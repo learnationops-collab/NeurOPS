@@ -7,8 +7,8 @@ import * as apiFz from './finanzasApi';
 
 /**
  * Sacar ventas de la nómina (08/10/2026). Antes era la casilla de cada fila de la auditoría de
- * Payroll; esa lista se sacó (los tiles abren sus ventas en Revisar) y la casilla volvió acá, a
- * pedido.
+ * Payroll; esa lista se sacó y la casilla volvió acá, a pedido. La misma casilla está en las ventas
+ * de cada persona (`VentasDePersona`, al tocar su tile), con el mismo endpoint.
  *
  * Es UNA lista de ventas y no una por persona: sacar una venta la saca de la comisión de todos los
  * que cobran sobre ella (setter, closer, director y Fulfillment), así que cada fila dice quiénes

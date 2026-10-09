@@ -34,14 +34,21 @@ def venta_completada(venta):
     return estado in ('', 'completada', 'confirmada')
 
 
+def fuente_valida(nombre):
+    """La fuente de una agenda dice quién la generó: no vale vacía, «s/f», «n/a» ni una entrevista
+    o diagnóstica (esas no son de un setter)."""
+    if not nombre or not nombre.strip():
+        return False
+    minusculas = nombre.lower()
+    return minusculas not in _FUENTE_INVALIDA and not any(
+        tipo in minusculas for tipo in ('entrevista', 'diagnostica', 'diagnóstica'))
+
+
 def setter_de_la_venta(venta, agenda):
     """El setter de una venta: la fuente de la agenda que la originó (vía `AttributionService`)
     manda sobre el campo `FinancialSale.setter`; una entrevista o diagnóstica no es un setter."""
-    if agenda and agenda.nombre and agenda.nombre.strip():
-        nombre = agenda.nombre.lower()
-        if (nombre not in _FUENTE_INVALIDA and 'entrevista' not in nombre
-                and 'diagnostica' not in nombre and 'diagnóstica' not in nombre):
-            return agenda.nombre
+    if agenda and fuente_valida(agenda.nombre):
+        return agenda.nombre
     setter = venta.setter
     if setter and setter.strip() and setter not in ('Sin Setter', 'Confirmada'):
         return setter
@@ -62,6 +69,18 @@ def _fin(dia):
     return datetime.combine(dia, time.max) if dia else None
 
 
+def ventas_del_rango(desde=None, hasta=None):
+    """Las ventas entre dos fechas (`date`, ambas inclusive; None = sin límite), completadas o no."""
+    from app.models import FinancialSale
+
+    query = FinancialSale.query
+    if desde:
+        query = query.filter(FinancialSale.date >= _inicio(desde))
+    if hasta:
+        query = query.filter(FinancialSale.date <= _fin(hasta))
+    return query.all()
+
+
 def comisiones_del_rango(desde=None, hasta=None):
     """La nómina variable entre dos fechas (`date`, ambas inclusive; None = sin límite).
 
@@ -73,18 +92,13 @@ def comisiones_del_rango(desde=None, hasta=None):
 
     Marlon suma sus dos partidas: cada venta de su lista dice de cuál es (`concepto`: 'propia' o
     'director') y `desglose` trae cada partida con su %, su neto, su comisión y sus ventas."""
-    from app.models import FinancialAgenda, FinancialSale
+    from app.models import FinancialAgenda
     from app.services.attribution_service import AttributionService
     from app.services.closer_name_service import resolver_nombre_closer
     from app.services.comision_tasas_service import por_mes
     from app.services.fulfillment_commission_service import nomina_por_persona
 
-    query = FinancialSale.query
-    if desde:
-        query = query.filter(FinancialSale.date >= _inicio(desde))
-    if hasta:
-        query = query.filter(FinancialSale.date <= _fin(hasta))
-    sales = query.all()
+    sales = ventas_del_rango(desde, hasta)
     attribution_map = AttributionService.get_sales_attribution(sales=sales, agendas=FinancialAgenda.query.all())
 
     tasas_de_mes = por_mes()

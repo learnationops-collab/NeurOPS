@@ -6,6 +6,7 @@ import { EsqueletoTablero, Humo, PillMenu } from '../Shared';
 import TasasComision from './TasasComision';
 import ExcluirVentas from './ExcluirVentas';
 import DetalleNomina from './DetalleNomina';
+import VentasDePersona from './VentasDePersona';
 import Cifra from '../Cifra';
 import RangoFechas, { rangoDe, textoRango } from '../RangoFechas';
 import { Cifron, HUMOS, dinero } from './comun';
@@ -17,15 +18,16 @@ import * as apiFz from './finanzasApi';
  * se paga a quienes se ven: sueldo base (prorrateado por días en un mes a medias, ver
  * `nomina_service.sueldo_base_del_rango`), comisiones y el total.
  *
- * Tocar un tile abre sus ventas en Revisar › Ventas, en el mismo período (`onVerVentas`): la lista
- * de abajo que había acá se sacó a pedido (08/10/2026), y Revisar ya tiene la tabla, la búsqueda,
- * los totales y la ficha de cada venta. Van las ventas que suman en la comisión: las que se sacaron
- * de la nómina quedan afuera, como en el número del tile. Sacarlas o volver a sumarlas se hace en
- * «Excluir ventas» de la barra (`ExcluirVentas`).
+ * Tocar un tile abre sus ventas acá mismo, en lugar de los tiles y en el mismo período
+ * (`VentasDePersona`, 08/10/2026): con cada una se la saca de la nómina o se la vuelve a sumar, y se
+ * le cambia el setter o el closer. Antes el tile llevaba a Revisar › Ventas de /admin/comercial, la
+ * vista de la dirección, y Kerwin pidió no tener que pasar por ahí. Quién está abierto lo dice la URL
+ * (`ver`, lo maneja `DashboardComercial`), así el botón atrás vuelve a los tiles. «Excluir ventas» de
+ * la barra (`ExcluirVentas`) sigue siendo la lista de todas las ventas del período juntas.
  *
  * «Exportar PDF» imprime la página: el CSS de impresión deja solo esto, con el encabezado que acá
  * no se ve (`.fz-impresion`: período y grupos, que en pantalla dice la barra) y, en hoja nueva, el
- * detalle de ventas de cada persona que se ve (`DetalleNomina`), que en pantalla está en Revisar.
+ * detalle de ventas de cada persona que se ve (`DetalleNomina`); con una persona abierta, el suyo.
  */
 
 const v = (tono) => `var(--${tono})`;
@@ -296,7 +298,7 @@ const Tile = ({ persona, datos, onVer }) => {
     const lineas = lecturaDe(persona, datos);
     return (
         <button type="button" className="kpi caja fz-persona" onClick={onVer} disabled={!onVer}
-            title={onVer ? `Ver en Revisar las ventas de ${persona.nombre}` : 'Sin ventas en este período'}>
+            title={onVer ? `Ver las ventas de ${persona.nombre}` : 'Sin ventas en este período'}>
             <Humo colores={persona.tono === 'success' ? HUMOS.ingreso : persona.tono === 'warning' ? HUMOS.gasto : HUMOS.marca} />
             <div className="kpi-cab">
                 <span className="chip" style={{ '--c': v(persona.tono) }}><Icono /> {persona.rol}</span>
@@ -318,7 +320,7 @@ const Tile = ({ persona, datos, onVer }) => {
     );
 };
 
-const Payroll = ({ desde, hasta, onVerVentas, grupos, personas = [], tasasAbiertas, onCerrarTasas, excluirAbierto, onCerrarExcluir }) => {
+const Payroll = ({ desde, hasta, ver = null, onVer, grupos, personas = [], tasasAbiertas, onCerrarTasas, excluirAbierto, onCerrarExcluir }) => {
     const [datos, setDatos] = useState(null);
 
     const cargar = useCallback(() => apiFz.getPayroll(desde, hasta).then(setDatos)
@@ -350,12 +352,11 @@ const Payroll = ({ desde, hasta, onVerVentas, grupos, personas = [], tasasAbiert
             onCerrar={onCerrarExcluir} onCambio={cargar} />
     );
 
-    const verVentas = (persona) => {
-        const ids = (datos[persona.id]?.sales || [])
-            .filter(venta => !venta.is_excluded_from_payroll).map(venta => venta.id);
-        if (!ids.length || !onVerVentas) return null;
-        return () => onVerVentas({ ids, rotulo: `Comisión de ${persona.nombre}`, desde, hasta });
-    };
+    // Sus ventas se abren acá mismo (`VentasDePersona`), también si están todas excluidas: desde ahí
+    // se vuelven a sumar. Sin ninguna venta en el período no hay nada que abrir.
+    const verVentas = (persona) => ((datos[persona.id]?.sales || []).length && onVer
+        ? () => onVer(persona.id) : null);
+    const abierta = ver ? PERSONAS.find(p => p.id === ver && datos[p.id]) : null;
 
     // Los grupos prendidos y, adentro, las personas elegidas (o todas): los tiles, la suma de
     // comisiones y el PDF dicen lo mismo.
@@ -385,12 +386,17 @@ const Payroll = ({ desde, hasta, onVerVentas, grupos, personas = [], tasasAbiert
         <>
             <div className="fz-impresion">
                 <p className="t-eyebrow">
-                    Payroll · {marcadas.length ? marcadas.map(p => p.nombre).join(', ') : visibles.map(g => g.titulo).join(', ')}
+                    Payroll · {abierta ? abierta.nombre
+                        : marcadas.length ? marcadas.map(p => p.nombre).join(', ') : visibles.map(g => g.titulo).join(', ')}
                 </p>
                 <h1 className="t-h2">Nómina · {fechaLarga(desde)} – {fechaLarga(hasta)}</h1>
             </div>
+            {abierta && (
+                <VentasDePersona key={abierta.id} persona={abierta} datos={datos[abierta.id]} desde={desde} hasta={hasta}
+                    onVolver={() => onVer(null)} onCambio={cargar} />
+            )}
             {/* Cinco en una fila: el cash, lo que se paga (base + comisiones = total) y el peso. */}
-            <div className="fz-grid fz-grid--5">
+            {!abierta && <div className="fz-grid fz-grid--5">
                 <Cifron rotulo="Cash del período" valor={dinero(cash.cash_neto)} tono="success" humo={HUMOS.ingreso}
                     sub={`${cash.ventas} ${cash.ventas === 1 ? 'venta' : 'ventas'} · bruto ${dinero(cash.cash_bruto)}`}
                     ayuda="Todo lo cobrado en el período, neto de la comisión de Stripe y Hotmart: la base sobre la que se calculan las comisiones." />
@@ -406,8 +412,8 @@ const Payroll = ({ desde, hasta, onVerVentas, grupos, personas = [], tasasAbiert
                 <Cifron rotulo="Peso sobre el cash" valor={peso == null ? '—' : `${peso.toFixed(1)}%`} humo={HUMOS.marca}
                     sub="Total ÷ cash del período"
                     ayuda="Cuánto del cash cobrado se va en la nómina (sueldo base más comisiones) de las personas que estás viendo." />
-            </div>
-            {secciones.map(g => (
+            </div>}
+            {!abierta && secciones.map(g => (
                 <section key={g.id} className="fz-bloque">
                     {g.titulo && <p className="t-rotulo">{g.titulo}</p>}
                     <div className={`fz-grid ${g.columnas}`}>
@@ -417,7 +423,7 @@ const Payroll = ({ desde, hasta, onVerVentas, grupos, personas = [], tasasAbiert
                     </div>
                 </section>
             ))}
-            {imprimiendo && <DetalleNomina personas={secciones.flatMap(g => g.personas)} datos={datos} />}
+            {imprimiendo && <DetalleNomina personas={abierta ? [abierta] : secciones.flatMap(g => g.personas)} datos={datos} />}
             {modal}
             {excluir}
         </>

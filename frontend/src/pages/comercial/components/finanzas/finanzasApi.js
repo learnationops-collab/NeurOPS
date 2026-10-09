@@ -61,6 +61,13 @@ export const getPayroll = (desde, hasta) => api.get('/public/financial-sales/pay
 export const marcarExclusion = (ventaId, excluir) => api.post(
     `/public/financial-sales/${ventaId}/toggle-payroll-exclusion`, { exclude: excluir }).then(datos);
 
+// La atribución de una venta desde Payroll (08/10/2026): a quiénes se puede elegir ({setters,
+// closers}, cada una {id, nombre, activo}) y el cambio, {setter_id?, closer_id?, desde, hasta}. El
+// período es el de Payroll: con él el backend corrige la agenda que mira la nómina de esas fechas.
+export const getPersonasAtribuibles = () => api.get('/public/finance/atribucion/personas').then(datos);
+export const cambiarAtribucion = (ventaId, cambio) => api.put(
+    `/public/finance/ventas/${ventaId}/atribucion`, cambio).then(datos);
+
 // Los % de comisión (08/10/2026): los que valen en un mes, y guardar un juego desde un mes.
 export const getTasas = (mes) => api.get('/public/finance/comisiones/tasas', { params: { mes } }).then(datos);
 export const guardarTasas = (vigenteDesde, tasas) => api.put('/public/finance/comisiones/tasas',

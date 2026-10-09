@@ -1,4 +1,4 @@
-from flask import request, jsonify
+from flask import current_app, request, jsonify
 from flask_login import current_user, login_required
 from app import db
 from app.models import User, Expense, AdPeriodSpend, MarketingBudget
@@ -764,3 +764,57 @@ def get_finance_procedencia():
     if not periodo:
         return jsonify({"error": "Parámetros 'start_date' y 'end_date' (YYYY-MM-DD) o 'month' (YYYY-MM) requeridos"}), 400
     return jsonify(procedencia_de_ingresos(*periodo)), 200
+
+
+@bp.route('/public/finance/atribucion/personas', methods=['GET'])
+@login_required
+@finance_admin_required
+def personas_para_atribuir():
+    """Los setters y closers que se pueden elegir al cambiar la atribución de una venta en Payroll
+    (08/10/2026): los activos y los inactivos que cobran comisión (`personas_atribuibles`)."""
+    from app.services.atribucion_venta_service import personas_atribuibles
+
+    return jsonify(personas_atribuibles()), 200
+
+
+@bp.route('/public/finance/ventas/<int:sale_id>/atribucion', methods=['PUT'])
+@login_required
+@finance_admin_required
+def cambiar_atribucion_de_venta(sale_id):
+    """Cambia el setter y/o el closer de una venta desde Payroll (08/10/2026), sin pasar por la vista
+    del director comercial: {closer_id?, setter_id?} (ids de usuario) y, opcionales, `desde`/`hasta`
+    (YYYY-MM-DD), el período de Payroll que se está mirando. Solo toca esos dos datos (el criterio, en
+    `atribucion_venta_service`) y es de quien ve Finanzas, como el resto de Payroll. La edición general
+    de ventas (`PUT /public/financial-sales/<id>`) no servía: pide el correo del closer escrito a mano,
+    cambia cualquier campo y la usa también quien no ve Finanzas."""
+    from app.api.public.financial_sales import _propagar_lote_a_sheets
+    from app.services import atribucion_venta_service as atribucion
+
+    venta = db.session.get(FinancialSale, sale_id)
+    if not venta:
+        return jsonify({"error": "Venta no encontrada"}), 404
+    data = request.get_json(silent=True)
+    data = data if isinstance(data, dict) else {}
+
+    def fecha(clave):
+        # Un período que no se entiende no corta el cambio: la agenda se busca solo con todas las ventas.
+        return _fecha_iso(data[clave]) if isinstance(data.get(clave), str) else None
+
+    try:
+        resultado = atribucion.cambiar_atribucion(
+            venta, closer_id=data.get('closer_id'), setter_id=data.get('setter_id'),
+            desde=fecha('desde'), hasta=fecha('hasta'))
+    except atribucion.AtribucionInvalida as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+
+    # La hoja de ventas queda al día, como con la edición de Operaciones, pero fuera de la request.
+    if venta.marca_temporal:
+        _propagar_lote_a_sheets(current_app._get_current_object(), [(venta.marca_temporal, {
+            "email_vendedor": venta.email_vendedor, "nombre_cliente": venta.nombre_cliente,
+            "telefono": venta.telefono, "mail_cliente": venta.mail_cliente, "tipo_pago": venta.tipo_pago,
+            "monto": venta.monto, "segundo_pago": venta.segundo_pago, "metodo_pago": venta.metodo_pago,
+            "examen": venta.examen, "instagram": venta.instagram, "setter": venta.setter,
+            "estado": venta.estado,
+        })])
+    return jsonify(resultado), 200

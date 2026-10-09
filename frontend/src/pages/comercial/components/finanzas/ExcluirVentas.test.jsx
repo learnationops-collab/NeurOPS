@@ -32,7 +32,7 @@ const nomina = (excluidaAna = false) => ({
 
 const montar = () => render(
     <Payroll desde="2026-09-01" hasta="2026-09-30" grupos={['setting', 'closing', 'fulfillment']}
-        onVerVentas={() => {}} tasasAbiertas={false} onCerrarTasas={() => {}}
+        onVer={() => {}} tasasAbiertas={false} onCerrarTasas={() => {}}
         excluirAbierto onCerrarExcluir={() => {}} />,
 );
 

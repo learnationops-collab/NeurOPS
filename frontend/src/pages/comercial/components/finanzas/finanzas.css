@@ -130,6 +130,25 @@
 .dc-shell .fz-excluida{opacity:.42}
 .dc-shell .fz-excluida .fz-tachable{text-decoration:line-through;text-decoration-color:var(--error)}
 
+/* Las ventas de una persona (`VentasDePersona`, 08/10/2026): el tile abre esto en lugar de los
+   tiles. Arriba la vuelta, quién es y el período, en una línea que se parte (nunca se monta). La
+   entrada es la de `.vista > *`, como la de cualquier sección. */
+.dc-shell .fz-ventas{display:grid;gap:var(--s4);min-width:0}
+.dc-shell .fz-ventas-cab{display:flex;align-items:center;flex-wrap:wrap;gap:var(--s2) var(--s3);min-width:0}
+.dc-shell .fz-ventas-cab .t-h2{min-width:0}
+.dc-shell .fz-ventas-periodo{margin-left:auto}
+/* La fila con su cambio de atribución abierto debajo: las dos se leen como una sola pieza. */
+.dc-shell .fz-fila--abierta,
+.dc-shell .fz-fila--abierta:hover{background:var(--mat-0);border-bottom-color:transparent}
+.dc-shell .fz-atribucion{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--s3);
+  padding:var(--s2) 10px var(--s4);background:var(--mat-0);border-bottom:1px solid var(--border-subtle)}
+.dc-shell .fz-atr-campo{display:grid;gap:4px;flex:0 1 190px;min-width:150px}
+.dc-shell .fz-atr-campo small{font-size:9.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text-muted-40)}
+.dc-shell .fz-atr-campo .fz-select{width:100%}
+.dc-shell .fz-atr-aviso{flex:1 1 240px;align-self:center;color:var(--warning)}
+.dc-shell .fz-atribucion .fz-acciones{margin-left:auto}
+
 /* El detalle de ventas por persona del PDF de Payroll (`DetalleNomina`): solo existe en el papel. */
 .dc-shell .fz-detalle{display:none}
 .dc-shell .fz-detalle-persona{margin-top:var(--s6)}
@@ -184,8 +203,12 @@
   .dc-shell .tip,
   .dc-shell .kpi-acciones{display:none !important}
   .dc-shell .fz-scroll{overflow:visible}
+  /* Con las ventas de una persona abiertas, el papel lleva su detalle (`DetalleNomina`), no la
+     lista de pantalla con sus casillas y lápices. */
+  .dc-shell .fz-ventas{display:none}
   .dc-shell .fz-impresion{display:block;margin-bottom:var(--s4)}
   .dc-shell .fz-detalle{display:block;break-before:page}
+  .dc-shell .fz-ventas ~ .fz-detalle{break-before:auto}
   /* Una hoja A4 mide menos que los cortes de pantalla (760 y 900px), que apilaban todo en una
      columna. Los cinco de Fulfillment van en una sola fila (de a tres quedaban 3 + 2) y sin su
      chip, que ahí no entra y repite el título del grupo. Los cinco KPIs de arriba sí llevan su

@@ -42,14 +42,16 @@ vi.mock('./components/finanzas/Finanzas', async (original) => ({
         <div data-testid="finanzas">{`${tab} · ${periodo.mes || `${periodo.desde} → ${periodo.hasta}`}`}</div>
     ),
 }));
+// De quién están abiertas las ventas (`ver`) lo dice la URL: el doble de Payroll lo muestra y abre o
+// cierra con `onVer`, como sus tiles y su «Volver a Payroll».
 vi.mock('./components/finanzas/Payroll', async (original) => ({
     ...(await original()),
-    default: ({ desde, hasta, onVerVentas }) => (
+    default: ({ desde, hasta, ver, onVer }) => (
         <div data-testid="payroll">
             {`${desde} → ${hasta}`}
-            <button type="button" onClick={() => onVerVentas({ ids: [7, 9], rotulo: 'Comisión de Andy', desde, hasta })}>
-                ver ventas de Andy
-            </button>
+            <output data-testid="payroll-ver">{ver || 'tiles'}</output>
+            <button type="button" onClick={() => onVer('andy')}>ver ventas de Andy</button>
+            <button type="button" onClick={() => onVer(null)}>volver a Payroll</button>
         </div>
     ),
 }));
@@ -210,29 +212,86 @@ describe('DashboardComercial · Finances (/finanzas)', () => {
     });
 });
 
-describe('DashboardComercial · Payroll lleva a sus ventas en Revisar', () => {
+/**
+ * Payroll abre las ventas de una persona dentro de /finanzas (08/10/2026): antes el tile llevaba a
+ * Revisar › Ventas de /admin/comercial, la vista de la dirección. Ahora es `ver` en la URL.
+ */
+describe('DashboardComercial · Payroll abre las ventas de una persona sin salir de /finanzas', () => {
     beforeEach(() => {
         navegar.mockClear();
+        estado.puede = true;
+        estado.user = null;
         try { localStorage.clear(); } catch { /* sin almacenamiento */ }
     });
 
-    it('desde /finanzas, que no tiene Revisar, abre Revisar › Ventas de Comercial con esas ventas como una sola etiqueta', async () => {
-        estado.puede = true;
-        const { unmount } = montar('/finanzas?s=payroll');
-        const boton = await screen.findByText(/ver ventas de Andy/);
-        await act(async () => { fireEvent.click(boton); });
+    // El «atrás» del navegador: `useNavigate` está doblado en este archivo, así que se usa el de
+    // verdad, sobre el mismo historial del MemoryRouter.
+    const montarConAtras = async (url) => {
+        const { useNavigate: useNavigateDeVerdad } = await vi.importActual('react-router-dom');
+        const Atras = () => {
+            const ir = useNavigateDeVerdad();
+            return <button type="button" onClick={() => ir(-1)}>atrás del navegador</button>;
+        };
+        return render(
+            <MemoryRouter initialEntries={[url]}>
+                <Routes>
+                    <Route path="/finanzas" element={<DashboardComercial espacio="finanzas" />} />
+                </Routes>
+                <Donde />
+                <Atras />
+            </MemoryRouter>,
+        );
+    };
 
-        const destino = new URL(`http://x${navegar.mock.calls[0][0]}`);
-        const q = Object.fromEntries(destino.searchParams);
-        expect(destino.pathname).toBe('/admin/comercial');
-        expect([q.s, q.t, q.rol, q.p]).toEqual(['revisar', 'ventas', 'closers', 'custom']);
-        expect(JSON.parse(q.f)).toEqual({ __ids: [7, 9], __ids_rotulo: 'Comisión de Andy', __de: 'Comisión de Andy' });
+    it('tocar un tile deja `ver` en la URL de /finanzas, sin navegar a la dirección comercial', async () => {
+        montar('/finanzas?s=payroll');
+        const abrir = await screen.findByText('ver ventas de Andy');
+        await act(async () => { fireEvent.click(abrir); });
 
-        // Y Comercial, con esa URL, abre la lista ya filtrada.
+        expect(screen.getByTestId('donde').textContent).toBe('/finanzas?s=payroll&ver=andy');
+        expect(screen.getByTestId('payroll-ver').textContent).toBe('andy');
+        expect(navegar).not.toHaveBeenCalled();
+        // Los filtros de grupos y personas son de los tiles: con una persona abierta no están.
+        expect(screen.queryByRole('group', { name: 'Grupos de la nómina' })).toBeNull();
+        expect(screen.queryByRole('button', { name: /Todas las personas/ })).toBeNull();
+        // El período y las acciones de la barra siguen.
+        expect(screen.getByRole('button', { name: /Excluir ventas/ })).toBeTruthy();
+
+        await act(async () => { fireEvent.click(screen.getByText('volver a Payroll')); });
+        expect(screen.getByTestId('donde').textContent).toBe('/finanzas?s=payroll');
+        expect(screen.getByRole('group', { name: 'Grupos de la nómina' })).toBeTruthy();
+    });
+
+    it('el botón atrás del navegador cierra las ventas y vuelve a los tiles', async () => {
+        await montarConAtras('/finanzas?s=payroll');
+        const abrir = await screen.findByText('ver ventas de Andy');
+        await act(async () => { fireEvent.click(abrir); });
+        expect(screen.getByTestId('payroll-ver').textContent).toBe('andy');
+
+        await act(async () => { fireEvent.click(screen.getByText('atrás del navegador')); });
+        expect(screen.getByTestId('donde').textContent).toBe('/finanzas?s=payroll');
+        expect(screen.getByTestId('payroll-ver').textContent).toBe('tiles');
+    });
+
+    it('un link con `ver` abre esas ventas; una persona que no es de la nómina se ignora', async () => {
+        const { unmount } = montar('/finanzas?s=payroll&ver=andy');
+        expect((await screen.findByTestId('payroll-ver')).textContent).toBe('andy');
         unmount();
-        montar(destino.pathname + destino.search);
-        expect(await screen.findByRole('button', { name: 'Quitar Comisión de Andy' })).toBeTruthy();
-        expect(screen.getByRole('tab', { name: 'Ventas', selected: true })).toBeTruthy();
+
+        montar('/finanzas?s=payroll&ver=nadie');
+        expect((await screen.findByTestId('payroll-ver')).textContent).toBe('tiles');
+        expect(screen.getByRole('group', { name: 'Grupos de la nómina' })).toBeTruthy();
+    });
+
+    it('cambiar de sección en el dock suelta las ventas abiertas', async () => {
+        montar('/finanzas?s=payroll&ver=andy');
+        await screen.findByTestId('payroll');
+        const dock = screen.getByRole('navigation', { name: 'Secciones del dashboard comercial' });
+
+        await act(async () => { fireEvent.click(within(dock).getByRole('button', { name: /Finanzas/ })); });
+        expect(screen.getByTestId('donde').textContent).toBe('/finanzas?s=finanzas');
+        await act(async () => { fireEvent.click(within(dock).getByRole('button', { name: /Payroll/ })); });
+        expect(screen.getByTestId('payroll-ver').textContent).toBe('tiles');
     });
 });
 

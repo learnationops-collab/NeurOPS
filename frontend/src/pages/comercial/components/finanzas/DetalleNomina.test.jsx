@@ -8,7 +8,7 @@ import Payroll from './Payroll';
  * mismos filtros que los tiles. Se arma solo al imprimir (`beforeprint`) y se va con `afterprint`.
  */
 
-const api = vi.hoisted(() => ({ getPayroll: vi.fn() }));
+const api = vi.hoisted(() => ({ getPayroll: vi.fn(), marcarExclusion: vi.fn(), getPersonasAtribuibles: vi.fn(), cambiarAtribucion: vi.fn() }));
 vi.mock('./finanzasApi', () => api);
 
 const venta = (id, nombre, comision, extra = {}) => ({
@@ -37,7 +37,7 @@ const NOMINA = {
 };
 
 const montar = (props) => render(
-    <Payroll desde="2026-09-01" hasta="2026-09-30" onVerVentas={() => {}} tasasAbiertas={false}
+    <Payroll desde="2026-09-01" hasta="2026-09-30" onVer={() => {}} tasasAbiertas={false}
         onCerrarTasas={() => {}} grupos={['setting', 'closing', 'fulfillment']} {...props} />,
 );
 
@@ -91,6 +91,17 @@ describe('Payroll · detalle de ventas del PDF', () => {
         const nombres = within(cont).getAllByRole('region').map(r => r.getAttribute('aria-label'));
         // Andy está elegida pero Fulfillment está apagado.
         expect(nombres).toEqual(['Ventas de Elias']);
+    });
+
+    it('con las ventas de una persona abiertas, el papel lleva solo su detalle', async () => {
+        montar({ ver: 'jeancarlo' });
+        await screen.findByRole('button', { name: /Volver a Payroll/ });
+        await act(async () => { window.dispatchEvent(new Event('beforeprint')); });
+        const cont = document.querySelector('.fz-detalle');
+
+        expect(within(cont).getAllByRole('region').map(r => r.getAttribute('aria-label'))).toEqual(['Ventas de Jean Carlo']);
+        expect(document.querySelector('.fz-impresion').textContent).toContain('Payroll · Jean Carlo');
+        await act(async () => { window.dispatchEvent(new Event('afterprint')); });
     });
 
     it('no está en la página hasta que se imprime, y se va al terminar', async () => {
