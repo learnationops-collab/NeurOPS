@@ -1037,23 +1037,36 @@ def _para_la_bitacora(valor):
 
 
 def editar_datos(appt, datos, usuario):
-    """Corrige los datos de contacto del cliente de esta agenda, y el examen de la agenda.
+    """Corrige los datos de contacto del cliente de esta agenda, y el examen y la fuente de la
+    agenda.
 
     Llegan solo los campos que se tocaron; los que llegan pero quedan igual despues de normalizar
     (un '@ana' sobre un 'ana') no cuentan como cambio. Se valida TODO antes de escribir nada: un
     choque en el telefono no puede dejar el nombre guardado a medias.
+
+    La fuente se sumo el 09/10/2026 (pedido del usuario: «al darle en editar en el modal no puedo
+    modificar la fuente del lead»). Es la misma correccion que la del historial
+    (`ficha_agendas_service`): del catalogo, con el setter y la fila del Tablero que le
+    corresponden. Viaja en este pedido y no en otro para que se guarde todo o nada.
     """
     from sqlalchemy.exc import IntegrityError
 
+    from app.services import ficha_agendas_service as agendas
     from app.services.booking_service import BookingService
 
-    pedidos = [c for c in (*CAMPOS_DEL_CLIENTE, 'examen') if c in datos]
+    pedidos = [c for c in (*CAMPOS_DEL_CLIENTE, 'examen', 'fuente') if c in datos]
     if not pedidos:
         raise ErrorDeAccion('No hay nada que guardar.')
 
     cliente = appt.client
     cambios = {}
     for campo in pedidos:
+        if campo == 'fuente':
+            # De la agenda, como el examen: no necesita cliente.
+            nueva = agendas.validar_fuente(datos['fuente'], appt.origin)
+            if nueva:
+                cambios['fuente'] = (appt.origin, nueva)
+            continue
         nuevo = _valor_nuevo(campo, datos[campo])
         if campo == 'examen':
             antes = appt.examen
@@ -1084,10 +1097,14 @@ def editar_datos(appt, datos, usuario):
     contactos = {CAMPOS_DEL_CLIENTE[c][0]: nuevo for c, (_, nuevo) in cambios.items()
                  if c in ('email', 'instagram', 'telefono')}
     atadas = _atar_ventas_que_se_perderian(cliente, contactos) if contactos else 0
+    # Antes de tocar el contacto: la fila del Tablero se encuentra por el que el cliente TIENE.
+    espejo = agendas.espejo_en_el_tablero(appt) if 'fuente' in cambios else None
 
     for campo, (_, nuevo) in cambios.items():
         if campo == 'examen':
             appt.examen = nuevo
+        elif campo == 'fuente':
+            agendas.poner_fuente(appt, nuevo, espejo)
         else:
             setattr(cliente, CAMPOS_DEL_CLIENTE[campo][0], nuevo)
     try:
@@ -1099,7 +1116,8 @@ def editar_datos(appt, datos, usuario):
         raise ErrorDeAccion('Ese correo se lo acaban de poner a otro cliente. Volvé a abrir la '
                             'ficha para ver con quién choca.', 'email') from None
 
-    rotulos = {**{c: v[1] for c, v in CAMPOS_DEL_CLIENTE.items()}, 'examen': EXAMEN[0]}
+    rotulos = {**{c: v[1] for c, v in CAMPOS_DEL_CLIENTE.items()}, 'examen': EXAMEN[0],
+               'fuente': 'fuente'}
     detalle = '; '.join(f'{rotulos[c]}: {_para_la_bitacora(a)} → {_para_la_bitacora(n)}'
                         for c, (a, n) in cambios.items())
     extra = (f' {atadas} venta(s) quedaron atadas al cliente por id, para no perderlas con el '
