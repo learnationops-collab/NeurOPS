@@ -204,22 +204,31 @@ const FichaLeadModal = ({
     // `eliminar_agenda`). Es una ref y no estado a propósito: cambiarla no tiene que volver a
     // correr el efecto de apertura, que resetea la pestaña y sacaría a la persona del Historial.
     const ancla = useRef(null);
+    // El número del último pedido de la ficha. Solo ESE pedido escribe la ficha, el error y el fin
+    // de la carga: uno abortado (StrictMode monta el efecto dos veces; cambiar de lead aborta el
+    // anterior) terminaba DESPUÉS de que arrancara el nuevo y apagaba `cargando` con la ficha
+    // todavía en camino. La cabecera se pintaba sin ficha, con el lápiz, y el editor abría vacío.
+    const ultimoPedido = useRef(0);
 
     const cargar = useCallback(async (signal) => {
+        const pedido = ++ultimoPedido.current;
+        const vigente = () => pedido === ultimoPedido.current;
         setCargando(true);
         setError(null);
         try {
             const datos = await obtenerFicha({
                 appointmentId: ancla.current ?? appointmentId, clientId, signal,
             });
+            // Una recarga que llega después de otra más nueva traería datos viejos.
+            if (!vigente()) return null;
             setFicha(datos);
             return datos;
         } catch (err) {
-            if (err?.code === 'ERR_CANCELED') return null;
+            if (err?.code === 'ERR_CANCELED' || !vigente()) return null;
             setError(mensajeDeError(err));
             return null;
         } finally {
-            setCargando(false);
+            if (vigente()) setCargando(false);
         }
     }, [appointmentId, clientId]);
 
@@ -228,6 +237,9 @@ const FichaLeadModal = ({
         fijada.current = false;
         ancla.current = null;   // otro lead: el ancla del anterior no aplica
         setPestana(null);
+        // Ni la ficha del lead anterior: mientras llega la nueva se veía la vieja, y un editor
+        // abierto en ella guardaba lo tipeado sobre el lead nuevo apenas este llegaba.
+        setFicha(null);
         cargar(ac.signal);
         return () => ac.abort();
     }, [cargar]);

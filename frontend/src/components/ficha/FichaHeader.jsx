@@ -52,8 +52,10 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
     const closers = opciones(ficha, 'closers');
     const puedeReasignar = ficha?.permisos?.reasignar !== false && puedeEditar && closers.length > 0;
     // Mismo criterio que el resto de los permisos de la ficha: solo un `false` explícito
-    // esconde. El backend lo manda siempre, y la ruta lo vuelve a comprobar.
-    const puedeCorregir = puedeEditar && ficha?.permisos?.editar_datos !== false;
+    // esconde. El backend lo manda siempre, y la ruta lo vuelve a comprobar. Pero sin ficha no
+    // hay permisos ni datos: la que no se pudo abrir no tiene nada que corregir, y el editor
+    // abría con todos los campos vacíos.
+    const puedeCorregir = !!ficha && puedeEditar && ficha.permisos?.editar_datos !== false;
 
     // Desde el instante (`iso`, UTC) y no desde `fecha`/`hora`, que el backend arma en UTC: la
     // cabecera decía otra hora que la fila de esa misma agenda en el historial.
