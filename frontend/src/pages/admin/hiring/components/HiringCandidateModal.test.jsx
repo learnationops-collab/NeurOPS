@@ -95,7 +95,7 @@ describe('HiringCandidateModal · encabezado', () => {
     });
 });
 
-describe('botonesDe: rescatar descartadas, incompletas y las que están en prueba', () => {
+describe('botonesDe: rescatar descartadas e incompletas, y devolver finalistas', () => {
     const ids = (d) => botonesDe(d).map((a) => a.id);
 
     it('a una que cortó el formulario se la puede aprobar o pasar a prueba, sin «Descartar»', () => {
@@ -112,6 +112,12 @@ describe('botonesDe: rescatar descartadas, incompletas y las que están en prueb
 
     it('una en prueba se puede devolver a Seleccionadas o Reserva', () => {
         expect(ids({ veredicto: 'testeo', estado: 'testeo' })).toEqual(['seleccionada', 'en_reserva', 'winner', 'top_tier', 'baja']);
+    });
+
+    it('Winner y Top tier se pueden devolver a prueba o a Análisis', () => {
+        const vuelta = ['seleccionada', 'en_reserva', 'testeo', 'baja'];
+        expect(ids({ veredicto: 'winner', estado: 'winner' })).toEqual(vuelta);
+        expect(ids({ veredicto: 'top_tier', estado: 'top_tier' })).toEqual(vuelta);
     });
 
     it('en el modal, una descartada por el formulario ofrece Seleccionar y Pasar a prueba', async () => {

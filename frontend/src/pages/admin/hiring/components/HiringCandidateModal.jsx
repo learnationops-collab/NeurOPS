@@ -48,8 +48,9 @@ const ACCIONES_POR_VEREDICTO = {
     // En prueba: cerrarla (Winner / Top tier / Baja) o devolverla a Análisis si no era el
     // momento. Lo pidió Kerwin el 09/10/2026: no había forma de sacarla de prueba.
     testeo: ['seleccionada', 'en_reserva', 'winner', 'top_tier', 'baja'],
-    winner: ['baja'],
-    top_tier: ['baja'],
+    // Winner y Top tier también tienen vuelta: a prueba o a Análisis (Kerwin, 09/10/2026).
+    winner: ['seleccionada', 'en_reserva', 'testeo', 'baja'],
+    top_tier: ['seleccionada', 'en_reserva', 'testeo', 'baja'],
     baja: [], // terminal: ya se fue, no hay a dónde moverlo
 };
 
