@@ -125,7 +125,8 @@ describe('Finanzas · Nómina', () => {
         expect(screen.getByText(/Transferencias recibidas de clientes/).textContent)
             .toBe('Transferencias recibidas de clientes -$150.00 · a pagar $50.00');
         await waitFor(() => expect(cifra('Total del mes')).toBe('$1,280.00'));
-        await waitFor(() => expect(cifra('Transferencias recibidas')).toBe('$150.00'));
+        await waitFor(() => expect(cifra('Transferencias')).toBe('$150.00'));
+        expect(screen.getByText('Recibidas: Jean Carlos')).toBeTruthy();
         await waitFor(() => expect(cifra('Por pagar')).toBe('$1,130.00'));
 
         api.guardarNomina.mockResolvedValueOnce({ ...jean, is_paid: true });

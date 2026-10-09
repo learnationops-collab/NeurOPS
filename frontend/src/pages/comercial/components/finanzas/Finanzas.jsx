@@ -508,8 +508,11 @@ const TotalesNomina = ({ filas, rotulo }) => {
         <div className="fz-grid fz-grid--4">
             <Cifron rotulo={rotulo} valor={dinero(total)} humo={HUMOS.marca} sub={nIntegrantes(filas.length)}
                 ayuda="Sueldos, comisiones y bonos de todo el equipo: lo que cuesta la nómina, lo mismo que suma la fila Total de la tabla." />
-            <Cifron rotulo="Transferencias recibidas" valor={dinero(recibidas)} tono="info" humo={HUMOS.info}
-                sub={conTransferencias.length ? conTransferencias.map(f => f.member_name).join(', ') : 'Nadie recibió plata de un cliente'}
+            {/* «Transferencias» a secas: «recibidas» partía el rótulo en dos renglones a 1280 px y la
+                cifra quedaba más abajo que las otras tres. Lo dice el renglón de abajo. */}
+            <Cifron rotulo="Transferencias" valor={dinero(recibidas)} tono="info" humo={HUMOS.info}
+                sub={conTransferencias.length ? `Recibidas: ${conTransferencias.map(f => f.member_name).join(', ')}`
+                    : 'Nadie recibió plata de un cliente'}
                 ayuda="Lo que alguien del equipo recibió en su cuenta por transferencia de un cliente en el período (se marca en la ficha del cliente, sección Pagos). Ya lo tiene: se le descuenta de lo que se le paga, no de lo que cuesta." />
             <Cifron rotulo="Pagado" valor={dinero(pagado)} tono="success" humo={HUMOS.ingreso}
                 sub={`${pagadas.length} de ${nIntegrantes(filas.length)}`}
