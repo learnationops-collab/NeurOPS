@@ -63,11 +63,30 @@ describe('Payroll', () => {
         expect(cifra('Cash del período').textContent).toBe('$2,300.00');
         expect(cifra('Sueldo base').textContent).toBe('$600.00');   // el de Andy
         expect(cifra('Comisiones').textContent).toBe('$230.00');   // 80 + 100 + 20 + 30
+        expect(cifra('Descuentos').textContent).toBe('$0.00');   // nadie recibió por transferencia
+        expect(screen.getByText('Nadie recibió plata de un cliente en el período')).toBeTruthy();
         expect(cifra('Total').textContent).toBe('$830.00');
-        expect(cifra('Peso sobre el cash').textContent).toBe('36.1%');   // total ÷ cash
+        expect(cifra('Peso sobre el cash').textContent).toBe('36.1%');   // (base + comisiones) ÷ cash
         // El tile de quien tiene sueldo fijo lo dice abajo; la cifra grande es la comisión.
         expect(screen.getByText('Andy').closest('.kpi').querySelector('.kpi-sub').textContent)
             .toBe('1 ingresos · neto $300.00 · base $600.00');
+    });
+
+    it('al cambiar de período antes de que cargue el anterior, la respuesta vieja no pisa la nueva', async () => {
+        // Visto el 09/10/2026: de «Este mes» a «Mes pasado» rápido, octubre llegaba último y quedaba
+        // en pantalla con el rótulo de septiembre.
+        let soltarOctubre;
+        api.getPayroll.mockImplementation((desde) => (desde === '2026-10-01'
+            ? new Promise((r) => { soltarOctubre = () => r({ ...NOMINA, totales: { cash_neto: 111, cash_bruto: 111, ventas: 1 } }); })
+            : Promise.resolve(NOMINA)));
+        const props = { grupos: GRUPOS.map(g => g.id), tasasAbiertas: false, onCerrarTasas: () => {} };
+        const { rerender } = render(<Payroll desde="2026-10-01" hasta="2026-10-09" {...props} />);
+        rerender(<Payroll desde="2026-09-01" hasta="2026-09-30" {...props} />);
+        await screen.findByText('3 ventas · bruto $2,400.00');
+
+        await act(async () => { soltarOctubre(); });
+        expect(screen.getByText('3 ventas · bruto $2,400.00')).toBeTruthy();
+        expect(screen.queryByText('1 venta · bruto $111.00')).toBeNull();
     });
 
     it('a quien recibió plata de un cliente por transferencia el tile le dice cuánto y lo que queda por pagarle', async () => {
@@ -87,9 +106,12 @@ describe('Payroll', () => {
         const pedro = screen.getByText('Pedro', { selector: '.fz-persona-nom' }).closest('.kpi');
         expect(pedro.querySelector('.fz-persona-descuento').textContent)
             .toBe('descuentos -$300.00 · debe devolver $300.00');
-        // Lo que cuesta la nómina, igual que sin transferencias (las cifras cuentan hasta su valor).
+        // Arriba, «Descuentos» en rojo y el Total es lo que se paga: 830 − 360. Las comisiones y el
+        // peso siguen siendo lo que cuesta (las cifras cuentan hasta su valor).
+        await waitFor(() => expect(cifra('Descuentos').textContent).toBe('-$360.00'));
+        expect(screen.getByText('Jean Carlo y Pedro', { selector: '.kpi-sub' })).toBeTruthy();
         await waitFor(() => expect(cifra('Comisiones').textContent).toBe('$230.00'));
-        await waitFor(() => expect(cifra('Total').textContent).toBe('$830.00'));
+        await waitFor(() => expect(cifra('Total').textContent).toBe('$470.00'));
         await waitFor(() => expect(cifra('Peso sobre el cash').textContent).toBe('36.1%'));
     });
 

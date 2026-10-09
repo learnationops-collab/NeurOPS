@@ -338,8 +338,16 @@ const Tile = ({ persona, datos, onVer }) => {
 const Payroll = ({ desde, hasta, ver = null, onVer, grupos, personas = [], tasasAbiertas, onCerrarTasas, excluirAbierto, onCerrarExcluir }) => {
     const [datos, setDatos] = useState(null);
 
-    const cargar = useCallback(() => apiFz.getPayroll(desde, hasta).then(setDatos)
-        .catch(() => toast.error('No se pudo cargar la nómina')), [desde, hasta]);
+    // Solo vale la respuesta del último pedido (09/10/2026): al pasar de «Este mes» a «Mes pasado»
+    // antes de que terminara de cargar, la respuesta de octubre llegaba después y pisaba la de
+    // septiembre, con el rótulo diciendo septiembre.
+    const ultimo = useRef(0);
+    const cargar = useCallback(() => {
+        const pedido = ++ultimo.current;
+        return apiFz.getPayroll(desde, hasta)
+            .then((d) => { if (pedido === ultimo.current) setDatos(d); })
+            .catch(() => { if (pedido === ultimo.current) toast.error('No se pudo cargar la nómina'); });
+    }, [desde, hasta]);
     useEffect(() => { setDatos(null); cargar(); }, [cargar]);
 
     // El detalle de ventas del PDF se arma solo mientras se imprime: siempre montado eran cientos
@@ -383,11 +391,16 @@ const Payroll = ({ desde, hasta, ver = null, onVer, grupos, personas = [], tasas
         .reduce((total, p) => total + (datos[p.id]?.[campo] || 0), 0);
     const comisiones = sumar('comision_total');
     const sueldoBase = sumar('sueldo_base');
-    const total = sueldoBase + comisiones;
+    // Lo que cobraron de clientes por transferencia (09/10/2026): se les descuenta del Total, que es
+    // lo que se les paga. El peso sobre el cash sigue siendo el de lo que cuesta (base + comisiones).
+    const descuentos = sumar('transferencias_recibidas');
+    const conDescuento = visibles.flatMap(g => g.personas).filter(p => (datos[p.id]?.transferencias_recibidas || 0) > 0.004);
+    const costo = sueldoBase + comisiones;
+    const total = costo - descuentos;
     const cash = datos.totales || { cash_neto: 0, cash_bruto: 0, ventas: 0 };
     // El peso es el de la nómina entera (sueldo base + comisiones) desde el 08/10/2026: con el fijo
     // afuera, el de Fulfillment parecía casi nada.
-    const peso = cash.cash_neto ? (total / cash.cash_neto) * 100 : null;
+    const peso = cash.cash_neto ? (costo / cash.cash_neto) * 100 : null;
     const deQuien = marcadas.length ? `a ${nombres(marcadas)}`
         : visibles.length === GRUPOS.length ? 'de todo el equipo' : `de ${visibles.map(g => g.titulo).join(' y ')}`;
     // Elegidas algunas personas van juntas en una grilla, sin los títulos de grupo (el chip de cada
@@ -410,8 +423,9 @@ const Payroll = ({ desde, hasta, ver = null, onVer, grupos, personas = [], tasas
                 <VentasDePersona key={abierta.id} persona={abierta} datos={datos[abierta.id]} desde={desde} hasta={hasta}
                     onVolver={() => onVer(null)} onCambio={cargar} />
             )}
-            {/* Cinco en una fila: el cash, lo que se paga (base + comisiones = total) y el peso. */}
-            {!abierta && <div className="fz-grid fz-grid--5">
+            {/* Seis, de a tres: arriba el cash, el fijo y las comisiones; abajo los descuentos, lo que
+                se paga (base + comisiones − descuentos = total) y el peso. */}
+            {!abierta && <div className="fz-grid fz-grid--3">
                 <Cifron rotulo="Cash del período" valor={dinero(cash.cash_neto)} tono="success" humo={HUMOS.ingreso}
                     sub={`${cash.ventas} ${cash.ventas === 1 ? 'venta' : 'ventas'} · bruto ${dinero(cash.cash_bruto)}`}
                     ayuda="Todo lo cobrado en el período, neto de la comisión de Stripe y Hotmart: la base sobre la que se calculan las comisiones." />
@@ -421,12 +435,15 @@ const Payroll = ({ desde, hasta, ver = null, onVer, grupos, personas = [], tasas
                 <Cifron rotulo="Comisiones" valor={dinero(comisiones)} tono="warning" humo={HUMOS.gasto}
                     sub={`A pagar ${deQuien}`}
                     ayuda="La suma de las comisiones de las personas que estás viendo, con los porcentajes vigentes en cada mes." />
-                <Cifron rotulo="Total" valor={dinero(total)} humo={HUMOS.gasto}
-                    sub="Sueldo base + comisiones"
-                    ayuda="Lo que se paga en el período a las personas que estás viendo: su sueldo base más sus comisiones." />
+                <Cifron rotulo="Descuentos" valor={dinero(-descuentos)} tono={descuentos > 0.004 ? 'error' : undefined} humo={HUMOS.gasto}
+                    sub={conDescuento.length ? nombres(conDescuento) : 'Nadie recibió plata de un cliente en el período'}
+                    ayuda="Lo que las personas que estás viendo recibieron en su cuenta por transferencia de un cliente en el período (se marca en la ficha del cliente, sección Pagos). Ya lo tienen: se les descuenta del Total. Cuenta por la fecha del pago." />
+                <Cifron rotulo="Total" valor={dinero(total)} humo={HUMOS.marca}
+                    sub="Sueldo base + comisiones − descuentos"
+                    ayuda="Lo que se paga en el período a las personas que estás viendo: su sueldo base más sus comisiones, menos lo que ya recibieron de un cliente por transferencia." />
                 <Cifron rotulo="Peso sobre el cash" valor={peso == null ? '—' : `${peso.toFixed(1)}%`} humo={HUMOS.marca}
-                    sub="Total ÷ cash del período"
-                    ayuda="Cuánto del cash cobrado se va en la nómina (sueldo base más comisiones) de las personas que estás viendo." />
+                    sub="Sueldo base + comisiones ÷ cash"
+                    ayuda="Cuánto del cash cobrado se va en la nómina (sueldo base más comisiones, sin los descuentos) de las personas que estás viendo." />
             </div>}
             {!abierta && secciones.map(g => (
                 <section key={g.id} className="fz-bloque">
