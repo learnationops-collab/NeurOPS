@@ -3,7 +3,7 @@ from flask_login import current_user, login_required
 from app import db
 from app.models import User, Expense, AdPeriodSpend, MarketingBudget
 from app.models.financial import FinancialSale, FinancialAgenda, TeamMember, MonthlyPayroll, MonthlyPaymentMethodBalance, MonthlySaving
-from datetime import datetime
+from datetime import date, datetime, time
 import calendar
 from functools import wraps
 from . import bp
@@ -345,10 +345,13 @@ def manage_payroll():
 @login_required
 @finance_admin_required
 def manage_balances():
+    if request.method == 'GET':
+        return _saldos_del_periodo()
+
     month = request.args.get('month') or request.json.get('month')
     if not month or len(month) != 7 or '-' not in month:
         return jsonify({"error": "Parámetro 'month' (YYYY-MM) es requerido"}), 400
-        
+
     if request.method == 'POST':
         data = request.json or {}
         payment_method = data.get('payment_method')
@@ -375,34 +378,48 @@ def manage_balances():
                 
         db.session.commit()
         return jsonify(balance.to_dict()), 200
-        
-    default_methods = ['Mercury', 'AirTM']
-    balances = MonthlyPaymentMethodBalance.query.filter_by(month=month).all()
-    balances_map = {b.payment_method: b for b in balances}
 
+
+def _saldos_del_periodo():
+    """GET de los saldos por pasarela: el saldo cargado a mano y lo que hay que pagar por cada una
+    según la nómina. Son libros mensuales: en un rango (08/10/2026) cada mes cuenta entero si el
+    rango lo cubre y prorrateado por días si lo corta (ver `meses_del_rango`)."""
+    periodo, error = _periodo_de_la_consulta()
+    if error:
+        return error
+
+    default_methods = ['Mercury', 'AirTM']
+    actual_by_method = {m: 0.0 for m in default_methods}
+    ids = {}
     # Calcula "por pagar" por pasarela desde la nómina del mes: los mismos integrantes y montos que
     # muestra la pestaña Nómina (los activos y los que ya tienen nómina guardada).
     expected_by_method = {m: 0.0 for m in default_methods}
 
-    for item in nomina_del_mes(month):
-        method = item.get('payment_method')
-        # Un medio que no es una pasarela de pago ('Stripe' de los integrantes viejos, o vacío) es
-        # el que la tabla de nómina muestra como elegido: el selector solo ofrece Mercury y AirTM
-        # y cae en el primero. Antes ese sueldo no se sumaba a ninguna pasarela.
-        if method not in expected_by_method:
-            method = default_methods[0]
-        expected_by_method[method] += total_de_item(item)
+    for mes, parte in periodo['meses']:
+        for b in MonthlyPaymentMethodBalance.query.filter_by(month=mes).all():
+            if b.payment_method in actual_by_method:
+                actual_by_method[b.payment_method] += (b.actual_amount or 0.0) * parte
+                ids[b.payment_method] = b.id
+        for item in nomina_del_mes(mes):
+            method = item.get('payment_method')
+            # Un medio que no es una pasarela de pago ('Stripe' de los integrantes viejos, o vacío)
+            # es el que la tabla de nómina muestra como elegido: el selector solo ofrece Mercury y
+            # AirTM y cae en el primero. Antes ese sueldo no se sumaba a ninguna pasarela.
+            if method not in expected_by_method:
+                method = default_methods[0]
+            expected_by_method[method] += total_de_item(item) * parte
 
     result = []
     total_actual = 0.0
     total_expected = 0.0
 
     for m in default_methods:
-        actual = balances_map[m].actual_amount if m in balances_map else 0.0
+        actual = round(actual_by_method[m], 2)
         expected = round(expected_by_method.get(m, 0.0), 2)
         result.append({
-            "id": balances_map[m].id if m in balances_map else None,
-            "month": month,
+            # La fila guardada solo existe por mes: en un rango no hay una que editar.
+            "id": ids.get(m) if periodo['mes'] else None,
+            "month": periodo['mes'],
             "payment_method": m,
             "actual_amount": actual,
             "expected_amount": expected
@@ -411,6 +428,7 @@ def manage_balances():
         total_expected += expected
 
     return jsonify({
+        **_periodo_a_dict(periodo),
         "balances": result,
         "total_actual": round(total_actual, 2),
         "total_expected": round(total_expected, 2)
@@ -426,6 +444,111 @@ def _rango_del_mes(month):
         return None
 
 
+# ------------------------------------------------------------------------------------------------
+# El período de Finanzas (08/10/2026): un mes, como siempre, o un rango personalizado de fechas.
+#
+# Lo fechado (las ventas del resumen, los gastos de software) se filtra por las fechas exactas. Los
+# libros mensuales (nómina, saldos por pasarela, presupuesto de anuncios) se guardan por mes
+# calendario: en un rango, el mes que el rango cubre entero cuenta entero y el que corta se
+# prorratea por días (monto × días del rango en ese mes / días del mes). Payroll prorratea el sueldo
+# base con la misma regla. Los ahorros son la excepción: ver `_ahorros_del_periodo`.
+
+# Cada mes de un rango pide su nómina (con las comisiones de sus ventas): se corta en dos años.
+MAX_MESES_PERIODO = 24
+
+
+def _fecha_iso(texto):
+    try:
+        return datetime.strptime(texto or '', '%Y-%m-%d').date()
+    except ValueError:
+        return None
+
+
+def meses_del_rango(desde, hasta):
+    """[(mes 'YYYY-MM', parte)] de cada mes calendario que toca el rango de `date`s: parte es 1 si el
+    rango lo cubre entero, y si lo corta los días del rango en ese mes sobre los días del mes."""
+    meses = []
+    anio, mes = desde.year, desde.month
+    while (anio, mes) <= (hasta.year, hasta.month):
+        dias_del_mes = calendar.monthrange(anio, mes)[1]
+        inicio = max(desde, date(anio, mes, 1))
+        fin = min(hasta, date(anio, mes, dias_del_mes))
+        meses.append(('%04d-%02d' % (anio, mes), ((fin - inicio).days + 1) / dias_del_mes))
+        anio, mes = (anio + 1, 1) if mes == 12 else (anio, mes + 1)
+    return meses
+
+
+def periodo_pedido(args):
+    """El período de un GET de Finanzas: `month` (YYYY-MM), o `start_date` y `end_date` (YYYY-MM-DD)
+    para un rango (dado vuelta si llega al revés, como en el tablero). Devuelve
+    {desde, hasta, mes, meses}, donde `mes` es el 'YYYY-MM' si el período es justo un mes calendario
+    (un rango del 1 al último día también) y si no None; o None si no sirve."""
+    month = args.get('month')
+    if month:
+        rango = _rango_del_mes(month) if len(month) == 7 and '-' in month else None
+        if not rango:
+            return None
+        desde, hasta = rango[0].date(), rango[1].date()
+    else:
+        desde, hasta = _fecha_iso(args.get('start_date')), _fecha_iso(args.get('end_date'))
+        if not desde or not hasta:
+            return None
+        if desde > hasta:
+            desde, hasta = hasta, desde
+    meses = meses_del_rango(desde, hasta)
+    mes = meses[0][0] if len(meses) == 1 and meses[0][1] == 1 else None
+    return {'desde': desde, 'hasta': hasta, 'mes': mes, 'meses': meses}
+
+
+def _periodo_de_la_consulta():
+    """(periodo, None) con el período del GET, o (None, respuesta 400) si falta o no sirve."""
+    periodo = periodo_pedido(request.args)
+    if not periodo:
+        return None, (jsonify({"error": "Parámetro 'month' (YYYY-MM), o 'start_date' y 'end_date' "
+                                        "(YYYY-MM-DD), es requerido"}), 400)
+    if len(periodo['meses']) > MAX_MESES_PERIODO:
+        return None, (jsonify({"error": "El período no puede pasar de %d meses" % MAX_MESES_PERIODO}), 400)
+    return periodo, None
+
+
+def _periodo_a_dict(periodo):
+    return {"month": periodo['mes'], "desde": periodo['desde'].isoformat(), "hasta": periodo['hasta'].isoformat()}
+
+
+def _limites(periodo):
+    """(primer instante, último instante) del período, para filtrar lo fechado."""
+    return datetime.combine(periodo['desde'], time.min), datetime.combine(periodo['hasta'], time.max)
+
+
+def _ahorros_del_periodo(periodo):
+    """Los ahorros del período. Se cargan a mano, un monto por mes, y no se acumulan día a día como
+    un sueldo: en un rango cuentan los meses que el rango cubre enteros, y un mes cortado no aporta
+    nada (repartirlo por días mostraría un ahorro que nadie hizo)."""
+    enteros = [mes for mes, parte in periodo['meses'] if parte == 1]
+    if not enteros:
+        return 0.0
+    return sum(s.savings or 0.0 for s in MonthlySaving.query.filter(MonthlySaving.month.in_(enteros)).all())
+
+
+def _presupuesto_de_anuncios(periodo):
+    """El presupuesto de anuncios del período: uno por mes, prorrateado si el rango corta el mes."""
+    total = 0.0
+    for mes, parte in periodo['meses']:
+        anio, num = map(int, mes.split('-'))
+        rec = MarketingBudget.query.filter_by(date=date(anio, num, 1)).first()
+        total += (rec.budget or 0.0) * parte if rec else 0.0
+    return total
+
+
+def _gastado_en_anuncios(desde, hasta):
+    """La inversión cargada en Marketing cuyos períodos tocan [desde, hasta] (como siempre: entera)."""
+    ad_spends = AdPeriodSpend.query.filter(
+        AdPeriodSpend.start_date <= hasta,
+        AdPeriodSpend.end_date >= desde
+    ).all()
+    return round(sum(sp.spend for sp in ad_spends), 2)
+
+
 def _gasto_a_dict(gasto):
     return {"id": gasto.id, "description": gasto.description, "amount": float(gasto.amount or 0.0),
             "category": gasto.category, "date": gasto.date.isoformat() if gasto.date else None}
@@ -435,9 +558,10 @@ def _gasto_a_dict(gasto):
 @login_required
 @finance_admin_required
 def manage_software_expenses():
-    """Los gastos de software del mes, los mismos que suma el resumen. Antes la pestaña Software
-    usaba /admin/finance/*, que es solo de admin y operaciones: la dirección comercial con «ver
-    finanzas» quedaba afuera de una de las cinco vistas."""
+    """Los gastos de software del período (un mes o, desde el 08/10/2026, un rango de fechas), los
+    mismos que suma el resumen. Antes la pestaña Software usaba /admin/finance/*, que es solo de
+    admin y operaciones: la dirección comercial con «ver finanzas» quedaba afuera de una de las
+    cinco vistas."""
     if request.method == 'POST':
         data = request.get_json() or {}
         try:
@@ -453,11 +577,12 @@ def manage_software_expenses():
         db.session.commit()
         return jsonify(_gasto_a_dict(gasto)), 201
 
-    rango = _rango_del_mes(request.args.get('month') or '')
-    if not rango:
-        return jsonify({"error": "Parámetro 'month' (YYYY-MM) es requerido"}), 400
+    periodo, error = _periodo_de_la_consulta()
+    if error:
+        return error
+    inicio, fin = _limites(periodo)
     gastos = Expense.query.filter(
-        Expense.date >= rango[0], Expense.date <= rango[1], func.lower(Expense.category) == 'software'
+        Expense.date >= inicio, Expense.date <= fin, func.lower(Expense.category) == 'software'
     ).order_by(Expense.date.asc()).all()
     return jsonify([_gasto_a_dict(g) for g in gastos]), 200
 
@@ -507,6 +632,12 @@ def comisiones_tasas():
 @login_required
 @finance_admin_required
 def manage_savings():
+    if request.method == 'GET':
+        periodo, error = _periodo_de_la_consulta()
+        if error:
+            return error
+        return jsonify({**_periodo_a_dict(periodo), "savings": round(_ahorros_del_periodo(periodo), 2)}), 200
+
     month = request.args.get('month') or request.json.get('month')
     if not month or len(month) != 7 or '-' not in month:
         return jsonify({"error": "Parámetro 'month' (YYYY-MM) es requerido"}), 400
@@ -524,17 +655,23 @@ def manage_savings():
             
         db.session.commit()
         return jsonify(saving.to_dict()), 200
-        
-    saving = MonthlySaving.query.filter_by(month=month).first()
-    return jsonify({
-        "month": month,
-        "savings": saving.savings if saving else 0.0
-    }), 200
 
 @bp.route('/public/finance/ad-budget', methods=['GET', 'POST'])
 @login_required
 @finance_admin_required
 def manage_ad_budget():
+    if request.method == 'GET':
+        # El presupuesto es por mes (prorrateado si un rango corta el mes); lo gastado son los
+        # períodos de inversión de Marketing que tocan el período.
+        periodo, error = _periodo_de_la_consulta()
+        if error:
+            return error
+        return jsonify({
+            **_periodo_a_dict(periodo),
+            "budget": round(_presupuesto_de_anuncios(periodo), 2),
+            "spent": _gastado_en_anuncios(periodo['desde'], periodo['hasta'])
+        }), 200
+
     month = request.args.get('month') or (request.json.get('month') if request.is_json else None)
     if not month or len(month) != 7 or '-' not in month:
         return jsonify({"error": "Parámetro 'month' (YYYY-MM) es requerido"}), 400
@@ -559,49 +696,26 @@ def manage_ad_budget():
             budget_rec.budget = budget_val
             
         db.session.commit()
-        
-        ad_spends = AdPeriodSpend.query.filter(
-            AdPeriodSpend.start_date <= end_date,
-            AdPeriodSpend.end_date >= start_date
-        ).all()
-        total_spent = sum(sp.spend for sp in ad_spends)
-        
+
         return jsonify({
             "month": month,
             "budget": budget_rec.budget,
-            "spent": round(total_spent, 2)
+            "spent": _gastado_en_anuncios(start_date, end_date)
         }), 200
-
-    budget_rec = MarketingBudget.query.filter_by(date=start_date).first()
-    
-    ad_spends = AdPeriodSpend.query.filter(
-        AdPeriodSpend.start_date <= end_date,
-        AdPeriodSpend.end_date >= start_date
-    ).all()
-    total_spent = sum(sp.spend for sp in ad_spends)
-    
-    return jsonify({
-        "month": month,
-        "budget": budget_rec.budget if budget_rec else 0.0,
-        "spent": round(total_spent, 2)
-    }), 200
 
 @bp.route('/public/finance/summary', methods=['GET'])
 @login_required
 @finance_admin_required
 def get_finance_summary():
-    month = request.args.get('month')
-    if not month or len(month) != 7 or '-' not in month:
-        return jsonify({"error": "Parámetro 'month' (YYYY-MM) es requerido"}), 400
-        
-    try:
-        year, month_num = map(int, month.split('-'))
-        start_date = datetime(year, month_num, 1)
-        last_day = calendar.monthrange(year, month_num)[1]
-        end_date = datetime(year, month_num, last_day, 23, 59, 59, 999999)
-    except Exception:
-        return jsonify({"error": "Mes con formato inválido"}), 400
-        
+    """El resumen del período: un mes o, desde el 08/10/2026, un rango de fechas (`start_date` y
+    `end_date`). Ingresos y software van por las fechas exactas; nómina, anuncios y saldos son
+    libros mensuales y en un rango se prorratean por días (ver `meses_del_rango`); los ahorros
+    cuentan por mes entero (ver `_ahorros_del_periodo`)."""
+    periodo, error = _periodo_de_la_consulta()
+    if error:
+        return error
+    start_date, end_date = _limites(periodo)
+
     sales = FinancialSale.query.filter(
         FinancialSale.date >= start_date,
         FinancialSale.date <= end_date
@@ -645,29 +759,31 @@ def get_finance_summary():
         Expense.date <= end_date,
         func.lower(Expense.category) == 'software'
     ).all()
-    total_software = sum(e.amount for e in software_expenses)
-    
-    
-    budget_rec = MarketingBudget.query.filter_by(date=start_date.date()).first()
-    total_anuncios = budget_rec.budget if budget_rec else 0.0
-    
-    # Lo mismo que suma la pestaña Nómina: sale de la misma cuenta.
-    total_sueldos = sum(total_de_item(item) for item in nomina_del_mes(month))
+    total_software = round(sum(e.amount for e in software_expenses), 2)
 
+    total_anuncios = round(_presupuesto_de_anuncios(periodo), 2)
+
+    # Lo mismo que suma la pestaña Nómina: sale de la misma cuenta, mes por mes.
+    total_sueldos = round(sum(sum(total_de_item(item) for item in nomina_del_mes(mes)) * parte
+                              for mes, parte in periodo['meses']), 2)
+
+    # Los rubros ya redondeados: el total es la suma de lo que muestra la tabla de gastos.
     total_expenses = total_software + total_anuncios + total_sueldos
-    
-    balances = MonthlyPaymentMethodBalance.query.filter_by(month=month).all()
-    total_actual = sum(b.actual_amount for b in balances)
-    total_expected = sum(b.expected_amount for b in balances)
-    
-    saving = MonthlySaving.query.filter_by(month=month).first()
-    savings_val = saving.savings if saving else 0.0
-    
+
+    total_actual = 0.0
+    total_expected = 0.0
+    for mes, parte in periodo['meses']:
+        for b in MonthlyPaymentMethodBalance.query.filter_by(month=mes).all():
+            total_actual += (b.actual_amount or 0.0) * parte
+            total_expected += (b.expected_amount or 0.0) * parte
+
+    savings_val = _ahorros_del_periodo(periodo)
+
     profit = total_income - total_expenses
     balance_neto = total_income - total_expenses + savings_val
-    
+
     return jsonify({
-        "month": month,
+        **_periodo_a_dict(periodo),
         "kpis": {
             "total_income": round(total_income, 2),
             "total_expenses": round(total_expenses, 2),
