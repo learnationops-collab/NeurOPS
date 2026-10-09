@@ -182,8 +182,8 @@ def _correo_cortado(a, b):
     """Si dos correos tienen lo mismo antes de la «@» y a uno de los dos le falta el dominio."""
     local_a, _, dom_a = a.partition('@')
     local_b, _, dom_b = b.partition('@')
-    roto = lambda dom: not dom or '.' not in dom
-    return len(local_a) >= 5 and local_a == local_b and (roto(dom_a) or roto(dom_b))
+    sin_dominio = not dom_a or '.' not in dom_a or not dom_b or '.' not in dom_b
+    return len(local_a) >= 5 and local_a == local_b and sin_dominio
 
 
 def _identidad(venta, mov):
@@ -304,7 +304,9 @@ def emparejar(ventas, movs):
     def rango(v, m):
         return RANGO.get(ident(v, m))
 
-    cerca = lambda v, m: abs(m['fecha'] - v['fecha']) <= VENTANA
+    def cerca(v, m):
+        return abs(m['fecha'] - v['fecha']) <= VENTANA
+
     libres_v = {v['id']: v for v in ventas}
     libres_m = {m['id']: m for m in movs}
     filas = []
@@ -472,6 +474,11 @@ def _total(numeros):
     return round(sum(numeros), 2)
 
 
+def _neto(movs):
+    """Lo que llegó de esos cobros: su neto, o el bruto si el CSV no lo traía."""
+    return _total(m['obj'].neto if m['obj'].neto is not None else m['bruto'] for m in movs)
+
+
 def conciliar(desde, hasta):
     """La conciliación del período (dos `date`, inclusive): {filas, kpis, pasarelas, cargas}.
 
@@ -523,13 +530,14 @@ def conciliar(desde, hasta):
             'venta': _venta_a_dict(venta, inicio, fin) if venta else None,
             'movimientos': [_mov_a_dict(m, inicio, fin) for m in ms],
             'reportado': reportado, 'ingresado': ingresado,
-            'neto': _total((m['obj'].neto if m['obj'].neto is not None else m['bruto']) for m in ms) if ms else None,
+            'neto': _neto(ms) if ms else None,
             'comision': _total((m['obj'].comision or 0.0) for m in ms) if ms else None,
             'diferencia': round((ingresado or 0.0) - (reportado or 0.0), 2),
             # Lo que la fila mueve la Diferencia de arriba: solo cuenta lo que cae dentro del período.
             'aporte': round(sum(m['bruto'] for m in ms if inicio <= m['fecha'] <= fin)
                             - (venta['monto'] if venta and inicio <= venta['fecha'] <= fin else 0.0), 2),
-            'cliente_id': (venta and venta['cliente_id']) or next((m['cliente_id'] for m in ms if m['cliente_id']), None),
+            'cliente_id': ((venta and venta['cliente_id'])
+                           or next((m['cliente_id'] for m in ms if m['cliente_id']), None)),
             'revisada': ({'por': revision.revisada_por.username if revision.revisada_por else None,
                           'at': _iso(revision.revisada_at), 'nota': revision.nota} if revision else None),
             'candidatos': candidatos,
@@ -560,7 +568,7 @@ def _kpis(filas, ventas, movs, inicio, fin, pasarelas, con_csv=True):
     return {
         'reportado': reportado, 'ventas': len(suyas),
         'ingresado': ingresado, 'movimientos': len(cobros),
-        'neto': _total((m['obj'].neto if m['obj'].neto is not None else m['bruto']) for m in cobros) if con_csv else None,
+        'neto': _neto(cobros) if con_csv else None,
         'comision': _total((m['obj'].comision or 0.0) for m in cobros) if con_csv else None,
         'comision_estimada': _total(v['monto'] * COMISION_ESTIMADA[v['pasarela']] for v in suyas),
         'diferencia': round(ingresado - reportado, 2) if con_csv else None,

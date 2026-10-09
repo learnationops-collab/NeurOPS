@@ -216,7 +216,8 @@ def test_una_venta_reportada_dos_veces_deja_la_segunda_sin_ingreso_con_el_cobro_
 def test_una_venta_reportada_por_stripe_que_entro_por_hotmart_sugiere_cambiar_el_metodo(db):
     v = venta(db, 250, datetime(2026, 9, 28, 18, 57), 'greta1@prueba.com', 'Greta Castro')
     subir(stripe(('2026-09-10 15:00:00', 100, 'Ana Prueba', 'ana@prueba.com')))
-    subir(CABECERA_HOTMART + '28/09/2026 21:15:12,Greta Estefania Castro Gallo,228.93,250,21.07,9.20%,greta2@prueba.com\n',
+    subir(CABECERA_HOTMART
+          + '28/09/2026 21:15:12,Greta Estefania Castro Gallo,228.93,250,21.07,9.20%,greta2@prueba.com\n',
           'hotmart.csv')
 
     r = conciliar()
