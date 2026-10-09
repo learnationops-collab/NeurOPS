@@ -22,14 +22,17 @@ FUENTES = ('renovacion', 'upsell', 'conversion', 'cuota')
 # Quiénes cobran y cómo se llaman en pantalla: el orden es el de los tiles de Payroll.
 PERSONAS = {
     'setters': [('elias', 'Elias'), ('paula', 'Paula')],
-    'closers': [('jeancarlo', 'Jean Carlo'), ('facundo', 'Facundo')],
+    'closers': [('jeancarlo', 'Jean Carlo'), ('facundo', 'Facundo'), ('nerina', 'Nerina'), ('gabriel', 'Gabriel'),
+                ('marlon', 'Marlon')],
     'director': [('marlon', 'Marlon')],
     'fulfillment': [('andy', 'Andy'), ('dari', 'Dari'), ('santi', 'Santi'), ('belu', 'Belu'), ('pedro', 'Pedro')],
 }
 
 TASAS_DE_FABRICA = {
     'setters': {'elias': 8, 'paula': 8},
-    'closers': {'jeancarlo': 10, 'facundo': 10},
+    # Nerina, Gabriel y Marlon (sus ventas propias) desde el 08/10/2026: un juego guardado antes los
+    # completa con estos. El de Marlon como director es aparte, sobre las ventas de los otros.
+    'closers': {'jeancarlo': 10, 'facundo': 10, 'nerina': 10, 'gabriel': 10, 'marlon': 10},
     'director': {'marlon': 5},
     # PDF «Comisiones por programa» de Fulfillment, de prueba desde septiembre de 2026.
     'fulfillment': {

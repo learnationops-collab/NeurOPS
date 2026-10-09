@@ -21,8 +21,11 @@
   .dc-shell .fz-grid--2,
   .dc-shell .fz-grid--4{grid-template-columns:minmax(0,1fr)}
 }
-/* Cinco tiles por fila son angostos: la cifra baja un escalón para no cortarse. */
+/* Cinco tiles por fila son angostos: la cifra baja un escalón para no cortarse, y el rótulo de los
+   KPIs de Payroll aprieta el espaciado (una palabra sola como «Comisiones» no se parte y, entre 900
+   y 950 px, empujaba la «i» fuera del tile). */
 .dc-shell .fz-grid--5 .kpi-n{font-size:clamp(22px,2.1vw,30px)}
+.dc-shell .fz-grid--5 > section.kpi .t-eyebrow{letter-spacing:.16em}
 
 .dc-shell .fz-bloque{display:grid;gap:var(--s3);min-width:0}
 
@@ -88,6 +91,20 @@
 .dc-shell .fz-check[aria-pressed="true"]{background:var(--success);border-color:var(--success);color:var(--on-state)}
 
 .dc-shell .fz-acciones{display:flex;align-items:center;gap:var(--s2);justify-content:flex-end}
+
+/* La comisión de la nómina: el campo y, si se cargó a mano, la marca «manual» que vuelve al
+   cálculo. La marca entra con un pop chico; el campo no se corre (queda pegado a la derecha). */
+.dc-shell .fz-comision{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-width:0}
+.dc-shell .fz-comision .fz-monto{flex:0 1 150px;min-width:0}
+.dc-shell .fz-manual{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 7px;flex-shrink:0;
+  border-radius:var(--radius-pill);border:1px solid color-mix(in srgb,var(--warning) 40%,transparent);
+  background:color-mix(in srgb,var(--warning) 13%,transparent);color:var(--warning);cursor:pointer;
+  animation:dcTagIn .22s var(--spring);transition:background-color .16s ease,transform .16s var(--spring)}
+.dc-shell .fz-manual small{font-size:9.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;line-height:1}
+.dc-shell .fz-manual svg{width:11px;height:11px}
+.dc-shell .fz-manual:hover{background:color-mix(in srgb,var(--warning) 24%,transparent)}
+.dc-shell .fz-manual:active{transform:scale(.92)}
+@media (prefers-reduced-motion:reduce){.dc-shell .fz-manual{animation:none}}
 
 /* Balance del período y anuncios: cajas hundidas con su cifra. */
 .dc-shell .fz-dato{display:grid;gap:var(--s2);align-content:start}
@@ -171,16 +188,31 @@
   .dc-shell .fz-detalle{display:block;break-before:page}
   /* Una hoja A4 mide menos que los cortes de pantalla (760 y 900px), que apilaban todo en una
      columna. Los cinco de Fulfillment van en una sola fila (de a tres quedaban 3 + 2) y sin su
-     chip, que ahí no entra y repite el título del grupo. */
+     chip, que ahí no entra y repite el título del grupo. Los cinco KPIs de arriba sí llevan su
+     rótulo: sin él no se sabría qué cifra es cuál. */
   .dc-shell .fz-grid--3{grid-template-columns:repeat(3,minmax(0,1fr))}
   .dc-shell .fz-grid--5{grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--s2)}
-  .dc-shell .fz-grid--5 .kpi-cab{display:none}
+  .dc-shell .fz-grid--5 .fz-persona .kpi-cab{display:none}
   .dc-shell .fz-grid--5 .kpi{padding:var(--s3)}
   .dc-shell .fz-grid--5 .kpi-n{font-size:19px}
   /* Los tiles son botones (llevan a Revisar), y la hoja de impresión global esconde todo
      `button`: sin esto el PDF salía sin ninguna persona. */
   .dc-shell button.fz-persona{display:flex !important;break-inside:avoid}
 }
+
+/* El período de Finanzas (08/10/2026). El menú de su píldora son 18 meses y «Personalizado»
+   (marcado con `.fz-periodo`): no pasa del alto de la pantalla, los meses scrollean, y con
+   «Personalizado» las dos fechas quedan pegadas al pie, a la vista. */
+.dc-shell .menu:has(.fz-periodo){max-height:min(560px,calc(100vh - 170px));overflow-y:auto;
+  overscroll-behavior:contain;scrollbar-width:thin}
+.dc-shell .menu:has(.fz-periodo) .menu-pie{position:sticky;bottom:calc(var(--s2) * -1);
+  padding-bottom:var(--s2);background:var(--bg-flotante)}
+
+/* La nota de los libros mensuales (nómina, saldos, anuncios, ahorros) en un período que no es un
+   mes: se ven sumados y no se editan. Chica y apagada, con su candado. */
+.dc-shell .fz-nota{display:inline-flex;align-items:center;gap:6px;min-width:0;
+  font-size:11.5px;font-weight:600;line-height:1.35;color:var(--text-muted-40)}
+.dc-shell .fz-nota svg{width:12px;height:12px;flex-shrink:0}
 
 /* El rótulo de cada grupo en el desplegable de personas de Payroll. */
 .dc-shell .fz-menu-grupo{padding:4px 14px 2px;font-size:10px}

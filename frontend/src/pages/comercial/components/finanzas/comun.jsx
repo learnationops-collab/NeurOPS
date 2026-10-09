@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Calendar } from 'lucide-react';
 import { Humo, PillMenu, Tip } from '../Shared';
 import Cifra from '../Cifra';
+import RangoFechas, { rangoDe, textoRango } from '../RangoFechas';
 
 /**
  * Piezas que comparten las secciones Finanzas y Payroll del dashboard comercial.
@@ -92,31 +93,125 @@ const ultimosMeses = () => {
     });
 };
 
-// El mes queda en el último elegido (por navegador): revisar un mes cerrado no obliga a volver
-// a elegirlo cada vez que se entra. Es la misma clave que usaba /admin/finance.
-const MES_GUARDADO = 'finanzas.mes';
+// ------------------------------------------------------------------------------------------------
+// El período de Finanzas (08/10/2026): un mes, como siempre, o un rango personalizado de fechas.
+//
+// Lo que se elige es {tipo: 'mes', mes} o {tipo: 'custom', desde, hasta}. Las vistas reciben el
+// período ya resuelto, {desde, hasta, mes}: `mes` ('YYYY-MM') existe solo si el período es justo un
+// mes calendario, y un rango del 1 al último día de un mes cuenta como ese mes. Los libros
+// mensuales (nómina, saldos, anuncios, ahorros) se editan solo con `mes`; con un rango se muestran
+// sumados, en solo lectura. Las fechas son días de calendario local (ver RangoFechas).
 
-export const leerMesGuardado = () => {
-    try {
-        const mes = localStorage.getItem(MES_GUARDADO);
-        if (mes && /^\d{4}-\d{2}$/.test(mes)) return mes;
-    } catch { /* sin almacenamiento: el mes actual */ }
-    return mesActual();
+const diasDelMes = (mes) => {
+    const [anio, m] = mes.split('-').map(Number);
+    return new Date(anio, m, 0).getDate();
 };
 
-export const guardarMes = (mes) => {
+/** Del 1 al último día del mes 'YYYY-MM'. */
+export const rangoDelMes = (mes) => ({ desde: `${mes}-01`, hasta: `${mes}-${String(diasDelMes(mes)).padStart(2, '0')}` });
+
+/** El 'YYYY-MM' si el rango es justo un mes calendario; si no, null. */
+export const mesExacto = (desde, hasta) => {
+    const mes = desde.slice(0, 7);
+    const entero = rangoDelMes(mes);
+    return entero.desde === desde && entero.hasta === hasta ? mes : null;
+};
+
+/** {desde, hasta, mes} de lo elegido en la píldora. */
+export const periodoDe = (eleccion) => {
+    if (eleccion.tipo === 'custom') return { desde: eleccion.desde, hasta: eleccion.hasta, mes: mesExacto(eleccion.desde, eleccion.hasta) };
+    return { ...rangoDelMes(eleccion.mes), mes: eleccion.mes };
+};
+
+/**
+ * [{mes, parte}] de cada mes calendario que toca el rango: parte es 1 si el rango lo cubre entero y,
+ * si lo corta, los días del rango en ese mes sobre los días del mes. Es la regla del backend para
+ * los libros mensuales (`meses_del_rango` en finance.py); acá la usa la nómina de varios meses.
+ */
+export const mesesDelRango = (desde, hasta) => {
+    const meses = [];
+    let mes = desde.slice(0, 7);
+    while (mes <= hasta.slice(0, 7)) {
+        const entero = rangoDelMes(mes);
+        const inicio = desde > entero.desde ? desde : entero.desde;
+        const fin = hasta < entero.hasta ? hasta : entero.hasta;
+        const dias = Number(fin.slice(8, 10)) - Number(inicio.slice(8, 10)) + 1;
+        meses.push({ mes, parte: dias / diasDelMes(mes) });
+        const [anio, m] = mes.split('-').map(Number);
+        mes = m === 12 ? `${anio + 1}-01` : `${anio}-${String(m + 1).padStart(2, '0')}`;
+    }
+    return meses;
+};
+
+/** «septiembre 2026», o «16/09 – 15/10» si no es un mes justo. */
+export const textoPeriodo = (periodo) => (periodo.mes ? nombreDelMes(periodo.mes) : textoRango(periodo));
+
+// Queda lo último elegido (por navegador): revisar un mes cerrado no obliga a volver a elegirlo cada
+// vez que se entra. El mes va en la clave que usaba /admin/finance (y se sigue leyendo); un rango
+// personalizado va en otra, que manda mientras exista.
+const MES_GUARDADO = 'finanzas.mes';
+const RANGO_GUARDADO = 'finanzas.periodo';
+
+const leerRangoGuardado = () => {
     try {
-        localStorage.setItem(MES_GUARDADO, mes);
+        const guardado = JSON.parse(localStorage.getItem(RANGO_GUARDADO) || 'null');
+        return (guardado && rangoDe(guardado.desde, guardado.hasta)) || null;
+    } catch {
+        return null; // sin almacenamiento o un valor roto: como si no hubiera
+    }
+};
+
+export const leerPeriodoGuardado = () => {
+    const rango = leerRangoGuardado();
+    if (rango) return { tipo: 'custom', ...rango };
+    try {
+        const mes = localStorage.getItem(MES_GUARDADO);
+        if (mes && /^\d{4}-\d{2}$/.test(mes)) return { tipo: 'mes', mes };
+    } catch { /* sin almacenamiento: el mes actual */ }
+    return { tipo: 'mes', mes: mesActual() };
+};
+
+export const guardarPeriodo = (eleccion) => {
+    try {
+        if (eleccion.tipo === 'custom') {
+            localStorage.setItem(RANGO_GUARDADO, JSON.stringify({ desde: eleccion.desde, hasta: eleccion.hasta }));
+        } else {
+            localStorage.setItem(MES_GUARDADO, eleccion.mes);
+            localStorage.removeItem(RANGO_GUARDADO);
+        }
     } catch { /* sin almacenamiento: dura mientras la página está abierta */ }
 };
 
-/** Píldora del mes, como la del período del tablero. */
-export const MenuMes = ({ mes, onCambiar }) => {
+/**
+ * La píldora del período de Finanzas, como la del período del tablero: «Personalizado» arriba (con
+ * 18 meses abajo quedaba fuera de la vista) y los meses del actual hacia atrás. Con «Personalizado»
+ * la píldora dice el rango y el menú queda abierto con las dos fechas al pie, que no se van al
+ * scrollear los meses (ver `.fz-periodo` en finanzas.css). Arranca en el mes que se estaba viendo.
+ */
+export const MenuPeriodoFinanzas = ({ eleccion, onCambiar }) => {
+    const custom = eleccion.tipo === 'custom';
     const meses = ultimosMeses();
-    if (!meses.includes(mes)) meses.push(mes);
+    if (!custom && !meses.includes(eleccion.mes)) meses.push(eleccion.mes);
+    const opciones = [
+        { key: 'custom', label: <span className="fz-periodo">Personalizado</span>, quedaAbierto: true },
+        ...meses.map(m => ({ key: m, label: nombreDelMes(m) })),
+    ];
     return (
-        <PillMenu icono={<Calendar size={14} />} rotulo="mes" texto={nombreDelMes(mes)} valor={mes}
-            opciones={meses.map(m => ({ key: m, label: nombreDelMes(m) }))}
-            onChange={onCambiar} />
+        <PillMenu icono={<Calendar size={14} />} rotulo="período"
+            texto={custom ? textoRango(eleccion) : nombreDelMes(eleccion.mes)}
+            // 340 y no los 324 de Payroll: la barra de los meses le come el ancho a las dos fechas,
+            // y debajo de ~300px `.rango` las apila una sobre otra.
+            valor={custom ? 'custom' : eleccion.mes} opciones={opciones} ancho={custom ? 340 : undefined}
+            pie={custom ? (
+                <RangoFechas rotulo="Período" desde={eleccion.desde} hasta={eleccion.hasta}
+                    onCambiar={({ desde, hasta }) => {
+                        const rango = rangoDe(desde, hasta);
+                        if (rango) onCambiar({ tipo: 'custom', ...rango });
+                    }} />
+            ) : null}
+            onChange={(k) => {
+                if (k !== 'custom') onCambiar({ tipo: 'mes', mes: k });
+                else if (!custom) onCambiar({ tipo: 'custom', ...rangoDelMes(eleccion.mes) });
+            }} />
     );
 };

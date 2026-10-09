@@ -2,7 +2,7 @@
 10/sep/2026): % fijo sobre el cash collected NETO (ya descontadas las fees de Stripe/Hotmart)
 que cada quien generó este mes — 10% para closers, 8% para setters.
 
-Quien está en la nómina con un % propio (Elias, Paula, Jean Carlo, Facundo) ve el suyo, el del mes
+Quien está en la nómina con un % propio (`SETTERS_CON_COMISION`, `CLOSERS_CON_COMISION`) ve el suyo, el del mes
 según `comision_tasas_service` (editable desde Payroll desde el 08/10/2026): así la tarjeta y la
 nómina dicen lo mismo. El resto del equipo, el caso general de 10% / 8%."""
 from datetime import datetime, timedelta
@@ -11,12 +11,33 @@ CLOSER_RATE = 0.10
 SETTER_RATE = 0.08
 DIRECTOR_RATE = 0.05
 
-# Quiénes cobran comisión variable en la nómina (/admin/finance y /admin/payroll), por el
-# nombre con el que aparecen en las ventas (setter = fuente de la agenda que originó la venta,
-# closer = `resolver_nombre_closer`) -> clave con la que viajan en las respuestas. Marlon, como
-# Director de Ventas, se lleva DIRECTOR_RATE de lo que venden estos closers, sin renovaciones.
+# Quiénes cobran comisión variable en la nómina (Finanzas y Payroll; la cuenta vive en
+# `nomina_service`), por el nombre con el que aparecen en las ventas (setter = fuente de la agenda
+# que originó la venta, closer = `resolver_nombre_closer`, normalizado) -> clave con la que viajan
+# en las respuestas. Marlon, como Director de Ventas, se lleva DIRECTOR_RATE de lo que venden estos
+# closers, sin renovaciones.
+#
+# Nerina y Gabriel cerraron ventas en septiembre de 2026 y no estaban (08/10/2026). Nerina ya no
+# está activa, pero `resolver_nombre_closer` resuelve contra todos los usuarios, activos o no.
+# «Gabriel» es Gabriel Hernandez: el 'Gabriel' a secas es otro closer de abril y mayo de 2026
+# (gabriel@thelearnation.com, del diccionario histórico) y Gabriel Cardozo no vendió.
+#
+# Marlon también vende: desde el 08/10/2026 cobra sus ventas propias como cualquier closer (con su %
+# de closer) y aparte su % de director sobre las de los OTROS closers; las suyas no entran en esa
+# parte. Sus ventas (marlon@thelearnation.com, marlongarcia27948@gmail.com) resuelven a su usuario,
+# 'Marlon Garcia', o a 'Marlon' (el diccionario histórico, donde no está el usuario).
 SETTERS_CON_COMISION = {'elias': 'elias', 'paula': 'paula'}
-CLOSERS_CON_COMISION = {'jean carlo': 'jeancarlo', 'facundo': 'facundo'}
+CLOSERS_CON_COMISION = {'jean carlo': 'jeancarlo', 'facundo': 'facundo', 'nerina': 'nerina',
+                        'gabriel hernandez': 'gabriel', 'marlon garcia': 'marlon', 'marlon': 'marlon'}
+DIRECTOR_DE_VENTAS = 'marlon'
+
+
+def clave_de_closer(nombre):
+    """La clave de nómina del closer con ese nombre canónico (`resolver_nombre_closer`), o None.
+    Se compara normalizado (sin acentos ni mayúsculas): 'Marlon García' y 'Marlon Garcia' son el
+    mismo usuario escrito de dos formas."""
+    from app.services.fuente_service import normalizar
+    return CLOSERS_CON_COMISION.get(normalizar(nombre))
 
 # Fees de la pasarela que se descuentan para llegar al cash NETO. Los mismos factores viven
 # repetidos en media docena de sitios de app/api/public (finance.py, financial_sales.py); acá se
@@ -64,7 +85,7 @@ class CommissionService:
         stats = CloserService.get_comprehensive_stats(user.id, start_date=inicio, end_date=fin)
         cash_neto = float((stats.get('sales') or {}).get('totals', {}).get('cash_neto') or 0.0)
         from app.services.closer_name_service import resolver_nombre_closer
-        clave = CLOSERS_CON_COMISION.get((resolver_nombre_closer(user.username) or '').strip().lower())
+        clave = clave_de_closer(resolver_nombre_closer(user.username))
         tasa = _tasa_propia('closers', clave, mes, CLOSER_RATE)
         return {
             'role': 'closer',
