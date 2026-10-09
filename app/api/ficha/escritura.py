@@ -216,7 +216,8 @@ def total(appt_id):
 
 @bp.route('/<int:appt_id>/datos', methods=['PATCH'])
 def datos_del_lead(appt_id):
-    """Nombre, telefono, correo e instagram del cliente de esta agenda, y el examen de la agenda.
+    """Nombre, telefono, correo e instagram del cliente de esta agenda, y el examen y la fuente de
+    la agenda.
 
     Es la misma correccion que `PATCH /closer/customers/<id>` con la misma normalizacion, pero con
     el permiso de la ficha (la direccion y cualquier closer, como esa ruta; ni setter ni triage) y
