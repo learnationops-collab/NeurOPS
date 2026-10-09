@@ -72,6 +72,23 @@ describe('Payroll', () => {
             .toBe('1 ingresos · neto $300.00 · base $600.00');
     });
 
+    it('al cambiar de período antes de que cargue el anterior, la respuesta vieja no pisa la nueva', async () => {
+        // Visto el 09/10/2026: de «Este mes» a «Mes pasado» rápido, octubre llegaba último y quedaba
+        // en pantalla con el rótulo de septiembre.
+        let soltarOctubre;
+        api.getPayroll.mockImplementation((desde) => (desde === '2026-10-01'
+            ? new Promise((r) => { soltarOctubre = () => r({ ...NOMINA, totales: { cash_neto: 111, cash_bruto: 111, ventas: 1 } }); })
+            : Promise.resolve(NOMINA)));
+        const props = { grupos: GRUPOS.map(g => g.id), tasasAbiertas: false, onCerrarTasas: () => {} };
+        const { rerender } = render(<Payroll desde="2026-10-01" hasta="2026-10-09" {...props} />);
+        rerender(<Payroll desde="2026-09-01" hasta="2026-09-30" {...props} />);
+        await screen.findByText('3 ventas · bruto $2,400.00');
+
+        await act(async () => { soltarOctubre(); });
+        expect(screen.getByText('3 ventas · bruto $2,400.00')).toBeTruthy();
+        expect(screen.queryByText('1 venta · bruto $111.00')).toBeNull();
+    });
+
     it('a quien recibió plata de un cliente por transferencia el tile le dice cuánto y lo que queda por pagarle', async () => {
         // Pedido de Kerwin (09/10/2026): se le descuenta de lo que se le paga, no de lo que cuesta:
         // la cifra grande (la comisión) y los KPIs no cambian.

@@ -338,8 +338,16 @@ const Tile = ({ persona, datos, onVer }) => {
 const Payroll = ({ desde, hasta, ver = null, onVer, grupos, personas = [], tasasAbiertas, onCerrarTasas, excluirAbierto, onCerrarExcluir }) => {
     const [datos, setDatos] = useState(null);
 
-    const cargar = useCallback(() => apiFz.getPayroll(desde, hasta).then(setDatos)
-        .catch(() => toast.error('No se pudo cargar la nómina')), [desde, hasta]);
+    // Solo vale la respuesta del último pedido (09/10/2026): al pasar de «Este mes» a «Mes pasado»
+    // antes de que terminara de cargar, la respuesta de octubre llegaba después y pisaba la de
+    // septiembre, con el rótulo diciendo septiembre.
+    const ultimo = useRef(0);
+    const cargar = useCallback(() => {
+        const pedido = ++ultimo.current;
+        return apiFz.getPayroll(desde, hasta)
+            .then((d) => { if (pedido === ultimo.current) setDatos(d); })
+            .catch(() => { if (pedido === ultimo.current) toast.error('No se pudo cargar la nómina'); });
+    }, [desde, hasta]);
     useEffect(() => { setDatos(null); cargar(); }, [cargar]);
 
     // El detalle de ventas del PDF se arma solo mientras se imprime: siempre montado eran cientos
