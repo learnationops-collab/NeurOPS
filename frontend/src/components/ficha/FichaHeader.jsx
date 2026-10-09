@@ -287,7 +287,7 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
                                         valor={borrador[c.clave] ?? ''} alto={40} invalido={!!fallo}
                                         aria-describedby={describe} onCambiar={poner(c.clave)}>
                                         {!iniciales[c.clave] && <option value="">Sin {c.rotulo.toLowerCase()} · elegí una</option>}
-                                        {gruposDeFuente(opciones(ficha, c.catalogo), iniciales[c.clave]).map(g => (
+                                        {gruposDeFuente(opciones(ficha, c.catalogo), iniciales[c.clave], id.fuente_label).map(g => (
                                             <optgroup key={g.titulo} label={g.titulo}>
                                                 {(g.opciones || []).map(o => (
                                                     <option key={o.clave} value={o.clave}>{o.label}</option>

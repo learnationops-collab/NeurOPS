@@ -167,7 +167,7 @@ describe('onAccion pega en el endpoint correcto', () => {
                 closer_id: 7, chip: { label: 'Asistió', tone: 'success' },
             }] },
             vocabulario: { ...fichaAlDia.vocabulario, fuentes: [{ titulo: 'Embudos', opciones: [
-                { clave: 'vsl', label: 'VSL' }, { clave: 'workshop', label: 'Workshop en vivo' },
+                { clave: 'vsl', label: 'VSL' }, { clave: 'workshop', label: 'Workshop' },
             ] }] },
         });
         await usuario.click(screen.getByRole('button', { name: /^Agendas/ }));

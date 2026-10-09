@@ -166,14 +166,27 @@ def test_los_tipos_de_seguimiento_son_los_grupos_de_la_pestana_del_closer(db):
     assert all(t['desc'] for t in tipos)
 
 
-def test_las_fuentes_son_el_catalogo_del_tablero_de_agendas(db):
+def test_las_fuentes_son_un_recorte_del_catalogo_del_tablero_de_agendas(db):
     """Dos catalogos de fuentes se desincronizan, y el embudo del workshop clasifica por este
-    texto: contaria distinto segun desde donde se corrigio la agenda."""
+    texto: contaria distinto segun desde donde se corrigio la agenda. La ficha ofrece el catalogo
+    sin la grabacion, el setting sin setter y «Desconocido» (09/10/2026), pero no inventa claves."""
     from app.services.fuente_service import FUENTES_CANONICAS
 
     claves = [o['clave'] for g in voc.fuentes_disponibles() for o in g['opciones']]
 
-    assert sorted(claves) == sorted(FUENTES_CANONICAS)
+    assert set(claves) <= set(FUENTES_CANONICAS)
+    assert sorted(claves) == sorted(set(FUENTES_CANONICAS) - voc.FUENTES_QUE_LA_FICHA_NO_OFRECE)
+    assert voc.fuentes_elegibles() == set(claves)
+
+
+def test_el_workshop_se_llama_workshop_y_las_que_no_se_ofrecen_conservan_su_etiqueta(db):
+    """Pedido del 09/10/2026: «la que dice workshop en vivo ponle solo workshop». Las que la ficha
+    ya no ofrece se siguen leyendo bien en las agendas que las tienen."""
+    [embudos, _] = voc.fuentes_disponibles()
+
+    assert [o['label'] for o in embudos['opciones']] == ['Workshop', 'VSL']
+    assert voc.etiqueta_de_fuente('workshop_landing') == 'Workshop · grabación'
+    assert voc.etiqueta_de_fuente('setting') == 'Setting · sin setter identificado'
 
 
 def test_los_programas_salen_del_mismo_mapa_que_traduce_el_tipo_de_pago(db):

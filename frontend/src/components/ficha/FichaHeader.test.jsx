@@ -188,7 +188,7 @@ describe('la fuente en modo edición', () => {
     // `ficha_vocabulario.fuentes_disponibles()`: el mismo catálogo que ofrece el historial.
     const FUENTES = [
         { titulo: 'Embudos', tono: 'info', opciones: [
-            { clave: 'workshop', label: 'Workshop en vivo' },
+            { clave: 'workshop', label: 'Workshop' },
             { clave: 'vsl', label: 'VSL' },
         ] },
         { titulo: 'Setters', tono: 'success', opciones: [{ clave: 'Paula', label: 'Paula' }] },
@@ -213,12 +213,26 @@ describe('la fuente en modo edición', () => {
             g.label, [...g.querySelectorAll('option')].map(o => o.textContent),
         ])).toEqual([
             ['Fuera del catálogo', ['Venta histórica sin agenda']],
-            ['Embudos', ['Workshop en vivo', 'VSL']],
+            ['Embudos', ['Workshop', 'VSL']],
             ['Setters', ['Paula']],
         ]);
         // Va con los otros cuatro, último como en la franja.
         expect([...document.querySelectorAll('.fi-cab-editor > .fi-dato > .t-rotulo')]
             .map(r => r.textContent)).toEqual(['Examen', 'Teléfono', 'Correo', 'Instagram', 'Fuente']);
+    });
+
+    it('una fuente que ya no se ofrece se lee con su etiqueta, no con la clave', async () => {
+        // 09/10/2026: la grabación del workshop salió de la lista, pero hay agendas que la tienen.
+        const usuario = userEvent.setup();
+        await abrir(conFuente(fichaPrecall, {
+            fuente: 'workshop_landing', fuente_label: 'Workshop · grabación',
+        }));
+        await usuario.click(lapiz());
+
+        expect(fuente()).toHaveValue('workshop_landing');
+        const [grupo] = fuente().querySelectorAll('optgroup');
+        expect([grupo.label, grupo.querySelector('option').textContent])
+            .toEqual(['Fuera del catálogo', 'Workshop · grabación']);
     });
 
     it('elegir otra la manda sola, por el mismo PATCH de los datos', async () => {

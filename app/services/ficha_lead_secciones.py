@@ -12,6 +12,7 @@ from datetime import datetime
 from app import db
 from app.models import ClientComment, Comment, CommentNotification, LeadEventLog, SurveyAnswer, SurveyQuestion, User
 from app.services.estado_lead import estado_de_agenda
+from app.services.ficha_vocabulario import etiqueta_de_fuente
 
 # Etiquetas de `Client.form_data` (el formulario de calificacion que llega por n8n). Estaban solo
 # en el JS (`CloserWorkflowPage.jsx` y `FormsManagementPage`): el orden de este dict es el orden en
@@ -105,6 +106,11 @@ def historial(appts, ahora, tiene_venta=False):
                         # closer cuando se corrige la agenda (`PATCH /ficha/<id>/agenda`).
                         'closer_id': a.closer_id,
                         'fuente': a.origin or None,
+                        # Como se lee, igual que en la cabecera. La lista de fuentes que viaja en
+                        # el vocabulario ya no trae todas (la grabación del workshop, el setting
+                        # sin setter y «Desconocido» no se ofrecen), y sin esto la fila de una
+                        # agenda que tiene una de esas mostraba la clave cruda.
+                        'fuente_label': etiqueta_de_fuente(a.origin),
                         # Con qué tipo arranca «Agendar seguimiento» sobre esta agenda. Si la
                         # llamada no dice nada (todavía no pasó, o fue una venta), un cliente
                         # que ya compró es cobranza y el resto, recuperación.

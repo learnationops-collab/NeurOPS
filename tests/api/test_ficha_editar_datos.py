@@ -234,17 +234,36 @@ def test_la_fuente_se_corrige_desde_la_cabecera_y_queda_en_la_bitacora(client, d
                                                                        auth_headers):
     """Pedido del 09/10/2026: «al darle en editar en el modal no puedo modificar la fuente del
     lead». Es la misma correccion que la del historial: un embudo no es de ningun setter."""
-    r = editar(client, auth_headers, equipo['closer'], lead, fuente='workshop_landing')
+    r = editar(client, auth_headers, equipo['closer'], lead, fuente='workshop')
 
     assert r.status_code == 200, r.get_json()
-    assert r.get_json()['cambios'] == {'fuente': 'workshop_landing'}
-    assert (lead.origin, lead.setter_id) == ('workshop_landing', None)
+    assert r.get_json()['cambios'] == {'fuente': 'workshop'}
+    assert (lead.origin, lead.setter_id) == ('workshop', None)
     [evento] = eventos(lead)
-    assert "fuente: 'vsl' → 'workshop_landing'" in evento.description
+    assert "fuente: 'vsl' → 'workshop'" in evento.description
 
     ficha = client.get(f'/api/ficha/lead?appointment_id={lead.id}',
                        headers=auth_headers(equipo['closer'])).get_json()
-    assert ficha['identidad']['fuente_label'] == 'Workshop · grabación'
+    assert ficha['identidad']['fuente_label'] == 'Workshop'
+
+
+@pytest.mark.parametrize('fuente', ['workshop_landing', 'setting', 'Desconocido'])
+def test_las_fuentes_que_la_ficha_no_ofrece_no_se_eligen_pero_se_conservan(
+        client, db, lead, equipo, auth_headers, fuente):
+    """Pedido del 09/10/2026: la grabación del workshop, el setting sin setter y «Desconocido» ya
+    no se ofrecen. Siguen en el catálogo del Tablero, así que una agenda que ya tiene una (la pone
+    el sync con n8n) la conserva al corregirle otro dato."""
+    r = editar(client, auth_headers, equipo['closer'], lead, fuente=fuente)
+    assert r.status_code == 400
+    assert r.get_json()['campo'] == 'fuente'
+    assert lead.origin == 'vsl'
+
+    lead.origin = fuente
+    db.session.commit()
+    r = editar(client, auth_headers, equipo['closer'], lead, fuente=fuente, telefono='+52 55 1234 0000')
+    assert r.status_code == 200, r.get_json()
+    assert r.get_json()['cambios'] == {'telefono': '+52 55 1234 0000'}
+    assert lead.origin == fuente
 
 
 def test_una_fuente_que_es_un_setter_le_atribuye_la_agenda(client, db, lead, equipo, make_user,

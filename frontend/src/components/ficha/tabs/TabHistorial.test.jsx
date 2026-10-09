@@ -34,7 +34,7 @@ const VOCABULARIO = {
     // `ficha_vocabulario.fuentes_disponibles()`: el catálogo del Tablero de Agendas, en dos grupos.
     fuentes: [
         { titulo: 'Embudos', tono: 'info', opciones: [
-            { clave: 'workshop', label: 'Workshop en vivo' },
+            { clave: 'workshop', label: 'Workshop' },
             { clave: 'vsl', label: 'VSL' },
         ] },
         { titulo: 'Setters', tono: 'success', opciones: [{ clave: 'Paula', label: 'Paula' }] },
@@ -133,6 +133,19 @@ describe('corregir una agenda en la fila', () => {
         await usuario.click(within(editor()).getByRole('button', { name: 'Guardar cambios' }));
 
         expect(onAccion).toHaveBeenCalledWith('editar_agenda', { fuente: 'Paula', closer_id: 8 }, 71);
+    });
+
+    it('una fuente que la ficha ya no ofrece se lee con su etiqueta, en la fila y en el editor', async () => {
+        // 09/10/2026: la grabación del workshop salió de la lista; la fila trae cómo se lee.
+        const usuario = userEvent.setup();
+        const grabacion = { ...AGENDA, fuente: 'workshop_landing', fuente_label: 'Workshop · grabación' };
+        await abrirAgendas(usuario, ficha([grabacion]));
+
+        expect(screen.getByTitle('Workshop · grabación · Jean Carlo')).toBeInTheDocument();
+        await usuario.click(lapiz());
+        expect(within(editor()).getByLabelText('Fuente de la agenda')).toHaveValue('workshop_landing');
+        expect(within(within(editor()).getByRole('group', { name: 'Fuera del catálogo' }))
+            .getByRole('option', { name: 'Workshop · grabación' })).toBeInTheDocument();
     });
 
     it('una fuente vieja fuera del catálogo se muestra, y no viaja si no se toca', async () => {

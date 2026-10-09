@@ -59,24 +59,24 @@ def _instante_utc(valor):
 
 
 def validar_fuente(valor, actual):
-    """La fuente pedida si cambia, None si es la misma, `ErrorDeAccion` si no es del catalogo.
+    """La fuente pedida si cambia, None si es la misma, `ErrorDeAccion` si no es de la lista.
 
-    Se ofrece el catalogo oficial de fuentes (`fuente_service.FUENTES_CANONICAS`), que es el mismo
-    del selector del Tablero de Agendas y de su edicion masiva. Los valores historicos que no estan
-    en el catalogo se siguen aceptando SOLO si no cambian: la fila puede conservar su fuente vieja,
-    pero una fuente nueva sale de la lista.
+    La lista es la que ofrece la ficha (`ficha_vocabulario.fuentes_elegibles`): el catalogo oficial
+    del Tablero de Agendas sin la grabacion del workshop, el setting sin setter ni «Desconocido»
+    (09/10/2026). Los valores que no estan en ella —historicos, o esos tres— se siguen aceptando
+    SOLO si no cambian: la fila puede conservar su fuente, pero una fuente nueva sale de la lista.
 
     La usa tambien la cabecera de la ficha (`ficha_acciones_service.editar_datos`): el error dice
     que fue la `fuente`, para que se pinte al lado de ese campo.
     """
-    from app.services.fuente_service import FUENTES_CANONICAS
+    from app.services.ficha_vocabulario import fuentes_elegibles
 
     fuente = valor.strip() if isinstance(valor, str) else ''
     if not fuente:
         raise ErrorDeAccion('Elegí la fuente de la lista.', 'fuente')
     if fuente == (actual or '').strip():
         return None
-    if fuente not in FUENTES_CANONICAS:
+    if fuente not in fuentes_elegibles():
         raise ErrorDeAccion(f'«{fuente}» no es una fuente del catálogo: elegí una de la lista.',
                             'fuente')
     return fuente

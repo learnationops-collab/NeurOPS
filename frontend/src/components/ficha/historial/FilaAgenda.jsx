@@ -46,7 +46,7 @@ const FilaAgenda = ({
     const [error, setError] = useState(null);
 
     const cuandoInicial = toDatetimeLocalValue(agenda.fecha);
-    const grupos = gruposDeFuente(fuentes, agenda.fuente);
+    const grupos = gruposDeFuente(fuentes, agenda.fuente, agenda.fuente_label);
     // El closer actual va siempre en la lista aunque ya no esté activo: sin él, el desplegable
     // arrancaría mostrando a otro y parecería que la agenda es de ese.
     const opcionesCloser = closers.some(c => String(c.id) === String(agenda.closer_id)) || !agenda.closer_id
@@ -106,7 +106,10 @@ const FilaAgenda = ({
     };
 
     const fecha = instanteLegible(agenda.fecha) || '—';
-    const quien = [agenda.fuente ? etiquetaDeFuente(fuentes, agenda.fuente) : null, agenda.closer]
+    // La etiqueta del backend primero: la lista ya no trae todas las fuentes que una agenda puede
+    // tener (la grabación del workshop, por ejemplo), y sin ella la fila decía la clave cruda.
+    const etiqueta = agenda.fuente_label || (agenda.fuente ? etiquetaDeFuente(fuentes, agenda.fuente) : null);
+    const quien = [etiqueta, agenda.closer]
         .filter(Boolean).join(' · ') || agenda.detalle || 'Sin detalle';
 
     return (
