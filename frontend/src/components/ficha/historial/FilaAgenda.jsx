@@ -6,6 +6,7 @@ import {
     datetimeLocalToUtcIso, toDatetimeLocalValue, viewerTimezoneLabel,
 } from '../../../utils/datetime';
 import { mensajeDeError } from '../fichaApi';
+import { etiquetaDeFuente, gruposDeFuente } from '../fuentes';
 import BorrarConConfirmacion from './BorrarConConfirmacion';
 import Desplegable from './Desplegable';
 import MotivoDelFallo from './MotivoDelFallo';
@@ -29,20 +30,6 @@ import MotivoDelFallo from './MotivoDelFallo';
  * un modal y no el «¿Seguro?» en el lugar de `InlineConfirm` que usan los pagos porque borrar una
  * agenda se lleva su registro de eventos y no hay deshacer: el diálogo dice qué se borra.
  */
-
-/** Las opciones de la fuente, con la actual agregada si es un valor histórico fuera del catálogo. */
-const gruposDeFuente = (grupos, actual) => {
-    const conocidas = new Set(grupos.flatMap(g => (g.opciones || []).map(o => o.clave)));
-    if (!actual || conocidas.has(actual)) return grupos;
-    // Una fuente vieja se sigue mostrando como está; lo que no se puede es ELEGIR una fuera del
-    // catálogo (mismo criterio que el backend).
-    return [{ titulo: 'Actual', opciones: [{ clave: actual, label: `${actual} (fuera del catálogo)` }] },
-        ...grupos];
-};
-
-const etiquetaDeFuente = (grupos, clave) => grupos
-    .flatMap(g => g.opciones || [])
-    .find(o => o.clave === clave)?.label || clave;
 
 const FilaAgenda = ({
     agenda, fuentes = [], closers = [], puedeEditar = false, puedeReasignar = false, onEditar,
