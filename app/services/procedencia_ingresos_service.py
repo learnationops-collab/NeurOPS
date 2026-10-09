@@ -50,6 +50,7 @@ una parte de las ventas (las de un closer) y la base BRUTA, que es la de su «Ca
 import re
 from datetime import datetime, time
 
+from app import db
 from app.models import FinancialAgenda, FinancialSale, User
 from app.services.attribution_service import AttributionService
 from app.services.commission_service import cash_neto_de
@@ -206,6 +207,22 @@ BASES = {
 }
 
 
+def agendas_para_atribuir():
+    """Las agendas que necesita la atribución, sin armar un `FinancialAgenda` por fila.
+
+    La atribución recorre TODAS las agendas (para unir a cada persona por su Instagram y su correo)
+    y de cada una lee seis columnas: con qué se identifica, cuándo fue y su `nombre`, que es la
+    fuente. Cargarlas como modelos costaba ~110 ms con 4.300 agendas —casi todo armar el objeto de
+    cada fila y decodificar su `raw_data`—, más que la atribución misma; en filas livianas, ~20 ms
+    (medido el 09/10/2026 sobre una copia de local.db). Las filas tienen esos atributos con el mismo
+    nombre, que es todo lo que leen `AttributionService` y `fuente_de`. Mismo orden que
+    `FinancialAgenda.query.all()`: la misma consulta, sin ORDER BY, como la nómina."""
+    return db.session.query(
+        FinancialAgenda.id, FinancialAgenda.nombre, FinancialAgenda.instagram, FinancialAgenda.mail,
+        FinancialAgenda.date, FinancialAgenda.created_at,
+    ).all()
+
+
 def procedencia_por_venta(ventas, contexto=None, agendas=None):
     """{id de cada una de `ventas` -> (balde, clave del detalle, rótulo del detalle)}: el balde de
     cada pago, uno por uno, con la atribución calculada sobre `contexto`.
@@ -218,7 +235,7 @@ def procedencia_por_venta(ventas, contexto=None, agendas=None):
     if not ventas:
         return {}
     contexto = ventas if contexto is None else contexto
-    agendas = FinancialAgenda.query.all() if agendas is None else agendas
+    agendas = agendas_para_atribuir() if agendas is None else agendas
     atribucion = AttributionService.get_sales_attribution(sales=contexto, agendas=agendas)
     setters = setters_conocidos()
     return {venta.id: clasificar_pago(venta, atribucion.get(venta.id), setters) for venta in ventas}

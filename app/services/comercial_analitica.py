@@ -13,7 +13,7 @@ from datetime import date, timedelta
 from sqlalchemy import func
 
 from app import db
-from app.models import FinancialAgenda, FinancialSale, User
+from app.models import FinancialSale, User
 from app.services.closer_dashboard_service import CloserDashboardService
 from app.services.closer_service import matriz_de_cierres
 from app.services.comercial_service import (
@@ -21,7 +21,7 @@ from app.services.comercial_service import (
     _limpiar_email, _limpiar_ig, chip, pct,
 )
 from app.services.commission_service import CLOSER_RATE
-from app.services.procedencia_ingresos_service import procedencia_de_ventas
+from app.services.procedencia_ingresos_service import agendas_para_atribuir, procedencia_de_ventas
 
 # Qué métricas llevan badge de delta y cómo se lee la diferencia: 'pts' para las tasas (la
 # diferencia entre dos porcentajes son puntos, no un porcentaje) y 'pct' para montos y conteos.
@@ -708,7 +708,7 @@ def fuentes_de(start, end, prev_start=None, prev_end=None, closer_nombre=None):
     Va fuera de `bloque_closers`, como `por_cobrar_de`: el bloque se corre por persona y por período
     en Comparativas y la atribución recorre todas las agendas. Acá se leen una sola vez para los
     dos períodos."""
-    agendas = FinancialAgenda.query.all()
+    agendas = agendas_para_atribuir()
     actual = ingresos_por_fuente(start, end, closer_nombre, agendas)
     # Las claves van siempre, en None sin comparación: el frontend no tiene que preguntar si están.
     actual['previo'] = actual['delta'] = None
