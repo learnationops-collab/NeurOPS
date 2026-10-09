@@ -77,3 +77,19 @@ export const guardarTasas = (vigenteDesde, tasas) => api.put('/public/finance/co
 // cuando Finanzas se mire por un período cualquiera.
 export const getProcedencia = (desde, hasta) => api.get('/public/finance/procedencia',
     { params: { start_date: desde, end_date: hasta } }).then(datos);
+
+// Diferencias (09/10/2026): los CSV de Stripe y Hotmart contra lo reportado. La conciliación del
+// período, subir un CSV (con la pasarela si hubo que elegirla), borrar una carga, corregir una venta
+// reportada ({monto?, fecha?, metodo_pago?, transferido_a?}) y marcar una diferencia como revisada.
+export const getConciliacion = (periodo) => api.get('/public/finance/conciliacion',
+    { params: delPeriodo(periodo) }).then(datos);
+export const subirCsv = (archivo, pasarela = null) => {
+    const formulario = new FormData();
+    formulario.append('archivo', archivo);
+    if (pasarela) formulario.append('pasarela', pasarela);
+    return api.post('/public/finance/conciliacion/cargas', formulario).then(datos);
+};
+export const borrarCarga = (id) => api.delete(`/public/finance/conciliacion/cargas/${id}`).then(datos);
+export const corregirVenta = (id, cambios) => api.put(`/public/finance/conciliacion/ventas/${id}`, cambios).then(datos);
+export const marcarRevisada = (clave, revisada, extra = {}) => api.post('/public/finance/conciliacion/revisiones',
+    { clave, revisada, ...extra }).then(datos);

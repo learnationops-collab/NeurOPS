@@ -187,6 +187,7 @@ const FichaLeadModal = ({
     pestanaInicial = null,  // el mazo sabe desde qué columna se abrió; gana sobre la del backend
     abrirEnVenta = false,   // «Declarar venta» del dock: Resultado arranca en «Registrar una venta»
     seguimiento = null,     // 'contacto' | 'cobro': se abrió para reportar ese seguimiento
+    seccionInicial = null,  // 'pagos': el Historial arranca con esa sección abierta (Finanzas › Diferencias)
 }) => {
     const [ficha, setFicha] = useState(null);
     const [cargando, setCargando] = useState(true);
@@ -336,7 +337,7 @@ const FichaLeadModal = ({
                 ? <Suspense fallback={<Esqueleto />}><TabAcciones {...props} /></Suspense>
                 : <Faltante label="Acciones" />;
             case 'ful': return <TabFulfillment {...props} />;
-            case 'hist': return <TabHistorial {...props} />;
+            case 'hist': return <TabHistorial {...props} seccionAbierta={seccionInicial} />;
             case 'form': return <TabFormulario {...props} />;
             case 'com': return <TabComunicacion {...props} />;
             default: return null;

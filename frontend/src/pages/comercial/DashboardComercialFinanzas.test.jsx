@@ -144,7 +144,7 @@ describe('DashboardComercial · Finances (/finanzas)', () => {
         expect(screen.queryByTestId('finanzas')).toBeNull();
     });
 
-    it('Finanzas trae sus cinco vistas arriba y su mes, que queda guardado', async () => {
+    it('Finanzas trae sus seis vistas arriba (Diferencias desde el 09/10) y su mes, que queda guardado', async () => {
         estado.puede = true;
         localStorage.setItem('finanzas.mes', '2026-09');
         montar('/finanzas?s=finanzas');
@@ -152,7 +152,7 @@ describe('DashboardComercial · Finances (/finanzas)', () => {
         expect((await screen.findByTestId('finanzas')).textContent).toBe('resumen · 2026-09');
         const vistas = screen.getByRole('tablist', { name: 'Vistas de Finanzas' });
         expect(within(vistas).getAllByRole('tab').map(t => t.textContent))
-            .toEqual(['Resumen', 'Medios de pago', 'Anuncios', 'Nómina', 'Software']);
+            .toEqual(['Resumen', 'Medios de pago', 'Anuncios', 'Nómina', 'Software', 'Diferencias']);
         // El período del tablero (Hoy, Este mes…) no aplica: va el mes de Finanzas.
         expect(screen.queryByRole('button', { name: /Este mes/ })).toBeNull();
 
