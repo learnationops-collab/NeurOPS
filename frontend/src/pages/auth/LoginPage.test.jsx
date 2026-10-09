@@ -50,23 +50,32 @@ describe('LoginPage', () => {
         expect(navigate).not.toHaveBeenCalled();
     });
 
-    it('con «ver finanzas» suma la tarjeta Finanzas: entra con admin y va a /finanzas', async () => {
+    it('con «ver finanzas» suma la tarjeta Finances («Learnation Finances»): entra con admin y va a /finanzas', async () => {
         await entrar({ id: 1, username: 'mario', role: 'operator', roles: ['operator', 'admin'], can_view_finance: true, email: 'm@x.com' });
-        fireEvent.click(await screen.findByRole('button', { name: /Finanzas/ }));
+        const tarjeta = await screen.findByRole('button', { name: /Finances/ });
+        expect(tarjeta.querySelector('small').textContent).toBe('Learnation');
+        fireEvent.click(tarjeta);
         await waitFor(() => expect(cambiarDeRolEnLaCuenta).toHaveBeenCalledWith('admin', '/finanzas'));
     });
 
-    it('si ya entró con el rol de Finanzas, va directo a /finanzas', async () => {
+    it('si ya entró con el rol de Finances, va directo a /finanzas', async () => {
         await entrar({ id: 1, username: 'mario', role: 'admin', roles: ['admin', 'closer'], can_view_finance: true, email: 'm@x.com' });
-        fireEvent.click(await screen.findByRole('button', { name: /Finanzas/ }));
+        fireEvent.click(await screen.findByRole('button', { name: /Finances/ }));
         expect(navigate).toHaveBeenCalledWith('/finanzas');
         expect(cambiarDeRolEnLaCuenta).not.toHaveBeenCalled();
     });
 
-    it('sin «ver finanzas» no hay tarjeta Finanzas', async () => {
+    it('con un solo rol y «ver finanzas» elige igual: la dirección comercial o Finances', async () => {
+        await entrar({ id: 4, username: 'marlon', role: 'director_comercial', roles: ['director_comercial'], can_view_finance: true, email: 'm@x.com' });
+        expect(await screen.findByRole('button', { name: /Dirección comercial/ })).toBeTruthy();
+        expect(screen.getByRole('button', { name: /Finances/ })).toBeTruthy();
+        expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('sin «ver finanzas» no hay tarjeta Finances', async () => {
         await entrar({ id: 1, username: 'mario', role: 'operator', roles: ['operator', 'admin'], email: 'm@x.com' });
         await screen.findByRole('button', { name: /Administrador/ });
-        expect(screen.queryByRole('button', { name: /Finanzas/ })).toBeNull();
+        expect(screen.queryByRole('button', { name: /Finances/ })).toBeNull();
     });
 
     it('la vuelta de Google sin cuenta muestra el motivo', () => {

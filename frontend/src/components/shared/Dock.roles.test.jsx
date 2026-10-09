@@ -25,4 +25,10 @@ describe('Dock: cambio de rol', () => {
         expect(screen.getByText('Pasar a Hiring')).toBeInTheDocument();
         expect(screen.queryByText('Pasar a Operador')).not.toBeInTheDocument();
     });
+
+    it('con más de una vista ofrece también el hub, «Cambiar de vista»', () => {
+        render(<Dock />);
+
+        expect(screen.getByText('Cambiar de vista')).toBeInTheDocument();
+    });
 });

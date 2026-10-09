@@ -5,7 +5,7 @@ import api from '../../services/api';
 import { saveSession } from '../../utils/sessionStore';
 import { roleLandingPath } from '../../utils/roleLanding';
 import { revertImpersonation } from '../../utils/impersonation';
-import ElegirRolAlSimular, { rolesDePersona, tieneVariosRoles } from '../shared/ElegirRolAlSimular';
+import ElegirRolAlSimular, { hayQueElegir, rolesDePersona } from '../shared/ElegirRolAlSimular';
 
 const OperatorControls = ({ isOpen, onClose }) => {
     const [user, setUser] = useState(null);
@@ -54,7 +54,8 @@ const OperatorControls = ({ isOpen, onClose }) => {
         setSelectedUserId(''); // Reset selection when filter changes
     }, [activeRoleFilter, targets]);
 
-    // Una persona con varios roles se simula con uno: se pregunta con cuál (ElegirRolAlSimular).
+    // Una persona con varios roles (o que ve finanzas) se simula con uno: se pregunta con cuál
+    // (ElegirRolAlSimular, ver `hayQueElegir`).
     // `rol` null: el principal. Con `elegirRol`, el error lo muestra esa pantalla y no un alert.
     const simular = async (rol = null, elegirRol = false, destino = null) => {
         setLoading(true);
@@ -77,7 +78,7 @@ const OperatorControls = ({ isOpen, onClose }) => {
 
     const handleImpersonate = () => {
         if (!selectedUserId) return;
-        if (tieneVariosRoles(objetivo)) setEligiendoRol({ nuevaPestana: false });
+        if (hayQueElegir(objetivo)) setEligiendoRol({ nuevaPestana: false });
         else simular();
     };
 
@@ -89,7 +90,7 @@ const OperatorControls = ({ isOpen, onClose }) => {
     const handleImpersonateNewTab = (e) => {
         e.preventDefault();
         if (!selectedUserId || loading) return;
-        if (tieneVariosRoles(objetivo)) setEligiendoRol({ nuevaPestana: true });
+        if (hayQueElegir(objetivo)) setEligiendoRol({ nuevaPestana: true });
         else simularEnPestanaNueva();
     };
 
@@ -122,7 +123,7 @@ const OperatorControls = ({ isOpen, onClose }) => {
     };
 
     // Ya eligió el rol (pantalla ElegirRolAlSimular): la pestaña nueva cierra la elección, la misma entra.
-    // `destino`: a dónde va en vez de la pantalla del rol (la tarjeta «Finanzas» va a /finanzas).
+    // `destino`: a dónde va en vez de la pantalla del rol (la tarjeta «Finances» va a /finanzas).
     const simularConRol = async (rol, destino = null) => {
         if (eligiendoRol.nuevaPestana) {
             await simularEnPestanaNueva(rol, true, destino);

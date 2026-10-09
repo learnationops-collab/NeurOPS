@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { AlertCircle, Calendar, Check, Copy, Eye, EyeOff, Ghost, KeyRound, Link2, Mail, Pencil, Search, Star, Trash2, UserPlus } from 'lucide-react';
 import api from '../../../services/api';
 import Modal from '../../../components/ui/Modal';
-import ElegirRolAlSimular, { tieneVariosRoles } from '../../../components/shared/ElegirRolAlSimular';
+import ElegirRolAlSimular, { hayQueElegir } from '../../../components/shared/ElegirRolAlSimular';
 import VincularCuentasModal from './VincularCuentasModal';
 import { Segmented } from '../../comercial/components/Shared';
 import '../../comercial/comercial.css';
@@ -32,8 +32,8 @@ export const ROLES = [
 ];
 const rotulo = (id) => ROLES.find(r => r.id === id)?.label || id;
 const rolesDe = (u) => (u.roles && u.roles.length ? u.roles : [u.role]);
-// Quién puede tener «ver finanzas»: con uno de estos roles ve Finanzas y Payroll en el dashboard
-// comercial (`puede_ver_finanzas` en el backend). Con otro rol el permiso no abre nada.
+// Quién puede tener «ver finanzas»: con uno de estos roles ve Finanzas y Payroll en Finances, /finanzas
+// (`puede_ver_finanzas` en el backend). Con otro rol el permiso no abre nada.
 const ROLES_FINANZAS = ['admin', 'director_comercial'];
 const veFinanzas = (roles) => roles.some(r => ROLES_FINANZAS.includes(r));
 const iniciales = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
@@ -170,11 +170,12 @@ const TeamManagementPage = ({ embebido = false }) => {
         }
     };
 
-    // Simular: con varios roles se pregunta con cuál (ElegirRolAlSimular); con uno, entra directo.
-    // `nuevaPestana` recuerda si fue clic derecho para seguir después de elegir.
+    // Simular: con varios roles (o si ve finanzas) se pregunta con cuál (ElegirRolAlSimular, ver
+    // `hayQueElegir`); si no, entra directo. `nuevaPestana` recuerda si fue clic derecho para seguir
+    // después de elegir.
     const iniciarSimulacion = (targetUser, nuevaPestana) => {
         if (!targetUser.is_active) return;
-        if (tieneVariosRoles(targetUser)) setSimulando({ persona: targetUser, nuevaPestana });
+        if (hayQueElegir(targetUser)) setSimulando({ persona: targetUser, nuevaPestana });
         else return nuevaPestana ? simularEnPestanaNueva(targetUser) : simularAqui(targetUser);
     };
 
@@ -220,7 +221,7 @@ const TeamManagementPage = ({ embebido = false }) => {
     };
 
     // Ya eligió el rol: aquí no se captura el error, ElegirRolAlSimular lo muestra en su pantalla.
-    // `destino`: a dónde va en vez de la pantalla del rol (la tarjeta «Finanzas» va a /finanzas).
+    // `destino`: a dónde va en vez de la pantalla del rol (la tarjeta «Finances» va a /finanzas).
     const simularConRol = async (rol, destino = null) => {
         const { persona, nuevaPestana } = simulando;
         if (nuevaPestana) {
@@ -424,7 +425,7 @@ const TeamManagementPage = ({ embebido = false }) => {
                             <Interruptor id="eq-activo" label="Cuenta activa" hint={formData.is_active ? 'Puede entrar' : 'No puede entrar; su historial queda'}
                                 valor={formData.is_active} onChange={(v) => set({ is_active: v })} />
                             {veFinanzas(formData.roles) && (
-                                <Interruptor id="eq-finanzas" label="Acceso a finanzas" hint="Finanzas y Payroll en Comercial"
+                                <Interruptor id="eq-finanzas" label="Acceso a finanzas" hint="Finanzas y Payroll en Finances"
                                     valor={formData.can_view_finance} onChange={(v) => set({ can_view_finance: v })} />
                             )}
                         </div>

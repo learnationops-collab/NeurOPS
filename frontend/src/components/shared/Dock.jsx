@@ -215,14 +215,17 @@ const Dock = () => {
                                         <p className="text-sm font-bold text-white mt-1">{user?.name}</p>
                                         <p className="text-[10px] text-muted truncate">{user?.email}</p>
                                     </div>
-                                    {opcionesDeRol(user, (m) => toast.error(m)).flatMap((op) => op.panel.cargar().map((o) => ({ ...o, Icono: op.Icono }))).map((op) => (
+                                    {/* «Cambiar de vista» va tal cual; el panel «Cambiar de rol» se abre en «Pasar a <rol>». */}
+                                    {opcionesDeRol(user, (m) => toast.error(m)).flatMap((op) => (op.panel
+                                        ? op.panel.cargar().map((o) => ({ ...o, Icono: op.Icono, label: `Pasar a ${o.label}` }))
+                                        : [op])).map((op) => (
                                         <button
                                             key={op.id}
                                             onClick={op.onClick}
                                             className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl hover:bg-white/5 transition-colors text-left mb-1"
                                         >
                                             <op.Icono size={16} className="text-muted" />
-                                            <span className="text-sm font-bold text-muted">Pasar a {op.label}</span>
+                                            <span className="text-sm font-bold text-muted">{op.label}</span>
                                         </button>
                                     ))}
                                     {reportes.opciones.map((op) => (

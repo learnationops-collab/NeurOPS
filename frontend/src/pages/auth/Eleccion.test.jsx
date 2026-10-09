@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { columnas } from './Eleccion';
 
 /**
- * Las tarjetas de la elección (rol o área) van en filas parejas: con la tarjeta «Finanzas» (08/10/2026)
+ * Las tarjetas de la elección (rol o área) van en filas parejas: con la tarjeta «Finances» (08/10/2026)
  * Mario tiene cinco, y la grilla automática las dejaba 4 + 1 (y 3 + 1 con cuatro hasta 900px).
  */
 describe('columnas', () => {

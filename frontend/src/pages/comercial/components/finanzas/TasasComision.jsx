@@ -78,7 +78,7 @@ const TasasComision = ({ onCerrar, onGuardado }) => {
             <p className="t-rotulo">{titulo}</p>
             <div className="fz-tabla" style={{ '--cols': 'minmax(0,1fr) 120px' }}>
                 {filas.map(({ grupo, clave, nombre, ayuda }) => (
-                    <div key={clave} className="fz-fila">
+                    <div key={`${grupo}-${clave}`} className="fz-fila">
                         <span className="fila" style={{ gap: 6 }}>
                             <b style={{ fontWeight: 700 }}>{nombre}</b>
                             {ayuda && <Tip titulo={nombre} texto={ayuda} />}
@@ -123,15 +123,22 @@ const TasasComision = ({ onCerrar, onGuardado }) => {
 
                 {!tasas ? <EsqueletoFilas rotulo="Cargando los porcentajes…" lineas={6} /> : (
                     <div style={{ display: 'grid', gap: 'var(--s6)' }}>
+                        {/* Marlon está dos veces: en Closing, el % de sus ventas propias, y en
+                            Director, el de las ventas de los otros closers (08/10/2026). Setting y
+                            Director van juntos a la izquierda: Closing es la lista larga. */}
                         <div className="fz-grid fz-grid--2" style={{ alignItems: 'start' }}>
-                            {grupoSimple('Setting', personas.setters.map(p => ({ grupo: 'setters', clave: p.clave, nombre: p.nombre })))}
-                            {grupoSimple('Closing', [
-                                ...personas.closers.map(p => ({ grupo: 'closers', clave: p.clave, nombre: p.nombre })),
-                                ...personas.director.map(p => ({
+                            <div style={{ display: 'grid', gap: 'var(--s6)' }}>
+                                {grupoSimple('Setting', personas.setters.map(p => ({ grupo: 'setters', clave: p.clave, nombre: p.nombre })))}
+                                {grupoSimple('Director', personas.director.map(p => ({
                                     grupo: 'director', clave: p.clave, nombre: `${p.nombre} · director`,
-                                    ayuda: 'Sobre lo que venden los closers, sin renovaciones.',
-                                })),
-                            ])}
+                                    ayuda: 'Sobre lo que venden los otros closers, sin renovaciones. Sus ventas propias cobran con su % de Closing.',
+                                })))}
+                            </div>
+                            {grupoSimple('Closing', personas.closers.map(p => ({
+                                grupo: 'closers', clave: p.clave, nombre: p.nombre,
+                                ayuda: personas.director.some(d => d.clave === p.clave)
+                                    ? 'Sobre sus ventas propias, como cualquier closer.' : undefined,
+                            })))}
                         </div>
 
                         <div className="fz-bloque">

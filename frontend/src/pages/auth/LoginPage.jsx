@@ -2,17 +2,19 @@
 // fondo a elección y el isotipo con anillos). Arranca directo en el panel.
 //   entrar   → usuario y clave, o «Entrar con Google» (vuelve a /login?google=…).
 //   email    → si la cuenta no tiene email, se pide para poder entrar con Google la próxima vez.
-//   rol      → si la persona tiene más de un rol (o cuentas vinculadas), elige con cuál entra (Eleccion).
+//   rol      → si la persona tiene más de un rol (o cuentas vinculadas, o un rol que además ve Finances),
+//              elige con cuál entra (ElegirRol, la misma elección del hub de vistas, /vistas).
 // Después va a destinoDeEntrada: si el rol tiene más de un área, a /inicio para elegirla (o directo a su
 // área por defecto).
 
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, Eye, EyeOff, Loader2, Mail, User } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Loader2, Mail } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { destinoDeEntrada } from '../../utils/areas';
-import { cambiarDeRol, cambiarDeRolEnLaCuenta, ICONO_DE_ROL, ICONO_FINANZAS, otrasCuentas, RUTA_FINANZAS, rolDeFinanzas, rotuloDeRol } from '../../utils/cuentasVinculadas';
-import Eleccion, { LogoEntrada, MarcoEntrada } from './Eleccion';
+import { hayQueElegir } from '../../utils/cuentasVinculadas';
+import { LogoEntrada, MarcoEntrada } from './Eleccion';
+import ElegirRol from './ElegirRol';
 import DebugConsole from '../../components/modals/DebugConsole';
 import './login.css';
 
@@ -147,48 +149,6 @@ function PedirEmail({ user, onListo }) {
     );
 }
 
-// onElegido(user, destino): sigue con el rol con el que entró; `destino` solo lo pasa «Finanzas».
-function ElegirRol({ user, onElegido }) {
-    const [eligiendo, setEligiendo] = useState(null);
-    const [error, setError] = useState(null);
-    const roles = user.roles?.length ? user.roles : [user.role];
-    // «Finanzas» no es un rol: entra con el que la habilita (ver `rolDeFinanzas`) y va a /finanzas.
-    const rolFinanzas = rolDeFinanzas(roles, user.can_view_finance);
-    const opciones = [
-        ...roles.map((rol) => ({ clave: `rol-${rol}`, titulo: rotuloDeRol(rol), Icono: ICONO_DE_ROL[rol], entrar: () => (rol === user.role ? onElegido(user) : cambiarDeRolEnLaCuenta(rol)) })),
-        ...otrasCuentas(user).map((c) => ({ clave: `cuenta-${c.id}`, titulo: rotuloDeRol(c.role), Icono: ICONO_DE_ROL[c.role], detalle: c.username, entrar: () => cambiarDeRol(c.id) })),
-        ...(rolFinanzas ? [{
-            clave: 'finanzas', titulo: 'Finanzas', Icono: ICONO_FINANZAS,
-            entrar: () => (rolFinanzas === user.role ? onElegido(user, RUTA_FINANZAS) : cambiarDeRolEnLaCuenta(rolFinanzas, RUTA_FINANZAS)),
-        }] : []),
-    ];
-
-    const elegir = async (o) => {
-        setEligiendo(o.clave);
-        setError(null);
-        try {
-            await o.entrar();
-        } catch (err) {
-            setError(err.response?.data?.message || 'No se pudo entrar con ese rol');
-            setEligiendo(null);
-        }
-    };
-
-    return (
-        <Eleccion
-            nombre={user.username}
-            pregunta="Seleccioná tu rol. Después podés cambiarlo desde tu menú."
-            eligiendo={eligiendo}
-            error={error}
-            opciones={opciones.map((o) => ({
-                clave: o.clave, titulo: o.titulo, detalle: o.detalle, Icono: o.Icono || User,
-                onElegir: () => elegir(o),
-            }))}
-        />
-    );
-}
-
-const tieneVariosRoles = (user) => (user.roles?.length || 0) > 1 || otrasCuentas(user).length > 0;
 
 export default function LoginPage() {
     const navigate = useNavigate();
@@ -202,7 +162,7 @@ export default function LoginPage() {
 
     const seguir = (u) => {
         setUser(u);
-        if (tieneVariosRoles(u)) setPaso('rol');
+        if (hayQueElegir(u)) setPaso('rol');
         else navigate(destinoDeEntrada(u));
     };
     const alEntrar = (u) => {

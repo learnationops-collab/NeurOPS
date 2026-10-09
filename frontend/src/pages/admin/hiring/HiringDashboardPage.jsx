@@ -143,7 +143,7 @@ const HiringDashboardPage = () => {
         return () => window.removeEventListener('keydown', onKey);
     }, [query, abierta, config]);
 
-    const rolesDeLaCuenta = opcionesDeRol(user, (m) => toast.error(m));
+    const rolesDeLaCuenta = opcionesDeRol(user, (m) => toast.error(m), navigate);
 
     const volverAMiSesion = async () => {
         try {

@@ -8,6 +8,7 @@ import PublicCallsBoardPage from './pages/public/PublicCallsBoardPage';
 import SalesAttributionPage from './pages/admin/reports/SalesAttributionPage';
 import LoginPage from './pages/auth/LoginPage';
 import ElegirAreaPage from './pages/auth/ElegirAreaPage';
+import ElegirVistaPage from './pages/auth/ElegirVistaPage';
 import SessionEntry from './pages/auth/SessionEntry';
 import AnalysisPage from './pages/admin/reports/AnalysisPage';
 import ConstructionPage from './pages/common/ConstructionPage';
@@ -115,6 +116,9 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/session-entry" element={<SessionEntry />} />
             <Route path="/inicio" element={<ProtectedRoute><ElegirAreaPage /></ProtectedRoute>} />
+            {/* El hub de vistas (08/10/2026): la elección del login con la sesión ya iniciada, desde
+                «Cambiar de vista» en el menú de sesión. Sin MainLayout, como el login. */}
+            <Route path="/vistas" element={<ProtectedRoute><ElegirVistaPage /></ProtectedRoute>} />
             <Route path="/book/:setter_id/:event_slug" element={<BookingPage />} />
             <Route path="/book/:event_slug" element={<BookingPage />} />
             <Route path="/politica-de-privacidad" element={<PrivacyPolicyPage />} />
@@ -213,10 +217,11 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            {/* Finanzas y Payroll son secciones del dashboard comercial desde el 08/10/2026: los
-                links viejos llevan ahí (sin el permiso «ver finanzas», el tablero abre Analizar). */}
-            {/* /finanzas: el mismo tablero con solo Finanzas y Payroll en el dock, la tarjeta
-                «Finanzas» de la elección de rol (08/10/2026). SIN MainLayout, como /admin/comercial. */}
+            {/* /finanzas: el mismo tablero con solo Finanzas y Payroll en el dock, la vista Finances
+                (08/10/2026), aparte del dashboard de la dirección comercial, que ya no las trae.
+                SIN MainLayout, como /admin/comercial. Los links viejos (/admin/finance, /admin/payroll
+                y /admin/comercial?s=finanzas o payroll) llevan acá; sin el permiso «ver finanzas»
+                la pantalla lo avisa. */}
             <Route
               path="/finanzas"
               element={
@@ -227,11 +232,11 @@ function App() {
             />
             <Route
               path="/admin/finance"
-              element={<Navigate to="/admin/comercial?s=finanzas" replace />}
+              element={<Navigate to="/finanzas?s=finanzas" replace />}
             />
             <Route
               path="/admin/payroll"
-              element={<Navigate to="/admin/comercial?s=payroll" replace />}
+              element={<Navigate to="/finanzas?s=payroll" replace />}
             />
             <Route
               path="/admin/marketing"

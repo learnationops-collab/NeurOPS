@@ -1,0 +1,27 @@
+/* ============================================================================
+   INGRESOS POR PROCEDENCIA — panel del Resumen de Finanzas (08/10/2026).
+
+   Usa la tabla de Finanzas (`.fz-tabla`, `.fz-fila`, `.fz-total`) y el riel del tablero
+   (`Barra`); acá solo va lo propio: el detalle de cada balde (vivo y grabación, cada setter…)
+   como filas más bajas y sangradas, el balde vacío apagado y la entrada escalonada de las barras.
+   ============================================================================ */
+
+.dc-shell .pr-fila[data-vacio="1"]{opacity:.45}
+.dc-shell .pr-sub{min-height:36px}
+.dc-shell .pr-sub-nom{padding-left:16px;font-size:12px;font-weight:600;color:var(--text-muted)}
+.dc-shell .pr-sub-n{font-size:12.5px;font-weight:800;letter-spacing:-.01em;font-variant-numeric:tabular-nums;
+  white-space:nowrap;color:var(--text-muted)}
+
+/* En el teléfono no entran las barras y el neto a la vez: se va la barra (el % dice lo mismo) y la
+   tabla cabe; en los más angostos scrollea de costado, como el resto de Finanzas. Con !important
+   porque las columnas llegan en el `style` de la tabla. */
+@media (max-width:640px){
+  .dc-shell .pr-tabla{--cols:minmax(130px,1fr) 44px 104px 50px !important;--min:390px !important}
+  .dc-shell .pr-tabla .riel,
+  .dc-shell .pr-tabla .pr-barra{display:none}
+}
+
+/* Las barras crecen de a una, de arriba hacia abajo (`--i` es el lugar de la fila). Con
+   movimiento reducido el riel ya no anima (comercial.css), pero el retraso seguiría: se anula. */
+.dc-shell .pr-tabla .riel > i{transition-delay:calc(var(--i, 0) * 70ms)}
+@media (prefers-reduced-motion:reduce){.dc-shell .pr-tabla .riel > i{transition-delay:0s}}
