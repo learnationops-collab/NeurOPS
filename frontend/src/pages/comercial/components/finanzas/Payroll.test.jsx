@@ -21,7 +21,10 @@ const venta = (id, excluida = false) => ({ id, is_excluded_from_payroll: excluid
 const NOMINA = {
     elias: persona(80, [venta(1), venta(2, true)]), paula: persona(0),
     jeancarlo: persona(100, [venta(1)]), facundo: persona(0), nerina: persona(0), gabriel: persona(0),
-    marlon: persona(20, [venta(1)]),
+    marlon: { ...persona(20, [venta(1)]), porcentaje_comision: null, desglose: {
+        director: { porcentaje: 5, total_recaudado_neto: 160, comision_total: 8, total_ventas: 1 },
+        propia: { porcentaje: 10, total_recaudado_neto: 120, comision_total: 12, total_ventas: 1 },
+    } },
     andy: { ...persona(30, [venta(3)]), porcentaje_comision: null },
     dari: persona(0), santi: persona(0), belu: persona(0), pedro: persona(0),
     totales: { cash_neto: 2300, cash_bruto: 2400, ventas: 3 },
@@ -55,6 +58,15 @@ describe('Payroll', () => {
         expect(cifra('Cash del período').textContent).toBe('$2,300.00');
         expect(cifra('Comisiones').textContent).toBe('$230.00');   // 80 + 100 + 20 + 30
         expect(cifra('Peso sobre el cash').textContent).toBe('10.0%');
+    });
+
+    it('el tile de Marlon suma sus ventas propias y su parte de director, y dice cuánto es cada una', async () => {
+        render(<ConFiltro />);
+        const tile = (await screen.findByText('Marlon')).closest('.kpi');
+
+        expect(tile.querySelector('.kpi-cab').textContent).toContain('10% · 5%');
+        expect(tile.querySelector('.kpi-sub').textContent).toBe('propias $12.00 · director $8.00');
+        await waitFor(() => expect(tile.querySelector('.kpi-n').textContent).toBe('$20.00'));
     });
 
     it('apagar un grupo lo saca de la pantalla y de la suma, y siempre queda al menos uno', async () => {

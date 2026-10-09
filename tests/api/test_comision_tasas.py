@@ -40,7 +40,8 @@ def test_un_juego_vale_desde_su_mes_y_no_cambia_los_anteriores(client, db, finan
     assert get_commissions_calculated('2026-09')['elias'] == 80.0    # 8%, el de fábrica
     assert get_commissions_calculated('2026-10')['elias'] == 120.0   # 12% desde octubre
     # Lo que no se tocó sigue como estaba.
-    assert servicio.vigentes('2026-10')[0]['closers'] == {'jeancarlo': 10, 'facundo': 10, 'nerina': 10, 'gabriel': 10}
+    assert servicio.vigentes('2026-10')[0]['closers'] == {'jeancarlo': 10, 'facundo': 10, 'nerina': 10,
+                                                          'gabriel': 10, 'marlon': 10}
 
     # Payroll en un rango que cruza el cambio: cada venta con el % de su mes.
     nomina = client.get('/api/public/financial-sales/payroll?start_date=2026-09-01&end_date=2026-10-31',

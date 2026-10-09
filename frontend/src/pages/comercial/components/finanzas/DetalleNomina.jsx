@@ -13,13 +13,21 @@ import { dinero } from './comun';
 
 const fecha = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '—');
 const FUENTES = { renovacion: 'Renovación', upsell: 'Upsell', conversion: 'Conversión', cuota: 'Cuota' };
+// Las ventas de Marlon (08/10/2026): las suyas le pagan como closer y las de los otros, como director.
+const CONCEPTOS = { propia: 'Propia', director: 'Director' };
 
 const TablaPersona = ({ persona, datos }) => {
     const ventas = [...(datos.sales || [])].sort((a, b) => (a.date || '').localeCompare(b.date || '') || a.id - b.id);
-    const fulfillment = persona.rol === 'Fulfillment';
+    // Una columna más cuando el % depende de algo de la venta: la fuente en Fulfillment, el
+    // concepto en las dos partidas de Marlon.
+    const extra = persona.rol === 'Fulfillment' ? { titulo: 'Fuente', de: v => FUENTES[v.fuente] || v.fuente }
+        : datos.desglose ? { titulo: 'Concepto', de: v => CONCEPTOS[v.concepto] || v.concepto } : null;
     const neto = ventas.filter(v => !v.is_excluded_from_payroll).reduce((t, v) => t + (v.monto_neto || 0), 0);
     const excluidas = ventas.filter(v => v.is_excluded_from_payroll).length;
-    const pct = datos.porcentaje_comision == null ? null : `${datos.porcentaje_comision}%`;
+    const pct = datos.desglose
+        ? Object.entries(CONCEPTOS).filter(([k]) => datos.desglose[k])
+            .map(([k, rotulo]) => `${rotulo.toLowerCase()} ${datos.desglose[k].porcentaje ?? '—'}%`).join(' · ')
+        : datos.porcentaje_comision == null ? null : `${datos.porcentaje_comision}%`;
 
     return (
         <section className="fz-detalle-persona" aria-label={`Ventas de ${persona.nombre}`}>
@@ -37,7 +45,7 @@ const TablaPersona = ({ persona, datos }) => {
                             <th>Cliente</th>
                             <th className="c-tipo">Tipo de pago</th>
                             <th className="c-metodo">Método</th>
-                            {fulfillment && <th className="c-fuente">Fuente</th>}
+                            {extra && <th className="c-fuente">{extra.titulo}</th>}
                             <th className="fz-der c-pct">%</th>
                             <th className="fz-der c-monto">Neto</th>
                             <th className="fz-der c-monto">Comisión</th>
@@ -52,7 +60,7 @@ const TablaPersona = ({ persona, datos }) => {
                                     <td className="fz-tachable">{venta.nombre_cliente}</td>
                                     <td>{venta.tipo_pago}</td>
                                     <td>{venta.metodo_pago}</td>
-                                    {fulfillment && <td>{FUENTES[venta.fuente] || venta.fuente}</td>}
+                                    {extra && <td>{extra.de(venta)}</td>}
                                     <td className="fz-der num">{venta.porcentaje != null ? `${venta.porcentaje}%` : '—'}</td>
                                     <td className="fz-der num">{dinero(venta.monto_neto)}</td>
                                     <td className="fz-der num fz-tachable">{excluida ? 'Excluida' : dinero(venta.comision)}</td>
@@ -62,7 +70,7 @@ const TablaPersona = ({ persona, datos }) => {
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colSpan={fulfillment ? 6 : 5}>
+                            <td colSpan={extra ? 6 : 5}>
                                 {datos.total_ventas} {datos.total_ventas === 1 ? 'venta suma' : 'ventas suman'}
                                 {excluidas ? ` · ${excluidas} ${excluidas === 1 ? 'excluida' : 'excluidas'}` : ''}
                             </td>

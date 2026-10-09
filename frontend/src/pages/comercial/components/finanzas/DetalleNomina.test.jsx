@@ -25,7 +25,12 @@ const vacia = persona([]);
 const NOMINA = {
     elias: persona([venta(3, 'Cami', 80), venta(1, 'Ana', 80), venta(2, 'Beto', 80, { is_excluded_from_payroll: true })]),
     paula: vacia,
-    jeancarlo: persona([venta(1, 'Ana', 100)], 10), facundo: vacia, marlon: vacia,
+    jeancarlo: persona([venta(1, 'Ana', 100)], 10), facundo: vacia,
+    marlon: {
+        ...persona([venta(5, 'Eva', 100, { concepto: 'propia', porcentaje: 10 }),
+            venta(1, 'Ana', 50, { concepto: 'director', porcentaje: 5 })], null),
+        desglose: { director: { porcentaje: 5, comision_total: 50 }, propia: { porcentaje: 10, comision_total: 100 } },
+    },
     andy: persona([venta(4, 'Dora', 30, { fuente: 'renovacion', porcentaje: 3 })], null),
     dari: vacia, santi: vacia, belu: vacia, pedro: vacia,
     totales: { cash_neto: 4000, cash_bruto: 4000, ventas: 4 },
@@ -64,6 +69,17 @@ describe('Payroll · detalle de ventas del PDF', () => {
         const cont = await detalle();
         expect(within(tabla(cont, 'Andy')).getByText('Renovación')).toBeTruthy();
         expect(within(tabla(cont, 'Paula')).getByText(/Sin ventas/)).toBeTruthy();
+    });
+
+    it('las ventas de Marlon dicen si son propias o de director, cada una con su %', async () => {
+        montar();
+        const marlon = tabla(await detalle(), 'Marlon');
+
+        expect(within(marlon).getByRole('heading').textContent).toContain('propia 10% · director 5%');
+        expect(within(marlon).getByRole('columnheader', { name: 'Concepto' })).toBeTruthy();
+        const filas = within(marlon).getAllByRole('row').slice(1, -1);
+        expect(filas.map(f => within(f).getAllByRole('cell')[4].textContent)).toEqual(['Director', 'Propia']);
+        expect(within(marlon).getAllByRole('row').at(-1).textContent).toContain('$150.00');
     });
 
     it('sigue a los filtros: solo los grupos prendidos y las personas elegidas', async () => {

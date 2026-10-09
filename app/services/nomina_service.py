@@ -8,7 +8,8 @@ Ahora las dos piden acá, y Finanzas es el rango de un mes.
 Quién cobra y con qué %:
 - setters (`SETTERS_CON_COMISION`): la fuente de la agenda que originó la venta, o el campo de la venta;
 - closers (`CLOSERS_CON_COMISION`): `resolver_nombre_closer` sobre `email_vendedor`;
-- Marlon como Director de Ventas, sobre lo que venden los closers con comisión, sin renovaciones;
+- Marlon como Director de Ventas, sobre lo que venden los OTROS closers con comisión, sin
+  renovaciones; sus ventas propias las cobra aparte como closer, con su % de closer;
 - Fulfillment, por programa y fuente (`fulfillment_commission_service.nomina_por_persona`).
 Cada venta cobra con el % del mes en que entró (`comision_tasas_service.por_mes`): un rango puede
 cruzar un cambio. Todo sobre el cash NETO (sin la fee de Stripe/Hotmart) de las ventas completadas.
@@ -20,6 +21,10 @@ from app.services.commission_service import (
 
 # Lo que el resto del sistema considera «sin resultado todavía» como fuente de un lead.
 _FUENTE_INVALIDA = ('s/f', 'n/a', '')
+
+# De qué es cada venta en la lista de Marlon (`concepto`): sus ventas propias, que cobra con su %
+# de closer, o las de otro closer, que cobra con su % de director.
+CONCEPTOS = {'closers': 'propia', 'director': 'director'}
 
 
 def venta_completada(venta):
@@ -63,7 +68,10 @@ def comisiones_del_rango(desde=None, hasta=None):
     'total_ventas'}} de cada persona con comisión, y 'totales' con el cash del período. Cada venta de
     `sales` trae su `porcentaje` y su `comision`; las sacadas de la nómina se listan pero no suman.
     `porcentaje_comision` es el % de la persona si en el rango hubo uno solo (None si cruzó un
-    cambio: cada venta trae el suyo)."""
+    cambio: cada venta trae el suyo).
+
+    Marlon suma sus dos partidas: cada venta de su lista dice de cuál es (`concepto`: 'propia' o
+    'director') y `desglose` trae cada partida con su %, su neto, su comisión y sus ventas."""
     from app.models import FinancialAgenda, FinancialSale
     from app.services.attribution_service import AttributionService
     from app.services.closer_name_service import resolver_nombre_closer
@@ -79,13 +87,18 @@ def comisiones_del_rango(desde=None, hasta=None):
     attribution_map = AttributionService.get_sales_attribution(sales=sales, agendas=FinancialAgenda.query.all())
 
     tasas_de_mes = por_mes()
-    grupo_de = {clave: 'setters' for clave in SETTERS_CON_COMISION.values()}
-    grupo_de.update({clave: 'closers' for clave in CLOSERS_CON_COMISION.values()})
-    grupo_de[DIRECTOR_DE_VENTAS] = 'director'
-    ventas_de = {clave: [] for clave in grupo_de}
-    recaudado = {clave: 0.0 for clave in grupo_de}
-    comision = {clave: 0.0 for clave in grupo_de}
-    porcentajes = {clave: set() for clave in grupo_de}
+    # Cada partida es (persona, grupo de su %). Marlon tiene dos: sus ventas propias, con su % de
+    # closer, y su parte de director sobre las de los otros closers (ver `CONCEPTOS`).
+    partidas = list(dict.fromkeys(
+        [(clave, 'setters') for clave in SETTERS_CON_COMISION.values()]
+        + [(clave, 'closers') for clave in CLOSERS_CON_COMISION.values()]
+        + [(DIRECTOR_DE_VENTAS, 'director')]))
+    claves = list(dict.fromkeys(clave for clave, _ in partidas))
+    ventas_de = {clave: [] for clave in claves}
+    recaudado = {partida: 0.0 for partida in partidas}
+    comision = {partida: 0.0 for partida in partidas}
+    contadas = {partida: 0 for partida in partidas}
+    porcentajes = {partida: set() for partida in partidas}
     completadas = []  # (venta, sale_data) para la nómina de Fulfillment
     # El cash del período, con o sin comisión de por medio: el contexto de lo que se paga.
     cash = {"neto": 0.0, "bruto": 0.0, "ventas": 0}
@@ -119,43 +132,59 @@ def comisiones_del_rango(desde=None, hasta=None):
         cash["ventas"] += 1
         tasas = tasas_de_mes(s.date.strftime('%Y-%m') if s.date else mes_de_cierre)
 
-        def sumar(clave):
-            pct = tasas[grupo_de[clave]][clave]
-            porcentajes[clave].add(pct)
-            ventas_de[clave].append({**sale_data, "porcentaje": pct, "comision": round(monto_ajustado * pct / 100, 2)})
+        def sumar(clave, grupo):
+            pct = tasas[grupo][clave]
+            porcentajes[(clave, grupo)].add(pct)
+            fila = {**sale_data, "porcentaje": pct, "comision": round(monto_ajustado * pct / 100, 2)}
+            if clave == DIRECTOR_DE_VENTAS:
+                fila["concepto"] = CONCEPTOS[grupo]
+            ventas_de[clave].append(fila)
             if not excluida:
-                recaudado[clave] += monto_ajustado
-                comision[clave] += monto_ajustado * pct / 100
+                recaudado[(clave, grupo)] += monto_ajustado
+                comision[(clave, grupo)] += monto_ajustado * pct / 100
+                contadas[(clave, grupo)] += 1
 
         setter_clave = SETTERS_CON_COMISION.get(final_setter.strip().lower())
         if setter_clave:
-            sumar(setter_clave)
+            sumar(setter_clave, 'setters')
 
         closer_clave = clave_de_closer(final_closer)
         if closer_clave:
-            sumar(closer_clave)
-            # Marlon cobra su % del cash collect de los closers sin renovaciones
-            if not es_renovacion(s.tipo_pago):
-                sumar(DIRECTOR_DE_VENTAS)
+            sumar(closer_clave, 'closers')
+            # Marlon cobra su % del cash collect de los OTROS closers, sin renovaciones: las suyas
+            # ya le pagan como closer.
+            if closer_clave != DIRECTOR_DE_VENTAS and not es_renovacion(s.tipo_pago):
+                sumar(DIRECTOR_DE_VENTAS, 'director')
 
-    def porcentaje_de(clave):
+    def porcentaje_de(partida):
         # Un solo % en el rango es el de la persona; si el rango cruza un cambio, no hay uno solo
         # (None, como Fulfillment) y cada venta trae el suyo. Sin ventas, el del último mes.
-        usados = porcentajes[clave]
+        usados = porcentajes[partida]
         if not usados:
-            return tasas_de_mes(mes_de_cierre)[grupo_de[clave]][clave]
+            clave, grupo = partida
+            return tasas_de_mes(mes_de_cierre)[grupo][clave]
         return next(iter(usados)) if len(usados) == 1 else None
 
-    nomina = {
-        clave: {
+    def resumen(clave):
+        suyas = [p for p in partidas if p[0] == clave]
+        datos = {
             "sales": ventas_de[clave],
-            "total_recaudado_neto": round(recaudado[clave], 2),
-            "porcentaje_comision": porcentaje_de(clave),
-            "comision_total": round(comision[clave], 2),
-            "total_ventas": len([x for x in ventas_de[clave] if not x["is_excluded_from_payroll"]])
+            "total_recaudado_neto": round(sum(recaudado[p] for p in suyas), 2),
+            # Con dos partidas (Marlon) no hay un % de la persona: cada una trae el suyo en `desglose`.
+            "porcentaje_comision": porcentaje_de(suyas[0]) if len(suyas) == 1 else None,
+            "comision_total": round(sum(comision[p] for p in suyas), 2),
+            "total_ventas": sum(contadas[p] for p in suyas),
         }
-        for clave in grupo_de
-    }
+        if len(suyas) > 1:
+            datos["desglose"] = {CONCEPTOS[grupo]: {
+                "porcentaje": porcentaje_de((clave, grupo)),
+                "total_recaudado_neto": round(recaudado[(clave, grupo)], 2),
+                "comision_total": round(comision[(clave, grupo)], 2),
+                "total_ventas": contadas[(clave, grupo)],
+            } for _, grupo in suyas}
+        return datos
+
+    nomina = {clave: resumen(clave) for clave in claves}
     # Fulfillment: el % cambia venta a venta (programa y fuente), así que cada venta trae el suyo.
     nomina.update(nomina_por_persona(completadas, tasas_de_mes))
     nomina["totales"] = {"cash_neto": round(cash["neto"], 2), "cash_bruto": round(cash["bruto"], 2),

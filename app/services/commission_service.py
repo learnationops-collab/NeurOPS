@@ -21,9 +21,14 @@ DIRECTOR_RATE = 0.05
 # está activa, pero `resolver_nombre_closer` resuelve contra todos los usuarios, activos o no.
 # «Gabriel» es Gabriel Hernandez: el 'Gabriel' a secas es otro closer de abril y mayo de 2026
 # (gabriel@thelearnation.com, del diccionario histórico) y Gabriel Cardozo no vendió.
+#
+# Marlon también vende: desde el 08/10/2026 cobra sus ventas propias como cualquier closer (con su %
+# de closer) y aparte su % de director sobre las de los OTROS closers; las suyas no entran en esa
+# parte. Sus ventas (marlon@thelearnation.com, marlongarcia27948@gmail.com) resuelven a su usuario,
+# 'Marlon Garcia', o a 'Marlon' (el diccionario histórico, donde no está el usuario).
 SETTERS_CON_COMISION = {'elias': 'elias', 'paula': 'paula'}
 CLOSERS_CON_COMISION = {'jean carlo': 'jeancarlo', 'facundo': 'facundo', 'nerina': 'nerina',
-                        'gabriel hernandez': 'gabriel'}
+                        'gabriel hernandez': 'gabriel', 'marlon garcia': 'marlon', 'marlon': 'marlon'}
 DIRECTOR_DE_VENTAS = 'marlon'
 
 

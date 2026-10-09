@@ -98,7 +98,7 @@ def test_la_nomina_muestra_a_paula_y_facundo(client, make_user, auth_headers, ve
         'facundo': (10.0, 80.0, 2, 2),
         'nerina': (10.0, 0.0, 0, 0),
         'gabriel': (10.0, 0.0, 0, 0),
-        'marlon': (5.0, 75.0, 2, 3),
+        'marlon': (None, 75.0, 2, 3),   # dos partidas (propias y director): cada una con su %
     }
 
 
@@ -123,6 +123,42 @@ def test_nerina_y_gabriel_cobran_como_closers(client, db, make_user, auth_header
     assert (datos['gabriel']['comision_total'], datos['gabriel']['total_ventas']) == (120.0, 2)
     # Marlon como director también cobra sobre ellos, sin la renovación: 5% de 450 + 1000.
     assert datos['marlon']['comision_total'] == 72.5
+
+
+def test_marlon_cobra_sus_ventas_propias_y_su_parte_de_director(client, db, make_user, auth_headers):
+    """Sus ventas propias (los dos correos) le pagan como a cualquier closer, con su % de closer; las
+    de los otros closers, sin renovaciones, con su % de director. Las suyas no entran en esa parte."""
+    from app.services import comision_tasas_service as tasas
+
+    make_user(role='director_comercial', username='Marlon Garcia', email='marlongarcia27948@gmail.com')
+    for monto, correo, tipo in ((1000.0, 'marlon@thelearnation.com', 'RR - Completo'),
+                                (500.0, 'marlongarcia27948@gmail.com', 'AL - Renovación'),
+                                (2000.0, 'jeancarlo@thelearnation.com', 'SI - Completo'),
+                                (300.0, 'jeancarlo@thelearnation.com', 'SI - Renovación')):
+        db.session.add(FinancialSale(monto=monto, metodo_pago='zelle', tipo_pago=tipo, estado='Completada',
+                                     email_vendedor=correo, date=datetime(2026, 9, 12)))
+    db.session.commit()
+    admin = auth_headers(make_user(role='admin', can_view_finance=True))
+    url = '/api/public/financial-sales/payroll?start_date=2026-09-01&end_date=2026-09-30'
+
+    marlon = client.get(url, headers=admin).get_json()['marlon']
+
+    assert marlon['comision_total'] == 250.0   # 10% de 1000 + 500, y 5% de 2000
+    assert marlon['total_ventas'] == 3
+    assert marlon['desglose'] == {
+        'propia': {'porcentaje': 10, 'total_recaudado_neto': 1500.0, 'comision_total': 150.0, 'total_ventas': 2},
+        'director': {'porcentaje': 5, 'total_recaudado_neto': 2000.0, 'comision_total': 100.0, 'total_ventas': 1},
+    }
+    assert sorted((v['concepto'], v['porcentaje'], v['comision']) for v in marlon['sales']) == [
+        ('director', 5, 100.0), ('propia', 10, 50.0), ('propia', 10, 100.0)]
+
+    # Su % de closer se edita aparte del de director.
+    tasas.guardar('2026-09', {'closers': {'marlon': 20}})
+    assert client.get(url, headers=admin).get_json()['marlon']['comision_total'] == 400.0
+
+    # En Finanzas, el integrante Marlon cobra el total.
+    marlon_equipo = TeamMember(name='Marlon', role='Director de Ventas', salary_type='variable')
+    assert comision_de_miembro(marlon_equipo, get_commissions_calculated('2026-09')) == 400.0
 
 
 def test_la_nomina_de_finanzas_suma_a_nerina_y_gabriel(client, db, make_user, auth_headers):

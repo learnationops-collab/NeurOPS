@@ -76,15 +76,17 @@ const FULFILLMENT = { rol: 'Fulfillment', Icono: Users, tono: 'success', ventas:
 
 // Filas completas, nunca una tarjeta suelta: los dos setters, los cuatro closers con el director
 // (Nerina y Gabriel desde el 08/10/2026), y los cinco de Fulfillment. `id` es la clave del filtro
-// por grupos de la barra (`FiltroGrupos`).
+// por grupos de la barra (`FiltroGrupos`). Marlon cobra dos partidas (`desglose`): sus ventas
+// propias, como closer, y las de los otros closers sin renovaciones, como director; su tile suma
+// las dos y abajo dice cuánto es cada una.
 export const GRUPOS = [
     { id: 'setting', titulo: 'Setting', columnas: 'fz-grid--2', personas: [
         { ...SETTER, id: 'elias', nombre: 'Elias' }, { ...SETTER, id: 'paula', nombre: 'Paula' }] },
     { id: 'closing', titulo: 'Closing', columnas: 'fz-grid--5', personas: [
         ...[['jeancarlo', 'Jean Carlo'], ['facundo', 'Facundo'], ['nerina', 'Nerina'], ['gabriel', 'Gabriel']]
             .map(([id, nombre]) => ({ ...CLOSER, id, nombre })),
-        { id: 'marlon', nombre: 'Marlon', rol: 'Director de ventas', Icono: UserCheck, tono: 'warning',
-            ventas: 'ventas de closers sin renovaciones' }] },
+        { id: 'marlon', nombre: 'Marlon', rol: 'Director', Icono: UserCheck, tono: 'warning',
+            ventas: 'ventas propias y de closers' }] },
     { id: 'fulfillment', titulo: 'Fulfillment', columnas: 'fz-grid--5', personas: [
         ['andy', 'Andy'], ['dari', 'Dari'], ['santi', 'Santi'], ['belu', 'Belu'], ['pedro', 'Pedro'],
     ].map(([id, nombre]) => ({ ...FULFILLMENT, id, nombre })) },
@@ -235,11 +237,23 @@ export const FiltroPersonas = ({ grupos, elegidas, onCambiar }) => {
     );
 };
 
+// Las dos partidas de Marlon, en el orden en que se leen (el JSON llega con las claves ordenadas).
+export const PARTIDAS = [['propia', 'propias'], ['director', 'director']];
+const pctDe = (n) => (n == null ? '—' : `${n}%`);
+
+/** La línea de abajo del tile: cuántas ventas y el neto, o, con dos partidas, cuánto es cada una. */
+const lecturaDe = (persona, datos) => (datos.desglose
+    ? PARTIDAS.filter(([k]) => datos.desglose[k]).map(([k, rotulo]) => `${rotulo} ${dinero(datos.desglose[k].comision_total)}`).join(' · ')
+    : `${datos.total_ventas} ${persona.ventas} · neto ${dinero(datos.total_recaudado_neto)}`);
+
 const Tile = ({ persona, datos, onVer }) => {
     const { Icono } = persona;
     // Fulfillment no tiene un % fijo (cada venta trae el suyo, y lo muestra la auditoría): en un
     // tile de un quinto de ancho, «% por programa» se partía en dos renglones al lado del chip.
-    const pct = datos.porcentaje_comision == null ? null : `${datos.porcentaje_comision}%`;
+    // Marlon tiene uno por partida: el de sus ventas propias y el de director.
+    const pct = datos.desglose
+        ? PARTIDAS.filter(([k]) => datos.desglose[k]).map(([k]) => pctDe(datos.desglose[k].porcentaje)).join(' · ')
+        : datos.porcentaje_comision == null ? null : `${datos.porcentaje_comision}%`;
     return (
         <button type="button" className="kpi caja fz-persona" onClick={onVer} disabled={!onVer}
             title={onVer ? `Ver en Revisar las ventas de ${persona.nombre}` : 'Sin ventas en este período'}>
@@ -251,9 +265,7 @@ const Tile = ({ persona, datos, onVer }) => {
             <p className="fz-persona-nom">{persona.nombre}</p>
             <div className="kpi-cifra">
                 <Cifra tag="p" className="kpi-n" valor={dinero(datos.comision_total)} style={{ color: v('success') }} />
-                <p className="kpi-sub num">
-                    {datos.total_ventas} {persona.ventas} · neto {dinero(datos.total_recaudado_neto)}
-                </p>
+                <p className="kpi-sub num">{lecturaDe(persona, datos)}</p>
             </div>
             {onVer && (
                 <span className="kpi-acciones" aria-hidden="true">
