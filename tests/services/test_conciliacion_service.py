@@ -253,8 +253,19 @@ def test_una_pasarela_sin_csv_en_el_periodo_no_se_concilia(db):
     assert [f['pasarela'] for f in r['filas']] == ['stripe']
     assert r['pasarelas']['hotmart']['con_csv'] is False
     assert (r['kpis']['hotmart']['reportado'], r['kpis']['hotmart']['ingresado']) == (100.0, None)
-    # «Todas» suma solo lo que se pudo conciliar.
-    assert r['kpis']['todas']['reportado'] == 50.0
+    # «Todas» suma solo lo que se pudo conciliar, y dice de qué pasarelas es.
+    assert (r['kpis']['todas']['reportado'], r['kpis']['todas']['pasarelas']) == (50.0, ['stripe'])
+
+
+def test_sin_ningun_csv_lo_reportado_suma_las_dos_y_no_hay_con_que_compararlo(db):
+    venta(db, 100, datetime(2026, 9, 10), 'ana@prueba.com', metodo='Hotmart')
+    venta(db, 50, datetime(2026, 9, 10), 'beto@prueba.com')
+
+    todas = conciliar()['kpis']['todas']
+
+    assert (todas['reportado'], todas['ventas'], todas['con_csv']) == (150.0, 2, False)
+    assert (todas['ingresado'], todas['diferencia'], todas['pendientes']['total']) == (None, None, 0)
+    assert conciliar()['filas'] == []
 
 
 # --- KPIs -----------------------------------------------------------------------------------------

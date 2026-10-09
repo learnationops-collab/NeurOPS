@@ -545,7 +545,9 @@ def conciliar(desde, hasta):
         })
     filas.sort(key=lambda f: (f['fecha'] or '', f['clave']), reverse=True)
 
-    kpis = {'todas': _kpis(filas, ventas, movs, inicio, fin, [p for p in PASARELAS if pasarelas[p]['con_csv']])}
+    # «Todas» suma las pasarelas con CSV; sin ninguno, lo reportado de las dos (y nada con qué compararlo).
+    con_csv = [p for p in PASARELAS if pasarelas[p]['con_csv']]
+    kpis = {'todas': _kpis(filas, ventas, movs, inicio, fin, con_csv or list(PASARELAS), con_csv=bool(con_csv))}
     for p in PASARELAS:
         kpis[p] = _kpis([f for f in filas if f['pasarela'] == p], ventas, movs, inicio, fin, [p],
                         con_csv=pasarelas[p]['con_csv'])
@@ -581,6 +583,7 @@ def _kpis(filas, ventas, movs, inicio, fin, pasarelas, con_csv=True):
         'coinciden': sum(1 for f in filas if f['estado'] == 'coincide'),
         'revisadas': sum(1 for f in filas if f['revisada']),
         'con_csv': con_csv,
+        'pasarelas': list(pasarelas),
     }
 
 
