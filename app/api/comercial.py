@@ -203,7 +203,10 @@ def tabla():
     elif cual == 'ventas':
         # Las ventas se atribuyen al closer que las firmó: pedirlas acotadas por un setter daría
         # una lista vacía, no la suya. Con rol setters se devuelven sin acotar por persona.
-        filas = ComercialService.ventas(start, end, closer_nombre=nombre if rol == ROL_CLOSERS else None)
+        # `con_fuente`: cada fila lleva la fuente de su cobro, para filtrar y agrupar por ella en
+        # Revisar. Se calcula una vez por pedido; filtrar y agrupar después es del lado del cliente.
+        filas = ComercialService.ventas(start, end, closer_nombre=nombre if rol == ROL_CLOSERS else None,
+                                        con_fuente=True)
         totales = ComercialService.totales_ventas(filas)
     elif cual == 'leads':
         de_setter = rol == ROL_SETTERS
