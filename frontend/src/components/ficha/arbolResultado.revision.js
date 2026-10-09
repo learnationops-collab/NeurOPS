@@ -26,6 +26,8 @@ const SECCION_DE = {
   venta_examen: 'cliente',
   programa: 'programa', venta_estado_cliente: 'programa',
   tipo_pago: 'pago', liquidar: 'pago', venta_montos: 'pago', medio_pago: 'pago',
+  // A quién del equipo se le hizo la transferencia (09/10/2026): va con el medio de pago.
+  transferido_a: 'pago',
   venta_cuota: 'pago', venta_num_cuotas: 'pago', venta_modo_cuotas: 'pago',
   venta_dia_pago: 'pago', venta_fechas_cuotas: 'pago',
   venta_fecha: 'fechas', venta_estado: 'fechas',

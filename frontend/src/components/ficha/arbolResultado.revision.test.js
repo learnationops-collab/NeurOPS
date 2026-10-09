@@ -101,7 +101,8 @@ describe('revisión de la venta', () => {
   });
 
   it('todas las preguntas de venta tienen sección asignada', () => {
-    const venta = PREGUNTAS.filter((q) => q.clave.startsWith('venta_') || ['programa', 'tipo_pago', 'medio_pago', 'liquidar'].includes(q.clave));
+    const venta = PREGUNTAS.filter((q) => q.clave.startsWith('venta_')
+      || ['programa', 'tipo_pago', 'medio_pago', 'transferido_a', 'liquidar'].includes(q.clave));
     venta.forEach((q) => expect(CLAVES_CON_SECCION, q.clave).toContain(q.clave));
   });
 });
