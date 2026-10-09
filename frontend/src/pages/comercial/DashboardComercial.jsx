@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Banknote, Calendar, FileDown, ListX, Percent, CalendarRange, CheckCircle2, Ghost, Inbox, LogOut, Search, Target, Users, VenetianMask, Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -138,9 +138,9 @@ const SECCIONES = [
     { id: 'proyectar', label: 'Proyectar', Icono: Calendar, tabs: [], pronto: true },
     { id: 'simulador', label: 'Simulador', Icono: Target, tabs: [], pronto: true },
     { id: 'reportar', label: 'Reportar', Icono: Inbox, tabs: [{ key: 'reporte', label: 'Reporte del día' }, { key: 'historial', label: 'Historial' }], soloDireccion: true },
-    // Las dos de plata van juntas al final del dock (08/10/2026, antes /admin/finance y
-    // /admin/payroll). `permiso` en una sección, como en una tab: solo para quien tiene «ver
-    // finanzas» (ver `puede_ver_finanzas` en app/api/comercial.py).
+    // Las dos de plata (08/10/2026, antes /admin/finance y /admin/payroll) son de /finanzas, no del
+    // dock de Comercial (ver `ESPACIOS`). `permiso` en una sección, como en una tab: solo para quien
+    // tiene «ver finanzas» (ver `puede_ver_finanzas` en app/api/comercial.py).
     { id: 'finanzas', label: 'Finanzas', Icono: Wallet, tabs: TABS_FINANZAS, permiso: 'puede_ver_finanzas' },
     { id: 'payroll', label: 'Payroll', Icono: Banknote, tabs: [], permiso: 'puede_ver_finanzas' },
 ];
@@ -151,8 +151,14 @@ const CON_PERIODO_PROPIO = ['finanzas', 'payroll'];
 /**
  * Espacios: este mismo tablero con solo algunas secciones en el dock. «finanzas» (08/10/2026) es
  * /finanzas, la vista Finances: Finanzas y Payroll solas, sin el switch Closers/Setters.
+ *
+ * Las secciones de un espacio viven SOLO ahí: el dock de Comercial no las trae («que sean 2 vistas
+ * separadas: director comercial y finanzas», pedido del 08/10/2026), y un link viejo a una de ellas
+ * (`/admin/comercial?s=payroll`) lleva al espacio con el resto de la query.
  */
 const ESPACIOS = { finanzas: ['finanzas', 'payroll'] };
+const RUTA_DE_ESPACIO = { finanzas: '/finanzas' };
+const espacioDe = (s) => Object.keys(ESPACIOS).find(e => ESPACIOS[e].includes(s)) || null;
 
 /**
  * Con qué fecha arranca el toggle "Fecha meet / F. creación" de cada tabla: la MISMA con la que el
@@ -196,16 +202,16 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const navigate = useNavigate();
     const [saliendo, setSaliendo] = useState(false);
 
-    // En un espacio, una `s` que no es de sus secciones abre la primera.
+    // En un espacio, una `s` que no es de sus secciones abre la primera. Fuera de uno, una `s` que
+    // es de un espacio (un link viejo a Finanzas o Payroll) lleva a ese espacio (ver `ESPACIOS`).
     const delEspacio = espacio ? ESPACIOS[espacio] : null;
-    const seccionPedida = seccionFija
+    const mudadaA = !embebido && !delEspacio ? espacioDe(params.get('s')) : null;
+    const seccion = seccionFija
         || (delEspacio && !delEspacio.includes(params.get('s')) ? delEspacio[0] : params.get('s'))
         || 'analizar';
-    // Una sección con permiso que esta persona no tiene (un link a Finanzas, por ejemplo) cae a
-    // Analizar en vez de dejar la pantalla vacía. En un espacio no hay Analizar: queda la pedida y,
-    // sin el permiso, se avisa (ver `sinPermiso`).
-    const permisoPedido = SECCIONES.find(s => s.id === seccionPedida)?.permiso;
-    const seccion = permisoPedido && !contexto?.[permisoPedido] && !delEspacio ? 'analizar' : seccionPedida;
+    // Una sección con permiso que esta persona no tiene (/finanzas sin «ver finanzas») avisa en vez
+    // de quedar vacía (ver `sinPermiso`).
+    const permisoPedido = SECCIONES.find(s => s.id === seccion)?.permiso;
     const period = params.get('p') || 'mes';
     const compare = params.get('vs') || 'prev';
     /**
@@ -465,23 +471,18 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
      * Desde Payroll: las ventas que componen la comisión de una persona, en Revisar › Ventas y en
      * el período de Payroll. Viajan las ventas mismas (`__ids`, ver `seleccion` en Revisar): la
      * atribución de la nómina no se puede escribir con las facetas de la tabla.
+     *
+     * Payroll vive en /finanzas, que no tiene Revisar: se abre el dashboard comercial con ese filtro
+     * (quien ve Finanzas —admin o dirección— entra ahí también).
      */
     const irAVentasDeNomina = useCallback(({ ids, rotulo, desde, hasta }) => {
-        const destino = {
-            s: 'revisar', rol: 'closers', t: 'ventas', m: null, p: 'custom', d: desde, h: hasta,
+        const query = new URLSearchParams({
+            s: 'revisar', rol: 'closers', t: 'ventas', p: 'custom', d: desde, h: hasta,
             f: JSON.stringify({ __ids: ids, __ids_rotulo: rotulo, __de: rotulo }),
             ft: proximoToken(),
-        };
-        // En /finanzas no hay Revisar: se abre el dashboard comercial con el mismo filtro (quien ve
-        // Finanzas —admin o dirección— entra ahí también).
-        if (espacio) {
-            const query = new URLSearchParams(Object.entries(destino).filter(([, v]) => v !== null));
-            navigate(`/admin/comercial?${query.toString()}`);
-            return;
-        }
-        olvidarBasis('ventas');
-        set(destino);
-    }, [set, proximoToken, olvidarBasis, espacio, navigate]);
+        });
+        navigate(`/admin/comercial?${query.toString()}`);
+    }, [proximoToken, navigate]);
 
     /**
      * Ir a la lista de UNA persona, opcionalmente con el corte de una métrica.
@@ -578,6 +579,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         }
     }, [filtros, tablaActual, basis]);
 
+    if (mudadaA) {
+        return <Navigate to={`${RUTA_DE_ESPACIO[mudadaA]}?${params.toString()}`} replace />;
+    }
+
     if (!contexto) {
         return (
             <div className={embebido ? 'dc-shell dc-shell--embebido' : 'dc-shell'}>
@@ -588,7 +593,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
 
     const secciones = SECCIONES.filter(s => (!s.soloDireccion || contexto.puede_reportar)
         && (!s.permiso || contexto[s.permiso])
-        && (!delEspacio || delEspacio.includes(s.id)));
+        && (delEspacio ? delEspacio.includes(s.id) : !espacioDe(s.id)));
     const sinPermiso = !!permisoPedido && !contexto[permisoPedido];
     const titulo = contexto.puede_elegir_equipo || delEspacio ? seccionActual.label : `${seccionActual.label} · mis datos`;
     // En un espacio la vuelta a otro lado es el menú del dock.

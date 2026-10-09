@@ -101,8 +101,8 @@ const useDockNavigation = () => {
                 { id: 'agendas', icon: CalendarDays, label: 'Registro Agendas', path: '/ops/agendas' }
                 // Ocultas a pedido del usuario (19/ago/2026): Marketing, Alertas, Sin Anuncio e
                 // Importaciones Sheets. Las rutas siguen existiendo, solo se quitaron del Dock.
-                // Finanzas y PayRoll ya no van acá: desde el 08/10/2026 son las dos últimas
-                // secciones del dock de Comercial, para quien tiene «ver finanzas».
+                // Finanzas y PayRoll ya no van acá: desde el 08/10/2026 son la vista Finances
+                // (/finanzas), para quien tiene «ver finanzas».
             ];
             return adminPages;
         } else if (user?.role === 'director_comercial') {
