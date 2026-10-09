@@ -121,13 +121,17 @@ describe('Finanzas · Nómina', () => {
         render(<Finanzas tab="nomina" periodo={SEPTIEMBRE} />);
         await screen.findAllByText('Jean Carlos');
 
-        // Al lado del Total, la columna «Descuentos» en rojo; los demás, «—». Sin renglón aparte.
-        expect(celdas('Jean Carlos')[4]).toBe('$200.00');
-        expect(celdas('Jean Carlos')[5]).toBe('-$150.00');
-        expect(celdas('Elias')[5]).toBe('—');
+        // Antes del Total, la columna «Descuentos» en rojo (los demás, «—»), y el Total es lo que se
+        // le paga: 200 − 150. Sin renglón aparte.
+        expect(celdas('Jean Carlos')[4]).toBe('-$150.00');
+        expect(celdas('Jean Carlos')[5]).toBe('$50.00');
+        expect(celdas('Elias')[4]).toBe('—');
+        expect(celdas('Elias')[5]).toBe('$80.00');
         expect(screen.queryByText(/Transferencias recibidas de clientes/)).toBeNull();
-        expect(screen.getByText(/Total del mes ·/).closest('.fz-fila').textContent).toContain('$1,280.00-$150.00');
-        await waitFor(() => expect(cifra('Total del mes')).toBe('$1,280.00'));
+        expect(screen.getByText(/Total del mes ·/).closest('.fz-fila').textContent).toContain('-$150.00$1,130.00');
+        // Arriba, lo mismo que la tabla: el total es lo que se paga, y el costo queda dicho abajo.
+        await waitFor(() => expect(cifra('Total del mes')).toBe('$1,130.00'));
+        expect(screen.getByText('3 integrantes · costo $1,280.00')).toBeTruthy();
         await waitFor(() => expect(cifra('Descuentos')).toBe('-$150.00'));
         expect(screen.getByText('Jean Carlos', { selector: '.kpi-sub' })).toBeTruthy();
         await waitFor(() => expect(cifra('Por pagar')).toBe('$1,130.00'));
@@ -168,8 +172,8 @@ describe('Finanzas · un período que no es un mes', () => {
 
         expect(api.getNominas).toHaveBeenCalledWith(['2026-09', '2026-10']);
         // Kerwin: 1000 × 15/30 + 1000 × 15/31; Elias: 80 × 15/30 + 62 × 15/31. Medio, el del último mes.
-        expect(celdas('Kerwin')).toEqual(['KerwinOperaciones', '$983.87', '$0.00', '$0.00', '$983.87', '—', 'AirTM', 'Parcial']);
-        expect(celdas('Elias')).toEqual(['EliasSetter', '$0.00', '$70.00', '$0.00', '$70.00', '—', 'Mercury', 'Pendiente']);
+        expect(celdas('Kerwin')).toEqual(['KerwinOperaciones', '$983.87', '$0.00', '$0.00', '—', '$983.87', 'AirTM', 'Parcial']);
+        expect(celdas('Elias')).toEqual(['EliasSetter', '$0.00', '$70.00', '$0.00', '—', '$70.00', 'Mercury', 'Pendiente']);
         await waitFor(() => expect(cifra('Total del período')).toBe('$1,053.87'));
         await waitFor(() => expect(cifra('Pagado')).toBe('$500.00'));   // el septiembre tildado de Kerwin
         await waitFor(() => expect(cifra('Por pagar')).toBe('$553.87'));
@@ -193,8 +197,10 @@ describe('Finanzas · un período que no es un mes', () => {
         await screen.findAllByText('Elias');
 
         // 60 × 15/30 + 31 × 15/31 = 45; su total (70) sigue siendo lo que cuesta.
-        expect(celdas('Elias')[4]).toBe('$70.00');
-        expect(celdas('Elias')[5]).toBe('-$45.00');
+        // Cuesta 70; se le descuentan 45 y se le pagan 25.
+        expect(celdas('Elias')[4]).toBe('-$45.00');
+        expect(celdas('Elias')[5]).toBe('$25.00');
+        await waitFor(() => expect(cifra('Total del período')).toBe('$25.00'));
         await waitFor(() => expect(cifra('Por pagar')).toBe('$25.00'));
     });
 
