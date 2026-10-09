@@ -392,6 +392,10 @@ CAMPOS = ('fecha', 'monto', 'metodo_pago', 'programa_code', 'tipo', 'transferido
 SOLO_DE_LA_VENTA = {'transferido_a'}
 
 
+# El pago pedido no está entre las ventas del lead (`_venta_y_espejo`).
+NO_ES_DE_ESTE_LEAD = 'Ese pago no es de este lead.'
+
+
 def _venta_y_espejo(appt, pago_id):
     """(venta, espejo, otras ventas sin espejo) del pago pedido, si es de ESTE lead.
     `ErrorDeAccion` si no.
@@ -408,7 +412,7 @@ def _venta_y_espejo(appt, pago_id):
         raise ErrorDeAccion('Ese pago no existe.')
     ventas = _ventas_del_cliente(appt.client) if appt.client else []
     if venta.id not in {v.id for v in ventas}:
-        raise ErrorDeAccion('Ese pago no es de este lead.')
+        raise ErrorDeAccion(NO_ES_DE_ESTE_LEAD)
     parejas = _emparejar(ventas, _pagos_del_cliente(appt.client_id))
     return venta, parejas.get(venta.id), _sin_espejo(ventas, parejas, excepto=venta.id)
 
@@ -511,7 +515,38 @@ def corregir(appt, datos, usuario, pago_id=None):
     if not any(campo in datos for campo in CAMPOS):
         raise ErrorDeAccion('No hay nada que guardar.')
     venta, espejo, sin_espejo = _venta_y_espejo(appt, pago_id)
+    cambios, bitacora = _aplicar(venta, datos)
 
+    if not cambios:
+        return _respuesta(appt, venta, espejo, cambios=[])
+
+    nota = None
+    if cambios <= SOLO_DE_LA_VENTA:
+        # Solo cambió a quién se le hizo la transferencia: la plata y su registro son los mismos.
+        db.session.commit()
+        _anotar(appt, usuario, 'pago_corregido', f'corrigió el pago #{venta.id}', '; '.join(bitacora))
+        return _respuesta(appt, venta, espejo, cambios=sorted(cambios))
+    if espejo is not None:
+        # Mismo criterio que `crear`: a un cliente con otras ventas sin espejo no se le abre una
+        # inscripcion para llevar ahi este pago.
+        nota = _mover_espejo(espejo, venta, cambios, appt, abrir=not sin_espejo)
+    db.session.commit()
+
+    if espejo is None:
+        destino = 'sin registro en inscripciones: la deuda no cambió'
+    else:
+        destino = nota or 'su registro en inscripciones se corrigió igual'
+    _anotar(appt, usuario, 'pago_corregido', f'corrigió el pago #{venta.id}',
+            '; '.join(bitacora) + f'; {destino}')
+    return _respuesta(appt, venta, espejo, cambios=sorted(cambios))
+
+
+def _aplicar(venta, datos):
+    """Valida lo pedido para UN pago y lo escribe en la venta, sin guardar: (cambios, bitácora).
+
+    Se validan todos los campos antes de escribir ninguno. Es el corazón de `corregir`, y también
+    de `corregir_venta` cuando la venta no tiene un lead donde anotarlo.
+    """
     dia = _dia(datos.get('fecha')) if 'fecha' in datos else None
     monto = _monto(datos.get('monto')) if 'monto' in datos else None
     medio = _medio(datos.get('metodo_pago'), venta.metodo_pago) if 'metodo_pago' in datos else None
@@ -550,29 +585,37 @@ def corregir(appt, datos, usuario, pago_id=None):
         bitacora.append(f'transferido a {_a_quien(venta.transferido_a)} → {_a_quien(transferido_a)}')
         venta.transferido_a = transferido_a
         cambios.add('transferido_a')
+    return cambios, bitacora
 
-    if not cambios:
-        return _respuesta(appt, venta, espejo, cambios=[])
 
-    nota = None
-    if cambios <= SOLO_DE_LA_VENTA:
-        # Solo cambió a quién se le hizo la transferencia: la plata y su registro son los mismos.
+def corregir_venta(venta, datos, usuario):
+    """La misma corrección de un pago, pedida desde fuera de la ficha: Finanzas › Diferencias
+    (09/10/2026) corrige la venta reportada contra lo que entró por la pasarela.
+
+    Si la venta es de un cliente con ficha (el mismo cruce por contacto de la tabla Ventas,
+    `clientes_de_ventas`), pasa por `corregir`: las mismas validaciones, el espejo en la deuda y la
+    bitácora del lead. Si no tiene a quién pertenecer —o el cruce no la reconoce como de ese lead—,
+    se corrige la venta sola con las mismas validaciones (`_aplicar`): no hay deuda que mover ni
+    bitácora donde anotarlo, y la respuesta lo dice (`ficha: False`).
+    """
+    from app.services.comercial_service import clientes_de_ventas
+    from app.services.ficha_lead_service import resolver_lead
+
+    if not any(campo in datos for campo in CAMPOS):
+        raise ErrorDeAccion('No hay nada que guardar.')
+    cliente_id = clientes_de_ventas([venta]).get(venta.id)
+    appt = resolver_lead(client_id=cliente_id)[0] if cliente_id else None
+    if appt is not None:
+        try:
+            return {**corregir(appt, datos, usuario, pago_id=venta.id), 'ficha': True}
+        except ErrorDeAccion as error:
+            if str(error) != NO_ES_DE_ESTE_LEAD:
+                raise
+            db.session.rollback()
+    cambios, _ = _aplicar(venta, datos)
+    if cambios:
         db.session.commit()
-        _anotar(appt, usuario, 'pago_corregido', f'corrigió el pago #{venta.id}', '; '.join(bitacora))
-        return _respuesta(appt, venta, espejo, cambios=sorted(cambios))
-    if espejo is not None:
-        # Mismo criterio que `crear`: a un cliente con otras ventas sin espejo no se le abre una
-        # inscripcion para llevar ahi este pago.
-        nota = _mover_espejo(espejo, venta, cambios, appt, abrir=not sin_espejo)
-    db.session.commit()
-
-    if espejo is None:
-        destino = 'sin registro en inscripciones: la deuda no cambió'
-    else:
-        destino = nota or 'su registro en inscripciones se corrigió igual'
-    _anotar(appt, usuario, 'pago_corregido', f'corrigió el pago #{venta.id}',
-            '; '.join(bitacora) + f'; {destino}')
-    return _respuesta(appt, venta, espejo, cambios=sorted(cambios))
+    return {'id': venta.id, 'espejo': False, 'ficha': False, 'cambios': sorted(cambios)}
 
 
 # --- Borrar un pago ---------------------------------------------------------------------------
