@@ -23,7 +23,7 @@ import RangoFechas, { mesEnCurso, rangoAnterior, rangoDe, textoRango } from './c
 import { corregirAgenda, eliminarAgenda as eliminarAgendaApi, getComparativas, getContexto, getResumen, getTabla, getVariabilidad, marcarAgendaDuplicada } from './comercialApi';
 import { sincronizarAcademia as sincronizarAcademiaApi } from './comercialApi';
 import Finanzas, { TABS_FINANZAS } from './components/finanzas/Finanzas';
-import Payroll, { FiltroGrupos, FiltroPersonas, MenuPeriodoPayroll, leerGrupos, leerPersonas, rangoPayroll } from './components/finanzas/Payroll';
+import Payroll, { FiltroGrupos, FiltroPersonas, GRUPOS as GRUPOS_DE_NOMINA, MenuPeriodoPayroll, leerGrupos, leerPersonas, rangoPayroll } from './components/finanzas/Payroll';
 import { MenuPeriodoFinanzas, guardarPeriodo, leerPeriodoGuardado, periodoDe } from './components/finanzas/comun';
 import './components/finanzas/finanzas.css';
 
@@ -157,6 +157,8 @@ const CON_PERIODO_PROPIO = ['finanzas', 'payroll'];
  * (`/admin/comercial?s=payroll`) lleva al espacio con el resto de la query.
  */
 const ESPACIOS = { finanzas: ['finanzas', 'payroll'] };
+// Las personas de Payroll cuyas ventas se pueden abrir con `ver` en la URL (ver `verEnNomina`).
+const PERSONAS_DE_NOMINA = GRUPOS_DE_NOMINA.flatMap(g => g.personas);
 const RUTA_DE_ESPACIO = { finanzas: RUTA_FINANZAS };
 const espacioDe = (s) => Object.keys(ESPACIOS).find(e => ESPACIOS[e].includes(s)) || null;
 
@@ -468,21 +470,19 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const irADetalle = embebido && !onIrASeccion ? null : irA;
 
     /**
-     * Desde Payroll: las ventas que componen la comisión de una persona, en Revisar › Ventas y en
-     * el período de Payroll. Viajan las ventas mismas (`__ids`, ver `seleccion` en Revisar): la
-     * atribución de la nómina no se puede escribir con las facetas de la tabla.
-     *
-     * Payroll vive en /finanzas, que no tiene Revisar: se abre el dashboard comercial con ese filtro
-     * (quien ve Finanzas —admin o dirección— entra ahí también).
+     * Payroll: de quién están abiertas las ventas (`ver`, el id de su tile), dentro de /finanzas
+     * (08/10/2026). Antes el tile llevaba a Revisar › Ventas de /admin/comercial, la vista de la
+     * dirección; ahora la lista vive en Payroll (`VentasDePersona`). Va en la URL y SUMA una entrada
+     * al historial (las demás de `set` la reemplazan): el botón atrás del navegador cierra la lista y
+     * vuelve a los tiles, y el link de una persona se comparte.
      */
-    const irAVentasDeNomina = useCallback(({ ids, rotulo, desde, hasta }) => {
-        const query = new URLSearchParams({
-            s: 'revisar', rol: 'closers', t: 'ventas', p: 'custom', d: desde, h: hasta,
-            f: JSON.stringify({ __ids: ids, __ids_rotulo: rotulo, __de: rotulo }),
-            ft: proximoToken(),
-        });
-        navigate(`/admin/comercial?${query.toString()}`);
-    }, [proximoToken, navigate]);
+    const verEnNomina = PERSONAS_DE_NOMINA.some(p => p.id === params.get('ver')) ? params.get('ver') : null;
+    const elegirEnNomina = useCallback((id) => {
+        const siguiente = new URLSearchParams(params);
+        if (id) siguiente.set('ver', id);
+        else siguiente.delete('ver');
+        setParams(siguiente);
+    }, [params, setParams]);
 
     /**
      * Ir a la lista de UNA persona, opcionalmente con el corte de una métrica.
@@ -735,11 +735,13 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     )}
 
                     {seccion === 'reportar' && stepper}
-                    {seccion === 'payroll' && !sinPermiso && (
+                    {/* Los filtros de grupos y personas son de los tiles: con las ventas de una
+                        persona abiertas no cambiarían nada de lo que se ve. */}
+                    {seccion === 'payroll' && !sinPermiso && !verEnNomina && (
                         <FiltroGrupos visibles={gruposNomina} onCambiar={setGruposNomina}
                             personas={personasNomina} onCambiarPersonas={setPersonasNomina} />
                     )}
-                    {seccion === 'payroll' && !sinPermiso && (
+                    {seccion === 'payroll' && !sinPermiso && !verEnNomina && (
                         <FiltroPersonas grupos={gruposNomina} elegidas={personasNomina} onCambiar={setPersonasNomina} />
                     )}
 
@@ -852,7 +854,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     )}
                     {seccion === 'finanzas' && !sinPermiso && <Finanzas tab={tab} periodo={periodoFinanzas} />}
                     {seccion === 'payroll' && !sinPermiso && (
-                        <Payroll desde={rangoNomina.desde} hasta={rangoNomina.hasta} onVerVentas={irAVentasDeNomina}
+                        <Payroll desde={rangoNomina.desde} hasta={rangoNomina.hasta} ver={verEnNomina} onVer={elegirEnNomina}
                             grupos={gruposNomina} personas={personasNomina} tasasAbiertas={tasasAbiertas}
                             onCerrarTasas={() => setTasasAbiertas(false)}
                             excluirAbierto={excluirAbierto} onCerrarExcluir={() => setExcluirAbierto(false)} />
@@ -888,7 +890,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
 
                 {!embebido && (
                     <DockSecciones secciones={secciones} activa={seccion}
-                        onElegir={(id) => set({ s: id })}
+                        onElegir={(id) => set({ s: id, ver: null })}
                         ariaLabel="Secciones del dashboard comercial" siempreNombres
                         despues={<MenuSesion nombre={contexto.yo.nombre} rol={rotuloDeRol} grupos={gruposDeSesion} />}
                         antes={contexto.puede_elegir_equipo && !delEspacio && (

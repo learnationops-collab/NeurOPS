@@ -37,7 +37,7 @@ const NOMINA = {
 };
 
 const montar = (props) => render(
-    <Payroll desde="2026-09-01" hasta="2026-09-30" onVerVentas={() => {}} tasasAbiertas={false}
+    <Payroll desde="2026-09-01" hasta="2026-09-30" onVer={() => {}} tasasAbiertas={false}
         onCerrarTasas={() => {}} grupos={['setting', 'closing', 'fulfillment']} {...props} />,
 );
 
