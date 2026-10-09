@@ -204,10 +204,18 @@ def create_new_financial_sale():
     
     if not data.get('nombre_cliente') or not data.get('monto'):
         return jsonify({"error": "Nombre del cliente y monto son requeridos"}), 400
-        
+    # Un cobro por transferencia dice a quién del equipo se le hizo (09/10/2026): es el alta, el
+    # momento de registrarlo. `post_to_sheets` lo guarda en la venta y no lo manda a la hoja.
+    from app.services.transferencias_service import para_guardar
+    try:
+        transferido_a = para_guardar(data.get('transferido_a'), data.get('metodo_pago'), obligatorio=True)
+    except ValueError as e:
+        return jsonify({"error": str(e), "campo": "transferido_a"}), 400
+
     try:
         # Formatear el payload para SheetsService.post_to_sheets
         payload = {
+            "transferido_a": transferido_a,
             "email_vendedor": data.get('email_vendedor') or 'Sin asignar',
             "nombre_cliente": data.get('nombre_cliente'),
             "telefono": data.get('telefono') or '',
@@ -259,6 +267,16 @@ def update_financial_sale(sale_id):
             sale.tipo_pago = data['product']
         if 'payment_type' in data:
             sale.metodo_pago = data['payment_type']
+        if 'payment_type' in data or 'transferido_a' in data:
+            # A quién se le hizo la transferencia se marca, se cambia o se limpia (null); un pago que
+            # deja de ser transferencia pierde la marca (ver `transferencias_service`).
+            from app.services.transferencias_service import para_guardar
+            try:
+                sale.transferido_a = para_guardar(data.get('transferido_a', sale.transferido_a),
+                                                  sale.metodo_pago)
+            except ValueError as e:
+                db.session.rollback()
+                return jsonify({"error": str(e), "campo": "transferido_a"}), 400
         if 'setter_name' in data:
             new_setter = data['setter_name']
             sale.setter = new_setter
@@ -841,6 +859,8 @@ def bulk_update_financial_sales():
     if dry_run:
         return jsonify({"matched": len(sales), "updated_count": 0, "dry_run": True}), 200
 
+    from app.services.transferencias_service import para_guardar
+
     updated_count = 0
     filas_para_sheets = []
     
@@ -865,6 +885,8 @@ def bulk_update_financial_sales():
                 
             if metodo_pago is not None:
                 sale.metodo_pago = metodo_pago
+                # Un pago que deja de ser transferencia pierde a quién se le hizo.
+                sale.transferido_a = para_guardar(sale.transferido_a, metodo_pago)
                 
             if setter is not None:
                 sale.setter = setter

@@ -59,6 +59,15 @@ class SheetsService:
             appointment_id = int(payload.pop('appointment_id', None) or 0) or None
         except (TypeError, ValueError):
             appointment_id = None
+        # A quién del equipo se le hizo el cobro si fue por transferencia (09/10/2026): también es de
+        # NeurOPS, se guarda en la venta y no viaja. Lo valida quien llama (la ficha lo pide en cada
+        # alta): acá se guarda solo si es una opción de la lista y el medio es transferencia.
+        from app.services import transferencias_service
+        try:
+            transferido_a = transferencias_service.para_guardar(payload.pop('transferido_a', None),
+                                                                payload.get('metodo_pago'))
+        except ValueError:
+            transferido_a = None
 
         # Si es Ventas_DB, guardamos en la base de datos local de forma inmediata
         inconsistency_warning = None
@@ -134,6 +143,7 @@ class SheetsService:
                     monto=SheetsService._parse_float(payload.get('monto')),
                     segundo_pago=SheetsService._to_str(payload.get('segundo_pago')),
                     metodo_pago=SheetsService._to_str(payload.get('metodo_pago')),
+                    transferido_a=transferido_a,
                     examen=SheetsService._to_str(payload.get('examen')),
                     instagram=SheetsService._to_str(payload.get('instagram')),
                     setter=SheetsService._to_str(payload.get('setter')),

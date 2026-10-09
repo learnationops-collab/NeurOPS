@@ -289,6 +289,7 @@ def _cobro(client, ventas, deuda, programa_code, programa_nombre, enrollment_dt,
     from app.models import InstallmentPlan
     from app.services.sales_consistency_service import SalesConsistencyService
     from app.services.sheets_service import SheetsService
+    from app.services.transferencias_service import es_transferencia
 
     client_id = client.id if client else None
     proxima = CloserFollowUpService._proxima_cuota(client_id, deuda)
@@ -302,10 +303,13 @@ def _cobro(client, ventas, deuda, programa_code, programa_nombre, enrollment_dt,
         programa, tipo = SheetsService.parse_tipo_pago(v.tipo_pago)
         # El id es la venta: con el se corrige o se borra ESE pago desde el historial. El
         # `tipo_pago` crudo y el programa son con lo que arranca su editor; `tipo` sigue siendo la
-        # palabra canonica ('cuota', 'seña'...) y `None` cuando el texto no dice ninguna.
+        # palabra canonica ('cuota', 'seña'...) y `None` cuando el texto no dice ninguna. En un pago
+        # por transferencia, `transferido_a` es a quién del equipo se le hizo (None = sin marcar).
         pagos.append({'id': v.id, 'fecha': _iso(v.date or v.created_at), 'medio': v.metodo_pago,
                       'monto': float(v.monto or 0.0), 'tipo': tipo,
-                      'tipo_pago': v.tipo_pago or None, 'programa_code': programa})
+                      'tipo_pago': v.tipo_pago or None, 'programa_code': programa,
+                      'es_transferencia': es_transferencia(v.metodo_pago),
+                      'transferido_a': v.transferido_a})
     pagado = round(sum(p['monto'] for p in pagos), 2)
     fechas = [p['fecha'] for p in pagos if p['fecha']]
 
