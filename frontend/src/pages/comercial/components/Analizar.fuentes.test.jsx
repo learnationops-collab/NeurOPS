@@ -127,19 +127,62 @@ describe('Analizar · Ingresos por fuente', () => {
         expect(rotulos()).toEqual(['Workshop', 'Setting', 'VSL', 'Fulfillment', 'Sin procedencia']);
     });
 
-    it('una fuente sin detalle no es un botón, y una en cero queda apagada sin esconderse', async () => {
+    it('una fuente sin detalle no se abre, y una en cero queda apagada sin esconderse', async () => {
         await montar(datos({
             ...FUENTES,
             procedencias: FUENTES.procedencias.map(p => (p.key === 'fulfillment'
                 ? { ...p, monto: 0, cantidad: 0, pct: 0, detalle: [] } : p)),
         }));
 
-        expect(within(tarjeta()).getByText('VSL').closest('button')).toBeNull();
+        const vsl = within(tarjeta()).getByText('VSL').closest('.fuente');
+        expect(vsl.querySelector('.fuente-abrir')).toBeNull();
         const apagada = within(tarjeta()).getByText('Fulfillment').closest('.fuente');
-        expect(apagada.tagName).toBe('DIV');
+        expect(apagada.querySelector('.fuente-abrir')).toBeNull();
         expect(apagada.dataset.vacio).toBe('1');
-        // Las filas no llevan a Revisar: la tabla Ventas no sabe cortar por la fuente atribuida.
-        expect(tarjeta().querySelectorAll('.metrica-clic, .ir-btn')).toHaveLength(0);
+        // Su monto lleva igual a la lista, apagado: un cero también se puede mirar.
+        expect(apagada.querySelector('.metrica-clic').dataset.vacio).toBe('1');
+    });
+
+    it('el monto de una fuente abre Revisar › Ventas con esa fuente, sin abrir el detalle', async () => {
+        const irA = vi.fn();
+        render(<Analizar datos={datos(FUENTES)} rol="closers" irA={irA} />);
+
+        const workshop = within(tarjeta()).getByRole('button', { name: 'Ver en la lista: 2 cobros de Workshop, $1,500' });
+        fireEvent.click(workshop);
+
+        expect(irA).toHaveBeenCalledWith('ventas',
+            { fuente: 'Workshop', __de: 'Ingresos por fuente: Workshop', __aviso: null });
+        expect(within(tarjeta()).getByRole('button', { name: /^Workshop: .*Ver el detalle/ }))
+            .toHaveAttribute('aria-expanded', 'false');
+
+        // La VSL no tiene detalle, pero su monto también lleva.
+        fireEvent.click(within(tarjeta()).getByRole('button', { name: 'Ver en la lista: 1 cobro de VSL, $1,500' }));
+        expect(irA).toHaveBeenLastCalledWith('ventas',
+            { fuente: 'VSL', __de: 'Ingresos por fuente: VSL', __aviso: null });
+
+        // El total es el Cash collected: la lista entera, sin etiquetas.
+        fireEvent.click(within(tarjeta()).getByRole('button', { name: 'Ver en la lista: 6 cobros del período, $5,550' }));
+        expect(irA).toHaveBeenLastCalledWith('ventas', { __de: 'Ingresos por fuente', __aviso: null });
+    });
+
+    it('un renglón del detalle abre la lista de ese renglón, con su fuente adelante', async () => {
+        const irA = vi.fn();
+        render(<Analizar datos={datos(FUENTES)} rol="closers" irA={irA} />);
+        fireEvent.click(within(tarjeta()).getByRole('button', { name: /^Setting: .*Ver el detalle/ }));
+
+        fireEvent.click(within(tarjeta()).getByRole('button', { name: 'Ver en la lista: 1 cobro de Setting · Elias, $1,200' }));
+
+        expect(irA).toHaveBeenCalledWith('ventas', {
+            fuente_detalle: 'Setting · Elias', __de: 'Ingresos por fuente: Setting · Elias', __aviso: null });
+    });
+
+    it('sin a dónde llevar (Analizar embebido sin lista), los montos son texto', async () => {
+        render(<Analizar datos={datos(FUENTES)} rol="closers" irA={null} />);
+
+        expect(tarjeta().querySelectorAll('.metrica-clic')).toHaveLength(0);
+        expect(fila('Workshop')).toEqual(['Workshop', '2', '$1,500', '27%']);
+        // El detalle se sigue abriendo.
+        expect(tarjeta().querySelectorAll('.fuente-abrir')).toHaveLength(4);
     });
 
     it('en gráfico, la dona reparte solo las fuentes que tuvieron cobros', async () => {

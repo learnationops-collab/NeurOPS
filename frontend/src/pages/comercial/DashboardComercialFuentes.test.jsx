@@ -1,9 +1,9 @@
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import DashboardComercial from './DashboardComercial';
-import { getResumen } from './comercialApi';
+import { getResumen, getTabla } from './comercialApi';
 
 /**
  * «Ingresos por fuente» en «Analizar · mis datos» del closer (09/10/2026): la tarjeta llega en el
@@ -42,6 +42,23 @@ const RESUMEN = {
     },
 };
 
+// Los dos cobros de Marlon en la tabla Ventas, cada uno con la fuente que le pone el backend: la
+// misma con la que los cuenta la tarjeta de arriba.
+const venta = (id, cliente, monto, procedencia, detalle) => ({
+    tipo: 'venta', id, client_id: null, cliente, closer: 'Marlon', programa: 'ACE', fecha: '2026-10-03T10:00:00',
+    tipo_pago: { key: 'completo', label: 'Pago completo', tone: 'success' }, tipo_pago_raw: 'ACE - Completo',
+    metodo: 'Zelle', monto, monto_neto: monto, es_venta: true, sena_estado: null, academia: null,
+    procedencia, procedencia_detalle: detalle,
+});
+const VENTAS = {
+    tabla: 'ventas', rol: 'closers', totales: {},
+    dates: { start: '2026-10-01', end: '2026-10-31', compare_start: null, compare_end: null },
+    filas: [
+        venta(1, 'Ana Workshop', 1000, { key: 'workshop', label: 'Workshop', tone: 'cat-4' }, { key: 'vivo', label: 'En vivo' }),
+        venta(2, 'Fede VSL', 1500, { key: 'vsl', label: 'VSL', tone: 'cat-1' }, null),
+    ],
+};
+
 vi.mock('./comercialApi', () => ({
     getContexto: vi.fn(() => Promise.resolve({
         puede_elegir_equipo: false, puede_reportar: false, puede_comparar: true, rol: 'closers',
@@ -52,7 +69,7 @@ vi.mock('./comercialApi', () => ({
     getResumen: vi.fn(() => Promise.resolve(RESUMEN)),
     getComparativas: vi.fn(() => Promise.resolve({})),
     getVariabilidad: vi.fn(() => Promise.resolve({})),
-    getTabla: vi.fn(() => Promise.resolve({ filas: [] })),
+    getTabla: vi.fn((_filtros, tabla) => Promise.resolve(tabla === 'ventas' ? VENTAS : { filas: [] })),
     corregirAgenda: vi.fn(),
     marcarAgendaDuplicada: vi.fn(),
     eliminarAgenda: vi.fn(),
@@ -84,5 +101,34 @@ describe('DashboardComercial · Ingresos por fuente en «Mis datos» del closer'
         // Un solo pedido, el del resumen, como closer y sin persona: la persona la pone el backend.
         expect(getResumen).toHaveBeenCalled();
         expect(getResumen.mock.calls.at(-1)[0]).toMatchObject({ rol: 'closers', miembroId: null });
+    });
+
+    it('tocar el monto de una fuente abre Revisar › Ventas con esa fuente y su cash', async () => {
+        render(
+            <MemoryRouter initialEntries={['/closer/mis-datos?p=mes&vs=none']}>
+                <DashboardComercial />
+            </MemoryRouter>,
+        );
+        const tarjeta = await waitFor(() => {
+            const el = document.getElementById('p-fuentes');
+            expect(el).not.toBeNull();
+            return el;
+        });
+
+        fireEvent.click(within(tarjeta).getByRole('button', { name: 'Ver en la lista: 1 cobro de Workshop, $1,000' }));
+
+        // Revisar, en Ventas, con la etiqueta de la fuente y solo sus cobros.
+        const quitar = await screen.findByRole('button', { name: 'Quitar Fuente: Workshop' });
+        expect(quitar).toBeInTheDocument();
+        expect(screen.getByRole('tab', { name: 'Ventas' })).toHaveAttribute('aria-selected', 'true');
+        expect(getTabla.mock.calls.at(-1)[1]).toBe('ventas');
+        // Mismo período y misma persona: el pedido de la tabla lleva el filtro del header de antes.
+        expect(getTabla.mock.calls.at(-1)[0]).toMatchObject({ period: 'mes', rol: 'closers', miembroId: null });
+        expect(screen.getAllByRole('button', { name: /^Abrir / })).toHaveLength(1);
+        expect(screen.getByText('Ana Workshop')).toBeInTheDocument();
+        expect(screen.queryByText('Fede VSL')).toBeNull();
+        // La tira dice el monto de la fila de la tarjeta.
+        await waitFor(() => expect(document.querySelector('.tot-tira [data-total="cash"] b').textContent)
+            .toBe('$1,000'));
     });
 });
