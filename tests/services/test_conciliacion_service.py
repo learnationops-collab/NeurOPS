@@ -342,6 +342,38 @@ def test_sin_ningun_csv_las_transferencias_suman_a_lo_reportado(db):
     assert (todas['ingresado'], todas['neto'], todas['diferencia']) == (None, None, None)
 
 
+def test_la_brecha_con_el_resumen_se_explica_por_sus_partes_al_centavo(db):
+    """Pedido del 09/10/2026: «en resumen se ve un ingreso distinto al de diferencia». El Resumen
+    suma lo reportado menos la comisión estimada; acá, lo que entró menos la real. Nada cambia: se
+    dice cuánto dice el Resumen y por qué no es igual, en partes que suman la brecha."""
+    venta(db, 1000, datetime(2026, 9, 10), 'ana@prueba.com', 'Ana Prueba')
+    venta(db, 200, datetime(2026, 9, 12), 'caro@prueba.com', 'Caro Prueba', metodo='Hotmart')   # sin CSV
+    venta(db, 100, datetime(2026, 9, 14), 'dani@prueba.com', 'Dani Prueba', metodo='Zelle')
+    venta(db, 150, datetime(2026, 9, 15), nombre='Israel Prueba', metodo='Transferencia Bancaria')
+    # Stripe cobró $60 de comisión, no los $45 estimados; y entró un cobro de $50 que nadie reportó.
+    subir(CABECERA_STRIPE + '2026-09-10 15:00:00,1000,60,940,Ana Prueba,ana@prueba.com,\n'
+          '2026-09-11 15:00:00,50,2.25,47.75,Beto Prueba,beto@prueba.com,\n')
+
+    resumen = conciliar()['kpis']['todas']['resumen']
+
+    # 955 (Stripe estimado) + 182.20 (Hotmart estimado) + 100 (Zelle) + 150 (transferencia).
+    assert resumen['total'] == 1387.2
+    # 987.75 (Stripe real) + 150 (transferencia) − 1387.20.
+    assert resumen['brecha'] == -249.45
+    assert [(p['tipo'], p['pasarela'], p['monto']) for p in resumen['partes']] == [
+        ('comision', 'stripe', -17.25), ('cobrado', 'stripe', 50.0), ('sin_csv', 'hotmart', -182.2),
+        ('otros', None, -100.0)]
+    assert round(sum(p['monto'] for p in resumen['partes']), 2) == resumen['brecha']
+
+
+def test_sin_ningun_csv_no_hay_brecha_pero_si_lo_que_dice_el_resumen(db):
+    venta(db, 100, datetime(2026, 9, 10), 'ana@prueba.com')
+
+    resumen = conciliar()['kpis']['todas']['resumen']
+
+    assert (resumen['total'], resumen['brecha'], resumen['partes']) == (95.5, None, [])
+
+
 # --- Revisadas ------------------------------------------------------------------------------------
 
 def test_marcar_revisada_saca_la_fila_de_pendientes_y_queda_quien_y_cuando(db, make_user):

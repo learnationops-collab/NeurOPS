@@ -151,6 +151,28 @@ def test_la_conciliacion_del_mes_con_sus_kpis_y_las_opciones_de_medio(client, db
     assert client.get('/api/public/finance/conciliacion?month=sept', headers=finanzas).status_code == 400
 
 
+def test_lo_que_dice_el_resumen_es_el_ingreso_del_resumen(client, db, finanzas, lead):
+    """La brecha (09/10/2026) parte de lo que muestra Finanzas › Resumen: si las dos cuentas se
+    separaran, la brecha explicaría un número que nadie ve. Con ventas de todos los medios: una
+    cancelada, una por Hotmart sin CSV, otra por Zelle y una transferencia."""
+    def otra(monto, metodo, estado='Completada'):
+        db.session.add(FinancialSale(monto=monto, metodo_pago=metodo, estado=estado, tipo_pago='AL - Cuota',
+                                     date=datetime(2026, 9, 12, 10), nombre_cliente='Otra Prueba'))
+
+    otra(333.33, 'Hotmart')
+    otra(120.0, 'Zelle')
+    otra(150.0, 'Transferencia Bancaria')
+    otra(999.0, 'Stripe', estado='Cancelada')
+    db.session.commit()
+    subir(client, finanzas, STRIPE)
+
+    resumen = conciliacion(client, finanzas)['kpis']['todas']['resumen']
+    ingresos = client.get('/api/public/finance/summary?month=2026-09', headers=finanzas).get_json()
+
+    assert resumen['total'] == ingresos['kpis']['total_income']
+    assert round(sum(p['monto'] for p in resumen['partes']), 2) == resumen['brecha']
+
+
 # --- Correcciones ---------------------------------------------------------------------------------
 
 def test_usar_el_bruto_real_corrige_la_venta_por_la_ficha_y_la_hoja_en_segundo_plano(client, db, finanzas, lead):
