@@ -255,59 +255,6 @@ export const KpisDiferencias = ({ kpis }) => {
 };
 
 // ------------------------------------------------------------------------------------------------
-// Contra el Resumen de Finanzas
-
-const AYUDA_BRECHA = 'Finanzas › Resumen suma las ventas reportadas menos una comisión estimada (4,5 % Stripe, '
-    + '8,9 % Hotmart). Acá se cuenta lo que entró según los CSV, con la comisión real de cada pasarela. Ninguno '
-    + 'de los dos números cambia: esto dice por qué no son iguales, y las partes suman la brecha al centavo.';
-
-/** Cómo se lee cada parte de la brecha (`conciliacion_service._contra_el_resumen`). */
-const PARTES_DE_LA_BRECHA = {
-    comision: (p, m) => `${PASARELAS[p]} cobró ${m < 0 ? 'más' : 'menos'} comisión que la estimada`,
-    cobrado: (p, m) => `En ${PASARELAS[p]} entró ${m > 0 ? 'más' : 'menos'} de lo reportado`,
-    sin_csv: (p) => `${PASARELAS[p]} no tiene CSV: el Resumen la estima y acá no se cuenta`,
-    otros: () => 'Otros medios, que no son pasarela ni transferencia: no se concilian',
-    redondeo: () => 'Redondeo',
-};
-
-/**
- * Lo ingresado de «Todas» contra el «Ingresos» del Resumen, y por qué no es igual (pedido del usuario,
- * 09/10/2026: «en resumen se ve un ingreso distinto al de diferencia»). Kerwin eligió no cambiar
- * ningún número y mostrar la brecha: en septiembre, −$96.48, casi toda la comisión real de Hotmart.
- * Solo va en «Todas» con algún CSV: el backend no manda brecha en otro caso.
- */
-export const BrechaConElResumen = ({ resumen, neto }) => {
-    const reducido = useReducedMotion();
-    return (
-        <section className="panel fz-brecha" aria-label="Contra el Resumen de Finanzas">
-            <PanelCab titulo="Contra el Resumen de Finanzas" tip={AYUDA_BRECHA} />
-            <p className="fz-brecha-frase">
-                El Resumen dice <b className="num">{dinero(resumen.total)}</b> y acá entró{' '}
-                <b className="num">{dinero(neto)}</b>:{' '}
-                <b className="num" style={{ color: `var(--${tonoDe(resumen.brecha)})` }}>
-                    {Math.abs(resumen.brecha) < 0.005 ? 'coinciden al centavo' : conSigno(resumen.brecha)}
-                </b>
-                {Math.abs(resumen.brecha) >= 0.005 && '.'}
-            </p>
-            {resumen.partes.length > 0 && (
-                <ul className="fz-brecha-partes">
-                    {resumen.partes.map((parte, i) => (
-                        <motion.li key={`${parte.tipo}-${parte.pasarela || ''}`}
-                            {...(reducido ? {} : {
-                                initial: { opacity: 0, y: 4 }, animate: { opacity: 1, y: 0 },
-                                transition: { duration: 0.2, delay: i * 0.05 },
-                            })}>
-                            <span>{PARTES_DE_LA_BRECHA[parte.tipo](parte.pasarela, parte.monto)}</span>
-                            <b className="num" style={{ color: `var(--${tonoDe(parte.monto)})` }}>{conSigno(parte.monto)}</b>
-                        </motion.li>
-                    ))}
-                </ul>
-            )}
-        </section>
-    );
-};
-
-// ------------------------------------------------------------------------------------------------
 // La fila y su detalle
 
 /** Corregir a mano la venta reportada: monto, fecha y medio (con a quién, si pasa a transferencia). */
@@ -760,7 +707,6 @@ const Diferencias = ({ periodo }) => {
     return (
         <>
             <KpisDiferencias kpis={kpis} />
-            {kpis.resumen?.brecha != null && <BrechaConElResumen resumen={kpis.resumen} neto={kpis.neto} />}
 
             <section className="panel">
                 <PanelCab titulo="Lo reportado contra lo ingresado" tip={REGLA}>

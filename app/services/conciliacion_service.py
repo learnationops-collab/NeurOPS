@@ -553,7 +553,6 @@ def conciliar(desde, hasta):
         kpis[p] = _kpis([f for f in filas if f['pasarela'] == p], ventas, movs, inicio, fin, [p],
                         con_csv=pasarelas[p]['con_csv'])
     kpis['todas'] = _con_transferencias(kpis['todas'], desde, hasta)
-    kpis['todas']['resumen'] = _contra_el_resumen(kpis, inicio, fin)
     return {'desde': desde.isoformat(), 'hasta': hasta.isoformat(), 'filas': filas, 'kpis': kpis,
             'pasarelas': pasarelas, 'cargas': _cargas(inicio, fin)}
 
@@ -613,63 +612,6 @@ def _con_transferencias(kpis, desde, hasta):
             kpis['ingresado'] = round(kpis['ingresado'] + total, 2)
             kpis['neto'] = round(kpis['neto'] + total, 2)
     return kpis
-
-
-def _contra_el_resumen(kpis, inicio, fin):
-    """Lo ingresado de «todas» contra el «Ingresos» del Resumen de Finanzas, y por qué no es igual.
-
-    Pedido del usuario (09/10/2026): «en resumen se ve un ingreso distinto al de diferencia». Son dos
-    cuentas: el Resumen suma lo REPORTADO menos una comisión ESTIMADA (4,5 % Stripe, 8,9 % Hotmart);
-    acá, lo que ENTRÓ según los CSV menos la comisión REAL. Kerwin eligió no cambiar ningún número
-    y mostrar la brecha (en septiembre, -$96.48: casi toda la comisión real de Hotmart, ~11,5 %).
-
-    {'total': lo que dice el Resumen, 'brecha': neto de «todas» − total, 'partes': [...]}, y la
-    brecha es la suma de sus partes, al centavo:
-      · por pasarela con CSV, la comisión estimada menos la real (`comision`, bruto − neto del
-        CSV) y lo que entró de más o de menos contra lo reportado (`cobrado`, su diferencia);
-      · por pasarela sin CSV, lo que el Resumen estima de ella y acá no se cuenta (`sin_csv`);
-      · lo de otros medios que no son pasarela ni transferencia (`otros`): no se concilian.
-    Las transferencias están de los dos lados y no aportan. Sin ningún CSV no hay brecha.
-
-    El total es el del Resumen con su misma regla (completadas, por su fecha, neto de la comisión
-    estimada: `cash_neto_de`), como Procedencia; un test lo ata a lo que devuelve el Resumen.
-    """
-    from app.services.commission_service import cash_neto_de
-    from app.services.nomina_service import venta_completada
-    from app.services.transferencias_service import es_transferencia
-
-    total = otros = 0.0
-    for v in FinancialSale.query.filter(FinancialSale.date >= inicio, FinancialSale.date <= fin).all():
-        if not venta_completada(v):
-            continue
-        neto = cash_neto_de(v.monto, v.metodo_pago)
-        total += neto
-        if not pasarela_de(v.metodo_pago) and not es_transferencia(v.metodo_pago):
-            otros += neto
-    total = round(total, 2)
-    todas = kpis['todas']
-    if not todas['con_csv']:
-        return {'total': total, 'brecha': None, 'partes': []}
-
-    partes = []
-    for p in PASARELAS:
-        k = kpis[p]
-        if k['con_csv']:
-            # La comisión real como bruto menos neto, y no la columna del CSV: es la que hace que
-            # las partes cierren aunque una fila traiga el neto sin la comisión.
-            partes.append({'tipo': 'comision', 'pasarela': p,
-                           'monto': round(k['comision_estimada'] - (k['ingresado'] - k['neto']), 2)})
-            partes.append({'tipo': 'cobrado', 'pasarela': p, 'monto': k['diferencia']})
-        else:
-            partes.append({'tipo': 'sin_csv', 'pasarela': p,
-                           'monto': -round(k['reportado'] - k['comision_estimada'], 2)})
-    partes.append({'tipo': 'otros', 'pasarela': None, 'monto': -round(otros, 2)})
-    brecha = round(todas['neto'] - total, 2)
-    # Cada parte se redondea por su lado: lo que sobre (un centavo) se dice, para que sumen exacto.
-    redondeo = round(brecha - sum(parte['monto'] for parte in partes), 2)
-    partes.append({'tipo': 'redondeo', 'pasarela': None, 'monto': redondeo})
-    return {'total': total, 'brecha': brecha,
-            'partes': [parte for parte in partes if abs(parte['monto']) >= 0.005]}
 
 
 # --- Revisadas ------------------------------------------------------------------------------------
