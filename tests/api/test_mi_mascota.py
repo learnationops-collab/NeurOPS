@@ -13,7 +13,9 @@ from app.models import User
 from app.models.user import MASCOTAS
 
 MASCOTA = '/api/auth/me/mascota'
-MIGRACION = Path(__file__).resolve().parents[2] / 'migrations' / 'versions' / 'ee63a37b67f3_users_mascota_en_main.py'
+VERSIONES = Path(__file__).resolve().parents[2] / 'migrations' / 'versions'
+# La misma columna llega por dos caminos: main (ee63a37b67f3) y develop (a4c8e2f6b913).
+MIGRACIONES = ['ee63a37b67f3_users_mascota_en_main.py', 'a4c8e2f6b913_users_mascota.py']
 
 
 def test_elegir_un_personaje_lo_guarda_y_vuelve_en_me(client, db, make_user, auth_headers):
@@ -58,28 +60,31 @@ def test_simulando_no_se_le_cambia_el_personaje_a_la_persona_simulada(client, db
     assert db.session.get(User, cata.id).mascota is None
 
 
-# --- La migración de main ---------------------------------------------------------------------------
+# --- Las migraciones ------------------------------------------------------------------------------
 
-def _migrar(conexion):
+def _migrar(conexion, archivo):
     from alembic.migration import MigrationContext
     from alembic.operations import Operations
 
-    spec = importlib.util.spec_from_file_location('migracion_users_mascota_en_main', MIGRACION)
+    spec = importlib.util.spec_from_file_location(f'migracion_{archivo[:12]}', VERSIONES / archivo)
     modulo = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(modulo)
     with Operations.context(MigrationContext.configure(conexion)):
         modulo.upgrade()
 
 
-def test_la_migracion_agrega_la_columna_y_en_una_base_que_ya_la_tiene_no_hace_nada():
-    """Local y staging ya tienen `users.mascota` por develop (a4c8e2f6b913): ahí no tiene que fallar."""
+@pytest.mark.parametrize('primera', MIGRACIONES)
+def test_las_dos_migraciones_agregan_la_columna_y_la_que_corre_segunda_no_hace_nada(primera):
+    """Una base corre las dos (en el orden que sea): la segunda ve la columna y no la vuelve a crear."""
+    segunda = next(m for m in MIGRACIONES if m != primera)
     motor = sa.create_engine('sqlite://')
     with motor.begin() as conexion:
         conexion.execute(sa.text('CREATE TABLE users (id INTEGER PRIMARY KEY, username VARCHAR(64))'))
         conexion.execute(sa.text("INSERT INTO users (username) VALUES ('ana')"))
-        _migrar(conexion)
+        _migrar(conexion, primera)
         conexion.execute(sa.text("UPDATE users SET mascota = 'owl'"))
-        _migrar(conexion)   # la segunda no hace nada
+        _migrar(conexion, segunda)    # no hace nada
+        _migrar(conexion, primera)    # tampoco
 
         filas = conexion.execute(sa.text('SELECT username, mascota FROM users')).all()
 
