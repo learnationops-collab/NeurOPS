@@ -150,6 +150,33 @@ describe('Payroll', () => {
         await waitFor(() => expect(cifra('Comisiones').textContent).toBe('$230.00'));
     });
 
+    it('el título de cada grupo elige o quita a todo el grupo, y queda a medias con algunas', async () => {
+        render(<ConFiltro />);
+        await screen.findByText('Elias');
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Todas las personas/ })); });
+        const menu = screen.getByRole('menu', { name: 'Personas de la nómina' });
+        const titulo = (nombre) => within(within(menu).getByRole('group', { name: nombre }))
+            .getAllByRole('menuitemcheckbox')[0];
+
+        await act(async () => { fireEvent.click(titulo('Setting')); });
+        expect(titulo('Setting').getAttribute('aria-checked')).toBe('true');
+        expect(JSON.parse(localStorage.getItem('payroll.personas'))).toEqual(['elias', 'paula']);
+        expect(screen.queryByTitle('Ver en Revisar las ventas de Jean Carlo')).toBeNull();
+        await waitFor(() => expect(cifra('Comisiones').textContent).toBe('$80.00'));
+
+        // Una sola de Closing: el título queda a medias; tocarlo suma a las que faltan.
+        await act(async () => { fireEvent.click(within(menu).getByRole('menuitemcheckbox', { name: 'Facundo' })); });
+        expect(titulo('Closing').getAttribute('aria-checked')).toBe('mixed');
+        await act(async () => { fireEvent.click(titulo('Closing')); });
+        expect(titulo('Closing').getAttribute('aria-checked')).toBe('true');
+        expect(screen.getByTitle('Ver en Revisar las ventas de Jean Carlo')).toBeTruthy();
+
+        // Tocarlo entero lo quita, y Setting sigue elegido.
+        await act(async () => { fireEvent.click(titulo('Closing')); });
+        expect(titulo('Closing').getAttribute('aria-checked')).toBe('false');
+        expect(JSON.parse(localStorage.getItem('payroll.personas'))).toEqual(['elias', 'paula']);
+    });
+
     it('solo ofrece personas de los grupos prendidos, y las de un grupo apagado no cuentan', async () => {
         render(<ConFiltro />);
         await screen.findByText('Elias');

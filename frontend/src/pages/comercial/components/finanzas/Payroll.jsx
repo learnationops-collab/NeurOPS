@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { Calendar, Check, ChevronDown, Compass, Eye, UserCheck, Users } from 'lucide-react';
+import { Calendar, Check, ChevronDown, Compass, Eye, Minus, UserCheck, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { EsqueletoTablero, Humo, PillMenu } from '../Shared';
 import TasasComision from './TasasComision';
@@ -180,6 +180,9 @@ const nombres = (personas) => (personas.length <= 2
  * El desplegable de personas, para la barra de arriba (al lado de los grupos): una o varias de los
  * grupos prendidos, con su casilla, y «Todas» para volver a verlas a todas. El menú queda abierto
  * mientras se eligen.
+ *
+ * El título de cada grupo es también una casilla (08/10/2026): elige a todo el grupo de una vez o,
+ * si ya estaba entero, lo quita. Con solo algunas de sus personas elegidas queda a medias («mixed»).
  */
 export const FiltroPersonas = ({ grupos, elegidas, onCambiar }) => {
     const [abierto, setAbierto] = useState(false);
@@ -209,6 +212,11 @@ export const FiltroPersonas = ({ grupos, elegidas, onCambiar }) => {
     const cambiar = (ids) => { guardarPersonas(ids); onCambiar(ids); };
     const alternar = (id) => cambiar(elegidas.includes(id) ? elegidas.filter(x => x !== id)
         : PERSONAS.map(p => p.id).filter(x => x === id || elegidas.includes(x)));
+    const alternarGrupo = (g) => {
+        const ids = g.personas.map(p => p.id);
+        cambiar(ids.every(id => elegidas.includes(id)) ? elegidas.filter(x => !ids.includes(x))
+            : PERSONAS.map(p => p.id).filter(x => ids.includes(x) || elegidas.includes(x)));
+    };
 
     return (
         <div style={{ position: 'relative' }} ref={ref}>
@@ -225,22 +233,33 @@ export const FiltroPersonas = ({ grupos, elegidas, onCambiar }) => {
                         <span className="trunc">Todas las personas</span>
                         {!marcadas.length && <Check size={13} style={{ marginLeft: 'auto' }} />}
                     </button>
-                    {visibles.map(g => (
-                        <div key={g.id} role="group" aria-label={g.titulo}>
-                            <hr className="menu-sep" />
-                            <p className="t-rotulo fz-menu-grupo">{g.titulo}</p>
-                            {g.personas.map(p => {
-                                const marcada = marcadas.some(m => m.id === p.id);
-                                return (
-                                    <button key={p.id} type="button" className="menu-item menu-item--ico"
-                                        role="menuitemcheckbox" aria-checked={marcada} onClick={() => alternar(p.id)}>
-                                        <span className="menu-caja" aria-hidden="true">{marcada && <Check size={11} />}</span>
-                                        <span className="trunc">{p.nombre}</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    ))}
+                    {visibles.map(g => {
+                        const delGrupo = g.personas.filter(p => marcadas.includes(p)).length;
+                        const entero = delGrupo === g.personas.length;
+                        return (
+                            <div key={g.id} role="group" aria-label={g.titulo}>
+                                <hr className="menu-sep" />
+                                <button type="button" className="menu-item menu-item--ico fz-menu-grupo" role="menuitemcheckbox"
+                                    aria-checked={entero ? true : delGrupo ? 'mixed' : false} onClick={() => alternarGrupo(g)}
+                                    title={entero ? `Quitar a todo ${g.titulo}` : `Elegir a todo ${g.titulo}`}>
+                                    <span className="menu-caja" aria-hidden="true">
+                                        {entero ? <Check size={11} /> : delGrupo ? <Minus size={11} /> : null}
+                                    </span>
+                                    <small className="t-rotulo">{g.titulo}</small>
+                                </button>
+                                {g.personas.map(p => {
+                                    const marcada = marcadas.some(m => m.id === p.id);
+                                    return (
+                                        <button key={p.id} type="button" className="menu-item menu-item--ico"
+                                            role="menuitemcheckbox" aria-checked={marcada} onClick={() => alternar(p.id)}>
+                                            <span className="menu-caja" aria-hidden="true">{marcada && <Check size={11} />}</span>
+                                            <span className="trunc">{p.nombre}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        );
+                    })}
                 </div>
             )}
         </div>
