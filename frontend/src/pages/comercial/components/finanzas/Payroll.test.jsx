@@ -245,10 +245,12 @@ describe('Payroll · las ventas de una persona', () => {
         try { localStorage.clear(); } catch { /* sin almacenamiento */ }
     });
 
-    const abrir = async (nombre) => {
+    // Abre la lista desde el tile, después de que su cifra terminó de contar (`Cifra`): devuelve el
+    // número que mostraba.
+    const abrir = async (nombre, cifraDelTile = '$140.50') => {
         render(<ConFiltro />);
         const tile = (await screen.findByTitle(`Ver las ventas de ${nombre}`));
-        await waitFor(() => expect(tile.querySelector('.kpi-n').textContent).not.toBe('$0.00'));
+        await waitFor(() => expect(tile.querySelector('.kpi-n').textContent).toBe(cifraDelTile), { timeout: 3000 });
         const delTile = tile.querySelector('.kpi-n').textContent;
         await act(async () => { fireEvent.click(tile); });
         return delTile;
@@ -260,7 +262,6 @@ describe('Payroll · las ventas de una persona', () => {
     it('lo que suma la lista cierra con el número del tile: las excluidas se ven y no cuentan', async () => {
         const delTile = await abrir('Jean Carlo');
 
-        expect(delTile).toBe('$140.50');
         const suman = screen.getAllByRole('button', { name: /^Sacar de la nómina la venta de/ })
             .map(b => Number(b.closest('.fz-fila').children[8].textContent.replace(/[$,]/g, '')));
         expect(suman.reduce((t, n) => t + n, 0)).toBe(140.5);
