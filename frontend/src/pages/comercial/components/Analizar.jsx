@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowRight, ChevronsDown, CreditCard, Eye, PieChart, Rows } from 'lucide-react';
+import { ArrowRight, ChevronDown, ChevronsDown, CreditCard, Eye, PieChart, Rows } from 'lucide-react';
 import Embudo from './Embudo';
 // El "i" era una copia local con una prop `der` para forzar el lado a mano. El `Tip` compartido
 // mide y elige el lado que entra, así que la prop desapareció de todas las llamadas.
@@ -9,6 +9,7 @@ import Cifra from './Cifra';
 import MetricaClicable, { abrir } from '../../../components/dashboard/MetricaClicable';
 import MatrizCierres, { LeyendaCierres } from '../../../components/dashboard/MatrizCierres';
 import RepartoEstados from './RepartoEstados';
+import { AYUDA_PROCEDENCIA } from './procedencias';
 import {
     DESTINOS_CIERRES, DESTINOS_CLOSER as D, DESTINOS_SETTER as S, PASOS_CLOSER, PASOS_SETTER,
     destinoToques,
@@ -575,6 +576,132 @@ const PanelPagos = ({ bloque, irA }) => {
 };
 
 /**
+ * Ingresos por fuente (pedido del usuario, 09/10/2026): el Cash collected del período abierto por
+ * el embudo que trajo cada cobro —workshop, setting, VSL, Fulfillment o sin procedencia—, en la
+ * dirección comercial y en «Mis datos» del closer.
+ *
+ * Qué cobro va en qué fuente lo decide el backend con la MISMA atribución que Finanzas ›
+ * Procedencia y la columna Fuente de las ventas (`comercial_analitica.ingresos_por_fuente`); acá
+ * solo se dibuja. Llegan las cinco siempre, también en cero, y suman exacto el Cash collected del
+ * mismo filtro: en bruto, como el número grande de la tarjeta (Finanzas reparte el neto).
+ *
+ * Las filas abren su detalle (el vivo y la grabación, cada setter…) en vez de mostrarlo siempre: con
+ * todo abierto la tarjeta era el doble de alta que Payment types, su vecina. No llevan a Revisar: la
+ * tabla Ventas no tiene una faceta con la fuente atribuida (su "Setter" es el que se escribió en la
+ * venta, que no siempre es el de la agenda), y un clic que abre una lista que no cierra con el
+ * número es peor que un número que no se puede pinchar.
+ */
+const TABS_FUENTES = [['tabla', 'Tabla', Rows], ['grafico', 'Gráfico', PieChart]];
+
+/** "▲ 12%" chico, debajo del monto: el delta de una fuente contra el período comparado. */
+const DeltaFuente = ({ p }) => {
+    if (!p.delta) return null;
+    const sube = p.delta.valor >= 0;
+    return (
+        <small className="fuente-delta num" style={{ color: v(sube ? 'success' : 'error') }}
+            title={`${fmt.money(p.previo)} en el período comparado`}>
+            {`${sube ? '▲' : '▼'} ${Math.abs(p.delta.valor)}%`}
+        </small>
+    );
+};
+
+const FilaFuente = ({ p, total, i, abierta, alternar }) => {
+    const ancho = total > 0 ? (p.monto / total) * 100 : 0;
+    const conDetalle = p.detalle.length > 0;
+    const celdas = (
+        <>
+            <span className="tdatos-nom tdatos-nom--fuerte">
+                <span className="dato-punto" style={{ background: v(p.tone) }} />
+                <span className="trunc" title={p.label}>{p.label}</span>
+                <span className="solo-ancho"><Tip texto={AYUDA_PROCEDENCIA[p.key]} titulo={p.label} /></span>
+            </span>
+            <span className="tdatos-p">{fmt.num(p.cantidad)}</span>
+            <span className="tdatos-n" style={{ color: p.cantidad ? v(p.tone) : undefined }}>
+                {fmt.money(p.monto)}
+            </span>
+            <span className="tdatos-p">{fmt.pct(p.pct)}</span>
+            <span className="fuente-chev" aria-hidden="true">{conDetalle && <ChevronDown size={14} />}</span>
+            <span className="fuente-riel">
+                <Riel pct={ancho} color={v(p.tone)} fino delay={150 + i * 90} />
+            </span>
+            <DeltaFuente p={p} />
+        </>
+    );
+    return conDetalle ? (
+        <button type="button" className="tdatos-fila fuente" aria-expanded={abierta}
+            aria-label={`${p.label}: ${fmt.money(p.monto)}. ${abierta ? 'Cerrar' : 'Ver'} el detalle`}
+            onClick={alternar}>
+            {celdas}
+        </button>
+    ) : (
+        <div className="tdatos-fila fuente" data-vacio={p.cantidad ? undefined : '1'}>{celdas}</div>
+    );
+};
+
+const PanelFuentes = ({ fuentes }) => {
+    const [vista, setVista] = useState('tabla');
+    // Una abierta por vez: con dos, la tarjeta vuelve a crecer lo que se ahorró al plegarlas.
+    const [abierta, setAbierta] = useState(null);
+    const { total, cantidad, procedencias } = fuentes;
+    return (
+        <Panel id="p-fuentes" cab={
+            <PanelCab titulo="Ingresos por fuente"
+                ayuda={'De dónde vino el Cash collected del período: el embudo que trajo cada cobro, según '
+                    + 'la agenda que lo originó (la misma regla que la columna Fuente de las ventas y '
+                    + 'Finanzas › Procedencia). Una cuota cuenta para el embudo de su venta. Suma '
+                    + 'exacto el Cash collected, en bruto: Finanzas reparte lo mismo pero neto de la '
+                    + 'fee de la pasarela.'}>
+                <Tabs valor={vista} onChange={setVista} ops={TABS_FUENTES} aria="Vista de ingresos por fuente" />
+                <Delta delta={fuentes.delta} actual={fmt.money(total)} />
+            </PanelCab>
+        }>
+            {cantidad === 0 && <Vacio texto="Sin cobros en el período." />}
+
+            {cantidad > 0 && vista === 'grafico' && (
+                <Torta total={total} f={fmt.money} centro="cobrado"
+                    items={procedencias.filter(p => p.monto > 0)
+                        .map(p => ({ label: p.label, n: p.monto, tone: p.tone }))} />
+            )}
+
+            {cantidad > 0 && vista !== 'grafico' && (
+                <div className="tdatos tdatos--fuentes">
+                    <div className="tdatos-cab">
+                        <span>Fuente</span><span>Cobros</span><span>Monto</span><span>%</span><span />
+                    </div>
+                    {procedencias.map((p, i) => (
+                        <React.Fragment key={p.key}>
+                            <FilaFuente p={p} total={total} i={i} abierta={abierta === p.key}
+                                alternar={() => setAbierta(a => (a === p.key ? null : p.key))} />
+                            {abierta === p.key && p.detalle.map((d, j) => (
+                                <div key={d.key} className="tdatos-fila fuente-sub" style={{ '--j': j }}>
+                                    <span className="fuente-sub-nom trunc" title={d.label}>{d.label}</span>
+                                    <span className="tdatos-p">{fmt.num(d.cantidad)}</span>
+                                    <span className="fuente-sub-n num">{fmt.money(d.monto)}</span>
+                                    <span className="tdatos-p">{fmt.pct(d.pct)}</span>
+                                    <span />
+                                </div>
+                            ))}
+                        </React.Fragment>
+                    ))}
+                    <div className="tdatos-fila tdatos-total fuente-total">
+                        <span className="tdatos-nom">
+                            Total
+                            <Tip titulo="Total"
+                                texto={'Es el Cash collected de arriba, con el mismo filtro: los mismos cobros '
+                                    + 'y el mismo monto bruto. Cada cobro cuenta una vez, en la fuente de su agenda.'} />
+                        </span>
+                        <span className="tdatos-p">{fmt.num(cantidad)}</span>
+                        <span className="tdatos-n">{fmt.money(total)}</span>
+                        <span className="tdatos-p">{total > 0 ? '100%' : '—'}</span>
+                        <span />
+                    </div>
+                </div>
+            )}
+        </Panel>
+    );
+};
+
+/**
  * Programas. "Collected" es lo que cobró cada programa y con qué ticket; "Payments" abre esa
  * misma plata por forma de pago, con la cantidad de cobros debajo del monto.
  */
@@ -797,7 +924,7 @@ const pasosDe = (funnel, vocabulario, irA) => funnel.map(p => {
     };
 });
 
-const DashboardClosers = ({ bloque, deltas, porCobrar, irA }) => (
+const DashboardClosers = ({ bloque, deltas, porCobrar, fuentes, irA }) => (
     <>
         <div className="grid grid--4">
             <Tile label="Show up" valor={fmt.pct(bloque.show_up)} color={v('success')}
@@ -848,7 +975,15 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, irA }) => (
             <PanelCash bloque={bloque} deltas={deltas} porCobrar={porCobrar} irA={irA} />
         </div>
 
-        <PanelPagos bloque={bloque} irA={irA} />
+        {/* Las dos maneras de abrir el mismo cash: por forma de pago y por la fuente que lo trajo.
+            Sin `fuentes` (un payload viejo en mano mientras llega el nuevo) Payment types vuelve a
+            ocupar la fila entera, como antes. */}
+        {fuentes ? (
+            <div className="grid-2">
+                <PanelPagos bloque={bloque} irA={irA} />
+                <PanelFuentes fuentes={fuentes} />
+            </div>
+        ) : <PanelPagos bloque={bloque} irA={irA} />}
 
         <div className="grid-2">
             <PanelProgramas bloque={bloque} irA={irA} />
@@ -1025,7 +1160,8 @@ const Analizar = ({ datos, rol, irA }) => {
     const { actual, deltas } = datos;
     return rol === 'setters'
         ? <DashboardSetters bloque={actual} deltas={deltas} irA={irA} />
-        : <DashboardClosers bloque={actual} deltas={deltas} porCobrar={datos.por_cobrar} irA={irA} />;
+        : <DashboardClosers bloque={actual} deltas={deltas} porCobrar={datos.por_cobrar}
+            fuentes={datos.fuentes} irA={irA} />;
 };
 
 export default Analizar;
