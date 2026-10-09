@@ -56,6 +56,42 @@ const MAX_MESES = 24;
 // ------------------------------------------------------------------------------------------------
 // Resumen
 
+/**
+ * Lo que entró por transferencia en el período, según a quién del equipo se le hizo (pedido de
+ * Kerwin, 09/10/2026): es parte del ingreso de arriba, pero la plata está en la cuenta de esa
+ * persona y no en una de la empresa. Una fila por destino con plata, y las que todavía no se
+ * marcaron. Sin ninguna transferencia en el período, nada.
+ */
+export const TransferenciasPorDestino = ({ transferencias }) => {
+    if (!transferencias?.ventas) return null;
+    const filas = [
+        ...(transferencias.destinos || []).filter(d => d.ventas > 0).map(d => ({
+            ...d, sub: d.descuenta ? 'Se le descuenta de su pago' : 'No se descuenta a nadie',
+        })),
+        ...(transferencias.sin_marcar?.ventas
+            ? [{ clave: 'sin_marcar', label: 'Sin marcar', sub: 'Marcalas en la ficha › Pagos', ...transferencias.sin_marcar }]
+            : []),
+    ];
+    return (
+        <>
+            <p className="fz-grupo" style={{ '--c': v('warning') }}>
+                <i />Transferencias · en la cuenta de
+                <Tip titulo="Transferencias"
+                    texto="Lo que entró por transferencia en el período, según a quién del equipo se le hizo. Es parte del ingreso, pero la plata está en la cuenta de esa persona. A Pedro y a Jean Carlo se les descuenta de lo que se les paga (Nómina y Payroll); «Otro» solo se anota acá. Las sin marcar se marcan en la ficha del cliente, sección Pagos." />
+            </p>
+            {filas.map(d => (
+                <div key={d.clave} className="fz-fila">
+                    <span className="fz-nom"><b>{d.label}</b><small>{d.sub}</small></span>
+                    <span className="tdatos-p">{d.ventas}</span>
+                    <span className="fz-n fz-der" style={{ color: d.clave === 'sin_marcar' ? v('warning') : undefined }}>
+                        {dinero(d.total)}
+                    </span>
+                </div>
+            ))}
+        </>
+    );
+};
+
 const Resumen = ({ periodo }) => {
     // `periodo.desde`/`periodo.hasta` son el período exacto (YYYY-MM-DD): lo que necesita un bloque
     // fechado del resumen. `mes`, solo si es justo un mes: lo único editable acá (los ahorros).
@@ -142,6 +178,7 @@ const Resumen = ({ periodo }) => {
                             </div>
                         ))}
                         {ingresos.length === 0 && <p className="fz-vacio">No hubo ingresos en este período.</p>}
+                        <TransferenciasPorDestino transferencias={datos.transferencias} />
                     </div>
                 </section>
             </div>
@@ -212,7 +249,7 @@ const MediosDePago = ({ periodo }) => {
                     <div className="fz-cab">
                         <span>Pasarela</span>
                         <span className="fz-der">Saldo actual <Tip texto="Lo que hay en la cuenta. Se carga a mano, mes por mes." titulo="Saldo actual" /></span>
-                        <span className="fz-der">Por pagar <Tip texto="Sueldos, comisiones y bonos del período de quienes cobran por esta pasarela." titulo="Por pagar" /></span>
+                        <span className="fz-der">Por pagar <Tip texto="Sueldos, comisiones y bonos del período de quienes cobran por esta pasarela, menos lo que ya recibieron en su cuenta por transferencia de un cliente." titulo="Por pagar" /></span>
                         <span className="fz-der">Diferencia</span>
                     </div>
                     {filas.map(b => {

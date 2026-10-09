@@ -154,6 +154,44 @@ describe('Finanzas · un período que no es un mes', () => {
         expect(screen.getByText('Se edita por mes: elegí un mes en el período')).toBeTruthy();
     });
 
+    it('el resumen dice en la cuenta de quién está lo que entró por transferencia, sin cambiar el ingreso', async () => {
+        api.getResumen.mockResolvedValue({
+            kpis: { total_income: 580, total_expenses: 0, profit: 580, balance: 580, balance_neto: 580, savings: 0 },
+            expenses_breakdown: { software: 0, anuncios: 0, sueldos: 0 },
+            income_breakdown: [{ metodo_pago: 'Transferencia Bancaria', count: 4, total: 580 }],
+            transferencias: {
+                total: 580, ventas: 4, sin_marcar: { total: 50, ventas: 1 },
+                destinos: [
+                    { clave: 'pedro', label: 'Pedro', total: 300, ventas: 1, descuenta: true },
+                    { clave: 'jean_carlo', label: 'Jean Carlo', total: 150, ventas: 1, descuenta: true },
+                    { clave: 'otro', label: 'Otro', total: 80, ventas: 1, descuenta: false },
+                ],
+            },
+        });
+        api.getAhorros.mockResolvedValue({ savings: 0 });
+        render(<Finanzas tab="resumen" periodo={SEPTIEMBRE} />);
+        await screen.findByText('Transferencias · en la cuenta de');
+
+        expect(celdas('Jean Carlo')).toEqual(['Jean CarloSe le descuenta de su pago', '1', '$150.00']);
+        expect(celdas('Otro')).toEqual(['OtroNo se descuenta a nadie', '1', '$80.00']);
+        expect(celdas('Sin marcar')).toEqual(['Sin marcarMarcalas en la ficha › Pagos', '1', '$50.00']);
+        await waitFor(() => expect(cifra('Ingresos')).toBe('$580.00'));
+    });
+
+    it('sin transferencias en el período el resumen no agrega nada', async () => {
+        api.getResumen.mockResolvedValue({
+            kpis: { total_income: 100, total_expenses: 0, profit: 100, balance: 100, balance_neto: 100, savings: 0 },
+            expenses_breakdown: { software: 0, anuncios: 0, sueldos: 0 },
+            income_breakdown: [{ metodo_pago: 'Stripe', count: 1, total: 100 }],
+            transferencias: { total: 0, ventas: 0, sin_marcar: { total: 0, ventas: 0 }, destinos: [] },
+        });
+        api.getAhorros.mockResolvedValue({ savings: 0 });
+        render(<Finanzas tab="resumen" periodo={SEPTIEMBRE} />);
+        await screen.findByText('Stripe');
+
+        expect(screen.queryByText('Transferencias · en la cuenta de')).toBeNull();
+    });
+
     it('los saldos y los anuncios se piden por el rango y se ven sin campos', async () => {
         api.getSaldos.mockResolvedValue({ balances: [
             { payment_method: 'Mercury', actual_amount: 800, expected_amount: 500, id: null },
