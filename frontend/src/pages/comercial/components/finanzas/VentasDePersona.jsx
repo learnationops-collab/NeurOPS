@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { AlertTriangle, ArrowLeft, Check, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -118,7 +118,14 @@ const VentasDePersona = ({ persona, datos, desde, hasta, onVolver, onCambio }) =
     const [enCurso, setEnCurso] = useState(() => new Set());
     const [editando, setEditando] = useState(null);
     const [personas, setPersonas] = useState(null);
+    const quieto = useReducedMotion();
     const { Icono } = persona;
+
+    // Se abre desde un tile que puede estar abajo de todo (los de Fulfillment): la lista arranca
+    // arriba, con «Volver a Payroll» a la vista, y no a la altura donde estaba el tile.
+    useEffect(() => {
+        if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: quieto ? 'auto' : 'smooth' });
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
     // Fulfillment es un pozo de equipo: cobra sobre todo lo que entra, así que la atribución de una
     // venta no le cambia nada y no se edita desde acá.
     const atribuible = persona.rol !== 'Fulfillment';
