@@ -63,8 +63,10 @@ describe('Payroll', () => {
         expect(cifra('Cash del período').textContent).toBe('$2,300.00');
         expect(cifra('Sueldo base').textContent).toBe('$600.00');   // el de Andy
         expect(cifra('Comisiones').textContent).toBe('$230.00');   // 80 + 100 + 20 + 30
+        expect(cifra('Descuentos').textContent).toBe('$0.00');   // nadie recibió por transferencia
+        expect(screen.getByText('Nadie recibió plata de un cliente en el período')).toBeTruthy();
         expect(cifra('Total').textContent).toBe('$830.00');
-        expect(cifra('Peso sobre el cash').textContent).toBe('36.1%');   // total ÷ cash
+        expect(cifra('Peso sobre el cash').textContent).toBe('36.1%');   // (base + comisiones) ÷ cash
         // El tile de quien tiene sueldo fijo lo dice abajo; la cifra grande es la comisión.
         expect(screen.getByText('Andy').closest('.kpi').querySelector('.kpi-sub').textContent)
             .toBe('1 ingresos · neto $300.00 · base $600.00');
@@ -87,9 +89,12 @@ describe('Payroll', () => {
         const pedro = screen.getByText('Pedro', { selector: '.fz-persona-nom' }).closest('.kpi');
         expect(pedro.querySelector('.fz-persona-descuento').textContent)
             .toBe('descuentos -$300.00 · debe devolver $300.00');
-        // Lo que cuesta la nómina, igual que sin transferencias (las cifras cuentan hasta su valor).
+        // Arriba, «Descuentos» en rojo y el Total es lo que se paga: 830 − 360. Las comisiones y el
+        // peso siguen siendo lo que cuesta (las cifras cuentan hasta su valor).
+        await waitFor(() => expect(cifra('Descuentos').textContent).toBe('-$360.00'));
+        expect(screen.getByText('Jean Carlo y Pedro', { selector: '.kpi-sub' })).toBeTruthy();
         await waitFor(() => expect(cifra('Comisiones').textContent).toBe('$230.00'));
-        await waitFor(() => expect(cifra('Total').textContent).toBe('$830.00'));
+        await waitFor(() => expect(cifra('Total').textContent).toBe('$470.00'));
         await waitFor(() => expect(cifra('Peso sobre el cash').textContent).toBe('36.1%'));
     });
 
