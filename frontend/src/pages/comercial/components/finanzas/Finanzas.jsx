@@ -5,6 +5,7 @@ import InlineConfirm from '../../../../components/ui/InlineConfirm';
 import { EsqueletoFilas, EsqueletoTablero, PanelCab, Tip } from '../Shared';
 import { CampoMonto, Cifron, HUMOS, conSigno, dinero, mesesDelRango, nombreDelMes, textoPeriodo, tonoDe } from './comun';
 import * as apiFz from './finanzasApi';
+import Procedencia, { rangoDelMes } from './Procedencia';
 
 /**
  * Sección Finanzas del dashboard comercial (desde el 08/10/2026; antes /admin/finance).
@@ -144,6 +145,8 @@ const Resumen = ({ periodo }) => {
                     </div>
                 </section>
             </div>
+
+            <Procedencia {...rangoDelMes(mes)} />
 
             <section className="panel">
                 <PanelCab titulo="Balance del período"

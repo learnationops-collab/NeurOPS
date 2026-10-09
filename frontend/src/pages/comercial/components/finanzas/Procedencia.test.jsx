@@ -1,6 +1,7 @@
 import React from 'react';
 import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import Finanzas from './Finanzas';
 import Procedencia, { rangoDelMes } from './Procedencia';
 
 /**
@@ -9,7 +10,7 @@ import Procedencia, { rangoDelMes } from './Procedencia';
  * en qué balde lo decide el backend: acá se comprueba que se dibuje lo que llega.
  */
 
-const api = vi.hoisted(() => ({ getProcedencia: vi.fn() }));
+const api = vi.hoisted(() => ({ getProcedencia: vi.fn(), getResumen: vi.fn(), getAhorros: vi.fn() }));
 vi.mock('./finanzasApi', () => api);
 vi.mock('react-hot-toast', () => ({ default: { error: vi.fn(), success: vi.fn() } }));
 
@@ -128,6 +129,22 @@ describe('Procedencia', () => {
         render(<Procedencia desde="2026-09-01" hasta="2026-09-30" />);
 
         expect(await screen.findByText('No se pudo cargar la procedencia de los ingresos.')).toBeTruthy();
+    });
+});
+
+describe('Finanzas › Resumen', () => {
+    it('trae el panel con el mes que se mira', async () => {
+        api.getResumen.mockResolvedValue({
+            kpis: { total_income: 15270.71, total_expenses: 0, profit: 15270.71, balance_neto: 15270.71 },
+            expenses_breakdown: { sueldos: 0, anuncios: 0, software: 0 }, income_breakdown: [],
+        });
+        api.getAhorros.mockResolvedValue({ savings: 0 });
+        api.getProcedencia.mockResolvedValue(SEPTIEMBRE);
+        render(<Finanzas tab="resumen" mes="2026-02" />);
+        await cargado();
+
+        expect(api.getProcedencia).toHaveBeenCalledWith('2026-02-01', '2026-02-28');
+        expect(screen.getByRole('heading', { name: 'Ingresos por procedencia' })).toBeTruthy();
     });
 });
 
