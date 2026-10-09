@@ -45,7 +45,9 @@ const ACCIONES_POR_VEREDICTO = {
     // Descartada: rescatarla, o (si la descartó un revisor) tocar «Descartar» de nuevo para
     // deshacerlo. Si la cortó el formulario no hay nada que deshacer: ver `botonesDe`.
     descartado: ['seleccionada', 'en_reserva', 'testeo', 'descartado'],
-    testeo: ['winner', 'top_tier', 'baja'],
+    // En prueba: cerrarla (Winner / Top tier / Baja) o devolverla a Análisis si no era el
+    // momento. Lo pidió Kerwin el 09/10/2026: no había forma de sacarla de prueba.
+    testeo: ['seleccionada', 'en_reserva', 'winner', 'top_tier', 'baja'],
     winner: ['baja'],
     top_tier: ['baja'],
     baja: [], // terminal: ya se fue, no hay a dónde moverlo
