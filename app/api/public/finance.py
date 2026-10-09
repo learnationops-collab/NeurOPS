@@ -243,6 +243,54 @@ def _seed_variable_members():
     if changed:
         db.session.commit()
 
+
+def nomina_del_mes(month):
+    """La nómina de un mes 'YYYY-MM', un item por integrante con la forma de GET
+    /public/finance/payroll: lo guardado si la fila del mes se guardó, y si no el sueldo base del
+    integrante con la comisión calculada de las ventas. Los inactivos sin nada guardado en el mes
+    quedan afuera.
+
+    Desde el 08/10/2026 es la única cuenta de la nómina: la usan la pestaña Nómina, el «por pagar»
+    de cada pasarela y los sueldos del resumen (en un rango, mes por mes). Antes cada uno repetía el
+    mismo recorrido."""
+    saved_payroll_list = MonthlyPayroll.query.filter_by(month=month).all()
+    saved_payroll_map = {p.member_id: p for p in saved_payroll_list}
+
+    members = TeamMember.query.all()
+    dynamic_commissions = get_commissions_calculated(month)
+
+    payroll_data = []
+    for m in members:
+        if not m.is_active and m.id not in saved_payroll_map:
+            continue
+
+        if m.id in saved_payroll_map:
+            p = saved_payroll_map[m.id]
+            payroll_data.append(p.to_dict())
+        else:
+            calculated_comm = comision_de_miembro(m, dynamic_commissions)
+
+            payroll_data.append({
+                "id": None,
+                "member_id": m.id,
+                "member_name": m.name,
+                "month": month,
+                "base_salary": m.base_salary,
+                "commissions": calculated_comm,
+                "bonuses": 0.0,
+                "payment_method": m.payment_method,
+                "is_paid": False,
+                "paid_at": None,
+                "created_at": None
+            })
+    return payroll_data
+
+
+def total_de_item(item):
+    """Lo que cobra un integrante en un item de `nomina_del_mes`: sueldo, comisión y bonos."""
+    return (item.get('base_salary') or 0.0) + (item.get('commissions') or 0.0) + (item.get('bonuses') or 0.0)
+
+
 @bp.route('/public/finance/payroll', methods=['GET', 'POST'])
 @login_required
 @finance_admin_required
@@ -289,41 +337,9 @@ def manage_payroll():
         db.session.commit()
         return jsonify(payroll.to_dict()), 200
 
-    saved_payroll_list = MonthlyPayroll.query.filter_by(month=month).all()
-    saved_payroll_map = {p.member_id: p for p in saved_payroll_list}
-    
     # Auto-seedea los miembros variables si no existen
     _seed_variable_members()
-    
-    members = TeamMember.query.all()
-    dynamic_commissions = get_commissions_calculated(month)
-    
-    payroll_data = []
-    for m in members:
-        if not m.is_active and m.id not in saved_payroll_map:
-            continue
-            
-        if m.id in saved_payroll_map:
-            p = saved_payroll_map[m.id]
-            payroll_data.append(p.to_dict())
-        else:
-            calculated_comm = comision_de_miembro(m, dynamic_commissions)
-                    
-            payroll_data.append({
-                "id": None,
-                "member_id": m.id,
-                "member_name": m.name,
-                "month": month,
-                "base_salary": m.base_salary,
-                "commissions": calculated_comm,
-                "bonuses": 0.0,
-                "payment_method": m.payment_method,
-                "is_paid": False,
-                "paid_at": None,
-                "created_at": None
-            })
-            
-    return jsonify(payroll_data), 200
+    return jsonify(nomina_del_mes(month)), 200
 
 @bp.route('/public/finance/balances', methods=['GET', 'POST'])
 @login_required
@@ -364,29 +380,18 @@ def manage_balances():
     balances = MonthlyPaymentMethodBalance.query.filter_by(month=month).all()
     balances_map = {b.payment_method: b for b in balances}
 
-    # Calcula "por pagar" por pasarela desde la nómina del mes
-    saved_payroll_all = MonthlyPayroll.query.filter_by(month=month).all()
-    saved_payroll_map_all = {p.member_id: p for p in saved_payroll_all}
-    # Los mismos integrantes que suma la nómina: los activos y los que ya tienen nómina guardada.
-    members_all = [m for m in TeamMember.query.all() if m.is_active or m.id in saved_payroll_map_all]
-    dyn_comm = get_commissions_calculated(month)
+    # Calcula "por pagar" por pasarela desde la nómina del mes: los mismos integrantes y montos que
+    # muestra la pestaña Nómina (los activos y los que ya tienen nómina guardada).
     expected_by_method = {m: 0.0 for m in default_methods}
 
-    for mem in members_all:
-        if mem.id in saved_payroll_map_all:
-            p = saved_payroll_map_all[mem.id]
-            method = p.payment_method
-            total_pay = p.base_salary + p.commissions + p.bonuses
-        else:
-            method = mem.payment_method
-            comm = comision_de_miembro(mem, dyn_comm)
-            total_pay = mem.base_salary + comm
+    for item in nomina_del_mes(month):
+        method = item.get('payment_method')
         # Un medio que no es una pasarela de pago ('Stripe' de los integrantes viejos, o vacío) es
         # el que la tabla de nómina muestra como elegido: el selector solo ofrece Mercury y AirTM
         # y cae en el primero. Antes ese sueldo no se sumaba a ninguna pasarela.
         if method not in expected_by_method:
             method = default_methods[0]
-        expected_by_method[method] += total_pay
+        expected_by_method[method] += total_de_item(item)
 
     result = []
     total_actual = 0.0
@@ -646,23 +651,9 @@ def get_finance_summary():
     budget_rec = MarketingBudget.query.filter_by(date=start_date.date()).first()
     total_anuncios = budget_rec.budget if budget_rec else 0.0
     
-    saved_payroll_list = MonthlyPayroll.query.filter_by(month=month).all()
-    saved_payroll_map = {p.member_id: p for p in saved_payroll_list}
-    members = TeamMember.query.all()
-    dynamic_commissions = get_commissions_calculated(month)
-    
-    total_sueldos = 0.0
-    for m in members:
-        if not m.is_active and m.id not in saved_payroll_map:
-            continue
-            
-        if m.id in saved_payroll_map:
-            p = saved_payroll_map[m.id]
-            total_sueldos += (p.base_salary + p.commissions + p.bonuses)
-        else:
-            calculated_comm = comision_de_miembro(m, dynamic_commissions)
-            total_sueldos += (m.base_salary + calculated_comm)
-            
+    # Lo mismo que suma la pestaña Nómina: sale de la misma cuenta.
+    total_sueldos = sum(total_de_item(item) for item in nomina_del_mes(month))
+
     total_expenses = total_software + total_anuncios + total_sueldos
     
     balances = MonthlyPaymentMethodBalance.query.filter_by(month=month).all()
