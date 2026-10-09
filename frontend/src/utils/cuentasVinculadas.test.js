@@ -21,7 +21,21 @@ describe('cuentas vinculadas', () => {
 
     it('ofrece solo las otras cuentas de la persona', () => {
         expect(otrasCuentas(marlon).map((c) => c.id)).toEqual([2]);
-        expect(opcionesDeRol(marlon).map((o) => o.label)).toEqual(['Pasar a Closer']);
+        expect(opcionesDeRol(marlon).map((o) => o.label)).toEqual(['Cambiar de vista', 'Pasar a Closer']);
+    });
+
+    it('«Cambiar de vista» lleva al hub, /vistas, a quien tiene más de una tarjeta', () => {
+        const navegar = vi.fn();
+        const [hub] = opcionesDeRol(marlon, () => {}, navegar);
+        expect(hub.label).toBe('Cambiar de vista');
+        hub.onClick();
+        expect(navegar).toHaveBeenCalledWith('/vistas');
+
+        // Un rol que además ve Finances también tiene dos tarjetas.
+        const direccion = { id: 4, role: 'director_comercial', roles: ['director_comercial'], can_view_finance: true };
+        expect(opcionesDeRol(direccion).map((o) => o.label)).toEqual(['Cambiar de vista']);
+        expect(opcionesDeRol({ ...direccion, can_view_finance: false })).toEqual([]);
+        expect(opcionesDeRol({ ...direccion, is_impersonating: true })).toEqual([]);
     });
 
     it('no ofrece nada sin vínculos ni mientras se simula a otro usuario', () => {
@@ -69,7 +83,7 @@ describe('cuentas vinculadas', () => {
 
         it('ofrece los otros roles de la misma cuenta', () => {
             expect(otrosRoles(unico)).toEqual(['closer']);
-            expect(opcionesDeRol(unico).map((o) => o.label)).toEqual(['Pasar a Closer']);
+            expect(opcionesDeRol(unico).map((o) => o.label)).toEqual(['Cambiar de vista', 'Pasar a Closer']);
         });
 
         it('con un solo rol, o simulando a otro, no ofrece nada', () => {

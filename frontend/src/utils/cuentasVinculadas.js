@@ -1,5 +1,5 @@
 import {
-    ArrowLeftRight, BarChart3, Briefcase, Filter, Megaphone, MessageCircle, PhoneCall, Settings2, UserPlus, Wallet,
+    ArrowLeftRight, BarChart3, Briefcase, Filter, LayoutGrid, Megaphone, MessageCircle, PhoneCall, Settings2, UserPlus, Wallet,
 } from 'lucide-react';
 import api from '../services/api';
 import { saveSession, isIsolatedTab } from './sessionStore';
@@ -92,11 +92,17 @@ export const cambiarDeRolEnLaCuenta = async (rol, destino = null) => {
     window.location.href = destino || roleLandingPath(user.role);
 };
 
+const irAPagina = (ruta) => { window.location.href = ruta; };
+
 /**
  * Las opciones del menú de sesión para cambiar de rol: «Pasar a Closer», una por cuenta. Es una
  * lista vacía si la persona tiene una sola cuenta, así que se puede poner siempre en `grupos`.
+ *
+ * Primero va «Cambiar de vista» (08/10/2026): el hub de vistas, /vistas, con todas las tarjetas de la
+ * entrada (sus roles y Finances). Solo para quien tiene más de una (`hayQueElegir`) y no mientras simula
+ * a otro. `navegar` lleva ahí sin recargar; sin él, recarga la página en /vistas.
  */
-export const opcionesDeRol = (user, onError = () => {}) => {
+export const opcionesDeRol = (user, onError = () => {}, navegar = irAPagina) => {
     const intentar = (accion) => async () => {
         try {
             await accion();
@@ -105,6 +111,9 @@ export const opcionesDeRol = (user, onError = () => {}) => {
         }
     };
     return [
+        ...(user && !user.is_impersonating && hayQueElegir(user) ? [{
+            id: 'vistas', label: 'Cambiar de vista', Icono: LayoutGrid, onClick: () => navegar(RUTA_VISTAS),
+        }] : []),
         ...otrosRoles(user).map((rol) => ({
             id: `rol-${rol}`,
             label: `Pasar a ${rotuloDeRol(rol)}`,

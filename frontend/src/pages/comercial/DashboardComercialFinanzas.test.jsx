@@ -249,40 +249,61 @@ describe('DashboardComercial · ir y volver entre Comercial y Finances', () => {
     };
     const opciones = () => screen.getAllByRole('menuitem').map(i => i.textContent);
 
-    it('en Comercial, con «ver finanzas», el menú ofrece «Pasar a Finances»', async () => {
+    const direccion = (verFinanzas) => ({
+        id: 1, role: 'director_comercial', roles: ['director_comercial'], can_view_finance: verFinanzas, is_impersonating: false,
+    });
+
+    it('en Comercial, con «ver finanzas», el menú ofrece el hub y «Pasar a Finances»', async () => {
         estado.puede = true;
-        estado.user = { id: 1, role: 'director_comercial', roles: ['director_comercial'], is_impersonating: false };
+        estado.user = direccion(true);
         montar();
         await screen.findByTestId('analizar');
 
         await abrirSesion();
         expect(screen.getByText('Dirección comercial')).toBeTruthy();
-        expect(opciones()).toEqual(['Pasar a Finances', 'Simular a un closer', 'Cerrar sesión']);
+        expect(opciones()).toEqual(['Cambiar de vista', 'Pasar a Finances', 'Simular a un closer', 'Cerrar sesión']);
         fireEvent.click(screen.getByRole('menuitem', { name: 'Pasar a Finances' }));
         expect(navegar).toHaveBeenCalledWith('/finanzas');
     });
 
-    it('en Comercial, sin «ver finanzas», no la ofrece', async () => {
+    it('en Comercial, sin «ver finanzas» y con un solo rol, no ofrece ni Finances ni el hub', async () => {
         estado.puede = false;
-        estado.user = { id: 1, role: 'director_comercial', roles: ['director_comercial'], is_impersonating: false };
+        estado.user = direccion(false);
         montar();
         await screen.findByTestId('analizar');
 
         await abrirSesion();
-        expect(opciones()).not.toContain('Pasar a Finances');
+        expect(opciones()).toEqual(['Simular a un closer', 'Cerrar sesión']);
     });
 
     it('en /finanzas el menú dice Finances y su primera opción vuelve a la dirección comercial', async () => {
         estado.puede = true;
-        estado.user = { id: 1, role: 'director_comercial', roles: ['director_comercial'], is_impersonating: false };
+        estado.user = direccion(true);
         montar('/finanzas');
         await screen.findByTestId('finanzas');
 
         await abrirSesion();
         expect(screen.getByText('Finances')).toBeTruthy();
-        expect(opciones()).toEqual(['Pasar a Dirección comercial', 'Simular a un closer', 'Cerrar sesión']);
+        expect(opciones()).toEqual(['Pasar a Dirección comercial', 'Cambiar de vista', 'Simular a un closer', 'Cerrar sesión']);
         fireEvent.click(screen.getByRole('menuitem', { name: 'Pasar a Dirección comercial' }));
         expect(navegar).toHaveBeenCalledWith('/admin/comercial');
+    });
+
+    it('«Cambiar de vista» lleva al hub de vistas, en Comercial y en /finanzas', async () => {
+        estado.puede = true;
+        estado.user = direccion(true);
+        const { unmount } = montar();
+        await screen.findByTestId('analizar');
+        await abrirSesion();
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Cambiar de vista' }));
+        expect(navegar).toHaveBeenLastCalledWith('/vistas');
+
+        unmount();
+        montar('/finanzas');
+        await screen.findByTestId('finanzas');
+        await abrirSesion();
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Cambiar de vista' }));
+        expect(navegar).toHaveBeenLastCalledWith('/vistas');
     });
 
     it('el admin vuelve de /finanzas a su pantalla, y sus otros roles siguen en el menú', async () => {
@@ -292,7 +313,7 @@ describe('DashboardComercial · ir y volver entre Comercial y Finances', () => {
         await screen.findByTestId('finanzas');
 
         await abrirSesion();
-        expect(opciones().slice(0, 2)).toEqual(['Pasar a Administrador', 'Pasar a Closer']);
+        expect(opciones().slice(0, 3)).toEqual(['Pasar a Administrador', 'Cambiar de vista', 'Pasar a Closer']);
         expect(opciones()).not.toContain('Pasar a Finances');
         fireEvent.click(screen.getByRole('menuitem', { name: 'Pasar a Administrador' }));
         expect(navegar).toHaveBeenCalledWith('/admin/ventas');

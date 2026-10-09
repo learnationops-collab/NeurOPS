@@ -667,12 +667,13 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
 
     const rolReal = user?.is_impersonating ? user?.original_user_role : user?.role;
     // Comercial y Finances son dos vistas separadas: cada una ofrece pasar a la otra (ver
-    // `opcionesDeFinanzas`). En /finanzas la vuelta va primero, porque es la única salida.
+    // `opcionesDeFinanzas`). En /finanzas la vuelta va primero, porque es la única salida. Las dos
+    // tienen además «Cambiar de vista», el hub con todas (ver `opcionesDeRol`).
+    const deRol = opcionesDeRol(user, (m) => toast.error(m), navigate);
     const gruposDeSesion = [
         delEspacio
-            ? [...opcionesDeFinanzas(user, navigate, { enFinanzas: true }), ...opcionesDeRol(user, (m) => toast.error(m))]
-            : [...opcionesDeRol(user, (m) => toast.error(m)),
-                ...opcionesDeFinanzas(user, navigate, { puede: !!contexto.puede_ver_finanzas })],
+            ? [...opcionesDeFinanzas(user, navigate, { enFinanzas: true }), ...deRol]
+            : [...deRol, ...opcionesDeFinanzas(user, navigate, { puede: !!contexto.puede_ver_finanzas })],
         SIMULAN_CLOSERS.includes(rolReal) ? [{
             id: 'simular', label: 'Simular a un closer', Icono: VenetianMask,
             panel: { titulo: 'Simular a un closer', vacio: 'No hay closers activos.', cargar: cargarCloseresParaSimular },

@@ -47,7 +47,7 @@ const DockAdmin = ({ onSettingsClick, onImpersonateClick }) => {
             { id: 'ajustes', label: 'Ajustes generales', Icono: Settings, onClick: onSettingsClick },
             { id: 'simular', label: 'Simular acceso', Icono: VenetianMask, onClick: onImpersonateClick },
         ],
-        [...opcionesDeRol(user, (m) => toast.error(m)), ...opcionesDeFinanzas(user, navigate)],
+        [...opcionesDeRol(user, (m) => toast.error(m), navigate), ...opcionesDeFinanzas(user, navigate)],
         [
             ...(user?.is_impersonating ? [{ id: 'volver', label: 'Volver a mi sesión', Icono: Ghost, onClick: () => revertImpersonation() }] : []),
             { id: 'salir', label: 'Cerrar sesión', Icono: LogOut, peligro: true, onClick: () => { if (window.confirm('¿Cerrar sesión?')) logout(); } },
