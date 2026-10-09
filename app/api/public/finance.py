@@ -158,10 +158,19 @@ def _seed_variable_members():
         db.session.commit()
 
 
-def _item_de_nomina(member, month, fila, auto):
+def _item_de_nomina(member, month, fila, auto, transferencias=0.0):
     """Un integrante en la nómina del mes, con los valores que VALEN: la fila guardada si la hay
     (o lo del integrante si no) y la comisión escrita a mano o, sin ella, la calculada en vivo
-    (`auto`). `commissions_auto` va siempre, para mostrar el cálculo al lado de lo escrito."""
+    (`auto`). `commissions_auto` va siempre, para mostrar el cálculo al lado de lo escrito.
+
+    `transferencias_recibidas` (09/10/2026) es lo que el integrante recibió en su cuenta por
+    transferencia de un cliente en el mes: se le descuenta de lo que se le paga (`a_pagar_de_item`),
+    no de lo que cuesta (`total_de_item`)."""
+    return {**_valores_de_nomina(member, month, fila, auto),
+            "transferencias_recibidas": round(transferencias or 0.0, 2)}
+
+
+def _valores_de_nomina(member, month, fila, auto):
     if fila is None:
         return {
             "id": None,
@@ -192,9 +201,39 @@ def nomina_del_mes(month):
     _seed_variable_members()
     guardadas = {p.member_id: p for p in MonthlyPayroll.query.filter_by(month=month).all()}
     comisiones = get_commissions_calculated(month)
-    return [_item_de_nomina(m, month, guardadas.get(m.id), comision_de_miembro(m, comisiones))
-            for m in TeamMember.query.order_by(TeamMember.id).all()
-            if m.is_active or m.id in guardadas]
+    miembros = _miembros_del_mes(guardadas)
+    transferencias = transferencias_del_mes(month, miembros)
+    return [_item_de_nomina(m, month, guardadas.get(m.id), comision_de_miembro(m, comisiones),
+                            transferencias.get(m.id, 0.0))
+            for m in miembros]
+
+
+def _miembros_del_mes(guardadas):
+    """Los integrantes de la nómina de un mes: los activos y los que ya tienen la fila guardada."""
+    return [m for m in TeamMember.query.order_by(TeamMember.id).all() if m.is_active or m.id in guardadas]
+
+
+def transferencias_del_mes(month, miembros):
+    """{id del integrante -> lo que recibió por transferencia de un cliente en el mes 'YYYY-MM'}.
+
+    La cuenta es la de Payroll (`transferencias_service.recibidas_por_persona` sobre el mes
+    calendario): las dos dicen lo mismo. Cada persona de Payroll es UN integrante de `miembros`, el
+    primero (por id) cuyo nombre la nombra (`clave_de_nomina`): si hubiera dos filas para la misma
+    persona, la plata se le descontaría dos veces. «Otro» no es nadie y no se le descuenta a nadie."""
+    from app.services.nomina_service import clave_de_nomina
+    from app.services.transferencias_service import recibidas_por_persona
+
+    rango = _rango_del_mes(month or '')
+    if not rango:
+        return {}
+    recibidas = recibidas_por_persona(rango[0].date(), rango[1].date())
+    por_miembro, asignadas = {}, set()
+    for miembro in miembros:
+        clave = clave_de_nomina(miembro.name)
+        if clave in recibidas and clave not in asignadas:
+            asignadas.add(clave)
+            por_miembro[miembro.id] = recibidas[clave]['total']
+    return por_miembro
 
 
 class _MontoInvalido(ValueError):
@@ -209,8 +248,15 @@ def _monto(valor, campo):
 
 
 def total_de_item(item):
-    """Lo que cobra un integrante en un item de `nomina_del_mes`: sueldo, comisión y bonos."""
+    """Lo que cobra un integrante en un item de `nomina_del_mes`: sueldo, comisión y bonos. Es lo que
+    cuesta (los sueldos del Resumen): las transferencias recibidas no lo cambian."""
     return (item.get('base_salary') or 0.0) + (item.get('commissions') or 0.0) + (item.get('bonuses') or 0.0)
+
+
+def a_pagar_de_item(item):
+    """Lo que hay que pagarle a un integrante: lo que cobra menos lo que ya recibió por
+    transferencia de un cliente (09/10/2026). Negativo si recibió más de lo que cobra: lo debe."""
+    return total_de_item(item) - (item.get('transferencias_recibidas') or 0.0)
 
 
 @bp.route('/public/finance/payroll', methods=['GET', 'POST'])
@@ -268,7 +314,10 @@ def manage_payroll():
     if not fila.commissions_manual:
         fila.commissions = auto  # la última foto del cálculo; la que vale se calcula en vivo
     db.session.commit()
-    return jsonify(_item_de_nomina(member, month, fila, auto)), 200
+    # La fila vuelve con lo que recibió por transferencia, como en el GET: la tabla la reemplaza.
+    guardadas = {p.member_id for p in MonthlyPayroll.query.filter_by(month=month).all()}
+    transferencias = transferencias_del_mes(month, _miembros_del_mes(guardadas)).get(member.id, 0.0)
+    return jsonify(_item_de_nomina(member, month, fila, auto, transferencias)), 200
 
 @bp.route('/public/finance/balances', methods=['GET', 'POST'])
 @login_required
@@ -336,7 +385,8 @@ def _saldos_del_periodo():
             # AirTM y cae en el primero. Antes ese sueldo no se sumaba a ninguna pasarela.
             if method not in expected_by_method:
                 method = default_methods[0]
-            expected_by_method[method] += total_de_item(item) * parte
+            # Lo que ya recibió por transferencia de un cliente no se le paga por la pasarela.
+            expected_by_method[method] += a_pagar_de_item(item) * parte
 
     result = []
     total_actual = 0.0
@@ -639,7 +689,12 @@ def get_finance_summary():
     """El resumen del período: un mes o, desde el 08/10/2026, un rango de fechas (`start_date` y
     `end_date`). Ingresos y software van por las fechas exactas; nómina, anuncios y saldos son
     libros mensuales y en un rango se prorratean por días (ver `meses_del_rango`); los ahorros
-    cuentan por mes entero (ver `_ahorros_del_periodo`)."""
+    cuentan por mes entero (ver `_ahorros_del_periodo`).
+
+    `transferencias` (09/10/2026) abre lo que entró por transferencia en el período según a quién
+    del equipo se le hizo (`transferencias_service.resumen_del_periodo`): es plata del ingreso que
+    está en la cuenta de una persona y no en una de la empresa. No cambia el ingreso: es parte de él."""
+    from app.services.transferencias_service import resumen_del_periodo
     periodo, error = _periodo_de_la_consulta()
     if error:
         return error
@@ -728,7 +783,8 @@ def get_finance_summary():
             "anuncios": round(total_anuncios, 2),
             "sueldos": round(total_sueldos, 2)
         },
-        "income_breakdown": income_breakdown
+        "income_breakdown": income_breakdown,
+        "transferencias": resumen_del_periodo(periodo['desde'], periodo['hasta']),
     }), 200
 
 
