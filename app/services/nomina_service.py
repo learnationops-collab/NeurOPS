@@ -287,8 +287,14 @@ def payroll_del_rango(desde=None, hasta=None):
     `transferencias_service.recibidas_por_persona`, la misma cuenta que la Nómina de Finanzas) y lo
     que queda por pagarle (`a_pagar` = sueldo base + comisión − transferencias). Es un descuento
     sobre lo que se le paga, no sobre lo que cuesta: la comisión, el sueldo y los totales no cambian.
+
+    Y en 'totales', `transferencias` (pedido del usuario, 09/10/2026: «falta contar lo que ingresó
+    por transferencia para que las cuentas cuadren»): cuánto del cash del período entró por
+    transferencia y a quién, de TODAS las ventas y no solo de las personas de la nómina
+    (`transferencias_service.resumen_del_periodo`, la cuenta del Resumen de Finanzas). Ya está
+    dentro del cash: esto dice qué parte no pasó por Stripe ni Hotmart.
     """
-    from app.services.transferencias_service import recibidas_por_persona
+    from app.services.transferencias_service import recibidas_por_persona, resumen_del_periodo
 
     nomina = comisiones_del_rango(desde, hasta)
     sueldos = sueldo_base_del_rango(desde, hasta)
@@ -303,4 +309,5 @@ def payroll_del_rango(desde=None, hasta=None):
                                          - transferencias['total'], 2)
     nomina['totales']['sueldo_base'] = round(sum(nomina[c]['sueldo_base'] for c in personas), 2)
     nomina['totales']['comisiones'] = round(sum(nomina[c]['comision_total'] for c in personas), 2)
+    nomina['totales']['transferencias'] = resumen_del_periodo(desde, hasta)
     return nomina

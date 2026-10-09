@@ -91,11 +91,33 @@ def test_payroll_no_cambia_lo_que_cuesta_la_nomina(client, db, finanzas, septiem
     _marcar(db, 'jean_carlo', 'pedro', 'otro', None)
     despues = _payroll(client, finanzas)
 
-    assert despues['totales'] == antes['totales']
+    # Menos el desglose de las transferencias, que dice a quién fue cada una: eso sí cambia al marcar.
+    def sin_transferencias(totales):
+        return {k: v for k, v in totales.items() if k != 'transferencias'}
+
+    assert sin_transferencias(despues['totales']) == sin_transferencias(antes['totales'])
+    assert despues['totales']['transferencias']['total'] == antes['totales']['transferencias']['total']
     for clave in antes:
         if clave != 'totales':
             assert (despues[clave]['comision_total'], despues[clave]['sueldo_base']) == \
                 (antes[clave]['comision_total'], antes[clave]['sueldo_base'])
+
+
+def test_el_cash_de_payroll_dice_cuanto_entro_por_transferencia_y_a_quien(client, db, finanzas,
+                                                                          septiembre):
+    """Pedido del 09/10/2026: «falta contar lo que ingresó por transferencia para que las cuentas
+    cuadren». Ya estaba dentro del cash; ahora `totales` dice qué parte fue y a la cuenta de quién,
+    de todas las ventas del período (también «otro» y las sin marcar), como el Resumen de Finanzas."""
+    _marcar(db, 'jean_carlo', 'pedro', 'otro', None)
+
+    totales = _payroll(client, finanzas)['totales']
+
+    assert (totales['cash_bruto'], totales['ventas']) == (2580.0, 5)
+    transferencias = totales['transferencias']
+    assert (transferencias['total'], transferencias['ventas']) == (580.0, 4)
+    assert {d['clave']: d['total'] for d in transferencias['destinos']} == \
+        {'pedro': 300.0, 'jean_carlo': 150.0, 'otro': 80.0}
+    assert transferencias['sin_marcar'] == {'total': 50.0, 'ventas': 1}
 
 
 def test_una_venta_sacada_de_la_nomina_se_descuenta_igual(client, db, finanzas, septiembre):

@@ -72,6 +72,30 @@ describe('Payroll', () => {
             .toBe('1 ingresos · neto $300.00 · base $600.00');
     });
 
+    it('el cash dice cuánto de él entró por transferencia y a la cuenta de quién', async () => {
+        // Pedido del 09/10/2026: «falta contar lo que ingresó por transferencia para que las cuentas
+        // cuadren». Ya está dentro del cash: la línea dice qué parte no pasó por Stripe ni Hotmart.
+        const destino = (clave, label, total) => ({ clave, label, total, ventas: total ? 1 : 0 });
+        api.getPayroll.mockResolvedValue({ ...NOMINA, totales: { ...NOMINA.totales, transferencias: {
+            total: 400, ventas: 3,
+            destinos: [destino('pedro', 'Pedro', 0), destino('jean_carlo', 'Jean Carlo', 150), destino('otro', 'Otro', 50)],
+            sin_marcar: { total: 200, ventas: 1 },
+        } } });
+        render(<ConFiltro />);
+        await screen.findByText('Elias');
+
+        expect(cifra('Cash del período').textContent).toBe('$2,300.00');
+        expect(screen.getByText('3 ventas · bruto $2,400.00', { exact: false })).toBeTruthy();
+        expect(screen.getByText('transferencias $400.00 · Jean Carlo, Otro, sin marcar a quién')).toBeTruthy();
+    });
+
+    it('sin transferencias en el período, el cash no agrega la línea', async () => {
+        render(<ConFiltro />);
+        await screen.findByText('Elias');
+
+        expect(screen.queryByText(/^transferencias /)).toBeNull();
+    });
+
     it('al cambiar de período antes de que cargue el anterior, la respuesta vieja no pisa la nueva', async () => {
         // Visto el 09/10/2026: de «Este mes» a «Mes pasado» rápido, octubre llegaba último y quedaba
         // en pantalla con el rótulo de septiembre.
