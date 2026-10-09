@@ -198,7 +198,11 @@ const Gruesa = ({ label, cuenta, help, pct, tone, w, destino, irA, i = 0 }) => {
     );
 };
 
-/** Torta: cada ítem como un arco, el total al medio. */
+/**
+ * Torta: cada ítem como un arco, el total al medio. Un ítem puede traer su `pct` ya calculado (el
+ * del backend, repartido para que sumen 100): entonces la leyenda dice ese y no uno propio, para que
+ * la dona y la tabla de al lado no den 37,8% y 37,7% del mismo monto.
+ */
 const Torta = ({ items, total, f, centro }) => {
     const montado = useMontado();
     let off = 0;
@@ -219,7 +223,7 @@ const Torta = ({ items, total, f, centro }) => {
                                 strokeDasharray={montado ? `${d.toFixed(2)} ${(100 - d).toFixed(2)}` : '0 100'}
                                 strokeDashoffset={(-off).toFixed(2)}>
                                 <title>
-                                    {`${it.label} · ${f(it.n)}${total ? ` · ${p.toFixed(1)}%` : ''}`}
+                                    {`${it.label} · ${f(it.n)}${total ? ` · ${it.pct != null ? fmt.pct(it.pct) : `${p.toFixed(1)}%`}` : ''}`}
                                 </title>
                             </circle>
                         );
@@ -239,7 +243,9 @@ const Torta = ({ items, total, f, centro }) => {
                             <span className="dato-punto" style={{ background: v(it.tone) }} />
                             <span className="tl-nom trunc">{it.label}</span>
                             <span className="tl-v" style={{ color: v(it.tone) }}>{f(it.n)}</span>
-                            <span className="tl-p">{total ? `${((it.n / total) * 100).toFixed(1)}%` : '—'}</span>
+                            <span className="tl-p">
+                                {it.pct != null ? fmt.pct(it.pct) : (total ? `${((it.n / total) * 100).toFixed(1)}%` : '—')}
+                            </span>
                         </>
                     );
                     return it.ir
@@ -663,7 +669,7 @@ const PanelFuentes = ({ fuentes }) => {
             {cantidad > 0 && vista === 'grafico' && (
                 <Torta total={total} f={fmt.money} centro="cobrado"
                     items={procedencias.filter(p => p.monto > 0)
-                        .map(p => ({ label: p.label, n: p.monto, tone: p.tone }))} />
+                        .map(p => ({ label: p.label, n: p.monto, tone: p.tone, pct: p.pct }))} />
             )}
 
             {cantidad > 0 && vista !== 'grafico' && (

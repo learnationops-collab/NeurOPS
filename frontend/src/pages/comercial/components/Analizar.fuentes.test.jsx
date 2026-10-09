@@ -151,6 +151,9 @@ describe('Analizar · Ingresos por fuente', () => {
 
         expect([...tarjeta().querySelectorAll('.tl-nom')].map(n => n.textContent))
             .toEqual(['Workshop', 'Setting', 'Fulfillment', 'Sin procedencia']);
+        // El % de la leyenda es el del backend, el mismo que dice la tabla: no uno recalculado.
+        expect([...tarjeta().querySelectorAll('.tl-p')].map(n => n.textContent.trim()))
+            .toEqual(['27%', '36.1%', '5.4%', '4.5%']);
         expect(within(tarjeta()).getByText('cobrado')).toBeTruthy();
     });
 
