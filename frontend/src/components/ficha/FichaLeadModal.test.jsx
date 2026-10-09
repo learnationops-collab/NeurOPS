@@ -452,4 +452,12 @@ describe('la carga', () => {
         expect(titulo()).toHaveTextContent('Ana Gómez');
         expect(pedidos[2].params).toEqual({ appointment_id: 777 });
     });
+
+    it('si la ficha no se pudo abrir, no hay lápiz que abra un editor vacío', async () => {
+        api.get.mockRejectedValue({ response: { status: 500, data: { message: 'Se cayó la base' } } });
+        render(<FichaLeadModal appointmentId={9012} onCerrar={vi.fn()} />);
+
+        expect(await screen.findByText('No se pudo abrir la ficha')).toBeInTheDocument();
+        expect(lapiz()).not.toBeInTheDocument();
+    });
 });
