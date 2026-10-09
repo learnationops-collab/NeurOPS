@@ -1,5 +1,10 @@
+# Las imágenes base salen del espejo público de AWS (public.ecr.aws/docker/library) y no de Docker
+# Hub: el 09/10/2026 tres builds seguidos de Railway fallaron con «429 Too Many Requests» al bajar
+# node:20-slim y python:3.11-slim (Docker Hub limita las descargas anónimas por IP, y los builders
+# de Railway las comparten). Son las mismas imágenes oficiales, con el mismo digest.
+
 # Build Stage for React Frontend
-FROM node:20-slim as frontend_builder
+FROM public.ecr.aws/docker/library/node:20-slim AS frontend_builder
 
 WORKDIR /app_build
 
@@ -16,7 +21,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # Production Stage for Flask Backend
-FROM python:3.11-slim
+FROM public.ecr.aws/docker/library/python:3.11-slim
 
 WORKDIR /app
 
