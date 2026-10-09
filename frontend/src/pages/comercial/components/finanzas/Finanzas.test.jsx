@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Finanzas from './Finanzas';
 
@@ -26,6 +26,9 @@ const INTEGRANTES = [
     { id: 1, name: 'Kerwin', role: 'Operaciones', salary_type: 'fijo' },
     { id: 2, name: 'Elias', role: 'Setter', salary_type: 'variable' },
 ];
+
+// Las cifras cuentan hasta su valor (`Cifra`): lo que cambia se espera con `waitFor`.
+const cifra = (rotulo) => screen.getByText(rotulo, { selector: '.t-eyebrow' }).closest('.kpi').querySelector('.kpi-n').textContent;
 
 const montarNomina = async (nomina) => {
     api.getNomina.mockResolvedValue({ nomina, integrantes: INTEGRANTES });
@@ -74,6 +77,20 @@ describe('Finanzas · Nómina', () => {
         expect(api.guardarNomina).toHaveBeenLastCalledWith({ member_id: 2, month: '2026-09', commissions_manual: false });
         expect(screen.queryByRole('button', { name: /Volver a la comisión calculada/ })).toBeNull();
         expect(screen.getByRole('spinbutton', { name: 'Comisión de Elias' }).value).toBe('80');
+    });
+
+    it('arriba van el total, lo pagado y lo que falta pagar, y siguen a los tildes', async () => {
+        await montarNomina([KERWIN, ELIAS]);
+        expect(cifra('Total del mes')).toBe('$1,080.00');
+        expect(cifra('Pagado')).toBe('$0.00');
+        expect(cifra('Por pagar')).toBe('$1,080.00');
+
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Marcar como pagado a Kerwin' })); });
+
+        await waitFor(() => expect(cifra('Pagado')).toBe('$1,000.00'));
+        await waitFor(() => expect(cifra('Por pagar')).toBe('$80.00'));
+        // Uno pagado y uno por pagar.
+        expect(screen.getAllByText('1 de 2 integrantes', { selector: '.kpi-sub' })).toHaveLength(2);
     });
 
     it('sin los campos nuevos (backend viejo) no hay marca y todo sigue andando', async () => {

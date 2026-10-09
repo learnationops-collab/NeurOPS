@@ -391,6 +391,31 @@ const FilaNomina = ({ fila, integrante, onCambiar, onEditar, onEliminar }) => {
     );
 };
 
+const totalNomina = (filas) => filas.reduce((s, f) => s + (f.base_salary || 0) + (f.commissions || 0) + (f.bonuses || 0), 0);
+const nIntegrantes = (n) => `${n} ${n === 1 ? 'integrante' : 'integrantes'}`;
+
+/**
+ * Las tres cifras de arriba de la nómina (08/10/2026): el total, lo pagado (las filas tildadas) y
+ * lo que falta pagar (las que no). Al tildar una fila las dos últimas cuentan hasta su valor nuevo.
+ */
+const TotalesNomina = ({ filas, rotulo }) => {
+    const pagadas = filas.filter(f => f.is_paid);
+    const total = totalNomina(filas);
+    const pagado = totalNomina(pagadas);
+    return (
+        <div className="fz-grid fz-grid--3">
+            <Cifron rotulo={rotulo} valor={dinero(total)} humo={HUMOS.marca} sub={nIntegrantes(filas.length)}
+                ayuda="Sueldos, comisiones y bonos de todo el equipo: lo mismo que suma la fila Total de la tabla." />
+            <Cifron rotulo="Pagado" valor={dinero(pagado)} tono="success" humo={HUMOS.ingreso}
+                sub={`${pagadas.length} de ${nIntegrantes(filas.length)}`}
+                ayuda="La suma de las filas tildadas como pagadas." />
+            <Cifron rotulo="Por pagar" valor={dinero(total - pagado)} tono="warning" humo={HUMOS.gasto}
+                sub={`${filas.length - pagadas.length} de ${nIntegrantes(filas.length)}`}
+                ayuda="La suma de las filas que todavía no se tildaron como pagadas." />
+        </div>
+    );
+};
+
 const Nomina = ({ mes }) => {
     const pedir = useCallback(() => apiFz.getNomina(mes), [mes]);
     const [datos, recargar, setDatos] = useDatos(pedir, mes);
@@ -439,49 +464,52 @@ const Nomina = ({ mes }) => {
         { key: 'fijo', label: 'Equipo fijo', tono: 'info', filas: nomina.filter(f => integranteDe(f)?.salary_type !== 'variable') },
         { key: 'variable', label: 'Equipo variable · comisiones', tono: 'success', filas: nomina.filter(f => integranteDe(f)?.salary_type === 'variable') },
     ];
-    const total = nomina.reduce((s, f) => s + (f.base_salary || 0) + (f.commissions || 0) + (f.bonuses || 0), 0);
+    const total = totalNomina(nomina);
 
     return (
-        <section className="panel">
-            <PanelCab titulo="Nómina del mes"
-                tip="Sueldo fijo, comisión y bonos de cada integrante. La comisión se calcula sola desde las ventas con los porcentajes de Payroll, y sigue al cálculo aunque se cambie el sueldo, los bonos, el medio o el pagado. Si la escribís a mano queda marcada «manual» y vale esa, hasta que vuelvas a la calculada desde la marca.">
-                <button type="button" className="btn btn--linea btn--sm" onClick={() => setModal({ integrante: null })}>
-                    <Plus /> Nuevo integrante
-                </button>
-            </PanelCab>
-            <div className="fz-scroll">
-                <div className="fz-tabla" style={COLS_NOMINA}>
-                    <div className="fz-cab">
-                        <span>Integrante</span>
-                        <span className="fz-der">Sueldo base</span>
-                        <span className="fz-der">Comisión</span>
-                        <span className="fz-der">Bonos</span>
-                        <span className="fz-der">Total</span>
-                        <span>Medio de pago</span>
-                        <span className="fz-centro">Pagado</span>
-                        <span />
-                    </div>
-                    {grupos.map(g => (
-                        <React.Fragment key={g.key}>
-                            <p className="fz-grupo" style={{ '--c': v(g.tono) }}><i />{g.label}</p>
-                            {g.filas.map(fila => (
-                                <FilaNomina key={fila.member_id} fila={fila} integrante={integranteDe(fila)}
-                                    onCambiar={cambiar} onEliminar={eliminar}
-                                    onEditar={(integrante) => setModal({ integrante })} />
-                            ))}
-                            {g.filas.length === 0 && <p className="fz-vacio">Nadie en este grupo.</p>}
-                        </React.Fragment>
-                    ))}
-                    <div className="fz-fila fz-total">
-                        <span className="fz-rot">Total del mes · {nombreDelMes(mes)}</span>
-                        <span /><span /><span />
-                        <span className="fz-n fz-der">{dinero(total)}</span>
-                        <span /><span /><span />
+        <>
+            <TotalesNomina filas={nomina} rotulo="Total del mes" />
+            <section className="panel">
+                <PanelCab titulo="Nómina del mes"
+                    tip="Sueldo fijo, comisión y bonos de cada integrante. La comisión se calcula sola desde las ventas con los porcentajes de Payroll, y sigue al cálculo aunque se cambie el sueldo, los bonos, el medio o el pagado. Si la escribís a mano queda marcada «manual» y vale esa, hasta que vuelvas a la calculada desde la marca.">
+                    <button type="button" className="btn btn--linea btn--sm" onClick={() => setModal({ integrante: null })}>
+                        <Plus /> Nuevo integrante
+                    </button>
+                </PanelCab>
+                <div className="fz-scroll">
+                    <div className="fz-tabla" style={COLS_NOMINA}>
+                        <div className="fz-cab">
+                            <span>Integrante</span>
+                            <span className="fz-der">Sueldo base</span>
+                            <span className="fz-der">Comisión</span>
+                            <span className="fz-der">Bonos</span>
+                            <span className="fz-der">Total</span>
+                            <span>Medio de pago</span>
+                            <span className="fz-centro">Pagado</span>
+                            <span />
+                        </div>
+                        {grupos.map(g => (
+                            <React.Fragment key={g.key}>
+                                <p className="fz-grupo" style={{ '--c': v(g.tono) }}><i />{g.label}</p>
+                                {g.filas.map(fila => (
+                                    <FilaNomina key={fila.member_id} fila={fila} integrante={integranteDe(fila)}
+                                        onCambiar={cambiar} onEliminar={eliminar}
+                                        onEditar={(integrante) => setModal({ integrante })} />
+                                ))}
+                                {g.filas.length === 0 && <p className="fz-vacio">Nadie en este grupo.</p>}
+                            </React.Fragment>
+                        ))}
+                        <div className="fz-fila fz-total">
+                            <span className="fz-rot">Total del mes · {nombreDelMes(mes)}</span>
+                            <span /><span /><span />
+                            <span className="fz-n fz-der">{dinero(total)}</span>
+                            <span /><span /><span />
+                        </div>
                     </div>
                 </div>
-            </div>
-            {modal && <ModalIntegrante integrante={modal.integrante} onGuardar={guardarIntegrante} onCerrar={() => setModal(null)} />}
-        </section>
+                {modal && <ModalIntegrante integrante={modal.integrante} onGuardar={guardarIntegrante} onCerrar={() => setModal(null)} />}
+            </section>
+        </>
     );
 };
 
