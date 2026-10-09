@@ -752,7 +752,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                             {renderComparisonSubdataLeft(totalCashCollected, compTotalCashCollected, true)}
                         </MetricWithTooltip>
                         
-                        <MetricWithTooltip tooltip="Total de dinero neto recaudado tras descontar comisiones de pasarelas (Stripe: 4.5%, Hotmart: 8.9%)." className="block cursor-help border-l border-slate-800/60 pl-4">
+                        <MetricWithTooltip tooltip="Total de dinero neto recaudado tras descontar comisiones de pasarelas (Stripe: 4.4%, Hotmart: 8.2%)." className="block cursor-help border-l border-slate-800/60 pl-4">
                             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none">CASH COLLECT NETO</h4>
                             <h2 className="text-3xl font-black text-emerald-400 italic tracking-tighter leading-none mt-1.5">{fmtCash(totalCashCollectedNeto)}</h2>
                             {renderComparisonSubdataLeft(totalCashCollectedNeto, compTotalCashCollectedNeto, true)}

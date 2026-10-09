@@ -73,21 +73,21 @@ def test_reparte_el_ingreso_del_mes_por_procedencia(client, finanzas, septiembre
     datos = r.get_json()
     assert (datos['desde'], datos['hasta'], datos['cantidad']) == ('2026-09-01', '2026-09-30', 16)
     assert _por_balde(datos) == {
-        'workshop': (1659.7, 3, [('En vivo', 1477.5, 2), ('Grabación', 182.2, 1)]),
+        'workshop': (1661.6, 3, [('En vivo', 1478.0, 2), ('Grabación', 183.6, 1)]),
         'setting': (3625.0, 6, [('Elias', 2000.0, 1), ('Paula', 850.0, 2), ('Sin identificar', 600.0, 1),
                                 ('Ivan', 100.0, 1), ('Ramiro', 75.0, 1)]),
-        'vsl': (1432.5, 1, []),
+        'vsl': (1434.0, 1, []),
         'fulfillment': (1090.0, 3, [('Upsells', 700.0, 1), ('Renovaciones', 300.0, 1), ('Otros pagos', 90.0, 1)]),
         'sin_procedencia': (770.0, 3, [('Sin agenda', 650.0, 2), ('Otra fuente', 120.0, 1)]),
     }
-    assert [p['pct'] for p in datos['procedencias']] == [19.3, 42.3, 16.7, 12.7, 9.0]
+    assert [p['pct'] for p in datos['procedencias']] == [19.4, 42.2, 16.7, 12.7, 9.0]
 
 
 def test_los_baldes_suman_el_ingreso_del_resumen(client, finanzas, septiembre):
     resumen = client.get('/api/public/finance/summary?month=2026-09', headers=finanzas).get_json()
     datos = client.get('/api/public/finance/procedencia?month=2026-09', headers=finanzas).get_json()
 
-    assert datos['total'] == resumen['kpis']['total_income'] == 8577.2
+    assert datos['total'] == resumen['kpis']['total_income'] == 8580.6
     assert round(sum(p['monto'] for p in datos['procedencias']), 2) == datos['total']
     assert sum(p['cantidad'] for p in datos['procedencias']) == datos['cantidad']
     assert round(sum(p['pct'] for p in datos['procedencias']), 1) == 100.0
@@ -116,8 +116,8 @@ def test_un_rango_que_no_es_un_mes(client, finanzas, septiembre):
                        headers=finanzas).get_json()
 
     # La cuota de ana (Stripe), el upsell de caro y la renovación de dani.
-    assert datos['total'] == 1477.5
-    assert {p['key']: p['monto'] for p in datos['procedencias'] if p['monto']} == {'workshop': 477.5, 'fulfillment': 1000.0}
+    assert datos['total'] == 1478.0
+    assert {p['key']: p['monto'] for p in datos['procedencias'] if p['monto']} == {'workshop': 478.0, 'fulfillment': 1000.0}
 
 
 def test_un_periodo_sin_ventas_trae_los_cinco_baldes_en_cero(client, finanzas):

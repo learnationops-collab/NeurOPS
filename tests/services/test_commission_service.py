@@ -68,7 +68,7 @@ def test_una_venta_por_zelle_cuenta_el_monto_completo(db, ivan):
     assert (resultado['cash_neto'], resultado['commission']) == (500.0, 40.0)
 
 
-@pytest.mark.parametrize('metodo,factor', [('stripe', 0.955), ('hotmart', 0.911), ('Stripe', 0.955)])
+@pytest.mark.parametrize('metodo,factor', [('stripe', 0.956), ('hotmart', 0.918), ('Stripe', 0.956)])
 @freeze_time(HOY)
 def test_stripe_y_hotmart_descuentan_su_fee_zelle_no(db, ivan, metodo, factor):
     venta(db, setter='Ivan', monto=1000.0, metodo=metodo)
@@ -188,7 +188,7 @@ def test_varias_ventas_del_mes_se_suman(db, ivan):
 
     resultado = CommissionService.get_setter_commission(ivan)
 
-    assert resultado['cash_neto'] == round(100.0 + 100.0 * 0.955, 2)
+    assert resultado['cash_neto'] == round(100.0 + 100.0 * 0.956, 2)
 
 
 # --- get_closer_commission (CloserService simulado) ----------------------------------------------

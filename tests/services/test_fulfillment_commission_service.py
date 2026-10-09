@@ -70,7 +70,7 @@ def test_la_sena_misma_no_paga_comision(db):
 def test_se_cobra_sobre_el_neto(db):
     venta(db, 'RR - Upsell', 1000.0, metodo='stripe')
 
-    assert comisiones_del_mes('2026-09', del_mes(db))['santi'] == 9.55
+    assert comisiones_del_mes('2026-09', del_mes(db))['santi'] == 9.56
 
 
 def test_antes_de_septiembre_no_hay_comision(db):

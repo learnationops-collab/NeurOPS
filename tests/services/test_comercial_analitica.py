@@ -596,7 +596,7 @@ def test_la_comision_es_el_diez_por_ciento_del_cash_neto(db, marlon):
     fila = ca.comparativas('closers', DESDE, HASTA)['filas'][0]
 
     assert fila['cash'] == 1000.0
-    assert fila['comision'] == 95.5  # 1000 × 0.955 de fee × 10%
+    assert fila['comision'] == 95.6  # 1000 × 0.956 de fee × 10%
 
 
 @freeze_time(HOY)

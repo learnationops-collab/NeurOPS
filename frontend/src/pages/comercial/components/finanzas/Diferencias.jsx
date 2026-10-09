@@ -200,7 +200,7 @@ const ElegirPasarela = ({ archivos, onElegir, onDescartar }) => archivos.map(arc
 
 const AYUDAS = {
     reportado: 'Las ventas completadas del período reportadas por Stripe o Hotmart, por su monto bruto: lo mismo que suma el Resumen antes de descontar la comisión. Solo de las pasarelas con CSV en el período. En «Todas» van también las transferencias.',
-    ingresado: 'Lo que llegó de los cobros de los CSV con fecha en el período: el neto, ya sin la comisión real de la pasarela (Finanzas la estima en 4,5 % para Stripe y 8,9 % para Hotmart). Debajo, el bruto (lo que pagó el cliente) y esa comisión. En «Todas» suma también lo que entró por transferencia, que no viene en ningún CSV ni paga comisión: se cuenta igual en lo reportado, así que no cambia la diferencia.',
+    ingresado: 'Lo que llegó de los cobros de los CSV con fecha en el período: el neto, ya sin la comisión real de la pasarela (Finanzas la estima en 4,4 % para Stripe y 8,2 % para Hotmart). Debajo, el bruto (lo que pagó el cliente) y esa comisión. En «Todas» suma también lo que entró por transferencia, que no viene en ningún CSV ni paga comisión: se cuenta igual en lo reportado, así que no cambia la diferencia.',
     diferencia: 'Ingresado bruto menos reportado (los dos antes de la comisión). Positiva: entró más de lo que se reportó; negativa: se reportó algo que no entró. Se explica por las filas pendientes, las revisadas y las parejas con la venta o el cobro en otro período.',
     pendientes: 'Las filas que no coinciden y nadie marcó como revisadas.',
 };

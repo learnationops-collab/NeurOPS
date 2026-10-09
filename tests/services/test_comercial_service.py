@@ -417,7 +417,7 @@ def test_el_cash_neto_descuenta_la_fee_de_la_pasarela(db, marlon):
 
     totales = ComercialService.totales_ventas(ComercialService.ventas(DESDE, HASTA))
 
-    assert (totales['cash'], totales['cash_neto']) == (1000.0, 955.0)
+    assert (totales['cash'], totales['cash_neto']) == (1000.0, 956.0)
 
 
 @freeze_time(HOY)
