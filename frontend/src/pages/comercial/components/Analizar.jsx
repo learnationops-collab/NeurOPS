@@ -593,14 +593,18 @@ const PanelPagos = ({ bloque, irA }) => {
  */
 const TABS_FUENTES = [['tabla', 'Tabla', Rows], ['grafico', 'Gráfico', PieChart]];
 
-/** "▲ 12%" chico, debajo del monto: el delta de una fuente contra el período comparado. */
-const DeltaFuente = ({ p }) => {
-    if (!p.delta) return null;
-    const sube = p.delta.valor >= 0;
+/**
+ * "▲ 12%" chico, debajo del monto: el delta contra el período comparado, de una fuente o del total.
+ * El del total va en su fila y no en la cabecera: es el mismo número que el de Cash collected, y en
+ * la cabecera empujaba las pestañas a una segunda línea que Payment types, al lado, no tiene.
+ */
+const DeltaFuente = ({ delta, previo }) => {
+    if (!delta) return null;
+    const sube = delta.valor >= 0;
     return (
         <small className="fuente-delta num" style={{ color: v(sube ? 'success' : 'error') }}
-            title={`${fmt.money(p.previo)} en el período comparado`}>
-            {`${sube ? '▲' : '▼'} ${Math.abs(p.delta.valor)}%`}
+            title={`${fmt.money(previo)} en el período comparado`}>
+            {`${sube ? '▲' : '▼'} ${Math.abs(delta.valor)}%`}
         </small>
     );
 };
@@ -624,7 +628,7 @@ const FilaFuente = ({ p, total, i, abierta, alternar }) => {
             <span className="fuente-riel">
                 <Riel pct={ancho} color={v(p.tone)} fino delay={150 + i * 90} />
             </span>
-            <DeltaFuente p={p} />
+            <DeltaFuente delta={p.delta} previo={p.previo} />
         </>
     );
     return conDetalle ? (
@@ -652,7 +656,6 @@ const PanelFuentes = ({ fuentes }) => {
                     + 'exacto el Cash collected, en bruto: Finanzas reparte lo mismo pero neto de la '
                     + 'fee de la pasarela.'}>
                 <Tabs valor={vista} onChange={setVista} ops={TABS_FUENTES} aria="Vista de ingresos por fuente" />
-                <Delta delta={fuentes.delta} actual={fmt.money(total)} />
             </PanelCab>
         }>
             {cantidad === 0 && <Vacio texto="Sin cobros en el período." />}
@@ -666,7 +669,10 @@ const PanelFuentes = ({ fuentes }) => {
             {cantidad > 0 && vista !== 'grafico' && (
                 <div className="tdatos tdatos--fuentes">
                     <div className="tdatos-cab">
-                        <span>Fuente</span><span>Cobros</span><span>Monto</span><span>%</span><span />
+                        <span>Fuente</span>
+                        {/* En el teléfono «Cobros» no entra en su columna: va abreviado. */}
+                        <span title="Cobros"><span className="cab-largo">Cobros</span><span className="cab-corto">N.º</span></span>
+                        <span>Monto</span><span>%</span><span />
                     </div>
                     {procedencias.map((p, i) => (
                         <React.Fragment key={p.key}>
@@ -694,6 +700,7 @@ const PanelFuentes = ({ fuentes }) => {
                         <span className="tdatos-n">{fmt.money(total)}</span>
                         <span className="tdatos-p">{total > 0 ? '100%' : '—'}</span>
                         <span />
+                        <DeltaFuente delta={fuentes.delta} previo={fuentes.previo} />
                     </div>
                 </div>
             )}

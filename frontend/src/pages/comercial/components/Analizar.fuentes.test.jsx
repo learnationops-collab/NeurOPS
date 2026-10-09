@@ -100,11 +100,12 @@ describe('Analizar · Ingresos por fuente', () => {
             .toEqual(['27.0', '36.0', '27.0', '5.4', '4.5']));
         // Workshop subió contra agosto; Setting no tenía nada antes: sin delta, no un infinito.
         const deltas = [...tarjeta().querySelectorAll('.fuente-delta')];
-        expect(deltas.map(d => d.textContent)).toEqual(['▲ 650%']);
+        expect(deltas.map(d => d.textContent)).toEqual(['▲ 650%', '▲ 2675%']);
         expect(deltas[0].closest('.fuente')).toBe(within(tarjeta()).getByText('Workshop').closest('.fuente'));
         expect(deltas[0].title).toBe('$200 en el período comparado');
-        // El del total, en la cabecera, como la tarjeta Cash.
-        expect(tarjeta().querySelector('.panel-cab .delta').textContent).toBe('▲ 2675%');
+        // El del total, en su fila y no en la cabecera, que queda con las pestañas solas.
+        expect(deltas[1].closest('.tdatos-total')).not.toBeNull();
+        expect(tarjeta().querySelector('.panel-cab .delta')).toBeNull();
     });
 
     it('el detalle se abre de a una fuente: el de Setting es por setter', async () => {
