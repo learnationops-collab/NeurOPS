@@ -305,6 +305,13 @@ def operador(make_user, auth_headers):
     return auth_headers(make_user(role='operator'))
 
 
+def test_operaciones_lee_las_mismas_opciones_que_la_ficha(client, db, operador):
+    r = client.get('/api/public/financial-sales/transferido-a', headers=operador)
+
+    assert r.status_code == 200
+    assert [o['clave'] for o in r.get_json()] == ['pedro', 'jean_carlo', 'otro']
+
+
 def test_el_alta_de_operaciones_por_transferencia_pide_a_quien(client, db, operador):
     venta = {'nombre_cliente': 'Ana Gomez', 'monto': 150, 'tipo_pago': 'RR - Seña',
              'metodo_pago': 'Transferencia Bancaria'}

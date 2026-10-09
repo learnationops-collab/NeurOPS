@@ -241,6 +241,14 @@ def create_new_financial_sale():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@bp.route('/public/financial-sales/transferido-a', methods=['GET'])
+def opciones_de_transferencia():
+    """A quién del equipo se le puede haber hecho un pago por transferencia (09/10/2026), para el
+    alta y la edición de ventas de Operaciones: la lista vive en `transferencias_service`, la misma
+    que la ficha recibe en su vocabulario."""
+    from app.services.transferencias_service import opciones
+    return jsonify(opciones()), 200
+
 @bp.route('/public/financial-sales/sync', methods=['POST'])
 def sync_financial_sales_from_sheets():
     # Obtiene datos de Google Sheets y reconstruye registros
