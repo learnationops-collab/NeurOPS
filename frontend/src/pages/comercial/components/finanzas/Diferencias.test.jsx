@@ -106,6 +106,59 @@ beforeEach(() => {
     api.marcarRevisada.mockResolvedValue({ revisada: true });
 });
 
+describe('Diferencias · contra el Resumen de Finanzas', () => {
+    // Pedido del 09/10/2026: «en resumen se ve un ingreso distinto al de diferencia». Septiembre real.
+    const conBrecha = (resumen, extra = {}) => {
+        const base = datos();
+        return { ...base, kpis: { ...base.kpis, todas: { ...base.kpis.todas, neto: 15174.23, resumen, ...extra } } };
+    };
+    const panel = () => screen.queryByRole('region', { name: 'Contra el Resumen de Finanzas' });
+
+    it('dice cuánto dice el Resumen, cuánto entró y la brecha, con sus partes', async () => {
+        await montar(conBrecha({ total: 15270.71, brecha: -96.48, partes: [
+            { tipo: 'comision', pasarela: 'stripe', monto: 10.28 },
+            { tipo: 'comision', pasarela: 'hotmart', monto: -129.62 },
+            { tipo: 'cobrado', pasarela: 'hotmart', monto: 22.87 },
+            { tipo: 'redondeo', pasarela: null, monto: -0.01 },
+        ] }));
+
+        expect(panel()).toHaveTextContent('El Resumen dice $15,270.71 y acá entró $15,174.23: -$96.48.');
+        expect([...panel().querySelectorAll('li')].map(li => li.textContent)).toEqual([
+            'Stripe cobró menos comisión que la estimada+$10.28',
+            'Hotmart cobró más comisión que la estimada-$129.62',
+            'En Hotmart entró más de lo reportado+$22.87',
+            'Redondeo-$0.01',
+        ]);
+    });
+
+    it('las otras partes: una pasarela sin CSV y los otros medios', async () => {
+        await montar(conBrecha({ total: 500, brecha: -300, partes: [
+            { tipo: 'sin_csv', pasarela: 'hotmart', monto: -200 },
+            { tipo: 'otros', pasarela: null, monto: -100 },
+        ] }));
+
+        expect([...panel().querySelectorAll('li span')].map(s => s.textContent)).toEqual([
+            'Hotmart no tiene CSV: el Resumen la estima y acá no se cuenta',
+            'Otros medios, que no son pasarela ni transferencia: no se concilian',
+        ]);
+    });
+
+    it('si coinciden lo dice, sin partes; y no va en una pasarela suelta ni sin CSV', async () => {
+        await montar(conBrecha({ total: 15174.23, brecha: 0, partes: [] }));
+
+        expect(panel()).toHaveTextContent('acá entró $15,174.23: coinciden al centavo');
+        expect(panel().querySelector('ul')).toBeNull();
+        fireEvent.click(screen.getByRole('tab', { name: 'Stripe' }));
+        expect(panel()).toBeNull();
+    });
+
+    it('sin brecha (sin ningún CSV) no hay panel', async () => {
+        await montar(conBrecha({ total: 15270.71, brecha: null, partes: [] }));
+
+        expect(panel()).toBeNull();
+    });
+});
+
 describe('Diferencias · KPIs y filtros', () => {
     it('arriba van lo reportado, lo ingresado, la diferencia con signo y los pendientes', async () => {
         await montar();

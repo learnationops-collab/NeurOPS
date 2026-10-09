@@ -259,6 +259,16 @@
    Payroll) y las acciones de corregir van a la derecha. Nada se monta: los textos largos se cortan
    con «…» y llevan el texto entero en `title`, y las acciones bajan de renglón antes de pisarse.
    ============================================================================ */
+/* Contra el Resumen de Finanzas (09/10/2026): una frase con los dos ingresos y la brecha, y debajo
+   sus partes, cada una con su monto a la derecha. El texto de una parte puede bajar de renglón; el
+   monto no se parte ni se monta. */
+.dc-shell .fz-brecha-frase{margin:0;font-size:14px;line-height:1.5;color:var(--text-on-surface)}
+.dc-shell .fz-brecha-partes{list-style:none;margin:var(--s3) 0 0;padding:0;display:grid}
+.dc-shell .fz-brecha-partes li{display:flex;align-items:baseline;justify-content:space-between;
+  gap:var(--s4);padding:var(--s2) 0;border-top:1px solid var(--border-subtle);font-size:13px;
+  color:var(--text-muted)}
+.dc-shell .fz-brecha-partes li > span{min-width:0}
+.dc-shell .fz-brecha-partes b{flex-shrink:0;white-space:nowrap}
 .dc-shell .fz-dif-filtros{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2) var(--s3);
   margin-bottom:var(--s3);min-width:0}
 .dc-shell .fz-dif-filtros .tabs{overflow-x:auto;scrollbar-width:none}
