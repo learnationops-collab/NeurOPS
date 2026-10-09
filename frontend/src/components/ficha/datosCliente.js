@@ -9,10 +9,15 @@
  */
 export const CAMPOS_DATOS = [
     // El examen es de la AGENDA, no del cliente, y es texto libre: no hay vocabulario que ofrecer.
-    { clave: 'examen', rotulo: 'Examen', placeholder: 'ENARM, MIR, USMLE…' },
+    // Placeholder corto: con la fuente son cinco columnas y el examen es la más angosta.
+    { clave: 'examen', rotulo: 'Examen', placeholder: 'ENARM, MIR…' },
     { clave: 'telefono', rotulo: 'Teléfono', placeholder: '+52 55 1234 5678', tipo: 'tel' },
     { clave: 'email', rotulo: 'Correo', placeholder: 'nombre@correo.com', tipo: 'email' },
     { clave: 'instagram', rotulo: 'Instagram', placeholder: 'usuario', prefijo: '@' },
+    // También de la AGENDA, y no texto libre: se elige del catálogo de `vocabulario[catalogo]`,
+    // el mismo que ofrece el historial (pedido del 09/10/2026). Se guarda la clave cruda
+    // (`identidad.fuente`), no la etiqueta que se lee en la franja.
+    { clave: 'fuente', rotulo: 'Fuente', catalogo: 'fuentes' },
 ];
 
 // Lo que la lectura pone en `nombre` cuando el cliente no tiene uno: no es un nombre que corregir.
@@ -38,6 +43,7 @@ export const valoresIniciales = (identidad) => {
         // Se guarda sin la '@' (ver `normalizar_instagram`); el campo la muestra como prefijo.
         instagram: String(id.instagram || '').replace(/^@+/, ''),
         examen: id.examen || '',
+        fuente: id.fuente || '',
     };
 };
 

@@ -2,13 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { cambiosDe, valoresIniciales } from './datosCliente';
 
 describe('valoresIniciales', () => {
-    it('trae lo guardado, con el instagram sin la arroba', () => {
+    it('trae lo guardado, con el instagram sin la arroba y la fuente por su clave', () => {
         expect(valoresIniciales({
             nombre: 'Kevin Encalada', email: 'kevin@example.com', telefono: '+593 99 515 7254',
             instagram: '@kevin.enc', examen: 'MIR / ENARM',
+            fuente: 'workshop_landing', fuente_label: 'Workshop · grabación',
         })).toEqual({
             nombre: 'Kevin Encalada', email: 'kevin@example.com', telefono: '+593 99 515 7254',
-            instagram: 'kevin.enc', examen: 'MIR / ENARM',
+            instagram: 'kevin.enc', examen: 'MIR / ENARM', fuente: 'workshop_landing',
         });
     });
 
@@ -25,7 +26,7 @@ describe('valoresIniciales', () => {
 
     it('aguanta una identidad ausente', () => {
         expect(valoresIniciales(null)).toEqual(
-            { nombre: '', telefono: '', email: '', instagram: '', examen: '' });
+            { nombre: '', telefono: '', email: '', instagram: '', examen: '', fuente: '' });
     });
 });
 

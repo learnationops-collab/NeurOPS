@@ -9,6 +9,8 @@ import { opciones } from './estadoFicha';
 import { mensajeDeError } from './fichaApi';
 import { CAMPOS_DATOS, cambiosDe, valoresIniciales } from './datosCliente';
 import { esDeFathom } from './fathom';
+import { gruposDeFuente } from './fuentes';
+import Desplegable from './historial/Desplegable';
 
 /**
  * Cabecera de la ficha: una FRANJA, no un bloque de metadatos apilados.
@@ -19,7 +21,8 @@ import { esDeFathom } from './fathom';
  * hoy vive escondida en el mazo.
  *
  * El lápiz pone la franja en modo edición EN EL LUGAR: el título se vuelve el campo
- * del nombre y los cuatro datos, los campos de examen, teléfono, correo e instagram.
+ * del nombre y los datos, los campos de examen, teléfono, correo, instagram y fuente (esta
+ * desde el 09/10/2026, un desplegable con el catálogo del historial).
  * Antes el lápiz existía solo en el mazo del closer —que lo pasaba por `onEditar` y
  * abría un modal aparte encima de este— y desde el dashboard comercial no había
  * ninguno. Ahora aparece donde sea que se abra la ficha, si `permisos.editar_datos`
@@ -162,11 +165,11 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
         }
     };
 
-    const cambiar = (clave) => (e) => {
-        const valor = e.target.value;
+    const poner = (clave) => (valor) => {
         setBorrador(b => ({ ...b, [clave]: valor }));
         if (error?.campo === clave) setError(null);
     };
+    const cambiar = (clave) => (e) => poner(clave)(e.target.value);
 
     const errorDe = (clave) => (error?.campo === clave ? error.texto : null);
 
@@ -251,7 +254,7 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
                             {puedeCorregir && (
                                 <button type="button" className="ibtn" ref={lapiz}
                                     aria-label="Editar los datos del lead"
-                                    title="Corregir nombre, teléfono, correo, instagram y examen"
+                                    title="Corregir nombre, teléfono, correo, instagram, examen y fuente"
                                     onClick={abrirEdicion}>
                                     <Pencil size={16} />
                                 </button>
@@ -268,19 +271,37 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
                 <div className="fi-cab-datos fi-cab-editor">
                     {CAMPOS_DATOS.map((c, i) => {
                         const fallo = errorDe(c.clave);
+                        const describe = fallo ? `fi-error-${c.clave}` : undefined;
                         return (
                             <motion.div key={c.clave} className="fi-dato" {...mov.campo(i + 1)}>
                                 {/* `label` con `htmlFor` y no envolviendo el campo: envuelto, el
                                     error de abajo pasaba a ser parte del nombre del campo. */}
                                 <label className="t-rotulo" htmlFor={`fi-campo-${c.clave}`}>{c.rotulo}</label>
-                                <span className={`ln-field${fallo ? ' ln-field--invalid' : ''}`}>
-                                    {c.prefijo && <span className="ln-unit" aria-hidden="true">{c.prefijo}</span>}
-                                    <input id={`fi-campo-${c.clave}`} value={borrador[c.clave] ?? ''}
-                                        type={c.tipo || 'text'} placeholder={c.placeholder}
-                                        aria-invalid={!!fallo}
-                                        aria-describedby={fallo ? `fi-error-${c.clave}` : undefined}
-                                        onChange={cambiar(c.clave)} />
-                                </span>
+                                {c.catalogo ? (
+                                    // La guardada va siempre entre las opciones, aunque sea una
+                                    // vieja fuera del catálogo («Venta histórica sin agenda»): sin
+                                    // ella el desplegable arrancaría mostrando otra.
+                                    <Desplegable id={`fi-campo-${c.clave}`} etiqueta={c.rotulo}
+                                        valor={borrador[c.clave] ?? ''} alto={40} invalido={!!fallo}
+                                        aria-describedby={describe} onCambiar={poner(c.clave)}>
+                                        {!iniciales[c.clave] && <option value="">Sin {c.rotulo.toLowerCase()} · elegí una</option>}
+                                        {gruposDeFuente(opciones(ficha, c.catalogo), iniciales[c.clave]).map(g => (
+                                            <optgroup key={g.titulo} label={g.titulo}>
+                                                {(g.opciones || []).map(o => (
+                                                    <option key={o.clave} value={o.clave}>{o.label}</option>
+                                                ))}
+                                            </optgroup>
+                                        ))}
+                                    </Desplegable>
+                                ) : (
+                                    <span className={`ln-field${fallo ? ' ln-field--invalid' : ''}`}>
+                                        {c.prefijo && <span className="ln-unit" aria-hidden="true">{c.prefijo}</span>}
+                                        <input id={`fi-campo-${c.clave}`} value={borrador[c.clave] ?? ''}
+                                            type={c.tipo || 'text'} placeholder={c.placeholder}
+                                            aria-invalid={!!fallo} aria-describedby={describe}
+                                            onChange={cambiar(c.clave)} />
+                                    </span>
+                                )}
                                 {fallo && <ErrorDeCampo id={`fi-error-${c.clave}`} texto={fallo} />}
                             </motion.div>
                         );
