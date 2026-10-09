@@ -58,23 +58,27 @@ def _instante_utc(valor):
     return utc
 
 
-def _fuente(valor, actual):
+def validar_fuente(valor, actual):
     """La fuente pedida si cambia, None si es la misma, `ErrorDeAccion` si no es del catalogo.
 
     Se ofrece el catalogo oficial de fuentes (`fuente_service.FUENTES_CANONICAS`), que es el mismo
     del selector del Tablero de Agendas y de su edicion masiva. Los valores historicos que no estan
     en el catalogo se siguen aceptando SOLO si no cambian: la fila puede conservar su fuente vieja,
     pero una fuente nueva sale de la lista.
+
+    La usa tambien la cabecera de la ficha (`ficha_acciones_service.editar_datos`): el error dice
+    que fue la `fuente`, para que se pinte al lado de ese campo.
     """
     from app.services.fuente_service import FUENTES_CANONICAS
 
     fuente = valor.strip() if isinstance(valor, str) else ''
     if not fuente:
-        raise ErrorDeAccion('Elegí la fuente de la lista.')
+        raise ErrorDeAccion('Elegí la fuente de la lista.', 'fuente')
     if fuente == (actual or '').strip():
         return None
     if fuente not in FUENTES_CANONICAS:
-        raise ErrorDeAccion(f'«{fuente}» no es una fuente del catálogo: elegí una de la lista.')
+        raise ErrorDeAccion(f'«{fuente}» no es una fuente del catálogo: elegí una de la lista.',
+                            'fuente')
     return fuente
 
 
@@ -90,6 +94,21 @@ def _setter_de_la_fuente(fuente):
     setter = User.query.filter(func.lower(User.username) == fuente.lower(),
                                User.role == 'setter').first()
     return setter.id if setter else None
+
+
+def poner_fuente(appt, fuente, espejo):
+    """Le pone a la agenda una fuente ya validada (`validar_fuente`): el `origin`, el setter al que
+    se le atribuye y el nombre de su fila en el Tablero de Agendas (`espejo`), si tiene una.
+
+    La comparten el historial (`editar_agenda`) y la cabecera de la ficha
+    (`ficha_acciones_service.editar_datos`): corregida desde donde sea, la fuente tiene que dejar
+    el mismo setter y el mismo espejo, o el proximo sync del tablero deshace la que quedo distinta.
+    No hace commit.
+    """
+    appt.origin = fuente
+    appt.setter_id = _setter_de_la_fuente(fuente)
+    if espejo:
+        espejo.nombre = fuente
 
 
 def _choque(appt, closer_id, inicio):
@@ -108,7 +127,7 @@ def _choque(appt, closer_id, inicio):
     ).first()
 
 
-def _espejo_en_el_tablero(appt):
+def espejo_en_el_tablero(appt):
     """La fila del Tablero de Agendas (`FinancialAgenda`) que refleja esta cita, o None.
 
     Se busca ANTES de mover la cita y con la hora vieja, que es la que la fila todavia tiene. El
@@ -175,7 +194,7 @@ def editar_agenda(appt, datos, usuario):
         `followup_reminder_time` son del SEGUIMIENTO (`fecha_seguimiento`), y
         `pre_call_reminder_at` es una fecha que el closer elige a mano. No hay bandera que resetear.
       · El espejo en el Tablero de Agendas se mueve con la cita, si la cita tiene uno; la fila de
-        otra llamada del mismo lead no se toca (ver `_espejo_en_el_tablero`).
+        otra llamada del mismo lead no se toca (ver `espejo_en_el_tablero`).
       · El evento de Google Calendar NO se mueve: no hay una funcion que lo actualice, y el evento
         vive en el calendario de quien lo creo. Es lo mismo que hace el reagendado del closer
         (`PATCH /closer/appointments/<id>`).
@@ -192,7 +211,7 @@ def editar_agenda(appt, datos, usuario):
         raise ErrorDeAccion('No hay nada que guardar.')
 
     inicio = _instante_utc(datos.get('fecha')) if 'fecha' in datos else appt.start_time
-    fuente = _fuente(datos.get('fuente'), appt.origin) if 'fuente' in datos else None
+    fuente = validar_fuente(datos.get('fuente'), appt.origin) if 'fuente' in datos else None
     closer = appt.closer
     pedido = datos.get('closer_id')
     # El mismo closer que ya tiene no se valida: una agenda vieja de un closer que ya no está
@@ -212,7 +231,7 @@ def editar_agenda(appt, datos, usuario):
             raise ErrorDeAccion(f'{closer.username} ya tiene una llamada sin resolver con '
                                 f'{nombre} a esa misma hora.')
 
-    espejo = _espejo_en_el_tablero(appt)
+    espejo = espejo_en_el_tablero(appt)
     zona = zona_del_usuario(usuario)
     cambios, bitacora = [], []
 
@@ -229,11 +248,8 @@ def editar_agenda(appt, datos, usuario):
 
     if fuente:
         bitacora.append(f'fuente {appt.origin or "sin fuente"} → {fuente}')
-        appt.origin = fuente
-        appt.setter_id = _setter_de_la_fuente(fuente)
+        poner_fuente(appt, fuente, espejo)
         cambios.append('fuente')
-        if espejo:
-            espejo.nombre = fuente
 
     if cambia_closer:
         anterior = appt.closer.username if appt.closer else 'sin asignar'
