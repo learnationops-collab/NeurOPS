@@ -115,8 +115,12 @@ const guardarGrupos = (ids) => {
 /**
  * El filtro por grupos, para la barra de arriba: cada grupo se prende y se apaga, y siempre queda
  * al menos uno (sin ninguno la sección quedaría vacía sin decir por qué).
+ *
+ * Tocar un grupo vuelve a «Todas las personas» (`onCambiarPersonas([])`, 08/10/2026): las elegidas
+ * de un grupo apagado quedaban guardadas y, al prenderlo otra vez, volvían a filtrar y escondían
+ * los otros grupos (se prendía Fulfillment y desaparecían Setting y Closing).
  */
-export const FiltroGrupos = ({ visibles, onCambiar }) => (
+export const FiltroGrupos = ({ visibles, onCambiar, personas = [], onCambiarPersonas }) => (
     <div className="tabs" role="group" aria-label="Grupos de la nómina">
         {GRUPOS.map(g => {
             const prendido = visibles.includes(g.id);
@@ -129,6 +133,10 @@ export const FiltroGrupos = ({ visibles, onCambiar }) => (
                             : GRUPOS.map(x => x.id).filter(id => id === g.id || visibles.includes(id));
                         guardarGrupos(siguientes);
                         onCambiar(siguientes);
+                        if (personas.length && onCambiarPersonas) {
+                            guardarPersonas([]);
+                            onCambiarPersonas([]);
+                        }
                     }}>
                     <span className="punto" style={{ background: prendido ? 'currentColor' : 'var(--text-muted-40)' }} />
                     {g.titulo}
