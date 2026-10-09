@@ -2,6 +2,7 @@ import React, { useEffect, useId, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { localToday } from '../../../utils/datetime';
 import { mensajeDeError } from '../fichaApi';
+import { esTransferencia } from '../transferencia';
 import CamposPago, { faltaParaGuardar } from './CamposPago';
 import MotivoDelFallo from './MotivoDelFallo';
 
@@ -19,9 +20,13 @@ import MotivoDelFallo from './MotivoDelFallo';
  *
  * Arranca con hoy, el programa del cliente, el medio de su último pago y «Cuota», que es lo que más
  * se olvida cargar: lo único que hay que escribir casi siempre es el monto.
+ *
+ * Si el medio es una transferencia pregunta a quién del equipo se le hizo, y sin eso no guarda
+ * (09/10/2026): nunca arranca elegido, aunque el último pago fuera a la misma persona.
  */
 const AgregarPago = ({
-    pagos = [], programaDelCliente = null, medios = [], programas = [], tipos = [], onAgregar,
+    pagos = [], programaDelCliente = null, medios = [], programas = [], tipos = [], transferencias = [],
+    onAgregar,
 }) => {
     const reducido = useReducedMotion();
     const ids = useId();
@@ -49,6 +54,7 @@ const AgregarPago = ({
             medio: medios.some(m => m.clave === ultimo?.medio) ? ultimo.medio : (medios[0]?.clave || ''),
             programa: programaDelCliente || ultimo?.programa_code || '',
             tipo: tipos.some(t => t.clave === 'cuota') ? 'cuota' : (tipos[0]?.clave || ''),
+            transferido_a: null,
         });
         setError(null);
         setAbierto(true);
@@ -69,6 +75,9 @@ const AgregarPago = ({
             await onAgregar?.({
                 fecha: valores.fecha, monto: Number(valores.monto), metodo_pago: valores.medio,
                 programa_code: valores.programa, tipo: valores.tipo,
+                // Solo si el medio que quedó es transferencia: elegido y después cambiado a otro
+                // medio, no viaja.
+                ...(esTransferencia(valores.medio) ? { transferido_a: valores.transferido_a } : {}),
             });
             cerrar();
         } catch (err) {
@@ -111,7 +120,7 @@ const AgregarPago = ({
                     setError(null);
                     setValores(v => ({ ...v, ...parche }));
                 }}
-                medios={medios} programas={programas} tipos={tipos} />
+                medios={medios} programas={programas} tipos={tipos} transferencias={transferencias} />
 
             <small className="t-cap mut">
                 Carga un pago que quedó sin registrar, y la deuda lo cuenta. No le avisa al cliente, no

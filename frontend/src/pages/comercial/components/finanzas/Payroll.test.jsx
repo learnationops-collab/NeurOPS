@@ -70,6 +70,29 @@ describe('Payroll', () => {
             .toBe('1 ingresos · neto $300.00 · base $600.00');
     });
 
+    it('a quien recibió plata de un cliente por transferencia el tile le dice cuánto y lo que queda por pagarle', async () => {
+        // Pedido de Kerwin (09/10/2026): se le descuenta de lo que se le paga, no de lo que cuesta:
+        // la cifra grande (la comisión) y los KPIs no cambian.
+        api.getPayroll.mockResolvedValue({
+            ...NOMINA,
+            jeancarlo: { ...NOMINA.jeancarlo, sueldo_base: 0, transferencias_recibidas: 60, a_pagar: 40 },
+            pedro: { ...NOMINA.pedro, sueldo_base: 0, transferencias_recibidas: 300, a_pagar: -300 },
+        });
+        render(<ConFiltro />);
+        const jean = (await screen.findByText('Jean Carlo', { selector: '.fz-persona-nom' }, { timeout: 3000 })).closest('.kpi');
+
+        expect([...jean.querySelectorAll('.kpi-sub > span')].map(s => s.textContent))
+            .toEqual(['1 ventas cerradas · neto $1,000.00', 'transferencias -$60.00 · a pagar $40.00']);
+        await waitFor(() => expect(jean.querySelector('.kpi-n').textContent).toBe('$100.00'));
+        const pedro = screen.getByText('Pedro', { selector: '.fz-persona-nom' }).closest('.kpi');
+        expect(pedro.querySelector('.fz-persona-descuento').textContent)
+            .toBe('transferencias -$300.00 · debe devolver $300.00');
+        // Lo que cuesta la nómina, igual que sin transferencias (las cifras cuentan hasta su valor).
+        await waitFor(() => expect(cifra('Comisiones').textContent).toBe('$230.00'));
+        await waitFor(() => expect(cifra('Total').textContent).toBe('$830.00'));
+        await waitFor(() => expect(cifra('Peso sobre el cash').textContent).toBe('36.1%'));
+    });
+
     it('el tile de Marlon suma sus ventas propias y su parte de director, y dice cuánto es cada una', async () => {
         render(<ConFiltro />);
         const tile = (await screen.findByText('Marlon')).closest('.kpi');

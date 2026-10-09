@@ -120,8 +120,16 @@ def test_el_vocabulario_trae_todas_las_claves_del_contrato(db):
     assert set(bloque) == {'etapas_confirmacion', 'como_viene', 'dolores', 'motivos_descarte',
                            'motivos_cancelacion', 'motivos_baja', 'pre_call', 'post_call',
                            'tipos_pago', 'medios_pago', 'medios_pago_venta', 'tipos_pago_venta',
-                           'programas', 'canales_seguimiento', 'tipos_seguimiento', 'fuentes',
-                           'closers'}
+                           'transferido_a', 'programas', 'canales_seguimiento',
+                           'tipos_seguimiento', 'fuentes', 'closers'}
+
+
+def test_a_quien_se_le_hizo_la_transferencia_son_pedro_jean_carlo_y_otro(db):
+    """La lista sale de `transferencias_service`, el único lugar donde está escrita."""
+    assert voc.vocabulario()['transferido_a'] == [
+        {'clave': 'pedro', 'label': 'Pedro', 'descuenta': True},
+        {'clave': 'jean_carlo', 'label': 'Jean Carlo', 'descuenta': True},
+        {'clave': 'otro', 'label': 'Otro', 'descuenta': False}]
 
 
 def test_los_tipos_de_pago_de_una_venta_se_leen_como_los_escribe_el_wizard(db):

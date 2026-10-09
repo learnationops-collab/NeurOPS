@@ -136,9 +136,12 @@ const MENSAJES = {
     agregar_pago: (r) => (r?.espejo === false
         ? 'Pago agregado, pero sin registro en inscripciones: la deuda no lo cuenta.'
         : 'Pago agregado: la deuda ya lo cuenta.'),
-    corregir_pago: (r) => (r?.espejo === false
-        ? 'Pago corregido. No se encontró su registro en inscripciones, así que la deuda no cambió.'
-        : 'Pago corregido: la deuda se recalculó.'),
+    // Marcar a quién se le hizo una transferencia no toca la plata: la deuda no se movió.
+    corregir_pago: (r) => (r?.cambios?.length === 1 && r.cambios[0] === 'transferido_a'
+        ? 'Listo: quedó anotado a quién se le hizo la transferencia.'
+        : r?.espejo === false
+            ? 'Pago corregido. No se encontró su registro en inscripciones, así que la deuda no cambió.'
+            : 'Pago corregido: la deuda se recalculó.'),
     borrar_pago: (r) => (r?.espejo === false
         ? 'Pago borrado. No tenía registro en inscripciones: la deuda no cambió.'
         : 'Pago borrado: la deuda se recalculó.'),

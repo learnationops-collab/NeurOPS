@@ -168,6 +168,8 @@ export default function TabResultado({
       estadoVenta: venta.estado,
       cargandoVenta: venta.cargando,
       closers: ficha?.vocabulario?.closers || [],
+      // A quién se le puede haber hecho una transferencia (Pedro, Jean Carlo, Otro).
+      transferidoA: ficha?.vocabulario?.transferido_a || [],
       closerAgenda: ficha?.identidad?.closer || null,
       cuotas: ficha?.cobro?.cuotas || [],
     };

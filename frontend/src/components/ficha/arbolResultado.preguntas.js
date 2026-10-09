@@ -20,6 +20,7 @@ import {
   esVenta, esCompleto, esRenovacionOUpsell, saldoPrevio, saldoVenta, quedaSaldo,
   cobraCuotaExistente, armaPlan, cantidadCuotas, cronogramaEnTexto, fechaCorta, MAXIMO_CUOTAS,
 } from './arbolResultado.venta';
+import { PREGUNTA_TRANSFERENCIA, efectoDeTransferido, esTransferencia } from './transferencia';
 
 // Cómo se cuenta en la revisión lo que en crudo no se lee.
 const enPlata = (v) => (v === '' || v === undefined || v === null ? null : moneda(v));
@@ -282,6 +283,17 @@ export const PREGUNTAS = [
   { // ← wizard `method`
     clave: 'medio_pago', hito: 'deuda', campo: 'metodo_pago', tipo: 'opciones',
     enunciado: '¿Por dónde entró la plata?', opciones: opts(MEDIOS_PAGO, 'info'), cuando: esVenta,
+  },
+  { // Pedido de Kerwin (09/10/2026): una transferencia va a la cuenta de alguien del equipo, y a
+    // quién se registra en el momento. Las opciones salen del vocabulario de la ficha
+    // (`contexto.transferidoA`); a Pedro y a Jean Carlo se les descuenta en Payroll, a «Otro» no.
+    clave: 'transferido_a', hito: 'deuda', campo: 'transferido_a', tipo: 'opciones',
+    enunciado: PREGUNTA_TRANSFERENCIA,
+    ayuda: 'La plata quedó en la cuenta de esa persona: Finanzas lo muestra aparte.',
+    opciones: (r, c) => (c.transferidoA || []).map((o) => ({
+      valor: o.clave, label: o.label, sub: efectoDeTransferido(o), tono: o.descuenta ? 'warning' : 'info',
+    })),
+    cuando: (r) => esVenta(r) && esTransferencia(r.metodo_pago),
   },
   { // ← wizard `pickCuota`. El wizard solo la preguntaba si quedaba saldo, y pagar la ÚLTIMA cuota
     // dejaba esa cuota pendiente en el plan con la deuda ya en cero: se pregunta siempre que se

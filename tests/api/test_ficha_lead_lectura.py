@@ -313,7 +313,8 @@ def test_el_cobro_reusa_la_deuda_y_la_etapa_que_ya_calcula_el_closer(client, db,
     venta = FinancialSale.query.one()
     assert cobro['pagos'] == [{'id': venta.id, 'fecha': '2026-08-01T00:00:00', 'medio': 'Stripe',
                                'monto': 400.0, 'tipo': 'parcial', 'tipo_pago': 'RR - Parcial',
-                               'programa_code': 'RR'}]
+                               'programa_code': 'RR', 'es_transferencia': False,
+                               'transferido_a': None}]
     assert cobro['ultimo_pago'] == '2026-08-01T00:00:00'
     assert cobro['estado_pagos']['balance_remaining'] == 600.0
     # El total negociado viaja crudo: es el numero del que sale la deuda y el que la ficha deja
@@ -334,7 +335,7 @@ def test_un_pago_viejo_sin_programa_viaja_con_su_id_y_su_tipo(client, db, compra
 
     assert pagos[0] == {'id': vieja.id, 'fecha': '2026-07-01T00:00:00', 'medio': 'Otro',
                         'monto': 100.0, 'tipo': 'seña', 'tipo_pago': 'Con Seña',
-                        'programa_code': None}
+                        'programa_code': None, 'es_transferencia': False, 'transferido_a': None}
 
 
 def test_un_cliente_sin_total_cargado_no_se_lo_inventa(client, db, comprador, equipo, auth_headers):

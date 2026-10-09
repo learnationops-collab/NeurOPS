@@ -22,6 +22,10 @@ class FinancialSale(db.Model):
     raw_data = db.Column(db.JSON, nullable=True)
     sold_in_call = db.Column(db.Boolean, nullable=True)
     is_excluded_from_payroll = db.Column(db.Boolean, default=False, server_default="0")
+    # A quién del equipo se le hizo el pago cuando es por transferencia (09/10/2026): 'pedro',
+    # 'jean_carlo' u 'otro' (la lista vive en `transferencias_service`), o NULL = «sin marcar».
+    # Esa plata está en manos de esa persona y se le descuenta de lo que se le paga.
+    transferido_a = db.Column(db.String(20), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     date = db.Column(db.DateTime, default=datetime.utcnow) # Fecha de venta oficial (basada en marca_temporal)
 
@@ -45,6 +49,7 @@ class FinancialSale(db.Model):
             "marca_temporal": self.marca_temporal,
             "estado": self.estado or "Completada",
             "is_excluded_from_payroll": self.is_excluded_from_payroll or False,
+            "transferido_a": self.transferido_a,
             "sold_in_call": self.sold_in_call,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "date": self.date.isoformat() if self.date else None

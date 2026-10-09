@@ -277,16 +277,28 @@ const pctDe = (n) => (n == null ? '—' : `${n}%`);
  * grande es solo la comisión), o, con dos partidas, un renglón por partida con su % y cuánto es.
  * Los % de Marlon no van arriba, al lado del chip: en un quinto de ancho no entraban y cortaban el
  * chip (medido a 1000 px).
+ *
+ * Si recibió plata de un cliente por transferencia (09/10/2026), un renglón más: cuánto y lo que
+ * queda por pagarle (`a_pagar` = base + comisión − transferencias). La cifra grande y los KPIs
+ * siguen siendo lo que cuesta.
  */
+export const lineaDeTransferencias = (datos) => {
+    const recibidas = datos.transferencias_recibidas || 0;
+    if (recibidas <= 0.004) return null;
+    const neto = datos.a_pagar ?? ((datos.sueldo_base || 0) + (datos.comision_total || 0) - recibidas);
+    return `transferencias ${dinero(-recibidas)} · ${neto < -0.004 ? `debe devolver ${dinero(-neto)}` : `a pagar ${dinero(neto)}`}`;
+};
+
 const lecturaDe = (persona, datos) => {
     const base = datos.sueldo_base > 0 ? `base ${dinero(datos.sueldo_base)}` : null;
+    const transferencias = lineaDeTransferencias(datos);
     if (datos.desglose) {
         return [...PARTIDAS.filter(([k]) => datos.desglose[k]).map(([k, rotulo]) =>
-            `${rotulo} ${pctDe(datos.desglose[k].porcentaje)} · ${dinero(datos.desglose[k].comision_total)}`), base]
-            .filter(Boolean);
+            `${rotulo} ${pctDe(datos.desglose[k].porcentaje)} · ${dinero(datos.desglose[k].comision_total)}`), base,
+        transferencias].filter(Boolean);
     }
     return [[`${datos.total_ventas} ${persona.ventas} · neto ${dinero(datos.total_recaudado_neto)}`, base]
-        .filter(Boolean).join(' · ')];
+        .filter(Boolean).join(' · '), transferencias].filter(Boolean);
 };
 
 const Tile = ({ persona, datos, onVer }) => {
@@ -308,7 +320,10 @@ const Tile = ({ persona, datos, onVer }) => {
             <div className="kpi-cifra">
                 <Cifra tag="p" className="kpi-n" valor={dinero(datos.comision_total)} style={{ color: v('success') }} />
                 <p className="kpi-sub num">
-                    {lineas.length === 1 ? lineas[0] : lineas.map(l => <span key={l} style={{ display: 'block' }}>{l}</span>)}
+                    {lineas.length === 1 ? lineas[0] : lineas.map(l => (
+                        <span key={l} style={{ display: 'block' }}
+                            className={l.startsWith('transferencias') ? 'fz-persona-descuento' : undefined}>{l}</span>
+                    ))}
                 </p>
             </div>
             {onVer && (

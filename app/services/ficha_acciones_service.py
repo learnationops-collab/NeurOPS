@@ -381,14 +381,32 @@ def _fallo_de_sheets(respuesta):
     return None
 
 
+def _transferido_a(valor, medio):
+    """A quién del equipo se le hizo el cobro si es por transferencia: obligatorio, porque declarar
+    la venta es el momento de registrarlo (ver `transferencias_service`). Con otro medio, nadie."""
+    from app.services import transferencias_service as transferencias
+
+    try:
+        return transferencias.para_guardar(valor, medio, obligatorio=True)
+    except ValueError as e:
+        raise ErrorDeAccion(str(e), 'transferido_a') from None
+
+
 def _declarar(appt, datos, usuario):
-    """Declara una venta (y antes, si se pidio, la Cuota que liquida el saldo viejo)."""
+    """Declara una venta (y antes, si se pidio, la Cuota que liquida el saldo viejo).
+
+    Un cobro por transferencia dice a quién del equipo se le hizo (`transferido_a`): se valida
+    antes de mandar nada, y viaja a `post_to_sheets`, que lo guarda en la venta y no lo manda ni a
+    Google Sheets ni a n8n. La Cuota que liquida el saldo va por el mismo medio, a la misma persona.
+    """
     from app.services.sheets_service import SheetsService
 
     if not datos.get('tipo_pago'):
         raise ErrorDeAccion('Falta tipo_pago (ej. "RR - Parcial").')
     if not datos.get('monto'):
         raise ErrorDeAccion('Falta el monto cobrado.')
+    datos = {**datos, 'transferido_a': _transferido_a(datos.get('transferido_a'),
+                                                      datos.get('metodo_pago'))}
 
     liquidacion = None
     saldo = datos.get('liquidar_saldo')
@@ -397,6 +415,9 @@ def _declarar(appt, datos, usuario):
             raise ErrorDeAccion('`liquidar_saldo` necesita al menos un monto.')
         programa = (saldo.get('programa_code')
                     or str(datos['tipo_pago']).split('-')[0].strip().upper())
+        medio_del_saldo = saldo.get('metodo_pago') or datos.get('metodo_pago')
+        transferido_saldo = _transferido_a(saldo.get('transferido_a') or datos['transferido_a'],
+                                           medio_del_saldo)
         liquidacion = SheetsService.post_to_sheets('Ventas_DB', _payload_de_venta(appt, usuario, {
             # Los datos del cliente son los de la venta: si el closer los corrigio en el camino, la
             # Cuota que liquida el saldo tiene que quedar a nombre de la misma persona.
@@ -405,7 +426,8 @@ def _declarar(appt, datos, usuario):
             **({'appointment_id': datos['appointment_id']} if 'appointment_id' in datos else {}),
             'tipo_pago': f'{programa} - Cuota',
             'monto': saldo['monto'],
-            'metodo_pago': saldo.get('metodo_pago') or datos.get('metodo_pago'),
+            'metodo_pago': medio_del_saldo,
+            'transferido_a': transferido_saldo,
             'segundo_pago': saldo.get('comentario') or '',
             'enviar_webhook': False,
         }))
@@ -462,11 +484,12 @@ def venta(appt, datos, usuario):
 # Los campos de una venta tal como los lee `post_to_sheets`. El bloque `venta` del arbol se filtra
 # por esta lista: `post_to_sheets` manda su payload ENTERO a Google Sheets y a n8n, y el plan, el
 # acceso o los referidos no son columnas de la venta.
+# `transferido_a` no es una columna de la hoja: `post_to_sheets` lo saca del payload antes de mandarlo.
 CAMPOS_DE_VENTA = (
     'email_vendedor', 'nombre_cliente', 'telefono', 'mail_cliente', 'instagram',
     'documento_identidad', 'setter', 'tipo_pago', 'monto', 'precio_total', 'segundo_pago',
-    'metodo_pago', 'examen', 'estado', 'marca_temporal', 'enviar_webhook', 'enviar_mensaje',
-    'sold_in_call',
+    'metodo_pago', 'transferido_a', 'examen', 'estado', 'marca_temporal', 'enviar_webhook',
+    'enviar_mensaje', 'sold_in_call',
 )
 CAMPOS_DEL_COMPRADOR = ('email_vendedor', 'nombre_cliente', 'telefono', 'mail_cliente',
                         'instagram', 'documento_identidad', 'setter')

@@ -346,6 +346,7 @@ def vocabulario(closers=None):
     comercial: son los mismos chips, con los mismos tonos, en las dos pantallas.
     """
     from app.services.comercial_service import POST_CALL, PRE_CALL, TIPOS_PAGO
+    from app.services.transferencias_service import opciones as transferido_a
 
     extras = _extra_por_grupo()
     return {
@@ -362,6 +363,9 @@ def vocabulario(closers=None):
         # Los dos de la correccion de un pago desde la seccion Pagos del historial.
         'medios_pago_venta': list(MEDIOS_PAGO_VENTA),
         'tipos_pago_venta': list(TIPOS_PAGO_VENTA),
+        # A quién del equipo se le hizo un pago por transferencia: se pregunta al registrarlo y se
+        # marca en la sección Pagos (ver `transferencias_service`).
+        'transferido_a': transferido_a(),
         'programas': programas_disponibles(),
         'canales_seguimiento': list(CANALES_SEGUIMIENTO),
         'tipos_seguimiento': tipos_seguimiento(),

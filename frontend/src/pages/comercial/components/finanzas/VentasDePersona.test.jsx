@@ -52,6 +52,25 @@ describe('VentasDePersona', () => {
         api.cambiarAtribucion.mockReset().mockResolvedValue({});
     });
 
+    it('lo que recibió por transferencia va aparte, con lo que queda por pagarle', () => {
+        montar('jeancarlo', datosDe([venta(3)], {
+            sueldo_base: 0, transferencias_recibidas: 150, a_pagar: -50,
+            transferencias: [{ id: 9, date: '2026-09-09T00:00:00', nombre_cliente: 'Ana Gomez', tipo_pago: 'RR - Seña',
+                metodo_pago: 'Transferencia Bancaria', monto: 150 }],
+        }));
+
+        const panel = screen.getByText('Transferencias recibidas', { selector: '.t-h3, h2, h3, p, span' }).closest('.panel');
+        expect([...within(panel).getByText('Ana Gomez').closest('.fz-fila').children].map(c => c.textContent))
+            .toEqual(['09/09', 'Ana GomezRR - Seña', 'Transferencia Bancaria', '-$150.00']);
+        expect(within(panel).getByText(/Transferencias recibidas · debe devolver \$50\.00/)).toBeTruthy();
+    });
+
+    it('sin transferencias recibidas no hay nada aparte', () => {
+        montar('jeancarlo', datosDe([venta(3)]));
+
+        expect(screen.queryByText('Transferencias recibidas')).toBeNull();
+    });
+
     it('cada fila trae fecha, cliente, concepto, setter y closer, neto, % y comisión; el pie suma lo que suma', () => {
         montar('jeancarlo', datosDe([venta(3), venta(5, { comision: 50, monto_neto: 500, setter: 'Paula' }),
             venta(7, { is_excluded_from_payroll: true })]));

@@ -280,12 +280,27 @@ def sueldo_base_del_rango(desde, hasta):
 
 def payroll_del_rango(desde=None, hasta=None):
     """Lo que muestra la sección Payroll: `comisiones_del_rango` con el sueldo base de cada persona
-    (`sueldo_base`) y, en 'totales', el sueldo base y las comisiones de todas."""
+    (`sueldo_base`) y, en 'totales', el sueldo base y las comisiones de todas.
+
+    Desde el 09/10/2026 cada persona trae también lo que recibió por transferencia de un cliente en
+    el rango (`transferencias_recibidas` y la lista `transferencias`, de
+    `transferencias_service.recibidas_por_persona`, la misma cuenta que la Nómina de Finanzas) y lo
+    que queda por pagarle (`a_pagar` = sueldo base + comisión − transferencias). Es un descuento
+    sobre lo que se le paga, no sobre lo que cuesta: la comisión, el sueldo y los totales no cambian.
+    """
+    from app.services.transferencias_service import recibidas_por_persona
+
     nomina = comisiones_del_rango(desde, hasta)
     sueldos = sueldo_base_del_rango(desde, hasta)
+    recibidas = recibidas_por_persona(desde, hasta)
     personas = [clave for clave in nomina if clave != 'totales']
     for clave in personas:
         nomina[clave]['sueldo_base'] = sueldos.get(clave, 0.0)
+        transferencias = recibidas.get(clave, {'total': 0.0, 'pagos': []})
+        nomina[clave]['transferencias_recibidas'] = transferencias['total']
+        nomina[clave]['transferencias'] = transferencias['pagos']
+        nomina[clave]['a_pagar'] = round(nomina[clave]['sueldo_base'] + nomina[clave]['comision_total']
+                                         - transferencias['total'], 2)
     nomina['totales']['sueldo_base'] = round(sum(nomina[c]['sueldo_base'] for c in personas), 2)
     nomina['totales']['comisiones'] = round(sum(nomina[c]['comision_total'] for c in personas), 2)
     return nomina

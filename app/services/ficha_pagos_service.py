@@ -47,6 +47,7 @@ from sqlalchemy import func
 
 from app import db
 from app.models import Enrollment, FinancialSale, Payment, PaymentMethod
+from app.services import transferencias_service as transferencias
 from app.services.closer_followup_service import PROGRAM_CODE_NAMES, CloserFollowUpService
 from app.services.ficha_acciones_service import ErrorDeAccion
 from app.services.ficha_agendas_service import PRIMER_ANIO
@@ -114,6 +115,18 @@ def _medio(valor, actual=None):
     if medio != (actual or '').strip() and medio not in MEDIOS:
         raise ErrorDeAccion(f'«{medio}» no es un medio de pago de la lista.')
     return medio
+
+
+def _transferido_a(valor, medio, obligatorio=False):
+    """A quién del equipo se le hizo el pago si es por transferencia (ver `transferencias_service`).
+
+    Un pago nuevo por transferencia lo pide (`obligatorio`): es el momento de registrarlo. Con otro
+    medio no se guarda nadie, y la marca de un pago que deja de ser transferencia se limpia.
+    """
+    try:
+        return transferencias.para_guardar(valor, medio, obligatorio=obligatorio)
+    except ValueError as e:
+        raise ErrorDeAccion(str(e), 'transferido_a') from None
 
 
 def _programa(valor):
@@ -264,9 +277,16 @@ def _plata(monto):
 def _resumen(venta):
     """El pago en una linea para la bitacora: 'RR - Cuota · $300.00 · Stripe · 2026-09-15'."""
     cuando = _instante(venta.date)
-    return ' · '.join([venta.tipo_pago or 'sin tipo', _plata(venta.monto),
-                       venta.metodo_pago or 'sin medio',
-                       cuando.date().isoformat() if cuando else 'sin fecha'])
+    partes = [venta.tipo_pago or 'sin tipo', _plata(venta.monto), venta.metodo_pago or 'sin medio',
+              cuando.date().isoformat() if cuando else 'sin fecha']
+    if venta.transferido_a:
+        partes.append(f'transferido a {_a_quien(venta.transferido_a)}')
+    return ' · '.join(partes)
+
+
+def _a_quien(clave):
+    """'jean_carlo' -> 'Jean Carlo'; sin marca, «sin marcar»."""
+    return transferencias.ETIQUETAS.get(clave, clave) if clave else 'sin marcar'
 
 
 def _anotar(appt, usuario, tipo_evento, accion, detalle):
@@ -315,6 +335,7 @@ def crear(appt, datos, usuario):
     dia = _dia(datos.get('fecha'))
     monto = _monto(datos.get('monto'))
     medio = _medio(datos.get('metodo_pago'))
+    transferido_a = _transferido_a(datos.get('transferido_a'), medio, obligatorio=True)
     codigo = _programa(datos.get('programa_code'))
     tipo = _tipo(datos.get('tipo'))
     tipo_pago = f'{codigo} - {TIPOS[tipo]}'
@@ -328,8 +349,8 @@ def crear(appt, datos, usuario):
         client_id=cliente.id, email_vendedor=vendedor, nombre_cliente=cliente.full_name,
         mail_cliente=cliente.email, telefono=(cliente.phone or '').lstrip('+') or None,
         instagram=(cliente.instagram or '').lstrip('@') or None, examen=appt.examen or None,
-        tipo_pago=tipo_pago, monto=monto, metodo_pago=medio, estado='Completada',
-        sold_in_call=False, date=datetime.combine(dia, time()))
+        tipo_pago=tipo_pago, monto=monto, metodo_pago=medio, transferido_a=transferido_a,
+        estado='Completada', sold_in_call=False, date=datetime.combine(dia, time()))
     db.session.add(venta)
 
     espejo = None
@@ -363,9 +384,12 @@ def crear(appt, datos, usuario):
 # --- Corregir un pago -------------------------------------------------------------------------
 
 # Lo que se corrige de un pago, con los MISMOS nombres con los que lo lee y lo carga la ficha
-# (`fecha`, `monto`, `metodo_pago`, `programa_code`, `tipo`): si el GET dijera una cosa y el PATCH
-# pidiera otra, cada lado pasaria sus tests y en pantalla guardar no haria nada.
-CAMPOS = ('fecha', 'monto', 'metodo_pago', 'programa_code', 'tipo')
+# (`fecha`, `monto`, `metodo_pago`, `programa_code`, `tipo`, `transferido_a`): si el GET dijera una
+# cosa y el PATCH pidiera otra, cada lado pasaria sus tests y en pantalla guardar no haria nada.
+CAMPOS = ('fecha', 'monto', 'metodo_pago', 'programa_code', 'tipo', 'transferido_a')
+
+# Lo que no es la plata ni su registro: cambiarlo no toca el espejo en la deuda.
+SOLO_DE_LA_VENTA = {'transferido_a'}
 
 
 def _venta_y_espejo(appt, pago_id):
@@ -468,12 +492,18 @@ def _mover_espejo(espejo, venta, cambios, appt, abrir=True):
 
 
 def corregir(appt, datos, usuario, pago_id=None):
-    """Corrige la fecha, el monto, el medio, el programa y/o el tipo de UN pago del cliente.
+    """Corrige la fecha, el monto, el medio, el programa, el tipo y/o a quién se le hizo la
+    transferencia de UN pago del cliente.
 
     Solo se tocan los campos que vienen, y se validan todos antes de escribir ninguno. La fecha
     conserva la hora que tenia la venta: lo que se corrige es el dia. Lo que cambia en la venta se
     lleva a su espejo en la deuda (`_mover_espejo`); sin espejo, se corrige la venta sola y la
     respuesta lo dice.
+
+    A quién se le hizo la transferencia (`transferido_a`, 09/10/2026) se marca, se cambia o se
+    vuelve a «sin marcar» (null) en un pago por transferencia; en uno que no lo es, marcarlo es un
+    error. Un pago que pasa a transferencia lo pide, como el alta: es el momento de registrarlo. Uno
+    que deja de serlo pierde la marca.
 
     No se propaga a Google Sheets, igual que la correccion de ventas del historial del mazo
     (`PUT /closer/sales/<id>`): la hoja conserva el valor viejo.
@@ -487,6 +517,15 @@ def corregir(appt, datos, usuario, pago_id=None):
     medio = _medio(datos.get('metodo_pago'), venta.metodo_pago) if 'metodo_pago' in datos else None
     tipo_pago = (_tipo_pago_corregido(venta.tipo_pago, datos)
                  if 'programa_code' in datos or 'tipo' in datos else None)
+    medio_final = medio or venta.metodo_pago
+    marca = datos.get('transferido_a')
+    if marca not in (None, '') and not transferencias.es_transferencia(medio_final):
+        raise ErrorDeAccion('Este pago no es por transferencia: no hay a quién marcarle que se la '
+                            'hicieron.', 'transferido_a')
+    pasa_a_transferencia = (transferencias.es_transferencia(medio_final)
+                            and not transferencias.es_transferencia(venta.metodo_pago))
+    transferido_a = _transferido_a(datos.get('transferido_a', venta.transferido_a), medio_final,
+                                   obligatorio=pasa_a_transferencia)
 
     cambios, bitacora = set(), []
     antes = _instante(venta.date)
@@ -507,11 +546,20 @@ def corregir(appt, datos, usuario, pago_id=None):
         bitacora.append(f'tipo {venta.tipo_pago or "sin tipo"} → {tipo_pago}')
         venta.tipo_pago = tipo_pago
         cambios.add('tipo_pago')
+    if transferido_a != venta.transferido_a:
+        bitacora.append(f'transferido a {_a_quien(venta.transferido_a)} → {_a_quien(transferido_a)}')
+        venta.transferido_a = transferido_a
+        cambios.add('transferido_a')
 
     if not cambios:
         return _respuesta(appt, venta, espejo, cambios=[])
 
     nota = None
+    if cambios <= SOLO_DE_LA_VENTA:
+        # Solo cambió a quién se le hizo la transferencia: la plata y su registro son los mismos.
+        db.session.commit()
+        _anotar(appt, usuario, 'pago_corregido', f'corrigió el pago #{venta.id}', '; '.join(bitacora))
+        return _respuesta(appt, venta, espejo, cambios=sorted(cambios))
     if espejo is not None:
         # Mismo criterio que `crear`: a un cliente con otras ventas sin espejo no se le abre una
         # inscripcion para llevar ahi este pago.

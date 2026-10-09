@@ -16,6 +16,7 @@ import {
   esVenta, esCompleto, esCuota, esRenovacionOUpsell, pagadoAntes, saldoPrevio, quedaSaldo, armaPlan,
   cobraCuotaExistente, cantidadCuotas, fechasCuotas, montosCuotas,
 } from './arbolResultado.venta';
+import { esTransferencia } from './transferencia';
 
 const num = (v) => (v === '' || v === undefined || v === null ? undefined : parseFloat(v));
 const sinArroba = (v) => (v ? String(v).replace(/@/g, '').trim() : '');
@@ -235,6 +236,9 @@ function bloqueVenta(r, contexto) {
     precio_total: esCompleto(r) ? undefined : num(r.precio_total),
     segundo_pago: r.segundo_pago || '',
     metodo_pago: r.metodo_pago || '',
+    // A quién del equipo se le hizo la transferencia: solo si el medio que quedó lo es (una
+    // respuesta vieja, de antes de «Corregir» el medio, no viaja). El backend la pide.
+    transferido_a: esTransferencia(r.metodo_pago) ? (r.transferido_a || null) : null,
     examen: `${r.examen_lead || ''}${r.notas ? ` | ${r.notas}` : ''}`,
     instagram: sinArroba(r.instagram),
     estado: r.estado || 'Completada',

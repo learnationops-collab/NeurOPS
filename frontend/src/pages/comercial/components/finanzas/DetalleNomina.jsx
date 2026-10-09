@@ -37,6 +37,10 @@ const TablaPersona = ({ persona, datos }) => {
                 <span>
                     {persona.rol}{pct ? ` · ${pct}` : ''}
                     {datos.sueldo_base > 0 ? ` · sueldo base ${dinero(datos.sueldo_base)}` : ''}
+                    {/* Lo que recibió de clientes por transferencia: se le descuenta de lo que se le paga. */}
+                    {datos.transferencias_recibidas > 0.004
+                        ? ` · transferencias recibidas ${dinero(-datos.transferencias_recibidas)} · a pagar ${dinero(datos.a_pagar)}`
+                        : ''}
                 </span>
             </h3>
             {ventas.length === 0 ? (

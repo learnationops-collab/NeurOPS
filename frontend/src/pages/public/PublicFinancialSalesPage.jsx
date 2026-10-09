@@ -10,6 +10,7 @@ import AttributionModal from '../../components/modals/AttributionModal';
 import LeadRoadmapModal from '../../components/modals/LeadRoadmapModal';
 import { useNavigate } from 'react-router-dom';
 import { parseUtcIso } from '../../utils/datetime';
+import { PREGUNTA_TRANSFERENCIA, esTransferencia, leyendaTransferencia } from '../../components/ficha/transferencia';
 
 
 const getFirstDayOfCurrentMonth = () => {
@@ -1050,7 +1051,7 @@ const PublicFinancialSalesPage = () => {
         const isCustomPay = sale.tipo_pago_simple && !['Seña', 'Parcial', 'Cuota', 'Completo', 'Renovación', 'Upsell'].includes(sale.tipo_pago_simple);
         const isCustomCloser = sale.email_vendedor && sale.email_vendedor !== 'jeancarlo@thelearnation.com';
         const isCustomSetter = sale.setter && !['workshop', 'vsl', 'Elias'].includes(sale.setter);
-        const isCustomMethod = sale.metodo_pago && !['Stripe', 'PayPal', 'Paypal', 'Binance', 'Hotmart'].includes(sale.metodo_pago);
+        const isCustomMethod = sale.metodo_pago && !['Stripe', 'PayPal', 'Paypal', 'Binance', 'Hotmart', 'Transferencia Bancaria'].includes(sale.metodo_pago);
 
         setEditingSale(sale.id);
         setEditData({
@@ -1065,6 +1066,7 @@ const PublicFinancialSalesPage = () => {
             tipo_pago_custom: isCustomPay,
             payment_type: sale.metodo_pago || '',
             payment_type_custom: isCustomMethod,
+            transferido_a: sale.transferido_a || '',
             setter_name: sale.setter || '',
             setter_custom: isCustomSetter,
             estado: sale.estado || 'Completada',
@@ -1085,6 +1087,8 @@ const PublicFinancialSalesPage = () => {
                 amount: editData.amount,
                 product: combinedProduct,
                 payment_type: editData.payment_type,
+                // Solo si el medio que queda es transferencia: con otro, el backend limpia la marca.
+                ...(esTransferencia(editData.payment_type) ? { transferido_a: editData.transferido_a || null } : {}),
                 setter_name: editData.setter_name,
                 estado: editData.estado,
                 date: editData.date
@@ -1132,6 +1136,16 @@ const PublicFinancialSalesPage = () => {
     };
 
     const [showCreateModal, setShowCreateModal] = useState(false);
+    // A quién del equipo se le puede haber hecho una transferencia (Pedro, Jean Carlo, Otro): la lista
+    // vive en el backend (`transferencias_service`), la misma de la ficha. Un alta por transferencia
+    // la pide, y el backend la rechaza sin ella (09/10/2026).
+    const [opcionesTransferencia, setOpcionesTransferencia] = useState([]);
+    useEffect(() => {
+        api.get('/public/financial-sales/transferido-a')
+            .then((r) => setOpcionesTransferencia(Array.isArray(r.data) ? r.data : []))
+            .catch(() => setOpcionesTransferencia([]));
+    }, []);
+
     const [createData, setCreateData] = useState({
         nombre_cliente: '',
         instagram: '',
@@ -1153,7 +1167,8 @@ const PublicFinancialSalesPage = () => {
         segundo_pago: '',
         notas: '',
         date: new Date().toISOString().split('T')[0],
-        enviar_mensaje: true
+        enviar_mensaje: true,
+        transferido_a: ''
     });
 
     const [agendaSearchQuery, setAgendaSearchQuery] = useState('');
@@ -1245,7 +1260,8 @@ const PublicFinancialSalesPage = () => {
             segundo_pago: '',
             notas: '',
             date: new Date().toISOString().split('T')[0],
-            enviar_mensaje: true
+            enviar_mensaje: true,
+            transferido_a: ''
         });
     };
 
@@ -1257,6 +1273,11 @@ const PublicFinancialSalesPage = () => {
         }
         if (!createData.nombre_cliente || !createData.monto) {
             toast.error('Nombre y monto son obligatorios');
+            return;
+        }
+        const porTransferencia = esTransferencia(createData.metodo_pago);
+        if (porTransferencia && !createData.transferido_a) {
+            toast.error('Elegí a quién se le hizo la transferencia');
             return;
         }
 
@@ -1280,6 +1301,7 @@ const PublicFinancialSalesPage = () => {
                 tipo_pago: combinedProduct,
                 monto: parseFloat(createData.monto) || 0.0,
                 metodo_pago: createData.metodo_pago,
+                ...(porTransferencia ? { transferido_a: createData.transferido_a } : {}),
                 estado: createData.estado,
                 email_vendedor: createData.email_vendedor,
                 setter: createData.setter_name,
@@ -2199,6 +2221,7 @@ const PublicFinancialSalesPage = () => {
                                                                 <option value="PayPal">PayPal</option>
                                                                 <option value="Binance">Binance</option>
                                                                 <option value="Hotmart">Hotmart</option>
+                                                                <option value="Transferencia Bancaria">Transferencia bancaria</option>
                                                                 <option value="otro">Otro...</option>
                                                             </select>
                                                             {editData.payment_type_custom && (
@@ -2210,12 +2233,31 @@ const PublicFinancialSalesPage = () => {
                                                                     placeholder="Especificar método"
                                                                 />
                                                             )}
+                                                            {esTransferencia(editData.payment_type) && (
+                                                                <select
+                                                                    value={editData.transferido_a}
+                                                                    aria-label={PREGUNTA_TRANSFERENCIA}
+                                                                    title={PREGUNTA_TRANSFERENCIA}
+                                                                    onChange={e => setEditData({ ...editData, transferido_a: e.target.value })}
+                                                                    className="w-full bg-slate-900 border border-amber-700/60 rounded p-1 text-white text-xs cursor-pointer focus:border-indigo-500 focus:outline-none"
+                                                                >
+                                                                    <option value="">Sin marcar a quién</option>
+                                                                    {opcionesTransferencia.map(o => (
+                                                                        <option key={o.clave} value={o.clave}>Transferido a {o.label}</option>
+                                                                    ))}
+                                                                </select>
+                                                            )}
                                                         </div>
                                                     </>
                                                 ) : (
                                                     <>
                                                         <div className="font-medium text-slate-300">{sale.tipo_pago_simple || 'N/A'}</div>
                                                         <div className="text-xs text-slate-500">{sale.metodo_pago || 'N/A'}</div>
+                                                        {esTransferencia(sale.metodo_pago) && (
+                                                            <div className={`text-xs ${sale.transferido_a ? 'text-sky-300' : 'text-amber-400'}`}>
+                                                                {leyendaTransferencia(opcionesTransferencia, sale.transferido_a)}
+                                                            </div>
+                                                        )}
                                                     </>
                                                 )}
                                             </td>
@@ -2645,6 +2687,7 @@ const PublicFinancialSalesPage = () => {
                                 <option value="PayPal">PayPal</option>
                                 <option value="Binance">Binance</option>
                                 <option value="Hotmart">Hotmart</option>
+                                <option value="Transferencia Bancaria">Transferencia bancaria</option>
                                 <option value="otro">Otro / Agregar nuevo...</option>
                             </select>
                             {createData.metodo_pago_custom && (
@@ -2657,6 +2700,29 @@ const PublicFinancialSalesPage = () => {
                                 />
                             )}
                         </div>
+
+                        {esTransferencia(createData.metodo_pago) && (
+                            <div className="space-y-1">
+                                <label htmlFor="alta-transferido-a" className="text-[10px] font-black text-amber-400 uppercase tracking-widest block">{PREGUNTA_TRANSFERENCIA} *</label>
+                                <select
+                                    id="alta-transferido-a"
+                                    required
+                                    value={createData.transferido_a}
+                                    onChange={e => setCreateData({ ...createData, transferido_a: e.target.value })}
+                                    className="w-full bg-slate-950 border border-amber-700/60 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                                >
+                                    <option value="">Elegí a quién...</option>
+                                    {opcionesTransferencia.map(o => (
+                                        <option key={o.clave} value={o.clave}>{o.label}</option>
+                                    ))}
+                                </select>
+                                <p className="text-[11px] text-slate-500">
+                                    {opcionesTransferencia.find(o => o.clave === createData.transferido_a)?.descuenta === false
+                                        ? 'Solo se anota en Finanzas.'
+                                        : 'La plata quedó en su cuenta: a Pedro y a Jean Carlo se les descuenta en Payroll.'}
+                                </p>
+                            </div>
+                        )}
 
                         <div className="space-y-1">
                             <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Estado *</label>

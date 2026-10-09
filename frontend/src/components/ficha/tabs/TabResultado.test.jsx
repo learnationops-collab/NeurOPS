@@ -306,6 +306,42 @@ describe('TabResultado', () => {
     expect(conAvisos.irA).toHaveBeenCalledWith('acciones');
   }, 30000);
 
+  it('una venta por transferencia pregunta a quién del equipo se le hizo, y lo manda', async () => {
+    // Pedido de Kerwin (09/10/2026): registrarlo en el momento. Es una pregunta del árbol, sin
+    // «Continuar»: elegir es contestar, y sin contestarla no se llega a la revisión.
+    const user = userEvent.setup();
+    render(<TabResultado {...p} />);
+    await user.click(screen.getByRole('button', { name: 'Asistió' }));
+    await user.click(screen.getByRole('button', { name: /Sí, con decisor/ }));
+    await user.click(screen.getByRole('button', { name: /Sí, se presentó/ }));
+    await user.click(screen.getByRole('button', { name: /Sí, cerró/ }));
+    for (let i = 0; i < 5; i += 1) {
+      await user.click(screen.getByRole('button', { name: /^Continuar/ }));
+    }
+    await user.click(screen.getByRole('button', { name: /Ace Learner/ }));
+    await user.click(screen.getByRole('button', { name: /Completo \(PIF\)/ }));
+    await user.type(screen.getByLabelText('Monto cobrado'), '150');
+    await user.click(screen.getByRole('button', { name: /^Continuar/ }));
+    await user.click(screen.getByRole('button', { name: 'Transferencia Bancaria' }));
+
+    expect(screen.getByRole('heading', { name: '¿A quién se le hizo la transferencia?' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Pedro/ })).toHaveTextContent('Se le descuenta en Payroll');
+    expect(screen.getByRole('button', { name: /^Otro/ })).toHaveTextContent('Solo se anota en Finanzas');
+    await user.click(screen.getByRole('button', { name: /^Jean Carlo/ }));
+
+    await user.click(screen.getByRole('button', { name: /^Continuar/ })); // examen
+    await user.click(screen.getByRole('button', { name: /^Continuar/ })); // fecha
+    await user.click(screen.getByRole('button', { name: /^Completada/ }));
+    await user.click(screen.getByRole('button', { name: /^Continuar/ })); // notas
+    await user.click(screen.getByRole('button', { name: /No le pedí/ }));
+    await user.click(screen.getByRole('button', { name: /No por ahora/ }));
+    await user.click(screen.getByRole('button', { name: /Registrar la venta/ }));
+
+    const [accion, datos] = p.onAccion.mock.calls[0];
+    expect(accion).toBe('registrar_venta');
+    expect(datos.venta).toMatchObject({ metodo_pago: 'Transferencia Bancaria', transferido_a: 'jean_carlo', monto: 150 });
+  }, 30000);
+
   it('en modo seguimiento arranca por la cadencia y no por la llamada', () => {
     render(<TabResultado {...props(fichaEnSeguimiento)} />);
     expect(screen.getByRole('heading', { name: '¿Qué pasó con este contacto?' })).toBeInTheDocument();
@@ -489,6 +525,40 @@ describe('TabAcciones', () => {
     // esta pestaña: cuando lo ponían los dos salían dos avisos idénticos apilados. Lo que sí le
     // toca a la pestaña es volver al menú de las cuatro acciones.
     expect(await screen.findByRole('button', { name: 'Armar plan de cuotas' })).toBeInTheDocument();
+  });
+
+  it('un pago por transferencia pregunta a quién se le hizo y no se registra sin eso', async () => {
+    const user = userEvent.setup();
+    const p = props(fichaConDeuda);
+    render(<TabAcciones {...p} />);
+    await user.click(screen.getByRole('button', { name: 'Registrar pago' }));
+    await user.type(screen.getByLabelText('Monto'), '150');
+    expect(screen.queryByText('¿A quién se le hizo la transferencia?')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Transferencia' }));
+
+    expect(screen.getByText('Completá ¿A quién se le hizo la transferencia?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Registrar pago$/ })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Pedro' }));
+    expect(screen.getByText('Se le descuenta en Payroll')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^Registrar pago$/ }));
+
+    expect(p.onAccion).toHaveBeenCalledWith('registrar_pago', expect.objectContaining({
+      metodo_pago: 'Transferencia', transferido_a: 'pedro',
+    }));
+  });
+
+  it('un pago por otro medio no manda a quién, aunque se haya elegido antes', async () => {
+    const user = userEvent.setup();
+    const p = props(fichaConDeuda);
+    render(<TabAcciones {...p} />);
+    await user.click(screen.getByRole('button', { name: 'Registrar pago' }));
+    await user.type(screen.getByLabelText('Monto'), '150');
+    await user.click(screen.getByRole('button', { name: 'Transferencia' }));
+    await user.click(screen.getByRole('button', { name: 'Jean Carlo' }));
+    await user.click(screen.getByRole('button', { name: 'Stripe' }));
+    await user.click(screen.getByRole('button', { name: /^Registrar pago$/ }));
+
+    expect(p.onAccion.mock.calls[0][1]).not.toHaveProperty('transferido_a');
   });
 
   it('sin programa no se ofrece el formulario de pago, y se dice por qué', async () => {

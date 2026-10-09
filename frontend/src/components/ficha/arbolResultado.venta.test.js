@@ -167,6 +167,7 @@ describe('camino: venta parcial con plan de cuotas', () => {
     tipo_pago: { tipo_pago_simple: 'parcial' },
     venta_montos: { precio_total: '2000', monto: '500', segundo_pago: 'resto en 3 cuotas' },
     medio_pago: { metodo_pago: 'Transferencia Bancaria' },
+    transferido_a: { transferido_a: 'jean_carlo' },
     venta_num_cuotas: { num_cuotas: 3 },
     venta_modo_cuotas: { installmentMode: 'custom' },
     venta_fechas_cuotas: { cuotaFechas: { 1: '2026-10-25', 2: '2026-11-25', 3: '2026-12-25' } },
@@ -177,11 +178,42 @@ describe('camino: venta parcial con plan de cuotas', () => {
     venta_academia: { dar_acceso_academia: false },
   };
 
-  it('pasa por cuántas cuotas, si es mensual y las fechas', () => {
+  it('pasa por a quién se le hizo la transferencia, cuántas cuotas, si es mensual y las fechas', () => {
     const vistas = claves(guion);
     expect(vistas.slice(vistas.indexOf('medio_pago'), vistas.indexOf('venta_examen'))).toEqual([
-      'medio_pago', 'venta_num_cuotas', 'venta_modo_cuotas', 'venta_fechas_cuotas',
+      'medio_pago', 'transferido_a', 'venta_num_cuotas', 'venta_modo_cuotas', 'venta_fechas_cuotas',
     ]);
+  });
+
+  it('a quién se le hizo la transferencia sale del vocabulario y dice a quién se le descuenta', () => {
+    let r = INICIAL();
+    Object.entries(guion).slice(0, Object.keys(guion).indexOf('transferido_a')).forEach(([clave, valores]) => {
+      r = responder(r, clave, valores);
+    });
+    const contexto = { transferidoA: [
+      { clave: 'pedro', label: 'Pedro', descuenta: true }, { clave: 'jean_carlo', label: 'Jean Carlo', descuenta: true },
+      { clave: 'otro', label: 'Otro', descuenta: false },
+    ] };
+    const q = preguntaActual(r, contexto);
+    expect(q.enunciado).toBe('¿A quién se le hizo la transferencia?');
+    expect(q.opciones.map((o) => [o.valor, o.label, o.sub])).toEqual([
+      ['pedro', 'Pedro', 'Se le descuenta en Payroll'],
+      ['jean_carlo', 'Jean Carlo', 'Se le descuenta en Payroll'],
+      ['otro', 'Otro', 'Solo se anota en Finanzas'],
+    ]);
+    // Es obligatoria: sin contestarla el árbol no está completo.
+    expect(completo(r, contexto)).toBe(false);
+  });
+
+  it('a quién se le hizo la transferencia viaja en la venta', () => {
+    const { datos } = construirPayload(recorrer(guion), { appointmentId: 5 });
+    expect(datos.venta).toMatchObject({ metodo_pago: 'Transferencia Bancaria', transferido_a: 'jean_carlo' });
+  });
+
+  it('si el medio se corrige a otro, a quién ya no viaja ni se pregunta', () => {
+    const r = actualizar(recorrer(guion), { metodo_pago: 'Stripe' });
+    expect(claves({ ...guion, medio_pago: { metodo_pago: 'Stripe' } })).not.toContain('transferido_a');
+    expect(construirPayload(r, { appointmentId: 5 }).datos.venta.transferido_a).toBeNull();
   });
 
   it('el hito de deuda queda en ámbar recién cuando se cargaron los montos', () => {
