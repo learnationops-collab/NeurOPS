@@ -278,6 +278,14 @@
 .dc-shell .fi-pago > .fi-sec-fila{border-top:0}
 .dc-shell .fi-pago[data-editando] .ibtn{color:var(--text-on-surface);
   border-color:var(--border-control)}
+/* Marcar en la fila a quién se le hizo una transferencia sin marcar (09/10/2026): la pregunta y
+   sus tres opciones debajo del pago, alineadas con la columna del tipo; en un teléfono, la fila
+   ya va en una sola columna y la pregunta también. */
+.dc-shell .fi-pago-marcar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2) var(--s3);
+  padding:0 0 var(--s3) calc(110px + var(--s4))}
+@media (max-width:640px){
+  .dc-shell .fi-pago-marcar{padding-left:0}
+}
 
 /* ---------- Cabecera del modal ---------- */
 /* Dos filas fijas: el nombre con sus botones arriba, los datos abajo.

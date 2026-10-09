@@ -36,8 +36,10 @@ FALTA = '¿A quién se le hizo la transferencia? Elegí Pedro, Jean Carlo u Otro
 
 
 def opciones():
-    """La lista que ve la ficha: {clave, label}, en el orden en que se ofrecen."""
-    return [{'clave': o['clave'], 'label': o['label']} for o in TRANSFERIDO_A]
+    """La lista que ve la ficha: {clave, label, descuenta}, en el orden en que se ofrecen.
+    `descuenta` dice si a esa persona se le descuenta en Payroll, para que la pregunta lo explique."""
+    return [{'clave': o['clave'], 'label': o['label'], 'descuenta': bool(o['nomina'])}
+            for o in TRANSFERIDO_A]
 
 
 def es_transferencia(metodo_pago):

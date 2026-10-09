@@ -91,6 +91,12 @@ const VOCABULARIO = {
         { clave: 'paypal', label: 'PayPal' },
         { clave: 'efectivo', label: 'Efectivo' },
     ],
+    // `transferencias_service.opciones()`: a quién del equipo se le hizo un pago por transferencia.
+    transferido_a: [
+        { clave: 'pedro', label: 'Pedro', descuenta: true },
+        { clave: 'jean_carlo', label: 'Jean Carlo', descuenta: true },
+        { clave: 'otro', label: 'Otro', descuenta: false },
+    ],
     canales_seguimiento: [
         { clave: 'whatsapp', label: 'WhatsApp' },
         { clave: 'llamada', label: 'Llamada' },

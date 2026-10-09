@@ -127,8 +127,9 @@ def test_el_vocabulario_trae_todas_las_claves_del_contrato(db):
 def test_a_quien_se_le_hizo_la_transferencia_son_pedro_jean_carlo_y_otro(db):
     """La lista sale de `transferencias_service`, el único lugar donde está escrita."""
     assert voc.vocabulario()['transferido_a'] == [
-        {'clave': 'pedro', 'label': 'Pedro'}, {'clave': 'jean_carlo', 'label': 'Jean Carlo'},
-        {'clave': 'otro', 'label': 'Otro'}]
+        {'clave': 'pedro', 'label': 'Pedro', 'descuenta': True},
+        {'clave': 'jean_carlo', 'label': 'Jean Carlo', 'descuenta': True},
+        {'clave': 'otro', 'label': 'Otro', 'descuenta': False}]
 
 
 def test_los_tipos_de_pago_de_una_venta_se_leen_como_los_escribe_el_wizard(db):

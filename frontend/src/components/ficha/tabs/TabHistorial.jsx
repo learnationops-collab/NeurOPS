@@ -403,11 +403,13 @@ const Pagos = ({ pagos, programaDelCliente, vocabulario, puedeEditar, onAccion }
     const medios = vocabulario?.medios_pago_venta || [];
     const programas = vocabulario?.programas || [];
     const tipos = vocabulario?.tipos_pago_venta || [];
+    // A quién del equipo se le hizo un pago por transferencia: Pedro, Jean Carlo u Otro.
+    const transferencias = vocabulario?.transferido_a || [];
     return (
         <>
             {pagos.length ? pagos.map((p, i) => (
                 <FilaPago key={p.id ?? `${p.fecha}-${i}`} pago={p} medios={medios}
-                    programas={programas} tipos={tipos}
+                    programas={programas} tipos={tipos} transferencias={transferencias}
                     // Sin el id de su venta no hay a dónde mandar la corrección (datos viejos).
                     puedeEditar={puedeEditar && p.id != null}
                     onCorregir={(cambios) => onAccion?.('corregir_pago', { pago_id: p.id, ...cambios })}
@@ -415,7 +417,7 @@ const Pagos = ({ pagos, programaDelCliente, vocabulario, puedeEditar, onAccion }
             )) : <Vacio texto="Todavía no entró ningún pago." />}
             {puedeEditar && (
                 <AgregarPago pagos={pagos} programaDelCliente={programaDelCliente} medios={medios}
-                    programas={programas} tipos={tipos}
+                    programas={programas} tipos={tipos} transferencias={transferencias}
                     onAgregar={(datos) => onAccion?.('agregar_pago', datos)} />
             )}
         </>

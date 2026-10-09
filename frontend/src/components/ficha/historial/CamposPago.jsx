@@ -1,9 +1,15 @@
 import React from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { localToday } from '../../../utils/datetime';
+import ElegirTransferencia from '../piezas/ElegirTransferencia';
+import {
+    FALTA_TRANSFERENCIA, PREGUNTA_TRANSFERENCIA, efectoDeTransferido, esTransferencia,
+} from '../transferencia';
 import Desplegable from './Desplegable';
 
 /**
- * Los cinco campos de un pago: fecha, monto, medio, programa y tipo.
+ * Los cinco campos de un pago: fecha, monto, medio, programa y tipo. Y, si el medio es una
+ * transferencia, un sexto: a quién del equipo se le hizo (pedido de Kerwin, 09/10/2026).
  *
  * Los comparten el editor de una fila de la sección «Pagos» (`FilaPago`) y el formulario para
  * agregar uno (`AgregarPago`): un pago corregido y uno agregado tienen que pedir lo mismo, con las
@@ -32,12 +38,16 @@ export const montoExacto = (n) => `$${(Number(n) || 0).toLocaleString('es-AR', {
  * programa se tiene que poder corregir de monto sin decidir antes de qué programa era. Lo único que
  * pide es el programa cuando lo que cambia es el tipo, que se escribe detrás de él ('RR - Cuota').
  *
+ * A quién se le hizo la transferencia lo pide un pago nuevo por transferencia y uno que se corrige
+ * PARA pasar a transferencia (`pideTransferencia`): es el momento de registrarlo, como en el
+ * backend. Una transferencia vieja «sin marcar» se corrige igual sin decidirlo.
+ *
  * Una fecha futura se frena acá igual que en el backend (un día que todavía no llegó no puede ser
  * el de un pago), pero solo si es la que se está escribiendo: la de un pago viejo que nadie tocó
  * no viaja, y no tiene por qué impedir corregirle el monto.
  */
-export const faltaParaGuardar = ({ fecha, monto, medio, programa, tipo },
-    { nuevo = false, cambiaTipo = false, cambiaFecha = false } = {}) => {
+export const faltaParaGuardar = ({ fecha, monto, medio, programa, tipo, transferido_a: transferidoA },
+    { nuevo = false, cambiaTipo = false, cambiaFecha = false, pideTransferencia = false } = {}) => {
     if (!fecha) return 'Falta la fecha del pago';
     if ((nuevo || cambiaFecha) && fecha > localToday()) {
         return 'Un pago no puede tener fecha futura: ese día todavía no llegó';
@@ -47,12 +57,39 @@ export const faltaParaGuardar = ({ fecha, monto, medio, programa, tipo },
     if (nuevo && !programa) return 'Elegí el programa del pago';
     if (nuevo && !tipo) return 'Elegí el tipo de pago';
     if (cambiaTipo && !programa) return 'Elegí también el programa: el tipo se escribe «programa - tipo»';
+    if ((nuevo || pideTransferencia) && esTransferencia(medio) && !transferidoA) return FALTA_TRANSFERENCIA;
     return null;
+};
+
+/**
+ * La pregunta de a quién se le hizo la transferencia, a todo el ancho debajo de los cinco campos.
+ * Aparece sola al elegir un medio de transferencia (con un fundido corto, nada con movimiento
+ * reducido) y dice qué pasa con lo elegido: a Pedro y a Jean Carlo se les descuenta en Payroll.
+ */
+const CampoTransferencia = ({ ids, valor, opciones, sinMarcar, disabled, onCambiar }) => {
+    const reducido = useReducedMotion();
+    const elegida = opciones.find(o => o.clave === valor);
+    return (
+        <motion.div className="fi-campo" style={{ gridColumn: '1 / -1' }}
+            {...(reducido ? {} : {
+                initial: { opacity: 0, y: -4 },
+                animate: { opacity: 1, y: 0 },
+                transition: { duration: 0.18, ease: [0.22, 0.7, 0.2, 1] },
+            })}>
+            <span className="t-rotulo" id={`${ids}-transferido`}>{PREGUNTA_TRANSFERENCIA}</span>
+            <ElegirTransferencia opciones={opciones} valor={valor} sinMarcar={sinMarcar} disabled={disabled}
+                etiqueta={PREGUNTA_TRANSFERENCIA} onElegir={(v) => onCambiar({ transferido_a: v })} />
+            <small className="t-cap mut">
+                {elegida ? efectoDeTransferido(elegida)
+                    : 'La plata quedó en la cuenta de esa persona: a Pedro y a Jean Carlo se les descuenta en Payroll.'}
+            </small>
+        </motion.div>
+    );
 };
 
 const CamposPago = ({
     ids, valores, onCambiar, disabled = false, medios = [], programas = [], tipos = [],
-    actual = {}, autoFocus = false,
+    transferencias = [], actual = {}, autoFocus = false,
 }) => {
     const { fecha, monto, medio, programa, tipo } = valores;
     const medioFuera = actual.medio && !medios.some(m => m.clave === actual.medio);
@@ -106,6 +143,13 @@ const CamposPago = ({
                     {tipos.map(t => <option key={t.clave} value={t.clave}>{t.label}</option>)}
                 </Desplegable>
             </div>
+
+            {esTransferencia(medio) && (
+                // «Sin marcar» solo para devolver a ese estado una transferencia que ya estaba
+                // marcada: en un alta, o en un pago que recién pasa a transferencia, se pide.
+                <CampoTransferencia ids={ids} valor={valores.transferido_a ?? null} opciones={transferencias}
+                    sinMarcar={!!actual.transferido_a} disabled={disabled} onCambiar={onCambiar} />
+            )}
         </div>
     );
 };

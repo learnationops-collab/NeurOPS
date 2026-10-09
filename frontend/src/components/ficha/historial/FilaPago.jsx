@@ -3,6 +3,8 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Pencil } from 'lucide-react';
 import { mensajeDeError } from '../fichaApi';
 import { diaLegible } from '../piezas/fecha';
+import ElegirTransferencia from '../piezas/ElegirTransferencia';
+import { PREGUNTA_TRANSFERENCIA, esTransferencia, leyendaTransferencia } from '../transferencia';
 import CamposPago, {
     etiquetaDeTipo, faltaParaGuardar, montoExacto, nombreDePrograma,
 } from './CamposPago';
@@ -24,12 +26,18 @@ import MotivoDelFallo from './MotivoDelFallo';
  *
  * La fecha de un pago es un DÍA, no un instante: se lee del texto con `diaLegible` y no se pasa por
  * el huso de quien mira, que solo podría correrla.
+ *
+ * Un pago por transferencia dice a quién del equipo se le hizo («Transferido a Jean Carlo») o que
+ * está «Sin marcar» (pedido de Kerwin, 09/10/2026). Se cambia desde el lápiz, y uno sin marcar se
+ * marca directo en la fila, con las tres opciones debajo: es lo que hay que hacer con los pagos de
+ * antes, uno por uno, y abrir el editor entero para eso sobraba.
  */
 
 const diaDe = (fecha) => (fecha ? String(fecha).slice(0, 10) : '');
 
 const FilaPago = ({
-    pago: p, medios = [], programas = [], tipos = [], puedeEditar = false, onCorregir, onBorrar,
+    pago: p, medios = [], programas = [], tipos = [], transferencias = [], puedeEditar = false, onCorregir,
+    onBorrar,
 }) => {
     const reducido = useReducedMotion();
     const ids = useId();
@@ -41,8 +49,10 @@ const FilaPago = ({
 
     const inicial = {
         fecha: diaDe(p.fecha), monto: p.monto != null ? String(p.monto) : '', medio: p.medio || '',
-        programa: p.programa_code || '', tipo: p.tipo || '',
+        programa: p.programa_code || '', tipo: p.tipo || '', transferido_a: p.transferido_a || null,
     };
+    // El backend dice si es transferencia (`es_transferencia`); sin el dato, la misma regla acá.
+    const esDeTransferencia = p.es_transferencia ?? esTransferencia(p.medio);
     const dia = diaLegible(p.fecha) || 'Sin fecha';
     const tipo = p.tipo ? etiquetaDeTipo(tipos, p.tipo) : (p.tipo_pago || 'Sin tipo');
     const detalle = [p.programa_code ? nombreDePrograma(programas, p.programa_code) : 'Sin programa',
@@ -76,11 +86,34 @@ const FilaPago = ({
             cambios.programa_code = valores.programa;
         }
         if (valores.tipo && valores.tipo !== inicial.tipo) cambios.tipo = valores.tipo;
+        // A quién se le hizo la transferencia viaja solo si el medio que queda es transferencia:
+        // si pasa a otro medio, el backend limpia la marca solo.
+        if (esTransferencia(valores.medio) && (valores.transferido_a ?? null) !== inicial.transferido_a) {
+            cambios.transferido_a = valores.transferido_a ?? null;
+        }
     }
     const hayCambios = Object.keys(cambios).length > 0;
     const falta = editando
-        ? faltaParaGuardar(valores, { cambiaTipo: !!cambios.tipo, cambiaFecha: !!cambios.fecha })
+        ? faltaParaGuardar(valores, {
+            cambiaTipo: !!cambios.tipo, cambiaFecha: !!cambios.fecha,
+            // Pasar a transferencia es registrar una: se pide a quién, como en el alta.
+            pideTransferencia: !esTransferencia(inicial.medio) && esTransferencia(valores.medio),
+        })
         : null;
+
+    // Marcar directo en la fila una transferencia sin marcar: un pedido con solo eso.
+    const marcar = async (clave) => {
+        setGuardando(true);
+        setError(null);
+        try {
+            await onCorregir?.({ transferido_a: clave });
+        } catch (err) {
+            setError(mensajeDeError(err));
+        } finally {
+            setGuardando(false);
+        }
+    };
+    const marcarEnLaFila = puedeEditar && esDeTransferencia && !p.transferido_a && !editando;
 
     const guardar = async () => {
         if (!hayCambios || falta) return;
@@ -105,6 +138,14 @@ const FilaPago = ({
                 <span style={{ display: 'grid', gap: 2, minWidth: 0 }}>
                     <span className="t-sm trunc" title={p.tipo_pago || undefined}>{tipo}</span>
                     <small className="t-cap mut trunc" title={detalle}>{detalle}</small>
+                    {esDeTransferencia && (
+                        <span style={{ display: 'flex', minWidth: 0, marginTop: 2 }}>
+                            <span className="chip"
+                                style={{ '--c': p.transferido_a ? 'var(--info)' : 'var(--warning)' }}>
+                                {leyendaTransferencia(transferencias, p.transferido_a)}
+                            </span>
+                        </span>
+                    )}
                 </span>
                 <span className="fila" style={{ gap: 'var(--s2)', justifyContent: 'flex-end', whiteSpace: 'nowrap' }}>
                     <span className="t-sm num" style={{ fontWeight: 600 }}>{montoExacto(p.monto)}</span>
@@ -114,7 +155,8 @@ const FilaPago = ({
                                 aria-expanded={editando}
                                 aria-controls={`${ids}-editor`}
                                 aria-label={`Corregir el pago ${cual}`}
-                                title="Corregir fecha, monto, medio y tipo"
+                                title={esDeTransferencia ? 'Corregir fecha, monto, medio, tipo y a quién se le hizo la transferencia'
+                                    : 'Corregir fecha, monto, medio y tipo'}
                                 onClick={() => (editando ? cerrar() : abrir())}>
                                 <Pencil />
                             </button>
@@ -128,6 +170,21 @@ const FilaPago = ({
                     )}
                 </span>
             </div>
+
+            {marcarEnLaFila && (
+                <motion.div className="fi-pago-marcar" role="group"
+                    aria-label={`A quién se le hizo la transferencia ${cual}`}
+                    {...(reducido ? {} : {
+                        initial: { opacity: 0, y: -4 },
+                        animate: { opacity: 1, y: 0 },
+                        transition: { duration: 0.18, ease: [0.22, 0.7, 0.2, 1] },
+                    })}>
+                    <small className="t-cap mut">{PREGUNTA_TRANSFERENCIA}</small>
+                    <ElegirTransferencia chico opciones={transferencias} valor={null} disabled={guardando}
+                        etiqueta={`${PREGUNTA_TRANSFERENCIA} (pago ${cual})`} onElegir={marcar} />
+                    {guardando && <span className="ln-spinner" aria-label="Guardando" />}
+                </motion.div>
+            )}
 
             {!editando && <MotivoDelFallo motivo={error} />}
 
@@ -152,9 +209,9 @@ const FilaPago = ({
                             setError(null);
                             setValores(v => ({ ...v, ...parche }));
                         }}
-                        medios={medios} programas={programas} tipos={tipos}
+                        medios={medios} programas={programas} tipos={tipos} transferencias={transferencias}
                         actual={{ medio: p.medio, programa: p.programa_code, tipo: p.tipo,
-                            tipoCrudo: p.tipo_pago }} />
+                            tipoCrudo: p.tipo_pago, transferido_a: p.transferido_a }} />
 
                     <small className="t-cap mut">
                         Corrige el pago y lo que cuenta la deuda. No escribe en Google Sheets ni le avisa
