@@ -143,7 +143,8 @@ describe('corregir una agenda en la fila', () => {
 
         expect(within(editor()).getByLabelText('Fuente de la agenda'))
             .toHaveValue('Entrevista Diagnóstica Gratuita');
-        expect(within(editor()).getByRole('option', { name: /fuera del catálogo/ })).toBeInTheDocument();
+        expect(within(within(editor()).getByRole('group', { name: 'Fuera del catálogo' }))
+            .getByRole('option', { name: 'Entrevista Diagnóstica Gratuita' })).toBeInTheDocument();
         await usuario.selectOptions(within(editor()).getByLabelText('Closer de la agenda'), '9');
         await usuario.click(within(editor()).getByRole('button', { name: 'Guardar cambios' }));
 

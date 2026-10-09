@@ -11,9 +11,10 @@ export const gruposDeFuente = (grupos, actual) => {
     const conocidas = new Set(grupos.flatMap(g => (g.opciones || []).map(o => o.clave)));
     if (!actual || conocidas.has(actual)) return grupos;
     // Una fuente vieja se sigue mostrando como está; lo que no se puede es ELEGIR una fuera del
-    // catálogo (mismo criterio que el backend).
-    return [{ titulo: 'Actual', opciones: [{ clave: actual, label: `${actual} (fuera del catálogo)` }] },
-        ...grupos];
+    // catálogo (mismo criterio que el backend). El aviso va en el título del grupo y no en la
+    // opción: el desplegable cerrado muestra el texto de la opción elegida, y en la columna de la
+    // cabecera «Venta histórica sin agenda (fuera del catálogo)» quedaba siempre cortado.
+    return [{ titulo: 'Fuera del catálogo', opciones: [{ clave: actual, label: actual }] }, ...grupos];
 };
 
 export const etiquetaDeFuente = (grupos, clave) => grupos
