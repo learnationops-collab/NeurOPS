@@ -1,4 +1,4 @@
-import { ESTADO_CARTERA, SENA_ESTADO, diaDe, rotuloToques } from './tablasDef';
+import { ESTADO_CARTERA, SENA_ESTADO, diaDe, rotuloDetalleFuente, rotuloToques } from './tablasDef';
 
 /**
  * El mapa "dato del dashboard comercial → lista que lo compone".
@@ -119,6 +119,24 @@ export const DESTINOS_CLOSER = {
         aviso: 'La lista son las ventas nuevas del período. El monto cuenta solo las que arrancaron '
             + 'con una seña, y ese cruce (por mail o instagram) no existe como columna de la tabla.' },
 };
+
+/**
+ * Una fila de «Ingresos por fuente» (o un renglón de su detalle): los cobros de esa fuente en
+ * Ventas. `fuente` y `detalle` son los rótulos que manda el backend en la tarjeta, que son los
+ * mismos que trae cada fila de la tabla (las dos salen de `procedencia_por_venta`).
+ *
+ * Sin `aviso`: cierra con el número. La tarjeta suma cobros en bruto y la tabla lista cobros —no
+ * ventas— con su monto bruto, del mismo período y la misma persona; la tira de totales dice ese
+ * cash y esos cobros.
+ */
+export const destinoProcedencia = (fuente, detalle = null) => {
+    if (!detalle) return { tabla: 'ventas', filtro: { fuente }, de: `Ingresos por fuente: ${fuente}` };
+    const rotulo = rotuloDetalleFuente(fuente, detalle);
+    return { tabla: 'ventas', filtro: { fuente_detalle: rotulo }, de: `Ingresos por fuente: ${rotulo}` };
+};
+
+/** El total de «Ingresos por fuente» es el Cash collected: la lista entera del período. */
+export const DESTINO_PROCEDENCIAS_TOTAL = { tabla: 'ventas', filtro: {}, de: 'Ingresos por fuente' };
 
 /**
  * La matriz de cierres (`MatrizCierres`), con la misma forma que el bloque `cierres` del backend:
