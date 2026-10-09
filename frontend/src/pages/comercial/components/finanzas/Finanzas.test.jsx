@@ -112,6 +112,29 @@ describe('Finanzas · Nómina', () => {
         expect(screen.getAllByText('1 de 2 integrantes', { selector: '.kpi-sub' })).toHaveLength(2);
     });
 
+    it('a quien recibió plata de un cliente por transferencia se le descuenta de lo que se le paga, no del total', async () => {
+        // Pedido de Kerwin (09/10/2026): Jean Carlo recibió $150 de una seña. Lo que cuesta (el
+        // Total de su fila y el del mes) no cambia; lo que hay que pagarle, sí.
+        const jean = fila({ member_id: 3, member_name: 'Jean Carlos', commissions: 200, transferencias_recibidas: 150 });
+        api.getNomina.mockResolvedValue({ nomina: [KERWIN, ELIAS, jean], integrantes: [
+            ...INTEGRANTES, { id: 3, name: 'Jean Carlos', role: 'Closer', salary_type: 'variable' }] });
+        render(<Finanzas tab="nomina" periodo={SEPTIEMBRE} />);
+        await screen.findAllByText('Jean Carlos');
+
+        expect(celdas('Jean Carlos')[4]).toBe('$200.00');
+        expect(screen.getByText(/Transferencias recibidas de clientes/).textContent)
+            .toBe('Transferencias recibidas de clientes -$150.00 · a pagar $50.00');
+        await waitFor(() => expect(cifra('Total del mes')).toBe('$1,280.00'));
+        await waitFor(() => expect(cifra('Transferencias recibidas')).toBe('$150.00'));
+        await waitFor(() => expect(cifra('Por pagar')).toBe('$1,130.00'));
+
+        api.guardarNomina.mockResolvedValueOnce({ ...jean, is_paid: true });
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Marcar como pagado a Jean Carlos' })); });
+        // Se le pagó lo que quedaba: $50, no $200.
+        await waitFor(() => expect(cifra('Pagado')).toBe('$50.00'));
+        await waitFor(() => expect(cifra('Por pagar')).toBe('$1,080.00'));
+    });
+
     it('sin los campos nuevos (backend viejo) no hay marca y todo sigue andando', async () => {
         const vieja = { ...ELIAS };
         delete vieja.commissions_auto;
@@ -152,6 +175,24 @@ describe('Finanzas · un período que no es un mes', () => {
         expect(screen.queryByRole('button', { name: /Marcar como pagado/ })).toBeNull();
         expect(screen.queryByRole('button', { name: /Nuevo integrante/ })).toBeNull();
         expect(screen.getByText('Se edita por mes: elegí un mes en el período')).toBeTruthy();
+    });
+
+    it('en un período, lo recibido por transferencia se suma por integrante como su comisión', async () => {
+        api.getNominas.mockResolvedValue({
+            nominas: [
+                [{ ...ELIAS, transferencias_recibidas: 60 }],
+                [{ ...ELIAS, month: '2026-10', commissions: 62, transferencias_recibidas: 31 }],
+            ],
+            integrantes: INTEGRANTES,
+        });
+        render(<Finanzas tab="nomina" periodo={CORTADO} />);
+        await screen.findAllByText('Elias');
+
+        // 60 × 15/30 + 31 × 15/31 = 45; su total (70) sigue siendo lo que cuesta.
+        expect(celdas('Elias')[4]).toBe('$70.00');
+        expect(screen.getByText(/Transferencias recibidas de clientes/).textContent)
+            .toBe('Transferencias recibidas de clientes -$45.00 · a pagar $25.00');
+        await waitFor(() => expect(cifra('Por pagar')).toBe('$25.00'));
     });
 
     it('el resumen dice en la cuenta de quién está lo que entró por transferencia, sin cambiar el ingreso', async () => {
