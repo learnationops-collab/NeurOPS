@@ -348,3 +348,14 @@ def test_el_cambio_de_medio_en_lote_limpia_la_marca(client, db, lead, operador):
 
     assert r.status_code == 200, r.get_json()
     assert venta.transferido_a is None
+
+
+def test_la_correccion_del_closer_que_cambia_el_medio_limpia_la_marca(client, db, lead, equipo, auth_headers):
+    """`PUT /closer/sales/<id>` (la corrección del historial del mazo) sigue la misma regla."""
+    venta = _pago(lead, transferido_a='jean_carlo')
+
+    r = client.put(f'/api/closer/sales/{venta.id}', json={'metodo_pago': 'Stripe'},
+                   headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200, r.get_json()
+    assert (venta.metodo_pago, venta.transferido_a) == ('Stripe', None)

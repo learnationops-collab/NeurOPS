@@ -2362,6 +2362,10 @@ def update_closer_sale(sale_id):
 
     if not cambios:
         return jsonify({"message": "No hubo cambios que guardar", "sale": sale.to_dict()}), 200
+    if 'metodo_pago' in cambios:
+        # Una venta que deja de ser transferencia pierde a quién se le hizo (`transferencias_service`).
+        from app.services.transferencias_service import para_guardar
+        sale.transferido_a = para_guardar(sale.transferido_a, sale.metodo_pago)
 
     try:
         db.session.commit()
