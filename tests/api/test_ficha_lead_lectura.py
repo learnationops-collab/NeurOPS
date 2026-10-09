@@ -508,10 +508,23 @@ def test_cada_agenda_del_historial_trae_con_que_corregirla(client, db, lead, equ
     datos = abrir(client, auth_headers, equipo['director'], appointment_id=lead.id).get_json()
 
     agenda = datos['historial']['agendas'][0]
-    assert (agenda['closer_id'], agenda['fuente']) == (equipo['closer'].id, 'vsl')
+    assert (agenda['closer_id'], agenda['fuente'], agenda['fuente_label']) == (
+        equipo['closer'].id, 'vsl', 'VSL')
     grupos = {g['titulo']: [o['clave'] for o in g['opciones']] for g in datos['vocabulario']['fuentes']}
-    assert grupos == {'Embudos': ['workshop', 'workshop_landing', 'vsl', 'setting', 'Desconocido'],
-                      'Setters': ['Elias', 'Paula', 'Ivan']}
+    # Sin la grabación del workshop, el setting sin setter ni «Desconocido» (09/10/2026).
+    assert grupos == {'Embudos': ['workshop', 'vsl'], 'Setters': ['Elias', 'Paula', 'Ivan']}
+
+
+def test_una_agenda_con_una_fuente_que_ya_no_se_ofrece_se_sigue_leyendo_bien(client, db, lead,
+                                                                            equipo, auth_headers):
+    """La lista del vocabulario ya no trae la grabación: la etiqueta viaja en la fila."""
+    lead.origin = 'workshop_landing'
+    db.session.commit()
+
+    datos = abrir(client, auth_headers, equipo['director'], appointment_id=lead.id).get_json()
+
+    assert datos['historial']['agendas'][0]['fuente_label'] == 'Workshop · grabación'
+    assert datos['identidad']['fuente_label'] == 'Workshop · grabación'
 
 
 def test_cada_seguimiento_del_historial_dice_de_que_agenda_es(client, db, lead, equipo,

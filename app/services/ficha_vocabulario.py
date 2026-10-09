@@ -286,14 +286,23 @@ def programas_disponibles():
 # Como se lee cada fuente de embudo en el desplegable. El valor que se guarda es la clave tal cual
 # (`Appointment.origin`), que es lo que leen el Tablero de Agendas, el embudo del workshop y el
 # sync con n8n: la etiqueta es solo para que 'workshop_landing' no se lea como un nombre de
-# variable.
+# variable. «Workshop» a secas desde el 09/10/2026 (antes «Workshop en vivo»): es el único workshop
+# que la ficha ofrece.
 ETIQUETAS_FUENTE = {
-    'workshop': 'Workshop en vivo',
+    'workshop': 'Workshop',
     'workshop_landing': 'Workshop · grabación',
     'vsl': 'VSL',
     'setting': 'Setting · sin setter identificado',
     'Desconocido': 'Desconocido',
 }
+
+# Las del catalogo oficial que la ficha NO ofrece para elegir (pedido del usuario, 09/10/2026:
+# «quita las opciones de workshop grabación, setting sin setter asignado, desconocido»). Quien
+# corrige una agenda a mano sabe de donde vino: un setter con nombre o un embudo concreto, no "no
+# se sabe". Siguen en `FUENTES_CANONICAS` —las ponen el sync con n8n y el Tablero de Agendas, y el
+# embudo del workshop cuenta la grabacion— y una agenda que ya tiene una la conserva mientras no
+# se la cambie (`ficha_agendas_service.validar_fuente`).
+FUENTES_QUE_LA_FICHA_NO_OFRECE = frozenset({'workshop_landing', 'setting', 'Desconocido'})
 
 
 def etiqueta_de_fuente(fuente):
@@ -308,21 +317,30 @@ def etiqueta_de_fuente(fuente):
 
 
 def fuentes_disponibles():
-    """Las fuentes que se le pueden poner a una agenda desde el historial, en dos grupos.
+    """Las fuentes que se le pueden poner a una agenda desde la ficha (cabecera e historial), en
+    dos grupos.
 
-    Es el catalogo oficial (`fuente_service.FUENTES_CANONICAS`, 20/08/2026) que ya ofrecen el
-    selector del Tablero de Agendas y su edicion masiva, y no una lista propia: dos catalogos de
+    Salen del catalogo oficial (`fuente_service.FUENTES_CANONICAS`, 20/08/2026) que ofrecen el
+    selector del Tablero de Agendas y su edicion masiva, y no de una lista propia: dos catalogos de
     fuentes se desincronizan y el embudo del workshop, que clasifica por este texto, contaria
-    distinto segun desde donde se corrigio la agenda. Los setters van aparte porque una agenda con
-    su nombre de fuente se les atribuye (ver `ficha_agendas_service._setter_de_la_fuente`).
+    distinto segun desde donde se corrigio la agenda. La ficha ofrece un recorte de ese catalogo
+    (sin `FUENTES_QUE_LA_FICHA_NO_OFRECE`): un recorte no inventa claves, asi que no desincroniza.
+    Los setters van aparte porque una agenda con su nombre de fuente se les atribuye (ver
+    `ficha_agendas_service._setter_de_la_fuente`).
     """
     from app.services.fuente_service import FUENTES_CANONICAS, SETTERS
 
     embudos = [{'clave': f, 'label': ETIQUETAS_FUENTE.get(f, f)}
-               for f in FUENTES_CANONICAS if f not in SETTERS]
+               for f in FUENTES_CANONICAS
+               if f not in SETTERS and f not in FUENTES_QUE_LA_FICHA_NO_OFRECE]
     setters = [{'clave': s, 'label': s} for s in SETTERS]
     return [{'titulo': 'Embudos', 'tono': 'info', 'opciones': embudos},
             {'titulo': 'Setters', 'tono': 'success', 'opciones': setters}]
+
+
+def fuentes_elegibles():
+    """Las claves que `fuentes_disponibles` ofrece: lo unico que la ficha acepta como fuente NUEVA."""
+    return {o['clave'] for grupo in fuentes_disponibles() for o in grupo['opciones']}
 
 
 def tipos_seguimiento():
