@@ -5,7 +5,7 @@ vi.mock('../services/api', () => ({ default: { post: (...a) => post(...a) } }));
 
 import {
     otrasCuentas, otrosRoles, opcionesDeRol, cambiarDeRol, cambiarDeRolEnLaCuenta, rotuloDeRol, rolDeFinanzas,
-    opcionesDeFinanzas, RUTA_FINANZAS, TITULO_FINANZAS,
+    opcionesDeFinanzas, RUTA_FINANZAS, TITULO_FINANZAS, hayQueElegir,
 } from './cuentasVinculadas';
 
 const marlon = {
@@ -113,6 +113,15 @@ describe('cuentas vinculadas', () => {
             expect(rolDeFinanzas(['operator', 'admin'], false)).toBeNull();
             expect(rolDeFinanzas(['closer', 'setter'], true)).toBeNull();
             expect(rolDeFinanzas(undefined, true)).toBeNull();
+        });
+
+        it('hay que elegir con varios roles, con cuentas vinculadas o con un rol que ve Finances', () => {
+            expect(hayQueElegir({ id: 1, role: 'director_comercial', roles: ['director_comercial', 'closer'] })).toBe(true);
+            expect(hayQueElegir(marlon)).toBe(true);
+            expect(hayQueElegir({ id: 1, role: 'director_comercial', roles: ['director_comercial'], can_view_finance: true })).toBe(true);
+            expect(hayQueElegir({ id: 1, role: 'director_comercial', roles: ['director_comercial'], can_view_finance: false })).toBe(false);
+            expect(hayQueElegir({ id: 1, role: 'closer', can_view_finance: true })).toBe(false);
+            expect(hayQueElegir(null)).toBe(false);
         });
 
         it('la tarjeta se llama «Finances» y va a /finanzas', () => {

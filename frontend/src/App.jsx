@@ -7,6 +7,7 @@ import FinancialAnalysisPage from './pages/admin/reports/FinancialAnalysisPage';
 import PublicCallsBoardPage from './pages/public/PublicCallsBoardPage';
 import SalesAttributionPage from './pages/admin/reports/SalesAttributionPage';
 import LoginPage from './pages/auth/LoginPage';
+import ElegirVistaPage from './pages/auth/ElegirVistaPage';
 import SessionEntry from './pages/auth/SessionEntry';
 import AnalysisPage from './pages/admin/reports/AnalysisPage';
 import ConstructionPage from './pages/common/ConstructionPage';
@@ -100,6 +101,9 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/session-entry" element={<SessionEntry />} />
+            {/* El hub de vistas (08/10/2026): la elección del login con la sesión ya iniciada, desde
+                «Cambiar de vista» en el menú de sesión. Sin MainLayout, como el login. */}
+            <Route path="/vistas" element={<ProtectedRoute><ElegirVistaPage /></ProtectedRoute>} />
             <Route path="/book/:setter_id/:event_slug" element={<BookingPage />} />
             <Route path="/book/:event_slug" element={<BookingPage />} />
             <Route path="/politica-de-privacidad" element={<PrivacyPolicyPage />} />

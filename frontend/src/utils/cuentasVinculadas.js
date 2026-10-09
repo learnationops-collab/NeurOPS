@@ -45,6 +45,19 @@ export const rolDeFinanzas = (roles, puedeVerFinanzas) => (
     puedeVerFinanzas ? ROLES_FINANZAS.find((r) => (roles || []).includes(r)) || null : null
 );
 
+/** Los roles de la cuenta, con el principal primero (si no vienen, el activo). */
+export const rolesDeLaCuenta = (user) => (user?.roles?.length ? user.roles : [user?.role]).filter(Boolean);
+
+/**
+ * True si la persona tiene más de una tarjeta para elegir al entrar: varios roles, cuentas vinculadas,
+ * o un rol que además ve Finances. Lo mismo decide si tiene hub de vistas (/vistas).
+ */
+export const hayQueElegir = (user) => !!user && (rolesDeLaCuenta(user).length > 1 || otrasCuentas(user).length > 0
+    || !!rolDeFinanzas(rolesDeLaCuenta(user), user.can_view_finance));
+
+// El hub de vistas (08/10/2026): la elección del login para quien ya tiene sesión (ver ElegirVistaPage).
+export const RUTA_VISTAS = '/vistas';
+
 /** Los OTROS roles de la misma cuenta (vacío si tiene uno solo o está simulando a alguien). */
 export const otrosRoles = (user) => {
     if (!user || user.is_impersonating) return [];

@@ -5,61 +5,13 @@ import { roleLandingPath } from '../../utils/roleLanding';
 import { Lock, User, Eye, EyeOff } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import DebugConsole from '../../components/modals/DebugConsole';
-import {
-  cambiarDeRol, cambiarDeRolEnLaCuenta, ICONO_DE_ROL, ICONO_FINANZAS, otrasCuentas, RUTA_FINANZAS, rolDeFinanzas,
-  rotuloDeRol, TITULO_FINANZAS,
-} from '../../utils/cuentasVinculadas';
-import Eleccion from './Eleccion';
-
-const rolesDe = (user) => (user.roles?.length ? user.roles : [user.role]);
+import { hayQueElegir } from '../../utils/cuentasVinculadas';
+import ElegirRol from './ElegirRol';
 
 // Quien tiene más de un rol (o cuentas vinculadas) elige con cuál entra, con la pantalla de elección
-// de develop. También quien ve finanzas aunque tenga un solo rol (08/10/2026): Finances es una vista
-// aparte de la de su rol, y sin la elección no tenía cómo llegar al entrar. Con uno solo y sin
-// finanzas entra directo a su pantalla, como siempre.
-const hayQueElegir = (user) => rolesDe(user).length > 1 || otrasCuentas(user).length > 0
-  || !!rolDeFinanzas(rolesDe(user), user.can_view_finance);
-
-// onElegido(user, destino): sigue con el rol con el que entró; `destino` solo lo pasa «Finances».
-function ElegirRol({ user, onElegido }) {
-  const [eligiendo, setEligiendo] = useState(null);
-  const [error, setError] = useState(null);
-  const roles = rolesDe(user);
-  // «Finances» no es un rol: entra con el que la habilita (ver `rolDeFinanzas`) y va a /finanzas.
-  const rolFinanzas = rolDeFinanzas(roles, user.can_view_finance);
-  const opciones = [
-    ...roles.map((rol) => ({ clave: `rol-${rol}`, titulo: rotuloDeRol(rol), Icono: ICONO_DE_ROL[rol], entrar: () => (rol === user.role ? onElegido(user) : cambiarDeRolEnLaCuenta(rol)) })),
-    ...otrasCuentas(user).map((c) => ({ clave: `cuenta-${c.id}`, titulo: rotuloDeRol(c.role), Icono: ICONO_DE_ROL[c.role], detalle: c.username, entrar: () => cambiarDeRol(c.id) })),
-    ...(rolFinanzas ? [{
-      clave: 'finanzas', titulo: TITULO_FINANZAS, Icono: ICONO_FINANZAS,
-      entrar: () => (rolFinanzas === user.role ? onElegido(user, RUTA_FINANZAS) : cambiarDeRolEnLaCuenta(rolFinanzas, RUTA_FINANZAS)),
-    }] : []),
-  ];
-
-  const elegir = async (o) => {
-    setEligiendo(o.clave);
-    setError(null);
-    try {
-      await o.entrar();
-    } catch (err) {
-      setError(err.response?.data?.message || 'No se pudo entrar con ese rol');
-      setEligiendo(null);
-    }
-  };
-
-  return (
-    <Eleccion
-      nombre={user.username}
-      pregunta="Seleccioná tu rol. Después podés cambiarlo desde tu menú."
-      eligiendo={eligiendo}
-      error={error}
-      opciones={opciones.map((o) => ({
-        clave: o.clave, titulo: o.titulo, detalle: o.detalle, Icono: o.Icono || User,
-        onElegir: () => elegir(o),
-      }))}
-    />
-  );
-}
+// de develop (ElegirRol). También quien ve finanzas aunque tenga un solo rol (08/10/2026): Finances es
+// una vista aparte de la de su rol, y sin la elección no tenía cómo llegar al entrar. Con uno solo y
+// sin finanzas entra directo a su pantalla, como siempre (ver `hayQueElegir`).
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
