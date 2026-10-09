@@ -26,7 +26,9 @@ export const getNomina = async (mes) => {
     const integrantes = await api.get('/public/finance/team-members').then(datos);
     return { nomina, integrantes };
 };
-export const guardarNomina = (fila) => api.post('/public/finance/payroll', fila).then(datos);
+// Parcial (08/10/2026): {member_id, month, <solo el campo que cambió>}. Mandar `commissions` la
+// deja manual; `{commissions_manual: false}` la vuelve al cálculo. Responde la fila como la del GET.
+export const guardarNomina = (cambio) => api.post('/public/finance/payroll', cambio).then(datos);
 export const crearIntegrante = (integrante) => api.post('/public/finance/team-members', integrante).then(datos);
 export const editarIntegrante = (id, integrante) => api.put(`/public/finance/team-members/${id}`, integrante).then(datos);
 export const eliminarIntegrante = (id) => api.delete(`/public/finance/team-members/${id}`).then(datos);

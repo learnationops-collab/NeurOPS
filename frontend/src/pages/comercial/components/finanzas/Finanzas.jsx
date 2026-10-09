@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Check, Pencil, Plus, X } from 'lucide-react';
+import { Check, Pencil, Plus, RotateCcw, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import InlineConfirm from '../../../../components/ui/InlineConfirm';
 import { EsqueletoFilas, EsqueletoTablero, PanelCab, Tip } from '../Shared';
@@ -323,7 +323,26 @@ const ModalIntegrante = ({ integrante, onGuardar, onCerrar }) => {
     );
 };
 
-const COLS_NOMINA = { '--cols': 'minmax(150px,1.3fr) 130px 130px 130px 120px 120px 64px 82px', '--min': '1000px' };
+// La comisión es más ancha que los otros montos: a su lado va la marca «manual» cuando la hay.
+const COLS_NOMINA = { '--cols': 'minmax(150px,1.3fr) 130px 200px 130px 120px 120px 64px 82px', '--min': '1070px' };
+
+/**
+ * La marca de una comisión cargada a mano (08/10/2026): la calculada ya no la pisa hasta que se
+ * vuelve a ella con un clic. En el `title` va la calculada, para ver qué se recupera. Sin el campo
+ * (un backend que todavía no lo manda) no hay marca.
+ */
+const MarcaManual = ({ fila, onVolver }) => {
+    const calculada = fila.commissions_auto == null ? null : dinero(fila.commissions_auto);
+    return (
+        <button type="button" className="fz-manual" onClick={onVolver}
+            title={calculada ? `Cargada a mano. La calculada es ${calculada}: tocá para volver a ella.`
+                : 'Cargada a mano: tocá para volver a la calculada.'}
+            aria-label={`Volver a la comisión calculada de ${fila.member_name}${calculada ? ` (${calculada})` : ''}`}>
+            <small>manual</small>
+            <RotateCcw aria-hidden="true" />
+        </button>
+    );
+};
 
 const FilaNomina = ({ fila, integrante, onCambiar, onEditar, onEliminar }) => {
     // Un medio que no es una pasarela ('Stripe' de los integrantes viejos) se paga por Mercury:
@@ -338,8 +357,13 @@ const FilaNomina = ({ fila, integrante, onCambiar, onEditar, onEliminar }) => {
             </span>
             <CampoMonto valor={fila.base_salary} etiqueta={`Sueldo base de ${fila.member_name}`}
                 onGuardar={(n) => onCambiar(fila, 'base_salary', n)} />
-            <CampoMonto valor={fila.commissions} etiqueta={`Comisión de ${fila.member_name}`}
-                onGuardar={(n) => onCambiar(fila, 'commissions', n)} />
+            <span className="fz-comision">
+                {fila.commissions_manual && (
+                    <MarcaManual fila={fila} onVolver={() => onCambiar(fila, 'commissions_manual', false)} />
+                )}
+                <CampoMonto valor={fila.commissions} etiqueta={`Comisión de ${fila.member_name}`}
+                    onGuardar={(n) => onCambiar(fila, 'commissions', n)} />
+            </span>
             <CampoMonto valor={fila.bonuses} etiqueta={`Bonos de ${fila.member_name}`}
                 onGuardar={(n) => onCambiar(fila, 'bonuses', n)} />
             <span className="fz-n fz-der">{dinero(total)}</span>
@@ -376,13 +400,12 @@ const Nomina = ({ mes }) => {
     const { nomina, integrantes } = datos;
     const integranteDe = (fila) => integrantes.find(i => i.id === fila.member_id);
 
+    // Solo el campo que cambió (08/10/2026). Antes iba la fila entera: tildar «pagado» o tocar el
+    // sueldo guardaba también la comisión de ese momento, y cambiar después los % en Payroll ya no
+    // se reflejaba. Ahora la comisión queda en el cálculo hasta que se la edita (y se marca manual).
     const cambiar = async (fila, campo, valor) => {
-        const pedido = {
-            member_id: fila.member_id, month: mes, base_salary: fila.base_salary, commissions: fila.commissions,
-            bonuses: fila.bonuses, payment_method: fila.payment_method || '', is_paid: fila.is_paid, [campo]: valor,
-        };
         try {
-            const guardada = await apiFz.guardarNomina(pedido);
+            const guardada = await apiFz.guardarNomina({ member_id: fila.member_id, month: mes, [campo]: valor });
             setDatos(d => ({ ...d, nomina: d.nomina.map(p => (p.member_id === fila.member_id ? guardada : p)) }));
             toast.success('Nómina guardada');
         } catch {
@@ -421,7 +444,7 @@ const Nomina = ({ mes }) => {
     return (
         <section className="panel">
             <PanelCab titulo="Nómina del mes"
-                tip="Sueldo fijo, comisión y bonos de cada integrante. La comisión se calcula sola desde las ventas (setters 8%, closers 10%, Marlon 5% de los closers sin renovaciones, Fulfillment por programa desde septiembre de 2026) hasta que se guarda un cambio en la fila: desde ahí vale lo guardado.">
+                tip="Sueldo fijo, comisión y bonos de cada integrante. La comisión se calcula sola desde las ventas con los porcentajes de Payroll, y sigue al cálculo aunque se cambie el sueldo, los bonos, el medio o el pagado. Si la escribís a mano queda marcada «manual» y vale esa, hasta que vuelvas a la calculada desde la marca.">
                 <button type="button" className="btn btn--linea btn--sm" onClick={() => setModal({ integrante: null })}>
                     <Plus /> Nuevo integrante
                 </button>

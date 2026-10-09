@@ -89,6 +89,20 @@
 
 .dc-shell .fz-acciones{display:flex;align-items:center;gap:var(--s2);justify-content:flex-end}
 
+/* La comisión de la nómina: el campo y, si se cargó a mano, la marca «manual» que vuelve al
+   cálculo. La marca entra con un pop chico; el campo no se corre (queda pegado a la derecha). */
+.dc-shell .fz-comision{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-width:0}
+.dc-shell .fz-comision .fz-monto{flex:0 1 150px;min-width:0}
+.dc-shell .fz-manual{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 7px;flex-shrink:0;
+  border-radius:var(--radius-pill);border:1px solid color-mix(in srgb,var(--warning) 40%,transparent);
+  background:color-mix(in srgb,var(--warning) 13%,transparent);color:var(--warning);cursor:pointer;
+  animation:dcTagIn .22s var(--spring);transition:background-color .16s ease,transform .16s var(--spring)}
+.dc-shell .fz-manual small{font-size:9.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;line-height:1}
+.dc-shell .fz-manual svg{width:11px;height:11px}
+.dc-shell .fz-manual:hover{background:color-mix(in srgb,var(--warning) 24%,transparent)}
+.dc-shell .fz-manual:active{transform:scale(.92)}
+@media (prefers-reduced-motion:reduce){.dc-shell .fz-manual{animation:none}}
+
 /* Balance del período y anuncios: cajas hundidas con su cifra. */
 .dc-shell .fz-dato{display:grid;gap:var(--s2);align-content:start}
 .dc-shell .fz-dato b{font-size:clamp(20px,2vw,24px);line-height:1.1;font-weight:900;letter-spacing:-.025em;
