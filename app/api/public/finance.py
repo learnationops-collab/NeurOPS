@@ -105,6 +105,8 @@ _CLAVES_POR_NOMBRE = (
     ('paula', 'paula'),
     ('jeancarlo', 'jeancarlo'),
     ('facundo', 'facundo'),
+    ('nerina', 'nerina'),
+    ('gabriel', 'gabriel'),
     ('marlon', 'marlon'),
 )
 
@@ -152,6 +154,9 @@ def _seed_variable_members():
         {'name': 'Paula',       'role': 'Setter',              'salary_type': 'variable', 'payment_method': 'Mercury'},
         {'name': 'Jean Carlos', 'role': 'Closer',              'salary_type': 'variable', 'payment_method': 'Mercury'},
         {'name': 'Facundo',     'role': 'Closer',              'salary_type': 'variable', 'payment_method': 'Mercury'},
+        # Closers con ventas en septiembre de 2026 que no estaban (08/10/2026); Gabriel es Hernandez.
+        {'name': 'Nerina',      'role': 'Closer',              'salary_type': 'variable', 'payment_method': 'Mercury'},
+        {'name': 'Gabriel',     'role': 'Closer',              'salary_type': 'variable', 'payment_method': 'Mercury'},
         {'name': 'Marlon',      'role': 'Director de Ventas',  'salary_type': 'variable', 'payment_method': 'Mercury'},
     ]
     changed = False

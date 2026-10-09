@@ -40,7 +40,7 @@ def test_un_juego_vale_desde_su_mes_y_no_cambia_los_anteriores(client, db, finan
     assert get_commissions_calculated('2026-09')['elias'] == 80.0    # 8%, el de fábrica
     assert get_commissions_calculated('2026-10')['elias'] == 120.0   # 12% desde octubre
     # Lo que no se tocó sigue como estaba.
-    assert servicio.vigentes('2026-10')[0]['closers'] == {'jeancarlo': 10, 'facundo': 10}
+    assert servicio.vigentes('2026-10')[0]['closers'] == {'jeancarlo': 10, 'facundo': 10, 'nerina': 10, 'gabriel': 10}
 
     # Payroll en un rango que cruza el cambio: cada venta con el % de su mes.
     nomina = client.get('/api/public/financial-sales/payroll?start_date=2026-09-01&end_date=2026-10-31',
@@ -48,6 +48,17 @@ def test_un_juego_vale_desde_su_mes_y_no_cambia_los_anteriores(client, db, finan
     assert sorted(v['porcentaje'] for v in nomina['elias']['sales']) == [8, 12]
     assert nomina['elias']['comision_total'] == 200.0
     assert nomina['elias']['porcentaje_comision'] is None  # dos % distintos en el rango
+
+
+def test_un_juego_guardado_antes_de_una_persona_nueva_la_completa_con_los_de_fabrica(db):
+    """Nerina y Gabriel entraron el 08/10/2026: un juego guardado antes no los trae."""
+    from app.models.financial import ComisionTasas
+
+    db.session.add(ComisionTasas(vigente_desde='2026-09', tasas={'closers': {'jeancarlo': 12, 'facundo': 10}}))
+    db.session.commit()
+
+    closers = servicio.vigentes('2026-09')[0]['closers']
+    assert (closers['jeancarlo'], closers['nerina'], closers['gabriel']) == (12, 10, 10)
 
 
 def test_fulfillment_toma_su_tabla_del_mes(db):

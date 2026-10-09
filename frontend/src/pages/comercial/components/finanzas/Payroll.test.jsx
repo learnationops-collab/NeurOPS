@@ -20,7 +20,8 @@ const venta = (id, excluida = false) => ({ id, is_excluded_from_payroll: excluid
 
 const NOMINA = {
     elias: persona(80, [venta(1), venta(2, true)]), paula: persona(0),
-    jeancarlo: persona(100, [venta(1)]), facundo: persona(0), marlon: persona(20, [venta(1)]),
+    jeancarlo: persona(100, [venta(1)]), facundo: persona(0), nerina: persona(0), gabriel: persona(0),
+    marlon: persona(20, [venta(1)]),
     andy: { ...persona(30, [venta(3)]), porcentaje_comision: null },
     dari: persona(0), santi: persona(0), belu: persona(0), pedro: persona(0),
     totales: { cash_neto: 2300, cash_bruto: 2400, ventas: 3 },

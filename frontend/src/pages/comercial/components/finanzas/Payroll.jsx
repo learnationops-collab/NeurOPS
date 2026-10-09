@@ -74,13 +74,15 @@ const SETTER = { rol: 'Setter', Icono: Compass, tono: 'info', ventas: 'ventas at
 const CLOSER = { rol: 'Closer', Icono: UserCheck, tono: 'brand-secondary', ventas: 'ventas cerradas' };
 const FULFILLMENT = { rol: 'Fulfillment', Icono: Users, tono: 'success', ventas: 'ingresos' };
 
-// Filas completas, nunca una tarjeta suelta: los dos setters, los dos closers con el director, y
-// los cinco de Fulfillment. `id` es la clave del filtro por grupos de la barra (`FiltroGrupos`).
+// Filas completas, nunca una tarjeta suelta: los dos setters, los cuatro closers con el director
+// (Nerina y Gabriel desde el 08/10/2026), y los cinco de Fulfillment. `id` es la clave del filtro
+// por grupos de la barra (`FiltroGrupos`).
 export const GRUPOS = [
     { id: 'setting', titulo: 'Setting', columnas: 'fz-grid--2', personas: [
         { ...SETTER, id: 'elias', nombre: 'Elias' }, { ...SETTER, id: 'paula', nombre: 'Paula' }] },
-    { id: 'closing', titulo: 'Closing', columnas: 'fz-grid--3', personas: [
-        { ...CLOSER, id: 'jeancarlo', nombre: 'Jean Carlo' }, { ...CLOSER, id: 'facundo', nombre: 'Facundo' },
+    { id: 'closing', titulo: 'Closing', columnas: 'fz-grid--5', personas: [
+        ...[['jeancarlo', 'Jean Carlo'], ['facundo', 'Facundo'], ['nerina', 'Nerina'], ['gabriel', 'Gabriel']]
+            .map(([id, nombre]) => ({ ...CLOSER, id, nombre })),
         { id: 'marlon', nombre: 'Marlon', rol: 'Director de ventas', Icono: UserCheck, tono: 'warning',
             ventas: 'ventas de closers sin renovaciones' }] },
     { id: 'fulfillment', titulo: 'Fulfillment', columnas: 'fz-grid--5', personas: [

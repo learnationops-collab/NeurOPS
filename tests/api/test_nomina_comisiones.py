@@ -38,6 +38,8 @@ def test_finanzas_calcula_la_comision_de_las_cinco_personas(ventas_del_mes):
         'paula': 64.0,       # 8% de 500 + 300
         'jeancarlo': 100.0,  # 10% de 1000: la de 200 se sacó de la nómina
         'facundo': 80.0,     # 10% de 500 + 300
+        'nerina': 0.0,
+        'gabriel': 0.0,
         'marlon': 75.0,      # 5% de 1000 + 500: la renovación de Facundo no cuenta
     }
 
@@ -58,10 +60,11 @@ def test_finanzas_y_payroll_dicen_lo_mismo(client, make_user, auth_headers, vent
 
 @pytest.mark.parametrize('nombre,clave', [
     ('Elias', 'elias'), ('Paula', 'paula'), ('Jean Carlos', 'jeancarlo'), ('Facundo', 'facundo'),
-    ('Marlon', 'marlon'),
+    ('Nerina', 'nerina'), ('Gabriel', 'gabriel'), ('Marlon', 'marlon'),
 ])
 def test_cada_integrante_variable_toma_su_comision(nombre, clave):
-    comisiones = {'elias': 1.0, 'paula': 2.0, 'jeancarlo': 3.0, 'facundo': 4.0, 'marlon': 5.0}
+    comisiones = {'elias': 1.0, 'paula': 2.0, 'jeancarlo': 3.0, 'facundo': 4.0, 'nerina': 6.0,
+                  'gabriel': 7.0, 'marlon': 5.0}
     miembro = TeamMember(name=nombre, role='x', salary_type='variable')
 
     assert comision_de_miembro(miembro, comisiones) == comisiones[clave]
@@ -93,5 +96,42 @@ def test_la_nomina_muestra_a_paula_y_facundo(client, make_user, auth_headers, ve
         'paula': (8.0, 64.0, 2, 2),
         'jeancarlo': (10.0, 100.0, 1, 2),  # la venta excluida se lista pero no suma
         'facundo': (10.0, 80.0, 2, 2),
+        'nerina': (10.0, 0.0, 0, 0),
+        'gabriel': (10.0, 0.0, 0, 0),
         'marlon': (5.0, 75.0, 2, 3),
     }
+
+
+def test_nerina_y_gabriel_cobran_como_closers(client, db, make_user, auth_headers):
+    """Cerraron ventas en septiembre de 2026 y no aparecían (08/10/2026). Nerina ya no está activa
+    y se la reconoce igual; «Gabriel» es Gabriel Hernandez, no el Gabriel histórico de abril."""
+    make_user(role='closer', username='Nerina', email='ainerinanietoc@gmail.com', is_active=False)
+    make_user(role='closer', username='Gabriel Hernandez', email='gehernandezgp@gmail.com')
+    make_user(role='closer', username='Gabriel Cardozo', email='gabrielcardozo@gmail.com', is_active=False)
+    for monto, correo, tipo in ((450.0, 'ainerinanietoc@gmail.com', 'RR - Completo'),
+                                (1000.0, 'gehernandezgp@gmail.com', 'AL - Parcial'),
+                                (200.0, 'gehernandezgp@gmail.com', 'AL - Renovación'),
+                                (700.0, 'gabriel@thelearnation.com', 'AL - Completo')):
+        db.session.add(FinancialSale(monto=monto, metodo_pago='zelle', tipo_pago=tipo, estado='Completada',
+                                     email_vendedor=correo, date=datetime(2026, 9, 12)))
+    db.session.commit()
+
+    datos = client.get('/api/public/financial-sales/payroll?start_date=2026-09-01&end_date=2026-09-30',
+                       headers=auth_headers(make_user(role='admin', can_view_finance=True))).get_json()
+
+    assert (datos['nerina']['comision_total'], datos['nerina']['total_ventas']) == (45.0, 1)
+    assert (datos['gabriel']['comision_total'], datos['gabriel']['total_ventas']) == (120.0, 2)
+    # Marlon como director también cobra sobre ellos, sin la renovación: 5% de 450 + 1000.
+    assert datos['marlon']['comision_total'] == 72.5
+
+
+def test_la_nomina_de_finanzas_suma_a_nerina_y_gabriel(client, db, make_user, auth_headers):
+    admin = make_user(role='admin', can_view_finance=True)
+
+    nomina = client.get('/api/public/finance/payroll?month=2026-09', headers=auth_headers(admin)).get_json()
+
+    integrantes = {m.name: m for m in TeamMember.query.all()}
+    for nombre in ('Nerina', 'Gabriel'):
+        assert (integrantes[nombre].role, integrantes[nombre].salary_type, integrantes[nombre].payment_method) == (
+            'Closer', 'variable', 'Mercury')
+    assert {'Nerina', 'Gabriel'} <= {f['member_name'] for f in nomina}

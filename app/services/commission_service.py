@@ -2,7 +2,7 @@
 10/sep/2026): % fijo sobre el cash collected NETO (ya descontadas las fees de Stripe/Hotmart)
 que cada quien generó este mes — 10% para closers, 8% para setters.
 
-Quien está en la nómina con un % propio (Elias, Paula, Jean Carlo, Facundo) ve el suyo, el del mes
+Quien está en la nómina con un % propio (`SETTERS_CON_COMISION`, `CLOSERS_CON_COMISION`) ve el suyo, el del mes
 según `comision_tasas_service` (editable desde Payroll desde el 08/10/2026): así la tarjeta y la
 nómina dicen lo mismo. El resto del equipo, el caso general de 10% / 8%."""
 from datetime import datetime, timedelta
@@ -16,8 +16,14 @@ DIRECTOR_RATE = 0.05
 # que originó la venta, closer = `resolver_nombre_closer`, normalizado) -> clave con la que viajan
 # en las respuestas. Marlon, como Director de Ventas, se lleva DIRECTOR_RATE de lo que venden estos
 # closers, sin renovaciones.
+#
+# Nerina y Gabriel cerraron ventas en septiembre de 2026 y no estaban (08/10/2026). Nerina ya no
+# está activa, pero `resolver_nombre_closer` resuelve contra todos los usuarios, activos o no.
+# «Gabriel» es Gabriel Hernandez: el 'Gabriel' a secas es otro closer de abril y mayo de 2026
+# (gabriel@thelearnation.com, del diccionario histórico) y Gabriel Cardozo no vendió.
 SETTERS_CON_COMISION = {'elias': 'elias', 'paula': 'paula'}
-CLOSERS_CON_COMISION = {'jean carlo': 'jeancarlo', 'facundo': 'facundo'}
+CLOSERS_CON_COMISION = {'jean carlo': 'jeancarlo', 'facundo': 'facundo', 'nerina': 'nerina',
+                        'gabriel hernandez': 'gabriel'}
 DIRECTOR_DE_VENTAS = 'marlon'
 
 
