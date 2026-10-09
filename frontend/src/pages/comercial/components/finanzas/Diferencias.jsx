@@ -200,8 +200,8 @@ const ElegirPasarela = ({ archivos, onElegir, onDescartar }) => archivos.map(arc
 
 const AYUDAS = {
     reportado: 'Las ventas completadas del período reportadas por Stripe o Hotmart, por su monto bruto: lo mismo que suma el Resumen antes de descontar la comisión. Solo de las pasarelas con CSV en el período.',
-    ingresado: 'El bruto de los cobros de los CSV con fecha en el período: lo que pagó el cliente. El neto es lo que llegó, y la comisión, la real de la pasarela (Finanzas la estima en 4,5 % para Stripe y 8,9 % para Hotmart).',
-    diferencia: 'Ingresado menos reportado. Positiva: entró más de lo que se reportó; negativa: se reportó algo que no entró. Se explica por las filas pendientes, las revisadas y las parejas con la venta o el cobro en otro período.',
+    ingresado: 'Lo que llegó de los cobros de los CSV con fecha en el período: el neto, ya sin la comisión real de la pasarela (Finanzas la estima en 4,5 % para Stripe y 8,9 % para Hotmart). Debajo, el bruto (lo que pagó el cliente) y esa comisión.',
+    diferencia: 'Ingresado bruto menos reportado (los dos antes de la comisión). Positiva: entró más de lo que se reportó; negativa: se reportó algo que no entró. Se explica por las filas pendientes, las revisadas y las parejas con la venta o el cobro en otro período.',
     pendientes: 'Las filas que no coinciden y nadie marcó como revisadas.',
 };
 
@@ -227,9 +227,11 @@ export const KpisDiferencias = ({ kpis }) => {
             <Cifron rotulo="Reportado" valor={dinero(kpis.reportado)} humo={HUMOS.marca} ayuda={AYUDAS.reportado}
                 sub={falta ? `${ventas} · solo ${PASARELAS[kpis.pasarelas[0]]}, falta el CSV de ${PASARELAS[falta]}`
                     : `${ventas} en el sistema`} />
-            <Cifron rotulo="Ingresado" valor={sinCsv ? '—' : dinero(kpis.ingresado)} tono={sinCsv ? undefined : 'success'}
+            {/* El neto en grande y el bruto y la comisión debajo (pedido del usuario, 09/10/2026),
+                como el Cash de Payroll. La diferencia sigue siendo la del bruto. */}
+            <Cifron rotulo="Ingresado" valor={sinCsv ? '—' : dinero(kpis.neto)} tono={sinCsv ? undefined : 'success'}
                 humo={HUMOS.ingreso} ayuda={`${AYUDAS.ingresado} Finanzas estima ${dinero(kpis.comision_estimada)} de comisión para lo reportado.`}
-                sub={sinCsv ? 'Falta el CSV del período' : `neto ${dinero(kpis.neto)} · comisión ${dinero(kpis.comision)}`} />
+                sub={sinCsv ? 'Falta el CSV del período' : `bruto ${dinero(kpis.ingresado)} · comisión ${dinero(kpis.comision)}`} />
             <Cifron rotulo="Diferencia" valor={sinCsv ? '—' : conSigno(kpis.diferencia)}
                 tono={sinCsv ? undefined : tonoDe(kpis.diferencia)} humo={HUMOS.info} ayuda={AYUDAS.diferencia}
                 sub={sinCsv ? 'Sin CSV no hay con qué comparar' : partesDeLaDiferencia(kpis.diferencia_por)} />
