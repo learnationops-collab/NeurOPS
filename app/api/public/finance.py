@@ -175,46 +175,54 @@ def _seed_variable_members():
         db.session.commit()
 
 
+def _item_de_nomina(member, month, fila, auto):
+    """Un integrante en la nómina del mes, con los valores que VALEN: la fila guardada si la hay
+    (o lo del integrante si no) y la comisión escrita a mano o, sin ella, la calculada en vivo
+    (`auto`). `commissions_auto` va siempre, para mostrar el cálculo al lado de lo escrito."""
+    if fila is None:
+        return {
+            "id": None,
+            "member_id": member.id,
+            "member_name": member.name,
+            "month": month,
+            "base_salary": member.base_salary or 0.0,
+            "commissions": auto,
+            "commissions_auto": auto,
+            "commissions_manual": False,
+            "bonuses": 0.0,
+            "payment_method": member.payment_method,
+            "is_paid": False,
+            "paid_at": None,
+            "created_at": None
+        }
+    manual = bool(fila.commissions_manual)
+    return {**fila.to_dict(), "commissions": fila.commissions if manual else auto,
+            "commissions_auto": auto, "commissions_manual": manual}
+
+
 def nomina_del_mes(month):
-    """La nómina de un mes 'YYYY-MM', un item por integrante con la forma de GET
-    /public/finance/payroll: lo guardado si la fila del mes se guardó, y si no el sueldo base del
-    integrante con la comisión calculada de las ventas. Los inactivos sin nada guardado en el mes
-    quedan afuera.
+    """La nómina del mes 'YYYY-MM': un dict por integrante, los activos y los que ya tienen la fila
+    del mes guardada, con la forma de un item de GET /public/finance/payroll y los valores que valen
+    (comisión manual o calculada en vivo, ver `_item_de_nomina`). Es lo que suman «por pagar» de
+    Medios de pago y los sueldos del resumen: los tres dicen lo mismo (08/10/2026)."""
+    # Quien cobra comisión variable tiene que estar, aunque nadie haya abierto la nómina todavía.
+    _seed_variable_members()
+    guardadas = {p.member_id: p for p in MonthlyPayroll.query.filter_by(month=month).all()}
+    comisiones = get_commissions_calculated(month)
+    return [_item_de_nomina(m, month, guardadas.get(m.id), comision_de_miembro(m, comisiones))
+            for m in TeamMember.query.order_by(TeamMember.id).all()
+            if m.is_active or m.id in guardadas]
 
-    Desde el 08/10/2026 es la única cuenta de la nómina: la usan la pestaña Nómina, el «por pagar»
-    de cada pasarela y los sueldos del resumen (en un rango, mes por mes). Antes cada uno repetía el
-    mismo recorrido."""
-    saved_payroll_list = MonthlyPayroll.query.filter_by(month=month).all()
-    saved_payroll_map = {p.member_id: p for p in saved_payroll_list}
 
-    members = TeamMember.query.all()
-    dynamic_commissions = get_commissions_calculated(month)
+class _MontoInvalido(ValueError):
+    pass
 
-    payroll_data = []
-    for m in members:
-        if not m.is_active and m.id not in saved_payroll_map:
-            continue
 
-        if m.id in saved_payroll_map:
-            p = saved_payroll_map[m.id]
-            payroll_data.append(p.to_dict())
-        else:
-            calculated_comm = comision_de_miembro(m, dynamic_commissions)
-
-            payroll_data.append({
-                "id": None,
-                "member_id": m.id,
-                "member_name": m.name,
-                "month": month,
-                "base_salary": m.base_salary,
-                "commissions": calculated_comm,
-                "bonuses": 0.0,
-                "payment_method": m.payment_method,
-                "is_paid": False,
-                "paid_at": None,
-                "created_at": None
-            })
-    return payroll_data
+def _monto(valor, campo):
+    try:
+        return float(valor or 0.0)
+    except (TypeError, ValueError):
+        raise _MontoInvalido(f"«{campo}» tiene que ser un número")
 
 
 def total_de_item(item):
@@ -226,51 +234,58 @@ def total_de_item(item):
 @login_required
 @finance_admin_required
 def manage_payroll():
-    month = request.args.get('month') or request.json.get('month')
+    """GET: la nómina del mes (`nomina_del_mes`). POST parcial (08/10/2026): {member_id, month} y
+    SOLO los campos que cambian. La fila se crea con lo del integrante (sueldo y medio de pago) y
+    bonos en 0. Mandar `commissions` la guarda como escrita a mano (`commissions_manual`); mandar
+    `commissions_manual: false` la devuelve al cálculo automático. Antes el POST traía la fila
+    entera, y cambiar el sueldo o tildar «pagado» congelaba la comisión de ese momento."""
+    data = request.get_json(silent=True) or {}
+    month = request.args.get('month') or data.get('month')
     if not month or len(month) != 7 or '-' not in month:
         return jsonify({"error": "Parámetro 'month' (YYYY-MM) es requerido"}), 400
-        
-    if request.method == 'POST':
-        data = request.json or {}
-        member_id = data.get('member_id')
-        if not member_id:
-            return jsonify({"error": "member_id es requerido"}), 400
-            
-        payroll = MonthlyPayroll.query.filter_by(member_id=member_id, month=month).first()
-        
-        base_salary = float(data.get('base_salary', 0.0))
-        commissions = float(data.get('commissions', 0.0))
-        bonuses = float(data.get('bonuses', 0.0))
-        payment_method = data.get('payment_method', '')
-        is_paid = bool(data.get('is_paid', False))
-        
-        if not payroll:
-            payroll = MonthlyPayroll(
-                member_id=member_id,
-                month=month,
-                base_salary=base_salary,
-                commissions=commissions,
-                bonuses=bonuses,
-                payment_method=payment_method,
-                is_paid=is_paid,
-                paid_at=datetime.utcnow() if is_paid else None
-            )
-            db.session.add(payroll)
-        else:
-            payroll.base_salary = base_salary
-            payroll.commissions = commissions
-            payroll.bonuses = bonuses
-            payroll.payment_method = payment_method
-            if is_paid != payroll.is_paid:
-                payroll.is_paid = is_paid
-                payroll.paid_at = datetime.utcnow() if is_paid else None
-                
-        db.session.commit()
-        return jsonify(payroll.to_dict()), 200
 
-    # Auto-seedea los miembros variables si no existen
-    _seed_variable_members()
-    return jsonify(nomina_del_mes(month)), 200
+    if request.method == 'GET':
+        return jsonify(nomina_del_mes(month)), 200
+
+    try:
+        member = db.session.get(TeamMember, int(data.get('member_id')))
+    except (TypeError, ValueError):
+        member = None
+    if not member:
+        return jsonify({"error": "member_id es requerido"}), 400
+    try:
+        montos = {campo: _monto(data[campo], campo)
+                  for campo in ('base_salary', 'bonuses', 'commissions') if campo in data}
+    except _MontoInvalido as e:
+        return jsonify({"error": str(e)}), 400
+
+    auto = comision_de_miembro(member, get_commissions_calculated(month))
+    fila = MonthlyPayroll.query.filter_by(member_id=member.id, month=month).first()
+    if not fila:
+        fila = MonthlyPayroll(member_id=member.id, month=month, base_salary=member.base_salary or 0.0,
+                              commissions=auto, commissions_manual=False, bonuses=0.0,
+                              payment_method=member.payment_method or '', is_paid=False)
+        db.session.add(fila)
+    for campo in ('base_salary', 'bonuses'):
+        if campo in montos:
+            setattr(fila, campo, montos[campo])
+    if 'commissions' in montos:
+        fila.commissions = montos['commissions']
+        fila.commissions_manual = True
+    elif data.get('commissions_manual') is True and not fila.commissions_manual:
+        fila.commissions, fila.commissions_manual = auto, True   # congelar la de hoy
+    if data.get('commissions_manual') is False:
+        fila.commissions_manual = False
+    if 'payment_method' in data:
+        fila.payment_method = data['payment_method'] or ''
+    if 'is_paid' in data and bool(data['is_paid']) != bool(fila.is_paid):
+        fila.is_paid = bool(data['is_paid'])
+        fila.paid_at = datetime.utcnow() if fila.is_paid else None
+
+    if not fila.commissions_manual:
+        fila.commissions = auto  # la última foto del cálculo; la que vale se calcula en vivo
+    db.session.commit()
+    return jsonify(_item_de_nomina(member, month, fila, auto)), 200
 
 @bp.route('/public/finance/balances', methods=['GET', 'POST'])
 @login_required

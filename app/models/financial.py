@@ -267,12 +267,21 @@ class TeamMember(db.Model):
         }
 
 class MonthlyPayroll(db.Model):
+    """La fila de nómina de un integrante en un mes, la que se guarda al tocar algo en Finanzas.
+
+    Desde el 08/10/2026 la comisión guardada solo vale si alguien la escribió a mano
+    (`commissions_manual`): antes guardar la fila por cualquier cambio (el sueldo, el tilde de
+    pagado) congelaba la comisión calculada en ese momento, y un % editado después o una venta
+    sacada de la nómina ya no se veían en Finanzas. Sin la marca, `commissions` es solo la última
+    foto del cálculo y la comisión que vale es la calculada en vivo (ver `nomina_del_mes`).
+    """
     __tablename__ = 'monthly_payroll'
     id = db.Column(db.Integer, primary_key=True)
     member_id = db.Column(db.Integer, db.ForeignKey('team_members.id'), nullable=False)
     month = db.Column(db.String(7), nullable=False)  # YYYY-MM
     base_salary = db.Column(db.Float, default=0.0)
     commissions = db.Column(db.Float, default=0.0)
+    commissions_manual = db.Column(db.Boolean, nullable=False, default=False, server_default='0')
     bonuses = db.Column(db.Float, default=0.0)
     payment_method = db.Column(db.String(255), nullable=True)
     is_paid = db.Column(db.Boolean, default=False)
@@ -289,6 +298,7 @@ class MonthlyPayroll(db.Model):
             "month": self.month,
             "base_salary": self.base_salary,
             "commissions": self.commissions,
+            "commissions_manual": bool(self.commissions_manual),
             "bonuses": self.bonuses,
             "payment_method": self.payment_method,
             "is_paid": self.is_paid,
