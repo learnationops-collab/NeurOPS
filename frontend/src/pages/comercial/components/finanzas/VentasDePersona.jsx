@@ -120,6 +120,51 @@ const EditorAtribucion = ({ venta, personas, desde, hasta, onCerrar, onCambio })
     );
 };
 
+/**
+ * Lo que la persona recibió en su cuenta por transferencia de un cliente en el período (09/10/2026):
+ * cada pago, el total que se le descuenta y lo que queda por pagarle (sueldo base + comisión −
+ * transferencias, `a_pagar` del backend). Va solo si recibió algo. Se marca en la ficha del cliente,
+ * sección Pagos.
+ */
+export const TransferenciasRecibidas = ({ persona, datos }) => {
+    const pagos = datos.transferencias || [];
+    if (!pagos.length) return null;
+    const neto = datos.a_pagar ?? ((datos.sueldo_base || 0) + (datos.comision_total || 0) - (datos.transferencias_recibidas || 0));
+    return (
+        <section className="panel">
+            <PanelCab titulo="Transferencias recibidas"
+                tip={`Pagos de clientes que se le hicieron por transferencia a ${persona.nombre}: la plata ya la tiene, así que se le descuenta de lo que se le paga. No cambia su comisión ni lo que cuesta. Se marcan en la ficha del cliente, sección Pagos.`} />
+            <div className="fz-scroll">
+                <div className="fz-tabla" style={{ '--cols': '56px minmax(150px,1fr) minmax(96px,.6fr) 110px', '--min': '480px' }}>
+                    <div className="fz-cab">
+                        <span>Fecha</span>
+                        <span>Cliente</span>
+                        <span>Medio</span>
+                        <span className="fz-der">Monto</span>
+                    </div>
+                    {pagos.map(pago => (
+                        <div key={pago.id} className="fz-fila">
+                            <span className="num mut">{fecha(pago.date)}</span>
+                            <span className="fz-nom">
+                                <b title={pago.nombre_cliente}>{pago.nombre_cliente || 'Sin nombre'}</b>
+                                <small className="trunc" title={pago.tipo_pago}>{pago.tipo_pago}</small>
+                            </span>
+                            <span className="trunc mut">{pago.metodo_pago}</span>
+                            <span className="fz-n fz-der" style={{ color: v('warning') }}>{dinero(-pago.monto)}</span>
+                        </div>
+                    ))}
+                    <div className="fz-fila fz-total">
+                        <span className="fz-rot" style={{ gridColumn: '1 / 4' }}>
+                            Transferencias recibidas · {neto < -0.004 ? 'debe devolver' : 'a pagar'} {dinero(Math.abs(neto))}
+                        </span>
+                        <span className="fz-n fz-der" style={{ color: v('warning') }}>{dinero(-datos.transferencias_recibidas)}</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
+};
+
 const VentasDePersona = ({ persona, datos, desde, hasta, onVolver, onCambio }) => {
     const [cambios, setCambios] = useState({});   // id -> excluida, hasta que vuelve la nómina
     const [enCurso, setEnCurso] = useState(() => new Set());
@@ -225,6 +270,8 @@ const VentasDePersona = ({ persona, datos, desde, hasta, onVolver, onCambio }) =
                 <Cifron rotulo="Porcentaje" valor={porcentaje.valor} humo={HUMOS.gasto} sub={porcentaje.sub}
                     ayuda="El % con el que cobra en el período. Si cambió en el medio, o es de Fulfillment, cada venta trae el suyo." />
             </div>
+
+            <TransferenciasRecibidas persona={persona} datos={datos} />
 
             <section className="panel">
                 <PanelCab titulo={`Ventas de ${persona.nombre}`}

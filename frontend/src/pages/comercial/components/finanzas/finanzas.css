@@ -67,6 +67,8 @@
 .dc-shell .fz-descuento{justify-self:end;text-align:right;min-width:0}
 .dc-shell .fz-descuento b{font-weight:900;font-variant-numeric:tabular-nums;color:var(--warning);
   white-space:nowrap}
+/* El mismo descuento en el tile de Payroll: un renglón más de su lectura, en ámbar. */
+.dc-shell .fz-persona-descuento{color:var(--warning)}
 
 /* Monto editable: «$» adelante, número alineado a la derecha, guarda al salir. */
 .dc-shell .fz-monto{display:inline-flex;align-items:center;gap:6px;height:36px;width:100%;max-width:150px;
