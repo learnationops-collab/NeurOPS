@@ -47,6 +47,7 @@ from sqlalchemy import func
 from app import db
 from app.models import Client, ConciliacionCarga, ConciliacionMovimiento, ConciliacionRevision, FinancialSale
 from app.services import conciliacion_csv as lector
+from app.services.commission_service import COMISION_PASARELA
 
 PASARELAS = lector.PASARELAS
 VENTANA = timedelta(days=3)
@@ -57,8 +58,8 @@ MAX_RAFAGA = 6       # cobros que puede tener una ráfaga
 MAX_CANDIDATOS = 4
 ESTADOS = ('coincide', 'monto_distinto', 'sin_reportar', 'sin_ingreso')
 PENDIENTES = ('monto_distinto', 'sin_reportar', 'sin_ingreso')
-# Lo que Finanzas descuenta de comisión cuando no sabe la real (`get_finance_summary`).
-COMISION_ESTIMADA = {'stripe': 0.045, 'hotmart': 0.089}
+# Lo que Finanzas descuenta de comisión cuando no sabe la real: la misma definición que el Resumen.
+COMISION_ESTIMADA = COMISION_PASARELA
 
 # Lo firme primero: el mismo correo o el mismo cliente, el correo cortado, el nombre, y el nombre con
 # el correo del cobro registrado a otro cliente del sistema.

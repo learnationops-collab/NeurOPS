@@ -39,10 +39,13 @@ def clave_de_closer(nombre):
     from app.services.fuente_service import normalizar
     return CLOSERS_CON_COMISION.get(normalizar(nombre))
 
-# Fees de la pasarela que se descuentan para llegar al cash NETO. Los mismos factores viven
-# repetidos en media docena de sitios de app/api/public (finance.py, financial_sales.py); acá se
-# centralizan para lo nuevo, y se usan tambien desde el dashboard comercial.
-FEES_POR_METODO = {'stripe': 0.955, 'hotmart': 0.911}
+# La comisión ESTIMADA de cada pasarela, como fracción del bruto: lo que se descuenta para llegar al
+# cash NETO de un cobro. Es la ÚNICA definición: el Resumen de Finanzas, Payroll y las comisiones
+# del equipo, el cash neto del dashboard comercial y del closer, marketing, el listado de ventas y
+# la comisión estimada de Diferencias salen de acá. Antes el 0.955 y el 0.911 estaban escritos a
+# mano en una docena de sitios.
+COMISION_PASARELA = {'stripe': 0.045, 'hotmart': 0.089}
+FEES_POR_METODO = {metodo: round(1 - comision, 6) for metodo, comision in COMISION_PASARELA.items()}
 
 
 def cash_neto_de(monto, metodo_pago):

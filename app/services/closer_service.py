@@ -2068,11 +2068,13 @@ class CloserService:
 
         # Query official sales from FinancialSale to match Sales Log exactly
         from app.models import FinancialSale
+        from app.services.commission_service import FEES_POR_METODO
         from sqlalchemy import case, func, or_
-        
+
+        # El neto con la comisión estimada de cada pasarela (`FEES_POR_METODO`), en SQL.
         neto_monto_expr = case(
-            (func.lower(func.trim(FinancialSale.metodo_pago)) == 'stripe', FinancialSale.monto * 0.955),
-            (func.lower(func.trim(FinancialSale.metodo_pago)) == 'hotmart', FinancialSale.monto * 0.911),
+            *[(func.lower(func.trim(FinancialSale.metodo_pago)) == metodo, FinancialSale.monto * factor)
+              for metodo, factor in FEES_POR_METODO.items()],
             else_=FinancialSale.monto
         )
         

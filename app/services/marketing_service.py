@@ -5,6 +5,7 @@ from app.models import (
     Campaign, AdSet, Ad, LeadAnswer, ManychatLead,
     FinancialAgenda, FinancialSale, AdPeriodSpend
 )
+from app.services.commission_service import cash_neto_de
 from app.services.identity_service import normalize_ig
 
 class MarketingService:
@@ -238,14 +239,9 @@ class MarketingService:
             ig_val = sale.instagram or (sale.raw_data or {}).get('instagram') or (sale.raw_data or {}).get('ig')
             ig_norm = normalize_ig(ig_val)
 
-            # Aplicar descuento de Stripe de 4.5% o Hotmart de 8.9% si corresponde
+            # El neto, sin la comisión estimada de la pasarela (`COMISION_PASARELA`).
             monto_original = float(sale.monto or 0.0)
-            if sale.metodo_pago and sale.metodo_pago.strip().lower() == 'stripe':
-                monto_ajustado = monto_original * 0.955
-            elif sale.metodo_pago and sale.metodo_pago.strip().lower() == 'hotmart':
-                monto_ajustado = monto_original * 0.911
-            else:
-                monto_ajustado = monto_original
+            monto_ajustado = cash_neto_de(monto_original, sale.metodo_pago)
 
             matched_lead = None
             if ig_norm:

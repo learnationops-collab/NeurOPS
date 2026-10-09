@@ -1,6 +1,7 @@
 # pyrefly: ignore [missing-import]
 from flask import request, jsonify
 from app.models import db, User
+from app.services.commission_service import cash_neto_de
 from app.services.identity_service import normalize_ig
 from datetime import datetime, date, timedelta
 from . import bp
@@ -507,14 +508,9 @@ def get_sales_attribution_report():
     report_rows = []
 
     for sale in sales:
-        # Aplicar el descuento de comisión si el método de pago es Stripe (4.5%) o Hotmart (8.9%)
+        # El neto, sin la comisión estimada de la pasarela (`COMISION_PASARELA`).
         monto_original = float(sale.monto or 0.0)
-        if sale.metodo_pago and sale.metodo_pago.strip().lower() == 'stripe':
-            monto_ajustado = monto_original * 0.955
-        elif sale.metodo_pago and sale.metodo_pago.strip().lower() == 'hotmart':
-            monto_ajustado = monto_original * 0.911
-        else:
-            monto_ajustado = monto_original
+        monto_ajustado = cash_neto_de(monto_original, sale.metodo_pago)
 
         row = {
             "sale_id": sale.id,
@@ -756,14 +752,9 @@ def get_unattributed_leads():
             ig_norm = normalize_ig(ig_val)
             nombre_norm = (sale.nombre_cliente or '').strip().lower()
 
-            # Aplicar descuento de comisión si el método de pago es Stripe (4.5%) o Hotmart (8.9%)
+            # El neto, sin la comisión estimada de la pasarela (`COMISION_PASARELA`).
             monto_original = float(sale.monto or 0.0)
-            if sale.metodo_pago and sale.metodo_pago.strip().lower() == 'stripe':
-                monto_ajustado = monto_original * 0.955
-            elif sale.metodo_pago and sale.metodo_pago.strip().lower() == 'hotmart':
-                monto_ajustado = monto_original * 0.911
-            else:
-                monto_ajustado = monto_original
+            monto_ajustado = cash_neto_de(monto_original, sale.metodo_pago)
 
             lead_key = None
             if ig_norm:
