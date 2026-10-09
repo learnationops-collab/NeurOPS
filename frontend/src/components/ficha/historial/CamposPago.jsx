@@ -77,8 +77,12 @@ const CampoTransferencia = ({ ids, valor, opciones, sinMarcar, disabled, onCambi
                 transition: { duration: 0.18, ease: [0.22, 0.7, 0.2, 1] },
             })}>
             <span className="t-rotulo" id={`${ids}-transferido`}>{PREGUNTA_TRANSFERENCIA}</span>
-            <ElegirTransferencia opciones={opciones} valor={valor} sinMarcar={sinMarcar} disabled={disabled}
-                etiqueta={PREGUNTA_TRANSFERENCIA} onElegir={(v) => onCambiar({ transferido_a: v })} />
+            {/* En la grilla del campo el riel se estiraba a todo el ancho con las opciones a la
+                izquierda: va a su medida. */}
+            <span style={{ display: 'flex' }}>
+                <ElegirTransferencia opciones={opciones} valor={valor} sinMarcar={sinMarcar} disabled={disabled}
+                    etiqueta={PREGUNTA_TRANSFERENCIA} onElegir={(v) => onCambiar({ transferido_a: v })} />
+            </span>
             <small className="t-cap mut">
                 {elegida ? efectoDeTransferido(elegida)
                     : 'La plata quedó en la cuenta de esa persona: a Pedro y a Jean Carlo se les descuenta en Payroll.'}
