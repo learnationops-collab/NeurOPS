@@ -174,6 +174,7 @@ def test_usar_el_bruto_real_corrige_la_venta_por_la_ficha_y_la_hoja_en_segundo_p
     eventos = LeadEventLog.query.filter_by(appointment_id=lead['appt'].id).all()
     assert [e.action_type for e in eventos] == ['pago_corregido']
     assert '$480.00 → $480.77' in eventos[0].description
+    assert 'desde Finanzas › Diferencias' in eventos[0].description
     # Y la fila ya coincide: la conciliación se recalcula.
     assert [f['estado'] for f in conciliacion(client, finanzas)['filas']] == ['coincide', 'sin_reportar']
 

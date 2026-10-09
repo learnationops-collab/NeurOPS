@@ -289,13 +289,18 @@ def _a_quien(clave):
     return transferencias.ETIQUETAS.get(clave, clave) if clave else 'sin marcar'
 
 
-def _anotar(appt, usuario, tipo_evento, accion, detalle):
+# De dónde se hizo la corrección, para la bitácora: la ficha, o Finanzas › Diferencias (09/10/2026).
+DESDE_LA_FICHA = 'el historial de la ficha'
+DESDE_DIFERENCIAS = 'Finanzas › Diferencias'
+
+
+def _anotar(appt, usuario, tipo_evento, accion, detalle, origen=DESDE_LA_FICHA):
     """Deja la entrada en la bitacora del lead, con la forma de la del resto del historial."""
     from app.services.booking_service import BookingService
 
     BookingService.log_lead_event(
         appt.id, usuario.id, tipo_evento,
-        f'{usuario.username} {accion} desde el historial de la ficha: {detalle}.')
+        f'{usuario.username} {accion} desde {origen}: {detalle}.')
 
 
 def _respuesta(appt, venta, espejo, **extra):
@@ -495,7 +500,7 @@ def _mover_espejo(espejo, venta, cambios, appt, abrir=True):
     return nota
 
 
-def corregir(appt, datos, usuario, pago_id=None):
+def corregir(appt, datos, usuario, pago_id=None, origen=DESDE_LA_FICHA):
     """Corrige la fecha, el monto, el medio, el programa, el tipo y/o a quién se le hizo la
     transferencia de UN pago del cliente.
 
@@ -524,7 +529,7 @@ def corregir(appt, datos, usuario, pago_id=None):
     if cambios <= SOLO_DE_LA_VENTA:
         # Solo cambió a quién se le hizo la transferencia: la plata y su registro son los mismos.
         db.session.commit()
-        _anotar(appt, usuario, 'pago_corregido', f'corrigió el pago #{venta.id}', '; '.join(bitacora))
+        _anotar(appt, usuario, 'pago_corregido', f'corrigió el pago #{venta.id}', '; '.join(bitacora), origen)
         return _respuesta(appt, venta, espejo, cambios=sorted(cambios))
     if espejo is not None:
         # Mismo criterio que `crear`: a un cliente con otras ventas sin espejo no se le abre una
@@ -537,7 +542,7 @@ def corregir(appt, datos, usuario, pago_id=None):
     else:
         destino = nota or 'su registro en inscripciones se corrigió igual'
     _anotar(appt, usuario, 'pago_corregido', f'corrigió el pago #{venta.id}',
-            '; '.join(bitacora) + f'; {destino}')
+            '; '.join(bitacora) + f'; {destino}', origen)
     return _respuesta(appt, venta, espejo, cambios=sorted(cambios))
 
 
@@ -594,9 +599,10 @@ def corregir_venta(venta, datos, usuario):
 
     Si la venta es de un cliente con ficha (el mismo cruce por contacto de la tabla Ventas,
     `clientes_de_ventas`), pasa por `corregir`: las mismas validaciones, el espejo en la deuda y la
-    bitácora del lead. Si no tiene a quién pertenecer —o el cruce no la reconoce como de ese lead—,
-    se corrige la venta sola con las mismas validaciones (`_aplicar`): no hay deuda que mover ni
-    bitácora donde anotarlo, y la respuesta lo dice (`ficha: False`).
+    bitácora del lead, que dice que se corrigió desde Diferencias. Si no tiene a quién pertenecer —o
+    el cruce no la reconoce como de ese lead—, se corrige la venta sola con las mismas validaciones
+    (`_aplicar`): no hay deuda que mover ni bitácora donde anotarlo, y la respuesta lo dice
+    (`ficha: False`).
     """
     from app.services.comercial_service import clientes_de_ventas
     from app.services.ficha_lead_service import resolver_lead
@@ -607,7 +613,7 @@ def corregir_venta(venta, datos, usuario):
     appt = resolver_lead(client_id=cliente_id)[0] if cliente_id else None
     if appt is not None:
         try:
-            return {**corregir(appt, datos, usuario, pago_id=venta.id), 'ficha': True}
+            return {**corregir(appt, datos, usuario, pago_id=venta.id, origen=DESDE_DIFERENCIAS), 'ficha': True}
         except ErrorDeAccion as error:
             if str(error) != NO_ES_DE_ESTE_LEAD:
                 raise
