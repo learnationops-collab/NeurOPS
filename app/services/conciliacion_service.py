@@ -2,7 +2,8 @@
 
 Lo REPORTADO son las ventas del sistema por Stripe o Hotmart (`FinancialSale.metodo_pago`), las mismas
 que suma el Resumen de Finanzas: completadas, por su fecha. Lo INGRESADO son los cobros de los CSV que
-se suben (`ConciliacionMovimiento`, ver `conciliacion_csv`). Este módulo guarda las cargas sin
+se suben (`ConciliacionMovimiento`, ver `conciliacion_csv`). Las cifras de «todas» suman además las
+transferencias del período a los dos lados (ver `_con_transferencias`). Este módulo guarda las cargas sin
 duplicar, empareja una cosa con la otra y dice, de cada fila, en qué estado está:
 
   · coincide        — la venta y su cobro, por el mismo monto;
@@ -551,6 +552,7 @@ def conciliar(desde, hasta):
     for p in PASARELAS:
         kpis[p] = _kpis([f for f in filas if f['pasarela'] == p], ventas, movs, inicio, fin, [p],
                         con_csv=pasarelas[p]['con_csv'])
+    kpis['todas'] = _con_transferencias(kpis['todas'], desde, hasta)
     return {'desde': desde.isoformat(), 'hasta': hasta.isoformat(), 'filas': filas, 'kpis': kpis,
             'pasarelas': pasarelas, 'cargas': _cargas(inicio, fin)}
 
@@ -585,6 +587,31 @@ def _kpis(filas, ventas, movs, inicio, fin, pasarelas, con_csv=True):
         'con_csv': con_csv,
         'pasarelas': list(pasarelas),
     }
+
+
+def _con_transferencias(kpis, desde, hasta):
+    """Las cifras de «todas» con las transferencias del período (pedido del usuario, 09/10/2026:
+    «falta contar lo que ingresó por transferencia para que las cuentas cuadren»).
+
+    Una transferencia no pasa por ninguna pasarela ni viene en ningún CSV, así que no se concilia:
+    no hay otro registro contra el cual compararla, lo que se reportó es lo que entró. Por eso suma
+    lo mismo a lo reportado y a lo ingresado (bruto y neto: no paga comisión), y la diferencia no
+    cambia. Con eso «todas» cuenta toda la plata del período, como el cash de Payroll. Sin ningún
+    CSV no hay ingresado y queda en None. Las pasarelas sueltas no las llevan. Es la cuenta del
+    Resumen de Finanzas (`transferencias_service.resumen_del_periodo`): completadas, por su fecha.
+    """
+    from app.services.transferencias_service import resumen_del_periodo
+
+    transferencias = resumen_del_periodo(desde, hasta)
+    total = transferencias['total']
+    kpis = {**kpis, 'transferencias': {'total': total, 'ventas': transferencias['ventas']}}
+    if transferencias['ventas']:
+        kpis['reportado'] = round(kpis['reportado'] + total, 2)
+        kpis['ventas'] += transferencias['ventas']
+        if kpis['con_csv']:
+            kpis['ingresado'] = round(kpis['ingresado'] + total, 2)
+            kpis['neto'] = round(kpis['neto'] + total, 2)
+    return kpis
 
 
 # --- Revisadas ------------------------------------------------------------------------------------

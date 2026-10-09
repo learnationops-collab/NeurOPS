@@ -139,6 +139,17 @@ describe('Diferencias · KPIs y filtros', () => {
         await waitFor(() => expect(cifra('Diferencia').textContent).toBe('+$50.00'));
     });
 
+    it('«Todas» dice cuánto de lo reportado y lo ingresado fue por transferencia; una pasarela, no', async () => {
+        // Pedido del 09/10/2026: las transferencias no vienen en ningún CSV, pero son plata que entró.
+        const base = datos();
+        await montar({ ...base, kpis: { ...base.kpis,
+            todas: { ...base.kpis.todas, transferencias: { total: 150, ventas: 1 } } } });
+
+        expect(screen.getAllByText('incluye $150.00 por transferencia')).toHaveLength(2);
+        fireEvent.click(screen.getByRole('tab', { name: 'Stripe' }));
+        expect(screen.queryByText('incluye $150.00 por transferencia')).not.toBeInTheDocument();
+    });
+
     it('el buscador encuentra por nombre, correo o monto, sin tildes', async () => {
         await montar();
         const buscar = screen.getByRole('searchbox', { name: 'Buscar en las diferencias' });
