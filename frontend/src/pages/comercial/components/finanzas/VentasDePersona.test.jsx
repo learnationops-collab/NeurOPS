@@ -82,6 +82,42 @@ describe('VentasDePersona', () => {
         expect(screen.getByRole('button', { name: 'Sacar de la nómina la venta de Cliente 1' })).toBeTruthy();
     });
 
+    it('el buscador filtra por cliente, programa, setter o closer, sin tildes, y el pie suma lo que coincide', () => {
+        montar('jeancarlo', datosDe([
+            venta(1, { nombre_cliente: 'Ana Pérez' }),
+            venta(2, { nombre_cliente: 'Bruno Díaz', tipo_pago: 'AL - Cuota', setter: 'Paula', comision: 30, monto_neto: 300 }),
+            venta(3, { nombre_cliente: 'Carla Paz', setter: 'Paula', is_excluded_from_payroll: true }),
+        ]));
+        const buscar = screen.getByRole('searchbox', { name: 'Buscar en las ventas de Jean Carlo' });
+        const clientes = () => screen.queryAllByText(/^(Ana|Bruno|Carla) /).map(n => n.textContent);
+
+        fireEvent.change(buscar, { target: { value: 'perez' } });
+        expect(clientes()).toEqual(['Ana Pérez']);
+
+        // Por setter: la excluida aparece, tachada, pero el pie solo suma la que suma.
+        fireEvent.change(buscar, { target: { value: 'PAULA' } });
+        expect(clientes()).toEqual(['Carla Paz', 'Bruno Díaz']);
+        expect(screen.getByText(/coinciden/).closest('.fz-fila').textContent).toBe('2 de 3 coinciden · 1 suma$300.00$30.00');
+
+        fireEvent.change(buscar, { target: { value: 'al - cuota' } });
+        expect(clientes()).toEqual(['Bruno Díaz']);
+
+        fireEvent.change(buscar, { target: { value: 'zzz' } });
+        expect(clientes()).toEqual([]);
+        expect(screen.getByText('Ninguna venta coincide con «zzz».')).toBeTruthy();
+
+        // Vacío otra vez: todas, y el pie vuelve a los totales del tile.
+        fireEvent.change(buscar, { target: { value: '' } });
+        expect(clientes()).toHaveLength(3);
+        expect(screen.getByText(/ventas suman/).closest('.fz-fila').textContent).toBe('2 ventas suman · 1 excluida$1,300.00$130.00');
+    });
+
+    it('sin ventas no hay buscador', () => {
+        montar('elias', datosDe([]));
+        expect(screen.queryByRole('searchbox')).toBeNull();
+        expect(screen.getByText('Sin ventas que le paguen comisión en este período.')).toBeTruthy();
+    });
+
     it('la casilla saca la venta de la nómina o la vuelve a sumar, con el valor explícito, y recalcula', async () => {
         const onCambio = vi.fn();
         montar('elias', datosDe([venta(1), venta(2, { is_excluded_from_payroll: true })]), onCambio);
