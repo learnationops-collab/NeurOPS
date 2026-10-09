@@ -65,3 +65,8 @@ export const marcarExclusion = (ventaId, excluir) => api.post(
 export const getTasas = (mes) => api.get('/public/finance/comisiones/tasas', { params: { mes } }).then(datos);
 export const guardarTasas = (vigenteDesde, tasas) => api.put('/public/finance/comisiones/tasas',
     { vigente_desde: vigenteDesde, tasas }).then(datos);
+
+// De dónde entró el ingreso del Resumen (08/10/2026): por fechas y no por mes, así sirve igual
+// cuando Finanzas se mire por un período cualquiera.
+export const getProcedencia = (desde, hasta) => api.get('/public/finance/procedencia',
+    { params: { start_date: desde, end_date: hasta } }).then(datos);
