@@ -2,7 +2,7 @@ from flask import request, jsonify
 from flask_login import current_user, login_required
 from app import db
 from app.models import User, Expense, AdPeriodSpend, MarketingBudget
-from app.models.financial import FinancialSale, FinancialAgenda, TeamMember, MonthlyPayroll, MonthlyPaymentMethodBalance, MonthlySaving
+from app.models.financial import FinancialSale, TeamMember, MonthlyPayroll, MonthlyPaymentMethodBalance, MonthlySaving
 from datetime import date, datetime, time
 import calendar
 from functools import wraps
@@ -29,21 +29,6 @@ def finance_admin_required(f):
             return jsonify({"error": "No tienes acceso a esta sección de finanzas"}), 403
         return f(*args, **kwargs)
     return decorated_function
-
-def resolve_closer_name(email_or_name):
-    """Nombre canonico del closer. La logica vive en `closer_name_service`,
-    que resuelve contra los usuarios y alias reales antes de caer al diccionario
-    historico — antes la misma persona se partia en varias opciones del filtro."""
-    from app.services.closer_name_service import resolver_nombre_closer
-    return resolver_nombre_closer(email_or_name)
-
-def split_tipo_pago(tp):
-    if not tp:
-        return "Desconocido", "No Especificado"
-    if " - " in tp:
-        parts = tp.split(" - ", 1)
-        return parts[0].strip(), parts[1].strip()
-    return "Desconocido", tp.strip()
 
 @bp.route('/public/finance/team-members', methods=['GET', 'POST'])
 @login_required
