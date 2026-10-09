@@ -8,7 +8,8 @@ import { dinero } from './comun';
  *
  * Son las personas que se están viendo (grupos prendidos y, si hay, las elegidas en el
  * desplegable), en el mismo orden que los tiles. Cada una con todas sus ventas del período: las
- * que se sacaron de la nómina van tachadas y no suman, así que el total cierra con el del tile.
+ * que se sacaron de la nómina van tachadas y no suman, así que el total cierra con el del tile. Su
+ * sueldo base del período, si tiene, va en el encabezado: la tabla es solo de comisiones.
  */
 
 const fecha = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '—');
@@ -33,7 +34,10 @@ const TablaPersona = ({ persona, datos }) => {
         <section className="fz-detalle-persona" aria-label={`Ventas de ${persona.nombre}`}>
             <h3 className="fz-detalle-nom">
                 {persona.nombre}
-                <span>{persona.rol}{pct ? ` · ${pct}` : ''}</span>
+                <span>
+                    {persona.rol}{pct ? ` · ${pct}` : ''}
+                    {datos.sueldo_base > 0 ? ` · sueldo base ${dinero(datos.sueldo_base)}` : ''}
+                </span>
             </h3>
             {ventas.length === 0 ? (
                 <p className="fz-detalle-vacio">Sin ventas que le paguen comisión en el período.</p>

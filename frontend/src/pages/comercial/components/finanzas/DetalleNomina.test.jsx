@@ -31,7 +31,7 @@ const NOMINA = {
             venta(1, 'Ana', 50, { concepto: 'director', porcentaje: 5 })], null),
         desglose: { director: { porcentaje: 5, comision_total: 50 }, propia: { porcentaje: 10, comision_total: 100 } },
     },
-    andy: persona([venta(4, 'Dora', 30, { fuente: 'renovacion', porcentaje: 3 })], null),
+    andy: { ...persona([venta(4, 'Dora', 30, { fuente: 'renovacion', porcentaje: 3 })], null), sueldo_base: 600 },
     dari: vacia, santi: vacia, belu: vacia, pedro: vacia,
     totales: { cash_neto: 4000, cash_bruto: 4000, ventas: 4 },
 };
@@ -68,6 +68,9 @@ describe('Payroll · detalle de ventas del PDF', () => {
         montar();
         const cont = await detalle();
         expect(within(tabla(cont, 'Andy')).getByText('Renovación')).toBeTruthy();
+        // El sueldo fijo del período va en el encabezado: la tabla es solo de comisiones.
+        expect(within(tabla(cont, 'Andy')).getByRole('heading').textContent).toContain('sueldo base $600.00');
+        expect(within(tabla(cont, 'Elias')).getByRole('heading').textContent).not.toContain('sueldo base');
         expect(within(tabla(cont, 'Paula')).getByText(/Sin ventas/)).toBeTruthy();
     });
 

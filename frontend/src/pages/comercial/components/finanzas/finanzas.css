@@ -21,8 +21,11 @@
   .dc-shell .fz-grid--2,
   .dc-shell .fz-grid--4{grid-template-columns:minmax(0,1fr)}
 }
-/* Cinco tiles por fila son angostos: la cifra baja un escalón para no cortarse. */
+/* Cinco tiles por fila son angostos: la cifra baja un escalón para no cortarse, y el rótulo de los
+   KPIs de Payroll aprieta el espaciado (una palabra sola como «Comisiones» no se parte y, entre 900
+   y 950 px, empujaba la «i» fuera del tile). */
 .dc-shell .fz-grid--5 .kpi-n{font-size:clamp(22px,2.1vw,30px)}
+.dc-shell .fz-grid--5 > section.kpi .t-eyebrow{letter-spacing:.16em}
 
 .dc-shell .fz-bloque{display:grid;gap:var(--s3);min-width:0}
 
@@ -185,10 +188,11 @@
   .dc-shell .fz-detalle{display:block;break-before:page}
   /* Una hoja A4 mide menos que los cortes de pantalla (760 y 900px), que apilaban todo en una
      columna. Los cinco de Fulfillment van en una sola fila (de a tres quedaban 3 + 2) y sin su
-     chip, que ahí no entra y repite el título del grupo. */
+     chip, que ahí no entra y repite el título del grupo. Los cinco KPIs de arriba sí llevan su
+     rótulo: sin él no se sabría qué cifra es cuál. */
   .dc-shell .fz-grid--3{grid-template-columns:repeat(3,minmax(0,1fr))}
   .dc-shell .fz-grid--5{grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--s2)}
-  .dc-shell .fz-grid--5 .kpi-cab{display:none}
+  .dc-shell .fz-grid--5 .fz-persona .kpi-cab{display:none}
   .dc-shell .fz-grid--5 .kpi{padding:var(--s3)}
   .dc-shell .fz-grid--5 .kpi-n{font-size:19px}
   /* Los tiles son botones (llevan a Revisar), y la hoja de impresión global esconde todo

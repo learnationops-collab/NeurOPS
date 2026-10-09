@@ -729,9 +729,10 @@ def get_financial_sales():
 @bp.route('/public/financial-sales/payroll', methods=['GET'])
 @finance_admin_required
 def get_financial_sales_payroll():
-    """La nómina variable de un rango: la cuenta vive en `nomina_service.comisiones_del_rango`,
-    la misma que usa Finanzas para un mes (08/10/2026). Una fecha que no se entiende no filtra."""
-    from app.services.nomina_service import comisiones_del_rango
+    """La nómina de un rango: la comisión sale de `nomina_service.comisiones_del_rango`, la misma
+    cuenta que usa Finanzas para un mes, y cada persona trae además su sueldo base del rango
+    (`payroll_del_rango`, 08/10/2026). Una fecha que no se entiende no filtra."""
+    from app.services.nomina_service import payroll_del_rango
 
     def fecha(param):
         try:
@@ -739,7 +740,7 @@ def get_financial_sales_payroll():
         except ValueError:
             return None
 
-    return jsonify(comisiones_del_rango(fecha('start_date'), fecha('end_date'))), 200
+    return jsonify(payroll_del_rango(fecha('start_date'), fecha('end_date'))), 200
 
 @bp.route('/public/financial-sales/<int:sale_id>/resend-webhook', methods=['POST'])
 def resend_financial_sale_webhook(sale_id):

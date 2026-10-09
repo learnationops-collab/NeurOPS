@@ -99,16 +99,9 @@ def team_member_operations(id):
         db.session.commit()
         return jsonify(member.to_dict()), 200
 
-# Fragmento del nombre en TeamMember (sin espacios) -> clave de la comision.
-_CLAVES_POR_NOMBRE = (
-    ('elias', 'elias'),
-    ('paula', 'paula'),
-    ('jeancarlo', 'jeancarlo'),
-    ('facundo', 'facundo'),
-    ('nerina', 'nerina'),
-    ('gabriel', 'gabriel'),
-    ('marlon', 'marlon'),
-)
+# Fragmento del nombre en TeamMember (sin espacios) -> clave de la comision. Vive en el servicio de
+# la nómina desde el 08/10/2026: Payroll lo usa también para el sueldo base de cada persona.
+from app.services.nomina_service import CLAVES_POR_NOMBRE as _CLAVES_POR_NOMBRE  # noqa: E402
 
 
 def comision_de_miembro(member, dynamic_commissions):

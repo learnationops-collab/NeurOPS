@@ -14,7 +14,8 @@ Quién cobra y con qué %:
 Cada venta cobra con el % del mes en que entró (`comision_tasas_service.por_mes`): un rango puede
 cruzar un cambio. Todo sobre el cash NETO (sin la fee de Stripe/Hotmart) de las ventas completadas.
 """
-from datetime import datetime, time
+import calendar
+from datetime import datetime, time, timedelta
 
 from app.services.commission_service import (
     CLOSERS_CON_COMISION, DIRECTOR_DE_VENTAS, SETTERS_CON_COMISION, cash_neto_de, clave_de_closer)
@@ -189,4 +190,88 @@ def comisiones_del_rango(desde=None, hasta=None):
     nomina.update(nomina_por_persona(completadas, tasas_de_mes))
     nomina["totales"] = {"cash_neto": round(cash["neto"], 2), "cash_bruto": round(cash["bruto"], 2),
                          "ventas": cash["ventas"]}
+    return nomina
+
+
+# --- El sueldo base (08/10/2026) ------------------------------------------------------------------
+
+# Fragmento del nombre en TeamMember (minúsculas, sin espacios) -> clave de la persona en Payroll,
+# para quienes cobran por ventas. Los de Fulfillment se reconocen con
+# `fulfillment_commission_service.clave_de_miembro`.
+CLAVES_POR_NOMBRE = (
+    ('elias', 'elias'),
+    ('paula', 'paula'),
+    ('jeancarlo', 'jeancarlo'),
+    ('facundo', 'facundo'),
+    ('nerina', 'nerina'),
+    ('gabriel', 'gabriel'),
+    ('marlon', 'marlon'),
+)
+
+
+def clave_de_nomina(nombre):
+    """La persona de Payroll que es un integrante de Finanzas (por su nombre), o None: Kerwin, por
+    ejemplo, cobra sueldo pero no tiene tile en Payroll."""
+    from app.services.fulfillment_commission_service import clave_de_miembro
+
+    limpio = (nombre or '').lower().strip().replace(' ', '')
+    for fragmento, clave in CLAVES_POR_NOMBRE:
+        if fragmento in limpio:
+            return clave
+    return clave_de_miembro(nombre)
+
+
+def meses_del_rango(desde, hasta):
+    """[(mes 'YYYY-MM', parte del mes)] de cada mes que toca el rango (fechas inclusive): 1 si lo
+    cubre entero, y si no los días del rango en ese mes sobre los días del mes."""
+    meses = []
+    primero = desde.replace(day=1)
+    while primero <= hasta:
+        dias_del_mes = calendar.monthrange(primero.year, primero.month)[1]
+        ultimo = primero.replace(day=dias_del_mes)
+        dias = (min(hasta, ultimo) - max(desde, primero)).days + 1
+        meses.append((primero.strftime('%Y-%m'), dias / dias_del_mes))
+        primero = ultimo + timedelta(days=1)
+    return meses
+
+
+def sueldo_base_del_rango(desde, hasta):
+    """{clave de Payroll -> sueldo base del rango}.
+
+    El sueldo de cada mes es el de la fila guardada de la nómina de ese mes o, sin ella, el del
+    integrante (los mismos que suma `nomina_del_mes` de Finanzas: un inactivo sin fila no cobra). Un
+    mes entero del rango cuenta el sueldo completo; uno a medias, prorrateado por días (base × días
+    del rango en ese mes ÷ días del mes). Finanzas usa la misma regla para un rango. Sin las dos
+    fechas no hay sueldo que prorratear."""
+    from app.models.financial import MonthlyPayroll, TeamMember
+
+    if not desde or not hasta or desde > hasta:
+        return {}
+    meses = meses_del_rango(desde, hasta)
+    guardadas = {(p.member_id, p.month): p for p in
+                 MonthlyPayroll.query.filter(MonthlyPayroll.month.in_([mes for mes, _ in meses])).all()}
+    sueldos = {}
+    for miembro in TeamMember.query.all():
+        clave = clave_de_nomina(miembro.name)
+        if not clave:
+            continue
+        for mes, parte in meses:
+            fila = guardadas.get((miembro.id, mes))
+            if not fila and not miembro.is_active:
+                continue
+            base = fila.base_salary if fila else miembro.base_salary
+            sueldos[clave] = sueldos.get(clave, 0.0) + (base or 0.0) * parte
+    return {clave: round(monto, 2) for clave, monto in sueldos.items()}
+
+
+def payroll_del_rango(desde=None, hasta=None):
+    """Lo que muestra la sección Payroll: `comisiones_del_rango` con el sueldo base de cada persona
+    (`sueldo_base`) y, en 'totales', el sueldo base y las comisiones de todas."""
+    nomina = comisiones_del_rango(desde, hasta)
+    sueldos = sueldo_base_del_rango(desde, hasta)
+    personas = [clave for clave in nomina if clave != 'totales']
+    for clave in personas:
+        nomina[clave]['sueldo_base'] = sueldos.get(clave, 0.0)
+    nomina['totales']['sueldo_base'] = round(sum(nomina[c]['sueldo_base'] for c in personas), 2)
+    nomina['totales']['comisiones'] = round(sum(nomina[c]['comision_total'] for c in personas), 2)
     return nomina

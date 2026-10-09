@@ -13,7 +13,9 @@ import * as apiFz from './finanzasApi';
 
 /**
  * Sección Payroll del dashboard comercial (desde el 08/10/2026; antes /admin/payroll): la comisión
- * de cada persona en un rango de fechas, un tile por persona.
+ * de cada persona en un rango de fechas, un tile por persona. Arriba, el cash del período y lo que
+ * se paga a quienes se ven: sueldo base (prorrateado por días en un mes a medias, ver
+ * `nomina_service.sueldo_base_del_rango`), comisiones y el total.
  *
  * Tocar un tile abre sus ventas en Revisar › Ventas, en el mismo período (`onVerVentas`): la lista
  * de abajo que había acá se sacó a pedido (08/10/2026), y Revisar ya tiene la tabla, la búsqueda,
@@ -238,22 +240,33 @@ export const FiltroPersonas = ({ grupos, elegidas, onCambiar }) => {
 };
 
 // Las dos partidas de Marlon, en el orden en que se leen (el JSON llega con las claves ordenadas).
-export const PARTIDAS = [['propia', 'propias'], ['director', 'director']];
+const PARTIDAS = [['propia', 'propias'], ['director', 'director']];
 const pctDe = (n) => (n == null ? '—' : `${n}%`);
 
-/** La línea de abajo del tile: cuántas ventas y el neto, o, con dos partidas, cuánto es cada una. */
-const lecturaDe = (persona, datos) => (datos.desglose
-    ? PARTIDAS.filter(([k]) => datos.desglose[k]).map(([k, rotulo]) => `${rotulo} ${dinero(datos.desglose[k].comision_total)}`).join(' · ')
-    : `${datos.total_ventas} ${persona.ventas} · neto ${dinero(datos.total_recaudado_neto)}`);
+/**
+ * Las líneas de abajo del tile: cuántas ventas y el neto (con el sueldo base si tiene: la cifra
+ * grande es solo la comisión), o, con dos partidas, un renglón por partida con su % y cuánto es.
+ * Los % de Marlon no van arriba, al lado del chip: en un quinto de ancho no entraban y cortaban el
+ * chip (medido a 1000 px).
+ */
+const lecturaDe = (persona, datos) => {
+    const base = datos.sueldo_base > 0 ? `base ${dinero(datos.sueldo_base)}` : null;
+    if (datos.desglose) {
+        return [...PARTIDAS.filter(([k]) => datos.desglose[k]).map(([k, rotulo]) =>
+            `${rotulo} ${pctDe(datos.desglose[k].porcentaje)} · ${dinero(datos.desglose[k].comision_total)}`), base]
+            .filter(Boolean);
+    }
+    return [[`${datos.total_ventas} ${persona.ventas} · neto ${dinero(datos.total_recaudado_neto)}`, base]
+        .filter(Boolean).join(' · ')];
+};
 
 const Tile = ({ persona, datos, onVer }) => {
     const { Icono } = persona;
     // Fulfillment no tiene un % fijo (cada venta trae el suyo, y lo muestra la auditoría): en un
     // tile de un quinto de ancho, «% por programa» se partía en dos renglones al lado del chip.
-    // Marlon tiene uno por partida: el de sus ventas propias y el de director.
-    const pct = datos.desglose
-        ? PARTIDAS.filter(([k]) => datos.desglose[k]).map(([k]) => pctDe(datos.desglose[k].porcentaje)).join(' · ')
-        : datos.porcentaje_comision == null ? null : `${datos.porcentaje_comision}%`;
+    // Marlon tiene uno por partida, y van abajo (`lecturaDe`).
+    const pct = datos.porcentaje_comision == null ? null : `${datos.porcentaje_comision}%`;
+    const lineas = lecturaDe(persona, datos);
     return (
         <button type="button" className="kpi caja fz-persona" onClick={onVer} disabled={!onVer}
             title={onVer ? `Ver en Revisar las ventas de ${persona.nombre}` : 'Sin ventas en este período'}>
@@ -265,7 +278,9 @@ const Tile = ({ persona, datos, onVer }) => {
             <p className="fz-persona-nom">{persona.nombre}</p>
             <div className="kpi-cifra">
                 <Cifra tag="p" className="kpi-n" valor={dinero(datos.comision_total)} style={{ color: v('success') }} />
-                <p className="kpi-sub num">{lecturaDe(persona, datos)}</p>
+                <p className="kpi-sub num">
+                    {lineas.length === 1 ? lineas[0] : lineas.map(l => <span key={l} style={{ display: 'block' }}>{l}</span>)}
+                </p>
             </div>
             {onVer && (
                 <span className="kpi-acciones" aria-hidden="true">
@@ -321,10 +336,15 @@ const Payroll = ({ desde, hasta, onVerVentas, grupos, personas = [], tasasAbiert
     const visibles = GRUPOS.filter(g => grupos.includes(g.id)).map(g => ({
         ...g, personas: g.personas.filter(p => !marcadas.length || marcadas.includes(p)),
     })).filter(g => g.personas.length);
-    const comisiones = visibles.flatMap(g => g.personas)
-        .reduce((total, p) => total + (datos[p.id]?.comision_total || 0), 0);
+    const sumar = (campo) => visibles.flatMap(g => g.personas)
+        .reduce((total, p) => total + (datos[p.id]?.[campo] || 0), 0);
+    const comisiones = sumar('comision_total');
+    const sueldoBase = sumar('sueldo_base');
+    const total = sueldoBase + comisiones;
     const cash = datos.totales || { cash_neto: 0, cash_bruto: 0, ventas: 0 };
-    const peso = cash.cash_neto ? (comisiones / cash.cash_neto) * 100 : null;
+    // El peso es el de la nómina entera (sueldo base + comisiones) desde el 08/10/2026: con el fijo
+    // afuera, el de Fulfillment parecía casi nada.
+    const peso = cash.cash_neto ? (total / cash.cash_neto) * 100 : null;
     const deQuien = marcadas.length ? `a ${nombres(marcadas)}`
         : visibles.length === GRUPOS.length ? 'de todo el equipo' : `de ${visibles.map(g => g.titulo).join(' y ')}`;
     // Elegidas algunas personas van juntas en una grilla, sin los títulos de grupo (el chip de cada
@@ -342,16 +362,23 @@ const Payroll = ({ desde, hasta, onVerVentas, grupos, personas = [], tasasAbiert
                 </p>
                 <h1 className="t-h2">Nómina · {fechaLarga(desde)} – {fechaLarga(hasta)}</h1>
             </div>
-            <div className="fz-grid fz-grid--3">
+            {/* Cinco en una fila: el cash, lo que se paga (base + comisiones = total) y el peso. */}
+            <div className="fz-grid fz-grid--5">
                 <Cifron rotulo="Cash del período" valor={dinero(cash.cash_neto)} tono="success" humo={HUMOS.ingreso}
                     sub={`${cash.ventas} ${cash.ventas === 1 ? 'venta' : 'ventas'} · bruto ${dinero(cash.cash_bruto)}`}
                     ayuda="Todo lo cobrado en el período, neto de la comisión de Stripe y Hotmart: la base sobre la que se calculan las comisiones." />
+                <Cifron rotulo="Sueldo base" valor={dinero(sueldoBase)} tono="info" humo={HUMOS.info}
+                    sub="El fijo del período"
+                    ayuda="El sueldo fijo de las personas que estás viendo: el de su ficha en Finanzas, o el de su nómina guardada de ese mes. Un mes entero del período cuenta el sueldo completo; un mes a medias, la parte de sus días (sueldo × días del período en ese mes ÷ días del mes)." />
                 <Cifron rotulo="Comisiones" valor={dinero(comisiones)} tono="warning" humo={HUMOS.gasto}
                     sub={`A pagar ${deQuien}`}
                     ayuda="La suma de las comisiones de las personas que estás viendo, con los porcentajes vigentes en cada mes." />
+                <Cifron rotulo="Total" valor={dinero(total)} humo={HUMOS.gasto}
+                    sub="Sueldo base + comisiones"
+                    ayuda="Lo que se paga en el período a las personas que estás viendo: su sueldo base más sus comisiones." />
                 <Cifron rotulo="Peso sobre el cash" valor={peso == null ? '—' : `${peso.toFixed(1)}%`} humo={HUMOS.marca}
-                    sub="Comisiones ÷ cash del período"
-                    ayuda="Cuánto del cash cobrado se va en las comisiones de las personas que estás viendo." />
+                    sub="Total ÷ cash del período"
+                    ayuda="Cuánto del cash cobrado se va en la nómina (sueldo base más comisiones) de las personas que estás viendo." />
             </div>
             {secciones.map(g => (
                 <section key={g.id} className="fz-bloque">

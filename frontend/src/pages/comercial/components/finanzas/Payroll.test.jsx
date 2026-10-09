@@ -25,7 +25,7 @@ const NOMINA = {
         director: { porcentaje: 5, total_recaudado_neto: 160, comision_total: 8, total_ventas: 1 },
         propia: { porcentaje: 10, total_recaudado_neto: 120, comision_total: 12, total_ventas: 1 },
     } },
-    andy: { ...persona(30, [venta(3)]), porcentaje_comision: null },
+    andy: { ...persona(30, [venta(3)]), porcentaje_comision: null, sueldo_base: 600 },
     dari: persona(0), santi: persona(0), belu: persona(0), pedro: persona(0),
     totales: { cash_neto: 2300, cash_bruto: 2400, ventas: 3 },
 };
@@ -51,21 +51,27 @@ describe('Payroll', () => {
         try { localStorage.clear(); } catch { /* sin almacenamiento */ }
     });
 
-    it('muestra el cash del período y la suma de las comisiones de los grupos que se ven', async () => {
+    it('muestra el cash del período y el sueldo base, las comisiones y el total de los grupos que se ven', async () => {
         render(<ConFiltro />);
         await screen.findByText('Elias');
 
         expect(cifra('Cash del período').textContent).toBe('$2,300.00');
+        expect(cifra('Sueldo base').textContent).toBe('$600.00');   // el de Andy
         expect(cifra('Comisiones').textContent).toBe('$230.00');   // 80 + 100 + 20 + 30
-        expect(cifra('Peso sobre el cash').textContent).toBe('10.0%');
+        expect(cifra('Total').textContent).toBe('$830.00');
+        expect(cifra('Peso sobre el cash').textContent).toBe('36.1%');   // total ÷ cash
+        // El tile de quien tiene sueldo fijo lo dice abajo; la cifra grande es la comisión.
+        expect(screen.getByText('Andy').closest('.kpi').querySelector('.kpi-sub').textContent)
+            .toBe('1 ingresos · neto $300.00 · base $600.00');
     });
 
     it('el tile de Marlon suma sus ventas propias y su parte de director, y dice cuánto es cada una', async () => {
         render(<ConFiltro />);
         const tile = (await screen.findByText('Marlon')).closest('.kpi');
 
-        expect(tile.querySelector('.kpi-cab').textContent).toContain('10% · 5%');
-        expect(tile.querySelector('.kpi-sub').textContent).toBe('propias $12.00 · director $8.00');
+        // Un renglón por partida, con su %: arriba, al lado del chip, no entraban.
+        expect([...tile.querySelectorAll('.kpi-sub > span')].map(s => s.textContent))
+            .toEqual(['propias 10% · $12.00', 'director 5% · $8.00']);
         await waitFor(() => expect(tile.querySelector('.kpi-n').textContent).toBe('$20.00'));
     });
 
@@ -76,7 +82,9 @@ describe('Payroll', () => {
 
         await act(async () => { fireEvent.click(within(filtro).getByRole('button', { name: /Fulfillment/ })); });
         expect(screen.queryByText('Andy')).toBeNull();
-        expect(cifra('Comisiones').textContent).toBe('$200.00');
+        await waitFor(() => expect(cifra('Comisiones').textContent).toBe('$200.00'));
+        await waitFor(() => expect(cifra('Sueldo base').textContent).toBe('$0.00'));
+        await waitFor(() => expect(cifra('Total').textContent).toBe('$200.00'));
 
         await act(async () => { fireEvent.click(within(filtro).getByRole('button', { name: /Setting/ })); });
         expect(within(filtro).getByRole('button', { name: /Closing/ })).toBeDisabled();
