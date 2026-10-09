@@ -5,6 +5,7 @@
 import { useMemo, useState } from 'react';
 import { SubVista, DesplegableAgrupado, SiNo } from './piezas';
 import FormularioSimple from './FormularioSimple';
+import { PREGUNTA_TRANSFERENCIA, efectoDeTransferido, esTransferencia } from '../transferencia';
 
 const hoyIso = () => {
   const d = new Date();
@@ -35,13 +36,25 @@ const labels = (vocabulario, porDefecto) => (vocabulario?.length
 // (FinancialSale, espejo a Enrollment/Payment, secuencia de pagos). Y ese camino habla en
 // `tipo_pago` / `metodo_pago` / `marca_temporal`, no en monto/medio/fecha: mandarle las otras
 // claves era pedirle un cobro sin tipo de pago, que rechazaba siempre.
+//
+// Un cobro por transferencia pregunta a quién del equipo se le hizo (Pedro, Jean Carlo u Otro, del
+// vocabulario) y sin eso no se registra (09/10/2026): es el momento de anotarlo, y el backend lo
+// rechaza igual.
 export function SubVistaPago({ ficha, onVolver, onGuardar, guardando }) {
-  const [valores, setValores] = useState({ fecha: hoyIso(), medio: null, monto: '' });
+  const [valores, setValores] = useState({ fecha: hoyIso(), medio: null, monto: '', transferido_a: null });
+  const transferencias = useMemo(() => ficha?.vocabulario?.transferido_a || [], [ficha]);
+  const porTransferencia = esTransferencia(valores.medio);
   const campos = useMemo(() => [
     { campo: 'monto', label: 'Monto', tipo: 'monto', requerido: true },
     { campo: 'fecha', label: 'Fecha', tipo: 'fecha', requerido: true },
     { campo: 'medio', label: 'Medio', tipo: 'opcion', requerido: true, opciones: labels(ficha?.vocabulario?.medios_pago, MEDIOS_POR_DEFECTO) },
-  ], [ficha]);
+    ...(porTransferencia ? [{
+      campo: 'transferido_a', label: PREGUNTA_TRANSFERENCIA, tipo: 'opcion', requerido: true,
+      opciones: transferencias.map((o) => o.clave),
+      etiquetas: Object.fromEntries(transferencias.map((o) => [o.clave, o.label])),
+    }] : []),
+  ], [ficha, porTransferencia, transferencias]);
+  const elegida = porTransferencia ? transferencias.find((o) => o.clave === valores.transferido_a) : null;
 
   // El programa es el prefijo de `tipo_pago`: sin él no hay cobro que declarar. Se dice acá y se
   // manda a arreglarlo a la tarjeta de la izquierda, en vez de dejar que el backend lo rechace.
@@ -56,11 +69,14 @@ export function SubVistaPago({ ficha, onVolver, onGuardar, guardando }) {
           guardando={guardando}
           cta="Registrar pago"
           onCambio={(parche) => setValores((p) => ({ ...p, ...parche }))}
+          extra={elegida ? <p className="ln-t-body-sm ln-muted">{efectoDeTransferido(elegida)}</p> : null}
           onGuardar={() => onGuardar({
             tipo_pago: `${programa} - Cuota`,
             monto: parseFloat(valores.monto) || 0,
             metodo_pago: valores.medio,
             marca_temporal: valores.fecha,
+            // Solo si el medio que quedó es transferencia: elegido y cambiado después, no viaja.
+            ...(porTransferencia ? { transferido_a: valores.transferido_a } : {}),
           })}
         />
       ) : (

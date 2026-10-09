@@ -48,7 +48,15 @@ export const fichaAgendaVencida = {
     estado_pagos: { total_paid: 0, balance_remaining: 0, sales_count: 0 },
   },
   permisos: { confirmar: true, reportar: true, cobrar: true, eliminar: false, editar_datos: false, reasignar: true, comentar: true },
-  vocabulario: { medios_pago: [], canales_seguimiento: [], motivos_baja: [] },
+  vocabulario: {
+    medios_pago: [], canales_seguimiento: [], motivos_baja: [],
+    // `transferencias_service.opciones()`: a quién del equipo se le hizo un pago por transferencia.
+    transferido_a: [
+      { clave: 'pedro', label: 'Pedro', descuenta: true },
+      { clave: 'jean_carlo', label: 'Jean Carlo', descuenta: true },
+      { clave: 'otro', label: 'Otro', descuenta: false },
+    ],
+  },
 };
 
 // El mismo lead después de una venta parcial: queda deuda y el trabajo pasa a «Acciones».
