@@ -1,6 +1,6 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // El cliente HTTP se mockea completo: ninguna pestaña llama a axios por su cuenta,
@@ -378,4 +378,78 @@ describe('cerrar', () => {
         await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/ficha/9012'), { timeout: 8000 });
         await waitFor(() => expect(onCerrar).toHaveBeenCalled());
     }, 15000);   // la ventana de deshacer del InlineConfirm dura 5 s de reloj real
+});
+
+// Visto el 09/10/2026 verificando la fuente en el navegador: el lápiz abrió el editor con todos
+// los campos vacíos. Un pedido abortado apagaba `cargando` mientras el siguiente seguía en camino
+// y la cabecera se pintaba sin ficha.
+describe('la carga', () => {
+    const lapiz = () => screen.queryByRole('button', { name: 'Editar los datos del lead' });
+    const titulo = () => screen.queryByRole('heading', { level: 2 });
+    const otroLead = {
+        ...fichaConDeuda,
+        identidad: { ...fichaConDeuda.identidad, nombre: 'Ana Gómez', appointment_id: 777 },
+    };
+
+    /** Cada GET queda en espera hasta que el test lo resuelve; abortarlo lo rechaza, como axios. */
+    const pedidosEnEspera = () => {
+        const pedidos = [];
+        api.get.mockImplementation((url, { params, signal } = {}) => new Promise((resolver, rechazar) => {
+            signal?.addEventListener('abort', () => rechazar({ code: 'ERR_CANCELED' }));
+            pedidos.push({ params, resolver: (ficha) => resolver({ data: ficha }) });
+        }));
+        ['patch', 'post', 'put', 'delete'].forEach(m => api[m].mockResolvedValue({ data: { ok: true } }));
+        return pedidos;
+    };
+
+    it('el pedido abortado de StrictMode no da por terminada la carga del siguiente', async () => {
+        const pedidos = pedidosEnEspera();
+        render(
+            <React.StrictMode>
+                <FichaLeadModal appointmentId={9012} onCerrar={vi.fn()} />
+            </React.StrictMode>,
+        );
+        // StrictMode monta el efecto dos veces: el primer pedido se aborta y el segundo sigue.
+        await waitFor(() => expect(pedidos).toHaveLength(2));
+        await act(async () => {});
+
+        expect(titulo()).not.toBeInTheDocument();
+        expect(lapiz()).not.toBeInTheDocument();
+
+        await act(async () => pedidos[1].resolver(fichaPrecall));
+        expect(titulo()).toHaveTextContent('Kevin Encalada');
+        expect(lapiz()).toBeInTheDocument();
+    });
+
+    it('al cambiar de lead no queda a la vista el anterior mientras llega el nuevo', async () => {
+        const pedidos = pedidosEnEspera();
+        const { rerender } = render(<FichaLeadModal appointmentId={9012} onCerrar={vi.fn()} />);
+        await act(async () => pedidos[0].resolver(fichaPrecall));
+        expect(titulo()).toHaveTextContent('Kevin Encalada');
+
+        rerender(<FichaLeadModal appointmentId={777} onCerrar={vi.fn()} />);
+        expect(titulo()).not.toBeInTheDocument();
+        expect(lapiz()).not.toBeInTheDocument();
+
+        await act(async () => pedidos[1].resolver(otroLead));
+        expect(titulo()).toHaveTextContent('Ana Gómez');
+    });
+
+    it('la recarga de un lead que llega tarde no pisa al lead que se abrió después', async () => {
+        // Guardar recarga la ficha; si mientras tanto se abre otro lead, esa recarga ya es vieja.
+        const usuario = userEvent.setup();
+        const pedidos = pedidosEnEspera();
+        const { rerender } = render(<FichaLeadModal appointmentId={9012} onCerrar={vi.fn()} />);
+        await act(async () => pedidos[0].resolver(fichaPrecall));
+        await usuario.click(lapiz());
+        await usuario.type(screen.getByLabelText('Teléfono'), '9{Enter}');
+        await waitFor(() => expect(pedidos).toHaveLength(2));
+
+        rerender(<FichaLeadModal appointmentId={777} onCerrar={vi.fn()} />);
+        await act(async () => pedidos[2].resolver(otroLead));
+        await act(async () => pedidos[1].resolver(fichaPrecall));
+
+        expect(titulo()).toHaveTextContent('Ana Gómez');
+        expect(pedidos[2].params).toEqual({ appointment_id: 777 });
+    });
 });
