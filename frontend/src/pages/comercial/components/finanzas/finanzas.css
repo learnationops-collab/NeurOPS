@@ -263,6 +263,9 @@
   margin-bottom:var(--s3);min-width:0}
 .dc-shell .fz-dif-filtros .tabs{overflow-x:auto;scrollbar-width:none}
 .dc-shell .fz-dif-busca{flex:0 1 260px}
+/* Una sola columna que no crece con el nombre más largo: sin esto el ancho mínimo de la tabla era el
+   del nombre entero de la fila más larga (nowrap) y no `--min`, y a ~995px aparecía la barra. */
+.dc-shell .fz-dif-tabla{grid-template-columns:minmax(0,1fr)}
 .dc-shell .fz-dif-fila{min-height:60px}
 .dc-shell .fz-dif-estado{display:flex;min-width:0}
 .dc-shell .fz-dif-nom,
@@ -271,7 +274,7 @@
 .dc-shell .fz-dif-sub{display:block;min-width:0;font-size:11.5px;color:var(--text-muted-40);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dc-shell .fz-dif-debil{color:var(--warning)}
-.dc-shell .fz-dif-acciones{flex-wrap:wrap;row-gap:6px}
+.dc-shell .fz-dif-acciones{flex-wrap:wrap;gap:6px}
 /* Mientras una corrección pregunta «¿Seguro?», los íconos de al lado se corren: la pregunta y sus
    dos botones necesitan el ancho entero de la celda. */
 .dc-shell .fz-dif-acciones:has(.fz-dif-confirma) > .ibtn{display:none}

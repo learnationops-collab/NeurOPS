@@ -101,12 +101,13 @@ export const resumenDeCarga = (r) => {
  * No es `InlineConfirm`: aquel es para borrar (tacho, deshacer diferido) y esto cambia un dato que
  * se puede volver a cambiar.
  */
-const Confirmar = ({ etiqueta, pregunta, onConfirmar, icono = null }) => {
+const Confirmar = ({ etiqueta, pregunta, onConfirmar, icono = null, titulo = null }) => {
     const [fase, setFase] = useState('reposo');
     const quieto = useReducedMotion();
     if (fase === 'reposo') {
         return (
-            <button type="button" className="btn btn--linea btn--sm fz-dif-accion" onClick={() => setFase('pregunta')}>
+            <button type="button" className="btn btn--linea btn--sm fz-dif-accion" onClick={() => setFase('pregunta')}
+                title={titulo || undefined} aria-label={titulo || undefined}>
                 {icono}{etiqueta}
             </button>
         );
@@ -209,7 +210,7 @@ const partesDeLaDiferencia = (por) => {
     const partes = [
         Math.abs(por.pendientes) > 0.004 ? `${conSigno(por.pendientes)} pendientes` : null,
         Math.abs(por.revisadas) > 0.004 ? `${conSigno(por.revisadas)} revisadas` : null,
-        Math.abs(por.otro_periodo) > 0.004 ? `${conSigno(por.otro_periodo)} de otro período` : null,
+        Math.abs(por.otro_periodo) > 0.004 ? `${conSigno(por.otro_periodo)} otro período` : null,
     ].filter(Boolean);
     return partes.length ? partes.join(' · ') : 'Todo coincide';
 };
@@ -217,20 +218,26 @@ const partesDeLaDiferencia = (por) => {
 export const KpisDiferencias = ({ kpis }) => {
     const sinCsv = !kpis.con_csv;
     const p = kpis.pendientes;
+    // Con el CSV de una sola pasarela, «Todas» es solo esa: se dice cuál falta.
+    const falta = kpis.con_csv && kpis.pasarelas?.length === 1 && Object.keys(PASARELAS).length > 1
+        ? Object.keys(PASARELAS).find(clave => !kpis.pasarelas.includes(clave)) : null;
+    const ventas = `${kpis.ventas} ${kpis.ventas === 1 ? 'venta' : 'ventas'}`;
     return (
         <div className="fz-grid fz-grid--4">
             <Cifron rotulo="Reportado" valor={dinero(kpis.reportado)} humo={HUMOS.marca} ayuda={AYUDAS.reportado}
-                sub={`${kpis.ventas} ${kpis.ventas === 1 ? 'venta' : 'ventas'} en el sistema`} />
+                sub={falta ? `${ventas} · solo ${PASARELAS[kpis.pasarelas[0]]}, falta el CSV de ${PASARELAS[falta]}`
+                    : `${ventas} en el sistema`} />
             <Cifron rotulo="Ingresado" valor={sinCsv ? '—' : dinero(kpis.ingresado)} tono={sinCsv ? undefined : 'success'}
                 humo={HUMOS.ingreso} ayuda={`${AYUDAS.ingresado} Finanzas estima ${dinero(kpis.comision_estimada)} de comisión para lo reportado.`}
-                sub={sinCsv ? 'Falta el CSV del período' : `Bruto · neto ${dinero(kpis.neto)} · comisión ${dinero(kpis.comision)}`} />
+                sub={sinCsv ? 'Falta el CSV del período' : `neto ${dinero(kpis.neto)} · comisión ${dinero(kpis.comision)}`} />
             <Cifron rotulo="Diferencia" valor={sinCsv ? '—' : conSigno(kpis.diferencia)}
                 tono={sinCsv ? undefined : tonoDe(kpis.diferencia)} humo={HUMOS.info} ayuda={AYUDAS.diferencia}
                 sub={sinCsv ? 'Sin CSV no hay con qué comparar' : partesDeLaDiferencia(kpis.diferencia_por)} />
-            <Cifron rotulo="Pendientes" valor={String(p.total)} tono={p.total ? 'warning' : 'success'} humo={HUMOS.gasto}
-                ayuda={AYUDAS.pendientes}
-                sub={p.total ? `${p.monto_distinto} monto · ${p.sin_reportar} sin reportar · ${p.sin_ingreso} sin ingreso`
-                    : `Nada pendiente${kpis.revisadas ? ` · ${kpis.revisadas} revisadas` : ''}`} />
+            <Cifron rotulo="Pendientes" valor={sinCsv ? '—' : String(p.total)}
+                tono={sinCsv ? undefined : p.total ? 'warning' : 'success'} humo={HUMOS.gasto} ayuda={AYUDAS.pendientes}
+                sub={sinCsv ? 'Subí el CSV para comparar'
+                    : p.total ? `${p.monto_distinto} monto · ${p.sin_reportar} sin reportar · ${p.sin_ingreso} sin ingreso`
+                        : `Nada pendiente${kpis.revisadas ? ` · ${kpis.revisadas} revisadas` : ''}`} />
         </div>
     );
 };
@@ -411,7 +418,9 @@ const Detalle = ({ fila, opciones, onCorregir, onRevisar }) => {
     );
 };
 
-const COLS = { '--cols': 'minmax(118px,.7fr) minmax(170px,1.5fr) 120px 132px 108px minmax(232px,1.25fr)', '--min': '980px' };
+// Medido con la tabla a ~995px (la de Kerwin): el estado tiene piso para «Monto distinto» entero (con
+// 118px se leía «Monto dist…»), y las acciones, para un botón con texto y tres íconos en un renglón.
+const COLS = { '--cols': '144px minmax(150px,1.5fr) 112px 124px 104px minmax(252px,1.3fr)', '--min': '970px' };
 
 const FilaDiferencia = ({ fila, abierta, onAbrir, onCorregir, onRevisar, onFicha }) => {
     const estado = ESTADOS[fila.estado];
@@ -430,7 +439,9 @@ const FilaDiferencia = ({ fila, abierta, onAbrir, onCorregir, onRevisar, onFicha
         );
     } else if (pendiente && sugerencia) {
         principal = (
-            <Confirmar etiqueta={`Pasar a ${sugerencia.metodo_pago}`} icono={<ArrowRightLeft />}
+            // «A Hotmart» y no «Pasar a Hotmart»: con el texto entero el último ícono bajaba de renglón.
+            <Confirmar etiqueta={`A ${sugerencia.metodo_pago}`} icono={<ArrowRightLeft />}
+                titulo={`Pasar la venta a ${sugerencia.metodo_pago}`}
                 pregunta={`¿La venta fue por ${sugerencia.metodo_pago}?`}
                 onConfirmar={() => onCorregir(sugerencia.venta_id, { metodo_pago: sugerencia.metodo_pago },
                     `La venta pasó a ${sugerencia.metodo_pago}`)} />
@@ -463,8 +474,12 @@ const FilaDiferencia = ({ fila, abierta, onAbrir, onCorregir, onRevisar, onFicha
             <span className="fz-dif-nom">
                 <b title={nombre}>{nombre}</b>
                 <span className="fz-dif-sub" title={[email, PASARELAS[fila.pasarela], fila.identidad && IDENTIDADES[fila.identidad]].filter(Boolean).join(' · ')}>
-                    {PASARELAS[fila.pasarela]}{email ? ` · ${email}` : ''}
-                    {fila.identidad && DEBILES.has(fila.identidad) && <span className="fz-dif-debil"> · por nombre</span>}
+                    {PASARELAS[fila.pasarela]}
+                    {/* Antes del correo: un correo largo lo cortaría con «…». */}
+                    {fila.identidad && DEBILES.has(fila.identidad) && (
+                        <span className="fz-dif-debil">{fila.identidad === 'correo_parcial' ? ' · correo cortado' : ' · por nombre'}</span>
+                    )}
+                    {email ? ` · ${email}` : ''}
                 </span>
             </span>
             <span className="fz-dif-monto">
@@ -702,7 +717,7 @@ const Diferencias = ({ periodo }) => {
                                 ariaLabel="Estado de las filas" />
                         </div>
                         <div className="fz-scroll">
-                            <div className="fz-tabla" style={COLS}>
+                            <div className="fz-tabla fz-dif-tabla" style={COLS}>
                                 <div className="fz-cab">
                                     <span>Estado</span>
                                     <span>Cliente</span>

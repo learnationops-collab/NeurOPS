@@ -182,7 +182,7 @@ describe('Diferencias · correcciones rápidas', () => {
     it('una venta que entró por la otra pasarela se pasa con un clic confirmado', async () => {
         await montar();
 
-        fireEvent.click(screen.getByRole('button', { name: 'Pasar a Hotmart' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Pasar la venta a Hotmart' }));
         await act(async () => {
             fireEvent.click(within(screen.getByRole('group', { name: '¿La venta fue por Hotmart?' }))
                 .getByRole('button', { name: 'Sí' }));
@@ -285,9 +285,17 @@ describe('Diferencias · estados vacíos', () => {
 
         expect(screen.getByText('Subí los CSV de Stripe y Hotmart del período para ver qué no cierra.')).toBeInTheDocument();
         expect(cifra('Ingresado').textContent).toBe('—');
+        expect(cifra('Pendientes').textContent).toBe('—');
         expect(screen.getByText('Falta el CSV del período')).toBeInTheDocument();
         expect(screen.getByText('Todavía no se subió ningún CSV.')).toBeInTheDocument();
         expect(screen.queryByRole('searchbox')).toBeNull();
+    });
+
+    it('con el CSV de una sola pasarela, «Todas» dice cuál falta', async () => {
+        const base = datos([ANA]);
+        await montar({ ...base, kpis: { ...base.kpis, todas: { ...base.kpis.todas, pasarelas: ['stripe'] } } });
+
+        expect(screen.getByText('3 ventas · solo Stripe, falta el CSV de Hotmart')).toBeInTheDocument();
     });
 
     it('con todo conciliado, «Nada pendiente»', async () => {
