@@ -735,7 +735,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     )}
 
                     {seccion === 'reportar' && stepper}
-                    {seccion === 'payroll' && !sinPermiso && <FiltroGrupos visibles={gruposNomina} onCambiar={setGruposNomina} />}
+                    {seccion === 'payroll' && !sinPermiso && (
+                        <FiltroGrupos visibles={gruposNomina} onCambiar={setGruposNomina}
+                            personas={personasNomina} onCambiarPersonas={setPersonasNomina} />
+                    )}
                     {seccion === 'payroll' && !sinPermiso && (
                         <FiltroPersonas grupos={gruposNomina} elegidas={personasNomina} onCambiar={setPersonasNomina} />
                     )}
