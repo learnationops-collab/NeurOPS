@@ -214,8 +214,14 @@
   font-size:11.5px;font-weight:600;line-height:1.35;color:var(--text-muted-40)}
 .dc-shell .fz-nota svg{width:12px;height:12px;flex-shrink:0}
 
-/* El rótulo de cada grupo en el desplegable de personas de Payroll. */
-.dc-shell .fz-menu-grupo{padding:4px 14px 2px;font-size:10px}
+/* El rótulo de cada grupo en el desplegable de personas de Payroll: una casilla que elige o quita
+   a todo el grupo. Sin el fondo de elegida (es un título, no una persona), y a medias con el «−». */
+.dc-shell .menu-item.fz-menu-grupo{padding:8px 14px 4px}
+.dc-shell .menu-item.fz-menu-grupo .t-rotulo{font-size:10px;color:inherit}
+.dc-shell .menu-item.fz-menu-grupo[aria-checked="true"]{background:transparent}
+.dc-shell .menu-item.fz-menu-grupo:hover{background:var(--bg-element)}
+.dc-shell .menu-item.fz-menu-grupo[aria-checked="mixed"] .menu-caja{border-color:var(--brand-secondary)}
+.dc-shell .menu-item.fz-menu-grupo[aria-checked="mixed"] .menu-caja svg{color:var(--brand-secondary)}
 
 /* Porcentaje editable (editor de comisiones de Payroll): el número y el «%» después. */
 .dc-shell .fz-pct{max-width:104px}
