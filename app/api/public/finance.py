@@ -801,3 +801,37 @@ def get_finance_summary():
         },
         "income_breakdown": income_breakdown
     }), 200
+
+
+def _periodo_pedido():
+    """(desde, hasta) como fechas, de `start_date`/`end_date` (YYYY-MM-DD) o de `month` (YYYY-MM).
+    None si falta o no se entiende, o si el rango está al revés."""
+    inicio, fin = request.args.get('start_date'), request.args.get('end_date')
+    try:
+        if inicio or fin:
+            desde = datetime.strptime(inicio or '', '%Y-%m-%d').date()
+            hasta = datetime.strptime(fin or '', '%Y-%m-%d').date()
+        else:
+            rango = _rango_del_mes(request.args.get('month') or '')
+            if not rango:
+                return None
+            desde, hasta = rango[0].date(), rango[1].date()
+    except ValueError:
+        return None
+    return (desde, hasta) if desde <= hasta else None
+
+
+@bp.route('/public/finance/procedencia', methods=['GET'])
+@login_required
+@finance_admin_required
+def get_finance_procedencia():
+    """El ingreso del período abierto por procedencia (workshop, setting, VSL, Fulfillment, sin
+    procedencia), para el panel del Resumen (08/10/2026). Los baldes suman el ingreso del Resumen:
+    el criterio está en `procedencia_ingresos_service`. Acepta un mes o un rango de fechas, para
+    cuando Finanzas deje de mirarse solo por mes."""
+    from app.services.procedencia_ingresos_service import procedencia_de_ingresos
+
+    periodo = _periodo_pedido()
+    if not periodo:
+        return jsonify({"error": "Parámetros 'start_date' y 'end_date' (YYYY-MM-DD) o 'month' (YYYY-MM) requeridos"}), 400
+    return jsonify(procedencia_de_ingresos(*periodo)), 200
