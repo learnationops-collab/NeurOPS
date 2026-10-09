@@ -23,8 +23,8 @@ ROLE_DIRECTOR_MARKETING = 'director_marketing'
 # en app/decorators.py.
 ROLE_HIRING = 'hiring'
 
-# Los personajes que se pueden elegir de avatar (page-mascot; las hojas están en
-# frontend/public/mascotas y la misma lista en frontend/src/components/mascota/mascotas.js).
+# Los personajes que se pueden elegir de avatar (page-mascot; las hojas y la misma lista están en
+# frontend/src/components/mascota/: hojas/ y mascotas.js).
 MASCOTAS = ('fox', 'cat', 'panda', 'owl', 'penguin', 'redpanda', 'koala', 'astronaut', 'wizard', 'gearbot')
 
 def _esta_desactivado(user):
