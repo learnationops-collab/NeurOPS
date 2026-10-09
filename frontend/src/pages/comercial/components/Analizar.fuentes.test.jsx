@@ -143,6 +143,21 @@ describe('Analizar · Ingresos por fuente', () => {
         expect(apagada.querySelector('.metrica-clic').dataset.vacio).toBe('1');
     });
 
+    it('«Sin procedencia» en cero no se muestra; un embudo en cero, sí', async () => {
+        // Pedido del usuario (09/10/2026): «si "Sin procedencia" es cero no lo muestres».
+        await montar(datos({
+            ...FUENTES, total: 5300, cantidad: 5,
+            procedencias: FUENTES.procedencias.map(p => (p.key === 'sin_procedencia' || p.key === 'vsl'
+                ? { ...p, monto: 0, cantidad: 0, pct: 0, detalle: [],
+                    previo: 250, delta: { valor: -100, modo: 'pct' } }
+                : p)),
+        }));
+
+        expect(rotulos()).toEqual(['Workshop', 'Setting', 'VSL', 'Fulfillment']);
+        expect(within(tarjeta()).getByText('VSL').closest('.fuente').dataset.vacio).toBe('1');
+        expect(fila('Total')).toEqual(['Total', '5', '$5,300', '100%']);
+    });
+
     it('el monto de una fuente abre Revisar › Ventas con esa fuente, sin abrir el detalle', async () => {
         const irA = vi.fn();
         render(<Analizar datos={datos(FUENTES)} rol="closers" irA={irA} />);

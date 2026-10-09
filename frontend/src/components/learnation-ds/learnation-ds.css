@@ -340,6 +340,9 @@
 /* El placeholder es texto informativo: --text-muted-40 daba 3,74:1 y falla AA. */
 .ln-field input::placeholder { color: var(--text-muted); }
 .ln-field select option { background: var(--brand-navy); color: var(--text-on-surface); }
+/* El título de un grupo (`<optgroup>`) también: sin fondo propio el sistema lo pinta blanco y el
+   texto, heredado del select, es blanco. «Embudos» y «Setters» se veían como barras vacías. */
+.ln-field select optgroup { background: var(--brand-navy); color: var(--text-muted); }
 /* La unidad vive DENTRO del campo, no como sufijo suelto al lado. */
 .ln-field .ln-unit {
   font-size: 11px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase;
