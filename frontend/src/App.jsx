@@ -189,6 +189,16 @@ function App() {
             />
             {/* Finanzas y Payroll son secciones del dashboard comercial desde el 08/10/2026: los
                 links viejos llevan ahí (sin el permiso «ver finanzas», el tablero abre Analizar). */}
+            {/* /finanzas: el mismo tablero con solo Finanzas y Payroll en el dock, la vista Finances
+                (08/10/2026). SIN MainLayout, como /admin/comercial. */}
+            <Route
+              path="/finanzas"
+              element={
+                <ProtectedRoute roles={['admin', 'director_comercial']}>
+                  <DashboardComercial espacio="finanzas" />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/admin/finance"
               element={<Navigate to="/admin/comercial?s=finanzas" replace />}

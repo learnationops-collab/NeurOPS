@@ -11,6 +11,8 @@ import DashboardComercial from './DashboardComercial';
  */
 
 const estado = vi.hoisted(() => ({ puede: false }));
+const navegar = vi.hoisted(() => vi.fn());
+vi.mock('react-router-dom', async (original) => ({ ...(await original()), useNavigate: () => navegar }));
 
 vi.mock('./comercialApi', () => ({
     getContexto: vi.fn(() => Promise.resolve({
@@ -51,9 +53,9 @@ vi.mock('./components/finanzas/Payroll', async (original) => ({
     ),
 }));
 
-const montar = (url = '/admin/comercial') => render(
+const montar = (url = '/admin/comercial', props = {}) => render(
     <MemoryRouter initialEntries={[url]}>
-        <DashboardComercial />
+        <DashboardComercial {...props} />
     </MemoryRouter>,
 );
 
@@ -151,18 +153,72 @@ describe('DashboardComercial · Finanzas y Payroll', () => {
     });
 });
 
-describe('DashboardComercial · Payroll lleva a sus ventas en Revisar', () => {
+/** /finanzas: la tarjeta «Finanzas» de la elección de rol abre el tablero con solo estas dos. */
+describe('DashboardComercial · espacio Finanzas', () => {
     beforeEach(() => {
         try { localStorage.clear(); } catch { /* sin almacenamiento */ }
     });
 
-    it('abre Revisar › Ventas con esas ventas, como una sola etiqueta', async () => {
+    it('el dock trae solo Finanzas y Payroll, sin el switch Closers/Setters, y abre en Finanzas', async () => {
         estado.puede = true;
-        montar('/admin/comercial?s=payroll');
+        montar('/finanzas', { espacio: 'finanzas' });
+
+        await screen.findByTestId('finanzas');
+        expect(seccionesDelDock()).toEqual(['Finanzas', 'Payroll']);
+        expect(screen.queryByRole('button', { name: 'Closers' })).toBeNull();
+        expect(screen.queryByTestId('analizar')).toBeNull();
+        expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Finanzas');
+    });
+
+    it('una sección de Comercial en la URL abre Finanzas, y Payroll se elige en el dock', async () => {
+        estado.puede = true;
+        montar('/finanzas?s=analizar', { espacio: 'finanzas' });
+
+        await screen.findByTestId('finanzas');
+        const dock = screen.getByRole('navigation', { name: 'Secciones del dashboard comercial' });
+        await act(async () => { fireEvent.click(within(dock).getByRole('button', { name: /Payroll/ })); });
+        expect(screen.getByTestId('payroll')).toBeTruthy();
+        expect(screen.queryByTestId('finanzas')).toBeNull();
+    });
+
+    it('sin «ver finanzas» avisa en vez de caer en Analizar', async () => {
+        estado.puede = false;
+        montar('/finanzas', { espacio: 'finanzas' });
+
+        expect(await screen.findByText('Sin acceso a Finanzas')).toBeTruthy();
+        expect(screen.queryByTestId('analizar')).toBeNull();
+        expect(screen.queryByTestId('finanzas')).toBeNull();
+    });
+});
+
+describe('DashboardComercial · Payroll lleva a sus ventas en Revisar', () => {
+    beforeEach(() => {
+        navegar.mockClear();
+        try { localStorage.clear(); } catch { /* sin almacenamiento */ }
+    });
+
+    const tocarTile = async (url, props = {}) => {
+        estado.puede = true;
+        montar(url, props);
         const boton = await screen.findByText(/ver ventas de Andy/);
         await act(async () => { fireEvent.click(boton); });
+    };
+
+    it('en Comercial abre Revisar › Ventas con esas ventas, como una sola etiqueta', async () => {
+        await tocarTile('/admin/comercial?s=payroll');
 
         expect(await screen.findByRole('button', { name: 'Quitar Comisión de Andy' })).toBeTruthy();
         expect(screen.getByRole('tab', { name: 'Ventas', selected: true })).toBeTruthy();
+        expect(navegar).not.toHaveBeenCalled();
+    });
+
+    it('en /finanzas, que no tiene Revisar, lleva al dashboard comercial con el mismo filtro', async () => {
+        await tocarTile('/finanzas?s=payroll', { espacio: 'finanzas' });
+
+        const destino = new URL(`http://x${navegar.mock.calls[0][0]}`);
+        const q = Object.fromEntries(destino.searchParams);
+        expect(destino.pathname).toBe('/admin/comercial');
+        expect([q.s, q.t, q.rol, q.p]).toEqual(['revisar', 'ventas', 'closers', 'custom']);
+        expect(JSON.parse(q.f)).toEqual({ __ids: [7, 9], __ids_rotulo: 'Comisión de Andy', __de: 'Comisión de Andy' });
     });
 });
