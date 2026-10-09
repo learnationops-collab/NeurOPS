@@ -3,8 +3,8 @@ import { dinero } from './comun';
 
 /**
  * El detalle de ventas de cada persona, solo para el PDF de Payroll (08/10/2026). En pantalla las
- * ventas se ven en Revisar (el clic en el tile); en el papel no hay clic, así que va acá, después
- * del resumen y en hoja nueva.
+ * ventas se ven al tocar el tile (`VentasDePersona`); en el papel no hay clic, así que va acá,
+ * después del resumen y en hoja nueva.
  *
  * Son las personas que se están viendo (grupos prendidos y, si hay, las elegidas en el
  * desplegable), en el mismo orden que los tiles. Cada una con todas sus ventas del período: las
@@ -13,9 +13,9 @@ import { dinero } from './comun';
  */
 
 const fecha = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '—');
-const FUENTES = { renovacion: 'Renovación', upsell: 'Upsell', conversion: 'Conversión', cuota: 'Cuota' };
+export const FUENTES = { renovacion: 'Renovación', upsell: 'Upsell', conversion: 'Conversión', cuota: 'Cuota' };
 // Las ventas de Marlon (08/10/2026): las suyas le pagan como closer y las de los otros, como director.
-const CONCEPTOS = { propia: 'Propia', director: 'Director' };
+export const CONCEPTOS = { propia: 'Propia', director: 'Director' };
 
 const TablaPersona = ({ persona, datos }) => {
     const ventas = [...(datos.sales || [])].sort((a, b) => (a.date || '').localeCompare(b.date || '') || a.id - b.id);
