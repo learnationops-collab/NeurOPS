@@ -289,6 +289,19 @@ export const lineaDeTransferencias = (datos) => {
     return `descuentos ${dinero(-recibidas)} · ${neto < -0.004 ? `debe devolver ${dinero(-neto)}` : `a pagar ${dinero(neto)}`}`;
 };
 
+/**
+ * La línea del Cash que dice cuánto entró por transferencia y a quién (pedido del usuario,
+ * 09/10/2026: «falta contar lo que ingresó por transferencia para que las cuentas cuadren»). Ya está
+ * dentro del cash: dice qué parte no pasó por Stripe ni Hotmart. Es de TODO el período, no de las
+ * personas que estás viendo, como el cash. Sin transferencias, nada.
+ */
+export const lineaDeTransferenciasDelCash = (transferencias) => {
+    if (!transferencias || transferencias.total <= 0.004) return null;
+    const quienes = (transferencias.destinos || []).filter(d => d.total > 0.004).map(d => d.label);
+    if ((transferencias.sin_marcar?.total || 0) > 0.004) quienes.push('sin marcar a quién');
+    return `transferencias ${dinero(transferencias.total)}${quienes.length ? ` · ${quienes.join(', ')}` : ''}`;
+};
+
 const lecturaDe = (persona, datos) => {
     const base = datos.sueldo_base > 0 ? `base ${dinero(datos.sueldo_base)}` : null;
     const transferencias = lineaDeTransferencias(datos);
@@ -398,6 +411,7 @@ const Payroll = ({ desde, hasta, ver = null, onVer, grupos, personas = [], tasas
     const costo = sueldoBase + comisiones;
     const total = costo - descuentos;
     const cash = datos.totales || { cash_neto: 0, cash_bruto: 0, ventas: 0 };
+    const porTransferencia = lineaDeTransferenciasDelCash(cash.transferencias);
     // El peso es el de la nómina entera (sueldo base + comisiones) desde el 08/10/2026: con el fijo
     // afuera, el de Fulfillment parecía casi nada.
     const peso = cash.cash_neto ? (costo / cash.cash_neto) * 100 : null;
@@ -427,8 +441,11 @@ const Payroll = ({ desde, hasta, ver = null, onVer, grupos, personas = [], tasas
                 se paga (base + comisiones − descuentos = total) y el peso. */}
             {!abierta && <div className="fz-grid fz-grid--3">
                 <Cifron rotulo="Cash del período" valor={dinero(cash.cash_neto)} tono="success" humo={HUMOS.ingreso}
-                    sub={`${cash.ventas} ${cash.ventas === 1 ? 'venta' : 'ventas'} · bruto ${dinero(cash.cash_bruto)}`}
-                    ayuda="Todo lo cobrado en el período, neto de la comisión de Stripe y Hotmart: la base sobre la que se calculan las comisiones." />
+                    sub={<>
+                        {`${cash.ventas} ${cash.ventas === 1 ? 'venta' : 'ventas'} · bruto ${dinero(cash.cash_bruto)}`}
+                        {porTransferencia && <><br /><span>{porTransferencia}</span></>}
+                    </>}
+                    ayuda="Todo lo cobrado en el período, neto de la comisión de Stripe y Hotmart: la base sobre la que se calculan las comisiones. Incluye lo que entró por transferencia, que no paga comisión de pasarela: debajo dice cuánto fue y a la cuenta de quién." />
                 <Cifron rotulo="Sueldo base" valor={dinero(sueldoBase)} tono="info" humo={HUMOS.info}
                     sub="El fijo del período"
                     ayuda="El sueldo fijo de las personas que estás viendo: el de su ficha en Finanzas, o el de su nómina guardada de ese mes. Un mes entero del período cuenta el sueldo completo; un mes a medias, la parte de sus días (sueldo × días del período en ese mes ÷ días del mes)." />

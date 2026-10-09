@@ -307,6 +307,41 @@ def test_una_pareja_entre_dos_periodos_explica_su_parte_de_la_diferencia(db):
     assert kpis['diferencia_por'] == {'pendientes': 0.0, 'revisadas': 0.0, 'otro_periodo': 250.0}
 
 
+def test_todas_suma_las_transferencias_a_lo_reportado_y_a_lo_ingresado(db):
+    """Pedido del 09/10/2026: «falta contar lo que ingresó por transferencia para que las cuentas
+    cuadren». No vienen en ningún CSV ni se concilian: lo reportado es lo que entró, así que suman
+    a los dos lados (bruto y neto, sin comisión) y la diferencia no cambia. Las pasarelas sueltas no
+    las llevan, ni una transferencia cancelada o de otro mes."""
+    venta(db, 100, datetime(2026, 9, 9), 'ana@prueba.com', 'Ana Prueba')
+    venta(db, 150, datetime(2026, 9, 9), nombre='Israel Prueba', metodo='Transferencia Bancaria',
+          transferido_a='jean_carlo')
+    venta(db, 80, datetime(2026, 9, 20), nombre='Sin Marcar', metodo='Transferencia')
+    venta(db, 500, datetime(2026, 9, 20), nombre='Cancelada', metodo='Transferencia', estado='Cancelada')
+    venta(db, 70, datetime(2026, 10, 2), nombre='De Octubre', metodo='Transferencia')
+    subir(stripe(('2026-09-10 15:00:00', 90, 'Ana Prueba', 'ana@prueba.com')))
+
+    kpis = conciliar()['kpis']
+    todas, stripe_ = kpis['todas'], kpis['stripe']
+
+    assert todas['transferencias'] == {'total': 230.0, 'ventas': 2}
+    assert (todas['reportado'], todas['ventas']) == (330.0, 3)
+    assert (todas['ingresado'], todas['neto']) == (320.0, pytest.approx(85.95 + 230.0))
+    assert todas['comision'] == pytest.approx(4.05)
+    assert todas['diferencia'] == stripe_['diferencia'] == -10.0
+    assert (stripe_['reportado'], stripe_['ingresado']) == (100.0, 90.0)
+    assert 'transferencias' not in stripe_
+
+
+def test_sin_ningun_csv_las_transferencias_suman_a_lo_reportado(db):
+    venta(db, 100, datetime(2026, 9, 10), 'ana@prueba.com', metodo='Hotmart')
+    venta(db, 150, datetime(2026, 9, 10), nombre='Israel Prueba', metodo='Transferencia Bancaria')
+
+    todas = conciliar()['kpis']['todas']
+
+    assert (todas['reportado'], todas['ventas'], todas['transferencias']['total']) == (250.0, 2, 150.0)
+    assert (todas['ingresado'], todas['neto'], todas['diferencia']) == (None, None, None)
+
+
 # --- Revisadas ------------------------------------------------------------------------------------
 
 def test_marcar_revisada_saca_la_fila_de_pendientes_y_queda_quien_y_cuando(db, make_user):

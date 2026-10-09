@@ -72,7 +72,7 @@ const datos = (filas = [ANA, KERVIN, ADRIAN, LUZ, GRETA], extra = {}) => ({
     kpis: {
         todas: kpis({ pendientes: { monto_distinto: 1, sin_reportar: 2, sin_ingreso: 1, total: 4 } }),
         stripe: kpis(),
-        hotmart: kpis({ reportado: 0, ventas: 0, ingresado: 50, movimientos: 1, diferencia: 50,
+        hotmart: kpis({ reportado: 0, ventas: 0, ingresado: 50, neto: 45.55, comision: 4.45, movimientos: 1, diferencia: 50,
             diferencia_por: { pendientes: 50, revisadas: 0, otro_periodo: 0 },
             pendientes: { monto_distinto: 0, sin_reportar: 1, sin_ingreso: 0, total: 1 }, coinciden: 0 }),
     },
@@ -111,8 +111,11 @@ describe('Diferencias · KPIs y filtros', () => {
         await montar();
 
         await waitFor(() => expect(cifra('Reportado').textContent).toBe('$980.00'));
-        await waitFor(() => expect(cifra('Ingresado').textContent).toBe('$880.77'));
-        expect(cifra('Diferencia').textContent).toBe('-$99.23');
+        // Lo ingresado en neto, con el bruto y la comisión debajo (09/10/2026); la diferencia es la
+        // del bruto.
+        await waitFor(() => expect(cifra('Ingresado').textContent).toBe('$841.14'));
+        expect(screen.getByText('bruto $880.77 · comisión $39.63')).toBeInTheDocument();
+        await waitFor(() => expect(cifra('Diferencia').textContent).toBe('-$99.23'));
         expect(cifra('Diferencia').style.color).toBe('var(--error)');
         await waitFor(() => expect(cifra('Pendientes').textContent).toBe('4'));
         expect(screen.getByText('1 monto · 2 sin reportar · 1 sin ingreso')).toBeInTheDocument();
@@ -130,8 +133,21 @@ describe('Diferencias · KPIs y filtros', () => {
 
         fireEvent.click(screen.getByRole('tab', { name: 'Hotmart' }));
         expect(nombres()).toEqual(['Luz Prueba']);
-        await waitFor(() => expect(cifra('Ingresado').textContent).toBe('$50.00'));
-        expect(cifra('Diferencia').textContent).toBe('+$50.00');
+        await waitFor(() => expect(cifra('Ingresado').textContent).toBe('$45.55'));
+        // Esperada como la de arriba: las cifras cuentan hasta su valor y, con la máquina cargada, la
+        // diferencia todavía estaba en $0.00 cuando se leía de una.
+        await waitFor(() => expect(cifra('Diferencia').textContent).toBe('+$50.00'));
+    });
+
+    it('«Todas» dice cuánto de lo reportado y lo ingresado fue por transferencia; una pasarela, no', async () => {
+        // Pedido del 09/10/2026: las transferencias no vienen en ningún CSV, pero son plata que entró.
+        const base = datos();
+        await montar({ ...base, kpis: { ...base.kpis,
+            todas: { ...base.kpis.todas, transferencias: { total: 150, ventas: 1 } } } });
+
+        expect(screen.getAllByText('incluye $150.00 por transferencia')).toHaveLength(2);
+        fireEvent.click(screen.getByRole('tab', { name: 'Stripe' }));
+        expect(screen.queryByText('incluye $150.00 por transferencia')).not.toBeInTheDocument();
     });
 
     it('el buscador encuentra por nombre, correo o monto, sin tildes', async () => {
