@@ -256,6 +256,23 @@ describe('onAccion pega en el endpoint correcto', () => {
             expect(await screen.findByText(/la deuda no cambió/)).toBeInTheDocument();
         });
 
+        it('marcar a quién se le hizo una transferencia parchea solo eso y no dice que la deuda cambió', async () => {
+            const usuario = userEvent.setup();
+            await abrir({
+                ...conVocabularioDePagos,
+                cobro: { ...conVocabularioDePagos.cobro, pagos: [{
+                    ...conVocabularioDePagos.cobro.pagos[0], medio: 'Transferencia Bancaria',
+                    es_transferencia: true, transferido_a: null,
+                }] },
+            });
+            api.patch.mockResolvedValueOnce({ data: { id: 881, espejo: true, deuda: 100, cambios: ['transferido_a'] } });
+            await usuario.click(screen.getByRole('button', { name: /^Pagos/ }));
+            await usuario.click(screen.getByRole('button', { name: 'Jean Carlo' }));
+
+            expect(api.patch).toHaveBeenCalledWith('/ficha/9012/pago/881', { transferido_a: 'jean_carlo' });
+            expect(await screen.findByText('Listo: quedó anotado a quién se le hizo la transferencia.')).toBeInTheDocument();
+        });
+
         it('agregar un pago postea en la ruta de pagos y no declara una venta', async () => {
             // `/venta` pasa por Sheets y n8n: agregar un pago olvidado no tiene que avisarle a nadie.
             const usuario = userEvent.setup();
