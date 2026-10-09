@@ -18,8 +18,8 @@ import './procedencia.css';
  * Las barras miden contra el TOTAL, también las del detalle: así las de un balde, puestas una
  * detrás de otra, dan la barra del balde.
  *
- * Recibe `desde`/`hasta` (YYYY-MM-DD) y no el mes: el Resumen hoy se mira por mes (`rangoDelMes`),
- * pero el panel no tiene por qué saberlo.
+ * Recibe `desde`/`hasta` (YYYY-MM-DD) y no el mes: es el período exacto del Resumen, un mes o un
+ * rango personalizado.
  */
 
 const v = (tono) => `var(--${tono})`;
@@ -30,13 +30,6 @@ const AYUDAS = {
     vsl: 'Las agendas que entraron por el embudo de la VSL.',
     fulfillment: 'Renovaciones y upsells, que los trae Fulfillment y no un embudo, más los pagos de sus agendas.',
     sin_procedencia: 'Pagos sin una agenda que los origine, o con una fuente que no es ninguna de las de arriba.',
-};
-
-/** {desde, hasta} (YYYY-MM-DD) del mes 'YYYY-MM'. */
-export const rangoDelMes = (mes) => {
-    const [anio, m] = mes.split('-').map(Number);
-    const ultimo = new Date(anio, m, 0).getDate();
-    return { desde: `${mes}-01`, hasta: `${mes}-${String(ultimo).padStart(2, '0')}` };
 };
 
 const pct = (n) => (n === null || n === undefined ? '—' : `${n.toFixed(1)}%`);

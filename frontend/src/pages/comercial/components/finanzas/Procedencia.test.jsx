@@ -2,7 +2,7 @@ import React from 'react';
 import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Finanzas from './Finanzas';
-import Procedencia, { rangoDelMes } from './Procedencia';
+import Procedencia from './Procedencia';
 
 /**
  * Ingresos por procedencia (Finanzas › Resumen, 08/10/2026): los cinco baldes con su monto, sus
@@ -133,28 +133,17 @@ describe('Procedencia', () => {
 });
 
 describe('Finanzas › Resumen', () => {
-    it('trae el panel con el mes que se mira', async () => {
+    it('trae el panel con el período que se mira', async () => {
         api.getResumen.mockResolvedValue({
             kpis: { total_income: 15270.71, total_expenses: 0, profit: 15270.71, balance_neto: 15270.71 },
             expenses_breakdown: { sueldos: 0, anuncios: 0, software: 0 }, income_breakdown: [],
         });
         api.getAhorros.mockResolvedValue({ savings: 0 });
         api.getProcedencia.mockResolvedValue(SEPTIEMBRE);
-        render(<Finanzas tab="resumen" mes="2026-02" />);
+        render(<Finanzas tab="resumen" periodo={{ desde: '2026-02-01', hasta: '2026-02-28', mes: '2026-02' }} />);
         await cargado();
 
         expect(api.getProcedencia).toHaveBeenCalledWith('2026-02-01', '2026-02-28');
         expect(screen.getByRole('heading', { name: 'Ingresos por procedencia' })).toBeTruthy();
-    });
-});
-
-describe('rangoDelMes', () => {
-    it.each([
-        ['2026-09', { desde: '2026-09-01', hasta: '2026-09-30' }],
-        ['2026-10', { desde: '2026-10-01', hasta: '2026-10-31' }],
-        ['2028-02', { desde: '2028-02-01', hasta: '2028-02-29' }],
-        ['2026-12', { desde: '2026-12-01', hasta: '2026-12-31' }],
-    ])('%s', (mes, rango) => {
-        expect(rangoDelMes(mes)).toEqual(rango);
     });
 });

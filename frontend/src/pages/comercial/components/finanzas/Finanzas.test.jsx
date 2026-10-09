@@ -23,6 +23,7 @@ const api = vi.hoisted(() => ({
     getAhorros: vi.fn(),
     getGastosSoftware: vi.fn(),
     crearGasto: vi.fn(),
+    getProcedencia: vi.fn(() => new Promise(() => {})),
 }));
 vi.mock('./finanzasApi', () => api);
 
