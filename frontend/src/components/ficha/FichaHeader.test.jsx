@@ -182,3 +182,85 @@ describe('la franja en modo edición', () => {
         expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
 });
+
+// Pedido del 09/10/2026: «al darle en editar en el modal no puedo modificar la fuente del lead».
+describe('la fuente en modo edición', () => {
+    // `ficha_vocabulario.fuentes_disponibles()`: el mismo catálogo que ofrece el historial.
+    const FUENTES = [
+        { titulo: 'Embudos', tono: 'info', opciones: [
+            { clave: 'workshop', label: 'Workshop en vivo' },
+            { clave: 'vsl', label: 'VSL' },
+        ] },
+        { titulo: 'Setters', tono: 'success', opciones: [{ clave: 'Paula', label: 'Paula' }] },
+    ];
+    const conFuente = (ficha, identidad) => ({
+        ...ficha,
+        identidad: { ...ficha.identidad, ...identidad },
+        vocabulario: { ...ficha.vocabulario, fuentes: FUENTES },
+    });
+    const fuente = () => screen.getByLabelText('Fuente');
+
+    it('se elige del catálogo, y la guardada fuera de él sigue elegida', async () => {
+        // La cita ancla de un cliente que compró sin agenda: es el caso de la captura.
+        const usuario = userEvent.setup();
+        await abrir(conFuente(fichaConDeuda, {
+            fuente: 'Venta histórica sin agenda', fuente_label: 'Venta histórica sin agenda',
+        }));
+        await usuario.click(lapiz());
+
+        expect(fuente()).toHaveValue('Venta histórica sin agenda');
+        expect([...fuente().querySelectorAll('optgroup')].map(g => [
+            g.label, [...g.querySelectorAll('option')].map(o => o.textContent),
+        ])).toEqual([
+            ['Fuera del catálogo', ['Venta histórica sin agenda']],
+            ['Embudos', ['Workshop en vivo', 'VSL']],
+            ['Setters', ['Paula']],
+        ]);
+        // Va con los otros cuatro, último como en la franja.
+        expect([...document.querySelectorAll('.fi-cab-editor > .fi-dato > .t-rotulo')]
+            .map(r => r.textContent)).toEqual(['Examen', 'Teléfono', 'Correo', 'Instagram', 'Fuente']);
+    });
+
+    it('elegir otra la manda sola, por el mismo PATCH de los datos', async () => {
+        const usuario = userEvent.setup();
+        await abrir(conFuente(fichaPrecall, { fuente: 'vsl', fuente_label: 'VSL' }));
+        await usuario.click(lapiz());
+        await usuario.selectOptions(fuente(), 'workshop');
+        await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
+
+        expect(api.patch).toHaveBeenCalledWith('/ficha/9012/datos', { fuente: 'workshop' });
+        expect(await screen.findByText('Datos del lead corregidos.')).toBeInTheDocument();
+    });
+
+    it('sin fuente guardada pide elegir una, y sin tocarla no viaja', async () => {
+        const usuario = userEvent.setup();
+        await abrir(conFuente(fichaPrecall, { fuente: null, fuente_label: null }));
+        await usuario.click(lapiz());
+
+        expect(fuente()).toHaveValue('');
+        expect(fuente().options[0]).toHaveTextContent('Sin fuente · elegí una');
+        const telefono = screen.getByLabelText('Teléfono');
+        await usuario.clear(telefono);
+        await usuario.type(telefono, '+593 99 000 1111{Enter}');
+
+        expect(api.patch).toHaveBeenCalledWith('/ficha/9012/datos', { telefono: '+593 99 000 1111' });
+    });
+
+    it('el rechazo del backend queda al lado del desplegable', async () => {
+        const usuario = userEvent.setup();
+        await abrir(conFuente(fichaPrecall, { fuente: 'vsl', fuente_label: 'VSL' }));
+        api.patch.mockRejectedValueOnce({ response: { status: 400, data: {
+            message: '«Paula» no es una fuente del catálogo: elegí una de la lista.', campo: 'fuente',
+        } } });
+        await usuario.click(lapiz());
+        await usuario.selectOptions(fuente(), 'Paula');
+        await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('no es una fuente del catálogo');
+        expect(fuente()).toHaveAttribute('aria-invalid', 'true');
+        expect(fuente()).toHaveAttribute('aria-describedby', 'fi-error-fuente');
+        // Elegir otra borra el error.
+        await usuario.selectOptions(fuente(), 'workshop');
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+});

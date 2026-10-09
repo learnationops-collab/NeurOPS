@@ -324,13 +324,22 @@
   cursor:pointer;justify-self:start}
 .dc-shell .fi-closer-btn:hover{border-color:var(--brand-secondary)}
 
-/* La misma franja en modo edicion: el titulo se vuelve el campo del nombre y los cuatro
-   datos, cuatro campos. Columnas de ancho IGUAL (no `auto` como al leer): un campo vacio
-   mediria lo que su placeholder y la fila quedaria dentada. Mismos cortes que la franja,
-   por la misma razon: siempre par, nunca un 3 + 1. */
-.dc-shell .fi-cab-editor{justify-content:stretch;grid-template-columns:repeat(4,minmax(0,1fr))}
-@media (max-width:900px){
-  .dc-shell .fi-cab-editor{grid-template-columns:repeat(2,minmax(0,1fr))}
+/* La misma franja en modo edicion: el titulo se vuelve el campo del nombre y los cinco
+   datos, cinco campos (la fuente se sumo el 09/10/2026). Columnas FIJAS (no `auto` como al
+   leer): un campo vacio mediria lo que su placeholder y la fila quedaria dentada. Pero no
+   iguales: en el orden de `CAMPOS_DATOS` (examen, telefono, correo, instagram, fuente), cada
+   una con lo que suele llevar. Con cinco iguales, a 1100px un correo comun
+   («karlapato1295@gmail.com») y «Venta histórica sin agenda» quedaban cortados; el examen es
+   una sigla. El hueco es menor que al leer: cada campo tiene su borde.
+   Los cortes, como los de la franja: una fila, o 3 arriba y 2 abajo de lado a lado, nunca un
+   4 + 1. Pero la fila se parte antes, a los 1080px y no a los 900: medido, por debajo de eso
+   el correo y la fuente ya no entran en una fila de cinco. */
+.dc-shell .fi-cab-editor{justify-content:stretch;column-gap:var(--s4);
+  grid-template-columns:minmax(0,.75fr) minmax(0,.9fr) minmax(0,1.3fr) minmax(0,.9fr) minmax(0,1.35fr)}
+@media (min-width:521px) and (max-width:1080px){
+  .dc-shell .fi-cab-editor{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .dc-shell .fi-cab-editor > .fi-dato{grid-column:span 2}
+  .dc-shell .fi-cab-editor > .fi-dato:nth-last-child(-n+2){grid-column:span 3}
 }
 @media (max-width:520px){
   .dc-shell .fi-cab-editor{grid-template-columns:minmax(0,1fr)}
