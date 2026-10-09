@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Pencil } from 'lucide-react';
 import { diaLegible, fechaLegible as fecha, instanteLegible, SeccionColapsable } from '../piezas';
 import { datetimeLocalToUtcIso } from '../../../utils/datetime';
@@ -523,7 +523,15 @@ const PlanDeCuotas = ({ ficha, cuotas, onAccion, puedeEditar }) => {
     );
 };
 
-const TabHistorial = ({ ficha, onAccion, puedeEditar = true }) => {
+/**
+ * `seccionAbierta` (09/10/2026): la sección que arranca abierta y a la vista. Finanzas › Diferencias
+ * abre la ficha en «Pagos» para registrar un cobro que entró por la pasarela y nadie reportó.
+ */
+const TabHistorial = ({ ficha, onAccion, puedeEditar = true, seccionAbierta = null }) => {
+    const pagosRef = useRef(null);
+    useEffect(() => {
+        if (seccionAbierta === 'pagos') pagosRef.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+    }, [seccionAbierta]);
     const hist = ficha?.historial || {};
     const cobro = ficha?.cobro || {};
     const conf = ficha?.confirmacion || {};
@@ -608,14 +616,16 @@ const TabHistorial = ({ ficha, onAccion, puedeEditar = true }) => {
                     onAccion={onAccion} />
             </SeccionColapsable>
 
-            <SeccionColapsable titulo="Pagos"
-                resumen={pagos.length
-                    ? `${pagos.length} ${pagos.length === 1 ? 'pago' : 'pagos'} · ${plata(totalPagado)} en total`
-                    : 'Sin pagos'}>
-                {/* Mismo permiso que el resto del cobro: es la misma ruta de cobrar. */}
-                <Pagos pagos={pagos} programaDelCliente={cobro.programa_code}
-                    vocabulario={ficha?.vocabulario} puedeEditar={puedeCobrar} onAccion={onAccion} />
-            </SeccionColapsable>
+            <div ref={pagosRef}>
+                <SeccionColapsable titulo="Pagos" abiertaPorDefecto={seccionAbierta === 'pagos'}
+                    resumen={pagos.length
+                        ? `${pagos.length} ${pagos.length === 1 ? 'pago' : 'pagos'} · ${plata(totalPagado)} en total`
+                        : 'Sin pagos'}>
+                    {/* Mismo permiso que el resto del cobro: es la misma ruta de cobrar. */}
+                    <Pagos pagos={pagos} programaDelCliente={cobro.programa_code}
+                        vocabulario={ficha?.vocabulario} puedeEditar={puedeCobrar} onAccion={onAccion} />
+                </SeccionColapsable>
+            </div>
 
             {/* Los eventos del log solo aparecen si el backend los manda: son ruido
                 para el uso diario y sirven cuando hay que auditar algo. */}

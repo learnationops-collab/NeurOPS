@@ -901,3 +901,20 @@ describe('crear y eliminar el resto del historial', () => {
         expect(onAccion).toHaveBeenCalledWith('borrar_plan', {});
     });
 });
+
+describe('abrir el historial en una sección', () => {
+    it('con «pagos» la sección Pagos arranca abierta, con «Agregar pago» a mano (Finanzas › Diferencias)', () => {
+        render(<TabHistorial ficha={conPagos([PAGO])} onAccion={vi.fn()} seccionAbierta="pagos" />);
+
+        expect(screen.getByRole('button', { name: /^Pagos/ })).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.getByRole('button', { name: 'Agregar pago' })).toBeInTheDocument();
+        // Las otras siguen cerradas.
+        expect(screen.getByRole('button', { name: /^Agendas/ })).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('sin pedirla, Pagos arranca cerrada como siempre', () => {
+        render(<TabHistorial ficha={conPagos([PAGO])} onAccion={vi.fn()} />);
+
+        expect(screen.getByRole('button', { name: /^Pagos/ })).toHaveAttribute('aria-expanded', 'false');
+    });
+});
