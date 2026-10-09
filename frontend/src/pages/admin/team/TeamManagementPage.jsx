@@ -32,8 +32,8 @@ export const ROLES = [
 ];
 const rotulo = (id) => ROLES.find(r => r.id === id)?.label || id;
 const rolesDe = (u) => (u.roles && u.roles.length ? u.roles : [u.role]);
-// Quién puede tener «ver finanzas»: con uno de estos roles ve Finanzas y Payroll en el dashboard
-// comercial (`puede_ver_finanzas` en el backend). Con otro rol el permiso no abre nada.
+// Quién puede tener «ver finanzas»: con uno de estos roles ve Finanzas y Payroll en Finances, /finanzas
+// (`puede_ver_finanzas` en el backend). Con otro rol el permiso no abre nada.
 const ROLES_FINANZAS = ['admin', 'director_comercial'];
 const veFinanzas = (roles) => roles.some(r => ROLES_FINANZAS.includes(r));
 const iniciales = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
@@ -423,7 +423,7 @@ const TeamManagementPage = ({ embebido = false }) => {
                             <Interruptor id="eq-activo" label="Cuenta activa" hint={formData.is_active ? 'Puede entrar' : 'No puede entrar; su historial queda'}
                                 valor={formData.is_active} onChange={(v) => set({ is_active: v })} />
                             {veFinanzas(formData.roles) && (
-                                <Interruptor id="eq-finanzas" label="Acceso a finanzas" hint="Finanzas y Payroll en Comercial"
+                                <Interruptor id="eq-finanzas" label="Acceso a finanzas" hint="Finanzas y Payroll en Finances"
                                     valor={formData.can_view_finance} onChange={(v) => set({ can_view_finance: v })} />
                             )}
                         </div>
