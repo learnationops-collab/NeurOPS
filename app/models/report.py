@@ -102,7 +102,29 @@ class SetterDailyStats(db.Model):
 
     # Daily Reflection (6 preguntas como JSON)
     reflections = db.Column(db.JSON, nullable=True)
-    
+
+    # Reporte v2 (10/10/2026): el formulario por pasos del artifact que aprobó Kerwin. Entrantes,
+    # no leads, in-abribles, aperturas y agendas se cargan POR CANAL (anuncios / inbound), más las
+    # bienvenidas. El resto del v2 reusa columnas de arriba (embudo en `funnel_*`, follow-ups en
+    # `*_fu`, reflexión en `reflections`) y los totales viejos se siguen llenando, así que lo que
+    # leía el v1 sigue cuadrando. Quién lee y escribe esto: `app/services/setter_reporte_v2.py`.
+    report_version = db.Column(db.Integer, nullable=False, default=1, server_default='1')
+    ads_entrantes = db.Column(db.Integer, default=0, server_default='0')
+    ads_no_lead = db.Column(db.Integer, default=0, server_default='0')
+    ads_inabribles = db.Column(db.Integer, default=0, server_default='0')
+    ads_ap_entrantes = db.Column(db.Integer, default=0, server_default='0')
+    ads_ap_dolor = db.Column(db.Integer, default=0, server_default='0')
+    ads_agendas = db.Column(db.Integer, default=0, server_default='0')
+    inb_entrantes = db.Column(db.Integer, default=0, server_default='0')
+    inb_no_lead = db.Column(db.Integer, default=0, server_default='0')
+    inb_inabribles = db.Column(db.Integer, default=0, server_default='0')
+    inb_ap_entrantes = db.Column(db.Integer, default=0, server_default='0')
+    inb_ap_dolor = db.Column(db.Integer, default=0, server_default='0')
+    inb_agendas = db.Column(db.Integer, default=0, server_default='0')
+    bnv_hechas = db.Column(db.Integer, default=0, server_default='0')
+    bnv_respondidas = db.Column(db.Integer, default=0, server_default='0')
+    bnv_aperturas = db.Column(db.Integer, default=0, server_default='0')
+
     setter = db.relationship('User', foreign_keys=[setter_id], overlaps="setter_daily_stats_rel,user_rel")
     __table_args__ = (db.UniqueConstraint('setter_id', 'date', name='_setter_date_uc'),)
 
