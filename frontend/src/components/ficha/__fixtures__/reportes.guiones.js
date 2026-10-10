@@ -21,6 +21,7 @@ export const GUIONES = {
     pasos: [
       ['res', { res: 'asistio' }], ['decisor', { with_decision_maker: true }],
       ['oferta', { offer_presented: true }], ['cierre', { cierre: false }],
+      ['objecion', { objecion: '  Lo tiene que hablar con la pareja: el precio le parece alto.  ' }],
       ['nocierre_next', { nocierre_next: 'seguimiento' }],
       ['seguimiento', {
         fecha_seguimiento: '2026-10-06', followup_reminder_enabled: true,
@@ -35,6 +36,7 @@ export const GUIONES = {
     pasos: [
       ['res', { res: 'asistio' }], ['decisor', { with_decision_maker: true }],
       ['oferta', { offer_presented: true }], ['cierre', { cierre: false }],
+      ['objecion', { objecion: 'No tiene cómo pagarlo este año y no quiere cuotas.' }],
       ['nocierre_next', { nocierre_next: 'perdido' }],
       ['descarte', { motivo_descarte: 'Objeción de precio insalvable' }],
       ['refs_ask', { refs_ask: 'no' }],

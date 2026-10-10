@@ -31,9 +31,11 @@ import MotivoDelFallo from './MotivoDelFallo';
  * agenda se lleva su registro de eventos y no hay deshacer: el diálogo dice qué se borra.
  */
 
+// `pie` va debajo de la fila (y de su editor), dentro de la misma franja: la objeción de una
+// llamada que no cerró (`ObjecionDeAgenda`).
 const FilaAgenda = ({
     agenda, fuentes = [], closers = [], puedeEditar = false, puedeReasignar = false, onEditar,
-    puedeBorrar = false, unica = false, onBorrar, children = null,
+    puedeBorrar = false, unica = false, onBorrar, children = null, pie = null,
 }) => {
     const reducido = useReducedMotion();
     const ids = useId();
@@ -220,6 +222,7 @@ const FilaAgenda = ({
                     </div>
                 </motion.div>
             )}
+            {pie}
         </div>
     );
 };

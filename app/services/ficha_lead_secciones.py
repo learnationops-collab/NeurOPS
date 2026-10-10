@@ -72,16 +72,20 @@ def tiene_seguimiento(appt):
     return bool(appt.fecha_seguimiento or appt.seguimiento_sub or appt.seguimiento_tipo)
 
 
-def historial(appts, ahora, tiene_venta=False):
+def historial(appts, ahora, tiene_venta=False, cerro=False):
     """Agendas, seguimientos y bitácora de TODAS las agendas del cliente.
 
     `tiene_venta` es el «¿este cliente ya compró?» que la ficha resolvió una sola vez con su cruce
     de ventas. Con él se clasifica cada seguimiento como lo clasifica la pestaña Seguimientos del
     closer (`CloserFollowUpService._effective_tipo`) sin una consulta a las ventas por agenda.
+    `cerro` es más estricto: una venta de verdad (completo o split pay) o una seña, la cuenta del
+    hito de Cierre. Decide a qué agenda se le puede agregar la objeción de un «No cerró».
     """
+    from app.services import objeciones_service
     from app.services.closer_followup_service import CloserFollowUpService
     from app.services.comercial_service import post_call_de, pre_call_de
 
+    objeciones = objeciones_service.objeciones_por_agenda([a.id for a in appts])
     agendas, seguimientos = [], []
     for a in appts:
         # El tipo con el que un seguimiento de esta agenda cae en la pestaña Seguimientos: el que
@@ -115,7 +119,11 @@ def historial(appts, ahora, tiene_venta=False):
                         # llamada no dice nada (todavía no pasó, o fue una venta), un cliente
                         # que ya compró es cobranza y el resto, recuperación.
                         'tipo_seguimiento': tipo_efectivo
-                        or ('cerrada' if tiene_venta else 'no_tomada')})
+                        or ('cerrada' if tiene_venta else 'no_tomada'),
+                        # La objeción vigente de esta llamada ({texto, autor, fecha}) y si se le
+                        # puede agregar una: asistió y no cerró (ver `objeciones_service`).
+                        'objecion': objeciones.get(a.id),
+                        'admite_objecion': objeciones_service.admite_objecion(a, estado, cerro)})
         if tiene_seguimiento(a):
             seguimientos.append({
                 # De qué agenda es: con ese id se corrige (`PATCH /ficha/<id>/seguimiento`), y

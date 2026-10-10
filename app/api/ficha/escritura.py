@@ -285,6 +285,20 @@ def estado(appt_id):
     return _ejecutar(appt_id, 'reportar', acciones.estado_agenda)
 
 
+@bp.route('/<int:appt_id>/objecion', methods=['POST'])
+def objecion(appt_id):
+    """La objecion de una llamada que no cerro, agregada (o reemplazada) desde el historial.
+
+    Es para las agendas que se reportaron antes de que la objecion fuera obligatoria al reportar
+    «No cerró» (ver `objeciones_service`). El permiso es `reportar`, el mismo con el que se reporta
+    la llamada: la direccion y cualquier closer, como el resto de lo que se corrige en el historial.
+    """
+    from app.services import objeciones_service
+
+    return _ejecutar(appt_id, 'reportar', objeciones_service.guardar_desde_el_historial,
+                     exito=201)
+
+
 @bp.route('/<int:appt_id>/agenda', methods=['POST'])
 def agenda(appt_id):
     """Otra llamada con el mismo cliente. `appt_id` es la agenda desde la que se pide."""

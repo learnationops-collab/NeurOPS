@@ -4,6 +4,8 @@
     "datos": {
       "resultado": "asistio",
       "contacto_result": null,
+      "cierre": false,
+      "objecion": "Lo tiene que hablar con la pareja: el precio le parece alto.",
       "motivo": null,
       "motivo_descarte": null,
       "deck": {
@@ -42,6 +44,7 @@
           "decisor",
           "oferta",
           "cierre",
+          "objecion",
           "nocierre_next",
           "seguimiento",
           "refs_ask",
@@ -51,6 +54,7 @@
         "with_decision_maker": true,
         "offer_presented": true,
         "cierre": false,
+        "objecion": "  Lo tiene que hablar con la pareja: el precio le parece alto.  ",
         "nocierre_next": "seguimiento",
         "fecha_seguimiento": "2026-10-06",
         "followup_reminder_enabled": true,
@@ -75,6 +79,8 @@
     "datos": {
       "resultado": "asistio",
       "contacto_result": null,
+      "cierre": false,
+      "objecion": "No tiene cómo pagarlo este año y no quiere cuotas.",
       "motivo": null,
       "motivo_descarte": "Objeción de precio insalvable",
       "deck": {
@@ -102,6 +108,7 @@
           "decisor",
           "oferta",
           "cierre",
+          "objecion",
           "nocierre_next",
           "descarte",
           "refs_ask"
@@ -110,6 +117,7 @@
         "with_decision_maker": true,
         "offer_presented": true,
         "cierre": false,
+        "objecion": "No tiene cómo pagarlo este año y no quiere cuotas.",
         "nocierre_next": "perdido",
         "motivo_descarte": "Objeción de precio insalvable",
         "refs_ask": "no"
@@ -121,6 +129,8 @@
     "datos": {
       "resultado": "asistio",
       "contacto_result": null,
+      "cierre": null,
+      "objecion": null,
       "motivo": null,
       "motivo_descarte": null,
       "deck": {
@@ -166,6 +176,8 @@
     "datos": {
       "resultado": "asistio",
       "contacto_result": null,
+      "cierre": null,
+      "objecion": null,
       "motivo": null,
       "motivo_descarte": "No califica: no rinde este año",
       "deck": {
@@ -210,6 +222,8 @@
     "datos": {
       "resultado": "no_asistio",
       "contacto_result": null,
+      "cierre": null,
+      "objecion": null,
       "motivo": "Confundió la fecha",
       "motivo_descarte": null,
       "deck": {
@@ -254,6 +268,8 @@
     "datos": {
       "resultado": "no_asistio",
       "contacto_result": null,
+      "cierre": null,
+      "objecion": null,
       "motivo": "Bloqueó / desapareció",
       "motivo_descarte": "No responde hace dos semanas",
       "deck": {
@@ -296,6 +312,8 @@
     "datos": {
       "resultado": "cancelo",
       "contacto_result": null,
+      "cierre": null,
+      "objecion": null,
       "motivo": "Sin tiempo / imprevisto",
       "motivo_descarte": null,
       "deck": {
@@ -342,6 +360,8 @@
     "datos": {
       "resultado": "cancelo",
       "contacto_result": null,
+      "cierre": null,
+      "objecion": null,
       "motivo": "Problema económico",
       "motivo_descarte": null,
       "deck": {
@@ -386,6 +406,8 @@
     "datos": {
       "resultado": "cancelo",
       "contacto_result": null,
+      "cierre": null,
+      "objecion": null,
       "motivo": "Ya no le interesa",
       "motivo_descarte": "No rinde examen, no califica",
       "deck": {
@@ -427,6 +449,8 @@
     "datos": {
       "resultado": "reagenda",
       "contacto_result": null,
+      "cierre": null,
+      "objecion": null,
       "motivo": "Imprevisto del lead",
       "motivo_descarte": null,
       "deck": {
@@ -467,6 +491,8 @@
     "datos": {
       "resultado": "reagenda",
       "contacto_result": null,
+      "cierre": null,
+      "objecion": null,
       "motivo": "No dio motivo",
       "motivo_descarte": null,
       "deck": {
@@ -510,6 +536,8 @@
     "datos": {
       "resultado": null,
       "contacto_result": "no_resp",
+      "cierre": null,
+      "objecion": null,
       "motivo": null,
       "motivo_descarte": null,
       "deck": {
@@ -555,6 +583,8 @@
     "datos": {
       "resultado": null,
       "contacto_result": "contesto",
+      "cierre": null,
+      "objecion": null,
       "motivo": null,
       "motivo_descarte": null,
       "deck": {
@@ -597,6 +627,8 @@
     "datos": {
       "resultado": null,
       "contacto_result": "agendo",
+      "cierre": null,
+      "objecion": null,
       "motivo": null,
       "motivo_descarte": null,
       "deck": {
@@ -654,6 +686,8 @@
     "datos": {
       "resultado": null,
       "contacto_result": "no_resp",
+      "cierre": null,
+      "objecion": null,
       "motivo": null,
       "motivo_descarte": null,
       "deck": {
@@ -696,6 +730,8 @@
     "datos": {
       "resultado": null,
       "contacto_result": "contesto",
+      "cierre": null,
+      "objecion": null,
       "motivo": null,
       "motivo_descarte": null,
       "deck": {
@@ -739,6 +775,8 @@
     "datos": {
       "resultado": null,
       "contacto_result": "no_paga",
+      "cierre": null,
+      "objecion": null,
       "motivo": null,
       "motivo_descarte": null,
       "deck": {

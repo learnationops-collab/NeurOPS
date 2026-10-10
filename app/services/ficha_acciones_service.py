@@ -254,11 +254,39 @@ CAMPOS_DEL_REPORTE = (
 DESCARTES = ('Lead Perdido', 'No Lead')
 
 
+def _no_cerro(datos, deck):
+    """¿Es el reporte de una llamada en la que se presento la oferta y no se cerro?
+
+    El arbol lo dice con `cierre: false`. Tambien lo dice la oferta presentada en una llamada a la
+    que el lead asistio: por esta ruta no viaja ninguna venta —«Sí, cerró» va por la de venta—, asi
+    que asistio + oferta presentada es siempre «No cerró», lo diga o no el pedido.
+    """
+    if datos.get('resultado') != 'asistio':
+        return False
+    respuestas = datos.get('respuestas') if isinstance(datos.get('respuestas'), dict) else {}
+    return (datos.get('cierre') is False or respuestas.get('cierre') is False
+            or deck.get('offer_presented') is True)
+
+
+def _objecion_valida(datos, deck):
+    """El texto de la objecion si el reporte es un «No cerró» (obligatoria desde el 09/10/2026),
+    None si no lo es, o `ErrorDeAccion` si falta o no alcanza."""
+    from app.services import objeciones_service
+
+    if not _no_cerro(datos, deck):
+        return None
+    try:
+        return objeciones_service.texto_valido(datos.get('objecion'))
+    except objeciones_service.ObjecionInvalida as e:
+        raise ErrorDeAccion(str(e), 'objecion') from None
+
+
 def _reporte_valido(appt, datos):
-    """(deck, nuevo_inicio, descarte) listos para escribir, o `ErrorDeAccion`.
+    """(deck, nuevo_inicio, descarte, objecion) listos para escribir, o `ErrorDeAccion`.
 
     Todo se valida ANTES de escribir: el guardado del mazo y la bitacora comitean por su cuenta,
-    asi que una fecha mala descubierta a mitad de camino dejaria el reporte a medias.
+    asi que una fecha mala descubierta a mitad de camino dejaria el reporte a medias. La objecion
+    tambien: un «No cerró» sin ella no guarda nada.
     """
     from app.services.ficha_agendas_service import _instante_utc
 
@@ -292,9 +320,11 @@ def _reporte_valido(appt, datos):
             raise ErrorDeAccion('Falta el motivo del descarte.', 'motivo_descarte')
         descarte = {'status': pedido['status'], 'note': nota}
 
+    objecion = _objecion_valida(datos, deck)
+
     if not deck and not nuevo_inicio and not descarte:
         raise ErrorDeAccion('No hay nada que guardar.')
-    return deck, nuevo_inicio, descarte
+    return deck, nuevo_inicio, descarte, objecion
 
 
 def _mover_la_llamada(appt, inicio, usuario):
@@ -320,9 +350,12 @@ def _resultado_del_arbol(appt, datos, usuario):
 
     Primero se mueve la llamada si hay fecha nueva, despues va el guardado del mazo con el
     resultado y el seguimiento —que es el que escribe `show_up_reported` si el resultado cambio—,
-    despues el descarte y al final los referidos y las respuestas crudas a la bitacora.
+    despues el descarte y al final los referidos, la objecion de un «No cerró» (con su nota en
+    Comunicacion, ver `objeciones_service`) y las respuestas crudas a la bitacora.
     """
-    deck, nuevo_inicio, descarte = _reporte_valido(appt, datos)
+    from app.services import objeciones_service
+
+    deck, nuevo_inicio, descarte, objecion = _reporte_valido(appt, datos)
     if descarte and deck:
         # El guardado del mazo deja en la bitacora «Estado: …» con el `result` que recibe: sin él
         # un descarte quedaba anotado como «Pendiente». `process_agenda` lo vuelve a poner igual.
@@ -340,9 +373,12 @@ def _resultado_del_arbol(appt, datos, usuario):
     # Como en el mazo: sin contacto no hay a quien llamar, asi que solo queda anotado en la nota.
     referidos = _crear_referidos(appt, usuario, datos.get('referidos'),
                                  f'Referido durante {momento} de {nombre}.', solo_con_contacto=True)
+    if objecion:
+        objeciones_service.registrar_objecion(appt, usuario, objecion)
     _guardar_respuestas_del_arbol(appt, datos.get('respuestas'), usuario)
     db.session.commit()
     return {'id': appt.id, 'closer_result': appt.closer_result, 'referidos': referidos,
+            'objecion': bool(objecion),
             'fecha': appt.start_time.isoformat() if appt.start_time else None}
 
 

@@ -256,6 +256,31 @@
   .dc-shell .fi-agenda > .fi-agenda-fila{grid-template-columns:1fr}
 }
 
+/* ---------- Objeción de una agenda del historial (09/10/2026) ----------
+   Debajo de su fila, en la misma franja, alineada con la columna del detalle (la fecha de la fila
+   mide 150 px). Ámbar como el hito «No cerró»: es un desenlace malo, no un error. El editor usa
+   `.fi-agenda-editor` tal cual y ocupa el ancho entero, como el de la fecha y la fuente. */
+.dc-shell .fi-objecion-cita,
+.dc-shell .fi-objecion-falta{margin:0 0 var(--s3) calc(150px + var(--s4))}
+.dc-shell .fi-objecion-cita{display:grid;gap:var(--s1);padding:var(--s3) var(--s4);
+  border-radius:var(--radius-control);background:var(--hundido);
+  border:1px solid var(--border-subtle);border-left:3px solid var(--warning)}
+.dc-shell .fi-objecion-rotulo{display:inline-flex;align-items:center;gap:6px;color:var(--warning);
+  font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.dc-shell .fi-objecion-cita blockquote{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;
+  line-height:1.5;color:var(--text-on-surface)}
+.dc-shell .fi-objecion-pie{display:flex;flex-wrap:wrap;align-items:center;
+  justify-content:space-between;gap:var(--s2) var(--s3)}
+.dc-shell .fi-objecion-falta{display:flex;flex-wrap:wrap;align-items:center;
+  justify-content:space-between;gap:var(--s2) var(--s3);padding:var(--s2) var(--s3);
+  border-radius:var(--radius-control);border:1px dashed var(--warning-border)}
+.dc-shell .fi-objecion-falta > .t-cap{color:var(--warning)}
+.dc-shell .fi-objecion-despliegue{overflow:hidden}
+@media (max-width:640px){
+  .dc-shell .fi-objecion-cita,
+  .dc-shell .fi-objecion-falta{margin-left:0}
+}
+
 /* ---------- Seguimiento del historial ----------
    La misma franja que una agenda: el borde en el envoltorio y el editor adentro, con las clases
    `.fi-agenda-editor/-campos/-pie` tal cual. Lo propio es el estado: un control segmentado chico

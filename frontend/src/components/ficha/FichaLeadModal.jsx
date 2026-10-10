@@ -54,7 +54,7 @@ const TabAcciones = lazyDe('TabAcciones');
 const ERRORES_EN_LINEA = new Set(['editar_agenda', 'corregir_seguimiento', 'agendar_seguimiento',
     'corregir_pago', 'borrar_pago', 'agregar_pago', 'eliminar_agenda', 'borrar_seguimiento',
     'borrar_plan', 'borrar_evento', 'crear_evento', 'reportar_resultado', 'registrar_venta',
-    'acceso_academia', 'quitar_acceso_academia', 'guardar_fathom']);
+    'acceso_academia', 'quitar_acceso_academia', 'guardar_fathom', 'guardar_objecion']);
 
 /**
  * El aviso de una acción que dio de baja a un cliente, con lo que pasó con su acceso a la Academia
@@ -124,6 +124,7 @@ const MENSAJES = {
     guardar_programa: 'Programa asignado en las ventas de este cliente.',
     estado_agenda: 'Estado de la agenda corregido.',
     crear_agenda: 'Agenda creada.',
+    guardar_objecion: 'Objeción guardada: quedó también en Comunicación.',
     editar_agenda: 'Agenda corregida.',
     agendar_seguimiento: 'Seguimiento agendado.',
     corregir_seguimiento: 'Seguimiento corregido.',

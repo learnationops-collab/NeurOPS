@@ -430,7 +430,9 @@ def ficha(appointment_id=None, client_id=None, usuario=None, ahora=None):
                                 tipos_vendidos, con_seguimiento, baja),
         'cobro': _cobro(client, ventas, deuda, programa_code, programa_nombre, enrollment_dt,
                         baja),
-        'historial': secciones.historial(appts, ahora, tiene_venta=bool(ventas)),
+        'historial': secciones.historial(appts, ahora, tiene_venta=bool(ventas),
+                                         cerro=_que_compro(tipos_vendidos)[0]
+                                         or 'seña' in tipos_vendidos),
         'formulario': secciones.formulario(client, appt),
         'comunicacion': {'notas': secciones.notas(client, appt), 'equipo': secciones.equipo()},
         'permisos': permisos_de(usuario, appt),

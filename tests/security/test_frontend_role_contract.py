@@ -280,6 +280,10 @@ ESCRITURAS = [
                                 'triage': 403, 'setter': 403}),
     ('POST', '/evento', {'admin': 400, 'director_comercial': 400, 'closer': 400,
                          'triage': 403, 'setter': 403}),
+    # Agregar la objeción de una llamada que no cerró desde el historial (09/10/2026) es reportar.
+    # Con el cuerpo vacío quien puede recibe el 400 de «Falta la objeción».
+    ('POST', '/objecion', {'admin': 400, 'director_comercial': 400, 'closer': 400,
+                           'triage': 403, 'setter': 403}),
     # Revertir una baja es cobrar, como darla. El lead de prueba no esta de baja: quien puede
     # recibe el 400 de «no esta dado de baja».
     ('POST', '/revertir-baja', {'admin': 400, 'director_comercial': 400, 'closer': 400,
