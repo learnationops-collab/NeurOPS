@@ -1,6 +1,6 @@
 // La pantalla del Portal, con el formato de la referencia de Learnation Holding: la hora arriba a la
 // izquierda, la marca a la derecha, el isotipo con sus anillos, un saludo con el primer nombre que entra
-// letra por letra y una tarjeta por opción, cada una con su color. La usan el Portal (PortalPage: roles,
+// letra por letra y una tarjeta por opción, cada una con su color. La usan el Portal (Portal.jsx: roles,
 // áreas, cuentas y Finances) y la elección de rol al simular (ElegirRolAlSimular). El fondo se elige en
 // Configuración › Apariencia (FondoEntrada.jsx).
 //

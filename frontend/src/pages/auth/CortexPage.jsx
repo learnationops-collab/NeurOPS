@@ -1,13 +1,14 @@
 // /cortex: el área Cortex (10/10/2026), de todos los roles: lo que sabe el equipo en un solo lugar. Por
 // ahora el Playbook (la formación interna, que abre su vista de siempre, PlaybookOverlay) y Learnito (el
 // buscador con IA sobre el Playbook, próximamente). Antes los dos estaban en el menú de sesión.
-// Se entra desde el Portal; tiene la misma presentación.
+// Es el área común a todos los roles: se entra desde el Portal y tiene su misma presentación.
 
 import { useLocation, useNavigate } from 'react-router-dom';
 import { GraduationCap, Sparkles } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
-import { RUTA_PORTAL } from '../../utils/portal';
+import { roleLandingPath } from '../../utils/roleLanding';
+import { abrirPortal } from '../../sesion/portalBus';
 import Eleccion from './Eleccion';
 
 export default function CortexPage() {
@@ -15,7 +16,12 @@ export default function CortexPage() {
     const { openPlaybook, pendingCount } = usePlaybook();
     const navigate = useNavigate();
     const location = useLocation();
-    const volver = () => (location.key !== 'default' ? navigate(-1) : navigate(`${RUTA_PORTAL}?elegir=1`));
+    // Sin historia en la app (un link directo), a la pantalla de su rol con el Portal abierto.
+    const volver = () => {
+        if (location.key !== 'default') { navigate(-1); return; }
+        navigate(roleLandingPath(user?.role));
+        abrirPortal();
+    };
 
     return (
         <Eleccion

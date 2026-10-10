@@ -4,16 +4,16 @@ import { saveSession, isIsolatedTab } from './sessionStore';
 import { AREAS, areasDe } from './areas';
 import { ICONO_DE_ROL, otrasCuentas, rolDeFinanzas, rolesDeLaCuenta, rotuloDeRol } from './cuentasVinculadas';
 import { roleLandingPath } from './roleLanding';
+import { abrirPortal } from '../sesion/portalBus';
 
-// El Portal (/portal, 10/10/2026): la pantalla de entrada y de «Portal» en el menú de sesión. Muestra lo
-// que la persona puede hacer, separando ROLES de ÁREAS (utils/areas.js): un grupo por cada rol de la
-// cuenta y por cada cuenta vinculada, con sus áreas como tarjetas (Finances va en el rol con el que se
-// entra a ella). Aparte, para todos, Cortex (Learnito y el Playbook) y, para quien puede, Simular a
-// alguien del equipo.
+// El Portal (10/10/2026): una pantalla que se abre ENCIMA de lo que se está viendo (no es una ruta; ver
+// sesion/PortalContext.jsx), al iniciar sesión si hay más de un área y desde «Portal» del menú de sesión.
+// Separa ROLES de ÁREAS (utils/areas.js): primero los roles de la cuenta y de sus cuentas vinculadas (y
+// Simular a alguien, para quien puede); al elegir uno, sus áreas y Cortex, que es común a todos los roles.
+// Finances es un área del rol con el que se entra a ella.
 // «Entrar directo la próxima vez» guarda el área elegida (por cuenta, en este navegador) y la próxima
-// entrada la saltea. Desde el menú (?elegir=1) se muestra aunque haya una por defecto.
+// entrada va directo ahí.
 
-export const RUTA_PORTAL = '/portal';
 export const CORTEX = AREAS.cortex;
 
 const tarjeta = (rol, area, cuenta = null) => ({
@@ -83,16 +83,33 @@ export function fijarTarjetaPorDefecto(user, clave) {
 }
 
 /**
- * A dónde va al entrar: la pantalla de su rol si no hay nada que elegir (o está simulando), su tarjeta
- * por defecto si es del rol con el que ya está, y si no, el Portal (que entra solo a la por defecto si
- * hace falta cambiar de rol o de cuenta).
+ * A dónde va al entrar con ese rol: su área por defecto si es de ese mismo rol, y si no, la pantalla de su
+ * rol. Simulando, siempre la del rol simulado.
  */
 export function destinoDeEntrada(user) {
     if (!user) return '/login';
-    if (user.is_impersonating || !hayPortal(user)) return roleLandingPath(user.role);
+    if (user.is_impersonating) return roleLandingPath(user.role);
     const def = tarjetaPorDefecto(user);
-    return def && !def.cuenta && def.rol === user.role ? def.ruta : RUTA_PORTAL;
+    return def && !def.cuenta && def.rol === user.role ? def.ruta : roleLandingPath(user.role);
 }
+
+/**
+ * Al iniciar sesión: con un área por defecto, entra a esa (cambiando de rol o de cuenta si hace falta);
+ * si no, a la pantalla de su rol y, si tiene más de un área, con el Portal abierto encima.
+ */
+export function entrarAlIniciar(user, navegar) {
+    const def = tarjetaPorDefecto(user);
+    if (def) return entrarPorTarjeta(user, def, navegar);
+    navegar(roleLandingPath(user.role));
+    if (hayPortal(user)) abrirPortal();
+    return undefined;
+}
+
+/** Las áreas de un rol en el Portal: las suyas y Cortex, que es común a todos los roles. */
+export const areasDelGrupo = (grupo) => [
+    ...grupo.tarjetas,
+    { clave: `${grupo.clave}:cortex`, titulo: CORTEX.label, Icono: CORTEX.Icono, ruta: CORTEX.ruta, comun: true },
+];
 
 /**
  * Pasa a otra cuenta de la persona en ESTA pestaña (en una aislada no toca la cookie) y entra a `destino`
@@ -115,17 +132,18 @@ export const cambiarDeRolEnLaCuenta = async (rol, destino = null) => {
 
 /** Entra por una tarjeta: con el rol que ya tiene solo navega; si no, cambia de rol o de cuenta. */
 export function entrarPorTarjeta(user, tarjeta, navegar) {
+    if (tarjeta.comun) return navegar(tarjeta.ruta);
     if (tarjeta.cuenta) return cambiarDeCuenta(tarjeta.cuenta, tarjeta.ruta);
     if (tarjeta.rol === user.role) return navegar(tarjeta.ruta);
     return cambiarDeRolEnLaCuenta(tarjeta.rol, tarjeta.ruta);
 }
 
 /**
- * «Portal» para el menú de sesión: está siempre (ahí están Cortex y Simular). `pendientes`: los videos
- * pendientes del Playbook, que ahora vive en Cortex, con la cuenta en la opción.
+ * «Portal» para el menú de sesión: está siempre (ahí están Cortex y Simular) y abre el Portal encima de la
+ * pantalla. `pendientes`: los videos pendientes del Playbook, que vive en Cortex, con la cuenta en la opción.
  */
-export const opcionPortal = (user, navegar, pendientes = 0) => (user ? [{
-    id: 'portal', label: 'Portal', Icono: LayoutGrid, onClick: () => navegar(`${RUTA_PORTAL}?elegir=1`),
+export const opcionPortal = (user, pendientes = 0) => (user ? [{
+    id: 'portal', label: 'Portal', Icono: LayoutGrid, onClick: () => abrirPortal(),
     cuenta: pendientes > 0 ? pendientes : null,
     titulo: pendientes > 0 ? `${pendientes} ${pendientes === 1 ? 'video pendiente' : 'videos pendientes'} del Playbook, en Cortex` : null,
 }] : []);

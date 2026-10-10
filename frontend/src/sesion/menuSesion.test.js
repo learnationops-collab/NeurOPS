@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { armarMenuSesion, rotuloDeSesion } from './menuSesion';
 
 vi.mock('../services/api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
+const bus = vi.hoisted(() => ({ abrirPortal: vi.fn() }));
+vi.mock('./portalBus', () => bus);
 
 const ids = (grupos) => grupos.map(g => g.map(o => o.id));
 const base = (user, extra = {}) => armarMenuSesion({ user, navigate: vi.fn(), logout: vi.fn(), configuracion: { onClick: vi.fn() }, ...extra });
@@ -23,7 +25,9 @@ describe('menú de sesión', () => {
         expect(cuenta[1]).toMatchObject({ label: 'Portal', cuenta: 4 });
         const navigate = vi.fn();
         armarMenuSesion({ user: { role: 'closer' }, navigate, logout: vi.fn(), configuracion: {} })[1][1].onClick();
-        expect(navigate).toHaveBeenCalledWith('/portal?elegir=1');
+        // El Portal se abre encima de la pantalla: no navega.
+        expect(bus.abrirPortal).toHaveBeenCalledTimes(1);
+        expect(navigate).not.toHaveBeenCalled();
     });
 
     it('Configuración está en todas las pantallas, con «!» y el detalle si falta algo', () => {

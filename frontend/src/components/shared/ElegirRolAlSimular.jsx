@@ -55,7 +55,7 @@ export default function ElegirRolAlSimular({ persona, onElegir, onCancelar }) {
 
     return createPortal(
         <div className="elegir-rol-simular" role="dialog" aria-modal="true" aria-label={`Simular a ${persona.username}`}
-            style={{ position: 'fixed', inset: 0, zIndex: 160, overflowY: 'auto' }}>
+            style={{ position: 'fixed', inset: 0, zIndex: 320, overflowY: 'auto' }}>
             <Eleccion
                 nombre={persona.username}
                 pregunta={`Vas a simular a ${persona.username}. Elegí con qué rol.`}

@@ -7,7 +7,8 @@ const imp = vi.hoisted(() => ({ simularA: vi.fn(() => new Promise(() => {})), si
 vi.mock('../../utils/impersonation', () => imp);
 
 import SimularEnPortal from './SimularEnPortal';
-import { abrirSimulacion, puedeSimular, registrarSimulacion } from '../../sesion/simulacion';
+import { abrirSimulacion, puedeSimular } from '../../sesion/simulacion';
+import { registrarPortal } from '../../sesion/portalBus';
 
 const EQUIPO = [
     { id: 21, username: 'Jean Carlo', role: 'closer', roles: ['closer'], can_view_finance: false, mascota: null },
@@ -80,13 +81,11 @@ describe('quién puede simular', () => {
         expect(puedeSimular(null)).toBe(false);
     });
 
-    it('abrirSimulacion llama a lo que registró la hoja, y nada si no hay', () => {
+    it('abrirSimulacion abre el Portal en el paso de simular', () => {
         const abrir = vi.fn();
-        const quitar = registrarSimulacion(abrir);
+        const quitar = registrarPortal(abrir);
         abrirSimulacion();
-        expect(abrir).toHaveBeenCalledTimes(1);
+        expect(abrir).toHaveBeenCalledWith('simular');
         quitar();
-        abrirSimulacion();
-        expect(abrir).toHaveBeenCalledTimes(1);
     });
 });

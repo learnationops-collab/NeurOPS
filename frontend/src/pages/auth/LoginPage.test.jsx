@@ -7,6 +7,8 @@ vi.mock('../../contexts/AuthContext', () => ({ useAuth: () => auth }));
 const navigate = vi.fn();
 vi.mock('react-router-dom', async (orig) => ({ ...(await orig()), useNavigate: () => navigate }));
 vi.mock('../../components/modals/DebugConsole', () => ({ default: () => null }));
+const bus = vi.hoisted(() => ({ abrirPortal: vi.fn() }));
+vi.mock('../../sesion/portalBus', () => bus);
 
 import LoginPage from './LoginPage';
 
@@ -44,16 +46,19 @@ describe('LoginPage', () => {
     it('con un solo rol entra a su pantalla', async () => {
         await entrar({ id: 1, username: 'ana', role: 'closer', roles: ['closer'], email: 'a@x.com' });
         await waitFor(() => expect(navigate).toHaveBeenCalledWith('/closer/deck?step=confirmations'));
+        expect(bus.abrirPortal).not.toHaveBeenCalled();
     });
 
-    it('con varios roles, áreas o Finances va al Portal a elegir', async () => {
+    it('con varios roles entra a la pantalla de su rol con el Portal abierto encima', async () => {
         await entrar({ id: 1, username: 'ana', role: 'operator', roles: ['operator', 'closer'], email: 'a@x.com' });
-        await waitFor(() => expect(navigate).toHaveBeenCalledWith('/portal'));
+        await waitFor(() => expect(navigate).toHaveBeenCalledWith('/ops/dashboard'));
+        expect(bus.abrirPortal).toHaveBeenCalled();
     });
 
-    it('un solo rol que además ve Finances también va al Portal', async () => {
+    it('un solo rol que además ve Finances también elige en el Portal', async () => {
         await entrar({ id: 4, username: 'marlon', role: 'director_comercial', roles: ['director_comercial'], can_view_finance: true, email: 'm@x.com' });
-        await waitFor(() => expect(navigate).toHaveBeenCalledWith('/portal'));
+        await waitFor(() => expect(navigate).toHaveBeenCalledWith('/admin/comercial'));
+        expect(bus.abrirPortal).toHaveBeenCalled();
     });
 
     it('con una tarjeta por defecto del mismo rol entra directo ahí', async () => {

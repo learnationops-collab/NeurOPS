@@ -263,3 +263,14 @@
 .sp-nueva { position: absolute; top: 50%; right: 10px; translate: 0 -50%; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 9px;
     border: 1px solid rgba(255, 255, 255, .12); background: rgba(255, 255, 255, .04); color: rgba(255, 255, 255, .6); cursor: pointer; transition: color .2s, background-color .2s; }
 .sp-nueva:hover:not(:disabled), .sp-nueva:focus-visible { color: #fff; background: rgba(255, 255, 255, .14); outline: none; }
+
+/* --- El Portal como pantalla encima de lo que se ve (Portal.jsx) ----------------------------- */
+.pt { position: fixed; inset: 0; z-index: 300; overflow-y: auto; overscroll-behavior: contain; animation: pt-entra .35s ease both; }
+@keyframes pt-entra { from { opacity: 0; } }
+.pt .fe-arriba { padding-right: calc(clamp(16px, 3vw, 44px) + 52px); }
+.pt-cerrar { position: fixed; z-index: 310; top: clamp(14px, 2.6vh, 28px); right: clamp(16px, 3vw, 44px); width: 40px; height: 40px; border-radius: 50%;
+    display: grid; place-items: center; cursor: pointer; color: #fff; background: rgba(18, 20, 50, .72); border: 1px solid #282c5c; backdrop-filter: blur(10px);
+    transition: background-color .2s, border-color .2s; }
+.pt-cerrar:hover, .pt-cerrar:focus-visible { background: rgba(255, 255, 255, .14); border-color: rgba(255, 255, 255, .4); outline: none; }
+.pt-atras { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+@media (prefers-reduced-motion: reduce) { .pt { animation: none; } }
