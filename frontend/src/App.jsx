@@ -52,7 +52,6 @@ import AdminSalesHubPage from './pages/admin/reports/AdminSalesHubPage';
 import AdminMarketingHubPage from './pages/admin/marketing/AdminMarketingHubPage';
 import AdminSheetsHubPage from './pages/admin/reports/AdminSheetsHubPage';
 import WorkshopDashboardPage from './pages/admin/workshop/WorkshopDashboardPage';
-import PostulacionesDashboardPage from './pages/admin/postulaciones/PostulacionesDashboardPage';
 import HiringDashboardPage from './pages/admin/hiring/HiringDashboardPage';
 
 
@@ -267,17 +266,10 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/admin/postulaciones"
-              element={
-                // Sin MainLayout a propósito: esta vista es su propia "sub-app" con
-                // header y menú inferior propios (ver PostulacionesDashboardPage),
-                // en vez de vivir dentro del dock global del admin.
-                <ProtectedRoute roles={['admin']}>
-                  <PostulacionesDashboardPage />
-                </ProtectedRoute>
-              }
-            />
+            {/* Postulaciones (la búsqueda de Closer de ventas) es desde el 10/10/2026 la sección
+                Closers de Learnation Talent: se retiró la vista «Administración». Los links viejos
+                llevan ahí. */}
+            <Route path="/admin/postulaciones" element={<Navigate replace to="/admin/hiring?s=closers" />} />
             <Route
               path="/admin/hiring"
               element={
