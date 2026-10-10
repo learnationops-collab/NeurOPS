@@ -256,16 +256,8 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/admin/formularios"
-              element={
-                <ProtectedRoute roles={['admin']}>
-                  <MainLayout>
-                    <FormsManagementPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
+            {/* Formularios es una sección de Operaciones desde el 10/10/2026. */}
+            <Route path="/admin/formularios" element={<Navigate to="/ops/dashboard?step=formularios" replace />} />
             <Route
               path="/admin/workshops"
               element={

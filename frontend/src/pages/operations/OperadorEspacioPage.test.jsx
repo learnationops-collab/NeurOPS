@@ -31,6 +31,7 @@ vi.mock('./settings/SeccionTecnica', () => ({
 }));
 vi.mock('../admin/reports/FinancialAgendasPage', () => ({ default: () => <div data-testid="agendas" /> }));
 vi.mock('../public/PublicFinancialSalesPage', () => ({ default: () => <div data-testid="ventas" /> }));
+vi.mock('../shared/FormsManagementPage', () => ({ default: () => <div data-testid="formularios" /> }));
 vi.mock('./course-editor/CourseEditorPage', () => ({ default: () => <div data-testid="curso" /> }));
 
 const Ubicacion = () => {
@@ -60,7 +61,7 @@ describe('Espacio del operador', () => {
         expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Equipo');
         expect(screen.getByTestId('seccion')).toHaveTextContent('team');
         const dock = screen.getByRole('navigation', { name: 'Secciones del espacio del operador' });
-        ['Equipo', 'Soporte', 'Datos', 'Agendas', 'Ventas', 'Curso'].forEach(etiqueta => {
+        ['Equipo', 'Soporte', 'Datos', 'Agendas', 'Ventas', 'Formularios', 'Curso'].forEach(etiqueta => {
             expect(dock).toHaveTextContent(etiqueta);
         });
     });
@@ -93,6 +94,13 @@ describe('Espacio del operador', () => {
 
         expect(screen.getByTestId('url')).toHaveTextContent('/ops/dashboard?step=ventas');
         expect(screen.getByTestId('ventas')).toBeInTheDocument();
+    });
+
+    it('Formularios, que era de «Administración», es una sección más (10/10/2026)', () => {
+        montar('/ops/dashboard?step=formularios');
+
+        expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Formularios');
+        expect(screen.getByTestId('formularios')).toBeInTheDocument();
     });
 
     it('un paso o una pestaña que no existen caen en los de siempre', () => {

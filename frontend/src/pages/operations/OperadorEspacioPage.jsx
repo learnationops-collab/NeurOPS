@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { CalendarDays, Database, DollarSign, Ghost, GraduationCap, LifeBuoy, Users } from 'lucide-react';
+import { CalendarDays, ClipboardCheck, Database, DollarSign, Ghost, GraduationCap, LifeBuoy, Users } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
 import { revertImpersonation } from '../../utils/impersonation';
@@ -17,6 +17,7 @@ import './operadorEspacio.css';
 import SeccionTecnica, { ETIQUETAS_TECNICAS } from './settings/SeccionTecnica';
 import FinancialAgendasPage from '../admin/reports/FinancialAgendasPage';
 import PublicFinancialSalesPage from '../public/PublicFinancialSalesPage';
+import FormsManagementPage from '../shared/FormsManagementPage';
 import CourseEditorPage from './course-editor/CourseEditorPage';
 
 /**
@@ -48,6 +49,9 @@ const SECCIONES = [
         tabs: pestanasTecnicas(['marketing', 'database', 'operations', 'infra', 'danger_zone']) },
     { id: 'agendas', label: 'Agendas', Icono: CalendarDays },
     { id: 'ventas', label: 'Ventas', Icono: DollarSign },
+    // Los formularios de cualificación y la fusión de clientes (10/10/2026): eran del panel de
+    // «Administración», que se retiró. El triage sigue con su propia pantalla (/triage/formularios).
+    { id: 'formularios', label: 'Formularios', Icono: ClipboardCheck },
     { id: 'curso', label: 'Curso', Icono: GraduationCap },
 ];
 
@@ -154,6 +158,9 @@ const OperadorEspacioPage = () => {
                     )}
                     {seccion === 'ventas' && (
                         <div className="operador-oscuro"><PublicFinancialSalesPage /></div>
+                    )}
+                    {seccion === 'formularios' && (
+                        <div className="operador-oscuro"><FormsManagementPage /></div>
                     )}
                     {seccion === 'curso' && <CourseEditorPage />}
                 </motion.div>
