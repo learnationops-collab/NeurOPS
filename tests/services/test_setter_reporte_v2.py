@@ -117,6 +117,20 @@ def test_leer_un_v1_no_inventa_canales():
     assert lectura['reflexion'] == {'flujo_trabajo': '', 'win_del_dia': ''}
 
 
+def test_a_formulario_vuelve_a_la_forma_de_vacio_y_escribe_lo_mismo():
+    stat = rv2.escribir(_fila(), _payload())
+    form = rv2.a_formulario(rv2.leer(stat))
+
+    assert set(form) == set(rv2.vacio()) | {'is_non_working_day'}
+    assert form['anuncios'] == _payload()['anuncios']
+    assert form['embudo'] == {'dolor': 10, 'oferta': 7, 'link': 5}
+    assert rv2.leer(rv2.escribir(_fila(), form)) == rv2.leer(stat)
+
+
+def test_a_formulario_de_un_v1_es_none():
+    assert rv2.a_formulario(rv2.leer(_fila(report_version=1, inbox_entrantes=3))) is None
+
+
 def test_avisos_de_un_dia_sin_problemas_es_lista_vacia():
     assert rv2.avisos(rv2.leer(rv2.escribir(_fila(), _payload()))) == []
 

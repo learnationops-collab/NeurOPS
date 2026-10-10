@@ -176,6 +176,22 @@ def leer(stat):
     }
 
 
+def a_formulario(lectura):
+    """Una lectura v2 de vuelta a la forma de `vacio()` (lo que manda el formulario), con el día no
+    laborable: para editar una fila partiendo de lo que tiene. Una lectura v1 no tiene canales y
+    devuelve None: no se puede rehacer por canal sin inventar."""
+    if not lectura or lectura.get('version') != 2:
+        return None
+    return {
+        **{canal: {campo: lectura['canales'][canal][campo] for campo in CAMPOS_CANAL} for canal, _ in CANALES},
+        'bienvenidas': dict(lectura['bienvenidas']),
+        'embudo': {k: lectura['embudo'][k] for k, _ in EMBUDO},
+        'followups': dict(lectura['followups']),
+        'reflexion': dict(lectura['reflexion']),
+        'is_non_working_day': lectura['no_laborable'],
+    }
+
+
 def avisos(lectura):
     """Los avisos de un reporte v2, los mismos que muestra el formulario (`calcular` en
     `frontend/src/pages/setter/reporte/modelo.js`): `[{paso, nivel, msg}]`.

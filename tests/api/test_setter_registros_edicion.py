@@ -49,3 +49,58 @@ def test_lo_que_no_viene_no_se_toca(client, directora, fila, auth_headers):
     client.put(f'/api/public/setter-reports/{fila.id}', json={'entrantes': ''}, headers=auth_headers(directora))
 
     assert SetterDailyStats.query.get(fila.id).inbox_entrantes == 20
+
+
+# --- Un reporte v2 en Registros ------------------------------------------------------------------
+
+def _v2(db, setter_id):
+    from app.services import setter_reporte_v2 as rv2
+
+    datos = rv2.vacio()
+    datos['anuncios'].update(entrantes=10, no_lead=1, agendas=2)
+    datos['inbound'].update(entrantes=6, inabribles=1, agendas=1)
+    datos['bienvenidas'].update(hechas=12, respondidas=5)
+    datos['embudo'].update(dolor=10, oferta=7, link=5)
+    stat = rv2.escribir(SetterDailyStats(setter_id=setter_id, date=date(2026, 10, 10)), datos)
+    db.session.add(stat)
+    db.session.commit()
+    return stat
+
+
+def test_el_listado_dice_la_version_y_trae_los_canales(client, db, directora, fila, auth_headers):
+    nuevo = _v2(db, fila.setter_id)
+
+    reportes = client.get('/api/public/setter-reports', headers=auth_headers(directora)).get_json()['reports']
+
+    por_id = {r['id']: r for r in reportes}
+    assert (por_id[fila.id]['version'], por_id[fila.id]['v2']) == (1, None)
+    r = por_id[nuevo.id]
+    assert r['version'] == 2
+    assert r['v2']['canales']['anuncios']['agendas'] == 2
+    assert r['v2']['bienvenidas']['hechas'] == 12
+    # Las columnas de siempre, con los totales que llenó el v2.
+    assert (r['entrantes'], r['leads'], r['fun_agenda']) == (16, 14, 3)
+
+
+def test_un_v2_se_edita_por_canal_y_los_totales_lo_siguen(client, db, directora, fila, auth_headers):
+    nuevo = _v2(db, fila.setter_id)
+
+    r = client.put(f'/api/public/setter-reports/{nuevo.id}', headers=auth_headers(directora),
+                   json={'version': 2, 'inbound': {'agendas': 0, 'entrantes': 9}, 'bienvenidas': {'respondidas': 7}})
+
+    assert r.status_code == 200
+    g = SetterDailyStats.query.get(nuevo.id)
+    assert (g.inb_agendas, g.inb_entrantes, g.bnv_respondidas) == (0, 9, 7)
+    # Lo que no vino queda; los totales se recalculan con los canales.
+    assert (g.ads_entrantes, g.funnel_pain) == (10, 10)
+    assert (g.inbox_entrantes, g.funnel_agenda, g.inbox_leads) == (19, 2, 17)
+    assert r.get_json()['reporte']['canales']['inbound']['cualificados'] == 8
+
+
+def test_un_v2_no_se_edita_por_sus_totales(client, db, directora, fila, auth_headers):
+    nuevo = _v2(db, fila.setter_id)
+
+    r = client.put(f'/api/public/setter-reports/{nuevo.id}', json={'entrantes': 99}, headers=auth_headers(directora))
+
+    assert r.status_code == 409
+    assert SetterDailyStats.query.get(nuevo.id).inbox_entrantes == 16

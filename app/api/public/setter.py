@@ -814,6 +814,7 @@ def get_public_setter_reports():
     """Retorna lista paginada de reportes con filtros."""
     from flask_login import current_user
     from app.models import SetterDailyStats, User
+    from app.services import setter_reporte_v2
     
     setter_id = request.args.get('setter_id')
     # Un setter lista solo los suyos (sin `setter_id`, los suyos; con el de otro, 403). La
@@ -873,7 +874,12 @@ def get_public_setter_reports():
             "q1_useful": r.q1_useful,
             "q1_unuseful": r.q1_unuseful,
             "q2_useful": r.q2_useful,
-            "q2_unuseful": r.q2_unuseful
+            "q2_unuseful": r.q2_unuseful,
+            # El formulario con que se mandó y, si es el v2, su lectura por canal (`leer`): la tabla
+            # muestra los canales y edita un v2 por canal, no por sus totales.
+            "version": r.report_version or 1,
+            "is_non_working_day": bool(r.is_non_working_day),
+            "v2": setter_reporte_v2.leer(r) if (r.report_version or 1) >= 2 else None,
         })
         
     return jsonify({
@@ -926,6 +932,23 @@ def update_public_setter_report(report_id):
                 stat.date = datetime.strptime(data['date'], '%Y-%m-%d').date()
             except ValueError:
                 return jsonify({"message": "Formato de fecha inválido. Debe ser YYYY-MM-DD"}), 400
+
+        # Un v2 se edita por canal: sus totales los calcula `escribir`, y tocarlos sueltos dejaría
+        # los canales diciendo otra cosa. Lo que no viene en el pedido queda como estaba.
+        if (stat.report_version or 1) >= 2:
+            from app.services import setter_reporte_v2
+            if not _es_v2(data):
+                db.session.rollback()
+                return jsonify({"message": "Este reporte se cargó por canal: editalo por canal (version 2)."}), 409
+            form = setter_reporte_v2.a_formulario(setter_reporte_v2.leer(stat))
+            for seccion in ('anuncios', 'inbound', 'bienvenidas', 'embudo', 'followups', 'reflexion'):
+                if isinstance(data.get(seccion), dict):
+                    form[seccion].update({k: v for k, v in data[seccion].items() if k in form[seccion]})
+            if 'is_non_working_day' in data:
+                form['is_non_working_day'] = bool(data['is_non_working_day'])
+            setter_reporte_v2.escribir(stat, form)
+            db.session.commit()
+            return jsonify({"message": "Reporte actualizado", "reporte": setter_reporte_v2.leer(stat)}), 200
 
         # Cada columna toma lo que manda el pedido o se queda como estaba. Un 0 se guarda: con
         # `data.get(x) or actual` un número llevado a cero volvía al de antes sin avisar.
