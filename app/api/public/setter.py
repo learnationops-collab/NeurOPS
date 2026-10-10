@@ -146,10 +146,14 @@ def submit_public_setter_report():
 
     data = request.get_json() or {}
 
-    setter_id = data.get('setter_id')
+    # Un setter carga solo su reporte: el `setter_id` lo fija la sesión (ver `_setter_del_pedido`).
+    # El formulario viejo dejaba elegir el perfil de cualquier setter y mandarlo a su nombre.
+    setter_id, error = _setter_del_pedido(data.get('setter_id'))
+    if error:
+        return error
     report_date_str = data.get('date')
 
-    if not setter_id or not report_date_str:
+    if not report_date_str:
         return jsonify({"message": "ID del setter y fecha son obligatorios"}), 400
 
     try:
@@ -688,9 +692,16 @@ def get_public_setter_stats():
 @bp.route('/public/setter-reports', methods=['GET'])
 def get_public_setter_reports():
     """Retorna lista paginada de reportes con filtros."""
+    from flask_login import current_user
     from app.models import SetterDailyStats, User
     
     setter_id = request.args.get('setter_id')
+    # Un setter lista solo los suyos (sin `setter_id`, los suyos; con el de otro, 403). La
+    # dirección ve los de todos o los de quien elija.
+    if current_user.is_authenticated and current_user.role == 'setter':
+        setter_id, error = _setter_del_pedido(setter_id)
+        if error:
+            return error
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
     page = int(request.args.get('page', 1))
@@ -752,11 +763,22 @@ def get_public_setter_reports():
         "current_page": pagination.page
     }), 200
 
+def _puede_tocar(stat):
+    """Un setter edita o borra solo sus reportes; la dirección y admin, cualquiera. Antes un setter
+    podía editar o borrar el reporte de otro con solo cambiar el número de la URL."""
+    from flask_login import current_user
+
+    return not (current_user.is_authenticated and current_user.role == 'setter'
+                and stat.setter_id != current_user.id)
+
+
 @bp.route('/public/setter-reports/<int:report_id>', methods=['PUT'])
 def update_public_setter_report(report_id):
     """Actualiza un reporte existente."""
     from app.models import SetterDailyStats
     stat = SetterDailyStats.query.get_or_404(report_id)
+    if not _puede_tocar(stat):
+        return jsonify({"message": "Solo podés cambiar tu propio reporte"}), 403
     data = request.get_json() or {}
     
     try:
@@ -801,6 +823,8 @@ def delete_public_setter_report(report_id):
     """Elimina un reporte."""
     from app.models import SetterDailyStats
     stat = SetterDailyStats.query.get_or_404(report_id)
+    if not _puede_tocar(stat):
+        return jsonify({"message": "Solo podés borrar tu propio reporte"}), 403
     try:
         db.session.delete(stat)
         db.session.commit()
