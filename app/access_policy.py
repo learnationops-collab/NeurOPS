@@ -107,6 +107,10 @@ POLITICA = {
     ('GET', '/api/public/closer-stats'): _p(COMERCIAL),
     ('GET', '/api/public/setter-questions'): _p(SETTER),
     ('POST', '/api/public/setter-report'): _p(SETTER),
+    # Reabrir el reporte de un día y las marcas «Enviado» del calendario. Un setter solo el suyo
+    # (lo fija la vista); la direccion puede mirar el de cualquiera, como en Registros.
+    ('GET', '/api/public/setter-report'): _p(SETTER, COMERCIAL),
+    ('GET', '/api/public/setter-report/fechas'): _p(SETTER, COMERCIAL),
     ('GET', '/api/public/setter-report/prefill'): _p(SETTER),
     ('GET', '/api/public/setter-reports'): _p(COMERCIAL, SETTER),
     ('PUT', '/api/public/setter-reports/<int:report_id>'): _p(COMERCIAL, SETTER),

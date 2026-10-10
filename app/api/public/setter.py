@@ -27,6 +27,73 @@ def get_public_setter_questions():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+def _setter_del_pedido(valor):
+    """El setter de un pedido sobre reportes, y el error si no corresponde: `(id, None)` o `(None, respuesta)`.
+
+    Con un setter logueado (también la dirección simulándolo: la sesión ES el setter) manda la
+    sesión: sin `setter_id` es él, y otro `setter_id` es un 403. Un setter no carga ni lee el
+    reporte de otro. La dirección y admin eligen a quién mirar.
+    """
+    from flask_login import current_user
+
+    if current_user.is_authenticated and current_user.role == 'setter':
+        if valor not in (None, '') and str(valor) != str(current_user.id):
+            return None, (jsonify({"message": "Solo podés cargar o ver tu propio reporte"}), 403)
+        return current_user.id, None
+    if valor in (None, ''):
+        return None, (jsonify({"message": "setter_id es obligatorio"}), 400)
+    try:
+        return int(valor), None
+    except (TypeError, ValueError):
+        return None, (jsonify({"message": "ID del setter inválido"}), 400)
+
+
+@bp.route('/public/setter-report', methods=['GET'])
+def get_public_setter_report():
+    """El reporte que un setter mandó un día, para reabrirlo y editarlo: `{"reporte": leer(...)}`,
+    o `{"reporte": null}` si ese día no reportó. Un v1 vuelve sin canales (ver `leer`)."""
+    from app.models import SetterDailyStats
+    from app.services import setter_reporte_v2
+
+    setter_id, error = _setter_del_pedido(request.args.get('setter_id'))
+    if error:
+        return error
+    try:
+        dia = datetime.strptime(request.args.get('date') or '', '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({"message": "Formato de fecha inválido"}), 400
+
+    stat = SetterDailyStats.query.filter_by(setter_id=setter_id, date=dia).first()
+    return jsonify({"reporte": setter_reporte_v2.leer(stat) if stat else None}), 200
+
+
+@bp.route('/public/setter-report/fechas', methods=['GET'])
+def get_public_setter_report_dates():
+    """Los días de un rango (`desde`, `hasta`) en los que el setter mandó su reporte: las marcas
+    «Enviado» del calendario del formulario. Los no laborables van además aparte."""
+    from app.models import SetterDailyStats
+
+    setter_id, error = _setter_del_pedido(request.args.get('setter_id'))
+    if error:
+        return error
+    try:
+        desde = datetime.strptime(request.args.get('desde') or '', '%Y-%m-%d').date()
+        hasta = datetime.strptime(request.args.get('hasta') or '', '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({"message": "desde y hasta son obligatorios (AAAA-MM-DD)"}), 400
+    if hasta < desde or (hasta - desde).days > 400:
+        return jsonify({"message": "El rango tiene que ir de desde a hasta, y no pasar de un año"}), 400
+
+    filas = db.session.query(SetterDailyStats.date, SetterDailyStats.is_non_working_day).filter(
+        SetterDailyStats.setter_id == setter_id,
+        SetterDailyStats.date >= desde, SetterDailyStats.date <= hasta,
+    ).order_by(SetterDailyStats.date).all()
+    return jsonify({
+        "fechas": [d.isoformat() for d, _ in filas],
+        "no_laborables": [d.isoformat() for d, libre in filas if libre],
+    }), 200
+
+
 def _es_v2(data):
     """¿El pedido es del formulario por pasos? Lo dice `version: 2`; sin eso es el v1 de siempre."""
     try:
