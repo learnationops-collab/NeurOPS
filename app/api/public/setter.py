@@ -892,6 +892,25 @@ def _puede_tocar(stat):
                 and stat.setter_id != current_user.id)
 
 
+# Lo que edita la tabla de Registros: clave del pedido (la del listado) -> columna.
+_COLUMNAS_EDITABLES = (
+    ('entrantes', 'inbox_entrantes'), ('not_lead', 'not_lead'), ('inabribles', 'inbox_inabribles'),
+    ('leads', 'inbox_leads'), ('op_sub', 'opening_submitted'), ('op_res', 'opening_responded'),
+    ('fun_qual', 'funnel_qualification'), ('fun_pain', 'funnel_pain'), ('fun_offer', 'funnel_offer'),
+    ('fun_link', 'funnel_link'), ('fun_agenda', 'funnel_agenda'),
+    ('qualification_fu', 'qualification_fu'), ('pain_fu', 'pain_fu'), ('offer_fu', 'offer_fu'),
+    ('link_fu', 'link_fu'), ('agenda_fu', 'agenda_fu'),
+    ('qualification_fur', 'qualification_fur'), ('pain_fur', 'pain_fur'), ('offer_fur', 'offer_fur'),
+    ('link_fur', 'link_fur'), ('agenda_fur', 'agenda_fur'),
+    ('qualification_opening_submitted', 'qualification_opening_submitted'),
+    ('qualification_opening_responded', 'qualification_opening_responded'),
+    ('pain_opening_submitted', 'pain_opening_submitted'),
+    ('pain_opening_responded', 'pain_opening_responded'),
+    ('q1_useful', 'q1_useful'), ('q1_unuseful', 'q1_unuseful'),
+    ('q2_useful', 'q2_useful'), ('q2_unuseful', 'q2_unuseful'),
+)
+
+
 @bp.route('/public/setter-reports/<int:report_id>', methods=['PUT'])
 def update_public_setter_report(report_id):
     """Actualiza un reporte existente."""
@@ -908,29 +927,11 @@ def update_public_setter_report(report_id):
             except ValueError:
                 return jsonify({"message": "Formato de fecha inválido. Debe ser YYYY-MM-DD"}), 400
 
-        stat.inbox_entrantes = int(data.get('entrantes') or stat.inbox_entrantes)
-        stat.not_lead = int(data.get('not_lead') or stat.not_lead)
-        stat.inbox_inabribles = int(data.get('inabribles') or stat.inbox_inabribles)
-        stat.inbox_leads = int(data.get('leads') or stat.inbox_leads)
-        stat.opening_submitted = int(data.get('op_sub') or stat.opening_submitted)
-        stat.opening_responded = int(data.get('op_res') or stat.opening_responded)
-        stat.funnel_qualification = int(data.get('fun_qual') or stat.funnel_qualification)
-        stat.funnel_pain = int(data.get('fun_pain') or stat.funnel_pain)
-        stat.funnel_offer = int(data.get('fun_offer') or stat.funnel_offer)
-        stat.funnel_link = int(data.get('fun_link') or stat.funnel_link)
-        stat.funnel_agenda = int(data.get('fun_agenda') or stat.funnel_agenda)
-        stat.qualification_fu = int(data.get('qualification_fu') or stat.qualification_fu)
-        stat.pain_fu = int(data.get('pain_fu') or stat.pain_fu)
-        stat.offer_fu = int(data.get('offer_fu') or stat.offer_fu)
-        stat.agenda_fu = int(data.get('agenda_fu') or stat.agenda_fu)
-        stat.qualification_fur = int(data.get('qualification_fur') or stat.qualification_fur)
-        stat.pain_fur = int(data.get('pain_fur') or stat.pain_fur)
-        stat.offer_fur = int(data.get('offer_fur') or stat.offer_fur)
-        stat.agenda_fur = int(data.get('agenda_fur') or stat.agenda_fur)
-        stat.q1_useful = int(data.get('q1_useful') or stat.q1_useful)
-        stat.q1_unuseful = int(data.get('q1_unuseful') or stat.q1_unuseful)
-        stat.q2_useful = int(data.get('q2_useful') or stat.q2_useful)
-        stat.q2_unuseful = int(data.get('q2_unuseful') or stat.q2_unuseful)
+        # Cada columna toma lo que manda el pedido o se queda como estaba. Un 0 se guarda: con
+        # `data.get(x) or actual` un número llevado a cero volvía al de antes sin avisar.
+        for clave, columna in _COLUMNAS_EDITABLES:
+            if data.get(clave) not in (None, ''):
+                setattr(stat, columna, int(data[clave]))
         
         db.session.commit()
         return jsonify({"message": "Reporte actualizado"}), 200

@@ -21,6 +21,16 @@ const HeaderWithTooltip = ({ label, tooltipInfo }) => (
     </div>
 );
 
+/** Lo que manda el PUT al guardar una fila: las mismas claves que trae el listado. */
+const COLUMNAS_EDITABLES = [
+    'entrantes', 'not_lead', 'inabribles', 'leads', 'op_sub', 'op_res',
+    'fun_qual', 'fun_pain', 'fun_offer', 'fun_link', 'fun_agenda',
+    'qualification_fu', 'pain_fu', 'offer_fu', 'link_fu', 'agenda_fu',
+    'qualification_fur', 'pain_fur', 'offer_fur', 'link_fur', 'agenda_fur',
+    'qualification_opening_submitted', 'qualification_opening_responded',
+    'pain_opening_submitted', 'pain_opening_responded',
+];
+
 const SetterReportsTable = ({ setters }) => {
     const auth = useAuth();
     const user = auth?.user || { role: 'admin' };
@@ -124,29 +134,9 @@ const SetterReportsTable = ({ setters }) => {
     const handleSave = async () => {
         setSaving(true);
         try {
-            // Re-mapping keys for backend compatibility if they differ
-            const payload = {
-                entrantes: editForm.entrantes,
-                not_lead: editForm.not_lead,
-                inabribles: editForm.inabribles,
-                leads: editForm.leads,
-                op_sub: editForm.op_sub,
-                op_res: editForm.op_res,
-                fun_qual: editForm.fun_qual,
-                fun_pain: editForm.fun_pain,
-                fun_offer: editForm.fun_offer,
-                fun_link: editForm.fun_link,
-                fun_agenda: editForm.fun_agenda,
-                qualification_fu: editForm.qualification_fu,
-                pain_fu: editForm.pain_fu,
-                offer_fu: editForm.offer_fu,
-                agenda_fu: editForm.agenda_fu,
-                qualification_fur: editForm.qualification_fur,
-                pain_fur: editForm.pain_fur,
-                offer_fur: editForm.offer_fur,
-                agenda_fur: editForm.agenda_fur
-                // Missing: links? check backend Put logic
-            };
+            // Todas las columnas que la fila deja editar: antes los follow-ups de Link y las
+            // aperturas de cualificación y dolor se editaban en pantalla y no se mandaban.
+            const payload = Object.fromEntries(COLUMNAS_EDITABLES.map(k => [k, editForm[k]]));
             await api.put(`/public/setter-reports/${editingId}`, payload);
             setEditingId(null);
             fetchReports();
