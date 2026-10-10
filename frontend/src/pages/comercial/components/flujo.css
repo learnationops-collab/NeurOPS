@@ -1,0 +1,77 @@
+/* ============================================================================
+   EMBUDOS HORIZONTALES (`FlujoEmbudo`) — el lenguaje del reporte diario nuevo de
+   los setters (artifact aprobado el 10/10/2026): barras por etapa, bandas que
+   las unen y píldoras con la conversión. Lo usan «Mis datos» del setter y los
+   embudos de Comparativas.
+
+   Los colores de canal son los del artifact: el color es el dato (anuncios en
+   magenta, inbound en azul, bienvenidas en violeta, el total en lavanda). Viven
+   en `.dc-shell`, como el resto de los tokens del tablero (ver comercial.css).
+   ============================================================================ */
+.dc-shell.dc-shell{--ch-ads:#FF3FA4;--ch-inb:#6F7BFF;--ch-bnv:#9A7BE0;--ch-tot:#C9B8FF;--ch-sis:#2FBF8F}
+
+.dc-shell .flj{min-width:0;width:100%}
+.dc-shell .flj-svg{display:block;overflow:visible;font-family:var(--font)}
+
+/* Barras: crecen desde el centro. `transform-box` hace que el origen sea la barra
+   y no el SVG entero. */
+.dc-shell .flj-barra{transform:scaleY(0);transform-box:fill-box;transform-origin:center;
+  transition:transform .7s var(--crecer)}
+.dc-shell .flj-barra.on{transform:none}
+.dc-shell .flj-banda{fill:var(--c);fill-opacity:0;transition:fill-opacity .6s ease}
+.dc-shell .flj-banda.on{fill-opacity:.16}
+
+.dc-shell .flj-valor{fill:var(--text-on-surface);font-size:18px;font-weight:900;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums}
+.dc-shell .flj-rotulo{fill:var(--text-muted);font-size:10.5px;font-weight:900;letter-spacing:.08em}
+
+.dc-shell .flj-etapa--ir{cursor:pointer;outline:none}
+.dc-shell .flj-etapa--ir:hover .flj-rotulo,
+.dc-shell .flj-etapa--ir:focus-visible .flj-rotulo{fill:var(--brand-secondary)}
+.dc-shell .flj-etapa--ir:hover .flj-valor{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px}
+.dc-shell .flj-etapa--ir:focus-visible .flj-barra rect{stroke:var(--focus-blue);stroke-width:2}
+
+/* Píldoras: la conversión de la banda. Punteada en el cruce del reporte al
+   sistema (no es una conversión), ámbar arriba de 100%. */
+.dc-shell .flj-pildora{opacity:0;transition:opacity .4s ease}
+.dc-shell .flj-pildora.on{opacity:1}
+.dc-shell .flj-pildora rect{fill:var(--bg-flotante);stroke:color-mix(in srgb,var(--c) 55%,transparent);stroke-width:1}
+.dc-shell .flj-pildora text{fill:var(--text-on-surface);font-size:12px;font-weight:900;font-variant-numeric:tabular-nums}
+.dc-shell .flj-pildora--cruce rect{stroke:var(--text-muted);stroke-dasharray:3 3}
+.dc-shell .flj-pildora--cruce text{fill:var(--text-muted)}
+.dc-shell .flj-pildora--alta rect{stroke:var(--warning)}
+.dc-shell .flj-pildora--alta text{fill:var(--warning)}
+
+/* ---------- Apilado: una fila por etapa ---------- */
+.dc-shell .flj-v{display:grid;min-width:0}
+.dc-shell .flj-v-fila,
+.dc-shell .flj-v-entre{display:grid;grid-template-columns:minmax(0,96px) minmax(0,1fr) 52px;
+  column-gap:var(--s3);align-items:center;min-width:0}
+.dc-shell .flj-v-fila{min-height:30px}
+.dc-shell .flj-v-rotulo{min-width:0;font-size:10.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+.dc-shell button.flj-v-rotulo{cursor:pointer;transition:color .16s ease}
+.dc-shell button.flj-v-rotulo:hover{color:var(--brand-secondary)}
+.dc-shell .flj-v-pista{display:flex;justify-content:center;min-width:0}
+.dc-shell .flj-v-barra{display:flex;height:22px;border-radius:7px;overflow:hidden;
+  transform:scaleX(0);transform-origin:center;transition:transform .7s var(--crecer)}
+.dc-shell .flj-v-barra.on{transform:none}
+.dc-shell .flj-v-barra i{display:block;height:100%;min-width:2px}
+.dc-shell .flj-v-n{font-size:16px;font-weight:900;letter-spacing:-.02em;text-align:right;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.dc-shell .flj-v-entre{height:22px}
+.dc-shell .flj-v-banda{position:relative;height:100%;min-width:0}
+.dc-shell .flj-v-banda svg{display:block;width:100%;height:100%}
+.dc-shell .flj-v-banda .flj-pildora{position:absolute;left:50%;top:50%;translate:-50% -50%;
+  height:18px;padding:0 8px;border-radius:var(--radius-pill);display:inline-flex;align-items:center;
+  font-size:11px;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap;
+  background:var(--bg-flotante);color:var(--text-on-surface);
+  border:1px solid color-mix(in srgb,var(--c) 55%,transparent)}
+.dc-shell .flj-v-banda .flj-pildora--cruce{border-style:dashed;border-color:var(--text-muted);color:var(--text-muted)}
+.dc-shell .flj-v-banda .flj-pildora--alta{border-color:var(--warning);color:var(--warning)}
+
+@media (prefers-reduced-motion:reduce){
+  .dc-shell .flj-barra,.dc-shell .flj-v-barra{transform:none}
+  .dc-shell .flj-banda{fill-opacity:.16}
+  .dc-shell .flj-pildora{opacity:1}
+}
