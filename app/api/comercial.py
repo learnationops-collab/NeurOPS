@@ -139,17 +139,19 @@ def resumen():
 
 @bp.route('/comparativas', methods=['GET'])
 def comparativas():
-    """Analizar → Comparativas: ranking por métrica y mapa del equipo. **La dirección y los
-    closers.**
+    """Analizar → Comparativas: ranking por métrica y mapa del equipo. **La dirección, los closers
+    y los setters.**
 
     Es la única pantalla del tablero que muestra los números de OTRAS personas con nombre y
     apellido; todo lo demás está acotado a quien pregunta. Desde el 02/oct/2026 los closers la
-    ven —decisión del usuario, que revierte la del 24/sep— y siempre la de los CLOSERS: el rol
-    lo fija `alcance_de`, así que un closer no puede pedir la de los setters. Los setters siguen
-    sin verla.
+    ven —decisión del usuario, que revierte la del 24/sep— y desde el 10/oct/2026 también los
+    setters («hay que permitir que los setters vean la pestaña de comparativas que ve el
+    administrador comercial»). Cada uno ve SIEMPRE la de su propio rol: el rol lo fija
+    `alcance_de`, así que un closer no puede pedir la de los setters ni un setter la de los
+    closers (la plata de cada closer no es de su incumbencia).
 
-    El 403 es lo que la hace cumplir: la pestaña escondida en el frontend no alcanza, porque el
-    endpoint se puede pedir igual.
+    El 403 es lo que la cumple para cualquier otro rol: la pestaña escondida en el frontend no
+    alcanza, porque el endpoint se puede pedir igual.
     """
     if not _puede_comparar():
         return jsonify({'message': 'Forbidden'}), 403
@@ -412,8 +414,9 @@ def _solo_direccion():
 
 
 def _puede_comparar():
-    """Quién ve Analizar → Comparativas (ver `comparativas`)."""
-    return current_user.role in ROLES_DIRECCION + (ROLE_CLOSER,)
+    """Quién ve Analizar → Comparativas (ver `comparativas`): la dirección, los closers (desde el
+    02/10/2026) y los setters (desde el 10/10/2026), cada uno la de su rol."""
+    return current_user.role in ROLES_DIRECCION + (ROLE_CLOSER, ROLE_SETTER)
 
 
 @bp.route('/reporte/hoy', methods=['GET'])
