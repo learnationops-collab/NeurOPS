@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-    Inbox, CheckCircle2, Trophy, BarChart3, FileText, Search, X, Filter, Check, ArrowLeft, AlertTriangle, SlidersHorizontal,
+    Inbox, CheckCircle2, Trophy, BarChart3, FileText, Briefcase, Search, X, Filter, Check, ArrowLeft, AlertTriangle,
+    SlidersHorizontal,
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import api from '../../../services/api';
@@ -18,6 +19,7 @@ import HiringStats from './components/HiringStats';
 import ConfigTalent from './components/ConfigTalent';
 import HiringForms from './components/forms/HiringForms';
 import { IsotipoTalent } from './components/Piezas';
+import PostulacionesCloser, { PESTANAS_CLOSER } from '../postulaciones/PostulacionesCloser';
 import {
     PESTANAS, agrupar, colsVisibles, coincide, cuentas as contar, enPestana, filtrosActivos, guardarVista, leerVista,
     normalizar, ordenar, pasaFiltros, vistaDefault,
@@ -27,12 +29,18 @@ import './talent.css';
 
 // Learnation Talent: el panel del rol `hiring` (postulaciones al puesto de
 // Asistente Administrativa y Personal). Corre sin MainLayout (ver App.jsx): es
-// su propia sub-app, con su dock propio — Inbox, Analyze, Winners, Stats y
-// Forms— y el orbe de Configuración (Clarity y la búsqueda) al final, junto a
-// la sesión.
+// su propia sub-app, con su dock propio — Inbox, Analyze, Winners, Stats,
+// Forms y Closers— y el orbe de Configuración (Clarity y la búsqueda) al final,
+// junto a la sesión.
 //
 // El listado se pide entero una vez y todo lo demás —pestañas, búsqueda, filtros,
 // orden, grupos— se resuelve en el navegador (ver `lib/vista.js`).
+//
+// Closers (10/10/2026): la búsqueda de Closer de ventas (antes Postulaciones, una
+// pantalla del admin en /admin/postulaciones) vive acá desde que se retiró la vista
+// «Administración». Es una sección más del dock y sus pestañas van en la cabecera,
+// como las de Inbox o Stats; el contenido es el de Postulaciones tal cual (ver
+// PostulacionesCloser) y va fuera del `.dc-shell` (ver `hospeda` más abajo).
 
 const SECCIONES = [
     { id: 'pend', label: 'Inbox', Icono: Inbox },
@@ -40,9 +48,13 @@ const SECCIONES = [
     { id: 'fin', label: 'Winners', Icono: Trophy },
     { id: 'stats', label: 'Stats', Icono: BarChart3 },
     { id: 'forms', label: 'Forms', Icono: FileText },
+    { id: 'closers', label: 'Closers', Icono: Briefcase },
 ];
 
 const ES_TABLA = new Set(['pend', 'anal', 'fin']);
+
+// `?s=closers` (el redirect de /admin/postulaciones) elige la sección con la que se entra.
+const seccionDeEntrada = (s) => (SECCIONES.some((x) => x.id === s) ? s : 'pend');
 
 const Pestanas = ({ lista, actual, onElegir, cuentaDe }) => (
     <div className="tabs" role="group">
@@ -59,9 +71,10 @@ const Pestanas = ({ lista, actual, onElegir, cuentaDe }) => (
 const HiringDashboardPage = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const [params, setParams] = useSearchParams();
 
-    const [seccion, setSeccion] = useState('pend');
-    const [pestanas, setPestanas] = useState({ pend: 'hibrido', anal: 'seleccionada', fin: 'testeo' });
+    const [seccion, setSeccion] = useState(() => seccionDeEntrada(params.get('s')));
+    const [pestanas, setPestanas] = useState({ pend: 'hibrido', anal: 'seleccionada', fin: 'testeo', closers: 'pendientes' });
     const [statsTab, setStatsTab] = useState('panorama');
     const [statsSeg, setStatsSeg] = useState('gen');
     const [query, setQuery] = useState('');
@@ -117,6 +130,16 @@ const HiringDashboardPage = () => {
         api.get('/hiring/config').then((res) => setBusquedaCfg(res.data)).catch(() => setBusquedaCfg(null));
     }, [cargar, cargarPesos]);
 
+    // La `s` solo dice dónde se entra: ya leída, se saca de la URL (con `replace`, sin sumar un paso
+    // al historial). La sección no vive en la URL, y si quedaba, recargar después de pasar a Inbox
+    // volvía a abrir Closers.
+    useEffect(() => {
+        if (!params.has('s')) return;
+        const resto = new URLSearchParams(params);
+        resto.delete('s');
+        setParams(resto, { replace: true });
+    }, [params, setParams]);
+
     const cambiarVista = useCallback((nueva) => { setCfg(nueva); guardarVista(nueva); }, []);
 
     // --- Atajos: ⌘K / Ctrl+K (y Ctrl+P, el de antes) enfocan el buscador; Escape lo limpia; `w` abre Acceso Simulado ---
@@ -152,7 +175,12 @@ const HiringDashboardPage = () => {
     });
 
     // --- Lo que se ve ---
-    const q = query.trim();
+    // Closers hospeda Postulaciones (Tailwind, paleta `dash-v6`): ese contenido va FUERA del
+    // `.dc-shell`, cuyo reset de botones e inputs y su exención del `!important` tipográfico global
+    // le cambiarían el look. El buscador de la cabecera tampoco va: busca entre las candidatas a
+    // Asistente, no entre los closers.
+    const hospeda = seccion === 'closers';
+    const q = hospeda ? '' : query.trim();
     const enBusqueda = q.length > 0;
     const esTabla = enBusqueda || ES_TABLA.has(seccion);
     const c = useMemo(() => contar(todas), [todas]);
@@ -233,6 +261,9 @@ const HiringDashboardPage = () => {
                 </div>
             </>
         );
+    } else if (hospeda) {
+        // Las pestañas que Postulaciones tenía en su menú inferior.
+        controles = <Pestanas lista={PESTANAS_CLOSER} actual={pestana} onElegir={(id) => setPestanas((prev) => ({ ...prev, closers: id }))} />;
     }
     const nf = filtrosActivos(cfg);
 
@@ -290,7 +321,11 @@ const HiringDashboardPage = () => {
 
     return (
         <>
-            <div className="dc-shell talent">
+            {/* En Closers el `.dc-shell` se achica a la cabecera (y al dock, que es fijo) y
+                Postulaciones va debajo, fuera de él; el fondo de la página lo pone una capa fija
+                (`.tl-fondo`), así las dos partes se ven como una sola pantalla. */}
+            {hospeda && <div className="tl-fondo" aria-hidden="true" />}
+            <div className={`dc-shell talent${hospeda ? ' talent--hospeda' : ''}`}>
                 <div className="wrap">
                     <header className="tl-tope">
                         <div className="tl-marca">
@@ -300,27 +335,30 @@ const HiringDashboardPage = () => {
                                 {!enBusqueda && seccion === 'forms' && formActivoNombre && (
                                     <p className="tl-sub">Búsqueda: <b>{formActivoNombre}</b></p>
                                 )}
+                                {hospeda && <p className="tl-sub">Búsqueda: <b>Closer de ventas</b></p>}
                             </div>
                         </div>
                         <div className="tl-tope-der">
-                            <label className="busca" htmlFor="tl-q">
-                                <Search />
-                                <input
-                                    id="tl-q"
-                                    ref={buscador}
-                                    type="text"
-                                    autoComplete="off"
-                                    value={query}
-                                    onChange={(e) => setQuery(e.target.value)}
-                                    placeholder="Buscar candidata, país o provincia"
-                                    aria-label="Buscar postulante"
-                                />
-                                {enBusqueda ? (
-                                    <button type="button" className="tl-busca-x" onClick={() => setQuery('')} aria-label="Limpiar búsqueda"><X size={16} /></button>
-                                ) : (
-                                    <span className="flex gap-1" aria-hidden="true"><kbd>Ctrl</kbd><kbd>K</kbd></span>
-                                )}
-                            </label>
+                            {!hospeda && (
+                                <label className="busca" htmlFor="tl-q">
+                                    <Search />
+                                    <input
+                                        id="tl-q"
+                                        ref={buscador}
+                                        type="text"
+                                        autoComplete="off"
+                                        value={query}
+                                        onChange={(e) => setQuery(e.target.value)}
+                                        placeholder="Buscar candidata, país o provincia"
+                                        aria-label="Buscar postulante"
+                                    />
+                                    {enBusqueda ? (
+                                        <button type="button" className="tl-busca-x" onClick={() => setQuery('')} aria-label="Limpiar búsqueda"><X size={16} /></button>
+                                    ) : (
+                                        <span className="flex gap-1" aria-hidden="true"><kbd>Ctrl</kbd><kbd>K</kbd></span>
+                                    )}
+                                </label>
+                            )}
                             <div className="tl-controles">
                                 {controles}
                                 {esTabla && (
@@ -342,64 +380,66 @@ const HiringDashboardPage = () => {
                         </div>
                     </header>
 
-                    <main className="tl-vista" key={`${seccion}|${enBusqueda ? 'q' : ''}|${seccion === 'stats' ? statsTab : ''}`}>
-                        {errorCarga && <div className="tl-aviso-error"><AlertTriangle size={16} />{errorCarga}</div>}
-                        {errorBorrado && <div className="tl-aviso-error"><AlertTriangle size={16} />{errorBorrado}</div>}
+                    {!hospeda && (
+                        <main className="tl-vista" key={`${seccion}|${enBusqueda ? 'q' : ''}|${seccion === 'stats' ? statsTab : ''}`}>
+                            {errorCarga && <div className="tl-aviso-error"><AlertTriangle size={16} />{errorCarga}</div>}
+                            {errorBorrado && <div className="tl-aviso-error"><AlertTriangle size={16} />{errorBorrado}</div>}
 
-                        {!enBusqueda && seccion === 'pend' && !cargando && (
-                            <ResumenInbox
-                                proxima={proxima}
-                                cuentas={c}
-                                pesos={pesos}
-                                onAbrir={abrir}
-                                onPesos={() => setConfig('clarity')}
-                                onIr={irA}
-                            />
-                        )}
+                            {!enBusqueda && seccion === 'pend' && !cargando && (
+                                <ResumenInbox
+                                    proxima={proxima}
+                                    cuentas={c}
+                                    pesos={pesos}
+                                    onAbrir={abrir}
+                                    onPesos={() => setConfig('clarity')}
+                                    onIr={irA}
+                                />
+                            )}
 
-                        {esTabla && (
-                            <TablaPostulaciones
-                                grupos={grupos}
-                                cols={cols}
-                                cfg={cfg}
-                                totalBase={base.length}
-                                entra={entradas}
-                                ctx={{
-                                    conEstado: enBusqueda,
-                                    modoDescarte,
-                                    etiquetaDescarte: seccion === 'fin' ? 'Motivo' : 'Descarte',
-                                    presMax: busquedaCfg?.presupuesto_max || 400,
-                                    ahora: Date.now(),
-                                }}
-                                onOrden={(campo) => cambiarVista({
-                                    ...cfg,
-                                    orden: cfg.orden.campo === campo
-                                        ? { campo, dir: cfg.orden.dir === 'asc' ? 'desc' : 'asc' }
-                                        : { campo, dir: campo === 'nombre' || campo === 'pide' ? 'asc' : 'desc' },
-                                })}
-                                // Mientras se arrastra el ancho cambia en pantalla; se guarda al soltar
-                                // (`px` null), con flechas o con el doble clic que lo restablece (`undefined`).
-                                onAncho={(id, px, persistir) => setCfg((prev) => {
-                                    let nueva = prev;
-                                    if (px !== null) {
-                                        const anchos = { ...prev.anchos };
-                                        if (px === undefined) delete anchos[id];
-                                        else anchos[id] = px;
-                                        nueva = { ...prev, anchos };
-                                    }
-                                    if (persistir) guardarVista(nueva);
-                                    return nueva;
-                                })}
-                                onAbrir={abrir}
-                                onEliminar={eliminar}
-                                onLimpiarFiltros={() => cambiarVista({ ...cfg, filtros: vistaDefault().filtros })}
-                                vacio={vacio}
-                            />
-                        )}
+                            {esTabla && (
+                                <TablaPostulaciones
+                                    grupos={grupos}
+                                    cols={cols}
+                                    cfg={cfg}
+                                    totalBase={base.length}
+                                    entra={entradas}
+                                    ctx={{
+                                        conEstado: enBusqueda,
+                                        modoDescarte,
+                                        etiquetaDescarte: seccion === 'fin' ? 'Motivo' : 'Descarte',
+                                        presMax: busquedaCfg?.presupuesto_max || 400,
+                                        ahora: Date.now(),
+                                    }}
+                                    onOrden={(campo) => cambiarVista({
+                                        ...cfg,
+                                        orden: cfg.orden.campo === campo
+                                            ? { campo, dir: cfg.orden.dir === 'asc' ? 'desc' : 'asc' }
+                                            : { campo, dir: campo === 'nombre' || campo === 'pide' ? 'asc' : 'desc' },
+                                    })}
+                                    // Mientras se arrastra el ancho cambia en pantalla; se guarda al soltar
+                                    // (`px` null), con flechas o con el doble clic que lo restablece (`undefined`).
+                                    onAncho={(id, px, persistir) => setCfg((prev) => {
+                                        let nueva = prev;
+                                        if (px !== null) {
+                                            const anchos = { ...prev.anchos };
+                                            if (px === undefined) delete anchos[id];
+                                            else anchos[id] = px;
+                                            nueva = { ...prev, anchos };
+                                        }
+                                        if (persistir) guardarVista(nueva);
+                                        return nueva;
+                                    })}
+                                    onAbrir={abrir}
+                                    onEliminar={eliminar}
+                                    onLimpiarFiltros={() => cambiarVista({ ...cfg, filtros: vistaDefault().filtros })}
+                                    vacio={vacio}
+                                />
+                            )}
 
-                        {!enBusqueda && seccion === 'stats' && <HiringStats todas={todas} pestana={statsTab} segmento={statsSeg} />}
-                        {!enBusqueda && seccion === 'forms' && <HiringForms />}
-                    </main>
+                            {!enBusqueda && seccion === 'stats' && <HiringStats todas={todas} pestana={statsTab} segmento={statsSeg} />}
+                            {!enBusqueda && seccion === 'forms' && <HiringForms />}
+                        </main>
+                    )}
                 </div>
 
                 <DockSecciones
@@ -428,6 +468,13 @@ const HiringDashboardPage = () => {
                     )}
                 />
             </div>
+
+            {hospeda && (
+                // `key`: cada pestaña entra con el mismo fundido que las vistas de Talent.
+                <main className="tl-hospedado dash-v6 text-base" key={pestana}>
+                    <PostulacionesCloser pestana={pestana} />
+                </main>
+            )}
 
             {menuAbierto && esTabla && (
                 <MenuVista
