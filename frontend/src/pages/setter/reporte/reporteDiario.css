@@ -1,0 +1,325 @@
+/* ============================================================================
+   REPORTE DIARIO DEL SETTER — el formulario por pasos, su Resumen y el Historial.
+
+   Portada del diseño que aprobó Kerwin el 10/10/2026 (artifact «Reporte diario de
+   setters») sobre el sistema del dashboard comercial: todo vive dentro de un
+   `.dc-shell` (sus tokens, y la única zona exenta del `!important` de tipografía
+   global, así que los 900 y el tracking se ven de verdad). Cada clase lleva el
+   prefijo `rd-` y cada regla cuelga de `.rd`: el shell ya tiene `.chip`, `.btn`,
+   `.tabs`, `.panel`..., y su reset de botones (`.dc-shell button`) le ganaría a
+   una clase sola. `.rd .rd-x` le gana por especificidad.
+
+   Los colores de cada canal son tokens: son el dato (anuncios, inbound,
+   bienvenidas y el total de los dos). El producto es oscuro; los valores claros
+   del diseño quedan declarados para el día que el shell tenga tema claro.
+   ============================================================================ */
+
+.rd{
+  --ch-ads:#FF3FA4;
+  --ch-inb:#6F7BFF;
+  --ch-bnv:#9A7BE0;
+  --ch-tot:#C9B8FF;
+  --vidrio:rgba(6,9,36,.52);
+  --sec-bg:#FFFFFF; --sec-fg:#020617;
+  --out:cubic-bezier(.22,1,.36,1);
+}
+[data-tema="claro"] .rd,.rd[data-tema="claro"]{
+  --ch-ads:#D81B7F; --ch-inb:#1323C6; --ch-bnv:#6B47D6; --ch-tot:#4B3FA6;
+  --vidrio:rgba(255,255,255,.7);
+  --sec-bg:#0A0E3D; --sec-fg:#FFFFFF;
+}
+
+.rd .rd-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.rd .rd-k{font-size:10px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:var(--text-muted-40)}
+.rd .rd-punto{width:8px;height:8px;border-radius:var(--radius-pill);background:var(--c);flex-shrink:0;display:inline-block}
+.rd .rd-punto.mezcla,.rd .rd-rley i.mezcla{background:conic-gradient(var(--ch-ads) 0 50%,var(--ch-inb) 0)}
+.rd .rd-vidrio{position:relative;border-radius:28px;background:var(--vidrio);
+  backdrop-filter:blur(20px) saturate(140%);-webkit-backdrop-filter:blur(20px) saturate(140%);
+  border:1px solid var(--border-main);border-top-color:var(--sheen);box-shadow:0 24px 48px -28px rgba(0,0,0,.7)}
+
+/* --- Chips -------------------------------------------------------------------------------- */
+.rd .rd-chip{--c:var(--text-muted);display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;
+  border-radius:var(--radius-pill);font-size:12px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;
+  max-width:100%;min-width:0;color:var(--c);
+  background:color-mix(in srgb,var(--c) 13%,transparent);border:1px solid color-mix(in srgb,var(--c) 34%,transparent)}
+.rd .rd-chip > span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.rd .rd-chip b{font-weight:900;font-variant-numeric:tabular-nums}
+.rd .rd-chip svg{width:13px;height:13px;flex-shrink:0}
+.rd .rd-chip--canal{height:30px;padding:0 12px;font-size:13px}
+.rd .rd-chip--btn{cursor:pointer;height:34px;padding:0 12px;transition:background-color .16s ease,border-color .16s ease,color .16s ease}
+.rd .rd-chip--btn:hover{background:color-mix(in srgb,var(--c) 22%,transparent)}
+.rd .rd-chip--btn.on{border-color:color-mix(in srgb,var(--c) 60%,transparent)}
+.rd .rd-chip--quieto{animation:rdLatido 1.4s ease-in-out infinite}
+
+/* --- La barra: los pasos a la izquierda, el día a la derecha -------------------------------- */
+.rd .rd-barra{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);flex-wrap:wrap;margin-bottom:var(--s4)}
+.rd .rd-barra-der{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;justify-content:flex-end;min-width:0}
+
+.rd .rd-pasos{display:flex;align-items:center;gap:2px;max-width:100%;padding:5px;border-radius:var(--radius-pill);
+  background:var(--bg-input);border:1px solid var(--border-subtle);overflow-x:auto;scrollbar-width:none}
+.rd .rd-pasos::-webkit-scrollbar{display:none}
+.rd .rd-pz{display:inline-flex;align-items:center;gap:var(--s2);height:40px;padding:0 var(--s4) 0 6px;flex-shrink:0;
+  border-radius:var(--radius-pill);font-size:14px;font-weight:700;letter-spacing:-.01em;color:var(--text-muted);white-space:nowrap;
+  transition:background-color .25s var(--out),color .2s ease}
+.rd .rd-pz:hover{color:var(--text-on-surface)}
+.rd .rd-pz:disabled{opacity:.45;cursor:default}
+.rd .rd-tn{position:relative;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
+  font-size:12px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--text-muted-40);background:var(--bg-element);
+  transition:background-color .25s ease,color .25s ease}
+.rd .rd-tn svg{width:14px;height:14px;display:none}
+.rd .rd-pz.on .rd-tn{color:var(--success);background:color-mix(in srgb,var(--success) 16%,transparent)}
+.rd .rd-pz.on .rd-tn svg{display:block;animation:rdMarca .35s var(--out)}
+.rd .rd-pz.on .rd-tn > span{display:none}
+.rd .rd-pz.warn .rd-tn{color:var(--warning);background:color-mix(in srgb,var(--warning) 16%,transparent)}
+.rd .rd-pz.err .rd-tn{color:var(--error);background:color-mix(in srgb,var(--error) 16%,transparent)}
+.rd .rd-pz[aria-current="step"]{background:var(--brand-secondary);color:var(--ink)}
+.rd .rd-pz[aria-current="step"] .rd-tn{color:var(--ink);background:rgba(2,6,23,.16)}
+.rd .rd-pz[aria-current="step"] .rd-tn svg{display:none}
+.rd .rd-pz[aria-current="step"] .rd-tn > span{display:inline}
+
+/* --- El día --------------------------------------------------------------------------------- */
+.rd .rd-campo{position:relative;display:flex;align-items:center;height:44px;padding:0 6px 0 var(--s4);min-width:0;
+  background:var(--bg-input);border:1px solid var(--border-control);border-radius:var(--radius-control);
+  transition:border-color .18s ease}
+.rd .rd-campo:focus-within{border-color:color-mix(in srgb,var(--brand-secondary) 55%,transparent)}
+.rd .rd-fecha-btn{display:flex;align-items:center;gap:var(--s2);height:100%;padding-right:var(--s3);
+  font-size:14px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;font-variant-numeric:tabular-nums}
+.rd .rd-fecha-btn svg{width:16px;height:16px;color:var(--text-muted);transition:color .16s ease}
+.rd .rd-fecha-btn:hover svg,.rd .rd-fecha-btn[aria-expanded="true"] svg{color:var(--brand-secondary)}
+.rd .rd-fecha-btn:focus-visible{box-shadow:none}
+.rd .rd-cal{position:absolute;top:calc(100% + 10px);right:0;z-index:90;width:min(312px,calc(100vw - 32px));padding:var(--s4);
+  border-radius:24px;background:var(--bg-surface);backdrop-filter:saturate(180%) blur(28px);-webkit-backdrop-filter:saturate(180%) blur(28px);
+  border:1px solid var(--border-main);border-top-color:var(--sheen);box-shadow:var(--shadow-main),0 0 0 1px rgba(0,0,0,.25);
+  transform-origin:top right;animation:rdCalIn .34s var(--spring)}
+.rd .rd-cal-cab{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);margin-bottom:var(--s3)}
+.rd .rd-cal-cab b{font-size:15px;font-weight:900;letter-spacing:-.02em}
+.rd .rd-cal-sem,.rd .rd-cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px}
+.rd .rd-cal-sem span{text-align:center;padding:4px 0 8px;font-size:10px;font-weight:900;letter-spacing:.14em;color:var(--text-muted-40)}
+.rd .rd-cal-grid.mes-sig{animation:rdMesSig .36s var(--spring)}
+.rd .rd-cal-grid.mes-ant{animation:rdMesAnt .36s var(--spring)}
+.rd .rd-dia{position:relative;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;
+  font-variant-numeric:tabular-nums;color:var(--text-on-surface);transition:background-color .14s ease,color .14s ease,transform .18s var(--spring)}
+.rd .rd-dia:hover:not(:disabled){background:var(--bg-element-hover)}
+.rd .rd-dia:active:not(:disabled){transform:scale(.9)}
+.rd .rd-dia:focus-visible{box-shadow:0 0 0 2px color-mix(in srgb,var(--brand-secondary) 70%,transparent)}
+.rd .rd-dia.fuera{color:var(--text-muted-40)}
+.rd .rd-dia:disabled{color:var(--text-muted-40);opacity:.45;cursor:default}
+.rd .rd-dia.hoy{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--brand-secondary) 75%,transparent)}
+.rd .rd-dia[aria-selected="true"]{background:var(--brand-secondary);color:var(--ink);font-weight:900;
+  box-shadow:0 4px 14px color-mix(in srgb,var(--brand-secondary) 40%,transparent)}
+.rd .rd-marca{position:absolute;bottom:4px;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:var(--c)}
+.rd .rd-dia[aria-selected="true"] .rd-marca{background:var(--ink)}
+.rd .rd-cal-pie{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);margin-top:var(--s3);
+  padding-top:var(--s3);border-top:1px solid var(--border-subtle)}
+.rd .rd-cal-ley{display:flex;gap:var(--s3);font-size:11px;font-weight:700;color:var(--text-muted)}
+.rd .rd-cal-ley > span{display:inline-flex;align-items:center;gap:6px}
+.rd .rd-cal-ley .rd-punto{width:6px;height:6px}
+
+/* --- Botones -------------------------------------------------------------------------------- */
+.rd .rd-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--s2);height:48px;padding:0 var(--s6);
+  border-radius:var(--radius-pill);font-size:12px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;
+  border:1px solid transparent;transition:background-color .18s ease,color .18s ease,opacity .18s ease,transform .18s var(--spring)}
+.rd .rd-btn svg{width:16px;height:16px}
+.rd .rd-btn:active:not(:disabled){transform:scale(.97)}
+.rd .rd-btn:disabled{opacity:.5;cursor:not-allowed}
+.rd .rd-btn--plain{background:var(--bg-element);color:var(--text-on-surface);border-top-color:var(--sheen);padding:0 var(--s5)}
+.rd .rd-btn--plain:hover{background:var(--bg-element-hover)}
+.rd .rd-btn--sec{background:var(--sec-bg);color:var(--sec-fg)}
+.rd .rd-btn--sec:hover{opacity:.88}
+.rd .rd-btn--cta{background:var(--brand-secondary);color:var(--ink);box-shadow:var(--shadow-brand)}
+.rd .rd-btn--cta:hover:not(:disabled){background:var(--brand-secondary-light)}
+.rd .rd-btn--sm{height:34px;padding:0 var(--s4);font-size:11px}
+.rd .rd-ibtn{width:44px;height:44px;border-radius:var(--radius-pill);flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;
+  color:var(--text-muted);background:var(--bg-input);border:1px solid var(--border-subtle);transition:color .16s ease,transform .18s var(--spring)}
+.rd .rd-ibtn svg{width:16px;height:16px}
+.rd .rd-ibtn:hover{color:var(--text-on-surface)}
+.rd .rd-ibtn:active{transform:scale(.93)}
+.rd .rd-ibtn--sm{width:34px;height:34px}
+
+/* --- El paso: un panel, una columna por canal ------------------------------------------------ */
+.rd .rd-flujo{display:flex;flex-direction:column;gap:var(--s4)}
+.rd .rd-paneles{display:flex;min-height:clamp(420px,calc(100dvh - 360px),640px)}
+.rd .rd-panel{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--s4)}
+.rd .rd-pasopanel{flex:1;min-height:0;display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr))}
+.rd .rd-pcol{position:relative;display:flex;flex-direction:column;gap:var(--s4);min-width:0;padding:var(--s5) var(--s6);
+  animation:rdSube .5s var(--out) both;animation-delay:calc(var(--i,0) * 60ms)}
+.rd .rd-pcol + .rd-pcol::before{content:'';position:absolute;left:0;top:var(--s5);bottom:var(--s5);width:1px;background:var(--border-subtle)}
+.rd .rd-pasopanel--1 .rd-pcol{padding-inline:var(--s8)}
+.rd .rd-campos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s3)}
+.rd .rd-campos--n{grid-template-columns:repeat(var(--m),minmax(0,1fr))}
+.rd .rd-campo2{display:grid;gap:6px;min-width:0}
+.rd .rd-campo2.span{grid-column:1/-1}
+.rd .rd-campo2 .rd-k{color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rd .rd-campo2 .rd-k .rd-punto{width:6px;height:6px;margin-right:6px;vertical-align:1px}
+
+/* La celda tipo volumen: se llena con el color del canal; se arrastra o se escribe */
+.rd .rd-tile{position:relative;flex:1;min-width:0;height:60px;border-radius:18px;background:var(--hundido);
+  border:1px solid var(--border-main);overflow:hidden;isolation:isolate;cursor:ew-resize;touch-action:pan-y;
+  user-select:none;-webkit-user-select:none;
+  transition:border-color .16s ease,box-shadow .2s ease,transform .25s var(--out);
+  animation:rdSube .5s var(--out) both;animation-delay:calc(var(--i,0) * 35ms)}
+.rd .rd-tile:hover{border-color:var(--border-control)}
+.rd .rd-fill{position:absolute;inset:0;z-index:-1;transform-origin:left center;transform:scaleX(var(--p,0));
+  background:linear-gradient(90deg,color-mix(in srgb,var(--c) 6%,transparent),color-mix(in srgb,var(--c) 24%,transparent));
+  transition:transform .5s var(--out)}
+.rd .rd-borde{position:absolute;z-index:-1;top:0;bottom:0;left:calc(var(--p,0) * (100% - 2px));width:2px;background:var(--c);
+  opacity:.45;transition:left .5s var(--out),opacity .2s ease}
+.rd .rd-tile:hover .rd-borde,.rd .rd-tile.scrub .rd-borde{opacity:1}
+.rd .rd-tile.cero .rd-borde{opacity:0}
+.rd .rd-tile.scrub{transform:scale(1.03);border-color:color-mix(in srgb,var(--c) 70%,transparent);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 22%,transparent),0 14px 28px -12px color-mix(in srgb,var(--c) 50%,transparent)}
+.rd .rd-tile.scrub .rd-fill,.rd .rd-tile.scrub .rd-borde{transition:none}
+.rd .rd-tile:focus-within{border-color:color-mix(in srgb,var(--c) 65%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 20%,transparent)}
+.rd .rd-cv{display:block;width:100%;height:100%;padding:0 var(--s3);background:none;border:0;outline:none;text-align:center;
+  font-size:26px;font-weight:900;letter-spacing:-.03em;color:var(--text-on-surface);font-variant-numeric:tabular-nums;
+  caret-color:var(--c);cursor:inherit}
+.rd .rd-cv:focus{cursor:text}
+.rd .rd-cv:focus-visible{box-shadow:none}
+.rd .rd-cv::placeholder{color:var(--text-muted)}
+.rd .rd-cv::selection{background:color-mix(in srgb,var(--c) 34%,transparent);color:var(--text-on-surface)}
+.rd .rd-tile.is-warn{border-color:color-mix(in srgb,var(--warning) 80%,transparent)}
+.rd .rd-tile.is-err{border-color:color-mix(in srgb,var(--error) 85%,transparent)}
+.rd .rd-bump{animation:rdBump .3s var(--out)}
+.rd .rd-tile.rd-llega{animation:rdLlega .6s var(--out)}
+
+/* Abajo de cada columna: el número grande y su pedazo de embudo */
+.rd .rd-rcab{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);min-height:30px;min-width:0}
+.rd .rd-rchips{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto;justify-content:flex-end;min-width:0}
+.rd .rd-rbody{flex:1;min-height:0;display:flex;flex-direction:column;align-items:stretch;gap:var(--s2);
+  padding-top:var(--s4);border-top:1px solid var(--border-subtle)}
+.rd .rd-rbig{display:flex;flex-direction:row;align-items:baseline;flex-wrap:wrap;gap:var(--s2)}
+.rd .rd-rbig > b{font-size:40px;font-weight:900;letter-spacing:-.035em;line-height:1;color:var(--c);font-variant-numeric:tabular-nums}
+.rd .rd-rbig > span{font-size:13px;font-weight:700;color:var(--text-muted)}
+.rd .rd-rley{display:flex;gap:var(--s3);margin:0 0 0 auto;align-self:center;font-size:11px;font-weight:700;color:var(--text-muted)}
+.rd .rd-rley > span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.rd .rd-rley i{width:10px;height:10px;border-radius:3px;background:var(--c)}
+.rd .rd-rley i.claro{background:color-mix(in srgb,var(--c) 38%,transparent)}
+
+.rd .rd-flujo-svg{flex:1;min-width:0;min-height:150px;width:100%;height:100%;display:block;overflow:visible;font-family:var(--font)}
+.rd .rd-fv-band{fill:var(--c);fill-opacity:.16}
+.rd .rd-fv-bar{fill:var(--c)}
+.rd .rd-fv-bar.claro{fill:color-mix(in srgb,var(--c) 38%,transparent)}
+.rd .rd-fv-bar.ref{fill:var(--mat-3)}
+.rd .rd-fv-bar.ads{fill:var(--ch-ads)}
+.rd .rd-fv-bar.inb{fill:var(--ch-inb)}
+.rd .rd-fv-val{fill:var(--text-on-surface);font-size:22px;font-weight:900;font-variant-numeric:tabular-nums}
+.rd .ref .rd-fv-val{fill:var(--text-muted)}
+.rd .rd-fv-et{fill:var(--text-muted);font-size:13px;font-weight:900;letter-spacing:.1em}
+.rd .rd-fv-pill rect{fill:var(--bg-surface);stroke:color-mix(in srgb,var(--c) 50%,transparent);stroke-width:1}
+.rd .rd-fv-pill text{fill:var(--text-on-surface);font-size:14px;font-weight:900;font-variant-numeric:tabular-nums}
+.rd .rd-fv-pill.alto rect{stroke:var(--warning)}
+.rd .rd-fv-pill.alto text{fill:var(--warning)}
+
+/* --- Reflexión: los dos textos ocupan todo el paso ------------------------------------------- */
+.rd .rd-notas{flex:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:minmax(0,1fr);gap:var(--s4);
+  padding:var(--s5) var(--s6)}
+.rd .rd-nota{display:grid;grid-template-rows:auto minmax(0,1fr);gap:var(--s2);min-width:0;animation:rdSube .5s var(--out) both}
+.rd .rd-nota:nth-child(2){animation-delay:60ms}
+.rd .rd-nota .rd-k{display:flex;align-items:center;gap:6px;color:var(--text-muted)}
+.rd .rd-nota .rd-k svg{width:12px;height:12px}
+.rd .rd-area{display:flex;border-radius:18px;padding:var(--s3) var(--s4);background:var(--hundido);border:1px solid var(--border-main);
+  transition:border-color .16s ease,box-shadow .16s ease}
+.rd .rd-area:focus-within{border-color:color-mix(in srgb,var(--brand-secondary) 55%,transparent);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--brand-secondary) 16%,transparent)}
+.rd .rd-area textarea{flex:1;display:block;width:100%;min-height:140px;resize:none;background:none;border:0;outline:none;
+  font-size:15px;line-height:1.55;color:var(--text-on-surface)}
+.rd .rd-area textarea:focus-visible{box-shadow:none}
+.rd .rd-area textarea::placeholder{color:var(--text-muted-40)}
+
+/* --- Abajo: Atrás, los avisos del paso y Siguiente ------------------------------------------ */
+.rd .rd-nav{display:flex;align-items:center;gap:var(--s3)}
+.rd .rd-nav--centro{justify-content:center;margin-top:var(--s3);flex-wrap:wrap}
+.rd .rd-avisos{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:0}
+.rd .rd-hint{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text-muted-40);white-space:nowrap}
+.rd .rd-tecla{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:20px;padding:0 6px;border-radius:6px;
+  background:var(--bg-element);border:1px solid var(--border-subtle);font-size:11px;font-weight:900;color:var(--text-muted)}
+
+/* --- Resumen --------------------------------------------------------------------------------- */
+.rd .rd-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--s4);padding:var(--s5) var(--s6)}
+.rd .rd-kpi{display:grid;gap:var(--s2);align-content:start;min-width:0;animation:rdSube .5s var(--out) both}
+.rd .rd-kpi .rd-k{color:var(--text-muted)}
+.rd .rd-kpi > b{font-size:34px;font-weight:900;letter-spacing:-.035em;line-height:1;font-variant-numeric:tabular-nums}
+.rd .rd-split{display:flex;gap:2px;height:6px;margin-top:var(--s1);border-radius:var(--radius-pill);overflow:hidden;background:var(--hundido)}
+.rd .rd-split i{display:block;height:100%;width:0;transition:width .9s var(--out)}
+.rd .rd-split .a{background:var(--ch-ads)}
+.rd .rd-split .b{background:var(--ch-inb)}
+.rd .rd-kpis-pie{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px}
+.rd .rd-resultado{flex:1;min-height:0;display:grid}
+.rd .rd-resultado--resumen{grid-template-rows:minmax(0,1fr) minmax(0,1.15fr)}
+.rd .rd-resumen-a{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));min-height:0}
+.rd .rd-resumen-b{min-height:0;border-top:1px solid var(--border-subtle)}
+.rd .rd-rcol{position:relative;display:flex;flex-direction:column;gap:var(--s2);min-width:0;min-height:0;padding:var(--s5) var(--s6) var(--s4);
+  animation:rdSube .5s var(--out) both;animation-delay:calc(var(--i,0) * 60ms)}
+.rd .rd-rcol + .rd-rcol::before{content:'';position:absolute;left:0;top:var(--s5);bottom:var(--s5);width:1px;background:var(--border-subtle)}
+.rd .rd-rcol .rd-rbody{flex-direction:row;align-items:center;border-top:0;padding-top:0}
+
+/* --- Enviado: festejo corto ----------------------------------------------------------------- */
+.rd .rd-listo{flex:1;min-height:clamp(420px,calc(100dvh - 360px),640px);display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:var(--s3);text-align:center;overflow:hidden;padding:var(--s8) var(--s6)}
+.rd .rd-ok{width:92px;height:92px}
+.rd .rd-ok circle{fill:none;stroke:var(--success);stroke-width:3;stroke-dasharray:252;stroke-dashoffset:252;animation:rdTraza .9s var(--out) forwards}
+.rd .rd-ok path{fill:none;stroke:var(--success);stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:60;
+  stroke-dashoffset:60;animation:rdTraza .6s var(--out) .45s forwards}
+.rd .rd-listo h2{margin:var(--s2) 0 0;font-size:30px;font-weight:900;letter-spacing:-.025em}
+.rd .rd-listo p{margin:0;color:var(--text-muted);font-size:14px;font-variant-numeric:tabular-nums}
+.rd .rd-listo > .rd-btn{margin-top:var(--s3)}
+.rd .rd-chispa{position:absolute;left:50%;top:42%;width:8px;height:8px;border-radius:50%;background:var(--c);opacity:0;
+  animation:rdChispa 1s var(--out) forwards;animation-delay:var(--dl)}
+.rd .rd-nolab-ico{width:64px;height:64px;color:var(--info)}
+
+@keyframes rdMarca{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
+@keyframes rdSube{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes rdBump{from{transform:translateY(var(--dy,-8px));opacity:.35}to{transform:none;opacity:1}}
+@keyframes rdLlega{from{box-shadow:0 0 0 0 color-mix(in srgb,var(--c) 55%,transparent)}to{box-shadow:0 0 0 12px transparent}}
+@keyframes rdCalIn{from{opacity:0;transform:translateY(-8px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes rdMesSig{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+@keyframes rdMesAnt{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:none}}
+@keyframes rdTraza{to{stroke-dashoffset:0}}
+@keyframes rdChispa{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.4)}}
+@keyframes rdLatido{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* --- Adaptación: a lo angosto, una columna por canal apilada -------------------------------- */
+.rd .rd-escena{container-type:inline-size;min-width:0}
+@container (max-width:700px){
+  .rd .rd-pasopanel,.rd .rd-resumen-a{grid-template-columns:minmax(0,1fr)!important}
+  .rd .rd-pcol + .rd-pcol::before,.rd .rd-rcol + .rd-rcol::before{left:var(--s5);right:var(--s5);top:0;bottom:auto;width:auto;height:1px}
+  .rd .rd-pcol,.rd .rd-pasopanel--1 .rd-pcol,.rd .rd-rcol{padding:var(--s4) var(--s4)}
+  .rd .rd-campos--n{grid-template-columns:repeat(2,minmax(0,1fr))}
+  /* Los cinco del Embudo: dolor, oferta y link en una fila; las agendas de cada canal en otra.
+     En dos columnas quedaba una sola agenda suelta abajo. */
+  .rd .rd-campos--5{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .rd .rd-campos--5 > :nth-child(-n+3){grid-column:span 2}
+  .rd .rd-campos--5 > :nth-child(n+4){grid-column:span 3}
+  .rd .rd-campo2 .rd-k{letter-spacing:.1em}
+  .rd .rd-rcol .rd-rbody{flex-direction:column;align-items:stretch}
+  .rd .rd-flujo-svg{min-height:150px;flex:none;height:150px}
+  .rd .rd-kpis{grid-template-columns:repeat(2,minmax(0,1fr));padding:var(--s4)}
+  /* Cinco números en dos columnas: el último ocupa la fila entera en vez de quedar suelto. */
+  .rd .rd-kpis:not(.rd-kpis--4) > .rd-kpi:nth-child(5){grid-column:1/-1}
+  .rd .rd-resultado--resumen{grid-template-rows:auto auto}
+  .rd .rd-notas{grid-template-columns:minmax(0,1fr);padding:var(--s4)}
+  .rd .rd-rbig > b{font-size:34px}
+  .rd .rd-paneles{min-height:0}
+  .rd .rd-listo{min-height:360px}
+}
+@media (max-width:1100px){
+  .rd .rd-paneles{min-height:0}
+}
+@media (max-width:700px){
+  .rd .rd-barra-der{order:-1;width:100%;justify-content:flex-start}
+  .rd .rd-barra-der .rd-campo{flex:1 1 auto}
+  .rd .rd-fecha-btn{flex:1}
+  .rd .rd-pz:not([aria-current]) .rd-pz-n{display:none}
+  .rd .rd-pz:not([aria-current]){padding-right:6px}
+  .rd .rd-hint{display:none}
+  .rd .rd-btn{padding:0 var(--s4)}
+  .rd .rd-nav{flex-wrap:wrap}
+  .rd .rd-nav .rd-avisos{order:3;flex-basis:100%}
+  .rd .rd-nav > :last-child{margin-left:auto}
+}
+@media (prefers-reduced-motion:reduce){
+  .rd .rd-pcol,.rd .rd-tile,.rd .rd-rcol,.rd .rd-kpi,.rd .rd-nota,.rd .rd-bump,.rd .rd-tile.rd-llega,.rd .rd-chispa,
+  .rd .rd-cal,.rd .rd-cal-grid.mes-sig,.rd .rd-cal-grid.mes-ant,.rd .rd-chip--quieto,.rd .rd-pz.on .rd-tn svg{animation:none}
+  .rd .rd-ok circle,.rd .rd-ok path{animation:none;stroke-dashoffset:0}
+  .rd *{transition-duration:0s!important}
+}
