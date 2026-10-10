@@ -72,8 +72,11 @@ function dos(n) {
  * veces de un formulario ya en hora local, a veces a medianoche) y la ficha también la muestra
  * como día, sin pasarla por el huso. El filtro oculto «día» (`diaDe`) sigue en el día UTC a
  * propósito: es el mismo corte con el que el backend arma el período y Variabilidad sus días.
+ *
+ * Se exporta porque el CSV de Revisar (`exportarColumnas.js`) escribe la fecha con la MISMA regla
+ * (10/10/2026): el archivo tiene que decir la hora que dice la lista.
  */
-const TIPOS_EN_UTC = ['agenda', 'lead'];
+export const TIPOS_EN_UTC = ['agenda', 'lead'];
 
 export const cuandoDe = (fila, campo = 'fecha') => {
     const iso = fila?.[campo];
