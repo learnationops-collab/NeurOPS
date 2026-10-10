@@ -84,8 +84,8 @@ describe('el mapa de destinos del drill-down', () => {
     });
 
     it('un número del setter abre una tabla que el setter tiene, y uno del closer una del closer', () => {
-        // Que la tabla exista para ALGÚN rol no alcanza: la lista del setter (Reporte · Registros)
-        // ofrece solo Leads entrantes y Agendas generadas. Un destino suyo que apuntara a
+        // Que la tabla exista para ALGÚN rol no alcanza: la lista de setters de la dirección ofrece
+        // solo Leads entrantes y Agendas generadas. Un destino suyo que apuntara a
         // `agendas` no fallaría: la lista caería en su primera tabla, ignoraría las facetas que no
         // tiene y mostraría el período entero debajo de un número que no es. Lo mismo al revés.
         const SERIES = {

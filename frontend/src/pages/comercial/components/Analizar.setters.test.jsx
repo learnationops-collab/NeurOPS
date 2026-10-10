@@ -7,10 +7,11 @@ import { TABLAS, TABLAS_POR_ROL, rotuloToques } from './tablasDef';
 /**
  * Cada número cliqueable del tablero de un setter lleva a SU lista, y la lista cuenta lo mismo.
  *
- * Desde el 01/10/2026 el setter tiene drill-down: un número de "Mis datos" abre Reporte · Registros
- * con la tabla y el filtro de ese número. Su Registros solo tiene Leads entrantes y Agendas
- * generadas: un destino que apuntara a otra tabla no fallaría, caería en la primera y con un
- * filtro de facetas que esa tabla no tiene — la lista entera debajo de un número que no es.
+ * Desde el 01/10/2026 el setter tiene drill-down: un número de "Mis datos" abre su lista (Revisar
+ * desde el 10/10/2026) con la tabla y el filtro de ese número. La de setters de la dirección solo
+ * tiene Leads entrantes y Agendas generadas: un destino que apuntara a otra tabla no fallaría,
+ * caería en la primera y con un filtro de facetas que esa tabla no tiene — la lista entera debajo
+ * de un número que no es.
  *
  * El test pincha TODOS los botones del tablero real y, para cada drill-down, aplica el filtro con
  * las facetas de verdad sobre las mismas filas con las que se calcularon los números (con los

@@ -60,9 +60,9 @@
 .setter-espacio .setter-top .tab[aria-selected="true"]{background:var(--brand-secondary);color:var(--ink)}
 
 /* A ancho de teléfono el saludo queda solo con el nombre y las pestañas bajan a su propia línea,
-   enteras: Reporte tiene tres (Reporte del día · Mis reportes · Registros) y con el padding de
-   escritorio la última quedaba cortada contra el borde — justo la que abre un número de "Mis
-   datos". */
+   enteras: con el padding de escritorio la última de tres quedaba cortada contra el borde — en
+   Revisar (Agendas · Ventas · Leads, desde el 10/10/2026) justo una de las que abre un número de
+   "Mis datos". */
 @media (max-width:700px){
   .setter-espacio .hola h1 .sub{display:none}
   .setter-espacio .setter-top .tabs{order:3;width:100%}
@@ -72,7 +72,7 @@
   .setter-espacio .dc-shell .tab{padding:0 10px;font-size:13px}
 }
 
-/* La pestaña elegida entra con un pop corto, el de las etiquetas del filtro: al llegar a Registros
+/* La pestaña elegida entra con un pop corto, el de las etiquetas del filtro: al llegar a Revisar
    desde un número es la señal de dónde se aterrizó. Con movimiento reducido, quieta. */
 .setter-espacio .dc-shell .tab[aria-selected="true"]{animation:setterTabOn .26s var(--spring) both}
 @keyframes setterTabOn{from{opacity:.55;transform:scale(.9)}to{opacity:1;transform:none}}

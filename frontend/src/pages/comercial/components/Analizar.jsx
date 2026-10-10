@@ -118,8 +118,8 @@ const bajarA = (id) => {
  * Tile de vista rápida: un número, su lectura en chico y dos accesos — el ojo lleva al dato
  * crudo en la lista, el otro baja al panel que lo desglosa.
  *
- * El ojo dice "Ver los registros", sin nombrar la sección: la lista es Revisar para la dirección,
- * "Mi cartera" para el closer y Reporte · Registros para el setter.
+ * El ojo dice "Ver los registros", sin nombrar la sección: la lista es Revisar para la dirección y
+ * para el setter (desde el 10/10/2026; antes, Reporte · Registros) y "Mi cartera" para el closer.
  */
 const Tile = ({ label, help, valor, color, sub, delta, humo, ver, baja }) => (
     <section className="kpi caja">

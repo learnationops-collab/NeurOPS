@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { BarChart3, CalendarDays, ClipboardList, Compass, Ghost, Link2, LogOut } from 'lucide-react';
+import { BarChart3, CalendarDays, CheckCircle2, ClipboardList, Compass, Ghost, Link2, LogOut } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
@@ -13,6 +13,7 @@ import DashboardComercial from '../comercial/DashboardComercial';
 import DockSecciones from '../comercial/components/DockSecciones';
 import MenuSesion from '../comercial/components/MenuSesion';
 import { Segmented } from '../comercial/components/Shared';
+import { REVISAR_DEL_SETTER } from '../comercial/components/tablasSetter';
 import '../comercial/comercial.css';
 import './setterEspacio.css';
 import SetterWorkflowPage from './SetterWorkflowPage';
@@ -44,27 +45,29 @@ import PublicSetterStatsPage from '../public/PublicSetterStatsPage';
  * en el mazo del closer; en el header queda solo "Volver a mi sesión" mientras se simula, que es lo
  * primero que busca quien termina de mirar.
  *
- * Revisar (el libro de registros del dashboard) NO es una sección del setter (pedido del
- * 29/09/2026), y `?step=revisar` de un link viejo cae en Mis agendas. Sus listas viven en
- * Reporte · Registros (pedido del 01/10/2026: "el setter trabaja con Reporte, que vea los datos
- * dentro de su reporte"): sus leads y sus agendas generadas, acotadas a él por el backend.
+ * Revisar es una sección del setter desde el 10/10/2026 (pedido del usuario: «una pestaña de
+ * revisar donde pueda ver todas sus agendas, porque Mis agendas debe vaciarse [...] y las ventas que
+ * se van registrando con su fuente»). Revierte dos decisiones: la del 29/09 (el setter no veía
+ * Revisar) y la del 01/10, que había puesto sus listas en Reporte · Registros. Son las listas del
+ * Revisar de closers y dirección —el mismo `DashboardComercial`, no una copia— acotadas a él por el
+ * backend, de solo lectura: sus agendas (todas, con y sin palabra clave), los cobros de su fuente y
+ * sus leads. Ver `tablasSetter.js`.
  */
 
 /**
  * Las secciones del dock, en orden: el número de cada una (01, 02...) es el que muestra el
  * encabezado. `sub` es la frase apagada que sigue al saludo ("Hola, Elias. Así cerraste el día."):
  * dice para qué está la sección, y a ancho de teléfono se esconde.
- *
- * "Registros", una palabra: es la que ya dice el ojo de cada número de "Mis datos" ("Ver los
- * registros"), así que el clic y el lugar al que lleva se llaman igual. "Mis registros" quedaba al
- * lado de "Mis reportes" y de un vistazo eran la misma pestaña.
  */
 const SECCIONES = [
     // La primera es el aterrizaje del rol y adonde cae una sección que no existe.
     { id: 'agendas', label: 'Mis agendas', Icono: CalendarDays, sub: 'Cada agenda, con su anuncio.' },
+    // Una pestaña por tabla, y la tabla la elige la pestaña (`tablaFija`): su Ventas no es una de las
+    // tablas de setters de la dirección, así que la `t` de la URL sola no la podía abrir.
+    { id: 'revisar', label: 'Revisar', Icono: CheckCircle2, sub: 'Tus agendas, tus ventas y tus leads.',
+        tabs: REVISAR_DEL_SETTER.map(({ key, label }) => ({ key, label })) },
     { id: 'reporte', label: 'Reporte', Icono: ClipboardList, sub: 'Así cerraste el día.',
-        tabs: [{ key: 'hoy', label: 'Reporte del día' }, { key: 'historial', label: 'Mis reportes' },
-            { key: 'registros', label: 'Registros' }] },
+        tabs: [{ key: 'hoy', label: 'Reporte del día' }, { key: 'historial', label: 'Mis reportes' }] },
     { id: 'datos', label: 'Mis datos', Icono: BarChart3, sub: 'Así vienen tus números.' },
 ];
 
@@ -73,6 +76,10 @@ const numeroDe = (id) => String(SECCIONES.findIndex(s => s.id === id) + 1).padSt
 
 /** "Ana Setter" → "Ana": el saludo va con el nombre de pila. */
 const nombreDePila = (nombre) => String(nombre || '').trim().split(/\s+/)[0] || 'Setter';
+
+/** La pestaña de Revisar que abre la tabla `t` de un drill-down de "Mis datos". */
+const pestanaDeTabla = (t) => REVISAR_DEL_SETTER.find(p => p.tabla === t)?.key || REVISAR_DEL_SETTER[0].key;
+const tablaDePestana = (key) => REVISAR_DEL_SETTER.find(p => p.key === key)?.tabla;
 
 /**
  * Lo que el drill-down de "Mis datos" deja en la URL: la tabla (`t`) y su filtro (`f`, con su token
@@ -100,7 +107,7 @@ const SetterEspacioPage = () => {
 
     /**
      * Cambia de sección (y de pestaña) sin tocar el período que eligió en "Mis datos" (`p`, `vs`):
-     * sigue puesto al volver, y es el mismo con el que Registros arma la lista.
+     * sigue puesto al volver, y es el mismo con el que Revisar arma la lista.
      *
      * `base` es la URL del drill-down de "Mis datos": el dashboard escribe su tabla y su filtro
      * (`t`, `f`, `ft`) y en el mismo clic pide ir a la lista, así que la URL de este render todavía
@@ -108,8 +115,8 @@ const SetterEspacioPage = () => {
      * como entrada nueva del historial (el dashboard escribe la suya reemplazando), así que "atrás"
      * desde la lista vuelve a "Mis datos".
      *
-     * Sin `base` es un cambio a mano (el dock o una pestaña), y suelta el drill-down: Registros
-     * abierto así muestra sus leads sin filtro, no el último número que tocó.
+     * Sin `base` es un cambio a mano (el dock o una pestaña), y suelta el drill-down: Revisar
+     * abierto así muestra la lista de esa pestaña sin filtro, no el último número que tocó.
      */
     const irA = useCallback((id, nuevaTab = null, base = null) => {
         const siguiente = new URLSearchParams(base || params);
@@ -162,7 +169,10 @@ const SetterEspacioPage = () => {
         ? { ...s, marca: { texto: '✓', titulo: 'reporte de hoy enviado' } }
         : s));
 
-    const claveVista = `${seccion}-${tab || ''}`;
+    // Las pestañas de Revisar no desmontan la vista: es un solo dashboard que cambia de tabla, y
+    // desmontarlo volvía a pedir su contexto y mostraba el esqueleto de la página entera. El resto
+    // entra con su animación cada vez.
+    const claveVista = seccion === 'revisar' ? seccion : `${seccion}-${tab || ''}`;
     const nombre = user?.name || user?.username || 'Setter';
 
     // La sesión al final del dock: lo que antes eran botones del header.
@@ -234,18 +244,19 @@ const SetterEspacioPage = () => {
                         <PublicSetterReportPage onEnviado={(fecha) => { if (fecha === hoyLocal()) setReporteHoy(true); }} />
                     )}
                     {seccion === 'reporte' && tab === 'historial' && <PublicSetterStatsPage embebido />}
-                    {/* Registros y "Mis datos" son el dashboard comercial, acotado a este setter
-                        por el backend (`alcance_de`): la lista de Revisar y el tablero de Analizar,
-                        como "Mi cartera" y "Ver mis datos" en el mazo del closer. Sin selector de
-                        persona: el contexto de un setter no lo ofrece. */}
-                    {seccion === 'reporte' && tab === 'registros' && (
-                        <DashboardComercial embebido seccionFija="revisar" />
+                    {/* Revisar y "Mis datos" son el dashboard comercial, acotado a este setter por
+                        el backend (`alcance_de`): la lista de Revisar y el tablero de Analizar, como
+                        "Mi cartera" y "Ver mis datos" en el mazo del closer. Sin selector de
+                        persona: el contexto de un setter no lo ofrece. La tabla la elige la pestaña. */}
+                    {seccion === 'revisar' && (
+                        <DashboardComercial embebido seccionFija="revisar" tablaFija={tablaDePestana(tab)} />
                     )}
-                    {/* El drill-down de un dato lleva a Registros con la tabla y el filtro de ese
-                        número, partiendo de la URL que el dashboard acaba de escribir. */}
+                    {/* El drill-down de un dato lleva a Revisar, a la pestaña de su tabla y con el
+                        filtro de ese número, partiendo de la URL que el dashboard acaba de escribir. */}
                     {seccion === 'datos' && (
                         <DashboardComercial embebido seccionFija="analizar"
-                            onIrASeccion={(_seccion, urlDelFiltro) => irA('reporte', 'registros', urlDelFiltro)} />
+                            onIrASeccion={(_seccion, urlDelFiltro) => irA('revisar',
+                                pestanaDeTabla(urlDelFiltro?.get('t')), urlDelFiltro)} />
                     )}
                 </motion.div>
 

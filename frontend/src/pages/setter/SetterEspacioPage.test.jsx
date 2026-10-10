@@ -14,8 +14,8 @@ import SetterEspacioPage from './SetterEspacioPage';
  * Las secciones se reemplazan por dobles: acá se prueba la navegación del espacio, no las
  * pantallas que monta. El doble del dashboard hace lo mismo que el real en el drill-down: escribe
  * la tabla y el filtro en la URL y, en el MISMO clic, le pide al host ir a la lista con la query
- * string que acaba de escribir. Montado como lista (`seccionFija="revisar"`), dice qué tabla y qué
- * filtro le llegaron por la URL.
+ * string que acaba de escribir. Montado como lista (`seccionFija="revisar"`), dice qué tabla le
+ * fijó el espacio (`tablaFija`) y qué filtro le llegó por la URL.
  */
 
 const sesion = vi.hoisted(() => ({ user: null, reportesHoy: 0, pendientes: 0, openPlaybook: null }));
@@ -40,7 +40,7 @@ vi.mock('../public/PublicSetterStatsPage', () => ({
     default: ({ embebido }) => <div data-testid="mis-reportes">{embebido ? 'embebido' : 'pagina'}</div>,
 }));
 vi.mock('../comercial/DashboardComercial', () => ({
-    default: function DashboardDoble({ seccionFija, onIrASeccion }) {
+    default: function DashboardDoble({ seccionFija, onIrASeccion, tablaFija }) {
         const [params, setParams] = useSearchParams();
         const drillDown = () => {
             const siguiente = new URLSearchParams(params);
@@ -55,7 +55,7 @@ vi.mock('../comercial/DashboardComercial', () => ({
                 {onIrASeccion ? 'con drill-down' : 'sin drill-down'}
                 {onIrASeccion && <button type="button" onClick={drillDown}>ver el detalle</button>}
                 {seccionFija === 'revisar' && (
-                    <output data-testid="lista">{`${params.get('t') || 'leads'} · ${params.get('f') || 'sin filtro'}`}</output>
+                    <output data-testid="lista">{`${tablaFija} · ${params.get('f') || 'sin filtro'}`}</output>
                 )}
             </div>
         );
@@ -106,7 +106,7 @@ describe('SetterEspacioPage · un solo dock', () => {
 
         expect(screen.getByTestId('dashboard-analizar')).toBeInTheDocument();
         const secciones = Array.from(dock().querySelectorAll('.dock-item')).map(b => b.getAttribute('aria-label'));
-        expect(secciones).toEqual(['Mis agendas', 'Reporte', 'Mis datos']);
+        expect(secciones).toEqual(['Mis agendas', 'Revisar', 'Reporte', 'Mis datos']);
         expect(itemDelDock('Mis datos')).toHaveAttribute('aria-current', 'page');
 
         // Simulando, "Volver a mi sesión" está, pero ya no es la única salida.
@@ -118,49 +118,56 @@ describe('SetterEspacioPage · un solo dock', () => {
         expect(url().get('step')).toBe('agendas');
     });
 
-    it('el setter no ve Revisar, pero "Mis datos" tiene a dónde llevar un número', async () => {
-        // Pedido del 29/09/2026: Revisar no le hace falta al setter. Desde el 01/10/2026 sus
-        // listas están en Reporte · Registros, y ahí lleva el drill-down.
-        await montar('/setter/deck?step=datos');
-
-        expect(screen.getByTestId('dashboard-analizar')).toHaveTextContent('con drill-down');
-        expect(screen.queryAllByRole('button', { name: /^Revisar/ })).toHaveLength(0);
-    });
-
-    it('un link viejo a Revisar abre Mis agendas, no una pantalla vacía', async () => {
+    it('Revisar es una sección del setter, con Agendas · Ventas · Leads (10/10/2026)', async () => {
+        // Revierte el 29/09 (el setter no veía Revisar) y el 01/10 (sus listas en Reporte ·
+        // Registros). Abierta a mano, sin un número detrás: sus agendas, sin filtro.
         await montar('/setter/deck?step=revisar');
 
-        expect(screen.getByTestId('mazo')).toHaveTextContent('mazo:agendas');
+        expect(itemDelDock('Revisar')).toHaveAttribute('aria-current', 'page');
+        expect(screen.getAllByRole('tab').map(t => t.textContent)).toEqual(['Agendas', 'Ventas', 'Leads']);
+        expect(screen.getByRole('tab', { name: 'Agendas' })).toHaveAttribute('aria-selected', 'true');
+        expect(screen.getByTestId('lista')).toHaveTextContent('generadas · sin filtro');
+    });
+
+    it('cada pestaña de Revisar le fija su tabla al dashboard, sin desmontarlo', async () => {
+        await montar('/setter/deck?step=revisar');
+        const lista = screen.getByTestId('dashboard-revisar');
+
+        fireEvent.click(screen.getByRole('tab', { name: 'Ventas' }));
+        expect(screen.getByTestId('lista')).toHaveTextContent('ventas · sin filtro');
+        expect(url().get('tab')).toBe('ventas');
+
+        fireEvent.click(screen.getByRole('tab', { name: 'Leads' }));
+        expect(screen.getByTestId('lista')).toHaveTextContent('leads · sin filtro');
+        // El mismo dashboard: desmontarlo volvía a pedir el contexto en cada pestaña.
+        expect(screen.getByTestId('dashboard-revisar')).toBe(lista);
+    });
+
+    it('Reporte ya no tiene Registros, y un link viejo cae en su primera pestaña', async () => {
+        await montar('/setter/deck?step=reporte&tab=registros');
+
+        expect(screen.getAllByRole('tab').map(t => t.textContent)).toEqual(['Reporte del día', 'Mis reportes']);
+        expect(screen.getByTestId('reporte-hoy')).toBeInTheDocument();
         expect(screen.queryByTestId('dashboard-revisar')).toBeNull();
     });
 
-    it('Reporte tiene sus Registros: la lista del dashboard, en una pestaña más', async () => {
-        await montar('/setter/deck?step=reporte&tab=registros');
-
-        // Abierta a mano, sin un número detrás: sus leads, sin filtro.
-        expect(screen.getByTestId('lista')).toHaveTextContent('leads · sin filtro');
-        expect(screen.getAllByRole('tab').map(t => t.textContent))
-            .toEqual(['Reporte del día', 'Mis reportes', 'Registros']);
-        expect(screen.getByRole('tab', { name: 'Registros' })).toHaveAttribute('aria-selected', 'true');
-        expect(itemDelDock('Reporte')).toHaveAttribute('aria-current', 'page');
-    });
-
-    it('un número de "Mis datos" abre Registros con su tabla y su filtro, en el mismo clic', async () => {
+    it('un número de "Mis datos" abre Revisar en la pestaña de su tabla, con su filtro, en el mismo clic', async () => {
         await montar('/setter/deck?step=datos&p=mes');
+        expect(screen.getByTestId('dashboard-analizar')).toHaveTextContent('con drill-down');
 
         fireEvent.click(screen.getByRole('button', { name: 'ver el detalle' }));
 
         // Las dos navegaciones del clic —la del dashboard (`t`, `f`, `ft`) y la del espacio
         // (`step`, `tab`)— sobreviven: la segunda parte de la URL que escribió la primera.
-        expect(url().get('step')).toBe('reporte');
-        expect(url().get('tab')).toBe('registros');
+        expect(url().get('step')).toBe('revisar');
+        expect(url().get('tab')).toBe('agendas');
         expect(url().get('t')).toBe('generadas');
         expect(url().get('f')).toBe('{"asistio":"Sí"}');
         expect(url().get('ft')).toBe('1');
         expect(url().get('p')).toBe('mes');
         expect(screen.getByTestId('lista')).toHaveTextContent('generadas · {"asistio":"Sí"}');
-        expect(screen.getByRole('tab', { name: 'Registros' })).toHaveAttribute('aria-selected', 'true');
-        expect(itemDelDock('Reporte')).toHaveAttribute('aria-current', 'page');
+        expect(screen.getByRole('tab', { name: 'Agendas' })).toHaveAttribute('aria-selected', 'true');
+        expect(itemDelDock('Revisar')).toHaveAttribute('aria-current', 'page');
     });
 
     it('"atrás" desde la lista vuelve a "Mis datos"', async () => {
@@ -175,15 +182,14 @@ describe('SetterEspacioPage · un solo dock', () => {
         expect(url().get('p')).toBe('mes');
     });
 
-    it('volver a Registros por el dock suelta el filtro del último número', async () => {
-        // Tocó un número, volvió a "Mis datos" y después entra a Registros por su cuenta: la lista
+    it('volver a Revisar por el dock suelta el filtro del último número', async () => {
+        // Tocó un número, volvió a "Mis datos" y después entra a Revisar por su cuenta: la lista
         // no tiene que resucitar aquel filtro.
         await montar('/setter/deck?step=datos&p=mes&t=generadas&f=%7B%22asistio%22%3A%22S%C3%AD%22%7D&ft=3');
 
-        fireEvent.click(itemDelDock('Reporte'));
-        fireEvent.click(screen.getByRole('tab', { name: 'Registros' }));
+        fireEvent.click(itemDelDock('Revisar'));
 
-        expect(screen.getByTestId('lista')).toHaveTextContent('leads · sin filtro');
+        expect(screen.getByTestId('lista')).toHaveTextContent('generadas · sin filtro');
         expect(url().get('t')).toBeNull();
         expect(url().get('f')).toBeNull();
         expect(url().get('ft')).toBeNull();
@@ -224,6 +230,12 @@ describe('SetterEspacioPage · un solo dock', () => {
         await montar('/setter/deck?step=agendas');
 
         expect(itemDelDock('Reporte')).toHaveAttribute('aria-label', 'Reporte, reporte de hoy enviado');
+    });
+
+    it('Revisar es la 02 del encabezado, con su frase', async () => {
+        await montar('/setter/deck?step=revisar');
+        expect(document.querySelector('header.tope .head-num')).toHaveTextContent('02');
+        expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Tus agendas, tus ventas y tus leads.');
     });
 
     it('el encabezado es una línea: el número de la sección, el saludo y las pestañas', async () => {
