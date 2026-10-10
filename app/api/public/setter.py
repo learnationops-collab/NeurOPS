@@ -1199,7 +1199,11 @@ def preview_setter_report_discord(report_id):
             user_id = User.verify_auth_token(token)
             if user_id:
                 user = User.query.get(user_id)
-            
+                # Un token valido con current_user anonimo es, casi siempre, el de una cuenta DESACTIVADA (el
+                # request_loader ya lee `?token=` y la rechaza por eso). Aca tampoco entra.
+                if user is not None and not user.is_active:
+                    user = None
+
             if not user and (current_app.config.get('DEBUG') or current_app.debug):
                 try:
                     import jwt
