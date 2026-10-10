@@ -56,8 +56,6 @@ import AdminSheetsHubPage from './pages/admin/reports/AdminSheetsHubPage';
 import WorkshopDashboardPage from './pages/admin/workshop/WorkshopDashboardPage';
 import PostulacionesDashboardPage from './pages/admin/postulaciones/PostulacionesDashboardPage';
 import HiringDashboardPage from './pages/admin/hiring/HiringDashboardPage';
-import BackupPage from './pages/admin/backup/BackupPage';
-import RestorePage from './pages/admin/backup/RestorePage';
 
 
 import DashboardComercial from './pages/comercial/DashboardComercial';
@@ -268,30 +266,11 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            {/* Respaldo y restauración de la base: solo admin (el servidor lo vuelve a exigir, además de
-                la clave BACKUP_SECRET_KEY que escribe la persona en la pantalla). Antes eran páginas
-                públicas (/backup y /restore) con la clave escrita en el bundle de la web. Sin enlace en
-                el menú a propósito: se entra por la URL. */}
-            <Route
-              path="/admin/backup"
-              element={
-                <ProtectedRoute roles={['admin']}>
-                  <MainLayout>
-                    <BackupPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/restore"
-              element={
-                <ProtectedRoute roles={['admin']}>
-                  <MainLayout>
-                    <RestorePage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
+            {/* Respaldo y restauración de la base: desde el 10/10/2026 son pestañas de Operaciones › Datos
+                (admin u operador; el servidor lo vuelve a exigir, además de la clave BACKUP_SECRET_KEY que
+                escribe la persona en la pantalla). Antes eran páginas sueltas del admin, sin enlace. */}
+            <Route path="/admin/backup" element={<Navigate to="/ops/dashboard?step=datos&tab=respaldo" replace />} />
+            <Route path="/admin/restore" element={<Navigate to="/ops/dashboard?step=datos&tab=restaurar" replace />} />
             <Route
               path="/ops/course-editor"
               element={

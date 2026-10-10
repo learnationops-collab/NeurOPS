@@ -9,7 +9,7 @@ import {
 
 // Respaldo de la base (script SQL). Solo admin: la ruta ya lo exige y el servidor lo vuelve a comprobar.
 // La clave (BACKUP_SECRET_KEY) la escribe la persona: no está en el código ni se guarda en el navegador.
-const BackupPage = () => {
+const BackupPage = ({ embebido = false }) => {
     const [clave, setClave] = useState('');
     const [status, setStatus] = useState('idle'); // idle, previewing, downloading, success, error
     const [tablas, setTablas] = useState([]);
@@ -58,7 +58,7 @@ const BackupPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-neutral-900 flex items-center justify-center p-4 font-sans text-neutral-200">
+        <div className={`${embebido ? 'py-6' : 'min-h-screen'} bg-neutral-900 flex items-center justify-center p-4 font-sans text-neutral-200`}>
             <div className="max-w-2xl w-full bg-neutral-800 rounded-xl border border-neutral-700 p-8 shadow-2xl">
 
                 {/* Header */}

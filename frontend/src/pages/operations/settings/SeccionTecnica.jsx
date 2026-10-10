@@ -7,6 +7,8 @@ import LeadsAuditTogglePanel from '../../../components/operations/LeadsAuditTogg
 import ReportBacklogTogglePanel from '../../../components/operations/ReportBacklogTogglePanel';
 import BugReportsPanel from '../../../components/operations/BugReportsPanel';
 import PlaybookAdminPanel from '../../../components/operations/PlaybookAdminPanel';
+import BackupPage from '../../admin/backup/BackupPage';
+import RestorePage from '../../admin/backup/RestorePage';
 
 /**
  * Las secciones del panel técnico de Operaciones, por id. Es la ÚNICA lista de lo que hay: el espacio de
@@ -23,6 +25,10 @@ export const ETIQUETAS_TECNICAS = {
     bitacora: 'Bitácora de Cambios',
     database: 'Base de Datos',
     operations: 'Operaciones Críticas',
+    // El respaldo completo de la base (todas las tablas, con la clave de BACKUP_SECRET_KEY): era del panel
+    // de «Administración» y solo se abría por URL hasta el 10/10/2026.
+    respaldo: 'Respaldo',
+    restaurar: 'Restaurar',
 };
 
 const SeccionTecnica = ({ id, embebido = false }) => {
@@ -39,6 +45,8 @@ const SeccionTecnica = ({ id, embebido = false }) => {
         // «Infraestructura» que solo decía «en construcción»: se fueron el 10/10/2026, junto con los UTMs, que
         // son de Marketing (el mismo generador está en /admin/marketing).
         case 'operations': return <OperationsPage />;
+        case 'respaldo': return <BackupPage embebido />;
+        case 'restaurar': return <RestorePage embebido />;
         default: return null;
     }
 };

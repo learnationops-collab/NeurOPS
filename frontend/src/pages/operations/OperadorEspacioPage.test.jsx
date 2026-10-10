@@ -26,6 +26,7 @@ vi.mock('./settings/SeccionTecnica', () => ({
         team: 'Gestión de Equipo', closer_aliases: 'Alias de Closers', leads_audit: 'Auditoría de Leads',
         report_backlog: 'Bloqueo del Reporte', bug_reports: 'Reportes de Bugs', playbook: 'Playbook',
         bitacora: 'Bitácora de Cambios', database: 'Base de Datos', operations: 'Operaciones Críticas',
+        respaldo: 'Respaldo', restaurar: 'Restaurar',
     },
 }));
 vi.mock('../admin/reports/FinancialAgendasPage', () => ({ default: () => <div data-testid="agendas" /> }));
@@ -79,13 +80,14 @@ describe('Espacio del operador', () => {
         expect(screen.getByTestId('url')).toHaveTextContent('step=soporte&tab=bitacora');
     });
 
-    it('Datos ya no trae los UTMs ni pestañas repetidas o vacías (10/10/2026)', () => {
-        montar('/ops/dashboard?step=datos&tab=operations');
+    it('Datos trae el respaldo de la base y ya no los UTMs ni pestañas repetidas (10/10/2026)', () => {
+        montar('/ops/dashboard?step=datos&tab=respaldo');
 
         const pestanas = screen.getByRole('tablist', { name: 'Vistas de Datos' });
         expect([...pestanas.querySelectorAll('[role="tab"]')].map(t => t.textContent))
-            .toEqual(['Base de Datos', 'Operaciones Críticas']);
-        expect(screen.getByTestId('seccion')).toHaveTextContent('operations');
+            .toEqual(['Base de Datos', 'Operaciones Críticas', 'Respaldo', 'Restaurar']);
+        expect(screen.getByRole('tab', { name: 'Respaldo' })).toHaveAttribute('aria-selected', 'true');
+        expect(screen.getByTestId('seccion')).toHaveTextContent('respaldo');
     });
 
     it('elegir una sección en el dock cambia el paso en la URL', () => {
