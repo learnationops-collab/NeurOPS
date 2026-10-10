@@ -158,6 +158,12 @@ export function crearAdaptadorApi() {
             try { const { data } = await api.get('/agendas-v2/usuarios', { params: rol ? { rol } : undefined }); return Array.isArray(data && data.usuarios) ? data.usuarios : []; } catch (e) { throw errorDeApi(e); }
         },
 
+        // Lo ocupado en el Google Calendar de cada persona entre desde y hasta (ms), para Available:
+        // {persona_id: {estado: 'ok' | 'error' | 'sin_google' | 'sin_usuario', franjas: [[inicio, fin]]}}.
+        async ocupacion(desde, hasta) {
+            try { const { data } = await api.get('/agendas-v2/ocupacion', { params: { desde, hasta }, skipBugReport: true }); return (data && data.ocupacion) || {}; } catch (e) { throw errorDeApi(e); }
+        },
+
         async crearReserva() {
             const e = new Error('Con la API, las reservas se crean solo desde la página pública del lead (POST /api/agendas-v2/publico/reservas).');
             e.code = 'no_soportado';
