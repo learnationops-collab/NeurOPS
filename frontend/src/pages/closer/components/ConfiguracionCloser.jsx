@@ -14,17 +14,18 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { DatosCuenta, TarjetaCalendar, TarjetaDisponibilidad, TarjetaWhatsapp } from '../../agendas_v2/secciones/conf/cuenta';
 import MisEventos from '../../agendas_v2/secciones/conf/MisEventos';
 import TabApariencia from '../../../temas/TabApariencia';
+import { dataThemeDe, puedeElegirTema, useApariencia } from '../../../context/AparienciaContext';
 import { Icono } from '../../agendas_v2/ui/base';
 import '../../agendas_v2/thalamus.css';
 
 export const TABS_CLOSER = [
     ['datos', 'Datos', 'user'], ['disponibilidad', 'Disponibilidad', 'clock'], ['integraciones', 'Integraciones', 'enchufe'], ['eventos', 'Mis eventos', 'calendar'],
 ];
-// Apariencia todavía solo para admins: el closer la ve cuando sus pantallas estén migradas a los
-// temas (hasta entonces, elegir otro tema le cambiaría solo pedazos).
+// Apariencia solo para los roles que ya pueden elegir tema (context/AparienciaContext.jsx).
 const TAB_APARIENCIA = ['apariencia', 'Apariencia', 'sol'];
 
-// Las tarjetas de Thalamus van en el modo de la hoja que las contiene, no en el de la página: en el
+// Con tema elegido, el modo del tema (y la hoja lo sigue, components/ui/hoja-modal.css). Sin tema, las
+// tarjetas de Thalamus van en el modo de la hoja que las contiene, no en el de la página: en el
 // estilo glass la hoja (.bg-surface) es navy aunque la app esté en claro (Elegant Blue), y con el modo
 // de la clase `dark` el texto salía oscuro sobre oscuro. Se decide por el color del texto de la hoja:
 // si es claro, el fondo es oscuro.
@@ -42,8 +43,9 @@ const tabInicial = () => (new URLSearchParams(window.location.search).get('googl
 export default function ConfiguracionCloser({ user = null }) {
     const [tab, setTab] = useState(tabInicial);
     const raiz = useRef(null);
-    const [tema, setTema] = useState(temaApp);
-    useLayoutEffect(() => { setTema(temaDeLaHoja(raiz.current)); }, []);
+    const apariencia = useApariencia();
+    const [temaHoja, setTemaHoja] = useState(temaApp);
+    useLayoutEffect(() => { setTemaHoja(temaDeLaHoja(raiz.current)); }, []);
     let cuerpo;
     if (tab === 'disponibilidad') cuerpo = <TarjetaDisponibilidad />;
     else if (tab === 'integraciones') cuerpo = <><TarjetaCalendar /><TarjetaWhatsapp /></>;
@@ -51,9 +53,9 @@ export default function ConfiguracionCloser({ user = null }) {
     else if (tab === 'apariencia') cuerpo = <TabApariencia />;
     else cuerpo = user ? <DatosCuenta user={user} /> : null;
     return (
-        <div ref={raiz} className="thalamus cu-hoja" data-theme={tema} aria-label="Configuración">
+        <div ref={raiz} className="thalamus cu-hoja" data-theme={dataThemeDe(apariencia, temaHoja)} aria-label="Configuración">
             <div className="tabs" role="tablist" aria-label="Configuración">
-                {(user?.role === 'admin' ? [...TABS_CLOSER, TAB_APARIENCIA] : TABS_CLOSER).map(([t, n, ico]) => (
+                {(puedeElegirTema(user?.role) ? [...TABS_CLOSER, TAB_APARIENCIA] : TABS_CLOSER).map(([t, n, ico]) => (
                     <button key={t} type="button" className="tab" role="tab" aria-selected={tab === t} aria-controls="cu-cuerpo" onClick={() => setTab(t)}>
                         <Icono n={ico} />{n}
                     </button>

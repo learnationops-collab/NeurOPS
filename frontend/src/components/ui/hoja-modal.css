@@ -59,3 +59,14 @@
         padding: 3.5rem 2.5rem 2.25rem;
     }
 }
+
+/* Con tema elegido (`data-tema` en <html>, temas/temas.css) la hoja es el modal del tema y su texto
+   el del tema: nunca más una hoja navy con el texto de un tema claro. Sin tema, como siempre. */
+[data-tema] .hoja-panel {
+    background: var(--modal);
+    color: var(--en-modal);
+    border-color: var(--borde-2);
+    --text-main: var(--en-modal);
+    --color-text-base: var(--en-modal);
+    --text-muted: var(--texto-2);
+}

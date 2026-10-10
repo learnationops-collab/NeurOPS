@@ -11,9 +11,13 @@
    usan `--bg-surface`, `--text-muted`, `--brand-secondary`... con otros valores
    cada uno, y reusarlos acá los pisaría.
 
-   Closing oscuro es el look actual del closer, con sus valores exactos (los de
-   `.dc-shell` en pages/comercial/comercial.css): el default, para que nadie
-   note el cambio. Thalamus oscuro y claro son los de pages/agendas_v2/thalamus.css.
+   Cómo lo leen las pantallas: sus variables de siempre pasan a `var(--rol, valor de hoy)`
+   (`.dc-shell` en pages/comercial/comercial.css, `.thalamus` en agendas_v2/thalamus.css).
+   Sin tema elegido no hay `data-tema`, el rol no existe y queda el valor de hoy tal cual:
+   nadie nota nada hasta que elige. Elegido, el tema manda en todas.
+
+   Closing oscuro son los valores exactos de `.dc-shell`; Thalamus oscuro y claro, los de
+   thalamus.css.
 
    Roles:
    fondo           la página (color base + degradado) y el texto directo sobre ella
@@ -27,6 +31,8 @@
    borde-1/2/3     bordes de menor a mayor fuerza; brillo es el filo de arriba
    est-*           estados (exito, aviso, error, info, inactivo): color, superficie y borde
    riel            pista de switches y barras
+   esquema         dark o light, para el `color-scheme` de cada contenedor
+   mapa-*          el lienzo de flujos de Agendamiento; medalla-* el podio del ranking
 
    Por qué `est-` y `riel`: `--error`, `--info` y `--hueco` ya existen en otras hojas, y en <html>
    les ganarían a los `var(--error, respaldo)` de las pantallas viejas. Y sin `color-scheme`: en
@@ -35,6 +41,9 @@
    ============================================================================ */
 
 [data-tema="closing-oscuro"]{
+  --esquema:dark;
+  --mapa-lienzo:#070B2A; --mapa-punto:rgba(255,255,255,.07); --mapa-nodo:#0B1033; --mapa-nodo-fila:rgba(255,255,255,.06); --mapa-arista:rgba(160,175,230,.42);
+  --medalla-oro:#F2C14E; --medalla-plata:#C5CEDB; --medalla-bronce:#DA8C5C;
   --fondo:#020617; --fondo-degradado:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%); --en-fondo:#FFFFFF;
   --destacado:#FF3FA4; --destacado-claro:#FF6AD5; --en-destacado:#020617;
   --destacado-suave:rgba(255,63,164,.10); --destacado-suave-borde:rgba(255,63,164,.35);
@@ -63,6 +72,9 @@
 }
 
 [data-tema="thalamus-oscuro"]{
+  --esquema:dark;
+  --mapa-lienzo:#070B2A; --mapa-punto:rgba(255,255,255,.07); --mapa-nodo:#0B1033; --mapa-nodo-fila:rgba(255,255,255,.06); --mapa-arista:rgba(160,175,230,.42);
+  --medalla-oro:#F2C14E; --medalla-plata:#C5CEDB; --medalla-bronce:#DA8C5C;
   --fondo:#020617; --fondo-degradado:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%); --en-fondo:#FFFFFF;
   --destacado:#FF3FA4; --destacado-claro:#FF6AD5; --en-destacado:#020617;
   --destacado-suave:rgba(255,63,164,.10); --destacado-suave-borde:rgba(255,63,164,.35);
@@ -91,6 +103,9 @@
 }
 
 [data-tema="thalamus-claro"]{
+  --esquema:light;
+  --mapa-lienzo:#EEF1FA; --mapa-punto:rgba(10,14,61,.10); --mapa-nodo:#FFFFFF; --mapa-nodo-fila:rgba(10,14,61,.05); --mapa-arista:rgba(60,75,140,.38);
+  --medalla-oro:#A87400; --medalla-plata:#66748A; --medalla-bronce:#A65427;
   --fondo:#F6F7FC; --fondo-degradado:linear-gradient(135deg,#F6F7FC 0%,#EAEEFA 50%,#F5F0F8 100%); --en-fondo:#080C30;
   --destacado:#C9156F; --destacado-claro:#E23E96; --en-destacado:#FFFFFF;
   --destacado-suave:rgba(201,21,111,.09); --destacado-suave-borde:rgba(201,21,111,.30);

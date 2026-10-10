@@ -3,25 +3,25 @@
    Dock en el orden real de configuración: 1 Preguntas · 2 Team · 3 Eventos · 4 Estadísticas.
    Configuración (perfil y funnels) en el botón magenta. La pantalla del lead es oscura siempre. */
 .thalamus{
-  color-scheme: dark;
-  --brand-secondary:#FF3FA4; --brand-secondary-light:#FF6AD5;
-  --brand-secondary-surface:rgba(255,63,164,.10); --brand-secondary-border:rgba(255,63,164,.35);
-  --brand-primary:#1323C6; --brand-navy:#0A0E3D; --ink:#020617; --on-brand:#020617; --on-state:#020617;
-  --mat-0:rgba(255,255,255,.02); --mat-1:rgba(255,255,255,.04); --mat-3:rgba(255,255,255,.12);
-  --hundido:rgba(0,0,0,.34); --bg-surface:rgba(2,6,23,.92); --bg-flotante:#0B1030;
-  --bg-element:rgba(255,255,255,.07); --bg-input:rgba(0,0,0,.30); --bg-scrim:rgba(2,6,23,.72);
-  --border-main:rgba(255,255,255,.15); --border-subtle:rgba(255,255,255,.07); --border-control:rgba(255,255,255,.34);
-  --sheen:rgba(255,255,255,.10); --hueco:rgba(255,255,255,.12);
-  --text-on-surface:#FFFFFF; --text-muted:rgba(255,255,255,.62); --text-muted-40:rgba(255,255,255,.42);
-  --success:#2FBF8F; --success-surface:#071A24; --success-border:#10413D;
-  --warning:#D9A441; --warning-surface:#1A171C; --warning-border:#473924;
-  --error:#E85C4A;   --error-surface:#1B0F1D;   --error-border:#4C2227;
-  --info:#4E8BD8;    --info-surface:#0A152C;    --info-border:#1A3155;
-  --idle:#7F8CA8;    --idle-surface:#0E1326;    --idle-border:#252C42;
+  color-scheme: var(--esquema, dark);
+  --brand-secondary:var(--destacado, #FF3FA4); --brand-secondary-light:var(--destacado-claro, #FF6AD5);
+  --brand-secondary-surface:var(--destacado-suave, rgba(255,63,164,.10)); --brand-secondary-border:var(--destacado-suave-borde, rgba(255,63,164,.35));
+  --brand-primary:var(--destacado-2, #1323C6); --brand-navy:#0A0E3D; --ink:#020617; --on-brand:var(--en-destacado, #020617); --on-state:var(--en-est, #020617);
+  --mat-0:var(--cont-tenue, rgba(255,255,255,.02)); --mat-1:var(--cont-1, rgba(255,255,255,.04)); --mat-3:var(--cont-fuerte, rgba(255,255,255,.12));
+  --hundido:var(--cont-3, rgba(0,0,0,.34)); --bg-surface:var(--modal, rgba(2,6,23,.92)); --bg-flotante:var(--flotante, #0B1030);
+  --bg-element:var(--cont-2, rgba(255,255,255,.07)); --bg-input:var(--campo, rgba(0,0,0,.30)); --bg-scrim:var(--velo, rgba(2,6,23,.72));
+  --border-main:var(--borde-2, rgba(255,255,255,.15)); --border-subtle:var(--borde-1, rgba(255,255,255,.07)); --border-control:var(--borde-3, rgba(255,255,255,.34));
+  --sheen:var(--brillo, rgba(255,255,255,.10)); --hueco:var(--riel, rgba(255,255,255,.12));
+  --text-on-surface:var(--en-fondo, #FFFFFF); --text-muted:var(--texto-2, rgba(255,255,255,.62)); --text-muted-40:var(--texto-3, rgba(255,255,255,.42));
+  --success:var(--est-exito, #2FBF8F); --success-surface:var(--est-exito-sup, #071A24); --success-border:var(--est-exito-borde, #10413D);
+  --warning:var(--est-aviso, #D9A441); --warning-surface:var(--est-aviso-sup, #1A171C); --warning-border:var(--est-aviso-borde, #473924);
+  --error:var(--est-error, #E85C4A);   --error-surface:var(--est-error-sup, #1B0F1D);   --error-border:var(--est-error-borde, #4C2227);
+  --info:var(--est-info, #4E8BD8);    --info-surface:var(--est-info-sup, #0A152C);    --info-border:var(--est-info-borde, #1A3155);
+  --idle:var(--est-inactivo, #7F8CA8);    --idle-surface:var(--est-inactivo-sup, #0E1326);    --idle-border:var(--est-inactivo-borde, #252C42);
   /* Identidad (categórica, validada en Learnation Sales) */
   --fc-azul:#317DE9; --fc-ambar:#C06F0A; --fc-rosa:#D6459B; --fc-verde:#3B9555; --fc-violeta:#7D63E6; --fc-turquesa:#13918B;
   --on-fc:#FFFFFF; --perilla:#FFFFFF;
-  --lienzo:#070B2A; --lienzo-punto:rgba(255,255,255,.07); --nodo:#0B1033; --nodo-fila:rgba(255,255,255,.06); --arista:rgba(160,175,230,.42);
+  --lienzo:var(--mapa-lienzo, #070B2A); --lienzo-punto:var(--mapa-punto, rgba(255,255,255,.07)); --nodo:var(--mapa-nodo, #0B1033); --nodo-fila:var(--mapa-nodo-fila, rgba(255,255,255,.06)); --arista:var(--mapa-arista, rgba(160,175,230,.42));
   /* Pantalla del lead: un solo tema */
   --rv-bg:#030720; --rv-fg:#FFFFFF; --rv-mut:rgba(255,255,255,.64); --rv-mut40:rgba(255,255,255,.42); --rv-tenue:rgba(255,255,255,.24);
   --rv-linea:rgba(255,255,255,.13); --rv-campo:rgba(255,255,255,.05); --rv-campo-borde:rgba(255,255,255,.16); --rv-pop:#0D1235;
@@ -29,52 +29,52 @@
   --rv-error:#F07A6A; --rv-error-suave:rgba(232,92,74,.14); --rv-ok:#2FBF8F; --rv-ok-suave:rgba(47,191,143,.14);
   --rv-aviso:#E5B65C; --rv-aviso-suave:rgba(217,164,65,.14); --rv-humo-a:#1323C6; --rv-humo-b:#0A0E3D;
   --radius-main:32px; --radius-control:16px; --radius-pill:999px;
-  --shadow-main:0 8px 32px 0 rgba(0,0,0,.40); --shadow-brand:0 10px 15px -3px rgba(19,35,198,.35);
-  --focus-ring:0 0 0 3px rgba(91,124,255,.55); --focus-blue:#5B7CFF;
+  --shadow-main:var(--sombra, 0 8px 32px 0 rgba(0,0,0,.40)); --shadow-brand:var(--sombra-destacado, 0 10px 15px -3px rgba(19,35,198,.35));
+  --focus-ring:var(--anillo-foco, 0 0 0 3px rgba(91,124,255,.55)); --focus-blue:var(--foco, #5B7CFF);
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s6:24px; --s8:32px; --s12:48px; --s16:64px;
   --font:'Montserrat','Helvetica Neue',Arial,sans-serif;
-  --gradient-page:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%); --page-base:#020617;
+  --gradient-page:var(--fondo-degradado, linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%)); --page-base:var(--fondo, #020617);
   --spring:cubic-bezier(.32,.72,0,1);
-  --humo-blend:screen; --humo-op:.42; --humo-i-op:.62;
-  --oro:#F2C14E; --plata:#C5CEDB; --bronce:#DA8C5C;
+  --humo-blend:var(--humo-mezcla, screen); --humo-op:var(--humo-opacidad, .42); --humo-i-op:var(--humo-opacidad-i, .62);
+  --oro:var(--medalla-oro, #F2C14E); --plata:var(--medalla-plata, #C5CEDB); --bronce:var(--medalla-bronce, #DA8C5C);
 }
-@media (prefers-color-scheme: light){
+@media (prefers-color-scheme: var(--esquema, light)){
   .thalamus:not([data-theme="dark"]){
-    color-scheme: light;
-    --brand-secondary:#C9156F; --brand-secondary-light:#E23E96; --brand-secondary-surface:rgba(201,21,111,.09); --brand-secondary-border:rgba(201,21,111,.30);
-    --on-brand:#FFFFFF; --on-state:#FFFFFF;
-    --mat-0:rgba(10,14,61,.015); --mat-1:rgba(10,14,61,.035); --mat-3:rgba(10,14,61,.10); --hundido:rgba(10,14,61,.055);
-    --bg-surface:rgba(255,255,255,.96); --bg-flotante:#FFFFFF; --bg-element:rgba(255,255,255,.75); --bg-input:rgba(10,14,61,.05); --bg-scrim:rgba(10,14,61,.42);
-    --border-main:rgba(10,14,61,.14); --border-subtle:rgba(10,14,61,.08); --border-control:rgba(10,14,61,.26); --sheen:rgba(255,255,255,.9); --hueco:rgba(10,14,61,.12);
-    --text-on-surface:#080C30; --text-muted:rgba(8,12,48,.62); --text-muted-40:rgba(8,12,48,.46);
-    --success:#0E7E5C; --success-surface:#E4F5EE; --success-border:#AEDFCD; --warning:#8F6310; --warning-surface:#FAF0DC; --warning-border:#E5D0A0;
-    --error:#BE3726; --error-surface:#FCEAE6; --error-border:#F0C0B7; --info:#27599F; --info-surface:#E6EEFA; --info-border:#BAD2EE;
-    --idle:#54617A; --idle-surface:#ECEFF5; --idle-border:#CFD7E4;
-    --lienzo:#EEF1FA; --lienzo-punto:rgba(10,14,61,.10); --nodo:#FFFFFF; --nodo-fila:rgba(10,14,61,.05); --arista:rgba(60,75,140,.38);
-    --shadow-main:0 8px 32px 0 rgba(10,14,61,.12); --shadow-brand:0 10px 15px -3px rgba(201,21,111,.28);
-    --gradient-page:linear-gradient(135deg,#F6F7FC 0%,#EAEEFA 50%,#F5F0F8 100%); --page-base:#F6F7FC;
-    --humo-blend:multiply; --humo-op:.20; --humo-i-op:.55;
-    --oro:#A87400; --plata:#66748A; --bronce:#A65427;
+    color-scheme: var(--esquema, light);
+    --brand-secondary:var(--destacado, #C9156F); --brand-secondary-light:var(--destacado-claro, #E23E96); --brand-secondary-surface:var(--destacado-suave, rgba(201,21,111,.09)); --brand-secondary-border:var(--destacado-suave-borde, rgba(201,21,111,.30));
+    --on-brand:var(--en-destacado, #FFFFFF); --on-state:var(--en-est, #FFFFFF);
+    --mat-0:var(--cont-tenue, rgba(10,14,61,.015)); --mat-1:var(--cont-1, rgba(10,14,61,.035)); --mat-3:var(--cont-fuerte, rgba(10,14,61,.10)); --hundido:var(--cont-3, rgba(10,14,61,.055));
+    --bg-surface:var(--modal, rgba(255,255,255,.96)); --bg-flotante:var(--flotante, #FFFFFF); --bg-element:var(--cont-2, rgba(255,255,255,.75)); --bg-input:var(--campo, rgba(10,14,61,.05)); --bg-scrim:var(--velo, rgba(10,14,61,.42));
+    --border-main:var(--borde-2, rgba(10,14,61,.14)); --border-subtle:var(--borde-1, rgba(10,14,61,.08)); --border-control:var(--borde-3, rgba(10,14,61,.26)); --sheen:var(--brillo, rgba(255,255,255,.9)); --hueco:var(--riel, rgba(10,14,61,.12));
+    --text-on-surface:var(--en-fondo, #080C30); --text-muted:var(--texto-2, rgba(8,12,48,.62)); --text-muted-40:var(--texto-3, rgba(8,12,48,.46));
+    --success:var(--est-exito, #0E7E5C); --success-surface:var(--est-exito-sup, #E4F5EE); --success-border:var(--est-exito-borde, #AEDFCD); --warning:var(--est-aviso, #8F6310); --warning-surface:var(--est-aviso-sup, #FAF0DC); --warning-border:var(--est-aviso-borde, #E5D0A0);
+    --error:var(--est-error, #BE3726); --error-surface:var(--est-error-sup, #FCEAE6); --error-border:var(--est-error-borde, #F0C0B7); --info:var(--est-info, #27599F); --info-surface:var(--est-info-sup, #E6EEFA); --info-border:var(--est-info-borde, #BAD2EE);
+    --idle:var(--est-inactivo, #54617A); --idle-surface:var(--est-inactivo-sup, #ECEFF5); --idle-border:var(--est-inactivo-borde, #CFD7E4);
+    --lienzo:var(--mapa-lienzo, #EEF1FA); --lienzo-punto:var(--mapa-punto, rgba(10,14,61,.10)); --nodo:var(--mapa-nodo, #FFFFFF); --nodo-fila:var(--mapa-nodo-fila, rgba(10,14,61,.05)); --arista:var(--mapa-arista, rgba(60,75,140,.38));
+    --shadow-main:var(--sombra, 0 8px 32px 0 rgba(10,14,61,.12)); --shadow-brand:var(--sombra-destacado, 0 10px 15px -3px rgba(201,21,111,.28));
+    --gradient-page:var(--fondo-degradado, linear-gradient(135deg,#F6F7FC 0%,#EAEEFA 50%,#F5F0F8 100%)); --page-base:var(--fondo, #F6F7FC);
+    --humo-blend:var(--humo-mezcla, multiply); --humo-op:var(--humo-opacidad, .20); --humo-i-op:var(--humo-opacidad-i, .55);
+    --oro:var(--medalla-oro, #A87400); --plata:var(--medalla-plata, #66748A); --bronce:var(--medalla-bronce, #A65427);
   }
 }
 .thalamus[data-theme="light"]{
-  color-scheme: light;
-  --brand-secondary:#C9156F; --brand-secondary-light:#E23E96; --brand-secondary-surface:rgba(201,21,111,.09); --brand-secondary-border:rgba(201,21,111,.30);
-  --on-brand:#FFFFFF; --on-state:#FFFFFF;
-  --mat-0:rgba(10,14,61,.015); --mat-1:rgba(10,14,61,.035); --mat-3:rgba(10,14,61,.10); --hundido:rgba(10,14,61,.055);
-  --bg-surface:rgba(255,255,255,.96); --bg-flotante:#FFFFFF; --bg-element:rgba(255,255,255,.75); --bg-input:rgba(10,14,61,.05); --bg-scrim:rgba(10,14,61,.42);
-  --border-main:rgba(10,14,61,.14); --border-subtle:rgba(10,14,61,.08); --border-control:rgba(10,14,61,.26); --sheen:rgba(255,255,255,.9); --hueco:rgba(10,14,61,.12);
-  --text-on-surface:#080C30; --text-muted:rgba(8,12,48,.62); --text-muted-40:rgba(8,12,48,.46);
-  --success:#0E7E5C; --success-surface:#E4F5EE; --success-border:#AEDFCD; --warning:#8F6310; --warning-surface:#FAF0DC; --warning-border:#E5D0A0;
-  --error:#BE3726; --error-surface:#FCEAE6; --error-border:#F0C0B7; --info:#27599F; --info-surface:#E6EEFA; --info-border:#BAD2EE;
-  --idle:#54617A; --idle-surface:#ECEFF5; --idle-border:#CFD7E4;
-  --lienzo:#EEF1FA; --lienzo-punto:rgba(10,14,61,.10); --nodo:#FFFFFF; --nodo-fila:rgba(10,14,61,.05); --arista:rgba(60,75,140,.38);
-  --shadow-main:0 8px 32px 0 rgba(10,14,61,.12); --shadow-brand:0 10px 15px -3px rgba(201,21,111,.28);
-  --gradient-page:linear-gradient(135deg,#F6F7FC 0%,#EAEEFA 50%,#F5F0F8 100%); --page-base:#F6F7FC;
-  --humo-blend:multiply; --humo-op:.20; --humo-i-op:.55;
-  --oro:#A87400; --plata:#66748A; --bronce:#A65427;
+  color-scheme: var(--esquema, light);
+  --brand-secondary:var(--destacado, #C9156F); --brand-secondary-light:var(--destacado-claro, #E23E96); --brand-secondary-surface:var(--destacado-suave, rgba(201,21,111,.09)); --brand-secondary-border:var(--destacado-suave-borde, rgba(201,21,111,.30));
+  --on-brand:var(--en-destacado, #FFFFFF); --on-state:var(--en-est, #FFFFFF);
+  --mat-0:var(--cont-tenue, rgba(10,14,61,.015)); --mat-1:var(--cont-1, rgba(10,14,61,.035)); --mat-3:var(--cont-fuerte, rgba(10,14,61,.10)); --hundido:var(--cont-3, rgba(10,14,61,.055));
+  --bg-surface:var(--modal, rgba(255,255,255,.96)); --bg-flotante:var(--flotante, #FFFFFF); --bg-element:var(--cont-2, rgba(255,255,255,.75)); --bg-input:var(--campo, rgba(10,14,61,.05)); --bg-scrim:var(--velo, rgba(10,14,61,.42));
+  --border-main:var(--borde-2, rgba(10,14,61,.14)); --border-subtle:var(--borde-1, rgba(10,14,61,.08)); --border-control:var(--borde-3, rgba(10,14,61,.26)); --sheen:var(--brillo, rgba(255,255,255,.9)); --hueco:var(--riel, rgba(10,14,61,.12));
+  --text-on-surface:var(--en-fondo, #080C30); --text-muted:var(--texto-2, rgba(8,12,48,.62)); --text-muted-40:var(--texto-3, rgba(8,12,48,.46));
+  --success:var(--est-exito, #0E7E5C); --success-surface:var(--est-exito-sup, #E4F5EE); --success-border:var(--est-exito-borde, #AEDFCD); --warning:var(--est-aviso, #8F6310); --warning-surface:var(--est-aviso-sup, #FAF0DC); --warning-border:var(--est-aviso-borde, #E5D0A0);
+  --error:var(--est-error, #BE3726); --error-surface:var(--est-error-sup, #FCEAE6); --error-border:var(--est-error-borde, #F0C0B7); --info:var(--est-info, #27599F); --info-surface:var(--est-info-sup, #E6EEFA); --info-border:var(--est-info-borde, #BAD2EE);
+  --idle:var(--est-inactivo, #54617A); --idle-surface:var(--est-inactivo-sup, #ECEFF5); --idle-border:var(--est-inactivo-borde, #CFD7E4);
+  --lienzo:var(--mapa-lienzo, #EEF1FA); --lienzo-punto:var(--mapa-punto, rgba(10,14,61,.10)); --nodo:var(--mapa-nodo, #FFFFFF); --nodo-fila:var(--mapa-nodo-fila, rgba(10,14,61,.05)); --arista:var(--mapa-arista, rgba(60,75,140,.38));
+  --shadow-main:var(--sombra, 0 8px 32px 0 rgba(10,14,61,.12)); --shadow-brand:var(--sombra-destacado, 0 10px 15px -3px rgba(201,21,111,.28));
+  --gradient-page:var(--fondo-degradado, linear-gradient(135deg,#F6F7FC 0%,#EAEEFA 50%,#F5F0F8 100%)); --page-base:var(--fondo, #F6F7FC);
+  --humo-blend:var(--humo-mezcla, multiply); --humo-op:var(--humo-opacidad, .20); --humo-i-op:var(--humo-opacidad-i, .55);
+  --oro:var(--medalla-oro, #A87400); --plata:var(--medalla-plata, #66748A); --bronce:var(--medalla-bronce, #A65427);
 }
-.thalamus[data-theme="dark"]{color-scheme:dark}
+.thalamus[data-theme="dark"]{color-scheme: var(--esquema, dark)}
 
 .thalamus,.thalamus *,.thalamus *::before,.thalamus *::after{box-sizing:border-box}
 .thalamus-app{margin:0}

@@ -1,6 +1,8 @@
 // Configuración de Agendamiento (el dial magenta, como en Thalamus): Datos, Disponibilidad,
 // Integraciones, Equipo y Apariencia. Se abre como ventana flotante o a pantalla completa
 // (Visualización). No repite lógica de NeurOPS: las pestañas usan sus mismos endpoints (conf/cuenta.jsx).
+// Apariencia es el tema de toda la app (temas/TabApariencia.jsx); el oscuro/claro/sistema propio de
+// Agendamiento que había antes sigue valiendo solo mientras no se elige un tema.
 
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../../../contexts/AuthContext';
@@ -9,13 +11,13 @@ import { ui } from '../../ui/estadoUi';
 import { almacen, useUi } from '../../data/hooks';
 import { DatosCuenta, TarjetaCalendar, TarjetaDisponibilidad, TarjetaWhatsapp } from './cuenta';
 import TabEquipo from './TabEquipo';
+import TabApariencia from '../../../../temas/TabApariencia';
 
 export const TABS = [
     ['datos', 'Datos', 'user'], ['disponibilidad', 'Disponibilidad', 'clock'], ['integraciones', 'Integraciones', 'enchufe'],
     ['equipo', 'Equipo', 'users'], ['apariencia', 'Apariencia', 'sol'],
 ];
 const VISTAS = [['completa', 'Pantalla completa'], ['flotante', 'Ventana flotante']];
-const TEMAS = [['oscuro', 'Oscuro', 'luna'], ['claro', 'Claro', 'sol'], ['sistema', 'Sistema', 'monitor']];
 
 function MenuVisualizacion({ abierto, setAbierto }) {
     const { confVis } = useUi();
@@ -51,20 +53,6 @@ function MenuVisualizacion({ abierto, setAbierto }) {
     );
 }
 
-function Apariencia() {
-    const { tema } = useUi();
-    return (
-        <section className="panel cu-tarjeta">
-            <p className="t-eyebrow">Apariencia de Agendamiento</p>
-            <div className="apariencia" role="group" aria-label="Apariencia">
-                {TEMAS.map(([v, n, ico]) => (
-                    <button key={v} type="button" data-nav="" aria-pressed={tema === v} onClick={() => ui.set({ tema: v })}><Icono n={ico} />{n}</button>
-                ))}
-            </div>
-        </section>
-    );
-}
-
 export default function Configuracion() {
     const { user } = useAuth();
     const { conf, confVis } = useUi();
@@ -85,7 +73,7 @@ export default function Configuracion() {
     if (tab === 'disponibilidad') cuerpo = <TarjetaDisponibilidad />;
     else if (tab === 'integraciones') cuerpo = <><TarjetaCalendar volver="agendamiento" /><TarjetaWhatsapp /></>;
     else if (tab === 'equipo') cuerpo = <TabEquipo />;
-    else if (tab === 'apariencia') cuerpo = <Apariencia />;
+    else if (tab === 'apariencia') cuerpo = <TabApariencia />;
     else cuerpo = <DatosCuenta user={user} />;
 
     return (

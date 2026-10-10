@@ -4,14 +4,18 @@
 
 import { TarjetaCalendar } from '../pages/agendas_v2/secciones/conf/cuenta';
 import '../pages/agendas_v2/thalamus.css';
+import { dataThemeDe, useApariencia } from '../context/AparienciaContext';
 
-// Las tarjetas de Thalamus siguen el modo claro u oscuro de la app.
+// Las tarjetas de Thalamus siguen el modo del tema elegido; sin tema, el claro u oscuro de la app.
 const temaApp = () => (document.documentElement.classList.contains('dark') ? 'dark' : 'light');
 
-const GoogleCalendarSettings = () => (
-    <div className="thalamus cu-hoja" data-theme={temaApp()}>
-        <TarjetaCalendar />
-    </div>
-);
+const GoogleCalendarSettings = () => {
+    const apariencia = useApariencia();
+    return (
+        <div className="thalamus cu-hoja" data-theme={dataThemeDe(apariencia, temaApp())}>
+            <TarjetaCalendar />
+        </div>
+    );
+};
 
 export default GoogleCalendarSettings;

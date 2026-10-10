@@ -2,7 +2,6 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import { ThemeProvider } from './context/ThemeContext'
-import { AparienciaProvider } from './context/AparienciaContext'
 import './index.css'
 
 
@@ -33,9 +32,7 @@ if (window.location.pathname === '/session-entry') {
 ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
         <ThemeProvider>
-            <AparienciaProvider>
-                <App />
-            </AparienciaProvider>
+            <App />
         </ThemeProvider>
     </React.StrictMode>,
 )

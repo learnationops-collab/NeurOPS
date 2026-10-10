@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { BarChart3, CalendarDays, ClipboardList, Clock, LogOut, Settings, Users, VenetianMask } from 'lucide-react';
 import './thalamus.css';
 import { useAuth } from '../../contexts/AuthContext';
+import { dataThemeDe, useApariencia } from '../../context/AparienciaContext';
 import { SECCIONES } from './core/catalogos';
 import { almacen, useDatos, useIniciarAlmacen, usePermisos, useUi } from './data/hooks';
 import { Icono, LogoThalamus, Toasts, Tooltip } from './ui/base';
@@ -184,11 +185,12 @@ export default function ThalamusApp() {
     usePerfilDeLaSesion();
     useAtajos();
     const estado = useUi();
+    const apariencia = useApariencia();
     const sec = SECCIONES.find(s => s.id === estado.seccion) || SECCIONES[0];
     useEffect(() => { document.title = 'Learnation Thalamus'; }, []);
     return (
         <>
-        <div className="thalamus thalamus-app" data-theme={atributoTema(estado.tema)}>
+        <div className="thalamus thalamus-app" data-theme={dataThemeDe(apariencia, atributoTema(estado.tema))}>
             <Degradados />
             <div className="wrap">
                 <header className="tope">

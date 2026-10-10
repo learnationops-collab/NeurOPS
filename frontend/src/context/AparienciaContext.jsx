@@ -2,10 +2,15 @@
 // claro u oscuro, así que no hay que combinar nada ni adivinarlo mirando colores. El tema elegido va
 // a `data-tema` en <html> y se guarda en este navegador.
 //
-// Convive con el ThemeContext viejo (elegant/clean/custom × glass/solid) mientras se migran las
-// pantallas: el tema nuevo solo pinta lo que ya lee sus variables.
+// Sin elegir no hay tema: <html> no lleva `data-tema` y cada pantalla se ve como siempre (sus
+// variables caen a su valor de hoy). Convive así con el ThemeContext viejo (elegant/clean/custom ×
+// glass/solid) mientras se migran las pantallas.
+//
+// El tema se guarda por navegador pero se aplica solo si el rol de la sesión puede elegirlo: un admin
+// que eligió uno y simula a un closer en el mismo navegador ve al closer como lo ve el closer.
 
 import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import '../temas/temas.css';
 
 export const TEMAS = [
@@ -13,27 +18,35 @@ export const TEMAS = [
     { id: 'thalamus-oscuro', nombre: 'Thalamus', modo: 'oscuro' },
     { id: 'thalamus-claro', nombre: 'Thalamus', modo: 'claro' },
 ];
-// El look actual del closer: con este nadie nota el cambio.
-export const TEMA_POR_DEFECTO = 'closing-oscuro';
 const CLAVE = 'app-tema';
+// Quiénes ven el selector: los roles con todas sus pantallas ya leyendo los temas. Al closer se le
+// suma cuando el deck esté migrado (hoy cambiarían la Ficha y el Dock, pero no el deck).
+const ROLES_CON_TEMA = ['admin', 'director_comercial'];
+export const puedeElegirTema = (rol) => ROLES_CON_TEMA.includes(rol);
 
 const existe = (id) => TEMAS.some(t => t.id === id);
 function leerTema() {
     try {
         const guardado = localStorage.getItem(CLAVE);
-        return existe(guardado) ? guardado : TEMA_POR_DEFECTO;
+        return existe(guardado) ? guardado : null;
     } catch {
-        return TEMA_POR_DEFECTO;
+        return null;
     }
 }
-const modoDe = (id) => (TEMAS.find(t => t.id === id) || TEMAS[0]).modo;
+const modoDe = (id) => TEMAS.find(t => t.id === id)?.modo ?? null;
 
-const AparienciaContext = createContext({ tema: TEMA_POR_DEFECTO, modo: modoDe(TEMA_POR_DEFECTO), setTema: () => {}, temas: TEMAS });
+const AparienciaContext = createContext({ tema: null, modo: null, elegido: false, setTema: () => {}, temas: TEMAS });
 
 export function AparienciaProvider({ children }) {
-    const [tema, setTemaEstado] = useState(leerTema);
+    const { user } = useAuth();
+    const [guardado, setTemaEstado] = useState(leerTema);
+    const tema = puedeElegirTema(user?.role) ? guardado : null;
 
-    useLayoutEffect(() => { document.documentElement.dataset.tema = tema; }, [tema]);
+    useLayoutEffect(() => {
+        const raiz = document.documentElement;
+        if (tema) raiz.dataset.tema = tema;
+        else delete raiz.dataset.tema;
+    }, [tema]);
 
     const setTema = useCallback((id) => {
         if (!existe(id)) return;
@@ -41,8 +54,12 @@ export function AparienciaProvider({ children }) {
         setTemaEstado(id);
     }, []);
 
-    const valor = useMemo(() => ({ tema, modo: modoDe(tema), setTema, temas: TEMAS }), [tema, setTema]);
+    const valor = useMemo(() => ({ tema, modo: modoDe(tema), elegido: tema !== null, setTema, temas: TEMAS }), [tema, setTema]);
     return <AparienciaContext.Provider value={valor}>{children}</AparienciaContext.Provider>;
 }
 
 export const useApariencia = () => useContext(AparienciaContext);
+
+// El `data-theme` de las piezas de Thalamus: con tema elegido, el modo del tema; si no, `respaldo`
+// (lo que cada una decidía antes).
+export const dataThemeDe = ({ elegido, modo }, respaldo) => (elegido ? (modo === 'claro' ? 'light' : 'dark') : respaldo);

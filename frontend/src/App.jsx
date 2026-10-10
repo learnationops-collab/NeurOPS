@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AparienciaProvider } from './context/AparienciaContext';
 import { roleLandingPath } from './utils/roleLanding';
 import MainLayout from './components/MainLayout';
 import AdminDashboard from './pages/admin/dashboard/AdminDashboard';
@@ -103,6 +104,7 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <AparienciaProvider>
         <PlaybookProvider>
         <Router>
           <PixelTracker />
@@ -484,6 +486,7 @@ function App() {
           </Routes>
         </Router>
         </PlaybookProvider>
+        </AparienciaProvider>
       </AuthProvider>
     </ThemeProvider>
   );

@@ -42,44 +42,44 @@
    programa, anillo de foco) quedaria a medias.
    ============================================================ */
 .dc-shell.dc-shell{
-  color-scheme: dark;
+  color-scheme: var(--esquema, dark);
 
-  --brand-secondary:#FF3FA4;
-  --brand-secondary-light:#FF6AD5;
-  --brand-secondary-surface:rgba(255,63,164,.10);
-  --brand-secondary-border:rgba(255,63,164,.35);
-  --brand-primary:#1323C6;
+  --brand-secondary:var(--destacado, #FF3FA4);
+  --brand-secondary-light:var(--destacado-claro, #FF6AD5);
+  --brand-secondary-surface:var(--destacado-suave, rgba(255,63,164,.10));
+  --brand-secondary-border:var(--destacado-suave-borde, rgba(255,63,164,.35));
+  --brand-primary:var(--destacado-2, #1323C6);
   --brand-navy:#0A0E3D;
   --ink:#020617;
-  --on-brand:#020617;
-  --on-state:#020617;
-  --on-inverso:#020617;
+  --on-brand:var(--en-destacado, #020617);
+  --on-state:var(--en-est, #020617);
+  --on-inverso:var(--en-invertido, #020617);
 
-  --mat-0:rgba(255,255,255,.02);
-  --mat-1:rgba(255,255,255,.04);
-  --mat-3:rgba(255,255,255,.12);
-  --hundido:rgba(0,0,0,.34);
-  --bg-surface:rgba(2,6,23,.90);
-  --bg-flotante:#0B1030;
-  --bg-element:rgba(255,255,255,.08);
-  --bg-element-hover:rgba(255,255,255,.12);
-  --bg-input:rgba(0,0,0,.30);
-  --bg-scrim:rgba(2,6,23,.70);
-  --border-main:rgba(255,255,255,.15);
-  --border-subtle:rgba(255,255,255,.05);
-  --border-control:rgba(255,255,255,.38);
-  --sheen:rgba(255,255,255,.10);
-  --hueco:rgba(255,255,255,.12);
+  --mat-0:var(--cont-tenue, rgba(255,255,255,.02));
+  --mat-1:var(--cont-1, rgba(255,255,255,.04));
+  --mat-3:var(--cont-fuerte, rgba(255,255,255,.12));
+  --hundido:var(--cont-3, rgba(0,0,0,.34));
+  --bg-surface:var(--modal, rgba(2,6,23,.90));
+  --bg-flotante:var(--flotante, #0B1030);
+  --bg-element:var(--cont-2, rgba(255,255,255,.08));
+  --bg-element-hover:var(--cont-2-hover, rgba(255,255,255,.12));
+  --bg-input:var(--campo, rgba(0,0,0,.30));
+  --bg-scrim:var(--velo, rgba(2,6,23,.70));
+  --border-main:var(--borde-2, rgba(255,255,255,.15));
+  --border-subtle:var(--borde-1, rgba(255,255,255,.05));
+  --border-control:var(--borde-3, rgba(255,255,255,.38));
+  --sheen:var(--brillo, rgba(255,255,255,.10));
+  --hueco:var(--riel, rgba(255,255,255,.12));
 
-  --text-on-surface:#FFFFFF;
-  --text-muted:rgba(255,255,255,.60);
-  --text-muted-40:rgba(255,255,255,.40);
+  --text-on-surface:var(--en-fondo, #FFFFFF);
+  --text-muted:var(--texto-2, rgba(255,255,255,.60));
+  --text-muted-40:var(--texto-3, rgba(255,255,255,.40));
 
-  --success:#2FBF8F; --success-surface:#071A24; --success-border:#10413D;
-  --warning:#D9A441; --warning-surface:#1A171C; --warning-border:#473924;
-  --error:#E85C4A;   --error-surface:#1B0F1D;   --error-border:#4C2227;
-  --info:#4E8BD8;    --info-surface:#0A152C;    --info-border:#1A3155;
-  --idle:#7F8CA8;    --idle-surface:#0E1326;    --idle-border:#252C42;
+  --success:var(--est-exito, #2FBF8F); --success-surface:var(--est-exito-sup, #071A24); --success-border:var(--est-exito-borde, #10413D);
+  --warning:var(--est-aviso, #D9A441); --warning-surface:var(--est-aviso-sup, #1A171C); --warning-border:var(--est-aviso-borde, #473924);
+  --error:var(--est-error, #E85C4A);   --error-surface:var(--est-error-sup, #1B0F1D);   --error-border:var(--est-error-borde, #4C2227);
+  --info:var(--est-info, #4E8BD8);    --info-surface:var(--est-info-sup, #0A152C);    --info-border:var(--est-info-borde, #1A3155);
+  --idle:var(--est-inactivo, #7F8CA8);    --idle-surface:var(--est-inactivo-sup, #0E1326);    --idle-border:var(--est-inactivo-borde, #252C42);
 
   --prog-ace:#60A5FA; --prog-elite-a:#E86FB3; --prog-elite-b:#FF6AD5; --prog-free:#94A3B8;
 
@@ -95,9 +95,9 @@
   --radius-main:32px;
   --radius-control:16px;
   --radius-pill:999px;
-  --shadow-main:0 8px 32px 0 rgba(0,0,0,.40);
-  --shadow-brand:0 10px 15px -3px rgba(19,35,198,.35);
-  --focus-blue:#5B7CFF; --focus-ring:0 0 0 3px rgba(91,124,255,.55);
+  --shadow-main:var(--sombra, 0 8px 32px 0 rgba(0,0,0,.40));
+  --shadow-brand:var(--sombra-destacado, 0 10px 15px -3px rgba(19,35,198,.35));
+  --focus-blue:var(--foco, #5B7CFF); --focus-ring:var(--anillo-foco, 0 0 0 3px rgba(91,124,255,.55));
 
   /* --s5 no existia en la referencia y `.mapa` lo usa: sin el, ese
      `padding-top` se caia entero. Sigue la escala de 4px. */
@@ -105,12 +105,12 @@
   --s12:48px; --s16:64px; --s20:80px;
 
   --font:'Montserrat','Helvetica Neue',Arial,sans-serif;
-  --gradient-page:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%);
+  --gradient-page:var(--fondo-degradado, linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%));
   --gradient-brand:linear-gradient(135deg,#FF3FA4 0%,#FF6AD5 100%);
   --spring:cubic-bezier(.32,.72,0,1);
   --crecer:cubic-bezier(.22,.7,.2,1);
 
-  --humo-blend:screen; --humo-op:.42; --humo-i-op:.62;
+  --humo-blend:var(--humo-mezcla, screen); --humo-op:var(--humo-opacidad, .42); --humo-i-op:var(--humo-opacidad-i, .62);
 }
 
 /* ============================================================
