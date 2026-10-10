@@ -10,7 +10,7 @@
 // (app/api/google_calendar.py): la página abre esta hoja en Integraciones y la tarjeta de Calendar
 // muestra el resultado.
 
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { DatosCuenta, TarjetaCalendar, TarjetaDisponibilidad, TarjetaWhatsapp } from '../../agendas_v2/secciones/conf/cuenta';
 import MisEventos from '../../agendas_v2/secciones/conf/MisEventos';
 import { Icono } from '../../agendas_v2/ui/base';
@@ -20,20 +20,33 @@ export const TABS_CLOSER = [
     ['datos', 'Datos', 'user'], ['disponibilidad', 'Disponibilidad', 'clock'], ['integraciones', 'Integraciones', 'enchufe'], ['eventos', 'Mis eventos', 'calendar'],
 ];
 
-// Las tarjetas de Thalamus siguen el modo claro u oscuro de la app.
+// Las tarjetas de Thalamus van en el modo de la hoja que las contiene, no en el de la página: en el
+// estilo glass la hoja (.bg-surface) es navy aunque la app esté en claro (Elegant Blue), y con el modo
+// de la clase `dark` el texto salía oscuro sobre oscuro. Se decide por el color del texto de la hoja:
+// si es claro, el fondo es oscuro.
 const temaApp = () => (document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+function temaDeLaHoja(nodo) {
+    const hoja = nodo?.closest('.bg-surface');
+    const rgb = hoja && getComputedStyle(hoja).color.match(/\d+(\.\d+)?/g);
+    if (!rgb || rgb.length < 3) return temaApp();
+    const [r, g, b] = rgb.map(Number);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5 ? 'dark' : 'light';
+}
 // Volviendo de Google se abre en Integraciones, donde está el resultado.
 const tabInicial = () => (new URLSearchParams(window.location.search).get('google_connected') ? 'integraciones' : 'datos');
 
 export default function ConfiguracionCloser({ user = null }) {
     const [tab, setTab] = useState(tabInicial);
+    const raiz = useRef(null);
+    const [tema, setTema] = useState(temaApp);
+    useLayoutEffect(() => { setTema(temaDeLaHoja(raiz.current)); }, []);
     let cuerpo;
     if (tab === 'disponibilidad') cuerpo = <TarjetaDisponibilidad />;
     else if (tab === 'integraciones') cuerpo = <><TarjetaCalendar /><TarjetaWhatsapp /></>;
     else if (tab === 'eventos') cuerpo = <MisEventos />;
     else cuerpo = user ? <DatosCuenta user={user} /> : null;
     return (
-        <div className="thalamus cu-hoja" data-theme={temaApp()} aria-label="Configuración">
+        <div ref={raiz} className="thalamus cu-hoja" data-theme={tema} aria-label="Configuración">
             <div className="tabs" role="tablist" aria-label="Configuración">
                 {TABS_CLOSER.map(([t, n, ico]) => (
                     <button key={t} type="button" className="tab" role="tab" aria-selected={tab === t} aria-controls="cu-cuerpo" onClick={() => setTab(t)}>
