@@ -88,7 +88,7 @@ def test_un_operador_simula_desde_cualquiera_de_sus_roles(client, auth_headers, 
     assert respuesta.status_code == 200
     reclamos = claims(respuesta.get_json()['token'])
     assert (reclamos['id'], reclamos['original_user_id']) == (marlon.id, mario.id)
-    assert client.get('/api/auth/impersonate/closers', headers=headers).status_code == 200
+    assert client.get(EQUIPO, headers=headers).status_code == 200
 
 
 def test_un_rol_adicional_que_no_simula_no_da_permiso(client, make_user, auth_headers, equipo):
@@ -252,8 +252,7 @@ def test_un_token_de_suplantacion_sin_original_cierra_la_sesion(client, equipo):
 # cambiar de usuario sin volver: un closer o un setter simulado no puede ser la puerta a una cuenta
 # con mas permisos.
 
-LISTA = '/api/auth/impersonate/closers'
-LISTA_SETTERS = '/api/auth/impersonate/setters'
+EQUIPO = '/api/auth/impersonate/equipo'
 
 
 @pytest.fixture()
@@ -379,7 +378,7 @@ def test_si_a_la_direccion_le_cambian_el_rol_mientras_simula_ya_no_cambia_de_usu
     db.session.commit()
 
     assert suplantar(client, bearer(token_a), equipo['closer_b'].id, isolated=True).status_code == 403
-    assert client.get(LISTA, headers=bearer(token_a)).status_code == 403
+    assert client.get(EQUIPO, headers=bearer(token_a)).status_code == 403
 
 
 def test_un_token_de_suplantacion_sin_original_no_cambia_de_usuario(client, equipo):
@@ -398,75 +397,65 @@ def test_la_direccion_vuelve_a_su_sesion(client, auth_headers, equipo, direccion
     assert 'is_impersonating' not in claims(respuesta.get_json()['token'])
 
 
-# --- La lista de closers para simular ---------------------------------------------------------
+# --- La lista para simular: una sola, la de «Simular a alguien» (10/10/2026) ---------------------
 
-def test_la_lista_trae_solo_los_closers_activos_por_nombre(client, db, make_user, auth_headers, equipo, direccion):
+def nombres(respuesta):
+    return [p['username'] for p in respuesta.get_json()['equipo']]
+
+
+def test_la_direccion_ve_solo_closers_y_setters_activos_por_nombre(client, make_user, auth_headers, equipo,
+                                                                     direccion, setter):
     make_user(role='closer', username='ana')
     make_user(role='closer', username='zoe', is_active=False)
-    make_user(role='setter', username='beto')
+    make_user(role='triage', username='tito')
 
-    respuesta = client.get(LISTA, headers=auth_headers(direccion))
+    respuesta = client.get(EQUIPO, headers=auth_headers(direccion))
 
     assert respuesta.status_code == 200
-    assert [c['username'] for c in respuesta.get_json()['closers']] == ['ana', 'carlos', 'cata']
-    assert set(respuesta.get_json()['closers'][0]) == {'id', 'username'}  # nada mas que eso
+    assert nombres(respuesta) == ['ana', 'carlos', 'cata', 'sol']  # ni admin, ni operador, ni triage, ni ella
+    assert set(respuesta.get_json()['equipo'][0]) == {'id', 'username', 'role', 'roles', 'can_view_finance', 'mascota'}
+
+
+def test_a_la_direccion_le_llegan_solo_los_roles_que_puede_simular(client, make_user, auth_headers, direccion):
+    make_user(role='director_comercial', username='marlon', roles_extra='closer', can_view_finance=True)
+
+    marlon = client.get(EQUIPO, headers=auth_headers(direccion)).get_json()['equipo'][0]
+
+    assert (marlon['role'], marlon['roles'], marlon['can_view_finance']) == ('closer', ['closer'], False)
 
 
 @pytest.mark.parametrize('quien', ['admin', 'operator'])
-def test_admin_y_operator_tambien_ven_la_lista(client, auth_headers, equipo, quien):
-    assert client.get(LISTA, headers=auth_headers(equipo[quien])).status_code == 200
+def test_admin_y_operator_ven_a_todos_menos_a_si_mismos(client, auth_headers, equipo, direccion, quien):
+    respuesta = client.get(EQUIPO, headers=auth_headers(equipo[quien]))
+
+    assert respuesta.status_code == 200
+    esperado = sorted(u.username for k, u in {**equipo, 'dire': direccion}.items() if k != quien)
+    assert nombres(respuesta) == esperado
+
+
+def test_admin_ve_todos_los_roles_de_cada_persona(client, auth_headers, equipo, marlon):
+    persona = next(p for p in client.get(EQUIPO, headers=auth_headers(equipo['admin'])).get_json()['equipo']
+                   if p['username'] == 'marlon')
+
+    assert persona['roles'] == ['director_comercial', 'closer']
 
 
 @pytest.mark.parametrize('rol', ['closer', 'setter', 'triage', 'hiring', 'director_marketing'])
-def test_quien_no_simula_closers_no_ve_la_lista(client, make_user, auth_headers, equipo, rol):
-    respuesta = client.get(LISTA, headers=auth_headers(make_user(role=rol)))
-
-    assert respuesta.status_code == 403
+def test_quien_no_simula_no_ve_la_lista(client, make_user, auth_headers, equipo, rol):
+    assert client.get(EQUIPO, headers=auth_headers(make_user(role=rol))).status_code == 403
 
 
 def test_sin_sesion_no_hay_lista(client):
-    assert client.get(LISTA).status_code == 401
+    assert client.get(EQUIPO).status_code == 401
 
 
-def test_simulando_a_un_closer_la_direccion_sigue_viendo_la_lista(client, auth_headers, equipo, direccion):
-    token_a = suplantar(client, auth_headers(direccion), equipo['closer_a'].id, isolated=True).get_json()['token']
-
-    assert client.get(LISTA, headers=bearer(token_a)).status_code == 200
-
-
-# --- La lista de setters para simular (10/10/2026) --------------------------------------------
-
-def test_la_lista_de_setters_trae_solo_los_activos_por_nombre(client, make_user, auth_headers, equipo, direccion,
-                                                              setter):
-    make_user(role='setter', username='ana')
-    make_user(role='setter', username='zoe', is_active=False)
-
-    respuesta = client.get(LISTA_SETTERS, headers=auth_headers(direccion))
-
-    assert respuesta.status_code == 200
-    assert [s['username'] for s in respuesta.get_json()['setters']] == ['ana', 'sol']  # sin los closers
-    assert set(respuesta.get_json()['setters'][0]) == {'id', 'username'}
-
-
-@pytest.mark.parametrize('quien', ['admin', 'operator'])
-def test_admin_y_operator_tambien_ven_la_lista_de_setters(client, auth_headers, equipo, quien):
-    assert client.get(LISTA_SETTERS, headers=auth_headers(equipo[quien])).status_code == 200
-
-
-@pytest.mark.parametrize('rol', ['closer', 'setter', 'triage', 'hiring', 'director_marketing'])
-def test_quien_no_simula_setters_no_ve_su_lista(client, make_user, auth_headers, equipo, rol):
-    assert client.get(LISTA_SETTERS, headers=auth_headers(make_user(role=rol))).status_code == 403
-
-
-def test_sin_sesion_no_hay_lista_de_setters(client):
-    assert client.get(LISTA_SETTERS).status_code == 401
-
-
-def test_simulando_a_un_setter_la_direccion_sigue_viendo_las_dos_listas(client, auth_headers, direccion, setter):
+def test_simulando_la_direccion_sigue_viendo_su_lista(client, auth_headers, equipo, direccion, setter):
     token_s = suplantar(client, auth_headers(direccion), setter.id, isolated=True).get_json()['token']
 
-    assert client.get(LISTA_SETTERS, headers=bearer(token_s)).status_code == 200
-    assert client.get(LISTA, headers=bearer(token_s)).status_code == 200
+    respuesta = client.get(EQUIPO, headers=bearer(token_s))
+
+    assert respuesta.status_code == 200
+    assert 'carlos' in nombres(respuesta)
 
 
 # --- Simular a alguien con varios roles (07/10/2026) --------------------------------------------

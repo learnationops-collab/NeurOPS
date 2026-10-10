@@ -4,7 +4,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import DebugConsole from './modals/DebugConsole';
 import OnboardingTour from './modals/OnboardingTour';
-import OperatorControls from './modals/OperatorControls';
 import DockMainLayout from './shared/DockMainLayout';
 import WidgetsPill from './shared/WidgetsPill';
 import HotkeysManager from './admin/HotkeysManager';
@@ -12,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
 import { useApariencia } from '../context/AparienciaContext';
 import { useConfiguracion } from '../sesion/ConfiguracionContext';
+import { abrirSimulacion } from '../sesion/simulacion';
 
 const MainLayout = ({ children }) => {
     const { user } = useAuth();
@@ -19,7 +19,6 @@ const MainLayout = ({ children }) => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const [showImpersonation, setShowImpersonation] = useState(false);
     const [showConsole, setShowConsole] = useState(false);
     const configuracion = useConfiguracion();
     const [isPillOpen, setIsPillOpen] = useState(false);
@@ -59,12 +58,11 @@ const MainLayout = ({ children }) => {
         const handleDoubleClick = () => {
             if (isPillOpen) setIsPillOpen(false);
             if (showConsole) setShowConsole(false);
-            if (showImpersonation) setShowImpersonation(false);
         };
 
         window.addEventListener('dblclick', handleDoubleClick);
         return () => window.removeEventListener('dblclick', handleDoubleClick);
-    }, [isPillOpen, showConsole, showImpersonation]);
+    }, [isPillOpen, showConsole]);
 
     const controlFocus = isPillOpen ? 'widgets' : 'dock';
 
@@ -106,11 +104,6 @@ const MainLayout = ({ children }) => {
                     onWidgetsNavigate={(key) => setLastWidgetsNavKey({ key, timestamp: Date.now() })}
                 />
 
-                <OperatorControls
-                    isOpen={showImpersonation}
-                    onClose={() => setShowImpersonation(false)}
-                />
-
                 <OnboardingTour />
 
                 <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
@@ -121,13 +114,13 @@ const MainLayout = ({ children }) => {
                     </div>
 
                     {/* El dock de todas las pantallas (secciones + menú de sesión), para todos los roles. */}
-                    <DockMainLayout onImpersonateClick={() => setShowImpersonation(true)} />
+                    <DockMainLayout />
 
                     <WidgetsPill
                         isOpen={isPillOpen}
                         onToggle={() => setIsPillOpen(!isPillOpen)}
                         onConsoleToggle={() => setShowConsole(!showConsole)}
-                        onImpersonateClick={() => setShowImpersonation(true)}
+                        onImpersonateClick={abrirSimulacion}
                         isConsoleOpen={showConsole}
                         lastNavKey={lastWidgetsNavKey}
                     />

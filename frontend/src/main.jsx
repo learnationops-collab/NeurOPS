@@ -8,7 +8,7 @@ import './index.css'
 console.log('Frontend Version: 2024-02-04 JWT Patch v2');
 
 // Pestaña abierta desde "Simular" con clic derecho (nueva pestaña aislada, ver
-// TeamManagementPage.jsx / OperatorControls.jsx): la URL trae el token y el usuario
+// TeamManagementPage.jsx / sesion/Simular.jsx): la URL trae el token y el usuario
 // simulados como query params. Se guardan en sessionStorage (NO localStorage, que se
 // comparte entre TODAS las pestañas) antes de montar React, para que AuthContext los
 // encuentre ahí desde su primerísimo render sin parpadeos ni carreras de useEffect. El

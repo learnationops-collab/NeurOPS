@@ -1,6 +1,7 @@
-// Fondos de la entrada (login y elección de rol o área), como la referencia de Learnation Holding. Se
-// elige uno desde el selector de arriba a la derecha y queda guardado en este navegador:
-//   light       gradientes y una grilla tenue: se pinta una vez (por defecto, el más liviano).
+// Fondos de la entrada (el login y el Portal), como la referencia de Learnation Holding. Se elige en
+// Configuración › Apariencia (temas/TabApariencia.jsx) y queda guardado en este navegador; el login lo
+// usa aunque todavía no se sepa quién entra:
+//   light       «Simple»: gradientes y una grilla tenue, se pinta una vez (por defecto, el más liviano).
 //   humo        humo en WebGL que sigue al mouse, con viñeta.
 //   particulas  brasas que suben lento sobre el fondo light.
 //   aurora      manchas de color que flotan (el fondo de antes).
@@ -8,7 +9,12 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-export const FONDOS = [['light', 'Light'], ['humo', 'Humo'], ['particulas', 'Partículas'], ['aurora', 'Aurora']];
+export const FONDOS = [
+    ['light', 'Simple', 'Quieto, el más liviano'],
+    ['humo', 'Humo', 'Sigue al mouse'],
+    ['particulas', 'Partículas', 'Brasas que suben'],
+    ['aurora', 'Aurora', 'Manchas de color'],
+];
 const CLAVE = 'ln-fondo-entrada';
 const reducido = () => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -16,22 +22,17 @@ function leer() {
     try { const v = localStorage.getItem(CLAVE); return FONDOS.some(f => f[0] === v) ? v : 'light'; } catch { return 'light'; }
 }
 
-/** [fondo, cambiar]: el fondo elegido en este navegador. */
+/**
+ * [fondo, cambiar, elegido]: el fondo que se pinta (con «reducir movimiento» del sistema, siempre el
+ * simple) y el elegido en este navegador, que es el que muestra Apariencia.
+ */
 export function useFondo() {
-    const [fondo, setFondo] = useState(() => (reducido() ? 'light' : leer()));
-    const cambiar = (v) => { setFondo(v); try { localStorage.setItem(CLAVE, v); } catch { /* sin storage */ } };
-    return [fondo, cambiar];
+    const [elegido, setElegido] = useState(leer);
+    const cambiar = (v) => { setElegido(v); try { localStorage.setItem(CLAVE, v); } catch { /* sin storage */ } };
+    return [reducido() ? 'light' : elegido, cambiar, elegido];
 }
 
-export function SelectorFondo({ fondo, onCambiar }) {
-    return (
-        <div className="fe-selector" role="radiogroup" aria-label="Fondo">
-            {FONDOS.map(([v, n]) => (
-                <button key={v} type="button" role="radio" aria-checked={fondo === v} onClick={() => onCambiar(v)}>{n}</button>
-            ))}
-        </div>
-    );
-}
+export const movimientoReducido = reducido;
 
 // --- Humo: shader con ruido fractal deformado, a media resolución -------------------------------
 const VS = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';

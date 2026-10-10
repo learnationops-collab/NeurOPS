@@ -9,7 +9,7 @@ import { usePlaybook } from '../../contexts/PlaybookContext';
 import { revertImpersonation } from '../../utils/impersonation';
 import { armarMenuSesion, rotuloDeSesion } from '../../sesion/menuSesion';
 import { useConfiguracion } from '../../sesion/ConfiguracionContext';
-import OperatorControls from '../../components/modals/OperatorControls';
+import { abrirSimulacion } from '../../sesion/simulacion';
 import DashboardComercial from '../comercial/DashboardComercial';
 import DockSecciones from '../comercial/components/DockSecciones';
 import MenuSesion from '../comercial/components/MenuSesion';
@@ -91,7 +91,6 @@ const SetterEspacioPage = () => {
     const [params, setParams] = useSearchParams();
     const reducir = useReducedMotion();
     const [saliendo, setSaliendo] = useState(false);
-    const [operador, setOperador] = useState(false);
     const [reporteHoy, setReporteHoy] = useState(false);
 
     const seccionActual = SECCIONES.find(s => s.id === params.get('step')) || SECCIONES[0];
@@ -135,7 +134,7 @@ const SetterEspacioPage = () => {
             .catch(() => { /* sin ✓, que es lo que hay que mostrar si no se sabe */ });
     }, [user?.id]);
 
-    // Atajo 'w' para el panel de operador. Sin MainLayout esta pantalla no tiene el
+    // Atajo 'w' para Simular a alguien. Sin MainLayout esta pantalla no tiene el
     // HotkeysManager global (igual que el mazo del closer), y un operador que simula a un setter
     // lo necesita para cambiar de simulación.
     useEffect(() => {
@@ -143,7 +142,7 @@ const SetterEspacioPage = () => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
             if (e.key.toLowerCase() === 'w' && !e.metaKey && !e.ctrlKey && !e.altKey) {
                 e.preventDefault();
-                setOperador(v => !v);
+                abrirSimulacion();
             }
         };
         window.addEventListener('keydown', alTeclear);
@@ -260,7 +259,6 @@ const SetterEspacioPage = () => {
                 </div>
             </div>
 
-            <OperatorControls isOpen={operador} onClose={() => setOperador(false)} />
         </div>
     );
 };

@@ -30,7 +30,6 @@ vi.mock('../../services/api', () => ({
     default: { get: vi.fn(() => Promise.resolve({ data: { total: sesion.reportesHoy } })) },
 }));
 vi.mock('../../utils/impersonation', () => ({ revertImpersonation: vi.fn() }));
-vi.mock('../../components/modals/OperatorControls', () => ({ default: () => null }));
 vi.mock('./SetterWorkflowPage', () => ({
     default: ({ paso }) => <div data-testid="mazo">mazo:{paso}</div>,
 }));

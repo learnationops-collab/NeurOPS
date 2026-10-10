@@ -8,7 +8,7 @@ import { usePlaybook } from '../../contexts/PlaybookContext';
 import { revertImpersonation } from '../../utils/impersonation';
 import { armarMenuSesion, rotuloDeSesion } from '../../sesion/menuSesion';
 import { useConfiguracion } from '../../sesion/ConfiguracionContext';
-import OperatorControls from '../../components/modals/OperatorControls';
+import { abrirSimulacion } from '../../sesion/simulacion';
 import DockSecciones from '../comercial/components/DockSecciones';
 import MenuSesion from '../comercial/components/MenuSesion';
 import { Isotipo, Segmented } from '../comercial/components/Shared';
@@ -58,7 +58,6 @@ const OperadorEspacioPage = () => {
     const [params, setParams] = useSearchParams();
     const reducir = useReducedMotion();
     const [saliendo, setSaliendo] = useState(false);
-    const [operador, setOperador] = useState(false);
 
     const seccionActual = SECCIONES.find(s => s.id === params.get('step')) || SECCIONES[0];
     const seccion = seccionActual.id;
@@ -77,13 +76,13 @@ const OperadorEspacioPage = () => {
 
     const elegirTab = useCallback((nuevaTab) => irA(seccion, nuevaTab), [irA, seccion]);
 
-    // Atajo 'w' para el panel de operador: sin MainLayout no está el HotkeysManager global.
+    // Atajo 'w' para Simular a alguien: sin MainLayout no está el HotkeysManager global.
     useEffect(() => {
         const alTeclear = (e) => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
             if (e.key.toLowerCase() === 'w' && !e.metaKey && !e.ctrlKey && !e.altKey) {
                 e.preventDefault();
-                setOperador(v => !v);
+                abrirSimulacion();
             }
         };
         window.addEventListener('keydown', alTeclear);
@@ -174,7 +173,6 @@ const OperadorEspacioPage = () => {
                 </div>
             </div>
 
-            <OperatorControls isOpen={operador} onClose={() => setOperador(false)} />
         </div>
     );
 };

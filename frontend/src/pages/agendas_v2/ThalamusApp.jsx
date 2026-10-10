@@ -4,7 +4,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, CalendarDays, ClipboardList, Clock, Users, VenetianMask } from 'lucide-react';
+import { BarChart3, CalendarDays, ClipboardList, Clock, Users } from 'lucide-react';
 import './thalamus.css';
 import { useAuth } from '../../contexts/AuthContext';
 import { dataThemeDe, useApariencia } from '../../context/AparienciaContext';
@@ -22,8 +22,6 @@ import Stats from './secciones/stats/Stats';
 import ModalFunnel from './secciones/eventos/ModalFunnel';
 import CrearRapido from './secciones/conf/CrearRapido';
 import Configuracion, { TABS as TABS_CONF } from './secciones/conf/Configuracion';
-import { SIMULAN_CLOSERS, simularParaConfigurar } from './secciones/conf/TabEquipo';
-import api from '../../services/api';
 import PruebaLead from './reserva/PruebaLead';
 import DockSecciones from '../comercial/components/DockSecciones';
 import MenuSesion from '../comercial/components/MenuSesion';
@@ -46,21 +44,12 @@ function Dock() {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const secciones = SECCIONES.filter(s => perm.secOk(s.id)).map(s => ({ id: s.id, label: s.label, Icono: ICONO_DE_SECCION[s.id] || CalendarDays }));
-    const rolReal = user?.is_impersonating ? user?.original_user_role : user?.role;
     // Configuración abre la de Agendamiento (con Equipo y su vista flotante o completa); el resto del
     // menú es el de todas las pantallas (sesion/menuSesion.js).
     const grupos = armarMenuSesion({
         user, navigate, logout,
+        // Simular a un closer para cargarle lo que le falta: Configuración › Equipo (TabEquipo).
         configuracion: { onClick: () => ui.set({ conf: { tab: 'datos' } }) },
-        // Entra como el closer directo a su Configuración (Calendar, WhatsApp y disponibilidad).
-        equipo: SIMULAN_CLOSERS.includes(rolReal) ? [{
-            id: 'configurar-closer', label: 'Configurar a un closer', Icono: VenetianMask,
-            panel: {
-                titulo: 'Configurar a un closer', vacio: 'No hay closers activos.',
-                cargar: async () => ((await api.get('/auth/impersonate/closers')).data?.closers || [])
-                    .map(c => ({ id: c.id, label: c.username, onClick: () => simularParaConfigurar(c.id) })),
-            },
-        }] : [],
     });
     return (
         <div className="dc-shell dc-shell--embebido">

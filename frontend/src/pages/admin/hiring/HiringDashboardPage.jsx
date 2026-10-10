@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import api from '../../../services/api';
-import OperatorControls from '../../../components/modals/OperatorControls';
+import { abrirSimulacion } from '../../../sesion/simulacion';
 import { armarMenuSesion, rotuloDeSesion } from '../../../sesion/menuSesion';
 import { useConfiguracion } from '../../../sesion/ConfiguracionContext';
 import DockSecciones from '../../comercial/components/DockSecciones';
@@ -75,7 +75,6 @@ const HiringDashboardPage = () => {
     const [pesos, setPesos] = useState({});
     const [busquedaCfg, setBusquedaCfg] = useState(null);
     const [abierta, setAbierta] = useState(null);
-    const [showOperatorControls, setShowOperatorControls] = useState(false);
     const [entradas, setEntradas] = useState(0);
     const buscador = useRef(null);
     const botonVista = useRef(null);
@@ -135,7 +134,7 @@ const HiringDashboardPage = () => {
             }
             if (!enCampo && !abierta && e.key.toLowerCase() === 'w' && !e.metaKey && !e.ctrlKey && !e.altKey) {
                 e.preventDefault();
-                setShowOperatorControls((prev) => !prev);
+                abrirSimulacion();
             }
         };
         window.addEventListener('keydown', onKey);
@@ -452,7 +451,6 @@ const HiringDashboardPage = () => {
                 />
             )}
 
-            <OperatorControls isOpen={showOperatorControls} onClose={() => setShowOperatorControls(false)} />
 
             {abierta && (
                 // El modal de la postulación es el de siempre (Tailwind, paleta `dash-v6`): va fuera

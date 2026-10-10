@@ -1,4 +1,4 @@
-/* Entrada (login y elección de rol o área) con la marca Learnation, como la referencia de Learnation
+/* Entrada (el login y el Portal) con la marca Learnation, como la referencia de Learnation
    Holding: navy con gradientes y una grilla tenue, el fondo a elección (FondoEntrada.jsx) y paneles de
    vidrio. No sigue el tema elegido por el usuario: todavía no se sabe quién es. */
 
@@ -131,12 +131,10 @@
 .el-reloj { display: grid; gap: 6px; }
 .el-reloj b { font-family: var(--font-header); font-size: 26px; font-weight: 800; line-height: 1; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
 .el-reloj span { font-size: 10.5px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255, 255, 255, .42); }
-.fe-selector { display: inline-flex; gap: 2px; padding: 4px; border-radius: 999px; background: rgba(18, 20, 50, .72); border: 1px solid #282c5c; backdrop-filter: blur(10px); }
-.fe-selector button { height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: none; color: rgba(255, 255, 255, .5); cursor: pointer;
-    font: 800 10px/1 var(--font-body); letter-spacing: 0.16em; text-transform: uppercase; transition: color .2s, background-color .2s; }
-.fe-selector button:hover { color: #fff; }
-.fe-selector button[aria-checked="true"] { color: #fff; background: linear-gradient(90deg, var(--lg-rosa), #8a5cff); }
-.fe-selector button:focus-visible { outline: 2px solid #ff7bc6; outline-offset: 2px; }
+.fe-marca { display: inline-flex; align-items: baseline; gap: 6px; padding: 8px 14px; border-radius: 999px; background: rgba(18, 20, 50, .55);
+    border: 1px solid #282c5c; backdrop-filter: blur(10px); font: 800 10px/1 var(--font-body); letter-spacing: 0.24em; text-transform: uppercase;
+    color: rgba(255, 255, 255, .55); }
+.fe-marca b { font-weight: 900; background: linear-gradient(90deg, var(--lg-rosa), #8a5cff); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
 /* El isotipo con anillos que giran lento y un brillo que respira. */
 .fe-logo { --rs: clamp(84px, 13vh, 116px); position: relative; width: var(--rs); height: var(--rs); display: grid; place-items: center; flex: none; animation: fe-entra .9s var(--fe-ease) both; }
@@ -199,6 +197,9 @@
     opacity: 0; transform: translateX(-6px); transition: opacity .25s, transform .35s var(--fe-ease); }
 .el-tarjeta:hover .el-ir, .el-tarjeta:focus-visible .el-ir { opacity: 1; transform: none; }
 .el-cargando { position: absolute; right: 18px; bottom: 18px; }
+.el-num--defecto { padding: 4px 8px; margin: -4px -6px 0 0; border-radius: 999px; color: var(--acento); background: color-mix(in srgb, var(--acento) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--acento) 40%, transparent); letter-spacing: 0.14em; }
+.el-pie { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .el-defecto { display: inline-flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 14px; color: var(--lg-suave); cursor: pointer; animation: fe-entra .8s 1.2s var(--fe-ease) both; }
 .el-defecto input { position: absolute; opacity: 0; pointer-events: none; }
 .el-switch { position: relative; width: 40px; height: 24px; border-radius: 999px; background: rgba(255, 255, 255, 0.18); border: 1px solid var(--lg-borde); transition: background 0.2s; }
@@ -208,9 +209,7 @@
 .el-defecto input:focus-visible + .el-switch { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5); }
 
 @media (max-width: 560px) {
-    .fe-arriba { flex-direction: column; align-items: stretch; }
-    .fe-selector { align-self: flex-end; }
-    .el-centro { padding-top: 132px; }
+    .el-centro { padding-top: 104px; }
     .el-tarjeta { min-height: 112px; }
 }
 

@@ -81,4 +81,17 @@ describe('Configuración', () => {
         const { container } = render(<Configuracion user={CLOSER} />);
         expect(container.querySelector('.cu-hoja').dataset.theme).toBe('light');
     });
+
+    it('en Apariencia se elige el fondo del Portal y del login, y queda en este navegador', () => {
+        api.get.mockResolvedValue({ data: {} });
+        localStorage.clear();
+        render(<Configuracion user={CLOSER} tabInicial="apariencia" />);
+        const fondos = screen.getByRole('radiogroup', { name: 'Fondo del Portal' });
+        const opciones = () => Array.from(fondos.querySelectorAll('[role="radio"]'));
+        expect(opciones().map(o => o.getAttribute('aria-label'))).toEqual(['Simple', 'Humo', 'Partículas', 'Aurora']);
+        expect(opciones()[0].getAttribute('aria-checked')).toBe('true');
+        fireEvent.click(opciones()[1]);
+        expect(localStorage.getItem('ln-fondo-entrada')).toBe('humo');
+        expect(opciones()[1].getAttribute('aria-checked')).toBe('true');
+    });
 });

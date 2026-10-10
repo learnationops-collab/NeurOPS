@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { revertImpersonation } from '../../utils/impersonation';
-import { opcionesDeFinanzas, RUTA_FINANZAS, TITULO_FINANZAS } from '../../utils/cuentasVinculadas';
+import { RUTA_FINANZAS, TITULO_FINANZAS } from '../../utils/cuentasVinculadas';
 import { usePlaybook } from '../../contexts/PlaybookContext';
 import { armarMenuSesion, rotuloDeSesion } from '../../sesion/menuSesion';
 import { useConfiguracion } from '../../sesion/ConfiguracionContext';
@@ -653,14 +653,12 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         }
     };
 
-    // Comercial y Finances son dos vistas separadas: cada una ofrece pasar a la otra (ver
-    // `opcionesDeFinanzas`). En /finanzas la vuelta va primero, porque es la única salida.
+    // Comercial y Finances son dos vistas separadas: se pasa de una a la otra con «Cambiar de vista»
+    // (el Portal, utils/portal.js).
     const gruposDeSesion = armarMenuSesion({
         user, navigate, logout,
         configuracion: { onClick: () => abrirConfiguracion() },
         playbook: { onClick: () => openPlaybook('pending'), pendientes: pendingCount },
-        irAntes: delEspacio ? opcionesDeFinanzas(user, navigate, { enFinanzas: true }) : [],
-        irDespues: delEspacio ? [] : opcionesDeFinanzas(user, navigate, { puede: !!contexto.puede_ver_finanzas }),
     });
     // En /finanzas el menú dice Finances, como la tarjeta con la que se entra ahí.
     const rotuloDeRol = rotuloDeSesion(user, delEspacio ? TITULO_FINANZAS : null);

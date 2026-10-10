@@ -15,7 +15,7 @@ import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
 import TriageFollowUpModal from '../triage/components/TriageFollowUpModal';
-import OperatorControls from '../../components/modals/OperatorControls';
+import { abrirSimulacion } from '../../sesion/simulacion';
 import CloserLeadsAudit from './audit/CloserLeadsAudit';
 import SeguimientosPane from './components/SeguimientosPane';
 import EsqueletoKanban from './components/EsqueletoKanban';
@@ -87,7 +87,6 @@ const CloserWorkflowPage = () => {
     const { user, logout } = useAuth();
     const { pendingCount, openPlaybook } = usePlaybook();
     const [searchParams, setSearchParams] = useSearchParams();
-    const [showOperatorControls, setShowOperatorControls] = useState(false);
 
     const activeStep = searchParams.get('step') || 'confirmations';
 
@@ -110,7 +109,7 @@ const CloserWorkflowPage = () => {
         if (paraVender) buscadorRef.current?.focus();
     }, [paraVender]);
 
-    // Atajo 'w' para Acceso Simulado (operador). CloserWorkflowPage corre fuera de
+    // Atajo 'w' para Simular a alguien (sesion/Simular.jsx). CloserWorkflowPage corre fuera de
     // MainLayout (para que los modales fixed funcionen standalone), por lo que no
     // hereda el HotkeysManager global y necesita su propio listener.
     useEffect(() => {
@@ -122,7 +121,7 @@ const CloserWorkflowPage = () => {
             ) return;
             if (e.key.toLowerCase() === 'w' && !e.metaKey && !e.ctrlKey && !e.altKey) {
                 e.preventDefault();
-                setShowOperatorControls(prev => !prev);
+                abrirSimulacion();
             }
         };
         window.addEventListener('keydown', handleKeyDown);
@@ -2787,11 +2786,6 @@ const CloserWorkflowPage = () => {
                     }}
                 />
             )}
-
-            <OperatorControls
-                isOpen={showOperatorControls}
-                onClose={() => setShowOperatorControls(false)}
-            />
 
             {/* Modal de Celebración de Hitos (Pipeline de Confirmaciones v7) */}
             <>

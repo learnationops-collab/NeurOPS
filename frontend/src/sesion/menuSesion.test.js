@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { armarMenuSesion, rotuloDeSesion } from './menuSesion';
 
 vi.mock('../services/api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
+vi.mock('./simulacion', async (orig) => ({ ...(await orig()), abrirSimulacion: vi.fn() }));
+import { abrirSimulacion } from './simulacion';
 
 const ids = (grupos) => grupos.map(g => g.map(o => o.id));
 const base = (user, extra = {}) => armarMenuSesion({ user, navigate: vi.fn(), logout: vi.fn(), configuracion: { onClick: vi.fn() }, ...extra });
@@ -20,12 +22,26 @@ describe('menú de sesión', () => {
         expect(cuenta[0]).toMatchObject({ id: 'configuracion', label: 'Configuración', cuenta: '!', titulo: 'Google Calendar sin conectar' });
     });
 
-    it('simular a un closer o setter solo para quien puede, mirando el rol real', () => {
+    it('una sola simulación, «Simular a alguien», para quien puede, mirando el rol real y todos los de la cuenta', () => {
         expect(ids(base({ role: 'closer' }))[3]).toEqual([]);
-        expect(ids(base({ role: 'director_comercial' }))[3]).toEqual(['simular', 'simular-setter']);
+        for (const role of ['director_comercial', 'admin', 'operator']) expect(ids(base({ role }))[3]).toEqual(['simular']);
         // simulando a un closer, la dirección sigue pudiendo pasar a otro
-        expect(ids(base({ role: 'closer', is_impersonating: true, original_user_role: 'director_comercial' }))[3])
-            .toEqual(['simular', 'simular-setter']);
+        expect(ids(base({ role: 'closer', is_impersonating: true, original_user_role: 'director_comercial' }))[3]).toEqual(['simular']);
+        // un operador que pasó a su rol de closer sigue pudiendo simular
+        expect(ids(base({ role: 'closer', roles: ['operator', 'closer'] }))[3]).toEqual(['simular']);
+        const [simular] = base({ role: 'admin' })[3];
+        expect(simular.label).toBe('Simular a alguien');
+        simular.onClick();
+        expect(abrirSimulacion).toHaveBeenCalled();
+    });
+
+    it('«Cambiar de área», «de vista» y «de rol» son una sola opción: el Portal', () => {
+        const navigate = vi.fn();
+        const grupos = armarMenuSesion({ user: { id: 1, role: 'admin', roles: ['admin', 'closer'] }, navigate, logout: vi.fn(), configuracion: {} });
+        expect(grupos[2].map(o => o.label)).toEqual(['Cambiar de vista']);
+        grupos[2][0].onClick();
+        expect(navigate).toHaveBeenCalledWith('/portal?elegir=1');
+        expect(ids(base({ role: 'closer', roles: ['closer'] }))[2]).toEqual([]);
     });
 
     it('simulando: «Volver a mi sesión» antes de cerrar sesión, y el rótulo lo dice', () => {

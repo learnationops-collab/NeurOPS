@@ -79,7 +79,6 @@ vi.mock('../../services/api', () => ({
     default: { get: vi.fn(() => Promise.resolve({ data: { total: 0 } })) },
 }));
 vi.mock('../../utils/impersonation', () => ({ revertImpersonation: vi.fn(), simularA: vi.fn() }));
-vi.mock('../../components/modals/OperatorControls', () => ({ default: () => null }));
 vi.mock('./SetterWorkflowPage', () => ({ default: () => <div data-testid="mazo" /> }));
 vi.mock('./agendas/SetterAgendasPage', () => ({ default: () => null }));
 vi.mock('../public/PublicSetterReportPage', () => ({ default: () => null }));
