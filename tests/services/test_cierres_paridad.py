@@ -55,10 +55,10 @@ def test_los_dos_backends_dan_la_misma_matriz_de_cierres(db, marlon):
     pago(db, 'pif@x.com', 'AL - Completo')
     llamada(db, marlon, 'split@x.com')
     pago(db, 'split@x.com', 'RR - Parcial')
-    # Solo seña: cierre CON señas, no sin señas.
+    # Solo seña: cuenta en la fila de señas, no en la de ventas.
     llamada(db, marlon, 'sena@x.com')
     pago(db, 'sena@x.com', 'RR - Seña', monto=100.0)
-    # Seña el 3 y pago completo el 10: UN cierre en las dos filas.
+    # Seña el 3 y pago completo el 10: UNA venta, y no además una seña.
     llamada(db, marlon, 'completo@x.com')
     pago(db, 'completo@x.com', 'RR - Seña', dia=3, monto=100.0)
     pago(db, 'completo@x.com', 'RR - Completo', dia=10, monto=1900.0)
@@ -79,8 +79,11 @@ def test_los_dos_backends_dan_la_misma_matriz_de_cierres(db, marlon):
         'presentacion': {'num': 5, 'den': 6, 'pct': 83.3},
         'sin_senas': {'por_llamada': {'num': 3, 'den': 6, 'pct': 50.0},
                       'por_presentacion': {'num': 3, 'den': 5, 'pct': 60.0}},
-        'con_senas': {'por_llamada': {'num': 4, 'den': 6, 'pct': 66.7},
-                      'por_presentacion': {'num': 4, 'den': 5, 'pct': 80.0}},
+        # Solo la seña de sena@: la de completo@ terminó en venta y ya está arriba.
+        'solo_senas': {'por_llamada': {'num': 1, 'den': 6, 'pct': 16.7},
+                       'por_presentacion': {'num': 1, 'den': 5, 'pct': 20.0}},
+        # no@ (presentó y no compró) y corto@ (seguimiento abierto): asistieron y no cerraron.
+        'no_cerradas': {'num': 2, 'den': 6, 'pct': 33.3},
     }
     assert del_comercial == esperado
     assert del_closer == esperado

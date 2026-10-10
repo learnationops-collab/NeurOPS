@@ -19,6 +19,7 @@ from app.models import Appointment
 from app.api.public.finance import puede_ver_finanzas
 from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, ROLE_SETTER
 from app.services import comercial_analitica as analitica
+from app.services import comercial_no_cerradas
 from app.services import comercial_reporte as reporte
 from app.services.booking_service import BookingService
 from app.services.comercial_service import (
@@ -167,6 +168,27 @@ def variabilidad():
     start, end, _prev_start, _prev_end = _rangos()
     datos = analitica.variabilidad(rol, start, end, miembro_id)
     return jsonify({**datos, 'dates': _fechas(start, end, None, None)}), 200
+
+
+@bp.route('/cierres/no-cerradas', methods=['GET'])
+def cierres_no_cerradas():
+    """Analizar › Cierre › «No cerradas»: las llamadas con show up del período que no terminaron ni
+    en venta ni en seña, cada una con su objeción registrada (pedido del usuario, 09/10/2026).
+
+    Endpoint aparte y no un bloque de `/resumen`: se pide recién al abrir el modal, y leer la
+    objeción de cada agenda no tiene por qué pagarse en cada carga del dashboard.
+
+    El alcance es el de la tarjeta: la dirección ve el equipo o la persona elegida; un closer, solo
+    sus agendas, pida lo que pida (`alcance_de`). Un setter no tiene panel Cierre: 403.
+    """
+    if current_user.role == ROLE_SETTER:
+        return jsonify({'message': 'Forbidden'}), 403
+    rol, miembro_id, _ = _alcance()
+    start, end, _prev_start, _prev_end = _rangos()
+    filas = comercial_no_cerradas.no_cerradas(
+        start, end, closer_id=miembro_id if rol == ROL_CLOSERS else None)
+    return jsonify({'filas': filas, 'total': len(filas),
+                    'dates': _fechas(start, end, None, None)}), 200
 
 
 @bp.route('/tabla', methods=['GET'])

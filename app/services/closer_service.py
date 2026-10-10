@@ -23,8 +23,8 @@ SALE_TIPO_TO_BUCKET = {
 REAL_SALE_TIPOS = ('completo', 'parcial')
 
 
-def matriz_de_cierres(*, completo, split, senas, asistieron, presentaciones):
-    """El close rate en sus cuatro lecturas: por llamada o por presentación, sin o con señas.
+def matriz_de_cierres(*, completo, split, senas, asistieron, presentaciones, no_cerradas):
+    """El cierre en sus cuatro lecturas: ventas y señas, cada una por llamada y por presentación.
 
     Es la forma ÚNICA del bloque `cierres` que devuelven los dos tableros (el del closer, desde
     `get_comprehensive_stats`, y el panel Cierre del comercial, desde `bloque_closers`): mismas
@@ -34,11 +34,21 @@ def matriz_de_cierres(*, completo, split, senas, asistieron, presentaciones):
       · `completo` / `split`: cierres reales, pago completo y split pay (`REAL_SALE_TIPOS`). Las
         ventas son su suma y no un tercer argumento: así el desglose de la leyenda de la tarjeta
         ("3 PC + 9 SP") no puede dejar de sumar el total que está al lado.
-      · `senas`: señas que NO terminaron en una de esas ventas dentro del mismo conjunto. Solo se
-        suman en la fila "con señas": una seña que después se completó ya está en las ventas, y
-        contarla otra vez daría dos cierres por un mismo lead.
+      · `senas`: señas que NO terminaron en una de esas ventas dentro del mismo conjunto. Son la
+        fila `solo_senas`: una seña que después se completó ya está en las ventas, y contarla
+        también acá daría dos cierres por un mismo lead.
       · `asistieron`: denominador por llamada (llamadas con show up).
       · `presentaciones`: denominador por presentación (llamadas donde se presentó la oferta).
+      · `no_cerradas`: llamadas con show up que no terminaron ni en venta ni en seña (pedido del
+        usuario, 09/10/2026: «agrega un dato de "No cerradas"»). Va como celda sobre las que
+        asistieron, como la tira de presentación. Cada tablero la cuenta con su propia fuente: en el
+        comercial son las agendas, una por una, y por eso se pueden listar; en el del closer, el resto
+        de la base por llamada.
+
+    `sin_senas` son las ventas solas (el close rate de verdad) y `solo_senas` las señas solas. Hasta
+    el 09/10/2026 la segunda fila era "con señas" (ventas + señas); el usuario pidió sacar las
+    ventas de ahí: «que solo se vean las señas». Las dos filas no se solapan, así que la tarjeta
+    ya no repite las ventas dos veces.
 
     Van todos por nombre: son cinco conteos del mismo tipo y cambiar dos de lugar daría números
     plausibles y equivocados.
@@ -53,7 +63,6 @@ def matriz_de_cierres(*, completo, split, senas, asistieron, presentaciones):
                 'pct': round(num / den * 100, 1) if den else None}
 
     ventas = completo + split
-    con_senas = ventas + senas
     return {
         'ventas': ventas,
         'ventas_completo': completo,
@@ -64,8 +73,9 @@ def matriz_de_cierres(*, completo, split, senas, asistieron, presentaciones):
         'presentacion': celda(presentaciones, asistieron),
         'sin_senas': {'por_llamada': celda(ventas, asistieron),
                       'por_presentacion': celda(ventas, presentaciones)},
-        'con_senas': {'por_llamada': celda(con_senas, asistieron),
-                      'por_presentacion': celda(con_senas, presentaciones)},
+        'solo_senas': {'por_llamada': celda(senas, asistieron),
+                       'por_presentacion': celda(senas, presentaciones)},
+        'no_cerradas': celda(no_cerradas, asistieron),
     }
 
 
@@ -2495,11 +2505,16 @@ class CloserService:
                 "discrepancies": discrepancies,
                 "totals": {"count": total_sales, "cash": total_cash, "cash_neto": total_cash_neto, "in_call_count": total_ic_sales, "in_call_cash": total_ic_cash}
             },
-            # El close rate por llamada y por presentación, sin y con señas, con sus conteos. Misma
-            # forma que el panel Cierre del dashboard comercial (ver `matriz_de_cierres`).
+            # Las ventas y las señas por llamada y por presentación, con sus conteos. Misma forma
+            # que el panel Cierre del dashboard comercial (ver `matriz_de_cierres`).
+            # Las «No cerradas» son acá el resto de la base por llamada: este tablero cuenta las
+            # ventas por cobro del período y no por agenda, así que no hay una lista de llamadas
+            # que las componga. Sobre un conjunto limpio dan lo mismo que las del comercial, que sí
+            # las cuenta agenda por agenda (lo fija test_cierres_paridad).
             "cierres": matriz_de_cierres(completo=final_pif_count, split=final_split_count,
                                          senas=señas_sin_venta, asistieron=total_attended,
-                                         presentaciones=val(stats.offers_made)),
+                                         presentaciones=val(stats.offers_made),
+                                         no_cerradas=round(max(0, total_attended - total_sales - señas_sin_venta), 2)),
             "follow_ups": {
                 "sent": val(stats.fu_sent), "replied": val(stats.fu_replied),
                 "closed": val(stats.fu_closed),

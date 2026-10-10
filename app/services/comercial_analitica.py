@@ -364,15 +364,18 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
         'presentaciones': presentaciones,
         'presentacion_rate': pct(presentaciones, tot_a['asistieron']),
         'close_presentacion': pct(tot_a['ventas'], presentaciones),
-        # Las cuatro lecturas del cierre —por llamada y por presentación, sin señas (pago
-        # completo + split pay) y con señas— con numerador y denominador de cada una. Es la MISMA
-        # forma que el bloque `cierres` del dashboard del closer (`matriz_de_cierres`), así la
-        # tarjeta que las dibuja es una sola. Acá cada seña es una agenda en "Seña", que por
-        # construcción no tiene venta: no hay nada que descontar para no contarla dos veces. El
-        # desglose pago completo / split pay es por agenda (`venta_tipo`), como las ventas.
+        # Las cuatro lecturas del cierre —ventas (pago completo + split pay) y señas, cada una por
+        # llamada y por presentación— con numerador y denominador de cada una. Es la MISMA forma
+        # que el bloque `cierres` del dashboard del closer (`matriz_de_cierres`), así la tarjeta
+        # que las dibuja es una sola. Acá cada seña es una agenda en "Seña", que por construcción
+        # no tiene venta: no hay nada que descontar para no contarla dos veces. El desglose pago
+        # completo / split pay es por agenda (`venta_tipo`), como las ventas. Las «No cerradas» se
+        # cuentan por la marca de cada fila (`no_cerrada`), la misma con la que Revisar las filtra:
+        # el número y la lista no pueden dar distinto.
         'cierres': matriz_de_cierres(completo=tot_a['ventas_completo'], split=tot_a['ventas_split'],
                                      senas=tot_a['senas'], asistieron=tot_a['asistieron'],
-                                     presentaciones=presentaciones),
+                                     presentaciones=presentaciones,
+                                     no_cerradas=sum(1 for f in agendas if f['no_cerrada'])),
         'estados': estados_de(agendas),
         'cash': tot_v['cash'],
         'cash_neto': tot_v['cash_neto'],

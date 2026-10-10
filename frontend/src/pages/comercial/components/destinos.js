@@ -1,4 +1,4 @@
-import { ESTADO_CARTERA, SENA_ESTADO, diaDe, rotuloDetalleFuente, rotuloToques } from './tablasDef';
+import { ESTADO_CARTERA, NO, SENA_ESTADO, diaDe, rotuloDetalleFuente, rotuloToques } from './tablasDef';
 
 /**
  * El mapa "dato del dashboard comercial → lista que lo compone".
@@ -67,14 +67,19 @@ export const DESTINOS_CLOSER = {
         aviso: 'El numerador son TODAS las ventas del período, no solo las que además tienen la '
             + 'oferta marcada como presentada: es la lista que corresponde al número. '
             + AVISO_TASA_NUMERADOR },
-    // La fila "con señas" de la matriz de cierres: las agendas que cerraron más las que terminaron
-    // en una seña sin completar ("Seña" es un post call propio, ver `post_call_de`).
-    close_con_senas_llamada: { tabla: 'agendas', filtro: { post_call: ['Venta', 'Seña'] },
-        de: 'Cierre con señas por llamada', aviso: AVISO_TASA_NUMERADOR },
-    close_con_senas_presentacion: { tabla: 'agendas', filtro: { post_call: ['Venta', 'Seña'] },
-        de: 'Cierre con señas por presentación',
-        aviso: 'El numerador son TODAS las ventas y señas del período, no solo las que además '
-            + 'tienen la oferta marcada como presentada. ' + AVISO_TASA_NUMERADOR },
+    // La fila "Señas" de la matriz de cierres: SOLO las agendas que terminaron en una seña sin
+    // completar ("Seña" es un post call propio, ver `post_call_de`). Hasta el 09/10/2026 era "con
+    // señas" y sumaba también las ventas; el usuario pidió que ahí solo se vean las señas.
+    senas_llamada: { tabla: 'agendas', filtro: { post_call: 'Seña' }, de: 'Señas por llamada',
+        aviso: AVISO_TASA_NUMERADOR },
+    senas_presentacion: { tabla: 'agendas', filtro: { post_call: 'Seña' },
+        de: 'Señas por presentación',
+        aviso: 'El numerador son TODAS las señas del período, no solo las que además tienen la '
+            + 'oferta marcada como presentada. ' + AVISO_TASA_NUMERADOR },
+    // «No cerradas» del panel Cierre: asistieron y no terminaron en venta ni en seña. La faceta
+    // `cerro` lee la marca `no_cerrada` de cada fila, la misma con la que se cuenta el número: la
+    // lista cierra exacto con él.
+    no_cerradas: { tabla: 'agendas', filtro: { cerro: NO }, de: 'No cerradas' },
 
     // --- Panel Cash ---
     cash_collected: { tabla: 'ventas', filtro: {}, de: 'Cash collected' },
@@ -140,9 +145,9 @@ export const DESTINO_PROCEDENCIAS_TOTAL = { tabla: 'ventas', filtro: {}, de: 'In
 
 /**
  * La matriz de cierres (`MatrizCierres`), con la misma forma que el bloque `cierres` del backend:
- * fila (sin / con señas) → columna (por llamada / por presentación) → destino, más la tira de
- * presentación de arriba (`presentacion`). La usan el panel Cierre de acá y la tarjeta del
- * dashboard del closer, que lleva a esta misma lista.
+ * fila (ventas / señas) → columna (por llamada / por presentación) → destino, más la tira de
+ * presentación de arriba (`presentacion`) y la de «No cerradas» de abajo (`no_cerradas`). La usan
+ * el panel Cierre de acá y la tarjeta del dashboard del closer, que lleva a esta misma lista.
  */
 export const DESTINOS_CIERRES = {
     presentacion: DESTINOS_CLOSER.presentacion_rate,
@@ -150,10 +155,11 @@ export const DESTINOS_CIERRES = {
         por_llamada: DESTINOS_CLOSER.close_llamada,
         por_presentacion: DESTINOS_CLOSER.close_presentacion,
     },
-    con_senas: {
-        por_llamada: DESTINOS_CLOSER.close_con_senas_llamada,
-        por_presentacion: DESTINOS_CLOSER.close_con_senas_presentacion,
+    solo_senas: {
+        por_llamada: DESTINOS_CLOSER.senas_llamada,
+        por_presentacion: DESTINOS_CLOSER.senas_presentacion,
     },
+    no_cerradas: DESTINOS_CLOSER.no_cerradas,
 };
 
 /* ============================================================

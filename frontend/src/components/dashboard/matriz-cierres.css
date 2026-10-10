@@ -1,5 +1,6 @@
-/* Matriz de cierres (MatrizCierres.jsx): la tira de presentación y una tarjeta por columna
- * (por llamada / por presentación), con las ventas solas y con señas en cada una.
+/* Matriz de cierres (MatrizCierres.jsx): la tira de presentación, una tarjeta por columna
+ * (por llamada / por presentación) con las ventas y las señas en cada una, y la tira de las
+ * «No cerradas» abajo.
  *
  * Como drill.css, sin prefijo de pantalla: vive en el panel Cierre del dashboard comercial (dentro
  * de `.dc-shell`) y en el dashboard del closer (Tailwind, `dash-v6`). Los dos son oscuros siempre
@@ -17,6 +18,10 @@
 .mc {
     --mc-sin: var(--v6-blue2, #4E8BD8);
     --mc-con: var(--v6-pink, #FF3FA4);
+    /* Las «No cerradas»: un naranja entre el error y el aviso (el que tenía «Presentó, no cerró»
+       en el panel Estados hasta el 09/10/2026), que no se confunde con el azul de las ventas ni
+       con el rosa de las señas. */
+    --mc-no: color-mix(in oklch, var(--v6-dgr, #E85C4A) 55%, var(--v6-warn, #D9A441));
     --mc-presenta: rgba(255, 255, 255, .94);
     --mc-hueco: rgba(2, 6, 23, .55);
     --mc-mut: rgba(255, 255, 255, .5);
@@ -26,7 +31,16 @@
     --mc-curva: cubic-bezier(.22, .7, .2, 1);
     container: mc / inline-size;
     display: grid;
+    /* Tres pistas que comparten las dos tiras (presentación arriba, «No cerradas» abajo) con
+       `subgrid`: el rótulo, la barra y la cifra de una quedan exactamente encima de los de la otra,
+       aunque sus textos midan distinto. Todo lo demás ocupa el ancho entero. */
+    grid-template-columns: auto minmax(40px, 1fr) auto;
     gap: 14px;
+    min-width: 0;
+}
+
+.mc > * {
+    grid-column: 1 / -1;
     min-width: 0;
 }
 
@@ -117,12 +131,14 @@
 .mc-tramo--ventas { background: var(--mc-sin); }
 .mc-tramo--senas { background: var(--mc-con); }
 .mc-tramo--presenta { background: var(--mc-presenta); border-radius: 999px; }
+.mc-tramo--no { background: var(--mc-no); border-radius: 999px; }
 
 /* --- Tira de presentación -------------------------------------------------------------------- */
 
 .mc-tira {
     display: grid;
     grid-template-columns: auto minmax(40px, 1fr) auto;
+    grid-template-columns: subgrid;
     align-items: center;
     gap: 16px;
     padding: 12px 16px;
@@ -130,6 +146,31 @@
     background: var(--mc-superficie);
     border: 1px solid var(--mc-borde);
     animation: mc-entra .4s ease both;
+}
+
+.mc-tira--no {
+    animation-delay: 260ms;
+}
+
+/* La cifra de «No cerradas» cuando abre el modal (panel Cierre del comercial): la cantidad, su
+   base y una flecha que dice que se abre algo, todo un solo botón. */
+.mc-abre {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.mc-abre-flecha {
+    align-self: center;
+    flex: none;
+    color: var(--mc-no);
+    transition: transform .16s ease;
+}
+
+.mc-abre:hover .mc-abre-flecha,
+.mc-abre:focus-visible .mc-abre-flecha {
+    transform: translateX(2px);
 }
 
 .mc-tira-rot {
@@ -147,6 +188,7 @@
 .mc-tira-cifra {
     display: inline-flex;
     align-items: baseline;
+    justify-self: end;
     gap: 6px;
     white-space: nowrap;
 }
@@ -241,24 +283,6 @@
     gap: 8px;
     min-width: 0;
     min-height: 20px;
-}
-
-.mc-pp {
-    display: inline-flex;
-    align-items: center;
-    height: 19px;
-    padding: 0 8px;
-    border-radius: 999px;
-    background: var(--mc-con);
-    color: #fff;
-    font-size: 10.5px;
-    font-weight: 800;
-    letter-spacing: .01em;
-    white-space: nowrap;
-    font-variant-numeric: tabular-nums;
-    box-shadow: 0 4px 14px rgba(255, 63, 164, .28);
-    animation: mc-pastilla .5s var(--mc-curva) both;
-    animation-delay: calc(700ms + var(--mc-orden, 0) * 110ms);
 }
 
 .mc-cifra {
@@ -362,11 +386,6 @@
     to { opacity: 1; transform: none; }
 }
 
-@keyframes mc-pastilla {
-    from { opacity: 0; transform: scale(.7); }
-    to { opacity: 1; transform: none; }
-}
-
 @keyframes mc-humo {
     from { transform: translate3d(-5%, -4%, 0) scale(1); }
     to { transform: translate3d(6%, 5%, 0) scale(1.1); }
@@ -375,7 +394,6 @@
 @media (prefers-reduced-motion: reduce) {
     .mc-tira,
     .mc-col,
-    .mc-pp,
     .mc-tramo,
     .mc-humo {
         animation: none;
@@ -383,7 +401,8 @@
 
     .mc-tramo,
     .mc-ayuda,
-    .mc-col {
+    .mc-col,
+    .mc-abre-flecha {
         transition: none;
     }
 }

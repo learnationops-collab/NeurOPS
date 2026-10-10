@@ -22,7 +22,7 @@ import FichaLeadModal from '../../components/ficha/FichaLeadModal';
 import Reportar from './components/Reportar';
 import RangoFechas, { mesEnCurso, rangoAnterior, rangoDe, textoRango } from './components/RangoFechas';
 import { corregirAgenda, eliminarAgenda as eliminarAgendaApi, getComparativas, getContexto, getResumen, getTabla, getVariabilidad, marcarAgendaDuplicada } from './comercialApi';
-import { sincronizarAcademia as sincronizarAcademiaApi } from './comercialApi';
+import { getNoCerradas, sincronizarAcademia as sincronizarAcademiaApi } from './comercialApi';
 import Finanzas, { TABS_FINANZAS } from './components/finanzas/Finanzas';
 import Payroll, { FiltroGrupos, FiltroPersonas, GRUPOS as GRUPOS_DE_NOMINA, MenuPeriodoPayroll, leerGrupos, leerPersonas, rangoPayroll } from './components/finanzas/Payroll';
 import { MenuPeriodoFinanzas, guardarPeriodo, leerPeriodoGuardado, periodoDe } from './components/finanzas/comun';
@@ -286,13 +286,24 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     // Una fila de la tabla Clientes no es una agenda que corregir: es alguien a quien hay que
     // cobrarle. Si el host sabe abrir la gestión del cliente (ver el docstring de arriba), se la
     // pasa; si no, cae en el modal de corrección de siempre.
-    const abrirFila = useCallback((fila) => {
+    //
+    // `alCerrar` es a dónde se vuelve al cerrar la ficha: el modal de «No cerradas» del panel Cierre
+    // se cierra para abrirla (los dos son modales y no se apilan) y se vuelve a abrir después.
+    const volverDeLaFicha = useRef(null);
+    const abrirFila = useCallback((fila, { alCerrar = null } = {}) => {
         if (fila?.tipo === 'cliente' && fila.client_id && onAbrirCliente) {
             onAbrirCliente(fila.client_id, fila);
             return;
         }
+        volverDeLaFicha.current = alCerrar;
         setFilaAbierta(fila);
     }, [onAbrirCliente]);
+    const cerrarFila = useCallback(() => {
+        const volver = volverDeLaFicha.current;
+        volverDeLaFicha.current = null;
+        setFilaAbierta(null);
+        volver?.();
+    }, []);
     const drillDown = useRef(0);
     const [stepper, setStepper] = useState(null);
 
@@ -426,6 +437,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     }, [filtros, rol, tablaActual, basis, soloElUltimo, faltaPeriodo]);
 
     useEffect(() => { if (seccion === 'analizar') cargarAnalizar(); }, [seccion, cargarAnalizar]);
+
+    // La lista de «No cerradas» del panel Cierre, del mismo período y alcance que el resumen. Se pide
+    // al abrir su modal, no con el resumen (ver `GET /comercial/cierres/no-cerradas`).
+    const cargarNoCerradas = useCallback(() => getNoCerradas(filtros), [filtros]);
     useEffect(() => { if (seccion === 'revisar') cargarTabla(); }, [seccion, cargarTabla]);
 
     /**
@@ -822,7 +837,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                         <FaltaFecha texto="Elegí las dos fechas de la comparación.">{camposDeLaComparacion}</FaltaFecha>
                     )}
                     {!esperaFechas && seccion === 'analizar' && tab === 'dashboard' && (
-                        <Analizar datos={resumen} rol={rol} irA={irADetalle} />
+                        <Analizar datos={resumen} rol={rol} irA={irADetalle}
+                            cargarNoCerradas={cargarNoCerradas} onAbrirFila={abrirFila} />
                     )}
                     {!esperaFechas && seccion === 'analizar' && tab === 'comparativas' && contexto.puede_comparar && (
                         // Un closer ve a sus compañeros pero no puede abrir sus listas (el backend
@@ -880,7 +896,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     <FichaLeadModal
                         appointmentId={filaAbierta.tipo === 'agenda' ? filaAbierta.id : null}
                         clientId={filaAbierta.tipo === 'agenda' ? null : filaAbierta.client_id}
-                        onCerrar={() => setFilaAbierta(null)}
+                        onCerrar={cerrarFila}
                         onCambio={() => { cargarTabla(); cargarAnalizar(); }} />
                 ) : (
                     <LeadModal fila={filaAbierta} estados={contexto.estados}
@@ -888,7 +904,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                         duplicadaDe={duplicadas[filaAbierta.id]}
                         onCorregir={corregir} onMarcarDuplicada={marcarDuplicada}
                         onEliminar={contexto.puede_reportar ? eliminarAgenda : null}
-                        onCerrar={() => setFilaAbierta(null)} />
+                        onCerrar={cerrarFila} />
                 ))}
 
                 {!embebido && (

@@ -1,15 +1,18 @@
 import { useEffect, useRef } from 'react';
+import { ChevronRight } from 'lucide-react';
 import MetricaClicable from './MetricaClicable';
 import './pareja.css';
 import './matriz-cierres.css';
 
 /**
- * El close rate en sus cuatro lecturas: ventas solas o con señas, por llamada o por presentación.
- * Cada cifra es una tasa con su numerador y su denominador.
+ * El cierre en sus cuatro lecturas: las ventas y las señas, cada una por llamada y por
+ * presentación. Cada cifra es una tasa con su numerador y su denominador.
  *
  * Pedido del usuario (30/09/2026): el close rate solo cuenta pago completo y split pay; la seña es
- * una reserva. Pero ver cuánto suman las señas ayuda a entender qué está pasando con los cierres,
- * así que se muestran las dos cosas lado a lado en vez de mezclarlas en un solo número.
+ * una reserva. Pero ver las señas ayuda a entender qué está pasando con los cierres, así que se
+ * muestran las dos cosas lado a lado en vez de mezclarlas en un solo número. Hasta el 09/10/2026 la
+ * segunda fila era "con señas" (ventas + señas); el usuario pidió sacarle las ventas —«que solo se
+ * vean las señas ahí»—, así que ahora cada fila cuenta lo suyo y ninguna repite a la otra.
  *
  * Es UNA pieza para los dos tableros —el panel Cierre del dashboard comercial y el dashboard del
  * closer— porque los dos backends devuelven el mismo bloque `cierres` (ver `matriz_de_cierres` en
@@ -19,8 +22,8 @@ import './matriz-cierres.css';
  *
  * El diseño es el de Kerwin (30/09/2026): arriba una tira con la tasa de presentación —la que
  * explica la distancia entre las dos columnas— y debajo una tarjeta por columna, con las ventas
- * solas y, debajo, con señas: la barra de "con señas" apila el azul de las ventas y el rosa de
- * las señas, y la pastilla dice cuántos puntos suman las señas en esa columna.
+ * (barra azul) y, debajo, las señas (barra rosa). Cierra la tarjeta otra tira, la de «No cerradas»
+ * (09/10/2026): las que asistieron y no compraron ni dejaron seña.
  */
 
 export const FILAS = [
@@ -31,10 +34,11 @@ export const FILAS = [
             + 'es una reserva, no una venta, así que acá no entra.',
     },
     {
-        key: 'con_senas', label: 'Con señas',
-        numerador: 'ventas + señas sin completar',
-        ayuda: 'Las ventas más los leads que dejaron una seña y todavía no pagaron el programa. La '
-            + 'seña que después se completó ya está en las ventas: cuenta una sola vez.',
+        key: 'solo_senas', label: 'Señas',
+        numerador: 'señas sin completar',
+        ayuda: 'Los leads que dejaron una seña y todavía no pagaron el programa. Las ventas no '
+            + 'entran: están en la fila de arriba, y la seña que después se completó cuenta allá, '
+            + 'una sola vez.',
     },
 ];
 
@@ -63,14 +67,13 @@ const plural = (valor, uno, varios) => `${n(valor)} ${Number(valor) === 1 ? uno 
 /** Una tasa: `null` es "—" (sin denominador no hay tasa), nunca 0%. */
 export const pctDe = (valor) => (valor === null || valor === undefined ? '—' : `${valor}%`);
 
-/** Lo que suman las señas en una columna, en puntos: con señas menos sin señas. */
-export const brechaDe = (sin, con) => (sin === null || sin === undefined || con === null
-    || con === undefined ? null : Math.round((con - sin) * 10) / 10);
+/** Lo que muestra `Pct` al final: la tasa con su `%`, o el conteo pelado si el sufijo es vacío. */
+const textoDe = (valor, sufijo) => (valor === null || valor === undefined ? '—' : `${valor}${sufijo}`);
 
 /** Qué dice el tooltip de una celda: la cuenta en palabras y con los números del período. */
 export const textoDeCelda = (fila, col, celda) => `${fila.numerador} ÷ ${col.denominador}: `
-    + `${n(celda?.num)} de ${n(celda?.den)}. ${fila.key === 'con_senas'
-        ? 'Incluye las señas: no es el close rate, es el compromiso de compra.'
+    + `${n(celda?.num)} de ${n(celda?.den)}. ${fila.key === 'solo_senas'
+        ? 'Son reservas, no ventas: no entran en el close rate.'
         : 'Es el close rate.'}`;
 
 /** Tooltip mínimo para cuando el tablero no pasa el suyo: el texto va en el `title`. */
@@ -97,8 +100,9 @@ const quieto = () => typeof window !== 'undefined' && typeof window.matchMedia =
  *
  * Se exporta porque el panel Estados (`RepartoEstados`) cuenta sus porcentajes con la misma pieza.
  * Un `valor` en texto conserva sus decimales: "30.0" sube y termina en "30.0%", no en "30%".
+ * `sufijo` vacío la vuelve un conteo: la tira de «No cerradas» sube su cantidad con la misma curva.
  */
-export const Pct = ({ valor, className }) => {
+export const Pct = ({ valor, className, sufijo = '%' }) => {
     const ref = useRef(null);
     useEffect(() => {
         const el = ref.current;
@@ -112,16 +116,16 @@ export const Pct = ({ valor, className }) => {
         const paso = (t) => {
             if (!t0) t0 = t;
             const k = Math.min((t - t0) / 800, 1);
-            el.textContent = `${(fin * (1 - (1 - k) ** 3)).toFixed(dec)}%`;
+            el.textContent = `${(fin * (1 - (1 - k) ** 3)).toFixed(dec)}${sufijo}`;
             if (k < 1) id = requestAnimationFrame(paso);
-            else el.textContent = pctDe(valor);
+            else el.textContent = textoDe(valor, sufijo);
         };
         id = requestAnimationFrame(paso);
         // Solo se corta el conteo: si el valor cambió, React ya escribió el nuevo antes de esta
         // limpieza, y reponer acá el texto de este efecto dejaría el número viejo.
         return () => cancelAnimationFrame(id);
-    }, [valor]);
-    return <b ref={ref} className={className}>{pctDe(valor)}</b>;
+    }, [valor, sufijo]);
+    return <b ref={ref} className={className}>{textoDe(valor, sufijo)}</b>;
 };
 
 /** "12 de 84": el numerador resaltado, el resto apagado. */
@@ -134,7 +138,8 @@ const acotar = (x) => Math.max(0, Math.min(100, Number(x) || 0));
 /**
  * Riel con uno o más tramos apilados. Cada tramo crece desde 0 al montar (keyframes, sin JS: así
  * crece aunque el primer cuadro llegue tarde) y, si el dato cambia, se desliza a su ancho nuevo.
- * `demora` escalona: el rosa de las señas arranca cuando el azul de las ventas ya llegó.
+ * `demora` escalona: la barra rosa de las señas arranca después de la azul de las ventas, de
+ * arriba hacia abajo, como se lee la tarjeta.
  */
 const Riel = ({ tramos, className }) => (
     <span className={`mc-riel${className ? ` ${className}` : ''}`} aria-hidden="true">
@@ -166,14 +171,66 @@ const TiraPresentacion = ({ celda, destino, irA, Ayuda }) => (
     </div>
 );
 
+/**
+ * Abajo de la matriz: las llamadas con show up que no terminaron ni en venta ni en seña (pedido del
+ * usuario, 09/10/2026: «agrega un dato de "No cerradas" con la cantidad de agendas en show up que no
+ * se cerraron»). Es el resto de la columna "Por llamada" —ventas + señas + no cerradas son las que
+ * asistieron— y por eso va como tira, igual que la de presentación arriba, y no como una tercera
+ * fila de cada tarjeta: es una sola cifra sobre las llamadas, no dos.
+ *
+ * La cifra grande es la CANTIDAD, que es lo que se pidió; la base y la tasa van al lado.
+ *
+ * Con `onVer` (el panel Cierre del dashboard comercial) la cifra —con su base y una flecha— abre el
+ * modal con cada lead y su objeción, y es ese modal el que lleva a Revisar. Sin él (el dashboard del
+ * closer, donde el número es el resto de la base y no una lista de agendas) la cifra va directo a la
+ * lista, como todas las de la tarjeta. Las dos tiras comparten columnas (ver `.mc` en el CSS): la
+ * barra de una queda exactamente debajo de la de la otra.
+ */
+const TiraNoCerradas = ({ celda, destino, irA, onVer, Ayuda }) => {
+    const detalle = `No cerradas · ${n(celda.num)} de ${n(celda.den)}`;
+    const cifra = <Pct valor={n(celda.num)} sufijo="" className="mc-tira-pct" />;
+    const base = <small className="mc-frac">de {n(celda.den)} · {pctDe(celda.pct)}</small>;
+    return (
+        <div className="mc-tira mc-tira--no" role="group" aria-label="No cerradas">
+            <span className="mc-tira-rot">
+                <small className="mc-rot">No cerradas</small>
+                <ConAyuda Ayuda={Ayuda} titulo="No cerradas"
+                    texto={`Llamadas con show up que no terminaron ni en venta ni en seña: ${n(celda.num)} `
+                        + `de ${n(celda.den)}. Con las ventas y las señas suman todas las llamadas con `
+                        + 'show up: acá están los leads a los que hay que volver.'} />
+            </span>
+            <Riel className="mc-riel--tira" tramos={[{ tono: 'no', ancho: celda.pct, demora: 520 }]} />
+            <span className="mc-tira-cifra">
+                {onVer ? (
+                    <button type="button" className="metrica-clic mc-abre"
+                        data-vacio={celda.num ? undefined : '1'}
+                        aria-label={`Ver los leads: ${detalle}`} title={`Ver los leads: ${detalle}`}
+                        onClick={onVer}>
+                        {cifra}
+                        {base}
+                        <ChevronRight size={14} className="mc-abre-flecha" aria-hidden="true" />
+                    </button>
+                ) : (
+                    <>
+                        <MetricaClicable irA={irA} destino={destino} vacio={!celda.num} subrayar={false}
+                            detalle={detalle}>
+                            {cifra}
+                        </MetricaClicable>
+                        {base}
+                    </>
+                )}
+            </span>
+        </div>
+    );
+};
+
 /** Una lectura dentro de la tarjeta: rótulo, tasa grande con su fracción y la barra. */
-const Lectura = ({ fila, col, celda, tramos, pastilla, destino, irA, Ayuda }) => {
+const Lectura = ({ fila, col, celda, tramos, destino, irA, Ayuda }) => {
     const titulo = `${fila.label} · ${col.label}`;
     return (
         <div className={`mc-lectura mc-lectura--${fila.key}`} role="group" aria-label={titulo}>
             <div className="mc-lectura-cab">
                 <small className="mc-rot">{fila.label}</small>
-                {pastilla}
                 <ConAyuda Ayuda={Ayuda} titulo={titulo}
                     texto={`${textoDeCelda(fila, col, celda)} ${fila.ayuda}`} />
             </div>
@@ -191,16 +248,15 @@ const Lectura = ({ fila, col, celda, tramos, pastilla, destino, irA, Ayuda }) =>
     );
 };
 
-/** Una columna de la matriz como tarjeta: ventas solas arriba, con señas abajo. */
+/** Una columna de la matriz como tarjeta: las ventas arriba, las señas abajo. */
 const Columna = ({ col, cierres, orden, destinos, irA, Ayuda }) => {
     const sin = cierres.sin_senas?.[col.key] || {};
-    const con = cierres.con_senas?.[col.key] || {};
-    const den = sin.den ?? con.den;
-    const brecha = brechaDe(sin.pct, con.pct);
-    // Los tramos salen de los conteos y no de las tasas redondeadas: así el azul de las dos
-    // barras mide lo mismo y el rosa es exactamente lo que agregan las señas.
-    const ventas = den ? (sin.num / den) * 100 : 0;
-    const senas = den ? Math.max(0, ((con.num ?? 0) - (sin.num ?? 0)) / den) * 100 : 0;
+    const solo = cierres.solo_senas?.[col.key] || {};
+    const den = sin.den ?? solo.den;
+    // Los tramos salen de los conteos y no de las tasas redondeadas, con el mismo denominador:
+    // así las dos barras de la tarjeta se pueden comparar a ojo.
+    const ventas = den ? ((sin.num ?? 0) / den) * 100 : 0;
+    const senas = den ? ((solo.num ?? 0) / den) * 100 : 0;
     const demora = 260 + orden * 110;
     return (
         <div className="mc-col" role="group" aria-label={col.label} style={{ '--mc-orden': orden }}>
@@ -215,17 +271,9 @@ const Columna = ({ col, cierres, orden, destinos, irA, Ayuda }) => {
             <Lectura fila={FILAS[0]} col={col} celda={sin} irA={irA} Ayuda={Ayuda}
                 destino={destinos?.sin_senas?.[col.key]}
                 tramos={[{ tono: 'ventas', ancho: ventas, demora }]} />
-            <Lectura fila={FILAS[1]} col={col} celda={con} irA={irA} Ayuda={Ayuda}
-                destino={destinos?.con_senas?.[col.key]}
-                pastilla={brecha > 0 && (
-                    <small className="mc-pp" title={`Las señas suman ${brecha} puntos ${col.label.toLowerCase()}`}>
-                        +{brecha} pp
-                    </small>
-                )}
-                tramos={[
-                    { tono: 'ventas', ancho: ventas, demora: demora + 120 },
-                    { tono: 'senas', ancho: Math.min(senas, 100 - acotar(ventas)), demora: demora + 640 },
-                ]} />
+            <Lectura fila={FILAS[1]} col={col} celda={solo} irA={irA} Ayuda={Ayuda}
+                destino={destinos?.solo_senas?.[col.key]}
+                tramos={[{ tono: 'senas', ancho: senas, demora: demora + 240 }]} />
         </div>
     );
 };
@@ -257,7 +305,7 @@ export const LeyendaCierres = ({ cierres }) => {
     );
 };
 
-const MatrizCierres = ({ cierres, irA, destinos, Ayuda = AyudaSimple, className }) => {
+const MatrizCierres = ({ cierres, irA, destinos, onVerNoCerradas, Ayuda = AyudaSimple, className }) => {
     if (!cierres) return null;
     return (
         <div className={`mc${className ? ` ${className}` : ''}`}>
@@ -271,6 +319,10 @@ const MatrizCierres = ({ cierres, irA, destinos, Ayuda = AyudaSimple, className 
                         destinos={destinos} irA={irA} Ayuda={Ayuda} />
                 ))}
             </div>
+            {cierres.no_cerradas && (
+                <TiraNoCerradas celda={cierres.no_cerradas} destino={destinos?.no_cerradas}
+                    irA={irA} onVer={onVerNoCerradas} Ayuda={Ayuda} />
+            )}
         </div>
     );
 };

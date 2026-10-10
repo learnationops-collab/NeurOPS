@@ -494,8 +494,10 @@ class CloserDashboardService:
                 'pendientes': conv.get('pending', 0),
                 'pendientes_rate': conv.get('rate_pending', 0),
                 'conversion_total': conv.get('rate', 0),
-                # Close rate CON señas por llamada: el mismo número que `cierres.con_senas.
-                # por_llamada.pct` (solo que 0 y no None sin asistencias).
+                # Close rate CON señas por llamada: ventas + señas sin completar sobre las
+                # llamadas con show up (0 y no None sin asistencias). La tarjeta Cierre ya no lo
+                # muestra —sus dos filas son `cierres.sin_senas` y `cierres.solo_senas`—; queda
+                # para las pantallas que lo leen de acá.
                 'close_rate_promesa': pct.get('close_rate_promesa', 0)
             },
             # Cada bucket lleva su cantidad de pagos además del monto: sin eso no se puede

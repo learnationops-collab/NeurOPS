@@ -25,8 +25,8 @@ Definiciones (una sola vez, acá)
   · `show_up`     asistieron / realizadas.
   · `close_rate`  ventas / asistieron. "Venta" es una agenda cuyo lead tiene un pago completo o
                   un split pay (`REAL_SALE_TIPOS`). La seña NO: esa agenda queda como "Seña" y
-                  solo suma en las tasas "con señas" (`close_rate_con_senas`, ver
-                  `closer_service.matriz_de_cierres`).
+                  se cuenta en su propia fila (`solo_senas` de `closer_service.matriz_de_cierres`)
+                  y en `close_rate_con_senas` de los totales.
   · `cash`        suma de `FinancialSale.monto` del período (incluye cuotas y señas: es cash
                   cobrado, no ventas nuevas).
   · `ventas`      solo las filas cuyo tipo canónico es una venta de verdad (completo/parcial);
@@ -183,6 +183,12 @@ ASISTIO = ('asistio', 'venta', 'sena', 'seguimiento', 'segunda_llamada')
 PRESENTO = ('venta', 'sena')
 # Post call con resultado de asistencia: el denominador del show up (ver el docstring del módulo).
 REALIZADAS = ASISTIO + ('no_show',)
+# Post call con los que una llamada cerró: una venta o una seña. Una llamada con show up que no
+# terminó en ninguno de los dos es una «No cerrada» (panel Cierre, pedido del usuario del
+# 09/10/2026). Se define por lo que NO es —asistió y no cerró— y no listando los estados de "abierta"
+# (seguimiento, segunda llamada, presentó sin cerrar…), que cambian de nombre y se reparten: así
+# ventas + señas + no cerradas suman siempre las que asistieron.
+CERRO = ('venta', 'sena')
 # Agendas que salieron del trabajo del equipo: el lead canceló o el closer lo descartó. Siguen en los
 # números del período, pero las listas las esconden detrás de su propio filtro («Descartadas»):
 # pedido del usuario, 02/10/2026, «que desaparezcan y queden en otro lugar aparte».
@@ -468,6 +474,9 @@ class ComercialService:
                 'post_call': chip('post_call', post),
                 'estado_libro': estado,
                 'asistio': post in ASISTIO,
+                # Asistió y no terminó en venta ni en seña (ver `CERRO`). Va en la fila para que el
+                # panel Cierre, su lista de «No cerradas» y el filtro de Revisar lean el MISMO dato.
+                'no_cerrada': post in ASISTIO and post not in CERRO,
                 'realizada': post in REALIZADAS,
                 'presento': (post in PRESENTO or bool(a.offer_presented)
                              or cerro_sin_venta(estado, con_venta, con_seguimiento, con_sena=con_sena)),
