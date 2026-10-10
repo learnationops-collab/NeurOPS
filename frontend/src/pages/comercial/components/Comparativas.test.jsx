@@ -40,3 +40,25 @@ describe('Comparativas · mirada por un closer', () => {
         expect(screen.queryByRole('button', { name: /Ver la lista de/ })).toBeNull();
     });
 });
+
+describe('Comparativas · el líder contra el promedio', () => {
+    // Con setters el equipo suma también los leads sin setter asignado, así que el promedio por
+    // persona puede quedar arriba del primero. Decía «+-16.5 sobre el promedio».
+    const LEADS = { key: 'leads', label: 'Leads', formato: 'num', suma: true, desc: '' };
+    const conLeads = {
+        rol: 'setters', yo: null, metricas: [LEADS], columnas_info: [], equipo: { leads: 300 },
+        filas: [{ id: 1, nombre: 'Elias', leads: 120, deltas: {} }, { id: 2, nombre: 'Paula', leads: 80, deltas: {} }],
+    };
+
+    it('si el primero queda por debajo, lo dice', () => {
+        render(<Comparativas irAPersona={null} datos={conLeads} />);
+
+        expect(screen.getByText('Lidera Elias · −30 bajo el promedio')).toBeInTheDocument();
+    });
+
+    it('sin `irAPersona` el mapa no promete abrir listas', () => {
+        render(<Comparativas irAPersona={null} datos={conLeads} />);
+
+        expect(screen.getByText('Tocá el encabezado para rankear.')).toBeInTheDocument();
+    });
+});

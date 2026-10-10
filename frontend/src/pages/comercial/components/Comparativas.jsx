@@ -132,8 +132,13 @@ const Ranking = ({ datos, metrica, filas, yo, irAPersona, destino }) => {
                 <div className="fila" style={{ justifyContent: 'space-between', marginTop: 'var(--s3)' }}>
                     <span className="t-cap mut">
                         Lidera {filas[0].nombre}
-                        {promedio ? ` · +${fmt.porFormato((filas[0][metrica.key] || 0) - promedio, metrica.formato)}`
-                            + `${metrica.formato === 'pct' ? ' pts' : ''} sobre el promedio` : ''}
+                        {/* Puede quedar por debajo: el equipo de setters cuenta también los leads sin
+                            setter asignado, así que el promedio por persona sale más alto que el de
+                            todos. Antes se leía «+-16.5 sobre el promedio». */}
+                        {promedio ? ` · ${(filas[0][metrica.key] || 0) >= promedio ? '+' : '−'}`
+                            + `${fmt.porFormato(Math.abs((filas[0][metrica.key] || 0) - promedio), metrica.formato)}`
+                            + `${metrica.formato === 'pct' ? ' pts' : ''} ${(filas[0][metrica.key] || 0) >= promedio
+                                ? 'sobre' : 'bajo'} el promedio` : ''}
                     </span>
                     <span className="t-cap mut40 num">
                         Brecha 1º a último: {fmt.porFormato(
@@ -172,7 +177,11 @@ const MapaEquipo = ({ datos, metrica, filas, onMetrica, irAPersona }) => {
                 <div style={{ minWidth: 0 }}>
                     <p className="t-eyebrow">Mapa del equipo</p>
                     <p className="t-cap mut" style={{ marginTop: 6 }}>
-                        Tocá el encabezado para rankear · tocá una celda para abrir su lista.
+                        {/* Sin `irAPersona` (un closer o un setter mirando a su equipo) las
+                            celdas no abren ninguna lista: no se le promete. */}
+                        {irAPersona
+                            ? 'Tocá el encabezado para rankear · tocá una celda para abrir su lista.'
+                            : 'Tocá el encabezado para rankear.'}
                     </p>
                 </div>
                 <div className="panel-cab-der mapa-leyenda">
