@@ -172,9 +172,11 @@ const Eventos = ({ eventos, puedeEditar, onAccion }) => {
         }
     };
 
+    // `created_at` del log se guarda en UTC y llega sin la Z: `fechaLegible` lo leía como hora
+    // local y el evento aparecía cuatro horas corrido respecto de la agenda que lo produjo.
     const filas = eventos.map((e, i) => (
         <div key={e.id ?? i} className="fi-sec-fila">
-            <span className="t-sm mut">{fecha(e.fecha) || '—'}</span>
+            <span className="t-sm mut">{instanteLegible(e.fecha) || '—'}</span>
             {editando === e.id ? (
                 <span className="fila" style={{ gap: 'var(--s2)', minWidth: 0 }}>
                     <span className="ln-field" style={{ height: 34, flex: 1, minWidth: 0 }}>
@@ -211,7 +213,7 @@ const Eventos = ({ eventos, puedeEditar, onAccion }) => {
                         <BorrarConConfirmacion etiqueta="Eliminar este evento" chico={false}
                             titulo="¿Eliminar este evento?" confirmar="Eliminar evento"
                             onBorrar={() => onAccion?.('borrar_evento', { evento_id: e.id })}>
-                            <span><strong>{fecha(e.fecha) || 'Sin fecha'}</strong> · {e.autor}</span>
+                            <span><strong>{instanteLegible(e.fecha) || 'Sin fecha'}</strong> · {e.autor}</span>
                             <span>«{e.detalle}»</span>
                         </BorrarConConfirmacion>
                     </>
@@ -649,7 +651,7 @@ const TabHistorial = ({ ficha, onAccion, puedeEditar = true, seccionAbierta = nu
                 <SeccionColapsable titulo="Registro de eventos"
                     resumen={eventos.length
                         ? `${eventos.length} ${eventos.length === 1 ? 'evento' : 'eventos'}`
-                            + (eventos[0]?.fecha ? ` · último ${fecha(eventos[0].fecha)}` : '')
+                            + (eventos[0]?.fecha ? ` · último ${instanteLegible(eventos[0].fecha)}` : '')
                         : 'Sin eventos'}>
                     <Eventos eventos={eventos} puedeEditar={puedeReportar} onAccion={onAccion} />
                 </SeccionColapsable>
