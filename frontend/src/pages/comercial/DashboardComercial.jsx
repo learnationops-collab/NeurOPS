@@ -19,6 +19,7 @@ import Analizar from './components/Analizar';
 import Comparativas from './components/Comparativas';
 import Variabilidad from './components/Variabilidad';
 import Revisar, { TABLAS_POR_ROL, duplicadasDe } from './components/Revisar';
+import { puedeExportarRevisar } from './components/tablasDef';
 import LeadModal from './components/LeadModal';
 import FichaLeadModal from '../../components/ficha/FichaLeadModal';
 import Reportar from './components/Reportar';
@@ -815,7 +816,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                             puedeElegirEquipo={!!contexto.puede_elegir_equipo}
                             onOlvidarFiltro={() => set({ f: null, ft: null })}
                             onAbrirFila={abrirFila}
-                            onSincronizarAcademia={contexto.puede_reportar ? sincronizarAcademia : null} />
+                            onSincronizarAcademia={contexto.puede_reportar ? sincronizarAcademia : null}
+                            // Con el rol de quien mira, no con `rol` (el de la tabla): ver
+                            // `ROLES_QUE_EXPORTAN` (10/10/2026).
+                            puedeExportar={puedeExportarRevisar(contexto.yo?.rol)} />
                     )}
                     {sinPermiso && (
                         <section className="panel">

@@ -491,6 +491,19 @@ export const TABLAS_POR_ROL = {
     setters: ['leads', 'generadas'],
 };
 
+/**
+ * Quién puede exportar Revisar a CSV (panel «Exportar», 10/10/2026): la dirección comercial, admin y
+ * operator (que va a usar Revisar pronto). Closers y setters no, decidido con el usuario.
+ *
+ * Es el rol de QUIEN MIRA (`contexto.yo.rol`, el rol activo de la cuenta), no el `rol` de la tabla:
+ * ese es «closers» o «setters» y la dirección lo cambia con el switch del dock. Simulando a un closer
+ * el contexto es el del closer, así que se ve lo que vería él: sin Exportar. El backend no participa:
+ * el archivo se arma con las filas que esta persona ya puede ver.
+ */
+export const ROLES_QUE_EXPORTAN = ['director_comercial', 'admin', 'operator'];
+
+export const puedeExportarRevisar = (rolDeQuienMira) => ROLES_QUE_EXPORTAN.includes(rolDeQuienMira);
+
 /** Las claves de faceta de cada tabla. Es contra esto que se valida todo destino de una métrica. */
 export const FACETAS_POR_TABLA = Object.fromEntries(
     Object.entries(TABLAS).map(([tabla, def]) => [tabla, def.facetas.map(f => f.key)]));
