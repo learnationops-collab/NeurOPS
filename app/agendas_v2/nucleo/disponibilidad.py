@@ -70,8 +70,10 @@ def dias_del_horizonte(o, tz, ahora):
     return out
 
 
-def slots_persona(p, dur, o=None, ahora=None, ocupado=None):
-    """Inicios libres (ms UTC, ordenados) de la persona `p` para un evento de `dur` minutos.
+def slots_persona(p, dur, o=None, ahora=None, ocupado=None, margen=0):
+    """Inicios libres (ms UTC, ordenados) de la persona `p` para sesiones de `dur` minutos con `margen`
+    minutos después. La sesión tiene que entrar en su horario; el margen no (el último del día puede
+    pasarse), pero sí tiene que estar libre: sesión y margen no pueden pisar nada.
     `ocupado(persona_id, inicio, dur)` dice si ya tiene algo en ese rato (reservas, Google Calendar)."""
     o = o or agenda_opt(None, dur)
     ahora = ahora_ms() if ahora is None else ahora
@@ -84,7 +86,7 @@ def slots_persona(p, dur, o=None, ahora=None, ocupado=None):
             m = a_min(r[0])
             while m + dur <= a_min(r[1]):
                 t = zoned_to_utc(dia['y'], dia['m'], dia['d'], m // 60, m % 60, tz)
-                if t >= minimo and not ocupado(p.get('id'), t, dur):
+                if t >= minimo and not ocupado(p.get('id'), t, dur + margen):
                     out.append(t)
                 m += o['paso']
     return sorted(out)

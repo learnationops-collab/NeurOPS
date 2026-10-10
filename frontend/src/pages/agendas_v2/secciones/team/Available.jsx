@@ -1,6 +1,6 @@
 // Available: calendario semanal de cobertura. Cada closer es un carril; dentro de su horario, con su
-// duración real: lleno = agendada (reservas reales), gris rayado = evento en su Google Calendar,
-// claro = libre. Rayado rojo = franja del día sin ningún closer.
+// duración real: lleno = agendada (reservas reales), medio = su margen después, gris rayado = evento
+// en su Google Calendar, claro = libre. Rayado rojo = franja del día sin ningún closer.
 // Con una sola persona y permiso, se edita arrastrando: crear, mover y estirar franjas (de a 30 min).
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -50,10 +50,10 @@ const SIN_LEER = { estado: 'error', franjas: [] };
 
 // El detalle de un bloque: cuánto de lo disponible está ocupado y en qué.
 function resumenBloque(x) {
-    const ag = x.mAg ? durTxt(x.mAg) + ' agendado' : '';
+    const ag = x.mAg + x.mMg ? durTxt(x.mAg + x.mMg) + ' agendado' + (x.mMg ? ' (' + durTxt(x.mMg) + ' de margen)' : '') : '';
     if (x.sinLeer) return 'No se pudo leer su calendario' + (ag ? ' · ' + ag : '');
     const partes = [ag, x.mEv ? durTxt(x.mEv) + ' por eventos' : ''].filter(Boolean);
-    return durTxt(x.mAg + x.mEv) + ' ocupado de ' + durTxt(x.mDisp) + (partes.length ? ' · ' + partes.join(' · ') : '');
+    return durTxt(x.mAg + x.mMg + x.mEv) + ' ocupado de ' + durTxt(x.mDisp) + (partes.length ? ' · ' + partes.join(' · ') : '');
 }
 
 const nombres = (ps) => ps.map(p => p.nombre).join(', ');
@@ -184,6 +184,7 @@ export default function Available({ solo = null }) {
                         {cs.map(p => <span key={p.id} style={{ '--c': colorVar(p.color) }}><i />{p.nombre}</span>)}
                         {edit && <span className="av-ley-s av-ley-edit"><Icono n="edit" s={12} />Arrastrá para crear o mover · se repite cada semana</span>}
                         <span className="av-ley-s"><i className="av-l-ag" />Agendada</span>
+                        {bloques.some(x => x.mMg > 0) && <span className="av-ley-s"><i className="av-l-mg" />Margen</span>}
                         {conApi && <span className="av-ley-s"><i className="av-l-ev" />Evento en su calendario</span>}
                         <span className="av-ley-s"><i className="av-l-li" />Libre</span>
                         <span className="av-ley-s"><i className="av-l-hu" />Sin closer</span>

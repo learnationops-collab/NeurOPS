@@ -10,6 +10,12 @@ export function ord(d, col) {
 export function maxOrden(d, col) { return (d[col] || []).reduce((m, f) => Math.max(m, f.orden || 0), 0); }
 
 // Un rol que "toma llamadas" es closer; sin roles cargados, vale el id clásico.
+// [duración, margen] en minutos de las sesiones de ese closer en ese evento: lo que él ajustó o, si no
+// ajustó, la propuesta del evento (duracion, margen).
+export function sesionDe(p, eventoId, duracion, margen) {
+    const propia = (eventoId && p && p.sesiones && p.sesiones[eventoId]) || {};
+    return [propia.duracion ?? duracion, propia.margen ?? (margen || 0)];
+}
 export function esCloser(d, p) { const r = buscar(d, 'roles', p.rol); return r ? r.atiende : p.rol === 'closer'; }
 export function closers(d) { return ord(d, 'personas').filter(p => esCloser(d, p)); }
 export function setters(d) {

@@ -805,6 +805,7 @@
 .thalamus .av-ley span{display:inline-flex;align-items:center;gap:6px}
 .thalamus .av-ley span > i{width:10px;height:10px;border-radius:3px;background:var(--c)}
 .thalamus .av-ley .av-l-ag{background:var(--text-muted)!important}
+.thalamus .av-ley .av-l-mg{background:color-mix(in srgb,var(--text-muted) 45%,transparent)!important}
 .thalamus .av-ley .av-l-ev{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--text-muted) 50%,transparent) 0 2px,color-mix(in srgb,var(--text-muted) 12%,transparent) 2px 5px)!important}
 .thalamus .av-ley-aviso{color:var(--warning)!important}
 .thalamus .av-ley .av-l-li{background:none!important;border:1.5px dashed var(--text-muted)}
@@ -831,6 +832,7 @@
 .thalamus .av-bloque:hover{box-shadow:0 0 0 2px var(--c);z-index:2}
 .thalamus .av-bloque > i{position:absolute;left:3px;right:3px;min-height:2px;border-radius:5px}
 .thalamus .av-bloque > i.ag{background:var(--c);box-shadow:0 2px 8px -4px var(--c)}
+.thalamus .av-bloque > i.mg{background:color-mix(in srgb,var(--c) 40%,transparent)}
 .thalamus .av-bloque > i.ev{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--text-muted) 50%,transparent) 0 2px,color-mix(in srgb,var(--text-muted) 12%,transparent) 2px 5px)}
 .thalamus .av-bloque > i.pas{opacity:.4}
 .thalamus .av-bloque--sinleer{border:1.5px dashed var(--warning)}
@@ -1647,3 +1649,18 @@
 .thalamus .me-nom{flex:1 1 220px;font-weight:800}
 .thalamus .me-activo{display:inline-flex;align-items:center;gap:8px}
 .thalamus .me-link{flex:1 1 240px;min-width:0}
+/* Sesiones: duración y margen de cada closer por evento (secciones/team/Sesiones.jsx) */
+.thalamus .ses-lista{display:grid;gap:8px}
+.thalamus .ses-fila{display:grid;grid-template-columns:minmax(0,1fr) auto auto 150px;align-items:center;gap:14px;padding:10px 14px;border-radius:16px;background:var(--mat-1);border:1px solid var(--border-subtle)}
+.thalamus .ses-fila--propia{border-color:color-mix(in srgb,var(--brand-secondary) 40%,transparent)}
+.thalamus .ses-quien{display:flex;align-items:center;gap:10px;min-width:0}
+.thalamus .ses-quien > div{display:grid;gap:2px;min-width:0}
+.thalamus .ses-campo{display:flex;align-items:center;gap:8px}
+.thalamus .ses-campo > span{font-size:10.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted-40)}
+.thalamus .ses-min{display:flex;align-items:center;gap:6px}
+.thalamus .ses-otro{display:inline-flex;align-items:center;gap:4px}
+.thalamus .ses-otro .input--num{width:68px}
+.thalamus .ses-volver{justify-self:end}
+.thalamus .hor-ses{display:grid;gap:var(--s3);padding:var(--s4) var(--s6) var(--s6)}
+@media (max-width:640px){.thalamus .hor-ses{padding:var(--s3) var(--s4) var(--s4)}}
+@media (max-width:760px){.thalamus .ses-fila{grid-template-columns:1fr}.thalamus .ses-volver{justify-self:start}}

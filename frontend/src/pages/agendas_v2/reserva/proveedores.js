@@ -26,7 +26,7 @@
 
 import api from '../../../services/api';
 import { asignacion } from '../core/asignacion';
-import { buscar } from '../core/datos';
+import { buscar, sesionDe } from '../core/datos';
 import { armarReserva } from '../core/reserva';
 import { opcionesDeOcupacion } from '../data/ocupacion';
 
@@ -66,7 +66,9 @@ export function proveedorLocal(d, reservas = [], crear = null) {
             if (!crear) throw Object.assign(new Error('Esta vista no agenda'), { code: 'fallo' });
             const funnel = evento ? buscar(d, 'funnels', evento.funnel) || null : null;
             const a = asig || asignar(ctx, false);
-            return crear(armarReserva({ lead, evento, funnel, form, asig: a, slot, origen, setter }));
+            // Como el servidor: la reserva lleva la sesión del closer que tocó (lo suyo o la propuesta).
+            const conSesion = slot && evento ? (([dur, margen]) => ({ ...slot, dur, margen }))(sesionDe(buscar(d, 'personas', slot.p), evento.id, evento.duracion, evento.margen)) : slot;
+            return crear(armarReserva({ lead, evento, funnel, form, asig: a, slot: conSesion, origen, setter }));
         },
     };
 }

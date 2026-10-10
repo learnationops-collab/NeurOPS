@@ -832,3 +832,48 @@ def test_la_foto_queda_en_su_persona_de_team(client, armado, cuentas, auth_heade
     assert next(p for p in servicio.colecciones()['personas'] if p['id'] == 'ana')['foto'] == foto
     assert client.get('/api/auth/me/foto', headers=h).get_json() == {'foto': foto}
     assert client.put('/api/auth/me/foto', json={'foto': 'javascript:x'}, headers=h).status_code == 400
+
+
+# --- Sesiones: duración y margen de cada closer -----------------------------------------------------
+
+
+def test_cada_closer_agenda_con_su_sesion_y_el_margen_no_se_le_muestra_al_lead(client, armado, cuentas, google):
+    # El evento propone 45 min; Ana ajustó 30 min de sesión y 20 de margen.
+    servicio.guardar_doc('personas', 'ana', {'sesiones': {'ev': {'duracion': 30, 'margen': 20}}}, parcial=True)
+    r = _reservar(client)
+    assert r.status_code == 201
+    cuerpo = r.get_json()['reserva']
+    assert cuerpo['fin'] == '2026-10-05T13:30:00.000Z' and cuerpo['duracion'] == 30
+    p = Appointment.query.one().agenda_payload
+    assert (p['duracion_min'], p['margen_min']) == (30, 20)
+    # La invitación de Google dura solo la sesión.
+    (evt,) = google['crear']
+    assert evt['fin'] - evt['inicio'] == timedelta(minutes=30)
+
+
+def test_el_margen_bloquea_la_agenda_del_closer(client, armado, cuentas):
+    # 30 de sesión y 40 de margen: la agenda de las 09:00 le ocupa a Ana hasta las 10:10.
+    servicio.guardar_doc('personas', 'ana', {'sesiones': {'ev': {'duracion': 30, 'margen': 40}}}, parcial=True)
+    assert _reservar(client).status_code == 201
+    slots = _horarios(client)
+    assert LUNES_9_MS not in slots and LUNES_10_MS not in slots
+    otro = {'c-email': 'otro@correo.com', 'c-telefono': '7999 8888'}
+    r = _reservar(client, inicio='2026-10-05T14:00:00.000Z', **otro)
+    assert r.status_code == 409
+
+
+def test_el_closer_ajusta_sus_sesiones_y_lo_que_no_viene_vuelve_a_la_propuesta(client, armado, cuentas, auth_headers):
+    h = auth_headers(cuentas['ana'])
+    r = client.get('/api/auth/me/sesiones', headers=h).get_json()
+    assert r['en_team'] and [(e['id'], e['duracion'], e['margen'], e['propia']) for e in r['eventos']] == [
+        ('ev', 45, 0, {})
+    ]
+    pedido = {'sesiones': {'ev': {'duracion': 50, 'margen': 15}, 'inventado': {'duracion': 30}}}
+    r = client.put('/api/auth/me/sesiones', headers=h, json=pedido)
+    assert r.status_code == 200 and r.get_json()['eventos'][0]['propia'] == {'duracion': 50, 'margen': 15}
+    # Un evento que no existe no se guarda; lo de Team queda igual que lo que ve la dirección.
+    ana = servicio.buscar(servicio.colecciones(), 'personas', 'ana')
+    assert ana['sesiones'] == {'ev': {'duracion': 50, 'margen': 15}}
+    client.put('/api/auth/me/sesiones', headers=h, json={'sesiones': {}})
+    assert servicio.buscar(servicio.colecciones(), 'personas', 'ana')['sesiones'] == {}
+    assert client.get('/api/auth/me/sesiones', headers=auth_headers(cuentas['juan'])).status_code == 403

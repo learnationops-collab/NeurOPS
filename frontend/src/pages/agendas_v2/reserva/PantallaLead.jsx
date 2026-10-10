@@ -41,7 +41,8 @@ function armarCtx(form, ev, persona, d) {
     return {
         form: fo, evento: ev, preguntas, fin: fo ? fo.fin : FIN_DEF,
         eyebrow: ev ? ev.nombre : per ? 'Llamada con ' + per.nombre : fo ? fo.nombre : 'Llamada',
-        dur: ev ? ev.duracion : per && per.ldur ? per.ldur : 45,
+        // La duración que ve el lead es la propuesta del evento; al agendar se le confirma la del closer.
+        dur: ev ? ev.duracion : per && per.ldur ? per.ldur : 45, margen: ev ? ev.margen || 0 : 0, eventoId: ev ? ev.id : '',
         reglas: fo ? fo.reglas || [] : null, resto: fo ? fo.resto || '' : '', persona: perId,
         ag: ev ? { reservas: ev.reservas, antel: ev.antel, paso: ev.paso } : null,
         redir: ev ? ev.redir : '', tzFija: ev && ev.zona && ev.zona.modo === 'fija' ? ev.zona.tz : '',
@@ -57,7 +58,7 @@ function estadoInicial(ctx, { desde = 0, ejemplo = '' } = {}, enfocar = true) {
         fin: false, listo: false, slot: null, asigFinal: null, recalc: 0, vuelta: 0,
         // El lead que vuelve: buscando (el correo que se está buscando), reco (lo que se encontró) y su paso,
         // siYaTiene (lo que eligió con la sesión que ya tenía), guardados/tapados (confirmó sus datos guardados).
-        buscando: '', recoN: 0, reco: null, siYaTiene: null, guardados: false, tapados: null, consultor: null,
+        buscando: '', recoN: 0, reco: null, siYaTiene: null, guardados: false, tapados: null, consultor: null, durReal: null,
         foco: enfocar ? 'entra' : null, focoN: enfocar ? 1 : 0,
     };
 }
@@ -152,7 +153,7 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
     const nombre = nombreLead(s.resp, s.ejemplo);
     const enCal = idx >= n && !s.listo && !s.fin;
 
-    const ctxAsig = (p) => ({ preguntas, resp: p.resp, dur: ctx.dur, ag: ctx.ag, reglas: ctx.reglas, resto: ctx.resto, persona: ctx.persona });
+    const ctxAsig = (p) => ({ preguntas, resp: p.resp, dur: ctx.dur, margen: ctx.margen, eventoId: ctx.eventoId, ag: ctx.ag, reglas: ctx.reglas, resto: ctx.resto, persona: ctx.persona });
     // Proveedor local: la asignación sale al instante (sin parpadeo). Las reservas bloquean horarios;
     // cambiar de zona o un "ocupado" (recalc) vuelve a calcular.
     const asigSinc = useMemo(() => {
@@ -323,7 +324,9 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
                 if (!vivoRef.current) return;
                 const consultor = (r && r.reserva && r.reserva.consultor) || delSlot;
                 setEnvio(x => ({ ...x, enviando: false, error: '' }));
-                setS(q => conFoco({ ...q, listo: true, slot, asigFinal: asig, consultor }, 'entra'));
+                const rr = (r && r.reserva) || r || {};
+                const durReal = rr.duracion || rr.duracion_min || null;
+                setS(q => conFoco({ ...q, listo: true, slot, asigFinal: asig, consultor, durReal }, 'entra'));
             }, (e) => {
                 if (!vivoRef.current) return;
                 if (e && e.code === 'ya_tiene' && e.agenda) {
@@ -393,7 +396,7 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
         paso = <PasoFin ids={ids} fin={ctx.fin} nombre={nombre} prueba={prueba} respuestas={respuestas} acc={acc} />;
     } else if (s.listo) {
         clave = 'listo';
-        paso = <PasoListo ids={ids} nombre={nombre} slot={s.slot} s={s} dur={ctx.dur} redir={ctx.redir} preguntas={preguntas} prueba={prueba} respuestas={respuestas} acc={acc}
+        paso = <PasoListo ids={ids} nombre={nombre} slot={s.slot} s={s} dur={s.durReal || ctx.dur} redir={ctx.redir} preguntas={preguntas} prueba={prueba} respuestas={respuestas} acc={acc}
             consultor={s.consultor} tapados={s.guardados ? s.tapados : null} />;
     } else if (s.reco) {
         clave = 'reco';

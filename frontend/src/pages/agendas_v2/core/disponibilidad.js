@@ -39,14 +39,16 @@ export function diasDelHorizonte(o, tz, ahora) {
 
 // Inicios libres (ms UTC, ordenados) de la persona `p` para un evento de `dur` minutos.
 // `ocupado(personaId, inicio, dur)` dice si ya tiene algo en ese rato (reservas, Google Calendar).
-export function slotsPersona(p, dur, o, { ahora = Date.now(), ocupado = () => false } = {}) {
+// Inicios libres de `p` para sesiones de `dur` minutos con `margen` minutos después. La sesión tiene que
+// entrar en su horario; el margen no (el último del día puede pasarse), pero sí tiene que estar libre.
+export function slotsPersona(p, dur, o, { ahora = Date.now(), ocupado = () => false, margen = 0 } = {}) {
     o = o || agendaOpt(null, dur);
     const tz = p.tz || TZ_DEF, minimo = ahora + o.ant, out = [];
     diasDelHorizonte(o, tz, ahora).forEach(dia => {
         (p.horario[dia.dow] || []).forEach(r => {
             for (let m = aMin(r[0]); m + dur <= aMin(r[1]); m += o.paso) {
                 const t = zonedToUtc(dia.y, dia.m, dia.d, Math.floor(m / 60), m % 60, tz);
-                if (t >= minimo && !ocupado(p.id, t, dur)) out.push(t);
+                if (t >= minimo && !ocupado(p.id, t, dur + margen)) out.push(t);
             }
         });
     });

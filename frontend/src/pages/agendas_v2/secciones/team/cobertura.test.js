@@ -41,6 +41,17 @@ describe('calcularCobertura', () => {
         expect(ev).toHaveLength(1);
         expect(ev[0].eventos.map(e => e.titulo)).toEqual(['Daily', null]);
     });
+    it('el margen de cada agenda cuenta como ocupado y tapa lo de Google', () => {
+        // La agenda de las 12 dura 30 min con 20 de margen; su evento de Google cubre solo la sesión, y hay
+        // otra reunión de 12:40 a 13:00 que se pisa con el margen.
+        const rs = () => [{ inicio_ms: H(12), fin_ms: H(12, 30), margen_min: 20 }];
+        const g = () => ({ estado: 'ok', franjas: [[H(12), H(12, 30)], [H(12, 40), H(13)]] });
+        const c = calcularCobertura({ todos: [p], cs: [p], ahora, reservasDe: rs, googleDe: g });
+        expect(c.kpi.hAg).toBeCloseTo(50 / 60);
+        expect(c.kpi.hMg).toBeCloseTo(20 / 60);
+        expect(c.kpi.hEv).toBeCloseTo(10 / 60);
+        expect(c.bloques[0].segs.map(s => s.tipo)).toEqual(['ag', 'mg', 'ev']);
+    });
     it('lo de fuera del horario no cuenta y lo que lo cruza cuenta solo adentro', () => {
         const g = () => ({ estado: 'ok', franjas: [[H(8), H(9, 30)], [H(12, 30), H(14)], [H(20), H(21)]] });
         const c = calcularCobertura({ todos: [p], cs: [p], ahora, googleDe: g });

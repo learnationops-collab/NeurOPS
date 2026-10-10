@@ -15,8 +15,19 @@ from app import db
 from app.agendas_v2 import operacion
 from app.agendas_v2.modelos import MODELOS, SchedConfig, SchedIntento, SchedPerfil
 from app.agendas_v2.nucleo.asignacion import asignacion
-from app.agendas_v2.nucleo.catalogos import ESTRATEGIAS, HORAS, PAISES, TZ_DEF, ZONAS, con_opciones, zona_por_telefono, zona_valida
-from app.agendas_v2.nucleo.datos import buscar, nombre_origen, ordenados, rol_closer
+from app.agendas_v2.nucleo.catalogos import (
+    DURACIONES,
+    ESTRATEGIAS,
+    HORAS,
+    MARGENES,
+    PAISES,
+    TZ_DEF,
+    ZONAS,
+    con_opciones,
+    zona_por_telefono,
+    zona_valida,
+)
+from app.agendas_v2.nucleo.datos import buscar, nombre_origen, ordenados, rol_closer, sesion_de
 from app.agendas_v2.nucleo.disponibilidad import se_solapa
 from app.agendas_v2.nucleo.eventos import con_form_al_dia, config_de, link_evento, slug_libre, version_publicada
 from app.agendas_v2.nucleo.formulario import limpiar_respuesta, texto_regla, validar_respuesta
@@ -26,6 +37,7 @@ from app.agendas_v2.nucleo.normalizar import (
     contacto_preguntas,
     foto_ok,
     normal_integ,
+    normal_sesiones,
     normal_perfil,
     preguntas_flujo,
 )
@@ -183,11 +195,53 @@ def guardar_foto(user, foto):
 
 
 # Lo que el closer puede tocar de sus eventos. La persona (él) y el funnel (ninguno) los pone el servidor.
-CAMPOS_EVENTO_CLOSER = ('nombre', 'duracion', 'formulario', 'activo', 'desc', 'redir', 'indic', 'reservas', 'antel', 'paso', 'zona')
+CAMPOS_EVENTO_CLOSER = (
+    'nombre', 'duracion', 'margen', 'formulario', 'activo', 'desc', 'redir', 'indic',
+    'reservas', 'antel', 'paso', 'zona',
+)
 
 
 def _evento_de_closer(d, e):
     return {**e, 'link': link_evento(d, e)}
+
+
+def _eventos_compartidos(d):
+    """Los eventos que no son de un closer en particular: en esos cada closer ajusta su sesión."""
+    return [e for e in ordenados(d, 'eventos') if not e.get('persona')]
+
+
+def sesiones_de(user):
+    """Lo que el closer ve en «Mis sesiones»: cada evento compartido con la propuesta del director
+    (duracion, margen) y lo que él ajustó (propia: {duracion?, margen?}). Sus eventos propios se
+    ajustan en «Mis eventos»."""
+    d = colecciones()
+    p = persona_de_usuario(d, user)
+    propias = (p or {}).get('sesiones') or {}
+    return {
+        'en_team': bool(p),
+        'eventos': [
+            {'id': e['id'], 'nombre': e['nombre'], 'activo': e['activo'], 'duracion': e['duracion'],
+             'margen': e['margen'], 'propia': propias.get(e['id'], {})}
+            for e in _eventos_compartidos(d)
+        ],
+        'duraciones': DURACIONES,
+        'margenes': MARGENES,
+    }
+
+
+def guardar_sesiones(user, sesiones):
+    """Guarda lo que el closer ajustó ({evento_id: {duracion?, margen?}}, entero: lo que no viene vuelve a
+    la propuesta) en su persona de Team; si no está en Team, la crea."""
+    d = colecciones()
+    ids = {e['id'] for e in _eventos_compartidos(d)}
+    limpias = {k: v for k, v in normal_sesiones(sesiones).items() if k in ids}
+    p = persona_de_usuario(d, user)
+    if p:
+        guardar_doc('personas', p['id'], {'sesiones': limpias}, usuario_id=user.id, parcial=True)
+    else:
+        _persona_nueva(d, user, sesiones=limpias)
+    db.session.commit()
+    return sesiones_de(user)
 
 
 def eventos_de_closer(user):
@@ -347,6 +401,11 @@ def _duracion_min(appt):
     return int((appt.agenda_payload or {}).get('duracion_min') or DURACION_AGENDA_OPERACION_MIN)
 
 
+def _bloque_min(appt):
+    """Lo que una agenda le ocupa al closer: la sesión y el margen que se reservó después."""
+    return _duracion_min(appt) + int((appt.agenda_payload or {}).get('margen_min') or 0)
+
+
 def _vigente(appt):
     return not appt.closer_processed and (appt.result or '') not in operacion.RESULTADOS_NO_VIGENTES
 
@@ -450,6 +509,7 @@ def _agendas_de_operacion(elegibles, desde):
             'closer_id': pid,
             'inicio_ms': dt_a_ms(a.start_time),
             'fin_ms': dt_a_ms(a.start_time) + _duracion_min(a) * 60000,
+            'margen_min': _bloque_min(a) - _duracion_min(a),
         }
         for a in filas
         for pid in persona_de[a.closer_id]
@@ -508,7 +568,7 @@ def _choca(user_id, inicio, fin):
         Appointment.start_time >= ms_a_dt(inicio) - timedelta(hours=4),
         *operacion.filtro_vigente(),
     ).all()
-    if any(dt_a_ms(a.start_time) + _duracion_min(a) * 60000 > inicio for a in filas):
+    if any(dt_a_ms(a.start_time) + _bloque_min(a) * 60000 > inicio for a in filas):
         return True
     # Lo de Google se vuelve a mirar en el momento (sin caché): algo agendado recién también cuenta.
     from app.services.google_service import GoogleService
@@ -669,6 +729,8 @@ def _contexto(evento, form, resp):
         'preguntas': preguntas_flujo(form),
         'resp': resp,
         'dur': evento['duracion'],
+        'margen': evento.get('margen') or 0,
+        'evento_id': evento['id'],
         'ag': {'reservas': evento['reservas'], 'antel': evento['antel'], 'paso': evento['paso']},
         'reglas': form.get('reglas', []),
         'resto': form.get('resto', ''),
@@ -995,13 +1057,15 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
 
     # Bloqueo del closer: dos leads que eligen el mismo horario a la vez no pueden quedar los dos.
     closer = db.session.query(User).filter_by(id=elegibles[slot['p']]).with_for_update().first()
-    fin = inicio + evento['duracion'] * 60000
+    # La sesión de ese closer en este evento (lo que ajustó o la propuesta) y su margen: los dos bloquean.
+    dur, margen = sesion_de(buscar(d, 'personas', slot['p']), evento['id'], evento['duracion'], evento.get('margen'))
+    fin = inicio + (dur + margen) * 60000
     if not closer or _choca(closer.id, inicio, fin):
         db.session.rollback()
         raise ReservaRechazadaError('ocupado')
 
     payload = {
-        **armar_reserva(**base, asig=asig, slot=slot),
+        **armar_reserva(**base, asig=asig, slot={**slot, 'dur': dur, 'margen': margen}),
         'evento_nombre': evento['nombre'],
         'indicaciones': evento.get('indic') or '',
         'prioridad_nombre': asig['grupo']['nombre'] if asig.get('grupo') else None,

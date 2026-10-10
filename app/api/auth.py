@@ -224,6 +224,21 @@ def mi_disponibilidad():
     return jsonify(servicio.disponibilidad_de(current_user)), 200
 
 
+@bp.route('/auth/me/sesiones', methods=['GET', 'PUT'])
+@login_required
+def mis_sesiones():
+    """Cuánto dura cada sesión del closer y el margen que se deja después, por evento. La propuesta es la
+    del director en el evento; el closer la ajusta acá y la dirección comercial la revisa en Team.
+    PUT {sesiones: {evento_id: {duracion?, margen?}}} (entero: lo que no viene vuelve a la propuesta)."""
+    from app.agendas_v2 import servicio
+    if not current_user.tiene_rol('closer'):
+        return jsonify({"message": "Solo los closers tienen sesiones"}), 403
+    if request.method == 'PUT':
+        datos = request.get_json(silent=True) or {}
+        return jsonify(servicio.guardar_sesiones(current_user, datos.get('sesiones'))), 200
+    return jsonify(servicio.sesiones_de(current_user)), 200
+
+
 @bp.route('/auth/me/foto', methods=['GET', 'PUT'])
 @login_required
 def mi_foto():

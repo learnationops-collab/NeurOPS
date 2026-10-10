@@ -52,6 +52,13 @@ def max_orden(d, col):
     return max([0] + [f.get('orden') or 0 for f in d.get(col) or []])
 
 
+def sesion_de(p, evento_id, duracion, margen):
+    """(duración, margen) en minutos de las sesiones de ese closer en ese evento: lo que él ajustó o, si
+    no ajustó, la propuesta del evento (duracion, margen)."""
+    propia = ((p or {}).get('sesiones') or {}).get(evento_id) or {} if evento_id else {}
+    return propia.get('duracion', duracion), propia.get('margen', margen or 0)
+
+
 def es_closer(d, p):
     """Un rol que "toma llamadas" es closer; sin roles cargados, vale el id clásico."""
     r = buscar(d, 'roles', p.get('rol'))

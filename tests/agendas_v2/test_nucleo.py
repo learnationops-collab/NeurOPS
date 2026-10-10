@@ -399,6 +399,7 @@ def test_arma_el_contrato_con_copia_de_preguntas_y_respuestas():
         'formulario_id',
         'inicio',
         'duracion_min',
+        'margen_min',
         'closer_id',
         'prioridad_id',
         'prioridad_regla_id',
@@ -510,3 +511,65 @@ def test_resumen_agenda():
         'e', {'reservas': {'modo': 'rango', 'desde': '2026-09-05', 'hasta': '2026-10-05'}, 'paso': {'n': 2, 'u': 'h'}}
     )
     assert resumen_agenda(e) == '5 sept a 5 oct · 4 h antes · cada 2 h'
+
+
+# --- sesiones: duración y margen de cada closer ---------------------------------------------------
+
+
+def test_el_evento_acepta_duraciones_y_margenes_a_medida_dentro_de_los_limites():
+    assert normal_evento('e', {'duracion': 50})['duracion'] == 50
+    assert normal_evento('e', {'duracion': 500})['duracion'] == 240
+    assert normal_evento('e', {})['margen'] == 0
+    assert normal_evento('e', {'margen': 25})['margen'] == 25
+    assert normal_evento('e', {'margen': 999})['margen'] == 120
+
+
+def test_la_persona_guarda_solo_lo_que_ajusto():
+    sesiones = {'ev': {'duracion': 30}, 'otro': {'margen': '15'}, 'vacio': {}, 'basura': 3}
+    p = normal_persona('ana', {'sesiones': sesiones})
+    assert p['sesiones'] == {'ev': {'duracion': 30}, 'otro': {'margen': 15}}
+    assert normal_persona('ana', {})['sesiones'] == {}
+
+
+def test_sin_margen_lo_publicado_queda_como_antes():
+    e = normal_evento('e', {'nombre': 'Llamada'})
+    assert 'margen' not in json.loads(config_de(e, None))['ev']
+    assert json.loads(config_de({**e, 'margen': 10}, None))['ev']['margen'] == 10
+
+
+def test_la_sesion_entra_en_el_horario_y_el_ultimo_margen_puede_pasarse():
+    p = normal_persona('ana', {'tz': 'America/La_Paz', 'horario': LV9A12})
+    o = agenda_opt(ag(reservas={'n': 0}, paso={'n': 30}), 30)
+    # Una agenda a las 09:00 de 30 min con 20 de margen (ocupa hasta 09:50) y otra a las 11:00 sin margen.
+    nueve, once = date_utc(2026, 9, 5, 13), date_utc(2026, 9, 5, 15)
+    reservas = [
+        {'estado': 'agendada', 'closer_id': 'ana', 'inicio_ms': nueve, 'fin_ms': nueve + H // 2, 'margen_min': 20},
+        {'estado': 'agendada', 'closer_id': 'ana', 'inicio_ms': once, 'fin_ms': once + H // 2},
+    ]
+    ocupado = opciones_de_ocupacion(reservas, LUNES)['ocupado']
+    s = slots_persona(p, 30, o, ahora=LUNES, ocupado=ocupado, margen=20)
+    # 09:30 cae en el margen de la primera; 10:30 + 30 + 20 pisaría la de las 11:00; 11:30 termina a las
+    # 12:00 justo y su margen se pasa del horario, pero se ofrece igual.
+    assert s == [date_utc(2026, 9, 5, 14), date_utc(2026, 9, 5, 15, 30)]
+
+
+def test_cada_closer_ofrece_con_su_propia_sesion():
+    ana = {'id': 'ana', 'rol': 'closer', 'tz': 'America/La_Paz', 'horario': LV9A12}
+    ana['sesiones'] = {'ev': {'duracion': 30}}
+    beto = {'id': 'beto', 'rol': 'closer', 'tz': 'America/La_Paz', 'horario': LV9A12}
+    d = datos(personas=[ana, beto])
+    ctx = {'dur': 60, 'margen': 0, 'evento_id': 'ev', 'ag': ag(reservas={'n': 0}, paso={'n': 30})}
+    # Ana ajustó 30 min: le entra hasta las 11:30. Beto usa la propuesta de 60: hasta las 11:00.
+    assert len(asignacion({**ctx, 'persona': 'ana'}, d, {'ahora': LUNES})['slots']) == 6
+    assert len(asignacion({**ctx, 'persona': 'beto'}, d, {'ahora': LUNES})['slots']) == 5
+    # Sin evento_id (o en otro evento) lo ajustado no cuenta.
+    assert len(asignacion({**ctx, 'evento_id': 'otro', 'persona': 'ana'}, d, {'ahora': LUNES})['slots']) == 5
+
+
+def test_la_reserva_guarda_la_sesion_del_closer_que_toco():
+    lead = {'preguntas': [], 'resp': {'c-nombre': 'Ana'}, 'pais': 'BO', 'tz': 'America/La_Paz'}
+    e = normal_evento('e', {'duracion': 60, 'margen': 10})
+    r = armar_reserva(lead=lead, evento=e, slot={'t': LUNES, 'p': 'ana', 'dur': 30, 'margen': 20})
+    assert (r['duracion_min'], r['margen_min']) == (30, 20)
+    r = armar_reserva(lead=lead, evento=e, slot={'t': LUNES, 'p': 'ana'})
+    assert (r['duracion_min'], r['margen_min']) == (60, 10)

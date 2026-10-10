@@ -2,8 +2,8 @@
 // Son la definición del esquema; las tablas sched_* del backend tienen que aceptar exactamente esto.
 
 import {
-    COLORES, CONTACTO, DURACIONES, ESTRATEGIAS, FIN_DEF, HORAS, ICONOS_ROL, INTEG_DEF, MS_U, PERM_KEYS, PERM_VIEJOS,
-    TIPOS, TIPOS_CONTACTO, TZ_DEF, conOpciones, icoNombre, zonaValida,
+    COLORES, CONTACTO, DURACION_MAX, DURACION_MIN, ESTRATEGIAS, FIN_DEF, HORAS, ICONOS_ROL, INTEG_DEF, MS_U, PERM_KEYS, PERM_VIEJOS,
+    MARGEN_MAX, TIPOS, TIPOS_CONTACTO, TZ_DEF, conOpciones, icoNombre, zonaValida,
 } from './catalogos';
 import { abrevDe, clonar, entero, esc, slugify, uid } from './util';
 
@@ -129,8 +129,22 @@ export function normalPersona(id, d) {
     return {
         id, nombre: String(d.nombre || 'Sin nombre').slice(0, 60), email: emailOk(d.email), rol: String(d.rol || 'closer').slice(0, 40), foto: fotoOk(d.foto),
         nivel: entero(d.nivel, 1, 3, 1), color: COLORES.includes(d.color) ? d.color : 'azul', tz: zonaValida(d.tz) ? d.tz : TZ_DEF,
-        horario: normalHorario(d.horario), orden: Number(d.orden) || 0,
+        horario: normalHorario(d.horario), sesiones: normalSesiones(d.sesiones), orden: Number(d.orden) || 0,
     };
+}
+
+// Lo que el closer ajustó de cada evento: {eventoId: {duracion?, margen?}} en minutos. Lo que no ajustó
+// no aparece y toma la propuesta del evento.
+export function normalSesiones(v) {
+    const o = v && typeof v === 'object' && !Array.isArray(v) ? v : {}, out = {};
+    Object.entries(o).slice(0, 100).forEach(([k, x]) => {
+        x = x && typeof x === 'object' && !Array.isArray(x) ? x : {};
+        const s = {};
+        if (x.duracion !== '' && x.duracion != null) s.duracion = entero(x.duracion, DURACION_MIN, DURACION_MAX, 45);
+        if (x.margen !== '' && x.margen != null) s.margen = entero(x.margen, 0, MARGEN_MAX, 0);
+        if (Object.keys(s).length) out[String(k)] = s;
+    });
+    return out;
 }
 
 export function normalGrupo(id, d) {
@@ -150,10 +164,11 @@ function normalPesos(v) {
 export function normalEvento(id, d) {
     d = d || {};
     const rs = d.reservas || {}, an = d.antel || {}, pa = d.paso || {}, zn = d.zona || {};
-    const dur = DURACIONES.includes(+d.duracion) ? +d.duracion : 45;
+    const dur = entero(d.duracion, DURACION_MIN, DURACION_MAX, 45);
     return {
         id, nombre: String(d.nombre || 'Sin nombre').slice(0, 80), slug: slugify(d.slug) || slugify(d.nombre) || id, funnel: String(d.funnel || ''),
-        formulario: String(d.formulario || ''), duracion: dur, activo: d.activo !== false,
+        // margen: después de cada sesión; bloquea la agenda del closer pero el lead no lo ve.
+        formulario: String(d.formulario || ''), duracion: dur, margen: entero(d.margen, 0, MARGEN_MAX, 0), activo: d.activo !== false,
         publicado: typeof d.publicado === 'string' ? d.publicado : '', orden: Number(d.orden) || 0, persona: String(d.persona || ''),
         reservas: {
             modo: ['dias', 'rango', 'siempre'].includes(rs.modo) ? rs.modo : 'dias', n: entero(rs.n, 1, 365, 30),

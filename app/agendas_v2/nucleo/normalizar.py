@@ -8,7 +8,9 @@ import re
 from app.agendas_v2.nucleo.catalogos import (
     COLORES,
     CONTACTO,
-    DURACIONES,
+    DURACION_MAX,
+    DURACION_MIN,
+    MARGEN_MAX,
     ESTRATEGIAS,
     FIN_DEF,
     HORAS,
@@ -247,8 +249,25 @@ def normal_persona(id, d):
         'color': d.get('color') if d.get('color') in COLORES else 'azul',
         'tz': d.get('tz') if zona_valida(d.get('tz')) else TZ_DEF,
         'horario': normal_horario(d.get('horario')),
+        'sesiones': normal_sesiones(d.get('sesiones')),
         'orden': _orden(d.get('orden')),
     }
+
+
+def normal_sesiones(v):
+    """Lo que el closer ajustó de cada evento: {evento_id: {duracion?, margen?}} en minutos. Lo que no
+    ajustó no aparece y toma la propuesta del evento."""
+    out = {}
+    for k, x in list(obj(v).items())[:100]:
+        x = obj(x)
+        s = {}
+        if x.get('duracion') not in ('', None):
+            s['duracion'] = entero(x.get('duracion'), DURACION_MIN, DURACION_MAX, 45)
+        if x.get('margen') not in ('', None):
+            s['margen'] = entero(x.get('margen'), 0, MARGEN_MAX, 0)
+        if s:
+            out[js_str(k)] = s
+    return out
 
 
 def normal_grupo(id, d):
@@ -271,8 +290,7 @@ def _pesos(v):
 def normal_evento(id, d):
     d = obj(d)
     rs, an, pa, zn = obj(d.get('reservas')), obj(d.get('antel')), obj(d.get('paso')), obj(d.get('zona'))
-    dur_n = js_number(d.get('duracion'))
-    dur = int(dur_n) if dur_n in DURACIONES else 45
+    dur = entero(d.get('duracion'), DURACION_MIN, DURACION_MAX, 45)
     return {
         'id': id,
         'nombre': cortar(txt(d.get('nombre'), 'Sin nombre'), 80),
@@ -280,6 +298,8 @@ def normal_evento(id, d):
         'funnel': txt(d.get('funnel')),
         'formulario': txt(d.get('formulario')),
         'duracion': dur,
+        # Margen después de cada sesión: bloquea la agenda del closer pero el lead no lo ve.
+        'margen': entero(d.get('margen'), 0, MARGEN_MAX, 0),
         'activo': d.get('activo') is not False,
         'publicado': d.get('publicado') if isinstance(d.get('publicado'), str) else '',
         'orden': _orden(d.get('orden')),

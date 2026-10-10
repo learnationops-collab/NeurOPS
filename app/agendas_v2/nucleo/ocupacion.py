@@ -1,5 +1,6 @@
 """Ocupación de los closers a partir de las reservas. Port de reservasDe y opcionesDeOcupacion
-(frontend data/almacen.js). Las reservas traen `estado`, `closer_id`, `inicio_ms` y `fin_ms`.
+(frontend data/almacen.js). Las reservas traen `estado`, `closer_id`, `inicio_ms`, `fin_ms` (fin de la sesión) y
+`margen_min` (lo que el closer se reservó después; también bloquea).
 """
 
 from app.agendas_v2.nucleo.disponibilidad import ahora_ms, se_solapa
@@ -22,7 +23,10 @@ def opciones_de_ocupacion(reservas, ahora=None):
     for r in reservas:
         if r.get('estado') != 'agendada' or not r.get('closer_id') or r.get('inicio_ms') is None:
             continue
-        por.setdefault(r['closer_id'], []).append({'inicio': r['inicio_ms'], 'fin': r.get('fin_ms')})
+        fin = r.get('fin_ms')
+        if fin is not None:
+            fin += int(r.get('margen_min') or 0) * 60000
+        por.setdefault(r['closer_id'], []).append({'inicio': r['inicio_ms'], 'fin': fin})
     return {
         'ahora': ahora,
         'ocupado': lambda pid, t, dur: se_solapa(por.get(pid, []), t, dur),

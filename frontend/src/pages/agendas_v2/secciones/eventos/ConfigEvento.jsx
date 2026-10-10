@@ -1,8 +1,9 @@
-// Configuración de un evento: General, Disponibilidad, Página de reserva, eliminar y la Revisión al costado.
+// Configuración de un evento: General, Disponibilidad, Sesiones de cada closer, Página de reserva, eliminar y
+// la Revisión al costado.
 // En un funnel de setting el link muestra los de cada setter; en los otros, los links por procedencia.
 
 import { useState } from 'react';
-import { DURACIONES, TZ_DEF, ZONAS } from '../../core/catalogos';
+import { TZ_DEF, ZONAS } from '../../core/catalogos';
 import { buscar, closers, colorVar, nombreOrigen, ord } from '../../core/datos';
 import { linkEvento, revision, slugLibre } from '../../core/eventos';
 import { fechaOk, urlOk } from '../../core/normalizar';
@@ -13,6 +14,7 @@ import { Avatar, HUMO_MARCA, Humo, Icono, Seg, Sx } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
 import { copiarTexto, toast } from '../../ui/toast';
 import { ModalNoCalifica } from '../forms/Modales';
+import { CampoMinutos, SesionesDelEvento } from '../team/Sesiones';
 import { InputVivo, LinksSetters, slugOrigen, urlPublica, useBorrador } from './comun';
 
 const PASOS = [5, 10, 15, 20, 30, 45, 60];
@@ -76,8 +78,12 @@ function General({ d, e, f, cm }) {
                         .concat(fos.map(x => ({ v: x.id, n: x.nombre, icono: 'form', color: 'var(--info)' })))} />
             </Fila>
             <Fila l="Duración">
-                <Seg sm label="Duración" valor={e.duracion} onChange={v => almacen.editar('eventos', e.id, { duracion: v }, true)}
-                    opciones={DURACIONES.map(m => ({ v: m, n: m + ' min' }))} />
+                <CampoMinutos id="ev-dur" label="Duración" valor={e.duracion} onCambio={v => almacen.editar('eventos', e.id, { duracion: v }, true)} />
+                {!e.persona && <span className="t-sm mut">Propuesta: cada closer la puede ajustar.</span>}
+            </Fila>
+            <Fila l="Margen">
+                <CampoMinutos margen id="ev-margen" label="Margen" valor={e.margen} onCambio={v => almacen.editar('eventos', e.id, { margen: v }, true)} />
+                <span className="t-sm mut">Después de cada sesión, para poder extenderla. Bloquea la agenda; el lead no lo ve.</span>
             </Fila>
             <Fila l="Link" cls="ffila--top">
                 <div className="entrada" style={{ flex: '1 1 100%', minWidth: 0 }}>
@@ -259,6 +265,12 @@ export default function ConfigEvento({ e }) {
             </div>
             <div className="ev-col">
                 <Bloque tit="Disponibilidad" icono="calendar" i={1}><Disponibilidad e={e} /></Bloque>
+                {!e.persona && !cm && (
+                    <Bloque tit="Sesiones de cada closer" icono="clock" i={0}>
+                        <p className="t-sm mut">Lo que cada uno ajustó sobre la propuesta. Lo podés personalizar acá.</p>
+                        <SesionesDelEvento e={e} personas={closers(d)} onCambio={(p, sesiones) => almacen.editar('personas', p.id, { sesiones }, true)} />
+                    </Bloque>
+                )}
                 <Bloque tit="Página de reserva" icono="monitor" i={2}><Pagina d={d} e={e} /></Bloque>
             </div>
             <aside className="panel panel--sm caja ev-rev" style={{ overflow: 'hidden' }} aria-label="Revisión">

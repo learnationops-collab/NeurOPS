@@ -2,7 +2,7 @@
 // (sesion/menuSesion.js) en cualquier pantalla, a través de sesion/ConfiguracionContext.jsx. Las
 // pestañas dependen del rol:
 //   Datos (foto, email)                      todos
-//   Disponibilidad · Integraciones           quienes reciben agendas (closer, dirección comercial, admin)
+//   Disponibilidad (y Mis sesiones, closer) · Integraciones   quienes reciben agendas (closer, dirección comercial, admin)
 //   Mis eventos (sus propios links)          closer
 //   Equipo (alta, roles, contraseñas)        admin
 //   Apariencia (tema y modo)                 todos
@@ -16,7 +16,7 @@
 // resultado.
 
 import { useState } from 'react';
-import { DatosCuenta, TarjetaCalendar, TarjetaDisponibilidad, TarjetaWhatsapp } from '../pages/agendas_v2/secciones/conf/cuenta';
+import { DatosCuenta, TarjetaCalendar, TarjetaDisponibilidad, TarjetaSesiones, TarjetaWhatsapp } from '../pages/agendas_v2/secciones/conf/cuenta';
 import MisEventos from '../pages/agendas_v2/secciones/conf/MisEventos';
 import TeamManagementPage from '../pages/admin/team/TeamManagementPage';
 import TabApariencia from '../temas/TabApariencia';
@@ -46,7 +46,7 @@ export default function Configuracion({ user = null, tabInicial = null, onTab = 
     const elegir = (id) => { setElegida(id); onTab(id); };
     const [raiz, dataTheme] = useTemaDeHoja();
     let cuerpo;
-    if (tab === 'disponibilidad') cuerpo = <TarjetaDisponibilidad />;
+    if (tab === 'disponibilidad') cuerpo = <><TarjetaDisponibilidad />{user?.role === 'closer' && <TarjetaSesiones />}</>;
     else if (tab === 'integraciones') cuerpo = <><TarjetaCalendar /><TarjetaWhatsapp /></>;
     else if (tab === 'eventos') cuerpo = <MisEventos />;
     else if (tab === 'equipo') cuerpo = <TeamManagementPage embebido />;
