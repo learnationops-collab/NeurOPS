@@ -34,6 +34,13 @@ describe('el árbol de «Resultado» habla en acciones que la ficha conoce', () 
   });
 });
 
+describe('la objeción desde el historial', () => {
+  it('se postea en la agenda que se eligió, solo con el texto', async () => {
+    await ejecutarAccion('guardar_objecion', 71, { texto: 'Lo tiene que pensar', otra: 'cosa' });
+    expect(api.post).toHaveBeenCalledWith('/ficha/71/objecion', { texto: 'Lo tiene que pensar' });
+  });
+});
+
 describe('rutas de la venta', () => {
   it('registrar la venta postea el payload entero en la ruta de venta de esa agenda', async () => {
     const payload = { venta: { tipo_pago: 'RR - parcial', monto: 500 }, plan_cuotas: { total: 1500 } };

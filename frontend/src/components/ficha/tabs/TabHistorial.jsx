@@ -8,6 +8,7 @@ import { CampoPrograma, CampoTotal } from '../acciones/CamposCobro';
 import BorrarConConfirmacion from '../historial/BorrarConConfirmacion';
 import MotivoDelFallo from '../historial/MotivoDelFallo';
 import FilaAgenda from '../historial/FilaAgenda';
+import ObjecionDeAgenda from '../historial/ObjecionDeAgenda';
 import FilaSeguimiento, { estadoDeSeguimiento } from '../historial/FilaSeguimiento';
 import AgendarSeguimiento from '../historial/AgendarSeguimiento';
 import FilaPago from '../historial/FilaPago';
@@ -189,6 +190,13 @@ const Eventos = ({ eventos, puedeEditar, onAccion }) => {
                     <button type="button" className="btn btn--linea btn--sm"
                         onClick={() => setEditando(null)}>Cancelar</button>
                 </span>
+            ) : e.tipo === 'objecion' ? (
+                // La fila guarda la objeción tal cual (es el contrato que lee el dashboard): sin el
+                // rótulo, un «Lo tiene que pensar» suelto no dice qué es.
+                <span className="t-sm fila" style={{ gap: 'var(--s2)', minWidth: 0, alignItems: 'flex-start' }}>
+                    <Chip label="Objeción" tono="warning" />
+                    <span>{e.detalle}</span>
+                </span>
             ) : (
                 <span className="t-sm">{e.detalle}</span>
             )}
@@ -314,7 +322,11 @@ const Agendas = ({ agendas, vocabulario, closerId, puedeEditar, puedeReasignar, 
                     // El tercer argumento apunta la acción a ESTA agenda, no a la que abrió la ficha.
                     onEditar={(cambios) => onAccion?.('editar_agenda', cambios, a.id)}
                     puedeBorrar={puedeBorrar} unica={agendas.length === 1}
-                    onBorrar={() => onAccion?.('eliminar_agenda', {}, a.id)}>
+                    onBorrar={() => onAccion?.('eliminar_agenda', {}, a.id)}
+                    // La objeción de una llamada que no cerró: se agrega o se reemplaza acá, con el
+                    // mismo permiso que corregir la agenda (es la ruta de reportar).
+                    pie={<ObjecionDeAgenda agenda={a} puedeEditar={puedeEditar}
+                        onGuardar={(texto) => onAccion?.('guardar_objecion', { texto }, a.id)} />}>
                     {puedeEditar ? (
                         <>
                             <SelectorEstado etiqueta={`Pre call de la agenda del ${instanteLegible(a.fecha)}`}
@@ -568,6 +580,7 @@ const TabHistorial = ({ ficha, onAccion, puedeEditar = true, seccionAbierta = nu
         ].filter(Boolean).join(' · ');
 
     const totalPagado = pagos.reduce((x, p) => x + (Number(p.monto) || 0), 0);
+    const sinObjecion = agendas.filter(a => a.admite_objecion && !a.objecion).length;
 
     // La banda del cobro es de un cliente: un lead que todavía no compró no tiene nada que poner
     // ahí y la franja quedaría en cuatro guiones.
@@ -597,6 +610,9 @@ const TabHistorial = ({ ficha, onAccion, puedeEditar = true, seccionAbierta = nu
                 resumen={agendas.length
                     ? `${agendas.length} ${agendas.length === 1 ? 'agenda' : 'agendas'}`
                         + (agendas[0]?.fecha ? ` · próxima ${instanteLegible(agendas[0].fecha)}` : '')
+                        // Las llamadas que no cerraron y no dicen por qué se ven sin abrir nada.
+                        + (puedeReportar && sinObjecion
+                            ? ` · ${sinObjecion} sin objeción` : '')
                     : 'Sin agendas'}>
                 <Agendas agendas={agendas} vocabulario={ficha?.vocabulario}
                     closerId={ficha?.identidad?.closer?.id}

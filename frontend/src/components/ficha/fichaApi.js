@@ -60,6 +60,9 @@ const RUTAS = {
     // cliente, no solo la que la ficha tiene abierta: el id viaja en la URL (ver `onAccion`).
     estado_agenda: (appt, p) => api.patch(`/ficha/${appt}/estado`, p),
     crear_agenda: (appt, p) => api.post(`/ficha/${appt}/agenda`, p),
+    // La objeción de una llamada que no cerró (`{texto}`), agregada o reemplazada desde el
+    // historial en CUALQUIER agenda del cliente: el id viaja en la URL.
+    guardar_objecion: (appt, p) => api.post(`/ficha/${appt}/objecion`, { texto: p.texto }),
     // La fecha (instante UTC), la fuente y/o el closer de CUALQUIER agenda del cliente; solo
     // viaja lo que cambió.
     editar_agenda: (appt, p) => api.patch(`/ficha/${appt}/agenda`, p),
