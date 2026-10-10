@@ -155,18 +155,17 @@ def test_con_setters_el_equipo_cuenta_solo_las_agendas_que_genero_un_setter(clie
 
 
 @freeze_time(HOY)
-@pytest.mark.parametrize('tabla', ['ventas', 'clientes'])
-def test_un_setter_no_puede_pedir_las_ventas_ni_la_cartera_del_equipo(client, db, equipo, auth_headers,
-                                                                      tabla):
-    # Con rol setters esas tablas no se acotan por persona: para un setter eran las de todos.
+def test_un_setter_no_puede_pedir_la_cartera_del_equipo(client, db, equipo, auth_headers):
+    # Con rol setters la cartera no se acota por persona: para un setter era la de todos. Las ventas
+    # sí las pide desde el 10/10/2026, acotadas a su fuente (ver test_comercial_revisar_setter).
     respuesta = client.get(TABLA, headers=auth_headers(equipo['setter']),
-                           query_string={'period': 'mes', 'tabla': tabla})
+                           query_string={'period': 'mes', 'tabla': 'clientes'})
 
     assert respuesta.status_code == 403
 
 
 @freeze_time(HOY)
-@pytest.mark.parametrize('tabla', ['leads', 'generadas', 'agendas'])
+@pytest.mark.parametrize('tabla', ['leads', 'generadas', 'agendas', 'ventas'])
 def test_un_setter_si_ve_sus_tablas(client, db, equipo, auth_headers, tabla):
     respuesta = client.get(TABLA, headers=auth_headers(equipo['setter']),
                            query_string={'period': 'mes', 'tabla': tabla})

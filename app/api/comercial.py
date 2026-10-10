@@ -204,11 +204,13 @@ def tabla():
     cual = request.args.get('tabla', 'agendas')
     if cual not in TABLAS:
         cual = 'agendas'
-    # Las ventas y la cartera se atribuyen al closer, así que con rol setters se devuelven SIN
-    # acotar por persona (sirve a la dirección mirando el área de setting). Para un setter eso
-    # era la plata y los clientes de todo el equipo: su pantalla nunca las pide, pero el endpoint
-    # las servía igual (encontrado el 01/10/2026).
-    if current_user.role == ROLE_SETTER and cual in ('ventas', 'clientes'):
+    # La cartera se atribuye al closer que vendió, así que con rol setters se devuelve SIN acotar
+    # por persona (sirve a la dirección mirando el área de setting). Para un setter eso eran los
+    # clientes y las deudas de todo el equipo (encontrado el 01/10/2026): sigue prohibida.
+    #
+    # Las ventas sí, desde el 10/10/2026 (Revisar del setter: «que vea las ventas que se van
+    # registrando con su fuente»), y acotadas a las suyas acá abajo, no en la pantalla.
+    if current_user.role == ROLE_SETTER and cual == 'clientes':
         return jsonify({'message': 'Forbidden'}), 403
     # Sin `basis` explícito, cada tabla usa la fecha con la que se cuenta su número: las agendas
     # generadas por creación (ver `ComercialService.generadas`), las demás por la reunión.
@@ -223,12 +225,17 @@ def tabla():
         filas = ComercialService.clientes(closer_id=miembro_id if rol == ROL_CLOSERS else None)
         totales = ComercialService.totales_clientes(filas)
     elif cual == 'ventas':
-        # Las ventas se atribuyen al closer que las firmó: pedirlas acotadas por un setter daría
-        # una lista vacía, no la suya. Con rol setters se devuelven sin acotar por persona.
+        # Con closers, las que firmó ese closer. Con setters y una persona (el setter mismo, que
+        # `alcance_de` fija siempre, o la dirección eligiendo a uno), las que tienen su FUENTE: los
+        # cobros de «Setting · <setter>» de la tarjeta de fuentes (ver
+        # `ComercialService.de_la_fuente_del_setter`). `nombre or ''` porque un id sin usuario acota
+        # a nadie, no a todos. Con setters y sin persona (la dirección, todo el equipo), sin acotar.
         # `con_fuente`: cada fila lleva la fuente de su cobro, para filtrar y agrupar por ella en
         # Revisar. Se calcula una vez por pedido; filtrar y agrupar después es del lado del cliente.
+        de_un_setter = rol == ROL_SETTERS and miembro_id is not None
         filas = ComercialService.ventas(start, end, closer_nombre=nombre if rol == ROL_CLOSERS else None,
-                                        con_fuente=True)
+                                        con_fuente=True,
+                                        setter_nombre=(nombre or '') if de_un_setter else None)
         totales = ComercialService.totales_ventas(filas)
     elif cual == 'leads':
         de_setter = rol == ROL_SETTERS

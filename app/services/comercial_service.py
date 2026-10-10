@@ -616,21 +616,60 @@ class ComercialService:
                              if ComercialService.vendio(resolver_nombre_closer(v.email_vendedor), closer_nombre)]
 
     @staticmethod
-    def ventas(start, end, closer_nombre=None, con_fuente=False):
+    def de_la_fuente_del_setter(setter_nombre, procedencias):
+        """Los ids de los cobros cuya fuente es el setter `setter_nombre`, de un mapa
+        {id -> (balde, detalle, rótulo)} de `procedencia_por_venta`.
+
+        "Las ventas del setter" son las que la tarjeta «Ingresos por fuente» y Finanzas › Procedencia
+        ponen en «Setting · <setter>»: el balde `setting` con el detalle de ese setter. Es la misma
+        regla con la que la nómina le paga (`nomina_service.setter_de_la_venta`): la fuente de la
+        agenda que originó el pago, o si no hay, el setter escrito en la venta. Así su lista de
+        Revisar › Ventas son exactamente los cobros de su renglón en la tarjeta de la dirección.
+
+        No hay "sin acotar" acá: un nombre vacío, o un setter sin ninguna venta de su fuente, da un
+        conjunto vacío — nunca las del equipo (la fuga del conjunto vacío, ver `vendio`).
+        """
+        from app.services.fuente_service import normalizar
+
+        objetivo = normalizar(setter_nombre)
+        if not objetivo:
+            return set()
+        return {venta_id for venta_id, (balde, detalle, _rotulo) in procedencias.items()
+                if balde == 'setting' and detalle == objetivo}
+
+    @staticmethod
+    def ventas(start, end, closer_nombre=None, con_fuente=False, setter_nombre=None):
         """Filas de la tabla "Ventas". El cash del período sale de estas mismas filas.
 
         `con_fuente` le agrega a cada fila la fuente que trajo ese cobro (`_con_fuente`): la faceta
         y el agrupar «Fuente» de Revisar. Solo lo pide la tabla: esta función la corren también el
         bloque de Analizar, Variabilidad y el reporte diario, y en Comparativas una vez por persona
-        y por período, que no muestran la fuente y no tienen por qué pagar la atribución."""
+        y por período, que no muestran la fuente y no tienen por qué pagar la atribución.
+
+        `setter_nombre` deja solo los cobros cuya fuente es ese setter (ver
+        `de_la_fuente_del_setter`): Revisar › Ventas del setter, las que él originó. None es "no
+        acotar"; cualquier otro valor acota, también uno vacío. La fuente se calcula sobre TODAS
+        las ventas del período, como la tarjeta, así que una fila cae en el mismo balde para él y
+        para la dirección; ese contexto no le agrega ninguna fila ajena."""
         # El cliente de cada venta, para que la fila pueda abrir la ficha unificada. Se resuelve
         # en bloque ANTES del bucle: adentro sería una consulta por fila.
         del_periodo = ComercialService.ventas_del_periodo(start, end)
         clientes = clientes_de_ventas(del_periodo)
 
+        # Con un setter la fuente decide qué filas entran, así que se calcula antes del bucle (una
+        # sola vez: `_con_fuente` reusa este mismo mapa).
+        procedencias = None
+        del_setter = None
+        if setter_nombre is not None:
+            from app.services.procedencia_ingresos_service import procedencia_por_venta
+            procedencias = procedencia_por_venta(del_periodo, contexto=del_periodo)
+            del_setter = ComercialService.de_la_fuente_del_setter(setter_nombre, procedencias)
+
         filas = []
         propias = []
         for v in del_periodo:
+            if del_setter is not None and v.id not in del_setter:
+                continue
             nombre = resolver_nombre_closer(v.email_vendedor)
             if not ComercialService.vendio(nombre, closer_nombre):
                 continue
@@ -673,11 +712,11 @@ class ComercialService:
             filas_por_id[fila_id]['sena_estado'] = dato['estado']
         ComercialService._con_academia(filas)
         if con_fuente:
-            ComercialService._con_fuente(filas_por_id, propias, del_periodo)
+            ComercialService._con_fuente(filas_por_id, propias, del_periodo, procedencias)
         return filas
 
     @staticmethod
-    def _con_fuente(filas_por_id, propias, del_periodo):
+    def _con_fuente(filas_por_id, propias, del_periodo, procedencias=None):
         """Le pone a cada fila de Ventas la fuente que trajo ese cobro: `procedencia` (el balde,
         `{key, label, tone}`: Workshop, Setting, VSL, Fulfillment o Sin procedencia) y
         `procedencia_detalle` (`{key, label}`: en vivo o grabación, el setter… o None si el balde
@@ -697,11 +736,17 @@ class ComercialService:
         Fulfillment aunque la venta original haya sido de un setter.
 
         Con eso, filtrar Revisar › Ventas por una fuente da exactamente los cobros de esa fila de la
-        tarjeta, y su cash (bruto, como la tarjeta) suma su monto."""
+        tarjeta, y su cash (bruto, como la tarjeta) suma su monto.
+
+        `procedencias` es el mapa ya calculado sobre todo el período, si lo hay (las ventas de un
+        setter lo necesitan antes para elegir las filas): la atribución no se corre dos veces."""
         from app.services.procedencia_ingresos_service import PROCEDENCIAS, procedencia_por_venta
 
+        if procedencias is None:
+            procedencias = procedencia_por_venta(propias, contexto=del_periodo)
         baldes = {p['key']: {'key': p['key'], 'label': p['label'], 'tone': p['tone']} for p in PROCEDENCIAS}
-        for venta_id, (balde, sub, rotulo) in procedencia_por_venta(propias, contexto=del_periodo).items():
+        for venta_id in (v.id for v in propias):
+            balde, sub, rotulo = procedencias[venta_id]
             fila = filas_por_id[venta_id]
             fila['procedencia'] = dict(baldes[balde])
             fila['procedencia_detalle'] = {'key': sub, 'label': rotulo} if sub else None
