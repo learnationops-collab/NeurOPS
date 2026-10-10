@@ -18,8 +18,9 @@
 .mc {
     --mc-sin: var(--v6-blue2, #4E8BD8);
     --mc-con: var(--v6-pink, #FF3FA4);
-    /* Las «No cerradas»: el mismo naranja que «Presentó, no cerró» en el panel Estados
-       (`reparto-estados.css`), entre el error y el aviso. */
+    /* Las «No cerradas»: un naranja entre el error y el aviso (el que tenía «Presentó, no cerró»
+       en el panel Estados hasta el 09/10/2026), que no se confunde con el azul de las ventas ni
+       con el rosa de las señas. */
     --mc-no: color-mix(in oklch, var(--v6-dgr, #E85C4A) 55%, var(--v6-warn, #D9A441));
     --mc-presenta: rgba(255, 255, 255, .94);
     --mc-hueco: rgba(2, 6, 23, .55);
