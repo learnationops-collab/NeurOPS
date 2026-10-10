@@ -12,6 +12,7 @@ import WidgetsPill from './shared/WidgetsPill';
 import HotkeysManager from './admin/HotkeysManager';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
+import { useApariencia } from '../context/AparienciaContext';
 
 const MainLayout = ({ children }) => {
     const { user } = useAuth();
@@ -78,9 +79,11 @@ const MainLayout = ({ children }) => {
         }
     }, [isPillOpen, resetInactivity]);
 
+    // La imagen de fondo elegible es del sistema viejo: con tema elegido manda el fondo del tema.
+    const { elegido } = useApariencia();
     if (!user) return null;
 
-    const bgImage = backgroundType === 'custom' ? customBackground : backgroundType === 'stock' ? stockBackground : null;
+    const bgImage = elegido ? null : backgroundType === 'custom' ? customBackground : backgroundType === 'stock' ? stockBackground : null;
 
     return (
         <div

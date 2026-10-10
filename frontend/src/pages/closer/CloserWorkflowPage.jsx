@@ -27,7 +27,6 @@ import MenuSesion from '../comercial/components/MenuSesion';
 import { revertImpersonation } from '../../utils/impersonation';
 import { opcionesDeRol } from '../../utils/cuentasVinculadas';
 import '../comercial/comercial.css';
-import '../../temas/deck.css';
 import '../../components/dashboard/pareja.css';
 import ComisionMesCard from './components/ComisionMesCard';
 import ProcrastinarModal from './components/ProcrastinarModal';
@@ -1494,7 +1493,7 @@ const CloserWorkflowPage = () => {
     };
 
     return (
-        <div ref={paginaRef} className="tema-deck h-screen overflow-y-auto bg-v6 text-slate-100 flex flex-col custom-scrollbar"
+        <div ref={paginaRef} className="h-screen overflow-y-auto bg-v6 text-slate-100 flex flex-col custom-scrollbar"
             style={{ paddingBottom: 'calc(132px + env(safe-area-inset-bottom, 0px))' }}>
 
             {/* Header del Espacio de Trabajo Premium v6. Solo la marca y el buscador (pedido del

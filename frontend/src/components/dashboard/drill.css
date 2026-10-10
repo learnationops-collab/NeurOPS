@@ -44,7 +44,7 @@
 }
 
 .metrica-clic:focus-visible {
-    outline: 2px solid var(--brand-secondary, #6366F1);
+    outline: 2px solid var(--brand-secondary, var(--ln-brand-2, #6366F1));
     outline-offset: 2px;
 }
 

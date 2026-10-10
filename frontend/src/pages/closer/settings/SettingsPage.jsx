@@ -1,36 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../../services/api';
-import ThemeSelector from '../../../components/ui/ThemeSelector';
+import AparienciaEnAjustes from '../../../temas/AparienciaEnAjustes';
 import GoogleCalendarSettings from '../../../components/GoogleCalendarSettings';
-import { useTheme } from '../../../context/ThemeContext';
 import {
     Clock,
-    Calendar,
-    Trash2,
-    Plus,
     Check,
-    X,
     Loader2,
     Settings,
-    Shield,
-    User as UserIcon,
-    Bell,
-    Link as LinkIcon,
-    ExternalLink,
-    Copy,
-    Share2,
-    Save,
     AlertCircle,
-    ChevronRight,
-    MousePointer2,
-    Info,
-    CalendarDays,
-    Zap,
-    Columns,
-    Layers,
-    DollarSign,
-    Palette
+    Zap
 } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
@@ -43,121 +22,6 @@ const SLOTS = Array.from({ length: 16 }, (_, i) => {
     const min = (totalMinutes % 60).toString().padStart(2, '0');
     return `${hour}:${min}`;
 });
-
-const BackgroundPicker = () => {
-    const {
-        backgroundType, setBackgroundType,
-        customBackground, setCustomBackground,
-        stockBackground, setStockBackground
-    } = useTheme();
-
-    const stockImages = [
-        { name: 'Abstract Blue', url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop' },
-        { name: 'Cyberpunk City', url: 'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?q=80&w=2670&auto=format&fit=crop' },
-        { name: 'Minimal Mountain', url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2670&auto=format&fit=crop' },
-        { name: 'Dark Nebula', url: 'https://images.unsplash.com/photo-1462331940025-496dfbfc7564?q=80&w=2522&auto=format&fit=crop' },
-        { name: 'Glass Geometry', url: 'https://images.unsplash.com/photo-1635776062127-d379bfcba9f8?q=80&w=2532&auto=format&fit=crop' }
-    ];
-
-    const handleFileUpload = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setCustomBackground(reader.result);
-                setBackgroundType('custom');
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    return (
-        <div className="space-y-12">
-            <div className="flex gap-4 p-1.5 bg-main/50 rounded-2xl border border-base max-w-fit">
-                {[
-                    { id: 'theme', label: 'Tema Original', icon: Palette },
-                    { id: 'stock', label: 'Galería Stock', icon: Layers },
-                    { id: 'custom', label: 'Personalizado', icon: Plus }
-                ].map(type => (
-                    <button
-                        key={type.id}
-                        onClick={() => setBackgroundType(type.id)}
-                        className={`
-                            px-6 py-3 rounded-xl text-[9px] font-black tracking-widest transition-all flex items-center gap-2
-                            ${backgroundType === type.id ? 'bg-primary text-white shadow-lg' : 'text-muted hover:text-base'}
-                        `}
-                    >
-                        <type.icon size={14} />
-                        {type.label}
-                    </button>
-                ))}
-            </div>
-
-            <div className="animate-in fade-in zoom-in duration-500">
-                {backgroundType === 'theme' && (
-                    <div className="p-10 border border-dashed border-base rounded-[3rem] text-center space-y-4">
-                        <Info className="w-10 h-10 text-muted mx-auto" />
-                        <p className="text-muted font-black tracking-widest text-[10px]">Utilizando los colores definidos por el tema actual</p>
-                    </div>
-                )}
-
-                {backgroundType === 'stock' && (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-                        {stockImages.map(img => (
-                            <button
-                                key={img.url}
-                                onClick={() => setStockBackground(img.url)}
-                                className={`
-                                    group relative aspect-video rounded-2xl overflow-hidden border-2 transition-all
-                                    ${stockBackground === img.url ? 'border-primary scale-95 ring-4 ring-primary/20' : 'border-base hover:border-white/20'}
-                                `}
-                            >
-                                <img src={img.url} alt={img.name} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
-                                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3">
-                                    <p className="text-[8px] font-black text-white tracking-tighter">{img.name}</p>
-                                </div>
-                                {stockBackground === img.url && (
-                                    <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                                        <div className="bg-primary text-white p-1.5 rounded-full shadow-xl">
-                                            <Check size={16} strokeWidth={4} />
-                                        </div>
-                                    </div>
-                                )}
-                            </button>
-                        ))}
-                    </div>
-                )}
-
-                {backgroundType === 'custom' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <label className="flex flex-col items-center justify-center aspect-video p-10 border-2 border-dashed border-base hover:border-primary/50 rounded-[3rem] cursor-pointer transition-all group bg-main/20">
-                            <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
-                            <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mb-6 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all shadow-xl">
-                                <Plus size={32} />
-                            </div>
-                            <span className="text-[10px] font-black tracking-[0.2em] text-muted group-hover:text-base">Subir Imagen Nueva</span>
-                        </label>
-
-                        {customBackground && (
-                            <div className="relative aspect-video rounded-[3rem] overflow-hidden border-2 border-primary shadow-2xl">
-                                <img src={customBackground} alt="Custom Background" className="w-full h-full object-cover" />
-                                <div className="absolute inset-0 bg-primary/10 flex items-center justify-center">
-                                    <div className="bg-primary text-white px-6 py-2 rounded-full font-black text-[10px] tracking-widest shadow-2xl">VISTA PREVIA ACTIVA</div>
-                                </div>
-                                <button
-                                    onClick={() => setCustomBackground(null)}
-                                    className="absolute top-6 right-6 p-3 bg-rose-500 text-white rounded-2xl shadow-xl hover:bg-rose-600 transition-all"
-                                >
-                                    <Trash2 size={20} />
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-};
 
 const CloserSettingsPage = () => {
     const [availability, setAvailability] = useState([]);
@@ -462,12 +326,8 @@ const CloserSettingsPage = () => {
                 {activeTab === 'appearance' && (
                     <div className="space-y-12">
                         <Card variant="surface" className="p-10 border-base shadow-2xl">
-                            <h3 className="text-3xl font-black mb-8">Temas del Sistema</h3>
-                            <ThemeSelector />
-                        </Card>
-                        <Card variant="surface" className="p-10 border-base shadow-2xl">
-                            <h3 className="text-3xl font-black mb-8">Fondo de Pantalla</h3>
-                            <BackgroundPicker />
+                            <h3 className="text-3xl font-black mb-8">Apariencia</h3>
+                            <AparienciaEnAjustes />
                         </Card>
                     </div>
                 )}

@@ -1,0 +1,58 @@
+/* PUENTE — con tema elegido, las variables del sistema viejo (index.css: :root, .theme-elegant/
+   clean/custom, [data-theme-style=glass|solid]) leen los roles del tema. Todo lo armado con
+   bg-main, bg-surface, glass-panel, text-main, text-muted, border-base, bg-primary, input-theme o
+   los colores de shadcn (card, popover, muted, destructive) sigue así al tema sin tocar un archivo.
+
+   `html:root[data-tema][data-tema-modo]` (0,3,1) le gana al selector más fuerte del sistema viejo,
+   `:root.dark[data-theme-style="glass"]` (0,3,0). Sin tema elegido no aplica: cada uno sigue con lo
+   que tenía. Las tarjetas (`--bg-card`) van con el fondo de ventana del tema, opaco: en el sistema
+   viejo también hacen de modal y de menú, y un contenedor translúcido ahí no se leería. */
+html:root[data-tema][data-tema-modo] {
+    --bg-app: var(--ln-page-bg);
+    --color-bg: var(--ln-page-base);
+
+    --bg-card: var(--ln-window-bg);
+    --bg-sidebar: var(--ln-window-bg);
+    --color-surface: var(--ln-window-bg);
+    --glass-bg: var(--ln-window-bg);
+    --bg-item: var(--ln-ct3-bg);
+    --color-surface-hover: var(--ln-ct3-bg);
+    --bg-item-hover: var(--ln-ct3-bg-hover);
+    --bg-input: var(--ln-input-bg);
+    --text-input: var(--ln-text-in);
+
+    --text-main: var(--ln-text-out);
+    --text-on-app: var(--ln-text-out);
+    --color-text-base: var(--ln-text-out);
+    --text-on-card: var(--ln-text-in);
+    --text-muted: var(--ln-text-muted);
+    --text-muted-on-app: var(--ln-text-muted);
+    --color-text-muted: var(--ln-text-muted);
+
+    --border-color: var(--ln-border-main);
+    --color-border: var(--ln-border-main);
+    --color-border-hover: var(--ln-border-strong);
+    --glass-border: 1px solid var(--ln-border-main);
+    --glass-blur: var(--ln-blur);
+
+    --brand-primary: var(--ln-brand-2);
+    --brand-secondary: var(--ln-brand);
+    --color-primary: var(--ln-brand);
+    --color-primary-hover: var(--ln-brand-accent);
+    --color-secondary: var(--ln-brand-2);
+    --color-secondary-hover: var(--ln-brand-2-accent);
+    --color-accent: var(--ln-brand-accent);
+    --btn-bg: var(--ln-brand);
+    --btn-text: var(--ln-brand-content);
+    --secondary-foreground: var(--ln-brand-2-content);
+    --destructive: var(--ln-danger);
+    --destructive-foreground: var(--ln-on-status);
+
+    --shadow-main: var(--ln-shadow);
+    --shadow-brand: var(--ln-shadow-brand);
+}
+
+/* En glass, cada tarjeta se redefinía el texto secundario con un gris fijo (index.css). */
+html[data-tema] .bg-surface {
+    --text-muted: var(--ln-text-muted);
+}

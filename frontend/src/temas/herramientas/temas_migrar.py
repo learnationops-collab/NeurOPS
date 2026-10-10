@@ -21,6 +21,10 @@ PALETA = {
     '0d1246': 'ln-page-base', 'ff5cb1': 'ln-brand-accent', 'ffc2e4': 'ln-brand-text',
     '34a878': 'ln-success', '1e9974': 'ln-success', '9ae6c0': 'ln-success-text',
     '06210f': 'ln-brand-content', '1a0313': 'ln-brand-content',
+    # superficies y bordes de estado (los de .dc-shell) y navys sueltos
+    '071a24': 'ln-success-bg', '10413d': 'ln-success-border', '1a171c': 'ln-warning-bg', '473924': 'ln-warning-border',
+    '1b0f1d': 'ln-danger-bg', '4c2227': 'ln-danger-border', '0a152c': 'ln-info-bg', '1a3155': 'ln-info-border',
+    '05082d': 'ln-page-base', '050822': 'ln-page-base', '101550': 'ln-page-base', '4354ff': 'ln-brand-2-accent',
 }
 
 COLOR = re.compile(r'#[0-9a-fA-F]{3,8}\b|rgba?\(\s*[0-9.]+\s*,\s*[0-9.]+\s*,\s*[0-9.]+\s*(?:,\s*[0-9.]+\s*)?\)')
@@ -96,9 +100,9 @@ def _resolver(t):
     prev = None
     while prev != t:
         prev = t
-        t = re.sub(r'color-mix\(in srgb, var\(--[a-z0-9-]+, (#[0-9a-f]{6})\) ([0-9.]+)%, transparent\)',
+        t = re.sub(r'color-mix\(in srgb, var\(--ln-[a-z0-9-]+, (#[0-9a-f]{6})\) ([0-9.]+)%, transparent\)',
                    lambda m: 'rgba(%d,%d,%d,%s)' % (*a_rgba(m.group(1))[:3], round(float(m.group(2)) / 100, 4)), t)
-        t = re.sub(r'var\(--[a-z0-9-]+, ((?:#[0-9a-fA-F]{3,8})|(?:rgba?\([^()]*\)))\)', r'\1', t)
+        t = re.sub(r'var\(--ln-[a-z0-9-]+, ((?:#[0-9a-fA-F]{3,8})|(?:rgba?\([^()]*\)))\)', r'\1', t)
     return t
 
 

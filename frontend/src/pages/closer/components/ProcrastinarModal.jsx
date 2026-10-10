@@ -64,7 +64,7 @@ const ProcrastinarModal = ({ pendientes = 0, onClose, onGo }) => {
 
     return createPortal(
         <div
-            className="tema-deck fixed inset-0 z-[99997] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-[99997] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4"
             onClick={onClose}
             role="dialog"
             aria-modal="true"

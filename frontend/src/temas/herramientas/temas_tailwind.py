@@ -1,7 +1,7 @@
 """Genera las reglas de tema para las clases de color de Tailwind usadas en un conjunto de archivos.
 
 Solo existen bajo `[data-tema]`: sin tema elegido no aplican y todo queda como hoy.
-Uso: python temas_tailwind.py <scope> <salida.css> <archivos...>
+Uso: python temas_tailwind.py <scope> <salida.css> <archivos...>   (scope "" = toda la app)
 """
 import os
 import re
@@ -23,7 +23,25 @@ TEXTO_DE = {'ln-brand': 'ln-brand-text', 'ln-brand-2': 'ln-brand-2-text', 'ln-in
             'ln-success': 'ln-success-text', 'ln-warning': 'ln-warning-text', 'ln-danger': 'ln-danger-text'}
 CLARO_DE = {'ln-brand': 'ln-brand-accent', 'ln-brand-2': 'ln-brand-2-accent'}
 GRISES = {'slate', 'gray', 'zinc', 'neutral', 'stone'}
-EXTRA_HEX = {'111219': 'ln-window-bg'}
+EXTRA_HEX = {'111219': 'ln-window-bg', '1b0f1d': 'ln-danger-bg', '4c2227': 'ln-danger-border', '1a1204': 'ln-warning-bg'}
+FIJOS = {'25d366'}  # el verde de WhatsApp es marca de otro: no cambia con el tema
+
+
+def rol_por_luz(h, util):
+    """Hex escrito a mano que no está en la paleta: por luminosidad y tono."""
+    import colorsys
+    r, g, b = (int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
+    tono, luz, sat = colorsys.rgb_to_hls(r, g, b)
+    texto = util in ('text', 'placeholder', 'decoration')
+    if luz < 0.22:  # paneles casi negros o navy
+        return 'ln-inverse-text' if texto else 'ln-window-bg' if util == 'bg' else 'ln-border-main'
+    if luz > 0.9:
+        return 'ln-text-out' if texto else 'ln-inverse-bg' if util == 'bg' else 'ln-border-subtle'
+    if sat < 0.2:  # grises medios
+        return 'ln-text-muted' if texto else 'ln-ct3-bg-strong' if util == 'bg' else 'ln-border-strong'
+    if 0.55 <= tono <= 0.72:  # azules
+        return 'ln-brand-2' if luz < 0.55 else 'ln-brand-2-accent' if luz < 0.75 else 'ln-brand-2-text'
+    return None
 
 VARIANTES = r'(?:(?:hover|focus|focus-visible|focus-within|active|disabled|group-hover|placeholder):)*'
 UTIL = r'(?:bg|from|via|to|text|border(?:-[trblxy])?|ring|divide|placeholder|fill|stroke|accent|caret|outline|decoration)'
@@ -34,7 +52,11 @@ CLASE = re.compile(r'(?<![\w:-])(' + VARIANTES + UTIL + '-' + COLOR + r'(?:/(?:\
 def rol_gris(util, shade):
     s = int(shade)
     if util == 'text' or util == 'placeholder':
-        return ('ln-text-out', None) if s <= 200 else ('ln-text-out', 85) if s == 300 else ('ln-text-muted', None) if s == 400 else ('ln-text-faint', None)
+        if s <= 200: return ('ln-text-out', None)
+        if s == 300: return ('ln-text-out', 85)
+        if s == 400: return ('ln-text-muted', None)
+        if s <= 600: return ('ln-text-faint', None)
+        return ('ln-inverse-text', None)  # texto oscuro en una interfaz oscura: va sobre algo claro
     if util == 'bg':
         if s >= 950: return ('ln-page-base', None)
         if s >= 900: return ('ln-window-bg', None)
@@ -42,6 +64,7 @@ def rol_gris(util, shade):
         if s >= 600: return ('ln-border-strong', None)
         return ('ln-inverse-bg', None)
     # bordes, ring, divide, outline
+    if s <= 300: return ('ln-border-subtle', None)
     if s >= 900: return ('ln-border-subtle', None)
     if s >= 800: return ('ln-border-main', None)
     return ('ln-border-strong', None)
@@ -49,7 +72,9 @@ def rol_gris(util, shade):
 
 def valor(util, color, opac):
     if color == 'white':
-        rol, base = 'ln-text-out', None
+        # blanco sólido de fondo en una interfaz oscura es una píldora o botón invertido; con
+        # transparencia, un velo del color del texto
+        rol, base = ('ln-inverse-bg' if util == 'bg' and (opac is None or opac >= 100) else 'ln-text-out'), None
     elif color == 'black':
         if util == 'bg':
             rol, base = ('ln-scrim' if (opac or 100) >= 50 else 'ln-inset-bg'), None
@@ -59,7 +84,9 @@ def valor(util, color, opac):
     elif color.startswith('[#'):
         h = color[2:-1].lower()
         h = ''.join(c * 2 for c in h) if len(h) == 3 else h[:6]
-        rol, base = tm.PALETA.get(h) or EXTRA_HEX.get(h), None
+        if h in FIJOS:
+            return None
+        rol, base = tm.PALETA.get(h) or EXTRA_HEX.get(h) or rol_por_luz(h, util), None
         if not rol:
             return None
     else:
@@ -73,6 +100,11 @@ def valor(util, color, opac):
         else:
             r = FAM[fam]
             s = int(shade)
+            if util == 'bg' and s <= 200:
+                # fondo clarito de un color: un tinte de ese color
+                return f'color-mix(in srgb, var(--{r}) {round(15 * (opac or 100) / 100)}%, transparent)'
+            if util not in ('text', 'placeholder', 'decoration') and s <= 200:
+                return f'color-mix(in srgb, var(--{r}) {round(35 * (opac or 100) / 100)}%, transparent)'
             if util == 'bg' and s >= 900:
                 # fondo muy oscuro de un color: un tinte de ese color sobre el fondo del tema
                 return f'color-mix(in srgb, var(--{r}) 25%, var(--ln-page-base))' if not opac or opac >= 100 else                     f'color-mix(in srgb, color-mix(in srgb, var(--{r}) 25%, var(--ln-page-base)) {opac}%, transparent)'
@@ -133,8 +165,11 @@ def regla(scope, clase):
         sel += '::placeholder'
     if base_util == 'divide':
         sel += ' > * + *'
-    alcance = f'[data-tema] :is({scope}, {scope} *)'
-    selector = f'{alcance} {grupo}{sel}' if grupo else f'[data-tema] :is({scope}, {scope} *){sel}'
+    if not scope:  # toda la app: cuelga de <html> con tema
+        selector = f'[data-tema] {grupo}{sel}'
+    else:
+        alcance = f'[data-tema] :is({scope}, {scope} *)'
+        selector = f'{alcance} {grupo}{sel}' if grupo else f'{alcance}{sel}'
     return selector + '{' + (decl or ';'.join(f'{p}:{v}' for p in props)) + '}'
 
 

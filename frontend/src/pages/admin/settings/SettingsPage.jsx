@@ -3,7 +3,7 @@ import api from '../../../services/api';
 import { Shield, User, LogOut, Palette, AlertTriangle } from 'lucide-react';
 import TeamManagementPage from '../team/TeamManagementPage';
 import Card from '../../../components/ui/Card';
-import ThemeSelector from '../../../components/ui/ThemeSelector';
+import AparienciaEnAjustes from '../../../temas/AparienciaEnAjustes';
 
 const SettingsPage = () => {
     const [activeSection, setActiveSection] = useState('team');
@@ -103,11 +103,11 @@ const SettingsPage = () => {
                         <div className="animate-in fade-in slide-in-from-right-4 duration-500 space-y-8">
                             <div className="bg-surface p-10 rounded-[2.5rem] border border-base space-y-6">
                                 <div>
-                                    <h3 className="text-xl font-black text-base italic uppercase tracking-tight">Personalización de Interfaz</h3>
-                                    <p className="text-xs text-muted font-bold uppercase tracking-widest mt-1">Elige el tema que mejor se adapte a tu flujo de trabajo</p>
+                                    <h3 className="text-xl font-black text-base italic uppercase tracking-tight">Apariencia</h3>
+                                    <p className="text-xs text-muted font-bold uppercase tracking-widest mt-1">El tema y su modo, claro u oscuro</p>
                                 </div>
                                 <div className="pt-4">
-                                    <ThemeSelector />
+                                    <AparienciaEnAjustes />
                                 </div>
                             </div>
                         </div>

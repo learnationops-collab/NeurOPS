@@ -11,6 +11,8 @@
 import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import '../temas/temas.css';
+import '../temas/tailwind.css';
+import '../temas/puente.css';
 
 export const TEMAS = [
     { id: 'classic', nombre: 'Learnation Classic', descripcion: 'El de siempre del closer' },

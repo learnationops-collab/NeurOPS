@@ -1,8 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Compass, Ghost, LogOut, Palette, Settings, VenetianMask } from 'lucide-react';
+import { Compass, Ghost, LogOut, Settings, VenetianMask } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
 import useDockNavigation from '../../hooks/useDockNavigation';
 import DockSecciones from '../../pages/comercial/components/DockSecciones';
@@ -12,22 +11,16 @@ import { opcionesDeFinanzas, opcionesDeRol } from '../../utils/cuentasVinculadas
 import { revertImpersonation } from '../../utils/impersonation';
 import '../../pages/comercial/comercial.css';
 
-const TEMAS = [
-    { id: 'elegant', label: 'Elegant Blue · claro con vidrio' },
-    { id: 'clean', label: 'Clean Mac · claro sólido' },
-    { id: 'custom', label: 'Custom Pro · oscuro' },
-];
-
 /**
  * El dock del admin: el MISMO de los demás roles (DockSecciones + MenuSesion), en lugar de la
  * píldora flotante vieja. Las secciones son las páginas de siempre (useDockNavigation) y el menú
- * de sesión junta lo que estaba repartido en la píldora: cambiar de área, Playbook, tema, ajustes,
+ * de sesión junta lo que estaba repartido en la píldora: cambiar de área, Playbook, ajustes (con la
+ * Apariencia: tema y modo),
  * simular, cambiar de vista o de rol y cerrar sesión. Con «ver finanzas», además «Pasar a Finances»
  * (/finanzas, 08/10/2026).
  */
 const DockAdmin = ({ onSettingsClick, onImpersonateClick }) => {
     const { user, logout } = useAuth();
-    const { theme, setTheme } = useTheme();
     const { pendingCount, openPlaybook } = usePlaybook();
     const { pages, activePageIndex, onPageChange } = useDockNavigation();
     const navigate = useNavigate();
@@ -37,14 +30,6 @@ const DockAdmin = ({ onSettingsClick, onImpersonateClick }) => {
         opcionCambiarDeArea(user, 'administracion', navigate),
         [
             { id: 'playbook', label: 'Playbook', Icono: Compass, cuenta: pendingCount || null, onClick: () => openPlaybook('pending') },
-            {
-                id: 'tema', label: 'Tema', Icono: Palette,
-                panel: {
-                    titulo: 'Apariencia',
-                    vacio: '',
-                    cargar: () => TEMAS.map((t) => ({ id: t.id, label: `${theme === t.id ? '✓ ' : ''}${t.label}`, onClick: () => setTheme(t.id) })),
-                },
-            },
             { id: 'ajustes', label: 'Ajustes generales', Icono: Settings, onClick: onSettingsClick },
             { id: 'simular', label: 'Simular acceso', Icono: VenetianMask, onClick: onImpersonateClick },
         ],
