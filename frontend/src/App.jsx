@@ -273,8 +273,9 @@ function App() {
             <Route
               path="/admin/hiring"
               element={
-                // Igual que Postulaciones: sub-app con header y dock propios, sin
-                // MainLayout. Es la única pantalla del rol `hiring`.
+                // Learnation Talent: sub-app con header y dock propios, sin MainLayout.
+                // Es la única pantalla del rol `hiring` (Asistente y, desde el 10/10/2026,
+                // la sección Closers, que eran las Postulaciones del admin).
                 <ProtectedRoute roles={['admin', 'hiring']}>
                   <HiringDashboardPage />
                 </ProtectedRoute>
