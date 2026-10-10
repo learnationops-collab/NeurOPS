@@ -8,7 +8,10 @@ fuera de alcance (un 403 confirmaría que existe).
 
 "Suyo" es todo lo que alguna de sus listas le puede mostrar, con las reglas con las que se arman:
 
-  1. una agenda que generó él (`Appointment.setter_id`): sus agendas generadas;
+  1. una agenda que generó él (`Appointment.setter_id`): sus agendas generadas, las de
+     `comercial_service.es_agenda_del_setter` (la definición de sus números, de su Revisar y de
+     «Mis agendas»). Acá entra también el marcador que deja cualificar un lead: no es una agenda,
+     pero el lead lo cualificó él;
   2. una agenda cuya FUENTE es él (`Appointment.origin` con su nombre): el lápiz de la ficha escribe
      la fuente ahí y en el Tablero (`ficha_agendas_service.poner_fuente`), y las agendas viejas de un
      setter (junio-julio de 2026) quedaron con la fuente y sin `setter_id`;
