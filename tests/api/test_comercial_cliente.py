@@ -114,10 +114,20 @@ def test_un_closer_no_abre_un_cliente_que_no_vendio_el(client, db, equipo, auth_
     assert ficha(client, equipo['otro_closer'], auth_headers, comprador).status_code == 404
 
 
-def test_el_setter_puede_mirar_para_saber_en_que_termino_el_lead(client, db, equipo, auth_headers, comprador):
-    """La cartera se atribuye por quién VENDIÓ, así que acotarla a un setter daría siempre vacío:
-    el setter mira la del equipo, igual que en la tabla."""
+def test_el_setter_puede_mirar_en_que_termino_el_lead_que_agendo(client, db, equipo, auth_headers, comprador):
+    """La cartera se atribuye por quién VENDIÓ, así que no se acota por el setter: el que agendó a
+    este cliente lo mira entero (¿en qué terminó el lead que agendé?)."""
+    agenda = Appointment.query.filter_by(client_id=comprador.id).first()
+    agenda.setter_id = equipo['setter'].id
+    db.session.commit()
+
     assert ficha(client, equipo['setter'], auth_headers, comprador).status_code == 200
+
+
+def test_un_setter_no_abre_un_cliente_que_no_es_suyo(client, db, equipo, auth_headers, comprador):
+    """Hasta el 10/10/2026 un setter abría cualquier cliente del sistema, con pagos y deuda. Ahora
+    solo los suyos (ver test_ficha_alcance_setter); 404 como el closer, no 403."""
+    assert ficha(client, equipo['setter'], auth_headers, comprador).status_code == 404
 
 
 def test_un_rol_ajeno_al_area_comercial_no_entra(client, db, equipo, auth_headers, comprador):

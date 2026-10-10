@@ -4,7 +4,8 @@ Un solo tablero para tres audiencias, con el alcance resuelto SIEMPRE en el serv
 
   · dirección comercial y admin: todo el equipo, con selector de persona y de rol;
   · closer en "Mis datos": sus agendas y sus ventas, sin selector de equipo;
-  · setter en "Mis datos": sus leads y las agendas que generó.
+  · setter en "Mis datos" y en su Revisar: sus leads, las agendas que generó y las ventas de su
+    fuente.
 
 El frontend esconde controles, pero eso no protege nada: acá se ignora cualquier `rol` o
 `miembro_id` que mande alguien que no tiene permiso para elegirlos (ver `alcance_de`). Un closer
@@ -26,6 +27,7 @@ from app.services.comercial_service import (
     POST_CALL, POST_CALL_A_CLOSER_RESULT, PRE_CALL, PRE_CALL_A_RESULT, ROL_CLOSERS, ROL_SETTERS,
     ROLES, ComercialService,
 )
+from app.services.leads_del_setter import puede_abrir
 
 bp = Blueprint('comercial_api', __name__)
 
@@ -266,8 +268,12 @@ def cliente(client_id):
     nada, así que un rol que solo mira no necesita permisos de cobro para mirar.
 
     El alcance es el mismo que el de la tabla Clientes: a un closer solo se le deja abrir un
-    cliente al que él le vendió (ver `ComercialService.cliente`).
+    cliente al que él le vendió (ver `ComercialService.cliente`). Un setter, desde el 10/10/2026,
+    solo uno de sus leads (`leads_del_setter`): hasta ese día abría cualquier cliente del sistema,
+    con sus pagos y su deuda.
     """
+    if not puede_abrir(current_user, client_id=client_id):
+        return jsonify({'message': 'Cliente no encontrado'}), 404
     rol, miembro_id, _ = _alcance()
     ficha = ComercialService.cliente(client_id, closer_id=miembro_id if rol == ROL_CLOSERS else None)
     if not ficha:

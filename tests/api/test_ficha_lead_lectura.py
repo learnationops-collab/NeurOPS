@@ -121,13 +121,18 @@ def test_triage_confirma_pero_no_reporta_ni_cobra(client, db, lead, equipo, auth
 
 def test_el_setter_confirma_solo_la_agenda_que_genero(client, db, lead, equipo, auth_headers,
                                                      make_user):
-    """Mismo criterio que `_puede_corregir` del dashboard comercial: nadie toca las filas de otro."""
+    """Mismo criterio que `_puede_corregir` del dashboard comercial: nadie toca las filas de otro.
+
+    La otra agenda es de la MISMA persona, que volvió a agendar por el workshop: el lead es suyo y lo
+    puede abrir (ver `leads_del_setter`), pero esa agenda no la generó él."""
     propia = abrir(client, auth_headers, equipo['setter'], appointment_id=lead.id).get_json()
     assert propia['permisos']['confirmar'] is True
 
-    lead.setter_id = None
+    otra = Appointment(closer_id=equipo['closer'].id, client_id=lead.client_id, origin='workshop',
+                       start_time=datetime.utcnow() + timedelta(days=3))
+    db.session.add(otra)
     db.session.commit()
-    ajena = abrir(client, auth_headers, equipo['setter'], appointment_id=lead.id).get_json()
+    ajena = abrir(client, auth_headers, equipo['setter'], appointment_id=otra.id).get_json()
 
     assert ajena['permisos']['confirmar'] is False
     assert ajena['permisos']['comentar'] is True

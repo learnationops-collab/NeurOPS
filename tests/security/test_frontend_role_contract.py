@@ -222,6 +222,11 @@ def test_ninguna_ruta_de_la_ficha_responde_a_un_anonimo(client, app, db, lead_de
 def test_los_cinco_roles_de_la_ficha_leen_el_lead(client, db, make_user, auth_headers, rol,
                                                  lead_de_prueba):
     usuario = make_user(role=rol, username=f'lee_{rol}', email=f'lee_{rol}@ficha.test')
+    # Un setter lee solo SUS leads desde el 10/10/2026 (ver test_ficha_alcance_setter): el de
+    # prueba pasa a ser una agenda que generó él.
+    if rol == 'setter':
+        lead_de_prueba.setter_id = usuario.id
+        db.session.commit()
 
     r = client.get(f'/api/ficha/lead?appointment_id={lead_de_prueba.id}',
                    headers=auth_headers(usuario))
