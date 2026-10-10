@@ -117,6 +117,33 @@ def test_leer_un_v1_no_inventa_canales():
     assert lectura['reflexion'] == {'flujo_trabajo': '', 'win_del_dia': ''}
 
 
+def test_avisos_de_un_dia_sin_problemas_es_lista_vacia():
+    assert rv2.avisos(rv2.leer(rv2.escribir(_fila(), _payload()))) == []
+
+
+def test_avisos_como_los_del_formulario():
+    datos = _payload()
+    datos['anuncios'].update(entrantes=5, no_lead=4, inabribles=2, ap_entrantes=4, ap_dolor=3)
+    datos['bienvenidas'].update(hechas=2, respondidas=3, aperturas=4)
+    datos['embudo'].update(dolor=3, oferta=4, link=1)
+
+    avisos = rv2.avisos(rv2.leer(rv2.escribir(_fila(), datos)))
+
+    assert [(a['paso'], a['nivel'], a['msg']) for a in avisos] == [
+        ('entrantes', 'err', 'Anuncios: no leads e in-abribles superan los 5 mensajes'),
+        ('aperturas', 'warn', 'Anuncios: más aperturas que entrantes (5)'),
+        ('entrantes', 'warn', 'Bienvenidas: más respondidas que hechas'),
+        ('aperturas', 'warn', 'Bienvenidas: más aperturas que respuestas (3)'),
+        ('embudo', 'warn', 'Oferta supera a dolor (3)'),
+        ('embudo', 'warn', 'Agendas supera a link (1)'),
+        ('embudo', 'warn', 'Dolor es menor que las aperturas en dolor (6)'),
+    ]
+
+
+def test_un_v1_no_tiene_avisos():
+    assert rv2.avisos(rv2.leer(_fila(report_version=1, inbox_entrantes=1, not_lead=5))) == []
+
+
 def test_sumar_separa_lo_que_vino_sin_canal_y_salta_los_no_laborables():
     v2 = rv2.leer(rv2.escribir(_fila(), _payload()))
     v1 = rv2.leer(_fila(report_version=1, inbox_entrantes=20, not_lead=2, inbox_leads=13, funnel_agenda=2))

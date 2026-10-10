@@ -176,6 +176,48 @@ def leer(stat):
     }
 
 
+def avisos(lectura):
+    """Los avisos de un reporte v2, los mismos que muestra el formulario (`calcular` en
+    `frontend/src/pages/setter/reporte/modelo.js`): `[{paso, nivel, msg}]`.
+
+    `err` es lo único que el formulario no deja enviar (no leads + in-abribles por encima de los
+    mensajes del canal); `warn` se manda igual y queda a la vista de quien lea el reporte. Un v1 no
+    tiene avisos: sus números no se cargaban por canal.
+    """
+    if not lectura or lectura.get('version') != 2:
+        return []
+    salida = []
+    nombres = {'anuncios': 'Anuncios', 'inbound': 'Inbound'}
+    dolor_en_aperturas = 0
+    for canal, _ in CANALES:
+        d = lectura['canales'][canal]
+        if d['no_lead'] + d['inabribles'] > d['entrantes']:
+            salida.append({'paso': 'entrantes', 'nivel': 'err',
+                           'msg': f"{nombres[canal]}: no leads e in-abribles superan los {d['entrantes']} mensajes"})
+        if d['ap_entrantes'] + d['ap_dolor'] > d['entrantes']:
+            salida.append({'paso': 'aperturas', 'nivel': 'warn',
+                           'msg': f"{nombres[canal]}: más aperturas que entrantes ({d['entrantes']})"})
+        dolor_en_aperturas += d['ap_dolor']
+    b = lectura['bienvenidas']
+    if b['respondidas'] > b['hechas']:
+        salida.append({'paso': 'entrantes', 'nivel': 'warn', 'msg': 'Bienvenidas: más respondidas que hechas'})
+    if b['aperturas'] > b['respondidas']:
+        salida.append({'paso': 'aperturas', 'nivel': 'warn',
+                       'msg': f"Bienvenidas: más aperturas que respuestas ({b['respondidas']})"})
+    e = lectura['embudo']
+    etapas = [e['cualificados'], e['dolor'], e['oferta'], e['link'], e['agendas']]
+    nombres_g = ['', 'Dolor', 'Oferta', 'Link', 'Agendas']
+    previos = ['cualificados', 'dolor', 'oferta', 'link']
+    for i in range(1, len(etapas)):
+        if etapas[i] > etapas[i - 1]:
+            salida.append({'paso': 'embudo', 'nivel': 'warn',
+                           'msg': f'{nombres_g[i]} supera a {previos[i - 1]} ({etapas[i - 1]})'})
+    if dolor_en_aperturas > e['dolor']:
+        salida.append({'paso': 'embudo', 'nivel': 'warn',
+                       'msg': f'Dolor es menor que las aperturas en dolor ({dolor_en_aperturas})'})
+    return salida
+
+
 def sumar(lecturas):
     """Suma varias lecturas (`leer`) de un período o de un equipo.
 
