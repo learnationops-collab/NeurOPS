@@ -319,11 +319,17 @@ function payloadVenta(r, contexto) {
 export function construirPayload(respuestas = {}, contexto = {}) {
   const r = respuestas;
   if (esVenta(r)) return { accion: 'registrar_venta', datos: payloadVenta(r, contexto) };
+  // Solo un «No cerró» lleva objeción (el backend la exige ahí, desde el 09/10/2026). Si se escribió
+  // y después «Anterior» cambió la rama (ej. «No se presentó»), el texto queda en las respuestas
+  // pero no viaja como objeción.
+  const noCerro = r.cierre === false;
   return {
     accion: 'reportar_resultado',
     datos: {
       resultado: r.res ?? null,
       contacto_result: r.contacto_result ?? null,
+      cierre: r.cierre ?? null,
+      objecion: noCerro ? (String(r.objecion || '').trim() || null) : null,
       motivo: motivoDeRama(r),
       motivo_descarte: r.motivo_descarte || null,
       deck: bloqueDeck(r, contexto),

@@ -97,6 +97,10 @@ export const RESULTADOS_COBRO = [
   { valor: 'no_paga', label: 'No va a pagar', sub: 'Se da de baja: deja de deber', tono: 'error' },
 ];
 
+// El mínimo de la objeción de un «No cerró»: el mismo `MINIMO` de `objeciones_service` en el
+// backend, que la rechaza si no llega.
+export const OBJECION_MINIMA = 10;
+
 const si = { valor: true, label: 'Sí', tono: 'success' };
 const no = { valor: false, label: 'No', tono: 'error' };
 const texto = (campo, label, extra = {}) => ({ campo, label, tipo: 'texto', ...extra });
@@ -187,6 +191,17 @@ export const PREGUNTAS = [
     enunciado: '¿Se cerró la venta?',
     opciones: [{ ...si, label: 'Sí, cerró', sub: 'Registrar el pago' }, { ...no, label: 'No cerró' }],
     cuando: (r) => r.offer_presented === true,
+  },
+  { // Pedido de Kerwin (09/10/2026): un «No cerró» dice por qué, siempre. Queda como la objeción
+    // de esta llamada y como nota en Comunicación (`objeciones_service` en el backend, que también
+    // la exige: sin ella el reporte no se guarda).
+    clave: 'objecion', hito: 'cierre', tipo: 'formulario',
+    enunciado: '¿Por qué no cerró? ¿Cuál es la objeción?',
+    ayuda: 'Lo que dijo, con sus palabras si podés. Queda en Comunicación para quien lo vuelva a llamar.',
+    campos: [{
+      campo: 'objecion', label: 'Objeción', tipo: 'parrafo', requerido: true, minimoTexto: OBJECION_MINIMA,
+    }],
+    cuando: (r) => r.cierre === false,
   },
 
   // ---------- rama venta ----------

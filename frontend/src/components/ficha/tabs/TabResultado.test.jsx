@@ -145,6 +145,35 @@ describe('TabResultado', () => {
     expect(screen.getByRole('button', { name: /^Continuar$/ })).toBeEnabled();
   });
 
+  it('«No cerró» pide la objeción, no deja seguir sin ella y la manda con el reporte', async () => {
+    // Pedido de Kerwin (09/10/2026): queda registrada en Comunicación.
+    const user = userEvent.setup();
+    render(<TabResultado {...p} />);
+    await user.click(screen.getByRole('button', { name: 'Asistió' }));
+    await user.click(screen.getByRole('button', { name: /Sí, con decisor/ }));
+    await user.click(screen.getByRole('button', { name: /Sí, se presentó/ }));
+    await user.click(screen.getByRole('button', { name: 'No cerró' }));
+
+    expect(screen.getByRole('heading', { name: '¿Por qué no cerró? ¿Cuál es la objeción?' })).toBeInTheDocument();
+    expect(screen.getByText('Mínimo 10 caracteres · llevás 0')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Continuar$/ })).toBeDisabled();
+    await user.type(screen.getByLabelText('Objeción'), 'Es caro');
+    expect(screen.getByRole('button', { name: /^Continuar$/ })).toBeDisabled();
+    await user.type(screen.getByLabelText('Objeción'), ' y lo tiene que hablar con la pareja');
+    await user.click(screen.getByRole('button', { name: /^Continuar$/ }));
+
+    expect(screen.getByRole('heading', { name: /Se presentó la oferta pero no se cerró/ })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Programar seguimiento/ }));
+    await user.click(screen.getByRole('button', { name: /^Continuar$/ }));
+    await user.click(screen.getByRole('button', { name: /No le pedí/ }));
+    expect(screen.getByText('Es caro y lo tiene que hablar con la pareja')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Guardar el resultado/ }));
+
+    const [accion, datos] = p.onAccion.mock.calls[0];
+    expect(accion).toBe('reportar_resultado');
+    expect(datos).toMatchObject({ cierre: false, objecion: 'Es caro y lo tiene que hablar con la pareja' });
+  });
+
   it('al completar el árbol muestra la revisión y dispara onAccion con reportar_resultado', async () => {
     const user = userEvent.setup();
     render(<TabResultado {...p} />);

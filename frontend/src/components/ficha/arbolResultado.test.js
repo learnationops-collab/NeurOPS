@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   estadoInicial, reiniciar, responder, actualizar, volverA, preguntaActual, faltantes,
   puedeAvanzar, completo, arrancado, hitos, resumen, esVenta, construirPayload,
-  notaFinal, fechaHoraAIso, anterior, preguntaAnterior, elegida, RAICES,
+  notaFinal, fechaHoraAIso, anterior, preguntaAnterior, elegida, RAICES, OBJECION_MINIMA,
 } from './arbolResultado';
 
 // La rama de la venta tiene su propio archivo: `arbolResultado.venta.test.js`.
@@ -65,7 +65,8 @@ describe('estado inicial', () => {
 describe('camino: asistió, oferta presentada, no cerró', () => {
   const seguimiento = {
     res: { res: 'asistio' }, decisor: { with_decision_maker: true }, oferta: { offer_presented: true },
-    cierre: { cierre: false }, nocierre_next: { nocierre_next: 'seguimiento' },
+    cierre: { cierre: false }, objecion: { objecion: 'Lo tiene que consultar con la pareja' },
+    nocierre_next: { nocierre_next: 'seguimiento' },
     seguimiento: { fecha_seguimiento: '2026-09-30', followup_reminder_enabled: true, followup_reminder_time: '09:00', notes: 'vuelve el lunes' },
     refs_ask: { refs_ask: 'no' },
   };
@@ -94,12 +95,53 @@ describe('camino: asistió, oferta presentada, no cerró', () => {
     expect(construirPayload(r, {}).datos.deck.seguimiento_sub).toBe('Sin decisor · oferta presentada');
   });
 
+  // Pedido de Kerwin (09/10/2026): un «No cerró» pregunta por qué, y no se puede saltear.
+  it('«No cerró» pregunta enseguida la objeción y no deja seguir sin ella', () => {
+    let r = estadoInicial();
+    r = responder(r, 'res', { res: 'asistio' });
+    r = responder(r, 'decisor', { with_decision_maker: true });
+    r = responder(r, 'oferta', { offer_presented: true });
+    r = responder(r, 'cierre', { cierre: false });
+    const q = preguntaActual(r);
+    expect(q).toMatchObject({ clave: 'objecion', enunciado: '¿Por qué no cerró? ¿Cuál es la objeción?' });
+    expect(q.campos).toEqual([expect.objectContaining({
+      campo: 'objecion', tipo: 'parrafo', requerido: true, minimoTexto: OBJECION_MINIMA,
+    })]);
+    expect(faltantes(r)).toEqual(['Objeción (mínimo 10 caracteres, llevás 0)']);
+    r = actualizar(r, { objecion: '   Es caro   ' });
+    expect(faltantes(r)).toEqual(['Objeción (mínimo 10 caracteres, llevás 7)']);
+    r = actualizar(r, { objecion: 'Es caro y no quiere cuotas' });
+    expect(puedeAvanzar(r)).toBe(true);
+    r = responder(r, 'objecion', {});
+    expect(preguntaActual(r).clave).toBe('nocierre_next');
+  });
+
+  it('la objeción viaja recortada, con el cierre, y aparece en la revisión', () => {
+    const r = recorrer({ ...seguimiento, objecion: { objecion: '  Lo tiene que consultar con la pareja \n' } });
+    const { datos } = construirPayload(r, {});
+    expect(datos).toMatchObject({ cierre: false, objecion: 'Lo tiene que consultar con la pareja' });
+    expect(resumen(r).find((f) => f.clave === 'objecion.objecion'))
+      .toMatchObject({ label: 'Objeción', paso: 'objecion' });
+  });
+
+  it('si después se cambia la rama, la objeción escrita no viaja como objeción', () => {
+    let r = recorrer(seguimiento);
+    r = volverA(r, 'oferta');
+    r = responder(r, 'oferta', { offer_presented: false });
+    r = responder(r, 'nopres_next', { nopres_next: 'seguimiento' });
+    r = responder(r, 'seguimiento', {});
+    r = responder(r, 'refs_ask', { refs_ask: 'no' });
+    expect(completo(r)).toBe(true);
+    expect(construirPayload(r, {}).datos).toMatchObject({ cierre: null, objecion: null });
+  });
+
   it('descartar exige el motivo y manda Lead Perdido', () => {
     let r = estadoInicial();
     r = responder(r, 'res', { res: 'asistio' });
     r = responder(r, 'decisor', { with_decision_maker: true });
     r = responder(r, 'oferta', { offer_presented: true });
     r = responder(r, 'cierre', { cierre: false });
+    r = responder(r, 'objecion', { objecion: 'No tiene el dinero este año' });
     r = responder(r, 'nocierre_next', { nocierre_next: 'perdido' });
     expect(preguntaActual(r).clave).toBe('descarte');
     expect(faltantes(r)).toEqual(['Motivo (mínimo 3 caracteres, llevás 0)']);
