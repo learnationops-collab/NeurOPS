@@ -501,17 +501,13 @@ def revert_impersonation():
     # Token limpio (sin claims de suplantación) para la identidad original.
     token = original_user.get_auth_token()
 
+    # El mismo usuario que dan el login y /auth/me (`_usuario_json`). Armado a mano le faltaban
+    # `mascota` y `roles`: el frontend guardaba esa sesión y, al volver de simular, el avatar caía en
+    # el personaje que se asigna por id en vez del elegido (reportado por Kerwin, 10/10/2026).
     return jsonify({
         "message": "Reverted to original session",
         "token": token,
-        "user": {
-            "id": original_user.id,
-            "username": original_user.username,
-            "role": original_user.role,
-            "email": original_user.email,
-            "can_view_finance": getattr(original_user, 'can_view_finance', False),
-            "cuentas_vinculadas": cuentas_de(original_user),
-        }
+        "user": _usuario_json(original_user),
     }), 200
 
 

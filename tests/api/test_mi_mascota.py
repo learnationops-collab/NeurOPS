@@ -60,6 +60,31 @@ def test_simulando_no_se_le_cambia_el_personaje_a_la_persona_simulada(client, db
     assert db.session.get(User, cata.id).mascota is None
 
 
+@pytest.mark.parametrize('aislada', [True, False])
+def test_al_volver_de_simular_vuelve_el_personaje_propio(client, db, make_user, auth_headers, aislada):
+    # Reportado por Kerwin (10/10/2026): al volver de simular a otro le cambiaba el avatar. `/auth/revert`
+    # devolvía al usuario original sin `mascota`, el frontend guardaba esa sesión y el avatar caía en el
+    # personaje que se asigna por id mientras no se elige uno.
+    kerwin = make_user(role='admin', username='kerwin')
+    kerwin.mascota = 'owl'
+    cata = make_user(role='closer', username='cata')
+    cata.mascota = 'fox'
+    db.session.commit()
+
+    if aislada:
+        token = client.post('/api/auth/impersonate', headers=auth_headers(kerwin),
+                            json={'user_id': cata.id, 'isolated': True}).get_json()['token']
+        r = client.post('/api/auth/revert', headers={'Authorization': f'Bearer {token}'})
+    else:
+        client.post('/api/auth/login', json={'username': 'kerwin', 'password': 'secret123'})
+        client.post('/api/auth/impersonate', json={'user_id': cata.id})
+        r = client.post('/api/auth/revert')
+
+    usuario = r.get_json()['user']
+    assert (r.status_code, usuario['id'], usuario['mascota']) == (200, kerwin.id, 'owl')
+    assert usuario['roles'] == ['admin']
+
+
 # --- Las migraciones ------------------------------------------------------------------------------
 
 def _migrar(conexion, archivo):
