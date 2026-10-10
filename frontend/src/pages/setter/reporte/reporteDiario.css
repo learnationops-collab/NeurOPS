@@ -267,6 +267,51 @@
   animation:rdChispa 1s var(--out) forwards;animation-delay:var(--dl)}
 .rd .rd-nolab-ico{width:64px;height:64px;color:var(--info)}
 
+/* --- Historial: el período, sus totales y un día por fila ----------------------------------- */
+.rd .rd-pz--periodo{padding:0 var(--s4)}
+.rd .rd-pz--periodo[aria-selected="true"]{background:var(--brand-secondary);color:var(--ink)}
+.rd .rd-kpis--4{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:var(--s4)}
+.rd .rd-kpi-sub{font-size:12px;font-weight:700;color:var(--text-muted)}
+.rd .rd-kpi .rd-chip{justify-self:start}
+.rd .rd-nota-v1{margin:0;font-size:13px;color:var(--text-muted)}
+.rd .rd-lista{list-style:none;margin:0;padding:var(--s2) var(--s4)}
+.rd .rd-vacio{margin:0;padding:var(--s8) var(--s4);text-align:center;color:var(--text-muted);font-size:14px}
+.rd .rd-fila{display:grid;grid-template-columns:minmax(190px,1.4fr) repeat(4,minmax(96px,1fr)) auto;align-items:center;
+  gap:var(--s3);padding:var(--s3) var(--s2);min-width:0}
+.rd .rd-fila--cab{padding-block:var(--s3) var(--s2)}
+.rd .rd-fila--cab > span{font-size:10px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:var(--text-muted-40);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rd .rd-dia-rep{border-top:1px solid var(--border-subtle);animation:rdSube .45s var(--out) both;
+  animation-delay:calc(min(var(--i,0),12) * 30ms)}
+.rd .rd-fila-dia{display:flex;align-items:center;gap:var(--s2);min-width:0;text-align:left;border-radius:12px;padding:4px 2px}
+.rd .rd-fila-dia > svg{width:16px;height:16px;color:var(--text-muted);transition:transform .25s var(--spring)}
+.rd .rd-dia-rep.abierto .rd-fila-dia > svg{transform:rotate(180deg);color:var(--brand-secondary)}
+.rd .rd-fila-fecha{font-size:14px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+.rd .rd-fila-fecha b{font-weight:900}
+.rd .rd-celda{display:flex;flex-direction:column;gap:4px;min-width:0}
+.rd .rd-celda > b{font-size:18px;font-weight:900;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.rd .rd-celda--acciones{align-items:flex-end}
+.rd .rd-split--fila{height:4px;margin-top:0;max-width:96px}
+.rd .rd-canales-mini{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;color:var(--text-muted);
+  font-variant-numeric:tabular-nums}
+.rd .rd-canales-mini i{width:6px;height:6px;border-radius:50%;background:var(--c)}
+.rd .rd-canales-mini i + i,.rd .rd-canales-mini i:not(:first-child){margin-left:4px}
+.rd .rd-fila-resumen{display:flex;flex-direction:column;gap:var(--s4);padding:var(--s2) 0 var(--s5);animation:rdSube .4s var(--out) both}
+.rd .rd-fila-resumen .rd-kpis--4{margin-bottom:0}
+@media (max-width:820px){
+  .rd .rd-fila--cab{display:none}
+  .rd .rd-fila{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:var(--s3)}
+  .rd .rd-fila-dia,.rd .rd-celda--acciones{grid-column:1/-1}
+  .rd .rd-celda--acciones{align-items:stretch}
+  .rd .rd-celda::before{content:attr(data-rotulo);font-size:10px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--text-muted-40)}
+  .rd .rd-celda--acciones::before{content:none}
+  .rd .rd-kpis--4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  /* «Agendas reportadas» en una línea: partida en dos desalineaba los números de la fila. */
+  .rd .rd-kpis--4 .rd-k{letter-spacing:.1em;white-space:nowrap}
+  .rd .rd-pz--periodo{padding:0 var(--s3);font-size:13px}
+}
+
 @keyframes rdMarca{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
 @keyframes rdSube{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes rdBump{from{transform:translateY(var(--dy,-8px));opacity:.35}to{transform:none;opacity:1}}
@@ -319,7 +364,8 @@
 }
 @media (prefers-reduced-motion:reduce){
   .rd .rd-pcol,.rd .rd-tile,.rd .rd-rcol,.rd .rd-kpi,.rd .rd-nota,.rd .rd-bump,.rd .rd-tile.rd-llega,.rd .rd-chispa,
-  .rd .rd-cal,.rd .rd-cal-grid.mes-sig,.rd .rd-cal-grid.mes-ant,.rd .rd-chip--quieto,.rd .rd-pz.on .rd-tn svg{animation:none}
+  .rd .rd-cal,.rd .rd-cal-grid.mes-sig,.rd .rd-cal-grid.mes-ant,.rd .rd-chip--quieto,.rd .rd-pz.on .rd-tn svg,
+  .rd .rd-dia-rep,.rd .rd-fila-resumen{animation:none}
   .rd .rd-ok circle,.rd .rd-ok path{animation:none;stroke-dashoffset:0}
   .rd *{transition-duration:0s!important}
 }
