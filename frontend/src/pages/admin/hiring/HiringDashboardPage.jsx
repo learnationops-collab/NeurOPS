@@ -171,7 +171,8 @@ const HiringDashboardPage = () => {
         user, navigate, logout,
         acciones: [{ id: 'talent', label: 'Ajustes de Talent', Icono: SlidersHorizontal, onClick: () => setConfig('clarity') }],
         configuracion: { onClick: () => abrirConfiguracion() },
-        ir: user?.role === 'admin' ? [{ id: 'admin', label: 'Volver al panel de admin', Icono: ArrowLeft, onClick: () => navigate('/admin/ventas') }] : [],
+        // El admin aterriza en Operaciones desde que se retiró su panel (/admin/ventas, 10/10/2026).
+        ir: user?.role === 'admin' ? [{ id: 'operaciones', label: 'Volver a Operaciones', Icono: ArrowLeft, onClick: () => navigate('/ops/dashboard') }] : [],
     });
 
     // --- Lo que se ve ---
