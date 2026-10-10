@@ -54,6 +54,12 @@ def _trigger_setter_report_webhook(stat):
             print("[Discord Setter] No webhook URL configured in environment or database.")
             return
 
+        # El reporte v2 (por canal, desde el 10/10/2026) tiene su propio mensaje y su tarjeta. El
+        # v1 sigue saliendo exactamente como antes.
+        if (getattr(stat, 'report_version', None) or 1) >= 2:
+            _enviar_reporte_v2(url, stat)
+            return
+
         # 1. Prepare Data for Image
         from app.api.public.setter import _prepare_setter_report_data
         img_data = _prepare_setter_report_data(stat)
@@ -95,6 +101,38 @@ def _trigger_setter_report_webhook(stat):
         print(f"[Discord Setter Error] {e}")
         import traceback
         traceback.print_exc()
+
+
+def _enviar_reporte_v2(url, stat):
+    """Discord de un reporte v2: el Resumen en el texto del mensaje y la tarjeta por canal.
+
+    El texto va siempre, aunque la tarjeta no se pueda dibujar (depende del Chromium del
+    servidor): sin imagen, el reporte llega igual en vez de no llegar.
+    """
+    import json
+    import requests
+    from app.services import setter_reporte_discord
+    from app.services.image_service import ImageService
+
+    nombre = stat.setter.username if stat.setter else 'Setter'
+    payload = {"content": setter_reporte_discord.texto_de_discord(stat, nombre)}
+    try:
+        tarjeta = ImageService.generate_setter_report_v2_card(setter_reporte_discord.datos_de_la_imagen(stat))
+    except Exception as e:
+        print(f"[Discord Setter] Sin tarjeta, sale solo el texto: {e}")
+        tarjeta = None
+
+    if tarjeta is None:
+        res = requests.post(url, json=payload, timeout=20)
+    else:
+        payload["embeds"] = [{
+            "color": 0xFF3FA4,
+            "image": {"url": "attachment://setter_report.png"},
+            "footer": {"text": "NeurOPS Stats"},
+        }]
+        res = requests.post(url, files={'file1': ('setter_report.png', tarjeta, 'image/png')},
+                            data={"payload_json": json.dumps(payload)}, timeout=20)
+    print(f"[Discord Setter v2] Status: {res.status_code}")
 
 
 @bp.route('/daily-report', methods=['POST', 'GET'])

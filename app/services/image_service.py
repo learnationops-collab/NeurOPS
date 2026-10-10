@@ -121,6 +121,14 @@ class ImageService:
         return ReportImageService.generate_setter_report_card(data)
 
     @staticmethod
+    def generate_setter_report_v2_card(data):
+        """
+        Delegated to ReportImageService.
+        """
+        from app.services.report_image_service import ReportImageService
+        return ReportImageService.generate_setter_report_v2_card(data)
+
+    @staticmethod
     def generate_closer_report_card(data):
         """
         Delegated to ReportImageService.

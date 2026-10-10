@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<!-- La tarjeta del reporte v2 del setter para Discord: el Resumen del formulario por pasos
+     (entrantes y agendas por canal, bienvenidas, embudo, follow-ups, reflexión), con su paleta.
+     Los datos y los SVG de los embudos salen de `app/services/setter_reporte_discord.py`. -->
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap');
+:root{
+  --ch-ads:#FF3FA4; --ch-inb:#6F7BFF; --ch-bnv:#9A7BE0; --ch-tot:#C9B8FF;
+  --rosa:#FF3FA4; --tinta:#020617;
+  --texto:#FFFFFF; --muted:rgba(255,255,255,.60); --muted40:rgba(255,255,255,.40);
+  --borde:rgba(255,255,255,.15); --borde-suave:rgba(255,255,255,.06);
+  --vidrio:rgba(6,9,36,.62); --hundido:rgba(0,0,0,.34); --mat3:rgba(255,255,255,.12);
+  --success:#2FBF8F; --warning:#D9A441; --error:#E85C4A; --info:#4E8BD8;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1200px;font-family:'Montserrat','Helvetica Neue',Arial,sans-serif;color:var(--texto);
+  background:#020617 linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%);padding:36px 40px;
+  -webkit-font-smoothing:antialiased;position:relative;
+  {% if is_preview %}overflow-y:auto;min-height:100vh;{% else %}overflow:hidden;{% endif %}}
+.aura{position:absolute;inset:0;z-index:-1;overflow:hidden;opacity:.5}
+.aura i{position:absolute;width:46%;aspect-ratio:1;border-radius:50%;filter:blur(90px);opacity:.5}
+.aura i:nth-child(1){left:-8%;top:-10%;background:#1323C6}
+.aura i:nth-child(2){left:40%;top:30%;background:var(--ch-ads);opacity:.25}
+.aura i:nth-child(3){left:62%;top:-18%;background:var(--ch-inb);opacity:.35}
+.k{font-size:10px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.vidrio{border-radius:26px;background:var(--vidrio);border:1px solid var(--borde);border-top-color:rgba(255,255,255,.12)}
+.cab{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:22px}
+.cab h1{font-size:38px;font-weight:900;letter-spacing:-.03em;line-height:1.05;margin-top:8px}
+.cab h1 span{color:var(--muted);font-weight:600}
+.fecha{font-size:15px;font-weight:700;padding:10px 16px;border-radius:999px;background:var(--hundido);border:1px solid var(--borde)}
+.chip{--c:var(--muted);display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 11px;border-radius:999px;
+  font-size:12px;font-weight:700;white-space:nowrap;color:var(--c);
+  background:color-mix(in srgb,var(--c) 13%,transparent);border:1px solid color-mix(in srgb,var(--c) 34%,transparent)}
+.chip b{font-weight:900}
+.chip--canal{height:30px;padding:0 13px;font-size:13px}
+.punto{width:8px;height:8px;border-radius:50%;background:var(--c);display:inline-block}
+.punto.mix{background:conic-gradient(var(--ch-ads) 0 50%,var(--ch-inb) 0)}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;padding:22px 26px;margin-bottom:16px}
+.kpi b{display:block;font-size:36px;font-weight:900;letter-spacing:-.035em;line-height:1;margin-top:8px}
+.kpi .prom{display:block;margin-top:8px;font-size:11px;font-weight:700;color:var(--muted40)}
+.split{display:flex;gap:2px;height:6px;margin-top:10px;border-radius:999px;overflow:hidden;background:var(--hundido)}
+.split i{display:block;height:100%}
+.split .a{background:var(--ch-ads)}
+.split .b{background:var(--ch-inb)}
+.tres{display:grid;grid-template-columns:repeat(3,1fr);margin-bottom:16px}
+.col{position:relative;padding:20px 22px;min-width:0}
+.col+.col::before{content:'';position:absolute;left:0;top:20px;bottom:20px;width:1px;background:var(--borde-suave)}
+.col-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.cifras{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 12px;margin-bottom:10px}
+.cifra .k{font-size:9px;letter-spacing:.14em}
+.cifra b{display:block;font-size:22px;font-weight:900;letter-spacing:-.03em;margin-top:4px;font-variant-numeric:tabular-nums}
+.grande{display:flex;align-items:baseline;gap:8px;margin:6px 0 2px}
+.grande b{font-size:34px;font-weight:900;letter-spacing:-.035em;color:var(--c)}
+.grande span{font-size:13px;font-weight:700;color:var(--muted)}
+.flujo{display:block;width:100%;height:auto;overflow:visible;font-family:inherit}
+.flujo .band{fill:var(--c);fill-opacity:.16}
+.flujo .bar{fill:var(--c)}
+.flujo .bar.claro{fill:color-mix(in srgb,var(--c) 38%,transparent)}
+.flujo .bar.ref{fill:var(--mat3)}
+.flujo .bar.ads{fill:var(--ch-ads)}
+.flujo .bar.inb{fill:var(--ch-inb)}
+.flujo .val{fill:var(--texto);font-size:22px;font-weight:900}
+.flujo .val.ref{fill:var(--muted)}
+.flujo .et{fill:var(--muted);font-size:13px;font-weight:900;letter-spacing:.1em}
+.flujo .pill rect{fill:#0B1030;stroke:color-mix(in srgb,var(--c) 50%,transparent);stroke-width:1}
+.flujo .pill text{fill:var(--texto);font-size:14px;font-weight:900}
+.flujo .pill.alto rect{stroke:var(--warning)}
+.flujo .pill.alto text{fill:var(--warning)}
+.dos{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-bottom:16px}
+.bloque{padding:20px 24px}
+.ley{display:flex;gap:14px;font-size:11px;font-weight:700;color:var(--muted)}
+.ley span{display:inline-flex;align-items:center;gap:6px}
+.ley i{width:10px;height:10px;border-radius:3px;background:var(--c)}
+.avisos{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.notas{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.nota{padding:18px 22px}
+/* La tarjeta tiene alto fijo: una reflexión muy larga se corta en seis líneas (entera va en el texto del mensaje). */
+.nota p{margin-top:10px;font-size:15px;line-height:1.55;color:rgba(255,255,255,.88);white-space:pre-wrap;word-break:break-word;
+  display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden}
+.nota p.vacia{color:var(--muted40)}
+.libre{padding:60px 40px;text-align:center}
+.libre h2{font-size:34px;font-weight:900;letter-spacing:-.03em;margin:10px 0 8px}
+.libre p{color:var(--muted);font-size:15px}
+.pie{margin-top:18px;display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--muted40);letter-spacing:.08em;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div class="aura"><i></i><i></i><i></i></div>
+
+<header class="cab">
+  <div>
+    <span class="k">Reporte diario · Setter</span>
+    <h1>{{ setter_name }} <span>· así cerró el día</span></h1>
+  </div>
+  <span class="fecha">{{ date_str }}</span>
+</header>
+
+{% if no_laborable %}
+<section class="vidrio libre">
+  <span class="chip" style="--c:var(--info)">Día no laborable</span>
+  <h2>{{ setter_name }} no trabajó este día</h2>
+  <p>No suma en sus promedios ni en sus totales.</p>
+</section>
+{% else %}
+<section class="vidrio kpis">
+  <div class="kpi">
+    <span class="k">Entrantes</span><b>{{ kpis.entrantes }}</b>
+    <span class="split"><i class="a" style="width:{{ kpis.reparto_entrantes }}%"></i><i class="b" style="width:{{ 100 - kpis.reparto_entrantes if kpis.entrantes else 0 }}%"></i></span>
+    {% if promedio %}<span class="prom">Prom. {{ promedio.reportes }} reportes: {{ promedio.entrantes }}</span>{% endif %}
+  </div>
+  <div class="kpi">
+    <span class="k">Cualificación</span><b>{{ kpis.cualificacion }}</b>
+    {% if promedio %}<span class="prom">Prom.: {{ promedio.cualificacion }}</span>{% endif %}
+  </div>
+  <div class="kpi"><span class="k">Apertura</span><b>{{ kpis.apertura }}</b></div>
+  <div class="kpi">
+    <span class="k">Agendas</span><b>{{ kpis.agendas }}</b>
+    <span class="split"><i class="a" style="width:{{ kpis.reparto_agendas }}%"></i><i class="b" style="width:{{ 100 - kpis.reparto_agendas if kpis.agendas else 0 }}%"></i></span>
+    {% if promedio %}<span class="prom">Prom.: {{ promedio.agendas }}</span>{% endif %}
+  </div>
+  <div class="kpi"><span class="k">Bienvenidas</span><b>{{ kpis.bienvenidas }}</b></div>
+</section>
+
+<section class="vidrio tres">
+  {% for c in canales %}
+  <div class="col" style="--c:{{ c.color }}">
+    <div class="col-cab">
+      <span class="chip chip--canal" style="--c:{{ c.color }}"><i class="punto"></i>{{ c.nombre }}</span>
+      <span class="chip" style="--c:{{ c.color }}"><b>{{ c.apertura }}</b> apertura</span>
+    </div>
+    <div class="cifras">
+      <div class="cifra"><span class="k">Entrantes</span><b>{{ c.entrantes }}</b></div>
+      <div class="cifra"><span class="k">No leads</span><b>{{ c.no_lead }}</b></div>
+      <div class="cifra"><span class="k">In-abribles</span><b>{{ c.inabribles }}</b></div>
+      <div class="cifra"><span class="k">Ap. entrantes</span><b>{{ c.ap_entrantes }}</b></div>
+      <div class="cifra"><span class="k">Ap. dolor</span><b>{{ c.ap_dolor }}</b></div>
+      <div class="cifra"><span class="k">Agendas</span><b>{{ c.agendas }}</b></div>
+    </div>
+    <div class="grande"><b>{{ c.cualificacion }}</b><span>cualificación · {{ c.cualificados }} cualificados</span></div>
+    {{ c.svg }}
+  </div>
+  {% endfor %}
+  <div class="col" style="--c:var(--ch-bnv)">
+    <div class="col-cab">
+      <span class="chip chip--canal" style="--c:var(--ch-bnv)"><i class="punto"></i>Bienvenidas</span>
+      <span class="chip" style="--c:var(--ch-bnv)"><b>{{ bienvenidas.apertura }}</b> apertura</span>
+    </div>
+    <div class="cifras">
+      <div class="cifra"><span class="k">Hechas</span><b>{{ bienvenidas.hechas }}</b></div>
+      <div class="cifra"><span class="k">Respondidas</span><b>{{ bienvenidas.respondidas }}</b></div>
+      <div class="cifra"><span class="k">Aperturas</span><b>{{ bienvenidas.aperturas }}</b></div>
+    </div>
+    <div class="grande"><b>{{ bienvenidas.respuesta }}</b><span>respuesta</span></div>
+    {{ bienvenidas.svg }}
+  </div>
+</section>
+
+<section class="dos">
+  <div class="vidrio bloque" style="--c:var(--ch-tot)">
+    <div class="col-cab">
+      <span class="chip chip--canal" style="--c:var(--ch-tot)"><i class="punto mix"></i>Embudo · ambos canales</span>
+      <span class="ley"><span><i style="--c:var(--ch-ads)"></i>Anuncios</span><span><i style="--c:var(--ch-inb)"></i>Inbound</span></span>
+    </div>
+    <div class="grande" style="--c:var(--ch-tot)"><b>{{ embudo.conversion }}</b><span>de cualificados a agenda</span></div>
+    {{ embudo.svg }}
+  </div>
+  <div class="vidrio bloque" style="--c:var(--ch-tot)">
+    <div class="col-cab">
+      <span class="chip chip--canal" style="--c:var(--ch-tot)"><i class="punto mix"></i>Follow-ups</span>
+    </div>
+    <div class="grande" style="--c:var(--ch-tot)"><b>{{ followups.total }}</b><span>follow-ups</span></div>
+    {{ followups.svg }}
+  </div>
+</section>
+
+{% if avisos %}
+<div class="avisos">
+  {% for a in avisos %}<span class="chip" style="--c:{{ 'var(--error)' if a.nivel == 'err' else 'var(--warning)' }}">⚠ {{ a.msg }}</span>{% endfor %}
+</div>
+{% endif %}
+
+<section class="notas">
+  <div class="vidrio nota">
+    <span class="k">Flujo de trabajo</span>
+    {% if reflexion.flujo_trabajo %}<p>{{ reflexion.flujo_trabajo }}</p>{% else %}<p class="vacia">Sin cargar</p>{% endif %}
+  </div>
+  <div class="vidrio nota">
+    <span class="k">Win del día</span>
+    {% if reflexion.win_del_dia %}<p>{{ reflexion.win_del_dia }}</p>{% else %}<p class="vacia">Sin cargar</p>{% endif %}
+  </div>
+</section>
+{% endif %}
+
+<footer class="pie"><span>NeurOPS · Reporte del setter</span><span>Formulario por canal</span></footer>
+</body>
+</html>

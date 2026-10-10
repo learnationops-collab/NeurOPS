@@ -1432,10 +1432,17 @@ def preview_setter_report_discord(report_id):
         return jsonify({"error": "No autorizado"}), 403
 
     stat = SetterDailyStats.query.get_or_404(report_id)
-    img_data = _prepare_setter_report_data(stat)
+    # Un reporte v2 se ve con su propia tarjeta, la misma que sale a Discord.
+    if (stat.report_version or 1) >= 2:
+        from app.services.setter_reporte_discord import datos_de_la_imagen
+        img_data = datos_de_la_imagen(stat)
+        plantilla = 'setter_report_v2.html'
+    else:
+        img_data = _prepare_setter_report_data(stat)
+        plantilla = 'setter_report.html'
     img_data["is_preview"] = True
 
-    template_path = os.path.join(current_app.root_path, 'templates', 'reports', 'setter_report.html')
+    template_path = os.path.join(current_app.root_path, 'templates', 'reports', plantilla)
     with open(template_path, 'r', encoding='utf-8') as f:
         template_content = f.read()
 

@@ -109,6 +109,17 @@ class ReportImageService:
         )
 
     @staticmethod
+    def generate_setter_report_v2_card(data):
+        # El reporte v2 del setter (por canal). Alto medido con avisos y las dos reflexiones en su
+        # tope de seis líneas: ~1170px de contenido.
+        return ReportImageService._render_and_capture(
+            'templates/reports/setter_report_v2.html',
+            data,
+            (1200, 1220),
+            'setter_report_v2'
+        )
+
+    @staticmethod
     def generate_closer_report_card(data):
         # Altura medida a mano contra el caso mas exigente probado (nombre largo en 2 lineas +
         # reflexion larga en 4 lineas + los 6 tipos de venta con fila propia): ~1871px de
