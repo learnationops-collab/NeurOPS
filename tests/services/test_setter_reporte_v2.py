@@ -50,6 +50,23 @@ def test_escribir_llena_los_totales_del_v1_con_su_significado():
     assert (stat.qualification_opening_submitted, stat.pain_opening_submitted, stat.opening_submitted) == (4, 8, 12)
 
 
+def test_un_dia_del_v1_vuelto_a_mandar_con_el_v2_no_arrastra_lo_que_el_v2_no_pide():
+    # El 09/10 se reportó con el formulario viejo: respuestas a follow-ups y aperturas, preguntas.
+    fila = _fila(report_version=1, qualification_fur=12, pain_fur=4, agenda_fu=3, agenda_fur=2,
+                 opening_responded=9, qualification_opening_responded=6, offer_opening_submitted=5,
+                 link_opening_responded=1, q1_useful=3, q2_unuseful=2, stage_2_value=7,
+                 answers={'4': 'respuesta vieja'})
+
+    stat = rv2.escribir(fila, _payload())
+
+    assert stat.report_version == 2
+    for columna in rv2.SOLO_V1:
+        assert getattr(stat, columna) == 0, columna
+    assert stat.answers == {}
+    # Lo que el v2 sí carga queda con lo nuevo.
+    assert (stat.qualification_fu, stat.pain_opening_submitted) == (9, 8)
+
+
 def test_escribir_no_acepta_negativos_ni_basura():
     datos = rv2.vacio()
     datos['anuncios'].update(entrantes='-4', no_lead='abc', agendas=None)

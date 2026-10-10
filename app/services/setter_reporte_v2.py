@@ -30,6 +30,19 @@ REFLEXION = ('flujo_trabajo', 'win_del_dia')
 # Lo que se suma entre reportes (todo menos la reflexión).
 TOTALES = ('entrantes', 'no_lead', 'inabribles', 'cualificados', 'ap_entrantes', 'ap_dolor', 'aperturas', 'agendas')
 
+# Columnas que solo carga el v1 y el formulario nuevo no pide: las respuestas a aperturas y a
+# follow-ups, las aperturas en oferta y en link, el follow-up post-agenda, la eficacia de las dos
+# preguntas, las etapas del pipeline viejo y las respuestas cualitativas. Un día reportado con el
+# v1 y vuelto a mandar con el v2 no puede arrastrarlas: la fila diría «12 follow-ups respondidos»
+# de un reporte que ya no existe, y la tasa de respuesta de la Vista General las mezclaría.
+SOLO_V1 = (
+    'opening_responded', 'qualification_opening_responded', 'pain_opening_responded',
+    'offer_opening_submitted', 'offer_opening_responded', 'link_opening_submitted', 'link_opening_responded',
+    'qualification_fur', 'pain_fur', 'offer_fur', 'link_fur', 'agenda_fur', 'agenda_fu',
+    'q1_useful', 'q1_unuseful', 'q2_useful', 'q2_unuseful',
+    'stage_1_value', 'stage_2_value', 'stage_3_value', 'stage_4_value', 'stage_5_value',
+)
+
 
 def _entero(valor):
     """Un número del formulario: entero, nunca negativo; lo que no se entiende es 0."""
@@ -84,6 +97,10 @@ def escribir(stat, datos):
     stat.reflections = {k: str(reflexion.get(k) or '') for k in REFLEXION}
     if 'is_non_working_day' in datos:
         stat.is_non_working_day = bool(datos.get('is_non_working_day'))
+
+    for columna in SOLO_V1:
+        setattr(stat, columna, 0)
+    stat.answers = {}
 
     stat.report_version = 2
     stat.inbox_entrantes = tot['entrantes']
