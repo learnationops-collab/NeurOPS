@@ -151,6 +151,27 @@
     animation-delay: 260ms;
 }
 
+/* La cifra de «No cerradas» cuando abre el modal (panel Cierre del comercial): la cantidad, su
+   base y una flecha que dice que se abre algo, todo un solo botón. */
+.mc-abre {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.mc-abre-flecha {
+    align-self: center;
+    flex: none;
+    color: var(--mc-no);
+    transition: transform .16s ease;
+}
+
+.mc-abre:hover .mc-abre-flecha,
+.mc-abre:focus-visible .mc-abre-flecha {
+    transform: translateX(2px);
+}
+
 .mc-tira-rot {
     display: inline-flex;
     align-items: center;
@@ -379,7 +400,8 @@
 
     .mc-tramo,
     .mc-ayuda,
-    .mc-col {
+    .mc-col,
+    .mc-abre-flecha {
         transition: none;
     }
 }

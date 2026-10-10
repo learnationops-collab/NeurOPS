@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { ChevronRight } from 'lucide-react';
 import MetricaClicable from './MetricaClicable';
 import './pareja.css';
 import './matriz-cierres.css';
@@ -178,26 +179,50 @@ const TiraPresentacion = ({ celda, destino, irA, Ayuda }) => (
  * fila de cada tarjeta: es una sola cifra sobre las llamadas, no dos.
  *
  * La cifra grande es la CANTIDAD, que es lo que se pidió; la base y la tasa van al lado.
+ *
+ * Con `onVer` (el panel Cierre del dashboard comercial) la cifra —con su base y una flecha— abre el
+ * modal con cada lead y su objeción, y es ese modal el que lleva a Revisar. Sin él (el dashboard del
+ * closer, donde el número es el resto de la base y no una lista de agendas) la cifra va directo a la
+ * lista, como todas las de la tarjeta. Las dos tiras comparten columnas (ver `.mc` en el CSS): la
+ * barra de una queda exactamente debajo de la de la otra.
  */
-const TiraNoCerradas = ({ celda, destino, irA, Ayuda }) => (
-    <div className="mc-tira mc-tira--no" role="group" aria-label="No cerradas">
-        <span className="mc-tira-rot">
-            <small className="mc-rot">No cerradas</small>
-            <ConAyuda Ayuda={Ayuda} titulo="No cerradas"
-                texto={`Llamadas con show up que no terminaron ni en venta ni en seña: ${n(celda.num)} `
-                    + `de ${n(celda.den)}. Con las ventas y las señas suman todas las llamadas con `
-                    + 'show up: acá están los leads a los que hay que volver.'} />
-        </span>
-        <Riel className="mc-riel--tira" tramos={[{ tono: 'no', ancho: celda.pct, demora: 520 }]} />
-        <span className="mc-tira-cifra">
-            <MetricaClicable irA={irA} destino={destino} vacio={!celda.num} subrayar={false}
-                detalle={`No cerradas · ${n(celda.num)} de ${n(celda.den)}`}>
-                <Pct valor={n(celda.num)} sufijo="" className="mc-tira-pct" />
-            </MetricaClicable>
-            <small className="mc-frac">de {n(celda.den)} · {pctDe(celda.pct)}</small>
-        </span>
-    </div>
-);
+const TiraNoCerradas = ({ celda, destino, irA, onVer, Ayuda }) => {
+    const detalle = `No cerradas · ${n(celda.num)} de ${n(celda.den)}`;
+    const cifra = <Pct valor={n(celda.num)} sufijo="" className="mc-tira-pct" />;
+    const base = <small className="mc-frac">de {n(celda.den)} · {pctDe(celda.pct)}</small>;
+    return (
+        <div className="mc-tira mc-tira--no" role="group" aria-label="No cerradas">
+            <span className="mc-tira-rot">
+                <small className="mc-rot">No cerradas</small>
+                <ConAyuda Ayuda={Ayuda} titulo="No cerradas"
+                    texto={`Llamadas con show up que no terminaron ni en venta ni en seña: ${n(celda.num)} `
+                        + `de ${n(celda.den)}. Con las ventas y las señas suman todas las llamadas con `
+                        + 'show up: acá están los leads a los que hay que volver.'} />
+            </span>
+            <Riel className="mc-riel--tira" tramos={[{ tono: 'no', ancho: celda.pct, demora: 520 }]} />
+            <span className="mc-tira-cifra">
+                {onVer ? (
+                    <button type="button" className="metrica-clic mc-abre"
+                        data-vacio={celda.num ? undefined : '1'}
+                        aria-label={`Ver los leads: ${detalle}`} title={`Ver los leads: ${detalle}`}
+                        onClick={onVer}>
+                        {cifra}
+                        {base}
+                        <ChevronRight size={14} className="mc-abre-flecha" aria-hidden="true" />
+                    </button>
+                ) : (
+                    <>
+                        <MetricaClicable irA={irA} destino={destino} vacio={!celda.num} subrayar={false}
+                            detalle={detalle}>
+                            {cifra}
+                        </MetricaClicable>
+                        {base}
+                    </>
+                )}
+            </span>
+        </div>
+    );
+};
 
 /** Una lectura dentro de la tarjeta: rótulo, tasa grande con su fracción y la barra. */
 const Lectura = ({ fila, col, celda, tramos, destino, irA, Ayuda }) => {
@@ -280,7 +305,7 @@ export const LeyendaCierres = ({ cierres }) => {
     );
 };
 
-const MatrizCierres = ({ cierres, irA, destinos, Ayuda = AyudaSimple, className }) => {
+const MatrizCierres = ({ cierres, irA, destinos, onVerNoCerradas, Ayuda = AyudaSimple, className }) => {
     if (!cierres) return null;
     return (
         <div className={`mc${className ? ` ${className}` : ''}`}>
@@ -296,7 +321,7 @@ const MatrizCierres = ({ cierres, irA, destinos, Ayuda = AyudaSimple, className 
             </div>
             {cierres.no_cerradas && (
                 <TiraNoCerradas celda={cierres.no_cerradas} destino={destinos?.no_cerradas}
-                    irA={irA} Ayuda={Ayuda} />
+                    irA={irA} onVer={onVerNoCerradas} Ayuda={Ayuda} />
             )}
         </div>
     );

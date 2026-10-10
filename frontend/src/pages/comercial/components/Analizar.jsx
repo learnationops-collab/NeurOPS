@@ -9,6 +9,7 @@ import Cifra from './Cifra';
 import MetricaClicable, { abrir } from '../../../components/dashboard/MetricaClicable';
 import MatrizCierres, { LeyendaCierres } from '../../../components/dashboard/MatrizCierres';
 import RepartoEstados from './RepartoEstados';
+import ModalNoCerradas from './ModalNoCerradas';
 import { AYUDA_PROCEDENCIA } from './procedencias';
 import {
     DESTINOS_CIERRES, DESTINOS_CLOSER as D, DESTINOS_SETTER as S, DESTINO_PROCEDENCIAS_TOTAL,
@@ -355,10 +356,21 @@ const PanelEstados = ({ bloque, irA }) => {
  * La cabecera lleva la leyenda de los dos colores con los conteos detrás de las tasas —cuántas
  * ventas, partidas en pago completo y split pay, y cuántas señas sin completar—, que es lo que
  * antes era "N de M llamadas".
+ *
+ * «No cerradas» abre un modal con cada lead y su objeción (`ModalNoCerradas`), que pide su lista
+ * con `cargarNoCerradas` y desde el que se va a Revisar. Tocar un lead cierra el modal y abre su
+ * ficha (`onAbrirFila`, la misma de Revisar); al cerrar la ficha se vuelve a la lista, que se pide
+ * de nuevo por si en la ficha se cargó una objeción. Sin `cargarNoCerradas` el número va directo a
+ * Revisar, como el resto de la tarjeta.
  */
-const PanelCierre = ({ bloque, irA }) => {
+const PanelCierre = ({ bloque, irA, cargarNoCerradas, onAbrirFila }) => {
+    const [verNoCerradas, setVerNoCerradas] = useState(false);
     const c = bloque.cierres;
     const vacio = bloque.asistieron === 0 || !c;
+    const abrirLead = onAbrirFila ? (fila) => {
+        setVerNoCerradas(false);
+        onAbrirFila(fila, { alCerrar: () => setVerNoCerradas(true) });
+    } : null;
     return (
         <Panel id="p-cierre" cab={
             <PanelCab titulo="Cierre"
@@ -371,7 +383,13 @@ const PanelCierre = ({ bloque, irA }) => {
         }>
             {vacio
                 ? <Vacio texto="Ninguna llamada del período tiene todavía un show up cargado." />
-                : <MatrizCierres cierres={c} irA={irA} destinos={DESTINOS_CIERRES} Ayuda={Tip} />}
+                : <MatrizCierres cierres={c} irA={irA} destinos={DESTINOS_CIERRES} Ayuda={Tip}
+                    onVerNoCerradas={cargarNoCerradas ? () => setVerNoCerradas(true) : undefined} />}
+            {verNoCerradas && cargarNoCerradas && (
+                <ModalNoCerradas cargar={cargarNoCerradas} total={c?.no_cerradas?.num ?? null}
+                    irA={irA} destino={DESTINOS_CIERRES.no_cerradas} onAbrir={abrirLead}
+                    onCerrar={() => setVerNoCerradas(false)} />
+            )}
         </Panel>
     );
 };
@@ -954,7 +972,7 @@ const pasosDe = (funnel, vocabulario, irA) => funnel.map(p => {
     };
 });
 
-const DashboardClosers = ({ bloque, deltas, porCobrar, fuentes, irA }) => (
+const DashboardClosers = ({ bloque, deltas, porCobrar, fuentes, irA, cargarNoCerradas, onAbrirFila }) => (
     <>
         <div className="grid grid--4">
             <Tile label="Show up" valor={fmt.pct(bloque.show_up)} color={v('success')}
@@ -1001,7 +1019,8 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, fuentes, irA }) => (
         </div>
 
         <div className="grid-2">
-            <PanelCierre bloque={bloque} irA={irA} />
+            <PanelCierre bloque={bloque} irA={irA} cargarNoCerradas={cargarNoCerradas}
+                onAbrirFila={onAbrirFila} />
             <PanelCash bloque={bloque} deltas={deltas} porCobrar={porCobrar} irA={irA} />
         </div>
 
@@ -1179,7 +1198,7 @@ const DashboardSetters = ({ bloque, deltas, irA }) => {
    VISTA
    ============================================================ */
 
-const Analizar = ({ datos, rol, irA }) => {
+const Analizar = ({ datos, rol, irA, cargarNoCerradas = null, onAbrirFila = null }) => {
     if (!datos) return <EsqueletoTablero />;
     // El resumen que hay en mano puede ser todavía el del rol anterior: el `rol` de arriba cambia
     // en el momento y el fetch llega después. Dibujar el dashboard de closers con un payload de
@@ -1191,7 +1210,8 @@ const Analizar = ({ datos, rol, irA }) => {
     return rol === 'setters'
         ? <DashboardSetters bloque={actual} deltas={deltas} irA={irA} />
         : <DashboardClosers bloque={actual} deltas={deltas} porCobrar={datos.por_cobrar}
-            fuentes={datos.fuentes} irA={irA} />;
+            fuentes={datos.fuentes} irA={irA} cargarNoCerradas={cargarNoCerradas}
+            onAbrirFila={onAbrirFila} />;
 };
 
 export default Analizar;

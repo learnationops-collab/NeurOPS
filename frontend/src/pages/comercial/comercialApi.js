@@ -38,6 +38,11 @@ export const getVariabilidad = (filtros) =>
 export const getTabla = (filtros, tabla, basis) =>
     api.get('/comercial/tabla', { params: { ...filtrosQuery(filtros), tabla, basis } }).then(r => r.data);
 
+/** «No cerradas» del panel Cierre: las agendas con show up sin venta ni seña, cada una con su
+ *  objeción. Mismo período y alcance que el resumen; se pide recién al abrir su modal. */
+export const getNoCerradas = (filtros) =>
+    api.get('/comercial/cierres/no-cerradas', { params: filtrosQuery(filtros) }).then(r => r.data);
+
 /** Corrige el pre call o el post call de una agenda. Devuelve el valor anterior, por si hay que
  *  deshacerlo desde la interfaz. */
 export const corregirAgenda = (id, campo, valor) =>
