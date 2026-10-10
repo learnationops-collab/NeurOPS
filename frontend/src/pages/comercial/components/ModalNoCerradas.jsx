@@ -3,7 +3,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, CalendarX, ChevronRight, Quote, RotateCcw } from 'lucide-react';
 import Modal from '../../../components/ui/Modal';
 import { abrir } from '../../../components/dashboard/MetricaClicable';
-import { fmt } from './Shared';
+import { parseUtcIso } from '../../../utils/datetime';
 
 /**
  * «No cerradas» del panel Cierre: cada llamada con show up que no terminó ni en venta ni en seña, con
@@ -26,6 +26,20 @@ import { fmt } from './Shared';
 
 const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
 
+const dos = (n) => String(n).padStart(2, '0');
+
+/**
+ * `30/09` o `30/09 09:00` en el reloj de quien mira. `start_time` y `created_at` llegan en UTC y sin
+ * zona (`isoformat()`): leídos tal cual, una llamada de las 9 en La Paz se veía a las 13 y la ficha
+ * que se abre desde la fila decía otra hora. `parseUtcIso` es la conversión de la ficha y del mazo.
+ */
+const cuando = (iso, { conHora = false } = {}) => {
+    const d = parseUtcIso(iso);
+    if (!d) return '';
+    const dia = `${dos(d.getDate())}/${dos(d.getMonth() + 1)}`;
+    return conHora ? `${dia} ${dos(d.getHours())}:${dos(d.getMinutes())}` : dia;
+};
+
 /**
  * «Lo tiene que hablar con la pareja» — Marlon · 11/09. Entera y sin recortar: es lo que se viene a
  * leer a este modal.
@@ -38,7 +52,7 @@ const Objecion = ({ objecion }) => (
                 {objecion.texto}
             </small>
             <small className="mt-1 block text-[10.5px] font-semibold text-slate-500">
-                {[objecion.autor, objecion.fecha && fmt.fecha(objecion.fecha)].filter(Boolean).join(' · ')}
+                {[objecion.autor, cuando(objecion.fecha)].filter(Boolean).join(' · ')}
             </small>
         </span>
     </span>
@@ -73,7 +87,7 @@ const Fila = ({ fila, onAbrir }) => {
                         </small>
                     )}
                     <small className="shrink-0 text-[11px] font-semibold text-slate-500 tabular-nums">
-                        {fila.closer} · {fmt.fecha(fila.fecha)}{fmt.hora(fila.fecha) ? ` ${fmt.hora(fila.fecha)}` : ''}
+                        {[fila.closer, cuando(fila.fecha, { conHora: true })].filter(Boolean).join(' · ')}
                     </small>
                 </span>
                 <span className="mt-2 block">

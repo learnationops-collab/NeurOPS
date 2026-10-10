@@ -43,6 +43,15 @@ const TABLA = [
     agenda(5, 'No vino', { key: 'no_show', label: 'No show' }, { noCerrada: false, asistio: false }),
 ];
 
+// Las fechas viajan en UTC y sin Z (`isoformat()`). La expectativa se arma con la misma cuenta en la
+// zona del proceso, así el test no depende del huso de la máquina.
+const dos = (n) => String(n).padStart(2, '0');
+const enLocal = (iso, conHora) => {
+    const d = new Date(`${iso}Z`);
+    const dia = `${dos(d.getDate())}/${dos(d.getMonth() + 1)}`;
+    return conHora ? `${dia} ${dos(d.getHours())}:${dos(d.getMinutes())}` : dia;
+};
+
 /** Espera a que la promesa de `cargar` se resuelva y React pinte. */
 const esperarCarga = () => act(() => new Promise((listo) => { setTimeout(listo, 0); }));
 
@@ -66,10 +75,11 @@ describe('ModalNoCerradas', () => {
         expect(filas).toHaveLength(2);
 
         expect(filas[0]).toHaveTextContent('Luciana Paredes');
-        expect(filas[0]).toHaveTextContent('Marlon · 11/09 15:30');
+        // En el reloj de quien mira, como la ficha que abre la fila: no el ISO en UTC recortado.
+        expect(filas[0]).toHaveTextContent(`Marlon · ${enLocal('2026-09-11T15:30:00', true)}`);
         expect(filas[0]).toHaveTextContent('Seguimiento');
         expect(filas[0]).toHaveTextContent('Lo tiene que hablar con la pareja');
-        expect(filas[0]).toHaveTextContent('Marlon · 11/09');
+        expect(filas[0]).toHaveTextContent(`Marlon · ${enLocal('2026-09-11T16:00:00', false)}`);
         expect(dialogo()).toHaveTextContent('2 llamadas con show up sin venta ni seña');
     });
 
