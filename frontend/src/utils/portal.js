@@ -8,9 +8,9 @@ import { abrirPortal } from '../sesion/portalBus';
 
 // El Portal (10/10/2026): una pantalla que se abre ENCIMA de lo que se está viendo (no es una ruta; ver
 // sesion/PortalContext.jsx), al iniciar sesión si hay más de un área y desde «Portal» del menú de sesión.
-// Separa ROLES de ÁREAS (utils/areas.js): primero los roles de la cuenta y de sus cuentas vinculadas (y
-// Simular a alguien, para quien puede); al elegir uno, sus áreas y Cortex, que es común a todos los roles.
-// Finances es un área del rol con el que se entra a ella.
+// Distingue ROLES de ÁREAS (utils/areas.js): una tarjeta por cada área de cada rol de la cuenta y de sus
+// cuentas vinculadas, con el rol arriba; después Cortex, que es común a todos los roles (y Simular a
+// alguien, para quien puede). Finances es un área del rol con el que se entra a ella.
 // «Entrar directo la próxima vez» guarda el área elegida (por cuenta, en este navegador) y la próxima
 // entrada va directo ahí.
 
@@ -105,11 +105,8 @@ export function entrarAlIniciar(user, navegar) {
     return undefined;
 }
 
-/** Las áreas de un rol en el Portal: las suyas y Cortex, que es común a todos los roles. */
-export const areasDelGrupo = (grupo) => [
-    ...grupo.tarjetas,
-    { clave: `${grupo.clave}:cortex`, titulo: CORTEX.label, Icono: CORTEX.Icono, ruta: CORTEX.ruta, comun: true },
-];
+/** Cortex en el Portal: un área común a todos los roles, que entra sin cambiar de rol. */
+export const TARJETA_CORTEX = { clave: 'cortex', titulo: CORTEX.label, Icono: CORTEX.Icono, ruta: CORTEX.ruta, comun: true };
 
 /**
  * Pasa a otra cuenta de la persona en ESTA pestaña (en una aislada no toca la cookie) y entra a `destino`

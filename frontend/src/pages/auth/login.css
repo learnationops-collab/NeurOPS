@@ -274,3 +274,12 @@
 .pt-cerrar:hover, .pt-cerrar:focus-visible { background: rgba(255, 255, 255, .14); border-color: rgba(255, 255, 255, .4); outline: none; }
 .pt-atras { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
 @media (prefers-reduced-motion: reduce) { .pt { animation: none; } }
+
+/* El Portal como la referencia de Kerwin (10/10/2026): una sola grilla con las columnas que da Eleccion
+   (sin las 4 fijas de los grupos) y tarjetas del tamaño de la referencia (232px de ancho: con 5 por fila
+   la grilla se ensancha en vez de achicarlas). */
+.pt .el-grupo--solo { width: 100%; margin-top: 0; animation: none; }
+.pt .el-grupo--solo .el-tarjetas { width: min(calc(var(--cols) * 232px + (var(--cols) - 1) * var(--el-gap)), 100%); margin: 12px auto 0; }
+.pt .el-grupo--solo .el-tarjeta { min-height: clamp(130px, 20vh, 172px); }
+@media (min-width: 901px) { .pt .el-grupo--solo .el-tarjeta { flex-basis: calc((100% - (var(--cols) - 1) * var(--el-gap)) / var(--cols)); } }
+@media (max-width: 560px) { .pt .el-grupo--solo .el-tarjeta { min-height: 112px; } }

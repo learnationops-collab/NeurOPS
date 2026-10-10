@@ -6,7 +6,7 @@ const bus = vi.hoisted(() => ({ abrirPortal: vi.fn() }));
 vi.mock('../sesion/portalBus', () => bus);
 
 import {
-    areasDelGrupo, cambiarDeCuenta, cambiarDeRolEnLaCuenta, destinoDeEntrada, entrarAlIniciar, entrarPorTarjeta, fijarTarjetaPorDefecto, gruposDelPortal, hayPortal,
+    TARJETA_CORTEX, cambiarDeCuenta, cambiarDeRolEnLaCuenta, destinoDeEntrada, entrarAlIniciar, entrarPorTarjeta, fijarTarjetaPorDefecto, gruposDelPortal, hayPortal,
     opcionPortal, tarjetaPorDefecto, tarjetasDelPortal,
 } from './portal';
 
@@ -102,12 +102,10 @@ describe('a dónde entra', () => {
         expect(post).toHaveBeenCalledWith('/auth/switch-role', { user_id: 2, isolated: false });
     });
 
-    it('Cortex es un área común: está en todos los roles y entra sin cambiar de rol', () => {
+    it('Cortex es un área común: entra sin cambiar de rol', () => {
         const navegar = vi.fn();
-        const [g] = gruposDelPortal(dir);
-        const cortex = areasDelGrupo(g).at(-1);
-        expect(cortex).toMatchObject({ titulo: 'Cortex', ruta: '/cortex', comun: true });
-        entrarPorTarjeta({ ...dir, role: 'closer' }, cortex, navegar);
+        expect(TARJETA_CORTEX).toMatchObject({ titulo: 'Cortex', ruta: '/cortex', comun: true });
+        entrarPorTarjeta({ ...dir, role: 'closer' }, TARJETA_CORTEX, navegar);
         expect(navegar).toHaveBeenCalledWith('/cortex');
         expect(post).not.toHaveBeenCalled();
     });

@@ -59,38 +59,33 @@ describe('El Portal', () => {
         expect(screen.getByTestId('donde').textContent).toBe('/admin/comercial');
     });
 
-    it('primero los roles; al tocar uno, sus áreas y Cortex, el área común', () => {
+    it('una sola grilla: cada área con su rol arriba, Finances al final, y después Cortex y Simular', () => {
         sesion.user = MARIO;
         montar();
         abrir();
-        expect(tarjetas()).toEqual(['Operador', 'Administrador', 'Simular a alguien']);
-        fireEvent.click(screen.getByRole('button', { name: /Administrador/ }));
-        expect(screen.getByRole('heading', { name: 'Administrador' })).toBeTruthy();
-        expect(tarjetas()).toEqual(['Administración', 'Ventas', 'Agendamiento', 'Finances', 'Cortex']);
-        expect(screen.getByText('Área común')).toBeTruthy();
-        fireEvent.click(screen.getByRole('button', { name: /Tus roles/ }));
-        expect(tarjetas()).toEqual(['Operador', 'Administrador', 'Simular a alguien']);
+        expect(screen.getByText('¿A dónde vamos?')).toBeTruthy();
+        expect(tarjetas()).toEqual(['Operaciones', 'Administración', 'Ventas', 'Agendamiento', 'Finances', 'Cortex', 'Simular a alguien']);
+        const sobre = screen.getAllByRole('button').filter((b) => b.className.includes('el-tarjeta'))
+            .map((b) => b.querySelector('small').textContent);
+        expect(sobre).toEqual(['Operador', 'Administrador', 'Administrador', 'Administrador', 'Administrador', 'Para todos', 'Equipo']);
     });
 
-    it('con un solo rol y sin Simular va directo a sus áreas', () => {
+    it('con un solo rol: sus áreas y Cortex', () => {
         sesion.user = CLOSER;
         montar('/closer/deck');
         abrir();
         expect(tarjetas()).toEqual(['Cierres', 'Cortex']);
-        expect(screen.queryByRole('button', { name: /Tus roles/ })).toBeNull();
     });
 
     it('un área del rol de ahora navega y cierra el Portal; la de otro rol cambia de rol', () => {
         sesion.user = MARIO;
         montar('/ops/dashboard');
         abrir();
-        fireEvent.click(screen.getByRole('button', { name: /Operador/ }));
         fireEvent.click(screen.getByRole('button', { name: /Cortex/ }));
         expect(screen.getByTestId('donde').textContent).toBe('/cortex');
         expect(portalAbierto()).toBeNull();
 
         abrir();
-        fireEvent.click(screen.getByRole('button', { name: /Administrador/ }));
         fireEvent.click(screen.getByRole('button', { name: /Finances/ }));
         expect(portal.cambiarDeRolEnLaCuenta).toHaveBeenCalledWith('admin', '/finanzas');
     });
@@ -101,7 +96,7 @@ describe('El Portal', () => {
         abrir();
         fireEvent.click(screen.getByRole('button', { name: /Simular a alguien/ }));
         expect(screen.getByTestId('simular')).toBeTruthy();
-        fireEvent.click(screen.getByRole('button', { name: /Tus roles/ }));
+        fireEvent.click(screen.getByRole('button', { name: /Volver al Portal/ }));
         expect(screen.queryByTestId('simular')).toBeNull();
         fireEvent.click(screen.getByRole('button', { name: 'Cerrar el Portal' }));
 
@@ -116,13 +111,13 @@ describe('El Portal', () => {
         expect(portalAbierto()).toBeNull();
     });
 
-    it('Escape vuelve un paso y desde los roles cierra', () => {
+    it('Escape vuelve de Simular a la grilla y desde la grilla cierra', () => {
         sesion.user = DIR;
         montar();
         abrir();
-        fireEvent.click(screen.getByRole('button', { name: /Dirección comercial/ }));
+        fireEvent.click(screen.getByRole('button', { name: /Simular a alguien/ }));
         fireEvent.keyDown(window, { key: 'Escape' });
-        expect(tarjetas()).toEqual(['Dirección comercial', 'Simular a alguien']);
+        expect(tarjetas()).toEqual(['Ventas', 'Agendamiento', 'Cortex', 'Simular a alguien']);
         fireEvent.keyDown(window, { key: 'Escape' });
         expect(portalAbierto()).toBeNull();
     });
@@ -131,7 +126,6 @@ describe('El Portal', () => {
         sesion.user = DIR;
         const { unmount } = montar();
         abrir();
-        fireEvent.click(screen.getByRole('button', { name: /Dirección comercial/ }));
         fireEvent.click(screen.getByRole('checkbox'));
         fireEvent.click(screen.getByRole('button', { name: /Agendamiento/ }));
         expect(localStorage.getItem('portal_por_defecto_v2_7')).toBe('director_comercial:agendamiento');
@@ -139,7 +133,6 @@ describe('El Portal', () => {
 
         montar();
         abrir();
-        fireEvent.click(screen.getByRole('button', { name: /Dirección comercial/ }));
         expect(screen.getByText('Por defecto')).toBeTruthy();
         expect(screen.getByRole('checkbox').checked).toBe(true);
     });
