@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Banknote, Calendar, FileDown, ListX, Percent, CalendarRange, CheckCircle2, Ghost, Inbox, LogOut, Search, Target, Users, VenetianMask, Wallet } from 'lucide-react';
+import { ArrowLeft, Banknote, Calendar, FileDown, ListX, Percent, CalendarRange, CheckCircle2, Ghost, Inbox, Search, Target, Users, Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { revertImpersonation, simularA } from '../../utils/impersonation';
-import { opcionesDeFinanzas, opcionesDeRol, RUTA_FINANZAS, TITULO_FINANZAS } from '../../utils/cuentasVinculadas';
-import { opcionCambiarDeArea } from '../../utils/areas';
+import { revertImpersonation } from '../../utils/impersonation';
+import { opcionesDeFinanzas, RUTA_FINANZAS, TITULO_FINANZAS } from '../../utils/cuentasVinculadas';
+import { usePlaybook } from '../../contexts/PlaybookContext';
+import { armarMenuSesion, rotuloDeSesion } from '../../sesion/menuSesion';
+import { useConfiguracion } from '../../sesion/ConfiguracionContext';
 import './comercial.css';
 import '../../components/dashboard/pareja.css';
 import '../../components/learnation-ds/learnation-ds.css';
@@ -96,47 +98,6 @@ const SALIDA = {
     admin: { to: '/admin/ventas', label: 'Ir a Ventas' },
 };
 
-/**
- * Quién puede elegir "Simular a un closer" y "Simular a un setter" en el menú de sesión: lo decide
- * el backend (`/auth/impersonate`), esto solo evita ofrecerle la opción a quien recibiría un 403. Se
- * mira el rol REAL: simulando a un closer, la dirección sigue pudiendo pasar a otro o a un setter.
- * Los setters se suman el 10/10/2026 (pedido del usuario: «que el administrador comercial pueda
- * simular a los setters como lo hace con los closers»).
- */
-const SIMULAN_EQUIPO = ['director_comercial', 'admin', 'operator'];
-
-const ROTULO_DE_ROL = {
-    director_comercial: 'Dirección comercial',
-    admin: 'Admin',
-    operator: 'Operaciones',
-    closer: 'Closer',
-};
-
-/**
- * La lista del panel «Simular a un closer» o «a un setter»: `clave` es `closers` o `setters`. Se
- * simula con el rol de la lista, no con el principal de la persona: alguien que es closer o setter
- * además de otra cosa entra como eso.
- */
-const ROL_DE_LISTA = { closers: 'closer', setters: 'setter' };
-
-const cargarParaSimular = (clave) => async () => {
-    const res = await api.get(`/auth/impersonate/${clave}`);
-    return (res.data?.[clave] || []).map(c => ({
-        id: c.id,
-        label: c.username,
-        onClick: async () => {
-            const aviso = toast.loading(`Entrando como ${c.username}…`);
-            try {
-                await simularA(c.id, null, ROL_DE_LISTA[clave]);
-            } catch (error) {
-                toast.error(error?.response?.status === 403
-                    ? `No podés simular a ${c.username}`
-                    : `No se pudo simular a ${c.username}`, { id: aviso });
-            }
-        },
-    }));
-};
-
 const SECCIONES = [
     // `permiso` en una tab: la clave del contexto que la habilita. Comparativas es la única vista
     // que muestra los números de OTRAS personas con nombre y apellido: la ven la dirección y los
@@ -211,6 +172,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const [params, setParams] = useSearchParams();
     const [contexto, setContexto] = useState(null);
     const { user, logout } = useAuth();
+    const { pendingCount, openPlaybook } = usePlaybook();
+    const { abrir: abrirConfiguracion } = useConfiguracion();
     const navigate = useNavigate();
     const [saliendo, setSaliendo] = useState(false);
 
@@ -690,34 +653,17 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         }
     };
 
-    const rolReal = user?.is_impersonating ? user?.original_user_role : user?.role;
     // Comercial y Finances son dos vistas separadas: cada una ofrece pasar a la otra (ver
-    // `opcionesDeFinanzas`). En /finanzas la vuelta va primero, porque es la única salida. Las dos
-    // tienen además «Cambiar de vista», el hub con todas (ver `opcionesDeRol`).
-    const deRol = opcionesDeRol(user, (m) => toast.error(m), navigate);
-    const gruposDeSesion = [
-        // Dirección ↔ Agendamiento (Agendas 2.0), ver utils/areas.js.
-        opcionCambiarDeArea(user, 'direccion', navigate),
-        delEspacio
-            ? [...opcionesDeFinanzas(user, navigate, { enFinanzas: true }), ...deRol]
-            : [...deRol, ...opcionesDeFinanzas(user, navigate, { puede: !!contexto.puede_ver_finanzas })],
-        SIMULAN_EQUIPO.includes(rolReal) ? [
-            { id: 'simular', label: 'Simular a un closer', Icono: VenetianMask,
-                panel: { titulo: 'Simular a un closer', vacio: 'No hay closers activos.', cargar: cargarParaSimular('closers') } },
-            { id: 'simular-setter', label: 'Simular a un setter', Icono: VenetianMask,
-                panel: { titulo: 'Simular a un setter', vacio: 'No hay setters activos.', cargar: cargarParaSimular('setters') } },
-        ] : [],
-        [
-            ...(user?.is_impersonating
-                ? [{ id: 'volver', label: 'Volver a mi sesión', Icono: Ghost, onClick: volverAMiSesion }]
-                : []),
-            { id: 'salir', label: 'Cerrar sesión', Icono: LogOut, peligro: true,
-                onClick: () => { if (window.confirm('¿Cerrar sesión?')) logout(); } },
-        ],
-    ];
+    // `opcionesDeFinanzas`). En /finanzas la vuelta va primero, porque es la única salida.
+    const gruposDeSesion = armarMenuSesion({
+        user, navigate, logout,
+        configuracion: { onClick: () => abrirConfiguracion() },
+        playbook: { onClick: () => openPlaybook('pending'), pendientes: pendingCount },
+        irAntes: delEspacio ? opcionesDeFinanzas(user, navigate, { enFinanzas: true }) : [],
+        irDespues: delEspacio ? [] : opcionesDeFinanzas(user, navigate, { puede: !!contexto.puede_ver_finanzas }),
+    });
     // En /finanzas el menú dice Finances, como la tarjeta con la que se entra ahí.
-    const rotuloDeRol = [delEspacio ? TITULO_FINANZAS : ROTULO_DE_ROL[contexto.yo.rol] || contexto.yo.rol,
-        user?.is_impersonating && 'simulación'].filter(Boolean).join(' · ');
+    const rotuloDeRol = rotuloDeSesion(user, delEspacio ? TITULO_FINANZAS : null);
 
     const puedeCorregirFila = (fila) => {
         if (!fila || fila.tipo !== 'agenda') return false;

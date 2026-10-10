@@ -6,10 +6,10 @@ import {
     Layers, Search, Check, X, ChevronRight, Loader2,
     Calendar, Phone, Mail, Instagram, ExternalLink,
     CalendarDays, AlertCircle, CreditCard,
-    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Pencil,
-    Compass, Sparkles, DollarSign, UserPlus,
+    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, Pencil,
+    Sparkles, DollarSign, UserPlus,
     CalendarCheck, PhoneCall, MessageCircle, ClipboardList, BarChart3, Briefcase, FileSearch,
-    CalendarPlus, Gift, Hourglass, Ghost, Settings
+    CalendarPlus, Gift, Hourglass, Ghost
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -25,13 +25,12 @@ import DashboardComercial from '../comercial/DashboardComercial';
 import DockSecciones from '../comercial/components/DockSecciones';
 import MenuSesion from '../comercial/components/MenuSesion';
 import { revertImpersonation } from '../../utils/impersonation';
-import { opcionesDeRol } from '../../utils/cuentasVinculadas';
+import { armarMenuSesion, rotuloDeSesion } from '../../sesion/menuSesion';
+import { useConfiguracion } from '../../sesion/ConfiguracionContext';
 import '../comercial/comercial.css';
 import '../../components/dashboard/pareja.css';
 import ComisionMesCard from './components/ComisionMesCard';
 import ProcrastinarModal from './components/ProcrastinarModal';
-import ConfiguracionCloser from './components/ConfiguracionCloser';
-import HojaModal from '../../components/ui/HojaModal';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, localToday, localDateFromNow, formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
 import AgendaCountdown from '../../components/shared/AgendaCountdown';
 import FichaLeadModal from '../../components/ficha/FichaLeadModal';
@@ -142,17 +141,9 @@ const CloserWorkflowPage = () => {
 
     // Vista activa v6: 'inbox' (bandeja) o 'report' (reporte del día).
     const [activeView, setActiveView] = useState('inbox');
-    // Configuración se abre en una hoja encima del mazo. `?vista=configuracion` la abre: es a donde
-    // vuelve Google después de conectar el calendario.
-    const [configAbierta, setConfigAbierta] = useState(() => searchParams.get('vista') === 'configuracion');
-    const cerrarConfig = () => {
-        setConfigAbierta(false);
-        if (searchParams.get('vista') === 'configuracion') {
-            const resto = new URLSearchParams(searchParams);
-            ['vista', 'google_connected', 'google_error'].forEach((k) => resto.delete(k));
-            setSearchParams(resto, { replace: true });
-        }
-    };
+    // Configuración es la de todos (sesion/ConfiguracionContext.jsx): una hoja encima del mazo. Al
+    // cerrarla se vuelve a mirar si faltan Calendar o WhatsApp.
+    const { abierta: configAbierta, abrir: abrirConfiguracion } = useConfiguracion();
     // Google Calendar conectado y WhatsApp confirmado (null mientras no se sabe): sin ellos, el closer
     // no recibe agendas del sistema nuevo, así que «Configuración» lleva un aviso en el menú de sesión.
     const [calendarConectado, setCalendarConectado] = useState(null);
@@ -1450,34 +1441,20 @@ const CloserWorkflowPage = () => {
             toast.error(error?.response?.data?.message || 'No se pudo volver a tu sesión');
         }
     };
-    const gruposDeSesion = [
-        [
+    const gruposDeSesion = armarMenuSesion({
+        user, logout, navigate: (ruta) => window.location.assign(ruta),
+        acciones: [
             { id: 'agenda', label: 'Nueva agenda', Icono: CalendarPlus, onClick: () => setNewAgendaModalOpen(true) },
             { id: 'referido', label: 'Referido manual', Icono: Gift, onClick: () => setManualRefModalOpen(true) },
-        ],
-        [
-            { id: 'playbook', label: 'Playbook', Icono: Compass, onClick: () => openPlaybook('pending'),
-                cuenta: pendingCount > 0 ? pendingCount : null,
-                titulo: pendingCount > 0 ? `${pendingCount} pendientes` : null },
-            { id: 'learnito', label: 'Learnito', Icono: Sparkles, pronto: true, titulo: 'próximamente',
-                onClick: () => toast('Learnito (buscador con IA sobre el Playbook) llega próximamente.', { icon: '✨' }) },
             ...(counts.seguimientos > 0
                 ? [{ id: 'procrastinar', label: 'Quiero procrastinar', Icono: Hourglass, onClick: () => setShowProcrastinar(true) }]
                 : []),
+            { id: 'learnito', label: 'Learnito', Icono: Sparkles, pronto: true, titulo: 'próximamente',
+                onClick: () => toast('Learnito (buscador con IA sobre el Playbook) llega próximamente.', { icon: '✨' }) },
         ],
-        opcionesDeRol(user, (m) => toast.error(m)),
-        [
-            // Configuración (por ahora, Google Calendar) vive en el menú de sesión, no en el dock.
-            { id: 'configuracion', label: 'Configuración', Icono: Settings, onClick: () => setConfigAbierta(true),
-                cuenta: faltaConfigurar.length ? '!' : null,
-                titulo: faltaConfigurar.length ? faltaConfigurar.join(' · ') : null },
-            ...(user?.is_impersonating
-                ? [{ id: 'volver', label: 'Volver a mi sesión', Icono: Ghost, onClick: volverAMiSesion }]
-                : []),
-            { id: 'salir', label: 'Cerrar sesión', Icono: LogOut, peligro: true,
-                onClick: () => { if (window.confirm('¿Cerrar sesión?')) logout(); } },
-        ],
-    ];
+        configuracion: { onClick: () => abrirConfiguracion(), avisos: faltaConfigurar },
+        playbook: { onClick: () => openPlaybook('pending'), pendientes: pendingCount },
+    });
     // La página scrollea dentro de su propio contenedor, no en la ventana: al cambiar de sección se
     // vuelve arriba ahí, para no caer en la mitad de la otra.
     const paginaRef = useRef(null);
@@ -2360,7 +2337,7 @@ const CloserWorkflowPage = () => {
                 <DockSecciones secciones={seccionesDelDock} activa={seccionDelDock}
                     onElegir={irASeccion} ariaLabel="Secciones del espacio del closer"
                     despues={(
-                        <MenuSesion nombre={nombreDeSesion} rol={user?.is_impersonating ? 'Closer · simulación' : 'Closer'}
+                        <MenuSesion nombre={nombreDeSesion} rol={rotuloDeSesion(user)}
                             aviso={pendingCount > 0
                                 ? { texto: pendingCount, titulo: `${pendingCount} ${pendingCount === 1 ? 'video pendiente' : 'videos pendientes'} del Playbook` }
                                 : null}
@@ -2379,11 +2356,6 @@ const CloserWorkflowPage = () => {
                 entero del lead: ni la deuda, ni el formulario con el que entro, ni el hilo
                 del equipo. Las acciones rapidas siguen viviendo en la tarjeta, que es donde
                 estan: esto reemplaza el modal, no el mazo. */}
-            {configAbierta && (
-                <HojaModal titulo="Configuración" onCerrar={cerrarConfig}>
-                    <ConfiguracionCloser user={user} />
-                </HojaModal>
-            )}
             {selectedLead && (
                 <FichaLeadModal
                     appointmentId={selectedLead.id > 0 ? selectedLead.id : null}

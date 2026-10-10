@@ -1,24 +1,33 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import ConfiguracionCloser from './ConfiguracionCloser';
-import api from '../../../services/api';
+import Configuracion, { pestanasDe } from './Configuracion';
+import api from '../services/api';
 
-vi.mock('../../../services/api', () => ({ default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() } }));
+vi.mock('../services/api', () => ({ default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() } }));
 
+const CLOSER = { role: 'closer', username: 'jc' };
 const integraciones = () => fireEvent.click(screen.getByRole('tab', { name: /Integraciones/ }));
 
-describe('Configuración del closer', () => {
+describe('Configuración', () => {
     beforeEach(() => { api.get.mockReset(); api.put.mockReset(); api.delete.mockReset(); });
 
     it('tiene las pestañas de lo que decide el closer', () => {
         api.get.mockResolvedValue({ data: {} });
-        render(<ConfiguracionCloser />);
-        expect(screen.getAllByRole('tab').map(t => t.textContent)).toEqual(['Datos', 'Disponibilidad', 'Integraciones', 'Mis eventos']);
+        render(<Configuracion user={CLOSER} />);
+        expect(screen.getAllByRole('tab').map(t => t.textContent)).toEqual(['Datos', 'Disponibilidad', 'Integraciones', 'Mis eventos', 'Apariencia']);
+    });
+
+    it('cada rol ve las pestañas que le tocan', () => {
+        const de = (rol) => pestanasDe(rol).map(p => p.id);
+        expect(de('setter')).toEqual(['datos', 'apariencia']);
+        expect(de('operator')).toEqual(['datos', 'apariencia']);
+        expect(de('director_comercial')).toEqual(['datos', 'disponibilidad', 'integraciones', 'apariencia']);
+        expect(de('admin')).toEqual(['datos', 'disponibilidad', 'integraciones', 'equipo', 'apariencia']);
     });
 
     it('sin Google Calendar conectado ofrece conectarlo y explica por qué', async () => {
         api.get.mockResolvedValue({ data: { connected: false } });
-        render(<ConfiguracionCloser />);
+        render(<Configuracion user={CLOSER} />);
         integraciones();
         expect(await screen.findByRole('button', { name: /Conectar con Google/i })).toBeTruthy();
         expect(screen.getByText(/sin él, el sistema de agendas no te ofrece/i)).toBeTruthy();
@@ -28,7 +37,7 @@ describe('Configuración del closer', () => {
     it('conectado muestra el estado y el calendario de destino', async () => {
         const calendar = { connected: true, selected_calendar: 'primary', calendars: [{ id: 'primary', summary: 'Ana', primary: true }] };
         api.get.mockImplementation((url) => Promise.resolve({ data: url === '/google/calendars' ? calendar : {} }));
-        render(<ConfiguracionCloser />);
+        render(<Configuracion user={CLOSER} />);
         integraciones();
         expect(await screen.findByText(/Conectado/)).toBeTruthy();
         expect(screen.getByText('Ana (principal)')).toBeTruthy();  // el calendario de destino
@@ -39,7 +48,7 @@ describe('Configuración del closer', () => {
         api.put.mockImplementation((url, cuerpo) => Promise.resolve({ data: { evento: {
             id: url.split('/').pop(), nombre: cuerpo.nombre || 'Seguimiento', duracion: 45, formulario: cuerpo.formulario || '', activo: true, link: '/agenda/ana-seguimiento',
         } } }));
-        render(<ConfiguracionCloser />);
+        render(<Configuracion user={CLOSER} />);
         fireEvent.click(screen.getByRole('tab', { name: /Mis eventos/ }));
         expect(await screen.findByText('Todavía no creaste eventos propios.')).toBeTruthy();
         fireEvent.change(screen.getByLabelText('Nuevo evento'), { target: { value: 'Seguimiento' } });
@@ -57,7 +66,7 @@ describe('Configuración del closer', () => {
             hoja.className = 'bg-surface';
             hoja.style.color = color;
             document.body.appendChild(hoja);
-            const { container, unmount } = render(<ConfiguracionCloser />, { container: hoja });
+            const { container, unmount } = render(<Configuracion user={CLOSER} />, { container: hoja });
             const tema = container.querySelector('.cu-hoja').dataset.theme;
             unmount();
             hoja.remove();
@@ -69,7 +78,7 @@ describe('Configuración del closer', () => {
 
     it('fuera de una hoja sigue el modo de la app', () => {
         api.get.mockResolvedValue({ data: {} });
-        const { container } = render(<ConfiguracionCloser />);
+        const { container } = render(<Configuracion user={CLOSER} />);
         expect(container.querySelector('.cu-hoja').dataset.theme).toBe('light');
     });
 });

@@ -4,7 +4,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, CalendarDays, ClipboardList, Clock, LogOut, Settings, Users, VenetianMask } from 'lucide-react';
+import { BarChart3, CalendarDays, ClipboardList, Clock, Users, VenetianMask } from 'lucide-react';
 import './thalamus.css';
 import { useAuth } from '../../contexts/AuthContext';
 import { dataThemeDe, useApariencia } from '../../context/AparienciaContext';
@@ -27,8 +27,8 @@ import api from '../../services/api';
 import PruebaLead from './reserva/PruebaLead';
 import DockSecciones from '../comercial/components/DockSecciones';
 import MenuSesion from '../comercial/components/MenuSesion';
-import { opcionCambiarDeArea } from '../../utils/areas';
-import { opcionesDeRol } from '../../utils/cuentasVinculadas';
+import { rotuloDeRol } from '../../utils/cuentasVinculadas';
+import { armarMenuSesion, rotuloDeSesion } from '../../sesion/menuSesion';
 import '../comercial/comercial.css';
 
 // Tema: oscuro, claro o el del sistema. Se aplica a la raíz de Thalamus, no a toda la app.
@@ -47,27 +47,26 @@ function Dock() {
     const navigate = useNavigate();
     const secciones = SECCIONES.filter(s => perm.secOk(s.id)).map(s => ({ id: s.id, label: s.label, Icono: ICONO_DE_SECCION[s.id] || CalendarDays }));
     const rolReal = user?.is_impersonating ? user?.original_user_role : user?.role;
-    const grupos = [
-        [{ id: 'conf', label: 'Configuración', Icono: Settings, onClick: () => ui.set({ conf: { tab: 'datos' } }) }],
-        opcionCambiarDeArea(user, 'agendamiento', navigate),
-        opcionesDeRol(user, (m) => toast(m, 'error')),
+    // Configuración abre la de Agendamiento (con Equipo y su vista flotante o completa); el resto del
+    // menú es el de todas las pantallas (sesion/menuSesion.js).
+    const grupos = armarMenuSesion({
+        user, navigate, logout,
+        configuracion: { onClick: () => ui.set({ conf: { tab: 'datos' } }) },
         // Entra como el closer directo a su Configuración (Calendar, WhatsApp y disponibilidad).
-        SIMULAN_CLOSERS.includes(rolReal) ? [{
-            id: 'simular', label: 'Simular a un closer', Icono: VenetianMask,
+        equipo: SIMULAN_CLOSERS.includes(rolReal) ? [{
+            id: 'configurar-closer', label: 'Configurar a un closer', Icono: VenetianMask,
             panel: {
-                titulo: 'Simular a un closer', vacio: 'No hay closers activos.',
+                titulo: 'Configurar a un closer', vacio: 'No hay closers activos.',
                 cargar: async () => ((await api.get('/auth/impersonate/closers')).data?.closers || [])
                     .map(c => ({ id: c.id, label: c.username, onClick: () => simularParaConfigurar(c.id) })),
             },
         }] : [],
-        [{ id: 'salir', label: 'Cerrar sesión', Icono: LogOut, peligro: true,
-            onClick: () => { if (window.confirm('¿Cerrar sesión?')) logout(); } }],
-    ];
+    });
     return (
         <div className="dc-shell dc-shell--embebido">
             <DockSecciones secciones={secciones} activa={seccion} ariaLabel="Secciones de Agendamiento"
                 onElegir={irA}
-                despues={<MenuSesion nombre={user?.username || ''} rol="Dirección comercial · Agendamiento" grupos={grupos} />} />
+                despues={<MenuSesion nombre={user?.username || ''} rol={rotuloDeSesion(user, `${rotuloDeRol(user?.role)} · Agendamiento`)} grupos={grupos} />} />
         </div>
     );
 }

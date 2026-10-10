@@ -16,7 +16,7 @@ import './hoja-modal.css';
  *
  * Props: `titulo` (para lectores de pantalla), `onCerrar`, `acciones`, `children`.
  */
-export default function HojaModal({ titulo, onCerrar, acciones = null, children }) {
+export default function HojaModal({ titulo, onCerrar, acciones = null, amplia = false, children }) {
     const panel = useRef(null);
     const { cerrar, atraparTab, propsFondo } = useComportamientoModal({ onCerrar, panel });
     const quieto = useReducedMotion();
@@ -31,7 +31,7 @@ export default function HojaModal({ titulo, onCerrar, acciones = null, children 
                 aria-label={titulo}
                 tabIndex={-1}
                 onKeyDown={atraparTab}
-                className="hoja-panel bg-surface border border-base text-base outline-none"
+                className={`hoja-panel${amplia ? ' hoja-panel--amplia' : ''} bg-surface border border-base text-base outline-none`}
                 initial={quieto ? false : { opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2, ease: 'easeOut' }}

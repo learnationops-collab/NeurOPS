@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AparienciaProvider, dataThemeDe, useApariencia } from './AparienciaContext';
 import TabApariencia from '../temas/TabApariencia';
-import ConfiguracionCloser from '../pages/closer/components/ConfiguracionCloser';
+import Configuracion from '../sesion/Configuracion';
 
 const sesion = vi.hoisted(() => ({ user: null }));
 vi.mock('../contexts/AuthContext', () => ({ useAuth: () => ({ user: sesion.user }) }));
@@ -76,7 +76,7 @@ describe('Apariencia', () => {
     });
 
     it('en la Configuración, Apariencia aparece para cualquier rol', () => {
-        montar(<ConfiguracionCloser user={{ role: 'setter', username: 'st' }} />);
+        montar(<Configuracion user={{ role: 'setter', username: 'st' }} />);
         fireEvent.click(screen.getByRole('tab', { name: /Apariencia/ }));
         expect(screen.getByRole('radiogroup', { name: 'Tema' })).toBeTruthy();
         expect(screen.getByRole('radiogroup', { name: 'Modo' })).toBeTruthy();
@@ -84,7 +84,7 @@ describe('Apariencia', () => {
 
     it('con tema elegido, la Configuración del closer va en el modo del tema', () => {
         localStorage.setItem('app-tema', JSON.stringify({ tema: 'modern', modo: 'claro' }));
-        const { container } = montar(<ConfiguracionCloser user={{ role: 'admin', username: 'mario' }} />);
+        const { container } = montar(<Configuracion user={{ role: 'admin', username: 'mario' }} />);
         expect(container.querySelector('.cu-hoja').dataset.theme).toBe('light');
     });
 });

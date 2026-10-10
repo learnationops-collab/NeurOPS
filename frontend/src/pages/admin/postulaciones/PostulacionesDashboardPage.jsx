@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Inbox, CheckCircle2, Users, BarChart3, Sliders, ArrowLeft, LogOut } from 'lucide-react';
+import { Inbox, CheckCircle2, Users, BarChart3, Sliders, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import MenuSesion from '../../comercial/components/MenuSesion';
 import '../../comercial/comercial.css';
@@ -8,6 +8,8 @@ import PostulacionesInbox from './components/PostulacionesInbox';
 import PostulacionesRevisoresTab from './components/PostulacionesRevisoresTab';
 import PostulacionesStatsTab from './components/PostulacionesStatsTab';
 import PostulacionesClarityTab from './components/PostulacionesClarityTab';
+import { armarMenuSesion, rotuloDeSesion } from '../../../sesion/menuSesion';
+import { useConfiguracion } from '../../../sesion/ConfiguracionContext';
 
 // Antes "Postulantes" era una sola pestaña con un selector de vista adentro
 // (Revisión/En reserva/Incompletas). Se separa en "Pendientes" y "Analizados"
@@ -25,6 +27,7 @@ const TABS = [
 
 const PostulacionesDashboardPage = () => {
     const { user, logout } = useAuth();
+    const { abrir: abrirConfiguracion } = useConfiguracion();
     const [activeTab, setActiveTab] = useState('pendientes');
 
     return (
@@ -100,8 +103,11 @@ const PostulacionesDashboardPage = () => {
                     <div className="dc-shell dc-shell--embebido flex flex-none items-center">
                         <MenuSesion
                             nombre={user?.name || user?.username || ''}
-                            rol="Postulaciones"
-                            grupos={[[{ id: 'salir', label: 'Cerrar sesión', Icono: LogOut, peligro: true, onClick: logout }]]}
+                            rol={rotuloDeSesion(user, 'Postulaciones')}
+                            grupos={armarMenuSesion({
+                                user, logout, navigate: (ruta) => window.location.assign(ruta),
+                                configuracion: { onClick: () => abrirConfiguracion() },
+                            })}
                         />
                     </div>
                 </div>

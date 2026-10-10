@@ -99,7 +99,8 @@ function leerVueltaDeGoogle() {
 
 /**
  * Google Calendar: conectar (vuelve a esta pantalla), elegir en qué calendario se crean las agendas y
- * desconectar. volver: a dónde lo devuelve Google ('agendamiento' o, sin nada, la Configuración del closer).
+ * desconectar. volver: a dónde lo devuelve Google ('agendamiento' o, sin nada, a esta misma pantalla con la
+ * Configuración abierta, sesion/ConfiguracionContext.jsx).
  */
 export function TarjetaCalendar({ volver }) {
     const [st, setSt] = useState(null); // { connected, vencido, calendars, selected_calendar }
@@ -118,7 +119,7 @@ export function TarjetaCalendar({ volver }) {
         try { await fn(); } catch { setMsg({ error: 'Algo falló con Google. Probá de nuevo.' }); } finally { setOcupado(false); }
     };
     const conectar = () => correr(async () => {
-        const r = await api.get('/google/login', { params: volver ? { volver } : {} });
+        const r = await api.get('/google/login', { params: { volver: volver || window.location.pathname } });
         if (r.data.auth_url) window.location.href = r.data.auth_url;
     });
     const elegir = (v) => correr(async () => {

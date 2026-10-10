@@ -110,9 +110,10 @@ def test_frontend_url_solo_cambia_el_dominio_de_vuelta(client, make_user, auth_h
     monkeypatch.setenv('FRONTEND_URL', 'http://localhost:5173/')
     admin = make_user(role='admin')
     h = auth_headers(admin)
-    state = _login(client, h)['state'][0]
+    r = client.get('/api/google/login?volver=/admin/ventas', headers=h)
+    state = parse_qs(urlparse(r.get_json()['auth_url']).query)['state'][0]
     r = client.get(f'/google/callback?error=access_denied&state={state}', headers=h)
-    assert r.location == 'http://localhost:5173/admin/settings?google_connected=cancelado'
+    assert r.location == 'http://localhost:5173/admin/ventas?vista=configuracion&google_connected=cancelado'
 
 
 @pytest.fixture()
@@ -210,7 +211,25 @@ def test_desde_agendamiento_vuelve_a_su_configuracion(client, make_user, auth_he
     # La próxima conexión sin ?volver vuelve a la de siempre.
     state = _login(client, h)['state'][0]
     r = client.get(f'/google/callback?error=access_denied&state={state}', headers=h)
-    assert r.location == '/closer/settings?google_connected=cancelado'
+    assert r.location == '/closer/deck?vista=configuracion&google_connected=cancelado'
+
+
+@pytest.mark.parametrize('volver', ['/admin/comercial', '/setter/deck'])
+def test_vuelve_a_la_pantalla_desde_donde_se_conecto(client, make_user, auth_headers, volver):
+    h = auth_headers(make_user(role='director_comercial'))
+    r = client.get(f'/api/google/login?volver={volver}', headers=h)
+    state = parse_qs(urlparse(r.get_json()['auth_url']).query)['state'][0]
+    r = client.get(f'/google/callback?error=access_denied&state={state}', headers=h)
+    assert r.location == f'{volver}?vista=configuracion&google_connected=cancelado'
+
+
+@pytest.mark.parametrize('volver', ['//otro.com/x', 'https://otro.com', '/a?b=1', '/a/../x', 'javascript:alert(1)'])
+def test_volver_no_sirve_para_mandar_a_otro_lado(client, make_user, auth_headers, volver):
+    h = auth_headers(make_user(role='director_comercial'))
+    r = client.get('/api/google/login', query_string={'volver': volver}, headers=h)
+    state = parse_qs(urlparse(r.get_json()['auth_url']).query)['state'][0]
+    r = client.get(f'/google/callback?error=access_denied&state={state}', headers=h)
+    assert r.location == '/closer/deck?vista=configuracion&google_connected=cancelado'
 
 
 class _Freebusy:

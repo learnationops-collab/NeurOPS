@@ -2,11 +2,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { CalendarDays, Compass, Database, DollarSign, Ghost, GraduationCap, LifeBuoy, LogOut, Users } from 'lucide-react';
+import { CalendarDays, Database, DollarSign, Ghost, GraduationCap, LifeBuoy, Users } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
 import { revertImpersonation } from '../../utils/impersonation';
-import { opcionesDeRol } from '../../utils/cuentasVinculadas';
+import { armarMenuSesion, rotuloDeSesion } from '../../sesion/menuSesion';
+import { useConfiguracion } from '../../sesion/ConfiguracionContext';
 import OperatorControls from '../../components/modals/OperatorControls';
 import DockSecciones from '../comercial/components/DockSecciones';
 import MenuSesion from '../comercial/components/MenuSesion';
@@ -52,6 +53,7 @@ const SECCIONES = [
 
 const OperadorEspacioPage = () => {
     const { user, logout } = useAuth();
+    const { abrir: abrirConfiguracion } = useConfiguracion();
     const { pendingCount, openPlaybook } = usePlaybook();
     const [params, setParams] = useSearchParams();
     const reducir = useReducedMotion();
@@ -101,19 +103,12 @@ const OperadorEspacioPage = () => {
     const nombre = user?.name || user?.username || 'Operador';
     const claveVista = `${seccion}-${tab || ''}`;
 
-    const gruposDeSesion = [
-        [{ id: 'playbook', label: 'Playbook', Icono: Compass, onClick: () => openPlaybook('pending'),
-            cuenta: pendingCount > 0 ? pendingCount : null,
-            titulo: pendingCount > 0 ? `${pendingCount} pendientes` : null }],
-        opcionesDeRol(user, (m) => toast.error(m)),
-        [
-            ...(user?.is_impersonating
-                ? [{ id: 'volver', label: 'Volver a mi sesión', Icono: Ghost, onClick: volverAMiSesion }]
-                : []),
-            { id: 'salir', label: 'Cerrar sesión', Icono: LogOut, peligro: true,
-                onClick: () => { if (window.confirm('¿Cerrar sesión?')) logout(); } },
-        ],
-    ];
+    const gruposDeSesion = armarMenuSesion({
+        user, logout, navigate: (ruta) => window.location.assign(ruta),
+        acciones: [],
+        configuracion: { onClick: () => abrirConfiguracion() },
+        playbook: { onClick: () => openPlaybook('pending'), pendientes: pendingCount },
+    });
 
     return (
         <div className="operador-espacio">
@@ -170,7 +165,7 @@ const OperadorEspacioPage = () => {
                         ariaLabel="Secciones del espacio del operador"
                         despues={(
                             <MenuSesion nombre={nombre}
-                                rol={user?.is_impersonating ? 'Operador · simulación' : 'Operador'}
+                                rol={rotuloDeSesion(user)}
                                 aviso={pendingCount > 0
                                     ? { texto: pendingCount, titulo: `${pendingCount} ${pendingCount === 1 ? 'video pendiente' : 'videos pendientes'} del Playbook` }
                                     : null}

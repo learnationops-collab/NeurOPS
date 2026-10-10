@@ -320,7 +320,7 @@ describe('DashboardComercial · ir y volver entre Comercial y Finances', () => {
 
         await abrirSesion();
         expect(screen.getByText('Dirección comercial')).toBeTruthy();
-        expect(opciones()).toEqual(['Cambiar de área', 'Cambiar de vista', 'Pasar a Finances', 'Simular a un closer',
+        expect(opciones()).toEqual(['Configuración', 'Playbook', 'Cambiar de área', 'Cambiar de vista', 'Pasar a Finances', 'Simular a un closer',
             'Simular a un setter', 'Reportar un problema', 'Mis reportes', 'Cerrar sesión']);
         fireEvent.click(screen.getByRole('menuitem', { name: 'Pasar a Finances' }));
         expect(navegar).toHaveBeenCalledWith('/finanzas');
@@ -333,7 +333,7 @@ describe('DashboardComercial · ir y volver entre Comercial y Finances', () => {
         await screen.findByTestId('analizar');
 
         await abrirSesion();
-        expect(opciones()).toEqual(['Cambiar de área', 'Simular a un closer', 'Simular a un setter', 'Reportar un problema',
+        expect(opciones()).toEqual(['Configuración', 'Playbook', 'Cambiar de área', 'Simular a un closer', 'Simular a un setter', 'Reportar un problema',
             'Mis reportes', 'Cerrar sesión']);
     });
 
@@ -345,7 +345,7 @@ describe('DashboardComercial · ir y volver entre Comercial y Finances', () => {
 
         await abrirSesion();
         expect(screen.getByText('Finances')).toBeTruthy();
-        expect(opciones()).toEqual(['Cambiar de área', 'Pasar a Dirección comercial', 'Cambiar de vista', 'Simular a un closer',
+        expect(opciones()).toEqual(['Configuración', 'Playbook', 'Cambiar de área', 'Pasar a Dirección comercial', 'Cambiar de vista', 'Simular a un closer',
             'Simular a un setter', 'Reportar un problema', 'Mis reportes', 'Cerrar sesión']);
         fireEvent.click(screen.getByRole('menuitem', { name: 'Pasar a Dirección comercial' }));
         expect(navegar).toHaveBeenCalledWith('/admin/comercial');
@@ -375,7 +375,7 @@ describe('DashboardComercial · ir y volver entre Comercial y Finances', () => {
         await screen.findByTestId('finanzas');
 
         await abrirSesion();
-        expect(opciones().slice(0, 4)).toEqual(['Cambiar de área', 'Pasar a Administrador', 'Cambiar de vista', 'Cambiar de rol']);
+        expect(opciones().slice(2, 6)).toEqual(['Cambiar de área', 'Pasar a Administrador', 'Cambiar de vista', 'Cambiar de rol']);
         expect(opciones()).not.toContain('Pasar a Finances');
         fireEvent.click(screen.getByRole('menuitem', { name: 'Pasar a Administrador' }));
         expect(navegar).toHaveBeenCalledWith('/admin/ventas');

@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AparienciaProvider } from './context/AparienciaContext';
+import { ConfiguracionProvider } from './sesion/ConfiguracionContext';
 import { roleLandingPath } from './utils/roleLanding';
 import MainLayout from './components/MainLayout';
 import AdminDashboard from './pages/admin/dashboard/AdminDashboard';
@@ -15,12 +16,10 @@ import AnalysisPage from './pages/admin/reports/AnalysisPage';
 import ConstructionPage from './pages/common/ConstructionPage';
 import DatabasePage from './pages/admin/database/DatabasePage';
 import MarketingPage from './pages/admin/marketing/MarketingPage';
-import SettingsPage from './pages/admin/settings/SettingsPage';
 import AdminLeadsPage from './pages/admin/leads/LeadsPage';
 import CloserDashboard from './pages/closer/dashboard/CloserDashboard';
 import StatisticsPage from './pages/closer/dashboard/StatisticsPage';
 import CloserLeadsPage from './pages/closer/leads/LeadsPage';
-import CloserSettingsPage from './pages/closer/settings/SettingsPage';
 import CloserNewAppointmentPage from './pages/closer/records/NewAppointmentPage';
 import SetterStatisticsPage from './pages/setter/dashboard/StatisticsPage';
 import LeadsManagementPage from './pages/shared/LeadsManagementPage';
@@ -107,6 +106,7 @@ function App() {
         <AparienciaProvider>
         <PlaybookProvider>
         <Router>
+        <ConfiguracionProvider>
           <PixelTracker />
           <Toaster position="top-right" />
           <SoloInterno>
@@ -484,6 +484,7 @@ function App() {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/login" />} />
           </Routes>
+        </ConfiguracionProvider>
         </Router>
         </PlaybookProvider>
         </AparienciaProvider>
