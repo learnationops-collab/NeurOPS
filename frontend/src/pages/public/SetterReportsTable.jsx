@@ -50,9 +50,15 @@ const formularioV2 = (v2) => Object.fromEntries(EDICION_V2.map(({ k, campos }) =
     return [k, Object.fromEntries(campos.map(([c]) => [c, origen?.[c] ?? 0]))];
 }));
 
+// Supervisan los reportes de todo el equipo (vista previa y reenvío a Discord del de cualquiera). La
+// dirección comercial lo hereda del admin, que lo conserva, desde que se retiró la vista «Administración»
+// (10/10/2026). `user.role` es el rol ACTIVO.
+const ROLES_DIRECCION = ['admin', 'director_comercial'];
+
 const SetterReportsTable = ({ setters }) => {
     const auth = useAuth();
     const user = auth?.user || { role: 'admin' };
+    const esDireccion = ROLES_DIRECCION.includes(user.role);
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
@@ -332,7 +338,7 @@ const SetterReportsTable = ({ setters }) => {
                                                 </>
                                             ) : (
                                                 <>
-                                                    {user.role === 'admin' && (
+                                                    {esDireccion && (
                                                         <button 
                                                             onClick={() => {
                                                                 const token = localStorage.getItem('auth_token');
@@ -344,7 +350,7 @@ const SetterReportsTable = ({ setters }) => {
                                                             <Eye size={14} />
                                                         </button>
                                                     )}
-                                                    {(user.role === 'admin' || user.role === 'setter') && (
+                                                    {(esDireccion || user.role === 'setter') && (
                                                         <button 
                                                             onClick={() => handleResendDiscord(r.id)} 
                                                             disabled={resendingId === r.id}

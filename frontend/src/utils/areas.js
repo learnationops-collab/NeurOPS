@@ -1,5 +1,5 @@
 import {
-    BarChart3, Brain, Briefcase, CalendarDays, Filter, Megaphone, MessageCircle, PhoneCall, UserPlus, Wallet, Wrench,
+    BarChart3, Brain, CalendarDays, Filter, Megaphone, MessageCircle, PhoneCall, UserPlus, Wallet, Wrench,
 } from 'lucide-react';
 
 // Áreas (10/10/2026): un ROL gestiona un tipo de acceso a una o más ÁREAS. La dirección comercial, por
@@ -8,9 +8,12 @@ import {
 //
 // Finances es un área de admin y de la dirección comercial, pero solo con el permiso «ver finanzas»
 // (ver `rolDeFinanzas` en cuentasVinculadas.js). Cortex (Learnito y el Playbook) es de todos los roles.
+//
+// El admin ya no tiene un área propia (10/10/2026): «Administración» se retiró porque cada cosa ya tiene su
+// rol, y lo que era solo suyo pasó a Operaciones. Sus áreas son las de los demás roles que puede abrir; en el
+// Portal solo se ofrecen las que ningún otro rol de la cuenta ya ofrece (ver `gruposDelPortal`).
 
 export const AREAS = {
-    administracion: { id: 'administracion', label: 'Administración', ruta: '/admin/ventas', Icono: Briefcase },
     ventas: { id: 'ventas', label: 'Ventas', ruta: '/admin/comercial', Icono: BarChart3 },
     agendamiento: { id: 'agendamiento', label: 'Agendamiento', ruta: '/agendas-v2', Icono: CalendarDays },
     cierres: { id: 'cierres', label: 'Cierres', ruta: '/closer/deck?step=confirmations', Icono: PhoneCall },
@@ -25,7 +28,7 @@ export const AREAS = {
 
 // La primera es la de siempre del rol (ver roleLanding.js).
 const AREAS_POR_ROL = {
-    admin: ['administracion', 'ventas', 'agendamiento'],
+    admin: ['operaciones', 'ventas', 'agendamiento', 'marketing', 'talent'],
     director_comercial: ['ventas', 'agendamiento'],
     closer: ['cierres'],
     setter: ['setting'],

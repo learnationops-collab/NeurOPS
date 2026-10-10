@@ -1,6 +1,6 @@
 import React from 'react';
-import { MemoryRouter } from 'react-router-dom';
-import { render, screen } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 // Hiring no tiene el dock global: «Portal» (con todos sus roles y áreas) va en el menú de sesión del
@@ -23,7 +23,7 @@ vi.mock('../../comercial/components/MenuSesion', () => ({
         <ul>
             {grupos.flat().map((op) => (
                 <li key={op.id} data-panel={op.panel ? op.panel.cargar().map((o) => o.label).join('|') : undefined}>
-                    {op.label}
+                    <button type="button" onClick={op.onClick}>{op.label}</button>
                 </li>
             ))}
         </ul>
@@ -50,5 +50,27 @@ describe('HiringDashboardPage · el Portal', () => {
         usuario = { ...MARIO, is_impersonating: true };
         montar();
         expect(screen.getByText('Portal')).toBeTruthy();
+    });
+
+    // Se retiró el panel del admin (/admin/ventas, 10/10/2026): el admin aterriza en Operaciones.
+    it('el admin vuelve a Operaciones', () => {
+        usuario = { ...MARIO, role: 'admin' };
+        render(
+            <MemoryRouter initialEntries={['/admin/hiring']}>
+                <Routes>
+                    <Route path="/admin/hiring" element={<HiringDashboardPage />} />
+                    <Route path="/ops/dashboard" element={<p>Operaciones</p>} />
+                </Routes>
+            </MemoryRouter>,
+        );
+        expect(screen.queryByText('Volver al panel de admin')).toBeNull();
+        fireEvent.click(screen.getByText('Volver a Operaciones'));
+        expect(screen.getByText('Operaciones')).toBeTruthy();
+    });
+
+    it('sin rol admin activo no aparece «Volver a Operaciones»', () => {
+        usuario = MARIO;
+        montar();
+        expect(screen.queryByText('Volver a Operaciones')).toBeNull();
     });
 });

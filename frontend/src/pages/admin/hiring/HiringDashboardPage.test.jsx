@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../../../services/api';
 import HiringDashboardPage from './HiringDashboardPage';
@@ -22,6 +22,13 @@ vi.mock('./components/HiringCandidateModal', () => ({
 }));
 vi.mock('./components/HiringStats', () => ({ default: () => <div data-testid="stats" /> }));
 vi.mock('./components/forms/HiringForms', () => ({ default: () => <div data-testid="forms" /> }));
+// Closers hospeda las pestañas de Postulaciones: acá alcanza con saber cuál se monta.
+vi.mock('../postulaciones/components/PostulacionesInbox', () => ({
+    default: ({ grupo }) => <div data-testid="postulaciones">inbox {grupo}</div>,
+}));
+vi.mock('../postulaciones/components/PostulacionesRevisoresTab', () => ({ default: () => <div data-testid="postulaciones">revisores</div> }));
+vi.mock('../postulaciones/components/PostulacionesStatsTab', () => ({ default: () => <div data-testid="postulaciones">estadisticas</div> }));
+vi.mock('../postulaciones/components/PostulacionesClarityTab', () => ({ default: () => <div data-testid="postulaciones">clarity</div> }));
 
 const fila = (id, nombre, extra = {}) => ({
     id, nombre, pais: 'Argentina', provincia: 'Salta', edad: '28', modalidad: 'hibrido', veredicto: 'sin_analizar',
@@ -114,6 +121,52 @@ describe('Learnation Talent', () => {
         fireEvent.click(screen.getByRole('button', { name: /Candidata/ }));
         const nombres = within(tabla()).getAllByText(/Pérez|Gómez/).map((n) => n.textContent);
         expect(nombres).toEqual(['Ana Pérez', 'Bea Gómez']);
+    });
+
+    it('Closers hospeda Postulaciones fuera del .dc-shell, con sus pestañas en la cabecera', async () => {
+        montar();
+        await screen.findAllByText('Bea Gómez');
+        fireEvent.click(screen.getByRole('button', { name: /^Closers/ }));
+
+        expect(screen.getByRole('heading', { level: 1, name: 'Closers' })).toBeInTheDocument();
+        expect(screen.getByText('Closer de ventas')).toBeInTheDocument();
+        // El buscador busca candidatas a Asistente: en Closers no va.
+        expect(screen.queryByLabelText('Buscar postulante')).not.toBeInTheDocument();
+        const contenido = screen.getByTestId('postulaciones');
+        expect(contenido.textContent).toBe('inbox pend');
+        // Fuera del shell (su reset de botones le borraría los estilos de Tailwind) y con la paleta de siempre.
+        expect(contenido.closest('.dc-shell')).toBeNull();
+        expect(contenido.closest('main.dash-v6')).not.toBeNull();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Analizados' }));
+        expect(screen.getByTestId('postulaciones').textContent).toBe('inbox anal');
+        fireEvent.click(screen.getByRole('button', { name: 'Revisores' }));
+        expect(screen.getByTestId('postulaciones').textContent).toBe('revisores');
+
+        // Volver a una sección de Talent saca a Postulaciones y trae de vuelta el buscador.
+        fireEvent.click(screen.getByRole('button', { name: /^Inbox/ }));
+        expect(screen.queryByTestId('postulaciones')).not.toBeInTheDocument();
+        expect(screen.getByLabelText('Buscar postulante')).toBeInTheDocument();
+    });
+
+    it('?s=closers (el link viejo de Postulaciones) entra en Closers y saca la s de la URL', async () => {
+        const Ubicacion = () => <output data-testid="url">{useLocation().search}</output>;
+        render(
+            <MemoryRouter initialEntries={['/admin/hiring?s=closers']}>
+                <HiringDashboardPage />
+                <Ubicacion />
+            </MemoryRouter>,
+        );
+
+        expect(screen.getByRole('heading', { level: 1, name: 'Closers' })).toBeInTheDocument();
+        expect(screen.getByTestId('postulaciones').textContent).toBe('inbox pend');
+        await waitFor(() => expect(screen.getByTestId('url').textContent).toBe(''));
+    });
+
+    it('una ?s= que no es una sección abre el Inbox', async () => {
+        render(<MemoryRouter initialEntries={['/admin/hiring?s=otra']}><HiringDashboardPage /></MemoryRouter>);
+        await screen.findAllByText('Bea Gómez');
+        expect(screen.getByRole('heading', { level: 1, name: 'Inbox' })).toBeInTheDocument();
     });
 
     it('el menú Vista esconde columnas y lo recuerda', async () => {

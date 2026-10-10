@@ -20,6 +20,11 @@ import { periodLabel, compareLabel } from './performanceUtils';
 import { detectIssues } from './dataIssues';
 import { useDrillDown } from './useDrillDown';
 
+// Eligen qué closer mirar (el closer ve siempre lo suyo). La dirección comercial lo hereda del admin, que lo
+// conserva, desde que se retiró la vista «Administración» (10/10/2026); el backend ya le respetaba el
+// `closer_id` (ROLES_CON_VISTA_AGREGADA en app/api/closer_dashboard.py).
+const ROLES_CON_FILTRO_DE_CLOSERS = ['admin', 'director_comercial'];
+
 const SectionTitle = ({ children }) => (
     <h2 className="text-[11.5px] font-black tracking-widest uppercase text-muted mt-10 mb-4 flex items-center gap-3 first:mt-0">
         {children}
@@ -125,7 +130,7 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
                         setPeriod={setPeriod}
                         compare={compare}
                         setCompare={setCompare}
-                        showClosersFilter={user?.role === 'admin'}
+                        showClosersFilter={ROLES_CON_FILTRO_DE_CLOSERS.includes(user?.role)}
                         customRange={customRange}
                         setCustomRange={setCustomRange}
                         compareRange={compareRange}

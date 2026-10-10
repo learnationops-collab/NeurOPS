@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Filter, Inbox, LayoutGrid, List, Plus, Rows, RotateCcw, Search,
+import { ChevronDown, Download, Filter, Inbox, LayoutGrid, List, Plus, Rows, RotateCcw, Search,
     SlidersHorizontal, X } from 'lucide-react';
 // El ícono "i" es el `Tip` compartido: la burbuja va en un portal porque acá cae al final de la
 // barra, pegada al borde derecho, y antes se cortaba (ver `Tip.jsx`).
@@ -8,6 +8,7 @@ import Cifra from './Cifra';
 import { DIMENSION_PROPIA, TABLAS_POR_ROL, valoresVigentes } from './tablasDef';
 import { defDeTabla } from './tablasSetter';
 import PanelConfigurar from './PanelConfigurar';
+import PanelExportar from './PanelExportar';
 import RevisarLista, { EsqueletoRevisar } from './RevisarLista';
 import { columnasOrdenables, ordenarFilas, siguienteOrden } from './ordenFilas';
 import MenuOrdenar from './MenuOrdenar';
@@ -41,6 +42,11 @@ export { ChipTono } from './RevisarLista';
  * `datos` puede llegar en `null` mientras el backend todavía no devolvió las filas de la tabla
  * pedida (ver el fix de DashboardComercial): las filas que llegan acá SON siempre de la tabla
  * que se pidió, así que los accesores no llevan guardas.
+ *
+ * Al lado del filtro completo va «Exportar» (10/10/2026, ver `PanelExportar`): el CSV de lo que se
+ * está viendo o del período entero, con las columnas y el formato elegidos. Solo con
+ * `puedeExportar`, que decide `DashboardComercial` con el rol de QUIEN MIRA: el `rol` de acá es el
+ * de la tabla (closers/setters), que la dirección cambia con el switch del dock.
  */
 
 const texto = (fila) => [fila.cliente, fila.ig, fila.email, fila.telefono, fila.closer, fila.setter,
@@ -138,7 +144,7 @@ const TotalesTira = ({ items, alcance, filtrada }) => (
  */
 const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcance, onAbrirFila,
     filtroInicial, onOlvidarFiltro, puedeElegirEquipo = true, onSincronizarAcademia = null,
-    tablas = null }) => {
+    tablas = null, puedeExportar = false }) => {
     const [query, setQuery] = useState('');
     const [facetas, setFacetas] = useState({});
     const [modo, setModo] = useState('todas');
@@ -152,6 +158,12 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     const [columnas, setColumnas] = useState('base');
     const barra = useRef(null);
     const mas = useRef(null);
+    const botonExportar = useRef(null);
+    // Cerrar con su X o después de bajar el archivo devuelve el foco al botón, como Escape.
+    const cerrarExportar = () => {
+        setMenu(null);
+        botonExportar.current?.focus();
+    };
 
     // Lista o tarjetas, con la elección recordada. La clave es por tabla: mirar las agendas como
     // lista y las ventas como tarjetas es una preferencia razonable, no una inconsistencia.
@@ -242,14 +254,28 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     // Un solo menú abierto por vez, y se cierra al clickear afuera de la barra. El "+" de la fila
     // de etiquetas cuenta como barra: abre el mismo panel, y sin esto el `mousedown` lo cerraba
     // y el `click` lo volvía a abrir, así que no había forma de cerrarlo desde ahí.
+    //
+    // Escape también cierra (10/10/2026, con el panel Exportar), y el foco vuelve al botón que abrió
+    // el menú —el que tiene `aria-expanded`—: si no, quedaba en el body y había que volver a
+    // recorrer la barra con el tabulador.
     useEffect(() => {
         if (!menu) return undefined;
         const fuera = (e) => {
             if (mas.current?.contains(e.target)) return;
             if (barra.current && !barra.current.contains(e.target)) setMenu(null);
         };
+        const escape = (e) => {
+            if (e.key !== 'Escape') return;
+            const boton = barra.current?.querySelector('[aria-expanded="true"]');
+            setMenu(null);
+            boton?.focus();
+        };
         document.addEventListener('mousedown', fuera);
-        return () => document.removeEventListener('mousedown', fuera);
+        document.addEventListener('keydown', escape);
+        return () => {
+            document.removeEventListener('mousedown', fuera);
+            document.removeEventListener('keydown', escape);
+        };
     }, [menu]);
 
     const filas = datos?.filas || [];
@@ -274,6 +300,11 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     const visibles = useMemo(
         () => ordenarFilas(mostradas, colOrden?.orden, orden?.dir),
         [mostradas, colOrden, orden]);
+    // El período entero para Exportar, con el mismo orden de columna que la lista. Solo se ordena
+    // con el panel abierto: el resto del tiempo nadie lo lee.
+    const todasOrdenadas = useMemo(
+        () => (menu === 'exportar' ? ordenarFilas(filas, colOrden?.orden, orden?.dir) : filas),
+        [menu, filas, colOrden, orden]);
     const ordenar = (key) => setOrden(o => siguienteOrden(o, key));
     // Desde el menú: elegir la columna que ya ordena invierte la dirección; null vuelve al orden
     // de la tabla.
@@ -517,6 +548,10 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                     )}
                 </div>
 
+                {/* Exportar comparte la envoltura del filtro completo: los dos paneles se anclan en el
+                    MISMO lugar (el borde izquierdo de «Filtro completo») y debajo de 900px se
+                    despliegan en la misma fila. Anclado a su propio botón, más a la derecha, el
+                    panel de 680px se salía de la pantalla en los anchos apenas arriba de 900px. */}
                 <div className="config-envoltura">
                     <button type="button" className={`pastilla${activas ? ' pastilla--on' : ''}`}
                         aria-expanded={menu === 'config'} aria-haspopup="dialog"
@@ -526,10 +561,26 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                         {activas > 0 && <span className="cuenta-burbuja">{activas}</span>}
                         <ChevronDown size={14} />
                     </button>
+                    {puedeExportar && (
+                        <button ref={botonExportar} type="button" className="pastilla"
+                            aria-expanded={menu === 'exportar'} aria-haspopup="dialog"
+                            onClick={() => setMenu(m => (m === 'exportar' ? null : 'exportar'))}>
+                            <Download size={15} />
+                            Exportar
+                            <ChevronDown size={14} />
+                        </button>
+                    )}
                     {menu === 'config' && (
                         <PanelConfigurar def={def} filas={filas} facetas={facetas} setFacetas={cambiarFacetas}
                             modo={modo} setModo={setModo} tabla={tabla} basis={basis} setBasis={setBasis}
                             onLimpiar={() => cambiarFacetas({})} onCerrar={() => setMenu(null)} />
+                    )}
+                    {/* Lo que estás viendo va en el orden de la lista (`visibles`), que tiene las
+                        mismas filas que `mostradas` (las de la tira de totales). */}
+                    {puedeExportar && menu === 'exportar' && (
+                        <PanelExportar def={def} tabla={tabla} colsVistas={defVista.cols}
+                            filasVista={visibles} filasTodas={todasOrdenadas}
+                            fechas={datos?.dates} onCerrar={cerrarExportar} />
                     )}
                 </div>
 

@@ -1,20 +1,19 @@
-import { Shield } from 'lucide-react';
 import DatabasePage from '../../admin/database/DatabasePage';
 import OperationsPage from '../../admin/database/OperationsPage';
 import TeamManagementPage from '../../admin/team/TeamManagementPage';
-import UTMGenerator from '../../../components/operations/UTMGenerator';
 import CloserAliasesPanel from '../../../components/operations/CloserAliasesPanel';
 import BitacoraPanel from '../../../components/operations/BitacoraPanel';
 import LeadsAuditTogglePanel from '../../../components/operations/LeadsAuditTogglePanel';
 import ReportBacklogTogglePanel from '../../../components/operations/ReportBacklogTogglePanel';
 import BugReportsPanel from '../../../components/operations/BugReportsPanel';
 import PlaybookAdminPanel from '../../../components/operations/PlaybookAdminPanel';
-import Card from '../../../components/ui/Card';
+import BackupPage from '../../admin/backup/BackupPage';
+import RestorePage from '../../admin/backup/RestorePage';
 
 /**
- * Las secciones del panel técnico del operador, por id. Es la ÚNICA lista de lo que hay: la usan el
- * espacio del operador (`OperadorEspacioPage`, que las reparte en pestañas) y el panel antiguo
- * (`OperationsSettingsPage`, que sigue sirviendo al admin por URL).
+ * Las secciones del panel técnico de Operaciones, por id. Es la ÚNICA lista de lo que hay: el espacio de
+ * Operaciones (`OperadorEspacioPage`) las reparte en pestañas. El panel antiguo, que el admin abría por URL,
+ * se fue con «Administración» (10/10/2026).
  */
 export const ETIQUETAS_TECNICAS = {
     team: 'Gestión de Equipo',
@@ -24,11 +23,12 @@ export const ETIQUETAS_TECNICAS = {
     bug_reports: 'Reportes de Bugs',
     playbook: 'Playbook',
     bitacora: 'Bitácora de Cambios',
-    marketing: 'Marketing UTMs',
     database: 'Base de Datos',
     operations: 'Operaciones Críticas',
-    infra: 'Infraestructura',
-    danger_zone: 'Zona de Peligro',
+    // El respaldo completo de la base (todas las tablas, con la clave de BACKUP_SECRET_KEY): era del panel
+    // de «Administración» y solo se abría por URL hasta el 10/10/2026.
+    respaldo: 'Respaldo',
+    restaurar: 'Restaurar',
 };
 
 const SeccionTecnica = ({ id, embebido = false }) => {
@@ -40,23 +40,13 @@ const SeccionTecnica = ({ id, embebido = false }) => {
         case 'bug_reports': return <BugReportsPanel />;
         case 'playbook': return <PlaybookAdminPanel />;
         case 'bitacora': return <BitacoraPanel />;
-        case 'marketing': return <UTMGenerator />;
         case 'database': return <DatabasePage />;
-        // «Operaciones críticas» y «Zona de peligro» son la misma pantalla, con su advertencia.
-        case 'operations':
-        case 'danger_zone': return <OperationsPage />;
-        case 'infra':
-            return (
-                <Card variant="surface" className="p-10 space-y-6 bg-amber-500/5 border-amber-500/10">
-                    <div className="flex items-center gap-4 text-amber-500">
-                        <Shield size={32} />
-                        <h3 className="text-xl font-black italic tracking-tighter uppercase">Monitor de Infraestructura</h3>
-                    </div>
-                    <p className="text-sm text-muted font-medium leading-relaxed">
-                        Estas configuraciones permiten gestionar el despliegue y los límites de recursos del servidor. ( Bajo Construcción )
-                    </p>
-                </Card>
-            );
+        // Antes también estaba como «Zona de peligro» (la misma pantalla dos veces) y había una pestaña
+        // «Infraestructura» que solo decía «en construcción»: se fueron el 10/10/2026, junto con los UTMs, que
+        // son de Marketing (el mismo generador está en /admin/marketing).
+        case 'operations': return <OperationsPage />;
+        case 'respaldo': return <BackupPage embebido />;
+        case 'restaurar': return <RestorePage embebido />;
         default: return null;
     }
 };

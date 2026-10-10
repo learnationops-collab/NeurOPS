@@ -19,6 +19,7 @@ import Analizar from './components/Analizar';
 import Comparativas from './components/Comparativas';
 import Variabilidad from './components/Variabilidad';
 import Revisar, { TABLAS_POR_ROL, duplicadasDe } from './components/Revisar';
+import { puedeExportarRevisar } from './components/tablasDef';
 import LeadModal from './components/LeadModal';
 import FichaLeadModal from '../../components/ficha/FichaLeadModal';
 import Reportar from './components/Reportar';
@@ -91,11 +92,11 @@ const esFichaUnificada = (fila) => (fila?.tipo === 'agenda' && !!fila.id)
  * A dónde vuelve cada rol cuando sale del dashboard. El setter no está: nunca lo ve suelto, lo ve
  * embebido en su espacio, donde la vuelta es el dock (ver `SetterEspacioPage`). La dirección
  * comercial tampoco, desde el 30/09/2026: su "Ir a Ventas" se sacó a pedido; su sesión (simular a
- * un closer, cerrar sesión) está en el menú del dock.
+ * un closer, cerrar sesión) está en el menú del dock. El admin perdió el suyo el 10/10/2026: llevaba
+ * al hub de «Administración», que se retiró; se va por el Portal, como la dirección.
  */
 const SALIDA = {
     closer: { to: '/closer/deck?step=confirmations', label: 'Volver al mazo' },
-    admin: { to: '/admin/ventas', label: 'Ir a Ventas' },
 };
 
 const SECCIONES = [
@@ -824,7 +825,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                             tablas={tablaFija ? [tablaFija] : null}
                             onOlvidarFiltro={() => set({ f: null, ft: null })}
                             onAbrirFila={abrirFila}
-                            onSincronizarAcademia={contexto.puede_reportar ? sincronizarAcademia : null} />
+                            onSincronizarAcademia={contexto.puede_reportar ? sincronizarAcademia : null}
+                            // Con el rol de quien mira, no con `rol` (el de la tabla): ver
+                            // `ROLES_QUE_EXPORTAN` (10/10/2026).
+                            puedeExportar={puedeExportarRevisar(contexto.yo?.rol)} />
                     )}
                     {sinPermiso && (
                         <section className="panel">

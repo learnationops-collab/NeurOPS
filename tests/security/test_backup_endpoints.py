@@ -3,8 +3,9 @@
 Son las rutas mas peligrosas del sistema: exportar vuelca TODA la base (hashes de clave y datos
 personales incluidos) y restaurar la BORRA y ejecuta el SQL subido. Antes estaban protegidas solo por
 una clave escrita en el codigo (y en el bundle publico de la web) y `/api/backup/fix-auth` resetea la
-clave de un admin sin autenticacion. Ahora exigen un admin logueado Y la clave de BACKUP_SECRET_KEY,
-y sin esa variable quedan apagadas (503). Aca la clave es una de prueba: la real no se usa nunca.
+clave de un admin sin autenticacion. Ahora exigen un admin u operador logueado (el operador desde el
+10/10/2026, cuando el respaldo paso a Operaciones) Y la clave de BACKUP_SECRET_KEY, y sin esa variable
+quedan apagadas (503). Aca la clave es una de prueba: la real no se usa nunca.
 """
 import pytest
 
@@ -40,12 +41,19 @@ def test_sin_sesion_es_401_aunque_la_clave_sea_la_correcta(client, clave_configu
 
 
 @pytest.mark.parametrize('metodo,plantilla', RUTAS)
-@pytest.mark.parametrize('rol', ['operator', 'closer', 'setter', 'triage', 'hiring', 'director_comercial'])
-def test_solo_un_admin_puede_usarlas_aunque_tenga_la_clave(
+@pytest.mark.parametrize('rol', ['closer', 'setter', 'triage', 'hiring', 'director_comercial'])
+def test_solo_admin_u_operador_pueden_usarlas_aunque_tengan_la_clave(
         client, make_user, auth_headers, clave_configurada, metodo, plantilla, rol):
     cabeceras = auth_headers(make_user(role=rol))
 
     assert pedir(client, metodo, plantilla, cabeceras=cabeceras).status_code == 403
+
+
+def test_el_operador_entra_con_la_clave_porque_el_respaldo_esta_en_operaciones(
+        client, make_user, auth_headers, clave_configurada):
+    respuesta = pedir(client, 'get', RUTAS[0][1], cabeceras=auth_headers(make_user(role='operator')))
+
+    assert respuesta.status_code == 200
 
 
 # --- La clave --------------------------------------------------------------------------------

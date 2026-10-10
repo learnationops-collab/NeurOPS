@@ -9,7 +9,7 @@ hora y las bandejas se vaciaban solas cada noche.
 `User.timezone` la sincroniza el login desde el navegador (ver `auth.py`), con
 'America/La_Paz' como respaldo para quien nunca entro.
 
-Lo que corre SIN usuario detras (crons, el motor de alertas) no tiene de donde
+Lo que corre SIN usuario detras (crons) no tiene de donde
 sacar una zona personal, pero tampoco puede usar la del servidor: ahi va
 `zona_del_negocio()` y sus derivados, que son la misma zona de respaldo pero
 dicha en voz alta.

@@ -143,7 +143,8 @@ def get_assigned_leads():
 @bp.route('/leads/search', methods=['GET'])
 @login_required
 def search_closer_leads():
-    if current_user.role not in ['closer', 'admin', 'setter', 'triage']:
+    # El operador la usa para elegir el cliente destino al fusionar en Formularios (10/10/2026).
+    if current_user.role not in ['closer', 'admin', 'setter', 'triage', 'operator']:
         return jsonify({"message": "Forbidden"}), 403
         
     query_str = request.args.get('q', '')

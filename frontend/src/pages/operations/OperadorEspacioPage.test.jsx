@@ -25,12 +25,13 @@ vi.mock('./settings/SeccionTecnica', () => ({
     ETIQUETAS_TECNICAS: {
         team: 'Gestión de Equipo', closer_aliases: 'Alias de Closers', leads_audit: 'Auditoría de Leads',
         report_backlog: 'Bloqueo del Reporte', bug_reports: 'Reportes de Bugs', playbook: 'Playbook',
-        bitacora: 'Bitácora de Cambios', marketing: 'Marketing UTMs', database: 'Base de Datos',
-        operations: 'Operaciones Críticas', infra: 'Infraestructura', danger_zone: 'Zona de Peligro',
+        bitacora: 'Bitácora de Cambios', database: 'Base de Datos', operations: 'Operaciones Críticas',
+        respaldo: 'Respaldo', restaurar: 'Restaurar',
     },
 }));
 vi.mock('../admin/reports/FinancialAgendasPage', () => ({ default: () => <div data-testid="agendas" /> }));
 vi.mock('../public/PublicFinancialSalesPage', () => ({ default: () => <div data-testid="ventas" /> }));
+vi.mock('../shared/FormsManagementPage', () => ({ default: () => <div data-testid="formularios" /> }));
 vi.mock('./course-editor/CourseEditorPage', () => ({ default: () => <div data-testid="curso" /> }));
 
 const Ubicacion = () => {
@@ -60,7 +61,7 @@ describe('Espacio del operador', () => {
         expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Equipo');
         expect(screen.getByTestId('seccion')).toHaveTextContent('team');
         const dock = screen.getByRole('navigation', { name: 'Secciones del espacio del operador' });
-        ['Equipo', 'Soporte', 'Datos', 'Agendas', 'Ventas', 'Curso'].forEach(etiqueta => {
+        ['Equipo', 'Soporte', 'Datos', 'Agendas', 'Ventas', 'Formularios', 'Curso'].forEach(etiqueta => {
             expect(dock).toHaveTextContent(etiqueta);
         });
     });
@@ -79,11 +80,14 @@ describe('Espacio del operador', () => {
         expect(screen.getByTestId('url')).toHaveTextContent('step=soporte&tab=bitacora');
     });
 
-    it('Datos trae la zona de peligro como una pestaña más', () => {
-        montar('/ops/dashboard?step=datos&tab=danger_zone');
+    it('Datos trae el respaldo de la base y ya no los UTMs ni pestañas repetidas (10/10/2026)', () => {
+        montar('/ops/dashboard?step=datos&tab=respaldo');
 
-        expect(screen.getByRole('tab', { name: 'Zona de Peligro' })).toHaveAttribute('aria-selected', 'true');
-        expect(screen.getByTestId('seccion')).toHaveTextContent('danger_zone');
+        const pestanas = screen.getByRole('tablist', { name: 'Vistas de Datos' });
+        expect([...pestanas.querySelectorAll('[role="tab"]')].map(t => t.textContent))
+            .toEqual(['Base de Datos', 'Operaciones Críticas', 'Respaldo', 'Restaurar']);
+        expect(screen.getByRole('tab', { name: 'Respaldo' })).toHaveAttribute('aria-selected', 'true');
+        expect(screen.getByTestId('seccion')).toHaveTextContent('respaldo');
     });
 
     it('elegir una sección en el dock cambia el paso en la URL', () => {
@@ -93,6 +97,13 @@ describe('Espacio del operador', () => {
 
         expect(screen.getByTestId('url')).toHaveTextContent('/ops/dashboard?step=ventas');
         expect(screen.getByTestId('ventas')).toBeInTheDocument();
+    });
+
+    it('Formularios, que era de «Administración», es una sección más (10/10/2026)', () => {
+        montar('/ops/dashboard?step=formularios');
+
+        expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Formularios');
+        expect(screen.getByTestId('formularios')).toBeInTheDocument();
     });
 
     it('un paso o una pestaña que no existen caen en los de siempre', () => {
@@ -119,13 +130,14 @@ describe('Espacio del operador', () => {
     });
 });
 
-describe('OpsRuta: el admin conserva su pantalla de siempre', () => {
-    it('con el layout de la app y sin redirigir', () => {
+describe('OpsRuta: el admin entra al mismo espacio (10/10/2026)', () => {
+    it('sin el layout de la app, y las rutas viejas lo llevan a su sección', () => {
         sesion.user = { id: 1, role: 'admin', roles: ['admin'] };
 
         montar('/ops/ventas');
 
-        expect(screen.getByTestId('main-layout')).toContainElement(screen.getByTestId('legacy-ventas'));
-        expect(screen.getByTestId('url')).toHaveTextContent('/ops/ventas');
+        expect(screen.queryByTestId('main-layout')).not.toBeInTheDocument();
+        expect(screen.getByTestId('url')).toHaveTextContent('/ops/dashboard?step=ventas');
+        expect(screen.getByTestId('ventas')).toBeInTheDocument();
     });
 });

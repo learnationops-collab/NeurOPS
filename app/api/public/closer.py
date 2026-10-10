@@ -1,8 +1,13 @@
 from flask import request, jsonify, render_template
 from app.models import db, User
+from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL
 from flask_login import current_user
 from datetime import datetime
 from . import bp
+
+# Ven la vista previa y reenvian a Discord el reporte de CUALQUIER closer. La direccion comercial lo hereda
+# del admin (que lo conserva) desde que se retiro la vista «Administracion» (10/10/2026).
+ROLES_DIRECCION = (ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL)
 
 # ============================================================
 # CLOSER DAILY REPORT
@@ -679,7 +684,11 @@ def preview_closer_report_discord(report_id):
             user_id = User.verify_auth_token(token)
             if user_id:
                 user = User.query.get(user_id)
-            
+                # Un token valido con current_user anonimo es, casi siempre, el de una cuenta DESACTIVADA (el
+                # request_loader ya lee `?token=` y la rechaza por eso). Aca tampoco entra.
+                if user is not None and not user.is_active:
+                    user = None
+
             # Soporte de compatibilidad en desarrollo local (DEBUG) si el ID de admin no existe en SQLite
             if not user and (current_app.config.get('DEBUG') or current_app.debug):
                 try:
@@ -691,8 +700,8 @@ def preview_closer_report_discord(report_id):
                 except Exception as e:
                     print(f"DEBUG PREVIEW BYPASS ERROR: {e}")
 
-    # Validar permisos de administrador
-    if not user or user.role != 'admin':
+    # Solo la direccion: `role` es el rol ACTIVO (el loader lo fija con el claim `active_role` del token).
+    if not user or user.role not in ROLES_DIRECCION:
         return jsonify({"error": "No autorizado"}), 403
 
     report = CloserDailyReport.query.get_or_404(report_id)
@@ -716,12 +725,13 @@ def resend_closer_report_discord(report_id):
     if not current_user.is_authenticated:
         return jsonify({"error": "No autorizado"}), 401
 
-    if current_user.role not in ['admin', 'closer']:
+    # La direccion reenvia el de cualquiera; el closer, solo el suyo.
+    if current_user.role not in ROLES_DIRECCION + (ROLE_CLOSER,):
         return jsonify({"error": "No autorizado"}), 403
 
     report = CloserDailyReport.query.get_or_404(report_id)
 
-    if current_user.role == 'closer' and report.closer_id != current_user.id:
+    if current_user.role == ROLE_CLOSER and report.closer_id != current_user.id:
         return jsonify({"error": "No autorizado"}), 403
     try:
         _trigger_closer_report_discord(report)

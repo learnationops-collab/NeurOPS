@@ -5,6 +5,10 @@ from sqlalchemy import func
 import logging
 
 bp = Blueprint('triage', __name__)
+
+# Quién trabaja los formularios de cualificación (verlos, corregirles la fecha y fusionar clientes): el
+# triage en su pantalla y, desde el 10/10/2026, Operaciones, que heredó la de «Administración».
+ROLES_FORMULARIOS = ('triage', 'admin', 'operator')
 logger = logging.getLogger(__name__)
 
 # ============================================================
@@ -367,7 +371,7 @@ def get_qualified_forms():
     from app.models.booking import Appointment
     from flask_login import current_user
     
-    if current_user.role not in ['triage', 'admin']:
+    if current_user.role not in ROLES_FORMULARIOS:
         return jsonify({"message": "Forbidden"}), 403
         
     unlinked_only = request.args.get('unlinked_only', 'true').lower() == 'true'
@@ -465,7 +469,7 @@ def merge_clients():
     from app.models.payment import Enrollment
     from flask_login import current_user
     
-    if current_user.role not in ['triage', 'admin']:
+    if current_user.role not in ROLES_FORMULARIOS:
         return jsonify({"message": "Forbidden"}), 403
         
     data = request.get_json() or {}
@@ -526,7 +530,7 @@ def update_qualified_form(client_id):
     from app.models.client import Client
     from flask_login import current_user
     
-    if current_user.role not in ['triage', 'admin']:
+    if current_user.role not in ROLES_FORMULARIOS:
         return jsonify({"message": "Forbidden"}), 403
         
     data = request.json or {}

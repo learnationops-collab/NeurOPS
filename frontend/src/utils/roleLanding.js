@@ -7,7 +7,8 @@
 //
 // Al agregar un rol nuevo, alcanza con sumarlo acá.
 export const ROLE_LANDING_PATHS = {
-    admin: '/admin/ventas',
+    // Operaciones: desde el 10/10/2026 el admin no tiene vista propia (lo que era solo suyo pasó ahí).
+    admin: '/ops/dashboard',
     operator: '/ops/dashboard',
     // "Mis agendas": desde el 10/10/2026 Cualificación ya no es una sección del setter.
     setter: '/setter/deck?step=agendas',

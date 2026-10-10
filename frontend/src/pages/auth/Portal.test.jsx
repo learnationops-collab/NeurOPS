@@ -40,7 +40,7 @@ const tarjetas = () => screen.getAllByRole('button').filter((b) => b.className.i
     .map((b) => b.querySelector('b').textContent);
 const portalAbierto = () => screen.queryByRole('dialog', { name: 'Portal' });
 
-const MARIO = { id: 3, username: 'mario', role: 'operator', roles: ['operator', 'admin'], can_view_finance: true };
+const MARIO = { id: 3, username: 'mario', role: 'operator', roles: ['operator', 'admin', 'director_comercial'], can_view_finance: true };
 const DIR = { id: 7, username: 'dire', role: 'director_comercial', roles: ['director_comercial'] };
 const CLOSER = { id: 1, username: 'ana', role: 'closer', roles: ['closer'] };
 
@@ -64,10 +64,11 @@ describe('El Portal', () => {
         montar();
         abrir();
         expect(screen.getByText('¿A dónde vamos?')).toBeTruthy();
-        expect(tarjetas()).toEqual(['Operaciones', 'Administración', 'Ventas', 'Agendamiento', 'Finances', 'Cortex', 'Simular a alguien']);
+        // Sin «Administrador» (10/10/2026): lo suyo que ningún otro rol ofrece va con Operador.
+        expect(tarjetas()).toEqual(['Operaciones', 'Marketing', 'Talent', 'Ventas', 'Agendamiento', 'Finances', 'Cortex', 'Simular a alguien']);
         const sobre = screen.getAllByRole('button').filter((b) => b.className.includes('el-tarjeta'))
             .map((b) => b.querySelector('small').textContent);
-        expect(sobre).toEqual(['Operador', 'Administrador', 'Administrador', 'Administrador', 'Administrador', 'Para todos', 'Equipo']);
+        expect(sobre).toEqual(['Operador', 'Operador', 'Operador', 'Dirección comercial', 'Dirección comercial', 'Dirección comercial', 'Para todos', 'Equipo']);
     });
 
     it('con un solo rol: sus áreas y Cortex', () => {
@@ -87,7 +88,7 @@ describe('El Portal', () => {
 
         abrir();
         fireEvent.click(screen.getByRole('button', { name: /Finances/ }));
-        expect(portal.cambiarDeRolEnLaCuenta).toHaveBeenCalledWith('admin', '/finanzas');
+        expect(portal.cambiarDeRolEnLaCuenta).toHaveBeenCalledWith('director_comercial', '/finanzas');
     });
 
     it('«Simular a alguien» elige a un miembro del equipo en el mismo Portal; la «w» abre ahí', () => {

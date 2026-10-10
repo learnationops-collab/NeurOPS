@@ -38,15 +38,37 @@ describe('roles y áreas en el Portal', () => {
     });
 
     it('un grupo por rol y por cuenta vinculada; Finances es un área del rol con el que se entra', () => {
-        const mario = { id: 3, role: 'operator', roles: ['operator', 'admin', 'closer'], can_view_finance: true };
+        const mario = { id: 3, role: 'operator', roles: ['operator', 'director_comercial', 'closer'], can_view_finance: true };
         expect(gruposDelPortal(mario).map((g) => [g.titulo, g.tarjetas.map((t) => t.titulo)])).toEqual([
             ['Operador', ['Operaciones']],
-            ['Administrador', ['Administración', 'Ventas', 'Agendamiento', 'Finances']],
+            ['Dirección comercial', ['Ventas', 'Agendamiento', 'Finances']],
             ['Closer', ['Cierres']],
         ]);
-        expect(tarjetasDelPortal(mario).find((t) => t.titulo === 'Finances')).toMatchObject({ clave: 'admin:finanzas', rol: 'admin', ruta: '/finanzas' });
+        expect(tarjetasDelPortal(mario).find((t) => t.titulo === 'Finances')).toMatchObject({ clave: 'director_comercial:finanzas', rol: 'director_comercial', ruta: '/finanzas' });
         expect(gruposDelPortal(marlon).at(-1)).toMatchObject({ clave: 'cuenta-2', titulo: 'Closer', detalle: 'Cuenta vinculada · marlon_closer' });
         expect(gruposDelPortal(marlon).at(-1).tarjetas[0]).toMatchObject({ clave: 'cuenta-2:cierres', titulo: 'Cierres', cuenta: 2 });
+    });
+
+    it('el admin no es un grupo: con operador, sus áreas que nadie más ofrece van a Operador (10/10/2026)', () => {
+        const kerwin = { id: 4, role: 'operator', roles: ['operator', 'admin', 'director_comercial', 'director_marketing'], can_view_finance: true };
+        expect(gruposDelPortal(kerwin).map((g) => [g.titulo, g.tarjetas.map((t) => t.titulo)])).toEqual([
+            ['Operador', ['Operaciones', 'Talent']],
+            ['Dirección comercial', ['Ventas', 'Agendamiento', 'Finances']],
+            ['Dirección de marketing', ['Marketing']],
+        ]);
+        // Talent entra con el rol admin: es el que la abre en esa cuenta.
+        expect(tarjetasDelPortal(kerwin).find((t) => t.titulo === 'Talent')).toMatchObject({ clave: 'admin:talent', rol: 'admin', ruta: '/admin/hiring' });
+
+        // Con hiring, Talent ya está en su grupo y Operador no la repite.
+        const mario = { id: 3, role: 'operator', roles: ['operator', 'admin', 'hiring'] };
+        expect(gruposDelPortal(mario).map((g) => [g.titulo, g.tarjetas.map((t) => t.titulo)])).toEqual([
+            ['Operador', ['Operaciones', 'Ventas', 'Agendamiento', 'Marketing']],
+            ['Hiring', ['Talent']],
+        ]);
+
+        // Una cuenta que solo es admin sigue viendo su grupo, que arranca en Operaciones.
+        expect(gruposDelPortal({ id: 5, role: 'admin', roles: ['admin'] })[0].tarjetas.map((t) => t.titulo))
+            .toEqual(['Operaciones', 'Ventas', 'Agendamiento', 'Marketing', 'Talent']);
     });
 
     it('simulando, el Portal muestra solo el rol simulado, y no cuenta para entrar', () => {
@@ -134,11 +156,11 @@ describe('entrar por una tarjeta', () => {
     });
 
     it('con otro rol de la cuenta lo activa y va a esa ruta', async () => {
-        post.mockResolvedValue({ data: { token: 'tk', user: { id: 3, role: 'admin', roles: ['operator', 'admin'] } } });
-        const mario = { id: 3, role: 'operator', roles: ['operator', 'admin'], can_view_finance: true };
-        await entrarPorTarjeta(mario, tarjetasDelPortal(mario).find((t) => t.clave === 'admin:finanzas'), vi.fn());
-        expect(post).toHaveBeenCalledWith('/auth/switch-role', { role: 'admin', isolated: false });
-        expect(JSON.parse(localStorage.getItem('user')).role).toBe('admin');
+        post.mockResolvedValue({ data: { token: 'tk', user: { id: 3, role: 'director_comercial', roles: ['operator', 'director_comercial'] } } });
+        const mario = { id: 3, role: 'operator', roles: ['operator', 'director_comercial'], can_view_finance: true };
+        await entrarPorTarjeta(mario, tarjetasDelPortal(mario).find((t) => t.clave === 'director_comercial:finanzas'), vi.fn());
+        expect(post).toHaveBeenCalledWith('/auth/switch-role', { role: 'director_comercial', isolated: false });
+        expect(JSON.parse(localStorage.getItem('user')).role).toBe('director_comercial');
         expect(window.location.href).toBe('/finanzas');
     });
 

@@ -62,10 +62,16 @@ const PendingKpiStrip = ({ closerId }) => {
     );
 };
 
+// Supervisan los reportes de todo el equipo (tira de pendientes, vista previa y reenvío a Discord del de
+// cualquiera). La dirección comercial lo hereda del admin, que lo conserva, desde que se retiró la vista
+// «Administración» (10/10/2026). `user.role` es el rol ACTIVO.
+const ROLES_DIRECCION = ['admin', 'director_comercial'];
+
 // Componente Principal de la Tabla
 const CloserReportsTable = ({ closers }) => {
     const auth = useAuth();
     const user = auth?.user || { role: 'admin' };
+    const esDireccion = ROLES_DIRECCION.includes(user.role);
     const navigate = useNavigate();
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -156,8 +162,8 @@ const CloserReportsTable = ({ closers }) => {
     return (
         <div className="space-y-6 animate-in fade-in duration-500 relative">
 
-            {/* KPIs de pendientes — solo para admin, arriba de todo (27/ago/2026) */}
-            {user.role === 'admin' && <PendingKpiStrip closerId={filters.closer_id} />}
+            {/* KPIs de pendientes — solo para la dirección, arriba de todo (27/ago/2026) */}
+            {esDireccion && <PendingKpiStrip closerId={filters.closer_id} />}
 
             {/* FILTERS */}
             <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-[2rem] flex flex-wrap items-end gap-6">
@@ -332,7 +338,7 @@ const CloserReportsTable = ({ closers }) => {
 
                                         <td className="p-4 text-right">
                                             <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                {user.role === 'admin' && (
+                                                {esDireccion && (
                                                     <button 
                                                         onClick={() => {
                                                             const token = localStorage.getItem('auth_token');
@@ -344,7 +350,7 @@ const CloserReportsTable = ({ closers }) => {
                                                         <Eye size={14} />
                                                     </button>
                                                 )}
-                                                {(user.role === 'admin' || user.role === 'closer') && (
+                                                {(esDireccion || user.role === 'closer') && (
                                                     <button 
                                                         onClick={() => handleResendDiscord(r.id)} 
                                                         disabled={resendingId === r.id}

@@ -29,6 +29,8 @@ describe('cuentas vinculadas', () => {
     it('Finances entra con admin o dirección comercial, y solo con «ver finanzas»', () => {
         expect(rolDeFinanzas(['operator', 'admin'], true)).toBe('admin');
         expect(rolDeFinanzas(['director_comercial'], true)).toBe('director_comercial');
+        // Con los dos, va con la dirección: el admin ya no es una vista (10/10/2026).
+        expect(rolDeFinanzas(['operator', 'admin', 'director_comercial'], true)).toBe('director_comercial');
         expect(rolDeFinanzas(['operator', 'admin'], false)).toBeNull();
         expect(rolDeFinanzas(['closer', 'setter'], true)).toBeNull();
         expect(rolDeFinanzas(undefined, true)).toBeNull();

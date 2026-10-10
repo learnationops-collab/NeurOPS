@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
 import PublicSetterStatsPage from '../../public/PublicSetterStatsPage';
 import PublicCloserStatsPage from '../../public/PublicCloserStatsPage';
-import PublicTriageStatsPage from '../../public/PublicTriageStatsPage';
 import WorkshopDashboardPage from '../workshop/WorkshopDashboardPage';
 
 const AdminSalesHubPage = () => {
@@ -41,7 +40,6 @@ const AdminSalesHubPage = () => {
             <div className="w-full">
                 {tab === 'closer' && <PublicCloserStatsPage />}
                 {tab === 'setter' && <PublicSetterStatsPage />}
-                {tab === 'triage' && <PublicTriageStatsPage />}
                 {tab === 'workshop' && puedeVerWorkshops && <WorkshopDashboardPage />}
             </div>
         </div>

@@ -18,7 +18,7 @@ from .triage_tracker import TriageTrackerReport
 from .workshop import WorkshopTemplate, WorkshopButton, WorkshopTemplateSent, WorkshopInteraction, WorkshopEvent, WorkshopGoals, WorkshopAction
 from .workshop_lead import WorkshopLead
 from .landing_session import LandingSession
-from .alert import AlertRule, Alert
+from .alert import AlertRule, Alert  # Alertas se retiró el 10/10/2026; las tablas se conservan (ver alert.py)
 from .installment import InstallmentPlan
 from .ficha_opcion import FichaOpcion
 from .client_merge_log import ClientMergeLog

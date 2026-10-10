@@ -29,14 +29,26 @@ const areasDelRol = (rol) => {
 /**
  * Los grupos del Portal: [{ clave, titulo, detalle?, Icono, tarjetas: [{ clave, titulo, Icono, rol, ruta, cuenta? }] }].
  * Un grupo por rol de la cuenta (simulando, solo el simulado) y uno por cuenta vinculada.
+ *
+ * El admin ya no es una vista (10/10/2026): una cuenta con admin y operador no ve el grupo «Administrador».
+ * Las áreas del admin que ningún otro rol de la cuenta ofrece van al grupo Operador y entran con el rol admin
+ * (por ejemplo Talent, para quien no tiene hiring); las demás ya están en su grupo.
  */
 export function gruposDelPortal(user) {
     if (!user) return [];
     const roles = user.is_impersonating ? [user.role] : rolesDeLaCuenta(user);
     const rolFinanzas = rolDeFinanzas(roles, user.can_view_finance);
-    const propios = roles.map((rol) => ({
+    const areasConFinanzas = (rol) => [...areasDelRol(rol), ...(rol === rolFinanzas ? [AREAS.finanzas] : [])];
+    const plegarAdmin = roles.includes('admin') && roles.includes('operator');
+    const visibles = plegarAdmin ? roles.filter((rol) => rol !== 'admin') : roles;
+    const ofrecidas = new Set(visibles.flatMap((rol) => areasConFinanzas(rol).map((a) => a.id)));
+    const delAdmin = plegarAdmin ? areasConFinanzas('admin').filter((a) => !ofrecidas.has(a.id)) : [];
+    const propios = visibles.map((rol) => ({
         clave: rol, titulo: rotuloDeRol(rol), Icono: ICONO_DE_ROL[rol] || User,
-        tarjetas: [...areasDelRol(rol), ...(rol === rolFinanzas ? [AREAS.finanzas] : [])].map((a) => tarjeta(rol, a)),
+        tarjetas: [
+            ...areasConFinanzas(rol).map((a) => tarjeta(rol, a)),
+            ...(rol === 'operator' ? delAdmin.map((a) => tarjeta('admin', a)) : []),
+        ],
     }));
     const vinculadas = otrasCuentas(user).map((c) => ({
         clave: `cuenta-${c.id}`, titulo: rotuloDeRol(c.role), detalle: `Cuenta vinculada · ${c.username}`, Icono: ICONO_DE_ROL[c.role] || Users,

@@ -34,7 +34,7 @@ export const rotuloDeSesion = (user, rotulo = null) =>
  *   un "!" con el detalle (p. ej. "Google Calendar sin conectar").
  * - playbook: { pendientes } (opcional): los videos pendientes, con la cuenta en «Portal» (el Playbook
  *   está en Cortex).
- * - ir: opciones de navegación propias, después de «Portal» (p. ej. «Volver al panel de admin»).
+ * - ir: opciones de navegación propias, después de «Portal» (p. ej. «Volver a Operaciones»).
  */
 // `navigate` ya no hace falta (el Portal se abre encima, sin navegar): las pantallas lo pueden seguir pasando.
 export function armarMenuSesion({

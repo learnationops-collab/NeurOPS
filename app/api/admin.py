@@ -819,44 +819,6 @@ def generate_mock_data():
         sale_count=data.get('sales', 5)
     )
     return jsonify({"message": message}), 200 if success else 400
-@bp.route('/admin/db/export', methods=['GET'])
-@login_required
-@operator_required
-def export_database():
-    try:
-        data = DatabaseService.export_db()
-        # Create a JSON response as a downloadable file
-        response_data = json.dumps(data, indent=2)
-        
-        from flask import Response
-        filename = f"neurops_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        
-        return Response(
-            response_data,
-            mimetype='application/json',
-            headers={'Content-Disposition': f'attachment;filename={filename}'}
-        )
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@bp.route('/admin/db/import', methods=['POST'])
-@login_required
-@operator_required
-def import_database():
-    if 'file' not in request.files:
-        return jsonify({"message": "No se subió ningún archivo"}), 400
-        
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"message": "Nombre de archivo vacío"}), 400
-        
-    try:
-        import_data = json.load(file)
-        success, message = DatabaseService.import_db(import_data)
-        return jsonify({"message": message}), 200 if success else 400
-    except Exception as e:
-        return jsonify({"message": f"Error al procesar el archivo: {str(e)}"}), 500
-
 @bp.route('/admin/tools/backlog-cleanup', methods=['GET', 'POST'])
 @login_required
 @operator_required

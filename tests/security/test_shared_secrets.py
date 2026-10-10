@@ -173,10 +173,9 @@ CRONS = {
 
 @pytest.fixture(params=sorted(CRONS))
 def cron_real(request, monkeypatch):
-    """(url, lista de ejecuciones reales) de un cron con lo externo (Sheets, alertas, WhatsApp, Academia) simulado."""
+    """(url, lista de ejecuciones reales) de un cron con lo externo (Sheets, WhatsApp, Academia) simulado."""
     ejecuciones = []
     if request.param == 'sheets':
-        from app.services.alert_service import AlertService
         from app.services.sheets_service import SheetsService
 
         def sincronizar(tabla, force=False):
@@ -184,7 +183,6 @@ def cron_real(request, monkeypatch):
             return {'status': 'success'}
 
         monkeypatch.setattr(SheetsService, 'sync_from_sheets', staticmethod(sincronizar))
-        monkeypatch.setattr(AlertService, 'evaluate_rules', staticmethod(lambda: 0))
     elif request.param == 'academia':
         from app.services import academy_snapshot_service
 

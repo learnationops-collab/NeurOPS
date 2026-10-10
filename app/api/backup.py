@@ -7,7 +7,9 @@ import sqlalchemy as sa
 from flask import Blueprint, Response, current_app, jsonify
 
 from app import db
-from app.decorators import role_required
+# Admin u operador (10/10/2026): el respaldo pasó del panel de «Administración», que se retiró, a
+# Operaciones › Datos. La clave de BACKUP_SECRET_KEY se sigue pidiendo igual.
+from app.decorators import operator_required
 
 bp = Blueprint('backup', __name__)
 
@@ -56,7 +58,7 @@ def format_value(value):
     return str(value)
 
 @bp.route('/secret-backup-preview/<string:secret_key>', methods=['GET'])
-@role_required('admin')
+@operator_required
 def preview_db(secret_key):
     """
     Returns statistics about the database tables.
@@ -81,7 +83,7 @@ def preview_db(secret_key):
         return jsonify({"message": f"Preview failed: {str(e)}"}), 500
 
 @bp.route('/secret-backup-export/<string:secret_key>', methods=['GET'])
-@role_required('admin')
+@operator_required
 def export_db(secret_key):
     """
     Exports the entire database as a SQL dump (INSERT statements).
@@ -135,7 +137,7 @@ def export_db(secret_key):
         return jsonify({"message": "Backup failed"}), 500
 
 @bp.route('/secret-restore-import/<string:secret_key>', methods=['POST'])
-@role_required('admin')
+@operator_required
 def restore_db(secret_key):
     """
     Restores the database from an uploaded SQL file.

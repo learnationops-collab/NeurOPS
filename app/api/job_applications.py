@@ -1,7 +1,12 @@
 """Panel de revisión de postulaciones (Closer de ventas). Autenticado: acá
-salen datos personales y se vota. Cualquier `role == 'admin'` puede revisar
-(mismo criterio que Alertas/Workshops/Formularios) — el voto se asocia a la
-sesión real del usuario logueado (`current_user.id`), sin switch de demo."""
+salen datos personales y se vota. El voto se asocia a la sesión real del
+usuario logueado (`current_user.id`), sin switch de demo.
+
+Desde el 10/10/2026 el panel vive dentro de Learnation Talent (se retiró la
+vista «Administración»), así que lo abren los mismos que Talent: `admin` y el
+rol acotado `hiring` (`hiring_required` en app/decorators.py, igual que
+app/api/assistant_applications.py). Cuenta el rol ACTIVO de la sesión: quien
+tiene `hiring` como rol adicional entra cuando trabaja con ese rol."""
 import logging
 from collections import Counter
 from datetime import datetime, timedelta
@@ -10,8 +15,10 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 
 from app import db
+from app.decorators import ROLE_ADMIN, hiring_required
 from app.models import JobApplication, JobApplicationVote, ClarityWeight, User
 from app.models.job_application import CLARITY_CRITERIA, VOTE_VALUES, RESOLUCION_VALUES
+from app.models.user import ROLE_HIRING
 from app.services import clarity
 
 bp = Blueprint('job_applications', __name__)
@@ -21,11 +28,9 @@ FILTROS_VALIDOS = ('mis_pendientes', 'todas', 'preseleccionadas', 'en_reserva', 
 # (no tiene sentido votar algo a medio completar), es una vista aparte para
 # ver dónde quedó alguien que no terminó.
 
-
-def check_admin():
-    if not current_user.is_authenticated or current_user.role != 'admin':
-        return jsonify({"message": "Se requiere rol admin"}), 403
-    return None
+# Quiénes revisan: los mismos roles que abren el panel (ver `hiring_required`). Antes del
+# 10/10/2026 eran solo los `admin`.
+ROLES_REVISORES = (ROLE_ADMIN, ROLE_HIRING)
 
 
 def _weights_map():
@@ -58,11 +63,8 @@ def _aplica_filtro(app_row, filtro):
 
 @bp.route('/job-applications', methods=['GET'])
 @login_required
+@hiring_required
 def listar_job_applications():
-    forbidden = check_admin()
-    if forbidden:
-        return forbidden
-
     filtro = request.args.get('filtro', 'mis_pendientes')
     weights = _weights_map()
 
@@ -90,11 +92,8 @@ def listar_job_applications():
 
 @bp.route('/job-applications/<int:app_id>', methods=['GET'])
 @login_required
+@hiring_required
 def ver_job_application(app_id):
-    forbidden = check_admin()
-    if forbidden:
-        return forbidden
-
     app_row = JobApplication.query.get_or_404(app_id)
     weights = _weights_map()
     data = app_row.to_dict(weights=weights, include_respuestas=True)
@@ -104,11 +103,8 @@ def ver_job_application(app_id):
 
 @bp.route('/job-applications/<int:app_id>/vote', methods=['POST'])
 @login_required
+@hiring_required
 def votar_job_application(app_id):
-    forbidden = check_admin()
-    if forbidden:
-        return forbidden
-
     data = request.get_json(silent=True) or {}
     valor = data.get('valor')
     if valor not in VOTE_VALUES:
@@ -148,17 +144,14 @@ def votar_job_application(app_id):
 
 @bp.route('/job-applications/<int:app_id>/resolver', methods=['POST'])
 @login_required
+@hiring_required
 def resolver_job_application(app_id):
-    """Decisión manual de un admin que pisa el veredicto calculado por votos:
+    """Decisión manual de un revisor que pisa el veredicto calculado por votos:
     'preseleccionada' para destrabar un 'decidir' sin esperar a que algún
     revisor cambie su voto, 'testeo' para un closer preseleccionado que ya
     está en su etapa de prueba, o 'baja' para uno que se fue por cualquier
     motivo (a diferencia de 'descartado', que es un rechazo durante la
     revisión). `valor: null` deshace la resolución."""
-    forbidden = check_admin()
-    if forbidden:
-        return forbidden
-
     data = request.get_json(silent=True) or {}
     valor = data.get('valor')
     if valor is not None and valor not in RESOLUCION_VALUES:
@@ -185,11 +178,8 @@ def resolver_job_application(app_id):
 
 @bp.route('/job-applications/clarity-weights', methods=['GET'])
 @login_required
+@hiring_required
 def ver_clarity_weights():
-    forbidden = check_admin()
-    if forbidden:
-        return forbidden
-
     filas = ClarityWeight.query.order_by(ClarityWeight.id).all()
     if not filas:
         return jsonify([
@@ -201,11 +191,8 @@ def ver_clarity_weights():
 
 @bp.route('/job-applications/clarity-weights', methods=['PUT'])
 @login_required
+@hiring_required
 def guardar_clarity_weights():
-    forbidden = check_admin()
-    if forbidden:
-        return forbidden
-
     data = request.get_json(silent=True) or {}
     pesos = data.get('weights') or {}
     claves_validas = {c['criterion'] for c in CLARITY_CRITERIA}
@@ -231,11 +218,8 @@ def guardar_clarity_weights():
 
 @bp.route('/job-applications/stats', methods=['GET'])
 @login_required
+@hiring_required
 def stats_job_applications():
-    forbidden = check_admin()
-    if forbidden:
-        return forbidden
-
     SEGMENTOS_VALIDOS = ('todos', 'preseleccionados', 'en_reserva', 'testeo', 'descartados', 'bajas', 'incompletos')
     segmento = request.args.get('segmento', 'todos')
     if segmento not in SEGMENTOS_VALIDOS:
@@ -340,22 +324,22 @@ def stats_job_applications():
 
 @bp.route('/job-applications/revisores', methods=['GET'])
 @login_required
+@hiring_required
 def revisores_job_applications():
     """Estado de la revisión por revisor: a cuántos les falta calificar a cada
-    admin, dónde votaron distinto (necesita decidir) y qué le falta ver al
-    usuario actual. 'Revisor' es cualquier admin, no una lista fija — mismo
-    criterio de autorización que votar (`check_admin`)."""
-    forbidden = check_admin()
-    if forbidden:
-        return forbidden
-
+    revisor, dónde votaron distinto (necesita decidir) y qué le falta ver al
+    usuario actual. 'Revisor' es quien puede votar, no una lista fija: tiene
+    alguno de `ROLES_REVISORES`, el mismo criterio que `hiring_required`."""
     weights = _weights_map()
     completas = JobApplication.query.filter_by(completo=True).all()
     total = len(completas)
 
-    admins = User.query.filter_by(role='admin').order_by(User.username).all()
+    # `User.role.in_(...)` (ver `_RolComparator` en app/models/user.py) encuentra a quien TENGA el
+    # rol, principal o adicional (`roles_extra`): el operador con `hiring` de rol extra también vota
+    # (cuando trabaja con ese rol) y tiene que figurar. Una persona con los dos roles sale una vez.
+    usuarios = User.query.filter(User.role.in_(ROLES_REVISORES)).order_by(User.username).all()
     revisores = []
-    for u in admins:
+    for u in usuarios:
         # `mosaico`: un valor por postulación completa, en el mismo orden que `completas`, con
         # el voto de este revisor o None si todavía no llegó — pensado para dibujar una barra
         # segmentada de color por candidato (mockup de referencia) en vez de una sola barra de

@@ -26,15 +26,11 @@ import LeadsManagementPage from './pages/shared/LeadsManagementPage';
 import SetterEspacioPage from './pages/setter/SetterEspacioPage';
 import CloserWorkflowPage from './pages/closer/CloserWorkflowPage';
 import OperationsPage from './pages/admin/database/OperationsPage';
-import OperationsDashboard from './pages/operations/dashboard/OperationsDashboard';
 import OpsRuta from './pages/operations/OpsRuta';
-import OperationsSettingsPage from './pages/operations/settings/OperationsSettingsPage';
-import PublicFinancialSalesPage from './pages/public/PublicFinancialSalesPage';
 import BookingPage from './pages/public/BookingPage';
 import PublicCloserReportPage from './pages/public/PublicCloserReportPage';
 import PublicCloserStatsPage from './pages/public/PublicCloserStatsPage';
 import PublicTriageReportPage from './pages/public/PublicTriageReportPage';
-import PublicTriageStatsPage from './pages/public/PublicTriageStatsPage';
 import AdManagementPage from './pages/public/AdManagementPage';
 import FinancialAgendasPage from './pages/admin/reports/FinancialAgendasPage';
 import TriageWorkflowPage from './pages/triage/TriageWorkflowPage';
@@ -50,18 +46,13 @@ import TermsOfServicePage from './pages/public/TermsOfServicePage';
 import AgendasV2Routes from './pages/agendas_v2/AgendasV2Routes';
 import AgendasV2Publica from './pages/agendas_v2/AgendasV2Publica';
 import UnattributedLeadsPage from './pages/admin/marketing/UnattributedLeadsPage';
-import AlertsHubPage from './pages/admin/alerts/AlertsHubPage';
 import FormsManagementPage from './pages/shared/FormsManagementPage';
 
 import AdminSalesHubPage from './pages/admin/reports/AdminSalesHubPage';
 import AdminMarketingHubPage from './pages/admin/marketing/AdminMarketingHubPage';
 import AdminSheetsHubPage from './pages/admin/reports/AdminSheetsHubPage';
 import WorkshopDashboardPage from './pages/admin/workshop/WorkshopDashboardPage';
-import CourseEditorPage from './pages/operations/course-editor/CourseEditorPage';
-import PostulacionesDashboardPage from './pages/admin/postulaciones/PostulacionesDashboardPage';
 import HiringDashboardPage from './pages/admin/hiring/HiringDashboardPage';
-import BackupPage from './pages/admin/backup/BackupPage';
-import RestorePage from './pages/admin/backup/RestorePage';
 
 
 import DashboardComercial from './pages/comercial/DashboardComercial';
@@ -144,32 +135,22 @@ function App() {
               }
             />
 
-            {/* Protected Admin Routes: Hubs */}
+            {/* Operaciones: un solo espacio con su dock (ver OpsRuta). Desde el 10/10/2026 el admin
+                entra al mismo que el operador: «Administración» se retiró y lo suyo pasó acá. Las
+                rutas viejas llevan a su sección. */}
             <Route
               path="/ops/dashboard"
               element={
                 <ProtectedRoute roles={['operator', 'admin']}>
-                  <OpsRuta>
-                    <OperationsSettingsPage />
-                  </OpsRuta>
+                  <OpsRuta />
                 </ProtectedRoute>
               }
             />
-            {/* Registro de Agendas y Registro de Ventas: pasaron del panel de admin al
-                de operaciones el 20/ago/2026. El admin conserva el acceso por URL. */}
             <Route
               path="/ops/agendas"
               element={
                 <ProtectedRoute roles={['operator', 'admin']}>
-                  <OpsRuta paso="agendas">
-                    {/* Estas dos vistas están diseñadas sobre fondo oscuro (venían
-                        embebidas en el hub de admin, que lo aportaba). Fuera de ahí
-                        necesitan su propia superficie o quedan con texto blanco sobre
-                        el fondo claro del tema por defecto. */}
-                    <div className="min-h-screen bg-slate-950 text-slate-200">
-                      <FinancialAgendasPage />
-                    </div>
-                  </OpsRuta>
+                  <OpsRuta paso="agendas" />
                 </ProtectedRoute>
               }
             />
@@ -177,11 +158,7 @@ function App() {
               path="/ops/ventas"
               element={
                 <ProtectedRoute roles={['operator', 'admin']}>
-                  <OpsRuta paso="ventas">
-                    <div className="min-h-screen bg-slate-950 text-slate-200">
-                      <PublicFinancialSalesPage />
-                    </div>
-                  </OpsRuta>
+                  <OpsRuta paso="ventas" />
                 </ProtectedRoute>
               }
             />
@@ -264,26 +241,8 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/admin/alerts"
-              element={
-                <ProtectedRoute roles={['admin']}>
-                  <MainLayout>
-                    <AlertsHubPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/formularios"
-              element={
-                <ProtectedRoute roles={['admin']}>
-                  <MainLayout>
-                    <FormsManagementPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
+            {/* Formularios es una sección de Operaciones desde el 10/10/2026. */}
+            <Route path="/admin/formularios" element={<Navigate to="/ops/dashboard?step=formularios" replace />} />
             <Route
               path="/admin/workshops"
               element={
@@ -294,56 +253,29 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            {/* Respaldo y restauración de la base: solo admin (el servidor lo vuelve a exigir, además de
-                la clave BACKUP_SECRET_KEY que escribe la persona en la pantalla). Antes eran páginas
-                públicas (/backup y /restore) con la clave escrita en el bundle de la web. Sin enlace en
-                el menú a propósito: se entra por la URL. */}
-            <Route
-              path="/admin/backup"
-              element={
-                <ProtectedRoute roles={['admin']}>
-                  <MainLayout>
-                    <BackupPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/restore"
-              element={
-                <ProtectedRoute roles={['admin']}>
-                  <MainLayout>
-                    <RestorePage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
+            {/* Respaldo y restauración de la base: desde el 10/10/2026 son pestañas de Operaciones › Datos
+                (admin u operador; el servidor lo vuelve a exigir, además de la clave BACKUP_SECRET_KEY que
+                escribe la persona en la pantalla). Antes eran páginas sueltas del admin, sin enlace. */}
+            <Route path="/admin/backup" element={<Navigate to="/ops/dashboard?step=datos&tab=respaldo" replace />} />
+            <Route path="/admin/restore" element={<Navigate to="/ops/dashboard?step=datos&tab=restaurar" replace />} />
             <Route
               path="/ops/course-editor"
               element={
                 <ProtectedRoute roles={['operator', 'admin']}>
-                  <OpsRuta paso="curso">
-                    <CourseEditorPage />
-                  </OpsRuta>
+                  <OpsRuta paso="curso" />
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/admin/postulaciones"
-              element={
-                // Sin MainLayout a propósito: esta vista es su propia "sub-app" con
-                // header y menú inferior propios (ver PostulacionesDashboardPage),
-                // en vez de vivir dentro del dock global del admin.
-                <ProtectedRoute roles={['admin']}>
-                  <PostulacionesDashboardPage />
-                </ProtectedRoute>
-              }
-            />
+            {/* Postulaciones (la búsqueda de Closer de ventas) es desde el 10/10/2026 la sección
+                Closers de Learnation Talent: se retiró la vista «Administración». Los links viejos
+                llevan ahí. */}
+            <Route path="/admin/postulaciones" element={<Navigate replace to="/admin/hiring?s=closers" />} />
             <Route
               path="/admin/hiring"
               element={
-                // Igual que Postulaciones: sub-app con header y dock propios, sin
-                // MainLayout. Es la única pantalla del rol `hiring`.
+                // Learnation Talent: sub-app con header y dock propios, sin MainLayout.
+                // Es la única pantalla del rol `hiring` (Asistente y, desde el 10/10/2026,
+                // la sección Closers, que eran las Postulaciones del admin).
                 <ProtectedRoute roles={['admin', 'hiring']}>
                   <HiringDashboardPage />
                 </ProtectedRoute>
