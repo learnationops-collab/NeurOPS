@@ -348,7 +348,7 @@ const PanelEstados = ({ bloque, irA }) => {
 
 /**
  * El cierre en sus cuatro lecturas: ventas (pago completo + split pay, el close rate de verdad) y
- * con señas, cada una por llamada y por presentación. La matriz es la misma pieza que usa el
+ * señas, cada una por llamada y por presentación. La matriz es la misma pieza que usa el
  * dashboard del closer (`MatrizCierres`) sobre el mismo bloque `cierres` del backend, y trae
  * arriba la tira de presentación (que lleva a la lista de las que presentaron, como antes).
  *
@@ -363,9 +363,8 @@ const PanelCierre = ({ bloque, irA }) => {
         <Panel id="p-cierre" cab={
             <PanelCab titulo="Cierre"
                 ayuda={'El close rate cuenta solo pagos completos y split pay: una seña es una reserva, '
-                    + 'no una venta. "Con señas" suma a las que dejaron seña para ver el compromiso '
-                    + 'de compra completo. Cada tarjeta mide lo mismo contra las llamadas con show up '
-                    + 'y contra las presentaciones.'}>
+                    + 'no una venta, y va en su propia fila. Cada tarjeta mide lo mismo contra las '
+                    + 'llamadas con show up y contra las presentaciones.'}>
                 {!vacio && <LeyendaCierres cierres={c} />}
             </PanelCab>
         }>

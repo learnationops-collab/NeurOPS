@@ -1,5 +1,5 @@
 /* Matriz de cierres (MatrizCierres.jsx): la tira de presentación y una tarjeta por columna
- * (por llamada / por presentación), con las ventas solas y con señas en cada una.
+ * (por llamada / por presentación), con las ventas y las señas en cada una.
  *
  * Como drill.css, sin prefijo de pantalla: vive en el panel Cierre del dashboard comercial (dentro
  * de `.dc-shell`) y en el dashboard del closer (Tailwind, `dash-v6`). Los dos son oscuros siempre
@@ -243,24 +243,6 @@
     min-height: 20px;
 }
 
-.mc-pp {
-    display: inline-flex;
-    align-items: center;
-    height: 19px;
-    padding: 0 8px;
-    border-radius: 999px;
-    background: var(--mc-con);
-    color: #fff;
-    font-size: 10.5px;
-    font-weight: 800;
-    letter-spacing: .01em;
-    white-space: nowrap;
-    font-variant-numeric: tabular-nums;
-    box-shadow: 0 4px 14px rgba(255, 63, 164, .28);
-    animation: mc-pastilla .5s var(--mc-curva) both;
-    animation-delay: calc(700ms + var(--mc-orden, 0) * 110ms);
-}
-
 .mc-cifra {
     display: flex;
     align-items: baseline;
@@ -362,11 +344,6 @@
     to { opacity: 1; transform: none; }
 }
 
-@keyframes mc-pastilla {
-    from { opacity: 0; transform: scale(.7); }
-    to { opacity: 1; transform: none; }
-}
-
 @keyframes mc-humo {
     from { transform: translate3d(-5%, -4%, 0) scale(1); }
     to { transform: translate3d(6%, 5%, 0) scale(1.1); }
@@ -375,7 +352,6 @@
 @media (prefers-reduced-motion: reduce) {
     .mc-tira,
     .mc-col,
-    .mc-pp,
     .mc-tramo,
     .mc-humo {
         animation: none;

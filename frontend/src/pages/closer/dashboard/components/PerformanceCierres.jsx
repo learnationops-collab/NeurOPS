@@ -3,13 +3,13 @@ import MetricTip from './MetricTip';
 import MatrizCierres, { LeyendaCierres } from '../../../../components/dashboard/MatrizCierres';
 import { DESTINOS_CIERRES } from '../../../comercial/components/destinos';
 
-/* Cierre: ventas y con señas, por llamada y por presentación.
+/* Cierre: ventas y señas, por llamada y por presentación.
  *
  * Los mismos números que el panel Cierre del dashboard comercial, con la misma pieza
  * (`MatrizCierres`), el mismo bloque del backend (`current.cierres`) y la misma cabecera: el
  * título a la izquierda y, a la derecha, la leyenda con cuántas ventas (pago completo + split pay)
- * y cuántas señas hay detrás de las tasas. El close rate de verdad es "Ventas"; "Con señas" existe
- * para ver cuánto de lo que parece un cierre es todavía una reserva.
+ * y cuántas señas hay detrás de las tasas. El close rate de verdad es "Ventas"; "Señas" cuenta
+ * aparte las reservas que todavía no se completaron.
  *
  * El tooltip del tablero es `MetricTip`: se adapta a la forma `{ titulo, texto }` que espera la
  * matriz. */
@@ -27,8 +27,8 @@ const PerformanceCierres = ({ cierres, irA }) => {
                 <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-primary" /> Cierre
                     <MetricTip iconOnly title="Cómo leer esta tarjeta" source="derivado"
-                        formula="ventas: pago completo + split pay · con señas: + señas sin completar"
-                        note="El close rate solo cuenta pagos completos y split pay: una seña es una reserva, no una venta. «Con señas» suma a los leads que dejaron seña y todavía no pagaron, para ver el compromiso de compra completo. Arriba, la tasa de presentación: de las llamadas con show up, en cuántas se llegó a la oferta. Las ventas salen del registro financiero y las llamadas de la bandeja." />
+                        formula="ventas: pago completo + split pay · señas: señas sin completar"
+                        note="El close rate solo cuenta pagos completos y split pay: una seña es una reserva, no una venta. «Señas» cuenta aparte a los leads que dejaron seña y todavía no pagaron. Arriba, la tasa de presentación: de las llamadas con show up, en cuántas se llegó a la oferta. Las ventas salen del registro financiero y las llamadas de la bandeja." />
                 </h3>
                 {hayLlamadas && <LeyendaCierres cierres={cierres} />}
             </div>

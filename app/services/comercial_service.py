@@ -25,8 +25,8 @@ Definiciones (una sola vez, acá)
   · `show_up`     asistieron / realizadas.
   · `close_rate`  ventas / asistieron. "Venta" es una agenda cuyo lead tiene un pago completo o
                   un split pay (`REAL_SALE_TIPOS`). La seña NO: esa agenda queda como "Seña" y
-                  solo suma en las tasas "con señas" (`close_rate_con_senas`, ver
-                  `closer_service.matriz_de_cierres`).
+                  se cuenta en su propia fila (`solo_senas` de `closer_service.matriz_de_cierres`)
+                  y en `close_rate_con_senas` de los totales.
   · `cash`        suma de `FinancialSale.monto` del período (incluye cuotas y señas: es cash
                   cobrado, no ventas nuevas).
   · `ventas`      solo las filas cuyo tipo canónico es una venta de verdad (completo/parcial);

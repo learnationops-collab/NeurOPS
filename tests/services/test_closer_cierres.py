@@ -64,8 +64,9 @@ def test_la_matriz_tiene_las_cuatro_tasas_con_sus_conteos():
 
     assert m['sin_senas']['por_llamada'] == {'num': 2, 'den': 8, 'pct': 25.0}
     assert m['sin_senas']['por_presentacion'] == {'num': 2, 'den': 4, 'pct': 50.0}
-    assert m['con_senas']['por_llamada'] == {'num': 3, 'den': 8, 'pct': 37.5}
-    assert m['con_senas']['por_presentacion'] == {'num': 3, 'den': 4, 'pct': 75.0}
+    # La fila de señas cuenta SOLO las señas: las ventas ya están en la de arriba.
+    assert m['solo_senas']['por_llamada'] == {'num': 1, 'den': 8, 'pct': 12.5}
+    assert m['solo_senas']['por_presentacion'] == {'num': 1, 'den': 4, 'pct': 25.0}
     assert (m['ventas'], m['senas'], m['asistieron'], m['presentaciones']) == (2, 1, 8, 4)
 
 
@@ -94,7 +95,7 @@ def test_sin_denominador_la_tasa_es_none_y_no_cero():
     m = matriz_de_cierres(completo=0, split=0, senas=0, asistieron=0, presentaciones=0)
 
     assert m['sin_senas']['por_llamada']['pct'] is None
-    assert m['con_senas']['por_presentacion']['pct'] is None
+    assert m['solo_senas']['por_presentacion']['pct'] is None
     assert m['presentacion']['pct'] is None
 
 
@@ -114,10 +115,11 @@ def test_una_sena_sola_no_es_un_cierre_pero_si_cuenta_con_senas(db, marlon):
     assert s['percentages']['close_rate'] == 50.0          # 2 de 4: la seña no entra
     assert (cierres['ventas_completo'], cierres['ventas_split']) == (1, 1)
     assert cierres['sin_senas']['por_llamada'] == {'num': 2, 'den': 4, 'pct': 50.0}
-    assert cierres['con_senas']['por_llamada'] == {'num': 3, 'den': 4, 'pct': 75.0}
+    assert cierres['solo_senas']['por_llamada'] == {'num': 1, 'den': 4, 'pct': 25.0}
     assert cierres['sin_senas']['por_presentacion']['pct'] == 50.0
-    assert cierres['con_senas']['por_presentacion']['pct'] == 75.0
-    # "Close rate promesa" ES el close rate con señas por llamada.
+    assert cierres['solo_senas']['por_presentacion']['pct'] == 25.0
+    # "Close rate promesa" sigue siendo ventas + señas por llamada: la tarjeta ya no lo muestra,
+    # pero hay pantallas que lo leen de `percentages`.
     assert s['percentages']['close_rate_promesa'] == 75.0
     assert s['percentages']['offer_to_sale_con_senas'] == 75.0
 
@@ -134,7 +136,8 @@ def test_la_sena_completada_en_el_periodo_no_cuenta_dos_veces(db, marlon):
 
     assert (cierres['ventas'], cierres['senas']) == (1, 0)
     assert cierres['sin_senas']['por_llamada']['pct'] == 100.0
-    assert cierres['con_senas']['por_llamada']['pct'] == 100.0
+    # Es una venta y no una seña: en la fila de señas no aparece.
+    assert cierres['solo_senas']['por_llamada']['pct'] == 0.0
 
 
 @freeze_time(HOY)
@@ -151,7 +154,7 @@ def test_la_sena_completada_despues_del_periodo_cuenta_como_sena(db, marlon):
 
     assert (cierres['ventas'], cierres['senas']) == (0, 1)
     assert cierres['sin_senas']['por_llamada']['pct'] == 0.0
-    assert cierres['con_senas']['por_llamada']['pct'] == 100.0
+    assert cierres['solo_senas']['por_llamada']['pct'] == 100.0
 
 
 @pytest.mark.parametrize('tipo', ['RR - Cuota', 'RR - Renovación', 'AL - Upsell'])
@@ -178,7 +181,7 @@ def test_por_presentacion_divide_por_las_ofertas_presentadas(db, marlon):
 
     assert (cierres['asistieron'], cierres['presentaciones']) == (4, 2)
     assert cierres['sin_senas']['por_presentacion'] == {'num': 1, 'den': 2, 'pct': 50.0}
-    assert cierres['con_senas']['por_presentacion'] == {'num': 2, 'den': 2, 'pct': 100.0}
+    assert cierres['solo_senas']['por_presentacion'] == {'num': 1, 'den': 2, 'pct': 50.0}
 
 
 @freeze_time(HOY)
@@ -208,7 +211,7 @@ def test_el_dashboard_del_closer_expone_el_bloque_de_cierres(db, marlon):
     actual = datos['current']
 
     assert actual['cierres']['sin_senas']['por_llamada']['pct'] == 50.0
-    assert actual['cierres']['con_senas']['por_llamada']['pct'] == 100.0
+    assert actual['cierres']['solo_senas']['por_llamada']['pct'] == 50.0
     # Los números viejos siguen, y dicen lo mismo que el bloque nuevo.
     assert actual['kpis']['close_rate_llamada'] == 50.0
     assert actual['senas']['close_rate_promesa'] == 100.0
