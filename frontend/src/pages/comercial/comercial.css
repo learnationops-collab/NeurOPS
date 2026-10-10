@@ -1387,6 +1387,12 @@
   background:var(--brand-secondary-surface);border:1px solid var(--brand-secondary-border);
   color:var(--brand-secondary)}
 .dc-shell .vacio-icono svg{width:24px;height:24px}
+/* Una lista de Revisar sin ninguna fila en el período (las del setter, ver tablasSetter.js): menos
+   aire que la sección "pronto", y el ícono entra con un pop corto. Con movimiento reducido, quieto. */
+.dc-shell .vacio-grande--periodo{padding:var(--s12) var(--s4)}
+.dc-shell .vacio-grande--periodo .vacio-icono{animation:dcVacioIn .42s var(--spring) both}
+@keyframes dcVacioIn{from{opacity:0;transform:translateY(6px) scale(.86)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.dc-shell .vacio-grande--periodo .vacio-icono{animation:none}}
 .dc-shell .borrador-aviso{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap;
   padding:var(--s3) var(--s4);border-radius:var(--radius-control);
   border:1px dashed var(--border-control);background:var(--mat-0);

@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Filter, LayoutGrid, List, Plus, Rows, RotateCcw, Search,
+import { ChevronDown, Filter, Inbox, LayoutGrid, List, Plus, Rows, RotateCcw, Search,
     SlidersHorizontal, X } from 'lucide-react';
 // El ícono "i" es el `Tip` compartido: la burbuja va en un portal porque acá cae al final de la
 // barra, pegada al borde derecho, y antes se cortaba (ver `Tip.jsx`).
 import { Tip, fmt } from './Shared';
 import Cifra from './Cifra';
-import { DIMENSION_PROPIA, TABLAS, TABLAS_POR_ROL, valoresVigentes } from './tablasDef';
+import { DIMENSION_PROPIA, TABLAS_POR_ROL, valoresVigentes } from './tablasDef';
+import { defDeTabla } from './tablasSetter';
 import PanelConfigurar from './PanelConfigurar';
 import RevisarLista, { EsqueletoRevisar } from './RevisarLista';
 import { columnasOrdenables, ordenarFilas, siguienteOrden } from './ordenFilas';
@@ -156,7 +157,9 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     // lista y las ventas como tarjetas es una preferencia razonable, no una inconsistencia.
     const { modo: modoVista, setModo: setModoVista } = useModoVista(`comercial_view_mode_${tabla}`);
 
-    const def = TABLAS[tabla];
+    // Quien mira solo sus filas con rol setters (el setter mismo) ve las tablas a su medida: sin la
+    // columna de sí mismo y con la palabra clave (ver `tablasSetter.js`).
+    const def = defDeTabla(tabla, rol, !puedeElegirEquipo);
     const deLaFila = tablas || TABLAS_POR_ROL[rol];
     const panel = useRef(null);
 
@@ -447,7 +450,9 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         return [
             { key: 'agendas', label: segun(lista.length, 'agenda', 'agendas'), valor: fmt.num(lista.length),
                 color: 'var(--text-on-surface)',
-                hint: fmt.plural(realizadas, 'realizada', 'realizadas') },
+                // La del setter dice cuántas no tienen palabra clave (ver `tablasSetter.js`).
+                hint: def.pistaDelTotal ? def.pistaDelTotal(lista)
+                    : fmt.plural(realizadas, 'realizada', 'realizadas') },
             { key: 'show_up', label: 'show up', valor: fmt.pct(pct(asistieron, realizadas)),
                 color: 'var(--success)', hint: de(asistieron, realizadas) },
             { key: 'close_rate', label: 'close rate', valor: fmt.pct(pct(ventas, asistieron)),
@@ -460,7 +465,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                 valor: fmt.num(pendientes.length), color: conRetraso ? 'var(--warning)' : 'var(--idle)',
                 hint: conRetraso ? `${fmt.num(conRetraso)} con retraso` : 'al día' },
         ];
-    }, [mostradas, tabla]);
+    }, [mostradas, tabla, def]);
 
     // ¿La lista está recortada por algo que eligió el usuario? Es lo que enciende la tira (ver
     // `TotalesTira`). El período no cuenta: es el de toda la pantalla y ya lo dice el alcance.
@@ -474,7 +479,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                     {deLaFila.map(k => (
                         <button key={k} type="button" role="tab" aria-selected={tabla === k}
                             className="tab" onClick={() => setTabla(k)}>
-                            {TABLAS[k].label}
+                            {defDeTabla(k, rol, !puedeElegirEquipo).label}
                         </button>
                     ))}
                 </div>
@@ -644,7 +649,17 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                     {conAcademia && <AcademiaBarra filas={filas} onSincronizar={onSincronizarAcademia} />}
                     <TotalesTira items={totales} alcance={alcance} filtrada={filtrando} />
 
-                    {visibles.length === 0 ? (
+                    {/* Sin ninguna fila en el período no hay filtro que sacar: la tabla que lo sabe
+                        decir (las del setter, ver `tablasSetter.js`) lo dice con sus palabras. */}
+                    {filas.length === 0 && def.vacio ? (
+                        <div className="tabla">
+                            <div className="vacio-grande vacio-grande--periodo">
+                                <span className="vacio-icono"><Inbox size={22} /></span>
+                                <p className="t-h3">{def.vacio.titulo}</p>
+                                <p className="t-sm mut">{def.vacio.texto}</p>
+                            </div>
+                        </div>
+                    ) : visibles.length === 0 ? (
                         <div className="tabla">
                             <div className="vacio">
                                 <p className="t-h3">Ningún registro entra por este filtro</p>

@@ -7,6 +7,7 @@ import { usePaginaProgresiva } from '../../../components/listas/usePaginaProgres
 import { Esqueleto, Hueso, Renglon, escalonDe } from '../../../components/huesos/Huesos';
 import { Tip, cuandoDe, fmt } from './Shared';
 import { DIAS_DATO_VIEJO, diasDesde, formatoAcademia, haceCuanto } from './academia';
+import { SIN_PALABRA_CLAVE } from './tablasSetter';
 
 /**
  * Cómo se dibujan las filas de Revisar: como tabla o como tarjetas, sueltas o repartidas en grupos.
@@ -148,6 +149,16 @@ const Celda = ({ fila, col }) => {
             );
         case 'mensajes':
             return <span className="celda celda--num">{fmt.num(fila.mensajes)}</span>;
+        // La del anuncio que trajo al lead (Revisar del setter, ver `tablasSetter.js`). Sin ella se
+        // marca como el retraso de un post call: es lo que «Mis agendas» le pide completar.
+        case 'palabra_clave':
+            return fila.palabra_clave
+                ? <span className="celda" title={fila.palabra_clave}>{fila.palabra_clave}</span>
+                : (
+                    <span className="celda" style={{ color: 'var(--warning)', fontWeight: 700 }}>
+                        {SIN_PALABRA_CLAVE}
+                    </span>
+                );
         // --- La Academia (ver `academia.js`). `fila.academia` es null en una venta sin cliente.
         case 'academia': {
             // El estado y, debajo, cuánto confiar en él: la última actividad que se le vio o de
