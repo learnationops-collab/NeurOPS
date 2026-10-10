@@ -186,7 +186,9 @@ def submit_daily_report():
     is_non_working = bool(data.get('is_non_working_day', False))
 
     if stat:
-        # Update existing
+        # Update existing. Si el día se había mandado con el v2, ahora es un reporte v1.
+        from app.services.setter_reporte_v2 import como_v1
+        como_v1(stat)
         stat.is_non_working_day = is_non_working
         stat.not_lead = int(data.get('not_lead') or 0)
         stat.inbox_entrantes = int(data.get('inbox_entrantes') or 0)

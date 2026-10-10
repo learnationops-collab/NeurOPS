@@ -115,6 +115,22 @@ def escribir(stat, datos):
     return stat
 
 
+def como_v1(stat):
+    """La fila vuelve a ser un reporte v1: la pisa un cliente que todavía manda el formulario viejo.
+
+    Sin esto, un día reportado con el v2 y vuelto a mandar con el v1 quedaba marcado como v2 con
+    los canales viejos: `leer` mostraba los canales de antes con los totales nuevos, y no sumaban
+    lo mismo.
+    """
+    for _, pre in CANALES:
+        for campo in CAMPOS_CANAL:
+            setattr(stat, f'{pre}_{campo}', 0)
+    for _, columna in BIENVENIDAS:
+        setattr(stat, columna, 0)
+    stat.report_version = 1
+    return stat
+
+
 def leer(stat):
     """La fila como reporte v2. Una fila v1 vuelve con `canales` y `bienvenidas` en None y los
     totales sacados de sus columnas: no se inventa en qué canal entró cada uno."""

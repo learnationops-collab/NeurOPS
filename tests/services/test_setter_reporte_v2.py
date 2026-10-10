@@ -67,6 +67,14 @@ def test_un_dia_del_v1_vuelto_a_mandar_con_el_v2_no_arrastra_lo_que_el_v2_no_pid
     assert (stat.qualification_fu, stat.pain_opening_submitted) == (9, 8)
 
 
+def test_como_v1_saca_los_canales_y_la_marca_de_version():
+    stat = rv2.como_v1(rv2.escribir(_fila(), _payload()))
+
+    assert stat.report_version == 1
+    assert (stat.ads_entrantes, stat.inb_agendas, stat.bnv_hechas) == (0, 0, 0)
+    assert rv2.leer(stat)['canales'] is None
+
+
 def test_escribir_no_acepta_negativos_ni_basura():
     datos = rv2.vacio()
     datos['anuncios'].update(entrantes='-4', no_lead='abc', agendas=None)

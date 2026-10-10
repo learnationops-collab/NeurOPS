@@ -97,6 +97,9 @@ def submit_public_setter_report():
     stat = SetterDailyStats.query.filter_by(setter_id=setter_id, date=report_date).first()
 
     if stat:
+        # Si el día se había mandado con el v2, ahora es un reporte v1: sin los canales de antes.
+        from app.services.setter_reporte_v2 import como_v1
+        como_v1(stat)
         stat.not_lead = int(data.get('not_lead') or 0)
         stat.inbox_entrantes = int(data.get('inbox_entrantes') or 0)
         stat.inbox_inabribles = int(data.get('inbox_inabribles') or 0)

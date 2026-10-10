@@ -103,6 +103,29 @@ def test_el_v1_sigue_guardandose_como_siempre(client, elias, auth_headers, _sin_
     assert _sin_discord == [fila.id]
 
 
+def test_el_v1_sobre_un_dia_del_v2_lo_vuelve_v1(client, elias, auth_headers):
+    client.post(URL, json=v2(elias.id), headers=auth_headers(elias))
+
+    client.post(URL, headers=auth_headers(elias), json={
+        'setter_id': elias.id, 'date': DIA, 'inbox_entrantes': 20, 'funnel_agenda': 1})
+
+    fila = SetterDailyStats.query.one()
+    assert (fila.report_version, fila.ads_entrantes, fila.bnv_hechas) == (1, 0, 0)
+    assert (fila.inbox_entrantes, fila.funnel_agenda) == (20, 1)
+
+
+def test_el_v1_del_mazo_sobre_un_dia_del_v2_tambien(client, elias, auth_headers):
+    """`/api/setter/daily-report` es el otro cliente del v1 (con día no laborable)."""
+    client.post(URL, json=v2(elias.id), headers=auth_headers(elias))
+
+    r = client.post('/api/setter/daily-report', headers=auth_headers(elias),
+                    json={'date': DIA, 'inbox_entrantes': 7, 'is_non_working_day': False})
+
+    assert r.status_code == 201
+    fila = SetterDailyStats.query.one()
+    assert (fila.report_version, fila.inb_entrantes, fila.inbox_entrantes) == (1, 0, 7)
+
+
 def test_un_setter_que_no_existe_es_404(client, make_user, auth_headers):
     admin = make_user(role='admin')
 
