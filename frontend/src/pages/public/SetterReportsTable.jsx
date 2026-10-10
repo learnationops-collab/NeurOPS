@@ -31,6 +31,25 @@ const COLUMNAS_EDITABLES = [
     'pain_opening_submitted', 'pain_opening_responded',
 ];
 
+/**
+ * Un reporte del formulario por canal (v2, desde el 10/10/2026) se edita por canal: sus totales
+ * los recalcula el backend, y tocarlos sueltos dejaría los canales diciendo otra cosa (el PUT lo
+ * rechaza). Estas son sus secciones y campos, en el orden del formulario.
+ */
+const EDICION_V2 = [
+    { k: 'anuncios', n: 'Anuncios', campos: [['entrantes', 'Entr.'], ['no_lead', 'No lead'], ['inabribles', 'In-abr.'], ['ap_entrantes', 'Ap. entr.'], ['ap_dolor', 'Ap. dolor'], ['agendas', 'Agendas']] },
+    { k: 'inbound', n: 'Inbound', campos: [['entrantes', 'Entr.'], ['no_lead', 'No lead'], ['inabribles', 'In-abr.'], ['ap_entrantes', 'Ap. entr.'], ['ap_dolor', 'Ap. dolor'], ['agendas', 'Agendas']] },
+    { k: 'bienvenidas', n: 'Bienvenidas', campos: [['hechas', 'Hechas'], ['respondidas', 'Resp.'], ['aperturas', 'Aperturas']] },
+    { k: 'embudo', n: 'Embudo', campos: [['dolor', 'Dolor'], ['oferta', 'Oferta'], ['link', 'Link']] },
+    { k: 'followups', n: 'Follow-ups', campos: [['entrantes', 'Entr.'], ['dolor', 'Dolor'], ['oferta', 'Oferta'], ['link', 'Link']] },
+];
+
+/** La lectura v2 de una fila (`leer` del backend) en la forma que edita la tabla. */
+const formularioV2 = (v2) => Object.fromEntries(EDICION_V2.map(({ k, campos }) => {
+    const origen = k === 'anuncios' || k === 'inbound' ? v2.canales[k] : v2[k];
+    return [k, Object.fromEntries(campos.map(([c]) => [c, origen?.[c] ?? 0]))];
+}));
+
 const SetterReportsTable = ({ setters }) => {
     const auth = useAuth();
     const user = auth?.user || { role: 'admin' };
@@ -128,7 +147,7 @@ const SetterReportsTable = ({ setters }) => {
 
     const startEdit = (report) => {
         setEditingId(report.id);
-        setEditForm({ ...report });
+        setEditForm(report.version === 2 && report.v2 ? { v2: formularioV2(report.v2) } : { ...report });
     };
 
     const handleSave = async () => {
@@ -136,7 +155,9 @@ const SetterReportsTable = ({ setters }) => {
         try {
             // Todas las columnas que la fila deja editar: antes los follow-ups de Link y las
             // aperturas de cualificación y dolor se editaban en pantalla y no se mandaban.
-            const payload = Object.fromEntries(COLUMNAS_EDITABLES.map(k => [k, editForm[k]]));
+            const payload = editForm.v2
+                ? { version: 2, ...editForm.v2 }
+                : Object.fromEntries(COLUMNAS_EDITABLES.map(k => [k, editForm[k]]));
             await api.put(`/public/setter-reports/${editingId}`, payload);
             setEditingId(null);
             fetchReports();
@@ -217,24 +238,29 @@ const SetterReportsTable = ({ setters }) => {
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center relative group/th"><HeaderWithTooltip label="Agenda FU/R" tooltipInfo="Follow Ups en Agenda: Enviados (Arriba) / Respondidos (Abajo)." /></th>
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center relative group/th"><HeaderWithTooltip label="Qual Op" tooltipInfo="Aperturas en Cualificación: Enviadas (Arriba) / Respondidas (Abajo)." /></th>
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center relative group/th"><HeaderWithTooltip label="Pain Op" tooltipInfo="Aperturas en Dolor: Enviadas (Arriba) / Respondidas (Abajo)." /></th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center relative group/th"><HeaderWithTooltip label="Bienv." tooltipInfo="Solo el formulario por canal: bienvenidas hechas (arriba) / respondidas (abajo)." /></th>
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-right">Acciones</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800">
                             {loading ? (
                                 <tr>
-                                    <td colSpan="14" className="py-20 text-center">
+                                    <td colSpan="15" className="py-20 text-center">
                                         <Loader2 className="animate-spin mx-auto text-indigo-500 mb-2" size={32} />
                                         <span className="text-[10px] font-black text-slate-400 uppercase">Cargando registros...</span>
                                     </td>
                                 </tr>
                             ) : reports.length === 0 ? (
                                 <tr>
-                                    <td colSpan="14" className="py-20 text-center text-slate-500 font-bold italic">No se encontraron reportes</td>
+                                    <td colSpan="15" className="py-20 text-center text-slate-500 font-bold italic">No se encontraron reportes</td>
                                 </tr>
                             ) : reports.map(r => (
-                                <tr key={r.id} className="hover:bg-indigo-500/5 transition-colors group">
-                                    <td className="p-4 text-[11px] font-black text-slate-400 tabular-nums">{r.date}</td>
+                                <React.Fragment key={r.id}>
+                                <tr className="hover:bg-indigo-500/5 transition-colors group">
+                                    <td className="p-4 text-[11px] font-black text-slate-400 tabular-nums">
+                                        {r.date}
+                                        {r.version === 2 && <span className="block mt-1 text-[9px] text-fuchsia-400" title="Cargado con el formulario por canal">Por canal</span>}
+                                    </td>
                                     <td className="p-4 text-xs font-bold text-white uppercase italic">{r.setter_name}</td>
 
                                     {/* MAPPING DYNAMICALLY FOR DISPLAY/EDIT */}
@@ -252,7 +278,7 @@ const SetterReportsTable = ({ setters }) => {
                                         { f: 'pain_opening_submitted', fur: 'pain_opening_responded', label: 'POp' }
                                     ].map(col => (
                                         <td key={col.f} className="p-4 text-center">
-                                            {editingId === r.id ? (
+                                            {editingId === r.id && !editForm?.v2 ? (
                                                 <div className="flex flex-col gap-1 items-center">
                                                         <input
                                                             type="number"
@@ -273,10 +299,25 @@ const SetterReportsTable = ({ setters }) => {
                                                 <div className="flex flex-col items-center">
                                                     <span className="text-xs font-black text-white tabular-nums">{r[col.f]}</span>
                                                     {col.fur && <span className="text-[10px] font-bold text-slate-500 border-t border-slate-800 w-full mt-1 pt-1 tabular-nums">{r[col.fur]}</span>}
+                                                    {/* Un v2 dice de qué canal vinieron sus entrantes: A(nuncios) · I(nbound). */}
+                                                    {col.f === 'entrantes' && r.version === 2 && r.v2 && (
+                                                        <span className="text-[9px] font-bold text-slate-500 mt-1 whitespace-nowrap tabular-nums"
+                                                            title="Anuncios · Inbound">
+                                                            A {r.v2.canales.anuncios.entrantes} · I {r.v2.canales.inbound.entrantes}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             )}
                                         </td>
                                     ))}
+                                    <td className="p-4 text-center">
+                                        {r.version === 2 && r.v2 ? (
+                                            <div className="flex flex-col items-center">
+                                                <span className="text-xs font-black text-white tabular-nums">{r.v2.bienvenidas.hechas}</span>
+                                                <span className="text-[10px] font-bold text-slate-500 border-t border-slate-800 w-full mt-1 pt-1 tabular-nums">{r.v2.bienvenidas.respondidas}</span>
+                                            </div>
+                                        ) : <span className="text-xs font-black text-slate-600">—</span>}
+                                    </td>
 
                                     <td className="p-4 text-right">
                                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -324,6 +365,33 @@ const SetterReportsTable = ({ setters }) => {
                                         </div>
                                     </td>
                                 </tr>
+                                {/* Editar un v2: por canal, en una fila debajo. Al guardar, el backend
+                                    recalcula los totales de las columnas de arriba. */}
+                                {editingId === r.id && editForm?.v2 && (
+                                    <tr className="bg-slate-950/60">
+                                        <td colSpan="15" className="p-4">
+                                            <div className="flex flex-wrap gap-6">
+                                                {EDICION_V2.map(({ k, n, campos }) => (
+                                                    <fieldset key={k} className="flex flex-col gap-2">
+                                                        <legend className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">{n}</legend>
+                                                        <div className="flex gap-2">
+                                                            {campos.map(([c, rotulo]) => (
+                                                                <label key={c} className="flex flex-col items-center gap-1 text-[9px] font-bold text-slate-500 uppercase">
+                                                                    {rotulo}
+                                                                    <input type="number" min="0" aria-label={`${n}: ${rotulo}`}
+                                                                        value={editForm.v2[k][c]}
+                                                                        onChange={e => setEditForm(f => ({ v2: { ...f.v2, [k]: { ...f.v2[k], [c]: parseInt(e.target.value) || 0 } } }))}
+                                                                        className="w-14 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-[11px] text-center font-black text-fuchsia-300 focus:border-fuchsia-500 outline-none" />
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                    </fieldset>
+                                                ))}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                                </React.Fragment>
                             ))}
                         </tbody>
                     </table>
