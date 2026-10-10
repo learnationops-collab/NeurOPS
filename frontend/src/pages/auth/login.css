@@ -283,3 +283,9 @@
 .pt .el-grupo--solo .el-tarjeta { min-height: clamp(130px, 20vh, 172px); }
 @media (min-width: 901px) { .pt .el-grupo--solo .el-tarjeta { flex-basis: calc((100% - (var(--cols) - 1) * var(--el-gap)) / var(--cols)); } }
 @media (max-width: 560px) { .pt .el-grupo--solo .el-tarjeta { min-height: 112px; } }
+/* Y con la letra de la referencia: la de la app (Inter, con los pesos del reset global de index.css) en
+   vez de Sora y Manrope, que siguen en el login y en Cortex. */
+.pt * { font-family: var(--font-body) !important; }
+.pt :is(h1, h2, h3, h4, h5, h6) { font-family: var(--font-header) !important; font-weight: var(--weight-semibold) !important; }
+.pt :is(p, span, div, button, input, label) { font-weight: var(--weight-regular) !important; }
+.pt :is(b, strong) { font-weight: var(--weight-medium) !important; }
