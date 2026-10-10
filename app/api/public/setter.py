@@ -27,28 +27,75 @@ def get_public_setter_questions():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+def _es_v2(data):
+    """¿El pedido es del formulario por pasos? Lo dice `version: 2`; sin eso es el v1 de siempre."""
+    try:
+        return int(data.get('version') or 1) >= 2
+    except (TypeError, ValueError):
+        return False
+
+
+def _guardar_reporte_v2(setter_id, report_date, data):
+    """El reporte v2 del día: crea la fila o pisa la que había (también si era del v1) con
+    `setter_reporte_v2.escribir`, que además deja los totales del v1 con su significado de siempre."""
+    from app.models import SetterDailyStats
+    from app.api.setter import _trigger_setter_report_webhook
+    from app.services import setter_reporte_v2
+
+    try:
+        setter_id = int(setter_id)
+    except (TypeError, ValueError):
+        return jsonify({"message": "ID del setter inválido"}), 400
+    if not db.session.get(User, setter_id):
+        return jsonify({"message": "Setter no encontrado"}), 404
+
+    stat = SetterDailyStats.query.filter_by(setter_id=setter_id, date=report_date).first()
+    if not stat:
+        stat = SetterDailyStats(setter_id=setter_id, date=report_date)
+        db.session.add(stat)
+    setter_reporte_v2.escribir(stat, data)
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Error al guardar el reporte: {e}"}), 500
+
+    # Discord aparte: si falla, el reporte ya quedó guardado.
+    _trigger_setter_report_webhook(stat)
+    return jsonify({"message": "Reporte guardado exitosamente", "id": stat.id,
+                    "reporte": setter_reporte_v2.leer(stat)}), 201
+
+
 @bp.route('/public/setter-report', methods=['POST'])
 def submit_public_setter_report():
-    """Recibe y guarda el reporte diario de un setter, disparando las automatizaciones."""
+    """Recibe y guarda el reporte diario de un setter, disparando las automatizaciones.
+
+    Desde el 10/10/2026 el espacio del setter manda el v2 (`version: 2`, por canal y con
+    bienvenidas: ver `app/services/setter_reporte_v2.py`). Lo que llegue sin `version` es el v1 de
+    siempre y se guarda como antes: este endpoint es público para cualquier cliente que lo use.
+    """
     from app.models import SetterDailyStats, PipelineStage
     from app.api.setter import _trigger_setter_report_webhook, _get_setter_stages_ordered
-    
+
     data = request.get_json() or {}
-    
+
     setter_id = data.get('setter_id')
     report_date_str = data.get('date')
-    
+
     if not setter_id or not report_date_str:
         return jsonify({"message": "ID del setter y fecha son obligatorios"}), 400
-        
+
     try:
         report_date = datetime.strptime(report_date_str, '%Y-%m-%d').date()
     except ValueError:
         return jsonify({"message": "Formato de fecha inválido"}), 400
-        
+
+    if _es_v2(data):
+        return _guardar_reporte_v2(setter_id, report_date, data)
+
     # Verificar existencia
     stat = SetterDailyStats.query.filter_by(setter_id=setter_id, date=report_date).first()
-    
+
     if stat:
         stat.not_lead = int(data.get('not_lead') or 0)
         stat.inbox_entrantes = int(data.get('inbox_entrantes') or 0)
