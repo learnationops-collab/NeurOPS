@@ -33,6 +33,12 @@ MINIMO = 10
 # Un párrafo largo entra; un pegado de la transcripción entera de la llamada, no.
 MAXIMO = 2000
 
+# Los estados del libro de agendas (`derivar_estado`) en los que el lead estuvo en la llamada. El
+# perdido entra solo si se le presentó la oferta: es lo que deja «No cerró → Lead perdido» del árbol
+# de «Resultado», y los perdidos de un no show o de una cancelación no tuvieron objeción que contar.
+_ASISTIO = 'show_up'
+_PERDIDO = 'lead_perdido'
+
 
 class ObjecionInvalida(ValueError):
     """El texto no alcanza para ser una objeción: vacío, muy corto o demasiado largo."""
@@ -51,6 +57,20 @@ def texto_valido(texto):
     if len(limpio) > MAXIMO:
         raise ObjecionInvalida(f'La objeción es demasiado larga: el máximo es {MAXIMO} caracteres.')
     return limpio
+
+
+def admite_objecion(appt, estado, cerro):
+    """Si a esta agenda le corresponde una objeción: el lead asistió y no cerró.
+
+    `estado` es el del libro de agendas (`derivar_estado`) y `cerro` dice si el cliente tiene una
+    venta (pago completo o split pay) o una seña: es la misma cuenta con la que la ficha deriva su
+    post call («Presentó, no cerró») y su hito de Cierre, que es por cliente porque una venta no
+    guarda de qué agenda salió. Una agenda a la que se le dijo que NO se presentó la oferta no
+    tiene objeción: el lead no llegó a decir que no.
+    """
+    if cerro or appt.offer_presented is False:
+        return False
+    return estado == _ASISTIO or (estado == _PERDIDO and appt.offer_presented is True)
 
 
 def objeciones_por_agenda(ids):
@@ -88,7 +108,7 @@ def registrar_objecion(appt, usuario, texto):
     """Guarda la objeción de esta agenda y la deja anotada en Comunicación. Devuelve la fila.
 
     `texto` se valida con `texto_valido` (levanta `ObjecionInvalida`). NO comitea: quien la llama
-    la guarda junto con el resto de lo suyo (el reporte de la llamada).
+    la guarda junto con el resto de lo suyo (el reporte de la llamada, o la acción del historial).
     """
     texto = texto_valido(texto)
     habia = (db.session.query(LeadEventLog.id)
@@ -110,3 +130,40 @@ def registrar_objecion(appt, usuario, texto):
                                associated_id=appt.id))
     db.session.flush()
     return fila
+
+
+def _cliente_cerro(appt):
+    """La misma cuenta que hace la ficha al leerse (`ficha_lead_service.ficha`): ¿el cliente de
+    esta agenda tiene una venta de verdad o una seña?"""
+    from app.services.ficha_lead_service import _que_compro, _ventas_del_cliente
+    from app.services.sheets_service import SheetsService
+
+    tipos = {SheetsService.parse_tipo_pago(v.tipo_pago)[1] for v in _ventas_del_cliente(appt.client)}
+    con_venta, _ = _que_compro(tipos)
+    return con_venta or 'seña' in tipos
+
+
+def guardar_desde_el_historial(appt, datos, usuario):
+    """«Agregar objeción» de una agenda del historial, para las que se reportaron antes de que la
+    objeción fuera obligatoria. Reemplaza la que hubiera (la vigente es la más nueva).
+
+    Solo en una agenda en la que el lead asistió y no cerró, o que ya tiene una objeción (una
+    renovación que no cerró de alguien que ya compró la deja el reporte de la llamada, y tiene que
+    poder corregirse aunque el cliente ya haya comprado antes).
+    """
+    from app.services.estado_lead import estado_de_agenda
+    from app.services.ficha_acciones_service import ErrorDeAccion
+
+    try:
+        texto = texto_valido(datos.get('texto'))
+    except ObjecionInvalida as e:
+        raise ErrorDeAccion(str(e), 'texto') from None
+
+    ya_tiene = appt.id in objeciones_por_agenda([appt.id])
+    if not ya_tiene and not admite_objecion(appt, estado_de_agenda(appt), _cliente_cerro(appt)):
+        raise ErrorDeAccion('Solo lleva objeción una llamada a la que el lead asistió y en la que '
+                            'no cerró.')
+
+    registrar_objecion(appt, usuario, texto)
+    db.session.commit()
+    return {'id': appt.id, 'objecion': objeciones_por_agenda([appt.id])[appt.id]}
