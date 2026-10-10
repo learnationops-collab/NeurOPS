@@ -31,6 +31,16 @@ describe('calcularCobertura', () => {
         expect(c.kpi.nAg).toBe(1);
         expect(c.bloques[0].segs.map(s => s.tipo)).toEqual(['ev', 'ag']);
     });
+    it('cada tramo por eventos lleva los eventos que lo forman', () => {
+        const g = () => ({ estado: 'ok', franjas: [[H(10), H(11, 30)]], eventos: [
+            { inicio: H(10), fin: H(11), titulo: 'Daily' }, { inicio: H(10, 30), fin: H(11, 30), titulo: null },
+            { inicio: H(20), fin: H(21), titulo: 'Fuera' },
+        ] });
+        const c = calcularCobertura({ todos: [p], cs: [p], ahora, googleDe: g });
+        const ev = c.bloques[0].segs.filter(s => s.tipo === 'ev');
+        expect(ev).toHaveLength(1);
+        expect(ev[0].eventos.map(e => e.titulo)).toEqual(['Daily', null]);
+    });
     it('lo de fuera del horario no cuenta y lo que lo cruza cuenta solo adentro', () => {
         const g = () => ({ estado: 'ok', franjas: [[H(8), H(9, 30)], [H(12, 30), H(14)], [H(20), H(21)]] });
         const c = calcularCobertura({ todos: [p], cs: [p], ahora, googleDe: g });

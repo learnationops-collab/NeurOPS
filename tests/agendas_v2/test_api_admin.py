@@ -206,12 +206,16 @@ def test_editar_el_formulario_pone_al_dia_los_links_publicados(client, dir_h):
 
 @pytest.fixture()
 def google_semana(monkeypatch):
-    """Lo que responde Google por usuario: lista de franjas, o None si falla."""
+    """Lo que responde Google por usuario: lista de eventos (inicio, fin, titulo), o None si falla."""
     from app.services.google_service import GoogleService
 
     respuestas = {}
     servicio._google_semana_cache.clear()
-    monkeypatch.setattr(GoogleService, 'franjas_ocupadas', staticmethod(lambda u, desde, hasta: respuestas.get(u, [])))
+    def eventos(u, desde, hasta):
+        r = respuestas.get(u, [])
+        return None if r is None else [{'inicio': a, 'fin': b, 'titulo': t} for a, b, t in r]
+
+    monkeypatch.setattr(GoogleService, 'eventos_ocupados', staticmethod(eventos))
     return respuestas
 
 
@@ -225,10 +229,13 @@ def test_ocupacion_une_lo_que_se_pisa_entre_calendarios(client, db, dir_h, gente
     db.session.add(GoogleCalendarToken(user_id=gente['closer'].id, token_json='{}'))
     db.session.commit()
     client.put('/api/agendas-v2/personas/p1', headers=dir_h, json={'nombre': 'Ana', 'email': 'ana@neuro.com'})
-    google_semana[gente['closer'].id] = [(100, 200), (150, 300), (300, 350), (500, 600)]
+    google_semana[gente['closer'].id] = [(100, 200, 'Daily'), (150, 300, 'Médico'), (300, 350, None), (500, 600, 'Gym')]
     r = _ocupacion(client, dir_h)
     assert r.status_code == 200
-    assert r.get_json()['ocupacion']['p1'] == {'estado': 'ok', 'franjas': [[100, 350], [500, 600]]}
+    ana = r.get_json()['ocupacion']['p1']
+    assert ana['estado'] == 'ok' and ana['franjas'] == [[100, 350], [500, 600]]
+    # Cada evento viaja con su título (None si es privado) para mostrarlo en el visor.
+    assert [e['titulo'] for e in ana['eventos']] == ['Daily', 'Médico', None, 'Gym']
 
 
 def test_ocupacion_distingue_error_sin_google_y_sin_usuario(client, db, dir_h, gente, google_semana, make_user):

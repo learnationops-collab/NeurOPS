@@ -521,7 +521,7 @@ def _choca(user_id, inicio, fin):
 
 # El visor pide la semana que se ve (con un dia de margen a cada lado por las zonas horarias).
 RANGO_MAX_OCUPACION_DIAS = 10
-# {(user_id, desde_ms, hasta_ms): (vence (monotonic), [[inicio, fin]])}. Aparte de _google_cache: lo que
+# {(user_id, desde_ms, hasta_ms): (vence (monotonic), {franjas, eventos})}. Aparte de _google_cache: lo que
 # mira alguien en el visor (cualquier semana, pasada o lejana) no le cambia nada al motor.
 _google_semana_cache = {}
 
@@ -539,44 +539,46 @@ def unir_franjas(franjas):
     return out
 
 
-def _franjas_semana(user_id, desde, hasta):
-    """Lo ocupado de ese closer en Google entre desde y hasta (ms), ya unido. None si Google no respondió."""
+def _ocupado_semana(user_id, desde, hasta):
+    """{franjas, eventos} de ese closer en Google entre desde y hasta (ms): franjas = lo ocupado, ya
+    unido; eventos = cada evento con su título, para mostrarlo. None si Google no respondió."""
     from app.services.google_service import GoogleService
 
     clave, ahora = (user_id, desde, hasta), time.monotonic()
     guardado = _google_semana_cache.get(clave)
     if guardado and guardado[0] > ahora:
         return guardado[1]
-    franjas = GoogleService.franjas_ocupadas(user_id, ms_a_dt(desde), ms_a_dt(hasta))
-    if franjas is None:
+    eventos = GoogleService.eventos_ocupados(user_id, ms_a_dt(desde), ms_a_dt(hasta))
+    if eventos is None:
         return None
-    franjas = unir_franjas([list(f) for f in franjas])
+    leido = {'franjas': unir_franjas([[e['inicio'], e['fin']] for e in eventos]), 'eventos': eventos}
     if len(_google_semana_cache) > 500:
         _google_semana_cache.clear()
-    _google_semana_cache[clave] = (ahora + CACHE_GOOGLE_S, franjas)
-    return franjas
+    _google_semana_cache[clave] = (ahora + CACHE_GOOGLE_S, leido)
+    return leido
 
 
 def ocupacion_google(desde, hasta):
-    """{persona_id: {'estado', 'franjas'}} de cada persona de Team entre desde y hasta (ms).
-    estado: 'ok' (franjas = lo ocupado en sus calendarios de conflicto, unido), 'error' (Google no
+    """{persona_id: {'estado', 'franjas', 'eventos'}} de cada persona de Team entre desde y hasta (ms).
+    estado: 'ok' (franjas = lo ocupado en sus calendarios de conflicto, unido; eventos = cada uno con
+    su título, None si es privado), 'error' (Google no
     respondió: no se sabe), 'sin_google' (no conectó su calendario) o 'sin_usuario' (su email no es el
     de un usuario activo). A diferencia del motor, acá no saber no se muestra como libre."""
     personas = colecciones()['personas']
     usuarios = _usuarios_de_personas({'personas': personas})
     con_calendar = _con_calendar(set(usuarios.values()))
-    por_usuario = {u: _franjas_semana(u, desde, hasta) for u in set(usuarios.values()) & con_calendar}
+    por_usuario = {u: _ocupado_semana(u, desde, hasta) for u in set(usuarios.values()) & con_calendar}
     out = {}
     for p in personas:
         u = usuarios.get(p['id'])
         if u is None:
-            out[p['id']] = {'estado': 'sin_usuario', 'franjas': []}
+            out[p['id']] = {'estado': 'sin_usuario', 'franjas': [], 'eventos': []}
         elif u not in con_calendar:
-            out[p['id']] = {'estado': 'sin_google', 'franjas': []}
+            out[p['id']] = {'estado': 'sin_google', 'franjas': [], 'eventos': []}
         elif por_usuario[u] is None:
-            out[p['id']] = {'estado': 'error', 'franjas': []}
+            out[p['id']] = {'estado': 'error', 'franjas': [], 'eventos': []}
         else:
-            out[p['id']] = {'estado': 'ok', 'franjas': por_usuario[u]}
+            out[p['id']] = {'estado': 'ok', **por_usuario[u]}
     return out
 
 

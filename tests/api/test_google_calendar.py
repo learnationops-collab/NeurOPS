@@ -258,6 +258,62 @@ def test_franjas_ocupadas_lee_freebusy_e_ignora_calendarios_con_error(db, closer
     assert GoogleService.franjas_ocupadas(closer.id, dt.datetime(2026, 10, 5), dt.datetime(2026, 10, 6)) is None
 
 
+class _Eventos(_Freebusy):
+    """events().list(...).execute() por calendario; un calendario en `sin_permiso` falla como en Google."""
+
+    def __init__(self, por_calendario, sin_permiso=(), freebusy=None):
+        super().__init__(freebusy)
+        self.por_calendario, self.sin_permiso, self.cal = por_calendario, sin_permiso, None
+
+    def events(self):
+        return self
+
+    def list(self, calendarId, **kw):  # noqa: N803  (así se llama en la API de Google)
+        self.cal = calendarId
+        return self
+
+    def execute(self):
+        if self.cal is None:
+            return super().execute()
+        cal, self.cal = self.cal, None
+        if cal in self.sin_permiso:
+            raise OSError('403')
+        return self.por_calendario[cal]
+
+
+def test_eventos_ocupados_trae_titulos_y_cuenta_lo_que_cuenta_freebusy(db, closer, monkeypatch):
+    import datetime as dt
+    conflicto = ['primary', 'facu@group']
+    db.session.add(GoogleCalendarToken(user_id=closer.id, token_json='{}', calendarios_conflicto=conflicto))
+    db.session.commit()
+    def ev(h0, h1, **kw):
+        return {'start': {'dateTime': f'2026-10-05T{h0}:00:00Z'}, 'end': {'dateTime': f'2026-10-05T{h1}:00:00Z'}, **kw}
+
+    servicio = _Eventos({'primary': {'timeZone': 'America/La_Paz', 'items': [
+        ev('13', '14', summary='Daily'),
+        ev('15', '16', summary='Médico', visibility='private'),
+        ev('17', '18', summary='Libre igual', transparency='transparent'),
+        ev('19', '20', summary='Cancelado', status='cancelled'),
+        ev('21', '22', summary='No voy', attendees=[{'self': True, 'responseStatus': 'declined'}]),
+        {'summary': 'Feriado', 'start': {'date': '2026-10-06'}, 'end': {'date': '2026-10-07'}},
+    ]}}, sin_permiso=('facu@group',), freebusy={'calendars': {
+        'facu@group': {'busy': [{'start': '2026-10-05T23:00:00Z', 'end': '2026-10-05T23:30:00Z'}]},
+    }})
+    monkeypatch.setattr(GoogleService, 'get_service', staticmethod(lambda u: servicio))
+    eventos = GoogleService.eventos_ocupados(closer.id, dt.datetime(2026, 10, 5), dt.datetime(2026, 10, 8))
+    assert [e['titulo'] for e in eventos] == ['Daily', None, None, 'Feriado']
+    assert eventos[0]['inicio'] == 1791205200000
+    # El día entero va de medianoche a medianoche en la zona del calendario (La Paz, UTC-4).
+    assert eventos[3]['inicio'] == int(dt.datetime(2026, 10, 6, 4, tzinfo=dt.timezone.utc).timestamp() * 1000)
+    # Del calendario que no deja ver eventos se pide solo lo ocupado.
+    assert servicio.body['items'] == [{'id': 'facu@group'}]
+    # Si tampoco se puede leer lo ocupado: None (no se sabe).
+    caido = _Eventos({}, sin_permiso=('primary', 'facu@group'))
+    caido.error = OSError('sin red')
+    monkeypatch.setattr(GoogleService, 'get_service', staticmethod(lambda u: caido))
+    assert GoogleService.eventos_ocupados(closer.id, dt.datetime(2026, 10, 5), dt.datetime(2026, 10, 6)) is None
+
+
 def test_el_closer_elige_en_que_calendarios_revisar_conflictos(client, db, closer, auth_headers):
     db.session.add(GoogleCalendarToken(user_id=closer.id, token_json='{}'))
     db.session.commit()

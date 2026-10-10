@@ -87,7 +87,8 @@ export function rangoSemana(cs, semana = 0, ahora = Date.now()) {
  * total. Un hueco es una franja del día sin ningún closer.
  * o: {todos: closers con horario, cs: carriles que se muestran, semana: desplazamiento, ahora,
  *     reservasDe(personaId) → [{inicio_ms, fin_ms}],
- *     googleDe(personaId) → {estado: 'ok' | 'error' | 'sin_google' | 'sin_usuario', franjas} | null, edit}
+ *     googleDe(personaId) → {estado: 'ok' | 'error' | 'sin_google' | 'sin_usuario', franjas, eventos} | null, edit}
+ * Cada tramo por eventos lleva los eventos de Google que lo forman ({inicio, fin, titulo}), para mostrarlos.
  * Un closer cuyo calendario no se pudo leer ('error') queda fuera de la ocupación: no se sabe.
  */
 export function calcularCobertura({ todos, cs, semana = 0, ahora = Date.now(), reservasDe = () => [], googleDe = () => null, edit = false }) {
@@ -106,6 +107,7 @@ export function calcularCobertura({ todos, cs, semana = 0, ahora = Date.now(), r
         const g = googleDe(p.id);
         const ev = unirTramos(g && g.estado === 'ok' ? (g.franjas || []).map(f => [f[0], f[1]]) : []);
         const sinLeer = !!g && g.estado === 'error';
+        const eventos = g && g.estado === 'ok' ? (g.eventos || []) : [];
         for (let j = -1; j < 8; j++) {
             const b = new Date(lunes + j * DIA_MS), dow = b.getUTCDay();
             ((p.horario || {})[dow] || []).forEach((r, ri) => {
@@ -117,7 +119,7 @@ export function calcularCobertura({ todos, cs, semana = 0, ahora = Date.now(), r
                 if (di < 0) return;
                 const enAg = recortar(ag, t0, t1), enEv = restar(recortar(ev, t0, t1), enAg);
                 const segs = enAg.map(([s0, s1]) => ({ a: s0, b: s1, tipo: 'ag' }))
-                    .concat(enEv.map(([s0, s1]) => ({ a: s0, b: s1, tipo: 'ev' })))
+                    .concat(enEv.map(([s0, s1]) => ({ a: s0, b: s1, tipo: 'ev', eventos: eventos.filter(e => e.inicio < s1 && e.fin > s0) })))
                     .sort((x, y) => x.a - y.a);
                 const m0 = minutoDelDia(t0, tz), m1 = m0 + (t1 - t0) / 60000;
                 todosBloques.push({

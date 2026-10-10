@@ -834,6 +834,7 @@
 .thalamus .av-bloque > i.ev{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--text-muted) 50%,transparent) 0 2px,color-mix(in srgb,var(--text-muted) 12%,transparent) 2px 5px)}
 .thalamus .av-bloque > i.pas{opacity:.4}
 .thalamus .av-bloque--sinleer{border:1.5px dashed var(--warning)}
+.thalamus .av-ev-txt{display:block;width:max-content;max-width:calc(100% - 4px);margin:2px;padding:0 4px;border-radius:4px;background:var(--bg-flotante);font-size:9.5px;font-weight:800;line-height:14px;color:var(--text-on-surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
 .thalamus .av-ini{position:absolute;z-index:1;top:3px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:900;color:var(--text-on-surface);background:var(--bg-flotante);border-radius:6px;padding:1px 4px;pointer-events:none}
 .thalamus .av--edit .av-col{cursor:crosshair;touch-action:none;user-select:none}
 .thalamus .av--edit .av-bloque{cursor:grab;touch-action:none}

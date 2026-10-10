@@ -13,6 +13,7 @@ Un token que Google rechaza (revocado, vencido o emitido por otro cliente) se ma
 import datetime
 import json
 import os
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
@@ -28,6 +29,33 @@ SCOPES = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.co
 # Errores de Google que significan «este token ya no sirve, hay que reconectar». Otros (red,
 # cliente mal configurado) no marcan el token: reconectar no los arreglaría.
 ERRORES_DE_TOKEN = ('invalid_grant', 'unauthorized_client')
+
+
+def _iso_utc(dt):
+    """datetime UTC sin zona → '2026-10-05T13:00:00Z'."""
+    return dt.replace(microsecond=0).isoformat() + 'Z'
+
+
+def _ms_iso(texto):
+    return int(datetime.datetime.fromisoformat(texto.replace('Z', '+00:00')).timestamp() * 1000)
+
+
+def _ms_punto(punto, zona):
+    """El inicio o fin de un evento en ms. Un evento de día entero va de medianoche a medianoche en la
+    zona del calendario. None si no se entiende."""
+    punto = punto or {}
+    try:
+        if punto.get('dateTime'):
+            return _ms_iso(punto['dateTime'])
+        if punto.get('date'):
+            try:
+                tz = ZoneInfo(punto.get('timeZone') or zona)
+            except (ZoneInfoNotFoundError, ValueError):
+                tz = datetime.timezone.utc
+            return int(datetime.datetime.fromisoformat(punto['date']).replace(tzinfo=tz).timestamp() * 1000)
+    except ValueError:
+        return None
+    return None
 
 
 def _cliente():
@@ -286,6 +314,77 @@ class GoogleService:
                 except (KeyError, ValueError):
                     continue
         return sorted(franjas)
+
+    @staticmethod
+    def eventos_ocupados(user_id, desde, hasta):
+        """[{inicio, fin, titulo}] (ms) de los eventos que ocupan al usuario en sus calendarios de
+        conflicto entre `desde` y `hasta` (datetime UTC sin zona), con su título para Available. Cuenta
+        lo mismo que freebusy: no los cancelados, los marcados «Disponible» ni los que rechazó. Un evento
+        privado o confidencial va sin título (None), igual que lo de un calendario del que solo se ve
+        libre/ocupado (se lee con freebusy). None si no se pudo saber."""
+        token = GoogleService.token_vigente(user_id)
+        calendarios = GoogleService.calendarios_de_conflicto(token)
+        if not calendarios:
+            return []
+        try:
+            service = GoogleService.get_service(user_id)
+        except Exception as e:  # noqa: BLE001
+            current_app.logger.warning(f'[GOOGLE] Sin servicio para leer los eventos del usuario #{user_id}: {e}')
+            return None
+        if not service:
+            return None
+        eventos, solo_ocupado = [], []
+        for cal in calendarios:
+            try:
+                eventos += GoogleService._eventos_de(service, cal, desde, hasta)
+            except Exception as e:  # noqa: BLE001
+                # Un calendario que ya no existe se ignora (como en freebusy); si no deja ver los eventos,
+                # se pide solo lo ocupado.
+                if getattr(getattr(e, 'resp', None), 'status', None) in (404, 410):
+                    continue
+                solo_ocupado.append(cal)
+        if solo_ocupado:
+            try:
+                r = service.freebusy().query(body={
+                    'timeMin': _iso_utc(desde), 'timeMax': _iso_utc(hasta), 'items': [{'id': c} for c in solo_ocupado],
+                }).execute()
+            except Exception as e:  # noqa: BLE001
+                current_app.logger.warning(f'[GOOGLE] No se pudieron leer los eventos del usuario #{user_id}: {e}')
+                return None
+            for cal in (r.get('calendars') or {}).values():
+                for b in cal.get('busy') or []:
+                    try:
+                        eventos.append({'inicio': _ms_iso(b['start']), 'fin': _ms_iso(b['end']), 'titulo': None})
+                    except (KeyError, ValueError):
+                        continue
+        return sorted(eventos, key=lambda x: (x['inicio'], x['fin']))
+
+    @staticmethod
+    def _eventos_de(service, calendario, desde, hasta):
+        """Los eventos que ocupan en un calendario (los recurrentes, cada uno por separado)."""
+        out, pagina = [], None
+        while True:
+            r = service.events().list(
+                calendarId=calendario, timeMin=_iso_utc(desde), timeMax=_iso_utc(hasta), singleEvents=True,
+                maxResults=250, pageToken=pagina,
+                fields='timeZone,nextPageToken,'
+                       'items(summary,start,end,status,transparency,visibility,attendees(self,responseStatus))',
+            ).execute()
+            zona = r.get('timeZone') or 'UTC'
+            for e in r.get('items') or []:
+                if e.get('status') == 'cancelled' or e.get('transparency') == 'transparent':
+                    continue
+                if any(a.get('self') and a.get('responseStatus') == 'declined' for a in e.get('attendees') or []):
+                    continue
+                inicio, fin = _ms_punto(e.get('start'), zona), _ms_punto(e.get('end'), zona)
+                if inicio is None or fin is None or fin <= inicio:
+                    continue
+                privado = e.get('visibility') in ('private', 'confidential')
+                titulo = None if privado else (e.get('summary') or '').strip() or None
+                out.append({'inicio': inicio, 'fin': fin, 'titulo': titulo})
+            pagina = r.get('nextPageToken')
+            if not pagina:
+                return out
 
     @staticmethod
     def evento_cancelado(user_id, event_id):

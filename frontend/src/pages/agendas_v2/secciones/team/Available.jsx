@@ -58,6 +58,15 @@ function resumenBloque(x) {
 
 const nombres = (ps) => ps.map(p => p.nombre).join(', ');
 
+// Título de un evento de Google: el privado o el de un calendario del que solo se ve lo ocupado, sin él.
+const tituloEv = (e) => (e.titulo || 'Ocupado').replace(/\|/g, '/');
+// Lo que muestra un tramo por eventos: sus títulos y, al pasar el mouse, cada uno con su hora.
+function textoEventos(sg) { return [...new Set(sg.eventos.map(tituloEv))].join(' · '); }
+function tipEventos(sg, tz) {
+    const n = sg.eventos.length;
+    return (n === 1 ? 'Evento' : n + ' eventos') + ' en su calendario|' + sg.eventos.map(e => horaTxt(e.inicio, tz) + '–' + horaTxt(e.fin, tz) + ' ' + tituloEv(e)).join(' · ');
+}
+
 export default function Available({ solo = null }) {
     const { d, perfil, reservas } = useDatos();
     const { sim, team } = useUi();
@@ -227,10 +236,16 @@ export default function Available({ solo = null }) {
                                                             <span className="av-hora">{txtH}</span>
                                                         </>
                                                     ) : <span className="av-ini">{iniciales(x.p.nombre)}</span>}
-                                                    {!vivo && x.segs.map(sg => (
-                                                        <i key={sg.tipo + sg.a} className={sg.tipo + (sg.b <= ahora ? ' pas' : '')}
-                                                            style={{ top: (sg.a - x.t0) / 3600000 * HPX, height: (sg.b - sg.a) / 3600000 * HPX }} />
-                                                    ))}
+                                                    {!vivo && x.segs.map(sg => {
+                                                        const alto = (sg.b - sg.a) / 3600000 * HPX, conEv = sg.tipo === 'ev' && sg.eventos && sg.eventos.length > 0;
+                                                        return (
+                                                            <i key={sg.tipo + sg.a} className={sg.tipo + (sg.b <= ahora ? ' pas' : '')}
+                                                                style={{ top: (sg.a - x.t0) / 3600000 * HPX, height: alto }}
+                                                                data-tip={conEv ? tipEventos(sg, tz) : undefined}>
+                                                                {conEv && alto >= 14 && <span className="av-ev-txt">{textoEventos(sg)}</span>}
+                                                            </i>
+                                                        );
+                                                    })}
                                                 </div>
                                             );
                                         })}
