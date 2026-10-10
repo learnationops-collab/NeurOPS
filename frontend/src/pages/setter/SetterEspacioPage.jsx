@@ -17,8 +17,8 @@ import { REVISAR_DEL_SETTER } from '../comercial/components/tablasSetter';
 import '../comercial/comercial.css';
 import './setterEspacio.css';
 import MisAgendas from './agendas/MisAgendas';
-import PublicSetterReportPage from '../public/PublicSetterReportPage';
-import PublicSetterStatsPage from '../public/PublicSetterStatsPage';
+import ReporteDiario from './reporte/ReporteDiario';
+import Historial from './reporte/Historial';
 import SetterDatos from './datos/SetterDatos';
 
 /**
@@ -67,7 +67,7 @@ const SECCIONES = [
     { id: 'revisar', label: 'Revisar', Icono: CheckCircle2, sub: 'Tus agendas, tus ventas y tus leads.',
         tabs: REVISAR_DEL_SETTER.map(({ key, label }) => ({ key, label })) },
     { id: 'reporte', label: 'Reporte', Icono: ClipboardList, sub: 'Así cerraste el día.',
-        tabs: [{ key: 'hoy', label: 'Reporte del día' }, { key: 'historial', label: 'Mis reportes' }] },
+        tabs: [{ key: 'hoy', label: 'Reporte' }, { key: 'historial', label: 'Historial' }] },
     // Desde el 10/10/2026 con Comparativas: la de los setters, la misma que ve la dirección, en
     // solo lectura (ver `SetterDatos`).
     { id: 'datos', label: 'Mis datos', Icono: BarChart3, sub: 'Así vienen tus números.',
@@ -261,10 +261,13 @@ const SetterEspacioPage = () => {
                     {seccion === 'agendas' && (
                         <MisAgendas onResumen={alResumenDeAgendas} onVerDatos={() => irA('datos')} />
                     )}
+                    {/* El reporte del día por pasos y su Historial (10/10/2026). El setter es el de la
+                        sesión: simulando, el simulado. */}
                     {seccion === 'reporte' && tab === 'hoy' && (
-                        <PublicSetterReportPage onEnviado={(fecha) => { if (fecha === hoyLocal()) setReporteHoy(true); }} />
+                        <ReporteDiario setterId={user?.id}
+                            onEnviado={(fecha) => { if (fecha === hoyLocal()) setReporteHoy(true); }} />
                     )}
-                    {seccion === 'reporte' && tab === 'historial' && <PublicSetterStatsPage embebido />}
+                    {seccion === 'reporte' && tab === 'historial' && <Historial setterId={user?.id} />}
                     {/* Revisar es el dashboard comercial, acotado a este setter por el backend
                         (`alcance_de`): la lista de Revisar, como "Mi cartera" en el mazo del closer.
                         Sin selector de persona: el contexto de un setter no lo ofrece. La tabla la

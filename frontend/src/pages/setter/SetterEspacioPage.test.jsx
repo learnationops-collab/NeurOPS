@@ -39,9 +39,11 @@ vi.mock('./agendas/MisAgendas', () => ({
         return <div data-testid="mis-agendas" />;
     },
 }));
-vi.mock('../public/PublicSetterReportPage', () => ({ default: () => <div data-testid="reporte-hoy" /> }));
-vi.mock('../public/PublicSetterStatsPage', () => ({
-    default: ({ embebido }) => <div data-testid="mis-reportes">{embebido ? 'embebido' : 'pagina'}</div>,
+vi.mock('./reporte/ReporteDiario', () => ({
+    default: ({ setterId }) => <div data-testid="reporte-hoy">reporte de {setterId}</div>,
+}));
+vi.mock('./reporte/Historial', () => ({
+    default: ({ setterId }) => <div data-testid="mis-reportes">historial de {setterId}</div>,
 }));
 vi.mock('../comercial/DashboardComercial', () => ({
     default: function DashboardDoble({ seccionFija, onIrASeccion, tablaFija }) {
@@ -193,7 +195,7 @@ describe('SetterEspacioPage · un solo dock', () => {
     it('Reporte ya no tiene Registros, y un link viejo cae en su primera pestaña', async () => {
         await montar('/setter/deck?step=reporte&tab=registros');
 
-        expect(screen.getAllByRole('tab').map(t => t.textContent)).toEqual(['Reporte del día', 'Mis reportes']);
+        expect(screen.getAllByRole('tab').map(t => t.textContent)).toEqual(['Reporte', 'Historial']);
         expect(screen.getByTestId('reporte-hoy')).toBeInTheDocument();
         expect(screen.queryByTestId('dashboard-revisar')).toBeNull();
     });
@@ -247,11 +249,12 @@ describe('SetterEspacioPage · un solo dock', () => {
         // /setter/statistics redirige a esta URL (ver App.jsx).
         await montar('/setter/deck?step=reporte&tab=historial');
 
-        expect(screen.getByTestId('mis-reportes')).toHaveTextContent('embebido');
-        expect(screen.getByRole('tab', { name: 'Mis reportes' })).toHaveAttribute('aria-selected', 'true');
+        // El Historial y el reporte son los del setter de la sesión (simulando, el simulado).
+        expect(screen.getByTestId('mis-reportes')).toHaveTextContent('historial de 7');
+        expect(screen.getByRole('tab', { name: 'Historial' })).toHaveAttribute('aria-selected', 'true');
 
-        fireEvent.click(screen.getByRole('tab', { name: 'Reporte del día' }));
-        expect(screen.getByTestId('reporte-hoy')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('tab', { name: 'Reporte' }));
+        expect(screen.getByTestId('reporte-hoy')).toHaveTextContent('reporte de 7');
         expect(url().get('tab')).toBe('hoy');
     });
 
