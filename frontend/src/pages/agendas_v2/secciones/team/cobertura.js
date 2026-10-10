@@ -8,8 +8,6 @@ import { claveDia, minutoDelDia, zonedToUtc } from '../../core/tiempo';
 import { pad } from '../../core/util';
 
 const DIA_MS = 86400000;
-export const PASO_CELDA = 60;   // cada celda del carril es una hora posible de llamada
-export const DUR_CELDA = 45;    // y dibuja una llamada de 45 min
 export const HPX = 46;          // alto de una hora en la grilla
 export const MAX_FRANJAS = 6;
 
@@ -37,17 +35,63 @@ export function horarioLaV() {
 
 export function nombreDia(dow) { const x = DIAS.find(d => d.d === dow); return x ? x.n : ''; }
 
-/**
- * Cobertura de una semana. Cada closer es un carril; dentro de su horario, cada celda está
- * agendada (hay una reserva real que empieza en esa hora) o libre. Un hueco es una franja del
- * día sin ningún closer.
- * o: {todos: closers con horario, cs: carriles que se muestran, semana: desplazamiento,
- *     ahora, reservasDe(personaId) → [{inicio_ms, fin_ms}], edit}
- */
-export function calcularCobertura({ todos, cs, semana = 0, ahora = Date.now(), reservasDe = () => [], edit = false }) {
+// Minutos → "45 min", "2 h", "2 h 15".
+export function durTxt(m) {
+    m = Math.round(m);
+    if (m < 60) return m + ' min';
+    return Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + pad(m % 60) : '');
+}
+
+// Tramos [inicio, fin] (ms) ordenados y sin superponerse: lo que se pisa o se toca queda en uno.
+export function unirTramos(ts) {
+    const out = [];
+    ts.filter(t => t[1] > t[0]).sort((x, y) => x[0] - y[0]).forEach(([a, b]) => {
+        const u = out[out.length - 1];
+        if (u && a <= u[1]) u[1] = Math.max(u[1], b); else out.push([a, b]);
+    });
+    return out;
+}
+// Lo de unos tramos unidos que cae dentro de [t0, t1].
+function recortar(ts, t0, t1) { return ts.map(([a, b]) => [Math.max(a, t0), Math.min(b, t1)]).filter(([a, b]) => b > a); }
+// Lo de `ts` que no cae en `menos` (los dos unidos).
+function restar(ts, menos) {
+    const out = [];
+    ts.forEach(([a, b]) => {
+        let cur = a;
+        for (const [c, d] of menos) {
+            if (d <= cur) continue;
+            if (c >= b) break;
+            if (c > cur) out.push([cur, c]);
+            cur = Math.max(cur, d);
+        }
+        if (cur < b) out.push([cur, b]);
+    });
+    return out;
+}
+const largoMin = (ts) => ts.reduce((s, [a, b]) => s + b - a, 0) / 60000;
+
+// La semana que se ve: zona del equipo, su lunes (fecha UTC) y el rango de instantes a pedir a Google
+// (un día de margen a cada lado: los horarios de otras zonas pueden caer en el día vecino).
+export function rangoSemana(cs, semana = 0, ahora = Date.now()) {
     const tz = tzEquipo(cs), hoy = claveDia(ahora, tz).split('-').map(Number);
     const dHoy = Date.UTC(hoy[0], hoy[1] - 1, hoy[2]);
     const lunes = dHoy - ((new Date(dHoy).getUTCDay() + 6) % 7) * DIA_MS + semana * 7 * DIA_MS;
+    return { tz, lunes, desde: lunes - DIA_MS, hasta: lunes + 8 * DIA_MS };
+}
+
+/**
+ * Cobertura de una semana. Cada closer es un carril; dentro de su horario se mide en minutos cuánto
+ * está ocupado: la unión de sus reservas y de lo que tiene en Google Calendar, recortada al horario
+ * (lo que se pisa cuenta una vez y lo de fuera del horario no cuenta). Lo ocupado se parte en
+ * agendado (reservas) y por eventos (lo de Google que no es una reserva), así las partes suman el
+ * total. Un hueco es una franja del día sin ningún closer.
+ * o: {todos: closers con horario, cs: carriles que se muestran, semana: desplazamiento, ahora,
+ *     reservasDe(personaId) → [{inicio_ms, fin_ms}],
+ *     googleDe(personaId) → {estado: 'ok' | 'error' | 'sin_google' | 'sin_usuario', franjas} | null, edit}
+ * Un closer cuyo calendario no se pudo leer ('error') queda fuera de la ocupación: no se sabe.
+ */
+export function calcularCobertura({ todos, cs, semana = 0, ahora = Date.now(), reservasDe = () => [], googleDe = () => null, edit = false }) {
+    const { tz, lunes } = rangoSemana(cs, semana, ahora);
     const dias = [];
     for (let i = 0; i < 7; i++) { const d = new Date(lunes + i * DIA_MS); dias.push({ k: d.toISOString().slice(0, 10), d }); }
     const claves = dias.map(x => x.k);
@@ -58,6 +102,10 @@ export function calcularCobertura({ todos, cs, semana = 0, ahora = Date.now(), r
     gente.forEach(p => {
         const li = cs.indexOf(p);
         const rs = reservasDe(p.id);
+        const ag = unirTramos(rs.map(x => [x.inicio_ms, x.fin_ms != null ? x.fin_ms : x.inicio_ms + 3600000]));
+        const g = googleDe(p.id);
+        const ev = unirTramos(g && g.estado === 'ok' ? (g.franjas || []).map(f => [f[0], f[1]]) : []);
+        const sinLeer = !!g && g.estado === 'error';
         for (let j = -1; j < 8; j++) {
             const b = new Date(lunes + j * DIA_MS), dow = b.getUTCDay();
             ((p.horario || {})[dow] || []).forEach((r, ri) => {
@@ -67,13 +115,16 @@ export function calcularCobertura({ todos, cs, semana = 0, ahora = Date.now(), r
                 if (t1 <= t0) return;
                 const di = claves.indexOf(claveDia(t0, tz));
                 if (di < 0) return;
-                const celdas = [];
-                for (let t = t0; t + DUR_CELDA * 60000 <= t1; t += PASO_CELDA * 60000) {
-                    const fin = t + PASO_CELDA * 60000;
-                    celdas.push({ t, oc: rs.some(x => x.inicio_ms >= t && x.inicio_ms < fin) });
-                }
+                const enAg = recortar(ag, t0, t1), enEv = restar(recortar(ev, t0, t1), enAg);
+                const segs = enAg.map(([s0, s1]) => ({ a: s0, b: s1, tipo: 'ag' }))
+                    .concat(enEv.map(([s0, s1]) => ({ a: s0, b: s1, tipo: 'ev' })))
+                    .sort((x, y) => x.a - y.a);
                 const m0 = minutoDelDia(t0, tz), m1 = m0 + (t1 - t0) / 60000;
-                todosBloques.push({ p, li, di, m0, m1: Math.min(m1, 1440), t0, t1, celdas, dow, ri });
+                todosBloques.push({
+                    p, li, di, m0, m1: Math.min(m1, 1440), t0, t1, dow, ri, segs, sinLeer,
+                    mDisp: (t1 - t0) / 60000, mAg: largoMin(enAg), mEv: largoMin(enEv),
+                    nAg: rs.filter(x => x.inicio_ms >= t0 && x.inicio_ms < t1).length,
+                });
             });
         }
     });
@@ -85,9 +136,12 @@ export function calcularCobertura({ todos, cs, semana = 0, ahora = Date.now(), r
     if (edit) { minH = Math.min(minH, 6); maxH = 24; }
     if (maxH <= minH) { minH = 8; maxH = 20; }
 
-    // Métricas
-    let hDisp = 0, agendadas = 0, celdas = 0;
-    bloques.forEach(x => { hDisp += (x.m1 - x.m0) / 60; x.celdas.forEach(c => { celdas++; if (c.oc) agendadas++; }); });
+    // Métricas (en minutos). La ocupación se mide solo sobre lo que se sabe.
+    let mDisp = 0, mAg = 0, mEv = 0, nAg = 0, mBase = 0, mAgBase = 0, mEvBase = 0;
+    bloques.forEach(x => {
+        mDisp += x.mDisp; mAg += x.mAg; mEv += x.mEv; nAg += x.nAg;
+        if (!x.sinLeer) { mBase += x.mDisp; mAgBase += x.mAg; mEvBase += x.mEv; }
+    });
     const huecos = [];
     let hHueco = 0;
     const ventana = [Infinity, 0];
@@ -102,14 +156,21 @@ export function calcularCobertura({ todos, cs, semana = 0, ahora = Date.now(), r
             if (c && ini != null) { huecos.push({ di, m0: ini, m1: m }); hHueco += (m - ini) / 60; ini = null; }
         });
     });
+    // Por día: minutos ocupados (a) de los disponibles (t), sin los calendarios que no se pudieron leer.
     const porDia = dias.map((dd, di) => {
         let a = 0, t = 0;
-        bloques.filter(x => x.di === di).forEach(x => x.celdas.forEach(c => { t++; if (c.oc) a++; }));
+        bloques.filter(x => x.di === di && !x.sinLeer).forEach(x => { a += x.mAg + x.mEv; t += x.mDisp; });
         return { a, t };
     });
+    const conEstado = (ests) => cs.filter(p => { const g = googleDe(p.id); return !!g && ests.includes(g.estado); });
     return {
         tz, dias, bloques, huecos, porDia, minH, maxH, hoyK: claveDia(ahora, tz), mAhora: minutoDelDia(ahora, tz),
-        kpi: { hDisp, agendadas, celdas, ocupacion: celdas ? agendadas / celdas : 0, hHueco },
+        sinLeer: conEstado(['error']), sinGoogle: conEstado(['sin_google', 'sin_usuario']),
+        kpi: {
+            hDisp: mDisp / 60, hAg: mAg / 60, hEv: mEv / 60, hLibre: (mDisp - mAg - mEv) / 60, nAg, hHueco,
+            ocupacion: mBase ? (mAgBase + mEvBase) / mBase : 0,
+            ocupAg: mBase ? mAgBase / mBase : 0, ocupEv: mBase ? mEvBase / mBase : 0,
+        },
     };
 }
 

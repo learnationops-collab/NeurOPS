@@ -101,6 +101,16 @@ def integraciones():
     return jsonify({'integ': integ, 'version': servicio.version()})
 
 
+@bp.route('/ocupacion', methods=['GET'])
+def ocupacion():
+    """Lo ocupado en el Google Calendar de cada persona de Team entre ?desde y ?hasta (ms), para
+    Available. Como mucho 10 dias por pedido: el visor pide la semana que se ve."""
+    desde, hasta = request.args.get('desde', type=int), request.args.get('hasta', type=int)
+    if desde is None or hasta is None or not 0 < hasta - desde <= servicio.RANGO_MAX_OCUPACION_DIAS * servicio.DIA_MS:
+        return jsonify({'message': 'Rango inválido'}), 400
+    return jsonify({'ocupacion': servicio.ocupacion_google(desde, hasta)})
+
+
 @bp.route('/usuarios', methods=['GET'])
 def usuarios():
     """Usuarios activos de la app. Por defecto los closers: Team (quienes atienden) suma personas solo

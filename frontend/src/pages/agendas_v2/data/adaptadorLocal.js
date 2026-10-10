@@ -44,6 +44,7 @@ export function crearAdaptadorLocal() {
         async guardarPerfil(p) { escribir('perfil', p); },
         async guardarInteg(i) { escribir('integ', i); },
         async usuarios() { return []; },
+        async ocupacion() { return {}; },
         async crearReserva(payload) {
             const rs = leer('reservas', []);
             const inicio = payload.inicio ? Date.parse(payload.inicio) : null;
