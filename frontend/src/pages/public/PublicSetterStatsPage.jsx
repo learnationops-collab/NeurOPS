@@ -21,6 +21,7 @@ import IncomingLeadsTab from './IncomingLeadsTab';
 import LeadUnifiedKPI from '../../components/shared/LeadUnifiedKPI';
 import ConfigurableStatCard from '../../components/shared/ConfigurableStatCard';
 import StatTooltip from '../../components/shared/StatTooltip';
+import CanalesSetter from '../setter/reporte/CanalesSetter';
 
 /**
  * El historial de reportes del setter y sus estadísticas conversacionales.
@@ -812,6 +813,11 @@ const PublicSetterStatsPage = ({ embebido = false }) => {
                                     </div>
 
                                 </div>
+
+                                {/* Lo nuevo del reporte v2 (10/10/2026): por canal y bienvenidas. Se
+                                    suma a lo de arriba, que sigue con los totales de los dos
+                                    formularios. */}
+                                <CanalesSetter stats={stats} promedio={filters.agg_type === 'avg'} comparar={compare} />
 
                                 {/* SECCIÓN: ANÁLISIS PROFUNDO DEL EMBUDO Y PÉRDIDAS */}
                                 <MetricSection title="Análisis del Embudo y Conversión" icon={TrendingUp}>

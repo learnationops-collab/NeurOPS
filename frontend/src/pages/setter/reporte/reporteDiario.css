@@ -312,6 +312,19 @@
   .rd .rd-pz--periodo{padding:0 var(--s3);font-size:13px}
 }
 
+/* --- Por canal en la Vista General de /admin/ventas › Setters ------------------------------ */
+.rd.rd-canales{container-type:inline-size;margin:var(--s6) 0}
+.rd .rd-canales-cab{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s3);flex-wrap:wrap;margin-bottom:var(--s3)}
+.rd .rd-canales-titulo{margin:4px 0 0;font-size:22px;font-weight:900;letter-spacing:-.025em}
+.rd .rd-canales-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.rd .rd-cifras{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s4) var(--s3);padding-top:var(--s2)}
+.rd .rd-cifra{display:grid;gap:4px;min-width:0}
+.rd .rd-cifra .rd-k{color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rd .rd-cifra > b{font-size:28px;font-weight:900;letter-spacing:-.03em;line-height:1;color:var(--c);font-variant-numeric:tabular-nums}
+.rd .rd-antes{font-size:11px;font-weight:700;color:var(--text-muted-40);font-variant-numeric:tabular-nums}
+.rd .rd-canales-nota{margin:var(--s3) 0 0;font-size:13px;line-height:1.5;color:var(--text-muted)}
+.rd.rd-canales .rd-vacio{padding:var(--s6)}
+
 @keyframes rdMarca{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
 @keyframes rdSube{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes rdBump{from{transform:translateY(var(--dy,-8px));opacity:.35}to{transform:none;opacity:1}}
@@ -326,7 +339,7 @@
 /* --- Adaptación: a lo angosto, una columna por canal apilada -------------------------------- */
 .rd .rd-escena{container-type:inline-size;min-width:0}
 @container (max-width:700px){
-  .rd .rd-pasopanel,.rd .rd-resumen-a{grid-template-columns:minmax(0,1fr)!important}
+  .rd .rd-pasopanel,.rd .rd-resumen-a,.rd .rd-canales-grid{grid-template-columns:minmax(0,1fr)!important}
   .rd .rd-pcol + .rd-pcol::before,.rd .rd-rcol + .rd-rcol::before{left:var(--s5);right:var(--s5);top:0;bottom:auto;width:auto;height:1px}
   .rd .rd-pcol,.rd .rd-pasopanel--1 .rd-pcol,.rd .rd-rcol{padding:var(--s4) var(--s4)}
   .rd .rd-campos--n{grid-template-columns:repeat(2,minmax(0,1fr))}
