@@ -16,7 +16,7 @@ import pytest
 from freezegun import freeze_time
 
 from app.models import Appointment, Client, FinancialSale, LeadAnswer, ManychatLead
-from app.services.comercial_service import ComercialService, post_call_de, pre_call_de
+from app.services.comercial_service import ComercialService, cerro_sin_venta, post_call_de, pre_call_de
 
 HOY = '2026-09-17 21:30:00'
 DESDE = datetime(2026, 9, 1).date()
@@ -76,40 +76,52 @@ def test_pre_call_sale_de_result(result, esperado):
     assert pre_call_de(Appointment(result=result)) == esperado
 
 
-@pytest.mark.parametrize('estado,venta_,seguimiento,esperado', [
-    ('show_up', True, False, 'venta'),
-    ('show_up', False, True, 'seguimiento'),
-    ('show_up', False, False, 'presento_no_cerro'),
-    # La venta manda sobre el seguimiento: si compró, el resultado de esa llamada fue una venta.
-    ('show_up', True, True, 'venta'),
-    ('no_show', False, False, 'no_show'),
-    ('reagendada', False, False, 'reagendo'),
-    ('cancelada', False, False, 'cancelo'),
-    ('sin_reportar', False, False, 'pendiente'),
-    ('reportada_sin_resultado', False, False, 'pendiente'),
+@pytest.mark.parametrize('estado,venta_,esperado', [
+    ('show_up', True, 'venta'),
+    # Asistió y no compró: "Seguimiento", tenga o no un seguimiento programado (antes, sin él, era
+    # "Presentó, no cerró"; el usuario pidió que se vean todas como "Seguimiento", 09/10/2026).
+    ('show_up', False, 'seguimiento'),
+    ('no_show', False, 'no_show'),
+    ('reagendada', False, 'reagendo'),
+    ('cancelada', False, 'cancelo'),
+    ('sin_reportar', False, 'pendiente'),
+    ('reportada_sin_resultado', False, 'pendiente'),
     # Antes caían en "Otro estado": se muestran con lo que reportó el closer (02/10/2026).
-    ('lead_perdido', False, False, 'lead_perdido'),
-    ('no_lead', False, False, 'no_lead'),
-    ('inventado', False, False, 'pendiente'),
+    ('lead_perdido', False, 'lead_perdido'),
+    ('no_lead', False, 'no_lead'),
+    ('inventado', False, 'pendiente'),
 ])
-def test_post_call_resuelve_los_estados_derivados(estado, venta_, seguimiento, esperado):
-    assert post_call_de(estado, venta_, seguimiento) == esperado
+def test_post_call_resuelve_los_estados_derivados(estado, venta_, esperado):
+    assert post_call_de(estado, venta_) == esperado
 
 
-@pytest.mark.parametrize('venta_,sena,seguimiento,esperado', [
-    # Solo una seña: es "Seña", no "Venta".
-    (False, True, False, 'sena'),
-    # La seña dice más que el seguimiento abierto que casi siempre la acompaña.
-    (False, True, True, 'sena'),
+@pytest.mark.parametrize('venta_,sena,esperado', [
+    # Solo una seña: es "Seña", no "Venta" (aunque casi siempre la acompañe un seguimiento abierto).
+    (False, True, 'sena'),
     # Con pago completo o split pay manda la venta, aunque la haya precedido una seña.
-    (True, True, False, 'venta'),
+    (True, True, 'venta'),
 ])
-def test_la_sena_es_un_estado_propio_y_no_una_venta(venta_, sena, seguimiento, esperado):
-    assert post_call_de('show_up', venta_, seguimiento, con_sena=sena) == esperado
+def test_la_sena_es_un_estado_propio_y_no_una_venta(venta_, sena, esperado):
+    assert post_call_de('show_up', venta_, con_sena=sena) == esperado
 
 
 def test_una_sena_sin_asistencia_no_cambia_el_resultado_de_la_llamada():
-    assert post_call_de('no_show', False, False, con_sena=True) == 'no_show'
+    assert post_call_de('no_show', False, con_sena=True) == 'no_show'
+
+
+@pytest.mark.parametrize('estado,venta_,sena,seguimiento,esperado', [
+    # Lo que antes era "Presentó, no cerró": asistió, sin venta, sin seña y sin nada programado.
+    ('show_up', False, False, False, True),
+    # Con un seguimiento abierto la venta sigue en curso: no "terminó sin venta".
+    ('show_up', False, False, True, False),
+    ('show_up', True, False, False, False),
+    ('show_up', False, True, False, False),
+    # Sin asistencia no hubo llamada que cerrar.
+    ('no_show', False, False, False, False),
+    ('sin_reportar', False, False, False, False),
+])
+def test_cerro_sin_venta_es_el_viejo_presento_no_cerro(estado, venta_, sena, seguimiento, esperado):
+    assert cerro_sin_venta(estado, venta_, seguimiento, con_sena=sena) is esperado
 
 
 # --- Filas de agendas ---------------------------------------------------------------------------
@@ -204,7 +216,7 @@ def test_solo_pago_completo_y_split_pay_marcan_la_agenda_como_venta(db, marlon, 
 
     fila = ComercialService.agendas(DESDE, HASTA)[0]
 
-    assert fila['post_call']['key'] == 'presento_no_cerro'
+    assert fila['post_call']['key'] == 'seguimiento'
     assert fila['con_venta'] is False
 
 
@@ -218,23 +230,55 @@ def test_el_cruce_con_la_venta_tambien_funciona_por_instagram(db, marlon):
 
 
 @freeze_time(HOY)
-def test_asistio_sin_venta_ni_seguimiento_es_presento_no_cerro(db, marlon):
+def test_asistio_sin_venta_ni_seguimiento_se_muestra_como_seguimiento(db, marlon):
+    """Pedido del usuario (09/10/2026): «Presentó, no cerró» no se muestra más, «que digan
+    Seguimiento». Pero esa llamada se sigue contando como presentación, igual que antes: cambiar la
+    etiqueta no puede mover el embudo ni el cierre por presentación."""
     agenda(db, marlon, cliente(db, 'Fernanda Ortiz'), closer_result='Show up')
 
     fila = ComercialService.agendas(DESDE, HASTA)[0]
 
-    assert fila['post_call']['key'] == 'presento_no_cerro'
+    assert fila['post_call'] == {'key': 'seguimiento', 'label': 'Seguimiento', 'tone': 'warning'}
     assert fila['asistio'] is True
+    assert fila['presento'] is True
 
 
 @freeze_time(HOY)
-def test_un_seguimiento_ya_hecho_no_deja_la_agenda_en_seguimiento(db, marlon):
+def test_con_un_seguimiento_abierto_la_presentacion_sigue_dependiendo_del_tilde(db, marlon):
+    # Las dos se ven igual, «Seguimiento», pero solo la que terminó sin nada programado cuenta como
+    # presentación sin que nadie tildara la oferta: es la regla de siempre, no una nueva.
+    agenda(db, marlon, cliente(db, 'Lo pienso'), closer_result='Show up',
+           seguimiento_tipo='llamada', fecha_seguimiento=datetime(2026, 9, 20))
+    agenda(db, marlon, cliente(db, 'Lo pienso con oferta'), closer_result='Show up',
+           seguimiento_tipo='llamada', fecha_seguimiento=datetime(2026, 9, 20), offer_presented=True)
+
+    filas = {f['cliente']: f for f in ComercialService.agendas(DESDE, HASTA)}
+
+    assert {f['post_call']['key'] for f in filas.values()} == {'seguimiento'}
+    assert filas['Lo pienso']['presento'] is False
+    assert filas['Lo pienso con oferta']['presento'] is True
+
+
+@freeze_time(HOY)
+def test_el_total_de_seguimiento_cuenta_una_vez_cada_agenda(db, marlon):
+    agenda(db, marlon, cliente(db, 'Sin nada programado'), closer_result='Show up')
+    agenda(db, marlon, cliente(db, 'Con llamada'), closer_result='Show up', seguimiento_tipo='llamada')
+
+    totales = ComercialService.totales_agendas(ComercialService.agendas(DESDE, HASTA))
+
+    assert totales['seguimiento'] == 2
+
+
+@freeze_time(HOY)
+def test_un_seguimiento_ya_hecho_no_deja_la_agenda_en_curso(db, marlon):
     # `seguimiento_realizado` cerrado significa que el seguimiento ya pasó: la llamada no está
-    # esperando nada, así que vuelve a ser "presentó, no cerró".
+    # esperando nada. Se ve como «Seguimiento» (la venta sigue abierta) y cuenta como presentada.
     agenda(db, marlon, cliente(db, 'Tomas Ibarra'), closer_result='Show up',
            seguimiento_tipo='tomada', seguimiento_realizado=True)
 
-    assert ComercialService.agendas(DESDE, HASTA)[0]['post_call']['key'] == 'presento_no_cerro'
+    fila = ComercialService.agendas(DESDE, HASTA)[0]
+    assert fila['post_call']['key'] == 'seguimiento'
+    assert fila['presento'] is True
 
 
 @freeze_time(HOY)

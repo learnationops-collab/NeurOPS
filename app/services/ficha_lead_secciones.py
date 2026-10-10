@@ -104,7 +104,7 @@ def historial(appts, ahora, tiene_venta=False, cerro=False):
         agendas.append({'id': a.id, 'fecha': _iso(a.start_time), 'detalle': detalle or 'Sin detalle',
                         'chip': {'label': label, 'tone': tono},
                         'pre_call': pre_call_de(a),
-                        'post_call': post_call_de(estado, False, False),
+                        'post_call': post_call_de(estado, False),
                         'closer': a.closer.username if a.closer else None,
                         # El id y no solo el nombre: es con lo que la fila arranca elegido el
                         # closer cuando se corrige la agenda (`PATCH /ficha/<id>/agenda`).

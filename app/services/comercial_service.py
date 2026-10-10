@@ -73,8 +73,8 @@ PRE_CALL = [
 ]
 
 # Los estados que un humano puede FIJAR a mano desde el modal salen del mismo vocabulario que ya
-# usa el mazo del closer (`closer_result`). El diseño original listaba además "Venta",
-# "Seguimiento" y "Presentó, no cerró" como opciones editables; acá no lo son a propósito:
+# usa el mazo del closer (`closer_result`). El diseño original listaba además "Venta" y
+# "Seguimiento" como opciones editables; acá no lo son a propósito:
 #   · "Venta" no es un estado de la agenda sino la existencia de una `FinancialSale` cruzada por
 #     contacto. Ponerlo a mano marcaría una venta que no existe en la contabilidad.
 #   · "Seguimiento" lo escribe el flujo de seguimientos del closer, con su tipo y su fecha.
@@ -92,8 +92,11 @@ POST_CALL = [
     # El lead dejó una seña y todavía no tiene un pago completo ni un split pay. No es "Venta":
     # si lo fuera, la tabla, los totales y el close rate contarían una reserva como un cierre.
     {'key': 'sena', 'label': 'Seña', 'tone': 'warning', 'editable': False},
+    # Asistió y no compró ni dejó una seña: la venta sigue abierta. Hasta el 09/10/2026 la que no
+    # tenía un seguimiento programado se mostraba aparte, como "Presentó, no cerró"; el usuario
+    # pidió que se vean todas como "Seguimiento" (ver `cerro_sin_venta`, que guarda la diferencia
+    # para las métricas y para la ficha).
     {'key': 'seguimiento', 'label': 'Seguimiento', 'tone': 'warning', 'editable': False},
-    {'key': 'presento_no_cerro', 'label': 'Presentó, no cerró', 'tone': 'warning', 'editable': False},
     {'key': 'lead_perdido', 'label': 'Lead perdido', 'tone': 'error', 'editable': False},
     {'key': 'no_lead', 'label': 'No lead', 'tone': 'idle', 'editable': False},
 ]
@@ -173,10 +176,11 @@ POST_CALL_A_CLOSER_RESULT = {'pendiente': 'Pendiente', 'asistio': 'Show up', 'no
                              'reagendo': 'Reagendado', 'cancelo': 'Cancelado', 'segunda_llamada': '2da call'}
 
 # Post call que cuentan como "la llamada ocurrió y el lead estaba del otro lado".
-ASISTIO = ('asistio', 'venta', 'sena', 'seguimiento', 'presento_no_cerro', 'segunda_llamada')
+ASISTIO = ('asistio', 'venta', 'sena', 'seguimiento', 'segunda_llamada')
 # Post call que implican que la oferta se presentó aunque nadie haya tildado el campo: no se puede
-# comprar ni dejar una seña sin haber visto el precio.
-PRESENTO = ('venta', 'sena', 'presento_no_cerro')
+# comprar ni dejar una seña sin haber visto el precio. La llamada que terminó sin venta y sin un
+# seguimiento abierto también cuenta (`cerro_sin_venta`), aunque se muestre como "Seguimiento".
+PRESENTO = ('venta', 'sena')
 # Post call con resultado de asistencia: el denominador del show up (ver el docstring del módulo).
 REALIZADAS = ASISTIO + ('no_show',)
 # Agendas que salieron del trabajo del equipo: el lead canceló o el closer lo descartó. Siguen en los
@@ -280,13 +284,17 @@ def pre_call_de(appt):
     return 'sin_confirmar'
 
 
-def post_call_de(estado, con_venta, con_seguimiento, con_sena=False):
+def post_call_de(estado, con_venta, con_sena=False):
     """Resultado de la llamada. `estado` es el del libro de agendas (`derivar_estado`).
 
     Los estados derivados salen de acá y no de una columna: una agenda con asistencia es "Venta"
     si el lead tiene un pago completo o un split pay cruzado, "Seña" si lo único que dejó es una
-    seña, "Seguimiento" si quedó un seguimiento abierto, y si no, "Presentó, no cerró" — que es
-    lo que efectivamente pasó cuando alguien asistió y no hay ni venta ni seguimiento.
+    seña, y si no, "Seguimiento": la venta sigue abierta.
+
+    "Seguimiento" es la misma etiqueta con o sin un seguimiento programado. Hasta el 09/10/2026 la
+    que no tenía ninguno se mostraba aparte, como "Presentó, no cerró", y el usuario pidió que se
+    vean todas como "Seguimiento". Lo que esa diferencia decía de la llamada no se perdió:
+    `cerro_sin_venta` lo sigue sabiendo, y con eso cuentan las presentaciones y la ficha.
 
     La seña va antes que el seguimiento porque dice más: quien dejó una seña casi siempre tiene
     además un seguimiento abierto (para completar el pago), y "Seguimiento" escondería que ya
@@ -296,10 +304,23 @@ def post_call_de(estado, con_venta, con_seguimiento, con_sena=False):
             return 'venta'
         if con_sena:
             return 'sena'
-        if con_seguimiento:
-            return 'seguimiento'
-        return 'presento_no_cerro'
+        return 'seguimiento'
     return _ESTADO_A_POST_CALL.get(estado, 'pendiente')
+
+
+def cerro_sin_venta(estado, con_venta, con_seguimiento, con_sena=False):
+    """¿La llamada ocurrió y terminó sin venta, sin seña y sin ningún seguimiento abierto?
+
+    Es lo que antes era el estado "Presentó, no cerró". Ya no se muestra (es un "Seguimiento" más,
+    ver `post_call_de`), pero dice dos cosas que se siguen usando:
+
+      · la oferta se presentó aunque nadie haya tildado el campo — así se contaba y así se sigue
+        contando en las presentaciones del embudo, en la tasa de presentación y en el cierre por
+        presentación: cambiar la etiqueta no puede mover esos números;
+      · en la ficha, el cierre de esa llamada es "No cerró" y no "Pendiente": no hay nada
+        programado que lo vaya a resolver.
+    """
+    return estado == 'show_up' and not (con_venta or con_sena or con_seguimiento)
 
 
 def chip(grupo, key):
@@ -416,7 +437,7 @@ class ComercialService:
             con_seguimiento = bool(a.seguimiento_tipo or a.fecha_seguimiento) and not a.seguimiento_realizado
 
             estado = derivar_estado(a, ahora)
-            post = post_call_de(estado, con_venta, con_seguimiento, con_sena=con_sena)
+            post = post_call_de(estado, con_venta, con_sena=con_sena)
             pre = pre_call_de(a)
 
             # Días sin reportar: solo para una llamada que ya pasó y sigue sin resultado.
@@ -448,7 +469,8 @@ class ComercialService:
                 'estado_libro': estado,
                 'asistio': post in ASISTIO,
                 'realizada': post in REALIZADAS,
-                'presento': post in PRESENTO or bool(a.offer_presented),
+                'presento': (post in PRESENTO or bool(a.offer_presented)
+                             or cerro_sin_venta(estado, con_venta, con_seguimiento, con_sena=con_sena)),
                 'retraso_dias': retraso,
                 'ya_paso': ya_paso,
                 'descartada': post in DESCARTADAS,
@@ -807,7 +829,7 @@ class ComercialService:
         # Asistieron y dejaron una seña, sin pago completo ni split pay. No son ventas: entran
         # solo en `close_rate_con_senas`.
         senas = [f for f in filas if f['post_call']['key'] == 'sena']
-        seguimiento = [f for f in filas if f['post_call']['key'] in ('seguimiento', 'presento_no_cerro')]
+        seguimiento = [f for f in filas if f['post_call']['key'] == 'seguimiento']
         no_show = [f for f in filas if f['post_call']['key'] == 'no_show']
         pendientes = [f for f in filas if f['post_call']['key'] == 'pendiente']
         con_retraso = [f for f in pendientes if f['retraso_dias'] > 0]

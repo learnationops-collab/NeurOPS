@@ -99,9 +99,29 @@ def test_una_sena_anulada_no_cuenta_para_nada(client, db, reservo, equipo, auth_
     FinancialSale.query.update({'estado': 'Anulada'})
     db.session.commit()
 
-    post = _ficha(client, auth_headers, equipo['director'], reservo)['resultado']['post_call']
+    ficha = _ficha(client, auth_headers, equipo['director'], reservo)
 
-    assert post['key'] == 'presento_no_cerro'
+    # Asistió, sin pagos vigentes y sin nada programado: se muestra «Seguimiento» (antes «Presentó,
+    # no cerró», 09/10/2026), pero el cierre de esa llamada sigue siendo «No cerró».
+    assert ficha['resultado']['post_call']['key'] == 'seguimiento'
+    hitos = _hitos(ficha)
+    assert (hitos['resultado']['sub'], hitos['resultado']['estado']) == ('Seguimiento', 'hecho')
+    assert (hitos['cierre']['sub'], hitos['cierre']['estado']) == ('No cerró', 'alerta')
+
+
+def test_con_un_seguimiento_abierto_el_cierre_sigue_pendiente(client, db, reservo, equipo,
+                                                               auth_headers):
+    # El mismo «Seguimiento» en el post call, pero con algo programado la venta está en curso: el
+    # cierre no es «No cerró».
+    FinancialSale.query.update({'estado': 'Anulada'})
+    Appointment.query.update({'seguimiento_realizado': False, 'seguimiento_tipo': 'llamada'})
+    db.session.commit()
+
+    ficha = _ficha(client, auth_headers, equipo['director'], reservo)
+
+    assert ficha['resultado']['post_call']['key'] == 'seguimiento'
+    hitos = _hitos(ficha)
+    assert (hitos['cierre']['sub'], hitos['cierre']['estado']) == ('Pendiente', 'actual')
 
 
 def test_una_sena_sin_total_cargado_no_figura_saldada(client, db, equipo, auth_headers):

@@ -228,16 +228,13 @@ SIN_REPORTE = {'key': 'sin_reporte', 'label': 'Sin reporte', 'tone': 'warning'}
 POR_OCURRIR = {'key': 'por_ocurrir', 'label': 'Aún no ocurrió', 'tone': 'idle'}
 
 # El color de cada estado EN ESTE PANEL, donde el vocabulario no alcanza: la dona pone los estados
-# uno al lado del otro, y con los tonos de los chips "Seña", "Seguimiento" y "Presentó, no cerró"
-# serían tres arcos del mismo amarillo (y "Sin reporte" y "No show", dos del mismo rojo). La
-# paleta es la del diseño de Kerwin (30/09/2026): la seña en magenta, como en la tarjeta de Cierre;
-# el seguimiento en azul; "Presentó, no cerró" en `naranja`, entre el error y el aviso (lo define
-# la pieza del panel, `reparto-estados.css`); y "Sin reporte" en amarillo, arriba. Los chips de
-# Revisar siguen con el tono del vocabulario.
+# uno al lado del otro, y con los tonos de los chips "Seña" y "Seguimiento" serían dos arcos del
+# mismo amarillo (y "Sin reporte" y "No show", dos del mismo rojo). La paleta es la del diseño de
+# Kerwin (30/09/2026): la seña en magenta, como en la tarjeta de Cierre; el seguimiento en azul; y
+# "Sin reporte" en amarillo, arriba. Los chips de Revisar siguen con el tono del vocabulario.
 TONO_EN_PANEL = {
     'sena': 'brand-secondary',
     'seguimiento': 'info',
-    'presento_no_cerro': 'naranja',
 }
 
 # El gráfico del panel Estados (diseño de Kerwin, 30/09/2026) junta los estados en tres grupos:
@@ -249,7 +246,7 @@ TONO_EN_PANEL = {
 #     que nombra el diseño, entran "Canceló" y "Reagendó": son las otras dos pérdidas de agenda
 #     del dashboard del closer, y en las dos la cita no tuvo llamada.
 #   · En curso: la llamada todavía no pasó ("Aún no ocurrió") o pasó y la venta sigue abierta
-#     (seguimiento, segunda llamada, presentó sin cerrar, asistió sin más datos).
+#     (seguimiento, segunda llamada, asistió sin más datos).
 #   · Cerradas: hubo venta o seña.
 GRUPO_DE_ESTADO = {
     'sin_reporte': 'sin_resultado',
@@ -262,7 +259,6 @@ GRUPO_DE_ESTADO = {
     'asistio': 'en_curso',
     'segunda_llamada': 'en_curso',
     'seguimiento': 'en_curso',
-    'presento_no_cerro': 'en_curso',
     'venta': 'cerradas',
     'sena': 'cerradas',
 }
@@ -322,12 +318,6 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
     tot_a = ComercialService.totales_agendas(agendas)
     tot_v = ComercialService.totales_ventas(ventas)
 
-    # Una llamada a la que el lead ASISTIO estaba confirmada, por definicion: el embudo es una
-    # cadena de subconjuntos y sin esto mostraba mas asistencias que confirmadas — en produccion,
-    # 15 asistieron sobre 7 confirmadas, o sea un 214.3% imposible en la fila siguiente. El
-    # mismo criterio que ya aplica `CloserService.mark_sale_appointment_as_show_up`, que fuerza
-    # `result='Confirmado'` al registrar una venta justamente por este motivo.
-    confirmadas = sum(1 for f in agendas if f['pre_call']['key'] == 'confirmada' or f['asistio'])
     # Presentaciones: asistencias en las que se presentó la oferta. Una venta cuenta como
     # presentación aunque nadie haya tildado el campo — sin eso el embudo mostraría más ventas
     # que presentaciones, que es imposible.
@@ -413,13 +403,17 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
                           for k, v in datos['por_tipo'].items()]}
             for nombre, datos in programas.items()
         ), key=lambda p: p['cash'], reverse=True),
-        # Los cinco pasos cuentan AGENDAS, incluido el último: un embudo cuyo último escalón
+        # Los cuatro pasos cuentan AGENDAS, incluido el último: un embudo cuyo último escalón
         # cambiara de unidad (filas de venta del período) no se puede leer — "de 29
         # presentaciones a 7 ventas" mezclaría llamadas con cobros y daría un porcentaje que no
         # significa nada.
+        #
+        # Sin "Confirmadas" entre Agendas y Asistieron: el usuario pidió sacarlas del embudo
+        # (09/10/2026). La confirmación sigue en el pre call de cada agenda y en su faceta de
+        # Revisar; lo que se fue es el escalón, y con él la tasa de asistencia pasa a medirse
+        # contra las agendas.
         'funnel': [
             {'paso': 'Agendas', 'n': tot_a['agendas']},
-            {'paso': 'Confirmadas', 'n': confirmadas},
             {'paso': 'Asistieron', 'n': tot_a['asistieron']},
             {'paso': 'Presentaciones', 'n': presentaciones},
             {'paso': 'Ventas', 'n': tot_a['ventas']},

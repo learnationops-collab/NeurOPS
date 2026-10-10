@@ -194,10 +194,8 @@ export const PASOS_CLOSER = {
         ayuda: 'Llamadas agendadas en el período, sin importar la fuente.',
         destino: { tabla: 'agendas', filtro: {}, de: 'Embudo · Agendas' },
     },
-    Confirmadas: {
-        ayuda: 'Confirmaron asistencia antes de la llamada.',
-        destino: { tabla: 'agendas', filtro: { confirmada: 'Sí' }, de: 'Embudo · Confirmadas' },
-    },
+    // Sin «Confirmadas»: el usuario la sacó del embudo (09/10/2026). La confirmación se sigue
+    // viendo en el pre call de cada agenda y se filtra con la faceta «Confirmada» de Revisar.
     Asistieron: {
         ayuda: 'La llamada ocurrió y el lead estaba del otro lado.',
         destino: { tabla: 'agendas', filtro: { asistio: 'Sí' }, de: 'Embudo · Asistieron' },

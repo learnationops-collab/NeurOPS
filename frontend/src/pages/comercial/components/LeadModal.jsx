@@ -111,8 +111,7 @@ const LeadModal = ({ fila, estados, puedeCorregir, duplicadaDe, onCorregir, onMa
         ? { key: 'retraso', label: `Pendiente · ${fila.retraso_dias} d de retraso`, tone: 'warning' }
         : fila.post_call || fila.estado || fila.tipo_pago;
 
-    const derivado = esAgenda
-        && ['venta', 'sena', 'seguimiento', 'presento_no_cerro'].includes(fila.post_call.key);
+    const derivado = esAgenda && ['venta', 'sena', 'seguimiento'].includes(fila.post_call.key);
 
     return (
         <div className="scrim"
@@ -226,17 +225,17 @@ const LeadModal = ({ fila, estados, puedeCorregir, duplicadaDe, onCorregir, onMa
                                     </div>
                                 ))}
 
-                                {/* "Venta", "Seña", "Seguimiento" y "Presentó, no cerró" NO son
-                                    editables: son estados derivados (un pago cruzado por contacto,
-                                    un seguimiento abierto) y fijarlos a mano marcaría una venta que
-                                    no existe en la contabilidad. Se explica en línea para que nadie
-                                    los busque en la lista de arriba. */}
+                                {/* "Venta", "Seña" y "Seguimiento" NO son editables: son estados
+                                    derivados (un pago cruzado por contacto, o una asistencia sin
+                                    ninguno) y fijarlos a mano marcaría una venta que no existe en
+                                    la contabilidad. Se explica en línea para que nadie los busque
+                                    en la lista de arriba. */}
                                 {derivado && (
                                     <p className="t-cap mut40">
                                         «{fila.post_call.label}» sale de los datos, no de un campo: un
                                         pago cruzado con este contacto (pago completo o split pay es
-                                        Venta; solo una seña es Seña), o un seguimiento abierto. Se
-                                        corrige donde se genera.
+                                        Venta; solo una seña es Seña). Si asistió y no hay ninguno, es
+                                        Seguimiento. Se corrige donde se genera.
                                     </p>
                                 )}
 

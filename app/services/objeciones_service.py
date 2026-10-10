@@ -64,9 +64,9 @@ def admite_objecion(appt, estado, cerro):
 
     `estado` es el del libro de agendas (`derivar_estado`) y `cerro` dice si el cliente tiene una
     venta (pago completo o split pay) o una seña: es la misma cuenta con la que la ficha deriva su
-    post call («Presentó, no cerró») y su hito de Cierre, que es por cliente porque una venta no
-    guarda de qué agenda salió. Una agenda a la que se le dijo que NO se presentó la oferta no
-    tiene objeción: el lead no llegó a decir que no.
+    post call («Seguimiento», antes «Presentó, no cerró») y su hito de Cierre, que es por cliente
+    porque una venta no guarda de qué agenda salió. Una agenda a la que se le dijo que NO se
+    presentó la oferta no tiene objeción: el lead no llegó a decir que no.
     """
     if cerro or appt.offer_presented is False:
         return False

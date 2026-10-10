@@ -4,12 +4,11 @@
  * como `comercial.css` y usa sus tokens. El prefijo además gana a `.dc-shell button`, que les
  * quita el padding a todos los botones del tablero.
  *
- * El color de cada estado llega por su `tone` del backend (`var(--tone)`). `--naranja` es el único
- * que no es un token del tablero: el diseño pinta "Presentó, no cerró" entre el error y el aviso,
- * y se define acá porque solo este panel lo usa. */
+ * El color de cada estado llega por su `tone` del backend (`var(--tone)`), siempre un token del
+ * tablero. Hasta el 09/10/2026 había uno propio de este panel, `--naranja`, para "Presentó, no
+ * cerró": ese estado ahora se muestra como "Seguimiento" y el token se fue con él. */
 
 .dc-shell .est {
-    --naranja: color-mix(in oklch, var(--error) 55%, var(--warning));
     container: est / inline-size;
     min-width: 0;
     animation: est-entra .35s ease both;
@@ -269,7 +268,7 @@
 }
 
 /* Muy angosto (un teléfono): el nombre más largo entra entero si puede y las barras se quedan con lo
-   que sobra, en vez de partir el ancho por la mitad y cortar "Presentó, no cerró". Las columnas
+   que sobra, en vez de partir el ancho por la mitad y cortar "Aún no ocurrió". Las columnas
    son de la tabla (`subgrid`) para que todas las barras arranquen a la misma altura; sin soporte
    queda la grilla de arriba. La primera y la última columna suman los 8px de padding de la fila,
    que en un subgrid caen dentro de las columnas de los bordes. */

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     ESTADO_CARTERA, FACETAS_POR_TABLA, SENA_ESTADO, TABLAS, TABLAS_POR_ROL, revisarDestino,
-    rotuloToques,
+    rotuloToques, valoresVigentes,
 } from '../../pages/comercial/components/tablasDef';
 import {
     DESTINOS_CLOSER, DESTINOS_METRICA, DESTINOS_SETTER, DESTINO_PROCEDENCIAS_TOTAL, PASOS_CLOSER,
@@ -174,6 +174,19 @@ describe('las etiquetas del vocabulario del backend', () => {
                 .map(v => `${donde}: estado="${v}" no es una etiqueta de ESTADO_CARTERA`));
 
         expect(invalidas).toEqual([]);
+    });
+
+    it('ningún destino filtra por un estado de agenda que ya no existe', () => {
+        // «Presentó, no cerró» se muestra como «Seguimiento» desde el 09/10/2026. Revisar traduce la
+        // etiqueta vieja cuando llega de un link de antes, pero un destino del repo no tiene por qué
+        // depender de esa traducción: tiene que escribir la de hoy.
+        const viejos = todos().flatMap(([donde, d]) => ['estado', 'post_call'].flatMap((clave) => {
+            const valores = [d.filtro?.[clave]].flat().filter(Boolean);
+            return valoresVigentes(clave, valores).join() === valores.join() ? []
+                : [`${donde}: ${clave}=${JSON.stringify(valores)} usa un estado retirado`];
+        }));
+
+        expect(viejos).toEqual([]);
     });
 
     it('ningún destino escribe a mano un estado de seña que no salga del mapa', () => {

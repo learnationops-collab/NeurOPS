@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Send } from 'lucide-react';
+import { instanteLegible } from '../piezas/fecha';
 
 // El color del avatar dice el rol sin leer nada: el hilo se escanea por bloques.
 const TONO_ROL = { Triage: 'info', Setter: 'success', Closer: 'brand-secondary', Dirección: 'warning' };
@@ -57,7 +58,9 @@ const TabComunicacion = ({ ficha, onAccion, puedeEditar = true }) => {
                         <div style={{ display: 'grid', gap: 'var(--s2)', minWidth: 0, flex: 1 }}>
                             <div className="fila" style={{ flexWrap: 'wrap', gap: 'var(--s1) var(--s3)' }}>
                                 <span className="t-sm" style={{ fontWeight: 700 }}>{n.autor}</span>
-                                <span className="t-cap mut">{[n.rol, n.fecha].filter(Boolean).join(' · ')}</span>
+                                {/* La fecha llega como `isoformat()` del `created_at` en UTC: cruda se leía
+                                    «2026-10-09T21:19:05.691000», y en otro huso que el del servidor. */}
+                                <span className="t-cap mut">{[n.rol, instanteLegible(n.fecha)].filter(Boolean).join(' · ')}</span>
                             </div>
                             <div className="t-sm fi-globo">{n.texto}</div>
                             {n.notificados?.length > 0 && (

@@ -681,6 +681,23 @@ describe('el registro de eventos', () => {
         // Es solo un ícono: sin nombre, el lector anunciaba «botón» a secas.
         expect(screen.getByRole('button', { name: 'Eliminar este evento' })).toBeInTheDocument();
     });
+
+    it('la hora de cada evento está en el reloj de quien mira, no en UTC', async () => {
+        const usuario = userEvent.setup();
+        const CREADO_UTC = '2026-09-20T10:00:00.218225';
+        render(<TabHistorial onAccion={vi.fn()} ficha={{
+            ...fichaPrecall,
+            historial: { ...fichaPrecall.historial, eventos: [
+                { id: 5, fecha: CREADO_UTC, detalle: 'Llamó dos veces', autor: 'vendedor' },
+            ] },
+        }} />);
+
+        // El resumen de la sección cerrada y la fila dicen la misma hora local.
+        expect(screen.getByRole('button', { name: new RegExp(`último ${enLocal(CREADO_UTC)}`) }))
+            .toBeInTheDocument();
+        await usuario.click(screen.getByRole('button', { name: /^Registro de eventos/ }));
+        expect(screen.getByText(enLocal(CREADO_UTC))).toBeInTheDocument();
+    });
 });
 
 describe('agendar un seguimiento desde el historial', () => {

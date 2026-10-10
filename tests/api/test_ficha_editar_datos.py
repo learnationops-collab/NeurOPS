@@ -481,7 +481,7 @@ def test_revisar_y_el_libro_siguen_mostrando_la_venta_despues_de_corregir_el_cor
         client, db, lead, equipo, auth_headers):
     """La venta se ata por id antes del cambio y `_client_has_sale` ya la cuenta. Los cruces en
     lote de Revisar, del libro de agendas y del conteo de seguimientos miraban solo correo e
-    instagram: la fila pasaba de "Venta" a "Presentó, no cerró" y la ficha seguía diciendo que
+    instagram: la fila pasaba de "Venta" a "Seguimiento" y la ficha seguía diciendo que
     compró."""
     from datetime import date
 
