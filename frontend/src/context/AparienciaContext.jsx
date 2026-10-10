@@ -18,9 +18,9 @@ export const TEMAS = [
 ];
 export const MODOS = [{ id: 'oscuro', nombre: 'Oscuro' }, { id: 'claro', nombre: 'Claro' }];
 const CLAVE = 'app-tema';
-// Quiénes ven el selector: los roles con todas sus pantallas ya leyendo los temas. Al closer se le
-// suma cuando el mazo esté revisado con tema puesto.
-const ROLES_CON_TEMA = ['admin', 'director_comercial'];
+// Quiénes ven el selector: los roles con todas sus pantallas ya leyendo los temas (el closer, desde
+// que el mazo los lee).
+const ROLES_CON_TEMA = ['admin', 'director_comercial', 'closer'];
 export const puedeElegirTema = (rol) => ROLES_CON_TEMA.includes(rol);
 
 const esTema = (id) => TEMAS.some(t => t.id === id);

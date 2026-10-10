@@ -62,7 +62,7 @@ describe('Apariencia', () => {
 
     it('a un rol que todavía no elige tema no se le aplica el guardado en el navegador', () => {
         localStorage.setItem('app-tema', JSON.stringify({ tema: 'modern', modo: 'claro' }));
-        sesion.user = { role: 'closer' };  // p. ej. un admin simulando a un closer
+        sesion.user = { role: 'setter' };  // p. ej. un admin simulando a un setter
         montar(<Estado />);
         expect(html()).toEqual([undefined, undefined]);
         expect(estado()).toBe('null|null|false|respaldo');
@@ -76,10 +76,10 @@ describe('Apariencia', () => {
     });
 
     it('en la Configuración del closer, Apariencia aparece solo para los roles que eligen tema', () => {
-        const { unmount } = montar(<ConfiguracionCloser user={{ role: 'closer', username: 'jc' }} />);
+        const { unmount } = montar(<ConfiguracionCloser user={{ role: 'setter', username: 'st' }} />);
         expect(screen.queryByRole('tab', { name: /Apariencia/ })).toBeNull();
         unmount();
-        montar(<ConfiguracionCloser user={{ role: 'director_comercial', username: 'dir' }} />);
+        montar(<ConfiguracionCloser user={{ role: 'closer', username: 'jc' }} />);
         fireEvent.click(screen.getByRole('tab', { name: /Apariencia/ }));
         expect(screen.getByRole('radiogroup', { name: 'Tema' })).toBeTruthy();
         expect(screen.getByRole('radiogroup', { name: 'Modo' })).toBeTruthy();
