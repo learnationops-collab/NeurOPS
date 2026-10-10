@@ -5,7 +5,7 @@ BLUEPRINTS_ESPERADOS = {
     'api', 'closer_api', 'closer_dashboard_api', 'closer_followups_api', 'closer_installments_api',
     'public_api', 'external_academy_api', 'external_dev_platform_api', 'setter', 'google_calendar_bp',
     'webhooks', 'analytics', 'marketing', 'backup', 'comments', 'manychat', 'triage', 'sheets',
-    'workshop', 'metrics', 'conversational', 'alerts', 'bug_reports', 'job_applications',
+    'workshop', 'metrics', 'conversational', 'bug_reports', 'job_applications',
     'assistant_applications', 'hiring_forms', 'playbook',
 }
 

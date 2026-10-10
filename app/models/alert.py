@@ -1,3 +1,8 @@
+# 10/10/2026: Alertas se retiró (pantalla /admin/alerts, API /api/alerts y el motor que corría en el
+# cron de Sheets y avisaba a Discord). Nada del código lee ni escribe ya estas tablas. El modelo se
+# conserva A PROPÓSITO, igual que su import en app/models/__init__.py: las tablas `alert_rules` y
+# `alerts` guardan las reglas y el historial, y sacar el modelo haría que `flask db migrate` propusiera
+# borrarlas. Borrar datos no tiene vuelta atrás; si algún día se decide, que sea con una migración propia.
 from datetime import datetime
 from app import db
 

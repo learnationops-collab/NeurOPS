@@ -34,3 +34,14 @@ def test_el_cron_de_sheets_ya_no_evalua_reglas_ni_avisa_a_discord(client, db, si
     assert 'alerts_triggered' not in respuesta.get_json()
     assert Alert.query.count() == 0
     assert enviados == []
+
+
+def test_ya_no_hay_rutas_de_alertas(app):
+    # Reglas, historial, resolver, forzar evaluación, prueba a Discord y su configuración.
+    assert 'alerts' not in app.blueprints
+    assert [r.rule for r in app.url_map.iter_rules() if r.rule.startswith('/api/alerts')] == []
+
+
+def test_las_tablas_de_alertas_se_conservan_con_el_modelo(db):
+    # Sin el modelo, `flask db migrate` propondría borrarlas: los datos se quedan a propósito.
+    assert {'alert_rules', 'alerts'} <= set(db.metadata.tables)

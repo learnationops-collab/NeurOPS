@@ -185,9 +185,6 @@ def create_app(config_class=Config):
     from app.api.conversational import bp as conversational_bp
     app.register_blueprint(conversational_bp, url_prefix='/api/conversational')
 
-    from app.api.alerts import bp as alerts_bp
-    app.register_blueprint(alerts_bp, url_prefix='/api')
-
     from app.api.bug_reports import bp as bug_reports_bp
     app.register_blueprint(bug_reports_bp, url_prefix='/api')
 

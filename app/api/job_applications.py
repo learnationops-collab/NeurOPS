@@ -1,6 +1,6 @@
 """Panel de revisión de postulaciones (Closer de ventas). Autenticado: acá
 salen datos personales y se vota. Cualquier `role == 'admin'` puede revisar
-(mismo criterio que Alertas/Workshops/Formularios) — el voto se asocia a la
+(mismo criterio que Workshops/Formularios) — el voto se asocia a la
 sesión real del usuario logueado (`current_user.id`), sin switch de demo."""
 import logging
 from collections import Counter

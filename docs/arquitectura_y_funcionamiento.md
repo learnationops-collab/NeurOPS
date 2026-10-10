@@ -176,8 +176,8 @@ NeurOPS se conecta de forma dinámica con herramientas externas clave:
 3. **Webhooks y Notificaciones**:
    - Webhook del sistema que consume eventos de ManyChat y automatizaciones en n8n.
    - Envío automático de notificaciones a **Discord** ante la confirmación de reportes diarios, usando variables de entorno protegidas (`DISCORD_REPORTS_WEBHOOK`) para mayor seguridad.
-4. **Motor de Alertas**:
-   - Reglas parametrizadas por la administración (`AlertRule`) para disparar alertas del sistema y notificar anomalías en los embudos, caídas de conversión o actividades fuera de rango.
+4. **Motor de Alertas (retirado el 10/10/2026)**:
+   - Evaluaba reglas parametrizadas por la administración (`AlertRule`) al final del cron de Sheets y avisaba a Discord. Se eliminó junto con la vista Administración: ya no hay pantalla, API ni evaluación. Las tablas `alert_rules` y `alerts` se conservan con sus datos.
 
 ---
 
