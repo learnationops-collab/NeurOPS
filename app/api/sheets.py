@@ -46,22 +46,14 @@ def cron_sync():
     res_ventas = SheetsService.sync_from_sheets('Ventas_DB')
     # res_agendas = SheetsService.sync_from_sheets('Llamadas_DB')
     res_agendas = {"status": "disabled", "message": "Deshabilitado en favor de n8n."}
-    
-    # Evaluar reglas de alertas después del sync
-    try:
-        from app.services.alert_service import AlertService
-        new_alerts = AlertService.evaluate_rules()
-        logger.info(f"[CRON] Evaluación de alertas completada. Se generaron {new_alerts} nuevas alertas.")
-    except Exception as e:
-        logger.error(f"[CRON] Error al evaluar alertas en cron: {str(e)}")
-        new_alerts = 0
 
+    # Hasta el 10/10/2026 acá se evaluaban también las reglas de alerta (y se avisaba a Discord). La
+    # pantalla de Alertas se retiró junto con la vista Administración y el motor se apagó con ella.
     return jsonify({
         "status": "success",
         "message": "Sincronización cron completada",
         "ventas": res_ventas,
         "agendas": res_agendas,
-        "alerts_triggered": new_alerts
     }), 200
 
 @bp.route('/push', methods=['POST'])
