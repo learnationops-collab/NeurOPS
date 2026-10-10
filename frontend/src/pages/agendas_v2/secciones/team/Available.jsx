@@ -58,7 +58,7 @@ function resumenBloque(x) {
 
 const nombres = (ps) => ps.map(p => p.nombre).join(', ');
 
-// Título de un evento de Google: el privado o el de un calendario del que solo se ve lo ocupado, sin él.
+// Título de un evento de Google: solo los del calendario de agendamiento lo traen; el resto, «Ocupado».
 const tituloEv = (e) => (e.titulo || 'Ocupado').replace(/\|/g, '/');
 // Lo que muestra un tramo por eventos: sus títulos y, al pasar el mouse, cada uno con su hora.
 function textoEventos(sg) { return [...new Set(sg.eventos.map(tituloEv))].join(' · '); }

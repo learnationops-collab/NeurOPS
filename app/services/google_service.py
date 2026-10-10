@@ -318,10 +318,11 @@ class GoogleService:
     @staticmethod
     def eventos_ocupados(user_id, desde, hasta):
         """[{inicio, fin, titulo}] (ms) de los eventos que ocupan al usuario en sus calendarios de
-        conflicto entre `desde` y `hasta` (datetime UTC sin zona), con su título para Available. Cuenta
-        lo mismo que freebusy: no los cancelados, los marcados «Disponible» ni los que rechazó. Un evento
-        privado o confidencial va sin título (None), igual que lo de un calendario del que solo se ve
-        libre/ocupado (se lee con freebusy). None si no se pudo saber."""
+        conflicto entre `desde` y `hasta` (datetime UTC sin zona), para Available. Cuenta lo mismo que
+        freebusy: no los cancelados, los marcados «Disponible» ni los que rechazó. Solo los del calendario
+        de agendamiento (donde caen sus agendas) llevan título, y no si son privados o confidenciales: lo
+        de sus otros calendarios es suyo y va sin título (None), igual que lo de un calendario del que
+        solo se ve libre/ocupado (se lee con freebusy). None si no se pudo saber."""
         token = GoogleService.token_vigente(user_id)
         calendarios = GoogleService.calendarios_de_conflicto(token)
         if not calendarios:
@@ -333,10 +334,11 @@ class GoogleService:
             return None
         if not service:
             return None
+        destino = (token.google_calendar_id if token else None) or 'primary'
         eventos, solo_ocupado = [], []
         for cal in calendarios:
             try:
-                eventos += GoogleService._eventos_de(service, cal, desde, hasta)
+                eventos += GoogleService._eventos_de(service, cal, desde, hasta, con_titulo=cal == destino)
             except Exception as e:  # noqa: BLE001
                 # Un calendario que ya no existe se ignora (como en freebusy); si no deja ver los eventos,
                 # se pide solo lo ocupado.
@@ -357,11 +359,18 @@ class GoogleService:
                         eventos.append({'inicio': _ms_iso(b['start']), 'fin': _ms_iso(b['end']), 'titulo': None})
                     except (KeyError, ValueError):
                         continue
-        return sorted(eventos, key=lambda x: (x['inicio'], x['fin']))
+        # El mismo evento leído dos veces (el principal por su id y como 'primary') queda una, con título.
+        unicos = {}
+        for e in eventos:
+            k = (e['inicio'], e['fin'])
+            if k not in unicos or (e['titulo'] and not unicos[k]['titulo']):
+                unicos[k] = e
+        return sorted(unicos.values(), key=lambda x: (x['inicio'], x['fin']))
 
     @staticmethod
-    def _eventos_de(service, calendario, desde, hasta):
-        """Los eventos que ocupan en un calendario (los recurrentes, cada uno por separado)."""
+    def _eventos_de(service, calendario, desde, hasta, con_titulo=True):
+        """Los eventos que ocupan en un calendario (los recurrentes, cada uno por separado). Sin
+        `con_titulo`, ninguno lleva título."""
         out, pagina = [], None
         while True:
             r = service.events().list(
@@ -380,7 +389,7 @@ class GoogleService:
                 if inicio is None or fin is None or fin <= inicio:
                     continue
                 privado = e.get('visibility') in ('private', 'confidential')
-                titulo = None if privado else (e.get('summary') or '').strip() or None
+                titulo = (e.get('summary') or '').strip() or None if con_titulo and not privado else None
                 out.append({'inicio': inicio, 'fin': fin, 'titulo': titulo})
             pagina = r.get('nextPageToken')
             if not pagina:

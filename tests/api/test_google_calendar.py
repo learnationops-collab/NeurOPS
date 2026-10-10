@@ -302,7 +302,7 @@ class _Eventos(_Freebusy):
 
 def test_eventos_ocupados_trae_titulos_y_cuenta_lo_que_cuenta_freebusy(db, closer, monkeypatch):
     import datetime as dt
-    conflicto = ['primary', 'facu@group']
+    conflicto = ['primary', 'personal@group', 'facu@group']
     db.session.add(GoogleCalendarToken(user_id=closer.id, token_json='{}', calendarios_conflicto=conflicto))
     db.session.commit()
     def ev(h0, h1, **kw):
@@ -315,19 +315,22 @@ def test_eventos_ocupados_trae_titulos_y_cuenta_lo_que_cuenta_freebusy(db, close
         ev('19', '20', summary='Cancelado', status='cancelled'),
         ev('21', '22', summary='No voy', attendees=[{'self': True, 'responseStatus': 'declined'}]),
         {'summary': 'Feriado', 'start': {'date': '2026-10-06'}, 'end': {'date': '2026-10-07'}},
+    ]}, 'personal@group': {'timeZone': 'UTC', 'items': [
+        ev('14', '15', summary='Dentista'),  # de otro calendario: sin título
+        ev('13', '14', summary='Daily'),     # el mismo de primary, leído dos veces: queda uno
     ]}}, sin_permiso=('facu@group',), freebusy={'calendars': {
         'facu@group': {'busy': [{'start': '2026-10-05T23:00:00Z', 'end': '2026-10-05T23:30:00Z'}]},
     }})
     monkeypatch.setattr(GoogleService, 'get_service', staticmethod(lambda u: servicio))
     eventos = GoogleService.eventos_ocupados(closer.id, dt.datetime(2026, 10, 5), dt.datetime(2026, 10, 8))
-    assert [e['titulo'] for e in eventos] == ['Daily', None, None, 'Feriado']
+    assert [e['titulo'] for e in eventos] == ['Daily', None, None, None, 'Feriado']
     assert eventos[0]['inicio'] == 1791205200000
     # El día entero va de medianoche a medianoche en la zona del calendario (La Paz, UTC-4).
-    assert eventos[3]['inicio'] == int(dt.datetime(2026, 10, 6, 4, tzinfo=dt.timezone.utc).timestamp() * 1000)
+    assert eventos[4]['inicio'] == int(dt.datetime(2026, 10, 6, 4, tzinfo=dt.timezone.utc).timestamp() * 1000)
     # Del calendario que no deja ver eventos se pide solo lo ocupado.
     assert servicio.body['items'] == [{'id': 'facu@group'}]
     # Si tampoco se puede leer lo ocupado: None (no se sabe).
-    caido = _Eventos({}, sin_permiso=('primary', 'facu@group'))
+    caido = _Eventos({}, sin_permiso=('primary', 'personal@group', 'facu@group'))
     caido.error = OSError('sin red')
     monkeypatch.setattr(GoogleService, 'get_service', staticmethod(lambda u: caido))
     assert GoogleService.eventos_ocupados(closer.id, dt.datetime(2026, 10, 5), dt.datetime(2026, 10, 6)) is None
