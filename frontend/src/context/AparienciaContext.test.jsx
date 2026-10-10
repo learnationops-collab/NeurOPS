@@ -60,9 +60,9 @@ describe('Apariencia', () => {
         expect(html()).toEqual([undefined, undefined]);
     });
 
-    it('a un rol que todavía no elige tema no se le aplica el guardado en el navegador', () => {
+    it('sin sesión (login, páginas públicas) no se aplica el tema guardado', () => {
         localStorage.setItem('app-tema', JSON.stringify({ tema: 'modern', modo: 'claro' }));
-        sesion.user = { role: 'setter' };  // p. ej. un admin simulando a un setter
+        sesion.user = null;
         montar(<Estado />);
         expect(html()).toEqual([undefined, undefined]);
         expect(estado()).toBe('null|null|false|respaldo');
@@ -75,11 +75,8 @@ describe('Apariencia', () => {
             .toEqual([['classic', 'claro'], ['modern', 'claro']]);
     });
 
-    it('en la Configuración del closer, Apariencia aparece solo para los roles que eligen tema', () => {
-        const { unmount } = montar(<ConfiguracionCloser user={{ role: 'setter', username: 'st' }} />);
-        expect(screen.queryByRole('tab', { name: /Apariencia/ })).toBeNull();
-        unmount();
-        montar(<ConfiguracionCloser user={{ role: 'closer', username: 'jc' }} />);
+    it('en la Configuración, Apariencia aparece para cualquier rol', () => {
+        montar(<ConfiguracionCloser user={{ role: 'setter', username: 'st' }} />);
         fireEvent.click(screen.getByRole('tab', { name: /Apariencia/ }));
         expect(screen.getByRole('radiogroup', { name: 'Tema' })).toBeTruthy();
         expect(screen.getByRole('radiogroup', { name: 'Modo' })).toBeTruthy();

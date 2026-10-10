@@ -5,8 +5,8 @@
 // variables caen a su valor de hoy). Convive así con el ThemeContext viejo (elegant/clean/custom ×
 // glass/solid) mientras se migran las pantallas.
 //
-// El tema se guarda por navegador pero se aplica solo si el rol de la sesión puede elegirlo: un admin
-// que eligió uno y simula a un closer en el mismo navegador ve al closer como lo ve el closer.
+// El tema se guarda por navegador y vale para cualquier sesión con rol (todas las pantallas ya leen
+// los temas). Sin sesión (login, páginas públicas) no se aplica.
 
 import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -20,10 +20,9 @@ export const TEMAS = [
 ];
 export const MODOS = [{ id: 'oscuro', nombre: 'Oscuro' }, { id: 'claro', nombre: 'Claro' }];
 const CLAVE = 'app-tema';
-// Quiénes ven el selector: los roles con todas sus pantallas ya leyendo los temas (el closer, desde
-// que el mazo los lee).
-const ROLES_CON_TEMA = ['admin', 'director_comercial', 'closer'];
-export const puedeElegirTema = (rol) => ROLES_CON_TEMA.includes(rol);
+// Todos los roles eligen tema: sus pantallas leen los roles del tema (temas/puente.css,
+// temas/tailwind.css y el CSS propio de cada una). Sin sesión no hay tema.
+export const puedeElegirTema = (rol) => Boolean(rol);
 
 const esTema = (id) => TEMAS.some(t => t.id === id);
 const esModo = (id) => MODOS.some(m => m.id === id);

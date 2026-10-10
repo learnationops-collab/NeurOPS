@@ -12,7 +12,7 @@ export default function AparienciaEnAjustes() {
     const { user } = useAuth();
     const apariencia = useApariencia();
     if (!puedeElegirTema(user?.role)) {
-        return <p className="text-sm text-muted">El tema de tu rol todavía no se puede cambiar.</p>;
+        return null;
     }
     return (
         <div className="thalamus cu-hoja" data-theme={dataThemeDe(apariencia, modoDeLaApp())}>

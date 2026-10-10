@@ -293,13 +293,12 @@ html[data-tema]{color-scheme:var(--ln-scheme)}
 [data-tema] .border-\[\#0a0b0e\]{border-color:var(--ln-border-main)}
 [data-tema] .border-\[\#1534ff\]\/10{border-color:color-mix(in srgb, var(--ln-brand-2) 10%, transparent)}
 [data-tema] .border-\[\#1534ff\]\/20{border-color:color-mix(in srgb, var(--ln-brand-2) 20%, transparent)}
-[data-tema] .border-\[\#1534ff\]\/25{border-color:color-mix(in srgb, var(--ln-brand-2) 25%, transparent)}
 [data-tema] .border-\[\#1534ff\]\/30{border-color:color-mix(in srgb, var(--ln-brand-2) 30%, transparent)}
 [data-tema] .border-\[\#1534ff\]\/40{border-color:color-mix(in srgb, var(--ln-brand-2) 40%, transparent)}
 [data-tema] .border-\[\#1a1c23\]{border-color:var(--ln-border-main)}
 [data-tema] .border-\[\#262626\]{border-color:var(--ln-border-main)}
 [data-tema] .border-\[\#4C2227\]{border-color:var(--ln-danger-border)}
-[data-tema] .border-\[\#5B7CFF\]\/50{border-color:color-mix(in srgb, var(--ln-brand-2-accent) 50%, transparent)}
+[data-tema] .border-\[\#5B7CFF\]\/50{border-color:color-mix(in srgb, var(--ln-focus) 50%, transparent)}
 [data-tema] .border-\[\#8AA3FF\]\/60{border-color:color-mix(in srgb, var(--ln-brand-2-text) 60%, transparent)}
 [data-tema] .border-\[\#FF3FA4\]{border-color:var(--ln-brand)}
 [data-tema] .border-\[\#FF3FA4\]\/45{border-color:color-mix(in srgb, var(--ln-brand) 45%, transparent)}
@@ -512,7 +511,7 @@ html[data-tema]{color-scheme:var(--ln-scheme)}
 [data-tema] .focus-within\:border-violet-500\/50:focus-within{border-color:color-mix(in srgb, var(--ln-brand-2) 50%, transparent)}
 [data-tema] .focus-within\:ring-violet-500\/30:focus-within{--tw-ring-color:color-mix(in srgb, var(--ln-brand-2) 30%, transparent)}
 [data-tema] .focus\:bg-slate-950:focus{background-color:var(--ln-page-base)}
-[data-tema] .focus\:border-\[\#5B7CFF\]:focus{border-color:var(--ln-brand-2-accent)}
+[data-tema] .focus\:border-\[\#5B7CFF\]:focus{border-color:var(--ln-focus)}
 [data-tema] .focus\:border-amber-500:focus{border-color:var(--ln-warning)}
 [data-tema] .focus\:border-amber-500\/50:focus{border-color:color-mix(in srgb, var(--ln-warning) 50%, transparent)}
 [data-tema] .focus\:border-amber-500\/60:focus{border-color:color-mix(in srgb, var(--ln-warning) 60%, transparent)}
@@ -549,7 +548,6 @@ html[data-tema]{color-scheme:var(--ln-scheme)}
 [data-tema] .from-amber-500{--tw-gradient-from:var(--ln-warning) var(--tw-gradient-from-position)}
 [data-tema] .from-amber-500\/0{--tw-gradient-from:color-mix(in srgb, var(--ln-warning) 0%, transparent) var(--tw-gradient-from-position)}
 [data-tema] .from-amber-600{--tw-gradient-from:var(--ln-warning) var(--tw-gradient-from-position)}
-[data-tema] .from-black\/80{--tw-gradient-from:var(--ln-scrim) var(--tw-gradient-from-position)}
 [data-tema] .from-blue-500{--tw-gradient-from:var(--ln-brand-2) var(--tw-gradient-from-position)}
 [data-tema] .from-blue-500\/0{--tw-gradient-from:color-mix(in srgb, var(--ln-brand-2) 0%, transparent) var(--tw-gradient-from-position)}
 [data-tema] .from-blue-600{--tw-gradient-from:var(--ln-brand-2) var(--tw-gradient-from-position)}
@@ -616,8 +614,8 @@ html[data-tema]{color-scheme:var(--ln-scheme)}
 [data-tema] .hover\:bg-\[\#1534ff\]\/5:hover{background-color:color-mix(in srgb, var(--ln-brand-2) 5%, transparent)}
 [data-tema] .hover\:bg-\[\#1534ff\]\/90:hover{background-color:color-mix(in srgb, var(--ln-brand-2) 90%, transparent)}
 [data-tema] .hover\:bg-\[\#282a35\]:hover{background-color:var(--ln-window-bg)}
-[data-tema] .hover\:bg-\[\#5B7CFF\]\/20:hover{background-color:color-mix(in srgb, var(--ln-brand-2-accent) 20%, transparent)}
-[data-tema] .hover\:bg-\[\#5B7CFF\]\/\[\.07\]:hover{background-color:color-mix(in srgb, var(--ln-brand-2-accent) 7%, transparent)}
+[data-tema] .hover\:bg-\[\#5B7CFF\]\/20:hover{background-color:color-mix(in srgb, var(--ln-focus) 20%, transparent)}
+[data-tema] .hover\:bg-\[\#5B7CFF\]\/\[\.07\]:hover{background-color:color-mix(in srgb, var(--ln-focus) 7%, transparent)}
 [data-tema] .hover\:bg-\[\#FAFAFD\]:hover{background-color:var(--ln-inverse-bg)}
 [data-tema] .hover\:bg-amber-400:hover{background-color:var(--ln-warning)}
 [data-tema] .hover\:bg-amber-400\/25:hover{background-color:color-mix(in srgb, var(--ln-warning) 25%, transparent)}
@@ -727,7 +725,7 @@ html[data-tema]{color-scheme:var(--ln-scheme)}
 [data-tema] .hover\:bg-white\/\[0\.04\]:hover{background-color:color-mix(in srgb, var(--ln-text-out) 4%, transparent)}
 [data-tema] .hover\:bg-white\/\[0\.07\]:hover{background-color:color-mix(in srgb, var(--ln-text-out) 7%, transparent)}
 [data-tema] .hover\:border-\[\#1534ff\]\/20:hover{border-color:color-mix(in srgb, var(--ln-brand-2) 20%, transparent)}
-[data-tema] .hover\:border-\[\#5B7CFF\]\/45:hover{border-color:color-mix(in srgb, var(--ln-brand-2-accent) 45%, transparent)}
+[data-tema] .hover\:border-\[\#5B7CFF\]\/45:hover{border-color:color-mix(in srgb, var(--ln-focus) 45%, transparent)}
 [data-tema] .hover\:border-amber-500\/50:hover{border-color:color-mix(in srgb, var(--ln-warning) 50%, transparent)}
 [data-tema] .hover\:border-amber-800\/40:hover{border-color:color-mix(in srgb, var(--ln-warning) 40%, transparent)}
 [data-tema] .hover\:border-blue-500\/30:hover{border-color:color-mix(in srgb, var(--ln-brand-2) 30%, transparent)}
@@ -824,7 +822,6 @@ html[data-tema]{color-scheme:var(--ln-scheme)}
 [data-tema] .ring-violet-500\/20{--tw-ring-color:color-mix(in srgb, var(--ln-brand-2) 20%, transparent)}
 [data-tema] .ring-white\/20{--tw-ring-color:color-mix(in srgb, var(--ln-text-out) 20%, transparent)}
 [data-tema] .ring-white\/5{--tw-ring-color:color-mix(in srgb, var(--ln-text-out) 5%, transparent)}
-[data-tema] .ring-white\/50{--tw-ring-color:color-mix(in srgb, var(--ln-text-out) 50%, transparent)}
 [data-tema] .stroke-slate-900{stroke:var(--ln-inverse-text)}
 [data-tema] .stroke-slate-950{stroke:var(--ln-inverse-text)}
 [data-tema] .text-\[\#020617\]{color:var(--ln-page-base)}
@@ -832,7 +829,7 @@ html[data-tema]{color-scheme:var(--ln-scheme)}
 [data-tema] .text-\[\#1534ff\]{color:var(--ln-brand-2)}
 [data-tema] .text-\[\#1a1204\]{color:var(--ln-warning-bg)}
 [data-tema] .text-\[\#2FBF8F\]{color:var(--ln-success)}
-[data-tema] .text-\[\#5B7CFF\]{color:var(--ln-brand-2-accent)}
+[data-tema] .text-\[\#5B7CFF\]{color:var(--ln-focus)}
 [data-tema] .text-\[\#868593\]{color:var(--ln-text-muted)}
 [data-tema] .text-\[\#8AA3FF\]{color:var(--ln-brand-2-text)}
 [data-tema] .text-\[\#D9A441\]{color:var(--ln-warning)}

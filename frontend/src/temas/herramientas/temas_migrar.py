@@ -24,6 +24,8 @@ PALETA = {
     # superficies y bordes de estado (los de .dc-shell) y navys sueltos
     '071a24': 'ln-success-bg', '10413d': 'ln-success-border', '1a171c': 'ln-warning-bg', '473924': 'ln-warning-border',
     '1b0f1d': 'ln-danger-bg', '4c2227': 'ln-danger-border', '0a152c': 'ln-info-bg', '1a3155': 'ln-info-border',
+    'e2e8f0': 'ln-text-out', '94a3b8': 'ln-text-muted', '5b7cff': 'ln-focus', '0a0e2f': 'ln-page-base',
+    '6f7bff': 'ln-brand-2-accent', '7db2ec': 'ln-info-text', '6fe0b8': 'ln-success-text',
     '05082d': 'ln-page-base', '050822': 'ln-page-base', '101550': 'ln-page-base', '4354ff': 'ln-brand-2-accent',
 }
 

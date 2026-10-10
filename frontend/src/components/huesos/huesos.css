@@ -39,9 +39,9 @@
        brillo por encima. El ancho de 250% es para que la franja entre y salga del todo del hueso
        en cada vuelta; con menos se ve el corte del degradado en el borde. */
     background:
-        linear-gradient(100deg, transparent 30%, var(--hueso-brillo, rgba(255, 255, 255, .11)) 50%,
+        linear-gradient(100deg, transparent 30%, var(--hueso-brillo, color-mix(in srgb, var(--ln-text-out, #ffffff) 11%, transparent)) 50%,
             transparent 70%) 150% 0 / 250% 100% no-repeat,
-        var(--mat-1, rgba(148, 163, 184, .14));
+        var(--mat-1, color-mix(in srgb, var(--ln-text-muted, #94a3b8) 14%, transparent));
     animation: huesoBarrido 1.5s ease-in-out var(--d, 0ms) infinite;
 }
 
