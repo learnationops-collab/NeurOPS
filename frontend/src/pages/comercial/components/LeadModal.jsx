@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Calendar, Check, CheckCircle2, Clock, CopyX, Inbox, Mail, Pencil, Phone, Target, X } from 'lucide-react';
 import InlineConfirm from '../../../components/ui/InlineConfirm';
 import { ChipTono } from './Revisar';
-import { fmt } from './Shared';
+import { cuandoDe, fmt } from './Shared';
 
 /**
  * Modal del lead: el detalle de una fila SIN salir de Revisar (no navega, se abre encima).
@@ -92,7 +92,7 @@ const LeadModal = ({ fila, estados, puedeCorregir, duplicadaDe, onCorregir, onMa
         if (resolviendo) return;
         // Cancela una agenda: se confirma antes, con la hora de la que se conserva, para que
         // quede claro cuál de las dos sobrevive.
-        const cuando = duplicadaDe ? `${fmt.fecha(duplicadaDe.fecha)} ${fmt.hora(duplicadaDe.fecha)}` : '';
+        const cuando = duplicadaDe ? `${cuandoDe(duplicadaDe).dia} ${cuandoDe(duplicadaDe).hora}` : '';
         if (!window.confirm(
             `¿Marcar esta agenda de ${fila.cliente} como duplicada y cancelarla?\n\n`
             + `Se conserva la otra cita de este cliente${cuando ? ` (${cuando})` : ''}.`)) return;
@@ -148,10 +148,10 @@ const LeadModal = ({ fila, estados, puedeCorregir, duplicadaDe, onCorregir, onMa
                         valor={fila.closer || fila.setter} color="var(--text-on-surface)" />
                     <Meta label={esVenta ? 'Programa' : 'Reunión'}
                         valor={esVenta ? fila.programa
-                            : `${fmt.fecha(fila.fecha)} · ${fmt.hora(fila.fecha)}`}
+                            : `${cuandoDe(fila).dia} · ${cuandoDe(fila).hora}`}
                         color="var(--text-on-surface)" />
                     <Meta label={esVenta ? 'Cobrado' : 'Ingresó'}
-                        valor={esVenta ? fmt.money(fila.monto) : fmt.fecha(fila.creada)}
+                        valor={esVenta ? fmt.money(fila.monto) : cuandoDe(fila, 'creada').dia}
                         color={esVenta ? 'var(--success)' : 'var(--text-muted)'} />
                 </div>
 
@@ -251,8 +251,8 @@ const LeadModal = ({ fila, estados, puedeCorregir, duplicadaDe, onCorregir, onMa
                                         <span className="t-cap" style={{ color: 'var(--warning)' }}>
                                             <CopyX size={12} style={{ display: 'inline', marginRight: 5,
                                                 verticalAlign: '-2px' }} />
-                                            Posible duplicado de la cita de {fmt.fecha(duplicadaDe.fecha)}
-                                            {' '}{fmt.hora(duplicadaDe.fecha)} — esta no tiene resultado.
+                                            Posible duplicado de la cita de {cuandoDe(duplicadaDe).dia}
+                                            {' '}{cuandoDe(duplicadaDe).hora} — esta no tiene resultado.
                                         </span>
                                         <button type="button" className="btn btn--linea btn--sm"
                                             style={{ justifySelf: 'start' }}
