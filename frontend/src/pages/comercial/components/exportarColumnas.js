@@ -160,3 +160,54 @@ export const columnasExportables = (def) => {
         return partesDe(col);
     });
 };
+
+/* ============================================================
+   LA ELECCIÓN DEL PANEL — qué columnas van y en qué orden
+   ============================================================ */
+
+/**
+ * La elección del panel Exportar: `[{ key, on }]`, en el orden en que quedan las columnas del
+ * archivo. Funciones puras, para que el orden y la selección se prueben sin montar el panel.
+ *
+ * Sin una elección guardada arranca con lo que se ve hoy (10/10/2026): las partes de las columnas
+ * en pantalla (`vistas`, las del juego de columnas elegido), en su orden y prendidas; después el
+ * resto —el otro juego de columnas— apagado, para sumarlo con un clic.
+ *
+ * Con una guardada manda esa: su orden y lo que estaba prendido. Una columna que no existía cuando
+ * se guardó va al final, apagada; una que ya no existe se descarta.
+ */
+export const eleccionInicial = (exportables, vistas, guardada = null) => {
+    const claves = exportables.map(c => c.key);
+    if (guardada && Array.isArray(guardada.orden) && Array.isArray(guardada.elegidas)) {
+        const existe = new Set(claves);
+        const orden = [...new Set(guardada.orden)].filter(k => existe.has(k));
+        const elegidas = new Set(guardada.elegidas);
+        return [...orden, ...claves.filter(k => !orden.includes(k))]
+            .map(key => ({ key, on: elegidas.has(key) }));
+    }
+    const enPantalla = [...new Set((vistas || [])
+        .flatMap(col => exportables.filter(c => c.columna === col.key).map(c => c.key)))];
+    return [...enPantalla, ...claves.filter(k => !enPantalla.includes(k))]
+        .map(key => ({ key, on: enPantalla.includes(key) }));
+};
+
+/** Sube (`paso` -1) o baja (+1) una columna. En una punta no hace nada. */
+export const moverColumna = (eleccion, key, paso) => {
+    const i = eleccion.findIndex(c => c.key === key);
+    const j = i + paso;
+    if (i < 0 || j < 0 || j >= eleccion.length) return eleccion;
+    const nueva = eleccion.slice();
+    [nueva[i], nueva[j]] = [nueva[j], nueva[i]];
+    return nueva;
+};
+
+export const alternarColumna = (eleccion, key) => eleccion.map(c => (c.key === key ? { ...c, on: !c.on } : c));
+
+/** «Todas» o «Ninguna»: cambia qué va, no el orden. */
+export const marcarTodas = (eleccion, on) => eleccion.map(c => ({ ...c, on }));
+
+/** Las columnas que se escriben, en el orden elegido. */
+export const columnasElegidas = (eleccion, exportables) => {
+    const porClave = new Map(exportables.map(c => [c.key, c]));
+    return eleccion.filter(c => c.on && porClave.has(c.key)).map(c => porClave.get(c.key));
+};

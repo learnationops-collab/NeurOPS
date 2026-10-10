@@ -1304,7 +1304,9 @@
    12 · CONFIGURAR — un solo boton abre todos los filtros.
    Se abre ancho, no alto: cada faceta es una columna.
    ============================================================ */
-.dc-shell .config-envoltura{position:relative}
+/* Desde el 10/10/2026 la envoltura lleva también «Exportar» (Revisar.jsx): los dos botones en fila
+   y los dos paneles anclados al mismo borde. */
+.dc-shell .config-envoltura{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2)}
 /* Se ancla al borde IZQUIERDO de su boton: el panel es ancho y el boton
    vive a la izquierda de la barra, asi que alinearlo a la derecha lo sacaba
    de la pantalla. Debajo de 900px deja de flotar y se despliega en su fila. */
@@ -1318,8 +1320,11 @@
 /* En pantalla chica el panel deja de flotar y se despliega en su lugar:
    ocupa la fila entera y empuja la tabla, sin anclajes que se salgan. */
 @media (max-width:900px){
-  .dc-shell .config-envoltura{flex:1 1 100%}
-  .dc-shell .config-panel{position:static;width:auto;margin-top:var(--s3);
+  .dc-shell .config-envoltura{flex:1 1 100%;min-width:0}
+  /* En su propia línea de la envoltura (flex): 4px + el hueco de 8px = los 12px de antes. El
+     `min-width:0` es lo que impide que la vista previa de Exportar (celdas sin cortar) lo
+     estire más allá de la pantalla: un ítem flex no se angosta por debajo de su contenido. */
+  .dc-shell .config-panel{position:static;width:auto;flex:1 1 100%;min-width:0;margin-top:var(--s1);
     max-height:none;overflow:visible;animation:none}
   .dc-shell .config-lista{max-height:none}
 }
@@ -1359,6 +1364,61 @@
   min-width:19px;height:19px;padding:0 6px;border-radius:var(--radius-pill);
   background:var(--brand-secondary);color:var(--on-brand);
   font-size:11px;font-weight:900;font-variant-numeric:tabular-nums}
+
+/* ============================================================
+   12b · EXPORTAR — el CSV de Revisar (PanelExportar.jsx, 10/10/2026).
+   El mismo `.config-panel` que Configurar; adentro, sus mismas
+   piezas (`.config-op`, `.config-caja`, `.config-lista`, `.config-pie`)
+   más la lista ordenable y la vista previa.
+   ============================================================ */
+/* La entrada la anima framer-motion (con movimiento reducido, quieto): la del CSS se apaga para
+   no animar dos veces. */
+.dc-shell .config-panel--exportar{animation:none}
+.dc-shell .exp-tipo{padding:2px 8px;border-radius:var(--radius-pill);border:1px solid var(--border-control);
+  font-size:10.5px;font-weight:900;letter-spacing:.12em;color:var(--text-muted)}
+/* Qué filas | Formato: dos de dos, lado a lado; angosto, una debajo de la otra. */
+.dc-shell .exp-dos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s4) var(--s3);
+  margin-bottom:var(--s4)}
+@media (max-width:560px){.dc-shell .exp-dos{grid-template-columns:minmax(0,1fr)}}
+.dc-shell .config-caja--radio{border-radius:50%}
+.dc-shell .config-op[aria-checked="true"] .config-caja--radio{box-shadow:inset 0 0 0 3px var(--bg-flotante)}
+.dc-shell .exp-seccion{margin-bottom:var(--s4)}
+.dc-shell .exp-cab{display:flex;align-items:center;gap:var(--s2);margin-bottom:var(--s2);min-height:34px}
+.dc-shell .exp-cab > .t-rotulo{margin-right:auto;white-space:nowrap}
+/* En un teléfono el rótulo con su cuenta y los dos botones no entran en una línea: el rótulo va
+   arriba entero y «Todas»/«Ninguna» juntos debajo, nunca uno solo. */
+@media (max-width:480px){
+  .dc-shell .exp-cab{flex-wrap:wrap}
+  .dc-shell .exp-cab > .t-rotulo{flex:1 1 100%}
+}
+.dc-shell .exp-cuenta{font-size:11px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--text-muted-40)}
+.dc-shell .exp-lista{list-style:none;max-height:232px}
+.dc-shell .exp-col{display:flex;align-items:center;gap:2px;min-width:0}
+.dc-shell .exp-col > .config-op{flex:1}
+.dc-shell .exp-mover{width:30px;height:30px;flex-shrink:0;display:grid;place-items:center;border-radius:10px;
+  color:var(--text-muted-40);transition:background-color .15s ease,color .15s ease}
+.dc-shell .exp-mover svg{width:14px;height:14px}
+.dc-shell .exp-mover:hover:not(:disabled){background:var(--bg-element);color:var(--text-on-surface)}
+.dc-shell .exp-mover:disabled{opacity:.28;cursor:default}
+/* La vista previa: el texto de cada celda tal como queda en el archivo, sin mayúsculas ni formato
+   agregados. Scroll propio en las dos direcciones; el encabezado queda arriba. */
+.dc-shell .exp-previa{overflow:auto;max-height:228px;border-radius:14px;background:var(--hundido);
+  border:1px solid var(--border-subtle);overscroll-behavior:contain}
+.dc-shell .exp-previa table{border-collapse:collapse;min-width:100%;font-size:12px}
+.dc-shell .exp-previa th{position:sticky;top:0;z-index:1;padding:8px 12px;text-align:left;white-space:nowrap;
+  background:var(--bg-flotante);border-bottom:1px solid var(--border-control);
+  font-size:11.5px;font-weight:800;color:var(--text-on-surface)}
+.dc-shell .exp-previa td{max-width:220px;padding:7px 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  border-top:1px solid var(--border-subtle);color:var(--text-muted);font-variant-numeric:tabular-nums}
+.dc-shell .exp-previa tbody tr:first-child td{border-top:0}
+.dc-shell .exp-previa-vacia{padding:var(--s3)}
+.dc-shell .exp-medida{margin-top:var(--s2)}
+/* El pie (nombre y Exportar) queda pegado abajo mientras el panel se desplaza: con la lista de
+   columnas y la vista previa el botón caía debajo del borde y había que ir a buscarlo. */
+.dc-shell .exp-pie{position:sticky;bottom:calc(-1 * var(--s4));z-index:2;
+  margin-bottom:calc(-1 * var(--s4));padding-bottom:var(--s4);background:var(--bg-flotante)}
+.dc-shell .exp-pie .exp-nombre{flex:1 1 220px}
+@media (max-width:560px){.dc-shell .exp-pie > *{flex:1 1 100%}}
 
 /* ============================================================
    13 · PERFIL

@@ -1,7 +1,8 @@
 import { isValidElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import { TABLAS } from './tablasDef';
-import { PARTES_POR_COLUMNA, columnasExportables, fechaDeFila } from './exportarColumnas';
+import { PARTES_POR_COLUMNA, alternarColumna, columnasElegidas, columnasExportables, eleccionInicial,
+    fechaDeFila, marcarTodas, moverColumna } from './exportarColumnas';
 import { cuandoDe } from './Shared';
 
 /**
@@ -179,5 +180,61 @@ describe('exportar · qué escribe cada columna', () => {
         expect(claves).toContain('ac_horas');
         expect(claves.filter(k => k === 'fecha')).toHaveLength(1);
         expect(claves.filter(k => k === 'cliente')).toHaveLength(1);
+    });
+});
+
+describe('exportar · la elección de columnas del panel', () => {
+    const def = TABLAS.clientes;
+    const exportables = columnasExportables(def);
+    const prendidas = (e) => e.filter(c => c.on).map(c => c.key);
+
+    it('sin memoria: las de la pantalla, en su orden y prendidas; el otro juego después, apagado', () => {
+        const e = eleccionInicial(exportables, def.cols);
+        expect(prendidas(e)).toEqual(['cliente', 'cliente.ig', 'programa', 'closer', 'pagado', 'pagado.cobros',
+            'deuda', 'cuota', 'cuota.fecha', 'cuota.monto', 'cuota.baja', 'cuota.motivo']);
+        expect(e.slice(prendidas(e).length).every(c => !c.on)).toBe(true);
+        expect(e).toHaveLength(exportables.length);
+    });
+
+    it('viendo las columnas de la Academia, arranca con esas y en ESE orden', () => {
+        const e = eleccionInicial(exportables, def.colsAcademia);
+        expect(prendidas(e).slice(0, 4)).toEqual(['cliente', 'cliente.ig', 'closer', 'academia']);
+        expect(prendidas(e)).not.toContain('programa');
+    });
+
+    it('con memoria: su orden y lo elegido; lo nuevo al final apagado, lo que ya no existe afuera', () => {
+        const guardada = { orden: ['deuda', 'cliente', 'ya_no_existe'], elegidas: ['deuda', 'ya_no_existe'] };
+        const e = eleccionInicial(exportables, def.cols, guardada);
+        expect(e.slice(0, 2)).toEqual([{ key: 'deuda', on: true }, { key: 'cliente', on: false }]);
+        expect(e.map(c => c.key)).not.toContain('ya_no_existe');
+        expect(prendidas(e)).toEqual(['deuda']);
+        expect(e).toHaveLength(exportables.length);
+    });
+
+    it('una memoria rota no rompe: arranca con lo que se ve', () => {
+        expect(eleccionInicial(exportables, def.cols, { orden: 'x' }))
+            .toEqual(eleccionInicial(exportables, def.cols));
+    });
+
+    it('subir y bajar cambian el orden; en las puntas no hacen nada', () => {
+        const e = eleccionInicial(exportables, def.cols);
+        expect(moverColumna(e, 'programa', -1).slice(0, 3).map(c => c.key)).toEqual(['cliente', 'programa', 'cliente.ig']);
+        expect(moverColumna(e, 'cliente', 1).slice(0, 2).map(c => c.key)).toEqual(['cliente.ig', 'cliente']);
+        expect(moverColumna(e, 'cliente', -1)).toBe(e);
+        expect(moverColumna(e, e.at(-1).key, 1)).toBe(e);
+    });
+
+    it('alternar, todas y ninguna cambian qué va, no el orden', () => {
+        const e = eleccionInicial(exportables, def.cols);
+        expect(prendidas(alternarColumna(e, 'programa'))).not.toContain('programa');
+        expect(prendidas(marcarTodas(e, true))).toEqual(e.map(c => c.key));
+        expect(prendidas(marcarTodas(e, false))).toEqual([]);
+        expect(marcarTodas(e, true).map(c => c.key)).toEqual(e.map(c => c.key));
+    });
+
+    it('las columnas que se escriben son las prendidas, en el orden elegido', () => {
+        const e = moverColumna(eleccionInicial(exportables, def.cols), 'programa', -1);
+        expect(columnasElegidas(e, exportables).slice(0, 3).map(c => c.header))
+            .toEqual(['Cliente', 'Programa', 'Instagram']);
     });
 });
