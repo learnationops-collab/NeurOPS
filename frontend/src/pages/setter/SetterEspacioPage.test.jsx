@@ -229,6 +229,19 @@ describe('SetterEspacioPage · un solo dock', () => {
         expect(screen.queryAllByRole('button', { name: /^Cualificación/ })).toHaveLength(0);
     });
 
+    it('el dock dice cuántas agendas quedan sin palabra clave', async () => {
+        sesion.pendientesAgendas = 12;
+        await montar('/setter/deck?step=agendas');
+        expect(itemDelDock('Mis agendas')).toHaveAttribute('aria-label', 'Mis agendas, 12 sin palabra clave');
+        expect(itemDelDock('Mis agendas').querySelector('.dock-marca--cuenta')).toHaveTextContent('12');
+    });
+
+    it('con la bandeja vacía, el dock marca "Mis agendas" con ✓', async () => {
+        sesion.pendientesAgendas = 0;
+        await montar('/setter/deck?step=agendas');
+        expect(itemDelDock('Mis agendas')).toHaveAttribute('aria-label', 'Mis agendas, todas con palabra clave');
+    });
+
     it('con el reporte de hoy enviado, el dock lo marca', async () => {
         sesion.reportesHoy = 1;
         await montar('/setter/deck?step=agendas');

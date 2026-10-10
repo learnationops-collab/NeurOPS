@@ -97,6 +97,13 @@ const SetterEspacioPage = () => {
     const [saliendo, setSaliendo] = useState(false);
     const [operador, setOperador] = useState(false);
     const [reporteHoy, setReporteHoy] = useState(false);
+    // Cuántas agendas le quedan sin palabra clave: la marca de "Mis agendas" en el dock. La
+    // informa la propia bandeja (al cargar y después de cada asignación); si se entra por otra
+    // sección, se pide solo el resumen.
+    const [pendientesAgendas, setPendientesAgendas] = useState(null);
+    const alResumenDeAgendas = useCallback((resumen) => {
+        if (resumen && typeof resumen.pendientes === 'number') setPendientesAgendas(resumen.pendientes);
+    }, []);
 
     const seccionActual = SECCIONES.find(s => s.id === params.get('step')) || SECCIONES[0];
     const seccion = seccionActual.id;
@@ -164,9 +171,23 @@ const SetterEspacioPage = () => {
         }
     };
 
-    const secciones = SECCIONES.map(s => (s.id === 'reporte' && reporteHoy
-        ? { ...s, marca: { texto: '✓', titulo: 'reporte de hoy enviado' } }
-        : s));
+    useEffect(() => {
+        if (!user?.id || seccion === 'agendas' || pendientesAgendas !== null) return;
+        api.get('/setter/palabras-clave', { params: { solo: 'resumen' } })
+            .then(res => alResumenDeAgendas(res.data?.resumen))
+            .catch(() => { /* sin marca: no se inventa un número */ });
+    }, [user?.id, seccion]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const marcaDeAgendas = pendientesAgendas === null ? null
+        : pendientesAgendas > 0
+            ? { tipo: 'cuenta', texto: pendientesAgendas > 99 ? '99+' : String(pendientesAgendas),
+                titulo: `${pendientesAgendas} sin palabra clave` }
+            : { texto: '✓', titulo: 'todas con palabra clave' };
+    const secciones = SECCIONES.map((s) => {
+        if (s.id === 'reporte' && reporteHoy) return { ...s, marca: { texto: '✓', titulo: 'reporte de hoy enviado' } };
+        if (s.id === 'agendas' && marcaDeAgendas) return { ...s, marca: marcaDeAgendas };
+        return s;
+    });
 
     // Las pestañas de Revisar no desmontan la vista: es un solo dashboard que cambia de tabla, y
     // desmontarlo volvía a pedir su contexto y mostraba el esqueleto de la página entera. El resto
@@ -234,7 +255,7 @@ const SetterEspacioPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.28, ease: [0.22, 0.7, 0.2, 1] }}>
                     {seccion === 'agendas' && (
-                        <MisAgendas onVerDatos={() => irA('datos')} />
+                        <MisAgendas onResumen={alResumenDeAgendas} onVerDatos={() => irA('datos')} />
                     )}
                     {seccion === 'reporte' && tab === 'hoy' && (
                         <PublicSetterReportPage onEnviado={(fecha) => { if (fecha === hoyLocal()) setReporteHoy(true); }} />
