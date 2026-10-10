@@ -47,7 +47,6 @@ import TermsOfServicePage from './pages/public/TermsOfServicePage';
 import AgendasV2Routes from './pages/agendas_v2/AgendasV2Routes';
 import AgendasV2Publica from './pages/agendas_v2/AgendasV2Publica';
 import UnattributedLeadsPage from './pages/admin/marketing/UnattributedLeadsPage';
-import AlertsHubPage from './pages/admin/alerts/AlertsHubPage';
 import FormsManagementPage from './pages/shared/FormsManagementPage';
 
 import AdminSalesHubPage from './pages/admin/reports/AdminSalesHubPage';
@@ -240,16 +239,6 @@ function App() {
                 <ProtectedRoute roles={['admin']}>
                   <MainLayout>
                     <AdminSheetsHubPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/alerts"
-              element={
-                <ProtectedRoute roles={['admin']}>
-                  <MainLayout>
-                    <AlertsHubPage />
                   </MainLayout>
                 </ProtectedRoute>
               }
