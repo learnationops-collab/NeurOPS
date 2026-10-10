@@ -2,7 +2,8 @@
 
 Lo que se fija acá es lo que hacía que «no cuadrara» (10/10/2026): que el reporte y el sistema no se
 mezclen, que los reportes v1 sumen sin inventar canales, que el período sea el pedido y que la
-comparación salga de la misma cuenta.
+comparación salga de la misma cuenta. Y los embudos de Comparativas: uno por setter y el del
+equipo recalculado sobre el total.
 """
 import itertools
 from datetime import date, datetime, timedelta
@@ -11,6 +12,7 @@ import pytest
 from freezegun import freeze_time
 
 from app.models import Appointment, Client, SetterDailyStats
+from app.services import comercial_analitica as ca
 from app.services import setter_mis_datos as smd
 from app.services import setter_reporte_v2 as rv2
 
@@ -252,3 +254,37 @@ def test_los_reportes_de_alguien_que_no_es_setter_no_cuentan(db, elias, closer):
 
     assert smd.lecturas_por_setter(*SEPT) == {}
 
+
+# --- Los embudos de Comparativas -----------------------------------------------------------------
+
+@freeze_time('2026-10-10 15:00:00')
+def test_comparativas_de_setters_trae_un_embudo_por_setter_y_el_del_equipo(db, elias, paula, closer):
+    v2(db, elias, date(2026, 9, 3), ads=(30, 10, 0, 0, 0, 3), embudo=(8, 5, 4))
+    v2(db, paula, date(2026, 9, 3), ads=(10, 0, 0, 0, 0, 2), embudo=(6, 4, 2))
+    generada(db, elias, closer, creada=datetime(2026, 9, 3, 15), closer_result='Show up')
+    generada(db, paula, closer, creada=datetime(2026, 9, 4, 15))
+
+    emb = ca.comparativas('setters', *SEPT)['embudos']
+
+    por_nombre = {f['nombre']: [e['n'] for e in f['etapas']] for f in emb['filas']}
+    assert por_nombre == {'Elias': [30, 20, 8, 5, 4, 3, 1, 1, 0], 'Paula': [10, 10, 6, 4, 2, 2, 1, 0, 0]}
+    equipo = emb['equipo']
+    assert [e['n'] for e in equipo['etapas']] == [40, 30, 14, 9, 6, 5, 2, 1, 0]
+    # La tasa del equipo sale del total (30 de 40 = 75%), no del promedio de 66,7% y 100%.
+    assert equipo['etapas'][1]['tasa'] == 75.0
+
+
+@freeze_time('2026-10-10 15:00:00')
+def test_la_comparativa_de_closers_no_trae_embudos(db, closer):
+    assert 'embudos' not in ca.comparativas('closers', *SEPT)
+
+
+@freeze_time('2026-10-10 15:00:00')
+def test_comparativas_lee_los_reportes_una_sola_vez(db, elias, paula, monkeypatch):
+    llamadas = []
+    original = smd.lecturas_por_setter
+    monkeypatch.setattr(smd, 'lecturas_por_setter', lambda *a, **k: llamadas.append(a) or original(*a, **k))
+
+    ca.comparativas('setters', *SEPT, *AGOSTO)
+
+    assert len(llamadas) == 1

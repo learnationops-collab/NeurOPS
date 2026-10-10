@@ -449,6 +449,8 @@ def bloque_setters(start, end, setter_id=None, setter_nombre=None):
         'conversion': tot_l['conversion'],
         'mensajes': tot_l['mensajes'],
         'generadas': tot_g['agendas'],
+        # Las agendas generadas que asistieron: el paso «Asistieron» de los embudos de Comparativas.
+        'asistieron': tot_g['asistieron'],
         'show_up': tot_g['show_up'],
         'ventas_originadas': tot_g['ventas'],
         'tenacidad': [{'toques': k, 'leads': v} for k, v in tenacidad.items()],
@@ -781,14 +783,21 @@ def _fila_comparativa(rol, bloque):
 
 
 def comparativas(rol, start, end, prev_start=None, prev_end=None):
-    """Ranking por métrica + mapa del equipo, con el delta de cada persona en cada métrica."""
+    """Ranking por métrica + mapa del equipo, con el delta de cada persona en cada métrica.
+
+    Con Setters trae además `embudos` (pedido del usuario, 10/10/2026): el embudo de cada setter y
+    el del equipo, del reporte diario a las ventas (ver `setter_mis_datos.embudos_de_comparativa`).
+    Generadas, asistieron y ventas salen de los mismos bloques que el ranking, así que no se vuelven
+    a recorrer las agendas; los reportes del período se leen una sola vez.
+    """
     miembros = ComercialService.miembros(rol)
     bloque = _bloque_de(rol)
 
-    filas = []
+    filas, bloques = [], {}
     for m in miembros:
         kwargs = _kwargs_de(rol, m['id'], m['nombre'])
-        datos = _fila_comparativa(rol, bloque(start, end, **kwargs))
+        bloques[m['id']] = bloque(start, end, **kwargs)
+        datos = _fila_comparativa(rol, bloques[m['id']])
         deltas = {}
         if prev_start:
             anterior = _fila_comparativa(rol, bloque(prev_start, prev_end, **kwargs))
@@ -802,7 +811,13 @@ def comparativas(rol, start, end, prev_start=None, prev_end=None):
     # La fila "Equipo" NO es la suma de las filas de arriba: las tasas se recalculan sobre el
     # total del equipo. Promediar los porcentajes de gente con volúmenes muy distintos da un
     # número que no le corresponde a nadie.
-    equipo = _fila_comparativa(rol, bloque(start, end))
+    bloque_equipo = bloque(start, end)
+    equipo = _fila_comparativa(rol, bloque_equipo)
 
-    return {'rol': rol, 'metricas': METRICAS[rol], 'columnas_info': COLUMNAS_INFO[rol],
-            'filas': filas, 'equipo': equipo}
+    salida = {'rol': rol, 'metricas': METRICAS[rol], 'columnas_info': COLUMNAS_INFO[rol],
+              'filas': filas, 'equipo': equipo}
+    if rol == ROL_SETTERS:
+        # Import tardío: `setter_mis_datos` usa `delta` de este módulo.
+        from app.services.setter_mis_datos import embudos_de_comparativa
+        salida['embudos'] = embudos_de_comparativa(miembros, bloques, bloque_equipo, start, end)
+    return salida

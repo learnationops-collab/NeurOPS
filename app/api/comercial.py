@@ -151,6 +151,9 @@ def comparativas():
     `alcance_de`, así que un closer no puede pedir la de los setters ni un setter la de los
     closers (la plata de cada closer no es de su incumbencia).
 
+    Con Setters trae además `embudos`: el de cada setter y el del equipo, del reporte diario a las
+    ventas (ver `comercial_analitica.comparativas`).
+
     El 403 es lo que la cumple para cualquier otro rol: la pestaña escondida en el frontend no
     alcanza, porque el endpoint se puede pedir igual.
     """

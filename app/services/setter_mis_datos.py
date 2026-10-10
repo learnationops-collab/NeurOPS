@@ -24,9 +24,10 @@ diferencia a la vista («reportaste 75 · el sistema registra 68»).
 Los reportes v1 (sin canal) suman en los totales y, en lo que va por canal, aparecen aparte como
 «sin canal» (`sumar` los deja en `sin_canal`): nunca se reparten entre anuncios e inbound.
 
-El embudo de punta a punta (`embudo_de`) va de Entrantes → Cualificados → Dolor → Oferta → Link →
-Agendas, del reporte, a Generadas → Asistieron → Ventas, del sistema. Los reportes se leen con UNA
-consulta (`lecturas_por_setter`), sea de una persona o de todo el equipo.
+El mismo embudo de punta a punta es el que Comparativas dibuja para cada setter y para el equipo
+(`embudo_de`): Entrantes → Cualificados → Dolor → Oferta → Link → Agendas, del reporte, y Generadas
+→ Asistieron → Ventas, del sistema. Los reportes se leen con UNA consulta para todo el equipo
+(`lecturas_por_setter`), porque Comparativas ya recorre las agendas persona por persona.
 """
 from datetime import date, timedelta
 
@@ -290,3 +291,28 @@ def mis_datos(setter_id, start, end, prev_start=None, prev_end=None):
         'deltas': deltas,
     }
 
+
+def embudos_de_comparativa(miembros, bloques, bloque_equipo, start, end):
+    """Los embudos del bloque «Embudos» de Comparativas: uno por setter y el del equipo.
+
+    `bloques` es `{id: bloque_setters}` de cada persona y `bloque_equipo` el del equipo, ya
+    calculados por `comparativas`: de ahí salen generadas, asistieron y ventas sin volver a recorrer
+    las agendas. Los reportes se leen UNA vez para todos.
+
+    La fila del equipo NO suma las etapas de las filas: suma los reportes de todos los setters
+    (también los de alguien que ya no está activo, como hace el sistema con sus agendas) y sus
+    conversiones salen de esos totales, igual que las tasas de la fila «Equipo» del mapa.
+    """
+    lecturas = lecturas_por_setter(start, end)
+
+    def sistema(b):
+        return {'generadas': b['generadas'], 'asistieron': b['asistieron'], 'ventas': b['ventas_originadas']}
+
+    filas = [{'id': m['id'], 'nombre': m['nombre'],
+              'etapas': embudo_de(reporte_v2.sumar([l for l, _ in lecturas.get(m['id'], [])]),
+                                  sistema(bloques[m['id']]))}
+             for m in miembros]
+    todas = [l for pares in lecturas.values() for l, _ in pares]
+    return {'filas': filas,
+            'equipo': {'id': 'equipo', 'nombre': 'Equipo',
+                       'etapas': embudo_de(reporte_v2.sumar(todas), sistema(bloque_equipo))}}
