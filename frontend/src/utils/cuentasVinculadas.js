@@ -37,7 +37,9 @@ export const ICONO_DE_ROL = {
 export const TITULO_FINANZAS = 'Finances';
 export const RUTA_FINANZAS = '/finanzas';
 export const ICONO_FINANZAS = Wallet;
-const ROLES_FINANZAS = ['admin', 'director_comercial'];
+// La dirección comercial primero (10/10/2026): el admin ya no es una vista, así que con los dos roles Finances
+// va con la dirección.
+const ROLES_FINANZAS = ['director_comercial', 'admin'];
 export const rolDeFinanzas = (roles, puedeVerFinanzas) => (
     puedeVerFinanzas ? ROLES_FINANZAS.find((r) => (roles || []).includes(r)) || null : null
 );
