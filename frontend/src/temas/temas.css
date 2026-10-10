@@ -23,6 +23,7 @@
    fondo           la página (color base + degradado) y el texto directo sobre ella
    destacado       botones principales y lo activo; destacado-2 es el acento azul
    destacado-suave lo seleccionado sin gritar (píldoras, notas propias)
+   *-texto         el mismo color pensado para texto sobre el fondo del tema (en oscuro, más claro)
    cont-1/2/3      contenedores: 1 paneles, 2 tarjetas y controles dentro, 3 hundido
    campo           inputs
    modal/flotante  hojas y modales / menús, popovers y tooltips; velo detrás del modal
@@ -41,6 +42,8 @@
    ============================================================================ */
 
 [data-tema="closing-oscuro"]{
+  --destacado-2-claro:#4E8BD8; --destacado-texto:#FFB3DE; --destacado-2-texto:#8C99E0;
+  --est-exito-texto:#7DEAC0; --est-aviso-texto:#F3D08A; --est-error-texto:#F5A99C; --est-info-texto:#93C5FD;
   --esquema:dark;
   --mapa-lienzo:#070B2A; --mapa-punto:rgba(255,255,255,.07); --mapa-nodo:#0B1033; --mapa-nodo-fila:rgba(255,255,255,.06); --mapa-arista:rgba(160,175,230,.42);
   --medalla-oro:#F2C14E; --medalla-plata:#C5CEDB; --medalla-bronce:#DA8C5C;
@@ -72,6 +75,8 @@
 }
 
 [data-tema="thalamus-oscuro"]{
+  --destacado-2-claro:#4E8BD8; --destacado-texto:#FFB3DE; --destacado-2-texto:#8C99E0;
+  --est-exito-texto:#7DEAC0; --est-aviso-texto:#F3D08A; --est-error-texto:#F5A99C; --est-info-texto:#93C5FD;
   --esquema:dark;
   --mapa-lienzo:#070B2A; --mapa-punto:rgba(255,255,255,.07); --mapa-nodo:#0B1033; --mapa-nodo-fila:rgba(255,255,255,.06); --mapa-arista:rgba(160,175,230,.42);
   --medalla-oro:#F2C14E; --medalla-plata:#C5CEDB; --medalla-bronce:#DA8C5C;
@@ -103,6 +108,8 @@
 }
 
 [data-tema="thalamus-claro"]{
+  --destacado-2-claro:#27599F; --destacado-texto:#C9156F; --destacado-2-texto:#1323C6;
+  --est-exito-texto:#0E7E5C; --est-aviso-texto:#8F6310; --est-error-texto:#BE3726; --est-info-texto:#27599F;
   --esquema:light;
   --mapa-lienzo:#EEF1FA; --mapa-punto:rgba(10,14,61,.10); --mapa-nodo:#FFFFFF; --mapa-nodo-fila:rgba(10,14,61,.05); --mapa-arista:rgba(60,75,140,.38);
   --medalla-oro:#A87400; --medalla-plata:#66748A; --medalla-bronce:#A65427;

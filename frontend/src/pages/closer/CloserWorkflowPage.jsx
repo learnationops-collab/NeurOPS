@@ -27,6 +27,7 @@ import MenuSesion from '../comercial/components/MenuSesion';
 import { revertImpersonation } from '../../utils/impersonation';
 import { opcionesDeRol } from '../../utils/cuentasVinculadas';
 import '../comercial/comercial.css';
+import '../../temas/deck.css';
 import '../../components/dashboard/pareja.css';
 import ComisionMesCard from './components/ComisionMesCard';
 import ProcrastinarModal from './components/ProcrastinarModal';
@@ -1493,7 +1494,7 @@ const CloserWorkflowPage = () => {
     };
 
     return (
-        <div ref={paginaRef} className="h-screen overflow-y-auto bg-v6 text-slate-100 flex flex-col custom-scrollbar"
+        <div ref={paginaRef} className="tema-deck h-screen overflow-y-auto bg-v6 text-slate-100 flex flex-col custom-scrollbar"
             style={{ paddingBottom: 'calc(132px + env(safe-area-inset-bottom, 0px))' }}>
 
             {/* Header del Espacio de Trabajo Premium v6. Solo la marca y el buscador (pedido del
@@ -1879,14 +1880,14 @@ const CloserWorkflowPage = () => {
                                         )}
                                         {confirmationsPipeline.porConfirmar.length > 0 && (
                                             <>
-                                                <div className="ksub-v6"><span className="dt-v6" style={{ background: 'var(--v6-warn)', boxShadow: '0 0 0 3px rgba(217,164,65,.16)' }}></span>Sin contactar</div>
+                                                <div className="ksub-v6"><span className="dt-v6" style={{ background: 'var(--v6-warn)', boxShadow: '0 0 0 3px color-mix(in srgb, var(--est-aviso, #d9a441) 16%, transparent)' }}></span>Sin contactar</div>
                                                 {/* Orden de entrada: renglón × 2 columnas + columna (ver renderKanbanCard). */}
                                                 {confirmationsPipeline.porConfirmar.map((a, i) => renderKanbanCard(a, 'por_confirmar', i * 2))}
                                             </>
                                         )}
                                         {confirmationsPipeline.conversando.length > 0 && (
                                             <>
-                                                <div className="ksub-v6"><span className="dt-v6" style={{ background: 'var(--v6-info)', boxShadow: '0 0 0 3px rgba(96,165,250,.16)' }}></span>Conversando</div>
+                                                <div className="ksub-v6"><span className="dt-v6" style={{ background: 'var(--v6-info)', boxShadow: '0 0 0 3px color-mix(in srgb, var(--est-info, #60a5fa) 16%, transparent)' }}></span>Conversando</div>
                                                 {/* Mismo carril que "Sin contactar": sigue contando desde ahí. */}
                                                 {confirmationsPipeline.conversando.map((a, i) => renderKanbanCard(a, 'conversando', (confirmationsPipeline.porConfirmar.length + i) * 2))}
                                             </>
@@ -2062,14 +2063,14 @@ const CloserWorkflowPage = () => {
                                     <h2>Buen avance, {firstName}</h2>
                                     <p>{doneToday} de {totalToday} resueltos · ${Math.round(cashToday).toLocaleString()} movidos {isToday ? 'hoy' : 'ayer'}</p>
                                     <div className="flex items-center gap-3 flex-wrap mt-4">
-                                        <span className="rpt-pill-v6" style={{ background: 'rgba(255,63,164,.12)', border: '1px solid rgba(255,63,164,.45)' }}>
-                                            <span style={{ color: 'rgba(255,255,255,.6)' }}>MOVISTE</span>
+                                        <span className="rpt-pill-v6" style={{ background: 'color-mix(in srgb, var(--destacado, #ff3fa4) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--destacado, #ff3fa4) 45%, transparent)' }}>
+                                            <span style={{ color: 'color-mix(in srgb, var(--en-fondo, #ffffff) 60%, transparent)' }}>MOVISTE</span>
                                             <span style={{ color: 'var(--v6-pink)', fontVariantNumeric: 'tabular-nums' }}>${Math.round(cashToday).toLocaleString()}</span>
                                         </span>
-                                        <span className="rpt-pill-v6" style={{ background: 'rgba(78,139,216,.12)', border: '1px solid rgba(78,139,216,.45)', color: '#4E8BD8' }}>
+                                        <span className="rpt-pill-v6" style={{ background: 'color-mix(in srgb, var(--destacado-2-claro, #4e8bd8) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--destacado-2-claro, #4e8bd8) 45%, transparent)', color: 'var(--destacado-2-claro, #4E8BD8)' }}>
                                             {reportXp} XP
                                         </span>
-                                        <span className="rpt-pill-v6" style={{ background: 'rgba(217,164,65,.12)', border: '1px solid rgba(217,164,65,.45)', color: '#D9A441' }}>
+                                        <span className="rpt-pill-v6" style={{ background: 'color-mix(in srgb, var(--est-aviso, #d9a441) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--est-aviso, #d9a441) 45%, transparent)', color: 'var(--est-aviso, #D9A441)' }}>
                                             RACHA {reportActivity?.streak_days ?? 0} DÍAS
                                         </span>
                                     </div>
@@ -2084,7 +2085,7 @@ const CloserWorkflowPage = () => {
                                                         className="rpt-trend-bar-v6"
                                                         style={{
                                                             height: `${Math.max(4, (dtItem.cash / maxTrend) * 74)}px`,
-                                                            background: dtItem.is_target ? 'var(--v6-ok)' : 'rgba(78,139,216,.55)'
+                                                            background: dtItem.is_target ? 'var(--v6-ok)' : 'color-mix(in srgb, var(--destacado-2-claro, #4e8bd8) 55%, transparent)'
                                                         }}
                                                         title={`$${Math.round(dtItem.cash).toLocaleString()}`}
                                                     ></div>
@@ -2132,10 +2133,10 @@ const CloserWorkflowPage = () => {
                         // que el hero), cada KPI queda en lo que se hizo ese día.
                         const pendiente = (n) => (reportandoHoy ? n : 0);
                         const kpis = [
-                            { label: 'Confirmaciones', done: confirmDoneKpi, pending: pendiente(confirmPendingKpi), color: '#4E8BD8' },
-                            { label: 'Llamadas reportadas', done: reportActivity?.show_ups || 0, pending: pendiente(counts.calls), color: '#4E8BD8' },
-                            { label: 'Seguimientos hechos', done: reportActivity?.seguimientos_hechos || 0, pending: pendiente(counts.seguimientos), color: '#2FBF8F' },
-                            { label: 'Cobros resueltos', done: reportActivity?.ventas_count || 0, pending: cobrosPendientes, color: '#FF3FA4' },
+                            { label: 'Confirmaciones', done: confirmDoneKpi, pending: pendiente(confirmPendingKpi), color: 'var(--destacado-2-claro, #4E8BD8)' },
+                            { label: 'Llamadas reportadas', done: reportActivity?.show_ups || 0, pending: pendiente(counts.calls), color: 'var(--destacado-2-claro, #4E8BD8)' },
+                            { label: 'Seguimientos hechos', done: reportActivity?.seguimientos_hechos || 0, pending: pendiente(counts.seguimientos), color: 'var(--est-exito, #2FBF8F)' },
+                            { label: 'Cobros resueltos', done: reportActivity?.ventas_count || 0, pending: cobrosPendientes, color: 'var(--destacado, #FF3FA4)' },
                         ];
                         return (
                             <div className="rpt-kpis-v6">
@@ -2212,7 +2213,7 @@ const CloserWorkflowPage = () => {
                                         onChange={(e) => { setReportSlots(e.target.value); setReportSlotsIsDefault(false); }}
                                         placeholder="0"
                                         className="rpt-slots-input-v6"
-                                        style={slotsPorDebajoDeAgendas ? { borderColor: 'var(--v6-warn)' } : reportSlotsIsDefault ? { borderColor: 'rgba(139,92,246,.6)' } : undefined}
+                                        style={slotsPorDebajoDeAgendas ? { borderColor: 'var(--v6-warn)' } : reportSlotsIsDefault ? { borderColor: 'color-mix(in srgb, var(--destacado-2, #8b5cf6) 60%, transparent)' } : undefined}
                                     />
                                 </div>
                             </div>
@@ -2221,7 +2222,7 @@ const CloserWorkflowPage = () => {
                                 cupo ocupado sigue siendo un cupo, así que los slots nunca pueden ser
                                 menos que esto. */}
                             {reportActivity?.agendas_del_dia !== undefined && (
-                                <p className="text-[11px] font-bold" style={{ color: slotsPorDebajoDeAgendas ? '#F3D08A' : 'var(--v6-tx3)' }}>
+                                <p className="text-[11px] font-bold" style={{ color: slotsPorDebajoDeAgendas ? 'var(--est-aviso-texto, #F3D08A)' : 'var(--v6-tx3)' }}>
                                     {slotsPorDebajoDeAgendas ? '⚠️ ' : ''}Mínimo {reportActivity.agendas_del_dia} — ese día tenés {reportActivity.agendas_del_dia} agenda(s) registradas, y un cupo ocupado sigue contando.
                                 </p>
                             )}
@@ -2251,7 +2252,7 @@ const CloserWorkflowPage = () => {
                     <div className="rpt-card-v6 flex items-center gap-4 flex-wrap">
                         <div className="flex items-center gap-2.5">
                             <span className="w-2 h-2 rounded-full" style={{ background: 'var(--v6-warn)' }}></span>
-                            <span className="text-xs font-bold" style={{ color: '#F3D08A' }}>
+                            <span className="text-xs font-bold" style={{ color: 'var(--est-aviso-texto, #F3D08A)' }}>
                                 {reportandoHoy
                                     ? `${counts.confirmations + counts.calls + counts.seguimientos} cosa(s) quedaron sin resolver`
                                     : `Se guarda como el reporte del ${etiquetaDia(reportDate, { largo: true })}`}
@@ -2299,7 +2300,7 @@ const CloserWorkflowPage = () => {
                                 }
                             }}
                             className="h-[52px] px-8 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black uppercase text-[11px] tracking-widest rounded-full transition-all cursor-pointer flex items-center gap-2"
-                            style={{ background: 'var(--v6-gradb)', boxShadow: '0 10px 15px -3px rgba(19,35,198,.35)' }}
+                            style={{ background: 'var(--v6-gradb)', boxShadow: '0 10px 15px -3px color-mix(in srgb, var(--destacado-2, #1323c6) 35%, transparent)' }}
                         >
                             {sendingReport ? <Loader2 size={14} className="animate-spin" /> : null}
                             {sendingReport ? 'Enviando...' : reportSent ? 'Actualizar y reenviar reporte' : reportandoHoy ? 'Enviar reporte del día' : 'Enviar reporte de ayer'}

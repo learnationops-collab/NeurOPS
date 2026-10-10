@@ -64,7 +64,7 @@ const ProcrastinarModal = ({ pendientes = 0, onClose, onGo }) => {
 
     return createPortal(
         <div
-            className="fixed inset-0 z-[99997] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4"
+            className="tema-deck fixed inset-0 z-[99997] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4"
             onClick={onClose}
             role="dialog"
             aria-modal="true"
@@ -92,10 +92,10 @@ const ProcrastinarModal = ({ pendientes = 0, onClose, onGo }) => {
                 </div>
 
                 <div className="grid grid-cols-4 gap-2 mt-4">
-                    <Stat value={mensajes} label="Mensajes" color="#fff" />
-                    <Stat value={calc.contestan.toFixed(1)} label="Contestan" color="#60A5FA" />
-                    <Stat value={calc.ventas.toFixed(1)} label="Ventas" color="#F3D08A" />
-                    <Stat value={money(calc.potencial)} label="En caja" color="#FF3FA4" />
+                    <Stat value={mensajes} label="Mensajes" color="var(--en-fondo, #fff)" />
+                    <Stat value={calc.contestan.toFixed(1)} label="Contestan" color="var(--est-info, #60A5FA)" />
+                    <Stat value={calc.ventas.toFixed(1)} label="Ventas" color="var(--est-aviso-texto, #F3D08A)" />
+                    <Stat value={money(calc.potencial)} label="En caja" color="var(--destacado, #FF3FA4)" />
                 </div>
 
                 <div className="space-y-4 mt-5">
