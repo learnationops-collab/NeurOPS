@@ -114,10 +114,18 @@ describe('botonesDe: rescatar descartadas e incompletas, y devolver finalistas',
         expect(ids({ veredicto: 'testeo', estado: 'testeo' })).toEqual(['seleccionada', 'en_reserva', 'winner', 'top_tier', 'baja']);
     });
 
-    it('Winner y Top tier se pueden devolver a prueba o a Análisis', () => {
-        const vuelta = ['seleccionada', 'en_reserva', 'testeo', 'baja'];
-        expect(ids({ veredicto: 'winner', estado: 'winner' })).toEqual(vuelta);
-        expect(ids({ veredicto: 'top_tier', estado: 'top_tier' })).toEqual(vuelta);
+    it('Winner y Top tier se pueden devolver a prueba o a Análisis, y pasar de una a la otra', () => {
+        expect(ids({ veredicto: 'winner', estado: 'winner' })).toEqual(['seleccionada', 'en_reserva', 'testeo', 'top_tier', 'baja']);
+        expect(ids({ veredicto: 'top_tier', estado: 'top_tier' })).toEqual(['seleccionada', 'en_reserva', 'testeo', 'winner', 'baja']);
+    });
+
+    it('en el modal, una Winner pasa a Top tier con un clic', async () => {
+        api.get.mockResolvedValue({ data: postulacion({ veredicto: 'winner', estado: 'winner' }) });
+        api.post.mockResolvedValue({ data: { status: 'success' } });
+        render(<HiringCandidateModal applicationId={7} ids={[7]} onClose={vi.fn()} onNavigate={vi.fn()} />);
+        await screen.findByText('Ana Pérez');
+        screen.getByRole('button', { name: /Top tier/ }).click();
+        await waitFor(() => expect(api.post).toHaveBeenCalledWith('/assistant-applications/7/estado', { valor: 'top_tier', motivo: null }));
     });
 
     it('en el modal, una descartada por el formulario ofrece Seleccionar y Pasar a prueba', async () => {
