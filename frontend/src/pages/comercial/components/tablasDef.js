@@ -115,18 +115,20 @@ export const SENA_ESTADO = {
 /**
  * Las facetas de sí/no de los pasos del embudo.
  *
- * Los pasos intermedios —Confirmadas, Asistieron, Presentaciones del embudo de closers, y
- * Respondieron y Cualificados del de setters— no eran clickeables porque ninguna faceta los
- * aislaba: el corte no es un valor de una columna sino una condición sobre la fila. Cada una
- * repite EXACTAMENTE el criterio con el que el backend cuenta ese paso, así que el clic abre
- * tantas filas como dice el número.
+ * Los pasos intermedios —Asistieron y Presentaciones del embudo de closers, y Respondieron y
+ * Cualificados del de setters— no eran clickeables porque ninguna faceta los aislaba: el corte no
+ * es un valor de una columna sino una condición sobre la fila. Cada una repite EXACTAMENTE el
+ * criterio con el que el backend cuenta ese paso, así que el clic abre tantas filas como dice el
+ * número. «Confirmada» ya no es un paso del embudo comercial (09/10/2026), pero la faceta queda:
+ * la usan el dashboard del closer y quien filtra Revisar a mano.
  */
 export const SI = 'Sí';
 export const NO = 'No';
 const siNo = (condicion) => (fila) => (condicion(fila) ? SI : NO);
 
-// Una llamada a la que el lead asistió estaba confirmada, por definición: el mismo criterio de
-// `bloque_closers`, que existe porque el embudo es una cadena de subconjuntos.
+// Una llamada a la que el lead asistió estaba confirmada, por definición: si no, «Confirmada: Sí»
+// dejaría afuera asistencias que nadie pasó por el flujo de confirmación (el mismo criterio con
+// el que el embudo comercial contaba ese paso hasta el 09/10/2026).
 export const fueConfirmada = siNo((f) => f.pre_call?.key === 'confirmada' || f.asistio);
 export const asistio = siNo((f) => f.asistio);
 // Presentar requiere haber asistido: sin eso el embudo mostraría más presentaciones que

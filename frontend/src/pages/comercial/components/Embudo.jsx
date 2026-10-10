@@ -28,9 +28,11 @@ const Embudo = ({ pasos, sinCuello = false }) => {
     const ancho = (n) => Math.max(14, primero ? (n / primero) * 100 : 14);
 
     // Cuello de botella: el salto de menor conversión a partir del SEGUNDO (i >= 2). El primer
-    // salto queda fuera a propósito: "de agendas a confirmadas" es casi siempre el más flojo
-    // —confirmar depende de que el lead conteste, no de cómo se llevó la llamada— y si compite
-    // se lleva la etiqueta todas las veces, tapando el cuello real del embudo.
+    // salto queda fuera a propósito: "de agendas a asistieron" (o "de entrantes a respondieron")
+    // es casi siempre el más flojo —depende de que el lead aparezca, no de cómo se llevó la
+    // llamada, y con el período en curso cuenta también las llamadas que todavía no pasaron— y si
+    // compite se lleva la etiqueta todas las veces, tapando el cuello real del embudo. Era la
+    // misma regla cuando el primer salto iba a "Confirmadas", que salió del embudo el 09/10/2026.
     let cuello = null;
     if (!sinCuello) {
         let peor = Infinity;

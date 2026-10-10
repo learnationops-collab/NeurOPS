@@ -65,16 +65,17 @@ def venta(db, *, mail=None, ig=None, monto=990.0, tipo='AL - Completo', metodo='
 # --- Embudo --------------------------------------------------------------------------------------
 
 @freeze_time(HOY)
-def test_el_embudo_encadena_los_cinco_pasos(db, marlon):
+def test_el_embudo_encadena_los_cuatro_pasos(db, marlon):
     confirmada_y_asistio = cliente(db, 'Asistio', email='asistio@test.local')
     agenda(db, marlon, confirmada_y_asistio, closer_result='Show up')
     venta(db, mail='asistio@test.local')
     agenda(db, marlon, cliente(db, 'No Vino'), closer_result='No Show')
     agenda(db, marlon, cliente(db, 'Sin Confirmar'), result='Pendiente')
 
-    pasos = {p['paso']: p['n'] for p in ca.bloque_closers(DESDE, HASTA)['funnel']}
+    funnel = ca.bloque_closers(DESDE, HASTA)['funnel']
 
-    assert pasos == {'Agendas': 3, 'Confirmadas': 2, 'Asistieron': 1, 'Presentaciones': 1, 'Ventas': 1}
+    assert [(p['paso'], p['n']) for p in funnel] == [
+        ('Agendas', 3), ('Asistieron', 1), ('Presentaciones', 1), ('Ventas', 1)]
 
 
 @freeze_time(HOY)
@@ -142,27 +143,29 @@ def test_el_close_rate_de_la_tarjeta_es_el_mismo_que_el_de_los_totales(db, marlo
 
 
 @freeze_time(HOY)
-def test_una_llamada_a_la_que_asistieron_cuenta_como_confirmada(db, marlon):
-    """El embudo es una cadena de subconjuntos: ningun paso puede superar al anterior.
+def test_el_embudo_no_tiene_confirmadas_y_va_de_agendas_a_asistieron(db, marlon):
+    """Pedido del usuario (09/10/2026): «Quita las confirmadas del embudo del dashboard».
 
-    Bug real visto en el servidor de prueba: 15 asistieron sobre 7 confirmadas, o sea un 214.3%
-    en la fila siguiente. Pasa porque `result='Confirmado'` lo escribe el flujo de confirmacion y
-    asistir no lo exige — pero una llamada a la que el lead se presento estaba confirmada, por
-    definicion. Es el mismo criterio que ya aplica `mark_sale_appointment_as_show_up`, que fuerza
-    `result='Confirmado'` al registrar una venta justamente por esto.
+    La confirmación no se fue de la agenda —sigue en su pre call—, solo el escalón: Asistieron se
+    mide ahora contra Agendas. Y el embudo sigue siendo una cadena de subconjuntos: ningún paso
+    puede superar al anterior.
     """
     # Asistio sin haber pasado por el flujo de confirmacion.
     agenda(db, marlon, cliente(db, 'Vino igual'), result='Pendiente', closer_result='Show up')
     agenda(db, marlon, cliente(db, 'Confirmo y vino'), result='Confirmado', closer_result='Show up')
     agenda(db, marlon, cliente(db, 'Solo confirmo'), result='Confirmado')
 
-    pasos = {p['paso']: p['n'] for p in ca.bloque_closers(DESDE, HASTA)['funnel']}
+    bloque = ca.bloque_closers(DESDE, HASTA)
+    funnel = bloque['funnel']
 
-    assert pasos['Confirmadas'] == 3
-    assert pasos['Asistieron'] == 2
+    assert [p['paso'] for p in funnel] == ['Agendas', 'Asistieron', 'Presentaciones', 'Ventas']
+    assert (funnel[0]['n'], funnel[1]['n']) == (3, 2)
     # El invariante que importa, por encima de los numeros puntuales.
-    orden = [p['n'] for p in ca.bloque_closers(DESDE, HASTA)['funnel']]
+    orden = [p['n'] for p in funnel]
     assert orden == sorted(orden, reverse=True), f'el embudo no decrece: {orden}'
+    # La confirmación sigue en cada fila: la que solo confirmó no perdió su pre call.
+    filas = {f['cliente']: f for f in ComercialService.agendas(DESDE, HASTA)}
+    assert filas['Solo confirmo']['pre_call']['key'] == 'confirmada'
 
 
 # --- Panel Cierre: las dos tasas de cierre ------------------------------------------------------
