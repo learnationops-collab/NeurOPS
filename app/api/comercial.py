@@ -4,8 +4,8 @@ Un solo tablero para tres audiencias, con el alcance resuelto SIEMPRE en el serv
 
   · dirección comercial y admin: todo el equipo, con selector de persona y de rol;
   · closer en "Mis datos": sus agendas y sus ventas, sin selector de equipo;
-  · setter en "Mis datos" y en su Revisar: sus leads, las agendas que generó y las ventas de su
-    fuente.
+  · setter en "Mis datos" y en su Revisar: su reporte diario, sus leads, las agendas que generó y
+    las ventas de su fuente.
 
 El frontend esconde controles, pero eso no protege nada: acá se ignora cualquier `rol` o
 `miembro_id` que mande alguien que no tiene permiso para elegirlos (ver `alcance_de`). Un closer
@@ -16,12 +16,13 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 
 from app import db
-from app.models import Appointment
+from app.models import Appointment, User
 from app.api.public.finance import puede_ver_finanzas
 from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, ROLE_SETTER
 from app.services import comercial_analitica as analitica
 from app.services import comercial_no_cerradas
 from app.services import comercial_reporte as reporte
+from app.services import setter_mis_datos as datos_setter
 from app.services.booking_service import BookingService
 from app.services.comercial_service import (
     POST_CALL, POST_CALL_A_CLOSER_RESULT, PRE_CALL, PRE_CALL_A_RESULT, ROL_CLOSERS, ROL_SETTERS,
@@ -172,6 +173,30 @@ def variabilidad():
     start, end, _prev_start, _prev_end = _rangos()
     datos = analitica.variabilidad(rol, start, end, miembro_id)
     return jsonify({**datos, 'dates': _fechas(start, end, None, None)}), 200
+
+
+@bp.route('/setter/mis-datos', methods=['GET'])
+def setter_mis_datos():
+    """«Mis datos» del setter: su reporte diario sumado en el período y lo que registra el sistema,
+    lado a lado (ver `app/services/setter_mis_datos.py`). Mismos parámetros de período y de
+    comparación que el resto del tablero.
+
+    El alcance lo decide `alcance_de`, como en todo el tablero: un setter ve solo lo suyo pida lo
+    que pida, también simulado por la dirección (la sesión simulada ES la del setter). La dirección
+    lo pide para un setter con `miembro_id`, o sin él para el equipo de setting. Un `miembro_id` que
+    no es un setter es un 404: acotar los reportes por el id de un closer daría ceros que parecen
+    datos. Un closer no tiene «Mis datos» de setter: 403.
+    """
+    if current_user.role not in ROLES_DIRECCION + (ROLE_SETTER,):
+        return jsonify({'message': 'Forbidden'}), 403
+    _rol, miembro_id, puede_elegir = alcance_de(current_user, ROL_SETTERS, request.args.get('miembro_id'))
+    if puede_elegir and miembro_id is not None:
+        miembro = db.session.get(User, miembro_id)
+        if not miembro or miembro.role != ROLE_SETTER:
+            return jsonify({'message': 'No existe ese setter'}), 404
+    start, end, prev_start, prev_end = _rangos()
+    datos = datos_setter.mis_datos(miembro_id, start, end, prev_start, prev_end)
+    return jsonify({**datos, 'dates': _fechas(start, end, prev_start, prev_end)}), 200
 
 
 @bp.route('/cierres/no-cerradas', methods=['GET'])
