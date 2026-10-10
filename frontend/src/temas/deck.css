@@ -3,130 +3,130 @@
      python frontend/src/temas/herramientas/temas_tailwind.py ".tema-deck" <salida> <archivos...>
    y pegar la salida debajo de este encabezado.
    Todo cuelga de [data-tema]: sin tema elegido ninguna regla aplica y el mazo queda como hoy. */
-[data-tema] .tema-deck{color-scheme:var(--esquema)}
-[data-tema] :is(.tema-deck, .tema-deck *).accent-pink-500{accent-color:var(--destacado)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-\[\#111219\]\/95{background-color:color-mix(in srgb, var(--modal) 95%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-amber-500{background-color:var(--est-aviso)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-amber-500\/10{background-color:color-mix(in srgb, var(--est-aviso) 10%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-amber-500\/15{background-color:color-mix(in srgb, var(--est-aviso) 15%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-amber-500\/20{background-color:color-mix(in srgb, var(--est-aviso) 20%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-amber-500\/5{background-color:color-mix(in srgb, var(--est-aviso) 5%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-black\/20{background-color:var(--cont-3)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-black\/40{background-color:var(--cont-3)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-black\/75{background-color:var(--velo)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-blue-500\/10{background-color:color-mix(in srgb, var(--destacado-2) 10%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-blue-600{background-color:var(--destacado-2)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-emerald-500\/10{background-color:color-mix(in srgb, var(--est-exito) 10%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-emerald-500\/15{background-color:color-mix(in srgb, var(--est-exito) 15%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-emerald-500\/5{background-color:color-mix(in srgb, var(--est-exito) 5%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-emerald-600{background-color:var(--est-exito)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-pink-500\/10{background-color:color-mix(in srgb, var(--destacado) 10%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-pink-500\/5{background-color:color-mix(in srgb, var(--destacado) 5%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-pink-600{background-color:var(--destacado)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-red-500\/15{background-color:color-mix(in srgb, var(--est-error) 15%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-rose-500{background-color:var(--est-error)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-rose-500\/10{background-color:color-mix(in srgb, var(--est-error) 10%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-rose-500\/15{background-color:color-mix(in srgb, var(--est-error) 15%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-rose-500\/5{background-color:color-mix(in srgb, var(--est-error) 5%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-slate-800{background-color:var(--cont-fuerte)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-slate-900{background-color:var(--modal)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-slate-900\/60{background-color:color-mix(in srgb, var(--modal) 60%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-slate-950{background-color:var(--fondo)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-slate-950\/40{background-color:color-mix(in srgb, var(--fondo) 40%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-slate-950\/60{background-color:color-mix(in srgb, var(--fondo) 60%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-slate-950\/70{background-color:color-mix(in srgb, var(--fondo) 70%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-slate-950\/80{background-color:color-mix(in srgb, var(--fondo) 80%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-slate-950\/85{background-color:color-mix(in srgb, var(--fondo) 85%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-violet-500\/10{background-color:color-mix(in srgb, var(--destacado-2) 10%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-violet-500\/15{background-color:color-mix(in srgb, var(--destacado-2) 15%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-violet-500\/5{background-color:color-mix(in srgb, var(--destacado-2) 5%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).bg-violet-600{background-color:var(--destacado-2)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-amber-400{border-color:var(--est-aviso)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-amber-500{border-color:var(--est-aviso)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-amber-500\/10{border-color:color-mix(in srgb, var(--est-aviso) 10%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-amber-500\/20{border-color:color-mix(in srgb, var(--est-aviso) 20%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-amber-500\/30{border-color:color-mix(in srgb, var(--est-aviso) 30%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-amber-500\/40{border-color:color-mix(in srgb, var(--est-aviso) 40%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-blue-500\/20{border-color:color-mix(in srgb, var(--destacado-2) 20%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-emerald-400{border-color:var(--est-exito)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-emerald-500\/10{border-color:color-mix(in srgb, var(--est-exito) 10%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-emerald-500\/20{border-color:color-mix(in srgb, var(--est-exito) 20%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-pink-500\/20{border-color:color-mix(in srgb, var(--destacado) 20%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-pink-500\/30{border-color:color-mix(in srgb, var(--destacado) 30%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-pink-500\/50{border-color:color-mix(in srgb, var(--destacado) 50%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-red-500\/40{border-color:color-mix(in srgb, var(--est-error) 40%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-rose-400{border-color:var(--est-error)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-rose-500\/10{border-color:color-mix(in srgb, var(--est-error) 10%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-rose-500\/20{border-color:color-mix(in srgb, var(--est-error) 20%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-rose-500\/30{border-color:color-mix(in srgb, var(--est-error) 30%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-rose-500\/60{border-color:color-mix(in srgb, var(--est-error) 60%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-slate-700{border-color:var(--borde-3)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-slate-800{border-color:var(--borde-2)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-slate-800\/80{border-color:color-mix(in srgb, var(--borde-2) 80%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-slate-900{border-color:var(--borde-1)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-slate-900\/60{border-color:color-mix(in srgb, var(--borde-1) 60%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-violet-500\/10{border-color:color-mix(in srgb, var(--destacado-2) 10%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-violet-500\/30{border-color:color-mix(in srgb, var(--destacado-2) 30%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-violet-500\/40{border-color:color-mix(in srgb, var(--destacado-2) 40%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-violet-500\/50{border-color:color-mix(in srgb, var(--destacado-2) 50%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).border-white\/10{border-color:color-mix(in srgb, var(--en-fondo) 10%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).focus\:ring-amber-500\/50:focus{--tw-ring-color:color-mix(in srgb, var(--est-aviso) 50%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).focus\:ring-emerald-500:focus{--tw-ring-color:var(--est-exito)}
-[data-tema] :is(.tema-deck, .tema-deck *).focus\:ring-violet-500:focus{--tw-ring-color:var(--destacado-2)}
-[data-tema] :is(.tema-deck, .tema-deck *).from-pink-500{--tw-gradient-from:var(--destacado) var(--tw-gradient-from-position)}
-[data-tema] :is(.tema-deck, .tema-deck *).from-violet-950{--tw-gradient-from:color-mix(in srgb, var(--destacado-2) 25%, var(--fondo)) var(--tw-gradient-from-position)}
-[data-tema] :is(.tema-deck, .tema-deck *) .group:hover .group-hover\:text-white{color:var(--en-fondo)}
-[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-amber-400:hover{background-color:var(--est-aviso)}
-[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-blue-500:hover{background-color:var(--destacado-2)}
-[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-emerald-500:hover{background-color:var(--est-exito)}
-[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-emerald-500\/10:hover{background-color:color-mix(in srgb, var(--est-exito) 10%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-emerald-700:hover{background-color:var(--est-exito)}
-[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-pink-500:hover{background-color:var(--destacado)}
-[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-pink-500\/\[0\.08\]:hover{background-color:color-mix(in srgb, var(--destacado) 8%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-rose-500\/20:hover{background-color:color-mix(in srgb, var(--est-error) 20%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-slate-700:hover{background-color:var(--borde-3)}
-[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-slate-800:hover{background-color:var(--cont-fuerte)}
-[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-slate-900:hover{background-color:var(--modal)}
-[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-slate-900\/50:hover{background-color:color-mix(in srgb, var(--modal) 50%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-violet-500:hover{background-color:var(--destacado-2)}
-[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-violet-500\/10:hover{background-color:color-mix(in srgb, var(--destacado-2) 10%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-white\/5:hover{background-color:color-mix(in srgb, var(--en-fondo) 5%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).hover\:border-amber-500\/50:hover{border-color:color-mix(in srgb, var(--est-aviso) 50%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).hover\:border-pink-500\/50:hover{border-color:color-mix(in srgb, var(--destacado) 50%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).hover\:border-slate-700:hover{border-color:var(--borde-3)}
-[data-tema] :is(.tema-deck, .tema-deck *).hover\:border-slate-800:hover{border-color:var(--borde-2)}
-[data-tema] :is(.tema-deck, .tema-deck *).hover\:text-slate-300:hover{color:color-mix(in srgb, var(--en-fondo) 85%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).hover\:text-white:hover{color:var(--en-fondo)}
-[data-tema] :is(.tema-deck, .tema-deck *).placeholder\:text-slate-600::placeholder{color:var(--texto-3)}
-[data-tema] :is(.tema-deck, .tema-deck *).ring-amber-500\/30{--tw-ring-color:color-mix(in srgb, var(--est-aviso) 30%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).ring-emerald-500\/30{--tw-ring-color:color-mix(in srgb, var(--est-exito) 30%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).ring-rose-500\/30{--tw-ring-color:color-mix(in srgb, var(--est-error) 30%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-amber-300{color:var(--est-aviso-texto)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-amber-400{color:var(--est-aviso)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-amber-500{color:var(--est-aviso)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-amber-500\/80{color:color-mix(in srgb, var(--est-aviso) 80%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-black{color:var(--en-destacado)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-blue-400{color:var(--destacado-2-claro)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-emerald-200{color:var(--est-exito-texto)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-emerald-300{color:var(--est-exito-texto)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-emerald-400{color:var(--est-exito)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-emerald-500{color:var(--est-exito)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-pink-200{color:var(--destacado-texto)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-pink-300{color:var(--destacado-texto)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-pink-400{color:var(--destacado-claro)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-pink-500{color:var(--destacado)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-red-400{color:var(--est-error)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-rose-300{color:var(--est-error-texto)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-rose-400{color:var(--est-error)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-slate-100{color:var(--en-fondo)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-slate-200{color:var(--en-fondo)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-slate-300{color:color-mix(in srgb, var(--en-fondo) 85%, transparent)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-slate-400{color:var(--texto-2)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-slate-500{color:var(--texto-3)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-slate-600{color:var(--texto-3)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-violet-300{color:var(--destacado-2-texto)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-violet-400{color:var(--destacado-2-claro)}
-[data-tema] :is(.tema-deck, .tema-deck *).text-white{color:var(--en-fondo)}
-[data-tema] :is(.tema-deck, .tema-deck *).to-slate-950{--tw-gradient-to:var(--fondo) var(--tw-gradient-to-position)}
-[data-tema] :is(.tema-deck, .tema-deck *).to-violet-500{--tw-gradient-to:var(--destacado-2) var(--tw-gradient-to-position)}
-[data-tema] :is(.tema-deck, .tema-deck *).via-slate-900{--tw-gradient-stops:var(--tw-gradient-from), var(--modal) var(--tw-gradient-via-position), var(--tw-gradient-to)}
+[data-tema] .tema-deck{color-scheme:var(--ln-scheme)}
+[data-tema] :is(.tema-deck, .tema-deck *).accent-pink-500{accent-color:var(--ln-brand)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-\[\#111219\]\/95{background-color:color-mix(in srgb, var(--ln-window-bg) 95%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-amber-500{background-color:var(--ln-warning)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-amber-500\/10{background-color:color-mix(in srgb, var(--ln-warning) 10%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-amber-500\/15{background-color:color-mix(in srgb, var(--ln-warning) 15%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-amber-500\/20{background-color:color-mix(in srgb, var(--ln-warning) 20%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-amber-500\/5{background-color:color-mix(in srgb, var(--ln-warning) 5%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-black\/20{background-color:var(--ln-inset-bg)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-black\/40{background-color:var(--ln-inset-bg)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-black\/75{background-color:var(--ln-scrim)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-blue-500\/10{background-color:color-mix(in srgb, var(--ln-brand-2) 10%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-blue-600{background-color:var(--ln-brand-2)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-emerald-500\/10{background-color:color-mix(in srgb, var(--ln-success) 10%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-emerald-500\/15{background-color:color-mix(in srgb, var(--ln-success) 15%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-emerald-500\/5{background-color:color-mix(in srgb, var(--ln-success) 5%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-emerald-600{background-color:var(--ln-success)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-pink-500\/10{background-color:color-mix(in srgb, var(--ln-brand) 10%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-pink-500\/5{background-color:color-mix(in srgb, var(--ln-brand) 5%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-pink-600{background-color:var(--ln-brand)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-red-500\/15{background-color:color-mix(in srgb, var(--ln-danger) 15%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-rose-500{background-color:var(--ln-danger)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-rose-500\/10{background-color:color-mix(in srgb, var(--ln-danger) 10%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-rose-500\/15{background-color:color-mix(in srgb, var(--ln-danger) 15%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-rose-500\/5{background-color:color-mix(in srgb, var(--ln-danger) 5%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-slate-800{background-color:var(--ln-ct3-bg-strong)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-slate-900{background-color:var(--ln-window-bg)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-slate-900\/60{background-color:color-mix(in srgb, var(--ln-window-bg) 60%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-slate-950{background-color:var(--ln-page-base)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-slate-950\/40{background-color:color-mix(in srgb, var(--ln-page-base) 40%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-slate-950\/60{background-color:color-mix(in srgb, var(--ln-page-base) 60%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-slate-950\/70{background-color:color-mix(in srgb, var(--ln-page-base) 70%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-slate-950\/80{background-color:color-mix(in srgb, var(--ln-page-base) 80%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-slate-950\/85{background-color:color-mix(in srgb, var(--ln-page-base) 85%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-violet-500\/10{background-color:color-mix(in srgb, var(--ln-brand-2) 10%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-violet-500\/15{background-color:color-mix(in srgb, var(--ln-brand-2) 15%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-violet-500\/5{background-color:color-mix(in srgb, var(--ln-brand-2) 5%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).bg-violet-600{background-color:var(--ln-brand-2)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-amber-400{border-color:var(--ln-warning)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-amber-500{border-color:var(--ln-warning)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-amber-500\/10{border-color:color-mix(in srgb, var(--ln-warning) 10%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-amber-500\/20{border-color:color-mix(in srgb, var(--ln-warning) 20%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-amber-500\/30{border-color:color-mix(in srgb, var(--ln-warning) 30%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-amber-500\/40{border-color:color-mix(in srgb, var(--ln-warning) 40%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-blue-500\/20{border-color:color-mix(in srgb, var(--ln-brand-2) 20%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-emerald-400{border-color:var(--ln-success)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-emerald-500\/10{border-color:color-mix(in srgb, var(--ln-success) 10%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-emerald-500\/20{border-color:color-mix(in srgb, var(--ln-success) 20%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-pink-500\/20{border-color:color-mix(in srgb, var(--ln-brand) 20%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-pink-500\/30{border-color:color-mix(in srgb, var(--ln-brand) 30%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-pink-500\/50{border-color:color-mix(in srgb, var(--ln-brand) 50%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-red-500\/40{border-color:color-mix(in srgb, var(--ln-danger) 40%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-rose-400{border-color:var(--ln-danger)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-rose-500\/10{border-color:color-mix(in srgb, var(--ln-danger) 10%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-rose-500\/20{border-color:color-mix(in srgb, var(--ln-danger) 20%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-rose-500\/30{border-color:color-mix(in srgb, var(--ln-danger) 30%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-rose-500\/60{border-color:color-mix(in srgb, var(--ln-danger) 60%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-slate-700{border-color:var(--ln-border-strong)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-slate-800{border-color:var(--ln-border-main)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-slate-800\/80{border-color:color-mix(in srgb, var(--ln-border-main) 80%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-slate-900{border-color:var(--ln-border-subtle)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-slate-900\/60{border-color:color-mix(in srgb, var(--ln-border-subtle) 60%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-violet-500\/10{border-color:color-mix(in srgb, var(--ln-brand-2) 10%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-violet-500\/30{border-color:color-mix(in srgb, var(--ln-brand-2) 30%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-violet-500\/40{border-color:color-mix(in srgb, var(--ln-brand-2) 40%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-violet-500\/50{border-color:color-mix(in srgb, var(--ln-brand-2) 50%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).border-white\/10{border-color:color-mix(in srgb, var(--ln-text-out) 10%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).focus\:ring-amber-500\/50:focus{--tw-ring-color:color-mix(in srgb, var(--ln-warning) 50%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).focus\:ring-emerald-500:focus{--tw-ring-color:var(--ln-success)}
+[data-tema] :is(.tema-deck, .tema-deck *).focus\:ring-violet-500:focus{--tw-ring-color:var(--ln-brand-2)}
+[data-tema] :is(.tema-deck, .tema-deck *).from-pink-500{--tw-gradient-from:var(--ln-brand) var(--tw-gradient-from-position)}
+[data-tema] :is(.tema-deck, .tema-deck *).from-violet-950{--tw-gradient-from:color-mix(in srgb, var(--ln-brand-2) 25%, var(--ln-page-base)) var(--tw-gradient-from-position)}
+[data-tema] :is(.tema-deck, .tema-deck *) .group:hover .group-hover\:text-white{color:var(--ln-text-out)}
+[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-amber-400:hover{background-color:var(--ln-warning)}
+[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-blue-500:hover{background-color:var(--ln-brand-2)}
+[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-emerald-500:hover{background-color:var(--ln-success)}
+[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-emerald-500\/10:hover{background-color:color-mix(in srgb, var(--ln-success) 10%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-emerald-700:hover{background-color:var(--ln-success)}
+[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-pink-500:hover{background-color:var(--ln-brand)}
+[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-pink-500\/\[0\.08\]:hover{background-color:color-mix(in srgb, var(--ln-brand) 8%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-rose-500\/20:hover{background-color:color-mix(in srgb, var(--ln-danger) 20%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-slate-700:hover{background-color:var(--ln-border-strong)}
+[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-slate-800:hover{background-color:var(--ln-ct3-bg-strong)}
+[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-slate-900:hover{background-color:var(--ln-window-bg)}
+[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-slate-900\/50:hover{background-color:color-mix(in srgb, var(--ln-window-bg) 50%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-violet-500:hover{background-color:var(--ln-brand-2)}
+[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-violet-500\/10:hover{background-color:color-mix(in srgb, var(--ln-brand-2) 10%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).hover\:bg-white\/5:hover{background-color:color-mix(in srgb, var(--ln-text-out) 5%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).hover\:border-amber-500\/50:hover{border-color:color-mix(in srgb, var(--ln-warning) 50%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).hover\:border-pink-500\/50:hover{border-color:color-mix(in srgb, var(--ln-brand) 50%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).hover\:border-slate-700:hover{border-color:var(--ln-border-strong)}
+[data-tema] :is(.tema-deck, .tema-deck *).hover\:border-slate-800:hover{border-color:var(--ln-border-main)}
+[data-tema] :is(.tema-deck, .tema-deck *).hover\:text-slate-300:hover{color:color-mix(in srgb, var(--ln-text-out) 85%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).hover\:text-white:hover{color:var(--ln-text-out)}
+[data-tema] :is(.tema-deck, .tema-deck *).placeholder\:text-slate-600::placeholder{color:var(--ln-text-faint)}
+[data-tema] :is(.tema-deck, .tema-deck *).ring-amber-500\/30{--tw-ring-color:color-mix(in srgb, var(--ln-warning) 30%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).ring-emerald-500\/30{--tw-ring-color:color-mix(in srgb, var(--ln-success) 30%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).ring-rose-500\/30{--tw-ring-color:color-mix(in srgb, var(--ln-danger) 30%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-amber-300{color:var(--ln-warning-text)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-amber-400{color:var(--ln-warning)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-amber-500{color:var(--ln-warning)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-amber-500\/80{color:color-mix(in srgb, var(--ln-warning) 80%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-black{color:var(--ln-brand-content)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-blue-400{color:var(--ln-brand-2-accent)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-emerald-200{color:var(--ln-success-text)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-emerald-300{color:var(--ln-success-text)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-emerald-400{color:var(--ln-success)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-emerald-500{color:var(--ln-success)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-pink-200{color:var(--ln-brand-text)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-pink-300{color:var(--ln-brand-text)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-pink-400{color:var(--ln-brand-accent)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-pink-500{color:var(--ln-brand)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-red-400{color:var(--ln-danger)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-rose-300{color:var(--ln-danger-text)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-rose-400{color:var(--ln-danger)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-slate-100{color:var(--ln-text-out)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-slate-200{color:var(--ln-text-out)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-slate-300{color:color-mix(in srgb, var(--ln-text-out) 85%, transparent)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-slate-400{color:var(--ln-text-muted)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-slate-500{color:var(--ln-text-faint)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-slate-600{color:var(--ln-text-faint)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-violet-300{color:var(--ln-brand-2-text)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-violet-400{color:var(--ln-brand-2-accent)}
+[data-tema] :is(.tema-deck, .tema-deck *).text-white{color:var(--ln-text-out)}
+[data-tema] :is(.tema-deck, .tema-deck *).to-slate-950{--tw-gradient-to:var(--ln-page-base) var(--tw-gradient-to-position)}
+[data-tema] :is(.tema-deck, .tema-deck *).to-violet-500{--tw-gradient-to:var(--ln-brand-2) var(--tw-gradient-to-position)}
+[data-tema] :is(.tema-deck, .tema-deck *).via-slate-900{--tw-gradient-stops:var(--tw-gradient-from), var(--ln-window-bg) var(--tw-gradient-via-position), var(--tw-gradient-to)}

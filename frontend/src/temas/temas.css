@@ -1,159 +1,186 @@
 /* ============================================================================
    TEMAS — la apariencia de la app en un solo lugar.
 
-   Cada tema es un bloque completo y cerrado: define todos los roles y no se
-   combina con nada (no hay "tema + variante"). El modo claro u oscuro es parte
-   del tema, no un eje aparte. Se elige en Configuración › Apariencia y vive en
-   `data-tema` sobre <html> (context/AparienciaContext.jsx); cualquier nodo con
-   `data-tema` toma ese tema para su subárbol, así se pintan las vistas previas.
+   Dos ejes, como en academy: el tema (Learnation Classic, el look de siempre del closer;
+   Learnation Modern, el de Agendamiento) y su modo, claro u oscuro. Cada combinación es un
+   bloque completo y cerrado. Viven en <html> como `data-tema` y `data-tema-modo`
+   (context/AparienciaContext.jsx); cualquier nodo con los dos atributos toma ese tema para su
+   subárbol, así se pintan las vistas previas.
 
-   Los nombres son nuevos a propósito: index.css, comercial.css y thalamus.css
-   usan `--bg-surface`, `--text-muted`, `--brand-secondary`... con otros valores
-   cada uno, y reusarlos acá los pisaría.
+   Todos los roles llevan el prefijo `--ln-`: los nombres sueltos (`--bg-input`, `--text-muted`,
+   `--border-main`...) ya existen en index.css, comercial.css y thalamus.css con otros valores, y
+   dentro de esas hojas `--bg-input: var(--bg-input, ...)` se apuntaría a sí mismo.
 
-   Cómo lo leen las pantallas: sus variables de siempre pasan a `var(--rol, valor de hoy)`
-   (`.dc-shell` en pages/comercial/comercial.css, `.thalamus` en agendas_v2/thalamus.css).
-   Sin tema elegido no hay `data-tema`, el rol no existe y queda el valor de hoy tal cual:
-   nadie nota nada hasta que elige. Elegido, el tema manda en todas.
+   Cómo lo leen las pantallas: sus colores pasan a `var(--ln-rol, valor de hoy)` o a
+   `color-mix(in srgb, var(--ln-rol, color) N%, transparent)`. Sin tema elegido no hay
+   `data-tema`, el rol no existe y queda el valor de hoy tal cual. Las clases de color de
+   Tailwind van por reglas generadas bajo `[data-tema]` (temas/deck.css, temas/herramientas).
 
-   Closing oscuro son los valores exactos de `.dc-shell`; Thalamus oscuro y claro, los de
-   thalamus.css.
-
-   Roles:
-   fondo           la página (color base + degradado) y el texto directo sobre ella
-   destacado       botones principales y lo activo; destacado-2 es el acento azul
-   destacado-suave lo seleccionado sin gritar (píldoras, notas propias)
-   *-texto         el mismo color pensado para texto sobre el fondo del tema (en oscuro, más claro)
-   cont-1/2/3      contenedores: 1 paneles, 2 tarjetas y controles dentro, 3 hundido
-   campo           inputs
-   modal/flotante  hojas y modales / menús, popovers y tooltips; velo detrás del modal
-   invertido       el segmento o pestaña activa (píldora clara sobre oscuro)
-   texto-2/3       texto secundario en dos niveles
-   borde-1/2/3     bordes de menor a mayor fuerza; brillo es el filo de arriba
-   est-*           estados (exito, aviso, error, info, inactivo): color, superficie y borde
-   riel            pista de switches y barras
-   esquema         dark o light, para el `color-scheme` de cada contenedor
-   mapa-*          el lienzo de flujos de Agendamiento; medalla-* el podio del ranking
-
-   Por qué `est-` y `riel`: `--error`, `--info` y `--hueco` ya existen en otras hojas, y en <html>
-   les ganarían a los `var(--error, respaldo)` de las pantallas viejas. Y sin `color-scheme`: en
-   <html> les cambiaría los scrollbars y los controles nativos a las pantallas que todavía no
-   usan los temas; lo pone cada contenedor migrado.
+   Roles (contenedores con la numeración de academy):
+   page-bg/-base, text-out   la página (degradado + color base) y el texto directo sobre ella
+   ct2-bg, text-in           contenedor no prioritario (panel) y el texto adentro
+   ct3-bg, ct3-text          lo que va dentro de un contenedor: tarjetas, botones, controles
+   inset-bg                  el hundido (tablas, pozos)
+   brand / brand-2           destacado rosa y azul, con -accent, -content (texto encima),
+                             -soft (seleccionado sin gritar) y -text (para texto sobre la página)
+   input-bg                  campos
+   window-bg / popover-bg    modales y hojas / menús, popovers y tooltips; scrim detrás del modal
+   inverse-bg/-text          el segmento o pestaña activa
+   text-muted / text-faint   texto secundario en dos niveles
+   border-subtle/-main/-strong, sheen, track
+   success, warning, danger, info, idle   con -bg, -border y -text; on-status es el texto encima
+   scheme                    dark o light, para el `color-scheme` de cada contenedor
+   map-*, medal-*            el lienzo de flujos y el podio de Agendamiento
    ============================================================================ */
 
-[data-tema="closing-oscuro"]{
-  --destacado-2-claro:#4E8BD8; --destacado-texto:#FFB3DE; --destacado-2-texto:#8C99E0;
-  --est-exito-texto:#7DEAC0; --est-aviso-texto:#F3D08A; --est-error-texto:#F5A99C; --est-info-texto:#93C5FD;
-  --esquema:dark;
-  --mapa-lienzo:#070B2A; --mapa-punto:rgba(255,255,255,.07); --mapa-nodo:#0B1033; --mapa-nodo-fila:rgba(255,255,255,.06); --mapa-arista:rgba(160,175,230,.42);
-  --medalla-oro:#F2C14E; --medalla-plata:#C5CEDB; --medalla-bronce:#DA8C5C;
-  --fondo:#020617; --fondo-degradado:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%); --en-fondo:#FFFFFF;
-  --destacado:#FF3FA4; --destacado-claro:#FF6AD5; --en-destacado:#020617;
-  --destacado-suave:rgba(255,63,164,.10); --destacado-suave-borde:rgba(255,63,164,.35);
-  --destacado-2:#1323C6; --en-destacado-2:#FFFFFF;
-  --cont-tenue:rgba(255,255,255,.02);
-  --cont-1:rgba(255,255,255,.04); --en-cont-1:#FFFFFF;
-  --cont-2:rgba(255,255,255,.08); --cont-2-hover:rgba(255,255,255,.12); --en-cont-2:#FFFFFF;
-  --cont-3:rgba(0,0,0,.34); --en-cont-3:#FFFFFF;
-  --cont-fuerte:rgba(255,255,255,.12);
-  --campo:rgba(0,0,0,.30);
-  --modal:rgba(2,6,23,.90); --en-modal:#FFFFFF; --flotante:#0B1030; --velo:rgba(2,6,23,.70);
-  --invertido:#FFFFFF; --en-invertido:#020617;
-  --texto-2:rgba(255,255,255,.60); --texto-3:rgba(255,255,255,.40);
-  --borde-1:rgba(255,255,255,.05); --borde-2:rgba(255,255,255,.15); --borde-3:rgba(255,255,255,.38);
-  --brillo:rgba(255,255,255,.10); --riel:rgba(255,255,255,.12);
-  --est-exito:#2FBF8F;    --est-exito-sup:#071A24;    --est-exito-borde:#10413D;
-  --est-aviso:#D9A441;    --est-aviso-sup:#1A171C;    --est-aviso-borde:#473924;
-  --est-error:#E85C4A;    --est-error-sup:#1B0F1D;    --est-error-borde:#4C2227;
-  --est-info:#4E8BD8;     --est-info-sup:#0A152C;     --est-info-borde:#1A3155;
-  --est-inactivo:#7F8CA8; --est-inactivo-sup:#0E1326; --est-inactivo-borde:#252C42;
-  --en-est:#020617;
-  --foco:#5B7CFF; --anillo-foco:0 0 0 3px rgba(91,124,255,.55);
-  --sombra:0 8px 32px 0 rgba(0,0,0,.40); --sombra-destacado:0 10px 15px -3px rgba(19,35,198,.35);
-  --radio:32px; --radio-control:16px; --desenfoque:0px;
-  --humo-mezcla:screen; --humo-opacidad:.42; --humo-opacidad-i:.62;
+[data-tema="classic"][data-tema-modo="oscuro"]{
+  --ln-brand-2-accent:#4E8BD8; --ln-brand-text:#FFB3DE; --ln-brand-2-text:#8C99E0;
+  --ln-success-text:#7DEAC0; --ln-warning-text:#F3D08A; --ln-danger-text:#F5A99C; --ln-info-text:#93C5FD;
+  --ln-scheme:dark;
+  --ln-map-canvas:#070B2A; --ln-map-dot:rgba(255,255,255,.07); --ln-map-node:#0B1033; --ln-map-node-row:rgba(255,255,255,.06); --ln-map-edge:rgba(160,175,230,.42);
+  --ln-medal-gold:#F2C14E; --ln-medal-silver:#C5CEDB; --ln-medal-bronze:#DA8C5C;
+  --ln-page-base:#020617; --ln-page-bg:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%); --ln-text-out:#FFFFFF;
+  --ln-brand:#FF3FA4; --ln-brand-accent:#FF6AD5; --ln-brand-content:#020617;
+  --ln-brand-soft:rgba(255,63,164,.10); --ln-brand-soft-border:rgba(255,63,164,.35);
+  --ln-brand-2:#1323C6; --ln-brand-2-content:#FFFFFF;
+  --ln-ct2-bg-subtle:rgba(255,255,255,.02);
+  --ln-ct2-bg:rgba(255,255,255,.04); --ln-text-in:#FFFFFF;
+  --ln-ct3-bg:rgba(255,255,255,.08); --ln-ct3-bg-hover:rgba(255,255,255,.12); --ln-ct3-text:#FFFFFF;
+  --ln-inset-bg:rgba(0,0,0,.34); --ln-inset-text:#FFFFFF;
+  --ln-ct3-bg-strong:rgba(255,255,255,.12);
+  --ln-input-bg:rgba(0,0,0,.30);
+  --ln-window-bg:rgba(2,6,23,.90); --ln-window-text:#FFFFFF; --ln-popover-bg:#0B1030; --ln-scrim:rgba(2,6,23,.70);
+  --ln-inverse-bg:#FFFFFF; --ln-inverse-text:#020617;
+  --ln-text-muted:rgba(255,255,255,.60); --ln-text-faint:rgba(255,255,255,.40);
+  --ln-border-subtle:rgba(255,255,255,.05); --ln-border-main:rgba(255,255,255,.15); --ln-border-strong:rgba(255,255,255,.38);
+  --ln-sheen:rgba(255,255,255,.10); --ln-track:rgba(255,255,255,.12);
+  --ln-success:#2FBF8F;    --ln-success-bg:#071A24;    --ln-success-border:#10413D;
+  --ln-warning:#D9A441;    --ln-warning-bg:#1A171C;    --ln-warning-border:#473924;
+  --ln-danger:#E85C4A;    --ln-danger-bg:#1B0F1D;    --ln-danger-border:#4C2227;
+  --ln-info:#4E8BD8;     --ln-info-bg:#0A152C;     --ln-info-border:#1A3155;
+  --ln-idle:#7F8CA8; --ln-idle-bg:#0E1326; --ln-idle-border:#252C42;
+  --ln-on-status:#020617;
+  --ln-focus:#5B7CFF; --ln-focus-ring:0 0 0 3px rgba(91,124,255,.55);
+  --ln-shadow:0 8px 32px 0 rgba(0,0,0,.40); --ln-shadow-brand:0 10px 15px -3px rgba(19,35,198,.35);
+  --ln-radius:32px; --ln-radius-control:16px; --ln-blur:0px;
+  --ln-humo-blend:screen; --ln-humo-op:.42; --ln-humo-op-i:.62;
 }
 
-[data-tema="thalamus-oscuro"]{
-  --destacado-2-claro:#4E8BD8; --destacado-texto:#FFB3DE; --destacado-2-texto:#8C99E0;
-  --est-exito-texto:#7DEAC0; --est-aviso-texto:#F3D08A; --est-error-texto:#F5A99C; --est-info-texto:#93C5FD;
-  --esquema:dark;
-  --mapa-lienzo:#070B2A; --mapa-punto:rgba(255,255,255,.07); --mapa-nodo:#0B1033; --mapa-nodo-fila:rgba(255,255,255,.06); --mapa-arista:rgba(160,175,230,.42);
-  --medalla-oro:#F2C14E; --medalla-plata:#C5CEDB; --medalla-bronce:#DA8C5C;
-  --fondo:#020617; --fondo-degradado:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%); --en-fondo:#FFFFFF;
-  --destacado:#FF3FA4; --destacado-claro:#FF6AD5; --en-destacado:#020617;
-  --destacado-suave:rgba(255,63,164,.10); --destacado-suave-borde:rgba(255,63,164,.35);
-  --destacado-2:#1323C6; --en-destacado-2:#FFFFFF;
-  --cont-tenue:rgba(255,255,255,.02);
-  --cont-1:rgba(255,255,255,.04); --en-cont-1:#FFFFFF;
-  --cont-2:rgba(255,255,255,.07); --cont-2-hover:rgba(255,255,255,.12); --en-cont-2:#FFFFFF;
-  --cont-3:rgba(0,0,0,.34); --en-cont-3:#FFFFFF;
-  --cont-fuerte:rgba(255,255,255,.12);
-  --campo:rgba(0,0,0,.30);
-  --modal:rgba(2,6,23,.92); --en-modal:#FFFFFF; --flotante:#0B1030; --velo:rgba(2,6,23,.72);
-  --invertido:#FFFFFF; --en-invertido:#020617;
-  --texto-2:rgba(255,255,255,.62); --texto-3:rgba(255,255,255,.42);
-  --borde-1:rgba(255,255,255,.07); --borde-2:rgba(255,255,255,.15); --borde-3:rgba(255,255,255,.34);
-  --brillo:rgba(255,255,255,.10); --riel:rgba(255,255,255,.12);
-  --est-exito:#2FBF8F;    --est-exito-sup:#071A24;    --est-exito-borde:#10413D;
-  --est-aviso:#D9A441;    --est-aviso-sup:#1A171C;    --est-aviso-borde:#473924;
-  --est-error:#E85C4A;    --est-error-sup:#1B0F1D;    --est-error-borde:#4C2227;
-  --est-info:#4E8BD8;     --est-info-sup:#0A152C;     --est-info-borde:#1A3155;
-  --est-inactivo:#7F8CA8; --est-inactivo-sup:#0E1326; --est-inactivo-borde:#252C42;
-  --en-est:#020617;
-  --foco:#5B7CFF; --anillo-foco:0 0 0 3px rgba(91,124,255,.55);
-  --sombra:0 8px 32px 0 rgba(0,0,0,.40); --sombra-destacado:0 10px 15px -3px rgba(19,35,198,.35);
-  --radio:32px; --radio-control:16px; --desenfoque:0px;
-  --humo-mezcla:screen; --humo-opacidad:.42; --humo-opacidad-i:.62;
+[data-tema="modern"][data-tema-modo="oscuro"]{
+  --ln-brand-2-accent:#4E8BD8; --ln-brand-text:#FFB3DE; --ln-brand-2-text:#8C99E0;
+  --ln-success-text:#7DEAC0; --ln-warning-text:#F3D08A; --ln-danger-text:#F5A99C; --ln-info-text:#93C5FD;
+  --ln-scheme:dark;
+  --ln-map-canvas:#070B2A; --ln-map-dot:rgba(255,255,255,.07); --ln-map-node:#0B1033; --ln-map-node-row:rgba(255,255,255,.06); --ln-map-edge:rgba(160,175,230,.42);
+  --ln-medal-gold:#F2C14E; --ln-medal-silver:#C5CEDB; --ln-medal-bronze:#DA8C5C;
+  --ln-page-base:#020617; --ln-page-bg:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%); --ln-text-out:#FFFFFF;
+  --ln-brand:#FF3FA4; --ln-brand-accent:#FF6AD5; --ln-brand-content:#020617;
+  --ln-brand-soft:rgba(255,63,164,.10); --ln-brand-soft-border:rgba(255,63,164,.35);
+  --ln-brand-2:#1323C6; --ln-brand-2-content:#FFFFFF;
+  --ln-ct2-bg-subtle:rgba(255,255,255,.02);
+  --ln-ct2-bg:rgba(255,255,255,.04); --ln-text-in:#FFFFFF;
+  --ln-ct3-bg:rgba(255,255,255,.07); --ln-ct3-bg-hover:rgba(255,255,255,.12); --ln-ct3-text:#FFFFFF;
+  --ln-inset-bg:rgba(0,0,0,.34); --ln-inset-text:#FFFFFF;
+  --ln-ct3-bg-strong:rgba(255,255,255,.12);
+  --ln-input-bg:rgba(0,0,0,.30);
+  --ln-window-bg:rgba(2,6,23,.92); --ln-window-text:#FFFFFF; --ln-popover-bg:#0B1030; --ln-scrim:rgba(2,6,23,.72);
+  --ln-inverse-bg:#FFFFFF; --ln-inverse-text:#020617;
+  --ln-text-muted:rgba(255,255,255,.62); --ln-text-faint:rgba(255,255,255,.42);
+  --ln-border-subtle:rgba(255,255,255,.07); --ln-border-main:rgba(255,255,255,.15); --ln-border-strong:rgba(255,255,255,.34);
+  --ln-sheen:rgba(255,255,255,.10); --ln-track:rgba(255,255,255,.12);
+  --ln-success:#2FBF8F;    --ln-success-bg:#071A24;    --ln-success-border:#10413D;
+  --ln-warning:#D9A441;    --ln-warning-bg:#1A171C;    --ln-warning-border:#473924;
+  --ln-danger:#E85C4A;    --ln-danger-bg:#1B0F1D;    --ln-danger-border:#4C2227;
+  --ln-info:#4E8BD8;     --ln-info-bg:#0A152C;     --ln-info-border:#1A3155;
+  --ln-idle:#7F8CA8; --ln-idle-bg:#0E1326; --ln-idle-border:#252C42;
+  --ln-on-status:#020617;
+  --ln-focus:#5B7CFF; --ln-focus-ring:0 0 0 3px rgba(91,124,255,.55);
+  --ln-shadow:0 8px 32px 0 rgba(0,0,0,.40); --ln-shadow-brand:0 10px 15px -3px rgba(19,35,198,.35);
+  --ln-radius:32px; --ln-radius-control:16px; --ln-blur:0px;
+  --ln-humo-blend:screen; --ln-humo-op:.42; --ln-humo-op-i:.62;
 }
 
-[data-tema="thalamus-claro"]{
-  --destacado-2-claro:#27599F; --destacado-texto:#C9156F; --destacado-2-texto:#1323C6;
-  --est-exito-texto:#0E7E5C; --est-aviso-texto:#8F6310; --est-error-texto:#BE3726; --est-info-texto:#27599F;
-  --esquema:light;
-  --mapa-lienzo:#EEF1FA; --mapa-punto:rgba(10,14,61,.10); --mapa-nodo:#FFFFFF; --mapa-nodo-fila:rgba(10,14,61,.05); --mapa-arista:rgba(60,75,140,.38);
-  --medalla-oro:#A87400; --medalla-plata:#66748A; --medalla-bronce:#A65427;
-  --fondo:#F6F7FC; --fondo-degradado:linear-gradient(135deg,#F6F7FC 0%,#EAEEFA 50%,#F5F0F8 100%); --en-fondo:#080C30;
-  --destacado:#C9156F; --destacado-claro:#E23E96; --en-destacado:#FFFFFF;
-  --destacado-suave:rgba(201,21,111,.09); --destacado-suave-borde:rgba(201,21,111,.30);
-  --destacado-2:#1323C6; --en-destacado-2:#FFFFFF;
-  --cont-tenue:rgba(10,14,61,.015);
-  --cont-1:rgba(10,14,61,.035); --en-cont-1:#080C30;
-  --cont-2:rgba(255,255,255,.75); --cont-2-hover:#FFFFFF; --en-cont-2:#080C30;
-  --cont-3:rgba(10,14,61,.055); --en-cont-3:#080C30;
-  --cont-fuerte:rgba(10,14,61,.10);
-  --campo:rgba(10,14,61,.05);
-  --modal:rgba(255,255,255,.96); --en-modal:#080C30; --flotante:#FFFFFF; --velo:rgba(10,14,61,.42);
-  --invertido:#080C30; --en-invertido:#F6F7FC;
-  --texto-2:rgba(8,12,48,.62); --texto-3:rgba(8,12,48,.46);
-  --borde-1:rgba(10,14,61,.08); --borde-2:rgba(10,14,61,.14); --borde-3:rgba(10,14,61,.26);
-  --brillo:rgba(255,255,255,.9); --riel:rgba(10,14,61,.12);
-  --est-exito:#0E7E5C;    --est-exito-sup:#E4F5EE;    --est-exito-borde:#AEDFCD;
-  --est-aviso:#8F6310;    --est-aviso-sup:#FAF0DC;    --est-aviso-borde:#E5D0A0;
-  --est-error:#BE3726;    --est-error-sup:#FCEAE6;    --est-error-borde:#F0C0B7;
-  --est-info:#27599F;     --est-info-sup:#E6EEFA;     --est-info-borde:#BAD2EE;
-  --est-inactivo:#54617A; --est-inactivo-sup:#ECEFF5; --est-inactivo-borde:#CFD7E4;
-  --en-est:#FFFFFF;
-  --foco:#5B7CFF; --anillo-foco:0 0 0 3px rgba(91,124,255,.55);
-  --sombra:0 8px 32px 0 rgba(10,14,61,.12); --sombra-destacado:0 10px 15px -3px rgba(201,21,111,.28);
-  --radio:32px; --radio-control:16px; --desenfoque:0px;
-  --humo-mezcla:multiply; --humo-opacidad:.20; --humo-opacidad-i:.55;
+[data-tema="modern"][data-tema-modo="claro"]{
+  --ln-brand-2-accent:#27599F; --ln-brand-text:#C9156F; --ln-brand-2-text:#1323C6;
+  --ln-success-text:#0E7E5C; --ln-warning-text:#8F6310; --ln-danger-text:#BE3726; --ln-info-text:#27599F;
+  --ln-scheme:light;
+  --ln-map-canvas:#EEF1FA; --ln-map-dot:rgba(10,14,61,.10); --ln-map-node:#FFFFFF; --ln-map-node-row:rgba(10,14,61,.05); --ln-map-edge:rgba(60,75,140,.38);
+  --ln-medal-gold:#A87400; --ln-medal-silver:#66748A; --ln-medal-bronze:#A65427;
+  --ln-page-base:#F6F7FC; --ln-page-bg:linear-gradient(135deg,#F6F7FC 0%,#EAEEFA 50%,#F5F0F8 100%); --ln-text-out:#080C30;
+  --ln-brand:#C9156F; --ln-brand-accent:#E23E96; --ln-brand-content:#FFFFFF;
+  --ln-brand-soft:rgba(201,21,111,.09); --ln-brand-soft-border:rgba(201,21,111,.30);
+  --ln-brand-2:#1323C6; --ln-brand-2-content:#FFFFFF;
+  --ln-ct2-bg-subtle:rgba(10,14,61,.015);
+  --ln-ct2-bg:rgba(10,14,61,.035); --ln-text-in:#080C30;
+  --ln-ct3-bg:rgba(255,255,255,.75); --ln-ct3-bg-hover:#FFFFFF; --ln-ct3-text:#080C30;
+  --ln-inset-bg:rgba(10,14,61,.055); --ln-inset-text:#080C30;
+  --ln-ct3-bg-strong:rgba(10,14,61,.10);
+  --ln-input-bg:rgba(10,14,61,.05);
+  --ln-window-bg:rgba(255,255,255,.96); --ln-window-text:#080C30; --ln-popover-bg:#FFFFFF; --ln-scrim:rgba(10,14,61,.42);
+  --ln-inverse-bg:#080C30; --ln-inverse-text:#F6F7FC;
+  --ln-text-muted:rgba(8,12,48,.62); --ln-text-faint:rgba(8,12,48,.46);
+  --ln-border-subtle:rgba(10,14,61,.08); --ln-border-main:rgba(10,14,61,.14); --ln-border-strong:rgba(10,14,61,.26);
+  --ln-sheen:rgba(255,255,255,.9); --ln-track:rgba(10,14,61,.12);
+  --ln-success:#0E7E5C;    --ln-success-bg:#E4F5EE;    --ln-success-border:#AEDFCD;
+  --ln-warning:#8F6310;    --ln-warning-bg:#FAF0DC;    --ln-warning-border:#E5D0A0;
+  --ln-danger:#BE3726;    --ln-danger-bg:#FCEAE6;    --ln-danger-border:#F0C0B7;
+  --ln-info:#27599F;     --ln-info-bg:#E6EEFA;     --ln-info-border:#BAD2EE;
+  --ln-idle:#54617A; --ln-idle-bg:#ECEFF5; --ln-idle-border:#CFD7E4;
+  --ln-on-status:#FFFFFF;
+  --ln-focus:#5B7CFF; --ln-focus-ring:0 0 0 3px rgba(91,124,255,.55);
+  --ln-shadow:0 8px 32px 0 rgba(10,14,61,.12); --ln-shadow-brand:0 10px 15px -3px rgba(201,21,111,.28);
+  --ln-radius:32px; --ln-radius-control:16px; --ln-blur:0px;
+  --ln-humo-blend:multiply; --ln-humo-op:.20; --ln-humo-op-i:.55;
+}
+[data-tema="classic"][data-tema-modo="claro"]{
+  --ln-brand-2-accent:#27599F; --ln-brand-text:#C9156F; --ln-brand-2-text:#1323C6;
+  --ln-success-text:#0E7E5C; --ln-warning-text:#8F6310; --ln-danger-text:#BE3726; --ln-info-text:#27599F;
+  --ln-scheme:light;
+  --ln-map-canvas:#EEF1FA; --ln-map-dot:rgba(10,14,61,.10); --ln-map-node:#FFFFFF; --ln-map-node-row:rgba(10,14,61,.05); --ln-map-edge:rgba(60,75,140,.38);
+  --ln-medal-gold:#A87400; --ln-medal-silver:#66748A; --ln-medal-bronze:#A65427;
+  --ln-page-base:#F6F7FC; --ln-page-bg:linear-gradient(135deg,#F6F7FC 0%,#EAEEFA 50%,#F5F0F8 100%); --ln-text-out:#080C30;
+  --ln-brand:#C9156F; --ln-brand-accent:#E23E96; --ln-brand-content:#FFFFFF;
+  --ln-brand-soft:rgba(201,21,111,.09); --ln-brand-soft-border:rgba(201,21,111,.30);
+  --ln-brand-2:#1323C6; --ln-brand-2-content:#FFFFFF;
+  --ln-ct2-bg-subtle:rgba(10,14,61,.015);
+  --ln-ct2-bg:rgba(10,14,61,.035); --ln-text-in:#080C30;
+  --ln-ct3-bg:rgba(255,255,255,.82); --ln-ct3-bg-hover:#FFFFFF; --ln-ct3-text:#080C30;
+  --ln-inset-bg:rgba(10,14,61,.055); --ln-inset-text:#080C30;
+  --ln-ct3-bg-strong:rgba(10,14,61,.10);
+  --ln-input-bg:rgba(10,14,61,.05);
+  --ln-window-bg:rgba(255,255,255,.94); --ln-window-text:#080C30; --ln-popover-bg:#FFFFFF; --ln-scrim:rgba(10,14,61,.42);
+  --ln-inverse-bg:#080C30; --ln-inverse-text:#F6F7FC;
+  --ln-text-muted:rgba(8,12,48,.60); --ln-text-faint:rgba(8,12,48,.44);
+  --ln-border-subtle:rgba(10,14,61,.06); --ln-border-main:rgba(10,14,61,.14); --ln-border-strong:rgba(10,14,61,.30);
+  --ln-sheen:rgba(255,255,255,.9); --ln-track:rgba(10,14,61,.12);
+  --ln-success:#0E7E5C;    --ln-success-bg:#E4F5EE;    --ln-success-border:#AEDFCD;
+  --ln-warning:#8F6310;    --ln-warning-bg:#FAF0DC;    --ln-warning-border:#E5D0A0;
+  --ln-danger:#BE3726;    --ln-danger-bg:#FCEAE6;    --ln-danger-border:#F0C0B7;
+  --ln-info:#27599F;     --ln-info-bg:#E6EEFA;     --ln-info-border:#BAD2EE;
+  --ln-idle:#54617A; --ln-idle-bg:#ECEFF5; --ln-idle-border:#CFD7E4;
+  --ln-on-status:#FFFFFF;
+  --ln-focus:#5B7CFF; --ln-focus-ring:0 0 0 3px rgba(91,124,255,.55);
+  --ln-shadow:0 8px 32px 0 rgba(10,14,61,.12); --ln-shadow-brand:0 10px 15px -3px rgba(201,21,111,.28);
+  --ln-radius:32px; --ln-radius-control:16px; --ln-blur:0px;
+  --ln-humo-blend:multiply; --ln-humo-op:.20; --ln-humo-op-i:.55;
 }
 
-/* Vista previa de un tema en la pestaña Apariencia: cada tarjeta lleva su propio
-   `data-tema`, así muestra sus colores aunque la app tenga otro puesto. */
+/* Vista previa de un tema en la pestaña Apariencia: cada tarjeta lleva su propio `data-tema` (en el
+   modo elegido), así muestra sus colores aunque la app tenga otro puesto. */
 .ap-temas{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
 .ap-tema{display:grid;gap:10px;padding:10px;border-radius:20px;text-align:left;cursor:pointer;
-  background:var(--fondo-degradado),var(--fondo);color:var(--en-fondo);border:2px solid var(--borde-1);
+  background:var(--ln-page-bg),var(--ln-page-base);color:var(--ln-text-out);border:2px solid var(--ln-border-subtle);
   font:inherit;transition:border-color .16s,transform .16s}
 .ap-tema:hover{transform:translateY(-1px)}
-.ap-tema:focus-visible{outline:none;box-shadow:var(--anillo-foco)}
-.ap-tema[aria-checked="true"]{border-color:var(--destacado)}
-.ap-muestra{display:grid;gap:6px;padding:10px;border-radius:14px;background:var(--cont-1);border:1px solid var(--borde-1)}
+.ap-tema:focus-visible{outline:none;box-shadow:var(--ln-focus-ring)}
+.ap-tema[aria-checked="true"]{border-color:var(--ln-brand)}
+.ap-muestra{display:grid;gap:6px;padding:10px;border-radius:14px;background:var(--ln-ct2-bg);border:1px solid var(--ln-border-subtle)}
 .ap-muestra-fila{display:flex;align-items:center;gap:6px}
-.ap-muestra-tarjeta{flex:1;height:22px;border-radius:8px;background:var(--cont-2);border:1px solid var(--borde-1)}
-.ap-muestra-btn{width:34px;height:22px;border-radius:999px;background:var(--destacado)}
-.ap-muestra-linea{height:6px;border-radius:999px;background:var(--texto-3)}
-.ap-muestra-linea--corta{width:55%;background:var(--texto-2)}
+.ap-muestra-tarjeta{flex:1;height:22px;border-radius:8px;background:var(--ln-ct3-bg);border:1px solid var(--ln-border-subtle)}
+.ap-muestra-btn{width:34px;height:22px;border-radius:999px;background:var(--ln-brand)}
+.ap-muestra-linea{height:6px;border-radius:999px;background:var(--ln-text-faint)}
+.ap-muestra-linea--corta{width:55%;background:var(--ln-text-muted)}
 .ap-nombre{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;font-weight:800}
-.ap-modo{font-size:11px;font-weight:700;color:var(--texto-2)}
+.ap-modo{font-size:11px;font-weight:700;color:var(--ln-text-muted)}
+/* El modo, debajo de los temas: el mismo control segmentado de Agendamiento, con dos opciones. */
+.thalamus .apariencia.ap-modos{grid-template-columns:repeat(2,minmax(0,1fr))}
+.thalamus .apariencia.ap-modos button[aria-checked="true"]{background:var(--mat-3);color:var(--text-on-surface)}

@@ -2,7 +2,7 @@
 
 - color de la paleta            -> var(--rol, color)
 - rgba de un color de la paleta -> color-mix(in srgb, var(--rol, #hex) P%, transparent)
-- negro con alfa en fondos      -> var(--cont-3, literal)   (en sombras queda tal cual)
+- negro con alfa en fondos      -> var(--ln-inset-bg, literal)   (en sombras queda tal cual)
 - cualquier otro                -> queda tal cual (se reporta)
 
 verificar(orig, nuevo): resuelve los respaldos y compara color por color.
@@ -10,17 +10,17 @@ verificar(orig, nuevo): resuelve los respaldos y compara color por color.
 import re
 
 PALETA = {
-    'ffffff': 'en-fondo', '020617': 'fondo', '0a0e3d': 'fondo', '070a2b': 'fondo',
-    'ff3fa4': 'destacado', 'ff6ad5': 'destacado-claro', '1323c6': 'destacado-2', '4e8bd8': 'destacado-2-claro',
-    '2fbf8f': 'est-exito', 'd9a441': 'est-aviso', 'e85c4a': 'est-error', '60a5fa': 'est-info', '7f8ca8': 'est-inactivo',
-    '7deac0': 'est-exito-texto', 'f3d08a': 'est-aviso-texto', 'f5a99c': 'est-error-texto', '93c5fd': 'est-info-texto',
-    'ffb3de': 'destacado-texto', '8c99e0': 'destacado-2-texto', 'd1d8ff': 'destacado-2-texto', 'bfd3ff': 'destacado-2-texto',
-    'c7d2fe': 'destacado-2-texto', 'c7cceb': 'destacado-2-texto',
+    'ffffff': 'ln-text-out', '020617': 'ln-page-base', '0a0e3d': 'ln-page-base', '070a2b': 'ln-page-base',
+    'ff3fa4': 'ln-brand', 'ff6ad5': 'ln-brand-accent', '1323c6': 'ln-brand-2', '4e8bd8': 'ln-brand-2-accent',
+    '2fbf8f': 'ln-success', 'd9a441': 'ln-warning', 'e85c4a': 'ln-danger', '60a5fa': 'ln-info', '7f8ca8': 'ln-idle',
+    '7deac0': 'ln-success-text', 'f3d08a': 'ln-warning-text', 'f5a99c': 'ln-danger-text', '93c5fd': 'ln-info-text',
+    'ffb3de': 'ln-brand-text', '8c99e0': 'ln-brand-2-text', 'd1d8ff': 'ln-brand-2-text', 'bfd3ff': 'ln-brand-2-text',
+    'c7d2fe': 'ln-brand-2-text', 'c7cceb': 'ln-brand-2-text',
     # tonos sueltos del deck, cada uno a su familia
-    '6366f1': 'destacado-2', '8b5cf6': 'destacado-2', '6d8bff': 'destacado-2-claro', '6da3e0': 'destacado-2-claro',
-    '0d1246': 'fondo', 'ff5cb1': 'destacado-claro', 'ffc2e4': 'destacado-texto',
-    '34a878': 'est-exito', '1e9974': 'est-exito', '9ae6c0': 'est-exito-texto',
-    '06210f': 'en-destacado', '1a0313': 'en-destacado',
+    '6366f1': 'ln-brand-2', '8b5cf6': 'ln-brand-2', '6d8bff': 'ln-brand-2-accent', '6da3e0': 'ln-brand-2-accent',
+    '0d1246': 'ln-page-base', 'ff5cb1': 'ln-brand-accent', 'ffc2e4': 'ln-brand-text',
+    '34a878': 'ln-success', '1e9974': 'ln-success', '9ae6c0': 'ln-success-text',
+    '06210f': 'ln-brand-content', '1a0313': 'ln-brand-content',
 }
 
 COLOR = re.compile(r'#[0-9a-fA-F]{3,8}\b|rgba?\(\s*[0-9.]+\s*,\s*[0-9.]+\s*,\s*[0-9.]+\s*(?:,\s*[0-9.]+\s*)?\)')
@@ -55,7 +55,7 @@ def rol_de(literal, en_sombra):
     if h == '000000':
         if en_sombra:
             return None
-        return f'var(--cont-3, {literal.strip()})'
+        return f'var(--ln-inset-bg, {literal.strip()})'
     rol = PALETA.get(h)
     if not rol:
         return None

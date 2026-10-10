@@ -63,10 +63,10 @@
 /* Con tema elegido (`data-tema` en <html>, temas/temas.css) la hoja es el modal del tema y su texto
    el del tema: nunca más una hoja navy con el texto de un tema claro. Sin tema, como siempre. */
 [data-tema] .hoja-panel {
-    background: var(--modal);
-    color: var(--en-modal);
-    border-color: var(--borde-2);
-    --text-main: var(--en-modal);
-    --color-text-base: var(--en-modal);
-    --text-muted: var(--texto-2);
+    background: var(--ln-window-bg);
+    color: var(--ln-window-text);
+    border-color: var(--ln-border-main);
+    --text-main: var(--ln-window-text);
+    --color-text-base: var(--ln-window-text);
+    --text-muted: var(--ln-text-muted);
 }

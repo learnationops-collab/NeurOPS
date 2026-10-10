@@ -55,7 +55,7 @@ const DiaDelReporte = ({ hoy, ayer, valor, onElegir, enviado, enviadoEl, ayerSin
                     role="radiogroup"
                     aria-label="Qué día reportás"
                     className="flex items-center p-1 rounded-full"
-                    style={{ background: 'var(--cont-3, rgba(0,0,0,.28))', border: '1px solid var(--v6-bd)' }}
+                    style={{ background: 'var(--ln-inset-bg, rgba(0,0,0,.28))', border: '1px solid var(--v6-bd)' }}
                 >
                     {opciones.map(({ fecha, rotulo }) => {
                         const activo = valor === fecha;
@@ -67,7 +67,7 @@ const DiaDelReporte = ({ hoy, ayer, valor, onElegir, enviado, enviadoEl, ayerSin
                                 aria-checked={activo}
                                 onClick={() => { if (!activo) onElegir(fecha); }}
                                 className="relative h-8 px-4 rounded-full text-[11px] font-black cursor-pointer flex items-center gap-1.5"
-                                style={{ color: activo ? 'var(--en-fondo, #fff)' : 'var(--v6-tx3)' }}
+                                style={{ color: activo ? 'var(--ln-text-out, #fff)' : 'var(--v6-tx3)' }}
                             >
                                 {/* Mismo recurso que la pestaña activa del nav: un solo fondo que se
                                     desliza de una opción a la otra en vez de saltar. */}
@@ -75,7 +75,7 @@ const DiaDelReporte = ({ hoy, ayer, valor, onElegir, enviado, enviadoEl, ayerSin
                                     <motion.span
                                         layoutId="dia-del-reporte-pill"
                                         className="absolute inset-0 rounded-full"
-                                        style={{ background: 'color-mix(in srgb, var(--destacado, #ff3fa4) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--destacado, #ff3fa4) 50%, transparent)' }}
+                                        style={{ background: 'color-mix(in srgb, var(--ln-brand, #ff3fa4) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--ln-brand, #ff3fa4) 50%, transparent)' }}
                                         transition={reducido ? { duration: 0 } : { type: 'spring', bounce: 0.2, duration: 0.45 }}
                                     />
                                 )}
@@ -94,7 +94,7 @@ const DiaDelReporte = ({ hoy, ayer, valor, onElegir, enviado, enviadoEl, ayerSin
                 </div>
 
                 {enviado && (
-                    <span className="tud-xp-v6" style={{ color: 'var(--est-exito-texto, #7DEAC0)', background: 'color-mix(in srgb, var(--est-exito, #2fbf8f) 14%, transparent)', borderColor: 'color-mix(in srgb, var(--est-exito, #2fbf8f) 32%, transparent)' }}>
+                    <span className="tud-xp-v6" style={{ color: 'var(--ln-success-text, #7DEAC0)', background: 'color-mix(in srgb, var(--ln-success, #2fbf8f) 14%, transparent)', borderColor: 'color-mix(in srgb, var(--ln-success, #2fbf8f) 32%, transparent)' }}>
                         {textoEnviado(enviadoEl, valor)}
                     </span>
                 )}
@@ -112,7 +112,7 @@ const DiaDelReporte = ({ hoy, ayer, valor, onElegir, enviado, enviadoEl, ayerSin
                     <span aria-hidden="true">⏳</span>
                     <span>Ayer quedó sin reportar</span>
                     {agendasDeAyer > 0 && (
-                        <span className="font-semibold" style={{ color: 'color-mix(in srgb, var(--est-aviso-texto, #f3d08a) 75%, transparent)' }}>
+                        <span className="font-semibold" style={{ color: 'color-mix(in srgb, var(--ln-warning-text, #f3d08a) 75%, transparent)' }}>
                             — tuviste {agendasDeAyer} agenda{agendasDeAyer === 1 ? '' : 's'} el {etiquetaDia(ayer, { largo: true })}
                         </span>
                     )}
@@ -127,7 +127,7 @@ const DiaDelReporte = ({ hoy, ayer, valor, onElegir, enviado, enviadoEl, ayerSin
             )}
 
             {esAyer && (
-                <p className="mt-3 text-[11px] font-bold" style={{ color: 'var(--est-aviso-texto, #F3D08A)' }}>
+                <p className="mt-3 text-[11px] font-bold" style={{ color: 'var(--ln-warning-text, #F3D08A)' }}>
                     Estás cerrando ayer: se guarda como el reporte del {etiquetaDia(ayer, { largo: true })} y en Discord se aclara que lo mandaste hoy.
                 </p>
             )}

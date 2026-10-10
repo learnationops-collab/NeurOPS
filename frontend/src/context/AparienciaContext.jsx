@@ -1,6 +1,5 @@
-// La apariencia de la app: un tema de una lista plana (temas/temas.css). Cada tema ya trae su modo
-// claro u oscuro, así que no hay que combinar nada ni adivinarlo mirando colores. El tema elegido va
-// a `data-tema` en <html> y se guarda en este navegador.
+// La apariencia de la app, como en academy: un tema (temas/temas.css) y su modo, claro u oscuro. Van
+// a <html> como `data-tema` y `data-tema-modo`, y se guardan en este navegador.
 //
 // Sin elegir no hay tema: <html> no lleva `data-tema` y cada pantalla se ve como siempre (sus
 // variables caen a su valor de hoy). Convive así con el ThemeContext viejo (elegant/clean/custom ×
@@ -14,52 +13,74 @@ import { useAuth } from '../contexts/AuthContext';
 import '../temas/temas.css';
 
 export const TEMAS = [
-    { id: 'closing-oscuro', nombre: 'Closing', modo: 'oscuro' },
-    { id: 'thalamus-oscuro', nombre: 'Thalamus', modo: 'oscuro' },
-    { id: 'thalamus-claro', nombre: 'Thalamus', modo: 'claro' },
+    { id: 'classic', nombre: 'Learnation Classic', descripcion: 'El de siempre del closer' },
+    { id: 'modern', nombre: 'Learnation Modern', descripcion: 'El de Agendamiento' },
 ];
+export const MODOS = [{ id: 'oscuro', nombre: 'Oscuro' }, { id: 'claro', nombre: 'Claro' }];
 const CLAVE = 'app-tema';
 // Quiénes ven el selector: los roles con todas sus pantallas ya leyendo los temas. Al closer se le
-// suma cuando el deck esté migrado (hoy cambiarían la Ficha y el Dock, pero no el deck).
+// suma cuando el mazo esté revisado con tema puesto.
 const ROLES_CON_TEMA = ['admin', 'director_comercial'];
 export const puedeElegirTema = (rol) => ROLES_CON_TEMA.includes(rol);
 
-const existe = (id) => TEMAS.some(t => t.id === id);
-function leerTema() {
+const esTema = (id) => TEMAS.some(t => t.id === id);
+const esModo = (id) => MODOS.some(m => m.id === id);
+// Lo guardado antes de que el modo fuera aparte ("closing-oscuro", "thalamus-claro") se traduce.
+const ANTERIORES = { closing: 'classic', thalamus: 'modern' };
+const NADA = { tema: null, modo: 'oscuro' };
+
+function leer() {
     try {
-        const guardado = localStorage.getItem(CLAVE);
-        return existe(guardado) ? guardado : null;
+        const crudo = localStorage.getItem(CLAVE);
+        if (!crudo) return NADA;
+        if (!crudo.startsWith('{')) {
+            const [viejo, modo] = crudo.split('-');
+            return esTema(ANTERIORES[viejo]) && esModo(modo) ? { tema: ANTERIORES[viejo], modo } : NADA;
+        }
+        const { tema, modo } = JSON.parse(crudo);
+        return { tema: esTema(tema) ? tema : null, modo: esModo(modo) ? modo : 'oscuro' };
     } catch {
-        return null;
+        return NADA;
     }
 }
-const modoDe = (id) => TEMAS.find(t => t.id === id)?.modo ?? null;
 
-const AparienciaContext = createContext({ tema: null, modo: null, elegido: false, setTema: () => {}, temas: TEMAS });
+const AparienciaContext = createContext({
+    tema: null, modo: null, modoGuardado: 'oscuro', elegido: false, setTema: () => {}, setModo: () => {}, temas: TEMAS, modos: MODOS,
+});
 
 export function AparienciaProvider({ children }) {
     const { user } = useAuth();
-    const [guardado, setTemaEstado] = useState(leerTema);
-    const tema = puedeElegirTema(user?.role) ? guardado : null;
+    const [guardado, setGuardado] = useState(leer);
+    const habilitado = puedeElegirTema(user?.role) && guardado.tema !== null;
+    const tema = habilitado ? guardado.tema : null;
+    const modo = habilitado ? guardado.modo : null;
 
     useLayoutEffect(() => {
         const raiz = document.documentElement;
-        if (tema) raiz.dataset.tema = tema;
-        else delete raiz.dataset.tema;
-    }, [tema]);
+        if (tema) { raiz.dataset.tema = tema; raiz.dataset.temaModo = modo; }
+        else { delete raiz.dataset.tema; delete raiz.dataset.temaModo; }
+    }, [tema, modo]);
 
-    const setTema = useCallback((id) => {
-        if (!existe(id)) return;
-        try { localStorage.setItem(CLAVE, id); } catch { /* sin storage: dura hasta recargar */ }
-        setTemaEstado(id);
+    const guardar = useCallback((cambiar) => {
+        setGuardado(prev => {
+            const nuevo = cambiar(prev);
+            try { localStorage.setItem(CLAVE, JSON.stringify(nuevo)); } catch { /* sin storage: dura hasta recargar */ }
+            return nuevo;
+        });
     }, []);
+    const setTema = useCallback((id) => { if (esTema(id)) guardar(prev => ({ ...prev, tema: id })); }, [guardar]);
+    // El modo siempre es de un tema: elegirlo sin tema elegido pone Classic.
+    const setModo = useCallback((id) => { if (esModo(id)) guardar(prev => ({ tema: prev.tema ?? 'classic', modo: id })); }, [guardar]);
 
-    const valor = useMemo(() => ({ tema, modo: modoDe(tema), elegido: tema !== null, setTema, temas: TEMAS }), [tema, setTema]);
+    const valor = useMemo(
+        () => ({ tema, modo, modoGuardado: guardado.modo, elegido: tema !== null, setTema, setModo, temas: TEMAS, modos: MODOS }),
+        [tema, modo, guardado.modo, setTema, setModo],
+    );
     return <AparienciaContext.Provider value={valor}>{children}</AparienciaContext.Provider>;
 }
 
 export const useApariencia = () => useContext(AparienciaContext);
 
-// El `data-theme` de las piezas de Thalamus: con tema elegido, el modo del tema; si no, `respaldo`
-// (lo que cada una decidía antes).
+// El `data-theme` de las piezas de Thalamus: con tema elegido, su modo; si no, `respaldo` (lo que cada
+// una decidía antes).
 export const dataThemeDe = ({ elegido, modo }, respaldo) => (elegido ? (modo === 'claro' ? 'light' : 'dark') : respaldo);

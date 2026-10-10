@@ -12,18 +12,18 @@ import temas_migrar as tm  # noqa: E402
 
 ESCALA = {'50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950'}
 FAM = {
-    'pink': 'destacado', 'fuchsia': 'destacado',
-    'violet': 'destacado-2', 'purple': 'destacado-2', 'indigo': 'destacado-2', 'blue': 'destacado-2',
-    'sky': 'est-info', 'cyan': 'est-info',
-    'emerald': 'est-exito', 'green': 'est-exito', 'teal': 'est-exito', 'lime': 'est-exito',
-    'amber': 'est-aviso', 'yellow': 'est-aviso', 'orange': 'est-aviso',
-    'red': 'est-error', 'rose': 'est-error',
+    'pink': 'ln-brand', 'fuchsia': 'ln-brand',
+    'violet': 'ln-brand-2', 'purple': 'ln-brand-2', 'indigo': 'ln-brand-2', 'blue': 'ln-brand-2',
+    'sky': 'ln-info', 'cyan': 'ln-info',
+    'emerald': 'ln-success', 'green': 'ln-success', 'teal': 'ln-success', 'lime': 'ln-success',
+    'amber': 'ln-warning', 'yellow': 'ln-warning', 'orange': 'ln-warning',
+    'red': 'ln-danger', 'rose': 'ln-danger',
 }
-TEXTO_DE = {'destacado': 'destacado-texto', 'destacado-2': 'destacado-2-texto', 'est-info': 'est-info-texto',
-            'est-exito': 'est-exito-texto', 'est-aviso': 'est-aviso-texto', 'est-error': 'est-error-texto'}
-CLARO_DE = {'destacado': 'destacado-claro', 'destacado-2': 'destacado-2-claro'}
+TEXTO_DE = {'ln-brand': 'ln-brand-text', 'ln-brand-2': 'ln-brand-2-text', 'ln-info': 'ln-info-text',
+            'ln-success': 'ln-success-text', 'ln-warning': 'ln-warning-text', 'ln-danger': 'ln-danger-text'}
+CLARO_DE = {'ln-brand': 'ln-brand-accent', 'ln-brand-2': 'ln-brand-2-accent'}
 GRISES = {'slate', 'gray', 'zinc', 'neutral', 'stone'}
-EXTRA_HEX = {'111219': 'modal'}
+EXTRA_HEX = {'111219': 'ln-window-bg'}
 
 VARIANTES = r'(?:(?:hover|focus|focus-visible|focus-within|active|disabled|group-hover|placeholder):)*'
 UTIL = r'(?:bg|from|via|to|text|border(?:-[trblxy])?|ring|divide|placeholder|fill|stroke|accent|caret|outline|decoration)'
@@ -34,28 +34,28 @@ CLASE = re.compile(r'(?<![\w:-])(' + VARIANTES + UTIL + '-' + COLOR + r'(?:/(?:\
 def rol_gris(util, shade):
     s = int(shade)
     if util == 'text' or util == 'placeholder':
-        return ('en-fondo', None) if s <= 200 else ('en-fondo', 85) if s == 300 else ('texto-2', None) if s == 400 else ('texto-3', None)
+        return ('ln-text-out', None) if s <= 200 else ('ln-text-out', 85) if s == 300 else ('ln-text-muted', None) if s == 400 else ('ln-text-faint', None)
     if util == 'bg':
-        if s >= 950: return ('fondo', None)
-        if s >= 900: return ('modal', None)
-        if s >= 800: return ('cont-fuerte', None)
-        if s >= 600: return ('borde-3', None)
-        return ('invertido', None)
+        if s >= 950: return ('ln-page-base', None)
+        if s >= 900: return ('ln-window-bg', None)
+        if s >= 800: return ('ln-ct3-bg-strong', None)
+        if s >= 600: return ('ln-border-strong', None)
+        return ('ln-inverse-bg', None)
     # bordes, ring, divide, outline
-    if s >= 900: return ('borde-1', None)
-    if s >= 800: return ('borde-2', None)
-    return ('borde-3', None)
+    if s >= 900: return ('ln-border-subtle', None)
+    if s >= 800: return ('ln-border-main', None)
+    return ('ln-border-strong', None)
 
 
 def valor(util, color, opac):
     if color == 'white':
-        rol, base = 'en-fondo', None
+        rol, base = 'ln-text-out', None
     elif color == 'black':
         if util == 'bg':
-            rol, base = ('velo' if (opac or 100) >= 50 else 'cont-3'), None
+            rol, base = ('ln-scrim' if (opac or 100) >= 50 else 'ln-inset-bg'), None
             opac = None
         else:
-            rol, base = 'en-destacado', None
+            rol, base = 'ln-brand-content', None
     elif color.startswith('[#'):
         h = color[2:-1].lower()
         h = ''.join(c * 2 for c in h) if len(h) == 3 else h[:6]
@@ -75,7 +75,7 @@ def valor(util, color, opac):
             s = int(shade)
             if util == 'bg' and s >= 900:
                 # fondo muy oscuro de un color: un tinte de ese color sobre el fondo del tema
-                return f'color-mix(in srgb, var(--{r}) 25%, var(--fondo))' if not opac or opac >= 100 else                     f'color-mix(in srgb, color-mix(in srgb, var(--{r}) 25%, var(--fondo)) {opac}%, transparent)'
+                return f'color-mix(in srgb, var(--{r}) 25%, var(--ln-page-base))' if not opac or opac >= 100 else                     f'color-mix(in srgb, color-mix(in srgb, var(--{r}) 25%, var(--ln-page-base)) {opac}%, transparent)'
             if util in ('text', 'placeholder', 'decoration'):
                 rol = TEXTO_DE[r] if s <= 300 else CLARO_DE.get(r, r) if s == 400 else r
             else:
