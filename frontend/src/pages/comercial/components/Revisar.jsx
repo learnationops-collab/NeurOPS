@@ -5,7 +5,7 @@ import { ChevronDown, Filter, LayoutGrid, List, Plus, Rows, RotateCcw, Search,
 // barra, pegada al borde derecho, y antes se cortaba (ver `Tip.jsx`).
 import { Tip, fmt } from './Shared';
 import Cifra from './Cifra';
-import { DIMENSION_PROPIA, TABLAS, TABLAS_POR_ROL } from './tablasDef';
+import { DIMENSION_PROPIA, TABLAS, TABLAS_POR_ROL, valoresVigentes } from './tablasDef';
 import PanelConfigurar from './PanelConfigurar';
 import RevisarLista, { EsqueletoRevisar } from './RevisarLista';
 import { columnasOrdenables, ordenarFilas, siguienteOrden } from './ordenFilas';
@@ -189,9 +189,10 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                 Object.entries(filtroInicial).forEach(([k, valor]) => {
                     // Las claves `__` son metadatos del drill-down (token, procedencia,
                     // advertencia), no condiciones. Un array de etiquetas en la misma faceta es
-                    // un OR.
+                    // un OR. Un estado que ya no existe (un link de antes) llega con su nombre de
+                    // hoy, en vez de dejar la lista vacía.
                     if (k.startsWith('__') || valor === null || valor === undefined) return;
-                    nuevas[k] = Array.isArray(valor) ? valor : [valor];
+                    nuevas[k] = valoresVigentes(k, Array.isArray(valor) ? valor : [valor]);
                 });
             }
             const de = Object.keys(nuevas).length ? filtroInicial.__de || null : null;

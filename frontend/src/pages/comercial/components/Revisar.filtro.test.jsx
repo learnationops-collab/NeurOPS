@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Revisar from './Revisar';
+import { valoresVigentes } from './tablasDef';
 
 /**
  * La fila de etiquetas del filtro: lo único que queda arriba de la lista al llegar de un número.
@@ -178,5 +179,36 @@ describe('Revisar · la fila de etiquetas del filtro', () => {
 
         expect(screen.getByRole('button', { name: 'Quitar Asistió: Sí' })).toHaveTextContent('Asistió: Sí');
         expect(registros()).toHaveLength(3);
+    });
+});
+
+describe('Revisar · un link de antes con un estado que ya no existe', () => {
+    beforeEach(() => { window.localStorage.clear(); });
+
+    /**
+     * «Presentó, no cerró» se muestra como «Seguimiento» desde el 09/10/2026. Un link guardado o el
+     * botón "atrás" pueden traer la etiqueta vieja en la URL, y una etiqueta que ninguna fila tiene
+     * no falla: deja la lista vacía, como si no hubiera agendas.
+     */
+    it('aterriza en «Seguimiento» en vez de en una lista vacía', () => {
+        render(<ConUrl inicial={{ estado: 'Presentó, no cerró', __de: 'Estados: Presentó, no cerró', __t: 7 }}
+            onOlvidar={() => {}} />);
+
+        expect(screen.getByRole('button', { name: 'Quitar Estado: Seguimiento' })).toBeInTheDocument();
+        expect(registros()).toHaveLength(1);
+    });
+
+    it('la etiqueta vieja y la nueva juntas quedan en una sola', () => {
+        render(<ConUrl inicial={{ post_call: ['Seguimiento', 'Presentó, no cerró'], __de: 'Estados: En curso', __t: 8 }}
+            onOlvidar={() => {}} />);
+
+        expect(screen.getAllByRole('button', { name: /^Quitar Post call:/ })).toHaveLength(1);
+        expect(registros()).toHaveLength(1);
+    });
+
+    it('solo se traducen las facetas de estado, y la key vieja también', () => {
+        expect(valoresVigentes('estado', ['presento_no_cerro', 'Venta'])).toEqual(['Seguimiento', 'Venta']);
+        expect(valoresVigentes('closer', ['Presentó, no cerró'])).toEqual(['Presentó, no cerró']);
+        expect(valoresVigentes('post_call', ['toString'])).toEqual(['toString']);
     });
 });

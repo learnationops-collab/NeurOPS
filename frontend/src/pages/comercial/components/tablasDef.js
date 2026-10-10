@@ -34,6 +34,32 @@ export const estadoDeAgenda = (fila) => {
 };
 
 /**
+ * Estados de agenda que el backend ya no manda, con el que los reemplazó.
+ *
+ * El filtro del drill-down viaja en la URL (`f`) con etiquetas, así que un link guardado, el botón
+ * "atrás" o una pestaña abierta de antes pueden traer una que ya no existe. Y una etiqueta que no
+ * existe no falla: filtra cero filas y la lista sale vacía, como si no hubiera agendas. «Presentó,
+ * no cerró» se muestra como «Seguimiento» desde el 09/10/2026 (pedido del usuario); se reconoce
+ * también su key, por si un filtro escrito a mano la trajera.
+ */
+const ESTADOS_RETIRADOS = new Map([
+    ['Presentó, no cerró', 'Seguimiento'],
+    ['presento_no_cerro', 'Seguimiento'],
+]);
+
+/** Las facetas que filtran por el estado de la agenda (ver `estadoDeAgenda`). */
+const FACETAS_DE_ESTADO = ['estado', 'post_call'];
+
+/**
+ * Los valores con los que llega una faceta, con los estados retirados ya traducidos y sin repetir:
+ * `['Seguimiento', 'Presentó, no cerró']` queda en `['Seguimiento']`. Las demás facetas pasan tal
+ * cual.
+ */
+export const valoresVigentes = (faceta, valores) => (FACETAS_DE_ESTADO.includes(faceta)
+    ? [...new Set(valores.map(v => ESTADOS_RETIRADOS.get(v) ?? v))]
+    : valores);
+
+/**
  * ¿Esta agenda entra en el listado por defecto?
  *
  * Las descartadas —el lead canceló, o el closer lo marcó como lead perdido o no lead— salen de la
