@@ -42,16 +42,23 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
     // la lista de ahora, no la de cuando se mandó.
     const listaRef = useRef([]);
     listaRef.current = datos?.pendientes || [];
+    // Cada carga lleva su número y solo vale la última. Asignar también cuenta como una: una carga
+    // que salió antes (la segunda del montaje, en desarrollo) puede volver DESPUÉS con la bandeja de
+    // antes de asignar, o vaciarla antes de que llegue la respuesta y mostrar "Todo al día" en vez
+    // del festejo.
+    const pedido = useRef(0);
 
     const cargar = useCallback(async () => {
+        const mio = ++pedido.current;
         setError(false);
         try {
             const res = await api.get('/setter/palabras-clave');
+            if (mio !== pedido.current) return;
             setDatos(res.data);
             setError(false);
             onResumen?.(res.data?.resumen);
         } catch {
-            setError(true);
+            if (mio === pedido.current) setError(true);
         }
     }, [onResumen]);
 
@@ -66,6 +73,7 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
     const anuncioPorId = useMemo(() => new Map((datos?.anuncios || []).map(a => [a.id, a])), [datos?.anuncios]);
 
     const asignar = async (agenda, anuncio, instagram) => {
+        pedido.current += 1;
         try {
             const res = await api.post('/setter/palabras-clave', {
                 appointment_id: agenda.id, ad_id: anuncio.id, ...(instagram !== undefined ? { instagram } : {}),

@@ -2,6 +2,7 @@ import React from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import MisAgendas from './MisAgendas';
+import api from '../../../services/api';
 
 /**
  * «Mis agendas»: la bandeja de palabras clave del setter (pedido de Kerwin, 10/10/2026).
@@ -26,16 +27,19 @@ const agenda = (id, cliente, extra = {}) => ({
     estado: { key: 'confirmada', label: 'Confirmada', tone: 'info' }, ...extra,
 });
 
+/** Lo que contesta el backend de mentira a cada GET. */
+const responder = (url) => Promise.resolve({
+    data: url === '/setter/palabras-clave'
+        ? { pendientes: red.pendientes, anuncios: ANUNCIOS, resumen: red.resumen }
+        : url === '/setter/commission' ? { rate: 0.08, cash_neto: 12500, commission: 1000 } : [],
+});
+
 vi.mock('../../../services/api', () => ({
     default: {
-        get: vi.fn((url) => Promise.resolve({
-            data: url === '/setter/palabras-clave'
-                ? { pendientes: red.pendientes, anuncios: ANUNCIOS, resumen: red.resumen }
-                : url === '/setter/commission' ? { rate: 0.08, cash_neto: 12500, commission: 1000 } : [],
-        })),
+        get: vi.fn((url) => responder(url)),
         post: vi.fn((url, cuerpo) => {
             red.posts.push(cuerpo);
-            return red.post(cuerpo);
+            return red.post(cuerpo, url);
         }),
     },
 }));
@@ -115,6 +119,38 @@ describe('MisAgendas · la bandeja de palabras clave', () => {
         expect(screen.getByText(/Completaste 2 agendas hoy/)).toBeInTheDocument();
         expect(screen.getByText('Primer día de racha')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Ver mis datos/ })).toBeInTheDocument();
+    });
+
+    it('una carga que vuelve tarde, con la bandeja de antes, no pisa lo asignado ni tapa el festejo', async () => {
+        // Reclamar una agenda sin dueño recarga la bandeja; si esa carga vuelve DESPUÉS de asignar, trae
+        // la bandeja de antes y no puede resucitar la tarjeta ni cambiar el festejo por "Todo al día".
+        red.pendientes = [agenda(11, 'Ana')];
+        red.resumen = { pendientes: 1, hoy: 0, racha: 0 };
+        const vieja = { pendientes: [agenda(11, 'Ana')], anuncios: ANUNCIOS, resumen: { pendientes: 1, hoy: 0, racha: 0 } };
+        let soltar;
+        let cargas = 0;
+        api.get.mockImplementation((url) => {
+            if (url === '/setter/agendas/sin-asignar') {
+                return Promise.resolve({ data: [{ id: 99, lead_name: 'Sin Dueño', fuente: 'setting', start_time: null }] });
+            }
+            if (url === '/setter/palabras-clave' && ++cargas === 2) {
+                return new Promise((r) => { soltar = () => r({ data: vieja }); });
+            }
+            return responder(url);
+        });
+        const asigna = backendQueAsigna();
+        red.post = (cuerpo, url) => (url.includes('/reclamar')
+            ? Promise.resolve({ data: { accion: 'mia' } }) : asigna(cuerpo));
+        await montar();
+
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Es mía/ })); });
+        await asignarConTeclado('Ana', 'guia');
+        expect(await screen.findByRole('heading', { name: '¡Bandeja vacía!' })).toBeInTheDocument();
+        await act(async () => { soltar?.(); });
+
+        expect(screen.getByRole('heading', { name: '¡Bandeja vacía!' })).toBeInTheDocument();
+        expect(screen.queryByRole('listitem', { name: 'Agenda de Ana' })).toBeNull();
+        api.get.mockImplementation(responder);
     });
 
     it('si ya estaba vacía al entrar, "Todo al día" sin festejo', async () => {
