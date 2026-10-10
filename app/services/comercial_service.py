@@ -37,7 +37,7 @@ Definiciones (una sola vez, acá)
 """
 from datetime import date, datetime, time
 
-from sqlalchemy import func
+from sqlalchemy import and_, func
 from sqlalchemy.orm import joinedload
 
 from app import db
@@ -205,6 +205,24 @@ def no_es_marcador():
     "agenda generada" y un "Agendó". `coalesce` porque un `result` vacío es una agenda de verdad.
     """
     return func.lower(func.coalesce(Appointment.result, '')) != 'cualificado'
+
+
+def es_agenda_del_setter(setter_id):
+    """Condición SQL de «las agendas de un setter». Es LA definición: la usan sus números
+    (`ComercialService.agendas` con `de_setters`, y por ella `generadas`: el bloque de Analizar, la
+    serie de Variabilidad y la tabla de Revisar) y sus listas («Mis agendas», ver
+    `palabra_clave_service`). Una lista que se arme con otra regla va a decir un número distinto
+    del de "Mis datos".
+
+    Una agenda es del setter cuando su cita (`Appointment`) tiene su `setter_id`, sin contar el
+    marcador que deja cualificar un lead (`no_es_marcador`). `setter_id` no es un dato aparte de
+    la fuente, es su espejo: el sync del Tablero lo recalcula desde `FinancialAgenda.nombre` cada
+    vez que corre (`BookingService.sync_financial_agenda_to_appointment`), la ficha lo escribe
+    junto con la fuente (`ficha_agendas_service.poner_fuente`), Agendas 2.0 lo pone con el link
+    del setter y reclamar una agenda sin dueño también. Así «las que llegaron con la fuente del
+    setter» y «las que cuentan en sus números» son las mismas filas.
+    """
+    return and_(Appointment.setter_id == setter_id, no_es_marcador())
 
 
 def _limpiar_email(valor):
@@ -405,13 +423,14 @@ class ComercialService:
         ).filter(columna >= desde, columna <= hasta)
         if closer_id:
             q = q.filter(Appointment.closer_id == closer_id)
-        if setter_id:
+        if setter_id and de_setters:
+            # Las agendas generadas de un setter: la definición única (`es_agenda_del_setter`).
+            q = q.filter(es_agenda_del_setter(setter_id))
+        elif setter_id:
             q = q.filter(Appointment.setter_id == setter_id)
         elif de_setters:
             q = q.filter(Appointment.setter_id.in_(
-                db.session.query(User.id).filter(User.role == 'setter')))
-        if de_setters:
-            q = q.filter(no_es_marcador())
+                db.session.query(User.id).filter(User.role == 'setter')), no_es_marcador())
 
         appts = q.order_by(Appointment.start_time.desc(), Appointment.id.desc()).all()
         if not appts:
