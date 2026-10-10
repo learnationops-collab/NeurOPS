@@ -30,7 +30,16 @@
     --mc-curva: cubic-bezier(.22, .7, .2, 1);
     container: mc / inline-size;
     display: grid;
+    /* Tres pistas que comparten las dos tiras (presentación arriba, «No cerradas» abajo) con
+       `subgrid`: el rótulo, la barra y la cifra de una quedan exactamente encima de los de la otra,
+       aunque sus textos midan distinto. Todo lo demás ocupa el ancho entero. */
+    grid-template-columns: auto minmax(40px, 1fr) auto;
     gap: 14px;
+    min-width: 0;
+}
+
+.mc > * {
+    grid-column: 1 / -1;
     min-width: 0;
 }
 
@@ -128,6 +137,7 @@
 .mc-tira {
     display: grid;
     grid-template-columns: auto minmax(40px, 1fr) auto;
+    grid-template-columns: subgrid;
     align-items: center;
     gap: 16px;
     padding: 12px 16px;
@@ -156,6 +166,7 @@
 .mc-tira-cifra {
     display: inline-flex;
     align-items: baseline;
+    justify-self: end;
     gap: 6px;
     white-space: nowrap;
 }
