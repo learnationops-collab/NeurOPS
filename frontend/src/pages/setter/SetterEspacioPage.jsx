@@ -12,7 +12,7 @@ import OperatorControls from '../../components/modals/OperatorControls';
 import DashboardComercial from '../comercial/DashboardComercial';
 import DockSecciones from '../comercial/components/DockSecciones';
 import MenuSesion from '../comercial/components/MenuSesion';
-import { Isotipo, Segmented } from '../comercial/components/Shared';
+import { Segmented } from '../comercial/components/Shared';
 import '../comercial/comercial.css';
 import './setterEspacio.css';
 import SetterWorkflowPage from './SetterWorkflowPage';
@@ -51,18 +51,28 @@ import PublicSetterStatsPage from '../public/PublicSetterStatsPage';
  */
 
 /**
+ * Las secciones del dock, en orden: el número de cada una (01, 02...) es el que muestra el
+ * encabezado. `sub` es la frase apagada que sigue al saludo ("Hola, Elias. Así cerraste el día."):
+ * dice para qué está la sección, y a ancho de teléfono se esconde.
+ *
  * "Registros", una palabra: es la que ya dice el ojo de cada número de "Mis datos" ("Ver los
  * registros"), así que el clic y el lugar al que lleva se llaman igual. "Mis registros" quedaba al
  * lado de "Mis reportes" y de un vistazo eran la misma pestaña.
  */
 const SECCIONES = [
     // La primera es el aterrizaje del rol y adonde cae una sección que no existe.
-    { id: 'agendas', label: 'Mis agendas', Icono: CalendarDays },
-    { id: 'reporte', label: 'Reporte', Icono: ClipboardList,
+    { id: 'agendas', label: 'Mis agendas', Icono: CalendarDays, sub: 'Cada agenda, con su anuncio.' },
+    { id: 'reporte', label: 'Reporte', Icono: ClipboardList, sub: 'Así cerraste el día.',
         tabs: [{ key: 'hoy', label: 'Reporte del día' }, { key: 'historial', label: 'Mis reportes' },
             { key: 'registros', label: 'Registros' }] },
-    { id: 'datos', label: 'Mis datos', Icono: BarChart3 },
+    { id: 'datos', label: 'Mis datos', Icono: BarChart3, sub: 'Así vienen tus números.' },
 ];
+
+/** "01", "02"...: el número de la sección en el dock, como lo escribe el encabezado. */
+const numeroDe = (id) => String(SECCIONES.findIndex(s => s.id === id) + 1).padStart(2, '0');
+
+/** "Ana Setter" → "Ana": el saludo va con el nombre de pila. */
+const nombreDePila = (nombre) => String(nombre || '').trim().split(/\s+/)[0] || 'Setter';
 
 /**
  * Lo que el drill-down de "Mis datos" deja en la URL: la tabla (`t`) y su filtro (`f`, con su token
@@ -176,33 +186,38 @@ const SetterEspacioPage = () => {
 
     return (
         <div className="setter-espacio">
+            {/* El humo de fondo de toda la página, el del reporte que aprobó Kerwin: los paneles
+                de vidrio flotan encima. Quieto con movimiento reducido. */}
+            <div className="aura-pag" aria-hidden="true"><i /><i /><i /><i /></div>
             <div className="setter-espacio-wrap">
+                {/* El encabezado en una línea, como el artifact: el número de la sección en el
+                    dock, el saludo con lo que se hace ahí y, si la sección tiene, sus pestañas.
+                    El nombre de la sección lo dice el dock; acá se lee igual con un lector. */}
                 <div className="dc-shell dc-shell--embebido">
-                    <header className="tope">
-                        <div className="tope-id">
-                            <Isotipo idGrad="lnGradSetter" />
-                            <h1 className="t-h1">{seccionActual.label}</h1>
+                    <header className="tope setter-top">
+                        <div className="hola">
+                            <span className="head-num num" aria-hidden="true">{numeroDe(seccion)}</span>
+                            <h1>
+                                <span className="sr">{seccionActual.label}. </span>
+                                Hola, {nombreDePila(nombre)}.{' '}
+                                {seccionActual.sub && <span className="sub">{seccionActual.sub}</span>}
+                            </h1>
                         </div>
+                        {seccionActual.tabs && (
+                            <Segmented opciones={seccionActual.tabs} valor={tab} onChange={elegirTab}
+                                ariaLabel={`Vistas de ${seccionActual.label}`} />
+                        )}
                         {/* Simulando, la salida es terminar la simulación. Ya no es la ÚNICA
                             salida de ningún lado: moverse entre secciones es el dock. También está
                             en el menú del avatar, pero acá se ve sin buscarla. */}
                         {user?.is_impersonating && (
-                            <div className="tope-meta tope-acciones">
-                                <button type="button" className="btn btn--linea btn--sm" disabled={saliendo}
-                                    title="Volver a tu sesión original" onClick={volverAMiSesion}>
-                                    <Ghost size={15} />
-                                    {saliendo ? 'Volviendo…' : 'Volver a mi sesión'}
-                                </button>
-                            </div>
+                            <button type="button" className="btn btn--linea btn--sm setter-volver" disabled={saliendo}
+                                title="Volver a tu sesión original" onClick={volverAMiSesion}>
+                                <Ghost size={15} />
+                                {saliendo ? 'Volviendo…' : 'Volver a mi sesión'}
+                            </button>
                         )}
                     </header>
-
-                    {seccionActual.tabs && (
-                        <div className="barra">
-                            <Segmented opciones={seccionActual.tabs} valor={tab} onChange={elegirTab}
-                                ariaLabel={`Vistas de ${seccionActual.label}`} />
-                        </div>
-                    )}
                 </div>
 
                 <motion.div key={claveVista}

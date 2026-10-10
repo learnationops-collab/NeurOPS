@@ -226,6 +226,19 @@ describe('SetterEspacioPage · un solo dock', () => {
         expect(itemDelDock('Reporte')).toHaveAttribute('aria-label', 'Reporte, reporte de hoy enviado');
     });
 
+    it('el encabezado es una línea: el número de la sección, el saludo y las pestañas', async () => {
+        // El estilo del reporte que aprobó Kerwin (10/10/2026): "01" es el número de la sección en
+        // el dock, el saludo va con el nombre de pila y las pestañas, en la misma línea.
+        await montar('/setter/deck?step=agendas');
+        const header = document.querySelector('header.tope');
+        expect(header.querySelector('.head-num')).toHaveTextContent('01');
+        expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Hola, Ana.');
+        expect(screen.queryByRole('tablist')).toBeNull();
+
+        fireEvent.click(itemDelDock('Reporte'));
+        expect(header.contains(screen.getByRole('tablist', { name: 'Vistas de Reporte' }))).toBe(true);
+    });
+
     it('sin simulación no ofrece "Volver a mi sesión"', async () => {
         sesion.user = { ...sesion.user, is_impersonating: false };
         await montar('/setter/deck?step=datos');

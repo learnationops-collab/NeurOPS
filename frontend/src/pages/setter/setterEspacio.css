@@ -4,13 +4,19 @@
    El header, las pestañas y el dock son islas del sistema del dashboard comercial
    (`.dc-shell.dc-shell--embebido`, ver comercial.css): así el dock es EL MISMO que
    el de "Mis datos" y no una copia que se vaya separando. El contenido del medio
-   —el mazo, las agendas, el reporte— NO va dentro de un `.dc-shell`: su reset de
-   botones (`background:none;border:0`) le borraría los estilos de Tailwind.
+   que todavía es Tailwind (el reporte, Mis reportes) NO va dentro de un `.dc-shell`:
+   su reset de botones (`background:none;border:0`) le borraría los estilos.
+
+   El encabezado y el humo de fondo son los del reporte de setters que aprobó Kerwin
+   (10/10/2026): una línea con el número de la sección, el saludo y las pestañas.
    ============================================================================ */
 
 /* El mismo fondo que `--gradient-page` del dashboard: el token vive dentro del
-   shell, y esta página no es un shell. */
+   shell, y esta página no es un shell. `isolation` arma el contexto en el que el
+   humo (z-index -1) queda sobre este fondo y debajo de todo lo demás. */
 .setter-espacio{
+  position:relative;
+  isolation:isolate;
   min-height:100vh;
   background:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%) fixed,#020617;
   color:#e2e8f0;
@@ -18,19 +24,50 @@
   padding-bottom:calc(132px + env(safe-area-inset-bottom,0px));
 }
 
+/* El humo de toda la página: cuatro manchas de marca, muy desenfocadas, que se
+   mueven despacio. Fijo: no scrollea con el contenido, y su `overflow` recorta las
+   manchas cuando salen de la pantalla. Los colores van escritos porque los tokens
+   viven dentro de `.dc-shell` y esto está afuera. */
+.setter-espacio .aura-pag{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;opacity:.5}
+.setter-espacio .aura-pag i{position:absolute;width:46%;aspect-ratio:1;border-radius:50%;
+  filter:blur(90px);mix-blend-mode:screen;opacity:.55}
+.setter-espacio .aura-pag i:nth-child(1){left:-8%;top:-10%;background:#1323C6;animation:dcAura1 29s ease-in-out infinite}
+.setter-espacio .aura-pag i:nth-child(2){left:30%;top:40%;background:#FF3FA4;animation:dcAura2 37s ease-in-out infinite}
+.setter-espacio .aura-pag i:nth-child(3){left:58%;top:-18%;background:#6F7BFF;animation:dcAura3 41s ease-in-out infinite}
+.setter-espacio .aura-pag i:nth-child(4){left:76%;top:46%;background:#FF6AD5;animation:dcAura2 43s ease-in-out infinite reverse}
+
 /* El ancho y el margen del `.wrap` del dashboard, para que el contenido del mazo
    y el de "Mis datos" (que embebido toma el ancho de su contenedor) queden
    alineados al mismo borde. */
 .setter-espacio-wrap{max-width:1340px;margin:0 auto;padding:24px clamp(16px,3vw,22px) 0}
 
-/* En el header queda solo "Volver a mi sesión" mientras se simula: el Playbook, quién está
-   conectado y cerrar sesión viven en la sesión al final del dock (`MenuSesion`). */
-.setter-espacio .tope-acciones{display:flex;align-items:center;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+/* --- Encabezado: una línea ----------------------------------------------------------------
+   El número de la sección (el del dock), "Hola, Elias." con lo que se hace en la sección en
+   gris, las pestañas en la misma línea y, simulando, "Volver a mi sesión" al final. */
+.setter-espacio .setter-top{gap:var(--s3) var(--s4);margin-bottom:var(--s6)}
+.setter-espacio .hola{display:flex;align-items:center;gap:var(--s3);min-width:0;flex:1 1 auto}
+.setter-espacio .head-num{flex-shrink:0;padding:6px 9px;border-radius:9px;
+  font-size:11px;font-weight:900;letter-spacing:.16em;color:var(--ink);background:var(--brand-secondary)}
+.setter-espacio .hola h1{margin:0;min-width:0;font-size:clamp(22px,2.4vw,28px);font-weight:900;
+  letter-spacing:-.025em;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.setter-espacio .hola h1 .sub{color:var(--text-muted);font-weight:600;letter-spacing:-.015em}
+.setter-espacio .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.setter-espacio .setter-volver{margin-left:auto}
 
-/* A ancho de teléfono las pestañas entran enteras: Reporte tiene tres desde el 01/10/2026
-   (Reporte del día · Mis reportes · Registros) y con el padding de escritorio la última quedaba
-   cortada contra el borde — justo la que abre un número de "Mis datos". Lo mismo las dos tablas
-   de Registros (Leads entrantes · Agendas generadas). */
+/* Las pestañas del encabezado, como en el artifact: la elegida en el rosa de marca. */
+.setter-espacio .setter-top .tabs{background:var(--bg-input);border-color:var(--border-subtle)}
+.setter-espacio .setter-top .tab{height:34px;padding:0 var(--s4);font-size:13px;font-weight:700;letter-spacing:-.01em}
+.setter-espacio .setter-top .tab[aria-selected="true"]{background:var(--brand-secondary);color:var(--ink)}
+
+/* A ancho de teléfono el saludo queda solo con el nombre y las pestañas bajan a su propia línea,
+   enteras: Reporte tiene tres (Reporte del día · Mis reportes · Registros) y con el padding de
+   escritorio la última quedaba cortada contra el borde — justo la que abre un número de "Mis
+   datos". */
+@media (max-width:700px){
+  .setter-espacio .hola h1 .sub{display:none}
+  .setter-espacio .setter-top .tabs{order:3;width:100%}
+  .setter-espacio .setter-top .tab{flex:1 0 auto}
+}
 @media (max-width:440px){
   .setter-espacio .dc-shell .tab{padding:0 10px;font-size:13px}
 }
@@ -41,4 +78,5 @@
 @keyframes setterTabOn{from{opacity:.55;transform:scale(.9)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){
   .setter-espacio .dc-shell .tab[aria-selected="true"]{animation:none}
+  .setter-espacio .aura-pag i{animation:none}
 }
