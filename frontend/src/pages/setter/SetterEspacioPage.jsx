@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { BarChart3, CalendarDays, ClipboardList, Compass, Ghost, Layers, Link2, LogOut } from 'lucide-react';
+import { BarChart3, CalendarDays, ClipboardList, Compass, Ghost, Link2, LogOut } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
@@ -31,8 +31,12 @@ import PublicSetterStatsPage from '../public/PublicSetterStatsPage';
  * (`DockSecciones`), con las secciones del setter.
  *
  * La sección y su pestaña viven en la query string (`step` y `tab`), así que un link, el botón
- * "atrás" y la ruta de aterrizaje del rol (`/setter/deck?step=cualificacion`) siguen andando. Las
+ * "atrás" y la ruta de aterrizaje del rol (`/setter/deck?step=agendas`) siguen andando. Las
  * rutas viejas (/setter/report, /setter/agendas, /setter/mis-datos...) redirigen acá.
+ *
+ * Cualificación ya no es una sección (pedido del 10/10/2026: "ya no es necesaria para los
+ * setters"): el aterrizaje es "Mis agendas", y un link viejo a `?step=cualificacion` cae ahí como
+ * cualquier sección que no existe.
  *
  * Va SIN `MainLayout`, igual que el mazo del closer: el dock de la app le quedaría encima del
  * propio. A cambio, ofrece lo que daba aquel: el Playbook, la salida de una simulación y cerrar
@@ -41,7 +45,7 @@ import PublicSetterStatsPage from '../public/PublicSetterStatsPage';
  * primero que busca quien termina de mirar.
  *
  * Revisar (el libro de registros del dashboard) NO es una sección del setter (pedido del
- * 29/09/2026), y `?step=revisar` de un link viejo cae en Cualificación. Sus listas viven en
+ * 29/09/2026), y `?step=revisar` de un link viejo cae en Mis agendas. Sus listas viven en
  * Reporte · Registros (pedido del 01/10/2026: "el setter trabaja con Reporte, que vea los datos
  * dentro de su reporte"): sus leads y sus agendas generadas, acotadas a él por el backend.
  */
@@ -52,9 +56,8 @@ import PublicSetterStatsPage from '../public/PublicSetterStatsPage';
  * lado de "Mis reportes" y de un vistazo eran la misma pestaña.
  */
 const SECCIONES = [
-    { id: 'cualificacion', label: 'Cualificación', Icono: Layers },
-    { id: 'agendas', label: 'Agendas', Icono: CalendarDays,
-        tabs: [{ key: 'fecha', label: 'Por fecha' }, { key: 'historial', label: 'Historial' }] },
+    // La primera es el aterrizaje del rol y adonde cae una sección que no existe.
+    { id: 'agendas', label: 'Mis agendas', Icono: CalendarDays },
     { id: 'reporte', label: 'Reporte', Icono: ClipboardList,
         tabs: [{ key: 'hoy', label: 'Reporte del día' }, { key: 'historial', label: 'Mis reportes' },
             { key: 'registros', label: 'Registros' }] },
@@ -149,11 +152,7 @@ const SetterEspacioPage = () => {
         ? { ...s, marca: { texto: '✓', titulo: 'reporte de hoy enviado' } }
         : s));
 
-    // Cualificación y "Agendas · Por fecha" son el mismo mazo con otro paso: comparten la clave
-    // para que React no lo desmonte al ir de una a otra y se conserven el rango de fechas y la
-    // búsqueda. El resto entra con su animación cada vez.
-    const esMazo = seccion === 'cualificacion' || (seccion === 'agendas' && tab === 'fecha');
-    const claveVista = esMazo ? 'mazo' : `${seccion}-${tab || ''}`;
+    const claveVista = `${seccion}-${tab || ''}`;
     const nombre = user?.name || user?.username || 'Setter';
 
     // La sesión al final del dock: lo que antes eran botones del header.
@@ -210,8 +209,12 @@ const SetterEspacioPage = () => {
                     initial={reducir ? false : { opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.28, ease: [0.22, 0.7, 0.2, 1] }}>
-                    {esMazo && <SetterWorkflowPage paso={seccion === 'cualificacion' ? 'cualificacion' : 'agendas'} />}
-                    {seccion === 'agendas' && tab === 'historial' && <SetterAgendasPage />}
+                    {seccion === 'agendas' && (
+                        <>
+                            <SetterWorkflowPage paso="agendas" />
+                            <SetterAgendasPage />
+                        </>
+                    )}
                     {seccion === 'reporte' && tab === 'hoy' && (
                         <PublicSetterReportPage onEnviado={(fecha) => { if (fecha === hoyLocal()) setReporteHoy(true); }} />
                     )}

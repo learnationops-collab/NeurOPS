@@ -8,8 +8,8 @@ import SetterEspacioPage from './SetterEspacioPage';
  * El espacio del setter tiene UN dock, y entrar a "Mis datos" no lo cambia.
  *
  * Reportado el 29/sep/2026 simulando a un setter: al ir a "Mis datos" el panel de abajo pasaba a
- * ser el del dashboard comercial (Analizar, Revisar, Proyectar...) y ya no había cómo volver a
- * Cualificación; la única salida era "Volver a mi sesión", que terminaba la simulación.
+ * ser el del dashboard comercial (Analizar, Revisar, Proyectar...) y ya no había cómo volver al
+ * trabajo; la única salida era "Volver a mi sesión", que terminaba la simulación.
  *
  * Las secciones se reemplazan por dobles: acá se prueba la navegación del espacio, no las
  * pantallas que monta. El doble del dashboard hace lo mismo que el real en el drill-down: escribe
@@ -106,16 +106,16 @@ describe('SetterEspacioPage · un solo dock', () => {
 
         expect(screen.getByTestId('dashboard-analizar')).toBeInTheDocument();
         const secciones = Array.from(dock().querySelectorAll('.dock-item')).map(b => b.getAttribute('aria-label'));
-        expect(secciones).toEqual(['Cualificación', 'Agendas', 'Reporte', 'Mis datos']);
+        expect(secciones).toEqual(['Mis agendas', 'Reporte', 'Mis datos']);
         expect(itemDelDock('Mis datos')).toHaveAttribute('aria-current', 'page');
 
         // Simulando, "Volver a mi sesión" está, pero ya no es la única salida.
         expect(screen.getByRole('button', { name: /Volver a mi sesión/ })).toBeInTheDocument();
 
-        fireEvent.click(itemDelDock('Cualificación'));
-        expect(screen.getByTestId('mazo')).toHaveTextContent('mazo:cualificacion');
-        expect(itemDelDock('Cualificación')).toHaveAttribute('aria-current', 'page');
-        expect(url().get('step')).toBe('cualificacion');
+        fireEvent.click(itemDelDock('Mis agendas'));
+        expect(screen.getByTestId('mazo')).toHaveTextContent('mazo:agendas');
+        expect(itemDelDock('Mis agendas')).toHaveAttribute('aria-current', 'page');
+        expect(url().get('step')).toBe('agendas');
     });
 
     it('el setter no ve Revisar, pero "Mis datos" tiene a dónde llevar un número', async () => {
@@ -127,10 +127,10 @@ describe('SetterEspacioPage · un solo dock', () => {
         expect(screen.queryAllByRole('button', { name: /^Revisar/ })).toHaveLength(0);
     });
 
-    it('un link viejo a Revisar abre Cualificación, no una pantalla vacía', async () => {
+    it('un link viejo a Revisar abre Mis agendas, no una pantalla vacía', async () => {
         await montar('/setter/deck?step=revisar');
 
-        expect(screen.getByTestId('mazo')).toHaveTextContent('mazo:cualificacion');
+        expect(screen.getByTestId('mazo')).toHaveTextContent('mazo:agendas');
         expect(screen.queryByTestId('dashboard-revisar')).toBeNull();
     });
 
@@ -205,24 +205,23 @@ describe('SetterEspacioPage · un solo dock', () => {
     it('una sección o pestaña desconocida cae en la primera, no en una pantalla vacía', async () => {
         await montar('/setter/deck?step=inventada&tab=otra');
 
-        expect(screen.getByTestId('mazo')).toHaveTextContent('mazo:cualificacion');
-        expect(itemDelDock('Cualificación')).toHaveAttribute('aria-current', 'page');
+        expect(screen.getByTestId('mazo')).toHaveTextContent('mazo:agendas');
+        expect(itemDelDock('Mis agendas')).toHaveAttribute('aria-current', 'page');
     });
 
-    it('Cualificación y Agendas por fecha comparten el mazo, sin desmontarlo', async () => {
+    it('Cualificación ya no está: el aterrizaje viejo cae en Mis agendas', async () => {
+        // Pedido del 10/10/2026: "quitar la pestaña de cualificación, ya no es necesario para los
+        // setters". Un link guardado con `?step=cualificacion` no puede abrir una pantalla vacía.
         await montar('/setter/deck?step=cualificacion');
-        const mazo = screen.getByTestId('mazo');
 
-        fireEvent.click(itemDelDock('Agendas'));
-
-        // Es el MISMO nodo: si React lo desmontara, el rango de fechas y la búsqueda se perderían.
-        expect(screen.getByTestId('mazo')).toBe(mazo);
-        expect(mazo).toHaveTextContent('mazo:agendas');
+        expect(screen.getByTestId('mazo')).toHaveTextContent('mazo:agendas');
+        expect(itemDelDock('Mis agendas')).toHaveAttribute('aria-current', 'page');
+        expect(screen.queryAllByRole('button', { name: /^Cualificación/ })).toHaveLength(0);
     });
 
     it('con el reporte de hoy enviado, el dock lo marca', async () => {
         sesion.reportesHoy = 1;
-        await montar('/setter/deck?step=cualificacion');
+        await montar('/setter/deck?step=agendas');
 
         expect(itemDelDock('Reporte')).toHaveAttribute('aria-label', 'Reporte, reporte de hoy enviado');
     });
@@ -254,7 +253,7 @@ describe('SetterEspacioPage · la sesión en el dock', () => {
     };
 
     it('el header ya no tiene Playbook ni cerrar sesión: están en el avatar del dock, con lo pendiente a la vista', async () => {
-        await montar('/setter/deck?step=cualificacion');
+        await montar('/setter/deck?step=agendas');
 
         const header = document.querySelector('header.tope');
         expect(header.querySelectorAll('button')).toHaveLength(0);
@@ -274,7 +273,7 @@ describe('SetterEspacioPage · la sesión en el dock', () => {
     it('simulando, "Volver a mi sesión" está arriba y también en el menú', async () => {
         sesion.user = { ...sesion.user, is_impersonating: true };
         sesion.pendientes = 0;
-        await montar('/setter/deck?step=cualificacion');
+        await montar('/setter/deck?step=agendas');
 
         const header = document.querySelector('header.tope');
         expect(Array.from(header.querySelectorAll('button')).map(b => b.textContent)).toEqual(['Volver a mi sesión']);

@@ -362,7 +362,7 @@ function App() {
             <Route path="/setter/dashboard" element={<Navigate replace to="/setter/deck?step=datos" />} />
             <Route path="/setter/report" element={<Navigate replace to="/setter/deck?step=reporte" />} />
             <Route path="/setter/statistics" element={<Navigate replace to="/setter/deck?step=reporte&tab=historial" />} />
-            <Route path="/setter/agendas" element={<Navigate replace to="/setter/deck?step=agendas&tab=historial" />} />
+            <Route path="/setter/agendas" element={<Navigate replace to="/setter/deck?step=agendas" />} />
             <Route
               path="/closer/report"
               element={

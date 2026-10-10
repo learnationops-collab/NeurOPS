@@ -61,11 +61,11 @@ const useDockNavigation = () => {
             // El setter trabaja en SU espacio (/setter/deck), que trae su propio dock y no pasa
             // por MainLayout. Este dock solo lo ve en las pocas páginas que sí lo usan (Sin
             // anuncio), así que cada entrada lleva a la sección del espacio con el mismo nombre.
+            // Cualificación ya no es una sección (10/10/2026): la primera es "Mis agendas".
             return [
-                { id: 'step-1', icon: Layers, label: '1. Cualificación', path: '/setter/deck?step=cualificacion' },
-                { id: 'step-2', icon: CalendarDays, label: '2. Agendas', path: '/setter/deck?step=agendas' },
-                { id: 'step-3', icon: ClipboardList, label: '3. Reporte', path: '/setter/deck?step=reporte' },
-                { id: 'step-4', icon: BarChart3, label: '4. Mis Datos', path: '/setter/deck?step=datos' }
+                { id: 'step-1', icon: CalendarDays, label: '1. Mis agendas', path: '/setter/deck?step=agendas' },
+                { id: 'step-2', icon: ClipboardList, label: '2. Reporte', path: '/setter/deck?step=reporte' },
+                { id: 'step-3', icon: BarChart3, label: '3. Mis Datos', path: '/setter/deck?step=datos' }
             ];
         } else if (isTriage) {
             return [
