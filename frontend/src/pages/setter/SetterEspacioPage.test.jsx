@@ -3,6 +3,7 @@ import { MemoryRouter, useLocation, useNavigate, useSearchParams } from 'react-r
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SetterEspacioPage from './SetterEspacioPage';
+import api from '../../services/api';
 
 /**
  * El espacio del setter tiene UN dock, y entrar a "Mis datos" no lo cambia.
@@ -289,6 +290,7 @@ describe('SetterEspacioPage · la sesión en el dock', () => {
         sesion.pendientes = 3;
         sesion.openPlaybook = vi.fn();
         vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+        api.get.mockImplementation(() => Promise.resolve({ data: { total: sesion.reportesHoy } }));
     });
 
     const abrirSesion = async (nombre) => {
@@ -325,5 +327,24 @@ describe('SetterEspacioPage · la sesión en el dock', () => {
         expect(screen.getByText('Setter · simulación')).toBeInTheDocument();
         expect(screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent))
             .toEqual(['Playbook', 'Mis links de agendamiento', 'Reportar un problema', 'Mis reportes', 'Volver a mi sesión', 'Cerrar sesión']);
+    });
+
+    it('"Mis links de agendamiento" trae los de Agendas 2.0 y también los de los eventos viejos', async () => {
+        // El botón "Links de Agendamiento" de la pestaña Historial (que se fue el 10/10/2026) daba los
+        // links de los eventos viejos (/book/<slug>): siguen al alcance, en el mismo panel.
+        api.get.mockImplementation((ruta) => Promise.resolve({
+            data: ruta === '/setter/agendas-links'
+                ? { links: [{ funnel: 'Setting', evento: 'Llamada', ruta: '/agendas-v2/agenda/setting/llamada?o=ana' }] }
+                : ruta === '/setter/booking-link'
+                    ? [{ id: 1, name: 'Grupo viejo', links: [{ id: 9, name: 'Evento viejo', url: 'https://x.test/book/viejo' }] }]
+                    : { total: 0 },
+        }));
+        await montar('/setter/deck?step=agendas');
+        await abrirSesion('Tu sesión: Ana Setter, 3 videos pendientes del Playbook');
+
+        await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Mis links de agendamiento' })); });
+
+        expect(screen.getByRole('menuitem', { name: 'Setting · Llamada' })).toBeInTheDocument();
+        expect(screen.getByRole('menuitem', { name: 'Grupo viejo · Evento viejo' })).toBeInTheDocument();
     });
 });

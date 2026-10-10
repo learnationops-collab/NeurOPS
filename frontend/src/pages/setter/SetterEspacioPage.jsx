@@ -298,16 +298,33 @@ const SetterEspacioPage = () => {
 };
 
 // Tocar un link lo copia: es lo que el setter pega en WhatsApp o Instagram.
+const copiar = async (url) => {
+    try { await navigator.clipboard.writeText(url); toast.success('Link copiado'); } catch { window.prompt('Copiá tu link:', url); }
+};
+
+// Van también los links de los eventos viejos (`/book/<slug>`, los que daba el botón "Links de
+// Agendamiento" de la pestaña Historial, que se fue el 10/10/2026): si un setter todavía tiene uno,
+// lo sigue encontrando acá. Si ese pedido falla, quedan los de Agendas 2.0.
 const cargarMisLinks = async () => {
-    const res = await api.get('/setter/agendas-links');
-    return (res.data?.links || []).map((l) => ({
-        id: l.ruta,
-        label: `${l.funnel} · ${l.evento}`,
-        onClick: async () => {
-            const url = window.location.origin + l.ruta;
-            try { await navigator.clipboard.writeText(url); toast.success('Link copiado'); } catch { window.prompt('Copiá tu link:', url); }
-        },
-    }));
+    const [nuevos, viejos] = await Promise.allSettled([
+        api.get('/setter/agendas-links'),
+        api.get('/setter/booking-link'),
+    ]);
+    if (nuevos.status === 'rejected' && viejos.status === 'rejected') throw nuevos.reason;
+    const deAgendas = nuevos.status === 'fulfilled' ? (nuevos.value.data?.links || []) : [];
+    const deEventos = viejos.status === 'fulfilled' && Array.isArray(viejos.value.data) ? viejos.value.data : [];
+    return [
+        ...deAgendas.map((l) => ({
+            id: l.ruta,
+            label: `${l.funnel} · ${l.evento}`,
+            onClick: () => copiar(window.location.origin + l.ruta),
+        })),
+        ...deEventos.flatMap(g => (g.links || []).map((l) => ({
+            id: `evento-${l.id}`,
+            label: `${g.name} · ${l.name}`,
+            onClick: () => copiar(l.url),
+        }))),
+    ];
 };
 
 export default SetterEspacioPage;
