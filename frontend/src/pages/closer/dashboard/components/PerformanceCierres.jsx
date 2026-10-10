@@ -28,7 +28,7 @@ const PerformanceCierres = ({ cierres, irA }) => {
                     <span className="w-2 h-2 rounded-full bg-primary" /> Cierre
                     <MetricTip iconOnly title="Cómo leer esta tarjeta" source="derivado"
                         formula="ventas: pago completo + split pay · señas: señas sin completar"
-                        note="El close rate solo cuenta pagos completos y split pay: una seña es una reserva, no una venta. «Señas» cuenta aparte a los leads que dejaron seña y todavía no pagaron. Arriba, la tasa de presentación: de las llamadas con show up, en cuántas se llegó a la oferta. Las ventas salen del registro financiero y las llamadas de la bandeja." />
+                        note="El close rate solo cuenta pagos completos y split pay: una seña es una reserva, no una venta. «Señas» cuenta aparte a los leads que dejaron seña y todavía no pagaron. Arriba, la tasa de presentación: de las llamadas con show up, en cuántas se llegó a la oferta. Abajo, las no cerradas: las llamadas con show up que no terminaron ni en venta ni en seña. Las ventas salen del registro financiero y las llamadas de la bandeja." />
                 </h3>
                 {hayLlamadas && <LeyendaCierres cierres={cierres} />}
             </div>

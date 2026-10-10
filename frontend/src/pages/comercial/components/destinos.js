@@ -1,4 +1,4 @@
-import { ESTADO_CARTERA, SENA_ESTADO, diaDe, rotuloDetalleFuente, rotuloToques } from './tablasDef';
+import { ESTADO_CARTERA, NO, SENA_ESTADO, diaDe, rotuloDetalleFuente, rotuloToques } from './tablasDef';
 
 /**
  * El mapa "dato del dashboard comercial → lista que lo compone".
@@ -76,6 +76,10 @@ export const DESTINOS_CLOSER = {
         de: 'Señas por presentación',
         aviso: 'El numerador son TODAS las señas del período, no solo las que además tienen la '
             + 'oferta marcada como presentada. ' + AVISO_TASA_NUMERADOR },
+    // «No cerradas» del panel Cierre: asistieron y no terminaron en venta ni en seña. La faceta
+    // `cerro` lee la marca `no_cerrada` de cada fila, la misma con la que se cuenta el número: la
+    // lista cierra exacto con él.
+    no_cerradas: { tabla: 'agendas', filtro: { cerro: NO }, de: 'No cerradas' },
 
     // --- Panel Cash ---
     cash_collected: { tabla: 'ventas', filtro: {}, de: 'Cash collected' },
@@ -142,8 +146,8 @@ export const DESTINO_PROCEDENCIAS_TOTAL = { tabla: 'ventas', filtro: {}, de: 'In
 /**
  * La matriz de cierres (`MatrizCierres`), con la misma forma que el bloque `cierres` del backend:
  * fila (ventas / señas) → columna (por llamada / por presentación) → destino, más la tira de
- * presentación de arriba (`presentacion`). La usan el panel Cierre de acá y la tarjeta del
- * dashboard del closer, que lleva a esta misma lista.
+ * presentación de arriba (`presentacion`) y la de «No cerradas» de abajo (`no_cerradas`). La usan
+ * el panel Cierre de acá y la tarjeta del dashboard del closer, que lleva a esta misma lista.
  */
 export const DESTINOS_CIERRES = {
     presentacion: DESTINOS_CLOSER.presentacion_rate,
@@ -155,6 +159,7 @@ export const DESTINOS_CIERRES = {
         por_llamada: DESTINOS_CLOSER.senas_llamada,
         por_presentacion: DESTINOS_CLOSER.senas_presentacion,
     },
+    no_cerradas: DESTINOS_CLOSER.no_cerradas,
 };
 
 /* ============================================================

@@ -1,5 +1,6 @@
-/* Matriz de cierres (MatrizCierres.jsx): la tira de presentación y una tarjeta por columna
- * (por llamada / por presentación), con las ventas y las señas en cada una.
+/* Matriz de cierres (MatrizCierres.jsx): la tira de presentación, una tarjeta por columna
+ * (por llamada / por presentación) con las ventas y las señas en cada una, y la tira de las
+ * «No cerradas» abajo.
  *
  * Como drill.css, sin prefijo de pantalla: vive en el panel Cierre del dashboard comercial (dentro
  * de `.dc-shell`) y en el dashboard del closer (Tailwind, `dash-v6`). Los dos son oscuros siempre
@@ -17,6 +18,9 @@
 .mc {
     --mc-sin: var(--v6-blue2, #4E8BD8);
     --mc-con: var(--v6-pink, #FF3FA4);
+    /* Las «No cerradas»: el mismo naranja que «Presentó, no cerró» en el panel Estados
+       (`reparto-estados.css`), entre el error y el aviso. */
+    --mc-no: color-mix(in oklch, var(--v6-dgr, #E85C4A) 55%, var(--v6-warn, #D9A441));
     --mc-presenta: rgba(255, 255, 255, .94);
     --mc-hueco: rgba(2, 6, 23, .55);
     --mc-mut: rgba(255, 255, 255, .5);
@@ -117,6 +121,7 @@
 .mc-tramo--ventas { background: var(--mc-sin); }
 .mc-tramo--senas { background: var(--mc-con); }
 .mc-tramo--presenta { background: var(--mc-presenta); border-radius: 999px; }
+.mc-tramo--no { background: var(--mc-no); border-radius: 999px; }
 
 /* --- Tira de presentación -------------------------------------------------------------------- */
 
@@ -130,6 +135,10 @@
     background: var(--mc-superficie);
     border: 1px solid var(--mc-borde);
     animation: mc-entra .4s ease both;
+}
+
+.mc-tira--no {
+    animation-delay: 260ms;
 }
 
 .mc-tira-rot {

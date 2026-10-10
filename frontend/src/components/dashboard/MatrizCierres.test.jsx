@@ -29,6 +29,8 @@ const CIERRES = {
         por_llamada: { num: 1, den: 6, pct: 16.7 },
         por_presentacion: { num: 1, den: 5, pct: 20.0 },
     },
+    // 6 asistieron = 3 ventas + 1 seña + 2 no cerradas.
+    no_cerradas: { num: 2, den: 6, pct: 33.3 },
 };
 
 const tarjeta = (nombre) => screen.getByRole('group', { name: nombre });
@@ -147,6 +149,51 @@ describe('MatrizCierres', () => {
     it('sin bloque no dibuja nada', () => {
         const { container } = render(<MatrizCierres cierres={null} />);
         expect(container).toBeEmptyDOMElement();
+    });
+});
+
+describe('MatrizCierres · No cerradas', () => {
+    const tira = () => screen.getByRole('group', { name: 'No cerradas' });
+
+    it('abajo va la tira de las no cerradas: la cantidad, su base y la tasa', () => {
+        const { container } = render(<MatrizCierres cierres={CIERRES} />);
+
+        expect(tira()).toHaveTextContent('No cerradas');
+        expect(tira().querySelector('.mc-tira-pct')).toHaveTextContent(/^2$/);
+        expect(tira()).toHaveTextContent('de 6 · 33.3%');
+        // Va después de las dos tarjetas: cierra la lectura de la columna por llamada.
+        const hijos = [...container.querySelector('.mc').children];
+        expect(hijos.indexOf(tira())).toBe(hijos.length - 1);
+        const [tramo] = tira().querySelectorAll('.mc-tramo');
+        expect(tramo).toHaveClass('mc-tramo--no');
+        expect(tramo.style.getPropertyValue('--ancho')).toBe('33.3%');
+    });
+
+    it('la cantidad lleva a Revisar con las que no cerraron', () => {
+        const irA = vi.fn();
+        render(<MatrizCierres cierres={CIERRES} irA={irA} destinos={DESTINOS_CIERRES} />);
+
+        fireEvent.click(screen.getByRole('button', { name: /No cerradas · 2 de 6/ }));
+
+        expect(irA).toHaveBeenCalledWith('agendas', expect.objectContaining({ cerro: 'No', __de: 'No cerradas' }));
+    });
+
+    it('su tooltip dice qué cuenta y con los números del período', () => {
+        const Ayuda = vi.fn(() => null);
+        render(<MatrizCierres cierres={CIERRES} Ayuda={Ayuda} />);
+
+        const texto = Ayuda.mock.calls.map(([p]) => p).find(p => p.titulo === 'No cerradas')?.texto;
+        expect(texto).toContain('ni en venta ni en seña: 2 de 6');
+    });
+
+    it('sin show up la tasa es un guion, y un bloque viejo sin el dato no dibuja la tira', () => {
+        const { rerender } = render(
+            <MatrizCierres cierres={{ ...CIERRES, no_cerradas: { num: 0, den: 0, pct: null } }} />);
+        expect(tira()).toHaveTextContent('de 0 · —');
+
+        const { no_cerradas: _fuera, ...viejo } = CIERRES;
+        rerender(<MatrizCierres cierres={viejo} />);
+        expect(screen.queryByRole('group', { name: 'No cerradas' })).toBeNull();
     });
 });
 

@@ -21,7 +21,8 @@ import './matriz-cierres.css';
  *
  * El diseño es el de Kerwin (30/09/2026): arriba una tira con la tasa de presentación —la que
  * explica la distancia entre las dos columnas— y debajo una tarjeta por columna, con las ventas
- * (barra azul) y, debajo, las señas (barra rosa).
+ * (barra azul) y, debajo, las señas (barra rosa). Cierra la tarjeta otra tira, la de «No cerradas»
+ * (09/10/2026): las que asistieron y no compraron ni dejaron seña.
  */
 
 export const FILAS = [
@@ -65,6 +66,9 @@ const plural = (valor, uno, varios) => `${n(valor)} ${Number(valor) === 1 ? uno 
 /** Una tasa: `null` es "—" (sin denominador no hay tasa), nunca 0%. */
 export const pctDe = (valor) => (valor === null || valor === undefined ? '—' : `${valor}%`);
 
+/** Lo que muestra `Pct` al final: la tasa con su `%`, o el conteo pelado si el sufijo es vacío. */
+const textoDe = (valor, sufijo) => (valor === null || valor === undefined ? '—' : `${valor}${sufijo}`);
+
 /** Qué dice el tooltip de una celda: la cuenta en palabras y con los números del período. */
 export const textoDeCelda = (fila, col, celda) => `${fila.numerador} ÷ ${col.denominador}: `
     + `${n(celda?.num)} de ${n(celda?.den)}. ${fila.key === 'solo_senas'
@@ -95,8 +99,9 @@ const quieto = () => typeof window !== 'undefined' && typeof window.matchMedia =
  *
  * Se exporta porque el panel Estados (`RepartoEstados`) cuenta sus porcentajes con la misma pieza.
  * Un `valor` en texto conserva sus decimales: "30.0" sube y termina en "30.0%", no en "30%".
+ * `sufijo` vacío la vuelve un conteo: la tira de «No cerradas» sube su cantidad con la misma curva.
  */
-export const Pct = ({ valor, className }) => {
+export const Pct = ({ valor, className, sufijo = '%' }) => {
     const ref = useRef(null);
     useEffect(() => {
         const el = ref.current;
@@ -110,16 +115,16 @@ export const Pct = ({ valor, className }) => {
         const paso = (t) => {
             if (!t0) t0 = t;
             const k = Math.min((t - t0) / 800, 1);
-            el.textContent = `${(fin * (1 - (1 - k) ** 3)).toFixed(dec)}%`;
+            el.textContent = `${(fin * (1 - (1 - k) ** 3)).toFixed(dec)}${sufijo}`;
             if (k < 1) id = requestAnimationFrame(paso);
-            else el.textContent = pctDe(valor);
+            else el.textContent = textoDe(valor, sufijo);
         };
         id = requestAnimationFrame(paso);
         // Solo se corta el conteo: si el valor cambió, React ya escribió el nuevo antes de esta
         // limpieza, y reponer acá el texto de este efecto dejaría el número viejo.
         return () => cancelAnimationFrame(id);
-    }, [valor]);
-    return <b ref={ref} className={className}>{pctDe(valor)}</b>;
+    }, [valor, sufijo]);
+    return <b ref={ref} className={className}>{textoDe(valor, sufijo)}</b>;
 };
 
 /** "12 de 84": el numerador resaltado, el resto apagado. */
@@ -161,6 +166,35 @@ const TiraPresentacion = ({ celda, destino, irA, Ayuda }) => (
                 <Pct valor={celda.pct} className="mc-tira-pct" />
             </MetricaClicable>
             <Fraccion num={celda.num} den={celda.den} />
+        </span>
+    </div>
+);
+
+/**
+ * Abajo de la matriz: las llamadas con show up que no terminaron ni en venta ni en seña (pedido del
+ * usuario, 09/10/2026: «agrega un dato de "No cerradas" con la cantidad de agendas en show up que no
+ * se cerraron»). Es el resto de la columna "Por llamada" —ventas + señas + no cerradas son las que
+ * asistieron— y por eso va como tira, igual que la de presentación arriba, y no como una tercera
+ * fila de cada tarjeta: es una sola cifra sobre las llamadas, no dos.
+ *
+ * La cifra grande es la CANTIDAD, que es lo que se pidió; la base y la tasa van al lado.
+ */
+const TiraNoCerradas = ({ celda, destino, irA, Ayuda }) => (
+    <div className="mc-tira mc-tira--no" role="group" aria-label="No cerradas">
+        <span className="mc-tira-rot">
+            <small className="mc-rot">No cerradas</small>
+            <ConAyuda Ayuda={Ayuda} titulo="No cerradas"
+                texto={`Llamadas con show up que no terminaron ni en venta ni en seña: ${n(celda.num)} `
+                    + `de ${n(celda.den)}. Con las ventas y las señas suman todas las llamadas con `
+                    + 'show up: acá están los leads a los que hay que volver.'} />
+        </span>
+        <Riel className="mc-riel--tira" tramos={[{ tono: 'no', ancho: celda.pct, demora: 520 }]} />
+        <span className="mc-tira-cifra">
+            <MetricaClicable irA={irA} destino={destino} vacio={!celda.num} subrayar={false}
+                detalle={`No cerradas · ${n(celda.num)} de ${n(celda.den)}`}>
+                <Pct valor={n(celda.num)} sufijo="" className="mc-tira-pct" />
+            </MetricaClicable>
+            <small className="mc-frac">de {n(celda.den)} · {pctDe(celda.pct)}</small>
         </span>
     </div>
 );
@@ -260,6 +294,10 @@ const MatrizCierres = ({ cierres, irA, destinos, Ayuda = AyudaSimple, className 
                         destinos={destinos} irA={irA} Ayuda={Ayuda} />
                 ))}
             </div>
+            {cierres.no_cerradas && (
+                <TiraNoCerradas celda={cierres.no_cerradas} destino={destinos?.no_cerradas}
+                    irA={irA} Ayuda={Ayuda} />
+            )}
         </div>
     );
 };

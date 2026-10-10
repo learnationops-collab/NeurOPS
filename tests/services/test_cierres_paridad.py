@@ -82,6 +82,8 @@ def test_los_dos_backends_dan_la_misma_matriz_de_cierres(db, marlon):
         # Solo la seña de sena@: la de completo@ terminó en venta y ya está arriba.
         'solo_senas': {'por_llamada': {'num': 1, 'den': 6, 'pct': 16.7},
                        'por_presentacion': {'num': 1, 'den': 5, 'pct': 20.0}},
+        # no@ (presentó y no compró) y corto@ (seguimiento abierto): asistieron y no cerraron.
+        'no_cerradas': {'num': 2, 'den': 6, 'pct': 33.3},
     }
     assert del_comercial == esperado
     assert del_closer == esperado

@@ -364,7 +364,8 @@ const PanelCierre = ({ bloque, irA }) => {
             <PanelCab titulo="Cierre"
                 ayuda={'El close rate cuenta solo pagos completos y split pay: una seña es una reserva, '
                     + 'no una venta, y va en su propia fila. Cada tarjeta mide lo mismo contra las '
-                    + 'llamadas con show up y contra las presentaciones.'}>
+                    + 'llamadas con show up y contra las presentaciones. Abajo, las no cerradas: las '
+                    + 'que asistieron y no terminaron ni en venta ni en seña.'}>
                 {!vacio && <LeyendaCierres cierres={c} />}
             </PanelCab>
         }>

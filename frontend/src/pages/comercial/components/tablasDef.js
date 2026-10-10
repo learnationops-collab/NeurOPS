@@ -134,6 +134,10 @@ export const asistio = siNo((f) => f.asistio);
 // Presentar requiere haber asistido: sin eso el embudo mostraría más presentaciones que
 // asistencias, que es imposible.
 export const presento = siNo((f) => f.asistio && f.presento);
+// ¿La llamada con show up terminó en venta o en seña? Solo se pregunta de las que asistieron: una
+// que no ocurrió no "no cerró". La marca la pone el backend (`no_cerrada`), la misma con la que el
+// panel Cierre cuenta sus «No cerradas», así la lista no puede dar otro número.
+export const cerro = (f) => (f.asistio ? (f.no_cerrada ? NO : SI) : null);
 export const respondio = siNo((f) => f.respondio);
 export const cualificado = siNo((f) => f.cualificado);
 
@@ -248,6 +252,9 @@ export const TABLAS = {
             { key: 'confirmada', label: 'Confirmada', de: fueConfirmada },
             { key: 'asistio', label: 'Asistió', de: asistio },
             { key: 'presento', label: 'Presentó', de: presento },
+            // Oculta, como el día: existe para que «No cerradas» del panel Cierre tenga a dónde
+            // llevar («Cerró: No»). Los estados de una llamada abierta ya se filtran por post call.
+            { key: 'cerro', label: 'Cerró', de: cerro, oculta: true },
             { key: 'dia', label: 'Día de la reunión', de: (f) => diaDe(f.fecha), oculta: true },
         ],
         chips: [
