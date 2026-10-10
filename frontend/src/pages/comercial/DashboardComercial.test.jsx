@@ -1,15 +1,16 @@
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import DashboardComercial from './DashboardComercial';
+import { getTabla } from './comercialApi';
 
 /**
  * El drill-down de "Mis datos" existe solo si hay una lista a la que llegar.
  *
  * Embebido, la lista es del host: sin `onIrASeccion` cada flecha o número cliqueable llevaría a
- * ninguna parte. El closer ("Mi cartera"), el setter (Reporte · Registros) y la dirección (su
- * dock) lo tienen.
+ * ninguna parte. El closer ("Mi cartera"), el setter (su Revisar) y la dirección (su dock) lo
+ * tienen.
  *
  * Analizar se reemplaza por un doble que dice si recibió `irA` y, si lo recibió, lo usa con un
  * destino de verdad: sin él, el real ya muestra los números como números (ver `MetricaClicable` y
@@ -90,5 +91,28 @@ describe('DashboardComercial · drill-down de Analizar', () => {
         expect(query.get('p')).toBe('mes');
         // Embebido, la sección la elige el host: el dashboard no escribe la suya.
         expect(query.get('s')).toBeNull();
+    });
+});
+
+describe('DashboardComercial · tabla fija del host', () => {
+    it('con `tablaFija` pide esa tabla, aunque no sea del rol ni la diga la URL, y sin fila de pestañas', async () => {
+        // El Revisar del setter elige Agendas · Ventas · Leads con las pestañas de su espacio: su
+        // Ventas no está entre las tablas de setters de la dirección (Leads entrantes, Agendas
+        // generadas), así que por la `t` de la URL no se podía abrir.
+        getTabla.mockClear();
+        montar({ embebido: true, seccionFija: 'revisar', tablaFija: 'ventas' }, '/x?t=leads');
+
+        await waitFor(() => expect(getTabla).toHaveBeenCalled());
+        expect(getTabla.mock.calls.at(-1)[1]).toBe('ventas');
+        expect(screen.queryByRole('tablist', { name: 'Tabla' })).toBeNull();
+    });
+
+    it('sin `tablaFija`, la fila de pestañas y la tabla de la URL, como siempre', async () => {
+        getTabla.mockClear();
+        montar({ embebido: true, seccionFija: 'revisar' }, '/x?t=generadas');
+
+        await waitFor(() => expect(getTabla).toHaveBeenCalled());
+        expect(getTabla.mock.calls.at(-1)[1]).toBe('generadas');
+        expect(await screen.findByRole('tablist', { name: 'Tabla' })).toBeInTheDocument();
     });
 });

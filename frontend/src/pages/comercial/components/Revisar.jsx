@@ -130,8 +130,14 @@ const TotalesTira = ({ items, alcance, filtrada }) => (
     </div>
 );
 
+/**
+ * `tablas` son las que ofrece la fila de pestañas (por defecto, las del rol). Con una sola no hay
+ * fila: el Revisar del setter elige la tabla con las pestañas de su espacio (ver
+ * `SetterEspacioPage`), y una segunda fila debajo repetiría la misma elección.
+ */
 const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcance, onAbrirFila,
-    filtroInicial, onOlvidarFiltro, puedeElegirEquipo = true, onSincronizarAcademia = null }) => {
+    filtroInicial, onOlvidarFiltro, puedeElegirEquipo = true, onSincronizarAcademia = null,
+    tablas = null }) => {
     const [query, setQuery] = useState('');
     const [facetas, setFacetas] = useState({});
     const [modo, setModo] = useState('todas');
@@ -151,6 +157,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     const { modo: modoVista, setModo: setModoVista } = useModoVista(`comercial_view_mode_${tabla}`);
 
     const def = TABLAS[tabla];
+    const deLaFila = tablas || TABLAS_POR_ROL[rol];
     const panel = useRef(null);
 
     /**
@@ -461,15 +468,17 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
 
     return (
         <section className="panel" ref={panel}>
-            <div className="tabs" role="tablist" aria-label="Tabla"
-                style={{ marginBottom: 'var(--s4)' }}>
-                {TABLAS_POR_ROL[rol].map(k => (
-                    <button key={k} type="button" role="tab" aria-selected={tabla === k}
-                        className="tab" onClick={() => setTabla(k)}>
-                        {TABLAS[k].label}
-                    </button>
-                ))}
-            </div>
+            {deLaFila.length > 1 && (
+                <div className="tabs" role="tablist" aria-label="Tabla"
+                    style={{ marginBottom: 'var(--s4)' }}>
+                    {deLaFila.map(k => (
+                        <button key={k} type="button" role="tab" aria-selected={tabla === k}
+                            className="tab" onClick={() => setTabla(k)}>
+                            {TABLAS[k].label}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {/* Todo el control en una línea: rápido, completo, búsqueda y la cuenta de lo visible. */}
             <div className="fila barra-tabla" ref={barra}>

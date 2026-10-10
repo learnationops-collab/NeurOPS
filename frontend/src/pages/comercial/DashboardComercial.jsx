@@ -73,7 +73,7 @@ const esFichaUnificada = (fila) => (fila?.tipo === 'agenda' && !!fila.id)
  *
  * El drill-down de Analizar tiene que cambiar de sección, y embebido no hay dock que lo haga: lo
  * resuelve `onIrASeccion(seccion, queryString)`, con el que el host cambia su propia pestaña ("Mi
- * cartera" en el mazo del closer, Reporte · Registros en el espacio del setter). El segundo
+ * cartera" en el mazo del closer, Revisar en el espacio del setter). El segundo
  * argumento es la URL con el filtro ya escrito, para el host que también navega por la URL (el del
  * setter). Un host que no lo pasa no tiene lista, y entonces no hay drill-down.
  *
@@ -207,7 +207,13 @@ const FaltaFecha = ({ texto, children }) => (
     </section>
 );
 
-const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion = null, onAbrirCliente = null, espacio = null }) => {
+/**
+ * `tablaFija`: la tabla de Revisar la elige el host y no la `t` de la URL, y Revisar no muestra su
+ * fila de pestañas. Es el Revisar del setter (10/10/2026), que elige Agendas · Ventas · Leads con las
+ * pestañas de su espacio: su Ventas no es una tabla del rol setters para la dirección (ver
+ * `TABLAS_POR_ROL`), así que por la URL sola no se podía abrir.
+ */
+const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion = null, onAbrirCliente = null, espacio = null, tablaFija = null }) => {
     const [params, setParams] = useSearchParams();
     const [contexto, setContexto] = useState(null);
     const { user, logout } = useAuth();
@@ -357,7 +363,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const tabsVisibles = useMemo(
         () => seccionActual.tabs.filter(t => !t.permiso || contexto?.[t.permiso]),
         [seccionActual, contexto]);
-    const tablaActual = tabla && TABLAS_POR_ROL[rol]?.includes(tabla) ? tabla : TABLAS_POR_ROL[rol]?.[0];
+    const tablaActual = tablaFija
+        || (tabla && TABLAS_POR_ROL[rol]?.includes(tabla) ? tabla : TABLAS_POR_ROL[rol]?.[0]);
 
     // Una fecha por tabla y no una sola: con una sola, la fecha por creación de "Agendas generadas"
     // se arrastraba a "Agendas" del closer, cuyo número se cuenta por la reunión.
@@ -869,6 +876,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                             cargando={cargandoTabla || !datosVigentes} rol={rol} basis={basis} setBasis={setBasis}
                             alcance={alcance} filtroInicial={filtroInicial}
                             puedeElegirEquipo={!!contexto.puede_elegir_equipo}
+                            tablas={tablaFija ? [tablaFija] : null}
                             onOlvidarFiltro={() => set({ f: null, ft: null })}
                             onAbrirFila={abrirFila}
                             onSincronizarAcademia={contexto.puede_reportar ? sincronizarAcademia : null} />
