@@ -296,7 +296,7 @@ describe('DashboardComercial · Payroll abre las ventas de una persona sin salir
 });
 
 /**
- * Las dos vistas se pasan de una a la otra con «Cambiar de vista» del menú del avatar (el Portal, desde el
+ * Las dos vistas se pasan de una a la otra con «Portal» del menú del avatar (el Portal, desde el
  * 10/10/2026: antes eran «Pasar a Finances» / «Pasar a <rol>», «Cambiar de área» y «Cambiar de rol»).
  * Ninguna queda sin salida.
  */
@@ -310,14 +310,14 @@ describe('DashboardComercial · ir y volver entre Comercial y Finances', () => {
     const abrirSesion = async () => {
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: /^Tu sesión: Mario/ })); });
     };
-    const opciones = () => screen.getAllByRole('menuitem').map(i => i.textContent);
-    const MENU = ['Configuración', 'Playbook', 'Cambiar de vista', 'Simular a alguien', 'Reportar un problema', 'Mis reportes', 'Cerrar sesión'];
+    const opciones = () => screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent);
+    const MENU = ['Configuración', 'Portal', 'Mis reportes', 'Reportar un problema', 'Cerrar sesión'];
 
     const direccion = (verFinanzas) => ({
         id: 1, role: 'director_comercial', roles: ['director_comercial'], can_view_finance: verFinanzas, is_impersonating: false,
     });
 
-    it('en Comercial y en /finanzas el menú es el mismo, y «Cambiar de vista» lleva al Portal', async () => {
+    it('en Comercial y en /finanzas el menú es el mismo, y «Portal» lleva a elegir', async () => {
         estado.puede = true;
         estado.user = direccion(true);
         const { unmount } = montar();
@@ -325,7 +325,7 @@ describe('DashboardComercial · ir y volver entre Comercial y Finances', () => {
         await abrirSesion();
         expect(screen.getByText('Dirección comercial')).toBeTruthy();
         expect(opciones()).toEqual(MENU);
-        fireEvent.click(screen.getByRole('menuitem', { name: 'Cambiar de vista' }));
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Portal' }));
         expect(navegar).toHaveBeenLastCalledWith('/portal?elegir=1');
 
         unmount();
@@ -334,7 +334,7 @@ describe('DashboardComercial · ir y volver entre Comercial y Finances', () => {
         await abrirSesion();
         expect(screen.getByText('Finances')).toBeTruthy();
         expect(opciones()).toEqual(MENU);
-        fireEvent.click(screen.getByRole('menuitem', { name: 'Cambiar de vista' }));
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Portal' }));
         expect(navegar).toHaveBeenLastCalledWith('/portal?elegir=1');
     });
 

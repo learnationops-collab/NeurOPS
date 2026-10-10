@@ -264,7 +264,7 @@ describe('SetterEspacioPage · la sesión en el dock', () => {
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: nombre })); });
     };
 
-    it('el header ya no tiene Playbook ni cerrar sesión: están en el avatar del dock, con lo pendiente a la vista', async () => {
+    it('el header ya no tiene Playbook ni cerrar sesión: el avatar del dock lleva lo pendiente, y el Playbook está en Cortex (el Portal)', async () => {
         await montar('/setter/deck?step=agendas');
 
         const header = document.querySelector('header.tope');
@@ -276,10 +276,8 @@ describe('SetterEspacioPage · la sesión en el dock', () => {
         await abrirSesion('Tu sesión: Ana Setter, 3 videos pendientes del Playbook');
         expect(screen.getByText('Setter')).toBeInTheDocument();
         expect(screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent))
-            .toEqual(['Mis links de agendamiento', 'Configuración', 'Playbook, 3 pendientes', 'Reportar un problema', 'Mis reportes', 'Cerrar sesión']);
-
-        fireEvent.click(screen.getByRole('menuitem', { name: 'Playbook, 3 pendientes' }));
-        expect(sesion.openPlaybook).toHaveBeenCalledWith('pending');
+            .toEqual(['Mis links de agendamiento', 'Configuración', 'Portal, 3 videos pendientes del Playbook, en Cortex', 'Mis reportes',
+                'Reportar un problema', 'Cerrar sesión']);
     });
 
     it('simulando, "Volver a mi sesión" está arriba y también en el menú', async () => {
@@ -293,6 +291,6 @@ describe('SetterEspacioPage · la sesión en el dock', () => {
         await abrirSesion('Tu sesión: Ana Setter');
         expect(screen.getByText('Setter · simulación')).toBeInTheDocument();
         expect(screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent))
-            .toEqual(['Mis links de agendamiento', 'Configuración', 'Playbook', 'Reportar un problema', 'Mis reportes', 'Volver a mi sesión', 'Cerrar sesión']);
+            .toEqual(['Mis links de agendamiento', 'Configuración', 'Portal', 'Mis reportes', 'Reportar un problema', 'Volver a mi sesión', 'Cerrar sesión']);
     });
 });

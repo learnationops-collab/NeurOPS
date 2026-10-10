@@ -4,7 +4,7 @@ const post = vi.fn();
 vi.mock('../services/api', () => ({ default: { post: (...a) => post(...a) } }));
 
 import {
-    cambiarDeCuenta, cambiarDeRolEnLaCuenta, destinoDeEntrada, entrarPorTarjeta, fijarTarjetaPorDefecto, hayPortal,
+    cambiarDeCuenta, cambiarDeRolEnLaCuenta, destinoDeEntrada, entrarPorTarjeta, fijarTarjetaPorDefecto, gruposDelPortal, hayPortal,
     opcionPortal, tarjetaPorDefecto, tarjetasDelPortal,
 } from './portal';
 
@@ -27,23 +27,33 @@ beforeEach(() => {
 });
 afterEach(() => { window.location = original; });
 
-describe('las tarjetas del Portal', () => {
-    it('un rol con varias áreas: una tarjeta por área', () => {
-        expect(claves(dir)).toEqual(['director_comercial:direccion', 'director_comercial:agendamiento']);
-        expect(tarjetasDelPortal(dir)[0]).toMatchObject({ titulo: 'Dirección', sobre: null, ruta: '/admin/comercial' });
+describe('roles y áreas en el Portal', () => {
+    it('un rol es un grupo y sus áreas son las tarjetas', () => {
+        expect(claves(dir)).toEqual(['director_comercial:ventas', 'director_comercial:agendamiento']);
+        const [g] = gruposDelPortal(dir);
+        expect(g).toMatchObject({ clave: 'director_comercial', titulo: 'Dirección comercial' });
+        expect(g.tarjetas[0]).toMatchObject({ titulo: 'Ventas', rol: 'director_comercial', ruta: '/admin/comercial' });
     });
 
-    it('roles, áreas, cuentas vinculadas y Finances en una sola elección', () => {
+    it('un grupo por rol y por cuenta vinculada; Finances es un área del rol con el que se entra', () => {
         const mario = { id: 3, role: 'operator', roles: ['operator', 'admin', 'closer'], can_view_finance: true };
-        expect(claves(mario)).toEqual(['operator', 'admin:administracion', 'admin:direccion', 'admin:agendamiento', 'closer', 'finanzas']);
-        // Con varios roles, cada área dice de qué rol es.
-        expect(tarjetasDelPortal(mario)[1].sobre).toBe('Administrador');
-        expect(tarjetasDelPortal(mario).at(-1)).toMatchObject({ titulo: 'Finances', rol: 'admin', ruta: '/finanzas' });
-        expect(claves(marlon)).toEqual(['director_comercial:direccion', 'director_comercial:agendamiento', 'cuenta-2']);
-        expect(tarjetasDelPortal(marlon)[2]).toMatchObject({ titulo: 'Closer', sobre: 'Cuenta vinculada', detalle: 'marlon_closer', cuenta: 2 });
+        expect(gruposDelPortal(mario).map((g) => [g.titulo, g.tarjetas.map((t) => t.titulo)])).toEqual([
+            ['Operador', ['Operaciones']],
+            ['Administrador', ['Administración', 'Ventas', 'Agendamiento', 'Finances']],
+            ['Closer', ['Cierres']],
+        ]);
+        expect(tarjetasDelPortal(mario).find((t) => t.titulo === 'Finances')).toMatchObject({ clave: 'admin:finanzas', rol: 'admin', ruta: '/finanzas' });
+        expect(gruposDelPortal(marlon).at(-1)).toMatchObject({ clave: 'cuenta-2', titulo: 'Closer', detalle: 'Cuenta vinculada · marlon_closer' });
+        expect(gruposDelPortal(marlon).at(-1).tarjetas[0]).toMatchObject({ clave: 'cuenta-2:cierres', titulo: 'Cierres', cuenta: 2 });
     });
 
-    it('un solo destino (o simulando) no tiene Portal', () => {
+    it('simulando, el Portal muestra solo el rol simulado, y no cuenta para entrar', () => {
+        const sim = { id: 9, role: 'closer', roles: [], is_impersonating: true };
+        expect(gruposDelPortal(sim).map((g) => g.titulo)).toEqual(['Closer']);
+        expect(tarjetasDelPortal(sim)).toEqual([]);
+    });
+
+    it('un solo área (o simulando) no tiene que elegir al entrar', () => {
         expect(hayPortal({ id: 1, role: 'closer', roles: ['closer'] })).toBe(false);
         expect(hayPortal({ id: 1, role: 'closer', roles: ['closer'], can_view_finance: true })).toBe(false);
         expect(hayPortal({ ...dir, is_impersonating: true })).toBe(false);
@@ -73,9 +83,11 @@ describe('a dónde entra', () => {
         expect(destinoDeEntrada(marlon)).toBe('/portal');
     });
 
-    it('lee el área por defecto de antes', () => {
+    it('lee el área por defecto de antes (Dirección ahora es Ventas)', () => {
         localStorage.setItem('area_por_defecto_7_director_comercial', 'agendamiento');
         expect(destinoDeEntrada(dir)).toBe('/agendas-v2');
+        localStorage.setItem('area_por_defecto_7_director_comercial', 'direccion');
+        expect(destinoDeEntrada(dir)).toBe('/admin/comercial');
         fijarTarjetaPorDefecto(dir, 'director_comercial:direccion');
         expect(localStorage.getItem('area_por_defecto_7_director_comercial')).toBeNull();
     });
@@ -97,18 +109,18 @@ describe('entrar por una tarjeta', () => {
     it('con otro rol de la cuenta lo activa y va a esa ruta', async () => {
         post.mockResolvedValue({ data: { token: 'tk', user: { id: 3, role: 'admin', roles: ['operator', 'admin'] } } });
         const mario = { id: 3, role: 'operator', roles: ['operator', 'admin'], can_view_finance: true };
-        await entrarPorTarjeta(mario, tarjetasDelPortal(mario).find((t) => t.clave === 'finanzas'), vi.fn());
+        await entrarPorTarjeta(mario, tarjetasDelPortal(mario).find((t) => t.clave === 'admin:finanzas'), vi.fn());
         expect(post).toHaveBeenCalledWith('/auth/switch-role', { role: 'admin', isolated: false });
         expect(JSON.parse(localStorage.getItem('user')).role).toBe('admin');
         expect(window.location.href).toBe('/finanzas');
     });
 
-    it('con una cuenta vinculada pasa a esa cuenta y entra a donde entra ella', async () => {
+    it('con un área de una cuenta vinculada pasa a esa cuenta y entra a esa área', async () => {
         post.mockResolvedValue({ data: { token: 'tk', user: { id: 2, role: 'closer', username: 'marlon_closer' } } });
         await entrarPorTarjeta(marlon, tarjetasDelPortal(marlon)[2], vi.fn());
         expect(post).toHaveBeenCalledWith('/auth/switch-role', { user_id: 2, isolated: false });
         expect(localStorage.getItem('auth_token')).toBe('tk');
-        expect(window.location.href).toContain('/closer/deck');
+        expect(window.location.href).toBe('/closer/deck?step=confirmations');
     });
 
     it('en una pestaña aislada pide el cambio aislado', async () => {
@@ -123,14 +135,15 @@ describe('entrar por una tarjeta', () => {
     });
 });
 
-describe('«Cambiar de vista» del menú', () => {
-    it('vuelve al Portal aunque haya una por defecto, solo si hay algo que elegir', () => {
+describe('«Portal» en el menú', () => {
+    it('está siempre (ahí están Cortex y Simular), entra aunque haya una por defecto y lleva lo pendiente del Playbook', () => {
         const navegar = vi.fn();
-        const [op] = opcionPortal(dir, navegar);
-        expect(op.label).toBe('Cambiar de vista');
+        const [op] = opcionPortal({ id: 1, role: 'closer' }, navegar, 3);
+        expect(op).toMatchObject({ label: 'Portal', cuenta: 3 });
+        expect(op.titulo).toMatch(/3 videos pendientes del Playbook/);
         op.onClick();
         expect(navegar).toHaveBeenCalledWith('/portal?elegir=1');
-        expect(opcionPortal({ id: 1, role: 'closer' }, navegar)).toEqual([]);
-        expect(opcionPortal({ ...dir, is_impersonating: true }, navegar)).toEqual([]);
+        expect(opcionPortal(dir, navegar)[0].cuenta).toBeNull();
+        expect(opcionPortal(null, navegar)).toEqual([]);
     });
 });

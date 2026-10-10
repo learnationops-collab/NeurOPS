@@ -11,6 +11,7 @@ import PublicCallsBoardPage from './pages/public/PublicCallsBoardPage';
 import SalesAttributionPage from './pages/admin/reports/SalesAttributionPage';
 import LoginPage from './pages/auth/LoginPage';
 import PortalPage from './pages/auth/PortalPage';
+import CortexPage from './pages/auth/CortexPage';
 import SessionEntry from './pages/auth/SessionEntry';
 import AnalysisPage from './pages/admin/reports/AnalysisPage';
 import ConstructionPage from './pages/common/ConstructionPage';
@@ -122,6 +123,8 @@ function App() {
                 «Cambiar de vista» del menú de sesión. Sin MainLayout, como el login. /inicio (las áreas)
                 y /vistas (el hub de vistas) eran dos partes de lo mismo: llevan al Portal. */}
             <Route path="/portal" element={<ProtectedRoute><PortalPage /></ProtectedRoute>} />
+            {/* Cortex (10/10/2026): el área de todos, con Learnito y el Playbook. */}
+            <Route path="/cortex" element={<ProtectedRoute><CortexPage /></ProtectedRoute>} />
             <Route path="/inicio" element={<Navigate to="/portal?elegir=1" replace />} />
             <Route path="/vistas" element={<Navigate to="/portal?elegir=1" replace />} />
             <Route path="/book/:setter_id/:event_slug" element={<BookingPage />} />

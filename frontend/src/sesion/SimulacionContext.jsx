@@ -1,21 +1,16 @@
-// La hoja «Simular a alguien» (Simular.jsx), una sola para toda la app. Se abre con `abrirSimulacion()`
-// (sesion/simulacion.js) desde cualquier lado: la opción del menú de sesión, la tecla «w» de cada
-// pantalla o la píldora de MainLayout. Si la persona no puede simular, no hace nada.
+// La tecla «w» (y la píldora de MainLayout) abren «Simular a alguien», que vive en el Portal
+// (/portal?simular=1, pages/auth/SimularEnPortal.jsx). Este provider registra cómo llegar ahí con el
+// router (sesion/simulacion.js); si la persona no puede simular, no hace nada.
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { puedeSimular, registrarSimulacion } from './simulacion';
-import Simular from './Simular';
+import { puedeSimular, registrarSimulacion, RUTA_SIMULAR } from './simulacion';
 
 export function SimulacionProvider({ children }) {
     const { user } = useAuth();
-    const [abierta, setAbierta] = useState(false);
+    const navigate = useNavigate();
     const puede = puedeSimular(user);
-    useEffect(() => registrarSimulacion(() => { if (puede) setAbierta(true); }), [puede]);
-    return (
-        <>
-            {children}
-            {abierta && puede && <Simular onCerrar={() => setAbierta(false)} />}
-        </>
-    );
+    useEffect(() => registrarSimulacion(() => { if (puede) navigate(RUTA_SIMULAR); }), [puede, navigate]);
+    return children;
 }

@@ -3,9 +3,9 @@ import { MemoryRouter } from 'react-router-dom';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-// Hiring no tiene el dock global: «Cambiar de vista» (el Portal, con todos sus roles) va en el menú de
-// sesión del dock de Talent, como en los demás docks. Sin él, quien tiene varios roles quedaba encerrado
-// en Hiring y solo podía cerrar sesión (Mario, operador con hiring como rol adicional, 08/10/2026).
+// Hiring no tiene el dock global: «Portal» (con todos sus roles y áreas) va en el menú de sesión del
+// dock de Talent, como en los demás docks. Sin una salida, quien tiene varios roles quedaba encerrado en
+// Hiring y solo podía cerrar sesión (Mario, operador con hiring como rol adicional, 08/10/2026).
 
 vi.mock('../../../services/api', () => ({
     default: { post: vi.fn(), get: vi.fn(() => Promise.resolve({ data: {} })), put: vi.fn(), delete: vi.fn() },
@@ -39,23 +39,16 @@ const MARIO = {
 
 const montar = () => render(<MemoryRouter><HiringDashboardPage /></MemoryRouter>);
 
-describe('HiringDashboardPage · cambiar de vista', () => {
-    it('quien tiene más roles puede ir al Portal desde el menú de sesión', () => {
+describe('HiringDashboardPage · el Portal', () => {
+    it('el menú de sesión lleva al Portal, simulando o no', () => {
         usuario = MARIO;
-        montar();
-
-        expect(screen.getByText('Cambiar de vista')).toBeTruthy();
-        expect(screen.queryByText('Cambiar de rol')).toBeNull();
-    });
-
-    it('con un solo rol, o simulando a alguien, no hay a dónde cambiar', () => {
-        usuario = { id: 9, username: 'Hire', role: 'hiring', roles: ['hiring'] };
         const { unmount } = montar();
-        expect(screen.queryByText('Cambiar de vista')).toBeNull();
+        expect(screen.getByText('Portal')).toBeTruthy();
+        expect(screen.queryByText('Cambiar de rol')).toBeNull();
         unmount();
 
         usuario = { ...MARIO, is_impersonating: true };
         montar();
-        expect(screen.queryByText('Cambiar de vista')).toBeNull();
+        expect(screen.getByText('Portal')).toBeTruthy();
     });
 });

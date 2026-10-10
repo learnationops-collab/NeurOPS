@@ -20,8 +20,13 @@
         radial-gradient(46% 55% at 50% -8%, rgba(92, 60, 196, .38), transparent 70%),
         #0a0b20;
     color: var(--lg-texto);
-    font-family: var(--font-body);
+    /* La letra de la entrada (10/10/2026): Sora para los títulos y Manrope para el resto. */
+    --lg-display: 'Sora', 'Plus Jakarta Sans', sans-serif;
+    --lg-cuerpo: 'Manrope', 'Inter', sans-serif;
+    font-family: var(--lg-cuerpo);
+    font-feature-settings: 'ss01';
 }
+.lg button, .lg input { font-family: inherit; }
 
 /* Fondo: manchas de color que se mueven lento; al desbloquear se desenfoca, como en Windows. */
 .lg-fondo { position: absolute; inset: 0; transition: filter 0.6s ease, transform 0.6s ease; }
@@ -40,12 +45,12 @@
     width: 112px; height: 112px; border-radius: 50%; display: grid; place-items: center;
     background: linear-gradient(135deg, var(--lg-azul), var(--lg-rosa));
     border: 3px solid rgba(255, 255, 255, 0.35); box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
-    font-family: var(--font-header); font-size: 40px; font-weight: 700; letter-spacing: 0.02em;
+    font-family: var(--lg-display); font-size: 40px; font-weight: 700; letter-spacing: 0.02em;
 }
 .lg-avatar-l { font-style: italic; font-weight: 900; }
-.lg-titulo { margin: 4px 0 0; display: grid; gap: 4px; font-family: var(--font-header); font-size: 26px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+.lg-titulo { margin: 4px 0 0; display: grid; gap: 4px; font-family: var(--lg-display); font-size: 26px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
 .lg-titulo small { font-size: 10px; font-weight: 800; letter-spacing: 0.28em; text-transform: uppercase; color: var(--lg-rosa); }
-.lg-hola { margin: 4px 0 0; font-family: var(--font-header); font-size: 26px; font-weight: 600; }
+.lg-hola { margin: 4px 0 0; font-family: var(--lg-display); font-size: 26px; font-weight: 600; }
 .lg-texto { margin: 0 0 4px; font-size: 14px; color: var(--lg-suave); line-height: 1.5; display: inline-flex; align-items: center; gap: 8px; }
 
 .lg-form { width: 100%; display: flex; flex-direction: column; gap: 10px; }
@@ -129,10 +134,10 @@
     padding: clamp(14px, 2.6vh, 28px) clamp(16px, 3vw, 44px); pointer-events: none; }
 .fe-arriba > * { pointer-events: auto; }
 .el-reloj { display: grid; gap: 6px; }
-.el-reloj b { font-family: var(--font-header); font-size: 26px; font-weight: 800; line-height: 1; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.el-reloj b { font-family: var(--lg-display); font-size: 26px; font-weight: 800; line-height: 1; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
 .el-reloj span { font-size: 10.5px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255, 255, 255, .42); }
 .fe-marca { display: inline-flex; align-items: baseline; gap: 6px; padding: 8px 14px; border-radius: 999px; background: rgba(18, 20, 50, .55);
-    border: 1px solid #282c5c; backdrop-filter: blur(10px); font: 800 10px/1 var(--font-body); letter-spacing: 0.24em; text-transform: uppercase;
+    border: 1px solid #282c5c; backdrop-filter: blur(10px); font: 800 10px/1 var(--lg-cuerpo); letter-spacing: 0.24em; text-transform: uppercase;
     color: rgba(255, 255, 255, .55); }
 .fe-marca b { font-weight: 900; background: linear-gradient(90deg, var(--lg-rosa), #8a5cff); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
@@ -158,7 +163,7 @@
 .el-centro { position: relative; z-index: 2; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: clamp(10px, 2vh, 18px); padding: 96px 16px 48px; text-align: center; }
 /* Sin letras gigantes: el saludo es el título, no el protagonista. */
-.el-hola { margin: 4px 0 0; font-family: var(--font-header); font-size: clamp(26px, 3.6vw, 42px); font-weight: 800; letter-spacing: -0.025em; line-height: 1.1; }
+.el-hola { margin: 4px 0 0; font-family: var(--lg-display); font-size: clamp(26px, 3.6vw, 42px); font-weight: 700; letter-spacing: -0.035em; line-height: 1.1; }
 .fe-ch { display: inline-block; white-space: pre; opacity: 0; transform: translateY(.3em); filter: blur(8px);
     animation: fe-letra .8s var(--fe-ease) forwards; animation-delay: calc(.35s + var(--i) * 32ms); }
 .fe-nombre { white-space: nowrap; }
@@ -190,7 +195,7 @@
 .el-num { position: absolute; top: clamp(14px, 1.4vw, 18px); right: clamp(14px, 1.4vw, 18px); font-size: 10px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255, 255, 255, .42); }
 .el-txt { display: grid; gap: 3px; }
 .el-txt small { font-size: 8.5px; font-weight: 700; letter-spacing: 0.24em; text-transform: uppercase; color: rgba(255, 255, 255, .42); }
-.el-txt b { font-family: var(--font-header); font-size: clamp(18px, 1.6vw, 22px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+.el-txt b { font-family: var(--lg-display); font-size: clamp(18px, 1.6vw, 22px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
 .el-txt em { font-style: normal; font-size: 13px; color: rgba(255, 255, 255, .68); }
 .el-tarjeta--pronto .el-txt { opacity: .6; }
 .el-ir { position: absolute; right: 14px; bottom: 14px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.14);
@@ -216,3 +221,45 @@
 @media (prefers-reduced-motion: reduce) {
     .lg *, .lg *::before, .lg *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* --- El Portal: cada rol con sus áreas (PortalPage, Eleccion con `grupos`) ------------------------ */
+.el-grupo { width: min(980px, 100%); display: grid; gap: 10px; margin-top: 14px; text-align: left; animation: fe-entra .9s .8s var(--fe-ease) both; }
+.el-grupo .el-tarjetas { margin-top: 0; justify-content: flex-start; }
+.el-grupo--solo .el-tarjetas { justify-content: center; }
+.el-grupo-cab { display: flex; align-items: center; gap: 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.el-grupo-ico { width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; color: rgba(255, 255, 255, .8);
+    background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .1); }
+.el-grupo-txt { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.el-grupo-txt b { font-family: var(--lg-display); font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+.el-grupo-txt small { font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255, 255, 255, .42); }
+.el-grupo .el-tarjeta { min-height: clamp(112px, 15vh, 138px); }
+@media (min-width: 901px) { .el-grupo .el-tarjeta { flex-basis: calc((100% - 3 * var(--el-gap)) / 4); } }
+
+/* --- Simular a alguien, en el Portal (SimularEnPortal) ----------------------------------------- */
+.sp { width: min(980px, 100%); display: grid; gap: 14px; margin-top: 10px; text-align: left; animation: fe-entra .8s .6s var(--fe-ease) both; }
+.sp-barra { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.sp-buscar { position: relative; flex: 1 1 260px; }
+.sp-buscar svg { position: absolute; left: 14px; top: 15px; color: var(--lg-suave); pointer-events: none; }
+.sp-buscar .lg-input { padding-left: 40px; }
+.sp-roles { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(18, 20, 50, .72); border: 1px solid #282c5c; }
+.sp-roles button { height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: none; color: rgba(255, 255, 255, .6); cursor: pointer;
+    font-size: 12px; font-weight: 700; transition: color .2s, background-color .2s; }
+.sp-roles button:hover { color: #fff; }
+.sp-roles button[aria-pressed="true"] { color: #fff; background: linear-gradient(90deg, var(--lg-rosa), #8a5cff); }
+.sp-roles button:focus-visible { outline: 2px solid #ff7bc6; outline-offset: 2px; }
+.sp-nota { margin: 0; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--lg-suave); }
+.sp-lista { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.sp-persona { position: relative; animation: fe-entra .6s var(--fe-ease) both; animation-delay: calc(.7s + var(--n) * 40ms); }
+.sp-entrar { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 44px 10px 10px; border-radius: 16px; cursor: pointer; text-align: left;
+    color: #fff; background: rgba(18, 20, 50, .82); border: 1px solid #282c5c; backdrop-filter: blur(18px);
+    transition: translate .2s, border-color .2s, background-color .2s; }
+.sp-entrar:hover:not(:disabled), .sp-entrar:focus-visible { translate: 0 -2px; border-color: #ffb03a; background: color-mix(in srgb, #ffb03a 12%, rgba(18, 20, 50, .82)); outline: none; }
+.sp-entrar:disabled { cursor: default; opacity: .7; }
+.sp-avatar { flex: none; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 14px; background: rgba(255, 255, 255, .06); overflow: hidden; }
+.sp-txt { display: grid; gap: 2px; min-width: 0; }
+.sp-txt b { font-family: var(--lg-display); font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-txt small { font-size: 12px; color: rgba(255, 255, 255, .55); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-cargando { margin-left: auto; }
+.sp-nueva { position: absolute; top: 50%; right: 10px; translate: 0 -50%; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 9px;
+    border: 1px solid rgba(255, 255, 255, .12); background: rgba(255, 255, 255, .04); color: rgba(255, 255, 255, .6); cursor: pointer; transition: color .2s, background-color .2s; }
+.sp-nueva:hover:not(:disabled), .sp-nueva:focus-visible { color: #fff; background: rgba(255, 255, 255, .14); outline: none; }

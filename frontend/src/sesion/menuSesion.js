@@ -1,23 +1,19 @@
 // El menú de sesión (el desplegable al lado del dock, pages/comercial/components/MenuSesion.jsx) con
 // los mismos grupos, en el mismo orden y con los mismos nombres en todas las pantallas. Cada pantalla
-// aporta solo lo suyo: sus acciones de trabajo y, si corresponde, a dónde más puede ir.
+// aporta solo sus acciones de trabajo.
 //
 //   [Acciones de esta pantalla]  Nueva agenda, Referido, Mis links... (opcional)
-//   [Mi cuenta]                  Configuración · Playbook
-//   [Ir a]                       Cambiar de vista (el Portal: roles, áreas, cuentas y Finances)
-//   [Equipo]                     Simular a alguien (quien puede)
-//   [Ayuda]                      Reportar un problema · Mis reportes (lo agrega MenuSesion solo)
+//   [Mi cuenta]                  Configuración · Portal
+//   [Ayuda]                      Mis reportes [+] (lo agrega MenuSesion solo; el «+» reporta uno nuevo)
 //   [Salida]                     Volver a mi sesión · Cerrar sesión
 //
-// Desde el 10/10/2026 «Cambiar de área», «Cambiar de vista» y «Cambiar de rol» son una sola opción (el
-// Portal, utils/portal.js), y las simulaciones («a un closer», «a un setter», «Configurar a un closer»,
-// «Simular a otra persona») son una sola hoja (sesion/Simular.jsx).
+// El Portal (utils/portal.js) junta lo que antes eran opciones sueltas: cambiar de rol, de área o de
+// cuenta, Finances, Simular a alguien y Cortex (Learnito y el Playbook, 10/10/2026).
 import toast from 'react-hot-toast';
-import { Compass, Ghost, LogOut, Settings, VenetianMask } from 'lucide-react';
+import { Ghost, LogOut, Settings } from 'lucide-react';
 import { rotuloDeRol } from '../utils/cuentasVinculadas';
 import { revertImpersonation } from '../utils/impersonation';
 import { opcionPortal } from '../utils/portal';
-import { abrirSimulacion, puedeSimular } from './simulacion';
 
 export const volverAMiSesion = async () => {
     try {
@@ -36,13 +32,13 @@ export const rotuloDeSesion = (user, rotulo = null) =>
  * - acciones: las de trabajo de esta pantalla (opcional).
  * - configuracion: { onClick, avisos? } — "Configuración" está siempre; `avisos` (textos) le pone
  *   un "!" con el detalle (p. ej. "Google Calendar sin conectar").
- * - playbook: { onClick, pendientes? } (opcional).
- * - irAntes / irDespues: opciones de navegación propias, antes o después de «Cambiar de vista».
+ * - playbook: { pendientes } (opcional): los videos pendientes, con la cuenta en «Portal» (el Playbook
+ *   está en Cortex).
+ * - ir: opciones de navegación propias, después de «Portal» (p. ej. «Volver al panel de admin»).
  */
 export function armarMenuSesion({
     user, navigate, logout,
-    acciones = [], configuracion, playbook = null,
-    irAntes = [], irDespues = [],
+    acciones = [], configuracion, playbook = null, ir = [],
 }) {
     const avisos = configuracion?.avisos?.filter(Boolean) || [];
     return [
@@ -50,12 +46,9 @@ export function armarMenuSesion({
         [
             { id: 'configuracion', label: 'Configuración', Icono: Settings, onClick: configuracion?.onClick,
                 cuenta: avisos.length ? '!' : null, titulo: avisos.length ? avisos.join(' · ') : null },
-            ...(playbook ? [{ id: 'playbook', label: 'Playbook', Icono: Compass, onClick: playbook.onClick,
-                cuenta: playbook.pendientes > 0 ? playbook.pendientes : null,
-                titulo: playbook.pendientes > 0 ? `${playbook.pendientes} pendientes` : null }] : []),
+            ...opcionPortal(user, navigate, playbook?.pendientes || 0),
+            ...ir,
         ],
-        [...irAntes, ...opcionPortal(user, navigate), ...irDespues],
-        puedeSimular(user) ? [{ id: 'simular', label: 'Simular a alguien', Icono: VenetianMask, onClick: abrirSimulacion }] : [],
         [
             ...(user?.is_impersonating ? [{ id: 'volver', label: 'Volver a mi sesión', Icono: Ghost, onClick: volverAMiSesion }] : []),
             { id: 'salir', label: 'Cerrar sesión', Icono: LogOut, peligro: true,

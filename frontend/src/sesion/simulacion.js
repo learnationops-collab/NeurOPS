@@ -1,6 +1,6 @@
-// Quién puede simular y cómo abrir «Simular a alguien» desde cualquier lado. La hoja vive en
-// SimulacionContext.jsx, que registra acá cómo abrirla; así el menú de sesión y las teclas no dependen
-// del componente.
+// Quién puede simular y cómo abrir «Simular a alguien» (en el Portal, /portal?simular=1) desde cualquier
+// lado. SimulacionContext.jsx registra acá cómo llegar con el router; así las teclas de cada pantalla no
+// dependen de él.
 import { rolesDeLaCuenta } from '../utils/cuentasVinculadas';
 
 /**
@@ -14,6 +14,8 @@ export const puedeSimular = (user) => {
     const roles = user.is_impersonating ? [user.original_user_role] : rolesDeLaCuenta(user);
     return roles.some((r) => SIMULAN.includes(r));
 };
+
+export const RUTA_SIMULAR = '/portal?simular=1';
 
 let abrir = () => {};
 export const registrarSimulacion = (fn) => { abrir = fn; return () => { if (abrir === fn) abrir = () => {}; }; };

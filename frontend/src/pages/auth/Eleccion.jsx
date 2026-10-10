@@ -97,60 +97,94 @@ function Saludo({ nombre }) {
     );
 }
 
+function Tarjeta({ o, i, eligiendo, marcada }) {
+    const pronto = o.pronto || !o.onElegir;
+    const defecto = !pronto && marcada === o.clave;
+    return (
+        <button type="button" className={'el-tarjeta' + (pronto ? ' el-tarjeta--pronto' : '')}
+            style={{ '--acento': pronto ? '#8e9bd8' : o.acento || ACENTOS[i % ACENTOS.length], '--n': i }}
+            disabled={pronto || !!eligiendo} onClick={() => o.onElegir(o)}>
+            <span className="el-ico">{o.Icono && <o.Icono size={20} />}</span>
+            <span className={'el-num' + (defecto ? ' el-num--defecto' : '')}>
+                {pronto ? 'Pronto' : defecto ? 'Por defecto' : i < 9 ? String(i + 1).padStart(2, '0') : ''}
+            </span>
+            <span className="el-txt">
+                <small>{o.sobre || 'Learnation'}</small>
+                <b>{o.titulo}</b>
+                {o.detalle && <em>{o.detalle}</em>}
+            </span>
+            {eligiendo === o.clave
+                ? <Loader2 size={18} className="lg-gira el-cargando" />
+                : !pronto && <span className="el-ir" aria-hidden="true"><ArrowRight size={14} /></span>}
+        </button>
+    );
+}
+
 /**
- * nombre: el de la cuenta. pregunta: el texto bajo el saludo.
- * opciones: [{ clave, titulo, sobre?, detalle?, Icono, onElegir?, pronto? }]. `sobre` va arriba del
- * título (el rol de un área, «Cuenta vinculada»); sin él, «Learnation». Sin onElegir (o con pronto) queda
- * deshabilitada con «Pronto». eligiendo: la clave que está cargando. marcada: la clave de la tarjeta por
- * defecto (lleva «Por defecto» en vez del número). pie: lo que va debajo (el toggle).
+ * nombre: el de la cuenta (el saludo). titulo: en vez del saludo (p. ej. «Cortex»). pregunta: el texto
+ * debajo.
+ * Las tarjetas van en `opciones` (una sola grilla) o en `grupos` ([{ clave, titulo, detalle?, Icono,
+ * opciones }], una grilla por grupo con su encabezado: en el Portal, cada rol con sus áreas).
+ * Opción: { clave, titulo, sobre?, detalle?, Icono, acento?, onElegir?, pronto? }. `sobre` va arriba del
+ * título; sin él, «Learnation». Sin onElegir (o con pronto) queda deshabilitada con «Pronto».
+ * eligiendo: la clave que está cargando. marcada: la clave de la tarjeta por defecto (lleva «Por
+ * defecto» en vez del número). contenido: algo propio en lugar de las tarjetas (Simular, en el Portal).
+ * pie: lo que va debajo (el toggle, «Volver»).
  */
-export default function Eleccion({ nombre, pregunta, opciones, eligiendo = null, error = null, pie = null, marcada = null }) {
+export default function Eleccion({
+    nombre, titulo = null, pregunta, opciones = null, grupos = null, eligiendo = null, error = null, pie = null,
+    marcada = null, contenido = null,
+}) {
     const n = primerNombre(nombre);
-    const cols = columnas(opciones.length);
+    const secciones = grupos || (opciones ? [{ clave: 'opciones', opciones }] : []);
+    const todas = secciones.flatMap((g) => g.opciones);
 
     // El número de cada tarjeta entra directo (fuera de un campo de texto).
     useEffect(() => {
+        if (contenido) return undefined;
         const alTeclear = (e) => {
             if (eligiendo || e.metaKey || e.ctrlKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
-            const o = /^[1-9]$/.test(e.key) ? opciones[Number(e.key) - 1] : null;
+            const o = /^[1-9]$/.test(e.key) ? todas[Number(e.key) - 1] : null;
             if (!o || o.pronto || !o.onElegir) return;
             e.preventDefault();
             o.onElegir(o);
         };
         window.addEventListener('keydown', alTeclear);
         return () => window.removeEventListener('keydown', alTeclear);
-    }, [opciones, eligiendo]);
+    }, [todas, eligiendo, contenido]);
+
+    let i = 0;
     return (
         <MarcoEntrada>
             <main className="el-centro">
                 <LogoEntrada idGrad="lnGradEleccion" />
-                <Saludo nombre={n} />
+                {titulo ? <h1 className="el-hola">{titulo}</h1> : <Saludo nombre={n} />}
                 {pregunta && <p className="el-pregunta">{pregunta}</p>}
-                <div className="el-tarjetas" role="group" aria-label={pregunta || 'Opciones'}
-                    style={{ '--cols': cols.ancho, '--cols-medio': cols.medio }}>
-                    {opciones.map((o, i) => {
-                        const pronto = o.pronto || !o.onElegir;
-                        const defecto = !pronto && marcada === o.clave;
-                        return (
-                            <button key={o.clave} type="button" className={'el-tarjeta' + (pronto ? ' el-tarjeta--pronto' : '')}
-                                style={{ '--acento': pronto ? '#8e9bd8' : ACENTOS[i % ACENTOS.length], '--n': i }}
-                                disabled={pronto || !!eligiendo} onClick={() => o.onElegir(o)}>
-                                <span className="el-ico">{o.Icono && <o.Icono size={20} />}</span>
-                                <span className={'el-num' + (defecto ? ' el-num--defecto' : '')}>
-                                    {pronto ? 'Pronto' : defecto ? 'Por defecto' : String(i + 1).padStart(2, '0')}
+                {contenido || secciones.map((g) => {
+                    const cols = columnas(g.opciones.length);
+                    const grilla = (
+                        <div className="el-tarjetas" role="group" aria-label={g.titulo || pregunta || 'Opciones'}
+                            style={{ '--cols': cols.ancho, '--cols-medio': cols.medio }}>
+                            {g.opciones.map((o) => {
+                                const k = i++;
+                                return <Tarjeta key={o.clave} o={o} i={k} eligiendo={eligiendo} marcada={marcada} />;
+                            })}
+                        </div>
+                    );
+                    if (!g.titulo) return <div key={g.clave} className="el-grupo el-grupo--solo">{grilla}</div>;
+                    return (
+                        <section key={g.clave} className="el-grupo" aria-label={g.titulo}>
+                            <header className="el-grupo-cab">
+                                {g.Icono && <span className="el-grupo-ico" aria-hidden="true"><g.Icono size={15} /></span>}
+                                <span className="el-grupo-txt">
+                                    <b>{g.titulo}</b>
+                                    {g.detalle && <small>{g.detalle}</small>}
                                 </span>
-                                <span className="el-txt">
-                                    <small>{o.sobre || 'Learnation'}</small>
-                                    <b>{o.titulo}</b>
-                                    {o.detalle && <em>{o.detalle}</em>}
-                                </span>
-                                {eligiendo === o.clave
-                                    ? <Loader2 size={18} className="lg-gira el-cargando" />
-                                    : !pronto && <span className="el-ir" aria-hidden="true"><ArrowRight size={14} /></span>}
-                            </button>
-                        );
-                    })}
-                </div>
+                            </header>
+                            {grilla}
+                        </section>
+                    );
+                })}
                 {error && <p className="lg-error" role="alert">{error}</p>}
                 {pie}
             </main>

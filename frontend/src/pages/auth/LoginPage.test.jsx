@@ -57,7 +57,7 @@ describe('LoginPage', () => {
     });
 
     it('con una tarjeta por defecto del mismo rol entra directo ahí', async () => {
-        localStorage.setItem('portal_por_defecto_4', 'director_comercial:agendamiento');
+        localStorage.setItem('portal_por_defecto_v2_4', 'director_comercial:agendamiento');
         await entrar({ id: 4, username: 'marlon', role: 'director_comercial', roles: ['director_comercial'], email: 'm@x.com' });
         await waitFor(() => expect(navigate).toHaveBeenCalledWith('/agendas-v2'));
     });

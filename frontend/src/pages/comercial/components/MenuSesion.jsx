@@ -19,9 +19,12 @@ import { saveSession } from '../../../utils/sessionStore';
  * Playbook, las respuestas sin leer a tus reportes) lleva la cuenta encima, para que guardarlo en un
  * menú no lo esconda.
  *
- * «Reportar un problema» y «Mis reportes» (el botón flotante rosado de antes, desde el 07/10/2026) se
- * agregan solos a TODOS los menús, en el grupo previo al último (el de cerrar sesión): ningún dock
- * tiene que acordarse de ponerlos.
+ * «Mis reportes» (el botón flotante rosado de antes, desde el 07/10/2026), con un «+» al lado para
+ * reportar un problema nuevo, se agrega solo a TODOS los menús, en el grupo previo al último (el de
+ * cerrar sesión): ningún dock tiene que acordarse de ponerlo.
+ *
+ * Una opción con `accion: { id, label, Icono, onClick, marcada? }` lleva al lado un botón chico con esa
+ * acción (el «+» de «Mis reportes»); con el teclado es una opción más.
  *
  * El menú se dibuja en un portal colgado de `<body>`, como la burbuja de `Tip`: el dock tiene
  * `overflow` y `backdrop-filter`, y adentro un menú quedaría recortado (el `backdrop-filter` además
@@ -300,7 +303,8 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
                                 {todosLosGrupos.map((grupo, i) => (
                                     <div key={grupo[0].id} role="group">
                                         {i > 0 && <hr className="menu-sep" />}
-                                        {grupo.map(op => (
+                                        {grupo.map(op => {
+                                            const boton = (
                                             <button key={op.id} type="button" role="menuitem" data-id={op.id}
                                                 className={`menu-item menu-item--ico${op.peligro ? ' menu-item--peligro' : ''}`}
                                                 aria-label={op.titulo ? `${op.label}, ${op.titulo}` : undefined}
@@ -312,7 +316,20 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
                                                 {op.pronto && <span className="dock-pronto">Pronto</span>}
                                                 {op.panel && <ChevronRight size={15} aria-hidden="true" className="menu-flecha" />}
                                             </button>
-                                        ))}
+                                            );
+                                            if (!op.accion) return boton;
+                                            return (
+                                                <div key={op.id} className="menu-fila">
+                                                    {boton}
+                                                    <button type="button" role="menuitem" data-id={op.accion.id}
+                                                        className={`menu-accion${op.accion.marcada ? ' menu-accion--marcada' : ''}`}
+                                                        aria-label={op.accion.label} title={op.accion.label}
+                                                        onClick={() => elegir(op.accion)}>
+                                                        <op.accion.Icono size={16} aria-hidden="true" />
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 ))}
                             </>

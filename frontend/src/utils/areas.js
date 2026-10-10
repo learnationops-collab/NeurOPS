@@ -1,21 +1,38 @@
-import { BarChart3, Briefcase, CalendarDays } from 'lucide-react';
+import {
+    BarChart3, Brain, Briefcase, CalendarDays, Filter, Megaphone, MessageCircle, PhoneCall, UserPlus, Wallet, Wrench,
+} from 'lucide-react';
 
-// Áreas: un mismo rol trabaja en más de una pantalla, cada una con su dock. Cada área es una tarjeta
-// del Portal (utils/portal.js), junto a los demás roles de la persona. Por ahora la dirección comercial
-// y admin (que además tiene la suya):
-//   Administración  las páginas del admin (ventas, payroll, formularios, agendas…).
-//   Dirección     el dashboard comercial (analizar, revisar, reportar).
-//   Agendamiento  Agendas 2.0 / Thalamus (formularios, equipo, eventos de agenda).
+// Áreas (10/10/2026): un ROL gestiona un tipo de acceso a una o más ÁREAS. La dirección comercial, por
+// ejemplo, trabaja en Ventas (el dashboard comercial) y en Agendamiento; el closer, en Cierres. En el
+// Portal (utils/portal.js) cada rol de la persona es un grupo y sus áreas son las tarjetas.
+//
+// Finances es un área de admin y de la dirección comercial, pero solo con el permiso «ver finanzas»
+// (ver `rolDeFinanzas` en cuentasVinculadas.js). Cortex (Learnito y el Playbook) es de todos los roles.
 
 export const AREAS = {
     administracion: { id: 'administracion', label: 'Administración', ruta: '/admin/ventas', Icono: Briefcase },
-    direccion: { id: 'direccion', label: 'Dirección', ruta: '/admin/comercial', Icono: BarChart3 },
+    ventas: { id: 'ventas', label: 'Ventas', ruta: '/admin/comercial', Icono: BarChart3 },
     agendamiento: { id: 'agendamiento', label: 'Agendamiento', ruta: '/agendas-v2', Icono: CalendarDays },
+    cierres: { id: 'cierres', label: 'Cierres', ruta: '/closer/deck?step=confirmations', Icono: PhoneCall },
+    setting: { id: 'setting', label: 'Setting', ruta: '/setter/deck?step=agendas', Icono: MessageCircle },
+    triage: { id: 'triage', label: 'Triage', ruta: '/triage/deck?step=confirmar', Icono: Filter },
+    operaciones: { id: 'operaciones', label: 'Operaciones', ruta: '/ops/dashboard', Icono: Wrench },
+    marketing: { id: 'marketing', label: 'Marketing', ruta: '/admin/workshops', Icono: Megaphone },
+    talent: { id: 'talent', label: 'Talent', ruta: '/admin/hiring', Icono: UserPlus },
+    finanzas: { id: 'finanzas', label: 'Finances', ruta: '/finanzas', Icono: Wallet },
+    cortex: { id: 'cortex', label: 'Cortex', ruta: '/cortex', Icono: Brain },
 };
 
+// La primera es la de siempre del rol (ver roleLanding.js).
 const AREAS_POR_ROL = {
-    director_comercial: ['direccion', 'agendamiento'],
-    admin: ['administracion', 'direccion', 'agendamiento'],
+    admin: ['administracion', 'ventas', 'agendamiento'],
+    director_comercial: ['ventas', 'agendamiento'],
+    closer: ['cierres'],
+    setter: ['setting'],
+    triage: ['triage'],
+    operator: ['operaciones'],
+    director_marketing: ['marketing'],
+    hiring: ['talent'],
 };
 
 export const areasDe = (rol) => (AREAS_POR_ROL[rol] || []).map((id) => AREAS[id]);

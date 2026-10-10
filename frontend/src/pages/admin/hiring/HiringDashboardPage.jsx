@@ -148,7 +148,7 @@ const HiringDashboardPage = () => {
         user, navigate, logout,
         acciones: [{ id: 'talent', label: 'Ajustes de Talent', Icono: SlidersHorizontal, onClick: () => setConfig('clarity') }],
         configuracion: { onClick: () => abrirConfiguracion() },
-        irAntes: user?.role === 'admin' ? [{ id: 'admin', label: 'Volver al panel de admin', Icono: ArrowLeft, onClick: () => navigate('/admin/ventas') }] : [],
+        ir: user?.role === 'admin' ? [{ id: 'admin', label: 'Volver al panel de admin', Icono: ArrowLeft, onClick: () => navigate('/admin/ventas') }] : [],
     });
 
     // --- Lo que se ve ---

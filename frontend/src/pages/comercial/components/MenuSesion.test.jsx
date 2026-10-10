@@ -48,9 +48,9 @@ describe('MenuSesion', () => {
         const menu = screen.getByRole('menu', { name: 'Tu sesión' });
         expect(menu.textContent).toContain('Marlon Closer');
         expect(screen.getAllByRole('group')).toHaveLength(4);
-        // «Reportar un problema» y «Mis reportes» se agregan solos, antes del último grupo (cerrar sesión).
+        // «Mis reportes», con el «+» al lado para reportar uno nuevo, se agrega solo antes del último grupo.
         expect(screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent))
-            .toEqual(['Nueva agenda', 'Playbook, 5 pendientes', 'Reportar un problema', 'Mis reportes', 'Cerrar sesión']);
+            .toEqual(['Nueva agenda', 'Playbook, 5 pendientes', 'Mis reportes', 'Reportar un problema', 'Cerrar sesión']);
         expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: 'Nueva agenda' }));
     });
 

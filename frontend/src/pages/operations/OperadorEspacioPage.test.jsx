@@ -101,13 +101,13 @@ describe('Espacio del operador', () => {
         expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Equipo');
     });
 
-    it('el menú del avatar lleva al Portal para pasar a los otros roles, y simula desde una sola opción', async () => {
+    it('el menú del avatar lleva al Portal, donde están sus otros roles y Simular', async () => {
         montar('/ops/dashboard');
 
         fireEvent.click(screen.getByRole('button', { name: /Mario/ }));
 
-        expect(screen.getByRole('menuitem', { name: /Cambiar de vista/ })).toBeInTheDocument();
-        expect(screen.getByRole('menuitem', { name: /Simular a alguien/ })).toBeInTheDocument();
+        expect(screen.getByRole('menuitem', { name: /^Portal/ })).toBeInTheDocument();
+        expect(screen.queryByRole('menuitem', { name: /Simular/ })).not.toBeInTheDocument();
         expect(screen.queryByRole('menuitem', { name: /Cambiar de rol/ })).not.toBeInTheDocument();
     });
 

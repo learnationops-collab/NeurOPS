@@ -621,6 +621,13 @@
   display:grid;place-items:center;border-radius:var(--radius-pill);
   background:var(--brand-secondary);color:var(--on-brand);font-size:10px;font-weight:900;line-height:1}
 .dc-shell .menu-item .dock-pronto{margin:0 0 0 auto}
+/* Una opción con su acción al lado («Mis reportes» y el «+» para reportar uno nuevo). */
+.dc-shell .menu-fila{display:flex;align-items:center;gap:4px}
+.dc-shell .menu-fila > .menu-item{flex:1;min-width:0}
+.dc-shell .menu-accion{flex-shrink:0;width:36px;height:36px;display:grid;place-items:center;border-radius:12px;
+  border:1px solid var(--border-subtle);color:var(--text-muted);transition:background-color .15s ease,color .15s ease,border-color .15s ease}
+.dc-shell .menu-accion:hover,.dc-shell .menu-accion:focus-visible{background:var(--brand-secondary);border-color:var(--brand-secondary);color:var(--on-brand);outline:none}
+.dc-shell .menu-accion--marcada{border-color:var(--brand-secondary);color:var(--brand-secondary)}
 .dc-shell .menu-item--peligro:hover,
 .dc-shell .menu-item--peligro:focus-visible{background:var(--error-surface);color:var(--error)}
 /* Una opcion que abre una lista en el mismo menu ("Simular a un closer"): la flecha la anuncia,

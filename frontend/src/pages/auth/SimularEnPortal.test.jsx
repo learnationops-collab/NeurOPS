@@ -2,26 +2,25 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const api = vi.hoisted(() => ({ get: vi.fn() }));
-vi.mock('../services/api', () => ({ default: api }));
+vi.mock('../../services/api', () => ({ default: api }));
 const imp = vi.hoisted(() => ({ simularA: vi.fn(() => new Promise(() => {})), simularEnPestanaNueva: vi.fn(() => Promise.resolve()) }));
-vi.mock('../utils/impersonation', () => imp);
+vi.mock('../../utils/impersonation', () => imp);
 
-import Simular from './Simular';
-import { abrirSimulacion, puedeSimular, registrarSimulacion } from './simulacion';
+import SimularEnPortal from './SimularEnPortal';
+import { abrirSimulacion, puedeSimular, registrarSimulacion } from '../../sesion/simulacion';
 
 const EQUIPO = [
     { id: 21, username: 'Jean Carlo', role: 'closer', roles: ['closer'], can_view_finance: false, mascota: null },
     { id: 31, username: 'Paula', role: 'setter', roles: ['setter'], can_view_finance: false, mascota: null },
     { id: 40, username: 'Marlon', role: 'director_comercial', roles: ['director_comercial', 'closer'], can_view_finance: false, mascota: null },
 ];
-const montar = async (onCerrar = vi.fn()) => {
+const montar = async () => {
     api.get.mockResolvedValue({ data: { equipo: EQUIPO } });
-    await act(async () => { render(<Simular onCerrar={onCerrar} />); });
-    return onCerrar;
+    await act(async () => { render(<SimularEnPortal />); });
 };
 const filas = () => screen.getAllByRole('listitem').map((li) => li.querySelector('b').textContent);
 
-describe('Simular a alguien', () => {
+describe('Simular a alguien, en el Portal', () => {
     beforeEach(() => { vi.clearAllMocks(); });
 
     it('una sola lista con todo el equipo que se puede simular', async () => {
@@ -43,31 +42,30 @@ describe('Simular a alguien', () => {
         expect(screen.getByText('Nadie coincide con la búsqueda.')).toBeTruthy();
     });
 
-    it('«Entrar» simula en esta pestaña; con un solo rol, directo', async () => {
+    it('tocar a alguien lo simula en esta pestaña; con un solo rol, directo', async () => {
         await montar();
         fireEvent.click(screen.getByRole('button', { name: 'Simular a Jean Carlo' }));
         expect(imp.simularA).toHaveBeenCalledWith(21, null, null);
         expect(screen.getByRole('button', { name: 'Simular a Paula' }).disabled).toBe(true);
     });
 
-    it('el botón de al lado simula en una pestaña nueva y cierra la hoja', async () => {
-        const onCerrar = await montar();
+    it('el botón de la esquina simula en una pestaña nueva', async () => {
+        await montar();
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Simular a Paula en una pestaña nueva' })); });
         expect(imp.simularEnPestanaNueva).toHaveBeenCalledWith(31, null, null);
-        expect(onCerrar).toHaveBeenCalled();
     });
 
     it('a quien tiene varios roles se le pregunta con cuál, en la pantalla del Portal', async () => {
         await montar();
         fireEvent.click(screen.getByRole('button', { name: 'Simular a Marlon' }));
-        expect(screen.getByRole('dialog', { name: 'Simular a Marlon' })).toBeTruthy();
-        await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Closer/ })); });
+        const dialogo = screen.getByRole('dialog', { name: 'Simular a Marlon' });
+        await act(async () => { fireEvent.click(within(dialogo).getByRole('button', { name: /Closer/ })); });
         expect(imp.simularA).toHaveBeenCalledWith(40, null, 'closer');
     });
 
     it('si no se puede cargar el equipo lo dice', async () => {
         api.get.mockRejectedValue(new Error('x'));
-        await act(async () => { render(<Simular onCerrar={vi.fn()} />); });
+        await act(async () => { render(<SimularEnPortal />); });
         expect(screen.getByRole('alert').textContent).toBe('No se pudo cargar el equipo.');
     });
 });

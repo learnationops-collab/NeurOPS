@@ -8,11 +8,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Plus+Jakarta+Sans:wght@200..800&family=Outfit:wght@100..900&family=Montserrat:wght@400;600;700;800;900&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Plus+Jakarta+Sans:wght@200..800&family=Outfit:wght@100..900&family=Montserrat:wght@400;600;700;800;900&family=Sora:wght@400..800&family=Manrope:wght@400..800&display=swap"
         rel="stylesheet">
     <title>Learnation Adquisitions</title>
     <style>
-        /* ABSOLUTE TYPOGRAPHY FORCE — :not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *) en cada
+        /* ABSOLUTE TYPOGRAPHY FORCE — :not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *) en cada
            selector: el Closer Workspace (CloserWorkflowPage.jsx, raíz con class="bg-v6"), Workshop
            Intelligence (WorkshopDashboardPage.jsx, raíz con class="ws-shell"), el Editor de curso
            (CourseEditorPage.jsx, raíz con class="ce-shell") y el Dashboard comercial
@@ -26,8 +26,8 @@
         html,
         body,
         #root,
-        #root *:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        [class*="font-"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *) {
+        #root *:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        [class*="font-"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *) {
             font-family: 'Inter', sans-serif !important;
             font-style: normal !important;
             -webkit-font-smoothing: antialiased !important;
@@ -35,7 +35,7 @@
             text-rendering: optimizeLegibility !important;
         }
 
-        /* :not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *) en cada selector de estos dos
+        /* :not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *) en cada selector de estos dos
            bloques: el rediseño "v6/v7" del Workspace de Closers, el reskin de Workshop Intelligence
            y el Dashboard comercial (design system Learnation: pesos 700/800/900 y tracking propios
            en .ln-* y estilos inline) definen sus propios pesos explícitos
@@ -47,37 +47,37 @@
            y solo la de index.css excluida. Sin esta segunda exclusión, TODO el bloque reskineado (números
            del hero, tarjetas, navegación, etc.) se ve más fino que la referencia, porque casi todos esos
            elementos son <div>/<span>/<button>/<h3>. */
-        h1:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        h2:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        h3:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        h4:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        h5:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        h6:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        .font-bold:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        .font-semibold:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        .font-black:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        .font-medium:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        b:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        strong:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        th:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        [class*="font-bold"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        [class*="font-semibold"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        [class*="font-black"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        [class*="font-medium"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *) {
+        h1:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        h2:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        h3:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        h4:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        h5:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        h6:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        .font-bold:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        .font-semibold:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        .font-black:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        .font-medium:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        b:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        strong:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        th:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        [class*="font-bold"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        [class*="font-semibold"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        [class*="font-black"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        [class*="font-medium"]:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *) {
             font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif !important;
             font-weight: 600 !important;
             letter-spacing: -0.02em !important;
         }
 
-        p:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        span:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        div:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        button:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        input:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        label:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        a:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        li:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *),
-        td:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *) {
+        p:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        span:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        div:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        button:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        input:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        label:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        a:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        li:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *),
+        td:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):not(.ce-shell *):not(.dc-shell):not(.dc-shell *):not(.thalamus):not(.thalamus *):not(.lg):not(.lg *) {
             font-weight: 400 !important;
             letter-spacing: -0.005em !important;
         }

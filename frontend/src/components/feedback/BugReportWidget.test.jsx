@@ -41,9 +41,12 @@ const Opciones = () => {
         <div>
             <output data-testid="estado">{`${sinLeer}|${enProgreso}`}</output>
             {opciones.map((o) => (
-                <button key={o.id} type="button" onClick={o.onClick}>
-                    {o.label}{o.cuenta ? ` (${o.cuenta})` : ''}
-                </button>
+                <span key={o.id}>
+                    <button type="button" onClick={o.onClick}>
+                        {o.label}{o.cuenta ? ` (${o.cuenta})` : ''}
+                    </button>
+                    {o.accion && <button type="button" aria-label={o.accion.label} onClick={o.accion.onClick}>+</button>}
+                </span>
             ))}
         </div>
     );
@@ -109,12 +112,14 @@ describe('BugReportWidget sin botón flotante', () => {
 
         expect(screen.getByTestId('estado').textContent).toBe('2|false');
         expect(screen.getByText('Mis reportes (2)')).toBeTruthy();
+        // Una sola fila: «Mis reportes» y al lado el «+» para reportar uno nuevo.
+        expect(screen.getByRole('button', { name: 'Reportar un problema' })).toBeTruthy();
 
         act(() => triggerBugReport({ message: 'x', autoOpen: true }));
         fireEvent.click(screen.getByText('minimizar'));
 
         expect(screen.getByTestId('estado').textContent).toBe('2|true');
-        expect(screen.getByText('Continuar reporte en progreso')).toBeTruthy();
+        expect(screen.getByRole('button', { name: 'Continuar reporte en progreso' })).toBeTruthy();
     });
 
     it('abrir «Mis reportes» baja la cuenta a cero', async () => {

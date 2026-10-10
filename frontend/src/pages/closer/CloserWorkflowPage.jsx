@@ -7,7 +7,7 @@ import {
     Calendar, Phone, Mail, Instagram, ExternalLink,
     CalendarDays, AlertCircle, CreditCard,
     Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, Pencil,
-    Sparkles, DollarSign, UserPlus,
+    DollarSign, UserPlus,
     CalendarCheck, PhoneCall, MessageCircle, ClipboardList, BarChart3, Briefcase, FileSearch,
     CalendarPlus, Gift, Hourglass, Ghost
 } from 'lucide-react';
@@ -1448,8 +1448,6 @@ const CloserWorkflowPage = () => {
             ...(counts.seguimientos > 0
                 ? [{ id: 'procrastinar', label: 'Quiero procrastinar', Icono: Hourglass, onClick: () => setShowProcrastinar(true) }]
                 : []),
-            { id: 'learnito', label: 'Learnito', Icono: Sparkles, pronto: true, titulo: 'próximamente',
-                onClick: () => toast('Learnito (buscador con IA sobre el Playbook) llega próximamente.', { icon: '✨' }) },
         ],
         configuracion: { onClick: () => abrirConfiguracion(), avisos: faltaConfigurar },
         playbook: { onClick: () => openPlaybook('pending'), pendientes: pendingCount },
@@ -1473,8 +1471,8 @@ const CloserWorkflowPage = () => {
             style={{ paddingBottom: 'calc(132px + env(safe-area-inset-bottom, 0px))' }}>
 
             {/* Header del Espacio de Trabajo Premium v6. Solo la marca y el buscador (pedido del
-                30/09/2026): crear una agenda o un referido, el Playbook, Learnito, "Quiero
-                procrastinar" y la sesión viven al final del dock, en `MenuSesion`. */}
+                30/09/2026): crear una agenda o un referido, "Quiero procrastinar" y la sesión
+                viven al final del dock, en `MenuSesion`; el Playbook y Learnito, en Cortex (el Portal). */}
             <header className="top-v6 border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
                 <div className="topin topin--buscador">
                     <div className="brand-v6">
