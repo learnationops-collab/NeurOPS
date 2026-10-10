@@ -12,9 +12,9 @@ import PlaybookAdminPanel from '../../../components/operations/PlaybookAdminPane
 import Card from '../../../components/ui/Card';
 
 /**
- * Las secciones del panel técnico del operador, por id. Es la ÚNICA lista de lo que hay: la usan el
- * espacio del operador (`OperadorEspacioPage`, que las reparte en pestañas) y el panel antiguo
- * (`OperationsSettingsPage`, que sigue sirviendo al admin por URL).
+ * Las secciones del panel técnico de Operaciones, por id. Es la ÚNICA lista de lo que hay: el espacio de
+ * Operaciones (`OperadorEspacioPage`) las reparte en pestañas. El panel antiguo, que el admin abría por URL,
+ * se fue con «Administración» (10/10/2026).
  */
 export const ETIQUETAS_TECNICAS = {
     team: 'Gestión de Equipo',

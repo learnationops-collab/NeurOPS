@@ -26,10 +26,7 @@ import LeadsManagementPage from './pages/shared/LeadsManagementPage';
 import SetterEspacioPage from './pages/setter/SetterEspacioPage';
 import CloserWorkflowPage from './pages/closer/CloserWorkflowPage';
 import OperationsPage from './pages/admin/database/OperationsPage';
-import OperationsDashboard from './pages/operations/dashboard/OperationsDashboard';
 import OpsRuta from './pages/operations/OpsRuta';
-import OperationsSettingsPage from './pages/operations/settings/OperationsSettingsPage';
-import PublicFinancialSalesPage from './pages/public/PublicFinancialSalesPage';
 import BookingPage from './pages/public/BookingPage';
 import PublicCloserReportPage from './pages/public/PublicCloserReportPage';
 import PublicCloserStatsPage from './pages/public/PublicCloserStatsPage';
@@ -57,7 +54,6 @@ import AdminSalesHubPage from './pages/admin/reports/AdminSalesHubPage';
 import AdminMarketingHubPage from './pages/admin/marketing/AdminMarketingHubPage';
 import AdminSheetsHubPage from './pages/admin/reports/AdminSheetsHubPage';
 import WorkshopDashboardPage from './pages/admin/workshop/WorkshopDashboardPage';
-import CourseEditorPage from './pages/operations/course-editor/CourseEditorPage';
 import PostulacionesDashboardPage from './pages/admin/postulaciones/PostulacionesDashboardPage';
 import HiringDashboardPage from './pages/admin/hiring/HiringDashboardPage';
 import BackupPage from './pages/admin/backup/BackupPage';
@@ -144,32 +140,22 @@ function App() {
               }
             />
 
-            {/* Protected Admin Routes: Hubs */}
+            {/* Operaciones: un solo espacio con su dock (ver OpsRuta). Desde el 10/10/2026 el admin
+                entra al mismo que el operador: «Administración» se retiró y lo suyo pasó acá. Las
+                rutas viejas llevan a su sección. */}
             <Route
               path="/ops/dashboard"
               element={
                 <ProtectedRoute roles={['operator', 'admin']}>
-                  <OpsRuta>
-                    <OperationsSettingsPage />
-                  </OpsRuta>
+                  <OpsRuta />
                 </ProtectedRoute>
               }
             />
-            {/* Registro de Agendas y Registro de Ventas: pasaron del panel de admin al
-                de operaciones el 20/ago/2026. El admin conserva el acceso por URL. */}
             <Route
               path="/ops/agendas"
               element={
                 <ProtectedRoute roles={['operator', 'admin']}>
-                  <OpsRuta paso="agendas">
-                    {/* Estas dos vistas están diseñadas sobre fondo oscuro (venían
-                        embebidas en el hub de admin, que lo aportaba). Fuera de ahí
-                        necesitan su propia superficie o quedan con texto blanco sobre
-                        el fondo claro del tema por defecto. */}
-                    <div className="min-h-screen bg-slate-950 text-slate-200">
-                      <FinancialAgendasPage />
-                    </div>
-                  </OpsRuta>
+                  <OpsRuta paso="agendas" />
                 </ProtectedRoute>
               }
             />
@@ -177,11 +163,7 @@ function App() {
               path="/ops/ventas"
               element={
                 <ProtectedRoute roles={['operator', 'admin']}>
-                  <OpsRuta paso="ventas">
-                    <div className="min-h-screen bg-slate-950 text-slate-200">
-                      <PublicFinancialSalesPage />
-                    </div>
-                  </OpsRuta>
+                  <OpsRuta paso="ventas" />
                 </ProtectedRoute>
               }
             />
@@ -322,9 +304,7 @@ function App() {
               path="/ops/course-editor"
               element={
                 <ProtectedRoute roles={['operator', 'admin']}>
-                  <OpsRuta paso="curso">
-                    <CourseEditorPage />
-                  </OpsRuta>
+                  <OpsRuta paso="curso" />
                 </ProtectedRoute>
               }
             />

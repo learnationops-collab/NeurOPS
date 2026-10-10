@@ -119,13 +119,14 @@ describe('Espacio del operador', () => {
     });
 });
 
-describe('OpsRuta: el admin conserva su pantalla de siempre', () => {
-    it('con el layout de la app y sin redirigir', () => {
+describe('OpsRuta: el admin entra al mismo espacio (10/10/2026)', () => {
+    it('sin el layout de la app, y las rutas viejas lo llevan a su sección', () => {
         sesion.user = { id: 1, role: 'admin', roles: ['admin'] };
 
         montar('/ops/ventas');
 
-        expect(screen.getByTestId('main-layout')).toContainElement(screen.getByTestId('legacy-ventas'));
-        expect(screen.getByTestId('url')).toHaveTextContent('/ops/ventas');
+        expect(screen.queryByTestId('main-layout')).not.toBeInTheDocument();
+        expect(screen.getByTestId('url')).toHaveTextContent('/ops/dashboard?step=ventas');
+        expect(screen.getByTestId('ventas')).toBeInTheDocument();
     });
 });

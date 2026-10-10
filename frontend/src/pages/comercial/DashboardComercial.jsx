@@ -91,11 +91,11 @@ const esFichaUnificada = (fila) => (fila?.tipo === 'agenda' && !!fila.id)
  * A dónde vuelve cada rol cuando sale del dashboard. El setter no está: nunca lo ve suelto, lo ve
  * embebido en su espacio, donde la vuelta es el dock (ver `SetterEspacioPage`). La dirección
  * comercial tampoco, desde el 30/09/2026: su "Ir a Ventas" se sacó a pedido; su sesión (simular a
- * un closer, cerrar sesión) está en el menú del dock.
+ * un closer, cerrar sesión) está en el menú del dock. El admin perdió el suyo el 10/10/2026: llevaba
+ * al hub de «Administración», que se retiró; se va por el Portal, como la dirección.
  */
 const SALIDA = {
     closer: { to: '/closer/deck?step=confirmations', label: 'Volver al mazo' },
-    admin: { to: '/admin/ventas', label: 'Ir a Ventas' },
 };
 
 const SECCIONES = [

@@ -74,37 +74,17 @@ const useDockNavigation = () => {
                 { id: 'formularios', icon: ClipboardCheck, label: 'Formularios', path: '/triage/formularios' },
                 { id: 'report', icon: ClipboardList, label: 'Reporte Diario', path: '/triage/report' }
             ];
-        } else if (user?.role === 'operator') {
+        } else if (user?.role === 'operator' || user?.role === 'admin') {
             // Agendas y Ventas pasaron del panel de admin al de operaciones (20/ago/2026):
-            // es el rol que hace la limpieza y corrección de esos registros.
+            // es el rol que hace la limpieza y corrección de esos registros. Cada entrada lleva
+            // a su sección del espacio de Operaciones (ver OpsRuta). El admin usa el mismo dock
+            // desde el 10/10/2026: «Administración» se retiró y lo suyo pasó a Operaciones.
             return [
                 { id: 'settings', icon: Settings, label: 'Control Técnico', path: '/ops/dashboard' },
                 { id: 'agendas', icon: CalendarDays, label: 'Registro Agendas', path: '/ops/agendas' },
                 { id: 'ventas', icon: DollarSign, label: 'Registro Ventas', path: '/ops/ventas' },
                 { id: 'course-editor', icon: GraduationCap, label: 'Editor de Curso', path: '/ops/course-editor' }
             ];
-        } else if (user?.role === 'admin') {
-            const adminPages = [
-                { id: 'comercial', icon: BarChart3, label: 'Comercial', path: '/admin/comercial' },
-                { id: 'ventas', icon: TrendingUp, label: 'Ventas', path: '/admin/ventas' },
-                { id: 'formularios', icon: ClipboardList, label: 'Formularios', path: '/admin/formularios' },
-                { id: 'postulaciones', icon: UserCheck, label: 'Postulaciones', path: '/admin/postulaciones' },
-                // El resto del panel de Operaciones (Equipo, Bugs, Bitácora, etc.) el admin lo
-                // sigue teniendo solo por URL (/ops/dashboard) -- pero el Editor de curso es lo
-                // bastante autónomo (su propia ruta full-bleed) como para ganarse su propio
-                // ícono, si no el admin no tenía NINGUNA forma de encontrarlo (13/sep/2026).
-                { id: 'course-editor', icon: GraduationCap, label: 'Editor de Curso', path: '/ops/course-editor' },
-                // Mismo caso (26/09/2026): cuando Agendas y Ventas pasaron a Operaciones el
-                // admin quedó con acceso solo por URL, y el panel de duplicados que vive ahí
-                // adentro resultó imposible de encontrar. No estaba entre lo que se ocultó a
-                // propósito el 19/ago -- se cayó del Dock como efecto colateral de la mudanza.
-                { id: 'agendas', icon: CalendarDays, label: 'Registro Agendas', path: '/ops/agendas' }
-                // Ocultas a pedido del usuario (19/ago/2026): Marketing, Alertas, Sin Anuncio e
-                // Importaciones Sheets. Las rutas siguen existiendo, solo se quitaron del Dock.
-                // Finanzas y PayRoll ya no van acá: desde el 08/10/2026 son la vista Finances
-                // (/finanzas), para quien tiene «ver finanzas».
-            ];
-            return adminPages;
         } else if (user?.role === 'director_comercial') {
             // Rol enfocado en ventas: closing (Closers) y setting (Setters), sin
             // acceso al resto del panel de admin.
