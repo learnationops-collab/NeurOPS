@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import Comparativas from './Comparativas';
 
 /**
@@ -60,5 +60,55 @@ describe('Comparativas · el líder contra el promedio', () => {
         render(<Comparativas irAPersona={null} datos={conLeads} />);
 
         expect(screen.getByText('Tocá el encabezado para rankear.')).toBeInTheDocument();
+    });
+});
+
+const etapas = (ns) => ['entrantes', 'cualificados', 'dolor', 'oferta', 'link', 'agendas', 'generadas',
+    'asistieron', 'ventas'].map((key, i) => ({
+    key, label: key[0].toUpperCase() + key.slice(1), n: ns[i], fuente: i < 6 ? 'reporte' : 'sistema',
+    tasa: null, ...(key === 'generadas' ? { cruce: true } : {}),
+}));
+
+const conEmbudos = (extra = {}) => ({
+    ...datos('setters', {}),
+    filas: [{ id: 1, nombre: 'Elias', show_up: 50, deltas: {} }, { id: 2, nombre: 'Paula', show_up: 40, deltas: {} }],
+    embudos: {
+        filas: [{ id: 1, nombre: 'Elias', etapas: etapas([100, 60, 30, 20, 15, 12, 10, 5, 2]) },
+            { id: 2, nombre: 'Paula', etapas: etapas([40, 30, 20, 10, 8, 6, 6, 3, 1]) }],
+        equipo: { id: 'equipo', nombre: 'Equipo', etapas: etapas([140, 90, 50, 30, 23, 18, 16, 8, 3]) },
+    },
+    ...extra,
+});
+
+describe('Comparativas · los embudos de los setters', () => {
+    // Pedido del usuario (10/10/2026): en la comparativa de setters, el embudo de cada uno y el del
+    // equipo, del reporte diario a las ventas.
+    it('cada setter y el equipo tienen su embudo, y la fila propia dice "vos"', () => {
+        render(<Comparativas datos={conEmbudos({ yo: 1 })} irAPersona={null} />);
+
+        expect(screen.getByText('Embudos')).toBeInTheDocument();
+        expect(screen.getAllByText('Elias · vos')).toHaveLength(2); // el ranking y su embudo
+        expect(screen.getByText('100 entrantes → 2 ventas · 2%')).toBeInTheDocument();
+        expect(screen.getByText('40 entrantes → 1 venta · 2.5%')).toBeInTheDocument();
+        expect(screen.getByText('140 entrantes → 3 ventas · 2.1%')).toBeInTheDocument();
+        // Solo lectura: un setter no abre la lista de nadie.
+        expect(screen.queryByRole('button', { name: /Ver la lista:/ })).toBeNull();
+    });
+
+    it('a la dirección, las etapas del sistema le abren la lista de esa persona', () => {
+        const irAPersona = vi.fn();
+        render(<Comparativas datos={conEmbudos()} irAPersona={irAPersona} />);
+
+        // Tres etapas del sistema por embudo: Elias, Paula y el equipo.
+        expect(screen.getAllByRole('button', { name: /^Ver la lista: (Generadas|Asistieron|Ventas),/ })).toHaveLength(9);
+        fireEvent.click(screen.getByRole('button', { name: 'Ver la lista: Asistieron, 3' }));
+        expect(irAPersona).toHaveBeenCalledWith(2, {
+            tabla: 'generadas', filtro: { asistio: 'Sí' }, de: 'Agendas generadas que asistieron' });
+    });
+
+    it('la comparativa de closers no trae embudos', () => {
+        render(<Comparativas datos={datos('closers', { agendas: 41 })} irAPersona={() => {}} />);
+
+        expect(screen.queryByText('Embudos')).toBeNull();
     });
 });

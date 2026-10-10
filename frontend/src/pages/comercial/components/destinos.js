@@ -184,6 +184,18 @@ export const DESTINOS_SETTER = {
         aviso: AVISO_TASA_NUMERADOR },
 };
 
+/**
+ * Las etapas del SISTEMA del embudo de punta a punta del setter («Mis datos» y los embudos de
+ * Comparativas, 10/10/2026). Las del reporte (entrantes … agendas reportadas) no tienen lista: son
+ * números que cargó el setter, no filas. Las tres cierran con el número: son las agendas generadas
+ * (una por persona, por fecha de creación) y sus cortes, que es como se cuentan.
+ */
+export const DESTINOS_EMBUDO_SETTER = {
+    generadas: { tabla: 'generadas', filtro: {}, de: 'Agendas generadas' },
+    asistieron: { tabla: 'generadas', filtro: { asistio: 'Sí' }, de: 'Agendas generadas que asistieron' },
+    ventas: { tabla: 'generadas', filtro: { post_call: 'Venta' }, de: 'Ventas originadas' },
+};
+
 /** Un tramo de la tenacidad del seguimiento: los leads que recibieron ese puñado de toques. */
 export const destinoToques = (toques) => {
     const n = Number(String(toques).replace('+', ''));

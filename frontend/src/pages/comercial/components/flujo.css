@@ -70,6 +70,19 @@
 .dc-shell .flj-v-banda .flj-pildora--cruce{border-style:dashed;border-color:var(--text-muted);color:var(--text-muted)}
 .dc-shell .flj-v-banda .flj-pildora--alta{border-color:var(--warning);color:var(--warning)}
 
+/* ---------- Comparativas · Embudos de los setters ---------- */
+.dc-shell .embudos-filas{display:grid;gap:var(--s3);min-width:0}
+.dc-shell .embudo-fila{display:grid;gap:var(--s3);min-width:0;padding:var(--s4);
+  border-radius:var(--radius-control);background:var(--hundido);border:1px solid var(--border-subtle)}
+.dc-shell .embudo-fila--equipo{background:var(--mat-1);border-color:var(--border-main)}
+.dc-shell .embudo-quien{display:flex;align-items:center;gap:var(--s2);min-width:0;flex-wrap:wrap}
+.dc-shell .embudo-quien .celda{font-weight:800;min-width:0}
+.dc-shell .embudo-final{margin-left:auto}
+@media (max-width:520px){
+  .dc-shell .embudo-fila{padding:var(--s3)}
+  .dc-shell .embudo-final{margin-left:0;flex-basis:100%}
+}
+
 @media (prefers-reduced-motion:reduce){
   .dc-shell .flj-barra,.dc-shell .flj-v-barra{transform:none}
   .dc-shell .flj-banda{fill-opacity:.16}

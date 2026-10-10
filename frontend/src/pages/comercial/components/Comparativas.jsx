@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Delta, EsqueletoPanel, fmt, Segmented, useMontado } from './Shared';
-import { DESTINOS_METRICA } from './destinos';
+import { DESTINOS_EMBUDO_SETTER, DESTINOS_METRICA } from './destinos';
+import FlujoEmbudo from './FlujoEmbudo';
+import { COLOR_CANAL, COLOR_FUENTE, etapasParaDibujar, puntaAPunta } from './embudoSetter';
 
 /**
  * Analizar → Comparativas: un solo panel con el ranking arriba y el mapa del equipo abajo.
@@ -257,6 +259,63 @@ const MapaEquipo = ({ datos, metrica, filas, onMetrica, irAPersona }) => {
     );
 };
 
+/**
+ * Los embudos de los setters (pedido del usuario, 10/10/2026): uno por setter y el del equipo, del
+ * reporte diario a las ventas, TODOS EN LA MISMA ESCALA —la etapa más grande de todos, el equipo
+ * incluido— para que dos barras del mismo alto sean el mismo número. Es el mismo embudo que cada
+ * setter ve en su «Mis datos» (`embudoSetter.js`).
+ *
+ * Solo lo trae la comparativa de setters (`embudos`); la de closers no cambia. Las etapas del sistema
+ * abren la lista de esa persona cuando hay `irAPersona` (la dirección); un setter mira sin abrir.
+ */
+const EmbudosSetters = ({ embudos, yo, rol, irAPersona }) => {
+    const filas = [...embudos.filas, embudos.equipo];
+    const escala = Math.max(1, ...filas.flatMap(f => f.etapas.map(e => e.n || 0)));
+    const irDe = (fila) => (irAPersona
+        ? (etapa) => (DESTINOS_EMBUDO_SETTER[etapa.key]
+            ? () => irAPersona(fila.id, DESTINOS_EMBUDO_SETTER[etapa.key])
+            : undefined)
+        : null);
+    return (
+        <div className="mapa embudos-set">
+            <div className="panel-cab">
+                <div style={{ minWidth: 0 }}>
+                    <p className="t-eyebrow">Embudos</p>
+                    <p className="t-cap mut" style={{ marginTop: 6 }}>
+                        Del reporte diario a las ventas, todos en la misma escala. Cada píldora es la etapa sobre la
+                        anterior; la punteada compara lo reportado con lo que registra el sistema.
+                    </p>
+                </div>
+                <div className="panel-cab-der mapa-leyenda">
+                    <span><i style={{ background: COLOR_FUENTE.reporte }} />Reporte</span>
+                    <span><i style={{ background: COLOR_FUENTE.sistema }} />Sistema</span>
+                    <span><i style={{ background: COLOR_CANAL.anuncios }} />Anuncios</span>
+                    <span><i style={{ background: COLOR_CANAL.inbound }} />Inbound</span>
+                </div>
+            </div>
+            <div className="embudos-filas">
+                {filas.map(fila => {
+                    const esEquipo = fila.id === 'equipo';
+                    const final = puntaAPunta(fila.etapas);
+                    return (
+                        <div key={fila.id} className={`embudo-fila${esEquipo ? ' embudo-fila--equipo' : ''}`}>
+                            <div className="embudo-quien">
+                                {!esEquipo && <Avatar nombre={fila.nombre} rol={rol} chico />}
+                                <span className="celda">{fila.nombre}{fila.id === yo ? ' · vos' : ''}</span>
+                                <span className="t-cap mut40 num embudo-final">
+                                    {final === null ? 'sin entrantes reportados' : `${fmt.num(fila.etapas[0].n)} entrantes → `
+                                        + `${fmt.plural(fila.etapas[fila.etapas.length - 1].n, 'venta', 'ventas')} · ${final}%`}
+                                </span>
+                            </div>
+                            <FlujoEmbudo etapas={etapasParaDibujar(fila.etapas, irDe(fila))} max={escala} />
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
 const Comparativas = ({ datos, irAPersona }) => {
     const [metricaKey, setMetricaKey] = useState(null);
 
@@ -279,6 +338,9 @@ const Comparativas = ({ datos, irAPersona }) => {
                 irAPersona={irAPersona} destino={destino} />
             <MapaEquipo datos={datos} metrica={metrica} filas={filas} onMetrica={setMetricaKey}
                 irAPersona={irAPersona} />
+            {datos.embudos && (
+                <EmbudosSetters embudos={datos.embudos} yo={datos.yo} rol={datos.rol} irAPersona={irAPersona} />
+            )}
         </section>
     );
 };
