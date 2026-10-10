@@ -1,5 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AparienciaProvider } from './context/AparienciaContext';
+import { ConfiguracionProvider } from './sesion/ConfiguracionContext';
+import { SimulacionProvider } from './sesion/SimulacionContext';
 import { roleLandingPath } from './utils/roleLanding';
 import MainLayout from './components/MainLayout';
 import AdminDashboard from './pages/admin/dashboard/AdminDashboard';
@@ -7,19 +10,17 @@ import FinancialAnalysisPage from './pages/admin/reports/FinancialAnalysisPage';
 import PublicCallsBoardPage from './pages/public/PublicCallsBoardPage';
 import SalesAttributionPage from './pages/admin/reports/SalesAttributionPage';
 import LoginPage from './pages/auth/LoginPage';
-import ElegirAreaPage from './pages/auth/ElegirAreaPage';
-import ElegirVistaPage from './pages/auth/ElegirVistaPage';
+import PortalPage from './pages/auth/PortalPage';
+import CortexPage from './pages/auth/CortexPage';
 import SessionEntry from './pages/auth/SessionEntry';
 import AnalysisPage from './pages/admin/reports/AnalysisPage';
 import ConstructionPage from './pages/common/ConstructionPage';
 import DatabasePage from './pages/admin/database/DatabasePage';
 import MarketingPage from './pages/admin/marketing/MarketingPage';
-import SettingsPage from './pages/admin/settings/SettingsPage';
 import AdminLeadsPage from './pages/admin/leads/LeadsPage';
 import CloserDashboard from './pages/closer/dashboard/CloserDashboard';
 import StatisticsPage from './pages/closer/dashboard/StatisticsPage';
 import CloserLeadsPage from './pages/closer/leads/LeadsPage';
-import CloserSettingsPage from './pages/closer/settings/SettingsPage';
 import CloserNewAppointmentPage from './pages/closer/records/NewAppointmentPage';
 import SetterStatisticsPage from './pages/setter/dashboard/StatisticsPage';
 import LeadsManagementPage from './pages/shared/LeadsManagementPage';
@@ -103,8 +104,11 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <AparienciaProvider>
         <PlaybookProvider>
         <Router>
+        <ConfiguracionProvider>
+        <SimulacionProvider>
           <PixelTracker />
           <Toaster position="top-right" />
           <SoloInterno>
@@ -115,10 +119,14 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/session-entry" element={<SessionEntry />} />
-            <Route path="/inicio" element={<ProtectedRoute><ElegirAreaPage /></ProtectedRoute>} />
-            {/* El hub de vistas (08/10/2026): la elección del login con la sesión ya iniciada, desde
-                «Cambiar de vista» en el menú de sesión. Sin MainLayout, como el login. */}
-            <Route path="/vistas" element={<ProtectedRoute><ElegirVistaPage /></ProtectedRoute>} />
+            {/* El Portal (10/10/2026): la entrada para quien tiene más de un rol, área o cuenta, y
+                «Cambiar de vista» del menú de sesión. Sin MainLayout, como el login. /inicio (las áreas)
+                y /vistas (el hub de vistas) eran dos partes de lo mismo: llevan al Portal. */}
+            <Route path="/portal" element={<ProtectedRoute><PortalPage /></ProtectedRoute>} />
+            {/* Cortex (10/10/2026): el área de todos, con Learnito y el Playbook. */}
+            <Route path="/cortex" element={<ProtectedRoute><CortexPage /></ProtectedRoute>} />
+            <Route path="/inicio" element={<Navigate to="/portal?elegir=1" replace />} />
+            <Route path="/vistas" element={<Navigate to="/portal?elegir=1" replace />} />
             <Route path="/book/:setter_id/:event_slug" element={<BookingPage />} />
             <Route path="/book/:event_slug" element={<BookingPage />} />
             <Route path="/politica-de-privacidad" element={<PrivacyPolicyPage />} />
@@ -482,8 +490,11 @@ function App() {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/login" />} />
           </Routes>
+        </SimulacionProvider>
+        </ConfiguracionProvider>
         </Router>
         </PlaybookProvider>
+        </AparienciaProvider>
       </AuthProvider>
     </ThemeProvider>
   );

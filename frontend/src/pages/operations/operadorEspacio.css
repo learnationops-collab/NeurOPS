@@ -11,8 +11,8 @@
    no es un shell. */
 .operador-espacio{
   min-height:100vh;
-  background:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%) fixed,#020617;
-  color:#e2e8f0;
+  background:linear-gradient(135deg,var(--ln-page-base, #020617) 0%,var(--ln-page-base, #0A0E3D) 50%,var(--ln-page-base, #05082D) 100%) fixed,var(--ln-page-base, #020617);
+  color:var(--ln-text-out, #e2e8f0);
   /* El dock es `position:fixed`: sin este colchón tapa el final de cada lista. */
   padding-bottom:calc(132px + env(safe-area-inset-bottom,0px));
 }
@@ -26,8 +26,8 @@
    oscuro) casi no se leían. `dash-v6` (index.css) fija la paleta oscura para todo lo que lleva
    adentro, igual que el dashboard del closer: el panel queda a tono con el dock y las pestañas. */
 .operador-panel{
-  background:#05082D;
-  border:1px solid rgba(255,255,255,.08);
+  background:var(--ln-page-base, #05082D);
+  border:1px solid color-mix(in srgb, var(--ln-text-out, #ffffff) 8%, transparent);
   border-radius:28px;
   padding:clamp(16px,2.4vw,28px);
   overflow-x:auto;
@@ -35,10 +35,10 @@
 
 /* Registro de agendas y de ventas: pensadas sobre fondo oscuro. */
 .operador-oscuro{
-  background:#020617;
-  border:1px solid rgba(255,255,255,.08);
+  background:var(--ln-page-base, #020617);
+  border:1px solid color-mix(in srgb, var(--ln-text-out, #ffffff) 8%, transparent);
   border-radius:28px;
-  color:#e2e8f0;
+  color:var(--ln-text-out, #e2e8f0);
   overflow:hidden;
 }
 

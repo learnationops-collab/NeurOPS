@@ -12,7 +12,9 @@ export function opcionesDeOcupacion(reservas, ahora = Date.now()) {
     const por = {};
     reservas.forEach(r => {
         if (r.estado !== 'agendada' || !r.closer_id || r.inicio_ms == null) return;
-        (por[r.closer_id] = por[r.closer_id] || []).push({ inicio: r.inicio_ms, fin: r.fin_ms });
+        // El margen que el closer se reservó después de la sesión también bloquea.
+        const fin = r.fin_ms == null ? r.fin_ms : r.fin_ms + (r.margen_min || 0) * 60000;
+        (por[r.closer_id] = por[r.closer_id] || []).push({ inicio: r.inicio_ms, fin });
     });
     return {
         ahora,

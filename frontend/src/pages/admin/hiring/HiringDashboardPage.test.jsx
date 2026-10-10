@@ -17,7 +17,6 @@ let usuario = { username: 'Mario Hire', role: 'hiring' };
 vi.mock('../../../contexts/AuthContext', () => ({
     useAuth: () => ({ user: usuario, logout: vi.fn() }),
 }));
-vi.mock('../../../components/modals/OperatorControls', () => ({ default: () => null }));
 vi.mock('./components/HiringCandidateModal', () => ({
     default: ({ applicationId, ids }) => <div data-testid="modal-candidata">{applicationId}|{ids.join(',')}</div>,
 }));

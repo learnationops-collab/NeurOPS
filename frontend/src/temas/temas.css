@@ -1,0 +1,203 @@
+/* ============================================================================
+   TEMAS — la apariencia de la app en un solo lugar.
+
+   Dos ejes, como en academy: el tema (Learnation Classic, el look de siempre del closer;
+   Learnation Modern, el de Agendamiento) y su modo, claro u oscuro. Cada combinación es un
+   bloque completo y cerrado. Viven en <html> como `data-tema` y `data-tema-modo`
+   (context/AparienciaContext.jsx); cualquier nodo con los dos atributos toma ese tema para su
+   subárbol, así se pintan las vistas previas.
+
+   Todos los roles llevan el prefijo `--ln-`: los nombres sueltos (`--bg-input`, `--text-muted`,
+   `--border-main`...) ya existen en index.css, comercial.css y thalamus.css con otros valores, y
+   dentro de esas hojas `--bg-input: var(--bg-input, ...)` se apuntaría a sí mismo.
+
+   Cómo lo leen las pantallas: sus colores pasan a `var(--ln-rol, valor de hoy)` o a
+   `color-mix(in srgb, var(--ln-rol, color) N%, transparent)`. Sin tema elegido no hay
+   `data-tema`, el rol no existe y queda el valor de hoy tal cual. Las clases de color de
+   Tailwind van por reglas generadas bajo `[data-tema]` (temas/deck.css, temas/herramientas).
+
+   Roles (contenedores con la numeración de academy):
+   page-bg/-base, text-out   la página (degradado + color base) y el texto directo sobre ella
+   ct2-bg, text-in           contenedor no prioritario (panel) y el texto adentro
+   ct3-bg, ct3-text          lo que va dentro de un contenedor: tarjetas, botones, controles
+   inset-bg                  el hundido (tablas, pozos)
+   brand / brand-2           destacado rosa y azul, con -accent, -content (texto encima),
+                             -soft (seleccionado sin gritar) y -text (para texto sobre la página)
+   input-bg                  campos
+   window-bg / popover-bg    modales y hojas / menús, popovers y tooltips; scrim detrás del modal
+   inverse-bg/-text          el segmento o pestaña activa
+   text-muted / text-faint   texto secundario en dos niveles
+   border-subtle/-main/-strong, sheen, track
+   success, warning, danger, info, idle   con -bg, -border y -text; on-status es el texto encima
+   scheme                    dark o light, para el `color-scheme` de cada contenedor
+   map-*, medal-*            el lienzo de flujos y el podio de Agendamiento
+   ============================================================================ */
+
+[data-tema="classic"][data-tema-modo="oscuro"]{
+  --ln-brand-2-accent:#4E8BD8; --ln-brand-text:#FFB3DE; --ln-brand-2-text:#8C99E0;
+  --ln-success-text:#7DEAC0; --ln-warning-text:#F3D08A; --ln-danger-text:#F5A99C; --ln-info-text:#93C5FD;
+  --ln-scheme:dark;
+  --ln-map-canvas:#070B2A; --ln-map-dot:rgba(255,255,255,.07); --ln-map-node:#0B1033; --ln-map-node-row:rgba(255,255,255,.06); --ln-map-edge:rgba(160,175,230,.42);
+  --ln-medal-gold:#F2C14E; --ln-medal-silver:#C5CEDB; --ln-medal-bronze:#DA8C5C;
+  --ln-page-base:#020617; --ln-page-bg:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%); --ln-text-out:#FFFFFF;
+  --ln-brand:#FF3FA4; --ln-brand-accent:#FF6AD5; --ln-brand-content:#020617;
+  --ln-brand-soft:rgba(255,63,164,.10); --ln-brand-soft-border:rgba(255,63,164,.35);
+  --ln-brand-2:#1323C6; --ln-brand-2-content:#FFFFFF;
+  --ln-ct2-bg-subtle:rgba(255,255,255,.02);
+  --ln-ct2-bg:rgba(255,255,255,.04); --ln-text-in:#FFFFFF;
+  --ln-ct3-bg:rgba(255,255,255,.08); --ln-ct3-bg-hover:rgba(255,255,255,.12); --ln-ct3-text:#FFFFFF;
+  --ln-inset-bg:rgba(0,0,0,.34); --ln-inset-text:#FFFFFF;
+  --ln-ct3-bg-strong:rgba(255,255,255,.12);
+  --ln-input-bg:rgba(0,0,0,.30);
+  --ln-window-bg:rgba(2,6,23,.90); --ln-window-text:#FFFFFF; --ln-popover-bg:#0B1030; --ln-scrim:rgba(2,6,23,.70);
+  --ln-inverse-bg:#FFFFFF; --ln-inverse-text:#020617;
+  --ln-text-muted:rgba(255,255,255,.60); --ln-text-faint:rgba(255,255,255,.40);
+  --ln-border-subtle:rgba(255,255,255,.05); --ln-border-main:rgba(255,255,255,.15); --ln-border-strong:rgba(255,255,255,.38);
+  --ln-sheen:rgba(255,255,255,.10); --ln-track:rgba(255,255,255,.12);
+  --ln-success:#2FBF8F;    --ln-success-bg:#071A24;    --ln-success-border:#10413D;
+  --ln-warning:#D9A441;    --ln-warning-bg:#1A171C;    --ln-warning-border:#473924;
+  --ln-danger:#E85C4A;    --ln-danger-bg:#1B0F1D;    --ln-danger-border:#4C2227;
+  --ln-info:#4E8BD8;     --ln-info-bg:#0A152C;     --ln-info-border:#1A3155;
+  --ln-idle:#7F8CA8; --ln-idle-bg:#0E1326; --ln-idle-border:#252C42;
+  --ln-on-status:#020617;
+  --ln-focus:#5B7CFF; --ln-focus-ring:0 0 0 3px rgba(91,124,255,.55);
+  --ln-shadow:0 8px 32px 0 rgba(0,0,0,.40); --ln-shadow-brand:0 10px 15px -3px rgba(19,35,198,.35);
+  --ln-radius:32px; --ln-radius-control:16px; --ln-blur:0px;
+  --ln-humo-blend:screen; --ln-humo-op:.42; --ln-humo-op-i:.62;
+}
+
+[data-tema="modern"][data-tema-modo="oscuro"]{
+  --ln-brand-2-accent:#4E8BD8; --ln-brand-text:#FFB3DE; --ln-brand-2-text:#8C99E0;
+  --ln-success-text:#7DEAC0; --ln-warning-text:#F3D08A; --ln-danger-text:#F5A99C; --ln-info-text:#93C5FD;
+  --ln-scheme:dark;
+  --ln-map-canvas:#070B2A; --ln-map-dot:rgba(255,255,255,.07); --ln-map-node:#0B1033; --ln-map-node-row:rgba(255,255,255,.06); --ln-map-edge:rgba(160,175,230,.42);
+  --ln-medal-gold:#F2C14E; --ln-medal-silver:#C5CEDB; --ln-medal-bronze:#DA8C5C;
+  --ln-page-base:#020617; --ln-page-bg:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%); --ln-text-out:#FFFFFF;
+  --ln-brand:#FF3FA4; --ln-brand-accent:#FF6AD5; --ln-brand-content:#020617;
+  --ln-brand-soft:rgba(255,63,164,.10); --ln-brand-soft-border:rgba(255,63,164,.35);
+  --ln-brand-2:#1323C6; --ln-brand-2-content:#FFFFFF;
+  --ln-ct2-bg-subtle:rgba(255,255,255,.02);
+  --ln-ct2-bg:rgba(255,255,255,.04); --ln-text-in:#FFFFFF;
+  --ln-ct3-bg:rgba(255,255,255,.07); --ln-ct3-bg-hover:rgba(255,255,255,.12); --ln-ct3-text:#FFFFFF;
+  --ln-inset-bg:rgba(0,0,0,.34); --ln-inset-text:#FFFFFF;
+  --ln-ct3-bg-strong:rgba(255,255,255,.12);
+  --ln-input-bg:rgba(0,0,0,.30);
+  --ln-window-bg:rgba(2,6,23,.92); --ln-window-text:#FFFFFF; --ln-popover-bg:#0B1030; --ln-scrim:rgba(2,6,23,.72);
+  --ln-inverse-bg:#FFFFFF; --ln-inverse-text:#020617;
+  --ln-text-muted:rgba(255,255,255,.62); --ln-text-faint:rgba(255,255,255,.42);
+  --ln-border-subtle:rgba(255,255,255,.07); --ln-border-main:rgba(255,255,255,.15); --ln-border-strong:rgba(255,255,255,.34);
+  --ln-sheen:rgba(255,255,255,.10); --ln-track:rgba(255,255,255,.12);
+  --ln-success:#2FBF8F;    --ln-success-bg:#071A24;    --ln-success-border:#10413D;
+  --ln-warning:#D9A441;    --ln-warning-bg:#1A171C;    --ln-warning-border:#473924;
+  --ln-danger:#E85C4A;    --ln-danger-bg:#1B0F1D;    --ln-danger-border:#4C2227;
+  --ln-info:#4E8BD8;     --ln-info-bg:#0A152C;     --ln-info-border:#1A3155;
+  --ln-idle:#7F8CA8; --ln-idle-bg:#0E1326; --ln-idle-border:#252C42;
+  --ln-on-status:#020617;
+  --ln-focus:#5B7CFF; --ln-focus-ring:0 0 0 3px rgba(91,124,255,.55);
+  --ln-shadow:0 8px 32px 0 rgba(0,0,0,.40); --ln-shadow-brand:0 10px 15px -3px rgba(19,35,198,.35);
+  --ln-radius:32px; --ln-radius-control:16px; --ln-blur:0px;
+  --ln-humo-blend:screen; --ln-humo-op:.42; --ln-humo-op-i:.62;
+}
+
+[data-tema="modern"][data-tema-modo="claro"]{
+  --ln-brand-2-accent:#27599F; --ln-brand-text:#C9156F; --ln-brand-2-text:#1323C6;
+  --ln-success-text:#0E7E5C; --ln-warning-text:#8F6310; --ln-danger-text:#BE3726; --ln-info-text:#27599F;
+  --ln-scheme:light;
+  --ln-map-canvas:#EEF1FA; --ln-map-dot:rgba(10,14,61,.10); --ln-map-node:#FFFFFF; --ln-map-node-row:rgba(10,14,61,.05); --ln-map-edge:rgba(60,75,140,.38);
+  --ln-medal-gold:#A87400; --ln-medal-silver:#66748A; --ln-medal-bronze:#A65427;
+  --ln-page-base:#F6F7FC; --ln-page-bg:linear-gradient(135deg,#F6F7FC 0%,#EAEEFA 50%,#F5F0F8 100%); --ln-text-out:#080C30;
+  --ln-brand:#C9156F; --ln-brand-accent:#E23E96; --ln-brand-content:#FFFFFF;
+  --ln-brand-soft:rgba(201,21,111,.09); --ln-brand-soft-border:rgba(201,21,111,.30);
+  --ln-brand-2:#1323C6; --ln-brand-2-content:#FFFFFF;
+  --ln-ct2-bg-subtle:rgba(10,14,61,.015);
+  --ln-ct2-bg:rgba(10,14,61,.035); --ln-text-in:#080C30;
+  --ln-ct3-bg:rgba(255,255,255,.75); --ln-ct3-bg-hover:#FFFFFF; --ln-ct3-text:#080C30;
+  --ln-inset-bg:rgba(10,14,61,.055); --ln-inset-text:#080C30;
+  --ln-ct3-bg-strong:rgba(10,14,61,.10);
+  --ln-input-bg:rgba(10,14,61,.05);
+  --ln-window-bg:rgba(255,255,255,.96); --ln-window-text:#080C30; --ln-popover-bg:#FFFFFF; --ln-scrim:rgba(10,14,61,.42);
+  --ln-inverse-bg:#080C30; --ln-inverse-text:#F6F7FC;
+  --ln-text-muted:rgba(8,12,48,.62); --ln-text-faint:rgba(8,12,48,.46);
+  --ln-border-subtle:rgba(10,14,61,.08); --ln-border-main:rgba(10,14,61,.14); --ln-border-strong:rgba(10,14,61,.26);
+  --ln-sheen:rgba(255,255,255,.9); --ln-track:rgba(10,14,61,.12);
+  --ln-success:#0E7E5C;    --ln-success-bg:#E4F5EE;    --ln-success-border:#AEDFCD;
+  --ln-warning:#8F6310;    --ln-warning-bg:#FAF0DC;    --ln-warning-border:#E5D0A0;
+  --ln-danger:#BE3726;    --ln-danger-bg:#FCEAE6;    --ln-danger-border:#F0C0B7;
+  --ln-info:#27599F;     --ln-info-bg:#E6EEFA;     --ln-info-border:#BAD2EE;
+  --ln-idle:#54617A; --ln-idle-bg:#ECEFF5; --ln-idle-border:#CFD7E4;
+  --ln-on-status:#FFFFFF;
+  --ln-focus:#5B7CFF; --ln-focus-ring:0 0 0 3px rgba(91,124,255,.55);
+  --ln-shadow:0 8px 32px 0 rgba(10,14,61,.12); --ln-shadow-brand:0 10px 15px -3px rgba(201,21,111,.28);
+  --ln-radius:32px; --ln-radius-control:16px; --ln-blur:0px;
+  --ln-humo-blend:multiply; --ln-humo-op:.20; --ln-humo-op-i:.55;
+}
+[data-tema="classic"][data-tema-modo="claro"]{
+  --ln-brand-2-accent:#27599F; --ln-brand-text:#C9156F; --ln-brand-2-text:#1323C6;
+  --ln-success-text:#0E7E5C; --ln-warning-text:#8F6310; --ln-danger-text:#BE3726; --ln-info-text:#27599F;
+  --ln-scheme:light;
+  --ln-map-canvas:#EEF1FA; --ln-map-dot:rgba(10,14,61,.10); --ln-map-node:#FFFFFF; --ln-map-node-row:rgba(10,14,61,.05); --ln-map-edge:rgba(60,75,140,.38);
+  --ln-medal-gold:#A87400; --ln-medal-silver:#66748A; --ln-medal-bronze:#A65427;
+  --ln-page-base:#F6F7FC; --ln-page-bg:linear-gradient(135deg,#F6F7FC 0%,#EAEEFA 50%,#F5F0F8 100%); --ln-text-out:#080C30;
+  --ln-brand:#C9156F; --ln-brand-accent:#E23E96; --ln-brand-content:#FFFFFF;
+  --ln-brand-soft:rgba(201,21,111,.09); --ln-brand-soft-border:rgba(201,21,111,.30);
+  --ln-brand-2:#1323C6; --ln-brand-2-content:#FFFFFF;
+  --ln-ct2-bg-subtle:rgba(10,14,61,.015);
+  --ln-ct2-bg:rgba(10,14,61,.035); --ln-text-in:#080C30;
+  --ln-ct3-bg:rgba(255,255,255,.82); --ln-ct3-bg-hover:#FFFFFF; --ln-ct3-text:#080C30;
+  --ln-inset-bg:rgba(10,14,61,.055); --ln-inset-text:#080C30;
+  --ln-ct3-bg-strong:rgba(10,14,61,.10);
+  --ln-input-bg:rgba(10,14,61,.05);
+  --ln-window-bg:rgba(255,255,255,.94); --ln-window-text:#080C30; --ln-popover-bg:#FFFFFF; --ln-scrim:rgba(10,14,61,.42);
+  --ln-inverse-bg:#080C30; --ln-inverse-text:#F6F7FC;
+  --ln-text-muted:rgba(8,12,48,.60); --ln-text-faint:rgba(8,12,48,.44);
+  --ln-border-subtle:rgba(10,14,61,.06); --ln-border-main:rgba(10,14,61,.14); --ln-border-strong:rgba(10,14,61,.30);
+  --ln-sheen:rgba(255,255,255,.9); --ln-track:rgba(10,14,61,.12);
+  --ln-success:#0E7E5C;    --ln-success-bg:#E4F5EE;    --ln-success-border:#AEDFCD;
+  --ln-warning:#8F6310;    --ln-warning-bg:#FAF0DC;    --ln-warning-border:#E5D0A0;
+  --ln-danger:#BE3726;    --ln-danger-bg:#FCEAE6;    --ln-danger-border:#F0C0B7;
+  --ln-info:#27599F;     --ln-info-bg:#E6EEFA;     --ln-info-border:#BAD2EE;
+  --ln-idle:#54617A; --ln-idle-bg:#ECEFF5; --ln-idle-border:#CFD7E4;
+  --ln-on-status:#FFFFFF;
+  --ln-focus:#5B7CFF; --ln-focus-ring:0 0 0 3px rgba(91,124,255,.55);
+  --ln-shadow:0 8px 32px 0 rgba(10,14,61,.12); --ln-shadow-brand:0 10px 15px -3px rgba(201,21,111,.28);
+  --ln-radius:32px; --ln-radius-control:16px; --ln-blur:0px;
+  --ln-humo-blend:multiply; --ln-humo-op:.20; --ln-humo-op-i:.55;
+}
+
+/* Vista previa de un tema en la pestaña Apariencia: cada tarjeta lleva su propio `data-tema` (en el
+   modo elegido), así muestra sus colores aunque la app tenga otro puesto. */
+.ap-temas{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.ap-tema{display:grid;gap:10px;padding:10px;border-radius:20px;text-align:left;cursor:pointer;
+  background:var(--ln-page-bg),var(--ln-page-base);color:var(--ln-text-out);border:2px solid var(--ln-border-subtle);
+  font:inherit;transition:border-color .16s,transform .16s}
+.ap-tema:hover{transform:translateY(-1px)}
+.ap-tema:focus-visible{outline:none;box-shadow:var(--ln-focus-ring)}
+.ap-tema[aria-checked="true"]{border-color:var(--ln-brand)}
+.ap-muestra{display:grid;gap:6px;padding:10px;border-radius:14px;background:var(--ln-ct2-bg);border:1px solid var(--ln-border-subtle)}
+.ap-muestra-fila{display:flex;align-items:center;gap:6px}
+.ap-muestra-tarjeta{flex:1;height:22px;border-radius:8px;background:var(--ln-ct3-bg);border:1px solid var(--ln-border-subtle)}
+.ap-muestra-btn{width:34px;height:22px;border-radius:999px;background:var(--ln-brand)}
+.ap-muestra-linea{height:6px;border-radius:999px;background:var(--ln-text-faint)}
+.ap-muestra-linea--corta{width:55%;background:var(--ln-text-muted)}
+.ap-nombre{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;font-weight:800}
+.ap-modo{font-size:11px;font-weight:700;color:var(--ln-text-muted)}
+/* El modo, debajo de los temas: el mismo control segmentado de Agendamiento, con dos opciones. */
+/* El fondo del Portal: una muestra de cada uno, con sus colores fijos (son los de la entrada, no del tema). */
+.ap-fondos{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px}
+.ap-fondo{display:grid;gap:6px;padding:8px;border-radius:18px;text-align:left;cursor:pointer;background:var(--ln-ct2-bg,var(--mat-1));border:1px solid var(--ln-border-subtle,var(--border-subtle));color:inherit;transition:transform .15s,border-color .15s}
+.ap-fondo:hover{transform:translateY(-1px)}
+.ap-fondo:focus-visible{outline:2px solid var(--ln-focus,var(--focus-blue));outline-offset:2px}
+.ap-fondo[aria-checked="true"]{border-color:var(--ln-brand,var(--brand-secondary));box-shadow:0 0 0 1px var(--ln-brand,var(--brand-secondary))}
+.ap-fondo-muestra{height:64px;border-radius:12px;background:#0a0b20}
+.ap-fondo-muestra--light{background:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px) 0 0/12px 12px,linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px) 0 0/12px 12px,
+  radial-gradient(70% 90% at 10% 110%,rgba(196,48,140,.55),transparent 65%),radial-gradient(60% 80% at 95% 50%,rgba(34,92,196,.5),transparent 66%),#0a0b20}
+.ap-fondo-muestra--humo{background:radial-gradient(45% 60% at 20% 70%,rgba(230,51,143,.7),transparent 70%),radial-gradient(50% 60% at 80% 45%,rgba(20,107,219,.6),transparent 70%),
+  radial-gradient(60% 50% at 50% 30%,rgba(97,54,194,.55),transparent 70%),#05061a}
+.ap-fondo-muestra--particulas{background:radial-gradient(circle at 20% 70%,#fff 0 1px,transparent 2px),radial-gradient(circle at 55% 40%,#ff96d7 0 1.5px,transparent 2.5px),
+  radial-gradient(circle at 80% 75%,#aabeff 0 1px,transparent 2px),radial-gradient(circle at 35% 25%,#ffd2f0 0 1px,transparent 2px),radial-gradient(circle at 70% 15%,#fff 0 1px,transparent 2px),
+  radial-gradient(70% 90% at 10% 110%,rgba(196,48,140,.45),transparent 65%),#0a0b20}
+.ap-fondo-muestra--aurora{background:radial-gradient(55% 70% at 15% 20%,rgba(19,35,198,.9),transparent 70%),radial-gradient(45% 60% at 90% 90%,rgba(255,63,164,.7),transparent 70%),
+  radial-gradient(35% 45% at 55% 60%,rgba(91,61,245,.6),transparent 70%),#0a0b20}
+
+.thalamus .apariencia.ap-modos{grid-template-columns:repeat(2,minmax(0,1fr))}
+.thalamus .apariencia.ap-modos button[aria-checked="true"]{background:var(--mat-3);color:var(--text-on-surface)}

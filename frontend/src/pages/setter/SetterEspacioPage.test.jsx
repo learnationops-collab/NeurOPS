@@ -31,7 +31,6 @@ vi.mock('../../services/api', () => ({
     default: { get: vi.fn(() => Promise.resolve({ data: { total: sesion.reportesHoy } })) },
 }));
 vi.mock('../../utils/impersonation', () => ({ revertImpersonation: vi.fn() }));
-vi.mock('../../components/modals/OperatorControls', () => ({ default: () => null }));
 // La bandeja de "Mis agendas" le informa al espacio cuántas quedan (la marca del dock).
 vi.mock('./agendas/MisAgendas', () => ({
     default: function MisAgendasDoble({ onResumen }) {
@@ -342,7 +341,7 @@ describe('SetterEspacioPage · la sesión en el dock', () => {
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: nombre })); });
     };
 
-    it('el header ya no tiene Playbook ni cerrar sesión: están en el avatar del dock, con lo pendiente a la vista', async () => {
+    it('el header ya no tiene Playbook ni cerrar sesión: el avatar del dock lleva lo pendiente, y el Playbook está en Cortex (el Portal)', async () => {
         await montar('/setter/deck?step=agendas');
 
         const header = document.querySelector('header.tope');
@@ -354,10 +353,8 @@ describe('SetterEspacioPage · la sesión en el dock', () => {
         await abrirSesion('Tu sesión: Ana Setter, 3 videos pendientes del Playbook');
         expect(screen.getByText('Setter')).toBeInTheDocument();
         expect(screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent))
-            .toEqual(['Playbook, 3 pendientes', 'Mis links de agendamiento', 'Reportar un problema', 'Mis reportes', 'Cerrar sesión']);
-
-        fireEvent.click(screen.getByRole('menuitem', { name: 'Playbook, 3 pendientes' }));
-        expect(sesion.openPlaybook).toHaveBeenCalledWith('pending');
+            .toEqual(['Mis links de agendamiento', 'Configuración', 'Portal, 3 videos pendientes del Playbook, en Cortex', 'Mis reportes',
+                'Reportar un problema', 'Cerrar sesión']);
     });
 
     it('simulando, "Volver a mi sesión" está arriba y también en el menú', async () => {
@@ -371,7 +368,7 @@ describe('SetterEspacioPage · la sesión en el dock', () => {
         await abrirSesion('Tu sesión: Ana Setter');
         expect(screen.getByText('Setter · simulación')).toBeInTheDocument();
         expect(screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent))
-            .toEqual(['Playbook', 'Mis links de agendamiento', 'Reportar un problema', 'Mis reportes', 'Volver a mi sesión', 'Cerrar sesión']);
+            .toEqual(['Mis links de agendamiento', 'Configuración', 'Portal', 'Mis reportes', 'Reportar un problema', 'Volver a mi sesión', 'Cerrar sesión']);
     });
 
     it('"Mis links de agendamiento" trae los de Agendas 2.0 y también los de los eventos viejos', async () => {

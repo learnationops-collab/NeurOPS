@@ -1,7 +1,7 @@
 // Asignación: qué horarios ve el lead y a qué closer va cada uno.
 // Orden: respuestas → regla → prioridad → estrategia de la prioridad → closer por horario.
 
-import { buscar, closers, esCloser, horasSemana, ord } from './datos';
+import { buscar, closers, esCloser, horasSemana, ord, sesionDe } from './datos';
 import { GENERICA, agendaOpt, slotsPersona } from './disponibilidad';
 import { calificar, grupoPorReglas } from './formulario';
 
@@ -59,7 +59,8 @@ function porEstrategia(estrategia, miembros, slotsDe, { ahora, cargaDe }, g = nu
 }
 
 /**
- * ctx: {preguntas, resp, dur, ag, reglas, resto, persona}
+ * ctx: {preguntas, resp, dur, margen, eventoId, ag, reglas, resto, persona}. dur y margen son la propuesta
+ * del evento; cada closer usa lo suyo si lo ajustó (sesionDe).
  * opts: {ahora, ocupado(personaId, t, dur), cargaDe(personaId) → agendas futuras, prueba}
  * Devuelve {nota, grupo, grupoRegla, reglaIdx, desborde, slots:[{t, p}], regla, aviso}.
  */
@@ -70,7 +71,13 @@ export function asignacion(ctx, d, opts = {}) {
     const nota = calificar(ctx.preguntas || [], ctx.resp || {});
     const o = agendaOpt(ctx.ag, ctx.dur);
     const memo = new Map();
-    const slotsDe = (p) => { if (!memo.has(p.id)) memo.set(p.id, slotsPersona(p, ctx.dur, o, { ahora, ocupado })); return memo.get(p.id); };
+    const slotsDe = (p) => {
+        if (!memo.has(p.id)) {
+            const [dur, margen] = sesionDe(p, ctx.eventoId, ctx.dur, ctx.margen);
+            memo.set(p.id, slotsPersona(p, dur, o, { ahora, ocupado, margen }));
+        }
+        return memo.get(p.id);
+    };
     const base = { nota, grupo: null, grupoRegla: '', reglaIdx: null, desborde: false, aviso: '' };
 
     if (ctx.persona) {

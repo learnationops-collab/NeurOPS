@@ -1,12 +1,15 @@
-// Pantalla de elección al entrar, con el formato de la referencia de Learnation Holding: la hora arriba
-// a la izquierda, el selector de fondo a la derecha, el isotipo con sus anillos, un saludo con el primer
-// nombre que entra letra por letra y una tarjeta por opción, cada una con su color. La usan el rol (en
-// el login, si la persona tiene más de uno) y el área (/inicio, si el rol tiene más de una).
+// La pantalla del Portal, con el formato de la referencia de Learnation Holding: la hora arriba a la
+// izquierda, la marca a la derecha, el isotipo con sus anillos, un saludo con el primer nombre que entra
+// letra por letra y una tarjeta por opción, cada una con su color. La usan el Portal (PortalPage: roles,
+// áreas, cuentas y Finances) y la elección de rol al simular (ElegirRolAlSimular). El fondo se elige en
+// Configuración › Apariencia (FondoEntrada.jsx).
+//
+// Con el teclado: Tab entre tarjetas, o el número de cada una (1 a 9) para entrar directo.
 
 import { useEffect, useState } from 'react';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { Isotipo } from '../comercial/components/Shared';
-import FondoEntrada, { SelectorFondo, useFondo } from './FondoEntrada';
+import FondoEntrada, { useFondo } from './FondoEntrada';
 import './login.css';
 
 export function saludo(fecha = new Date()) {
@@ -62,15 +65,19 @@ export function LogoEntrada({ idGrad }) {
     );
 }
 
-/** El marco de la entrada: fondo elegido, la hora, el selector de fondo y lo de adentro, centrado. */
-export function MarcoEntrada({ children, clase = '', reloj = true }) {
-    const [fondo, setFondo] = useFondo();
+/**
+ * El marco de la entrada: el fondo elegido en Apariencia, la hora, la marca y lo de adentro, centrado.
+ * Si el equipo no da para el fondo, pasa a Simple solo por esta vez (no cambia lo elegido).
+ */
+export function MarcoEntrada({ children, clase = '', reloj = true, marca = 'Portal' }) {
+    const [fondo] = useFondo();
+    const [lento, setLento] = useState(false);
     return (
         <div className={'lg el ' + clase}>
-            <FondoEntrada fondo={fondo} onLento={() => setFondo('light')} />
+            <FondoEntrada fondo={lento ? 'light' : fondo} onLento={() => setLento(true)} />
             <header className="fe-arriba">
                 {reloj ? <Reloj /> : <span />}
-                <SelectorFondo fondo={fondo} onCambiar={setFondo} />
+                <span className="fe-marca" aria-hidden="true">Learnation{marca && <b>{marca}</b>}</span>
             </header>
             {children}
         </div>
@@ -90,42 +97,94 @@ function Saludo({ nombre }) {
     );
 }
 
+function Tarjeta({ o, i, eligiendo, marcada }) {
+    const pronto = o.pronto || !o.onElegir;
+    const defecto = !pronto && marcada === o.clave;
+    return (
+        <button type="button" className={'el-tarjeta' + (pronto ? ' el-tarjeta--pronto' : '')}
+            style={{ '--acento': pronto ? '#8e9bd8' : o.acento || ACENTOS[i % ACENTOS.length], '--n': i }}
+            disabled={pronto || !!eligiendo} onClick={() => o.onElegir(o)}>
+            <span className="el-ico">{o.Icono && <o.Icono size={20} />}</span>
+            <span className={'el-num' + (defecto ? ' el-num--defecto' : '')}>
+                {pronto ? 'Pronto' : defecto ? 'Por defecto' : i < 9 ? String(i + 1).padStart(2, '0') : ''}
+            </span>
+            <span className="el-txt">
+                <small>{o.sobre || 'Learnation'}</small>
+                <b>{o.titulo}</b>
+                {o.detalle && <em>{o.detalle}</em>}
+            </span>
+            {eligiendo === o.clave
+                ? <Loader2 size={18} className="lg-gira el-cargando" />
+                : !pronto && <span className="el-ir" aria-hidden="true"><ArrowRight size={14} /></span>}
+        </button>
+    );
+}
+
 /**
- * nombre: el de la cuenta. pregunta: el texto bajo el saludo.
- * opciones: [{ clave, titulo, detalle?, Icono, onElegir?, pronto? }]. Sin onElegir (o con pronto) queda
- * deshabilitada con «Pronto». eligiendo: la clave que está cargando. pie: lo que va debajo (el toggle).
+ * nombre: el de la cuenta (el saludo). titulo: en vez del saludo (p. ej. «Cortex»). pregunta: el texto
+ * debajo.
+ * Las tarjetas van en `opciones` (una sola grilla) o en `grupos` ([{ clave, titulo, detalle?, Icono,
+ * opciones }], una grilla por grupo con su encabezado: en el Portal, cada rol con sus áreas).
+ * Opción: { clave, titulo, sobre?, detalle?, Icono, acento?, onElegir?, pronto? }. `sobre` va arriba del
+ * título; sin él, «Learnation». Sin onElegir (o con pronto) queda deshabilitada con «Pronto».
+ * eligiendo: la clave que está cargando. marcada: la clave de la tarjeta por defecto (lleva «Por
+ * defecto» en vez del número). contenido: algo propio en lugar de las tarjetas (Simular, en el Portal).
+ * pie: lo que va debajo (el toggle, «Volver»).
  */
-export default function Eleccion({ nombre, pregunta, opciones, eligiendo = null, error = null, pie = null }) {
+export default function Eleccion({
+    nombre, titulo = null, pregunta, opciones = null, grupos = null, eligiendo = null, error = null, pie = null,
+    marcada = null, contenido = null,
+}) {
     const n = primerNombre(nombre);
-    const cols = columnas(opciones.length);
+    const secciones = grupos || (opciones ? [{ clave: 'opciones', opciones }] : []);
+    const todas = secciones.flatMap((g) => g.opciones);
+
+    // El número de cada tarjeta entra directo (fuera de un campo de texto).
+    useEffect(() => {
+        if (contenido) return undefined;
+        const alTeclear = (e) => {
+            if (eligiendo || e.metaKey || e.ctrlKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+            const o = /^[1-9]$/.test(e.key) ? todas[Number(e.key) - 1] : null;
+            if (!o || o.pronto || !o.onElegir) return;
+            e.preventDefault();
+            o.onElegir(o);
+        };
+        window.addEventListener('keydown', alTeclear);
+        return () => window.removeEventListener('keydown', alTeclear);
+    }, [todas, eligiendo, contenido]);
+
+    let i = 0;
     return (
         <MarcoEntrada>
             <main className="el-centro">
                 <LogoEntrada idGrad="lnGradEleccion" />
-                <Saludo nombre={n} />
+                {titulo ? <h1 className="el-hola">{titulo}</h1> : <Saludo nombre={n} />}
                 {pregunta && <p className="el-pregunta">{pregunta}</p>}
-                <div className="el-tarjetas" role="group" aria-label={pregunta || 'Opciones'}
-                    style={{ '--cols': cols.ancho, '--cols-medio': cols.medio }}>
-                    {opciones.map((o, i) => {
-                        const pronto = o.pronto || !o.onElegir;
-                        return (
-                            <button key={o.clave} type="button" className={'el-tarjeta' + (pronto ? ' el-tarjeta--pronto' : '')}
-                                style={{ '--acento': pronto ? '#8e9bd8' : ACENTOS[i % ACENTOS.length], '--n': i }}
-                                disabled={pronto || !!eligiendo} onClick={() => o.onElegir(o)}>
-                                <span className="el-ico">{o.Icono && <o.Icono size={20} />}</span>
-                                <span className="el-num">{pronto ? 'Pronto' : String(i + 1).padStart(2, '0')}</span>
-                                <span className="el-txt">
-                                    <small>Learnation</small>
-                                    <b>{o.titulo}</b>
-                                    {o.detalle && <em>{o.detalle}</em>}
+                {contenido || secciones.map((g) => {
+                    const cols = columnas(g.opciones.length);
+                    const grilla = (
+                        <div className="el-tarjetas" role="group" aria-label={g.titulo || pregunta || 'Opciones'}
+                            style={{ '--cols': cols.ancho, '--cols-medio': cols.medio }}>
+                            {g.opciones.map((o) => {
+                                const k = i++;
+                                return <Tarjeta key={o.clave} o={o} i={k} eligiendo={eligiendo} marcada={marcada} />;
+                            })}
+                        </div>
+                    );
+                    if (!g.titulo) return <div key={g.clave} className="el-grupo el-grupo--solo">{grilla}</div>;
+                    return (
+                        <section key={g.clave} className="el-grupo" aria-label={g.titulo}>
+                            <header className="el-grupo-cab">
+                                {g.Icono && <span className="el-grupo-ico" aria-hidden="true"><g.Icono size={15} /></span>}
+                                <span className="el-grupo-txt">
+                                    <b>{g.titulo}</b>
+                                    {g.detalle && <small>{g.detalle}</small>}
                                 </span>
-                                {eligiendo === o.clave
-                                    ? <Loader2 size={18} className="lg-gira el-cargando" />
-                                    : !pronto && <span className="el-ir" aria-hidden="true"><ArrowRight size={14} /></span>}
-                            </button>
-                        );
-                    })}
-                </div>
+                            </header>
+                            {grilla}
+                        </section>
+                    );
+                })}
                 {error && <p className="lg-error" role="alert">{error}</p>}
                 {pie}
             </main>

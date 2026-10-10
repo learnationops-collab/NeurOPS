@@ -5,9 +5,9 @@
 
 import { useEffect, useState } from 'react';
 import api from '../../../../services/api';
-import { DURACIONES } from '../../core/catalogos';
 import { uid } from '../../core/util';
 import { Icono, Switch, Sx } from '../../ui/base';
+import { CampoMinutos } from '../team/Sesiones';
 
 const urlDe = (link) => window.location.origin + '/agendas-v2' + link;
 const SIN_FORM = '';
@@ -31,8 +31,12 @@ function Evento({ e, formularios, onCambio, onBorrar }) {
                 </label>
             </div>
             <div className="me-fila">
-                <Sx sm label="Duración" valor={String(e.duracion)} onChange={v => onCambio({ duracion: Number(v) })}
-                    opciones={DURACIONES.map(n => ({ v: String(n), n: n + ' min', icono: 'clock' }))} />
+                <label className="ses-campo"><span>Sesión</span>
+                    <CampoMinutos id={'me-dur-' + e.id} label="Duración" valor={e.duracion} onCambio={v => onCambio({ duracion: v })} />
+                </label>
+                <label className="ses-campo"><span>Margen</span>
+                    <CampoMinutos margen id={'me-mar-' + e.id} label="Margen" valor={e.margen || 0} onCambio={v => onCambio({ margen: v })} />
+                </label>
                 <Sx sm label="Formulario" valor={formularios.some(f => f.id === e.formulario) ? e.formulario : SIN_FORM} onChange={v => onCambio({ formulario: v })}
                     opciones={[{ v: SIN_FORM, n: 'Sin formulario (solo contacto)', icono: 'user' }].concat(formularios.map(f => ({ v: f.id, n: f.nombre, icono: 'form' })))} />
             </div>

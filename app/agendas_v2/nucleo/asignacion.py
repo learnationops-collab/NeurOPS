@@ -2,7 +2,7 @@
 Orden: respuestas → regla → prioridad → estrategia de la prioridad → closer por horario.
 """
 
-from app.agendas_v2.nucleo.datos import buscar, closers, es_closer, horas_semana, ordenados
+from app.agendas_v2.nucleo.datos import buscar, closers, es_closer, horas_semana, ordenados, sesion_de
 from app.agendas_v2.nucleo.disponibilidad import GENERICA, agenda_opt, ahora_ms, slots_persona
 from app.agendas_v2.nucleo.formulario import calificar, grupo_por_reglas
 from app.agendas_v2.nucleo.util import js_truthy
@@ -90,7 +90,8 @@ def _por_estrategia(estrategia, miembros, slots_de, ahora, carga_de, g=None):
 
 
 def asignacion(ctx, d, opts=None):
-    """ctx: {preguntas, resp, dur, ag, reglas, resto, persona}
+    """ctx: {preguntas, resp, dur, margen, evento_id, ag, reglas, resto, persona}. dur y margen son la
+    propuesta del evento; cada closer usa lo suyo si lo ajustó (sesion_de).
     opts: {ahora, ocupado(persona_id, t, dur), carga_de(persona_id) → agendas futuras, prueba}
     Devuelve {nota, grupo, grupo_regla, regla_idx, desborde, slots: [{t, p}], regla, aviso}."""
     opts = opts or {}
@@ -104,7 +105,8 @@ def asignacion(ctx, d, opts=None):
 
     def slots_de(p):
         if p['id'] not in memo:
-            memo[p['id']] = slots_persona(p, ctx['dur'], o, ahora=ahora, ocupado=ocupado)
+            dur, margen = sesion_de(p, ctx.get('evento_id'), ctx['dur'], ctx.get('margen'))
+            memo[p['id']] = slots_persona(p, dur, o, ahora=ahora, ocupado=ocupado, margen=margen)
         return memo[p['id']]
 
     base = {'nota': nota, 'grupo': None, 'grupo_regla': '', 'regla_idx': None, 'desborde': False, 'aviso': ''}

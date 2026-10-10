@@ -19,7 +19,6 @@ vi.mock('../../contexts/PlaybookContext', () => ({
     usePlaybook: () => ({ pendingCount: 0, openPlaybook: vi.fn() }),
 }));
 vi.mock('../../utils/impersonation', () => ({ revertImpersonation: vi.fn() }));
-vi.mock('../../components/modals/OperatorControls', () => ({ default: () => null }));
 vi.mock('../../components/MainLayout', () => ({ default: ({ children }) => <div data-testid="main-layout">{children}</div> }));
 vi.mock('./settings/SeccionTecnica', () => ({
     default: ({ id }) => <div data-testid="seccion">{id}</div>,
@@ -102,13 +101,14 @@ describe('Espacio del operador', () => {
         expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Equipo');
     });
 
-    it('el menú del avatar ofrece cambiar a los otros roles de la cuenta', async () => {
+    it('el menú del avatar lleva al Portal, donde están sus otros roles y Simular', async () => {
         montar('/ops/dashboard');
 
         fireEvent.click(screen.getByRole('button', { name: /Mario/ }));
 
-        fireEvent.click(screen.getByRole('menuitem', { name: /Cambiar de rol/ }));
-        expect(await screen.findByRole('menuitem', { name: /Closer/ })).toBeInTheDocument();
+        expect(screen.getByRole('menuitem', { name: /^Portal/ })).toBeInTheDocument();
+        expect(screen.queryByRole('menuitem', { name: /Simular/ })).not.toBeInTheDocument();
+        expect(screen.queryByRole('menuitem', { name: /Cambiar de rol/ })).not.toBeInTheDocument();
     });
 
     it('las rutas viejas mandan al operador a su sección del espacio', () => {

@@ -18,8 +18,8 @@
   position:relative;
   isolation:isolate;
   min-height:100vh;
-  background:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%) fixed,#020617;
-  color:#e2e8f0;
+  background:linear-gradient(135deg,var(--ln-page-base, #020617) 0%,var(--ln-page-base, #0A0E3D) 50%,var(--ln-page-base, #05082D) 100%) fixed,var(--ln-page-base, #020617);
+  color:var(--ln-text-out, #e2e8f0);
   /* El dock es `position:fixed`: sin este colchón tapa el final de cada lista. */
   padding-bottom:calc(132px + env(safe-area-inset-bottom,0px));
 }
@@ -31,10 +31,10 @@
 .setter-espacio .aura-pag{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;opacity:.5}
 .setter-espacio .aura-pag i{position:absolute;width:46%;aspect-ratio:1;border-radius:50%;
   filter:blur(90px);mix-blend-mode:screen;opacity:.55}
-.setter-espacio .aura-pag i:nth-child(1){left:-8%;top:-10%;background:#1323C6;animation:dcAura1 29s ease-in-out infinite}
-.setter-espacio .aura-pag i:nth-child(2){left:30%;top:40%;background:#FF3FA4;animation:dcAura2 37s ease-in-out infinite}
-.setter-espacio .aura-pag i:nth-child(3){left:58%;top:-18%;background:#6F7BFF;animation:dcAura3 41s ease-in-out infinite}
-.setter-espacio .aura-pag i:nth-child(4){left:76%;top:46%;background:#FF6AD5;animation:dcAura2 43s ease-in-out infinite reverse}
+.setter-espacio .aura-pag i:nth-child(1){left:-8%;top:-10%;background:var(--ln-brand-2, #1323C6);animation:dcAura1 29s ease-in-out infinite}
+.setter-espacio .aura-pag i:nth-child(2){left:30%;top:40%;background:var(--ln-brand, #FF3FA4);animation:dcAura2 37s ease-in-out infinite}
+.setter-espacio .aura-pag i:nth-child(3){left:58%;top:-18%;background:var(--ln-brand-2-accent, #6F7BFF);animation:dcAura3 41s ease-in-out infinite}
+.setter-espacio .aura-pag i:nth-child(4){left:76%;top:46%;background:var(--ln-brand-accent, #FF6AD5);animation:dcAura2 43s ease-in-out infinite reverse}
 
 /* El ancho y el margen del `.wrap` del dashboard, para que el contenido del mazo
    y el de "Mis datos" (que embebido toma el ancho de su contenedor) queden

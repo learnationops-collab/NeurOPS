@@ -229,3 +229,51 @@ describe('reserva', () => {
         expect(r).toMatchObject({ closer_id: 'ana', prioridad_id: 'g1', nota: 10, origen: 'juan', inicio: new Date(LUNES).toISOString() });
     });
 });
+
+describe('sesiones: duración y margen de cada closer', () => {
+    it('el evento acepta duraciones y márgenes a medida dentro de los límites', () => {
+        expect(normalEvento('e', { duracion: 50 }).duracion).toBe(50);
+        expect(normalEvento('e', { duracion: 500 }).duracion).toBe(240);
+        expect(normalEvento('e', {}).margen).toBe(0);
+        expect(normalEvento('e', { margen: 25 }).margen).toBe(25);
+        expect(normalEvento('e', { margen: 999 }).margen).toBe(120);
+    });
+    it('la persona guarda solo lo que ajustó', () => {
+        const p = normalPersona('ana', { sesiones: { ev: { duracion: 30 }, otro: { margen: '15' }, vacio: {}, basura: 3 } });
+        expect(p.sesiones).toEqual({ ev: { duracion: 30 }, otro: { margen: 15 } });
+        expect(normalPersona('ana', {}).sesiones).toEqual({});
+    });
+    it('sin margen, lo publicado queda como antes', () => {
+        const e = normalEvento('e', { nombre: 'Llamada' });
+        expect('margen' in JSON.parse(configDe(e, null)).ev).toBe(false);
+        expect(JSON.parse(configDe({ ...e, margen: 10 }, null)).ev.margen).toBe(10);
+    });
+    it('la sesión entra en el horario y el último margen puede pasarse', () => {
+        const p = normalPersona('ana', { tz: 'America/La_Paz', horario: LV9a12 });
+        const o = agendaOpt(ag({ reservas: { n: 0 }, paso: { n: 30 } }), 30);
+        const nueve = Date.UTC(2026, 9, 5, 13), once = Date.UTC(2026, 9, 5, 15);
+        const reservas = [
+            { estado: 'agendada', closer_id: 'ana', inicio_ms: nueve, fin_ms: nueve + H / 2, margen_min: 20 },
+            { estado: 'agendada', closer_id: 'ana', inicio_ms: once, fin_ms: once + H / 2 },
+        ];
+        const { ocupado } = opcionesDeOcupacion(reservas, LUNES);
+        expect(slotsPersona(p, 30, o, { ahora: LUNES, ocupado, margen: 20 })).toEqual([Date.UTC(2026, 9, 5, 14), Date.UTC(2026, 9, 5, 15, 30)]);
+    });
+    it('cada closer ofrece con su propia sesión', () => {
+        const ana = { id: 'ana', rol: 'closer', tz: 'America/La_Paz', horario: LV9a12, sesiones: { ev: { duracion: 30 } } };
+        const beto = { id: 'beto', rol: 'closer', tz: 'America/La_Paz', horario: LV9a12 };
+        const d = datos({ personas: [ana, beto] });
+        const ctx = { dur: 60, margen: 0, eventoId: 'ev', ag: ag({ reservas: { n: 0 }, paso: { n: 30 } }) };
+        expect(asignacion({ ...ctx, persona: 'ana' }, d, { ahora: LUNES }).slots).toHaveLength(6);
+        expect(asignacion({ ...ctx, persona: 'beto' }, d, { ahora: LUNES }).slots).toHaveLength(5);
+        expect(asignacion({ ...ctx, eventoId: 'otro', persona: 'ana' }, d, { ahora: LUNES }).slots).toHaveLength(5);
+    });
+    it('la reserva guarda la sesión del closer que tocó', () => {
+        const lead = { preguntas: [], resp: { 'c-nombre': 'Ana' }, pais: 'BO', tz: 'America/La_Paz' };
+        const e = normalEvento('e', { duracion: 60, margen: 10 });
+        let r = armarReserva({ lead, evento: e, slot: { t: LUNES, p: 'ana', dur: 30, margen: 20 } });
+        expect([r.duracion_min, r.margen_min]).toEqual([30, 20]);
+        r = armarReserva({ lead, evento: e, slot: { t: LUNES, p: 'ana' } });
+        expect([r.duracion_min, r.margen_min]).toEqual([60, 10]);
+    });
+});

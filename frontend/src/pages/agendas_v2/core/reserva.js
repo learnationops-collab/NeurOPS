@@ -50,7 +50,9 @@ export function armarReserva({ lead, evento, funnel, form, asig, slot, origen, s
         funnel_tipo: funnel ? (funnel.tipo || 'otro') : '',
         formulario_id: form ? form.id : '',
         inicio: slot ? new Date(slot.t).toISOString() : null,
-        duracion_min: evento.duracion,
+        // La sesión del closer que tocó (lo suyo o la propuesta del evento) y su margen, como eran al agendar.
+        duracion_min: (slot && slot.dur) || evento.duracion,
+        margen_min: slot && slot.margen != null ? slot.margen : evento.margen || 0,
         closer_id: slot ? slot.p : null,
         prioridad_id: asig && asig.grupo ? asig.grupo.id : null,
         prioridad_regla_id: asig ? asig.grupoRegla || null : null,

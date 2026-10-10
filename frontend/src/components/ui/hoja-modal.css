@@ -55,7 +55,22 @@
         max-height: calc(100dvh - 48px);
         border-radius: 2rem;
     }
+    /* Para tablas anchas (Equipo, en la Configuración del admin). */
+    .hoja-panel--amplia {
+        max-width: 72rem;
+    }
     .hoja-cuerpo {
         padding: 3.5rem 2.5rem 2.25rem;
     }
+}
+
+/* Con tema elegido (`data-tema` en <html>, temas/temas.css) la hoja es el modal del tema y su texto
+   el del tema: nunca más una hoja navy con el texto de un tema claro. Sin tema, como siempre. */
+[data-tema] .hoja-panel {
+    background: var(--ln-window-bg);
+    color: var(--ln-window-text);
+    border-color: var(--ln-border-main);
+    --text-main: var(--ln-window-text);
+    --color-text-base: var(--ln-window-text);
+    --text-muted: var(--ln-text-muted);
 }

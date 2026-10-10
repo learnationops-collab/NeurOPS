@@ -5,12 +5,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DashboardComercial from './DashboardComercial';
 
 /**
- * La sesión en el dock del dashboard comercial (30/09/2026): la dirección simula a cualquier closer
- * activo desde el menú del avatar —y desde el 10/10/2026 a cualquier setter activo—, y ya no tiene
- * "Ir a Ventas" en la cabecera. Quién puede simular lo decide el backend; acá se comprueba que la
- * opción se ofrezca a quien corresponde y que elegir a alguien lo simule a él.
+ * La sesión en el dock del dashboard comercial (30/09/2026): ya no tiene "Ir a Ventas" en la cabecera.
+ * Desde el 10/10/2026 el menú es el mismo para todos (Configuración, Portal, Mis reportes, salida):
+ * cambiar de rol o de área, simular, el Playbook y Learnito están en el Portal.
  */
-const OPCIONES_DE_SIMULAR = ['Simular a un closer', 'Simular a un setter'];
 
 const estado = vi.hoisted(() => ({ user: null, yo: null }));
 const api = vi.hoisted(() => ({ get: vi.fn() }));
@@ -55,42 +53,20 @@ describe('DashboardComercial · la sesión en el dock', () => {
         impersonation.simularA.mockClear();
     });
 
-    it('la dirección no tiene "Ir a Ventas", y desde el avatar simula a un closer activo', async () => {
+    it('la dirección no tiene "Ir a Ventas", y el menú es corto: simular está en el Portal', async () => {
         estado.user = { id: 1, role: 'director_comercial', is_impersonating: false };
         estado.yo = { id: 1, rol: 'director_comercial', nombre: 'Dirección' };
-        api.get.mockResolvedValue({ data: { closers: [{ id: 21, username: 'Marlon Closer' }, { id: 22, username: 'Jean Carlo' }] } });
         montar();
         await screen.findByTestId('analizar');
 
         expect(screen.queryByText(/Ir a Ventas/i)).toBeNull();
         await abrirSesion('Dirección');
         expect(screen.getByText('Dirección comercial')).toBeTruthy();
-        expect(screen.getAllByRole('menuitem').map(i => i.textContent))
-            .toEqual(['Cambiar de área', ...OPCIONES_DE_SIMULAR, 'Reportar un problema', 'Mis reportes', 'Cerrar sesión']);
-
-        await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Simular a un closer' })); });
-        expect(api.get).toHaveBeenCalledWith('/auth/impersonate/closers');
-        await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Marlon Closer' })); });
-        expect(impersonation.simularA).toHaveBeenCalledWith(21, null, 'closer');
+        expect(screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent))
+            .toEqual(['Configuración', 'Portal', 'Mis reportes', 'Reportar un problema', 'Cerrar sesión']);
     });
 
-    it('la dirección simula a un setter activo desde el mismo menú', async () => {
-        estado.user = { id: 1, role: 'director_comercial', is_impersonating: false };
-        estado.yo = { id: 1, rol: 'director_comercial', nombre: 'Dirección' };
-        api.get.mockResolvedValue({ data: { setters: [{ id: 31, username: 'Paula' }, { id: 32, username: 'Facundo' }] } });
-        montar();
-        await screen.findByTestId('analizar');
-
-        await abrirSesion('Dirección');
-        await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Simular a un setter' })); });
-        expect(api.get).toHaveBeenCalledWith('/auth/impersonate/setters');
-        expect(screen.getByRole('group', { name: 'Simular a un setter' })).toBeTruthy();
-        expect(screen.getByRole('menuitem', { name: 'Paula' })).toBeTruthy();
-        await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Facundo' })); });
-        expect(impersonation.simularA).toHaveBeenCalledWith(32, null, 'setter');
-    });
-
-    it('un closer en "Mis datos" no ve "Simular a un closer", y sigue teniendo la vuelta al mazo', async () => {
+    it('un closer en "Mis datos" tiene el mismo menú, y sigue teniendo la vuelta al mazo', async () => {
         estado.user = { id: 21, role: 'closer', is_impersonating: false };
         estado.yo = { id: 21, rol: 'closer', nombre: 'Marlon Closer' };
         montar();
@@ -98,11 +74,11 @@ describe('DashboardComercial · la sesión en el dock', () => {
 
         expect(screen.getByRole('link', { name: 'Volver al mazo' })).toBeTruthy();
         await abrirSesion('Marlon Closer');
-        expect(screen.getAllByRole('menuitem').map(i => i.textContent)).toEqual(['Reportar un problema', 'Mis reportes', 'Cerrar sesión']);
+        expect(screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent)).toEqual(['Configuración', 'Portal', 'Mis reportes', 'Reportar un problema', 'Cerrar sesión']);
         expect(api.get).not.toHaveBeenCalled();
     });
 
-    it('la dirección simulando a un closer puede pasar a otro y volver a su sesión', async () => {
+    it('la dirección simulando a un closer puede volver a su sesión', async () => {
         estado.user = { id: 21, role: 'closer', is_impersonating: true, original_user_role: 'director_comercial' };
         estado.yo = { id: 21, rol: 'closer', nombre: 'Marlon Closer' };
         montar();
@@ -110,8 +86,8 @@ describe('DashboardComercial · la sesión en el dock', () => {
 
         await abrirSesion('Marlon Closer');
         expect(screen.getByText('Closer · simulación')).toBeTruthy();
-        expect(screen.getAllByRole('menuitem').map(i => i.textContent))
-            .toEqual([...OPCIONES_DE_SIMULAR, 'Reportar un problema', 'Mis reportes', 'Volver a mi sesión', 'Cerrar sesión']);
+        expect(screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent))
+            .toEqual(['Configuración', 'Portal', 'Mis reportes', 'Reportar un problema', 'Volver a mi sesión', 'Cerrar sesión']);
         fireEvent.click(screen.getByRole('menuitem', { name: 'Volver a mi sesión' }));
         expect(impersonation.revertImpersonation).toHaveBeenCalledTimes(1);
     });

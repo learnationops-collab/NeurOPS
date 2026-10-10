@@ -92,10 +92,10 @@ const ProcrastinarModal = ({ pendientes = 0, onClose, onGo }) => {
                 </div>
 
                 <div className="grid grid-cols-4 gap-2 mt-4">
-                    <Stat value={mensajes} label="Mensajes" color="#fff" />
-                    <Stat value={calc.contestan.toFixed(1)} label="Contestan" color="#60A5FA" />
-                    <Stat value={calc.ventas.toFixed(1)} label="Ventas" color="#F3D08A" />
-                    <Stat value={money(calc.potencial)} label="En caja" color="#FF3FA4" />
+                    <Stat value={mensajes} label="Mensajes" color="var(--ln-text-out, #fff)" />
+                    <Stat value={calc.contestan.toFixed(1)} label="Contestan" color="var(--ln-info, #60A5FA)" />
+                    <Stat value={calc.ventas.toFixed(1)} label="Ventas" color="var(--ln-warning-text, #F3D08A)" />
+                    <Stat value={money(calc.potencial)} label="En caja" color="var(--ln-brand, #FF3FA4)" />
                 </div>
 
                 <div className="space-y-4 mt-5">

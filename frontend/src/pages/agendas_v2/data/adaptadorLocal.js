@@ -44,12 +44,15 @@ export function crearAdaptadorLocal() {
         async guardarPerfil(p) { escribir('perfil', p); },
         async guardarInteg(i) { escribir('integ', i); },
         async usuarios() { return []; },
+        async ocupacion() { return {}; },
         async crearReserva(payload) {
             const rs = leer('reservas', []);
             const inicio = payload.inicio ? Date.parse(payload.inicio) : null;
             const fin = inicio != null ? inicio + payload.duracion_min * 60000 : null;
-            // Misma regla que tiene que hacer cumplir el servidor dentro de una transacción.
-            if (inicio != null && payload.closer_id && rs.some(r => r.estado !== 'cancelada' && r.closer_id === payload.closer_id && r.inicio_ms < fin && inicio < r.fin_ms)) {
+            // Misma regla que tiene que hacer cumplir el servidor dentro de una transacción (con los márgenes).
+            const tope = fin != null ? fin + (payload.margen_min || 0) * 60000 : null;
+            const ocupa = (r) => r.inicio_ms < tope && inicio < r.fin_ms + (r.margen_min || 0) * 60000;
+            if (inicio != null && payload.closer_id && rs.some(r => r.estado !== 'cancelada' && r.closer_id === payload.closer_id && ocupa(r))) {
                 const e = new Error('Ese horario se acaba de ocupar.'); e.code = 'ocupado'; throw e;
             }
             const r = { ...payload, id: uid('rs'), estado: payload.descalificada ? 'descalificada' : 'agendada', inicio_ms: inicio, fin_ms: fin, creada: new Date().toISOString() };

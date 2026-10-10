@@ -6,11 +6,9 @@ const auth = { login: vi.fn(), entrarConGoogle: vi.fn(), completarLoginGoogle: v
 vi.mock('../../contexts/AuthContext', () => ({ useAuth: () => auth }));
 const navigate = vi.fn();
 vi.mock('react-router-dom', async (orig) => ({ ...(await orig()), useNavigate: () => navigate }));
-vi.mock('../../utils/cuentasVinculadas', async (orig) => ({ ...(await orig()), cambiarDeRolEnLaCuenta: vi.fn() }));
 vi.mock('../../components/modals/DebugConsole', () => ({ default: () => null }));
 
 import LoginPage from './LoginPage';
-import { cambiarDeRolEnLaCuenta } from '../../utils/cuentasVinculadas';
 
 const montar = (url = '/login') => render(<MemoryRouter initialEntries={[url]}><LoginPage /></MemoryRouter>);
 
@@ -23,7 +21,7 @@ const entrar = async (user) => {
 };
 
 describe('LoginPage', () => {
-    beforeEach(() => vi.clearAllMocks());
+    beforeEach(() => { vi.clearAllMocks(); localStorage.clear(); });
 
     it('arranca directo en el inicio de sesión', () => {
         montar();
@@ -43,39 +41,25 @@ describe('LoginPage', () => {
         expect(auth.cargarEmail).not.toHaveBeenCalled();
     });
 
-    it('con varios roles elige con cuál entra', async () => {
+    it('con un solo rol entra a su pantalla', async () => {
+        await entrar({ id: 1, username: 'ana', role: 'closer', roles: ['closer'], email: 'a@x.com' });
+        await waitFor(() => expect(navigate).toHaveBeenCalledWith('/closer/deck?step=confirmations'));
+    });
+
+    it('con varios roles, áreas o Finances va al Portal a elegir', async () => {
         await entrar({ id: 1, username: 'ana', role: 'operator', roles: ['operator', 'closer'], email: 'a@x.com' });
-        fireEvent.click(await screen.findByRole('button', { name: /closer/i }));
-        await waitFor(() => expect(cambiarDeRolEnLaCuenta).toHaveBeenCalledWith('closer'));
-        expect(navigate).not.toHaveBeenCalled();
+        await waitFor(() => expect(navigate).toHaveBeenCalledWith('/portal'));
     });
 
-    it('con «ver finanzas» suma la tarjeta Finances («Learnation Finances»): entra con admin y va a /finanzas', async () => {
-        await entrar({ id: 1, username: 'mario', role: 'operator', roles: ['operator', 'admin'], can_view_finance: true, email: 'm@x.com' });
-        const tarjeta = await screen.findByRole('button', { name: /Finances/ });
-        expect(tarjeta.querySelector('small').textContent).toBe('Learnation');
-        fireEvent.click(tarjeta);
-        await waitFor(() => expect(cambiarDeRolEnLaCuenta).toHaveBeenCalledWith('admin', '/finanzas'));
-    });
-
-    it('si ya entró con el rol de Finances, va directo a /finanzas', async () => {
-        await entrar({ id: 1, username: 'mario', role: 'admin', roles: ['admin', 'closer'], can_view_finance: true, email: 'm@x.com' });
-        fireEvent.click(await screen.findByRole('button', { name: /Finances/ }));
-        expect(navigate).toHaveBeenCalledWith('/finanzas');
-        expect(cambiarDeRolEnLaCuenta).not.toHaveBeenCalled();
-    });
-
-    it('con un solo rol y «ver finanzas» elige igual: la dirección comercial o Finances', async () => {
+    it('un solo rol que además ve Finances también va al Portal', async () => {
         await entrar({ id: 4, username: 'marlon', role: 'director_comercial', roles: ['director_comercial'], can_view_finance: true, email: 'm@x.com' });
-        expect(await screen.findByRole('button', { name: /Dirección comercial/ })).toBeTruthy();
-        expect(screen.getByRole('button', { name: /Finances/ })).toBeTruthy();
-        expect(navigate).not.toHaveBeenCalled();
+        await waitFor(() => expect(navigate).toHaveBeenCalledWith('/portal'));
     });
 
-    it('sin «ver finanzas» no hay tarjeta Finances', async () => {
-        await entrar({ id: 1, username: 'mario', role: 'operator', roles: ['operator', 'admin'], email: 'm@x.com' });
-        await screen.findByRole('button', { name: /Administrador/ });
-        expect(screen.queryByRole('button', { name: /Finances/ })).toBeNull();
+    it('con una tarjeta por defecto del mismo rol entra directo ahí', async () => {
+        localStorage.setItem('portal_por_defecto_v2_4', 'director_comercial:agendamiento');
+        await entrar({ id: 4, username: 'marlon', role: 'director_comercial', roles: ['director_comercial'], email: 'm@x.com' });
+        await waitFor(() => expect(navigate).toHaveBeenCalledWith('/agendas-v2'));
     });
 
     it('la vuelta de Google sin cuenta muestra el motivo', () => {

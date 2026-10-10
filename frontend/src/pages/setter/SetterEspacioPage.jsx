@@ -2,13 +2,14 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { BarChart3, CalendarDays, CheckCircle2, ClipboardList, Compass, Ghost, Link2, LogOut } from 'lucide-react';
+import { BarChart3, CalendarDays, CheckCircle2, ClipboardList, Ghost, Link2 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
 import { revertImpersonation } from '../../utils/impersonation';
-import { opcionesDeRol } from '../../utils/cuentasVinculadas';
-import OperatorControls from '../../components/modals/OperatorControls';
+import { armarMenuSesion, rotuloDeSesion } from '../../sesion/menuSesion';
+import { useConfiguracion } from '../../sesion/ConfiguracionContext';
+import { abrirSimulacion } from '../../sesion/simulacion';
 import DashboardComercial from '../comercial/DashboardComercial';
 import DockSecciones from '../comercial/components/DockSecciones';
 import MenuSesion from '../comercial/components/MenuSesion';
@@ -95,11 +96,11 @@ const hoyLocal = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60
 
 const SetterEspacioPage = () => {
     const { user, logout } = useAuth();
+    const { abrir: abrirConfiguracion } = useConfiguracion();
     const { pendingCount, openPlaybook } = usePlaybook();
     const [params, setParams] = useSearchParams();
     const reducir = useReducedMotion();
     const [saliendo, setSaliendo] = useState(false);
-    const [operador, setOperador] = useState(false);
     const [reporteHoy, setReporteHoy] = useState(false);
     // Cuántas agendas le quedan sin palabra clave: la marca de "Mis agendas" en el dock. La
     // informa la propia bandeja (al cargar y después de cada asignación); si se entra por otra
@@ -150,7 +151,7 @@ const SetterEspacioPage = () => {
             .catch(() => { /* sin ✓, que es lo que hay que mostrar si no se sabe */ });
     }, [user?.id]);
 
-    // Atajo 'w' para el panel de operador. Sin MainLayout esta pantalla no tiene el
+    // Atajo 'w' para Simular a alguien. Sin MainLayout esta pantalla no tiene el
     // HotkeysManager global (igual que el mazo del closer), y un operador que simula a un setter
     // lo necesita para cambiar de simulación.
     useEffect(() => {
@@ -158,7 +159,7 @@ const SetterEspacioPage = () => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
             if (e.key.toLowerCase() === 'w' && !e.metaKey && !e.ctrlKey && !e.altKey) {
                 e.preventDefault();
-                setOperador(v => !v);
+                abrirSimulacion();
             }
         };
         window.addEventListener('keydown', alTeclear);
@@ -200,23 +201,17 @@ const SetterEspacioPage = () => {
     const nombre = user?.name || user?.username || 'Setter';
 
     // La sesión al final del dock: lo que antes eran botones del header.
-    const gruposDeSesion = [
-        [{ id: 'playbook', label: 'Playbook', Icono: Compass, onClick: () => openPlaybook('pending'),
-            cuenta: pendingCount > 0 ? pendingCount : null,
-            titulo: pendingCount > 0 ? `${pendingCount} pendientes` : null },
-        // Sus links de Agendas 2.0 (uno por evento de cada funnel de setting): lo que entra por ahí
-        // queda a su nombre y aparece en sus agendas, como con Calendly. Tocar uno lo copia.
-        { id: 'links', label: 'Mis links de agendamiento', Icono: Link2,
-            panel: { titulo: 'Mis links de agendamiento', vacio: 'Todavía no hay funnels de setting publicados.', cargar: cargarMisLinks } }],
-        opcionesDeRol(user, (m) => toast.error(m)),
-        [
-            ...(user?.is_impersonating
-                ? [{ id: 'volver', label: 'Volver a mi sesión', Icono: Ghost, onClick: volverAMiSesion }]
-                : []),
-            { id: 'salir', label: 'Cerrar sesión', Icono: LogOut, peligro: true,
-                onClick: () => { if (window.confirm('¿Cerrar sesión?')) logout(); } },
+    const gruposDeSesion = armarMenuSesion({
+        user, logout, navigate: (ruta) => window.location.assign(ruta),
+        acciones: [
+            // Sus links de Agendas 2.0 (uno por evento de cada funnel de setting): lo que entra por ahí
+            // queda a su nombre y aparece en sus agendas, como con Calendly. Tocar uno lo copia.
+            { id: 'links', label: 'Mis links de agendamiento', Icono: Link2,
+                panel: { titulo: 'Mis links de agendamiento', vacio: 'Todavía no hay funnels de setting publicados.', cargar: cargarMisLinks } },
         ],
-    ];
+        configuracion: { onClick: () => abrirConfiguracion() },
+        playbook: { onClick: () => openPlaybook('pending'), pendientes: pendingCount },
+    });
 
     return (
         <div className="setter-espacio">
@@ -290,7 +285,7 @@ const SetterEspacioPage = () => {
                         ariaLabel="Secciones del espacio del setter"
                         despues={(
                             <MenuSesion nombre={nombre}
-                                rol={user?.is_impersonating ? 'Setter · simulación' : 'Setter'}
+                                rol={rotuloDeSesion(user)}
                                 aviso={pendingCount > 0
                                     ? { texto: pendingCount, titulo: `${pendingCount} ${pendingCount === 1 ? 'video pendiente' : 'videos pendientes'} del Playbook` }
                                     : null}
@@ -299,7 +294,6 @@ const SetterEspacioPage = () => {
                 </div>
             </div>
 
-            <OperatorControls isOpen={operador} onClose={() => setOperador(false)} />
         </div>
     );
 };

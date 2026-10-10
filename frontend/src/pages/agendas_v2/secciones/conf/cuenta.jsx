@@ -1,4 +1,4 @@
-// Lo de cada cuenta, con el estilo de Thalamus: datos, Google Calendar, WhatsApp y disponibilidad.
+// Lo de cada cuenta, con el estilo de Thalamus: datos, Google Calendar, WhatsApp, disponibilidad y sesiones.
 // Lo usan la Configuración de Agendamiento y la del closer (que lo envuelve en `.thalamus`). No tiene
 // lógica propia: habla con los mismos endpoints de NeurOPS (/google/*, /auth/me/*).
 //
@@ -10,6 +10,7 @@ import api from '../../../../services/api';
 import { rotuloDeRol } from '../../../../utils/cuentasVinculadas';
 import { Icono, Sx } from '../../ui/base';
 import { HorarioEditor } from '../team/Horario';
+import { EditorSesiones } from '../team/Sesiones';
 import FotoCuenta from './FotoCuenta';
 
 function Estado({ ok, si, no }) {
@@ -99,7 +100,8 @@ function leerVueltaDeGoogle() {
 
 /**
  * Google Calendar: conectar (vuelve a esta pantalla), elegir en qué calendario se crean las agendas y
- * desconectar. volver: a dónde lo devuelve Google ('agendamiento' o, sin nada, la Configuración del closer).
+ * desconectar. volver: a dónde lo devuelve Google ('agendamiento' o, sin nada, a esta misma pantalla con la
+ * Configuración abierta, sesion/ConfiguracionContext.jsx).
  */
 export function TarjetaCalendar({ volver }) {
     const [st, setSt] = useState(null); // { connected, vencido, calendars, selected_calendar }
@@ -118,7 +120,7 @@ export function TarjetaCalendar({ volver }) {
         try { await fn(); } catch { setMsg({ error: 'Algo falló con Google. Probá de nuevo.' }); } finally { setOcupado(false); }
     };
     const conectar = () => correr(async () => {
-        const r = await api.get('/google/login', { params: volver ? { volver } : {} });
+        const r = await api.get('/google/login', { params: { volver: volver || window.location.pathname } });
         if (r.data.auth_url) window.location.href = r.data.auth_url;
     });
     const elegir = (v) => correr(async () => {
@@ -285,6 +287,54 @@ export function TarjetaDisponibilidad() {
                         <Mensajes error={error} aviso={aviso} />
                         <button type="button" className="btn btn--cta btn--sm" disabled={ocupado || !cambios} onClick={guardar}>
                             {ocupado ? 'Guardando…' : 'Guardar disponibilidad'}
+                        </button>
+                    </div>
+                </>
+            )}
+        </Tarjeta>
+    );
+}
+
+/** Mis sesiones: cuánto dura cada sesión y el margen que se deja después, por evento. La propuesta es la
+ * del evento; lo que se ajusta acá queda en su persona de Team, donde la dirección comercial lo revisa. */
+export function TarjetaSesiones() {
+    const [datos, setDatos] = useState(null);
+    const [sesiones, setSesiones] = useState({});
+    const [cambios, setCambios] = useState(false);
+    const [ocupado, setOcupado] = useState(false);
+    const [error, setError] = useState(null);
+    const [aviso, setAviso] = useState(null);
+
+    const aplicar = (r) => {
+        setDatos(r);
+        setSesiones(Object.fromEntries((r.eventos || []).filter(e => e.propia && Object.keys(e.propia).length).map(e => [e.id, e.propia])));
+        setCambios(false);
+    };
+    useEffect(() => {
+        api.get('/auth/me/sesiones').then((r) => aplicar(r.data)).catch(() => setError('No se pudieron leer tus sesiones.'));
+    }, []);
+    const guardar = async () => {
+        setOcupado(true); setError(null);
+        try {
+            const r = await api.put('/auth/me/sesiones', { sesiones });
+            aplicar(r.data);
+            setAviso('Listo: tus sesiones quedaron guardadas.');
+        } catch (e) {
+            setError(e?.response?.data?.message || 'No se pudo guardar. Probá de nuevo.');
+        } finally { setOcupado(false); }
+    };
+
+    return (
+        <Tarjeta icono="clock" titulo="Mis sesiones"
+            texto="Cuánto dura cada sesión y el margen que te dejás después para poder extenderla. El lead ve solo la duración; el margen bloquea tu agenda.">
+            {!datos ? <p className="t-sm mut">{error || 'Cargando…'}</p> : (
+                <>
+                    <EditorSesiones eventos={datos.eventos || []} sesiones={sesiones}
+                        onCambio={(s) => { setSesiones(s); setCambios(true); setAviso(null); }} />
+                    <div className="cu-fila cu-fila--fin">
+                        <Mensajes error={error} aviso={aviso} />
+                        <button type="button" className="btn btn--cta btn--sm" disabled={ocupado || !cambios} onClick={guardar}>
+                            {ocupado ? 'Guardando…' : 'Guardar sesiones'}
                         </button>
                     </div>
                 </>

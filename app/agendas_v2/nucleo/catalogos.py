@@ -77,7 +77,11 @@ FIN_DEF = {
     'titulo': 'Gracias por tu sinceridad',
     'texto': 'Por ahora no vamos a agendar la sesión. Te mandamos por email la ruta para que sigas avanzando.',
 }
+# Duración de la sesión y margen después de ella, en minutos: los atajos que se ofrecen. Se puede poner
+# cualquier otro valor dentro de los límites.
 DURACIONES = [15, 30, 45, 60, 90]
+MARGENES = [0, 5, 10, 15, 20, 30]
+DURACION_MIN, DURACION_MAX, MARGEN_MAX = 5, 240, 120
 DIAS = [
     {'d': 1, 'c': 'L', 'n': 'lunes'},
     {'d': 2, 'c': 'M', 'n': 'martes'},

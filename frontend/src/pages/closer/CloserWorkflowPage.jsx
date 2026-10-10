@@ -6,16 +6,16 @@ import {
     Layers, Search, Check, X, ChevronRight, Loader2,
     Calendar, Phone, Mail, Instagram, ExternalLink,
     CalendarDays, AlertCircle, CreditCard,
-    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, LogOut, Pencil,
-    Compass, Sparkles, DollarSign, UserPlus,
+    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, Pencil,
+    DollarSign, UserPlus,
     CalendarCheck, PhoneCall, MessageCircle, ClipboardList, BarChart3, Briefcase, FileSearch,
-    CalendarPlus, Gift, Hourglass, Ghost, Settings
+    CalendarPlus, Gift, Hourglass, Ghost
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
 import TriageFollowUpModal from '../triage/components/TriageFollowUpModal';
-import OperatorControls from '../../components/modals/OperatorControls';
+import { abrirSimulacion } from '../../sesion/simulacion';
 import CloserLeadsAudit from './audit/CloserLeadsAudit';
 import SeguimientosPane from './components/SeguimientosPane';
 import EsqueletoKanban from './components/EsqueletoKanban';
@@ -25,13 +25,12 @@ import DashboardComercial from '../comercial/DashboardComercial';
 import DockSecciones from '../comercial/components/DockSecciones';
 import MenuSesion from '../comercial/components/MenuSesion';
 import { revertImpersonation } from '../../utils/impersonation';
-import { opcionesDeRol } from '../../utils/cuentasVinculadas';
+import { armarMenuSesion, rotuloDeSesion } from '../../sesion/menuSesion';
+import { useConfiguracion } from '../../sesion/ConfiguracionContext';
 import '../comercial/comercial.css';
 import '../../components/dashboard/pareja.css';
 import ComisionMesCard from './components/ComisionMesCard';
 import ProcrastinarModal from './components/ProcrastinarModal';
-import ConfiguracionCloser from './components/ConfiguracionCloser';
-import HojaModal from '../../components/ui/HojaModal';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, localToday, localDateFromNow, formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
 import AgendaCountdown from '../../components/shared/AgendaCountdown';
 import FichaLeadModal from '../../components/ficha/FichaLeadModal';
@@ -88,7 +87,6 @@ const CloserWorkflowPage = () => {
     const { user, logout } = useAuth();
     const { pendingCount, openPlaybook } = usePlaybook();
     const [searchParams, setSearchParams] = useSearchParams();
-    const [showOperatorControls, setShowOperatorControls] = useState(false);
 
     const activeStep = searchParams.get('step') || 'confirmations';
 
@@ -111,7 +109,7 @@ const CloserWorkflowPage = () => {
         if (paraVender) buscadorRef.current?.focus();
     }, [paraVender]);
 
-    // Atajo 'w' para Acceso Simulado (operador). CloserWorkflowPage corre fuera de
+    // Atajo 'w' para Simular a alguien (sesion/Simular.jsx). CloserWorkflowPage corre fuera de
     // MainLayout (para que los modales fixed funcionen standalone), por lo que no
     // hereda el HotkeysManager global y necesita su propio listener.
     useEffect(() => {
@@ -123,7 +121,7 @@ const CloserWorkflowPage = () => {
             ) return;
             if (e.key.toLowerCase() === 'w' && !e.metaKey && !e.ctrlKey && !e.altKey) {
                 e.preventDefault();
-                setShowOperatorControls(prev => !prev);
+                abrirSimulacion();
             }
         };
         window.addEventListener('keydown', handleKeyDown);
@@ -142,17 +140,9 @@ const CloserWorkflowPage = () => {
 
     // Vista activa v6: 'inbox' (bandeja) o 'report' (reporte del día).
     const [activeView, setActiveView] = useState('inbox');
-    // Configuración se abre en una hoja encima del mazo. `?vista=configuracion` la abre: es a donde
-    // vuelve Google después de conectar el calendario.
-    const [configAbierta, setConfigAbierta] = useState(() => searchParams.get('vista') === 'configuracion');
-    const cerrarConfig = () => {
-        setConfigAbierta(false);
-        if (searchParams.get('vista') === 'configuracion') {
-            const resto = new URLSearchParams(searchParams);
-            ['vista', 'google_connected', 'google_error'].forEach((k) => resto.delete(k));
-            setSearchParams(resto, { replace: true });
-        }
-    };
+    // Configuración es la de todos (sesion/ConfiguracionContext.jsx): una hoja encima del mazo. Al
+    // cerrarla se vuelve a mirar si faltan Calendar o WhatsApp.
+    const { abierta: configAbierta, abrir: abrirConfiguracion } = useConfiguracion();
     // Google Calendar conectado y WhatsApp confirmado (null mientras no se sabe): sin ellos, el closer
     // no recibe agendas del sistema nuevo, así que «Configuración» lleva un aviso en el menú de sesión.
     const [calendarConectado, setCalendarConectado] = useState(null);
@@ -1450,34 +1440,18 @@ const CloserWorkflowPage = () => {
             toast.error(error?.response?.data?.message || 'No se pudo volver a tu sesión');
         }
     };
-    const gruposDeSesion = [
-        [
+    const gruposDeSesion = armarMenuSesion({
+        user, logout, navigate: (ruta) => window.location.assign(ruta),
+        acciones: [
             { id: 'agenda', label: 'Nueva agenda', Icono: CalendarPlus, onClick: () => setNewAgendaModalOpen(true) },
             { id: 'referido', label: 'Referido manual', Icono: Gift, onClick: () => setManualRefModalOpen(true) },
-        ],
-        [
-            { id: 'playbook', label: 'Playbook', Icono: Compass, onClick: () => openPlaybook('pending'),
-                cuenta: pendingCount > 0 ? pendingCount : null,
-                titulo: pendingCount > 0 ? `${pendingCount} pendientes` : null },
-            { id: 'learnito', label: 'Learnito', Icono: Sparkles, pronto: true, titulo: 'próximamente',
-                onClick: () => toast('Learnito (buscador con IA sobre el Playbook) llega próximamente.', { icon: '✨' }) },
             ...(counts.seguimientos > 0
                 ? [{ id: 'procrastinar', label: 'Quiero procrastinar', Icono: Hourglass, onClick: () => setShowProcrastinar(true) }]
                 : []),
         ],
-        opcionesDeRol(user, (m) => toast.error(m)),
-        [
-            // Configuración (por ahora, Google Calendar) vive en el menú de sesión, no en el dock.
-            { id: 'configuracion', label: 'Configuración', Icono: Settings, onClick: () => setConfigAbierta(true),
-                cuenta: faltaConfigurar.length ? '!' : null,
-                titulo: faltaConfigurar.length ? faltaConfigurar.join(' · ') : null },
-            ...(user?.is_impersonating
-                ? [{ id: 'volver', label: 'Volver a mi sesión', Icono: Ghost, onClick: volverAMiSesion }]
-                : []),
-            { id: 'salir', label: 'Cerrar sesión', Icono: LogOut, peligro: true,
-                onClick: () => { if (window.confirm('¿Cerrar sesión?')) logout(); } },
-        ],
-    ];
+        configuracion: { onClick: () => abrirConfiguracion(), avisos: faltaConfigurar },
+        playbook: { onClick: () => openPlaybook('pending'), pendientes: pendingCount },
+    });
     // La página scrollea dentro de su propio contenedor, no en la ventana: al cambiar de sección se
     // vuelve arriba ahí, para no caer en la mitad de la otra.
     const paginaRef = useRef(null);
@@ -1497,8 +1471,8 @@ const CloserWorkflowPage = () => {
             style={{ paddingBottom: 'calc(132px + env(safe-area-inset-bottom, 0px))' }}>
 
             {/* Header del Espacio de Trabajo Premium v6. Solo la marca y el buscador (pedido del
-                30/09/2026): crear una agenda o un referido, el Playbook, Learnito, "Quiero
-                procrastinar" y la sesión viven al final del dock, en `MenuSesion`. */}
+                30/09/2026): crear una agenda o un referido, "Quiero procrastinar" y la sesión
+                viven al final del dock, en `MenuSesion`; el Playbook y Learnito, en Cortex (el Portal). */}
             <header className="top-v6 border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
                 <div className="topin topin--buscador">
                     <div className="brand-v6">
@@ -1879,14 +1853,14 @@ const CloserWorkflowPage = () => {
                                         )}
                                         {confirmationsPipeline.porConfirmar.length > 0 && (
                                             <>
-                                                <div className="ksub-v6"><span className="dt-v6" style={{ background: 'var(--v6-warn)', boxShadow: '0 0 0 3px rgba(217,164,65,.16)' }}></span>Sin contactar</div>
+                                                <div className="ksub-v6"><span className="dt-v6" style={{ background: 'var(--v6-warn)', boxShadow: '0 0 0 3px color-mix(in srgb, var(--ln-warning, #d9a441) 16%, transparent)' }}></span>Sin contactar</div>
                                                 {/* Orden de entrada: renglón × 2 columnas + columna (ver renderKanbanCard). */}
                                                 {confirmationsPipeline.porConfirmar.map((a, i) => renderKanbanCard(a, 'por_confirmar', i * 2))}
                                             </>
                                         )}
                                         {confirmationsPipeline.conversando.length > 0 && (
                                             <>
-                                                <div className="ksub-v6"><span className="dt-v6" style={{ background: 'var(--v6-info)', boxShadow: '0 0 0 3px rgba(96,165,250,.16)' }}></span>Conversando</div>
+                                                <div className="ksub-v6"><span className="dt-v6" style={{ background: 'var(--v6-info)', boxShadow: '0 0 0 3px color-mix(in srgb, var(--ln-info, #60a5fa) 16%, transparent)' }}></span>Conversando</div>
                                                 {/* Mismo carril que "Sin contactar": sigue contando desde ahí. */}
                                                 {confirmationsPipeline.conversando.map((a, i) => renderKanbanCard(a, 'conversando', (confirmationsPipeline.porConfirmar.length + i) * 2))}
                                             </>
@@ -2062,14 +2036,14 @@ const CloserWorkflowPage = () => {
                                     <h2>Buen avance, {firstName}</h2>
                                     <p>{doneToday} de {totalToday} resueltos · ${Math.round(cashToday).toLocaleString()} movidos {isToday ? 'hoy' : 'ayer'}</p>
                                     <div className="flex items-center gap-3 flex-wrap mt-4">
-                                        <span className="rpt-pill-v6" style={{ background: 'rgba(255,63,164,.12)', border: '1px solid rgba(255,63,164,.45)' }}>
-                                            <span style={{ color: 'rgba(255,255,255,.6)' }}>MOVISTE</span>
+                                        <span className="rpt-pill-v6" style={{ background: 'color-mix(in srgb, var(--ln-brand, #ff3fa4) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--ln-brand, #ff3fa4) 45%, transparent)' }}>
+                                            <span style={{ color: 'color-mix(in srgb, var(--ln-text-out, #ffffff) 60%, transparent)' }}>MOVISTE</span>
                                             <span style={{ color: 'var(--v6-pink)', fontVariantNumeric: 'tabular-nums' }}>${Math.round(cashToday).toLocaleString()}</span>
                                         </span>
-                                        <span className="rpt-pill-v6" style={{ background: 'rgba(78,139,216,.12)', border: '1px solid rgba(78,139,216,.45)', color: '#4E8BD8' }}>
+                                        <span className="rpt-pill-v6" style={{ background: 'color-mix(in srgb, var(--ln-brand-2-accent, #4e8bd8) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--ln-brand-2-accent, #4e8bd8) 45%, transparent)', color: 'var(--ln-brand-2-accent, #4E8BD8)' }}>
                                             {reportXp} XP
                                         </span>
-                                        <span className="rpt-pill-v6" style={{ background: 'rgba(217,164,65,.12)', border: '1px solid rgba(217,164,65,.45)', color: '#D9A441' }}>
+                                        <span className="rpt-pill-v6" style={{ background: 'color-mix(in srgb, var(--ln-warning, #d9a441) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--ln-warning, #d9a441) 45%, transparent)', color: 'var(--ln-warning, #D9A441)' }}>
                                             RACHA {reportActivity?.streak_days ?? 0} DÍAS
                                         </span>
                                     </div>
@@ -2084,7 +2058,7 @@ const CloserWorkflowPage = () => {
                                                         className="rpt-trend-bar-v6"
                                                         style={{
                                                             height: `${Math.max(4, (dtItem.cash / maxTrend) * 74)}px`,
-                                                            background: dtItem.is_target ? 'var(--v6-ok)' : 'rgba(78,139,216,.55)'
+                                                            background: dtItem.is_target ? 'var(--v6-ok)' : 'color-mix(in srgb, var(--ln-brand-2-accent, #4e8bd8) 55%, transparent)'
                                                         }}
                                                         title={`$${Math.round(dtItem.cash).toLocaleString()}`}
                                                     ></div>
@@ -2132,10 +2106,10 @@ const CloserWorkflowPage = () => {
                         // que el hero), cada KPI queda en lo que se hizo ese día.
                         const pendiente = (n) => (reportandoHoy ? n : 0);
                         const kpis = [
-                            { label: 'Confirmaciones', done: confirmDoneKpi, pending: pendiente(confirmPendingKpi), color: '#4E8BD8' },
-                            { label: 'Llamadas reportadas', done: reportActivity?.show_ups || 0, pending: pendiente(counts.calls), color: '#4E8BD8' },
-                            { label: 'Seguimientos hechos', done: reportActivity?.seguimientos_hechos || 0, pending: pendiente(counts.seguimientos), color: '#2FBF8F' },
-                            { label: 'Cobros resueltos', done: reportActivity?.ventas_count || 0, pending: cobrosPendientes, color: '#FF3FA4' },
+                            { label: 'Confirmaciones', done: confirmDoneKpi, pending: pendiente(confirmPendingKpi), color: 'var(--ln-brand-2-accent, #4E8BD8)' },
+                            { label: 'Llamadas reportadas', done: reportActivity?.show_ups || 0, pending: pendiente(counts.calls), color: 'var(--ln-brand-2-accent, #4E8BD8)' },
+                            { label: 'Seguimientos hechos', done: reportActivity?.seguimientos_hechos || 0, pending: pendiente(counts.seguimientos), color: 'var(--ln-success, #2FBF8F)' },
+                            { label: 'Cobros resueltos', done: reportActivity?.ventas_count || 0, pending: cobrosPendientes, color: 'var(--ln-brand, #FF3FA4)' },
                         ];
                         return (
                             <div className="rpt-kpis-v6">
@@ -2212,7 +2186,7 @@ const CloserWorkflowPage = () => {
                                         onChange={(e) => { setReportSlots(e.target.value); setReportSlotsIsDefault(false); }}
                                         placeholder="0"
                                         className="rpt-slots-input-v6"
-                                        style={slotsPorDebajoDeAgendas ? { borderColor: 'var(--v6-warn)' } : reportSlotsIsDefault ? { borderColor: 'rgba(139,92,246,.6)' } : undefined}
+                                        style={slotsPorDebajoDeAgendas ? { borderColor: 'var(--v6-warn)' } : reportSlotsIsDefault ? { borderColor: 'color-mix(in srgb, var(--ln-brand-2, #8b5cf6) 60%, transparent)' } : undefined}
                                     />
                                 </div>
                             </div>
@@ -2221,7 +2195,7 @@ const CloserWorkflowPage = () => {
                                 cupo ocupado sigue siendo un cupo, así que los slots nunca pueden ser
                                 menos que esto. */}
                             {reportActivity?.agendas_del_dia !== undefined && (
-                                <p className="text-[11px] font-bold" style={{ color: slotsPorDebajoDeAgendas ? '#F3D08A' : 'var(--v6-tx3)' }}>
+                                <p className="text-[11px] font-bold" style={{ color: slotsPorDebajoDeAgendas ? 'var(--ln-warning-text, #F3D08A)' : 'var(--v6-tx3)' }}>
                                     {slotsPorDebajoDeAgendas ? '⚠️ ' : ''}Mínimo {reportActivity.agendas_del_dia} — ese día tenés {reportActivity.agendas_del_dia} agenda(s) registradas, y un cupo ocupado sigue contando.
                                 </p>
                             )}
@@ -2251,7 +2225,7 @@ const CloserWorkflowPage = () => {
                     <div className="rpt-card-v6 flex items-center gap-4 flex-wrap">
                         <div className="flex items-center gap-2.5">
                             <span className="w-2 h-2 rounded-full" style={{ background: 'var(--v6-warn)' }}></span>
-                            <span className="text-xs font-bold" style={{ color: '#F3D08A' }}>
+                            <span className="text-xs font-bold" style={{ color: 'var(--ln-warning-text, #F3D08A)' }}>
                                 {reportandoHoy
                                     ? `${counts.confirmations + counts.calls + counts.seguimientos} cosa(s) quedaron sin resolver`
                                     : `Se guarda como el reporte del ${etiquetaDia(reportDate, { largo: true })}`}
@@ -2299,7 +2273,7 @@ const CloserWorkflowPage = () => {
                                 }
                             }}
                             className="h-[52px] px-8 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black uppercase text-[11px] tracking-widest rounded-full transition-all cursor-pointer flex items-center gap-2"
-                            style={{ background: 'var(--v6-gradb)', boxShadow: '0 10px 15px -3px rgba(19,35,198,.35)' }}
+                            style={{ background: 'var(--v6-gradb)', boxShadow: '0 10px 15px -3px color-mix(in srgb, var(--ln-brand-2, #1323c6) 35%, transparent)' }}
                         >
                             {sendingReport ? <Loader2 size={14} className="animate-spin" /> : null}
                             {sendingReport ? 'Enviando...' : reportSent ? 'Actualizar y reenviar reporte' : reportandoHoy ? 'Enviar reporte del día' : 'Enviar reporte de ayer'}
@@ -2360,7 +2334,7 @@ const CloserWorkflowPage = () => {
                 <DockSecciones secciones={seccionesDelDock} activa={seccionDelDock}
                     onElegir={irASeccion} ariaLabel="Secciones del espacio del closer"
                     despues={(
-                        <MenuSesion nombre={nombreDeSesion} rol={user?.is_impersonating ? 'Closer · simulación' : 'Closer'}
+                        <MenuSesion nombre={nombreDeSesion} rol={rotuloDeSesion(user)}
                             aviso={pendingCount > 0
                                 ? { texto: pendingCount, titulo: `${pendingCount} ${pendingCount === 1 ? 'video pendiente' : 'videos pendientes'} del Playbook` }
                                 : null}
@@ -2379,11 +2353,6 @@ const CloserWorkflowPage = () => {
                 entero del lead: ni la deuda, ni el formulario con el que entro, ni el hilo
                 del equipo. Las acciones rapidas siguen viviendo en la tarjeta, que es donde
                 estan: esto reemplaza el modal, no el mazo. */}
-            {configAbierta && (
-                <HojaModal titulo="Configuración" onCerrar={cerrarConfig}>
-                    <ConfiguracionCloser user={user} />
-                </HojaModal>
-            )}
             {selectedLead && (
                 <FichaLeadModal
                     appointmentId={selectedLead.id > 0 ? selectedLead.id : null}
@@ -2815,11 +2784,6 @@ const CloserWorkflowPage = () => {
                     }}
                 />
             )}
-
-            <OperatorControls
-                isOpen={showOperatorControls}
-                onClose={() => setShowOperatorControls(false)}
-            />
 
             {/* Modal de Celebración de Hitos (Pipeline de Confirmaciones v7) */}
             <>

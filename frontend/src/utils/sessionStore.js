@@ -1,6 +1,6 @@
 // La sesión de una pestaña vive en sessionStorage cuando esa pestaña se abrió de forma
 // aislada (clic derecho -> "Simular en pestaña nueva": ver TeamManagementPage.jsx /
-// OperatorControls.jsx), o en localStorage para el flujo normal (login real, o "Simular"
+// sesion/Simular.jsx), o en localStorage para el flujo normal (login real, o "Simular"
 // con clic izquierdo de toda la vida, compartido entre pestañas como siempre funcionó).
 //
 // sessionStorage NO se comparte entre pestañas del mismo navegador (a diferencia de

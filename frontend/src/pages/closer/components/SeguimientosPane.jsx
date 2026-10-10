@@ -61,9 +61,9 @@ const retrasoWhen = (dias) => {
 // colores que ya usan when-v6/late-v6/now-v6/soon-v6 en el resto del mazo, pero acá se pinta como
 // caja llena (como la hora de una fila de Llamadas) en vez de pastilla con punto.
 const TIME_BOX_STYLE = {
-    'late-v6': { background: 'rgba(232,92,74,.14)', borderColor: 'rgba(232,92,74,.36)', color: '#F5A99C' },
-    'now-v6': { background: 'rgba(217,164,65,.14)', borderColor: 'rgba(217,164,65,.36)', color: '#F3D08A' },
-    'soon-v6': { background: 'rgba(78,139,216,.14)', borderColor: 'rgba(78,139,216,.36)', color: '#BFD3FF' },
+    'late-v6': { background: 'color-mix(in srgb, var(--ln-danger, #e85c4a) 14%, transparent)', borderColor: 'color-mix(in srgb, var(--ln-danger, #e85c4a) 36%, transparent)', color: 'var(--ln-danger-text, #F5A99C)' },
+    'now-v6': { background: 'color-mix(in srgb, var(--ln-warning, #d9a441) 14%, transparent)', borderColor: 'color-mix(in srgb, var(--ln-warning, #d9a441) 36%, transparent)', color: 'var(--ln-warning-text, #F3D08A)' },
+    'soon-v6': { background: 'color-mix(in srgb, var(--ln-brand-2-accent, #4e8bd8) 14%, transparent)', borderColor: 'color-mix(in srgb, var(--ln-brand-2-accent, #4e8bd8) 36%, transparent)', color: 'var(--ln-brand-2-text, #BFD3FF)' },
 };
 
 // Resultado real de la llamada (`closer_result`) → chip de color, mismo idioma de colores que el
@@ -498,8 +498,8 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
                 </div>
                 {earnings && totalHoy > 0 && (
                     <div className="text-right pl-6 border-l border-slate-900 shrink-0">
-                        <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#8C99E0' }}>Ganancia potencial hoy</div>
-                        <div className="text-3xl font-black" style={{ color: '#7DEAC0' }}>{money(totalPotencial)}</div>
+                        <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--ln-brand-2-text, #8C99E0)' }}>Ganancia potencial hoy</div>
+                        <div className="text-3xl font-black" style={{ color: 'var(--ln-success-text, #7DEAC0)' }}>{money(totalPotencial)}</div>
                     </div>
                 )}
             </div>
@@ -536,7 +536,7 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
                                             <div className="text-[11px] font-semibold" style={{ color: 'var(--v6-tx3)' }}>{TIPOS[tipo].desc}</div>
                                         </div>
                                         {earnings && grouped[tipo].length > 0 && (
-                                            <span className="text-xs font-black" style={{ color: '#7DEAC0' }}>{money(subtotal)}</span>
+                                            <span className="text-xs font-black" style={{ color: 'var(--ln-success-text, #7DEAC0)' }}>{money(subtotal)}</span>
                                         )}
                                         <span style={{ fontSize: '28px', fontWeight: 900 }} className={grouped[tipo].length === 0 ? 'text-emerald-400' : 'text-white'}>
                                             {grouped[tipo].length}

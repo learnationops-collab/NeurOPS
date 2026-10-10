@@ -42,44 +42,44 @@
    programa, anillo de foco) quedaria a medias.
    ============================================================ */
 .dc-shell.dc-shell{
-  color-scheme: dark;
+  color-scheme: var(--ln-scheme, dark);
 
-  --brand-secondary:#FF3FA4;
-  --brand-secondary-light:#FF6AD5;
-  --brand-secondary-surface:rgba(255,63,164,.10);
-  --brand-secondary-border:rgba(255,63,164,.35);
-  --brand-primary:#1323C6;
+  --brand-secondary:var(--ln-brand, #FF3FA4);
+  --brand-secondary-light:var(--ln-brand-accent, #FF6AD5);
+  --brand-secondary-surface:var(--ln-brand-soft, rgba(255,63,164,.10));
+  --brand-secondary-border:var(--ln-brand-soft-border, rgba(255,63,164,.35));
+  --brand-primary:var(--ln-brand-2, #1323C6);
   --brand-navy:#0A0E3D;
   --ink:#020617;
-  --on-brand:#020617;
-  --on-state:#020617;
-  --on-inverso:#020617;
+  --on-brand:var(--ln-brand-content, #020617);
+  --on-state:var(--ln-on-status, #020617);
+  --on-inverso:var(--ln-inverse-text, #020617);
 
-  --mat-0:rgba(255,255,255,.02);
-  --mat-1:rgba(255,255,255,.04);
-  --mat-3:rgba(255,255,255,.12);
-  --hundido:rgba(0,0,0,.34);
-  --bg-surface:rgba(2,6,23,.90);
-  --bg-flotante:#0B1030;
-  --bg-element:rgba(255,255,255,.08);
-  --bg-element-hover:rgba(255,255,255,.12);
-  --bg-input:rgba(0,0,0,.30);
-  --bg-scrim:rgba(2,6,23,.70);
-  --border-main:rgba(255,255,255,.15);
-  --border-subtle:rgba(255,255,255,.05);
-  --border-control:rgba(255,255,255,.38);
-  --sheen:rgba(255,255,255,.10);
-  --hueco:rgba(255,255,255,.12);
+  --mat-0:var(--ln-ct2-bg-subtle, rgba(255,255,255,.02));
+  --mat-1:var(--ln-ct2-bg, rgba(255,255,255,.04));
+  --mat-3:var(--ln-ct3-bg-strong, rgba(255,255,255,.12));
+  --hundido:var(--ln-inset-bg, rgba(0,0,0,.34));
+  --bg-surface:var(--ln-window-bg, rgba(2,6,23,.90));
+  --bg-flotante:var(--ln-popover-bg, #0B1030);
+  --bg-element:var(--ln-ct3-bg, rgba(255,255,255,.08));
+  --bg-element-hover:var(--ln-ct3-bg-hover, rgba(255,255,255,.12));
+  --bg-input:var(--ln-input-bg, rgba(0,0,0,.30));
+  --bg-scrim:var(--ln-scrim, rgba(2,6,23,.70));
+  --border-main:var(--ln-border-main, rgba(255,255,255,.15));
+  --border-subtle:var(--ln-border-subtle, rgba(255,255,255,.05));
+  --border-control:var(--ln-border-strong, rgba(255,255,255,.38));
+  --sheen:var(--ln-sheen, rgba(255,255,255,.10));
+  --hueco:var(--ln-track, rgba(255,255,255,.12));
 
-  --text-on-surface:#FFFFFF;
-  --text-muted:rgba(255,255,255,.60);
-  --text-muted-40:rgba(255,255,255,.40);
+  --text-on-surface:var(--ln-text-out, #FFFFFF);
+  --text-muted:var(--ln-text-muted, rgba(255,255,255,.60));
+  --text-muted-40:var(--ln-text-faint, rgba(255,255,255,.40));
 
-  --success:#2FBF8F; --success-surface:#071A24; --success-border:#10413D;
-  --warning:#D9A441; --warning-surface:#1A171C; --warning-border:#473924;
-  --error:#E85C4A;   --error-surface:#1B0F1D;   --error-border:#4C2227;
-  --info:#4E8BD8;    --info-surface:#0A152C;    --info-border:#1A3155;
-  --idle:#7F8CA8;    --idle-surface:#0E1326;    --idle-border:#252C42;
+  --success:var(--ln-success, #2FBF8F); --success-surface:var(--ln-success-bg, #071A24); --success-border:var(--ln-success-border, #10413D);
+  --warning:var(--ln-warning, #D9A441); --warning-surface:var(--ln-warning-bg, #1A171C); --warning-border:var(--ln-warning-border, #473924);
+  --error:var(--ln-danger, #E85C4A);   --error-surface:var(--ln-danger-bg, #1B0F1D);   --error-border:var(--ln-danger-border, #4C2227);
+  --info:var(--ln-info, #4E8BD8);    --info-surface:var(--ln-info-bg, #0A152C);    --info-border:var(--ln-info-border, #1A3155);
+  --idle:var(--ln-idle, #7F8CA8);    --idle-surface:var(--ln-idle-bg, #0E1326);    --idle-border:var(--ln-idle-border, #252C42);
 
   --prog-ace:#60A5FA; --prog-elite-a:#E86FB3; --prog-elite-b:#FF6AD5; --prog-free:#94A3B8;
 
@@ -95,9 +95,9 @@
   --radius-main:32px;
   --radius-control:16px;
   --radius-pill:999px;
-  --shadow-main:0 8px 32px 0 rgba(0,0,0,.40);
-  --shadow-brand:0 10px 15px -3px rgba(19,35,198,.35);
-  --focus-blue:#5B7CFF; --focus-ring:0 0 0 3px rgba(91,124,255,.55);
+  --shadow-main:var(--ln-shadow, 0 8px 32px 0 rgba(0,0,0,.40));
+  --shadow-brand:var(--ln-shadow-brand, 0 10px 15px -3px rgba(19,35,198,.35));
+  --focus-blue:var(--ln-focus, #5B7CFF); --focus-ring:var(--ln-focus-ring, 0 0 0 3px rgba(91,124,255,.55));
 
   /* --s5 no existia en la referencia y `.mapa` lo usa: sin el, ese
      `padding-top` se caia entero. Sigue la escala de 4px. */
@@ -105,12 +105,12 @@
   --s12:48px; --s16:64px; --s20:80px;
 
   --font:'Montserrat','Helvetica Neue',Arial,sans-serif;
-  --gradient-page:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%);
+  --gradient-page:var(--ln-page-bg, linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%));
   --gradient-brand:linear-gradient(135deg,#FF3FA4 0%,#FF6AD5 100%);
   --spring:cubic-bezier(.32,.72,0,1);
   --crecer:cubic-bezier(.22,.7,.2,1);
 
-  --humo-blend:screen; --humo-op:.42; --humo-i-op:.62;
+  --humo-blend:var(--ln-humo-blend, screen); --humo-op:var(--ln-humo-op, .42); --humo-i-op:var(--ln-humo-op-i, .62);
 }
 
 /* ============================================================
@@ -621,6 +621,13 @@
   display:grid;place-items:center;border-radius:var(--radius-pill);
   background:var(--brand-secondary);color:var(--on-brand);font-size:10px;font-weight:900;line-height:1}
 .dc-shell .menu-item .dock-pronto{margin:0 0 0 auto}
+/* Una opción con su acción al lado («Mis reportes» y el «+» para reportar uno nuevo). */
+.dc-shell .menu-fila{display:flex;align-items:center;gap:4px}
+.dc-shell .menu-fila > .menu-item{flex:1;min-width:0}
+.dc-shell .menu-accion{flex-shrink:0;width:36px;height:36px;display:grid;place-items:center;border-radius:12px;
+  border:1px solid var(--border-subtle);color:var(--text-muted);transition:background-color .15s ease,color .15s ease,border-color .15s ease}
+.dc-shell .menu-accion:hover,.dc-shell .menu-accion:focus-visible{background:var(--brand-secondary);border-color:var(--brand-secondary);color:var(--on-brand);outline:none}
+.dc-shell .menu-accion--marcada{border-color:var(--brand-secondary);color:var(--brand-secondary)}
 .dc-shell .menu-item--peligro:hover,
 .dc-shell .menu-item--peligro:focus-visible{background:var(--error-surface);color:var(--error)}
 /* Una opcion que abre una lista en el mismo menu ("Simular a un closer"): la flecha la anuncia,

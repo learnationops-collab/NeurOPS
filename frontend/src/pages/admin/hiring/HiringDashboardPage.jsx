@@ -1,14 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    Inbox, CheckCircle2, Trophy, BarChart3, FileText, Search, X, Filter, Check, LogOut, Ghost, ArrowLeft, AlertTriangle,
+    Inbox, CheckCircle2, Trophy, BarChart3, FileText, Search, X, Filter, Check, ArrowLeft, AlertTriangle, SlidersHorizontal,
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import api from '../../../services/api';
-import OperatorControls from '../../../components/modals/OperatorControls';
-import toast from 'react-hot-toast';
-import { revertImpersonation } from '../../../utils/impersonation';
-import { opcionesDeRol } from '../../../utils/cuentasVinculadas';
+import { abrirSimulacion } from '../../../sesion/simulacion';
+import { armarMenuSesion, rotuloDeSesion } from '../../../sesion/menuSesion';
+import { useConfiguracion } from '../../../sesion/ConfiguracionContext';
 import DockSecciones from '../../comercial/components/DockSecciones';
 import MenuSesion from '../../comercial/components/MenuSesion';
 import HiringCandidateModal from './components/HiringCandidateModal';
@@ -76,7 +75,6 @@ const HiringDashboardPage = () => {
     const [pesos, setPesos] = useState({});
     const [busquedaCfg, setBusquedaCfg] = useState(null);
     const [abierta, setAbierta] = useState(null);
-    const [showOperatorControls, setShowOperatorControls] = useState(false);
     const [entradas, setEntradas] = useState(0);
     const buscador = useRef(null);
     const botonVista = useRef(null);
@@ -136,22 +134,22 @@ const HiringDashboardPage = () => {
             }
             if (!enCampo && !abierta && e.key.toLowerCase() === 'w' && !e.metaKey && !e.ctrlKey && !e.altKey) {
                 e.preventDefault();
-                setShowOperatorControls((prev) => !prev);
+                abrirSimulacion();
             }
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
     }, [query, abierta, config]);
 
-    const rolesDeLaCuenta = opcionesDeRol(user, (m) => toast.error(m), navigate);
-
-    const volverAMiSesion = async () => {
-        try {
-            await revertImpersonation();
-        } catch (err) {
-            alert(err.response?.data?.message || 'No se pudo volver a tu sesión');
-        }
-    };
+    const { abrir: abrirConfiguracion } = useConfiguracion();
+    // El menú de sesión de todas las pantallas (sesion/menuSesion.js); lo propio de Hiring son los
+    // ajustes de la herramienta (Clarity y búsqueda), que también abre el orbe del dock.
+    const gruposDeSesion = armarMenuSesion({
+        user, navigate, logout,
+        acciones: [{ id: 'talent', label: 'Ajustes de Talent', Icono: SlidersHorizontal, onClick: () => setConfig('clarity') }],
+        configuracion: { onClick: () => abrirConfiguracion() },
+        ir: user?.role === 'admin' ? [{ id: 'admin', label: 'Volver al panel de admin', Icono: ArrowLeft, onClick: () => navigate('/admin/ventas') }] : [],
+    });
 
     // --- Lo que se ve ---
     const q = query.trim();
@@ -423,14 +421,8 @@ const HiringDashboardPage = () => {
                             </button>
                             <MenuSesion
                                 nombre={user?.name || user?.username || ''}
-                                rol={user?.is_impersonating ? 'Hiring · simulación' : 'Hiring'}
-                                // «Pasar a <rol>» para quien tiene más roles en la cuenta: sin esto,
-                                // quien entraba a Hiring quedaba encerrado (Mario, 08/10/2026).
-                                grupos={[...(rolesDeLaCuenta.length ? [rolesDeLaCuenta] : []), [
-                                    ...(user?.role === 'admin' ? [{ id: 'admin', label: 'Volver al panel de admin', Icono: ArrowLeft, onClick: () => navigate('/admin/ventas') }] : []),
-                                    ...(user?.is_impersonating ? [{ id: 'volver', label: 'Volver a mi sesión', Icono: Ghost, onClick: volverAMiSesion }] : []),
-                                    { id: 'salir', label: 'Cerrar sesión', Icono: LogOut, peligro: true, onClick: logout },
-                                ]]}
+                                rol={rotuloDeSesion(user, 'Hiring')}
+                                grupos={gruposDeSesion}
                             />
                         </>
                     )}
@@ -459,7 +451,6 @@ const HiringDashboardPage = () => {
                 />
             )}
 
-            <OperatorControls isOpen={showOperatorControls} onClose={() => setShowOperatorControls(false)} />
 
             {abierta && (
                 // El modal de la postulación es el de siempre (Tailwind, paleta `dash-v6`): va fuera

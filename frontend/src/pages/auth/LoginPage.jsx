@@ -1,20 +1,16 @@
-// Inicio de sesión con la marca Learnation, en el mismo marco que la elección de rol y de área (hora,
-// fondo a elección y el isotipo con anillos). Arranca directo en el panel.
+// Inicio de sesión con la marca Learnation, en el mismo marco que el Portal (hora, el fondo elegido en
+// Apariencia y el isotipo con anillos). Arranca directo en el panel.
 //   entrar   → usuario y clave, o «Entrar con Google» (vuelve a /login?google=…).
 //   email    → si la cuenta no tiene email, se pide para poder entrar con Google la próxima vez.
-//   rol      → si la persona tiene más de un rol (o cuentas vinculadas, o un rol que además ve Finances),
-//              elige con cuál entra (ElegirRol, la misma elección del hub de vistas, /vistas).
-// Después va a destinoDeEntrada: si el rol tiene más de un área, a /inicio para elegirla (o directo a su
-// área por defecto).
+// Después va a destinoDeEntrada (utils/portal.js): el Portal si tiene más de un rol, área, cuenta o
+// Finances (o directo a su tarjeta por defecto), y si no, la pantalla de su rol.
 
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Eye, EyeOff, Loader2, Mail } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { destinoDeEntrada } from '../../utils/areas';
-import { hayQueElegir } from '../../utils/cuentasVinculadas';
+import { destinoDeEntrada } from '../../utils/portal';
 import { LogoEntrada, MarcoEntrada } from './Eleccion';
-import ElegirRol from './ElegirRol';
 import DebugConsole from '../../components/modals/DebugConsole';
 import './login.css';
 
@@ -160,11 +156,7 @@ export default function LoginPage() {
     const [user, setUser] = useState(null);
     const [errorGoogle, setErrorGoogle] = useState(google && google !== 'ok' ? MENSAJE_GOOGLE[google] || MENSAJE_GOOGLE.error : null);
 
-    const seguir = (u) => {
-        setUser(u);
-        if (hayQueElegir(u)) setPaso('rol');
-        else navigate(destinoDeEntrada(u));
-    };
+    const seguir = (u) => navigate(destinoDeEntrada(u));
     const alEntrar = (u) => {
         if (!u.email) { setUser(u); setPaso('email'); } else seguir(u);
     };
@@ -180,10 +172,8 @@ export default function LoginPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    if (paso === 'rol' && user) return <ElegirRol user={user} onElegido={(u, destino) => navigate(destino || destinoDeEntrada(u))} />;
-
     return (
-        <MarcoEntrada clase="lg--login">
+        <MarcoEntrada clase="lg--login" marca={null}>
             <main className="lg-centro">
                     {paso === 'entrar' && (entrandoGoogle
                         ? <div className="lg-panel"><LogoEntrada idGrad="lnGradLogin" /><p className="lg-texto"><Loader2 size={16} className="lg-gira" /> Entrando con Google…</p></div>

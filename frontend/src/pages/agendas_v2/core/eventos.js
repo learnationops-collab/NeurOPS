@@ -6,14 +6,17 @@ import { normalEvento, normalForm } from './normalizar';
 import { fechaCorta } from './tiempo';
 import { fmt } from './util';
 
-const CAMPOS_EV = ['nombre', 'slug', 'funnel', 'formulario', 'duracion', 'activo', 'persona', 'reservas', 'antel', 'paso', 'zona', 'desc', 'redir', 'indic'];
+const CAMPOS_EV = ['nombre', 'slug', 'funnel', 'formulario', 'duracion', 'margen', 'activo', 'persona', 'reservas', 'antel', 'paso', 'zona', 'desc', 'redir', 'indic'];
 const CAMPOS_FORM = ['id', 'nombre', 'contacto', 'preguntas', 'reglas', 'resto', 'fin'];
 const tomar = (o, ks) => ks.reduce((a, k) => { a[k] = o[k]; return a; }, {});
 
 // Lo que queda en vivo al publicar: la configuración completa del evento y una copia del formulario.
 // La copia del formulario se pone al día sola cuando se edita el formulario (conFormAlDia).
 export function configDe(e, form) {
-    return JSON.stringify({ ev: tomar(e, CAMPOS_EV), form: form ? tomar(form, CAMPOS_FORM) : null });
+    const ev = tomar(e, CAMPOS_EV);
+    // Sin margen no se escribe: así lo publicado antes de que existiera el margen sigue igual.
+    if (!ev.margen) delete ev.margen;
+    return JSON.stringify({ ev, form: form ? tomar(form, CAMPOS_FORM) : null });
 }
 // `publicado` con la copia del formulario al día y el resto como se publicó, o null si no cambia nada.
 // El servidor hace lo mismo al guardar el formulario (nucleo/eventos.py con_form_al_dia).

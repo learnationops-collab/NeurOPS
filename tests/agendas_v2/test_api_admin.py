@@ -199,3 +199,61 @@ def test_editar_el_formulario_pone_al_dia_los_links_publicados(client, dir_h):
     pub = json.loads(e['publicado'])
     assert pub['form']['preguntas'][0]['titulo'] == 'Nueva'
     assert pub['ev']['nombre'] == 'Diagnóstico'
+
+
+# --- Ocupacion en Google para Available -----------------------------------------------------------
+
+
+@pytest.fixture()
+def google_semana(monkeypatch):
+    """Lo que responde Google por usuario: lista de eventos (inicio, fin, titulo), o None si falla."""
+    from app.services.google_service import GoogleService
+
+    respuestas = {}
+    servicio._google_semana_cache.clear()
+    def eventos(u, desde, hasta):
+        r = respuestas.get(u, [])
+        return None if r is None else [{'inicio': a, 'fin': b, 'titulo': t} for a, b, t in r]
+
+    monkeypatch.setattr(GoogleService, 'eventos_ocupados', staticmethod(eventos))
+    return respuestas
+
+
+def _ocupacion(client, dir_h, desde=0, hasta=7 * 86400000):
+    return client.get(f'/api/agendas-v2/ocupacion?desde={desde}&hasta={hasta}', headers=dir_h)
+
+
+def test_ocupacion_une_lo_que_se_pisa_entre_calendarios(client, db, dir_h, gente, google_semana):
+    from app.models import GoogleCalendarToken
+
+    db.session.add(GoogleCalendarToken(user_id=gente['closer'].id, token_json='{}'))
+    db.session.commit()
+    client.put('/api/agendas-v2/personas/p1', headers=dir_h, json={'nombre': 'Ana', 'email': 'ana@neuro.com'})
+    google_semana[gente['closer'].id] = [(100, 200, 'Daily'), (150, 300, 'Médico'), (300, 350, None), (500, 600, 'Gym')]
+    r = _ocupacion(client, dir_h)
+    assert r.status_code == 200
+    ana = r.get_json()['ocupacion']['p1']
+    assert ana['estado'] == 'ok' and ana['franjas'] == [[100, 350], [500, 600]]
+    # Cada evento viaja con su título (None si es privado) para mostrarlo en el visor.
+    assert [e['titulo'] for e in ana['eventos']] == ['Daily', 'Médico', None, 'Gym']
+
+
+def test_ocupacion_distingue_error_sin_google_y_sin_usuario(client, db, dir_h, gente, google_semana, make_user):
+    from app.models import GoogleCalendarToken
+
+    db.session.add(GoogleCalendarToken(user_id=gente['closer'].id, token_json='{}'))
+    make_user(role='closer', email='beto@neuro.com')
+    db.session.commit()
+    client.put('/api/agendas-v2/personas/p1', headers=dir_h, json={'nombre': 'Ana', 'email': 'ana@neuro.com'})
+    client.put('/api/agendas-v2/personas/p2', headers=dir_h, json={'nombre': 'Beto', 'email': 'beto@neuro.com'})
+    client.put('/api/agendas-v2/personas/p3', headers=dir_h, json={'nombre': 'Caro', 'email': 'caro@otro.com'})
+    google_semana[gente['closer'].id] = None
+    oc = _ocupacion(client, dir_h).get_json()['ocupacion']
+    assert {k: v['estado'] for k, v in oc.items()} == {'p1': 'error', 'p2': 'sin_google', 'p3': 'sin_usuario'}
+
+
+def test_ocupacion_exige_un_rango_valido_y_ser_direccion(client, gente, dir_h, auth_headers, google_semana):
+    assert _ocupacion(client, dir_h, 10, 10).status_code == 400
+    assert _ocupacion(client, dir_h, 0, 11 * 86400000).status_code == 400
+    assert client.get('/api/agendas-v2/ocupacion', headers=dir_h).status_code == 400
+    assert _ocupacion(client, auth_headers(gente['closer'])).status_code == 403

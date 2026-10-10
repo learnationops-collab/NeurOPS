@@ -17,6 +17,7 @@ CAMPOS_EV = [
     'funnel',
     'formulario',
     'duracion',
+    'margen',
     'activo',
     'persona',
     'reservas',
@@ -38,7 +39,11 @@ def _tomar(o, ks):
 def config_de(e, form):
     """Lo que queda en vivo al publicar: la configuración completa del evento y una copia del formulario.
     La copia del formulario se pone al día sola cuando se edita el formulario (con_form_al_dia)."""
-    return js_json({'ev': _tomar(e, CAMPOS_EV), 'form': _tomar(form, CAMPOS_FORM) if form else None})
+    ev = _tomar(e, CAMPOS_EV)
+    # Sin margen no se escribe: así lo publicado antes de que existiera el margen sigue igual.
+    if not ev.get('margen'):
+        ev.pop('margen', None)
+    return js_json({'ev': ev, 'form': _tomar(form, CAMPOS_FORM) if form else None})
 
 
 def con_form_al_dia(e, form):

@@ -38,7 +38,11 @@ export const CONTACTO = [
     { k: 'instagram', tipo: 'instagram', n: 'Instagram', ico: 'instagram', titulo: '¿Cuál es tu Instagram?', placeholder: 'tu.usuario' },
 ];
 export const FIN_DEF = { titulo: 'Gracias por tu sinceridad', texto: 'Por ahora no vamos a agendar la sesión. Te mandamos por email la ruta para que sigas avanzando.' };
+// Duración de la sesión y margen después de ella, en minutos: los atajos que se ofrecen. Se puede poner
+// cualquier otro valor dentro de los límites.
 export const DURACIONES = [15, 30, 45, 60, 90];
+export const MARGENES = [0, 5, 10, 15, 20, 30];
+export const DURACION_MIN = 5, DURACION_MAX = 240, MARGEN_MAX = 120;
 export const DIAS = [
     { d: 1, c: 'L', n: 'lunes' }, { d: 2, c: 'M', n: 'martes' }, { d: 3, c: 'M', n: 'miércoles' }, { d: 4, c: 'J', n: 'jueves' },
     { d: 5, c: 'V', n: 'viernes' }, { d: 6, c: 'S', n: 'sábado' }, { d: 0, c: 'D', n: 'domingo' },

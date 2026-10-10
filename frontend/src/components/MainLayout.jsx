@@ -4,14 +4,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import DebugConsole from './modals/DebugConsole';
 import OnboardingTour from './modals/OnboardingTour';
-import OperatorControls from './modals/OperatorControls';
-import GlobalSettingsModal from './modals/GlobalSettingsModal';
-import Dock from './shared/Dock';
-import DockAdmin from './shared/DockAdmin';
+import DockMainLayout from './shared/DockMainLayout';
 import WidgetsPill from './shared/WidgetsPill';
 import HotkeysManager from './admin/HotkeysManager';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
+import { useApariencia } from '../context/AparienciaContext';
+import { useConfiguracion } from '../sesion/ConfiguracionContext';
+import { abrirSimulacion } from '../sesion/simulacion';
 
 const MainLayout = ({ children }) => {
     const { user } = useAuth();
@@ -19,9 +19,8 @@ const MainLayout = ({ children }) => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const [showImpersonation, setShowImpersonation] = useState(false);
     const [showConsole, setShowConsole] = useState(false);
-    const [showSettings, setShowSettings] = useState(false);
+    const configuracion = useConfiguracion();
     const [isPillOpen, setIsPillOpen] = useState(false);
     const [isDockVisible, setIsDockVisible] = useState(true);
     const [lastWidgetsNavKey, setLastWidgetsNavKey] = useState(null);
@@ -58,14 +57,12 @@ const MainLayout = ({ children }) => {
     useEffect(() => {
         const handleDoubleClick = () => {
             if (isPillOpen) setIsPillOpen(false);
-            if (showSettings) setShowSettings(false);
             if (showConsole) setShowConsole(false);
-            if (showImpersonation) setShowImpersonation(false);
         };
 
         window.addEventListener('dblclick', handleDoubleClick);
         return () => window.removeEventListener('dblclick', handleDoubleClick);
-    }, [isPillOpen, showSettings, showConsole, showImpersonation]);
+    }, [isPillOpen, showConsole]);
 
     const controlFocus = isPillOpen ? 'widgets' : 'dock';
 
@@ -78,9 +75,11 @@ const MainLayout = ({ children }) => {
         }
     }, [isPillOpen, resetInactivity]);
 
+    // La imagen de fondo elegible es del sistema viejo: con tema elegido manda el fondo del tema.
+    const { elegido } = useApariencia();
     if (!user) return null;
 
-    const bgImage = backgroundType === 'custom' ? customBackground : backgroundType === 'stock' ? stockBackground : null;
+    const bgImage = elegido ? null : backgroundType === 'custom' ? customBackground : backgroundType === 'stock' ? stockBackground : null;
 
     return (
         <div
@@ -100,19 +99,9 @@ const MainLayout = ({ children }) => {
                 <HotkeysManager
                     controlFocus={controlFocus}
                     onToggleWidgets={() => setIsPillOpen(prev => !prev)}
-                    onToggleSettings={() => setShowSettings(prev => !prev)}
+                    onToggleSettings={() => (configuracion.abierta ? configuracion.cerrar() : configuracion.abrir())}
                     onResetInactivity={resetInactivity}
                     onWidgetsNavigate={(key) => setLastWidgetsNavKey({ key, timestamp: Date.now() })}
-                />
-
-                <OperatorControls
-                    isOpen={showImpersonation}
-                    onClose={() => setShowImpersonation(false)}
-                />
-
-                <GlobalSettingsModal
-                    isOpen={showSettings}
-                    onClose={() => setShowSettings(false)}
                 />
 
                 <OnboardingTour />
@@ -124,27 +113,14 @@ const MainLayout = ({ children }) => {
                         </div>
                     </div>
 
-                    {/* El admin usa el dock de los demás roles (secciones + menú de sesión); el resto
-                        de quienes pasan por MainLayout sigue con la píldora de siempre. */}
-                    {user.role === 'admin' ? (
-                        <DockAdmin
-                            onSettingsClick={() => setShowSettings(true)}
-                            onImpersonateClick={() => setShowImpersonation(true)}
-                        />
-                    ) : (
-                        <Dock
-                            isVisible={isDockVisible}
-                            onToggleVisibility={() => setIsDockVisible(!isDockVisible)}
-                            onSettingsClick={() => setShowSettings(true)}
-                            isSettingsOpen={showSettings}
-                        />
-                    )}
+                    {/* El dock de todas las pantallas (secciones + menú de sesión), para todos los roles. */}
+                    <DockMainLayout />
 
                     <WidgetsPill
                         isOpen={isPillOpen}
                         onToggle={() => setIsPillOpen(!isPillOpen)}
                         onConsoleToggle={() => setShowConsole(!showConsole)}
-                        onImpersonateClick={() => setShowImpersonation(true)}
+                        onImpersonateClick={abrirSimulacion}
                         isConsoleOpen={showConsole}
                         lastNavKey={lastWidgetsNavKey}
                     />

@@ -295,7 +295,11 @@ describe('DashboardComercial · Payroll abre las ventas de una persona sin salir
     });
 });
 
-/** Las dos vistas se pasan de una a la otra desde el menú del avatar: ninguna queda sin salida. */
+/**
+ * Las dos vistas se pasan de una a la otra con «Portal» del menú del avatar (el Portal, desde el
+ * 10/10/2026: antes eran «Pasar a Finances» / «Pasar a <rol>», «Cambiar de área» y «Cambiar de rol»).
+ * Ninguna queda sin salida.
+ */
 describe('DashboardComercial · ir y volver entre Comercial y Finances', () => {
     beforeEach(() => {
         navegar.mockClear();
@@ -306,78 +310,41 @@ describe('DashboardComercial · ir y volver entre Comercial y Finances', () => {
     const abrirSesion = async () => {
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: /^Tu sesión: Mario/ })); });
     };
-    const opciones = () => screen.getAllByRole('menuitem').map(i => i.textContent);
+    const opciones = () => screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent);
+    const MENU = ['Configuración', 'Portal', 'Mis reportes', 'Reportar un problema', 'Cerrar sesión'];
 
     const direccion = (verFinanzas) => ({
         id: 1, role: 'director_comercial', roles: ['director_comercial'], can_view_finance: verFinanzas, is_impersonating: false,
     });
 
-    it('en Comercial, con «ver finanzas», el menú ofrece el hub y «Pasar a Finances»', async () => {
+    it('en Comercial y en /finanzas el menú es el mismo, y «Portal» lleva a elegir', async () => {
         estado.puede = true;
         estado.user = direccion(true);
-        montar();
+        const { unmount } = montar();
         await screen.findByTestId('analizar');
-
         await abrirSesion();
         expect(screen.getByText('Dirección comercial')).toBeTruthy();
-        expect(opciones()).toEqual(['Cambiar de área', 'Cambiar de vista', 'Pasar a Finances', 'Simular a un closer',
-            'Simular a un setter', 'Reportar un problema', 'Mis reportes', 'Cerrar sesión']);
-        fireEvent.click(screen.getByRole('menuitem', { name: 'Pasar a Finances' }));
-        expect(navegar).toHaveBeenCalledWith('/finanzas');
+        expect(opciones()).toEqual(MENU);
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Portal' }));
+        expect(navegar).toHaveBeenLastCalledWith('/portal?elegir=1');
+
+        unmount();
+        montar('/finanzas');
+        await screen.findByTestId('finanzas');
+        await abrirSesion();
+        expect(screen.getByText('Finances')).toBeTruthy();
+        expect(opciones()).toEqual(MENU);
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Portal' }));
+        expect(navegar).toHaveBeenLastCalledWith('/portal?elegir=1');
     });
 
-    it('en Comercial, sin «ver finanzas» y con un solo rol, no ofrece ni Finances ni el hub', async () => {
+    it('sin «ver finanzas» la dirección igual elige entre sus áreas', async () => {
         estado.puede = false;
         estado.user = direccion(false);
         montar();
         await screen.findByTestId('analizar');
 
         await abrirSesion();
-        expect(opciones()).toEqual(['Cambiar de área', 'Simular a un closer', 'Simular a un setter', 'Reportar un problema',
-            'Mis reportes', 'Cerrar sesión']);
-    });
-
-    it('en /finanzas el menú dice Finances y ofrece volver a la dirección comercial', async () => {
-        estado.puede = true;
-        estado.user = direccion(true);
-        montar('/finanzas');
-        await screen.findByTestId('finanzas');
-
-        await abrirSesion();
-        expect(screen.getByText('Finances')).toBeTruthy();
-        expect(opciones()).toEqual(['Cambiar de área', 'Pasar a Dirección comercial', 'Cambiar de vista', 'Simular a un closer',
-            'Simular a un setter', 'Reportar un problema', 'Mis reportes', 'Cerrar sesión']);
-        fireEvent.click(screen.getByRole('menuitem', { name: 'Pasar a Dirección comercial' }));
-        expect(navegar).toHaveBeenCalledWith('/admin/comercial');
-    });
-
-    it('«Cambiar de vista» lleva al hub de vistas, en Comercial y en /finanzas', async () => {
-        estado.puede = true;
-        estado.user = direccion(true);
-        const { unmount } = montar();
-        await screen.findByTestId('analizar');
-        await abrirSesion();
-        fireEvent.click(screen.getByRole('menuitem', { name: 'Cambiar de vista' }));
-        expect(navegar).toHaveBeenLastCalledWith('/vistas');
-
-        unmount();
-        montar('/finanzas');
-        await screen.findByTestId('finanzas');
-        await abrirSesion();
-        fireEvent.click(screen.getByRole('menuitem', { name: 'Cambiar de vista' }));
-        expect(navegar).toHaveBeenLastCalledWith('/vistas');
-    });
-
-    it('el admin vuelve de /finanzas a su pantalla, y sus otros roles siguen en el menú', async () => {
-        estado.puede = true;
-        estado.user = { id: 1, role: 'admin', roles: ['admin', 'closer'], can_view_finance: true, is_impersonating: false };
-        montar('/finanzas');
-        await screen.findByTestId('finanzas');
-
-        await abrirSesion();
-        expect(opciones().slice(0, 4)).toEqual(['Cambiar de área', 'Pasar a Administrador', 'Cambiar de vista', 'Cambiar de rol']);
-        expect(opciones()).not.toContain('Pasar a Finances');
-        fireEvent.click(screen.getByRole('menuitem', { name: 'Pasar a Administrador' }));
-        expect(navegar).toHaveBeenCalledWith('/admin/ventas');
+        expect(opciones()).toEqual(MENU);
     });
 });

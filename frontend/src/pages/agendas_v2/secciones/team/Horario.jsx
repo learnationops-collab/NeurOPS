@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { DIAS, HORAS, ZONAS, aMin } from '../../core/catalogos';
-import { closers, colorVar, horasSemana } from '../../core/datos';
+import { closers, colorVar, horasSemana, ord } from '../../core/datos';
 import { normalHorario } from '../../core/normalizar';
 import { nombreSim, puedeHorarioDe } from '../../core/permisos';
 import { gmtTxt } from '../../core/tiempo';
@@ -16,6 +16,7 @@ import { toast } from '../../ui/toast';
 import Available from './Available';
 import { MAX_FRANJAS, horarioLaV } from './cobertura';
 import { HUMO_PERSONA, SemanaMini, setTeam } from './comun';
+import { EditorSesiones } from './Sesiones';
 
 const OPS_DESDE = HORAS.slice(0, -1).map(h => ({ v: h, n: h }));
 const OPS_HASTA = HORAS.slice(1).map(h => ({ v: h, n: h }));
@@ -195,7 +196,7 @@ export function ModalHorario() {
     };
     let modal = null;
     if (p) {
-        const tab = team.horTab === 'semana' ? 'semana' : 'config', hs = horasSemana(p), puede = puedeHorarioDe(d, sim, perfil, p);
+        const tab = ['semana', 'sesiones'].includes(team.horTab) ? team.horTab : 'config', hs = horasSemana(p), puede = puedeHorarioDe(d, sim, perfil, p);
         modal = (
             <Modal onCerrar={cerrar} clase="modal--hor" labelledBy="hor-tit" style={{ '--c': colorVar(p.color) }}>
                 <Humo clase="humo--tarjeta humo--suave" cols={HUMO_PERSONA} />
@@ -207,12 +208,21 @@ export function ModalHorario() {
                             <span className="pc-sub" style={{ padding: 0 }}><SemanaMini p={p} /><span className="num">{hs ? fmt(hs, 1) + ' h/sem' : 'Sin horario'}</span></span>
                         </div>
                         <Seg sm nav label="Vista" valor={tab} onChange={v => setTeam({ horTab: v })}
-                            opciones={[{ v: 'config', n: 'Horario', icono: 'ajustes' }, { v: 'semana', n: 'Semana', icono: 'calendar' }]} />
+                            opciones={[{ v: 'config', n: 'Horario', icono: 'ajustes' }, { v: 'sesiones', n: 'Sesiones', icono: 'clock' }, { v: 'semana', n: 'Semana', icono: 'calendar' }]} />
                         <button type="button" className="ibtn" data-nav="" aria-label="Cerrar" onClick={cerrar}><Icono n="x" /></button>
                     </div>
                     {tab === 'semana'
                         ? <div className="hor-semana"><Available solo={p} /></div>
-                        : (
+                        : tab === 'sesiones' ? (
+                            <>
+                                {!puede && <p className="hor-ro"><Icono n="candado" s={14} />Solo lectura: {nombreSim(d, sim)} no puede cambiar sus sesiones.</p>}
+                                <div className="hor-ses">
+                                    <p className="t-sm mut">Cuánto dura cada sesión de {p.nombre} y el margen que se deja después, por evento. Lo que no ajustó usa la propuesta del evento.</p>
+                                    <EditorSesiones eventos={ord(d, 'eventos').filter(e => !e.persona)} sesiones={p.sesiones} bloqueado={!puede}
+                                        onCambio={sesiones => almacen.editar('personas', p.id, { sesiones }, true)} />
+                                </div>
+                            </>
+                        ) : (
                             <>
                                 {!puede && <p className="hor-ro"><Icono n="candado" s={14} />Solo lectura: {nombreSim(d, sim)} no puede cambiar este horario.</p>}
                                 <HorarioEditor p={p} bloqueado={!puede} />

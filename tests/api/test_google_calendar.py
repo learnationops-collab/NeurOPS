@@ -110,9 +110,10 @@ def test_frontend_url_solo_cambia_el_dominio_de_vuelta(client, make_user, auth_h
     monkeypatch.setenv('FRONTEND_URL', 'http://localhost:5173/')
     admin = make_user(role='admin')
     h = auth_headers(admin)
-    state = _login(client, h)['state'][0]
+    r = client.get('/api/google/login?volver=/admin/ventas', headers=h)
+    state = parse_qs(urlparse(r.get_json()['auth_url']).query)['state'][0]
     r = client.get(f'/google/callback?error=access_denied&state={state}', headers=h)
-    assert r.location == 'http://localhost:5173/admin/settings?google_connected=cancelado'
+    assert r.location == 'http://localhost:5173/admin/ventas?vista=configuracion&google_connected=cancelado'
 
 
 @pytest.fixture()
@@ -210,7 +211,25 @@ def test_desde_agendamiento_vuelve_a_su_configuracion(client, make_user, auth_he
     # La próxima conexión sin ?volver vuelve a la de siempre.
     state = _login(client, h)['state'][0]
     r = client.get(f'/google/callback?error=access_denied&state={state}', headers=h)
-    assert r.location == '/closer/settings?google_connected=cancelado'
+    assert r.location == '/closer/deck?vista=configuracion&google_connected=cancelado'
+
+
+@pytest.mark.parametrize('volver', ['/admin/comercial', '/setter/deck'])
+def test_vuelve_a_la_pantalla_desde_donde_se_conecto(client, make_user, auth_headers, volver):
+    h = auth_headers(make_user(role='director_comercial'))
+    r = client.get(f'/api/google/login?volver={volver}', headers=h)
+    state = parse_qs(urlparse(r.get_json()['auth_url']).query)['state'][0]
+    r = client.get(f'/google/callback?error=access_denied&state={state}', headers=h)
+    assert r.location == f'{volver}?vista=configuracion&google_connected=cancelado'
+
+
+@pytest.mark.parametrize('volver', ['//otro.com/x', 'https://otro.com', '/a?b=1', '/a/../x', 'javascript:alert(1)'])
+def test_volver_no_sirve_para_mandar_a_otro_lado(client, make_user, auth_headers, volver):
+    h = auth_headers(make_user(role='director_comercial'))
+    r = client.get('/api/google/login', query_string={'volver': volver}, headers=h)
+    state = parse_qs(urlparse(r.get_json()['auth_url']).query)['state'][0]
+    r = client.get(f'/google/callback?error=access_denied&state={state}', headers=h)
+    assert r.location == '/closer/deck?vista=configuracion&google_connected=cancelado'
 
 
 class _Freebusy:
@@ -256,6 +275,65 @@ def test_franjas_ocupadas_lee_freebusy_e_ignora_calendarios_con_error(db, closer
     # Si Google falla: None, y quien llama ofrece igual.
     monkeypatch.setattr(GoogleService, 'get_service', staticmethod(lambda u: _Freebusy(error=OSError('sin red'))))
     assert GoogleService.franjas_ocupadas(closer.id, dt.datetime(2026, 10, 5), dt.datetime(2026, 10, 6)) is None
+
+
+class _Eventos(_Freebusy):
+    """events().list(...).execute() por calendario; un calendario en `sin_permiso` falla como en Google."""
+
+    def __init__(self, por_calendario, sin_permiso=(), freebusy=None):
+        super().__init__(freebusy)
+        self.por_calendario, self.sin_permiso, self.cal = por_calendario, sin_permiso, None
+
+    def events(self):
+        return self
+
+    def list(self, calendarId, **kw):  # noqa: N803  (así se llama en la API de Google)
+        self.cal = calendarId
+        return self
+
+    def execute(self):
+        if self.cal is None:
+            return super().execute()
+        cal, self.cal = self.cal, None
+        if cal in self.sin_permiso:
+            raise OSError('403')
+        return self.por_calendario[cal]
+
+
+def test_eventos_ocupados_trae_titulos_y_cuenta_lo_que_cuenta_freebusy(db, closer, monkeypatch):
+    import datetime as dt
+    conflicto = ['primary', 'personal@group', 'facu@group']
+    db.session.add(GoogleCalendarToken(user_id=closer.id, token_json='{}', calendarios_conflicto=conflicto))
+    db.session.commit()
+    def ev(h0, h1, **kw):
+        return {'start': {'dateTime': f'2026-10-05T{h0}:00:00Z'}, 'end': {'dateTime': f'2026-10-05T{h1}:00:00Z'}, **kw}
+
+    servicio = _Eventos({'primary': {'timeZone': 'America/La_Paz', 'items': [
+        ev('13', '14', summary='Daily'),
+        ev('15', '16', summary='Médico', visibility='private'),
+        ev('17', '18', summary='Libre igual', transparency='transparent'),
+        ev('19', '20', summary='Cancelado', status='cancelled'),
+        ev('21', '22', summary='No voy', attendees=[{'self': True, 'responseStatus': 'declined'}]),
+        {'summary': 'Feriado', 'start': {'date': '2026-10-06'}, 'end': {'date': '2026-10-07'}},
+    ]}, 'personal@group': {'timeZone': 'UTC', 'items': [
+        ev('14', '15', summary='Dentista'),  # de otro calendario: sin título
+        ev('13', '14', summary='Daily'),     # el mismo de primary, leído dos veces: queda uno
+    ]}}, sin_permiso=('facu@group',), freebusy={'calendars': {
+        'facu@group': {'busy': [{'start': '2026-10-05T23:00:00Z', 'end': '2026-10-05T23:30:00Z'}]},
+    }})
+    monkeypatch.setattr(GoogleService, 'get_service', staticmethod(lambda u: servicio))
+    eventos = GoogleService.eventos_ocupados(closer.id, dt.datetime(2026, 10, 5), dt.datetime(2026, 10, 8))
+    assert [e['titulo'] for e in eventos] == ['Daily', None, None, None, 'Feriado']
+    assert eventos[0]['inicio'] == 1791205200000
+    # El día entero va de medianoche a medianoche en la zona del calendario (La Paz, UTC-4).
+    assert eventos[4]['inicio'] == int(dt.datetime(2026, 10, 6, 4, tzinfo=dt.timezone.utc).timestamp() * 1000)
+    # Del calendario que no deja ver eventos se pide solo lo ocupado.
+    assert servicio.body['items'] == [{'id': 'facu@group'}]
+    # Si tampoco se puede leer lo ocupado: None (no se sabe).
+    caido = _Eventos({}, sin_permiso=('primary', 'personal@group', 'facu@group'))
+    caido.error = OSError('sin red')
+    monkeypatch.setattr(GoogleService, 'get_service', staticmethod(lambda u: caido))
+    assert GoogleService.eventos_ocupados(closer.id, dt.datetime(2026, 10, 5), dt.datetime(2026, 10, 6)) is None
 
 
 def test_el_closer_elige_en_que_calendarios_revisar_conflictos(client, db, closer, auth_headers):

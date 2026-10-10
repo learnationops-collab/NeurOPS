@@ -224,6 +224,21 @@ def mi_disponibilidad():
     return jsonify(servicio.disponibilidad_de(current_user)), 200
 
 
+@bp.route('/auth/me/sesiones', methods=['GET', 'PUT'])
+@login_required
+def mis_sesiones():
+    """Cuánto dura cada sesión del closer y el margen que se deja después, por evento. La propuesta es la
+    del director en el evento; el closer la ajusta acá y la dirección comercial la revisa en Team.
+    PUT {sesiones: {evento_id: {duracion?, margen?}}} (entero: lo que no viene vuelve a la propuesta)."""
+    from app.agendas_v2 import servicio
+    if not current_user.tiene_rol('closer'):
+        return jsonify({"message": "Solo los closers tienen sesiones"}), 403
+    if request.method == 'PUT':
+        datos = request.get_json(silent=True) or {}
+        return jsonify(servicio.guardar_sesiones(current_user, datos.get('sesiones'))), 200
+    return jsonify(servicio.sesiones_de(current_user)), 200
+
+
 @bp.route('/auth/me/foto', methods=['GET', 'PUT'])
 @login_required
 def mi_foto():
@@ -355,30 +370,37 @@ def _roles_que_puede_simular(usuario):
     return frozenset()
 
 
-def _lista_para_simular(rol, clave):
-    """Las personas activas de `rol` que quien está detrás de la sesión puede simular (el menú del
-    dock de la dirección comercial), por nombre. 403 para quien no simula ese rol."""
-    permitidos = _roles_que_puede_simular(_quien_simula())
-    if permitidos is not None and rol not in permitidos:
+@bp.route('/auth/impersonate/equipo', methods=['GET'])
+@login_required
+def equipo_para_simular():
+    """A quiénes puede simular quien está detrás de la sesión: la lista de «Simular a alguien» del menú de
+    sesión, la misma para todos (10/10/2026; antes eran «Simular a un closer», «a un setter» y el panel
+    del operador, cada uno con su lista). Las personas activas, por nombre, sin la propia, cada una con
+    los roles con los que se la puede simular (la dirección comercial solo ve closer y setter, aunque la
+    persona tenga otros). 403 para quien no simula a nadie.
+    """
+    quien = _quien_simula()
+    permitidos = _roles_que_puede_simular(quien)
+    if permitidos is not None and not permitidos:
         return jsonify({"message": "Forbidden"}), 403
     personas = db.session.scalars(
-        sa.select(User).where(User.role == rol, User.is_active.is_(True)).order_by(User.username)
+        sa.select(User).where(User.is_active.is_(True), User.id != quien.id).order_by(User.username)
     ).all()
-    return jsonify({clave: [{"id": u.id, "username": u.username} for u in personas]}), 200
-
-
-@bp.route('/auth/impersonate/closers', methods=['GET'])
-@login_required
-def closers_para_simular():
-    from app.models.user import ROLE_CLOSER
-    return _lista_para_simular(ROLE_CLOSER, 'closers')
-
-
-@bp.route('/auth/impersonate/setters', methods=['GET'])
-@login_required
-def setters_para_simular():
-    from app.models.user import ROLE_SETTER
-    return _lista_para_simular(ROLE_SETTER, 'setters')
+    equipo = []
+    for u in personas:
+        roles = [r for r in u.roles if permitidos is None or r in permitidos]
+        if not roles:
+            continue
+        equipo.append({
+            "id": u.id,
+            "username": u.username,
+            "role": roles[0],
+            "roles": roles,
+            # Finances entra con admin o dirección: solo si se lo puede simular con esos roles.
+            "can_view_finance": bool(getattr(u, 'can_view_finance', False)) and permitidos is None,
+            "mascota": u.mascota,
+        })
+    return jsonify({"equipo": equipo}), 200
 
 
 @bp.route('/auth/impersonate', methods=['POST'])

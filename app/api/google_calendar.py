@@ -2,6 +2,7 @@
 su token. Ver app/services/google_service.py para las variables de entorno."""
 
 import os
+import re
 
 from flask import Blueprint, current_app, jsonify, redirect, request, session
 from flask_login import current_user, login_required
@@ -18,18 +19,22 @@ if os.environ.get('FLASK_ENV') != 'production':
 os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 
 
+# Una ruta interna simple ("/admin/comercial"): nada de dominios, "//" ni parámetros, para que
+# `volver` no sirva de redirección abierta.
+_RUTA_INTERNA = re.compile(r'^/(?!/)[A-Za-z0-9/_-]*$')
+
+
 def _volver(resultado):
-    """A la pantalla desde donde se conecta, según el rol activo. Mismo dominio que el backend salvo
-    en local, donde FRONTEND_URL apunta al servidor de Vite."""
+    """A la pantalla desde donde se conecta, con la Configuración abierta en Integraciones. Mismo
+    dominio que el backend salvo en local, donde FRONTEND_URL apunta al servidor de Vite."""
     base = os.environ.get('FRONTEND_URL', '').rstrip('/')
-    if session.pop('google_volver', None) == 'agendamiento':
+    volver = session.pop('google_volver', None)
+    if volver == 'agendamiento':
         destino = '/agendas-v2?config=integraciones&'
-    elif current_user.is_authenticated and current_user.role == 'closer':
-        destino = '/closer/deck?vista=configuracion&'
-    elif current_user.is_authenticated and current_user.role == 'admin':
-        destino = '/admin/settings?'
+    elif volver and _RUTA_INTERNA.match(volver):
+        destino = f'{volver}?vista=configuracion&'
     else:
-        destino = '/closer/settings?'
+        destino = '/closer/deck?vista=configuracion&'
     return redirect(f'{base}{destino}google_connected={resultado}')
 
 
@@ -46,9 +51,11 @@ def login():
     session['google_oauth_state'] = state
     session['google_redirect_uri'] = redirect_uri
     session.pop('google_oauth_proposito', None)  # es conectar el calendario, no entrar con Google
-    # ?volver=agendamiento: se conecta desde la Configuración de Agendamiento y vuelve ahí.
-    if request.args.get('volver') == 'agendamiento':
-        session['google_volver'] = 'agendamiento'
+    # ?volver=agendamiento: se conecta desde la Configuración de Agendamiento y vuelve ahí. Con una
+    # ruta ("/admin/comercial"), vuelve a esa pantalla con la Configuración abierta (sesion/).
+    volver = request.args.get('volver')
+    if volver == 'agendamiento' or (volver and _RUTA_INTERNA.match(volver)):
+        session['google_volver'] = volver
     else:
         session.pop('google_volver', None)
     return jsonify({'auth_url': auth_url})

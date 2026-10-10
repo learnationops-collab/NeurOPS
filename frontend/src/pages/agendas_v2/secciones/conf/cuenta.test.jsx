@@ -2,7 +2,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../../../../services/api';
-import { TarjetaCalendar, TarjetaDisponibilidad, TarjetaWhatsapp } from './cuenta';
+import { TarjetaCalendar, TarjetaDisponibilidad, TarjetaSesiones, TarjetaWhatsapp } from './cuenta';
 
 vi.mock('../../../../services/api', () => ({ default: { get: vi.fn(), put: vi.fn(), post: vi.fn() } }));
 
@@ -58,5 +58,27 @@ describe('Cuenta', () => {
         expect(url).toBe('/auth/me/disponibilidad');
         expect(cuerpo.horario[2]).toEqual([['09:00', '18:00']]);
         expect(screen.getByRole('status')).toHaveTextContent('quedó guardada');
+    });
+
+    it('Sesiones: ajusta la duración y el margen, y puede volver a la propuesta', async () => {
+        const ev = { id: 'ev', nombre: 'Llamada', activo: true, duracion: 45, margen: 0 };
+        api.get.mockResolvedValue({ data: { en_team: true, eventos: [{ ...ev, propia: {} }] } });
+        api.put.mockImplementation((url, cuerpo) => Promise.resolve({ data: { en_team: true, eventos: [{ ...ev, propia: cuerpo.sesiones.ev || {} }] } }));
+        render(envolver(<TarjetaSesiones />));
+        expect(await screen.findByText('Usa la propuesta')).toBeTruthy();
+        expect(screen.getByRole('button', { name: 'Guardar sesiones' })).toBeDisabled();
+        fireEvent.click(screen.getByRole('button', { name: 'Margen de Llamada' }));
+        fireEvent.click(screen.getByRole('option', { name: /20 min/ }));
+        // Un valor a medida: «Otro…» y se escribe.
+        fireEvent.click(screen.getByRole('button', { name: 'Sesión de Llamada' }));
+        fireEvent.click(screen.getByRole('option', { name: /Otro/ }));
+        const campo = screen.getByRole('spinbutton', { name: 'Sesión de Llamada en minutos' });
+        fireEvent.change(campo, { target: { value: '50' } });
+        fireEvent.blur(campo);
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Guardar sesiones' })); });
+        expect(api.put).toHaveBeenCalledWith('/auth/me/sesiones', { sesiones: { ev: { margen: 20, duracion: 50 } } });
+        expect(screen.getByText('Propuesta: 45 min')).toBeTruthy();
+        fireEvent.click(screen.getByRole('button', { name: /Usar la propuesta/ }));
+        expect(screen.getByText('Usa la propuesta')).toBeTruthy();
     });
 });

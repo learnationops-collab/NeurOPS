@@ -1,5 +1,6 @@
-// Available: calendario semanal de cobertura. Cada closer es un carril; dentro de su horario,
-// lleno = agendada (reservas reales), claro = libre. Rayado = franja del día sin ningún closer.
+// Available: calendario semanal de cobertura. Cada closer es un carril; dentro de su horario, con su
+// duración real: lleno = agendada (reservas reales), medio = su margen después, gris rayado = evento
+// en su Google Calendar, claro = libre. Rayado rojo = franja del día sin ningún closer.
 // Con una sola persona y permiso, se edita arrastrando: crear, mover y estirar franjas (de a 30 min).
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -12,7 +13,7 @@ import { almacen, useDatos, useUi } from '../../data/hooks';
 import { HUMO_MARCA, Humo, Icono } from '../../ui/base';
 import { toast } from '../../ui/toast';
 import { DIAS } from '../../core/catalogos';
-import { HPX, avUnir, calcularCobertura, hmTxt, nombreDia } from './cobertura';
+import { HPX, avUnir, calcularCobertura, durTxt, hmTxt, nombreDia, rangoSemana } from './cobertura';
 import { setTeam } from './comun';
 
 const hm = (m) => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
@@ -24,6 +25,48 @@ function useAhora() {
     return ahora;
 }
 
+// Lo ocupado en Google de cada persona entre desde y hasta, renovado cada 2 minutos (lo que el servidor
+// guarda lo leído). null mientras no llega o sin API; 'error' si el pedido entero falló.
+function useOcupacionGoogle(desde, hasta, activo) {
+    const [res, setRes] = useState(null);   // {k, datos}
+    const k = desde + '-' + hasta;
+    useEffect(() => {
+        const ad = almacen.adaptador;
+        if (!activo || !ad.ocupacion) return undefined;
+        let vivo = true;
+        const pedir = () => ad.ocupacion(desde, hasta).then(
+            (datos) => { if (vivo) setRes({ k, datos }); },
+            // Si falla una renovación se queda lo último leído de esta semana.
+            () => { if (vivo) setRes(r => (r && r.k === k ? r : { k, datos: 'error' })); },
+        );
+        pedir();
+        const t = setInterval(pedir, 120000);
+        return () => { vivo = false; clearInterval(t); };
+    }, [k, activo]); // eslint-disable-line react-hooks/exhaustive-deps
+    return res && res.k === k ? res.datos : null;
+}
+
+const SIN_LEER = { estado: 'error', franjas: [] };
+
+// El detalle de un bloque: cuánto de lo disponible está ocupado y en qué.
+function resumenBloque(x) {
+    const ag = x.mAg + x.mMg ? durTxt(x.mAg + x.mMg) + ' agendado' + (x.mMg ? ' (' + durTxt(x.mMg) + ' de margen)' : '') : '';
+    if (x.sinLeer) return 'No se pudo leer su calendario' + (ag ? ' · ' + ag : '');
+    const partes = [ag, x.mEv ? durTxt(x.mEv) + ' por eventos' : ''].filter(Boolean);
+    return durTxt(x.mAg + x.mMg + x.mEv) + ' ocupado de ' + durTxt(x.mDisp) + (partes.length ? ' · ' + partes.join(' · ') : '');
+}
+
+const nombres = (ps) => ps.map(p => p.nombre).join(', ');
+
+// Título de un evento de Google: solo los del calendario de agendamiento lo traen; el resto, «Ocupado».
+const tituloEv = (e) => (e.titulo || 'Ocupado').replace(/\|/g, '/');
+// Lo que muestra un tramo por eventos: sus títulos y, al pasar el mouse, cada uno con su hora.
+function textoEventos(sg) { return [...new Set(sg.eventos.map(tituloEv))].join(' · '); }
+function tipEventos(sg, tz) {
+    const n = sg.eventos.length;
+    return (n === 1 ? 'Evento' : n + ' eventos') + ' en su calendario|' + sg.eventos.map(e => horaTxt(e.inicio, tz) + '–' + horaTxt(e.fin, tz) + ' ' + tituloEv(e)).join(' · ');
+}
+
 export default function Available({ solo = null }) {
     const { d, perfil, reservas } = useDatos();
     const { sim, team } = useUi();
@@ -33,9 +76,13 @@ export default function Available({ solo = null }) {
     const todos = useMemo(() => closers(d).filter(p => horasSemana(p) > 0), [d]);
     const cs = useMemo(() => (solo ? (horasSemana(solo) > 0 || edit ? [solo] : []) : todos), [solo, edit, todos]);
 
+    const { desde, hasta } = rangoSemana(cs, semana, ahora);
+    const google = useOcupacionGoogle(desde, hasta, cs.length > 0);
+
     const cob = useMemo(() => (cs.length ? calcularCobertura({
         todos, cs, semana, ahora, edit, reservasDe: (id) => _reservasDe(reservas, id),
-    }) : null), [todos, cs, semana, ahora, edit, reservas]);
+        googleDe: google === 'error' ? () => SIN_LEER : google ? (id) => google[id] || null : () => null,
+    }) : null), [todos, cs, semana, ahora, edit, reservas, google]);
 
     const [arr, setArr] = useState(null);   // franja que se está arrastrando: {dow, ri, a, b, modo}
     const drag = useRef(null);
@@ -43,7 +90,8 @@ export default function Available({ solo = null }) {
     if (!cob) {
         return <div className="panel vacio"><p className="t-sm mut">{solo ? 'Cargá tu horario para ver tu semana.' : 'Cargá horarios en People para ver la cobertura.'}</p></div>;
     }
-    const { tz, dias, bloques, huecos, porDia, minH, maxH, hoyK, mAhora, kpi } = cob;
+    const { tz, dias, bloques, huecos, porDia, minH, maxH, hoyK, mAhora, kpi, sinLeer, sinGoogle } = cob;
+    const conApi = !!almacen.adaptador.ocupacion, leyendo = conApi && google == null;
     const n = cs.length, alto = (maxH - minH) * HPX;
     const rango = fechaCorta(dias[0].k) + ' – ' + fechaCorta(dias[6].k);
     const y = (m) => (m - minH * 60) / 60 * HPX;
@@ -109,13 +157,18 @@ export default function Available({ solo = null }) {
 
     const irSemana = (v) => setTeam({ semana: v === 0 ? 0 : semana + v });
     const ocupPct = Math.round(kpi.ocupacion * 100);
+    const nadieLeido = sinLeer.length > 0 && sinLeer.length === cs.length;
 
     return (
         <>
             <div className="av-kpis">
                 <div className="av-kpi"><span>{solo ? 'Tus horas' : 'Horas disponibles'}</span><b className="num">{fmt(kpi.hDisp, 0)}</b></div>
-                <div className="av-kpi"><span>Agendadas</span><b className="num">{kpi.agendadas}<em>/{kpi.celdas}</em></b></div>
-                <div className="av-kpi"><span>Ocupación</span><b className="num">{ocupPct}%</b><i className="av-barra"><i style={{ width: kpi.ocupacion * 100 + '%' }} /></i></div>
+                <div className="av-kpi"><span>Agendado</span><b className="num">{fmt(kpi.hAg, 1)} h<em> · {kpi.nAg} {kpi.nAg === 1 ? 'agenda' : 'agendas'}</em></b></div>
+                <div className="av-kpi"><span>Por eventos</span><b className="num">{conApi && !leyendo && !nadieLeido ? fmt(kpi.hEv, 1) + ' h' : '—'}</b></div>
+                <div className="av-kpi" data-tip={'Ocupación|Tiempo efectivo de agendas y eventos dentro del horario: lo que se pisa cuenta una vez.' + (sinLeer.length ? ' Sin contar a ' + nombres(sinLeer) + '.' : '')}>
+                    <span>Ocupación</span><b className="num">{nadieLeido ? '—' : ocupPct + '%'}<em> · {fmt(kpi.hLibre, 1)} h libres</em></b>
+                    <i className="av-barra"><i style={{ width: kpi.ocupAg * 100 + '%' }} /><i className="ev" style={{ width: kpi.ocupEv * 100 + '%' }} /></i>
+                </div>
                 <div className="av-kpi av-kpi--hueco"><span>{solo ? 'Huecos del equipo' : 'Sin closer'}</span><b className="num">{fmt(kpi.hHueco, 0)} h</b></div>
             </div>
             <section className={'av caja' + (edit ? ' av--edit' : '')}>
@@ -131,8 +184,13 @@ export default function Available({ solo = null }) {
                         {cs.map(p => <span key={p.id} style={{ '--c': colorVar(p.color) }}><i />{p.nombre}</span>)}
                         {edit && <span className="av-ley-s av-ley-edit"><Icono n="edit" s={12} />Arrastrá para crear o mover · se repite cada semana</span>}
                         <span className="av-ley-s"><i className="av-l-ag" />Agendada</span>
+                        {bloques.some(x => x.mMg > 0) && <span className="av-ley-s"><i className="av-l-mg" />Margen</span>}
+                        {conApi && <span className="av-ley-s"><i className="av-l-ev" />Evento en su calendario</span>}
                         <span className="av-ley-s"><i className="av-l-li" />Libre</span>
                         <span className="av-ley-s"><i className="av-l-hu" />Sin closer</span>
+                        {leyendo && <span className="av-ley-s">Leyendo calendarios…</span>}
+                        {sinLeer.length > 0 && <span className="av-ley-s av-ley-aviso"><Icono n="alerta" s={12} />No se pudo leer el calendario de {nombres(sinLeer)}</span>}
+                        {sinGoogle.length > 0 && <span className="av-ley-s"><Icono n="calendar" s={12} />Sin Google Calendar: {nombres(sinGoogle)} (solo agendas)</span>}
                     </div>
                 </div>
                 <div className="av-cal">
@@ -164,14 +222,13 @@ export default function Available({ solo = null }) {
                                             <div key={x.m0} className="av-hueco" style={{ top: y(x.m0), height: (x.m1 - x.m0) / 60 * HPX }} data-tip={'Sin closer|' + hm(x.m0) + ' a ' + hm(x.m1)} />
                                         ))}
                                         {bls.map((x, i) => {
-                                            const ag = x.celdas.filter(c => c.oc).length;
                                             const vivo = enArr && arr.modo !== 'crear' && arr.ri === x.ri;
                                             const m0 = vivo ? arr.a : x.m0, m1 = vivo ? arr.b : x.m1;
                                             const txtH = vivo ? hmTxt(m0) + '–' + hmTxt(m1) : horaTxt(x.t0, tz) + '–' + horaTxt(x.t1, tz);
                                             return (
-                                                <div key={x.p.id + '-' + x.dow + '-' + x.ri} data-i={i} className={'av-bloque' + (vivo ? ' av-bloque--drag' : '')}
+                                                <div key={x.p.id + '-' + x.dow + '-' + x.ri} data-i={i} className={'av-bloque' + (vivo ? ' av-bloque--drag' : '') + (x.sinLeer ? ' av-bloque--sinleer' : '')}
                                                     style={{ '--c': colorVar(x.p.color), top: y(m0), height: (m1 - m0) / 60 * HPX, left: 'calc(' + (x.li / n * 100) + '% + 2px)', width: 'calc(' + (100 / n) + '% - 4px)' }}
-                                                    data-tip={x.p.nombre + ' · ' + horaTxt(x.t0, tz) + '–' + horaTxt(x.t1, tz) + '|' + ag + ' agendadas de ' + x.celdas.length}>
+                                                    data-tip={x.p.nombre + ' · ' + horaTxt(x.t0, tz) + '–' + horaTxt(x.t1, tz) + '|' + resumenBloque(x)}>
                                                     {edit ? (
                                                         <>
                                                             <span className="av-asa av-asa--t" data-av="t" />
@@ -180,10 +237,16 @@ export default function Available({ solo = null }) {
                                                             <span className="av-hora">{txtH}</span>
                                                         </>
                                                     ) : <span className="av-ini">{iniciales(x.p.nombre)}</span>}
-                                                    {!vivo && x.celdas.map(c => (
-                                                        <i key={c.t} className={(c.oc ? 'oc' : '') + (c.t + 45 * 60000 < ahora ? ' pas' : '')}
-                                                            style={{ top: (c.t - x.t0) / 3600000 * HPX, height: HPX * 45 / 60 }} />
-                                                    ))}
+                                                    {!vivo && x.segs.map(sg => {
+                                                        const alto = (sg.b - sg.a) / 3600000 * HPX, conEv = sg.tipo === 'ev' && sg.eventos && sg.eventos.length > 0;
+                                                        return (
+                                                            <i key={sg.tipo + sg.a} className={sg.tipo + (sg.b <= ahora ? ' pas' : '')}
+                                                                style={{ top: (sg.a - x.t0) / 3600000 * HPX, height: alto }}
+                                                                data-tip={conEv ? tipEventos(sg, tz) : undefined}>
+                                                                {conEv && alto >= 14 && <span className="av-ev-txt">{textoEventos(sg)}</span>}
+                                                            </i>
+                                                        );
+                                                    })}
                                                 </div>
                                             );
                                         })}

@@ -16,18 +16,18 @@
  * con !important en span/div/p fuera de los shells exentos, y `small` no está en esa lista. */
 
 .mc {
-    --mc-sin: var(--v6-blue2, #4E8BD8);
-    --mc-con: var(--v6-pink, #FF3FA4);
+    --mc-sin: var(--v6-blue2, var(--ln-brand-2-accent, #4E8BD8));
+    --mc-con: var(--v6-pink, var(--ln-brand, #FF3FA4));
     /* Las «No cerradas»: un naranja entre el error y el aviso (el que tenía «Presentó, no cerró»
        en el panel Estados hasta el 09/10/2026), que no se confunde con el azul de las ventas ni
        con el rosa de las señas. */
-    --mc-no: color-mix(in oklch, var(--v6-dgr, #E85C4A) 55%, var(--v6-warn, #D9A441));
-    --mc-presenta: rgba(255, 255, 255, .94);
-    --mc-hueco: rgba(2, 6, 23, .55);
-    --mc-mut: rgba(255, 255, 255, .5);
-    --mc-mut-2: rgba(255, 255, 255, .72);
-    --mc-borde: rgba(255, 255, 255, .09);
-    --mc-superficie: rgba(255, 255, 255, .035);
+    --mc-no: color-mix(in oklch, var(--v6-dgr, var(--ln-danger, #E85C4A)) 55%, var(--v6-warn, var(--ln-warning, #D9A441)));
+    --mc-presenta: color-mix(in srgb, var(--ln-text-out, #ffffff) 94%, transparent);
+    --mc-hueco: color-mix(in srgb, var(--ln-page-base, #020617) 55%, transparent);
+    --mc-mut: color-mix(in srgb, var(--ln-text-out, #ffffff) 50%, transparent);
+    --mc-mut-2: color-mix(in srgb, var(--ln-text-out, #ffffff) 72%, transparent);
+    --mc-borde: color-mix(in srgb, var(--ln-text-out, #ffffff) 9%, transparent);
+    --mc-superficie: color-mix(in srgb, var(--ln-text-out, #ffffff) 3.5%, transparent);
     --mc-curva: cubic-bezier(.22, .7, .2, 1);
     container: mc / inline-size;
     display: grid;
@@ -112,7 +112,7 @@
     height: 10px;
     border-radius: 4px;
     background: var(--mc-hueco);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .03);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ln-text-out, #ffffff) 3%, transparent);
     overflow: hidden;
 }
 
@@ -227,7 +227,7 @@
 }
 
 .mc-col:hover {
-    border-color: rgba(255, 255, 255, .16);
+    border-color: color-mix(in srgb, var(--ln-text-out, #ffffff) 16%, transparent);
 }
 
 /* El humo de la referencia: azul arriba a la izquierda, magenta hacia la derecha y un índigo
@@ -238,9 +238,9 @@
     z-index: -1;
     pointer-events: none;
     background:
-        radial-gradient(30% 34% at 30% 28%, rgba(78, 139, 216, .36), transparent 70%),
-        radial-gradient(30% 38% at 76% 46%, rgba(255, 63, 164, .27), transparent 72%),
-        radial-gradient(38% 30% at 48% 74%, rgba(19, 35, 198, .36), transparent 72%);
+        radial-gradient(30% 34% at 30% 28%, color-mix(in srgb, var(--ln-brand-2-accent, #4e8bd8) 36%, transparent), transparent 70%),
+        radial-gradient(30% 38% at 76% 46%, color-mix(in srgb, var(--ln-brand, #ff3fa4) 27%, transparent), transparent 72%),
+        radial-gradient(38% 30% at 48% 74%, color-mix(in srgb, var(--ln-brand-2, #1323c6) 36%, transparent), transparent 72%);
     filter: blur(14px);
     animation: mc-humo 24s ease-in-out infinite alternate;
 }
@@ -315,8 +315,8 @@
 /* --- Leyenda (la pone cada tablero en su cabecera) ------------------------------------------- */
 
 .mc-leyenda {
-    --mc-sin: var(--v6-blue2, #4E8BD8);
-    --mc-con: var(--v6-pink, #FF3FA4);
+    --mc-sin: var(--v6-blue2, var(--ln-brand-2-accent, #4E8BD8));
+    --mc-con: var(--v6-pink, var(--ln-brand, #FF3FA4));
     display: inline-flex;
     flex-wrap: wrap;
     align-items: center;
@@ -351,7 +351,7 @@
 .mc-ley-desglose {
     font-size: 10.5px;
     font-weight: 600;
-    color: var(--mc-mut, rgba(255, 255, 255, .5));
+    color: var(--mc-mut, color-mix(in srgb, var(--ln-text-out, #ffffff) 50%, transparent));
     font-variant-numeric: tabular-nums;
 }
 
