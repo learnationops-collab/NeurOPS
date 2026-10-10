@@ -5,7 +5,7 @@ import FichaHeader from './FichaHeader';
 import FichaTabs from './FichaTabs';
 import { Aviso, diaLegible, useMovimiento } from './piezas';
 import { Hueso } from '../huesos/Huesos';
-import { leerEstado } from './estadoFicha';
+import { enSoloLectura, leerEstado } from './estadoFicha';
 import { ejecutarAccion, ejecutarConsulta, mensajeDeError, obtenerFicha } from './fichaApi';
 import TabConfirmacion from './tabs/TabConfirmacion';
 import TabFulfillment from './tabs/TabFulfillment';
@@ -189,6 +189,7 @@ const FichaLeadModal = ({
     abrirEnVenta = false,   // «Declarar venta» del dock: Resultado arranca en «Registrar una venta»
     seguimiento = null,     // 'contacto' | 'cobro': se abrió para reportar ese seguimiento
     seccionInicial = null,  // 'pagos': el Historial arranca con esa sección abierta (Finanzas › Diferencias)
+    soloLectura = false,    // para mirar: ninguna acción salvo una nota (Revisar del setter, ver `enSoloLectura`)
 }) => {
     const [ficha, setFicha] = useState(null);
     const [cargando, setCargando] = useState(true);
@@ -222,7 +223,7 @@ const FichaLeadModal = ({
             });
             // Una recarga que llega después de otra más nueva traería datos viejos.
             if (!vigente()) return null;
-            setFicha(datos);
+            setFicha(soloLectura ? enSoloLectura(datos) : datos);
             return datos;
         } catch (err) {
             if (err?.code === 'ERR_CANCELED' || !vigente()) return null;
@@ -231,7 +232,7 @@ const FichaLeadModal = ({
         } finally {
             if (vigente()) setCargando(false);
         }
-    }, [appointmentId, clientId]);
+    }, [appointmentId, clientId, soloLectura]);
 
     useEffect(() => {
         const ac = new AbortController();

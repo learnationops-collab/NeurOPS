@@ -60,13 +60,27 @@ export const pestanaPorDefecto = (ficha) => {
     return visibles.some(p => p.id === pedida) ? pedida : visibles[0].id;
 };
 
+const PERMISOS = ['confirmar', 'reportar', 'cobrar', 'reasignar', 'comentar', 'eliminar', 'editar_datos'];
+
 /** Si el rol no puede tocar nada, el panel se muestra en solo lectura. */
 export const puedeEditarFicha = (ficha) => {
     const permisos = ficha?.permisos;
     if (!permisos) return true;
-    return ['confirmar', 'reportar', 'cobrar', 'reasignar', 'comentar', 'eliminar', 'editar_datos']
-        .some(k => permisos[k] === true);
+    return PERMISOS.some(k => permisos[k] === true);
 };
+
+/**
+ * La ficha para MIRAR: todos los permisos en `false` salvo `comentar`, que queda como lo dio el
+ * servidor. La pide quien abre la ficha desde una lista de solo lectura —el Revisar del setter
+ * (10/10/2026: «ninguna acción de edición ni de borrado»)— aunque el rol pueda hacer algo en otra
+ * pantalla (el setter confirma sus propias agendas). Una nota al equipo no edita el lead.
+ *
+ * Los permisos se ponen TODOS explícitos: uno ausente no veta nada (ver `vetado`), y sin ninguno
+ * la ficha se abriría editable.
+ */
+export const enSoloLectura = (ficha) => (ficha
+    ? { ...ficha, permisos: Object.fromEntries(PERMISOS.map(k => [k, k === 'comentar' && ficha.permisos?.comentar === true])) }
+    : ficha);
 
 /** Lo que el cascarón necesita de `estado`, en un solo objeto y sin `undefined`. */
 export const leerEstado = (ficha) => ({

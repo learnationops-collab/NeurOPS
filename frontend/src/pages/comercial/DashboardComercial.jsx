@@ -910,11 +910,15 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     el que está. Antes eran dos modales distintos y ninguno mostraba todo.
 
                     Un lead de ManyChat sigue con el modal viejo: su fila no trae ni agenda ni
-                    cliente con los que pedir la ficha. */}
+                    cliente con los que pedir la ficha.
+
+                    El setter mira sus listas: en su Revisar la ficha es de solo lectura (pedido
+                    del 10/10/2026), aunque en otra pantalla confirme sus propias agendas. */}
                 {filaAbierta && (esFichaUnificada(filaAbierta) ? (
                     <FichaLeadModal
                         appointmentId={filaAbierta.tipo === 'agenda' ? filaAbierta.id : null}
                         clientId={filaAbierta.tipo === 'agenda' ? null : filaAbierta.client_id}
+                        soloLectura={contexto.yo.rol === 'setter'}
                         onCerrar={cerrarFila}
                         onCambio={() => { cargarTabla(); cargarAnalizar(); }} />
                 ) : (
