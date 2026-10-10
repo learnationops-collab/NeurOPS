@@ -383,7 +383,7 @@ def test_los_grupos_del_panel_estados_siguen_el_diseno(db, marlon):
     assert grupo == {
         'sin_reporte': 'sin_resultado', 'no_show': 'sin_resultado',
         'cancelo': 'sin_resultado', 'reagendo': 'sin_resultado',
-        'por_ocurrir': 'en_curso', 'seguimiento': 'en_curso', 'presento_no_cerro': 'en_curso',
+        'por_ocurrir': 'en_curso', 'seguimiento': 'en_curso',
         'venta': 'cerradas', 'sena': 'cerradas',
     }
     por_grupo = {}
@@ -399,9 +399,25 @@ def test_los_grupos_del_panel_estados_siguen_el_diseno(db, marlon):
     assert tono['venta'] == 'success'
     assert tono['sena'] == 'brand-secondary'
     assert tono['seguimiento'] == 'info'
-    assert tono['presento_no_cerro'] == 'naranja'
     # Es la paleta del panel, no la del vocabulario: el chip de Revisar sigue en su tono.
     assert chip('post_call', 'sena')['tone'] == 'warning'
+
+
+@freeze_time(HOY)
+def test_el_panel_estados_tiene_una_sola_fila_de_seguimiento(db, marlon):
+    """Pedido del usuario (09/10/2026): «Presentó, no cerró» se muestra como «Seguimiento». En el
+    panel eso es UNA fila con las dos cuentas sumadas, nunca dos filas con el mismo nombre — y el
+    embudo sigue contando como presentación la que terminó sin nada programado."""
+    agenda(db, marlon, cliente(db, 'Lo pienso'), closer_result='Show up',
+           seguimiento_tipo='llamada', fecha_seguimiento=datetime(2026, 9, 20))
+    agenda(db, marlon, cliente(db, 'Escucho y se fue'), closer_result='Show up')
+
+    bloque = ca.bloque_closers(DESDE, HASTA)
+
+    assert [(e['key'], e['label'], e['n'], e['filtro']) for e in bloque['estados']] == [
+        ('seguimiento', 'Seguimiento', 2, 'Seguimiento')]
+    assert {p['paso']: p['n'] for p in bloque['funnel']}['Presentaciones'] == 1
+    assert bloque['presentaciones'] == 1
 
 
 # --- Señas ---------------------------------------------------------------------------------------

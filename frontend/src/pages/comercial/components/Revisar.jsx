@@ -435,8 +435,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         const noShow = lista.filter(f => f.post_call.key === 'no_show').length;
         const pendientes = lista.filter(f => f.post_call.key === 'pendiente');
         const conRetraso = pendientes.filter(f => f.retraso_dias > 0).length;
-        const seguimiento = lista.filter(
-            f => ['seguimiento', 'presento_no_cerro'].includes(f.post_call.key)).length;
+        const seguimiento = lista.filter(f => f.post_call.key === 'seguimiento').length;
         return [
             { key: 'agendas', label: segun(lista.length, 'agenda', 'agendas'), valor: fmt.num(lista.length),
                 color: 'var(--text-on-surface)',

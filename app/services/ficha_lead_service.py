@@ -24,7 +24,7 @@ from app.models import Appointment, Client, FinancialSale
 from app.services import ficha_lead_secciones as secciones
 from app.services import ficha_vocabulario as voc
 from app.services.closer_followup_service import CloserFollowUpService
-from app.services.comercial_service import chip, post_call_de, pre_call_de
+from app.services.comercial_service import ASISTIO, cerro_sin_venta, chip, post_call_de, pre_call_de
 from app.services.estado_lead import estado_de_agenda, resolver_estado
 from app.services.lead_cobro_service import UMBRAL_DEUDA, resolver_etapa
 
@@ -176,16 +176,19 @@ def _que_compro(tipos_vendidos):
     return con_venta, (not con_venta and 'seña' in tipos_vendidos)
 
 
-def _hitos(confirmada, post, venta, deuda, tipos_vendidos, baja=None):
+def _hitos(confirmada, post, venta, deuda, tipos_vendidos, baja=None, no_cerro=False):
     """Los 5 hitos del stepper de la pestana Resultado, con su subtitulo en vivo.
 
     `estado` es el vocabulario de `StepperFicha`: 'hecho' (verde), 'alerta' (ambar: se alcanzo pero
     salio mal), 'actual' y 'pendiente'. Un hito malo no es un hito pendiente: el closer tiene que
     ver de un golpe que la llamada ocurrio y salio mal.
+
+    `no_cerro` es `cerro_sin_venta`: la llamada termino sin venta, sin sena y sin un seguimiento
+    abierto. El post call de esa llamada dice "Seguimiento" como el de cualquier otra que no cerro,
+    pero su cierre es "No cerro" y no "Pendiente": no hay nada programado que lo vaya a resolver.
     """
     clave_post = post['key']
-    asistio = clave_post in ('asistio', 'venta', 'sena', 'seguimiento', 'presento_no_cerro',
-                             'segunda_llamada')
+    asistio = clave_post in ASISTIO
     reportado = clave_post != 'pendiente'
     # `venta` es el último pago, de cualquier tipo: dice si hay un cliente con deuda que mirar. Si
     # la llamada CERRÓ lo dicen los tipos de pago: una seña sola no es una venta.
@@ -211,7 +214,7 @@ def _hitos(confirmada, post, venta, deuda, tipos_vendidos, baja=None):
         cierre = ('Seña · falta completar', 'actual')
     elif not asistio:
         cierre = ('Pendiente', 'pendiente')
-    elif clave_post == 'presento_no_cerro':
+    elif no_cerro:
         cierre = ('No cerró', 'alerta')
     else:
         cierre = ('Pendiente', 'actual')
@@ -255,8 +258,9 @@ def _resultado(appt, ventas, estado_libro, confirmada, deuda, tipos_vendidos, co
                 'seguimiento_activo': False, 'seguimiento_intento': 1, 'seguimiento_tipo': None}
 
     con_venta, _ = _que_compro(tipos_vendidos)
-    post = chip('post_call', post_call_de(estado_libro, con_venta, con_seguimiento,
-                                          con_sena='seña' in tipos_vendidos))
+    con_sena = 'seña' in tipos_vendidos
+    post = chip('post_call', post_call_de(estado_libro, con_venta, con_sena=con_sena))
+    no_cerro = cerro_sin_venta(estado_libro, con_venta, con_seguimiento, con_sena=con_sena)
     ultima = ventas[-1] if ventas else None
     venta = None
     if ultima:
@@ -272,7 +276,7 @@ def _resultado(appt, ventas, estado_libro, confirmada, deuda, tipos_vendidos, co
         'oferta_presentada': appt.offer_presented,
         'reportada': bool(appt.closer_processed),
         'venta': venta,
-        'hitos': _hitos(confirmada, post, venta, deuda, tipos_vendidos, baja),
+        'hitos': _hitos(confirmada, post, venta, deuda, tipos_vendidos, baja, no_cerro=no_cerro),
         # El lead puede entrar a la pestana Resultado por dos caminos distintos: una llamada sin
         # reportar (se elige entre las 4 tarjetas) o la cadencia de seguimiento, que ya tiene un
         # resultado y lo que pide es el proximo contacto. Sin esto la pestana no sabe cual es y

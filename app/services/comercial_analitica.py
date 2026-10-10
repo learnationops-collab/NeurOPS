@@ -228,16 +228,13 @@ SIN_REPORTE = {'key': 'sin_reporte', 'label': 'Sin reporte', 'tone': 'warning'}
 POR_OCURRIR = {'key': 'por_ocurrir', 'label': 'Aún no ocurrió', 'tone': 'idle'}
 
 # El color de cada estado EN ESTE PANEL, donde el vocabulario no alcanza: la dona pone los estados
-# uno al lado del otro, y con los tonos de los chips "Seña", "Seguimiento" y "Presentó, no cerró"
-# serían tres arcos del mismo amarillo (y "Sin reporte" y "No show", dos del mismo rojo). La
-# paleta es la del diseño de Kerwin (30/09/2026): la seña en magenta, como en la tarjeta de Cierre;
-# el seguimiento en azul; "Presentó, no cerró" en `naranja`, entre el error y el aviso (lo define
-# la pieza del panel, `reparto-estados.css`); y "Sin reporte" en amarillo, arriba. Los chips de
-# Revisar siguen con el tono del vocabulario.
+# uno al lado del otro, y con los tonos de los chips "Seña" y "Seguimiento" serían dos arcos del
+# mismo amarillo (y "Sin reporte" y "No show", dos del mismo rojo). La paleta es la del diseño de
+# Kerwin (30/09/2026): la seña en magenta, como en la tarjeta de Cierre; el seguimiento en azul; y
+# "Sin reporte" en amarillo, arriba. Los chips de Revisar siguen con el tono del vocabulario.
 TONO_EN_PANEL = {
     'sena': 'brand-secondary',
     'seguimiento': 'info',
-    'presento_no_cerro': 'naranja',
 }
 
 # El gráfico del panel Estados (diseño de Kerwin, 30/09/2026) junta los estados en tres grupos:
@@ -249,7 +246,7 @@ TONO_EN_PANEL = {
 #     que nombra el diseño, entran "Canceló" y "Reagendó": son las otras dos pérdidas de agenda
 #     del dashboard del closer, y en las dos la cita no tuvo llamada.
 #   · En curso: la llamada todavía no pasó ("Aún no ocurrió") o pasó y la venta sigue abierta
-#     (seguimiento, segunda llamada, presentó sin cerrar, asistió sin más datos).
+#     (seguimiento, segunda llamada, asistió sin más datos).
 #   · Cerradas: hubo venta o seña.
 GRUPO_DE_ESTADO = {
     'sin_reporte': 'sin_resultado',
@@ -262,7 +259,6 @@ GRUPO_DE_ESTADO = {
     'asistio': 'en_curso',
     'segunda_llamada': 'en_curso',
     'seguimiento': 'en_curso',
-    'presento_no_cerro': 'en_curso',
     'venta': 'cerradas',
     'sena': 'cerradas',
 }

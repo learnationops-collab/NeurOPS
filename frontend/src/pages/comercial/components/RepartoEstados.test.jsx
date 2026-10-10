@@ -17,7 +17,7 @@ const ESTADOS = [
     { key: 'venta', label: 'Venta', tone: 'success', n: 13, filtro: 'Venta', grupo: 'cerradas' },
     { key: 'sena', label: 'Seña', tone: 'brand-secondary', n: 12, filtro: 'Seña', grupo: 'cerradas' },
     { key: 'seguimiento', label: 'Seguimiento', tone: 'info', n: 58, filtro: 'Seguimiento', grupo: 'en_curso' },
-    { key: 'presento_no_cerro', label: 'Presentó, no cerró', tone: 'naranja', n: 1, filtro: 'Presentó, no cerró', grupo: 'en_curso' },
+    { key: 'asistio', label: 'Asistió', tone: 'success', n: 1, filtro: 'Asistió', grupo: 'en_curso' },
     { key: 'segunda_llamada', label: '2da llamada', tone: 'info', n: 9, filtro: '2da llamada', grupo: 'en_curso' },
 ];
 
@@ -77,9 +77,9 @@ describe('RepartoEstados · gráfico', () => {
 
     it('un estado con una sola agenda sigue teniendo su arco aunque la rendija sea más grande', () => {
         const { container } = render(<RepartoEstados estados={ESTADOS} vista="grafico" />);
-        const presento = container.querySelectorAll('.est-seg')[5];
+        const asistio = container.querySelectorAll('.est-seg')[5];
 
-        expect(parseFloat(presento.getAttribute('stroke-dasharray'))).toBeGreaterThan(0);
+        expect(parseFloat(asistio.getAttribute('stroke-dasharray'))).toBeGreaterThan(0);
     });
 
     it('cada grupo lleva a las agendas de todos sus estados, y cada arco a las del suyo', () => {
@@ -135,7 +135,7 @@ describe('RepartoEstados · tabla', () => {
         const filas = container.querySelectorAll('.est-fila');
         expect(filas).toHaveLength(7);
         expect(filas[0]).toHaveTextContent('Sin reporte8033.6%');
-        expect(filas[5]).toHaveTextContent('Presentó, no cerró10.4%');
+        expect(filas[5]).toHaveTextContent('Asistió10.4%');
         const anchos = [...container.querySelectorAll('.est-fila-riel > i')]
             .map(i => parseFloat(i.style.getPropertyValue('--ancho')));
         expect(anchos[0]).toBe(100);
