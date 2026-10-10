@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { HelpCircle, Check, X, Instagram, Phone, Mail, Loader2 } from 'lucide-react';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
+import { parseUtcIso } from '../../../utils/datetime';
 
 /**
  * Agendas que entraron por setting pero sin saber de qué setter son.
@@ -14,8 +15,19 @@ import toast from 'react-hot-toast';
  *
  * Solo aparecen las posteriores al ingreso de cada setter, y lo que uno descarta
  * deja de mostrársele a él pero le sigue apareciendo al resto.
+ *
+ * Desde el 10/10/2026 vive al pie de «Mis agendas» (antes, en la pestaña Historial) y con el
+ * sistema visual del espacio: va dentro de un `.dc-shell`, así que sus botones son los del shell
+ * (`btn`), no los de Tailwind, que su reset borraría.
  */
+const fecha = (iso) => {
+    const d = parseUtcIso(iso);
+    if (!d) return 'Sin fecha';
+    return `${d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} · ${d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+};
+
 const SetterUnclaimedAgendas = ({ agendas, onResuelta }) => {
+    const reducir = useReducedMotion();
     const [enviando, setEnviando] = useState(null);
 
     if (!agendas || agendas.length === 0) return null;
@@ -36,82 +48,56 @@ const SetterUnclaimedAgendas = ({ agendas, onResuelta }) => {
         }
     };
 
-    const fecha = (iso) => {
-        if (!iso) return 'Sin fecha';
-        const d = new Date(iso);
-        return `${d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} · ${d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
-    };
-
     return (
-        <div className="bg-slate-950 border border-amber-500/40 rounded-[2rem] p-6 space-y-5 shadow-xl">
-            <div className="space-y-1">
-                <h3 className="text-xs font-black uppercase tracking-widest text-amber-300 flex items-center gap-2">
-                    <HelpCircle size={15} />
-                    ¿Alguna de estas agendas es tuya? ({agendas.length})
-                </h3>
-                <p className="text-[11px] text-amber-100/80 font-medium leading-relaxed max-w-3xl">
-                    Entraron por un link de setting pero el formulario no dice de quién son. Si la
-                    reclamás, queda con tu fuente y tus respuestas del formulario se vinculan a vos.
-                    Si no es tuya, deja de aparecerte (les sigue apareciendo a los demás).
-                </p>
-            </div>
+        <section className="ma-sin-dueno" aria-labelledby="ma-sin-dueno-t">
+            <header className="ma-sin-dueno-cab">
+                <HelpCircle size={18} aria-hidden="true" />
+                <div>
+                    <h2 id="ma-sin-dueno-t">¿Alguna de estas agendas es tuya? <span className="num">({agendas.length})</span></h2>
+                    <p>
+                        Entraron por un link de setting pero el formulario no dice de quién son. Si la
+                        reclamás, queda con tu fuente y tus respuestas del formulario se vinculan a vos.
+                        Si no es tuya, deja de aparecerte (les sigue apareciendo a los demás).
+                    </p>
+                </div>
+            </header>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+            <ul className="ma-sin-dueno-lista">
                 <AnimatePresence initial={false}>
-                {agendas.map(a => (
-                    <motion.div
-                        key={a.id}
-                        layout
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.92, transition: { duration: 0.18 } }}
-                        transition={{ type: 'spring', bounce: 0.15, duration: 0.4 }}
-                        className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4"
-                    >
-                        <div className="min-w-0 space-y-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-sm font-black text-white truncate">{a.lead_name}</span>
-                                <span className="px-2 py-0.5 rounded-lg bg-slate-950 border border-slate-700 text-[8px] font-black uppercase tracking-widest text-slate-300">
-                                    {a.fuente || 'sin fuente'}
+                    {agendas.map(a => (
+                        <motion.li key={a.id} layout={!reducir} className="ma-sin-dueno-fila"
+                            initial={reducir ? false : { opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.94, transition: { duration: reducir ? 0 : 0.18 } }}>
+                            <div className="ma-sin-dueno-dato">
+                                <div className="fila" style={{ gap: 'var(--s2)', flexWrap: 'wrap' }}>
+                                    <b className="trunc">{a.lead_name}</b>
+                                    <span className="chip" style={{ '--c': 'var(--idle)' }}>{a.fuente || 'sin fuente'}</span>
+                                </div>
+                                <span className="ma-sin-dueno-cita">Cita: {fecha(a.start_time)}</span>
+                                <span className="ma-meta">
+                                    {a.instagram && <span><Instagram size={13} aria-hidden="true" />@{a.instagram.replace('@', '')}</span>}
+                                    {a.phone && <span><Phone size={13} aria-hidden="true" />{a.phone}</span>}
+                                    {a.mail && <span className="trunc"><Mail size={13} aria-hidden="true" />{a.mail}</span>}
                                 </span>
                             </div>
-                            <p className="text-[10px] font-bold text-amber-300/90 uppercase tracking-wider">
-                                Cita: {fecha(a.start_time)}
-                            </p>
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-slate-400 font-medium">
-                                {a.instagram && (
-                                    <span className="flex items-center gap-1"><Instagram size={10} />@{a.instagram.replace('@', '')}</span>
-                                )}
-                                {a.phone && <span className="flex items-center gap-1"><Phone size={10} />{a.phone}</span>}
-                                {a.mail && <span className="flex items-center gap-1 truncate max-w-[180px]"><Mail size={10} />{a.mail}</span>}
+                            <div className="ma-sin-dueno-acciones">
+                                <button type="button" className="btn btn--cta btn--sm" disabled={!!enviando}
+                                    onClick={() => responder(a, 'mia')}>
+                                    {enviando === `${a.id}-mia` ? <Loader2 size={14} className="ma-gira" /> : <Check size={14} />}
+                                    Es mía
+                                </button>
+                                <button type="button" className="btn btn--linea btn--sm" disabled={!!enviando}
+                                    onClick={() => responder(a, 'no_mia')}>
+                                    {enviando === `${a.id}-no_mia` ? <Loader2 size={14} className="ma-gira" /> : <X size={14} />}
+                                    No es mía
+                                </button>
                             </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0">
-                            <motion.button
-                                onClick={() => responder(a, 'mia')}
-                                disabled={!!enviando}
-                                whileTap={{ scale: 0.94 }}
-                                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest transition-colors disabled:opacity-40 cursor-pointer"
-                            >
-                                {enviando === `${a.id}-mia` ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
-                                Es mía
-                            </motion.button>
-                            <motion.button
-                                onClick={() => responder(a, 'no_mia')}
-                                disabled={!!enviando}
-                                whileTap={{ scale: 0.94 }}
-                                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 hover:border-slate-500 text-slate-400 hover:text-white text-[9px] font-black uppercase tracking-widest transition-colors disabled:opacity-40 cursor-pointer"
-                            >
-                                {enviando === `${a.id}-no_mia` ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
-                                No es mía
-                            </motion.button>
-                        </div>
-                    </motion.div>
-                ))}
+                        </motion.li>
+                    ))}
                 </AnimatePresence>
-            </div>
-        </div>
+            </ul>
+        </section>
     );
 };
 

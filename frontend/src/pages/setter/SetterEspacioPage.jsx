@@ -16,8 +16,7 @@ import { Segmented } from '../comercial/components/Shared';
 import { REVISAR_DEL_SETTER } from '../comercial/components/tablasSetter';
 import '../comercial/comercial.css';
 import './setterEspacio.css';
-import SetterWorkflowPage from './SetterWorkflowPage';
-import SetterAgendasPage from './agendas/SetterAgendasPage';
+import MisAgendas from './agendas/MisAgendas';
 import PublicSetterReportPage from '../public/PublicSetterReportPage';
 import PublicSetterStatsPage from '../public/PublicSetterStatsPage';
 
@@ -235,10 +234,7 @@ const SetterEspacioPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.28, ease: [0.22, 0.7, 0.2, 1] }}>
                     {seccion === 'agendas' && (
-                        <>
-                            <SetterWorkflowPage paso="agendas" />
-                            <SetterAgendasPage />
-                        </>
+                        <MisAgendas onVerDatos={() => irA('datos')} />
                     )}
                     {seccion === 'reporte' && tab === 'hoy' && (
                         <PublicSetterReportPage onEnviado={(fecha) => { if (fecha === hoyLocal()) setReporteHoy(true); }} />

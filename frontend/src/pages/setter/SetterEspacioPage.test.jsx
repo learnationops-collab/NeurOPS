@@ -18,7 +18,7 @@ import SetterEspacioPage from './SetterEspacioPage';
  * fijó el espacio (`tablaFija`) y qué filtro le llegó por la URL.
  */
 
-const sesion = vi.hoisted(() => ({ user: null, reportesHoy: 0, pendientes: 0, openPlaybook: null }));
+const sesion = vi.hoisted(() => ({ user: null, reportesHoy: 0, pendientes: 0, openPlaybook: null, pendientesAgendas: 0 }));
 
 vi.mock('../../contexts/AuthContext', () => ({
     useAuth: () => ({ user: sesion.user, logout: vi.fn() }),
@@ -31,10 +31,13 @@ vi.mock('../../services/api', () => ({
 }));
 vi.mock('../../utils/impersonation', () => ({ revertImpersonation: vi.fn() }));
 vi.mock('../../components/modals/OperatorControls', () => ({ default: () => null }));
-vi.mock('./SetterWorkflowPage', () => ({
-    default: ({ paso }) => <div data-testid="mazo">mazo:{paso}</div>,
+// La bandeja de "Mis agendas" le informa al espacio cuántas quedan (la marca del dock).
+vi.mock('./agendas/MisAgendas', () => ({
+    default: function MisAgendasDoble({ onResumen }) {
+        React.useEffect(() => { onResumen?.({ pendientes: sesion.pendientesAgendas, hoy: 0, racha: 0 }); }, []);
+        return <div data-testid="mis-agendas" />;
+    },
 }));
-vi.mock('./agendas/SetterAgendasPage', () => ({ default: () => <div data-testid="agendas-historial" /> }));
 vi.mock('../public/PublicSetterReportPage', () => ({ default: () => <div data-testid="reporte-hoy" /> }));
 vi.mock('../public/PublicSetterStatsPage', () => ({
     default: ({ embebido }) => <div data-testid="mis-reportes">{embebido ? 'embebido' : 'pagina'}</div>,
@@ -95,6 +98,7 @@ describe('SetterEspacioPage · un solo dock', () => {
     beforeEach(() => {
         sesion.user = { id: 7, name: 'Ana Setter', role: 'setter', is_impersonating: true };
         sesion.reportesHoy = 0;
+        sesion.pendientesAgendas = 0;
         sesion.pendientes = 0;
         sesion.openPlaybook = vi.fn();
         // jsdom no implementa el scroll; cambiar de sección vuelve arriba de la página.
@@ -113,7 +117,7 @@ describe('SetterEspacioPage · un solo dock', () => {
         expect(screen.getByRole('button', { name: /Volver a mi sesión/ })).toBeInTheDocument();
 
         fireEvent.click(itemDelDock('Mis agendas'));
-        expect(screen.getByTestId('mazo')).toHaveTextContent('mazo:agendas');
+        expect(screen.getByTestId('mis-agendas')).toBeInTheDocument();
         expect(itemDelDock('Mis agendas')).toHaveAttribute('aria-current', 'page');
         expect(url().get('step')).toBe('agendas');
     });
@@ -211,7 +215,7 @@ describe('SetterEspacioPage · un solo dock', () => {
     it('una sección o pestaña desconocida cae en la primera, no en una pantalla vacía', async () => {
         await montar('/setter/deck?step=inventada&tab=otra');
 
-        expect(screen.getByTestId('mazo')).toHaveTextContent('mazo:agendas');
+        expect(screen.getByTestId('mis-agendas')).toBeInTheDocument();
         expect(itemDelDock('Mis agendas')).toHaveAttribute('aria-current', 'page');
     });
 
@@ -220,7 +224,7 @@ describe('SetterEspacioPage · un solo dock', () => {
         // setters". Un link guardado con `?step=cualificacion` no puede abrir una pantalla vacía.
         await montar('/setter/deck?step=cualificacion');
 
-        expect(screen.getByTestId('mazo')).toHaveTextContent('mazo:agendas');
+        expect(screen.getByTestId('mis-agendas')).toBeInTheDocument();
         expect(itemDelDock('Mis agendas')).toHaveAttribute('aria-current', 'page');
         expect(screen.queryAllByRole('button', { name: /^Cualificación/ })).toHaveLength(0);
     });
@@ -268,6 +272,7 @@ describe('SetterEspacioPage · la sesión en el dock', () => {
     beforeEach(() => {
         sesion.user = { id: 7, name: 'Ana Setter', role: 'setter', is_impersonating: false };
         sesion.reportesHoy = 0;
+        sesion.pendientesAgendas = 0;
         sesion.pendientes = 3;
         sesion.openPlaybook = vi.fn();
         vi.spyOn(window, 'scrollTo').mockImplementation(() => {});

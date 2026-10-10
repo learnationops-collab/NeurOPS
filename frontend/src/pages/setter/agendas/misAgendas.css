@@ -1,0 +1,214 @@
+/* ============================================================================
+   MIS AGENDAS — la bandeja de palabras clave del setter.
+
+   Va dentro de un `.dc-shell.dc-shell--embebido` (tokens, botones y chips del
+   dashboard comercial) con el estilo del reporte de setters que aprobó Kerwin el
+   10/10/2026: paneles de vidrio, etiquetas `.k`, el rosa de marca para lo que
+   se hace y el festejo con el check que se dibuja y las chispas.
+   ============================================================================ */
+
+.mis-agendas{
+  --vidrio:rgba(6,9,36,.52);
+  --out:cubic-bezier(.22,1,.36,1);
+  display:grid;gap:var(--s4);
+}
+.mis-agendas .k{font-size:10px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:var(--text-muted-40)}
+.mis-agendas .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.mis-agendas .vidrio,
+.mis-agendas .ma-tira{border-radius:28px;background:var(--vidrio);
+  backdrop-filter:blur(20px) saturate(140%);-webkit-backdrop-filter:blur(20px) saturate(140%);
+  border:1px solid var(--border-main);border-top-color:var(--sheen);box-shadow:0 24px 48px -28px rgba(0,0,0,.7)}
+.mis-agendas .tecla{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:20px;
+  padding:0 6px;margin:0 2px;border-radius:6px;background:var(--bg-element);border:1px solid var(--border-subtle);
+  font-size:11px;font-weight:900;color:var(--text-muted)}
+
+/* --- La tira de arriba: cuántas quedan, la barra de hoy, la racha y la comisión ------------- */
+.mis-agendas .ma-tira{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:var(--s4) var(--s8);
+  align-items:center;padding:var(--s5) var(--s6)}
+.mis-agendas .ma-avance{display:grid;gap:var(--s3);min-width:0}
+.mis-agendas .ma-quedan{display:grid;gap:4px}
+.mis-agendas .ma-quedan-n{display:flex;align-items:baseline;gap:var(--s3);flex-wrap:wrap;min-width:0}
+.mis-agendas .ma-quedan-n b{font-size:44px;font-weight:900;letter-spacing:-.035em;line-height:1;color:var(--brand-secondary)}
+.mis-agendas .ma-quedan-n .mut{font-size:14px;font-weight:600}
+.mis-agendas .ma-barra-fila{display:flex;align-items:center;gap:var(--s3);min-width:0}
+.mis-agendas .ma-barra{flex:1;min-width:0;height:10px;border-radius:var(--radius-pill);background:var(--hundido);
+  border:1px solid var(--border-subtle);overflow:hidden}
+.mis-agendas .ma-barra i{display:block;height:100%;border-radius:inherit;
+  background:linear-gradient(90deg,var(--brand-primary),var(--brand-secondary));transition:width .6s var(--out)}
+.mis-agendas .ma-barra-t{flex-shrink:0;font-size:13px;font-weight:700;color:var(--text-muted);white-space:nowrap}
+.mis-agendas .ma-barra-t b{display:inline-block;font-weight:900;color:var(--text-on-surface)}
+.mis-agendas .ma-medidas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s4)}
+.mis-agendas .medida{display:grid;gap:6px;align-content:start;min-width:0}
+.mis-agendas .medida .mv{display:flex;align-items:baseline;gap:6px;font-size:24px;font-weight:900;
+  letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums;color:var(--c,var(--text-on-surface))}
+.mis-agendas .medida .mv svg{align-self:center}
+.mis-agendas .medida .mv small{font-size:12px;font-weight:700;letter-spacing:0;color:var(--text-muted)}
+.mis-agendas .ma-medida-pie{font-size:11.5px;font-weight:600;color:var(--text-muted-40)}
+
+/* Cada vez que baja, el número cae a su lugar; lo de hoy, un pop en verde. */
+.mis-agendas .ma-baja{animation:maBaja .34s var(--out)}
+@keyframes maBaja{from{transform:translateY(-14px);opacity:.3}to{transform:none;opacity:1}}
+.mis-agendas .ma-pop{animation:maPop .5s var(--out)}
+@keyframes maPop{from{transform:scale(1.6);color:var(--success)}to{transform:none}}
+
+.mis-agendas .ma-ayuda{margin:0;padding:0 var(--s2);font-size:12.5px;font-weight:600;color:var(--text-muted-40)}
+@media (hover:none),(max-width:700px){.mis-agendas .ma-ayuda{display:none}}
+
+/* --- Las tarjetas ------------------------------------------------------------------------------
+   Sin `backdrop-filter`: son cientos y cada una con su desenfoque hacía pesado el scroll. Un fondo
+   un poco más opaco da el mismo vidrio sobre el humo. */
+.mis-agendas .ma-lista{list-style:none;margin:0;padding:0;display:grid;gap:var(--s3)}
+.mis-agendas .ma-card{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,420px);
+  gap:var(--s4) var(--s6);align-items:center;padding:var(--s4) var(--s5) var(--s4) var(--s6);border-radius:24px;
+  background:rgba(6,9,36,.66);border:1px solid var(--border-main);border-top-color:var(--sheen);
+  transition:border-color .18s ease,box-shadow .2s ease}
+.mis-agendas .ma-card:focus-within{border-color:color-mix(in srgb,var(--brand-secondary) 45%,transparent);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--brand-secondary) 14%,transparent)}
+/* La lista de anuncios abierta tiene que quedar sobre la tarjeta de abajo. */
+.mis-agendas .ma-card--abierta{z-index:5}
+.mis-agendas .ma-card--enviando{opacity:.75}
+
+.mis-agendas .ma-info{display:grid;gap:var(--s3);min-width:0}
+.mis-agendas .ma-quien{display:flex;align-items:center;gap:var(--s3);min-width:0}
+.mis-agendas .ma-ini{width:42px;height:42px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;
+  font-size:13px;font-weight:900;letter-spacing:.02em;color:var(--c);
+  background:color-mix(in srgb,var(--c) 16%,transparent);border:1px solid color-mix(in srgb,var(--c) 40%,transparent)}
+.mis-agendas .ma-quien-t{min-width:0;flex:1}
+.mis-agendas .ma-nombre{margin:0;font-size:17px;font-weight:900;letter-spacing:-.02em;line-height:1.2}
+.mis-agendas .ma-meta{display:flex;flex-wrap:wrap;gap:4px var(--s4);margin-top:4px;font-size:13px;font-weight:600;color:var(--text-muted);min-width:0}
+.mis-agendas .ma-meta > span{display:inline-flex;align-items:center;gap:6px;min-width:0;white-space:nowrap}
+.mis-agendas .ma-meta svg{color:var(--text-muted-40)}
+.mis-agendas .ma-estado{flex-shrink:0;align-self:flex-start}
+
+.mis-agendas .ma-ig{display:flex;align-items:center;flex-wrap:wrap;gap:6px var(--s3);min-width:0;padding-left:54px}
+.mis-agendas .ma-ig-link{display:inline-flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:700;
+  color:var(--text-on-surface);text-decoration:none;overflow-wrap:anywhere}
+.mis-agendas .ma-ig-link:hover{color:var(--brand-secondary-light)}
+.mis-agendas .ma-ig-link svg{color:var(--text-muted)}
+.mis-agendas .ma-ig-cambiar{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text-muted-40);padding:4px 8px;border-radius:8px;transition:color .16s ease,background-color .16s ease}
+.mis-agendas .ma-ig-cambiar:hover{color:var(--text-on-surface);background:var(--bg-element)}
+.mis-agendas .ma-ig-campo{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 10px;min-width:0;
+  width:min(240px,100%);border-radius:12px;background:var(--bg-input);border:1px solid var(--border-control)}
+.mis-agendas .ma-ig-campo:focus-within{border-color:color-mix(in srgb,var(--brand-secondary) 55%,transparent)}
+.mis-agendas .ma-ig-campo--falta{border-color:color-mix(in srgb,var(--warning) 70%,transparent)}
+.mis-agendas .ma-ig-campo svg{color:var(--text-muted)}
+.mis-agendas .ma-ig-campo input{flex:1;min-width:0;border:0;background:none;outline:none;font-size:13px;font-weight:700}
+.mis-agendas .ma-ig-campo input:focus-visible{box-shadow:none}
+.mis-agendas .ma-ig-nota{font-size:12px;font-weight:600;color:var(--warning)}
+
+/* --- Asignar: el buscador y el botón ------------------------------------------------------- */
+.mis-agendas .ma-asignar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:var(--s2);min-width:0}
+.mis-agendas .ma-btn{height:44px;padding:0 var(--s4)}
+.mis-agendas .ma-error{grid-column:1 / -1;margin:0;font-size:12.5px;font-weight:700;color:var(--error)}
+.mis-agendas .ma-gira{animation:maGira 1s linear infinite}
+@keyframes maGira{to{transform:rotate(360deg)}}
+
+.mis-agendas .ma-combo{display:grid;gap:6px;min-width:0}
+.mis-agendas .ma-combo .k{color:var(--text-muted)}
+.mis-agendas .ma-campo{position:relative;display:flex;align-items:center;gap:var(--s2);height:44px;padding:0 6px 0 var(--s3);
+  min-width:0;border-radius:var(--radius-control);background:var(--bg-input);border:1px solid var(--border-control);
+  transition:border-color .18s ease}
+.mis-agendas .ma-campo:focus-within{border-color:color-mix(in srgb,var(--brand-secondary) 60%,transparent)}
+.mis-agendas .ma-campo > svg{color:var(--text-muted)}
+.mis-agendas .ma-campo input{flex:1;min-width:0;height:100%;border:0;background:none;outline:none;
+  font-size:14px;font-weight:700;letter-spacing:-.01em}
+.mis-agendas .ma-campo input::placeholder{color:var(--text-muted-40);font-weight:600}
+.mis-agendas .ma-campo input:focus-visible{box-shadow:none}
+.mis-agendas .ma-limpiar{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:var(--text-muted-40)}
+.mis-agendas .ma-limpiar:hover{color:var(--text-on-surface);background:var(--bg-element)}
+.mis-agendas .ma-lista-op{position:absolute;top:calc(100% + 6px);left:-1px;right:-1px;z-index:40;list-style:none;margin:0;
+  max-height:296px;overflow-y:auto;padding:6px;border-radius:18px;background:var(--bg-flotante);
+  border:1px solid var(--border-main);border-top-color:var(--sheen);box-shadow:var(--shadow-main),0 0 0 1px rgba(0,0,0,.25);
+  transform-origin:top center;animation:maLista .22s var(--spring)}
+@keyframes maLista{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+.mis-agendas .ma-op{display:flex;align-items:center;gap:var(--s2);min-height:40px;padding:6px 10px;border-radius:12px;
+  cursor:pointer;font-size:14px;color:var(--text-muted)}
+.mis-agendas .ma-op[aria-selected="true"]{background:var(--bg-element-hover);color:var(--text-on-surface)}
+.mis-agendas .ma-op--vacia{cursor:default;font-size:13px;color:var(--text-muted-40)}
+.mis-agendas .ma-op-k{flex-shrink:0;font-weight:800;color:var(--text-on-surface);letter-spacing:-.01em}
+.mis-agendas .ma-op-n{font-size:12.5px;font-weight:600;color:var(--text-muted-40)}
+.mis-agendas .ma-op mark{background:none;color:var(--brand-secondary);font-weight:900}
+.mis-agendas .ma-op-der{margin-left:auto;display:inline-flex;align-items:center;gap:6px;flex-shrink:0}
+.mis-agendas .ma-op-pausa{font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted-40)}
+.mis-agendas .ma-op-usos{font-size:11.5px;font-weight:800;color:var(--text-muted)}
+
+/* --- El premio y "Todo al día" --------------------------------------------------------------- */
+/* Recibe el foco al vaciar la bandeja (el campo que lo tenía desaparece) para que el lector de
+   pantalla lea el premio; no es un control, así que no lleva anillo. */
+.mis-agendas .ma-premio-foco:focus,
+.mis-agendas .ma-premio-foco:focus-visible{outline:none;box-shadow:none}
+.mis-agendas .ma-premio{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:var(--s3);min-height:340px;padding:var(--s8) var(--s6);text-align:center}
+.mis-agendas .ma-premio h2{margin:var(--s2) 0 0;font-size:30px;font-weight:900;letter-spacing:-.025em}
+.mis-agendas .ma-premio p{margin:0;max-width:440px;color:var(--text-muted);font-size:14px;line-height:1.5}
+.mis-agendas .ma-premio .btn{margin-top:var(--s2)}
+.mis-agendas .ma-premio-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.mis-agendas .ma-premio--calmo{min-height:260px;border-radius:28px;background:rgba(6,9,36,.46);border:1px solid var(--border-subtle)}
+.mis-agendas .ma-premio--calmo h2{font-size:24px}
+.mis-agendas .ma-premio-ok{color:var(--success)}
+
+.mis-agendas .ma-premio-trofeo{position:relative;width:96px;height:96px}
+.mis-agendas .ma-premio-trofeo svg.ok{width:96px;height:96px}
+.mis-agendas .ma-premio-trofeo svg.ok circle{fill:none;stroke:var(--success);stroke-width:3;stroke-dasharray:252;
+  stroke-dashoffset:252;animation:maTraza .9s var(--out) forwards}
+.mis-agendas .ma-premio-trofeo svg.ok path{fill:none;stroke:var(--success);stroke-width:4;stroke-linecap:round;
+  stroke-linejoin:round;stroke-dasharray:60;stroke-dashoffset:60;animation:maTraza .6s var(--out) .45s forwards}
+@keyframes maTraza{to{stroke-dashoffset:0}}
+.mis-agendas .ma-premio-copa{position:absolute;right:-10px;bottom:-6px;width:38px;height:38px;border-radius:50%;
+  display:grid;place-items:center;color:var(--ink);background:var(--warning);
+  box-shadow:0 8px 20px -6px color-mix(in srgb,var(--warning) 70%,transparent);animation:maCopa .55s var(--spring) .7s both}
+@keyframes maCopa{from{transform:scale(0) rotate(-30deg)}to{transform:none}}
+.mis-agendas .chispa{position:absolute;left:50%;top:34%;width:8px;height:8px;border-radius:50%;background:var(--c);
+  opacity:0;pointer-events:none;animation:maChispa 1s var(--out) forwards;animation-delay:var(--dl)}
+@keyframes maChispa{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.4)}}
+
+/* --- Agendas sin dueño ----------------------------------------------------------------------- */
+.mis-agendas .ma-sin-dueno{margin-top:var(--s4);padding:var(--s5) var(--s6);border-radius:28px;
+  background:color-mix(in srgb,var(--warning) 6%,rgba(6,9,36,.6));border:1px solid color-mix(in srgb,var(--warning) 35%,transparent)}
+.mis-agendas .ma-sin-dueno-cab{display:flex;gap:var(--s3);align-items:flex-start;margin-bottom:var(--s4);color:var(--warning)}
+.mis-agendas .ma-sin-dueno-cab svg{margin-top:2px}
+.mis-agendas .ma-sin-dueno-cab h2{margin:0;font-size:16px;font-weight:900;letter-spacing:-.015em;color:var(--text-on-surface)}
+.mis-agendas .ma-sin-dueno-cab p{margin:4px 0 0;max-width:760px;font-size:13px;line-height:1.5;color:var(--text-muted)}
+.mis-agendas .ma-sin-dueno-lista{list-style:none;margin:0;padding:0;display:grid;gap:var(--s3);
+  grid-template-columns:repeat(auto-fill,minmax(min(100%,460px),1fr))}
+.mis-agendas .ma-sin-dueno-fila{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--s3);
+  min-width:0;padding:var(--s3) var(--s4);border-radius:18px;background:var(--hundido);border:1px solid var(--border-subtle)}
+.mis-agendas .ma-sin-dueno-dato{display:grid;gap:4px;min-width:0}
+.mis-agendas .ma-sin-dueno-dato b{font-size:15px;font-weight:900}
+.mis-agendas .ma-sin-dueno-cita{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--warning)}
+.mis-agendas .ma-sin-dueno-dato .ma-meta{margin-top:0;font-size:12px}
+.mis-agendas .ma-sin-dueno-acciones{display:flex;gap:var(--s2);flex-shrink:0}
+
+/* --- Adaptación ------------------------------------------------------------------------------ */
+@media (max-width:900px){
+  .mis-agendas .ma-card{grid-template-columns:minmax(0,1fr);padding:var(--s4)}
+}
+@media (max-width:700px){
+  .mis-agendas .ma-tira{grid-template-columns:minmax(0,1fr);padding:var(--s4)}
+  .mis-agendas .ma-quedan-n b{font-size:38px}
+  .mis-agendas .ma-ig{padding-left:0}
+  .mis-agendas .ma-premio{padding:var(--s6) var(--s4)}
+  .mis-agendas .ma-sin-dueno{padding:var(--s4)}
+}
+/* En un teléfono el estado baja debajo del nombre (al lado no entra: el nombre quedaba en "Xi…"),
+   y el botón de asignar va a lo ancho, debajo del buscador. */
+@media (max-width:600px){
+  .mis-agendas .ma-quien{display:grid;grid-template-columns:42px minmax(0,1fr);column-gap:var(--s3);row-gap:var(--s2)}
+  .mis-agendas .ma-estado{grid-column:2;justify-self:start}
+}
+@media (max-width:440px){
+  .mis-agendas .ma-asignar{grid-template-columns:minmax(0,1fr)}
+  .mis-agendas .ma-btn{width:100%}
+  .mis-agendas .ma-sin-dueno-acciones{width:100%}
+  .mis-agendas .ma-sin-dueno-acciones .btn{flex:1}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .mis-agendas .ma-baja,.mis-agendas .ma-pop,.mis-agendas .ma-lista-op,.mis-agendas .ma-premio-copa,
+  .mis-agendas .chispa{animation:none}
+  .mis-agendas .ma-premio-trofeo svg.ok circle,
+  .mis-agendas .ma-premio-trofeo svg.ok path{animation:none;stroke-dashoffset:0}
+  .mis-agendas .ma-barra i{transition:none}
+}
