@@ -1,0 +1,85 @@
+/* ============================================================================
+   «MIS DATOS» DEL SETTER — el reporte diario y el sistema, lado a lado.
+
+   Todo cuelga de `.dc-shell` (los tokens y el reset del tablero comercial) y usa
+   sus piezas: `.panel`, `.grid-2`, `.pareja`, `.chip`, `.datos`, `.leyenda`. Los
+   embudos son `FlujoEmbudo` (flujo.css). Lo de acá es solo la disposición propia
+   de esta vista; las animaciones tienen su versión quieta al final.
+   ============================================================================ */
+
+.dc-shell .setter-datos-alcance{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- Lo que reportaste: seis cifras (6, 3 + 3 o 2 + 2 + 2, nunca 5 + 1) ---------- */
+.dc-shell .md-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:var(--s5) var(--s4)}
+@media (max-width:1100px){.dc-shell .md-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:560px){.dc-shell .md-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.dc-shell .md-kpi{display:grid;gap:6px;align-content:start;min-width:0;animation:mdSube .5s var(--crecer) both}
+.dc-shell .md-kpi:nth-child(2){animation-delay:40ms}
+.dc-shell .md-kpi:nth-child(3){animation-delay:80ms}
+.dc-shell .md-kpi:nth-child(4){animation-delay:120ms}
+.dc-shell .md-kpi:nth-child(5){animation-delay:160ms}
+.dc-shell .md-kpi:nth-child(6){animation-delay:200ms}
+.dc-shell .md-kpi-cab{display:flex;align-items:center;gap:6px;min-width:0;flex-wrap:wrap}
+.dc-shell .md-kpi-n{font-size:clamp(26px,2.6vw,34px);font-weight:900;letter-spacing:-.035em;line-height:1}
+.dc-shell .md-kpi-sub{min-width:0;display:flex;align-items:center;flex-wrap:wrap;gap:4px 6px}
+.dc-shell .md-split{display:flex;gap:2px;height:6px;margin-top:2px;border-radius:var(--radius-pill);
+  overflow:hidden;background:var(--hundido)}
+.dc-shell .md-split i{display:block;height:100%;transition:width .9s var(--crecer)}
+
+/* ---------- ¿Cuadra con el sistema? ---------- */
+.dc-shell .md-contraste{display:grid;gap:var(--s4)}
+.dc-shell .md-contraste-fila{display:grid;gap:var(--s2);padding-top:var(--s4);border-top:1px solid var(--border-subtle)}
+.dc-shell .md-contraste-fila:first-child{padding-top:0;border-top:0}
+.dc-shell .md-contraste-cifras{display:flex;align-items:flex-end;gap:var(--s3) var(--s6);flex-wrap:wrap}
+.dc-shell .md-contraste-n{font-size:28px;font-weight:900;letter-spacing:-.03em;line-height:1.1}
+.dc-shell .md-contraste-chip{margin-left:auto;margin-bottom:4px}
+
+/* Un número del sistema que abre su lista: subrayado fino y la flecha que aparece al pasar. */
+.dc-shell .md-abre{display:inline-flex;align-items:center;gap:6px;color:var(--text-on-surface);
+  cursor:pointer;border-radius:8px;text-decoration:underline;text-decoration-color:var(--border-control);
+  text-decoration-thickness:1px;text-underline-offset:5px;transition:color .16s ease}
+.dc-shell .md-abre svg{opacity:0;transform:translateX(-4px);transition:opacity .16s ease,transform .2s var(--spring)}
+.dc-shell .md-abre:hover{color:var(--brand-secondary)}
+.dc-shell .md-abre:hover svg,.dc-shell .md-abre:focus-visible svg{opacity:1;transform:none}
+.dc-shell .md-abre--quieto{cursor:default;text-decoration:none}
+
+/* ---------- Lo que pasó después ---------- */
+.dc-shell .md-stat{display:grid;gap:6px;align-content:start;min-width:0;padding:var(--s4);
+  border-radius:var(--radius-control);background:var(--hundido);border:1px solid var(--border-subtle)}
+.dc-shell .md-stat-n{font-size:30px;font-weight:900;letter-spacing:-.03em;line-height:1.05}
+.dc-shell .md-despues-datos{margin-top:var(--s4)}
+.dc-shell .md-despues-datos .dato,.dc-shell .md-canal .dato{padding:7px 0;border-bottom:1px solid var(--border-subtle);border-radius:0}
+.dc-shell .md-despues-datos .dato:last-child,.dc-shell .md-canal .dato:last-child{border-bottom:0}
+.dc-shell .md-despues-datos .dato-nom{white-space:normal}
+
+/* ---------- Embudo y canales ---------- */
+.dc-shell .md-leyenda{margin-top:var(--s4)}
+.dc-shell .md-canal{display:grid;gap:var(--s3);align-content:start;min-width:0;padding:var(--s4);
+  border-radius:var(--radius-control);background:var(--hundido);border:1px solid var(--border-subtle);
+  border-top:2px solid color-mix(in srgb,var(--c) 60%,transparent)}
+.dc-shell .md-canal-chip{justify-self:start}
+.dc-shell .md-punto{width:8px;height:8px;border-radius:50%;background:var(--c);display:inline-block}
+.dc-shell .md-fu-pie{margin-top:var(--s4)}
+
+/* ---------- Constancia y wins ---------- */
+.dc-shell .md-constancia-cab{display:grid;gap:4px;margin-bottom:var(--s4)}
+.dc-shell .md-dias{display:grid;grid-template-columns:repeat(auto-fill,minmax(14px,1fr));gap:4px;margin-bottom:var(--s5)}
+.dc-shell .md-dia{display:block;aspect-ratio:1;border-radius:4px;background:color-mix(in srgb,var(--c) 70%,transparent)}
+.dc-shell .md-dia--finde{background:var(--mat-3)}
+.dc-shell .md-dia--falta{background:transparent;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--c) 70%,transparent)}
+.dc-shell .md-wins-tit{margin-bottom:var(--s2)}
+.dc-shell .md-wins{list-style:none;margin:0;padding:0;display:grid;gap:var(--s3)}
+.dc-shell .md-wins li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:var(--s3);align-items:baseline;
+  animation:mdSube .45s var(--crecer) both}
+.dc-shell .md-wins li span:last-child{overflow-wrap:anywhere}
+
+@keyframes mdSube{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+@media (max-width:560px){
+  .dc-shell .md-contraste-chip{margin-left:0}
+  .dc-shell .md-contraste-n{font-size:24px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .dc-shell .md-kpi,.dc-shell .md-wins li{animation:none}
+}

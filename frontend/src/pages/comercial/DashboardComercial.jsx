@@ -139,8 +139,9 @@ const cargarParaSimular = (clave) => async () => {
 
 const SECCIONES = [
     // `permiso` en una tab: la clave del contexto que la habilita. Comparativas es la única vista
-    // que muestra los números de OTRAS personas con nombre y apellido: la ven la dirección y los
-    // closers (desde el 02/10/2026), y el setter no — su tablero es el suyo y nada más.
+    // que muestra los números de OTRAS personas con nombre y apellido: la ven la dirección, los
+    // closers (desde el 02/10/2026) y los setters (desde el 10/10/2026, en su espacio: ver
+    // `SetterDatos`), cada uno la de su rol.
     { id: 'analizar', label: 'Analizar', Icono: Search, tabs: [{ key: 'dashboard', label: 'Dashboard' },
         { key: 'comparativas', label: 'Comparativas', permiso: 'puede_comparar' },
         { key: 'variabilidad', label: 'Variabilidad' }] },

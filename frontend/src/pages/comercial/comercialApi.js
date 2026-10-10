@@ -31,6 +31,11 @@ export const getResumen = (filtros) =>
 export const getComparativas = (filtros) =>
     api.get('/comercial/comparativas', { params: filtrosQuery(filtros) }).then(r => r.data);
 
+/** «Mis datos» del setter: su reporte diario sumado y lo que registra el sistema, lado a lado. El
+ *  backend lo acota a él (a un setter no se le respeta otro `miembro_id`). */
+export const getMisDatosSetter = (filtros) =>
+    api.get('/comercial/setter/mis-datos', { params: filtrosQuery(filtros) }).then(r => r.data);
+
 /** Series por día de Variabilidad. Endpoint aparte: se pide solo al abrir la pestaña. */
 export const getVariabilidad = (filtros) =>
     api.get('/comercial/variabilidad', { params: filtrosQuery(filtros) }).then(r => r.data);

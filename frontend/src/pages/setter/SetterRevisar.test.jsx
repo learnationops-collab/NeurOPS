@@ -4,6 +4,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SetterEspacioPage from './SetterEspacioPage';
 import { getTabla } from '../comercial/comercialApi';
+import { misDatosEjemplo } from './datos/misDatosEjemplo';
 
 /**
  * Revisar del setter (10/10/2026): sus agendas, sus ventas y sus leads, y la lista detrás de cada
@@ -90,6 +91,7 @@ vi.mock('../comercial/comercialApi', () => ({
         dates: { start: '2026-10-01', end: '2026-10-31' },
     })),
     getComparativas: vi.fn(() => Promise.resolve({})),
+    getMisDatosSetter: vi.fn(() => Promise.resolve(misDatosEjemplo())),
     getVariabilidad: vi.fn(() => Promise.resolve({})),
     getTabla: vi.fn((_filtros, tabla) => Promise.resolve({
         tabla, rol: 'setters', filas: api.filas[tabla] ?? [], totales: {},
@@ -143,7 +145,6 @@ const montar = async (ruta) => {
 };
 
 const filas = (prefijo) => screen.queryAllByRole('button', { name: new RegExp(`^Abrir ${prefijo} `) });
-const tile = async (nombre) => (await screen.findByText(nombre, { selector: '.t-eyebrow' })).closest('section');
 const encabezados = () => Array.from(document.querySelectorAll('.tabla-cab > span')).map(s => s.textContent);
 const tira = () => screen.getByRole('group', { name: /^Totales/ });
 
@@ -244,6 +245,10 @@ describe('Revisar del setter · sus agendas, sus ventas y sus leads', () => {
     });
 });
 
+/**
+ * Desde el 10/10/2026 «Mis datos» es su propia vista (`SetterDatos`): sus números del SISTEMA abren
+ * la lista que los compone; los del reporte no tienen lista (son lo que el setter cargó).
+ */
 describe('Revisar del setter · de un número de "Mis datos" a su lista', () => {
     beforeEach(() => {
         window.localStorage.clear();
@@ -252,17 +257,13 @@ describe('Revisar del setter · de un número de "Mis datos" a su lista', () => 
         vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
     });
 
-    it('el ojo de "Tasa de respuesta" abre Revisar › Leads con «Respondió: Sí» y tantas filas como dice', async () => {
+    it('los leads de ManyChat de «¿Cuadra con el sistema?» abren Revisar › Leads', async () => {
         await montar('/setter/deck?step=datos&p=mes');
 
-        const respuesta = await tile('Tasa de respuesta');
-        fireEvent.click(within(respuesta).getByRole('button', { name: /^Ver los registros/ }));
+        fireEvent.click(await screen.findByRole('button', { name: 'Ver en la lista: entrantes del sistema, 70' }));
 
-        expect(await screen.findByRole('button', { name: 'Quitar Respondió: Sí' })).toBeInTheDocument();
-        expect(screen.getByText('Cumple todas:')).toBeInTheDocument();
-        expect(filas('Lead')).toHaveLength(BLOQUE.respondieron);
-        expect(screen.getByText(`mostrando ${BLOQUE.respondieron} de ${BLOQUE.respondieron}`)).toBeInTheDocument();
-
+        await screen.findByText(`mostrando ${LEADS.length} de ${LEADS.length}`);
+        expect(filas('Lead')).toHaveLength(LEADS.length);
         expect(url().get('step')).toBe('revisar');
         expect(url().get('tab')).toBe('leads');
         expect(url().get('t')).toBe('leads');
@@ -271,25 +272,28 @@ describe('Revisar del setter · de un número de "Mis datos" a su lista', () => 
         expect(getTabla.mock.calls.at(-1)[1]).toBe('leads');
     });
 
-    it('un paso del embudo también aterriza filtrado, y "atrás" vuelve al tablero', async () => {
+    it('un paso del embudo aterriza filtrado en Revisar › Agendas, y "atrás" vuelve a «Mis datos»', async () => {
         await montar('/setter/deck?step=datos&p=mes');
 
-        fireEvent.click(await screen.findByRole('button', { name: 'Cualificados' }));
+        fireEvent.click(await screen.findByRole('button', { name: 'Ver la lista: Asistieron, 4' }));
 
-        expect(await screen.findByRole('button', { name: 'Quitar Cualificado: Sí' })).toBeInTheDocument();
-        expect(filas('Lead')).toHaveLength(BLOQUE.cualificados);
+        expect(await screen.findByRole('button', { name: 'Quitar Asistió: Sí' })).toBeInTheDocument();
+        expect(filas('Agenda')).toHaveLength(AGENDAS.filter(a => a.asistio).length);
+        expect(screen.getByRole('tab', { name: 'Agendas' })).toHaveAttribute('aria-selected', 'true');
+        expect(url().get('t')).toBe('generadas');
 
         fireEvent.click(screen.getByRole('button', { name: 'atrás' }));
 
-        expect(await tile('Entrantes')).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: 'Lo que reportaste' })).toBeInTheDocument();
         expect(url().get('step')).toBe('datos');
     });
 
-    it('en "Mis datos" tampoco hay selector de persona', async () => {
+    it('en "Mis datos" tampoco hay selector de persona, y Comparativas es una pestaña', async () => {
         await montar('/setter/deck?step=datos');
 
-        await tile('Entrantes');
+        await screen.findByRole('heading', { name: 'Lo que reportaste' });
         expect(screen.queryByRole('button', { name: /Todo el equipo/ })).toBeNull();
-        expect(screen.queryByRole('tab', { name: 'Comparativas' })).toBeNull();
+        // Desde el 10/10/2026 el setter ve la Comparativa de los setters (pedido del usuario).
+        expect(screen.getByRole('tab', { name: 'Comparativas' })).toBeInTheDocument();
     });
 });
