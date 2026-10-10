@@ -2,14 +2,14 @@
 // Apariencia y el isotipo con anillos). Arranca directo en el panel.
 //   entrar   → usuario y clave, o «Entrar con Google» (vuelve a /login?google=…).
 //   email    → si la cuenta no tiene email, se pide para poder entrar con Google la próxima vez.
-// Después va a destinoDeEntrada (utils/portal.js): el Portal si tiene más de un rol, área, cuenta o
-// Finances (o directo a su tarjeta por defecto), y si no, la pantalla de su rol.
+// Después entra (entrarAlIniciar, utils/portal.js) a su área por defecto o a la pantalla de su rol, con el
+// Portal abierto encima si tiene más de un área para elegir.
 
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Eye, EyeOff, Loader2, Mail } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { destinoDeEntrada } from '../../utils/portal';
+import { entrarAlIniciar } from '../../utils/portal';
 import { LogoEntrada, MarcoEntrada } from './Eleccion';
 import DebugConsole from '../../components/modals/DebugConsole';
 import './login.css';
@@ -156,7 +156,7 @@ export default function LoginPage() {
     const [user, setUser] = useState(null);
     const [errorGoogle, setErrorGoogle] = useState(google && google !== 'ok' ? MENSAJE_GOOGLE[google] || MENSAJE_GOOGLE.error : null);
 
-    const seguir = (u) => navigate(destinoDeEntrada(u));
+    const seguir = (u) => entrarAlIniciar(u, navigate);
     const alEntrar = (u) => {
         if (!u.email) { setUser(u); setPaso('email'); } else seguir(u);
     };

@@ -36,8 +36,9 @@ export const rotuloDeSesion = (user, rotulo = null) =>
  *   está en Cortex).
  * - ir: opciones de navegación propias, después de «Portal» (p. ej. «Volver al panel de admin»).
  */
+// `navigate` ya no hace falta (el Portal se abre encima, sin navegar): las pantallas lo pueden seguir pasando.
 export function armarMenuSesion({
-    user, navigate, logout,
+    user, logout,
     acciones = [], configuracion, playbook = null, ir = [],
 }) {
     const avisos = configuracion?.avisos?.filter(Boolean) || [];
@@ -46,7 +47,7 @@ export function armarMenuSesion({
         [
             { id: 'configuracion', label: 'Configuración', Icono: Settings, onClick: configuracion?.onClick,
                 cuenta: avisos.length ? '!' : null, titulo: avisos.length ? avisos.join(' · ') : null },
-            ...opcionPortal(user, navigate, playbook?.pendientes || 0),
+            ...opcionPortal(user, playbook?.pendientes || 0),
             ...ir,
         ],
         [

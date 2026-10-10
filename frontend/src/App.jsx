@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AparienciaProvider } from './context/AparienciaContext';
 import { ConfiguracionProvider } from './sesion/ConfiguracionContext';
-import { SimulacionProvider } from './sesion/SimulacionContext';
+import { PortalProvider, PortalRuta } from './sesion/PortalContext';
 import { roleLandingPath } from './utils/roleLanding';
 import MainLayout from './components/MainLayout';
 import AdminDashboard from './pages/admin/dashboard/AdminDashboard';
@@ -10,7 +10,6 @@ import FinancialAnalysisPage from './pages/admin/reports/FinancialAnalysisPage';
 import PublicCallsBoardPage from './pages/public/PublicCallsBoardPage';
 import SalesAttributionPage from './pages/admin/reports/SalesAttributionPage';
 import LoginPage from './pages/auth/LoginPage';
-import PortalPage from './pages/auth/PortalPage';
 import CortexPage from './pages/auth/CortexPage';
 import SessionEntry from './pages/auth/SessionEntry';
 import AnalysisPage from './pages/admin/reports/AnalysisPage';
@@ -108,7 +107,7 @@ function App() {
         <PlaybookProvider>
         <Router>
         <ConfiguracionProvider>
-        <SimulacionProvider>
+        <PortalProvider>
           <PixelTracker />
           <Toaster position="top-right" />
           <SoloInterno>
@@ -119,10 +118,9 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/session-entry" element={<SessionEntry />} />
-            {/* El Portal (10/10/2026): la entrada para quien tiene más de un rol, área o cuenta, y
-                «Cambiar de vista» del menú de sesión. Sin MainLayout, como el login. /inicio (las áreas)
-                y /vistas (el hub de vistas) eran dos partes de lo mismo: llevan al Portal. */}
-            <Route path="/portal" element={<ProtectedRoute><PortalPage /></ProtectedRoute>} />
+            {/* El Portal (10/10/2026) es una pantalla encima de lo que se ve, no una ruta
+                (sesion/PortalContext.jsx): /portal, /inicio y /vistas quedan por los links guardados. */}
+            <Route path="/portal" element={<ProtectedRoute><PortalRuta /></ProtectedRoute>} />
             {/* Cortex (10/10/2026): el área de todos, con Learnito y el Playbook. */}
             <Route path="/cortex" element={<ProtectedRoute><CortexPage /></ProtectedRoute>} />
             <Route path="/inicio" element={<Navigate to="/portal?elegir=1" replace />} />
@@ -490,7 +488,7 @@ function App() {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/login" />} />
           </Routes>
-        </SimulacionProvider>
+        </PortalProvider>
         </ConfiguracionProvider>
         </Router>
         </PlaybookProvider>

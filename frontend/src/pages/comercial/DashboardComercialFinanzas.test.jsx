@@ -12,6 +12,8 @@ import DashboardComercial from './DashboardComercial';
  */
 
 const estado = vi.hoisted(() => ({ puede: false, user: null }));
+const bus = vi.hoisted(() => ({ abrirPortal: vi.fn() }));
+vi.mock('../../sesion/portalBus', () => bus);
 const navegar = vi.hoisted(() => vi.fn());
 vi.mock('react-router-dom', async (original) => ({ ...(await original()), useNavigate: () => navegar }));
 
@@ -317,7 +319,7 @@ describe('DashboardComercial · ir y volver entre Comercial y Finances', () => {
         id: 1, role: 'director_comercial', roles: ['director_comercial'], can_view_finance: verFinanzas, is_impersonating: false,
     });
 
-    it('en Comercial y en /finanzas el menú es el mismo, y «Portal» lleva a elegir', async () => {
+    it('en Comercial y en /finanzas el menú es el mismo, y «Portal» lo abre encima', async () => {
         estado.puede = true;
         estado.user = direccion(true);
         const { unmount } = montar();
@@ -326,7 +328,7 @@ describe('DashboardComercial · ir y volver entre Comercial y Finances', () => {
         expect(screen.getByText('Dirección comercial')).toBeTruthy();
         expect(opciones()).toEqual(MENU);
         fireEvent.click(screen.getByRole('menuitem', { name: 'Portal' }));
-        expect(navegar).toHaveBeenLastCalledWith('/portal?elegir=1');
+        expect(bus.abrirPortal).toHaveBeenCalled();
 
         unmount();
         montar('/finanzas');
@@ -335,7 +337,7 @@ describe('DashboardComercial · ir y volver entre Comercial y Finances', () => {
         expect(screen.getByText('Finances')).toBeTruthy();
         expect(opciones()).toEqual(MENU);
         fireEvent.click(screen.getByRole('menuitem', { name: 'Portal' }));
-        expect(navegar).toHaveBeenLastCalledWith('/portal?elegir=1');
+        expect(bus.abrirPortal).toHaveBeenCalled();
     });
 
     it('sin «ver finanzas» la dirección igual elige entre sus áreas', async () => {

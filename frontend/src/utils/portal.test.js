@@ -2,9 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const post = vi.fn();
 vi.mock('../services/api', () => ({ default: { post: (...a) => post(...a) } }));
+const bus = vi.hoisted(() => ({ abrirPortal: vi.fn() }));
+vi.mock('../sesion/portalBus', () => bus);
 
 import {
-    cambiarDeCuenta, cambiarDeRolEnLaCuenta, destinoDeEntrada, entrarPorTarjeta, fijarTarjetaPorDefecto, gruposDelPortal, hayPortal,
+    TARJETA_CORTEX, cambiarDeCuenta, cambiarDeRolEnLaCuenta, destinoDeEntrada, entrarAlIniciar, entrarPorTarjeta, fijarTarjetaPorDefecto, gruposDelPortal, hayPortal,
     opcionPortal, tarjetaPorDefecto, tarjetasDelPortal,
 } from './portal';
 
@@ -20,7 +22,7 @@ const marlon = {
 
 let original;
 beforeEach(() => {
-    post.mockReset(); localStorage.clear(); sessionStorage.clear();
+    post.mockReset(); bus.abrirPortal.mockReset(); localStorage.clear(); sessionStorage.clear();
     original = window.location;
     delete window.location;
     window.location = { href: '' };
@@ -69,18 +71,43 @@ describe('a dónde entra', () => {
         expect(destinoDeEntrada(null)).toBe('/login');
     });
 
-    it('con algo que elegir, al Portal; con una por defecto del mismo rol, directo ahí', () => {
-        expect(destinoDeEntrada(dir)).toBe('/portal');
+    it('a la pantalla de su rol; con un área por defecto del mismo rol, directo ahí', () => {
+        expect(destinoDeEntrada(dir)).toBe('/admin/comercial');
         fijarTarjetaPorDefecto(dir, 'director_comercial:agendamiento');
         expect(tarjetaPorDefecto(dir).titulo).toBe('Agendamiento');
         expect(destinoDeEntrada(dir)).toBe('/agendas-v2');
         fijarTarjetaPorDefecto(dir, null);
-        expect(destinoDeEntrada(dir)).toBe('/portal');
+        expect(destinoDeEntrada(dir)).toBe('/admin/comercial');
     });
 
-    it('si la por defecto es de otro rol o cuenta, va al Portal (que entra solo)', () => {
-        fijarTarjetaPorDefecto(marlon, 'cuenta-2');
-        expect(destinoDeEntrada(marlon)).toBe('/portal');
+    it('al iniciar sesión: con área por defecto entra ahí; si no, a su pantalla con el Portal abierto si hay que elegir', async () => {
+        const navegar = vi.fn();
+        entrarAlIniciar(dir, navegar);
+        expect(navegar).toHaveBeenCalledWith('/admin/comercial');
+        expect(bus.abrirPortal).toHaveBeenCalledTimes(1);
+
+        entrarAlIniciar({ id: 1, role: 'closer', roles: ['closer'] }, navegar);
+        expect(navegar).toHaveBeenLastCalledWith('/closer/deck?step=confirmations');
+        expect(bus.abrirPortal).toHaveBeenCalledTimes(1);
+
+        fijarTarjetaPorDefecto(dir, 'director_comercial:agendamiento');
+        entrarAlIniciar(dir, navegar);
+        expect(navegar).toHaveBeenLastCalledWith('/agendas-v2');
+        expect(bus.abrirPortal).toHaveBeenCalledTimes(1);
+
+        // Un área por defecto de una cuenta vinculada pasa a esa cuenta.
+        post.mockResolvedValue({ data: { token: 'tk', user: { id: 2, role: 'closer' } } });
+        fijarTarjetaPorDefecto(marlon, 'cuenta-2:cierres');
+        await entrarAlIniciar(marlon, navegar);
+        expect(post).toHaveBeenCalledWith('/auth/switch-role', { user_id: 2, isolated: false });
+    });
+
+    it('Cortex es un área común: entra sin cambiar de rol', () => {
+        const navegar = vi.fn();
+        expect(TARJETA_CORTEX).toMatchObject({ titulo: 'Cortex', ruta: '/cortex', comun: true });
+        entrarPorTarjeta({ ...dir, role: 'closer' }, TARJETA_CORTEX, navegar);
+        expect(navegar).toHaveBeenCalledWith('/cortex');
+        expect(post).not.toHaveBeenCalled();
     });
 
     it('lee el área por defecto de antes (Dirección ahora es Ventas)', () => {
@@ -136,14 +163,13 @@ describe('entrar por una tarjeta', () => {
 });
 
 describe('«Portal» en el menú', () => {
-    it('está siempre (ahí están Cortex y Simular), entra aunque haya una por defecto y lleva lo pendiente del Playbook', () => {
-        const navegar = vi.fn();
-        const [op] = opcionPortal({ id: 1, role: 'closer' }, navegar, 3);
+    it('está siempre (ahí están Cortex y Simular), abre el Portal encima y lleva lo pendiente del Playbook', () => {
+        const [op] = opcionPortal({ id: 1, role: 'closer' }, 3);
         expect(op).toMatchObject({ label: 'Portal', cuenta: 3 });
         expect(op.titulo).toMatch(/3 videos pendientes del Playbook/);
         op.onClick();
-        expect(navegar).toHaveBeenCalledWith('/portal?elegir=1');
-        expect(opcionPortal(dir, navegar)[0].cuenta).toBeNull();
-        expect(opcionPortal(null, navegar)).toEqual([]);
+        expect(bus.abrirPortal).toHaveBeenCalledTimes(1);
+        expect(opcionPortal(dir)[0].cuenta).toBeNull();
+        expect(opcionPortal(null)).toEqual([]);
     });
 });

@@ -1,7 +1,7 @@
-// Quién puede simular y cómo abrir «Simular a alguien» (en el Portal, /portal?simular=1) desde cualquier
-// lado. SimulacionContext.jsx registra acá cómo llegar con el router; así las teclas de cada pantalla no
-// dependen de él.
+// Quién puede simular y cómo abrir «Simular a alguien» (un paso del Portal) desde cualquier lado, como la
+// tecla «w» de cada pantalla.
 import { rolesDeLaCuenta } from '../utils/cuentasVinculadas';
+import { abrirPortal } from './portalBus';
 
 /**
  * Lo decide el backend (`_roles_que_puede_simular` en app/api/auth.py); esto solo evita ofrecer la
@@ -15,8 +15,5 @@ export const puedeSimular = (user) => {
     return roles.some((r) => SIMULAN.includes(r));
 };
 
-export const RUTA_SIMULAR = '/portal?simular=1';
-
-let abrir = () => {};
-export const registrarSimulacion = (fn) => { abrir = fn; return () => { if (abrir === fn) abrir = () => {}; }; };
-export const abrirSimulacion = () => abrir();
+/** Abre el Portal en Simular a alguien; si la persona no puede simular, no hace nada (PortalContext). */
+export const abrirSimulacion = () => abrirPortal('simular');
