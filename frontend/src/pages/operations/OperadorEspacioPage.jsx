@@ -46,7 +46,7 @@ const SECCIONES = [
     { id: 'soporte', label: 'Soporte', Icono: LifeBuoy,
         tabs: pestanasTecnicas(['bug_reports', 'closer_aliases', 'leads_audit', 'report_backlog', 'playbook', 'bitacora']) },
     { id: 'datos', label: 'Datos', Icono: Database,
-        tabs: pestanasTecnicas(['marketing', 'database', 'operations', 'infra', 'danger_zone']) },
+        tabs: pestanasTecnicas(['database', 'operations']) },
     { id: 'agendas', label: 'Agendas', Icono: CalendarDays },
     { id: 'ventas', label: 'Ventas', Icono: DollarSign },
     // Los formularios de cualificación y la fusión de clientes (10/10/2026): eran del panel de
