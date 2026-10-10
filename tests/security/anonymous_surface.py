@@ -25,6 +25,13 @@ PUBLICAS_POR_DISENO = frozenset({
     ('GET', '/api/agendas-v2/publico/eventos/<funnel_slug>/<evento_slug>'),
     ('POST', '/api/agendas-v2/publico/eventos/<evento_id>/horarios'),
     ('POST', '/api/agendas-v2/publico/reservas'),
+    # El lead que vuelve (06/10/2026): con su email, su nombre para precargarlo, el WhatsApp y el Instagram
+    # TAPADOS y el horario de su próxima agenda (sin closer). Un anónimo que sabe un email ve eso mismo:
+    # nombre completo y si tiene una llamada y cuándo. 10 pedidos por minuto por IP.
+    ('POST', '/api/agendas-v2/publico/eventos/<evento_id>/conocido'),
+    # Hasta dónde llegó el lead en el link, para Stats (dónde se caen los que dejaron sus datos). No
+    # devuelve nada; escribe un intento por email y evento, y el paso nunca retrocede. 60 por minuto por IP.
+    ('POST', '/api/agendas-v2/publico/eventos/<evento_id>/avance'),
     # Formulario público de Asistente: lee las preguntas del formulario activo (las mismas que muestra a
     # cualquiera) y los datos de la búsqueda. No expone postulaciones.
     ('GET', '/api/public/assistant-form'),
