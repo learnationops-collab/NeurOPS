@@ -204,13 +204,13 @@ def test_la_objecion_de_otra_agenda_del_mismo_lead_no_se_mezcla(client, db, equi
 
 
 @freeze_time(HOY)
-def test_una_objecion_del_sistema_no_tiene_autor(client, db, equipo, auth_headers):
+def test_una_objecion_sin_usuario_la_firma_el_sistema(client, db, equipo, auth_headers):
     filas = _mes(db, equipo)
     objecion(db, filas['presento'], None, 'Precio')
 
     lista = _pedir(client, NO_CERRADAS, auth_headers(equipo['director']))
 
-    assert {f['id']: f['objecion'] for f in lista['filas']}[filas['presento'].id]['autor'] is None
+    assert {f['id']: f['objecion'] for f in lista['filas']}[filas['presento'].id]['autor'] == 'Sistema'
 
 
 @freeze_time(HOY)
