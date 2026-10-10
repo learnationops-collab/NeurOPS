@@ -333,6 +333,10 @@ def prefill_public_setter_report():
 
     Un setter solo pide los suyos: ahora son sus números reales, y en "Mis datos" nadie ve los de
     otro (decisión del 24/09/2026). Antes daba igual, porque los entrantes eran los del equipo.
+
+    **Por canal, para el reporte v2 (10/10/2026).** `anuncios` e `inbound` traen lo mismo partido
+    por canal (ver `_precarga_por_canal`): entrantes, no leads, in-abribles y agendas. Las claves
+    del v1 siguen para quien las use.
     """
     from flask_login import current_user
 
@@ -359,19 +363,94 @@ def prefill_public_setter_report():
         return jsonify({"message": "Setter no encontrado"}), 404
 
     es_setter = user.role == 'setter'
-    leads = ComercialService.totales_leads(ComercialService.leads(
-        target_date, target_date,
-        setter_nombre=user.username if es_setter else None,
-        setter_id=user.id if es_setter else None))
     generadas = ComercialService.generadas(target_date, target_date,
                                            setter_id=user.id if es_setter else None)
+
+    filas_leads = ComercialService.leads(
+        target_date, target_date,
+        setter_nombre=user.username if es_setter else None,
+        setter_id=user.id if es_setter else None)
+    leads = ComercialService.totales_leads(filas_leads)
 
     return jsonify({
         "inbox_entrantes": leads['leads'],
         "funnel_qualification": leads['respondieron'],
         "not_lead": leads['respondieron'] - leads['cualificados'],
         "funnel_agenda": len(generadas),
+        "version": 2,
+        **_precarga_por_canal(filas_leads, generadas),
     }), 200
+
+
+def _leads_de_inbound(lead_ids):
+    """Cuáles de estos leads de ManyChat entraron por Inbound y no por un anuncio.
+
+    Inbound es el «anuncio» ficticio con `keyword='Inbound'` que crea `ensure_inbound_ad_exists`
+    (marketing.py): ManyChat manda esa palabra clave cuando el lead escribe sin venir de un
+    anuncio. Un lead es de Inbound si alguna de sus respuestas trae esa palabra o ese anuncio.
+    """
+    from sqlalchemy import func
+    from app.models import Ad, LeadAnswer
+
+    if not lead_ids:
+        return set()
+    anuncios_inbound = {i for (i,) in db.session.query(Ad.id).filter(func.lower(Ad.keyword) == 'inbound')}
+    inbound = set()
+    for lead_id, keyword, ad_id in db.session.query(LeadAnswer.lead_id, LeadAnswer.keyword, LeadAnswer.ad_id)             .filter(LeadAnswer.lead_id.in_(list(lead_ids))):
+        if (keyword or '').strip().lower() == 'inbound' or (ad_id is not None and ad_id in anuncios_inbound):
+            inbound.add(lead_id)
+    return inbound
+
+
+def _precarga_por_canal(filas_leads, generadas):
+    """La precarga del reporte v2 partida en anuncios e inbound. Lo que el sistema NO sabe
+    (aperturas, bienvenidas, embudo, follow-ups) no viene: eso lo carga el setter.
+
+    Por canal, con las mismas filas que "Mis datos" (los cualificados de los dos canales suman los
+    de "Mis datos"):
+
+      · Entrantes = sus leads de ManyChat del día (personas, no interacciones).
+      · No leads = contestaron la pregunta filtro y no califican.
+      · In-abribles = no contestaron nunca: la conversación no se pudo abrir.
+        Así entrantes − no leads − in-abribles = los cualificados, que es como el v2 los calcula.
+      · Agendas = sus agendas generadas del día, por el canal del lead que agendó: se cruza el
+        instagram del cliente con sus leads de ManyChat (de cualquier fecha). Si alguno vino de un
+        anuncio, es de anuncios; si solo vino por Inbound, o no tiene lead de ManyChat (escribió
+        por su cuenta y nadie lo cargó como lead de un anuncio), es de inbound.
+
+    Hasta el 10/10/2026 ningún lead de la base trae la marca de Inbound (ManyChat todavía no la
+    manda), así que en la práctica todo lo de ManyChat cae en anuncios: es lo que dice el dato, y
+    el setter lo corrige si no.
+    """
+    from sqlalchemy import func
+    from app.models import ManychatLead
+    from app.services.comercial_service import _limpiar_ig
+
+    def vacio():
+        return {'entrantes': 0, 'no_lead': 0, 'inabribles': 0, 'agendas': 0}
+
+    canales = {'anuncios': vacio(), 'inbound': vacio()}
+    de_inbound = _leads_de_inbound({f['id'] for f in filas_leads})
+    for fila in filas_leads:
+        c = canales['inbound' if fila['id'] in de_inbound else 'anuncios']
+        c['entrantes'] += 1
+        if not fila['respondio']:
+            c['inabribles'] += 1
+        elif not fila['cualificado']:
+            c['no_lead'] += 1
+
+    igs = {ig for ig in (_limpiar_ig(a.get('ig')) for a in generadas) if ig}
+    leads_por_ig = {}
+    if igs:
+        ig_lead = func.lower(func.replace(ManychatLead.ig, '@', ''))
+        for lead_id, ig in db.session.query(ManychatLead.id, ig_lead).filter(ig_lead.in_(sorted(igs))):
+            leads_por_ig.setdefault(_limpiar_ig(ig), set()).add(lead_id)
+    inbound_por_ig = _leads_de_inbound({i for ids in leads_por_ig.values() for i in ids})
+    for agenda in generadas:
+        ids = leads_por_ig.get(_limpiar_ig(agenda.get('ig')), set())
+        de_un_anuncio = any(i not in inbound_por_ig for i in ids)
+        canales['anuncios' if de_un_anuncio else 'inbound']['agendas'] += 1
+    return canales
 
 def _compute_setter_stats(start_date_str, end_date_str, setter_id, agg_type):
     from app.models import SetterDailyStats, User

@@ -88,8 +88,7 @@ def test_el_reporte_del_dia_arranca_con_los_numeros_de_mis_datos(client, equipo,
                        query_string={'setter_id': elias.id, 'date': DIA.isoformat()}).get_json()
     mis_datos = ca.bloque_setters(DIA, DIA, setter_id=elias.id, setter_nombre='Elias')
 
-    assert datos == {'inbox_entrantes': 4, 'funnel_qualification': 3, 'not_lead': 1,
-                     'funnel_agenda': 2}
+    assert {k: datos[k] for k in ('inbox_entrantes', 'funnel_qualification', 'not_lead', 'funnel_agenda')}         == {'inbox_entrantes': 4, 'funnel_qualification': 3, 'not_lead': 1, 'funnel_agenda': 2}
     assert datos['inbox_entrantes'] == mis_datos['leads']
     assert datos['funnel_qualification'] == mis_datos['respondieron']
     # El formulario deriva "Leads netos" = Cualificación − No Lead: son los cualificados.
