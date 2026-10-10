@@ -13,12 +13,16 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { DatosCuenta, TarjetaCalendar, TarjetaDisponibilidad, TarjetaWhatsapp } from '../../agendas_v2/secciones/conf/cuenta';
 import MisEventos from '../../agendas_v2/secciones/conf/MisEventos';
+import TabApariencia from '../../../temas/TabApariencia';
 import { Icono } from '../../agendas_v2/ui/base';
 import '../../agendas_v2/thalamus.css';
 
 export const TABS_CLOSER = [
     ['datos', 'Datos', 'user'], ['disponibilidad', 'Disponibilidad', 'clock'], ['integraciones', 'Integraciones', 'enchufe'], ['eventos', 'Mis eventos', 'calendar'],
 ];
+// Apariencia todavía solo para admins: el closer la ve cuando sus pantallas estén migradas a los
+// temas (hasta entonces, elegir otro tema le cambiaría solo pedazos).
+const TAB_APARIENCIA = ['apariencia', 'Apariencia', 'sol'];
 
 // Las tarjetas de Thalamus van en el modo de la hoja que las contiene, no en el de la página: en el
 // estilo glass la hoja (.bg-surface) es navy aunque la app esté en claro (Elegant Blue), y con el modo
@@ -44,11 +48,12 @@ export default function ConfiguracionCloser({ user = null }) {
     if (tab === 'disponibilidad') cuerpo = <TarjetaDisponibilidad />;
     else if (tab === 'integraciones') cuerpo = <><TarjetaCalendar /><TarjetaWhatsapp /></>;
     else if (tab === 'eventos') cuerpo = <MisEventos />;
+    else if (tab === 'apariencia') cuerpo = <TabApariencia />;
     else cuerpo = user ? <DatosCuenta user={user} /> : null;
     return (
         <div ref={raiz} className="thalamus cu-hoja" data-theme={tema} aria-label="Configuración">
             <div className="tabs" role="tablist" aria-label="Configuración">
-                {TABS_CLOSER.map(([t, n, ico]) => (
+                {(user?.role === 'admin' ? [...TABS_CLOSER, TAB_APARIENCIA] : TABS_CLOSER).map(([t, n, ico]) => (
                     <button key={t} type="button" className="tab" role="tab" aria-selected={tab === t} aria-controls="cu-cuerpo" onClick={() => setTab(t)}>
                         <Icono n={ico} />{n}
                     </button>

@@ -1,0 +1,137 @@
+/* ============================================================================
+   TEMAS — la apariencia de la app en un solo lugar.
+
+   Cada tema es un bloque completo y cerrado: define todos los roles y no se
+   combina con nada (no hay "tema + variante"). El modo claro u oscuro es parte
+   del tema, no un eje aparte. Se elige en Configuración › Apariencia y vive en
+   `data-tema` sobre <html> (context/AparienciaContext.jsx); cualquier nodo con
+   `data-tema` toma ese tema para su subárbol, así se pintan las vistas previas.
+
+   Los nombres son nuevos a propósito: index.css, comercial.css y thalamus.css
+   usan `--bg-surface`, `--text-muted`, `--brand-secondary`... con otros valores
+   cada uno, y reusarlos acá los pisaría.
+
+   Closing oscuro es el look actual del closer, con sus valores exactos (los de
+   `.dc-shell` en pages/comercial/comercial.css): el default, para que nadie
+   note el cambio. Thalamus oscuro y claro son los de pages/agendas_v2/thalamus.css.
+
+   Roles:
+   fondo           la página (color base + degradado) y el texto directo sobre ella
+   destacado       botones principales y lo activo; destacado-2 es el acento azul
+   destacado-suave lo seleccionado sin gritar (píldoras, notas propias)
+   cont-1/2/3      contenedores: 1 paneles, 2 tarjetas y controles dentro, 3 hundido
+   campo           inputs
+   modal/flotante  hojas y modales / menús, popovers y tooltips; velo detrás del modal
+   invertido       el segmento o pestaña activa (píldora clara sobre oscuro)
+   texto-2/3       texto secundario en dos niveles
+   borde-1/2/3     bordes de menor a mayor fuerza; brillo es el filo de arriba
+   est-*           estados (exito, aviso, error, info, inactivo): color, superficie y borde
+   riel            pista de switches y barras
+
+   Por qué `est-` y `riel`: `--error`, `--info` y `--hueco` ya existen en otras hojas, y en <html>
+   les ganarían a los `var(--error, respaldo)` de las pantallas viejas. Y sin `color-scheme`: en
+   <html> les cambiaría los scrollbars y los controles nativos a las pantallas que todavía no
+   usan los temas; lo pone cada contenedor migrado.
+   ============================================================================ */
+
+[data-tema="closing-oscuro"]{
+  --fondo:#020617; --fondo-degradado:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%); --en-fondo:#FFFFFF;
+  --destacado:#FF3FA4; --destacado-claro:#FF6AD5; --en-destacado:#020617;
+  --destacado-suave:rgba(255,63,164,.10); --destacado-suave-borde:rgba(255,63,164,.35);
+  --destacado-2:#1323C6; --en-destacado-2:#FFFFFF;
+  --cont-tenue:rgba(255,255,255,.02);
+  --cont-1:rgba(255,255,255,.04); --en-cont-1:#FFFFFF;
+  --cont-2:rgba(255,255,255,.08); --cont-2-hover:rgba(255,255,255,.12); --en-cont-2:#FFFFFF;
+  --cont-3:rgba(0,0,0,.34); --en-cont-3:#FFFFFF;
+  --cont-fuerte:rgba(255,255,255,.12);
+  --campo:rgba(0,0,0,.30);
+  --modal:rgba(2,6,23,.90); --en-modal:#FFFFFF; --flotante:#0B1030; --velo:rgba(2,6,23,.70);
+  --invertido:#FFFFFF; --en-invertido:#020617;
+  --texto-2:rgba(255,255,255,.60); --texto-3:rgba(255,255,255,.40);
+  --borde-1:rgba(255,255,255,.05); --borde-2:rgba(255,255,255,.15); --borde-3:rgba(255,255,255,.38);
+  --brillo:rgba(255,255,255,.10); --riel:rgba(255,255,255,.12);
+  --est-exito:#2FBF8F;    --est-exito-sup:#071A24;    --est-exito-borde:#10413D;
+  --est-aviso:#D9A441;    --est-aviso-sup:#1A171C;    --est-aviso-borde:#473924;
+  --est-error:#E85C4A;    --est-error-sup:#1B0F1D;    --est-error-borde:#4C2227;
+  --est-info:#4E8BD8;     --est-info-sup:#0A152C;     --est-info-borde:#1A3155;
+  --est-inactivo:#7F8CA8; --est-inactivo-sup:#0E1326; --est-inactivo-borde:#252C42;
+  --en-est:#020617;
+  --foco:#5B7CFF; --anillo-foco:0 0 0 3px rgba(91,124,255,.55);
+  --sombra:0 8px 32px 0 rgba(0,0,0,.40); --sombra-destacado:0 10px 15px -3px rgba(19,35,198,.35);
+  --radio:32px; --radio-control:16px; --desenfoque:0px;
+  --humo-mezcla:screen; --humo-opacidad:.42; --humo-opacidad-i:.62;
+}
+
+[data-tema="thalamus-oscuro"]{
+  --fondo:#020617; --fondo-degradado:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%); --en-fondo:#FFFFFF;
+  --destacado:#FF3FA4; --destacado-claro:#FF6AD5; --en-destacado:#020617;
+  --destacado-suave:rgba(255,63,164,.10); --destacado-suave-borde:rgba(255,63,164,.35);
+  --destacado-2:#1323C6; --en-destacado-2:#FFFFFF;
+  --cont-tenue:rgba(255,255,255,.02);
+  --cont-1:rgba(255,255,255,.04); --en-cont-1:#FFFFFF;
+  --cont-2:rgba(255,255,255,.07); --cont-2-hover:rgba(255,255,255,.12); --en-cont-2:#FFFFFF;
+  --cont-3:rgba(0,0,0,.34); --en-cont-3:#FFFFFF;
+  --cont-fuerte:rgba(255,255,255,.12);
+  --campo:rgba(0,0,0,.30);
+  --modal:rgba(2,6,23,.92); --en-modal:#FFFFFF; --flotante:#0B1030; --velo:rgba(2,6,23,.72);
+  --invertido:#FFFFFF; --en-invertido:#020617;
+  --texto-2:rgba(255,255,255,.62); --texto-3:rgba(255,255,255,.42);
+  --borde-1:rgba(255,255,255,.07); --borde-2:rgba(255,255,255,.15); --borde-3:rgba(255,255,255,.34);
+  --brillo:rgba(255,255,255,.10); --riel:rgba(255,255,255,.12);
+  --est-exito:#2FBF8F;    --est-exito-sup:#071A24;    --est-exito-borde:#10413D;
+  --est-aviso:#D9A441;    --est-aviso-sup:#1A171C;    --est-aviso-borde:#473924;
+  --est-error:#E85C4A;    --est-error-sup:#1B0F1D;    --est-error-borde:#4C2227;
+  --est-info:#4E8BD8;     --est-info-sup:#0A152C;     --est-info-borde:#1A3155;
+  --est-inactivo:#7F8CA8; --est-inactivo-sup:#0E1326; --est-inactivo-borde:#252C42;
+  --en-est:#020617;
+  --foco:#5B7CFF; --anillo-foco:0 0 0 3px rgba(91,124,255,.55);
+  --sombra:0 8px 32px 0 rgba(0,0,0,.40); --sombra-destacado:0 10px 15px -3px rgba(19,35,198,.35);
+  --radio:32px; --radio-control:16px; --desenfoque:0px;
+  --humo-mezcla:screen; --humo-opacidad:.42; --humo-opacidad-i:.62;
+}
+
+[data-tema="thalamus-claro"]{
+  --fondo:#F6F7FC; --fondo-degradado:linear-gradient(135deg,#F6F7FC 0%,#EAEEFA 50%,#F5F0F8 100%); --en-fondo:#080C30;
+  --destacado:#C9156F; --destacado-claro:#E23E96; --en-destacado:#FFFFFF;
+  --destacado-suave:rgba(201,21,111,.09); --destacado-suave-borde:rgba(201,21,111,.30);
+  --destacado-2:#1323C6; --en-destacado-2:#FFFFFF;
+  --cont-tenue:rgba(10,14,61,.015);
+  --cont-1:rgba(10,14,61,.035); --en-cont-1:#080C30;
+  --cont-2:rgba(255,255,255,.75); --cont-2-hover:#FFFFFF; --en-cont-2:#080C30;
+  --cont-3:rgba(10,14,61,.055); --en-cont-3:#080C30;
+  --cont-fuerte:rgba(10,14,61,.10);
+  --campo:rgba(10,14,61,.05);
+  --modal:rgba(255,255,255,.96); --en-modal:#080C30; --flotante:#FFFFFF; --velo:rgba(10,14,61,.42);
+  --invertido:#080C30; --en-invertido:#F6F7FC;
+  --texto-2:rgba(8,12,48,.62); --texto-3:rgba(8,12,48,.46);
+  --borde-1:rgba(10,14,61,.08); --borde-2:rgba(10,14,61,.14); --borde-3:rgba(10,14,61,.26);
+  --brillo:rgba(255,255,255,.9); --riel:rgba(10,14,61,.12);
+  --est-exito:#0E7E5C;    --est-exito-sup:#E4F5EE;    --est-exito-borde:#AEDFCD;
+  --est-aviso:#8F6310;    --est-aviso-sup:#FAF0DC;    --est-aviso-borde:#E5D0A0;
+  --est-error:#BE3726;    --est-error-sup:#FCEAE6;    --est-error-borde:#F0C0B7;
+  --est-info:#27599F;     --est-info-sup:#E6EEFA;     --est-info-borde:#BAD2EE;
+  --est-inactivo:#54617A; --est-inactivo-sup:#ECEFF5; --est-inactivo-borde:#CFD7E4;
+  --en-est:#FFFFFF;
+  --foco:#5B7CFF; --anillo-foco:0 0 0 3px rgba(91,124,255,.55);
+  --sombra:0 8px 32px 0 rgba(10,14,61,.12); --sombra-destacado:0 10px 15px -3px rgba(201,21,111,.28);
+  --radio:32px; --radio-control:16px; --desenfoque:0px;
+  --humo-mezcla:multiply; --humo-opacidad:.20; --humo-opacidad-i:.55;
+}
+
+/* Vista previa de un tema en la pestaña Apariencia: cada tarjeta lleva su propio
+   `data-tema`, así muestra sus colores aunque la app tenga otro puesto. */
+.ap-temas{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.ap-tema{display:grid;gap:10px;padding:10px;border-radius:20px;text-align:left;cursor:pointer;
+  background:var(--fondo-degradado),var(--fondo);color:var(--en-fondo);border:2px solid var(--borde-1);
+  font:inherit;transition:border-color .16s,transform .16s}
+.ap-tema:hover{transform:translateY(-1px)}
+.ap-tema:focus-visible{outline:none;box-shadow:var(--anillo-foco)}
+.ap-tema[aria-checked="true"]{border-color:var(--destacado)}
+.ap-muestra{display:grid;gap:6px;padding:10px;border-radius:14px;background:var(--cont-1);border:1px solid var(--borde-1)}
+.ap-muestra-fila{display:flex;align-items:center;gap:6px}
+.ap-muestra-tarjeta{flex:1;height:22px;border-radius:8px;background:var(--cont-2);border:1px solid var(--borde-1)}
+.ap-muestra-btn{width:34px;height:22px;border-radius:999px;background:var(--destacado)}
+.ap-muestra-linea{height:6px;border-radius:999px;background:var(--texto-3)}
+.ap-muestra-linea--corta{width:55%;background:var(--texto-2)}
+.ap-nombre{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;font-weight:800}
+.ap-modo{font-size:11px;font-weight:700;color:var(--texto-2)}
