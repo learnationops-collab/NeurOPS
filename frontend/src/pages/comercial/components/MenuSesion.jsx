@@ -29,8 +29,9 @@ import { saveSession } from '../../../utils/sessionStore';
  * foco al botón) o tocando afuera.
  *
  * Una opción con `panel: { titulo, cargar, vacio }` no corre nada: abre, en el mismo menú, una
- * lista que se pide al tocarla (`cargar` devuelve `[{ id, label, onClick }]`). Es "Simular a un
- * closer" de la dirección comercial: la lista de closers activos sale del backend en ese momento.
+ * lista que se pide al tocarla (`cargar` devuelve `[{ id, label, onClick }]`). Son "Simular a un
+ * closer" y "Simular a un setter" de la dirección comercial: la lista de activos sale del backend en
+ * ese momento.
  * Arriba de la lista va la vuelta al menú, que también es Escape o la flecha a la izquierda.
  *
  * El avatar es un personaje (page-mascot, ver `components/mascota`) que mira hacia el cursor; antes

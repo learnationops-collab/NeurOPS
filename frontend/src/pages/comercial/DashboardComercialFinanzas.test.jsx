@@ -320,7 +320,8 @@ describe('DashboardComercial · ir y volver entre Comercial y Finances', () => {
 
         await abrirSesion();
         expect(screen.getByText('Dirección comercial')).toBeTruthy();
-        expect(opciones()).toEqual(['Cambiar de vista', 'Pasar a Finances', 'Simular a un closer', 'Cerrar sesión']);
+        expect(opciones()).toEqual(['Cambiar de vista', 'Pasar a Finances', 'Simular a un closer', 'Simular a un setter',
+            'Cerrar sesión']);
         fireEvent.click(screen.getByRole('menuitem', { name: 'Pasar a Finances' }));
         expect(navegar).toHaveBeenCalledWith('/finanzas');
     });
@@ -332,7 +333,7 @@ describe('DashboardComercial · ir y volver entre Comercial y Finances', () => {
         await screen.findByTestId('analizar');
 
         await abrirSesion();
-        expect(opciones()).toEqual(['Simular a un closer', 'Cerrar sesión']);
+        expect(opciones()).toEqual(['Simular a un closer', 'Simular a un setter', 'Cerrar sesión']);
     });
 
     it('en /finanzas el menú dice Finances y su primera opción vuelve a la dirección comercial', async () => {
@@ -343,7 +344,8 @@ describe('DashboardComercial · ir y volver entre Comercial y Finances', () => {
 
         await abrirSesion();
         expect(screen.getByText('Finances')).toBeTruthy();
-        expect(opciones()).toEqual(['Pasar a Dirección comercial', 'Cambiar de vista', 'Simular a un closer', 'Cerrar sesión']);
+        expect(opciones()).toEqual(['Pasar a Dirección comercial', 'Cambiar de vista', 'Simular a un closer',
+            'Simular a un setter', 'Cerrar sesión']);
         fireEvent.click(screen.getByRole('menuitem', { name: 'Pasar a Dirección comercial' }));
         expect(navegar).toHaveBeenCalledWith('/admin/comercial');
     });

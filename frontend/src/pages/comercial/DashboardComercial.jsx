@@ -59,7 +59,7 @@ const esFichaUnificada = (fila) => (fila?.tipo === 'agenda' && !!fila.id)
  * cambio, la salida la ofrece esta pantalla: la vuelta al lugar de trabajo de cada rol y, si es
  * una simulación, además "Volver a mi sesión" (ver `revertImpersonation`, que existe justamente
  * para las sub-apps sin MainLayout). Al final del dock va la sesión (`MenuSesion`): cerrar
- * sesión, volver de una simulación y, para la dirección, "Simular a un closer".
+ * sesión, volver de una simulación y, para la dirección, "Simular a un closer" o "a un setter".
  *
  * ## Modo embebido
  *
@@ -96,11 +96,13 @@ const SALIDA = {
 };
 
 /**
- * Quién puede elegir "Simular a un closer" en el menú de sesión: lo decide el backend
- * (`/auth/impersonate`), esto solo evita ofrecerle la opción a quien recibiría un 403. Se mira el
- * rol REAL: simulando a un closer, la dirección sigue pudiendo pasar a otro.
+ * Quién puede elegir "Simular a un closer" y "Simular a un setter" en el menú de sesión: lo decide
+ * el backend (`/auth/impersonate`), esto solo evita ofrecerle la opción a quien recibiría un 403. Se
+ * mira el rol REAL: simulando a un closer, la dirección sigue pudiendo pasar a otro o a un setter.
+ * Los setters se suman el 10/10/2026 (pedido del usuario: «que el administrador comercial pueda
+ * simular a los setters como lo hace con los closers»).
  */
-const SIMULAN_CLOSERS = ['director_comercial', 'admin', 'operator'];
+const SIMULAN_EQUIPO = ['director_comercial', 'admin', 'operator'];
 
 const ROTULO_DE_ROL = {
     director_comercial: 'Dirección comercial',
@@ -109,9 +111,10 @@ const ROTULO_DE_ROL = {
     closer: 'Closer',
 };
 
-const cargarCloseresParaSimular = async () => {
-    const res = await api.get('/auth/impersonate/closers');
-    return (res.data?.closers || []).map(c => ({
+/** La lista del panel «Simular a un closer» o «a un setter»: `clave` es `closers` o `setters`. */
+const cargarParaSimular = (clave) => async () => {
+    const res = await api.get(`/auth/impersonate/${clave}`);
+    return (res.data?.[clave] || []).map(c => ({
         id: c.id,
         label: c.username,
         onClick: async () => {
@@ -689,10 +692,12 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         delEspacio
             ? [...opcionesDeFinanzas(user, navigate, { enFinanzas: true }), ...deRol]
             : [...deRol, ...opcionesDeFinanzas(user, navigate, { puede: !!contexto.puede_ver_finanzas })],
-        SIMULAN_CLOSERS.includes(rolReal) ? [{
-            id: 'simular', label: 'Simular a un closer', Icono: VenetianMask,
-            panel: { titulo: 'Simular a un closer', vacio: 'No hay closers activos.', cargar: cargarCloseresParaSimular },
-        }] : [],
+        SIMULAN_EQUIPO.includes(rolReal) ? [
+            { id: 'simular', label: 'Simular a un closer', Icono: VenetianMask,
+                panel: { titulo: 'Simular a un closer', vacio: 'No hay closers activos.', cargar: cargarParaSimular('closers') } },
+            { id: 'simular-setter', label: 'Simular a un setter', Icono: VenetianMask,
+                panel: { titulo: 'Simular a un setter', vacio: 'No hay setters activos.', cargar: cargarParaSimular('setters') } },
+        ] : [],
         [
             ...(user?.is_impersonating
                 ? [{ id: 'volver', label: 'Volver a mi sesión', Icono: Ghost, onClick: volverAMiSesion }]
