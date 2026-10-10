@@ -485,6 +485,10 @@ class ComercialService:
                 'telefono': (cliente.phone or '') if cliente else '',
                 'client_id': a.client_id,
                 'fuente': a.origin or 'Sin fuente',
+                # La palabra clave del anuncio que trajo al lead, la que el setter le asigna en el
+                # mazo. Vacía si todavía no tiene: es lo que su Revisar cuenta como «sin palabra
+                # clave».
+                'palabra_clave': (a.keyword or '').strip(),
                 'closer': a.closer.username if a.closer else 'Sin closer',
                 'closer_id': a.closer_id,
                 'setter': a.setter.username if a.setter else '',

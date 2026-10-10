@@ -182,6 +182,30 @@ def test_la_direccion_puede_mirar_las_ventas_de_un_setter(client, equipo, cobros
     assert vacia['filas'] == []
 
 
+# --- Agendas: la palabra clave ---------------------------------------------------------------------
+
+@freeze_time(HOY)
+def test_cada_agenda_trae_su_palabra_clave_o_vacia(client, db, equipo, auth_headers):
+    """Su lista cuenta las que todavía no tienen la palabra clave del anuncio: la fila la trae, sin
+    espacios, y vacía (no None) cuando falta."""
+    from app.models import Appointment, Client
+
+    for nombre, palabra in (('Con', ' AULA '), ('Sin', None), ('Blanco', '')):
+        cliente = Client(full_name=nombre, email=f'{nombre.lower()}@test.local')
+        db.session.add(cliente)
+        db.session.commit()
+        db.session.add(Appointment(closer_id=equipo['marlon'].id, client_id=cliente.id, setter_id=equipo['elias'].id,
+                                   start_time=datetime(2026, 9, 12, 15), created_at=datetime(2026, 9, 10, 12),
+                                   origin='Elias', keyword=palabra))
+    db.session.commit()
+
+    filas = client.get(TABLA, headers=auth_headers(equipo['elias']),
+                       query_string={**SEPTIEMBRE, 'tabla': 'generadas'}).get_json()['filas']
+
+    assert sorted((f['cliente'], f['palabra_clave']) for f in filas) == [
+        ('Blanco', ''), ('Con', 'AULA'), ('Sin', '')]
+
+
 def test_acotar_a_un_setter_sin_nombre_es_acotar_a_nadie(db):
     """None es "no acotar"; un nombre vacío no es de nadie (la fuga del conjunto vacío)."""
     from app.services.comercial_service import ComercialService
