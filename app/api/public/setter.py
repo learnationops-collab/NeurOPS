@@ -453,8 +453,24 @@ def _precarga_por_canal(filas_leads, generadas):
     return canales
 
 def _compute_setter_stats(start_date_str, end_date_str, setter_id, agg_type):
+    """La Vista General de /admin/ventas › Setters (y su período de comparación).
+
+    **Con reportes v2 (10/10/2026).** Los totales salen de las columnas del v1, que el v2 sigue
+    llenando con el mismo significado (`setter_reporte_v2.escribir`), así que entrantes,
+    cualificados, embudo y agendas suman los dos formularios. Lo que el v2 NO pide son las
+    respuestas: a aperturas y a follow-ups. Una tasa de respuesta con el v2 adentro dividía las
+    respuestas del v1 por los envíos de los dos y bajaba sola. Por eso cada tasa de respuesta se
+    calcula solo con los reportes v1 (`*_v1`), y `por_canal` trae lo nuevo del v2 (canales,
+    cualificación, aperturas, agendas y bienvenidas) con `setter_reporte_v2.sumar`.
+    """
     from app.models import SetterDailyStats, User
-    from sqlalchemy import func
+    from app.services import setter_reporte_v2
+    from sqlalchemy import case, func, or_
+
+    es_v1 = or_(SetterDailyStats.report_version.is_(None), SetterDailyStats.report_version < 2)
+
+    def solo_v1(columna):
+        return func.sum(case((es_v1, columna), else_=0))
 
     # Count how many days of reports are in this range to calculate averages correctly
     days_count_query = db.session.query(func.count(SetterDailyStats.id))
@@ -511,7 +527,23 @@ def _compute_setter_stats(start_date_str, end_date_str, setter_id, agg_type):
         func.sum(SetterDailyStats.q1_useful).label('q1_u'),
         func.sum(SetterDailyStats.q1_unuseful).label('q1_i'),
         func.sum(SetterDailyStats.q2_useful).label('q2_u'),
-        func.sum(SetterDailyStats.q2_unuseful).label('q2_i')
+        func.sum(SetterDailyStats.q2_unuseful).label('q2_i'),
+
+        # Los envíos de los reportes que miden la respuesta (solo el v1): denominadores de las tasas
+        solo_v1(SetterDailyStats.qualification_opening_submitted + SetterDailyStats.pain_opening_submitted).label('op_sub_v1'),
+        solo_v1(SetterDailyStats.qualification_fu).label('fu_q_s_v1'),
+        solo_v1(SetterDailyStats.pain_fu).label('fu_p_s_v1'),
+        solo_v1(SetterDailyStats.offer_fu).label('fu_o_s_v1'),
+        solo_v1(SetterDailyStats.link_fu).label('fu_l_s_v1'),
+        solo_v1(SetterDailyStats.agenda_fu).label('fu_a_s_v1'),
+        solo_v1(SetterDailyStats.qualification_fu + SetterDailyStats.pain_fu + SetterDailyStats.offer_fu
+                + SetterDailyStats.link_fu + SetterDailyStats.agenda_fu).label('total_fu_s_v1'),
+        solo_v1(SetterDailyStats.qualification_opening_submitted).label('q_op_s_v1'),
+        solo_v1(SetterDailyStats.pain_opening_submitted).label('p_op_s_v1'),
+        solo_v1(SetterDailyStats.offer_opening_submitted).label('o_op_s_v1'),
+        solo_v1(SetterDailyStats.link_opening_submitted).label('l_op_s_v1'),
+        solo_v1(SetterDailyStats.funnel_agenda).label('fun_agenda_v1'),
+        solo_v1(1).label('reportes_v1'),
     )
     
     filters = []
@@ -600,19 +632,20 @@ def _compute_setter_stats(start_date_str, end_date_str, setter_id, agg_type):
                 "not_lead": div(float(stats.not_lead or 0), entrantes),
                 "inabribles": div(float(stats.inabribles or 0), entrantes)
             },
+            # Las respuestas solo las mide el v1: cada tasa, sobre los envíos de esos reportes.
             "rates": {
-                "opening_response": div(float(stats.op_res or 0), float(stats.op_sub or 0)),
+                "opening_response": div(float(stats.op_res or 0), float(stats.op_sub_v1 or 0)),
                 "opening_rate": div(float(stats.leads or 0), float(stats.entrantes or 0)),
-                "qualification_fur": div(float(stats.fu_q_r or 0), float(stats.fu_q_s or 0)),
-                "pain_fur": div(float(stats.fu_p_r or 0), float(stats.fu_p_s or 0)),
-                "offer_fur": div(float(stats.fu_o_r or 0), float(stats.fu_o_s or 0)),
-                "link_fur": div(float(stats.fu_l_r or 0), float(stats.fu_l_s or 0)),
-                "agenda_fur": div(float(stats.fu_a_r or 0), float(stats.fu_a_s or 0)),
-                "total_fur": div(float(stats.total_fu_r or 0), float(stats.total_fu_s or 0)),
-                "qualification_opening_rate": div(float(stats.q_op_r or 0), float(stats.q_op_s or 0)),
-                "pain_opening_rate": div(float(stats.p_op_r or 0), float(stats.p_op_s or 0)),
-                "offer_opening_rate": div(float(stats.o_op_r or 0), float(stats.o_op_s or 0)),
-                "link_opening_rate": div(float(stats.l_op_r or 0), float(stats.l_op_s or 0))
+                "qualification_fur": div(float(stats.fu_q_r or 0), float(stats.fu_q_s_v1 or 0)),
+                "pain_fur": div(float(stats.fu_p_r or 0), float(stats.fu_p_s_v1 or 0)),
+                "offer_fur": div(float(stats.fu_o_r or 0), float(stats.fu_o_s_v1 or 0)),
+                "link_fur": div(float(stats.fu_l_r or 0), float(stats.fu_l_s_v1 or 0)),
+                "agenda_fur": div(float(stats.fu_a_r or 0), float(stats.fu_a_s_v1 or 0)),
+                "total_fur": div(float(stats.total_fu_r or 0), float(stats.total_fu_s_v1 or 0)),
+                "qualification_opening_rate": div(float(stats.q_op_r or 0), float(stats.q_op_s_v1 or 0)),
+                "pain_opening_rate": div(float(stats.p_op_r or 0), float(stats.p_op_s_v1 or 0)),
+                "offer_opening_rate": div(float(stats.o_op_r or 0), float(stats.o_op_s_v1 or 0)),
+                "link_opening_rate": div(float(stats.l_op_r or 0), float(stats.l_op_s_v1 or 0))
             },
             "funnel_evolution": {
                 "qual_to_pain": div(float(stats.fun_pain or 0), float(stats.leads or 0)),
@@ -621,13 +654,21 @@ def _compute_setter_stats(start_date_str, end_date_str, setter_id, agg_type):
                 "link_to_agenda": div(float(stats.fun_agenda or 0), float(stats.fun_link or 0))
             },
             "conversions_to_agenda": {
-                "opening_to_agenda": div(float(stats.fun_agenda or 0), float(stats.op_res or 0)),
+                "opening_to_agenda": div(float(stats.fun_agenda_v1 or 0), float(stats.op_res or 0)),
                 "offer_to_agenda": div(float(stats.fun_agenda or 0), float(stats.fun_offer or 0)),
                 "link_to_agenda": div(float(stats.fun_agenda or 0), float(stats.fun_link or 0))
             }
         },
         "setters_breakdown": []
     }
+
+    # Lo nuevo del v2: por canal, bienvenidas, y cuántos reportes miden la respuesta (los v1).
+    filas = SetterDailyStats.query
+    for f in filters:
+        filas = filas.filter(f)
+    res["por_canal"] = setter_reporte_v2.sumar([setter_reporte_v2.leer(r) for r in filas.all()])
+    res["reportes_por_version"] = {"v1": int(stats.reportes_v1 or 0),
+                                   "v2": res["por_canal"]["reportes_v2"]}
 
     # Breakdown by setter
     breakdown_query = db.session.query(
