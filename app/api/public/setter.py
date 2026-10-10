@@ -1,9 +1,14 @@
 from flask import request, jsonify, render_template_string
 from app.models import db, User
+from app.models.user import ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL, ROLE_SETTER
 from datetime import datetime, date, timedelta
 from . import bp
 import json
 import requests
+
+# Ven la vista previa y reenvian a Discord el reporte de CUALQUIER setter. La direccion comercial lo hereda
+# del admin (que lo conserva) desde que se retiro la vista «Administracion» (10/10/2026).
+ROLES_DIRECCION = (ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL)
 
 @bp.route('/public/active-setters', methods=['GET'])
 def get_active_setters():
@@ -1212,7 +1217,8 @@ def preview_setter_report_discord(report_id):
                 except Exception as e:
                     print(f"DEBUG PREVIEW BYPASS ERROR: {e}")
 
-    if not user or user.role != 'admin':
+    # Solo la direccion: `role` es el rol ACTIVO (el loader lo fija con el claim `active_role` del token).
+    if not user or user.role not in ROLES_DIRECCION:
         return jsonify({"error": "No autorizado"}), 403
 
     stat = SetterDailyStats.query.get_or_404(report_id)
@@ -1236,12 +1242,13 @@ def resend_setter_report_discord(report_id):
     if not current_user.is_authenticated:
         return jsonify({"error": "No autorizado"}), 401
 
-    if current_user.role not in ['admin', 'setter']:
+    # La direccion reenvia el de cualquiera; el setter, solo el suyo.
+    if current_user.role not in ROLES_DIRECCION + (ROLE_SETTER,):
         return jsonify({"error": "No autorizado"}), 403
 
     stat = SetterDailyStats.query.get_or_404(report_id)
 
-    if current_user.role == 'setter' and stat.setter_id != current_user.id:
+    if current_user.role == ROLE_SETTER and stat.setter_id != current_user.id:
         return jsonify({"error": "No autorizado"}), 403
     try:
         _trigger_setter_report_webhook(stat)
