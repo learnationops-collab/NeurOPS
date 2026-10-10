@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 import Tip from './Tip';
 import { Esqueleto, Hueso } from '../../../components/huesos/Huesos';
+import { parseUtcIso } from '../../../utils/datetime';
 
 /**
  * Piezas compartidas del dashboard comercial.
@@ -41,9 +42,44 @@ export const fmt = {
         const f = new Date(`${iso.slice(0, 10)}T12:00:00`);
         return `${dias[f.getDay()]} ${f.getDate()} de ${meses[f.getMonth()]}`;
     },
+    /** Un INSTANTE guardado en UTC (sin la Z), en el reloj de quien mira: `02/10`. */
+    fechaLocal: (iso) => {
+        const d = parseUtcIso(iso);
+        return d ? `${dos(d.getDate())}/${dos(d.getMonth() + 1)}` : fmt.fecha(iso);
+    },
+    horaLocal: (iso) => {
+        const d = parseUtcIso(iso);
+        return d ? `${dos(d.getHours())}:${dos(d.getMinutes())}` : '';
+    },
     iniciales: (nombre) => (nombre || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase(),
     /** "1 venta" / "2 ventas": el plural a mano se notaba en cuanto un closer cerraba una sola. */
     plural: (n, singular, plural) => `${fmt.num(n)} ${n === 1 ? singular : plural}`,
+};
+
+function dos(n) {
+    return String(n).padStart(2, '0');
+}
+
+/**
+ * El día y la hora de una fila de Revisar, para mostrar: `{ dia: '02/10', hora: '17:30' }`.
+ *
+ * La `fecha` de una agenda (`start_time`) y de un lead (`created_at`) es un instante guardado en
+ * UTC que el backend manda con `isoformat()`, sin la Z. Recortado tal cual, Revisar decía la hora
+ * UTC: la misma llamada figuraba a las 13:00 en la lista y a las 09:00 en la ficha y en el modal
+ * de «No cerradas» (pedido del usuario, 09/10/2026: «Arregla las horas de Revisar en hora local»).
+ *
+ * Las ventas y los clientes NO se convierten: su fecha es un día (`FinancialSale.date` viene a
+ * veces de un formulario ya en hora local, a veces a medianoche) y la ficha también la muestra
+ * como día, sin pasarla por el huso. El filtro oculto «día» (`diaDe`) sigue en el día UTC a
+ * propósito: es el mismo corte con el que el backend arma el período y Variabilidad sus días.
+ */
+const TIPOS_EN_UTC = ['agenda', 'lead'];
+
+export const cuandoDe = (fila, campo = 'fecha') => {
+    const iso = fila?.[campo];
+    return TIPOS_EN_UTC.includes(fila?.tipo)
+        ? { dia: fmt.fechaLocal(iso), hora: fmt.horaLocal(iso) }
+        : { dia: fmt.fecha(iso), hora: fmt.hora(iso) };
 };
 
 /**

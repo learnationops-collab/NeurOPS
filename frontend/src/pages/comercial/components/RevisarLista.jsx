@@ -5,7 +5,7 @@ import ListaAgrupable from '../../../components/listas/ListaAgrupable';
 import VistaTarjetas from '../../../components/listas/VistaTarjetas';
 import { usePaginaProgresiva } from '../../../components/listas/usePaginaProgresiva';
 import { Esqueleto, Hueso, Renglon, escalonDe } from '../../../components/huesos/Huesos';
-import { Tip, fmt } from './Shared';
+import { Tip, cuandoDe, fmt } from './Shared';
 import { DIAS_DATO_VIEJO, diasDesde, formatoAcademia, haceCuanto } from './academia';
 
 /**
@@ -55,13 +55,15 @@ export const ChipTono = ({ chip }) => (chip
 
 const Celda = ({ fila, col }) => {
     switch (col.key) {
-        case 'fecha':
+        case 'fecha': {
+            const { dia, hora } = cuandoDe(fila);
             return (
                 <span className="celda num">
-                    {fmt.fecha(fila.fecha)}
-                    {fmt.hora(fila.fecha) && <span className="celda-sub num">{fmt.hora(fila.fecha)}</span>}
+                    {dia}
+                    {hora && <span className="celda-sub num">{hora}</span>}
                 </span>
             );
+        }
         // `title` con el texto entero: la celda lo corta con «…» cuando no entra.
         case 'cliente':
             return (
