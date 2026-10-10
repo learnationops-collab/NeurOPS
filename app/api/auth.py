@@ -322,9 +322,9 @@ def _quien_simula():
 
     Lo que puede simular se decide por él y no por el usuario simulado. Antes, quien ya estaba
     simulando podía saltar a cualquiera "para cambiar de usuario sin volver"; con solo admin y
-    operator simulando daba igual, pero el director comercial simula closers, y un closer simulado
-    no puede ser la puerta a un admin. El original se relee de la base (no del token ni de la
-    cookie): si mientras simula lo desactivan o le cambian el rol, ya no simula a nadie más.
+    operator simulando daba igual, pero el director comercial simula closers y setters, y ninguno de
+    los dos simulado puede ser la puerta a un admin. El original se relee de la base (no del token ni
+    de la cookie): si mientras simula lo desactivan o le cambian el rol, ya no simula a nadie más.
     """
     from app.models import get_impersonation_state
     is_impersonating, original_id, _ = get_impersonation_state()
@@ -337,36 +337,48 @@ def _quien_simula():
 def _roles_que_puede_simular(usuario):
     """None = a cualquiera; un conjunto = solo a esos roles; vacío = a nadie.
 
-    La dirección comercial simula closers (pedido del 30/09/2026): para ver el mazo como lo ve cada
-    uno. No simula setters ni a otra dirección, y menos a un admin.
+    La dirección comercial simula closers (pedido del 30/09/2026), para ver el mazo como lo ve cada
+    uno, y setters (pedido del 10/10/2026: «que pueda simular a los setters como lo hace con los
+    closers»), para ver su espacio. No simula a otra dirección, y menos a un admin.
 
     Cuenta cualquiera de sus roles, no solo el activo: un operador que pasó a su rol de dirección o de
     closer seguía pudiendo volver a operador con un clic, pero mientras tanto no podía simular a nadie
     (Mario, 08/10/2026).
     """
-    from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, ROLE_OPERATOR
+    from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, ROLE_OPERATOR, ROLE_SETTER
     if usuario is None:
         return frozenset()
     if usuario.tiene_rol(ROLE_ADMIN) or usuario.tiene_rol(ROLE_OPERATOR):
         return None
     if usuario.tiene_rol(ROLE_DIRECTOR_COMERCIAL):
-        return frozenset({ROLE_CLOSER})
+        return frozenset({ROLE_CLOSER, ROLE_SETTER})
     return frozenset()
+
+
+def _lista_para_simular(rol, clave):
+    """Las personas activas de `rol` que quien está detrás de la sesión puede simular (el menú del
+    dock de la dirección comercial), por nombre. 403 para quien no simula ese rol."""
+    permitidos = _roles_que_puede_simular(_quien_simula())
+    if permitidos is not None and rol not in permitidos:
+        return jsonify({"message": "Forbidden"}), 403
+    personas = db.session.scalars(
+        sa.select(User).where(User.role == rol, User.is_active.is_(True)).order_by(User.username)
+    ).all()
+    return jsonify({clave: [{"id": u.id, "username": u.username} for u in personas]}), 200
 
 
 @bp.route('/auth/impersonate/closers', methods=['GET'])
 @login_required
 def closers_para_simular():
-    """Los closers activos que quien está detrás de la sesión puede simular (el menú del dock de la
-    dirección comercial). 403 para quien no simula closers."""
     from app.models.user import ROLE_CLOSER
-    permitidos = _roles_que_puede_simular(_quien_simula())
-    if permitidos is not None and ROLE_CLOSER not in permitidos:
-        return jsonify({"message": "Forbidden"}), 403
-    closers = db.session.scalars(
-        sa.select(User).where(User.role == ROLE_CLOSER, User.is_active.is_(True)).order_by(User.username)
-    ).all()
-    return jsonify({"closers": [{"id": u.id, "username": u.username} for u in closers]}), 200
+    return _lista_para_simular(ROLE_CLOSER, 'closers')
+
+
+@bp.route('/auth/impersonate/setters', methods=['GET'])
+@login_required
+def setters_para_simular():
+    from app.models.user import ROLE_SETTER
+    return _lista_para_simular(ROLE_SETTER, 'setters')
 
 
 @bp.route('/auth/impersonate', methods=['POST'])
@@ -375,7 +387,7 @@ def impersonate():
     from flask import session
     from app.models import get_impersonation_state
 
-    # Puede simular admin u operator (a cualquiera) y la dirección comercial (solo a closers).
+    # Puede simular admin u operator (a cualquiera) y la dirección comercial (a closers y setters).
     # Quien ya está simulando puede cambiar de usuario sin volver, pero con lo que puede SU usuario
     # original (ver `_quien_simula`), no el simulado.
     is_impersonating, original_id, original_role = get_impersonation_state()

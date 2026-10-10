@@ -1,6 +1,6 @@
 """/api/auth/impersonate y /api/auth/revert: simular a otro usuario y volver.
 
-Admin y operator simulan a cualquiera; la direccion comercial, solo a closers activos. Quien ya esta
+Admin y operator simulan a cualquiera; la direccion comercial, solo a closers y setters activos. Quien ya esta
 simulando puede cambiar de usuario sin volver, con lo que puede su usuario ORIGINAL (no el simulado). El estado viaja en los claims del JWT (`is_impersonating`, `original_user_id`,
 `original_user_role`), asi cada pestana lleva su propia identidad; el modo clasico ademas cambia la
 cookie de sesion, que es de TODO el navegador. Invariante de auditoria: el "original" es siempre el
@@ -245,18 +245,25 @@ def test_un_token_de_suplantacion_sin_original_cierra_la_sesion(client, equipo):
     assert respuesta.get_json() == {'message': 'Session lost, logged out'}
 
 
-# --- La direccion comercial simula closers (30/09/2026) ---------------------------------------
+# --- La direccion comercial simula closers (30/09/2026) y setters (10/10/2026) ----------------
 #
-# Para ver el mazo como lo ve cada closer. Solo closers activos: ni setters, ni otra direccion, ni un
-# admin. Y lo que puede se decide por el usuario REAL, tambien al cambiar de usuario sin volver: un
-# closer simulado no puede ser la puerta a una cuenta con mas permisos.
+# Para ver el mazo como lo ve cada closer y el espacio como lo ve cada setter. Solo closers y setters
+# activos: ni otra direccion, ni un admin. Y lo que puede se decide por el usuario REAL, tambien al
+# cambiar de usuario sin volver: un closer o un setter simulado no puede ser la puerta a una cuenta
+# con mas permisos.
 
 LISTA = '/api/auth/impersonate/closers'
+LISTA_SETTERS = '/api/auth/impersonate/setters'
 
 
 @pytest.fixture()
 def direccion(make_user, equipo):
     return make_user(role='director_comercial', username='dire')
+
+
+@pytest.fixture()
+def setter(make_user):
+    return make_user(role='setter', username='sol')
 
 
 def test_la_direccion_simula_a_un_closer_activo(client, auth_headers, equipo, direccion):
@@ -268,9 +275,29 @@ def test_la_direccion_simula_a_un_closer_activo(client, auth_headers, equipo, di
     assert (reclamos['original_user_id'], reclamos['original_user_role']) == (direccion.id, 'director_comercial')
 
 
-@pytest.mark.parametrize('rol', ['admin', 'operator', 'setter', 'triage', 'hiring', 'director_comercial',
+def test_la_direccion_simula_a_un_setter_activo(client, auth_headers, direccion, setter):
+    respuesta = suplantar(client, auth_headers(direccion), setter.id, isolated=True)
+
+    assert respuesta.status_code == 200
+    assert respuesta.get_json()['user']['role'] == 'setter'
+    reclamos = claims(respuesta.get_json()['token'])
+    assert (reclamos['id'], reclamos['is_impersonating']) == (setter.id, True)
+    assert (reclamos['original_user_id'], reclamos['original_user_role']) == (direccion.id, 'director_comercial')
+
+
+def test_la_direccion_no_simula_a_un_setter_desactivado(client, db, auth_headers, direccion, setter):
+    setter.is_active = False
+    db.session.commit()
+
+    respuesta = suplantar(client, auth_headers(direccion), setter.id)
+
+    assert respuesta.status_code == 400
+    assert respuesta.get_json() == {'message': 'User is inactive'}
+
+
+@pytest.mark.parametrize('rol', ['admin', 'operator', 'triage', 'hiring', 'director_comercial',
                                  'director_marketing'])
-def test_la_direccion_no_simula_a_quien_no_es_closer(client, make_user, auth_headers, direccion, rol):
+def test_la_direccion_no_simula_a_quien_no_es_closer_ni_setter(client, make_user, auth_headers, direccion, rol):
     otro = make_user(role=rol)
 
     respuesta = suplantar(client, auth_headers(direccion), otro.id)
@@ -299,6 +326,28 @@ def test_simulando_a_un_closer_la_direccion_cambia_a_otro_closer(client, auth_he
     reclamos = claims(respuesta.get_json()['token'])
     assert (reclamos['id'], reclamos['original_user_id'], reclamos['original_user_role']) == \
         (equipo['closer_b'].id, direccion.id, 'director_comercial')
+
+
+def test_simulando_a_un_closer_la_direccion_pasa_a_un_setter_y_vuelve(client, auth_headers, equipo, direccion, setter):
+    token_a = suplantar(client, auth_headers(direccion), equipo['closer_a'].id, isolated=True).get_json()['token']
+
+    respuesta = suplantar(client, bearer(token_a), setter.id, isolated=True)
+
+    assert respuesta.status_code == 200
+    token_s = respuesta.get_json()['token']
+    assert (claims(token_s)['id'], claims(token_s)['original_user_id']) == (setter.id, direccion.id)
+    assert client.post(REVERTIR, headers=bearer(token_s)).get_json()['user']['id'] == direccion.id
+
+
+@pytest.mark.parametrize('destino', ['admin', 'operator'])
+def test_un_setter_simulado_por_la_direccion_no_salta_a_un_admin(client, auth_headers, equipo, direccion, setter,
+                                                                destino):
+    token_s = suplantar(client, auth_headers(direccion), setter.id, isolated=True).get_json()['token']
+
+    respuesta = suplantar(client, bearer(token_s), equipo[destino].id, isolated=True)
+
+    assert respuesta.status_code == 403
+    assert 'token' not in respuesta.get_json()
 
 
 @pytest.mark.parametrize('destino', ['admin', 'operator'])
@@ -383,6 +432,41 @@ def test_simulando_a_un_closer_la_direccion_sigue_viendo_la_lista(client, auth_h
     token_a = suplantar(client, auth_headers(direccion), equipo['closer_a'].id, isolated=True).get_json()['token']
 
     assert client.get(LISTA, headers=bearer(token_a)).status_code == 200
+
+
+# --- La lista de setters para simular (10/10/2026) --------------------------------------------
+
+def test_la_lista_de_setters_trae_solo_los_activos_por_nombre(client, make_user, auth_headers, equipo, direccion,
+                                                              setter):
+    make_user(role='setter', username='ana')
+    make_user(role='setter', username='zoe', is_active=False)
+
+    respuesta = client.get(LISTA_SETTERS, headers=auth_headers(direccion))
+
+    assert respuesta.status_code == 200
+    assert [s['username'] for s in respuesta.get_json()['setters']] == ['ana', 'sol']  # sin los closers
+    assert set(respuesta.get_json()['setters'][0]) == {'id', 'username'}
+
+
+@pytest.mark.parametrize('quien', ['admin', 'operator'])
+def test_admin_y_operator_tambien_ven_la_lista_de_setters(client, auth_headers, equipo, quien):
+    assert client.get(LISTA_SETTERS, headers=auth_headers(equipo[quien])).status_code == 200
+
+
+@pytest.mark.parametrize('rol', ['closer', 'setter', 'triage', 'hiring', 'director_marketing'])
+def test_quien_no_simula_setters_no_ve_su_lista(client, make_user, auth_headers, equipo, rol):
+    assert client.get(LISTA_SETTERS, headers=auth_headers(make_user(role=rol))).status_code == 403
+
+
+def test_sin_sesion_no_hay_lista_de_setters(client):
+    assert client.get(LISTA_SETTERS).status_code == 401
+
+
+def test_simulando_a_un_setter_la_direccion_sigue_viendo_las_dos_listas(client, auth_headers, direccion, setter):
+    token_s = suplantar(client, auth_headers(direccion), setter.id, isolated=True).get_json()['token']
+
+    assert client.get(LISTA_SETTERS, headers=bearer(token_s)).status_code == 200
+    assert client.get(LISTA, headers=bearer(token_s)).status_code == 200
 
 
 # --- Simular a alguien con varios roles (07/10/2026) --------------------------------------------
