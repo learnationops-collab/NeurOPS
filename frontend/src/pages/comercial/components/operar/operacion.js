@@ -19,8 +19,10 @@
  * dibuja su propio modal (`components/ui/Modal`), así cada uno elige su ancho y su pie.
  */
 
+import duplicados from './duplicados';
+
 /** Los módulos registrados: `{ [tabla]: { lote?, herramientas?, fila? } }`. */
-export const MODULOS = [];
+export const MODULOS = [duplicados];
 
 /**
  * Las acciones de Operaciones para esta tabla, o null si no hay ninguna (y entonces Revisar se ve
