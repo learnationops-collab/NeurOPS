@@ -1,8 +1,9 @@
 """Editar en lote las agendas desde Revisar (10/10/2026).
 
-La edicion masiva del Tablero de Agendas de Operaciones (`public/financial_agendas_bulk.py`) se fue
-con sus tablas viejas: el operador mira los registros en el Revisar del dashboard comercial, y lo
-que solo el hacia llega como acciones de esa vista (ver `operar/operacion.js` en el frontend).
+Operaciones dejo de usar la edicion masiva del Tablero de Agendas (`public/financial_agendas_bulk.py`)
+junto con sus tablas viejas: el operador mira los registros en el Revisar del dashboard comercial, y
+lo que solo el hacia llega como acciones de esa vista (ver `operar/operacion.js` en el frontend). La
+vieja sigue para el Tablero que todavia abren la direccion (/admin/ventas) y el triage.
 
 La diferencia de fondo con la vieja es QUE se edita. Aquella escribia en `FinancialAgenda`, el
 espejo de n8n/Calendly, y le pasaba a la cita solo la fuente, con su propio cruce. Las filas de
