@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Delta, EsqueletoPanel, fmt, Segmented, useMontado } from './Shared';
-import { DESTINOS_EMBUDO_SETTER, DESTINOS_METRICA } from './destinos';
+import { DESTINOS_METRICA, DESTINOS_SETTER } from './destinos';
 import FlujoEmbudo from './FlujoEmbudo';
 import { COLOR_CANAL, COLOR_FUENTE, etapasParaDibujar, puntaAPunta } from './embudoSetter';
 
@@ -272,8 +272,8 @@ const EmbudosSetters = ({ embudos, yo, rol, irAPersona }) => {
     const filas = [...embudos.filas, embudos.equipo];
     const escala = Math.max(1, ...filas.flatMap(f => f.etapas.map(e => e.n || 0)));
     const irDe = (fila) => (irAPersona
-        ? (etapa) => (DESTINOS_EMBUDO_SETTER[etapa.key]
-            ? () => irAPersona(fila.id, DESTINOS_EMBUDO_SETTER[etapa.key])
+        ? (etapa) => (DESTINOS_SETTER[etapa.key]
+            ? () => irAPersona(fila.id, DESTINOS_SETTER[etapa.key])
             : undefined)
         : null);
     return (

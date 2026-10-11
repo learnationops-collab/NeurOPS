@@ -70,27 +70,6 @@ vi.mock('../comercial/DashboardComercial', () => ({
     },
 }));
 
-// «Mis datos» (10/10/2026) es su propia vista: el doble hace lo que la real en el drill-down, arma la
-// URL con la tabla y el filtro y se la pasa al host en el mismo clic (sin escribirla ella).
-vi.mock('./datos/SetterDatos', () => ({
-    default: function DatosDoble({ tab, onIrALista }) {
-        const [params] = useSearchParams();
-        const drillDown = () => {
-            const siguiente = new URLSearchParams(params);
-            siguiente.set('t', 'generadas');
-            siguiente.set('f', '{"asistio":"Sí"}');
-            siguiente.set('ft', '1');
-            onIrALista?.('generadas', siguiente);
-        };
-        return (
-            <div data-testid={`datos-${tab}`}>
-                {onIrALista ? 'con drill-down' : 'sin drill-down'}
-                {onIrALista && <button type="button" onClick={drillDown}>ver el detalle</button>}
-            </div>
-        );
-    },
-}));
-
 const Ubicacion = () => {
     const { pathname, search } = useLocation();
     return <><output data-testid="url">{search}</output><output data-testid="ruta">{pathname}</output></>;
@@ -135,7 +114,7 @@ describe('SetterEspacioPage · un solo dock', () => {
     it('en "Mis datos" el dock sigue siendo el del setter, y vuelve al trabajo', async () => {
         await montar('/setter/deck?step=datos');
 
-        expect(screen.getByTestId('datos-resumen')).toBeInTheDocument();
+        expect(screen.getByTestId('dashboard-analizar')).toBeInTheDocument();
         const secciones = Array.from(dock().querySelectorAll('.dock-item')).map(b => b.getAttribute('aria-label'));
         // El orden del día del setter (11/10/2026): Revisar al final.
         expect(secciones).toEqual(['Mis agendas', 'Reporte', 'Mis datos', 'Revisar']);
@@ -153,21 +132,16 @@ describe('SetterEspacioPage · un solo dock', () => {
     it('"Mis datos" tiene a dónde llevar un número', async () => {
         await montar('/setter/deck?step=datos');
 
-        expect(screen.getByTestId('datos-resumen')).toHaveTextContent('con drill-down');
+        expect(screen.getByTestId('dashboard-analizar')).toHaveTextContent('con drill-down');
     });
 
-    it('"Mis datos" tiene dos pestañas: sus datos y Comparativas', async () => {
-        // Pedido del 10/10/2026: «permitir que los setters vean la pestaña de comparativas».
+    it('"Mis datos" es el Analizar del dashboard: sus pestañas no van en el encabezado', async () => {
+        // 10/10/2026: vuelve a ser el mismo tablero que ve la dirección, con Dashboard · Comparativas ·
+        // Variabilidad, que dibuja el dashboard. El encabezado del espacio no repite pestañas.
         await montar('/setter/deck?step=datos&p=7d');
 
-        expect(screen.getAllByRole('tab').map(t => t.textContent)).toEqual(['Mis datos', 'Comparativas']);
-        expect(screen.getByRole('tab', { name: 'Mis datos' })).toHaveAttribute('aria-selected', 'true');
-
-        fireEvent.click(screen.getByRole('tab', { name: 'Comparativas' }));
-
-        expect(screen.getByTestId('datos-comparativas')).toBeInTheDocument();
-        expect(url().get('tab')).toBe('comparativas');
-        // El período es el mismo para las dos pestañas.
+        expect(screen.getByTestId('dashboard-analizar')).toBeInTheDocument();
+        expect(document.querySelector('header.tope [role=tablist]')).toBeNull();
         expect(url().get('p')).toBe('7d');
     });
 
@@ -206,7 +180,7 @@ describe('SetterEspacioPage · un solo dock', () => {
 
     it('un número de "Mis datos" abre Revisar en la pestaña de su tabla, con su filtro, en el mismo clic', async () => {
         await montar('/setter/deck?step=datos&p=mes');
-        expect(screen.getByTestId('datos-resumen')).toHaveTextContent('con drill-down');
+        expect(screen.getByTestId('dashboard-analizar')).toHaveTextContent('con drill-down');
 
         fireEvent.click(screen.getByRole('button', { name: 'ver el detalle' }));
 
@@ -230,7 +204,7 @@ describe('SetterEspacioPage · un solo dock', () => {
 
         fireEvent.click(screen.getByRole('button', { name: 'atrás' }));
 
-        expect(screen.getByTestId('datos-resumen')).toBeInTheDocument();
+        expect(screen.getByTestId('dashboard-analizar')).toBeInTheDocument();
         expect(url().get('step')).toBe('datos');
         expect(url().get('p')).toBe('mes');
     });

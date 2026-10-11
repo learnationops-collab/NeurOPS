@@ -1,0 +1,119 @@
+/* ============================================================================
+   ANALIZAR · SETTERS (`DashboardSetters`) — el tablero de setters de la
+   dirección y del «Mis datos» del setter (10/10/2026).
+
+   Todo cuelga de `.dc-shell` y usa sus piezas (`.kpi`, `.panel`, `.gruesa`,
+   `.datos`, `.leyenda`, `.pareja`); los embudos son `FlujoEmbudo` (flujo.css).
+   Acá va solo la disposición propia de este tablero. Nunca una fila con uno
+   suelto abajo: los cinco tiles van 5, 3 + 2 o 1 + 2 + 2.
+   ============================================================================ */
+
+.dc-shell .ds-vistas{flex-wrap:wrap}
+
+/* ---------- Los cinco tiles ---------- */
+/* Los cortes salen de lo que necesita la cabecera de un tile —«CUALIFICACIÓN», la «i» y el delta—
+   sin pisarse, medido sobre el ancho del TABLERO y no de la ventana (`.ds-tiles-caja` es el
+   contenedor): el mismo tablero vive en el espacio del setter y, más angosto, en el de la dirección.
+   5 en fila, 3 + 2, 1 + 2 + 2 y uno por fila en el teléfono, como los tiles de closers. */
+.dc-shell .ds-tiles-caja{container-type:inline-size;min-width:0}
+.dc-shell .ds-tiles{display:grid;gap:var(--s4);grid-template-columns:repeat(5,minmax(0,1fr))}
+.dc-shell .ds-tiles > *{min-width:0}
+/* El alto de la pastilla del delta, tenga o no: sin delta (las bienvenidas sin período anterior) el
+   número de ese tile quedaba más arriba que los de al lado. */
+.dc-shell .ds-tiles .kpi-cab{min-height:22px}
+.dc-shell .ds-tiles .kpi-cab .t-eyebrow{letter-spacing:.16em;min-width:0;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+@container (max-width:1380px){
+  .dc-shell .ds-tiles{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .dc-shell .ds-tiles > *{grid-column:span 2}
+  .dc-shell .ds-tiles > :nth-child(n+4){grid-column:span 3}
+}
+@container (max-width:780px){
+  .dc-shell .ds-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dc-shell .ds-tiles > *,.dc-shell .ds-tiles > :nth-child(n+4){grid-column:span 1}
+  .dc-shell .ds-tiles > :first-child{grid-column:1 / -1}
+}
+@container (max-width:540px){
+  .dc-shell .ds-tiles{grid-template-columns:minmax(0,1fr)}
+}
+
+.dc-shell .ds-barras{display:grid;gap:var(--s3)}
+
+/* ---------- Follow-ups: una columna por etapa, con su respuesta abajo ---------- */
+/* El panel comparte fila con «Después de la agenda», que es más alto: las barras crecen hasta llenar
+   el lugar en vez de dejar un hueco abajo. */
+.dc-shell #p-followups{display:flex;flex-direction:column}
+.dc-shell .ds-fu{flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--s3)}
+.dc-shell .ds-fu-col{display:grid;grid-template-rows:auto minmax(110px,1fr) auto auto;justify-items:center;
+  gap:8px;min-width:0}
+.dc-shell .ds-fu-n{font-size:22px;font-weight:900;letter-spacing:-.025em;line-height:1}
+.dc-shell .ds-fu-pista{display:flex;align-items:flex-end;justify-content:center;width:100%;min-height:110px}
+.dc-shell .ds-fu-pista i{display:block;width:min(64px,70%);border-radius:10px;background:var(--ch-tot);
+  transition:height .8s var(--crecer)}
+.dc-shell .ds-fu-rotulo{font-size:10.5px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text-muted);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-shell .ds-fu-resp{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:var(--radius-pill);
+  font-size:12px;font-weight:900;color:var(--text-on-surface);background:var(--bg-flotante);
+  border:1px solid color-mix(in srgb,var(--ch-tot) 55%,transparent);white-space:nowrap}
+/* Sin el dato en el reporte: un «—» apagado, no una pastilla que parece un botón. */
+.dc-shell .ds-fu-resp--vacia{background:none;border-color:transparent;color:var(--text-muted-40)}
+
+/* ---------- Después de la agenda: Agendas → los cuatro resultados (2 × 2) → ventas y comisión ---------- */
+.dc-shell .ds-despues{display:grid;gap:6px;container-type:inline-size}
+.dc-shell .ds-despues-estados,
+.dc-shell .ds-despues-fin{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.dc-shell .ds-caja{display:grid;gap:4px;align-content:start;min-width:0;padding:var(--s3) var(--s4);
+  border-radius:var(--radius-control);background:var(--hundido);border:1px solid var(--border-subtle);
+  border-top:2px solid color-mix(in srgb,var(--c,var(--border-subtle)) 65%,transparent);
+  animation:dsSube .45s var(--crecer) both}
+.dc-shell .ds-caja-cab{display:flex;align-items:center;gap:6px;min-width:0}
+.dc-shell .ds-caja-cab .t-rotulo{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-shell .ds-caja-n{font-size:26px;font-weight:900;letter-spacing:-.03em;line-height:1.05;color:var(--c,var(--text-on-surface))}
+.dc-shell .ds-caja-cifras{display:flex;align-items:baseline;flex-wrap:wrap;gap:0 8px;min-width:0}
+.dc-shell .ds-caja-sub{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:800}
+.dc-shell .ds-baja{display:flex;justify-content:center;color:var(--text-muted-40);line-height:0}
+/* «Comisión del mes» y su «8% de $2,194 netos» no entran en media caja angosta: van una debajo de otra. */
+@container (max-width:440px){.dc-shell .ds-despues-fin{grid-template-columns:minmax(0,1fr)}}
+
+/* ---------- Por canal ---------- */
+.dc-shell .ds-canal{display:grid;gap:var(--s3);align-content:start;min-width:0;padding:var(--s4);
+  border-radius:var(--radius-control);background:var(--hundido);border:1px solid var(--border-subtle);
+  border-top:2px solid color-mix(in srgb,var(--c) 60%,transparent);
+  transition:box-shadow .25s ease,border-color .25s ease}
+.dc-shell .ds-canal[data-activo]{border-color:color-mix(in srgb,var(--c) 70%,transparent);
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--c) 45%,transparent)}
+.dc-shell .ds-canal-cab{display:flex;align-items:center;gap:6px;min-width:0}
+.dc-shell .ds-punto{width:8px;height:8px;border-radius:50%;background:var(--c);display:inline-block}
+.dc-shell .ds-canal .dato{padding:7px 0;border-bottom:1px solid var(--border-subtle);border-radius:0}
+.dc-shell .ds-canal .dato:last-child{border-bottom:0}
+
+/* ---------- Constancia y wins ---------- */
+.dc-shell .ds-constancia{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:var(--s6)}
+@media (max-width:760px){.dc-shell .ds-constancia{grid-template-columns:minmax(0,1fr);gap:var(--s5)}}
+.dc-shell .ds-constancia-dias{display:grid;gap:6px;align-content:start;min-width:0}
+.dc-shell .ds-constancia-n{font-size:34px;font-weight:900;letter-spacing:-.035em;line-height:1;margin:0}
+.dc-shell .ds-dias{display:grid;grid-template-columns:repeat(auto-fill,minmax(14px,1fr));gap:4px;margin-top:var(--s3)}
+.dc-shell .ds-dia{display:block;aspect-ratio:1;border-radius:4px;background:color-mix(in srgb,var(--c) 70%,transparent)}
+.dc-shell .ds-dia--finde{background:var(--mat-3)}
+.dc-shell .ds-dia--falta{background:transparent;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--c) 70%,transparent)}
+.dc-shell .ds-wins{display:grid;gap:var(--s3);align-content:start;min-width:0}
+.dc-shell .ds-wins ul{list-style:none;margin:0;padding:0;display:grid;gap:var(--s2)}
+.dc-shell .ds-wins li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:var(--s3);align-items:baseline;
+  min-width:0;animation:dsSube .45s var(--crecer) both}
+/* Un win por línea: el texto entero va en el `title` de la fila. */
+.dc-shell .ds-win{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- Teléfono ---------- */
+@media (max-width:480px){
+  .dc-shell .ds-fu{gap:6px}
+  .dc-shell .ds-fu-rotulo{font-size:9.5px;letter-spacing:0}
+  .dc-shell .ds-caja{padding:var(--s3)}
+  .dc-shell .ds-caja .t-rotulo{font-size:10px;letter-spacing:.05em}
+}
+
+@keyframes dsSube{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+@media (prefers-reduced-motion:reduce){
+  .dc-shell .ds-caja,.dc-shell .ds-wins li{animation:none}
+  .dc-shell .ds-fu-pista i{transition:none}
+}

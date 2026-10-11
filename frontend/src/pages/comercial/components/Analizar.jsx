@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { ArrowRight, ChevronDown, ChevronsDown, CreditCard, Eye, PieChart, Rows } from 'lucide-react';
+import { ChevronDown, CreditCard, PieChart, Rows } from 'lucide-react';
 import Embudo from './Embudo';
 // El "i" era una copia local con una prop `der` para forzar el lado a mano. El `Tip` compartido
 // mide y elige el lado que entra, así que la prop desapareció de todas las llamadas.
-import { EsqueletoTablero, Humo, Tip, fmt, useMontado } from './Shared';
+import { EsqueletoTablero, Tip, fmt, useMontado } from './Shared';
 // La cifra que sube hasta su valor: vive aparte porque la usa también la tira de Revisar.
 import Cifra from './Cifra';
 import MetricaClicable, { abrir } from '../../../components/dashboard/MetricaClicable';
@@ -12,9 +12,11 @@ import RepartoEstados from './RepartoEstados';
 import ModalNoCerradas from './ModalNoCerradas';
 import { AYUDA_PROCEDENCIA } from './procedencias';
 import {
-    DESTINOS_CIERRES, DESTINOS_CLOSER as D, DESTINOS_SETTER as S, DESTINO_PROCEDENCIAS_TOTAL,
-    PASOS_CLOSER, PASOS_SETTER, destinoProcedencia, destinoToques,
+    DESTINOS_CIERRES, DESTINOS_CLOSER as D, DESTINO_PROCEDENCIAS_TOTAL, PASOS_CLOSER, destinoProcedencia,
 } from './destinos';
+// El tile, la barra gruesa y el panel los comparte el tablero de setters (10/10/2026).
+import { Delta, Panel, PanelCab, Riel, Tabs, Tile, Vacio, tasa, v } from './PiezasAnalizar';
+import DashboardSetters from './DashboardSetters';
 
 /**
  * Analizar → Dashboard.
@@ -39,165 +41,7 @@ import {
    PIEZAS
    ============================================================ */
 
-const v = (tono) => `var(--${tono})`;
-
-/**
- * Variación contra el período comparado. El `title` lleva el valor actual, porque un porcentaje
- * suelto no dice nada: "▼ 25%" sobre qué.
- */
-const Delta = ({ delta, actual }) => {
-    if (!delta) return null;
-    const sube = delta.valor >= 0;
-    const n = Math.abs(delta.valor);
-    const txt = `${sube ? '▲' : '▼'} ${delta.modo === 'pts' ? `${n} pts` : `${n}%`}`;
-    return (
-        <span className="delta" style={{ '--c': v(sube ? 'success' : 'error') }}
-            title={`${actual ? `${actual} · ` : ''}${txt} vs. el período comparado`}>
-            {txt}
-        </span>
-    );
-};
-
-/** Barra fina. Crece de 0 al montar, que es la animación que define el CSS (`.riel > i`). */
-const Riel = ({ pct, color, fino, delay }) => {
-    const montado = useMontado();
-    return (
-        <span className={`riel${fino ? ' riel--fino' : ''}`}>
-            <i style={{
-                width: montado ? `${Math.max(0, Math.min(100, pct || 0))}%` : 0,
-                background: color,
-                transitionDelay: delay ? `${delay}ms` : undefined,
-            }} />
-        </span>
-    );
-};
-
-const PanelCab = ({ titulo, ayuda, children }) => (
-    <div className="panel-cab">
-        <h2 className="t-h3">{titulo}</h2>
-        <Tip texto={ayuda} titulo={titulo} />
-        {children && <div className="panel-cab-der">{children}</div>}
-    </div>
-);
-
-const Panel = ({ id, humo, cab, children }) => (
-    <section className={`panel${humo ? ' caja' : ''}`} id={id}>
-        {humo && <Humo clase="humo--tarjeta" colores={humo} />}
-        {cab}
-        {children}
-    </section>
-);
-
-/** Un par de pastillas que eligen cómo se mira el mismo dato. */
-const Tabs = ({ valor, onChange, ops, aria }) => (
-    <div className="tabs" role="tablist" aria-label={aria}>
-        {ops.map(([key, label, Icono]) => (
-            <button key={key} type="button" className="tab tab--sm" role="tab"
-                aria-selected={valor === key} onClick={() => onChange(key)}>
-                <Icono size={13} />{label}
-            </button>
-        ))}
-    </div>
-);
-
 const TABS_VISTA = [['tabla', 'Tabla', Rows], ['grafico', 'Gráfico', PieChart]];
-
-/** Baja al panel que desglosa un tile y lo hace parpadear una vez para ubicarte. */
-const bajarA = (id) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el.classList.remove('destacado');
-    // Reflow forzado: sin esto, volver a agregar la clase en el mismo cuadro no reinicia la
-    // animación y el segundo click no destaca nada.
-    void el.offsetWidth;
-    el.classList.add('destacado');
-};
-
-/**
- * Tile de vista rápida: un número, su lectura en chico y dos accesos — el ojo lleva al dato
- * crudo en la lista, el otro baja al panel que lo desglosa.
- *
- * El ojo dice "Ver los registros", sin nombrar la sección: la lista es Revisar para la dirección y
- * para el setter (desde el 10/10/2026; antes, Reporte · Registros) y "Mi cartera" para el closer.
- */
-const Tile = ({ label, help, valor, color, sub, delta, humo, ver, baja }) => (
-    <section className="kpi caja">
-        <Humo colores={humo} />
-        <div className="kpi-cab">
-            <p className="t-eyebrow">{label}</p>
-            <Tip texto={help} titulo={label} />
-            {delta && <span style={{ marginLeft: 'auto' }}><Delta delta={delta} actual={valor} /></span>}
-        </div>
-        <div className="kpi-cifra">
-            <Cifra tag="p" className="kpi-n" valor={valor}
-                style={{ color: color || v('text-on-surface') }} />
-            {sub && <p className="kpi-sub num">{sub}</p>}
-        </div>
-        {(ver || baja) && (
-            <div className="kpi-acciones">
-                {ver && (
-                    <button type="button" className="kpi-acc kpi-acc--solo" onClick={ver}
-                        title="Ver los registros" aria-label="Ver los registros">
-                        <Eye size={14} />
-                    </button>
-                )}
-                {baja && (
-                    <button type="button" className="kpi-acc kpi-acc--solo" onClick={() => bajarA(baja)}
-                        title="Profundizar: bajar al desglose" aria-label="Profundizar: bajar al desglose">
-                        <ChevronsDown size={14} />
-                    </button>
-                )}
-            </div>
-        )}
-    </section>
-);
-
-/**
- * Barra gruesa: el conteo entra dentro de la barra si hay lugar, y el botón de la derecha lleva
- * a ese mismo corte en la lista. Es la pieza de los paneles que muestran una tasa sola.
- */
-const Gruesa = ({ label, cuenta, help, pct, tone, w, destino, irA, i = 0 }) => {
-    const montado = useMontado();
-    const color = v(tone);
-    const dentro = (w || 0) >= 22 && cuenta;
-    const ir = abrir(irA, destino);
-    return (
-        <div className="gruesa-fila">
-            <div className="gruesa-cab">
-                <span className="t-rotulo">{label}</span>
-                <Tip texto={help} titulo={label} />
-            </div>
-            <div className="gruesa">
-                <span className="gruesa-pista">
-                    <i style={{
-                        width: montado ? `${Math.max(0, Math.min(100, w || 0))}%` : 0,
-                        background: color,
-                        transitionDelay: `${140 + i * 120}ms`,
-                    }} />
-                    {cuenta && (
-                        <span className="gruesa-txt" style={dentro
-                            ? { marginLeft: 14, marginRight: 'auto', color: v('on-state') }
-                            : { marginLeft: 'auto', paddingRight: 14, color: v('text-on-surface') }}>
-                            {cuenta}
-                        </span>
-                    )}
-                </span>
-                <MetricaClicable irA={irA} destino={destino} detalle={destino?.de}
-                    className={`gruesa-pct${String(pct).length > 6 ? ' gruesa-pct--larga' : ''}`}
-                    style={{ color }}>
-                    {pct}
-                </MetricaClicable>
-                {ir && (
-                    <button type="button" className="ir-btn" style={{ '--c': color }} onClick={ir}
-                        aria-label={`Ver ${label.toLowerCase()} en la lista`}>
-                        <ArrowRight size={14} />
-                    </button>
-                )}
-            </div>
-        </div>
-    );
-};
 
 /**
  * Torta: cada ítem como un arco, el total al medio. Un ítem puede traer su `pct` ya calculado (el
@@ -284,8 +128,6 @@ const Chispa = ({ dias, tone, etiqueta }) => {
     );
 };
 
-const Vacio = ({ texto }) => <p className="t-cap mut40">{texto}</p>;
-
 /* ============================================================
    VOCABULARIO DE COLOR
    ============================================================ */
@@ -302,13 +144,6 @@ const marcaPrograma = (programa) => {
     if (programa === 'Sin programa') return v('prog-free');
     return v('prog-ace');
 };
-
-/** Tasa que devuelve null —y por lo tanto "—"— cuando no hay denominador. */
-const tasa = (num, den) => (den ? Number(((num / den) * 100).toFixed(1)) : null);
-
-/** Color de la rampa del embudo para el ítem `i` de `n`: mismo degradado que la referencia. */
-const rampa = (i, n) =>
-    `color-mix(in oklab, var(--ramp-b) ${Math.round((i / Math.max(n - 1, 1)) * 100)}%, var(--ramp-a))`;
 
 /* ============================================================
    PANELES · CLOSERS
@@ -1047,163 +882,14 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, fuentes, irA, cargarNoCer
 );
 
 /* ============================================================
-   DASHBOARD · SETTERS
-   ============================================================ */
-
-const DashboardSetters = ({ bloque, deltas, irA }) => {
-    const cualifEnt = tasa(bloque.cualificados, bloque.leads);
-    const convOpen = tasa(bloque.agendas, bloque.respondieron);
-    const convCualif = tasa(bloque.agendas, bloque.cualificados);
-    // Denominador de la tenacidad: los leads que recibieron al menos un mensaje. No son los
-    // entrantes —un lead al que nadie escribió no tiene toques que contar— ni los que
-    // respondieron: el seguimiento se mide por lo que se mandó, no por lo que volvió.
-    const conToques = bloque.tenacidad.reduce((a, t) => a + t.leads, 0);
-
-    return (
-        <>
-            <div className="grid">
-                <Tile label="Entrantes" valor={fmt.num(bloque.leads)} color={v('info')}
-                    help={'Leads nuevos que entraron al inbox en el período. Es el denominador de todo '
-                        + 'lo demás de esta pantalla.'}
-                    delta={deltas.leads}
-                    humo={[v('info'), v('brand-primary'), v('info'), v('brand-navy')]}
-                    sub="leads nuevos del período"
-                    ver={abrir(irA, S.leads)} baja="p-embudo-set" />
-                <Tile label="Tasa de respuesta" valor={fmt.pct(bloque.respuesta)} color={v('success')}
-                    help={'De cada 100 leads que entraron, cuántos contestaron al menos un mensaje. '
-                        + 'Mide si se está llegando a la gente, no si la conversación es buena.'}
-                    delta={deltas.respuesta}
-                    humo={[v('success'), v('info'), v('brand-primary'), v('success')]}
-                    sub={`${bloque.respondieron} de ${fmt.plural(bloque.leads, 'entrante', 'entrantes')}`}
-                    ver={abrir(irA, S.respuesta)} baja="p-cualificacion" />
-                {/* Este tile y el panel Conversión abren los LEADS que agendaron y no la tabla
-                    "Agendas generadas": el número cuenta leads del período que llegaron a reservar
-                    (45) y esa tabla son las citas del período, que es la misma historia contada al
-                    revés (169). El clic mostraba 169 filas debajo de un 45. */}
-                <Tile label="Agendas" valor={fmt.num(bloque.agendas)} color={v('brand-secondary')}
-                    help={'Leads del período que reservaron una cita con el setter. Los que '
-                        + 'reservaron por otro lado (un taller, otro setter, un closer) no cuentan: '
-                        + 'en la lista figuran como "Agendó por otra vía".'}
-                    delta={deltas.agendas}
-                    humo={[v('brand-secondary'), v('brand-secondary-light'), v('brand-primary'), v('brand-navy')]}
-                    sub={`${fmt.pct(bloque.conversion)} de los entrantes`}
-                    ver={abrir(irA, S.agendas)} baja="p-conversion" />
-            </div>
-
-            <div className="grid-2">
-                <Panel id="p-cualificacion" cab={
-                    <PanelCab titulo="Cualificación"
-                        ayuda={'Cuántos leads cumplen el perfil del programa, medido de dos maneras: '
-                            + 'sobre todos los que entraron, y sólo sobre los que contestaron. La '
-                            + 'segunda mide la conversación; la diferencia entre las dos son los '
-                            + `${bloque.leads - bloque.respondieron} que nunca respondieron.`}>
-                        <span className="t-cap mut40 num">{bloque.cualificados} cualificados</span>
-                    </PanelCab>
-                }>
-                    <div className="gruesa--sm" style={{ display: 'grid', gap: 'var(--s3)' }}>
-                        {/* Las dos tasas comparten numerador —los mismos leads cualificados— y lo
-                            que cambia es contra que se miden: la lista es la del numerador en las
-                            dos, y el aviso de procedencia dice cual era el denominador. */}
-                        <Gruesa i={0} label="Sobre entrantes" cuenta={`sobre ${bloque.leads}`}
-                            help={'De cada 100 leads que llegaron, cuántos son buen prospecto. Mezcla '
-                                + 'la calidad del lead con la capacidad de contestarle.'}
-                            pct={fmt.pct(cualifEnt)} tone="info" w={cualifEnt}
-                            irA={irA} destino={S.cualif_entrantes} />
-                        <Gruesa i={1} label="Sobre respuesta" cuenta={`sobre ${bloque.respondieron}`}
-                            help={'De cada 100 leads que sí contestaron, cuántos son buen prospecto. '
-                                + 'Esta mide la conversación, sin el ruido de quien nunca respondió.'}
-                            pct={fmt.pct(bloque.cualificacion)} tone="success" w={bloque.cualificacion}
-                            irA={irA} destino={S.cualif_respuesta} />
-                    </div>
-                </Panel>
-
-                <Panel id="p-conversion" cab={
-                    <PanelCab titulo="Conversión"
-                        ayuda={`Las mismas ${bloque.agendas} citas medidas contra tres puntos de `
-                            + 'partida. Cuanto más abajo en el embudo está el denominador, más alto da '
-                            + 'el porcentaje: no son mejores ni peores, responden preguntas distintas.'}>
-                        <span className="t-cap mut40 num">{fmt.plural(bloque.agendas, 'cita', 'citas')}</span>
-                    </PanelCab>
-                }>
-                    <div className="gruesa--sm" style={{ display: 'grid', gap: 'var(--s3)' }}>
-                        <Gruesa i={0} label="De entrante a cita" cuenta={`sobre ${bloque.leads}`}
-                            help={'Conversión final. De todo lo que entró por marketing, cuánto '
-                                + 'terminó en el calendario.'}
-                            pct={fmt.pct(bloque.conversion)} tone="warning" w={bloque.conversion}
-                            irA={irA} destino={S.conv_entrante} />
-                        <Gruesa i={1} label="De respuesta a cita" cuenta={`sobre ${bloque.respondieron}`}
-                            help="De cada 100 conversaciones abiertas, cuántas llegan a cita."
-                            pct={fmt.pct(convOpen)} tone="info" w={convOpen}
-                            irA={irA} destino={S.conv_respuesta} />
-                        <Gruesa i={2} label="De cualificado a cita" cuenta={`sobre ${bloque.cualificados}`}
-                            help={'La eficacia pura del setter: de la gente que sí es buen prospecto, '
-                                + 'a cuántos convence de reservar.'}
-                            pct={fmt.pct(convCualif)} tone="success" w={convCualif}
-                            irA={irA} destino={S.conv_cualificado} />
-                    </div>
-                </Panel>
-            </div>
-
-            <div className="grid-2">
-                <div id="p-embudo-set" style={{ minWidth: 0 }}>
-                    <Embudo pasos={pasosDe(bloque.funnel, PASOS_SETTER, irA)} />
-                </div>
-
-                <Panel id="p-tenacidad" cab={
-                    <PanelCab titulo="Tenacidad del seguimiento"
-                        ayuda={'Cuántos toques recibió cada lead antes de que el setter lo soltara. Un '
-                            + 'inbox donde casi todos los leads tienen un solo mensaje no tiene un '
-                            + 'problema de cierre: tiene seguimiento que no se hizo.'}>
-                        <span className="t-cap mut40 num">
-                            {fmt.plural(bloque.mensajes, 'mensaje', 'mensajes')}
-                        </span>
-                    </PanelCab>
-                }>
-                    {conToques === 0 ? <Vacio texto="Sin mensajes en el período." /> : (
-                        <>
-                            <div className="tdatos">
-                                <div className="tdatos-cab">
-                                    <span>Toques</span><span>Leads</span><span>%</span>
-                                </div>
-                                {bloque.tenacidad.map((t, i) => {
-                                    const color = rampa(i, bloque.tenacidad.length);
-                                    return (
-                                        <div key={t.toques} className="tdatos-fila">
-                                            <span className="tdatos-nom">
-                                                <span className="dato-punto" style={{ background: color }} />
-                                                <span className="trunc">
-                                                    {fmt.plural(Number(t.toques.replace('+', '')), 'toque', 'toques')}
-                                                    {t.toques.endsWith('+') && ' o más'}
-                                                </span>
-                                            </span>
-                                            <MetricaClicable irA={irA} destino={destinoToques(t.toques)}
-                                                vacio={!t.leads} className="tdatos-n"
-                                                style={{ color }}
-                                                detalle={`${t.leads} leads con ${t.toques} toques`}>
-                                                {t.leads}
-                                            </MetricaClicable>
-                                            <span className="tdatos-p">{fmt.pct(tasa(t.leads, conToques))}</span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                            <p className="t-cap mut40" style={{ marginTop: 'var(--s3)' }}>
-                                El porcentaje es sobre los {conToques} leads que recibieron al menos un
-                                mensaje: a un lead al que nadie escribió no se le puede contar tenacidad.
-                            </p>
-                        </>
-                    )}
-                </Panel>
-            </div>
-        </>
-    );
-};
-
-/* ============================================================
    VISTA
    ============================================================ */
 
-const Analizar = ({ datos, rol, irA, cargarNoCerradas = null, onAbrirFila = null }) => {
+/**
+ * `canal` / `onCanal`: la pestaña General · Anuncios · Inbound del tablero de setters, que vive en la
+ * URL como el resto de los filtros (ver `DashboardComercial`). El de closers no la usa.
+ */
+const Analizar = ({ datos, rol, irA, cargarNoCerradas = null, onAbrirFila = null, canal = null, onCanal = null }) => {
     if (!datos) return <EsqueletoTablero />;
     // El resumen que hay en mano puede ser todavía el del rol anterior: el `rol` de arriba cambia
     // en el momento y el fetch llega después. Dibujar el dashboard de closers con un payload de
@@ -1213,7 +899,8 @@ const Analizar = ({ datos, rol, irA, cargarNoCerradas = null, onAbrirFila = null
     if (datos.rol !== rol) return <EsqueletoTablero />;
     const { actual, deltas } = datos;
     return rol === 'setters'
-        ? <DashboardSetters bloque={actual} deltas={deltas} irA={irA} />
+        ? <DashboardSetters bloque={actual} deltas={deltas} deltasCanales={datos.deltas_canales}
+            comision={datos.comision} canal={canal} onCanal={onCanal} irA={irA} />
         : <DashboardClosers bloque={actual} deltas={deltas} porCobrar={datos.por_cobrar}
             fuentes={datos.fuentes} irA={irA} cargarNoCerradas={cargarNoCerradas}
             onAbrirFila={onAbrirFila} />;

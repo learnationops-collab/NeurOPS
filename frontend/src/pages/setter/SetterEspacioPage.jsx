@@ -21,7 +21,6 @@ import MisAgendas from './agendas/MisAgendas';
 import { marcaDelDock } from './agendas/meses';
 import ReporteDiario from './reporte/ReporteDiario';
 import Historial from './reporte/Historial';
-import SetterDatos from './datos/SetterDatos';
 
 /**
  * El espacio del setter: todo su trabajo y sus datos en una sola pantalla, con un solo dock.
@@ -69,10 +68,9 @@ const SECCIONES = [
     { id: 'agendas', label: 'Mis agendas', Icono: CalendarDays, sub: 'Cada agenda, con su anuncio.' },
     { id: 'reporte', label: 'Reporte', Icono: ClipboardList, sub: 'Así cerraste el día.',
         tabs: [{ key: 'hoy', label: 'Reporte' }, { key: 'historial', label: 'Historial' }] },
-    // Desde el 10/10/2026 con Comparativas: la de los setters, la misma que ve la dirección, en
-    // solo lectura (ver `SetterDatos`).
-    { id: 'datos', label: 'Mis datos', Icono: BarChart3, sub: 'Así vienen tus números.',
-        tabs: [{ key: 'resumen', label: 'Mis datos' }, { key: 'comparativas', label: 'Comparativas' }] },
+    // El Analizar del dashboard comercial, el mismo tablero de setters que ve la dirección, con sus
+    // pestañas Dashboard · Comparativas · Variabilidad (las dibuja el dashboard, no el encabezado).
+    { id: 'datos', label: 'Mis datos', Icono: BarChart3, sub: 'Así vienen tus números.' },
     // Una pestaña por tabla, y la tabla la elige la pestaña (`tablaFija`): su Ventas no es una de las
     // tablas de setters de la dirección, así que la `t` de la URL sola no la podía abrir.
     { id: 'revisar', label: 'Revisar', Icono: CheckCircle2, sub: 'Tus agendas, tus ventas y tus leads.',
@@ -91,7 +89,7 @@ const tablaDePestana = (key) => REVISAR_DEL_SETTER.find(p => p.key === key)?.tab
 
 /**
  * Lo que el drill-down de "Mis datos" deja en la URL: la tabla (`t`) y su filtro (`f`, con su token
- * `ft`). Ver `SetterDatos` y `DashboardComercial`.
+ * `ft`). Ver `DashboardComercial`.
  */
 const CLAVES_DEL_DRILL_DOWN = ['t', 'f', 'ft'];
 
@@ -274,12 +272,15 @@ const SetterEspacioPage = () => {
                     {seccion === 'revisar' && (
                         <DashboardComercial embebido seccionFija="revisar" tablaFija={tablaDePestana(tab)} />
                     )}
-                    {/* «Mis datos» y Comparativas (10/10/2026). Un número del sistema lleva a Revisar,
-                        a la pestaña de su tabla y con el filtro de ese número, partiendo de la URL que
-                        la vista acaba de escribir. */}
+                    {/* «Mis datos» es el Analizar del dashboard comercial embebido: el MISMO tablero de
+                        setters que ve la dirección, acotado a él por el backend (`alcance_de`), con
+                        Comparativas de solo lectura (10/10/2026: vuelve a ser este y no una vista
+                        propia). Un número del sistema lleva a Revisar, a la pestaña de su tabla y con
+                        el filtro de ese número, partiendo de la URL que el dashboard acaba de escribir. */}
                     {seccion === 'datos' && (
-                        <SetterDatos tab={tab}
-                            onIrALista={(tabla, urlDelFiltro) => irA('revisar', pestanaDeTabla(tabla), urlDelFiltro)} />
+                        <DashboardComercial embebido seccionFija="analizar"
+                            onIrASeccion={(_seccion, urlDelFiltro) => irA('revisar',
+                                pestanaDeTabla(urlDelFiltro?.get('t')), urlDelFiltro)} />
                     )}
                 </motion.div>
 

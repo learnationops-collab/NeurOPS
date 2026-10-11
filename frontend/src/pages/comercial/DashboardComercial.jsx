@@ -103,8 +103,8 @@ const SALIDA = {
 const SECCIONES = [
     // `permiso` en una tab: la clave del contexto que la habilita. Comparativas es la única vista
     // que muestra los números de OTRAS personas con nombre y apellido: la ven la dirección, los
-    // closers (desde el 02/10/2026) y los setters (desde el 10/10/2026, en su espacio: ver
-    // `SetterDatos`), cada uno la de su rol.
+    // closers (desde el 02/10/2026) y los setters (desde el 10/10/2026, en su «Mis datos»), cada uno
+    // la de su rol.
     { id: 'analizar', label: 'Analizar', Icono: Search, tabs: [{ key: 'dashboard', label: 'Dashboard' },
         { key: 'comparativas', label: 'Comparativas', permiso: 'puede_comparar' },
         { key: 'variabilidad', label: 'Variabilidad' }] },
@@ -213,6 +213,9 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const rolPedido = params.get('rol');
     const miembroPedido = params.get('m');
     const tabla = params.get('t') || null;
+    // La pestaña General · Anuncios · Inbound del tablero de setters (10/10/2026). Solo elige qué
+    // vista del resumen se dibuja —el backend manda las tres juntas—, así que no dispara pedidos.
+    const canal = ['anuncios', 'inbound'].includes(params.get('canal')) ? params.get('canal') : null;
 
     const [tab, setTab] = useState('dashboard');
     // Finanzas se mira por mes o por un rango personalizado (queda el último elegido; las vistas
@@ -806,7 +809,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     )}
                     {!esperaFechas && seccion === 'analizar' && tab === 'dashboard' && (
                         <Analizar datos={resumen} rol={rol} irA={irADetalle}
-                            cargarNoCerradas={cargarNoCerradas} onAbrirFila={abrirFila} />
+                            cargarNoCerradas={cargarNoCerradas} onAbrirFila={abrirFila}
+                            canal={canal} onCanal={(c) => set({ canal: c })} />
                     )}
                     {!esperaFechas && seccion === 'analizar' && tab === 'comparativas' && contexto.puede_comparar && (
                         // Un closer ve a sus compañeros pero no puede abrir sus listas (el backend

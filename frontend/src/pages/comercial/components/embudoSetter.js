@@ -1,8 +1,8 @@
 /**
- * El embudo de punta a punta del setter, listo para `FlujoEmbudo`: lo comparten «Mis datos» del
- * setter y los embudos de Comparativas, así un setter ve su embudo igual en las dos pantallas.
+ * El embudo de punta a punta del setter, listo para `FlujoEmbudo`: lo comparten el tablero de setters
+ * (`DashboardSetters`) y los embudos de Comparativas, así un setter ve su embudo igual en las dos.
  *
- * El backend manda las etapas (`setter_mis_datos.embudo_de`) con su `fuente`: lo que cargó el setter
+ * El backend manda las etapas (`setter_analitica.embudo_de`) con su `fuente`: lo que cargó el setter
  * en el reporte o lo que registra el sistema. Acá solo se les pone el color —lavanda el reporte,
  * verde el sistema, como la leyenda— y el de cada canal a las partes de las agendas.
  */

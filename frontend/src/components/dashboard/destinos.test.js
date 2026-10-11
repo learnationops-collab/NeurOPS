@@ -5,7 +5,7 @@ import {
 } from '../../pages/comercial/components/tablasDef';
 import {
     DESTINOS_CLOSER, DESTINOS_METRICA, DESTINOS_SETTER, DESTINO_PROCEDENCIAS_TOTAL, PASOS_CLOSER,
-    PASOS_SETTER, conDia, destinoDeSerie, destinoProcedencia, destinoToques, serieCortable,
+    conDia, destinoDeSerie, destinoProcedencia, serieCortable,
 } from '../../pages/comercial/components/destinos';
 import {
     DESTINOS_RANKING, METRICS, destino, destinoFuente, destinoPrograma,
@@ -31,7 +31,6 @@ const todos = () => {
     Object.entries(DESTINOS_CLOSER).forEach(([k, d]) => sumar(`DESTINOS_CLOSER.${k}`, d));
     Object.entries(DESTINOS_SETTER).forEach(([k, d]) => sumar(`DESTINOS_SETTER.${k}`, d));
     Object.entries(PASOS_CLOSER).forEach(([k, p]) => sumar(`PASOS_CLOSER.${k}`, p.destino));
-    Object.entries(PASOS_SETTER).forEach(([k, p]) => sumar(`PASOS_SETTER.${k}`, p.destino));
     Object.entries(DESTINOS_METRICA).forEach(([rol, metricas]) => {
         Object.entries(metricas).forEach(([k, d]) => sumar(`DESTINOS_METRICA.${rol}.${k}`, d));
     });
@@ -42,14 +41,13 @@ const todos = () => {
     sumar('destinoPrograma()', destinoPrograma('Residency Roadmap'));
     sumar('destinoFuente(agendas)', destinoFuente('Setting'));
     sumar('destinoFuente(asistencias)', destinoFuente('Setting', 'asistencias'));
-    sumar('destinoToques()', destinoToques('3'));
     sumar('destinoProcedencia()', destinoProcedencia('Workshop'));
     sumar('destinoProcedencia(detalle)', destinoProcedencia('Setting', 'Elias'));
     sumar('DESTINO_PROCEDENCIAS_TOTAL', DESTINO_PROCEDENCIAS_TOTAL);
 
     ['closers', 'setters'].forEach(rol => {
         ['cash', 'agendas', 'ventas', 'showup', 'senas', 'programas',
-            'entrantes', 'respuestas', 'cualificados', 'tasa_resp'].forEach(key => {
+            'generadas'].forEach(key => {
             sumar(`destinoDeSerie(${rol}, ${key})`, destinoDeSerie(rol, key));
         });
     });
@@ -90,14 +88,12 @@ describe('el mapa de destinos del drill-down', () => {
         // tiene y mostraría el período entero debajo de un número que no es. Lo mismo al revés.
         const SERIES = {
             closers: ['cash', 'agendas', 'ventas', 'showup', 'senas', 'programas'],
-            setters: ['entrantes', 'respuestas', 'cualificados', 'agendas', 'tasa_resp'],
+            setters: ['generadas'],
         };
         const delRol = {
             setters: [
                 ...Object.entries(DESTINOS_SETTER).map(([k, d]) => [`DESTINOS_SETTER.${k}`, d]),
-                ...Object.entries(PASOS_SETTER).map(([k, p]) => [`PASOS_SETTER.${k}`, p.destino]),
                 ...Object.entries(DESTINOS_METRICA.setters).map(([k, d]) => [`DESTINOS_METRICA.setters.${k}`, d]),
-                ['destinoToques()', destinoToques('4+')],
             ],
             closers: [
                 ...Object.entries(DESTINOS_CLOSER).map(([k, d]) => [`DESTINOS_CLOSER.${k}`, d]),
@@ -113,7 +109,9 @@ describe('el mapa de destinos del drill-down', () => {
             .filter(([, d]) => !TABLAS_POR_ROL[rol].includes(d.tabla))
             .map(([donde, d]) => `${donde} -> ${d.tabla} (no es de ${rol})`));
 
-        expect(delRol.setters.length).toBeGreaterThan(20);
+        // Desde el 10/10/2026 solo los números del SISTEMA del tablero de setters tienen lista (los del
+        // reporte son lo que el setter cargó): las agendas generadas y sus cortes.
+        expect(delRol.setters.length).toBeGreaterThanOrEqual(9);
         expect(ajenas).toEqual([]);
     });
 
@@ -260,7 +258,7 @@ describe('el destino de un día de Variabilidad', () => {
     it('un día de "Agendas generadas" abre las agendas CREADAS ese día, no las que se reúnen', () => {
         // La serie del setter suma por fecha de creación (ver `ComercialService.generadas`): si la
         // faceta mirara la reunión, el día abriría otras agendas que las que suma la barra.
-        const d = conDia(destinoDeSerie('setters', 'agendas'), '2026-09-28');
+        const d = conDia(destinoDeSerie('setters', 'generadas'), '2026-09-28');
         const dia = TABLAS.generadas.facetas.find(f => f.key === 'dia');
         const reservadaEl28 = { creada: '2026-09-28T14:00:00', fecha: '2026-10-03T15:00:00' };
 
@@ -279,6 +277,15 @@ describe('el destino de un día de Variabilidad', () => {
         expect(serieCortable('closers', 'cash', 'Cuotas')).toBe(true);
     });
 
+    it('las series del reporte del setter no abren ninguna lista', () => {
+        // Entrantes, cualificación, apertura, agendas reportadas y bienvenidas son lo que el setter
+        // cargó cada día, no filas (10/10/2026): un clic que abriera los leads de ManyChat mostraría
+        // otro número.
+        ['entrantes', 'cualificacion', 'apertura', 'agendas', 'bienvenidas'].forEach(key => {
+            expect(destinoDeSerie('setters', key)).toBeNull();
+        });
+    });
+
     it('una serie desconocida no devuelve un destino a medias', () => {
         expect(destinoDeSerie('closers', 'inventada')).toBeNull();
         expect(serieCortable('closers', 'inventada')).toBe(false);
@@ -291,13 +298,6 @@ describe('la tenacidad del seguimiento', () => {
         expect(rotuloToques(3)).toBe('3 toques');
         expect(rotuloToques(4)).toBe('4 toques o más');
         expect(rotuloToques(9)).toBe('4 toques o más');
-    });
-
-    it('el tramo "4+" del backend se traduce al mismo rótulo', () => {
-        // El backend manda la clave "4+" y el panel escribe "4 toques o más": si los dos no salen
-        // de la misma función, el clic filtra cero filas.
-        expect(destinoToques('4+').filtro.toques).toBe('4 toques o más');
-        expect(destinoToques('2').filtro.toques).toBe('2 toques');
     });
 
     it('la faceta `toques` de la tabla de leads produce esos mismos rótulos', () => {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { TABLAS, TABLAS_POR_ROL } from './tablasDef';
 import { REVISAR_DEL_SETTER, SIN_PALABRA_CLAVE, TABLAS_DEL_SETTER, defDeTabla } from './tablasSetter';
 import {
-    DESTINOS_METRICA, DESTINOS_SETTER, PASOS_SETTER, destinoDeSerie, destinoToques,
+    DESTINOS_METRICA, DESTINOS_SETTER, destinoDeSerie,
 } from './destinos';
 
 /**
@@ -35,11 +35,8 @@ describe('tablas del Revisar del setter', () => {
         // período entero debajo de un número que no es (ver destinos.test.js).
         const destinos = [
             ...Object.entries(DESTINOS_SETTER).map(([k, d]) => [`DESTINOS_SETTER.${k}`, d]),
-            ...Object.entries(PASOS_SETTER).map(([k, p]) => [`PASOS_SETTER.${k}`, p.destino]),
             ...Object.entries(DESTINOS_METRICA.setters).map(([k, d]) => [`DESTINOS_METRICA.setters.${k}`, d]),
-            ['destinoToques()', destinoToques('4+')],
-            ...['entrantes', 'respuestas', 'cualificados', 'agendas', 'tasa_resp']
-                .map(k => [`destinoDeSerie(setters, ${k})`, destinoDeSerie('setters', k)]),
+            ['destinoDeSerie(setters, generadas)', destinoDeSerie('setters', 'generadas')],
         ].filter(([, d]) => d);
 
         const perdidas = destinos.flatMap(([donde, d]) => {
@@ -50,7 +47,8 @@ describe('tablas del Revisar del setter', () => {
                 .map(k => `${donde}: la tabla ${d.tabla} del setter no tiene la faceta "${k}"`);
         });
 
-        expect(destinos.length).toBeGreaterThan(15);
+        // Desde el 10/10/2026 solo los números del sistema tienen lista (ver `DESTINOS_SETTER`).
+        expect(destinos.length).toBeGreaterThanOrEqual(9);
         expect(perdidas).toEqual([]);
     });
 

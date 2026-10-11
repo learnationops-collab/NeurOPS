@@ -1,4 +1,4 @@
-import { ESTADO_CARTERA, NO, SENA_ESTADO, diaDe, rotuloDetalleFuente, rotuloToques } from './tablasDef';
+import { ESTADO_CARTERA, NO, SENA_ESTADO, diaDe, rotuloDetalleFuente } from './tablasDef';
 
 /**
  * El mapa "dato del dashboard comercial → lista que lo compone".
@@ -166,41 +166,21 @@ export const DESTINOS_CIERRES = {
    SETTERS
    ============================================================ */
 
-export const DESTINOS_SETTER = {
-    leads: { tabla: 'leads', filtro: {}, de: 'Entrantes' },
-    respuesta: { tabla: 'leads', filtro: { respondio: 'Sí' }, de: 'Tasa de respuesta',
-        aviso: AVISO_TASA_NUMERADOR },
-    // El número cuenta LEADS del período que llegaron a reservar, no las citas del período: son
-    // la misma historia contada al revés y dan distinto (45 contra 169). Por eso va a `leads`.
-    agendas: { tabla: 'leads', filtro: { estado: 'Agendó' }, de: 'Agendas' },
-    cualif_entrantes: { tabla: 'leads', filtro: { cualificado: 'Sí' }, de: 'Cualificados sobre entrantes',
-        aviso: AVISO_TASA_NUMERADOR },
-    cualif_respuesta: { tabla: 'leads', filtro: { cualificado: 'Sí' }, de: 'Cualificados sobre respuesta',
-        aviso: AVISO_TASA_NUMERADOR },
-    conv_entrante: { tabla: 'leads', filtro: { estado: 'Agendó' }, de: 'De entrante a cita' },
-    conv_respuesta: { tabla: 'leads', filtro: { estado: 'Agendó' }, de: 'De respuesta a cita',
-        aviso: AVISO_TASA_NUMERADOR },
-    conv_cualificado: { tabla: 'leads', filtro: { estado: 'Agendó' }, de: 'De cualificado a cita',
-        aviso: AVISO_TASA_NUMERADOR },
-};
-
 /**
- * Las etapas del SISTEMA del embudo de punta a punta del setter («Mis datos» y los embudos de
- * Comparativas, 10/10/2026). Las del reporte (entrantes … agendas reportadas) no tienen lista: son
- * números que cargó el setter, no filas. Las tres cierran con el número: son las agendas generadas
- * (una por persona, por fecha de creación) y sus cortes, que es como se cuentan.
+ * Lo que el sistema registra de un setter (10/10/2026): sus agendas generadas y en qué terminaron.
+ * Son los únicos números del tablero de setters con lista; los del reporte (entrantes, cualificación,
+ * apertura, agendas reportadas…) no la tienen: son lo que el setter cargó, no filas. Todos cierran
+ * con el número: son las agendas generadas (una por persona, por fecha de creación) y sus cortes,
+ * que es como se cuentan. Las claves `generadas`, `asistieron` y `ventas` son además las de las
+ * etapas del sistema en el embudo de punta a punta (el tablero y Comparativas).
  */
-export const DESTINOS_EMBUDO_SETTER = {
+export const DESTINOS_SETTER = {
     generadas: { tabla: 'generadas', filtro: {}, de: 'Agendas generadas' },
-    asistieron: { tabla: 'generadas', filtro: { asistio: 'Sí' }, de: 'Agendas generadas que asistieron' },
+    canceladas: { tabla: 'generadas', filtro: { post_call: 'Canceló' }, de: 'Agendas canceladas' },
+    reagendadas: { tabla: 'generadas', filtro: { post_call: 'Reagendó' }, de: 'Agendas reagendadas' },
+    no_show: { tabla: 'generadas', filtro: { post_call: 'No show' }, de: 'No show' },
+    asistieron: { tabla: 'generadas', filtro: { asistio: 'Sí' }, de: 'Show up de las agendas generadas' },
     ventas: { tabla: 'generadas', filtro: { post_call: 'Venta' }, de: 'Ventas originadas' },
-};
-
-/** Un tramo de la tenacidad del seguimiento: los leads que recibieron ese puñado de toques. */
-export const destinoToques = (toques) => {
-    const n = Number(String(toques).replace('+', ''));
-    const rotulo = rotuloToques(n);
-    return { tabla: 'leads', filtro: { toques: rotulo }, de: `Leads con ${rotulo}` };
 };
 
 /* ============================================================
@@ -229,28 +209,6 @@ export const PASOS_CLOSER = {
     },
 };
 
-export const PASOS_SETTER = {
-    Entrantes: {
-        ayuda: 'Leads nuevos que entraron al inbox en el período. Es el denominador de todo lo demás.',
-        destino: { tabla: 'leads', filtro: {}, de: 'Embudo · Entrantes' },
-    },
-    Respondieron: {
-        ayuda: 'Contestaron al menos un mensaje.',
-        destino: { tabla: 'leads', filtro: { respondio: 'Sí' }, de: 'Embudo · Respondieron' },
-    },
-    Cualificados: {
-        ayuda: 'Cumplen el perfil del programa. Ojo: se mide sobre los que respondieron.',
-        destino: { tabla: 'leads', filtro: { cualificado: 'Sí' }, de: 'Embudo · Cualificados' },
-    },
-    Agendaron: {
-        ayuda: 'Reservaron una cita con el setter. Los que reservaron por otro lado no cuentan.',
-        // Los LEADS que agendaron, no la tabla de agendas generadas: el paso cuenta leads del
-        // período que llegaron a reservar (45), y esa otra tabla son las citas del período
-        // mirándolo al revés (169). El clic mostraba 169 filas debajo de un 45.
-        destino: { tabla: 'leads', filtro: { estado: 'Agendó' }, de: 'Embudo · Agendaron' },
-    },
-};
-
 /* ============================================================
    VARIABILIDAD — una barra, una celda o un punto es UN DÍA
    ============================================================ */
@@ -275,13 +233,10 @@ const SERIES = {
         senas: { tabla: 'ventas', de: 'Señas', filtro: { tipo_pago: 'Depósitos' } },
         programas: { tabla: 'ventas', de: 'Programas', porSub: 'programa', todas: { Todos: {} } },
     },
+    // Solo las agendas generadas: las series del reporte (entrantes, cualificación, apertura, agendas
+    // reportadas, bienvenidas) son lo que el setter cargó cada día, no filas que abrir.
     setters: {
-        entrantes: { tabla: 'leads', de: 'Entrantes', porSub: 'setter', todas: { Todos: {} } },
-        respuestas: { tabla: 'leads', de: 'Respuestas', filtro: { respondio: 'Sí' } },
-        cualificados: { tabla: 'leads', de: 'Cualificados', filtro: { cualificado: 'Sí' } },
-        agendas: { tabla: 'generadas', de: 'Agendas generadas' },
-        tasa_resp: { tabla: 'leads', de: 'Tasa de respuesta', filtro: { respondio: 'Sí' },
-            aviso: AVISO_TASA_NUMERADOR },
+        generadas: { tabla: 'generadas', de: 'Agendas generadas' },
     },
 };
 
@@ -342,14 +297,9 @@ export const DESTINOS_METRICA = {
             de: 'Conversión de señas' },
         agendas: { tabla: 'agendas', filtro: {}, de: 'Agendas' },
     },
+    // Las métricas del reporte (entrantes, cualificación, apertura, agendas, conv. final,
+    // bienvenidas) no abren nada: son lo que cada setter cargó. En el mapa, su celda rankea.
     setters: {
-        leads: { tabla: 'leads', filtro: {}, de: 'Leads' },
-        respuesta: { tabla: 'leads', filtro: { respondio: 'Sí' }, de: 'Respuesta',
-            aviso: AVISO_TASA_NUMERADOR },
-        cualificacion: { tabla: 'leads', filtro: { cualificado: 'Sí' }, de: 'Cualificación',
-            aviso: AVISO_TASA_NUMERADOR },
-        agendas: { tabla: 'leads', filtro: { estado: 'Agendó' }, de: 'Agendas' },
-        conversion: { tabla: 'leads', filtro: { estado: 'Agendó' }, de: 'Conv. final' },
         show_up: { tabla: 'generadas', filtro: { asistio: 'Sí' }, de: 'Show up de sus agendas',
             aviso: AVISO_TASA_NUMERADOR },
         ventas_originadas: { tabla: 'generadas', filtro: { post_call: 'Venta' },

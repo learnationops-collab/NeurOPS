@@ -103,7 +103,7 @@ describe('Comparativas · los embudos de los setters', () => {
         expect(screen.getAllByRole('button', { name: /^Ver la lista: (Generadas|Asistieron|Ventas),/ })).toHaveLength(9);
         fireEvent.click(screen.getByRole('button', { name: 'Ver la lista: Asistieron, 3' }));
         expect(irAPersona).toHaveBeenCalledWith(2, {
-            tabla: 'generadas', filtro: { asistio: 'Sí' }, de: 'Agendas generadas que asistieron' });
+            tabla: 'generadas', filtro: { asistio: 'Sí' }, de: 'Show up de las agendas generadas' });
     });
 
     it('la comparativa de closers no trae embudos', () => {
