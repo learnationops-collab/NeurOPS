@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Delta, EsqueletoPanel, fmt, Segmented, useMontado } from './Shared';
+import { Delta, EsqueletoPanel, fmt, Segmented, Tip, useMontado } from './Shared';
 import { DESTINOS_METRICA, DESTINOS_SETTER } from './destinos';
 import FlujoEmbudo from './FlujoEmbudo';
 import { COLOR_CANAL, COLOR_FUENTE, etapasParaDibujar, puntaAPunta } from './embudoSetter';
@@ -51,22 +51,29 @@ const Ranking = ({ datos, metrica, filas, yo, irAPersona, destino }) => {
         : valorEquipo;
 
     const bajada = (fila) => {
-        // El show up de un setter se mide sobre las agendas que GENERÓ; su `agendas` es otra cosa
-        // (los leads que agendaron). Un closer no trae `generadas` y cae en sus agendas.
-        if (metrica.key === 'show_up') return `${fila.generadas ?? fila.agendas ?? 0} agendas`;
+        // El show up de un setter se mide sobre sus agendas generadas que ya tienen resultado; su
+        // `agendas` es otra cosa (las que reportó). Un closer no trae `generadas` y cae en sus agendas.
+        if (metrica.key === 'show_up') {
+            return fila.realizadas !== undefined ? `${fila.realizadas} con resultado` : `${fila.agendas ?? 0} agendas`;
+        }
         if (metrica.key === 'close_rate' || metrica.key === 'ticket') return `${fila.ventas ?? 0} ventas`;
         if (metrica.key === 'comision') return `10% de ${fmt.money(fila.cash)}`;
         if (metrica.key === 'senas_conversion') return fila.senas_detalle;
-        if (metrica.key === 'respuesta' || metrica.key === 'cualificacion') return `${fila.leads ?? 0} leads`;
+        if (['cualificacion', 'apertura', 'conversion'].includes(metrica.key)) return `${fmt.num(fila.entrantes ?? 0)} entrantes`;
+        if (metrica.key === 'bienvenidas_respuesta') {
+            return `${fmt.num(fila.bienvenidas_respondidas ?? 0)} de ${fmt.num(fila.bienvenidas_hechas ?? 0)}`;
+        }
         return '';
     };
 
     return (
         <>
+            {/* La descripción de la métrica va en el tooltip, no en un renglón debajo (poco texto,
+                pedido del 10/10/2026). */}
             <div className="panel-cab">
-                <div style={{ minWidth: 0 }}>
+                <div className="fila" style={{ gap: 6, minWidth: 0 }}>
                     <p className="t-eyebrow">Ranking · {metrica.label}</p>
-                    <p className="t-sm mut" style={{ marginTop: 6 }}>{metrica.desc}</p>
+                    <Tip titulo={metrica.label} texto={metrica.desc} />
                 </div>
                 <div className="panel-cab-der" style={{ display: 'block', textAlign: 'right' }}>
                     <p className="t-rotulo">Equipo</p>
@@ -92,9 +99,10 @@ const Ranking = ({ datos, metrica, filas, yo, irAPersona, destino }) => {
                     const valor = fila[metrica.key];
                     const sobrePromedio = valor !== null && promedio !== null && valor >= promedio;
                     const largo = valor && tope ? (valor / tope) * 100 : 0;
-                    // Sin `irAPersona` (un closer mirando a su equipo) la fila es solo lectura.
-                    const Fila = irAPersona ? 'button' : 'div';
-                    const accion = irAPersona ? {
+                    // Sin `irAPersona` (un closer o un setter mirando a su equipo) la fila es solo
+                    // lectura; sin `destino` también (las métricas del reporte de un setter no son filas).
+                    const Fila = irAPersona && destino ? 'button' : 'div';
+                    const accion = irAPersona && destino ? {
                         type: 'button',
                         'aria-label': `Ver la lista de ${fila.nombre} filtrada por ${metrica.label}`,
                         onClick: () => irAPersona(fila.id, destino),
@@ -176,15 +184,13 @@ const MapaEquipo = ({ datos, metrica, filas, onMetrica, irAPersona }) => {
     return (
         <div className="mapa">
             <div className="panel-cab">
-                <div style={{ minWidth: 0 }}>
+                <div className="fila" style={{ gap: 6, minWidth: 0 }}>
                     <p className="t-eyebrow">Mapa del equipo</p>
-                    <p className="t-cap mut" style={{ marginTop: 6 }}>
-                        {/* Sin `irAPersona` (un closer o un setter mirando a su equipo) las
-                            celdas no abren ninguna lista: no se le promete. */}
-                        {irAPersona
-                            ? 'Tocá el encabezado para rankear · tocá una celda para abrir su lista.'
-                            : 'Tocá el encabezado para rankear.'}
-                    </p>
+                    {/* Sin `irAPersona` (un closer o un setter mirando a su equipo) las celdas no
+                        abren ninguna lista: no se le promete. */}
+                    <Tip titulo="Mapa del equipo" texto={irAPersona
+                        ? 'Tocá el encabezado para rankear y una celda para abrir su lista.'
+                        : 'Tocá el encabezado para rankear.'} />
                 </div>
                 <div className="panel-cab-der mapa-leyenda">
                     <span><i style={{ background: 'var(--success)' }} />Mejor</span>
@@ -261,16 +267,20 @@ const MapaEquipo = ({ datos, metrica, filas, onMetrica, irAPersona }) => {
 
 /**
  * Los embudos de los setters (pedido del usuario, 10/10/2026): uno por setter y el del equipo, del
- * reporte diario a las ventas, TODOS EN LA MISMA ESCALA —la etapa más grande de todos, el equipo
- * incluido— para que dos barras del mismo alto sean el mismo número. Es el mismo embudo que cada
- * setter ve en su «Mis datos» (`embudoSetter.js`).
+ * reporte diario a las ventas. Es el mismo embudo de punta a punta del tablero (`embudoSetter.js`).
+ *
+ * **Cada uno en su propia escala**, la de su primera etapa, y **en raíz** (`raiz`). Con una escala
+ * compartida (la etapa más grande de todos, el equipo incluido) los embudos de cada setter quedaban
+ * aplastados contra el del equipo, y de 494 entrantes a 2 ventas las etapas del sistema eran rayas de
+ * 2 px: el dueño los vio «chatos, casi ilegibles». Lo que se compara entre setters es la forma —las
+ * píldoras con la conversión de cada etapa—; los números exactos van siempre escritos arriba de cada
+ * barra (ver `FlujoEmbudo`).
  *
  * Solo lo trae la comparativa de setters (`embudos`); la de closers no cambia. Las etapas del sistema
  * abren la lista de esa persona cuando hay `irAPersona` (la dirección); un setter mira sin abrir.
  */
 const EmbudosSetters = ({ embudos, yo, rol, irAPersona }) => {
     const filas = [...embudos.filas, embudos.equipo];
-    const escala = Math.max(1, ...filas.flatMap(f => f.etapas.map(e => e.n || 0)));
     const irDe = (fila) => (irAPersona
         ? (etapa) => (DESTINOS_SETTER[etapa.key]
             ? () => irAPersona(fila.id, DESTINOS_SETTER[etapa.key])
@@ -279,12 +289,10 @@ const EmbudosSetters = ({ embudos, yo, rol, irAPersona }) => {
     return (
         <div className="mapa embudos-set">
             <div className="panel-cab">
-                <div style={{ minWidth: 0 }}>
+                <div className="fila" style={{ gap: 6, minWidth: 0 }}>
                     <p className="t-eyebrow">Embudos</p>
-                    <p className="t-cap mut" style={{ marginTop: 6 }}>
-                        Del reporte diario a las ventas, todos en la misma escala. Cada píldora es la etapa sobre la
-                        anterior; la punteada compara lo reportado con lo que registra el sistema.
-                    </p>
+                    <Tip titulo="Embudos"
+                        texto="Cada píldora es la etapa sobre la anterior; la punteada, lo reportado contra el sistema." />
                 </div>
                 <div className="panel-cab-der mapa-leyenda">
                     <span><i style={{ background: COLOR_FUENTE.reporte }} />Reporte</span>
@@ -307,7 +315,7 @@ const EmbudosSetters = ({ embudos, yo, rol, irAPersona }) => {
                                         + `${fmt.plural(fila.etapas[fila.etapas.length - 1].n, 'venta', 'ventas')} · ${final}%`}
                                 </span>
                             </div>
-                            <FlujoEmbudo etapas={etapasParaDibujar(fila.etapas, irDe(fila))} max={escala} />
+                            <FlujoEmbudo etapas={etapasParaDibujar(fila.etapas, irDe(fila))} raiz />
                         </div>
                     );
                 })}

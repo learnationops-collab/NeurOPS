@@ -1,8 +1,8 @@
 /* ============================================================================
    EMBUDOS HORIZONTALES (`FlujoEmbudo`) — el lenguaje del reporte diario nuevo de
    los setters (artifact aprobado el 10/10/2026): barras por etapa, bandas que
-   las unen y píldoras con la conversión. Lo usan «Mis datos» del setter y los
-   embudos de Comparativas.
+   las unen y píldoras con la conversión. Lo usan el tablero de setters (el de
+   la dirección y el «Mis datos» del setter) y los embudos de Comparativas.
 
    Los colores de canal son los del artifact: el color es el dato (anuncios en
    magenta, inbound en azul, bienvenidas en violeta, el total en lavanda). Viven

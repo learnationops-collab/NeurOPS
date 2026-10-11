@@ -12,8 +12,9 @@ import './flujo.css';
  *
  * - `n` es el conteo de la etapa; `partes` ([{ key, n, color }]) la parte en tramos apilados del
  *   mismo alto total (las agendas por canal). Las partes tienen que sumar `n`.
- * - `max` es la escala: el valor que llena el alto entero. Por defecto, la etapa más grande; varios
- *   embudos que se comparan (los setters de Comparativas) reciben el MISMO `max`.
+ * - `max` es la escala: el valor que llena el alto entero. Por defecto, la etapa más grande. Una
+ *   etapa que no está en cero mide al menos `ALTO_MIN`, para que se lea como barra. `raiz` dibuja
+ *   las alturas en raíz (ver `proporcion`).
  * - La píldora de cada banda es la etapa sobre la anterior. `cruce` marca la etapa donde cambia la
  *   fuente (del reporte al sistema): ahí la píldora no es una conversión sino cuánto registra el
  *   sistema de lo que se reportó, y se dibuja punteada. Arriba de 100% va en ámbar, como en el
@@ -34,6 +35,23 @@ const ARRIBA = 30;             // lugar para el número arriba de la barra
 const CON_ROTULOS = 26;        // lugar para el rótulo abajo
 const PILDORA = { alto: 22, ancho: 44 };
 const ANCHO_SUPUESTO = 960;    // sin medida (jsdom, primer cuadro)
+// Lo mínimo que mide una etapa que no está en cero: en un embudo de 494 entrantes a 2 ventas las
+// últimas etapas eran una raya de 2 px y no se leían como barras (Comparativas, 10/10/2026). El cero
+// sí queda en una raya: es la diferencia que tiene que verse.
+const ALTO_MIN = 8;
+const PCT_MIN = 6;
+
+/**
+ * Qué parte del alto le toca a `v`. Con `raiz`, la raíz de la proporción: de 494 entrantes a 2 ventas
+ * las etapas del final siguen siendo barras y no rayas, y el orden se mantiene (más alto = más). Es
+ * para comparar formas (los embudos de Comparativas); el número exacto va siempre escrito arriba y la
+ * conversión, en la píldora.
+ */
+const proporcion = (v, escala, raiz) => {
+    if (!escala) return 0;
+    const p = Math.max(0, v) / escala;
+    return raiz ? Math.sqrt(p) : p;
+};
 
 /** El ancho de un elemento, al día con su contenedor. 0 hasta la primera medida. */
 export const useAncho = () => {
@@ -79,12 +97,12 @@ const accion = (etapa) => (etapa.ir ? {
     onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); etapa.ir(); } },
 } : {});
 
-const Horizontal = ({ etapas, escala, ancho, rotulos, bandas, color, montado }) => {
+const Horizontal = ({ etapas, escala, raiz, ancho, rotulos, bandas, color, montado }) => {
     const n = etapas.length;
     const { anchoBarra: fb, hueco: fg } = geometria(ancho, n, rotulos);
     const alto = ARRIBA + ALTO_MAX + (rotulos ? CON_ROTULOS : 6);
     const cy = ARRIBA + ALTO_MAX / 2;
-    const altoDe = (v) => Math.max(2, escala ? (v / escala) * ALTO_MAX : 0);
+    const altoDe = (v) => Math.max(v > 0 ? ALTO_MIN : 2, proporcion(v, escala, raiz) * ALTO_MAX);
     const x = (i) => MX + i * (fb + fg);
     return (
         <svg className="flj-svg" width="100%" height={alto} viewBox={`0 0 ${ancho} ${alto}`} role="group"
@@ -143,8 +161,8 @@ const Horizontal = ({ etapas, escala, ancho, rotulos, bandas, color, montado }) 
 };
 
 /** El mismo embudo girado: una fila por etapa, la barra centrada en su pista. */
-const Vertical = ({ etapas, escala, bandas, color, montado }) => {
-    const pct = (v) => Math.max(2, escala ? (v / escala) * 100 : 0);
+const Vertical = ({ etapas, escala, raiz, bandas, color, montado }) => {
+    const pct = (v) => Math.max(v > 0 ? PCT_MIN : 2, proporcion(v, escala, raiz) * 100);
     return (
         <div className="flj-v" role="list">
             {etapas.map((e, i) => {
@@ -192,7 +210,7 @@ const Vertical = ({ etapas, escala, bandas, color, montado }) => {
     );
 };
 
-const FlujoEmbudo = ({ etapas, max, color = 'var(--ch-tot)', bandas = true, rotulos = true, apilar = null }) => {
+const FlujoEmbudo = ({ etapas, max, raiz = false, color = 'var(--ch-tot)', bandas = true, rotulos = true, apilar = null }) => {
     const [ref, medido] = useAncho();
     const montado = useMontado();
     const ancho = medido || ANCHO_SUPUESTO;
@@ -201,8 +219,8 @@ const FlujoEmbudo = ({ etapas, max, color = 'var(--ch-tot)', bandas = true, rotu
     return (
         <div ref={ref} className={`flj${vertical ? ' flj--v' : ''}`} style={{ '--c': color }}>
             {vertical
-                ? <Vertical etapas={etapas} escala={escala} bandas={bandas} color={color} montado={montado} />
-                : <Horizontal etapas={etapas} escala={escala} ancho={ancho} rotulos={rotulos} bandas={bandas}
+                ? <Vertical etapas={etapas} escala={escala} raiz={raiz} bandas={bandas} color={color} montado={montado} />
+                : <Horizontal etapas={etapas} escala={escala} raiz={raiz} ancho={ancho} rotulos={rotulos} bandas={bandas}
                     color={color} montado={montado} />}
         </div>
     );

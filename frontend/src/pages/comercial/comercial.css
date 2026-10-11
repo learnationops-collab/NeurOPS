@@ -1627,6 +1627,13 @@
   color:var(--text-muted-40);transition:color .16s ease}
 .dc-shell .mapa-cab button{font-family:inherit;font-size:9.5px;font-weight:900;letter-spacing:.07em;
   text-transform:uppercase;color:var(--text-muted-40);cursor:pointer}
+/* Una palabra más larga que su columna («CUALIFICACIÓN» en un teléfono) se parte —con guion si el
+   navegador sabe español— en vez de montarse sobre la de al lado (10/10/2026). `anywhere` y no
+   `break-word`: el texto es un ítem flex alineado a la derecha y solo `anywhere` le baja el ancho
+   mínimo; con `break-word` se salía hacia la izquierda, encima del encabezado vecino. */
+.dc-shell .mapa-cab > *{hyphens:auto;-webkit-hyphens:auto;overflow-wrap:anywhere;min-width:0}
+/* En el teléfono la tabla scrollea igual: columnas de 120 px y ningún rótulo partido al medio. */
+@media (max-width:760px){.dc-shell .mapa-grid{min-width:calc(170px + var(--n) * 120px)}}
 .dc-shell .mapa-cab button:hover{color:var(--text-muted)}
 .dc-shell .mapa-cab .activa{color:var(--text-on-surface)}
 .dc-shell .mapa-celda{height:40px;display:flex;align-items:center;justify-content:flex-end;gap:6px;

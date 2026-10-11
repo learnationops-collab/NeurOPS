@@ -6,9 +6,9 @@ import Comparativas from './Comparativas';
 /**
  * La bajada del ranking de show up dice sobre cuántas agendas se midió.
  *
- * En una fila de setter, `agendas` son los LEADS que agendaron con él y `generadas` las agendas
- * que generó: el show up se mide sobre las segundas. Con `agendas` primero, el ranking decía
- * "34 agendas" debajo de un show up calculado sobre 70.
+ * En una fila de setter, `agendas` son las que REPORTÓ y el show up se mide sobre sus agendas
+ * generadas que ya tienen resultado (`realizadas`). Con `agendas`, el ranking decía "34 agendas"
+ * debajo de un show up calculado sobre otras.
  */
 
 const SHOW_UP = { key: 'show_up', label: 'Show up', formato: 'pct', suma: false, desc: '' };
@@ -19,9 +19,10 @@ const datos = (rol, fila) => ({
 });
 
 describe('Comparativas · la bajada del show up', () => {
-    it('para un setter cuenta las agendas que generó', () => {
-        render(<Comparativas datos={datos('setters', { agendas: 34, generadas: 70 })} irAPersona={() => {}} />);
-        expect(screen.getByText('70 agendas')).toBeInTheDocument();
+    it('para un setter cuenta sus agendas generadas con resultado', () => {
+        render(<Comparativas datos={datos('setters', { agendas: 34, generadas: 70, realizadas: 50 })}
+            irAPersona={() => {}} />);
+        expect(screen.getByText('50 con resultado')).toBeInTheDocument();
         expect(screen.queryByText('34 agendas')).toBeNull();
     });
 
@@ -59,7 +60,9 @@ describe('Comparativas · el líder contra el promedio', () => {
     it('sin `irAPersona` el mapa no promete abrir listas', () => {
         render(<Comparativas irAPersona={null} datos={conLeads} />);
 
-        expect(screen.getByText('Tocá el encabezado para rankear.')).toBeInTheDocument();
+        // En el tooltip y no en un renglón debajo (poco texto, 10/10/2026).
+        expect(screen.getByRole('note', { name: 'Mapa del equipo: Tocá el encabezado para rankear.' }))
+            .toBeInTheDocument();
     });
 });
 
@@ -110,5 +113,56 @@ describe('Comparativas · los embudos de los setters', () => {
         render(<Comparativas datos={datos('closers', { agendas: 41 })} irAPersona={() => {}} />);
 
         expect(screen.queryByText('Embudos')).toBeNull();
+    });
+
+    it('cada embudo va en su propia escala y ninguna etapa queda en una raya', () => {
+        // El dueño (10/10/2026): «los embudos son líneas chatas casi ilegibles». Con la escala de
+        // todos, el de Paula (40) quedaba aplastado contra el del equipo (140) y las ventas eran 2 px.
+        const { container } = render(<Comparativas datos={conEmbudos()} irAPersona={null} />);
+        const altos = [...container.querySelectorAll('.embudo-fila')].map(fila =>
+            [...fila.querySelectorAll('.flj-barra rect')].map(r => Number(r.getAttribute('height'))));
+
+        // La primera etapa de cada uno llena el alto entero, sea de 100, de 40 o de 140.
+        expect(new Set(altos.map(a => a[0])).size).toBe(1);
+        // Y una etapa chica (1 venta de 40 entrantes) sigue siendo una barra.
+        expect(Math.min(...altos.flat())).toBeGreaterThanOrEqual(8);
+    });
+});
+
+describe('Comparativas · el ranking de los setters', () => {
+    const METRICAS = [
+        { key: 'cualificacion', label: 'Cualificación', formato: 'pct', suma: false, desc: 'Cualificados sobre entrantes.' },
+        { key: 'show_up', label: 'Show up', formato: 'pct', suma: false, desc: 'Sobre las que tienen resultado.' },
+    ];
+    const setters = {
+        rol: 'setters', yo: null, metricas: METRICAS, columnas_info: [], equipo: { cualificacion: 70, show_up: 60 },
+        filas: [
+            { id: 1, nombre: 'Elias', entrantes: 494, cualificacion: 65.8, show_up: 58.8, realizadas: 17, deltas: {} },
+            { id: 2, nombre: 'Paula', entrantes: 270, cualificacion: 73.3, show_up: 70, realizadas: 10, deltas: {} },
+        ],
+    };
+
+    it('una métrica del reporte dice sobre cuántos entrantes y no abre la lista de nadie', () => {
+        const irAPersona = vi.fn();
+        render(<Comparativas datos={setters} irAPersona={irAPersona} />);
+
+        expect(screen.getByText('494 entrantes')).toBeInTheDocument();
+        // Lo que cargó el setter no es una lista: la fila del ranking no es un botón.
+        expect(screen.queryByRole('button', { name: /Ver la lista de Elias filtrada por Cualificación/ })).toBeNull();
+        // La descripción va en el tooltip del ranking.
+        expect(screen.getByRole('note', { name: 'Cualificación: Cualificados sobre entrantes.' })).toBeInTheDocument();
+    });
+
+    it('el show up, que sale del sistema, sí abre sus agendas generadas', () => {
+        const irAPersona = vi.fn();
+        render(<Comparativas datos={setters} irAPersona={irAPersona} />);
+
+        fireEvent.click(screen.getAllByRole('tab', { name: 'Show up' })[0]);
+        // La fila del ranking y su celda del mapa: las dos llevan a la misma lista.
+        const aPaula = screen.getAllByRole('button', { name: 'Ver la lista de Paula filtrada por Show up' });
+        expect(aPaula).toHaveLength(2);
+        fireEvent.click(aPaula[0]);
+
+        expect(irAPersona).toHaveBeenCalledWith(2, expect.objectContaining({ tabla: 'generadas', filtro: { asistio: 'Sí' } }));
     });
 });
