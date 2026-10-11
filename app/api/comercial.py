@@ -232,8 +232,12 @@ def tabla():
         # una lista vacía, no la suya. Con rol setters se devuelven sin acotar por persona.
         # `con_fuente`: cada fila lleva la fuente de su cobro, para filtrar y agrupar por ella en
         # Revisar. Se calcula una vez por pedido; filtrar y agrupar después es del lado del cliente.
+        # `operar=1` (10/10/2026): quien opera los registros recibe además las no completadas, el
+        # estado de cada venta y si tiene agenda (`ComercialService._para_operar`). Ningún otro rol,
+        # mande lo que mande; y los totales siguen contando solo las completadas (`totales_ventas`).
+        para_operar = current_user.role in ROLES_QUE_OPERAN and request.args.get('operar') in ('1', 'true')
         filas = ComercialService.ventas(start, end, closer_nombre=nombre if rol == ROL_CLOSERS else None,
-                                        con_fuente=True)
+                                        con_fuente=True, para_operar=para_operar)
         totales = ComercialService.totales_ventas(filas)
     elif cual == 'leads':
         de_setter = rol == ROL_SETTERS
