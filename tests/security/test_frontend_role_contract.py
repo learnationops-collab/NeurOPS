@@ -20,6 +20,14 @@ ROLES_REALES = {'admin', 'operator', 'closer', 'setter', 'triage', 'director_com
 # Nombres que App.jsx menciona en algun ProtectedRoute pero que no son un rol de la app (nadie los tiene).
 ROLES_INEXISTENTES_EN_EL_FRONTEND = {'marketer'}
 
+_MOTIVO_OPERAR_VENTAS = {
+    'closer': 'Corregir las ventas de todo el equipo (su estado, su closer, su agenda) es de Operaciones: en '
+              'el Revisar del closer las acciones de Operaciones no se dibujan (`puede_operar`) y sus '
+              'ventas se corrigen desde la ficha.',
+    'setter': 'El setter no ve la tabla Ventas (su Revisar son leads y agendas generadas) y las acciones de '
+              'Operaciones sobre las ventas no se le dibujan (`puede_operar`).',
+}
+
 # (metodo, ruta) -> {rol: motivo}: el frontend deja llegar a ese rol a una pantalla que llama a la ruta, pero la
 # politica se lo niega a proposito. Cada una explica por que.
 EXCEPCIONES = {
@@ -53,6 +61,21 @@ EXCEPCIONES = {
     } for ruta in (('GET', '/api/public/financial-sales/payroll'),
                    # «Excluir ventas» de la barra de Payroll: saca una venta de la nomina de todos.
                    ('POST', '/api/public/financial-sales/<int:sale_id>/toggle-payroll-exclusion'))},
+    # Las acciones de Operaciones sobre las ventas en Revisar (10/10/2026, antes en la tabla vieja de Ventas):
+    # atribuir una venta a una agenda (`AttributionModal`), reenviar su webhook y editarlas en lote. Viajan
+    # con el dashboard comercial, que tambien es "Mis datos" y "Mi cartera" de closers y setters, pero se
+    # dibujan solo para quien opera los registros (`puede_operar`: admin y operador).
+    **{ruta: {rol: _MOTIVO_OPERAR_VENTAS[rol] for rol in roles} for ruta, roles in (
+        (('GET', '/api/public/financial-sales'), ('closer', 'setter')),
+        (('PUT', '/api/public/financial-sales/<int:sale_id>'), ('closer', 'setter')),
+        (('POST', '/api/public/financial-sales/<int:sale_id>/resend-webhook'), ('closer', 'setter')),
+        (('GET', '/api/public/financial-agendas'), ('closer', 'setter')),
+        (('POST', '/api/public/financial-agendas'), ('closer', 'setter')),
+        (('PUT', '/api/public/financial-agendas/<int:agenda_id>'), ('closer', 'setter')),
+        # Cada uno ya puede leer la lista de su propio rol: lo que se le niega es la del otro.
+        (('GET', '/api/public/active-closers'), ('setter',)),
+        (('GET', '/api/public/active-setters'), ('closer',)),
+    )},
 }
 
 

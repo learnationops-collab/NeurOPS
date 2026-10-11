@@ -22,9 +22,10 @@
 
 import agendasLote from './agendasLote';
 import duplicados from './duplicados';
+import accionesDeVentas from './ventas';
 
 /** Los módulos registrados: `{ [tabla]: { lote?, herramientas?, fila? } }`. */
-export const MODULOS = [agendasLote, duplicados];
+export const MODULOS = [agendasLote, duplicados, accionesDeVentas];
 
 /**
  * Las acciones de Operaciones para esta tabla, o null si no hay ninguna (y entonces Revisar se ve
