@@ -12,6 +12,8 @@ Lo que se fija acá:
   3. Quién puede: solo el setter de la agenda; el Instagram hace falta porque es la llave.
   4. El juego: cuántas asignó hoy y la racha de días con la bandeja vacía, reconstruida sin
      inventar días.
+  5. Por mes (11/10/2026, «que le vayamos pidiendo de a poquito»): la bandeja partida por el mes
+     de creación, del mes actual al primero.
 """
 import itertools
 from datetime import date, datetime
@@ -92,6 +94,11 @@ def conversacion(db, ig, ad=None, cuando=datetime(2026, 10, 7, 10)):
     return lead
 
 
+def juego(resumen):
+    """Lo que se festeja (sin la bandeja por mes, que tiene sus propias pruebas)."""
+    return {k: resumen[k] for k in ('pendientes', 'hoy', 'racha')}
+
+
 def bandeja(client, user, auth_headers):
     r = client.get(URL, headers=auth_headers(user))
     assert r.status_code == 200, r.get_json()
@@ -135,7 +142,7 @@ def test_la_bandeja_son_sus_agendas_sin_anuncio_una_por_persona(client, db, equi
     datos = bandeja(client, equipo['elias'], auth_headers)
 
     assert [p['cliente'] for p in datos['pendientes']] == ['Ana', 'Caro', 'Dani']
-    assert datos['resumen'] == {'pendientes': 3, 'hoy': 0, 'racha': 0}
+    assert juego(datos['resumen']) == {'pendientes': 3, 'hoy': 0, 'racha': 0}
     ana_fila = datos['pendientes'][0]
     assert ana_fila['instagram'] == 'ana.ig'
     assert ana_fila['closer'] == 'Marlon'
@@ -151,7 +158,10 @@ def test_el_dock_puede_pedir_solo_el_resumen(client, db, equipo, anuncios, auth_
 
     r = client.get(URL, headers=auth_headers(equipo['elias']), query_string={'solo': 'resumen'})
 
-    assert r.get_json() == {'resumen': {'pendientes': 1, 'hoy': 0, 'racha': 0}}
+    assert list(r.get_json()) == ['resumen']
+    assert juego(r.get_json()['resumen']) == {'pendientes': 1, 'hoy': 0, 'racha': 0}
+    # La marca del dock se arma con el mes: también viene en el resumen solo.
+    assert r.get_json()['resumen']['meses'][0] == {'mes': '2026-10', 'pendientes': 1, 'total': 1}
 
 
 @freeze_time(HOY)
@@ -193,7 +203,7 @@ def test_asignar_la_deja_atribuida_para_marketing_y_sale_de_la_bandeja(client, d
     r = asignar(client, equipo['elias'], auth_headers, appt, anuncios['GUIA'])
 
     assert r.status_code == 200, r.get_json()
-    assert r.get_json()['resumen'] == {'pendientes': 1, 'hoy': 1, 'racha': 0}
+    assert juego(r.get_json()['resumen']) == {'pendientes': 1, 'hoy': 1, 'racha': 0}
     assert agendas_de_marketing(anuncios['GUIA']) == 1
     assert [p['cliente'] for p in bandeja(client, equipo['elias'], auth_headers)['pendientes']] == ['Beto']
     # Lo mismo que dejaba la atribución manual: la conversación con el nombre del LEAD (no el de
@@ -284,21 +294,21 @@ def test_la_racha_cuenta_los_dias_que_terminaron_con_la_bandeja_vacia(client, db
         primera = agenda(db, equipo, cliente(db, 'Ana', 'ana'), creada=datetime(2026, 10, 7, 13))
         # Antes de la primera asignación no hay racha: la bandeja todavía no existía.
         assert bandeja(client, elias, auth_headers)['resumen']['racha'] == 0
-        assert asignar(client, elias, auth_headers, primera, anuncios['GUIA']).get_json()['resumen'] == \
+        assert juego(asignar(client, elias, auth_headers, primera, anuncios['GUIA']).get_json()['resumen']) == \
             {'pendientes': 0, 'hoy': 1, 'racha': 1}
 
     with freeze_time('2026-10-08 15:00:00'):
         # Un día sin agendas nuevas: la bandeja sigue vacía y la racha sube.
-        assert bandeja(client, elias, auth_headers)['resumen'] == {'pendientes': 0, 'hoy': 0, 'racha': 2}
+        assert juego(bandeja(client, elias, auth_headers)['resumen']) == {'pendientes': 0, 'hoy': 0, 'racha': 2}
         # Llega una y todavía no la asignó: hoy sigue en juego, la racha es la de ayer.
         nueva = agenda(db, equipo, cliente(db, 'Beto', 'beto'), creada=datetime(2026, 10, 8, 14))
-        assert bandeja(client, elias, auth_headers)['resumen'] == {'pendientes': 1, 'hoy': 0, 'racha': 1}
+        assert juego(bandeja(client, elias, auth_headers)['resumen']) == {'pendientes': 1, 'hoy': 0, 'racha': 1}
 
     with freeze_time('2026-10-09 15:00:00'):
         # El 8 cerró con una pendiente: la racha se cortó.
         assert bandeja(client, elias, auth_headers)['resumen']['racha'] == 0
         r = asignar(client, elias, auth_headers, nueva, anuncios['GUIA'])
-        assert r.get_json()['resumen'] == {'pendientes': 0, 'hoy': 1, 'racha': 1}
+        assert juego(r.get_json()['resumen']) == {'pendientes': 0, 'hoy': 1, 'racha': 1}
 
 
 def test_las_de_hoy_se_cuentan_en_el_dia_del_setter(client, db, equipo, anuncios, auth_headers):
@@ -311,3 +321,56 @@ def test_las_de_hoy_se_cuentan_en_el_dia_del_setter(client, db, equipo, anuncios
         assert bandeja(client, elias, auth_headers)['resumen']['hoy'] == 1
     with freeze_time('2026-10-10 05:00:00'):  # 10/10 01:00 en La Paz
         assert bandeja(client, elias, auth_headers)['resumen']['hoy'] == 0
+
+
+# --- 5. Por mes ---------------------------------------------------------------------------------
+
+@freeze_time(HOY)
+def test_la_bandeja_va_por_mes_de_creacion_del_actual_al_primero(client, db, equipo, anuncios, auth_headers):
+    # Octubre: Ana sin anuncio y Beto ya atribuido. Septiembre: dos sin anuncio (una creada el 30
+    # a la noche en UTC, que es la fecha con que cuentan las «generadas»). Agosto: nada pendiente.
+    agenda(db, equipo, cliente(db, 'Ana', 'ana'), creada=datetime(2026, 10, 2, 9))
+    agenda(db, equipo, cliente(db, 'Beto', 'beto'), creada=datetime(2026, 10, 3, 9))
+    conversacion(db, 'beto', anuncios['GUIA'])
+    agenda(db, equipo, cliente(db, 'Caro', 'caro'), creada=datetime(2026, 9, 30, 23, 30),
+           reunion=datetime(2026, 10, 2, 14))
+    agenda(db, equipo, cliente(db, 'Dani', 'dani'), creada=datetime(2026, 9, 12, 9),
+           reunion=datetime(2026, 9, 14, 14))
+    eli = cliente(db, 'Eli', 'eli')
+    agenda(db, equipo, eli, creada=datetime(2026, 8, 20, 9), reunion=datetime(2026, 8, 22, 14))
+    conversacion(db, 'eli', anuncios['PROTOCOLO'], cuando=datetime(2026, 8, 19, 10))
+
+    datos = bandeja(client, equipo['elias'], auth_headers)
+
+    assert datos['resumen']['mes_actual'] == '2026-10'
+    # El mes actual primero; julio está aunque no tenga ninguna (llega hasta `DESDE`).
+    assert datos['resumen']['meses'] == [
+        {'mes': '2026-10', 'pendientes': 1, 'total': 2},
+        {'mes': '2026-09', 'pendientes': 2, 'total': 2},
+        {'mes': '2026-08', 'pendientes': 0, 'total': 1},
+        {'mes': '2026-07', 'pendientes': 0, 'total': 0},
+    ]
+    assert {p['cliente']: p['mes'] for p in datos['pendientes']} == {
+        'Ana': '2026-10', 'Caro': '2026-09', 'Dani': '2026-09'}
+
+
+@freeze_time(HOY)
+def test_el_mes_actual_esta_aunque_no_tenga_agendas(client, db, equipo, anuncios, auth_headers):
+    agenda(db, equipo, cliente(db, 'Ana', 'ana'), creada=datetime(2026, 9, 2, 9), reunion=datetime(2026, 9, 4, 14))
+
+    meses = bandeja(client, equipo['elias'], auth_headers)['resumen']['meses']
+
+    assert meses[:2] == [{'mes': '2026-10', 'pendientes': 0, 'total': 0},
+                         {'mes': '2026-09', 'pendientes': 1, 'total': 1}]
+
+
+@freeze_time(HOY)
+def test_asignar_baja_la_cuenta_de_su_mes(client, db, equipo, anuncios, auth_headers):
+    appt = agenda(db, equipo, cliente(db, 'Caro', 'caro'), creada=datetime(2026, 9, 12, 9),
+                  reunion=datetime(2026, 9, 14, 14))
+    agenda(db, equipo, cliente(db, 'Ana', 'ana'))
+
+    meses = asignar(client, equipo['elias'], auth_headers, appt, anuncios['GUIA']).get_json()['resumen']['meses']
+
+    assert meses[:2] == [{'mes': '2026-10', 'pendientes': 1, 'total': 1},
+                         {'mes': '2026-09', 'pendientes': 0, 'total': 1}]

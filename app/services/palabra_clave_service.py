@@ -25,6 +25,11 @@ lo pide solo cuando falta.
 conversación (la primera `LeadAnswer` es de ese mes; antes no hay ninguna). Una agenda anterior no
 tiene contra qué atribuirse ni un reporte de Marketing que la cuente: pedirla solo haría la bandeja
 imposible de vaciar.
+
+**Por mes (11/10/2026).** Kerwin: «Tenés 149 pendientes, es una banda: estaría bueno el filtro de
+este mes, que te llenen este mes y luego el mes pasado, y que le vayamos pidiendo de a poquito». El
+resumen trae la bandeja partida por el mes en que se CREÓ cada agenda (la fecha con que cuentan las
+«Agendas generadas»), del mes actual al primero, y la pantalla muestra un mes por vez.
 """
 from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta
@@ -115,6 +120,35 @@ def _anuncio_de_cada_una(filas):
     return anuncio
 
 
+def mes_de(fila):
+    """'2026-10': el mes en que se creó la agenda, en la misma fecha (UTC) con que la cuentan las
+    «Agendas generadas». None si no se sabe."""
+    return (fila.get('creada') or '')[:7] or None
+
+
+def _siguiente_mes_atras(anio, mes):
+    return (anio - 1, 12) if mes == 1 else (anio, mes - 1)
+
+
+def por_mes(setter, pend, filas):
+    """La bandeja por mes de creación, del más nuevo al más viejo: `[{mes, pendientes, total}]`.
+
+    Arranca en el mes actual del setter aunque no tenga ninguna (el mes en curso siempre está, es
+    donde abre la pantalla) y llega hasta `DESDE`. `total` son todas sus agendas de ese mes, con o
+    sin anuncio: un mes con `pendientes` en 0 está completo.
+    """
+    total = Counter(m for m in map(mes_de, filas) if m)
+    faltan = Counter(m for m in map(mes_de, pend) if m)
+    hoy = hoy_del_usuario(setter)
+    anio, mes = max([(hoy.year, hoy.month)] + [(int(m[:4]), int(m[5:7])) for m in total])
+    salida = []
+    while (anio, mes) >= (DESDE.year, DESDE.month):
+        clave = f'{anio:04d}-{mes:02d}'
+        salida.append({'mes': clave, 'pendientes': faltan.get(clave, 0), 'total': total.get(clave, 0)})
+        anio, mes = _siguiente_mes_atras(anio, mes)
+    return salida
+
+
 def _estado(fila):
     """El chip de la agenda: su post call si la llamada ya tiene resultado, si no el pre call."""
     post = fila.get('post_call') or {}
@@ -150,6 +184,7 @@ def _serializar(filas):
             'telefono': f['telefono'] or '',
             'reunion': f['fecha'],
             'creada': f['creada'],
+            'mes': mes_de(f),
             'closer': f['closer'],
             'canal': _canal(cita),
             'estado': _estado(f),
@@ -203,6 +238,8 @@ def _dia_local(instante, tz):
 
 def resumen(setter, bandeja=None):
     """Lo que se festeja: cuántas quedan, cuántas asignó hoy y la racha de días con la bandeja vacía.
+    Y la bandeja por mes (`meses`, ver `por_mes`) con el mes actual del setter (`mes_actual`): de ahí
+    sale el mes que se trabaja y la marca del dock.
 
     La racha no se guarda: se reconstruye con lo que ya hay. Una agenda estuvo pendiente desde el
     día en que se creó hasta el día de su asignación (el registro `palabra_clave` de su historial);
@@ -252,7 +289,8 @@ def resumen(setter, bandeja=None):
             racha += 1
             dia -= timedelta(days=1)
 
-    return {'pendientes': len(pend), 'hoy': hoy_hechas, 'racha': racha}
+    return {'pendientes': len(pend), 'hoy': hoy_hechas, 'racha': racha,
+            'mes_actual': f'{hoy.year:04d}-{hoy.month:02d}', 'meses': por_mes(setter, pend, filas)}
 
 
 def bandeja(setter):
