@@ -116,13 +116,14 @@ function App() {
             <Route path="/terminos-de-servicio" element={<TermsOfServicePage />} />
             <Route path="/terms-of-service" element={<TermsOfServicePage />} />
             {/* Agendas 2.0: la página de reserva del lead es pública; Thalamus (la gestión) pide sesión
-                de la dirección comercial. Van en rutas y módulos separados para que la página pública
-                no cargue la herramienta de gestión ni sus llamadas a la API. */}
+                de la dirección comercial, o de un setter, que entra en solo lectura (10/10/2026; lo
+                aplica el servidor: app/agendas_v2/api_admin.py). Van en rutas y módulos separados para
+                que la página pública no cargue la herramienta de gestión ni sus llamadas a la API. */}
             <Route path="/agendas-v2/agenda/*" element={<AgendasV2Publica />} />
             <Route
               path="/agendas-v2/*"
               element={
-                <ProtectedRoute roles={['admin', 'director_comercial']}>
+                <ProtectedRoute roles={['admin', 'director_comercial', 'setter']}>
                   <AgendasV2Routes />
                 </ProtectedRoute>
               }

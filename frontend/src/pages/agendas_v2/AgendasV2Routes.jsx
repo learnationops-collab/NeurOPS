@@ -1,8 +1,8 @@
 import { lazy, Suspense } from 'react';
 import { Route, Routes } from 'react-router-dom';
 
-// Agendas 2.0 (Learnation Thalamus), montado bajo /agendas-v2/* con sesión y rol admin o
-// director_comercial (ProtectedRoute en App.jsx). Se carga aparte (lazy) para no sumarle nada al
+// Agendas 2.0 (Learnation Thalamus), montado bajo /agendas-v2/* con sesión y rol admin,
+// director_comercial o setter (este, en solo lectura; ProtectedRoute en App.jsx). Se carga aparte (lazy) para no sumarle nada al
 // paquete que usa el resto de la app.
 //   /agendas-v2                          → Thalamus, la herramienta del director comercial
 // La página pública del lead (/agendas-v2/agenda/...) NO pasa por acá: es AgendasV2Publica.jsx, sin sesión.

@@ -18,7 +18,7 @@ La página pública **no usa el almacén**: la pantalla del lead recibe un *prov
 
 | Ruta | Pantalla |
 |---|---|
-| `/agendas-v2` | Thalamus, la herramienta del director comercial: Forms · Team · Events · Stats · Configuración. Pide sesión con rol `admin` o `director_comercial` (`AgendasV2Routes.jsx`) |
+| `/agendas-v2` | Thalamus, la herramienta del director comercial: Forms · Team · Events · Stats · Configuración. Pide sesión con rol `admin` o `director_comercial` (`AgendasV2Routes.jsx`). El `setter` entra en solo lectura (lo dice `solo_lectura` de `/estado`; `ui/soloLectura.js`) |
 | `/agendas-v2/agenda/:funnel/:evento?o=<origen>` | Página pública de reserva del lead (solo la versión publicada del evento). Sin sesión (`AgendasV2Publica.jsx`, que no importa nada de Thalamus) |
 
 ## Estructura

@@ -361,3 +361,38 @@ def test_una_variable_del_frontend_no_se_atribuye_a_una_ruta_literal_del_backend
     assert coincide('/public/x/abc', '/api/public/x/<int:id>') is False
     assert coincide('/public/x/abc', '/api/public/x/<string:nombre>') is True
     assert coincide('/public/x', '/api/public/x/<int:id>') is False
+
+
+# --- Thalamus (/api/agendas-v2) --------------------------------------------------------------------
+#
+# Como la ficha, no esta en POLITICA: su guardia es un before_request propio que deja configurar a la
+# direccion y mirar al setter (10/10/2026). Que App.jsx y esa guardia digan lo mismo: todo rol que entra
+# a /agendas-v2 lee su estado (si no, la pantalla queda en "Cargando…"), ningun otro, y quien solo mira
+# no escribe.
+
+from app.agendas_v2.api_admin import ROLES_CON_ACCESO as CONFIGURAN_THALAMUS  # noqa: E402
+from app.agendas_v2.api_admin import ROLES_DE_LECTURA as MIRAN_THALAMUS  # noqa: E402
+from tests.security.frontend_roles import _rutas_de_app  # noqa: E402
+
+
+def _roles_de_thalamus_en_app():
+    rutas, _ = _rutas_de_app()
+    return set(next(r['roles'] for r in rutas if r['path'] == '/agendas-v2/*'))
+
+
+def test_app_deja_entrar_a_thalamus_a_quien_el_backend_deja_leer():
+    assert _roles_de_thalamus_en_app() == set(CONFIGURAN_THALAMUS) | set(MIRAN_THALAMUS)
+
+
+@pytest.mark.parametrize('rol', sorted(ROLES_REALES))
+def test_thalamus_da_a_cada_rol_lo_que_app_promete(client, make_user, auth_headers, rol):
+    cabecera = auth_headers(make_user(role=rol, username=f'th_{rol}', email=f'th_{rol}@thalamus.test'))
+    entra = rol in _roles_de_thalamus_en_app()
+
+    estado = client.get('/api/agendas-v2/estado', headers=cabecera)
+    escribe = client.put('/api/agendas-v2/funnels/f1', headers=cabecera, json={'nombre': 'X'})
+
+    assert estado.status_code == (200 if entra else 403), rol
+    assert escribe.status_code == (200 if rol in CONFIGURAN_THALAMUS else 403), rol
+    if entra:
+        assert estado.get_json()['solo_lectura'] is (rol in MIRAN_THALAMUS)
