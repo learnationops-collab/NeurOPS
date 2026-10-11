@@ -287,6 +287,23 @@ def test_un_correo_en_el_instagram_no_es_un_usuario(client, db, equipo, anuncios
     assert agendas_de_marketing(anuncios['GUIA']) == 1
 
 
+@freeze_time(HOY)
+def test_revisar_dice_sin_palabra_clave_solo_de_las_que_estan_en_la_bandeja(client, db, equipo, anuncios,
+                                                                           auth_headers):
+    """Beto llegó por ManyChat con anuncio: nunca estuvo en la bandeja y su Revisar no puede decir
+    que le falta la palabra clave. Ana sí está en la bandeja: en Revisar, «sin palabra clave»."""
+    agenda(db, equipo, cliente(db, 'Ana', 'ana'))
+    agenda(db, equipo, cliente(db, 'Beto', 'beto'))
+    conversacion(db, 'beto', anuncios['PROTOCOLO'])
+
+    filas = client.get('/api/comercial/tabla', headers=auth_headers(equipo['elias']), query_string={
+        'tabla': 'generadas', 'period': 'custom', 'start_date': '2026-10-01', 'end_date': '2026-10-31',
+        'compare': 'none'}).get_json()['filas']
+
+    assert sorted((f['cliente'], f['palabra_clave']) for f in filas) == [('Ana', ''), ('Beto', 'PROTOCOLO')]
+    assert [p['cliente'] for p in bandeja(client, equipo['elias'], auth_headers)['pendientes']] == ['Ana']
+
+
 # --- 3. Quién puede y qué hace falta -------------------------------------------------------------
 
 @freeze_time(HOY)

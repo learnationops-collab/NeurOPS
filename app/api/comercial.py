@@ -286,6 +286,10 @@ def tabla():
         totales = ComercialService.totales_leads(filas)
     elif cual == 'generadas':
         filas = ComercialService.generadas(start, end, setter_id=miembro_id, basis=basis)
+        if miembro_id:
+            # La palabra clave de las que ya atribuye Marketing, como las ve «Mis agendas».
+            from app.services.palabra_clave_service import completar_palabra_clave
+            completar_palabra_clave(filas)
         totales = ComercialService.totales_agendas(filas)
     else:
         closer_id = miembro_id if rol == ROL_CLOSERS else None

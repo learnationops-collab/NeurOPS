@@ -125,6 +125,24 @@ def _anuncio_de_cada_una(filas):
     return anuncio
 
 
+def completar_palabra_clave(filas):
+    """Las filas de «Agendas generadas» de un setter sin `palabra_clave` que Marketing ya atribuye
+    a un anuncio (llegaron por ManyChat y nadie tuvo que asignarlas) toman la palabra clave de ese
+    anuncio. Así «Sin palabra clave» en su Revisar es lo mismo que pendiente en «Mis agendas»: antes
+    Revisar decía 14 sin palabra clave en octubre con la bandeja de octubre vacía (copia local).
+    Cambia las filas en el lugar y las devuelve."""
+    faltan = [f for f in filas if not f.get('palabra_clave')]
+    anuncio = _anuncio_de_cada_una(faltan)
+    if not anuncio:
+        return filas
+    ads = {a.id: a for a in Ad.query.filter(Ad.id.in_(set(anuncio.values()))).all()}
+    for f in faltan:
+        ad = ads.get(anuncio.get(f['id']))
+        if ad and (ad.keyword or ad.name):
+            f['palabra_clave'] = (ad.keyword or ad.name).strip()
+    return filas
+
+
 def mes_de(fila):
     """'2026-10': el mes en que se creó la agenda, en la misma fecha (UTC) con que la cuentan las
     «Agendas generadas». None si no se sabe."""
