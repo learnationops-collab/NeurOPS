@@ -463,10 +463,13 @@ def _compute_setter_stats(start_date_str, end_date_str, setter_id, agg_type):
     **Con reportes v2 (10/10/2026).** Los totales salen de las columnas del v1, que el v2 sigue
     llenando con el mismo significado (`setter_reporte_v2.escribir`), así que entrantes,
     cualificados, embudo y agendas suman los dos formularios. Lo que el v2 NO pide son las
-    respuestas: a aperturas y a follow-ups. Una tasa de respuesta con el v2 adentro dividía las
-    respuestas del v1 por los envíos de los dos y bajaba sola. Por eso cada tasa de respuesta se
-    calcula solo con los reportes v1 (`*_v1`), y `por_canal` trae lo nuevo del v2 (canales,
-    cualificación, aperturas, agendas y bienvenidas) con `setter_reporte_v2.sumar`.
+    respuestas a las aperturas (ni el follow-up post-agenda). Una tasa de respuesta con el v2
+    adentro dividía las respuestas del v1 por los envíos de los dos y bajaba sola. Por eso esas
+    tasas se calculan solo con los reportes v1 (`*_v1`), y `por_canal` trae lo nuevo del v2
+    (canales, cualificación, aperturas, agendas y bienvenidas) con `setter_reporte_v2.sumar`.
+
+    Las respuestas a los follow-ups de entrantes, dolor, oferta y link SÍ las pide el v2 desde el
+    11/10/2026 (`followups_respondidos`, en las mismas columnas `*_fur`): esas tasas suman los dos.
     """
     from app.models import SetterDailyStats, User
     from app.services import setter_reporte_v2
@@ -536,13 +539,7 @@ def _compute_setter_stats(start_date_str, end_date_str, setter_id, agg_type):
 
         # Los envíos de los reportes que miden la respuesta (solo el v1): denominadores de las tasas
         solo_v1(SetterDailyStats.qualification_opening_submitted + SetterDailyStats.pain_opening_submitted).label('op_sub_v1'),
-        solo_v1(SetterDailyStats.qualification_fu).label('fu_q_s_v1'),
-        solo_v1(SetterDailyStats.pain_fu).label('fu_p_s_v1'),
-        solo_v1(SetterDailyStats.offer_fu).label('fu_o_s_v1'),
-        solo_v1(SetterDailyStats.link_fu).label('fu_l_s_v1'),
         solo_v1(SetterDailyStats.agenda_fu).label('fu_a_s_v1'),
-        solo_v1(SetterDailyStats.qualification_fu + SetterDailyStats.pain_fu + SetterDailyStats.offer_fu
-                + SetterDailyStats.link_fu + SetterDailyStats.agenda_fu).label('total_fu_s_v1'),
         solo_v1(SetterDailyStats.qualification_opening_submitted).label('q_op_s_v1'),
         solo_v1(SetterDailyStats.pain_opening_submitted).label('p_op_s_v1'),
         solo_v1(SetterDailyStats.offer_opening_submitted).label('o_op_s_v1'),
@@ -637,16 +634,18 @@ def _compute_setter_stats(start_date_str, end_date_str, setter_id, agg_type):
                 "not_lead": div(float(stats.not_lead or 0), entrantes),
                 "inabribles": div(float(stats.inabribles or 0), entrantes)
             },
-            # Las respuestas solo las mide el v1: cada tasa, sobre los envíos de esos reportes.
+            # Las respuestas a aperturas y al follow-up post-agenda solo las mide el v1: esas tasas,
+            # sobre los envíos de esos reportes. Las de los follow-ups de las cuatro etapas las
+            # miden los dos formularios (el v2 no carga follow-ups post-agenda: el total también).
             "rates": {
                 "opening_response": div(float(stats.op_res or 0), float(stats.op_sub_v1 or 0)),
                 "opening_rate": div(float(stats.leads or 0), float(stats.entrantes or 0)),
-                "qualification_fur": div(float(stats.fu_q_r or 0), float(stats.fu_q_s_v1 or 0)),
-                "pain_fur": div(float(stats.fu_p_r or 0), float(stats.fu_p_s_v1 or 0)),
-                "offer_fur": div(float(stats.fu_o_r or 0), float(stats.fu_o_s_v1 or 0)),
-                "link_fur": div(float(stats.fu_l_r or 0), float(stats.fu_l_s_v1 or 0)),
+                "qualification_fur": div(float(stats.fu_q_r or 0), float(stats.fu_q_s or 0)),
+                "pain_fur": div(float(stats.fu_p_r or 0), float(stats.fu_p_s or 0)),
+                "offer_fur": div(float(stats.fu_o_r or 0), float(stats.fu_o_s or 0)),
+                "link_fur": div(float(stats.fu_l_r or 0), float(stats.fu_l_s or 0)),
                 "agenda_fur": div(float(stats.fu_a_r or 0), float(stats.fu_a_s_v1 or 0)),
-                "total_fur": div(float(stats.total_fu_r or 0), float(stats.total_fu_s_v1 or 0)),
+                "total_fur": div(float(stats.total_fu_r or 0), float(stats.total_fu_s or 0)),
                 "qualification_opening_rate": div(float(stats.q_op_r or 0), float(stats.q_op_s_v1 or 0)),
                 "pain_opening_rate": div(float(stats.p_op_r or 0), float(stats.p_op_s_v1 or 0)),
                 "offer_opening_rate": div(float(stats.o_op_r or 0), float(stats.o_op_s_v1 or 0)),

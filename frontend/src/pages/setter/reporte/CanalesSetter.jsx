@@ -96,7 +96,7 @@ const CanalesSetter = ({ stats, promedio = false, comparar = false }) => {
                         <>Además, {fmtInt(pc.sin_canal.entrantes)} entrantes y {fmtInt(pc.sin_canal.agendas)} agendas
                             de {v1} {v1 === 1 ? 'reporte' : 'reportes'} del formulario anterior, sin canal. </>
                     )}
-                    {n > 0 && 'Las tasas de respuesta (aperturas y follow-ups) de arriba se miden solo con el formulario anterior: el nuevo no las pide.'}
+                    {n > 0 && 'La respuesta a aperturas de arriba se mide solo con el formulario anterior: el nuevo no la pide.'}
                 </p>
             )}
         </section>

@@ -1,9 +1,10 @@
 """La Vista General de /admin/ventas › Setters con reportes v1 y v2 mezclados.
 
 Un v2 sigue llenando los totales del v1 (`setter_reporte_v2.escribir`), así que entrantes,
-cualificados, embudo y agendas suman los dos. Lo que el v2 no pide son las RESPUESTAS (a aperturas
-y a follow-ups): cada tasa de respuesta se calcula solo con los reportes v1, que son los que la
-miden. Y `por_canal` trae lo nuevo del v2.
+cualificados, embudo y agendas suman los dos. Lo que el v2 no pide son las respuestas a las
+APERTURAS: esa tasa se calcula solo con los reportes v1, que son los que la miden. Las respuestas a
+los follow-ups las piden los dos desde el 11/10/2026 y suman los dos. Y `por_canal` trae lo nuevo
+del v2.
 """
 from datetime import date
 
@@ -29,6 +30,7 @@ def v2_del_dia(dia, setter_id):
     datos['bienvenidas'].update(hechas=12, respondidas=5, aperturas=4)
     datos['embudo'].update(dolor=10, oferta=7, link=5)
     datos['followups'].update(entrantes=9, dolor=5, oferta=3, link=3)
+    datos['followups_respondidos'].update(entrantes=4, dolor=2, oferta=1, link=1)
     return rv2.escribir(SetterDailyStats(setter_id=setter_id, date=dia), datos)
 
 
@@ -66,11 +68,13 @@ def test_los_totales_suman_los_dos_formularios(client, equipo, mezcla, auth_head
 def test_las_tasas_de_respuesta_solo_miran_los_reportes_que_la_miden(client, equipo, mezcla, auth_headers):
     p = stats(client, auth_headers, equipo['directora'])['percentages']
 
-    # Solo el v1: 10 respondidas de 20 aperturas; 5 respuestas de 10 follow-ups.
+    # Aperturas, solo el v1: 10 respondidas de 20 aperturas.
     assert p['rates']['opening_response'] == 50.0
-    assert p['rates']['total_fur'] == 50.0
-    assert p['rates']['qualification_fur'] == 50.0
     assert p['rates']['qualification_opening_rate'] == 40.0
+    # Follow-ups, los dos: (4 + 1) + (4 + 2 + 1 + 1) = 13 respuestas de 10 + 20 follow-ups.
+    assert p['rates']['total_fur'] == round(13 / 30 * 100, 2)
+    assert p['rates']['qualification_fur'] == round(8 / 17 * 100, 2)
+    assert p['rates']['link_fur'] == round(1 / 3 * 100, 2)
     # Sin mezclar: 2 agendas del v1 sobre sus 10 aperturas respondidas.
     assert p['conversions_to_agenda']['opening_to_agenda'] == 20.0
     # Lo que no depende de respuestas suma todo: 27 cualificados de 36 entrantes; 5 agendas / 27.

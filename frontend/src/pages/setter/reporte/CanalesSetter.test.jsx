@@ -42,7 +42,7 @@ describe('CanalesSetter', () => {
         render(<CanalesSetter stats={{ por_canal: porCanal(), reportes_por_version: { v1: 1, v2: 2 } }} />);
 
         expect(screen.getByText(/30 entrantes y 3 agendas de 1 reporte del formulario anterior, sin canal/)).toBeInTheDocument();
-        expect(screen.getByText(/se miden solo con el formulario anterior/)).toBeInTheDocument();
+        expect(screen.getByText(/se mide solo con el formulario anterior/)).toBeInTheDocument();
     });
 
     it('con promedio, los conteos son por reporte (las tasas no cambian)', () => {
