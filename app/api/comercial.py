@@ -452,3 +452,6 @@ def reportes():
     except (TypeError, ValueError):
         miembro_id = None
     return jsonify(reporte.historial(miembro_id)), 200
+
+
+from app.api import comercial_agendas_lote  # noqa: E402,F401  (Editar en lote desde Revisar, 10/10/2026)
