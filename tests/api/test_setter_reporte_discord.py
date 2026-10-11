@@ -55,6 +55,7 @@ def reporte_v2(setter_id, **cambios):
         'bienvenidas': {'hechas': 12, 'respondidas': 5, 'aperturas': 4},
         'embudo': {'dolor': 10, 'oferta': 7, 'link': 5},
         'followups': {'entrantes': 9, 'dolor': 5, 'oferta': 3, 'link': 3},
+        'followups_respondidos': {'entrantes': 4, 'dolor': 2, 'oferta': 1, 'link': 1},
         'reflexion': {'flujo_trabajo': 'Abrí 40 conversaciones', 'win_del_dia': 'Una fría agendó'},
     }
     datos.update(cambios)
@@ -87,6 +88,7 @@ def test_el_v2_sale_por_canal_con_su_tarjeta(client, elias, auth_headers, enviad
     assert '👋 **Bienvenidas:** 12 hechas · 5 respondidas (41,7%) · 4 aperturas' in texto
     assert '🔻 **Embudo:** Cualificados 14 → Dolor 10 → Oferta 7 → Link 5 → Agendas 3' in texto
     assert '🔁 **Follow-ups:** 20 (Entrantes 9 · Dolor 5 · Oferta 3 · Link 3)' in texto
+    assert '↩️ **Respondieron:** 8 (40%) · Entrantes 4 · Dolor 2 · Oferta 1 · Link 1' in texto
     assert '🧭 **Flujo de trabajo:** Abrí 40 conversaciones' in texto
     assert '🏆 **Win del día:** Una fría agendó' in texto
     assert 'Avisos' not in texto
@@ -99,6 +101,15 @@ def test_los_avisos_del_reporte_van_en_el_mensaje(client, elias, auth_headers, e
     client.post(URL, json=datos, headers=auth_headers(elias))
 
     assert '⚠️ **Avisos:** Oferta supera a dolor (10)' in contenido(enviados['salidas'][0])['content']
+
+
+def test_respondieron_de_mas_va_en_los_avisos(client, elias, auth_headers, enviados):
+    datos = reporte_v2(elias.id)
+    datos['followups_respondidos']['oferta'] = 4
+
+    client.post(URL, json=datos, headers=auth_headers(elias))
+
+    assert 'Oferta: más respuestas que follow-ups (3)' in contenido(enviados['salidas'][0])['content']
 
 
 def test_sin_tarjeta_el_reporte_sale_igual_en_texto(client, elias, auth_headers, enviados, monkeypatch):
@@ -153,9 +164,11 @@ def test_la_tarjeta_v2_se_dibuja_con_sus_datos(app, db, elias):
     assert datos['kpis']['cualificacion'] == '87,5%'
     assert datos['promedio'] == {'reportes': 1, 'entrantes': '20', 'cualificacion': '50%', 'agendas': '4'}
     assert [c['nombre'] for c in datos['canales']] == ['Anuncios', 'Inbound']
+    assert (datos['followups']['total'], datos['followups']['respondidos'], datos['followups']['respuesta']) == (20, 8, '40%')
     assert 'Elias' in html and 'Anuncios' in html and 'Bienvenidas' in html
     assert html.count('<svg class="flujo"') == 5
     assert 'Una fría agendó' in html
+    assert 'respuesta · 8 de 20' in html
 
 
 def test_el_embudo_marca_en_ambar_una_conversion_de_mas_de_100():

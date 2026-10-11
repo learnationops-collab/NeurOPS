@@ -170,8 +170,9 @@ body{width:1200px;font-family:'Montserrat','Helvetica Neue',Arial,sans-serif;col
   <div class="vidrio bloque" style="--c:var(--ch-tot)">
     <div class="col-cab">
       <span class="chip chip--canal" style="--c:var(--ch-tot)"><i class="punto mix"></i>Follow-ups</span>
+      <span class="ley"><span><i style="--c:color-mix(in srgb,var(--ch-tot) 38%,transparent)"></i>Sin respuesta</span><span><i style="--c:var(--ch-tot)"></i>Respondieron</span></span>
     </div>
-    <div class="grande" style="--c:var(--ch-tot)"><b>{{ followups.total }}</b><span>follow-ups</span></div>
+    <div class="grande" style="--c:var(--ch-tot)"><b>{{ followups.respuesta }}</b><span>respuesta · {{ followups.respondidos }} de {{ followups.total }}</span></div>
     {{ followups.svg }}
   </div>
 </section>

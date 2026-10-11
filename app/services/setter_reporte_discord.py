@@ -154,7 +154,9 @@ def datos_de_la_imagen(stat):
         })
     max_b = max(1, b['hechas'], b['respondidas'], b['aperturas'])
     etapas = [e['cualificados'], e['dolor'], e['oferta'], e['link'], e['agendas']]
-    max_fu = max(1, *fu.values())
+    resp = lectura['followups_respondidos']
+    max_fu = max(1, *fu.values(), *resp.values())
+    etapas_fu = ('entrantes', 'dolor', 'oferta', 'link')
     suma_ent = canales['anuncios']['entrantes'] + canales['inbound']['entrantes']
     suma_ag = canales['anuncios']['agendas'] + canales['inbound']['agendas']
     return {
@@ -191,10 +193,13 @@ def datos_de_la_imagen(stat):
                              convs=[pct(etapas[i], etapas[i - 1]) for i in range(1, 5)], fb=76, fg=150, tot=True,
                              id_grad='ge'),
         },
+        # Cada barra es lo enviado: la parte clara, los que no respondieron; la llena, los que sí.
         'followups': {
-            **fu, 'total': sum(fu.values()),
-            'svg': flujo_svg([{'n': 'Entrantes'}, {'n': 'Dolor'}, {'n': 'Oferta'}, {'n': 'Link'}],
-                             [fu['entrantes'], fu['dolor'], fu['oferta'], fu['link']], max_fu, COLOR['tot'],
+            **fu, 'total': sum(fu.values()), 'respondidos': sum(resp.values()),
+            'respuesta': fmt_pct(pct(sum(resp.values()), sum(fu.values()))),
+            'svg': flujo_svg([{'n': 'Entrantes', 'split': True}, {'n': 'Dolor', 'split': True},
+                              {'n': 'Oferta', 'split': True}, {'n': 'Link', 'split': True}],
+                             [(max(0, fu[k] - resp[k]), resp[k]) for k in etapas_fu], max_fu, COLOR['tot'],
                              fb=70, fg=60, bandas=False, tot=True, id_grad='gf'),
         },
         'reflexion': lectura['reflexion'],
@@ -220,6 +225,7 @@ def texto_de_discord(stat, setter_name):
     b = lectura['bienvenidas']
     e = lectura['embudo']
     fu = lectura['followups']
+    resp = lectura['followups_respondidos']
     lineas = [
         f"📥 **Entrantes:** {tot['entrantes']} · Anuncios {ads['entrantes']} · Inbound {inb['entrantes']}",
         f"✅ **Cualificación:** {fmt_pct(pct(tot['cualificados'], tot['entrantes']))} "
@@ -234,6 +240,8 @@ def texto_de_discord(stat, setter_name):
         f" → Link {e['link']} → Agendas {e['agendas']}",
         f"🔁 **Follow-ups:** {sum(fu.values())} (Entrantes {fu['entrantes']} · Dolor {fu['dolor']}"
         f" · Oferta {fu['oferta']} · Link {fu['link']})",
+        f"↩️ **Respondieron:** {sum(resp.values())} ({fmt_pct(pct(sum(resp.values()), sum(fu.values())))})"
+        f" · Entrantes {resp['entrantes']} · Dolor {resp['dolor']} · Oferta {resp['oferta']} · Link {resp['link']}",
     ]
     avisos = setter_reporte_v2.avisos(lectura)
     if avisos:
