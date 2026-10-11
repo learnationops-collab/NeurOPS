@@ -44,7 +44,7 @@ def _maybe_auto_archive_backlog():
     try:
         result = CloserService.archive_stale_backlog(days=_BACKLOG_SWEEP_DAYS)
         if result['count']:
-            print(f"[Auto Backlog Cleanup] {result['count']} citas archivadas como Lead Perdido (>{_BACKLOG_SWEEP_DAYS} días sin confirmar)")
+            print(f"[Auto Backlog Cleanup] {result['count']} citas archivadas sin reporte (>{_BACKLOG_SWEEP_DAYS} días sin confirmar)")
     except Exception as e:
         print(f"[Auto Backlog Cleanup Error] {e}")
 

@@ -92,7 +92,7 @@ const DatabaseTools = () => {
 
     const handleArchiveBacklog = async () => {
         const count = backlogPreview?.count ?? 0;
-        if (!window.confirm(`Se archivarán ${count} citas nunca confirmadas (más de ${backlogDays} días) como "Lead Perdido". Esto no borra ningún registro, solo las saca de las colas activas del closer. ¿Continuar?`)) return;
+        if (!window.confirm(`Se archivarán ${count} citas nunca confirmadas (más de ${backlogDays} días) como "Archivada sin reporte". Esto no borra ningún registro, solo las saca de las colas activas del closer. ¿Continuar?`)) return;
 
         setArchivingBacklog(true);
         try {
@@ -185,7 +185,7 @@ const DatabaseTools = () => {
                             <div className="space-y-2">
                                 <p className="text-sm font-bold text-sky-200 uppercase tracking-tight">Qué hace</p>
                                 <p className="text-xs text-sky-400/80 leading-relaxed font-medium">
-                                    Citas que nunca fueron confirmadas por el closer y cuya fecha ya pasó hace más del umbral configurado se marcan como <span className="text-sky-300 font-black">"Lead Perdido"</span> para que dejen de acumularse invisibles en el mazo. No borra ningún registro — solo las saca de las colas activas. También corre automáticamente en segundo plano cada pocas horas, así que en uso normal no debería ser necesario ejecutarla manualmente.
+                                    Citas que nunca fueron confirmadas por el closer y cuya fecha ya pasó hace más del umbral configurado se marcan como <span className="text-sky-300 font-black">"Archivada sin reporte"</span> para que dejen de acumularse invisibles en el mazo. No borra ningún registro — solo las saca de las colas activas. También corre automáticamente en segundo plano cada pocas horas, así que en uso normal no debería ser necesario ejecutarla manualmente.
                                 </p>
                             </div>
                         </div>
@@ -233,7 +233,7 @@ const DatabaseTools = () => {
                             <p className="text-xs font-bold text-sky-300/80 uppercase tracking-widest px-1">
                                 {backlogPreview.count === 0
                                     ? "No hay citas pendientes de archivar con ese umbral."
-                                    : `${backlogPreview.count} citas se archivarían como "Lead Perdido".`}
+                                    : `${backlogPreview.count} citas se archivarían como "Archivada sin reporte".`}
                             </p>
                         )}
                     </div>

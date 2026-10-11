@@ -825,7 +825,7 @@ def generate_mock_data():
 def backlog_cleanup():
     """Herramienta de limpieza del backlog de citas nunca confirmadas (ver bitácora
     del 4 de agosto de 2026). GET = previsualización (dry run, no modifica nada).
-    POST = ejecución real, archiva como 'Lead Perdido'."""
+    POST = ejecución real, archiva como 'Archivada sin reporte'."""
     from app.services.closer_service import CloserService
 
     days = request.args.get('days', 30, type=int) if request.method == 'GET' else (request.get_json() or {}).get('days', 30)
@@ -843,7 +843,7 @@ def backlog_cleanup():
             **result
         }), 200
     return jsonify({
-        "message": f"{result['count']} citas archivadas como 'Lead Perdido' por antigüedad (más de {days} días sin confirmar).",
+        "message": f"{result['count']} citas archivadas como 'Archivada sin reporte' por antigüedad (más de {days} días sin confirmar).",
         **result
     }), 200
 

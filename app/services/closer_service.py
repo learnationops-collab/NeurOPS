@@ -665,8 +665,11 @@ class CloserService:
     # Resultados de llamada que se consideran "sin reportar o mal reportados" y que una venta
     # registrada contradice: si el lead compró, esa llamada la tomó. 'Show up' no está en la
     # lista (ya es correcto) y 'Cancelado'/'Reagendado' tampoco: esas citas efectivamente no
-    # ocurrieron — la venta salió de OTRA llamada, no de la que se canceló.
-    RESULTS_OVERRIDABLE_BY_SALE = {'', 'pendiente', 'no show', '2da call'}
+    # ocurrieron — la venta salió de OTRA llamada, no de la que se canceló. 'Archivada sin
+    # reporte' sí: es una llamada que nadie reportó, la cerró el barrido de los 30 días y no un
+    # closer (es lo que `corregir_archivados_con_pago.py` corrige a mano para atrás). 'Lead
+    # Perdido' no, porque lo decidió un closer.
+    RESULTS_OVERRIDABLE_BY_SALE = {'', 'pendiente', 'no show', '2da call', 'archivada sin reporte'}
 
     # Cuánto antes del inicio agendado de una llamada puede registrarse su venta y seguir contando
     # como "la venta de esa llamada": la hora agendada y la real no siempre coinciden.
@@ -2566,10 +2569,14 @@ class CloserService:
     def archive_stale_backlog(days=30, dry_run=False, limit=None):
         """Archiva citas que nunca fueron confirmadas (result/closer_result siguen en
         'Pendiente'/vacío, closer_processed=False) y cuya fecha ya pasó hace más de
-        `days` días. Las marca como 'Lead Perdido' (mismo estado terminal que usa un
-        closer al descartar manualmente un lead, vía CloserService.process_agenda),
-        para que dejen de acumularse invisibles fuera de la ventana de "Confirmaciones"
-        del mazo del closer sin perder el registro histórico de la cita.
+        `days` días. Las marca como 'Archivada sin reporte' (`ARCHIVADA_SIN_REPORTE`), un
+        estado terminal propio, para que dejen de acumularse invisibles fuera de la ventana de
+        "Confirmaciones" del mazo del closer sin perder el registro histórico de la cita.
+
+        Hasta el 10/10/2026 las marcaba 'Lead Perdido', el mismo estado con el que un closer
+        descarta un lead (vía CloserService.process_agenda), y en las listas no había forma de
+        distinguir una cosa de la otra. Se tratan igual —terminal, descartada, mismo grupo en
+        las métricas—; solo cambia el nombre, que dice quién la cerró y por qué.
 
         Corte por fecha en UTC absoluto (no por zona horaria de cada closer): es un
         barrido de mantenimiento en segundo plano, no una vista para el usuario, así
@@ -2592,9 +2599,11 @@ class CloserService:
         if dry_run:
             return {"count": len(archived_ids), "ids": archived_ids[:50], "dry_run": True}
 
-        note = f"[Sistema] Archivado automáticamente: sin confirmar ni procesar tras {days}+ días desde su fecha."
+        from app.services.closer_agendas_service import ARCHIVADA_SIN_REPORTE, NOTA_ARCHIVADA
+
+        note = f"{NOTA_ARCHIVADA}: sin confirmar ni procesar tras {days}+ días desde su fecha."
         for appt in appointments:
-            appt.closer_result = 'Lead Perdido'
+            appt.closer_result = ARCHIVADA_SIN_REPORTE
             appt.closer_processed = True
             appt.seguimiento_realizado = True
             appt.closer_notes = f"{appt.closer_notes}\n{note}".strip() if appt.closer_notes else note

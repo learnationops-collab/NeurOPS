@@ -1,5 +1,6 @@
 """Corrige citas que el barrido automático de backlog (CloserService.archive_stale_backlog)
-marcó 'Lead Perdido' por no haberse confirmado/procesado a tiempo, pero cuyo cliente en
+marcó 'Lead Perdido' (desde el 10/10/2026, 'Archivada sin reporte') por no haberse
+confirmado/procesado a tiempo, pero cuyo cliente en
 realidad SÍ tiene un pago real registrado (FinancialSale) — si pagó, necesariamente asistió,
 así que quedó mal marcado como perdido por un barrido de mantenimiento que no tenía forma de
 saber que el lead convirtió por fuera del flujo normal de la app.
@@ -41,6 +42,9 @@ else:
 from app import create_app, db
 
 ARCHIVE_NOTE_MARKER = "Archivado automáticamente"
+# Desde el 10/10/2026 el barrido deja 'Archivada sin reporte' (y la migración a3f6c9e2b815 pasó a
+# ese estado las que había dejado como 'Lead Perdido'). Se buscan los dos por si queda alguna vieja.
+ARCHIVED_RESULTS = ('Archivada sin reporte', 'Lead Perdido')
 
 
 def corregir_archivados_con_pago(apply=False):
@@ -52,11 +56,11 @@ def corregir_archivados_con_pago(apply=False):
         system_author = User.query.filter_by(role='admin').first() or User.query.first()
 
         candidatos = Appointment.query.filter(
-            Appointment.closer_result == 'Lead Perdido',
+            Appointment.closer_result.in_(ARCHIVED_RESULTS),
             Appointment.closer_notes.ilike(f'%{ARCHIVE_NOTE_MARKER}%')
         ).all()
 
-        print(f"--- Citas archivadas automáticamente como 'Lead Perdido': {len(candidatos)} ---")
+        print(f"--- Citas archivadas automáticamente por el barrido: {len(candidatos)} ---")
 
         afectadas = []
         for appt in candidatos:
@@ -75,13 +79,14 @@ def corregir_archivados_con_pago(apply=False):
 
         note = "[Corrección manual] El cliente sí tiene un pago real registrado (FinancialSale) — no era un lead perdido, quedó mal archivado por el barrido automático de backlog sin haberse procesado dentro de la app."
         for appt in afectadas:
+            antes = appt.closer_result
             appt.closer_result = 'Show up'
             appt.closer_notes = f"{appt.closer_notes}\n{note}".strip() if appt.closer_notes else note
             if system_author:
                 db.session.add(ClientComment(
                     client_id=appt.client_id,
                     author_id=system_author.id,
-                    text=f"Estado corregido: la cita #{appt.id} había quedado marcada 'Lead Perdido' por el archivado automático de backlog, pero el cliente sí tiene un pago real registrado. Se corrigió a 'Show up'."
+                    text=f"Estado corregido: la cita #{appt.id} había quedado marcada '{antes}' por el archivado automático de backlog, pero el cliente sí tiene un pago real registrado. Se corrigió a 'Show up'."
                 ))
 
         db.session.commit()
