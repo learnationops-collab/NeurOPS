@@ -255,6 +255,9 @@ GRUPO_DE_ESTADO = {
     'cancelo': 'sin_resultado',
     'lead_perdido': 'sin_resultado',
     'no_lead': 'sin_resultado',
+    # La que archivó el barrido de los 30 días: hasta el 10/10/2026 era un "Lead perdido" más, y en
+    # el mismo grupo sigue (cambió el nombre, no los números).
+    'archivada_sin_reporte': 'sin_resultado',
     'por_ocurrir': 'en_curso',
     'asistio': 'en_curso',
     'segunda_llamada': 'en_curso',
@@ -290,8 +293,10 @@ def estados_de(filas_agendas):
         else:
             orden.append(estado)
 
+    # `ayuda` es el tooltip del estado, en los que lo tienen (ver `POST_CALL`).
     return [{'key': e['key'], 'label': e['label'], 'tone': TONO_EN_PANEL.get(e['key'], e['tone']),
-             'n': conteo[e['key']], 'filtro': e['label'], 'grupo': GRUPO_DE_ESTADO[e['key']]}
+             'n': conteo[e['key']], 'filtro': e['label'], 'grupo': GRUPO_DE_ESTADO[e['key']],
+             **({'ayuda': e['ayuda']} if e.get('ayuda') else {})}
             for e in orden if conteo.get(e['key'])]
 
 
