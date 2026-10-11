@@ -357,7 +357,10 @@
   .rd .rd-campo2 .rd-k{letter-spacing:.1em}
   .rd .rd-campos--fu{grid-template-columns:auto repeat(2,minmax(0,1fr))}
   .rd .rd-fu-c{grid-column:var(--mc);grid-row:var(--mr)}
-  .rd .rd-fu-et,.rd .rd-fu-fila{letter-spacing:.1em}
+  .rd .rd-fu-et{letter-spacing:.1em}
+  /* «RESPONDIERON» y su "i" arriba de una columna de ~105 px: con el tracking de escritorio se salía. */
+  .rd .rd-fu-fila{letter-spacing:0;gap:4px;padding-right:0}
+  .rd .rd-fu-fila .tip-dot{width:14px;height:14px;font-size:9px}
   .rd .rd-rcol .rd-rbody{flex-direction:column;align-items:stretch}
   .rd .rd-flujo-svg{min-height:150px;flex:none;height:150px}
   .rd .rd-kpis{grid-template-columns:repeat(2,minmax(0,1fr));padding:var(--s4)}

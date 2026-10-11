@@ -437,6 +437,9 @@
   display:inline-flex;align-items:center;justify-content:center;
   border:1px solid var(--border-subtle);background:var(--bg-input);
   color:var(--text-muted-40);font-size:10px;font-weight:900;cursor:help;
+  /* Dentro de un rótulo en mayúsculas espaciadas («TE QUEDAN», la tira de Revisar) heredaba el
+     uppercase y el tracking: se leía «I» y corrido. */
+  text-transform:none;letter-spacing:0;
   transition:color .16s ease,border-color .16s ease,background-color .16s ease}
 .dc-shell .tip:hover .tip-dot,
 .dc-shell .tip:focus-within .tip-dot{color:var(--text-on-surface);
