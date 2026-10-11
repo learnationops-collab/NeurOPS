@@ -6,7 +6,6 @@ import { PortalProvider, PortalRuta } from './sesion/PortalContext';
 import { roleLandingPath } from './utils/roleLanding';
 import MainLayout from './components/MainLayout';
 import AdminDashboard from './pages/admin/dashboard/AdminDashboard';
-import FinancialAnalysisPage from './pages/admin/reports/FinancialAnalysisPage';
 import LoginPage from './pages/auth/LoginPage';
 import CortexPage from './pages/auth/CortexPage';
 import SessionEntry from './pages/auth/SessionEntry';
