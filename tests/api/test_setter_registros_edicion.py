@@ -61,6 +61,8 @@ def _v2(db, setter_id):
     datos['inbound'].update(entrantes=6, inabribles=1, agendas=1)
     datos['bienvenidas'].update(hechas=12, respondidas=5)
     datos['embudo'].update(dolor=10, oferta=7, link=5)
+    datos['followups'].update(entrantes=8, dolor=4)
+    datos['followups_respondidos'].update(entrantes=3, dolor=1)
     stat = rv2.escribir(SetterDailyStats(setter_id=setter_id, date=date(2026, 10, 10)), datos)
     db.session.add(stat)
     db.session.commit()
@@ -78,8 +80,10 @@ def test_el_listado_dice_la_version_y_trae_los_canales(client, db, directora, fi
     assert r['version'] == 2
     assert r['v2']['canales']['anuncios']['agendas'] == 2
     assert r['v2']['bienvenidas']['hechas'] == 12
-    # Las columnas de siempre, con los totales que llenó el v2.
+    # Las columnas de siempre, con los totales que llenó el v2: también los follow-ups respondidos.
     assert (r['entrantes'], r['leads'], r['fun_agenda']) == (16, 14, 3)
+    assert (r['qualification_fu'], r['qualification_fur'], r['pain_fur']) == (8, 3, 1)
+    assert r['v2']['followups_respondidos'] == {'entrantes': 3, 'dolor': 1, 'oferta': 0, 'link': 0}
 
 
 def test_un_v2_se_edita_por_canal_y_los_totales_lo_siguen(client, db, directora, fila, auth_headers):
@@ -95,6 +99,19 @@ def test_un_v2_se_edita_por_canal_y_los_totales_lo_siguen(client, db, directora,
     assert (g.ads_entrantes, g.funnel_pain) == (10, 10)
     assert (g.inbox_entrantes, g.funnel_agenda, g.inbox_leads) == (19, 2, 17)
     assert r.get_json()['reporte']['canales']['inbound']['cualificados'] == 8
+
+
+def test_un_v2_edita_sus_follow_ups_respondidos(client, db, directora, fila, auth_headers):
+    nuevo = _v2(db, fila.setter_id)
+
+    r = client.put(f'/api/public/setter-reports/{nuevo.id}', headers=auth_headers(directora),
+                   json={'version': 2, 'followups_respondidos': {'dolor': 4, 'otra': 9}})
+
+    assert r.status_code == 200
+    g = SetterDailyStats.query.get(nuevo.id)
+    # Lo que no vino queda (entrantes 3); una clave desconocida no entra.
+    assert (g.qualification_fur, g.pain_fur) == (3, 4)
+    assert r.get_json()['reporte']['followups_respondidos']['dolor'] == 4
 
 
 def test_un_v2_no_se_edita_por_sus_totales(client, db, directora, fila, auth_headers):

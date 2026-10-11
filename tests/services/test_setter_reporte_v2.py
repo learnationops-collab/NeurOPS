@@ -16,6 +16,7 @@ def _payload():
     datos['bienvenidas'].update(hechas=12, respondidas=5, aperturas=4)
     datos['embudo'].update(dolor=10, oferta=7, link=5)
     datos['followups'].update(entrantes=9, dolor=5, oferta=3, link=3)
+    datos['followups_respondidos'].update(entrantes=4, dolor=2, oferta=1, link=0)
     datos['reflexion'].update(flujo_trabajo='Abrí 40 conversaciones', win_del_dia='Agendó una fría')
     return datos
 
@@ -33,6 +34,7 @@ def test_escribir_guarda_los_canales_y_marca_version_2():
     assert (stat.bnv_hechas, stat.bnv_respondidas, stat.bnv_aperturas) == (12, 5, 4)
     assert (stat.funnel_pain, stat.funnel_offer, stat.funnel_link) == (10, 7, 5)
     assert (stat.qualification_fu, stat.pain_fu, stat.offer_fu, stat.link_fu) == (9, 5, 3, 3)
+    assert (stat.qualification_fur, stat.pain_fur, stat.offer_fur, stat.link_fur) == (4, 2, 1, 0)
     assert stat.reflections == {'flujo_trabajo': 'Abrí 40 conversaciones', 'win_del_dia': 'Agendó una fría'}
 
 
@@ -63,8 +65,18 @@ def test_un_dia_del_v1_vuelto_a_mandar_con_el_v2_no_arrastra_lo_que_el_v2_no_pid
     for columna in rv2.SOLO_V1:
         assert getattr(stat, columna) == 0, columna
     assert stat.answers == {}
-    # Lo que el v2 sí carga queda con lo nuevo.
+    # Lo que el v2 sí carga queda con lo nuevo: también los respondidos de los follow-ups.
     assert (stat.qualification_fu, stat.pain_opening_submitted) == (9, 8)
+    assert (stat.qualification_fur, stat.pain_fur) == (4, 2)
+    assert 'qualification_fur' not in rv2.SOLO_V1
+
+
+def test_un_cliente_que_no_manda_respondidos_los_deja_en_cero():
+    datos = _payload()
+    del datos['followups_respondidos']
+    stat = rv2.escribir(_fila(qualification_fur=7, link_fur=2), datos)
+
+    assert (stat.qualification_fur, stat.pain_fur, stat.offer_fur, stat.link_fur) == (0, 0, 0, 0)
 
 
 def test_como_v1_saca_los_canales_y_la_marca_de_version():
@@ -97,6 +109,7 @@ def test_leer_un_v2_devuelve_canales_embudo_y_reflexion():
     assert lectura['totales']['cualificados'] == 14
     assert lectura['embudo'] == {'cualificados': 14, 'dolor': 10, 'oferta': 7, 'link': 5, 'agendas': 3}
     assert lectura['followups'] == {'entrantes': 9, 'dolor': 5, 'oferta': 3, 'link': 3}
+    assert lectura['followups_respondidos'] == {'entrantes': 4, 'dolor': 2, 'oferta': 1, 'link': 0}
     assert lectura['bienvenidas'] == {'hechas': 12, 'respondidas': 5, 'aperturas': 4}
     assert lectura['reflexion']['win_del_dia'] == 'Agendó una fría'
 
@@ -104,7 +117,7 @@ def test_leer_un_v2_devuelve_canales_embudo_y_reflexion():
 def test_leer_un_v1_no_inventa_canales():
     fila = _fila(report_version=1, inbox_entrantes=20, not_lead=2, inbox_inabribles=3,
                  funnel_qualification=15, inbox_leads=None, funnel_pain=8, funnel_agenda=2, pain_fu=4,
-                 reflections={'1': 'texto viejo'})
+                 pain_fur=3, agenda_fur=9, reflections={'1': 'texto viejo'})
     lectura = rv2.leer(fila)
 
     assert lectura['version'] == 1
@@ -114,6 +127,8 @@ def test_leer_un_v1_no_inventa_canales():
     assert lectura['totales']['cualificados'] == 13
     assert lectura['embudo']['dolor'] == 8
     assert lectura['followups']['dolor'] == 4
+    # El v1 ya guardaba los respondidos en las mismas columnas: vuelven igual (sin el post-agenda).
+    assert lectura['followups_respondidos'] == {'entrantes': 0, 'dolor': 3, 'oferta': 0, 'link': 0}
     assert lectura['reflexion'] == {'flujo_trabajo': '', 'win_del_dia': ''}
 
 
@@ -124,6 +139,7 @@ def test_a_formulario_vuelve_a_la_forma_de_vacio_y_escribe_lo_mismo():
     assert set(form) == set(rv2.vacio()) | {'is_non_working_day'}
     assert form['anuncios'] == _payload()['anuncios']
     assert form['embudo'] == {'dolor': 10, 'oferta': 7, 'link': 5}
+    assert form['followups_respondidos'] == {'entrantes': 4, 'dolor': 2, 'oferta': 1, 'link': 0}
     assert rv2.leer(rv2.escribir(_fila(), form)) == rv2.leer(stat)
 
 
@@ -154,14 +170,26 @@ def test_avisos_como_los_del_formulario():
     ]
 
 
+def test_aviso_si_respondieron_mas_que_los_follow_ups_enviados():
+    datos = _payload()
+    datos['followups_respondidos'].update(dolor=6, link=1)
+
+    avisos = rv2.avisos(rv2.leer(rv2.escribir(_fila(), datos)))
+
+    assert [(a['paso'], a['nivel'], a['msg']) for a in avisos] == [
+        ('followups', 'warn', 'Dolor: más respuestas que follow-ups (5)'),
+    ]
+
+
 def test_un_v1_no_tiene_avisos():
     assert rv2.avisos(rv2.leer(_fila(report_version=1, inbox_entrantes=1, not_lead=5))) == []
 
 
 def test_sumar_separa_lo_que_vino_sin_canal_y_salta_los_no_laborables():
     v2 = rv2.leer(rv2.escribir(_fila(), _payload()))
-    v1 = rv2.leer(_fila(report_version=1, inbox_entrantes=20, not_lead=2, inbox_leads=13, funnel_agenda=2))
-    libre = rv2.leer(_fila(report_version=1, is_non_working_day=True, inbox_entrantes=99))
+    v1 = rv2.leer(_fila(report_version=1, inbox_entrantes=20, not_lead=2, inbox_leads=13, funnel_agenda=2,
+                        qualification_fu=6, qualification_fur=3))
+    libre = rv2.leer(_fila(report_version=1, is_non_working_day=True, inbox_entrantes=99, qualification_fur=50))
 
     total = rv2.sumar([v2, v1, libre])
 
@@ -171,6 +199,9 @@ def test_sumar_separa_lo_que_vino_sin_canal_y_salta_los_no_laborables():
     assert total['sin_canal']['entrantes'] == 20
     assert total['embudo']['agendas'] == 5
     assert total['bienvenidas']['hechas'] == 12
+    # Los respondidos suman los dos formularios (el no laborable no entra).
+    assert total['followups']['entrantes'] == 15
+    assert total['followups_respondidos'] == {'entrantes': 7, 'dolor': 2, 'oferta': 1, 'link': 0}
 
 
 def test_la_fila_v2_se_guarda_en_la_base(db, make_user):

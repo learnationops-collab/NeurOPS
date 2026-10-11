@@ -946,7 +946,7 @@ def update_public_setter_report(report_id):
                 db.session.rollback()
                 return jsonify({"message": "Este reporte se cargó por canal: editalo por canal (version 2)."}), 409
             form = setter_reporte_v2.a_formulario(setter_reporte_v2.leer(stat))
-            for seccion in ('anuncios', 'inbound', 'bienvenidas', 'embudo', 'followups', 'reflexion'):
+            for seccion in ('anuncios', 'inbound', 'bienvenidas', 'embudo', 'followups', 'followups_respondidos', 'reflexion'):
                 if isinstance(data.get(seccion), dict):
                     form[seccion].update({k: v for k, v in data[seccion].items() if k in form[seccion]})
             if 'is_non_working_day' in data:
