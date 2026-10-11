@@ -21,7 +21,18 @@ const montar = () => {
 
 describe('AgendasBulkEditModal', () => {
     beforeEach(() => {
-        api.get.mockResolvedValue({ data: { fuentes: ['workshop'], closers: [], encargados_triage: [], estados: [] } });
+        api.get.mockResolvedValue({ data: { fuentes: ['workshop'], closers: [], estados: [] } });
+    });
+
+    // Call Confirmer se retiró el 10/10/2026: los closers confirman sus propias agendas.
+    it('ofrece Fuente, Closer y Estado pre call, y ya no Call Confirmer', async () => {
+        montar();
+        await screen.findByRole('button', { name: 'workshop' });
+        for (const campo of ['Fuente', 'Closer', 'Estado pre call']) {
+            expect(screen.getByRole('button', { name: campo })).toBeInTheDocument();
+        }
+        expect(screen.queryByRole('button', { name: 'Call Confirmer' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Sin asignar' })).not.toBeInTheDocument();
     });
 
     it('va en el cascarón compartido: portal a body, con Cancelar y Aplicar en el pie', async () => {

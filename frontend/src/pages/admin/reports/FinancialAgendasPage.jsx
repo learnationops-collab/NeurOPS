@@ -49,7 +49,6 @@ const POTENTIAL_EXPORT_COLUMNS = [
     { id: 'instagram', label: 'Instagram', getValue: (l) => l.instagram || '' },
     { id: 'nombre', label: 'Fuente', getValue: (l) => l.nombre || '' },
     { id: 'closer', label: 'Closer', getValue: (l) => l.closer || '' },
-    { id: 'encargado_triage', label: 'Call Confirmer', getValue: (l) => l.encargado_triage || '' },
     { id: 'estado', label: 'Estado Pre Call', getValue: (l) => l.estado || '' },
     { id: 'closer_result', label: 'Estado Post Call', getValue: (l) => l.closer_result || '' },
     { id: 'zona_geografica', label: 'Zona Geografica', getValue: (l) => l.zona_geografica || '' },
@@ -524,7 +523,6 @@ const FinancialAgendasPage = () => {
     const [sortedClosers, setSortedClosers] = useState([]);
     const [byCloserState, setByCloserState] = useState({});
     const [bySourceState, setBySourceState] = useState({});
-    const [byTriageState, setByTriageState] = useState({});
 
     const [uniqueStates, setUniqueStates] = useState([]);
     const [uniqueClosers, setUniqueClosers] = useState([]);
@@ -534,7 +532,6 @@ const FinancialAgendasPage = () => {
     // incluir nombres históricos para poder filtrar agendas viejas.
     const [activeClosers, setActiveClosers] = useState([]);
     const [uniqueSources, setUniqueSources] = useState([]);
-    const [uniqueTriage, setUniqueTriage] = useState([]);
     const [isSummaryMinimized, setIsSummaryMinimized] = useState(true);
     const [activeSummaryTab, setActiveSummaryTab] = useState('fuente');
 
@@ -549,7 +546,6 @@ const FinancialAgendasPage = () => {
         whatsapp: '',
         mail: '',
         estado: '',
-        encargado_triage: '',
         created_at: ''
     });
 
@@ -621,7 +617,6 @@ const FinancialAgendasPage = () => {
             whatsapp: agenda.whatsapp || '',
             mail: agenda.mail || '',
             estado: agenda.estado || 'Pendiente',
-            encargado_triage: agenda.encargado_triage || '',
             created_at: toDatetimeLocalValue(agenda.created_at)
         });
     };
@@ -649,7 +644,6 @@ const FinancialAgendasPage = () => {
                     estado: estado,
                     closer: closer,
                     fuente: fuente,
-                    encargado_triage: encargadoTriage,
                     date_filter_by: dateFilterBy,
                     closer_result: closer_result
                 });
@@ -758,19 +752,17 @@ const FinancialAgendasPage = () => {
         estado: '',
         closer: '',
         fuente: '',
-        encargadoTriage: '',
         dateFilterBy: 'meet',
         closer_result: ''
     });
 
-    const { searchTerm, startDate, endDate, estado, closer, fuente, encargadoTriage, dateFilterBy, closer_result } = filters;
+    const { searchTerm, startDate, endDate, estado, closer, fuente, dateFilterBy, closer_result } = filters;
     const setSearchTerm = (val) => setFilters({ searchTerm: val });
     const setStartDate = (val) => setFilters({ startDate: val });
     const setEndDate = (val) => setFilters({ endDate: val });
     const setEstado = (val) => setFilters({ estado: val });
     const setCloser = (val) => setFilters({ closer: val });
     const setFuente = (val) => setFilters({ fuente: val });
-    const setEncargadoTriage = (val) => setFilters({ encargadoTriage: val });
     const setDateFilterBy = (val) => setFilters({ dateFilterBy: val });
     const setCloserResult = (val) => setFilters({ closer_result: val });
 
@@ -781,8 +773,7 @@ const FinancialAgendasPage = () => {
         estado ? `Pre call: ${estado}` : null,
         closer_result ? `Post call: ${closer_result}` : null,
         closer ? `Closer: ${closer}` : null,
-        fuente ? `Fuente: ${fuente}` : null,
-        encargadoTriage ? `Call Confirmer: ${encargadoTriage}` : null
+        fuente ? `Fuente: ${fuente}` : null
     ].filter(Boolean);
 
     // Parámetros de filtro tal cual los espera el backend. Se reutilizan en el GET del
@@ -795,7 +786,6 @@ const FinancialAgendasPage = () => {
         estado: estado,
         closer: closer,
         fuente: fuente,
-        encargado_triage: encargadoTriage,
         date_filter_by: dateFilterBy,
         closer_result: closer_result
     };
@@ -911,13 +901,11 @@ const FinancialAgendasPage = () => {
 
                 setByCloserState(resData.by_closer_state || {});
                 setBySourceState(resData.by_source_state || {});
-                setByTriageState(resData.by_triage_state || {});
 
                 setUniqueStates(resData.unique_states || []);
                 setUniqueClosers(resData.unique_closers || []);
                 setActiveClosers(resData.active_closers || []);
                 setUniqueSources(resData.unique_sources || []);
-                setUniqueTriage(resData.unique_triage || []);
             } else {
                 setAgendas(prev => {
                     const existingIds = new Set(prev.map(a => a.id));
@@ -946,7 +934,7 @@ const FinancialAgendasPage = () => {
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, startDate, endDate, estado, closer, fuente, encargadoTriage, dateFilterBy, closer_result]);
+    }, [searchTerm, startDate, endDate, estado, closer, fuente, dateFilterBy, closer_result]);
 
     // Observador para scroll infinito
     useEffect(() => {
@@ -1124,16 +1112,8 @@ const FinancialAgendasPage = () => {
                         placeholder="Todas"
                     />
 
-                    {/* Selector de Triaje */}
-                    <MultiSelectPill
-                        label="Call Confirmer"
-                        options={['Sin Asignar', ...uniqueTriage]}
-                        value={encargadoTriage}
-                        onChange={setEncargadoTriage}
-                    />
-
                     {/* Botón para Limpiar todos los Filtros */}
-                    {(estado || closer || fuente || encargadoTriage || closer_result || searchTerm || startDate !== getFirstDayOfCurrentMonth() || endDate !== getTodayDate()) && (
+                    {(estado || closer || fuente || closer_result || searchTerm || startDate !== getFirstDayOfCurrentMonth() || endDate !== getTodayDate()) && (
                         <button
                             type="button"
                             onClick={() => setFilters({
@@ -1143,7 +1123,6 @@ const FinancialAgendasPage = () => {
                                 estado: '',
                                 closer: '',
                                 fuente: '',
-                                encargadoTriage: '',
                                 closer_result: ''
                             })}
                             className="p-3 bg-rose-600/10 border border-rose-500/20 hover:bg-rose-600 hover:text-white text-rose-400 rounded-2xl transition-all cursor-pointer shadow-sm shadow-rose-950/20"
@@ -1336,7 +1315,6 @@ const FinancialAgendasPage = () => {
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">F. Reunión</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Cliente</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Fuente</th>
-                                        <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Call Confirmer</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Closer</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-cyan-400/80 uppercase tracking-widest text-center">Confirmación</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-violet-400/80 uppercase tracking-widest text-center">Resultado</th>
@@ -1464,30 +1442,6 @@ const FinancialAgendasPage = () => {
                                             </td>
                                             <td className="py-4 px-4">
                                                 <select
-                                                    value={agenda.encargado_triage || ''}
-                                                    onChange={async (e) => {
-                                                        const nuevoTriage = e.target.value;
-                                                        try {
-                                                            const response = await api.put(`/public/financial-agendas/${agenda.id}`, { encargado_triage: nuevoTriage });
-                                                            const updated = response.data.agenda;
-                                                            setAgendas(prev => prev.map(a => a.id === updated.id ? updated : a));
-                                                        } catch (err) {
-                                                            console.error("Error updating agenda triage in-line:", err);
-                                                            alert("Error al actualizar el encargado de triage");
-                                                        }
-                                                    }}
-                                                    className={`rounded-lg px-2 py-1 text-[9px] font-black uppercase tracking-wider border cursor-pointer outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all text-left bg-slate-950 text-slate-350 border-slate-800 hover:bg-slate-900/60
-                                                        ${agenda.encargado_triage ? 'bg-slate-900 text-slate-200 border-slate-800' : 'bg-slate-950/20 text-slate-500 border-dashed border-slate-850'}
-                                                    `}
-                                                >
-                                                    <option value="" className="bg-slate-900 text-slate-500 font-semibold">Sin Asignar</option>
-                                                    {uniqueTriage.map(tg => (
-                                                        <option key={tg} value={tg} className="bg-slate-900 text-white font-semibold">{tg}</option>
-                                                    ))}
-                                                </select>
-                                            </td>
-                                            <td className="py-4 px-4">
-                                                <select
                                                     value={agenda.closer || ''}
                                                     onChange={async (e) => {
                                                         const nuevoCloser = e.target.value;
@@ -1513,7 +1467,7 @@ const FinancialAgendasPage = () => {
                                                     ))}
                                                 </select>
                                             </td>
-                                            {/* COLUMNA: Confirmación del Call Confirmer (estado) */}
+                                            {/* COLUMNA: Confirmación (estado pre call) */}
                                             <td className="py-4 px-4 text-center">
                                                 {(() => {
                                                     // El operador es dueño de esta pestaña desde el 20/08/2026, así que edita igual que el admin
@@ -1620,7 +1574,7 @@ const FinancialAgendasPage = () => {
                                     ))}
                                     {agendas.length === 0 && (
                                         <tr>
-                                            <td colSpan="10" className="py-20 text-center text-muted uppercase text-xs font-bold tracking-widest">
+                                            <td colSpan="9" className="py-20 text-center text-muted uppercase text-xs font-bold tracking-widest">
                                                 No se encontraron agendas
                                             </td>
                                         </tr>
@@ -1769,21 +1723,9 @@ const FinancialAgendasPage = () => {
                                 ))}
                             </select>
                         </div>
+                        {/* Octavo campo: hace pareja con Estado, así las dos columnas cierran parejas
+                            (sin el Call Confirmer, retirado el 10/10/2026, ya no queda uno suelto). */}
                         <div className="space-y-1.5">
-                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Call Confirmer</label>
-                            <select 
-                                className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-semibold cursor-pointer"
-                                value={editForm.encargado_triage || ''}
-                                onChange={e => setEditForm({...editForm, encargado_triage: e.target.value})}
-                            >
-                                <option value="" className="bg-slate-900 text-slate-500">Sin Asignar</option>
-                                {uniqueTriage.map(tg => (
-                                    <option key={tg} value={tg} className="bg-slate-900 text-white">{tg}</option>
-                                ))}
-                            </select>
-                        </div>
-                        {/* El noveno campo ocupa la fila entera: suelto en media fila quedaba colgado. */}
-                        <div className="space-y-1.5 md:col-span-2">
                             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Registro (Sistema)</label>
                             <input 
                                 type="datetime-local"

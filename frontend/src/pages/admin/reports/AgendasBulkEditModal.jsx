@@ -8,7 +8,6 @@ import Modal from '../../../components/ui/Modal';
 const CAMPOS = [
     { id: 'nombre', label: 'Fuente', help: 'De dónde vino la agenda: el embudo o el setter que la generó.' },
     { id: 'closer', label: 'Closer', help: 'Quién atiende la llamada de venta.' },
-    { id: 'encargado_triage', label: 'Call Confirmer', help: 'Quién confirma la asistencia antes de la llamada.' },
     { id: 'estado', label: 'Estado pre call', help: 'Estado de confirmación. Cancelada y Reagendada no se pueden aplicar en lote porque cada una necesita su razón.' }
 ];
 
@@ -43,7 +42,6 @@ const AgendasBulkEditModal = ({ selectedIds, totalFiltradas, filterParams, filtr
         if (!options) return [];
         if (campo === 'nombre') return options.fuentes || [];
         if (campo === 'closer') return options.closers || [];
-        if (campo === 'encargado_triage') return options.encargados_triage || [];
         if (campo === 'estado') return options.estados || [];
         return [];
     }, [options, campo]);
@@ -205,15 +203,6 @@ const AgendasBulkEditModal = ({ selectedIds, totalFiltradas, filterParams, filtr
                                     {v}
                                 </button>
                             ))}
-                            {campo === 'encargado_triage' && (
-                                <button
-                                    type="button"
-                                    onClick={() => setValor('')}
-                                    className="px-3 py-2 rounded-xl text-[10px] font-bold border bg-slate-950 border-dashed border-slate-700 text-slate-500 hover:text-white cursor-pointer"
-                                >
-                                    Sin asignar
-                                </button>
-                            )}
                         </div>
                         {campo === 'nombre' && (
                             <input
