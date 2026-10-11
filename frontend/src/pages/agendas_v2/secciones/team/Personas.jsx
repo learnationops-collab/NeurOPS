@@ -147,7 +147,7 @@ function Persona({ p, ordenable, borrando, setBorrando, sinCuenta, sinCalendar, 
 
 export default function Personas() {
     const { d } = useDatos();
-    const { sim, puede } = usePermisos();
+    const { sim, puede, lectura } = usePermisos();
     const [borrando, setBorrando] = useState(null);
     const ps = ord(d, 'personas');
     const ids = ps.map(p => p.id);
@@ -157,7 +157,8 @@ export default function Personas() {
     }, []);
     const { contenedor: ordenCont, ...orden } = useOrdenable(ids, reordenar);
     const sumar = puede('team.sumar');
-    const usuarios = useUsuariosReales();
+    // En solo lectura no se suma a nadie ni se marca lo que le falta a cada uno: no se piden las cuentas.
+    const usuarios = useUsuariosReales(!lectura);
     const reales = almacen.adaptador.tipo === 'api';
     const enTeam = conEmail(ps);
     const disponibles = (usuarios || []).filter(u => u.email && !enTeam.has(u.email.toLowerCase()));
@@ -197,10 +198,10 @@ export default function Personas() {
         <Compo vacio={!ps.length} tit="Sumar persona" soloTit="Sumá a tu equipo" ph="Nombre, ej. Giancarlo" onCrear={crear}
             nav={!!sim && sumar} bloqueado={!!sim && !sumar} />
     );
-    if (!ps.length) return compo;
+    if (!ps.length) return lectura ? <div className="panel vacio"><p className="t-sm mut">Todavía no hay nadie en Team.</p></div> : compo;
     return (
         <>
-            {compo}
+            {!lectura && compo}
             <div className="columna" style={{ width: '100%' }}>
                 <div className="lista" ref={ordenCont}>
                     {porIdsOrden(ps, orden.lista).map(p => (

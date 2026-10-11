@@ -20,15 +20,17 @@ export function useIniciarAlmacen() {
     }, []);
 }
 
-// Permisos del rol simulado (sin simulación, todo permitido).
+// Permisos del rol simulado (sin simulación, todo permitido). `lectura`: la sesión solo mira (el
+// setter, lo dice el servidor): puede ver cada sección y nada más.
 export function usePermisos() {
-    const { d, perfil } = useDatos();
+    const { d, perfil, lectura } = useDatos();
     const { sim } = useUi();
     return useMemo(() => ({
         sim,
-        puede: (k) => _puede(d, sim, k),
+        lectura,
+        puede: (k) => (lectura ? k.endsWith('.ver') : _puede(d, sim, k)),
         secOk: (id) => secOk(d, sim, perfil, id),
         yo: _yoPersona(d, sim, perfil),
         modoCloser: _modoCloser(d, sim, perfil),
-    }), [d, sim, perfil]);
+    }), [d, sim, perfil, lectura]);
 }

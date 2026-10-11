@@ -1,6 +1,7 @@
 // Estado de los datos de Thalamus: colecciones, perfil, integraciones y reservas.
 // Las ediciones se ven al instante y se guardan en una pausa de 600 ms. Ctrl+Z deshace con un
 // historial de 80 cambios. El estado es inmutable para que React detecte los cambios.
+// `lectura` (lo manda el servidor: el setter, 10/10/2026): ninguna escritura cambia nada ni sale.
 
 import { conFormAlDia } from '../core/eventos';
 import { COLECCIONES, NORM, normalInteg, normalPerfil } from '../core/normalizar';
@@ -29,6 +30,7 @@ export function crearAlmacen(adaptador, { avisar = () => {} } = {}) {
         perfil: normalPerfil(null),
         integ: normalInteg(null),
         reservas: [],
+        lectura: false,
     };
     const subs = new Set();
     const pend = {};
@@ -41,8 +43,13 @@ export function crearAlmacen(adaptador, { avisar = () => {} } = {}) {
     const setCol = (col, arr) => set({ d: { ...estado.d, [col]: arr } });
     const buscar = (col, id) => estado.d[col].find(x => x.id === id);
     const fallo = (e) => avisar(msgError(e), 'error');
+    // En solo lectura la pantalla ya no ofrece cambiar nada; si algo se escapa, se avisa y no se toca.
+    const soloLectura = () => {
+        if (estado.lectura) avisar('Solo lectura: lo configura la dirección comercial.', 'error');
+        return estado.lectura;
+    };
 
-    function aplicarCargados({ cols, perfil, integ, reservas }) {
+    function aplicarCargados({ cols, perfil, integ, reservas, lectura = false }) {
         const d = {};
         COLECCIONES.forEach(c => { d[c] = (cols[c] || []).map(x => NORM[c](x.id, x)); });
         // Lo que todavía no se guardó gana sobre lo que llega.
@@ -50,7 +57,7 @@ export function crearAlmacen(adaptador, { avisar = () => {} } = {}) {
             const [col, id] = k.split('/');
             d[col] = d[col].map(x => (x.id === id ? NORM[col](id, { ...x, ...clonar(pend[k]) }) : x));
         });
-        set({ cargando: false, cargado: true, d, perfil: normalPerfil(perfil), integ: normalInteg(integ), reservas: Array.isArray(reservas) ? reservas : [] });
+        set({ cargando: false, cargado: true, d, perfil: normalPerfil(perfil), integ: normalInteg(integ), reservas: Array.isArray(reservas) ? reservas : [], lectura: lectura === true });
     }
 
     function recordar(col, id) {
@@ -110,6 +117,7 @@ export function crearAlmacen(adaptador, { avisar = () => {} } = {}) {
         async recargar() { aplicarCargados(await adaptador.cargar()); },
 
         crear(col, data) {
+            if (soloLectura()) return null;
             const id = uid('d');
             if (!deshaciendo) { hist.push({ k: col + '/' + id, col, id, prev: null, t: 0 }); if (hist.length > MAX_HIST) hist.shift(); }
             setCol(col, [...estado.d[col], NORM[col](id, clonar(data))]);
@@ -120,7 +128,7 @@ export function crearAlmacen(adaptador, { avisar = () => {} } = {}) {
         // Cambia campos de un documento. Se ve ya; se guarda en una pausa (o ya, con inmediato).
         editar(col, id, campos, inmediato = false) {
             const x = buscar(col, id);
-            if (!x) return;
+            if (!x || soloLectura()) return;
             recordar(col, id);
             setCol(col, estado.d[col].map(y => (y.id === id ? NORM[col](id, { ...y, ...clonar(campos) }) : y)));
             if (col === 'formularios') republicarForm(id);
@@ -132,6 +140,7 @@ export function crearAlmacen(adaptador, { avisar = () => {} } = {}) {
 
         // Reemplaza un documento entero (lo usa deshacer).
         fijar(col, id, data) {
+            if (soloLectura()) return;
             const d = clonar(data); delete d.id;
             const n = NORM[col](id, d), arr = estado.d[col];
             setCol(col, arr.some(x => x.id === id) ? arr.map(x => (x.id === id ? n : x)) : [...arr, n]);
@@ -142,7 +151,7 @@ export function crearAlmacen(adaptador, { avisar = () => {} } = {}) {
 
         borrar(col, id) {
             const x0 = buscar(col, id);
-            if (!x0) return;
+            if (!x0 || soloLectura()) return;
             if (!deshaciendo) { hist.push({ k: col + '/' + id + '/del', col, id, prev: clonar(x0), t: 0 }); if (hist.length > MAX_HIST) hist.shift(); }
             setCol(col, estado.d[col].filter(x => x.id !== id));
             delete pend[col + '/' + id];
@@ -153,6 +162,7 @@ export function crearAlmacen(adaptador, { avisar = () => {} } = {}) {
 
         // Deshace el último cambio. Devuelve false si no había nada.
         deshacer() {
+            if (estado.lectura) return false;
             const h = hist.pop();
             if (!h) return false;
             deshaciendo = true;
@@ -164,11 +174,13 @@ export function crearAlmacen(adaptador, { avisar = () => {} } = {}) {
         },
 
         guardarPerfil(cambios) {
+            if (soloLectura()) return Promise.resolve();
             const perfil = normalPerfil({ ...estado.perfil, ...cambios });
             set({ perfil });
             return adaptador.guardarPerfil(perfil).catch(fallo);
         },
         guardarInteg(integ) {
+            if (soloLectura()) return Promise.resolve();
             const n = normalInteg(integ);
             set({ integ: n });
             return adaptador.guardarInteg(n).catch(fallo);

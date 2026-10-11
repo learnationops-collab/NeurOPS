@@ -41,6 +41,12 @@ describe('adaptadorApi', () => {
         expect(r.cols.grupos).toEqual([]);
         expect(r.perfil).toEqual({ nombre: 'Mario' });
         expect(r.reservas).toHaveLength(1);
+        expect(r.lectura).toBe(false);
+    });
+
+    it('cargar trae la marca de solo lectura del servidor (el setter)', async () => {
+        api.get.mockResolvedValueOnce({ data: { ...ESTADO, solo_lectura: true } });
+        expect((await crearAdaptadorApi().cargar()).lectura).toBe(true);
     });
 
     it('PATCH con los campos si el documento ya está en el servidor; si no, PUT entero', async () => {

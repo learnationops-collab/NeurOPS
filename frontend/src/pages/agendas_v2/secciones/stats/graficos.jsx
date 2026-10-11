@@ -26,7 +26,7 @@ export function VacioGrafico({ icono, txt, accion, onAccion }) {
         <div className="g-vacio">
             <span className="g-vacio-ico"><Icono n={icono} s={18} /></span>
             <p>{txt}</p>
-            <button type="button" className="link-btn" data-nav="" onClick={onAccion}><Icono n="plus" />{accion}</button>
+            {accion && <button type="button" className="link-btn" data-nav="" onClick={onAccion}><Icono n="plus" />{accion}</button>}
         </div>
     );
 }

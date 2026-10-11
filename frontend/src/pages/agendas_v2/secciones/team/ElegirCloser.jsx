@@ -9,15 +9,17 @@ import { Icono } from '../../ui/base';
 import { toast } from '../../ui/toast';
 
 // Closers activos de la app (/agendas-v2/usuarios): {id, nombre, email, calendar, whatsapp, tz}.
-// null mientras carga; [] en modo local (sin backend).
-export function useUsuariosReales() {
+// null mientras carga; [] en modo local (sin backend). Sin `activo` (solo lectura: sumar y lo que le
+// falta a cada closer es de quien configura) no se piden y queda null.
+export function useUsuariosReales(activo = true) {
     const [usuarios, setUsuarios] = useState(null);
     useEffect(() => {
+        if (!activo) return undefined;
         let vivo = true;
         Promise.resolve(almacen.adaptador.usuarios ? almacen.adaptador.usuarios() : [])
             .then(u => { if (vivo) setUsuarios(u); }, () => { if (vivo) { setUsuarios([]); toast('No se pudo traer la lista de closers.', 'error'); } });
         return () => { vivo = false; };
-    }, []);
+    }, [activo]);
     return usuarios;
 }
 

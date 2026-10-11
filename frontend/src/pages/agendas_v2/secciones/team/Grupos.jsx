@@ -5,7 +5,7 @@ import { useCallback } from 'react';
 import { pesoDe } from '../../core/asignacion';
 import { COLOR_EST, ESTRATEGIAS, ICO_EST } from '../../core/catalogos';
 import { closers, colorVar, esCloser, horasSemana, maxOrden, ord } from '../../core/datos';
-import { almacen, useDatos } from '../../data/hooks';
+import { almacen, useDatos, usePermisos } from '../../data/hooks';
 import { HUMO_MARCA, Avatar, Humo, Icono } from '../../ui/base';
 import { toast } from '../../ui/toast';
 import { useOrdenable } from '../../ui/useOrdenable';
@@ -86,6 +86,7 @@ function Miembro({ p, j, g, numerar, ordenable, pct }) {
 
 function Prioridad({ g, i, ordenable, usuarios }) {
     const { d } = useDatos();
+    const { lectura } = usePermisos();
     const ms = g.miembros.map(id => d.personas.find(p => p.id === id)).filter(Boolean);
     const libres = closers(d).filter(p => !g.miembros.includes(p.id));
     const enOrden = g.estrategia !== 'repartir', pc = colorNivel(i + 1);
@@ -116,7 +117,7 @@ function Prioridad({ g, i, ordenable, usuarios }) {
             </div>
             <div className={'pr-flujo lista--h' + (enOrden ? ' pr-flujo--orden' : '')} ref={omCont}>
                 {msOrden.map((p, j) => <Miembro key={p.id} p={p} j={j} g={g} numerar={enOrden} ordenable={om} pct={pct} />)}
-                {libres.length > 0 && (
+                {libres.length > 0 && !lectura && (
                     <div className="pm-sumar">
                         <ElegirCloser opciones={libres.map(p => listoDe(p, usuarios))}
                             onElegir={v => almacen.editar('grupos', g.id, { miembros: g.miembros.concat([v]) }, true)} />
@@ -134,7 +135,8 @@ function Prioridad({ g, i, ordenable, usuarios }) {
 
 export default function Grupos() {
     const { d } = useDatos();
-    const usuarios = useUsuariosReales();
+    const { lectura } = usePermisos();
+    const usuarios = useUsuariosReales(!lectura);
     const gs = ord(d, 'grupos');
     const usados = gs.map(g => g.nombre.toLowerCase());
     const sug = SUGERIDAS.filter(n => !usados.includes(n.toLowerCase()));
@@ -153,10 +155,10 @@ export default function Grupos() {
                 </div>
             )} />
     );
-    if (!gs.length) return compo;
+    if (!gs.length) return lectura ? <div className="panel vacio"><p className="t-sm mut">Todavía no hay estrategias.</p></div> : compo;
     return (
         <>
-            {compo}
+            {!lectura && compo}
             <div className="lista" ref={ordenCont}>
                 {orden.lista.map(id => gs.find(g => g.id === id)).filter(Boolean).map((g, i) => (
                     <Prioridad key={g.id} g={g} i={i} ordenable={orden} usuarios={usuarios} />

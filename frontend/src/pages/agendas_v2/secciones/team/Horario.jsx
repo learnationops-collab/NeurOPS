@@ -180,7 +180,7 @@ export function abrirHorario(p, origen) {
  * solo lectura no la toque: los permisos los aplica ella con puedeHorarioDe.
  */
 export function ModalHorario() {
-    const { d, perfil } = useDatos();
+    const { d, perfil, lectura } = useDatos();
     const { sim, team } = useUi();
     const p = team.horario && d.personas.find(x => x.id === team.horario);
     const [raiz, setRaiz] = useState(null);
@@ -196,7 +196,9 @@ export function ModalHorario() {
     };
     let modal = null;
     if (p) {
-        const tab = ['semana', 'sesiones'].includes(team.horTab) ? team.horTab : 'config', hs = horasSemana(p), puede = puedeHorarioDe(d, sim, perfil, p);
+        const tab = ['semana', 'sesiones'].includes(team.horTab) ? team.horTab : 'config', hs = horasSemana(p), puede = !lectura && puedeHorarioDe(d, sim, perfil, p);
+        // En solo lectura (el setter) el aviso no nombra a nadie: no hay un rol simulado.
+        const aviso = (que) => (lectura ? 'Solo lectura.' : 'Solo lectura: ' + nombreSim(d, sim) + ' no puede cambiar ' + que + '.');
         modal = (
             <Modal onCerrar={cerrar} clase="modal--hor" labelledBy="hor-tit" style={{ '--c': colorVar(p.color) }}>
                 <Humo clase="humo--tarjeta humo--suave" cols={HUMO_PERSONA} />
@@ -215,7 +217,7 @@ export function ModalHorario() {
                         ? <div className="hor-semana"><Available solo={p} /></div>
                         : tab === 'sesiones' ? (
                             <>
-                                {!puede && <p className="hor-ro"><Icono n="candado" s={14} />Solo lectura: {nombreSim(d, sim)} no puede cambiar sus sesiones.</p>}
+                                {!puede && <p className="hor-ro"><Icono n="candado" s={14} />{aviso('sus sesiones')}</p>}
                                 <div className="hor-ses">
                                     <p className="t-sm mut">Cuánto dura cada sesión de {p.nombre} y el margen que se deja después, por evento. Lo que no ajustó usa la propuesta del evento.</p>
                                     <EditorSesiones eventos={ord(d, 'eventos').filter(e => !e.persona)} sesiones={p.sesiones} bloqueado={!puede}
@@ -224,7 +226,7 @@ export function ModalHorario() {
                             </>
                         ) : (
                             <>
-                                {!puede && <p className="hor-ro"><Icono n="candado" s={14} />Solo lectura: {nombreSim(d, sim)} no puede cambiar este horario.</p>}
+                                {!puede && <p className="hor-ro"><Icono n="candado" s={14} />{aviso('este horario')}</p>}
                                 <HorarioEditor p={p} bloqueado={!puede} />
                             </>
                         )}

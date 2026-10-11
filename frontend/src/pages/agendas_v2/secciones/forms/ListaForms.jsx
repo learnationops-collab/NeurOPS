@@ -1,7 +1,7 @@
 // Forms: la grilla de formularios con la caja para crear uno nuevo.
 
 import { useState } from 'react';
-import { almacen, useDatos } from '../../data/hooks';
+import { almacen, useDatos, usePermisos } from '../../data/hooks';
 import { FIN_DEF } from '../../core/catalogos';
 import { maxOrden, ord } from '../../core/datos';
 import { duplicarForm, resumenForm } from '../../core/formulario';
@@ -54,6 +54,7 @@ function ConfirmarBorrar({ f, d, onCancelar }) {
 }
 
 function Tarjeta({ f, d, borrando, setBorrando }) {
+    const { lectura } = usePermisos();
     const r = resumenForm(f);
     const duplicar = () => {
         const { d: d0 } = almacen.getState();
@@ -76,11 +77,17 @@ function Tarjeta({ f, d, borrando, setBorrando }) {
                 <div className="fcard-pie">
                     <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={() => ui.set({ prueba: { form: f } })}><Icono n="play" />Probar</button>
                     <div className="der">
-                        <button type="button" className="ibtn ibtn--sm" aria-label={'Duplicar ' + f.nombre} title="Duplicar" onClick={duplicar}><Icono n="copiar" s={15} /></button>
-                        <button type="button" className="ibtn ibtn--sm ibtn--peligro" data-borrar={f.id} aria-label={'Eliminar ' + f.nombre} title="Eliminar" onClick={() => setBorrando(f.id)}>
-                            <Icono n="basura" s={15} />
+                        {!lectura && (
+                            <>
+                                <button type="button" className="ibtn ibtn--sm" aria-label={'Duplicar ' + f.nombre} title="Duplicar" onClick={duplicar}><Icono n="copiar" s={15} /></button>
+                                <button type="button" className="ibtn ibtn--sm ibtn--peligro" data-borrar={f.id} aria-label={'Eliminar ' + f.nombre} title="Eliminar" onClick={() => setBorrando(f.id)}>
+                                    <Icono n="basura" s={15} />
+                                </button>
+                            </>
+                        )}
+                        <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={() => abrirForm(f.id)}>
+                            <Icono n={lectura ? 'ojo' : 'edit'} />{lectura ? 'Ver' : 'Editar'}
                         </button>
-                        <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={() => abrirForm(f.id)}><Icono n="edit" />Editar</button>
                     </div>
                 </div>
             )}
@@ -90,6 +97,7 @@ function Tarjeta({ f, d, borrando, setBorrando }) {
 
 export default function ListaForms() {
     const { d } = useDatos();
+    const { lectura } = usePermisos();
     const [borrar, setBorrar] = useState(null);
     const fs = ord(d, 'formularios');
     // Al cancelar, el foco vuelve al botón de eliminar de esa tarjeta.
@@ -99,7 +107,9 @@ export default function ListaForms() {
     };
     return (
         <>
-            <Compo vacio={!fs.length} tit="Nuevo formulario" soloTit="Armá tu primer formulario" ph="Nombre, ej. Calificación Workshop" onCrear={crearForm} />
+            {lectura
+                ? !fs.length && <div className="panel vacio"><p className="t-sm mut">Todavía no hay formularios.</p></div>
+                : <Compo vacio={!fs.length} tit="Nuevo formulario" soloTit="Armá tu primer formulario" ph="Nombre, ej. Calificación Workshop" onCrear={crearForm} />}
             {fs.length > 0 && (
                 <div className="grilla">
                     {fs.map(f => <Tarjeta key={f.id} f={f} d={d} borrando={borrar === f.id} setBorrando={setBorrando} />)}

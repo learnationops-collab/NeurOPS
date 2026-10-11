@@ -160,7 +160,8 @@ export function Sx({ valor, opciones, onChange, sm, label, id, style, disabled, 
                 <div ref={pop} className="sx-pop" role="listbox" aria-label={label} style={{ top: -9999, left: -9999 }}>
                     {opciones.map((o, i) => (
                         <button key={o.v + '|' + i} type="button" className={'sx-op' + (!o.v ? ' sx-op--vacio' : '') + (i === act ? ' activo' : '')} role="option"
-                            aria-selected={i === idx} tabIndex={-1} onMouseDown={e => e.preventDefault()} onClick={() => elegir(i)} onMouseEnter={() => setAct(i)}>
+                            aria-selected={i === idx} tabIndex={-1} data-nav={nav ? '' : undefined}
+                            onMouseDown={e => e.preventDefault()} onClick={() => elegir(i)} onMouseEnter={() => setAct(i)}>
                             {o.icono && <Icono n={o.icono} s={15} style={{ color: o.color || 'var(--text-muted-40)' }} />}
                             <span>{o.n}</span>
                             <Icono n="check" s={15} />

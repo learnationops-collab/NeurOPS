@@ -1,7 +1,7 @@
 // Editor de un formulario: barra (volver, vistas, importar preguntas, "No califica", eliminar) y la vista elegida.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { almacen, useDatos, useUi } from '../../data/hooks';
+import { almacen, useDatos, usePermisos, useUi } from '../../data/hooks';
 import { CONTACTO } from '../../core/catalogos';
 import { buscar } from '../../core/datos';
 import { nuevaPregunta, resumenForm } from '../../core/formulario';
@@ -22,6 +22,7 @@ const VISTAS = [{ v: 'preguntas', n: 'Preguntas', icono: 'lista' }, { v: 'ruteo'
 function cerrarForm() { almacen.flush(); ui.set({ form: null }); window.scrollTo({ top: 0 }); }
 
 function Barra({ f, vista, prevModo, onFin, finRef, onImportar }) {
+    const { lectura } = usePermisos();
     const [borrar, setBorrar] = useState(false);
     const r = resumenForm(f);
     const papelera = useRef(null), cancelar = useRef(null);
@@ -44,7 +45,7 @@ function Barra({ f, vista, prevModo, onFin, finRef, onImportar }) {
                         <button type="button" data-nav="" aria-pressed={prevModo === 'escritorio'} aria-label="Escritorio" title="Escritorio" onClick={() => ui.set({ prevModo: 'escritorio' })}><Icono n="monitor" /></button>
                         <button type="button" data-nav="" aria-pressed={prevModo === 'celular'} aria-label="Celular" title="Celular" onClick={() => ui.set({ prevModo: 'celular' })}><Icono n="celular" /></button>
                     </div>
-                ) : (
+                ) : !lectura && (
                     <>
                         <button type="button" className="fe-btn" title="Traer preguntas de otro formulario" onClick={e => onImportar(e.currentTarget)}>
                             <Icono n="importar" s={15} /><span>Importar preguntas</span>
@@ -107,6 +108,7 @@ function Cabecera({ f }) {
 }
 
 function VistaPreguntas({ f, sel, raiz, onImportar }) {
+    const { lectura } = usePermisos();
     const enfocar = useEnfocar(raiz);
     const ids = f.preguntas.map(q => q.id);
     // Si se llega con una pregunta elegida (ej. "Editar en Forms" desde Events), queda abierta y a la vista.
@@ -140,11 +142,11 @@ function VistaPreguntas({ f, sel, raiz, onImportar }) {
                 </div>
             ) : (
                 <div className="panel vacio">
-                    <p className="t-sm mut">Sin preguntas propias todavía. Agregá una o traelas de otro formulario.</p>
-                    <button type="button" className="btn btn--linea btn--sm" onClick={e => onImportar(e.currentTarget)}><Icono n="importar" />Importar preguntas</button>
+                    <p className="t-sm mut">{lectura ? 'Sin preguntas propias: solo pide los datos de contacto.' : 'Sin preguntas propias todavía. Agregá una o traelas de otro formulario.'}</p>
+                    {!lectura && <button type="button" className="btn btn--linea btn--sm" onClick={e => onImportar(e.currentTarget)}><Icono n="importar" />Importar preguntas</button>}
                 </div>
             )}
-            <div className="fe-mas">
+            <div className="fe-mas" hidden={lectura}>
                 <button type="button" className="fe-mas-b caja" onClick={agregar}>
                     <Humo clase="humo--tarjeta" cols={HUMO_MARCA} />
                     <span className="fe-mas-ico"><Icono n="plus" s={18} /></span><span><b>Agregar pregunta</b><em>Opción, desplegable o texto</em></span>

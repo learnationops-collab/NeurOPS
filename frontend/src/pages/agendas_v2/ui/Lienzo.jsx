@@ -92,11 +92,11 @@ export default function Lienzo({ children, alto = '68vh', etiqueta = 'Lienzo', a
             </div>
             {encima}
             <div className="lienzo-ctl" role="toolbar" aria-label="Zoom">
-                <button type="button" className="ibtn ibtn--sm" aria-label="Alejar" title="Alejar" onClick={() => zoom(1 / PASO)}><Icono n="zoom-out" s={15} /></button>
+                <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label="Alejar" title="Alejar" onClick={() => zoom(1 / PASO)}><Icono n="zoom-out" s={15} /></button>
                 <span className="lienzo-pct num" aria-live="polite">{Math.round(t.k * 100)}%</span>
-                <button type="button" className="ibtn ibtn--sm" aria-label="Acercar" title="Acercar" onClick={() => zoom(PASO)}><Icono n="zoom-in" s={15} /></button>
-                <button type="button" className="ibtn ibtn--sm" aria-label="Ajustar a la pantalla" title="Ajustar" onClick={ajustar}><Icono n="encuadre" s={15} /></button>
-                <button type="button" className="ibtn ibtn--sm" aria-label={grande ? 'Salir de pantalla completa' : 'Pantalla completa'}
+                <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label="Acercar" title="Acercar" onClick={() => zoom(PASO)}><Icono n="zoom-in" s={15} /></button>
+                <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label="Ajustar a la pantalla" title="Ajustar" onClick={ajustar}><Icono n="encuadre" s={15} /></button>
+                <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label={grande ? 'Salir de pantalla completa' : 'Pantalla completa'}
                     title={grande ? 'Salir (Esc)' : 'Pantalla completa'} aria-pressed={grande} onClick={() => setGrande(g => !g)}>
                     <Icono n={grande ? 'contraer' : 'expandir'} s={15} />
                 </button>

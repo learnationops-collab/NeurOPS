@@ -1038,8 +1038,15 @@
 .thalamus .yo-av--sim img{border-radius:50%}
 .thalamus .yo-sim-badge{position:absolute;right:-4px;bottom:-4px;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;color:#fff;background:var(--brand-secondary);border:2px solid var(--page-base)}
 @media (max-width:640px){.thalamus .dock-sim{right:auto;left:0;top:auto;transform:none;bottom:calc(100% + 8px)}}
-.thalamus .vista.ro .bloq{opacity:.55;cursor:not-allowed}
-.thalamus .vista.ro .sx.bloq,.thalamus .vista.ro input.bloq{opacity:.8}
+/* Solo lectura (el setter, ui/soloLectura.js): lo que configura queda deshabilitado, con su valor a la
+   vista; lo que solo borra, ordena o crea no aparece. Lo que es una celda de una grilla (agarrar, borrar)
+   solo se vuelve invisible: sacarlo correría las demás columnas. */
+.thalamus.thalamus-app--lectura :is(button,input,select,textarea):disabled:not([data-nav]){cursor:default}
+.thalamus.thalamus-app--lectura button:disabled:not([data-nav]):not(.sx):not([aria-pressed]):not([aria-checked]){opacity:.55}
+.thalamus.thalamus-app--lectura :is(.grip,.ibtn--peligro,.pq-acc){visibility:hidden}
+.thalamus.thalamus-app--lectura :is(.btn--peligro,.btn--borrar,.compo,.fe-mas,.agregar,.cond-mas,.sug,[data-op-add]){display:none}
+.thalamus.thalamus-app--lectura .foto{cursor:default}
+.thalamus .chip-lectura{flex-shrink:0;cursor:default}
 .thalamus .mtz{min-width:700px;display:grid}
 .thalamus .mtz-f{display:grid;grid-template-columns:minmax(200px,2fr) 64px repeat(6,minmax(54px,1fr)) 40px;align-items:center;gap:4px;padding:6px 10px 6px 6px;border-top:1px solid var(--border-subtle)}
 .thalamus .mtz-f:first-child{border-top:0}

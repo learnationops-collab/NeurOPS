@@ -8,6 +8,7 @@
 //     que devuelven nuestras propias escrituras cuentan como conocidas: guardar no provoca una recarga.
 //   - Las reservas las crea solo la página pública (/api/agendas-v2/publico/reservas), que las escribe
 //     en la operación (Appointment + FinancialAgenda). Thalamus solo las lee; no las cancela.
+//   - cargar() trae `lectura` (el `solo_lectura` del servidor): con él, el almacén no escribe nada.
 
 import api from '../../../services/api';
 import { COLECCIONES } from '../core/normalizar';
@@ -79,7 +80,11 @@ export function crearAdaptadorApi() {
             });
             if (typeof data.version === 'number') version = data.version;
             ajeno = false;
-            return { cols, perfil: data.perfil || null, integ: data.integ || null, reservas: Array.isArray(data.reservas) ? data.reservas : [] };
+            // solo_lectura: lo decide el servidor por el rol (el setter mira; la dirección configura).
+            return {
+                cols, perfil: data.perfil || null, integ: data.integ || null, reservas: Array.isArray(data.reservas) ? data.reservas : [],
+                lectura: data.solo_lectura === true,
+            };
         },
 
         guardar(col, id, data, campos) {

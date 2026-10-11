@@ -68,10 +68,10 @@ function tipEventos(sg, tz) {
 }
 
 export default function Available({ solo = null }) {
-    const { d, perfil, reservas } = useDatos();
+    const { d, perfil, reservas, lectura } = useDatos();
     const { sim, team } = useUi();
     const ahora = useAhora();
-    const edit = !!solo && puedeHorarioDe(d, sim, perfil, solo);
+    const edit = !!solo && !lectura && puedeHorarioDe(d, sim, perfil, solo);
     const semana = team.semana || 0;
     const todos = useMemo(() => closers(d).filter(p => horasSemana(p) > 0), [d]);
     const cs = useMemo(() => (solo ? (horasSemana(solo) > 0 || edit ? [solo] : []) : todos), [solo, edit, todos]);

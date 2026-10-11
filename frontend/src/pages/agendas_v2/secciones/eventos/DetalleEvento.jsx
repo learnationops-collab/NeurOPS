@@ -15,7 +15,7 @@ import { EstadoEv, copiarLink, probarEvento } from './comun';
 
 export default function DetalleEvento({ e, ev }) {
     const { d } = useDatos();
-    const { puede, modoCloser } = usePermisos();
+    const { puede, modoCloser, lectura } = usePermisos();
     const fo = buscar(d, 'formularios', e.formulario);
     const pendiente = sinPublicar(e, fo);
     // Descartar vuelve los campos del evento a lo publicado; si solo cambió el formulario no hay nada que descartar acá.
@@ -52,14 +52,16 @@ export default function DetalleEvento({ e, ev }) {
                         <Icono n="copiar" s={15} />
                     </button>
                     <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={() => probarEvento(d, e)}><Icono n="play" />Probar borrador</button>
-                    {evCambio && (
+                    {evCambio && !lectura && (
                         <button type="button" className="btn btn--linea btn--sm" onClick={descartar} disabled={!puedePublicar} title={sinPermiso}>
                             <Icono n="rotar" />Descartar
                         </button>
                     )}
-                    <button type="button" className="btn btn--cta btn--sm" onClick={publicar} disabled={!pendiente || !puedePublicar} title={sinPermiso}>
-                        <Icono n="publicar" />Publicar
-                    </button>
+                    {!lectura && (
+                        <button type="button" className="btn btn--cta btn--sm" onClick={publicar} disabled={!pendiente || !puedePublicar} title={sinPermiso}>
+                            <Icono n="publicar" />Publicar
+                        </button>
+                    )}
                 </div>
             </div>
     );

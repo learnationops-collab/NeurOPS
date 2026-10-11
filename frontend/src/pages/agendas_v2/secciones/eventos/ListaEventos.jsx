@@ -1,7 +1,8 @@
 // Lista de eventos (el eje de Agendamiento, como Thalamus): agrupada por funnel, por formulario o toda
 // junta, con la caja para crear uno. Cada tarjeta dice lo que le falta y, en un funnel de setting, los
 // links de cada setter. El funnel se crea y se edita desde acá (ModalFunnel).
-// En la vista de closer solo aparecen sus eventos propios, sin agrupar.
+// En la vista de closer solo aparecen sus eventos propios, sin agrupar. En solo lectura (el setter) no
+// se crea ni se edita nada: quedan los eventos, sus links y la prueba.
 
 import React, { useRef, useState } from 'react';
 import { buscar, colorVar, nombreGrupo, ord } from '../../core/datos';
@@ -48,6 +49,7 @@ function Compo({ cm, onCrear, err }) {
 }
 
 function TarjetaEvento({ d, e }) {
+    const { lectura } = usePermisos();
     const f = buscar(d, 'funnels', e.funnel), fo = buscar(d, 'formularios', e.formulario);
     const pfx = e.persona && buscar(d, 'personas', e.persona);
     let rut = pfx ? [pfx.nombre + ' (fijo)'] : gruposDeForm(fo).map(id => nombreGrupo(d, id));
@@ -77,7 +79,7 @@ function TarjetaEvento({ d, e }) {
                     <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label={'Probar ' + e.nombre} title="Probar" onClick={() => probarEvento(d, e)}>
                         <Icono n="play" s={15} />
                     </button>
-                    <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={() => abrirEvento(e.id)}><Icono n="edit" />Abrir</button>
+                    <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={() => abrirEvento(e.id)}><Icono n={lectura ? 'ojo' : 'edit'} />Abrir</button>
                 </div>
             </div>
         </article>
@@ -104,7 +106,7 @@ function EstadoFunnel({ f }) {
 export default function ListaEventos() {
     const { d } = useDatos();
     const { evAgrupar } = useUi();
-    const { modoCloser: cm } = usePermisos();
+    const { modoCloser: cm, lectura } = usePermisos();
     const [err, setErr] = useState('');
     const inp = useRef(null);
     const es = ord(d, 'eventos').filter(e => !cm || e.persona === cm.id);
@@ -114,7 +116,10 @@ export default function ListaEventos() {
         if (!m && inp.current) inp.current.value = '';
     };
 
-    if (!es.length) return <Compo cm={cm} onCrear={crear} err={err} />;
+    if (!es.length) {
+        return lectura ? <div className="panel vacio"><p className="t-sm mut">Todavía no hay eventos.</p></div>
+            : <Compo cm={cm} onCrear={crear} err={err} />;
+    }
 
     const agrupar = cm ? 'nada' : (evAgrupar || 'funnel');
     const grupos = new Map();
@@ -139,8 +144,8 @@ export default function ListaEventos() {
                             </button>
                         ))}
                     </div>
-                    {!cm && <button type="button" className="btn btn--linea btn--sm" onClick={() => ui.set({ funnel: {} })}><Icono n="funnel" />Nuevo funnel</button>}
-                    <form className="entrada ev-nuevo" noValidate onSubmit={ev => { ev.preventDefault(); crear(inp.current.value); }}>
+                    {!cm && !lectura && <button type="button" className="btn btn--linea btn--sm" onClick={() => ui.set({ funnel: {} })}><Icono n="funnel" />Nuevo funnel</button>}
+                    <form className="entrada ev-nuevo" hidden={lectura} noValidate onSubmit={ev => { ev.preventDefault(); crear(inp.current.value); }}>
                         <label className="sr" htmlFor="nuevo-nombre">Nuevo evento</label>
                         <span className="prefijo"><Icono n="plus" /></span>
                         <input ref={inp} id="nuevo-nombre" type="text" maxLength={80} autoComplete="off" placeholder="Nuevo evento, ej. Diagnóstico Workshop"
@@ -161,7 +166,7 @@ export default function ListaEventos() {
                                 {agrupar === 'funnel' && ref && <span className="chip chip--n" style={{ '--c': 'var(--idle)' }}>{TIPO[ref.tipo] || 'Otro'}</span>}
                                 {agrupar === 'funnel' && ref && <EstadoFunnel f={ref} />}
                                 <span className="t-cap mut40">{lista.length}</span>
-                                {agrupar === 'funnel' && ref && (
+                                {agrupar === 'funnel' && ref && !lectura && (
                                     <button type="button" className="ibtn ibtn--sm" aria-label={'Editar funnel ' + ref.nombre} title="Editar funnel"
                                         onClick={() => ui.set({ funnel: { id: ref.id } })}><Icono n="ajustes" s={15} /></button>
                                 )}
@@ -170,7 +175,7 @@ export default function ListaEventos() {
                         {lista.length ? <div className="lista">{lista.map(e => <TarjetaEvento key={e.id} d={d} e={e} />)}</div> : (
                             <div className="tarjeta caja ev-card ev-fila">
                                 <span className="t-sm mut">Sin agendamientos: este funnel no genera agendas.</span>
-                                <div className="barra-der">
+                                <div className="barra-der" hidden={lectura}>
                                     <button type="button" className="btn btn--cta btn--sm" onClick={() => ui.set({ funnel: { id: ref.id } })}>
                                         <Icono n="plus" />Agregar agendamiento
                                     </button>

@@ -1,19 +1,24 @@
 // Learnation Thalamus: la herramienta del director comercial para armar formularios, equipo,
 // prioridades y eventos de agenda. Dock en el orden real de configuración: 1 Forms · 2 Team ·
 // 3 Eventos · 4 Stats. Es el área «Agendamiento». Los funnels se crean y editan desde Eventos (ModalFunnel).
+// El setter (10/10/2026) entra en solo lectura: ve todo, copia su link y prueba el agendamiento, pero
+// lo que se configura queda deshabilitado o no aparece (ui/soloLectura.js). Lo decide el servidor.
 
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, CalendarDays, ClipboardList, Clock, Users } from 'lucide-react';
+import { ArrowLeft, BarChart3, CalendarDays, ClipboardList, Clock, Users } from 'lucide-react';
 import './thalamus.css';
 import { useAuth } from '../../contexts/AuthContext';
 import { dataThemeDe, useApariencia } from '../../context/AparienciaContext';
+import { useConfiguracion } from '../../sesion/ConfiguracionContext';
+import { roleLandingPath } from '../../utils/roleLanding';
 import { SECCIONES } from './core/catalogos';
 import { almacen, useDatos, useIniciarAlmacen, usePermisos, useUi } from './data/hooks';
 import { Icono, LogoThalamus, Toasts, Tooltip } from './ui/base';
 import { ui } from './ui/estadoUi';
 import { toast } from './ui/toast';
 import { irA } from './ui/navegacion';
+import { useSoloLectura } from './ui/soloLectura';
 import Forms from './secciones/forms/Forms';
 import Team from './secciones/team/Team';
 import Horas from './secciones/team/Horas';
@@ -43,13 +48,18 @@ function Dock() {
     const perm = usePermisos();
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const { abrir: abrirConfiguracion } = useConfiguracion();
     const secciones = SECCIONES.filter(s => perm.secOk(s.id)).map(s => ({ id: s.id, label: s.label, Icono: ICONO_DE_SECCION[s.id] || CalendarDays }));
     // Configuración abre la de Agendamiento (con Equipo y su vista flotante o completa); el resto del
-    // menú es el de todas las pantallas (sesion/menuSesion.js).
+    // menú es el de todas las pantallas (sesion/menuSesion.js). En solo lectura, la de todos (la de
+    // Agendamiento es de quien recibe agendas y suma al equipo) y la vuelta a su espacio.
     const grupos = armarMenuSesion({
         user, navigate, logout,
         // Simular a un closer para cargarle lo que le falta: Configuración › Equipo (TabEquipo).
-        configuracion: { onClick: () => ui.set({ conf: { tab: 'datos' } }) },
+        configuracion: { onClick: perm.lectura ? () => abrirConfiguracion() : () => ui.set({ conf: { tab: 'datos' } }) },
+        ir: perm.lectura
+            ? [{ id: 'mi-espacio', label: 'Volver a mi espacio', Icono: ArrowLeft, onClick: () => navigate(roleLandingPath(user?.role)) }]
+            : [],
     });
     return (
         <div className="dc-shell dc-shell--embebido">
@@ -107,6 +117,8 @@ class ErrorDeVista extends React.Component {
 function useAtajos() {
     useEffect(() => {
         const fn = (e) => {
+            // En solo lectura no hay nada que deshacer ni crear.
+            if (almacen.getState().lectura) return;
             const e0 = ui.getState(), tg = e.target;
             const escribe = /INPUT|TEXTAREA|SELECT/.test(tg.tagName) || tg.isContentEditable;
             const enLead = tg.closest && tg.closest('.reserva');
@@ -143,15 +155,15 @@ function Degradados() {
 // Con la API, el perfil es del usuario de la sesión. Si está vacío, arranca con su nombre (una sola vez).
 function usePerfilDeLaSesion() {
     const { user } = useAuth();
-    const { cargado, perfil } = useDatos();
+    const { cargado, perfil, lectura } = useDatos();
     const hecho = useRef(false);
     useEffect(() => {
-        if (hecho.current || !cargado || !user || almacen.adaptador.tipo !== 'api') return;
+        if (hecho.current || !cargado || lectura || !user || almacen.adaptador.tipo !== 'api') return;
         hecho.current = true;
         if (perfil.nombre || perfil.apellido) return;
         const partes = String(user.name || user.username || '').trim().split(/\s+/).filter(Boolean);
         if (partes.length) almacen.guardarPerfil({ nombre: partes[0], apellido: partes.slice(1).join(' ') });
-    }, [cargado, perfil, user]);
+    }, [cargado, perfil, user, lectura]);
 }
 
 // ?config=<pestaña> abre Configuración (es a donde vuelve Google después de conectar el calendario).
@@ -173,27 +185,36 @@ export default function ThalamusApp() {
     usePerfilDeLaSesion();
     useAtajos();
     const estado = useUi();
+    const { lectura } = useDatos();
     const apariencia = useApariencia();
+    const raiz = useRef(null);
+    useSoloLectura(raiz, lectura);
     const sec = SECCIONES.find(s => s.id === estado.seccion) || SECCIONES[0];
     useEffect(() => { document.title = 'Learnation Thalamus'; }, []);
     return (
         <>
-        <div className="thalamus thalamus-app" data-theme={dataThemeDe(apariencia, atributoTema(estado.tema))}>
+        <div ref={raiz} className={'thalamus thalamus-app' + (lectura ? ' thalamus-app--lectura' : '')} data-theme={dataThemeDe(apariencia, atributoTema(estado.tema))}>
             <Degradados />
             <div className="wrap">
                 <header className="tope">
                     <div className="tope-id">
                         <LogoThalamus />
                         <h1 className="t-h1">{sec.label}</h1>
+                        {lectura && (
+                            <span className="chip chip-lectura" style={{ '--c': 'var(--info)' }} data-tip="Solo lectura|Lo que se configura lo cambia la dirección comercial.">
+                                <Icono n="candado" s={13} />Solo lectura
+                            </span>
+                        )}
                     </div>
                     {/* Los botones y filtros de la sección van acá, a la derecha del título (ui/EnTope). */}
                     <div className="tope-acc" id="tope-acc" />
                 </header>
                 <Vista />
             </div>
-            {estado.funnel && <ModalFunnel estado={estado.funnel} />}
-            {estado.conf && <Configuracion />}
-            {estado.crear && <CrearRapido />}
+            {/* Funnel, Configuración y Crear rápido son para configurar: en solo lectura no se abren. */}
+            {estado.funnel && !lectura && <ModalFunnel estado={estado.funnel} />}
+            {estado.conf && !lectura && <Configuracion />}
+            {estado.crear && !lectura && <CrearRapido />}
             {estado.prueba && <PruebaLead />}
             <Toasts />
             <Tooltip />

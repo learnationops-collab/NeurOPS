@@ -45,8 +45,8 @@ export default function PruebaLead() {
             <div className="rv-fondo" aria-hidden="true" />
             <PantallaLead fuente={fuente} proveedor={proveedor} modo="prueba" prevModo={prevModo} onSalir={salir} />
             <div className="seg seg--sm rv-dispo" role="group" aria-label="Pantalla">
-                <button type="button" aria-pressed={!cel} onClick={() => dispo('escritorio')}><Icono n="monitor" />Computadora</button>
-                <button type="button" aria-pressed={cel} onClick={() => dispo('celular')}><Icono n="celular" />Teléfono</button>
+                <button type="button" data-nav="" aria-pressed={!cel} onClick={() => dispo('escritorio')}><Icono n="monitor" />Computadora</button>
+                <button type="button" data-nav="" aria-pressed={cel} onClick={() => dispo('celular')}><Icono n="celular" />Teléfono</button>
             </div>
         </>
     );

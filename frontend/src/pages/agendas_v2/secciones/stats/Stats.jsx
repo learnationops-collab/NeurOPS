@@ -52,7 +52,8 @@ const irAFunnels = () => ui.set({ funnel: {} });
 export default function Stats() {
     const { d } = useDatos();
     const estado = useUi();
-    const { modoCloser: cm } = usePermisos();
+    // En solo lectura (el setter) los gráficos vacíos no invitan a crear links: eso es configurar.
+    const { modoCloser: cm, lectura } = usePermisos();
     const st = { ...EST_DEF, ...(estado.est || {}) };
     const setEst = (parcial) => ui.set(e => ({ est: { ...EST_DEF, ...(e.est || {}), ...parcial } }));
 
@@ -158,12 +159,12 @@ export default function Stats() {
                 </Grafico>
                 <Grafico t="Por procedencia" sub="Qué link usaron" aura={['var(--fc-turquesa)', 'var(--brand-primary)', 'var(--brand-secondary)', 'var(--brand-navy)']}>
                     {porOr.length < 2
-                        ? <VacioGrafico icono="link" txt="Todas entraron por el link general." accion="Creá links por procedencia" onAccion={irAFunnels} />
+                        ? <VacioGrafico icono="link" txt="Todas entraron por el link general." accion={lectura ? null : 'Creá links por procedencia'} onAccion={irAFunnels} />
                         : <Ranking items={porOr.map((x, i) => ({ k: x[0], v: x[1], c: x[0] === 'Directo' ? 'var(--idle)' : colorVar(COLORES[i % COLORES.length]) }))} />}
                 </Grafico>
                 <Grafico t="Por setter" sub="Quién trajo cada agenda" aura={['var(--fc-violeta)', 'var(--brand-primary)', 'var(--brand-secondary)', 'var(--brand-navy)']}>
                     {!porSt.length
-                        ? <VacioGrafico icono="user" txt="Ninguna agenda vino de un setter." accion="Darle un link a cada setter" onAccion={irAFunnels} />
+                        ? <VacioGrafico icono="user" txt="Ninguna agenda vino de un setter." accion={lectura ? null : 'Darle un link a cada setter'} onAccion={irAFunnels} />
                         : <Ranking items={porSt.map(x => {
                             const p = sts.find(s => s.nombre === x[0]);
                             return { k: x[0], v: x[1], c: p ? colorVar(p.color) : 'var(--fc-violeta)', av: p ? <Avatar p={p} clase="avatar--xs" /> : null };
