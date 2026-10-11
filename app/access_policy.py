@@ -140,8 +140,7 @@ POLITICA = {
     ('DELETE', '/api/public/financial-sales/<int:sale_id>'): _p(COMERCIAL, OPERATOR),
     ('POST', '/api/public/financial-sales/<int:sale_id>/resend-webhook'): _p(COMERCIAL, OPERATOR),
     ('POST', '/api/public/financial-sales/<int:sale_id>/toggle-payroll-exclusion'): _p(COMERCIAL),  # nomina: la vista pide ademas «ver finanzas»
-    ('POST', '/api/public/financial-sales/new'): _p(COMERCIAL, OPERATOR),
-    # A quién se le hizo una transferencia: las opciones del alta y la edición de arriba.
+    # A quién se le hizo una transferencia: las opciones de la edición de arriba.
     ('GET', '/api/public/financial-sales/transferido-a'): _p(COMERCIAL, OPERATOR),
     ('GET', '/api/public/financial-sales/payroll'): _p(COMERCIAL),  # nomina: la vista pide ademas «ver finanzas»
     ('POST', '/api/public/financial-sales/sync'): _p(COMERCIAL, OPERATOR),

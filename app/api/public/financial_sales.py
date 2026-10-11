@@ -197,56 +197,16 @@ def receive_financial_sales():
         current_app.logger.error(f"[FINANCIAL] Database commit error: {e}")
         return jsonify({"error": str(e)}), 500
 
-@bp.route('/public/financial-sales/new', methods=['POST'])
-def create_new_financial_sale():
-    # Registra manualmente una nueva venta en la DB local y la propaga a Google Sheets
-    from app.services.sheets_service import SheetsService
-    data = request.get_json() or {}
-    
-    if not data.get('nombre_cliente') or not data.get('monto'):
-        return jsonify({"error": "Nombre del cliente y monto son requeridos"}), 400
-    # Un cobro por transferencia dice a quién del equipo se le hizo (09/10/2026): es el alta, el
-    # momento de registrarlo. `post_to_sheets` lo guarda en la venta y no lo manda a la hoja.
-    from app.services.transferencias_service import para_guardar
-    try:
-        transferido_a = para_guardar(data.get('transferido_a'), data.get('metodo_pago'), obligatorio=True)
-    except ValueError as e:
-        return jsonify({"error": str(e), "campo": "transferido_a"}), 400
-
-    try:
-        # Formatear el payload para SheetsService.post_to_sheets
-        payload = {
-            "transferido_a": transferido_a,
-            "email_vendedor": data.get('email_vendedor') or 'Sin asignar',
-            "nombre_cliente": data.get('nombre_cliente'),
-            "telefono": data.get('telefono') or '',
-            "mail_cliente": data.get('mail_cliente') or '',
-            "tipo_pago": data.get('tipo_pago') or 'No Especificado',
-            "monto": float(data.get('monto') or 0.0),
-            "segundo_pago": data.get('segundo_pago') or '',
-            "metodo_pago": data.get('metodo_pago') or 'No Especificado',
-            "examen": data.get('examen') or '',
-            "instagram": data.get('instagram') or 'N/A',
-            "setter": data.get('setter') or '',
-            "estado": "Completada" if (data.get('estado') or 'Completada').strip().lower() in ('completada', 'confirmada') else (data.get('estado') or 'Completada'),
-            "documento_identidad": data.get('documento_identidad') or '',
-            "marca_temporal": data.get('marca_temporal') or datetime.utcnow().strftime('%d/%m/%Y %H:%M:%S'),
-            "enviar_webhook": data.get('enviar_webhook', True),
-            "enviar_mensaje": data.get('enviar_mensaje', True)
-        }
-        
-        result = SheetsService.post_to_sheets("Ventas_DB", payload)
-        if result["status"] == "success":
-            return jsonify({"message": "Venta registrada con éxito", "status": "success"}), 201
-        return jsonify({"error": result.get("message") or "Error al propagar a Sheets"}), 500
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+# POST /public/financial-sales/new (el alta manual de una venta desde el Registro de Ventas) se
+# retiró el 10/10/2026: su modal no lo abría nada desde que el botón pasó a navegar a otra ruta, y
+# ningún sistema externo lo llama (no es de ingesta en app/access_policy.py). Las ventas se declaran
+# en la ficha del cliente.
 
 @bp.route('/public/financial-sales/transferido-a', methods=['GET'])
 def opciones_de_transferencia():
-    """A quién del equipo se le puede haber hecho un pago por transferencia (09/10/2026), para el
-    alta y la edición de ventas de Operaciones: la lista vive en `transferencias_service`, la misma
-    que la ficha recibe en su vocabulario."""
+    """A quién del equipo se le puede haber hecho un pago por transferencia (09/10/2026), para la
+    edición de ventas del Registro de Ventas: la lista vive en `transferencias_service`, la misma que
+    la ficha recibe en su vocabulario."""
     from app.services.transferencias_service import opciones
     return jsonify(opciones()), 200
 
