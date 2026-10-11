@@ -1191,6 +1191,23 @@
   .dc-shell .tabla-fila > *[data-h=""]{justify-content:flex-end}
 }
 
+/* Operar (10/10/2026): la casilla y el menú «⋯» de cada fila, y la barra de lo tildado. Solo los ve
+   quien opera los registros (admin y operador). */
+.dc-shell .op-celda{display:flex;align-items:center;justify-content:center;position:relative}
+.dc-shell .op-casilla{width:16px;height:16px;margin:0;cursor:pointer;accent-color:var(--brand-secondary)}
+.dc-shell .op-mas{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;
+  border-radius:10px;color:var(--text-muted);transition:background .15s ease,color .15s ease}
+.dc-shell .op-mas:hover,.dc-shell .op-mas[aria-expanded="true"]{background:var(--bg-element);color:var(--text-on-surface)}
+.dc-shell .op-menu{top:36px;right:0;left:auto}
+.dc-shell .op-menu .menu-item{align-items:center}
+.dc-shell .op-barra{gap:var(--s2);align-items:center;flex-wrap:wrap;margin-bottom:var(--s3);
+  padding:var(--s2) var(--s3);border-radius:14px;border:1px solid var(--brand-secondary-border);
+  background:var(--brand-secondary-surface)}
+.dc-shell .op-barra-cuenta{font-weight:800;color:var(--text-on-surface);margin-right:var(--s2)}
+@media (max-width:900px){
+  .dc-shell .op-celda{justify-content:flex-end}
+}
+
 /* Comparativa: fila con avatar y barras */
 .dc-shell .cmp-fila{display:grid;gap:var(--s3);align-items:center;grid-template-columns:var(--cols);
   padding:var(--s3) var(--s4);border-bottom:1px solid var(--border-subtle);min-width:0}

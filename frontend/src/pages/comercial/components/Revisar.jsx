@@ -8,7 +8,7 @@ import Cifra from './Cifra';
 import { DIMENSION_PROPIA, TABLAS, TABLAS_POR_ROL, valoresVigentes } from './tablasDef';
 import PanelConfigurar from './PanelConfigurar';
 import PanelExportar from './PanelExportar';
-import RevisarLista, { EsqueletoRevisar } from './RevisarLista';
+import RevisarLista, { EsqueletoRevisar, claveDe } from './RevisarLista';
 import { columnasOrdenables, ordenarFilas, siguienteOrden } from './ordenFilas';
 import MenuOrdenar from './MenuOrdenar';
 import AcademiaBarra, { SelectorColumnas } from './AcademiaBarra';
@@ -136,9 +136,14 @@ const TotalesTira = ({ items, alcance, filtrada }) => (
     </div>
 );
 
+/**
+ * `operacion` son las acciones de Operaciones sobre esta tabla (`operacionDe` en
+ * `operar/operacion.js`), o null para quien no opera: la dirección y los closers ven Revisar igual
+ * que siempre. `onRecargar` vuelve a pedir la tabla después de una acción.
+ */
 const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcance, onAbrirFila,
     filtroInicial, onOlvidarFiltro, puedeElegirEquipo = true, onSincronizarAcademia = null,
-    puedeExportar = false }) => {
+    puedeExportar = false, operacion = null, onRecargar = null }) => {
     const [query, setQuery] = useState('');
     const [facetas, setFacetas] = useState({});
     const [modo, setModo] = useState('todas');
@@ -150,6 +155,11 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     // Qué juego de columnas se ve: el de siempre o el de la Academia (solo Clientes y Ventas, las
     // tablas con `colsAcademia`). Son las mismas filas y el mismo filtro: cambia qué se muestra.
     const [columnas, setColumnas] = useState('base');
+    // Operar (10/10/2026): las filas tildadas, por su clave, y la acción abierta con su panel.
+    const [seleccion, setSeleccion] = useState(() => new Set());
+    const [abierta, setAbierta] = useState(null);
+    const seleccionable = !!operacion?.lote?.length;
+    const conMenuDeFila = !!operacion?.fila;
     const barra = useRef(null);
     const mas = useRef(null);
     const botonExportar = useRef(null);
@@ -219,6 +229,8 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
             setAgrupacion(null);
             setOrden(null);
             setColumnas('base');
+            // Lo tildado es de una tabla: en otra, o con otro filtro de origen, son otras filas.
+            setSeleccion(new Set());
         }
     }
 
@@ -296,6 +308,29 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     const todasOrdenadas = useMemo(
         () => (menu === 'exportar' ? ordenarFilas(filas, colOrden?.orden, orden?.dir) : filas),
         [menu, filas, colOrden, orden]);
+    // Lo tildado que la lista sigue mostrando: si un filtro saca una fila tildada, la acción de lote
+    // no la toca (se opera sobre lo que se ve, nunca sobre algo escondido).
+    const seleccionadas = useMemo(
+        () => (seleccionable ? visibles.filter(f => seleccion.has(claveDe(f))) : []),
+        [seleccionable, visibles, seleccion]);
+    const alternar = (fila) => setSeleccion((previa) => {
+        const nueva = new Set(previa);
+        const clave = claveDe(fila);
+        if (nueva.has(clave)) nueva.delete(clave); else nueva.add(clave);
+        return nueva;
+    });
+    const estadoTodas = seleccionadas.length === 0 ? 'ninguna'
+        : seleccionadas.length === visibles.length ? 'todas' : 'algunas';
+    const alternarTodas = () => setSeleccion(
+        estadoTodas === 'todas' ? new Set() : new Set(visibles.map(claveDe)));
+    const abrirAccion = (accion, filasDe, fila = null) => {
+        setMenu(null);
+        setAbierta({ accion, filas: filasDe, fila });
+    };
+    const operar = operacion ? {
+        seleccionable, seleccion, onAlternar: alternar, estadoTodas, onAlternarTodas: alternarTodas,
+        deFila: operacion.fila, onAccion: (accion, fila) => abrirAccion(accion, [fila], fila),
+    } : null;
     const ordenar = (key) => setOrden(o => siguienteOrden(o, key));
     // Desde el menú: elegir la columna que ya ordena invierte la dirección; null vuelve al orden
     // de la tabla.
@@ -316,7 +351,12 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         [def, conAcademia]);
     // `min` (px) es el ancho del que una columna no baja (ver `COLS_ACADEMIA`): la que no lo trae
     // puede angostarse hasta 0 y corta su texto con «…».
-    const plantilla = defVista.cols.map(c => `minmax(${c.min || 0}px,${c.width})`).join(' ');
+    // Quien opera suma dos columnas fijas: la casilla adelante y el «⋯» al final (ver `RevisarLista`).
+    const plantilla = [
+        ...(seleccionable ? ['34px'] : []),
+        ...defVista.cols.map(c => `minmax(${c.min || 0}px,${c.width})`),
+        ...(conMenuDeFila ? ['40px'] : []),
+    ].join(' ');
     // Quien ve solo sus propias filas no puede agruparse por sí mismo: sería un grupo único con
     // todo adentro. La dirección conserva todas las dimensiones (ver `DIMENSION_PROPIA`).
     const agrupables = useMemo(
@@ -571,6 +611,16 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                     )}
                 </div>
 
+                {/* Las herramientas de Operaciones (Duplicados, …): botones sueltos de la barra que
+                    abren su panel con las filas que muestra la lista. */}
+                {operacion?.herramientas.map(h => (
+                    <button key={h.id} type="button" className="pastilla"
+                        onClick={() => abrirAccion(h, visibles)}>
+                        {h.Icono && <h.Icono size={15} />}
+                        {h.label}
+                    </button>
+                ))}
+
                 {/* Agrupar por: la dimensión sale de `def.agrupables`, así que cada tabla ofrece
                     las suyas y agregar un criterio nuevo es una línea en `tablasDef.js`. */}
                 {agrupables.length > 0 && (
@@ -681,8 +731,29 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                 </div>
             )}
 
+            {/* Lo tildado y qué se le puede hacer. Aparece al tildar la primera fila y se va al
+                destildar la última o al terminar una acción. */}
+            {seleccionadas.length > 0 && (
+                <div className="fila op-barra" role="region" aria-label="Filas seleccionadas">
+                    <span className="t-sm num op-barra-cuenta">
+                        {fmt.plural(seleccionadas.length, 'seleccionada', 'seleccionadas')}
+                    </span>
+                    {operacion.lote.map(a => (
+                        <button key={a.id} type="button" className="btn btn--sm"
+                            onClick={() => abrirAccion(a, seleccionadas)}>
+                            {a.Icono && <a.Icono size={14} />}
+                            {a.label}
+                        </button>
+                    ))}
+                    <button type="button" className="btn btn--linea btn--sm" onClick={() => setSeleccion(new Set())}>
+                        <X size={13} />
+                        Quitar selección
+                    </button>
+                </div>
+            )}
+
             {cargando ? <EsqueletoRevisar def={defVista} plantilla={plantilla} modo={modoVista}
-                totales={totales.length} /> : (
+                totales={totales.length} operar={operar} /> : (
                 <>
                     {conAcademia && <AcademiaBarra filas={filas} onSincronizar={onSincronizarAcademia} />}
                     <TotalesTira items={totales} alcance={alcance} filtrada={filtrando} />
@@ -705,10 +776,16 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                         <RevisarLista def={defVista} visibles={visibles} plantilla={plantilla}
                             onAbrirFila={onAbrirFila} dimension={dimension} modo={modoVista}
                             gruposElegidos={gruposElegidos} onElegirGrupo={elegirGrupo}
-                            orden={orden} onOrdenar={ordenar}
+                            orden={orden} onOrdenar={ordenar} operar={modoVista === 'lista' ? operar : null}
                             variante={`${columnas}-${orden ? `${orden.key}-${orden.dir}` : ''}`} />
                     )}
                 </>
+            )}
+
+            {abierta && (
+                <abierta.accion.Panel tabla={tabla} filas={abierta.filas} fila={abierta.fila}
+                    fechas={datos?.dates} onCerrar={() => setAbierta(null)}
+                    onHecho={() => { setSeleccion(new Set()); onRecargar?.(); }} />
             )}
         </section>
     );
