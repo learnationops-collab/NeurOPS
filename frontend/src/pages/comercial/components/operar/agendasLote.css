@@ -1,0 +1,44 @@
+/* «Editar en lote» las agendas desde Revisar (10/10/2026).
+
+   El panel es el `Modal` compartido, que se monta por portal en `body`: fuera del `.dc-shell` del
+   tablero. Su cuerpo y su pie llevan su propio `.dc-shell dc-shell--embebido` (los tokens, `.btn` y
+   `.ln-field`, sin el alto mínimo, el fondo ni el colchón del dock de la página), y lo de acá cuelga
+   de esa clase como el resto de `comercial.css`.
+
+   Los tres campos van uno debajo del otro, a todo el ancho: en un modal angosto, una grilla de dos
+   columnas dejaba el tercero suelto abajo. */
+.dc-shell.op-lote{display:grid;gap:var(--s5);font-size:14px}
+.dc-shell .op-lote-campos{display:grid;gap:var(--s4)}
+.dc-shell .op-lote-campo{display:grid;gap:var(--s2);min-width:0}
+.dc-shell .op-lote-campo-cab{display:flex;align-items:baseline;justify-content:space-between;
+  gap:var(--s3);flex-wrap:wrap;min-width:0}
+.dc-shell .op-lote-campo .ln-field{transition:border-color .16s ease,background-color .16s ease,box-shadow .15s ease}
+/* Un campo que ya no está en «No cambiar» se marca: de un vistazo se ve qué se va a tocar. */
+.dc-shell .op-lote-campo--on .ln-field{border-color:var(--brand-secondary-border);
+  background:var(--brand-secondary-surface)}
+.dc-shell .op-lote-campo--on .t-rotulo{color:var(--brand-secondary)}
+
+/* El resumen de lo que va a pasar: punteado mientras no hay nada que aplicar. */
+.dc-shell .op-lote-resumen{display:flex;align-items:flex-start;gap:var(--s3);
+  padding:var(--s3) var(--s4);border-radius:var(--radius-control);
+  border:1px dashed var(--border-main);background:var(--mat-0);color:var(--text-muted);
+  font-size:14px;font-weight:600;line-height:1.45;
+  transition:border-color .18s ease,background-color .18s ease,color .18s ease}
+.dc-shell .op-lote-resumen svg{width:16px;height:16px;margin-top:2px}
+.dc-shell .op-lote-resumen > span{min-width:0;overflow-wrap:anywhere}
+.dc-shell .op-lote-resumen--listo{border-style:solid;border-color:var(--brand-secondary-border);
+  background:var(--brand-secondary-surface);color:var(--text-on-surface)}
+.dc-shell .op-lote-resumen--listo svg{color:var(--brand-secondary)}
+
+.dc-shell .op-lote-error{padding:var(--s3) var(--s4);border-radius:var(--radius-control);
+  background:var(--error-surface);border:1px solid var(--error-border);color:var(--error);font-weight:600}
+.dc-shell .op-lote-aviso{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);
+  flex-wrap:wrap;padding:var(--s3) var(--s4);border-radius:var(--radius-control);
+  background:var(--error-surface);border:1px solid var(--error-border);color:var(--error);font-weight:600}
+
+/* El pie: ocupa todo el ancho del pie del `Modal` y deja los botones a la derecha. */
+.dc-shell.op-lote-pie{flex:1 1 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;
+  gap:var(--s3);font-size:14px}
+@media (max-width:480px){
+  .dc-shell.op-lote-pie .btn{flex:1 1 auto}
+}

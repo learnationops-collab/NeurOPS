@@ -1,3 +1,4 @@
+
 /**
  * Lo que Operaciones hace sobre los registros desde Revisar (10/10/2026).
  *
@@ -19,10 +20,11 @@
  * dibuja su propio modal (`components/ui/Modal`), así cada uno elige su ancho y su pie.
  */
 
+import agendasLote from './agendasLote';
 import duplicados from './duplicados';
 
 /** Los módulos registrados: `{ [tabla]: { lote?, herramientas?, fila? } }`. */
-export const MODULOS = [duplicados];
+export const MODULOS = [agendasLote, duplicados];
 
 /**
  * Las acciones de Operaciones para esta tabla, o null si no hay ninguna (y entonces Revisar se ve
