@@ -15,14 +15,16 @@ _mails = itertools.count(1)
 
 
 def v2(db, setter, dia, *, ads=(0, 0, 0, 0, 0, 0), inb=(0, 0, 0, 0, 0, 0), bnv=(0, 0, 0),
-       embudo=(0, 0, 0), fu=(0, 0, 0, 0), win='', no_laborable=False):
-    """Un reporte v2. `ads`/`inb`: (entrantes, no_lead, inabribles, ap_entrantes, ap_dolor, agendas)."""
+       embudo=(0, 0, 0), fu=(0, 0, 0, 0), fur=(0, 0, 0, 0), win='', no_laborable=False):
+    """Un reporte v2. `ads`/`inb`: (entrantes, no_lead, inabribles, ap_entrantes, ap_dolor, agendas);
+    `fu`/`fur`: los follow-ups y cuántos respondieron, por etapa (entrantes, dolor, oferta, link)."""
     datos = rv2.vacio()
     for canal, valores in (('anuncios', ads), ('inbound', inb)):
         datos[canal].update(dict(zip(rv2.CAMPOS_CANAL, valores)))
     datos['bienvenidas'].update(dict(zip(('hechas', 'respondidas', 'aperturas'), bnv)))
     datos['embudo'].update(dict(zip(('dolor', 'oferta', 'link'), embudo)))
     datos['followups'].update(dict(zip(('entrantes', 'dolor', 'oferta', 'link'), fu)))
+    datos['followups_respondidos'] = dict(zip(('entrantes', 'dolor', 'oferta', 'link'), fur))
     datos['reflexion']['win_del_dia'] = win
     stat = rv2.escribir(SetterDailyStats(setter_id=setter.id, date=dia), datos)
     stat.is_non_working_day = no_laborable

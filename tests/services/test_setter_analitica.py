@@ -121,29 +121,33 @@ def test_solo_cuentan_los_reportes_y_las_agendas_del_periodo(db, elias, closer):
 # --- Los follow-ups y su respuesta ----------------------------------------------------------------
 
 @freeze_time(HOY)
-def test_sin_respondidos_en_el_reporte_la_respuesta_de_los_followups_es_none(db, elias):
-    v2(db, elias, date(2026, 9, 1), fu=(9, 5, 3, 3))
+def test_cada_etapa_de_los_followups_trae_su_respuesta(db, elias):
+    v2(db, elias, date(2026, 9, 1), fu=(10, 5, 0, 4), fur=(4, 5, 0, 1))
+    v2(db, elias, date(2026, 9, 2), fu=(10, 0, 0, 0), fur=(6, 0, 0, 0))
 
     fu = bloque(elias)['followups']
 
-    assert [(e['key'], e['hechos']) for e in fu['etapas']] == [('entrantes', 9), ('dolor', 5),
-                                                               ('oferta', 3), ('link', 3)]
-    assert all(e['respuesta'] is None for e in fu['etapas'])
-    assert (fu['total'], fu['respondidos'], fu['respuesta']) == (20, None, None)
+    assert [(e['key'], e['hechos'], e['respondidos']) for e in fu['etapas']] == [
+        ('entrantes', 20, 10), ('dolor', 5, 5), ('oferta', 0, 0), ('link', 4, 1)]
+    # Sin follow-ups en una etapa, su respuesta es «—» y no 0%.
+    assert [e['respuesta'] for e in fu['etapas']] == [50.0, 100.0, None, 25.0]
+    assert (fu['total'], fu['respondidos'], fu['respuesta']) == (29, 16, round(16 / 29 * 100, 1))
 
 
 @freeze_time(HOY)
-def test_con_respondidos_en_el_reporte_cada_etapa_trae_su_respuesta(db, elias, monkeypatch):
-    v2(db, elias, date(2026, 9, 1), fu=(10, 5, 0, 4))
-    # Lo que va a agregar `setter_reporte_v2.sumar` (contrato del 10/10/2026).
+def test_sin_respondidos_en_la_suma_la_respuesta_es_none_y_no_se_deduce(db, elias, monkeypatch):
+    """El contrato con el reporte: si `sumar` no trae `followups_respondidos` (un cliente viejo), el
+    porcentaje es «—»; no se calcula de otra cosa."""
+    v2(db, elias, date(2026, 9, 1), fu=(9, 5, 3, 3), fur=(9, 5, 3, 3))
     sumar = sa.reporte_v2.sumar
     monkeypatch.setattr(sa.reporte_v2, 'sumar', lambda lecturas: {
-        **sumar(lecturas), 'followups_respondidos': {'entrantes': 4, 'dolor': 5, 'oferta': 0, 'link': 1}})
+        k: v for k, v in sumar(lecturas).items() if k != 'followups_respondidos'})
 
     fu = bloque(elias)['followups']
 
-    assert [e['respuesta'] for e in fu['etapas']] == [40.0, 100.0, None, 25.0]
-    assert (fu['total'], fu['respondidos'], fu['respuesta']) == (19, 10, round(10 / 19 * 100, 1))
+    assert [e['hechos'] for e in fu['etapas']] == [9, 5, 3, 3]
+    assert all(e['respuesta'] is None for e in fu['etapas'])
+    assert (fu['total'], fu['respondidos'], fu['respuesta']) == (20, None, None)
 
 
 # --- Lo que pasó después de la agenda (el sistema) ------------------------------------------------
