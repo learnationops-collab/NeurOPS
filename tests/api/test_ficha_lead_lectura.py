@@ -59,18 +59,19 @@ def abrir(client, auth_headers, usuario, **params):
 
 # --- Quien puede abrir la ficha ---------------------------------------------------------------
 
-@pytest.mark.parametrize('rol', ['director', 'closer', 'otro_closer', 'setter', 'triage'])
-def test_los_cinco_roles_abren_el_mismo_lead(client, db, lead, equipo, auth_headers, rol):
+@pytest.mark.parametrize('rol', ['director', 'closer', 'otro_closer', 'setter', 'triage', 'operador'])
+def test_los_roles_del_circuito_abren_el_mismo_lead(client, db, lead, equipo, auth_headers, rol):
     """Que la direccion comercial abra este lead es el motivo de todo el trabajo: por
-    `/api/closer/*` recibe 403."""
+    `/api/closer/*` recibe 403. Operaciones entra desde el 10/10/2026: corrige los registros desde
+    Revisar."""
     r = abrir(client, auth_headers, equipo[rol], appointment_id=lead.id)
 
     assert r.status_code == 200, rol
     assert r.get_json()['identidad']['nombre'] == 'Ana Gomez'
 
 
-def test_un_rol_de_fuera_del_circuito_comercial_no_entra(client, db, lead, equipo, auth_headers):
-    assert abrir(client, auth_headers, equipo['operador'], appointment_id=lead.id).status_code == 403
+def test_un_rol_de_fuera_del_circuito_comercial_no_entra(client, db, lead, make_user, auth_headers):
+    assert abrir(client, auth_headers, make_user(role='hiring'), appointment_id=lead.id).status_code == 403
 
 
 def test_un_anonimo_no_entra(client, db, lead):

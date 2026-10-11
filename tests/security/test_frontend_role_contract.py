@@ -156,7 +156,8 @@ import pytest  # noqa: E402
 from app.api.ficha import ROLES_CON_ACCESO  # noqa: E402
 
 # Los cinco roles que trabajan un lead entran; los tres que no tocan el circuito comercial, no.
-ROLES_FUERA_DE_LA_FICHA = ('operator', 'director_marketing', 'hiring')
+# Operaciones entra desde el 10/10/2026: corrige los registros desde Revisar.
+ROLES_FUERA_DE_LA_FICHA = ('director_marketing', 'hiring')
 
 
 def _rutas_de_la_ficha(app):

@@ -21,9 +21,10 @@ from flask_login import current_user, login_required
 
 bp = Blueprint('ficha_api', __name__)
 
-# Quien entra a la ficha. Los cinco roles que trabajan un lead: la direccion, el closer que la
-# atiende, el setter que la genero y triage, que confirma.
-ROLES_CON_ACCESO = ('admin', 'director_comercial', 'closer', 'setter', 'triage')
+# Quien entra a la ficha. Los roles que trabajan un lead: la direccion, el closer que la atiende, el
+# setter que la genero, triage, que confirma, y Operaciones, que corrige los registros desde Revisar
+# (10/10/2026, cuando sus tablas viejas pasaron ahi).
+ROLES_CON_ACCESO = ('admin', 'director_comercial', 'operator', 'closer', 'setter', 'triage')
 
 
 @bp.before_request

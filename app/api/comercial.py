@@ -17,7 +17,7 @@ from flask_login import current_user, login_required
 from app import db
 from app.models import Appointment
 from app.api.public.finance import puede_ver_finanzas
-from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, ROLE_SETTER
+from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, ROLE_OPERATOR, ROLE_SETTER
 from app.services import comercial_analitica as analitica
 from app.services import comercial_no_cerradas
 from app.services import comercial_reporte as reporte
@@ -31,8 +31,12 @@ bp = Blueprint('comercial_api', __name__)
 
 # Quién ve el equipo completo y puede elegir de quién son los datos.
 ROLES_DIRECCION = (ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL)
+# Quién opera los registros desde Revisar: la edición masiva, los duplicados y las acciones sobre las
+# ventas (10/10/2026, cuando las tablas viejas de Operaciones pasaron a Revisar). Ve el equipo completo
+# como la dirección, pero no reporta ni compara: el operador solo entra a Revisar.
+ROLES_QUE_OPERAN = (ROLE_ADMIN, ROLE_OPERATOR)
 # Quién entra al tablero, de una forma u otra.
-ROLES_CON_ACCESO = ROLES_DIRECCION + (ROLE_CLOSER, ROLE_SETTER)
+ROLES_CON_ACCESO = ROLES_DIRECCION + (ROLE_OPERATOR, ROLE_CLOSER, ROLE_SETTER)
 
 PERIODOS = [
     {'key': 'hoy', 'label': 'Hoy'}, {'key': 'ayer', 'label': 'Ayer'},
@@ -109,6 +113,7 @@ def contexto():
         'miembro_id': miembro_id,
         'puede_elegir_equipo': puede_elegir,
         'puede_reportar': current_user.role in ROLES_DIRECCION,
+        'puede_operar': current_user.role in ROLES_QUE_OPERAN,
         'puede_comparar': _puede_comparar(),
         # Las secciones Finanzas y Payroll del dock: el mismo criterio con el que responden sus
         # endpoints (`finance_admin_required`), admin o dirección con el permiso «ver finanzas».

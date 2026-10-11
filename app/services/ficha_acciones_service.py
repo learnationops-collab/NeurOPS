@@ -27,7 +27,7 @@ from app.services.deck_escritura_service import aplicar_cambios
 # el permiso con `permisos_de` antes de llegar aca, asi que se entra como admin para no volver a
 # pedirle permiso a la puerta de atras — que es justamente la puerta que le cerraba el paso a la
 # direccion comercial.
-ROLES_SIN_ALCANCE_EN_EL_MAZO = ('admin', 'director_comercial')
+ROLES_SIN_ALCANCE_EN_EL_MAZO = ('admin', 'director_comercial', 'operator')
 
 
 class ErrorDeAccion(Exception):
