@@ -270,6 +270,23 @@ def test_con_otro_instagram_en_el_tablero_sale_igual_de_la_bandeja(client, db, e
     assert agendas_de_marketing(anuncios['GUIA']) == 1
 
 
+@freeze_time(HOY)
+def test_un_correo_en_el_instagram_no_es_un_usuario(client, db, equipo, anuncios, auth_headers):
+    """«alexss_10@hotmail.com» en el Instagram del cliente: la tarjeta lo pide como si faltara, y
+    asignar con el del Tablero lo deja en el cliente y la saca de la bandeja."""
+    alex = cliente(db, 'Alex', 'alexss_10@hotmail.com')
+    appt = agenda(db, equipo, alex)
+    FinancialAgenda.query.filter_by(lead='Alex').one().instagram = 'alexss_10'
+    db.session.commit()
+
+    assert bandeja(client, equipo['elias'], auth_headers)['pendientes'][0]['instagram'] is None
+    assert asignar(client, equipo['elias'], auth_headers, appt, anuncios['GUIA']).status_code == 200
+
+    assert db.session.get(Client, alex.id).instagram == 'alexss_10'
+    assert bandeja(client, equipo['elias'], auth_headers)['pendientes'] == []
+    assert agendas_de_marketing(anuncios['GUIA']) == 1
+
+
 # --- 3. Quién puede y qué hace falta -------------------------------------------------------------
 
 @freeze_time(HOY)

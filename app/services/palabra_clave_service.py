@@ -71,6 +71,11 @@ def normalizar_ig(valor):
         return None
     if '/' in limpio or ' ' in limpio:
         return None
+    # Un correo en el campo del Instagram («alexss_10@hotmail.com») no es un usuario: la consulta
+    # de las conversaciones le saca todas las @ y no lo encontraba nunca, así que la agenda no
+    # salía de la bandeja aunque se le asignara el anuncio. Sin usuario, la tarjeta lo pide.
+    if '@' in limpio:
+        return None
     return limpio
 
 
