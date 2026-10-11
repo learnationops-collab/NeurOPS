@@ -53,6 +53,9 @@ import SetterDatos from './datos/SetterDatos';
  * Revisar de closers y dirección —el mismo `DashboardComercial`, no una copia— acotadas a él por el
  * backend, de solo lectura: sus agendas (todas, con y sin palabra clave), los cobros de su fuente y
  * sus leads. Ver `tablasSetter.js`.
+ *
+ * El orden del dock es el del día del setter (pedido del 11/10/2026: «Mis agendas, Reporte, Mis datos
+ * y luego Revisar»): lo que hace, lo que reporta, cómo le va y, al final, las listas para buscar algo.
  */
 
 /**
@@ -63,16 +66,16 @@ import SetterDatos from './datos/SetterDatos';
 const SECCIONES = [
     // La primera es el aterrizaje del rol y adonde cae una sección que no existe.
     { id: 'agendas', label: 'Mis agendas', Icono: CalendarDays, sub: 'Cada agenda, con su anuncio.' },
-    // Una pestaña por tabla, y la tabla la elige la pestaña (`tablaFija`): su Ventas no es una de las
-    // tablas de setters de la dirección, así que la `t` de la URL sola no la podía abrir.
-    { id: 'revisar', label: 'Revisar', Icono: CheckCircle2, sub: 'Tus agendas, tus ventas y tus leads.',
-        tabs: REVISAR_DEL_SETTER.map(({ key, label }) => ({ key, label })) },
     { id: 'reporte', label: 'Reporte', Icono: ClipboardList, sub: 'Así cerraste el día.',
         tabs: [{ key: 'hoy', label: 'Reporte' }, { key: 'historial', label: 'Historial' }] },
     // Desde el 10/10/2026 con Comparativas: la de los setters, la misma que ve la dirección, en
     // solo lectura (ver `SetterDatos`).
     { id: 'datos', label: 'Mis datos', Icono: BarChart3, sub: 'Así vienen tus números.',
         tabs: [{ key: 'resumen', label: 'Mis datos' }, { key: 'comparativas', label: 'Comparativas' }] },
+    // Una pestaña por tabla, y la tabla la elige la pestaña (`tablaFija`): su Ventas no es una de las
+    // tablas de setters de la dirección, así que la `t` de la URL sola no la podía abrir.
+    { id: 'revisar', label: 'Revisar', Icono: CheckCircle2, sub: 'Tus agendas, tus ventas y tus leads.',
+        tabs: REVISAR_DEL_SETTER.map(({ key, label }) => ({ key, label })) },
 ];
 
 /** "01", "02"...: el número de la sección en el dock, como lo escribe el encabezado. */

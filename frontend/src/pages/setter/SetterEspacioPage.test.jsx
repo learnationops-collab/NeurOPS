@@ -133,7 +133,8 @@ describe('SetterEspacioPage · un solo dock', () => {
 
         expect(screen.getByTestId('datos-resumen')).toBeInTheDocument();
         const secciones = Array.from(dock().querySelectorAll('.dock-item')).map(b => b.getAttribute('aria-label'));
-        expect(secciones).toEqual(['Mis agendas', 'Revisar', 'Reporte', 'Mis datos']);
+        // El orden del día del setter (11/10/2026): Revisar al final.
+        expect(secciones).toEqual(['Mis agendas', 'Reporte', 'Mis datos', 'Revisar']);
         expect(itemDelDock('Mis datos')).toHaveAttribute('aria-current', 'page');
 
         // Simulando, "Volver a mi sesión" está, pero ya no es la única salida.
@@ -294,10 +295,15 @@ describe('SetterEspacioPage · un solo dock', () => {
         expect(itemDelDock('Reporte')).toHaveAttribute('aria-label', 'Reporte, reporte de hoy enviado');
     });
 
-    it('Revisar es la 02 del encabezado, con su frase', async () => {
+    it('Revisar es la 04 del encabezado, con su frase; Reporte la 02 y Mis datos la 03', async () => {
         await montar('/setter/deck?step=revisar');
-        expect(document.querySelector('header.tope .head-num')).toHaveTextContent('02');
+        expect(document.querySelector('header.tope .head-num')).toHaveTextContent('04');
         expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Tus agendas, tus ventas y tus leads.');
+
+        fireEvent.click(itemDelDock('Reporte'));
+        expect(document.querySelector('header.tope .head-num')).toHaveTextContent('02');
+        fireEvent.click(itemDelDock('Mis datos'));
+        expect(document.querySelector('header.tope .head-num')).toHaveTextContent('03');
     });
 
     it('el encabezado es una línea: el número de la sección, el saludo y las pestañas', async () => {
