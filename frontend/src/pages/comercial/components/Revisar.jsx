@@ -460,7 +460,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                     hint: fuera ? `${deCobros} · ${fmt.num(fuera)} no ${fuera === 1 ? 'suma' : 'suman'}` : deCobros,
                     ayuda: fuera ? 'Lo cobrado en las ventas completadas de la lista. Las no completadas '
                         + '(pendientes, reembolsadas, canceladas) se ven para corregirlas, pero no son cash.'
-                        : undefined },
+                        : 'Todo lo cobrado en la lista: ventas, cuotas y señas.' },
                 { key: 'ventas', label: segun(ventas, 'venta', 'ventas'), valor: fmt.num(ventas),
                     color: 'var(--brand-secondary)',
                     ayuda: 'Pago completo y split pay. Una seña es una reserva: no cuenta como venta.' },
@@ -518,13 +518,17 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
             const mensajes = lista.reduce((a, f) => a + f.mensajes, 0);
             return [
                 { key: 'leads', label: segun(lista.length, 'lead', 'leads'), valor: fmt.num(lista.length),
-                    color: 'var(--text-on-surface)', hint: fmt.plural(mensajes, 'mensaje', 'mensajes') },
+                    color: 'var(--text-on-surface)', hint: fmt.plural(mensajes, 'mensaje', 'mensajes'),
+                    ayuda: 'Los leads de la lista, con los filtros puestos.' },
                 { key: 'respuesta', label: 'respuesta', valor: fmt.pct(pct(respondieron, lista.length)),
-                    color: 'var(--info)', hint: de(respondieron, lista.length) },
+                    color: 'var(--info)', hint: de(respondieron, lista.length),
+                    ayuda: 'Los que respondieron, sobre todos los leads.' },
                 { key: 'cualificacion', label: 'cualificación', valor: fmt.pct(pct(cualificados, respondieron)),
-                    color: 'var(--success)', hint: de(cualificados, respondieron) },
+                    color: 'var(--success)', hint: de(cualificados, respondieron),
+                    ayuda: 'Los cualificados, sobre los que respondieron.' },
                 { key: 'conversion', label: 'conversión', valor: fmt.pct(pct(agendaron, lista.length)),
-                    color: 'var(--brand-secondary)', hint: fmt.plural(agendaron, 'agendó', 'agendaron') },
+                    color: 'var(--brand-secondary)', hint: fmt.plural(agendaron, 'agendó', 'agendaron'),
+                    ayuda: 'Los que agendaron, sobre todos los leads.' },
             ];
         }
 
@@ -540,18 +544,23 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                 color: 'var(--text-on-surface)',
                 // La del setter dice cuántas no tienen palabra clave (ver `tablasSetter.js`).
                 hint: def.pistaDelTotal ? def.pistaDelTotal(lista)
-                    : fmt.plural(realizadas, 'realizada', 'realizadas') },
+                    : fmt.plural(realizadas, 'realizada', 'realizadas'),
+                ayuda: 'Las agendas de la lista, con los filtros puestos.' },
             { key: 'show_up', label: 'show up', valor: fmt.pct(pct(asistieron, realizadas)),
-                color: 'var(--success)', hint: de(asistieron, realizadas) },
+                color: 'var(--success)', hint: de(asistieron, realizadas),
+                ayuda: 'Asistieron, sobre las llamadas con resultado (asistió o no show).' },
             { key: 'close_rate', label: 'close rate', valor: fmt.pct(pct(ventas, asistieron)),
-                color: 'var(--brand-secondary)', hint: de(ventas, asistieron) },
+                color: 'var(--brand-secondary)', hint: de(ventas, asistieron),
+                ayuda: 'Ventas sobre los que asistieron. Una seña no cuenta como venta.' },
             { key: 'seguimiento', label: 'seguimiento', valor: fmt.num(seguimiento), color: 'var(--warning)',
                 ayuda: 'Asistieron y no cerraron: siguen en seguimiento.' },
             { key: 'no_show', label: 'no show', valor: fmt.num(noShow), color: 'var(--error)',
-                hint: realizadas ? `${fmt.pct(pct(noShow, realizadas))} de ${fmt.num(realizadas)}` : null },
+                hint: realizadas ? `${fmt.pct(pct(noShow, realizadas))} de ${fmt.num(realizadas)}` : null,
+                ayuda: 'No se presentaron a la llamada.' },
             { key: 'pendientes', label: segun(pendientes.length, 'pendiente', 'pendientes'),
                 valor: fmt.num(pendientes.length), color: conRetraso ? 'var(--warning)' : 'var(--idle)',
-                hint: conRetraso ? `${fmt.num(conRetraso)} con retraso` : 'al día' },
+                hint: conRetraso ? `${fmt.num(conRetraso)} con retraso` : 'al día',
+                ayuda: 'Llamadas que todavía no tienen resultado cargado.' },
         ];
     }, [mostradas, tabla, def]);
 
