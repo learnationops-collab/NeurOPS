@@ -16,6 +16,7 @@ const diaDelDiseno = () => {
         bienvenidas: { hechas: 12, respondidas: 5, aperturas: 4 },
         embudo: { dolor: 10, oferta: 7, link: 5 },
         followups: { entrantes: 9, dolor: 5, oferta: 3, link: 3 },
+        followups_respondidos: { entrantes: 4, dolor: 2, oferta: 1, link: 1 },
     });
     return s;
 };
@@ -35,6 +36,8 @@ describe('calcular', () => {
         expect(num['tot.agendas']).toBe(3);
         expect(num['tot.convRate']).toBeCloseTo(21.43, 1);
         expect(num['tot.fuTot']).toBe(20);
+        expect(num['tot.fuResp']).toBe(8);
+        expect(num['tot.fuRate']).toBe(40);
         expect(num['bienvenidas.rate']).toBeCloseTo(41.67, 1);
         expect(num['bienvenidas.apRate']).toBe(80);
     });
@@ -94,6 +97,18 @@ describe('calcular', () => {
         expect(estadoDelPaso(avisos, 'followups')).toBeNull();
     });
 
+    it('más respuestas que follow-ups enviados es advertencia del paso Follow-ups', () => {
+        const { avisos, marcas } = calcular(conRuta(diaDelDiseno(), 'followups_respondidos.oferta', 4));
+
+        expect(avisos).toEqual([{ paso: 'followups', nivel: 'warn', msg: 'Oferta: más respuestas que follow-ups (3)' }]);
+        expect(marcas.get('followups_respondidos.oferta')).toBe('warn');
+        expect(estadoDelPaso(avisos, 'followups')).toBe('warn');
+    });
+
+    it('sin follow-ups enviados la respuesta es «—»', () => {
+        expect(fmtPct(calcular(vacio()).num['tot.fuRate'])).toBe('—');
+    });
+
     it('agendas por encima del link marcan las agendas de los dos canales', () => {
         const { marcas } = calcular(conRuta(diaDelDiseno(), 'embudo.link', 2));
 
@@ -112,6 +127,10 @@ describe('el relleno de cada celda', () => {
         expect(referenciaDe(s, 'bienvenidas.aperturas')).toBe(5);
         expect(proporcion(s, 'anuncios.ap_dolor')).toBe(0.5);
         expect(proporcion(s, 'embudo.oferta')).toBe(0.7);
+        // Los respondidos de un follow-up, contra lo enviado en esa etapa.
+        expect(referenciaDe(s, 'followups_respondidos.dolor')).toBe(5);
+        expect(proporcion(s, 'followups_respondidos.dolor')).toBe(0.4);
+        expect(topeDeArrastre(s, 'followups_respondidos.dolor')).toBe(5);
     });
 
     it('sin tope natural se compara con sus pares, y nunca pasa de lleno', () => {
@@ -140,8 +159,9 @@ describe('ida y vuelta con el backend', () => {
 
         expect(p).toMatchObject({ setter_id: 7, date: '2026-10-10', version: 2, is_non_working_day: false });
         expect(p.anuncios).toEqual({ entrantes: 10, no_lead: 1, inabribles: 0, ap_entrantes: 3, ap_dolor: 5, agendas: 2 });
-        expect(Object.keys(p).sort()).toEqual(['anuncios', 'bienvenidas', 'date', 'embudo', 'followups', 'inbound',
-            'is_non_working_day', 'reflexion', 'setter_id', 'version']);
+        expect(Object.keys(p).sort()).toEqual(['anuncios', 'bienvenidas', 'date', 'embudo', 'followups',
+            'followups_respondidos', 'inbound', 'is_non_working_day', 'reflexion', 'setter_id', 'version']);
+        expect(p.followups_respondidos).toEqual({ entrantes: 4, dolor: 2, oferta: 1, link: 1 });
     });
 
     it('una lectura v2 del backend vuelve a la forma del formulario', () => {
@@ -155,10 +175,12 @@ describe('ida y vuelta con el backend', () => {
             totales: { entrantes: 16 },
             embudo: { cualificados: 14, dolor: 10, oferta: 7, link: 5, agendas: 3 },
             followups: { entrantes: 9, dolor: 5, oferta: 3, link: 3 },
+            followups_respondidos: { entrantes: 4, dolor: 2, oferta: 1, link: 1 },
             reflexion: { flujo_trabajo: 'Abrí 40', win_del_dia: 'Una fría' },
         };
 
         const s = desdeLectura(lectura);
+        expect(s.followups_respondidos).toEqual({ entrantes: 4, dolor: 2, oferta: 1, link: 1 });
 
         expect(s.anuncios).toEqual(diaDelDiseno().anuncios);
         expect(s.embudo).toEqual({ dolor: 10, oferta: 7, link: 5 });

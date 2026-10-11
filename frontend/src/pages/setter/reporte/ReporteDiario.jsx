@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { ArrowLeft, ArrowRight, Check, Moon, PenLine, Send, Trophy } from 'lucide-react';
 import api from '../../../services/api';
+import Tip from '../../comercial/components/Tip';
 import Calendario from './Calendario';
 import Celda from './Celda';
 import Flujo from './Flujo';
@@ -78,11 +79,13 @@ const Campo = ({ ruta, rotulo, canal, aria, ancho, punto, ctx }) => (
     </div>
 );
 
-/** Una columna del paso: arriba lo que se carga, abajo el número grande y su pedazo de embudo. */
-const Columna = ({ canal, extra, campos, cols, grande, rotulo, ley, children, indice }) => (
+/** Una columna del paso: arriba lo que se carga, abajo el número grande y su pedazo de embudo.
+ * `clase` le da a los campos una grilla propia (la tabla de los follow-ups). */
+const Columna = ({ canal, extra, campos, cols, clase, grande, rotulo, ley, children, indice }) => (
     <div className="rd-pcol" style={{ '--c': canal.c, '--i': indice }}>
         <div className="rd-rcab"><ChipCanal canal={canal} />{extra}</div>
-        <div className={`rd-campos${cols ? ` rd-campos--n rd-campos--${cols}` : ''}`} style={cols ? { '--m': cols } : undefined}>{campos}</div>
+        <div className={`rd-campos${cols ? ` rd-campos--n rd-campos--${cols}` : ''}${clase ? ` ${clase}` : ''}`}
+            style={cols ? { '--m': cols } : undefined}>{campos}</div>
         <div className="rd-rbody">
             <div className="rd-rbig">{grande}<span>{rotulo}</span>{ley}</div>
             {children}
@@ -191,19 +194,64 @@ const PasoEmbudo = ({ ctx }) => {
     );
 };
 
+/**
+ * Los follow-ups: una fila con los enviados y otra con los que respondieron, por etapa. En la
+ * tabla cada celda se ubica con `--dc`/`--dr` (escritorio: etapas en columnas) y `--mc`/`--mr`
+ * (teléfono: etapas en filas, que en cuatro columnas no entran los números).
+ */
+const FILAS_FU = [
+    { sec: 'followups', n: 'Enviados', aria: 'Follow-ups enviados en', tip: 'Follow-ups que mandaste hoy en cada etapa.' },
+    { sec: 'followups_respondidos', n: 'Respondieron', aria: 'Follow-ups respondidos en', tip: 'Cuántos de esos follow-ups tuvieron respuesta.' },
+];
+
+const TablaFollowups = ({ ctx }) => (
+    <>
+        {FOLLOWUPS.map(([k, n], e) => (
+            <span key={`et-${k}`} className="rd-k rd-fu-c rd-fu-et" style={{ '--dc': e + 2, '--dr': 1, '--mc': 1, '--mr': e + 2 }}>{n}</span>
+        ))}
+        {FILAS_FU.map((f, i) => (
+            <span key={`fila-${f.sec}`} className="rd-k rd-fu-c rd-fu-fila" style={{ '--dc': 1, '--dr': i + 2, '--mc': i + 2, '--mr': 1 }}>
+                {f.n}<Tip titulo={f.n} texto={f.tip} />
+            </span>
+        ))}
+        {FILAS_FU.flatMap((f, i) => FOLLOWUPS.map(([k, n], e) => {
+            const ruta = `${f.sec}.${k}`;
+            return (
+                <div key={ruta} className="rd-fu-c" style={{ '--dc': e + 2, '--dr': i + 2, '--mc': i + 2, '--mr': e + 2 }}>
+                    <Celda ruta={ruta} valor={leerRuta(ctx.estado, ruta)} color={AMBOS.c} aria={`${f.aria} ${n.toLowerCase()}`}
+                        proporcion={proporcion(ctx.estado, ruta)} tope={topeDeArrastre(ctx.estado, ruta)}
+                        marca={ctx.marcas.get(ruta)} indice={ctx.orden.indexOf(ruta)} onCambio={ctx.cambiar} onEnter={ctx.alEnter} />
+                </div>
+            );
+        }))}
+    </>
+);
+
 const PasoFollowups = ({ ctx }) => {
     const { estado: s, num } = ctx;
     const angosto = useAngosto();
-    const valores = FOLLOWUPS.map(([k]) => s.followups[k]);
+    const r = s.followups_respondidos;
+    // Cada barra es lo enviado: la parte clara, los que no respondieron; la llena, los que sí.
+    const valores = FOLLOWUPS.map(([k]) => [Math.max(0, s.followups[k] - r[k]), r[k]]);
     return (
         <section className="rd-pasopanel rd-pasopanel--1 rd-vidrio" style={{ '--n': 1 }} aria-label="Follow-ups">
-            <Columna canal={AMBOS} indice={0} cols={4}
-                campos={FOLLOWUPS.map(([k, n]) => (
-                    <Campo key={k} ctx={ctx} ruta={`followups.${k}`} rotulo={n} canal={AMBOS} aria={`Follow-ups en ${n.toLowerCase()}`} />
-                ))}
-                grande={<Numero valor={num['tot.fuTot']} />} rotulo="follow-ups">
-                <Flujo etapas={FOLLOWUPS.map(([, n]) => ({ n }))} color="var(--ch-tot)" tot bandas={false} fb={96} fg={angosto ? 40 : 170}
-                    valores={valores} max={Math.max(1, ...valores)} />
+            <Columna canal={AMBOS} indice={0} clase="rd-campos--fu"
+                extra={(
+                    <span className="rd-rchips">
+                        <span className="rd-chip" style={{ '--c': 'var(--ch-tot)' }} title="Follow-ups enviados en total">
+                            <Numero valor={num['tot.fuTot']} /> enviados
+                        </span>
+                        <span className="rd-chip" style={{ '--c': 'var(--ch-tot)' }} title="Follow-ups que tuvieron respuesta">
+                            <Numero valor={num['tot.fuResp']} /> respondieron
+                        </span>
+                    </span>
+                )}
+                campos={<TablaFollowups ctx={ctx} />}
+                grande={<Numero valor={num['tot.fuRate']} tipo="pct" />} rotulo="respuesta"
+                ley={<Leyenda items={[['Sin respuesta', 'claro'], ['Respondieron', '']]} />}>
+                <Flujo etapas={FOLLOWUPS.map(([, n]) => ({ n, split: true }))} color="var(--ch-tot)" tot bandas={false}
+                    fb={96} fg={angosto ? 40 : 170} valores={valores}
+                    max={Math.max(1, ...FOLLOWUPS.map(([k]) => Math.max(s.followups[k], r[k])))} />
             </Columna>
         </section>
     );
@@ -235,7 +283,7 @@ const ORDEN = {
         'bienvenidas.hechas', 'bienvenidas.respondidas'],
     aperturas: [...CANALES.flatMap(c => [`${c.k}.ap_entrantes`, `${c.k}.ap_dolor`]), 'bienvenidas.aperturas'],
     embudo: [...ETAPAS.map(([k]) => `embudo.${k}`), ...CANALES.map(c => `${c.k}.agendas`)],
-    followups: FOLLOWUPS.map(([k]) => `followups.${k}`),
+    followups: ['followups', 'followups_respondidos'].flatMap(sec => FOLLOWUPS.map(([k]) => `${sec}.${k}`)),
 };
 
 const PANELES = {

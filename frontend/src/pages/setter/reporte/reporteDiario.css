@@ -151,6 +151,12 @@
 .rd .rd-campo2.span{grid-column:1/-1}
 .rd .rd-campo2 .rd-k{color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rd .rd-campo2 .rd-k .rd-punto{width:6px;height:6px;margin-right:6px;vertical-align:1px}
+/* Los follow-ups en tabla: enviados y respondidos por etapa. Cada celda trae su lugar en las dos
+   grillas (`--dc`/`--dr` acá, `--mc`/`--mr` a lo angosto, donde las etapas pasan a ser filas). */
+.rd .rd-campos--fu{grid-template-columns:auto repeat(4,minmax(0,1fr));align-items:center;row-gap:var(--s2)}
+.rd .rd-fu-c{grid-column:var(--dc);grid-row:var(--dr);min-width:0}
+.rd .rd-fu-et{color:var(--text-muted);white-space:nowrap}
+.rd .rd-fu-fila{display:inline-flex;align-items:center;gap:6px;padding-right:var(--s2);color:var(--text-muted);white-space:nowrap}
 
 /* La celda tipo volumen: se llena con el color del canal; se arrastra o se escribe */
 .rd .rd-tile{position:relative;flex:1;min-width:0;height:60px;border-radius:18px;background:var(--hundido);
@@ -349,6 +355,9 @@
   .rd .rd-campos--5 > :nth-child(-n+3){grid-column:span 2}
   .rd .rd-campos--5 > :nth-child(n+4){grid-column:span 3}
   .rd .rd-campo2 .rd-k{letter-spacing:.1em}
+  .rd .rd-campos--fu{grid-template-columns:auto repeat(2,minmax(0,1fr))}
+  .rd .rd-fu-c{grid-column:var(--mc);grid-row:var(--mr)}
+  .rd .rd-fu-et,.rd .rd-fu-fila{letter-spacing:.1em}
   .rd .rd-rcol .rd-rbody{flex-direction:column;align-items:stretch}
   .rd .rd-flujo-svg{min-height:150px;flex:none;height:150px}
   .rd .rd-kpis{grid-template-columns:repeat(2,minmax(0,1fr));padding:var(--s4)}

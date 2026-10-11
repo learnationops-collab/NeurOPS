@@ -94,9 +94,14 @@ export const Embudos = ({ estado }) => {
             <div className="rd-resumen-b">
                 <ColResumen canal={AMBOS} indice={2}
                     chips={(
-                        <span className="rd-chip" style={{ '--c': 'var(--ch-tot)' }}>
-                            <Numero valor={num['tot.fuTot']} /> follow-ups
-                        </span>
+                        <>
+                            <span className="rd-chip" style={{ '--c': 'var(--ch-tot)' }} title="Follow-ups enviados en total">
+                                <Numero valor={num['tot.fuTot']} /> follow-ups
+                            </span>
+                            <span className="rd-chip" style={{ '--c': 'var(--ch-tot)' }} title="Follow-ups que tuvieron respuesta">
+                                <Numero valor={num['tot.fuRate']} tipo="pct" /> respuesta
+                            </span>
+                        </>
                     )}>
                     <Flujo etapas={[{ n: 'Cualificados' }, ...ETAPAS.map(([, n]) => ({ n })), { n: 'Agendas', split: 'canales' }]}
                         color="var(--ch-tot)" tot fb={64} fg={fg} max={mG} convs={convG.slice(1)}

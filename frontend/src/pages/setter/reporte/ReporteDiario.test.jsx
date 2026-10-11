@@ -185,6 +185,38 @@ describe('ReporteDiario · los avisos', () => {
     });
 });
 
+describe('ReporteDiario · los follow-ups respondidos', () => {
+    it('una fila «Respondieron» por etapa, con el % de respuesta y su aviso', async () => {
+        await montar();
+        siguiente(); siguiente(); siguiente();
+        expect(pasoActual()).toContain('Follow-ups');
+
+        escribir('Follow-ups enviados en entrantes', 8);
+        escribir('Follow-ups enviados en dolor', 2);
+        escribir('Follow-ups respondidos en entrantes', 3);
+        escribir('Follow-ups respondidos en dolor', 2);
+
+        const paso = screen.getByRole('region', { name: 'Follow-ups' });
+        expect(within(paso).getByText('Respondieron', { selector: '.rd-fu-fila' })).toBeInTheDocument();
+        // 5 respuestas de 10 enviados.
+        expect(paso.querySelector('.rd-rbig > b').textContent).toBe('50%');
+
+        escribir('Follow-ups respondidos en dolor', 4);
+        expect(screen.getByText('Dolor: más respuestas que follow-ups (2)')).toBeInTheDocument();
+        expect(celda('Follow-ups respondidos en dolor')).toHaveAttribute('aria-invalid', 'true');
+    });
+
+    it('Enter recorre los enviados y después los respondidos', async () => {
+        await montar();
+        siguiente(); siguiente(); siguiente();
+
+        celda('Follow-ups enviados en link').focus();
+        fireEvent.keyDown(celda('Follow-ups enviados en link'), { key: 'Enter' });
+
+        expect(celda('Follow-ups respondidos en entrantes')).toHaveFocus();
+    });
+});
+
 describe('ReporteDiario · enviar', () => {
     it('manda el v2 por canal, festeja y deja editar', async () => {
         const onEnviado = vi.fn();
@@ -198,7 +230,8 @@ describe('ReporteDiario · enviar', () => {
         escribir('Agendas de anuncios', 2);
         escribir('Agendas de inbound', 1);
         siguiente();
-        escribir('Follow-ups en entrantes', 9);
+        escribir('Follow-ups enviados en entrantes', 9);
+        escribir('Follow-ups respondidos en entrantes', 4);
         siguiente();
         fireEvent.change(screen.getByLabelText('Win del día'), { target: { value: 'Una fría agendó' } });
         siguiente();
@@ -214,6 +247,7 @@ describe('ReporteDiario · enviar', () => {
             bienvenidas: { hechas: 12, respondidas: 5, aperturas: 0 },
             embudo: { dolor: 10, oferta: 0, link: 0 },
             followups: { entrantes: 9, dolor: 0, oferta: 0, link: 0 },
+            followups_respondidos: { entrantes: 4, dolor: 0, oferta: 0, link: 0 },
             reflexion: { flujo_trabajo: '', win_del_dia: 'Una fría agendó' },
         });
         expect(onEnviado).toHaveBeenCalledWith(HOY);

@@ -9,7 +9,9 @@
  * usan igual.
  *
  * Los cualificados no se cargan: son entrantes − no leads − in-abribles, por canal. El embudo
- * (dolor, oferta, link) y los follow-ups van en total; las agendas, por canal.
+ * (dolor, oferta, link) y los follow-ups van en total; las agendas, por canal. Desde el 11/10/2026
+ * cada follow-up lleva también cuántos respondieron (`followups_respondidos`), para el % de
+ * respuesta que pidió Kerwin.
  */
 
 export const CANALES = [
@@ -41,6 +43,7 @@ export const vacio = () => ({
     bienvenidas: { hechas: 0, respondidas: 0, aperturas: 0 },
     embudo: { dolor: 0, oferta: 0, link: 0 },
     followups: { entrantes: 0, dolor: 0, oferta: 0, link: 0 },
+    followups_respondidos: { entrantes: 0, dolor: 0, oferta: 0, link: 0 },
     reflexion: { flujo_trabajo: '', win_del_dia: '' },
     is_non_working_day: false,
 });
@@ -154,7 +157,16 @@ export function calcular(s) {
         marca('embudo.dolor', 'warn');
     }
 
+    // Cada follow-up con sus respondidos: más respuestas que envíos es un número mal cargado.
+    const r = s.followups_respondidos;
+    for (const [k, n] of FOLLOWUPS) {
+        if (r[k] > s.followups[k]) {
+            aviso('followups', 'warn', `${n}: más respuestas que follow-ups (${s.followups[k]})`);
+            marca(`followups_respondidos.${k}`, 'warn');
+        }
+    }
     const fuTot = FOLLOWUPS.reduce((a, [k]) => a + s.followups[k], 0);
+    const fuResp = FOLLOWUPS.reduce((a, [k]) => a + r[k], 0);
     Object.assign(num, {
         'tot.entr': t.entr,
         'tot.net': t.net,
@@ -163,6 +175,8 @@ export function calcular(s) {
         'tot.apRate': tasa(t.ap, t.entr),
         'tot.convRate': tasa(t.ag, t.net),
         'tot.fuTot': fuTot,
+        'tot.fuResp': fuResp,
+        'tot.fuRate': tasa(fuResp, fuTot),
         'bienvenidas.hechas': b.hechas,
         'bienvenidas.resp': b.respondidas,
         'bienvenidas.rate': tasa(b.respondidas, b.hechas),
@@ -181,8 +195,9 @@ export const estadoDelPaso = (avisos, paso) => {
 export const primerError = (avisos) => avisos.find(a => a.nivel === 'err') || null;
 
 /**
- * El tope natural de cada número: la etapa anterior, los entrantes del canal o las respuestas.
- * `null` si no tiene (entrantes, bienvenidas hechas, follow-ups): esa celda se compara con sus pares.
+ * El tope natural de cada número: la etapa anterior, los entrantes del canal o las respuestas (los
+ * respondidos de un follow-up, sus envíos). `null` si no tiene (entrantes, bienvenidas hechas,
+ * follow-ups enviados): esa celda se compara con sus pares.
  */
 export function referenciaDe(s, ruta) {
     const [sec, campo] = ruta.split('.');
@@ -195,6 +210,7 @@ export function referenciaDe(s, ruta) {
         return { dolor: netoDe(s.anuncios) + netoDe(s.inbound), oferta: s.embudo.dolor, link: s.embudo.oferta }[campo];
     }
     if (sec === 'followups') return null;
+    if (sec === 'followups_respondidos') return s.followups[campo];
     if (['no_lead', 'inabribles', 'ap_entrantes', 'ap_dolor'].includes(campo)) return s[sec].entrantes;
     if (campo === 'agendas') return s.embudo.link;
     return null;
@@ -237,6 +253,7 @@ export const desdeLectura = (l) => {
         ...(l.bienvenidas ? { bienvenidas: l.bienvenidas } : {}),
         embudo: l.embudo,
         followups: l.followups,
+        followups_respondidos: l.followups_respondidos,
         reflexion: l.reflexion,
         is_non_working_day: Boolean(l.no_laborable),
     });
@@ -252,6 +269,7 @@ export const aPayload = (s, fecha, setterId) => ({
     bienvenidas: { ...s.bienvenidas },
     embudo: { ...s.embudo },
     followups: { ...s.followups },
+    followups_respondidos: { ...s.followups_respondidos },
     reflexion: { ...s.reflexion },
     is_non_working_day: Boolean(s.is_non_working_day),
 });
