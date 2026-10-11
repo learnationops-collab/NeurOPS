@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { BarChart3, CalendarDays, CheckCircle2, ClipboardList, Ghost, Link2 } from 'lucide-react';
@@ -99,6 +99,7 @@ const SetterEspacioPage = () => {
     const { abrir: abrirConfiguracion } = useConfiguracion();
     const { pendingCount, openPlaybook } = usePlaybook();
     const [params, setParams] = useSearchParams();
+    const navegar = useNavigate();
     const reducir = useReducedMotion();
     const [saliendo, setSaliendo] = useState(false);
     const [reporteHoy, setReporteHoy] = useState(false);
@@ -208,6 +209,9 @@ const SetterEspacioPage = () => {
             // queda a su nombre y aparece en sus agendas, como con Calendly. Tocar uno lo copia.
             { id: 'links', label: 'Mis links de agendamiento', Icono: Link2,
                 panel: { titulo: 'Mis links de agendamiento', vacio: 'Todavía no hay funnels de setting publicados.', cargar: cargarMisLinks } },
+            // Tálamus (Agendas 2.0) en solo lectura: los funnels, formularios y el equipo con que se
+            // agenda. Desde su menú, «Volver a mi espacio» trae de vuelta acá.
+            { id: 'thalamus', label: 'Tálamus', Icono: CalendarDays, onClick: () => navegar('/agendas-v2') },
         ],
         configuracion: { onClick: () => abrirConfiguracion() },
         playbook: { onClick: () => openPlaybook('pending'), pendientes: pendingCount },
