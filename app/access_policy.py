@@ -93,7 +93,6 @@ POLITICA = {
     ('POST', '/api/public/marketing/manual-attribution'): _p(CLOSER, SETTER),
     ('POST', '/api/public/marketing/manual-attribution-agenda'): _p(CLOSER, SETTER),
     ('GET', '/api/public/marketing/unattributed-leads'): _p(CLOSER, SETTER),
-    ('GET', '/api/public/reports/sales-attribution'): _p(),
 
     # --- Equipos: listas de closers, setters y triage; reportes diarios y estadisticas ------------------
     ('GET', '/api/public/active-closers'): _p(CLOSER, COMERCIAL, OPERATOR),
