@@ -544,7 +544,17 @@ def descartar(conservada, duplicada, usuario_id, motivo=None, cancelar_cita=True
 
 
 def restaurar(agenda):
-    """Deshace un descarte: la fila vuelve al libro y su cita al estado que tenía."""
+    """Deshace un descarte: la fila vuelve al libro y su cita al estado que tenía.
+
+    De la cita se deshace solo lo que el descarte cambió, y solo si sigue como lo dejó: el
+    `result` vuelve al de antes mientras diga 'Cancelado'. Antes se reescribían `result` y
+    `closer_result` a ciegas, así que deshacer después de que el closer reportó la llamada
+    le borraba el reporte (el descarte nunca toca `closer_result`: devolverlo solo podía
+    pisar algo nuevo), y a una cita a la que alguien le había cambiado el pre call después
+    del descarte se le volvía a poner el de antes. Desde el 10/10/2026 esto se usa desde
+    Revisar, donde la cita cancelada sigue a la vista (en «Descartadas») y se puede trabajar
+    mientras la agenda está descartada.
+    """
     if agenda.duplicada_de_id is None:
         raise ValueError(f'La agenda #{agenda.id} no está descartada')
 
@@ -552,9 +562,8 @@ def restaurar(agenda):
     appointment_id = snapshot.get('appointment_id')
     if appointment_id:
         cita = Appointment.query.get(appointment_id)
-        if cita:
+        if cita and (cita.result or '') == 'Cancelado':
             cita.result = snapshot.get('result_previo')
-            cita.closer_result = snapshot.get('closer_result_previo')
 
     # Devolver lo que la conservada heredó de esta fila: si no, deshacer dejaría las dos
     # con el mismo dato y ya no se sabría cuál era de quién.

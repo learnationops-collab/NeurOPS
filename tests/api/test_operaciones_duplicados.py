@@ -9,7 +9,7 @@ el panel nuevo:
   · los grupos se piden con el período de Revisar (fecha de la reunión);
   · resolver con «cancelar citas» cancela la cita de la descartada —y solo esa—, así que sale de las
     vigentes de Revisar;
-  · restaurar devuelve la cita a como estaba.
+  · restaurar devuelve la cita a como estaba, sin pisar lo que alguien le cargó después.
 """
 from datetime import datetime
 
@@ -125,6 +125,36 @@ def test_sin_cancelar_citas_la_cita_no_se_toca(client, db, operador, auth_header
     assert r.status_code == 200
     assert db.session.get(FinancialAgenda, reprogramo['vieja'].id).duplicada_de_id == reprogramo['nueva'].id
     assert db.session.get(Appointment, reprogramo['cita_vieja'].id).result == 'Confirmado'
+
+
+def test_restaurar_no_pisa_el_resultado_que_el_closer_cargo_despues(client, db, operador, auth_headers, reprogramo):
+    """Entre el descarte y el deshacer el closer reportó la llamada: deshacer devuelve lo que el
+    descarte cambió (la cancelación), no borra el reporte."""
+    cabeceras = auth_headers(operador)
+    _resolver(client, cabeceras, reprogramo['nueva'], [reprogramo['vieja']])
+    cita = db.session.get(Appointment, reprogramo['cita_vieja'].id)
+    cita.closer_result = 'Show up'
+    db.session.commit()
+
+    client.post(RESTAURAR, headers=cabeceras, json={'agenda_ids': [reprogramo['vieja'].id]})
+
+    cita = db.session.get(Appointment, reprogramo['cita_vieja'].id)
+    assert (cita.result, cita.closer_result) == ('Confirmado', 'Show up')
+
+
+def test_restaurar_no_pisa_una_cita_que_alguien_movio_despues(client, db, operador, auth_headers, reprogramo):
+    """Si después del descarte alguien le cambió el pre call a la cita (ya no dice «Cancelado», lo que
+    dejó el descarte), deshacer no la devuelve a la de antes: manda lo último que se decidió."""
+    cabeceras = auth_headers(operador)
+    _resolver(client, cabeceras, reprogramo['nueva'], [reprogramo['vieja']])
+    cita = db.session.get(Appointment, reprogramo['cita_vieja'].id)
+    cita.result = 'Reagendado'
+    db.session.commit()
+
+    client.post(RESTAURAR, headers=cabeceras, json={'agenda_ids': [reprogramo['vieja'].id]})
+
+    assert db.session.get(FinancialAgenda, reprogramo['vieja'].id).duplicada_de_id is None
+    assert db.session.get(Appointment, reprogramo['cita_vieja'].id).result == 'Reagendado'
 
 
 @pytest.mark.parametrize('rol', ['director_comercial', 'closer', 'setter'])
