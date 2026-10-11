@@ -75,7 +75,6 @@ def _build_agenda_queries():
     estados = _split_multi(request.args.get('estado', default='', type=str))
     closers = _split_multi(request.args.get('closer', default='', type=str))
     fuentes = _split_multi(request.args.get('fuente', default='', type=str))
-    encargados_triage = _split_multi(request.args.get('encargado_triage', default='', type=str))
     closer_results = _split_multi(request.args.get('closer_result', default='', type=str))
 
     # Consulta base filtrada únicamente por fechas. Las marcadas como repetidas del mismo
@@ -138,14 +137,8 @@ def _build_agenda_queries():
         query = query.filter(FinancialAgenda.closer.in_(closers))
     if fuentes:
         query = query.filter(FinancialAgenda.nombre.in_(fuentes))
-    if encargados_triage:
-        triage_conds = []
-        asignados = [t for t in encargados_triage if t != 'Sin Asignar']
-        if 'Sin Asignar' in encargados_triage:
-            triage_conds.append(or_(FinancialAgenda.encargado_triage == None, FinancialAgenda.encargado_triage == ''))
-        if asignados:
-            triage_conds.append(FinancialAgenda.encargado_triage.in_(asignados))
-        query = query.filter(or_(*triage_conds))
+    # El filtro por Call Confirmer (`encargado_triage`) se retiró el 10/10/2026 junto con la
+    # columna del tablero: los closers confirman sus propias agendas. Si llega, se ignora.
 
     if date_filter_by == 'created':
         query = query.order_by(FinancialAgenda.registro.desc())
@@ -322,7 +315,9 @@ def receive_financial_agendas():
                     item = dict(item)
                     item['reprogramada_desde'] = existing.date.isoformat() if existing.date else None
 
-        # Extraer encargado de triage de forma robusta
+        # Extraer encargado de triage de forma robusta. El Call Confirmer ya no se ve en el
+        # tablero (10/10/2026), pero n8n puede seguir mandandolo y se guarda igual: es el dato
+        # que cuenta el reporte diario del rol triage (ver el PUT de mas abajo).
         encargado_triage_val = None
         for k in ['encargado_triage', 'encargado', 'triage', 'call_confirmer', 'confirmer', 'encargadotriage', 'callconfirmer']:
             val = next((item[key] for key in item if key.lower() == k), None)
@@ -674,15 +669,7 @@ def get_financial_agendas():
     # edición) para no volver a asignar una agenda a alguien que ya no está activo
     # y que por lo tanto no la vería en su espacio de trabajo.
     active_closers = sorted(closer_usernames)
-    
-    triage_query = db.session.query(FinancialAgenda.encargado_triage).distinct().filter(
-        FinancialAgenda.id.in_(date_query.with_entities(FinancialAgenda.id))
-    ).all()
-    triage_names_db = [t[0].strip() for t in triage_query if t[0] and t[0].strip()]
-    triage_users = User.query.filter_by(role='triage', is_active=True).all()
-    triage_usernames = [u.username for u in triage_users]
-    unique_triage = sorted(list(set(triage_names_db + triage_usernames)))
-    
+
     raw_sources = [s[0].strip() for s in sources_query if s[0] and s[0].strip()]
     unique_sources = []
     for src in raw_sources:
@@ -731,12 +718,10 @@ def get_financial_agendas():
             "by_closer": by_closer,
             "by_closer_state": by_closer_state,
             "by_source_state": by_source_state,
-            "by_triage_state": {},
             "unique_states": ['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada', 'Cerrada', '2TH Call', 'No Lead', 'Follow Up'],
             "unique_closers": unique_closers,
             "active_closers": active_closers,
             "unique_sources": unique_sources,
-            "unique_triage": unique_triage,
             "page": page,
             "pages": pages_count,
             "has_more": has_more
@@ -801,6 +786,10 @@ def update_financial_agenda(agenda_id):
             status_changed = True
             agenda.estado = data['estado']
             
+        # El Tablero de Agendas ya no muestra ni edita el Call Confirmer (10/10/2026), pero la
+        # pantalla del rol triage (/triage/deck, TriageWorkflowPage) sigue mandando su usuario al
+        # confirmar o reagendar, y el prefill de su reporte diario (/public/triage-report/prefill)
+        # cuenta sus agendas por este campo: si dejara de guardarse, ese reporte quedaria en cero.
         if 'encargado_triage' in data:
             agenda.encargado_triage = data['encargado_triage']
         if 'fecha_seguimiento' in data:

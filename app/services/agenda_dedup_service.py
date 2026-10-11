@@ -361,8 +361,10 @@ def decidir_reconciliacion(agenda, universo=None, ventas_conocidas=None):
 
 # Campos que la fila que se conserva HEREDA de la repetida cuando ella no los tiene.
 # Sin esto, conservar la original significaría perder el resultado que el closer cargó
-# sobre la copia.
-_VACIOS = {'', 'n/a', 'na', 'none', 'no tengo', 'notengo', 'ninguno', 'sin asignar', 'desconocido'}
+# sobre la copia. `encargado_triage` se queda aunque el tablero ya no muestre el Call
+# Confirmer (10/10/2026): lo sigue escribiendo la pantalla del rol triage y lo cuenta su
+# reporte diario, asi que la fila que sobrevive no debe perderlo.
+_VACIOS ={'', 'n/a', 'na', 'none', 'no tengo', 'notengo', 'ninguno', 'sin asignar', 'desconocido'}
 CAMPOS_HEREDABLES = ('mail', 'instagram', 'whatsapp', 'closer', 'encargado_triage', 'zona_geografica')
 
 
