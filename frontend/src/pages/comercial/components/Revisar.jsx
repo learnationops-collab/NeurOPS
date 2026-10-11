@@ -5,7 +5,7 @@ import { ChevronDown, Download, Filter, LayoutGrid, List, Plus, Rows, RotateCcw,
 // barra, pegada al borde derecho, y antes se cortaba (ver `Tip.jsx`).
 import { Tip, fmt } from './Shared';
 import Cifra from './Cifra';
-import { DIMENSION_PROPIA, TABLAS, TABLAS_POR_ROL, valoresVigentes } from './tablasDef';
+import { DIMENSION_PROPIA, TABLAS, TABLAS_POR_ROL, defDe, valoresVigentes, ventaSuma } from './tablasDef';
 import PanelConfigurar from './PanelConfigurar';
 import PanelExportar from './PanelExportar';
 import RevisarLista, { EsqueletoRevisar, claveDe } from './RevisarLista';
@@ -173,7 +173,9 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     // lista y las ventas como tarjetas es una preferencia razonable, no una inconsistencia.
     const { modo: modoVista, setModo: setModoVista } = useModoVista(`comercial_view_mode_${tabla}`);
 
-    const def = TABLAS[tabla];
+    // Quien opera ve Ventas con su estado, su agenda y las no completadas (ver `defDe`); el resto, la
+    // tabla de siempre.
+    const def = defDe(tabla, !!operacion);
     const panel = useRef(null);
 
     /**
@@ -286,8 +288,13 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         () => aplicarFiltros(filas, def, query, facetas, modo),
         [filas, def, query, facetas, modo]);
 
-    const chipActivo = chip || def.chips[0].key;
-    const rapido = def.chips.find(c => c.key === chipActivo) || def.chips[0];
+    // Un filtro rápido `soloSiHay` («No completadas» de quien opera) se ofrece solo si el período
+    // tiene filas así; si las corrigieron todas, el elegido vuelve al de por defecto.
+    const chips = useMemo(
+        () => def.chips.filter(c => !c.soloSiHay || filas.some(f => c.filtro(f, {}))),
+        [def, filas]);
+    const chipActivo = chips.some(c => c.key === chip) ? chip : def.chips[0].key;
+    const rapido = chips.find(c => c.key === chipActivo) || def.chips[0];
     // El filtro rápido recibe también las facetas: el de por defecto de Clientes deja afuera a los
     // dados de baja salvo que se los pida por estado (ver `entraPorDefecto` en `tablasDef.js`).
     // Con una flecha y no pasando `rapido.filtro` directo: `Array.filter` le daría el índice.
@@ -425,16 +432,28 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         const de = (a, b) => `${fmt.num(a)} de ${fmt.num(b)}`;
 
         if (tabla === 'ventas') {
-            const cash = lista.reduce((a, f) => a + f.monto, 0);
+            // Una venta no completada no es cash: quien opera la ve en la lista para corregirla
+            // («No completadas», o pidiendo su estado), pero la tira cuenta solo las completadas,
+            // igual que `totales_ventas` en el backend. Así ningún número de la dirección se mueve.
+            const cobros = lista.filter(ventaSuma);
+            const fuera = lista.length - cobros.length;
+            const cash = cobros.reduce((a, f) => a + f.monto, 0);
             // El ticket promedia solo lo cobrado en las ventas nuevas: las cuotas y las señas
             // suman al cash pero no son ventas (igual que `totales_ventas` en el backend).
-            const nuevas = lista.filter(f => f.es_venta);
+            const nuevas = cobros.filter(f => f.es_venta);
             const ventas = nuevas.length;
             const cashVentas = nuevas.reduce((a, f) => a + f.monto, 0);
-            const neto = lista.reduce((a, f) => a + f.monto_neto, 0);
+            const neto = cobros.reduce((a, f) => a + f.monto_neto, 0);
+            const deCobros = fmt.plural(cobros.length, 'cobro', 'cobros');
             return [
                 { key: 'cash', label: 'cash', valor: fmt.money(Math.round(cash * 100) / 100),
-                    color: 'var(--text-on-surface)', hint: fmt.plural(lista.length, 'cobro', 'cobros') },
+                    color: 'var(--text-on-surface)',
+                    // Con no completadas a la vista, la bajada dice cuántas quedaron afuera: si no, la
+                    // lista mostraría más filas que cobros cuenta la tira, sin explicación.
+                    hint: fuera ? `${deCobros} · ${fmt.num(fuera)} no ${fuera === 1 ? 'suma' : 'suman'}` : deCobros,
+                    ayuda: fuera ? 'Lo cobrado en las ventas completadas de la lista. Las no completadas '
+                        + '(pendientes, reembolsadas, canceladas) se ven para corregirlas, pero no son cash.'
+                        : undefined },
                 { key: 'ventas', label: segun(ventas, 'venta', 'ventas'), valor: fmt.num(ventas),
                     color: 'var(--brand-secondary)',
                     ayuda: 'Pago completo y split pay. Una seña es una reserva: no cuenta como venta.' },
@@ -444,7 +463,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                         + 'fueron. Las cuotas y las señas no entran.' },
                 { key: 'neto', label: 'cash neto', valor: fmt.money(Math.round(neto * 100) / 100),
                     color: 'var(--success)', ayuda: 'El cash sin los fees de la pasarela de pago.' },
-                itemTotalAcademia(lista),
+                itemTotalAcademia(cobros),
             ].filter(Boolean);
         }
 
@@ -557,7 +576,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                     </button>
                     {menu === 'rapido' && (
                         <div className="menu" role="menu" aria-label="Filtro rápido">
-                            {def.chips.map(c => (
+                            {chips.map(c => (
                                 <button key={c.key} type="button" className="menu-item"
                                     role="menuitemradio" aria-checked={chipActivo === c.key}
                                     onClick={() => {

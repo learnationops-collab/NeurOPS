@@ -35,8 +35,15 @@ export const getComparativas = (filtros) =>
 export const getVariabilidad = (filtros) =>
     api.get('/comercial/variabilidad', { params: filtrosQuery(filtros) }).then(r => r.data);
 
-export const getTabla = (filtros, tabla, basis) =>
-    api.get('/comercial/tabla', { params: { ...filtrosQuery(filtros), tabla, basis } }).then(r => r.data);
+/**
+ * Las filas de una tabla de Revisar. `operar` (10/10/2026) la pide para operar los registros: en
+ * Ventas, el backend suma las no completadas, el estado y la agenda de cada venta. Solo le hace caso
+ * a admin y operador (`ROLES_QUE_OPERAN`); a cualquier otro rol le devuelve lo de siempre.
+ */
+export const getTabla = (filtros, tabla, basis, { operar = false } = {}) =>
+    api.get('/comercial/tabla', {
+        params: { ...filtrosQuery(filtros), tabla, basis, ...(operar ? { operar: 1 } : {}) },
+    }).then(r => r.data);
 
 /** «No cerradas» del panel Cierre: las agendas con show up sin venta ni seña, cada una con su
  *  objeción. Mismo período y alcance que el resumen; se pide recién al abrir su modal. */

@@ -98,7 +98,27 @@ const Celda = ({ fila, col }) => {
                 </>
             );
         case 'monto':
-            return <span className="celda celda--num">{fmt.money(fila.monto)}</span>;
+            // Una venta no completada (solo la ve quien opera) no es cash: el monto va tachado, que
+            // es lo que explica por qué no está en la tira de totales.
+            return fila.completada === false ? (
+                <span className="celda celda--num mut40" style={{ textDecoration: 'line-through' }}
+                    title={`No suma: la venta está ${(fila.estado?.label || 'sin completar').toLowerCase()}`}>
+                    {fmt.money(fila.monto)}
+                </span>
+            ) : <span className="celda celda--num">{fmt.money(fila.monto)}</span>;
+        // Solo en la tabla de quien opera (ver `defDe` en `tablasDef.js`): el estado de la venta y,
+        // debajo, si no tiene agenda, que es lo que se viene a corregir con «Atribuir a una agenda».
+        case 'estado_venta':
+            return (
+                <>
+                    <ChipTono chip={fila.estado} />
+                    {fila.tiene_agenda === false && (
+                        <span className="celda-sub" style={{ color: 'var(--warning)', fontWeight: 700 }}>
+                            Sin agenda
+                        </span>
+                    )}
+                </>
+            );
         case 'pagado':
             return (
                 <span className="celda celda--num">
@@ -198,7 +218,7 @@ const Celda = ({ fila, col }) => {
 };
 
 /** Las columnas que se leen como un chip de estado: en una tarjeta van arriba, no en la lista de datos. */
-const COLS_CHIP = new Set(['pre_call', 'post_call', 'estado', 'academia']);
+const COLS_CHIP = new Set(['pre_call', 'post_call', 'estado', 'estado_venta', 'academia']);
 /** Y estas ya están en el encabezado de la tarjeta o no son un dato. */
 const COLS_FUERA = new Set(['cliente', 'ver']);
 
