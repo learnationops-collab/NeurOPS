@@ -29,8 +29,10 @@ const CUOTA = {
 
 const chipDeCuota = (estado) => CUOTA[String(estado || '').toLowerCase()] || CUOTA.pendiente;
 
-const Chip = ({ label, tono = 'idle' }) => (
-    <span className="chip" style={{ '--c': `var(--${tono})` }}>{label}</span>
+// `ayuda` es el tooltip del estado, que el backend manda en los que hay que explicar («Lead
+// perdido», «Archivada sin reporte»).
+const Chip = ({ label, tono = 'idle', ayuda = undefined }) => (
+    <span className="chip" style={{ '--c': `var(--${tono})` }} title={ayuda}>{label}</span>
 );
 
 /** Fila del historial: fecha · detalle · monto/chip. Siempre las mismas tres columnas. */
@@ -106,15 +108,18 @@ const hoyMasUnDia = () => {
 };
 
 /** Un desplegable chico de estado, con el vocabulario que manda el backend. */
+// El tooltip del desplegable es la `ayuda` del estado elegido, si la tiene (ver `Chip`).
 const SelectorEstado = ({ etiqueta, valor, opciones, disabled, onCambiar }) => (
     <span className="ln-field" style={{ height: 34, minWidth: 0 }}>
         <select value={valor || ''} disabled={disabled} aria-label={etiqueta}
+            title={opciones.find(o => o.key === valor)?.ayuda}
             onChange={(e) => onCambiar(e.target.value)}>
             {opciones.map(o => (
                 // Los no editables se muestran pero no se eligen: «Venta» no es un estado que se
                 // fije a mano —es que exista una venta cruzada— y ponerlo acá marcaría una venta
                 // que la contabilidad no tiene. Mismo criterio que el libro de registros.
-                <option key={o.key} value={o.key} disabled={o.editable === false}>{o.label}</option>
+                <option key={o.key} value={o.key} disabled={o.editable === false}
+                    title={o.ayuda}>{o.label}</option>
             ))}
         </select>
     </span>
@@ -340,7 +345,7 @@ const Agendas = ({ agendas, vocabulario, closerId, puedeEditar, puedeReasignar, 
                                 disabled={ocupada === `${a.id}:post_call`}
                                 onCambiar={(v) => corregir(a.id, 'post_call', v)} />
                         </>
-                    ) : a.chip && <Chip label={a.chip.label} tono={a.chip.tone} />}
+                    ) : a.chip && <Chip label={a.chip.label} tono={a.chip.tone} ayuda={a.chip.ayuda} />}
                 </FilaAgenda>
             )) : <Vacio texto="Este lead todavía no tiene ninguna agenda." />}
 

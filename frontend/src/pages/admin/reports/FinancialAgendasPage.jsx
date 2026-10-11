@@ -31,6 +31,7 @@ import LeadRoadmapModal from '../../../components/modals/LeadRoadmapModal';
 import AgendasBulkEditModal from './AgendasBulkEditModal';
 import AgendasDuplicadosModal from './AgendasDuplicadosModal';
 import { useAuth } from '../../../contexts/AuthContext';
+import { ayudaDeResultado } from '../../../utils/estadosAgenda';
 
 
 // Columnas disponibles al exportar clientes potenciales (el orden define el del CSV)
@@ -1488,13 +1489,15 @@ const FinancialAgendasPage = () => {
                                                                     } catch (err) { console.error(err); alert('Error al actualizar resultado'); }
                                                                 }}
                                                                 className={`rounded-lg px-2.5 py-1 text-[9px] font-black uppercase tracking-widest border cursor-pointer outline-none focus:ring-1 focus:ring-violet-500/50 transition-all ${colorClass}`}
+                                                                title={ayudaDeResultado(val)}
                                                             >
                                                                 {resultOptions.map(st => <option key={st} value={st} className="bg-slate-900 text-white">{st}</option>)}
                                                             </select>
                                                         );
                                                     }
                                                     // Solo lectura para triage
-                                                    return <span className={`rounded-lg px-2 py-0.5 text-[9px] font-black uppercase tracking-widest border ${colorClass}`}>{val}</span>;
+                                                    return <span className={`rounded-lg px-2 py-0.5 text-[9px] font-black uppercase tracking-widest border ${colorClass}`}
+                                                        title={ayudaDeResultado(val)}>{val}</span>;
                                                 })()}
                                             </td>
                                             <td className="py-4 px-4 text-right">

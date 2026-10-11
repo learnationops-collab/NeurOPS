@@ -3,6 +3,7 @@ import { Loader2, ChevronDown, ChevronUp, Save, DollarSign, CalendarDays } from 
 import toast from 'react-hot-toast';
 import api from '../../../services/api';
 import { parseUtcIso } from '../../../utils/datetime';
+import { ayudaDeResultado } from '../../../utils/estadosAgenda';
 
 const CLOSER_RESULT_OPTIONS = [
     'Pendiente', 'Show up', 'No Show', 'Cancelado', 'Reagendado', '2da call', 'Lead Perdido'
@@ -75,7 +76,8 @@ const AppointmentRow = ({ appt, onSaved }) => {
                 <>
                     <span className="text-slate-300">Reunión: {formatDate(appt.start_time)}</span>
                     <span className="text-slate-500">· Creada: {formatDate(appt.created_at)}</span>
-                    <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-200 font-bold">{appt.closer_result || 'Pendiente'}</span>
+                    <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-200 font-bold"
+                        title={ayudaDeResultado(appt.closer_result)}>{appt.closer_result || 'Pendiente'}</span>
                     <button onClick={() => setEditing(true)} className="ml-auto text-primary hover:underline font-bold">Editar</button>
                 </>
             )}

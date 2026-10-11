@@ -34,6 +34,13 @@ export const estadoDeAgenda = (fila) => {
 };
 
 /**
+ * El tooltip del estado de una agenda en las facetas que filtran por él: la `ayuda` del chip, que
+ * manda el backend solo en los estados que hay que explicar («Lead perdido», «Archivada sin
+ * reporte»). Ver `PanelConfigurar`.
+ */
+const ayudaDelEstado = (fila) => fila.post_call?.ayuda;
+
+/**
  * Estados de agenda que el backend ya no manda, con el que los reemplazó.
  *
  * El filtro del drill-down viaja en la URL (`f`) con etiquetas, así que un link guardado, el botón
@@ -269,9 +276,9 @@ export const TABLAS = {
             { key: 'ver', header: '', width: '0.4fr' },
         ],
         facetas: [
-            { key: 'estado', label: 'Estado', de: estadoDeAgenda },
+            { key: 'estado', label: 'Estado', de: estadoDeAgenda, ayuda: ayudaDelEstado },
             { key: 'pre_call', label: 'Pre call', de: (f) => f.pre_call.label },
-            { key: 'post_call', label: 'Post call', de: (f) => f.post_call.label },
+            { key: 'post_call', label: 'Post call', de: (f) => f.post_call.label, ayuda: ayudaDelEstado },
             { key: 'closer', label: 'Closer', de: (f) => f.closer },
             { key: 'fuente', label: 'Fuente', de: (f) => f.fuente },
             { key: 'confirmada', label: 'Confirmada', de: fueConfirmada },
@@ -468,10 +475,10 @@ export const TABLAS = {
             { key: 'ver', header: '', width: '0.4fr' },
         ],
         facetas: [
-            { key: 'estado', label: 'Estado', de: estadoDeAgenda },
+            { key: 'estado', label: 'Estado', de: estadoDeAgenda, ayuda: ayudaDelEstado },
             { key: 'setter', label: 'Setter', de: (f) => f.setter },
             { key: 'pre_call', label: 'Pre call', de: (f) => f.pre_call.label },
-            { key: 'post_call', label: 'Post call', de: (f) => f.post_call.label },
+            { key: 'post_call', label: 'Post call', de: (f) => f.post_call.label, ayuda: ayudaDelEstado },
             { key: 'closer', label: 'Closer', de: (f) => f.closer },
             { key: 'confirmada', label: 'Confirmada', de: fueConfirmada },
             { key: 'asistio', label: 'Asistió', de: asistio },

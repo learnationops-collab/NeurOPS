@@ -22,6 +22,14 @@ const PanelConfigurar = ({ def, filas, facetas, setFacetas, modo, setModo, tabla
         return [...conteo.entries()].sort((a, b) => b[1] - a[1]);
     };
 
+    // El tooltip de cada opción, si la faceta sabe darlo (`faceta.ayuda`): el mismo del chip de la
+    // fila, que es el que manda el backend (ver `ChipTono`).
+    const ayudaDe = (faceta, valor) => {
+        if (!faceta.ayuda) return undefined;
+        const fila = filas.find(f => faceta.de(f) === valor);
+        return (fila && faceta.ayuda(fila)) || undefined;
+    };
+
     const alternar = (faceta, valor) => {
         const actuales = facetas[faceta.key] || [];
         setFacetas({
@@ -86,7 +94,7 @@ const PanelConfigurar = ({ def, filas, facetas, setFacetas, modo, setModo, tabla
                                     const on = sel.includes(valor);
                                     return (
                                         <button key={valor} type="button" className="config-op"
-                                            role="checkbox" aria-checked={on}
+                                            role="checkbox" aria-checked={on} title={ayudaDe(faceta, valor)}
                                             onClick={() => alternar(faceta, valor)}>
                                             <span className="config-caja">{on ? '✓' : ''}</span>
                                             <span className="trunc">{valor}</span>

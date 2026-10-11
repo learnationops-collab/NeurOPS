@@ -121,7 +121,7 @@ const Dona = ({ estados, total, sinResultado, activo, irA }) => {
                                     if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ir(); }
                                 },
                             } : {})}>
-                            <title>{texto}</title>
+                            <title>{e.ayuda ? `${texto}. ${e.ayuda}` : texto}</title>
                         </circle>
                     );
                 })}
@@ -188,7 +188,7 @@ const Tabla = ({ estados, irA }) => {
                 const Tag = ir ? 'button' : 'div';
                 return (
                     <Tag key={e.key} className="est-fila" data-grupo={e.grupo}
-                        style={{ '--c': color(e.tone), '--i': i }}
+                        style={{ '--c': color(e.tone), '--i': i }} title={e.ayuda}
                         {...(ir ? {
                             type: 'button', onClick: ir,
                             'aria-label': `${e.label}: ${plural(e.n, 'agenda', 'agendas')}, `
@@ -209,7 +209,8 @@ const Tabla = ({ estados, irA }) => {
 };
 
 /**
- * `estados`: `[{key, label, tone, n, filtro, grupo}]` tal como los manda `estados_de`.
+ * `estados`: `[{key, label, tone, n, filtro, grupo}]` tal como los manda `estados_de`, más `ayuda`
+ * (el tooltip) en los estados que hay que explicar: «Lead perdido» y «Archivada sin reporte».
  * `vista`: 'grafico' | 'tabla'. `irA`: el drill-down del tablero; sin él nada es cliqueable.
  */
 const RepartoEstados = ({ estados, vista = 'grafico', irA }) => {

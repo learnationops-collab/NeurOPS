@@ -90,8 +90,11 @@ const TarjetaAgenda = forwardRef(({ agenda, anuncios, sugerido, onAsignar, orden
                             {agenda.canal && <span title="Por dónde reservó"><Radio size={14} aria-hidden="true" />{agenda.canal}</span>}
                         </div>
                     </div>
+                    {/* El tooltip es la `ayuda` del estado, que el backend manda en los que hay
+                        que explicar («Lead perdido», «Archivada sin reporte»). */}
                     {estado?.label && (
-                        <span className="chip ma-estado" style={{ '--c': `var(--${estado.tone || 'idle'})` }}>{estado.label}</span>
+                        <span className="chip ma-estado" style={{ '--c': `var(--${estado.tone || 'idle'})` }}
+                            title={estado.ayuda}>{estado.label}</span>
                     )}
                 </div>
 

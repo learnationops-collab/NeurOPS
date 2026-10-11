@@ -45,10 +45,13 @@ import { SIN_PALABRA_CLAVE } from './tablasSetter';
  *
  * El texto va en su propio span: el chip es `inline-flex`, y a un texto suelto dentro de un flex
  * no se le puede poner `text-overflow`. Así, en una columna angosta se corta con «…» en vez de
- * salirse del chip y pisar la columna de al lado. */
+ * salirse del chip y pisar la columna de al lado.
+ *
+ * El tooltip es la `ayuda` del estado cuando el backend la manda («Lead perdido», «Archivada sin
+ * reporte»: los que hay que explicar), y si no la etiqueta entera, por si se cortó. */
 export const ChipTono = ({ chip }) => (chip
     ? (
-        <span className="chip" style={{ '--c': `var(--${chip.tone})` }} title={chip.label}>
+        <span className="chip" style={{ '--c': `var(--${chip.tone})` }} title={chip.ayuda || chip.label}>
             <span className="trunc">{chip.label}</span>
         </span>
     )

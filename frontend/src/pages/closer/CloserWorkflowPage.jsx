@@ -37,6 +37,7 @@ import FichaLeadModal from '../../components/ficha/FichaLeadModal';
 import ClienteNuevoVenta from './components/ClienteNuevoVenta';
 import DiaDelReporte, { etiquetaDia } from './components/DiaDelReporte';
 import { agendaParaVender, mensajeDeError } from '../../components/ficha/fichaApi';
+import { ayudaDeResultado } from '../../utils/estadosAgenda';
 
 const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', 'séptimo', 'octavo', 'noveno', 'décimo'];
 
@@ -1287,7 +1288,8 @@ const CloserWorkflowPage = () => {
                         </span>
                     )}
                     {(phase === 'call' || phase === 'call_done') && a.closer_result && a.closer_result !== 'Pendiente' && (
-                        <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-violet-500/15 border border-violet-500/40 text-violet-300">
+                        <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-violet-500/15 border border-violet-500/40 text-violet-300"
+                            title={ayudaDeResultado(a.closer_result)}>
                             {a.closer_result}
                         </span>
                     )}
