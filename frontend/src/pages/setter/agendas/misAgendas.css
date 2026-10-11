@@ -22,7 +22,7 @@
   padding:0 6px;margin:0 2px;border-radius:6px;background:var(--bg-element);border:1px solid var(--border-subtle);
   font-size:11px;font-weight:900;color:var(--text-muted)}
 
-/* --- La tira de arriba: cuántas quedan, la barra de hoy, la racha y la comisión ------------- */
+/* --- La tira de arriba: cuántas quedan en el mes, la barra del mes, hoy y la racha ------------ */
 .mis-agendas .ma-tira{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:var(--s4) var(--s8);
   align-items:center;padding:var(--s5) var(--s6)}
 .mis-agendas .ma-avance{display:grid;gap:var(--s3);min-width:0}
@@ -43,7 +43,29 @@
   letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums;color:var(--c,var(--text-on-surface))}
 .mis-agendas .medida .mv svg{align-self:center}
 .mis-agendas .medida .mv small{font-size:12px;font-weight:700;letter-spacing:0;color:var(--text-muted)}
-.mis-agendas .ma-medida-pie{font-size:11.5px;font-weight:600;color:var(--text-muted-40)}
+/* El rótulo con su "i": el tooltip va pegado a la palabra, no al final de la columna. */
+.mis-agendas .ma-k{display:inline-flex;align-items:center;gap:6px}
+.mis-agendas .ma-barra-t{display:inline-flex;align-items:center;gap:4px}
+.mis-agendas .ma-barra-t .tip{margin-left:4px}
+
+/* --- El mes: su nombre con lo que falta y el selector, del más nuevo al más viejo ------------ */
+.mis-agendas .ma-meses{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);flex-wrap:wrap;
+  padding:0 var(--s2);min-width:0}
+.mis-agendas .ma-mes-titulo{margin:0;font-size:20px;font-weight:900;letter-spacing:-.02em;white-space:nowrap}
+.mis-agendas .ma-mes-titulo .num{color:var(--brand-secondary)}
+.mis-agendas .ma-meses-chips{display:flex;gap:4px;padding:4px;border-radius:var(--radius-pill);min-width:0;max-width:100%;
+  overflow-x:auto;scrollbar-width:none;background:var(--bg-input);border:1px solid var(--border-subtle)}
+.mis-agendas .ma-meses-chips::-webkit-scrollbar{display:none}
+.mis-agendas .ma-mes{position:relative;isolation:isolate;display:inline-flex;align-items:center;gap:6px;height:32px;
+  padding:0 12px;flex-shrink:0;border-radius:var(--radius-pill);font-size:13px;font-weight:700;color:var(--text-muted);
+  transition:color .16s ease}
+.mis-agendas .ma-mes:hover{color:var(--text-on-surface)}
+.mis-agendas .ma-mes b{font-weight:900;font-variant-numeric:tabular-nums;color:var(--brand-secondary)}
+.mis-agendas .ma-mes.completo svg{color:var(--success)}
+.mis-agendas .ma-mes.on{color:var(--ink)}
+.mis-agendas .ma-mes.on b,.mis-agendas .ma-mes.on svg{color:var(--ink)}
+.mis-agendas .ma-mes-pildora{position:absolute;inset:0;z-index:-1;border-radius:inherit;background:var(--brand-secondary)}
+.mis-agendas .ma-mes.completo.on .ma-mes-pildora{background:var(--success)}
 
 /* Cada vez que baja, el número cae a su lugar; lo de hoy, un pop en verde. */
 .mis-agendas .ma-baja{animation:maBaja .34s var(--out)}
@@ -95,7 +117,7 @@
 .mis-agendas .ma-ig-campo svg{color:var(--text-muted)}
 .mis-agendas .ma-ig-campo input{flex:1;min-width:0;border:0;background:none;outline:none;font-size:13px;font-weight:700}
 .mis-agendas .ma-ig-campo input:focus-visible{box-shadow:none}
-.mis-agendas .ma-ig-nota{font-size:12px;font-weight:600;color:var(--warning)}
+.mis-agendas .ma-ig-nota{font-size:12px;font-weight:700;color:var(--warning);cursor:help}
 
 /* --- Asignar: el buscador y el botón ------------------------------------------------------- */
 .mis-agendas .ma-asignar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:var(--s2);min-width:0}
@@ -147,6 +169,9 @@
 .mis-agendas .ma-premio--calmo{min-height:260px;border-radius:28px;background:rgba(6,9,36,.46);border:1px solid var(--border-subtle)}
 .mis-agendas .ma-premio--calmo h2{font-size:24px}
 .mis-agendas .ma-premio-ok{color:var(--success)}
+/* «Seguí con septiembre · 23»: lo que sigue después de vaciar un mes. */
+.mis-agendas .ma-premio .ma-llamado{margin-top:var(--s2);gap:var(--s2)}
+.mis-agendas .ma-llamado b{font-weight:900}
 
 .mis-agendas .ma-premio-trofeo{position:relative;width:96px;height:96px}
 .mis-agendas .ma-premio-trofeo svg.ok{width:96px;height:96px}
@@ -187,6 +212,8 @@
 }
 @media (max-width:700px){
   .mis-agendas .ma-tira{grid-template-columns:minmax(0,1fr);padding:var(--s4)}
+  .mis-agendas .ma-meses{padding:0}
+  .mis-agendas .ma-meses-chips{width:100%}
   .mis-agendas .ma-quedan-n b{font-size:38px}
   .mis-agendas .ma-ig{padding-left:0}
   .mis-agendas .ma-premio{padding:var(--s6) var(--s4)}
