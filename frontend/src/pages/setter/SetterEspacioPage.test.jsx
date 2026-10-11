@@ -19,7 +19,8 @@ import api from '../../services/api';
  * fijó el espacio (`tablaFija`) y qué filtro le llegó por la URL.
  */
 
-const sesion = vi.hoisted(() => ({ user: null, reportesHoy: 0, pendientes: 0, openPlaybook: null, pendientesAgendas: 0 }));
+const sesion = vi.hoisted(() => ({ user: null, reportesHoy: 0, pendientes: 0, openPlaybook: null, pendientesAgendas: 0,
+    mesesAgendas: undefined }));
 
 vi.mock('../../contexts/AuthContext', () => ({
     useAuth: () => ({ user: sesion.user, logout: vi.fn() }),
@@ -34,7 +35,9 @@ vi.mock('../../utils/impersonation', () => ({ revertImpersonation: vi.fn() }));
 // La bandeja de "Mis agendas" le informa al espacio cuántas quedan (la marca del dock).
 vi.mock('./agendas/MisAgendas', () => ({
     default: function MisAgendasDoble({ onResumen }) {
-        React.useEffect(() => { onResumen?.({ pendientes: sesion.pendientesAgendas, hoy: 0, racha: 0 }); }, []);
+        React.useEffect(() => {
+            onResumen?.({ pendientes: sesion.pendientesAgendas, hoy: 0, racha: 0, meses: sesion.mesesAgendas });
+        }, []);
         return <div data-testid="mis-agendas" />;
     },
 }));
@@ -122,6 +125,7 @@ describe('SetterEspacioPage · un solo dock', () => {
         sesion.user = { id: 7, name: 'Ana Setter', role: 'setter', is_impersonating: true };
         sesion.reportesHoy = 0;
         sesion.pendientesAgendas = 0;
+        sesion.mesesAgendas = undefined;
         sesion.pendientes = 0;
         sesion.openPlaybook = vi.fn();
         // jsdom no implementa el scroll; cambiar de sección vuelve arriba de la página.
@@ -282,6 +286,17 @@ describe('SetterEspacioPage · un solo dock', () => {
         expect(itemDelDock('Mis agendas').querySelector('.dock-marca--cuenta')).toHaveTextContent('12');
     });
 
+    it('el dock cuenta las del mes que se trabaja, no la bandeja entera', async () => {
+        // «149 pendientes es una banda» (11/10/2026): la marca es la del mes en juego.
+        sesion.pendientesAgendas = 149;
+        sesion.mesesAgendas = [{ mes: '2026-10', pendientes: 0, total: 9 }, { mes: '2026-09', pendientes: 23, total: 60 },
+            { mes: '2026-08', pendientes: 126, total: 130 }];
+        await montar('/setter/deck?step=agendas');
+
+        expect(itemDelDock('Mis agendas')).toHaveAttribute('aria-label', 'Mis agendas, 23 sin palabra clave en septiembre');
+        expect(itemDelDock('Mis agendas').querySelector('.dock-marca--cuenta')).toHaveTextContent('23');
+    });
+
     it('con la bandeja vacía, el dock marca "Mis agendas" con ✓', async () => {
         sesion.pendientesAgendas = 0;
         await montar('/setter/deck?step=agendas');
@@ -337,6 +352,7 @@ describe('SetterEspacioPage · la sesión en el dock', () => {
         sesion.user = { id: 7, name: 'Ana Setter', role: 'setter', is_impersonating: false };
         sesion.reportesHoy = 0;
         sesion.pendientesAgendas = 0;
+        sesion.mesesAgendas = undefined;
         sesion.pendientes = 3;
         sesion.openPlaybook = vi.fn();
         vi.spyOn(window, 'scrollTo').mockImplementation(() => {});

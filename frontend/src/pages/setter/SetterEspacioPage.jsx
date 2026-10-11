@@ -18,6 +18,7 @@ import { REVISAR_DEL_SETTER } from '../comercial/components/tablasSetter';
 import '../comercial/comercial.css';
 import './setterEspacio.css';
 import MisAgendas from './agendas/MisAgendas';
+import { marcaDelDock } from './agendas/meses';
 import ReporteDiario from './reporte/ReporteDiario';
 import Historial from './reporte/Historial';
 import SetterDatos from './datos/SetterDatos';
@@ -106,12 +107,12 @@ const SetterEspacioPage = () => {
     const reducir = useReducedMotion();
     const [saliendo, setSaliendo] = useState(false);
     const [reporteHoy, setReporteHoy] = useState(false);
-    // Cuántas agendas le quedan sin palabra clave: la marca de "Mis agendas" en el dock. La
-    // informa la propia bandeja (al cargar y después de cada asignación); si se entra por otra
-    // sección, se pide solo el resumen.
-    const [pendientesAgendas, setPendientesAgendas] = useState(null);
+    // El resumen de la bandeja de "Mis agendas": de ahí sale su marca en el dock (ver `marcaDelDock`:
+    // cuenta las del mes que se trabaja, no las 149 de todos los meses). Lo informa la propia bandeja
+    // (al cargar y después de cada asignación); si se entra por otra sección, se pide solo el resumen.
+    const [resumenAgendas, setResumenAgendas] = useState(null);
     const alResumenDeAgendas = useCallback((resumen) => {
-        if (resumen && typeof resumen.pendientes === 'number') setPendientesAgendas(resumen.pendientes);
+        if (resumen && typeof resumen.pendientes === 'number') setResumenAgendas(resumen);
     }, []);
 
     const seccionActual = SECCIONES.find(s => s.id === params.get('step')) || SECCIONES[0];
@@ -181,17 +182,13 @@ const SetterEspacioPage = () => {
     };
 
     useEffect(() => {
-        if (!user?.id || seccion === 'agendas' || pendientesAgendas !== null) return;
+        if (!user?.id || seccion === 'agendas' || resumenAgendas !== null) return;
         api.get('/setter/palabras-clave', { params: { solo: 'resumen' } })
             .then(res => alResumenDeAgendas(res.data?.resumen))
             .catch(() => { /* sin marca: no se inventa un número */ });
     }, [user?.id, seccion]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const marcaDeAgendas = pendientesAgendas === null ? null
-        : pendientesAgendas > 0
-            ? { tipo: 'cuenta', texto: pendientesAgendas > 99 ? '99+' : String(pendientesAgendas),
-                titulo: `${pendientesAgendas} sin palabra clave` }
-            : { texto: '✓', titulo: 'todas con palabra clave' };
+    const marcaDeAgendas = marcaDelDock(resumenAgendas);
     const secciones = SECCIONES.map((s) => {
         if (s.id === 'reporte' && reporteHoy) return { ...s, marca: { texto: '✓', titulo: 'reporte de hoy enviado' } };
         if (s.id === 'agendas' && marcaDeAgendas) return { ...s, marca: marcaDeAgendas };
