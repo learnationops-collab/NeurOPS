@@ -112,7 +112,9 @@ const TarjetaAgenda = forwardRef(({ agenda, anuncios, sugerido, onAsignar, orden
                                     }} />
                             </span>
                             {!agenda.instagram && (
-                                <span className="ma-ig-nota">Sin Instagram Marketing no encuentra su conversación.</span>
+                                <span className="ma-ig-nota" title="Sin Instagram, Marketing no encuentra su conversación.">
+                                    Falta el Instagram
+                                </span>
                             )}
                         </>
                     ) : (
