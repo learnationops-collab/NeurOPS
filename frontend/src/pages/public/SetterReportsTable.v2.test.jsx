@@ -32,6 +32,7 @@ const V2 = {
         bienvenidas: { hechas: 12, respondidas: 5, aperturas: 4 },
         embudo: { cualificados: 14, dolor: 10, oferta: 7, link: 5, agendas: 3 },
         followups: { entrantes: 9, dolor: 5, oferta: 3, link: 3 },
+        followups_respondidos: { entrantes: 4, dolor: 2, oferta: 1, link: 0 },
     },
 };
 const V1 = { id: 8, date: '2026-10-08', setter_name: 'Elias', version: 1, v2: null, entrantes: 20, leads: 13,
@@ -64,6 +65,7 @@ describe('Registros · reportes por canal', () => {
         fireEvent.click(screen.getAllByTitle('Editar Reporte Completo')[0]);
         fireEvent.change(screen.getByLabelText('Inbound: Agendas'), { target: { value: '0' } });
         fireEvent.change(screen.getByLabelText('Bienvenidas: Resp.'), { target: { value: '7' } });
+        fireEvent.change(screen.getByLabelText('Respondieron: Link'), { target: { value: '2' } });
         // Guardar (el botón verde de la fila).
         await act(async () => { fireEvent.click(document.querySelector('button.bg-emerald-50')); });
 
@@ -73,6 +75,7 @@ describe('Registros · reportes por canal', () => {
         expect(datos.inbound).toEqual({ entrantes: 6, no_lead: 0, inabribles: 1, ap_entrantes: 1, ap_dolor: 3, agendas: 0 });
         expect(datos.bienvenidas).toEqual({ hechas: 12, respondidas: 7, aperturas: 4 });
         expect(datos.embudo).toEqual({ dolor: 10, oferta: 7, link: 5 });
+        expect(datos.followups_respondidos).toEqual({ entrantes: 4, dolor: 2, oferta: 1, link: 2 });
         expect(datos).not.toHaveProperty('entrantes');
     });
 

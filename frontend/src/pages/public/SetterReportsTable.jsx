@@ -42,6 +42,7 @@ const EDICION_V2 = [
     { k: 'bienvenidas', n: 'Bienvenidas', campos: [['hechas', 'Hechas'], ['respondidas', 'Resp.'], ['aperturas', 'Aperturas']] },
     { k: 'embudo', n: 'Embudo', campos: [['dolor', 'Dolor'], ['oferta', 'Oferta'], ['link', 'Link']] },
     { k: 'followups', n: 'Follow-ups', campos: [['entrantes', 'Entr.'], ['dolor', 'Dolor'], ['oferta', 'Oferta'], ['link', 'Link']] },
+    { k: 'followups_respondidos', n: 'Respondieron', campos: [['entrantes', 'Entr.'], ['dolor', 'Dolor'], ['oferta', 'Oferta'], ['link', 'Link']] },
 ];
 
 /** La lectura v2 de una fila (`leer` del backend) en la forma que edita la tabla. */
