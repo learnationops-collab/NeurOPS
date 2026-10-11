@@ -170,7 +170,8 @@ class BookingService:
             return None
 
         # Verificar conflicto de horario para el mismo closer (una cita ya resuelta por el closer,
-        # p.ej. Show up/No Show/No Lead/Lead Perdido, no debe seguir bloqueando ese horario)
+        # p.ej. Show up/No Show/No Lead/Lead Perdido, o archivada sin reporte por el sistema, no
+        # debe seguir bloqueando ese horario: todas quedan con closer_processed=True)
         conflict = Appointment.query.filter_by(closer_id=closer_id, start_time=start_time_utc).filter(
             Appointment.closer_processed == False,
             or_(Appointment.result == None, Appointment.result == '', Appointment.result.notin_(['Cancelada', 'Reprogramada']))
@@ -734,8 +735,10 @@ class BookingService:
             elif estado_clean in ('reagendado', 'reagendada'):
                 result = 'Reagendado'
         
-        # Si es un estado del Closer (después de la llamada)
-        elif estado_clean in ('show up', 'show_up', 'no show', 'no_show', 'cerrada', 'cerrado', '2th call', '2da call', 'lead perdido', 'perdido', 'no lead', 'venta', 'cerrado/pif', 'cerrado/split'):
+        # Si es un estado del Closer (después de la llamada). 'Archivada sin reporte' no lo escribe
+        # nadie en el tablero: vuelve del espejo de una agenda que archivó el barrido de los 30 días
+        # (ver `sync_appointment_to_financial_agenda`), y se lee como lo que es.
+        elif estado_clean in ('show up', 'show_up', 'no show', 'no_show', 'cerrada', 'cerrado', '2th call', '2da call', 'lead perdido', 'perdido', 'no lead', 'archivada sin reporte', 'venta', 'cerrado/pif', 'cerrado/split'):
             if estado_clean in ('no show', 'no_show'):
                 closer_result = 'No Show'
             elif estado_clean in ('show up', 'show_up'):
@@ -748,6 +751,9 @@ class BookingService:
                 closer_result = 'Lead Perdido'
             elif estado_clean == 'no lead':
                 closer_result = 'No Lead'
+            elif estado_clean == 'archivada sin reporte':
+                from app.services.closer_agendas_service import ARCHIVADA_SIN_REPORTE
+                closer_result = ARCHIVADA_SIN_REPORTE
             
             # Si se procesa con un estado de Closer pero el result del confirmer estaba vacío,
             # lo dejamos como Confirmado por defecto.
@@ -756,7 +762,7 @@ class BookingService:
 
         # Determinar si está procesado por el Closer o Setter
         is_already_closer_processed = appt.closer_processed if appt else False
-        is_closer_state = estado_clean in ('show up', 'show_up', 'no show', 'no_show', 'cerrada', 'cerrado', '2th call', '2da call', 'lead perdido', 'perdido', 'no lead', 'cancelado', 'cancelada', 'reagendado', 'reagendada', 'venta', 'cerrado/pif', 'cerrado/split')
+        is_closer_state = estado_clean in ('show up', 'show_up', 'no show', 'no_show', 'cerrada', 'cerrado', '2th call', '2da call', 'lead perdido', 'perdido', 'no lead', 'archivada sin reporte', 'cancelado', 'cancelada', 'reagendado', 'reagendada', 'venta', 'cerrado/pif', 'cerrado/split')
         
         if is_already_closer_processed and not is_closer_state:
             # Si ya fue procesado por el closer y el webhook no envía un estado de closer,
@@ -937,6 +943,9 @@ class BookingService:
             mapped_state = 'Lead Perdido'
         elif mapped_state_lower == 'no lead':
             mapped_state = 'No Lead'
+        elif mapped_state_lower == 'archivada sin reporte':
+            from app.services.closer_agendas_service import ARCHIVADA_SIN_REPORTE
+            mapped_state = ARCHIVADA_SIN_REPORTE
                 
         # Buscar nombres de closer y setter
         closer_name = 'Sin asignar'

@@ -51,11 +51,23 @@ _CHIP_AGENDA = {
     'cancelada': ('Canceló', 'warning'),
     'lead_perdido': ('Lead perdido', 'error'),
     'no_lead': ('No lead', 'error'),
+    'archivada_sin_reporte': ('Archivada sin reporte', 'idle'),
     'sin_reportar': ('Sin reportar', 'error'),
     'reportada_sin_resultado': ('Reportada · sin resultado', 'warning'),
     'por_confirmar': ('Por confirmar', 'idle'),
     'confirmada': ('Confirmada', 'info'),
 }
+
+
+def _chip_de_agenda(label, tono, estado):
+    """El chip de la fila, con su tooltip (`ayuda`) en los estados que hay que explicar: los mismos
+    del vocabulario del libro de registros, para que la ficha y la tabla digan lo mismo."""
+    from app.services.closer_agendas_service import AYUDA_ESTADO
+
+    chip = {'label': label, 'tone': tono}
+    if estado in AYUDA_ESTADO:
+        chip['ayuda'] = AYUDA_ESTADO[estado]
+    return chip
 
 
 def tiene_seguimiento(appt):
@@ -102,7 +114,7 @@ def historial(appts, ahora, tiene_venta=False, cerro=False):
         # correccion diga lo mismo desde las dos pantallas). El chip se queda: es el estado
         # derivado, que no siempre coincide con ninguno de los dos campos sueltos.
         agendas.append({'id': a.id, 'fecha': _iso(a.start_time), 'detalle': detalle or 'Sin detalle',
-                        'chip': {'label': label, 'tone': tono},
+                        'chip': _chip_de_agenda(label, tono, estado),
                         'pre_call': pre_call_de(a),
                         'post_call': post_call_de(estado, False),
                         'closer': a.closer.username if a.closer else None,

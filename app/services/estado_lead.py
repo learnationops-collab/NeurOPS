@@ -22,8 +22,9 @@ PESTANAS = ('conf', 'resultado', 'acciones', 'ful', 'hist', 'form', 'com')
 
 # Estados de `derivar_estado` que significan "la llamada todavía no ocurrió".
 _PRE_CALL = ('por_confirmar', 'confirmada')
-# Estados de `derivar_estado` en los que el lead quedó fuera del embudo por decisión del closer.
-_DESCARTE = ('lead_perdido', 'no_lead')
+# Estados de `derivar_estado` en los que el lead quedó fuera del embudo: por decisión del closer, o
+# porque nadie reportó la llamada en 30 días y el sistema la archivó.
+_DESCARTE = ('lead_perdido', 'no_lead', 'archivada_sin_reporte')
 
 # Etiqueta y tono de cada estado. `tono` es uno de los 5 del design system: el frontend no elige
 # colores, los toma de acá (mismo criterio que el vocabulario del dashboard comercial).
@@ -40,6 +41,9 @@ _ETIQUETAS = {
     'reagendada': ('Reagendada', 'info'),
     'cancelada': ('Canceló', 'warning'),
     'descartado': ('Descartado', 'error'),
+    # Fuera del embudo como un descartado, pero nadie la descartó: la archivó el barrido de los 30
+    # días. Abre donde abre un descartado (Historial); solo cambia cómo se llama.
+    'archivada_sin_reporte': ('Archivada sin reporte', 'idle'),
     'venta_con_deuda': ('Venta · con deuda', 'warning'),
     'venta_al_dia': ('Cliente al día', 'success'),
     # Dejó una seña y todavía no pagó completo ni hizo un split: es una reserva, no una venta
@@ -71,7 +75,7 @@ def _clave(estado_agenda, etapa_confirmacion, descartado, tiene_venta, deuda, ba
     if not estado_agenda:
         return 'sin_agenda'
     if descartado:
-        return 'descartado'
+        return 'archivada_sin_reporte' if estado_agenda == 'archivada_sin_reporte' else 'descartado'
     if estado_agenda in _PRE_CALL:
         # La llamada no ocurrió: el trabajo es confirmarla, aunque el lead ya sea cliente (una 2ª
         # llamada o una renovación entran por acá). Por eso el pre call gana al estado de cobro,

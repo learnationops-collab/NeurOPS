@@ -740,6 +740,14 @@ def resend_closer_report_discord(report_id):
         return jsonify({"error": str(e)}), 500
 
 
+# Resultados con los que el prefill del reporte diario da una llamada por atendida. 'archivada sin
+# reporte' cuenta donde contaba cuando el barrido la dejaba como "Lead perdido" (10/10/2026: el
+# estado cambió de nombre, los números no). En la práctica no cae en el día de un reporte: el barrido
+# solo archiva agendas de hace más de 30 días.
+ATENDIDAS_EN_PREFILL = ('terminada', 'completada', 'cerrada', 'show up', 'show_up', 'lead perdido', 'perdido',
+                        'no lead', 'archivada sin reporte')
+
+
 @bp.route('/public/closer-report/prefill', methods=['GET'])
 def prefill_closer_report():
     """Calcula y retorna los datos automáticos para pre-rellenar el reporte diario de un closer."""
@@ -804,7 +812,7 @@ def prefill_closer_report():
         res = (appt.closer_result or appt.result or '').strip().lower()
         if is_first:
             first_call_scheduled += 1
-            if res in ('terminada', 'completada', 'cerrada', 'show up', 'show_up', 'lead perdido', 'perdido', 'no lead'):
+            if res in ATENDIDAS_EN_PREFILL:
                 first_call_attended += 1
             elif res in ('no show', 'no_show'):
                 first_call_no_show += 1
@@ -815,7 +823,7 @@ def prefill_closer_report():
                 first_call_canceled += 1
         else:
             second_call_scheduled += 1
-            if res in ('terminada', 'completada', 'cerrada', 'show up', 'show_up', 'lead perdido', 'perdido', 'no lead'):
+            if res in ATENDIDAS_EN_PREFILL:
                 second_call_attended += 1
             elif res in ('no show', 'no_show'):
                 second_call_no_show += 1

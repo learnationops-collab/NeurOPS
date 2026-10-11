@@ -22,6 +22,23 @@ from app.models import Appointment, FinancialSale, User
 from app.services.closer_followup_service import CloserFollowUpService
 from app.services.user_time_service import hoy_del_usuario, limites_rango_utc, zona_del_usuario
 
+# El `closer_result` que deja el barrido de mantenimiento (`CloserService.archive_stale_backlog`)
+# en la agenda que nadie confirmó ni reportó en 30 días, y la firma que agrega a sus notas. Hasta el
+# 10/10/2026 el barrido escribía 'Lead Perdido', el mismo valor con el que un closer descarta un
+# lead: de 2589 «Lead perdido» de la base, 2569 eran del barrido, y el dueño no entendía qué quería
+# decir el estado. Ahora cada uno tiene el suyo (la migración a3f6c9e2b815 pasó las viejas).
+ARCHIVADA_SIN_REPORTE = 'Archivada sin reporte'
+NOTA_ARCHIVADA = '[Sistema] Archivado automáticamente'
+
+# Qué quiere decir cada uno de esos dos estados, en una oración: es el tooltip de su chip en todas
+# las pantallas (Revisar, la ficha, Mis agendas del setter). Viaja con el vocabulario (`ayuda`), así
+# que el frontend no tiene su propia copia salvo la del mazo, que lee el valor crudo (ver
+# `frontend/src/utils/estadosAgenda.js`, que un test compara contra estas).
+AYUDA_ESTADO = {
+    'lead_perdido': 'El closer lo descartó.',
+    'archivada_sin_reporte': 'Nadie la reportó en 30 días; el sistema la archivó.',
+}
+
 # Un solo catálogo para el backend (clasificación y conteos) y el frontend (chips, colores,
 # orden). El orden es el del ciclo de vida de una agenda: antes de la llamada, después, y
 # los cierres que la sacan del circuito.
@@ -46,9 +63,11 @@ ESTADOS = [
     {'key': 'cancelada', 'label': 'Cancelada', 'color': '#94A3B8',
      'desc': 'Cancelada antes de la llamada.'},
     {'key': 'lead_perdido', 'label': 'Lead perdido', 'color': '#F97316',
-     'desc': 'Marcada como lead perdido.'},
+     'desc': AYUDA_ESTADO['lead_perdido']},
     {'key': 'no_lead', 'label': 'No lead', 'color': '#78716C',
      'desc': 'Marcada como no lead (no calificaba).'},
+    {'key': 'archivada_sin_reporte', 'label': ARCHIVADA_SIN_REPORTE, 'color': '#A8A29E',
+     'desc': AYUDA_ESTADO['archivada_sin_reporte']},
 ]
 ESTADO_LABELS = {e['key']: e['label'] for e in ESTADOS}
 
@@ -66,6 +85,7 @@ _NO_SHOW = {'no show', 'no_show', 'noshow'}
 _SEGUNDA = {'2da call', '2th call', '2da llamada', 'follow up'}
 _LEAD_PERDIDO = {'lead perdido', 'perdido'}
 _NO_LEAD = {'no lead'}
+_ARCHIVADA = {ARCHIVADA_SIN_REPORTE.lower()}
 _CANCELADA = {'cancelado', 'cancelada'}
 _REAGENDADA = {'reagendado', 'reagendada', 'reprogramado', 'reprogramada'}
 _PENDIENTE = {'', 'pendiente'}
@@ -162,6 +182,8 @@ def derivar_estado(appt, now_utc):
         return 'lead_perdido'
     if cr in _NO_LEAD:
         return 'no_lead'
+    if cr in _ARCHIVADA:
+        return 'archivada_sin_reporte'
     if cr in _CANCELADA or res in _CANCELADA:
         return 'cancelada'
     if cr in _REAGENDADA or res in _REAGENDADA:

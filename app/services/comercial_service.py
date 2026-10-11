@@ -42,7 +42,7 @@ from sqlalchemy.orm import joinedload
 
 from app import db
 from app.models import Appointment, Client, FinancialSale, LeadAnswer, ManychatLead, User
-from app.services.closer_agendas_service import CloserAgendasService, derivar_estado
+from app.services.closer_agendas_service import AYUDA_ESTADO, ARCHIVADA_SIN_REPORTE, CloserAgendasService, derivar_estado
 from app.services.closer_dashboard_service import CloserDashboardService
 from app.services.closer_name_service import resolver_nombre_closer
 from app.services.commission_service import cash_neto_de
@@ -97,7 +97,14 @@ POST_CALL = [
     # pidió que se vean todas como "Seguimiento" (ver `cerro_sin_venta`, que guarda la diferencia
     # para las métricas y para la ficha).
     {'key': 'seguimiento', 'label': 'Seguimiento', 'tone': 'warning', 'editable': False},
-    {'key': 'lead_perdido', 'label': 'Lead perdido', 'tone': 'error', 'editable': False},
+    # Nadie la confirmó ni la reportó en 30 días y la archivó el barrido de mantenimiento: no es un
+    # descarte del closer, aunque se trate igual (terminal, descartada, mismo grupo en Analizar).
+    # Va antes de "Lead perdido" por la dona de Analizar: entre "Seguimiento" y "Lead perdido" no
+    # queda pegada a otro arco gris. `ayuda` es el tooltip de su chip, y viaja con el vocabulario.
+    {'key': 'archivada_sin_reporte', 'label': ARCHIVADA_SIN_REPORTE, 'tone': 'idle', 'editable': False,
+     'ayuda': AYUDA_ESTADO['archivada_sin_reporte']},
+    {'key': 'lead_perdido', 'label': 'Lead perdido', 'tone': 'error', 'editable': False,
+     'ayuda': AYUDA_ESTADO['lead_perdido']},
     {'key': 'no_lead', 'label': 'No lead', 'tone': 'idle', 'editable': False},
 ]
 
@@ -181,6 +188,9 @@ _ESTADO_A_POST_CALL = {
     # tabla las saca del listado por defecto (ver `DESCARTADAS`). No suman a las realizadas.
     'lead_perdido': 'lead_perdido',
     'no_lead': 'no_lead',
+    # La que archivó el barrido de los 30 días (antes también decía "Lead perdido"): otro nombre,
+    # mismo trato que las de arriba.
+    'archivada_sin_reporte': 'archivada_sin_reporte',
 }
 
 # Valor que se escribe en la base al corregir el estado desde el modal.
@@ -202,10 +212,11 @@ REALIZADAS = ASISTIO + ('no_show',)
 # (seguimiento, segunda llamada, presentó sin cerrar…), que cambian de nombre y se reparten: así
 # ventas + señas + no cerradas suman siempre las que asistieron.
 CERRO = ('venta', 'sena')
-# Agendas que salieron del trabajo del equipo: el lead canceló o el closer lo descartó. Siguen en los
-# números del período, pero las listas las esconden detrás de su propio filtro («Descartadas»):
-# pedido del usuario, 02/10/2026, «que desaparezcan y queden en otro lugar aparte».
-DESCARTADAS = ('cancelo', 'lead_perdido', 'no_lead')
+# Agendas que salieron del trabajo del equipo: el lead canceló, el closer lo descartó o el sistema la
+# archivó porque nadie la reportó. Siguen en los números del período, pero las listas las esconden
+# detrás de su propio filtro («Descartadas»): pedido del usuario, 02/10/2026, «que desaparezcan y
+# queden en otro lugar aparte».
+DESCARTADAS = ('cancelo', 'lead_perdido', 'no_lead', 'archivada_sin_reporte')
 
 
 def no_es_marcador():
@@ -361,9 +372,13 @@ def cerro_sin_venta(estado, con_venta, con_seguimiento, con_sena=False):
 
 
 def chip(grupo, key):
-    """{key, label, tone} para que el frontend no tenga su propia copia del vocabulario."""
+    """{key, label, tone} para que el frontend no tenga su propia copia del vocabulario. Más
+    `ayuda`, el tooltip, en los estados que lo tienen (los que hay que explicar: ver `POST_CALL`)."""
     dato = _LABELS[grupo].get(key) or {'key': key, 'label': str(key), 'tone': 'idle'}
-    return {'key': dato['key'], 'label': dato['label'], 'tone': dato['tone']}
+    salida = {'key': dato['key'], 'label': dato['label'], 'tone': dato['tone']}
+    if dato.get('ayuda'):
+        salida['ayuda'] = dato['ayuda']
+    return salida
 
 
 def venta_completada(venta):
