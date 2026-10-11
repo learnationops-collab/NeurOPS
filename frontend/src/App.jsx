@@ -16,7 +16,6 @@ import DatabasePage from './pages/admin/database/DatabasePage';
 import MarketingPage from './pages/admin/marketing/MarketingPage';
 import AdminLeadsPage from './pages/admin/leads/LeadsPage';
 import CloserDashboard from './pages/closer/dashboard/CloserDashboard';
-import StatisticsPage from './pages/closer/dashboard/StatisticsPage';
 import CloserLeadsPage from './pages/closer/leads/LeadsPage';
 import CloserNewAppointmentPage from './pages/closer/records/NewAppointmentPage';
 import SetterStatisticsPage from './pages/setter/dashboard/StatisticsPage';
@@ -27,7 +26,6 @@ import OperationsPage from './pages/admin/database/OperationsPage';
 import OpsRuta from './pages/operations/OpsRuta';
 import BookingPage from './pages/public/BookingPage';
 import PublicCloserReportPage from './pages/public/PublicCloserReportPage';
-import PublicCloserStatsPage from './pages/public/PublicCloserStatsPage';
 import PublicTriageReportPage from './pages/public/PublicTriageReportPage';
 import AdManagementPage from './pages/public/AdManagementPage';
 import FinancialAgendasPage from './pages/admin/reports/FinancialAgendasPage';
@@ -301,16 +299,9 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/closer/stats"
-              element={
-                <ProtectedRoute roles={['admin']}>
-                  <MainLayout>
-                    <PublicCloserStatsPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
+            {/* /closer/stats (solo admin) dibujaba la misma pantalla que la pestaña Closers de
+                /admin/ventas: desde el 10/10/2026 lleva ahí. */}
+            <Route path="/closer/stats" element={<Navigate to="/admin/ventas" replace />} />
             <Route
               path="/closer/dashboard"
               element={
