@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { CalendarDays, ClipboardCheck, Database, DollarSign, Ghost, GraduationCap, LifeBuoy, Users } from 'lucide-react';
+import { ClipboardCheck, Database, Ghost, GraduationCap, LifeBuoy, Table2, Users } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
 import { revertImpersonation } from '../../utils/impersonation';
@@ -15,8 +15,7 @@ import { Isotipo, Segmented } from '../comercial/components/Shared';
 import '../comercial/comercial.css';
 import './operadorEspacio.css';
 import SeccionTecnica, { ETIQUETAS_TECNICAS } from './settings/SeccionTecnica';
-import FinancialAgendasPage from '../admin/reports/FinancialAgendasPage';
-import PublicFinancialSalesPage from '../public/PublicFinancialSalesPage';
+import DashboardComercial from '../comercial/DashboardComercial';
 import FormsManagementPage from '../shared/FormsManagementPage';
 import CourseEditorPage from './course-editor/CourseEditorPage';
 
@@ -47,13 +46,18 @@ const SECCIONES = [
         tabs: pestanasTecnicas(['bug_reports', 'closer_aliases', 'leads_audit', 'report_backlog', 'playbook', 'bitacora']) },
     { id: 'datos', label: 'Datos', Icono: Database,
         tabs: pestanasTecnicas(['database', 'operations', 'respaldo', 'restaurar']) },
-    { id: 'agendas', label: 'Agendas', Icono: CalendarDays },
-    { id: 'ventas', label: 'Ventas', Icono: DollarSign },
+    // Las agendas, las ventas y los clientes, en el Revisar de la dirección (10/10/2026): antes eran
+    // dos tablas viejas propias, «Agendas» y «Ventas». Lo que solo hacía Operaciones (edición masiva,
+    // duplicados, acciones por venta) son acciones de esa vista (ver `comercial/components/operar`).
+    { id: 'registros', label: 'Registros', Icono: Table2 },
     // Los formularios de cualificación y la fusión de clientes (10/10/2026): eran del panel de
     // «Administración», que se retiró. El triage sigue con su propia pantalla (/triage/formularios).
     { id: 'formularios', label: 'Formularios', Icono: ClipboardCheck },
     { id: 'curso', label: 'Curso', Icono: GraduationCap },
 ];
+
+/** Las secciones que se juntaron en Registros: un link viejo cae en su tabla. */
+const TABLA_DE_SECCION_VIEJA = { agendas: 'agendas', ventas: 'ventas' };
 
 const OperadorEspacioPage = () => {
     const { user, logout } = useAuth();
@@ -63,7 +67,18 @@ const OperadorEspacioPage = () => {
     const reducir = useReducedMotion();
     const [saliendo, setSaliendo] = useState(false);
 
-    const seccionActual = SECCIONES.find(s => s.id === params.get('step')) || SECCIONES[0];
+    // `/ops/agendas`, `/ops/ventas` y los `?step=agendas|ventas` guardados llevan a Registros, con la
+    // tabla que era (la elige el Revisar embebido por su parámetro `t`).
+    const tablaVieja = TABLA_DE_SECCION_VIEJA[params.get('step')];
+    useEffect(() => {
+        if (!tablaVieja) return;
+        const siguiente = new URLSearchParams(params);
+        siguiente.set('step', 'registros');
+        siguiente.set('t', tablaVieja);
+        setParams(siguiente, { replace: true });
+    }, [tablaVieja, params, setParams]);
+
+    const seccionActual = SECCIONES.find(s => s.id === (tablaVieja ? 'registros' : params.get('step'))) || SECCIONES[0];
     const seccion = seccionActual.id;
     const tab = seccionActual.tabs?.some(t => t.key === params.get('tab'))
         ? params.get('tab')
@@ -151,14 +166,11 @@ const OperadorEspacioPage = () => {
                     {(seccion === 'soporte' || seccion === 'datos') && (
                         <div className="operador-panel dash-v6 bg-main text-base"><SeccionTecnica id={tab} embebido /></div>
                     )}
-                    {/* Estas dos vistas están diseñadas sobre fondo oscuro (venían del hub de admin, que
-                        lo aportaba): necesitan su propia superficie. */}
-                    {seccion === 'agendas' && (
-                        <div className="operador-oscuro"><FinancialAgendasPage /></div>
-                    )}
-                    {seccion === 'ventas' && (
-                        <div className="operador-oscuro"><PublicFinancialSalesPage /></div>
-                    )}
+                    {/* El mismo Revisar de la dirección, con su período y sus tablas; trae su propia
+                        isla `.dc-shell`. */}
+                    {seccion === 'registros' && <DashboardComercial embebido seccionFija="revisar" />}
+                    {/* Formularios está diseñado sobre fondo oscuro (venía del hub de admin, que lo
+                        aportaba): necesita su propia superficie. */}
                     {seccion === 'formularios' && (
                         <div className="operador-oscuro"><FormsManagementPage /></div>
                     )}

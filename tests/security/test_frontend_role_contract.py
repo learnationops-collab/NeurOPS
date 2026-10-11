@@ -37,6 +37,8 @@ EXCEPCIONES = {
                   'igual; el boton que dispara un lote no se le muestra, y la frescura la sostiene el cron.',
         'setter': 'Mismo motivo que el closer: el setter ve el dashboard como "Mis datos" y no dispara '
                   'lotes contra el limite de la Academia; ni siquiera ve las tablas Clientes y Ventas.',
+        'operator': 'Operaciones ve el dashboard embebido solo en Revisar (sus Registros, 10/10/2026): el '
+                    'boton del lote es de la direccion (`puede_reportar`) y no se le muestra.',
     },
     # Payroll es una seccion del mismo dashboard (08/10/2026) y solo se dibuja con «ver finanzas»
     # (`puede_ver_finanzas`: admin o direccion comercial con el permiso). La nomina de todo el equipo no
@@ -46,6 +48,8 @@ EXCEPCIONES = {
                   'espacio de trabajo, no la de los demas, y la seccion Payroll no se le muestra.',
         'setter': 'Mismo motivo que el closer: la seccion Payroll no aparece en sus "Mis datos" y la nomina '
                   'del equipo no es informacion para un setter.',
+        'operator': 'Operaciones monta el dashboard solo en Revisar (sus Registros, 10/10/2026); Payroll es de '
+                    'Finances, con «ver finanzas», y no se le muestra.',
     } for ruta in (('GET', '/api/public/financial-sales/payroll'),
                    # «Excluir ventas» de la barra de Payroll: saca una venta de la nomina de todos.
                    ('POST', '/api/public/financial-sales/<int:sale_id>/toggle-payroll-exclusion'))},
