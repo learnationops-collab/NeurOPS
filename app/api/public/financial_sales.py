@@ -210,15 +210,10 @@ def opciones_de_transferencia():
     from app.services.transferencias_service import opciones
     return jsonify(opciones()), 200
 
-@bp.route('/public/financial-sales/sync', methods=['POST'])
-def sync_financial_sales_from_sheets():
-    # Obtiene datos de Google Sheets y reconstruye registros
-    from app.services.sheets_service import SheetsService
-    force = request.args.get('force', 'false').lower() == 'true'
-    result = SheetsService.sync_from_sheets("Ventas_DB", force=force)
-    if result["status"] == "success":
-        return jsonify({"message": "Base de datos reconstruida con éxito", "added": result["count"]}), 200
-    return jsonify({"error": result["message"]}), 500
+# POST /public/financial-sales/sync se retiró el 10/10/2026: lo llamaban solo pantallas que ya no se
+# dibujaban (el «sincronizar» sin botón del Registro de Ventas, FinancialAnalysisPage y
+# SalesAttributionPage). Sin `force` respondía 500 «disabled»; con `?force=true` BORRABA las ventas
+# y las reconstruía desde la hoja. El cron de la hoja sigue en GET /api/sheets/cron-sync.
 
 @bp.route('/public/financial-sales/<int:sale_id>', methods=['PUT', 'OPTIONS'])
 def update_financial_sale(sale_id):

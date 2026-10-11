@@ -143,7 +143,6 @@ POLITICA = {
     # A quién se le hizo una transferencia: las opciones de la edición de arriba.
     ('GET', '/api/public/financial-sales/transferido-a'): _p(COMERCIAL, OPERATOR),
     ('GET', '/api/public/financial-sales/payroll'): _p(COMERCIAL),  # nomina: la vista pide ademas «ver finanzas»
-    ('POST', '/api/public/financial-sales/sync'): _p(COMERCIAL, OPERATOR),
 
     # --- Clientes y roadmap del lead. Los de consulta documentados para "otra pagina" admiten el secreto -
     ('GET', '/api/public/clients/search'): _p(CLOSER, SETTER, ingesta=True),
