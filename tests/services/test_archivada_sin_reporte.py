@@ -156,9 +156,8 @@ def _escenario(db, marlon, elias):
 
 def _numeros(elias):
     """Todo lo que muestran Analizar (closers y setters), Variabilidad, Comparativas y Mis datos,
-    con el panel Estados reducido a lo que suma: sus grupos y sus cuentas."""
-    from app.services.setter_mis_datos import sistema_de
-
+    con el panel Estados reducido a lo que suma: sus grupos y sus cuentas. «Mis datos» del setter es
+    el mismo tablero de setters acotado a él (`setters`, con `miembro_id`)."""
     closers = ca.resumen('closers', DESDE, HASTA)
     setters = ca.resumen('setters', DESDE, HASTA, miembro_id=elias.id)
     estados = closers['actual'].pop('estados')
@@ -169,7 +168,6 @@ def _numeros(elias):
         'closers': closers, 'setters': setters, 'grupos': grupos,
         'variabilidad': [ca.variabilidad('closers', DESDE, HASTA), ca.variabilidad('setters', DESDE, HASTA)],
         'comparativas': [ca.comparativas('closers', DESDE, HASTA), ca.comparativas('setters', DESDE, HASTA)],
-        'mis_datos': sistema_de(DESDE, HASTA, setter_id=elias.id, setter_nombre='Elias'),
     }
 
 

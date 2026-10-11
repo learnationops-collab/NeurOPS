@@ -52,8 +52,8 @@ def test_las_reportadas_van_con_las_generadas_de_mis_datos(client, equipo, septi
 
     assert datos['totals']['funnel_agenda'] == 5
     assert datos['generadas'] == 4
-    assert datos['generadas'] == ca.bloque_setters(date(2026, 9, 1), date(2026, 9, 30), setter_id=elias.id,
-                                                   setter_nombre='Elias')['generadas']
+    assert datos['generadas'] == ca.bloque_setters(date(2026, 9, 1), date(2026, 9, 30),
+                                                   setter_id=elias.id)['generadas']
 
 
 @freeze_time(HOY)

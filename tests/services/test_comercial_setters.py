@@ -67,8 +67,8 @@ def test_una_agenda_generada_cuenta_en_el_mes_en_que_se_reservo(db, equipo):
            creada=datetime(2026, 8, 30, 9, 0), reunion=datetime(2026, 9, 2, 15, 0))
 
     elias = equipo['elias'].id
-    assert ca.bloque_setters(*SEP, setter_id=elias, setter_nombre='Elias')['generadas'] == 1
-    assert ca.bloque_setters(*OCT, setter_id=elias, setter_nombre='Elias')['generadas'] == 0
+    assert ca.bloque_setters(*SEP, setter_id=elias)['generadas'] == 1
+    assert ca.bloque_setters(*OCT, setter_id=elias)['generadas'] == 0
     assert ca.bloque_setters(*SEP)['generadas'] == 1
 
 
@@ -78,14 +78,13 @@ def test_la_serie_de_agendas_generadas_suma_por_el_dia_en_que_se_reservo(db, equ
            creada=datetime(2026, 9, 28, 14, 0), reunion=datetime(2026, 9, 30, 15, 0))
 
     datos = ca.variabilidad('setters', *SEP, miembro_id=equipo['elias'].id)
-    serie = next(s for s in datos['series'] if s['key'] == 'agendas')
+    serie = next(s for s in datos['series'] if s['key'] == 'generadas')
     por_dia = dict(zip(datos['dias'], serie['vals']))
 
     assert por_dia['2026-09-28'] == 1
     assert por_dia['2026-09-30'] == 0
     # El total de la serie es el número del tile.
-    assert sum(serie['vals']) == ca.bloque_setters(*SEP, setter_id=equipo['elias'].id,
-                                                    setter_nombre='Elias')['generadas']
+    assert sum(serie['vals']) == ca.bloque_setters(*SEP, setter_id=equipo['elias'].id)['generadas']
 
 
 @freeze_time(HOY)
@@ -123,8 +122,15 @@ def test_el_setter_ve_en_mis_datos_lo_mismo_que_la_direccion(client, db, equipo,
 
 # --- 2. Una persona, una vez ----------------------------------------------------------------------
 
-def _bloque(setter=None, nombre=None):
-    return ca.bloque_setters(*SEP, setter_id=setter.id if setter else None, setter_nombre=nombre)
+def _bloque(setter=None):
+    return ca.bloque_setters(*SEP, setter_id=setter.id if setter else None)
+
+
+def _agendaron(setter=None):
+    """«Agendaron» de los leads de ManyChat: lo que lista Revisar › Leads (el tablero ya no lo muestra,
+    desde el 10/10/2026 sus agendas salen del reporte)."""
+    return ComercialService.totales_leads(ComercialService.leads(
+        *SEP, setter_nombre=setter.username if setter else None, setter_id=setter.id if setter else None))
 
 
 @freeze_time(HOY)
@@ -136,7 +142,7 @@ def test_un_lead_que_reagenda_cuenta_una_vez_con_su_agenda_mas_reciente(db, equi
                      creada=datetime(2026, 9, 5, 16, 0), reunion=datetime(2026, 9, 9, 15, 0))
 
     filas = ComercialService.generadas(*SEP, setter_id=equipo['elias'].id)
-    bloque = _bloque(equipo['elias'], 'Elias')
+    bloque = _bloque(equipo['elias'])
 
     assert [f['id'] for f in filas] == [vigente.id]
     assert bloque['generadas'] == 1
@@ -171,7 +177,7 @@ def test_una_venta_originada_no_se_cuenta_dos_veces_por_las_agendas_del_mismo_le
                                  date=datetime(2026, 9, 8), estado='Completada'))
     db.session.commit()
 
-    assert _bloque(equipo['elias'], 'Elias')['ventas_originadas'] == 1
+    assert _bloque(equipo['elias'])['ventas_originadas'] == 1
 
 
 @freeze_time(HOY)
@@ -189,7 +195,7 @@ def test_la_agenda_de_la_venta_gana_aunque_haya_otra_mas_nueva_sin_resultado(db,
     db.session.commit()
 
     assert [f['id'] for f in ComercialService.generadas(*SEP, setter_id=equipo['elias'].id)] == [compra.id]
-    assert _bloque(equipo['elias'], 'Elias')['ventas_originadas'] == 1
+    assert _bloque(equipo['elias'])['ventas_originadas'] == 1
 
 
 @freeze_time(HOY)
@@ -205,8 +211,8 @@ def test_un_lead_de_dos_setters_cuenta_para_los_dos_y_el_equipo_es_la_suma(db, e
         agenda(db, equipo['marlon'], reagendo, setter=equipo['elias'],
                creada=datetime(2026, 9, dia, 10, 0), reunion=datetime(2026, 9, dia + 2, 15, 0))
 
-    elias = _bloque(equipo['elias'], 'Elias')['generadas']
-    paula = _bloque(equipo['paula'], 'Paula')['generadas']
+    elias = _bloque(equipo['elias'])['generadas']
+    paula = _bloque(equipo['paula'])['generadas']
 
     assert (elias, paula) == (2, 1)
     assert _bloque()['generadas'] == elias + paula == 3
@@ -277,10 +283,9 @@ def test_agendo_cuenta_solo_las_citas_que_genero_ese_setter(db, equipo, leads_de
         'con_paula': 'agendo_otra_via', 'en_un_taller': 'agendo_otra_via',
         'a_mano_por_un_closer': 'agendo_otra_via', 'sin_cita': 'sin_respuesta'}
 
-    bloque = ca.bloque_setters(*SEP, setter_id=equipo['elias'].id, setter_nombre='Elias')
-    assert bloque['agendas'] == 1
-    assert next(p['n'] for p in bloque['funnel'] if p['paso'] == 'Agendaron') == 1
-    assert bloque['conversion'] == 20.0  # 1 de 5 entrantes
+    totales = _agendaron(equipo['elias'])
+    assert totales['agendas'] == 1
+    assert totales['conversion'] == 20.0  # 1 de 5 entrantes
 
 
 @freeze_time(HOY)
@@ -289,7 +294,7 @@ def test_con_el_equipo_agendo_es_una_cita_de_cualquier_setter(db, equipo, leads_
 
     # El de Paula sí: es trabajo del equipo de setting. El taller y el closer, no.
     assert agendaron == {'Lead @con_elias', 'Lead @con_paula'}
-    assert ca.bloque_setters(*SEP)['agendas'] == 2
+    assert _agendaron()['agendas'] == 2
 
 
 @freeze_time(HOY)
@@ -313,13 +318,11 @@ def test_la_lista_de_leads_del_setter_cierra_con_agendaron(client, db, equipo, l
     for quien, extra in [('elias', {}),
                          ('director', {'rol': 'setters', 'miembro_id': equipo['elias'].id})]:
         headers = auth_headers(equipo[quien])
-        resumen = client.get('/api/comercial/resumen', headers=headers,
-                             query_string={**rango, **extra}).get_json()
         tabla = client.get(TABLA, headers=headers,
                            query_string={**rango, **extra, 'tabla': 'leads'}).get_json()
-        # El drill-down de "Agendaron" filtra por la etiqueta "Agendó": tiene que dar el número.
+        # El filtro por la etiqueta "Agendó" tiene que dar el total de la tira.
         agendo = [f for f in tabla['filas'] if f['estado']['label'] == 'Agendó']
-        assert resumen['actual']['agendas'] == tabla['totales']['agendas'] == len(agendo) == 1
+        assert _agendaron(equipo['elias'])['agendas'] == tabla['totales']['agendas'] == len(agendo) == 1
 
 
 # --- El marcador de cualificación no es una agenda ------------------------------------------------
@@ -338,8 +341,7 @@ def test_cualificar_un_lead_en_el_mazo_no_es_generar_una_agenda_ni_agendar(db, e
     db.session.commit()
 
     elias = equipo['elias'].id
-    bloque = ca.bloque_setters(*SEP, setter_id=elias, setter_nombre='Elias')
-    assert (bloque['generadas'], bloque['agendas']) == (1, 0)
+    assert (_bloque(equipo['elias'])['generadas'], _agendaron(equipo['elias'])['agendas']) == (1, 0)
     assert ComercialService.leads(*SEP, setter_id=elias, setter_nombre='Elias')[0]['estado']['key'] \
         == 'sin_respuesta'
     # El closer al que quedó asignado lo sigue viendo como siempre: esto es solo del setter.

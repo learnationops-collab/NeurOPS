@@ -20,6 +20,7 @@ from app.services.comercial_service import (
     DIAS_SENA_CAIDA, POST_CALL, ROL_CLOSERS, ROL_SETTERS, TIPOS_PAGO_COBROS, ComercialService,
     _limpiar_email, _limpiar_ig, chip, pct,
 )
+from app.services import setter_analitica
 from app.services.commission_service import CLOSER_RATE
 from app.services.procedencia_ingresos_service import agendas_para_atribuir, procedencia_de_ventas
 
@@ -28,9 +29,15 @@ from app.services.procedencia_ingresos_service import agendas_para_atribuir, pro
 DELTAS = {
     ROL_CLOSERS: {'show_up': 'pts', 'close_rate': 'pts', 'cash': 'pct', 'cash_neto': 'pct', 'ventas': 'pct',
                   'ticket': 'pct', 'agendas': 'pct', 'comision': 'pct'},
-    ROL_SETTERS: {'leads': 'pct', 'respuesta': 'pts', 'cualificacion': 'pts', 'agendas': 'pct',
-                  'conversion': 'pts', 'generadas': 'pct', 'mensajes': 'pct'},
+    ROL_SETTERS: {'entrantes': 'pct', 'cualificacion': 'pts', 'apertura': 'pts', 'agendas': 'pct',
+                  'conversion': 'pts', 'conv_cualificados': 'pts', 'bienvenidas_respuesta': 'pts',
+                  'followups_total': 'pct', 'generadas': 'pct', 'show_up': 'pts', 'ventas_originadas': 'pct'},
 }
+
+# Las que cambian con el canal (pestañas General · Anuncios · Inbound del tablero de setters): las
+# del reporte que se cargan por canal. Las demás (bienvenidas, follow-ups, el sistema) son una sola.
+DELTAS_POR_CANAL = {'entrantes': 'pct', 'cualificacion': 'pts', 'apertura': 'pts', 'agendas': 'pct',
+                    'conversion': 'pts', 'conv_cualificados': 'pts'}
 
 # Las métricas rankeables, en el orden en que las muestra el selector del ranking. `suma`
 # distingue las que se totalizan para el equipo (cash, ventas) de las tasas, que no se suman.
@@ -53,21 +60,25 @@ METRICAS = {
         {'key': 'agendas', 'label': 'Agendas', 'formato': 'num', 'suma': True,
          'desc': 'Llamadas agendadas en el período.'},
     ],
+    # Las mismas del tablero de setters (10/10/2026): lo de la conversación, del reporte diario; el
+    # show up y las ventas, de las agendas generadas (ver `setter_analitica`). Antes leads,
+    # respuesta y cualificación salían de ManyChat y daban 98% y 100% a todos.
     ROL_SETTERS: [
-        {'key': 'leads', 'label': 'Leads', 'formato': 'num', 'suma': True,
-         'desc': 'Prospectos entrantes del período.'},
-        {'key': 'respuesta', 'label': 'Respuesta', 'formato': 'pct', 'suma': False,
-         'desc': 'De los leads entrantes, cuántos contestaron.'},
+        {'key': 'entrantes', 'label': 'Entrantes', 'formato': 'num', 'suma': True,
+         'desc': 'Mensajes nuevos que reportó en el período.'},
         {'key': 'cualificacion', 'label': 'Cualificación', 'formato': 'pct', 'suma': False,
-         'desc': 'De los que contestaron, cuántos cualificaron.'},
+         'desc': 'Cualificados sobre entrantes, del reporte.'},
+        {'key': 'apertura', 'label': 'Apertura', 'formato': 'pct', 'suma': False,
+         'desc': 'Aperturas sobre entrantes, del reporte.'},
         {'key': 'agendas', 'label': 'Agendas', 'formato': 'num', 'suma': True,
-         'desc': 'Leads del período que agendaron con ese setter. Los que reservaron por otro '
-                 'lado (un taller, otro setter, un closer) no cuentan.'},
+         'desc': 'Agendas que reportó en el período.'},
         {'key': 'conversion', 'label': 'Conv. final', 'formato': 'pct', 'suma': False,
-         'desc': 'De entrante a agenda, punta a punta.'},
+         'desc': 'Agendas sobre entrantes, los dos del reporte.'},
+        {'key': 'bienvenidas_respuesta', 'label': 'Bienvenidas', 'formato': 'pct', 'suma': False,
+         'desc': 'Bienvenidas respondidas sobre las hechas.'},
         {'key': 'show_up', 'label': 'Show up', 'formato': 'pct', 'suma': False,
-         'desc': 'De las agendas que generó (una por persona), cuántas asistieron.'},
-        {'key': 'ventas_originadas', 'label': 'Ventas originadas', 'formato': 'num', 'suma': True,
+         'desc': 'De sus agendas generadas con resultado, cuántas asistieron.'},
+        {'key': 'ventas_originadas', 'label': 'Ventas', 'formato': 'num', 'suma': True,
          'desc': 'Ventas salidas de las agendas que generó.'},
     ],
 }
@@ -83,8 +94,8 @@ COLUMNAS_INFO = {
          'desc': 'Qué parte de sus ventas fue Residency Roadmap, el programa de mayor ticket.'},
     ],
     ROL_SETTERS: [
-        {'key': 'mensajes', 'label': 'Mensajes', 'formato': 'num',
-         'desc': 'Cuántos mensajes mandó en total en el período.'},
+        {'key': 'generadas', 'label': 'Generadas', 'formato': 'num',
+         'desc': 'Agendas que registra el sistema, una por persona.'},
     ],
 }
 
@@ -430,42 +441,11 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
     }
 
 
-def bloque_setters(start, end, setter_id=None, setter_nombre=None):
-    """Lo mismo para setters: el embudo va del lead entrante a la agenda generada."""
-    leads = ComercialService.leads(start, end, setter_nombre=setter_nombre, setter_id=setter_id)
-    generadas = ComercialService.generadas(start, end, setter_id=setter_id)
-    tot_l = ComercialService.totales_leads(leads)
-    tot_g = ComercialService.totales_agendas(generadas)
-
-    # Tenacidad del seguimiento: cuántos leads recibieron 1, 2, 3 o 4+ toques antes de soltarlos.
-    tenacidad = {'1': 0, '2': 0, '3': 0, '4+': 0}
-    for f in leads:
-        n = f['mensajes']
-        if n > 0:
-            tenacidad['4+' if n >= 4 else str(n)] += 1
-
-    return {
-        'leads': tot_l['leads'],
-        'respondieron': tot_l['respondieron'],
-        'respuesta': tot_l['respuesta'],
-        'cualificados': tot_l['cualificados'],
-        'cualificacion': tot_l['cualificacion'],
-        'agendas': tot_l['agendas'],
-        'conversion': tot_l['conversion'],
-        'mensajes': tot_l['mensajes'],
-        'generadas': tot_g['agendas'],
-        # Las agendas generadas que asistieron: el paso «Asistieron» de los embudos de Comparativas.
-        'asistieron': tot_g['asistieron'],
-        'show_up': tot_g['show_up'],
-        'ventas_originadas': tot_g['ventas'],
-        'tenacidad': [{'toques': k, 'leads': v} for k, v in tenacidad.items()],
-        'funnel': [
-            {'paso': 'Entrantes', 'n': tot_l['leads']},
-            {'paso': 'Respondieron', 'n': tot_l['respondieron']},
-            {'paso': 'Cualificados', 'n': tot_l['cualificados']},
-            {'paso': 'Agendaron', 'n': tot_l['agendas']},
-        ],
-    }
+def bloque_setters(start, end, setter_id=None, pares=None):
+    """Lo mismo para setters: la conversación sale del reporte diario y lo que pasa después, de las
+    agendas generadas (10/10/2026; antes todo salía de ManyChat). Vive en `setter_analitica`, de
+    donde sale también Variabilidad. `pares`: los reportes ya leídos (ver `comparativas`)."""
+    return setter_analitica.bloque(start, end, setter_id=setter_id, pares=pares)
 
 
 # ================================================================================================
@@ -520,18 +500,8 @@ def _dia_de_agenda(fila):
     return fila['fecha'][:10] if fila['fecha'] else None
 
 
-def _dia_de_creacion(fila):
-    """El día en que se reservó la agenda: el eje de "Agendas generadas" (ver
-    `ComercialService.generadas`), para que la serie sume el mismo número que el tile."""
-    return fila['creada'][:10] if fila.get('creada') else None
-
-
 def _dia_de_venta(fila):
     return fila['fecha'][:10] if fila['fecha'] else None
-
-
-def _dia_de_lead(fila):
-    return fila['creada'][:10] if fila.get('creada') else None
 
 
 def _sub(label, tone, vals):
@@ -574,7 +544,7 @@ def variabilidad(rol, start, end, miembro_id=None):
     nombre = ComercialService.nombre_de(miembro_id)
 
     if rol == ROL_SETTERS:
-        series = _series_setters(dias, start, end, miembro_id, nombre)
+        series = _series_setters(dias, start, end, miembro_id)
     else:
         series = _series_closers(dias, start, end, miembro_id, nombre)
     return {'dias': dias, 'series': series}
@@ -630,38 +600,12 @@ def _series_closers(dias, start, end, closer_id, closer_nombre):
     ]
 
 
-def _series_setters(dias, start, end, setter_id, setter_nombre):
-    leads = ComercialService.leads(start, end, setter_nombre=setter_nombre, setter_id=setter_id)
-    generadas = ComercialService.generadas(start, end, setter_id=setter_id)
+def _series_setters(dias, start, end, setter_id):
+    """Las del reporte diario (abiertas por canal) y las agendas generadas, día por día: las mismas
+    fuentes que el tablero (ver `setter_analitica.series`). Hasta el 10/10/2026 eran los leads de
+    ManyChat, con su respuesta y su cualificación de casi 100%."""
+    return setter_analitica.series(dias, start, end, setter_id)
 
-    return [
-        {'key': 'entrantes', 'label': 'Entrantes', 'unidad': '', 'tone': 'info',
-         'help': 'Leads nuevos que entraron al inbox cada día. Depende de la pauta y del '
-                 'contenido, no del setter. Se abre por setter y NO por fuente: en las filas de '
-                 'lead la fuente es siempre "ManyChat" (ver `ComercialService.leads`), así que '
-                 'abrirla por ahí daría una sola serie repetida.',
-         'series': [_sub('Todos', 'info', _serie(dias, leads, _dia_de_lead))]
-                   + _por_categoria(dias, leads, _dia_de_lead, lambda f: f['setter'],
-                                    None, CAT_TONOS)},
-        {'key': 'respuestas', 'label': 'Respuestas', 'unidad': '', 'tone': 'success',
-         'help': 'Leads que contestaron cada día. Seguir la forma de la curva de entrantes es '
-                 'buena señal.',
-         'vals': _serie(dias, leads, _dia_de_lead, None, lambda f: f['respondio'])},
-        {'key': 'cualificados', 'label': 'Cualificados', 'unidad': '', 'tone': 'cat-1',
-         'help': 'Leads que cumplieron el perfil cada día.',
-         'vals': _serie(dias, leads, _dia_de_lead, None, lambda f: f['cualificado'])},
-        {'key': 'agendas', 'label': 'Agendas generadas', 'unidad': '', 'tone': 'brand-secondary',
-         'help': 'Agendas reservadas cada día, por el día en que se crearon y no el de la '
-                 'reunión. Un lead que reagendó cuenta una vez. Es la salida del trabajo de '
-                 'setting.',
-         'vals': _serie(dias, generadas, _dia_de_creacion)},
-        {'key': 'tasa_resp', 'label': 'Tasa de respuesta', 'unidad': '%', 'tone': 'success',
-         'tipo': 'tasa',
-         'help': 'Qué porcentaje de los entrantes de ese día contestó. Los días en cero son días '
-                 'sin leads nuevos.',
-         'vals': _tasa_diaria(dias, leads, _dia_de_lead,
-                              lambda f: f['respondio'], lambda f: True)},
-    ]
 
 def por_cobrar_de(closer_id=None):
     """Lo que falta cobrar, A HOY. Reusa `CloserDashboardService._pending_collections`, que es de
@@ -735,8 +679,18 @@ def _bloque_de(rol):
 
 def _kwargs_de(rol, miembro_id, nombre):
     if rol == ROL_SETTERS:
-        return {'setter_id': miembro_id, 'setter_nombre': nombre}
+        return {'setter_id': miembro_id}
     return {'closer_id': miembro_id, 'closer_nombre': nombre}
+
+
+def _deltas(actual, previo, modos):
+    """`{clave: delta}` de las que tienen contra qué compararse (ver `delta`)."""
+    salida = {}
+    for clave, modo in modos.items():
+        d = delta(actual.get(clave), previo.get(clave), modo)
+        if d:
+            salida[clave] = d
+    return salida
 
 
 def resumen(rol, start, end, prev_start=None, prev_end=None, miembro_id=None):
@@ -749,30 +703,35 @@ def resumen(rol, start, end, prev_start=None, prev_end=None, miembro_id=None):
     actual = bloque(start, end, **kwargs)
     previo = bloque(prev_start, prev_end, **kwargs) if prev_start else None
 
-    deltas = {}
-    if previo:
-        for clave, modo in DELTAS[rol].items():
-            d = delta(actual.get(clave), previo.get(clave), modo)
-            if d:
-                deltas[clave] = d
+    deltas = _deltas(actual, previo, DELTAS[rol]) if previo else {}
 
     datos = {'rol': rol, 'actual': actual, 'previo': previo, 'deltas': deltas,
              'miembro': {'id': miembro.id, 'nombre': miembro.username} if miembro else None}
     # Fuera de `actual` a propósito: no es una cifra del período (ver `por_cobrar_de`).
     if rol == ROL_CLOSERS:
         datos['por_cobrar'] = por_cobrar_de(miembro_id)
-        # Solo con closers, que es donde está el Cash collected con el que cierra. El tablero de
-        # setters no muestra plata: un setter no la ve, y la dirección con Setters tampoco.
+        # Solo con closers, que es donde está el Cash collected con el que cierra.
         datos['fuentes'] = fuentes_de(start, end, prev_start, prev_end, nombre)
+    else:
+        # Los deltas de cada pestaña de canal (los de General son `deltas`) y la comisión del mes
+        # en curso, que se mudó de «Mis agendas» a este tablero (pedido del 10/10/2026). Como
+        # `por_cobrar`, la comisión no es una cifra del período: no va en `actual`.
+        datos['deltas_canales'] = {canal: _deltas(actual['canales'][canal], previo['canales'][canal],
+                                                  DELTAS_POR_CANAL)
+                                   for canal in setter_analitica.CANALES} if previo else {}
+        datos['comision'] = setter_analitica.comision_de(miembro)
     return datos
 
 
 def _fila_comparativa(rol, bloque):
     """Los números de una persona (o del equipo) para el ranking y el mapa."""
     if rol == ROL_SETTERS:
-        return {k: bloque.get(k) for k in
-                ('leads', 'respuesta', 'cualificacion', 'agendas', 'conversion', 'show_up',
-                 'ventas_originadas', 'mensajes', 'generadas')}
+        # Las del ranking y el mapa, más lo que dice la bajada de cada una («494 entrantes»).
+        return {**{k: bloque.get(k) for k in
+                   ('entrantes', 'cualificacion', 'apertura', 'agendas', 'conversion', 'bienvenidas_respuesta',
+                    'show_up', 'ventas_originadas', 'generadas', 'realizadas')},
+                'bienvenidas_hechas': bloque['bienvenidas']['hechas'],
+                'bienvenidas_respondidas': bloque['bienvenidas']['respondidas']}
     senas = bloque['senas']
     completo = next((p for p in bloque['payment_types'] if p['key'] == 'completo'), None)
     residency = next((p for p in bloque['programas'] if p['programa'] == 'Residency Roadmap'), None)
@@ -790,22 +749,38 @@ def _fila_comparativa(rol, bloque):
 def comparativas(rol, start, end, prev_start=None, prev_end=None):
     """Ranking por métrica + mapa del equipo, con el delta de cada persona en cada métrica.
 
-    Con Setters trae además `embudos` (pedido del usuario, 10/10/2026): el embudo de cada setter y
-    el del equipo, del reporte diario a las ventas (ver `setter_mis_datos.embudos_de_comparativa`).
-    Generadas, asistieron y ventas salen de los mismos bloques que el ranking, así que no se vuelven
-    a recorrer las agendas; los reportes del período se leen una sola vez.
+    Con Setters trae además `embudos` (pedido del usuario, 10/10/2026): el embudo de punta a punta de
+    cada setter y el del equipo, del reporte diario a las ventas. Son el `funnel` de los MISMOS
+    bloques del ranking, así que las dos mitades no pueden contar distinto. Los reportes de todo el
+    equipo se leen una sola vez por período y se reparten (`setter_analitica.lecturas_por_setter`):
+    el bloque de cada persona ya recorre sus agendas.
     """
     miembros = ComercialService.miembros(rol)
     bloque = _bloque_de(rol)
+    de_setters = rol == ROL_SETTERS
+    reportes = {}
+    if de_setters:
+        reportes['actual'] = setter_analitica.lecturas_por_setter(start, end)
+        if prev_start:
+            reportes['previo'] = setter_analitica.lecturas_por_setter(prev_start, prev_end)
+
+    def kwargs(miembro, periodo='actual'):
+        base = _kwargs_de(rol, miembro['id'] if miembro else None, miembro['nombre'] if miembro else None)
+        if de_setters:
+            de_cada_uno = reportes[periodo]
+            # El equipo: los reportes de todos los setters, también los de alguien que ya no está
+            # activo (como cuenta el sistema sus agendas).
+            base['pares'] = (de_cada_uno.get(miembro['id'], []) if miembro
+                             else [p for pares in de_cada_uno.values() for p in pares])
+        return base
 
     filas, bloques = [], {}
     for m in miembros:
-        kwargs = _kwargs_de(rol, m['id'], m['nombre'])
-        bloques[m['id']] = bloque(start, end, **kwargs)
+        bloques[m['id']] = bloque(start, end, **kwargs(m))
         datos = _fila_comparativa(rol, bloques[m['id']])
         deltas = {}
         if prev_start:
-            anterior = _fila_comparativa(rol, bloque(prev_start, prev_end, **kwargs))
+            anterior = _fila_comparativa(rol, bloque(prev_start, prev_end, **kwargs(m, 'previo')))
             for metrica in METRICAS[rol]:
                 modo = 'pts' if metrica['formato'] == 'pct' else 'pct'
                 d = delta(datos.get(metrica['key']), anterior.get(metrica['key']), modo)
@@ -816,13 +791,15 @@ def comparativas(rol, start, end, prev_start=None, prev_end=None):
     # La fila "Equipo" NO es la suma de las filas de arriba: las tasas se recalculan sobre el
     # total del equipo. Promediar los porcentajes de gente con volúmenes muy distintos da un
     # número que no le corresponde a nadie.
-    bloque_equipo = bloque(start, end)
+    bloque_equipo = bloque(start, end, **kwargs(None))
     equipo = _fila_comparativa(rol, bloque_equipo)
 
     salida = {'rol': rol, 'metricas': METRICAS[rol], 'columnas_info': COLUMNAS_INFO[rol],
               'filas': filas, 'equipo': equipo}
-    if rol == ROL_SETTERS:
-        # Import tardío: `setter_mis_datos` usa `delta` de este módulo.
-        from app.services.setter_mis_datos import embudos_de_comparativa
-        salida['embudos'] = embudos_de_comparativa(miembros, bloques, bloque_equipo, start, end)
+    if de_setters:
+        salida['embudos'] = {
+            'filas': [{'id': m['id'], 'nombre': m['nombre'], 'etapas': bloques[m['id']]['funnel']}
+                      for m in miembros],
+            'equipo': {'id': 'equipo', 'nombre': 'Equipo', 'etapas': bloque_equipo['funnel']},
+        }
     return salida

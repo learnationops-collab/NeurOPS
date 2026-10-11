@@ -12,13 +12,24 @@ import pytest
 from freezegun import freeze_time
 
 from app.models import Appointment, Client, LeadAnswer, ManychatLead
-from app.services import comercial_analitica as ca
+from app.services.comercial_service import ComercialService
 
 HOY = '2026-10-01 18:00:00'
 DIA = date(2026, 10, 1)
 PREFILL = '/api/public/setter-report/prefill'
 
 _n = itertools.count(1)
+
+
+def del_sistema(dia, setter):
+    """Lo que el sistema registra ese día para el setter —sus leads de ManyChat y sus agendas
+    generadas—, que es con lo que arranca la precarga. Hasta el 10/10/2026 lo mostraba «Mis datos»;
+    desde entonces el tablero cuenta la conversación con el reporte, y estos números viven en Revisar."""
+    leads = ComercialService.totales_leads(ComercialService.leads(dia, dia, setter_nombre=setter.username,
+                                                                  setter_id=setter.id))
+    generadas = ComercialService.totales_agendas(ComercialService.generadas(dia, dia, setter_id=setter.id))
+    return {'leads': leads['leads'], 'respondieron': leads['respondieron'],
+            'cualificados': leads['cualificados'], 'generadas': generadas['agendas']}
 
 
 @pytest.fixture()
@@ -86,7 +97,7 @@ def test_el_reporte_del_dia_arranca_con_los_numeros_de_mis_datos(client, equipo,
     elias = equipo['elias']
     datos = client.get(PREFILL, headers=auth_headers(elias),
                        query_string={'setter_id': elias.id, 'date': DIA.isoformat()}).get_json()
-    mis_datos = ca.bloque_setters(DIA, DIA, setter_id=elias.id, setter_nombre='Elias')
+    mis_datos = del_sistema(DIA, elias)
 
     assert {k: datos[k] for k in ('inbox_entrantes', 'funnel_qualification', 'not_lead', 'funnel_agenda')}         == {'inbox_entrantes': 4, 'funnel_qualification': 3, 'not_lead': 1, 'funnel_agenda': 2}
     assert datos['inbox_entrantes'] == mis_datos['leads']
@@ -104,7 +115,7 @@ def test_el_dia_del_reporte_es_el_dia_de_mis_datos(client, db, equipo, dia_de_el
     lead(db, None, 'true', 'null', cuando=datetime(2026, 9, 30, 9, 0))  # sin repartir: de nadie
     datos = client.get(PREFILL, headers=auth_headers(elias),
                        query_string={'setter_id': elias.id, 'date': ayer.isoformat()}).get_json()
-    mis_datos = ca.bloque_setters(ayer, ayer, setter_id=elias.id, setter_nombre='Elias')
+    mis_datos = del_sistema(ayer, elias)
 
     assert (datos['inbox_entrantes'], datos['funnel_agenda']) == (1, 1)
     assert (datos['inbox_entrantes'], datos['funnel_agenda']) == (mis_datos['leads'], mis_datos['generadas'])

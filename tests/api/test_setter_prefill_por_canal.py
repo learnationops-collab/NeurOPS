@@ -10,7 +10,7 @@ import pytest
 from freezegun import freeze_time
 
 from app.models import Ad, AdSet, Appointment, Campaign, Client, LeadAnswer, ManychatLead
-from app.services import comercial_analitica as ca
+from app.services.comercial_service import ComercialService
 
 DIA = date(2026, 10, 10)
 PREFILL = '/api/public/setter-report/prefill'
@@ -81,12 +81,13 @@ def test_la_precarga_parte_los_entrantes_y_las_agendas_por_canal(client, db, equ
     assert datos['anuncios'] == {'entrantes': 3, 'no_lead': 1, 'inabribles': 1, 'agendas': 2}
     assert datos['inbound'] == {'entrantes': 2, 'no_lead': 0, 'inabribles': 1, 'agendas': 2}
 
-    # Los dos canales juntos son "Mis datos" del día.
-    mis_datos = ca.bloque_setters(DIA, DIA, setter_id=elias.id, setter_nombre='Elias')
+    # Los dos canales juntos son lo que el sistema registra ese día: sus leads y sus agendas generadas.
+    leads = ComercialService.totales_leads(ComercialService.leads(DIA, DIA, setter_nombre='Elias', setter_id=elias.id))
+    generadas = ComercialService.totales_agendas(ComercialService.generadas(DIA, DIA, setter_id=elias.id))
     entrantes = datos['anuncios']['entrantes'] + datos['inbound']['entrantes']
     cualificados = sum(c['entrantes'] - c['no_lead'] - c['inabribles'] for c in (datos['anuncios'], datos['inbound']))
-    assert (entrantes, cualificados) == (mis_datos['leads'], mis_datos['cualificados'])
-    assert datos['anuncios']['agendas'] + datos['inbound']['agendas'] == mis_datos['generadas']
+    assert (entrantes, cualificados) == (leads['leads'], leads['cualificados'])
+    assert datos['anuncios']['agendas'] + datos['inbound']['agendas'] == generadas['agendas']
 
 
 @freeze_time('2026-10-10 20:00:00')
