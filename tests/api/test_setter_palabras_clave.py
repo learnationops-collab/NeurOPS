@@ -256,6 +256,20 @@ def test_el_instagram_nuevo_se_corrige_en_el_cliente_y_en_el_tablero(client, db,
     assert agendas_de_marketing(anuncios['GUIA']) == 1
 
 
+@freeze_time(HOY)
+def test_con_otro_instagram_en_el_tablero_sale_igual_de_la_bandeja(client, db, equipo, anuncios, auth_headers):
+    """El cliente dice `Dafne.aj` y el Tablero `Dafne_aj`: Marketing atribuye con el del Tablero y la
+    bandeja mira el del cliente. Antes quedaba atribuida para Marketing y volvía a la bandeja."""
+    appt = agenda(db, equipo, cliente(db, 'Dafne', 'Dafne.aj'))
+    FinancialAgenda.query.filter_by(lead='Dafne').one().instagram = 'Dafne_aj'
+    db.session.commit()
+
+    assert asignar(client, equipo['elias'], auth_headers, appt, anuncios['GUIA']).status_code == 200
+
+    assert bandeja(client, equipo['elias'], auth_headers)['pendientes'] == []
+    assert agendas_de_marketing(anuncios['GUIA']) == 1
+
+
 # --- 3. Quién puede y qué hace falta -------------------------------------------------------------
 
 @freeze_time(HOY)

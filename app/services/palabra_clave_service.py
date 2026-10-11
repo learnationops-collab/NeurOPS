@@ -320,6 +320,12 @@ def asignar(setter, appointment_id, ad_id, instagram=None):
     El Instagram es obligatorio porque es con lo que Marketing encuentra la conversación (ver el
     docstring del módulo): si viene uno nuevo, se corrige en el cliente y en la fila del Tablero.
     Deja un registro `palabra_clave` en el historial del lead. Hace commit.
+
+    **Si el cliente y el Tablero tienen Instagram distintos** (`Dafne.aj` y `Dafne_aj`: 7 de las 25
+    de octubre de Elias en la copia local), el anuncio va a la conversación de los dos. Marketing
+    atribuye con el del Tablero y la bandeja mira el del cliente (las filas de «Agendas generadas»):
+    con solo el del Tablero, la agenda quedaba atribuida para Marketing y volvía a la bandeja en la
+    próxima carga, que así no se podía vaciar.
     """
     from app.services.ficha_agendas_service import espejo_en_el_tablero
 
@@ -354,6 +360,31 @@ def asignar(setter, appointment_id, ad_id, instagram=None):
     antes_de_todo = min(momentos) - timedelta(minutes=1) if momentos else datetime.utcnow()
     tope = min((a.start_time for a in suyas if a.start_time), default=None)
 
+    igs = [ig]
+    del_cliente = normalizar_ig(cliente.instagram) if cliente else None
+    if del_cliente and del_cliente != ig:
+        igs.append(del_cliente)
+    for usuario in igs:
+        _responder_con_anuncio(usuario, cita, cliente, anuncio, tope, antes_de_todo)
+
+    for a in suyas:
+        a.keyword = anuncio.keyword or anuncio.name
+
+    db.session.add(LeadEventLog(appointment_id=cita.id, user_id=setter.id, action_type=ACCION,
+                                description=_texto_del_registro(anuncio, setter),
+                                created_at=datetime.utcnow()))
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise ErrorDePalabraClave('No se pudo guardar: probá de nuevo.', 500) from None
+    return {'appointment_id': cita.id, 'instagram': ig,
+            'anuncio': {'id': anuncio.id, 'keyword': anuncio.keyword or anuncio.name}}
+
+
+def _responder_con_anuncio(ig, cita, cliente, anuncio, tope, antes_de_todo):
+    """La conversación de ese Instagram (la crea si no está) con una respuesta con el anuncio de
+    antes de la reunión: la que ya había sin anuncio o una nueva antes de la primera agenda."""
     conversacion = ManychatLead.query.filter(
         func.lower(func.replace(ManychatLead.ig, '@', '')) == ig).first()
     if not conversacion:
@@ -372,20 +403,6 @@ def asignar(setter, appointment_id, ad_id, instagram=None):
     else:
         db.session.add(LeadAnswer(lead_id=conversacion.id, ad_id=anuncio.id, keyword=KEYWORD_MANUAL,
                                   qualification='true', created_at=antes_de_todo, updated_at=antes_de_todo))
-
-    for a in suyas:
-        a.keyword = anuncio.keyword or anuncio.name
-
-    db.session.add(LeadEventLog(appointment_id=cita.id, user_id=setter.id, action_type=ACCION,
-                                description=_texto_del_registro(anuncio, setter),
-                                created_at=datetime.utcnow()))
-    try:
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        raise ErrorDePalabraClave('No se pudo guardar: probá de nuevo.', 500) from None
-    return {'appointment_id': cita.id, 'instagram': ig,
-            'anuncio': {'id': anuncio.id, 'keyword': anuncio.keyword or anuncio.name}}
 
 
 def _texto_del_registro(anuncio, setter):
