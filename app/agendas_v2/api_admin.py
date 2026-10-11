@@ -1,6 +1,8 @@
 """API de gestion de Agendas 2.0 (/api/agendas-v2): la usa Thalamus, la herramienta del director
-comercial. Toda ruta exige sesion y rol de direccion; la guarda vive en el before_request, asi que
-ninguna vista puede olvidarse de chequearlo. Contrato: docs/agendas_v2_api.md.
+comercial. Toda ruta exige sesion; la guarda vive en el before_request, asi que ninguna vista puede
+olvidarse de chequearlo. La direccion configura todo. El setter (10/10/2026) entra a mirar: solo las
+lecturas de VISTAS_DE_LECTURA y sin los datos personales de otros (`_para_lectura`).
+Contrato: docs/agendas_v2_api.md.
 """
 
 import re
@@ -15,14 +17,34 @@ from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, RO
 bp = Blueprint('agendas_v2_admin', __name__)
 
 ROLES_CON_ACCESO = (ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL)
+# Ven Thalamus sin cambiar nada: funnels, formularios, equipo y Stats, su link y la prueba del
+# agendamiento. Lo que se configura es de todos (un funnel o un evento borrado deja sin agendas a todo
+# el equipo), asi que queda para la direccion. Vale el rol ACTIVO, como en toda la app.
+ROLES_DE_LECTURA = (ROLE_SETTER,)
+VISTAS_DE_LECTURA = frozenset({'estado', 'estadisticas', 'version', 'ocupacion', 'usuarios'})
 ID_VALIDO = re.compile(r'^[A-Za-z0-9_-]{1,40}$')
+
+# Lo que un rol de lectura recibe de cada reserva: lo que dibuja la ocupacion de cada closer. Fuera
+# quedan el contacto y las respuestas del lead (son leads de otros setters) y el link de Meet.
+CAMPOS_DE_RESERVA_EN_LECTURA = (
+    'id', 'estado', 'inicio_ms', 'fin_ms', 'duracion_min', 'margen_min', 'closer_id', 'evento_id', 'funnel_id', 'creada',
+)
 
 
 @bp.before_request
 @login_required
-def _solo_direccion():
-    if current_user.role not in ROLES_CON_ACCESO:
-        return jsonify({'message': 'Forbidden'}), 403
+def _guardia():
+    if current_user.role in ROLES_CON_ACCESO:
+        return None
+    vista = (request.endpoint or '').rpartition('.')[2]
+    if current_user.role in ROLES_DE_LECTURA and request.method == 'GET' and vista in VISTAS_DE_LECTURA:
+        return None
+    return jsonify({'message': 'Forbidden'}), 403
+
+
+def _para_lectura():
+    """True si la sesion solo mira: sus respuestas van sin datos personales ajenos."""
+    return current_user.role not in ROLES_CON_ACCESO
 
 
 def _validar(col, doc_id):
@@ -38,14 +60,21 @@ def _cuerpo():
 
 @bp.route('/estado', methods=['GET'])
 def estado():
-    """Todo lo que Thalamus necesita al abrir: colecciones, perfil propio, integraciones y reservas."""
+    """Todo lo que Thalamus necesita al abrir: colecciones, perfil propio, integraciones y reservas.
+    `solo_lectura` le dice a la pantalla que esconda lo que se configura."""
+    cols, reservas, lectura = servicio.colecciones(), servicio.reservas_para_estado(), _para_lectura()
+    if lectura:
+        # El email de cada persona de Team solo sirve para unirla a su cuenta, y eso es configurar.
+        cols['personas'] = [{**p, 'email': ''} for p in cols['personas']]
+        reservas = [{k: r[k] for k in CAMPOS_DE_RESERVA_EN_LECTURA if k in r} for r in reservas]
     return jsonify(
         {
-            'cols': servicio.colecciones(),
+            'cols': cols,
             'perfil': servicio.perfil_de(current_user.id),
             'integ': servicio.integraciones(),
-            'reservas': servicio.reservas_para_estado(),
+            'reservas': reservas,
             'version': servicio.version(),
+            'solo_lectura': lectura,
         }
     )
 
@@ -108,16 +137,27 @@ def ocupacion():
     desde, hasta = request.args.get('desde', type=int), request.args.get('hasta', type=int)
     if desde is None or hasta is None or not 0 < hasta - desde <= servicio.RANGO_MAX_OCUPACION_DIAS * servicio.DIA_MS:
         return jsonify({'message': 'Rango inválido'}), 400
-    return jsonify({'ocupacion': servicio.ocupacion_google(desde, hasta)})
+    ocupacion = servicio.ocupacion_google(desde, hasta)
+    if _para_lectura():
+        # Lo ocupado sí; el título de cada evento del calendario de un closer no (el de sus agendas lleva
+        # el nombre del lead). El visor ya los muestra como «Ocupado», igual que los privados.
+        ocupacion = {
+            pid: {**o, 'eventos': [{**e, 'titulo': None} for e in o.get('eventos') or []]} for pid, o in ocupacion.items()
+        }
+    return jsonify({'ocupacion': ocupacion})
 
 
 @bp.route('/usuarios', methods=['GET'])
 def usuarios():
     """Usuarios activos de la app. Por defecto los closers: Team (quienes atienden) suma personas solo
     desde aca, unidas por email. Con ?rol=setter, los setters: cada uno tiene su link en los funnels
-    de setting."""
+    de setting. `yo` marca a la sesion (el setter ve solo su link). A un rol de lectura le llegan sin
+    email (sumar a Team no es lo suyo)."""
     rol = ROLE_SETTER if request.args.get('rol') == 'setter' else ROLE_CLOSER
-    return jsonify({'usuarios': servicio.usuarios_del_equipo((rol,))})
+    lista = [{**u, 'yo': u['id'] == current_user.id} for u in servicio.usuarios_del_equipo((rol,))]
+    if _para_lectura():
+        lista = [{**u, 'email': ''} for u in lista]
+    return jsonify({'usuarios': lista})
 
 
 @bp.route('/paquete/prompt', methods=['GET'])

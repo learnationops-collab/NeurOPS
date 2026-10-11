@@ -1,8 +1,8 @@
 """API de gestion de Agendas 2.0 (/api/agendas-v2): quien entra y que se guarda.
 
-Thalamus es la herramienta del director comercial: un closer o un setter no tienen nada que hacer
-aca, y todo documento que entra se normaliza con el mismo esquema que el frontend (lo que no
-cumple se corrige, nunca se guarda tal cual).
+Thalamus es la herramienta del director comercial: un closer no tiene nada que hacer aca (el setter
+entra a mirar: test_api_lectura_setter.py), y todo documento que entra se normaliza con el mismo
+esquema que el frontend (lo que no cumple se corrige, nunca se guarda tal cual).
 """
 
 import pytest
@@ -30,11 +30,10 @@ def test_sin_sesion_responde_401(client):
     assert client.get('/api/agendas-v2/estado').status_code == 401
 
 
-@pytest.mark.parametrize('rol', ['closer', 'setter'])
-def test_closer_y_setter_no_entran(client, gente, auth_headers, rol):
-    assert client.get('/api/agendas-v2/estado', headers=auth_headers(gente[rol])).status_code == 403
+def test_el_closer_no_entra(client, gente, auth_headers):
+    assert client.get('/api/agendas-v2/estado', headers=auth_headers(gente['closer'])).status_code == 403
     assert (
-        client.put('/api/agendas-v2/funnels/f1', json={'nombre': 'X'}, headers=auth_headers(gente[rol])).status_code
+        client.put('/api/agendas-v2/funnels/f1', json={'nombre': 'X'}, headers=auth_headers(gente['closer'])).status_code
         == 403
     )
 
@@ -47,6 +46,7 @@ def test_la_direccion_y_admin_leen_el_estado(client, gente, auth_headers, rol):
     assert set(cuerpo['cols']) == {'funnels', 'formularios', 'personas', 'grupos', 'eventos', 'roles'}
     assert cuerpo['reservas'] == [] and cuerpo['version'] == 0
     assert cuerpo['integ']['gcal']['activo'] is False
+    assert cuerpo['solo_lectura'] is False
 
 
 def test_put_normaliza_el_documento(client, dir_h):
@@ -164,7 +164,7 @@ def test_usuarios_dice_quien_conecto_su_calendar(client, gente, dir_h, db):
     assert {u['email']: u['calendar'] for u in usuarios}['ana@neuro.com'] is True
 
 
-def test_usuarios_es_solo_para_la_direccion(client, gente, auth_headers):
+def test_usuarios_pide_sesion_y_no_es_para_el_closer(client, gente, auth_headers):
     assert client.get('/api/agendas-v2/usuarios').status_code == 401
     assert client.get('/api/agendas-v2/usuarios', headers=auth_headers(gente['closer'])).status_code == 403
 
@@ -252,7 +252,7 @@ def test_ocupacion_distingue_error_sin_google_y_sin_usuario(client, db, dir_h, g
     assert {k: v['estado'] for k, v in oc.items()} == {'p1': 'error', 'p2': 'sin_google', 'p3': 'sin_usuario'}
 
 
-def test_ocupacion_exige_un_rango_valido_y_ser_direccion(client, gente, dir_h, auth_headers, google_semana):
+def test_ocupacion_exige_un_rango_valido_y_no_es_para_el_closer(client, gente, dir_h, auth_headers, google_semana):
     assert _ocupacion(client, dir_h, 10, 10).status_code == 400
     assert _ocupacion(client, dir_h, 0, 11 * 86400000).status_code == 400
     assert client.get('/api/agendas-v2/ocupacion', headers=dir_h).status_code == 400

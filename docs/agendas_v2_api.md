@@ -11,7 +11,7 @@ app/agendas_v2/
   servicio.py    Lectura y escritura de documentos, versión, disponibilidad y reservas con bloqueo
   operacion.py   Escribe la reserva en la operación: cliente, Appointment, FinancialAgenda, evento de Calendar y aviso a Discord
   paquete.py     Configuración con IA: el prompt que se exporta y la importación del JSON («paquete»)
-  api_admin.py   /api/agendas-v2/*          sesión + rol admin o director_comercial (CSRF activo)
+  api_admin.py   /api/agendas-v2/*          sesión + rol admin o director_comercial; setter solo lee (CSRF activo)
   api_publico.py /api/agendas-v2/publico/*  anónimo, exento de CSRF, con límite por IP
 tests/agendas_v2/  test_nucleo.py (mismos casos que core/nucleo.test.js), test_api_admin.py, test_api_publico.py
 ```
@@ -41,12 +41,14 @@ Todo documento que entra pasa por el normalizador de `nucleo/normalizar.py`, el 
 
 Pide sesión y rol `admin` o `director_comercial`. Si no hay sesión responde 401; si el rol no corresponde, 403.
 
+**El setter mira (10/10/2026).** Con rol activo `setter` solo responden los GET `/estado`, `/estadisticas`, `/version`, `/ocupacion` y `/usuarios`; todo lo demás (escribir documentos, perfil, integraciones, el paquete con IA y su prompt) da 403. Lo que lee va sin datos personales de otros: `/estado` trae `solo_lectura: true`, las personas de Team sin `email` y cada reserva solo con `id, estado, inicio_ms, fin_ms, duracion_min, margen_min, closer_id, evento_id, funnel_id, creada` (sin el lead, sus respuestas ni el Meet); `/ocupacion`, cada evento con `titulo: null`; `/usuarios`, sin `email`. La pantalla se pone en solo lectura con esa marca (`frontend/src/pages/agendas_v2/ui/soloLectura.js`).
+
 | Método | Ruta | Cuerpo | Respuesta |
 |---|---|---|---|
-| GET | `/estado` | — | `{cols: {funnels, formularios, personas, grupos, eventos, roles}, perfil, integ, reservas, version}`. `reservas`: las `appointments` con `agenda_payload` de los últimos 35 días y futuras, en el formato de `adaptadorLocal` (`id` = id de la Appointment, `inicio_ms`, `fin_ms`, `estado` `agendada` o `cancelada`, y los campos del payload). Thalamus no cancela ni reprograma: eso lo hace el closer en NeurOPS |
+| GET | `/estado` | — | `{cols: {funnels, formularios, personas, grupos, eventos, roles}, perfil, integ, reservas, version, solo_lectura}`. `reservas`: las `appointments` con `agenda_payload` de los últimos 35 días y futuras, en el formato de `adaptadorLocal` (`id` = id de la Appointment, `inicio_ms`, `fin_ms`, `estado` `agendada` o `cancelada`, y los campos del payload). Thalamus no cancela ni reprograma: eso lo hace el closer en NeurOPS |
 | GET | `/estadisticas` | — | `{leads: [{t, ev, llego, desc, agenda, score, closer, setter, origen, grupo, inicio, cancelada?}]}`: los últimos 180 días para Stats. Las `appointments` con `agenda_payload` (`agenda: true`, `llego: 999`, `t` = cuándo se creó, `inicio` = el horario, `closer` = id de la persona de Team, `setter` = usuario) y los `sched_intentos` (`llego` = su paso, `desc` si no calificó). Las visitas al link sin datos no se registran |
 | GET | `/version` | — | `{version}` (el frontend lo consulta cada 15 s para traer cambios de otros) |
-| GET | `/usuarios` | — | `{usuarios: [{id, nombre, email, rol, tz, calendar}]}`: closers y setters activos de la app. Team suma personas solo desde esta lista, con su email, así cada persona queda unida a su cuenta (`sched_personas.user_id`) |
+| GET | `/usuarios` | — | `{usuarios: [{id, nombre, email, rol, tz, calendar, yo}]}`: closers y setters activos de la app (`yo`: el de la sesión). Team suma personas solo desde esta lista, con su email, así cada persona queda unida a su cuenta (`sched_personas.user_id`) |
 | GET | `/ocupacion?desde&hasta` | — | `{ocupacion: {persona_id: {estado, franjas: [[inicio_ms, fin_ms]], eventos: [{inicio, fin, titulo}]}}}`: lo ocupado en los calendarios de conflicto de Google de cada persona de Team, para Available. `franjas`, ya unido (lo que se pisa queda en un tramo); `eventos`, cada uno con su título solo si es del calendario de agendamiento (`null` en sus otros calendarios, si es privado o confidencial, o si el calendario solo deja ver libre/ocupado). Cuenta lo mismo que freebusy: sin cancelados, «Disponible» ni rechazados. `estado`: `ok`, `error` (Google no respondió: el visor no lo muestra como libre), `sin_google` o `sin_usuario`. Rango en ms, de hasta 10 días (400 si no). Se guarda 2 min por closer y rango, aparte de lo que usa el motor |
 | PUT | `/<col>/<id>` | documento completo (sin `id`) | `{doc, version}`. Crea o reemplaza |
 | PATCH | `/<col>/<id>` | campos sueltos | `{doc, version}`. Mezcla con lo guardado y normaliza; 404 si no existe |
