@@ -27,7 +27,7 @@ from app.services.deck_escritura_service import aplicar_cambios
 # el permiso con `permisos_de` antes de llegar aca, asi que se entra como admin para no volver a
 # pedirle permiso a la puerta de atras — que es justamente la puerta que le cerraba el paso a la
 # direccion comercial.
-ROLES_SIN_ALCANCE_EN_EL_MAZO = ('admin', 'director_comercial')
+ROLES_SIN_ALCANCE_EN_EL_MAZO = ('admin', 'director_comercial', 'operator')
 
 
 class ErrorDeAccion(Exception):
@@ -1274,7 +1274,7 @@ def borrar_plan(appt, datos, usuario):
 
 # --- Estado de una agenda ---------------------------------------------------------------------
 
-def estado_agenda(appt, datos, usuario):
+def estado_agenda(appt, datos, usuario, *, desde='el historial de la ficha'):
     """Corrige el pre call o el post call de UNA agenda.
 
     Es la misma escritura que `PATCH /comercial/agendas/<id>` —los mismos dos mapas, la misma
@@ -1283,6 +1283,9 @@ def estado_agenda(appt, datos, usuario):
     poder corregir cualquiera, no solo la que la ficha tiene abierta: la ruta ya recibe el id de
     la agenda y `permisos_de` la comprueba contra esa, asi que corregir la de hace tres meses pasa
     por el mismo permiso que corregir la de hoy.
+
+    `desde` es de donde vino la correccion, para la bitacora: la edicion en lote de Revisar
+    (10/10/2026) corrige el pre call de cada agenda con esta misma funcion.
     """
     from app.services.booking_service import BookingService
     from app.services.comercial_service import POST_CALL_A_CLOSER_RESULT, PRE_CALL_A_RESULT
@@ -1303,7 +1306,7 @@ def estado_agenda(appt, datos, usuario):
     db.session.commit()
     BookingService.log_lead_event(
         appt.id, usuario.id, 'status_changed',
-        f'{usuario.username} corrigió {columna} desde el historial de la ficha: '
+        f'{usuario.username} corrigió {columna} desde {desde}: '
         f'{anterior!r} -> {nuevo!r}.')
     return {'id': appt.id, 'campo': campo, 'valor': valor, 'anterior': anterior}
 

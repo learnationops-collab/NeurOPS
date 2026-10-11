@@ -5,11 +5,11 @@ import { ChevronDown, Download, Filter, Inbox, LayoutGrid, List, Plus, Rows, Rot
 // barra, pegada al borde derecho, y antes se cortaba (ver `Tip.jsx`).
 import { Tip, fmt } from './Shared';
 import Cifra from './Cifra';
-import { DIMENSION_PROPIA, TABLAS_POR_ROL, valoresVigentes } from './tablasDef';
+import { DIMENSION_PROPIA, TABLAS_POR_ROL, defDe, valoresVigentes, ventaSuma } from './tablasDef';
 import { defDeTabla } from './tablasSetter';
 import PanelConfigurar from './PanelConfigurar';
 import PanelExportar from './PanelExportar';
-import RevisarLista, { EsqueletoRevisar } from './RevisarLista';
+import RevisarLista, { EsqueletoRevisar, claveDe } from './RevisarLista';
 import { columnasOrdenables, ordenarFilas, siguienteOrden } from './ordenFilas';
 import MenuOrdenar from './MenuOrdenar';
 import AcademiaBarra, { SelectorColumnas } from './AcademiaBarra';
@@ -141,10 +141,14 @@ const TotalesTira = ({ items, alcance, filtrada }) => (
  * `tablas` son las que ofrece la fila de pestañas (por defecto, las del rol). Con una sola no hay
  * fila: el Revisar del setter elige la tabla con las pestañas de su espacio (ver
  * `SetterEspacioPage`), y una segunda fila debajo repetiría la misma elección.
+ *
+ * `operacion` son las acciones de Operaciones sobre esta tabla (`operacionDe` en
+ * `operar/operacion.js`), o null para quien no opera: la dirección y los closers ven Revisar igual
+ * que siempre. `onRecargar` vuelve a pedir la tabla después de una acción.
  */
 const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcance, onAbrirFila,
     filtroInicial, onOlvidarFiltro, puedeElegirEquipo = true, onSincronizarAcademia = null,
-    tablas = null, puedeExportar = false }) => {
+    tablas = null, puedeExportar = false, operacion = null, onRecargar = null }) => {
     const [query, setQuery] = useState('');
     const [facetas, setFacetas] = useState({});
     const [modo, setModo] = useState('todas');
@@ -156,6 +160,11 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     // Qué juego de columnas se ve: el de siempre o el de la Academia (solo Clientes y Ventas, las
     // tablas con `colsAcademia`). Son las mismas filas y el mismo filtro: cambia qué se muestra.
     const [columnas, setColumnas] = useState('base');
+    // Operar (10/10/2026): las filas tildadas, por su clave, y la acción abierta con su panel.
+    const [seleccion, setSeleccion] = useState(() => new Set());
+    const [abierta, setAbierta] = useState(null);
+    const seleccionable = !!operacion?.lote?.length;
+    const conMenuDeFila = !!operacion?.fila;
     const barra = useRef(null);
     const mas = useRef(null);
     const botonExportar = useRef(null);
@@ -169,9 +178,10 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     // lista y las ventas como tarjetas es una preferencia razonable, no una inconsistencia.
     const { modo: modoVista, setModo: setModoVista } = useModoVista(`comercial_view_mode_${tabla}`);
 
-    // Quien mira solo sus filas con rol setters (el setter mismo) ve las tablas a su medida: sin la
-    // columna de sí mismo y con la palabra clave (ver `tablasSetter.js`).
-    const def = defDeTabla(tabla, rol, !puedeElegirEquipo);
+    // Quien opera ve Ventas con su estado, su agenda y las no completadas (ver `defDe`). Quien mira
+    // solo sus filas con rol setters (el setter mismo) ve las tablas a su medida: sin la columna de sí
+    // mismo y con la palabra clave (ver `tablasSetter.js`). El resto, la tabla de siempre.
+    const def = operacion ? defDe(tabla, true) : defDeTabla(tabla, rol, !puedeElegirEquipo);
     const deLaFila = tablas || TABLAS_POR_ROL[rol];
     const panel = useRef(null);
 
@@ -228,6 +238,8 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
             setAgrupacion(null);
             setOrden(null);
             setColumnas('base');
+            // Lo tildado es de una tabla: en otra, o con otro filtro de origen, son otras filas.
+            setSeleccion(new Set());
         }
     }
 
@@ -283,8 +295,13 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         () => aplicarFiltros(filas, def, query, facetas, modo),
         [filas, def, query, facetas, modo]);
 
-    const chipActivo = chip || def.chips[0].key;
-    const rapido = def.chips.find(c => c.key === chipActivo) || def.chips[0];
+    // Un filtro rápido `soloSiHay` («No completadas» de quien opera) se ofrece solo si el período
+    // tiene filas así; si las corrigieron todas, el elegido vuelve al de por defecto.
+    const chips = useMemo(
+        () => def.chips.filter(c => !c.soloSiHay || filas.some(f => c.filtro(f, {}))),
+        [def, filas]);
+    const chipActivo = chips.some(c => c.key === chip) ? chip : def.chips[0].key;
+    const rapido = chips.find(c => c.key === chipActivo) || def.chips[0];
     // El filtro rápido recibe también las facetas: el de por defecto de Clientes deja afuera a los
     // dados de baja salvo que se los pida por estado (ver `entraPorDefecto` en `tablasDef.js`).
     // Con una flecha y no pasando `rapido.filtro` directo: `Array.filter` le daría el índice.
@@ -305,6 +322,29 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     const todasOrdenadas = useMemo(
         () => (menu === 'exportar' ? ordenarFilas(filas, colOrden?.orden, orden?.dir) : filas),
         [menu, filas, colOrden, orden]);
+    // Lo tildado que la lista sigue mostrando: si un filtro saca una fila tildada, la acción de lote
+    // no la toca (se opera sobre lo que se ve, nunca sobre algo escondido).
+    const seleccionadas = useMemo(
+        () => (seleccionable ? visibles.filter(f => seleccion.has(claveDe(f))) : []),
+        [seleccionable, visibles, seleccion]);
+    const alternar = (fila) => setSeleccion((previa) => {
+        const nueva = new Set(previa);
+        const clave = claveDe(fila);
+        if (nueva.has(clave)) nueva.delete(clave); else nueva.add(clave);
+        return nueva;
+    });
+    const estadoTodas = seleccionadas.length === 0 ? 'ninguna'
+        : seleccionadas.length === visibles.length ? 'todas' : 'algunas';
+    const alternarTodas = () => setSeleccion(
+        estadoTodas === 'todas' ? new Set() : new Set(visibles.map(claveDe)));
+    const abrirAccion = (accion, filasDe, fila = null) => {
+        setMenu(null);
+        setAbierta({ accion, filas: filasDe, fila });
+    };
+    const operar = operacion ? {
+        seleccionable, seleccion, onAlternar: alternar, estadoTodas, onAlternarTodas: alternarTodas,
+        deFila: operacion.fila, onAccion: (accion, fila) => abrirAccion(accion, [fila], fila),
+    } : null;
     const ordenar = (key) => setOrden(o => siguienteOrden(o, key));
     // Desde el menú: elegir la columna que ya ordena invierte la dirección; null vuelve al orden
     // de la tabla.
@@ -325,7 +365,12 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         [def, conAcademia]);
     // `min` (px) es el ancho del que una columna no baja (ver `COLS_ACADEMIA`): la que no lo trae
     // puede angostarse hasta 0 y corta su texto con «…».
-    const plantilla = defVista.cols.map(c => `minmax(${c.min || 0}px,${c.width})`).join(' ');
+    // Quien opera suma dos columnas fijas: la casilla adelante y el «⋯» al final (ver `RevisarLista`).
+    const plantilla = [
+        ...(seleccionable ? ['34px'] : []),
+        ...defVista.cols.map(c => `minmax(${c.min || 0}px,${c.width})`),
+        ...(conMenuDeFila ? ['40px'] : []),
+    ].join(' ');
     // Quien ve solo sus propias filas no puede agruparse por sí mismo: sería un grupo único con
     // todo adentro. La dirección conserva todas las dimensiones (ver `DIMENSION_PROPIA`).
     const agrupables = useMemo(
@@ -394,16 +439,28 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         const de = (a, b) => `${fmt.num(a)} de ${fmt.num(b)}`;
 
         if (tabla === 'ventas') {
-            const cash = lista.reduce((a, f) => a + f.monto, 0);
+            // Una venta no completada no es cash: quien opera la ve en la lista para corregirla
+            // («No completadas», o pidiendo su estado), pero la tira cuenta solo las completadas,
+            // igual que `totales_ventas` en el backend. Así ningún número de la dirección se mueve.
+            const cobros = lista.filter(ventaSuma);
+            const fuera = lista.length - cobros.length;
+            const cash = cobros.reduce((a, f) => a + f.monto, 0);
             // El ticket promedia solo lo cobrado en las ventas nuevas: las cuotas y las señas
             // suman al cash pero no son ventas (igual que `totales_ventas` en el backend).
-            const nuevas = lista.filter(f => f.es_venta);
+            const nuevas = cobros.filter(f => f.es_venta);
             const ventas = nuevas.length;
             const cashVentas = nuevas.reduce((a, f) => a + f.monto, 0);
-            const neto = lista.reduce((a, f) => a + f.monto_neto, 0);
+            const neto = cobros.reduce((a, f) => a + f.monto_neto, 0);
+            const deCobros = fmt.plural(cobros.length, 'cobro', 'cobros');
             return [
                 { key: 'cash', label: 'cash', valor: fmt.money(Math.round(cash * 100) / 100),
-                    color: 'var(--text-on-surface)', hint: fmt.plural(lista.length, 'cobro', 'cobros') },
+                    color: 'var(--text-on-surface)',
+                    // Con no completadas a la vista, la bajada dice cuántas quedaron afuera: si no, la
+                    // lista mostraría más filas que cobros cuenta la tira, sin explicación.
+                    hint: fuera ? `${deCobros} · ${fmt.num(fuera)} no ${fuera === 1 ? 'suma' : 'suman'}` : deCobros,
+                    ayuda: fuera ? 'Lo cobrado en las ventas completadas de la lista. Las no completadas '
+                        + '(pendientes, reembolsadas, canceladas) se ven para corregirlas, pero no son cash.'
+                        : undefined },
                 { key: 'ventas', label: segun(ventas, 'venta', 'ventas'), valor: fmt.num(ventas),
                     color: 'var(--brand-secondary)',
                     ayuda: 'Pago completo y split pay. Una seña es una reserva: no cuenta como venta.' },
@@ -413,7 +470,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                         + 'fueron. Las cuotas y las señas no entran.' },
                 { key: 'neto', label: 'cash neto', valor: fmt.money(Math.round(neto * 100) / 100),
                     color: 'var(--success)', ayuda: 'El cash sin los fees de la pasarela de pago.' },
-                itemTotalAcademia(lista),
+                itemTotalAcademia(cobros),
             ].filter(Boolean);
         }
 
@@ -530,7 +587,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                     </button>
                     {menu === 'rapido' && (
                         <div className="menu" role="menu" aria-label="Filtro rápido">
-                            {def.chips.map(c => (
+                            {chips.map(c => (
                                 <button key={c.key} type="button" className="menu-item"
                                     role="menuitemradio" aria-checked={chipActivo === c.key}
                                     onClick={() => {
@@ -583,6 +640,16 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                             fechas={datos?.dates} onCerrar={cerrarExportar} />
                     )}
                 </div>
+
+                {/* Las herramientas de Operaciones (Duplicados, …): botones sueltos de la barra que
+                    abren su panel con las filas que muestra la lista. */}
+                {operacion?.herramientas.map(h => (
+                    <button key={h.id} type="button" className="pastilla"
+                        onClick={() => abrirAccion(h, visibles)}>
+                        {h.Icono && <h.Icono size={15} />}
+                        {h.label}
+                    </button>
+                ))}
 
                 {/* Agrupar por: la dimensión sale de `def.agrupables`, así que cada tabla ofrece
                     las suyas y agregar un criterio nuevo es una línea en `tablasDef.js`. */}
@@ -694,8 +761,29 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                 </div>
             )}
 
+            {/* Lo tildado y qué se le puede hacer. Aparece al tildar la primera fila y se va al
+                destildar la última o al terminar una acción. */}
+            {seleccionadas.length > 0 && (
+                <div className="fila op-barra" role="region" aria-label="Filas seleccionadas">
+                    <span className="t-sm num op-barra-cuenta">
+                        {fmt.plural(seleccionadas.length, 'seleccionada', 'seleccionadas')}
+                    </span>
+                    {operacion.lote.map(a => (
+                        <button key={a.id} type="button" className="btn btn--sm"
+                            onClick={() => abrirAccion(a, seleccionadas)}>
+                            {a.Icono && <a.Icono size={14} />}
+                            {a.label}
+                        </button>
+                    ))}
+                    <button type="button" className="btn btn--linea btn--sm" onClick={() => setSeleccion(new Set())}>
+                        <X size={13} />
+                        Quitar selección
+                    </button>
+                </div>
+            )}
+
             {cargando ? <EsqueletoRevisar def={defVista} plantilla={plantilla} modo={modoVista}
-                totales={totales.length} /> : (
+                totales={totales.length} operar={operar} /> : (
                 <>
                     {conAcademia && <AcademiaBarra filas={filas} onSincronizar={onSincronizarAcademia} />}
                     <TotalesTira items={totales} alcance={alcance} filtrada={filtrando} />
@@ -728,10 +816,16 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                         <RevisarLista def={defVista} visibles={visibles} plantilla={plantilla}
                             onAbrirFila={onAbrirFila} dimension={dimension} modo={modoVista}
                             gruposElegidos={gruposElegidos} onElegirGrupo={elegirGrupo}
-                            orden={orden} onOrdenar={ordenar}
+                            orden={orden} onOrdenar={ordenar} operar={modoVista === 'lista' ? operar : null}
                             variante={`${columnas}-${orden ? `${orden.key}-${orden.dir}` : ''}`} />
                     )}
                 </>
+            )}
+
+            {abierta && (
+                <abierta.accion.Panel tabla={tabla} filas={abierta.filas} fila={abierta.fila}
+                    fechas={datos?.dates} onCerrar={() => setAbierta(null)}
+                    onHecho={() => { setSeleccion(new Set()); onRecargar?.(); }} />
             )}
         </section>
     );

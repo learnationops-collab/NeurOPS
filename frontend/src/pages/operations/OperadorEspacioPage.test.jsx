@@ -29,8 +29,10 @@ vi.mock('./settings/SeccionTecnica', () => ({
         respaldo: 'Respaldo', restaurar: 'Restaurar',
     },
 }));
-vi.mock('../admin/reports/FinancialAgendasPage', () => ({ default: () => <div data-testid="agendas" /> }));
-vi.mock('../public/PublicFinancialSalesPage', () => ({ default: () => <div data-testid="ventas" /> }));
+// Registros es el Revisar de la dirección, embebido: acá solo importa que se monte así.
+vi.mock('../comercial/DashboardComercial', () => ({
+    default: ({ embebido, seccionFija }) => <div data-testid="registros">{`${embebido}-${seccionFija}`}</div>,
+}));
 vi.mock('../shared/FormsManagementPage', () => ({ default: () => <div data-testid="formularios" /> }));
 vi.mock('./course-editor/CourseEditorPage', () => ({ default: () => <div data-testid="curso" /> }));
 
@@ -61,7 +63,7 @@ describe('Espacio del operador', () => {
         expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Equipo');
         expect(screen.getByTestId('seccion')).toHaveTextContent('team');
         const dock = screen.getByRole('navigation', { name: 'Secciones del espacio del operador' });
-        ['Equipo', 'Soporte', 'Datos', 'Agendas', 'Ventas', 'Formularios', 'Curso'].forEach(etiqueta => {
+        ['Equipo', 'Soporte', 'Datos', 'Registros', 'Formularios', 'Curso'].forEach(etiqueta => {
             expect(dock).toHaveTextContent(etiqueta);
         });
     });
@@ -93,10 +95,10 @@ describe('Espacio del operador', () => {
     it('elegir una sección en el dock cambia el paso en la URL', () => {
         montar('/ops/dashboard');
 
-        fireEvent.click(screen.getByRole('button', { name: /Ventas/ }));
+        fireEvent.click(screen.getByRole('button', { name: /Registros/ }));
 
-        expect(screen.getByTestId('url')).toHaveTextContent('/ops/dashboard?step=ventas');
-        expect(screen.getByTestId('ventas')).toBeInTheDocument();
+        expect(screen.getByTestId('url')).toHaveTextContent('/ops/dashboard?step=registros');
+        expect(screen.getByTestId('registros')).toHaveTextContent('true-revisar');
     });
 
     it('Formularios, que era de «Administración», es una sección más (10/10/2026)', () => {
@@ -125,7 +127,9 @@ describe('Espacio del operador', () => {
     it('las rutas viejas mandan al operador a su sección del espacio', () => {
         montar('/ops/agendas');
 
-        expect(screen.getByTestId('url')).toHaveTextContent('/ops/dashboard?step=agendas');
+        // Agendas y Ventas se juntaron en Registros (10/10/2026): el link viejo cae en su tabla.
+        expect(screen.getByTestId('url')).toHaveTextContent('/ops/dashboard?step=registros&t=agendas');
+        expect(screen.getByTestId('registros')).toBeInTheDocument();
         expect(screen.queryByTestId('legacy-agendas')).not.toBeInTheDocument();
     });
 });
@@ -137,7 +141,7 @@ describe('OpsRuta: el admin entra al mismo espacio (10/10/2026)', () => {
         montar('/ops/ventas');
 
         expect(screen.queryByTestId('main-layout')).not.toBeInTheDocument();
-        expect(screen.getByTestId('url')).toHaveTextContent('/ops/dashboard?step=ventas');
-        expect(screen.getByTestId('ventas')).toBeInTheDocument();
+        expect(screen.getByTestId('url')).toHaveTextContent('/ops/dashboard?step=registros&t=ventas');
+        expect(screen.getByTestId('registros')).toBeInTheDocument();
     });
 });

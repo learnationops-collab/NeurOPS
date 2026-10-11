@@ -216,6 +216,31 @@ const detalleFuenteDe = (fila) => (fila.procedencia && fila.procedencia_detalle
     ? rotuloDetalleFuente(fila.procedencia.label, fila.procedencia_detalle.label)
     : null);
 
+/**
+ * ¿Este cobro suma? Solo las ventas completadas son cash. Las no completadas (pendientes,
+ * reembolsadas, canceladas…) llegan únicamente a quien opera los registros (`operar=1`, 10/10/2026)
+ * y vienen con `completada: false`; las filas de la dirección y de los closers no traen la marca,
+ * porque todas suman.
+ */
+export const ventaSuma = (fila) => fila.completada !== false;
+
+/** «Con agenda» / «Sin agenda»: lo que dice `tiene_agenda` (solo en las filas de quien opera). */
+export const CON_AGENDA = 'Con agenda';
+export const SIN_AGENDA = 'Sin agenda';
+export const agendaDe = (fila) => {
+    if (fila.tiene_agenda === undefined || fila.tiene_agenda === null) return null;
+    return fila.tiene_agenda ? CON_AGENDA : SIN_AGENDA;
+};
+
+/**
+ * ¿Esta venta entra en el listado de quien opera? Las no completadas salen de todos los filtros
+ * rápidos menos el suyo, «No completadas»: así el listado por defecto, sus totales y cada atajo
+ * cuentan lo mismo que ve la dirección. Mismo criterio que los dados de baja de Clientes
+ * (`entraPorDefecto`): si alguien pide ese estado desde el filtro completo, se lo muestra.
+ */
+export const ventaEntraPorDefecto = (fila, facetas) => ventaSuma(fila)
+    || (facetas?.estado_venta || []).includes(fila.estado?.label);
+
 // Columnas que están en los dos juegos de columnas de su tabla: el de siempre y el de la Academia.
 const COL_FECHA_VENTA = { key: 'fecha', header: 'Venta', width: '0.8fr', orden: (f) => f.fecha,
     ordenLabel: 'Fecha de la venta' };
@@ -470,6 +495,59 @@ export const TABLAS = {
         ],
     },
 };
+
+/**
+ * Ventas para quien opera los registros (admin y operador, 10/10/2026).
+ *
+ * La tabla vieja de Ventas de Operaciones se retiró y Revisar la reemplaza. Las filas de quien opera
+ * traen además las ventas no completadas, el `estado` de cada una y si tiene agenda (ver
+ * `ComercialService._para_operar`), y con eso la tabla suma:
+ *
+ *  - la columna «Estado» (el chip del estado y, debajo, «Sin agenda» cuando no tiene);
+ *  - las facetas «Estado» y «Agenda»;
+ *  - el filtro rápido «No completadas», que se ofrece solo si el período tiene alguna (`soloSiHay`).
+ *    Los demás atajos —también el de por defecto, que acá se llama «Completadas»— las dejan afuera
+ *    (`ventaEntraPorDefecto`), así que lo que se ve al entrar, y su tira de totales, es lo mismo que
+ *    ve la dirección.
+ *
+ * Es otra definición y no columnas condicionales: la dirección y los closers ven `TABLAS.ventas`
+ * tal cual, sin una columna ni una faceta vacías.
+ */
+const VENTAS_PARA_OPERAR = {
+    ...TABLAS.ventas,
+    cols: [
+        COL_FECHA_VENTA,
+        { key: 'cliente', header: 'Cliente', width: '1.7fr' },
+        { key: 'programa', header: 'Programa', width: '1.2fr' },
+        { key: 'tipo_pago', header: 'Pago', width: '1fr' },
+        { key: 'monto', header: 'Monto', width: '0.9fr', orden: (f) => f.monto, ordenLabel: 'Monto' },
+        { key: 'closer', header: 'Closer', width: '0.9fr' },
+        { key: 'estado_venta', header: 'Estado', width: '1fr' },
+        COL_VER,
+    ],
+    facetas: [
+        ...TABLAS.ventas.facetas,
+        { key: 'estado_venta', label: 'Estado', de: (f) => f.estado?.label ?? null },
+        { key: 'agenda', label: 'Agenda', de: agendaDe },
+    ],
+    chips: [
+        // El de por defecto se llama «Completadas» y no «Todas»: para quien opera no son todas.
+        ...TABLAS.ventas.chips.map((c, i) => ({
+            ...c, ...(i === 0 ? { label: 'Completadas' } : {}),
+            filtro: (f, facetas) => ventaEntraPorDefecto(f, facetas) && c.filtro(f, facetas),
+        })),
+        { key: 'no_completadas', label: 'No completadas', filtro: (f) => !ventaSuma(f), soloSiHay: true },
+    ],
+};
+
+const TABLAS_PARA_OPERAR = { ventas: VENTAS_PARA_OPERAR };
+
+/**
+ * La definición de una tabla para quien mira: la de siempre, o la de quien opera si la tabla tiene
+ * una (hoy, Ventas). Devuelve siempre el mismo objeto para la misma pregunta, así que sirve de
+ * dependencia de un `useMemo`.
+ */
+export const defDe = (tabla, opera = false) => (opera && TABLAS_PARA_OPERAR[tabla]) || TABLAS[tabla];
 
 /**
  * La dimensión que un equipo NO puede agruparse a sí mismo.

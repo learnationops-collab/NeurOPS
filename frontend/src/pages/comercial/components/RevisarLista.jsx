@@ -1,5 +1,5 @@
-import React from 'react';
-import { ArrowDown, ArrowRight } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ArrowDown, ArrowRight, MoreHorizontal } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import ListaAgrupable from '../../../components/listas/ListaAgrupable';
 import VistaTarjetas from '../../../components/listas/VistaTarjetas';
@@ -99,7 +99,27 @@ const Celda = ({ fila, col }) => {
                 </>
             );
         case 'monto':
-            return <span className="celda celda--num">{fmt.money(fila.monto)}</span>;
+            // Una venta no completada (solo la ve quien opera) no es cash: el monto va tachado, que
+            // es lo que explica por qué no está en la tira de totales.
+            return fila.completada === false ? (
+                <span className="celda celda--num mut40" style={{ textDecoration: 'line-through' }}
+                    title={`No suma: la venta está ${(fila.estado?.label || 'sin completar').toLowerCase()}`}>
+                    {fmt.money(fila.monto)}
+                </span>
+            ) : <span className="celda celda--num">{fmt.money(fila.monto)}</span>;
+        // Solo en la tabla de quien opera (ver `defDe` en `tablasDef.js`): el estado de la venta y,
+        // debajo, si no tiene agenda, que es lo que se viene a corregir con «Atribuir a una agenda».
+        case 'estado_venta':
+            return (
+                <>
+                    <ChipTono chip={fila.estado} />
+                    {fila.tiene_agenda === false && (
+                        <span className="celda-sub" style={{ color: 'var(--warning)', fontWeight: 700 }}>
+                            Sin agenda
+                        </span>
+                    )}
+                </>
+            );
         case 'pagado':
             return (
                 <span className="celda celda--num">
@@ -209,7 +229,7 @@ const Celda = ({ fila, col }) => {
 };
 
 /** Las columnas que se leen como un chip de estado: en una tarjeta van arriba, no en la lista de datos. */
-const COLS_CHIP = new Set(['pre_call', 'post_call', 'estado', 'academia']);
+const COLS_CHIP = new Set(['pre_call', 'post_call', 'estado', 'estado_venta', 'academia']);
 /** Y estas ya están en el encabezado de la tarjeta o no son un dato. */
 const COLS_FUERA = new Set(['cliente', 'ver']);
 
@@ -222,7 +242,77 @@ const chipsDe = (def) => (fila) => def.cols
     .filter(c => COLS_CHIP.has(c.key))
     .map(c => <Celda key={c.key} fila={fila} col={c} />);
 
-const claveDe = (fila) => `${fila.tipo}-${fila.id}`;
+export const claveDe = (fila) => `${fila.tipo}-${fila.id}`;
+
+/* ============================================================
+   OPERAR — la casilla y el menú «⋯» de cada fila (10/10/2026)
+   ============================================================
+
+   Solo aparecen cuando quien mira opera los registros (admin y operador, ver `operar/operacion.js`):
+   la casilla si la tabla tiene acciones de lote, el «⋯» si tiene acciones de fila. Son una columna
+   más de la grilla (Revisar le suma su ancho a `plantilla`), así que el encabezado y los huesos
+   llevan la misma celda y nada se corre al llegar las filas.
+
+   Los dos cortan el clic: la fila entera abre la ficha, y tildar o abrir el menú no tiene que
+   abrirla. Con el teclado, lo mismo con Enter y espacio. */
+
+const cortar = (e) => e.stopPropagation();
+
+const CasillaFila = ({ fila, marcada, onAlternar }) => (
+    <div className="op-celda" onClick={cortar} onKeyDown={cortar} data-h="">
+        <input type="checkbox" className="op-casilla" checked={marcada}
+            onChange={() => onAlternar(fila)} aria-label={`Seleccionar ${fila.cliente}`} />
+    </div>
+);
+
+/** El menú «⋯» de una fila: se cierra al elegir, con Escape o con un clic afuera. */
+const MenuFila = ({ fila, acciones, onAccion }) => {
+    const [abierto, setAbierto] = useState(false);
+    const caja = useRef(null);
+    useEffect(() => {
+        if (!abierto) return undefined;
+        const fuera = (e) => { if (!caja.current?.contains(e.target)) setAbierto(false); };
+        const escape = (e) => { if (e.key === 'Escape') setAbierto(false); };
+        document.addEventListener('mousedown', fuera);
+        document.addEventListener('keydown', escape);
+        return () => {
+            document.removeEventListener('mousedown', fuera);
+            document.removeEventListener('keydown', escape);
+        };
+    }, [abierto]);
+    return (
+        <div className="op-celda op-celda--fin" ref={caja} onClick={cortar} onKeyDown={cortar} data-h="">
+            {acciones.length > 0 && (
+                <>
+                    <button type="button" className="op-mas" aria-haspopup="menu" aria-expanded={abierto}
+                        aria-label={`Acciones de ${fila.cliente}`} onClick={() => setAbierto((v) => !v)}>
+                        <MoreHorizontal size={16} />
+                    </button>
+                    {abierto && (
+                        <div className="menu op-menu" role="menu" aria-label={`Acciones de ${fila.cliente}`}>
+                            {acciones.map(({ id, label, Icono }) => (
+                                <button key={id} type="button" className="menu-item" role="menuitem"
+                                    onClick={() => { setAbierto(false); onAccion(acciones.find((a) => a.id === id), fila); }}>
+                                    {Icono && <Icono size={14} />}
+                                    <span className="trunc">{label}</span>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </>
+            )}
+        </div>
+    );
+};
+
+/** La casilla del encabezado: tilda o destilda todas las filas que muestra la lista. */
+const CasillaTodas = ({ estado, onAlternar }) => (
+    <span className="op-celda">
+        <input type="checkbox" className="op-casilla" checked={estado === 'todas'}
+            ref={(el) => { if (el) el.indeterminate = estado === 'algunas'; }}
+            onChange={onAlternar} aria-label="Seleccionar todas las filas de la lista" />
+    </span>
+);
 
 /* Las tres piezas viven en el módulo y no dentro de `RevisarLista`. Un componente declarado en el
    cuerpo de otro es una función NUEVA en cada render, así que React lo trata como un tipo distinto
@@ -239,8 +329,9 @@ const claveDe = (fila) => `${fila.tipo}-${fila.id}`;
  */
 const RotuloOrden = { desc: 'de mayor a menor', asc: 'de menor a mayor' };
 
-const Encabezado = ({ def, plantilla, orden, onOrdenar }) => (
+const Encabezado = ({ def, plantilla, orden, onOrdenar, operar = null }) => (
     <div className="tabla-cab" style={{ '--cols': plantilla }}>
+        {operar?.seleccionable && <CasillaTodas estado={operar.estadoTodas} onAlternar={operar.onAlternarTodas} />}
         {def.cols.map(c => {
             const ordenable = !!(c.orden && onOrdenar);
             const dir = orden?.key === c.key ? orden.dir : null;
@@ -267,6 +358,7 @@ const Encabezado = ({ def, plantilla, orden, onOrdenar }) => (
                 </span>
             );
         })}
+        {operar?.deFila && <span className="op-celda op-celda--fin" />}
     </div>
 );
 
@@ -278,7 +370,7 @@ const Encabezado = ({ def, plantilla, orden, onOrdenar }) => (
    El recorrido es de 12 px y la curva frena al final: con 6 px y 0,2 s la fila aparecía casi en
    su lugar y el escalonado no se percibía, que era justo lo que se había pedido ver. */
 const ENTRADA_FILA = { duration: .34, ease: [.22, 1, .36, 1] };
-const Filas = ({ def, filas, plantilla, onAbrirFila, desde = 0, quieto }) => filas.map((fila, i) => (
+const Filas = ({ def, filas, plantilla, onAbrirFila, desde = 0, quieto, operar = null }) => filas.map((fila, i) => (
     <motion.div key={claveDe(fila)} className="tabla-fila"
         role="button" tabIndex={0} style={{ '--cols': plantilla }}
         aria-label={`Abrir ${fila.cliente}`}
@@ -294,6 +386,9 @@ const Filas = ({ def, filas, plantilla, onAbrirFila, desde = 0, quieto }) => fil
                 onAbrirFila(fila);
             }
         }}>
+        {operar?.seleccionable && (
+            <CasillaFila fila={fila} marcada={operar.seleccion.has(claveDe(fila))} onAlternar={operar.onAlternar} />
+        )}
         {def.cols.map(c => (
             // `data-h` es el rótulo que el CSS pinta a la izquierda de cada dato cuando la
             // tabla se apila en móvil.
@@ -301,6 +396,7 @@ const Filas = ({ def, filas, plantilla, onAbrirFila, desde = 0, quieto }) => fil
                 <Celda fila={fila} col={c} />
             </div>
         ))}
+        {operar?.deFila && <MenuFila fila={fila} acciones={operar.deFila(fila)} onAccion={operar.onAccion} />}
     </motion.div>
 ));
 
@@ -321,13 +417,15 @@ const anchoHueso = (col, i) => (col.key === 'ver' ? 14 : ANCHOS_HUESO[i % ANCHOS
 
 /** Una fila de huesos con las columnas REALES de la tabla: `def.cols` trae el `width` de cada una,
  *  así que el hueso cae justo donde va a caer el dato y al llegar las filas nada se corre. */
-const HuesoFila = ({ def, plantilla, paso }) => (
+const HuesoFila = ({ def, plantilla, paso, operar = null }) => (
     <div className="tabla-fila" style={{ '--cols': plantilla }} aria-hidden="true">
+        {operar?.seleccionable && <div className="op-celda" />}
         {def.cols.map((c, i) => (
             <div key={c.key} data-h={c.header}>
                 <Hueso alto={12} ancho={anchoHueso(c, i)} paso={paso} />
             </div>
         ))}
+        {operar?.deFila && <div className="op-celda op-celda--fin" />}
     </div>
 );
 
@@ -344,7 +442,7 @@ const HuesoTarjeta = ({ paso }) => (
  * con el encabezado de verdad. El encabezado no se dibuja con huesos porque ya se sabe —las
  * columnas son de la definición, no del servidor— y leerlo mientras carga adelanta qué viene.
  */
-export const EsqueletoRevisar = ({ def, plantilla, modo, filas = 8, totales = 5 }) => (
+export const EsqueletoRevisar = ({ def, plantilla, modo, filas = 8, totales = 5, operar = null }) => (
     <Esqueleto rotulo="Cargando los registros…">
         {/* La tira con la misma grilla y los mismos renglones que `TotalesTira` (Revisar.jsx): el
             alcance, y por celda el número, el rótulo y la bajada. Al llegar los datos no se corre. */}
@@ -368,9 +466,9 @@ export const EsqueletoRevisar = ({ def, plantilla, modo, filas = 8, totales = 5 
             </div>
         ) : (
             <div className="tabla">
-                <Encabezado def={def} plantilla={plantilla} />
+                <Encabezado def={def} plantilla={plantilla} operar={operar} />
                 {Array.from({ length: filas }, (_, i) => (
-                    <HuesoFila key={i} def={def} plantilla={plantilla} paso={i} />
+                    <HuesoFila key={i} def={def} plantilla={plantilla} paso={i} operar={operar} />
                 ))}
             </div>
         )}
@@ -384,8 +482,13 @@ export const EsqueletoRevisar = ({ def, plantilla, modo, filas = 8, totales = 5 
  * a tarjetas —"esto es otra vista"—, y además vuelve a la primera página, que es donde está lo que
  * se acaba de pedir ver primero.
  */
+/**
+ * `operar` (solo para quien opera, ver `operar/operacion.js`): `{ seleccionable, seleccion,
+ * onAlternar, estadoTodas, onAlternarTodas, deFila, onAccion }`. Las casillas y el «⋯» van en la
+ * lista; en tarjetas no, que es una vista para leer.
+ */
 const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo, gruposElegidos,
-    onElegirGrupo, orden = null, onOrdenar = null, variante = '' }) => {
+    onElegirGrupo, orden = null, onOrdenar = null, variante = '', operar = null }) => {
     const quieto = useReducedMotion();
     const esTarjetas = modo === 'tarjetas';
 
@@ -404,7 +507,7 @@ const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo, 
             </div>
         )
         : <Filas def={def} filas={filas} plantilla={plantilla} onAbrirFila={onAbrirFila}
-            desde={desde} quieto={quieto} />);
+            desde={desde} quieto={quieto} operar={operar} />);
 
     // El pie de un grupo abierto: los mismos huesos que el de la lista suelta, pero sin su propia
     // `.tabla` —ya está adentro de la de `ListaAgrupable`— y, en tarjetas, con el mismo relleno
@@ -416,7 +519,7 @@ const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo, 
             </div>
         )
         : Array.from({ length: 3 }, (_, i) => (
-            <HuesoFila key={i} def={def} plantilla={plantilla} paso={i} />
+            <HuesoFila key={i} def={def} plantilla={plantilla} paso={i} operar={operar} />
         )));
 
     const cuerpo = () => {
@@ -427,7 +530,8 @@ const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo, 
                         sin él las columnas quedaban sin rótulo, y repetirlo por grupo convertía
                         la lista en cinco tablas en vez de una repartida. */}
                     {!esTarjetas && (
-                        <Encabezado def={def} plantilla={plantilla} orden={orden} onOrdenar={onOrdenar} />
+                        <Encabezado def={def} plantilla={plantilla} orden={orden} onOrdenar={onOrdenar}
+                            operar={operar} />
                     )}
                     {/* `filas` son TODAS las filtradas: así los subtotales de cada grupo cierran
                         con la tira de arriba aunque el grupo esté cerrado, y lo que va llegando al
@@ -443,9 +547,10 @@ const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo, 
         }
         return (
             <div className="tabla">
-                <Encabezado def={def} plantilla={plantilla} orden={orden} onOrdenar={onOrdenar} />
+                <Encabezado def={def} plantilla={plantilla} orden={orden} onOrdenar={onOrdenar}
+                    operar={operar} />
                 <Filas def={def} filas={pagina} plantilla={plantilla} onAbrirFila={onAbrirFila}
-                    desde={dibujadas} quieto={quieto} />
+                    desde={dibujadas} quieto={quieto} operar={operar} />
             </div>
         );
     };
@@ -465,7 +570,7 @@ const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo, 
                     {esTarjetas
                         ? Array.from({ length: 2 }, (_, i) => <HuesoTarjeta key={i} paso={i} />)
                         : Array.from({ length: 3 }, (_, i) => (
-                            <HuesoFila key={i} def={def} plantilla={plantilla} paso={i} />
+                            <HuesoFila key={i} def={def} plantilla={plantilla} paso={i} operar={operar} />
                         ))}
                 </div>
             )}

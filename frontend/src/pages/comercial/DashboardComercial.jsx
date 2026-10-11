@@ -20,6 +20,7 @@ import Comparativas from './components/Comparativas';
 import Variabilidad from './components/Variabilidad';
 import Revisar, { TABLAS_POR_ROL, duplicadasDe } from './components/Revisar';
 import { puedeExportarRevisar } from './components/tablasDef';
+import { operacionDe } from './components/operar/operacion';
 import LeadModal from './components/LeadModal';
 import FichaLeadModal from '../../components/ficha/FichaLeadModal';
 import Reportar from './components/Reportar';
@@ -312,6 +313,9 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const miembrosDelRol = contexto?.miembros_por_rol?.[rol] || contexto?.miembros || [];
     const miembroId = contexto?.puede_elegir_equipo
         && miembrosDelRol.some(m => String(m.id) === String(miembroPedido)) ? miembroPedido : null;
+    // Quien opera los registros (admin y operador) pide las tablas para operarlas: en Ventas llegan
+    // también las no completadas, con su estado y su agenda (10/10/2026, ver `getTabla`).
+    const operar = !!contexto?.puede_operar;
 
     const filtros = useMemo(
         () => ({ period, compare, rol, miembroId, desde: rango?.desde, hasta: rango?.hasta,
@@ -411,11 +415,11 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const cargarTabla = useCallback(() => {
         if (!rol || !tablaActual || (faltaPeriodo && tablaActual !== 'clientes')) return;
         setCargandoTabla(true);
-        getTabla(filtros, tablaActual, basis)
+        getTabla(filtros, tablaActual, basis, { operar })
             .then(soloElUltimo('tabla', setDatosTabla))
             .catch(() => toast.error('No se pudo cargar la tabla'))
             .finally(() => setCargandoTabla(false));
-    }, [filtros, rol, tablaActual, basis, soloElUltimo, faltaPeriodo]);
+    }, [filtros, rol, tablaActual, basis, operar, soloElUltimo, faltaPeriodo]);
 
     useEffect(() => { if (seccion === 'analizar') cargarAnalizar(); }, [seccion, cargarAnalizar]);
 
@@ -517,7 +521,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const marcarDuplicada = useCallback(async (fila) => {
         try {
             await marcarAgendaDuplicada(fila.id);
-            const datos = await getTabla(filtros, tablaActual, basis);
+            const datos = await getTabla(filtros, tablaActual, basis, { operar });
             setDatosTabla(datos);
             setFilaAbierta(null);
             toast.success('Agenda marcada como duplicada y cancelada');
@@ -526,14 +530,14 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
             toast.error(error?.response?.data?.message || 'No se pudo marcar la agenda como duplicada');
             throw error;
         }
-    }, [filtros, tablaActual, basis]);
+    }, [filtros, tablaActual, basis, operar]);
 
     // `puede_reportar` es exactamente "es dirección" en el backend (ver /comercial/contexto), que
     // es el mismo permiso con el que la ruta DELETE responde 403 al resto. Un solo criterio.
     const eliminarAgenda = useCallback(async (fila) => {
         try {
             await eliminarAgendaApi(fila.id);
-            const datos = await getTabla(filtros, tablaActual, basis);
+            const datos = await getTabla(filtros, tablaActual, basis, { operar });
             setDatosTabla(datos);
             setFilaAbierta(null);
             toast.success('Agenda eliminada');
@@ -542,7 +546,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
             toast.error(error?.response?.data?.message || 'No se pudo eliminar la agenda');
             throw error;
         }
-    }, [filtros, tablaActual, basis]);
+    }, [filtros, tablaActual, basis, operar]);
 
     /**
      * "Actualizar datos de la Academia" (solo la dirección): corre un lote de fotos y vuelve a pedir
@@ -564,7 +568,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const corregir = useCallback(async (fila, campo, valor) => {
         try {
             await corregirAgenda(fila.id, campo, valor);
-            const datos = await getTabla(filtros, tablaActual, basis);
+            const datos = await getTabla(filtros, tablaActual, basis, { operar });
             setDatosTabla(datos);
             setFilaAbierta(datos.filas.find(f => f.id === fila.id && f.tipo === fila.tipo) || null);
             getResumen(filtros).then(setResumen).catch(() => { /* el KPI viejo no rompe la corrección */ });
@@ -574,7 +578,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                 : 'No se pudo guardar la corrección');
             throw error;
         }
-    }, [filtros, tablaActual, basis]);
+    }, [filtros, tablaActual, basis, operar]);
 
     if (mudadaA) {
         return <Navigate to={`${RUTA_DE_ESPACIO[mudadaA]}?${params.toString()}`} replace />;
@@ -828,7 +832,11 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                             onSincronizarAcademia={contexto.puede_reportar ? sincronizarAcademia : null}
                             // Con el rol de quien mira, no con `rol` (el de la tabla): ver
                             // `ROLES_QUE_EXPORTAN` (10/10/2026).
-                            puedeExportar={puedeExportarRevisar(contexto.yo?.rol)} />
+                            puedeExportar={puedeExportarRevisar(contexto.yo?.rol)}
+                            // Operaciones (admin y operador) opera los registros desde acá desde el
+                            // 10/10/2026: edición masiva, duplicados y acciones por venta.
+                            operacion={contexto.puede_operar ? operacionDe(tablaActual) : null}
+                            onRecargar={cargarTabla} />
                     )}
                     {sinPermiso && (
                         <section className="panel">

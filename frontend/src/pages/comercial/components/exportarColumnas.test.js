@@ -1,6 +1,6 @@
 import { isValidElement } from 'react';
 import { describe, expect, it } from 'vitest';
-import { TABLAS } from './tablasDef';
+import { TABLAS, defDe } from './tablasDef';
 import { PARTES_POR_COLUMNA, alternarColumna, columnasElegidas, columnasExportables, eleccionInicial,
     fechaDeFila, marcarTodas, moverColumna } from './exportarColumnas';
 import { cuandoDe } from './Shared';
@@ -36,6 +36,8 @@ const COMPLETAS = {
         tipo: 'venta', id: 2, client_id: 3, fecha: '2026-09-10T10:00:00', cliente: 'Ana Pérez', ig: '@ana',
         programa: 'ACE', tipo_pago: chip('completo', 'Pago completo'), metodo: 'Stripe', monto: 1234.5,
         monto_neto: 1190, closer: 'Nerina', academia: ACADEMIA,
+        // Solo en las filas de quien opera (`operar=1`).
+        estado: chip('reembolsada', 'Reembolsada'), completada: false, tiene_agenda: false,
     },
     lead: {
         tipo: 'lead', id: 4, fecha: '2026-10-01T03:10:00', cliente: 'Juan', ig: '@juan', fuente: 'ManyChat',
@@ -62,20 +64,31 @@ const TIPO_DE_TABLA = { agendas: 'agenda', generadas: 'agenda', ventas: 'venta',
 const esPlano = (v) => v === null || v === undefined || typeof v === 'string'
     || (typeof v === 'number' && Number.isFinite(v));
 
+// Cada tabla como la ve la dirección y, si quien opera la ve con otras columnas (Ventas, `defDe`),
+// también así: una columna de quien opera tiene que poder exportarse igual.
+const DEFINICIONES = Object.keys(TABLAS).flatMap(tabla => [
+    [tabla, tabla, TABLAS[tabla]],
+    ...(defDe(tabla, true) !== TABLAS[tabla] ? [[`${tabla} (quien opera)`, tabla, defDe(tabla, true)]] : []),
+]);
+
 describe('exportar · cada columna de cada tabla da un valor plano', () => {
     it('las cinco tablas están cubiertas por los fixtures', () => {
         expect(Object.keys(TABLAS).sort()).toEqual(Object.keys(TIPO_DE_TABLA).sort());
     });
 
-    Object.entries(TABLAS).forEach(([tabla, def]) => {
+    it('Ventas de quien opera está en el recorrido', () => {
+        expect(DEFINICIONES.map(([nombre]) => nombre)).toContain('ventas (quien opera)');
+    });
+
+    DEFINICIONES.forEach(([nombre, tabla, def]) => {
         const columnas = [...def.cols, ...(def.colsAcademia || [])];
 
-        it(`${tabla}: toda columna dice cómo se exporta`, () => {
+        it(`${nombre}: toda columna dice cómo se exporta`, () => {
             const sinDefinir = columnas.map(c => c.key).filter(k => !(k in PARTES_POR_COLUMNA));
             expect(sinDefinir).toEqual([]);
         });
 
-        it(`${tabla}: toda columna que es un dato tiene al menos una parte, sin claves repetidas`, () => {
+        it(`${nombre}: toda columna que es un dato tiene al menos una parte, sin claves repetidas`, () => {
             const exportables = columnasExportables(def);
             const conPartes = new Set(exportables.map(c => c.columna));
             columnas.filter(c => c.key !== 'ver').forEach(c => expect(conPartes.has(c.key)).toBe(true));
@@ -84,21 +97,21 @@ describe('exportar · cada columna de cada tabla da un valor plano', () => {
             exportables.forEach(c => expect(c.header, c.key).toMatch(/\S/));
         });
 
-        it(`${tabla}: cada parte da texto, número o vacío, nunca un objeto ni JSX`, () => {
+        it(`${nombre}: cada parte da texto, número o vacío, nunca un objeto ni JSX`, () => {
             const tipo = TIPO_DE_TABLA[tabla];
             [COMPLETAS[tipo], VACIAS[tipo]].forEach(fila => {
                 columnasExportables(def).forEach(c => {
                     const v = c.valor(fila);
-                    expect(isValidElement(v), `${tabla}.${c.key}`).toBe(false);
-                    expect(esPlano(v), `${tabla}.${c.key} dio ${JSON.stringify(v)}`).toBe(true);
+                    expect(isValidElement(v), `${nombre}.${c.key}`).toBe(false);
+                    expect(esPlano(v), `${nombre}.${c.key} dio ${JSON.stringify(v)}`).toBe(true);
                 });
             });
         });
 
-        it(`${tabla}: con una fila completa, ninguna parte principal sale vacía`, () => {
+        it(`${nombre}: con una fila completa, ninguna parte principal sale vacía`, () => {
             const fila = COMPLETAS[TIPO_DE_TABLA[tabla]];
             columnasExportables(def).filter(c => c.key === c.columna).forEach(c => {
-                expect(c.valor(fila), `${tabla}.${c.key}`).not.toBeNull();
+                expect(c.valor(fila), `${nombre}.${c.key}`).not.toBeNull();
             });
         });
     });
@@ -120,6 +133,16 @@ describe('exportar · qué escribe cada columna', () => {
         expect(v['cliente.ig']).toBe('@ana');
         // «Venta» suelto en una planilla no dice que es una fecha.
         expect(encabezados('ventas').fecha).toBe('Fecha de la venta');
+    });
+
+    it('Ventas de quien opera: el estado de la venta y si tiene agenda, cada uno en su columna', () => {
+        const partes = Object.fromEntries(columnasExportables(defDe('ventas', true)).map(c => [c.key, c]));
+        expect(partes.estado_venta.header).toBe('Estado de la venta');
+        expect(partes.estado_venta.valor(COMPLETAS.venta)).toBe('Reembolsada');
+        expect(partes['estado_venta.agenda'].valor(COMPLETAS.venta)).toBe('Sin agenda');
+        expect(partes['estado_venta.agenda'].valor({ ...COMPLETAS.venta, tiene_agenda: true })).toBe('Con agenda');
+        // La dirección no tiene esas columnas: su Exportar no ofrece nada vacío.
+        expect(columnasExportables(TABLAS.ventas).some(c => c.columna === 'estado_venta')).toBe(false);
     });
 
     it('una fecha sin hora sale solo con el día', () => {

@@ -176,7 +176,7 @@ def _en_la_zona(dt, zona):
     return pytz.UTC.localize(dt).astimezone(zona).strftime('%d/%m/%Y %H:%M')
 
 
-def editar_agenda(appt, datos, usuario):
+def editar_agenda(appt, datos, usuario, *, desde='el historial de la ficha'):
     """Corrige la fecha y hora, la fuente y/o el closer de UNA agenda del cliente.
 
     Solo se tocan los campos que vienen en el pedido. Lo que se decidio con lo que depende de
@@ -202,7 +202,9 @@ def editar_agenda(appt, datos, usuario):
         Reprogramar crea otra agenda y tiene su propia accion.
 
     Queda una entrada en la bitacora del lead con cada valor anterior, con las horas en la zona de
-    quien corrigio.
+    quien corrigio. `desde` dice en esa entrada de donde vino la correccion: la edicion en lote de
+    Revisar (10/10/2026) corrige cada agenda con esta misma funcion, y la bitacora no puede decir
+    «el historial de la ficha» de algo que se hizo sobre doce agendas a la vez.
     """
     from app.services.closer_agendas_service import derivar_estado
     from app.services.user_time_service import zona_del_usuario
@@ -264,7 +266,7 @@ def editar_agenda(appt, datos, usuario):
     from app.services.booking_service import BookingService
     BookingService.log_lead_event(
         appt.id, usuario.id, 'agenda_corregida',
-        f'{usuario.username} corrigió la agenda desde el historial de la ficha: '
+        f'{usuario.username} corrigió la agenda desde {desde}: '
         + '; '.join(bitacora) + '.')
 
     return {'id': appt.id, 'cambios': cambios, 'fecha': appt.start_time.isoformat(),

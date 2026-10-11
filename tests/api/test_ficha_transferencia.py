@@ -1,8 +1,9 @@
 """A quién del equipo se le hizo un pago por transferencia, en cada lugar donde se carga un pago.
 
 Pedido de Kerwin (09/10/2026): marcarlo en la sección Pagos de la ficha (Pedro, Jean Carlo u otro)
-y preguntarlo al registrar: la venta de «Resultado», «Registrar pago» de Acciones, «Agregar pago»
-del historial y el alta de Operaciones. Un alta nueva por transferencia sin a quién es un 400; los
+y preguntarlo al registrar: la venta de «Resultado», «Registrar pago» de Acciones y «Agregar pago»
+del historial (el alta de Operaciones, POST /public/financial-sales/new, se retiró el 10/10/2026:
+nada la abría). Un alta nueva por transferencia sin a quién es un 400; los
 pagos viejos quedan «sin marcar» (null) y se corrigen igual. Lo marca quien hoy puede editar pagos
 (el permiso `cobrar`: la dirección y cualquier closer; ni setter ni triage).
 """
@@ -298,7 +299,7 @@ def test_la_venta_guarda_a_quien_y_no_lo_manda_a_la_hoja_ni_a_n8n(db, lead):
     assert 'transferido_a' not in n8n.call_args[0][0]
 
 
-# --- El alta y la edición de Operaciones -------------------------------------------------------------
+# --- La edición de Operaciones ------------------------------------------------------------------------
 
 @pytest.fixture()
 def operador(make_user, auth_headers):
@@ -310,21 +311,6 @@ def test_operaciones_lee_las_mismas_opciones_que_la_ficha(client, db, operador):
 
     assert r.status_code == 200
     assert [o['clave'] for o in r.get_json()] == ['pedro', 'jean_carlo', 'otro']
-
-
-def test_el_alta_de_operaciones_por_transferencia_pide_a_quien(client, db, operador):
-    venta = {'nombre_cliente': 'Ana Gomez', 'monto': 150, 'tipo_pago': 'RR - Seña',
-             'metodo_pago': 'Transferencia Bancaria'}
-
-    with patch(SHEETS, return_value={'status': 'success'}) as enviado:
-        sin = client.post('/api/public/financial-sales/new', json=venta, headers=operador)
-        con = client.post('/api/public/financial-sales/new', json={**venta, 'transferido_a': 'pedro'},
-                          headers=operador)
-
-    assert sin.status_code == 400
-    assert con.status_code == 201
-    enviado.assert_called_once()
-    assert enviado.call_args[0][1]['transferido_a'] == 'pedro'
 
 
 def test_la_edicion_de_operaciones_marca_y_limpia(client, db, lead, operador):

@@ -8,31 +8,10 @@ logger = logging.getLogger(__name__)
 
 bp = Blueprint('sheets', __name__)
 
-@bp.route('/sync', methods=['GET'])
-@login_required
-def sync_sheets():
-    """
-    Sincroniza una tabla específica desde Google Sheets. 
-    Parámetro: ?tabla=Agendas_DB o ?tabla=Ventas_DB
-    """
-    tabla = request.args.get('tabla')
-    if not tabla:
-        return jsonify({"status": "error", "message": "Parámetro 'tabla' es requerido"}), 400
-    
-    if tabla == 'Llamadas_DB':
-        return jsonify({"status": "disabled", "message": "La sincronización de agendas desde Google Sheets ha sido deshabilitada en favor de n8n."}), 200
-        
-    if tabla not in ('Llamadas_DB', 'Ventas_DB'):
-        return jsonify({"status": "error", "message": "Tabla no válida"}), 400
-
-    force = request.args.get('force', 'false').lower() == 'true'
-    result = SheetsService.sync_from_sheets(tabla, force=force)
-    if result["status"] == "success":
-        logger.info(f"[SHEETS] Sync successful for {tabla} (force={force})")
-        return jsonify(result), 200
-    else:
-        logger.error(f"[SHEETS] Sync failed for {tabla}: {result.get('message')}")
-        return jsonify(result), 500
+# GET /sync (la sincronización manual de una tabla) se retiró el 10/10/2026 con «Importaciones
+# Sheets» (/admin/sheets), su única pantalla: con Ventas_DB respondía 500 «disabled» (la
+# sincronización destructiva está apagada) y con Llamadas_DB, «disabled» (las agendas llegan por
+# n8n). El cron sigue abajo, con su propio secreto.
 
 @bp.route('/cron-sync', methods=['GET'])
 @require_cron_secret

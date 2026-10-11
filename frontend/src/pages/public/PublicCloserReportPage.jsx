@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import api from '../../services/api';
-import { Loader2, Send, Phone, DollarSign, ArrowLeft, BarChart3, Users, TrendingUp, Target, Activity, Zap, Brain, Headphones, BarChart, ArrowLeftCircle, Coffee } from 'lucide-react';
+import { Loader2, Send, Phone, DollarSign, ArrowLeft, Users, TrendingUp, Target, Activity, Zap, Brain, Headphones, BarChart, ArrowLeftCircle, Coffee } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import DailyReflectionSection from '../../components/reports/DailyReflectionSection';
@@ -461,16 +461,6 @@ const PublicCloserReportPage = () => {
                             >
                                 <ArrowLeftCircle size={16} className="group-hover:text-rose-500" />
                                 Cancelar Edición
-                            </button>
-                        )}
-                        {user.role === 'closer' && !editReport && (
-                            <button
-                                type="button"
-                                onClick={() => navigate('/closer/stats')}
-                                className="flex items-center gap-2 bg-slate-900 border border-slate-800 text-slate-400 px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:text-white hover:border-violet-500 transition-all group shadow-xl cursor-pointer"
-                            >
-                                <BarChart3 size={16} className="group-hover:text-violet-500" />
-                                Ver Mis Estadísticas
                             </button>
                         )}
                     </div>

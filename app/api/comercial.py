@@ -18,7 +18,7 @@ from flask_login import current_user, login_required
 from app import db
 from app.models import Appointment, User
 from app.api.public.finance import puede_ver_finanzas
-from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, ROLE_SETTER
+from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, ROLE_OPERATOR, ROLE_SETTER
 from app.services import comercial_analitica as analitica
 from app.services import comercial_no_cerradas
 from app.services import comercial_reporte as reporte
@@ -34,8 +34,12 @@ bp = Blueprint('comercial_api', __name__)
 
 # Quién ve el equipo completo y puede elegir de quién son los datos.
 ROLES_DIRECCION = (ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL)
+# Quién opera los registros desde Revisar: la edición masiva, los duplicados y las acciones sobre las
+# ventas (10/10/2026, cuando las tablas viejas de Operaciones pasaron a Revisar). Ve el equipo completo
+# como la dirección, pero no reporta ni compara: el operador solo entra a Revisar.
+ROLES_QUE_OPERAN = (ROLE_ADMIN, ROLE_OPERATOR)
 # Quién entra al tablero, de una forma u otra.
-ROLES_CON_ACCESO = ROLES_DIRECCION + (ROLE_CLOSER, ROLE_SETTER)
+ROLES_CON_ACCESO = ROLES_DIRECCION + (ROLE_OPERATOR, ROLE_CLOSER, ROLE_SETTER)
 
 PERIODOS = [
     {'key': 'hoy', 'label': 'Hoy'}, {'key': 'ayer', 'label': 'Ayer'},
@@ -112,6 +116,7 @@ def contexto():
         'miembro_id': miembro_id,
         'puede_elegir_equipo': puede_elegir,
         'puede_reportar': current_user.role in ROLES_DIRECCION,
+        'puede_operar': current_user.role in ROLES_QUE_OPERAN,
         'puede_comparar': _puede_comparar(),
         # Las secciones Finanzas y Payroll del dock: el mismo criterio con el que responden sus
         # endpoints (`finance_admin_required`), admin o dirección con el permiso «ver finanzas».
@@ -265,9 +270,14 @@ def tabla():
         # `con_fuente`: cada fila lleva la fuente de su cobro, para filtrar y agrupar por ella en
         # Revisar. Se calcula una vez por pedido; filtrar y agrupar después es del lado del cliente.
         de_un_setter = rol == ROL_SETTERS and miembro_id is not None
+        # `operar=1` (10/10/2026): quien opera los registros recibe además las no completadas, el
+        # estado de cada venta y si tiene agenda (`ComercialService._para_operar`). Ningún otro rol,
+        # mande lo que mande; y los totales siguen contando solo las completadas (`totales_ventas`).
+        para_operar = current_user.role in ROLES_QUE_OPERAN and request.args.get('operar') in ('1', 'true')
         filas = ComercialService.ventas(start, end, closer_nombre=nombre if rol == ROL_CLOSERS else None,
                                         con_fuente=True,
-                                        setter_nombre=(nombre or '') if de_un_setter else None)
+                                        setter_nombre=(nombre or '') if de_un_setter else None,
+                                        para_operar=para_operar)
         totales = ComercialService.totales_ventas(filas)
     elif cual == 'leads':
         de_setter = rol == ROL_SETTERS
@@ -491,3 +501,6 @@ def reportes():
     except (TypeError, ValueError):
         miembro_id = None
     return jsonify(reporte.historial(miembro_id)), 200
+
+
+from app.api import comercial_agendas_lote  # noqa: E402,F401  (Editar en lote desde Revisar, 10/10/2026)

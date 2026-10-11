@@ -26,6 +26,7 @@
 import { parseUtcIso } from '../../../utils/datetime';
 import { TIPOS_EN_UTC } from './Shared';
 import { actividadDe } from './academia';
+import { agendaDe } from './tablasDef';
 
 const dos = (n) => String(n).padStart(2, '0');
 
@@ -92,6 +93,12 @@ export const PARTES_POR_COLUMNA = {
             valor: (f) => (f.retraso_dias > 0 ? aNumero(f.retraso_dias) : null) },
     ],
     estado: [{ valor: etiqueta('estado') }],
+    // Ventas de quien opera (`defDe` en `tablasDef.js`): el estado de la venta y si tiene agenda, cada
+    // uno en su columna. «Estado» suelto en una planilla de ventas se lee como el del cliente.
+    estado_venta: [
+        { header: 'Estado de la venta', valor: etiqueta('estado') },
+        { sub: 'agenda', header: 'Agenda', valor: agendaDe },
+    ],
     tipo_pago: [
         { valor: etiqueta('tipo_pago') },
         { sub: 'metodo', header: 'Método', valor: texto('metodo') },

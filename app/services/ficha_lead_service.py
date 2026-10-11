@@ -30,7 +30,9 @@ from app.services.lead_cobro_service import UMBRAL_DEUDA, resolver_etapa
 
 MESES = ('ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic')
 
-ROLES_DIRECCION = ('admin', 'director_comercial')
+# Operaciones trabaja la ficha con los permisos de la direccion (10/10/2026): corrige y limpia los
+# registros que antes editaba en sus tablas viejas, que se fueron a Revisar.
+ROLES_DIRECCION = ('admin', 'director_comercial', 'operator')
 
 
 # --- Formato ----------------------------------------------------------------------------------

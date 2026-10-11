@@ -146,10 +146,23 @@ TIPOS_PAGO_COBROS = TIPOS_PAGO + [
     {'key': 'upsell', 'label': 'Upsell', 'tone': 'success'},
 ]
 
+# Estado de un cobro (`FinancialSale.estado`). Cuenta como cash solo el completado: vacío,
+# «Completada» o «Confirmada» (`ESTADOS_COMPLETADA`), que se muestran juntos como «Completada». Los
+# demás —pendientes, reembolsados, cancelados— los ve solo quien opera los registros (admin y
+# operador, 10/10/2026), para corregirlos desde Revisar: no suman a ningún número del tablero.
+ESTADO_VENTA = [
+    {'key': 'completada', 'label': 'Completada', 'tone': 'success'},
+    {'key': 'pendiente', 'label': 'Pendiente', 'tone': 'warning'},
+    {'key': 'reembolsada', 'label': 'Reembolsada', 'tone': 'error'},
+    {'key': 'cancelada', 'label': 'Cancelada', 'tone': 'idle'},
+]
+ESTADOS_COMPLETADA = ('', 'completada', 'confirmada')
+
 _LABELS = {'pre_call': {e['key']: e for e in PRE_CALL},
            'post_call': {e['key']: e for e in POST_CALL},
            'estado': {e['key']: e for e in ESTADO_LEAD},
            'estado_cartera': {e['key']: e for e in ESTADO_CARTERA},
+           'estado_venta': {e['key']: e for e in ESTADO_VENTA},
            'tipo_pago': {e['key']: e for e in TIPOS_PAGO_COBROS}}
 
 # Estado del libro de agendas -> estado post call de este tablero, para los que no dependen de si
@@ -351,6 +364,23 @@ def chip(grupo, key):
     """{key, label, tone} para que el frontend no tenga su propia copia del vocabulario."""
     dato = _LABELS[grupo].get(key) or {'key': key, 'label': str(key), 'tone': 'idle'}
     return {'key': dato['key'], 'label': dato['label'], 'tone': dato['tone']}
+
+
+def venta_completada(venta):
+    """¿Este cobro cuenta como cash? Es el único criterio del tablero: las filas de Ventas, sus
+    totales, el cash de Analizar y sus fuentes salen de los cobros que lo cumplen."""
+    return (venta.estado or '').strip().lower() in ESTADOS_COMPLETADA
+
+
+def estado_de_venta(venta):
+    """{key, label, tone} del estado de un cobro (ver `ESTADO_VENTA`). Uno escrito a mano que no está
+    en el vocabulario se muestra como vino, en amarillo: no es cash y alguien lo tiene que mirar."""
+    if venta_completada(venta):
+        return chip('estado_venta', 'completada')
+    crudo = (venta.estado or '').strip()
+    if crudo.lower() in _LABELS['estado_venta']:
+        return chip('estado_venta', crudo.lower())
+    return {'key': crudo.lower(), 'label': crudo, 'tone': 'warning'}
 
 
 def pct(numerador, denominador):
@@ -588,13 +618,18 @@ class ComercialService:
         return programa, (tipo or 'otro'), (tipo in REAL_SALE_TIPOS)
 
     @staticmethod
+    def _cobros_del_periodo(start, end):
+        """TODOS los cobros (`FinancialSale`) del período, de todo el equipo, en cualquier estado y
+        del más reciente al más viejo."""
+        desde, hasta = ComercialService._limites(start, end)
+        q = FinancialSale.query.filter(FinancialSale.date >= desde, FinancialSale.date <= hasta)
+        return q.order_by(FinancialSale.date.desc(), FinancialSale.id.desc()).all()
+
+    @staticmethod
     def ventas_del_periodo(start, end):
         """Los cobros (`FinancialSale`) del período que cuentan como cash, de todo el equipo y del
         más reciente al más viejo: los de estado vacío, «Completada» o «Confirmada»."""
-        desde, hasta = ComercialService._limites(start, end)
-        q = FinancialSale.query.filter(FinancialSale.date >= desde, FinancialSale.date <= hasta)
-        return [v for v in q.order_by(FinancialSale.date.desc(), FinancialSale.id.desc()).all()
-                if (v.estado or '').strip().lower() in ('', 'completada', 'confirmada')]
+        return [v for v in ComercialService._cobros_del_periodo(start, end) if venta_completada(v)]
 
     @staticmethod
     def vendio(nombre_vendedor, closer_nombre):
@@ -642,7 +677,39 @@ class ComercialService:
                 if balde == 'setting' and detalle == objetivo}
 
     @staticmethod
-    def ventas(start, end, closer_nombre=None, con_fuente=False, setter_nombre=None):
+    def _fila_venta(v, nombre, client_id):
+        """La fila de Ventas de un cobro: `nombre` es su closer ya resuelto y `client_id` el cliente
+        con el que se cruzó (`clientes_de_ventas`), o None."""
+        programa, tipo, es_venta = ComercialService.clasificar_venta(v)
+        monto = float(v.monto or 0.0)
+        return {
+            'id': v.id,
+            'tipo': 'venta',
+            # `None` cuando la venta no se pudo cruzar con ningún cliente: esa fila sigue
+            # abriendo el modal viejo, porque no hay ficha que abrir.
+            'client_id': client_id,
+            'fecha': v.date.isoformat() if v.date else None,
+            'creada': v.created_at.isoformat() if v.created_at else None,
+            'cliente': v.nombre_cliente or 'Sin nombre',
+            'ig': v.instagram or '',
+            'email': v.mail_cliente or '',
+            'telefono': v.telefono or '',
+            'programa': programa,
+            'tipo_pago': chip('tipo_pago', tipo),
+            'tipo_pago_raw': (v.tipo_pago or '').strip() or 'Sin tipo',
+            'es_venta': es_venta,
+            'monto': round(monto, 2),
+            'monto_neto': round(cash_neto_de(monto, v.metodo_pago), 2),
+            'metodo': v.metodo_pago or 'Sin método',
+            'closer': nombre,
+            'setter': v.setter or '',
+            # Se completa abajo: en qué terminó esta seña. `None` en cualquier fila que no sea
+            # una seña, para que la clave no falte nunca y el frontend no tenga que preguntar.
+            'sena_estado': None,
+        }
+
+    @staticmethod
+    def ventas(start, end, closer_nombre=None, con_fuente=False, setter_nombre=None, para_operar=False):
         """Filas de la tabla "Ventas". El cash del período sale de estas mismas filas.
 
         `con_fuente` le agrega a cada fila la fuente que trajo ese cobro (`_con_fuente`): la faceta
@@ -654,11 +721,25 @@ class ComercialService:
         `de_la_fuente_del_setter`): Revisar › Ventas del setter, las que él originó. None es "no
         acotar"; cualquier otro valor acota, también uno vacío. La fuente se calcula sobre TODAS
         las ventas del período, como la tarjeta, así que una fila cae en el mismo balde para él y
-        para la dirección; ese contexto no le agrega ninguna fila ajena."""
+        para la dirección; ese contexto no le agrega ninguna fila ajena.
+
+        `para_operar` suma lo que Operaciones necesita para corregir las ventas desde Revisar (ver
+        `_para_operar`). Solo lo pide `GET /comercial/tabla` para admin y operador: las filas
+        completadas salen idénticas, y sin él la función devuelve exactamente lo de siempre. Con un
+        setter elegido no suma las no completadas: lo que ata un cobro a un setter es su fuente, y
+        esa se calcula sobre lo cobrado."""
         # El cliente de cada venta, para que la fila pueda abrir la ficha unificada. Se resuelve
         # en bloque ANTES del bucle: adentro sería una consulta por fila.
-        del_periodo = ComercialService.ventas_del_periodo(start, end)
-        clientes = clientes_de_ventas(del_periodo)
+        if para_operar:
+            cobros = ComercialService._cobros_del_periodo(start, end)
+            del_periodo = [v for v in cobros if venta_completada(v)]
+            no_completadas = [v for v in cobros if not venta_completada(v)] if setter_nombre is None else []
+        else:
+            del_periodo = ComercialService.ventas_del_periodo(start, end)
+            no_completadas = []
+        # Una venta se cruza con su cliente por su propio contacto, así que sumar las no completadas
+        # no le cambia el cliente a ninguna completada.
+        clientes = clientes_de_ventas(del_periodo + no_completadas)
 
         # Con un setter la fuente decide qué filas entran, así que se calcula antes del bucle (una
         # sola vez: `_con_fuente` reusa este mismo mapa).
@@ -678,33 +759,7 @@ class ComercialService:
             if not ComercialService.vendio(nombre, closer_nombre):
                 continue
             propias.append(v)
-            programa, tipo, es_venta = ComercialService.clasificar_venta(v)
-            monto = float(v.monto or 0.0)
-            filas.append({
-                'id': v.id,
-                'tipo': 'venta',
-                # `None` cuando la venta no se pudo cruzar con ningún cliente: esa fila sigue
-                # abriendo el modal viejo, porque no hay ficha que abrir.
-                'client_id': clientes.get(v.id),
-                'fecha': v.date.isoformat() if v.date else None,
-                'creada': v.created_at.isoformat() if v.created_at else None,
-                'cliente': v.nombre_cliente or 'Sin nombre',
-                'ig': v.instagram or '',
-                'email': v.mail_cliente or '',
-                'telefono': v.telefono or '',
-                'programa': programa,
-                'tipo_pago': chip('tipo_pago', tipo),
-                'tipo_pago_raw': (v.tipo_pago or '').strip() or 'Sin tipo',
-                'es_venta': es_venta,
-                'monto': round(monto, 2),
-                'monto_neto': round(cash_neto_de(monto, v.metodo_pago), 2),
-                'metodo': v.metodo_pago or 'Sin método',
-                'closer': nombre,
-                'setter': v.setter or '',
-                # Se completa abajo: en qué terminó esta seña. `None` en cualquier fila que no sea
-                # una seña, para que la clave no falte nunca y el frontend no tenga que preguntar.
-                'sena_estado': None,
-            })
+            filas.append(ComercialService._fila_venta(v, nombre, clientes.get(v.id)))
 
         # En qué terminó cada seña, con la MISMA función que cuenta el panel Señas. Sin esto la
         # tabla Ventas no sabía cortar por eso: el panel decía "3 caídas" y no había forma de ver
@@ -716,11 +771,62 @@ class ComercialService:
             filas_por_id[fila_id]['sena_estado'] = dato['estado']
         ComercialService._con_academia(filas)
         if con_fuente:
-            ComercialService._con_fuente(filas_por_id, propias, del_periodo, procedencias)
+            ComercialService._con_fuente(filas_por_id, propias, del_periodo, procedencias=procedencias)
+        if para_operar:
+            filas = ComercialService._para_operar(filas, del_periodo, no_completadas, closer_nombre,
+                                                  clientes, con_fuente)
         return filas
 
     @staticmethod
-    def _con_fuente(filas_por_id, propias, del_periodo, procedencias=None):
+    def _para_operar(filas, del_periodo, no_completadas, closer_nombre, clientes, con_fuente):
+        """Las filas de Ventas para quien opera los registros (admin y operador, 10/10/2026).
+
+        La tabla vieja de Ventas de Operaciones se retiró y Revisar la reemplaza; lo que ella sabía y
+        Revisar no, se suma acá:
+
+          · **Las no completadas** (pendientes, reembolsadas, canceladas…), mezcladas en el orden de
+            la tabla. Se arman DESPUÉS de todo lo de las completadas: en qué terminó cada seña y la
+            fuente de cada cobro se calcularon sin ellas, así que las filas completadas salen
+            idénticas a las de la dirección. Una no completada no es cash: no tiene estado de seña,
+            y su fuente se calcula sobre el período entero, como la de cualquier cobro.
+          · **`estado`** (`estado_de_venta`) y **`completada`** en todas: con eso Revisar arma la
+            faceta y el filtro rápido, y deja a las no completadas fuera de los totales.
+          · **`tiene_agenda`** en todas, con el criterio de la tabla vieja (`sin_atribucion` de
+            `GET /public/financial-sales`): ¿`AttributionService` le encuentra una `FinancialAgenda`
+            entre las del lead? Sobre los cobros del período en cualquier estado, como ella. Una
+            atribución para todas las filas, nunca una consulta por fila.
+        """
+        from app.services.attribution_service import AttributionService
+        from app.services.procedencia_ingresos_service import agendas_para_atribuir
+
+        extra, propias_extra = [], []
+        for v in no_completadas:
+            nombre = resolver_nombre_closer(v.email_vendedor)
+            if not ComercialService.vendio(nombre, closer_nombre):
+                continue
+            propias_extra.append(v)
+            extra.append(ComercialService._fila_venta(v, nombre, clientes.get(v.id)))
+        ComercialService._con_academia(extra)
+
+        todos = del_periodo + no_completadas
+        agendas = agendas_para_atribuir()
+        if con_fuente:
+            ComercialService._con_fuente({f['id']: f for f in extra}, propias_extra, todos, agendas=agendas)
+
+        atribucion = AttributionService.get_sales_attribution(sales=todos, agendas=agendas)
+        por_id = {v.id: v for v in todos}
+        juntas = filas + extra
+        for fila in juntas:
+            venta = por_id[fila['id']]
+            fila['estado'] = estado_de_venta(venta)
+            fila['completada'] = venta_completada(venta)
+            fila['tiene_agenda'] = atribucion.get(fila['id']) is not None
+        # El orden de `_cobros_del_periodo`: la fecha y después el id, de lo más nuevo a lo más viejo.
+        juntas.sort(key=lambda f: (por_id[f['id']].date, f['id']), reverse=True)
+        return juntas
+
+    @staticmethod
+    def _con_fuente(filas_por_id, propias, del_periodo, procedencias=None, agendas=None):
         """Le pone a cada fila de Ventas la fuente que trajo ese cobro: `procedencia` (el balde,
         `{key, label, tone}`: Workshop, Setting, VSL, Fulfillment o Sin procedencia) y
         `procedencia_detalle` (`{key, label}`: en vivo o grabación, el setter… o None si el balde
@@ -743,11 +849,13 @@ class ComercialService:
         tarjeta, y su cash (bruto, como la tarjeta) suma su monto.
 
         `procedencias` es el mapa ya calculado sobre todo el período, si lo hay (las ventas de un
-        setter lo necesitan antes para elegir las filas): la atribución no se corre dos veces."""
+        setter lo necesitan antes para elegir las filas): la atribución no se corre dos veces.
+        `agendas` (opcional) son las de la atribución ya leídas, para quien las necesita también para
+        otra cosa (`_para_operar`); sin ellas, `procedencia_por_venta` las lee."""
         from app.services.procedencia_ingresos_service import PROCEDENCIAS, procedencia_por_venta
 
         if procedencias is None:
-            procedencias = procedencia_por_venta(propias, contexto=del_periodo)
+            procedencias = procedencia_por_venta(propias, contexto=del_periodo, agendas=agendas)
         baldes = {p['key']: {'key': p['key'], 'label': p['label'], 'tone': p['tone']} for p in PROCEDENCIAS}
         for venta_id in (v.id for v in propias):
             balde, sub, rotulo = procedencias[venta_id]
@@ -1138,6 +1246,9 @@ class ComercialService:
 
     @staticmethod
     def totales_ventas(filas):
+        # Una venta no completada no es cash: llega solo a quien opera (`_para_operar`), que la ve
+        # en la lista para corregirla, pero no suma. Las filas de los demás no traen la marca.
+        filas = [f for f in filas if f.get('completada', True)]
         cash = sum(f['monto'] for f in filas)
         ventas = [f for f in filas if f['es_venta']]
         # El ticket es lo que entró POR CADA VENTA NUEVA (pago completo o split pay), igual que

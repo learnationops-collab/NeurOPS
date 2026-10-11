@@ -25,10 +25,11 @@ logger = logging.getLogger(__name__)
 # CloserService.process_agenda, que exige una razon y (a veces) una fecha nueva
 # por cada agenda, algo que no tiene sentido aplicar con un valor unico a 200
 # registros. Para eso siguen estando los selectores fila por fila.
+# El Call Confirmer (`encargado_triage`) salio el 10/10/2026: los closers confirman sus
+# propias agendas y el tablero ya no lo muestra.
 CAMPOS_MASIVOS = {
     'nombre': 'Fuente',
     'closer': 'Closer',
-    'encargado_triage': 'Call Confirmer',
     'estado': 'Estado pre call',
 }
 
@@ -178,12 +179,10 @@ def bulk_update_financial_agendas():
 def bulk_update_options():
     """Catálogo de valores válidos para el panel de edición masiva."""
     closers = [u.username for u in User.query.filter_by(role='closer', is_active=True).order_by(User.username).all()]
-    triage = [u.username for u in User.query.filter_by(role='triage').order_by(User.username).all()]
     return jsonify({
         "fields": CAMPOS_MASIVOS,
         "fuentes": FUENTES_CANONICAS,
         "closers": closers,
-        "encargados_triage": triage,
         "estados": ESTADOS_MASIVOS_PERMITIDOS,
         "limite_lote": LIMITE_LOTE,
     }), 200

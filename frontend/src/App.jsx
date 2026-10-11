@@ -6,9 +6,6 @@ import { PortalProvider, PortalRuta } from './sesion/PortalContext';
 import { roleLandingPath } from './utils/roleLanding';
 import MainLayout from './components/MainLayout';
 import AdminDashboard from './pages/admin/dashboard/AdminDashboard';
-import FinancialAnalysisPage from './pages/admin/reports/FinancialAnalysisPage';
-import PublicCallsBoardPage from './pages/public/PublicCallsBoardPage';
-import SalesAttributionPage from './pages/admin/reports/SalesAttributionPage';
 import LoginPage from './pages/auth/LoginPage';
 import CortexPage from './pages/auth/CortexPage';
 import SessionEntry from './pages/auth/SessionEntry';
@@ -18,7 +15,6 @@ import DatabasePage from './pages/admin/database/DatabasePage';
 import MarketingPage from './pages/admin/marketing/MarketingPage';
 import AdminLeadsPage from './pages/admin/leads/LeadsPage';
 import CloserDashboard from './pages/closer/dashboard/CloserDashboard';
-import StatisticsPage from './pages/closer/dashboard/StatisticsPage';
 import CloserLeadsPage from './pages/closer/leads/LeadsPage';
 import CloserNewAppointmentPage from './pages/closer/records/NewAppointmentPage';
 import SetterStatisticsPage from './pages/setter/dashboard/StatisticsPage';
@@ -29,12 +25,10 @@ import OperationsPage from './pages/admin/database/OperationsPage';
 import OpsRuta from './pages/operations/OpsRuta';
 import BookingPage from './pages/public/BookingPage';
 import PublicCloserReportPage from './pages/public/PublicCloserReportPage';
-import PublicCloserStatsPage from './pages/public/PublicCloserStatsPage';
 import PublicTriageReportPage from './pages/public/PublicTriageReportPage';
 import AdManagementPage from './pages/public/AdManagementPage';
 import FinancialAgendasPage from './pages/admin/reports/FinancialAgendasPage';
 import TriageWorkflowPage from './pages/triage/TriageWorkflowPage';
-import PublicSalesAttributionPage from './pages/public/PublicSalesAttributionPage';
 import PublicWorkshopStatsPage from './pages/public/PublicWorkshopStatsPage';
 import PixelTracker from './components/common/PixelTracker';
 import BugReportWidget from './components/feedback/BugReportWidget';
@@ -50,7 +44,6 @@ import FormsManagementPage from './pages/shared/FormsManagementPage';
 
 import AdminSalesHubPage from './pages/admin/reports/AdminSalesHubPage';
 import AdminMarketingHubPage from './pages/admin/marketing/AdminMarketingHubPage';
-import AdminSheetsHubPage from './pages/admin/reports/AdminSheetsHubPage';
 import WorkshopDashboardPage from './pages/admin/workshop/WorkshopDashboardPage';
 import HiringDashboardPage from './pages/admin/hiring/HiringDashboardPage';
 
@@ -231,16 +224,10 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/admin/sheets"
-              element={
-                <ProtectedRoute roles={['admin']}>
-                  <MainLayout>
-                    <AdminSheetsHubPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
+            {/* «Importaciones Sheets» se retiró el 10/10/2026: su «Ventas DB» siempre fallaba (la
+                sincronización desde la hoja está apagada) y su «Agendas DB» repetía Agendas. Los links
+                viejos llevan a Registros de Operaciones. */}
+            <Route path="/admin/sheets" element={<Navigate to="/ops/dashboard?step=registros" replace />} />
             {/* Formularios es una sección de Operaciones desde el 10/10/2026. */}
             <Route path="/admin/formularios" element={<Navigate to="/ops/dashboard?step=formularios" replace />} />
             <Route
@@ -311,16 +298,9 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/closer/stats"
-              element={
-                <ProtectedRoute roles={['admin']}>
-                  <MainLayout>
-                    <PublicCloserStatsPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
+            {/* /closer/stats (solo admin) dibujaba la misma pantalla que la pestaña Closers de
+                /admin/ventas: desde el 10/10/2026 lleva ahí. */}
+            <Route path="/closer/stats" element={<Navigate to="/admin/ventas" replace />} />
             <Route
               path="/closer/dashboard"
               element={

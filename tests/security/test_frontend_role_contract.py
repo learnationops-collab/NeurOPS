@@ -20,6 +20,14 @@ ROLES_REALES = {'admin', 'operator', 'closer', 'setter', 'triage', 'director_com
 # Nombres que App.jsx menciona en algun ProtectedRoute pero que no son un rol de la app (nadie los tiene).
 ROLES_INEXISTENTES_EN_EL_FRONTEND = {'marketer'}
 
+_MOTIVO_OPERAR_VENTAS = {
+    'closer': 'Corregir las ventas de todo el equipo (su estado, su closer, su agenda) es de Operaciones: en '
+              'el Revisar del closer las acciones de Operaciones no se dibujan (`puede_operar`) y sus '
+              'ventas se corrigen desde la ficha.',
+    'setter': 'El setter no ve la tabla Ventas (su Revisar son leads y agendas generadas) y las acciones de '
+              'Operaciones sobre las ventas no se le dibujan (`puede_operar`).',
+}
+
 # (metodo, ruta) -> {rol: motivo}: el frontend deja llegar a ese rol a una pantalla que llama a la ruta, pero la
 # politica se lo niega a proposito. Cada una explica por que.
 EXCEPCIONES = {
@@ -37,6 +45,8 @@ EXCEPCIONES = {
                   'igual; el boton que dispara un lote no se le muestra, y la frescura la sostiene el cron.',
         'setter': 'Mismo motivo que el closer: el setter ve el dashboard como "Mis datos" y no dispara '
                   'lotes contra el limite de la Academia; ni siquiera ve las tablas Clientes y Ventas.',
+        'operator': 'Operaciones ve el dashboard embebido solo en Revisar (sus Registros, 10/10/2026): el '
+                    'boton del lote es de la direccion (`puede_reportar`) y no se le muestra.',
     },
     # Payroll es una seccion del mismo dashboard (08/10/2026) y solo se dibuja con «ver finanzas»
     # (`puede_ver_finanzas`: admin o direccion comercial con el permiso). La nomina de todo el equipo no
@@ -46,9 +56,26 @@ EXCEPCIONES = {
                   'espacio de trabajo, no la de los demas, y la seccion Payroll no se le muestra.',
         'setter': 'Mismo motivo que el closer: la seccion Payroll no aparece en sus "Mis datos" y la nomina '
                   'del equipo no es informacion para un setter.',
+        'operator': 'Operaciones monta el dashboard solo en Revisar (sus Registros, 10/10/2026); Payroll es de '
+                    'Finances, con «ver finanzas», y no se le muestra.',
     } for ruta in (('GET', '/api/public/financial-sales/payroll'),
                    # «Excluir ventas» de la barra de Payroll: saca una venta de la nomina de todos.
                    ('POST', '/api/public/financial-sales/<int:sale_id>/toggle-payroll-exclusion'))},
+    # Las acciones de Operaciones sobre las ventas en Revisar (10/10/2026, antes en la tabla vieja de Ventas):
+    # atribuir una venta a una agenda (`AttributionModal`), reenviar su webhook y editarlas en lote. Viajan
+    # con el dashboard comercial, que tambien es "Mis datos" y "Mi cartera" de closers y setters, pero se
+    # dibujan solo para quien opera los registros (`puede_operar`: admin y operador).
+    **{ruta: {rol: _MOTIVO_OPERAR_VENTAS[rol] for rol in roles} for ruta, roles in (
+        (('GET', '/api/public/financial-sales'), ('closer', 'setter')),
+        (('PUT', '/api/public/financial-sales/<int:sale_id>'), ('closer', 'setter')),
+        (('POST', '/api/public/financial-sales/<int:sale_id>/resend-webhook'), ('closer', 'setter')),
+        (('GET', '/api/public/financial-agendas'), ('closer', 'setter')),
+        (('POST', '/api/public/financial-agendas'), ('closer', 'setter')),
+        (('PUT', '/api/public/financial-agendas/<int:agenda_id>'), ('closer', 'setter')),
+        # Cada uno ya puede leer la lista de su propio rol: lo que se le niega es la del otro.
+        (('GET', '/api/public/active-closers'), ('setter',)),
+        (('GET', '/api/public/active-setters'), ('closer',)),
+    )},
 }
 
 
@@ -156,7 +183,8 @@ import pytest  # noqa: E402
 from app.api.ficha import ROLES_CON_ACCESO  # noqa: E402
 
 # Los cinco roles que trabajan un lead entran; los tres que no tocan el circuito comercial, no.
-ROLES_FUERA_DE_LA_FICHA = ('operator', 'director_marketing', 'hiring')
+# Operaciones entra desde el 10/10/2026: corrige los registros desde Revisar.
+ROLES_FUERA_DE_LA_FICHA = ('director_marketing', 'hiring')
 
 
 def _rutas_de_la_ficha(app):
