@@ -1263,27 +1263,10 @@ def update_appointment_outcome(id):
     
     return jsonify({"message": "Resultado actualizado", "outcome": outcome}), 200
 
-@bp.route('/stats', methods=['GET'])
-@login_required
-def get_stats():
-    if current_user.role not in ['closer', 'admin']:
-        return jsonify({"message": "Forbidden"}), 403
-    
-    from app.services.closer_service import CloserService
-    
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    agg_type = request.args.get('agg_type', 'sum')
-    
-    stats = CloserService.get_comprehensive_stats(
-        closer_id=current_user.id,
-        start_date=start_date,
-        end_date=end_date,
-        agg_type=agg_type
-    )
-    return jsonify(stats), 200
-
-
+# GET /stats («Tus Estadísticas» del closer) se retiró el 10/10/2026: su única pantalla,
+# closer/dashboard/StatisticsPage, estaba importada en App.jsx y ninguna ruta la dibujaba. Las
+# métricas del closer salen de `CloserService.get_comprehensive_stats` por el dashboard del closer
+# y por /public/closer-stats.
 
 
 @bp.route('/booking-link', methods=['GET'])
