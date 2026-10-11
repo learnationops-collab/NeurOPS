@@ -17,11 +17,6 @@ import {
     ChevronDown,
     ChevronUp,
     Clock,
-    CheckCircle,
-    UserX,
-    DollarSign,
-    Building,
-    RefreshCw,
     Download,
     Check,
     Layers,
@@ -30,7 +25,6 @@ import {
 } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
-import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import usePersistentFilters from '../../../hooks/usePersistentFilters';
 import LeadRoadmapModal from '../../../components/modals/LeadRoadmapModal';
@@ -401,46 +395,6 @@ const getTodayDate = () => {
     return toLocalDateString(new Date());
 };
 
-const getEstadoBadgeVariant = (estado) => {
-    switch (estado) {
-        case 'Show Up':
-            return 'primary';
-        case 'Contactado':
-            return 'indigo';
-        case 'Confirmado':
-            return 'success';
-        case 'Cerrada':
-            return 'indigo';
-        case 'No show':
-        case 'No Show':
-            return 'rose';
-        case 'Reagendada':
-            return 'warning';
-        case 'Cancelada':
-            return 'neutral';
-        case 'Pendiente':
-        default:
-            return 'neutral';
-    }
-};
-
-const formatDate = (dateStr) => {
-    if (!dateStr) return 'N/A';
-    try {
-        const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return dateStr;
-        return d.toLocaleDateString('es-ES', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    } catch {
-        return dateStr;
-    }
-};
-
 const formatDateOnly = (dateStr) => {
     if (!dateStr) return 'N/A';
     try {
@@ -512,7 +466,6 @@ const FinancialAgendasPage = () => {
 
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
-    const [syncing, setSyncing] = useState(false);
     const [exporting, setExporting] = useState(false);
     const [error, setError] = useState(null);
     const [page, setPage] = useState(1);
@@ -520,11 +473,9 @@ const FinancialAgendasPage = () => {
 
     const [totalAgendados, setTotalAgendados] = useState(0);
     const [proximasCitas, setProximasCitas] = useState(0);
-    const [sortedClosers, setSortedClosers] = useState([]);
     const [byCloserState, setByCloserState] = useState({});
     const [bySourceState, setBySourceState] = useState({});
 
-    const [uniqueStates, setUniqueStates] = useState([]);
     const [uniqueClosers, setUniqueClosers] = useState([]);
     // Solo closers activos (role='closer', is_active=True): son las únicas opciones
     // válidas al REASIGNAR el closer de una agenda (columna de la tabla y modal de
@@ -893,16 +844,10 @@ const FinancialAgendasPage = () => {
                 setAgendas(newAgendas);
                 setTotalAgendados(resData.total || 0);
                 setProximasCitas(resData.upcoming_count || 0);
-                
-                // Parse de conteo de closer
-                const byCloser = resData.by_closer || {};
-                const sorted = Object.entries(byCloser).sort((a, b) => b[1] - a[1]);
-                setSortedClosers(sorted);
 
                 setByCloserState(resData.by_closer_state || {});
                 setBySourceState(resData.by_source_state || {});
 
-                setUniqueStates(resData.unique_states || []);
                 setUniqueClosers(resData.unique_closers || []);
                 setActiveClosers(resData.active_closers || []);
                 setUniqueSources(resData.unique_sources || []);
@@ -1291,7 +1236,7 @@ const FinancialAgendasPage = () => {
                     </div>
                 </div>
 
-                {loading && !syncing ? (
+                {loading ? (
                     <div className="flex flex-col items-center justify-center py-20 gap-4">
                         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                         <p className="text-xs font-bold uppercase tracking-widest text-muted">Cargando registros...</p>
