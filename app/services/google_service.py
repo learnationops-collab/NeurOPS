@@ -357,7 +357,8 @@ class GoogleService:
             for cal in (r.get('calendars') or {}).values():
                 for b in cal.get('busy') or []:
                     try:
-                        eventos.append({'inicio': _ms_iso(b['start']), 'fin': _ms_iso(b['end']), 'titulo': None, 'calendario': None})
+                        inicio, fin = _ms_iso(b['start']), _ms_iso(b['end'])
+                        eventos.append({'inicio': inicio, 'fin': fin, 'titulo': None, 'calendario': None})
                     except (KeyError, ValueError):
                         continue
         # El mismo evento leído dos veces (el principal por su id y como 'primary') queda una, con título.
