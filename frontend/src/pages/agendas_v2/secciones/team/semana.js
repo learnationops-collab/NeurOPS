@@ -51,20 +51,31 @@ export function googleDeOcupacion(google) {
 // Una agenda de n8n (de /ocupacion) con la forma de una reserva.
 const deN8n = (a) => ({ id: 'n8n-' + a.id, inicio_ms: a.inicio, fin_ms: a.fin, margen_min: 0, lead: { nombre: a.nombre }, n8n: true, resultado: a.resultado });
 
+// Una agenda recién tomada puede no estar todavía en lo leído de Google: hasta 10 minutos, ocupa igual.
+const GRACIA_MS = 10 * 60000;
+
 /**
- * Las agendas de cada persona en la semana, de los dos sistemas:
+ * Las agendas de cada persona en la semana, de los dos sistemas. Google Calendar manda: con su
+ * calendario leído, una reserva que ya no está ahí (cancelada, borrada o marcada «Disponible») no ocupa.
  * ocupan(id): las reservas de Agendas 2.0 agendadas o ya hechas (procesadas) y las de n8n vigentes.
  * canceladas(id): las que ya no ocupan, cada una con `motivo`: 'cancelada' (cancelada o reprogramada)
- * o 'sin_evento' (de n8n, vigente en NeurOPS pero ya no está en su Google Calendar).
+ * o 'sin_evento' (vigente en NeurOPS pero ya no está en su Google Calendar).
  */
-export function agendasDeVista(reservas, google) {
+export function agendasDeVista(reservas, google, ahora = Date.now()) {
     const g = googleDeOcupacion(google);
-    const propias = (id) => reservas.filter(r => r.closer_id === id && r.inicio_ms != null);
     const n8n = (id) => ((g(id) || {}).agendas || []);
+    const enGoogle = (id, r) => {
+        const x = g(id);
+        if (!x || x.estado !== 'ok' || (r.creada && Date.parse(r.creada) > ahora - GRACIA_MS)) return true;
+        return (x.franjas || []).some(([a, b]) => a <= r.inicio_ms && r.inicio_ms < b);
+    };
+    const propias = (id) => reservas.filter(r => r.closer_id === id && r.inicio_ms != null);
+    const vigentes = (id) => propias(id).filter(r => r.estado === 'agendada' || r.cancelada === false);
     return {
-        ocupan: (id) => propias(id).filter(r => r.estado === 'agendada' || r.cancelada === false)
+        ocupan: (id) => vigentes(id).filter(r => enGoogle(id, r))
             .concat(n8n(id).filter(a => a.estado === 'vigente').map(deN8n)),
         canceladas: (id) => propias(id).filter(r => r.estado !== 'agendada' && r.cancelada !== false).map(r => ({ ...r, motivo: 'cancelada' }))
+            .concat(vigentes(id).filter(r => !enGoogle(id, r)).map(r => ({ ...r, motivo: 'sin_evento' })))
             .concat(n8n(id).filter(a => a.estado !== 'vigente').map(a => ({ ...deN8n(a), motivo: a.estado }))),
     };
 }

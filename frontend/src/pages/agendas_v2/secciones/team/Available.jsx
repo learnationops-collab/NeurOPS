@@ -62,7 +62,7 @@ const TIPOS = [
 function textoCancelada(r) {
     const lead = nombreLead(r);
     if (r.motivo === 'sin_evento') {
-        return { titulo: '¿Cancelada? · ' + lead, por: 'Ya no está en su Google Calendar: probablemente se canceló o se movió en Calendly. En NeurOPS sigue como ' + (r.resultado || 'agendada') + '.' };
+        return { titulo: '¿Cancelada? · ' + lead, por: 'Ya no está en su Google Calendar (se canceló, se borró o se marcó «Disponible»), así que el horario queda libre. En NeurOPS sigue como ' + (r.resultado || 'agendada') + '.' };
     }
     return { titulo: 'Cancelada · ' + lead, por: r.resultado ? 'Marcada como ' + r.resultado + '.' : 'Se canceló o reprogramó.' };
 }

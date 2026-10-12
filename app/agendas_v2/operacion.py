@@ -173,11 +173,12 @@ def proxima_de(cliente_id, ahora):
     return None
 
 
-def registrar_agenda(payload, closer, setter, inicio, ahora=None, decision=None):
+def registrar_agenda(payload, closer, setter, inicio, ahora=None, decision=None, ignorar_ids=()):
     """Crea (o reprograma) la agenda en la operacion. `inicio`: datetime UTC sin zona.
     `decision`: lo que eligió el lead que ya tenía una agenda próxima: 'reprogramar' la mueve;
     cualquier otra cosa ('adicional') crea otra y le avisa al closer, que decide si cancela la
     anterior. Nunca se borra ni se mueve una agenda sin que el lead lo haya pedido.
+    `ignorar_ids`: agendas del closer a esa hora que ya no están en su Google Calendar (no la frenan).
     Devuelve (appointment, evento_a_borrar): evento_a_borrar es (user_id, google_event_id) del evento
     viejo de una agenda reprogramada, o None. Hace commit."""
     from app.services.booking_service import BookingService
@@ -230,6 +231,7 @@ def registrar_agenda(payload, closer, setter, inicio, ahora=None, decision=None)
         start_time_utc=inicio,
         origin=_fuente(payload, setter),
         setter_id=setter.id if setter else None,
+        ignorar_ids=ignorar_ids,
     )
     if not appt:
         # create_appointment solo falla si el closer ya tiene una cita a esa MISMA hora.

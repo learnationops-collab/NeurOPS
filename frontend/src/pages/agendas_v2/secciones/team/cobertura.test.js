@@ -140,12 +140,25 @@ describe('agendasDeVista', () => {
             { id: 'b', closer_id: 'p1', inicio_ms: 2, estado: 'cancelada', cancelada: false },  // ya procesada: se hizo
             { id: 'c', closer_id: 'p1', inicio_ms: 3, estado: 'cancelada', cancelada: true },
         ];
-        const google = { p1: { estado: 'ok', agendas: [
+        const google = { p1: { estado: 'ok', franjas: [[0, 10]], agendas: [
             { id: 7, inicio: 4, fin: 5, nombre: 'Lu', estado: 'vigente' }, { id: 8, inicio: 6, fin: 7, nombre: 'Mo', estado: 'sin_evento', resultado: 'Pendiente' },
         ] } };
         const v = agendasDeVista(reservas, google);
         expect(v.ocupan('p1').map(r => r.id)).toEqual(['a', 'b', 'n8n-7']);
         expect(v.canceladas('p1').map(r => [r.id, r.motivo])).toEqual([['c', 'cancelada'], ['n8n-8', 'sin_evento']]);
         expect(v.ocupan('p2')).toEqual([]);
+    });
+    it('Google manda: la reserva que ya no está en su calendario no ocupa (salvo recién tomada)', () => {
+        const ahora = 10 * 3600000;
+        const reservas = [
+            { id: 'a', closer_id: 'p1', inicio_ms: 1000, estado: 'agendada' },
+            { id: 'b', closer_id: 'p1', inicio_ms: 5000, estado: 'agendada' },
+            { id: 'c', closer_id: 'p1', inicio_ms: 9000, estado: 'agendada', creada: new Date(ahora - 60000).toISOString() },
+        ];
+        const v = agendasDeVista(reservas, { p1: { estado: 'ok', franjas: [[0, 2000]] } }, ahora);
+        expect(v.ocupan('p1').map(r => r.id)).toEqual(['a', 'c']);
+        expect(v.canceladas('p1').map(r => [r.id, r.motivo])).toEqual([['b', 'sin_evento']]);
+        // Sin poder leer su calendario no se sabe: ocupan todas.
+        expect(agendasDeVista(reservas, { p1: { estado: 'error', franjas: [] } }, ahora).ocupan('p1')).toHaveLength(3);
     });
 });

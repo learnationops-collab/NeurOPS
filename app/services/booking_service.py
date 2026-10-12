@@ -150,7 +150,7 @@ class BookingService:
         return client
 
     @staticmethod
-    def create_appointment(client_id, closer_id, start_time_utc, origin='direct', setter_id=None):
+    def create_appointment(client_id, closer_id, start_time_utc, origin='direct', setter_id=None, ignorar_ids=()):
         # Validar existencia de cliente
         client = Client.query.get(client_id)
         if not client:
@@ -170,11 +170,15 @@ class BookingService:
             return None
 
         # Verificar conflicto de horario para el mismo closer (una cita ya resuelta por el closer,
-        # p.ej. Show up/No Show/No Lead/Lead Perdido, no debe seguir bloqueando ese horario)
+        # p.ej. Show up/No Show/No Lead/Lead Perdido, no debe seguir bloqueando ese horario).
+        # ignorar_ids: las que quien llama ya sabe que no siguen (Agendas 2.0: ya no están en su Google Calendar).
         conflict = Appointment.query.filter_by(closer_id=closer_id, start_time=start_time_utc).filter(
             Appointment.closer_processed == False,
             or_(Appointment.result == None, Appointment.result == '', Appointment.result.notin_(['Cancelada', 'Reprogramada']))
-        ).first()
+        )
+        if ignorar_ids:
+            conflict = conflict.filter(Appointment.id.notin_(list(ignorar_ids)))
+        conflict = conflict.first()
         if conflict: return None
             
         appt = Appointment(

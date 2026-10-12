@@ -57,6 +57,9 @@ VENTANA_ESTADO_DIAS = 35
 # Conflictos en Google Calendar: hasta cuántos días se miran y cuánto se guarda lo leído de cada closer.
 VENTANA_GOOGLE_DIAS = 60
 CACHE_GOOGLE_S = 120
+# Una agenda recién tomada puede no estar todavía en lo leído de Google (caché o evento en camino):
+# hasta este tiempo después de creada, bloquea aunque Google no la muestre.
+GRACIA_GOOGLE = timedelta(minutes=10)
 # Stats: cuántos días de leads viajan (el período más largo, 90 días, y el anterior para comparar).
 VENTANA_STATS_DIAS = 180
 LARGO_MAX_TEXTO = {'texto': 300, 'parrafo': 2000, 'email': 120, 'telefono': 40, 'instagram': 30}
@@ -503,9 +506,26 @@ def solo_elegibles(d):
     return {**d, 'personas': personas}, elegibles
 
 
-def _agendas_de_operacion(elegibles, desde):
+def sigue_en_google(appt, franjas, ahora=None, leido_desde=None):
+    """Si una agenda vigente en NeurOPS sigue ocupando según Google Calendar, que es la certeza: con su
+    calendario leído (`franjas`, [(inicio, fin)] ms), solo si a esa hora hay algo ocupado; una agenda
+    cuyo evento se canceló, se borró o se marcó «Disponible» ya no bloquea, aunque en NeurOPS siga
+    abierta (no se la toca). franjas None: no se sabe y bloquea. Las recién creadas, y las que empiezan
+    antes de lo leído (`leido_desde`, ms), bloquean igual."""
+    t = dt_a_ms(appt.start_time)
+    if franjas is None or (leido_desde is not None and t < leido_desde):
+        return True
+    ahora = ahora or datetime.utcnow()
+    if appt.created_at and appt.created_at >= ahora - GRACIA_GOOGLE:
+        return True
+    return any(a <= t < b for a, b in franjas)
+
+
+def _agendas_de_operacion(elegibles, desde, franjas_de=None, leido_desde=None):
     """Agendas vigentes de esos closers (Appointment), como reservas del nucleo. Las de Agendas 2.0
-    duran lo que dura su evento; las que entran por n8n, 60 minutos."""
+    duran lo que dura su evento; las que entran por n8n, 60 minutos. franjas_de: {user_id: lo leído de
+    su Google, o None} desde `leido_desde` (ms); con su calendario leído, solo las que siguen ahí
+    (sigue_en_google)."""
     from app.models import Appointment
 
     if not elegibles:
@@ -519,6 +539,8 @@ def _agendas_de_operacion(elegibles, desde):
         Appointment.start_time >= desde - timedelta(hours=4),
         *operacion.filtro_vigente(),
     ).all()
+    franjas_de = franjas_de or {}
+    filas = [a for a in filas if sigue_en_google(a, franjas_de.get(a.closer_id), leido_desde=leido_desde)]
     return [
         {
             'estado': 'agendada',
@@ -538,7 +560,7 @@ _google_cache = {}
 
 def _franjas_google(user_id, desde, hasta):
     """Lo ocupado en los calendarios de conflicto del closer entre desde y hasta (ms), con caché corta
-    para no consultar a Google en cada clic del lead. [] si Google no respondió (se ofrece igual)."""
+    para no consultar a Google en cada clic del lead. None si Google no respondió (se ofrece igual)."""
     from app.services.google_service import GoogleService
 
     ahora = time.monotonic()
@@ -547,50 +569,62 @@ def _franjas_google(user_id, desde, hasta):
         return guardado[3]
     franjas = GoogleService.franjas_ocupadas(user_id, ms_a_dt(desde), ms_a_dt(hasta))
     if franjas is None:
-        return []
+        return None
     if len(_google_cache) > 500:
         _google_cache.clear()
     _google_cache[user_id] = (ahora + CACHE_GOOGLE_S, desde, hasta, franjas)
     return franjas
 
 
-def _ocupado_en_google(elegibles, ahora):
-    """{persona_id: [{inicio, fin}]} de lo que cada closer elegible tiene en sus calendarios de Google."""
+def _leido_de_google(elegibles, ahora):
+    """{user_id: [(inicio, fin)] o None} de cada closer elegible: lo ocupado en sus calendarios de
+    Google desde una hora atrás. None si no conectó su calendario o Google no respondió (no se sabe)."""
     desde, hasta = ahora - 3600000, ahora + VENTANA_GOOGLE_DIAS * DIA_MS
-    por_usuario = {u: _franjas_google(u, desde, hasta) for u in set(elegibles.values())}
-    return {pid: [{'inicio': a, 'fin': b} for a, b in por_usuario[u]] for pid, u in elegibles.items() if por_usuario[u]}
+    usuarios = set(elegibles.values())
+    con = _con_calendar(usuarios)
+    return {u: _franjas_google(u, desde, hasta) if u in con else None for u in usuarios}
 
 
 def _ocupacion(ahora, elegibles=None):
     """Lo que tiene ocupado cada closer: sus agendas vigentes en la operacion y lo que tiene en sus
     calendarios de Google (los de conflicto), en el formato del nucleo. Lo de Google bloquea el horario
-    pero no suma a su carga (no son agendas)."""
+    pero no suma a su carga (no son agendas). Google manda: una agenda que ya no está en su calendario
+    (cancelada, borrada o marcada «Disponible») no bloquea (sigue_en_google)."""
     elegibles = elegibles or {}
-    base = opciones_de_ocupacion(_agendas_de_operacion(elegibles, ms_a_dt(ahora - DIA_MS)), ahora)
-    google = _ocupado_en_google(elegibles, ahora)
+    leido = _leido_de_google(elegibles, ahora)
+    agendas = _agendas_de_operacion(elegibles, ms_a_dt(ahora - DIA_MS), leido, leido_desde=ahora - 3600000)
+    base = opciones_de_ocupacion(agendas, ahora)
+    google = {pid: [{'inicio': a, 'fin': b} for a, b in leido[u]] for pid, u in elegibles.items() if leido.get(u)}
     if not google:
         return base
     ocupado = base['ocupado']
     return {**base, 'ocupado': lambda pid, t, dur: ocupado(pid, t, dur) or se_solapa(google.get(pid, []), t, dur)}
 
 
-def _choca(user_id, inicio, fin):
-    """Si el closer ya tiene una agenda vigente que se cruza con [inicio, fin) (ms)."""
+def _choque(user_id, inicio, fin):
+    """(choca, fuera_de_google): si el closer ya tiene algo que se cruza con [inicio, fin) (ms) —lo de su
+    Google Calendar, leído en el momento (sin caché: algo agendado recién también cuenta), o una agenda
+    vigente en NeurOPS— y los ids de las agendas vigentes en NeurOPS que se cruzan pero ya no están en
+    su calendario (sigue_en_google): esas no chocan."""
     from app.models import Appointment
+    from app.services.google_service import GoogleService
 
+    franjas = None
+    if _con_calendar({user_id}):
+        # Desde 4 horas antes: para saber si las agendas que empezaron antes siguen en su calendario.
+        franjas = GoogleService.franjas_ocupadas(user_id, ms_a_dt(inicio) - timedelta(hours=4), ms_a_dt(fin))
+    if franjas and any(a < fin and inicio < b for a, b in franjas):
+        return True, []
     filas = Appointment.query.filter(
         Appointment.closer_id == user_id,
         Appointment.start_time < ms_a_dt(fin),
         Appointment.start_time >= ms_a_dt(inicio) - timedelta(hours=4),
         *operacion.filtro_vigente(),
     ).all()
-    if any(dt_a_ms(a.start_time) + _bloque_min(a) * 60000 > inicio for a in filas):
-        return True
-    # Lo de Google se vuelve a mirar en el momento (sin caché): algo agendado recién también cuenta.
-    from app.services.google_service import GoogleService
-
-    franjas = GoogleService.franjas_ocupadas(user_id, ms_a_dt(inicio), ms_a_dt(fin)) or []
-    return any(a < fin and inicio < b for a, b in franjas)
+    leido_desde = inicio - 4 * 3600000
+    cruzan = [a for a in filas if dt_a_ms(a.start_time) + _bloque_min(a) * 60000 > inicio]
+    siguen = [a for a in cruzan if sigue_en_google(a, franjas, leido_desde=leido_desde)]
+    return bool(siguen), [a.id for a in cruzan if a not in siguen]
 
 
 # --- Ocupacion en Google para Available ---------------------------------------------------------
@@ -1198,7 +1232,8 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     # La sesión de ese closer en este evento (lo que ajustó o la propuesta) y su margen: los dos bloquean.
     dur, margen = sesion_de(buscar(d, 'personas', slot['p']), evento['id'], evento['duracion'], evento.get('margen'))
     fin = inicio + (dur + margen) * 60000
-    if not closer or _choca(closer.id, inicio, fin):
+    choca, fuera_de_google = _choque(closer.id, inicio, fin) if closer else (True, [])
+    if choca:
         db.session.rollback()
         raise ReservaRechazadaError('ocupado')
 
@@ -1212,7 +1247,7 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
         'setter_user_id': setter.id if setter else None,
     }
     appt, evento_viejo = operacion.registrar_agenda(
-        payload, closer, setter, ms_a_dt(inicio), ahora=ms_a_dt(ahora), decision=decision
+        payload, closer, setter, ms_a_dt(inicio), ahora=ms_a_dt(ahora), decision=decision, ignorar_ids=fuera_de_google
     )
     if not appt:
         raise ReservaRechazadaError('ocupado')

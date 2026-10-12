@@ -735,6 +735,37 @@ def test_si_se_ocupa_en_google_mientras_elige_el_horario_se_avisa(client, armado
     assert Appointment.query.count() == 0
 
 
+def _agenda_vieja(db, *closers):
+    """Una agenda vigente en NeurOPS a las 9 para cada closer, tomada hace días (sin gracia)."""
+    cli = Client(full_name='Vieja', email='vieja@x.com')
+    db.session.add(cli)
+    db.session.flush()
+    for c in closers:
+        db.session.add(Appointment(client_id=cli.id, closer_id=c.id, start_time=datetime(2026, 10, 5, 13),
+                                   result='Confirmado', created_at=datetime(2026, 9, 1)))
+    db.session.commit()
+
+
+def test_google_manda_una_agenda_que_ya_no_esta_en_su_calendario_no_bloquea(client, db, armado, cuentas, google):
+    # Las dos agendas de las 9 se cancelaron en Google (o se marcaron «Disponible»): el horario se ofrece.
+    _agenda_vieja(db, cuentas['ana'], cuentas['beto'])
+    assert H9 in client.post(URL + '/eventos/ev/horarios', json={'resp': _resp()}).get_json()['slots']
+    servicio._google_cache.clear()
+    # La de Ana sigue en su calendario: la agenda va a Beto.
+    google['ocupado'] = {cuentas['ana'].id: [(H9, H10)]}
+    servicio.guardar_doc('grupos', 'top', {'estrategia': 'horario'}, parcial=True)
+    r = _reservar(client)
+    assert r.status_code == 201, r.get_json()
+    nueva = Appointment.query.filter(Appointment.client.has(Client.full_name != 'Vieja')).one()
+    assert nueva.closer_id == cuentas['beto'].id
+
+
+def test_sin_leer_su_calendario_la_agenda_de_neurops_bloquea(client, db, armado, cuentas, google, monkeypatch):
+    _agenda_vieja(db, cuentas['ana'], cuentas['beto'])
+    monkeypatch.setattr(GoogleService, 'franjas_ocupadas', staticmethod(lambda u, desde, hasta: None))
+    assert H9 not in client.post(URL + '/eventos/ev/horarios', json={'resp': _resp()}).get_json()['slots']
+
+
 # --- Intentos y Stats: los que dejaron sus datos y no agendaron ---------------------------------
 
 
