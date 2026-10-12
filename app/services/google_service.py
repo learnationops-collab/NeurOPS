@@ -317,12 +317,13 @@ class GoogleService:
 
     @staticmethod
     def eventos_ocupados(user_id, desde, hasta):
-        """[{inicio, fin, titulo}] (ms) de los eventos que ocupan al usuario en sus calendarios de
+        """[{inicio, fin, titulo, calendario}] (ms) de los eventos que ocupan al usuario en sus calendarios de
         conflicto entre `desde` y `hasta` (datetime UTC sin zona), para Available. Cuenta lo mismo que
         freebusy: no los cancelados, los marcados «Disponible» ni los que rechazó. Solo los del calendario
         de agendamiento (donde caen sus agendas) llevan título, y no si son privados o confidenciales: lo
         de sus otros calendarios es suyo y va sin título (None), igual que lo de un calendario del que
-        solo se ve libre/ocupado (se lee con freebusy). None si no se pudo saber."""
+        solo se ve libre/ocupado (se lee con freebusy). Los que van sin título dicen de qué calendario son
+        (`calendario`, su nombre), para que se entienda de dónde sale cada «Ocupado». None si no se pudo saber."""
         token = GoogleService.token_vigente(user_id)
         calendarios = GoogleService.calendarios_de_conflicto(token)
         if not calendarios:
@@ -356,7 +357,7 @@ class GoogleService:
             for cal in (r.get('calendars') or {}).values():
                 for b in cal.get('busy') or []:
                     try:
-                        eventos.append({'inicio': _ms_iso(b['start']), 'fin': _ms_iso(b['end']), 'titulo': None})
+                        eventos.append({'inicio': _ms_iso(b['start']), 'fin': _ms_iso(b['end']), 'titulo': None, 'calendario': None})
                     except (KeyError, ValueError):
                         continue
         # El mismo evento leído dos veces (el principal por su id y como 'primary') queda una, con título.
@@ -376,10 +377,10 @@ class GoogleService:
             r = service.events().list(
                 calendarId=calendario, timeMin=_iso_utc(desde), timeMax=_iso_utc(hasta), singleEvents=True,
                 maxResults=250, pageToken=pagina,
-                fields='timeZone,nextPageToken,'
+                fields='summary,timeZone,nextPageToken,'
                        'items(summary,start,end,status,transparency,visibility,attendees(self,responseStatus))',
             ).execute()
-            zona = r.get('timeZone') or 'UTC'
+            zona, nombre = r.get('timeZone') or 'UTC', (r.get('summary') or '').strip() or None
             for e in r.get('items') or []:
                 if e.get('status') == 'cancelled' or e.get('transparency') == 'transparent':
                     continue
@@ -390,7 +391,7 @@ class GoogleService:
                     continue
                 privado = e.get('visibility') in ('private', 'confidential')
                 titulo = (e.get('summary') or '').strip() or None if con_titulo and not privado else None
-                out.append({'inicio': inicio, 'fin': fin, 'titulo': titulo})
+                out.append({'inicio': inicio, 'fin': fin, 'titulo': titulo, 'calendario': None if titulo else nombre})
             pagina = r.get('nextPageToken')
             if not pagina:
                 return out

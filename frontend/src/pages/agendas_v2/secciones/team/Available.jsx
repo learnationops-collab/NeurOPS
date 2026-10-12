@@ -33,10 +33,24 @@ function resumenBloque(x) {
 
 const nombres = (ps) => ps.map(p => p.nombre).join(', ');
 
-// Título de un evento de Google: solo los del calendario de agendamiento lo traen; el resto, «Ocupado».
-const tituloEv = (e) => (e.titulo || 'Ocupado').replace(/\|/g, '/');
+// Título de un evento de Google: solo los del calendario de agendamiento lo traen; el resto es «Ocupado»
+// con el nombre del calendario de donde sale.
+const tituloEv = (e) => (e.titulo || 'Ocupado' + (e.calendario ? ' · ' + e.calendario : '')).replace(/\|/g, '/');
 // Lo que muestra un tramo por eventos: sus títulos y, al pasar el mouse, cada uno con su hora.
 function textoEventos(sg) { return [...new Set(sg.eventos.map(tituloEv))].join(' · '); }
+// Las agendas de un tramo: el nombre de cada lead.
+const textoAgendas = (sg) => [...new Set((sg.reservas || []).map(r => (r.lead && r.lead.nombre) || 'Agenda'))].join(' · ') || 'Agenda';
+
+// Un bloque del calendario, al estilo de Google Calendar: el título y, si entra, la hora.
+function Tarjeta({ clase, top, alto, titulo, hora, tip }) {
+    return (
+        <div className={'av-card ' + clase} style={{ top, height: alto }} data-tip={tip}>
+            {alto >= 15 && <b className="av-card-tit">{titulo}</b>}
+            {alto >= 32 && hora && <span className="av-card-hora">{hora}</span>}
+        </div>
+    );
+}
+
 function tipEventos(sg, tz) {
     const n = sg.eventos.length;
     return (n === 1 ? 'Evento' : n + ' eventos') + ' en su calendario|' + sg.eventos.map(e => horaTxt(e.inicio, tz) + '–' + horaTxt(e.fin, tz) + ' ' + tituloEv(e)).join(' · ');
@@ -74,6 +88,8 @@ export default function Available({ solo = null, evento = null }) {
     const { tz, dias, bloques, huecos, porDia, minH, maxH, hoyK, mAhora, kpi, sinLeer, sinGoogle } = cob;
     const conApi = !!almacen.adaptador.ocupacion, leyendo = conApi && google == null;
     const n = cs.length, alto = (maxH - minH) * HPX;
+    // Cada día, lo bastante ancho para leer los bloques de todos sus closers (si no entra, se desplaza).
+    const anchoMin = 56 + 7 * Math.max(120, n * 112);
     const rango = fechaCorta(dias[0].k) + ' – ' + fechaCorta(dias[6].k);
     const y = (m) => (m - minH * 60) / 60 * HPX;
 
@@ -168,11 +184,10 @@ export default function Available({ solo = null, evento = null }) {
                             return <span key={p.id} style={{ '--c': colorVar(p.color) }}><i />{p.nombre}{f && <b className="av-ley-n">{f.nLibres} libres</b>}</span>;
                         })}
                         {edit && <span className="av-ley-s av-ley-edit"><Icono n="edit" s={12} />Arrastrá para crear o mover · se repite cada semana</span>}
-                        <span className="av-ley-s"><i className="av-l-ag" />Agendada</span>
+                        <span className="av-ley-s"><i className="av-l-ag" />Agenda</span>
                         {bloques.some(x => x.mMg > 0) && <span className="av-ley-s"><i className="av-l-mg" />Margen</span>}
-                        {conApi && <span className="av-ley-s"><i className="av-l-ev" />Evento en su calendario</span>}
-                        <span className="av-ley-s"><i className="av-l-li" />Libre</span>
-                        {turnos && <span className="av-ley-s"><i className="av-l-tu" />Turno libre</span>}
+                        {conApi && <span className="av-ley-s"><i className="av-l-ev" />Ocupado en otro calendario</span>}
+                        {turnos && <span className="av-ley-s"><i className="av-l-tu" />Libre</span>}
                         <span className="av-ley-s"><i className="av-l-hu" />Sin closer</span>
                         {leyendo && <span className="av-ley-s">Leyendo calendarios…</span>}
                         {sinLeer.length > 0 && <span className="av-ley-s av-ley-aviso"><Icono n="alerta" s={12} />No se pudo leer el calendario de {nombres(sinLeer)}</span>}
@@ -180,7 +195,7 @@ export default function Available({ solo = null, evento = null }) {
                     </div>
                 </div>
                 <div className="av-cal">
-                    <div className="av-cab">
+                    <div className="av-cab" style={{ minWidth: anchoMin }}>
                         <span className="av-tz">{gmtTxt(tz, ahora)}</span>
                         {dias.map((dd, di) => {
                             const pd = porDia[di], esHoy = dd.k === hoyK;
@@ -192,7 +207,7 @@ export default function Available({ solo = null, evento = null }) {
                             );
                         })}
                     </div>
-                    <div className="av-cuerpo" style={{ height: alto }}>
+                    <div className="av-cuerpo" style={{ height: alto, minWidth: anchoMin }}>
                         <div className="av-horas">
                             {Array.from({ length: maxH - minH }, (_, i) => <span key={i} style={{ top: i * HPX }}>{pad(minH + i)}:00</span>)}
                         </div>
@@ -222,22 +237,28 @@ export default function Available({ solo = null, evento = null }) {
                                                             <button type="button" className="av-del" aria-label={'Quitar ' + txtH} onClick={() => quitar(x)}><Icono n="x" s={11} /></button>
                                                             <span className="av-hora">{txtH}</span>
                                                         </>
-                                                    ) : <span className="av-ini">{iniciales(x.p.nombre)}</span>}
+                                                    ) : null}
                                                     {!vivo && x.segs.map(sg => {
-                                                        const alto = (sg.b - sg.a) / 3600000 * HPX, conEv = sg.tipo === 'ev' && sg.eventos && sg.eventos.length > 0;
+                                                        const top = (sg.a - x.t0) / 3600000 * HPX, alto = (sg.b - sg.a) / 3600000 * HPX;
+                                                        const hora = horaTxt(sg.a, tz) + ' – ' + horaTxt(sg.b, tz), pas = sg.b <= ahora ? ' pas' : '';
+                                                        if (sg.tipo === 'ag') {
+                                                            return <Tarjeta key={'ag' + sg.a} clase={'ag' + pas} top={top} alto={alto} titulo={textoAgendas(sg)} hora={hora} tip={'Agenda · ' + x.p.nombre + '|' + hora + ' · ' + textoAgendas(sg)} />;
+                                                        }
+                                                        if (sg.tipo === 'mg') {
+                                                            return <Tarjeta key={'mg' + sg.a} clase={'mg' + pas} top={top} alto={alto} titulo="Margen" tip={'Margen después de la agenda|' + hora} />;
+                                                        }
+                                                        const evs = sg.eventos || [], agenda = evs.some(e => e.titulo);
                                                         return (
-                                                            <i key={sg.tipo + sg.a} className={sg.tipo + (sg.b <= ahora ? ' pas' : '')}
-                                                                style={{ top: (sg.a - x.t0) / 3600000 * HPX, height: alto }}
-                                                                data-tip={conEv ? tipEventos(sg, tz) : undefined}>
-                                                                {conEv && alto >= 14 && <span className="av-ev-txt">{textoEventos(sg)}</span>}
-                                                            </i>
+                                                            <Tarjeta key={'ev' + sg.a} clase={'ev' + (agenda ? ' ev--agenda' : '') + pas} top={top} alto={alto}
+                                                                titulo={evs.length ? textoEventos(sg) : 'Ocupado'} hora={hora} tip={evs.length ? tipEventos(sg, tz) : 'Ocupado|' + hora} />
                                                         );
                                                     })}
                                                     {!vivo && (filaDe(x.p.id)?.inicios || []).filter(t => t >= x.t0 && t < x.t1).map(t => {
-                                                        const f = filaDe(x.p.id);
+                                                        const f = filaDe(x.p.id), hora = horaTxt(t, tz) + ' – ' + horaTxt(t + f.dur * 60000, tz);
                                                         return (
-                                                            <i key={'tl' + t} className="tl" style={{ top: (t - x.t0) / 3600000 * HPX, height: f.dur / 60 * HPX }}
-                                                                data-tip={'Turno libre · ' + x.p.nombre + '|' + horaTxt(t, tz) + '–' + horaTxt(t + f.dur * 60000, tz) + (f.margen ? ' (+' + f.margen + ' de margen)' : '')} />
+                                                            <Tarjeta key={'tl' + t} clase="tl" top={(t - x.t0) / 3600000 * HPX} alto={f.dur / 60 * HPX}
+                                                                titulo={'Libre' + (n > 1 ? ' · ' + iniciales(x.p.nombre) : '')} hora={hora}
+                                                                tip={'Turno libre · ' + x.p.nombre + '|' + hora + (f.margen ? ' (+' + f.margen + ' de margen)' : '')} />
                                                         );
                                                     })}
                                                 </div>

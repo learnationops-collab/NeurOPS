@@ -164,7 +164,7 @@ export function TarjetaCalendar({ volver }) {
                                             aria-label={'Revisar conflictos en ' + c.summary} onClick={() => alternarConflicto(c.id, !on)} />
                                         <span className="trunc">{c.summary}</span>
                                         {c.primary && <span className="chip chip--n" style={{ '--c': 'var(--idle)' }}>Principal</span>}
-                                        {c.id === destino && <span className="chip chip--n" style={{ '--c': 'var(--info)' }}>Destino</span>}
+                                        {c.id === destino && <span className="chip chip--n" style={{ '--c': 'var(--info)' }}>Agendamiento</span>}
                                         {!c.escribe && <span className="t-cap mut40">solo lectura</span>}
                                     </label>
                                 );

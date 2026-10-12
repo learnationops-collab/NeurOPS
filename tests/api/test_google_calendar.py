@@ -308,14 +308,14 @@ def test_eventos_ocupados_trae_titulos_y_cuenta_lo_que_cuenta_freebusy(db, close
     def ev(h0, h1, **kw):
         return {'start': {'dateTime': f'2026-10-05T{h0}:00:00Z'}, 'end': {'dateTime': f'2026-10-05T{h1}:00:00Z'}, **kw}
 
-    servicio = _Eventos({'primary': {'timeZone': 'America/La_Paz', 'items': [
+    servicio = _Eventos({'primary': {'summary': 'Ventas', 'timeZone': 'America/La_Paz', 'items': [
         ev('13', '14', summary='Daily'),
         ev('15', '16', summary='Médico', visibility='private'),
         ev('17', '18', summary='Libre igual', transparency='transparent'),
         ev('19', '20', summary='Cancelado', status='cancelled'),
         ev('21', '22', summary='No voy', attendees=[{'self': True, 'responseStatus': 'declined'}]),
         {'summary': 'Feriado', 'start': {'date': '2026-10-06'}, 'end': {'date': '2026-10-07'}},
-    ]}, 'personal@group': {'timeZone': 'UTC', 'items': [
+    ]}, 'personal@group': {'summary': 'Personal', 'timeZone': 'UTC', 'items': [
         ev('14', '15', summary='Dentista'),  # de otro calendario: sin título
         ev('13', '14', summary='Daily'),     # el mismo de primary, leído dos veces: queda uno
     ]}}, sin_permiso=('facu@group',), freebusy={'calendars': {
@@ -324,6 +324,8 @@ def test_eventos_ocupados_trae_titulos_y_cuenta_lo_que_cuenta_freebusy(db, close
     monkeypatch.setattr(GoogleService, 'get_service', staticmethod(lambda u: servicio))
     eventos = GoogleService.eventos_ocupados(closer.id, dt.datetime(2026, 10, 5), dt.datetime(2026, 10, 8))
     assert [e['titulo'] for e in eventos] == ['Daily', None, None, None, 'Feriado']
+    # Lo que va sin título dice de qué calendario es (lo de freebusy no se sabe).
+    assert [e['calendario'] for e in eventos] == [None, 'Personal', 'Ventas', None, None]
     assert eventos[0]['inicio'] == 1791205200000
     # El día entero va de medianoche a medianoche en la zona del calendario (La Paz, UTC-4).
     assert eventos[4]['inicio'] == int(dt.datetime(2026, 10, 6, 4, tzinfo=dt.timezone.utc).timestamp() * 1000)

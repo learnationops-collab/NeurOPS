@@ -8,7 +8,7 @@ import { claveDia, minutoDelDia, zonedToUtc } from '../../core/tiempo';
 import { pad } from '../../core/util';
 
 const DIA_MS = 86400000;
-export const HPX = 46;          // alto de una hora en la grilla
+export const HPX = 60;          // alto de una hora en la grilla
 export const MAX_FRANJAS = 6;
 
 // Minutos → "HH:MM" (24:00 incluido).
@@ -126,7 +126,7 @@ export function calcularCobertura({ todos, cs, semana = 0, ahora = Date.now(), r
                 if (di < 0) return;
                 const enAg = recortar(ag, t0, t1), enMg = restar(recortar(mg, t0, t1), enAg);
                 const enEv = restar(restar(recortar(ev, t0, t1), enAg), enMg);
-                const segs = enAg.map(([s0, s1]) => ({ a: s0, b: s1, tipo: 'ag' }))
+                const segs = enAg.map(([s0, s1]) => ({ a: s0, b: s1, tipo: 'ag', reservas: rs.filter(r => r.inicio_ms < s1 && finDe(r) > s0) }))
                     .concat(enMg.map(([s0, s1]) => ({ a: s0, b: s1, tipo: 'mg' })))
                     .concat(enEv.map(([s0, s1]) => ({ a: s0, b: s1, tipo: 'ev', eventos: eventos.filter(e => e.inicio < s1 && e.fin > s0) })))
                     .sort((x, y) => x.a - y.a);
