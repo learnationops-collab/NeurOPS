@@ -1292,6 +1292,19 @@
 .thalamus .reserva--mini{position:absolute;inset:0;animation:none;pointer-events:none}
 .thalamus .reserva--embebida{position:absolute;inset:0;animation:none}
 .thalamus .reserva .humo i{filter:blur(90px);width:52%}
+/* Humo del lead, barato de dibujar: cada nube es un degradé radial ya difuso (sin filter:blur ni
+   mix-blend-mode, que obligan a redibujar todo en cada cuadro) y solo se anima su posición, lento, en la
+   placa de video. El ruido de ::after rompe las franjas del degradé sobre el fondo oscuro. */
+.thalamus .reserva .humo i{filter:none;mix-blend-mode:normal;width:78%;opacity:var(--humo-i-op);will-change:transform;transform:translate3d(0,0,0)}
+.thalamus .reserva .humo i:nth-child(1){background:radial-gradient(closest-side,var(--h1),transparent);animation:rvHumo1 52s ease-in-out infinite}
+.thalamus .reserva .humo i:nth-child(2){background:radial-gradient(closest-side,var(--h2),transparent);animation:rvHumo2 61s ease-in-out infinite}
+.thalamus .reserva .humo i:nth-child(3){background:radial-gradient(closest-side,var(--h3),transparent);animation:rvHumo3 67s ease-in-out infinite}
+.thalamus .reserva .humo i:nth-child(4){background:radial-gradient(closest-side,var(--h4),transparent);animation:rvHumo2 73s ease-in-out infinite reverse}
+.thalamus .reserva .humo::after{content:'';position:absolute;inset:0;opacity:.06;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+@keyframes rvHumo1{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(32%,16%,0)}}
+@keyframes rvHumo2{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(-28%,12%,0)}}
+@keyframes rvHumo3{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(-24%,18%,0)}}
 .thalamus .rv-top{position:relative;display:flex;align-items:center;gap:16px;padding:22px clamp(20px,8cqi,160px) 0}
 .thalamus .rv-marca{font-size:clamp(12px,1.1cqi,16px);font-weight:900;letter-spacing:.34em;text-transform:uppercase}
 .thalamus .rv-evento{margin-left:auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:clamp(10px,.95cqi,13px);font-weight:900;letter-spacing:.3em;text-transform:uppercase;color:var(--rv-mut40)}
@@ -1418,7 +1431,9 @@
 .thalamus .reserva :focus-visible{box-shadow:0 0 0 3px rgba(255,63,164,.55)}
 .thalamus .reserva .rv-input:focus-visible{box-shadow:none}
 
-@media (prefers-reduced-motion:reduce){.thalamus .humo i{animation:none}.thalamus,.thalamus *{transition-duration:.01ms!important;animation-duration:.01ms!important}}
+/* !important: las reglas :nth-child del humo son más específicas; sin esto les llegaba solo la duración de
+   .01ms de abajo y el humo repetía su ciclo en cada cuadro (estrobo). */
+@media (prefers-reduced-motion:reduce){.thalamus .humo i{animation:none!important}.thalamus,.thalamus *{transition-duration:.01ms!important;animation-duration:.01ms!important}}
 /* Reserva en el celular (donde la ve casi todo lead): sin las flechas de navegación, que flotaban
    encima de los horarios y del «Confirmar» (en el celular se navega con el dedo); la lista de horas
    sin scroll propio dentro del scroll de la página (al elegir la hora, PasoCalendario desliza hasta
