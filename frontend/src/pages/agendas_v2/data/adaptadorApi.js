@@ -79,7 +79,7 @@ export function crearAdaptadorApi() {
             });
             if (typeof data.version === 'number') version = data.version;
             ajeno = false;
-            return { cols, perfil: data.perfil || null, integ: data.integ || null, reservas: Array.isArray(data.reservas) ? data.reservas : [] };
+            return { cols, perfil: data.perfil || null, integ: data.integ || null, reservas: Array.isArray(data.reservas) ? data.reservas : [], zona: data.zona || null };
         },
 
         guardar(col, id, data, campos) {

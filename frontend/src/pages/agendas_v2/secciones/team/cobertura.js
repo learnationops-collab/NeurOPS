@@ -70,10 +70,12 @@ function restar(ts, menos) {
 }
 const largoMin = (ts) => ts.reduce((s, [a, b]) => s + b - a, 0) / 60000;
 
-// La semana que se ve: zona del equipo, su lunes (fecha UTC) y el rango de instantes a pedir a Google
-// (un día de margen a cada lado: los horarios de otras zonas pueden caer en el día vecino).
-export function rangoSemana(cs, semana = 0, ahora = Date.now()) {
-    const tz = tzEquipo(cs), hoy = claveDia(ahora, tz).split('-').map(Number);
+// La semana que se ve: su zona (`tz`, o la que más se repite entre esos closers), su lunes (fecha UTC) y
+// el rango de instantes a pedir a Google (un día de margen a cada lado: los horarios de otras zonas
+// pueden caer en el día vecino).
+export function rangoSemana(cs, semana = 0, ahora = Date.now(), tz = null) {
+    tz = tz || tzEquipo(cs);
+    const hoy = claveDia(ahora, tz).split('-').map(Number);
     const dHoy = Date.UTC(hoy[0], hoy[1] - 1, hoy[2]);
     const lunes = dHoy - ((new Date(dHoy).getUTCDay() + 6) % 7) * DIA_MS + semana * 7 * DIA_MS;
     return { tz, lunes, desde: lunes - DIA_MS, hasta: lunes + 8 * DIA_MS };
@@ -91,9 +93,11 @@ export function rangoSemana(cs, semana = 0, ahora = Date.now()) {
  *     googleDe(personaId) → {estado: 'ok' | 'error' | 'sin_google' | 'sin_usuario', franjas, eventos} | null, edit}
  * Cada tramo por eventos lleva los eventos de Google que lo forman ({inicio, fin, titulo}), para mostrarlos.
  * Un closer cuyo calendario no se pudo leer ('error') queda fuera de la ocupación: no se sabe.
+ * tz: en qué zona se muestra (la de quien mira); sin ella, la que más se repite entre los closers.
  */
-export function calcularCobertura({ todos, cs, semana = 0, ahora = Date.now(), reservasDe = () => [], googleDe = () => null, edit = false }) {
-    const { tz, lunes } = rangoSemana(cs, semana, ahora);
+export function calcularCobertura({ todos, cs, semana = 0, ahora = Date.now(), reservasDe = () => [], googleDe = () => null, edit = false, tz = null }) {
+    const { tz: zona, lunes } = rangoSemana(cs, semana, ahora, tz);
+    tz = zona;
     const dias = [];
     for (let i = 0; i < 7; i++) { const d = new Date(lunes + i * DIA_MS); dias.push({ k: d.toISOString().slice(0, 10), d }); }
     const claves = dias.map(x => x.k);

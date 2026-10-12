@@ -30,9 +30,10 @@ export function capacidadSemana(horario, dur, margen = 0) {
  * o: {personas, evento, semana, ahora, reservasDe(id) → [{inicio_ms, fin_ms, margen_min}],
  *     googleDe(id) → {estado, franjas} | null}
  * Cada fila trae también `inicios`: los horarios libres de la semana (para dibujarlos).
+ * tz: en qué zona se cuentan los días (la de quien mira); sin ella, la que más se repite.
  */
-export function turnosSemana({ personas, evento, semana = 0, ahora = Date.now(), reservasDe = () => [], googleDe = () => null }) {
-    const { tz, lunes } = rangoSemana(personas, semana, ahora);
+export function turnosSemana({ personas, evento, semana = 0, ahora = Date.now(), reservasDe = () => [], googleDe = () => null, tz: zona = null }) {
+    const { tz, lunes } = rangoSemana(personas, semana, ahora, zona);
     const claves = [0, 1, 2, 3, 4, 5, 6].map(i => new Date(lunes + i * DIA_MS).toISOString().slice(0, 10));
     // Un día de margen a cada lado: el horario de alguien en otra zona puede caer en el día vecino.
     const dias = [];

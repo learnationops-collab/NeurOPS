@@ -257,3 +257,13 @@ def test_ocupacion_exige_un_rango_valido_y_ser_direccion(client, gente, dir_h, a
     assert _ocupacion(client, dir_h, 0, 11 * 86400000).status_code == 400
     assert client.get('/api/agendas-v2/ocupacion', headers=dir_h).status_code == 400
     assert _ocupacion(client, auth_headers(gente['closer'])).status_code == 403
+
+
+def test_el_estado_dice_en_que_zona_mira_cada_uno(client, db, gente, dir_h):
+    # Sin WhatsApp ni zona elegida: decide el navegador.
+    assert client.get('/api/agendas-v2/estado', headers=dir_h).get_json()['zona'] is None
+    # Con WhatsApp de Argentina, la semana del equipo se ve en hora de Buenos Aires.
+    gente['director'].two_chat_number = '5491122334455'
+    db.session.commit()
+    assert client.get('/api/agendas-v2/estado', headers=dir_h).get_json()['zona'] == 'America/Argentina/Buenos_Aires'
+

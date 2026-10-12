@@ -17,7 +17,7 @@ import { toast } from '../../ui/toast';
 import { DIAS } from '../../core/catalogos';
 import { HPX, avUnir, calcularCobertura, durTxt, hmTxt, nombreDia, rangoSemana } from './cobertura';
 import { setTeam } from './comun';
-import { googleDeOcupacion, useAhora, useOcupacionGoogle } from './semana';
+import { googleDeOcupacion, useAhora, useOcupacionGoogle, useZonaVista } from './semana';
 import { turnosSemana } from './turnos';
 
 const hm = (m) => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
@@ -51,16 +51,18 @@ export default function Available({ solo = null, evento = null }) {
     const todos = useMemo(() => closers(d).filter(p => horasSemana(p) > 0), [d]);
     const cs = useMemo(() => (solo ? (horasSemana(solo) > 0 || edit ? [solo] : []) : todos), [solo, edit, todos]);
 
-    const { desde, hasta } = rangoSemana(cs, semana, ahora);
+    // El equipo se ve en la hora de quien mira; la semana de un closer, en la suya (ahí se edita su horario).
+    const zonaVista = useZonaVista(), tzVista = solo ? null : zonaVista;
+    const { desde, hasta } = rangoSemana(cs, semana, ahora, tzVista);
     const google = useOcupacionGoogle(desde, hasta, cs.length > 0);
 
     const cob = useMemo(() => (cs.length ? calcularCobertura({
         todos, cs, semana, ahora, edit, reservasDe: (id) => _reservasDe(reservas, id),
-        googleDe: googleDeOcupacion(google),
-    }) : null), [todos, cs, semana, ahora, edit, reservas, google]);
+        googleDe: googleDeOcupacion(google), tz: tzVista,
+    }) : null), [todos, cs, semana, ahora, edit, reservas, google, tzVista]);
     const turnos = useMemo(() => (evento && cs.length ? turnosSemana({
-        personas: cs, evento, semana, ahora, reservasDe: (id) => _reservasDe(reservas, id), googleDe: googleDeOcupacion(google),
-    }) : null), [evento, cs, semana, ahora, reservas, google]);
+        personas: cs, evento, semana, ahora, reservasDe: (id) => _reservasDe(reservas, id), googleDe: googleDeOcupacion(google), tz: tzVista,
+    }) : null), [evento, cs, semana, ahora, reservas, google, tzVista]);
     const filaDe = (id) => (turnos ? turnos.filas.find(f => f.p.id === id) : null);
 
     const [arr, setArr] = useState(null);   // franja que se está arrastrando: {dow, ri, a, b, modo}

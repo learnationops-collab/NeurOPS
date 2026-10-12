@@ -38,13 +38,15 @@ def _cuerpo():
 
 @bp.route('/estado', methods=['GET'])
 def estado():
-    """Todo lo que Thalamus necesita al abrir: colecciones, perfil propio, integraciones y reservas."""
+    """Todo lo que Thalamus necesita al abrir: colecciones, perfil propio, integraciones, reservas y la
+    zona horaria de quien mira (zona_para_ver)."""
     return jsonify(
         {
             'cols': servicio.colecciones(),
             'perfil': servicio.perfil_de(current_user.id),
             'integ': servicio.integraciones(),
             'reservas': servicio.reservas_para_estado(),
+            'zona': servicio.zona_para_ver(current_user),
             'version': servicio.version(),
         }
     )

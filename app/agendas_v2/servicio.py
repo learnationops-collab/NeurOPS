@@ -120,6 +120,15 @@ def _email_de_cuenta(email):
     return u.id if u else None
 
 
+def zona_para_ver(u):
+    """La zona en la que alguien mira la semana del equipo (Available): la del país de su WhatsApp; sin
+    número, la que eligió (users.timezone); si no, None y decide su navegador."""
+    tz = zona_por_telefono(u.two_chat_number)
+    if tz:
+        return tz
+    return u.timezone if u.timezone and u.timezone != TZ_DEF and zona_valida(u.timezone) else None
+
+
 def zona_de_usuario(u):
     """La zona horaria de un usuario: la que eligió (users.timezone) si no es la de por defecto; si no,
     la del país de su WhatsApp; si no, la de por defecto."""

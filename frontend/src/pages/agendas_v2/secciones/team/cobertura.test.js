@@ -52,6 +52,13 @@ describe('calcularCobertura', () => {
         expect(c.kpi.hEv).toBeCloseTo(10 / 60);
         expect(c.bloques[0].segs.map(s => s.tipo)).toEqual(['ag', 'mg', 'ev']);
     });
+    it('se puede ver en la zona de quien mira', () => {
+        // Ana trabaja de 9 a 13 en La Paz (UTC-4); vista desde Buenos Aires (UTC-3) arranca a las 10.
+        const c = calcularCobertura({ todos: [p], cs: [p], ahora, tz: 'America/Argentina/Buenos_Aires' });
+        expect(c.tz).toBe('America/Argentina/Buenos_Aires');
+        expect([c.bloques[0].m0, c.bloques[0].m1]).toEqual([600, 840]);
+        expect(calcularCobertura({ todos: [p], cs: [p], ahora }).bloques[0].m0).toBe(540);
+    });
     it('lo de fuera del horario no cuenta y lo que lo cruza cuenta solo adentro', () => {
         const g = () => ({ estado: 'ok', franjas: [[H(8), H(9, 30)], [H(12, 30), H(14)], [H(20), H(21)]] });
         const c = calcularCobertura({ todos: [p], cs: [p], ahora, googleDe: g });

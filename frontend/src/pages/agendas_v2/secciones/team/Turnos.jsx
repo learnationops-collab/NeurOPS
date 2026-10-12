@@ -9,7 +9,7 @@ import { reservasDe as _reservasDe } from '../../data/almacen';
 import { useDatos, useUi } from '../../data/hooks';
 import { Avatar, Icono } from '../../ui/base';
 import { setTeam } from './comun';
-import { googleDeOcupacion, useAhora, useOcupacionGoogle } from './semana';
+import { googleDeOcupacion, useAhora, useOcupacionGoogle, useZonaVista } from './semana';
 import { textoSesion } from './Sesiones';
 import { rangoSemana } from './cobertura';
 import { turnosSemana } from './turnos';
@@ -25,11 +25,12 @@ export default function TablaTurnos({ evento, personas }) {
     const { team } = useUi();
     const ahora = useAhora();
     const semana = team.semana || 0;
-    const { desde, hasta } = rangoSemana(personas, semana, ahora);
+    const tz = useZonaVista();
+    const { desde, hasta } = rangoSemana(personas, semana, ahora, tz);
     const google = useOcupacionGoogle(desde, hasta, personas.length > 0);
     const t = useMemo(() => turnosSemana({
-        personas, evento, semana, ahora, reservasDe: (id) => _reservasDe(reservas, id), googleDe: googleDeOcupacion(google),
-    }), [personas, evento, semana, ahora, reservas, google]);
+        personas, evento, semana, ahora, reservasDe: (id) => _reservasDe(reservas, id), googleDe: googleDeOcupacion(google), tz,
+    }), [personas, evento, semana, ahora, reservas, google, tz]);
 
     if (!personas.length) return <p className="t-sm mut">Ningún closer tiene horario cargado.</p>;
     const hoyK = claveDia(ahora, t.tz);

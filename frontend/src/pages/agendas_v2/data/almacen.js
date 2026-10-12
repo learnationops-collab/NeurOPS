@@ -29,6 +29,7 @@ export function crearAlmacen(adaptador, { avisar = () => {} } = {}) {
         perfil: normalPerfil(null),
         integ: normalInteg(null),
         reservas: [],
+        zona: null, // la zona horaria de quien mira (según su WhatsApp); null: la del navegador
     };
     const subs = new Set();
     const pend = {};
@@ -42,7 +43,7 @@ export function crearAlmacen(adaptador, { avisar = () => {} } = {}) {
     const buscar = (col, id) => estado.d[col].find(x => x.id === id);
     const fallo = (e) => avisar(msgError(e), 'error');
 
-    function aplicarCargados({ cols, perfil, integ, reservas }) {
+    function aplicarCargados({ cols, perfil, integ, reservas, zona = null }) {
         const d = {};
         COLECCIONES.forEach(c => { d[c] = (cols[c] || []).map(x => NORM[c](x.id, x)); });
         // Lo que todavía no se guardó gana sobre lo que llega.
@@ -50,7 +51,7 @@ export function crearAlmacen(adaptador, { avisar = () => {} } = {}) {
             const [col, id] = k.split('/');
             d[col] = d[col].map(x => (x.id === id ? NORM[col](id, { ...x, ...clonar(pend[k]) }) : x));
         });
-        set({ cargando: false, cargado: true, d, perfil: normalPerfil(perfil), integ: normalInteg(integ), reservas: Array.isArray(reservas) ? reservas : [] });
+        set({ cargando: false, cargado: true, d, perfil: normalPerfil(perfil), integ: normalInteg(integ), reservas: Array.isArray(reservas) ? reservas : [], zona });
     }
 
     function recordar(col, id) {

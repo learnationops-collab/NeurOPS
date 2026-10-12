@@ -2,7 +2,15 @@
 // Google Calendar de cada persona.
 
 import { useEffect, useState } from 'react';
-import { almacen } from '../../data/hooks';
+import { almacen, useDatos } from '../../data/hooks';
+
+// La zona en la que mira la semana del equipo quien está usando Thalamus: la del país de su WhatsApp (la
+// manda el servidor) o, si no tiene, la de su navegador. Así coincide con su propio Google Calendar.
+export function useZonaVista() {
+    const { zona } = useDatos();
+    if (zona) return zona;
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch { return null; }
+}
 
 // Hora actual, que se renueva cada minuto.
 export function useAhora() {
