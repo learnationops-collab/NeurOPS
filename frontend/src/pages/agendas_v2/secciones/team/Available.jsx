@@ -58,26 +58,56 @@ const TIPOS = [
     { v: 'cx', n: 'Canceladas', cls: 'av-l-cx', tip: 'Agendas canceladas o que ya no están en su Google Calendar: no ocupan' },
 ];
 
-// Una agenda que ya no ocupa: el título y el detalle de por qué.
-function textoCancelada(r) {
-    const lead = nombreLead(r);
-    if (r.motivo === 'sin_evento') {
-        return { titulo: '¿Cancelada? · ' + lead, por: 'Ya no está en su Google Calendar (se canceló, se borró o se marcó «Disponible»), así que el horario queda libre. En NeurOPS sigue como ' + (r.resultado || 'agendada') + '.' };
+// Una agenda que ya no ocupa: el título y el detalle de por qué (con su evento vinculado, qué le pasó).
+function textoCancelada(r, tz) {
+    const lead = nombreLead(r), t = r.calendar || {};
+    if (r.motivo !== 'sin_evento') {
+        return { titulo: 'Cancelada · ' + lead, por: r.resultado ? 'Marcada como ' + r.resultado + '.' : 'Se canceló o reprogramó.' };
     }
-    return { titulo: 'Cancelada · ' + lead, por: r.resultado ? 'Marcada como ' + r.resultado + '.' : 'Se canceló o reprogramó.' };
+    const enNeurops = ' En NeurOPS sigue como ' + (r.resultado || 'agendada') + '.';
+    if (t.estado === 'cancelado') return { titulo: 'Cancelada en Calendar · ' + lead, por: 'Su evento se canceló en Google Calendar.' + enNeurops };
+    if (t.estado === 'borrado') return { titulo: 'Borrada de Calendar · ' + lead, por: 'Su evento ya no existe en Google Calendar.' + enNeurops };
+    if (t.estado === 'disponible') return { titulo: 'Marcada «Disponible» · ' + lead, por: 'Su evento está marcado «Disponible» en Google Calendar: no ocupa.' + enNeurops };
+    if (t.estado === 'movido') {
+        const nueva = fechaCorta(new Date(t.inicio_nuevo).toISOString().slice(0, 10)) + ' ' + horaTxt(t.inicio_nuevo, tz);
+        return { titulo: 'Movida al ' + nueva + ' · ' + lead, por: 'Su evento se movió en Google Calendar al ' + nueva + '.' + enNeurops };
+    }
+    return { titulo: '¿Cancelada? · ' + lead, por: 'No hay evento suyo en Google Calendar a esa hora, así que el horario queda libre.' + enNeurops };
+}
+
+// La traza de una agenda que ocupa, para el detalle: si su evento está vinculado y cómo.
+const VINCULO = { propio: 'lo creó NeurOPS', email: 'por el email del lead', nombre: 'por el nombre del lead' };
+function textoTraza(t) {
+    if (!t) return '';
+    if (t.estado === 'rechazado') return ' · El lead rechazó la invitación en Calendar';
+    if (t.estado === 'sin_vincular') return ' · Sin evento vinculado en Calendar';
+    if (t.estado === 'sin_dato') return ' · No se pudo leer su evento';
+    return ' · En Calendar (' + (VINCULO[t.vinculo] || 'vinculada') + ')';
 }
 
 // Cuántas agendas de la semana ya no ocupan y, al pasar el mouse, cuáles.
 function AvisoCanceladas({ bloques, tz }) {
     const cxs = bloques.flatMap(x => x.items.filter(it => it.tipo === 'cx').map(it => ({ ...it, p: x.p })));
     const dudas = cxs.filter(it => it.reserva.motivo === 'sin_evento').length;
-    const lista = cxs.map(it => fechaCorta(new Date(it.a).toISOString().slice(0, 10)) + ' ' + horaTxt(it.a, tz) + ' ' + it.p.nombre + ': ' + textoCancelada(it.reserva).titulo).join(' · ');
+    const lista = cxs.map(it => fechaCorta(new Date(it.a).toISOString().slice(0, 10)) + ' ' + horaTxt(it.a, tz) + ' ' + it.p.nombre + ': ' + textoCancelada(it.reserva, tz).titulo).join(' · ');
     return (
         <span className={'av-ley-s' + (dudas ? ' av-ley-aviso' : '')} data-tip={'Agendas que no ocupan|' + lista.replace(/\|/g, '/')}>
             <Icono n={dudas ? 'alerta' : 'x'} s={12} />
             {cxs.length - dudas > 0 && (cxs.length - dudas) + (cxs.length - dudas === 1 ? ' cancelada' : ' canceladas')}
             {cxs.length - dudas > 0 && dudas > 0 && ' · '}
             {dudas > 0 && dudas + (dudas === 1 ? ' ya no está' : ' ya no están') + ' en Google'}
+        </span>
+    );
+}
+
+// Las agendas cuyo lead rechazó la invitación en Calendar (siguen ocupando: el evento sigue ahí).
+function AvisoRechazos({ bloques, tz }) {
+    const xs = bloques.flatMap(x => x.items.filter(it => it.tipo === 'ag' && it.reserva.calendar && it.reserva.calendar.estado === 'rechazado').map(it => ({ ...it, p: x.p })));
+    if (!xs.length) return null;
+    const lista = xs.map(it => fechaCorta(new Date(it.a).toISOString().slice(0, 10)) + ' ' + horaTxt(it.a, tz) + ' ' + it.p.nombre + ': ' + nombreLead(it.reserva)).join(' · ');
+    return (
+        <span className="av-ley-s av-ley-aviso" data-tip={'El lead rechazó la invitación|' + lista + ' · El horario sigue ocupado mientras el evento siga en su Calendar.'}>
+            <Icono n="alerta" s={12} />{xs.length} {xs.length === 1 ? 'rechazada' : 'rechazadas'} por el lead
         </span>
     );
 }
@@ -253,6 +283,7 @@ export default function Available({ solo = null }) {
                     {edit && <span className="av-ley-s av-ley-edit"><Icono n="edit" s={12} />Arrastrá para crear o mover · se repite cada semana</span>}
                     <span className="av-ley-s"><i className="av-l-hu" />Sin closer</span>
                     {kpi.nCx > 0 && <AvisoCanceladas bloques={bloques} tz={tz} />}
+                    <AvisoRechazos bloques={bloques} tz={tz} />
                     {leyendo && <span className="av-ley-s">Leyendo calendarios…</span>}
                     {sinLeer.length > 0 && <span className="av-ley-s av-ley-aviso"><Icono n="alerta" s={12} />No se pudo leer el calendario de {nombres(sinLeer)}</span>}
                     {sinGoogle.length > 0 && <span className="av-ley-s"><Icono n="calendar" s={12} />Sin Google Calendar: {nombres(sinGoogle)} (solo agendas)</span>}
@@ -306,8 +337,9 @@ export default function Available({ solo = null }) {
                                                         const hora = horaTxt(it.a, tz) + ' – ' + horaTxt(it.b, tz), pas = it.b <= ahora ? ' pas' : '';
                                                         const key = it.tipo + it.a + '-' + k, pos = { top, alto, hora, col: it.col, ncols: it.ncols };
                                                         if (it.tipo === 'ag') {
-                                                            const lead = nombreLead(it.reserva);
-                                                            return <Tarjeta key={key} {...pos} clase={'ag' + pas} titulo={lead} tip={'Agenda · ' + x.p.nombre + '|' + hora + ' · ' + lead} />;
+                                                            const lead = nombreLead(it.reserva), t = it.reserva.calendar, aviso = t && t.estado === 'rechazado';
+                                                            return <Tarjeta key={key} {...pos} clase={'ag' + (aviso ? ' ag--aviso' : '') + pas} titulo={(aviso ? '⚠ ' : '') + lead}
+                                                                tip={'Agenda · ' + x.p.nombre + '|' + hora + ' · ' + lead + textoTraza(t)} />;
                                                         }
                                                         if (it.tipo === 'mg') return <Tarjeta key={key} {...pos} clase={'mg' + pas} titulo="Margen" tip={'Margen después de la agenda|' + hora} />;
                                                         const e = it.evento, tit = tituloEv(e);
@@ -327,7 +359,7 @@ export default function Available({ solo = null }) {
                                                         );
                                                     })}
                                                     {!vivo && ver('cx') && x.items.filter(it => it.tipo === 'cx').map(it => {
-                                                        const c = textoCancelada(it.reserva), hora = horaTxt(it.a, tz) + ' – ' + horaTxt(it.b, tz);
+                                                        const c = textoCancelada(it.reserva, tz), hora = horaTxt(it.a, tz) + ' – ' + horaTxt(it.b, tz);
                                                         return (
                                                             <Tarjeta key={'cx' + it.reserva.id} clase={'cx' + (it.reserva.motivo === 'sin_evento' ? ' cx--duda' : '')}
                                                                 top={(it.a - x.t0) / 3600000 * HPX} alto={(it.b - it.a) / 3600000 * HPX} titulo={c.titulo} hora={hora}

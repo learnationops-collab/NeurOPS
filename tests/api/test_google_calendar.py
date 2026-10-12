@@ -344,3 +344,32 @@ def test_el_closer_elige_en_que_calendarios_revisar_conflictos(client, db, close
     r = client.post('/api/google/calendars', json={'conflicto': ['primary', 'facu@group', 3]}, headers=auth_headers(closer))
     assert r.status_code == 200 and r.get_json()['conflicto'] == ['primary', 'facu@group']
     assert GoogleCalendarToken.query.one().calendarios_conflicto == ['primary', 'facu@group']
+
+
+def test_eventos_para_traza_trae_cancelados_invitados_y_no_repite(db, closer, monkeypatch):
+    import datetime as dt
+    conflicto = ['primary', 'ventas@group', 'x@group']
+    db.session.add(GoogleCalendarToken(user_id=closer.id, token_json='{}', calendarios_conflicto=conflicto))
+    db.session.commit()
+    def ev(id_, h, **kw):
+        inicio, fin = {'dateTime': f'2026-10-05T{h}:00:00Z'}, {'dateTime': f'2026-10-05T{h}:45:00Z'}
+        return {'id': id_, 'start': inicio, 'end': fin, **kw}
+
+    lead = [{'email': 'Lucia@X.com', 'responseStatus': 'declined'}, {'email': 'ana@neuro.com', 'self': True}]
+    servicio = _Eventos({
+        'primary': {'items': [ev('a', '13', summary='Lucía', attendees=lead)]},
+        'ventas@group': {'items': [
+            ev('a', '13', summary='Lucía', attendees=lead),
+            ev('b', '15', status='cancelled'),
+            ev('c', '17', transparency='transparent'),
+        ]},
+    }, sin_permiso=('x@group',))
+    monkeypatch.setattr(GoogleService, 'get_service', staticmethod(lambda u: servicio))
+    evs = GoogleService.eventos_para_traza(closer.id, dt.datetime(2026, 10, 5), dt.datetime(2026, 10, 6))
+    assert [(e['id'], e['calendario'], e['estado'], e['disponible']) for e in evs] == [
+        ('a', 'ventas@group', 'confirmed', False),
+        ('b', 'ventas@group', 'cancelled', False),
+        ('c', 'ventas@group', 'confirmed', True),
+    ]
+    assert evs[0]['invitados'] == [{'email': 'lucia@x.com', 'respuesta': 'declined', 'propio': False},
+                                   {'email': 'ana@neuro.com', 'respuesta': None, 'propio': True}]

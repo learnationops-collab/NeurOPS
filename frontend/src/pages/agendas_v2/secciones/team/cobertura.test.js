@@ -158,6 +158,11 @@ describe('agendasDeVista', () => {
         const v = agendasDeVista(reservas, { p1: { estado: 'ok', franjas: [[0, 2000]] } }, ahora);
         expect(v.ocupan('p1').map(r => r.id)).toEqual(['a', 'c']);
         expect(v.canceladas('p1').map(r => [r.id, r.motivo])).toEqual([['b', 'sin_evento']]);
+        // Con su evento vinculado manda lo que le pasó, no la hora.
+        const conTraza = { p1: { estado: 'ok', franjas: [[0, 2000]], trazas: { a: { estado: 'cancelado' }, b: { estado: 'rechazado' } } } };
+        const w = agendasDeVista(reservas, conTraza, ahora);
+        expect(w.ocupan('p1').map(r => [r.id, r.calendar && r.calendar.estado])).toEqual([['b', 'rechazado'], ['c', null]]);
+        expect(w.canceladas('p1').map(r => [r.id, r.calendar.estado])).toEqual([['a', 'cancelado']]);
         // Sin poder leer su calendario no se sabe: ocupan todas.
         expect(agendasDeVista(reservas, { p1: { estado: 'error', franjas: [] } }, ahora).ocupan('p1')).toHaveLength(3);
     });

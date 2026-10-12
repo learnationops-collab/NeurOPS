@@ -49,7 +49,11 @@ export function googleDeOcupacion(google) {
 }
 
 // Una agenda de n8n (de /ocupacion) con la forma de una reserva.
-const deN8n = (a) => ({ id: 'n8n-' + a.id, inicio_ms: a.inicio, fin_ms: a.fin, margen_min: 0, lead: { nombre: a.nombre }, n8n: true, resultado: a.resultado });
+const deN8n = (a) => ({
+    id: 'n8n-' + a.id, inicio_ms: a.inicio, fin_ms: a.fin, margen_min: 0, lead: { nombre: a.nombre }, n8n: true, resultado: a.resultado, calendar: a.calendar || null,
+});
+// Lo que le pasó al evento de una agenda que deja libre su horario (la traza de /ocupacion).
+export const NO_OCUPA = ['cancelado', 'borrado', 'movido', 'disponible'];
 
 // Una agenda recién tomada puede no estar todavía en lo leído de Google: hasta 10 minutos, ocupa igual.
 const GRACIA_MS = 10 * 60000;
@@ -57,6 +61,7 @@ const GRACIA_MS = 10 * 60000;
 /**
  * Las agendas de cada persona en la semana, de los dos sistemas. Google Calendar manda: con su
  * calendario leído, una reserva que ya no está ahí (cancelada, borrada o marcada «Disponible») no ocupa.
+ * Si su evento está vinculado (la traza, en `calendar`), se sabe por él; si no, por la hora.
  * ocupan(id): las reservas de Agendas 2.0 agendadas o ya hechas (procesadas) y las de n8n vigentes.
  * canceladas(id): las que ya no ocupan, cada una con `motivo`: 'cancelada' (cancelada o reprogramada)
  * o 'sin_evento' (vigente en NeurOPS pero ya no está en su Google Calendar).
@@ -64,12 +69,15 @@ const GRACIA_MS = 10 * 60000;
 export function agendasDeVista(reservas, google, ahora = Date.now()) {
     const g = googleDeOcupacion(google);
     const n8n = (id) => ((g(id) || {}).agendas || []);
+    const traza = (id, r) => (((g(id) || {}).trazas || {})[r.id]) || null;
     const enGoogle = (id, r) => {
         const x = g(id);
         if (!x || x.estado !== 'ok' || (r.creada && Date.parse(r.creada) > ahora - GRACIA_MS)) return true;
+        const t = r.calendar;
+        if (t && t.estado !== 'sin_vincular' && t.estado !== 'sin_dato') return !NO_OCUPA.includes(t.estado);
         return (x.franjas || []).some(([a, b]) => a <= r.inicio_ms && r.inicio_ms < b);
     };
-    const propias = (id) => reservas.filter(r => r.closer_id === id && r.inicio_ms != null);
+    const propias = (id) => reservas.filter(r => r.closer_id === id && r.inicio_ms != null).map(r => ({ ...r, calendar: traza(id, r) }));
     const vigentes = (id) => propias(id).filter(r => r.estado === 'agendada' || r.cancelada === false);
     return {
         ocupan: (id) => vigentes(id).filter(r => enGoogle(id, r))

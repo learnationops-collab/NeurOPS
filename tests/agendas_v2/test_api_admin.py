@@ -216,6 +216,11 @@ def google_semana(monkeypatch):
         return None if r is None else [{'inicio': a, 'fin': b, 'titulo': t} for a, b, t in r]
 
     monkeypatch.setattr(GoogleService, 'eventos_ocupados', staticmethod(eventos))
+    # Lo que se lee para seguir cada agenda: respuestas['traza'][user_id] = [evento como _traza_de].
+    servicio._traza_cache.clear()
+    traza = staticmethod(lambda u, desde, hasta: respuestas.get('traza', {}).get(u, []))
+    monkeypatch.setattr(GoogleService, 'eventos_para_traza', traza)
+    monkeypatch.setattr(GoogleService, 'evento_para_traza', staticmethod(lambda u, cal, ev: 'borrado'))
     return respuestas
 
 
@@ -278,6 +283,55 @@ def test_ocupacion_trae_las_agendas_de_n8n_y_detecta_las_canceladas(client, db, 
     google_semana[gente['closer'].id] = None
     ana = _ocupacion(client, dir_h).get_json()['ocupacion']['p1']
     assert [a['estado'] for a in ana['agendas']] == ['vigente', 'vigente', 'cancelada']
+
+
+def _ev(id_, inicio, invitados=(), estado='confirmed', titulo='', disponible=False, cal='ventas'):
+    return {
+        'id': id_, 'calendario': cal, 'estado': estado, 'inicio': inicio, 'fin': inicio + 3600000,
+        'disponible': disponible,
+        'titulo': titulo, 'invitados': [{'email': e, 'respuesta': r, 'propio': False} for e, r in invitados],
+    }
+
+
+def test_cada_agenda_se_vincula_a_su_evento_y_se_sabe_que_paso(client, db, dir_h, gente, google_semana):
+    from datetime import datetime
+
+    from app.models import Appointment, Client, GoogleCalendarToken
+
+    db.session.add(GoogleCalendarToken(user_id=gente['closer'].id, token_json='{}'))
+    lu = Client(full_name='Lucía Pérez', email='lucia@x.com')
+    mo = Client(full_name='Mónica Díaz', email='mo@x.com')
+    db.session.add_all([lu, mo])
+    db.session.flush()
+    hora = lambda h: datetime(1970, 1, 2, h)  # noqa: E731
+    ms = lambda h: int((86400 + h * 3600) * 1000)  # noqa: E731
+    citas = [Appointment(client_id=c.id, closer_id=gente['closer'].id, start_time=hora(h), result='Confirmado')
+             for c, h in ((lu, 9), (mo, 11), (lu, 13), (mo, 15), (lu, 17), (mo, 19))]
+    db.session.add_all(citas)
+    db.session.commit()
+    client.put('/api/agendas-v2/personas/p1', headers=dir_h, json={'nombre': 'Ana', 'email': 'ana@neuro.com'})
+    google_semana[gente['closer'].id] = [(ms(9), ms(10), 'Lucía')]
+    google_semana['traza'] = {gente['closer'].id: [
+        _ev('a', ms(9), [('lucia@x.com', 'accepted')]),                     # la de las 9, por el email
+        _ev('b', ms(11), titulo='Llamada con Mónica'),                     # la de las 11, por el nombre
+        _ev('c', ms(13), [('lucia@x.com', 'needsAction')], estado='cancelled'),
+        _ev('d', ms(15), [('mo@x.com', 'declined')]),
+        _ev('e', ms(17), [('lucia@x.com', 'accepted')], disponible=True),
+        _ev('x', ms(19), titulo='Otra cosa'),                              # la de las 19 no se vincula
+    ]}
+    tr = _ocupacion(client, dir_h).get_json()['ocupacion']['p1']['trazas']
+    estados = [(tr[str(a.id)]['estado'], tr[str(a.id)]['vinculo']) for a in citas]
+    assert estados == [('ok', 'email'), ('ok', 'nombre'), ('cancelado', 'email'), ('rechazado', 'email'),
+                       ('disponible', 'email'), ('sin_vincular', None)]
+    db.session.expire_all()
+    assert db.session.get(Appointment, citas[0].id).calendar_evento_id == 'a'
+    assert db.session.get(Appointment, citas[0].id).google_event_id is None  # el de NeurOPS no se toca
+    # El evento de las 9 se movió a las 10 y el de las 11 ya no está: se sabe por el vínculo guardado.
+    servicio._traza_cache.clear()
+    google_semana['traza'] = {gente['closer'].id: [_ev('a', ms(10), [('lucia@x.com', 'accepted')])]}
+    tr = _ocupacion(client, dir_h).get_json()['ocupacion']['p1']['trazas']
+    assert tr[str(citas[0].id)] == {'estado': 'movido', 'vinculo': 'email', 'inicio_nuevo': ms(10)}
+    assert tr[str(citas[1].id)]['estado'] == 'borrado'
 
 
 def test_ocupacion_exige_un_rango_valido_y_ser_direccion(client, gente, dir_h, auth_headers, google_semana):

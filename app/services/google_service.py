@@ -398,6 +398,84 @@ class GoogleService:
                 return out
 
     @staticmethod
+    def _traza_de(e, calendario, zona):
+        """Lo de un evento que sirve para seguir una agenda (eventos_para_traza)."""
+        return {
+            'id': e.get('id'),
+            'calendario': calendario,
+            'estado': e.get('status') or 'confirmed',
+            'inicio': _ms_punto(e.get('start'), zona),
+            'fin': _ms_punto(e.get('end'), zona),
+            'disponible': e.get('transparency') == 'transparent',
+            'titulo': (e.get('summary') or '').strip(),
+            'invitados': [
+                {
+                    'email': (i.get('email') or '').strip().lower(),
+                    'respuesta': i.get('responseStatus'),
+                    'propio': bool(i.get('self')),
+                }
+                for i in e.get('attendees') or []
+            ],
+        }
+
+    @staticmethod
+    def eventos_para_traza(user_id, desde, hasta):
+        """Los eventos de los calendarios de conflicto del usuario entre `desde` y `hasta` (datetime UTC sin
+        zona), cancelados incluidos, con lo que hace falta para seguir cada agenda: [{id, calendario, estado
+        ('confirmed', 'tentative' o 'cancelled'), inicio, fin (ms), disponible (marcado «Disponible»), titulo,
+        invitados: [{email, respuesta, propio}]}]. Uso interno: el título no sale al visor. Un mismo evento
+        leído por su calendario y como 'primary' va una vez. None si no se pudo leer ningún calendario."""
+        token = GoogleService.token_vigente(user_id)
+        calendarios = GoogleService.calendarios_de_conflicto(token)
+        if not calendarios:
+            return []
+        try:
+            service = GoogleService.get_service(user_id)
+        except Exception as e:  # noqa: BLE001
+            current_app.logger.warning(f'[GOOGLE] Sin servicio para seguir las agendas del usuario #{user_id}: {e}')
+            return None
+        if not service:
+            return None
+        unicos, leidos = {}, 0
+        for cal in calendarios:
+            pagina = None
+            try:
+                while True:
+                    r = service.events().list(
+                        calendarId=cal, timeMin=_iso_utc(desde), timeMax=_iso_utc(hasta), singleEvents=True,
+                        showDeleted=True, maxResults=250, pageToken=pagina,
+                        fields='timeZone,nextPageToken,'
+                               'items(id,status,summary,start,end,transparency,attendees(email,self,responseStatus))',
+                    ).execute()
+                    zona = r.get('timeZone') or 'UTC'
+                    for e in r.get('items') or []:
+                        if e.get('id') and (e['id'] not in unicos or unicos[e['id']]['calendario'] == 'primary'):
+                            unicos[e['id']] = GoogleService._traza_de(e, cal, zona)
+                    pagina = r.get('nextPageToken')
+                    if not pagina:
+                        break
+                leidos += 1
+            except Exception as e:  # noqa: BLE001  (un calendario que no se puede leer no frena a los otros)
+                current_app.logger.info(f'[GOOGLE] No se pudo leer el calendario {cal} del usuario #{user_id}: {e}')
+        return list(unicos.values()) if leidos else None
+
+    @staticmethod
+    def evento_para_traza(user_id, calendario, evento_id):
+        """Un evento por su id, como en eventos_para_traza; 'borrado' si Google dice que ya no existe; None
+        si no se pudo saber."""
+        try:
+            service = GoogleService.get_service(user_id)
+            if not service:
+                return None
+            e = service.events().get(calendarId=calendario, eventId=evento_id).execute()
+        except Exception as e:  # noqa: BLE001
+            if getattr(getattr(e, 'resp', None), 'status', None) in (404, 410):
+                return 'borrado'
+            current_app.logger.info(f'[GOOGLE] No se pudo leer el evento {evento_id} del usuario #{user_id}: {e}')
+            return None
+        return GoogleService._traza_de(e, calendario, (e.get('start') or {}).get('timeZone') or 'UTC')
+
+    @staticmethod
     def evento_cancelado(user_id, event_id):
         """True solo si Google confirma que el evento se canceló o se borró. Ante cualquier duda (sin
         token, sin red, 404 porque se cambió de calendario) devuelve False: la agenda sigue contando."""

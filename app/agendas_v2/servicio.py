@@ -13,7 +13,7 @@ import time
 from datetime import datetime, timedelta, timezone
 
 from app import db
-from app.agendas_v2 import operacion
+from app.agendas_v2 import operacion, trazabilidad
 from app.agendas_v2.modelos import MODELOS, SchedConfig, SchedIntento, SchedPerfil
 from app.agendas_v2.nucleo.asignacion import asignacion
 from app.agendas_v2.nucleo.catalogos import (
@@ -673,8 +673,8 @@ TOLERANCIA_EVENTO_MS = 60000
 
 
 def _agendas_operacion(user_ids, desde, hasta):
-    """{user_id: [Appointment]} de las agendas de n8n de esos closers que empiezan entre desde y hasta
-    (ms). Las de Agendas 2.0 (con payload) no: esas ya viajan en /estado."""
+    """{user_id: [Appointment]} de las agendas de esos closers (las de n8n y las de Agendas 2.0) que
+    empiezan entre desde y hasta (ms)."""
     from app.models import Appointment
 
     if not user_ids:
@@ -682,7 +682,6 @@ def _agendas_operacion(user_ids, desde, hasta):
     filas = (
         Appointment.query.filter(
             Appointment.closer_id.in_(user_ids),
-            Appointment.agenda_payload.is_(None),
             Appointment.start_time >= ms_a_dt(desde),
             Appointment.start_time < ms_a_dt(hasta),
         )
@@ -695,16 +694,20 @@ def _agendas_operacion(user_ids, desde, hasta):
     return out
 
 
-def agenda_operacion_a_dict(appt, eventos):
+def agenda_operacion_a_dict(appt, eventos, traza=None):
     """Una agenda de n8n para Available. estado: 'cancelada' (marcada cancelada o reprogramada),
-    'sin_evento' (en NeurOPS sigue vigente pero ya no está en su Google Calendar: se canceló o se movió
-    sin que NeurOPS se enterara) o 'vigente'. `eventos`: lo leído de su Google, None si no se pudo (y
-    entonces no se sabe: queda vigente). Dura lo que su evento en Google o, si no está, lo de siempre.
-    Solo se muestra: la agenda no se toca."""
+    'sin_evento' (en NeurOPS sigue vigente pero en su Google Calendar ya no ocupa: se canceló, se borró, se
+    movió o se marcó «Disponible» sin que NeurOPS se enterara) o 'vigente'. `eventos`: lo leído de su
+    Google, None si no se pudo (y entonces no se sabe: queda vigente). `traza`: lo que se sabe de su evento
+    vinculado (trazabilidad.py); manda sobre la coincidencia por hora. Dura lo que su evento en Google o, si
+    no está, lo de siempre. Solo se muestra: la agenda no se toca."""
     inicio = dt_a_ms(appt.start_time)
     evento = next((e for e in eventos or [] if abs(e['inicio'] - inicio) <= TOLERANCIA_EVENTO_MS), None)
+    vinculada = traza and traza['estado'] not in ('sin_vincular', 'sin_dato')
     if (appt.result or '') in operacion.RESULTADOS_NO_VIGENTES:
         estado = 'cancelada'
+    elif vinculada:
+        estado = 'sin_evento' if traza['estado'] in trazabilidad.NO_OCUPA else 'vigente'
     elif eventos is not None and evento is None:
         estado = 'sin_evento'
     else:
@@ -717,7 +720,27 @@ def agenda_operacion_a_dict(appt, eventos):
         'nombre': (cliente.full_name if cliente else None) or 'Agenda',
         'estado': estado,
         'resultado': appt.result,
+        'calendar': traza,
     }
+
+
+# {(user_id, desde, hasta): (vence (monotonic), trazas)}: lo leído para seguir las agendas en Calendar.
+_traza_cache = {}
+
+
+def _trazas(user_id, citas, desde, hasta):
+    """Las trazas en Calendar de esas agendas de un closer (trazabilidad.trazas), con 2 min de caché."""
+    clave, ahora = (user_id, desde, hasta), time.monotonic()
+    guardado = _traza_cache.get(clave)
+    if guardado and guardado[0] > ahora:
+        return guardado[1]
+    out = trazabilidad.trazas(user_id, citas, desde, hasta)
+    if out is None:
+        return None
+    if len(_traza_cache) > 500:
+        _traza_cache.clear()
+    _traza_cache[clave] = (ahora + CACHE_GOOGLE_S, out)
+    return out
 
 
 def ocupacion_google(desde, hasta):
@@ -726,7 +749,8 @@ def ocupacion_google(desde, hasta):
     uno con su título, None si es privado), 'error' (Google no
     respondió: no se sabe), 'sin_google' (no conectó su calendario) o 'sin_usuario' (su email no es el
     de un usuario activo). A diferencia del motor, acá no saber no se muestra como libre.
-    agendas: las de n8n de ese closer, con si siguen en pie (agenda_operacion_a_dict)."""
+    agendas: las de n8n de ese closer, con si siguen en pie (agenda_operacion_a_dict). trazas: {appointment_id:
+    traza} de todas sus agendas (las de Agendas 2.0 también): qué pasó con su evento en Calendar."""
     personas = colecciones()['personas']
     usuarios = _usuarios_de_personas({'personas': personas})
     con_calendar = _con_calendar(set(usuarios.values()))
@@ -745,7 +769,12 @@ def ocupacion_google(desde, hasta):
         else:
             out[p['id']] = {'estado': 'ok', **leido}
         eventos = leido['eventos'] if leido else None
-        out[p['id']]['agendas'] = [agenda_operacion_a_dict(a, eventos) for a in agendas.get(u, [])]
+        citas = agendas.get(u, [])
+        trazas = (_trazas(u, citas, desde, hasta) if citas else {}) if leido else None
+        out[p['id']]['trazas'] = trazas or {}
+        out[p['id']]['agendas'] = [
+            agenda_operacion_a_dict(a, eventos, (trazas or {}).get(str(a.id))) for a in citas if not a.agenda_payload
+        ]
     return out
 
 

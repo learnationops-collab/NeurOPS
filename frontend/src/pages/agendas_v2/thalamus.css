@@ -1719,3 +1719,4 @@
 .thalamus .av-card.cx--duda{border-color:var(--warning);color:var(--warning)}
 .thalamus .av-card.cx--duda .av-card-tit{text-decoration:none}
 .thalamus .av-fil--tipo > i.av-l-cx{background:transparent;border:1.5px dashed var(--text-muted)}
+.thalamus .av-card.ag--aviso{box-shadow:inset 0 0 0 2px var(--warning)}

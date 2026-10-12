@@ -312,6 +312,9 @@ def crear_evento(appt, nombre_evento, evento_a_borrar=None):
         db.session.commit()
         return False
     appt.google_event_id = evento_id
+    # El vínculo para seguirla en su Calendar (trazabilidad.py).
+    appt.calendar_evento_id, appt.calendar_vinculo = evento_id, 'propio'
+    appt.calendar_id = GoogleService._calendario(appt.closer_id)
     appt.agenda_payload = {**payload, 'meet': meet}
     db.session.commit()
     return True
