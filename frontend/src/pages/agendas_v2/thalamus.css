@@ -1742,7 +1742,9 @@
 .thalamus .av-card.cancelada.cx--duda{border-color:var(--warning);color:var(--warning)}
 .thalamus .av-card.cancelada.cx--duda .av-card-tit{text-decoration:none}
 .thalamus .av-bloque .av-card.cancelada{left:auto;right:3px;width:58%}
-.thalamus .av-col > .av-card{z-index:1}
+.thalamus .av-col > .av-card{z-index:1;box-shadow:-3px 0 6px -3px rgb(0 0 0 / .35)}
+.thalamus .av-col > .av-card:hover{z-index:20}
+.thalamus .av-col > .av-card.libre{border-color:color-mix(in srgb,var(--success) 70%,transparent)}
 .thalamus .av-ley .av-l-ag,.thalamus .av-fil--tipo > i.av-l-ag{background:var(--info)!important}
 .thalamus .av-fil--tipo > i.av-l-tu{background:color-mix(in srgb,var(--success) 45%,transparent)}
 .thalamus .tip span{white-space:pre-line}

@@ -1,39 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { agrupar, nombresTxt, primerNombre, resumenGrupo } from './tarjetas';
+import { apilar, primerNombre } from './tarjetas';
 
-const ana = { id: 'a', nombre: 'Ana López' }, beto = { id: 'b', nombre: 'Beto' }, caro = { id: 'c', nombre: 'Caro Díaz' };
-const pz = (tipo, m0, m1, p) => ({ tipo, m0, m1, p });
+const pz = (tipo, m0, m1, id) => ({ tipo, m0, m1, id });
 
-describe('agrupar', () => {
-    it('junta lo del mismo tipo que se pisa o se toca, de cualquier closer', () => {
-        const gs = agrupar([
-            pz('libre', 540, 585, ana), pz('libre', 600, 645, ana),   // turnos encadenados con 15 de margen
-            pz('libre', 570, 615, beto),
-            pz('llamada', 720, 765, ana), pz('margen', 765, 780, ana), // la llamada y su margen, juntos
-            pz('libre', 900, 945, caro),                               // más tarde: otra tarjeta
+describe('apilar', () => {
+    it('cada turno va por separado: lo ocupado atrás, lo libre adelante y corrido', () => {
+        const xs = apilar([
+            pz('libre', 540, 585, 'a1'), pz('libre', 600, 645, 'a2'),   // dos turnos de Ana: no se juntan
+            pz('libre', 570, 615, 'b1'),                                // uno de Beto que se les pisa
+            pz('ocupado', 540, 660, 'c'),                               // un evento de Caro debajo de todo
         ]);
-        expect(gs.map(g => [g.tipo, g.m0, g.m1, g.piezas.length])).toEqual([
-            ['libre', 540, 645, 3], ['llamada', 720, 780, 2], ['libre', 900, 945, 1],
-        ]);
-        expect(gs[0].personas.map(p => p.id)).toEqual(['a', 'b']);
-        expect(resumenGrupo(gs[0])).toBe('3 turnos');
-        expect(resumenGrupo(gs[1])).toBe('');
+        expect(xs.map(x => [x.id, x.capa])).toEqual([['c', 0], ['a1', 1], ['b1', 2], ['a2', 1]]);
     });
-    it('lo de distinto tipo que se pisa va lado a lado', () => {
-        const gs = agrupar([pz('libre', 540, 660, ana), pz('ocupado', 600, 630, beto), pz('cancelada', 600, 645, ana)]);
-        expect(gs.map(g => [g.tipo, g.col, g.ncols])).toEqual([['libre', 0, 3], ['cancelada', 1, 3], ['ocupado', 2, 3]]);
-    });
-    it('el tiempo libre sin turno completo va con los libres', () => {
-        const gs = agrupar([pz('hueco', 540, 570, ana)]);
-        expect(gs[0].tipo).toBe('libre');
-        expect(resumenGrupo(gs[0])).toBe('sin turno completo');
+    it('lo corrido no crece a lo largo del día', () => {
+        // Dos closers con turnos encadenados que se pisan de a dos todo el día.
+        const xs = [];
+        for (let i = 0; i < 10; i++) xs.push(pz('libre', 540 + i * 60, 585 + i * 60, 'a' + i), pz('libre', 570 + i * 60, 615 + i * 60, 'b' + i));
+        expect(Math.max(...apilar(xs).map(x => x.capa))).toBe(1);
     });
 });
 
-describe('nombres', () => {
-    it('el primer nombre de cada closer, y +N si son más de dos', () => {
+describe('primerNombre', () => {
+    it('el primer nombre del closer', () => {
         expect(primerNombre('  Ana López ')).toBe('Ana');
-        expect(nombresTxt([ana, beto])).toBe('Ana, Beto');
-        expect(nombresTxt([ana, beto, caro])).toBe('Ana +2');
     });
 });

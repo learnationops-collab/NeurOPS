@@ -1,8 +1,9 @@
 // Available: calendario semanal de cobertura. Cada agenda, margen y evento de su Google Calendar es una
 // tarjeta, y los turnos libres del evento elegido (encadenados con su sesión, turnos.js) son tarjetas
 // «Libre»: verde con un check lo libre, azul con un teléfono las llamadas, un reloj lo ocupado por otro
-// evento. Con varios closers se agrupan (tarjetas.js): cada día junta lo del mismo tipo que se pisa, con el
-// primer nombre de cada closer y el detalle al pasar el mouse; sin agrupar, cada closer es un carril.
+// evento. Con varios closers se agrupan como cartas (tarjetas.js): cada día es una columna con todas las
+// tarjetas, una por turno, y lo que se pisa queda encimado (lo ocupado atrás, lo libre adelante), con el
+// primer nombre del closer y el detalle al pasar el mouse; sin agrupar, cada closer es un carril.
 // Rayado rojo = franja del día sin ningún closer. Se filtra por closer y por tipo de tarjeta.
 // Con una sola persona y permiso, se edita arrastrando: crear, mover y estirar franjas (de a 30 min).
 
@@ -18,7 +19,7 @@ import { DIAS } from '../../core/catalogos';
 import { HPX, avUnir, calcularCobertura, durTxt, hmTxt, huecosLibres, nombreDia, rangoSemana } from './cobertura';
 import { setTeam } from './comun';
 import { agendasDeVista, googleDeOcupacion, useAhora, useOcupacionGoogle, useZonaVista } from './semana';
-import { VISUAL, agrupar, nombresTxt, primerNombre, resumenGrupo } from './tarjetas';
+import { VISUAL, apilar, primerNombre } from './tarjetas';
 import { gruposDeSesion, turnosSemana } from './turnos';
 
 const hm = (m) => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
@@ -41,9 +42,12 @@ const tituloEv = (e) => (e.titulo || 'Ocupado' + (e.calendario ? ' · ' + e.cale
 const nombreLead = (r) => ((r.lead && r.lead.nombre) || 'Agenda').replace(/\|/g, '/');
 
 // Una tarjeta del calendario, al estilo de Google Calendar: el ícono de su tipo (VISUAL), el título y, si
-// entra, la hora (y `sub`). `col` de `ncols`: su lugar cuando se pisa con otras. `puntos`: el color de cada closer.
-function Tarjeta({ tipo, clase, top, alto, titulo, hora, sub, tip, col = 0, ncols = 1, puntos = null }) {
-    const pos = ncols > 1 ? { left: 'calc(' + (col / ncols * 100) + '% + 2px)', width: 'calc(' + (100 / ncols) + '% - 3px)', right: 'auto' } : null;
+// entra, la hora (y `sub`). `col` de `ncols`: su lugar cuando se pisa con otras, lado a lado; `capa`: cuánto
+// se corre cuando va encimada como carta (agrupadas). `puntos`: el color del closer.
+const CORRE_PX = 14;
+function Tarjeta({ tipo, clase, top, alto, titulo, hora, sub, tip, col = 0, ncols = 1, capa = null, puntos = null }) {
+    const pos = capa != null ? { left: 'calc(min(' + capa * CORRE_PX + 'px, 55%) + 2px)', right: 3 }
+        : ncols > 1 ? { left: 'calc(' + (col / ncols * 100) + '% + 2px)', width: 'calc(' + (100 / ncols) + '% - 3px)', right: 'auto' } : null;
     const icono = VISUAL[tipo] && VISUAL[tipo].icono;
     return (
         <div className={'av-card ' + clase} style={{ top, height: alto, ...pos }} data-tip={tip}>
@@ -64,7 +68,6 @@ const claseDe = (tipo, pzs) => tipo + (pzs.some(z => z.aviso) ? ' ag--aviso' : '
     + (pzs.every(z => z.pas) ? ' pas' : '');
 // Quita el separador del tooltip de un texto.
 const sinBarra = (t) => String(t).replace(/\|/g, '/');
-const MAX_LINEAS_TIP = 12;
 
 // Los tipos de tarjeta que se pueden ocultar.
 const TIPOS = [
@@ -185,7 +188,7 @@ export default function Available({ solo = null }) {
     // Con varios closers, agrupadas: cada día es una columna angosta. Sin agrupar, lo bastante ancho para
     // leer los carriles de todos (si no entra, se desplaza).
     const agrupado = !solo && n > 1 && agrupar_;
-    const anchoMin = 56 + 7 * (agrupado ? 150 : Math.max(120, n * 112));
+    const anchoMin = 56 + 7 * (agrupado ? 160 : Math.max(120, n * 112));
     const rango = fechaCorta(dias[0].k) + ' – ' + fechaCorta(dias[6].k);
     const y = (m) => (m - minH * 60) / 60 * HPX;
 
@@ -281,16 +284,14 @@ export default function Available({ solo = null }) {
         }
         return out;
     };
-    // Un grupo de piezas (agrupado): los closers, cuántos turnos o llamadas junta y, al pasar el mouse, cada una.
-    const tarjetaGrupo = (g, k) => {
-        const hora = hm(Math.round(g.m0)) + ' – ' + hm(Math.min(1440, Math.round(g.m1)));
-        const lineas = g.piezas.slice(0, MAX_LINEAS_TIP).map(z => primerNombre(z.p.nombre) + ' ' + horaTxt(z.a, tz) + '–' + horaTxt(z.b, tz) + ' · ' + z.detalle);
-        if (g.piezas.length > MAX_LINEAS_TIP) lineas.push('y ' + (g.piezas.length - MAX_LINEAS_TIP) + ' más');
+    // Una pieza encimada como carta (agrupadas): el primer nombre del closer con su color y, al pasar el
+    // mouse, el detalle.
+    const tarjetaCarta = (z, k) => {
+        const hora = horaTxt(z.a, tz) + ' – ' + horaTxt(z.b, tz);
         return (
-            <Tarjeta key={g.tipo + g.m0 + '-' + k} tipo={g.tipo} clase={claseDe(g.tipo, g.piezas)} top={y(g.m0)} alto={(g.m1 - g.m0) / 60 * HPX}
-                col={g.col} ncols={g.ncols} titulo={nombresTxt(g.personas)} hora={hora} sub={resumenGrupo(g)}
-                puntos={g.personas.slice(0, 4).map(p => <i key={p.id} className="av-dot" style={{ '--c': colorVar(p.color) }} />)}
-                tip={sinBarra(VISUAL[g.tipo].n + ' · ' + hora) + '|' + sinBarra(lineas.join('\n'))} />
+            <Tarjeta key={z.p.id + z.tipo + z.a + '-' + k} tipo={z.tipo} clase={claseDe(z.tipo, [z])} top={y(z.m0)} alto={(z.m1 - z.m0) / 60 * HPX}
+                capa={z.capa} titulo={primerNombre(z.p.nombre)} hora={hora} puntos={<i className="av-dot" style={{ '--c': colorVar(z.p.color) }} />}
+                tip={sinBarra(VISUAL[z.tipo].n + ' · ' + z.p.nombre) + '|' + sinBarra(hora + ' · ' + z.detalle)} />
         );
     };
 
@@ -340,7 +341,7 @@ export default function Available({ solo = null }) {
                     {!solo && <span className="av-fil-sep" />}
                     {!solo && n > 1 && (
                         <button type="button" className="av-fil av-fil--tipo" aria-pressed={agrupar_} onClick={() => setAgrupar(v => !v)}
-                            data-tip="Agrupar|Junta lo del mismo tipo que se pisa, de cualquier closer, en una tarjeta. Sin agrupar, cada closer tiene su carril.">
+                            data-tip="Agrupar|Todos los closers en una columna por día, con lo que se pisa encimado como cartas: lo libre adelante, lo ocupado atrás. Sin agrupar, cada closer tiene su carril.">
                             <Icono n="capas" s={13} />Agrupar
                         </button>
                     )}
@@ -388,7 +389,7 @@ export default function Available({ solo = null }) {
                                         {huecos.filter(x => x.di === di).map(x => (
                                             <div key={x.m0} className="av-hueco" style={{ top: y(x.m0), height: (x.m1 - x.m0) / 60 * HPX }} data-tip={'Sin closer|' + hm(x.m0) + ' a ' + hm(x.m1)} />
                                         ))}
-                                        {agrupado && agrupar(bls.flatMap(piezasDe)).map(tarjetaGrupo)}
+                                        {agrupado && apilar(bls.flatMap(piezasDe)).map(tarjetaCarta)}
                                         {!agrupado && bls.map((x, i) => {
                                             const vivo = enArr && arr.modo !== 'crear' && arr.ri === x.ri;
                                             const m0 = vivo ? arr.a : x.m0, m1 = vivo ? arr.b : x.m1;
