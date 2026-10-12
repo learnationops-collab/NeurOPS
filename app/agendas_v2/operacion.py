@@ -29,7 +29,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from app import db
 from app.models import Appointment, Client, Notification, User
 from app.models.financial import FinancialAgenda
-from app.agendas_v2.nucleo.catalogos import pais_de, pais_por_telefono
+from app.agendas_v2.nucleo.catalogos import pais_de, pais_por_telefono, zona_valida
 
 # Resultados de una Appointment que ya no ocupan el horario del closer. Incluye las dos grafias que
 # hay en la base: las que pone el closer (Cancelada/Reprogramada) y las del sync de n8n (Cancelado/Reagendado).
@@ -355,7 +355,8 @@ def zona_del_lead(lead):
     eligió el lead es de ese mismo país (Brasil, México, EE. UU. tienen varias), se respeta."""
     tz = lead.get('tz')
     pais = pais_por_telefono(lead.get('telefono')) or pais_de(lead.get('pais'))
-    zonas = [z[0] for z in pais['z']]
+    # «Otro país» de un código que no está en la lista: la zona que eligió el lead.
+    zonas = [z[0] for z in pais['z']] or ([tz] if zona_valida(tz) else [ZONA_EQUIPO])
     try:
         return ZoneInfo(tz if tz in zonas else zonas[0]), pais
     except Exception:  # noqa: BLE001

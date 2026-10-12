@@ -1,7 +1,7 @@
 // Un paso del formulario en la pantalla del lead: la pregunta, su campo y el botón para seguir.
 // Mismo marcado y clases que el prototipo (rvPreguntaHTML / rvTelHTML / rvOp).
 
-import { PAISES, paisDe, tipo, zonaInfo } from '../core/catalogos';
+import { PAIS_OTRO, PAISES, ZONAS, paisDe, tipo, zonaInfo } from '../core/catalogos';
 import { gmtTxt } from '../core/tiempo';
 import { letra, mayus } from '../core/util';
 import { AreaAuto, Bandera, Icono } from '../ui/base';
@@ -25,13 +25,16 @@ function Opcion({ o, j, val, rol, oculta, onElegir }) {
 
 function Telefono({ s, ids, tzFija, acc }) {
     const p = paisDe(s.pais), z = zonaInfo(s.tz);
+    const otro = p.c === PAIS_OTRO.c;
+    // «Otro país» no tiene zonas propias: se elige entre todas.
+    const zonas = otro ? ZONAS.map(x => [x.tz, null, x.n]) : p.z;
     return (
         <>
             <div className="rv-tel">
                 <div className="rv-pais-caja">
                     <button type="button" className="rv-pais" aria-haspopup="listbox" aria-expanded={s.paisAbierto} aria-label={'País: ' + p.n + ' ' + p.d}
                         onClick={acc.alternarPais}>
-                        <Bandera c={p.c} /><b>{p.c}</b><span>{p.d}</span><Icono n="chevron-down" s={16} />
+                        {otro ? <><Icono n="globo" s={16} /><span>+</span></> : <><Bandera c={p.c} /><b>{p.c}</b><span>{p.d}</span></>}<Icono n="chevron-down" s={16} />
                     </button>
                     {s.paisAbierto && (
                         <div className="rv-paises" role="listbox" aria-label="País">
@@ -40,11 +43,14 @@ function Telefono({ s, ids, tzFija, acc }) {
                                     <Bandera c={x.c} /><span>{x.n}</span><span>{x.d}</span>
                                 </button>
                             ))}
+                            <button type="button" className="rv-pais-op" role="option" aria-selected={otro} onClick={() => acc.elegirPais(PAIS_OTRO.c)}>
+                                <Icono n="globo" s={16} /><span>Otro país</span><span>+ código</span>
+                            </button>
                         </div>
                     )}
                 </div>
                 <div className="rv-linea rv-linea--tel">
-                    <input className="rv-input" data-rv="in" type="tel" inputMode="tel" autoComplete="tel-national" placeholder={p.ej}
+                    <input className="rv-input" data-rv="in" type="tel" inputMode="tel" autoComplete={otro ? 'tel' : 'tel-national'} placeholder={p.ej}
                         value={s.tel} aria-labelledby={ids.q} onChange={e => acc.escribir(e.target.value)} />
                 </div>
             </div>
@@ -53,12 +59,12 @@ function Telefono({ s, ids, tzFija, acc }) {
             ) : (
                 <div className="rv-zona">
                     <Icono n="globo" s={16} />
-                    {p.z.length > 1 ? (
+                    {zonas.length > 1 ? (
                         <>
                             <label className="sr" htmlFor={ids.zsel}>Zona horaria</label>
                             <select id={ids.zsel} value={s.tz} onChange={e => acc.elegirZonaSelect(e.target.value)}>
                                 {/* Si la zona actual no es de este país, el navegador muestra la primera. */}
-                                {p.z.map(zz => <option key={zz[0]} value={zz[0]}>{mayus(zz[2])} · {gmtTxt(zz[0])}</option>)}
+                                {zonas.map(zz => <option key={zz[0]} value={zz[0]}>{mayus(zz[2])} · {gmtTxt(zz[0])}</option>)}
                             </select>
                         </>
                     ) : (

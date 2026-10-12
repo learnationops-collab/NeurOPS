@@ -6,7 +6,7 @@ import { agendaOpt, diasDelHorizonte, slotsPersona } from './disponibilidad';
 import { configDe, camposPublicados, linkEvento, revision, sinPublicar, versionPublicada } from './eventos';
 import { NO_CALIFICA, calificar, duplicarForm, grupoPorReglas, gruposDeForm, personalizar, reglasRotas, revisarSegmentacion, validarRespuesta } from './formulario';
 import { normalEvento, normalForm, normalGrupo, normalPersona, normalRol, preguntasFlujo } from './normalizar';
-import { armarReserva, telefonoE164 } from './reserva';
+import { armarReserva, telefonoE164, textoRespuesta } from './reserva';
 import { opcionesDeOcupacion } from '../data/almacen';
 
 // Lunes 5 de octubre de 2026, 08:00 en La Paz (UTC-4) = 12:00 UTC.
@@ -249,6 +249,15 @@ describe('reserva', () => {
         expect(telefonoE164('BO', '7123 4567')).toBe('+59171234567');
         expect(telefonoE164('AR', '011 2345-6789')).toBe('+541123456789');
         expect(telefonoE164('MX', '+52 55 1234 5678')).toBe('+525512345678');
+        expect(telefonoE164('PA', '6123 4567')).toBe('+50761234567');
+        // «Otro país»: el código va escrito a mano, con o sin + o 00.
+        expect(telefonoE164('OT', '+502 5123 4567')).toBe('+50251234567');
+        expect(telefonoE164('OT', '502 5123 4567')).toBe('+50251234567');
+        expect(telefonoE164('OT', '00502 5123 4567')).toBe('+50251234567');
+        const tel = { tipo: 'telefono' };
+        expect(textoRespuesta(tel, '502 5123 4567', 'OT')).toBe('+502 5123 4567');
+        expect(textoRespuesta(tel, '+502 5123 4567', 'BO')).toBe('+502 5123 4567');
+        expect(textoRespuesta(tel, '7123 4567', 'BO')).toBe('+591 7123 4567');
     });
     it('arma el contrato con copia de preguntas y respuestas', () => {
         const form = normalForm('f', { preguntas: [{ id: 'q1', tipo: 'opciones', titulo: '¿Cuánto?', peso: 1, opciones: [{ id: 'a', texto: 'Mucho', puntos: 10 }] }] });

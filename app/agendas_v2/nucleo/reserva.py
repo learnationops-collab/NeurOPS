@@ -21,6 +21,9 @@ def telefono_e164(pais, tel):
     if crudo.startswith('+'):
         return '+' + dig
     pref = re.sub('[^0-9]', '', pais_de(pais)['d'])
+    # «Otro país»: el código va escrito en el número (con o sin + o 00).
+    if not pref:
+        return '+' + (dig[2:] if crudo.startswith('00') else dig)
     if crudo.startswith('00') and dig[2:].startswith(pref):
         return '+' + dig[2:]
     return '+' + pref + re.sub('^0+', '', dig)
@@ -33,7 +36,12 @@ def texto_respuesta(q, v, pais):
         o = next((x for x in q['opciones'] if x['id'] == v), None)
         return o['texto'] if o else ''
     if q.get('tipo') == 'telefono':
-        return pais_de(pais)['d'] + ' ' + js_str(v)
+        # Con el código escrito a mano (+… u «Otro país») no se le suma el del país elegido.
+        v = js_trim(js_str(v))
+        if v.startswith('+'):
+            return v
+        d = pais_de(pais)['d']
+        return '+' + re.sub('^0+', '', v) if d == '+' else d + ' ' + v
     if q.get('tipo') == 'instagram':
         return '@' + js_str(v)
     return v

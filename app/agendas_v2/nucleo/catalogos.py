@@ -169,6 +169,13 @@ PAISES = [
         ],
     },
     {
+        'c': 'PA',
+        'n': 'Panamá',
+        'd': '+507',
+        'ej': '6123 4567',
+        'z': [['America/Panama', 'Panamá', 'hora de Panamá']],
+    },
+    {
         'c': 'PY',
         'n': 'Paraguay',
         'd': '+595',
@@ -212,7 +219,13 @@ PAISES = [
 ]
 
 
+# «Otro país»: el lead escribe el código a mano (+507 …). Sin zona propia: queda la que tenga.
+PAIS_OTRO = {'c': 'OT', 'n': 'Otro país', 'd': '+', 'ej': '+507 6123 4567', 'z': []}
+
+
 def pais_de(c):
+    if c == PAIS_OTRO['c']:
+        return PAIS_OTRO
     return next((p for p in PAISES if p['c'] == c), PAISES[1])
 
 

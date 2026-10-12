@@ -21,6 +21,7 @@ from app.agendas_v2.nucleo.catalogos import (
     ESTRATEGIAS,
     HORAS,
     MARGENES,
+    PAIS_OTRO,
     PAISES,
     TZ_DEF,
     ZONAS,
@@ -1345,7 +1346,7 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     # El lead que vuelve y confirmó sus datos o sus respuestas no los escribe de nuevo: salen de lo que ya tenemos.
     resp = con_guardados(form, cuerpo, resp)
     limpias, errores, descalifica = _limpiar_respuestas(preguntas, resp)
-    pais = cuerpo.get('pais') if any(p['c'] == cuerpo.get('pais') for p in PAISES) else 'BO'
+    pais = cuerpo.get('pais') if any(p['c'] == cuerpo.get('pais') for p in [*PAISES, PAIS_OTRO]) else 'BO'
     tz = cuerpo.get('tz') if zona_valida(cuerpo.get('tz')) else (evento['zona']['tz'] or TZ_DEF)
     origen = slugify(str(cuerpo.get('origen') or ''))[:60]
     lead = {'preguntas': preguntas, 'resp': limpias, 'pais': pais, 'tz': tz}

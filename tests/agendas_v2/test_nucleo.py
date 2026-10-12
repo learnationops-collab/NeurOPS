@@ -35,7 +35,7 @@ from app.agendas_v2.nucleo.normalizar import (
     preguntas_flujo,
 )
 from app.agendas_v2.nucleo.ocupacion import opciones_de_ocupacion
-from app.agendas_v2.nucleo.reserva import armar_reserva, telefono_e164
+from app.agendas_v2.nucleo.reserva import armar_reserva, telefono_e164, texto_respuesta
 from app.agendas_v2.nucleo.tiempo import date_utc, iso, zoned_to_utc
 from app.agendas_v2.nucleo.util import entero, fmt, js_round
 
@@ -379,6 +379,15 @@ def test_normaliza_el_telefono_a_formato_internacional():
     assert telefono_e164('BO', '7123 4567') == '+59171234567'
     assert telefono_e164('AR', '011 2345-6789') == '+541123456789'
     assert telefono_e164('MX', '+52 55 1234 5678') == '+525512345678'
+    assert telefono_e164('PA', '6123 4567') == '+50761234567'
+    # «Otro país»: el código va escrito a mano, con o sin + o 00.
+    assert telefono_e164('OT', '+502 5123 4567') == '+50251234567'
+    assert telefono_e164('OT', '502 5123 4567') == '+50251234567'
+    assert telefono_e164('OT', '00502 5123 4567') == '+50251234567'
+    tel = {'tipo': 'telefono'}
+    assert texto_respuesta(tel, '502 5123 4567', 'OT') == '+502 5123 4567'
+    assert texto_respuesta(tel, '+502 5123 4567', 'BO') == '+502 5123 4567'
+    assert texto_respuesta(tel, '7123 4567', 'BO') == '+591 7123 4567'
 
 
 def test_arma_el_contrato_con_copia_de_preguntas_y_respuestas():

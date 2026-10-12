@@ -347,7 +347,8 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
         elegirPais(c) {
             setS(p => {
                 const pz = paisDe(c);
-                const tz = !ctx.tzFija && !pz.z.some(z => z[0] === p.tz) ? pz.z[0][0] : p.tz;
+                // «Otro país» no tiene zonas propias: queda la que tenía.
+                const tz = !ctx.tzFija && pz.z.length && !pz.z.some(z => z[0] === p.tz) ? pz.z[0][0] : p.tz;
                 return conFoco({ ...p, pais: c, tz, paisAbierto: false, dia: null, mes: null, hora: null }, '[data-rv="in"]');
             });
         },
