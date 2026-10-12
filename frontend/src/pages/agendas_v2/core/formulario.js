@@ -35,28 +35,34 @@ export function opcionDescalifica(q, resp) {
     return !!(o && o.descalifica);
 }
 
+// Destino especial de una regla o de «Todo lo demás»: el lead no califica (no agenda y ve el fin).
+export const NO_CALIFICA = '__no';
+
 // Ruteo: las reglas se miran en orden y la primera que se cumple decide la prioridad.
 // Una regla se cumple si en cada condición el lead eligió alguna de las respuestas marcadas.
 // Las reglas sin condiciones completas se saltean. Si ninguna se cumple, va a `resto`.
 // Una regla con `url` no elige prioridad: el lead no agenda y se lo manda a esa página.
+// Con destino NO_CALIFICA (no: true) el lead no califica: no agenda y ve el fin.
 export function grupoPorReglas(fo, resp) {
-    if (!fo) return { grupo: '', regla: null, url: '' };
+    if (!fo) return { grupo: '', regla: null, url: '', no: false };
     const reglas = fo.reglas || [];
     for (let i = 0; i < reglas.length; i++) {
         const conds = reglas[i].cond.filter(c => c.q && c.ops.length);
         if (conds.length && conds.every(c => c.ops.includes(resp[c.q]))) {
             const url = reglas[i].url || '';
-            return { grupo: url ? '' : reglas[i].grupo, regla: i, url };
+            const no = !url && reglas[i].grupo === NO_CALIFICA;
+            return { grupo: url || no ? '' : reglas[i].grupo, regla: i, url, no };
         }
     }
-    return { grupo: fo.resto || '', regla: null, url: '' };
+    const no = fo.resto === NO_CALIFICA;
+    return { grupo: no ? '' : fo.resto || '', regla: null, url: '', no };
 }
 
 export function gruposDeForm(fo) {
     const ids = [];
     if (!fo) return ids;
-    fo.reglas.forEach(r => { if (r.grupo && !ids.includes(r.grupo)) ids.push(r.grupo); });
-    if (fo.resto && !ids.includes(fo.resto)) ids.push(fo.resto);
+    fo.reglas.forEach(r => { if (r.grupo && r.grupo !== NO_CALIFICA && !ids.includes(r.grupo)) ids.push(r.grupo); });
+    if (fo.resto && fo.resto !== NO_CALIFICA && !ids.includes(fo.resto)) ids.push(fo.resto);
     return ids;
 }
 

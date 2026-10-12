@@ -446,6 +446,37 @@ def test_una_regla_con_url_no_agenda_y_devuelve_la_pagina(client, armado, google
     assert _reservar(client, q1='a', **{'c-email': 'otro@correo.com'}).status_code == 201
 
 
+def _con_no_califica(regla=True, resto=False):
+    """q1 = «Poco» (b): una regla manda a «No califica»; con resto=True, también todo lo demás."""
+    fo = servicio.colecciones()['formularios'][0]
+    q1 = {**fo['preguntas'][0], 'opciones': fo['preguntas'][0]['opciones'] + [{'id': 'b', 'texto': 'Poco'}]}
+    reglas = [{'id': 'rn', 'grupo': '__no', 'cond': [{'q': 'q1', 'ops': ['b']}]}] if regla else []
+    if resto:
+        reglas.append({'id': 'ra', 'grupo': 'top', 'cond': [{'q': 'q1', 'ops': ['a']}]})
+    cambios = {'preguntas': [q1], 'reglas': reglas, **({'resto': '__no'} if resto else {})}
+    servicio.guardar_doc('formularios', 'fo', cambios, parcial=True)
+
+
+def test_una_regla_a_no_califica_no_agenda_y_queda_descalificado(client, armado, google):
+    _con_no_califica()
+    assert client.post(URL + '/eventos/ev/horarios', json={'resp': _resp(q1='b')}).get_json()['slots'] == []
+    r = _reservar(client, q1='b')
+    assert r.status_code == 201 and r.get_json() == {'descalificada': True}
+    assert Appointment.query.count() == 0 and google['crear'] == []
+    assert Client.query.one().formulario_payload['descalificada'] is True
+    # Los demás siguen agendando.
+    assert _reservar(client, q1='a', **{'c-email': 'otro@correo.com'}).status_code == 201
+
+
+def test_todo_lo_demas_puede_ser_no_califica(client, armado, google):
+    _con_no_califica(regla=False, resto=True)
+    assert client.post(URL + '/eventos/ev/horarios', json={'resp': _resp(q1='b')}).get_json()['slots'] == []
+    assert _reservar(client, q1='b').get_json() == {'descalificada': True}
+    assert client.post(URL + '/eventos/ev/horarios', json={'resp': _resp(q1='a')}).get_json()['slots']
+    assert _reservar(client, q1='a', **{'c-email': 'otro@correo.com'}).status_code == 201
+    assert Appointment.query.count() == 1
+
+
 def test_un_descalificado_no_puede_forzar_un_horario(client, armado):
     _reservar(client, q1='x')
     assert Appointment.query.count() == 0 and Client.query.one().formulario_payload['descalificada'] is True
@@ -980,3 +1011,54 @@ def test_el_closer_ajusta_sus_sesiones_y_lo_que_no_viene_vuelve_a_la_propuesta(c
     client.put('/api/auth/me/sesiones', headers=h, json={'sesiones': {}})
     assert servicio.buscar(servicio.colecciones(), 'personas', 'ana')['sesiones'] == {}
     assert client.get('/api/auth/me/sesiones', headers=auth_headers(cuentas['juan'])).status_code == 403
+# --- Prueba por segmento (Thalamus): lo que vería el lead de una prioridad, sin pasar por el formulario ---
+
+
+def _probar(client, auth_headers, user, grupo, evento='ev'):
+    return client.post(f'/api/agendas-v2/eventos/{evento}/prueba', json={'grupo': grupo}, headers=auth_headers(user))
+
+
+def test_la_prueba_por_segmento_da_los_horarios_del_lead_con_su_closer(client, armado, make_user, auth_headers):
+    director = make_user(role='director_comercial', email='dir@equipo.com')
+    r = _probar(client, auth_headers, director, 'top')
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data['version'] == 'publicada' and data['grupo'] == 'top' and not data['desborde']
+    publicos = client.post(URL + '/eventos/ev/horarios', json={'resp': _resp()}).get_json()['slots']
+    assert [s['t'] for s in data['slots']] == publicos
+    assert {s['p'] for s in data['slots']} == {'ana'}  # Ultra llena primero a Ana
+
+
+def test_la_prueba_fuerza_la_prioridad_elegida(client, armado, make_user, auth_headers, google, cuentas):
+    servicio.guardar_doc(
+        'grupos', 'beto', {'nombre': 'Solo Beto', 'estrategia': 'llenar', 'miembros': ['beto'], 'orden': 2}
+    )
+    director = make_user(role='director_comercial', email='dir@equipo.com')
+    data = _probar(client, auth_headers, director, 'beto').get_json()
+    assert data['grupo'] == 'beto' and {s['p'] for s in data['slots']} == {'beto'}
+    # Lo ocupado en su Google Calendar tampoco se ofrece en la prueba.
+    lunes_9 = calendar.timegm(datetime(2026, 10, 5, 13).timetuple()) * 1000
+    google['ocupado'][cuentas['beto'].id] = [(lunes_9, lunes_9 + 3600000)]
+    servicio._google_cache.clear()
+    data = _probar(client, auth_headers, director, 'beto').get_json()
+    assert lunes_9 not in [s['t'] for s in data['slots']]
+
+
+def test_la_prueba_es_solo_para_la_direccion_y_no_agenda(client, armado, cuentas, auth_headers, db):
+    assert client.post('/api/agendas-v2/eventos/ev/prueba', json={'grupo': 'top'}).status_code == 401
+    assert _probar(client, auth_headers, cuentas['ana'], 'top').status_code == 403
+    director = cuentas['juan']
+    director.role = 'director_comercial'
+    db.session.commit()
+    assert _probar(client, auth_headers, director, 'top').status_code == 200
+    assert Appointment.query.count() == 0
+
+
+def test_la_prueba_de_un_evento_sin_publicar_usa_el_borrador(client, armado, make_user, auth_headers):
+    servicio.guardar_doc(
+        'eventos', 'nuevo', {'nombre': 'Nuevo', 'slug': 'nuevo', 'funnel': 'fu', 'formulario': 'fo', 'duracion': 30}
+    )
+    director = make_user(role='director_comercial', email='dir@equipo.com')
+    data = _probar(client, auth_headers, director, 'top', evento='nuevo').get_json()
+    assert data['version'] == 'borrador' and data['slots']
+    assert _probar(client, auth_headers, director, 'top', evento='nada').status_code == 404

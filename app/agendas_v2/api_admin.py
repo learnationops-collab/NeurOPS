@@ -113,6 +113,17 @@ def ocupacion():
     return jsonify({'ocupacion': servicio.ocupacion_google(desde, hasta)})
 
 
+@bp.route('/eventos/<evento_id>/prueba', methods=['POST'])
+def prueba_horarios(evento_id):
+    """{grupo} → lo que vería un lead de esa prioridad en ese evento (la versión publicada, o el borrador
+    si nunca se publicó), salteando el formulario: {version, slots: [{t, p}], grupo, regla, desborde}.
+    No agenda nada."""
+    if not ID_VALIDO.match(evento_id or ''):
+        return jsonify({'message': 'Not found'}), 404
+    r = servicio.horarios_prueba(servicio.colecciones(), evento_id, _cuerpo().get('grupo'))
+    return jsonify(r) if r else (jsonify({'message': 'Not found'}), 404)
+
+
 @bp.route('/usuarios', methods=['GET'])
 def usuarios():
     """Usuarios activos de la app. Por defecto los closers: Team (quienes atienden) suma personas solo

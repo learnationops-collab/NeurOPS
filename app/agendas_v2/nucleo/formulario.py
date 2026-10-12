@@ -47,19 +47,26 @@ def opcion_descalifica(q, resp):
     return bool(o and o.get('descalifica'))
 
 
+# Destino especial de una regla o de «Todo lo demás»: el lead no califica (no agenda y ve el fin).
+NO_CALIFICA = '__no'
+
+
 def grupo_por_reglas(fo, resp):
     """Ruteo: las reglas se miran en orden y la primera que se cumple decide la prioridad.
     Una regla se cumple si en cada condición el lead eligió alguna de las respuestas marcadas.
     Las reglas sin condiciones completas se saltean. Si ninguna se cumple, va a `resto`.
-    Una regla con `url` no elige prioridad: el lead no agenda y se lo manda a esa página."""
+    Una regla con `url` no elige prioridad: el lead no agenda y se lo manda a esa página.
+    Con destino NO_CALIFICA (`no`: True) el lead no califica: no agenda y ve el fin."""
     if not fo:
-        return {'grupo': '', 'regla': None, 'url': ''}
+        return {'grupo': '', 'regla': None, 'url': '', 'no': False}
     for i, r in enumerate(fo.get('reglas') or []):
         conds = [c for c in r['cond'] if js_truthy(c.get('q')) and c.get('ops')]
         if conds and all(resp.get(c['q']) in c['ops'] for c in conds):
             url = r.get('url') or ''
-            return {'grupo': '' if url else r['grupo'], 'regla': i, 'url': url}
-    return {'grupo': fo.get('resto') or '', 'regla': None, 'url': ''}
+            no = not url and r['grupo'] == NO_CALIFICA
+            return {'grupo': '' if url or no else r['grupo'], 'regla': i, 'url': url, 'no': no}
+    no = fo.get('resto') == NO_CALIFICA
+    return {'grupo': '' if no else fo.get('resto') or '', 'regla': None, 'url': '', 'no': no}
 
 
 def texto_regla(fo, i):
@@ -83,9 +90,9 @@ def grupos_de_form(fo):
     if not fo:
         return ids
     for r in fo['reglas']:
-        if r['grupo'] and r['grupo'] not in ids:
+        if r['grupo'] and r['grupo'] != NO_CALIFICA and r['grupo'] not in ids:
             ids.append(r['grupo'])
-    if fo.get('resto') and fo['resto'] not in ids:
+    if fo.get('resto') and fo['resto'] != NO_CALIFICA and fo['resto'] not in ids:
         ids.append(fo['resto'])
     return ids
 

@@ -51,13 +51,14 @@ function armarCtx(form, ev, persona, d) {
     };
 }
 
-function estadoInicial(ctx, { desde = 0, ejemplo = '' } = {}, enfocar = true) {
+// resp/fin/finUrl: la prueba por segmento arranca con el lead de prueba ya cargado (o directo en el fin).
+function estadoInicial(ctx, { desde = 0, ejemplo = '', resp = null, fin = false, finUrl = '' } = {}, enfocar = true) {
     const p0 = detectarPais();
     return {
-        idx: Math.min(desde || 0, ctx.preguntas.length), resp: {}, ejemplo: ejemplo || '', tel: '',
+        idx: Math.min(desde || 0, ctx.preguntas.length), resp: resp ? { ...resp } : {}, ejemplo: ejemplo || '', tel: (resp && resp['c-telefono']) || '',
         pais: p0.c, tz: ctx.tzFija || p0.tz, mes: null, dia: null, hora: null,
         error: '', errN: 0, paisAbierto: false, zonaAbierta: false, busca: '',
-        fin: false, finUrl: '', listo: false, slot: null, asigFinal: null, recalc: 0, vuelta: 0,
+        fin: !!fin, finUrl: finUrl || '', listo: false, slot: null, asigFinal: null, recalc: 0, vuelta: 0,
         // El lead que vuelve: buscando (la pregunta, WhatsApp o correo, con la que se lo busca), visto (con
         // cuál se lo reconoció: no se lo vuelve a buscar con la otra), reco (lo que se encontró) y su paso,
         // siYaTiene (lo que eligió con la sesión que ya tenía), guardados/tapados (confirmó sus datos guardados),
@@ -78,10 +79,12 @@ function fijarTexto(p, preguntas) {
     return { ...p, resp: { ...p.resp, [q.id]: limpiarRespuesta(q, p.resp[q.id]) } };
 }
 
-// La página a la que una regla manda al lead (no agenda). Con persona fija no hay segmentación.
-function urlPorReglas(ctx, resp) {
-    if (!ctx || !ctx.form || ctx.persona) return '';
-    return grupoPorReglas(ctx.form, resp).url || '';
+// Lo que la segmentación decide al terminar las preguntas: {url} (una regla lo manda a otra página) o
+// {no} (lo manda a «No califica»). En los dos casos no agenda. Con persona fija no hay segmentación.
+function cortePorReglas(ctx, resp) {
+    if (!ctx || !ctx.form || ctx.persona) return { url: '', no: false };
+    const r = grupoPorReglas(ctx.form, resp);
+    return { url: r.url || '', no: !!r.no };
 }
 
 // Con qué se reconoce al lead que vuelve: su WhatsApp o su correo (el que deje primero).
@@ -95,7 +98,7 @@ function ofrecePrevias(p, preguntas) {
 
 // reconocer: el proveedor sabe buscar al lead que vuelve; al dejar el WhatsApp o el correo se lo busca
 // antes de seguir (con el segundo, solo si con el primero no apareció).
-// ctx: al terminar las preguntas, una regla con url corta como un descalificado y lo manda a esa página.
+// ctx: al terminar las preguntas, una regla con url (o a «No califica») corta como un descalificado.
 function seguirDe(p, preguntas, reconocer = false, ctx = null) {
     if (p.idx >= preguntas.length || p.listo || p.fin || p.buscando || p.reco || ofrecePrevias(p, preguntas)) return p;
     const q = preguntas[p.idx], p1 = fijarTexto(p, preguntas);
@@ -106,8 +109,9 @@ function seguirDe(p, preguntas, reconocer = false, ctx = null) {
         return { ...cerrado, buscando: q.id, visto: '', recoN: p1.recoN + 1, guardados: false, tapados: null, siYaTiene: null, previas: null, usaPrevias: null };
     }
     if (opcionDescalifica(q, p1.resp)) return conFoco({ ...cerrado, fin: true }, 'entra');
-    const url = p1.idx + 1 >= preguntas.length ? urlPorReglas(ctx, p1.resp) : '';
-    if (url) return conFoco({ ...cerrado, fin: true, finUrl: url }, 'entra');
+    const corte = p1.idx + 1 >= preguntas.length ? cortePorReglas(ctx, p1.resp) : { url: '', no: false };
+    if (corte.url) return conFoco({ ...cerrado, fin: true, finUrl: corte.url }, 'entra');
+    if (corte.no) return conFoco({ ...cerrado, fin: true }, 'entra');
     return conFoco({ ...cerrado, idx: p1.idx + 1, busca: '' }, 'entra');
 }
 
@@ -154,7 +158,7 @@ function elegirPrevias(p, si, preguntas, ctx) {
     if (!si) return conFoco({ ...p, usaPrevias: false }, 'entra');
     const resp = { ...p.resp, ...(p.previas.resp || {}) };
     let corte = p.previas.resp ? null : { url: p.previas.url || '', no: !!p.previas.no };
-    if (!corte) corte = preguntas.some(q => opcionDescalifica(q, resp)) ? { url: '', no: true } : { url: urlPorReglas(ctx, resp), no: false };
+    if (!corte) corte = preguntas.some(q => opcionDescalifica(q, resp)) ? { url: '', no: true } : cortePorReglas(ctx, resp);
     const p1 = { ...p, resp, usaPrevias: true, idx: preguntas.length, busca: '', error: '' };
     if (corte.url) return conFoco({ ...p1, fin: true, finUrl: corte.url }, 'entra');
     if (corte.no) return conFoco({ ...p1, fin: true }, 'entra');
@@ -171,11 +175,13 @@ function atrapar(e, cont) {
 }
 
 /**
- * fuente: {form, evento?, persona?, desde?, ejemplo?}. En el link público, evento y form son la versión publicada.
+ * fuente: {form, evento?, persona?, desde?, ejemplo?, resp?, fin?, finUrl?, etiqueta?}. En el link público, evento y form son la versión publicada.
+ * etiqueta: lo que se está probando (va junto a «Prueba»).
  * proveedor: proveedorLocal(...) o proveedorApi() (reserva/proveedores.js).
  * origen: slug de ?o=; setter: id de la persona del origen (lo resuelve la página pública en modo local).
+ * onReiniciar: en vez de volver a empezar acá, «Probar de nuevo» hace esto (la prueba por segmento vuelve a elegir).
  */
-export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevModo = 'escritorio', origen = '', setter = null, onSalir }) {
+export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevModo = 'escritorio', origen = '', setter = null, onSalir, onReiniciar }) {
     const d = proveedor.d || SIN_DATOS;
     const sinc = proveedor.sinc !== false;
     const prueba = modo !== 'publico';
@@ -245,6 +251,7 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
     }, [s.focoN]);
 
     // Link público: el que no califica queda registrado (sin horario) para contarlo después. Una sola vez.
+    // Si una regla lo manda a otra página, se lo lleva ahí después de registrarlo (o a los 3 s, si tarda).
     useEffect(() => {
         if (modo !== 'publico' || !s.fin || descRef.current || !ctx.evento) return;
         descRef.current = true;
@@ -393,6 +400,7 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
             });
         },
         reiniciar() {
+            if (onReiniciar) { onReiniciar(); return; }
             clearTimeout(timerRef.current);
             descRef.current = false;
             setEnvio({ enviando: false, error: '', n: 0 });
@@ -488,7 +496,7 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
             <div className="rv-progreso" role="progressbar" aria-label="Avance" aria-valuemin={1} aria-valuemax={tot} aria-valuenow={Math.min(idx + 1, tot)}>{puntos}</div>
             <main className="rv-cuerpo" ref={cuerpoRef}><Fragment key={s.vuelta + '-' + clave}>{paso}</Fragment></main>
             <div className="rv-control">
-                {prueba && <span className="rv-prueba"><Icono n="play" s={13} />Prueba<span className="rv-prueba-largo">&nbsp;· no se agenda nada</span></span>}
+                {prueba && <span className="rv-prueba"><Icono n="play" s={13} />Prueba<span className="rv-prueba-largo">&nbsp;· {fuente.etiqueta ? fuente.etiqueta + ' · ' : ''}no se agenda nada</span></span>}
                 <div className="rv-nav">
                     <button type="button" className="rv-navbtn" aria-label="Anterior" disabled={(idx === 0 && !s.reco) || terminado} onClick={acc.atras}><Icono n="chevron-up" s={18} /></button>
                     <button type="button" className="rv-navbtn" aria-label="Siguiente" disabled={idx >= n || terminado || !!s.reco || !!s.buscando || ofrecePrevias(s, preguntas)} onClick={acc.seguir}><Icono n="chevron-down" s={18} /></button>

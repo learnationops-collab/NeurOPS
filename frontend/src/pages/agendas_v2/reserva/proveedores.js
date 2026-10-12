@@ -102,6 +102,26 @@ export function proveedorLocal(d, reservas = [], crear = null) {
     };
 }
 
+// Prueba por segmento (Thalamus): los horarios de una prioridad (grupo), salteando el formulario. No agenda.
+// Con la API los pide al servidor (los mismos que vería el lead: closers que pueden recibir, sus agendas
+// y su Google Calendar) y dice de quién es cada uno; en modo local los calcula acá.
+export function proveedorPrueba(d, reservas, eventoId, grupo, conApi) {
+    if (!conApi) {
+        const local = proveedorLocal(d, reservas);
+        return { ...local, horarios({ ctx, prueba }) { return local.horarios({ ctx: { ...ctx, reglas: [], resto: grupo }, prueba }); } };
+    }
+    return {
+        tipo: 'prueba', sinc: false, d,
+        async horarios({ signal }) {
+            try {
+                const { data } = await api.post(`/agendas-v2/eventos/${seg(eventoId)}/prueba`, { grupo }, { signal });
+                const slots = (data && Array.isArray(data.slots) ? data.slots : []).filter(x => x && Number.isFinite(x.t)).map(x => ({ t: x.t, p: x.p || null }));
+                return { slots, aviso: '', regla: data.regla || '', desborde: !!data.desborde, grupo: buscar(d, 'grupos', data.grupo) || null };
+            } catch (e) { throw errorPublico(e); }
+        },
+    };
+}
+
 // Error de axios → {code} que entiende la pantalla del lead.
 function errorPublico(e) {
     const st = e && e.response ? e.response.status : null;

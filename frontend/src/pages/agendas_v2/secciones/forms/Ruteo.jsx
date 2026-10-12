@@ -1,10 +1,11 @@
 // Segmentación: reglas en orden; la primera que se cumple elige la estrategia. Lo que no cumple ninguna va a "Todo lo demás".
+// Una regla o «Todo lo demás» puede mandar a «No califica» en vez de a una estrategia: ese lead no agenda y ve el fin.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { almacen } from '../../data/hooks';
 import { conOpciones } from '../../core/catalogos';
 import { buscar, nombreGrupo, ord as ordCol } from '../../core/datos';
-import { reglasRotas, revisarSegmentacion } from '../../core/formulario';
+import { NO_CALIFICA, reglasRotas, revisarSegmentacion } from '../../core/formulario';
 import { urlOk } from '../../core/normalizar';
 import { uid } from '../../core/util';
 import { Humo, HUMO_MARCA, Icono, Sx } from '../../ui/base';
@@ -31,12 +32,15 @@ function Revision({ avisos }) {
     );
 }
 
+// «No califica»: va en todos los destinos, después de las estrategias.
+const OP_NO = { v: NO_CALIFICA, n: 'No califica', icono: 'prohibido', color: 'var(--error)' };
+
 function Destino({ d, valor, onChange, label, extra = [] }) {
-    const gs = ordCol(d, 'grupos'), g = buscar(d, 'grupos', valor), i = gs.indexOf(g);
+    const gs = ordCol(d, 'grupos'), g = buscar(d, 'grupos', valor), i = gs.indexOf(g), no = valor === NO_CALIFICA;
     return (
-        <div className="destino" style={{ '--c': g ? colorNivel(i + 1) : 'var(--idle)' }}>
+        <div className="destino" style={{ '--c': g ? colorNivel(i + 1) : no ? 'var(--error)' : 'var(--idle)' }}>
             <span className="destino-flecha" aria-hidden="true"><Icono n="chevron-right" s={16} /></span>
-            <Sx sm label={label} valor={g ? valor : ''} opciones={opcionesPrioridad(d).concat(extra)} onChange={onChange} />
+            <Sx sm label={label} valor={g || no ? valor : ''} opciones={opcionesPrioridad(d).concat([OP_NO], extra)} onChange={onChange} />
         </div>
     );
 }

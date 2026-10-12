@@ -950,6 +950,41 @@ def horarios(d, evento, form, resp, ahora=None):
     return sorted({s['t'] for s in asig['slots']})
 
 
+def version_para_prueba(d, e):
+    """(evento, form, 'publicada'|'borrador') que se prueba: la publicada si existe (la que ve el lead),
+    si no el borrador. Sin mirar si está activo: se puede probar algo pausado."""
+    pub = version_publicada(e)
+    if pub:
+        evento, form, version = pub['evento'], pub.get('form'), 'publicada'
+    else:
+        evento, form, version = e, buscar(d, 'formularios', e.get('formulario')), 'borrador'
+    if not form and evento.get('persona'):
+        form = form_solo_contacto()
+    return evento, form, version
+
+
+def horarios_prueba(d, evento_id, grupo, ahora=None):
+    """Lo que vería el lead de esa prioridad (grupo): los mismos horarios que la página pública (closers
+    elegibles, agendas y Google Calendar), salteando el formulario. Para la dirección: dice de qué
+    closer es cada horario. None si el evento no existe."""
+    e = buscar(d, 'eventos', evento_id)
+    if not e:
+        return None
+    evento, form, version = version_para_prueba(d, e)
+    ahora = ahora or ahora_ms()
+    d, elegibles = solo_elegibles(d)
+    # Sin reglas y con `resto` = la prioridad elegida: el ruteo cae siempre ahí.
+    ctx = {**_contexto(evento, form or {}, {}), 'reglas': [], 'resto': str(grupo or '')}
+    asig = asignacion(ctx, d, {**_ocupacion(ahora, elegibles), 'prueba': False})
+    return {
+        'version': version,
+        'slots': sorted(({'t': s['t'], 'p': s['p']} for s in asig['slots']), key=lambda s: s['t']),
+        'grupo': asig['grupo']['id'] if asig.get('grupo') else '',
+        'regla': asig.get('regla') or '',
+        'desborde': bool(asig.get('desborde')),
+    }
+
+
 def setters_activos():
     """Los setters de NeurOPS (rol principal o extra), activos: los que tienen link en un funnel de setting."""
     from app.models.user import ROLE_SETTER, User
@@ -1284,7 +1319,8 @@ def _respuesta(appt):
 
 def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     """Toma la agenda y la escribe en la operacion (operacion.py). Devuelve (resultado, creada):
-    resultado es {'descalificada': True} o {'id', 'inicio', 'fin', 'duracion'} (ms).
+    resultado es {'descalificada': True}, {'descalificada': True, 'redirigir': url} (una regla lo manda a
+    otra página) o {'id', 'inicio', 'fin', 'duracion'} (ms).
     Lanza ReservaRechazadaError."""
     from app.models import User
 
@@ -1308,7 +1344,13 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     if errores:
         raise ReservaRechazadaError('invalido', errores)
     # Una regla que manda a otra página: no agenda, queda como los que no califican.
-    url = '' if evento.get('persona') else grupo_por_reglas(form, limpias)['url']
+    ruteo = {'url': '', 'no': False} if evento.get('persona') else grupo_por_reglas(form, limpias)
+    if ruteo['no']:
+        # La segmentación lo manda a «No califica».
+        _cerrar_intento(evento, form, funnel, limpias, origen, setter, True)
+        operacion.registrar_descalificado({**armar_reserva(**base, asig=None, slot=None), 'descalificada': True})
+        return {'descalificada': True}, True
+    url = ruteo['url']
     if url:
         _cerrar_intento(evento, form, funnel, limpias, origen, setter, True)
         payload = armar_reserva(**base, asig=None, slot=None)

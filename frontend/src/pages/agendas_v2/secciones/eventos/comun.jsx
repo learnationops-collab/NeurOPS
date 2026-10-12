@@ -118,6 +118,12 @@ export function probarEvento(d, e) {
     ui.set({ prueba: { evento: e, form: formDeEvento(d, e) } });
 }
 
+// Prueba por segmento: se elige la segmentación y se saltea el formulario (reserva/PruebaSegmento).
+export function probarSegmento(e) {
+    almacen.flush();
+    ui.set({ prueba: { evento: e.id, segmento: '', porSegmento: true } });
+}
+
 // Qué pasa con los leads de una prioridad, en una línea.
 export function textoEstrategia(d, g) {
     const ns = g.miembros.map(id => { const p = buscar(d, 'personas', id); return p ? p.nombre : ''; }).filter(Boolean);

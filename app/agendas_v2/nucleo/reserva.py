@@ -91,7 +91,8 @@ def armar_reserva(*, lead, evento, funnel=None, form=None, asig=None, slot=None,
         'regla_idx': _de(asig, 'regla_idx', 'reglaIdx') if asig else None,
         'desborde': bool(asig and asig.get('desborde')),
         'nota': calificar(preguntas, resp),
-        'descalificada': any(r['descalifica'] for r in respuestas),
+        # No califica por una respuesta o porque la segmentación lo manda a «No califica».
+        'descalificada': any(r['descalifica'] for r in respuestas) or bool(asig and asig.get('no')),
         'origen': origen or '',
         'setter_id': setter or None,
         'lead': {

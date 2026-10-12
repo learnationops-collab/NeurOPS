@@ -82,6 +82,15 @@ describe('PantallaLead', () => {
         expect(container.querySelector('.rv-dia')).toBeNull();
     });
 
+    it('una regla a «No califica» corta antes del calendario con el cierre', async () => {
+        const conNo = normalForm('f3', { ...form, reglas: [{ id: 'r1', grupo: '__no', cond: [{ q: 'q1', ops: ['o1'] }] }] });
+        const { container } = render(<PantallaLead fuente={{ form: conNo }} proveedor={local()} modo="prueba" />);
+        await responderContacto(container);
+        elegir('Lo necesario');
+        expect(screen.getByRole('heading', { name: 'Gracias por tu sinceridad' })).toBeInTheDocument();
+        expect(container.querySelector('.rv-dia')).toBeNull();
+    });
+
     it('avanza con los datos de contacto y una opción hasta el calendario', async () => {
         const { container } = render(<PantallaLead fuente={{ form }} proveedor={local()} modo="prueba" />);
         await responderContacto(container);

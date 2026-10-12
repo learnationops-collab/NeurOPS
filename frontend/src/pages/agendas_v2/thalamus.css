@@ -1348,6 +1348,9 @@
 .thalamus .rv-op[aria-checked="true"],.thalamus .rv-op[aria-selected="true"]{border-color:var(--rv-acento);background:var(--rv-acento-suave)}
 .thalamus .rv-op[aria-checked="true"] kbd,.thalamus .rv-op[aria-selected="true"] kbd{background:var(--rv-acento);border-color:var(--rv-acento);color:var(--rv-on-acento)}
 .thalamus .rv-op[aria-checked="true"] > svg,.thalamus .rv-op[aria-selected="true"] > svg{opacity:1}
+/* Prueba por segmento: de dónde sale cada segmentación, debajo de su nombre. */
+.thalamus .rv-op-sub{display:block;margin-top:2px;font-size:.8em;font-weight:500;color:var(--rv-mut)}
+.thalamus .rv-op:hover > svg:last-child{opacity:.6}
 .thalamus .rv-nada{padding:14px;color:var(--rv-mut40);font-size:15px}
 .thalamus .rv-tel{margin-top:clamp(28px,3.4cqi,50px);width:100%;min-width:0;display:flex;align-items:flex-end;gap:14px}
 .thalamus .rv-pais-caja{position:relative;flex-shrink:0}

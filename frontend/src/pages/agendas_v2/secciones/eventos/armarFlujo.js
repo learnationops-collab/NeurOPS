@@ -4,6 +4,7 @@
 import { CONTACTO, ESTRATEGIAS, FIN_DEF, conOpciones } from '../../core/catalogos';
 import { buscar, nombreGrupo, ord } from '../../core/datos';
 import { linkEvento } from '../../core/eventos';
+import { NO_CALIFICA } from '../../core/formulario';
 
 export const NW = 236, NGAP = 84, ROW0 = 90, ROWH = 36;
 
@@ -75,13 +76,16 @@ export function armarFlujo(d, e, reach, calor) {
     } else {
         const rutas = fo
             ? fo.reglas.filter(rg => !rg.url).map((rg) => ({ t: 'Regla ' + (fo.reglas.indexOf(rg) + 1) + ' → ' + nombreGrupo(d, rg.grupo), g: rg.grupo })).concat([{ t: 'Todo lo demás → ' + nombreGrupo(d, fo.resto), g: fo.resto }])
+                // «No califica» va al fin, no a una estrategia.
+                .map(x => ({ ...x, no: x.g === NO_CALIFICA }))
             : [{ t: 'Todos', g: '' }];
-        const nf = nodo({ id: 'calif', col: col++, y: 60, tipo: 'Función', c: 'var(--brand-secondary)', ico: 'rayo', tit: 'Segmentar por respuestas', filas: rutas.map(x => ({ t: x.t })), calor: rFin(2) });
+        const nf = nodo({ id: 'calif', col: col++, y: 60, tipo: 'Función', c: 'var(--brand-secondary)', ico: 'rayo', tit: 'Segmentar por respuestas', filas: rutas.map(x => ({ t: x.t, no: x.no })), calor: rFin(2) });
         unir(prev, nf);
         if (hayNo()) nodoNo(nf);
         const gcol = col++, ngs = [], porG = {}, grupos = ord(d, 'grupos');
         let gy = 60;
         rutas.forEach((rt, i) => {
+            if (rt.no) return;
             if (porG[rt.g]) { aristas.push([nf, i, porG[rt.g], 'fn']); return; }
             const g = buscar(d, 'grupos', rt.g);
             const ms = g ? g.miembros.map(id => buscar(d, 'personas', id)).filter(Boolean) : [];
