@@ -50,14 +50,16 @@ def opcion_descalifica(q, resp):
 def grupo_por_reglas(fo, resp):
     """Ruteo: las reglas se miran en orden y la primera que se cumple decide la prioridad.
     Una regla se cumple si en cada condición el lead eligió alguna de las respuestas marcadas.
-    Las reglas sin condiciones completas se saltean. Si ninguna se cumple, va a `resto`."""
+    Las reglas sin condiciones completas se saltean. Si ninguna se cumple, va a `resto`.
+    Una regla con `url` no elige prioridad: el lead no agenda y se lo manda a esa página."""
     if not fo:
-        return {'grupo': '', 'regla': None}
+        return {'grupo': '', 'regla': None, 'url': ''}
     for i, r in enumerate(fo.get('reglas') or []):
         conds = [c for c in r['cond'] if js_truthy(c.get('q')) and c.get('ops')]
         if conds and all(resp.get(c['q']) in c['ops'] for c in conds):
-            return {'grupo': r['grupo'], 'regla': i}
-    return {'grupo': fo.get('resto') or '', 'regla': None}
+            url = r.get('url') or ''
+            return {'grupo': '' if url else r['grupo'], 'regla': i, 'url': url}
+    return {'grupo': fo.get('resto') or '', 'regla': None, 'url': ''}
 
 
 def texto_regla(fo, i):
@@ -166,6 +168,7 @@ def duplicar_form(fd):
         {
             'id': uid('r'),
             'grupo': r['grupo'],
+            'url': r.get('url') or '',
             'cond': [{'q': mq.get(c['q']) or '', 'ops': [mo[o] for o in c['ops'] if mo.get(o)]} for c in r['cond']],
         }
         for r in fd['reglas']

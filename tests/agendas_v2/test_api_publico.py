@@ -417,6 +417,25 @@ def test_el_descalificado_queda_como_cliente_sin_agenda(client, armado, google):
     assert Appointment.query.count() == 0 and FinancialAgenda.query.count() == 0 and google['crear'] == []
 
 
+def _con_regla_url():
+    fo = servicio.colecciones()['formularios'][0]
+    q1 = {**fo['preguntas'][0], 'opciones': fo['preguntas'][0]['opciones'] + [{'id': 'b', 'texto': 'Poco'}]}
+    regla = {'id': 'ru', 'url': 'https://academy.thelearnation.com/', 'cond': [{'q': 'q1', 'ops': ['b']}]}
+    servicio.guardar_doc('formularios', 'fo', {'preguntas': [q1], 'reglas': [regla]}, parcial=True)
+
+
+def test_una_regla_con_url_no_agenda_y_devuelve_la_pagina(client, armado, google):
+    _con_regla_url()
+    assert client.post(URL + '/eventos/ev/horarios', json={'resp': _resp(q1='b')}).get_json()['slots'] == []
+    r = _reservar(client, q1='b')
+    assert r.status_code == 201
+    assert r.get_json() == {'descalificada': True, 'redirigir': 'https://academy.thelearnation.com/'}
+    assert Appointment.query.count() == 0 and google['crear'] == []
+    assert Client.query.one().formulario_payload['descalificada'] is True
+    # Los demás siguen agendando.
+    assert _reservar(client, q1='a', **{'c-email': 'otro@correo.com'}).status_code == 201
+
+
 def test_un_descalificado_no_puede_forzar_un_horario(client, armado):
     _reservar(client, q1='x')
     assert Appointment.query.count() == 0 and Client.query.one().formulario_payload['descalificada'] is True

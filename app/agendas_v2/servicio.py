@@ -31,7 +31,7 @@ from app.agendas_v2.nucleo.catalogos import (
 from app.agendas_v2.nucleo.datos import buscar, nombre_origen, ordenados, rol_closer, sesion_de
 from app.agendas_v2.nucleo.disponibilidad import se_solapa
 from app.agendas_v2.nucleo.eventos import con_form_al_dia, config_de, link_evento, slug_libre, version_publicada
-from app.agendas_v2.nucleo.formulario import limpiar_respuesta, texto_regla, validar_respuesta
+from app.agendas_v2.nucleo.formulario import grupo_por_reglas, limpiar_respuesta, texto_regla, validar_respuesta
 from app.agendas_v2.nucleo.normalizar import (
     COLECCIONES,
     NORM,
@@ -1202,6 +1202,13 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
         return {'descalificada': True}, True
     if errores:
         raise ReservaRechazadaError('invalido', errores)
+    # Una regla que manda a otra página: no agenda, queda como los que no califican.
+    url = '' if evento.get('persona') else grupo_por_reglas(form, limpias)['url']
+    if url:
+        _cerrar_intento(evento, form, funnel, limpias, origen, setter, True)
+        payload = armar_reserva(**base, asig=None, slot=None)
+        operacion.registrar_descalificado({**payload, 'descalificada': True, 'redirigir': url})
+        return {'descalificada': True, 'redirigir': url}, True
 
     try:
         inicio = int(datetime.fromisoformat(str(cuerpo.get('inicio')).replace('Z', '+00:00')).timestamp() * 1000)

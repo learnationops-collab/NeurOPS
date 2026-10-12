@@ -65,6 +65,16 @@ function elegir(texto) {
 const elegirDia = (container) => fireEvent.click(container.querySelector('.rv-dia:not(:disabled)'));
 
 describe('PantallaLead', () => {
+    it('una regla con url corta antes del calendario y avisa a dónde va el lead', () => {
+        const conUrl = normalForm('f2', { ...form, reglas: [{ id: 'r1', url: 'https://academy.thelearnation.com/', cond: [{ q: 'q1', ops: ['o1'] }] }] });
+        const { container } = render(<PantallaLead fuente={{ form: conUrl }} proveedor={local()} modo="prueba" />);
+        responderContacto(container);
+        elegir('Lo necesario');
+        expect(screen.getByRole('heading', { name: 'Gracias, Ana.' })).toBeInTheDocument();
+        expect(screen.getByText(/academy\.thelearnation\.com/)).toBeInTheDocument();
+        expect(container.querySelector('.rv-dia')).toBeNull();
+    });
+
     it('avanza con los datos de contacto y una opción hasta el calendario', () => {
         const { container } = render(<PantallaLead fuente={{ form }} proveedor={local()} modo="prueba" />);
         responderContacto(container);

@@ -74,7 +74,7 @@ export function armarFlujo(d, e, reach, calor) {
         cierre([np]);
     } else {
         const rutas = fo
-            ? fo.reglas.map((rg, i) => ({ t: 'Regla ' + (i + 1) + ' → ' + nombreGrupo(d, rg.grupo), g: rg.grupo })).concat([{ t: 'Todo lo demás → ' + nombreGrupo(d, fo.resto), g: fo.resto }])
+            ? fo.reglas.filter(rg => !rg.url).map((rg) => ({ t: 'Regla ' + (fo.reglas.indexOf(rg) + 1) + ' → ' + nombreGrupo(d, rg.grupo), g: rg.grupo })).concat([{ t: 'Todo lo demás → ' + nombreGrupo(d, fo.resto), g: fo.resto }])
             : [{ t: 'Todos', g: '' }];
         const nf = nodo({ id: 'calif', col: col++, y: 60, tipo: 'Función', c: 'var(--brand-secondary)', ico: 'rayo', tit: 'Segmentar por respuestas', filas: rutas.map(x => ({ t: x.t })), calor: rFin(2) });
         unir(prev, nf);

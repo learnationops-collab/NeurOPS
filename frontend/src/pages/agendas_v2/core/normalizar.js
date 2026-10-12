@@ -63,8 +63,10 @@ export function normalPregunta(q) {
 export function normalReglas(reglas) {
     return (Array.isArray(reglas) ? reglas : []).slice(0, 20).map(r => {
         r = r || {};
+        // url: la regla no manda a una estrategia sino a otra página (el lead no agenda).
+        const url = urlOk(r.url);
         return {
-            id: String(r.id || uid('r')).slice(0, 40), grupo: String(r.grupo || ''),
+            id: String(r.id || uid('r')).slice(0, 40), grupo: url ? '' : String(r.grupo || ''), url,
             cond: (Array.isArray(r.cond) ? r.cond : []).slice(0, 8).map(c => { c = c || {}; return { q: String(c.q || ''), ops: (Array.isArray(c.ops) ? c.ops : []).map(String).slice(0, 60) }; }),
         };
     });

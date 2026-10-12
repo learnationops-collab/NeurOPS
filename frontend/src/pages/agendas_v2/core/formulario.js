@@ -38,14 +38,18 @@ export function opcionDescalifica(q, resp) {
 // Ruteo: las reglas se miran en orden y la primera que se cumple decide la prioridad.
 // Una regla se cumple si en cada condición el lead eligió alguna de las respuestas marcadas.
 // Las reglas sin condiciones completas se saltean. Si ninguna se cumple, va a `resto`.
+// Una regla con `url` no elige prioridad: el lead no agenda y se lo manda a esa página.
 export function grupoPorReglas(fo, resp) {
-    if (!fo) return { grupo: '', regla: null };
+    if (!fo) return { grupo: '', regla: null, url: '' };
     const reglas = fo.reglas || [];
     for (let i = 0; i < reglas.length; i++) {
         const conds = reglas[i].cond.filter(c => c.q && c.ops.length);
-        if (conds.length && conds.every(c => c.ops.includes(resp[c.q]))) return { grupo: reglas[i].grupo, regla: i };
+        if (conds.length && conds.every(c => c.ops.includes(resp[c.q]))) {
+            const url = reglas[i].url || '';
+            return { grupo: url ? '' : reglas[i].grupo, regla: i, url };
+        }
     }
-    return { grupo: fo.resto || '', regla: null };
+    return { grupo: fo.resto || '', regla: null, url: '' };
 }
 
 export function gruposDeForm(fo) {
@@ -82,10 +86,12 @@ const MAX_COMBOS = 20000;
 export function revisarSegmentacion(fo, nombreGrupo = (id) => id) {
     if (!fo) return [];
     const avisos = [];
-    const reglas = fo.reglas.map((r, i) => ({ i, grupo: r.grupo, conds: r.cond.filter(c => c.q && c.ops.length) }));
+    // destino: la estrategia o la página a la que manda la regla (para ver si dos reglas se pisan).
+    const reglas = fo.reglas.map((r, i) => ({ i, grupo: r.grupo, url: r.url || '', destino: r.url ? 'url:' + r.url : r.grupo, conds: r.cond.filter(c => c.q && c.ops.length) }));
+    const nombreDestino = (r) => (r.url ? r.url.replace(/^https:\/\//i, '') : nombreGrupo(r.grupo));
     reglas.forEach(r => {
         if (!r.conds.length) avisos.push({ k: 'sin-regla', nivel: 'error', regla: r.i, t: 'La regla ' + (r.i + 1) + ' no tiene condiciones completas: nunca se cumple.' });
-        else if (!r.grupo) avisos.push({ k: 'sin-destino', nivel: 'error', regla: r.i, t: 'La regla ' + (r.i + 1) + ' no tiene estrategia.' });
+        else if (!r.destino) avisos.push({ k: 'sin-destino', nivel: 'error', regla: r.i, t: 'La regla ' + (r.i + 1) + ' no tiene estrategia.' });
     });
     const usadas = [...new Set(reglas.flatMap(r => r.conds.map(c => c.q)))]
         .map(id => fo.preguntas.find(q => q.id === id && conOpciones(q.tipo))).filter(Boolean);
@@ -106,7 +112,7 @@ export function revisarSegmentacion(fo, nombreGrupo = (id) => id) {
                 }
                 gana[cumplen[0].i]++;
                 cumplen.slice(1).forEach(r => {
-                    if (r.grupo === cumplen[0].grupo) return;
+                    if (r.destino === cumplen[0].destino) return;
                     const clave = cumplen[0].i + '-' + r.i;
                     choques.set(clave, (choques.get(clave) || 0) + 1);
                 });
@@ -127,7 +133,7 @@ export function revisarSegmentacion(fo, nombreGrupo = (id) => id) {
             if (!gana[b]) return; // ya avisada como «nunca»
             avisos.push({
                 k: 'repetida', nivel: 'warning', regla: b,
-                t: 'Las reglas ' + (a + 1) + ' y ' + (b + 1) + ' se pisan en ' + n + (n === 1 ? ' caso' : ' casos') + ' y mandan a estrategias distintas: gana la ' + (a + 1) + ' (' + nombreGrupo(reglas[a].grupo) + ').',
+                t: 'Las reglas ' + (a + 1) + ' y ' + (b + 1) + ' se pisan en ' + n + (n === 1 ? ' caso' : ' casos') + ' y mandan a estrategias distintas: gana la ' + (a + 1) + ' (' + nombreDestino(reglas[a]) + ').',
             });
         });
         if (alResto) {
@@ -193,6 +199,6 @@ export function duplicarForm(fd) {
         q.opciones.forEach((o, j) => { mo[o.id] = c.opciones[j].id; });
         return c;
     });
-    const reglas = fd.reglas.map(r => ({ id: uid('r'), grupo: r.grupo, cond: r.cond.map(c => ({ q: mq[c.q] || '', ops: c.ops.map(o => mo[o]).filter(Boolean) })) }));
+    const reglas = fd.reglas.map(r => ({ id: uid('r'), grupo: r.grupo, url: r.url || '', cond: r.cond.map(c => ({ q: mq[c.q] || '', ops: c.ops.map(o => mo[o]).filter(Boolean) })) }));
     return { nombre: fd.nombre + ' (copia)', contacto: clonar(fd.contacto), preguntas, reglas, resto: fd.resto, fin: clonar(fd.fin) };
 }

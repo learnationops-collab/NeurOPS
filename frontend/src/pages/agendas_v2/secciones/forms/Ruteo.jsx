@@ -1,10 +1,11 @@
 // Segmentación: reglas en orden; la primera que se cumple elige la estrategia. Lo que no cumple ninguna va a "Todo lo demás".
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { almacen } from '../../data/hooks';
 import { conOpciones } from '../../core/catalogos';
 import { buscar, nombreGrupo, ord as ordCol } from '../../core/datos';
 import { reglasRotas, revisarSegmentacion } from '../../core/formulario';
+import { urlOk } from '../../core/normalizar';
 import { uid } from '../../core/util';
 import { Humo, HUMO_MARCA, Icono, Sx } from '../../ui/base';
 import Lienzo from '../../ui/Lienzo';
@@ -30,12 +31,37 @@ function Revision({ avisos }) {
     );
 }
 
-function Destino({ d, valor, onChange, label }) {
+function Destino({ d, valor, onChange, label, extra = [] }) {
     const gs = ordCol(d, 'grupos'), g = buscar(d, 'grupos', valor), i = gs.indexOf(g);
     return (
         <div className="destino" style={{ '--c': g ? colorNivel(i + 1) : 'var(--idle)' }}>
             <span className="destino-flecha" aria-hidden="true"><Icono n="chevron-right" s={16} /></span>
-            <Sx sm label={label} valor={g ? valor : ''} opciones={opcionesPrioridad(d)} onChange={onChange} />
+            <Sx sm label={label} valor={g ? valor : ''} opciones={opcionesPrioridad(d).concat(extra)} onChange={onChange} />
+        </div>
+    );
+}
+
+// Destino de una regla: una estrategia o una página (el lead no agenda y va a esa URL).
+// Lo que se escribe queda en borrador hasta que es una URL https válida: así no se borra mientras se tipea.
+const A_URL = '__url';
+function DestinoRegla({ d, r, onGrupo, onUrl }) {
+    const [enUrl, setEnUrl] = useState(!!r.url);
+    const [borrador, setBorrador] = useState(r.url || 'https://');
+    // La url cambió desde afuera (deshacer, otra pestaña): se toma esa.
+    const [previa, setPrevia] = useState(r.url);
+    if (previa !== r.url) { setPrevia(r.url); if (r.url) { setEnUrl(true); setBorrador(r.url); } }
+    if (!enUrl) {
+        return <Destino d={d} valor={r.grupo} label="Estrategia" extra={[{ v: A_URL, n: 'Ir a una página (URL)', icono: 'link', color: 'var(--info)' }]}
+            onChange={v => { if (v === A_URL) setEnUrl(true); else onGrupo(v); }} />;
+    }
+    const mal = !urlOk(borrador);
+    return (
+        <div className="destino destino--url" style={{ '--c': 'var(--info)' }}>
+            <span className="destino-flecha" aria-hidden="true"><Icono n="link" s={15} /></span>
+            <input className={'input' + (mal ? ' mal' : '')} type="url" value={borrador} aria-label="Página a la que va el lead" placeholder="https://…"
+                onChange={e => { setBorrador(e.target.value); if (urlOk(e.target.value)) onUrl(urlOk(e.target.value)); }} />
+            <button type="button" className="ibtn ibtn--xs" aria-label="Mandar a una estrategia" title="Mandar a una estrategia"
+                onClick={() => { setEnUrl(false); setBorrador('https://'); onUrl(''); }}><Icono n="x" /></button>
         </div>
     );
 }
@@ -113,7 +139,7 @@ function Regla({ r, i, f, d, qs, msel, rota, ord, enfocar }) {
                     </p>
                 )}
             </div>
-            <Destino d={d} valor={r.grupo} label="Estrategia" onChange={v => cambiar(x => { x.grupo = v; })} />
+            <DestinoRegla d={d} r={r} onGrupo={v => cambiar(x => { x.grupo = v; x.url = ''; })} onUrl={u => cambiar(x => { x.url = u; if (u) x.grupo = ''; })} />
             <button type="button" className="ibtn ibtn--xs ibtn--peligro regla-x" aria-label={'Eliminar regla ' + (i + 1)}
                 onClick={() => { mutarForm(f.id, 'reglas', rs => rs.filter(y => y.id !== r.id)); enfocar('[data-regla-add]'); }}>
                 <Icono n="basura" />

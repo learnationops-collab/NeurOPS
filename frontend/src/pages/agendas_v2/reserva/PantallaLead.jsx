@@ -13,7 +13,7 @@ import '../thalamus.css';
 import { Fragment, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { FIN_DEF, conOpciones, detectarPais, paisDe } from '../core/catalogos';
 import { buscar } from '../core/datos';
-import { limpiarRespuesta, nombreLead, opcionDescalifica, personalizar, validarRespuesta } from '../core/formulario';
+import { grupoPorReglas, limpiarRespuesta, nombreLead, opcionDescalifica, personalizar, validarRespuesta } from '../core/formulario';
 import { COLECCIONES, normalForm, preguntasFlujo } from '../core/normalizar';
 import { Humo, Icono } from '../ui/base';
 import { rutaGracias } from './gracias/contenido';
@@ -57,7 +57,7 @@ function estadoInicial(ctx, { desde = 0, ejemplo = '' } = {}, enfocar = true) {
         idx: Math.min(desde || 0, ctx.preguntas.length), resp: {}, ejemplo: ejemplo || '', tel: '',
         pais: p0.c, tz: ctx.tzFija || p0.tz, mes: null, dia: null, hora: null,
         error: '', errN: 0, paisAbierto: false, zonaAbierta: false, busca: '',
-        fin: false, listo: false, slot: null, asigFinal: null, recalc: 0, vuelta: 0,
+        fin: false, finUrl: '', listo: false, slot: null, asigFinal: null, recalc: 0, vuelta: 0,
         // El lead que vuelve: buscando (el correo que se está buscando), reco (lo que se encontró) y su paso,
         // siYaTiene (lo que eligió con la sesión que ya tenía), guardados/tapados (confirmó sus datos guardados).
         buscando: '', recoN: 0, reco: null, siYaTiene: null, guardados: false, tapados: null, consultor: null, durReal: null,
@@ -76,7 +76,14 @@ function fijarTexto(p, preguntas) {
 }
 
 // reconocer: el proveedor sabe buscar al lead que vuelve; al dejar el correo se lo busca antes de seguir.
-function seguirDe(p, preguntas, reconocer = false) {
+// La página a la que una regla manda al lead (no agenda). Con persona fija no hay segmentación.
+function urlPorReglas(ctx, resp) {
+    if (!ctx || !ctx.form || ctx.persona) return '';
+    return grupoPorReglas(ctx.form, resp).url || '';
+}
+
+// ctx: al terminar las preguntas, una regla con url corta como un descalificado y lo manda a esa página.
+function seguirDe(p, preguntas, reconocer = false, ctx = null) {
     if (p.idx >= preguntas.length || p.listo || p.fin || p.buscando || p.reco) return p;
     const q = preguntas[p.idx], p1 = fijarTexto(p, preguntas);
     const err = validarRespuesta(q, p1.resp[q.id] || '');
@@ -86,6 +93,8 @@ function seguirDe(p, preguntas, reconocer = false) {
         return { ...cerrado, buscando: p1.resp[q.id], recoN: p1.recoN + 1, guardados: false, tapados: null, siYaTiene: null };
     }
     if (opcionDescalifica(q, p1.resp)) return conFoco({ ...cerrado, fin: true }, 'entra');
+    const url = p1.idx + 1 >= preguntas.length ? urlPorReglas(ctx, p1.resp) : '';
+    if (url) return conFoco({ ...cerrado, fin: true, finUrl: url }, 'entra');
     return conFoco({ ...cerrado, idx: p1.idx + 1, busca: '' }, 'entra');
 }
 
@@ -208,10 +217,15 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
     useEffect(() => {
         if (modo !== 'publico' || !s.fin || descRef.current || !ctx.evento) return;
         descRef.current = true;
+        // Si una regla lo manda a otra página, se lo lleva ahí después de registrarlo (o a los 3 s, si tarda).
+        const url = s.finUrl;
+        let ido = false;
+        const ir = () => { if (url && !ido && vivoRef.current) { ido = true; window.location.assign(url); } };
+        if (url) setTimeout(ir, 3000);
         try {
-            proveedor.reservar({ lead: { preguntas, resp: s.resp, pais: s.pais, tz: s.tz }, ctx: ctxAsig(s), evento: ctx.evento, form: ctx.form, asig: null, slot: null, origen, setter, datosGuardados: s.guardados })
-                .catch(() => { /* no frena al lead */ });
-        } catch { /* no frena al lead */ }
+            Promise.resolve(proveedor.reservar({ lead: { preguntas, resp: s.resp, pais: s.pais, tz: s.tz }, ctx: ctxAsig(s), evento: ctx.evento, form: ctx.form, asig: null, slot: null, origen, setter, datosGuardados: s.guardados }))
+                .catch(() => { /* no frena al lead */ }).then(ir);
+        } catch { ir(); /* no frena al lead */ }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [s.fin]);
 
@@ -276,11 +290,11 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
             });
             clearTimeout(timerRef.current);
             timerRef.current = setTimeout(() => {
-                setS(p => (p.vuelta === vuelta && p.idx === i && !p.fin && !p.listo ? seguirDe(p, preguntas, reconocer) : p));
+                setS(p => (p.vuelta === vuelta && p.idx === i && !p.fin && !p.listo ? seguirDe(p, preguntas, reconocer, ctx) : p));
             }, AUTO_AVANCE);
         },
         buscar(v) { setS(p => ({ ...p, busca: v })); },
-        seguir() { setS(p => seguirDe(p, preguntas, reconocer)); },
+        seguir() { setS(p => seguirDe(p, preguntas, reconocer, ctx)); },
         // El lead que vuelve con una sesión próxima: la reprograma o suma otra.
         elegirProxima(v) { setS(p => (p.reco ? usarGuardados({ ...p, siYaTiene: v }, p.reco, preguntas) : p)); },
         atras() { setS(p => atrasDe(p, preguntas)); },
@@ -395,7 +409,7 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
     let paso, clave;
     if (s.fin) {
         clave = 'fin';
-        paso = <PasoFin ids={ids} fin={ctx.fin} nombre={nombre} prueba={prueba} respuestas={respuestas} acc={acc} />;
+        paso = <PasoFin ids={ids} fin={ctx.fin} nombre={nombre} prueba={prueba} respuestas={respuestas} acc={acc} url={s.finUrl} />;
     } else if (s.listo) {
         clave = 'listo';
         paso = <PasoListo ids={ids} nombre={nombre} slot={s.slot} s={s} dur={s.durReal || ctx.dur} redir={ctx.redir} preguntas={preguntas} prueba={prueba} respuestas={respuestas} acc={acc}

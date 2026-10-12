@@ -1089,6 +1089,7 @@
 .thalamus .destino{display:flex;align-items:center;gap:8px;min-width:0}
 .thalamus .destino-flecha{width:26px;height:26px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;color:var(--c);background:color-mix(in srgb,var(--c) 16%,transparent)}
 .thalamus .destino .sx{flex:1;min-width:0}
+.thalamus .destino--url .input{flex:1;min-width:0;height:36px;padding:0 10px;font-size:13px}
 .thalamus .agregar--sm{height:40px;border-radius:14px}
 .thalamus .regla--resto{align-items:center;background:var(--hundido);padding-left:14px;grid-template-columns:minmax(0,1fr) 250px 30px}
 .thalamus .regla-resto-t{font-size:13px;font-weight:700;color:var(--text-muted)}

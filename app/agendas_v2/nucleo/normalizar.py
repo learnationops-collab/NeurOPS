@@ -143,7 +143,10 @@ def normal_reglas(reglas):
         for c in lista(r.get('cond'))[:8]:
             c = obj(c)
             cond.append({'q': txt(c.get('q')), 'ops': [js_str(x) for x in lista(c.get('ops'))][:60]})
-        out.append({'id': cortar(txt(r.get('id')) or uid('r'), 40), 'grupo': txt(r.get('grupo')), 'cond': cond})
+        # url: la regla no manda a una estrategia sino a otra página (el lead no agenda).
+        url = url_ok(r.get('url'))
+        out.append({'id': cortar(txt(r.get('id')) or uid('r'), 40), 'grupo': '' if url else txt(r.get('grupo')),
+                    'url': url, 'cond': cond})
     return out
 
 

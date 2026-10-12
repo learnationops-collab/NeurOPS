@@ -130,7 +130,7 @@ def reservar():
             return jsonify({'code': 'ya_tiene', 'agenda': {'inicio': inicio}}), 409
         return jsonify({'code': 'invalido', 'errores': e.errores}), 400
     if r.get('descalificada'):
-        return jsonify({'descalificada': True}), 201
+        return jsonify({'descalificada': True, **({'redirigir': r['redirigir']} if r.get('redirigir') else {})}), 201
 
     def _iso(ms):
         return servicio.ms_a_dt(ms).isoformat(timespec='milliseconds') + 'Z'
