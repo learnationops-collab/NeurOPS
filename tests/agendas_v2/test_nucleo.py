@@ -193,7 +193,7 @@ def test_valida_correo_telefono_e_instagram():
 
 
 def test_los_datos_de_contacto_van_primero_y_en_orden_fijo():
-    assert [q['id'] for q in preguntas_flujo(F)[:4]] == ['c-email', 'c-nombre', 'c-telefono', 'c-instagram']
+    assert [q['id'] for q in preguntas_flujo(F)[:4]] == ['c-telefono', 'c-email', 'c-nombre', 'c-instagram']
 
 
 # --- asignacion -----------------------------------------------------------------------------------

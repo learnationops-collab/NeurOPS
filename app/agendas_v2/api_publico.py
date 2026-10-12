@@ -78,19 +78,27 @@ def horarios(evento_id):
     if not x:
         return jsonify(NO_DISPONIBLE[0]), NO_DISPONIBLE[1]
     evento, form, _ = x
-    return jsonify({'slots': servicio.horarios(d, evento, form, _cuerpo().get('resp'))})
+    cuerpo = _cuerpo()
+    # El lead que confirmó sus respuestas guardadas: la segmentación sale de esas.
+    resp = servicio.con_guardados(form, cuerpo, cuerpo.get('resp'))
+    return jsonify({'slots': servicio.horarios(d, evento, form, resp)})
 
 
 @bp.route('/eventos/<evento_id>/conocido', methods=['POST'])
 def conocido(evento_id):
-    """{email} → si ya agendó antes: su primer nombre, sus datos tapados y su próxima agenda."""
+    """{email} o {telefono, pais} → si ya agendó antes: su primer nombre, sus datos tapados, su próxima
+    agenda y si ya respondió este formulario."""
     if _excede('conocido'):
         return _demasiados()
     x = servicio.evento_publico(servicio.colecciones(), evento_id)
     if not x:
         return jsonify(NO_DISPONIBLE[0]), NO_DISPONIBLE[1]
-    email = str(_cuerpo().get('email') or '').strip().lower()[:120]
-    r = servicio.conocido(x[1], email)
+    cuerpo = _cuerpo()
+    resp = {
+        'c-email': str(cuerpo.get('email') or '').strip().lower()[:120],
+        'c-telefono': str(cuerpo.get('telefono') or '').strip()[:40],
+    }
+    r = servicio.conocido(x[0], x[1], resp, cuerpo.get('pais'))
     if r.get('proxima'):
         r['proxima'] = {'inicio': servicio.ms_a_dt(r['proxima']['inicio']).isoformat(timespec='milliseconds') + 'Z'}
     return jsonify(r)

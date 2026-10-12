@@ -43,7 +43,7 @@ from app.agendas_v2.nucleo.normalizar import (
     preguntas_flujo,
 )
 from app.agendas_v2.nucleo.ocupacion import opciones_de_ocupacion
-from app.agendas_v2.nucleo.reserva import armar_reserva
+from app.agendas_v2.nucleo.reserva import armar_reserva, telefono_e164
 from app.agendas_v2.nucleo.util import slugify, uid
 from app.services.learnation_service import LearnationAPIError, LearnationService
 
@@ -1014,21 +1014,35 @@ def _segmento(d, form, asig):
 
 # --- El lead que vuelve --------------------------------------------------------------------------
 
-CONTACTO_GUARDADO = ('c-nombre', 'c-telefono', 'c-instagram')
+CONTACTO_GUARDADO = ('c-telefono', 'c-email', 'c-nombre', 'c-instagram')
+# Con lo que se reconoce al lead: si lo escribió de nuevo vale lo que escribió (puede ser un número nuevo).
+IDENTIFICA = ('c-telefono', 'c-email')
 
 
-def datos_guardados(form, email):
-    """Lo que ya sabemos del lead por su email, para no volver a pedírselo: (cliente, respuestas de
-    contacto válidas, completos). `completos` es False si falta (o no sirve) alguno obligatorio."""
-    cliente = operacion.cliente_por_email(email) if isinstance(email, str) else None
+def cliente_de(resp, pais):
+    """El cliente del lead por lo que ya escribió: su correo o, si no, su WhatsApp (con el país elegido)."""
+    resp = resp if isinstance(resp, dict) else {}
+    email, tel = resp.get('c-email'), resp.get('c-telefono')
+    cliente = operacion.cliente_por_email(email) if isinstance(email, str) and '@' in email else None
+    if not cliente and isinstance(tel, str) and tel.strip():
+        cliente = operacion.cliente_por_telefono(telefono_e164(pais, tel))
+    return cliente
+
+
+def datos_guardados(form, cliente):
+    """Lo que ya sabemos del lead, para no volver a pedírselo: (respuestas de contacto válidas,
+    completos). `completos` es False si falta (o no sirve) alguno obligatorio."""
     if not cliente:
-        return None, {}, False
+        return {}, False
     pl = cliente.formulario_payload if isinstance(cliente.formulario_payload, dict) else {}
     lead = pl.get('lead') if isinstance(pl.get('lead'), dict) else {}
     nombre = lead.get('nombre') or cliente.full_name
+    email = cliente.email or ''
     crudos = {
-        'c-nombre': '' if nombre == 'Desconocido' else nombre,
         'c-telefono': lead.get('telefono') or cliente.phone,
+        # El cliente creado sin correo tiene uno inventado (no-email-…@neurops.com): no sirve.
+        'c-email': '' if email.startswith('no-email-') else email,
+        'c-nombre': '' if nombre == 'Desconocido' else nombre,
         'c-instagram': lead.get('instagram') or cliente.instagram,
     }
     preguntas = {q['id']: q for q in contacto_preguntas(form)}
@@ -1043,31 +1057,95 @@ def datos_guardados(form, email):
             resp[k] = v
         elif q.get('obligatoria'):
             completos = False
-    return cliente, resp, completos
+    return resp, completos
+
+
+def respuestas_guardadas(form, cliente):
+    """Las respuestas que el lead ya dio a este mismo formulario (su último envío), para que solo las
+    confirme. None si el último fue otro formulario, si este cambió de preguntas o si alguna ya no sirve:
+    en esos casos responde de nuevo."""
+    pl = cliente.formulario_payload if cliente and isinstance(cliente.formulario_payload, dict) else {}
+    qs = (form or {}).get('preguntas') or []
+    if not qs or not form.get('id') or pl.get('formulario_id') != form['id']:
+        return None
+    previas = {r.get('pregunta_id'): r for r in pl.get('respuestas') or [] if isinstance(r, dict)}
+    if set(previas) != {q['id'] for q in qs}:
+        return None
+    resp = {}
+    for q in qs:
+        r = previas[q['id']]
+        if con_opciones(q['tipo']):
+            v = r.get('opcion_id') if isinstance(r.get('opcion_id'), str) else ''
+            if v and not any(o['id'] == v for o in q['opciones']):
+                return None
+        else:
+            crudo = r.get('respuesta') if isinstance(r.get('respuesta'), str) else ''
+            v = limpiar_respuesta(q, crudo)[: LARGO_MAX_TEXTO.get(q['tipo'], 300)]
+        if validar_respuesta(q, v):
+            return None
+        if v:
+            resp[q['id']] = v
+    return resp
+
+
+def con_guardados(form, cuerpo, resp):
+    """Lo que el lead no volvió a escribir porque confirmó lo que ya teníamos: sus datos de contacto
+    (`datos_guardados`) y sus respuestas al formulario (`respuestas_guardadas`). Salen de la base,
+    nunca del navegador."""
+    resp = resp if isinstance(resp, dict) else {}
+    datos, respuestas = cuerpo.get('datos_guardados') is True, cuerpo.get('respuestas_guardadas') is True
+    if not datos and not respuestas:
+        return resp
+    cliente = cliente_de(resp, cuerpo.get('pais'))
+    if not cliente:
+        return resp
+    extra = {}
+    if datos:
+        guardados, _ = datos_guardados(form, cliente)
+        extra.update({k: v for k, v in guardados.items() if not (k in IDENTIFICA and resp.get(k))})
+    if respuestas:
+        extra.update(respuestas_guardadas(form, cliente) or {})
+    return {**resp, **extra}
 
 
 def _tapar(v, ver):
     return v[:ver] + '•••' if v else ''
 
 
-def conocido(form, email, ahora=None):
-    """Lo que ve el lead que vuelve: su nombre (para precargarlo), el WhatsApp y el Instagram tapados
-    (nadie saca el contacto de otro con su email) y el horario de su próxima agenda, si tiene."""
-    cliente, resp, completos = datos_guardados(form, email)
+def _corte(evento, form, resp):
+    """Qué pasaría al terminar las preguntas con esas respuestas: no (no califica, por una opción o porque
+    la segmentación lo manda a «No califica») o url (una regla lo manda a otra página)."""
+    _, _, descalifica = _limpiar_respuestas(preguntas_flujo(form), resp)
+    if descalifica:
+        return {'no': True, 'url': ''}
+    r = {'url': '', 'no': False} if evento.get('persona') else grupo_por_reglas(form, resp)
+    return {'no': bool(r.get('no')), 'url': r.get('url') or ''}
+
+
+def conocido(evento, form, resp, pais, ahora=None):
+    """Lo que ve el lead que vuelve (se lo busca por correo o WhatsApp): su nombre (para precargarlo),
+    el WhatsApp y el Instagram tapados (nadie saca el contacto de otro), el horario de su próxima
+    agenda y, si ya respondió este mismo formulario, cuándo (las respuestas no: solo las confirma)."""
+    cliente = cliente_de(resp, pais)
     if not cliente:
         return {'conocido': False}
-    tel = re.sub('[^0-9]', '', resp.get('c-telefono', ''))
+    guardados, completos = datos_guardados(form, cliente)
+    tel = re.sub('[^0-9]', '', guardados.get('c-telefono', ''))
     proxima = operacion.proxima_de(cliente.id, ms_a_dt(ahora or ahora_ms()))
+    previas = respuestas_guardadas(form, cliente)
+    pl = cliente.formulario_payload if isinstance(cliente.formulario_payload, dict) else {}
+    respuestas = None if previas is None else {'enviado': pl.get('enviado') or None, **_corte(evento, form, previas)}
     return {
         'conocido': True,
         'completos': completos,
         'datos': {
-            'nombre': (resp.get('c-nombre') or '').split(' ')[0],
-            'nombre_completo': resp.get('c-nombre') or '',
+            'nombre': (guardados.get('c-nombre') or '').split(' ')[0],
+            'nombre_completo': guardados.get('c-nombre') or '',
             'telefono': '+' + tel[:2] + ' ••• ' + tel[-3:] if tel else '',
-            'instagram': '@' + _tapar(resp.get('c-instagram', ''), 2) if resp.get('c-instagram') else '',
+            'instagram': '@' + _tapar(guardados.get('c-instagram', ''), 2) if guardados.get('c-instagram') else '',
         },
         'proxima': {'inicio': dt_a_ms(proxima.start_time)} if proxima else None,
+        'respuestas': respuestas,
     }
 
 
@@ -1092,8 +1170,7 @@ def registrar_avance(d, evento, form, funnel, cuerpo):
     con un email válido (ya dejó sus datos). Un registro por lead y evento; el paso nunca retrocede.
     Devuelve False si no hay email válido."""
     crudas = cuerpo.get('resp') if isinstance(cuerpo.get('resp'), dict) else {}
-    if cuerpo.get('datos_guardados') is True:
-        crudas = {**crudas, **datos_guardados(form, crudas.get('c-email'))[1]}
+    crudas = con_guardados(form, cuerpo, crudas)
     resp = {}
     for q in preguntas_flujo(form):
         crudo = crudas.get(q['id'])
@@ -1214,9 +1291,8 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     ahora = ahora or ahora_ms()
     preguntas = preguntas_flujo(form)
     resp = cuerpo.get('resp') if isinstance(cuerpo.get('resp'), dict) else {}
-    # El lead que vuelve y confirmó sus datos no los escribe de nuevo: salen de lo que ya tenemos.
-    if cuerpo.get('datos_guardados') is True:
-        resp = {**resp, **datos_guardados(form, resp.get('c-email'))[1]}
+    # El lead que vuelve y confirmó sus datos o sus respuestas no los escribe de nuevo: salen de lo que ya tenemos.
+    resp = con_guardados(form, cuerpo, resp)
     limpias, errores, descalifica = _limpiar_respuestas(preguntas, resp)
     pais = cuerpo.get('pais') if any(p['c'] == cuerpo.get('pais') for p in PAISES) else 'BO'
     tz = cuerpo.get('tz') if zona_valida(cuerpo.get('tz')) else (evento['zona']['tz'] or TZ_DEF)

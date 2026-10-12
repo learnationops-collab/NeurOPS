@@ -729,6 +729,48 @@ def test_sin_datos_guardados_los_obligatorios_se_piden(client, armado):
     assert r.status_code == 400 and 'c-nombre' in r.get_json()['errores']
 
 
+def test_tambien_se_lo_reconoce_por_su_whatsapp(client, armado):
+    assert _reservar(client).status_code == 201
+    r = client.post(URL + '/eventos/ev/conocido', json={'telefono': '7123 4567', 'pais': 'BO'}).get_json()
+    assert r['conocido'] is True and r['completos'] is True and r['datos']['nombre'] == 'Lucía'
+    nadie = client.post(URL + '/eventos/ev/conocido', json={'telefono': '7999 9999', 'pais': 'BO'}).get_json()
+    assert nadie == {'conocido': False}
+
+
+def test_si_ya_respondio_este_formulario_solo_lo_confirma_sin_ver_sus_respuestas(client, armado):
+    assert _reservar(client).status_code == 201
+    r = client.post(URL + '/eventos/ev/conocido', json={'telefono': '71234567', 'pais': 'BO'})
+    assert r.get_json()['respuestas']['no'] is False and r.get_json()['respuestas']['url'] == ''
+    assert 'Mucho' not in r.get_data(as_text=True)  # la respuesta no viaja: el servidor la completa
+    # Solo dejó su WhatsApp: el correo, el nombre y la respuesta salen de lo guardado.
+    r = client.post(URL + '/reservas', json={
+        'evento_id': 'ev', 'resp': {'c-telefono': '71234567'}, 'pais': 'BO', 'tz': 'America/La_Paz',
+        'inicio': '2026-10-05T13:45:00.000Z', 'si_ya_tiene': 'adicional',
+        'datos_guardados': True, 'respuestas_guardadas': True,
+    })
+    assert r.status_code == 201
+    nueva = Appointment.query.order_by(Appointment.start_time.desc()).first()
+    assert nueva.agenda_payload['lead']['email'] == 'lucia@correo.com'
+    assert nueva.agenda_payload['respuestas'][0]['opcion_id'] == 'a'
+
+
+def test_si_el_formulario_cambio_de_preguntas_responde_de_nuevo(client, armado):
+    assert _reservar(client).status_code == 201
+    fo = next(x for x in servicio.colecciones()['formularios'] if x['id'] == 'fo')
+    nueva = {'id': 'q2', 'tipo': 'texto', 'titulo': '¿Por qué?', 'peso': 0, 'opciones': []}
+    servicio.guardar_doc('formularios', 'fo', {'preguntas': fo['preguntas'] + [nueva]}, parcial=True)
+    _publicar('ev')
+    r = _conocido(client, 'lucia@correo.com').get_json()
+    assert r['conocido'] is True and r['respuestas'] is None
+
+
+def test_el_que_no_califico_lo_sabe_al_confirmar_sus_respuestas(client, armado):
+    assert client.post(URL + '/reservas', json={
+        'evento_id': 'ev', 'resp': _resp(q1='x'), 'pais': 'BO', 'tz': 'America/La_Paz', 'inicio': None,
+    }).status_code == 201
+    assert _conocido(client, 'lucia@correo.com').get_json()['respuestas']['no'] is True
+
+
 def test_al_agendar_el_lead_ve_el_nombre_de_su_consultor_y_nada_de_contacto(client, armado):
     r = _reservar(client)
     consultor = r.get_json()['reserva']['consultor']
