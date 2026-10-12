@@ -107,7 +107,7 @@ class ErrorDeVista extends React.Component {
         return (
             <div className="panel vacio">
                 <p className="t-sm">Esta vista tuvo un error.</p>
-                <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={() => { ui.set({ form: null, ev: null }); this.setState({ error: null }); }}>
+                <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={() => { ui.set({ form: null, gracias: null, ev: null }); this.setState({ error: null }); }}>
                     <Icono n="rotar" />Volver
                 </button>
             </div>
@@ -178,9 +178,26 @@ function useConfigDeLaUrl() {
     }, []);
 }
 
+// ?probar=<evento>(&seg=<segmento>) abre la prueba por segmento: se saltea el formulario y se ve lo que
+// vería un lead de esa segmentación (reserva/PruebaSegmento).
+function useProbarDeLaUrl() {
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const evento = params.get('probar');
+        if (!evento) return;
+        const segmento = params.get('seg') || '';
+        params.delete('probar');
+        params.delete('seg');
+        const resto = params.toString();
+        window.history.replaceState({}, document.title, window.location.pathname + (resto ? '?' + resto : ''));
+        ui.set({ prueba: { evento, segmento, porSegmento: true } });
+    }, []);
+}
+
 export default function ThalamusApp() {
     useIniciarAlmacen();
     useConfigDeLaUrl();
+    useProbarDeLaUrl();
     usePerfilDeLaSesion();
     useAtajos();
     const estado = useUi();

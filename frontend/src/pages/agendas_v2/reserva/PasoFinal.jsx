@@ -117,7 +117,19 @@ export function PasoListo({ ids, nombre, slot, s, dur, redir, preguntas, prueba,
     );
 }
 
-export function PasoFin({ ids, fin, nombre, prueba, respuestas, acc }) {
+// url: una regla manda al lead a otra página. No es un "no califica": se lo lleva ahí (y queda el botón por si tarda).
+export function PasoFin({ ids, fin, nombre, prueba, respuestas, acc, url = '' }) {
+    if (url) {
+        return (
+            <div className="rv-paso rv-paso--entra">
+                <h1 className="rv-q rv-q--l1" id={ids.q}>{nombre ? 'Gracias, ' + nombre + '.' : 'Gracias.'}</h1>
+                <p className="rv-ayuda">{prueba ? 'En el link real, el lead va a ' + url.replace(/^https:\/\//i, '') + '.' : 'Te estamos llevando a tu próximo paso…'}</p>
+                {!prueba && <div className="rv-acc"><a className="rv-seguir" href={url}>Continuar<Icono n="chevron-right" s={18} /></a></div>}
+                {respuestas}
+                {prueba && <Acciones acc={acc} />}
+            </div>
+        );
+    }
     return (
         <div className="rv-paso rv-paso--entra">
             <span className="rv-listo-ico rv-listo-ico--no"><Icono n="prohibido" s={30} /></span>

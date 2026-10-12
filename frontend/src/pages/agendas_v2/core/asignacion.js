@@ -79,6 +79,10 @@ export function asignacion(ctx, d, opts = {}) {
     }
 
     const r = ctx.reglas ? grupoPorReglas({ reglas: ctx.reglas, resto: ctx.resto }, ctx.resp || {}) : { grupo: '', regla: null };
+    // La regla manda a otra página: no hay horarios que ofrecer.
+    if (r.url) return { ...base, reglaIdx: r.regla, url: r.url, slots: [], regla: 'Redirige a ' + r.url };
+    // La segmentación lo marca como que no califica: no agenda.
+    if (r.no) return { ...base, reglaIdx: r.regla, no: true, slots: [], regla: 'No califica' };
     const g0 = buscar(d, 'grupos', r.grupo) || null;
     const res = { ...base, grupoRegla: g0 ? g0.id : '', reglaIdx: r.regla };
 

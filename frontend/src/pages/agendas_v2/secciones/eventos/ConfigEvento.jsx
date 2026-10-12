@@ -13,6 +13,7 @@ import { Avatar, HUMO_MARCA, Humo, Icono, Seg, Sx } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
 import { copiarTexto, toast } from '../../ui/toast';
 import { ModalNoCalifica } from '../forms/Modales';
+import { abrirGracias } from '../forms/ListaGracias';
 import { InputVivo, LinksSetters, slugOrigen, urlPublica, useBorrador } from './comun';
 
 const PASOS = [5, 10, 15, 20, 30, 45, 60];
@@ -184,6 +185,7 @@ function Pagina({ d, e }) {
     const [fin, setFin] = useState(false);
     const fo = buscar(d, 'formularios', e.formulario);
     const redirMal = redir.escribiendo && !!redir.value.trim() && !urlOk(redir.value.trim());
+    const gs = ord(d, 'gracias'), gracias = buscar(d, 'gracias', e.gracias);
     return (
         <>
             <Fila l="Zona horaria">
@@ -193,6 +195,16 @@ function Pagina({ d, e }) {
                     <Sx sm id="ev-ztz" label="Zona fija" valor={e.zona.tz} onChange={v => setEv(e.id, 'zona', 'tz', v, true)}
                         opciones={ZONAS.map(z => ({ v: z.tz, n: z.n + ' · ' + gmtTxt(z.tz) }))} />
                 )}
+            </Fila>
+            {/* La página de gracias va en vivo: elegirla no pide volver a publicar. Si hay una, manda sobre «Redirigir a». */}
+            <Fila l="Página de gracias">
+                <Sx sm id="ev-gracias" label="Página de gracias" valor={gracias ? e.gracias : ''}
+                    style={{ flex: '1 1 200px', minWidth: 0 }}
+                    onChange={v => { almacen.editar('eventos', e.id, { gracias: v }); almacen.flush(); }}
+                    opciones={[{ v: '', n: 'Ninguna' }, ...gs.map(g => ({ v: g.id, n: g.nombre, icono: 'video' }))]} />
+                {gracias
+                    ? <button type="button" className="btn btn--linea btn--sm" onClick={() => abrirGracias(gracias.id)}><Icono n="edit" />Editar</button>
+                    : !gs.length && <button type="button" className="btn btn--linea btn--sm" onClick={() => ui.set({ seccion: 'preguntas', recurso: 'gracias', ev: null })}><Icono n="plus" />Crear una</button>}
             </Fila>
             <Fila l="Redirigir a">
                 <div className={'entrada' + (redirMal ? ' mal' : '')} style={{ flex: 1, minWidth: 0 }}>
@@ -206,6 +218,7 @@ function Pagina({ d, e }) {
                         }}
                         onBlur={() => { redir.soltar(); almacen.flush(); }} />
                 </div>
+                {gracias && e.redir && <span className="t-sm mut">No se usa: el lead va a la página de gracias.</span>}
             </Fila>
             <Fila l="Si no califica">
                 {fo ? (

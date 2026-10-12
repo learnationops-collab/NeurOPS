@@ -1,0 +1,28 @@
+/* Forms › Páginas de gracias (ListaGracias, EditorGracias). Vive bajo .thalamus como el resto. */
+.thalamus .gx-chips{display:flex;flex-wrap:wrap;gap:6px}
+.thalamus .gx-nom{flex:1 1 220px;max-width:420px;font-weight:800}
+.thalamus .gx-editor{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:var(--s4);align-items:start}
+.thalamus .gx-campos{display:grid;gap:var(--s4);min-width:0}
+.thalamus .gx-video{position:relative;display:grid;gap:var(--s3);overflow:hidden}
+.thalamus .gx-video > *{position:relative}
+.thalamus .gx-video > .humo{position:absolute}
+.thalamus .gx-previa{position:relative;aspect-ratio:16/9;border-radius:16px;overflow:hidden;background:#030720;border:1px solid var(--border-subtle)}
+.thalamus .gx-previa video,.thalamus .gx-previa iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
+.thalamus .gx-vacio{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--text-muted)}
+.thalamus .gx-nombre{display:flex;align-items:center;gap:6px;min-width:0;color:var(--text-muted)}
+.thalamus .gx-acc{display:flex;flex-wrap:wrap;gap:var(--s2)}
+.thalamus .gx-link{flex:1;min-width:0;height:100%;border:0;background:transparent;color:inherit;font:inherit;outline:none}
+.thalamus .gx-subida{display:grid;gap:var(--s2);justify-items:start}
+.thalamus .gx-subida-txt{display:flex;justify-content:space-between;gap:var(--s3);width:100%;font-size:13px;font-weight:700;min-width:0}
+.thalamus .gx-barra{width:100%;height:8px;border-radius:999px;background:var(--bg-input);overflow:hidden}
+.thalamus .gx-barra i{display:block;height:100%;border-radius:inherit;background:var(--brand-secondary);transition:width .3s ease}
+.thalamus .gx-switch{display:flex;align-items:center;gap:var(--s3)}
+.thalamus .gx-vista{position:sticky;top:var(--s4);display:grid;gap:var(--s3);min-width:0}
+.thalamus .gx-marco{position:relative;height:min(78vh,760px);border-radius:var(--radius-main);overflow:hidden;border:1px solid var(--border-main);background:#030720;box-shadow:var(--shadow-main)}
+.thalamus .gx-marco iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.thalamus .forms-recurso{margin-bottom:var(--s4)}
+@media (max-width:960px){
+  .thalamus .gx-editor{grid-template-columns:minmax(0,1fr)}
+  .thalamus .gx-vista{position:relative;top:0}
+  .thalamus .gx-marco{height:70vh}
+}

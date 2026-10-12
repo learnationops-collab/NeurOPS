@@ -25,6 +25,12 @@ PUBLICAS_POR_DISENO = frozenset({
     ('GET', '/api/agendas-v2/publico/eventos/<funnel_slug>/<evento_slug>'),
     ('POST', '/api/agendas-v2/publico/eventos/<evento_id>/horarios'),
     ('POST', '/api/agendas-v2/publico/reservas'),
+    # El lead que vuelve (sus datos salen tapados) y cada paso que avanza (solo para Stats); los dos con
+    # limite por IP. La pagina de gracias (sus videos y los casos de exito) y el video subido, por su id.
+    ('POST', '/api/agendas-v2/publico/eventos/<evento_id>/conocido'),
+    ('POST', '/api/agendas-v2/publico/eventos/<evento_id>/avance'),
+    ('GET', '/api/agendas-v2/publico/gracias/<gracias_id>'),
+    ('GET', '/api/agendas-v2/publico/videos/<video_id>'),
     ('POST', '/api/public/book'),
     # Pagina publica de reservas (BookingPage): el visitante carga el evento con sus preguntas y horarios y
     # comprueba si ya lo conocemos por email o Instagram para precargar el formulario. La comprobacion solo

@@ -44,7 +44,7 @@ def test_la_direccion_y_admin_leen_el_estado(client, gente, auth_headers, rol):
     r = client.get('/api/agendas-v2/estado', headers=auth_headers(gente[rol]))
     assert r.status_code == 200
     cuerpo = r.get_json()
-    assert set(cuerpo['cols']) == {'funnels', 'formularios', 'personas', 'grupos', 'eventos', 'roles'}
+    assert set(cuerpo['cols']) == {'funnels', 'formularios', 'personas', 'grupos', 'eventos', 'roles', 'gracias'}
     assert cuerpo['reservas'] == [] and cuerpo['version'] == 0
     assert cuerpo['integ']['gcal']['activo'] is False
 

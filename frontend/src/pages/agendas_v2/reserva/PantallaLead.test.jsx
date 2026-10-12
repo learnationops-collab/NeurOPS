@@ -45,16 +45,23 @@ function escribirYEnter(c, v) {
     fireEvent.change(el, { target: { value: v } });
     fireEvent.keyDown(el, { key: 'Enter' });
 }
-// El correo (opcional, va primero) vacío, nombre, WhatsApp de Bolivia e Instagram vacío.
-function responderContacto(c) {
-    escribirYEnter(c, '');
-    escribirYEnter(c, 'Ana Gómez');
-    expect(screen.getByRole('heading', { name: 'Ana, ¿a qué WhatsApp te escribimos?' })).toBeInTheDocument();
+// El WhatsApp de Bolivia (va primero; con un evento se busca si ya agendó), el correo (opcional) vacío,
+// nombre e Instagram vacío.
+async function responderContacto(c, tel = '7123 4567') {
+    expect(screen.getByRole('heading', { name: '¿A qué WhatsApp te escribimos?' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /^País:/ }));
     fireEvent.click(screen.getByRole('option', { name: /Bolivia/ }));
-    escribirYEnter(c, '7123 4567');
+    await act(async () => { escribirYEnter(c, tel); });
+    escribirYEnter(c, '');
+    escribirYEnter(c, 'Ana Gómez');
     escribirYEnter(c, '');
     expect(screen.getByRole('heading', { name: '¿Cuánto podés invertir?' })).toBeInTheDocument();
+}
+// Hasta el WhatsApp de Bolivia (y la búsqueda del lead que vuelve).
+async function dejarWhatsapp(c, tel) {
+    fireEvent.click(screen.getByRole('button', { name: /^País:/ }));
+    fireEvent.click(screen.getByRole('option', { name: /Bolivia/ }));
+    await act(async () => { escribirYEnter(c, tel); });
 }
 function elegir(texto) {
     fireEvent.click(screen.getByRole('radio', { name: new RegExp(texto) }));
@@ -65,9 +72,28 @@ function elegir(texto) {
 const elegirDia = (container) => fireEvent.click(container.querySelector('.rv-dia:not(:disabled)'));
 
 describe('PantallaLead', () => {
-    it('avanza con los datos de contacto y una opción hasta el calendario', () => {
+    it('una regla con url corta antes del calendario y avisa a dónde va el lead', async () => {
+        const conUrl = normalForm('f2', { ...form, reglas: [{ id: 'r1', url: 'https://academy.thelearnation.com/', cond: [{ q: 'q1', ops: ['o1'] }] }] });
+        const { container } = render(<PantallaLead fuente={{ form: conUrl }} proveedor={local()} modo="prueba" />);
+        await responderContacto(container);
+        elegir('Lo necesario');
+        expect(screen.getByRole('heading', { name: 'Gracias, Ana.' })).toBeInTheDocument();
+        expect(screen.getByText(/academy\.thelearnation\.com/)).toBeInTheDocument();
+        expect(container.querySelector('.rv-dia')).toBeNull();
+    });
+
+    it('una regla a «No califica» corta antes del calendario con el cierre', async () => {
+        const conNo = normalForm('f3', { ...form, reglas: [{ id: 'r1', grupo: '__no', cond: [{ q: 'q1', ops: ['o1'] }] }] });
+        const { container } = render(<PantallaLead fuente={{ form: conNo }} proveedor={local()} modo="prueba" />);
+        await responderContacto(container);
+        elegir('Lo necesario');
+        expect(screen.getByRole('heading', { name: 'Gracias por tu sinceridad' })).toBeInTheDocument();
+        expect(container.querySelector('.rv-dia')).toBeNull();
+    });
+
+    it('avanza con los datos de contacto y una opción hasta el calendario', async () => {
         const { container } = render(<PantallaLead fuente={{ form }} proveedor={local()} modo="prueba" />);
-        responderContacto(container);
+        await responderContacto(container);
         elegir('Lo necesario');
         expect(screen.getByRole('heading', { name: 'Ana, elegí día y horario' })).toBeInTheDocument();
         expect(container.querySelector('.rv-hora')).toBeNull();
@@ -77,7 +103,10 @@ describe('PantallaLead', () => {
 
     it('valida antes de seguir', () => {
         const { container } = render(<PantallaLead fuente={{ form }} proveedor={local()} modo="prueba" />);
-        expect(screen.getByRole('heading', { name: '¿Cuál es tu correo?' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: '¿A qué WhatsApp te escribimos?' })).toBeInTheDocument();
+        escribirYEnter(container, '12');
+        expect(screen.getByRole('alert')).toHaveTextContent('El número parece incompleto.');
+        escribirYEnter(container, '7123 4567');
         escribirYEnter(container, 'no-es-un-correo');
         expect(screen.getByRole('alert')).toHaveTextContent('Revisá el correo.');
         escribirYEnter(container, '');
@@ -86,9 +115,9 @@ describe('PantallaLead', () => {
         expect(screen.getByRole('heading', { name: '¿Cómo te llamás?' })).toBeInTheDocument();
     });
 
-    it('una opción que descalifica muestra el cierre', () => {
+    it('una opción que descalifica muestra el cierre', async () => {
         const { container } = render(<PantallaLead fuente={{ form }} proveedor={local()} modo="prueba" />);
-        responderContacto(container);
+        await responderContacto(container);
         elegir('Nada por ahora');
         expect(screen.getByRole('heading', { name: 'Gracias por tu sinceridad' })).toBeInTheDocument();
         expect(screen.getByText('No califica')).toBeInTheDocument();
@@ -98,7 +127,7 @@ describe('PantallaLead', () => {
         const spy = vi.spyOn(almacen, 'crearReserva');
         const { container } = render(<PantallaLead fuente={{ form, evento }} proveedor={local(p => almacen.crearReserva(p))} modo="publico" origen="ig" />);
         expect(screen.queryByText(/no se agenda nada/)).not.toBeInTheDocument();
-        responderContacto(container);
+        await responderContacto(container);
         elegir('Lo necesario');
         elegirDia(container);
         fireEvent.click(container.querySelector('.rv-hora'));
@@ -116,12 +145,27 @@ describe('PantallaLead', () => {
         expect(screen.getByRole('heading', { name: /^Nos vemos el lunes, Ana\.$/ })).toBeInTheDocument();
     });
 
-    it('al lead que vuelve lo reconoce por el correo y no le pide de nuevo sus datos', async () => {
+    it('al lead que vuelve lo reconoce por el WhatsApp y no le pide de nuevo sus datos', async () => {
         const reservas = [{
             id: 'r0', estado: 'agendada', inicio_ms: Date.UTC(2026, 9, 6, 13), fin_ms: Date.UTC(2026, 9, 6, 14), closer_id: 'ana',
             lead: { nombre: 'Ana Gómez', telefono: '+59171234567', email: 'ana@correo.com', instagram: '' },
         }];
         const { container } = render(<PantallaLead fuente={{ form, evento }} proveedor={proveedorLocal(almacen.getState().d, reservas)} modo="prueba" />);
+        await dejarWhatsapp(container, '7123 4567');
+        expect(screen.getByRole('heading', { name: 'Detectamos que no es tu primera vez agendando una sesión con nosotros.' })).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: /Agendar una nueva/ }));
+        // Sin escribir correo, nombre ni Instagram: directo a las preguntas.
+        expect(screen.getByRole('heading', { name: '¿Cuánto podés invertir?' })).toBeInTheDocument();
+    });
+
+    it('si no aparece por el WhatsApp lo reconoce por el correo', async () => {
+        const reservas = [{
+            id: 'r0', estado: 'agendada', inicio_ms: Date.UTC(2026, 9, 6, 13), fin_ms: Date.UTC(2026, 9, 6, 14), closer_id: 'ana',
+            lead: { nombre: 'Ana Gómez', telefono: '+59171234567', email: 'ana@correo.com', instagram: '' },
+        }];
+        const { container } = render(<PantallaLead fuente={{ form, evento }} proveedor={proveedorLocal(almacen.getState().d, reservas)} modo="prueba" />);
+        await dejarWhatsapp(container, '7999 9999');
+        expect(screen.getByRole('heading', { name: '¿Cuál es tu correo?' })).toBeInTheDocument();
         await act(async () => { escribirYEnter(container, 'ANA@correo.com'); });
         expect(screen.getByRole('heading', { name: 'Detectamos que no es tu primera vez agendando una sesión con nosotros.' })).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: /Agendar una nueva/ }));
@@ -139,9 +183,40 @@ describe('PantallaLead, el lead que vuelve sin todos sus datos', () => {
             lead: { nombre: 'Ana Gómez', telefono: '', email: 'ana@correo.com', instagram: '' },
         }];
         const { container } = render(<PantallaLead fuente={{ form, evento }} proveedor={proveedorLocal(almacen.getState().d, reservas)} modo="prueba" />);
+        await dejarWhatsapp(container, '7999 9999');
         await act(async () => { escribirYEnter(container, 'ana@correo.com'); });
         expect(screen.queryByRole('heading', { name: /no es tu primera vez/ })).not.toBeInTheDocument();
         expect(container.querySelector('[data-rv="in"]').value).toBe('Ana Gómez');
+    });
+});
+
+describe('PantallaLead, el lead que ya respondió el formulario', () => {
+    // Ya agendó y ya pasó (sin sesión próxima): con sus datos completos y las respuestas a este formulario.
+    const previa = (formularioId) => [{
+        id: 'r0', estado: 'hecha', inicio_ms: Date.UTC(2026, 8, 1, 13), fin_ms: Date.UTC(2026, 8, 1, 14), closer_id: 'ana', formulario_id: formularioId,
+        lead: { nombre: 'Ana Gómez', telefono: '+59171234567', email: 'ana@correo.com', instagram: '' },
+        respuestas: [{ pregunta_id: 'q1', tipo: 'opciones', respuesta: 'Lo necesario', opcion_id: 'o1' }],
+    }];
+
+    it('confirma que sigue igual y va directo al calendario', async () => {
+        const { container } = render(<PantallaLead fuente={{ form, evento }} proveedor={proveedorLocal(almacen.getState().d, previa('f1'))} modo="prueba" />);
+        await dejarWhatsapp(container, '7123 4567');
+        expect(screen.getByRole('heading', { name: 'Ya respondiste estas preguntas la última vez.' })).toBeInTheDocument();
+        expect(screen.queryByText('Lo necesario')).not.toBeInTheDocument(); // sus respuestas no se muestran
+        fireEvent.click(screen.getByRole('button', { name: /Sí, sigue igual/ }));
+        expect(screen.getByRole('heading', { name: 'Ana, elegí día y horario' })).toBeInTheDocument();
+        elegirDia(container);
+        expect(container.querySelectorAll('.rv-hora').length).toBeGreaterThan(0);
+        // Atrás vuelve a preguntarle si sigue igual; puede responder de nuevo.
+        fireEvent.click(screen.getByRole('button', { name: 'Anterior' }));
+        fireEvent.click(screen.getByRole('button', { name: /responderlas de nuevo/ }));
+        expect(screen.getByRole('heading', { name: '¿Cuánto podés invertir?' })).toBeInTheDocument();
+    });
+
+    it('si respondió otro formulario (o este cambió) contesta de nuevo', async () => {
+        const { container } = render(<PantallaLead fuente={{ form, evento }} proveedor={proveedorLocal(almacen.getState().d, previa('otro'))} modo="prueba" />);
+        await dejarWhatsapp(container, '7123 4567');
+        expect(screen.getByRole('heading', { name: '¿Cuánto podés invertir?' })).toBeInTheDocument();
     });
 });
 

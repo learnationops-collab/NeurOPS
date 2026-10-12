@@ -38,6 +38,8 @@ function diferida() {
 const errHttp = (status, data = {}) => Object.assign(new Error('HTTP ' + status), { response: { status, data } });
 
 const esHorarios = (url) => url === '/agendas-v2/publico/eventos/e1/horarios';
+const esConocido = (url) => url === '/agendas-v2/publico/eventos/e1/conocido';
+const esReserva = (url) => url === '/agendas-v2/publico/reservas';
 const llamadasA = (pred) => api.post.mock.calls.filter(c => pred(c[0]));
 
 beforeEach(() => {
@@ -52,13 +54,14 @@ function escribirYEnter(c, v) {
     fireEvent.change(el, { target: { value: v } });
     fireEvent.keyDown(el, { key: 'Enter' });
 }
-// El correo (opcional, va primero) vacío, nombre, WhatsApp de Bolivia e Instagram vacío.
-function responderContacto(c) {
-    escribirYEnter(c, '');
-    escribirYEnter(c, 'Ana Gómez');
+// El WhatsApp de Bolivia (va primero: se busca si ya agendó), el correo (opcional) vacío, nombre e
+// Instagram vacío.
+async function responderContacto(c) {
     fireEvent.click(screen.getByRole('button', { name: /^País:/ }));
     fireEvent.click(screen.getByRole('option', { name: /Bolivia/ }));
-    escribirYEnter(c, '7123 4567');
+    await act(async () => { escribirYEnter(c, '7123 4567'); });
+    escribirYEnter(c, '');
+    escribirYEnter(c, 'Ana Gómez');
     escribirYEnter(c, '');
 }
 function elegir(texto) {
@@ -79,7 +82,7 @@ describe('PantallaLead con la API', () => {
             return Promise.reject(errHttp(404));
         });
         const { container } = render(<PantallaLead fuente={{ form, evento }} proveedor={proveedorApi()} modo="publico" origen="ig" />);
-        responderContacto(container);
+        await responderContacto(container);
         elegir('Lo necesario');
 
         expect(screen.getByRole('heading', { name: 'Ana, elegí día y horario' })).toBeInTheDocument();
@@ -113,11 +116,12 @@ describe('PantallaLead con la API', () => {
         let intento = 0;
         api.post.mockImplementation((url) => {
             if (esHorarios(url)) return Promise.resolve({ data: { slots: [H9] } });
+            if (esConocido(url)) return Promise.resolve({ data: { conocido: false } });
             if (++intento === 1) return Promise.reject(errHttp(429));
             return Promise.resolve({ data: { reserva: { id: 'r1', inicio: new Date(H9).toISOString(), duracion: 45 } } });
         });
         const { container } = render(<PantallaLead fuente={{ form, evento }} proveedor={proveedorApi()} modo="publico" />);
-        responderContacto(container);
+        await responderContacto(container);
         await act(async () => { elegir('Lo necesario'); });
         elegirDia(container);
         fireEvent.click(container.querySelector('.rv-hora'));
@@ -130,11 +134,12 @@ describe('PantallaLead con la API', () => {
     it('si ya tiene otra agenda le pregunta y repite el pedido con lo que eligió', async () => {
         api.post.mockImplementation((url, cuerpo) => {
             if (esHorarios(url)) return Promise.resolve({ data: { slots: [H10] } });
+            if (esConocido(url)) return Promise.resolve({ data: { conocido: false } });
             if (!cuerpo.si_ya_tiene) return Promise.reject(errHttp(409, { code: 'ya_tiene', agenda: { inicio: new Date(H9).toISOString() } }));
             return Promise.resolve({ data: { reserva: { id: 'r2', inicio: new Date(H10).toISOString(), duracion: 45 } } });
         });
         const { container } = render(<PantallaLead fuente={{ form, evento }} proveedor={proveedorApi()} modo="publico" />);
-        responderContacto(container);
+        await responderContacto(container);
         await act(async () => { elegir('Lo necesario'); });
         elegirDia(container);
         fireEvent.click(container.querySelector('.rv-hora'));
@@ -154,12 +159,11 @@ describe('PantallaLead con la API', () => {
     it('el que no califica se registra una vez, sin horario', async () => {
         api.post.mockResolvedValue({ data: { descalificada: true } });
         const { container } = render(<PantallaLead fuente={{ form, evento }} proveedor={proveedorApi()} modo="publico" />);
-        responderContacto(container);
+        await responderContacto(container);
         await act(async () => { elegir('Nada por ahora'); });
         expect(screen.getByRole('heading', { name: 'Gracias por tu sinceridad' })).toBeInTheDocument();
-        expect(api.post).toHaveBeenCalledTimes(1);
-        expect(api.post.mock.calls[0][0]).toBe('/agendas-v2/publico/reservas');
-        expect(api.post.mock.calls[0][1]).toMatchObject({ evento_id: 'e1', inicio: null, resp: { q1: 'o2' } });
+        expect(llamadasA(esReserva)).toHaveLength(1);
+        expect(llamadasA(esReserva)[0][1]).toMatchObject({ evento_id: 'e1', inicio: null, resp: { q1: 'o2' } });
     });
 
     it('desde que deja su correo, cada paso queda registrado para Stats', async () => {
@@ -169,11 +173,11 @@ describe('PantallaLead con la API', () => {
         });
         const esAvance = (u) => u === '/agendas-v2/publico/eventos/e1/avance';
         const { container } = render(<PantallaLead fuente={{ form, evento }} proveedor={proveedorApi()} modo="publico" origen="ig" />);
-        await act(async () => { escribirYEnter(container, 'ana@correo.com'); });
-        escribirYEnter(container, 'Ana Gómez');
         fireEvent.click(screen.getByRole('button', { name: /^País:/ }));
         fireEvent.click(screen.getByRole('option', { name: /Bolivia/ }));
-        escribirYEnter(container, '7123 4567');
+        await act(async () => { escribirYEnter(container, '7123 4567'); });
+        await act(async () => { escribirYEnter(container, 'ana@correo.com'); });
+        escribirYEnter(container, 'Ana Gómez');
         expect(llamadasA(esAvance)).toHaveLength(0); // todavía no terminó el contacto
         escribirYEnter(container, '');
         expect(llamadasA(esAvance)).toHaveLength(1);
@@ -182,5 +186,51 @@ describe('PantallaLead con la API', () => {
         expect(llamadasA(esAvance)).toHaveLength(2);
         expect(llamadasA(esAvance)[1][1]).toMatchObject({ en_calendario: true, resp: { q1: 'o1' } });
         expect(screen.getByRole('heading', { name: 'Ana, elegí día y horario' })).toBeInTheDocument();
+    });
+
+    it('el que vuelve por su WhatsApp confirma sus respuestas sin verlas y el servidor las completa', async () => {
+        api.post.mockImplementation((url) => {
+            if (esConocido(url)) {
+                return Promise.resolve({ data: {
+                    conocido: true, completos: true, proxima: null, respuestas: { enviado: null, no: false, url: '' },
+                    datos: { nombre: 'Ana', nombre_completo: 'Ana Gómez', telefono: '+59 ••• 567', instagram: '' },
+                } });
+            }
+            if (esHorarios(url)) return Promise.resolve({ data: { slots: [H9] } });
+            return Promise.resolve({ data: { reserva: { id: 'r1', inicio: new Date(H9).toISOString(), duracion: 45 } } });
+        });
+        const { container } = render(<PantallaLead fuente={{ form, evento }} proveedor={proveedorApi()} modo="publico" />);
+        fireEvent.click(screen.getByRole('button', { name: /^País:/ }));
+        fireEvent.click(screen.getByRole('option', { name: /Bolivia/ }));
+        await act(async () => { escribirYEnter(container, '7123 4567'); });
+        expect(llamadasA(esConocido)[0][1]).toEqual({ telefono: '7123 4567', pais: 'BO' });
+        expect(screen.getByRole('heading', { name: 'Ya respondiste estas preguntas la última vez.' })).toBeInTheDocument();
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Sí, sigue igual/ })); });
+        expect(screen.getByRole('heading', { name: 'Ana, elegí día y horario' })).toBeInTheDocument();
+        expect(llamadasA(esHorarios)[0][1]).toMatchObject({ pais: 'BO', respuestas_guardadas: true });
+        elegirDia(container);
+        fireEvent.click(container.querySelector('.rv-hora'));
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Confirmar/ })); });
+        expect(llamadasA(esReserva)[0][1]).toMatchObject({ datos_guardados: true, respuestas_guardadas: true, resp: { 'c-telefono': '7123 4567' } });
+        expect(screen.getByRole('heading', { name: 'Listo, Ana. Tu sesión quedó agendada.' })).toBeInTheDocument();
+    });
+
+    it('si con sus respuestas no califica, termina ahí sin pasar por el calendario', async () => {
+        api.post.mockImplementation((url) => {
+            if (esConocido(url)) {
+                return Promise.resolve({ data: {
+                    conocido: true, completos: true, proxima: null, respuestas: { enviado: null, no: true, url: '' },
+                    datos: { nombre: 'Ana', nombre_completo: 'Ana Gómez', telefono: '+59 ••• 567', instagram: '' },
+                } });
+            }
+            return Promise.resolve({ data: { descalificada: true } });
+        });
+        const { container } = render(<PantallaLead fuente={{ form, evento }} proveedor={proveedorApi()} modo="publico" />);
+        fireEvent.click(screen.getByRole('button', { name: /^País:/ }));
+        fireEvent.click(screen.getByRole('option', { name: /Bolivia/ }));
+        await act(async () => { escribirYEnter(container, '7123 4567'); });
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Sí, sigue igual/ })); });
+        expect(screen.getByRole('heading', { name: 'Gracias por tu sinceridad' })).toBeInTheDocument();
+        expect(llamadasA(esReserva)[0][1]).toMatchObject({ inicio: null, respuestas_guardadas: true });
     });
 });

@@ -295,3 +295,18 @@ def test_una_estrategia_distribuida_lleva_sus_porcentajes(client, equipo, dir_h)
     malo = _paquete(prioridades__0__porcentajes={'closer1@empresa.com': 100})
     errores = client.post(URL, json={'paquete': malo, 'simular': True}, headers=dir_h).get_json()['errores']
     assert any('solo para la estrategia "repartir"' in e for e in errores)
+
+
+def test_una_regla_o_el_resto_pueden_ser_no_califica_y_vuelven_igual(client, equipo, dir_h):
+    from app.agendas_v2 import paquete
+    p = _paquete(formulario__resto='No califica')
+    r = client.post(URL, json={'paquete': p}, headers=dir_h)
+    assert r.status_code == 201, r.get_json()
+    evento = r.get_json()['creados']['evento']
+    d = servicio.colecciones()
+    form_id = next(e for e in d['eventos'] if e['id'] == evento)['formulario']
+    fo = next(f for f in d['formularios'] if f['id'] == form_id)
+    assert fo['resto'] == '__no'
+    exportado = paquete.exportar(d, evento)
+    assert exportado['formulario']['resto'] == 'No califica'
+    assert '· el resto → No califica' in client.get(URL + '/prompt', headers=dir_h).get_json()['prompt']

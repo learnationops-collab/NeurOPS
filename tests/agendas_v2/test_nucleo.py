@@ -20,6 +20,7 @@ from app.agendas_v2.nucleo.formulario import (
     calificar,
     duplicar_form,
     grupo_por_reglas,
+    grupos_de_form,
     personalizar,
     reglas_rotas,
     validar_respuesta,
@@ -146,8 +147,28 @@ def test_la_nota_pondera_puntos_por_peso_y_excluye_opciones_sin_puntos():
 
 
 def test_la_primera_regla_que_se_cumple_decide_y_si_no_va_a_resto():
-    assert grupo_por_reglas(F, {'q1': 'a', 'q2': 'd'}) == {'grupo': 'g1', 'regla': 0}
-    assert grupo_por_reglas(F, {'q1': 'b', 'q2': 'c'}) == {'grupo': 'g3', 'regla': None}
+    assert grupo_por_reglas(F, {'q1': 'a', 'q2': 'd'}) == {'grupo': 'g1', 'regla': 0, 'url': '', 'no': False}
+    assert grupo_por_reglas(F, {'q1': 'b', 'q2': 'c'}) == {'grupo': 'g3', 'regla': None, 'url': '', 'no': False}
+
+
+def test_una_regla_o_el_resto_pueden_mandar_a_no_califica():
+    regla_no = {'id': 'r0', 'grupo': '__no', 'cond': [{'q': 'q1', 'ops': ['b']}]}
+    fo = normal_form('f', {**F, 'reglas': [regla_no, *F['reglas']]})
+    assert grupo_por_reglas(fo, {'q1': 'b'}) == {'grupo': '', 'regla': 0, 'url': '', 'no': True}
+    assert grupo_por_reglas(fo, {'q1': 'a', 'q2': 'd'})['no'] is False
+    sin_resto = normal_form('f', {**F, 'resto': '__no'})
+    assert grupo_por_reglas(sin_resto, {'q1': 'b', 'q2': 'c'}) == {'grupo': '', 'regla': None, 'url': '', 'no': True}
+    assert '__no' not in grupos_de_form(sin_resto)
+
+
+def test_una_regla_con_url_manda_a_esa_pagina_sin_estrategia():
+    fo = normal_form('f', {**F, 'reglas': [{'id': 'r0', 'grupo': 'g1', 'url': 'https://academy.thelearnation.com/',
+                                            'cond': [{'q': 'q1', 'ops': ['b']}]}, *F['reglas']]})
+    assert fo['reglas'][0]['grupo'] == '' and fo['reglas'][0]['url'] == 'https://academy.thelearnation.com/'
+    assert grupo_por_reglas(fo, {'q1': 'b'}) == {'grupo': '', 'regla': 0, 'url': 'https://academy.thelearnation.com/', 'no': False}
+    assert grupo_por_reglas(fo, {'q1': 'a', 'q2': 'c'})['grupo'] == 'g1'
+    # Solo https: lo demás se descarta y la regla vuelve a mandar a su estrategia.
+    assert normal_form('f', {'reglas': [{'grupo': 'g1', 'url': 'javascript:alert(1)'}]})['reglas'][0]['url'] == ''
 
 
 def test_detecta_reglas_que_apuntan_a_opciones_borradas():
@@ -179,7 +200,7 @@ def test_valida_correo_telefono_e_instagram():
 
 
 def test_los_datos_de_contacto_van_primero_y_en_orden_fijo():
-    assert [q['id'] for q in preguntas_flujo(F)[:4]] == ['c-email', 'c-nombre', 'c-telefono', 'c-instagram']
+    assert [q['id'] for q in preguntas_flujo(F)[:4]] == ['c-telefono', 'c-email', 'c-nombre', 'c-instagram']
 
 
 # --- asignacion -----------------------------------------------------------------------------------

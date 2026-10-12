@@ -839,6 +839,31 @@ def export_database():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@bp.route('/admin/db/export/customers-csv', methods=['GET'])
+@login_required
+@operator_required
+def export_customers_csv():
+    """Clientes históricos con mail, teléfono, nombre y país, en el formato de
+    "customer list" de Meta Ads. `?alcance=ventas` (default, los que compraron)
+    o `?alcance=todos` (compraran o no). Ver CustomerExportService."""
+    try:
+        from flask import Response
+        from app.services.customer_export_service import CustomerExportService
+
+        alcance = request.args.get('alcance', 'ventas')
+        if alcance not in CustomerExportService.ALCANCES:
+            return jsonify({"error": "alcance debe ser 'ventas' o 'todos'"}), 400
+
+        customers = CustomerExportService.get_customers(alcance)
+        filename = f"clientes_{alcance}_meta_ads_{datetime.now().strftime('%Y%m%d')}.csv"
+        return Response(
+            CustomerExportService.to_csv(customers),
+            mimetype='text/csv; charset=utf-8',
+            headers={'Content-Disposition': f'attachment;filename={filename}'}
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @bp.route('/admin/db/import', methods=['POST'])
 @login_required
 @operator_required

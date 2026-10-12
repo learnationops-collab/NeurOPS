@@ -8,7 +8,7 @@ import re
 from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 
-from app.agendas_v2 import paquete, servicio
+from app.agendas_v2 import paquete, servicio, videos
 from app.agendas_v2.nucleo.normalizar import COLECCIONES
 from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, ROLE_SETTER
 
@@ -111,6 +111,17 @@ def ocupacion():
     return jsonify({'ocupacion': servicio.ocupacion_google(desde, hasta)})
 
 
+@bp.route('/eventos/<evento_id>/prueba', methods=['POST'])
+def prueba_horarios(evento_id):
+    """{grupo} → lo que vería un lead de esa prioridad en ese evento (la versión publicada, o el borrador
+    si nunca se publicó), salteando el formulario: {version, slots: [{t, p}], grupo, regla, desborde}.
+    No agenda nada."""
+    if not ID_VALIDO.match(evento_id or ''):
+        return jsonify({'message': 'Not found'}), 404
+    r = servicio.horarios_prueba(servicio.colecciones(), evento_id, _cuerpo().get('grupo'))
+    return jsonify(r) if r else (jsonify({'message': 'Not found'}), 404)
+
+
 @bp.route('/usuarios', methods=['GET'])
 def usuarios():
     """Usuarios activos de la app. Por defecto los closers: Team (quienes atienden) suma personas solo
@@ -160,3 +171,56 @@ def paquete_importar():
         return jsonify({'resumen': paquete.resumen(plan), 'editados': tocados, 'version': servicio.version()})
     creados = paquete.importar(d, plan, usuario_id=current_user.id, en_funnel=funnel_id)
     return jsonify({'resumen': paquete.resumen(plan), 'creados': creados, 'version': servicio.version()}), 201
+
+
+# --- Videos de las páginas de gracias (volumen, ver videos.py) ---------------------------------------
+
+
+def _error_video(e):
+    estado = {'sin_volumen': 503, 'invalido': 400, 'no_existe': 404, 'desfasado': 409}[e.code]
+    cuerpo = {'code': e.code, 'message': str(e)}
+    if e.recibido is not None:
+        cuerpo['recibido'] = e.recibido
+    return jsonify(cuerpo), estado
+
+
+@bp.route('/videos', methods=['POST'])
+def video_crear():
+    """{nombre, tamano, tipo} → {video}: reserva el lugar; las partes llegan con PUT."""
+    c = _cuerpo()
+    try:
+        return jsonify({'video': videos.crear(c.get('nombre'), c.get('tamano'), c.get('tipo'))}), 201
+    except videos.VideoError as e:
+        return _error_video(e)
+
+
+@bp.route('/videos/<video_id>', methods=['GET'])
+def video_estado(video_id):
+    """Cuánto llegó: para retomar una subida cortada."""
+    try:
+        return jsonify({'video': videos.meta(video_id)})
+    except videos.VideoError as e:
+        return _error_video(e)
+
+
+@bp.route('/videos/<video_id>', methods=['PUT'])
+def video_parte(video_id):
+    """?desde=<bytes ya guardados>, el cuerpo es la parte (binario)."""
+    desde = request.args.get('desde', type=int)
+    if desde is None or desde < 0 or (request.content_length or 0) > videos.PARTE_MAX:
+        return jsonify({'code': 'invalido', 'message': 'Parte inválida.'}), 400
+    try:
+        return jsonify({'video': videos.recibir(video_id, desde, request.get_data(cache=False))})
+    except videos.VideoError as e:
+        return _error_video(e)
+
+
+@bp.route('/videos/<video_id>', methods=['DELETE'])
+def video_borrar(video_id):
+    """Borra el archivo si ninguna otra página de gracias lo usa (?salvo=<la que lo suelta>)."""
+    if not videos.RE_ID.fullmatch(video_id) or not videos.directorio():
+        return jsonify({'ok': True})
+    if servicio.video_en_uso(servicio.colecciones(), video_id, salvo=request.args.get('salvo')):
+        return jsonify({'ok': True, 'enUso': True})
+    videos.borrar(video_id)
+    return jsonify({'ok': True})

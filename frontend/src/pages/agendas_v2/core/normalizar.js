@@ -7,7 +7,7 @@ import {
 } from './catalogos';
 import { abrevDe, clonar, entero, esc, slugify, uid } from './util';
 
-export const COLECCIONES = ['funnels', 'formularios', 'personas', 'grupos', 'eventos', 'roles'];
+export const COLECCIONES = ['funnels', 'formularios', 'personas', 'grupos', 'eventos', 'roles', 'gracias'];
 
 export function emailOk(m) {
     m = String(m || '').trim().toLowerCase().slice(0, 120);
@@ -63,8 +63,10 @@ export function normalPregunta(q) {
 export function normalReglas(reglas) {
     return (Array.isArray(reglas) ? reglas : []).slice(0, 20).map(r => {
         r = r || {};
+        // url: la regla no manda a una estrategia sino a otra página (el lead no agenda).
+        const url = urlOk(r.url);
         return {
-            id: String(r.id || uid('r')).slice(0, 40), grupo: String(r.grupo || ''),
+            id: String(r.id || uid('r')).slice(0, 40), grupo: url ? '' : String(r.grupo || ''), url,
             cond: (Array.isArray(r.cond) ? r.cond : []).slice(0, 8).map(c => { c = c || {}; return { q: String(c.q || ''), ops: (Array.isArray(c.ops) ? c.ops : []).map(String).slice(0, 60) }; }),
         };
     });
@@ -165,6 +167,27 @@ export function normalEvento(id, d) {
         desc: limpiarHTML(d.desc), redir: urlOk(d.redir),
         // Indicaciones para el lead: van en la invitación de Google Calendar (texto plano).
         indic: typeof d.indic === 'string' ? d.indic.slice(0, 2000) : '',
+        // Página de gracias (colección `gracias`) a la que va el lead al confirmar. No entra en la copia
+        // publicada: se toma del evento en vivo.
+        gracias: String(d.gracias || ''),
+    };
+}
+
+// Un video de la página de gracias: un archivo subido al volumen (`archivo`, su id) o un link (Loom,
+// YouTube, Vimeo o Drive). Si están los dos, manda el archivo.
+export function normalVideo(v) {
+    v = v || {};
+    const a = String(v.archivo || '');
+    return { archivo: /^v[a-z0-9]{20}$/.test(a) ? a : '', nombre: String(v.nombre || '').slice(0, 120), url: urlOk(v.url) };
+}
+
+// Página de gracias después de agendar: el video que completa la reserva, el del plan y los casos de éxito
+// de la Academia. `segundos`: cuánto video antes de mostrar «Ver mi plan».
+export function normalGracias(id, d) {
+    d = d || {};
+    return {
+        id, nombre: String(d.nombre || 'Sin nombre').slice(0, 80), video: normalVideo(d.video), plan: normalVideo(d.plan),
+        segundos: entero(d.segundos, 0, 60, 5), casos: d.casos !== false, orden: Number(d.orden) || 0,
     };
 }
 
@@ -202,7 +225,7 @@ export function normalInteg(d) {
     return o;
 }
 
-export const NORM = { funnels: normalFunnel, formularios: normalForm, personas: normalPersona, grupos: normalGrupo, eventos: normalEvento, roles: normalRol };
+export const NORM = { funnels: normalFunnel, formularios: normalForm, personas: normalPersona, grupos: normalGrupo, eventos: normalEvento, roles: normalRol, gracias: normalGracias };
 
 // Las preguntas de contacto no se guardan: se arman al vuelo con los textos fijos de CONTACTO.
 export function contactoPreguntas(f) {

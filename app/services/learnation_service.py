@@ -83,3 +83,9 @@ class LearnationService:
     @staticmethod
     def get_student_summary(learnation_user_id):
         return LearnationService._request('GET', f'/users/{learnation_user_id}/summary')
+
+    @staticmethod
+    def get_success_cases():
+        """Los casos de éxito publicados para landings (el Muro de Honor): los muestra la página de
+        gracias de Agendas 2.0."""
+        return LearnationService._request('GET', '/success-cases')

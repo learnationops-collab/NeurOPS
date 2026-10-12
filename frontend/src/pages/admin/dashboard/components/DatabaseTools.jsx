@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast';
 const DatabaseTools = () => {
     const [migrating, setMigrating] = useState(false);
     const [exporting, setExporting] = useState(false);
+    const [exportingCustomers, setExportingCustomers] = useState(false);
     const [importing, setImporting] = useState(false);
     const [cleaning, setCleaning] = useState(false);
     const [selectedTable, setSelectedTable] = useState('');
@@ -69,6 +70,27 @@ const DatabaseTools = () => {
             toast.error("Error al exportar la base de datos");
         } finally {
             setExporting(false);
+        }
+    };
+
+    const handleExportCustomers = async () => {
+        setExportingCustomers(true);
+        try {
+            // Sin timeout a propósito: recorre todas las ventas históricas (ver migrate-leads arriba).
+            const response = await api.get('/admin/db/export/customers-csv', { responseType: 'blob', timeout: 0 });
+            const url = window.URL.createObjectURL(response.data);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `clientes_meta_ads_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success("Lista de clientes descargada");
+        } catch (error) {
+            console.error("Error exporting customers", error);
+            toast.error("Error al exportar los clientes");
+        } finally {
+            setExportingCustomers(false);
         }
     };
 
@@ -233,6 +255,14 @@ const DatabaseTools = () => {
                             className="w-full h-14 bg-white/5 hover:bg-white/10 text-white border border-white/10 flex items-center justify-center gap-2 rounded-xl transition-all font-black uppercase tracking-widest text-[9px]"
                         >
                             {exporting ? <Loader2 className="animate-spin" /> : <><Download size={18} /> Exportar Base de Datos</>}
+                        </Button>
+
+                        <Button
+                            onClick={handleExportCustomers}
+                            disabled={exportingCustomers}
+                            className="w-full h-14 bg-white/5 hover:bg-white/10 text-white border border-white/10 flex items-center justify-center gap-2 rounded-xl transition-all font-black uppercase tracking-widest text-[9px]"
+                        >
+                            {exportingCustomers ? <Loader2 className="animate-spin" /> : <><Download size={18} /> Exportar Clientes (CSV Meta Ads)</>}
                         </Button>
 
                         <div className="relative">

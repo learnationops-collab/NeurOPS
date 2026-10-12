@@ -43,7 +43,8 @@ export function armarReserva({ lead, evento, funnel, form, asig, slot, origen, s
             opcion_id: o ? o.id : null, puntos: o ? o.puntos : null, peso: q.peso, descalifica: !!(o && o.descalifica),
         };
     });
-    const descalificada = respuestas.some(r => r.descalifica);
+    // No califica por una respuesta o porque la segmentación lo manda a «No califica».
+    const descalificada = respuestas.some(r => r.descalifica) || !!(asig && asig.no);
     return {
         version: VERSION_CONTRATO,
         evento_id: evento.id, evento_slug: evento.slug, funnel_id: funnel ? funnel.id : '', funnel_slug: funnel ? funnel.slug : '',

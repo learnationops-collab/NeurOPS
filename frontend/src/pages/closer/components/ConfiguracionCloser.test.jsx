@@ -49,4 +49,27 @@ describe('Configuración del closer', () => {
         expect(screen.getByText(/\/agendas-v2\/agenda\/ana-seguimiento$/)).toBeTruthy();
         expect(screen.getByText('Sin formulario (solo contacto)')).toBeTruthy();
     });
+
+    it('toma el modo de la hoja que la contiene: texto claro es hoja oscura aunque la app esté en claro', () => {
+        api.get.mockResolvedValue({ data: {} });
+        const modo = (color) => {
+            const hoja = document.createElement('div');
+            hoja.className = 'bg-surface';
+            hoja.style.color = color;
+            document.body.appendChild(hoja);
+            const { container, unmount } = render(<ConfiguracionCloser />, { container: hoja });
+            const tema = container.querySelector('.cu-hoja').dataset.theme;
+            unmount();
+            hoja.remove();
+            return tema;
+        };
+        expect(modo('rgb(255, 255, 255)')).toBe('dark');  // glass: hoja navy con texto blanco
+        expect(modo('rgb(15, 23, 42)')).toBe('light');
+    });
+
+    it('fuera de una hoja sigue el modo de la app', () => {
+        api.get.mockResolvedValue({ data: {} });
+        const { container } = render(<ConfiguracionCloser />);
+        expect(container.querySelector('.cu-hoja').dataset.theme).toBe('light');
+    });
 });

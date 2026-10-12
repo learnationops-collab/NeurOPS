@@ -13,11 +13,12 @@ import '../thalamus.css';
 import { Fragment, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { FIN_DEF, conOpciones, detectarPais, paisDe } from '../core/catalogos';
 import { buscar } from '../core/datos';
-import { limpiarRespuesta, nombreLead, opcionDescalifica, personalizar, validarRespuesta } from '../core/formulario';
+import { grupoPorReglas, limpiarRespuesta, nombreLead, opcionDescalifica, personalizar, validarRespuesta } from '../core/formulario';
 import { COLECCIONES, normalForm, preguntasFlujo } from '../core/normalizar';
 import { Humo, Icono } from '../ui/base';
+import { rutaGracias } from './gracias/contenido';
 import PasoCalendario from './PasoCalendario';
-import PasoConocido from './PasoConocido';
+import PasoConocido, { PasoPrevias } from './PasoConocido';
 import { PasoFin, PasoListo, Respuestas } from './PasoFinal';
 import PasoPregunta, { opcionesVisibles } from './PasoPregunta';
 
@@ -44,20 +45,25 @@ function armarCtx(form, ev, persona, d) {
         dur: ev ? ev.duracion : per && per.ldur ? per.ldur : 45,
         reglas: fo ? fo.reglas || [] : null, resto: fo ? fo.resto || '' : '', persona: perId,
         ag: ev ? { reservas: ev.reservas, antel: ev.antel, paso: ev.paso } : null,
-        redir: ev ? ev.redir : '', tzFija: ev && ev.zona && ev.zona.modo === 'fija' ? ev.zona.tz : '',
+        // Después de confirmar: la página de gracias del evento si tiene una; si no, su link de redirección.
+        redir: ev ? (ev.gracias ? window.location.origin + rutaGracias(ev.gracias) : ev.redir) : '', tzFija: ev && ev.zona && ev.zona.modo === 'fija' ? ev.zona.tz : '',
     };
 }
 
-function estadoInicial(ctx, { desde = 0, ejemplo = '' } = {}, enfocar = true) {
+// resp/fin/finUrl: la prueba por segmento arranca con el lead de prueba ya cargado (o directo en el fin).
+function estadoInicial(ctx, { desde = 0, ejemplo = '', resp = null, fin = false, finUrl = '' } = {}, enfocar = true) {
     const p0 = detectarPais();
     return {
-        idx: Math.min(desde || 0, ctx.preguntas.length), resp: {}, ejemplo: ejemplo || '', tel: '',
+        idx: Math.min(desde || 0, ctx.preguntas.length), resp: resp ? { ...resp } : {}, ejemplo: ejemplo || '', tel: (resp && resp['c-telefono']) || '',
         pais: p0.c, tz: ctx.tzFija || p0.tz, mes: null, dia: null, hora: null,
         error: '', errN: 0, paisAbierto: false, zonaAbierta: false, busca: '',
-        fin: false, listo: false, slot: null, asigFinal: null, recalc: 0, vuelta: 0,
-        // El lead que vuelve: buscando (el correo que se está buscando), reco (lo que se encontró) y su paso,
-        // siYaTiene (lo que eligió con la sesión que ya tenía), guardados/tapados (confirmó sus datos guardados).
-        buscando: '', recoN: 0, reco: null, siYaTiene: null, guardados: false, tapados: null, consultor: null,
+        fin: !!fin, finUrl: finUrl || '', listo: false, slot: null, asigFinal: null, recalc: 0, vuelta: 0,
+        // El lead que vuelve: buscando (la pregunta, WhatsApp o correo, con la que se lo busca), visto (con
+        // cuál se lo reconoció: no se lo vuelve a buscar con la otra), reco (lo que se encontró) y su paso,
+        // siYaTiene (lo que eligió con la sesión que ya tenía), guardados/tapados (confirmó sus datos guardados),
+        // previas (ya respondió este formulario) y usaPrevias (null: no eligió; true: las confirmó; false: responde).
+        buscando: '', visto: '', recoN: 0, reco: null, siYaTiene: null, guardados: false, tapados: null, consultor: null,
+        previas: null, usaPrevias: null,
         foco: enfocar ? 'entra' : null, focoN: enfocar ? 1 : 0,
     };
 }
@@ -72,31 +78,57 @@ function fijarTexto(p, preguntas) {
     return { ...p, resp: { ...p.resp, [q.id]: limpiarRespuesta(q, p.resp[q.id]) } };
 }
 
-// reconocer: el proveedor sabe buscar al lead que vuelve; al dejar el correo se lo busca antes de seguir.
-function seguirDe(p, preguntas, reconocer = false) {
-    if (p.idx >= preguntas.length || p.listo || p.fin || p.buscando || p.reco) return p;
+// Lo que la segmentación decide al terminar las preguntas: {url} (una regla lo manda a otra página) o
+// {no} (lo manda a «No califica»). En los dos casos no agenda. Con persona fija no hay segmentación.
+function cortePorReglas(ctx, resp) {
+    if (!ctx || !ctx.form || ctx.persona) return { url: '', no: false };
+    const r = grupoPorReglas(ctx.form, resp);
+    return { url: r.url || '', no: !!r.no };
+}
+
+// Con qué se reconoce al lead que vuelve: su WhatsApp o su correo (el que deje primero).
+const IDENTIFICA = ['c-telefono', 'c-email'];
+const primeraDelForm = (preguntas) => preguntas.findIndex(q => !q.id.startsWith('c-'));
+
+// Ya respondió este formulario: antes de la primera pregunta se le pregunta si sigue todo igual.
+function ofrecePrevias(p, preguntas) {
+    return !!p.previas && p.usaPrevias === null && !p.listo && !p.fin && !p.reco && p.idx < preguntas.length && p.idx === primeraDelForm(preguntas);
+}
+
+// reconocer: el proveedor sabe buscar al lead que vuelve; al dejar el WhatsApp o el correo se lo busca
+// antes de seguir (con el segundo, solo si con el primero no apareció).
+// ctx: al terminar las preguntas, una regla con url (o a «No califica») corta como un descalificado.
+function seguirDe(p, preguntas, reconocer = false, ctx = null) {
+    if (p.idx >= preguntas.length || p.listo || p.fin || p.buscando || p.reco || ofrecePrevias(p, preguntas)) return p;
     const q = preguntas[p.idx], p1 = fijarTexto(p, preguntas);
     const err = validarRespuesta(q, p1.resp[q.id] || '');
     if (err) return { ...p1, error: err, errN: p1.errN + 1 };
     const cerrado = { ...p1, error: '', paisAbierto: false, zonaAbierta: false };
-    if (reconocer && q.id === 'c-email' && p1.resp[q.id]) {
-        return { ...cerrado, buscando: p1.resp[q.id], recoN: p1.recoN + 1, guardados: false, tapados: null, siYaTiene: null };
+    if (reconocer && IDENTIFICA.includes(q.id) && p1.resp[q.id] && (!p1.visto || p1.visto === q.id)) {
+        return { ...cerrado, buscando: q.id, visto: '', recoN: p1.recoN + 1, guardados: false, tapados: null, siYaTiene: null, previas: null, usaPrevias: null };
     }
     if (opcionDescalifica(q, p1.resp)) return conFoco({ ...cerrado, fin: true }, 'entra');
+    const corte = p1.idx + 1 >= preguntas.length ? cortePorReglas(ctx, p1.resp) : { url: '', no: false };
+    if (corte.url) return conFoco({ ...cerrado, fin: true, finUrl: corte.url }, 'entra');
+    if (corte.no) return conFoco({ ...cerrado, fin: true }, 'entra');
     return conFoco({ ...cerrado, idx: p1.idx + 1, busca: '' }, 'entra');
 }
 
 function atrasDe(p, preguntas) {
     if (p.listo || p.fin) return p;
-    // Desde "no es tu primera vez" se vuelve al correo.
+    // Desde "no es tu primera vez" se vuelve a donde se lo reconoció (WhatsApp o correo).
     if (p.reco) return conFoco({ ...p, reco: null, siYaTiene: null }, 'entra');
     if (p.idx === 0) return p;
     const p1 = fijarTexto(p, preguntas);
     let idx = Math.min(p1.idx, preguntas.length) - 1;
-    // Confirmó sus datos guardados: las preguntas de contacto se saltearon, así que se vuelve al correo.
+    // Confirmó sus respuestas guardadas: las preguntas se saltearon, así que se vuelve a preguntarle si sigue igual.
+    if (p1.usaPrevias && preguntas[idx] && !preguntas[idx].id.startsWith('c-')) {
+        return conFoco({ ...p1, idx: primeraDelForm(preguntas), usaPrevias: null, error: '', busca: '' }, 'entra');
+    }
+    // Confirmó sus datos guardados: las preguntas de contacto se saltearon, así que se vuelve a donde se lo reconoció.
     if (p1.guardados && preguntas[idx] && preguntas[idx].id.startsWith('c-')) {
-        idx = Math.max(0, preguntas.findIndex(q => q.id === 'c-email'));
-        return conFoco({ ...p1, idx, guardados: false, tapados: null, siYaTiene: null, error: '', busca: '' }, 'entra');
+        idx = Math.max(0, preguntas.findIndex(q => q.id === (p1.visto || 'c-email')));
+        return conFoco({ ...p1, idx, guardados: false, tapados: null, siYaTiene: null, previas: null, usaPrevias: null, error: '', busca: '' }, 'entra');
     }
     return conFoco({ ...p1, idx, error: '', busca: '', paisAbierto: false, zonaAbierta: false }, 'entra');
 }
@@ -110,12 +142,26 @@ function conNombre(p, r) {
 // El lead que vuelve con los datos completos no los escribe de nuevo: se saltean las preguntas de contacto.
 // Si le faltan, sigue después del correo con el nombre precargado.
 function usarGuardados(p, r, preguntas) {
-    const base = { ...p, buscando: '', reco: null, busca: '' };
+    const base = { ...p, buscando: '', reco: null, busca: '', previas: r.respuestas || null, usaPrevias: null };
     if (!r.completos) return conFoco({ ...conNombre(base, r), idx: p.idx + 1 }, 'entra');
     const i = preguntas.findIndex(q => !q.id.startsWith('c-'));
     const resp = { ...p.resp, ...(r.resp || {}) };
     if (!resp['c-nombre'] && r.datos.nombre) resp['c-nombre'] = r.datos.nombre;
     return conFoco({ ...base, resp, guardados: true, tapados: r.datos, idx: i < 0 ? preguntas.length : i }, 'entra');
+}
+
+// Sí, sigue igual: se saltean las preguntas y termina como si las hubiera respondido (calendario, «No
+// califica» u otra página). La API no manda las respuestas: dice cómo termina y el servidor las completa.
+function elegirPrevias(p, si, preguntas, ctx) {
+    if (!ofrecePrevias(p, preguntas)) return p;
+    if (!si) return conFoco({ ...p, usaPrevias: false }, 'entra');
+    const resp = { ...p.resp, ...(p.previas.resp || {}) };
+    let corte = p.previas.resp ? null : { url: p.previas.url || '', no: !!p.previas.no };
+    if (!corte) corte = preguntas.some(q => opcionDescalifica(q, resp)) ? { url: '', no: true } : cortePorReglas(ctx, resp);
+    const p1 = { ...p, resp, usaPrevias: true, idx: preguntas.length, busca: '', error: '' };
+    if (corte.url) return conFoco({ ...p1, fin: true, finUrl: corte.url }, 'entra');
+    if (corte.no) return conFoco({ ...p1, fin: true }, 'entra');
+    return conFoco(p1, 'entra');
 }
 
 // Tab no sale de la pantalla a pantalla completa.
@@ -128,11 +174,13 @@ function atrapar(e, cont) {
 }
 
 /**
- * fuente: {form, evento?, persona?, desde?, ejemplo?}. En el link público, evento y form son la versión publicada.
+ * fuente: {form, evento?, persona?, desde?, ejemplo?, resp?, fin?, finUrl?, etiqueta?}. En el link público, evento y form son la versión publicada.
+ * etiqueta: lo que se está probando (va junto a «Prueba»).
  * proveedor: proveedorLocal(...) o proveedorApi() (reserva/proveedores.js).
  * origen: slug de ?o=; setter: id de la persona del origen (lo resuelve la página pública en modo local).
+ * onReiniciar: en vez de volver a empezar acá, «Probar de nuevo» hace esto (la prueba por segmento vuelve a elegir).
  */
-export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevModo = 'escritorio', origen = '', setter = null, onSalir }) {
+export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevModo = 'escritorio', origen = '', setter = null, onSalir, onReiniciar }) {
     const d = proveedor.d || SIN_DATOS;
     const sinc = proveedor.sinc !== false;
     const prueba = modo !== 'publico';
@@ -164,12 +212,12 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
     // Proveedor de la API: los horarios llegan después. Cada pedido tiene una clave (respuestas, zona y
     // recalc); uno viejo se cancela. Mientras llega el nuevo se siguen mostrando los horarios anteriores
     // de las mismas respuestas, si los había (cambiar de zona o un "ocupado" no deja la pantalla en blanco).
-    const clavePedido = enCal && !sinc ? JSON.stringify([ctx.evento ? ctx.evento.id : '', s.resp, s.tz, s.recalc]) : '';
+    const clavePedido = enCal && !sinc ? JSON.stringify([ctx.evento ? ctx.evento.id : '', s.resp, s.tz, s.recalc, s.usaPrevias === true]) : '';
     const [remoto, setRemoto] = useState(SIN_REMOTO);
     useEffect(() => {
         if (!clavePedido) return undefined;
-        const ctl = new AbortController(), { resp, tz } = sRef.current;
-        proveedor.horarios({ evento: ctx.evento, resp, tz, signal: ctl.signal }).then((asig) => {
+        const ctl = new AbortController(), { resp, tz, pais, usaPrevias } = sRef.current;
+        proveedor.horarios({ evento: ctx.evento, resp, tz, pais, guardadas: usaPrevias === true, signal: ctl.signal }).then((asig) => {
             if (!ctl.signal.aborted && vivoRef.current) setRemoto({ clave: clavePedido, resp, asig, error: '' });
         }, (e) => {
             if (ctl.signal.aborted || !vivoRef.current || (e && e.code === 'cancelado')) return;
@@ -202,13 +250,18 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
     }, [s.focoN]);
 
     // Link público: el que no califica queda registrado (sin horario) para contarlo después. Una sola vez.
+    // Si una regla lo manda a otra página, se lo lleva ahí después de registrarlo (o a los 3 s, si tarda).
     useEffect(() => {
         if (modo !== 'publico' || !s.fin || descRef.current || !ctx.evento) return;
         descRef.current = true;
+        const url = s.finUrl;
+        let ido = false;
+        const ir = () => { if (url && !ido && vivoRef.current) { ido = true; window.location.assign(url); } };
+        if (url) setTimeout(ir, 3000);
         try {
-            proveedor.reservar({ lead: { preguntas, resp: s.resp, pais: s.pais, tz: s.tz }, ctx: ctxAsig(s), evento: ctx.evento, form: ctx.form, asig: null, slot: null, origen, setter, datosGuardados: s.guardados })
-                .catch(() => { /* no frena al lead */ });
-        } catch { /* no frena al lead */ }
+            Promise.resolve(proveedor.reservar({ lead: { preguntas, resp: s.resp, pais: s.pais, tz: s.tz }, ctx: ctxAsig(s), evento: ctx.evento, form: ctx.form, asig: null, slot: null, origen, setter, datosGuardados: s.guardados, respuestasGuardadas: s.usaPrevias === true }))
+                .catch(() => { /* no frena al lead */ }).then(ir);
+        } catch { ir(); /* no frena al lead */ }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [s.fin]);
 
@@ -217,24 +270,27 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
     const nContacto = preguntas.filter(q => q.id.startsWith('c-')).length;
     useEffect(() => {
         if (modo !== 'publico' || typeof proveedor.avance !== 'function' || !ctx.evento || s.fin || s.listo || s.reco || s.buscando) return;
-        // Sin correo no hay a quién seguir (el servidor tampoco lo registraría).
-        if ((idx < nContacto && !s.guardados) || !s.resp['c-email']) return;
-        proveedor.avance({ evento: ctx.evento, resp: s.resp, origen, enCalendario: idx >= n, datosGuardados: s.guardados });
+        // Sin correo (escrito o guardado) no hay a quién seguir (el servidor tampoco lo registraría).
+        if ((idx < nContacto && !s.guardados) || (!s.resp['c-email'] && !s.guardados)) return;
+        proveedor.avance({ evento: ctx.evento, resp: s.resp, pais: s.pais, origen, enCalendario: idx >= n, datosGuardados: s.guardados, respuestasGuardadas: s.usaPrevias === true });
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [idx, s.reco, s.buscando]);
+    }, [idx, s.reco, s.buscando, s.usaPrevias]);
 
-    // El lead dejó su correo: ¿ya agendó antes? Si no (o si falla la búsqueda), sigue como siempre.
+    // El lead dejó su WhatsApp o su correo: ¿ya agendó antes? Si no (o si falla la búsqueda), sigue como siempre.
     useEffect(() => {
         if (!s.buscando) return undefined;
         const n0 = s.recoN, seguir = (p) => conFoco({ ...p, buscando: '', idx: p.idx + 1, busca: '' }, 'entra');
+        const por = s.buscando, valor = s.resp[por];
+        const quien = por === 'c-email' ? { email: valor } : { telefono: valor, pais: s.pais };
         let vivo = true;
-        Promise.resolve().then(() => proveedor.conocido({ evento: ctx.evento, email: s.buscando })).then((r) => {
+        Promise.resolve().then(() => proveedor.conocido({ evento: ctx.evento, form: ctx.form, ...quien })).then((r) => {
             if (!vivo || !vivoRef.current) return;
             setS(p => {
                 if (p.recoN !== n0 || !p.buscando) return p;
                 if (!r || !r.conocido) return seguir(p);
-                if (!r.proxima) return usarGuardados(p, r, preguntas);
-                return conFoco({ ...p, buscando: '', reco: r }, 'entra');
+                const visto = { ...p, visto: por };
+                if (!r.proxima) return usarGuardados(visto, r, preguntas);
+                return conFoco({ ...visto, buscando: '', reco: r }, 'entra');
             });
         }, () => { if (vivo && vivoRef.current) setS(p => (p.recoN === n0 && p.buscando ? seguir(p) : p)); });
         return () => { vivo = false; };
@@ -273,13 +329,15 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
             });
             clearTimeout(timerRef.current);
             timerRef.current = setTimeout(() => {
-                setS(p => (p.vuelta === vuelta && p.idx === i && !p.fin && !p.listo ? seguirDe(p, preguntas, reconocer) : p));
+                setS(p => (p.vuelta === vuelta && p.idx === i && !p.fin && !p.listo ? seguirDe(p, preguntas, reconocer, ctx) : p));
             }, AUTO_AVANCE);
         },
         buscar(v) { setS(p => ({ ...p, busca: v })); },
-        seguir() { setS(p => seguirDe(p, preguntas, reconocer)); },
+        seguir() { setS(p => seguirDe(p, preguntas, reconocer, ctx)); },
         // El lead que vuelve con una sesión próxima: la reprograma o suma otra.
         elegirProxima(v) { setS(p => (p.reco ? usarGuardados({ ...p, siYaTiene: v }, p.reco, preguntas) : p)); },
+        // Ya respondió este formulario: true confirma sus respuestas, false las responde de nuevo.
+        elegirPrevias(si) { setS(p => elegirPrevias(p, si, preguntas, ctx)); },
         atras() { setS(p => atrasDe(p, preguntas)); },
         alternarPais() {
             setS(p => conFoco({ ...p, paisAbierto: !p.paisAbierto }, p.paisAbierto ? '.rv-pais' : '.rv-pais-op[aria-selected="true"]'));
@@ -317,7 +375,7 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
             let envioP;
             try {
                 envioP = proveedor.reservar({ lead: { preguntas, resp: p.resp, pais: p.pais, tz: p.tz }, ctx: ctxAsig(p), evento: ctx.evento, form: ctx.form, asig, slot, origen, setter,
-                    siYaTiene: siYaTiene || p.siYaTiene || undefined, datosGuardados: p.guardados });
+                    siYaTiene: siYaTiene || p.siYaTiene || undefined, datosGuardados: p.guardados, respuestasGuardadas: p.usaPrevias === true });
             } catch (e) { envioP = Promise.reject(e); }
             envioP.then((r) => {
                 if (!vivoRef.current) return;
@@ -336,6 +394,7 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
             });
         },
         reiniciar() {
+            if (onReiniciar) { onReiniciar(); return; }
             clearTimeout(timerRef.current);
             descRef.current = false;
             setEnvio({ enviando: false, error: '', n: 0 });
@@ -370,7 +429,7 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
                 return;
             }
         }
-        if (q && !p.listo && !p.fin && q.tipo === 'opciones' && /^[a-z]$/i.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey && !/INPUT|TEXTAREA|SELECT/.test(t.tagName)) {
+        if (q && !p.listo && !p.fin && !ofrecePrevias(p, preguntas) && q.tipo === 'opciones' && /^[a-z]$/i.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey && !/INPUT|TEXTAREA|SELECT/.test(t.tagName)) {
             const o = q.opciones[e.key.toUpperCase().charCodeAt(0) - 65];
             if (o) { e.preventDefault(); a.elegirOp(o.id); }
         }
@@ -390,7 +449,7 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
     let paso, clave;
     if (s.fin) {
         clave = 'fin';
-        paso = <PasoFin ids={ids} fin={ctx.fin} nombre={nombre} prueba={prueba} respuestas={respuestas} acc={acc} />;
+        paso = <PasoFin ids={ids} fin={ctx.fin} nombre={nombre} prueba={prueba} respuestas={respuestas} acc={acc} url={s.finUrl} />;
     } else if (s.listo) {
         clave = 'listo';
         paso = <PasoListo ids={ids} nombre={nombre} slot={s.slot} s={s} dur={ctx.dur} redir={ctx.redir} preguntas={preguntas} prueba={prueba} respuestas={respuestas} acc={acc}
@@ -398,6 +457,9 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
     } else if (s.reco) {
         clave = 'reco';
         paso = <PasoConocido ids={ids} reco={s.reco} tz={s.tz} acc={acc} />;
+    } else if (ofrecePrevias(s, preguntas)) {
+        clave = 'previas';
+        paso = <PasoPrevias ids={ids} nombre={nombre} acc={acc} />;
     } else if (idx < n) {
         const q = preguntas[idx];
         clave = 'q' + idx;
@@ -428,10 +490,10 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
             <div className="rv-progreso" role="progressbar" aria-label="Avance" aria-valuemin={1} aria-valuemax={tot} aria-valuenow={Math.min(idx + 1, tot)}>{puntos}</div>
             <main className="rv-cuerpo" ref={cuerpoRef}><Fragment key={s.vuelta + '-' + clave}>{paso}</Fragment></main>
             <div className="rv-control">
-                {prueba && <span className="rv-prueba"><Icono n="play" s={13} />Prueba<span className="rv-prueba-largo">&nbsp;· no se agenda nada</span></span>}
+                {prueba && <span className="rv-prueba"><Icono n="play" s={13} />Prueba<span className="rv-prueba-largo">&nbsp;· {fuente.etiqueta ? fuente.etiqueta + ' · ' : ''}no se agenda nada</span></span>}
                 <div className="rv-nav">
                     <button type="button" className="rv-navbtn" aria-label="Anterior" disabled={(idx === 0 && !s.reco) || terminado} onClick={acc.atras}><Icono n="chevron-up" s={18} /></button>
-                    <button type="button" className="rv-navbtn" aria-label="Siguiente" disabled={idx >= n || terminado || !!s.reco || !!s.buscando} onClick={acc.seguir}><Icono n="chevron-down" s={18} /></button>
+                    <button type="button" className="rv-navbtn" aria-label="Siguiente" disabled={idx >= n || terminado || !!s.reco || !!s.buscando || ofrecePrevias(s, preguntas)} onClick={acc.seguir}><Icono n="chevron-down" s={18} /></button>
                     {emb && <button type="button" className="rv-salir" onClick={acc.reiniciar}><Icono n="rotar" s={16} /><span>Reiniciar</span></button>}
                     {modo === 'prueba' && onSalir && <button type="button" className="rv-salir" onClick={onSalir}><Icono n="x" s={16} /><span>Salir</span></button>}
                 </div>

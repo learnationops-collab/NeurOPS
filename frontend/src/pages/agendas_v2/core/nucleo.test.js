@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { asignacion, VENTANA_LLENAR_DIAS } from './asignacion';
 import { agendaOpt, diasDelHorizonte, slotsPersona } from './disponibilidad';
 import { configDe, camposPublicados, linkEvento, revision, sinPublicar, versionPublicada } from './eventos';
-import { calificar, duplicarForm, grupoPorReglas, personalizar, reglasRotas, revisarSegmentacion, validarRespuesta } from './formulario';
+import { NO_CALIFICA, calificar, duplicarForm, grupoPorReglas, gruposDeForm, personalizar, reglasRotas, revisarSegmentacion, validarRespuesta } from './formulario';
 import { normalEvento, normalForm, normalGrupo, normalPersona, normalRol, preguntasFlujo } from './normalizar';
 import { armarReserva, telefonoE164 } from './reserva';
 import { opcionesDeOcupacion } from '../data/almacen';
@@ -65,8 +65,25 @@ describe('formulario', () => {
         expect(calificar(f.preguntas, {})).toBeNull();
     });
     it('la primera regla que se cumple decide; las reglas vacías se saltean; si no, va a "resto"', () => {
-        expect(grupoPorReglas(f, { q1: 'a', q2: 'd' })).toEqual({ grupo: 'g1', regla: 0 });
-        expect(grupoPorReglas(f, { q1: 'b', q2: 'c' })).toEqual({ grupo: 'g3', regla: null });
+        expect(grupoPorReglas(f, { q1: 'a', q2: 'd' })).toEqual({ grupo: 'g1', regla: 0, url: '', no: false });
+        expect(grupoPorReglas(f, { q1: 'b', q2: 'c' })).toEqual({ grupo: 'g3', regla: null, url: '', no: false });
+    });
+    it('una regla o «Todo lo demás» pueden mandar a «No califica»', () => {
+        const fn = normalForm('f', { ...f, reglas: [{ id: 'r0', grupo: NO_CALIFICA, cond: [{ q: 'q1', ops: ['b'] }] }, ...f.reglas] });
+        expect(grupoPorReglas(fn, { q1: 'b' })).toEqual({ grupo: '', regla: 0, url: '', no: true });
+        const resto = normalForm('f', { ...f, resto: NO_CALIFICA });
+        expect(grupoPorReglas(resto, { q1: 'b', q2: 'c' })).toEqual({ grupo: '', regla: null, url: '', no: true });
+        expect(gruposDeForm(resto)).not.toContain(NO_CALIFICA);
+        // La revisión no lo toma como «sin estrategia».
+        expect(revisarSegmentacion(resto).some(a => a.k === 'sin-destino')).toBe(false);
+    });
+    it('una regla con url manda a esa página sin estrategia (solo https)', () => {
+        const fu = normalForm('f', { ...f, reglas: [{ id: 'r0', grupo: 'g1', url: 'https://academy.thelearnation.com/', cond: [{ q: 'q1', ops: ['b'] }] }, ...f.reglas] });
+        expect(fu.reglas[0]).toMatchObject({ grupo: '', url: 'https://academy.thelearnation.com/' });
+        expect(grupoPorReglas(fu, { q1: 'b' })).toEqual({ grupo: '', regla: 0, url: 'https://academy.thelearnation.com/', no: false });
+        expect(normalForm('f', { reglas: [{ grupo: 'g1', url: 'javascript:alert(1)' }] }).reglas[0].url).toBe('');
+        // La revisión no la marca como «sin estrategia».
+        expect(revisarSegmentacion(fu).some(a => a.k === 'sin-destino' && a.regla === 0)).toBe(false);
     });
     it('detecta reglas que apuntan a opciones borradas', () => {
         expect(reglasRotas({ ...f, reglas: [{ id: 'r', grupo: 'g', cond: [{ q: 'q1', ops: ['zz'] }] }] })).toEqual([0]);
@@ -114,7 +131,7 @@ describe('formulario', () => {
         expect(validarRespuesta(q('opciones'), '')).toBe('Elegí una opción.');
     });
     it('los datos de contacto van primero y en orden fijo', () => {
-        expect(preguntasFlujo(f).slice(0, 4).map(q => q.id)).toEqual(['c-email', 'c-nombre', 'c-telefono', 'c-instagram']);
+        expect(preguntasFlujo(f).slice(0, 4).map(q => q.id)).toEqual(['c-telefono', 'c-email', 'c-nombre', 'c-instagram']);
     });
 });
 

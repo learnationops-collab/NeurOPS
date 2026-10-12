@@ -17,6 +17,7 @@ ingesta de n8n), aunque cambie el closer.
 """
 
 import os
+import re
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -101,6 +102,17 @@ def cliente_por_email(email):
     if not email:
         return None
     return Client.query.filter(func.lower(Client.email) == email).first()
+
+
+def cliente_por_telefono(telefono):
+    """El cliente con ese WhatsApp (+país…). Como find_or_create_client, por los últimos 8 dígitos: es el
+    mismo cliente al que después se le suma la agenda. Si hay varios, el del número exacto."""
+    dig = re.sub('[^0-9]', '', telefono or '')
+    if len(dig) < 8:
+        return None
+    candidatos = Client.query.filter(Client.phone.like(f'%{dig[-8:]}%')).order_by(Client.id).limit(20).all()
+    exacto = next((c for c in candidatos if re.sub('[^0-9]', '', c.phone or '') == dig), None)
+    return exacto or (candidatos[0] if candidatos else None)
 
 
 def _fuente(payload, setter):

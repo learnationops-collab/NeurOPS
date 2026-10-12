@@ -118,6 +118,12 @@ def asignacion(ctx, d, opts=None):
         r = grupo_por_reglas({'reglas': ctx['reglas'], 'resto': ctx.get('resto')}, resp)
     else:
         r = {'grupo': '', 'regla': None}
+    if r.get('url'):
+        # La regla manda a otra página: no hay horarios que ofrecer.
+        return {**base, 'regla_idx': r['regla'], 'url': r['url'], 'slots': [], 'regla': 'Redirige a ' + r['url']}
+    if r.get('no'):
+        # La segmentación lo marca como que no califica: no agenda.
+        return {**base, 'regla_idx': r['regla'], 'no': True, 'slots': [], 'regla': 'No califica'}
     g0 = buscar(d, 'grupos', r['grupo'])
     res = {**base, 'grupo_regla': g0['id'] if g0 else '', 'regla_idx': r['regla']}
 
