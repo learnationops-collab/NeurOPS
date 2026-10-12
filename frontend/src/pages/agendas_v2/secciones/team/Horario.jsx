@@ -218,7 +218,7 @@ export function ModalHorario() {
                                 {!puede && <p className="hor-ro"><Icono n="candado" s={14} />Solo lectura: {nombreSim(d, sim)} no puede cambiar sus sesiones.</p>}
                                 <div className="hor-ses">
                                     <p className="t-sm mut">Cuánto dura cada sesión de {p.nombre} y el margen que se deja después, por evento. Lo que no ajustó usa la propuesta del evento.</p>
-                                    <EditorSesiones eventos={ord(d, 'eventos').filter(e => !e.persona)} sesiones={p.sesiones} bloqueado={!puede}
+                                    <EditorSesiones eventos={ord(d, 'eventos').filter(e => !e.persona)} sesiones={p.sesiones} bloqueado={!puede} horario={p.horario}
                                         onCambio={sesiones => almacen.editar('personas', p.id, { sesiones }, true)} />
                                 </div>
                             </>

@@ -20,11 +20,12 @@ function datos({ personas = [], grupos = [], roles = [] } = {}) {
 }
 
 describe('disponibilidad', () => {
-    it('genera inicios cada `paso` minutos dentro del horario, en la zona de la persona', () => {
+    it('encadena las sesiones dentro del horario, en la zona de la persona', () => {
         const p = normalPersona('ana', { tz: 'America/La_Paz', horario: LV9a12 });
         const s = slotsPersona(p, 45, agendaOpt(ag({ reservas: { n: 0 } }), 45), { ahora: LUNES });
-        // 09:00, 10:00 y 11:00 en La Paz; 11:00 + 45 min termina 11:45, entra.
-        expect(s).toEqual([Date.UTC(2026, 9, 5, 13), Date.UTC(2026, 9, 5, 14), Date.UTC(2026, 9, 5, 15)]);
+        // Una tras otra en La Paz: 09:00, 09:45, 10:30 y 11:15 (termina 12:00 justo). El intervalo del evento
+        // ya no cuenta: entran 4, no 3.
+        expect(s).toEqual([Date.UTC(2026, 9, 5, 13), Date.UTC(2026, 9, 5, 13, 45), Date.UTC(2026, 9, 5, 14, 30), Date.UTC(2026, 9, 5, 15, 15)]);
     });
     it('respeta la antelación mínima', () => {
         const p = normalPersona('ana', { tz: 'America/La_Paz', horario: LV9a12 });
@@ -32,10 +33,12 @@ describe('disponibilidad', () => {
         const s = slotsPersona(p, 45, agendaOpt(ag({ reservas: { n: 0 }, antel: { n: 3, u: 'h' } }), 45), { ahora: LUNES });
         expect(s).toEqual([Date.UTC(2026, 9, 5, 15)]);
     });
-    it('saltea lo ocupado', () => {
+    it('después de algo ocupado, la cadena sigue cuando termina', () => {
         const p = normalPersona('ana', { tz: 'America/La_Paz', horario: LV9a12 });
-        const ocupado = (pid, t) => t === Date.UTC(2026, 9, 5, 14);
-        expect(slotsPersona(p, 45, agendaOpt(ag({ reservas: { n: 0 } }), 45), { ahora: LUNES, ocupado })).toHaveLength(2);
+        // Una reunión de 09:30 a 10:00: las 09:00 la pisarían; la cadena arranca a las 10:00.
+        const b0 = Date.UTC(2026, 9, 5, 13, 30), b1 = Date.UTC(2026, 9, 5, 14);
+        const ocupado = (pid, t, dur) => t < b1 && t + dur * 60000 > b0;
+        expect(slotsPersona(p, 45, agendaOpt(ag({ reservas: { n: 0 } }), 45), { ahora: LUNES, ocupado })).toEqual([Date.UTC(2026, 9, 5, 14), Date.UTC(2026, 9, 5, 14, 45)]);
     });
     it('"días hábiles" no ofrece sábados ni domingos', () => {
         const dias = diasDelHorizonte(agendaOpt(ag({ reservas: { n: 5, tipo: 'habiles' } }), 45), 'America/La_Paz', LUNES);
@@ -141,7 +144,9 @@ describe('asignacion', () => {
         const t0 = Date.UTC(2026, 9, 5, 13);
         const a = asignacion(ctx(), d, { ahora: LUNES, ocupado: (pid, t) => pid === 'ana' && t === t0 });
         expect(a.slots.find(s => s.t === t0).p).toBe('beto');
-        expect(a.slots.find(s => s.t === t0 + H).p).toBe('ana');
+        // Ana sigue su cadena en el primer inicio libre (09:05); las 09:45 son de la cadena de Beto.
+        expect(a.slots.find(s => s.t === t0 + 5 * 60000).p).toBe('ana');
+        expect(a.slots.find(s => s.t === t0 + 45 * 60000).p).toBe('beto');
     });
     it('"Distribuida" sin porcentajes: cada horario va a quien tiene menos agendas por delante', () => {
         const d = datos({ roles, personas: [ana, beto], grupos: [{ id: 'g1', nombre: 'Top', estrategia: 'repartir', miembros: ['ana', 'beto'] }] });
@@ -257,7 +262,9 @@ describe('sesiones: duración y margen de cada closer', () => {
             { estado: 'agendada', closer_id: 'ana', inicio_ms: once, fin_ms: once + H / 2 },
         ];
         const { ocupado } = opcionesDeOcupacion(reservas, LUNES);
-        expect(slotsPersona(p, 30, o, { ahora: LUNES, ocupado, margen: 20 })).toEqual([Date.UTC(2026, 9, 5, 14), Date.UTC(2026, 9, 5, 15, 30)]);
+        // Arranca al terminar el margen de la primera (09:50); la siguiente (10:40) pisaría la de las 11:00 y
+        // sigue a las 11:30, que termina a las 12:00 justo: su margen se pasa del horario y se ofrece igual.
+        expect(slotsPersona(p, 30, o, { ahora: LUNES, ocupado, margen: 20 })).toEqual([Date.UTC(2026, 9, 5, 13, 50), Date.UTC(2026, 9, 5, 15, 30)]);
     });
     it('cada closer ofrece con su propia sesión', () => {
         const ana = { id: 'ana', rol: 'closer', tz: 'America/La_Paz', horario: LV9a12, sesiones: { ev: { duracion: 30 } } };
@@ -265,8 +272,8 @@ describe('sesiones: duración y margen de cada closer', () => {
         const d = datos({ personas: [ana, beto] });
         const ctx = { dur: 60, margen: 0, eventoId: 'ev', ag: ag({ reservas: { n: 0 }, paso: { n: 30 } }) };
         expect(asignacion({ ...ctx, persona: 'ana' }, d, { ahora: LUNES }).slots).toHaveLength(6);
-        expect(asignacion({ ...ctx, persona: 'beto' }, d, { ahora: LUNES }).slots).toHaveLength(5);
-        expect(asignacion({ ...ctx, eventoId: 'otro', persona: 'ana' }, d, { ahora: LUNES }).slots).toHaveLength(5);
+        expect(asignacion({ ...ctx, persona: 'beto' }, d, { ahora: LUNES }).slots).toHaveLength(3);
+        expect(asignacion({ ...ctx, eventoId: 'otro', persona: 'ana' }, d, { ahora: LUNES }).slots).toHaveLength(3);
     });
     it('la reserva guarda la sesión del closer que tocó', () => {
         const lead = { preguntas: [], resp: { 'c-nombre': 'Ana' }, pais: 'BO', tz: 'America/La_Paz' };

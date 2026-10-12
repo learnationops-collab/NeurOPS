@@ -3,9 +3,10 @@
 // (persona.sesiones = {eventoId: {duracion?, margen?}}). El margen bloquea la agenda pero el lead no lo ve.
 
 import { useState } from 'react';
-import { DURACIONES, DURACION_MAX, DURACION_MIN, MARGENES, MARGEN_MAX } from '../../core/catalogos';
+import { DIAS, DURACIONES, DURACION_MAX, DURACION_MIN, MARGENES, MARGEN_MAX } from '../../core/catalogos';
 import { entero } from '../../core/util';
 import { Avatar, Icono, Sx } from '../../ui/base';
+import { capacidadSemana } from './turnos';
 
 const OTRO = 'otro';
 
@@ -40,8 +41,21 @@ export function CampoMinutos({ valor, onCambio, margen = false, label, id, disab
 
 export const textoSesion = (dur, margen) => dur + ' min' + (margen ? ' + ' + margen + ' de margen' : '');
 
-/** Una fila: quién o qué, su sesión y su margen, y si es la propuesta o algo ajustado. */
-export function FilaSesion({ titulo, persona, propuesta, propia, onCambio, bloqueado, idBase }) {
+// Cuántas sesiones entran por semana con ese horario, y por día al pasar el mouse.
+function Capacidad({ horario, dur, margen }) {
+    const c = capacidadSemana(horario, dur, margen);
+    const dias = DIAS.filter(x => c.porDia[x.d]).map(x => mayusc(x.n.slice(0, 3)) + ' ' + c.porDia[x.d]).join(' · ');
+    return (
+        <span className="ses-cap" data-tip={c.total ? 'Por semana|' + dias : 'Por semana|Con este horario no entra ninguna'}>
+            <b className="num">{c.total}</b> por semana
+        </span>
+    );
+}
+const mayusc = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+
+/** Una fila: quién o qué, su sesión y su margen, si es la propuesta o algo ajustado y, con `horario`,
+ * cuántas sesiones le entran por semana. */
+export function FilaSesion({ titulo, persona, propuesta, propia, onCambio, bloqueado, idBase, horario = null }) {
     const dur = propia && propia.duracion != null ? propia.duracion : propuesta.duracion;
     const margen = propia && propia.margen != null ? propia.margen : propuesta.margen;
     const ajustada = !!propia && Object.keys(propia).length > 0;
@@ -61,6 +75,7 @@ export function FilaSesion({ titulo, persona, propuesta, propia, onCambio, bloqu
             <label className="ses-campo"><span>Margen</span>
                 <CampoMinutos margen id={idBase + '-mar'} label={'Margen de ' + titulo} valor={margen} disabled={bloqueado} onCambio={v => set('margen', v)} />
             </label>
+            {horario ? <Capacidad horario={horario} dur={dur} margen={margen} /> : <span />}
             {ajustada && !bloqueado
                 ? <button type="button" className="link-btn link-btn--sutil ses-volver" onClick={() => onCambio(null)}><Icono n="volver" s={13} />Usar la propuesta</button>
                 : <span className="ses-volver" />}
@@ -75,14 +90,14 @@ export function conSesion(sesiones, eventoId, propia) {
     return out;
 }
 
-/** Las sesiones de una persona en cada evento compartido. */
-export function EditorSesiones({ eventos, sesiones, onCambio, bloqueado = false }) {
+/** Las sesiones de una persona en cada evento compartido; con `horario`, cuántas le entran en cada uno. */
+export function EditorSesiones({ eventos, sesiones, onCambio, bloqueado = false, horario = null }) {
     if (!eventos.length) return <p className="t-sm mut">Todavía no hay eventos para ajustar.</p>;
     return (
         <div className="ses-lista">
             {eventos.map(e => (
                 <FilaSesion key={e.id} idBase={'ses-' + e.id} titulo={e.nombre + (e.activo === false ? ' (pausado)' : '')}
-                    propuesta={{ duracion: e.duracion, margen: e.margen || 0 }} propia={(sesiones || {})[e.id]} bloqueado={bloqueado}
+                    propuesta={{ duracion: e.duracion, margen: e.margen || 0 }} propia={(sesiones || {})[e.id]} bloqueado={bloqueado} horario={horario}
                     onCambio={propia => onCambio(conSesion(sesiones, e.id, propia))} />
             ))}
         </div>
@@ -96,7 +111,7 @@ export function SesionesDelEvento({ e, personas, onCambio, bloqueado = false }) 
         <div className="ses-lista">
             {personas.map(p => (
                 <FilaSesion key={p.id} idBase={'ses-' + e.id + '-' + p.id} titulo={p.nombre} persona={p}
-                    propuesta={{ duracion: e.duracion, margen: e.margen || 0 }} propia={(p.sesiones || {})[e.id]} bloqueado={bloqueado}
+                    propuesta={{ duracion: e.duracion, margen: e.margen || 0 }} propia={(p.sesiones || {})[e.id]} bloqueado={bloqueado} horario={p.horario}
                     onCambio={propia => onCambio(p, conSesion(p.sesiones, e.id, propia))} />
             ))}
         </div>

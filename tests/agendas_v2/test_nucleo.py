@@ -66,11 +66,12 @@ def datos(personas=(), grupos=(), roles=()):
 # --- disponibilidad -------------------------------------------------------------------------------
 
 
-def test_inicios_cada_paso_dentro_del_horario_en_la_zona_de_la_persona():
+def test_las_sesiones_se_encadenan_dentro_del_horario_en_la_zona_de_la_persona():
     p = normal_persona('ana', {'tz': 'America/La_Paz', 'horario': LV9A12})
     s = slots_persona(p, 45, agenda_opt(ag(reservas={'n': 0}), 45), ahora=LUNES)
-    # 09:00, 10:00 y 11:00 en La Paz; 11:00 + 45 min termina 11:45, entra.
-    assert s == [date_utc(2026, 9, 5, 13), date_utc(2026, 9, 5, 14), date_utc(2026, 9, 5, 15)]
+    # Una tras otra en La Paz: 09:00, 09:45, 10:30 y 11:15 (termina 12:00 justo). El intervalo del evento
+    # ya no cuenta: entran 4, no 3.
+    assert s == [date_utc(2026, 9, 5, h, m) for h, m in ((13, 0), (13, 45), (14, 30), (15, 15))]
 
 
 def test_respeta_la_antelacion_minima():
@@ -80,13 +81,16 @@ def test_respeta_la_antelacion_minima():
     assert s == [date_utc(2026, 9, 5, 15)]
 
 
-def test_saltea_lo_ocupado():
+def test_despues_de_algo_ocupado_la_cadena_sigue_cuando_termina():
     p = normal_persona('ana', {'tz': 'America/La_Paz', 'horario': LV9A12})
+    # Una reunión de 09:30 a 10:00: las 09:00 la pisarían; la cadena arranca a las 10:00.
+    b0, b1 = date_utc(2026, 9, 5, 13, 30), date_utc(2026, 9, 5, 14)
 
     def ocupado(pid, t, dur):
-        return t == date_utc(2026, 9, 5, 14)
+        return t < b1 and t + dur * 60000 > b0
 
-    assert len(slots_persona(p, 45, agenda_opt(ag(reservas={'n': 0}), 45), ahora=LUNES, ocupado=ocupado)) == 2
+    s = slots_persona(p, 45, agenda_opt(ag(reservas={'n': 0}), 45), ahora=LUNES, ocupado=ocupado)
+    assert s == [date_utc(2026, 9, 5, 14), date_utc(2026, 9, 5, 14, 45)]
 
 
 def test_dias_habiles_no_ofrece_sabados_ni_domingos():
@@ -224,7 +228,9 @@ def test_por_horario_cada_horario_va_al_primero_que_lo_tiene_libre():
     t0 = date_utc(2026, 9, 5, 13)
     a = asignacion(ctx(), d, {'ahora': LUNES, 'ocupado': lambda pid, t, dur: pid == 'ana' and t == t0})
     assert next(s for s in a['slots'] if s['t'] == t0)['p'] == 'beto'
-    assert next(s for s in a['slots'] if s['t'] == t0 + H)['p'] == 'ana'
+    # Ana sigue su cadena en el primer inicio libre (09:05); las 09:45 son de la cadena de Beto.
+    assert next(s for s in a['slots'] if s['t'] == t0 + 5 * 60000)['p'] == 'ana'
+    assert next(s for s in a['slots'] if s['t'] == t0 + 45 * 60000)['p'] == 'beto'
 
 
 def test_repartir_parejo_va_a_quien_tiene_menos_agendas_por_delante():
@@ -459,7 +465,7 @@ def test_horario_acepta_claves_de_texto():
     p_json = json.loads(json.dumps(p))
     o = agenda_opt(ag(reservas={'n': 0}), 45)
     assert slots_persona(p_json, 45, o, ahora=LUNES) == slots_persona(p, 45, o, ahora=LUNES)
-    assert len(slots_persona(p_json, 45, o, ahora=LUNES)) == 3
+    assert len(slots_persona(p_json, 45, o, ahora=LUNES)) == 4
 
 
 def test_redondeo_como_en_js():
@@ -508,9 +514,9 @@ def test_zoned_to_utc_en_cambios_de_horario():
 
 def test_resumen_agenda():
     e = normal_evento(
-        'e', {'reservas': {'modo': 'rango', 'desde': '2026-09-05', 'hasta': '2026-10-05'}, 'paso': {'n': 2, 'u': 'h'}}
+        'e', {'reservas': {'modo': 'rango', 'desde': '2026-09-05', 'hasta': '2026-10-05'}, 'margen': 15}
     )
-    assert resumen_agenda(e) == '5 sept a 5 oct · 4 h antes · cada 2 h'
+    assert resumen_agenda(e) == '5 sept a 5 oct · 4 h antes · 45 min + 15 de margen'
 
 
 # --- sesiones: duración y margen de cada closer ---------------------------------------------------
@@ -548,9 +554,10 @@ def test_la_sesion_entra_en_el_horario_y_el_ultimo_margen_puede_pasarse():
     ]
     ocupado = opciones_de_ocupacion(reservas, LUNES)['ocupado']
     s = slots_persona(p, 30, o, ahora=LUNES, ocupado=ocupado, margen=20)
-    # 09:30 cae en el margen de la primera; 10:30 + 30 + 20 pisaría la de las 11:00; 11:30 termina a las
-    # 12:00 justo y su margen se pasa del horario, pero se ofrece igual.
-    assert s == [date_utc(2026, 9, 5, 14), date_utc(2026, 9, 5, 15, 30)]
+    # La cadena arranca al terminar el margen de la primera (09:50); la siguiente (10:40) pisaría la de las
+    # 11:00, así que sigue a las 11:30, que termina a las 12:00 justo: su margen se pasa del horario y se
+    # ofrece igual.
+    assert s == [date_utc(2026, 9, 5, 13, 50), date_utc(2026, 9, 5, 15, 30)]
 
 
 def test_cada_closer_ofrece_con_su_propia_sesion():
@@ -559,11 +566,11 @@ def test_cada_closer_ofrece_con_su_propia_sesion():
     beto = {'id': 'beto', 'rol': 'closer', 'tz': 'America/La_Paz', 'horario': LV9A12}
     d = datos(personas=[ana, beto])
     ctx = {'dur': 60, 'margen': 0, 'evento_id': 'ev', 'ag': ag(reservas={'n': 0}, paso={'n': 30})}
-    # Ana ajustó 30 min: le entra hasta las 11:30. Beto usa la propuesta de 60: hasta las 11:00.
+    # Ana ajustó 30 min: le entran 6 en las 3 horas. Beto usa la propuesta de 60: 3.
     assert len(asignacion({**ctx, 'persona': 'ana'}, d, {'ahora': LUNES})['slots']) == 6
-    assert len(asignacion({**ctx, 'persona': 'beto'}, d, {'ahora': LUNES})['slots']) == 5
+    assert len(asignacion({**ctx, 'persona': 'beto'}, d, {'ahora': LUNES})['slots']) == 3
     # Sin evento_id (o en otro evento) lo ajustado no cuenta.
-    assert len(asignacion({**ctx, 'evento_id': 'otro', 'persona': 'ana'}, d, {'ahora': LUNES})['slots']) == 5
+    assert len(asignacion({**ctx, 'evento_id': 'otro', 'persona': 'ana'}, d, {'ahora': LUNES})['slots']) == 3
 
 
 def test_la_reserva_guarda_la_sesion_del_closer_que_toco():

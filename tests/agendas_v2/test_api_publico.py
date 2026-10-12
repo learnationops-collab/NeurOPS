@@ -277,8 +277,9 @@ def test_la_invitacion_lleva_las_indicaciones_del_evento(client, armado, google)
 def test_la_agenda_nueva_ocupa_lo_que_dura_el_evento(client, armado):
     assert _reservar(client).status_code == 201
     slots = _horarios(client)
-    # Ana tiene 09:00-09:45; el lead nuevo sigue viendo solo a Ana ("llenar en orden"), desde las 10:00.
-    assert LUNES_9_MS not in slots and LUNES_10_MS in slots
+    # Ana tiene 09:00-09:45; el lead nuevo sigue viendo solo a Ana ("llenar en orden"), y su cadena sigue
+    # justo después: 09:45.
+    assert LUNES_9_MS not in slots and LUNES_9_MS + 45 * 60000 in slots and LUNES_10_MS not in slots
 
 
 def test_si_google_falla_la_agenda_queda_y_se_avisa(client, armado, cuentas, google):
@@ -312,24 +313,24 @@ def test_si_ya_tiene_una_agenda_futura_se_le_pregunta_antes_de_tocar_nada(client
 def test_una_agenda_cancelada_en_google_calendar_no_cuenta_como_proxima(client, armado, google):
     assert _reservar(client).status_code == 201
     google['cancelados'].add('evt1')  # el closer la canceló en su Calendar, no en NeurOPS
-    r = _reservar(client, inicio='2026-10-05T14:00:00.000Z')
+    r = _reservar(client, inicio='2026-10-05T13:45:00.000Z')
     assert r.status_code == 201
     vieja, nueva = Appointment.query.order_by(Appointment.start_time).all()
     # La vieja no se toca: la cierra el closer en NeurOPS, como siempre.
     assert vieja.result is None and not vieja.is_rescheduled and google['borrar'] == []
-    assert nueva.start_time == datetime(2026, 10, 5, 14)
+    assert nueva.start_time == datetime(2026, 10, 5, 13, 45)
 
 
 def test_si_elige_cambiar_la_fecha_se_reprograma(client, armado, cuentas, google):
     assert _reservar(client).status_code == 201
-    r = _reservar(client, inicio='2026-10-05T14:00:00.000Z', si_ya_tiene='reprogramar')
+    r = _reservar(client, inicio='2026-10-05T13:45:00.000Z', si_ya_tiene='reprogramar')
     assert r.status_code == 201
     appt = Appointment.query.one()
     assert str(appt.id) == r.get_json()['reserva']['id']
-    assert appt.start_time == datetime(2026, 10, 5, 14) and appt.is_rescheduled
+    assert appt.start_time == datetime(2026, 10, 5, 13, 45) and appt.is_rescheduled
     assert appt.agenda_payload['reprogramada_desde'] == '2026-10-05T13:00:00Z'
     fa = FinancialAgenda.query.one()
-    assert fa.date == datetime(2026, 10, 5, 14)
+    assert fa.date == datetime(2026, 10, 5, 13, 45)
     # El evento viejo se borra del Calendar y se crea uno nuevo.
     assert google['borrar'] == [(cuentas['ana'].id, 'evt1')] and len(google['crear']) == 2
     assert appt.google_event_id == 'evt2'
@@ -337,14 +338,14 @@ def test_si_elige_cambiar_la_fecha_se_reprograma(client, armado, cuentas, google
 
 def test_si_elige_una_sesion_adicional_quedan_las_dos_y_se_avisa_al_closer(client, armado, cuentas, google):
     assert _reservar(client).status_code == 201
-    r = _reservar(client, inicio='2026-10-05T14:00:00.000Z', si_ya_tiene='adicional')
+    r = _reservar(client, inicio='2026-10-05T13:45:00.000Z', si_ya_tiene='adicional')
     assert r.status_code == 201
     vieja, nueva = Appointment.query.order_by(Appointment.start_time).all()
     assert vieja.start_time == datetime(2026, 10, 5, 13) and not vieja.is_rescheduled
-    assert nueva.start_time == datetime(2026, 10, 5, 14) and str(nueva.id) == r.get_json()['reserva']['id']
+    assert nueva.start_time == datetime(2026, 10, 5, 13, 45) and str(nueva.id) == r.get_json()['reserva']['id']
     assert nueva.agenda_payload['sesion_adicional_de']['agenda_id'] == vieja.id
     # Cada una con su fila en el registro de agendas y su evento en el Calendar; nada se borra.
-    assert sorted(fa.date for fa in FinancialAgenda.query.all()) == [datetime(2026, 10, 5, 13), datetime(2026, 10, 5, 14)]
+    assert sorted(fa.date for fa in FinancialAgenda.query.all()) == [datetime(2026, 10, 5, 13), datetime(2026, 10, 5, 13, 45)]
     assert len(google['crear']) == 2 and google['borrar'] == []
     aviso = Notification.query.filter_by(subject='Sesión adicional: revisá la agenda anterior').one()
     assert aviso.associated_id == nueva.id and vieja.closer_id in aviso.target_users
@@ -543,7 +544,7 @@ def test_la_reprogramacion_avisa_distinto_y_el_descalificado_no_avisa(client, ar
     _reservar(client, inicio=None, q1='x', **{'c-email': 'otra@correo.com'})
     assert discord == []
     _reservar(client)
-    _reservar(client, inicio='2026-10-05T14:00:00.000Z', si_ya_tiene='reprogramar')
+    _reservar(client, inicio='2026-10-05T13:45:00.000Z', si_ya_tiene='reprogramar')
     titulos = [m['json']['embeds'][0]['title'] for m in discord]
     assert titulos == ['📅 Nueva agenda: Llamada', '🔁 Agenda reprogramada: Llamada']
 
@@ -683,7 +684,7 @@ def test_con_datos_guardados_no_hace_falta_escribirlos_de_nuevo(client, armado):
     assert _reservar(client).status_code == 201
     r = client.post(URL + '/reservas', json={
         'evento_id': 'ev', 'resp': {'c-email': 'lucia@correo.com', 'q1': 'a'}, 'pais': 'BO', 'tz': 'America/La_Paz',
-        'inicio': '2026-10-05T14:00:00.000Z', 'datos_guardados': True, 'si_ya_tiene': 'adicional',
+        'inicio': '2026-10-05T13:45:00.000Z', 'datos_guardados': True, 'si_ya_tiene': 'adicional',
     })
     assert r.status_code == 201
     nueva = Appointment.query.order_by(Appointment.start_time.desc()).first()

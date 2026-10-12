@@ -212,13 +212,14 @@ def _eventos_compartidos(d):
 
 def sesiones_de(user):
     """Lo que el closer ve en «Mis sesiones»: cada evento compartido con la propuesta del director
-    (duracion, margen) y lo que él ajustó (propia: {duracion?, margen?}). Sus eventos propios se
-    ajustan en «Mis eventos»."""
+    (duracion, margen) y lo que él ajustó (propia: {duracion?, margen?}), y su horario (para mostrarle
+    cuántas sesiones le entran). Sus eventos propios se ajustan en «Mis eventos»."""
     d = colecciones()
     p = persona_de_usuario(d, user)
     propias = (p or {}).get('sesiones') or {}
     return {
         'en_team': bool(p),
+        'horario': p['horario'] if p else None,
         'eventos': [
             {'id': e['id'], 'nombre': e['nombre'], 'activo': e['activo'], 'duracion': e['duracion'],
              'margen': e['margen'], 'propia': propias.get(e['id'], {})}

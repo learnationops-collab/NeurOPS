@@ -9,7 +9,7 @@ from app.agendas_v2.nucleo.datos import buscar, horas_semana
 from app.agendas_v2.nucleo.formulario import grupos_de_form, reglas_rotas
 from app.agendas_v2.nucleo.normalizar import normal_evento, normal_form
 from app.agendas_v2.nucleo.tiempo import fecha_corta
-from app.agendas_v2.nucleo.util import fmt, js_json, js_str, js_truthy, num, obj
+from app.agendas_v2.nucleo.util import fmt, js_json, js_str, js_truthy, obj
 
 CAMPOS_EV = [
     'nombre',
@@ -124,7 +124,6 @@ def link_evento(d, e):
 
 def resumen_agenda(e):
     r, a = e['reservas'], e['antel']
-    pm = e['paso']['n'] * (60 if e['paso']['u'] == 'h' else 1)
     if r['modo'] == 'siempre':
         hasta = 'Sin límite'
     elif r['modo'] == 'rango':
@@ -135,15 +134,16 @@ def resumen_agenda(e):
         )
     else:
         hasta = js_str(r['n']) + (' días hábiles' if r['tipo'] == 'habiles' else ' días')
-    cada = js_str(num(pm / 60)) + ' h' if pm % 60 == 0 and pm >= 60 else js_str(pm) + ' min'
+    # Las sesiones se encadenan una tras otra: lo que cuenta es la sesión (propuesta) y su margen.
+    sesion = js_str(e['duracion']) + ' min' + (' + ' + js_str(e['margen']) + ' de margen' if e.get('margen') else '')
     return (
         hasta
         + ' · '
         + js_str(a['n'])
         + ' '
         + {'min': 'min', 'h': 'h', 'd': 'd'}.get(a['u'], 'undefined')
-        + ' antes · cada '
-        + cada
+        + ' antes · '
+        + sesion
     )
 
 

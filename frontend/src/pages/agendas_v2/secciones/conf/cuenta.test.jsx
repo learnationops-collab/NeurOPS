@@ -62,19 +62,24 @@ describe('Cuenta', () => {
 
     it('Sesiones: ajusta la duración y el margen, y puede volver a la propuesta', async () => {
         const ev = { id: 'ev', nombre: 'Llamada', activo: true, duracion: 45, margen: 0 };
-        api.get.mockResolvedValue({ data: { en_team: true, eventos: [{ ...ev, propia: {} }] } });
-        api.put.mockImplementation((url, cuerpo) => Promise.resolve({ data: { en_team: true, eventos: [{ ...ev, propia: cuerpo.sesiones.ev || {} }] } }));
+        const horario = { 1: [['09:00', '12:00']] };
+        api.get.mockResolvedValue({ data: { en_team: true, horario, eventos: [{ ...ev, propia: {} }] } });
+        api.put.mockImplementation((url, cuerpo) => Promise.resolve({ data: { en_team: true, horario, eventos: [{ ...ev, propia: cuerpo.sesiones.ev || {} }] } }));
         render(envolver(<TarjetaSesiones />));
         expect(await screen.findByText('Usa la propuesta')).toBeTruthy();
         expect(screen.getByRole('button', { name: 'Guardar sesiones' })).toBeDisabled();
+        // 3 h el lunes: con 45 min encadenados entran 4.
+        expect(screen.getByText('por semana').textContent).toBe('4 por semana');
         fireEvent.click(screen.getByRole('button', { name: 'Margen de Llamada' }));
         fireEvent.click(screen.getByRole('option', { name: /20 min/ }));
+        expect(screen.getByText('por semana').textContent).toBe('3 por semana');
         // Un valor a medida: «Otro…» y se escribe.
         fireEvent.click(screen.getByRole('button', { name: 'Sesión de Llamada' }));
         fireEvent.click(screen.getByRole('option', { name: /Otro/ }));
         const campo = screen.getByRole('spinbutton', { name: 'Sesión de Llamada en minutos' });
         fireEvent.change(campo, { target: { value: '50' } });
         fireEvent.blur(campo);
+        expect(screen.getByText('por semana').textContent).toBe('2 por semana');
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Guardar sesiones' })); });
         expect(api.put).toHaveBeenCalledWith('/auth/me/sesiones', { sesiones: { ev: { margen: 20, duracion: 50 } } });
         expect(screen.getByText('Propuesta: 45 min')).toBeTruthy();

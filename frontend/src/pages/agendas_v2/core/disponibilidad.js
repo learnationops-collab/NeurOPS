@@ -39,20 +39,32 @@ export function diasDelHorizonte(o, tz, ahora) {
 
 // Inicios libres (ms UTC, ordenados) de la persona `p` para un evento de `dur` minutos.
 // `ocupado(personaId, inicio, dur)` dice si ya tiene algo en ese rato (reservas, Google Calendar).
-// Inicios libres de `p` para sesiones de `dur` minutos con `margen` minutos después. La sesión tiene que
-// entrar en su horario; el margen no (el último del día puede pasarse), pero sí tiene que estar libre.
-export function slotsPersona(p, dur, o, { ahora = Date.now(), ocupado = () => false, margen = 0 } = {}) {
-    o = o || agendaOpt(null, dur);
-    const tz = p.tz || TZ_DEF, minimo = ahora + o.ant, out = [];
-    diasDelHorizonte(o, tz, ahora).forEach(dia => {
-        (p.horario[dia.dow] || []).forEach(r => {
-            for (let m = aMin(r[0]); m + dur <= aMin(r[1]); m += o.paso) {
+// Las sesiones se encadenan una tras otra (sesión + margen). Si un inicio no está libre, se busca el
+// siguiente de a estos minutos: después de algo ocupado, la cadena sigue en el primer inicio libre.
+export const PASO_BUSQUEDA = 5;
+
+// Inicios de `p` en esos días ({y, m, d, dow}), encadenados para que le entren la mayor cantidad de
+// sesiones: cada una empieza donde termina el margen de la anterior. La sesión tiene que entrar en su
+// horario; el margen no (el del final del día puede pasarse), pero sí tiene que estar libre.
+export function iniciosEnDias(p, dur, dias, { margen = 0, minimo = -Infinity, ocupado = () => false } = {}) {
+    const tz = p.tz || TZ_DEF, out = [];
+    dias.forEach(dia => {
+        ((p.horario || {})[dia.dow] || []).forEach(r => {
+            let m = aMin(r[0]);
+            const fin = aMin(r[1]);
+            while (m + dur <= fin) {
                 const t = zonedToUtc(dia.y, dia.m, dia.d, Math.floor(m / 60), m % 60, tz);
-                if (t >= minimo && !ocupado(p.id, t, dur + margen)) out.push(t);
+                if (t >= minimo && !ocupado(p.id, t, dur + margen)) { out.push(t); m += dur + margen; } else m += PASO_BUSQUEDA;
             }
         });
     });
     return out.sort((a, b) => a - b);
+}
+
+// Inicios libres de `p` en los días que ofrece el evento y con su antelación mínima. Ver iniciosEnDias.
+export function slotsPersona(p, dur, o, { ahora = Date.now(), ocupado = () => false, margen = 0 } = {}) {
+    o = o || agendaOpt(null, dur);
+    return iniciosEnDias(p, dur, diasDelHorizonte(o, p.tz || TZ_DEF, ahora), { margen, minimo: ahora + o.ant, ocupado });
 }
 
 // Horario genérico, solo para probar un evento cuando todavía no hay closers con horario.

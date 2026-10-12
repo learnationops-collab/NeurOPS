@@ -70,7 +70,6 @@ EJEMPLO = {
         'slug': 'diagnostico',
         'duracion': 45,
         'antel': {'n': 4, 'u': 'h'},
-        'paso': {'n': 60, 'u': 'min'},
         'reservas': {'modo': 'dias', 'n': 14, 'tipo': 'corridos'},
         'desc': 'Una llamada de 45 minutos para ver si el programa es para vos.',
         'indic': 'Conectate desde una computadora y tené a mano tu último simulacro.',
@@ -221,7 +220,7 @@ Si uno no está en Team se suma solo al importar. Para que reciba agendas necesi
   - "reglas": lista ordenada. Cada una: "prioridad" (nombre de una prioridad) y "si": lista de condiciones {{"pregunta": "<id de pregunta con opciones>", "respuestas": ["<id de opción>", ...]}}.
   - "resto": nombre de la prioridad para quien no cumple ninguna regla.
   - "fin": "titulo" y "texto" del mensaje para el lead que no califica.
-- "evento": "nombre", "slug", "duracion" (minutos: {', '.join(str(x) for x in DURACIONES)}), "antel" (anticipación mínima: "n" y "u" = "min" | "h" | "d"), "paso" (cada cuánto se ofrecen horarios: "n" y "u" = "min" | "h"), "reservas" (hasta cuándo se puede agendar: {{"modo": "dias", "n": 14, "tipo": "corridos" | "habiles"}}), "desc" (texto que ve el lead), "redir" (opcional: URL https a donde va el lead después de agendar), "indic" (indicaciones para la sesión: qué tiene que tener listo el lead; van en la invitación de Google Calendar).
+- "evento": "nombre", "slug", "duracion" (minutos: {', '.join(str(x) for x in DURACIONES)}), "antel" (anticipación mínima: "n" y "u" = "min" | "h" | "d"), "reservas" (hasta cuándo se puede agendar: {{"modo": "dias", "n": 14, "tipo": "corridos" | "habiles"}}), "desc" (texto que ve el lead), "redir" (opcional: URL https a donde va el lead después de agendar), "indic" (indicaciones para la sesión: qué tiene que tener listo el lead; van en la invitación de Google Calendar).
 
 ## Ejemplo (solo para mostrar la forma; usá los datos reales que te dé)
 ```json

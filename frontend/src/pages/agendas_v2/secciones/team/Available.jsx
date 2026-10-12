@@ -3,7 +3,7 @@
 // en su Google Calendar, claro = libre. Rayado rojo = franja del día sin ningún closer.
 // Con una sola persona y permiso, se edita arrastrando: crear, mover y estirar franjas (de a 30 min).
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { closers, colorVar, horasSemana } from '../../core/datos';
 import { puedeHorarioDe } from '../../core/permisos';
 import { fechaCorta, gmtTxt, horaTxt } from '../../core/tiempo';
@@ -15,38 +15,10 @@ import { toast } from '../../ui/toast';
 import { DIAS } from '../../core/catalogos';
 import { HPX, avUnir, calcularCobertura, durTxt, hmTxt, nombreDia, rangoSemana } from './cobertura';
 import { setTeam } from './comun';
+import { googleDeOcupacion, useAhora, useOcupacionGoogle } from './semana';
 
 const hm = (m) => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
 
-// Hora actual, que se renueva cada minuto para mover la línea de "ahora".
-function useAhora() {
-    const [ahora, setAhora] = useState(() => Date.now());
-    useEffect(() => { const t = setInterval(() => setAhora(Date.now()), 60000); return () => clearInterval(t); }, []);
-    return ahora;
-}
-
-// Lo ocupado en Google de cada persona entre desde y hasta, renovado cada 2 minutos (lo que el servidor
-// guarda lo leído). null mientras no llega o sin API; 'error' si el pedido entero falló.
-function useOcupacionGoogle(desde, hasta, activo) {
-    const [res, setRes] = useState(null);   // {k, datos}
-    const k = desde + '-' + hasta;
-    useEffect(() => {
-        const ad = almacen.adaptador;
-        if (!activo || !ad.ocupacion) return undefined;
-        let vivo = true;
-        const pedir = () => ad.ocupacion(desde, hasta).then(
-            (datos) => { if (vivo) setRes({ k, datos }); },
-            // Si falla una renovación se queda lo último leído de esta semana.
-            () => { if (vivo) setRes(r => (r && r.k === k ? r : { k, datos: 'error' })); },
-        );
-        pedir();
-        const t = setInterval(pedir, 120000);
-        return () => { vivo = false; clearInterval(t); };
-    }, [k, activo]); // eslint-disable-line react-hooks/exhaustive-deps
-    return res && res.k === k ? res.datos : null;
-}
-
-const SIN_LEER = { estado: 'error', franjas: [] };
 
 // El detalle de un bloque: cuánto de lo disponible está ocupado y en qué.
 function resumenBloque(x) {
@@ -81,7 +53,7 @@ export default function Available({ solo = null }) {
 
     const cob = useMemo(() => (cs.length ? calcularCobertura({
         todos, cs, semana, ahora, edit, reservasDe: (id) => _reservasDe(reservas, id),
-        googleDe: google === 'error' ? () => SIN_LEER : google ? (id) => google[id] || null : () => null,
+        googleDe: googleDeOcupacion(google),
     }) : null), [todos, cs, semana, ahora, edit, reservas, google]);
 
     const [arr, setArr] = useState(null);   // franja que se está arrastrando: {dow, ri, a, b, modo}
