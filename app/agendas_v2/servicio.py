@@ -7,6 +7,7 @@ asignacion con las agendas reales y, antes de escribir, se bloquea al closer y s
 siga libre.
 """
 
+import logging
 import re
 import time
 from datetime import datetime, timedelta, timezone
@@ -44,6 +45,9 @@ from app.agendas_v2.nucleo.normalizar import (
 from app.agendas_v2.nucleo.ocupacion import opciones_de_ocupacion
 from app.agendas_v2.nucleo.reserva import armar_reserva
 from app.agendas_v2.nucleo.util import slugify, uid
+from app.services.learnation_service import LearnationAPIError, LearnationService
+
+log = logging.getLogger(__name__)
 
 DIA_MS = 86400000
 # Las agendas de la operacion (Appointment) no guardan duracion: cada una bloquea 60 minutos.
@@ -654,7 +658,9 @@ def ocupacion_google(desde, hasta):
 
 # --- Pagina publica -----------------------------------------------------------------------------
 
-CAMPOS_EVENTO_PUBLICO = ('id', 'nombre', 'slug', 'duracion', 'reservas', 'antel', 'paso', 'zona', 'desc', 'redir')
+CAMPOS_EVENTO_PUBLICO = (
+    'id', 'nombre', 'slug', 'duracion', 'reservas', 'antel', 'paso', 'zona', 'desc', 'redir', 'gracias',
+)
 
 
 # El formulario de un evento con persona fija que no eligió uno: solo los datos de contacto.
@@ -678,7 +684,9 @@ def _disponible(d, e):
     funnel = buscar(d, 'funnels', pub['evento'].get('funnel'))
     if funnel and not funnel.get('activo'):
         return None
-    return pub['evento'], form, funnel
+    # La página de gracias no se publica: va la del evento en vivo, si todavía existe.
+    gracias = e.get('gracias') if buscar(d, 'gracias', e.get('gracias')) else ''
+    return {**pub['evento'], 'gracias': gracias}, form, funnel
 
 
 def evento_disponible(d, funnel_slug, evento_slug):
@@ -710,6 +718,67 @@ def vista_publica(evento, form, funnel):
         'form': form,
         'funnel': {'nombre': funnel['nombre'], 'slug': funnel['slug']} if funnel else None,
     }
+
+
+# --- Página de gracias --------------------------------------------------------------------------
+
+# Los casos de éxito de la Academia cambian poco y la API tiene un límite compartido (60 por minuto):
+# se piden cada CACHE_CASOS_S como mucho. Si la Academia falla, quedan los últimos que se trajeron.
+CACHE_CASOS_S = 600
+_casos = {'en': 0.0, 'lista': []}
+
+
+def _caso(c):
+    foto, video = c.get('photo_url'), c.get('video_url')
+    return {
+        'nombre': str(c.get('name') or '')[:120],
+        'meta': str(c.get('meta') or '')[:200],
+        'resumen': str(c.get('summary') or '')[:300],
+        'cita': str(c.get('quote') or '')[:3000],
+        'foto': foto if isinstance(foto, str) and foto.startswith('https://') else '',
+        'video': video if isinstance(video, str) and video.startswith('https://') else '',
+    }
+
+
+def casos_de_exito(ahora=None):
+    ahora = time.monotonic() if ahora is None else ahora
+    if _casos['en'] and ahora - _casos['en'] < CACHE_CASOS_S:
+        return _casos['lista']
+    _casos['en'] = ahora  # aunque falle: no reintentar en cada visita
+    try:
+        r = LearnationService.get_success_cases()
+        _casos['lista'] = [_caso(c) for c in (r.get('cases') or []) if isinstance(c, dict) and c.get('name')]
+    except LearnationAPIError as e:
+        log.warning('Casos de éxito de la Academia: %s', e)
+    return _casos['lista']
+
+
+def _video_publico(v):
+    """{src, tipo}: el archivo del volumen (lo sirve /publico/videos) o el link tal cual; None si no hay."""
+    if v.get('archivo'):
+        return {'tipo': 'archivo', 'src': '/api/agendas-v2/publico/videos/' + v['archivo']}
+    if v.get('url'):
+        return {'tipo': 'link', 'src': v['url']}
+    return None
+
+
+def gracias_publica(d, gracias_id):
+    """Lo que ve el lead en la página de gracias, o None si no existe."""
+    g = buscar(d, 'gracias', gracias_id)
+    if not g:
+        return None
+    return {
+        'id': g['id'],
+        'video': _video_publico(g['video']),
+        'plan': _video_publico(g['plan']),
+        'segundos': g['segundos'],
+        'casos': casos_de_exito() if g['casos'] else [],
+    }
+
+
+def video_en_uso(d, video_id, salvo=None):
+    """¿Alguna página de gracias (fuera de `salvo`) usa este archivo?"""
+    return any(g['id'] != salvo and video_id in (g['video']['archivo'], g['plan']['archivo']) for g in d['gracias'])
 
 
 def _limpiar_respuestas(preguntas, resp):

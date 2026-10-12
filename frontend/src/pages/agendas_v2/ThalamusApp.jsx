@@ -96,7 +96,7 @@ class ErrorDeVista extends React.Component {
         return (
             <div className="panel vacio">
                 <p className="t-sm">Esta vista tuvo un error.</p>
-                <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={() => { ui.set({ form: null, ev: null }); this.setState({ error: null }); }}>
+                <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={() => { ui.set({ form: null, gracias: null, ev: null }); this.setState({ error: null }); }}>
                     <Icono n="rotar" />Volver
                 </button>
             </div>

@@ -11,9 +11,9 @@ import threading
 import time
 from collections import defaultdict, deque
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, Response, jsonify, request
 
-from app.agendas_v2 import servicio
+from app.agendas_v2 import servicio, videos
 
 bp = Blueprint('agendas_v2_publico', __name__)
 
@@ -21,7 +21,7 @@ NO_DISPONIBLE = ({'code': 'no_disponible', 'message': 'Este link no está dispon
 
 # Limite por IP, en memoria y por proceso: frena a un script que martilla el endpoint, no es una
 # defensa distribuida. (pedidos, segundos)
-LIMITES = {'horarios': (30, 60), 'reservas': (10, 60), 'conocido': (10, 60), 'avance': (60, 60)}
+LIMITES = {'horarios': (30, 60), 'reservas': (10, 60), 'conocido': (10, 60), 'avance': (60, 60), 'gracias': (30, 60)}
 _pedidos = defaultdict(deque)
 _candado = threading.Lock()
 
@@ -139,3 +139,28 @@ def reservar():
         {'reserva': {'id': r['id'], 'inicio': _iso(r['inicio']), 'fin': _iso(r['fin']), 'duracion': r['duracion'],
                      'consultor': r.get('consultor')}}
     ), 201
+
+@bp.route('/gracias/<gracias_id>', methods=['GET'])
+def gracias(gracias_id):
+    """La página de gracias: sus videos y los casos de éxito de la Academia."""
+    if _excede('gracias'):
+        return _demasiados()
+    g = servicio.gracias_publica(servicio.colecciones(), gracias_id)
+    return jsonify({'gracias': g}) if g else (jsonify(NO_DISPONIBLE[0]), NO_DISPONIBLE[1])
+
+
+@bp.route('/videos/<video_id>', methods=['GET'])
+def video(video_id):
+    """El video subido, de a un pedazo por pedido (206 con Content-Range): ver videos.py."""
+    try:
+        datos, inicio, fin, total, tipo = videos.parte_para_servir(video_id, request.headers.get('Range'))
+    except videos.VideoError as e:
+        if e.code == 'invalido':
+            return Response(status=416, headers={'Content-Range': 'bytes */*'})
+        return jsonify(NO_DISPONIBLE[0]), NO_DISPONIBLE[1]
+    return Response(datos, status=206, mimetype=tipo, headers={
+        'Content-Range': f'bytes {inicio}-{fin}/{total}',
+        'Accept-Ranges': 'bytes',
+        # El id es único por archivo: lo que se subió no cambia nunca.
+        'Cache-Control': 'public, max-age=31536000, immutable',
+    })

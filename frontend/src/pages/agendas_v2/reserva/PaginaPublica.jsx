@@ -90,7 +90,9 @@ function useEventoLocal(funnelSlug, eventoSlug, origen) {
     const proveedor = useMemo(() => (d ? proveedorLocal(d, reservas, (payload) => ad.crearReserva(payload)) : null), [d, reservas, ad]);
     return {
         cargando, setter, proveedor, sinRed: false,
-        evento: disponible ? encontrado.v.evento : null, form: disponible ? encontrado.v.form : null,
+        // La página de gracias no se publica: va la del evento en vivo (como en el servidor).
+        evento: disponible ? { ...encontrado.v.evento, gracias: buscar(d, 'gracias', encontrado.e.gracias) ? encontrado.e.gracias : '' } : null,
+        form: disponible ? encontrado.v.form : null,
     };
 }
 

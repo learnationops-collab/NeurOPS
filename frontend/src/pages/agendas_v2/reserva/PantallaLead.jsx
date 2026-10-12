@@ -16,6 +16,7 @@ import { buscar } from '../core/datos';
 import { limpiarRespuesta, nombreLead, opcionDescalifica, personalizar, validarRespuesta } from '../core/formulario';
 import { COLECCIONES, normalForm, preguntasFlujo } from '../core/normalizar';
 import { Humo, Icono } from '../ui/base';
+import { rutaGracias } from './gracias/contenido';
 import PasoCalendario from './PasoCalendario';
 import PasoConocido from './PasoConocido';
 import { PasoFin, PasoListo, Respuestas } from './PasoFinal';
@@ -45,7 +46,8 @@ function armarCtx(form, ev, persona, d) {
         dur: ev ? ev.duracion : per && per.ldur ? per.ldur : 45, margen: ev ? ev.margen || 0 : 0, eventoId: ev ? ev.id : '',
         reglas: fo ? fo.reglas || [] : null, resto: fo ? fo.resto || '' : '', persona: perId,
         ag: ev ? { reservas: ev.reservas, antel: ev.antel, paso: ev.paso } : null,
-        redir: ev ? ev.redir : '', tzFija: ev && ev.zona && ev.zona.modo === 'fija' ? ev.zona.tz : '',
+        // Después de confirmar: la página de gracias del evento si tiene una; si no, su link de redirección.
+        redir: ev ? (ev.gracias ? window.location.origin + rutaGracias(ev.gracias) : ev.redir) : '', tzFija: ev && ev.zona && ev.zona.modo === 'fija' ? ev.zona.tz : '',
     };
 }
 

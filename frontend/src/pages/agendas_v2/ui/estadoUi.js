@@ -15,6 +15,8 @@ let estado = {
     confVis: p.confVis === 'completa' ? 'completa' : 'flotante',     // Configuración flotante o a pantalla completa
     sim: null,              // {tipo:'rol'|'persona', id}
     form: null,             // {id, vista:'preguntas'|'ruteo'|'previa'} formulario abierto en el editor
+    recurso: 'formularios', // pestaña de Forms: 'formularios' | 'gracias'
+    gracias: null,          // {id, pantalla:'gracias'|'plan'} página de gracias abierta en su editor
     ev: null,               // {id, tab:'config'|'flujo'} evento abierto
     team: { tab: 'personas', horario: null },  // horario: id de la persona con el modal de horario abierto
     funnel: null,           // modal del funnel: {id} para editarlo, {} para crear uno

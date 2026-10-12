@@ -56,6 +56,7 @@ __all__ = [
     'limpiar_html',
     'normal_evento',
     'normal_form',
+    'normal_gracias',
     'normal_funnel',
     'normal_grupo',
     'normal_horario',
@@ -65,11 +66,12 @@ __all__ = [
     'normal_pregunta',
     'normal_reglas',
     'normal_rol',
+    'normal_video',
     'preguntas_flujo',
     'url_ok',
 ]
 
-COLECCIONES = ['funnels', 'formularios', 'personas', 'grupos', 'eventos', 'roles']
+COLECCIONES = ['funnels', 'formularios', 'personas', 'grupos', 'eventos', 'roles', 'gracias']
 
 _RE_EMAIL = re.compile('[^' + WS + '@<>"\']+@[^' + WS + '@<>"\']+\\.[a-z]{2,}')
 _RE_URL = re.compile('https://[^' + WS + '<>"\']+', re.I)
@@ -325,6 +327,39 @@ def normal_evento(id, d):
         'redir': url_ok(d.get('redir')),
         # Indicaciones para el lead: van en la invitación de Google Calendar (texto plano).
         'indic': cortar(d['indic'], 2000) if isinstance(d.get('indic'), str) else '',
+        # Página de gracias (colección `gracias`) a la que va el lead al confirmar. No entra en la copia
+        # publicada: se toma del evento en vivo.
+        'gracias': txt(d.get('gracias')),
+    }
+
+
+_RE_ARCHIVO_VIDEO = re.compile('v[a-z0-9]{20}')
+
+
+def normal_video(v):
+    """Un video de la página de gracias: un archivo subido al volumen (`archivo`, su id) o un link
+    (Loom, YouTube, Vimeo o Drive). Si están los dos, manda el archivo."""
+    v = obj(v)
+    a = txt(v.get('archivo'))
+    return {
+        'archivo': a if _RE_ARCHIVO_VIDEO.fullmatch(a) else '',
+        'nombre': cortar(txt(v.get('nombre')), 120),
+        'url': url_ok(v.get('url')),
+    }
+
+
+def normal_gracias(id, d):
+    """Página de gracias después de agendar: el video que completa la reserva, el del plan y los
+    casos de éxito de la Academia. `segundos`: cuánto video antes de mostrar «Ver mi plan»."""
+    d = obj(d)
+    return {
+        'id': id,
+        'nombre': cortar(txt(d.get('nombre'), 'Sin nombre'), 80),
+        'video': normal_video(d.get('video')),
+        'plan': normal_video(d.get('plan')),
+        'segundos': entero(d.get('segundos'), 0, 60, 5),
+        'casos': d.get('casos') is not False,
+        'orden': _orden(d.get('orden')),
     }
 
 
@@ -380,6 +415,7 @@ NORM = {
     'grupos': normal_grupo,
     'eventos': normal_evento,
     'roles': normal_rol,
+    'gracias': normal_gracias,
 }
 
 
