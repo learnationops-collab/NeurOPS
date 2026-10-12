@@ -1,14 +1,16 @@
-// Available: calendario semanal de cobertura. Cada closer es un carril; dentro de su horario, cada agenda,
-// cada margen y cada evento de su Google Calendar es una tarjeta propia (lado a lado si se pisan), y los
-// turnos libres del evento elegido (encadenados con su sesión, turnos.js) son tarjetas «Libre». Rayado
-// rojo = franja del día sin ningún closer. Se filtra por closer y por tipo de tarjeta.
+// Available: calendario semanal de cobertura. Cada agenda, margen y evento de su Google Calendar es una
+// tarjeta, y los turnos libres del evento elegido (encadenados con su sesión, turnos.js) son tarjetas
+// «Libre»: verde con un check lo libre, azul con un teléfono las llamadas, un reloj lo ocupado por otro
+// evento. Con varios closers se agrupan (tarjetas.js): cada día junta lo del mismo tipo que se pisa, con el
+// primer nombre de cada closer y el detalle al pasar el mouse; sin agrupar, cada closer es un carril.
+// Rayado rojo = franja del día sin ningún closer. Se filtra por closer y por tipo de tarjeta.
 // Con una sola persona y permiso, se edita arrastrando: crear, mover y estirar franjas (de a 30 min).
 
 import { useMemo, useRef, useState } from 'react';
 import { closers, colorVar, horasSemana } from '../../core/datos';
 import { puedeHorarioDe } from '../../core/permisos';
 import { fechaCorta, gmtTxt, horaTxt } from '../../core/tiempo';
-import { clonar, fmt, iniciales, mayus, pad } from '../../core/util';
+import { clonar, fmt, mayus, pad } from '../../core/util';
 import { almacen, useDatos, useUi } from '../../data/hooks';
 import { HUMO_MARCA, Humo, Icono, Sx } from '../../ui/base';
 import { toast } from '../../ui/toast';
@@ -16,6 +18,7 @@ import { DIAS } from '../../core/catalogos';
 import { HPX, avUnir, calcularCobertura, durTxt, hmTxt, huecosLibres, nombreDia, rangoSemana } from './cobertura';
 import { setTeam } from './comun';
 import { agendasDeVista, googleDeOcupacion, useAhora, useOcupacionGoogle, useZonaVista } from './semana';
+import { VISUAL, agrupar, nombresTxt, primerNombre, resumenGrupo } from './tarjetas';
 import { gruposDeSesion, turnosSemana } from './turnos';
 
 const hm = (m) => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
@@ -37,17 +40,31 @@ const tituloEv = (e) => (e.titulo || 'Ocupado' + (e.calendario ? ' · ' + e.cale
 // El nombre del lead de una agenda.
 const nombreLead = (r) => ((r.lead && r.lead.nombre) || 'Agenda').replace(/\|/g, '/');
 
-// Una tarjeta del calendario, al estilo de Google Calendar: el título y, si entra, la hora. `col` de
-// `ncols`: su lugar cuando se pisa con otras.
-function Tarjeta({ clase, top, alto, titulo, hora, tip, col = 0, ncols = 1 }) {
+// Una tarjeta del calendario, al estilo de Google Calendar: el ícono de su tipo (VISUAL), el título y, si
+// entra, la hora (y `sub`). `col` de `ncols`: su lugar cuando se pisa con otras. `puntos`: el color de cada closer.
+function Tarjeta({ tipo, clase, top, alto, titulo, hora, sub, tip, col = 0, ncols = 1, puntos = null }) {
     const pos = ncols > 1 ? { left: 'calc(' + (col / ncols * 100) + '% + 2px)', width: 'calc(' + (100 / ncols) + '% - 3px)', right: 'auto' } : null;
+    const icono = VISUAL[tipo] && VISUAL[tipo].icono;
     return (
         <div className={'av-card ' + clase} style={{ top, height: alto, ...pos }} data-tip={tip}>
-            {alto >= 15 && <b className="av-card-tit">{titulo}</b>}
-            {alto >= 32 && hora && <span className="av-card-hora">{hora}</span>}
+            {alto >= 15 && (
+                <span className="av-card-cab">
+                    {icono && <Icono n={icono} s={12} className="av-card-ico" />}
+                    {puntos}
+                    <b className="av-card-tit">{titulo}</b>
+                </span>
+            )}
+            {alto >= 32 && hora && <span className="av-card-hora">{hora}{sub ? ' · ' + sub : ''}</span>}
         </div>
     );
 }
+
+// La clase de una pieza o de un grupo de piezas.
+const claseDe = (tipo, pzs) => tipo + (pzs.some(z => z.aviso) ? ' ag--aviso' : '') + (tipo === 'cancelada' && pzs.some(z => z.duda) ? ' cx--duda' : '')
+    + (pzs.every(z => z.pas) ? ' pas' : '');
+// Quita el separador del tooltip de un texto.
+const sinBarra = (t) => String(t).replace(/\|/g, '/');
+const MAX_LINEAS_TIP = 12;
 
 // Los tipos de tarjeta que se pueden ocultar.
 const TIPOS = [
@@ -121,6 +138,7 @@ export default function Available({ solo = null }) {
     const todos = useMemo(() => closers(d).filter(p => horasSemana(p) > 0), [d]);
     // Filtros: closers y tipos de tarjeta ocultos ({'p:<id>': true, ag|mg|ev|tl: true}).
     const [oculto, setOculto] = useState({});
+    const [agrupar_, setAgrupar] = useState(true);
     const alternar = (k) => setOculto(o => ({ ...o, [k]: !o[k] }));
     const ver = (k) => !oculto[k];
     const cs = useMemo(() => (solo ? (horasSemana(solo) > 0 || edit ? [solo] : []) : todos.filter(p => !oculto['p:' + p.id])), [solo, edit, todos, oculto]);
@@ -164,8 +182,10 @@ export default function Available({ solo = null }) {
     const { tz, dias, bloques, huecos, porDia, minH, maxH, hoyK, mAhora, kpi, sinLeer, sinGoogle } = cob;
     const conApi = !!almacen.adaptador.ocupacion, leyendo = conApi && google == null;
     const n = cs.length, alto = (maxH - minH) * HPX;
-    // Cada día, lo bastante ancho para leer los bloques de todos sus closers (si no entra, se desplaza).
-    const anchoMin = 56 + 7 * Math.max(120, n * 112);
+    // Con varios closers, agrupadas: cada día es una columna angosta. Sin agrupar, lo bastante ancho para
+    // leer los carriles de todos (si no entra, se desplaza).
+    const agrupado = !solo && n > 1 && agrupar_;
+    const anchoMin = 56 + 7 * (agrupado ? 150 : Math.max(120, n * 112));
     const rango = fechaCorta(dias[0].k) + ' – ' + fechaCorta(dias[6].k);
     const y = (m) => (m - minH * 60) / 60 * HPX;
 
@@ -228,6 +248,52 @@ export default function Available({ solo = null }) {
         toast(mayus(nombreDia(bl.dow)) + ' ' + horaTxt(bl.t0, tz) + '–' + horaTxt(bl.t1, tz) + ' quitado');
     };
 
+    // Las piezas de un bloque (un closer en una franja), según los filtros: cada una con su tipo visual
+    // (VISUAL), sus instantes (a, b) y minutos del día (m0, m1), lo que dice (etiqueta) y su detalle.
+    const piezasDe = (x) => {
+        const out = [], f = filaDe(x.p.id);
+        const pieza = (tipo, a, b, extra) => out.push({
+            tipo, a, b, m0: x.m0 + (a - x.t0) / 60000, m1: x.m0 + (b - x.t0) / 60000, p: x.p, pas: b <= ahora, ...extra,
+        });
+        x.items.forEach(it => {
+            if (!ver(it.tipo)) return;
+            const lugar = { col: it.col, ncols: it.ncols };
+            if (it.tipo === 'ag') {
+                const lead = nombreLead(it.reserva), t = it.reserva.calendar;
+                pieza('llamada', it.a, it.b, { ...lugar, aviso: !!t && t.estado === 'rechazado', etiqueta: lead, detalle: 'Llamada con ' + lead + textoTraza(t) });
+            } else if (it.tipo === 'mg') {
+                pieza('margen', it.a, it.b, { ...lugar, etiqueta: 'Margen', detalle: 'margen después de la llamada' });
+            } else if (it.tipo === 'ev') {
+                const e = it.evento, tit = tituloEv(e);
+                pieza(e.titulo ? 'llamada' : 'ocupado', it.a, it.b, { ...lugar, etiqueta: tit, detalle: (e.titulo ? 'En su calendario de agendamiento: ' : '') + tit });
+            } else if (it.tipo === 'cx') {
+                const c = textoCancelada(it.reserva, tz);
+                pieza('cancelada', it.a, it.b, { duda: it.reserva.motivo === 'sin_evento', etiqueta: c.titulo, detalle: c.titulo + '. ' + c.por });
+            }
+        });
+        if (ver('tl')) {
+            (f ? f.inicios : []).filter(t => t >= x.t0 && t < x.t1).forEach(t => pieza('libre', t, t + f.dur * 60000, {
+                etiqueta: 'Libre', detalle: 'turno libre de ' + f.dur + ' min' + (f.margen ? ' (+' + f.margen + ' de margen)' : ''),
+            }));
+            huecosLibres(x, { ahora, turnos: f ? f.inicios : [], largoTurno: f ? (f.dur + f.margen) * 60000 : 0 }).forEach(([a, b]) => pieza('hueco', a, b, {
+                etiqueta: 'Libre · ' + durTxt((b - a) / 60000), detalle: 'tiempo libre' + (f ? ', no entra una sesión de ' + f.dur + ' min' : ''),
+            }));
+        }
+        return out;
+    };
+    // Un grupo de piezas (agrupado): los closers, cuántos turnos o llamadas junta y, al pasar el mouse, cada una.
+    const tarjetaGrupo = (g, k) => {
+        const hora = hm(Math.round(g.m0)) + ' – ' + hm(Math.min(1440, Math.round(g.m1)));
+        const lineas = g.piezas.slice(0, MAX_LINEAS_TIP).map(z => primerNombre(z.p.nombre) + ' ' + horaTxt(z.a, tz) + '–' + horaTxt(z.b, tz) + ' · ' + z.detalle);
+        if (g.piezas.length > MAX_LINEAS_TIP) lineas.push('y ' + (g.piezas.length - MAX_LINEAS_TIP) + ' más');
+        return (
+            <Tarjeta key={g.tipo + g.m0 + '-' + k} tipo={g.tipo} clase={claseDe(g.tipo, g.piezas)} top={y(g.m0)} alto={(g.m1 - g.m0) / 60 * HPX}
+                col={g.col} ncols={g.ncols} titulo={nombresTxt(g.personas)} hora={hora} sub={resumenGrupo(g)}
+                puntos={g.personas.slice(0, 4).map(p => <i key={p.id} className="av-dot" style={{ '--c': colorVar(p.color) }} />)}
+                tip={sinBarra(VISUAL[g.tipo].n + ' · ' + hora) + '|' + sinBarra(lineas.join('\n'))} />
+        );
+    };
+
     const irSemana = (v) => setTeam({ semana: v === 0 ? 0 : semana + v });
     const ocupPct = Math.round(kpi.ocupacion * 100);
     const nadieLeido = sinLeer.length > 0 && sinLeer.length === cs.length;
@@ -272,6 +338,12 @@ export default function Available({ solo = null }) {
                         );
                     })}
                     {!solo && <span className="av-fil-sep" />}
+                    {!solo && n > 1 && (
+                        <button type="button" className="av-fil av-fil--tipo" aria-pressed={agrupar_} onClick={() => setAgrupar(v => !v)}
+                            data-tip="Agrupar|Junta lo del mismo tipo que se pisa, de cualquier closer, en una tarjeta. Sin agrupar, cada closer tiene su carril.">
+                            <Icono n="capas" s={13} />Agrupar
+                        </button>
+                    )}
                     {TIPOS.filter(t => (t.v !== 'ev' || conApi) && (t.v !== 'mg' || bloques.some(x => x.mMg > 0)) && (t.v !== 'cx' || kpi.nCx > 0)).map(t => (
                         <button key={t.v} type="button" className="av-fil av-fil--tipo" aria-pressed={ver(t.v)} data-tip={t.tip} onClick={() => alternar(t.v)}>
                             <i className={t.cls} />{t.n}
@@ -316,7 +388,8 @@ export default function Available({ solo = null }) {
                                         {huecos.filter(x => x.di === di).map(x => (
                                             <div key={x.m0} className="av-hueco" style={{ top: y(x.m0), height: (x.m1 - x.m0) / 60 * HPX }} data-tip={'Sin closer|' + hm(x.m0) + ' a ' + hm(x.m1)} />
                                         ))}
-                                        {bls.map((x, i) => {
+                                        {agrupado && agrupar(bls.flatMap(piezasDe)).map(tarjetaGrupo)}
+                                        {!agrupado && bls.map((x, i) => {
                                             const vivo = enArr && arr.modo !== 'crear' && arr.ri === x.ri;
                                             const m0 = vivo ? arr.a : x.m0, m1 = vivo ? arr.b : x.m1;
                                             const txtH = vivo ? hmTxt(m0) + '–' + hmTxt(m1) : horaTxt(x.t0, tz) + '–' + horaTxt(x.t1, tz);
@@ -332,46 +405,13 @@ export default function Available({ solo = null }) {
                                                             <span className="av-hora">{txtH}</span>
                                                         </>
                                                     ) : null}
-                                                    {!vivo && x.items.filter(it => it.tipo !== 'cx' && ver(it.tipo)).map((it, k) => {
-                                                        const top = (it.a - x.t0) / 3600000 * HPX, alto = (it.b - it.a) / 3600000 * HPX;
-                                                        const hora = horaTxt(it.a, tz) + ' – ' + horaTxt(it.b, tz), pas = it.b <= ahora ? ' pas' : '';
-                                                        const key = it.tipo + it.a + '-' + k, pos = { top, alto, hora, col: it.col, ncols: it.ncols };
-                                                        if (it.tipo === 'ag') {
-                                                            const lead = nombreLead(it.reserva), t = it.reserva.calendar, aviso = t && t.estado === 'rechazado';
-                                                            return <Tarjeta key={key} {...pos} clase={'ag' + (aviso ? ' ag--aviso' : '') + pas} titulo={(aviso ? '⚠ ' : '') + lead}
-                                                                tip={'Agenda · ' + x.p.nombre + '|' + hora + ' · ' + lead + textoTraza(t)} />;
-                                                        }
-                                                        if (it.tipo === 'mg') return <Tarjeta key={key} {...pos} clase={'mg' + pas} titulo="Margen" tip={'Margen después de la agenda|' + hora} />;
-                                                        const e = it.evento, tit = tituloEv(e);
+                                                    {!vivo && piezasDe(x).map((z, k) => {
+                                                        const hora = horaTxt(z.a, tz) + ' – ' + horaTxt(z.b, tz);
                                                         return (
-                                                            <Tarjeta key={key} {...pos} clase={'ev' + (e.titulo ? ' ev--agenda' : '') + pas} titulo={tit}
-                                                                tip={(e.titulo ? 'En su calendario de agendamiento' : 'En su Google Calendar') + ' · ' + x.p.nombre + '|' + horaTxt(e.inicio, tz) + ' – ' + horaTxt(e.fin, tz) + ' · ' + tit} />
-                                                        );
-                                                    })}
-                                                    {!vivo && ver('tl') && huecosLibres(x, {
-                                                        ahora, turnos: filaDe(x.p.id)?.inicios || [], largoTurno: filaDe(x.p.id) ? (filaDe(x.p.id).dur + filaDe(x.p.id).margen) * 60000 : 0,
-                                                    }).map(([a, b]) => {
-                                                        const hora = horaTxt(a, tz) + ' – ' + horaTxt(b, tz), f = filaDe(x.p.id), largo = durTxt((b - a) / 60000);
-                                                        return (
-                                                            <Tarjeta key={'hl' + a} clase="hl" top={(a - x.t0) / 3600000 * HPX} alto={(b - a) / 3600000 * HPX}
-                                                                titulo={'Libre · ' + largo} hora={hora}
-                                                                tip={'Tiempo libre · ' + x.p.nombre + '|' + hora + (f ? ' · no entra una sesión de ' + f.dur + ' min' : '')} />
-                                                        );
-                                                    })}
-                                                    {!vivo && ver('cx') && x.items.filter(it => it.tipo === 'cx').map(it => {
-                                                        const c = textoCancelada(it.reserva, tz), hora = horaTxt(it.a, tz) + ' – ' + horaTxt(it.b, tz);
-                                                        return (
-                                                            <Tarjeta key={'cx' + it.reserva.id} clase={'cx' + (it.reserva.motivo === 'sin_evento' ? ' cx--duda' : '')}
-                                                                top={(it.a - x.t0) / 3600000 * HPX} alto={(it.b - it.a) / 3600000 * HPX} titulo={c.titulo} hora={hora}
-                                                                tip={c.titulo + '|' + hora + ' · ' + c.por} />
-                                                        );
-                                                    })}
-                                                    {!vivo && ver('tl') && (filaDe(x.p.id)?.inicios || []).filter(t => t >= x.t0 && t < x.t1).map(t => {
-                                                        const f = filaDe(x.p.id), hora = horaTxt(t, tz) + ' – ' + horaTxt(t + f.dur * 60000, tz);
-                                                        return (
-                                                            <Tarjeta key={'tl' + t} clase="tl" top={(t - x.t0) / 3600000 * HPX} alto={f.dur / 60 * HPX}
-                                                                titulo={'Libre' + (n > 1 ? ' · ' + iniciales(x.p.nombre) : '')} hora={hora}
-                                                                tip={'Turno libre · ' + x.p.nombre + '|' + hora + (f.margen ? ' (+' + f.margen + ' de margen)' : '')} />
+                                                            <Tarjeta key={z.tipo + z.a + '-' + k} tipo={z.tipo} clase={claseDe(z.tipo, [z])}
+                                                                top={(z.a - x.t0) / 3600000 * HPX} alto={(z.b - z.a) / 3600000 * HPX} col={z.col} ncols={z.ncols}
+                                                                titulo={n > 1 ? primerNombre(x.p.nombre) : z.etiqueta} hora={hora}
+                                                                tip={sinBarra(VISUAL[z.tipo].n + ' · ' + x.p.nombre) + '|' + sinBarra(hora + ' · ' + z.detalle)} />
                                                         );
                                                     })}
                                                 </div>
