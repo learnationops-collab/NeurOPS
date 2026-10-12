@@ -291,6 +291,16 @@ def test_si_google_falla_la_agenda_queda_y_se_avisa(client, armado, cuentas, goo
     assert 'token vencido' in aviso.content and cuentas['ana'].id in aviso.target_users
 
 
+def test_la_pagina_sabe_a_que_correo_salio_la_invitacion(client, armado, google):
+    assert _reservar(client).get_json()['reserva']['invitacion'] == 'lucia@correo.com'
+    assert google['crear'][0]['invitado'] == 'lucia@correo.com'
+
+
+def test_si_google_falla_no_se_promete_la_invitacion(client, armado, google):
+    google['falla'] = RuntimeError('token vencido')
+    assert _reservar(client).get_json()['reserva']['invitacion'] is None
+
+
 def test_el_mismo_lead_dos_veces_no_duplica(client, armado, google):
     a, b = _reservar(client), _reservar(client)
     assert b.status_code == 201

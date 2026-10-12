@@ -63,7 +63,8 @@ export function DatosLead({ preguntas, s, tapados }) {
  * «Confirmar», que lleva a la redirección del evento si tiene una; si no, despide.
  * consultor: {nombre, color} (en la prueba, la persona del horario elegido).
  */
-export function PasoListo({ ids, nombre, slot, s, dur, redir, preguntas, prueba, respuestas, acc, consultor, tapados }) {
+// invitacion: el correo al que salió la invitación de Google Calendar; el lead la tiene que aceptar para verla en su calendario.
+export function PasoListo({ ids, nombre, slot, s, dur, redir, preguntas, prueba, respuestas, acc, consultor, invitacion, tapados }) {
     const [listo, setListo] = useState(false);
     const z = zonaInfo(s.tz), t = slot.t;
     if (listo) {
@@ -104,6 +105,11 @@ export function PasoListo({ ids, nombre, slot, s, dur, redir, preguntas, prueba,
                     <div><span className="rv-tk-lbl">Tu consultor</span><b className="rv-tk-nom">{consultor ? consultor.nombre : 'Te lo asignamos en breve'}</b></div>
                 </div>
                 <DatosLead preguntas={preguntas} s={s} tapados={tapados} />
+                {invitacion && (
+                    <p className="rv-tk-wa rv-tk-mail"><Icono n="mail" s={18} />
+                        <span>Te mandamos la invitación a <b>{invitacion}</b>. Abrí el correo y aceptala para que la sesión quede en tu calendario con el link de Meet.</span>
+                    </p>
+                )}
                 <p className="rv-tk-wa"><Icono n="whatsapp" s={18} /><span>Te va a escribir por WhatsApp antes de la sesión.</span></p>
             </section>
             <div className="rv-acc rv-acc--ok">

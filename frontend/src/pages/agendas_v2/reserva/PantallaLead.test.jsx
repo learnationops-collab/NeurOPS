@@ -85,6 +85,21 @@ describe('PantallaLead', () => {
         expect(container.querySelectorAll('.rv-hora').length).toBeGreaterThan(0);
     });
 
+    it('al agendar con correo le avisa que revise la invitación', () => {
+        const { container } = render(<PantallaLead fuente={{ form }} proveedor={local()} modo="prueba" />);
+        escribirYEnter(container, 'ana@correo.com');
+        escribirYEnter(container, 'Ana Gómez');
+        fireEvent.click(screen.getByRole('button', { name: /^País:/ }));
+        fireEvent.click(screen.getByRole('option', { name: /Bolivia/ }));
+        escribirYEnter(container, '7123 4567');
+        escribirYEnter(container, '');
+        elegir('Lo necesario');
+        elegirDia(container);
+        fireEvent.click(container.querySelector('.rv-hora'));
+        fireEvent.click(screen.getByRole('button', { name: /Confirmar/ }));
+        expect(screen.getByText(/Te mandamos la invitación a/)).toHaveTextContent('ana@correo.com');
+    });
+
     it('valida antes de seguir', () => {
         const { container } = render(<PantallaLead fuente={{ form }} proveedor={local()} modo="prueba" />);
         expect(screen.getByRole('heading', { name: '¿Cuál es tu correo?' })).toBeInTheDocument();
@@ -121,6 +136,8 @@ describe('PantallaLead', () => {
         expect(payload.inicio).toBe(new Date(Date.UTC(2026, 9, 5, 13)).toISOString());
         expect(screen.getByRole('heading', { name: 'Listo, Ana. Tu sesión quedó agendada.' })).toBeInTheDocument();
         expect(screen.getByText('Ana Pérez')).toBeInTheDocument(); // su consultor
+        // Sin correo no hay invitación de Calendar: no se la promete.
+        expect(screen.queryByText(/Te mandamos la invitación/)).not.toBeInTheDocument();
         expect(screen.queryByText(/Vista del closer/)).not.toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: /Confirmar/ }));
         expect(screen.getByRole('heading', { name: /^Nos vemos el lunes, Ana\.$/ })).toBeInTheDocument();

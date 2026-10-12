@@ -1490,6 +1490,9 @@
 .thalamus .rv-tk-wa{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:16px;background:rgba(47,191,143,.1);border:1px solid rgba(47,191,143,.28);font-size:14.5px;line-height:1.4;color:var(--rv-mut)}
 .thalamus .rv-tk-wa svg{flex-shrink:0;margin-top:1px;color:var(--rv-ok)}
 .thalamus .rv-tk-wa b{color:var(--rv-fg);font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
+.thalamus .rv-tk-mail{background:var(--rv-acento-suave);border-color:var(--rv-acento-borde)}
+.thalamus .rv-tk-mail svg{color:var(--rv-acento)}
+.thalamus .rv-tk-mail b{white-space:normal;overflow-wrap:anywhere}
 /* Datos del lead */
 .thalamus .rv-datos{display:grid;gap:4px;min-width:0}
 .thalamus .rv-datos-cab{display:grid;gap:4px;margin-bottom:8px}

@@ -60,7 +60,7 @@ function estadoInicial(ctx, { desde = 0, ejemplo = '' } = {}, enfocar = true) {
         fin: false, finUrl: '', listo: false, slot: null, asigFinal: null, recalc: 0, vuelta: 0,
         // El lead que vuelve: buscando (el correo que se está buscando), reco (lo que se encontró) y su paso,
         // siYaTiene (lo que eligió con la sesión que ya tenía), guardados/tapados (confirmó sus datos guardados).
-        buscando: '', recoN: 0, reco: null, siYaTiene: null, guardados: false, tapados: null, consultor: null, durReal: null,
+        buscando: '', recoN: 0, reco: null, siYaTiene: null, guardados: false, tapados: null, consultor: null, invitacion: '', durReal: null,
         foco: enfocar ? 'entra' : null, focoN: enfocar ? 1 : 0,
     };
 }
@@ -327,7 +327,7 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
             if (!slot) return;
             const per = slot.p ? buscar(d, 'personas', slot.p) : null;
             const delSlot = per ? { nombre: per.nombre, color: per.color } : null;
-            if (prueba) { setS(p => conFoco({ ...p, listo: true, slot, asigFinal: asig, consultor: delSlot }, 'entra')); return; }
+            if (prueba) { setS(p => conFoco({ ...p, listo: true, slot, asigFinal: asig, consultor: delSlot, invitacion: p.resp['c-email'] || '' }, 'entra')); return; }
             if (envio.enviando) return;
             setEnvio(x => ({ ...x, enviando: true, error: '', yaTiene: null }));
             const p = sRef.current;
@@ -342,7 +342,9 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
                 setEnvio(x => ({ ...x, enviando: false, error: '' }));
                 const rr = (r && r.reserva) || r || {};
                 const durReal = rr.duracion || rr.duracion_min || null;
-                setS(q => conFoco({ ...q, listo: true, slot, asigFinal: asig, consultor, durReal }, 'entra'));
+                // El correo al que Google mandó la invitación al evento (vacío si no hubo evento o correo).
+                const invitacion = (r && r.reserva && r.reserva.invitacion) || '';
+                setS(q => conFoco({ ...q, listo: true, slot, asigFinal: asig, consultor, durReal, invitacion }, 'entra'));
             }, (e) => {
                 if (!vivoRef.current) return;
                 if (e && e.code === 'ya_tiene' && e.agenda) {
@@ -413,7 +415,7 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
     } else if (s.listo) {
         clave = 'listo';
         paso = <PasoListo ids={ids} nombre={nombre} slot={s.slot} s={s} dur={s.durReal || ctx.dur} redir={ctx.redir} preguntas={preguntas} prueba={prueba} respuestas={respuestas} acc={acc}
-            consultor={s.consultor} tapados={s.guardados ? s.tapados : null} />;
+            consultor={s.consultor} invitacion={s.invitacion} tapados={s.guardados ? s.tapados : null} />;
     } else if (s.reco) {
         clave = 'reco';
         paso = <PasoConocido ids={ids} reco={s.reco} tz={s.tz} acc={acc} />;

@@ -137,7 +137,7 @@ def reservar():
 
     return jsonify(
         {'reserva': {'id': r['id'], 'inicio': _iso(r['inicio']), 'fin': _iso(r['fin']), 'duracion': r['duracion'],
-                     'consultor': r.get('consultor')}}
+                     'consultor': r.get('consultor'), 'invitacion': r.get('invitacion')}}
     ), 201
 
 @bp.route('/gracias/<gracias_id>', methods=['GET'])

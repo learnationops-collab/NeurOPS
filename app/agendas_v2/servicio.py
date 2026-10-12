@@ -1248,7 +1248,9 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     cliente = operacion.cliente_por_email(limpias.get('c-email'))
     previa = operacion.agenda_de(cliente.id, ms_a_dt(inicio)) if cliente else None
     if previa:
-        return {**_respuesta(previa), 'consultor': _consultor(d, db.session.get(User, previa.closer_id))}, False
+        invitacion = limpias.get('c-email') if previa.google_event_id else None
+        return {**_respuesta(previa), 'consultor': _consultor(d, db.session.get(User, previa.closer_id)),
+                'invitacion': invitacion}, False
 
     # Ya tiene otra agenda próxima: antes de tocar nada se le pregunta si quiere cambiarla de fecha o
     # sumar una sesión. La página repite el pedido con `si_ya_tiene`.
@@ -1290,7 +1292,9 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     _cerrar_intento(evento, form, funnel, limpias, origen, setter, False)
     _subir_version()
     db.session.commit()
-    operacion.crear_evento(appt, evento['nombre'], evento_a_borrar=evento_viejo)
+    # Con correo, el evento de Calendar le manda la invitación al lead: la página se lo dice solo si salió.
+    con_evento = operacion.crear_evento(appt, evento['nombre'], evento_a_borrar=evento_viejo)
     operacion.avisar_discord(appt)
     operacion.avisar_whatsapp(appt)
-    return {**_respuesta(appt), 'consultor': _consultor(d, closer)}, True
+    invitacion = limpias.get('c-email') if con_evento else None
+    return {**_respuesta(appt), 'consultor': _consultor(d, closer), 'invitacion': invitacion}, True
