@@ -1,6 +1,8 @@
 // Available: calendario semanal de cobertura. Cada closer es un carril; dentro de su horario, con su
 // duración real: lleno = agendada (reservas reales), medio = su margen después, gris rayado = evento
-// en su Google Calendar, claro = libre. Rayado rojo = franja del día sin ningún closer.
+// en su Google Calendar, claro = libre. Rayado rojo = franja del día sin ningún closer. Con `evento`,
+// los turnos libres de cada closer (encadenados con su sesión en ese evento, turnos.js) van punteados
+// y se cuentan por día.
 // Con una sola persona y permiso, se edita arrastrando: crear, mover y estirar franjas (de a 30 min).
 
 import { useMemo, useRef, useState } from 'react';
@@ -16,6 +18,7 @@ import { DIAS } from '../../core/catalogos';
 import { HPX, avUnir, calcularCobertura, durTxt, hmTxt, nombreDia, rangoSemana } from './cobertura';
 import { setTeam } from './comun';
 import { googleDeOcupacion, useAhora, useOcupacionGoogle } from './semana';
+import { turnosSemana } from './turnos';
 
 const hm = (m) => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
 
@@ -39,7 +42,7 @@ function tipEventos(sg, tz) {
     return (n === 1 ? 'Evento' : n + ' eventos') + ' en su calendario|' + sg.eventos.map(e => horaTxt(e.inicio, tz) + '–' + horaTxt(e.fin, tz) + ' ' + tituloEv(e)).join(' · ');
 }
 
-export default function Available({ solo = null }) {
+export default function Available({ solo = null, evento = null }) {
     const { d, perfil, reservas } = useDatos();
     const { sim, team } = useUi();
     const ahora = useAhora();
@@ -55,6 +58,10 @@ export default function Available({ solo = null }) {
         todos, cs, semana, ahora, edit, reservasDe: (id) => _reservasDe(reservas, id),
         googleDe: googleDeOcupacion(google),
     }) : null), [todos, cs, semana, ahora, edit, reservas, google]);
+    const turnos = useMemo(() => (evento && cs.length ? turnosSemana({
+        personas: cs, evento, semana, ahora, reservasDe: (id) => _reservasDe(reservas, id), googleDe: googleDeOcupacion(google),
+    }) : null), [evento, cs, semana, ahora, reservas, google]);
+    const filaDe = (id) => (turnos ? turnos.filas.find(f => f.p.id === id) : null);
 
     const [arr, setArr] = useState(null);   // franja que se está arrastrando: {dow, ri, a, b, modo}
     const drag = useRef(null);
@@ -134,6 +141,7 @@ export default function Available({ solo = null }) {
     return (
         <>
             <div className="av-kpis">
+                {turnos && <div className="av-kpi av-kpi--turnos"><span>Turnos libres</span><b className="num">{turnos.nLibres}<em>/{turnos.nTotal}</em></b></div>}
                 <div className="av-kpi"><span>{solo ? 'Tus horas' : 'Horas disponibles'}</span><b className="num">{fmt(kpi.hDisp, 0)}</b></div>
                 <div className="av-kpi"><span>Agendado</span><b className="num">{fmt(kpi.hAg, 1)} h<em> · {kpi.nAg} {kpi.nAg === 1 ? 'agenda' : 'agendas'}</em></b></div>
                 <div className="av-kpi"><span>Por eventos</span><b className="num">{conApi && !leyendo && !nadieLeido ? fmt(kpi.hEv, 1) + ' h' : '—'}</b></div>
@@ -153,12 +161,16 @@ export default function Available({ solo = null }) {
                         <b className="av-rango" aria-live="polite">{rango}</b>
                     </div>
                     <div className="av-ley">
-                        {cs.map(p => <span key={p.id} style={{ '--c': colorVar(p.color) }}><i />{p.nombre}</span>)}
+                        {cs.map(p => {
+                            const f = filaDe(p.id);
+                            return <span key={p.id} style={{ '--c': colorVar(p.color) }}><i />{p.nombre}{f && <b className="av-ley-n">{f.nLibres} libres</b>}</span>;
+                        })}
                         {edit && <span className="av-ley-s av-ley-edit"><Icono n="edit" s={12} />Arrastrá para crear o mover · se repite cada semana</span>}
                         <span className="av-ley-s"><i className="av-l-ag" />Agendada</span>
                         {bloques.some(x => x.mMg > 0) && <span className="av-ley-s"><i className="av-l-mg" />Margen</span>}
                         {conApi && <span className="av-ley-s"><i className="av-l-ev" />Evento en su calendario</span>}
                         <span className="av-ley-s"><i className="av-l-li" />Libre</span>
+                        {turnos && <span className="av-ley-s"><i className="av-l-tu" />Turno libre</span>}
                         <span className="av-ley-s"><i className="av-l-hu" />Sin closer</span>
                         {leyendo && <span className="av-ley-s">Leyendo calendarios…</span>}
                         {sinLeer.length > 0 && <span className="av-ley-s av-ley-aviso"><Icono n="alerta" s={12} />No se pudo leer el calendario de {nombres(sinLeer)}</span>}
@@ -173,7 +185,7 @@ export default function Available({ solo = null }) {
                             return (
                                 <div key={dd.k} className={'av-dia' + (esHoy ? ' av-dia--hoy' : '')}>
                                     <span>{DIAS[(dd.d.getUTCDay() + 6) % 7].n.slice(0, 3)}</span><b>{dd.d.getUTCDate()}</b>
-                                    <em>{pd.t ? Math.round(pd.a / pd.t * 100) + '%' : '—'}</em>
+                                    <em>{turnos ? turnos.filas.reduce((n, f) => n + f.libres[di], 0) + ' libres' : pd.t ? Math.round(pd.a / pd.t * 100) + '%' : '—'}</em>
                                 </div>
                             );
                         })}
@@ -217,6 +229,13 @@ export default function Available({ solo = null }) {
                                                                 data-tip={conEv ? tipEventos(sg, tz) : undefined}>
                                                                 {conEv && alto >= 14 && <span className="av-ev-txt">{textoEventos(sg)}</span>}
                                                             </i>
+                                                        );
+                                                    })}
+                                                    {!vivo && (filaDe(x.p.id)?.inicios || []).filter(t => t >= x.t0 && t < x.t1).map(t => {
+                                                        const f = filaDe(x.p.id);
+                                                        return (
+                                                            <i key={'tl' + t} className="tl" style={{ top: (t - x.t0) / 3600000 * HPX, height: f.dur / 60 * HPX }}
+                                                                data-tip={'Turno libre · ' + x.p.nombre + '|' + horaTxt(t, tz) + '–' + horaTxt(t + f.dur * 60000, tz) + (f.margen ? ' (+' + f.margen + ' de margen)' : '')} />
                                                         );
                                                     })}
                                                 </div>

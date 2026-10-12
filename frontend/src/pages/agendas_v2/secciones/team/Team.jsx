@@ -1,7 +1,7 @@
-// Team: personas (People), prioridades (Priorities) y la semana (Available): los turnos que le quedan a
-// cada closer en un evento o, en Calendario, la cobertura por franjas.
+// Team: personas (People), prioridades (Priorities) y la semana (Available), con los turnos libres de
+// cada closer según las sesiones de los eventos elegidos.
 
-import { closers, horasSemana, ord } from '../../core/datos';
+import { closers, horasSemana } from '../../core/datos';
 import { almacen, useDatos, useUi } from '../../data/hooks';
 import { Seg, Sx } from '../../ui/base';
 import EnTope from '../../ui/EnTope';
@@ -9,8 +9,8 @@ import Available from './Available';
 import Grupos from './Grupos';
 import { ModalHorario } from './Horario';
 import Personas from './Personas';
-import TablaTurnos from './Turnos';
 import { setTeam } from './comun';
+import { gruposDeSesion } from './turnos';
 
 const TABS = [
     { v: 'personas', n: 'People', icono: 'users' },
@@ -18,28 +18,24 @@ const TABS = [
     { v: 'available', n: 'Available', icono: 'calendar' },
 ];
 
-// Available: por defecto los turnos de un evento (cada closer tiene su sesión en cada uno); Calendario,
-// las franjas de la semana.
+// Available: la semana de cada closer con sus turnos libres. Los turnos dependen de cuánto dura cada
+// sesión, así que se eligen los eventos (agrupados los que dan las mismas sesiones).
 function Semana() {
     const { d } = useDatos();
     const { team } = useUi();
-    const vista = team.vista === 'calendario' ? 'calendario' : 'turnos';
-    const evs = ord(d, 'eventos').filter(e => !e.persona).sort((a, b) => (b.activo ? 1 : 0) - (a.activo ? 1 : 0));
-    const ev = evs.find(e => e.id === team.evento) || evs[0];
     const cs = closers(d).filter(p => horasSemana(p) > 0);
+    const grupos = gruposDeSesion(d, cs);
+    const g = grupos.find(x => x.eventos.some(e => e.id === team.evento)) || grupos[0];
     return (
         <>
-            <div className="tu-barra">
-                <Seg sm label="Vista" valor={vista} onChange={v => setTeam({ vista: v })}
-                    opciones={[{ v: 'turnos', n: 'Turnos', icono: 'users' }, { v: 'calendario', n: 'Calendario', icono: 'calendar' }]} />
-                {vista === 'turnos' && ev && (
-                    <Sx sm id="tu-evento" label="Evento" valor={ev.id} onChange={v => setTeam({ evento: v })}
-                        opciones={evs.map(e => ({ v: e.id, n: e.nombre + (e.activo ? '' : ' (pausado)'), icono: 'calendar' }))} />
-                )}
-            </div>
-            {vista === 'calendario' ? <Available /> : ev ? (
-                <section className="panel caja"><TablaTurnos evento={ev} personas={cs} /></section>
-            ) : <div className="panel vacio"><p className="t-sm mut">Creá un evento para ver cuántos turnos le quedan a cada closer.</p></div>}
+            {g && (
+                <div className="tu-barra">
+                    <span className="t-rotulo">Turnos de</span>
+                    <Sx sm id="tu-evento" label="Turnos de" valor={g.id} onChange={v => setTeam({ evento: v })}
+                        opciones={grupos.map(x => ({ v: x.id, n: x.nombre + ' — ' + x.detalle, icono: 'calendar' }))} />
+                </div>
+            )}
+            <Available evento={g ? g.evento : null} />
         </>
     );
 }
