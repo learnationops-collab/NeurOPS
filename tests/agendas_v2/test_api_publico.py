@@ -410,6 +410,54 @@ def test_dos_leads_a_la_vez_el_bloqueo_frena_al_segundo(client, armado, monkeypa
     assert Appointment.query.count() == 1
 
 
+def test_si_un_commit_suelta_el_bloqueo_se_vuelve_a_mirar_antes_de_escribir(
+    client, db, armado, cuentas, google, monkeypatch
+):
+    """Buscar la agenda previa del lead lee Google, y renovar el token hace commit: eso suelta el bloqueo
+    del closer. Si en ese rato otro lead le tomó a Ana un horario que se cruza, no quedan las dos."""
+    assert _reservar(client).status_code == 201  # Lucía, lunes 9:00 con Ana
+    llamadas = []
+
+    def cancelado(user_id, event_id):
+        llamadas.append(event_id)
+        if len(llamadas) == 2:  # la segunda es la de registrar_agenda, ya con Ana bloqueada
+            otro = Client(full_name='Otro', email='otro@x.com')
+            db.session.add(otro)
+            db.session.flush()
+            db.session.add(Appointment(client_id=otro.id, closer_id=cuentas['ana'].id,
+                                       start_time=datetime(2026, 10, 5, 13, 50)))
+            db.session.commit()
+        return False
+
+    monkeypatch.setattr(GoogleService, 'evento_cancelado', staticmethod(cancelado))
+    r = _reservar(client, inicio='2026-10-05T13:45:00.000Z', si_ya_tiene='adicional')
+    assert len(llamadas) == 2
+    assert r.status_code == 409 and r.get_json()['code'] == 'ocupado'
+    assert Appointment.query.filter_by(start_time=datetime(2026, 10, 5, 13, 45)).count() == 0
+
+
+def test_el_mismo_lead_que_confirma_dos_veces_a_la_vez_recibe_su_agenda(client, armado, monkeypatch):
+    """El segundo pedido no vio la agenda del primero al empezar; ya bloqueado, la encuentra y la devuelve."""
+    primera = _reservar(client)
+    assert primera.status_code == 201
+    original, vistas = operacion.agenda_de, []
+
+    def agenda_de(cliente_id, inicio):
+        vistas.append(inicio)
+        return None if len(vistas) == 1 else original(cliente_id, inicio)
+
+    monkeypatch.setattr(operacion, 'agenda_de', agenda_de)
+    monkeypatch.setattr(
+        servicio,
+        '_ocupacion',
+        lambda ahora, elegibles=None: {'ahora': ahora, 'ocupado': lambda *a: False, 'carga_de': lambda pid: 0},
+    )
+    r = _reservar(client, si_ya_tiene='reprogramar')
+    assert r.status_code == 201
+    assert r.get_json()['reserva']['id'] == primera.get_json()['reserva']['id']
+    assert Appointment.query.count() == 1
+
+
 def test_respuestas_invalidas_dan_400(client, armado):
     r = _reservar(client, **{'c-email': 'no-es-correo'})
     assert r.status_code == 400 and 'c-email' in r.get_json()['errores']

@@ -80,8 +80,8 @@ En `POST /reservas` el servidor no confía en nada de lo que calculó el cliente
 1. Valida cada respuesta con `validar_respuesta`, sobre las preguntas de la versión publicada.
 2. Si alguna opción descalifica, busca o crea el **cliente** con su `formulario_payload` y termina: sin agenda.
 3. Si no, recalcula la asignación con las agendas reales y busca el horario pedido.
-4. Toma el closer de ese horario y bloquea su usuario (`SELECT … FOR UPDATE` sobre `users`).
-5. Vuelve a comprobar que el closer no tenga otra agenda vigente en ese rato (su sesión más su margen).
+4. Toma el closer de ese horario, lee su Google Calendar sin caché y recién después bloquea su usuario (`SELECT … FOR UPDATE` sobre `users`). Google va antes porque renovar el token hace commit, y un commit suelta el bloqueo.
+5. Ya bloqueado, vuelve a comprobar que el closer no tenga otra agenda vigente en ese rato (su sesión más su margen). Dos leads que piden el mismo closer a la vez quedan en fila: el segundo lee después del commit del primero y recibe 409 `ocupado`; si es el mismo lead confirmando dos veces, recibe la agenda que ya tomó. Justo antes de escribir se bloquea y se comprueba otra vez, porque buscar la agenda previa del lead también lee Google.
 6. Escribe en la operación (`operacion.py`), por el mismo camino que la «Nueva agenda» manual del closer:
    - cliente: `BookingService.find_or_create_client` (email, teléfono, Instagram) y su `formulario_payload`;
    - si el cliente ya tiene una agenda futura abierta (de Agendas 2.0 o de n8n), **la reprograma**: la mueve al horario y closer nuevos, marca `is_rescheduled` y actualiza su `FinancialAgenda`;

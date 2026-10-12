@@ -601,20 +601,35 @@ def _ocupacion(ahora, elegibles=None):
     return {**base, 'ocupado': lambda pid, t, dur: ocupado(pid, t, dur) or se_solapa(google.get(pid, []), t, dur)}
 
 
-def _choque(user_id, inicio, fin):
-    """(choca, fuera_de_google): si el closer ya tiene algo que se cruza con [inicio, fin) (ms) —lo de su
-    Google Calendar, leído en el momento (sin caché: algo agendado recién también cuenta), o una agenda
-    vigente en NeurOPS— y los ids de las agendas vigentes en NeurOPS que se cruzan pero ya no están en
-    su calendario (sigue_en_google): esas no chocan."""
-    from app.models import Appointment
+def _franjas_frescas(user_id, inicio, fin):
+    """Lo ocupado en el Google Calendar del closer alrededor de [inicio, fin) (ms), leído en el momento
+    (sin caché: algo agendado recién también cuenta). None si no se pudo leer.
+    Va ANTES de bloquear al closer: leer Google puede renovar su token, eso hace commit y un commit
+    suelta el bloqueo (ver _bloquear_y_verificar)."""
     from app.services.google_service import GoogleService
 
-    franjas = None
-    if _con_calendar({user_id}):
-        # Desde 4 horas antes: para saber si las agendas que empezaron antes siguen en su calendario.
-        franjas = GoogleService.franjas_ocupadas(user_id, ms_a_dt(inicio) - timedelta(hours=4), ms_a_dt(fin))
+    if not _con_calendar({user_id}):
+        return None
+    # Desde 4 horas antes: para saber si las agendas que empezaron antes siguen en su calendario.
+    return GoogleService.franjas_ocupadas(user_id, ms_a_dt(inicio) - timedelta(hours=4), ms_a_dt(fin))
+
+
+def _bloquear_y_verificar(user_id, inicio, fin, franjas):
+    """Bloquea al closer (SELECT … FOR UPDATE sobre su fila de users) y, ya bloqueado, mira en la base si
+    tiene otra agenda vigente que se cruce con [inicio, fin) (ms). Dos leads que piden el mismo closer a
+    la vez quedan en fila: el segundo espera a que el primero haga commit y recién ahí lee, así que ve
+    su agenda. Desde acá hasta el commit que guarda la agenda no puede haber otro commit (lo soltaría):
+    por eso Google se lee antes (_franjas_frescas). Se puede volver a llamar después de algo que haya
+    hecho commit: vuelve a bloquear y a mirar.
+    Devuelve (closer, choca, fuera_de_google): fuera_de_google son los ids de las agendas que se cruzan
+    pero ya no están en su calendario (sigue_en_google): esas no chocan."""
+    from app.models import Appointment, User
+
+    closer = db.session.query(User).filter_by(id=user_id).with_for_update().first()
+    if not closer:
+        return None, True, []
     if franjas and any(a < fin and inicio < b for a, b in franjas):
-        return True, []
+        return closer, True, []
     filas = Appointment.query.filter(
         Appointment.closer_id == user_id,
         Appointment.start_time < ms_a_dt(fin),
@@ -624,7 +639,7 @@ def _choque(user_id, inicio, fin):
     leido_desde = inicio - 4 * 3600000
     cruzan = [a for a in filas if dt_a_ms(a.start_time) + _bloque_min(a) * 60000 > inicio]
     siguen = [a for a in cruzan if sigue_en_google(a, franjas, leido_desde=leido_desde)]
-    return bool(siguen), [a.id for a in cruzan if a not in siguen]
+    return closer, bool(siguen), [a.id for a in cruzan if a not in siguen]
 
 
 # --- Ocupacion en Google para Available ---------------------------------------------------------
@@ -1383,15 +1398,29 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     if not slot or not slot['p'] or slot['p'] not in elegibles:
         raise ReservaRechazadaError('ocupado')
 
-    # Bloqueo del closer: dos leads que eligen el mismo horario a la vez no pueden quedar los dos.
-    closer = db.session.query(User).filter_by(id=elegibles[slot['p']]).with_for_update().first()
+    user_id = elegibles[slot['p']]
     # La sesión de ese closer en este evento (lo que ajustó o la propuesta) y su margen: los dos bloquean.
     dur, margen = sesion_de(buscar(d, 'personas', slot['p']), evento['id'], evento['duracion'], evento.get('margen'))
     fin = inicio + (dur + margen) * 60000
-    choca, fuera_de_google = _choque(closer.id, inicio, fin) if closer else (True, [])
+    # Google primero, sin bloqueo: renovar el token hace commit y soltaría el bloqueo.
+    franjas = _franjas_frescas(user_id, inicio, fin)
+    # Bloqueo del closer: dos leads que eligen el mismo horario a la vez no pueden quedar los dos.
+    closer, choca, fuera_de_google = _bloquear_y_verificar(user_id, inicio, fin, franjas)
     if choca:
         db.session.rollback()
+        # El mismo lead que confirmó dos veces a la vez: el primer pedido ya le tomó la agenda.
+        cliente = operacion.cliente_por_email(limpias.get('c-email'))
+        previa = operacion.agenda_de(cliente.id, ms_a_dt(inicio)) if cliente else None
+        if previa:
+            invitacion = limpias.get('c-email') if previa.google_event_id else None
+            return {**_respuesta(previa), 'consultor': _consultor(d, db.session.get(User, previa.closer_id)),
+                    'invitacion': invitacion}, False
         raise ReservaRechazadaError('ocupado')
+
+    def asegurar():
+        """Lo que llama registrar_agenda justo antes de escribir: buscar la agenda previa del lead lee su
+        Google Calendar y puede haber hecho commit (soltando el bloqueo). Vuelve a bloquear y a mirar."""
+        return _bloquear_y_verificar(user_id, inicio, fin, franjas)[1:]
 
     payload = {
         **armar_reserva(**base, asig=asig, slot={**slot, 'dur': dur, 'margen': margen}),
@@ -1403,7 +1432,8 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
         'setter_user_id': setter.id if setter else None,
     }
     appt, evento_viejo = operacion.registrar_agenda(
-        payload, closer, setter, ms_a_dt(inicio), ahora=ms_a_dt(ahora), decision=decision, ignorar_ids=fuera_de_google
+        payload, closer, setter, ms_a_dt(inicio), ahora=ms_a_dt(ahora), decision=decision, ignorar_ids=fuera_de_google,
+        asegurar=asegurar,
     )
     if not appt:
         raise ReservaRechazadaError('ocupado')
