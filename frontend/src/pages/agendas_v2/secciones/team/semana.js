@@ -47,3 +47,24 @@ export function googleDeOcupacion(google) {
     if (google === 'error') return () => SIN_LEER;
     return google ? (id) => google[id] || null : () => null;
 }
+
+// Una agenda de n8n (de /ocupacion) con la forma de una reserva.
+const deN8n = (a) => ({ id: 'n8n-' + a.id, inicio_ms: a.inicio, fin_ms: a.fin, margen_min: 0, lead: { nombre: a.nombre }, n8n: true, resultado: a.resultado });
+
+/**
+ * Las agendas de cada persona en la semana, de los dos sistemas:
+ * ocupan(id): las reservas de Agendas 2.0 agendadas o ya hechas (procesadas) y las de n8n vigentes.
+ * canceladas(id): las que ya no ocupan, cada una con `motivo`: 'cancelada' (cancelada o reprogramada)
+ * o 'sin_evento' (de n8n, vigente en NeurOPS pero ya no está en su Google Calendar).
+ */
+export function agendasDeVista(reservas, google) {
+    const g = googleDeOcupacion(google);
+    const propias = (id) => reservas.filter(r => r.closer_id === id && r.inicio_ms != null);
+    const n8n = (id) => ((g(id) || {}).agendas || []);
+    return {
+        ocupan: (id) => propias(id).filter(r => r.estado === 'agendada' || r.cancelada === false)
+            .concat(n8n(id).filter(a => a.estado === 'vigente').map(deN8n)),
+        canceladas: (id) => propias(id).filter(r => r.estado !== 'agendada' && r.cancelada !== false).map(r => ({ ...r, motivo: 'cancelada' }))
+            .concat(n8n(id).filter(a => a.estado !== 'vigente').map(a => ({ ...deN8n(a), motivo: a.estado }))),
+    };
+}

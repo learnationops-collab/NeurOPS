@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { normalHorario, normalPersona } from '../../core/normalizar';
-import { avUnir, calcularCobertura, columnas, durTxt, hmTxt, textoEstrategia, unirTramos } from './cobertura';
+import { avUnir, calcularCobertura, columnas, durTxt, hmTxt, huecosLibres, textoEstrategia, unirTramos } from './cobertura';
+import { agendasDeVista } from './semana';
 
 describe('avUnir', () => {
     it('une franjas que se pisan o se tocan y ordena', () => {
@@ -62,6 +63,21 @@ describe('calcularCobertura', () => {
         expect(its.map(x => x.tipo)).toEqual(['ag', 'ag', 'ev', 'ev']);
         expect(its.map(x => [x.col, x.ncols])).toEqual([[0, 1], [0, 1], [0, 2], [1, 2]]);
     });
+    it('las canceladas se muestran pero no ocupan', () => {
+        const cx = () => [{ id: 'x', inicio_ms: H(10), fin_ms: H(11), motivo: 'sin_evento', lead: { nombre: 'Lu' } }];
+        const c = calcularCobertura({ todos: [p], cs: [p], ahora, canceladasDe: cx });
+        expect(c.bloques[0].items.map(x => x.tipo)).toEqual(['cx']);
+        expect(c.kpi.nCx).toBe(1);
+        expect(c.kpi.hLibre).toBe(4);
+    });
+    it('el tiempo libre donde no entra un turno', () => {
+        // De 9 a 13 con una agenda de 12 a 12:45: libres 9 a 12 y 12:45 a 13. Turnos de 45 + 15 a las 9, 10 y 11.
+        const x = calcularCobertura({ todos: [p], cs: [p], ahora, reservasDe: reservas }).bloques[0];
+        expect(huecosLibres(x, { ahora })).toEqual([[H(9), H(12)], [H(12, 45), H(13)]]);
+        expect(huecosLibres(x, { ahora, turnos: [H(9), H(10), H(11)], largoTurno: 60 * 60000 })).toEqual([[H(12, 45), H(13)]]);
+        // Lo que ya pasó no cuenta, y menos de 15 minutos tampoco.
+        expect(huecosLibres(x, { ahora: H(12, 50) })).toEqual([]);
+    });
     it('se puede ver en la zona de quien mira', () => {
         // Ana trabaja de 9 a 13 en La Paz (UTC-4); vista desde Buenos Aires (UTC-3) arranca a las 10.
         const c = calcularCobertura({ todos: [p], cs: [p], ahora, tz: 'America/Argentina/Buenos_Aires' });
@@ -114,5 +130,22 @@ describe('columnas', () => {
     it('reparte en columnas solo lo que se pisa', () => {
         const xs = columnas([{ a: 0, b: 10 }, { a: 5, b: 15 }, { a: 12, b: 20 }, { a: 30, b: 40 }]);
         expect(xs.map(x => [x.col, x.ncols])).toEqual([[0, 2], [1, 2], [0, 2], [0, 1]]);
+    });
+});
+
+describe('agendasDeVista', () => {
+    it('junta Agendas 2.0 y n8n, y aparta las canceladas', () => {
+        const reservas = [
+            { id: 'a', closer_id: 'p1', inicio_ms: 1, estado: 'agendada' },
+            { id: 'b', closer_id: 'p1', inicio_ms: 2, estado: 'cancelada', cancelada: false },  // ya procesada: se hizo
+            { id: 'c', closer_id: 'p1', inicio_ms: 3, estado: 'cancelada', cancelada: true },
+        ];
+        const google = { p1: { estado: 'ok', agendas: [
+            { id: 7, inicio: 4, fin: 5, nombre: 'Lu', estado: 'vigente' }, { id: 8, inicio: 6, fin: 7, nombre: 'Mo', estado: 'sin_evento', resultado: 'Pendiente' },
+        ] } };
+        const v = agendasDeVista(reservas, google);
+        expect(v.ocupan('p1').map(r => r.id)).toEqual(['a', 'b', 'n8n-7']);
+        expect(v.canceladas('p1').map(r => [r.id, r.motivo])).toEqual([['c', 'cancelada'], ['n8n-8', 'sin_evento']]);
+        expect(v.ocupan('p2')).toEqual([]);
     });
 });

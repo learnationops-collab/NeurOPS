@@ -1711,3 +1711,10 @@
 .thalamus .ses-cap--btn{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:4px 10px;border:1px solid var(--border-subtle);background:var(--mat-1);cursor:pointer}
 .thalamus .ses-cap--btn svg{margin-left:6px;color:var(--brand-secondary)}
 .thalamus .ses-cap--btn:hover{border-color:var(--brand-secondary-border);color:var(--text-on-surface)}
+/* Available: tiempo libre donde no entra una sesión y agendas que ya no ocupan */
+.thalamus .av-card.hl{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--success) 10%,transparent) 0 4px,transparent 4px 9px);border:1px dashed color-mix(in srgb,var(--success) 45%,transparent);color:var(--text-muted);z-index:0}
+.thalamus .av-card.cx{left:auto;right:3px;width:58%;z-index:2;background:var(--bg-flotante);border:1.5px dashed var(--text-muted-40);color:var(--text-muted)}
+.thalamus .av-card.cx .av-card-tit{text-decoration:line-through}
+.thalamus .av-card.cx--duda{border-color:var(--warning);color:var(--warning)}
+.thalamus .av-card.cx--duda .av-card-tit{text-decoration:none}
+.thalamus .av-fil--tipo > i.av-l-cx{background:transparent;border:1.5px dashed var(--text-muted)}

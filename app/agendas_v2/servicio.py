@@ -431,6 +431,8 @@ def reserva_a_dict(appt):
         **(appt.agenda_payload or {}),
         'id': str(appt.id),
         'estado': 'agendada' if _vigente(appt) else 'cancelada',
+        # Si dejó de estar agendada porque se canceló o reprogramó (no porque el closer ya la procesó).
+        'cancelada': (appt.result or '') in operacion.RESULTADOS_NO_VIGENTES,
         'inicio_ms': inicio,
         'fin_ms': inicio + _duracion_min(appt) * 60000 if inicio is not None else None,
         'creada': appt.created_at.replace(tzinfo=timezone.utc).isoformat().replace('+00:00', 'Z')
@@ -632,27 +634,84 @@ def _ocupado_semana(user_id, desde, hasta):
     return leido
 
 
+# Una agenda de n8n se busca en Google por su inicio, con esta tolerancia.
+TOLERANCIA_EVENTO_MS = 60000
+
+
+def _agendas_operacion(user_ids, desde, hasta):
+    """{user_id: [Appointment]} de las agendas de n8n de esos closers que empiezan entre desde y hasta
+    (ms). Las de Agendas 2.0 (con payload) no: esas ya viajan en /estado."""
+    from app.models import Appointment
+
+    if not user_ids:
+        return {}
+    filas = (
+        Appointment.query.filter(
+            Appointment.closer_id.in_(user_ids),
+            Appointment.agenda_payload.is_(None),
+            Appointment.start_time >= ms_a_dt(desde),
+            Appointment.start_time < ms_a_dt(hasta),
+        )
+        .order_by(Appointment.start_time)
+        .all()
+    )
+    out = {}
+    for a in filas:
+        out.setdefault(a.closer_id, []).append(a)
+    return out
+
+
+def agenda_operacion_a_dict(appt, eventos):
+    """Una agenda de n8n para Available. estado: 'cancelada' (marcada cancelada o reprogramada),
+    'sin_evento' (en NeurOPS sigue vigente pero ya no está en su Google Calendar: se canceló o se movió
+    sin que NeurOPS se enterara) o 'vigente'. `eventos`: lo leído de su Google, None si no se pudo (y
+    entonces no se sabe: queda vigente). Dura lo que su evento en Google o, si no está, lo de siempre.
+    Solo se muestra: la agenda no se toca."""
+    inicio = dt_a_ms(appt.start_time)
+    evento = next((e for e in eventos or [] if abs(e['inicio'] - inicio) <= TOLERANCIA_EVENTO_MS), None)
+    if (appt.result or '') in operacion.RESULTADOS_NO_VIGENTES:
+        estado = 'cancelada'
+    elif eventos is not None and evento is None:
+        estado = 'sin_evento'
+    else:
+        estado = 'vigente'
+    cliente = appt.client
+    return {
+        'id': str(appt.id),
+        'inicio': inicio,
+        'fin': evento['fin'] if evento else inicio + _duracion_min(appt) * 60000,
+        'nombre': (cliente.full_name if cliente else None) or 'Agenda',
+        'estado': estado,
+        'resultado': appt.result,
+    }
+
+
 def ocupacion_google(desde, hasta):
-    """{persona_id: {'estado', 'franjas', 'eventos'}} de cada persona de Team entre desde y hasta (ms).
-    estado: 'ok' (franjas = lo ocupado en sus calendarios de conflicto, unido; eventos = cada uno con
-    su título, None si es privado), 'error' (Google no
+    """{persona_id: {'estado', 'franjas', 'eventos', 'agendas'}} de cada persona de Team entre desde y
+    hasta (ms). estado: 'ok' (franjas = lo ocupado en sus calendarios de conflicto, unido; eventos = cada
+    uno con su título, None si es privado), 'error' (Google no
     respondió: no se sabe), 'sin_google' (no conectó su calendario) o 'sin_usuario' (su email no es el
-    de un usuario activo). A diferencia del motor, acá no saber no se muestra como libre."""
+    de un usuario activo). A diferencia del motor, acá no saber no se muestra como libre.
+    agendas: las de n8n de ese closer, con si siguen en pie (agenda_operacion_a_dict)."""
     personas = colecciones()['personas']
     usuarios = _usuarios_de_personas({'personas': personas})
     con_calendar = _con_calendar(set(usuarios.values()))
     por_usuario = {u: _ocupado_semana(u, desde, hasta) for u in set(usuarios.values()) & con_calendar}
+    agendas = _agendas_operacion(set(usuarios.values()), desde, hasta)
     out = {}
     for p in personas:
         u = usuarios.get(p['id'])
+        leido = por_usuario.get(u)
         if u is None:
             out[p['id']] = {'estado': 'sin_usuario', 'franjas': [], 'eventos': []}
         elif u not in con_calendar:
             out[p['id']] = {'estado': 'sin_google', 'franjas': [], 'eventos': []}
-        elif por_usuario[u] is None:
+        elif leido is None:
             out[p['id']] = {'estado': 'error', 'franjas': [], 'eventos': []}
         else:
-            out[p['id']] = {'estado': 'ok', **por_usuario[u]}
+            out[p['id']] = {'estado': 'ok', **leido}
+        eventos = leido['eventos'] if leido else None
+        out[p['id']]['agendas'] = [agenda_operacion_a_dict(a, eventos) for a in agendas.get(u, [])]
     return out
 
 

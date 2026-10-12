@@ -9,14 +9,13 @@ import { closers, colorVar, horasSemana } from '../../core/datos';
 import { puedeHorarioDe } from '../../core/permisos';
 import { fechaCorta, gmtTxt, horaTxt } from '../../core/tiempo';
 import { clonar, fmt, iniciales, mayus, pad } from '../../core/util';
-import { reservasDe as _reservasDe } from '../../data/almacen';
 import { almacen, useDatos, useUi } from '../../data/hooks';
 import { HUMO_MARCA, Humo, Icono, Sx } from '../../ui/base';
 import { toast } from '../../ui/toast';
 import { DIAS } from '../../core/catalogos';
-import { HPX, avUnir, calcularCobertura, durTxt, hmTxt, nombreDia, rangoSemana } from './cobertura';
+import { HPX, avUnir, calcularCobertura, durTxt, hmTxt, huecosLibres, nombreDia, rangoSemana } from './cobertura';
 import { setTeam } from './comun';
-import { googleDeOcupacion, useAhora, useOcupacionGoogle, useZonaVista } from './semana';
+import { agendasDeVista, googleDeOcupacion, useAhora, useOcupacionGoogle, useZonaVista } from './semana';
 import { gruposDeSesion, turnosSemana } from './turnos';
 
 const hm = (m) => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
@@ -55,8 +54,33 @@ const TIPOS = [
     { v: 'ag', n: 'Agendas', cls: 'av-l-ag' },
     { v: 'mg', n: 'Margen', cls: 'av-l-mg' },
     { v: 'ev', n: 'Ocupado', cls: 'av-l-ev', tip: 'Eventos de su Google Calendar' },
-    { v: 'tl', n: 'Libres', cls: 'av-l-tu', tip: 'Turnos libres del evento elegido' },
+    { v: 'tl', n: 'Libres', cls: 'av-l-tu', tip: 'Los turnos libres del evento elegido y el tiempo libre donde no entra una sesión' },
+    { v: 'cx', n: 'Canceladas', cls: 'av-l-cx', tip: 'Agendas canceladas o que ya no están en su Google Calendar: no ocupan' },
 ];
+
+// Una agenda que ya no ocupa: el título y el detalle de por qué.
+function textoCancelada(r) {
+    const lead = nombreLead(r);
+    if (r.motivo === 'sin_evento') {
+        return { titulo: '¿Cancelada? · ' + lead, por: 'Ya no está en su Google Calendar: probablemente se canceló o se movió en Calendly. En NeurOPS sigue como ' + (r.resultado || 'agendada') + '.' };
+    }
+    return { titulo: 'Cancelada · ' + lead, por: r.resultado ? 'Marcada como ' + r.resultado + '.' : 'Se canceló o reprogramó.' };
+}
+
+// Cuántas agendas de la semana ya no ocupan y, al pasar el mouse, cuáles.
+function AvisoCanceladas({ bloques, tz }) {
+    const cxs = bloques.flatMap(x => x.items.filter(it => it.tipo === 'cx').map(it => ({ ...it, p: x.p })));
+    const dudas = cxs.filter(it => it.reserva.motivo === 'sin_evento').length;
+    const lista = cxs.map(it => fechaCorta(new Date(it.a).toISOString().slice(0, 10)) + ' ' + horaTxt(it.a, tz) + ' ' + it.p.nombre + ': ' + textoCancelada(it.reserva).titulo).join(' · ');
+    return (
+        <span className={'av-ley-s' + (dudas ? ' av-ley-aviso' : '')} data-tip={'Agendas que no ocupan|' + lista.replace(/\|/g, '/')}>
+            <Icono n={dudas ? 'alerta' : 'x'} s={12} />
+            {cxs.length - dudas > 0 && (cxs.length - dudas) + (cxs.length - dudas === 1 ? ' cancelada' : ' canceladas')}
+            {cxs.length - dudas > 0 && dudas > 0 && ' · '}
+            {dudas > 0 && dudas + (dudas === 1 ? ' ya no está' : ' ya no están') + ' en Google'}
+        </span>
+    );
+}
 
 export default function Available({ solo = null }) {
     const { d, perfil, reservas } = useDatos();
@@ -81,14 +105,16 @@ export default function Available({ solo = null }) {
     const zonaVista = useZonaVista(), tzVista = solo ? null : zonaVista;
     const { desde, hasta } = rangoSemana(cs, semana, ahora, tzVista);
     const google = useOcupacionGoogle(desde, hasta, cs.length > 0);
+    // Las agendas de Agendas 2.0 y las de n8n; las canceladas, aparte.
+    const vista = useMemo(() => agendasDeVista(reservas, google), [reservas, google]);
 
     const cob = useMemo(() => (cs.length ? calcularCobertura({
-        todos, cs, semana, ahora, edit, reservasDe: (id) => _reservasDe(reservas, id),
+        todos, cs, semana, ahora, edit, reservasDe: vista.ocupan, canceladasDe: vista.canceladas,
         googleDe: googleDeOcupacion(google), tz: tzVista,
-    }) : null), [todos, cs, semana, ahora, edit, reservas, google, tzVista]);
+    }) : null), [todos, cs, semana, ahora, edit, vista, google, tzVista]);
     const turnos = useMemo(() => (evento && cs.length ? turnosSemana({
-        personas: cs, evento, semana, ahora, reservasDe: (id) => _reservasDe(reservas, id), googleDe: googleDeOcupacion(google), tz: tzVista,
-    }) : null), [evento, cs, semana, ahora, reservas, google, tzVista]);
+        personas: cs, evento, semana, ahora, reservasDe: vista.ocupan, googleDe: googleDeOcupacion(google), tz: tzVista,
+    }) : null), [evento, cs, semana, ahora, vista, google, tzVista]);
     const filaDe = (id) => (turnos ? turnos.filas.find(f => f.p.id === id) : null);
 
     const [arr, setArr] = useState(null);   // franja que se está arrastrando: {dow, ri, a, b, modo}
@@ -216,7 +242,7 @@ export default function Available({ solo = null }) {
                         );
                     })}
                     {!solo && <span className="av-fil-sep" />}
-                    {TIPOS.filter(t => (t.v !== 'tl' || turnos) && (t.v !== 'ev' || conApi) && (t.v !== 'mg' || bloques.some(x => x.mMg > 0))).map(t => (
+                    {TIPOS.filter(t => (t.v !== 'ev' || conApi) && (t.v !== 'mg' || bloques.some(x => x.mMg > 0)) && (t.v !== 'cx' || kpi.nCx > 0)).map(t => (
                         <button key={t.v} type="button" className="av-fil av-fil--tipo" aria-pressed={ver(t.v)} data-tip={t.tip} onClick={() => alternar(t.v)}>
                             <i className={t.cls} />{t.n}
                         </button>
@@ -226,6 +252,7 @@ export default function Available({ solo = null }) {
                     {solo && turnos && <span className="av-ley-s"><b className="av-ley-n">{turnos.nLibres} turnos libres</b> de {turnos.nTotal} esta semana</span>}
                     {edit && <span className="av-ley-s av-ley-edit"><Icono n="edit" s={12} />Arrastrá para crear o mover · se repite cada semana</span>}
                     <span className="av-ley-s"><i className="av-l-hu" />Sin closer</span>
+                    {kpi.nCx > 0 && <AvisoCanceladas bloques={bloques} tz={tz} />}
                     {leyendo && <span className="av-ley-s">Leyendo calendarios…</span>}
                     {sinLeer.length > 0 && <span className="av-ley-s av-ley-aviso"><Icono n="alerta" s={12} />No se pudo leer el calendario de {nombres(sinLeer)}</span>}
                     {sinGoogle.length > 0 && <span className="av-ley-s"><Icono n="calendar" s={12} />Sin Google Calendar: {nombres(sinGoogle)} (solo agendas)</span>}
@@ -274,7 +301,7 @@ export default function Available({ solo = null }) {
                                                             <span className="av-hora">{txtH}</span>
                                                         </>
                                                     ) : null}
-                                                    {!vivo && x.items.filter(it => ver(it.tipo)).map((it, k) => {
+                                                    {!vivo && x.items.filter(it => it.tipo !== 'cx' && ver(it.tipo)).map((it, k) => {
                                                         const top = (it.a - x.t0) / 3600000 * HPX, alto = (it.b - it.a) / 3600000 * HPX;
                                                         const hora = horaTxt(it.a, tz) + ' – ' + horaTxt(it.b, tz), pas = it.b <= ahora ? ' pas' : '';
                                                         const key = it.tipo + it.a + '-' + k, pos = { top, alto, hora, col: it.col, ncols: it.ncols };
@@ -287,6 +314,24 @@ export default function Available({ solo = null }) {
                                                         return (
                                                             <Tarjeta key={key} {...pos} clase={'ev' + (e.titulo ? ' ev--agenda' : '') + pas} titulo={tit}
                                                                 tip={(e.titulo ? 'En su calendario de agendamiento' : 'En su Google Calendar') + ' · ' + x.p.nombre + '|' + horaTxt(e.inicio, tz) + ' – ' + horaTxt(e.fin, tz) + ' · ' + tit} />
+                                                        );
+                                                    })}
+                                                    {!vivo && ver('tl') && huecosLibres(x, {
+                                                        ahora, turnos: filaDe(x.p.id)?.inicios || [], largoTurno: filaDe(x.p.id) ? (filaDe(x.p.id).dur + filaDe(x.p.id).margen) * 60000 : 0,
+                                                    }).map(([a, b]) => {
+                                                        const hora = horaTxt(a, tz) + ' – ' + horaTxt(b, tz), f = filaDe(x.p.id), largo = durTxt((b - a) / 60000);
+                                                        return (
+                                                            <Tarjeta key={'hl' + a} clase="hl" top={(a - x.t0) / 3600000 * HPX} alto={(b - a) / 3600000 * HPX}
+                                                                titulo={'Libre · ' + largo} hora={hora}
+                                                                tip={'Tiempo libre · ' + x.p.nombre + '|' + hora + (f ? ' · no entra una sesión de ' + f.dur + ' min' : '')} />
+                                                        );
+                                                    })}
+                                                    {!vivo && ver('cx') && x.items.filter(it => it.tipo === 'cx').map(it => {
+                                                        const c = textoCancelada(it.reserva), hora = horaTxt(it.a, tz) + ' – ' + horaTxt(it.b, tz);
+                                                        return (
+                                                            <Tarjeta key={'cx' + it.reserva.id} clase={'cx' + (it.reserva.motivo === 'sin_evento' ? ' cx--duda' : '')}
+                                                                top={(it.a - x.t0) / 3600000 * HPX} alto={(it.b - it.a) / 3600000 * HPX} titulo={c.titulo} hora={hora}
+                                                                tip={c.titulo + '|' + hora + ' · ' + c.por} />
                                                         );
                                                     })}
                                                     {!vivo && ver('tl') && (filaDe(x.p.id)?.inicios || []).filter(t => t >= x.t0 && t < x.t1).map(t => {

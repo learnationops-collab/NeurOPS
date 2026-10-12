@@ -252,6 +252,34 @@ def test_ocupacion_distingue_error_sin_google_y_sin_usuario(client, db, dir_h, g
     assert {k: v['estado'] for k, v in oc.items()} == {'p1': 'error', 'p2': 'sin_google', 'p3': 'sin_usuario'}
 
 
+def test_ocupacion_trae_las_agendas_de_n8n_y_detecta_las_canceladas(client, db, dir_h, gente, google_semana):
+    from datetime import datetime
+
+    from app.models import Appointment, Client, GoogleCalendarToken
+
+    db.session.add(GoogleCalendarToken(user_id=gente['closer'].id, token_json='{}'))
+    cli = Client(full_name='Lucía', email='lucia@x.com')
+    db.session.add(cli)
+    db.session.flush()
+    hora = lambda h: datetime(1970, 1, 2, h)  # noqa: E731
+    for h, res in ((10, 'Confirmado'), (12, 'Pendiente'), (14, 'Cancelado')):
+        db.session.add(Appointment(client_id=cli.id, closer_id=gente['closer'].id, start_time=hora(h), result=res))
+    db.session.commit()
+    client.put('/api/agendas-v2/personas/p1', headers=dir_h, json={'nombre': 'Ana', 'email': 'ana@neuro.com'})
+    ms = lambda h: int((86400 + h * 3600) * 1000)  # noqa: E731
+    # La de las 10 sigue en su Google (dura lo que su evento); la de las 12 ya no está.
+    google_semana[gente['closer'].id] = [(ms(10), ms(10) + 45 * 60000, 'Lucía')]
+    ana = _ocupacion(client, dir_h).get_json()['ocupacion']['p1']
+    assert [a['estado'] for a in ana['agendas']] == ['vigente', 'sin_evento', 'cancelada']
+    assert {a['nombre'] for a in ana['agendas']} == {'Lucía'}
+    assert ana['agendas'][0]['fin'] - ana['agendas'][0]['inicio'] == 45 * 60000
+    # Sin poder leer su Google no se sabe: la que no está marcada cancelada queda vigente.
+    servicio._google_semana_cache.clear()
+    google_semana[gente['closer'].id] = None
+    ana = _ocupacion(client, dir_h).get_json()['ocupacion']['p1']
+    assert [a['estado'] for a in ana['agendas']] == ['vigente', 'vigente', 'cancelada']
+
+
 def test_ocupacion_exige_un_rango_valido_y_ser_direccion(client, gente, dir_h, auth_headers, google_semana):
     assert _ocupacion(client, dir_h, 10, 10).status_code == 400
     assert _ocupacion(client, dir_h, 0, 11 * 86400000).status_code == 400
