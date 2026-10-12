@@ -1,8 +1,7 @@
-// Available: calendario semanal de cobertura. Cada closer es un carril; dentro de su horario, con su
-// duración real: lleno = agendada (reservas reales), medio = su margen después, gris rayado = evento
-// en su Google Calendar, claro = libre. Rayado rojo = franja del día sin ningún closer. Con `evento`,
-// los turnos libres de cada closer (encadenados con su sesión en ese evento, turnos.js) van punteados
-// y se cuentan por día.
+// Available: calendario semanal de cobertura. Cada closer es un carril; dentro de su horario, cada agenda,
+// cada margen y cada evento de su Google Calendar es una tarjeta propia (lado a lado si se pisan), y los
+// turnos libres del evento elegido (encadenados con su sesión, turnos.js) son tarjetas «Libre». Rayado
+// rojo = franja del día sin ningún closer. Se filtra por closer y por tipo de tarjeta.
 // Con una sola persona y permiso, se edita arrastrando: crear, mover y estirar franjas (de a 30 min).
 
 import { useMemo, useRef, useState } from 'react';
@@ -12,13 +11,13 @@ import { fechaCorta, gmtTxt, horaTxt } from '../../core/tiempo';
 import { clonar, fmt, iniciales, mayus, pad } from '../../core/util';
 import { reservasDe as _reservasDe } from '../../data/almacen';
 import { almacen, useDatos, useUi } from '../../data/hooks';
-import { HUMO_MARCA, Humo, Icono } from '../../ui/base';
+import { HUMO_MARCA, Humo, Icono, Sx } from '../../ui/base';
 import { toast } from '../../ui/toast';
 import { DIAS } from '../../core/catalogos';
 import { HPX, avUnir, calcularCobertura, durTxt, hmTxt, nombreDia, rangoSemana } from './cobertura';
 import { setTeam } from './comun';
 import { googleDeOcupacion, useAhora, useOcupacionGoogle, useZonaVista } from './semana';
-import { turnosSemana } from './turnos';
+import { gruposDeSesion, turnosSemana } from './turnos';
 
 const hm = (m) => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
 
@@ -36,34 +35,47 @@ const nombres = (ps) => ps.map(p => p.nombre).join(', ');
 // Título de un evento de Google: solo los del calendario de agendamiento lo traen; el resto es «Ocupado»
 // con el nombre del calendario de donde sale.
 const tituloEv = (e) => (e.titulo || 'Ocupado' + (e.calendario ? ' · ' + e.calendario : '')).replace(/\|/g, '/');
-// Lo que muestra un tramo por eventos: sus títulos y, al pasar el mouse, cada uno con su hora.
-function textoEventos(sg) { return [...new Set(sg.eventos.map(tituloEv))].join(' · '); }
-// Las agendas de un tramo: el nombre de cada lead.
-const textoAgendas = (sg) => [...new Set((sg.reservas || []).map(r => (r.lead && r.lead.nombre) || 'Agenda'))].join(' · ') || 'Agenda';
+// El nombre del lead de una agenda.
+const nombreLead = (r) => ((r.lead && r.lead.nombre) || 'Agenda').replace(/\|/g, '/');
 
-// Un bloque del calendario, al estilo de Google Calendar: el título y, si entra, la hora.
-function Tarjeta({ clase, top, alto, titulo, hora, tip }) {
+// Una tarjeta del calendario, al estilo de Google Calendar: el título y, si entra, la hora. `col` de
+// `ncols`: su lugar cuando se pisa con otras.
+function Tarjeta({ clase, top, alto, titulo, hora, tip, col = 0, ncols = 1 }) {
+    const pos = ncols > 1 ? { left: 'calc(' + (col / ncols * 100) + '% + 2px)', width: 'calc(' + (100 / ncols) + '% - 3px)', right: 'auto' } : null;
     return (
-        <div className={'av-card ' + clase} style={{ top, height: alto }} data-tip={tip}>
+        <div className={'av-card ' + clase} style={{ top, height: alto, ...pos }} data-tip={tip}>
             {alto >= 15 && <b className="av-card-tit">{titulo}</b>}
             {alto >= 32 && hora && <span className="av-card-hora">{hora}</span>}
         </div>
     );
 }
 
-function tipEventos(sg, tz) {
-    const n = sg.eventos.length;
-    return (n === 1 ? 'Evento' : n + ' eventos') + ' en su calendario|' + sg.eventos.map(e => horaTxt(e.inicio, tz) + '–' + horaTxt(e.fin, tz) + ' ' + tituloEv(e)).join(' · ');
-}
+// Los tipos de tarjeta que se pueden ocultar.
+const TIPOS = [
+    { v: 'ag', n: 'Agendas', cls: 'av-l-ag' },
+    { v: 'mg', n: 'Margen', cls: 'av-l-mg' },
+    { v: 'ev', n: 'Ocupado', cls: 'av-l-ev', tip: 'Eventos de su Google Calendar' },
+    { v: 'tl', n: 'Libres', cls: 'av-l-tu', tip: 'Turnos libres del evento elegido' },
+];
 
-export default function Available({ solo = null, evento = null }) {
+export default function Available({ solo = null }) {
     const { d, perfil, reservas } = useDatos();
     const { sim, team } = useUi();
     const ahora = useAhora();
     const edit = !!solo && puedeHorarioDe(d, sim, perfil, solo);
     const semana = team.semana || 0;
     const todos = useMemo(() => closers(d).filter(p => horasSemana(p) > 0), [d]);
-    const cs = useMemo(() => (solo ? (horasSemana(solo) > 0 || edit ? [solo] : []) : todos), [solo, edit, todos]);
+    // Filtros: closers y tipos de tarjeta ocultos ({'p:<id>': true, ag|mg|ev|tl: true}).
+    const [oculto, setOculto] = useState({});
+    const alternar = (k) => setOculto(o => ({ ...o, [k]: !o[k] }));
+    const ver = (k) => !oculto[k];
+    const cs = useMemo(() => (solo ? (horasSemana(solo) > 0 || edit ? [solo] : []) : todos.filter(p => !oculto['p:' + p.id])), [solo, edit, todos, oculto]);
+
+    // Los turnos libres dependen de cuánto dura cada sesión: se elige el evento (agrupados los que dan
+    // las mismas sesiones a quienes se ven).
+    const grupos = useMemo(() => gruposDeSesion(d, solo ? [solo] : todos), [d, solo, todos]);
+    const grupo = grupos.find(x => x.eventos.some(e => e.id === team.evento)) || grupos[0] || null;
+    const evento = grupo ? grupo.evento : null;
 
     // El equipo se ve en la hora de quien mira; la semana de un closer, en la suya (ahí se edita su horario).
     const zonaVista = useZonaVista(), tzVista = solo ? null : zonaVista;
@@ -83,6 +95,14 @@ export default function Available({ solo = null, evento = null }) {
     const drag = useRef(null);
 
     if (!cob) {
+        if (!solo && todos.length) {
+            return (
+                <div className="panel vacio">
+                    <p className="t-sm mut">Ocultaste a todos los closers.</p>
+                    <button type="button" className="btn btn--linea btn--sm" onClick={() => setOculto({})}>Mostrar todos</button>
+                </div>
+            );
+        }
         return <div className="panel vacio"><p className="t-sm mut">{solo ? 'Cargá tu horario para ver tu semana.' : 'Cargá horarios en People para ver la cobertura.'}</p></div>;
     }
     const { tz, dias, bloques, huecos, porDia, minH, maxH, hoyK, mAhora, kpi, sinLeer, sinGoogle } = cob;
@@ -178,21 +198,37 @@ export default function Available({ solo = null, evento = null }) {
                         <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label="Semana siguiente" onClick={() => irSemana(1)}><Icono n="chevron-right" /></button>
                         <b className="av-rango" aria-live="polite">{rango}</b>
                     </div>
-                    <div className="av-ley">
-                        {cs.map(p => {
-                            const f = filaDe(p.id);
-                            return <span key={p.id} style={{ '--c': colorVar(p.color) }}><i />{p.nombre}{f && <b className="av-ley-n">{f.nLibres} libres</b>}</span>;
-                        })}
-                        {edit && <span className="av-ley-s av-ley-edit"><Icono n="edit" s={12} />Arrastrá para crear o mover · se repite cada semana</span>}
-                        <span className="av-ley-s"><i className="av-l-ag" />Agenda</span>
-                        {bloques.some(x => x.mMg > 0) && <span className="av-ley-s"><i className="av-l-mg" />Margen</span>}
-                        {conApi && <span className="av-ley-s"><i className="av-l-ev" />Ocupado en otro calendario</span>}
-                        {turnos && <span className="av-ley-s"><i className="av-l-tu" />Libre</span>}
-                        <span className="av-ley-s"><i className="av-l-hu" />Sin closer</span>
-                        {leyendo && <span className="av-ley-s">Leyendo calendarios…</span>}
-                        {sinLeer.length > 0 && <span className="av-ley-s av-ley-aviso"><Icono n="alerta" s={12} />No se pudo leer el calendario de {nombres(sinLeer)}</span>}
-                        {sinGoogle.length > 0 && <span className="av-ley-s"><Icono n="calendar" s={12} />Sin Google Calendar: {nombres(sinGoogle)} (solo agendas)</span>}
-                    </div>
+                    {grupo && (
+                        <div className="av-evento">
+                            <span className="t-rotulo">Turnos de</span>
+                            <Sx sm id={solo ? 'av-evento-' + solo.id : 'tu-evento'} label="Turnos de" valor={grupo.id} onChange={v => setTeam({ evento: v })}
+                                opciones={grupos.map(x => ({ v: x.id, n: x.nombre + ' — ' + x.detalle, icono: 'calendar' }))} />
+                        </div>
+                    )}
+                </div>
+                <div className="av-filtros" role="group" aria-label="Filtros">
+                    {!solo && todos.map(p => {
+                        const f = filaDe(p.id), on = ver('p:' + p.id);
+                        return (
+                            <button key={p.id} type="button" className="av-fil" aria-pressed={on} style={{ '--c': colorVar(p.color) }} onClick={() => alternar('p:' + p.id)}>
+                                <i />{p.nombre}{f && on && <b className="av-ley-n">{f.nLibres} libres</b>}
+                            </button>
+                        );
+                    })}
+                    {!solo && <span className="av-fil-sep" />}
+                    {TIPOS.filter(t => (t.v !== 'tl' || turnos) && (t.v !== 'ev' || conApi) && (t.v !== 'mg' || bloques.some(x => x.mMg > 0))).map(t => (
+                        <button key={t.v} type="button" className="av-fil av-fil--tipo" aria-pressed={ver(t.v)} data-tip={t.tip} onClick={() => alternar(t.v)}>
+                            <i className={t.cls} />{t.n}
+                        </button>
+                    ))}
+                </div>
+                <div className="av-ley">
+                    {solo && turnos && <span className="av-ley-s"><b className="av-ley-n">{turnos.nLibres} turnos libres</b> de {turnos.nTotal} esta semana</span>}
+                    {edit && <span className="av-ley-s av-ley-edit"><Icono n="edit" s={12} />Arrastrá para crear o mover · se repite cada semana</span>}
+                    <span className="av-ley-s"><i className="av-l-hu" />Sin closer</span>
+                    {leyendo && <span className="av-ley-s">Leyendo calendarios…</span>}
+                    {sinLeer.length > 0 && <span className="av-ley-s av-ley-aviso"><Icono n="alerta" s={12} />No se pudo leer el calendario de {nombres(sinLeer)}</span>}
+                    {sinGoogle.length > 0 && <span className="av-ley-s"><Icono n="calendar" s={12} />Sin Google Calendar: {nombres(sinGoogle)} (solo agendas)</span>}
                 </div>
                 <div className="av-cal">
                     <div className="av-cab" style={{ minWidth: anchoMin }}>
@@ -202,7 +238,7 @@ export default function Available({ solo = null, evento = null }) {
                             return (
                                 <div key={dd.k} className={'av-dia' + (esHoy ? ' av-dia--hoy' : '')}>
                                     <span>{DIAS[(dd.d.getUTCDay() + 6) % 7].n.slice(0, 3)}</span><b>{dd.d.getUTCDate()}</b>
-                                    <em>{turnos ? turnos.filas.reduce((n, f) => n + f.libres[di], 0) + ' libres' : pd.t ? Math.round(pd.a / pd.t * 100) + '%' : '—'}</em>
+                                    <em>{turnos ? turnos.filas.reduce((s, f) => s + f.libres[di], 0) + ' libres' : pd.t ? Math.round(pd.a / pd.t * 100) + '%' : '—'}</em>
                                 </div>
                             );
                         })}
@@ -238,22 +274,22 @@ export default function Available({ solo = null, evento = null }) {
                                                             <span className="av-hora">{txtH}</span>
                                                         </>
                                                     ) : null}
-                                                    {!vivo && x.segs.map(sg => {
-                                                        const top = (sg.a - x.t0) / 3600000 * HPX, alto = (sg.b - sg.a) / 3600000 * HPX;
-                                                        const hora = horaTxt(sg.a, tz) + ' – ' + horaTxt(sg.b, tz), pas = sg.b <= ahora ? ' pas' : '';
-                                                        if (sg.tipo === 'ag') {
-                                                            return <Tarjeta key={'ag' + sg.a} clase={'ag' + pas} top={top} alto={alto} titulo={textoAgendas(sg)} hora={hora} tip={'Agenda · ' + x.p.nombre + '|' + hora + ' · ' + textoAgendas(sg)} />;
+                                                    {!vivo && x.items.filter(it => ver(it.tipo)).map((it, k) => {
+                                                        const top = (it.a - x.t0) / 3600000 * HPX, alto = (it.b - it.a) / 3600000 * HPX;
+                                                        const hora = horaTxt(it.a, tz) + ' – ' + horaTxt(it.b, tz), pas = it.b <= ahora ? ' pas' : '';
+                                                        const key = it.tipo + it.a + '-' + k, pos = { top, alto, hora, col: it.col, ncols: it.ncols };
+                                                        if (it.tipo === 'ag') {
+                                                            const lead = nombreLead(it.reserva);
+                                                            return <Tarjeta key={key} {...pos} clase={'ag' + pas} titulo={lead} tip={'Agenda · ' + x.p.nombre + '|' + hora + ' · ' + lead} />;
                                                         }
-                                                        if (sg.tipo === 'mg') {
-                                                            return <Tarjeta key={'mg' + sg.a} clase={'mg' + pas} top={top} alto={alto} titulo="Margen" tip={'Margen después de la agenda|' + hora} />;
-                                                        }
-                                                        const evs = sg.eventos || [], agenda = evs.some(e => e.titulo);
+                                                        if (it.tipo === 'mg') return <Tarjeta key={key} {...pos} clase={'mg' + pas} titulo="Margen" tip={'Margen después de la agenda|' + hora} />;
+                                                        const e = it.evento, tit = tituloEv(e);
                                                         return (
-                                                            <Tarjeta key={'ev' + sg.a} clase={'ev' + (agenda ? ' ev--agenda' : '') + pas} top={top} alto={alto}
-                                                                titulo={evs.length ? textoEventos(sg) : 'Ocupado'} hora={hora} tip={evs.length ? tipEventos(sg, tz) : 'Ocupado|' + hora} />
+                                                            <Tarjeta key={key} {...pos} clase={'ev' + (e.titulo ? ' ev--agenda' : '') + pas} titulo={tit}
+                                                                tip={(e.titulo ? 'En su calendario de agendamiento' : 'En su Google Calendar') + ' · ' + x.p.nombre + '|' + horaTxt(e.inicio, tz) + ' – ' + horaTxt(e.fin, tz) + ' · ' + tit} />
                                                         );
                                                     })}
-                                                    {!vivo && (filaDe(x.p.id)?.inicios || []).filter(t => t >= x.t0 && t < x.t1).map(t => {
+                                                    {!vivo && ver('tl') && (filaDe(x.p.id)?.inicios || []).filter(t => t >= x.t0 && t < x.t1).map(t => {
                                                         const f = filaDe(x.p.id), hora = horaTxt(t, tz) + ' – ' + horaTxt(t + f.dur * 60000, tz);
                                                         return (
                                                             <Tarjeta key={'tl' + t} clase="tl" top={(t - x.t0) / 3600000 * HPX} alto={f.dur / 60 * HPX}

@@ -1692,3 +1692,22 @@
 .thalamus .av-card.tl{background:color-mix(in srgb,var(--success) 16%,var(--bg-flotante));border:1px solid color-mix(in srgb,var(--success) 45%,transparent);color:var(--text-on-surface)}
 .thalamus .av-card.pas{opacity:.45}
 .thalamus .av-ley .av-l-tu{background:color-mix(in srgb,var(--success) 30%,transparent)!important;border:1px solid color-mix(in srgb,var(--success) 55%,transparent)}
+/* Available: filtros por closer y por tipo, y el evento de los turnos */
+.thalamus .av-evento{display:flex;align-items:center;gap:var(--s2)}
+.thalamus .av-filtros{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.thalamus .av-fil{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border-radius:999px;border:1px solid var(--border-subtle);background:var(--mat-1);font-size:12px;font-weight:700;color:var(--text-on-surface);cursor:pointer;transition:opacity .15s,background .15s}
+.thalamus .av-fil > i{width:10px;height:10px;border-radius:3px;background:var(--c)}
+.thalamus .av-fil[aria-pressed="true"]{border-color:color-mix(in srgb,var(--c,var(--text-muted)) 50%,transparent);background:color-mix(in srgb,var(--c,var(--text-muted)) 10%,var(--mat-1))}
+.thalamus .av-fil[aria-pressed="false"]{opacity:.45;text-decoration:line-through}
+.thalamus .av-fil--tipo > i.av-l-ag{background:var(--text-muted)}
+.thalamus .av-fil--tipo > i.av-l-mg{background:color-mix(in srgb,var(--text-muted) 45%,transparent)}
+.thalamus .av-fil--tipo > i.av-l-ev{background:color-mix(in srgb,var(--text-muted) 30%,var(--bg-flotante));border:1px solid var(--border-subtle)}
+.thalamus .av-fil--tipo > i.av-l-tu{background:color-mix(in srgb,var(--success) 30%,transparent);border:1px solid color-mix(in srgb,var(--success) 55%,transparent)}
+.thalamus .av-fil-sep{width:1px;height:18px;background:var(--border-subtle);margin:0 4px}
+.thalamus .av--edit .av-hora{opacity:0;transition:opacity .15s;background:var(--bg-flotante);border-radius:6px;padding:1px 5px;right:auto}
+.thalamus .av--edit .av-bloque:hover .av-hora,.thalamus .av--edit .av-bloque--drag .av-hora,.thalamus .av--edit .av-ghost .av-hora{opacity:1}
+.thalamus .hor-pie{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);flex-wrap:wrap;padding:0 var(--s6) var(--s6)}
+@media (max-width:640px){.thalamus .hor-pie{padding:0 var(--s4) var(--s4)}}
+.thalamus .ses-cap--btn{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:4px 10px;border:1px solid var(--border-subtle);background:var(--mat-1);cursor:pointer}
+.thalamus .ses-cap--btn svg{margin-left:6px;color:var(--brand-secondary)}
+.thalamus .ses-cap--btn:hover{border-color:var(--brand-secondary-border);color:var(--text-on-surface)}

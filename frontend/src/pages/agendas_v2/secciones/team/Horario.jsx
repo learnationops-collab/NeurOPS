@@ -157,6 +157,18 @@ export function HorarioEditor({ p, bloqueado = false, onGuardar = null }) {
     );
 }
 
+// Pie de las pestañas Horario y Sesiones: ir a ver cómo queda la semana, igual que en Available.
+function VerSemana() {
+    return (
+        <div className="hor-pie">
+            <span className="t-sm mut">Los turnos que se ofrecen salen de este horario y de la sesión de cada evento.</span>
+            <button type="button" className="btn btn--linea btn--sm" onClick={() => { almacen.flush(); setTeam({ horTab: 'semana' }); }}>
+                <Icono n="calendar" />Ver cómo queda la semana
+            </button>
+        </div>
+    );
+}
+
 // Mantiene el foco dentro de la ventana con Tab.
 function atrapar(e) {
     if (e.key !== 'Tab') return;
@@ -219,13 +231,16 @@ export function ModalHorario() {
                                 <div className="hor-ses">
                                     <p className="t-sm mut">Cuánto dura cada sesión de {p.nombre} y el margen que se deja después, por evento. Lo que no ajustó usa la propuesta del evento.</p>
                                     <EditorSesiones eventos={ord(d, 'eventos').filter(e => !e.persona)} sesiones={p.sesiones} bloqueado={!puede} horario={p.horario}
+                                        onVer={id => { almacen.flush(); setTeam({ evento: id, horTab: 'semana' }); }}
                                         onCambio={sesiones => almacen.editar('personas', p.id, { sesiones }, true)} />
                                 </div>
+                                <VerSemana />
                             </>
                         ) : (
                             <>
                                 {!puede && <p className="hor-ro"><Icono n="candado" s={14} />Solo lectura: {nombreSim(d, sim)} no puede cambiar este horario.</p>}
                                 <HorarioEditor p={p} bloqueado={!puede} />
+                                <VerSemana />
                             </>
                         )}
                 </div>

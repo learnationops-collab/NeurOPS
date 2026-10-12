@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { normalHorario, normalPersona } from '../../core/normalizar';
-import { avUnir, calcularCobertura, durTxt, hmTxt, textoEstrategia, unirTramos } from './cobertura';
+import { avUnir, calcularCobertura, columnas, durTxt, hmTxt, textoEstrategia, unirTramos } from './cobertura';
 
 describe('avUnir', () => {
     it('une franjas que se pisan o se tocan y ordena', () => {
@@ -52,6 +52,16 @@ describe('calcularCobertura', () => {
         expect(c.kpi.hEv).toBeCloseTo(10 / 60);
         expect(c.bloques[0].segs.map(s => s.tipo)).toEqual(['ag', 'mg', 'ev']);
     });
+    it('cada agenda y cada evento es una tarjeta propia, lado a lado si se pisan', () => {
+        const rs = () => [{ inicio_ms: H(9), fin_ms: H(9, 45), lead: { nombre: 'Ana' } }, { inicio_ms: H(9, 45), fin_ms: H(10, 30), lead: { nombre: 'Beto' } }];
+        const g = () => ({ estado: 'ok', franjas: [[H(9), H(9, 45)], [H(11), H(12, 30)]], eventos: [
+            { inicio: H(9), fin: H(9, 45), titulo: 'Ana' },   // el de la propia agenda: no va
+            { inicio: H(11), fin: H(12), titulo: 'Daily' }, { inicio: H(11, 30), fin: H(12, 30), titulo: null },
+        ] });
+        const its = calcularCobertura({ todos: [p], cs: [p], ahora, reservasDe: rs, googleDe: g }).bloques[0].items;
+        expect(its.map(x => x.tipo)).toEqual(['ag', 'ag', 'ev', 'ev']);
+        expect(its.map(x => [x.col, x.ncols])).toEqual([[0, 1], [0, 1], [0, 2], [1, 2]]);
+    });
     it('se puede ver en la zona de quien mira', () => {
         // Ana trabaja de 9 a 13 en La Paz (UTC-4); vista desde Buenos Aires (UTC-3) arranca a las 10.
         const c = calcularCobertura({ todos: [p], cs: [p], ahora, tz: 'America/Argentina/Buenos_Aires' });
@@ -97,5 +107,12 @@ describe('textoEstrategia', () => {
     it('explica llenar en orden con la ventana', () => {
         expect(textoEstrategia(d, { miembros: ['a', 'b'], estrategia: 'llenar' })).toMatch(/Los leads van a Ana hasta llenar .* 7 días; después a Beto\./);
         expect(textoEstrategia(d, { miembros: [], estrategia: 'llenar' })).toBe('Sumá closers.');
+    });
+});
+
+describe('columnas', () => {
+    it('reparte en columnas solo lo que se pisa', () => {
+        const xs = columnas([{ a: 0, b: 10 }, { a: 5, b: 15 }, { a: 12, b: 20 }, { a: 30, b: 40 }]);
+        expect(xs.map(x => [x.col, x.ncols])).toEqual([[0, 2], [1, 2], [0, 2], [0, 1]]);
     });
 });

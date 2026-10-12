@@ -41,21 +41,26 @@ export function CampoMinutos({ valor, onCambio, margen = false, label, id, disab
 
 export const textoSesion = (dur, margen) => dur + ' min' + (margen ? ' + ' + margen + ' de margen' : '');
 
-// Cuántas sesiones entran por semana con ese horario, y por día al pasar el mouse.
-function Capacidad({ horario, dur, margen }) {
+// Cuántas sesiones entran por semana con ese horario, y por día al pasar el mouse. Con `onVer`, abre
+// la semana con esos turnos.
+function Capacidad({ horario, dur, margen, onVer }) {
     const c = capacidadSemana(horario, dur, margen);
     const dias = DIAS.filter(x => c.porDia[x.d]).map(x => mayusc(x.n.slice(0, 3)) + ' ' + c.porDia[x.d]).join(' · ');
-    return (
-        <span className="ses-cap" data-tip={c.total ? 'Por semana|' + dias : 'Por semana|Con este horario no entra ninguna'}>
-            <b className="num">{c.total}</b> por semana
-        </span>
-    );
+    const tip = c.total ? 'Por semana|' + dias : 'Por semana|Con este horario no entra ninguna';
+    if (onVer) {
+        return (
+            <button type="button" className="ses-cap ses-cap--btn" data-tip={tip} onClick={onVer}>
+                <b className="num">{c.total}</b> por semana<Icono n="calendar" s={13} />Ver semana
+            </button>
+        );
+    }
+    return <span className="ses-cap" data-tip={tip}><b className="num">{c.total}</b> por semana</span>;
 }
 const mayusc = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 
 /** Una fila: quién o qué, su sesión y su margen, si es la propuesta o algo ajustado y, con `horario`,
  * cuántas sesiones le entran por semana. */
-export function FilaSesion({ titulo, persona, propuesta, propia, onCambio, bloqueado, idBase, horario = null }) {
+export function FilaSesion({ titulo, persona, propuesta, propia, onCambio, bloqueado, idBase, horario = null, onVer = null }) {
     const dur = propia && propia.duracion != null ? propia.duracion : propuesta.duracion;
     const margen = propia && propia.margen != null ? propia.margen : propuesta.margen;
     const ajustada = !!propia && Object.keys(propia).length > 0;
@@ -69,13 +74,14 @@ export function FilaSesion({ titulo, persona, propuesta, propia, onCambio, bloqu
                     <span className="t-sm mut">{ajustada ? 'Propuesta: ' + textoSesion(propuesta.duracion, propuesta.margen) : 'Usa la propuesta'}</span>
                 </div>
             </div>
-            <label className="ses-campo"><span>Sesión</span>
+            {/* div y no label: un label le reenvía el clic al desplegable, que se volvía a abrir al elegir */}
+            <div className="ses-campo"><span aria-hidden="true">Sesión</span>
                 <CampoMinutos id={idBase + '-dur'} label={'Sesión de ' + titulo} valor={dur} disabled={bloqueado} onCambio={v => set('duracion', v)} />
-            </label>
-            <label className="ses-campo"><span>Margen</span>
+            </div>
+            <div className="ses-campo"><span aria-hidden="true">Margen</span>
                 <CampoMinutos margen id={idBase + '-mar'} label={'Margen de ' + titulo} valor={margen} disabled={bloqueado} onCambio={v => set('margen', v)} />
-            </label>
-            {horario ? <Capacidad horario={horario} dur={dur} margen={margen} /> : <span />}
+            </div>
+            {horario ? <Capacidad horario={horario} dur={dur} margen={margen} onVer={onVer} /> : <span />}
             {ajustada && !bloqueado
                 ? <button type="button" className="link-btn link-btn--sutil ses-volver" onClick={() => onCambio(null)}><Icono n="volver" s={13} />Usar la propuesta</button>
                 : <span className="ses-volver" />}
@@ -90,15 +96,16 @@ export function conSesion(sesiones, eventoId, propia) {
     return out;
 }
 
-/** Las sesiones de una persona en cada evento compartido; con `horario`, cuántas le entran en cada uno. */
-export function EditorSesiones({ eventos, sesiones, onCambio, bloqueado = false, horario = null }) {
+/** Las sesiones de una persona en cada evento compartido; con `horario`, cuántas le entran en cada uno.
+ * onVer(eventoId): abre la semana con los turnos de ese evento. */
+export function EditorSesiones({ eventos, sesiones, onCambio, bloqueado = false, horario = null, onVer = null }) {
     if (!eventos.length) return <p className="t-sm mut">Todavía no hay eventos para ajustar.</p>;
     return (
         <div className="ses-lista">
             {eventos.map(e => (
                 <FilaSesion key={e.id} idBase={'ses-' + e.id} titulo={e.nombre + (e.activo === false ? ' (pausado)' : '')}
                     propuesta={{ duracion: e.duracion, margen: e.margen || 0 }} propia={(sesiones || {})[e.id]} bloqueado={bloqueado} horario={horario}
-                    onCambio={propia => onCambio(conSesion(sesiones, e.id, propia))} />
+                    onVer={onVer ? () => onVer(e.id) : null} onCambio={propia => onCambio(conSesion(sesiones, e.id, propia))} />
             ))}
         </div>
     );

@@ -15,7 +15,7 @@ import { ui } from '../../ui/estadoUi';
 import { copiarTexto, toast } from '../../ui/toast';
 import { ModalNoCalifica } from '../forms/Modales';
 import { CampoMinutos, SesionesDelEvento } from '../team/Sesiones';
-import TablaTurnos from '../team/Turnos';
+import TablaTurnos from '../team/Turnos.jsx';
 import { abrirGracias } from '../forms/ListaGracias';
 import { InputVivo, LinksSetters, slugOrigen, urlPublica, useBorrador } from './comun';
 
