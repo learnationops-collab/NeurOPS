@@ -207,6 +207,19 @@ def ctx(**o):
     return {'preguntas': [], 'resp': {}, 'dur': 45, 'ag': ag(), 'reglas': [], 'resto': 'g1', **o}
 
 
+def test_si_los_dias_del_evento_estan_llenos_se_abre_uno_mas():
+    d = datos(roles=ROLES, personas=[ANA], grupos=[{'id': 'g1', 'nombre': 'Top', 'estrategia': 'horario', 'miembros': ['ana']}])
+    tres = ctx(ag=ag({'n': 3}))
+    # Lunes a jueves completos: aparece el viernes, y solo el viernes.
+    limite = LUNES + 4 * 24 * H
+    a = asignacion(tres, d, {'ahora': LUNES, 'ocupado': lambda pid, t, dur: t < limite})
+    assert a['dias_extra'] == 1 and a['slots'] and all(limite <= s['t'] < limite + 24 * H for s in a['slots'])
+    # Con lugar en la ventana no se abre nada.
+    assert 'dias_extra' not in asignacion(tres, d, {'ahora': LUNES})
+    # Todo ocupado: no hay horarios y no se pasa del tope.
+    assert asignacion(tres, d, {'ahora': LUNES, 'ocupado': lambda pid, t, dur: True})['slots'] == []
+
+
 def test_llenar_en_orden_muestra_solo_al_primero_mientras_tenga_lugar():
     d = datos(
         roles=ROLES,

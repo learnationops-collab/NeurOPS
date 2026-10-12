@@ -135,6 +135,18 @@ describe('asignacion', () => {
     const beto = { id: 'beto', nombre: 'Beto', rol: 'rc', tz: 'America/La_Paz', horario: LV9a12 };
     const ctx = (o = {}) => ({ preguntas: [], resp: {}, dur: 45, ag: ag(), reglas: [], resto: 'g1', ...o });
 
+    it('si los días del evento están llenos se abre uno más', () => {
+        const d = datos({ roles, personas: [ana], grupos: [{ id: 'g1', nombre: 'Top', estrategia: 'horario', miembros: ['ana'] }] });
+        const tres = ctx({ ag: ag({ reservas: { n: 3 } }) });
+        // Lunes a jueves completos: aparece el viernes, y solo el viernes.
+        const limite = LUNES + 4 * 24 * H;
+        const a = asignacion(tres, d, { ahora: LUNES, ocupado: (pid, t) => t < limite });
+        expect(a.diasExtra).toBe(1);
+        expect(a.slots.length).toBeGreaterThan(0);
+        expect(a.slots.every(s => s.t >= limite && s.t < limite + 24 * H)).toBe(true);
+        expect(asignacion(tres, d, { ahora: LUNES }).diasExtra).toBeUndefined();
+        expect(asignacion(tres, d, { ahora: LUNES, ocupado: () => true }).slots).toEqual([]);
+    });
     it('"Llenar en orden": el lead ve solo la agenda del primero mientras tenga lugar en la ventana', () => {
         const d = datos({ roles, personas: [ana, beto], grupos: [{ id: 'g1', nombre: 'Top', estrategia: 'llenar', miembros: ['ana', 'beto'] }] });
         const a = asignacion(ctx(), d, { ahora: LUNES });

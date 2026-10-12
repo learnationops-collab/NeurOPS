@@ -58,13 +58,31 @@ function porEstrategia(estrategia, miembros, slotsDe, { ahora, cargaDe }, g = nu
     return { slots, regla: estrategia === 'horario' ? 'Máxima disponibilidad: ' + nombres.join(' → ') : 'Distribuida entre ' + miembros.length };
 }
 
+// Si en los días del evento no queda ningún horario, se suma un día por vez hasta encontrar uno: el lead
+// nunca se queda sin agendar porque la ventana se llenó. Tope de días agregados.
+export const DIAS_EXTRA_MAX = 14;
+
+// Como asignar(), pero si el evento ofrece «N días» y no queda ningún horario en esos días, abre un día
+// más (y otro, hasta DIAS_EXTRA_MAX) hasta que aparezca alguno. `diasExtra` dice cuántos se abrieron.
+export function asignacion(ctx, d, opts = {}) {
+    const r = asignar(ctx, d, opts);
+    const ag = ctx.ag;
+    if (r.slots.length || r.url || !ag || !ag.reservas || ag.reservas.modo !== 'dias') return r;
+    const n = ag.reservas.n || 0;
+    for (let extra = 1; extra <= DIAS_EXTRA_MAX; extra++) {
+        const r2 = asignar({ ...ctx, ag: { ...ag, reservas: { ...ag.reservas, n: n + extra } } }, d, opts);
+        if (r2.slots.length) return { ...r2, diasExtra: extra };
+    }
+    return r;
+}
+
 /**
  * ctx: {preguntas, resp, dur, margen, eventoId, ag, reglas, resto, persona}. dur y margen son la propuesta
  * del evento; cada closer usa lo suyo si lo ajustó (sesionDe).
  * opts: {ahora, ocupado(personaId, t, dur), cargaDe(personaId) → agendas futuras, prueba}
  * Devuelve {nota, grupo, grupoRegla, reglaIdx, desborde, slots:[{t, p}], regla, aviso}.
  */
-export function asignacion(ctx, d, opts = {}) {
+function asignar(ctx, d, opts = {}) {
     const ahora = opts.ahora ?? Date.now();
     const ocupado = opts.ocupado || (() => false);
     const cargaDe = opts.cargaDe || (() => 0);
