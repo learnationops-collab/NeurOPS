@@ -11,6 +11,9 @@ DIA = 86400000
 # "Llenar en orden": un closer está lleno cuando no le queda ningún horario libre en esta ventana.
 # Mientras tenga lugar en los próximos 7 días, el lead ve solo su agenda.
 VENTANA_LLENAR_DIAS = 7
+# Si en los días del evento no queda ningún horario, se suma un día por vez hasta encontrar uno: el lead
+# nunca se queda sin agendar porque la ventana se llenó. Tope de días agregados.
+DIAS_EXTRA_MAX = 14
 
 
 def miembros_validos(d, g):
@@ -90,6 +93,22 @@ def _por_estrategia(estrategia, miembros, slots_de, ahora, carga_de, g=None):
 
 
 def asignacion(ctx, d, opts=None):
+    """Como _asignacion, pero si el evento ofrece «N días» y no queda ningún horario en esos días, abre
+    un día más (y otro, hasta DIAS_EXTRA_MAX) hasta que aparezca alguno. `dias_extra` dice cuántos se
+    abrieron. La reserva recalcula con lo mismo, así que puede tomar un horario de un día abierto así."""
+    r = _asignacion(ctx, d, opts)
+    ag = ctx.get('ag')
+    if r['slots'] or r.get('url') or not ag or (ag.get('reservas') or {}).get('modo') != 'dias':
+        return r
+    n = ag['reservas'].get('n') or 0
+    for extra in range(1, DIAS_EXTRA_MAX + 1):
+        r2 = _asignacion({**ctx, 'ag': {**ag, 'reservas': {**ag['reservas'], 'n': n + extra}}}, d, opts)
+        if r2['slots']:
+            return {**r2, 'dias_extra': extra}
+    return r
+
+
+def _asignacion(ctx, d, opts=None):
     """ctx: {preguntas, resp, dur, margen, evento_id, ag, reglas, resto, persona}. dur y margen son la
     propuesta del evento; cada closer usa lo suyo si lo ajustó (sesion_de).
     opts: {ahora, ocupado(persona_id, t, dur), carga_de(persona_id) → agendas futuras, prueba}
@@ -120,6 +139,12 @@ def asignacion(ctx, d, opts=None):
         r = grupo_por_reglas({'reglas': ctx['reglas'], 'resto': ctx.get('resto')}, resp)
     else:
         r = {'grupo': '', 'regla': None}
+    if r.get('url'):
+        # La regla manda a otra página: no hay horarios que ofrecer.
+        return {**base, 'regla_idx': r['regla'], 'url': r['url'], 'slots': [], 'regla': 'Redirige a ' + r['url']}
+    if r.get('no'):
+        # La segmentación lo marca como que no califica: no agenda.
+        return {**base, 'regla_idx': r['regla'], 'no': True, 'slots': [], 'regla': 'No califica'}
     g0 = buscar(d, 'grupos', r['grupo'])
     res = {**base, 'grupo_regla': g0['id'] if g0 else '', 'regla_idx': r['regla']}
 

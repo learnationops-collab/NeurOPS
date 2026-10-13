@@ -30,6 +30,7 @@ export function crearAlmacen(adaptador, { avisar = () => {} } = {}) {
         perfil: normalPerfil(null),
         integ: normalInteg(null),
         reservas: [],
+        zona: null, // la zona horaria de quien mira (según su WhatsApp); null: la del navegador
         lectura: false,
     };
     const subs = new Set();
@@ -49,7 +50,7 @@ export function crearAlmacen(adaptador, { avisar = () => {} } = {}) {
         return estado.lectura;
     };
 
-    function aplicarCargados({ cols, perfil, integ, reservas, lectura = false }) {
+    function aplicarCargados({ cols, perfil, integ, reservas, zona = null, lectura = false }) {
         const d = {};
         COLECCIONES.forEach(c => { d[c] = (cols[c] || []).map(x => NORM[c](x.id, x)); });
         // Lo que todavía no se guardó gana sobre lo que llega.

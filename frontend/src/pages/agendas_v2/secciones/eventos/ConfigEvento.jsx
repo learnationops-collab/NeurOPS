@@ -1,10 +1,10 @@
-// Configuración de un evento: General, Disponibilidad, Sesiones de cada closer, Página de reserva, eliminar y
-// la Revisión al costado.
+// Configuración de un evento: General, Disponibilidad, Sesiones de cada closer, Página de reserva, eliminar,
+// la Revisión al costado y, abajo, los turnos de la semana de cada closer en este evento.
 // En un funnel de setting el link muestra los de cada setter; en los otros, los links por procedencia.
 
 import { useState } from 'react';
 import { TZ_DEF, ZONAS } from '../../core/catalogos';
-import { buscar, closers, colorVar, nombreOrigen, ord } from '../../core/datos';
+import { buscar, closers, colorVar, horasSemana, nombreOrigen, ord } from '../../core/datos';
 import { linkEvento, revision, slugLibre } from '../../core/eventos';
 import { fechaOk, urlOk } from '../../core/normalizar';
 import { claveDia, gmtTxt } from '../../core/tiempo';
@@ -15,9 +15,10 @@ import { ui } from '../../ui/estadoUi';
 import { copiarTexto, toast } from '../../ui/toast';
 import { ModalNoCalifica } from '../forms/Modales';
 import { CampoMinutos, SesionesDelEvento } from '../team/Sesiones';
+import TablaTurnos from '../team/Turnos.jsx';
+import { abrirGracias } from '../forms/ListaGracias';
 import { InputVivo, LinksSetters, slugOrigen, urlPublica, useBorrador } from './comun';
 
-const PASOS = [5, 10, 15, 20, 30, 45, 60];
 const DIA = 86400000;
 
 // Edita una parte de un campo compuesto (reservas, antel, paso, zona) partiendo del valor más reciente.
@@ -129,9 +130,8 @@ function General({ d, e, f, cm }) {
 }
 
 function Disponibilidad({ e }) {
-    const r = e.reservas, pm = e.paso.n * (e.paso.u === 'h' ? 60 : 1);
+    const r = e.reservas;
     const rangoMal = !!(r.desde && r.hasta && r.hasta < r.desde);
-    const pasoSel = e.paso.pers || e.paso.u !== 'min' || !PASOS.includes(pm) ? 'pers' : String(pm);
     const modo = (v) => {
         const rr = { ...clonar(r), modo: v };
         if (v === 'rango' && !rr.desde) { rr.desde = claveDia(Date.now(), TZ_DEF); rr.hasta = claveDia(Date.now() + 30 * DIA, TZ_DEF); }
@@ -167,19 +167,8 @@ function Disponibilidad({ e }) {
                     <span className="combo-t">antes</span>
                 </div>
             </Fila>
-            <Fila l="Intervalos">
-                <Sx id="ev-paso" label="Intervalo entre horarios" valor={pasoSel}
-                    onChange={v => almacen.editar('eventos', e.id, { paso: v === 'pers' ? { n: e.paso.n, u: e.paso.u, pers: true } : { n: +v, u: 'min', pers: false } }, true)}
-                    opciones={PASOS.map(m => ({ v: String(m), n: 'Cada ' + m + ' min', icono: 'clock', color: 'var(--info)' }))
-                        .concat([{ v: 'pers', n: 'Personalizado', icono: 'edit', color: 'var(--brand-secondary)' }])} />
-                {pasoSel === 'pers' && (
-                    <div className="combo">
-                        <span className="combo-t">Cada</span>
-                        <Num id="ev-pn" valor={e.paso.n} min={1} max={720} label="Intervalo" onGuardar={v => setEv(e.id, 'paso', 'n', v)} />
-                        <Sx sm id="ev-pu" label="Unidad" valor={e.paso.u} onChange={v => setEv(e.id, 'paso', 'u', v, true)}
-                            opciones={[{ v: 'min', n: 'minutos' }, { v: 'h', n: 'horas' }]} />
-                    </div>
-                )}
+            <Fila l="Horarios">
+                <span className="t-sm mut">Uno tras otro, con la sesión y el margen de cada closer: así le entran la mayor cantidad de agendas.</span>
             </Fila>
         </>
     );
@@ -190,6 +179,7 @@ function Pagina({ d, e }) {
     const [fin, setFin] = useState(false);
     const fo = buscar(d, 'formularios', e.formulario);
     const redirMal = redir.escribiendo && !!redir.value.trim() && !urlOk(redir.value.trim());
+    const gs = ord(d, 'gracias'), gracias = buscar(d, 'gracias', e.gracias);
     return (
         <>
             <Fila l="Zona horaria">
@@ -199,6 +189,16 @@ function Pagina({ d, e }) {
                     <Sx sm id="ev-ztz" label="Zona fija" valor={e.zona.tz} onChange={v => setEv(e.id, 'zona', 'tz', v, true)}
                         opciones={ZONAS.map(z => ({ v: z.tz, n: z.n + ' · ' + gmtTxt(z.tz) }))} />
                 )}
+            </Fila>
+            {/* La página de gracias va en vivo: elegirla no pide volver a publicar. Si hay una, manda sobre «Redirigir a». */}
+            <Fila l="Página de gracias">
+                <Sx sm id="ev-gracias" label="Página de gracias" valor={gracias ? e.gracias : ''}
+                    style={{ flex: '1 1 200px', minWidth: 0 }}
+                    onChange={v => { almacen.editar('eventos', e.id, { gracias: v }); almacen.flush(); }}
+                    opciones={[{ v: '', n: 'Ninguna' }, ...gs.map(g => ({ v: g.id, n: g.nombre, icono: 'video' }))]} />
+                {gracias
+                    ? <button type="button" className="btn btn--linea btn--sm" onClick={() => abrirGracias(gracias.id)}><Icono n="edit" />Editar</button>
+                    : !gs.length && <button type="button" className="btn btn--linea btn--sm" onClick={() => ui.set({ seccion: 'preguntas', recurso: 'gracias', ev: null })}><Icono n="plus" />Crear una</button>}
             </Fila>
             <Fila l="Redirigir a">
                 <div className={'entrada' + (redirMal ? ' mal' : '')} style={{ flex: 1, minWidth: 0 }}>
@@ -212,6 +212,7 @@ function Pagina({ d, e }) {
                         }}
                         onBlur={() => { redir.soltar(); almacen.flush(); }} />
                 </div>
+                {gracias && e.redir && <span className="t-sm mut">No se usa: el lead va a la página de gracias.</span>}
             </Fila>
             <Fila l="Si no califica">
                 {fo ? (
@@ -241,48 +242,54 @@ export default function ConfigEvento({ e }) {
         if (conFunnel) almacen.borrar('funnels', f.id);
         toast(conFunnel ? e.nombre + ' y ' + f.nombre + ' eliminados' : e.nombre + ' eliminado');
     };
+    const personas = e.persona ? [buscar(d, 'personas', e.persona)].filter(Boolean) : closers(d).filter(p => horasSemana(p) > 0);
     return (
-        <div className="ev-grid ev-grid--3">
-            <div className="ev-col">
-                <Bloque tit="General" icono="ajustes" i={0}><General d={d} e={e} f={f} cm={cm} /></Bloque>
-                {borrar ? (
-                    <div className="ed-pie--borrar">
-                        <p className="t-sm">¿Eliminar <b>{e.nombre}</b>? El link deja de funcionar.</p>
-                        {ultimo && <p className="t-sm">Es el único agendamiento de <b>{f.nombre}</b>: sin él, el funnel no genera agendas.</p>}
-                        <div className="der">
-                            <button type="button" className="btn btn--linea btn--sm" autoFocus onClick={() => setBorrar(false)}>Cancelar</button>
-                            {ultimo ? (
-                                <>
-                                    <button type="button" className="btn btn--linea btn--sm" onClick={() => eliminar(false)}>Solo el evento</button>
-                                    <button type="button" className="btn btn--borrar btn--sm" onClick={() => eliminar(true)}><Icono n="basura" />Eliminar evento y funnel</button>
-                                </>
-                            ) : <button type="button" className="btn btn--borrar btn--sm" onClick={() => eliminar(false)}><Icono n="basura" />Eliminar</button>}
+        <div className="ev-conf">
+            <div className="ev-grid ev-grid--3">
+                <div className="ev-col">
+                    <Bloque tit="General" icono="ajustes" i={0}><General d={d} e={e} f={f} cm={cm} /></Bloque>
+                    {borrar ? (
+                        <div className="ed-pie--borrar">
+                            <p className="t-sm">¿Eliminar <b>{e.nombre}</b>? El link deja de funcionar.</p>
+                            {ultimo && <p className="t-sm">Es el único agendamiento de <b>{f.nombre}</b>: sin él, el funnel no genera agendas.</p>}
+                            <div className="der">
+                                <button type="button" className="btn btn--linea btn--sm" autoFocus onClick={() => setBorrar(false)}>Cancelar</button>
+                                {ultimo ? (
+                                    <>
+                                        <button type="button" className="btn btn--linea btn--sm" onClick={() => eliminar(false)}>Solo el evento</button>
+                                        <button type="button" className="btn btn--borrar btn--sm" onClick={() => eliminar(true)}><Icono n="basura" />Eliminar evento y funnel</button>
+                                    </>
+                                ) : <button type="button" className="btn btn--borrar btn--sm" onClick={() => eliminar(false)}><Icono n="basura" />Eliminar</button>}
+                            </div>
                         </div>
-                    </div>
-                ) : (
-                    <div><button type="button" className="btn btn--peligro btn--sm" onClick={() => setBorrar(true)}><Icono n="basura" />Eliminar evento</button></div>
-                )}
+                    ) : (
+                        <div><button type="button" className="btn btn--peligro btn--sm" onClick={() => setBorrar(true)}><Icono n="basura" />Eliminar evento</button></div>
+                    )}
+                </div>
+                <div className="ev-col">
+                    <Bloque tit="Disponibilidad" icono="calendar" i={1}><Disponibilidad e={e} /></Bloque>
+                    {!e.persona && !cm && (
+                        <Bloque tit="Sesiones de cada closer" icono="clock" i={0}>
+                            <p className="t-sm mut">Lo que cada uno ajustó sobre la propuesta. Lo podés personalizar acá.</p>
+                            <SesionesDelEvento e={e} personas={closers(d)} onCambio={(p, sesiones) => almacen.editar('personas', p.id, { sesiones }, true)} />
+                        </Bloque>
+                    )}
+                    <Bloque tit="Página de reserva" icono="monitor" i={2}><Pagina d={d} e={e} /></Bloque>
+                </div>
+                <aside className="panel panel--sm caja ev-rev" style={{ overflow: 'hidden' }} aria-label="Revisión">
+                    <Humo clase="humo--tarjeta humo--suave" cols={['var(--success)', 'var(--brand-primary)', 'var(--brand-secondary)', 'var(--brand-navy)']} />
+                    <div className="panel-cab"><span className="t-rotulo">Revisión</span></div>
+                    {revision(d, e).filter((c, i) => i > 0 || !c[0]).map((c, i) => (
+                        <div key={i} className="check" style={{ '--c': c[0] ? 'var(--success)' : 'var(--warning)' }}>
+                            <Icono n={c[0] ? 'check' : 'alerta'} />
+                            <div><b>{c[1]}</b><span>{c[2]}</span></div>
+                        </div>
+                    ))}
+                </aside>
             </div>
-            <div className="ev-col">
-                <Bloque tit="Disponibilidad" icono="calendar" i={1}><Disponibilidad e={e} /></Bloque>
-                {!e.persona && !cm && (
-                    <Bloque tit="Sesiones de cada closer" icono="clock" i={0}>
-                        <p className="t-sm mut">Lo que cada uno ajustó sobre la propuesta. Lo podés personalizar acá.</p>
-                        <SesionesDelEvento e={e} personas={closers(d)} onCambio={(p, sesiones) => almacen.editar('personas', p.id, { sesiones }, true)} />
-                    </Bloque>
-                )}
-                <Bloque tit="Página de reserva" icono="monitor" i={2}><Pagina d={d} e={e} /></Bloque>
-            </div>
-            <aside className="panel panel--sm caja ev-rev" style={{ overflow: 'hidden' }} aria-label="Revisión">
-                <Humo clase="humo--tarjeta humo--suave" cols={['var(--success)', 'var(--brand-primary)', 'var(--brand-secondary)', 'var(--brand-navy)']} />
-                <div className="panel-cab"><span className="t-rotulo">Revisión</span></div>
-                {revision(d, e).filter((c, i) => i > 0 || !c[0]).map((c, i) => (
-                    <div key={i} className="check" style={{ '--c': c[0] ? 'var(--success)' : 'var(--warning)' }}>
-                        <Icono n={c[0] ? 'check' : 'alerta'} />
-                        <div><b>{c[1]}</b><span>{c[2]}</span></div>
-                    </div>
-                ))}
-            </aside>
+            <Bloque tit="Turnos de la semana" icono="users" i={1}>
+                <TablaTurnos evento={e} personas={personas} />
+            </Bloque>
         </div>
     );
 }

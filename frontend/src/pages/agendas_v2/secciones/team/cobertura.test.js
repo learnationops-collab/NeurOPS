@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { normalHorario, normalPersona } from '../../core/normalizar';
-import { avUnir, calcularCobertura, durTxt, hmTxt, textoEstrategia, unirTramos } from './cobertura';
+import { avUnir, calcularCobertura, columnas, durTxt, hmTxt, huecosLibres, textoEstrategia, unirTramos } from './cobertura';
+import { agendasDeVista } from './semana';
 
 describe('avUnir', () => {
     it('une franjas que se pisan o se tocan y ordena', () => {
@@ -52,6 +53,38 @@ describe('calcularCobertura', () => {
         expect(c.kpi.hEv).toBeCloseTo(10 / 60);
         expect(c.bloques[0].segs.map(s => s.tipo)).toEqual(['ag', 'mg', 'ev']);
     });
+    it('cada agenda y cada evento es una tarjeta propia, lado a lado si se pisan', () => {
+        const rs = () => [{ inicio_ms: H(9), fin_ms: H(9, 45), lead: { nombre: 'Ana' } }, { inicio_ms: H(9, 45), fin_ms: H(10, 30), lead: { nombre: 'Beto' } }];
+        const g = () => ({ estado: 'ok', franjas: [[H(9), H(9, 45)], [H(11), H(12, 30)]], eventos: [
+            { inicio: H(9), fin: H(9, 45), titulo: 'Ana' },   // el de la propia agenda: no va
+            { inicio: H(11), fin: H(12), titulo: 'Daily' }, { inicio: H(11, 30), fin: H(12, 30), titulo: null },
+        ] });
+        const its = calcularCobertura({ todos: [p], cs: [p], ahora, reservasDe: rs, googleDe: g }).bloques[0].items;
+        expect(its.map(x => x.tipo)).toEqual(['ag', 'ag', 'ev', 'ev']);
+        expect(its.map(x => [x.col, x.ncols])).toEqual([[0, 1], [0, 1], [0, 2], [1, 2]]);
+    });
+    it('las canceladas se muestran pero no ocupan', () => {
+        const cx = () => [{ id: 'x', inicio_ms: H(10), fin_ms: H(11), motivo: 'sin_evento', lead: { nombre: 'Lu' } }];
+        const c = calcularCobertura({ todos: [p], cs: [p], ahora, canceladasDe: cx });
+        expect(c.bloques[0].items.map(x => x.tipo)).toEqual(['cx']);
+        expect(c.kpi.nCx).toBe(1);
+        expect(c.kpi.hLibre).toBe(4);
+    });
+    it('el tiempo libre donde no entra un turno', () => {
+        // De 9 a 13 con una agenda de 12 a 12:45: libres 9 a 12 y 12:45 a 13. Turnos de 45 + 15 a las 9, 10 y 11.
+        const x = calcularCobertura({ todos: [p], cs: [p], ahora, reservasDe: reservas }).bloques[0];
+        expect(huecosLibres(x, { ahora })).toEqual([[H(9), H(12)], [H(12, 45), H(13)]]);
+        expect(huecosLibres(x, { ahora, turnos: [H(9), H(10), H(11)], largoTurno: 60 * 60000 })).toEqual([[H(12, 45), H(13)]]);
+        // Lo que ya pasó no cuenta, y menos de 15 minutos tampoco.
+        expect(huecosLibres(x, { ahora: H(12, 50) })).toEqual([]);
+    });
+    it('se puede ver en la zona de quien mira', () => {
+        // Ana trabaja de 9 a 13 en La Paz (UTC-4); vista desde Buenos Aires (UTC-3) arranca a las 10.
+        const c = calcularCobertura({ todos: [p], cs: [p], ahora, tz: 'America/Argentina/Buenos_Aires' });
+        expect(c.tz).toBe('America/Argentina/Buenos_Aires');
+        expect([c.bloques[0].m0, c.bloques[0].m1]).toEqual([600, 840]);
+        expect(calcularCobertura({ todos: [p], cs: [p], ahora }).bloques[0].m0).toBe(540);
+    });
     it('lo de fuera del horario no cuenta y lo que lo cruza cuenta solo adentro', () => {
         const g = () => ({ estado: 'ok', franjas: [[H(8), H(9, 30)], [H(12, 30), H(14)], [H(20), H(21)]] });
         const c = calcularCobertura({ todos: [p], cs: [p], ahora, googleDe: g });
@@ -90,5 +123,47 @@ describe('textoEstrategia', () => {
     it('explica llenar en orden con la ventana', () => {
         expect(textoEstrategia(d, { miembros: ['a', 'b'], estrategia: 'llenar' })).toMatch(/Los leads van a Ana hasta llenar .* 7 días; después a Beto\./);
         expect(textoEstrategia(d, { miembros: [], estrategia: 'llenar' })).toBe('Sumá closers.');
+    });
+});
+
+describe('columnas', () => {
+    it('reparte en columnas solo lo que se pisa', () => {
+        const xs = columnas([{ a: 0, b: 10 }, { a: 5, b: 15 }, { a: 12, b: 20 }, { a: 30, b: 40 }]);
+        expect(xs.map(x => [x.col, x.ncols])).toEqual([[0, 2], [1, 2], [0, 2], [0, 1]]);
+    });
+});
+
+describe('agendasDeVista', () => {
+    it('junta Agendas 2.0 y n8n, y aparta las canceladas', () => {
+        const reservas = [
+            { id: 'a', closer_id: 'p1', inicio_ms: 1, estado: 'agendada' },
+            { id: 'b', closer_id: 'p1', inicio_ms: 2, estado: 'cancelada', cancelada: false },  // ya procesada: se hizo
+            { id: 'c', closer_id: 'p1', inicio_ms: 3, estado: 'cancelada', cancelada: true },
+        ];
+        const google = { p1: { estado: 'ok', franjas: [[0, 10]], agendas: [
+            { id: 7, inicio: 4, fin: 5, nombre: 'Lu', estado: 'vigente' }, { id: 8, inicio: 6, fin: 7, nombre: 'Mo', estado: 'sin_evento', resultado: 'Pendiente' },
+        ] } };
+        const v = agendasDeVista(reservas, google);
+        expect(v.ocupan('p1').map(r => r.id)).toEqual(['a', 'b', 'n8n-7']);
+        expect(v.canceladas('p1').map(r => [r.id, r.motivo])).toEqual([['c', 'cancelada'], ['n8n-8', 'sin_evento']]);
+        expect(v.ocupan('p2')).toEqual([]);
+    });
+    it('Google manda: la reserva que ya no está en su calendario no ocupa (salvo recién tomada)', () => {
+        const ahora = 10 * 3600000;
+        const reservas = [
+            { id: 'a', closer_id: 'p1', inicio_ms: 1000, estado: 'agendada' },
+            { id: 'b', closer_id: 'p1', inicio_ms: 5000, estado: 'agendada' },
+            { id: 'c', closer_id: 'p1', inicio_ms: 9000, estado: 'agendada', creada: new Date(ahora - 60000).toISOString() },
+        ];
+        const v = agendasDeVista(reservas, { p1: { estado: 'ok', franjas: [[0, 2000]] } }, ahora);
+        expect(v.ocupan('p1').map(r => r.id)).toEqual(['a', 'c']);
+        expect(v.canceladas('p1').map(r => [r.id, r.motivo])).toEqual([['b', 'sin_evento']]);
+        // Con su evento vinculado manda lo que le pasó, no la hora.
+        const conTraza = { p1: { estado: 'ok', franjas: [[0, 2000]], trazas: { a: { estado: 'cancelado' }, b: { estado: 'rechazado' } } } };
+        const w = agendasDeVista(reservas, conTraza, ahora);
+        expect(w.ocupan('p1').map(r => [r.id, r.calendar && r.calendar.estado])).toEqual([['b', 'rechazado'], ['c', null]]);
+        expect(w.canceladas('p1').map(r => [r.id, r.calendar.estado])).toEqual([['a', 'cancelado']]);
+        // Sin poder leer su calendario no se sabe: ocupan todas.
+        expect(agendasDeVista(reservas, { p1: { estado: 'error', franjas: [] } }, ahora).ocupan('p1')).toHaveLength(3);
     });
 });

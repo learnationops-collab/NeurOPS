@@ -12,7 +12,9 @@ import { useDatos, usePermisos, useUi } from '../../data/hooks';
 import { HUMO_MARCA, Humo, Icono } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
 import EnTope from '../../ui/EnTope';
-import { EstadoEv, LinksSetters, PasosPendientes, abrirEvento, copiarLink, crearEvento, probarEvento, settersDe, useSetters } from './comun';
+import { EstadoEv, LinksSetters, PasosPendientes, abrirEvento, copiarLink, crearEvento, probarEvento, probarSegmento, settersDe, useSetters } from './comun';
+import { urlPrueba } from '../../reserva/segmentos';
+import { copiarTexto } from '../../ui/toast';
 
 const AGRUPAR = [['funnel', 'Funnels', 'funnel'], ['formulario', 'Forms', 'form'], ['nada', 'All', 'lista']];
 const TIPO = { workshop: 'Workshop', vsl: 'VSL', setting: 'Setting', otro: 'Otro' };
@@ -79,6 +81,17 @@ function TarjetaEvento({ d, e }) {
                     <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label={'Probar ' + e.nombre} title="Probar" onClick={() => probarEvento(d, e)}>
                         <Icono n="play" s={15} />
                     </button>
+                    {!lectura && (
+                        <>
+                            <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label={'Copiar enlace de prueba de ' + e.nombre} title="Copiar enlace de prueba por segmento"
+                                onClick={() => copiarTexto(urlPrueba(e.id), 'Enlace de prueba copiado')}>
+                                <Icono n="link" s={15} />
+                            </button>
+                            <button type="button" className="btn btn--linea btn--sm" data-nav="" title="Saltear el formulario y ver lo que vería el lead de cada segmentación" onClick={() => probarSegmento(e)}>
+                                <Icono n="users" />Probar segmento
+                            </button>
+                        </>
+                    )}
                     <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={() => abrirEvento(e.id)}><Icono n={lectura ? 'ojo' : 'edit'} />Abrir</button>
                 </div>
             </div>

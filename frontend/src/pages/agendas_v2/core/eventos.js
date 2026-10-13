@@ -59,9 +59,11 @@ export function estadoEvento(e, form) {
 export function linkEvento(d, e) { const f = buscar(d, 'funnels', e.funnel); return '/agenda/' + (f ? f.slug + '/' : '') + e.slug; }
 
 export function resumenAgenda(e) {
-    const r = e.reservas, a = e.antel, pm = e.paso.n * (e.paso.u === 'h' ? 60 : 1);
+    const r = e.reservas, a = e.antel;
     const hasta = r.modo === 'siempre' ? 'Sin límite' : r.modo === 'rango' ? (r.desde && r.hasta ? fechaCorta(r.desde) + ' a ' + fechaCorta(r.hasta) : 'Rango sin fechas') : r.n + (r.tipo === 'habiles' ? ' días hábiles' : ' días');
-    return hasta + ' · ' + a.n + ' ' + ({ min: 'min', h: 'h', d: 'd' })[a.u] + ' antes · cada ' + (pm % 60 === 0 && pm >= 60 ? pm / 60 + ' h' : pm + ' min');
+    // Las sesiones se encadenan una tras otra: lo que cuenta es la sesión (propuesta) y su margen.
+    const sesion = e.duracion + ' min' + (e.margen ? ' + ' + e.margen + ' de margen' : '');
+    return hasta + ' · ' + a.n + ' ' + ({ min: 'min', h: 'h', d: 'd' })[a.u] + ' antes · ' + sesion;
 }
 
 // Un evento con persona fija sin formulario (los que crea cada closer) pide solo los datos de contacto.

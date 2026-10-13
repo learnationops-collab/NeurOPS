@@ -187,6 +187,10 @@ def receive_financial_sales():
         except Exception as conv_err:
             current_app.logger.error(f"[Down Payment Conversion API Hook Error] {conv_err}")
 
+        # Cada pago le extiende el acceso en la Academia y avisa al gestor del alumno (en un hilo).
+        from app.services.academy_payment_sync import notify_academy_of_payments
+        notify_academy_of_payments(successful_sales)
+
         return jsonify({
             "message": f"{saved} sales records saved",
             "saved": saved,

@@ -17,6 +17,7 @@ ingesta de n8n), aunque cambie el closer.
 """
 
 import os
+import re
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -28,7 +29,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from app import db
 from app.models import Appointment, Client, Notification, User
 from app.models.financial import FinancialAgenda
-from app.agendas_v2.nucleo.catalogos import pais_de, pais_por_telefono
+from app.agendas_v2.nucleo.catalogos import pais_de, pais_por_telefono, zona_valida
 
 # Resultados de una Appointment que ya no ocupan el horario del closer. Incluye las dos grafias que
 # hay en la base: las que pone el closer (Cancelada/Reprogramada) y las del sync de n8n (Cancelado/Reagendado).
@@ -103,6 +104,17 @@ def cliente_por_email(email):
     return Client.query.filter(func.lower(Client.email) == email).first()
 
 
+def cliente_por_telefono(telefono):
+    """El cliente con ese WhatsApp (+país…). Como find_or_create_client, por los últimos 8 dígitos: es el
+    mismo cliente al que después se le suma la agenda. Si hay varios, el del número exacto."""
+    dig = re.sub('[^0-9]', '', telefono or '')
+    if len(dig) < 8:
+        return None
+    candidatos = Client.query.filter(Client.phone.like(f'%{dig[-8:]}%')).order_by(Client.id).limit(20).all()
+    exacto = next((c for c in candidatos if re.sub('[^0-9]', '', c.phone or '') == dig), None)
+    return exacto or (candidatos[0] if candidatos else None)
+
+
 def _fuente(payload, setter):
     """Lo que va en Appointment.origin / FinancialAgenda.nombre («Fuente»), según el tipo del funnel:
     - setting: el setter del link ('setting', «sin dueño», si el link no es de un setter activo);
@@ -173,13 +185,16 @@ def proxima_de(cliente_id, ahora):
     return None
 
 
-def registrar_agenda(payload, closer, setter, inicio, ahora=None, decision=None):
+def registrar_agenda(payload, closer, setter, inicio, ahora=None, decision=None, ignorar_ids=(), asegurar=None):
     """Crea (o reprograma) la agenda en la operacion. `inicio`: datetime UTC sin zona.
     `decision`: lo que eligió el lead que ya tenía una agenda próxima: 'reprogramar' la mueve;
     cualquier otra cosa ('adicional') crea otra y le avisa al closer, que decide si cancela la
     anterior. Nunca se borra ni se mueve una agenda sin que el lead lo haya pedido.
+    `ignorar_ids`: agendas del closer a esa hora que ya no están en su Google Calendar (no la frenan).
+    `asegurar()`: vuelve a bloquear al closer y devuelve (choca, ignorar_ids). Se llama justo antes de
+    escribir, porque buscar la agenda previa lee Google y puede haber hecho commit (soltando el bloqueo).
     Devuelve (appointment, evento_a_borrar): evento_a_borrar es (user_id, google_event_id) del evento
-    viejo de una agenda reprogramada, o None. Hace commit."""
+    viejo de una agenda reprogramada, o None; (None, None) si el horario ya no está libre. Hace commit."""
     from app.services.booking_service import BookingService
 
     ahora = ahora or datetime.utcnow()
@@ -187,6 +202,12 @@ def registrar_agenda(payload, closer, setter, inicio, ahora=None, decision=None)
     db.session.flush()
 
     previa = proxima_de(cliente.id, ahora)
+
+    if asegurar:
+        choca, ignorar_ids = asegurar()
+        if choca:
+            db.session.rollback()
+            return None, None
 
     if previa and decision == 'reprogramar':
         anterior = previa.start_time
@@ -230,6 +251,7 @@ def registrar_agenda(payload, closer, setter, inicio, ahora=None, decision=None)
         start_time_utc=inicio,
         origin=_fuente(payload, setter),
         setter_id=setter.id if setter else None,
+        ignorar_ids=ignorar_ids,
     )
     if not appt:
         # create_appointment solo falla si el closer ya tiene una cita a esa MISMA hora.
@@ -310,6 +332,9 @@ def crear_evento(appt, nombre_evento, evento_a_borrar=None):
         db.session.commit()
         return False
     appt.google_event_id = evento_id
+    # El vínculo para seguirla en su Calendar (trazabilidad.py).
+    appt.calendar_evento_id, appt.calendar_vinculo = evento_id, 'propio'
+    appt.calendar_id = GoogleService._calendario(appt.closer_id)
     appt.agenda_payload = {**payload, 'meet': meet}
     db.session.commit()
     return True
@@ -330,7 +355,8 @@ def zona_del_lead(lead):
     eligió el lead es de ese mismo país (Brasil, México, EE. UU. tienen varias), se respeta."""
     tz = lead.get('tz')
     pais = pais_por_telefono(lead.get('telefono')) or pais_de(lead.get('pais'))
-    zonas = [z[0] for z in pais['z']]
+    # «Otro país» de un código que no está en la lista: la zona que eligió el lead.
+    zonas = [z[0] for z in pais['z']] or ([tz] if zona_valida(tz) else [ZONA_EQUIPO])
     try:
         return ZoneInfo(tz if tz in zonas else zonas[0]), pais
     except Exception:  # noqa: BLE001

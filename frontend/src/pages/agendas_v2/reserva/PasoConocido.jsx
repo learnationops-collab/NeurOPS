@@ -1,5 +1,6 @@
-// El lead que vuelve: después del correo se lo reconoce. Si tiene una sesión próxima elige si la
-// reprograma o agenda otra. Sus datos no se le preguntan: si están completos no los escribe de nuevo.
+// El lead que vuelve: después del WhatsApp o del correo se lo reconoce. Si tiene una sesión próxima elige si
+// la reprograma o agenda otra. Sus datos no se le preguntan: si están completos no los escribe de nuevo.
+// Si ya respondió este mismo formulario, solo confirma que sigue todo igual.
 
 import { fechaTs, horaTxt } from '../core/tiempo';
 import { Icono } from '../ui/base';
@@ -21,6 +22,22 @@ export default function PasoConocido({ ids, reco, tz, acc }) {
             <div className="rv-acc rv-acc--ok">
                 <button type="button" className="rv-seguir" onClick={() => acc.elegirProxima('reprogramar')}>Quiero reprogramarla<Icono n="calendar" s={18} /></button>
                 <button type="button" className="rv-sec" onClick={() => acc.elegirProxima('adicional')}>Agendar una nueva</button>
+            </div>
+        </div>
+    );
+}
+
+/** Ya respondió este mismo formulario: confirma que sigue todo igual o lo responde de nuevo. Las
+ *  respuestas no se muestran (cualquiera puede escribir el WhatsApp o el correo de otro). */
+export function PasoPrevias({ ids, nombre, acc }) {
+    return (
+        <div className="rv-paso rv-paso--entra rv-conocido">
+            <p className="rv-ok-eyebrow"><span className="rv-ok-punto" aria-hidden="true"><Icono n="check" s={14} /></span>{nombre ? 'Hola de nuevo, ' + nombre + '.' : 'Hola de nuevo.'}</p>
+            <h1 className="rv-q rv-q--l1" id={ids.q}>Ya respondiste estas preguntas la última vez.</h1>
+            <p className="rv-ayuda">¿Sigue todo igual?</p>
+            <div className="rv-acc rv-acc--ok">
+                <button type="button" className="rv-seguir" onClick={() => acc.elegirPrevias(true)}>Sí, sigue igual<Icono n="check" s={18} /></button>
+                <button type="button" className="rv-sec" onClick={() => acc.elegirPrevias(false)}>Quiero responderlas de nuevo</button>
             </div>
         </div>
     );

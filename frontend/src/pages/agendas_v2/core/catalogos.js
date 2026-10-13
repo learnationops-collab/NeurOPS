@@ -29,12 +29,13 @@ export function tipo(k) {
 }
 export function conOpciones(k) { return k === 'opciones' || k === 'lista'; }
 
-// Datos de contacto: siempre se piden, en este orden. Solo se elige si son obligatorios. El correo va
-// primero: con él se reconoce al lead que ya agendó antes y no se le piden de nuevo sus datos.
+// Datos de contacto: siempre se piden, en este orden. Solo se elige si son obligatorios. El WhatsApp y el
+// correo van primero: con cualquiera de los dos se reconoce al lead que ya agendó antes y no se le piden
+// de nuevo sus datos (ni sus respuestas, si el formulario no cambió).
 export const CONTACTO = [
+    { k: 'telefono', tipo: 'telefono', n: 'WhatsApp', ico: 'whatsapp', titulo: '¿A qué WhatsApp te escribimos?', ayuda: 'Por ahí te confirmamos la llamada.' },
     { k: 'email', tipo: 'email', n: 'Correo', ico: 'mail', titulo: '¿Cuál es tu correo?', placeholder: 'nombre@correo.com' },
     { k: 'nombre', tipo: 'texto', n: 'Nombre', ico: 'user', titulo: '¿Cómo te llamás?', placeholder: 'Nombre y apellido' },
-    { k: 'telefono', tipo: 'telefono', n: 'WhatsApp', ico: 'whatsapp', titulo: '{nombre}, ¿a qué WhatsApp te escribimos?', ayuda: 'Por ahí te confirmamos la llamada.' },
     { k: 'instagram', tipo: 'instagram', n: 'Instagram', ico: 'instagram', titulo: '¿Cuál es tu Instagram?', placeholder: 'tu.usuario' },
 ];
 export const FIN_DEF = { titulo: 'Gracias por tu sinceridad', texto: 'Por ahora no vamos a agendar la sesión. Te mandamos por email la ruta para que sigas avanzando.' };
@@ -71,6 +72,7 @@ export const PAISES = [
     { c: 'CR', n: 'Costa Rica', d: '+506', ej: '8312 3456', z: [['America/Costa_Rica', 'Costa Rica', 'hora de Costa Rica']] },
     { c: 'EC', n: 'Ecuador', d: '+593', ej: '99 123 4567', z: [['America/Guayaquil', 'Ecuador', 'hora de Ecuador']] },
     { c: 'MX', n: 'México', d: '+52', ej: '55 1234 5678', z: [['America/Mexico_City', 'Centro', 'hora del centro de México'], ['America/Cancun', 'Quintana Roo', 'hora de Quintana Roo'], ['America/Mazatlan', 'Pacífico', 'hora del Pacífico mexicano'], ['America/Tijuana', 'Baja California', 'hora de Baja California']] },
+    { c: 'PA', n: 'Panamá', d: '+507', ej: '6123 4567', z: [['America/Panama', 'Panamá', 'hora de Panamá']] },
     { c: 'PY', n: 'Paraguay', d: '+595', ej: '981 123 456', z: [['America/Asuncion', 'Paraguay', 'hora de Paraguay']] },
     { c: 'PE', n: 'Perú', d: '+51', ej: '912 345 678', z: [['America/Lima', 'Perú', 'hora de Perú']] },
     { c: 'UY', n: 'Uruguay', d: '+598', ej: '94 123 456', z: [['America/Montevideo', 'Uruguay', 'hora de Uruguay']] },
@@ -78,7 +80,9 @@ export const PAISES = [
     { c: 'ES', n: 'España', d: '+34', ej: '612 34 56 78', z: [['Europe/Madrid', 'Península', 'hora de España'], ['Atlantic/Canary', 'Canarias', 'hora de Canarias']] },
     { c: 'US', n: 'Estados Unidos', d: '+1', ej: '(201) 555-0123', z: [['America/New_York', 'Este', 'hora del este de EE. UU.'], ['America/Chicago', 'Centro', 'hora del centro de EE. UU.'], ['America/Denver', 'Montaña', 'hora de la montaña de EE. UU.'], ['America/Los_Angeles', 'Pacífico', 'hora del Pacífico de EE. UU.']] },
 ];
-export function paisDe(c) { return PAISES.find(p => p.c === c) || PAISES[1]; }
+// «Otro país»: el lead escribe el código a mano (+507 …). Sin zona propia: queda la que tenga.
+export const PAIS_OTRO = { c: 'OT', n: 'Otro país', d: '+', ej: '+507 6123 4567', z: [] };
+export function paisDe(c) { return c === PAIS_OTRO.c ? PAIS_OTRO : PAISES.find(p => p.c === c) || PAISES[1]; }
 export const ZONAS = PAISES.flatMap(p => p.z.map(z => ({ tz: z[0], c: p.c, n: p.n + (p.z.length > 1 ? ' · ' + z[1] : '') })));
 export function zonaValida(tz) { return ZONAS.some(z => z.tz === tz); }
 export function zonaInfo(tz) {

@@ -1,6 +1,6 @@
 """Tablas de Agendas 2.0 (prefijo sched_): la configuracion de Thalamus.
 
-Los documentos de Thalamus (funnels, formularios, personas, prioridades, eventos, roles) se guardan
+Los documentos de Thalamus (funnels, formularios, personas, prioridades, eventos, roles, gracias) se guardan
 como JSON normalizado, el mismo esquema que el frontend (nucleo/normalizar.py). Las agendas NO viven
 aca: se escriben en la operacion (Appointment + su espejo FinancialAgenda), ver operacion.py.
 """
@@ -55,6 +55,13 @@ class SchedRol(_Documento, db.Model):
     __tablename__ = 'sched_roles'
 
 
+class SchedGracias(_Documento, db.Model):
+    """Una página de gracias (videos después de agendar). Los archivos de video viven en el volumen:
+    ver videos.py."""
+
+    __tablename__ = 'sched_gracias'
+
+
 class SchedPersona(_Documento, db.Model):
     """Una persona del equipo de Thalamus. `user_id` la une a su cuenta de la app cuando el email
     coincide: es lo que va a usar el paso 3 para saber a que closer real va una reserva."""
@@ -71,6 +78,7 @@ MODELOS = {
     'grupos': SchedGrupo,
     'eventos': SchedEvento,
     'roles': SchedRol,
+    'gracias': SchedGracias,
 }
 
 

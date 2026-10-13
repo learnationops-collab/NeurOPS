@@ -83,7 +83,7 @@ export function crearAdaptadorApi() {
             // solo_lectura: lo decide el servidor por el rol (el setter mira; la dirección configura).
             return {
                 cols, perfil: data.perfil || null, integ: data.integ || null, reservas: Array.isArray(data.reservas) ? data.reservas : [],
-                lectura: data.solo_lectura === true,
+                zona: data.zona || null, lectura: data.solo_lectura === true,
             };
         },
 

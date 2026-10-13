@@ -22,11 +22,13 @@ from app import db
 from app.agendas_v2.modelos import MODELOS
 from app.agendas_v2.nucleo.catalogos import DURACIONES, ESTRATEGIAS
 from app.agendas_v2.nucleo.datos import buscar, es_closer, rol_closer
-from app.agendas_v2.nucleo.formulario import texto_regla
+from app.agendas_v2.nucleo.formulario import NO_CALIFICA, texto_regla
 from app.agendas_v2.nucleo.normalizar import NORM, TIPOS_FUNNEL
 from app.agendas_v2.nucleo.util import entero, slugify, uid
 
 VERSION = 1
+# Lo que se escribe en "prioridad" o "resto" para mandar al lead a «No califica».
+NOMBRE_NO_CALIFICA = 'No califica'
 TIPOS_PREGUNTA = ('opciones', 'lista', 'texto', 'parrafo')
 CON_OPCIONES = ('opciones', 'lista')
 
@@ -70,7 +72,6 @@ EJEMPLO = {
         'slug': 'diagnostico',
         'duracion': 45,
         'antel': {'n': 4, 'u': 'h'},
-        'paso': {'n': 60, 'u': 'min'},
         'reservas': {'modo': 'dias', 'n': 14, 'tipo': 'corridos'},
         'desc': 'Una llamada de 45 minutos para ver si el programa es para vos.',
         'indic': 'Conectate desde una computadora y tené a mano tu último simulacro.',
@@ -158,7 +159,7 @@ El funnel de abajo YA EXISTE pero todavía no tiene un agendamiento armado: le f
 def _existente(d):
     """Lo que ya está armado en Thalamus y la IA puede reusar con {"usar": "<nombre>"}."""
     emails = {p['id']: p.get('email') for p in d['personas']}
-    nombre_g = {g['id']: g['nombre'] for g in d['grupos']}
+    nombre_g = {**{g['id']: g['nombre'] for g in d['grupos']}, NO_CALIFICA: NOMBRE_NO_CALIFICA}
     def closers_de(g):
         pct = g['estrategia'] == 'repartir' and g.get('pesos')
         return [emails[m] + (f' {g["pesos"].get(m, 0)}%' if pct else '') for m in g['miembros'] if emails.get(m)]
@@ -201,7 +202,7 @@ def prompt(d, actual=None, completar=None):
 
 ## Cómo funciona Thalamus (para que la configuración tenga sentido)
 - El lead completa el formulario (datos de contacto + preguntas). Si elige una opción con "descalifica": true, no agenda: ve el mensaje de "fin".
-- SEGMENTACIÓN: las REGLAS del formulario se miran en orden y la primera que se cumple decide a qué ESTRATEGIA (en el JSON, "prioridad") va el lead. Una regla se cumple si, en cada condición, el lead eligió alguna de las respuestas listadas. Si ninguna se cumple, va a la estrategia "resto".
+- SEGMENTACIÓN: las REGLAS del formulario se miran en orden y la primera que se cumple decide a qué ESTRATEGIA (en el JSON, "prioridad") va el lead. Una regla se cumple si, en cada condición, el lead eligió alguna de las respuestas listadas. Si ninguna se cumple, va a la estrategia "resto". En vez de una estrategia, una regla o el "resto" pueden ser "{NOMBRE_NO_CALIFICA}": ese lead no agenda y ve el mensaje de "fin".
 - Cada ESTRATEGIA es un grupo de closers con una forma de repartir: "llenar" = Llenar agenda (los leads cualificados van al primer closer hasta llenar su agenda, después al siguiente, en orden de prioridad), "horario" = Máxima disponibilidad (el lead ve todos los horarios del grupo; cada uno va al primer closer libre de la lista) o "repartir" = Distribuida (cada closer recibe un porcentaje de las agendas; sin porcentajes, parejo). Si una estrategia no tiene lugar, el lead pasa a la siguiente.
 - Los "puntos" (0 a 10) de cada opción y el "peso" (0 a 5) de cada pregunta arman una nota del lead que ve el closer. No rutean.
 - Los horarios de cada closer NO van en el JSON: cada closer ya tiene su horario en Team.
@@ -218,10 +219,10 @@ Si uno no está en Team se suma solo al importar. Para que reciba agendas necesi
   - "nombre".
   - "contacto": qué datos de contacto se piden (true/false): "nombre", "telefono", "email", "instagram". Nombre, teléfono y email conviene dejarlos en true.
   - "preguntas": cada una con "id" (clave corta única, minúsculas, sin espacios; no puede empezar con "c-"), "tipo" ("opciones" = opción única con botones, "lista" = desplegable, "texto" = texto corto, "parrafo" = texto largo), "titulo", "ayuda" (opcional), "obligatoria" (true/false), "peso" (0 a 5) y, si el tipo es "opciones" o "lista", "opciones": cada una con "id" (clave única dentro de la pregunta), "texto", "puntos" (0 a 10) y opcional "descalifica": true. NO pongas preguntas de nombre, teléfono, email ni Instagram: esas van en "contacto".
-  - "reglas": lista ordenada. Cada una: "prioridad" (nombre de una prioridad) y "si": lista de condiciones {{"pregunta": "<id de pregunta con opciones>", "respuestas": ["<id de opción>", ...]}}.
-  - "resto": nombre de la prioridad para quien no cumple ninguna regla.
+  - "reglas": lista ordenada. Cada una: "prioridad" (nombre de una prioridad, o "{NOMBRE_NO_CALIFICA}") y "si": lista de condiciones {{"pregunta": "<id de pregunta con opciones>", "respuestas": ["<id de opción>", ...]}}.
+  - "resto": nombre de la prioridad para quien no cumple ninguna regla (o "{NOMBRE_NO_CALIFICA}").
   - "fin": "titulo" y "texto" del mensaje para el lead que no califica.
-- "evento": "nombre", "slug", "duracion" (minutos: {', '.join(str(x) for x in DURACIONES)}), "antel" (anticipación mínima: "n" y "u" = "min" | "h" | "d"), "paso" (cada cuánto se ofrecen horarios: "n" y "u" = "min" | "h"), "reservas" (hasta cuándo se puede agendar: {{"modo": "dias", "n": 14, "tipo": "corridos" | "habiles"}}), "desc" (texto que ve el lead), "redir" (opcional: URL https a donde va el lead después de agendar), "indic" (indicaciones para la sesión: qué tiene que tener listo el lead; van en la invitación de Google Calendar).
+- "evento": "nombre", "slug", "duracion" (minutos: {', '.join(str(x) for x in DURACIONES)}), "antel" (anticipación mínima: "n" y "u" = "min" | "h" | "d"), "reservas" (hasta cuándo se puede agendar: {{"modo": "dias", "n": 14, "tipo": "corridos" | "habiles"}}), "desc" (texto que ve el lead), "redir" (opcional: URL https a donde va el lead después de agendar), "indic" (indicaciones para la sesión: qué tiene que tener listo el lead; van en la invitación de Google Calendar).
 
 ## Ejemplo (solo para mostrar la forma; usá los datos reales que te dé)
 ```json
@@ -355,6 +356,8 @@ def revisar(d, paquete, editando=None, en_funnel=None):
         errores.append('prioridades: hace falta al menos una (nueva, o {"usar": "<nombre>"} de una que ya existe).')
 
     def prioridad(nombre, donde):
+        if _txt(nombre).lower() == NOMBRE_NO_CALIFICA.lower():
+            return NO_CALIFICA
         gid = ids_prioridad.get(_txt(nombre).lower())
         if not gid:
             errores.append(f'{donde}: la prioridad "{nombre}" no está en "prioridades".')
@@ -568,7 +571,7 @@ def exportar(d, evento_id):
     usados = [r['grupo'] for r in reglas] + ([fo['resto']] if fo.get('resto') else [])
     grupos = [g for g in d['grupos'] if g['id'] in usados]
     emails = {p['id']: p.get('email') for p in d['personas']}
-    nombre_grupo = {g['id']: g['nombre'] for g in grupos}
+    nombre_grupo = {**{g['id']: g['nombre'] for g in grupos}, NO_CALIFICA: NOMBRE_NO_CALIFICA}
     return {
         'paquete_thalamus': VERSION,
         'funnel': {

@@ -1,4 +1,5 @@
-// Team: personas (People), prioridades (Priorities) y cobertura semanal (Available).
+// Team: personas (People), prioridades (Priorities) y la semana (Available), con los turnos libres de
+// cada closer según las sesiones del evento elegido.
 
 import { almacen, useUi } from '../../data/hooks';
 import { Seg } from '../../ui/base';

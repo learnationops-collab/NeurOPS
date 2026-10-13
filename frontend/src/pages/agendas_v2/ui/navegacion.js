@@ -3,12 +3,12 @@
 import { almacen } from '../data/hooks';
 import { ui } from './estadoUi';
 
-// Ir a una sección. Volver a tocar la sección abierta cierra el formulario o evento abierto.
+// Ir a una sección. Volver a tocar la sección abierta cierra el formulario, la página de gracias o el evento abierto.
 export function irA(id) {
     almacen.flush();
     const e = ui.getState();
     if (id === e.seccion) {
-        if (id === 'preguntas' && e.form) ui.set({ form: null });
+        if (id === 'preguntas' && (e.form || e.gracias)) ui.set({ form: null, gracias: null });
         else if (id === 'eventos' && e.ev) ui.set({ ev: null });
         return;
     }

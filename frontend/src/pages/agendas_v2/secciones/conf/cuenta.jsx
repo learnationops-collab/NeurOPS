@@ -164,7 +164,7 @@ export function TarjetaCalendar({ volver }) {
                                             aria-label={'Revisar conflictos en ' + c.summary} onClick={() => alternarConflicto(c.id, !on)} />
                                         <span className="trunc">{c.summary}</span>
                                         {c.primary && <span className="chip chip--n" style={{ '--c': 'var(--idle)' }}>Principal</span>}
-                                        {c.id === destino && <span className="chip chip--n" style={{ '--c': 'var(--info)' }}>Destino</span>}
+                                        {c.id === destino && <span className="chip chip--n" style={{ '--c': 'var(--info)' }}>Agendamiento</span>}
                                         {!c.escribe && <span className="t-cap mut40">solo lectura</span>}
                                     </label>
                                 );
@@ -248,6 +248,8 @@ export function TarjetaWhatsapp() {
     );
 }
 
+const EVENTO_HORARIO = 'neurops:horario';
+
 /** La disponibilidad: el horario de la persona de Team de esta cuenta, con el mismo editor de Team. */
 export function TarjetaDisponibilidad() {
     const [datos, setDatos] = useState(null);
@@ -263,6 +265,8 @@ export function TarjetaDisponibilidad() {
         api.get('/auth/me/disponibilidad').then((r) => aplicar(r.data)).catch(() => setError('No se pudo leer tu disponibilidad.'));
     }, []);
     const editar = (campos) => {
+        // Mis sesiones muestra cuántas entran con este horario: se entera mientras se edita.
+        if (campos.horario) window.dispatchEvent(new CustomEvent(EVENTO_HORARIO, { detail: campos.horario }));
         if (campos.horario) setHorario(campos.horario);
         if (campos.tz) setTz(campos.tz);
         setCambios(true); setAviso(null);
@@ -300,6 +304,7 @@ export function TarjetaDisponibilidad() {
 export function TarjetaSesiones() {
     const [datos, setDatos] = useState(null);
     const [sesiones, setSesiones] = useState({});
+    const [horario, setHorario] = useState(null);
     const [cambios, setCambios] = useState(false);
     const [ocupado, setOcupado] = useState(false);
     const [error, setError] = useState(null);
@@ -307,11 +312,15 @@ export function TarjetaSesiones() {
 
     const aplicar = (r) => {
         setDatos(r);
+        setHorario(r.horario || null);
         setSesiones(Object.fromEntries((r.eventos || []).filter(e => e.propia && Object.keys(e.propia).length).map(e => [e.id, e.propia])));
         setCambios(false);
     };
     useEffect(() => {
         api.get('/auth/me/sesiones').then((r) => aplicar(r.data)).catch(() => setError('No se pudieron leer tus sesiones.'));
+        const alCambiarHorario = (e) => setHorario(e.detail);
+        window.addEventListener(EVENTO_HORARIO, alCambiarHorario);
+        return () => window.removeEventListener(EVENTO_HORARIO, alCambiarHorario);
     }, []);
     const guardar = async () => {
         setOcupado(true); setError(null);
@@ -326,10 +335,10 @@ export function TarjetaSesiones() {
 
     return (
         <Tarjeta icono="clock" titulo="Mis sesiones"
-            texto="Cuánto dura cada sesión y el margen que te dejás después para poder extenderla. El lead ve solo la duración; el margen bloquea tu agenda.">
+            texto="Cuánto dura cada sesión y el margen que te dejás después para poder extenderla, y cuántas te entran por semana con tu horario. El lead ve solo la duración; el margen bloquea tu agenda.">
             {!datos ? <p className="t-sm mut">{error || 'Cargando…'}</p> : (
                 <>
-                    <EditorSesiones eventos={datos.eventos || []} sesiones={sesiones}
+                    <EditorSesiones eventos={datos.eventos || []} sesiones={sesiones} horario={horario}
                         onCambio={(s) => { setSesiones(s); setCambios(true); setAviso(null); }} />
                     <div className="cu-fila cu-fila--fin">
                         <Mensajes error={error} aviso={aviso} />

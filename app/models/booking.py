@@ -11,6 +11,12 @@ class Appointment(db.Model):
     origin = db.Column(db.String(100))
     is_pinned = db.Column(db.Boolean, default=False)
     google_event_id = db.Column(db.String(255))
+    # Trazabilidad en Google Calendar (app/agendas_v2/trazabilidad.py): el evento de esta agenda, en qué
+    # calendario está y cómo se vinculó ('propio', 'email' o 'nombre'). Distinto de google_event_id (el que
+    # creó NeurOPS y borra al cancelar): esto solo se lee, nunca se toca el evento.
+    calendar_evento_id = db.Column(db.String(255), nullable=True)
+    calendar_id = db.Column(db.String(255), nullable=True)
+    calendar_vinculo = db.Column(db.String(10), nullable=True)
     last_stage = db.Column(db.String(100))
     result = db.Column(db.String(100))
     closer_result = db.Column(db.String(100), default='Pendiente', nullable=True)

@@ -277,8 +277,9 @@ def test_la_invitacion_lleva_las_indicaciones_del_evento(client, armado, google)
 def test_la_agenda_nueva_ocupa_lo_que_dura_el_evento(client, armado):
     assert _reservar(client).status_code == 201
     slots = _horarios(client)
-    # Ana tiene 09:00-09:45; el lead nuevo sigue viendo solo a Ana ("llenar en orden"), desde las 10:00.
-    assert LUNES_9_MS not in slots and LUNES_10_MS in slots
+    # Ana tiene 09:00-09:45; el lead nuevo sigue viendo solo a Ana ("llenar en orden"), y su cadena sigue
+    # justo después: 09:45.
+    assert LUNES_9_MS not in slots and LUNES_9_MS + 45 * 60000 in slots and LUNES_10_MS not in slots
 
 
 def test_si_google_falla_la_agenda_queda_y_se_avisa(client, armado, cuentas, google):
@@ -288,6 +289,16 @@ def test_si_google_falla_la_agenda_queda_y_se_avisa(client, armado, cuentas, goo
     assert appt.google_event_id is None and FinancialAgenda.query.count() == 1
     aviso = Notification.query.filter_by(subject='Agenda sin evento de Google Calendar').one()
     assert 'token vencido' in aviso.content and cuentas['ana'].id in aviso.target_users
+
+
+def test_la_pagina_sabe_a_que_correo_salio_la_invitacion(client, armado, google):
+    assert _reservar(client).get_json()['reserva']['invitacion'] == 'lucia@correo.com'
+    assert google['crear'][0]['invitado'] == 'lucia@correo.com'
+
+
+def test_si_google_falla_no_se_promete_la_invitacion(client, armado, google):
+    google['falla'] = RuntimeError('token vencido')
+    assert _reservar(client).get_json()['reserva']['invitacion'] is None
 
 
 def test_el_mismo_lead_dos_veces_no_duplica(client, armado, google):
@@ -312,24 +323,24 @@ def test_si_ya_tiene_una_agenda_futura_se_le_pregunta_antes_de_tocar_nada(client
 def test_una_agenda_cancelada_en_google_calendar_no_cuenta_como_proxima(client, armado, google):
     assert _reservar(client).status_code == 201
     google['cancelados'].add('evt1')  # el closer la canceló en su Calendar, no en NeurOPS
-    r = _reservar(client, inicio='2026-10-05T14:00:00.000Z')
+    r = _reservar(client, inicio='2026-10-05T13:45:00.000Z')
     assert r.status_code == 201
     vieja, nueva = Appointment.query.order_by(Appointment.start_time).all()
     # La vieja no se toca: la cierra el closer en NeurOPS, como siempre.
     assert vieja.result is None and not vieja.is_rescheduled and google['borrar'] == []
-    assert nueva.start_time == datetime(2026, 10, 5, 14)
+    assert nueva.start_time == datetime(2026, 10, 5, 13, 45)
 
 
 def test_si_elige_cambiar_la_fecha_se_reprograma(client, armado, cuentas, google):
     assert _reservar(client).status_code == 201
-    r = _reservar(client, inicio='2026-10-05T14:00:00.000Z', si_ya_tiene='reprogramar')
+    r = _reservar(client, inicio='2026-10-05T13:45:00.000Z', si_ya_tiene='reprogramar')
     assert r.status_code == 201
     appt = Appointment.query.one()
     assert str(appt.id) == r.get_json()['reserva']['id']
-    assert appt.start_time == datetime(2026, 10, 5, 14) and appt.is_rescheduled
+    assert appt.start_time == datetime(2026, 10, 5, 13, 45) and appt.is_rescheduled
     assert appt.agenda_payload['reprogramada_desde'] == '2026-10-05T13:00:00Z'
     fa = FinancialAgenda.query.one()
-    assert fa.date == datetime(2026, 10, 5, 14)
+    assert fa.date == datetime(2026, 10, 5, 13, 45)
     # El evento viejo se borra del Calendar y se crea uno nuevo.
     assert google['borrar'] == [(cuentas['ana'].id, 'evt1')] and len(google['crear']) == 2
     assert appt.google_event_id == 'evt2'
@@ -337,14 +348,14 @@ def test_si_elige_cambiar_la_fecha_se_reprograma(client, armado, cuentas, google
 
 def test_si_elige_una_sesion_adicional_quedan_las_dos_y_se_avisa_al_closer(client, armado, cuentas, google):
     assert _reservar(client).status_code == 201
-    r = _reservar(client, inicio='2026-10-05T14:00:00.000Z', si_ya_tiene='adicional')
+    r = _reservar(client, inicio='2026-10-05T13:45:00.000Z', si_ya_tiene='adicional')
     assert r.status_code == 201
     vieja, nueva = Appointment.query.order_by(Appointment.start_time).all()
     assert vieja.start_time == datetime(2026, 10, 5, 13) and not vieja.is_rescheduled
-    assert nueva.start_time == datetime(2026, 10, 5, 14) and str(nueva.id) == r.get_json()['reserva']['id']
+    assert nueva.start_time == datetime(2026, 10, 5, 13, 45) and str(nueva.id) == r.get_json()['reserva']['id']
     assert nueva.agenda_payload['sesion_adicional_de']['agenda_id'] == vieja.id
     # Cada una con su fila en el registro de agendas y su evento en el Calendar; nada se borra.
-    assert sorted(fa.date for fa in FinancialAgenda.query.all()) == [datetime(2026, 10, 5, 13), datetime(2026, 10, 5, 14)]
+    assert sorted(fa.date for fa in FinancialAgenda.query.all()) == [datetime(2026, 10, 5, 13), datetime(2026, 10, 5, 13, 45)]
     assert len(google['crear']) == 2 and google['borrar'] == []
     aviso = Notification.query.filter_by(subject='Sesión adicional: revisá la agenda anterior').one()
     assert aviso.associated_id == nueva.id and vieja.closer_id in aviso.target_users
@@ -399,6 +410,54 @@ def test_dos_leads_a_la_vez_el_bloqueo_frena_al_segundo(client, armado, monkeypa
     assert Appointment.query.count() == 1
 
 
+def test_si_un_commit_suelta_el_bloqueo_se_vuelve_a_mirar_antes_de_escribir(
+    client, db, armado, cuentas, google, monkeypatch
+):
+    """Buscar la agenda previa del lead lee Google, y renovar el token hace commit: eso suelta el bloqueo
+    del closer. Si en ese rato otro lead le tomó a Ana un horario que se cruza, no quedan las dos."""
+    assert _reservar(client).status_code == 201  # Lucía, lunes 9:00 con Ana
+    llamadas = []
+
+    def cancelado(user_id, event_id):
+        llamadas.append(event_id)
+        if len(llamadas) == 2:  # la segunda es la de registrar_agenda, ya con Ana bloqueada
+            otro = Client(full_name='Otro', email='otro@x.com')
+            db.session.add(otro)
+            db.session.flush()
+            db.session.add(Appointment(client_id=otro.id, closer_id=cuentas['ana'].id,
+                                       start_time=datetime(2026, 10, 5, 13, 50)))
+            db.session.commit()
+        return False
+
+    monkeypatch.setattr(GoogleService, 'evento_cancelado', staticmethod(cancelado))
+    r = _reservar(client, inicio='2026-10-05T13:45:00.000Z', si_ya_tiene='adicional')
+    assert len(llamadas) == 2
+    assert r.status_code == 409 and r.get_json()['code'] == 'ocupado'
+    assert Appointment.query.filter_by(start_time=datetime(2026, 10, 5, 13, 45)).count() == 0
+
+
+def test_el_mismo_lead_que_confirma_dos_veces_a_la_vez_recibe_su_agenda(client, armado, monkeypatch):
+    """El segundo pedido no vio la agenda del primero al empezar; ya bloqueado, la encuentra y la devuelve."""
+    primera = _reservar(client)
+    assert primera.status_code == 201
+    original, vistas = operacion.agenda_de, []
+
+    def agenda_de(cliente_id, inicio):
+        vistas.append(inicio)
+        return None if len(vistas) == 1 else original(cliente_id, inicio)
+
+    monkeypatch.setattr(operacion, 'agenda_de', agenda_de)
+    monkeypatch.setattr(
+        servicio,
+        '_ocupacion',
+        lambda ahora, elegibles=None: {'ahora': ahora, 'ocupado': lambda *a: False, 'carga_de': lambda pid: 0},
+    )
+    r = _reservar(client, si_ya_tiene='reprogramar')
+    assert r.status_code == 201
+    assert r.get_json()['reserva']['id'] == primera.get_json()['reserva']['id']
+    assert Appointment.query.count() == 1
+
+
 def test_respuestas_invalidas_dan_400(client, armado):
     r = _reservar(client, **{'c-email': 'no-es-correo'})
     assert r.status_code == 400 and 'c-email' in r.get_json()['errores']
@@ -414,6 +473,56 @@ def test_el_descalificado_queda_como_cliente_sin_agenda(client, armado, google):
     assert cliente.email == 'lucia@correo.com'
     assert cliente.formulario_payload['descalificada'] is True and cliente.formulario_payload['inicio'] is None
     assert Appointment.query.count() == 0 and FinancialAgenda.query.count() == 0 and google['crear'] == []
+
+
+def _con_regla_url():
+    fo = servicio.colecciones()['formularios'][0]
+    q1 = {**fo['preguntas'][0], 'opciones': fo['preguntas'][0]['opciones'] + [{'id': 'b', 'texto': 'Poco'}]}
+    regla = {'id': 'ru', 'url': 'https://academy.thelearnation.com/', 'cond': [{'q': 'q1', 'ops': ['b']}]}
+    servicio.guardar_doc('formularios', 'fo', {'preguntas': [q1], 'reglas': [regla]}, parcial=True)
+
+
+def test_una_regla_con_url_no_agenda_y_devuelve_la_pagina(client, armado, google):
+    _con_regla_url()
+    assert client.post(URL + '/eventos/ev/horarios', json={'resp': _resp(q1='b')}).get_json()['slots'] == []
+    r = _reservar(client, q1='b')
+    assert r.status_code == 201
+    assert r.get_json() == {'descalificada': True, 'redirigir': 'https://academy.thelearnation.com/'}
+    assert Appointment.query.count() == 0 and google['crear'] == []
+    assert Client.query.one().formulario_payload['descalificada'] is True
+    # Los demás siguen agendando.
+    assert _reservar(client, q1='a', **{'c-email': 'otro@correo.com'}).status_code == 201
+
+
+def _con_no_califica(regla=True, resto=False):
+    """q1 = «Poco» (b): una regla manda a «No califica»; con resto=True, también todo lo demás."""
+    fo = servicio.colecciones()['formularios'][0]
+    q1 = {**fo['preguntas'][0], 'opciones': fo['preguntas'][0]['opciones'] + [{'id': 'b', 'texto': 'Poco'}]}
+    reglas = [{'id': 'rn', 'grupo': '__no', 'cond': [{'q': 'q1', 'ops': ['b']}]}] if regla else []
+    if resto:
+        reglas.append({'id': 'ra', 'grupo': 'top', 'cond': [{'q': 'q1', 'ops': ['a']}]})
+    cambios = {'preguntas': [q1], 'reglas': reglas, **({'resto': '__no'} if resto else {})}
+    servicio.guardar_doc('formularios', 'fo', cambios, parcial=True)
+
+
+def test_una_regla_a_no_califica_no_agenda_y_queda_descalificado(client, armado, google):
+    _con_no_califica()
+    assert client.post(URL + '/eventos/ev/horarios', json={'resp': _resp(q1='b')}).get_json()['slots'] == []
+    r = _reservar(client, q1='b')
+    assert r.status_code == 201 and r.get_json() == {'descalificada': True}
+    assert Appointment.query.count() == 0 and google['crear'] == []
+    assert Client.query.one().formulario_payload['descalificada'] is True
+    # Los demás siguen agendando.
+    assert _reservar(client, q1='a', **{'c-email': 'otro@correo.com'}).status_code == 201
+
+
+def test_todo_lo_demas_puede_ser_no_califica(client, armado, google):
+    _con_no_califica(regla=False, resto=True)
+    assert client.post(URL + '/eventos/ev/horarios', json={'resp': _resp(q1='b')}).get_json()['slots'] == []
+    assert _reservar(client, q1='b').get_json() == {'descalificada': True}
+    assert client.post(URL + '/eventos/ev/horarios', json={'resp': _resp(q1='a')}).get_json()['slots']
+    assert _reservar(client, q1='a', **{'c-email': 'otro@correo.com'}).status_code == 201
+    assert Appointment.query.count() == 1
 
 
 def test_un_descalificado_no_puede_forzar_un_horario(client, armado):
@@ -543,7 +652,7 @@ def test_la_reprogramacion_avisa_distinto_y_el_descalificado_no_avisa(client, ar
     _reservar(client, inicio=None, q1='x', **{'c-email': 'otra@correo.com'})
     assert discord == []
     _reservar(client)
-    _reservar(client, inicio='2026-10-05T14:00:00.000Z', si_ya_tiene='reprogramar')
+    _reservar(client, inicio='2026-10-05T13:45:00.000Z', si_ya_tiene='reprogramar')
     titulos = [m['json']['embeds'][0]['title'] for m in discord]
     assert titulos == ['📅 Nueva agenda: Llamada', '🔁 Agenda reprogramada: Llamada']
 
@@ -683,7 +792,7 @@ def test_con_datos_guardados_no_hace_falta_escribirlos_de_nuevo(client, armado):
     assert _reservar(client).status_code == 201
     r = client.post(URL + '/reservas', json={
         'evento_id': 'ev', 'resp': {'c-email': 'lucia@correo.com', 'q1': 'a'}, 'pais': 'BO', 'tz': 'America/La_Paz',
-        'inicio': '2026-10-05T14:00:00.000Z', 'datos_guardados': True, 'si_ya_tiene': 'adicional',
+        'inicio': '2026-10-05T13:45:00.000Z', 'datos_guardados': True, 'si_ya_tiene': 'adicional',
     })
     assert r.status_code == 201
     nueva = Appointment.query.order_by(Appointment.start_time.desc()).first()
@@ -697,6 +806,48 @@ def test_sin_datos_guardados_los_obligatorios_se_piden(client, armado):
         'inicio': LUNES_9, 'datos_guardados': True,
     })
     assert r.status_code == 400 and 'c-nombre' in r.get_json()['errores']
+
+
+def test_tambien_se_lo_reconoce_por_su_whatsapp(client, armado):
+    assert _reservar(client).status_code == 201
+    r = client.post(URL + '/eventos/ev/conocido', json={'telefono': '7123 4567', 'pais': 'BO'}).get_json()
+    assert r['conocido'] is True and r['completos'] is True and r['datos']['nombre'] == 'Lucía'
+    nadie = client.post(URL + '/eventos/ev/conocido', json={'telefono': '7999 9999', 'pais': 'BO'}).get_json()
+    assert nadie == {'conocido': False}
+
+
+def test_si_ya_respondio_este_formulario_solo_lo_confirma_sin_ver_sus_respuestas(client, armado):
+    assert _reservar(client).status_code == 201
+    r = client.post(URL + '/eventos/ev/conocido', json={'telefono': '71234567', 'pais': 'BO'})
+    assert r.get_json()['respuestas']['no'] is False and r.get_json()['respuestas']['url'] == ''
+    assert 'Mucho' not in r.get_data(as_text=True)  # la respuesta no viaja: el servidor la completa
+    # Solo dejó su WhatsApp: el correo, el nombre y la respuesta salen de lo guardado.
+    r = client.post(URL + '/reservas', json={
+        'evento_id': 'ev', 'resp': {'c-telefono': '71234567'}, 'pais': 'BO', 'tz': 'America/La_Paz',
+        'inicio': '2026-10-05T13:45:00.000Z', 'si_ya_tiene': 'adicional',
+        'datos_guardados': True, 'respuestas_guardadas': True,
+    })
+    assert r.status_code == 201
+    nueva = Appointment.query.order_by(Appointment.start_time.desc()).first()
+    assert nueva.agenda_payload['lead']['email'] == 'lucia@correo.com'
+    assert nueva.agenda_payload['respuestas'][0]['opcion_id'] == 'a'
+
+
+def test_si_el_formulario_cambio_de_preguntas_responde_de_nuevo(client, armado):
+    assert _reservar(client).status_code == 201
+    fo = next(x for x in servicio.colecciones()['formularios'] if x['id'] == 'fo')
+    nueva = {'id': 'q2', 'tipo': 'texto', 'titulo': '¿Por qué?', 'peso': 0, 'opciones': []}
+    servicio.guardar_doc('formularios', 'fo', {'preguntas': fo['preguntas'] + [nueva]}, parcial=True)
+    _publicar('ev')
+    r = _conocido(client, 'lucia@correo.com').get_json()
+    assert r['conocido'] is True and r['respuestas'] is None
+
+
+def test_el_que_no_califico_lo_sabe_al_confirmar_sus_respuestas(client, armado):
+    assert client.post(URL + '/reservas', json={
+        'evento_id': 'ev', 'resp': _resp(q1='x'), 'pais': 'BO', 'tz': 'America/La_Paz', 'inicio': None,
+    }).status_code == 201
+    assert _conocido(client, 'lucia@correo.com').get_json()['respuestas']['no'] is True
 
 
 def test_al_agendar_el_lead_ve_el_nombre_de_su_consultor_y_nada_de_contacto(client, armado):
@@ -732,6 +883,37 @@ def test_si_se_ocupa_en_google_mientras_elige_el_horario_se_avisa(client, armado
     r = _reservar(client)
     assert r.status_code == 409 and r.get_json()['code'] == 'ocupado'
     assert Appointment.query.count() == 0
+
+
+def _agenda_vieja(db, *closers):
+    """Una agenda vigente en NeurOPS a las 9 para cada closer, tomada hace días (sin gracia)."""
+    cli = Client(full_name='Vieja', email='vieja@x.com')
+    db.session.add(cli)
+    db.session.flush()
+    for c in closers:
+        db.session.add(Appointment(client_id=cli.id, closer_id=c.id, start_time=datetime(2026, 10, 5, 13),
+                                   result='Confirmado', created_at=datetime(2026, 9, 1)))
+    db.session.commit()
+
+
+def test_google_manda_una_agenda_que_ya_no_esta_en_su_calendario_no_bloquea(client, db, armado, cuentas, google):
+    # Las dos agendas de las 9 se cancelaron en Google (o se marcaron «Disponible»): el horario se ofrece.
+    _agenda_vieja(db, cuentas['ana'], cuentas['beto'])
+    assert H9 in client.post(URL + '/eventos/ev/horarios', json={'resp': _resp()}).get_json()['slots']
+    servicio._google_cache.clear()
+    # La de Ana sigue en su calendario: la agenda va a Beto.
+    google['ocupado'] = {cuentas['ana'].id: [(H9, H10)]}
+    servicio.guardar_doc('grupos', 'top', {'estrategia': 'horario'}, parcial=True)
+    r = _reservar(client)
+    assert r.status_code == 201, r.get_json()
+    nueva = Appointment.query.filter(Appointment.client.has(Client.full_name != 'Vieja')).one()
+    assert nueva.closer_id == cuentas['beto'].id
+
+
+def test_sin_leer_su_calendario_la_agenda_de_neurops_bloquea(client, db, armado, cuentas, google, monkeypatch):
+    _agenda_vieja(db, cuentas['ana'], cuentas['beto'])
+    monkeypatch.setattr(GoogleService, 'franjas_ocupadas', staticmethod(lambda u, desde, hasta: None))
+    assert H9 not in client.post(URL + '/eventos/ev/horarios', json={'resp': _resp()}).get_json()['slots']
 
 
 # --- Intentos y Stats: los que dejaron sus datos y no agendaron ---------------------------------
@@ -877,3 +1059,54 @@ def test_el_closer_ajusta_sus_sesiones_y_lo_que_no_viene_vuelve_a_la_propuesta(c
     client.put('/api/auth/me/sesiones', headers=h, json={'sesiones': {}})
     assert servicio.buscar(servicio.colecciones(), 'personas', 'ana')['sesiones'] == {}
     assert client.get('/api/auth/me/sesiones', headers=auth_headers(cuentas['juan'])).status_code == 403
+# --- Prueba por segmento (Thalamus): lo que vería el lead de una prioridad, sin pasar por el formulario ---
+
+
+def _probar(client, auth_headers, user, grupo, evento='ev'):
+    return client.post(f'/api/agendas-v2/eventos/{evento}/prueba', json={'grupo': grupo}, headers=auth_headers(user))
+
+
+def test_la_prueba_por_segmento_da_los_horarios_del_lead_con_su_closer(client, armado, make_user, auth_headers):
+    director = make_user(role='director_comercial', email='dir@equipo.com')
+    r = _probar(client, auth_headers, director, 'top')
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data['version'] == 'publicada' and data['grupo'] == 'top' and not data['desborde']
+    publicos = client.post(URL + '/eventos/ev/horarios', json={'resp': _resp()}).get_json()['slots']
+    assert [s['t'] for s in data['slots']] == publicos
+    assert {s['p'] for s in data['slots']} == {'ana'}  # Ultra llena primero a Ana
+
+
+def test_la_prueba_fuerza_la_prioridad_elegida(client, armado, make_user, auth_headers, google, cuentas):
+    servicio.guardar_doc(
+        'grupos', 'beto', {'nombre': 'Solo Beto', 'estrategia': 'llenar', 'miembros': ['beto'], 'orden': 2}
+    )
+    director = make_user(role='director_comercial', email='dir@equipo.com')
+    data = _probar(client, auth_headers, director, 'beto').get_json()
+    assert data['grupo'] == 'beto' and {s['p'] for s in data['slots']} == {'beto'}
+    # Lo ocupado en su Google Calendar tampoco se ofrece en la prueba.
+    lunes_9 = calendar.timegm(datetime(2026, 10, 5, 13).timetuple()) * 1000
+    google['ocupado'][cuentas['beto'].id] = [(lunes_9, lunes_9 + 3600000)]
+    servicio._google_cache.clear()
+    data = _probar(client, auth_headers, director, 'beto').get_json()
+    assert lunes_9 not in [s['t'] for s in data['slots']]
+
+
+def test_la_prueba_es_solo_para_la_direccion_y_no_agenda(client, armado, cuentas, auth_headers, db):
+    assert client.post('/api/agendas-v2/eventos/ev/prueba', json={'grupo': 'top'}).status_code == 401
+    assert _probar(client, auth_headers, cuentas['ana'], 'top').status_code == 403
+    director = cuentas['juan']
+    director.role = 'director_comercial'
+    db.session.commit()
+    assert _probar(client, auth_headers, director, 'top').status_code == 200
+    assert Appointment.query.count() == 0
+
+
+def test_la_prueba_de_un_evento_sin_publicar_usa_el_borrador(client, armado, make_user, auth_headers):
+    servicio.guardar_doc(
+        'eventos', 'nuevo', {'nombre': 'Nuevo', 'slug': 'nuevo', 'funnel': 'fu', 'formulario': 'fo', 'duracion': 30}
+    )
+    director = make_user(role='director_comercial', email='dir@equipo.com')
+    data = _probar(client, auth_headers, director, 'top', evento='nuevo').get_json()
+    assert data['version'] == 'borrador' and data['slots']
+    assert _probar(client, auth_headers, director, 'top', evento='nada').status_code == 404

@@ -7,12 +7,13 @@ asignacion con las agendas reales y, antes de escribir, se bloquea al closer y s
 siga libre.
 """
 
+import logging
 import re
 import time
 from datetime import datetime, timedelta, timezone
 
 from app import db
-from app.agendas_v2 import operacion
+from app.agendas_v2 import operacion, trazabilidad
 from app.agendas_v2.modelos import MODELOS, SchedConfig, SchedIntento, SchedPerfil
 from app.agendas_v2.nucleo.asignacion import asignacion
 from app.agendas_v2.nucleo.catalogos import (
@@ -20,6 +21,7 @@ from app.agendas_v2.nucleo.catalogos import (
     ESTRATEGIAS,
     HORAS,
     MARGENES,
+    PAIS_OTRO,
     PAISES,
     TZ_DEF,
     ZONAS,
@@ -30,7 +32,7 @@ from app.agendas_v2.nucleo.catalogos import (
 from app.agendas_v2.nucleo.datos import buscar, nombre_origen, ordenados, rol_closer, sesion_de
 from app.agendas_v2.nucleo.disponibilidad import se_solapa
 from app.agendas_v2.nucleo.eventos import con_form_al_dia, config_de, link_evento, slug_libre, version_publicada
-from app.agendas_v2.nucleo.formulario import limpiar_respuesta, texto_regla, validar_respuesta
+from app.agendas_v2.nucleo.formulario import grupo_por_reglas, limpiar_respuesta, texto_regla, validar_respuesta
 from app.agendas_v2.nucleo.normalizar import (
     COLECCIONES,
     NORM,
@@ -42,8 +44,11 @@ from app.agendas_v2.nucleo.normalizar import (
     preguntas_flujo,
 )
 from app.agendas_v2.nucleo.ocupacion import opciones_de_ocupacion
-from app.agendas_v2.nucleo.reserva import armar_reserva
+from app.agendas_v2.nucleo.reserva import armar_reserva, telefono_e164
 from app.agendas_v2.nucleo.util import slugify, uid
+from app.services.learnation_service import LearnationAPIError, LearnationService
+
+log = logging.getLogger(__name__)
 
 DIA_MS = 86400000
 # Las agendas de la operacion (Appointment) no guardan duracion: cada una bloquea 60 minutos.
@@ -53,6 +58,9 @@ VENTANA_ESTADO_DIAS = 35
 # Conflictos en Google Calendar: hasta cuántos días se miran y cuánto se guarda lo leído de cada closer.
 VENTANA_GOOGLE_DIAS = 60
 CACHE_GOOGLE_S = 120
+# Una agenda recién tomada puede no estar todavía en lo leído de Google (caché o evento en camino):
+# hasta este tiempo después de creada, bloquea aunque Google no la muestre.
+GRACIA_GOOGLE = timedelta(minutes=10)
 # Stats: cuántos días de leads viajan (el período más largo, 90 días, y el anterior para comparar).
 VENTANA_STATS_DIAS = 180
 LARGO_MAX_TEXTO = {'texto': 300, 'parrafo': 2000, 'email': 120, 'telefono': 40, 'instagram': 30}
@@ -118,6 +126,15 @@ def _email_de_cuenta(email):
 
     u = User.query.filter(db.func.lower(User.email) == email.lower()).first()
     return u.id if u else None
+
+
+def zona_para_ver(u):
+    """La zona en la que alguien mira la semana del equipo (Available): la del país de su WhatsApp; sin
+    número, la que eligió (users.timezone); si no, None y decide su navegador."""
+    tz = zona_por_telefono(u.two_chat_number)
+    if tz:
+        return tz
+    return u.timezone if u.timezone and u.timezone != TZ_DEF and zona_valida(u.timezone) else None
 
 
 def zona_de_usuario(u):
@@ -212,13 +229,14 @@ def _eventos_compartidos(d):
 
 def sesiones_de(user):
     """Lo que el closer ve en «Mis sesiones»: cada evento compartido con la propuesta del director
-    (duracion, margen) y lo que él ajustó (propia: {duracion?, margen?}). Sus eventos propios se
-    ajustan en «Mis eventos»."""
+    (duracion, margen) y lo que él ajustó (propia: {duracion?, margen?}), y su horario (para mostrarle
+    cuántas sesiones le entran). Sus eventos propios se ajustan en «Mis eventos»."""
     d = colecciones()
     p = persona_de_usuario(d, user)
     propias = (p or {}).get('sesiones') or {}
     return {
         'en_team': bool(p),
+        'horario': p['horario'] if p else None,
         'eventos': [
             {'id': e['id'], 'nombre': e['nombre'], 'activo': e['activo'], 'duracion': e['duracion'],
              'margen': e['margen'], 'propia': propias.get(e['id'], {})}
@@ -417,6 +435,8 @@ def reserva_a_dict(appt):
         **(appt.agenda_payload or {}),
         'id': str(appt.id),
         'estado': 'agendada' if _vigente(appt) else 'cancelada',
+        # Si dejó de estar agendada porque se canceló o reprogramó (no porque el closer ya la procesó).
+        'cancelada': (appt.result or '') in operacion.RESULTADOS_NO_VIGENTES,
         'inicio_ms': inicio,
         'fin_ms': inicio + _duracion_min(appt) * 60000 if inicio is not None else None,
         'creada': appt.created_at.replace(tzinfo=timezone.utc).isoformat().replace('+00:00', 'Z')
@@ -487,9 +507,26 @@ def solo_elegibles(d):
     return {**d, 'personas': personas}, elegibles
 
 
-def _agendas_de_operacion(elegibles, desde):
+def sigue_en_google(appt, franjas, ahora=None, leido_desde=None):
+    """Si una agenda vigente en NeurOPS sigue ocupando según Google Calendar, que es la certeza: con su
+    calendario leído (`franjas`, [(inicio, fin)] ms), solo si a esa hora hay algo ocupado; una agenda
+    cuyo evento se canceló, se borró o se marcó «Disponible» ya no bloquea, aunque en NeurOPS siga
+    abierta (no se la toca). franjas None: no se sabe y bloquea. Las recién creadas, y las que empiezan
+    antes de lo leído (`leido_desde`, ms), bloquean igual."""
+    t = dt_a_ms(appt.start_time)
+    if franjas is None or (leido_desde is not None and t < leido_desde):
+        return True
+    ahora = ahora or datetime.utcnow()
+    if appt.created_at and appt.created_at >= ahora - GRACIA_GOOGLE:
+        return True
+    return any(a <= t < b for a, b in franjas)
+
+
+def _agendas_de_operacion(elegibles, desde, franjas_de=None, leido_desde=None):
     """Agendas vigentes de esos closers (Appointment), como reservas del nucleo. Las de Agendas 2.0
-    duran lo que dura su evento; las que entran por n8n, 60 minutos."""
+    duran lo que dura su evento; las que entran por n8n, 60 minutos. franjas_de: {user_id: lo leído de
+    su Google, o None} desde `leido_desde` (ms); con su calendario leído, solo las que siguen ahí
+    (sigue_en_google)."""
     from app.models import Appointment
 
     if not elegibles:
@@ -503,6 +540,8 @@ def _agendas_de_operacion(elegibles, desde):
         Appointment.start_time >= desde - timedelta(hours=4),
         *operacion.filtro_vigente(),
     ).all()
+    franjas_de = franjas_de or {}
+    filas = [a for a in filas if sigue_en_google(a, franjas_de.get(a.closer_id), leido_desde=leido_desde)]
     return [
         {
             'estado': 'agendada',
@@ -522,7 +561,7 @@ _google_cache = {}
 
 def _franjas_google(user_id, desde, hasta):
     """Lo ocupado en los calendarios de conflicto del closer entre desde y hasta (ms), con caché corta
-    para no consultar a Google en cada clic del lead. [] si Google no respondió (se ofrece igual)."""
+    para no consultar a Google en cada clic del lead. None si Google no respondió (se ofrece igual)."""
     from app.services.google_service import GoogleService
 
     ahora = time.monotonic()
@@ -531,50 +570,77 @@ def _franjas_google(user_id, desde, hasta):
         return guardado[3]
     franjas = GoogleService.franjas_ocupadas(user_id, ms_a_dt(desde), ms_a_dt(hasta))
     if franjas is None:
-        return []
+        return None
     if len(_google_cache) > 500:
         _google_cache.clear()
     _google_cache[user_id] = (ahora + CACHE_GOOGLE_S, desde, hasta, franjas)
     return franjas
 
 
-def _ocupado_en_google(elegibles, ahora):
-    """{persona_id: [{inicio, fin}]} de lo que cada closer elegible tiene en sus calendarios de Google."""
+def _leido_de_google(elegibles, ahora):
+    """{user_id: [(inicio, fin)] o None} de cada closer elegible: lo ocupado en sus calendarios de
+    Google desde una hora atrás. None si no conectó su calendario o Google no respondió (no se sabe)."""
     desde, hasta = ahora - 3600000, ahora + VENTANA_GOOGLE_DIAS * DIA_MS
-    por_usuario = {u: _franjas_google(u, desde, hasta) for u in set(elegibles.values())}
-    return {pid: [{'inicio': a, 'fin': b} for a, b in por_usuario[u]] for pid, u in elegibles.items() if por_usuario[u]}
+    usuarios = set(elegibles.values())
+    con = _con_calendar(usuarios)
+    return {u: _franjas_google(u, desde, hasta) if u in con else None for u in usuarios}
 
 
 def _ocupacion(ahora, elegibles=None):
     """Lo que tiene ocupado cada closer: sus agendas vigentes en la operacion y lo que tiene en sus
     calendarios de Google (los de conflicto), en el formato del nucleo. Lo de Google bloquea el horario
-    pero no suma a su carga (no son agendas)."""
+    pero no suma a su carga (no son agendas). Google manda: una agenda que ya no está en su calendario
+    (cancelada, borrada o marcada «Disponible») no bloquea (sigue_en_google)."""
     elegibles = elegibles or {}
-    base = opciones_de_ocupacion(_agendas_de_operacion(elegibles, ms_a_dt(ahora - DIA_MS)), ahora)
-    google = _ocupado_en_google(elegibles, ahora)
+    leido = _leido_de_google(elegibles, ahora)
+    agendas = _agendas_de_operacion(elegibles, ms_a_dt(ahora - DIA_MS), leido, leido_desde=ahora - 3600000)
+    base = opciones_de_ocupacion(agendas, ahora)
+    google = {pid: [{'inicio': a, 'fin': b} for a, b in leido[u]] for pid, u in elegibles.items() if leido.get(u)}
     if not google:
         return base
     ocupado = base['ocupado']
     return {**base, 'ocupado': lambda pid, t, dur: ocupado(pid, t, dur) or se_solapa(google.get(pid, []), t, dur)}
 
 
-def _choca(user_id, inicio, fin):
-    """Si el closer ya tiene una agenda vigente que se cruza con [inicio, fin) (ms)."""
-    from app.models import Appointment
+def _franjas_frescas(user_id, inicio, fin):
+    """Lo ocupado en el Google Calendar del closer alrededor de [inicio, fin) (ms), leído en el momento
+    (sin caché: algo agendado recién también cuenta). None si no se pudo leer.
+    Va ANTES de bloquear al closer: leer Google puede renovar su token, eso hace commit y un commit
+    suelta el bloqueo (ver _bloquear_y_verificar)."""
+    from app.services.google_service import GoogleService
 
+    if not _con_calendar({user_id}):
+        return None
+    # Desde 4 horas antes: para saber si las agendas que empezaron antes siguen en su calendario.
+    return GoogleService.franjas_ocupadas(user_id, ms_a_dt(inicio) - timedelta(hours=4), ms_a_dt(fin))
+
+
+def _bloquear_y_verificar(user_id, inicio, fin, franjas):
+    """Bloquea al closer (SELECT … FOR UPDATE sobre su fila de users) y, ya bloqueado, mira en la base si
+    tiene otra agenda vigente que se cruce con [inicio, fin) (ms). Dos leads que piden el mismo closer a
+    la vez quedan en fila: el segundo espera a que el primero haga commit y recién ahí lee, así que ve
+    su agenda. Desde acá hasta el commit que guarda la agenda no puede haber otro commit (lo soltaría):
+    por eso Google se lee antes (_franjas_frescas). Se puede volver a llamar después de algo que haya
+    hecho commit: vuelve a bloquear y a mirar.
+    Devuelve (closer, choca, fuera_de_google): fuera_de_google son los ids de las agendas que se cruzan
+    pero ya no están en su calendario (sigue_en_google): esas no chocan."""
+    from app.models import Appointment, User
+
+    closer = db.session.query(User).filter_by(id=user_id).with_for_update().first()
+    if not closer:
+        return None, True, []
+    if franjas and any(a < fin and inicio < b for a, b in franjas):
+        return closer, True, []
     filas = Appointment.query.filter(
         Appointment.closer_id == user_id,
         Appointment.start_time < ms_a_dt(fin),
         Appointment.start_time >= ms_a_dt(inicio) - timedelta(hours=4),
         *operacion.filtro_vigente(),
     ).all()
-    if any(dt_a_ms(a.start_time) + _bloque_min(a) * 60000 > inicio for a in filas):
-        return True
-    # Lo de Google se vuelve a mirar en el momento (sin caché): algo agendado recién también cuenta.
-    from app.services.google_service import GoogleService
-
-    franjas = GoogleService.franjas_ocupadas(user_id, ms_a_dt(inicio), ms_a_dt(fin)) or []
-    return any(a < fin and inicio < b for a, b in franjas)
+    leido_desde = inicio - 4 * 3600000
+    cruzan = [a for a in filas if dt_a_ms(a.start_time) + _bloque_min(a) * 60000 > inicio]
+    siguen = [a for a in cruzan if sigue_en_google(a, franjas, leido_desde=leido_desde)]
+    return closer, bool(siguen), [a.id for a in cruzan if a not in siguen]
 
 
 # --- Ocupacion en Google para Available ---------------------------------------------------------
@@ -618,33 +684,121 @@ def _ocupado_semana(user_id, desde, hasta):
     return leido
 
 
+# Una agenda de n8n se busca en Google por su inicio, con esta tolerancia.
+TOLERANCIA_EVENTO_MS = 60000
+
+
+def _agendas_operacion(user_ids, desde, hasta):
+    """{user_id: [Appointment]} de las agendas de esos closers (las de n8n y las de Agendas 2.0) que
+    empiezan entre desde y hasta (ms)."""
+    from app.models import Appointment
+
+    if not user_ids:
+        return {}
+    filas = (
+        Appointment.query.filter(
+            Appointment.closer_id.in_(user_ids),
+            Appointment.start_time >= ms_a_dt(desde),
+            Appointment.start_time < ms_a_dt(hasta),
+        )
+        .order_by(Appointment.start_time)
+        .all()
+    )
+    out = {}
+    for a in filas:
+        out.setdefault(a.closer_id, []).append(a)
+    return out
+
+
+def agenda_operacion_a_dict(appt, eventos, traza=None):
+    """Una agenda de n8n para Available. estado: 'cancelada' (marcada cancelada o reprogramada),
+    'sin_evento' (en NeurOPS sigue vigente pero en su Google Calendar ya no ocupa: se canceló, se borró, se
+    movió o se marcó «Disponible» sin que NeurOPS se enterara) o 'vigente'. `eventos`: lo leído de su
+    Google, None si no se pudo (y entonces no se sabe: queda vigente). `traza`: lo que se sabe de su evento
+    vinculado (trazabilidad.py); manda sobre la coincidencia por hora. Dura lo que su evento en Google o, si
+    no está, lo de siempre. Solo se muestra: la agenda no se toca."""
+    inicio = dt_a_ms(appt.start_time)
+    evento = next((e for e in eventos or [] if abs(e['inicio'] - inicio) <= TOLERANCIA_EVENTO_MS), None)
+    vinculada = traza and traza['estado'] not in ('sin_vincular', 'sin_dato')
+    if (appt.result or '') in operacion.RESULTADOS_NO_VIGENTES:
+        estado = 'cancelada'
+    elif vinculada:
+        estado = 'sin_evento' if traza['estado'] in trazabilidad.NO_OCUPA else 'vigente'
+    elif eventos is not None and evento is None:
+        estado = 'sin_evento'
+    else:
+        estado = 'vigente'
+    cliente = appt.client
+    return {
+        'id': str(appt.id),
+        'inicio': inicio,
+        'fin': evento['fin'] if evento else inicio + _duracion_min(appt) * 60000,
+        'nombre': (cliente.full_name if cliente else None) or 'Agenda',
+        'estado': estado,
+        'resultado': appt.result,
+        'calendar': traza,
+    }
+
+
+# {(user_id, desde, hasta): (vence (monotonic), trazas)}: lo leído para seguir las agendas en Calendar.
+_traza_cache = {}
+
+
+def _trazas(user_id, citas, desde, hasta):
+    """Las trazas en Calendar de esas agendas de un closer (trazabilidad.trazas), con 2 min de caché."""
+    clave, ahora = (user_id, desde, hasta), time.monotonic()
+    guardado = _traza_cache.get(clave)
+    if guardado and guardado[0] > ahora:
+        return guardado[1]
+    out = trazabilidad.trazas(user_id, citas, desde, hasta)
+    if out is None:
+        return None
+    if len(_traza_cache) > 500:
+        _traza_cache.clear()
+    _traza_cache[clave] = (ahora + CACHE_GOOGLE_S, out)
+    return out
+
+
 def ocupacion_google(desde, hasta):
-    """{persona_id: {'estado', 'franjas', 'eventos'}} de cada persona de Team entre desde y hasta (ms).
-    estado: 'ok' (franjas = lo ocupado en sus calendarios de conflicto, unido; eventos = cada uno con
-    su título, None si es privado), 'error' (Google no
+    """{persona_id: {'estado', 'franjas', 'eventos', 'agendas'}} de cada persona de Team entre desde y
+    hasta (ms). estado: 'ok' (franjas = lo ocupado en sus calendarios de conflicto, unido; eventos = cada
+    uno con su título, None si es privado), 'error' (Google no
     respondió: no se sabe), 'sin_google' (no conectó su calendario) o 'sin_usuario' (su email no es el
-    de un usuario activo). A diferencia del motor, acá no saber no se muestra como libre."""
+    de un usuario activo). A diferencia del motor, acá no saber no se muestra como libre.
+    agendas: las de n8n de ese closer, con si siguen en pie (agenda_operacion_a_dict). trazas: {appointment_id:
+    traza} de todas sus agendas (las de Agendas 2.0 también): qué pasó con su evento en Calendar."""
     personas = colecciones()['personas']
     usuarios = _usuarios_de_personas({'personas': personas})
     con_calendar = _con_calendar(set(usuarios.values()))
     por_usuario = {u: _ocupado_semana(u, desde, hasta) for u in set(usuarios.values()) & con_calendar}
+    agendas = _agendas_operacion(set(usuarios.values()), desde, hasta)
     out = {}
     for p in personas:
         u = usuarios.get(p['id'])
+        leido = por_usuario.get(u)
         if u is None:
             out[p['id']] = {'estado': 'sin_usuario', 'franjas': [], 'eventos': []}
         elif u not in con_calendar:
             out[p['id']] = {'estado': 'sin_google', 'franjas': [], 'eventos': []}
-        elif por_usuario[u] is None:
+        elif leido is None:
             out[p['id']] = {'estado': 'error', 'franjas': [], 'eventos': []}
         else:
-            out[p['id']] = {'estado': 'ok', **por_usuario[u]}
+            out[p['id']] = {'estado': 'ok', **leido}
+        eventos = leido['eventos'] if leido else None
+        citas = agendas.get(u, [])
+        trazas = (_trazas(u, citas, desde, hasta) if citas else {}) if leido else None
+        out[p['id']]['trazas'] = trazas or {}
+        out[p['id']]['agendas'] = [
+            agenda_operacion_a_dict(a, eventos, (trazas or {}).get(str(a.id))) for a in citas if not a.agenda_payload
+        ]
     return out
 
 
 # --- Pagina publica -----------------------------------------------------------------------------
 
-CAMPOS_EVENTO_PUBLICO = ('id', 'nombre', 'slug', 'duracion', 'reservas', 'antel', 'paso', 'zona', 'desc', 'redir')
+CAMPOS_EVENTO_PUBLICO = (
+    'id', 'nombre', 'slug', 'duracion', 'reservas', 'antel', 'paso', 'zona', 'desc', 'redir', 'gracias',
+)
 
 
 # El formulario de un evento con persona fija que no eligió uno: solo los datos de contacto.
@@ -668,7 +822,9 @@ def _disponible(d, e):
     funnel = buscar(d, 'funnels', pub['evento'].get('funnel'))
     if funnel and not funnel.get('activo'):
         return None
-    return pub['evento'], form, funnel
+    # La página de gracias no se publica: va la del evento en vivo, si todavía existe.
+    gracias = e.get('gracias') if buscar(d, 'gracias', e.get('gracias')) else ''
+    return {**pub['evento'], 'gracias': gracias}, form, funnel
 
 
 def evento_disponible(d, funnel_slug, evento_slug):
@@ -700,6 +856,67 @@ def vista_publica(evento, form, funnel):
         'form': form,
         'funnel': {'nombre': funnel['nombre'], 'slug': funnel['slug']} if funnel else None,
     }
+
+
+# --- Página de gracias --------------------------------------------------------------------------
+
+# Los casos de éxito de la Academia cambian poco y la API tiene un límite compartido (60 por minuto):
+# se piden cada CACHE_CASOS_S como mucho. Si la Academia falla, quedan los últimos que se trajeron.
+CACHE_CASOS_S = 600
+_casos = {'en': 0.0, 'lista': []}
+
+
+def _caso(c):
+    foto, video = c.get('photo_url'), c.get('video_url')
+    return {
+        'nombre': str(c.get('name') or '')[:120],
+        'meta': str(c.get('meta') or '')[:200],
+        'resumen': str(c.get('summary') or '')[:300],
+        'cita': str(c.get('quote') or '')[:3000],
+        'foto': foto if isinstance(foto, str) and foto.startswith('https://') else '',
+        'video': video if isinstance(video, str) and video.startswith('https://') else '',
+    }
+
+
+def casos_de_exito(ahora=None):
+    ahora = time.monotonic() if ahora is None else ahora
+    if _casos['en'] and ahora - _casos['en'] < CACHE_CASOS_S:
+        return _casos['lista']
+    _casos['en'] = ahora  # aunque falle: no reintentar en cada visita
+    try:
+        r = LearnationService.get_success_cases()
+        _casos['lista'] = [_caso(c) for c in (r.get('cases') or []) if isinstance(c, dict) and c.get('name')]
+    except LearnationAPIError as e:
+        log.warning('Casos de éxito de la Academia: %s', e)
+    return _casos['lista']
+
+
+def _video_publico(v):
+    """{src, tipo}: el archivo del volumen (lo sirve /publico/videos) o el link tal cual; None si no hay."""
+    if v.get('archivo'):
+        return {'tipo': 'archivo', 'src': '/api/agendas-v2/publico/videos/' + v['archivo']}
+    if v.get('url'):
+        return {'tipo': 'link', 'src': v['url']}
+    return None
+
+
+def gracias_publica(d, gracias_id):
+    """Lo que ve el lead en la página de gracias, o None si no existe."""
+    g = buscar(d, 'gracias', gracias_id)
+    if not g:
+        return None
+    return {
+        'id': g['id'],
+        'video': _video_publico(g['video']),
+        'plan': _video_publico(g['plan']),
+        'segundos': g['segundos'],
+        'casos': casos_de_exito() if g['casos'] else [],
+    }
+
+
+def video_en_uso(d, video_id, salvo=None):
+    """¿Alguna página de gracias (fuera de `salvo`) usa este archivo?"""
+    return any(g['id'] != salvo and video_id in (g['video']['archivo'], g['plan']['archivo']) for g in d['gracias'])
 
 
 def _limpiar_respuestas(preguntas, resp):
@@ -747,6 +964,41 @@ def horarios(d, evento, form, resp, ahora=None):
     d, elegibles = solo_elegibles(d)
     asig = asignacion(_contexto(evento, form, limpias), d, {**_ocupacion(ahora, elegibles), 'prueba': False})
     return sorted({s['t'] for s in asig['slots']})
+
+
+def version_para_prueba(d, e):
+    """(evento, form, 'publicada'|'borrador') que se prueba: la publicada si existe (la que ve el lead),
+    si no el borrador. Sin mirar si está activo: se puede probar algo pausado."""
+    pub = version_publicada(e)
+    if pub:
+        evento, form, version = pub['evento'], pub.get('form'), 'publicada'
+    else:
+        evento, form, version = e, buscar(d, 'formularios', e.get('formulario')), 'borrador'
+    if not form and evento.get('persona'):
+        form = form_solo_contacto()
+    return evento, form, version
+
+
+def horarios_prueba(d, evento_id, grupo, ahora=None):
+    """Lo que vería el lead de esa prioridad (grupo): los mismos horarios que la página pública (closers
+    elegibles, agendas y Google Calendar), salteando el formulario. Para la dirección: dice de qué
+    closer es cada horario. None si el evento no existe."""
+    e = buscar(d, 'eventos', evento_id)
+    if not e:
+        return None
+    evento, form, version = version_para_prueba(d, e)
+    ahora = ahora or ahora_ms()
+    d, elegibles = solo_elegibles(d)
+    # Sin reglas y con `resto` = la prioridad elegida: el ruteo cae siempre ahí.
+    ctx = {**_contexto(evento, form or {}, {}), 'reglas': [], 'resto': str(grupo or '')}
+    asig = asignacion(ctx, d, {**_ocupacion(ahora, elegibles), 'prueba': False})
+    return {
+        'version': version,
+        'slots': sorted(({'t': s['t'], 'p': s['p']} for s in asig['slots']), key=lambda s: s['t']),
+        'grupo': asig['grupo']['id'] if asig.get('grupo') else '',
+        'regla': asig.get('regla') or '',
+        'desborde': bool(asig.get('desborde')),
+    }
 
 
 def setters_activos():
@@ -813,21 +1065,35 @@ def _segmento(d, form, asig):
 
 # --- El lead que vuelve --------------------------------------------------------------------------
 
-CONTACTO_GUARDADO = ('c-nombre', 'c-telefono', 'c-instagram')
+CONTACTO_GUARDADO = ('c-telefono', 'c-email', 'c-nombre', 'c-instagram')
+# Con lo que se reconoce al lead: si lo escribió de nuevo vale lo que escribió (puede ser un número nuevo).
+IDENTIFICA = ('c-telefono', 'c-email')
 
 
-def datos_guardados(form, email):
-    """Lo que ya sabemos del lead por su email, para no volver a pedírselo: (cliente, respuestas de
-    contacto válidas, completos). `completos` es False si falta (o no sirve) alguno obligatorio."""
-    cliente = operacion.cliente_por_email(email) if isinstance(email, str) else None
+def cliente_de(resp, pais):
+    """El cliente del lead por lo que ya escribió: su correo o, si no, su WhatsApp (con el país elegido)."""
+    resp = resp if isinstance(resp, dict) else {}
+    email, tel = resp.get('c-email'), resp.get('c-telefono')
+    cliente = operacion.cliente_por_email(email) if isinstance(email, str) and '@' in email else None
+    if not cliente and isinstance(tel, str) and tel.strip():
+        cliente = operacion.cliente_por_telefono(telefono_e164(pais, tel))
+    return cliente
+
+
+def datos_guardados(form, cliente):
+    """Lo que ya sabemos del lead, para no volver a pedírselo: (respuestas de contacto válidas,
+    completos). `completos` es False si falta (o no sirve) alguno obligatorio."""
     if not cliente:
-        return None, {}, False
+        return {}, False
     pl = cliente.formulario_payload if isinstance(cliente.formulario_payload, dict) else {}
     lead = pl.get('lead') if isinstance(pl.get('lead'), dict) else {}
     nombre = lead.get('nombre') or cliente.full_name
+    email = cliente.email or ''
     crudos = {
-        'c-nombre': '' if nombre == 'Desconocido' else nombre,
         'c-telefono': lead.get('telefono') or cliente.phone,
+        # El cliente creado sin correo tiene uno inventado (no-email-…@neurops.com): no sirve.
+        'c-email': '' if email.startswith('no-email-') else email,
+        'c-nombre': '' if nombre == 'Desconocido' else nombre,
         'c-instagram': lead.get('instagram') or cliente.instagram,
     }
     preguntas = {q['id']: q for q in contacto_preguntas(form)}
@@ -842,31 +1108,95 @@ def datos_guardados(form, email):
             resp[k] = v
         elif q.get('obligatoria'):
             completos = False
-    return cliente, resp, completos
+    return resp, completos
+
+
+def respuestas_guardadas(form, cliente):
+    """Las respuestas que el lead ya dio a este mismo formulario (su último envío), para que solo las
+    confirme. None si el último fue otro formulario, si este cambió de preguntas o si alguna ya no sirve:
+    en esos casos responde de nuevo."""
+    pl = cliente.formulario_payload if cliente and isinstance(cliente.formulario_payload, dict) else {}
+    qs = (form or {}).get('preguntas') or []
+    if not qs or not form.get('id') or pl.get('formulario_id') != form['id']:
+        return None
+    previas = {r.get('pregunta_id'): r for r in pl.get('respuestas') or [] if isinstance(r, dict)}
+    if set(previas) != {q['id'] for q in qs}:
+        return None
+    resp = {}
+    for q in qs:
+        r = previas[q['id']]
+        if con_opciones(q['tipo']):
+            v = r.get('opcion_id') if isinstance(r.get('opcion_id'), str) else ''
+            if v and not any(o['id'] == v for o in q['opciones']):
+                return None
+        else:
+            crudo = r.get('respuesta') if isinstance(r.get('respuesta'), str) else ''
+            v = limpiar_respuesta(q, crudo)[: LARGO_MAX_TEXTO.get(q['tipo'], 300)]
+        if validar_respuesta(q, v):
+            return None
+        if v:
+            resp[q['id']] = v
+    return resp
+
+
+def con_guardados(form, cuerpo, resp):
+    """Lo que el lead no volvió a escribir porque confirmó lo que ya teníamos: sus datos de contacto
+    (`datos_guardados`) y sus respuestas al formulario (`respuestas_guardadas`). Salen de la base,
+    nunca del navegador."""
+    resp = resp if isinstance(resp, dict) else {}
+    datos, respuestas = cuerpo.get('datos_guardados') is True, cuerpo.get('respuestas_guardadas') is True
+    if not datos and not respuestas:
+        return resp
+    cliente = cliente_de(resp, cuerpo.get('pais'))
+    if not cliente:
+        return resp
+    extra = {}
+    if datos:
+        guardados, _ = datos_guardados(form, cliente)
+        extra.update({k: v for k, v in guardados.items() if not (k in IDENTIFICA and resp.get(k))})
+    if respuestas:
+        extra.update(respuestas_guardadas(form, cliente) or {})
+    return {**resp, **extra}
 
 
 def _tapar(v, ver):
     return v[:ver] + '•••' if v else ''
 
 
-def conocido(form, email, ahora=None):
-    """Lo que ve el lead que vuelve: su nombre (para precargarlo), el WhatsApp y el Instagram tapados
-    (nadie saca el contacto de otro con su email) y el horario de su próxima agenda, si tiene."""
-    cliente, resp, completos = datos_guardados(form, email)
+def _corte(evento, form, resp):
+    """Qué pasaría al terminar las preguntas con esas respuestas: no (no califica, por una opción o porque
+    la segmentación lo manda a «No califica») o url (una regla lo manda a otra página)."""
+    _, _, descalifica = _limpiar_respuestas(preguntas_flujo(form), resp)
+    if descalifica:
+        return {'no': True, 'url': ''}
+    r = {'url': '', 'no': False} if evento.get('persona') else grupo_por_reglas(form, resp)
+    return {'no': bool(r.get('no')), 'url': r.get('url') or ''}
+
+
+def conocido(evento, form, resp, pais, ahora=None):
+    """Lo que ve el lead que vuelve (se lo busca por correo o WhatsApp): su nombre (para precargarlo),
+    el WhatsApp y el Instagram tapados (nadie saca el contacto de otro), el horario de su próxima
+    agenda y, si ya respondió este mismo formulario, cuándo (las respuestas no: solo las confirma)."""
+    cliente = cliente_de(resp, pais)
     if not cliente:
         return {'conocido': False}
-    tel = re.sub('[^0-9]', '', resp.get('c-telefono', ''))
+    guardados, completos = datos_guardados(form, cliente)
+    tel = re.sub('[^0-9]', '', guardados.get('c-telefono', ''))
     proxima = operacion.proxima_de(cliente.id, ms_a_dt(ahora or ahora_ms()))
+    previas = respuestas_guardadas(form, cliente)
+    pl = cliente.formulario_payload if isinstance(cliente.formulario_payload, dict) else {}
+    respuestas = None if previas is None else {'enviado': pl.get('enviado') or None, **_corte(evento, form, previas)}
     return {
         'conocido': True,
         'completos': completos,
         'datos': {
-            'nombre': (resp.get('c-nombre') or '').split(' ')[0],
-            'nombre_completo': resp.get('c-nombre') or '',
+            'nombre': (guardados.get('c-nombre') or '').split(' ')[0],
+            'nombre_completo': guardados.get('c-nombre') or '',
             'telefono': '+' + tel[:2] + ' ••• ' + tel[-3:] if tel else '',
-            'instagram': '@' + _tapar(resp.get('c-instagram', ''), 2) if resp.get('c-instagram') else '',
+            'instagram': '@' + _tapar(guardados.get('c-instagram', ''), 2) if guardados.get('c-instagram') else '',
         },
         'proxima': {'inicio': dt_a_ms(proxima.start_time)} if proxima else None,
+        'respuestas': respuestas,
     }
 
 
@@ -891,8 +1221,7 @@ def registrar_avance(d, evento, form, funnel, cuerpo):
     con un email válido (ya dejó sus datos). Un registro por lead y evento; el paso nunca retrocede.
     Devuelve False si no hay email válido."""
     crudas = cuerpo.get('resp') if isinstance(cuerpo.get('resp'), dict) else {}
-    if cuerpo.get('datos_guardados') is True:
-        crudas = {**crudas, **datos_guardados(form, crudas.get('c-email'))[1]}
+    crudas = con_guardados(form, cuerpo, crudas)
     resp = {}
     for q in preguntas_flujo(form):
         crudo = crudas.get(q['id'])
@@ -1006,18 +1335,18 @@ def _respuesta(appt):
 
 def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     """Toma la agenda y la escribe en la operacion (operacion.py). Devuelve (resultado, creada):
-    resultado es {'descalificada': True} o {'id', 'inicio', 'fin', 'duracion'} (ms).
+    resultado es {'descalificada': True}, {'descalificada': True, 'redirigir': url} (una regla lo manda a
+    otra página) o {'id', 'inicio', 'fin', 'duracion'} (ms).
     Lanza ReservaRechazadaError."""
     from app.models import User
 
     ahora = ahora or ahora_ms()
     preguntas = preguntas_flujo(form)
     resp = cuerpo.get('resp') if isinstance(cuerpo.get('resp'), dict) else {}
-    # El lead que vuelve y confirmó sus datos no los escribe de nuevo: salen de lo que ya tenemos.
-    if cuerpo.get('datos_guardados') is True:
-        resp = {**resp, **datos_guardados(form, resp.get('c-email'))[1]}
+    # El lead que vuelve y confirmó sus datos o sus respuestas no los escribe de nuevo: salen de lo que ya tenemos.
+    resp = con_guardados(form, cuerpo, resp)
     limpias, errores, descalifica = _limpiar_respuestas(preguntas, resp)
-    pais = cuerpo.get('pais') if any(p['c'] == cuerpo.get('pais') for p in PAISES) else 'BO'
+    pais = cuerpo.get('pais') if any(p['c'] == cuerpo.get('pais') for p in [*PAISES, PAIS_OTRO]) else 'BO'
     tz = cuerpo.get('tz') if zona_valida(cuerpo.get('tz')) else (evento['zona']['tz'] or TZ_DEF)
     origen = slugify(str(cuerpo.get('origen') or ''))[:60]
     lead = {'preguntas': preguntas, 'resp': limpias, 'pais': pais, 'tz': tz}
@@ -1030,6 +1359,19 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
         return {'descalificada': True}, True
     if errores:
         raise ReservaRechazadaError('invalido', errores)
+    # Una regla que manda a otra página: no agenda, queda como los que no califican.
+    ruteo = {'url': '', 'no': False} if evento.get('persona') else grupo_por_reglas(form, limpias)
+    if ruteo['no']:
+        # La segmentación lo manda a «No califica».
+        _cerrar_intento(evento, form, funnel, limpias, origen, setter, True)
+        operacion.registrar_descalificado({**armar_reserva(**base, asig=None, slot=None), 'descalificada': True})
+        return {'descalificada': True}, True
+    url = ruteo['url']
+    if url:
+        _cerrar_intento(evento, form, funnel, limpias, origen, setter, True)
+        payload = armar_reserva(**base, asig=None, slot=None)
+        operacion.registrar_descalificado({**payload, 'descalificada': True, 'redirigir': url})
+        return {'descalificada': True, 'redirigir': url}, True
 
     try:
         inicio = int(datetime.fromisoformat(str(cuerpo.get('inicio')).replace('Z', '+00:00')).timestamp() * 1000)
@@ -1040,7 +1382,9 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     cliente = operacion.cliente_por_email(limpias.get('c-email'))
     previa = operacion.agenda_de(cliente.id, ms_a_dt(inicio)) if cliente else None
     if previa:
-        return {**_respuesta(previa), 'consultor': _consultor(d, db.session.get(User, previa.closer_id))}, False
+        invitacion = limpias.get('c-email') if previa.google_event_id else None
+        return {**_respuesta(previa), 'consultor': _consultor(d, db.session.get(User, previa.closer_id)),
+                'invitacion': invitacion}, False
 
     # Ya tiene otra agenda próxima: antes de tocar nada se le pregunta si quiere cambiarla de fecha o
     # sumar una sesión. La página repite el pedido con `si_ya_tiene`.
@@ -1055,14 +1399,29 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     if not slot or not slot['p'] or slot['p'] not in elegibles:
         raise ReservaRechazadaError('ocupado')
 
-    # Bloqueo del closer: dos leads que eligen el mismo horario a la vez no pueden quedar los dos.
-    closer = db.session.query(User).filter_by(id=elegibles[slot['p']]).with_for_update().first()
+    user_id = elegibles[slot['p']]
     # La sesión de ese closer en este evento (lo que ajustó o la propuesta) y su margen: los dos bloquean.
     dur, margen = sesion_de(buscar(d, 'personas', slot['p']), evento['id'], evento['duracion'], evento.get('margen'))
     fin = inicio + (dur + margen) * 60000
-    if not closer or _choca(closer.id, inicio, fin):
+    # Google primero, sin bloqueo: renovar el token hace commit y soltaría el bloqueo.
+    franjas = _franjas_frescas(user_id, inicio, fin)
+    # Bloqueo del closer: dos leads que eligen el mismo horario a la vez no pueden quedar los dos.
+    closer, choca, fuera_de_google = _bloquear_y_verificar(user_id, inicio, fin, franjas)
+    if choca:
         db.session.rollback()
+        # El mismo lead que confirmó dos veces a la vez: el primer pedido ya le tomó la agenda.
+        cliente = operacion.cliente_por_email(limpias.get('c-email'))
+        previa = operacion.agenda_de(cliente.id, ms_a_dt(inicio)) if cliente else None
+        if previa:
+            invitacion = limpias.get('c-email') if previa.google_event_id else None
+            return {**_respuesta(previa), 'consultor': _consultor(d, db.session.get(User, previa.closer_id)),
+                    'invitacion': invitacion}, False
         raise ReservaRechazadaError('ocupado')
+
+    def asegurar():
+        """Lo que llama registrar_agenda justo antes de escribir: buscar la agenda previa del lead lee su
+        Google Calendar y puede haber hecho commit (soltando el bloqueo). Vuelve a bloquear y a mirar."""
+        return _bloquear_y_verificar(user_id, inicio, fin, franjas)[1:]
 
     payload = {
         **armar_reserva(**base, asig=asig, slot={**slot, 'dur': dur, 'margen': margen}),
@@ -1074,14 +1433,17 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
         'setter_user_id': setter.id if setter else None,
     }
     appt, evento_viejo = operacion.registrar_agenda(
-        payload, closer, setter, ms_a_dt(inicio), ahora=ms_a_dt(ahora), decision=decision
+        payload, closer, setter, ms_a_dt(inicio), ahora=ms_a_dt(ahora), decision=decision, ignorar_ids=fuera_de_google,
+        asegurar=asegurar,
     )
     if not appt:
         raise ReservaRechazadaError('ocupado')
     _cerrar_intento(evento, form, funnel, limpias, origen, setter, False)
     _subir_version()
     db.session.commit()
-    operacion.crear_evento(appt, evento['nombre'], evento_a_borrar=evento_viejo)
+    # Con correo, el evento de Calendar le manda la invitación al lead: la página se lo dice solo si salió.
+    con_evento = operacion.crear_evento(appt, evento['nombre'], evento_a_borrar=evento_viejo)
     operacion.avisar_discord(appt)
     operacion.avisar_whatsapp(appt)
-    return {**_respuesta(appt), 'consultor': _consultor(d, closer)}, True
+    invitacion = limpias.get('c-email') if con_evento else None
+    return {**_respuesta(appt), 'consultor': _consultor(d, closer), 'invitacion': invitacion}, True

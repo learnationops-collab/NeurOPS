@@ -334,3 +334,27 @@ Mientras tanto, la ficha avisa en pantalla los dos números ambiguos (puntos 3 y
 ### Dar, renovar y quitar desde la ficha (30/09/2026)
 
 La pestaña Fulfillment tiene los botones «Dar acceso», «Renovar acceso» y «Quitar acceso» (`app/services/ficha_academia.py`, permiso `cobrar`). Los tres usan la única escritura que tiene la Academia, `POST /users/{id}/products` con `expires_at`: dar crea la cuenta si no existe (el mismo camino de alta que la venta, `grant_access`), renovar la reasigna por el id del alumno sin tocar su correo, y **quitar la reasigna con vencimiento hoy** porque no hay un endpoint para revocar (pedido 10). Cada cambio queda en el historial del lead y en el hilo del cliente.
+
+---
+
+## 7. Cada pago avisa a la Academia (2026-10-13)
+
+> **Estado**: implementado. Del lado de la Academia es su ADR-128 y `POST /api/v1/payments` (doc de la Academia: `docs/MODELO/API.md` §2.8).
+
+Hasta ahora el acceso en la Academia se fijaba solo al declarar la venta o con «Renovar acceso». Las cuotas y los pagos que llegaban después no lo movían. Ahora **cada `FinancialSale` que nace de verdad** se le avisa a la Academia en un hilo aparte (`app/services/academy_payment_sync.py`):
+
+- **Dónde se engancha:** el webhook de la hoja (`receive_financial_sales`), la venta declarada (`SheetsService.post_to_sheets`) y el pago cargado a mano en la ficha (`ficha_pagos_service`). **No** en `_rebuild_sales`, que recrea todas las ventas en cada resincronización completa.
+- **Vencimiento** (`compute_payment_expiration`, función pura):
+  - seña: 7 días desde el pago;
+  - si queda alguna cuota de `InstallmentPlan` pendiente que vence después del pago: esa fecha + `GRACE_DAYS` (5);
+  - si no queda ninguna: 4 meses.
+  - La cuota que se está pagando suele seguir «pendiente» hasta que el closer la marca. Por eso solo cuentan las que vencen después del pago.
+- **Qué se manda:** `sale_id`, `email`, `work_client_id`, `fecha`, `monto`, `tipo_pago`, `product_slug` (por el mapeo de §5.1), `is_deposit_payment` y `expires_at`. Si la venta vino de la hoja, el tipo y el correo se toman de `raw_data`.
+- **Qué hace la Academia:**
+  - solo extiende, nunca acorta;
+  - convierte la seña si el pago no es seña;
+  - lo deja en el historial del alumno;
+  - avisa a quien da su próxima sesión.
+  - Es idempotente por `sale_id` y por fecha + monto + tipo, porque el mismo pago puede entrar por dos caminos.
+- **Fallos:** quedan en el log (`[ACADEMY PAYMENTS]`). La venta nunca se toca.
+- **Sigue pendiente:** acortar el acceso cuando una cuota se vence sin pagar (§5.3).

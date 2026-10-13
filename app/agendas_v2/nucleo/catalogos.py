@@ -37,9 +37,18 @@ def con_opciones(k):
     return k == 'opciones' or k == 'lista'
 
 
-# Datos de contacto: siempre se piden, en este orden. Solo se elige si son obligatorios. El correo va
-# primero: con él se reconoce al lead que ya agendó antes y no se le piden de nuevo sus datos.
+# Datos de contacto: siempre se piden, en este orden. Solo se elige si son obligatorios. El WhatsApp y el
+# correo van primero: con cualquiera de los dos se reconoce al lead que ya agendó antes y no se le piden
+# de nuevo sus datos (ni sus respuestas, si el formulario no cambió).
 CONTACTO = [
+    {
+        'k': 'telefono',
+        'tipo': 'telefono',
+        'n': 'WhatsApp',
+        'ico': 'whatsapp',
+        'titulo': '¿A qué WhatsApp te escribimos?',
+        'ayuda': 'Por ahí te confirmamos la llamada.',
+    },
     {
         'k': 'email',
         'tipo': 'email',
@@ -55,14 +64,6 @@ CONTACTO = [
         'ico': 'user',
         'titulo': '¿Cómo te llamás?',
         'placeholder': 'Nombre y apellido',
-    },
-    {
-        'k': 'telefono',
-        'tipo': 'telefono',
-        'n': 'WhatsApp',
-        'ico': 'whatsapp',
-        'titulo': '{nombre}, ¿a qué WhatsApp te escribimos?',
-        'ayuda': 'Por ahí te confirmamos la llamada.',
     },
     {
         'k': 'instagram',
@@ -168,6 +169,13 @@ PAISES = [
         ],
     },
     {
+        'c': 'PA',
+        'n': 'Panamá',
+        'd': '+507',
+        'ej': '6123 4567',
+        'z': [['America/Panama', 'Panamá', 'hora de Panamá']],
+    },
+    {
         'c': 'PY',
         'n': 'Paraguay',
         'd': '+595',
@@ -211,7 +219,13 @@ PAISES = [
 ]
 
 
+# «Otro país»: el lead escribe el código a mano (+507 …). Sin zona propia: queda la que tenga.
+PAIS_OTRO = {'c': 'OT', 'n': 'Otro país', 'd': '+', 'ej': '+507 6123 4567', 'z': []}
+
+
 def pais_de(c):
+    if c == PAIS_OTRO['c']:
+        return PAIS_OTRO
     return next((p for p in PAISES if p['c'] == c), PAISES[1])
 
 

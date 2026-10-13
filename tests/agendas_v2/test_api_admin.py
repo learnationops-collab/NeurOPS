@@ -43,7 +43,7 @@ def test_la_direccion_y_admin_leen_el_estado(client, gente, auth_headers, rol):
     r = client.get('/api/agendas-v2/estado', headers=auth_headers(gente[rol]))
     assert r.status_code == 200
     cuerpo = r.get_json()
-    assert set(cuerpo['cols']) == {'funnels', 'formularios', 'personas', 'grupos', 'eventos', 'roles'}
+    assert set(cuerpo['cols']) == {'funnels', 'formularios', 'personas', 'grupos', 'eventos', 'roles', 'gracias'}
     assert cuerpo['reservas'] == [] and cuerpo['version'] == 0
     assert cuerpo['integ']['gcal']['activo'] is False
     assert cuerpo['solo_lectura'] is False
@@ -216,6 +216,11 @@ def google_semana(monkeypatch):
         return None if r is None else [{'inicio': a, 'fin': b, 'titulo': t} for a, b, t in r]
 
     monkeypatch.setattr(GoogleService, 'eventos_ocupados', staticmethod(eventos))
+    # Lo que se lee para seguir cada agenda: respuestas['traza'][user_id] = [evento como _traza_de].
+    servicio._traza_cache.clear()
+    traza = staticmethod(lambda u, desde, hasta: respuestas.get('traza', {}).get(u, []))
+    monkeypatch.setattr(GoogleService, 'eventos_para_traza', traza)
+    monkeypatch.setattr(GoogleService, 'evento_para_traza', staticmethod(lambda u, cal, ev: 'borrado'))
     return respuestas
 
 
@@ -252,8 +257,95 @@ def test_ocupacion_distingue_error_sin_google_y_sin_usuario(client, db, dir_h, g
     assert {k: v['estado'] for k, v in oc.items()} == {'p1': 'error', 'p2': 'sin_google', 'p3': 'sin_usuario'}
 
 
+def test_ocupacion_trae_las_agendas_de_n8n_y_detecta_las_canceladas(client, db, dir_h, gente, google_semana):
+    from datetime import datetime
+
+    from app.models import Appointment, Client, GoogleCalendarToken
+
+    db.session.add(GoogleCalendarToken(user_id=gente['closer'].id, token_json='{}'))
+    cli = Client(full_name='Lucía', email='lucia@x.com')
+    db.session.add(cli)
+    db.session.flush()
+    hora = lambda h: datetime(1970, 1, 2, h)  # noqa: E731
+    for h, res in ((10, 'Confirmado'), (12, 'Pendiente'), (14, 'Cancelado')):
+        db.session.add(Appointment(client_id=cli.id, closer_id=gente['closer'].id, start_time=hora(h), result=res))
+    db.session.commit()
+    client.put('/api/agendas-v2/personas/p1', headers=dir_h, json={'nombre': 'Ana', 'email': 'ana@neuro.com'})
+    ms = lambda h: int((86400 + h * 3600) * 1000)  # noqa: E731
+    # La de las 10 sigue en su Google (dura lo que su evento); la de las 12 ya no está.
+    google_semana[gente['closer'].id] = [(ms(10), ms(10) + 45 * 60000, 'Lucía')]
+    ana = _ocupacion(client, dir_h).get_json()['ocupacion']['p1']
+    assert [a['estado'] for a in ana['agendas']] == ['vigente', 'sin_evento', 'cancelada']
+    assert {a['nombre'] for a in ana['agendas']} == {'Lucía'}
+    assert ana['agendas'][0]['fin'] - ana['agendas'][0]['inicio'] == 45 * 60000
+    # Sin poder leer su Google no se sabe: la que no está marcada cancelada queda vigente.
+    servicio._google_semana_cache.clear()
+    google_semana[gente['closer'].id] = None
+    ana = _ocupacion(client, dir_h).get_json()['ocupacion']['p1']
+    assert [a['estado'] for a in ana['agendas']] == ['vigente', 'vigente', 'cancelada']
+
+
+def _ev(id_, inicio, invitados=(), estado='confirmed', titulo='', disponible=False, cal='ventas'):
+    return {
+        'id': id_, 'calendario': cal, 'estado': estado, 'inicio': inicio, 'fin': inicio + 3600000,
+        'disponible': disponible,
+        'titulo': titulo, 'invitados': [{'email': e, 'respuesta': r, 'propio': False} for e, r in invitados],
+    }
+
+
+def test_cada_agenda_se_vincula_a_su_evento_y_se_sabe_que_paso(client, db, dir_h, gente, google_semana):
+    from datetime import datetime
+
+    from app.models import Appointment, Client, GoogleCalendarToken
+
+    db.session.add(GoogleCalendarToken(user_id=gente['closer'].id, token_json='{}'))
+    lu = Client(full_name='Lucía Pérez', email='lucia@x.com')
+    mo = Client(full_name='Mónica Díaz', email='mo@x.com')
+    db.session.add_all([lu, mo])
+    db.session.flush()
+    hora = lambda h: datetime(1970, 1, 2, h)  # noqa: E731
+    ms = lambda h: int((86400 + h * 3600) * 1000)  # noqa: E731
+    citas = [Appointment(client_id=c.id, closer_id=gente['closer'].id, start_time=hora(h), result='Confirmado')
+             for c, h in ((lu, 9), (mo, 11), (lu, 13), (mo, 15), (lu, 17), (mo, 19))]
+    db.session.add_all(citas)
+    db.session.commit()
+    client.put('/api/agendas-v2/personas/p1', headers=dir_h, json={'nombre': 'Ana', 'email': 'ana@neuro.com'})
+    google_semana[gente['closer'].id] = [(ms(9), ms(10), 'Lucía')]
+    google_semana['traza'] = {gente['closer'].id: [
+        _ev('a', ms(9), [('lucia@x.com', 'accepted')]),                     # la de las 9, por el email
+        _ev('b', ms(11), titulo='Llamada con Mónica'),                     # la de las 11, por el nombre
+        _ev('c', ms(13), [('lucia@x.com', 'needsAction')], estado='cancelled'),
+        _ev('d', ms(15), [('mo@x.com', 'declined')]),
+        _ev('e', ms(17), [('lucia@x.com', 'accepted')], disponible=True),
+        _ev('x', ms(19), titulo='Otra cosa'),                              # la de las 19 no se vincula
+    ]}
+    tr = _ocupacion(client, dir_h).get_json()['ocupacion']['p1']['trazas']
+    estados = [(tr[str(a.id)]['estado'], tr[str(a.id)]['vinculo']) for a in citas]
+    assert estados == [('ok', 'email'), ('ok', 'nombre'), ('cancelado', 'email'), ('rechazado', 'email'),
+                       ('disponible', 'email'), ('sin_vincular', None)]
+    db.session.expire_all()
+    assert db.session.get(Appointment, citas[0].id).calendar_evento_id == 'a'
+    assert db.session.get(Appointment, citas[0].id).google_event_id is None  # el de NeurOPS no se toca
+    # El evento de las 9 se movió a las 10 y el de las 11 ya no está: se sabe por el vínculo guardado.
+    servicio._traza_cache.clear()
+    google_semana['traza'] = {gente['closer'].id: [_ev('a', ms(10), [('lucia@x.com', 'accepted')])]}
+    tr = _ocupacion(client, dir_h).get_json()['ocupacion']['p1']['trazas']
+    assert tr[str(citas[0].id)] == {'estado': 'movido', 'vinculo': 'email', 'inicio_nuevo': ms(10)}
+    assert tr[str(citas[1].id)]['estado'] == 'borrado'
+
+
 def test_ocupacion_exige_un_rango_valido_y_no_es_para_el_closer(client, gente, dir_h, auth_headers, google_semana):
     assert _ocupacion(client, dir_h, 10, 10).status_code == 400
     assert _ocupacion(client, dir_h, 0, 11 * 86400000).status_code == 400
     assert client.get('/api/agendas-v2/ocupacion', headers=dir_h).status_code == 400
     assert _ocupacion(client, auth_headers(gente['closer'])).status_code == 403
+
+
+def test_el_estado_dice_en_que_zona_mira_cada_uno(client, db, gente, dir_h):
+    # Sin WhatsApp ni zona elegida: decide el navegador.
+    assert client.get('/api/agendas-v2/estado', headers=dir_h).get_json()['zona'] is None
+    # Con WhatsApp de Argentina, la semana del equipo se ve en hora de Buenos Aires.
+    gente['director'].two_chat_number = '5491122334455'
+    db.session.commit()
+    assert client.get('/api/agendas-v2/estado', headers=dir_h).get_json()['zona'] == 'America/Argentina/Buenos_Aires'
+

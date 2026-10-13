@@ -31,12 +31,12 @@ function Evento({ e, formularios, onCambio, onBorrar }) {
                 </label>
             </div>
             <div className="me-fila">
-                <label className="ses-campo"><span>Sesión</span>
+                <div className="ses-campo"><span aria-hidden="true">Sesión</span>
                     <CampoMinutos id={'me-dur-' + e.id} label="Duración" valor={e.duracion} onCambio={v => onCambio({ duracion: v })} />
-                </label>
-                <label className="ses-campo"><span>Margen</span>
+                </div>
+                <div className="ses-campo"><span aria-hidden="true">Margen</span>
                     <CampoMinutos margen id={'me-mar-' + e.id} label="Margen" valor={e.margen || 0} onCambio={v => onCambio({ margen: v })} />
-                </label>
+                </div>
                 <Sx sm label="Formulario" valor={formularios.some(f => f.id === e.formulario) ? e.formulario : SIN_FORM} onChange={v => onCambio({ formulario: v })}
                     opciones={[{ v: SIN_FORM, n: 'Sin formulario (solo contacto)', icono: 'user' }].concat(formularios.map(f => ({ v: f.id, n: f.nombre, icono: 'form' })))} />
             </div>

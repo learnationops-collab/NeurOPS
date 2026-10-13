@@ -13,6 +13,8 @@ export function telefonoE164(paisC, tel) {
     const dig = crudo.replace(/\D/g, '');
     if (crudo.startsWith('+')) return '+' + dig;
     const pref = paisDe(paisC).d.replace(/\D/g, '');
+    // «Otro país»: el código va escrito en el número (con o sin + o 00).
+    if (!pref) return '+' + (crudo.startsWith('00') ? dig.slice(2) : dig);
     if (crudo.startsWith('00') && dig.slice(2).startsWith(pref)) return '+' + dig.slice(2);
     return '+' + pref + dig.replace(/^0+/, '');
 }
@@ -20,7 +22,12 @@ export function telefonoE164(paisC, tel) {
 export function textoRespuesta(q, v, paisC) {
     if (!v) return '';
     if (conOpciones(q.tipo)) { const o = q.opciones.find(x => x.id === v); return o ? o.texto : ''; }
-    if (q.tipo === 'telefono') return paisDe(paisC).d + ' ' + v;
+    if (q.tipo === 'telefono') {
+        // Con el código escrito a mano (+… u «Otro país») no se le suma el del país elegido.
+        if (String(v).trim().startsWith('+')) return String(v).trim();
+        const d = paisDe(paisC).d;
+        return d === '+' ? '+' + String(v).trim().replace(/^0+/, '') : d + ' ' + v;
+    }
     if (q.tipo === 'instagram') return '@' + v;
     return v;
 }
@@ -43,7 +50,8 @@ export function armarReserva({ lead, evento, funnel, form, asig, slot, origen, s
             opcion_id: o ? o.id : null, puntos: o ? o.puntos : null, peso: q.peso, descalifica: !!(o && o.descalifica),
         };
     });
-    const descalificada = respuestas.some(r => r.descalifica);
+    // No califica por una respuesta o porque la segmentación lo manda a «No califica».
+    const descalificada = respuestas.some(r => r.descalifica) || !!(asig && asig.no);
     return {
         version: VERSION_CONTRATO,
         evento_id: evento.id, evento_slug: evento.slug, funnel_id: funnel ? funnel.id : '', funnel_slug: funnel ? funnel.slug : '',

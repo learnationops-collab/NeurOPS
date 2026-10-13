@@ -11,6 +11,9 @@ from app.agendas_v2.nucleo.normalizar import franjas, normal_horario
 from app.agendas_v2.nucleo.tiempo import clave_dia, zoned_to_utc
 
 MAX_DIAS = 120
+# Las sesiones se encadenan una tras otra (sesión + margen). Si un inicio no está libre, se busca el
+# siguiente de a estos minutos: después de algo ocupado, la cadena sigue en el primer inicio libre.
+PASO_BUSQUEDA = 5
 
 AG_DEF = {
     'reservas': {'modo': 'dias', 'n': 30, 'tipo': 'corridos', 'desde': '', 'hasta': ''},
@@ -70,26 +73,35 @@ def dias_del_horizonte(o, tz, ahora):
     return out
 
 
-def slots_persona(p, dur, o=None, ahora=None, ocupado=None, margen=0):
-    """Inicios libres (ms UTC, ordenados) de la persona `p` para sesiones de `dur` minutos con `margen`
-    minutos después. La sesión tiene que entrar en su horario; el margen no (el último del día puede
-    pasarse), pero sí tiene que estar libre: sesión y margen no pueden pisar nada.
+def inicios_en_dias(p, dur, dias, margen=0, minimo=-math.inf, ocupado=None):
+    """Inicios (ms UTC, ordenados) de la persona `p` en esos días, encadenados para que le entren la
+    mayor cantidad de sesiones: cada una empieza donde termina el margen de la anterior, y si un inicio
+    no está libre se busca el siguiente de a PASO_BUSQUEDA minutos. La sesión tiene que entrar en su
+    horario; el margen no (el del final del día puede pasarse), pero sí tiene que estar libre.
     `ocupado(persona_id, inicio, dur)` dice si ya tiene algo en ese rato (reservas, Google Calendar)."""
-    o = o or agenda_opt(None, dur)
-    ahora = ahora_ms() if ahora is None else ahora
     ocupado = ocupado or (lambda pid, t, dur: False)
     tz = p.get('tz') or TZ_DEF
-    minimo = ahora + o['ant']
     out = []
-    for dia in dias_del_horizonte(o, tz, ahora):
+    for dia in dias:
         for r in franjas(p.get('horario'), dia['dow']):
-            m = a_min(r[0])
-            while m + dur <= a_min(r[1]):
+            m, fin = a_min(r[0]), a_min(r[1])
+            while m + dur <= fin:
                 t = zoned_to_utc(dia['y'], dia['m'], dia['d'], m // 60, m % 60, tz)
                 if t >= minimo and not ocupado(p.get('id'), t, dur + margen):
                     out.append(t)
-                m += o['paso']
+                    m += dur + margen
+                else:
+                    m += PASO_BUSQUEDA
     return sorted(out)
+
+
+def slots_persona(p, dur, o=None, ahora=None, ocupado=None, margen=0):
+    """Inicios libres de `p` para sesiones de `dur` minutos con `margen` después, en los días que ofrece
+    el evento y respetando su antelación mínima. Ver inicios_en_dias."""
+    o = o or agenda_opt(None, dur)
+    ahora = ahora_ms() if ahora is None else ahora
+    tz = p.get('tz') or TZ_DEF
+    return inicios_en_dias(p, dur, dias_del_horizonte(o, tz, ahora), margen, ahora + o['ant'], ocupado)
 
 
 # Horario genérico, solo para probar un evento cuando todavía no hay closers con horario.

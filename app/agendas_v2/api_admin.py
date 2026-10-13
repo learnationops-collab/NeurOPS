@@ -10,7 +10,7 @@ import re
 from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 
-from app.agendas_v2 import paquete, servicio
+from app.agendas_v2 import paquete, servicio, videos
 from app.agendas_v2.nucleo.normalizar import COLECCIONES
 from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, ROLE_SETTER
 
@@ -28,6 +28,7 @@ ID_VALIDO = re.compile(r'^[A-Za-z0-9_-]{1,40}$')
 # quedan el contacto y las respuestas del lead (son leads de otros setters) y el link de Meet.
 CAMPOS_DE_RESERVA_EN_LECTURA = (
     'id', 'estado', 'inicio_ms', 'fin_ms', 'duracion_min', 'margen_min', 'closer_id', 'evento_id', 'funnel_id', 'creada',
+    'cancelada',
 )
 
 
@@ -60,7 +61,8 @@ def _cuerpo():
 
 @bp.route('/estado', methods=['GET'])
 def estado():
-    """Todo lo que Thalamus necesita al abrir: colecciones, perfil propio, integraciones y reservas.
+    """Todo lo que Thalamus necesita al abrir: colecciones, perfil propio, integraciones, reservas y la
+    zona horaria de quien mira (zona_para_ver).
     `solo_lectura` le dice a la pantalla que esconda lo que se configura."""
     cols, reservas, lectura = servicio.colecciones(), servicio.reservas_para_estado(), _para_lectura()
     if lectura:
@@ -73,6 +75,7 @@ def estado():
             'perfil': servicio.perfil_de(current_user.id),
             'integ': servicio.integraciones(),
             'reservas': reservas,
+            'zona': servicio.zona_para_ver(current_user),
             'version': servicio.version(),
             'solo_lectura': lectura,
         }
@@ -140,11 +143,28 @@ def ocupacion():
     ocupacion = servicio.ocupacion_google(desde, hasta)
     if _para_lectura():
         # Lo ocupado sí; el título de cada evento del calendario de un closer no (el de sus agendas lleva
-        # el nombre del lead). El visor ya los muestra como «Ocupado», igual que los privados.
+        # el nombre del lead), ni el nombre del lead de cada agenda de n8n. El visor ya los muestra como
+        # «Ocupado», igual que los privados.
         ocupacion = {
-            pid: {**o, 'eventos': [{**e, 'titulo': None} for e in o.get('eventos') or []]} for pid, o in ocupacion.items()
+            pid: {
+                **o,
+                'eventos': [{**e, 'titulo': None} for e in o.get('eventos') or []],
+                'agendas': [{**a, 'nombre': None} for a in o.get('agendas') or []],
+            }
+            for pid, o in ocupacion.items()
         }
     return jsonify({'ocupacion': ocupacion})
+
+
+@bp.route('/eventos/<evento_id>/prueba', methods=['POST'])
+def prueba_horarios(evento_id):
+    """{grupo} → lo que vería un lead de esa prioridad en ese evento (la versión publicada, o el borrador
+    si nunca se publicó), salteando el formulario: {version, slots: [{t, p}], grupo, regla, desborde}.
+    No agenda nada."""
+    if not ID_VALIDO.match(evento_id or ''):
+        return jsonify({'message': 'Not found'}), 404
+    r = servicio.horarios_prueba(servicio.colecciones(), evento_id, _cuerpo().get('grupo'))
+    return jsonify(r) if r else (jsonify({'message': 'Not found'}), 404)
 
 
 @bp.route('/usuarios', methods=['GET'])
@@ -200,3 +220,56 @@ def paquete_importar():
         return jsonify({'resumen': paquete.resumen(plan), 'editados': tocados, 'version': servicio.version()})
     creados = paquete.importar(d, plan, usuario_id=current_user.id, en_funnel=funnel_id)
     return jsonify({'resumen': paquete.resumen(plan), 'creados': creados, 'version': servicio.version()}), 201
+
+
+# --- Videos de las páginas de gracias (volumen, ver videos.py) ---------------------------------------
+
+
+def _error_video(e):
+    estado = {'sin_volumen': 503, 'invalido': 400, 'no_existe': 404, 'desfasado': 409}[e.code]
+    cuerpo = {'code': e.code, 'message': str(e)}
+    if e.recibido is not None:
+        cuerpo['recibido'] = e.recibido
+    return jsonify(cuerpo), estado
+
+
+@bp.route('/videos', methods=['POST'])
+def video_crear():
+    """{nombre, tamano, tipo} → {video}: reserva el lugar; las partes llegan con PUT."""
+    c = _cuerpo()
+    try:
+        return jsonify({'video': videos.crear(c.get('nombre'), c.get('tamano'), c.get('tipo'))}), 201
+    except videos.VideoError as e:
+        return _error_video(e)
+
+
+@bp.route('/videos/<video_id>', methods=['GET'])
+def video_estado(video_id):
+    """Cuánto llegó: para retomar una subida cortada."""
+    try:
+        return jsonify({'video': videos.meta(video_id)})
+    except videos.VideoError as e:
+        return _error_video(e)
+
+
+@bp.route('/videos/<video_id>', methods=['PUT'])
+def video_parte(video_id):
+    """?desde=<bytes ya guardados>, el cuerpo es la parte (binario)."""
+    desde = request.args.get('desde', type=int)
+    if desde is None or desde < 0 or (request.content_length or 0) > videos.PARTE_MAX:
+        return jsonify({'code': 'invalido', 'message': 'Parte inválida.'}), 400
+    try:
+        return jsonify({'video': videos.recibir(video_id, desde, request.get_data(cache=False))})
+    except videos.VideoError as e:
+        return _error_video(e)
+
+
+@bp.route('/videos/<video_id>', methods=['DELETE'])
+def video_borrar(video_id):
+    """Borra el archivo si ninguna otra página de gracias lo usa (?salvo=<la que lo suelta>)."""
+    if not videos.RE_ID.fullmatch(video_id) or not videos.directorio():
+        return jsonify({'ok': True})
+    if servicio.video_en_uso(servicio.colecciones(), video_id, salvo=request.args.get('salvo')):
+        return jsonify({'ok': True, 'enUso': True})
+    videos.borrar(video_id)
+    return jsonify({'ok': True})

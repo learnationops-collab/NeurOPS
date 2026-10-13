@@ -11,7 +11,7 @@ import { ui } from '../../ui/estadoUi';
 import { toast } from '../../ui/toast';
 import ConfigEvento from './ConfigEvento';
 import Flujo from './Flujo';
-import { EstadoEv, copiarLink, probarEvento } from './comun';
+import { EstadoEv, copiarLink, probarEvento, probarSegmento } from './comun';
 
 export default function DetalleEvento({ e, ev }) {
     const { d } = useDatos();
@@ -52,6 +52,7 @@ export default function DetalleEvento({ e, ev }) {
                         <Icono n="copiar" s={15} />
                     </button>
                     <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={() => probarEvento(d, e)}><Icono n="play" />Probar borrador</button>
+                    {!lectura && <button type="button" className="btn btn--linea btn--sm" data-nav="" title="Saltear el formulario y ver lo que vería el lead de cada segmentación" onClick={() => probarSegmento(e)}><Icono n="users" />Probar segmento</button>}
                     {evCambio && !lectura && (
                         <button type="button" className="btn btn--linea btn--sm" onClick={descartar} disabled={!puedePublicar} title={sinPermiso}>
                             <Icono n="rotar" />Descartar

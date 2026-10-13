@@ -4,9 +4,9 @@ import { describe, expect, it } from 'vitest';
 import { asignacion, VENTANA_LLENAR_DIAS } from './asignacion';
 import { agendaOpt, diasDelHorizonte, slotsPersona } from './disponibilidad';
 import { configDe, camposPublicados, linkEvento, revision, sinPublicar, versionPublicada } from './eventos';
-import { calificar, duplicarForm, grupoPorReglas, personalizar, reglasRotas, revisarSegmentacion, validarRespuesta } from './formulario';
+import { NO_CALIFICA, calificar, duplicarForm, grupoPorReglas, gruposDeForm, personalizar, reglasRotas, revisarSegmentacion, validarRespuesta } from './formulario';
 import { normalEvento, normalForm, normalGrupo, normalPersona, normalRol, preguntasFlujo } from './normalizar';
-import { armarReserva, telefonoE164 } from './reserva';
+import { armarReserva, telefonoE164, textoRespuesta } from './reserva';
 import { opcionesDeOcupacion } from '../data/almacen';
 
 // Lunes 5 de octubre de 2026, 08:00 en La Paz (UTC-4) = 12:00 UTC.
@@ -20,11 +20,12 @@ function datos({ personas = [], grupos = [], roles = [] } = {}) {
 }
 
 describe('disponibilidad', () => {
-    it('genera inicios cada `paso` minutos dentro del horario, en la zona de la persona', () => {
+    it('encadena las sesiones dentro del horario, en la zona de la persona', () => {
         const p = normalPersona('ana', { tz: 'America/La_Paz', horario: LV9a12 });
         const s = slotsPersona(p, 45, agendaOpt(ag({ reservas: { n: 0 } }), 45), { ahora: LUNES });
-        // 09:00, 10:00 y 11:00 en La Paz; 11:00 + 45 min termina 11:45, entra.
-        expect(s).toEqual([Date.UTC(2026, 9, 5, 13), Date.UTC(2026, 9, 5, 14), Date.UTC(2026, 9, 5, 15)]);
+        // Una tras otra en La Paz: 09:00, 09:45, 10:30 y 11:15 (termina 12:00 justo). El intervalo del evento
+        // ya no cuenta: entran 4, no 3.
+        expect(s).toEqual([Date.UTC(2026, 9, 5, 13), Date.UTC(2026, 9, 5, 13, 45), Date.UTC(2026, 9, 5, 14, 30), Date.UTC(2026, 9, 5, 15, 15)]);
     });
     it('respeta la antelación mínima', () => {
         const p = normalPersona('ana', { tz: 'America/La_Paz', horario: LV9a12 });
@@ -32,10 +33,12 @@ describe('disponibilidad', () => {
         const s = slotsPersona(p, 45, agendaOpt(ag({ reservas: { n: 0 }, antel: { n: 3, u: 'h' } }), 45), { ahora: LUNES });
         expect(s).toEqual([Date.UTC(2026, 9, 5, 15)]);
     });
-    it('saltea lo ocupado', () => {
+    it('después de algo ocupado, la cadena sigue cuando termina', () => {
         const p = normalPersona('ana', { tz: 'America/La_Paz', horario: LV9a12 });
-        const ocupado = (pid, t) => t === Date.UTC(2026, 9, 5, 14);
-        expect(slotsPersona(p, 45, agendaOpt(ag({ reservas: { n: 0 } }), 45), { ahora: LUNES, ocupado })).toHaveLength(2);
+        // Una reunión de 09:30 a 10:00: las 09:00 la pisarían; la cadena arranca a las 10:00.
+        const b0 = Date.UTC(2026, 9, 5, 13, 30), b1 = Date.UTC(2026, 9, 5, 14);
+        const ocupado = (pid, t, dur) => t < b1 && t + dur * 60000 > b0;
+        expect(slotsPersona(p, 45, agendaOpt(ag({ reservas: { n: 0 } }), 45), { ahora: LUNES, ocupado })).toEqual([Date.UTC(2026, 9, 5, 14), Date.UTC(2026, 9, 5, 14, 45)]);
     });
     it('"días hábiles" no ofrece sábados ni domingos', () => {
         const dias = diasDelHorizonte(agendaOpt(ag({ reservas: { n: 5, tipo: 'habiles' } }), 45), 'America/La_Paz', LUNES);
@@ -65,8 +68,25 @@ describe('formulario', () => {
         expect(calificar(f.preguntas, {})).toBeNull();
     });
     it('la primera regla que se cumple decide; las reglas vacías se saltean; si no, va a "resto"', () => {
-        expect(grupoPorReglas(f, { q1: 'a', q2: 'd' })).toEqual({ grupo: 'g1', regla: 0 });
-        expect(grupoPorReglas(f, { q1: 'b', q2: 'c' })).toEqual({ grupo: 'g3', regla: null });
+        expect(grupoPorReglas(f, { q1: 'a', q2: 'd' })).toEqual({ grupo: 'g1', regla: 0, url: '', no: false });
+        expect(grupoPorReglas(f, { q1: 'b', q2: 'c' })).toEqual({ grupo: 'g3', regla: null, url: '', no: false });
+    });
+    it('una regla o «Todo lo demás» pueden mandar a «No califica»', () => {
+        const fn = normalForm('f', { ...f, reglas: [{ id: 'r0', grupo: NO_CALIFICA, cond: [{ q: 'q1', ops: ['b'] }] }, ...f.reglas] });
+        expect(grupoPorReglas(fn, { q1: 'b' })).toEqual({ grupo: '', regla: 0, url: '', no: true });
+        const resto = normalForm('f', { ...f, resto: NO_CALIFICA });
+        expect(grupoPorReglas(resto, { q1: 'b', q2: 'c' })).toEqual({ grupo: '', regla: null, url: '', no: true });
+        expect(gruposDeForm(resto)).not.toContain(NO_CALIFICA);
+        // La revisión no lo toma como «sin estrategia».
+        expect(revisarSegmentacion(resto).some(a => a.k === 'sin-destino')).toBe(false);
+    });
+    it('una regla con url manda a esa página sin estrategia (solo https)', () => {
+        const fu = normalForm('f', { ...f, reglas: [{ id: 'r0', grupo: 'g1', url: 'https://academy.thelearnation.com/', cond: [{ q: 'q1', ops: ['b'] }] }, ...f.reglas] });
+        expect(fu.reglas[0]).toMatchObject({ grupo: '', url: 'https://academy.thelearnation.com/' });
+        expect(grupoPorReglas(fu, { q1: 'b' })).toEqual({ grupo: '', regla: 0, url: 'https://academy.thelearnation.com/', no: false });
+        expect(normalForm('f', { reglas: [{ grupo: 'g1', url: 'javascript:alert(1)' }] }).reglas[0].url).toBe('');
+        // La revisión no la marca como «sin estrategia».
+        expect(revisarSegmentacion(fu).some(a => a.k === 'sin-destino' && a.regla === 0)).toBe(false);
     });
     it('detecta reglas que apuntan a opciones borradas', () => {
         expect(reglasRotas({ ...f, reglas: [{ id: 'r', grupo: 'g', cond: [{ q: 'q1', ops: ['zz'] }] }] })).toEqual([0]);
@@ -114,7 +134,7 @@ describe('formulario', () => {
         expect(validarRespuesta(q('opciones'), '')).toBe('Elegí una opción.');
     });
     it('los datos de contacto van primero y en orden fijo', () => {
-        expect(preguntasFlujo(f).slice(0, 4).map(q => q.id)).toEqual(['c-email', 'c-nombre', 'c-telefono', 'c-instagram']);
+        expect(preguntasFlujo(f).slice(0, 4).map(q => q.id)).toEqual(['c-telefono', 'c-email', 'c-nombre', 'c-instagram']);
     });
 });
 
@@ -124,6 +144,18 @@ describe('asignacion', () => {
     const beto = { id: 'beto', nombre: 'Beto', rol: 'rc', tz: 'America/La_Paz', horario: LV9a12 };
     const ctx = (o = {}) => ({ preguntas: [], resp: {}, dur: 45, ag: ag(), reglas: [], resto: 'g1', ...o });
 
+    it('si los días del evento están llenos se abre uno más', () => {
+        const d = datos({ roles, personas: [ana], grupos: [{ id: 'g1', nombre: 'Top', estrategia: 'horario', miembros: ['ana'] }] });
+        const tres = ctx({ ag: ag({ reservas: { n: 3 } }) });
+        // Lunes a jueves completos: aparece el viernes, y solo el viernes.
+        const limite = LUNES + 4 * 24 * H;
+        const a = asignacion(tres, d, { ahora: LUNES, ocupado: (pid, t) => t < limite });
+        expect(a.diasExtra).toBe(1);
+        expect(a.slots.length).toBeGreaterThan(0);
+        expect(a.slots.every(s => s.t >= limite && s.t < limite + 24 * H)).toBe(true);
+        expect(asignacion(tres, d, { ahora: LUNES }).diasExtra).toBeUndefined();
+        expect(asignacion(tres, d, { ahora: LUNES, ocupado: () => true }).slots).toEqual([]);
+    });
     it('"Llenar en orden": el lead ve solo la agenda del primero mientras tenga lugar en la ventana', () => {
         const d = datos({ roles, personas: [ana, beto], grupos: [{ id: 'g1', nombre: 'Top', estrategia: 'llenar', miembros: ['ana', 'beto'] }] });
         const a = asignacion(ctx(), d, { ahora: LUNES });
@@ -141,7 +173,9 @@ describe('asignacion', () => {
         const t0 = Date.UTC(2026, 9, 5, 13);
         const a = asignacion(ctx(), d, { ahora: LUNES, ocupado: (pid, t) => pid === 'ana' && t === t0 });
         expect(a.slots.find(s => s.t === t0).p).toBe('beto');
-        expect(a.slots.find(s => s.t === t0 + H).p).toBe('ana');
+        // Ana sigue su cadena en el primer inicio libre (09:05); las 09:45 son de la cadena de Beto.
+        expect(a.slots.find(s => s.t === t0 + 5 * 60000).p).toBe('ana');
+        expect(a.slots.find(s => s.t === t0 + 45 * 60000).p).toBe('beto');
     });
     it('"Distribuida" sin porcentajes: cada horario va a quien tiene menos agendas por delante', () => {
         const d = datos({ roles, personas: [ana, beto], grupos: [{ id: 'g1', nombre: 'Top', estrategia: 'repartir', miembros: ['ana', 'beto'] }] });
@@ -215,6 +249,15 @@ describe('reserva', () => {
         expect(telefonoE164('BO', '7123 4567')).toBe('+59171234567');
         expect(telefonoE164('AR', '011 2345-6789')).toBe('+541123456789');
         expect(telefonoE164('MX', '+52 55 1234 5678')).toBe('+525512345678');
+        expect(telefonoE164('PA', '6123 4567')).toBe('+50761234567');
+        // «Otro país»: el código va escrito a mano, con o sin + o 00.
+        expect(telefonoE164('OT', '+502 5123 4567')).toBe('+50251234567');
+        expect(telefonoE164('OT', '502 5123 4567')).toBe('+50251234567');
+        expect(telefonoE164('OT', '00502 5123 4567')).toBe('+50251234567');
+        const tel = { tipo: 'telefono' };
+        expect(textoRespuesta(tel, '502 5123 4567', 'OT')).toBe('+502 5123 4567');
+        expect(textoRespuesta(tel, '+502 5123 4567', 'BO')).toBe('+502 5123 4567');
+        expect(textoRespuesta(tel, '7123 4567', 'BO')).toBe('+591 7123 4567');
     });
     it('arma el contrato con copia de preguntas y respuestas', () => {
         const form = normalForm('f', { preguntas: [{ id: 'q1', tipo: 'opciones', titulo: '¿Cuánto?', peso: 1, opciones: [{ id: 'a', texto: 'Mucho', puntos: 10 }] }] });
@@ -257,7 +300,9 @@ describe('sesiones: duración y margen de cada closer', () => {
             { estado: 'agendada', closer_id: 'ana', inicio_ms: once, fin_ms: once + H / 2 },
         ];
         const { ocupado } = opcionesDeOcupacion(reservas, LUNES);
-        expect(slotsPersona(p, 30, o, { ahora: LUNES, ocupado, margen: 20 })).toEqual([Date.UTC(2026, 9, 5, 14), Date.UTC(2026, 9, 5, 15, 30)]);
+        // Arranca al terminar el margen de la primera (09:50); la siguiente (10:40) pisaría la de las 11:00 y
+        // sigue a las 11:30, que termina a las 12:00 justo: su margen se pasa del horario y se ofrece igual.
+        expect(slotsPersona(p, 30, o, { ahora: LUNES, ocupado, margen: 20 })).toEqual([Date.UTC(2026, 9, 5, 13, 50), Date.UTC(2026, 9, 5, 15, 30)]);
     });
     it('cada closer ofrece con su propia sesión', () => {
         const ana = { id: 'ana', rol: 'closer', tz: 'America/La_Paz', horario: LV9a12, sesiones: { ev: { duracion: 30 } } };
@@ -265,8 +310,8 @@ describe('sesiones: duración y margen de cada closer', () => {
         const d = datos({ personas: [ana, beto] });
         const ctx = { dur: 60, margen: 0, eventoId: 'ev', ag: ag({ reservas: { n: 0 }, paso: { n: 30 } }) };
         expect(asignacion({ ...ctx, persona: 'ana' }, d, { ahora: LUNES }).slots).toHaveLength(6);
-        expect(asignacion({ ...ctx, persona: 'beto' }, d, { ahora: LUNES }).slots).toHaveLength(5);
-        expect(asignacion({ ...ctx, eventoId: 'otro', persona: 'ana' }, d, { ahora: LUNES }).slots).toHaveLength(5);
+        expect(asignacion({ ...ctx, persona: 'beto' }, d, { ahora: LUNES }).slots).toHaveLength(3);
+        expect(asignacion({ ...ctx, eventoId: 'otro', persona: 'ana' }, d, { ahora: LUNES }).slots).toHaveLength(3);
     });
     it('la reserva guarda la sesión del closer que tocó', () => {
         const lead = { preguntas: [], resp: { 'c-nombre': 'Ana' }, pais: 'BO', tz: 'America/La_Paz' };

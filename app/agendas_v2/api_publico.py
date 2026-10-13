@@ -11,9 +11,9 @@ import threading
 import time
 from collections import defaultdict, deque
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, Response, jsonify, request
 
-from app.agendas_v2 import servicio
+from app.agendas_v2 import servicio, videos
 
 bp = Blueprint('agendas_v2_publico', __name__)
 
@@ -21,7 +21,7 @@ NO_DISPONIBLE = ({'code': 'no_disponible', 'message': 'Este link no está dispon
 
 # Limite por IP, en memoria y por proceso: frena a un script que martilla el endpoint, no es una
 # defensa distribuida. (pedidos, segundos)
-LIMITES = {'horarios': (30, 60), 'reservas': (10, 60), 'conocido': (10, 60), 'avance': (60, 60)}
+LIMITES = {'horarios': (30, 60), 'reservas': (10, 60), 'conocido': (10, 60), 'avance': (60, 60), 'gracias': (30, 60)}
 _pedidos = defaultdict(deque)
 _candado = threading.Lock()
 
@@ -78,19 +78,27 @@ def horarios(evento_id):
     if not x:
         return jsonify(NO_DISPONIBLE[0]), NO_DISPONIBLE[1]
     evento, form, _ = x
-    return jsonify({'slots': servicio.horarios(d, evento, form, _cuerpo().get('resp'))})
+    cuerpo = _cuerpo()
+    # El lead que confirmó sus respuestas guardadas: la segmentación sale de esas.
+    resp = servicio.con_guardados(form, cuerpo, cuerpo.get('resp'))
+    return jsonify({'slots': servicio.horarios(d, evento, form, resp)})
 
 
 @bp.route('/eventos/<evento_id>/conocido', methods=['POST'])
 def conocido(evento_id):
-    """{email} → si ya agendó antes: su primer nombre, sus datos tapados y su próxima agenda."""
+    """{email} o {telefono, pais} → si ya agendó antes: su primer nombre, sus datos tapados, su próxima
+    agenda y si ya respondió este formulario."""
     if _excede('conocido'):
         return _demasiados()
     x = servicio.evento_publico(servicio.colecciones(), evento_id)
     if not x:
         return jsonify(NO_DISPONIBLE[0]), NO_DISPONIBLE[1]
-    email = str(_cuerpo().get('email') or '').strip().lower()[:120]
-    r = servicio.conocido(x[1], email)
+    cuerpo = _cuerpo()
+    resp = {
+        'c-email': str(cuerpo.get('email') or '').strip().lower()[:120],
+        'c-telefono': str(cuerpo.get('telefono') or '').strip()[:40],
+    }
+    r = servicio.conocido(x[0], x[1], resp, cuerpo.get('pais'))
     if r.get('proxima'):
         r['proxima'] = {'inicio': servicio.ms_a_dt(r['proxima']['inicio']).isoformat(timespec='milliseconds') + 'Z'}
     return jsonify(r)
@@ -130,12 +138,37 @@ def reservar():
             return jsonify({'code': 'ya_tiene', 'agenda': {'inicio': inicio}}), 409
         return jsonify({'code': 'invalido', 'errores': e.errores}), 400
     if r.get('descalificada'):
-        return jsonify({'descalificada': True}), 201
+        return jsonify({'descalificada': True, **({'redirigir': r['redirigir']} if r.get('redirigir') else {})}), 201
 
     def _iso(ms):
         return servicio.ms_a_dt(ms).isoformat(timespec='milliseconds') + 'Z'
 
     return jsonify(
         {'reserva': {'id': r['id'], 'inicio': _iso(r['inicio']), 'fin': _iso(r['fin']), 'duracion': r['duracion'],
-                     'consultor': r.get('consultor')}}
+                     'consultor': r.get('consultor'), 'invitacion': r.get('invitacion')}}
     ), 201
+
+@bp.route('/gracias/<gracias_id>', methods=['GET'])
+def gracias(gracias_id):
+    """La página de gracias: sus videos y los casos de éxito de la Academia."""
+    if _excede('gracias'):
+        return _demasiados()
+    g = servicio.gracias_publica(servicio.colecciones(), gracias_id)
+    return jsonify({'gracias': g}) if g else (jsonify(NO_DISPONIBLE[0]), NO_DISPONIBLE[1])
+
+
+@bp.route('/videos/<video_id>', methods=['GET'])
+def video(video_id):
+    """El video subido, de a un pedazo por pedido (206 con Content-Range): ver videos.py."""
+    try:
+        datos, inicio, fin, total, tipo = videos.parte_para_servir(video_id, request.headers.get('Range'))
+    except videos.VideoError as e:
+        if e.code == 'invalido':
+            return Response(status=416, headers={'Content-Range': 'bytes */*'})
+        return jsonify(NO_DISPONIBLE[0]), NO_DISPONIBLE[1]
+    return Response(datos, status=206, mimetype=tipo, headers={
+        'Content-Range': f'bytes {inicio}-{fin}/{total}',
+        'Accept-Ranges': 'bytes',
+        # El id es único por archivo: lo que se subió no cambia nunca.
+        'Cache-Control': 'public, max-age=31536000, immutable',
+    })

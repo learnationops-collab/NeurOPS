@@ -63,7 +63,8 @@ export function DatosLead({ preguntas, s, tapados }) {
  * «Confirmar», que lleva a la redirección del evento si tiene una; si no, despide.
  * consultor: {nombre, color} (en la prueba, la persona del horario elegido).
  */
-export function PasoListo({ ids, nombre, slot, s, dur, redir, preguntas, prueba, respuestas, acc, consultor, tapados }) {
+// invitacion: el correo al que salió la invitación de Google Calendar; el lead la tiene que aceptar para verla en su calendario.
+export function PasoListo({ ids, nombre, slot, s, dur, redir, preguntas, prueba, respuestas, acc, consultor, invitacion, tapados }) {
     const [listo, setListo] = useState(false);
     const z = zonaInfo(s.tz), t = slot.t;
     if (listo) {
@@ -104,6 +105,11 @@ export function PasoListo({ ids, nombre, slot, s, dur, redir, preguntas, prueba,
                     <div><span className="rv-tk-lbl">Tu consultor</span><b className="rv-tk-nom">{consultor ? consultor.nombre : 'Te lo asignamos en breve'}</b></div>
                 </div>
                 <DatosLead preguntas={preguntas} s={s} tapados={tapados} />
+                {invitacion && (
+                    <p className="rv-tk-wa rv-tk-mail"><Icono n="mail" s={18} />
+                        <span>Te mandamos la invitación a <b>{invitacion}</b>. Abrí el correo y aceptala para que la sesión quede en tu calendario con el link de Meet.</span>
+                    </p>
+                )}
                 <p className="rv-tk-wa"><Icono n="whatsapp" s={18} /><span>Te va a escribir por WhatsApp antes de la sesión.</span></p>
             </section>
             <div className="rv-acc rv-acc--ok">
@@ -117,7 +123,19 @@ export function PasoListo({ ids, nombre, slot, s, dur, redir, preguntas, prueba,
     );
 }
 
-export function PasoFin({ ids, fin, nombre, prueba, respuestas, acc }) {
+// url: una regla manda al lead a otra página. No es un "no califica": se lo lleva ahí (y queda el botón por si tarda).
+export function PasoFin({ ids, fin, nombre, prueba, respuestas, acc, url = '' }) {
+    if (url) {
+        return (
+            <div className="rv-paso rv-paso--entra">
+                <h1 className="rv-q rv-q--l1" id={ids.q}>{nombre ? 'Gracias, ' + nombre + '.' : 'Gracias.'}</h1>
+                <p className="rv-ayuda">{prueba ? 'En el link real, el lead va a ' + url.replace(/^https:\/\//i, '') + '.' : 'Te estamos llevando a tu próximo paso…'}</p>
+                {!prueba && <div className="rv-acc"><a className="rv-seguir" href={url}>Continuar<Icono n="chevron-right" s={18} /></a></div>}
+                {respuestas}
+                {prueba && <Acciones acc={acc} />}
+            </div>
+        );
+    }
     return (
         <div className="rv-paso rv-paso--entra">
             <span className="rv-listo-ico rv-listo-ico--no"><Icono n="prohibido" s={30} /></span>

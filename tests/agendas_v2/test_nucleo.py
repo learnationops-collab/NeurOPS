@@ -20,6 +20,7 @@ from app.agendas_v2.nucleo.formulario import (
     calificar,
     duplicar_form,
     grupo_por_reglas,
+    grupos_de_form,
     personalizar,
     reglas_rotas,
     validar_respuesta,
@@ -34,7 +35,7 @@ from app.agendas_v2.nucleo.normalizar import (
     preguntas_flujo,
 )
 from app.agendas_v2.nucleo.ocupacion import opciones_de_ocupacion
-from app.agendas_v2.nucleo.reserva import armar_reserva, telefono_e164
+from app.agendas_v2.nucleo.reserva import armar_reserva, telefono_e164, texto_respuesta
 from app.agendas_v2.nucleo.tiempo import date_utc, iso, zoned_to_utc
 from app.agendas_v2.nucleo.util import entero, fmt, js_round
 
@@ -66,11 +67,12 @@ def datos(personas=(), grupos=(), roles=()):
 # --- disponibilidad -------------------------------------------------------------------------------
 
 
-def test_inicios_cada_paso_dentro_del_horario_en_la_zona_de_la_persona():
+def test_las_sesiones_se_encadenan_dentro_del_horario_en_la_zona_de_la_persona():
     p = normal_persona('ana', {'tz': 'America/La_Paz', 'horario': LV9A12})
     s = slots_persona(p, 45, agenda_opt(ag(reservas={'n': 0}), 45), ahora=LUNES)
-    # 09:00, 10:00 y 11:00 en La Paz; 11:00 + 45 min termina 11:45, entra.
-    assert s == [date_utc(2026, 9, 5, 13), date_utc(2026, 9, 5, 14), date_utc(2026, 9, 5, 15)]
+    # Una tras otra en La Paz: 09:00, 09:45, 10:30 y 11:15 (termina 12:00 justo). El intervalo del evento
+    # ya no cuenta: entran 4, no 3.
+    assert s == [date_utc(2026, 9, 5, h, m) for h, m in ((13, 0), (13, 45), (14, 30), (15, 15))]
 
 
 def test_respeta_la_antelacion_minima():
@@ -80,13 +82,16 @@ def test_respeta_la_antelacion_minima():
     assert s == [date_utc(2026, 9, 5, 15)]
 
 
-def test_saltea_lo_ocupado():
+def test_despues_de_algo_ocupado_la_cadena_sigue_cuando_termina():
     p = normal_persona('ana', {'tz': 'America/La_Paz', 'horario': LV9A12})
+    # Una reunión de 09:30 a 10:00: las 09:00 la pisarían; la cadena arranca a las 10:00.
+    b0, b1 = date_utc(2026, 9, 5, 13, 30), date_utc(2026, 9, 5, 14)
 
     def ocupado(pid, t, dur):
-        return t == date_utc(2026, 9, 5, 14)
+        return t < b1 and t + dur * 60000 > b0
 
-    assert len(slots_persona(p, 45, agenda_opt(ag(reservas={'n': 0}), 45), ahora=LUNES, ocupado=ocupado)) == 2
+    s = slots_persona(p, 45, agenda_opt(ag(reservas={'n': 0}), 45), ahora=LUNES, ocupado=ocupado)
+    assert s == [date_utc(2026, 9, 5, 14), date_utc(2026, 9, 5, 14, 45)]
 
 
 def test_dias_habiles_no_ofrece_sabados_ni_domingos():
@@ -146,8 +151,28 @@ def test_la_nota_pondera_puntos_por_peso_y_excluye_opciones_sin_puntos():
 
 
 def test_la_primera_regla_que_se_cumple_decide_y_si_no_va_a_resto():
-    assert grupo_por_reglas(F, {'q1': 'a', 'q2': 'd'}) == {'grupo': 'g1', 'regla': 0}
-    assert grupo_por_reglas(F, {'q1': 'b', 'q2': 'c'}) == {'grupo': 'g3', 'regla': None}
+    assert grupo_por_reglas(F, {'q1': 'a', 'q2': 'd'}) == {'grupo': 'g1', 'regla': 0, 'url': '', 'no': False}
+    assert grupo_por_reglas(F, {'q1': 'b', 'q2': 'c'}) == {'grupo': 'g3', 'regla': None, 'url': '', 'no': False}
+
+
+def test_una_regla_o_el_resto_pueden_mandar_a_no_califica():
+    regla_no = {'id': 'r0', 'grupo': '__no', 'cond': [{'q': 'q1', 'ops': ['b']}]}
+    fo = normal_form('f', {**F, 'reglas': [regla_no, *F['reglas']]})
+    assert grupo_por_reglas(fo, {'q1': 'b'}) == {'grupo': '', 'regla': 0, 'url': '', 'no': True}
+    assert grupo_por_reglas(fo, {'q1': 'a', 'q2': 'd'})['no'] is False
+    sin_resto = normal_form('f', {**F, 'resto': '__no'})
+    assert grupo_por_reglas(sin_resto, {'q1': 'b', 'q2': 'c'}) == {'grupo': '', 'regla': None, 'url': '', 'no': True}
+    assert '__no' not in grupos_de_form(sin_resto)
+
+
+def test_una_regla_con_url_manda_a_esa_pagina_sin_estrategia():
+    fo = normal_form('f', {**F, 'reglas': [{'id': 'r0', 'grupo': 'g1', 'url': 'https://academy.thelearnation.com/',
+                                            'cond': [{'q': 'q1', 'ops': ['b']}]}, *F['reglas']]})
+    assert fo['reglas'][0]['grupo'] == '' and fo['reglas'][0]['url'] == 'https://academy.thelearnation.com/'
+    assert grupo_por_reglas(fo, {'q1': 'b'}) == {'grupo': '', 'regla': 0, 'url': 'https://academy.thelearnation.com/', 'no': False}
+    assert grupo_por_reglas(fo, {'q1': 'a', 'q2': 'c'})['grupo'] == 'g1'
+    # Solo https: lo demás se descarta y la regla vuelve a mandar a su estrategia.
+    assert normal_form('f', {'reglas': [{'grupo': 'g1', 'url': 'javascript:alert(1)'}]})['reglas'][0]['url'] == ''
 
 
 def test_detecta_reglas_que_apuntan_a_opciones_borradas():
@@ -179,7 +204,7 @@ def test_valida_correo_telefono_e_instagram():
 
 
 def test_los_datos_de_contacto_van_primero_y_en_orden_fijo():
-    assert [q['id'] for q in preguntas_flujo(F)[:4]] == ['c-email', 'c-nombre', 'c-telefono', 'c-instagram']
+    assert [q['id'] for q in preguntas_flujo(F)[:4]] == ['c-telefono', 'c-email', 'c-nombre', 'c-instagram']
 
 
 # --- asignacion -----------------------------------------------------------------------------------
@@ -191,6 +216,19 @@ BETO = {'id': 'beto', 'nombre': 'Beto', 'rol': 'rc', 'tz': 'America/La_Paz', 'ho
 
 def ctx(**o):
     return {'preguntas': [], 'resp': {}, 'dur': 45, 'ag': ag(), 'reglas': [], 'resto': 'g1', **o}
+
+
+def test_si_los_dias_del_evento_estan_llenos_se_abre_uno_mas():
+    d = datos(roles=ROLES, personas=[ANA], grupos=[{'id': 'g1', 'nombre': 'Top', 'estrategia': 'horario', 'miembros': ['ana']}])
+    tres = ctx(ag=ag({'n': 3}))
+    # Lunes a jueves completos: aparece el viernes, y solo el viernes.
+    limite = LUNES + 4 * 24 * H
+    a = asignacion(tres, d, {'ahora': LUNES, 'ocupado': lambda pid, t, dur: t < limite})
+    assert a['dias_extra'] == 1 and a['slots'] and all(limite <= s['t'] < limite + 24 * H for s in a['slots'])
+    # Con lugar en la ventana no se abre nada.
+    assert 'dias_extra' not in asignacion(tres, d, {'ahora': LUNES})
+    # Todo ocupado: no hay horarios y no se pasa del tope.
+    assert asignacion(tres, d, {'ahora': LUNES, 'ocupado': lambda pid, t, dur: True})['slots'] == []
 
 
 def test_llenar_en_orden_muestra_solo_al_primero_mientras_tenga_lugar():
@@ -224,7 +262,9 @@ def test_por_horario_cada_horario_va_al_primero_que_lo_tiene_libre():
     t0 = date_utc(2026, 9, 5, 13)
     a = asignacion(ctx(), d, {'ahora': LUNES, 'ocupado': lambda pid, t, dur: pid == 'ana' and t == t0})
     assert next(s for s in a['slots'] if s['t'] == t0)['p'] == 'beto'
-    assert next(s for s in a['slots'] if s['t'] == t0 + H)['p'] == 'ana'
+    # Ana sigue su cadena en el primer inicio libre (09:05); las 09:45 son de la cadena de Beto.
+    assert next(s for s in a['slots'] if s['t'] == t0 + 5 * 60000)['p'] == 'ana'
+    assert next(s for s in a['slots'] if s['t'] == t0 + 45 * 60000)['p'] == 'beto'
 
 
 def test_repartir_parejo_va_a_quien_tiene_menos_agendas_por_delante():
@@ -339,6 +379,15 @@ def test_normaliza_el_telefono_a_formato_internacional():
     assert telefono_e164('BO', '7123 4567') == '+59171234567'
     assert telefono_e164('AR', '011 2345-6789') == '+541123456789'
     assert telefono_e164('MX', '+52 55 1234 5678') == '+525512345678'
+    assert telefono_e164('PA', '6123 4567') == '+50761234567'
+    # «Otro país»: el código va escrito a mano, con o sin + o 00.
+    assert telefono_e164('OT', '+502 5123 4567') == '+50251234567'
+    assert telefono_e164('OT', '502 5123 4567') == '+50251234567'
+    assert telefono_e164('OT', '00502 5123 4567') == '+50251234567'
+    tel = {'tipo': 'telefono'}
+    assert texto_respuesta(tel, '502 5123 4567', 'OT') == '+502 5123 4567'
+    assert texto_respuesta(tel, '+502 5123 4567', 'BO') == '+502 5123 4567'
+    assert texto_respuesta(tel, '7123 4567', 'BO') == '+591 7123 4567'
 
 
 def test_arma_el_contrato_con_copia_de_preguntas_y_respuestas():
@@ -459,7 +508,7 @@ def test_horario_acepta_claves_de_texto():
     p_json = json.loads(json.dumps(p))
     o = agenda_opt(ag(reservas={'n': 0}), 45)
     assert slots_persona(p_json, 45, o, ahora=LUNES) == slots_persona(p, 45, o, ahora=LUNES)
-    assert len(slots_persona(p_json, 45, o, ahora=LUNES)) == 3
+    assert len(slots_persona(p_json, 45, o, ahora=LUNES)) == 4
 
 
 def test_redondeo_como_en_js():
@@ -508,9 +557,9 @@ def test_zoned_to_utc_en_cambios_de_horario():
 
 def test_resumen_agenda():
     e = normal_evento(
-        'e', {'reservas': {'modo': 'rango', 'desde': '2026-09-05', 'hasta': '2026-10-05'}, 'paso': {'n': 2, 'u': 'h'}}
+        'e', {'reservas': {'modo': 'rango', 'desde': '2026-09-05', 'hasta': '2026-10-05'}, 'margen': 15}
     )
-    assert resumen_agenda(e) == '5 sept a 5 oct · 4 h antes · cada 2 h'
+    assert resumen_agenda(e) == '5 sept a 5 oct · 4 h antes · 45 min + 15 de margen'
 
 
 # --- sesiones: duración y margen de cada closer ---------------------------------------------------
@@ -548,9 +597,10 @@ def test_la_sesion_entra_en_el_horario_y_el_ultimo_margen_puede_pasarse():
     ]
     ocupado = opciones_de_ocupacion(reservas, LUNES)['ocupado']
     s = slots_persona(p, 30, o, ahora=LUNES, ocupado=ocupado, margen=20)
-    # 09:30 cae en el margen de la primera; 10:30 + 30 + 20 pisaría la de las 11:00; 11:30 termina a las
-    # 12:00 justo y su margen se pasa del horario, pero se ofrece igual.
-    assert s == [date_utc(2026, 9, 5, 14), date_utc(2026, 9, 5, 15, 30)]
+    # La cadena arranca al terminar el margen de la primera (09:50); la siguiente (10:40) pisaría la de las
+    # 11:00, así que sigue a las 11:30, que termina a las 12:00 justo: su margen se pasa del horario y se
+    # ofrece igual.
+    assert s == [date_utc(2026, 9, 5, 13, 50), date_utc(2026, 9, 5, 15, 30)]
 
 
 def test_cada_closer_ofrece_con_su_propia_sesion():
@@ -559,11 +609,11 @@ def test_cada_closer_ofrece_con_su_propia_sesion():
     beto = {'id': 'beto', 'rol': 'closer', 'tz': 'America/La_Paz', 'horario': LV9A12}
     d = datos(personas=[ana, beto])
     ctx = {'dur': 60, 'margen': 0, 'evento_id': 'ev', 'ag': ag(reservas={'n': 0}, paso={'n': 30})}
-    # Ana ajustó 30 min: le entra hasta las 11:30. Beto usa la propuesta de 60: hasta las 11:00.
+    # Ana ajustó 30 min: le entran 6 en las 3 horas. Beto usa la propuesta de 60: 3.
     assert len(asignacion({**ctx, 'persona': 'ana'}, d, {'ahora': LUNES})['slots']) == 6
-    assert len(asignacion({**ctx, 'persona': 'beto'}, d, {'ahora': LUNES})['slots']) == 5
+    assert len(asignacion({**ctx, 'persona': 'beto'}, d, {'ahora': LUNES})['slots']) == 3
     # Sin evento_id (o en otro evento) lo ajustado no cuenta.
-    assert len(asignacion({**ctx, 'evento_id': 'otro', 'persona': 'ana'}, d, {'ahora': LUNES})['slots']) == 5
+    assert len(asignacion({**ctx, 'evento_id': 'otro', 'persona': 'ana'}, d, {'ahora': LUNES})['slots']) == 3
 
 
 def test_la_reserva_guarda_la_sesion_del_closer_que_toco():
