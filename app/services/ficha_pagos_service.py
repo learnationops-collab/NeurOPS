@@ -369,6 +369,10 @@ def crear(appt, datos, usuario):
         _ingreso_desde(espejo)
     db.session.commit()
 
+    # La Academia extiende el acceso solo si este pago lo alarga: cargar un pago viejo no lo acorta.
+    from app.services.academy_payment_sync import notify_academy_of_payments
+    notify_academy_of_payments([venta])
+
     # Sin espejo es porque el cliente no tiene inscripcion a ese programa y no se le abrio una:
     # tiene pagos anteriores sin registro, o no hay un `Program` activo. La venta queda, pero la
     # deuda no la cuenta, y eso queda escrito con el motivo.

@@ -85,6 +85,12 @@ class LearnationService:
         return LearnationService._request('GET', f'/users/{learnation_user_id}/summary')
 
     @staticmethod
+    def report_payment(payload):
+        """Avisa un pago a la Academia (ver app/services/academy_payment_sync.py). Idempotente
+        del lado de la Academia por `sale_id`."""
+        return LearnationService._request('POST', '/payments', json=payload)
+
+    @staticmethod
     def get_success_cases():
         """Los casos de éxito publicados para landings (el Muro de Honor): los muestra la página de
         gracias de Agendas 2.0."""

@@ -155,7 +155,11 @@ class SheetsService:
                 db.session.add(sale)
                 db.session.commit()
                 logger.info("[SHEETS POST] Venta registrada exitosamente en base de datos local.")
-                
+
+                # Cada pago le extiende el acceso en la Academia y avisa al gestor del alumno (en un hilo).
+                from app.services.academy_payment_sync import notify_academy_of_payments
+                notify_academy_of_payments([sale])
+
                 # Verificar conversión de seña a venta real
                 try:
                     from app.services.closer_service import CloserService
