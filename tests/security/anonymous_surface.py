@@ -18,6 +18,10 @@ PUBLICAS_POR_DISENO = frozenset({
     ('GET', '/api/health'),
     ('GET', '/api/manychat-webhook'),
     ('POST', '/api/manychat-webhook'),
+    # Webhook de la app propia de Meta para Instagram: Meta no manda sesion. El GET solo devuelve el
+    # challenge con el token de verificacion; el POST exige la firma X-Hub-Signature-256 (sin secretos: 503).
+    ('GET', '/api/webhooks/instagram'),
+    ('POST', '/api/webhooks/instagram'),
     ('POST', '/api/public/assistant-applications'),
     # Agendas 2.0: la pagina de reserva del lead. Solo la version PUBLICADA de un evento activo; los horarios
     # salen sin decir de que closer son y el closer lo elige el servidor (ver app/agendas_v2/api_publico.py).

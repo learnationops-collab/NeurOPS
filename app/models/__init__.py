@@ -31,6 +31,7 @@ from .playbook import (
     PlaybookRoadmap, PlaybookModule, PlaybookLesson, PlaybookQuestion, PlaybookOption,
     PlaybookLessonProgress, PlaybookCompletion, QUESTION_TYPES
 )
+from .instagram import InstagramWebhookEvento
 
 # Export all for easy access via from app.models import ...
 __all__ = [
@@ -55,6 +56,7 @@ __all__ = [
     'JobApplication', 'JobApplicationVote', 'ClarityWeight', 'CLARITY_CRITERIA', 'VOTE_VALUES',
     'AssistantApplication', 'AssistantClarityWeight', 'HiringForm', 'HiringConfig',
     'PlaybookRoadmap', 'PlaybookModule', 'PlaybookLesson', 'PlaybookQuestion', 'PlaybookOption',
-    'PlaybookLessonProgress', 'PlaybookCompletion', 'QUESTION_TYPES'
+    'PlaybookLessonProgress', 'PlaybookCompletion', 'QUESTION_TYPES',
+    'InstagramWebhookEvento',
 ]
 
