@@ -191,16 +191,24 @@ def normal_funnel(id, d):
         x = {'id': txt(o.get('id')), 'nombre': cortar(txt(o.get('nombre')), 60), 'setter': txt(o.get('setter'))}
         if x['id'] and (x['nombre'] or x['setter']):
             origenes.append(x)
+    slug = slugify(d.get('slug')) or slugify(d.get('nombre')) or id
+    anteriores = []
+    for x in lista(d.get('slugs_anteriores'))[:20]:
+        x = slugify(x)
+        if x and x != slug and x not in anteriores:
+            anteriores.append(x)
     return {
         'id': id,
         'nombre': cortar(txt(d.get('nombre'), 'Sin nombre'), 80),
-        'slug': slugify(d.get('slug')) or slugify(d.get('nombre')) or id,
+        'slug': slug,
+        # Los slugs que tuvo antes: los links ya compartidos con esos slugs siguen andando.
+        'slugs_anteriores': anteriores,
         'color': d.get('color') if d.get('color') in COLORES else 'azul',
         'activo': d.get('activo') is not False,
         'orden': _orden(d.get('orden')),
         'origenes': origenes,
         'tipo': tipo_funnel(d),
-        # Funnel de setting: cada setter activo de NeurOPS tiene su link (?o=<su usuario>) y la agenda
+        # Funnel de setting: cada setter activo de NeurOPS tiene su link (?o=<su código>) y la agenda
         # queda a su nombre. No lleva orígenes a mano.
         'setting': tipo_funnel(d) == 'setting',
         # Los setters que trabajan este funnel (ids de usuario). Vacío: todos los setters activos.
@@ -296,10 +304,18 @@ def normal_evento(id, d):
     d = obj(d)
     rs, an, pa, zn = obj(d.get('reservas')), obj(d.get('antel')), obj(d.get('paso')), obj(d.get('zona'))
     dur = entero(d.get('duracion'), DURACION_MIN, DURACION_MAX, 45)
+    slug = slugify(d.get('slug')) or slugify(d.get('nombre')) or id
+    anteriores = []
+    for x in lista(d.get('slugs_anteriores'))[:20]:
+        x = slugify(x)
+        if x and x != slug and x not in anteriores:
+            anteriores.append(x)
     return {
         'id': id,
         'nombre': cortar(txt(d.get('nombre'), 'Sin nombre'), 80),
-        'slug': slugify(d.get('slug')) or slugify(d.get('nombre')) or id,
+        'slug': slug,
+        # Los slugs que tuvo antes: los links ya compartidos con esos slugs siguen andando.
+        'slugs_anteriores': anteriores,
         'funnel': txt(d.get('funnel')),
         'formulario': txt(d.get('formulario')),
         'duracion': dur,

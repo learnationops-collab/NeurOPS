@@ -282,7 +282,7 @@ def revisar(d, paquete, editando=None, en_funnel=None):
     fu_slug = fu_actual['slug'] if fu_actual else (slugify(fu.get('slug')) or slugify(fu_nombre))
     if not fu_nombre:
         errores.append('funnel: falta "nombre".')
-    if fu_slug and any(f['slug'] == fu_slug and f is not fu_actual for f in d['funnels']):
+    if fu_slug and any(fu_slug in [f['slug'], *f.get('slugs_anteriores', [])] and f is not fu_actual for f in d['funnels']):
         errores.append(f'funnel: ya existe un funnel con el slug "{fu_slug}". Usá otro.')
     origenes = []
     for i, o in enumerate(_lista(fu.get('origenes'))):

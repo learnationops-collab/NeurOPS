@@ -7,6 +7,8 @@ import { configDe, estadoFunnel, pasosAgendamiento } from '../../core/eventos';
 import { settersDe } from './comun';
 import { buscar } from '../../core/datos';
 import ListaEventos from './ListaEventos';
+import ModalFunnel from './ModalFunnel';
+import { buscarPublicado } from '../../reserva/PaginaPublica';
 
 const envolver = (el) => <div className="thalamus thalamus-app">{el}</div>;
 let fuListo, fuVacio, evListo, evBorrador;
@@ -63,6 +65,26 @@ describe('Eventos', () => {
         render(envolver(<ListaEventos />));
         expect(screen.getAllByText('Links de setters').length).toBe(2);
         act(() => { almacen.editar('funnels', fuListo, { tipo: 'workshop', setting: false }, true); });
+    });
+
+    it('cambiar el link del funnel guarda el anterior: lo ya compartido sigue andando', () => {
+        render(envolver(<ModalFunnel estado={{ id: fuListo }} />));
+        const input = screen.getByRole('textbox', { name: 'Link del funnel' });
+        fireEvent.change(input, { target: { value: 'ST' } });
+        fireEvent.blur(input);
+        let f = buscar(almacen.getState().d, 'funnels', fuListo);
+        expect(f.slug).toBe('st');
+        expect(f.slugs_anteriores).toEqual(['workshop']);
+        const { d } = almacen.getState();
+        expect(buscarPublicado(d, 'workshop', 'diagnostico').e.id).toBe(evListo);
+        expect(buscarPublicado(d, 'st', 'diagnostico').e.id).toBe(evListo);
+        // El de otro funnel no se puede usar.
+        const input2 = screen.getByRole('textbox', { name: 'Link del funnel' });
+        fireEvent.change(input2, { target: { value: 'vsl' } });
+        fireEvent.blur(input2);
+        f = buscar(almacen.getState().d, 'funnels', fuListo);
+        expect(f.slug).toBe('st');
+        act(() => { almacen.editar('funnels', fuListo, { slug: 'workshop', slugs_anteriores: [] }, true); });
     });
 
     it('un formulario sin segmentación lleva a su segmentación', () => {

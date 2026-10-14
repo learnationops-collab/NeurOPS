@@ -7,7 +7,7 @@
 //    JSON se escribe encima (mismos links). El evento queda como borrador hasta publicarlo.
 // Tipo: para qué cuenta en las estadísticas (Workshop, VSL, Setting u Otro; ver operacion._fuente). En
 // un workshop, el origen «Grabación» (o Replay) cuenta como la grabación; el resto, como la clase en vivo.
-// Setting: cada setter del funnel tiene su link (?o=<su usuario>) y la agenda queda a su nombre. Se eligen
+// Setting: cada setter del funnel tiene su link (?o=<su código>) y la agenda queda a su nombre. Se eligen
 // cuáles trabajan el funnel; sin elegir ninguno, son todos los setters activos de NeurOPS.
 
 import { useState } from 'react';
@@ -42,12 +42,17 @@ function Tipos({ valor, onChange }) {
 }
 const ESTRATEGIA = { llenar: 'llenar agenda', horario: 'máxima disponibilidad', repartir: 'distribuida' };
 
+// Un slug de funnel está tomado si es el de otro funnel o uno que tuvo antes (sus links viejos siguen andando).
+function slugUsado(d, s, salvo = null) {
+    return d.funnels.some(f => f.id !== salvo && (f.slug === s || (f.slugs_anteriores || []).includes(s)));
+}
+
 export function crearFunnel(d, nombre, tipo = 'otro') {
     nombre = String(nombre || '').replace(/\s+/g, ' ').trim();
     if (!nombre) return null;
     const base = slugify(nombre) || 'funnel';
     let s = base, n = 2;
-    while (d.funnels.some(f => f.slug === s)) s = base + '-' + n++;
+    while (slugUsado(d, s)) s = base + '-' + n++;
     return almacen.crear('funnels', {
         nombre, slug: s, tipo, setting: tipo === 'setting', color: colorLibre(d, 'funnels'), activo: true, orden: maxOrden(d, 'funnels') + 1,
     });
@@ -314,12 +319,25 @@ function EditarFunnel({ d, f, cerrar }) {
     const [eventoIA, setEventoIA] = useState(eventos[0] ? eventos[0].id : '');
     const [borrar, setBorrar] = useState(false);
     const editar = (cambios, ya) => almacen.editar('funnels', f.id, cambios, ya);
+    // El slug va en todos los links del funnel. El anterior queda guardado: lo ya compartido sigue andando.
+    const cambiarSlug = (input) => {
+        const s = slugify(input.value);
+        if (!s || s === f.slug) { input.value = f.slug; return; }
+        if (slugUsado(d, s, f.id)) { toast('Ese link ya es de otro funnel', 'error'); input.value = f.slug; return; }
+        editar({ slug: s, slugs_anteriores: [f.slug, ...(f.slugs_anteriores || []).filter(x => x !== s)] }, true);
+        toast('Link cambiado a /' + s + '. Los links con /' + f.slug + ' siguen andando.');
+    };
     return (
         <>
             <Bloque titulo="Funnel">
                 <label className="sr" htmlFor="fm-nombre">Nombre del funnel</label>
                 <input id="fm-nombre" className="input" type="text" maxLength={80} defaultValue={f.nombre}
                     onBlur={e => { const v = e.target.value.trim(); if (v && v !== f.nombre) editar({ nombre: v }, true); }} />
+                <div className="entrada">
+                    <span className="prefijo"><Icono n="link" />/agenda/</span>
+                    <input key={f.slug} id="fm-slug" type="text" maxLength={60} spellCheck={false} autoComplete="off" aria-label="Link del funnel"
+                        defaultValue={f.slug} onBlur={e => cambiarSlug(e.target)} />
+                </div>
                 <Tipos valor={f.tipo} onChange={v => editar({ tipo: v, setting: v === 'setting' }, true)} />
                 <label className="fm-fila">
                     <Switch on={f.activo} label={f.nombre + ' recibe agendas'} onChange={v => editar({ activo: v }, true)} />

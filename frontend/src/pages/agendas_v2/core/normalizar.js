@@ -95,14 +95,22 @@ export function normalForm(id, d) {
 
 export function normalFunnel(id, d) {
     d = d || {};
+    const slug = slugify(d.slug) || slugify(d.nombre) || id;
+    const anteriores = [];
+    (Array.isArray(d.slugs_anteriores) ? d.slugs_anteriores : []).slice(0, 20).forEach(x => {
+        x = slugify(x);
+        if (x && x !== slug && !anteriores.includes(x)) anteriores.push(x);
+    });
     return {
-        id, nombre: String(d.nombre || 'Sin nombre').slice(0, 80), slug: slugify(d.slug) || slugify(d.nombre) || id,
+        id, nombre: String(d.nombre || 'Sin nombre').slice(0, 80), slug,
+        // Los slugs que tuvo antes: los links ya compartidos con esos slugs siguen andando.
+        slugs_anteriores: anteriores,
         color: COLORES.includes(d.color) ? d.color : 'azul', activo: d.activo !== false, orden: Number(d.orden) || 0,
         origenes: (Array.isArray(d.origenes) ? d.origenes : []).slice(0, 30)
             .map(o => { o = o || {}; return { id: String(o.id || ''), nombre: String(o.nombre || '').slice(0, 60), setter: String(o.setter || '') }; })
             .filter(o => o.id && (o.nombre || o.setter)),
         tipo: tipoFunnel(d),
-        // Funnel de setting: cada setter activo de NeurOPS tiene su link (?o=<su usuario>) y la agenda
+        // Funnel de setting: cada setter activo de NeurOPS tiene su link (?o=<su código>) y la agenda
         // queda a su nombre. No lleva orígenes a mano.
         setting: tipoFunnel(d) === 'setting',
         // Los setters que trabajan este funnel (ids de usuario). Vacío: todos los setters activos.

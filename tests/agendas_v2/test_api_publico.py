@@ -672,7 +672,8 @@ def test_si_discord_falla_la_agenda_queda(client, armado, monkeypatch):
 
 @pytest.fixture()
 def setting(armado):
-    """Un funnel de setting con el mismo evento: el link de cada setter es ?o=<su usuario>."""
+    """Un funnel de setting con el mismo evento: el link de cada setter es ?o=<su código> (los viejos,
+    ?o=<su usuario>)."""
     servicio.guardar_doc('funnels', 'fs', {'nombre': 'Setting directo', 'slug': 'setting', 'setting': True})
     servicio.guardar_doc('eventos', 'ev', {'funnel': 'fs'}, parcial=True)
     _publicar('ev')
@@ -742,8 +743,36 @@ def test_un_funnel_viejo_con_setting_true_es_de_tipo_setting(armado):
 def test_el_setter_ve_sus_links(client, setting, cuentas, auth_headers):
     r = client.get('/api/setter/agendas-links', headers=auth_headers(cuentas['juan']))
     assert r.status_code == 200
-    assert r.get_json()['links'] == [{'funnel': 'Setting directo', 'evento': 'Llamada', 'ruta': '/agendas-v2/agenda/setting/llamada?o=juan'}]
+    codigo = servicio.codigo_setter(cuentas['juan'].id)
+    ruta = f'/agendas-v2/agenda/setting/llamada?o={codigo}'
+    assert r.get_json()['links'] == [{'funnel': 'Setting directo', 'evento': 'Llamada', 'ruta': ruta}]
     assert client.get('/api/setter/agendas-links', headers=auth_headers(cuentas['ana'])).status_code == 403
+
+
+def test_el_link_del_setter_no_deja_ver_su_nombre_y_sobrevive_a_un_cambio_de_usuario(client, setting, cuentas, google, db):
+    codigo = servicio.codigo_setter(cuentas['juan'].id)
+    assert 'juan' not in codigo and len(codigo) == 6 and codigo == servicio.codigo_setter(cuentas['juan'].id)
+    cuentas['juan'].username = 'juan-perez'
+    db.session.commit()
+    assert _reservar_setting(client, codigo).status_code == 201
+    assert Appointment.query.one().setter_id == cuentas['juan'].id
+
+
+def test_los_codigos_de_setters_no_se_repiten():
+    codigos = {servicio.codigo_setter(i) for i in range(1, 5001)}
+    assert len(codigos) == 5000
+
+
+def test_cambiar_el_slug_del_funnel_no_rompe_los_links_compartidos(client, setting, cuentas, google):
+    servicio.guardar_doc('funnels', 'fs', {'slug': 'st', 'slugs_anteriores': ['setting']}, parcial=True)
+    assert client.get(URL + '/eventos/st/llamada').status_code == 200
+    assert client.get(URL + '/eventos/setting/llamada').status_code == 200  # el link viejo
+    assert client.get(URL + '/eventos/otro/llamada').status_code == 404
+    fs = next(f for f in servicio.colecciones()['funnels'] if f['id'] == 'fs')
+    assert fs['slug'] == 'st' and fs['slugs_anteriores'] == ['setting']
+    # El link viejo, con el usuario en vez del código, también sigue atribuyendo.
+    assert _reservar_setting(client, 'juan').status_code == 201
+    assert Appointment.query.one().setter_id == cuentas['juan'].id
 
 
 

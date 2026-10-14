@@ -7,6 +7,7 @@ asignacion con las agendas reales y, antes de escribir, se bloquea al closer y s
 siga libre.
 """
 
+import hashlib
 import logging
 import re
 import time
@@ -322,6 +323,7 @@ def usuarios_del_equipo(roles):
         {
             'id': u.id,
             'nombre': u.username or '',
+            'codigo': codigo_setter(u.id),
             'email': (u.email or '').lower(),
             # Una cuenta puede tener varios roles (users.roles_extra): vale el primero de `roles` que tenga.
             'rol': next((r for r in roles if u.tiene_rol(r)), u.role),
@@ -836,11 +838,14 @@ def evento_disponible(d, funnel_slug, evento_slug):
         if not x or x[0]['slug'] != evento_slug:
             continue
         funnel = x[2]
-        if funnel_slug is not None and (not funnel or funnel['slug'] != funnel_slug):
+        slugs = [funnel['slug'], *funnel.get('slugs_anteriores', [])] if funnel else []
+        if funnel_slug is not None and funnel_slug not in slugs:
             continue
         encontrados.append(x)
     if funnel_slug is None:
         encontrados.sort(key=lambda x: 0 if not x[2] else 1)  # sin funnel primero
+    else:
+        encontrados.sort(key=lambda x: 0 if x[2]['slug'] == funnel_slug else 1)  # el slug actual antes que uno viejo
     return encontrados[0] if encontrados else None
 
 
@@ -1015,16 +1020,29 @@ def setters_del_funnel(funnel, activos=None):
     return [u for u in activos if not elegidos or u.id in elegidos]
 
 
+def codigo_setter(user_id):
+    """El código del setter en su link (?o=...): fijo, sale del id y no deja ver el nombre. No cambia
+    si se le cambia el usuario."""
+    n = int.from_bytes(hashlib.sha256(f'agendas-setter-{user_id}'.encode()).digest()[:8], 'big')
+    c = ''
+    for _ in range(6):
+        n, r = divmod(n, 36)
+        c += '0123456789abcdefghijklmnopqrstuvwxyz'[r]
+    return c
+
+
 def _setter_de(d, funnel, origen):
     """El usuario setter al que se le atribuye la agenda. En un funnel de setting, el del link
-    (?o=<su usuario en slug>), si sigue activo. En los demás, el de un origen viejo con una persona
-    setter de Team (compatibilidad: los setters ya no van en Team)."""
+    (?o=<su código>, o su usuario en slug en los links viejos), si sigue activo. En los demás, el de un
+    origen viejo con una persona setter de Team (compatibilidad: los setters ya no van en Team)."""
     from app.models.user import User
 
     if not funnel or not origen:
         return None
     if funnel.get('setting'):
-        return next((u for u in setters_del_funnel(funnel) if slugify(u.username) == origen), None)
+        sts = setters_del_funnel(funnel)
+        return (next((u for u in sts if codigo_setter(u.id) == origen), None)
+                or next((u for u in sts if slugify(u.username) == origen), None))
     for o in funnel.get('origenes', []):
         if o.get('setter') and (slugify(nombre_origen(d, o)) or o['id']) == origen:
             user_id = _usuarios_de_personas(d).get(o['setter'])
@@ -1036,7 +1054,7 @@ def links_de_setter(user):
     """Los links de agendamiento de un setter: uno por evento publicado y activo de cada funnel de
     setting activo en el que trabaja. [{funnel, evento, ruta}] con la ruta relativa al sitio."""
     d = colecciones()
-    slug = slugify(user.username)
+    codigo = codigo_setter(user.id)
     links = []
     for f in d['funnels']:
         if not (f.get('setting') and f.get('activo')) or (f.get('setters') and user.id not in f['setters']):
@@ -1044,7 +1062,7 @@ def links_de_setter(user):
         for e in d['eventos']:
             if e.get('funnel') == f['id'] and e.get('activo') is not False and version_publicada(e):
                 links.append({'funnel': f['nombre'], 'evento': e['nombre'],
-                              'ruta': f'/agendas-v2/agenda/{f["slug"]}/{e["slug"]}?o={slug}'})
+                              'ruta': f'/agendas-v2/agenda/{f["slug"]}/{e["slug"]}?o={codigo}'})
     return links
 
 

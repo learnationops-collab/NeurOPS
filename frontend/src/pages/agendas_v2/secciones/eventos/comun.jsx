@@ -38,7 +38,9 @@ export function settersDe(f, sts) {
     const el = f && f.setters && f.setters.length ? new Set(f.setters) : null;
     return el ? sts.filter(s => el.has(Number(s.id))) : sts;
 }
-export const urlSetter = (d, e, s) => window.location.origin + '/agendas-v2' + linkEvento(d, e) + '?o=' + slugify(s.nombre);
+// El código del setter en su link: no deja ver su nombre (los links viejos con el usuario siguen andando).
+export const codigoSetter = s => s.codigo || slugify(s.nombre);
+export const urlSetter = (d, e, s) => window.location.origin + '/agendas-v2' + linkEvento(d, e) + '?o=' + codigoSetter(s);
 
 /**
  * «Links de setters» de un evento de un funnel de setting: uno por setter del funnel, para copiar y mandar.
@@ -55,7 +57,7 @@ export function LinksSetters({ d, e, compacto = false }) {
             : sts.map(s => (
                 <button key={s.id} type="button" className="ls-b" data-nav="" title={'Copiar ' + urlSetter(d, e, s)}
                     aria-label={'Copiar link de ' + s.nombre} onClick={() => copiarTexto(urlSetter(d, e, s), 'Link de ' + s.nombre + ' copiado')}>
-                    <b>{s.nombre}</b>{!compacto && <span>?o={slugify(s.nombre)}</span>}<Icono n="copiar" s={13} />
+                    <b>{s.nombre}</b>{!compacto && <span>?o={codigoSetter(s)}</span>}<Icono n="copiar" s={13} />
                 </button>
             ));
     return (

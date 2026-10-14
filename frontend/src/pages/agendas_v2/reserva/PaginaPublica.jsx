@@ -28,11 +28,12 @@ export function buscarPublicado(d, funnelSlug, eventoSlug) {
         const v = versionPublicada(e);
         if (!v || v.evento.slug !== eventoSlug) return;
         const f = buscar(d, 'funnels', v.evento.funnel) || null;
-        if (funnelSlug && (!f || f.slug !== funnelSlug)) return;
+        if (funnelSlug && (!f || (f.slug !== funnelSlug && !(f.slugs_anteriores || []).includes(funnelSlug)))) return;
         cands.push({ e, v, funnel: f });
     });
     if (!cands.length) return null;
-    return (!funnelSlug && cands.find(c => !c.funnel)) || cands[0];
+    // Sin funnel en la ruta, el evento sin funnel; con funnel, el de slug actual antes que uno viejo.
+    return (!funnelSlug && cands.find(c => !c.funnel)) || (funnelSlug && cands.find(c => c.funnel.slug === funnelSlug)) || cands[0];
 }
 
 function NoDisponible({ sinRed = false }) {
