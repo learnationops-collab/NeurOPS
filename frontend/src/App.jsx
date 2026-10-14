@@ -75,7 +75,7 @@ const ProtectedRoute = ({ children, roles = [] }) => {
 
 // Páginas que ve un lead o cualquiera sin cuenta: ni el widget de bugs ni los avisos del Playbook,
 // aunque quien las abra tenga la sesión del equipo iniciada.
-const RUTAS_PUBLICAS = ['/agendas-v2/agenda', '/book/', '/politica-de-privacidad', '/privacy-policy', '/terminos-de-servicio', '/terms-of-service'];
+const RUTAS_PUBLICAS = ['/agendas-v2/agenda', '/book/', '/politica-de-privacidad', '/privacy-policy', '/eliminacion-de-datos', '/terminos-de-servicio', '/terms-of-service'];
 const esRutaPublica = (pathname) => RUTAS_PUBLICAS.some((r) => pathname === r || pathname.startsWith(r.endsWith('/') ? r : r + '/'));
 
 function SoloInterno({ children }) {
@@ -113,6 +113,7 @@ function App() {
             <Route path="/book/:event_slug" element={<BookingPage />} />
             <Route path="/politica-de-privacidad" element={<PrivacyPolicyPage />} />
             <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+            <Route path="/eliminacion-de-datos" element={<PrivacyPolicyPage />} />
             <Route path="/terminos-de-servicio" element={<TermsOfServicePage />} />
             <Route path="/terms-of-service" element={<TermsOfServicePage />} />
             {/* Agendas 2.0: la página de reserva del lead es pública; Thalamus (la gestión) pide sesión

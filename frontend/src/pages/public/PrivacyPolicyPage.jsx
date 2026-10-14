@@ -1,9 +1,17 @@
 import { useEffect } from 'react';
 import { ShieldCheck, FileText, ArrowLeft, Mail, ExternalLink, MessageSquare, Calendar, ShieldAlert } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const PrivacyPolicyPage = () => {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+
+  // /eliminacion-de-datos es la URL de instrucciones de eliminación que pide Meta: abre esta misma página en esa sección.
+  useEffect(() => {
+    if (pathname === '/eliminacion-de-datos') {
+      document.getElementById('eliminacion-de-datos')?.scrollIntoView();
+    }
+  }, [pathname]);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -66,7 +74,7 @@ const PrivacyPolicyPage = () => {
               <h2 className="text-2xl sm:text-3xl font-black text-base uppercase tracking-tight">
                 Política de Privacidad
               </h2>
-              <p className="text-muted text-sm font-medium mt-1">Última actualización: 24 de julio de 2026</p>
+              <p className="text-muted text-sm font-medium mt-1">Última actualización: 14 de octubre de 2026</p>
             </div>
           </div>
 
@@ -99,6 +107,7 @@ const PrivacyPolicyPage = () => {
                 <li><strong>Datos de Identificación y Contacto:</strong> Nombres completos, direcciones de correo electrónico y números de teléfono.</li>
                 <li><strong>Información de Agendamiento:</strong> Fechas, horas, zonas horarias y detalles logísticos de las sesiones programadas.</li>
                 <li><strong>Datos de Diagnóstico:</strong> Respuestas suministradas en nuestros cuestionarios de diagnóstico de preparación o formularios de admisión.</li>
+                <li><strong>Mensajes de Instagram:</strong> Cuando nos escribes por mensaje directo o comentas en nuestras publicaciones de Instagram, recibimos tu identificador y nombre de usuario de Instagram, el contenido de tus mensajes o comentarios y la fecha en que los enviaste.</li>
               </ul>
             </div>
 
@@ -123,7 +132,7 @@ const PrivacyPolicyPage = () => {
                   <MessageSquare className="text-primary mt-1 shrink-0" size={18} />
                   <div>
                     <span className="font-bold text-sm text-base block">Automatizaciones de Asistencia</span>
-                    <span className="text-muted text-xs block mt-1">Envío de recordatorios y confirmación de citas mediante canales como WhatsApp o plataformas de agendamiento como Calendly.</span>
+                    <span className="text-muted text-xs block mt-1">Respuestas a tus mensajes de Instagram, envío de recordatorios y confirmación de citas mediante canales como WhatsApp o plataformas de agendamiento como Calendly.</span>
                   </div>
                 </div>
 
@@ -147,6 +156,7 @@ const PrivacyPolicyPage = () => {
               </p>
               <ul className="list-disc pl-8 space-y-2 text-muted text-sm">
                 <li><strong>Meta Platforms, Inc. (WhatsApp Cloud API):</strong> Usado exclusivamente para el envío automatizado de notificaciones de asistencia y confirmaciones operativas.</li>
+                <li><strong>Meta Platforms, Inc. (API de Instagram):</strong> Para recibir y responder los mensajes directos y comentarios que nos envías en Instagram. Solo accedemos a las conversaciones de nuestras propias cuentas de Instagram.</li>
                 <li><strong>Calendly LLC:</strong> Para la gestión integrada y automatizada de los calendarios de citas.</li>
                 <li><strong>Servicios Cloud e Infraestructura:</strong> Albergamos y procesamos datos en entornos en la nube seguros (como Railway), que cumplen con certificaciones internacionales de seguridad.</li>
               </ul>
@@ -183,6 +193,24 @@ const PrivacyPolicyPage = () => {
               </h3>
               <p className="text-muted text-sm leading-relaxed pl-4">
                 Toda la transferencia de información dentro de nuestra plataforma se realiza de forma cifrada utilizando protocolos criptográficos <strong>HTTPS (SSL/TLS)</strong> de extremo a extremo. Limitamos el acceso a los datos únicamente al personal autorizado que requiera realizar tareas de soporte o admisiones.
+              </p>
+            </div>
+
+            {/* Sección 7 */}
+            <div id="eliminacion-de-datos" className="space-y-3 scroll-mt-8">
+              <h3 className="text-lg font-bold text-base flex items-center gap-2 uppercase tracking-wider border-l-4 border-primary pl-3">
+                7. Cómo Solicitar la Eliminación de tus Datos
+              </h3>
+              <p className="text-muted text-sm leading-relaxed pl-4">
+                Puedes pedir que eliminemos todos los datos que tenemos sobre ti, incluidos los mensajes y comentarios recibidos a través de Instagram, en cualquier momento y sin costo:
+              </p>
+              <ol className="list-decimal pl-8 space-y-2 text-muted text-sm">
+                <li>Escribe a <a href="mailto:privacidad@thelearnation.com" className="text-primary underline">privacidad@thelearnation.com</a> con el asunto <strong>&quot;Eliminación de datos&quot;</strong>.</li>
+                <li>Indica tu nombre de usuario de Instagram y, si nos los diste, tu correo electrónico o número de teléfono, para que podamos encontrar todos tus registros.</li>
+                <li>Confirmaremos la recepción de tu solicitud y eliminaremos tus datos en un plazo máximo de 30 días, avisándote por el mismo medio cuando el proceso esté completo.</li>
+              </ol>
+              <p className="text-muted text-sm leading-relaxed pl-4">
+                Solo conservaremos la información que la ley nos obligue a mantener (por ejemplo, registros de facturación), durante el plazo que esa obligación exija.
               </p>
             </div>
 
