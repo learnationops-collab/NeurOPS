@@ -172,10 +172,10 @@ const PrivacyPolicyPage = () => {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 pl-4 mt-2">
                 <a
-                  href="mailto:privacidad@thelearnation.com"
+                  href="mailto:santiago@thelearnation.com"
                   className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-main border border-base hover:border-primary/50 text-base font-bold text-sm hover:bg-surface transition-all"
                 >
-                  <Mail size={16} className="text-primary" /> privacidad@thelearnation.com
+                  <Mail size={16} className="text-primary" /> santiago@thelearnation.com
                 </a>
                 <a
                   href="mailto:soporte@thelearnation.com"
@@ -205,7 +205,7 @@ const PrivacyPolicyPage = () => {
                 Puedes pedir que eliminemos todos los datos que tenemos sobre ti, incluidos los mensajes y comentarios recibidos a través de Instagram, en cualquier momento y sin costo:
               </p>
               <ol className="list-decimal pl-8 space-y-2 text-muted text-sm">
-                <li>Escribe a <a href="mailto:privacidad@thelearnation.com" className="text-primary underline">privacidad@thelearnation.com</a> con el asunto <strong>&quot;Eliminación de datos&quot;</strong>.</li>
+                <li>Escribe a <a href="mailto:santiago@thelearnation.com" className="text-primary underline">santiago@thelearnation.com</a> con el asunto <strong>&quot;Eliminación de datos&quot;</strong>.</li>
                 <li>Indica tu nombre de usuario de Instagram y, si nos los diste, tu correo electrónico o número de teléfono, para que podamos encontrar todos tus registros.</li>
                 <li>Confirmaremos la recepción de tu solicitud y eliminaremos tus datos en un plazo máximo de 30 días, avisándote por el mismo medio cuando el proceso esté completo.</li>
               </ol>
