@@ -1,5 +1,5 @@
 import React, { forwardRef, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Search, X } from 'lucide-react';
+import { Plus, Search, X } from 'lucide-react';
 
 /**
  * El buscador de la palabra clave del anuncio: un combobox (patrón ARIA "combobox" con "listbox").
@@ -17,11 +17,36 @@ import { Search, X } from 'lucide-react';
  *
  * El orden lo da el backend (activos, los más usados por el setter, los más nuevos); al filtrar,
  * los que EMPIEZAN con lo escrito van primero, sin perder ese orden entre ellos.
+ *
+ * Palabras clave que no están en los registros (15/10/2026): «los setters no ven todas las palabras
+ * claves que llegan desde ManyChat». La lista trae también las que llegaron por ManyChat y no tienen
+ * anuncio (`nueva`, sin `id`), y si lo escrito no coincide con ninguna, la última opción es
+ * «Agregar "…"». Elegir cualquiera de las dos manda la palabra como texto y el backend crea el
+ * anuncio al asignar.
  */
 
 /** Sin tildes y en minúsculas, un carácter por carácter: así los índices sirven para resaltar. */
 const plano = (texto) => Array.from(String(texto || ''))
     .map(c => (c.normalize('NFD')[0] || c).toLowerCase()).join('');
+
+/** Para comparar palabras clave enteras: «Guía  Perú» y «guia peru» son la misma. */
+const igual = (texto) => plano(texto).replace(/[^a-z0-9]+/g, ' ').trim();
+
+/** La clave de React de una opción: el id, o la palabra si todavía no tiene anuncio. */
+const claveDe = (a) => (a.id ? `id:${a.id}` : `nueva:${igual(a.keyword)}`);
+
+/** La lista con el anuncio que el backend acaba de crear: entra primero y sale la palabra que lo pidió. */
+export const agregarAnuncio = (anuncios, creado) => {
+    const sin = anuncios.filter(a => a.id ? a.id !== creado.id : igual(a.keyword) !== igual(creado.keyword));
+    return [{ id: creado.id, keyword: creado.keyword, nombre: creado.keyword, activo: true, usos: 1 }, ...sin];
+};
+
+/** Lo escrito como opción «Agregar»: solo si es algo y no coincide entero con ninguna de la lista. */
+export const opcionAgregar = (anuncios, escrito) => {
+    const texto = String(escrito || '').trim().replace(/\s+/g, ' ');
+    if (!igual(texto) || texto.length > 100 || anuncios.some(a => igual(a.keyword) === igual(texto))) return null;
+    return { id: null, keyword: texto, nombre: texto, activo: true, usos: 0, nueva: true, agregar: true };
+};
 
 export const filtrarAnuncios = (anuncios, consulta) => {
     const q = plano(consulta).trim();
@@ -65,12 +90,16 @@ const BuscadorAnuncio = forwardRef(({ anuncios, elegido, onElegir, onConfirmar, 
     useImperativeHandle(ref, () => ({ focus: () => campoRef.current?.focus() }), []);
 
     // Lo elegido desde afuera (la sugerencia de la agenda) se ve en el campo.
-    useEffect(() => { if (elegido) setTexto(elegido.keyword); }, [elegido?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { if (elegido) setTexto(elegido.keyword); }, [elegido && claveDe(elegido)]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Con un anuncio elegido el campo muestra su palabra clave: abrir la lista ahí muestra todos, no
     // solo el que ya está.
     const consulta = elegido && texto === elegido.keyword ? '' : texto;
-    const opciones = useMemo(() => filtrarAnuncios(anuncios, consulta), [anuncios, consulta]);
+    const opciones = useMemo(() => {
+        const lista = filtrarAnuncios(anuncios, consulta);
+        const agregar = opcionAgregar(anuncios, consulta);
+        return agregar ? [...lista, agregar] : lista;
+    }, [anuncios, consulta]);
 
     useEffect(() => { onAbrir?.(abierta); }, [abierta]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -116,8 +145,12 @@ const BuscadorAnuncio = forwardRef(({ anuncios, elegido, onElegir, onConfirmar, 
         } else if (e.key === 'Enter') {
             e.preventDefault();
             if (abierta && n) {
-                // Con un solo resultado no hay nada que dudar: elige y asigna en el mismo Enter.
-                elegir(opciones[Math.min(activa, n - 1)], { confirmar: n === 1 });
+                // Con un solo resultado no hay nada que dudar: elige y asigna en el mismo Enter («Agregar»
+                // no cuenta como resultado). Elegir «Agregar» nunca asigna en el mismo golpe: una
+                // palabra mal escrita crearía un anuncio, así que se confirma con otro Enter o el botón.
+                const opcion = opciones[Math.min(activa, n - 1)];
+                const reales = opciones.filter(o => !o.agregar).length;
+                elegir(opcion, { confirmar: reales === 1 && !opcion.agregar });
             } else if (!abierta && elegido) {
                 onConfirmar?.(elegido);
             } else if (!abierta && texto.trim()) {
@@ -160,8 +193,17 @@ const BuscadorAnuncio = forwardRef(({ anuncios, elegido, onElegir, onConfirmar, 
                         {opciones.length === 0 && (
                             <li className="ma-op ma-op--vacia" role="presentation">Ningún anuncio con «{texto}»</li>
                         )}
-                        {opciones.map((a, i) => (
-                            <li key={a.id} id={idOpcion(i)} data-i={i} role="option"
+                        {opciones.map((a, i) => (a.agregar ? (
+                            <li key="agregar" id={idOpcion(i)} data-i={i} role="option"
+                                aria-selected={i === Math.min(activa, opciones.length - 1)}
+                                className="ma-op ma-op--agregar" onMouseMove={() => setActiva(i)}
+                                onMouseDown={(e) => { e.preventDefault(); elegir(a); }}>
+                                <Plus size={15} aria-hidden="true" />
+                                <span className="ma-op-k trunc">Agregar «{a.keyword}»</span>
+                                <span className="ma-op-der"><span className="ma-op-pausa">nueva</span></span>
+                            </li>
+                        ) : (
+                            <li key={claveDe(a)} id={idOpcion(i)} data-i={i} role="option"
                                 aria-selected={i === Math.min(activa, opciones.length - 1)}
                                 className="ma-op" onMouseMove={() => setActiva(i)}
                                 // `mousedown` y no `click`: el campo no pierde el foco al elegir.
@@ -171,6 +213,11 @@ const BuscadorAnuncio = forwardRef(({ anuncios, elegido, onElegir, onConfirmar, 
                                     <span className="ma-op-n trunc"><Resaltado texto={a.nombre} consulta={consulta} /></span>
                                 )}
                                 <span className="ma-op-der">
+                                    {a.nueva && (
+                                        <span className="ma-op-pausa" title="Llegó por ManyChat y todavía no tiene anuncio: se crea al asignarla">
+                                            de ManyChat
+                                        </span>
+                                    )}
                                     {!a.activo && <span className="ma-op-pausa">pausado</span>}
                                     {a.usos > 0 && (
                                         <span className="ma-op-usos num" title={`Lo usaste ${a.usos} ${a.usos === 1 ? 'vez' : 'veces'}`}>
@@ -179,7 +226,7 @@ const BuscadorAnuncio = forwardRef(({ anuncios, elegido, onElegir, onConfirmar, 
                                     )}
                                 </span>
                             </li>
-                        ))}
+                        )))}
                     </ul>
                 )}
             </div>

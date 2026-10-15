@@ -205,6 +205,25 @@ describe('MisAgendas · la bandeja de palabras clave', () => {
         expect(red.posts).toEqual([{ appointment_id: 13, ad_id: 2, instagram: '@caro.real' }]);
     });
 
+    it('una palabra clave que no está en la lista viaja como texto y su anuncio entra a la lista', async () => {
+        // Pedido del 15/10/2026: «permitir agregar una palabra clave que no esté en los registros».
+        red.post = (cuerpo) => backendQueAsigna()(cuerpo).then(r => ({
+            data: { ...r.data, anuncio: { id: 9, keyword: 'guia peru' } },
+        }));
+        await montar();
+
+        await asignarConTeclado('Ana', 'guia peru');
+        // Elegir «Agregar» no asigna de un golpe: el segundo Enter sí.
+        expect(red.posts).toEqual([]);
+        await act(async () => { fireEvent.keyDown(buscadorDe('Ana'), { key: 'Enter' }); });
+
+        expect(red.posts).toEqual([{ appointment_id: 11, palabra_clave: 'guia peru' }]);
+        await waitFor(() => expect(screen.queryByRole('listitem', { name: 'Agenda de Ana' })).toBeNull());
+        // En la tarjeta que sigue ya es un anuncio más: con id, sin «Agregar».
+        fireEvent.change(buscadorDe('Beto'), { target: { value: 'guia peru' } });
+        expect(within(tarjeta('Beto')).getAllByRole('option').map(o => o.textContent)).toEqual(['guia peru×1']);
+    });
+
     it('la palabra clave que ya decía la agenda viene elegida: Enter la asigna', async () => {
         red.pendientes = [agenda(11, 'Ana', { sugerido: 3 })];
         red.resumen = resumenDe(red.pendientes);

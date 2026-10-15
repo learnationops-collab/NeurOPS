@@ -185,6 +185,10 @@
   cursor:pointer;font-size:14px;color:var(--text-muted)}
 .mis-agendas .ma-op[aria-selected="true"]{background:var(--bg-element-hover);color:var(--text-on-surface)}
 .mis-agendas .ma-op--vacia{cursor:default;font-size:13px;color:var(--text-muted-40)}
+/* «Agregar "…"»: la palabra clave que no está en la lista (15/10/2026). */
+.mis-agendas .ma-op--agregar{color:var(--brand-secondary);border-top:1px dashed var(--border-subtle);margin-top:4px}
+.mis-agendas .ma-op--agregar .ma-op-k{flex-shrink:1;min-width:0;color:inherit}
+.mis-agendas .ma-op--agregar svg{flex-shrink:0}
 .mis-agendas .ma-op-k{flex-shrink:0;font-weight:800;color:var(--text-on-surface);letter-spacing:-.01em}
 .mis-agendas .ma-op-n{font-size:12.5px;font-weight:600;color:var(--text-muted-40)}
 .mis-agendas .ma-op mark{background:none;color:var(--brand-secondary);font-weight:900}
