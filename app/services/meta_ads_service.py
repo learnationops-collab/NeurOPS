@@ -26,6 +26,7 @@ la que el anuncio pide escribir (así se escriben: «Respondé EARN», «coment�
 import json
 import os
 import re
+import time
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -58,6 +59,7 @@ class ErrorDeMeta(Exception):
     def __init__(self, mensaje, codigo=None):
         super().__init__(mensaje)
         self.codigo = codigo
+        self.pasajero = False
 
 
 def configuracion():
@@ -90,7 +92,24 @@ def ultima_sincronizacion():
 
 # --- La Graph API --------------------------------------------------------------------------------
 
+# Segundos antes de cada reintento de un error pasajero de Meta («Service temporarily unavailable»,
+# código 2, o los que Meta marca `is_transient`): el 15/10/2026 cortó una sincronización de 180 días a
+# la mitad y se perdió entera (es una sola transacción).
+ESPERAS_DE_REINTENTO = (3, 10)
+CODIGOS_PASAJEROS = {2}
+
+
 def _pedir(url, params=None):
+    for espera in (*ESPERAS_DE_REINTENTO, None):
+        try:
+            return _pedir_una_vez(url, params)
+        except ErrorDeMeta as error:
+            if espera is None or not error.pasajero:
+                raise
+            time.sleep(espera)
+
+
+def _pedir_una_vez(url, params=None):
     try:
         respuesta = requests.get(url, params=params, timeout=40)
     except requests.RequestException as error:
@@ -104,7 +123,9 @@ def _pedir(url, params=None):
         mensaje = error.get('message') or f'HTTP {respuesta.status_code}'
         if error.get('code') == 190:
             mensaje = f'El token de Meta venció o no es válido ({mensaje}).'
-        raise ErrorDeMeta(mensaje, error.get('code'))
+        fallo = ErrorDeMeta(mensaje, error.get('code'))
+        fallo.pasajero = bool(error.get('is_transient')) or error.get('code') in CODIGOS_PASAJEROS
+        raise fallo
     return datos
 
 

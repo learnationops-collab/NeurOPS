@@ -321,6 +321,37 @@ def test_el_embudo_lo_pone_la_sincronizacion_y_se_corrige_a_mano(db, meta):
     assert MetaAnuncio.query.filter_by(meta_ad_id='222').one().embudo_mapeo == 'auto'
 
 
+def test_un_error_pasajero_de_meta_se_reintenta(db, meta, monkeypatch):
+    """15/10/2026: «Service temporarily unavailable» (código 2) cortó una sincronización de 180 días."""
+    monkeypatch.setattr(servicio, 'ESPERAS_DE_REINTENTO', (0, 0))
+    get_original, fallas = servicio.requests.get, []
+
+    def get(url, params=None, timeout=None):
+        if len(fallas) < 2:
+            fallas.append(url)
+            return _Respuesta({'error': {'message': 'Service temporarily unavailable', 'code': 2}}, 503)
+        return get_original(url, params=params, timeout=timeout)
+
+    monkeypatch.setattr(servicio.requests, 'get', get)
+
+    assert servicio.sincronizar(date(2026, 10, 12), date(2026, 10, 13))['filas_de_gasto'] == 3
+    assert len(fallas) == 2
+
+
+def test_un_error_que_no_es_pasajero_no_se_reintenta(db, meta, monkeypatch):
+    monkeypatch.setattr(servicio, 'ESPERAS_DE_REINTENTO', (0, 0))
+    pedidos = []
+
+    def get(url, params=None, timeout=None):
+        pedidos.append(url)
+        return _Respuesta({'error': {'message': 'Invalid parameter', 'code': 100}}, 400)
+
+    monkeypatch.setattr(servicio.requests, 'get', get)
+    with pytest.raises(servicio.ErrorDeMeta):
+        servicio.sincronizar()
+    assert len(pedidos) == 1
+
+
 def test_un_token_vencido_es_un_error_claro(db, meta, monkeypatch):
     monkeypatch.setattr(servicio.requests, 'get', lambda *a, **k: _Respuesta(
         {'error': {'message': 'Session has expired', 'code': 190}}, 400))
