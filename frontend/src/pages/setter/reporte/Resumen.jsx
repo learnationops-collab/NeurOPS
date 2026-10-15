@@ -4,7 +4,7 @@ import { ChipAviso, ChipCanal, Numero, useAngosto } from './Piezas';
 import { AMBOS, CANALES, ETAPAS, calcular } from './modelo';
 
 /**
- * El Resumen del día: cinco números y los embudos de cada canal y del total.
+ * El Resumen del día: seis números y los embudos de cada canal y del total.
  *
  * Es el último paso del formulario y también lo que muestra el Historial al abrir un día, así que
  * recibe el reporte ya armado (la forma de `vacio()`) y no sabe de dónde vino. `conAvisos` pone
@@ -47,6 +47,10 @@ export const Kpis = ({ estado, conAvisos = false }) => {
                 <span className="rd-k">Apertura</span>
                 <Numero valor={num['tot.apRate']} tipo="pct" />
             </div>
+            <div className="rd-kpi" title="De las aperturas que hiciste, cuántas te respondieron">
+                <span className="rd-k">Respuesta</span>
+                <Numero valor={num['tot.respRate']} tipo="pct" />
+            </div>
             <div className="rd-kpi">
                 <span className="rd-k">Agendas</span>
                 <Numero valor={num['tot.agendas']} />
@@ -81,11 +85,16 @@ export const Embudos = ({ estado }) => {
                 {CANALES.map((c, i) => (
                     <ColResumen key={c.k} canal={c} indice={i}
                         chips={(
-                            <span className="rd-chip" style={{ '--c': c.c }}>
-                                <Numero valor={num[`${c.k}.apRate`]} tipo="pct" /> apertura
-                            </span>
+                            <>
+                                <span className="rd-chip" style={{ '--c': c.c }}>
+                                    <Numero valor={num[`${c.k}.apRate`]} tipo="pct" /> apertura
+                                </span>
+                                <span className="rd-chip" style={{ '--c': c.c }} title="Respondieron sobre las aperturas">
+                                    <Numero valor={num[`${c.k}.respRate`]} tipo="pct" /> respuesta
+                                </span>
+                            </>
                         )}>
-                        <Flujo etapas={[{ n: 'Entrantes' }, { n: 'Cualificados' }, { n: 'Agendas' }]} color={c.c}
+                        <Flujo etapas={[{ n: 'Entrantes' }, { n: 'Leads' }, { n: 'Agendas' }]} color={c.c}
                             valores={[estado[c.k].entrantes, num[`${c.k}.net`], estado[c.k].agendas]} max={mE}
                             convs={[num[`${c.k}.cualRate`], num[`${c.k}.convRate`]]} fb={64} fg={fg} />
                     </ColResumen>

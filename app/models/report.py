@@ -124,6 +124,17 @@ class SetterDailyStats(db.Model):
     bnv_hechas = db.Column(db.Integer, default=0, server_default='0')
     bnv_respondidas = db.Column(db.Integer, default=0, server_default='0')
     bnv_aperturas = db.Column(db.Integer, default=0, server_default='0')
+    # Correcciones del 15/10/2026: los leads que carga el setter por canal (antes los cualificados
+    # eran entrantes − no leads − in-abribles y el que no contestaba contaba como cualificado) y
+    # cuántos respondieron las aperturas. NULL = el reporte no lo cargó (todo lo de antes): quien lee
+    # sigue con la cuenta vieja, no con un cero.
+    ads_leads = db.Column(db.Integer, nullable=True)
+    ads_ap_entrantes_resp = db.Column(db.Integer, nullable=True)
+    ads_ap_dolor_resp = db.Column(db.Integer, nullable=True)
+    inb_leads = db.Column(db.Integer, nullable=True)
+    inb_ap_entrantes_resp = db.Column(db.Integer, nullable=True)
+    inb_ap_dolor_resp = db.Column(db.Integer, nullable=True)
+    bnv_aperturas_resp = db.Column(db.Integer, nullable=True)
 
     setter = db.relationship('User', foreign_keys=[setter_id], overlaps="setter_daily_stats_rel,user_rel")
     __table_args__ = (db.UniqueConstraint('setter_id', 'date', name='_setter_date_uc'),)

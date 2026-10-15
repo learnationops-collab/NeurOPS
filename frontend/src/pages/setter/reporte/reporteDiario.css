@@ -241,7 +241,7 @@
   background:var(--bg-element);border:1px solid var(--border-subtle);font-size:11px;font-weight:900;color:var(--text-muted)}
 
 /* --- Resumen --------------------------------------------------------------------------------- */
-.rd .rd-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--s4);padding:var(--s5) var(--s6)}
+.rd .rd-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:var(--s4);padding:var(--s5) var(--s6)}
 .rd .rd-kpi{display:grid;gap:var(--s2);align-content:start;min-width:0;animation:rdSube .5s var(--out) both}
 .rd .rd-kpi .rd-k{color:var(--text-muted)}
 .rd .rd-kpi > b{font-size:34px;font-weight:900;letter-spacing:-.035em;line-height:1;font-variant-numeric:tabular-nums}
@@ -364,8 +364,7 @@
   .rd .rd-rcol .rd-rbody{flex-direction:column;align-items:stretch}
   .rd .rd-flujo-svg{min-height:150px;flex:none;height:150px}
   .rd .rd-kpis{grid-template-columns:repeat(2,minmax(0,1fr));padding:var(--s4)}
-  /* Cinco números en dos columnas: el último ocupa la fila entera en vez de quedar suelto. */
-  .rd .rd-kpis:not(.rd-kpis--4) > .rd-kpi:nth-child(5){grid-column:1/-1}
+  /* Seis números (con la respuesta a las aperturas, 15/10/2026): tres filas de dos, ninguno suelto. */
   .rd .rd-resultado--resumen{grid-template-rows:auto auto}
   .rd .rd-notas{grid-template-columns:minmax(0,1fr);padding:var(--s4)}
   .rd .rd-rbig > b{font-size:34px}

@@ -54,9 +54,11 @@ const pasoActual = () => screen.getByRole('navigation', { name: 'Pasos del repor
 
 const cargarDiaDelDiseno = () => {
     escribir('Anuncios, nuevos mensajes', 10);
+    escribir('Anuncios, leads', 9);
     escribir('Anuncios, no leads', 1);
     escribir('Anuncios, in-abribles', 0);
     escribir('Inbound, nuevos mensajes', 6);
+    escribir('Inbound, leads', 5);
     escribir('Inbound, in-abribles', 1);
     escribir('Bienvenidas, hechas', 12);
     escribir('Bienvenidas, respondidas', 5);
@@ -104,6 +106,17 @@ describe('ReporteDiario · los pasos', () => {
         expect(within(paso).getByText('83%')).toBeInTheDocument();
     });
 
+    it('lo que sobra de los mensajes son los que no contestaron', async () => {
+        await montar();
+        cargarDiaDelDiseno();
+        escribir('Anuncios, leads', 6);
+
+        const paso = screen.getByRole('region', { name: 'Entrantes' });
+        expect(paso.querySelector('.rd-rbig > b').textContent).toBe('60%');
+        // Anuncios: 10 − 6 leads − 1 no lead − 0 in-abribles; inbound: todos contestaron.
+        expect(within(paso).getAllByText('no contestaron').map(t => t.previousSibling.textContent)).toEqual(['3', '0']);
+    });
+
     it('con el teclado: flechas ±1 (±10 con Shift), Enter al número siguiente y del último al paso siguiente', async () => {
         await montar();
         const entr = celda('Anuncios, nuevos mensajes');
@@ -115,7 +128,7 @@ describe('ReporteDiario · los pasos', () => {
         expect(entr).toHaveValue('10');
 
         fireEvent.keyDown(entr, { key: 'Enter' });
-        expect(celda('Anuncios, no leads')).toHaveFocus();
+        expect(celda('Anuncios, leads')).toHaveFocus();
 
         celda('Bienvenidas, respondidas').focus();
         fireEvent.keyDown(celda('Bienvenidas, respondidas'), { key: 'Enter' });
@@ -136,34 +149,40 @@ describe('ReporteDiario · los pasos', () => {
         expect(celda('Anuncios, nuevos mensajes')).toHaveValue('123');
     });
 
-    it('en Aperturas dice si te responden: más aperturas en dolor que en entrantes', async () => {
+    it('en Aperturas carga cuántos respondieron y da el % de respuesta de cada columna', async () => {
         await montar();
         siguiente();
 
         escribir('Anuncios, aperturas en entrantes', 3);
         escribir('Anuncios, aperturas en dolor', 5);
-        escribir('Inbound, aperturas en entrantes', 4);
-        escribir('Inbound, aperturas en dolor', 1);
+        escribir('Anuncios, respondieron las aperturas en entrantes', 1);
+        escribir('Anuncios, respondieron las aperturas en dolor', 3);
+        escribir('Bienvenidas, aperturas', 4);
+        escribir('Bienvenidas, respondieron las aperturas', 1);
 
-        expect(screen.getByText('Te responden')).toBeInTheDocument();
-        expect(screen.getByText('Responden poco')).toBeInTheDocument();
+        const paso = screen.getByRole('region', { name: 'Aperturas' });
+        const chips = [...paso.querySelectorAll('.rd-rcab .rd-chip')].map(c => c.textContent);
+        expect(chips).toEqual(['Anuncios', '50%respuesta', 'Inbound', 'Bienvenidas', '25%respuesta']);
+
+        escribir('Anuncios, respondieron las aperturas en dolor', 6);
+        expect(screen.getByText('Anuncios: más respuestas que aperturas en dolor (5)')).toBeInTheDocument();
     });
 });
 
 describe('ReporteDiario · los avisos', () => {
-    it('no leads + in-abribles por encima de los mensajes bloquea el envío y lleva al paso', async () => {
+    it('leads + no leads + in-abribles por encima de los mensajes bloquea el envío y lleva al paso', async () => {
         await montar();
         escribir('Inbound, nuevos mensajes', 2);
         escribir('Inbound, no leads', 3);
 
-        expect(screen.getByText('Inbound: no leads e in-abribles superan los 2 mensajes')).toBeInTheDocument();
+        expect(screen.getByText('Inbound: leads, no leads e in-abribles superan los 2 mensajes')).toBeInTheDocument();
         expect(celda('Inbound, no leads')).toHaveAttribute('aria-invalid', 'true');
 
         fireEvent.click(screen.getByRole('button', { name: /Resumen/ }));
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Enviar reporte' })); });
 
         expect(red.post).toBeNull();
-        expect(toast.error).toHaveBeenCalledWith('Inbound: no leads e in-abribles superan los 2 mensajes');
+        expect(toast.error).toHaveBeenCalledWith('Inbound: leads, no leads e in-abribles superan los 2 mensajes');
         expect(pasoActual()).toContain('Entrantes');
     });
 

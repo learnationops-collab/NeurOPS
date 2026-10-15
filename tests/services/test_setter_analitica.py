@@ -150,6 +150,18 @@ def test_sin_respondidos_en_la_suma_la_respuesta_es_none_y_no_se_deduce(db, elia
     assert (fu['total'], fu['respondidos'], fu['respuesta']) == (20, None, None)
 
 
+def test_la_respuesta_a_las_aperturas_sale_de_los_reportes_que_la_cargaron():
+    d = {'entrantes': 40, 'no_lead': 4, 'inabribles': 2, 'cualificados': 24, 'no_contestaron': 10,
+         'ap_entrantes': 6, 'ap_dolor': 14, 'aperturas': 20, 'agendas': 3}
+
+    v = sa.vista_de(d, respuesta={'aperturas': 16, 'respondidas': 4})
+
+    assert (v['respuesta_aperturas'], v['ap_respondidas'], v['ap_con_respuesta']) == (25.0, 4, 16)
+    assert v['no_contestaron_pct'] == 25.0
+    # Sin ningún reporte con el dato: «—», no 0%.
+    assert sa.vista_de(d)['respuesta_aperturas'] is None
+
+
 # --- Lo que pasó después de la agenda (el sistema) ------------------------------------------------
 
 @freeze_time(HOY)
@@ -165,6 +177,24 @@ def test_despues_de_la_agenda_cuenta_cada_resultado_con_su_porcentaje(db, elias,
     # El show up y el no show se miden sobre las que tienen resultado, como en todo el tablero.
     assert (b['realizadas'], b['no_show'], b['no_show_pct']) == (3, 1, round(1 / 3 * 100, 1))
     assert (b['asistieron'], b['show_up']) == (2, round(2 / 3 * 100, 1))
+
+
+@freeze_time(HOY)
+def test_despues_de_la_agenda_parte_de_las_que_ya_se_dieron(db, elias, closer):
+    """Corrección del dueño (15/10/2026): «que aquí solamente aparezcan las que ya se dieron». Una
+    llamada de la semana que viene no está en la base del panel; una cancelada sí (el cancelar ya
+    pasó), aunque su reunión fuera a ser después."""
+    futura = datetime(2026, 10, 20, 15)
+    generada(db, elias, closer, creada=datetime(2026, 9, 28, 15), reunion=futura)
+    generada(db, elias, closer, creada=datetime(2026, 9, 28, 15), reunion=futura, closer_result='Cancelado')
+    for resultado in ('Show up', 'No Show', 'Pendiente'):
+        generada(db, elias, closer, closer_result=resultado)
+
+    b = bloque(elias)
+
+    assert (b['generadas'], b['ocurridas'], b['por_venir'], b['sin_reporte']) == (5, 4, 1, 1)
+    assert (b['canceladas'], b['canceladas_pct']) == (1, 25.0)
+    assert (b['realizadas'], b['show_up']) == (2, 50.0)
 
 
 @freeze_time(HOY)

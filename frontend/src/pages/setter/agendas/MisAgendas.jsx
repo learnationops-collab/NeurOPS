@@ -5,6 +5,7 @@ import api from '../../../services/api';
 import { EsqueletoFilas, Tip } from '../../comercial/components/Shared';
 import TarjetaAgenda from './TarjetaAgenda';
 import Premio from './Premio';
+import ListaCompletadas from './ListaCompletadas';
 import SetterUnclaimedAgendas from './SetterUnclaimedAgendas';
 import { mesCorto, mesSiguiente, mesesConCuenta, nombreDeMes, tituloDeMes } from './meses';
 import './misAgendas.css';
@@ -34,9 +35,25 @@ import './misAgendas.css';
  * comisión del mes se fue a «Mis datos» (pedido del 11/10/2026: «me gusta que aparezca, pero no
  * acá: en sus datos»).
  *
+ * **Pendientes y completadas (15/10/2026).** El dueño: «quisiera saber los que ya pusieron [...]
+ * pendientes por un lado y me podés poner el tab de completados por otro, para saber rápidamente al
+ * entrar si están funcionando o no». Debajo del selector de meses, dos pestañas del mes elegido:
+ * «Pendientes» es la bandeja de siempre y «Completadas» la lista de solo lectura de las que ya
+ * tienen palabra clave (`ListaCompletadas`). Al asignar, la agenda pasa de una a la otra en el
+ * momento. La pestaña no va en la URL.
+ *
  * `onResumen` le avisa al espacio el resumen (la marca del dock); `onVerDatos` lleva a "Mis datos"
  * desde el premio final.
  */
+const PESTANAS = [
+    { id: 'pendientes', rotulo: 'Pendientes' },
+    { id: 'completadas', rotulo: 'Completadas' },
+];
+
+/** Las completadas en el orden del backend: las más nuevas (por creación) primero. */
+const ordenarCompletadas = (lista) => [...lista].sort((a, b) =>
+    (b.creada || '').localeCompare(a.creada || '') || (b.id - a.id));
+
 const MisAgendas = ({ onResumen, onVerDatos }) => {
     const reducir = useReducedMotion();
     const [datos, setDatos] = useState(null);
@@ -47,6 +64,9 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
     const [sinDueno, setSinDueno] = useState([]);
     // El mes que eligió en el selector; sin elegir, el actual.
     const [mesElegido, setMesElegido] = useState(null);
+    // 'pendientes' (la bandeja) o 'completadas' (las del mes que ya tienen palabra clave).
+    const [pestana, setPestana] = useState('pendientes');
+    const pestanasRef = useRef({});
     const tarjetas = useRef(new Map());
     const premioRef = useRef(null);
     const llamadoRef = useRef(null);
@@ -99,7 +119,27 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
     const mes = infoMes?.mes || null;
     mesRef.current = mes;
     const delMes = porMes ? pendientes.filter(a => a.mes === mes) : pendientes;
+    const completadas = useMemo(() => datos?.completadas || [], [datos]);
+    const hechasDelMes = porMes ? completadas.filter(a => a.mes === mes) : completadas;
     const siguiente = porMes ? mesSiguiente(meses, mes) : null;
+
+    const elegirPestana = (id, { enfocar = false } = {}) => {
+        // El festejo es del momento en que vació el mes: al volver de «Completadas», el «al día» calmo.
+        if (id !== pestana) setFestejo(null);
+        setPestana(id);
+        if (enfocar) pestanasRef.current[id]?.focus();
+    };
+
+    // ←/→ (y Inicio/Fin) cambian de pestaña con el foco, como pide el patrón de pestañas.
+    const teclaEnPestanas = (e) => {
+        const ids = PESTANAS.map(p => p.id);
+        const i = ids.indexOf(pestana);
+        const destino = { ArrowRight: ids[(i + 1) % ids.length], ArrowLeft: ids[(i - 1 + ids.length) % ids.length],
+            Home: ids[0], End: ids[ids.length - 1] }[e.key];
+        if (!destino) return;
+        e.preventDefault();
+        elegirPestana(destino, { enfocar: true });
+    };
 
     const irAlMes = useCallback((clave, { enfocar = false } = {}) => {
         setMesElegido(clave);
@@ -140,7 +180,16 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
             // El festejo se prende ANTES de vaciar la lista: si no, por un instante se veía "al día",
             // que es lo de quien entra y ya la encuentra vacía.
             if (quedanMes === 0 && !masTrabajo) setFestejo(quedan === 0 ? 'todo' : 'mes');
-            setDatos(d => ({ ...d, pendientes: d.pendientes.filter(a => a.id !== agenda.id), resumen: respuesta || d.resumen }));
+            // Pasa a «Completadas» en el momento, como la devolvería el backend.
+            const hecha = {
+                ...agenda, instagram: res.data?.instagram || agenda.instagram,
+                palabra_clave: res.data?.anuncio?.keyword || anuncio.keyword,
+                asignada: new Date().toISOString(), por: 'setter',
+            };
+            setDatos(d => ({
+                ...d, pendientes: d.pendientes.filter(a => a.id !== agenda.id), resumen: respuesta || d.resumen,
+                completadas: ordenarCompletadas([hecha, ...(d.completadas || []).filter(a => a.id !== agenda.id)]),
+            }));
             if (respuesta) onResumen?.(respuesta);
             const enElMes = mesAhora ? ` en ${nombreDeMes(mesAhora)}` : '';
             setAviso(`${anuncio.keyword} quedó en la agenda de ${agenda.cliente}. `
@@ -268,36 +317,72 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
                 </section>
             )}
 
-            {datos && delMes.length > 0 && (
-                <>
-                    <p className="ma-ayuda" aria-hidden="true">
-                        <span className="tecla">↑</span><span className="tecla">↓</span> elegir
-                        {' · '}<span className="tecla">Enter</span> asignar
-                    </p>
-                    {/* Una lista por mes: al cambiar de mes entra la nueva, sin que las tarjetas del
-                        otro salgan una por una. */}
-                    <motion.ul key={mes || 'todas'} className="ma-lista"
-                        initial={reducir ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}>
-                        <AnimatePresence initial={false}>
-                            {delMes.map((a, i) => (
-                                <TarjetaAgenda key={a.id} agenda={a} orden={i} anuncios={datos.anuncios}
-                                    sugerido={a.sugerido ? anuncioPorId.get(a.sugerido) : null}
-                                    onAsignar={asignar}
-                                    ref={(el) => { if (el) tarjetas.current.set(a.id, el); else tarjetas.current.delete(a.id); }} />
-                            ))}
-                        </AnimatePresence>
-                    </motion.ul>
-                </>
+            {datos && (
+                <div className="ma-pestanas" role="tablist" aria-label={porMes ? `Agendas de ${nombre}` : 'Tus agendas'}
+                    onKeyDown={teclaEnPestanas}>
+                    {PESTANAS.map(p => {
+                        const activa = p.id === pestana;
+                        const n = p.id === 'pendientes' ? delMes.length : hechasDelMes.length;
+                        return (
+                            <button key={p.id} type="button" role="tab" id={`ma-tab-${p.id}`}
+                                ref={(el) => { pestanasRef.current[p.id] = el; }}
+                                aria-selected={activa} aria-controls={`ma-panel-${p.id}`} tabIndex={activa ? 0 : -1}
+                                className={`ma-pestana ma-pestana--${p.id}${activa ? ' on' : ''}`}
+                                onClick={() => elegirPestana(p.id)}>
+                                {/* La píldora se desliza de una pestaña a la otra, como la de los meses. */}
+                                {activa && (
+                                    <motion.span className="ma-pestana-pildora" layoutId="ma-pestana-pildora" aria-hidden="true"
+                                        transition={reducir ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }} />
+                                )}
+                                <span className="ma-pestana-t">{p.rotulo}</span>
+                                <b className="num">· {n}</b>
+                            </button>
+                        );
+                    })}
+                </div>
             )}
 
-            {datos && delMes.length === 0 && (
-                <div ref={premioRef} tabIndex={-1} className="ma-premio-foco">
-                    <Premio ref={llamadoRef} festejo={festejo} hoy={resumen.hoy} racha={resumen.racha} mes={mes}
-                        llamado={siguiente
-                            ? { mes: siguiente.mes, pendientes: siguiente.pendientes, onIr: () => irAlMes(siguiente.mes, { enfocar: true }) }
-                            : null}
-                        onVerDatos={onVerDatos} />
+            {datos && pestana === 'completadas' && (
+                <div className="ma-panel" role="tabpanel" id="ma-panel-completadas" aria-labelledby="ma-tab-completadas"
+                    tabIndex={0}>
+                    <ListaCompletadas agendas={hechasDelMes} mes={mes} />
+                </div>
+            )}
+
+            {datos && pestana === 'pendientes' && (
+                <div className="ma-panel" role="tabpanel" id="ma-panel-pendientes" aria-labelledby="ma-tab-pendientes">
+                    {delMes.length > 0 && (
+                        <>
+                            <p className="ma-ayuda" aria-hidden="true">
+                                <span className="tecla">↑</span><span className="tecla">↓</span> elegir
+                                {' · '}<span className="tecla">Enter</span> asignar
+                            </p>
+                            {/* Una lista por mes: al cambiar de mes entra la nueva, sin que las tarjetas del
+                                otro salgan una por una. */}
+                            <motion.ul key={mes || 'todas'} className="ma-lista"
+                                initial={reducir ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}>
+                                <AnimatePresence initial={false}>
+                                    {delMes.map((a, i) => (
+                                        <TarjetaAgenda key={a.id} agenda={a} orden={i} anuncios={datos.anuncios}
+                                            sugerido={a.sugerido ? anuncioPorId.get(a.sugerido) : null}
+                                            onAsignar={asignar}
+                                            ref={(el) => { if (el) tarjetas.current.set(a.id, el); else tarjetas.current.delete(a.id); }} />
+                                    ))}
+                                </AnimatePresence>
+                            </motion.ul>
+                        </>
+                    )}
+
+                    {delMes.length === 0 && (
+                        <div ref={premioRef} tabIndex={-1} className="ma-premio-foco">
+                            <Premio ref={llamadoRef} festejo={festejo} hoy={resumen.hoy} racha={resumen.racha} mes={mes}
+                                llamado={siguiente
+                                    ? { mes: siguiente.mes, pendientes: siguiente.pendientes, onIr: () => irAlMes(siguiente.mes, { enfocar: true }) }
+                                    : null}
+                                onVerDatos={onVerDatos} />
+                        </div>
+                    )}
                 </div>
             )}
 

@@ -75,12 +75,14 @@ describe('Analizar · el tablero de setters y sus listas', () => {
 });
 
 describe('Analizar · los datos de la conversación salen del reporte', () => {
-    it('los tiles son Entrantes · Cualificación · Apertura · Agendas · Bienvenidas', () => {
+    it('los tiles son Entrantes · Cualificación · Apertura · Respuesta · Agendas · Bienvenidas', () => {
         pintar();
 
         const tiles = [...document.querySelectorAll('.ds-tiles .kpi')];
         expect(tiles.map(t => t.querySelector('.t-eyebrow').textContent))
-            .toEqual(['Entrantes', 'Cualificación', 'Apertura', 'Agendas', 'Bienvenidas']);
+            .toEqual(['Entrantes', 'Cualificación', 'Apertura', 'Respuesta', 'Agendas', 'Bienvenidas']);
+        // La respuesta a las aperturas (15/10/2026): sin reportes que la carguen, «—» y lo dice.
+        expect(within(tiles[3]).getByText('sin respuestas cargadas')).toBeInTheDocument();
         expect(within(tiles[1]).getByText('72 de 90')).toBeInTheDocument();
         expect(screen.queryByText(/Tasa de respuesta/)).toBeNull();
         expect(screen.queryByText(/Cuadra con el sistema/)).toBeNull();
@@ -95,6 +97,17 @@ describe('Analizar · los datos de la conversación salen del reporte', () => {
             .forEach(r => expect(within(despues).getByText(r)).toBeInTheDocument());
         expect(within(despues).getByText('$80')).toBeInTheDocument();
         expect(within(despues).getByText('8% de $1,000 netos')).toBeInTheDocument();
+    });
+
+    it('las agendas de «Después de la agenda» son solo las que ya se dieron', () => {
+        // Corrección del dueño (15/10/2026): una llamada de la semana que viene no cuenta todavía.
+        const futura = { ...GENERADAS[6], id: 99, ya_paso: false };
+        render(<Analizar datos={{ ...resumenSetterEjemplo(),
+            actual: bloqueSetterEjemplo({ filas: [...GENERADAS, futura] }) }} rol="setters" irA={null} />);
+
+        const caja = within(document.getElementById('p-despues')).getByText('Agendas').closest('.ds-caja');
+        expect(caja.querySelector('.ds-caja-n').textContent).toBe('7');
+        expect(within(caja).getByText('1 sin reporte · 1 por venir')).toBeInTheDocument();
     });
 
     it('cada follow-up dice qué parte respondió, y «—» si el reporte no lo trae', () => {

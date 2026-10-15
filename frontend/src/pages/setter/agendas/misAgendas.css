@@ -67,6 +67,43 @@
 .mis-agendas .ma-mes-pildora{position:absolute;inset:0;z-index:-1;border-radius:inherit;background:var(--brand-secondary)}
 .mis-agendas .ma-mes.completo.on .ma-mes-pildora{background:var(--success)}
 
+/* --- Pendientes y completadas del mes (15/10/2026) -------------------------------------------
+   Las dos pestañas con la misma píldora deslizante que los meses; la cuenta de las completadas en
+   verde, la de las pendientes en rosa. */
+.mis-agendas .ma-pestanas{justify-self:start;display:inline-flex;gap:4px;padding:4px;max-width:100%;min-width:0;
+  border-radius:var(--radius-pill);background:var(--bg-input);border:1px solid var(--border-subtle)}
+.mis-agendas .ma-pestana{position:relative;isolation:isolate;display:inline-flex;align-items:center;justify-content:center;
+  gap:6px;height:36px;padding:0 16px;min-width:0;border-radius:var(--radius-pill);font-size:14px;font-weight:800;
+  color:var(--text-muted);white-space:nowrap;transition:color .16s ease}
+.mis-agendas .ma-pestana:hover{color:var(--text-on-surface)}
+.mis-agendas .ma-pestana b{font-weight:900;font-variant-numeric:tabular-nums;color:var(--brand-secondary)}
+.mis-agendas .ma-pestana--completadas b{color:var(--success)}
+.mis-agendas .ma-pestana.on,.mis-agendas .ma-pestana.on b{color:var(--ink)}
+.mis-agendas .ma-pestana-pildora{position:absolute;inset:0;z-index:-1;border-radius:inherit;background:var(--brand-secondary)}
+.mis-agendas .ma-panel{display:grid;gap:var(--s4);min-width:0}
+.mis-agendas .ma-panel:focus{outline:none}
+.mis-agendas .ma-panel:focus-visible{outline:2px solid color-mix(in srgb,var(--brand-secondary) 55%,transparent);
+  outline-offset:4px;border-radius:24px}
+
+/* Una completada: quién y cuándo a la izquierda, la palabra clave y quién la puso a la derecha. Más
+   quieta que la tarjeta de la bandeja (no hay nada que hacer): borde suave y sin anillo de foco. */
+.mis-agendas .ma-hecha{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--s3) var(--s6);align-items:center;
+  padding:var(--s4) var(--s5) var(--s4) var(--s6);border-radius:24px;background:rgba(6,9,36,.5);
+  border:1px solid var(--border-subtle)}
+.mis-agendas .ma-hecha-ig{overflow:hidden;text-overflow:ellipsis}
+.mis-agendas .ma-hecha-clave{display:grid;justify-items:end;gap:6px;min-width:0;max-width:260px}
+.mis-agendas .ma-clave{--c:var(--brand-secondary)}
+.mis-agendas .ma-clave svg{flex-shrink:0}
+.mis-agendas .ma-clave-t{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.mis-agendas .ma-hecha-por{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;
+  color:var(--text-muted);white-space:nowrap}
+.mis-agendas .ma-hecha-por svg{color:var(--success)}
+.mis-agendas .ma-hecha-por--manychat svg{color:#6F7BFF}
+.mis-agendas .ma-hechas-vacia{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--s3);
+  min-height:180px;padding:var(--s6) var(--s4);text-align:center;border-radius:24px;
+  background:rgba(6,9,36,.46);border:1px solid var(--border-subtle);color:var(--text-muted-40)}
+.mis-agendas .ma-hechas-vacia p{margin:0;max-width:420px;font-size:14px;font-weight:600;line-height:1.5;color:var(--text-muted)}
+
 /* Cada vez que baja, el número cae a su lugar; lo de hoy, un pop en verde. */
 .mis-agendas .ma-baja{animation:maBaja .34s var(--out)}
 @keyframes maBaja{from{transform:translateY(-14px);opacity:.3}to{transform:none;opacity:1}}
@@ -218,6 +255,13 @@
   .mis-agendas .ma-ig{padding-left:0}
   .mis-agendas .ma-premio{padding:var(--s6) var(--s4)}
   .mis-agendas .ma-sin-dueno{padding:var(--s4)}
+  /* Las pestañas a lo ancho, mitad y mitad; la completada en una columna, con la palabra clave
+     debajo de quién es. */
+  .mis-agendas .ma-pestanas{display:flex;width:100%}
+  .mis-agendas .ma-pestana{flex:1 1 0;padding:0 10px}
+  .mis-agendas .ma-hecha{grid-template-columns:minmax(0,1fr);padding:var(--s4)}
+  .mis-agendas .ma-hecha-clave{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;
+    gap:6px var(--s3);max-width:none}
 }
 /* En un teléfono el estado baja debajo del nombre (al lado no entra: el nombre quedaba en "Xi…"),
    y el botón de asignar va a lo ancho, debajo del buscador. */

@@ -29,14 +29,16 @@ from app.services.procedencia_ingresos_service import agendas_para_atribuir, pro
 DELTAS = {
     ROL_CLOSERS: {'show_up': 'pts', 'close_rate': 'pts', 'cash': 'pct', 'cash_neto': 'pct', 'ventas': 'pct',
                   'ticket': 'pct', 'agendas': 'pct', 'comision': 'pct'},
-    ROL_SETTERS: {'entrantes': 'pct', 'cualificacion': 'pts', 'apertura': 'pts', 'agendas': 'pct',
+    ROL_SETTERS: {'entrantes': 'pct', 'cualificacion': 'pts', 'apertura': 'pts', 'respuesta_aperturas': 'pts',
+                  'agendas': 'pct',
                   'conversion': 'pts', 'conv_cualificados': 'pts', 'bienvenidas_respuesta': 'pts',
                   'followups_total': 'pct', 'generadas': 'pct', 'show_up': 'pts', 'ventas_originadas': 'pct'},
 }
 
 # Las que cambian con el canal (pestañas General · Anuncios · Inbound del tablero de setters): las
 # del reporte que se cargan por canal. Las demás (bienvenidas, follow-ups, el sistema) son una sola.
-DELTAS_POR_CANAL = {'entrantes': 'pct', 'cualificacion': 'pts', 'apertura': 'pts', 'agendas': 'pct',
+DELTAS_POR_CANAL = {'entrantes': 'pct', 'cualificacion': 'pts', 'apertura': 'pts', 'respuesta_aperturas': 'pts',
+                    'agendas': 'pct',
                     'conversion': 'pts', 'conv_cualificados': 'pts'}
 
 # Las métricas rankeables, en el orden en que las muestra el selector del ranking. `suma`
@@ -70,6 +72,8 @@ METRICAS = {
          'desc': 'Cualificados sobre entrantes, del reporte.'},
         {'key': 'apertura', 'label': 'Apertura', 'formato': 'pct', 'suma': False,
          'desc': 'Aperturas sobre entrantes, del reporte.'},
+        {'key': 'respuesta_aperturas', 'label': 'Resp. aperturas', 'formato': 'pct', 'suma': False,
+         'desc': 'De las aperturas que hizo, cuántas le respondieron, del reporte.'},
         {'key': 'agendas', 'label': 'Agendas', 'formato': 'num', 'suma': True,
          'desc': 'Agendas que reportó en el período.'},
         {'key': 'conversion', 'label': 'Conv. final', 'formato': 'pct', 'suma': False,
@@ -728,7 +732,8 @@ def _fila_comparativa(rol, bloque):
     if rol == ROL_SETTERS:
         # Las del ranking y el mapa, más lo que dice la bajada de cada una («494 entrantes»).
         return {**{k: bloque.get(k) for k in
-                   ('entrantes', 'cualificacion', 'apertura', 'agendas', 'conversion', 'bienvenidas_respuesta',
+                   ('entrantes', 'cualificacion', 'apertura', 'respuesta_aperturas', 'agendas', 'conversion',
+                    'bienvenidas_respuesta',
                     'show_up', 'ventas_originadas', 'generadas', 'realizadas')},
                 'bienvenidas_hechas': bloque['bienvenidas']['hechas'],
                 'bienvenidas_respondidas': bloque['bienvenidas']['respondidas']}

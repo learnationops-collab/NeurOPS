@@ -40,7 +40,8 @@ from app.services.comercial_service import ComercialService, pct
 
 CANALES = ('anuncios', 'inbound')
 # Lo que una vista del reporte suma: lo que `sumar` trae por canal y en el total.
-CAMPOS_VISTA = ('entrantes', 'no_lead', 'inabribles', 'cualificados', 'ap_entrantes', 'ap_dolor', 'aperturas',
+CAMPOS_VISTA = ('entrantes', 'no_lead', 'inabribles', 'cualificados', 'no_contestaron', 'ap_entrantes', 'ap_dolor',
+                'aperturas',
                 'agendas')
 FOLLOWUPS = ('entrantes', 'dolor', 'oferta', 'link')
 
@@ -100,7 +101,7 @@ def dias_habiles(start, end):
     return sum(1 for i in range((end - start).days + 1) if (start + timedelta(days=i)).weekday() < 5)
 
 
-def vista_de(d, link=None):
+def vista_de(d, link=None, respuesta=None):
     """Los números de una vista del reporte —General o un canal— con sus tasas, todas sobre los
     entrantes salvo la de cualificado a agenda, que es la del formulario.
 
@@ -110,14 +111,23 @@ def vista_de(d, link=None):
 
     `link` (el embudo) es un total del reporte, sin canal: solo la vista General lo trae, y en un
     canal `conv_link` queda en None («—»), no se calcula con el link de los dos canales.
+
+    `respuesta` (de `sumar`, `respuesta_aperturas`) es la respuesta a las aperturas que pidió el dueño
+    el 15/10/2026: respondidas sobre las aperturas de los reportes que cargaron cuántos respondieron.
+    Sin ninguno, None («—»).
     """
     v = {k: d[k] for k in CAMPOS_VISTA}
     entrantes = v['entrantes']
+    resp = respuesta or {'aperturas': 0, 'respondidas': None}
     v.update({
         'cualificacion': pct(v['cualificados'], entrantes),
+        'no_contestaron_pct': pct(v['no_contestaron'], entrantes),
         'no_lead_pct': pct(v['no_lead'], entrantes),
         'inabribles_pct': pct(v['inabribles'], entrantes),
         'apertura': pct(v['aperturas'], entrantes),
+        'ap_respondidas': resp['respondidas'],
+        'ap_con_respuesta': resp['aperturas'],
+        'respuesta_aperturas': pct(resp['respondidas'], resp['aperturas']) if resp['respondidas'] is not None else None,
         'conversion': pct(v['agendas'], entrantes),
         'conv_cualificados': pct(v['agendas'], v['cualificados']),
         'link': link,
@@ -147,21 +157,34 @@ def despues_de(generadas):
     """Lo que pasó con las agendas generadas: las mismas filas que lista Revisar › Agendas, una por
     persona y por fecha de creación (`ComercialService.generadas`).
 
-    Las canceladas y las reagendadas se miden sobre las generadas; el show up y el no show, sobre
-    las que ya tienen resultado (`realizadas`), que es el show up de todo el tablero: una llamada de
-    la semana que viene no es un no show. Las ventas, sobre las que asistieron.
+    Corrección del dueño (15/10/2026): «fijate que acá solamente aparezcan las que ya se dieron, no
+    las que todavía no se dieron». El panel parte de las agendas que YA SE DIERON (`ocurridas`): la
+    hora de la llamada ya pasó, o se canceló o reagendó (eso ya pasó aunque la llamada fuera a ser
+    la semana que viene). Las que todavía no ocurrieron quedan aparte (`por_venir`), y de las que
+    ocurrieron, las que nadie reportó (`sin_reporte`): son la diferencia entre las agendas y los
+    estados. `generadas` sigue siendo todas: es el cruce del embudo con las agendas reportadas.
+
+    Las canceladas y las reagendadas se miden sobre las ocurridas; el show up y el no show, sobre
+    las que ya tienen resultado (`realizadas`), que es el show up de todo el tablero. Las ventas,
+    sobre las que asistieron.
     """
     tot = ComercialService.totales_agendas(generadas)
     cuenta = {}
     for f in generadas:
         cuenta[f['post_call']['key']] = cuenta.get(f['post_call']['key'], 0) + 1
     n = tot['agendas']
+    ocurridas = [f for f in generadas if f.get('ya_paso') or f['post_call']['key'] in ('cancelo', 'reagendo')]
+    sin_reporte = sum(1 for f in ocurridas if f['post_call']['key'] == 'pendiente')
+    base = len(ocurridas)
     return {
         'generadas': n,
+        'ocurridas': base,
+        'por_venir': n - base,
+        'sin_reporte': sin_reporte,
         'canceladas': cuenta.get('cancelo', 0),
-        'canceladas_pct': pct(cuenta.get('cancelo', 0), n),
+        'canceladas_pct': pct(cuenta.get('cancelo', 0), base),
         'reagendadas': cuenta.get('reagendo', 0),
-        'reagendadas_pct': pct(cuenta.get('reagendo', 0), n),
+        'reagendadas_pct': pct(cuenta.get('reagendo', 0), base),
         'realizadas': tot['realizadas'],
         'no_show': tot['no_show'],
         'no_show_pct': tot['no_show_pct'],
@@ -267,16 +290,23 @@ def bloque(start, end, setter_id=None, pares=None):
     fu = followups_de(suma)
     bnv = suma['bienvenidas']
     sin_canal = suma['sin_canal']
+    resp = suma['respuesta_aperturas']
+    resp_bnv = resp['bienvenidas']
     return {
-        **vista_de(suma['totales'], link=suma['embudo']['link']),
-        'canales': {c: vista_de(suma['canales'][c]) for c in CANALES},
-        'sin_canal': {**sin_canal, 'apertura': pct(sin_canal['aperturas'], sin_canal['entrantes'])},
+        **vista_de(suma['totales'], link=suma['embudo']['link'], respuesta=resp['total']),
+        'canales': {c: vista_de(suma['canales'][c], respuesta=resp[c]) for c in CANALES},
+        'sin_canal': {**sin_canal, 'apertura': pct(sin_canal['aperturas'], sin_canal['entrantes']),
+                      'respuesta_aperturas': (pct(resp['sin_canal']['respondidas'], resp['sin_canal']['aperturas'])
+                                              if resp['sin_canal']['respondidas'] is not None else None)},
         'reportes': suma['reportes'],
         'reportes_v2': suma['reportes_v2'],
         'no_laborables': suma['no_laborables'],
         'embudo': {k: suma['embudo'][k] for k in ('dolor', 'oferta', 'link')},
         'bienvenidas': {**bnv, 'respuesta': pct(bnv['respondidas'], bnv['hechas']),
-                        'apertura': pct(bnv['aperturas'], bnv['respondidas'])},
+                        'apertura': pct(bnv['aperturas'], bnv['respondidas']),
+                        'aperturas_resp': resp_bnv['respondidas'],
+                        'respuesta_aperturas': (pct(resp_bnv['respondidas'], resp_bnv['aperturas'])
+                                                if resp_bnv['respondidas'] is not None else None)},
         'bienvenidas_respuesta': pct(bnv['respondidas'], bnv['hechas']),
         'followups': fu,
         'followups_total': fu['total'],

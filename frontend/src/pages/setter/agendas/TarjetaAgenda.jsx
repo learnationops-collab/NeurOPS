@@ -14,9 +14,9 @@ import BuscadorAnuncio from './BuscadorAnuncio';
  */
 const TONOS = ['var(--brand-secondary)', '#6F7BFF', 'var(--success)', 'var(--warning)', '#9A7BE0'];
 
-const colorDe = (nombre) => TONOS[Array.from(nombre || '').reduce((a, c) => a + c.charCodeAt(0), 0) % TONOS.length];
+export const colorDe = (nombre) => TONOS[Array.from(nombre || '').reduce((a, c) => a + c.charCodeAt(0), 0) % TONOS.length];
 
-const iniciales = (nombre) => (nombre || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+export const iniciales = (nombre) => (nombre || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
 
 const dos = (n) => String(n).padStart(2, '0');
 

@@ -10,28 +10,25 @@
 
 .dc-shell .ds-vistas{flex-wrap:wrap}
 
-/* ---------- Los cinco tiles ---------- */
+/* ---------- Los seis tiles ---------- */
 /* Los cortes salen de lo que necesita la cabecera de un tile —«CUALIFICACIÓN», la «i» y el delta—
    sin pisarse, medido sobre el ancho del TABLERO y no de la ventana (`.ds-tiles-caja` es el
    contenedor): el mismo tablero vive en el espacio del setter y, más angosto, en el de la dirección.
-   5 en fila, 3 + 2, 1 + 2 + 2 y uno por fila en el teléfono, como los tiles de closers. */
+   Desde el 15/10/2026 son seis (llegó la respuesta a las aperturas): 6 en fila, 3 + 3, 2 + 2 + 2 y
+   uno por fila en el teléfono; nunca uno suelto abajo. */
 .dc-shell .ds-tiles-caja{container-type:inline-size;min-width:0}
-.dc-shell .ds-tiles{display:grid;gap:var(--s4);grid-template-columns:repeat(5,minmax(0,1fr))}
+.dc-shell .ds-tiles{display:grid;gap:var(--s4);grid-template-columns:repeat(6,minmax(0,1fr))}
 .dc-shell .ds-tiles > *{min-width:0}
 /* El alto de la pastilla del delta, tenga o no: sin delta (las bienvenidas sin período anterior) el
    número de ese tile quedaba más arriba que los de al lado. */
 .dc-shell .ds-tiles .kpi-cab{min-height:22px}
 .dc-shell .ds-tiles .kpi-cab .t-eyebrow{letter-spacing:.16em;min-width:0;overflow:hidden;text-overflow:ellipsis;
   white-space:nowrap}
-@container (max-width:1380px){
-  .dc-shell .ds-tiles{grid-template-columns:repeat(6,minmax(0,1fr))}
-  .dc-shell .ds-tiles > *{grid-column:span 2}
-  .dc-shell .ds-tiles > :nth-child(n+4){grid-column:span 3}
+@container (max-width:1560px){
+  .dc-shell .ds-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 @container (max-width:780px){
   .dc-shell .ds-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .dc-shell .ds-tiles > *,.dc-shell .ds-tiles > :nth-child(n+4){grid-column:span 1}
-  .dc-shell .ds-tiles > :first-child{grid-column:1 / -1}
 }
 @container (max-width:540px){
   .dc-shell .ds-tiles{grid-template-columns:minmax(0,1fr)}

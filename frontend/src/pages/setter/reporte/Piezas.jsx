@@ -58,21 +58,13 @@ export const useAngosto = () => {
     return angosto;
 };
 
-/** "Te responden" / "Responden poco": abrir más en dolor que en entrantes es que contestan. */
-export const ChipRespuesta = ({ d }) => {
-    if (d.ap_dolor > d.ap_entrantes) {
-        return (
-            <span className="rd-chip" style={{ '--c': 'var(--success)' }}>
-                <Check strokeWidth={1.75} aria-hidden="true" /><span>Te responden</span>
-            </span>
-        );
-    }
-    if (d.ap_entrantes > d.ap_dolor) {
-        return (
-            <span className="rd-chip" style={{ '--c': 'var(--warning)' }}>
-                <AlertTriangle strokeWidth={1.75} aria-hidden="true" /><span>Responden poco</span>
-            </span>
-        );
-    }
-    return null;
-};
+/**
+ * El % de respuesta a las aperturas de una columna. Desde el 15/10/2026 se carga cuántos
+ * respondieron; antes se adivinaba («Te responden» / «Responden poco») comparando las aperturas en
+ * dolor con las de entrantes. Sin aperturas no se muestra.
+ */
+export const ChipRespuesta = ({ tasa: t }) => (t === null || t === undefined ? null : (
+    <span className="rd-chip" style={{ '--c': 'var(--success)' }} title="Respondieron sobre las aperturas">
+        <Check strokeWidth={1.75} aria-hidden="true" /><Numero valor={t} tipo="pct" /><span>respuesta</span>
+    </span>
+));
