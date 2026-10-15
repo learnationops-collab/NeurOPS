@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import MisAgendas from './MisAgendas';
 import api from '../../../services/api';
 
@@ -16,7 +16,7 @@ import api from '../../../services/api';
  * el selector cambia de mes y al vaciar uno el premio llama al que sigue.
  */
 
-const red = vi.hoisted(() => ({ pendientes: [], resumen: null, post: null, posts: [] }));
+const red = vi.hoisted(() => ({ pendientes: [], completadas: [], resumen: null, post: null, posts: [] }));
 
 const ANUNCIOS = [
     { id: 1, keyword: 'CURSO GRATUITO', nombre: 'CURSO GRATUITO', activo: true, usos: 3 },
@@ -46,7 +46,7 @@ const resumenDe = (pendientes, juego = {}) => ({
 /** Lo que contesta el backend de mentira a cada GET. */
 const responder = (url) => Promise.resolve({
     data: url === '/setter/palabras-clave'
-        ? { pendientes: red.pendientes, anuncios: ANUNCIOS, resumen: red.resumen }
+        ? { pendientes: red.pendientes, completadas: red.completadas, anuncios: ANUNCIOS, resumen: red.resumen }
         : url === '/setter/commission' ? { rate: 0.08, cash_neto: 12500, commission: 1000 } : [],
 });
 
@@ -293,5 +293,103 @@ describe('MisAgendas · un mes por vez', () => {
 
         expect(await screen.findByRole('heading', { name: '¡Bandeja vacía!' })).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /Seguí con/ })).toBeNull();
+    });
+});
+
+describe('MisAgendas · pendientes y completadas', () => {
+    // Pedido del dueño (15/10/2026): «pendientes por un lado y [...] el tab de completados por otro,
+    // para saber rápidamente al entrar si están funcionando o no».
+    beforeEach(() => {
+        TOTALES = { '2026-10': 4, '2026-09': 3 };
+        red.pendientes = [agenda(11, 'Ana'), agenda(21, 'Caro', { mes: '2026-09', creada: '2026-09-20T10:00:00' })];
+        red.completadas = [
+            agenda(31, 'Fede', { creada: '2026-10-06T10:00:00', palabra_clave: 'CURSO GRATUITO', por: 'setter', asignada: '2026-10-09T15:00:00',
+                estado: { key: 'show', label: 'Asistió', tone: 'success' } }),
+            agenda(32, 'Gabi', { palabra_clave: 'PROTOCOLO', por: 'manychat', asignada: null, creada: '2026-10-05T10:00:00' }),
+            agenda(41, 'Hugo', { mes: '2026-09', creada: '2026-09-10T10:00:00', palabra_clave: 'GUIA', por: 'setter',
+                asignada: '2026-09-11T15:00:00' }),
+        ];
+        red.resumen = resumenDe(red.pendientes);
+        red.posts = [];
+        red.post = backendQueAsigna();
+        vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => { cb(0); return 0; });
+    });
+
+    afterEach(() => { red.completadas = []; });
+
+    const pestana = (nombre) => screen.getByRole('tab', { name: new RegExp(`^${nombre}`) });
+    const filas = () => screen.getAllByRole('listitem').map(li => li.getAttribute('aria-label'));
+
+    it('abre en Pendientes; Completadas muestra las del mes con su palabra clave y quién la puso', async () => {
+        await montar();
+
+        expect(pestana('Pendientes')).toHaveAttribute('aria-selected', 'true');
+        expect(pestana('Pendientes')).toHaveTextContent('Pendientes· 1');
+        expect(pestana('Completadas')).toHaveTextContent('Completadas· 2');
+        expect(tarjeta('Ana')).toBeInTheDocument();
+
+        fireEvent.click(pestana('Completadas'));
+
+        expect(pestana('Completadas')).toHaveAttribute('aria-selected', 'true');
+        expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', 'ma-tab-completadas');
+        // Solo las de octubre, y nada para asignar.
+        expect(filas()).toEqual(['Completada: Fede', 'Completada: Gabi']);
+        expect(screen.queryByRole('combobox')).toBeNull();
+        const fede = screen.getByRole('listitem', { name: 'Completada: Fede' });
+        expect(within(fede).getByText('CURSO GRATUITO')).toBeInTheDocument();
+        expect(within(fede).getByText(/^Asignada el \d\d\/\d\d · \d\d:\d\d$/)).toBeInTheDocument();
+        expect(within(fede).getByText('Asistió')).toBeInTheDocument();
+        expect(within(fede).getByText('@fede')).toBeInTheDocument();
+        const gabi = screen.getByRole('listitem', { name: 'Completada: Gabi' });
+        expect(within(gabi).getByText('PROTOCOLO')).toBeInTheDocument();
+        expect(within(gabi).getByText('Por ManyChat')).toBeInTheDocument();
+
+        // El mes de arriba manda también en Completadas.
+        fireEvent.click(screen.getByRole('button', { name: 'Septiembre, 1 sin palabra clave' }));
+        expect(filas()).toEqual(['Completada: Hugo']);
+    });
+
+    it('las flechas cambian de pestaña con el foco', async () => {
+        await montar();
+        pestana('Pendientes').focus();
+
+        fireEvent.keyDown(pestana('Pendientes'), { key: 'ArrowRight' });
+        expect(pestana('Completadas')).toHaveAttribute('aria-selected', 'true');
+        expect(document.activeElement).toBe(pestana('Completadas'));
+        expect(pestana('Pendientes')).toHaveAttribute('tabindex', '-1');
+
+        fireEvent.keyDown(pestana('Completadas'), { key: 'ArrowLeft' });
+        expect(pestana('Pendientes')).toHaveAttribute('aria-selected', 'true');
+        expect(document.activeElement).toBe(pestana('Pendientes'));
+    });
+
+    it('un mes sin completadas lo dice con calma', async () => {
+        red.completadas = [];
+        await montar();
+
+        fireEvent.click(pestana('Completadas'));
+
+        expect(screen.getByText('Todavía no completaste ninguna en octubre.')).toBeInTheDocument();
+    });
+
+    it('asignar una pendiente la pasa a Completadas en el momento, y el premio sale en Pendientes', async () => {
+        await montar();
+        const cargas = api.get.mock.calls.filter(([url]) => url === '/setter/palabras-clave').length;
+
+        await asignarConTeclado('Ana', 'guia');
+
+        expect(await screen.findByRole('heading', { name: '¡Octubre al día!' })).toBeInTheDocument();
+        expect(pestana('Pendientes')).toHaveTextContent('Pendientes· 0');
+        expect(pestana('Completadas')).toHaveTextContent('Completadas· 3');
+        // Sin recargar la bandeja.
+        expect(api.get.mock.calls.filter(([url]) => url === '/setter/palabras-clave')).toHaveLength(cargas);
+
+        fireEvent.click(pestana('Completadas'));
+
+        // Ana es la más nueva (creada el 08/10): va primera.
+        expect(filas()).toEqual(['Completada: Ana', 'Completada: Fede', 'Completada: Gabi']);
+        const ana = screen.getByRole('listitem', { name: 'Completada: Ana' });
+        expect(within(ana).getByText('GUIA')).toBeInTheDocument();
+        expect(within(ana).getByText(/^Asignada el /)).toBeInTheDocument();
     });
 });
