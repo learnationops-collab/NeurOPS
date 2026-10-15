@@ -40,6 +40,7 @@ from sqlalchemy import func
 
 from app import db
 from app.models import Ad, Appointment, LeadEventLog, ManychatLead, LeadAnswer
+from app.models.marketing import clave_de_palabra
 from app.services.comercial_service import ComercialService, es_agenda_del_setter
 from app.services.user_time_service import hoy_del_usuario, limites_dia_utc, zona_del_usuario
 
@@ -219,9 +220,16 @@ def _serializar(filas):
 
 
 def _anuncios_por_keyword(keywords):
-    if not keywords:
+    """{palabra clave de la cita: id del anuncio}, comparando sin tildes ni mayúsculas (`Ad.clave`)."""
+    from app.services.anuncios_service import _vigente
+
+    claves = {k: clave_de_palabra(k) for k in keywords if clave_de_palabra(k)}
+    if not claves:
         return {}
-    return {a.keyword: a.id for a in Ad.query.filter(Ad.keyword.in_(keywords)).all()}
+    por_clave = defaultdict(list)
+    for a in Ad.query.filter(Ad.clave.in_(set(claves.values()))).all():
+        por_clave[a.clave].append(a)
+    return {k: _vigente(por_clave[c]).id for k, c in claves.items() if por_clave.get(c)}
 
 
 def _canal(cita):
@@ -241,16 +249,32 @@ def _canal(cita):
 
 def anuncios(setter, filas=None, anuncio=None):
     """Los anuncios para el buscador, en un orden que sirva: los activos primero; entre ellos, los
-    que este setter más usó (sus agendas atribuidas a cada uno) y después los más nuevos."""
+    que este setter más usó (sus agendas atribuidas a cada uno) y después los más nuevos.
+
+    **Uno por palabra clave** (15/10/2026). Desde el 14/10 cada palabra clave que llega de ManyChat
+    es un anuncio (lo crea el webhook, y la migración e5b8d2f4a1c7 creó los de las que ya habían
+    llegado sin uno registrado: «Obtener Guia», las guías por país…). Los anuncios viejos cargados a
+    mano repetían palabras clave («DOCUMENTO» dos veces, «GUÍA» y «GUIA», «LECCIÓN» y «leccion»): se
+    ofrece una sola opción por palabra clave, la del anuncio vigente, con los usos de todos.
+    """
+    from app.services.anuncios_service import _vigente
+
     if filas is None:
         _pend, filas, anuncio = _bandeja(setter)
-    usos = Counter((anuncio or {}).values())
-    todos = [a for a in Ad.query.all() if (a.keyword or a.name)]
-    todos.sort(key=lambda a: ((a.status or '').lower() != 'active', -usos.get(a.id, 0),
-                              -(a.created_at.timestamp() if a.created_at else 0), a.id))
+    usos_por_id = Counter((anuncio or {}).values())
+    grupos = defaultdict(list)
+    for a in Ad.query.all():
+        if a.keyword or a.name:
+            grupos[a.clave or f'#{a.id}'].append(a)
+    opciones = []
+    for suyos in grupos.values():
+        a = _vigente(suyos)
+        opciones.append((a, sum(usos_por_id.get(x.id, 0) for x in suyos)))
+    opciones.sort(key=lambda o: ((o[0].status or '').lower() != 'active', -o[1],
+                                 -(o[0].created_at.timestamp() if o[0].created_at else 0), o[0].id))
     return [{'id': a.id, 'keyword': a.keyword or a.name, 'nombre': a.name or a.keyword,
-             'activo': (a.status or '').lower() == 'active', 'usos': usos.get(a.id, 0)}
-            for a in todos]
+             'activo': (a.status or '').lower() == 'active', 'usos': usos}
+            for a, usos in opciones]
 
 
 # --- El juego: hoy y la racha -------------------------------------------------------------------

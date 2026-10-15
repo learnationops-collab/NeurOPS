@@ -191,6 +191,37 @@ def test_los_anuncios_van_activos_primero_y_despues_los_que_mas_usa(client, db, 
         ('PROTOCOLO', True, 2), ('GUIA', True, 0), ('VIEJO', False, 0)]
 
 
+@freeze_time(HOY)
+def test_una_sola_opcion_por_palabra_clave_aunque_haya_anuncios_repetidos(client, db, equipo, anuncios, auth_headers):
+    """15/10/2026: los anuncios cargados a mano repetían palabras clave («GUÍA» y «GUIA»). Se ofrece la del
+    anuncio vigente (el más nuevo sin archivar) con los usos de los dos."""
+    viejo = Ad(ad_set_id=anuncios['GUIA'].ad_set_id, name='Guía vieja', keyword='GUÍA', status='archived',
+               created_at=datetime(2026, 4, 25))
+    db.session.add(viejo)
+    db.session.commit()
+    agenda(db, equipo, cliente(db, 'Ana', 'ana'))
+    conversacion(db, 'ana', viejo)
+    agenda(db, equipo, cliente(db, 'Beto', 'beto'))
+    conversacion(db, 'beto', anuncios['GUIA'])
+
+    opciones = bandeja(client, equipo['elias'], auth_headers)['anuncios']
+
+    assert [(a['id'], a['keyword'], a['usos']) for a in opciones if a['keyword'] in ('GUIA', 'GUÍA')] == [
+        (anuncios['GUIA'].id, 'GUIA', 2)]
+
+
+@freeze_time(HOY)
+def test_la_palabra_clave_de_la_cita_se_sugiere_aunque_este_escrita_distinto(client, db, equipo, anuncios,
+                                                                            auth_headers):
+    cita = agenda(db, equipo, cliente(db, 'Ana', 'ana'))
+    cita.keyword = 'protocolo '
+    db.session.commit()
+
+    pendiente = bandeja(client, equipo['elias'], auth_headers)['pendientes'][0]
+
+    assert pendiente['sugerido'] == anuncios['PROTOCOLO'].id
+
+
 # --- 2. Asignar ---------------------------------------------------------------------------------
 
 @freeze_time(HOY)
