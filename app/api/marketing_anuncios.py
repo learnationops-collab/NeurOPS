@@ -66,6 +66,18 @@ def archivar():
         return jsonify({'error': str(error)}), 400
 
 
+@bp.route('/agrupar', methods=['POST'])
+def agrupar():
+    """Body: {"clave": "APLICAR", "campana": "DM Funnel", "conjunto": "Broad"}; sin campaña, vuelve a la de Meta."""
+    datos = request.get_json(silent=True) or {}
+    if any(datos.get(k) is not None and not isinstance(datos.get(k), str) for k in ('campana', 'conjunto')):
+        return jsonify({'error': 'La campaña y el conjunto van como texto.'}), 400
+    try:
+        return jsonify(anuncios_service.agrupar(datos.get('clave'), datos.get('campana'), datos.get('conjunto'))), 200
+    except ValueError as error:
+        return jsonify({'error': str(error)}), 400
+
+
 @bp.route('/meta', methods=['GET'])
 def anuncios_de_meta():
     """Los anuncios publicados en Meta con su palabra clave y su gasto del período."""

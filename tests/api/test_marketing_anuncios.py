@@ -93,3 +93,17 @@ def test_el_cron_exige_su_secreto(client, monkeypatch):
     sin_meta = client.get(f'{URL}/cron/meta', headers={'Authorization': f'Bearer {SECRETO}'})
     assert sin_meta.status_code == 503
     assert 'META_ADS_TOKEN' in sin_meta.get_json()['message']
+
+
+def test_elegir_campana_y_conjunto_a_mano(client, make_user, auth_headers, con_datos):
+    cabeceras = auth_headers(make_user(role='director_marketing'))
+
+    respuesta = client.post(f'{URL}/agrupar', json={'clave': 'APLICAR', 'campana': 'DM Funnel', 'conjunto': 'Broad'},
+                            headers=cabeceras)
+
+    assert respuesta.get_json() == {'clave': 'APLICAR', 'campana': 'DM Funnel', 'conjunto': 'Broad'}
+    tabla = client.get(URL, query_string={'desde': '2026-10-01', 'hasta': '2026-10-31'}, headers=cabeceras).get_json()
+    assert [(f['campana'], f['conjunto'], f['agrupacion']) for f in tabla['filas']] == [('DM Funnel', 'Broad', 'manual')]
+    assert client.post(f'{URL}/agrupar', json={'clave': 'APLICAR', 'campana': 5}, headers=cabeceras).status_code == 400
+    assert client.post(f'{URL}/agrupar', json={'clave': 'APLICAR'},
+                       headers=auth_headers(make_user(role='setter'))).status_code == 403

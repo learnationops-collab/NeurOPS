@@ -59,6 +59,9 @@ class Ad(db.Model):
     external_id = db.Column(db.String(100), unique=True)
     keyword = db.Column(db.String(100))
     clave = db.Column(db.String(100), nullable=True, index=True)
+    # La campaña y el conjunto (`ad_set_id`) los eligió alguien en la tabla de Marketing (15/10/2026): mandan
+    # sobre los que salen de Meta Ads. Sin la marca, el conjunto es el de la carga vieja y Meta lo reemplaza.
+    agrupado_a_mano = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     stage = db.Column(db.String(50))
     status = db.Column(db.String(20))
     details = db.Column(db.Text)

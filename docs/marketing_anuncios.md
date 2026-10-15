@@ -27,6 +27,19 @@ Cada fila de la tabla (pestaña **Anuncios**) es una palabra clave en el períod
 | Ventas | pagos completos y split pay completados en el período de esas personas |
 | Cobrado / ROAS | todo lo cobrado en el período a esas personas (también cuotas y señas) y cobrado ÷ gastado |
 
+### Campañas y conjuntos (15/10/2026)
+
+La tabla tiene tres niveles, como Meta: **Campañas › Conjuntos › Anuncios**. Elegir campañas filtra los conjuntos y
+los anuncios; tocar el nombre de una campaña baja a sus conjuntos. Cada palabra clave tiene una campaña y un conjunto:
+
+1. los elegidos **a mano** en la tabla (el lápiz debajo del nombre; se escribe o se elige uno que ya existe);
+2. si no, los de **sus anuncios de Meta**: donde más gastó en el período;
+3. si no, los de la **carga vieja** de anuncios (hasta julio de 2026).
+
+Los leads, agendas y ventas de una palabra clave van enteros a su campaña (no se sabe qué anuncio de Meta vio cada
+persona); el gasto se reparte exacto entre las campañas de sus anuncios de Meta. «Usar la de Meta» borra lo elegido
+a mano.
+
 ## 2. El gasto diario de Meta Ads, automático
 
 **Cómo funciona.** El backend le pide a la Marketing API de Meta, con un token de solo lectura:
