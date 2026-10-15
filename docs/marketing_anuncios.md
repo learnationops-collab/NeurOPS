@@ -86,9 +86,13 @@ agente lo copie con el conector de Meta (depende de una computadora prendida); u
    agenda pide el Instagram, que sea el mismo usuario.
 5. **`fecha` (Fecha entrante) llega vacía.** No hace falta: el servidor usa la hora en que recibe el webhook. Se puede
    sacar del JSON.
-6. **Un secreto en el webhook.** `POST /api/manychat-webhook` hoy acepta a cualquiera (y ahora una palabra clave nueva
-   crea un anuncio). Propuesta: agregar en ManyChat un header `X-ManyChat-Token` y que la ruta lo exija, como ya hace
-   `/api/webhooks/manychat`.
+6. **El header `X-ManyChat-Token` en cada «Solicitud externa».** Desde el 15/10/2026 `POST /api/manychat-webhook`
+   exige ese header con el valor de `MANYCHAT_WEBHOOK_TOKEN` (el mismo que `/api/webhooks/manychat`): una palabra
+   clave nueva crea un anuncio, y antes cualquiera podía crearlos. En cada acción de cada flujo: pestaña
+   **Encabezados** → clave `X-ManyChat-Token`, valor el secreto cargado en Railway; guardar y publicar el flujo.
+   Mientras producción siga con `INTEGRATIONS_AUTH_MODE=log_only`, lo que llega sin el header entra igual y queda en
+   el log como `[MIGRACION DE SECRETOS]`; sin ese modo, recibiría `401` y no entraría. Paso a paso y cómo
+   comprobarlo: [seguridad_despliegue.md §3](seguridad_despliegue.md#manychat-el-header-de-cada-solicitud-externa).
 7. **Nombres en Meta con la palabra clave** («AD 5 | APLICAR», conjunto «Guía Perú»): es el respaldo cuando el texto del
    anuncio no la dice.
 8. `last_stage` (`[System] FunnelStep`) ya se guarda por lead: servirá para la vista de en qué paso del flujo va cada
