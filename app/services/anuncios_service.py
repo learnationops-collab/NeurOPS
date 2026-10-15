@@ -93,6 +93,11 @@ def anuncio_de_keyword(keyword, crear=True):
     return anuncio
 
 
+def _meta_ads():
+    from app.services import meta_ads_service  # se importan entre los dos
+    return meta_ads_service
+
+
 def claves_conocidas():
     """Todas las palabras clave que el sistema conoce: las de los anuncios y las que llegaron en algún
     webhook (las anteriores a este cambio no tienen anuncio)."""
@@ -463,6 +468,8 @@ def tablero(desde, hasta):
             'gasto_meta': round(gasto_sin_clave, 2),
         },
         'agrupaciones': _opciones_de_agrupacion(filas, conjuntos),
+        # El gasto de Meta por embudo (setting, workshop…): el selector de Rendimiento (15/10/2026).
+        'embudos': _meta_ads().gasto_por_embudo(desde, hasta),
     }
 
 

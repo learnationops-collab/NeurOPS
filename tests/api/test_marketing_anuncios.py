@@ -84,6 +84,29 @@ def test_sincronizar_sin_meta_conectado_avisa(client, make_user, auth_headers):
     assert 'META_ADS_TOKEN' in respuesta.get_json()['error']
 
 
+def test_rendimiento_trae_el_gasto_por_embudo_y_el_detalle_de_workshop(client, db, make_user, auth_headers):
+    hoy = date.today()
+    db.session.add_all([
+        MetaAnuncio(meta_ad_id='s1', nombre='APLICAR', campana='DM Funnel', campana_id='c-dm', embudo='setting'),
+        MetaAnuncio(meta_ad_id='w1', nombre='Ad 4', campana='WORKSHOP FUNNEL', campana_id='c-ws', conjunto='Broad',
+                    embudo='workshop'),
+        MetaAnuncio(meta_ad_id='x1', nombre='Raro', campana='CLINIC', campana_id='c-x'),
+        MetaGastoDiario(meta_ad_id='s1', fecha=hoy, gasto=30.0, moneda='USD'),
+        MetaGastoDiario(meta_ad_id='w1', fecha=hoy, gasto=20.0, moneda='USD', impresiones=2000, clics=80, clics_enlace=40),
+        MetaGastoDiario(meta_ad_id='x1', fecha=hoy, gasto=5.0, moneda='USD'),
+    ])
+    db.session.commit()
+    cabeceras = auth_headers(make_user(role='director_marketing'))
+
+    embudos = {e['embudo']: e for e in client.get(URL, headers=cabeceras).get_json()['embudos']}
+
+    assert (embudos['setting']['gasto'], embudos['workshop']['gasto'], embudos[None]['gasto']) == (30.0, 20.0, 5.0)
+    assert embudos['workshop']['dias'] == {hoy.isoformat(): 20.0}
+    assert embudos['contratacion']['gasto'] == 0.0  # los cuatro embudos están siempre
+    workshop = client.get(f'{URL}/embudos/workshop', headers=cabeceras).get_json()
+    assert [(c['nombre'], c['gasto'], c['cpc']) for c in workshop['campanas']] == [('WORKSHOP FUNNEL', 20.0, 0.5)]
+
+
 def test_elegir_a_mano_el_embudo_de_un_anuncio_de_meta(client, db, make_user, auth_headers):
     db.session.add(MetaAnuncio(meta_ad_id='1', nombre='Ad 4', campana='WORKSHOP FUNNEL | TESTING ADS', campana_id='99'))
     db.session.add(MetaGastoDiario(meta_ad_id='1', fecha=date.today(), gasto=12.5, moneda='USD'))

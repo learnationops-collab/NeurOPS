@@ -6,11 +6,13 @@ diario de Meta, que no tiene sesión y se identifica con `CRON_SECRET` como los 
 """
 from datetime import date, timedelta
 
+import pytz
 from flask import Blueprint, jsonify, request
+from flask_login import current_user
 
 from app.decorators import _acceso_denegado, require_cron_secret
 from app.models.user import ROLE_ADMIN, ROLE_DIRECTOR_MARKETING
-from app.services import anuncios_service, meta_ads_service
+from app.services import anuncios_service, meta_ads_service, workshop_meta_service
 
 bp = Blueprint('marketing_anuncios', __name__)
 
@@ -92,6 +94,20 @@ def anuncios_de_meta():
         'claves': sorted(anuncios_service.claves_conocidas()),
         **_estado_de_meta(),
     }), 200
+
+
+@bp.route('/embudos/workshop', methods=['GET'])
+def embudo_workshop():
+    """Rendimiento › Workshop: los anuncios de workshop del período (campaña › conjunto › anuncio)."""
+    try:
+        desde, hasta = _periodo()
+    except ValueError as error:
+        return jsonify({'error': str(error)}), 400
+    try:
+        zona = pytz.timezone(getattr(current_user, 'timezone', None) or 'America/La_Paz')
+    except pytz.UnknownTimeZoneError:
+        zona = pytz.timezone('America/La_Paz')
+    return jsonify(workshop_meta_service.desglose_periodo(desde, hasta, zona)), 200
 
 
 @bp.route('/meta/<meta_ad_id>/embudo', methods=['PUT'])

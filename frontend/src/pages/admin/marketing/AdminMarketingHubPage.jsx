@@ -10,6 +10,8 @@ import LandingTrafficTable from '../../../components/marketing/LandingTrafficTab
 import WebhookMonitorTab from '../../public/WebhookMonitorTab';
 import TablaAnuncios from './anuncios/TablaAnuncios';
 import ConexionMeta from './anuncios/ConexionMeta';
+import EmbudosResumen from './anuncios/EmbudosResumen';
+import RendimientoWorkshop from './anuncios/RendimientoWorkshop';
 import { PERIODOS, PERIODO_POR_DEFECTO, rangoDePeriodo } from './anuncios/metricas';
 import { agruparPalabraClave, archivarPalabraClave, mensajeDeError, pedirTablero } from './anuncios/marketingApi';
 import '../../comercial/comercial.css';
@@ -25,8 +27,11 @@ import './anuncios/anuncios.css';
  * crea solo cuando ManyChat manda una palabra clave nueva y el gasto llega de Meta Ads («Meta Ads»).
  * «Webhooks», «Generador UTM» y «Tráfico landings» siguen como estaban.
  *
- * La pestaña y el período viven en la URL (`tab`, `periodo`, `desde`, `hasta`), así un link lleva a lo
- * mismo que se estaba mirando.
+ * Rendimiento separa el gasto por embudo (15/10/2026): «Todo» (resumen por embudo + la tabla de palabras
+ * clave), «Setting» (la tabla sola) y «Workshop» (los anuncios que llevan a la clase en vivo).
+ *
+ * La pestaña, el embudo y el período viven en la URL (`tab`, `embudo`, `periodo`, `desde`, `hasta`), así
+ * un link lleva a lo mismo que se estaba mirando.
  */
 
 const PESTANAS = [
@@ -37,12 +42,20 @@ const PESTANAS = [
     { key: 'trafico', label: 'Tráfico landings' },
 ];
 const CON_PERIODO = ['anuncios', 'meta'];
+// Rendimiento por embudo (15/10/2026): «Todo» suma el resumen por embudo arriba de la tabla de
+// palabras clave; «Setting» es esa tabla sola y «Workshop», los anuncios que llevan a la clase.
+const EMBUDOS_DE_RENDIMIENTO = [
+    { key: 'todo', label: 'Todo' },
+    { key: 'setting', label: 'Setting' },
+    { key: 'workshop', label: 'Workshop' },
+];
 
 const AdminMarketingHubPage = () => {
     const [params, setParams] = useSearchParams();
     const reducir = useReducedMotion();
     const pestana = PESTANAS.some((p) => p.key === params.get('tab')) ? params.get('tab') : 'anuncios';
     const periodo = PERIODOS.some((p) => p.key === params.get('periodo')) ? params.get('periodo') : PERIODO_POR_DEFECTO;
+    const embudo = EMBUDOS_DE_RENDIMIENTO.some((e) => e.key === params.get('embudo')) ? params.get('embudo') : 'todo';
     const rango = useMemo(() => {
         if (periodo === 'personalizado' && esFecha(params.get('desde')) && esFecha(params.get('hasta'))) {
             return { desde: params.get('desde'), hasta: params.get('hasta') };
@@ -152,8 +165,22 @@ const AdminMarketingHubPage = () => {
                                 : !datos ? <EsqueletoTablero rotulo="Cargando los anuncios…" />
                                     : (
                                         <div className={cargando ? 'mk-recargando' : undefined} aria-busy={cargando}>
-                                            <TablaAnuncios datos={datos} onArchivar={archivar} onAgrupar={agrupar}
-                                                irAMeta={() => cambiar({ tab: 'meta' })} />
+                                            <div className="mk-embudo-selector">
+                                                <Segmented chico ariaLabel="Embudo" opciones={EMBUDOS_DE_RENDIMIENTO} valor={embudo}
+                                                    onChange={(key) => cambiar({ embudo: key === 'todo' ? null : key })} />
+                                            </div>
+                                            {embudo === 'todo' && (
+                                                <EmbudosResumen embudos={datos.embudos} desde={rango.desde} hasta={rango.hasta}
+                                                    moneda={datos.moneda} onElegir={(key) => cambiar({ embudo: key })}
+                                                    irAMeta={() => cambiar({ tab: 'meta' })} />
+                                            )}
+                                            {embudo === 'workshop' ? (
+                                                <RendimientoWorkshop desde={rango.desde} hasta={rango.hasta} moneda={datos.moneda}
+                                                    embudos={datos.embudos} irAMeta={() => cambiar({ tab: 'meta' })} />
+                                            ) : (
+                                                <TablaAnuncios datos={datos} onArchivar={archivar} onAgrupar={agrupar}
+                                                    irAMeta={() => cambiar({ tab: 'meta' })} />
+                                            )}
                                         </div>
                                     )
                         )}

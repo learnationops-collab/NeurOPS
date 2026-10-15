@@ -147,15 +147,36 @@ export const ordenar = (filas, clave, dir) => {
  * La serie por día de las filas dadas, con todos los días del período (los vacíos en cero: un día sin
  * leads también es un dato). Cada fila trae `dias: { 'AAAA-MM-DD': [entrantes, calificados, gasto, agendas] }`.
  */
-export const serieDe = (filas, desde, hasta) => {
+/** Los días de [desde, hasta] (AAAA-MM-DD), como objetos `{ dia, ...ceros }`. */
+const diasDelRango = (desde, hasta, ceros) => {
     if (!desde || !hasta) return [];
     const [a, m, d] = desde.split('-').map(Number);
     const [a2, m2, d2] = hasta.split('-').map(Number);
     const fin = new Date(a2, m2 - 1, d2);
     const dias = [];
     for (let f = new Date(a, m - 1, d); f <= fin && dias.length < 400; f = masDias(f, 1)) {
-        dias.push({ dia: diaLocal(f), entrantes: 0, calificados: 0, gasto: 0, agendas: 0 });
+        dias.push({ dia: diaLocal(f), ...ceros });
     }
+    return dias;
+};
+
+/** El gasto de cada día por embudo (`tablero.embudos`): `[{ dia, setting, workshop, …, sin }]`. */
+export const serieDeEmbudos = (embudos, desde, hasta) => {
+    const claves = [...EMBUDOS.map((e) => e.key), 'sin'];
+    const dias = diasDelRango(desde, hasta, Object.fromEntries(claves.map((k) => [k, 0])));
+    const indice = Object.fromEntries(dias.map((x, i) => [x.dia, i]));
+    (embudos || []).forEach((e) => {
+        Object.entries(e.dias || {}).forEach(([dia, gasto]) => {
+            const x = dias[indice[dia]];
+            if (x) x[e.embudo || 'sin'] += gasto;
+        });
+    });
+    return dias;
+};
+
+export const serieDe = (filas, desde, hasta) => {
+    const dias = diasDelRango(desde, hasta, { entrantes: 0, calificados: 0, gasto: 0, agendas: 0 });
+    if (!dias.length) return [];
     const indice = Object.fromEntries(dias.map((x, i) => [x.dia, i]));
     filas.forEach((fila) => {
         Object.entries(fila.dias || {}).forEach(([dia, [e, c, g, ag]]) => {

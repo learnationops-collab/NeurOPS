@@ -165,6 +165,36 @@ describe('Marketing › Anuncios', () => {
             { dias: 30, hasta: null }, { dias: 30, hasta: '2026-09-15' }, { dias: 30, hasta: '2026-08-16' }]);
     });
 
+    it('Rendimiento muestra el gasto por embudo y Workshop abre sus anuncios', async () => {
+        const embudos = [
+            { embudo: 'setting', gasto: 300, anuncios: 12, dias: { '2026-10-01': 300 } },
+            { embudo: 'workshop', gasto: 100, anuncios: 4, dias: { '2026-10-01': 100 } },
+            { embudo: 'contratacion', gasto: 0, anuncios: 0, dias: {} },
+            { embudo: 'otro', gasto: 0, anuncios: 0, dias: {} },
+        ];
+        const workshop = {
+            desde: '2026-09-15', hasta: '2026-10-14', anuncios_workshop: 4,
+            totales: { gasto: 100, impresiones: 50000, clics: 1500, clics_enlace: 900, cpm: 2, cpc: 0.11, ctr: 3, visitas: 800, clics_whatsapp: 40, costo_whatsapp: 2.5 },
+            campanas: [{ campana_id: '120247656795310532', nombre: 'WORKSHOP FUNNEL | TESTING ADS', gasto: 100, impresiones: 50000,
+                clics: 1500, clics_enlace: 900, cpm: 2, cpc: 0.11, ctr: 3, visitas: 800, clics_whatsapp: 40, costo_whatsapp: 2.5,
+                conjuntos: [{ nombre: 'Broad | Pizarra Problem', gasto: 100, impresiones: 50000, clics: 1500, clics_enlace: 900, cpm: 2, cpc: 0.11, ctr: 3,
+                    anuncios: [{ meta_ad_id: '9', nombre: 'Ad 4', estado: 'ACTIVE', gasto: 100, impresiones: 50000, clics: 1500, clics_enlace: 900, cpm: 2, cpc: 0.11, ctr: 3 }] }] }],
+        };
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/anuncios' ? { ...TABLERO, embudos }
+            : url === '/marketing/anuncios/embudos/workshop' ? workshop : { anuncios: [], claves: [] } }));
+        abrir();
+
+        const tarjetaWorkshop = await screen.findByRole('button', { name: 'Ver Workshop: $100' });
+        expect(screen.getByText('75% del gasto · 12 anuncios')).toBeInTheDocument();
+        await userEvent.click(tarjetaWorkshop);
+
+        expect(await screen.findByText('Ad 4')).toBeInTheDocument();
+        expect(api.get).toHaveBeenCalledWith('/marketing/anuncios/embudos/workshop', expect.anything());
+        // La tabla de palabras clave (Setting) no está en la vista de Workshop.
+        expect(screen.queryByText('Obtener Guia')).not.toBeInTheDocument();
+        expect(within(screen.getByText('Total de Workshop').closest('tr')).getByText('40')).toBeInTheDocument();
+    });
+
     it('cada anuncio de Meta muestra su embudo, se filtra y se corrige a mano', async () => {
         const anuncio = (id, nombre, embudo, texto) => ({
             meta_ad_id: id, nombre, campana: 'C', conjunto: 'S', estado: 'ACTIVE', texto, clave: null, mapeo: null,

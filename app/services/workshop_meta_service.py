@@ -125,11 +125,15 @@ def _landings_por_campana(desde, hasta, zona):
 
 
 def desglose(evento, zona=None):
-    """Los anuncios de las campañas de workshop en los días del taller, por campaña › conjunto ›
-    anuncio, con gasto, impresiones, clics, CPM, CPC y CTR, y por campaña las visitas a las landings
-    y los clics al grupo de WhatsApp que trajo."""
+    """Los anuncios de workshop en los días del taller (del siguiente al anterior hasta el suyo)."""
+    return desglose_periodo(*ventana_de(evento), zona)
+
+
+def desglose_periodo(desde, hasta, zona=None):
+    """Los anuncios de workshop en [desde, hasta], por campaña › conjunto › anuncio, con gasto,
+    impresiones, clics, CPM, CPC y CTR, y por campaña las visitas a las landings y los clics al grupo
+    de WhatsApp que trajo. Lo usan el embudo de cada taller y Rendimiento › Workshop."""
     zona = zona or pytz.timezone('America/La_Paz')
-    desde, hasta = ventana_de(evento)
     filas = _de_workshop().filter(
         MetaGastoDiario.fecha >= desde, MetaGastoDiario.fecha <= hasta,
     ).with_entities(
