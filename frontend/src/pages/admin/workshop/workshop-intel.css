@@ -566,3 +566,7 @@
   .ws-shell .trafico-visitas { min-width: 120px; }
   .ws-shell .trafico-tabla table { min-width: 0; }
 }
+
+/* Hora y links del taller (15/10/2026): lo que leen las landings de institute, antes workshops.csv. */
+.ws-shell .hora-zona { display: inline; font-weight: 600; color: var(--text-muted); }
+.ws-shell .nota-landing { margin: -4px 0 0; font-size: 11px; line-height: 1.45; color: var(--text-muted); }

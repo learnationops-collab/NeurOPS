@@ -15,10 +15,15 @@ import WorkshopGoalsModal from './components/WorkshopGoalsModal';
 import WorkshopSimuladorView from './components/WorkshopSimuladorView';
 import WorkshopAccionesView from './components/WorkshopAccionesView';
 import WorkshopCompareModal from './components/WorkshopCompareModal';
+import { aCamposLocales, aInicioUtc, zonaNavegador } from './agendaTaller';
 
 const initialFormData = {
     date: '',
+    // Hora en la zona del navegador; viaja como `inicio_at` en UTC (ver agendaTaller.js)
+    hora: '',
     name: '',
+    meet_url: '',
+    whatsapp_url: '',
     inversion: 0.0,
     cpm: 0.0,
     cpc: 0.0,
@@ -224,9 +229,13 @@ const WorkshopDashboardPage = () => {
         setAgendaBreakdown(null);
         setCurrentStep(1);
         setPrefilledDate(event.date);
+        const local = aCamposLocales(event.inicio_at);
         setFormData({
-            date: event.date,
+            date: local.fecha || event.date,
+            hora: local.hora,
             name: event.name,
+            meet_url: event.meet_url || '',
+            whatsapp_url: event.whatsapp_url || '',
             inversion: event.inversion,
             cpm: event.cpm,
             cpc: event.cpc,
@@ -307,8 +316,13 @@ const WorkshopDashboardPage = () => {
             replay_activo_desde: formData.replay_activo_desde || null,
             replay_vence_hasta: formData.replay_vence_hasta || null,
             replay_info_segundos: Math.round((parseFloat(formData.replay_info_minutos) || 0) * 60),
-            replay_oferta_segundos: Math.round((parseFloat(formData.replay_oferta_minutos) || 0) * 60)
+            replay_oferta_segundos: Math.round((parseFloat(formData.replay_oferta_minutos) || 0) * 60),
+            inicio_at: aInicioUtc(formData.date, formData.hora),
+            zona: zonaNavegador(),
+            meet_url: formData.meet_url?.trim() || null,
+            whatsapp_url: formData.whatsapp_url?.trim() || null
         };
+        delete payload.hora;
         delete payload.replay_info_minutos;
         delete payload.replay_oferta_minutos;
 
