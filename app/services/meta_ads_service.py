@@ -145,10 +145,12 @@ def _texto_del_creativo(creativo):
     return texto or creativo.get('name') or ''
 
 
-def _guardar_anuncio(fila, cuenta):
-    anuncio = MetaAnuncio.query.filter_by(meta_ad_id=str(fila['id'])).first()
+def _guardar_anuncio(fila, cuenta, existentes):
+    """`existentes` ({meta_ad_id: MetaAnuncio}) se lee una vez por sincronización: una consulta por
+    anuncio son cientos de idas y vueltas a la base."""
+    anuncio = existentes.get(str(fila['id']))
     if not anuncio:
-        anuncio = MetaAnuncio(meta_ad_id=str(fila['id']))
+        anuncio = existentes[str(fila['id'])] = MetaAnuncio(meta_ad_id=str(fila['id']))
         db.session.add(anuncio)
     creativo = fila.get('creative') or {}
     anuncio.cuenta_id = cuenta
@@ -179,11 +181,12 @@ def sincronizar(desde=None, hasta=None):
 
     base = f'{GRAPH}/{version}'
     anuncios, filas_de_gasto, gasto_total = 0, 0, 0.0
+    existentes = {a.meta_ad_id: a for a in MetaAnuncio.query.all()}
     for cuenta in cuentas:
         conocidos = set()
         for fila in _paginas(f'{base}/act_{cuenta}/ads',
                              {'fields': CAMPOS_DEL_ANUNCIO, 'limit': 200, 'access_token': token}):
-            _guardar_anuncio(fila, cuenta)
+            _guardar_anuncio(fila, cuenta, existentes)
             conocidos.add(str(fila['id']))
             anuncios += 1
 
@@ -201,6 +204,9 @@ def sincronizar(desde=None, hasta=None):
         MetaGastoDiario.query.filter(MetaGastoDiario.fecha >= desde, MetaGastoDiario.fecha <= hasta,
                                      MetaGastoDiario.meta_ad_id.in_(de_la_cuenta.scalar_subquery())) \
             .delete(synchronize_session=False)
+        # Lo que quede en la ventana es de un anuncio que todavía no era de la cuenta: se pisa igual.
+        del_periodo = {(g.meta_ad_id, g.fecha): g for g in MetaGastoDiario.query.filter(
+            MetaGastoDiario.fecha >= desde, MetaGastoDiario.fecha <= hasta)}
         sin_ficha = {}
         for fila in insights:
             meta_ad_id = str(fila.get('ad_id') or '')
@@ -209,9 +215,9 @@ def sincronizar(desde=None, hasta=None):
                 continue
             gasto = float(fila.get('spend') or 0)
             dia = date.fromisoformat(fecha)
-            registro = MetaGastoDiario.query.filter_by(meta_ad_id=meta_ad_id, fecha=dia).first()
+            registro = del_periodo.get((meta_ad_id, dia))
             if not registro:
-                registro = MetaGastoDiario(meta_ad_id=meta_ad_id, fecha=dia)
+                registro = del_periodo[(meta_ad_id, dia)] = MetaGastoDiario(meta_ad_id=meta_ad_id, fecha=dia)
                 db.session.add(registro)
             registro.gasto = gasto
             registro.moneda = (fila.get('account_currency') or '')[:3] or None
@@ -224,7 +230,7 @@ def sincronizar(desde=None, hasta=None):
         # Un anuncio archivado o borrado no sale en el listado pero sí gastó: se lo pide suelto para
         # tener su texto (y si ya no se puede, queda con el nombre que traen los insights).
         for meta_ad_id, fila in sin_ficha.items():
-            existente = MetaAnuncio.query.filter_by(meta_ad_id=meta_ad_id).first()
+            existente = existentes.get(meta_ad_id)
             if existente and existente.texto:
                 continue
             try:
@@ -232,7 +238,7 @@ def sincronizar(desde=None, hasta=None):
             except ErrorDeMeta:
                 suelto = {'id': meta_ad_id, 'name': fila.get('ad_name'),
                           'campaign': {'name': fila.get('campaign_name')}, 'adset': {'name': fila.get('adset_name')}}
-            _guardar_anuncio(suelto, cuenta)
+            _guardar_anuncio(suelto, cuenta, existentes)
 
     db.session.flush()
     mapear_automatico()
