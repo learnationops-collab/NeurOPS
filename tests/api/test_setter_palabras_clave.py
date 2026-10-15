@@ -157,6 +157,30 @@ def test_la_bandeja_son_sus_agendas_sin_anuncio_una_por_persona(client, db, equi
 
 
 @freeze_time(HOY)
+def test_sin_instagram_que_coincida_se_conecta_por_el_nombre_completo(client, db, equipo, anuncios, auth_headers):
+    """Kerwin (15/10/2026): las agendas que llegaron por ManyChat deberían tener ya su palabra clave.
+    El setter escribió mal el Instagram («julio_garca» por «juliocgarca»): el nombre completo exacto,
+    sin tildes ni mayúsculas, lo encuentra; Marketing la cuenta igual."""
+    julio = agenda(db, equipo, cliente(db, 'JULIO GARCIA', 'julio_garca'))
+    lead = conversacion(db, 'juliocgarca', anuncios['GUIA'])
+    lead.name = 'Julio García'
+    # Dos conversaciones con el mismo nombre: no se elige ninguna.
+    agenda(db, equipo, cliente(db, 'Ana Pérez', 'ana_typo'))
+    for ig in ('anaperez1', 'anaperez2'):
+        conversacion(db, ig, anuncios['GUIA']).name = 'Ana Perez'
+    # Un nombre solo no identifica a nadie.
+    agenda(db, equipo, cliente(db, 'Mariana', 'mari_typo'))
+    conversacion(db, 'mariana_ok', anuncios['GUIA']).name = 'Mariana'
+    db.session.commit()
+
+    pendientes = bandeja(client, equipo['elias'], auth_headers)['pendientes']
+
+    assert sorted(p['cliente'] for p in pendientes) == ['Ana Pérez', 'Mariana']
+    assert julio.id not in {p['id'] for p in pendientes}
+    assert agendas_de_marketing(anuncios['GUIA']) == 1
+
+
+@freeze_time(HOY)
 def test_el_dock_puede_pedir_solo_el_resumen(client, db, equipo, anuncios, auth_headers):
     agenda(db, equipo, cliente(db, 'Ana', 'ana'))
 

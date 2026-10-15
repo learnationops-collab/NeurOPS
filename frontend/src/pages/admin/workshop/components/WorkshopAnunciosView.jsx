@@ -3,8 +3,8 @@ import { ChevronDown, ChevronRight, Megaphone } from 'lucide-react';
 import api from '../../../../services/api';
 
 /**
- * Los anuncios de Meta que llenaron este taller: las campañas marcadas como de workshop en
- * Marketing › Meta Ads, del día siguiente al taller anterior al día de este (los mismos días que su
+ * Los anuncios de Meta que llenaron este taller: los de embudo Workshop (Marketing › Meta Ads), del
+ * día siguiente al taller anterior al día de este (los mismos días que su
  * inversión). Campaña › conjunto › anuncio con gasto, impresiones, clics, CTR, CPC y CPM; por
  * campaña, además, las visitas a las landings y los clics al grupo de WhatsApp que trajo (el id de
  * la campaña viaja en el utm_campaign). Ver `app/services/workshop_meta_service.py`.
@@ -67,13 +67,14 @@ const WorkshopAnunciosView = ({ evento, formatCurrency }) => {
                 <p className="all-target ws-anuncios-vacio">{error}</p>
             ) : !datos ? (
                 <p className="all-target ws-anuncios-vacio" role="status">Cargando los anuncios…</p>
-            ) : !datos.campanas_marcadas ? (
+            ) : !datos.anuncios_workshop ? (
                 <p className="all-target ws-anuncios-vacio">
-                    Todavía no hay campañas marcadas como de workshop. Marcalas en Marketing › Meta Ads y acá
-                    vas a ver el gasto y los resultados de cada anuncio entre este taller y el anterior.
+                    Todavía no hay anuncios clasificados como Workshop. Se clasifican solos al sincronizar con Meta y se
+                    corrigen en Marketing › Meta Ads: acá vas a ver el gasto y los resultados de cada uno entre este
+                    taller y el anterior.
                 </p>
             ) : !datos.campanas.length ? (
-                <p className="all-target ws-anuncios-vacio">Las campañas de workshop no gastaron en estos días.</p>
+                <p className="all-target ws-anuncios-vacio">Los anuncios de Workshop no gastaron en estos días.</p>
             ) : (
                 <div className="comparison-scroll">
                     <table className="trafico-landings ws-anuncios-tabla">

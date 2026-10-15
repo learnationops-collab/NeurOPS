@@ -26,13 +26,14 @@ la que el anuncio pide escribir (así se escriben: «Respondé EARN», «coment�
 import json
 import os
 import re
+from collections import defaultdict
 from datetime import date, datetime, timedelta
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import requests
 
 from app import db
-from app.models import MetaAnuncio, MetaCampanaWorkshop, MetaGastoDiario
+from app.models import MetaAnuncio, MetaGastoDiario
 
 GRAPH = 'https://graph.facebook.com'
 VERSION_POR_DEFECTO = 'v24.0'
@@ -363,22 +364,105 @@ def detectar_clave(texto, nombre, claves, contexto=()):
     return None
 
 
+# --- El embudo de cada anuncio de Meta (15/10/2026) ---------------------------------------------
+
+EMBUDOS = ('setting', 'workshop', 'contratacion', 'otro')
+_CONTRATACION = re.compile(r'HIRING|^ASIS', re.I)
+# Lo que el anuncio pide hacer: escribir al DM (setting) o anotarse a la clase (workshop).
+_AL_DM = re.compile(r'\bDM\b|\b(comenta|respond[ea]|escrib[ei])\b', re.I)
+_A_LA_CLASE = re.compile(r'\bclase\b', re.I)
+# El nombre de la campaña, cuando el texto no lo dice («Tocá el botón del video…»).
+_CAMPANA_WORKSHOP = re.compile(r'^(WS|WB|LP FUNNEL|WORKSHOP)\b|\bLAUNCH\b', re.I)
+_CAMPANA_SETTING = re.compile(r'^(DM|DMV|LM)\b|DM FUNNEL|HAND RAISER|LM FUNNEL', re.I)
+
+
+def detectar_embudo(anuncio):
+    """A qué embudo va un anuncio de Meta. Kerwin (15/10): «las que dicen al DM son de setting, la que
+    dice clase gratis son de workshop». En orden:
+
+      1. campaña HIRING o ASIS (búsquedas de personal): contratación;
+      2. tiene palabra clave de ManyChat: setting (muchos no dicen «DM» al principio del texto —«Si
+         tus manuales están llenos de resaltador…»— pero piden escribir su palabra);
+      3. el texto pide escribir al DM («Pide gratis al DM», «Comenta…», «Respondé…»): setting;
+      4. el texto habla de la clase («CLASE GRATIS: cómo estudiar…»): workshop;
+      5. el nombre de la campaña: WS / WB / LP FUNNEL / WORKSHOP / LAUNCH es workshop, DM / LM es
+         setting;
+      6. si no, None (sin clasificar): se elige a mano.
+    """
+    texto = _sin_tildes(anuncio.texto or '')
+    campana = anuncio.campana or ''
+    if _CONTRATACION.search(campana):
+        return 'contratacion'
+    if anuncio.clave or _AL_DM.search(texto):
+        return 'setting'
+    if _A_LA_CLASE.search(texto):
+        return 'workshop'
+    if _CAMPANA_WORKSHOP.search(campana):
+        return 'workshop'
+    if _CAMPANA_SETTING.search(campana):
+        return 'setting'
+    return None
+
+
 def mapear_automatico():
-    """Recalcula la palabra clave de los anuncios de Meta que nadie asignó a mano. No hace commit."""
+    """Recalcula la palabra clave y el embudo de los anuncios de Meta que nadie eligió a mano. No hace
+    commit."""
     from app.services.anuncios_service import claves_conocidas
 
-    pendientes = MetaAnuncio.query.filter(db.or_(MetaAnuncio.mapeo.is_(None), MetaAnuncio.mapeo == 'auto')).all()
-    if not pendientes:
-        return 0
-    claves = claves_conocidas()
     cambios = 0
-    for anuncio in pendientes:
-        nueva = detectar_clave(anuncio.texto, anuncio.nombre, claves, (anuncio.conjunto, anuncio.campana))
-        if nueva != anuncio.clave:
-            anuncio.clave = nueva
-            cambios += 1
-        anuncio.mapeo = 'auto' if nueva else None
+    pendientes = MetaAnuncio.query.filter(db.or_(MetaAnuncio.mapeo.is_(None), MetaAnuncio.mapeo == 'auto')).all()
+    if pendientes:
+        claves = claves_conocidas()
+        for anuncio in pendientes:
+            nueva = detectar_clave(anuncio.texto, anuncio.nombre, claves, (anuncio.conjunto, anuncio.campana))
+            if nueva != anuncio.clave:
+                anuncio.clave = nueva
+                cambios += 1
+            anuncio.mapeo = 'auto' if nueva else None
+    # El embudo va después: depende de la palabra clave (también de la elegida a mano).
+    for anuncio in MetaAnuncio.query.filter(db.or_(MetaAnuncio.embudo_mapeo.is_(None),
+                                                    MetaAnuncio.embudo_mapeo == 'auto')).all():
+        anuncio.embudo = detectar_embudo(anuncio)
+        anuncio.embudo_mapeo = 'auto' if anuncio.embudo else None
     return cambios
+
+
+def gasto_por_embudo(desde, hasta):
+    """El gasto de Meta en [desde, hasta] por embudo, para Rendimiento: `[{embudo, gasto, anuncios,
+    dias: {fecha: gasto}}]` en el orden de `EMBUDOS`, más el de los sin clasificar (`embudo: None`)
+    si gastaron."""
+    por = {e: {'embudo': e, 'gasto': 0.0, 'anuncios': set(), 'dias': defaultdict(float)} for e in (*EMBUDOS, None)}
+    for embudo, meta_ad_id, fecha, gasto in db.session.query(
+            MetaAnuncio.embudo, MetaGastoDiario.meta_ad_id, MetaGastoDiario.fecha, MetaGastoDiario.gasto) \
+            .join(MetaAnuncio, MetaAnuncio.meta_ad_id == MetaGastoDiario.meta_ad_id) \
+            .filter(MetaGastoDiario.fecha >= desde, MetaGastoDiario.fecha <= hasta, MetaGastoDiario.gasto > 0):
+        fila = por.get(embudo, por[None])
+        fila['gasto'] += gasto
+        fila['anuncios'].add(meta_ad_id)
+        fila['dias'][fecha.isoformat()] += gasto
+    return [{'embudo': f['embudo'], 'gasto': round(f['gasto'], 2), 'anuncios': len(f['anuncios']),
+             'dias': {d: round(g, 2) for d, g in sorted(f['dias'].items())}}
+            for f in por.values() if f['embudo'] in EMBUDOS or f['gasto']]
+
+
+def asignar_embudo(meta_ad_id, embudo=None, automatico=False):
+    """Fija a mano el embudo de un anuncio de Meta, o lo devuelve a la detección automática.
+    Recalcula la inversión de los workshop (sale de los anuncios de 'workshop'). Hace commit."""
+    anuncio = MetaAnuncio.query.filter_by(meta_ad_id=str(meta_ad_id)).first()
+    if not anuncio:
+        raise LookupError('Ese anuncio de Meta no está sincronizado.')
+    if automatico:
+        anuncio.embudo = detectar_embudo(anuncio)
+        anuncio.embudo_mapeo = 'auto' if anuncio.embudo else None
+    else:
+        if embudo not in EMBUDOS:
+            raise ValueError('El embudo tiene que ser setting, workshop, contratacion u otro.')
+        anuncio.embudo, anuncio.embudo_mapeo = embudo, 'manual'
+    db.session.flush()
+    from app.services import workshop_meta_service
+    workshop_meta_service.recalcular()
+    db.session.commit()
+    return anuncio
 
 
 def asignar_clave(meta_ad_id, clave=None, automatico=False):
@@ -398,6 +482,10 @@ def asignar_clave(meta_ad_id, clave=None, automatico=False):
             raise ValueError('Esa palabra clave no llegó nunca desde ManyChat.')
         anuncio.clave = clave
         anuncio.mapeo = 'manual'
+        db.session.flush()
+        mapear_automatico()  # con palabra clave el embudo automático pasa a ser setting
+    from app.services import workshop_meta_service
+    workshop_meta_service.recalcular()
     db.session.commit()
     return anuncio
 
@@ -419,49 +507,9 @@ def listado(desde, hasta):
             'texto': (anuncio.texto or '')[:280],
             'clave': anuncio.clave,
             'mapeo': anuncio.mapeo,
+            'embudo': anuncio.embudo,
+            'embudo_mapeo': anuncio.embudo_mapeo,
             'gasto': round(float(gasto.get(anuncio.meta_ad_id) or 0), 2),
         })
     filas.sort(key=lambda f: (f['estado'] != 'ACTIVE', -f['gasto'], f['nombre'] or ''))
     return filas
-
-
-# --- Las campañas de workshop --------------------------------------------------------------------
-
-def campanas_workshop():
-    """{campana_id: nombre} de las campañas marcadas como de workshop."""
-    return {c.campana_id: c.nombre for c in MetaCampanaWorkshop.query.all()}
-
-
-def campanas(desde, hasta):
-    """Las campañas que gastaron en [desde, hasta] y las marcadas como de workshop (aunque no hayan
-    gastado), con su gasto y si son de workshop, para marcarlas en la pestaña de conexión."""
-    marcadas = campanas_workshop()
-    gasto = {cid: (nombre, float(total), anuncios) for cid, nombre, total, anuncios in db.session.query(
-        MetaAnuncio.campana_id, db.func.max(MetaAnuncio.campana), db.func.sum(MetaGastoDiario.gasto),
-        db.func.count(db.distinct(MetaAnuncio.meta_ad_id)))
-        .join(MetaGastoDiario, MetaGastoDiario.meta_ad_id == MetaAnuncio.meta_ad_id)
-        .filter(MetaGastoDiario.fecha >= desde, MetaGastoDiario.fecha <= hasta, MetaAnuncio.campana_id.isnot(None))
-        .group_by(MetaAnuncio.campana_id).having(db.func.sum(MetaGastoDiario.gasto) > 0)}
-    filas = [{'campana_id': cid, 'nombre': nombre, 'gasto': round(total, 2), 'anuncios': anuncios,
-              'workshop': cid in marcadas} for cid, (nombre, total, anuncios) in gasto.items()]
-    filas += [{'campana_id': cid, 'nombre': nombre, 'gasto': 0.0, 'anuncios': 0, 'workshop': True}
-              for cid, nombre in marcadas.items() if cid not in gasto]
-    filas.sort(key=lambda f: (not f['workshop'], -f['gasto'], f['nombre'] or ''))
-    return filas
-
-
-def marcar_workshop(campana_id, workshop):
-    """Marca (o desmarca) una campaña como de workshop. Hace commit."""
-    campana_id = str(campana_id)
-    nombre = db.session.query(MetaAnuncio.campana).filter(MetaAnuncio.campana_id == campana_id).first()
-    marcada = MetaCampanaWorkshop.query.filter_by(campana_id=campana_id).first()
-    if workshop and not marcada:
-        if not nombre:
-            raise LookupError('Esa campaña de Meta no está sincronizada.')
-        db.session.add(MetaCampanaWorkshop(campana_id=campana_id, nombre=nombre[0]))
-    elif not workshop and marcada:
-        db.session.delete(marcada)
-    db.session.flush()
-    from app.services import workshop_meta_service
-    workshop_meta_service.recalcular()
-    db.session.commit()

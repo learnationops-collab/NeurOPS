@@ -17,9 +17,11 @@ con agendas que Marketing sigue viendo sin atribuir. `Appointment.keyword` NO al
 lo lee; se escribe igual al asignar (lo muestran el mazo y la ficha) y, si ya estaba, sirve de
 sugerencia.
 
-**Por qué hace falta el Instagram.** Es lo único con lo que Marketing encuentra la conversación de
-la agenda: la tabla de anuncios no busca por nombre. Sin Instagram no hay atribución posible: la
-tarjeta lo pide solo cuando falta.
+**Por qué hace falta el Instagram.** Es con lo que Marketing encuentra la conversación de la agenda.
+Desde el 15/10/2026, si por el Instagram no aparece, también por el nombre completo exacto cuando una
+sola conversación de ManyChat lo tiene (Kerwin: «deberían conectarse solas»; 30 de 175 pendientes
+en staging eran un Instagram mal escrito o el nombre puesto en su lugar). Sin ninguna de las dos no
+hay atribución posible: la tarjeta pide el Instagram cuando falta.
 
 **Desde cuándo.** `DESDE` es julio de 2026, cuando ManyChat empezó a guardar el anuncio de cada
 conversación (la primera `LeadAnswer` es de ese mes; antes no hay ninguna). Una agenda anterior no
@@ -104,31 +106,39 @@ def _anuncio_de_cada_una(filas):
     En tres consultas para toda la bandeja (conversaciones, respuestas con anuncio) en vez de dos
     por agenda: la lista de un setter son cientos de filas.
     """
+    from app.services.anuncios_service import clave_de_nombre, leads_por_nombre
+
     igs = {normalizar_ig(f['ig']) for f in filas} - {None}
-    if not igs:
-        return {}
-    ig_columna = func.lower(func.replace(ManychatLead.ig, '@', ''))
-    leads = db.session.query(ManychatLead.id, ig_columna).filter(ig_columna.in_(igs)).all()
     leads_por_ig = defaultdict(list)
-    for lead_id, ig in leads:
-        leads_por_ig[(ig or '').strip()].append(lead_id)
+    if igs:
+        ig_columna = func.lower(func.replace(ManychatLead.ig, '@', ''))
+        for lead_id, ig in db.session.query(ManychatLead.id, ig_columna).filter(ig_columna.in_(igs)):
+            leads_por_ig[(ig or '').strip()].append(lead_id)
+    # Si el Instagram no lleva a ninguna, el nombre completo exacto, como Marketing
+    # (`anuncios_service._Atribuidor`): el setter lo escribe mal o pone el nombre en su lugar.
+    por_nombre = leads_por_nombre({clave_de_nombre(f['cliente']) for f in filas})
+    lead_ids = {lid for ids in leads_por_ig.values() for lid in ids} | set(por_nombre.values())
     respuestas = defaultdict(list)
-    if leads:
+    if lead_ids:
         for lead_id, ad_id, creada in db.session.query(
                 LeadAnswer.lead_id, LeadAnswer.ad_id, LeadAnswer.created_at).filter(
-                LeadAnswer.lead_id.in_([lid for lid, _ in leads]), LeadAnswer.ad_id.isnot(None)):
+                LeadAnswer.lead_id.in_(lead_ids), LeadAnswer.ad_id.isnot(None)):
             respuestas[lead_id].append((creada, ad_id))
+
+    def ultima(ids, reunion):
+        candidatas = [(creada, ad_id) for lead_id in ids for creada, ad_id in respuestas[lead_id]
+                      if creada and (reunion is None or creada <= reunion)]
+        # La más cercana a la reunión, como Marketing: es el anuncio por el que llegó esa vez.
+        return max(candidatas)[1] if candidatas else None
 
     anuncio = {}
     for f in filas:
         reunion = _instante(f['fecha'])
-        candidatas = [(creada, ad_id)
-                      for lead_id in leads_por_ig.get(normalizar_ig(f['ig']) or '', [])
-                      for creada, ad_id in respuestas[lead_id]
-                      if creada and (reunion is None or creada <= reunion)]
-        if candidatas:
-            # La más cercana a la reunión, como Marketing: es el anuncio por el que llegó esa vez.
-            anuncio[f['id']] = max(candidatas)[1]
+        por_ig = ultima(leads_por_ig.get(normalizar_ig(f['ig']) or '', []), reunion)
+        lead = por_nombre.get(clave_de_nombre(f['cliente']))
+        elegido = por_ig or (ultima([lead], reunion) if lead else None)
+        if elegido:
+            anuncio[f['id']] = elegido
     return anuncio
 
 

@@ -131,6 +131,12 @@ class MetaAnuncio(db.Model):
     estado = db.Column(db.String(40))
     clave = db.Column(db.String(100), nullable=True, index=True)
     mapeo = db.Column(db.String(10), nullable=True)  # 'auto' | 'manual'
+    # A qué embudo va (15/10/2026): 'setting' (al DM, ManyChat), 'workshop' (a la clase en vivo),
+    # 'contratacion' (búsquedas de personal) u 'otro'; null = sin clasificar. Lo pone la
+    # sincronización (`meta_ads_service.detectar_embudo`, `embudo_mapeo='auto'`) salvo que alguien lo
+    # elija a mano (`'manual'`). La inversión de cada workshop es el gasto de los de 'workshop'.
+    embudo = db.Column(db.String(20), nullable=True, index=True)
+    embudo_mapeo = db.Column(db.String(10), nullable=True)
     creado_at = db.Column(db.DateTime, default=datetime.utcnow)
     actualizado_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -150,17 +156,6 @@ class MetaGastoDiario(db.Model):
     clics = db.Column(db.Integer, nullable=True)  # todos los clics (`clicks`)
     clics_enlace = db.Column(db.Integer, nullable=True)  # clics en el enlace (`inline_link_clicks`)
     actualizado_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-
-class MetaCampanaWorkshop(db.Model):
-    """Una campaña de Meta que lleva a las landings del workshop, marcada a mano en Marketing › Meta
-    Ads (decisión de Kerwin del 15/10/2026: no se adivina por el nombre). Su gasto, impresiones y
-    clics son la inversión, el CPM, el CPC y los clics de cada taller (`workshop_meta_service`)."""
-    __tablename__ = 'meta_campanas_workshop'
-    id = db.Column(db.Integer, primary_key=True)
-    campana_id = db.Column(db.String(40), unique=True, nullable=False)
-    nombre = db.Column(db.String(255))  # el que tenía al marcarla, por si deja de gastar
-    creado_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class ManychatAdLead(db.Model):

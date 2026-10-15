@@ -20,7 +20,7 @@ import {
  * conjunto; acá se filtran, se agrupan (`agruparFilas`), se ordenan y se suman.
  */
 
-const Kpi = ({ titulo, valor, sub, tip, i }) => {
+export const Kpi = ({ titulo, valor, sub, tip, i }) => {
     const reducir = useReducedMotion();
     return (
         <motion.section className="kpi mk-kpi"

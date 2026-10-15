@@ -77,7 +77,7 @@ class WorkshopEvent(db.Model):
     cash_ventas = db.Column(db.Float, nullable=True)
     ventas_cobradas = db.Column(db.Integer, nullable=True)
 
-    # Lo que dice Meta de las campañas marcadas como de workshop (`MetaCampanaWorkshop`) entre el
+    # Lo que dice Meta de los anuncios de embudo 'workshop' (`MetaAnuncio.embudo`) entre el
     # día siguiente al taller anterior y el día de este (15/10/2026, `workshop_meta_service`). Si
     # hay, reemplazan a la inversión, el CPM, el CPC y los clics cargados a mano (que quedan en sus
     # columnas, por si se desmarcan las campañas). `meta_impresiones` null con `meta_inversion`

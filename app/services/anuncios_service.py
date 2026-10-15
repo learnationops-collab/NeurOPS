@@ -13,7 +13,8 @@ Marketing es una tabla al estilo del Administrador de anuncios de Meta, una fila
     marcó que no y los que todavía no tienen respuesta.
   · **Agendas**: las agendas creadas en el período (sin el marcador «Cualificado» del setter), una por
     persona y palabra clave. Se atribuyen como en «Mis agendas» del setter: el Instagram del cliente
-    lleva a su conversación de ManyChat y de ahí a la última interacción de antes de la reunión.
+    lleva a su conversación de ManyChat y de ahí a la última interacción de antes de la reunión. Si
+    por el Instagram no aparece, el nombre completo exacto, cuando una sola conversación lo tiene.
   · **Ventas**: los pagos completos y split pay completados del período (la misma regla del dashboard
     comercial), atribuidos igual, con la última interacción de antes del pago.
   · **Gasto**: lo que Meta Ads gastó por día en los anuncios de Meta asociados a la palabra clave
@@ -24,6 +25,8 @@ Una interacción sin palabra clave (un webhook que no la mandó) pertenece a la 
 toma la palabra clave de la interacción anterior de esa persona o, si es la primera, de la siguiente.
 La de un anuncio viejo sin palabra clave toma la del anuncio (`Ad.keyword`).
 """
+import re
+import unicodedata
 from collections import Counter, defaultdict
 from datetime import datetime, time, timedelta
 
@@ -88,6 +91,11 @@ def anuncio_de_keyword(keyword, crear=True):
     from app.services import meta_ads_service
     meta_ads_service.mapear_automatico()
     return anuncio
+
+
+def _meta_ads():
+    from app.services import meta_ads_service  # se importan entre los dos
+    return meta_ads_service
 
 
 def claves_conocidas():
@@ -158,22 +166,57 @@ def _leads_por_ig(igs):
     return por_ig
 
 
+def clave_de_nombre(texto):
+    """El nombre para compararlo con el de ManyChat: sin tildes, en minúsculas, solo letras.
+    None con menos de dos palabras: un nombre solo («Mariana») no identifica a nadie."""
+    if not isinstance(texto, str):
+        return None
+    sin_tildes = ''.join(c for c in unicodedata.normalize('NFKD', texto) if not unicodedata.combining(c))
+    palabras = re.sub(r'[^a-z]+', ' ', sin_tildes.lower()).split()
+    return ' '.join(palabras) if len(palabras) >= 2 else None
+
+
+def leads_por_nombre(nombres):
+    """{nombre normalizado: lead_id} de las conversaciones de ManyChat con ese nombre completo, solo
+    cuando hay UNA: con dos personas que se llaman igual no se elige ninguna."""
+    nombres = {n for n in nombres if n}
+    if not nombres:
+        return {}
+    por_nombre = defaultdict(set)
+    for lead_id, nombre in db.session.query(ManychatLead.id, ManychatLead.name).filter(ManychatLead.name.isnot(None)):
+        clave = clave_de_nombre(nombre)
+        if clave in nombres:
+            por_nombre[clave].add(lead_id)
+    return {clave: ids.pop() for clave, ids in por_nombre.items() if len(ids) == 1}
+
+
 class _Atribuidor:
     """Le busca a una agenda o a una venta la palabra clave por la que llegó la persona: la de su
-    última interacción de ManyChat hasta `tope` (la reunión o el pago)."""
+    última interacción de ManyChat hasta `tope` (la reunión o el pago).
 
-    def __init__(self, igs, clave_de_anuncio):
+    La conversación se busca por el Instagram y, si por ahí no aparece ninguna con palabra clave,
+    por el nombre completo exacto (Kerwin, 15/10/2026: el setter escribe mal el Instagram —
+    «julio_garca» por «juliocgarca»— o pone el nombre en su lugar; 30 de 175 agendas pendientes en
+    staging se resolvían así)."""
+
+    def __init__(self, igs, clave_de_anuncio, nombres=()):
         self.por_ig = _leads_por_ig({ig for ig in igs if ig})
-        lead_ids = {lid for ids in self.por_ig.values() for lid in ids}
+        self.por_nombre = leads_por_nombre({clave_de_nombre(n) for n in nombres})
+        lead_ids = {lid for ids in self.por_ig.values() for lid in ids} | set(self.por_nombre.values())
         self.interacciones = _interacciones(lead_ids, clave_de_anuncio)
 
-    def clave(self, ig, tope):
+    def _ultima(self, lead_ids, tope):
         mejor = None
-        for lead_id in self.por_ig.get(ig, ()):
+        for lead_id in lead_ids:
             for creada, clave, _ in self.interacciones.get(lead_id, ()):
                 if clave and (tope is None or creada <= tope) and (mejor is None or creada > mejor[0]):
                     mejor = (creada, clave)
         return mejor[1] if mejor else None
+
+    def clave(self, ig, tope, nombre=None):
+        por_nombre = self.por_nombre.get(clave_de_nombre(nombre))
+        return self._ultima(self.por_ig.get(ig, ()), tope) or (
+            self._ultima((por_nombre,), tope) if por_nombre else None)
 
 
 # --- El tablero --------------------------------------------------------------------------------
@@ -209,15 +252,16 @@ def _entrantes(desde_dt, hasta_dt, clave_de_anuncio):
 def _agendas(desde_dt, hasta_dt, clave_de_anuncio):
     """({clave: {'agendas', 'dias'}}, sin_atribuir): una agenda por persona y palabra clave."""
     filas = db.session.query(Appointment.id, Appointment.client_id, Appointment.start_time,
-                             Appointment.created_at, Client.instagram) \
+                             Appointment.created_at, Client.instagram, Client.full_name) \
         .outerjoin(Client, Client.id == Appointment.client_id) \
         .filter(Appointment.created_at >= desde_dt, Appointment.created_at <= hasta_dt, no_es_marcador()).all()
-    atribuidor = _Atribuidor({normalize_ig(f.instagram) for f in filas}, clave_de_anuncio)
+    atribuidor = _Atribuidor({normalize_ig(f.instagram) for f in filas}, clave_de_anuncio,
+                             {f.full_name for f in filas})
 
     por_clave = defaultdict(lambda: {'agendas': 0, 'dias': Counter()})
     vistas, sin_atribuir = set(), 0
     for f in sorted(filas, key=lambda f: (f.created_at, f.id)):
-        clave = atribuidor.clave(normalize_ig(f.instagram), f.start_time)
+        clave = atribuidor.clave(normalize_ig(f.instagram), f.start_time, f.full_name)
         if not clave:
             sin_atribuir += 1
             continue
@@ -237,21 +281,26 @@ def _ventas(desde_dt, hasta_dt, clave_de_anuncio):
                                                     FinancialSale.date <= hasta_dt).all()
               if venta_completada(v)]
     cliente_de = clientes_de_ventas(cobros)
-    ig_de_cliente = {}
+    ig_de_cliente, nombre_de_cliente = {}, {}
     ids = {cid for cid in cliente_de.values() if cid}
     for tanda in _en_tandas(ids):
-        for cid, ig in db.session.query(Client.id, Client.instagram).filter(Client.id.in_(tanda)):
+        for cid, ig, nombre in db.session.query(Client.id, Client.instagram, Client.full_name).filter(
+                Client.id.in_(tanda)):
             ig_de_cliente[cid] = normalize_ig(ig)
+            nombre_de_cliente[cid] = nombre
 
     def ig_de(cobro):
         return normalize_ig(cobro.instagram) or ig_de_cliente.get(cliente_de.get(cobro.id))
 
-    atribuidor = _Atribuidor({ig_de(c) for c in cobros}, clave_de_anuncio)
+    def nombre_de(cobro):
+        return nombre_de_cliente.get(cliente_de.get(cobro.id))
+
+    atribuidor = _Atribuidor({ig_de(c) for c in cobros}, clave_de_anuncio, {nombre_de(c) for c in cobros})
     por_clave = defaultdict(lambda: {'ventas': 0, 'cobrado': 0.0})
     sin_atribuir = 0
     for cobro in cobros:
         es_venta = ComercialService.clasificar_venta(cobro)[2]
-        clave = atribuidor.clave(ig_de(cobro), cobro.date)
+        clave = atribuidor.clave(ig_de(cobro), cobro.date, nombre_de(cobro))
         if not clave:
             sin_atribuir += 1 if es_venta else 0
             continue
@@ -419,6 +468,8 @@ def tablero(desde, hasta):
             'gasto_meta': round(gasto_sin_clave, 2),
         },
         'agrupaciones': _opciones_de_agrupacion(filas, conjuntos),
+        # El gasto de Meta por embudo (setting, workshop…): el selector de Rendimiento (15/10/2026).
+        'embudos': _meta_ads().gasto_por_embudo(desde, hasta),
     }
 
 

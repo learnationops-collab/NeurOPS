@@ -12,7 +12,7 @@ const dinero = (v) => `$${Number(v).toFixed(2)}`;
 const anuncio = (nombre, gasto) => ({ meta_ad_id: nombre, nombre, estado: 'ACTIVE', gasto, impresiones: 1000, clics: 50, clics_enlace: 20, cpm: 5, cpc: 1.5, ctr: 5 });
 
 const DESGLOSE = {
-    desde: '2026-10-04', hasta: '2026-10-12', campanas_marcadas: 2,
+    desde: '2026-10-04', hasta: '2026-10-12', anuncios_workshop: 4,
     totales: { gasto: 205.27, impresiones: 9000, clics: 300, clics_enlace: 120, cpm: 22.8, cpc: 1.71, ctr: 3.33, visitas: 410, clics_whatsapp: 61, costo_whatsapp: 3.37 },
     campanas: [
         { campana_id: '120247656795310532', nombre: 'WORKSHOP FUNNEL | TESTING ADS', gasto: 150, impresiones: 6000, clics: 200, clics_enlace: 90, cpm: 25, cpc: 1.67, ctr: 3.33, visitas: 300, clics_whatsapp: 45, costo_whatsapp: 3.33,
@@ -41,10 +41,10 @@ describe('Workshop › Embudo › anuncios del taller', () => {
         expect(within(total).getByText('61')).toBeInTheDocument();
     });
 
-    it('sin campañas marcadas dice dónde marcarlas', async () => {
-        api.get.mockResolvedValue({ data: { ...DESGLOSE, campanas_marcadas: 0, campanas: [] } });
+    it('sin anuncios de Workshop dice dónde se clasifican', async () => {
+        api.get.mockResolvedValue({ data: { ...DESGLOSE, anuncios_workshop: 0, campanas: [] } });
         render(<WorkshopAnunciosView evento={{ id: 15 }} formatCurrency={dinero} />);
 
-        expect(await screen.findByText(/Marcalas en Marketing › Meta Ads/)).toBeInTheDocument();
+        expect(await screen.findByText(/se\s+corrigen en Marketing › Meta Ads/)).toBeInTheDocument();
     });
 });

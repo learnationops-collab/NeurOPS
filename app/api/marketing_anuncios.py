@@ -6,11 +6,13 @@ diario de Meta, que no tiene sesión y se identifica con `CRON_SECRET` como los 
 """
 from datetime import date, timedelta
 
+import pytz
 from flask import Blueprint, jsonify, request
+from flask_login import current_user
 
 from app.decorators import _acceso_denegado, require_cron_secret
 from app.models.user import ROLE_ADMIN, ROLE_DIRECTOR_MARKETING
-from app.services import anuncios_service, meta_ads_service
+from app.services import anuncios_service, meta_ads_service, workshop_meta_service
 
 bp = Blueprint('marketing_anuncios', __name__)
 
@@ -89,23 +91,38 @@ def anuncios_de_meta():
         return jsonify({'error': str(error)}), 400
     return jsonify({
         'anuncios': meta_ads_service.listado(desde, hasta),
-        'campanas': meta_ads_service.campanas(desde, hasta),
         'claves': sorted(anuncios_service.claves_conocidas()),
         **_estado_de_meta(),
     }), 200
 
 
-@bp.route('/meta/campanas/<campana_id>', methods=['PUT'])
-def marcar_campana_workshop(campana_id):
-    """Body: {"workshop": true|false}: si la campaña lleva a las landings del workshop."""
-    datos = request.get_json(silent=True) or {}
-    if not isinstance(datos.get('workshop'), bool):
-        return jsonify({'error': 'Falta decir si es de workshop (true o false).'}), 400
+@bp.route('/embudos/workshop', methods=['GET'])
+def embudo_workshop():
+    """Rendimiento › Workshop: los anuncios de workshop del período (campaña › conjunto › anuncio)."""
     try:
-        meta_ads_service.marcar_workshop(campana_id, datos['workshop'])
+        desde, hasta = _periodo()
+    except ValueError as error:
+        return jsonify({'error': str(error)}), 400
+    try:
+        zona = pytz.timezone(getattr(current_user, 'timezone', None) or 'America/La_Paz')
+    except pytz.UnknownTimeZoneError:
+        zona = pytz.timezone('America/La_Paz')
+    return jsonify(workshop_meta_service.desglose_periodo(desde, hasta, zona)), 200
+
+
+@bp.route('/meta/<meta_ad_id>/embudo', methods=['PUT'])
+def asignar_embudo(meta_ad_id):
+    """Body: {"embudo": "setting"|"workshop"|"contratacion"|"otro"} o {"automatico": true}."""
+    datos = request.get_json(silent=True) or {}
+    try:
+        anuncio = meta_ads_service.asignar_embudo(meta_ad_id, datos.get('embudo'),
+                                                  automatico=bool(datos.get('automatico')))
     except LookupError as error:
         return jsonify({'error': str(error)}), 404
-    return jsonify({'campana_id': campana_id, 'workshop': datos['workshop']}), 200
+    except ValueError as error:
+        return jsonify({'error': str(error)}), 400
+    return jsonify({'meta_ad_id': anuncio.meta_ad_id, 'embudo': anuncio.embudo,
+                    'embudo_mapeo': anuncio.embudo_mapeo}), 200
 
 
 @bp.route('/meta/<meta_ad_id>', methods=['PUT'])
@@ -122,7 +139,8 @@ def asignar_clave(meta_ad_id):
         return jsonify({'error': str(error)}), 404
     except ValueError as error:
         return jsonify({'error': str(error)}), 400
-    return jsonify({'meta_ad_id': anuncio.meta_ad_id, 'clave': anuncio.clave, 'mapeo': anuncio.mapeo}), 200
+    return jsonify({'meta_ad_id': anuncio.meta_ad_id, 'clave': anuncio.clave, 'mapeo': anuncio.mapeo,
+                    'embudo': anuncio.embudo, 'embudo_mapeo': anuncio.embudo_mapeo}), 200
 
 
 @bp.route('/meta/sincronizar', methods=['POST'])

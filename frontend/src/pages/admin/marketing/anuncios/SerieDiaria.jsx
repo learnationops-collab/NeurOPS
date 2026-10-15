@@ -9,7 +9,7 @@ import { dinero } from './metricas';
  */
 const diaCorto = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 
-const Columnas = ({ dias, capas, formato, etiqueta, vacio }) => {
+export const Columnas = ({ dias, capas, formato, etiqueta, vacio }) => {
     const montado = useMontado();
     const [encima, setEncima] = useState(null);
     const totales = dias.map((d) => capas.reduce((s, c) => s + (d[c.key] || 0), 0));

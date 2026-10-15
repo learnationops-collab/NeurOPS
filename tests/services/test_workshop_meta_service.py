@@ -1,13 +1,13 @@
 """La inversión, el CPM, el CPC y los clics de cada workshop salen de Meta (15/10/2026).
 
-Las campañas de workshop se marcan a mano; a cada taller le toca el gasto del día siguiente al
+Los anuncios de embudo «workshop» (solos o elegidos a mano); a cada taller le toca el gasto del día siguiente al
 taller anterior hasta el día del taller (el criterio con el que el equipo los cargaba a mano).
 """
 from datetime import date
 
 import pytest
 
-from app.models import MetaAnuncio, MetaCampanaWorkshop, MetaGastoDiario, WorkshopEvent
+from app.models import MetaAnuncio, MetaGastoDiario, WorkshopEvent
 from app.services import meta_ads_service, workshop_meta_service
 
 
@@ -33,13 +33,13 @@ def talleres(db):
         _dia('ws1', '2026-07-09', 40.0),   # el día siguiente: es del taller del 14
         _dia('ws2', '2026-07-14', 60.0),
         _dia('ws1', '2026-07-15', 999.0),  # después del último taller: de ninguno todavía
-        _dia('dm1', '2026-07-10', 500.0),  # campaña no marcada: no cuenta
+        _dia('dm1', '2026-07-10', 500.0),  # anuncio de setting: no cuenta
     ])
     db.session.commit()
     return eventos
 
 
-def test_sin_campanas_marcadas_quedan_los_cargados_a_mano(db, talleres):
+def test_sin_anuncios_de_workshop_quedan_los_cargados_a_mano(db, talleres):
     workshop_meta_service.recalcular()
 
     datos = talleres['jul8'].to_dict()
@@ -48,8 +48,8 @@ def test_sin_campanas_marcadas_quedan_los_cargados_a_mano(db, talleres):
 
 
 def test_cada_taller_suma_el_gasto_desde_el_dia_siguiente_al_anterior(db, talleres):
-    meta_ads_service.marcar_workshop('c-ws', True)
-    meta_ads_service.marcar_workshop('c-launch', True)
+    meta_ads_service.asignar_embudo('ws1', 'workshop')
+    meta_ads_service.asignar_embudo('ws2', 'workshop')
 
     jul8, jul14 = talleres['jul8'].to_dict(), talleres['jul14'].to_dict()
     assert jul8['inversion'] == 130.0  # 02/07 (sin anterior: 7 días) + 08/07
@@ -62,19 +62,18 @@ def test_cada_taller_suma_el_gasto_desde_el_dia_siguiente_al_anterior(db, taller
     assert talleres['jul14'].inversion_real == 100.0
 
 
-def test_desmarcar_las_campanas_vuelve_a_lo_cargado_a_mano(db, talleres):
-    meta_ads_service.marcar_workshop('c-ws', True)
-    meta_ads_service.marcar_workshop('c-ws', False)
+def test_sacar_el_anuncio_de_workshop_vuelve_a_lo_cargado_a_mano(db, talleres):
+    meta_ads_service.asignar_embudo('ws1', 'workshop')
+    meta_ads_service.asignar_embudo('ws1', 'otro')
 
     assert talleres['jul8'].to_dict()['inversion'] == 500.0
-    assert MetaCampanaWorkshop.query.count() == 0
 
 
 def test_dias_sin_impresiones_dejan_cpm_cpc_y_clics_a_mano(db, talleres):
     """Días sincronizados antes de que se trajeran impresiones y clics: la inversión sí es de Meta."""
     MetaGastoDiario.query.filter_by(meta_ad_id='ws1', fecha=date(2026, 7, 9)).one().impresiones = None
     db.session.commit()
-    meta_ads_service.marcar_workshop('c-ws', True)
+    meta_ads_service.asignar_embudo('ws1', 'workshop')
 
     datos = talleres['jul14'].to_dict()
     assert (datos['inversion'], datos['inversion_de_meta'], datos['clics_de_meta']) == (40.0, True, False)
@@ -84,7 +83,7 @@ def test_dias_sin_impresiones_dejan_cpm_cpc_y_clics_a_mano(db, talleres):
 def test_un_taller_antes_de_los_datos_de_meta_queda_a_mano(db, talleres):
     db.session.add(WorkshopEvent(date=date(2026, 6, 1), name='Webinar de junio', inversion=321.0))
     db.session.commit()
-    meta_ads_service.marcar_workshop('c-ws', True)
+    meta_ads_service.asignar_embudo('ws1', 'workshop')
 
     junio = WorkshopEvent.query.filter_by(date=date(2026, 6, 1)).one()
     assert (junio.inversion_real, junio.inversion_de_meta) == (321.0, False)
@@ -94,7 +93,7 @@ def test_un_taller_antes_de_los_datos_de_meta_queda_a_mano(db, talleres):
 
 
 def test_registrar_y_borrar_un_taller_mueve_la_ventana_del_siguiente(client, db, talleres, make_user, auth_headers):
-    meta_ads_service.marcar_workshop('c-ws', True)
+    meta_ads_service.asignar_embudo('ws1', 'workshop')
     cabeceras = auth_headers(make_user(role='admin'))
 
     respuesta = client.post('/api/workshop/events', json={'date': '2026-07-11', 'name': 'Extra'}, headers=cabeceras)
@@ -112,8 +111,8 @@ def test_el_desglose_del_taller_por_campana_conjunto_y_anuncio(client, db, talle
     from app.models import LandingTracking
 
     MetaAnuncio.query.filter_by(meta_ad_id='ws1').one().conjunto = 'Broad | Pizarra'
-    meta_ads_service.marcar_workshop('c-ws', True)
-    meta_ads_service.marcar_workshop('c-launch', True)
+    meta_ads_service.asignar_embudo('ws1', 'workshop')
+    meta_ads_service.asignar_embudo('ws2', 'workshop')
     # Visitas y clics al grupo que trajo cada campaña (el id viaja en utm_campaign), en hora UTC.
     db.session.add_all([
         LandingTracking(page_path='/live-class-t3/', utm_campaign='c-ws', created_at=datetime(2026, 7, 10, 15)),
@@ -130,7 +129,7 @@ def test_el_desglose_del_taller_por_campana_conjunto_y_anuncio(client, db, talle
 
     datos = respuesta.get_json()
     assert respuesta.status_code == 200
-    assert (datos['desde'], datos['hasta'], datos['campanas_marcadas']) == ('2026-07-09', '2026-07-14', 2)
+    assert (datos['desde'], datos['hasta'], datos['anuncios_workshop']) == ('2026-07-09', '2026-07-14', 2)
     assert [(c['nombre'], c['gasto']) for c in datos['campanas']] == [('SPI-TRIPODE-LAUNCH', 60.0), ('WORKSHOP FUNNEL', 40.0)]
     ws = datos['campanas'][1]
     assert (ws['visitas'], ws['clics_whatsapp'], ws['costo_whatsapp']) == (2, 1, 40.0)
@@ -142,7 +141,7 @@ def test_el_desglose_del_taller_por_campana_conjunto_y_anuncio(client, db, talle
 
 def test_editar_el_taller_no_pisa_lo_cargado_a_mano_con_lo_de_meta(client, db, talleres, make_user, auth_headers):
     """El panel manda el evento entero (con los valores de Meta) al resincronizar el embudo."""
-    meta_ads_service.marcar_workshop('c-ws', True)
+    meta_ads_service.asignar_embudo('ws1', 'workshop')
     evento = talleres['jul8']
 
     client.put(f'/api/workshop/events/{evento.id}', json=evento.to_dict(), headers=auth_headers(make_user(role='admin')))

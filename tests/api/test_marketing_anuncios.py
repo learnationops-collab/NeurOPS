@@ -84,20 +84,47 @@ def test_sincronizar_sin_meta_conectado_avisa(client, make_user, auth_headers):
     assert 'META_ADS_TOKEN' in respuesta.get_json()['error']
 
 
-def test_marcar_una_campana_de_workshop(client, db, make_user, auth_headers):
+def test_rendimiento_trae_el_gasto_por_embudo_y_el_detalle_de_workshop(client, db, make_user, auth_headers):
+    hoy = date.today()
+    db.session.add_all([
+        MetaAnuncio(meta_ad_id='s1', nombre='APLICAR', campana='DM Funnel', campana_id='c-dm', embudo='setting'),
+        MetaAnuncio(meta_ad_id='w1', nombre='Ad 4', campana='WORKSHOP FUNNEL', campana_id='c-ws', conjunto='Broad',
+                    embudo='workshop'),
+        MetaAnuncio(meta_ad_id='x1', nombre='Raro', campana='CLINIC', campana_id='c-x'),
+        MetaGastoDiario(meta_ad_id='s1', fecha=hoy, gasto=30.0, moneda='USD'),
+        MetaGastoDiario(meta_ad_id='w1', fecha=hoy, gasto=20.0, moneda='USD', impresiones=2000, clics=80, clics_enlace=40),
+        MetaGastoDiario(meta_ad_id='x1', fecha=hoy, gasto=5.0, moneda='USD'),
+    ])
+    db.session.commit()
+    cabeceras = auth_headers(make_user(role='director_marketing'))
+
+    embudos = {e['embudo']: e for e in client.get(URL, headers=cabeceras).get_json()['embudos']}
+
+    assert (embudos['setting']['gasto'], embudos['workshop']['gasto'], embudos[None]['gasto']) == (30.0, 20.0, 5.0)
+    assert embudos['workshop']['dias'] == {hoy.isoformat(): 20.0}
+    assert embudos['contratacion']['gasto'] == 0.0  # los cuatro embudos están siempre
+    workshop = client.get(f'{URL}/embudos/workshop', headers=cabeceras).get_json()
+    assert [(c['nombre'], c['gasto'], c['cpc']) for c in workshop['campanas']] == [('WORKSHOP FUNNEL', 20.0, 0.5)]
+
+
+def test_elegir_a_mano_el_embudo_de_un_anuncio_de_meta(client, db, make_user, auth_headers):
     db.session.add(MetaAnuncio(meta_ad_id='1', nombre='Ad 4', campana='WORKSHOP FUNNEL | TESTING ADS', campana_id='99'))
     db.session.add(MetaGastoDiario(meta_ad_id='1', fecha=date.today(), gasto=12.5, moneda='USD'))
     db.session.commit()
     cabeceras = auth_headers(make_user(role='director_marketing'))
 
-    assert client.put(f'{URL}/meta/campanas/99', json={'workshop': 'si'}, headers=cabeceras).status_code == 400
-    assert client.put(f'{URL}/meta/campanas/99', json={'workshop': True}, headers=cabeceras).status_code == 200
-    assert client.put(f'{URL}/meta/campanas/77', json={'workshop': True}, headers=cabeceras).status_code == 404
+    assert client.put(f'{URL}/meta/1/embudo', json={'embudo': 'cualquiera'}, headers=cabeceras).status_code == 400
+    assert client.put(f'{URL}/meta/77/embudo', json={'embudo': 'setting'}, headers=cabeceras).status_code == 404
+    respuesta = client.put(f'{URL}/meta/1/embudo', json={'embudo': 'setting'}, headers=cabeceras)
+    assert respuesta.get_json() == {'meta_ad_id': '1', 'embudo': 'setting', 'embudo_mapeo': 'manual'}
 
-    [campana] = client.get(f'{URL}/meta', headers=cabeceras).get_json()['campanas']
-    assert (campana['campana_id'], campana['workshop'], campana['gasto']) == ('99', True, 12.5)
+    [anuncio] = client.get(f'{URL}/meta', headers=cabeceras).get_json()['anuncios']
+    assert (anuncio['embudo'], anuncio['embudo_mapeo']) == ('setting', 'manual')
+    # Volver a la detección: la campaña dice WORKSHOP.
+    respuesta = client.put(f'{URL}/meta/1/embudo', json={'automatico': True}, headers=cabeceras)
+    assert respuesta.get_json()['embudo'] == 'workshop'
     setter = auth_headers(make_user(role='setter', username='s1', email='s1@x.com'))
-    assert client.put(f'{URL}/meta/campanas/99', json={'workshop': False}, headers=setter).status_code == 403
+    assert client.put(f'{URL}/meta/1/embudo', json={'embudo': 'otro'}, headers=setter).status_code == 403
 
 
 def test_sincronizar_un_tramo_que_termina_en_hasta(client, make_user, auth_headers, monkeypatch):
@@ -125,7 +152,9 @@ def test_elegir_a_mano_la_palabra_clave_de_un_anuncio_de_meta(client, db, make_u
 
     respuesta = client.put(f'{URL}/meta/120248557648530532', json={'clave': 'APLICAR'}, headers=cabeceras)
 
-    assert respuesta.get_json() == {'meta_ad_id': '120248557648530532', 'clave': 'APLICAR', 'mapeo': 'manual'}
+    # Con palabra clave de ManyChat, el embudo automático pasa a ser setting.
+    assert respuesta.get_json() == {'meta_ad_id': '120248557648530532', 'clave': 'APLICAR', 'mapeo': 'manual',
+                                    'embudo': 'setting', 'embudo_mapeo': 'auto'}
     listado = client.get(f'{URL}/meta', headers=cabeceras).get_json()
     assert listado['claves'] == ['APLICAR']
     assert [(a['meta_ad_id'], a['clave']) for a in listado['anuncios']] == [('120248557648530532', 'APLICAR')]
