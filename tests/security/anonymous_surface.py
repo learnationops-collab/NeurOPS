@@ -16,8 +16,9 @@ PUBLICAS_POR_DISENO = frozenset({
     ('GET', '/api/auth/google'),
     ('POST', '/api/auth/logout'),
     ('GET', '/api/health'),
+    # Verificacion de URL de ManyChat: solo contesta "Webhook activo". El POST exige X-ManyChat-Token
+    # (MANYCHAT_WEBHOOK_TOKEN) desde el 15/10/2026, porque una palabra clave nueva crea un anuncio.
     ('GET', '/api/manychat-webhook'),
-    ('POST', '/api/manychat-webhook'),
     # Webhook de la app propia de Meta para Instagram: Meta no manda sesion. El GET solo devuelve el
     # challenge con el token de verificacion; el POST exige la firma X-Hub-Signature-256 (sin secretos: 503).
     ('GET', '/api/webhooks/instagram'),
