@@ -266,6 +266,43 @@ def test_el_embudo_de_cada_anuncio(texto, campana, clave, esperado):
     assert servicio.detectar_embudo(MetaAnuncio(texto=texto, campana=campana, clave=clave)) == esperado
 
 
+@pytest.mark.parametrize('destino, texto, clave, esperado', [
+    # Adónde lleva pesa más que el texto: el mismo «Pide gratis al DM» en una campaña WS va a la landing.
+    ('https://institute.thelearnation.com/live-class-t4/', 'Pide gratis al DM la guía de APROBACIÓN médica.', None, 'workshop'),
+    # «Ws Similar | Clase 26»: el nombre repite una palabra clave, pero lleva a la clase.
+    ('https://institute.thelearnation.com/live-class/', '', 'CLASE 26', 'workshop'),
+    ('https://www.instagram.com/', 'CLASE GRATIS en vivo', None, 'setting'),
+    ('cta:INSTAGRAM_MESSAGE', '', None, 'setting'),
+    # Un link a otra página no dice nada: sigue el texto.
+    ('https://thelearnation.com/blog', 'CLASE GRATIS', None, 'workshop'),
+])
+def test_el_destino_del_anuncio_manda(destino, texto, clave, esperado):
+    assert servicio.detectar_embudo(MetaAnuncio(destino=destino, texto=texto, campana='WS Funnel', clave=clave)) == esperado
+
+
+def test_el_destino_sale_del_creativo():
+    assert servicio._destino_del_creativo({'object_story_spec': {'video_data': {'call_to_action': {
+        'type': 'LEARN_MORE', 'value': {'link': 'https://institute.thelearnation.com/live-class-t3/'}}}}}) \
+        == 'https://institute.thelearnation.com/live-class-t3/'
+    assert servicio._destino_del_creativo({'asset_feed_spec': {'link_urls': [{'website_url': 'https://www.instagram.com/'}]}}) \
+        == 'https://www.instagram.com/'
+    assert servicio._destino_del_creativo({'call_to_action_type': 'INSTAGRAM_MESSAGE'}) == 'cta:INSTAGRAM_MESSAGE'
+    assert servicio._destino_del_creativo({}) is None
+
+
+def test_un_anuncio_que_lleva_a_la_clase_no_toma_palabra_clave(db, meta):
+    db.session.add(Ad(name='QUIERO APLICAR', keyword='QUIERO APLICAR', status='active'))
+    db.session.commit()
+    meta.anuncios[0]['creative']['object_story_spec'] = {
+        'link_data': {'link': 'https://institute.thelearnation.com/live-class-t3/'}}
+
+    servicio.sincronizar(date(2026, 10, 12), date(2026, 10, 13))
+
+    anuncio = MetaAnuncio.query.filter_by(meta_ad_id='111').one()  # «Comenta QUIERO APLICAR», pero va a la clase
+    assert (anuncio.clave, anuncio.embudo, anuncio.destino) == (
+        None, 'workshop', 'https://institute.thelearnation.com/live-class-t3/')
+
+
 def test_el_embudo_lo_pone_la_sincronizacion_y_se_corrige_a_mano(db, meta):
     db.session.add(Ad(name='QUIERO APLICAR', keyword='QUIERO APLICAR', status='active'))
     db.session.commit()

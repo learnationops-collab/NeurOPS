@@ -207,3 +207,7 @@
 .dc-shell .mk-tabla--ws .mk-ws-anuncio th{padding-left:calc(var(--s4) + 40px);font-weight:500;color:var(--text-muted)}
 .dc-shell .mk-tabla--ws .mk-ws-total th,.dc-shell .mk-tabla--ws .mk-ws-total td{font-weight:700}
 .dc-shell .mk-tabla--ws th.mk-col-nombre{max-width:360px}
+
+/* Adónde lleva cada anuncio de Meta, debajo de su embudo (16/10/2026). */
+.dc-shell .mk-clave:has(.mk-destino){display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+.dc-shell .mk-destino{display:block;max-width:220px;font-size:11px}

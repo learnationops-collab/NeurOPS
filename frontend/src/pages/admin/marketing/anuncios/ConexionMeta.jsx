@@ -20,6 +20,18 @@ const AUTO = '__auto';
 const NINGUNA = '__ninguna';
 const SIN_EMBUDO = '__sin';
 const etiquetaDeEmbudo = (key) => EMBUDOS.find((e) => e.key === key)?.label || key;
+
+/** Adónde lleva el anuncio, corto: «DM de Instagram», «/live-class-t4/» o el dominio. */
+const textoDestino = (destino) => {
+    if (!destino) return null;
+    if (/instagram\.com|ig\.me|^cta:(INSTAGRAM|MESSAGE|WHATSAPP)/i.test(destino)) return 'DM de Instagram';
+    try {
+        const u = new URL(destino);
+        return /thelearnation\.com$/i.test(u.hostname) ? u.pathname : u.hostname;
+    } catch {
+        return destino.replace(/^cta:/, '');
+    }
+};
 const TRAMO = 30;
 
 const diaAnterior = (iso) => {
@@ -313,6 +325,11 @@ const ConexionMeta = ({ desde, hasta, filasTablero, onCambio }) => {
                                                         </option>
                                                         {EMBUDOS.map((e) => <option key={e.key} value={e.key}>{e.label}</option>)}
                                                     </select>
+                                                    {textoDestino(a.destino) && (
+                                                        <span className="t-cap mut40 mk-destino trunc" title={a.destino}>
+                                                            Lleva a {textoDestino(a.destino)}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td>

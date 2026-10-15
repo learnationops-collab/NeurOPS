@@ -41,7 +41,9 @@ DIAS_POR_DEFECTO = 7
 DIAS_MAXIMOS = 180
 PAGINAS_MAXIMAS = 100
 CAMPOS_DEL_ANUNCIO = ('id,name,effective_status,campaign{id,name},adset{id,name},'
-                      'creative{id,name,body,title,asset_feed_spec{bodies}}')
+                      'creative{id,name,body,title,call_to_action_type,'
+                      'object_story_spec{link_data{link,call_to_action},video_data{call_to_action}},'
+                      'asset_feed_spec{bodies,link_urls{website_url}}}')
 
 
 FICHAS_POR_PEDIDO = 50  # el máximo de `?ids=` de la Graph API
@@ -163,6 +165,22 @@ def _fichas(base, ids, token):
     return fichas
 
 
+def _destino_del_creativo(creativo):
+    """Adónde lleva el anuncio: el link del creativo (el del botón, el de la publicación o el del
+    catálogo de variantes) o, si no trae ninguno, «cta:<tipo del botón>» (INSTAGRAM_MESSAGE…)."""
+    creativo = creativo or {}
+    historia = creativo.get('object_story_spec') or {}
+    links = [(historia.get('link_data') or {}).get('link')]
+    for parte in ('link_data', 'video_data'):
+        boton = (historia.get(parte) or {}).get('call_to_action') or {}
+        links.append((boton.get('value') or {}).get('link'))
+    links += [u.get('website_url') for u in (creativo.get('asset_feed_spec') or {}).get('link_urls') or []]
+    link = next((l for l in links if l), None)
+    if link:
+        return link[:500]
+    return f"cta:{creativo['call_to_action_type']}" if creativo.get('call_to_action_type') else None
+
+
 def _texto_del_creativo(creativo):
     creativo = creativo or {}
     partes = [creativo.get('body')]
@@ -198,6 +216,7 @@ def _guardar_anuncio(fila, cuenta, existentes):
     anuncio.conjunto_id = str((fila.get('adset') or {}).get('id') or anuncio.conjunto_id or '') or None
     anuncio.creative_id = str(creativo.get('id') or anuncio.creative_id or '') or None
     anuncio.texto = _texto_del_creativo(creativo) or anuncio.texto
+    anuncio.destino = _destino_del_creativo(creativo) or anuncio.destino
     anuncio.estado = fila.get('effective_status') or anuncio.estado
     anuncio.actualizado_at = datetime.utcnow()
     return anuncio
@@ -374,25 +393,48 @@ _A_LA_CLASE = re.compile(r'\bclase\b', re.I)
 # El nombre de la campaña, cuando el texto no lo dice («Tocá el botón del video…»).
 _CAMPANA_WORKSHOP = re.compile(r'^(WS|WB|LP FUNNEL|WORKSHOP)\b|\bLAUNCH\b', re.I)
 _CAMPANA_SETTING = re.compile(r'^(DM|DMV|LM)\b|DM FUNNEL|HAND RAISER|LM FUNNEL', re.I)
+# Adónde lleva (`MetaAnuncio.destino`): Instagram (el DM, donde contesta ManyChat) o las landings de la
+# clase en vivo de institute.thelearnation.com (/live-class-t3/, /live/, /acceso/…).
+_DESTINO_DM = re.compile(r'instagram\.com|ig\.me|m\.me/|^cta:(INSTAGRAM_MESSAGE|MESSAGE_PAGE|WHATSAPP_MESSAGE)', re.I)
+_DESTINO_CLASE = re.compile(r'thelearnation\.com/(live|acceso|crear-evento|replay)', re.I)
+
+
+def tipo_de_destino(destino):
+    """'dm', 'clase' o None según adónde lleva el anuncio."""
+    if not destino:
+        return None
+    if _DESTINO_CLASE.search(destino):
+        return 'clase'
+    if _DESTINO_DM.search(destino):
+        return 'dm'
+    return None
 
 
 def detectar_embudo(anuncio):
     """A qué embudo va un anuncio de Meta. Kerwin (15/10): «las que dicen al DM son de setting, la que
-    dice clase gratis son de workshop». En orden:
+    dice clase gratis son de workshop». Lo que más pesa es adónde LLEVA: hay anuncios que dicen «Pide
+    gratis al DM» y van a la landing de la clase (el mismo texto reusado en una campaña WS). En orden:
 
       1. campaña HIRING o ASIS (búsquedas de personal): contratación;
-      2. tiene palabra clave de ManyChat: setting (muchos no dicen «DM» al principio del texto —«Si
+      2. el link del anuncio: a la landing de la clase es workshop, a Instagram (o el botón «Enviar
+         mensaje») es setting;
+      3. tiene palabra clave de ManyChat: setting (muchos no dicen «DM» al principio del texto —«Si
          tus manuales están llenos de resaltador…»— pero piden escribir su palabra);
-      3. el texto pide escribir al DM («Pide gratis al DM», «Comenta…», «Respondé…»): setting;
-      4. el texto habla de la clase («CLASE GRATIS: cómo estudiar…»): workshop;
-      5. el nombre de la campaña: WS / WB / LP FUNNEL / WORKSHOP / LAUNCH es workshop, DM / LM es
+      4. el texto pide escribir al DM («Pide gratis al DM», «Comenta…», «Respondé…»): setting;
+      5. el texto habla de la clase («CLASE GRATIS: cómo estudiar…»): workshop;
+      6. el nombre de la campaña: WS / WB / LP FUNNEL / WORKSHOP / LAUNCH es workshop, DM / LM es
          setting;
-      6. si no, None (sin clasificar): se elige a mano.
+      7. si no, None (sin clasificar): se elige a mano.
     """
     texto = _sin_tildes(anuncio.texto or '')
     campana = anuncio.campana or ''
     if _CONTRATACION.search(campana):
         return 'contratacion'
+    destino = tipo_de_destino(anuncio.destino)
+    if destino == 'clase':
+        return 'workshop'
+    if destino == 'dm':
+        return 'setting'
     if anuncio.clave or _AL_DM.search(texto):
         return 'setting'
     if _A_LA_CLASE.search(texto):
@@ -414,7 +456,10 @@ def mapear_automatico():
     if pendientes:
         claves = claves_conocidas()
         for anuncio in pendientes:
-            nueva = detectar_clave(anuncio.texto, anuncio.nombre, claves, (anuncio.conjunto, anuncio.campana))
+            # Un anuncio que lleva a la landing de la clase no es de ninguna palabra clave de ManyChat,
+            # aunque su nombre la repita («Ws Similar | Clase 26»): su gasto no va a la tabla de Setting.
+            nueva = None if tipo_de_destino(anuncio.destino) == 'clase' else detectar_clave(
+                anuncio.texto, anuncio.nombre, claves, (anuncio.conjunto, anuncio.campana))
             if nueva != anuncio.clave:
                 anuncio.clave = nueva
                 cambios += 1
@@ -509,6 +554,7 @@ def listado(desde, hasta):
             'mapeo': anuncio.mapeo,
             'embudo': anuncio.embudo,
             'embudo_mapeo': anuncio.embudo_mapeo,
+            'destino': anuncio.destino,
             'gasto': round(float(gasto.get(anuncio.meta_ad_id) or 0), 2),
         })
     filas.sort(key=lambda f: (f['estado'] != 'ACTIVE', -f['gasto'], f['nombre'] or ''))

@@ -137,6 +137,9 @@ class MetaAnuncio(db.Model):
     # elija a mano (`'manual'`). La inversión de cada workshop es el gasto de los de 'workshop'.
     embudo = db.Column(db.String(20), nullable=True, index=True)
     embudo_mapeo = db.Column(db.String(10), nullable=True)
+    # Adónde lleva el anuncio, del creativo: el link (instagram.com = al DM; la landing de la clase =
+    # workshop) o «cta:INSTAGRAM_MESSAGE» si no trae link. Es lo que más pesa para el embudo.
+    destino = db.Column(db.String(500), nullable=True)
     creado_at = db.Column(db.DateTime, default=datetime.utcnow)
     actualizado_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
