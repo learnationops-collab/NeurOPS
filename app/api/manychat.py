@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_login import current_user
 from app import db
+from app.decorators import require_manychat_token
 from app.services.identity_service import normalize_ig
 from app.services.setter_assignment_service import condicion_leads_visibles
 import logging
@@ -11,17 +12,22 @@ logger = logging.getLogger(__name__)
 bp = Blueprint('manychat', __name__)
 
 
-@bp.route('/manychat-webhook', methods=['GET', 'POST'], strict_slashes=False)
+@bp.route('/manychat-webhook', methods=['GET'], strict_slashes=False)
+def verificar_manychat_webhook():
+    """Verificación de URL por ManyChat: sigue abierta (no lee ni escribe nada)."""
+    return jsonify({"status": "ok", "message": "Webhook activo"}), 200
+
+
+@bp.route('/manychat-webhook', methods=['POST'], strict_slashes=False)
+@require_manychat_token
 def receive_manychat_ad_lead():
     """
     Recibe un lead de ManyChat y lo vincula a un anuncio.
     Maneja el Lead (ManychatLead) y su respuesta/interacción (LeadAnswer)
-    GET: verificación de URL por ManyChat.
+    Exige el header 'X-ManyChat-Token' con el valor de MANYCHAT_WEBHOOK_TOKEN (el mismo secreto que
+    /api/webhooks/manychat): sin él cualquiera podía inyectar leads e interacciones. Sin la variable
+    responde 503; con INTEGRATIONS_AUTH_MODE=log_only pasa igual y lo registra.
     """
-    # Verificación de URL por ManyChat (GET)
-    if request.method == 'GET':
-        return jsonify({"status": "ok", "message": "Webhook activo"}), 200
-
     from app.models import ManychatLead, LeadAnswer, Ad
 
     data = request.get_json(silent=True) or {}
