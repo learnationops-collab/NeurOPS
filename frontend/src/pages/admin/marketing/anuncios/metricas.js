@@ -161,6 +161,68 @@ export const serieDe = (filas, desde, hasta) => {
     return dias.map((x) => ({ ...x, gasto: Number(x.gasto.toFixed(2)) }));
 };
 
+/**
+ * Los tres niveles de la tabla, como en Meta. Una palabra clave tiene UNA campaña y UN conjunto (el backend
+ * dice de dónde salen: a mano, Meta o la carga vieja); sus leads, agendas y ventas van enteros a ese grupo, y
+ * su gasto se reparte según `gasto_por_grupo` (los anuncios de Meta de una misma palabra clave pueden estar en
+ * campañas distintas).
+ */
+export const NIVELES = [
+    { key: 'campanas', label: 'Campañas' },
+    { key: 'conjuntos', label: 'Conjuntos' },
+    { key: 'anuncios', label: 'Anuncios' },
+];
+export const SIN_CAMPANA = 'Sin campaña';
+const SEP = '␟';
+
+export const claveDeCampana = (campana) => campana ?? '';
+export const claveDeConjunto = (campana, conjunto) => `${campana ?? ''}${SEP}${conjunto ?? ''}`;
+export const claveDeAnuncio = (fila) => fila.clave ?? '__sin';
+
+const SUMADAS_POR_GRUPO = ['entrantes', 'calificados', 'descalificados', 'agendas', 'ventas', 'cobrado'];
+
+/** Las filas de campañas o de conjuntos a partir de las de palabras clave. */
+export const agruparFilas = (filas, nivel) => {
+    const porCampana = nivel === 'campanas';
+    const claveDe = (c, j) => (porCampana ? claveDeCampana(c) : claveDeConjunto(c, j));
+    const grupos = new Map();
+    const grupo = (c, j) => {
+        const id = claveDe(c, j);
+        if (!grupos.has(id)) {
+            grupos.set(id, {
+                id, campana: c ?? null, conjunto: porCampana ? null : (j ?? null),
+                nombre: porCampana ? (c ?? SIN_CAMPANA) : (j ?? (c ? 'Sin conjunto' : SIN_CAMPANA)),
+                ...Object.fromEntries(SUMADAS_POR_GRUPO.map((k) => [k, 0])),
+                gasto: 0, palabras: new Set(), conjuntos: new Set(), dias: {}, origenes: new Set(), medido: false,
+            });
+        }
+        return grupos.get(id);
+    };
+    filas.forEach((f) => {
+        const g = grupo(f.campana, f.conjunto);
+        SUMADAS_POR_GRUPO.forEach((k) => { g[k] += Number(f[k]) || 0; });
+        g.palabras.add(claveDeAnuncio(f));
+        if (f.conjunto) g.conjuntos.add(f.conjunto);
+        if (f.agrupacion) g.origenes.add(f.agrupacion);
+        if (f.gasto || f.meta?.anuncios) g.medido = true;
+        Object.entries(f.dias || {}).forEach(([dia, valores]) => {
+            const previo = g.dias[dia] || [0, 0, 0, 0];
+            g.dias[dia] = previo.map((v, i) => v + (valores[i] || 0));
+        });
+        (f.gasto_por_grupo || []).forEach(([c, j, monto]) => {
+            const destino = grupo(c, j);
+            destino.gasto += Number(monto) || 0;
+            if (monto) destino.medido = true;
+        });
+    });
+    return [...grupos.values()].map((g) => completar({
+        ...g,
+        palabras: g.palabras.size,
+        conjuntos: g.conjuntos.size,
+        origenes: [...g.origenes],
+    }));
+};
+
 /** El texto de los anuncios de Meta de una fila: «3 anuncios en Meta · 1 activo». */
 export const textoMeta = (meta) => {
     if (!meta || !meta.anuncios) return null;

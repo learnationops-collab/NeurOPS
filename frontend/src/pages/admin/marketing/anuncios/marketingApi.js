@@ -15,6 +15,10 @@ export const asignarClaveDeMeta = (metaAdId, cuerpo) =>
 export const sincronizarMeta = (dias) =>
     api.post('/marketing/anuncios/meta/sincronizar', { dias }).then((r) => r.data);
 
+/** Campaña y conjunto elegidos a mano; con `campana` null vuelve a la automática (Meta). */
+export const agruparPalabraClave = (clave, campana, conjunto) =>
+    api.post('/marketing/anuncios/agrupar', { clave, campana, conjunto }).then((r) => r.data);
+
 export const archivarPalabraClave = (clave, archivado) =>
     api.post('/marketing/anuncios/archivar', { clave, archivado }).then((r) => r.data);
 

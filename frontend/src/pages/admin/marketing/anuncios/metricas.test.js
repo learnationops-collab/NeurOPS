@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { completar, dinero, formatear, ordenar, rangoDePeriodo, serieDe, textoMeta, totalesDe } from './metricas';
+import { agruparFilas, completar, dinero, formatear, ordenar, rangoDePeriodo, serieDe, textoMeta, totalesDe } from './metricas';
 
 const fila = (extra) => ({ entrantes: 0, calificados: 0, descalificados: 0, agendas: 0, ventas: 0, gasto: 0, cobrado: 0, ...extra });
 
@@ -59,6 +59,29 @@ describe('metricas de la tabla de anuncios', () => {
             { dia: '2026-10-02', entrantes: 0, calificados: 0, gasto: 0, agendas: 0 },
             { dia: '2026-10-03', entrantes: 1, calificados: 0, gasto: 0, agendas: 0 },
         ]);
+    });
+
+    it('agrupa por campaña con los leads en su campaña y el gasto repartido entre las de sus anuncios', () => {
+        const filas = [
+            fila({ clave: 'APLICAR', campana: 'DM Funnel', conjunto: 'AD 5', agrupacion: 'meta', entrantes: 100,
+                calificados: 60, agendas: 10, gasto: 300,
+                gasto_por_grupo: [['DM Funnel', 'AD 5', 240], ['DMV', 'H2 | BRD', 60]] }),
+            fila({ clave: 'EARN', campana: 'DM Funnel', conjunto: 'AD 8', agrupacion: 'meta', entrantes: 20,
+                calificados: 5, gasto: 20, gasto_por_grupo: [['DM Funnel', 'AD 8', 20]] }),
+            fila({ clave: 'GUIA PERU', campana: null, conjunto: null, entrantes: 30, calificados: 20, gasto_por_grupo: [] }),
+        ];
+        const campanas = Object.fromEntries(agruparFilas(filas, 'campanas').map((g) => [g.nombre, g]));
+        expect(campanas['DM Funnel']).toMatchObject({ entrantes: 120, calificados: 65, gasto: 260, palabras: 2, conjuntos: 2, cpl: 2.17 });
+        // DMV no trae leads (APLICAR es de DM Funnel), pero sí su gasto: así el total de gasto cierra.
+        expect(campanas.DMV).toMatchObject({ entrantes: 0, gasto: 60, palabras: 0, cpl: null });
+        expect(campanas['Sin campaña']).toMatchObject({ entrantes: 30, gasto: 0 });
+        expect(totalesDe(Object.values(campanas)).gasto).toBe(totalesDe(filas).gasto);
+
+        const conjuntos = agruparFilas(filas, 'conjuntos').map((g) => [g.campana, g.nombre, g.entrantes, g.gasto]);
+        expect(conjuntos).toEqual(expect.arrayContaining([
+            ['DM Funnel', 'AD 5', 100, 240], ['DMV', 'H2 | BRD', 0, 60], ['DM Funnel', 'AD 8', 20, 20],
+            [null, 'Sin campaña', 30, 0],
+        ]));
     });
 
     it('el texto de los anuncios de Meta de una fila', () => {

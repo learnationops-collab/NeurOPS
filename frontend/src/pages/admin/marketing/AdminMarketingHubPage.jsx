@@ -11,7 +11,7 @@ import WebhookMonitorTab from '../../public/WebhookMonitorTab';
 import TablaAnuncios from './anuncios/TablaAnuncios';
 import ConexionMeta from './anuncios/ConexionMeta';
 import { PERIODOS, PERIODO_POR_DEFECTO, rangoDePeriodo } from './anuncios/metricas';
-import { archivarPalabraClave, mensajeDeError, pedirTablero } from './anuncios/marketingApi';
+import { agruparPalabraClave, archivarPalabraClave, mensajeDeError, pedirTablero } from './anuncios/marketingApi';
 import '../../comercial/comercial.css';
 import '../../../components/dashboard/pareja.css';
 import './anuncios/anuncios.css';
@@ -30,7 +30,7 @@ import './anuncios/anuncios.css';
  */
 
 const PESTANAS = [
-    { key: 'anuncios', label: 'Anuncios' },
+    { key: 'anuncios', label: 'Rendimiento' },
     { key: 'meta', label: 'Meta Ads' },
     { key: 'webhooks', label: 'Webhooks' },
     { key: 'utms', label: 'Generador UTM' },
@@ -85,7 +85,21 @@ const AdminMarketingHubPage = () => {
         }
     };
 
-    const opcionesPeriodo = PERIODOS.map((p) => ({ ...p }));
+    // Devuelve si se guardó (el editor se cierra solo entonces). Se recarga la tabla: cambian los grupos y,
+    // al volver a la automática, la campaña sale de Meta.
+    const agrupar = async (fila, campana, conjunto) => {
+        try {
+            const r = await agruparPalabraClave(fila.clave, campana, conjunto);
+            toast.success(r.campana ? `«${fila.nombre}» quedó en ${r.campana} › ${r.conjunto}.` : `«${fila.nombre}» vuelve a la campaña de Meta.`);
+            recargar();
+            return true;
+        } catch (e) {
+            toast.error(mensajeDeError(e, 'No se pudo guardar la campaña.'));
+            return false;
+        }
+    };
+
+    const opcionesPeriodo =PERIODOS.map((p) => ({ ...p }));
     const textoPeriodo = periodo === 'personalizado'
         ? textoRango(rango)
         : PERIODOS.find((p) => p.key === periodo)?.label;
@@ -138,7 +152,7 @@ const AdminMarketingHubPage = () => {
                                 : !datos ? <EsqueletoTablero rotulo="Cargando los anuncios…" />
                                     : (
                                         <div className={cargando ? 'mk-recargando' : undefined} aria-busy={cargando}>
-                                            <TablaAnuncios datos={datos} onArchivar={archivar}
+                                            <TablaAnuncios datos={datos} onArchivar={archivar} onAgrupar={agrupar}
                                                 irAMeta={() => cambiar({ tab: 'meta' })} />
                                         </div>
                                     )

@@ -1,16 +1,23 @@
 import { useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Archive, ArchiveRestore, ArrowDown, ArrowUp, Link2, Search } from 'lucide-react';
+import { Archive, ArchiveRestore, ArrowDown, ArrowUp, ChevronRight, Link2, Pencil, Search } from 'lucide-react';
 import Cifra from '../../../comercial/components/Cifra';
-import { Tip } from '../../../comercial/components/Shared';
+import { Segmented, Tip } from '../../../comercial/components/Shared';
 import SerieDiaria from './SerieDiaria';
-import { COLUMNAS, formatear, ordenar, serieDe, textoMeta, totalesDe } from './metricas';
+import EditorAgrupacion from './EditorAgrupacion';
+import {
+    COLUMNAS, NIVELES, SIN_CAMPANA, agruparFilas, claveDeAnuncio, claveDeCampana, claveDeConjunto, formatear,
+    ordenar, serieDe, textoMeta, totalesDe,
+} from './metricas';
 
 /**
- * La tabla de anuncios de Marketing, al estilo del Administrador de anuncios de Meta: una fila por
- * palabra clave de ManyChat, los totales del período arriba (KPIs) y abajo (fila de resultados), y el
- * gráfico por día de las filas elegidas (o de todas). Los números de cada fila los arma el backend
- * (`anuncios_service.tablero`); acá se filtran, se ordenan y se suman.
+ * La tabla de anuncios de Marketing, al estilo del Administrador de anuncios de Meta: tres niveles
+ * (Campañas › Conjuntos › Anuncios, 15/10/2026), los totales del período arriba (KPIs) y abajo (fila de
+ * resultados), y el gráfico por día de lo elegido (o de todo). Elegir campañas filtra los conjuntos y los
+ * anuncios; elegir conjuntos filtra los anuncios, como en Meta. Un anuncio es una palabra clave de ManyChat.
+ *
+ * Los números de cada palabra clave los arma el backend (`anuncios_service.tablero`), con su campaña y su
+ * conjunto; acá se filtran, se agrupan (`agruparFilas`), se ordenan y se suman.
  */
 
 const Kpi = ({ titulo, valor, sub, tip, i }) => {
@@ -43,7 +50,8 @@ const Punto = ({ meta }) => {
 };
 
 // Un gasto en cero de una palabra clave sin anuncio en Meta no es un dato medido: «—», no «$0.00».
-const sinMedir = (fila, col) => col.key === 'gasto' && !fila.gasto && fila.meta && !fila.meta.anuncios;
+const sinMedir = (fila, col) => col.key === 'gasto' && !fila.gasto
+    && (fila.meta ? !fila.meta.anuncios : fila.medido === false);
 
 const Celda = ({ fila, col, moneda }) => (
     <td className="mk-num num">
@@ -52,38 +60,96 @@ const Celda = ({ fila, col, moneda }) => (
     </td>
 );
 
-const TablaAnuncios = ({ datos, onArchivar, irAMeta }) => {
+const NOMBRE_DEL_NIVEL = { campanas: 'Campaña', conjuntos: 'Conjunto', anuncios: 'Palabra clave' };
+const UNIDAD = {
+    campanas: ['campaña', 'campañas', 'elegidas'], conjuntos: ['conjunto', 'conjuntos', 'elegidos'],
+    anuncios: ['palabra clave', 'palabras clave', 'elegidas'],
+};
+const ORIGEN = { meta: 'Meta', manual: 'a mano', anterior: 'carga vieja' };
+
+const vacio = () => ({ campanas: new Set(), conjuntos: new Set(), anuncios: new Set() });
+
+const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
     const [busqueda, setBusqueda] = useState('');
     const [verArchivados, setVerArchivados] = useState(false);
     const [orden, setOrden] = useState({ clave: 'entrantes', dir: 'desc' });
-    const [elegidas, setElegidas] = useState(() => new Set());
+    const [nivel, setNivel] = useState('anuncios');
+    const [elegidas, setElegidas] = useState(vacio);
+    const [editando, setEditando] = useState(null);
+    const [guardando, setGuardando] = useState(false);
     const moneda = datos.moneda;
 
     const archivados = datos.filas.filter((f) => f.archivado).length;
-    const visibles = useMemo(() => {
+    // Las palabras clave que entran: sin las archivadas y con la búsqueda (que mira también su campaña y su
+    // conjunto, así «guía» encuentra el conjunto «Guía Perú»).
+    const base = useMemo(() => {
         const texto = busqueda.trim().toLowerCase();
-        const filas = datos.filas.filter((f) => (verArchivados || !f.archivado)
-            && (!texto || (f.nombre || '').toLowerCase().includes(texto) || (f.clave || '').toLowerCase().includes(texto)));
-        return ordenar(filas, orden.clave, orden.dir);
-    }, [datos.filas, busqueda, verArchivados, orden]);
+        return datos.filas.filter((f) => (verArchivados || !f.archivado)
+            && (!texto || [f.nombre, f.clave, f.campana, f.conjunto].some((x) => (x || '').toLowerCase().includes(texto))));
+    }, [datos.filas, busqueda, verArchivados]);
+    // En cascada, como en Meta: las campañas elegidas acotan los conjuntos, y estos los anuncios.
+    const deCampanas = useMemo(() => (elegidas.campanas.size
+        ? base.filter((f) => elegidas.campanas.has(claveDeCampana(f.campana))) : base), [base, elegidas.campanas]);
+    const deConjuntos = useMemo(() => (elegidas.conjuntos.size
+        ? deCampanas.filter((f) => elegidas.conjuntos.has(claveDeConjunto(f.campana, f.conjunto))) : deCampanas),
+    [deCampanas, elegidas.conjuntos]);
 
-    const claveDe = (f) => f.clave ?? '__sin';
-    const elegidasVisibles = visibles.filter((f) => elegidas.has(claveDe(f)));
+    const idDe = (f) => (nivel === 'anuncios' ? claveDeAnuncio(f) : f.id);
+    const visibles = useMemo(() => {
+        let filas;
+        if (nivel === 'campanas') filas = agruparFilas(base, 'campanas');
+        else if (nivel === 'conjuntos') {
+            filas = agruparFilas(deCampanas, 'conjuntos');
+            if (elegidas.campanas.size) filas = filas.filter((g) => elegidas.campanas.has(claveDeCampana(g.campana)));
+        } else filas = deConjuntos;
+        return ordenar(filas, orden.clave, orden.dir);
+    }, [nivel, base, deCampanas, deConjuntos, elegidas.campanas, orden]);
+
+    const delNivel = elegidas[nivel];
+    const elegidasVisibles = visibles.filter((f) => delNivel.has(idDe(f)));
     const totales = useMemo(() => totalesDe(visibles), [visibles]);
-    const paraElGrafico = elegidasVisibles.length ? elegidasVisibles : visibles;
+    // El gráfico: las palabras clave de lo elegido en este nivel o, sin elección, las de la tabla.
+    const paraElGrafico = useMemo(() => {
+        if (!delNivel.size) return nivel === 'campanas' ? base : nivel === 'conjuntos' ? deCampanas : deConjuntos;
+        if (nivel === 'campanas') return base.filter((f) => delNivel.has(claveDeCampana(f.campana)));
+        if (nivel === 'conjuntos') return deCampanas.filter((f) => delNivel.has(claveDeConjunto(f.campana, f.conjunto)));
+        return deConjuntos.filter((f) => delNivel.has(claveDeAnuncio(f)));
+    }, [nivel, delNivel, base, deCampanas, deConjuntos]);
     const serie = useMemo(() => serieDe(paraElGrafico, datos.desde, datos.hasta), [paraElGrafico, datos.desde, datos.hasta]);
+    const [uno, varios, elegidasTxt] = UNIDAD[nivel];
     const alcance = elegidasVisibles.length
-        ? (elegidasVisibles.length === 1 ? elegidasVisibles[0].nombre : `${elegidasVisibles.length} palabras clave elegidas`)
-        : 'Todas las palabras clave de la tabla';
+        ? (elegidasVisibles.length === 1 ? elegidasVisibles[0].nombre : `${elegidasVisibles.length} ${varios} ${elegidasTxt}`)
+        : `Todas las ${UNIDAD.anuncios[1]} de la tabla`;
 
     const alternar = (fila) => setElegidas((prev) => {
-        const nuevo = new Set(prev);
-        if (nuevo.has(claveDe(fila))) nuevo.delete(claveDe(fila));
-        else nuevo.add(claveDe(fila));
-        return nuevo;
+        const nuevo = new Set(prev[nivel]);
+        if (nuevo.has(idDe(fila))) nuevo.delete(idDe(fila));
+        else nuevo.add(idDe(fila));
+        return { ...prev, [nivel]: nuevo };
     });
     const todasElegidas = visibles.length > 0 && elegidasVisibles.length === visibles.length;
-    const elegirTodas = () => setElegidas(todasElegidas ? new Set() : new Set(visibles.map(claveDe)));
+    const elegirTodas = () => setElegidas((prev) => ({
+        ...prev, [nivel]: todasElegidas ? new Set() : new Set(visibles.map(idDe)),
+    }));
+    // Tocar el nombre de una campaña o de un conjunto baja al nivel siguiente con solo ese elegido.
+    const abrir = (grupo) => {
+        if (nivel === 'campanas') {
+            setElegidas({ ...vacio(), campanas: new Set([grupo.id]) });
+            setNivel('conjuntos');
+        } else {
+            setElegidas((prev) => ({ ...prev, conjuntos: new Set([grupo.id]), anuncios: new Set() }));
+            setNivel('anuncios');
+        }
+    };
+
+    const guardarAgrupacion = async (campana, conjunto) => {
+        setGuardando(true);
+        try {
+            if (await onAgrupar(editando, campana, conjunto)) setEditando(null);
+        } finally {
+            setGuardando(false);
+        }
+    };
 
     const ordenarPor = (clave, menor) => setOrden((o) => (o.clave === clave
         ? { clave, dir: o.dir === 'desc' ? 'asc' : 'desc' }
@@ -133,16 +199,18 @@ const TablaAnuncios = ({ datos, onArchivar, irAMeta }) => {
             <section className="panel mk-panel-tabla">
                 <div className="panel-cab mk-tabla-barra">
                     <div className="mk-cab-txt">
-                        <h2 className="t-h3">Anuncios por palabra clave</h2>
+                        <h2 className="t-h3">Campañas, conjuntos y anuncios</h2>
                         <p className="t-cap mut40">
-                            Cada palabra clave que llega de ManyChat es un anuncio. Elegí filas para ver solo esas en el gráfico.
+                            Cada palabra clave que llega de ManyChat es un anuncio. Elegí filas para filtrar el nivel siguiente y el gráfico.
                         </p>
                     </div>
                     <div className="panel-cab-der">
+                        <Segmented chico ariaLabel="Nivel de la tabla" valor={nivel} onChange={setNivel}
+                            opciones={NIVELES.map((n) => ({ ...n, cuenta: elegidas[n.key].size || null }))} />
                         <label className="busca busca--sm mk-busca">
                             <Search aria-hidden="true" />
-                            <input type="search" placeholder="Buscar palabra clave" value={busqueda}
-                                onChange={(e) => setBusqueda(e.target.value)} aria-label="Buscar palabra clave" />
+                            <input type="search" placeholder="Buscar" value={busqueda}
+                                onChange={(e) => setBusqueda(e.target.value)} aria-label="Buscar palabra clave, campaña o conjunto" />
                         </label>
                         {archivados > 0 && (
                             <button type="button" className={`pastilla pastilla--sm${verArchivados ? ' pastilla--on' : ''}`}
@@ -164,7 +232,7 @@ const TablaAnuncios = ({ datos, onArchivar, irAMeta }) => {
                                 </th>
                                 <th className="mk-col-nombre" scope="col" aria-sort={ariaOrden('nombre')}>
                                     <button type="button" className="mk-cab" onClick={() => ordenarPor('nombre')}>
-                                        Palabra clave <Flecha orden={orden} clave="nombre" />
+                                        {NOMBRE_DEL_NIVEL[nivel]} <Flecha orden={orden} clave="nombre" />
                                     </button>
                                 </th>
                                 {COLUMNAS.map((c) => (
@@ -181,11 +249,39 @@ const TablaAnuncios = ({ datos, onArchivar, irAMeta }) => {
                             </tr>
                         </thead>
                         <tbody>
-                            {visibles.map((f) => {
-                                const elegida = elegidas.has(claveDe(f));
+                            {nivel !== 'anuncios' && visibles.map((g) => {
+                                const elegida = delNivel.has(g.id);
+                                const detalle = nivel === 'campanas'
+                                    ? `${g.conjuntos} ${g.conjuntos === 1 ? 'conjunto' : 'conjuntos'} · ${g.palabras} ${g.palabras === 1 ? 'palabra clave' : 'palabras clave'}`
+                                    : `${g.campana ?? SIN_CAMPANA} · ${g.palabras} ${g.palabras === 1 ? 'palabra clave' : 'palabras clave'}`;
+                                return (
+                                    <tr key={g.id} className={elegida ? 'mk-fila--elegida' : ''}>
+                                        <td className="mk-col-sel">
+                                            <input type="checkbox" checked={elegida} onChange={() => alternar(g)}
+                                                aria-label={`Elegir ${g.nombre}`} />
+                                        </td>
+                                        <td className="mk-col-nombre">
+                                            <button type="button" className="mk-nombre mk-abrir" onClick={() => abrir(g)}
+                                                title={`Ver ${nivel === 'campanas' ? 'sus conjuntos' : 'sus palabras clave'}`}>
+                                                <div className="mk-nombre-txt">
+                                                    <span className="mk-nombre-kw trunc" title={g.nombre}>{g.nombre}</span>
+                                                    <span className="mk-nombre-sub trunc">
+                                                        {detalle}{g.origenes.length === 1 && ` · ${ORIGEN[g.origenes[0]]}`}
+                                                    </span>
+                                                </div>
+                                                <ChevronRight className="mk-abrir-flecha" size={15} aria-hidden="true" />
+                                            </button>
+                                        </td>
+                                        {COLUMNAS.map((c) => <Celda key={c.key} fila={g} col={c} moneda={moneda} />)}
+                                        <td className="mk-col-acc" />
+                                    </tr>
+                                );
+                            })}
+                            {nivel === 'anuncios' && visibles.map((f) => {
+                                const elegida = delNivel.has(claveDeAnuncio(f));
                                 const meta = textoMeta(f.meta);
                                 return (
-                                    <tr key={claveDe(f)} className={`${elegida ? 'mk-fila--elegida' : ''}${f.archivado ? ' mk-fila--archivada' : ''}`}>
+                                    <tr key={claveDeAnuncio(f)} className={`${elegida ? 'mk-fila--elegida' : ''}${f.archivado ? ' mk-fila--archivada' : ''}`}>
                                         <td className="mk-col-sel">
                                             <input type="checkbox" checked={elegida} onChange={() => alternar(f)}
                                                 aria-label={`Ver ${f.nombre} en el gráfico`} />
@@ -199,6 +295,13 @@ const TablaAnuncios = ({ datos, onArchivar, irAMeta }) => {
                                                         <span className="mk-nombre-sub trunc" title={(f.meta?.nombres || []).join(' · ')}>
                                                             {sub(f, meta)}
                                                         </span>
+                                                    )}
+                                                    {f.clave !== null && (
+                                                        <button type="button" className="mk-agrupar trunc" onClick={() => setEditando(f)}
+                                                            title={f.agrupacion ? `Campaña y conjunto (${ORIGEN[f.agrupacion]}): cambiarlos` : 'Elegir campaña y conjunto'}>
+                                                            <Pencil size={11} aria-hidden="true" />
+                                                            {f.campana ? `${f.campana} › ${f.conjunto ?? 'Sin conjunto'}` : 'Sin campaña · elegir'}
+                                                        </button>
                                                     )}
                                                 </div>
                                                 {f.archivado && <span className="chip mk-chip" style={{ '--c': 'var(--idle)' }}>Archivada</span>}
@@ -222,7 +325,7 @@ const TablaAnuncios = ({ datos, onArchivar, irAMeta }) => {
                                 <tr>
                                     <td colSpan={COLUMNAS.length + 3} className="mk-vacio">
                                         {datos.filas.length
-                                            ? 'Ninguna palabra clave coincide con la búsqueda.'
+                                            ? 'Nada coincide con la búsqueda o con lo elegido.'
                                             : 'No llegó ningún lead por ManyChat en este período.'}
                                     </td>
                                 </tr>
@@ -233,7 +336,7 @@ const TablaAnuncios = ({ datos, onArchivar, irAMeta }) => {
                                 <tr className="mk-total">
                                     <td className="mk-col-sel" />
                                     <td className="mk-col-nombre">
-                                        <span className="mk-total-rot">Resultados de {visibles.length} {visibles.length === 1 ? 'palabra clave' : 'palabras clave'}</span>
+                                        <span className="mk-total-rot">Resultados de {visibles.length} {visibles.length === 1 ? uno : varios}</span>
                                     </td>
                                     {COLUMNAS.map((c) => <Celda key={c.key} fila={totales} col={c} moneda={moneda} />)}
                                     <td className="mk-col-acc" />
@@ -254,6 +357,12 @@ const TablaAnuncios = ({ datos, onArchivar, irAMeta }) => {
                     </p>
                 )}
             </section>
+
+            {editando && (
+                <EditorAgrupacion fila={editando} opciones={datos.agrupaciones || []} guardando={guardando}
+                    onGuardar={guardarAgrupacion} onAutomatica={() => guardarAgrupacion(null, null)}
+                    onCerrar={() => setEditando(null)} />
+            )}
         </div>
     );
 };

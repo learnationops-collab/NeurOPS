@@ -19,6 +19,7 @@ const fila = (extra) => ({
     entrantes: 227, calificados: 147, descalificados: 0, no_calificados: 80, pct_calificados: 64.8, pct_no_calificados: 35.2,
     gasto: 431, cpl: 1.9, cpl_calificado: 2.93, agendas: 21, costo_agenda: 20.52, ventas: 1, costo_venta: 431,
     cobrado: 1000, roas: 2.32, dias: { '2026-10-01': [10, 6, 14.37, 1] },
+    campana: 'DM Funnel', conjunto: 'AD 5', agrupacion: 'meta', gasto_por_grupo: [['DM Funnel', 'AD 5', 431]],
     ...extra,
 });
 
@@ -28,13 +29,17 @@ const TABLERO = {
         fila(),
         fila({ clave: 'OBTENER GUIA', nombre: 'Obtener Guia', ad_id: null, meta: { anuncios: 0, activos: 0, nombres: [] },
             entrantes: 925, calificados: 693, no_calificados: 232, gasto: 0, cpl: null, cpl_calificado: null,
-            costo_agenda: null, costo_venta: null, roas: null, cobrado: 0, ventas: 2, agendas: 20 }),
+            costo_agenda: null, costo_venta: null, roas: null, cobrado: 0, ventas: 2, agendas: 20,
+            campana: null, conjunto: null, agrupacion: null, gasto_por_grupo: [] }),
         fila({ clave: 'VIEJA', nombre: 'VIEJA', archivado: true, entrantes: 3 }),
     ],
     totales: {},
     sin_atribuir: { agendas: 220, ventas: 0, gasto_meta: 1572 },
+    agrupaciones: [{ campana: 'DM Funnel', conjuntos: ['AD 5'] }],
     meta: { conectado: false, ultima_sincronizacion: null },
 };
+
+const niveles = () => within(screen.getByRole('tablist', { name: 'Nivel de la tabla' }));
 
 const abrir = (ruta = '/admin/marketing') => render(
     <MemoryRouter initialEntries={[ruta]}><AdminMarketingHubPage /></MemoryRouter>,
@@ -88,6 +93,44 @@ describe('Marketing › Anuncios', () => {
         expect(api.post).toHaveBeenCalledWith('/marketing/anuncios/archivar', { clave: 'APLICAR', archivado: true });
         await waitFor(() => expect(screen.queryByText('7 anuncios en Meta · 1 activo')).not.toBeInTheDocument());
         expect(screen.getByRole('button', { name: /Ver archivadas \(2\)/ })).toBeInTheDocument();
+    });
+
+    it('de Campañas se baja a Conjuntos y a Anuncios con lo elegido, como en Meta', async () => {
+        const user = userEvent.setup();
+        abrir();
+        await screen.findByText('Obtener Guia');
+
+        await user.click(niveles().getByRole('tab', { name: 'Campañas' }));
+        const nombres = () => screen.getAllByRole('row').slice(1, -1).map((r) => within(r).getAllByRole('cell')[1].textContent);
+        expect(nombres().join(' | ')).toMatch(/Obtener|Sin campaña/);
+        expect(nombres().some((n) => n.startsWith('DM Funnel'))).toBe(true);
+
+        await user.click(screen.getByRole('button', { name: /^DM Funnel/ }));
+        expect(niveles().getByRole('tab', { name: /Conjuntos/ })).toHaveAttribute('aria-selected', 'true');
+        expect(nombres()).toHaveLength(1);
+        expect(nombres()[0]).toMatch(/^AD 5/);
+
+        await user.click(screen.getByRole('button', { name: /^AD 5/ }));
+        expect(niveles().getByRole('tab', { name: /Anuncios/ })).toHaveAttribute('aria-selected', 'true');
+        expect(nombres()).toHaveLength(1);
+        expect(nombres()[0]).toMatch(/^APLICAR/);
+    });
+
+    it('elegir a mano la campaña y el conjunto de una palabra clave', async () => {
+        const user = userEvent.setup();
+        api.post.mockResolvedValue({ data: { clave: 'OBTENER GUIA', campana: 'Guías', conjunto: 'Perú' } });
+        abrir();
+        await user.click(await screen.findByRole('button', { name: /Sin campaña · elegir/ }));
+        const dialogo = screen.getByRole('dialog');
+        await user.type(within(dialogo).getByPlaceholderText('Escribí o elegí una campaña'), 'Guías');
+        await user.type(within(dialogo).getByPlaceholderText('Opcional'), 'Perú');
+        const pedidos = api.get.mock.calls.length;
+
+        await user.click(within(dialogo).getByRole('button', { name: 'Guardar' }));
+
+        expect(api.post).toHaveBeenCalledWith('/marketing/anuncios/agrupar', { clave: 'OBTENER GUIA', campana: 'Guías', conjunto: 'Perú' });
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+        await waitFor(() => expect(api.get.mock.calls.length).toBeGreaterThan(pedidos));
     });
 
     it('la pestaña Meta Ads explica cómo conectarlo cuando falta el token', async () => {
