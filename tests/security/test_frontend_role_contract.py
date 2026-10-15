@@ -94,11 +94,10 @@ def test_la_mayoria_de_las_rutas_de_la_politica_tienen_una_pantalla_que_las_usa(
     usadas = {(m, r) for (m, r) in POLITICA
               if any(mf in (m, '*') and coincide(ruta, r) for (mf, ruta) in llamadas)}
 
-    # El resto son rutas de ingesta (n8n, Apps Script) o de paginas que ninguna ruta de App.jsx alcanza. Desde el
-    # 14/10/2026 tambien las de la configuracion vieja de anuncios (campanas, conjuntos, inversion por periodo y el
-    # tablero por id de anuncio): la reemplazo la tabla por palabra clave de /api/marketing/anuncios y se quedaron
-    # sin pantalla (eran 60, quedan 54).
-    assert len(usadas) >= 50, f'Solo {len(usadas)} de {len(POLITICA)} rutas tienen una pantalla que las use'
+    # El resto son rutas de ingesta (n8n, Apps Script) o de paginas que ninguna ruta de App.jsx alcanza. Eran 60
+    # hasta el 14/10/2026, cuando la configuracion vieja de anuncios (campanas, conjuntos, inversion por periodo)
+    # se quedo sin pantalla; el 15/10/2026 se borraron sus rutas y quedan 54 de 70.
+    assert len(usadas) >= 54, f'Solo {len(usadas)} de {len(POLITICA)} rutas tienen una pantalla que las use'
 
 
 def test_ningun_rol_pierde_una_pantalla_que_ya_usaba_ni_una_pagina_publica_se_rompe():
