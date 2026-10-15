@@ -303,6 +303,8 @@ def agenda_whatsapp_confirmar(email):
 def _horario(h):
     """{0..6 (0 = domingo): [[HH:MM, HH:MM], ...]} validado, o None. Acepta cualquier minuto (la Academia
     no está atada a las medias horas del editor de Thalamus)."""
+    if isinstance(h, list) and len(h) == 7:  # PHP manda {0..6} como lista
+        h = dict(enumerate(h))
     if not isinstance(h, dict):
         return None
     out = {}

@@ -203,6 +203,14 @@ def test_horarios_encadenan_sesion_y_margen_y_respetan_lo_ocupado(client, db, go
     assert _del_lunes(_horarios(client, fresco=True)) == [LUNES_10]
 
 
+def test_horarios_aceptan_la_semana_como_lista(client, db, google):
+    """PHP manda {0..6} con claves seguidas como lista."""
+    _alta(client)
+    _lista(db)
+    semana = [LV10a12.get(str(d), []) for d in range(7)]
+    assert _del_lunes(_horarios(client, horario=semana)) == [LUNES_10, LUNES_10 + 3600000]
+
+
 def test_horarios_rechazan_datos_invalidos(client, db):
     _alta(client)
     _lista(db)
