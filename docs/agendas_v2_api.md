@@ -107,8 +107,11 @@ Thalamus como **servicio** para las sesiones del programa que agenda el equipo d
 | Método y ruta | Cuerpo | Respuesta |
 | :--- | :--- | :--- |
 | `PUT /equipo` | `{email, nombre, tz, telefono}` | estado |
-| `GET /equipo/<email>` | – | estado: `{email, calendar: conectado\|vencido\|no, whatsapp: confirmado\|pendiente\|sin_numero, numero, lista}` |
+| `GET /equipo/<email>` | – | estado: `{email, calendar: conectado\|vencido\|no, calendario_elegido, whatsapp: confirmado\|pendiente\|sin_numero, numero, invitar_personal, lista}` |
 | `POST /equipo/<email>/google` | `{volver}` (ruta de la Academia) | `{url}` |
+| `GET /equipo/<email>/calendarios` | – | `{cuenta, calendarios: [{id, nombre, principal, escribe}], destino, conflicto, invitar_personal}` |
+| `POST /equipo/<email>/calendarios` | `{nombre}` | crea un calendario en la cuenta conectada y lo deja como el suyo |
+| `PUT /equipo/<email>/calendarios` | `{destino, conflicto: [ids], invitar_personal}` | lo mismo que el GET |
 | `POST /equipo/<email>/whatsapp/prueba` | – | `{comprobante}` |
 | `POST /equipo/<email>/whatsapp/confirmar` | `{comprobante}` | estado |
 | `POST /horarios` | `{email, tz, horario, duracion, margen, antel_min, dias, ocupado: [{inicio, fin}], fresco}` | `{slots: [ms], google}` |
@@ -117,6 +120,8 @@ Thalamus como **servicio** para las sesiones del programa que agenda el equipo d
 | `DELETE /reservas/<event_id>` | `{email, calendar_id}` | `{ok}` |
 
 - **Conectar Google sin sesión:** la URL es `/google/conectar/<firma>` (itsdangerous, no JWT: `load_user_from_request` toma cualquier JWT con `id` como sesión). Vence a los 15 minutos y sirve una vez: si la cuenta ya tiene un token guardado después de emitida la firma, se rechaza. El callback guarda el token para la cuenta de la firma y vuelve a `ACADEMY_URL` (env, por defecto `https://academy.thelearnation.com`) + `volver?google=ok|cancelado|error`.
+- **Cuenta compartida y calendario propio:** el equipo puede conectar todos la misma cuenta de Google (team@, la que graba los Meet) y cada uno elige o crea **su** calendario dentro de ella: ahí se crean sus sesiones (`google_calendar_id`) y es el que se revisa para lo ocupado (`calendarios_conflicto`, más los que sume). Sin calendario elegido la cuenta no está `lista`, para que nadie agende en el principal compartido. La elección se guarda en `sched_perfiles.datos.academia` (`calendario_elegido`, `cuenta`, `invitar_personal`); si al listar la cuenta conectada ya no es la misma, se descarta y hay que elegir de nuevo.
+- **Invitar al calendario personal (opcional):** con `invitar_personal`, cada evento también invita al email de la cuenta (el de la Academia), salvo que sea la misma cuenta conectada.
 - **WhatsApp sin sesión:** la prueba devuelve un comprobante firmado con el número (15 min); confirmar lo exige. Cambiar el número en el alta vuelve a pedir la confirmación.
 - **`/horarios`:** exige Google conectado y WhatsApp confirmado (409 `no_lista`). El horario usa 0 = domingo y acepta cualquier minuto. `ocupado` es lo que la persona tiene en la Academia (clases, días bloqueados, otras reservas) y se suma a su freebusy de Google (caché de 120 s; `fresco: true` lo lee en el momento).
 - **`/reservas`:** no revisa disponibilidad (la Academia la confirmó antes con `fresco`, o es una fecha acordada por fuera). El evento dura `duracion` (el margen no va al evento). El WhatsApp usa la plantilla del aviso de agenda con `grupo = Academia` y la hora en la zona de quien da la sesión; si falla, solo queda en el log. Google falla: 502 `google`.

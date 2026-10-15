@@ -76,3 +76,4 @@
   - Rol nuevo `fulfillment`, sin pantallas. Las cuentas las crea la Academia; conectan Google con un link firmado de un solo uso y confirman el WhatsApp con un comprobante firmado.
   - No guarda nada de agenda ni toca la operación de ventas. `GoogleService` suma `mover_evento` y `delete_event` acepta el calendario donde se creó.
   - Verificación: `tests/agendas_v2/test_api_academia.py` (14 tests); `/google/conectar/<firma>` inventariada en `PUBLICAS_POR_DISENO`.
+  - Cuenta compartida: el equipo conecta team@ (la que graba los Meet) y cada uno elige o crea su calendario dentro de ella; sin calendario elegido no está lista. Opcional: invitar también a su calendario personal.

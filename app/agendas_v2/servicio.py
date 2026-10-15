@@ -392,7 +392,9 @@ def perfil_de(usuario_id):
 def guardar_perfil(usuario_id, datos):
     perfil = normal_perfil(datos)
     fila = db.session.get(SchedPerfil, usuario_id) or SchedPerfil(user_id=usuario_id)
-    fila.datos = perfil
+    # `academia`: preferencias que guarda la API de agenda de la Academia (app/api/external/agenda.py).
+    academia = (fila.datos or {}).get('academia') if isinstance(fila.datos, dict) else None
+    fila.datos = {**perfil, 'academia': academia} if academia else perfil
     db.session.add(fila)
     db.session.commit()
     return perfil

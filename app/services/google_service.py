@@ -225,9 +225,10 @@ class GoogleService:
             return None
 
     @staticmethod
-    def crear_evento_con_meet(user_id, inicio_utc, fin_utc, titulo, descripcion, invitado_email=None):
+    def crear_evento_con_meet(user_id, inicio_utc, fin_utc, titulo, descripcion, invitado_email=None, otros_invitados=None):
         """Crea el evento en el calendario elegido del usuario, con link de Google Meet, e invita a
-        `invitado_email` (Google le manda la invitacion por mail). Lo usa Agendas 2.0.
+        `invitado_email` (Google le manda la invitacion por mail). Lo usa Agendas 2.0. `otros_invitados`:
+        más emails a invitar (la Academia suma el calendario personal de quien da la sesión).
 
         inicio_utc/fin_utc: datetime UTC sin zona. Devuelve (event_id, link_de_meet). A diferencia de
         create_event, NO se traga los errores: quien llama decide que hacer si Google falla."""
@@ -249,8 +250,10 @@ class GoogleService:
                 'overrides': [{'method': 'email', 'minutes': 24 * 60}, {'method': 'popup', 'minutes': 10}],
             },
         }
-        if invitado_email:
-            cuerpo['attendees'] = [{'email': invitado_email}]
+        invitados = [e for e in [invitado_email, *(otros_invitados or [])] if e]
+        if invitados:
+            cuerpo['attendees'] = [{'email': e} for e in dict.fromkeys(invitados)]
+        invitado_email = invitados[0] if invitados else None
         evt = service.events().insert(
             calendarId=GoogleService._calendario(user_id),
             body=cuerpo,
@@ -490,6 +493,18 @@ class GoogleService:
             current_app.logger.warning(f'[GOOGLE] No se pudo leer el evento {event_id} del usuario #{user_id}: {e}')
             return False
         return (evt or {}).get('status') == 'cancelled'
+
+    @staticmethod
+    def crear_calendario(user_id, nombre, tz=None):
+        """Crea un calendario nuevo en la cuenta conectada (p. ej. uno por persona del equipo dentro de
+        una cuenta compartida) y devuelve su id. Lanza si Google falla."""
+        service = GoogleService.get_service(user_id)
+        if not service:
+            raise RuntimeError('El usuario no tiene Google Calendar conectado.')
+        cuerpo = {'summary': nombre}
+        if tz:
+            cuerpo['timeZone'] = tz
+        return service.calendars().insert(body=cuerpo).execute()['id']
 
     @staticmethod
     def mover_evento(user_id, event_id, inicio_utc, fin_utc, calendar_id=None):

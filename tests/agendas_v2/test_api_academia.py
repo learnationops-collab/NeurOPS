@@ -11,6 +11,7 @@ import pytest
 from freezegun import freeze_time
 
 from app.agendas_v2 import servicio
+from app.agendas_v2.modelos import SchedPerfil
 from app.models import Appointment, Client, GoogleCalendarToken, User
 from app.models.financial import FinancialAgenda
 from app.services.google_service import GoogleService
@@ -36,10 +37,11 @@ def google(monkeypatch):
     llamadas = {'crear': [], 'mover': [], 'borrar': [], 'ocupado': [], 'falla': None}
     servicio._google_cache.clear()
 
-    def crear(user_id, inicio, fin, titulo, descripcion, invitado_email=None):
+    def crear(user_id, inicio, fin, titulo, descripcion, invitado_email=None, otros_invitados=None):
         if llamadas['falla']:
             raise llamadas['falla']
-        llamadas['crear'].append({'user_id': user_id, 'inicio': inicio, 'fin': fin, 'titulo': titulo, 'invitado': invitado_email})
+        llamadas['crear'].append({'user_id': user_id, 'inicio': inicio, 'fin': fin, 'titulo': titulo, 'invitado': invitado_email,
+                                  'otros': otros_invitados})
         return 'evt1', 'https://meet.google.com/abc-defg-hij'
 
     monkeypatch.setattr(GoogleService, 'crear_evento_con_meet', staticmethod(crear))
@@ -47,6 +49,14 @@ def google(monkeypatch):
         lambda user_id, event_id, inicio, fin, calendar_id=None: llamadas['mover'].append((event_id, inicio, fin, calendar_id))))
     monkeypatch.setattr(GoogleService, 'delete_event', staticmethod(
         lambda user_id, event_id, calendar_id=None, avisar=False: llamadas['borrar'].append((event_id, calendar_id, avisar)) or True))
+    monkeypatch.setattr(GoogleService, 'list_calendars', staticmethod(lambda user_id, todos=False: [
+        {'id': 'team@thelearnation.com', 'summary': 'Team', 'primary': True, 'escribe': True},
+        {'id': 'cal-dari', 'summary': 'Dari', 'primary': False, 'escribe': True},
+        {'id': 'cal-andy', 'summary': 'Andy', 'primary': False, 'escribe': True},
+        {'id': 'feriados', 'summary': 'Feriados', 'primary': False, 'escribe': False},
+    ]))
+    monkeypatch.setattr(GoogleService, 'crear_calendario', staticmethod(
+        lambda user_id, nombre, tz=None: llamadas.setdefault('calendarios', []).append(nombre) or 'cal-nuevo'))
     monkeypatch.setattr(GoogleService, 'franjas_ocupadas', staticmethod(lambda user_id, desde, hasta: list(llamadas['ocupado'])))
     return llamadas
 
@@ -65,9 +75,12 @@ def _alta(client, email='dari@thelearnation.com', telefono='5491122334455'):
     return client.put(f'{BASE}/equipo', json={'email': email, 'nombre': 'Dari', 'tz': BA, 'telefono': telefono}, headers=H)
 
 
-def _lista(db, email='dari@thelearnation.com'):
+def _lista(db, email='dari@thelearnation.com', invitar_personal=False):
+    """Google conectado (a la cuenta compartida team@), su calendario elegido y el WhatsApp confirmado."""
     u = User.query.filter_by(email=email).first()
-    db.session.add(GoogleCalendarToken(user_id=u.id, token_json='{}'))
+    db.session.add(GoogleCalendarToken(user_id=u.id, token_json='{}', google_calendar_id='cal-dari'))
+    db.session.add(SchedPerfil(user_id=u.id, datos={'academia': {
+        'calendario_elegido': True, 'cuenta': 'team@thelearnation.com', 'invitar_personal': invitar_personal}}))
     u.whatsapp_confirmado_en = datetime(2026, 10, 1)
     db.session.commit()
     return u
@@ -90,8 +103,8 @@ def test_sin_token_no_entra(client):
 def test_alta_crea_cuenta_fulfillment_sin_clave(client, db):
     r = _alta(client)
     assert r.status_code == 200
-    assert r.json == {'email': 'dari@thelearnation.com', 'calendar': 'no', 'whatsapp': 'pendiente',
-                      'numero': '5491122334455', 'lista': False}
+    assert r.json == {'email': 'dari@thelearnation.com', 'calendar': 'no', 'calendario_elegido': False,
+                      'whatsapp': 'pendiente', 'numero': '5491122334455', 'invitar_personal': False, 'lista': False}
     u = User.query.filter_by(email='dari@thelearnation.com').first()
     assert u.role == 'fulfillment' and u.timezone == BA
     assert not u.check_password('')
@@ -206,7 +219,8 @@ def test_reservar_crea_el_evento_avisa_y_no_toca_ventas(client, db, google, what
         'descripcion': 'Primera sesión', 'invitado': {'nombre': 'Ana', 'email': 'ana@mail.com'},
         'aviso': {'sesion': 'Onboarding', 'alumno': 'Ana'}}, headers=H)
     assert r.status_code == 200
-    assert r.json == {'event_id': 'evt1', 'calendar_id': 'primary', 'meet': 'https://meet.google.com/abc-defg-hij'}
+    assert r.json == {'event_id': 'evt1', 'calendar_id': 'cal-dari', 'meet': 'https://meet.google.com/abc-defg-hij'}
+    assert google['crear'][0]['otros'] is None  # sin pedirlo, no se invita a su calendario personal
     assert google['crear'][0]['invitado'] == 'ana@mail.com'
     assert google['crear'][0]['fin'] == datetime(2026, 10, 5, 13, 45)
     assert whatsapp[-1]['lead'] == 'Ana' and whatsapp[-1]['hora'] == '10:00 am' and whatsapp[-1]['grupo'] == 'Academia'
@@ -236,3 +250,59 @@ def test_una_cuenta_fulfillment_no_entra_al_reparto_de_ventas(client, db):
     _lista(db)
     assert all(p.get('email') != 'dari@thelearnation.com' for p in servicio.colecciones()['personas'])
     assert User.query.filter(User.role == 'closer', User.email == 'dari@thelearnation.com').count() == 0
+
+
+def _conectada_sin_elegir(db, email='dari@thelearnation.com'):
+    u = User.query.filter_by(email=email).first()
+    db.session.add(GoogleCalendarToken(user_id=u.id, token_json='{}'))
+    u.whatsapp_confirmado_en = datetime(2026, 10, 1)
+    db.session.commit()
+    return u
+
+
+def test_sin_calendario_elegido_no_esta_lista(client, db):
+    _alta(client)
+    _conectada_sin_elegir(db)
+    estado = client.get(f'{BASE}/equipo/dari@thelearnation.com', headers=H).json
+    assert estado['calendar'] == 'conectado' and estado['calendario_elegido'] is False and estado['lista'] is False
+    assert _horarios(client).status_code == 409
+
+
+def test_listar_y_crear_su_calendario_en_la_cuenta_compartida(client, db, google):
+    _alta(client)
+    _conectada_sin_elegir(db)
+    r = client.get(f'{BASE}/equipo/dari@thelearnation.com/calendarios', headers=H)
+    assert r.json['cuenta'] == 'team@thelearnation.com' and r.json['destino'] is None
+    assert [c['id'] for c in r.json['calendarios']] == ['team@thelearnation.com', 'cal-dari', 'cal-andy', 'feriados']
+
+    r = client.post(f'{BASE}/equipo/dari@thelearnation.com/calendarios', json={'nombre': 'Sesiones Dari'}, headers=H)
+    assert r.status_code == 200 and google['calendarios'] == ['Sesiones Dari']
+    assert r.json['destino'] == 'cal-nuevo' and r.json['conflicto'] == ['cal-nuevo']
+    assert client.get(f'{BASE}/equipo/dari@thelearnation.com', headers=H).json['lista'] is True
+
+
+def test_elegir_calendario_conflictos_e_invitar_al_personal(client, db, google):
+    _alta(client)
+    _conectada_sin_elegir(db)
+    malo = client.put(f'{BASE}/equipo/dari@thelearnation.com/calendarios', json={'destino': 'feriados'}, headers=H)
+    assert malo.status_code == 400  # solo lectura
+    r = client.put(f'{BASE}/equipo/dari@thelearnation.com/calendarios', headers=H, json={
+        'destino': 'cal-dari', 'conflicto': ['feriados', 'inventado'], 'invitar_personal': True})
+    assert r.json['destino'] == 'cal-dari' and r.json['conflicto'] == ['cal-dari', 'feriados']
+    assert r.json['invitar_personal'] is True
+
+    client.post(f'{BASE}/reservas', json={'email': 'dari@thelearnation.com', 'inicio': LUNES_10, 'duracion': 45,
+                                          'invitado': {'nombre': 'Ana', 'email': 'ana@mail.com'}}, headers=H)
+    assert google['crear'][-1]['invitado'] == 'ana@mail.com'
+    assert google['crear'][-1]['otros'] == ['dari@thelearnation.com']
+
+
+def test_si_cambia_la_cuenta_de_google_hay_que_elegir_de_nuevo(client, db, monkeypatch):
+    _alta(client)
+    u = _lista(db)
+    monkeypatch.setattr(GoogleService, 'list_calendars', staticmethod(lambda user_id, todos=False: [
+        {'id': 'otra@gmail.com', 'summary': 'Otra', 'primary': True, 'escribe': True}]))
+    r = client.get(f'{BASE}/equipo/dari@thelearnation.com/calendarios', headers=H)
+    assert r.json['destino'] is None
+    assert client.get(f'{BASE}/equipo/dari@thelearnation.com', headers=H).json['lista'] is False
+    assert GoogleCalendarToken.query.filter_by(user_id=u.id).first().google_calendar_id == 'primary'

@@ -19,6 +19,7 @@ from sqlalchemy import func
 
 from app import db
 from app.agendas_v2 import servicio
+from app.agendas_v2.modelos import SchedPerfil
 from app.agendas_v2.nucleo.disponibilidad import agenda_opt, ahora_ms, se_solapa, slots_persona
 from app.api.external import bp
 from app.decorators import require_academy_token
@@ -48,16 +49,38 @@ def _cuenta(email):
     return u if u and u.is_active and u.tiene_rol(ROLE_FULFILLMENT) else None
 
 
+def _preferencias(u):
+    """Lo que la Academia eligió para esta cuenta, en su perfil de Thalamus (`sched_perfiles.datos.academia`):
+    `calendario_elegido`, `cuenta` (la cuenta de Google con la que se eligió) e `invitar_personal`."""
+    fila = db.session.get(SchedPerfil, u.id)
+    datos = fila.datos if fila and isinstance(fila.datos, dict) else {}
+    return dict(datos.get('academia') or {})
+
+
+def _guardar_preferencias(u, cambios):
+    fila = db.session.get(SchedPerfil, u.id) or SchedPerfil(user_id=u.id, datos={})
+    datos = dict(fila.datos) if isinstance(fila.datos, dict) else {}
+    datos['academia'] = {**(datos.get('academia') or {}), **cambios}
+    fila.datos = datos
+    db.session.add(fila)
+
+
 def _estado(u):
     token = GoogleCalendarToken.query.filter_by(user_id=u.id).first()
     calendar = 'no' if token is None else ('vencido' if token.vencido_en else 'conectado')
     whatsapp = 'sin_numero' if not u.two_chat_number else ('confirmado' if u.whatsapp_confirmado_en else 'pendiente')
+    pref = _preferencias(u)
+    elegido = calendar == 'conectado' and bool(pref.get('calendario_elegido'))
     return {
         'email': u.email,
         'calendar': calendar,
+        'calendario_elegido': elegido,
         'whatsapp': whatsapp,
         'numero': u.two_chat_number or None,
-        'lista': calendar == 'conectado' and whatsapp == 'confirmado',
+        'invitar_personal': bool(pref.get('invitar_personal')),
+        # Sin calendario elegido no se agenda: con una cuenta compartida (team@) caería en su calendario
+        # principal y las sesiones de uno bloquearían a los demás.
+        'lista': elegido and whatsapp == 'confirmado',
     }
 
 
@@ -126,6 +149,105 @@ def agenda_link_google(email):
     if not u:
         return _error('No existe esa persona del equipo', 404)
     return jsonify({'url': link_para_conectar(u.id, _cuerpo().get('volver'))}), 200
+
+
+def _calendarios(u, token):
+    """{cuenta, calendarios: [{id, nombre, principal, escribe}], destino, conflicto, invitar_personal} de la
+    cuenta conectada. Si la cuenta de Google cambió desde que se eligió, la elección se descarta."""
+    from app.services.google_service import GoogleService
+
+    todos = GoogleService.list_calendars(u.id, todos=True)
+    cuenta = next((c['id'] for c in todos if c.get('primary')), None)
+    pref = _preferencias(u)
+    if pref.get('calendario_elegido') and cuenta and pref.get('cuenta') and pref['cuenta'] != cuenta:
+        token.google_calendar_id, token.calendarios_conflicto = 'primary', None
+        _guardar_preferencias(u, {'calendario_elegido': False})
+        db.session.commit()
+        pref = _preferencias(u)
+    return {
+        'cuenta': cuenta,
+        'calendarios': [{'id': c['id'], 'nombre': c['summary'], 'principal': bool(c.get('primary')),
+                         'escribe': bool(c.get('escribe'))} for c in todos],
+        'destino': token.google_calendar_id if pref.get('calendario_elegido') else None,
+        'conflicto': GoogleService.calendarios_de_conflicto(token) if pref.get('calendario_elegido') else [],
+        'invitar_personal': bool(pref.get('invitar_personal')),
+    }
+
+
+def _token_conectado(u):
+    from app.services.google_service import GoogleService
+
+    return GoogleService.token_vigente(u.id)
+
+
+@bp.route('/agenda/equipo/<path:email>/calendarios', methods=['GET'])
+@require_academy_token
+def agenda_calendarios(email):
+    u = _cuenta(email)
+    if not u:
+        return _error('No existe esa persona del equipo', 404)
+    token = _token_conectado(u)
+    if not token:
+        return _error('Google Calendar no está conectado', 409)
+    return jsonify(_calendarios(u, token)), 200
+
+
+@bp.route('/agenda/equipo/<path:email>/calendarios', methods=['POST'])
+@require_academy_token
+def agenda_crear_calendario(email):
+    """{nombre}: crea un calendario en la cuenta conectada (p. ej. el de cada persona dentro de team@) y lo
+    deja como el suyo: ahí se crean sus sesiones y solo ese se revisa para ver lo ocupado."""
+    from app.services.google_service import GoogleService
+
+    u = _cuenta(email)
+    if not u:
+        return _error('No existe esa persona del equipo', 404)
+    token = _token_conectado(u)
+    if not token:
+        return _error('Google Calendar no está conectado', 409)
+    nombre = re.sub(r'\s+', ' ', str(_cuerpo().get('nombre') or '')).strip()[:100]
+    if not nombre:
+        return _error('Falta el nombre del calendario', 400)
+    try:
+        calendario_id = GoogleService.crear_calendario(u.id, nombre, u.timezone)
+    except Exception as e:  # noqa: BLE001
+        current_app.logger.warning(f'[AGENDA ACADEMIA] No se pudo crear el calendario de #{u.id}: {e}')
+        return _error('google', 502)
+    listado = _calendarios(u, token)
+    token.google_calendar_id, token.calendarios_conflicto = calendario_id, [calendario_id]
+    _guardar_preferencias(u, {'calendario_elegido': True, 'cuenta': listado['cuenta']})
+    db.session.commit()
+    servicio._google_cache.pop(u.id, None)
+    return jsonify(_calendarios(u, token)), 200
+
+
+@bp.route('/agenda/equipo/<path:email>/calendarios', methods=['PUT'])
+@require_academy_token
+def agenda_elegir_calendario(email):
+    """{destino, conflicto: [ids], invitar_personal}: dónde se crean sus sesiones (uno donde puede escribir),
+    qué calendarios se revisan para ver lo ocupado (el destino siempre) y si también se invita a su
+    calendario personal (su email)."""
+    u = _cuenta(email)
+    if not u:
+        return _error('No existe esa persona del equipo', 404)
+    token = _token_conectado(u)
+    if not token:
+        return _error('Google Calendar no está conectado', 409)
+    datos = _cuerpo()
+    listado = _calendarios(u, token)
+    ids = {c['id'] for c in listado['calendarios']}
+    escribibles = {c['id'] for c in listado['calendarios'] if c['escribe']}
+    destino = datos.get('destino')
+    if destino not in escribibles:
+        return _error('Elegí un calendario donde se pueda escribir', 400)
+    conflicto = [c for c in (datos.get('conflicto') or []) if isinstance(c, str) and c in ids]
+    token.google_calendar_id = destino
+    token.calendarios_conflicto = list(dict.fromkeys([destino, *conflicto]))[:20]
+    _guardar_preferencias(u, {'calendario_elegido': True, 'cuenta': listado['cuenta'],
+                              'invitar_personal': bool(datos.get('invitar_personal'))})
+    db.session.commit()
+    servicio._google_cache.pop(u.id, None)
+    return jsonify(_calendarios(u, token)), 200
 
 
 def _firmador_whatsapp():
@@ -274,7 +396,8 @@ def agenda_reservar():
     u = _cuenta(datos.get('email'))
     if not u:
         return _error('No existe esa persona del equipo', 404)
-    if _estado(u)['calendar'] != 'conectado':
+    estado = _estado(u)
+    if not estado['calendario_elegido']:
         return _error('no_lista', 409)
     inicio, dur = datos.get('inicio'), _entero(datos.get('duracion'), 5, 240)
     if not isinstance(inicio, int) or dur is None:
@@ -283,10 +406,13 @@ def agenda_reservar():
     aviso = datos.get('aviso') or {}
     inicio_dt = servicio.ms_a_dt(inicio)
     calendar_id = GoogleService._calendario(u.id)
+    # Su calendario personal (su email), si lo pidió y no es la misma cuenta que la conectada.
+    personal = [u.email] if estado['invitar_personal'] and u.email != _preferencias(u).get('cuenta') else []
     try:
         event_id, meet = GoogleService.crear_evento_con_meet(
             u.id, inicio_dt, inicio_dt + timedelta(minutes=dur), str(datos.get('titulo') or 'Sesión')[:200],
-            str(datos.get('descripcion') or '')[:4000], invitado_email=(invitado.get('email') or None))
+            str(datos.get('descripcion') or '')[:4000], invitado_email=(invitado.get('email') or None),
+            **({'otros_invitados': personal} if personal else {}))
     except Exception as e:  # noqa: BLE001
         current_app.logger.warning(f'[AGENDA ACADEMIA] No se pudo crear el evento de #{u.id}: {e}')
         return _error('google', 502)
