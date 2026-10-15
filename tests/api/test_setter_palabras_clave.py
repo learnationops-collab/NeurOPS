@@ -422,3 +422,62 @@ def test_asignar_baja_la_cuenta_de_su_mes(client, db, equipo, anuncios, auth_hea
 
     assert meses[:2] == [{'mes': '2026-10', 'pendientes': 1, 'total': 1},
                          {'mes': '2026-09', 'pendientes': 0, 'total': 1}]
+
+
+# --- 6. Completadas -----------------------------------------------------------------------------
+
+@freeze_time(HOY)
+def test_completadas_son_las_que_ya_tienen_anuncio_y_dicen_quien_las_completo(client, db, equipo, anuncios,
+                                                                            auth_headers):
+    """Pedido del dueño (15/10/2026): «pendientes por un lado y [...] el tab de completados por otro,
+    para saber rápidamente al entrar si están funcionando o no». Ana la asignó el setter, Beto llegó
+    por ManyChat con su anuncio y Caro sigue pendiente: no está."""
+    ana = agenda(db, equipo, cliente(db, 'Ana', 'ana'), creada=datetime(2026, 10, 2, 9))
+    agenda(db, equipo, cliente(db, 'Beto', 'beto'), creada=datetime(2026, 10, 3, 9))
+    conversacion(db, 'beto', anuncios['PROTOCOLO'])
+    agenda(db, equipo, cliente(db, 'Caro', 'caro'), creada=datetime(2026, 9, 12, 9),
+           reunion=datetime(2026, 9, 14, 14))
+    # Lo de Paula no se mezcla.
+    agenda(db, equipo, cliente(db, 'Eli', 'eli'), setter='paula')
+    conversacion(db, 'eli', anuncios['GUIA'])
+    assert asignar(client, equipo['elias'], auth_headers, ana, anuncios['GUIA']).status_code == 200
+
+    datos = bandeja(client, equipo['elias'], auth_headers)
+
+    assert [p['cliente'] for p in datos['pendientes']] == ['Caro']
+    hechas = datos['completadas']
+    # Las más nuevas primero, con la misma forma que las pendientes.
+    assert [c['cliente'] for c in hechas] == ['Beto', 'Ana']
+    assert set(datos['pendientes'][0]) <= set(hechas[0])
+    beto, ana_fila = hechas
+    assert (ana_fila['palabra_clave'], ana_fila['por'], ana_fila['asignada']) == \
+        ('GUIA', 'setter', '2026-10-10T15:00:00')
+    assert (beto['palabra_clave'], beto['por'], beto['asignada']) == ('PROTOCOLO', 'manychat', None)
+    assert ana_fila['mes'] == beto['mes'] == '2026-10'
+    assert ana_fila['instagram'] == 'ana'
+    assert ana_fila['estado']['label']
+    # Las completadas de cada mes son su total menos sus pendientes, exacto.
+    for m in datos['resumen']['meses']:
+        assert m['total'] - m['pendientes'] == sum(1 for c in hechas if c['mes'] == m['mes'])
+
+
+@freeze_time(HOY)
+def test_quien_reagendo_y_fue_asignado_desde_la_agenda_vieja_sigue_siendo_del_setter(client, db, equipo,
+                                                                                    anuncios, auth_headers):
+    """La fila es la de la reunión más reciente; el registro quedó en la otra agenda de esa persona."""
+    dani = cliente(db, 'Dani', 'dani')
+    vieja = agenda(db, equipo, dani, creada=datetime(2026, 10, 1, 9), reunion=datetime(2026, 10, 3, 14))
+    agenda(db, equipo, dani, creada=datetime(2026, 10, 4, 9), reunion=datetime(2026, 10, 6, 14))
+
+    assert asignar(client, equipo['elias'], auth_headers, vieja, anuncios['GUIA']).status_code == 200
+
+    [dani_fila] = bandeja(client, equipo['elias'], auth_headers)['completadas']
+    assert dani_fila['reunion'] == '2026-10-06T14:00:00'
+    assert (dani_fila['por'], dani_fila['asignada']) == ('setter', '2026-10-10T15:00:00')
+
+
+@freeze_time(HOY)
+def test_sin_ninguna_completada_la_lista_esta_vacia(client, db, equipo, anuncios, auth_headers):
+    agenda(db, equipo, cliente(db, 'Ana', 'ana'))
+
+    assert bandeja(client, equipo['elias'], auth_headers)['completadas'] == []

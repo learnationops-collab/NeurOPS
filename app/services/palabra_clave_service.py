@@ -218,6 +218,56 @@ def _serializar(filas):
     return salida
 
 
+def completadas(setter, filas, anuncio):
+    """Las agendas del setter que YA tienen anuncio, las más nuevas primero: la pestaña
+    «Completadas» de «Mis agendas».
+
+    Pedido del dueño (15/10/2026): «quisiera saber los que ya pusieron, quiero saber si están
+    avanzando o no en esto: pendientes por un lado y [...] el tab de completados por otro». Son las
+    mismas filas que la bandeja (`_bandeja`) del lado de las que Marketing ya atribuye, con la misma
+    forma que las pendientes y además:
+
+      · `palabra_clave`: la del anuncio que Marketing les atribuye (el de `_anuncio_de_cada_una`);
+      · `asignada`: cuándo la asignó el setter (el primer registro `palabra_clave` de esa persona),
+        o None si nadie la asignó;
+      · `por`: 'setter' si hay ese registro, 'manychat' si Marketing la atribuyó sola (llegó por
+        ManyChat con su anuncio y nunca estuvo en la bandeja).
+
+    El registro se busca por la agenda y, si no, por la persona: la fila es una por persona (la de
+    la reunión más reciente, o la venta) y el setter pudo haberla asignado desde otra de sus agendas.
+    Solo cuentan los registros de este setter (los deja `asignar`, también simulando).
+    """
+    hechas = [f for f in filas if f['id'] in anuncio]
+    if not hechas:
+        return []
+    ads = {a.id: a for a in Ad.query.filter(Ad.id.in_(set(anuncio[f['id']] for f in hechas))).all()}
+    ids = [f['id'] for f in hechas]
+    clientes = [f['client_id'] for f in hechas if f.get('client_id')]
+    por_agenda, por_cliente = {}, {}
+    condicion = Appointment.id.in_(ids)
+    if clientes:
+        condicion = condicion | Appointment.client_id.in_(clientes)
+    for appt_id, client_id, cuando in db.session.query(
+            LeadEventLog.appointment_id, Appointment.client_id, LeadEventLog.created_at) \
+            .join(Appointment, Appointment.id == LeadEventLog.appointment_id) \
+            .filter(LeadEventLog.action_type == ACCION, LeadEventLog.user_id == setter.id, condicion):
+        if cuando is None:
+            continue
+        if appt_id not in por_agenda or cuando < por_agenda[appt_id]:
+            por_agenda[appt_id] = cuando
+        if client_id and (client_id not in por_cliente or cuando < por_cliente[client_id]):
+            por_cliente[client_id] = cuando
+
+    salida = _serializar(hechas)
+    for fila in salida:
+        ad = ads.get(anuncio[fila['id']])
+        cuando = por_agenda.get(fila['id']) or por_cliente.get(fila['client_id'])
+        fila['palabra_clave'] = ((ad.keyword or ad.name) or '').strip() if ad else None
+        fila['asignada'] = cuando.isoformat() if cuando else None
+        fila['por'] = 'setter' if cuando else 'manychat'
+    return salida
+
+
 def _anuncios_por_keyword(keywords):
     if not keywords:
         return {}
@@ -317,11 +367,13 @@ def resumen(setter, bandeja=None):
 
 
 def bandeja(setter):
-    """Todo lo que la pantalla necesita en un pedido: la lista, los anuncios y el resumen."""
+    """Todo lo que la pantalla necesita en un pedido: las pendientes, las completadas (ver
+    `completadas`), los anuncios y el resumen. Las completadas de un mes son su `total` menos sus
+    `pendientes` en `resumen.meses`: salen de las mismas filas."""
     datos = _bandeja(setter)
     pend, filas, anuncio = datos
-    return {'pendientes': _serializar(pend), 'anuncios': anuncios(setter, filas, anuncio),
-            'resumen': resumen(setter, datos)}
+    return {'pendientes': _serializar(pend), 'completadas': completadas(setter, filas, anuncio),
+            'anuncios': anuncios(setter, filas, anuncio), 'resumen': resumen(setter, datos)}
 
 
 # --- Escritura ----------------------------------------------------------------------------------
