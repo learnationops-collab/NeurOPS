@@ -50,10 +50,10 @@ const PanelCualificacion = ({ r }) => (
     }>
         <div className="gruesa--sm ds-barras">
             <Gruesa i={0} label="Cualificados" cuenta={fmt.num(r.cualificados)}
-                help="Los leads que cargó el setter; antes del 15/10, entrantes sin no leads ni in-abribles."
+                help="Leads cualificados que cargó el setter; antes del 15/10, entrantes sin no leads ni in-abribles."
                 pct={fmt.pct(r.cualificacion)} tone="success" w={r.cualificacion} />
-            <Gruesa i={1} label="No contestaron" cuenta={fmt.num(r.no_contestaron)}
-                help="Entrantes que no fueron lead, no lead ni in-abribles; se cargan desde el 15/10."
+            <Gruesa i={1} label="Sin respuesta" cuenta={fmt.num(r.no_contestaron)}
+                help="Entrantes que no son leads cualificados, no leads ni in-abribles; desde el 15/10."
                 pct={fmt.pct(r.no_contestaron_pct)} tone="idle" w={r.no_contestaron_pct} />
             <Gruesa i={2} label="No leads" cuenta={fmt.num(r.no_lead)}
                 help="Entrantes marcados como no lead en el reporte." pct={fmt.pct(r.no_lead_pct)}
@@ -268,8 +268,8 @@ const Canal = ({ clave, d, activo }) => (
         ]} />
         <div className="datos">
             {clave !== 'sin_canal' && (
-                <DatoCanal nombre="No contestaron" valor={fmt.num(d.no_contestaron)}
-                    ayuda="Entrantes que no fueron lead, ni no lead, ni in-abribles." />
+                <DatoCanal nombre="Sin respuesta" valor={fmt.num(d.no_contestaron)}
+                    ayuda="Entrantes que no son leads cualificados, ni no leads, ni in-abribles." />
             )}
             <DatoCanal nombre="No leads" valor={fmt.num(d.no_lead)} ayuda="Entrantes marcados como no lead." />
             <DatoCanal nombre="In-abribles" valor={fmt.num(d.inabribles)} ayuda="Entrantes marcados como in-abribles." />
@@ -400,7 +400,7 @@ const DashboardSetters = ({ bloque, deltas = {}, deltasCanales = {}, comision = 
                     sub={`${fmt.num(r.no_lead)} no leads · ${fmt.num(r.inabribles)} in-abribles`}
                     baja="p-cualificacion" />
                 <Tile label="Cualificación" valor={fmt.pct(r.cualificacion)} color={v('success')}
-                    help="Leads sobre entrantes; antes del 15/10, entrantes sin no leads ni in-abribles."
+                    help="Leads cualificados sobre entrantes; antes del 15/10, entrantes sin no leads ni in-abribles."
                     delta={dr.cualificacion}
                     humo={[v('success'), v('info'), v('brand-primary'), v('success')]}
                     sub={`${fmt.num(r.cualificados)} de ${fmt.num(r.entrantes)}`} baja="p-cualificacion" />

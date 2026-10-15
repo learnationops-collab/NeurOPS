@@ -99,7 +99,7 @@ describe('calcular', () => {
         const { avisos, marcas } = calcular(s);
 
         expect(avisos.filter(a => a.nivel === 'err'))
-            .toEqual([{ paso: 'entrantes', nivel: 'err', msg: 'Inbound: leads, no leads e in-abribles superan los 6 mensajes' }]);
+            .toEqual([{ paso: 'entrantes', nivel: 'err', msg: 'Inbound: leads cualificados, no leads e in-abribles superan los 6 mensajes' }]);
         expect(marcas.get('inbound.leads')).toBe('err');
         expect(marcas.get('inbound.no_lead')).toBe('err');
         expect(marcas.get('inbound.inabribles')).toBe('err');

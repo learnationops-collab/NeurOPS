@@ -54,11 +54,11 @@ const pasoActual = () => screen.getByRole('navigation', { name: 'Pasos del repor
 
 const cargarDiaDelDiseno = () => {
     escribir('Anuncios, nuevos mensajes', 10);
-    escribir('Anuncios, leads', 9);
+    escribir('Anuncios, leads cualificados', 9);
     escribir('Anuncios, no leads', 1);
     escribir('Anuncios, in-abribles', 0);
     escribir('Inbound, nuevos mensajes', 6);
-    escribir('Inbound, leads', 5);
+    escribir('Inbound, leads cualificados', 5);
     escribir('Inbound, in-abribles', 1);
     escribir('Bienvenidas, hechas', 12);
     escribir('Bienvenidas, respondidas', 5);
@@ -106,15 +106,15 @@ describe('ReporteDiario · los pasos', () => {
         expect(within(paso).getByText('83%')).toBeInTheDocument();
     });
 
-    it('lo que sobra de los mensajes son los que no contestaron', async () => {
+    it('lo que sobra de los mensajes quedó sin respuesta', async () => {
         await montar();
         cargarDiaDelDiseno();
-        escribir('Anuncios, leads', 6);
+        escribir('Anuncios, leads cualificados', 6);
 
         const paso = screen.getByRole('region', { name: 'Entrantes' });
         expect(paso.querySelector('.rd-rbig > b').textContent).toBe('60%');
         // Anuncios: 10 − 6 leads − 1 no lead − 0 in-abribles; inbound: todos contestaron.
-        expect(within(paso).getAllByText('no contestaron').map(t => t.previousSibling.textContent)).toEqual(['3', '0']);
+        expect(within(paso).getAllByText('sin respuesta').map(t => t.previousSibling.textContent)).toEqual(['3', '0']);
     });
 
     it('con el teclado: flechas ±1 (±10 con Shift), Enter al número siguiente y del último al paso siguiente', async () => {
@@ -128,7 +128,7 @@ describe('ReporteDiario · los pasos', () => {
         expect(entr).toHaveValue('10');
 
         fireEvent.keyDown(entr, { key: 'Enter' });
-        expect(celda('Anuncios, leads')).toHaveFocus();
+        expect(celda('Anuncios, leads cualificados')).toHaveFocus();
 
         celda('Bienvenidas, respondidas').focus();
         fireEvent.keyDown(celda('Bienvenidas, respondidas'), { key: 'Enter' });
@@ -175,14 +175,14 @@ describe('ReporteDiario · los avisos', () => {
         escribir('Inbound, nuevos mensajes', 2);
         escribir('Inbound, no leads', 3);
 
-        expect(screen.getByText('Inbound: leads, no leads e in-abribles superan los 2 mensajes')).toBeInTheDocument();
+        expect(screen.getByText('Inbound: leads cualificados, no leads e in-abribles superan los 2 mensajes')).toBeInTheDocument();
         expect(celda('Inbound, no leads')).toHaveAttribute('aria-invalid', 'true');
 
         fireEvent.click(screen.getByRole('button', { name: /Resumen/ }));
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Enviar reporte' })); });
 
         expect(red.post).toBeNull();
-        expect(toast.error).toHaveBeenCalledWith('Inbound: leads, no leads e in-abribles superan los 2 mensajes');
+        expect(toast.error).toHaveBeenCalledWith('Inbound: leads cualificados, no leads e in-abribles superan los 2 mensajes');
         expect(pasoActual()).toContain('Entrantes');
     });
 

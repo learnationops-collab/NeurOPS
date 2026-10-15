@@ -275,7 +275,7 @@ def test_avisos_de_leads_y_de_respuestas_a_las_aperturas():
     datos['bienvenidas'].update(aperturas_resp=5)
     msgs = [(a['paso'], a['nivel'], a['msg']) for a in rv2.avisos(rv2.leer(rv2.escribir(_fila(), datos)))]
 
-    assert ('entrantes', 'err', 'Anuncios: leads, no leads e in-abribles superan los 10 mensajes') in msgs
+    assert ('entrantes', 'err', 'Anuncios: leads cualificados, no leads e in-abribles superan los 10 mensajes') in msgs
     assert ('aperturas', 'warn', 'Anuncios: más respuestas que aperturas en dolor (5)') in msgs
     assert ('aperturas', 'warn', 'Bienvenidas: más respuestas que aperturas (4)') in msgs
 

@@ -101,12 +101,12 @@ const Leyenda = ({ items }) => (
     </div>
 );
 
-/** Cuántos de los mensajes no contestaron: lo que sobra de repartirlos en leads, no leads e
+/** Cuántos de los mensajes quedaron sin respuesta: lo que sobra de repartirlos en leads cualificados, no leads e
  * in-abribles (corrección del 15/10/2026). Sin mensajes no se muestra. */
 const ChipNoContestaron = ({ n, entrantes }) => (entrantes > 0 ? (
     <span className="rd-chip" style={{ '--c': n ? 'var(--warning)' : 'var(--success)' }}
-        title="Mensajes que no fueron lead, ni no lead, ni in-abribles">
-        <Numero valor={n} /><span>{n === 1 ? 'no contestó' : 'no contestaron'}</span>
+        title="Mensajes que no son leads cualificados, ni no leads, ni in-abribles">
+        <Numero valor={n} /><span>sin respuesta</span>
     </span>
 ) : null);
 
@@ -120,12 +120,12 @@ const PasoEntrantes = ({ ctx }) => {
                     extra={<ChipNoContestaron n={num[`${c.k}.noCont`]} entrantes={s[c.k].entrantes} />}
                     campos={[
                         <Campo key="e" ctx={ctx} ruta={`${c.k}.entrantes`} rotulo="Nuevos mensajes" canal={c} aria={`${c.n}, nuevos mensajes`} />,
-                        <Campo key="l" ctx={ctx} ruta={`${c.k}.leads`} rotulo="Leads" canal={c} aria={`${c.n}, leads`} />,
+                        <Campo key="l" ctx={ctx} ruta={`${c.k}.leads`} rotulo="Leads cualificados" canal={c} aria={`${c.n}, leads cualificados`} />,
                         <Campo key="n" ctx={ctx} ruta={`${c.k}.no_lead`} rotulo="No leads" canal={c} aria={`${c.n}, no leads`} />,
                         <Campo key="i" ctx={ctx} ruta={`${c.k}.inabribles`} rotulo="In-abribles" canal={c} aria={`${c.n}, in-abribles`} />,
                     ]}
                     grande={<Numero valor={num[`${c.k}.cualRate`]} tipo="pct" />} rotulo="cualificación">
-                    <Flujo etapas={[{ n: 'Entrantes' }, { n: 'Leads' }]} color={c.c} fb={64} fg={104}
+                    <Flujo etapas={[{ n: 'Entrantes' }, { n: 'Cualificados' }]} color={c.c} fb={64} fg={104}
                         valores={[s[c.k].entrantes, num[`${c.k}.net`]]} max={mE} convs={[num[`${c.k}.cualRate`]]} />
                 </Columna>
             ))}
