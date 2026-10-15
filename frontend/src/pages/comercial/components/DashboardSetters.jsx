@@ -50,12 +50,15 @@ const PanelCualificacion = ({ r }) => (
     }>
         <div className="gruesa--sm ds-barras">
             <Gruesa i={0} label="Cualificados" cuenta={fmt.num(r.cualificados)}
-                help="Entrantes menos no leads e in-abribles." pct={fmt.pct(r.cualificacion)}
-                tone="success" w={r.cualificacion} />
-            <Gruesa i={1} label="No leads" cuenta={fmt.num(r.no_lead)}
+                help="Los leads que cargó el setter; antes del 15/10, entrantes sin no leads ni in-abribles."
+                pct={fmt.pct(r.cualificacion)} tone="success" w={r.cualificacion} />
+            <Gruesa i={1} label="No contestaron" cuenta={fmt.num(r.no_contestaron)}
+                help="Entrantes que no fueron lead, no lead ni in-abribles; se cargan desde el 15/10."
+                pct={fmt.pct(r.no_contestaron_pct)} tone="idle" w={r.no_contestaron_pct} />
+            <Gruesa i={2} label="No leads" cuenta={fmt.num(r.no_lead)}
                 help="Entrantes marcados como no lead en el reporte." pct={fmt.pct(r.no_lead_pct)}
                 tone="warning" w={r.no_lead_pct} />
-            <Gruesa i={2} label="In-abribles" cuenta={fmt.num(r.inabribles)}
+            <Gruesa i={3} label="In-abribles" cuenta={fmt.num(r.inabribles)}
                 help="Entrantes marcados como in-abribles en el reporte." pct={fmt.pct(r.inabribles_pct)}
                 tone="error" w={r.inabribles_pct} />
         </div>
@@ -259,10 +262,16 @@ const Canal = ({ clave, d, activo }) => (
             { key: 'cualificados', label: 'Cualificados', n: d.cualificados },
         ]} />
         <div className="datos">
+            {clave !== 'sin_canal' && (
+                <DatoCanal nombre="No contestaron" valor={fmt.num(d.no_contestaron)}
+                    ayuda="Entrantes que no fueron lead, ni no lead, ni in-abribles." />
+            )}
             <DatoCanal nombre="No leads" valor={fmt.num(d.no_lead)} ayuda="Entrantes marcados como no lead." />
             <DatoCanal nombre="In-abribles" valor={fmt.num(d.inabribles)} ayuda="Entrantes marcados como in-abribles." />
             <DatoCanal nombre={`Aperturas · ${fmt.pct(d.apertura)}`} valor={fmt.num(d.aperturas)}
                 ayuda="Aperturas en entrantes y en dolor, y su tasa sobre entrantes." />
+            <DatoCanal nombre="Respuesta" valor={fmt.pct(d.respuesta_aperturas)}
+                ayuda="De las aperturas, cuántas respondieron." />
             <DatoCanal nombre="Agendas" valor={fmt.num(d.agendas)} ayuda="Agendas reportadas en el canal." />
         </div>
     </div>
@@ -282,6 +291,8 @@ const Bienvenidas = ({ b }) => (
         <div className="datos">
             <DatoCanal nombre="Respuesta" valor={fmt.pct(b.respuesta)} ayuda="Respondidas sobre hechas." />
             <DatoCanal nombre="Apertura" valor={fmt.pct(b.apertura)} ayuda="Aperturas sobre respondidas." />
+            <DatoCanal nombre="Resp. a aperturas" valor={fmt.pct(b.respuesta_aperturas)}
+                ayuda="De las aperturas de las bienvenidas, cuántas respondieron." />
         </div>
     </div>
 );
@@ -384,13 +395,21 @@ const DashboardSetters = ({ bloque, deltas = {}, deltasCanales = {}, comision = 
                     sub={`${fmt.num(r.no_lead)} no leads · ${fmt.num(r.inabribles)} in-abribles`}
                     baja="p-cualificacion" />
                 <Tile label="Cualificación" valor={fmt.pct(r.cualificacion)} color={v('success')}
-                    help="Entrantes menos no leads e in-abribles, sobre los entrantes." delta={dr.cualificacion}
+                    help="Leads sobre entrantes; antes del 15/10, entrantes sin no leads ni in-abribles."
+                    delta={dr.cualificacion}
                     humo={[v('success'), v('info'), v('brand-primary'), v('success')]}
                     sub={`${fmt.num(r.cualificados)} de ${fmt.num(r.entrantes)}`} baja="p-cualificacion" />
                 <Tile label="Apertura" valor={fmt.pct(r.apertura)} color={v('warning')}
                     help="Aperturas en entrantes y en dolor, sobre los entrantes." delta={dr.apertura}
                     humo={[v('warning'), v('brand-primary'), v('warning'), v('brand-navy')]}
                     sub={`${fmt.num(r.aperturas)} de ${fmt.num(r.entrantes)}`} baja="p-canales" />
+                <Tile label="Respuesta" valor={fmt.pct(r.respuesta_aperturas)} color={v('cat-3')}
+                    help="De las aperturas, cuántas respondieron, en los reportes que cargan las respuestas."
+                    delta={dr.respuesta_aperturas}
+                    humo={[v('cat-3'), v('brand-primary'), v('cat-3'), v('brand-navy')]}
+                    sub={r.ap_respondidas === null || r.ap_respondidas === undefined ? 'sin respuestas cargadas'
+                        : `${fmt.num(r.ap_respondidas)} de ${fmt.num(r.ap_con_respuesta)} aperturas`}
+                    baja="p-canales" />
                 <Tile label="Agendas" valor={fmt.num(r.agendas)} color={v('brand-secondary')}
                     help="Agendas reportadas en el período." delta={dr.agendas}
                     humo={[v('brand-secondary'), v('brand-secondary-light'), v('brand-primary'), v('brand-navy')]}

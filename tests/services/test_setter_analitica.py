@@ -150,6 +150,18 @@ def test_sin_respondidos_en_la_suma_la_respuesta_es_none_y_no_se_deduce(db, elia
     assert (fu['total'], fu['respondidos'], fu['respuesta']) == (20, None, None)
 
 
+def test_la_respuesta_a_las_aperturas_sale_de_los_reportes_que_la_cargaron():
+    d = {'entrantes': 40, 'no_lead': 4, 'inabribles': 2, 'cualificados': 24, 'no_contestaron': 10,
+         'ap_entrantes': 6, 'ap_dolor': 14, 'aperturas': 20, 'agendas': 3}
+
+    v = sa.vista_de(d, respuesta={'aperturas': 16, 'respondidas': 4})
+
+    assert (v['respuesta_aperturas'], v['ap_respondidas'], v['ap_con_respuesta']) == (25.0, 4, 16)
+    assert v['no_contestaron_pct'] == 25.0
+    # Sin ningún reporte con el dato: «—», no 0%.
+    assert sa.vista_de(d)['respuesta_aperturas'] is None
+
+
 # --- Lo que pasó después de la agenda (el sistema) ------------------------------------------------
 
 @freeze_time(HOY)

@@ -96,7 +96,8 @@ def test_el_ranking_de_setters_mide_con_el_reporte_y_el_sistema(db, elias, paula
 
     datos = ca.comparativas('setters', *SEPT)
 
-    assert [m['key'] for m in datos['metricas']] == ['entrantes', 'cualificacion', 'apertura', 'agendas',
+    assert [m['key'] for m in datos['metricas']] == ['entrantes', 'cualificacion', 'apertura', 'respuesta_aperturas',
+                                                     'agendas',
                                                      'conversion', 'bienvenidas_respuesta', 'show_up',
                                                      'ventas_originadas']
     fila = next(f for f in datos['filas'] if f['nombre'] == 'Elias')

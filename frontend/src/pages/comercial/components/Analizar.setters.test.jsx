@@ -75,12 +75,14 @@ describe('Analizar · el tablero de setters y sus listas', () => {
 });
 
 describe('Analizar · los datos de la conversación salen del reporte', () => {
-    it('los tiles son Entrantes · Cualificación · Apertura · Agendas · Bienvenidas', () => {
+    it('los tiles son Entrantes · Cualificación · Apertura · Respuesta · Agendas · Bienvenidas', () => {
         pintar();
 
         const tiles = [...document.querySelectorAll('.ds-tiles .kpi')];
         expect(tiles.map(t => t.querySelector('.t-eyebrow').textContent))
-            .toEqual(['Entrantes', 'Cualificación', 'Apertura', 'Agendas', 'Bienvenidas']);
+            .toEqual(['Entrantes', 'Cualificación', 'Apertura', 'Respuesta', 'Agendas', 'Bienvenidas']);
+        // La respuesta a las aperturas (15/10/2026): sin reportes que la carguen, «—» y lo dice.
+        expect(within(tiles[3]).getByText('sin respuestas cargadas')).toBeInTheDocument();
         expect(within(tiles[1]).getByText('72 de 90')).toBeInTheDocument();
         expect(screen.queryByText(/Tasa de respuesta/)).toBeNull();
         expect(screen.queryByText(/Cuadra con el sistema/)).toBeNull();
@@ -96,7 +98,6 @@ describe('Analizar · los datos de la conversación salen del reporte', () => {
         expect(within(despues).getByText('$80')).toBeInTheDocument();
         expect(within(despues).getByText('8% de $1,000 netos')).toBeInTheDocument();
     });
-
     it('cada follow-up dice qué parte respondió, y «—» si el reporte no lo trae', () => {
         const { unmount } = pintar();
         const sinDato = document.querySelectorAll('.ds-fu-resp');
