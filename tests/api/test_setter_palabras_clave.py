@@ -191,8 +191,10 @@ def test_los_anuncios_van_activos_primero_y_despues_los_que_mas_usa(client, db, 
 
     datos = bandeja(client, equipo['elias'], auth_headers)
 
-    assert [(a['keyword'], a['activo'], a['usos']) for a in datos['anuncios']] == [
+    assert [(a['keyword'], a['activo'], a['usos']) for a in datos['anuncios'] if a['id']] == [
         ('PROTOCOLO', True, 2), ('GUIA', True, 0), ('VIEJO', False, 0)]
+    # Al final, la palabra clave que llegó por ManyChat sin anuncio (15/10/2026).
+    assert [a['keyword'] for a in datos['anuncios'] if not a['id']] == ['Obtener Guia']
 
 
 @freeze_time(HOY)
@@ -519,3 +521,71 @@ def test_sin_ninguna_completada_la_lista_esta_vacia(client, db, equipo, anuncios
     agenda(db, equipo, cliente(db, 'Ana', 'ana'))
 
     assert bandeja(client, equipo['elias'], auth_headers)['completadas'] == []
+
+
+# --- 7. Palabras clave que no están en los registros (15/10/2026) ---------------------------------
+
+@freeze_time(HOY)
+def test_la_lista_ofrece_las_palabras_clave_de_manychat_que_no_tienen_anuncio(client, db, equipo, anuncios,
+                                                                             auth_headers):
+    """«Los setters no ven todas las palabras clave que llegan desde ManyChat»: las que llegaron sin
+    anuncio van al final, una por palabra (sin tildes ni mayúsculas), sin id."""
+    agenda(db, equipo, cliente(db, 'Ana', 'ana'))
+    lead = ManychatLead(manychat_id='mc_peru', name='leo', ig='leo')
+    db.session.add(lead)
+    db.session.flush()
+    for keyword in ('Guía Perú', 'Guía Perú', 'guia peru', 'GUIA', '{{keyword}}', 'manual_attribution'):
+        db.session.add(LeadAnswer(lead_id=lead.id, keyword=keyword, created_at=datetime(2026, 10, 7)))
+    db.session.commit()
+
+    nuevas = [a for a in bandeja(client, equipo['elias'], auth_headers)['anuncios'] if a.get('nueva')]
+
+    # «GUIA» ya tiene anuncio; la variable sin reemplazar y la marca manual no son palabras clave.
+    assert [(a['id'], a['keyword']) for a in nuevas] == [(None, 'Guía Perú')]
+
+
+@freeze_time(HOY)
+def test_asignar_una_palabra_clave_nueva_crea_su_anuncio_y_marketing_la_cuenta(client, db, equipo, anuncios,
+                                                                              auth_headers):
+    a = agenda(db, equipo, cliente(db, 'Ana', 'ana'))
+
+    r = client.post(URL, headers=auth_headers(equipo['elias']),
+                    json={'appointment_id': a.id, 'palabra_clave': '  guia peru '})
+
+    assert r.status_code == 200, r.get_json()
+    nuevo = db.session.get(Ad, r.get_json()['anuncio']['id'])
+    assert (nuevo.keyword, nuevo.name, nuevo.status) == ('guia peru', 'guia peru', 'active')
+    # Como lo crea el webhook de ManyChat: con su clave y sin campaña ni conjunto (Marketing lo agrupa).
+    assert (nuevo.clave, nuevo.ad_set_id) == ('GUIA PERU', None)
+    assert agendas_de_marketing(nuevo) == 1
+    assert bandeja(client, equipo['elias'], auth_headers)['pendientes'] == []
+
+    # La misma palabra escrita de otra forma reusa el anuncio (y el conjunto), no crea otro.
+    b = agenda(db, equipo, cliente(db, 'Bea', 'bea'))
+    r = client.post(URL, headers=auth_headers(equipo['elias']),
+                    json={'appointment_id': b.id, 'palabra_clave': 'Guía Perú'})
+    assert r.get_json()['anuncio']['id'] == nuevo.id
+    assert Ad.query.filter_by(clave='GUIA PERU').count() == 1
+
+
+@freeze_time(HOY)
+def test_escribir_una_que_ya_existe_usa_ese_anuncio(client, db, equipo, anuncios, auth_headers):
+    a = agenda(db, equipo, cliente(db, 'Ana', 'ana'))
+
+    r = client.post(URL, headers=auth_headers(equipo['elias']),
+                    json={'appointment_id': a.id, 'palabra_clave': 'protocolo'})
+
+    assert r.get_json()['anuncio']['id'] == anuncios['PROTOCOLO'].id
+    assert Ad.query.count() == 3
+
+
+@freeze_time(HOY)
+@pytest.mark.parametrize('palabra', ['', '   ', '{{keyword}}', 'x' * 101, '¡¡¡'])
+def test_una_palabra_clave_que_no_sirve_no_crea_nada(client, db, equipo, anuncios, auth_headers, palabra):
+    a = agenda(db, equipo, cliente(db, 'Ana', 'ana'))
+
+    r = client.post(URL, headers=auth_headers(equipo['elias']),
+                    json={'appointment_id': a.id, 'palabra_clave': palabra})
+
+    assert r.status_code == 400
+    assert Ad.query.count() == 3

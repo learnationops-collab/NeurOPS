@@ -34,19 +34,28 @@ def bandeja_de_palabras_clave():
 def asignar_palabra_clave():
     """Body: {"appointment_id": int, "ad_id": int, "instagram": "usuario" (opcional)}.
 
+    En vez de `ad_id` puede venir `palabra_clave` (texto): una que no esta en la lista, o una que
+    llego por ManyChat sin anuncio. Se busca sin tildes ni mayusculas y, si no hay, se crea su
+    anuncio (15/10/2026).
+
     Devuelve la asignacion y el resumen recalculado: con `pendientes` en 0 la pantalla festeja.
     """
     datos = request.get_json(silent=True) or {}
+    palabra = datos.get('palabra_clave')
+    if palabra is not None and not isinstance(palabra, str):
+        return jsonify({'error': 'La palabra clave tiene que ser texto.'}), 400
     try:
         appointment_id = int(datos.get('appointment_id'))
-        ad_id = int(datos.get('ad_id'))
+        ad_id = int(datos['ad_id']) if datos.get('ad_id') is not None else None
     except (TypeError, ValueError):
+        return jsonify({'error': 'Falta la agenda o el anuncio.'}), 400
+    if ad_id is None and not (palabra or '').strip():
         return jsonify({'error': 'Falta la agenda o el anuncio.'}), 400
     instagram = datos.get('instagram')
     if instagram is not None and not isinstance(instagram, str):
         return jsonify({'error': 'El Instagram tiene que ser texto.'}), 400
     try:
-        hecho = servicio.asignar(current_user, appointment_id, ad_id, instagram)
+        hecho = servicio.asignar(current_user, appointment_id, ad_id, instagram, palabra=palabra)
     except servicio.ErrorDePalabraClave as error:
         return jsonify({'error': str(error)}), error.estado
     return jsonify({**hecho, 'resumen': servicio.resumen(current_user)}), 200
