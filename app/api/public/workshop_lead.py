@@ -140,6 +140,23 @@ def replay_config():
     }), 200
 
 
+@bp.route('/public/workshops/proximos', methods=['GET'])
+def workshops_proximos():
+    """Los próximos talleres para las landings de institute-site (antes, workshops.csv).
+
+    Cada uno con su inicio en UTC ('Z'), el link de Google Meet y el del grupo de WhatsApp.
+    Trae también los de la última semana: la landing elige el primero que no terminó y, si
+    no queda ninguno, repite la cadencia del último. Datos que la landing ya muestra a
+    cualquiera; nada personal.
+    """
+    from app.services.workshop_agenda_service import proximos_publicos
+
+    respuesta = jsonify({"eventos": proximos_publicos()})
+    # Corto: un cambio del panel tiene que verse en la landing en un minuto.
+    respuesta.headers['Cache-Control'] = 'public, max-age=60'
+    return respuesta, 200
+
+
 @bp.route('/public/workshop-lead/list', methods=['GET'])
 @login_required
 @admin_required

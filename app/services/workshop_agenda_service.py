@@ -22,6 +22,11 @@ MESES = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO
 LARGO_URL = 300
 MAX_SEMANAS = 26
 
+# Cuánto se sigue mostrando un taller en las landings después de empezar. Las landings ya
+# pasan solas al siguiente a los 30 minutos (su duración); se mandan también los de la
+# última semana para que, sin ninguno por delante, repitan la cadencia del último.
+VENTANA_PASADA = timedelta(days=8)
+
 
 class DatoInvalido(ValueError):
     """Un valor del formulario que no se puede guardar; el mensaje va tal cual al usuario."""
@@ -123,6 +128,32 @@ def programar_semanal(inicio_local, nombre_zona, semanas, meet_url, whatsapp_url
         creados.append(evento)
     db.session.flush()
     return creados, existentes
+
+
+def proximos_publicos(ahora=None):
+    """Lo que leen las landings: talleres con hora desde hace una semana, en orden.
+
+    Un taller sin link hereda el del anterior que lo tenga (como se hacía en el CSV, donde se
+    repetía el mismo Meet semana a semana): mejor el grupo de la semana pasada que ninguno.
+    """
+    ahora = ahora or datetime.utcnow()
+    eventos = (WorkshopEvent.query
+               .filter(WorkshopEvent.inicio_at.isnot(None))
+               .order_by(WorkshopEvent.inicio_at)
+               .all())
+    meet = whatsapp = None
+    salida = []
+    for ev in eventos:
+        meet = ev.meet_url or meet
+        whatsapp = ev.whatsapp_url or whatsapp
+        if ev.inicio_at < ahora - VENTANA_PASADA:
+            continue
+        salida.append({
+            'inicio': ev.inicio_at.isoformat() + 'Z',
+            'meet': meet,
+            'whatsapp': whatsapp,
+        })
+    return salida
 
 
 def dia_local(inicio_utc, tz):

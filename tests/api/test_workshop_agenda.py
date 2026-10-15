@@ -84,3 +84,28 @@ def test_programar_pide_rol_de_workshop(client, db, make_user, auth_headers):
     res = client.post('/api/workshop/events/programar', headers=closer, json={
         'inicio_local': '2026-10-19T17:00', 'semanas': 1})
     assert res.status_code in (401, 403)
+
+
+def test_las_landings_leen_los_proximos_con_el_link_heredado(client, db):
+    db.session.add_all([
+        WorkshopEvent(date=date(2026, 9, 1), name='viejo', inicio_at=datetime(2026, 9, 1, 20),
+                      meet_url='https://meet.google.com/viejo', whatsapp_url='https://chat.whatsapp.com/viejo'),
+        WorkshopEvent(date=date(2026, 10, 12), name='a', inicio_at=datetime(2026, 10, 12, 20),
+                      meet_url=MEET, whatsapp_url=GRUPO),
+        # Sin links: hereda los del anterior.
+        WorkshopEvent(date=date(2026, 10, 19), name='b', inicio_at=datetime(2026, 10, 19, 20)),
+        # Sin hora: no sale.
+        WorkshopEvent(date=date(2026, 10, 26), name='c'),
+    ])
+    db.session.commit()
+
+    eventos = workshop_agenda_service.proximos_publicos(ahora=datetime(2026, 10, 15, 12))
+    assert eventos == [
+        {'inicio': '2026-10-12T20:00:00Z', 'meet': MEET, 'whatsapp': GRUPO},
+        {'inicio': '2026-10-19T20:00:00Z', 'meet': MEET, 'whatsapp': GRUPO},
+    ]
+
+    res = client.get('/api/public/workshops/proximos')
+    assert res.status_code == 200
+    assert 'eventos' in res.get_json()
+    assert 'max-age' in res.headers['Cache-Control']
