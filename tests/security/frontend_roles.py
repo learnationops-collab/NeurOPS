@@ -9,7 +9,8 @@ alcanza.
 Alcance y limites (el test que lo usa los tiene en cuenta):
   - Solo ve rutas escritas como texto. Una llamada con la URL en una variable (api.get(url)) no se ve como
     llamada, pero si se recogen los literales que parecen una ruta de la API (con metodo desconocido '*'),
-    que cubren los casos que hoy existen (p. ej. AdsTab: /public/campaigns|adsets|ads/${id}).
+    que cubren los casos que hoy existen (p. ej. una lista de pestanas con `endpoint: '/public/...'` que
+    despues se llama con api.get(tab.endpoint)).
   - Una pagina que ninguna ruta de App.jsx alcanza (codigo muerto) no aporta roles.
 """
 import re

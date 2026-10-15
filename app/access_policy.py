@@ -61,7 +61,6 @@ POLITICA = {
     ('GET', '/api/conversational/stats/conversational'): _p(COMERCIAL, SETTER),
 
     # --- ManyChat: monitor de leads entrantes, limpieza y reasignacion (marketing) ----------------------
-    ('GET', '/api/manychat-webhook/ad-details/<int:ad_id>'): _p(MARKETING),
     ('PUT', '/api/manychat-webhook/answer/<int:answer_id>'): _p(COMERCIAL, MARKETING, SETTER),
     ('POST', '/api/manychat-webhook/bulk-reassign'): _p(MARKETING),
     ('POST', '/api/manychat-webhook/bulk-reassign/preview'): _p(MARKETING),
@@ -69,27 +68,11 @@ POLITICA = {
     ('POST', '/api/manychat-webhook/cleanup-duplicates'): _p(MARKETING),
     ('GET', '/api/manychat-webhook/log'): _p(COMERCIAL, MARKETING, SETTER),
     ('POST', '/api/manychat-webhook/migrate'): _p(MARKETING),
-    ('GET', '/api/manychat-webhook/stats'): _p(MARKETING),
-    ('GET', '/api/manychat-webhook/stats/dashboard'): _p(MARKETING),
-    ('GET', '/api/manychat-webhook/stats/segmentation'): _p(MARKETING),
-    ('POST', '/api/marketing/ads/<int:ad_id>/adjust-leads'): _p(MARKETING),
 
-    # --- Marketing: anuncios, conjuntos, campanas y gasto por periodo -----------------------------------
+    # --- Marketing: la lista de anuncios y la atribucion manual de la bandeja «Sin anuncio» -------------
+    # La configuracion vieja (alta y borrado de campanas, conjuntos y anuncios, gasto por periodo y el
+    # tablero por anuncio de manychat-webhook) se borro el 15/10/2026: la reemplazo /api/marketing/anuncios.
     ('GET', '/api/public/ads'): _p(MARKETING, CLOSER, SETTER),
-    ('POST', '/api/public/ads'): _p(MARKETING),
-    ('PUT', '/api/public/ads/<int:ad_id>'): _p(MARKETING),
-    ('DELETE', '/api/public/ads/<int:ad_id>'): _p(MARKETING),
-    ('GET', '/api/public/ads/period-spend'): _p(MARKETING),
-    ('POST', '/api/public/ads/period-spend'): _p(MARKETING),
-    ('PUT', '/api/public/ads/period-spend/<int:spend_id>'): _p(MARKETING),
-    ('DELETE', '/api/public/ads/period-spend/<int:spend_id>'): _p(MARKETING),
-    ('POST', '/api/public/adsets'): _p(MARKETING),
-    ('PUT', '/api/public/adsets/<int:adset_id>'): _p(MARKETING),
-    ('DELETE', '/api/public/adsets/<int:adset_id>'): _p(MARKETING),
-    ('GET', '/api/public/campaigns'): _p(MARKETING),
-    ('POST', '/api/public/campaigns'): _p(MARKETING),
-    ('PUT', '/api/public/campaigns/<int:campaign_id>'): _p(MARKETING),
-    ('DELETE', '/api/public/campaigns/<int:campaign_id>'): _p(MARKETING),
     ('POST', '/api/public/marketing/manual-attribution'): _p(CLOSER, SETTER),
     ('POST', '/api/public/marketing/manual-attribution-agenda'): _p(CLOSER, SETTER),
     ('GET', '/api/public/marketing/unattributed-leads'): _p(CLOSER, SETTER),
