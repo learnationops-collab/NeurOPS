@@ -1,0 +1,117 @@
+"""Tablas del motor de automatizaciones (prefijo aut_ para lo del motor, ig_ para lo de Instagram).
+
+  · AutFlujo: el flujo que arma el equipo. `grafo` es el borrador que edita el lienzo; lo que corre
+    es una AutFlujoVersion publicada (copia congelada), así editar no rompe a quien está en medio.
+  · IgContacto: una persona que le escribió a la cuenta (por su IGSID, el id que Instagram le da
+    para esta cuenta). Guarda la ventana de 24 h y la pausa del bot cuando escribe un humano.
+  · AutEjecucion: un contacto recorriendo una versión de un flujo (en qué nodo está, qué espera).
+  · IgMensaje: cada mensaje de la conversación, entrante o saliente, una sola vez por `mid`.
+"""
+from datetime import datetime, timezone
+
+from app import db
+
+
+def ahora():
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+class AutFlujo(db.Model):
+    __tablename__ = 'aut_flujos'
+
+    BORRADOR = 'borrador'
+    ACTIVO = 'activo'
+    PAUSADO = 'pausado'
+
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(150), nullable=False)
+    estado = db.Column(db.String(20), nullable=False, default=BORRADOR)
+    grafo = db.Column(db.JSON, nullable=False, default=dict)
+    version_publicada_id = db.Column(
+        db.Integer, db.ForeignKey('aut_flujo_versiones.id', use_alter=True, name='fk_aut_flujos_version_publicada'),
+        nullable=True)
+    creado_en = db.Column(db.DateTime, nullable=False, default=ahora)
+    actualizado_en = db.Column(db.DateTime, nullable=False, default=ahora, onupdate=ahora)
+
+    version_publicada = db.relationship('AutFlujoVersion', foreign_keys=[version_publicada_id], post_update=True)
+
+
+class AutFlujoVersion(db.Model):
+    __tablename__ = 'aut_flujo_versiones'
+
+    id = db.Column(db.Integer, primary_key=True)
+    flujo_id = db.Column(db.Integer, db.ForeignKey('aut_flujos.id', ondelete='CASCADE'), nullable=False, index=True)
+    numero = db.Column(db.Integer, nullable=False)
+    grafo = db.Column(db.JSON, nullable=False)
+    publicada_en = db.Column(db.DateTime, nullable=False, default=ahora)
+
+    flujo = db.relationship('AutFlujo', foreign_keys=[flujo_id])
+
+    __table_args__ = (db.UniqueConstraint('flujo_id', 'numero', name='uq_aut_flujo_versiones_numero'),)
+
+
+class IgContacto(db.Model):
+    __tablename__ = 'ig_contactos'
+
+    id = db.Column(db.Integer, primary_key=True)
+    igsid = db.Column(db.String(64), nullable=False, unique=True)
+    username = db.Column(db.String(100))
+    nombre = db.Column(db.String(150))
+    # Último mensaje del contacto: abre la ventana de 24 h en la que se le puede escribir.
+    ultimo_entrante_en = db.Column(db.DateTime, nullable=True)
+    # Hasta cuándo el bot no le habla (escribió una persona del equipo).
+    bot_pausado_hasta = db.Column(db.DateTime, nullable=True)
+    variables = db.Column(db.JSON, nullable=False, default=dict)
+    creado_en = db.Column(db.DateTime, nullable=False, default=ahora)
+
+
+class AutEjecucion(db.Model):
+    __tablename__ = 'aut_ejecuciones'
+
+    EN_CURSO = 'en_curso'
+    ESPERANDO_RESPUESTA = 'esperando_respuesta'
+    ESPERANDO_TIEMPO = 'esperando_tiempo'
+    TERMINADA = 'terminada'
+    CANCELADA = 'cancelada'
+    VENTANA_VENCIDA = 'ventana_vencida'
+    ERROR = 'error'
+    ABIERTOS = (EN_CURSO, ESPERANDO_RESPUESTA, ESPERANDO_TIEMPO)
+
+    id = db.Column(db.Integer, primary_key=True)
+    contacto_id = db.Column(db.Integer, db.ForeignKey('ig_contactos.id', ondelete='CASCADE'), nullable=False, index=True)
+    version_id = db.Column(db.Integer, db.ForeignKey('aut_flujo_versiones.id'), nullable=False, index=True)
+    estado = db.Column(db.String(20), nullable=False, default=EN_CURSO, index=True)
+    nodo_actual = db.Column(db.String(64), nullable=True)
+    # Cuándo vence la espera actual (un nodo «esperar» o el «sin respuesta» de un mensaje).
+    despertar_en = db.Column(db.DateTime, nullable=True, index=True)
+    # Comentario que la disparó: el primer mensaje tiene que ir como respuesta privada a ese comentario.
+    comentario_id = db.Column(db.String(64), nullable=True)
+    detalle = db.Column(db.String(300), nullable=True)
+    iniciada_en = db.Column(db.DateTime, nullable=False, default=ahora)
+    actualizada_en = db.Column(db.DateTime, nullable=False, default=ahora, onupdate=ahora)
+
+    contacto = db.relationship('IgContacto')
+    version = db.relationship('AutFlujoVersion')
+
+
+class IgMensaje(db.Model):
+    __tablename__ = 'ig_mensajes'
+
+    ENTRANTE = 'entrante'
+    SALIENTE = 'saliente'
+    # Quién lo originó: el lead, este motor, o cualquier otro emisor de la cuenta (una persona del
+    # equipo desde Kommo o la app, o ManyChat mientras conviva).
+    LEAD = 'lead'
+    MOTOR = 'motor'
+    OTRO = 'otro'
+
+    id = db.Column(db.Integer, primary_key=True)
+    contacto_id = db.Column(db.Integer, db.ForeignKey('ig_contactos.id', ondelete='CASCADE'), nullable=False, index=True)
+    mid = db.Column(db.String(400), nullable=True, unique=True)
+    direccion = db.Column(db.String(10), nullable=False)
+    origen = db.Column(db.String(10), nullable=False)
+    texto = db.Column(db.Text, nullable=True)
+    contenido = db.Column(db.JSON, nullable=True)
+    ejecucion_id = db.Column(db.Integer, db.ForeignKey('aut_ejecuciones.id', ondelete='SET NULL'), nullable=True)
+    nodo_id = db.Column(db.String(64), nullable=True)
+    enviado_en = db.Column(db.DateTime, nullable=False, default=ahora, index=True)

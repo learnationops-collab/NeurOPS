@@ -113,6 +113,10 @@ def create_app(config_class=Config):
     from app import agendas_v2
     agendas_v2.registrar(app, csrf)
 
+    # Automatizaciones de Instagram: el motor de flujos que reemplaza a ManyChat (apagado salvo IG_MOTOR_MODO).
+    from app import automatizaciones
+    automatizaciones.registrar(app)
+
     # Ficha unificada del lead: la unica superficie que sirve al closer y a la direccion comercial
     # a la vez. Su guardia (sesion + 5 roles) vive en su propio before_request (ver app/api/ficha).
     from app.api.ficha import bp as ficha_api_bp

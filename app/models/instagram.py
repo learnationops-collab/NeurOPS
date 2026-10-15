@@ -19,6 +19,9 @@ class InstagramWebhookEvento(db.Model):
     # 'messages,echo', etc. El detalle completo está en `payload`.
     tipos = db.Column(db.String(200), nullable=False, default='')
     payload = db.Column(db.JSON, nullable=False)
+    # Cuándo lo pasó el motor de automatizaciones y qué hizo con cada evento ('flujo_iniciado', 'eco_ajeno'...).
+    procesado_en = db.Column(db.DateTime, nullable=True, index=True)
+    resultado = db.Column(db.String(200), nullable=True)
 
     def to_dict(self):
         return {
