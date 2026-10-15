@@ -106,6 +106,40 @@ def test_registrar_y_borrar_un_taller_mueve_la_ventana_del_siguiente(client, db,
     assert talleres['jul14'].inversion_real == 40.0
 
 
+def test_el_desglose_del_taller_por_campana_conjunto_y_anuncio(client, db, talleres, make_user, auth_headers):
+    from datetime import datetime
+
+    from app.models import LandingTracking
+
+    MetaAnuncio.query.filter_by(meta_ad_id='ws1').one().conjunto = 'Broad | Pizarra'
+    meta_ads_service.marcar_workshop('c-ws', True)
+    meta_ads_service.marcar_workshop('c-launch', True)
+    # Visitas y clics al grupo que trajo cada campaña (el id viaja en utm_campaign), en hora UTC.
+    db.session.add_all([
+        LandingTracking(page_path='/live-class-t3/', utm_campaign='c-ws', created_at=datetime(2026, 7, 10, 15)),
+        LandingTracking(page_path='/live-class-t3/', utm_campaign='c-ws', created_at=datetime(2026, 7, 12, 15)),
+        LandingTracking(page_path='/live-class-t3/', utm_campaign='c-ws', evento='clic_whatsapp',
+                        created_at=datetime(2026, 7, 12, 15, 5)),
+        LandingTracking(page_path='/replay/', utm_campaign='c-ws', created_at=datetime(2026, 7, 12, 16)),  # otro embudo
+        LandingTracking(page_path='/live-class-t3/', utm_campaign='c-ws', created_at=datetime(2026, 7, 16, 15)),  # otro taller
+    ])
+    db.session.commit()
+
+    respuesta = client.get(f"/api/workshop/events/{talleres['jul14'].id}/anuncios",
+                           headers=auth_headers(make_user(role='admin')))
+
+    datos = respuesta.get_json()
+    assert respuesta.status_code == 200
+    assert (datos['desde'], datos['hasta'], datos['campanas_marcadas']) == ('2026-07-09', '2026-07-14', 2)
+    assert [(c['nombre'], c['gasto']) for c in datos['campanas']] == [('SPI-TRIPODE-LAUNCH', 60.0), ('WORKSHOP FUNNEL', 40.0)]
+    ws = datos['campanas'][1]
+    assert (ws['visitas'], ws['clics_whatsapp'], ws['costo_whatsapp']) == (2, 1, 40.0)
+    [conjunto] = ws['conjuntos']
+    assert conjunto['nombre'] == 'Broad | Pizarra'
+    assert [(a['nombre'], a['gasto'], a['cpc'], a['ctr']) for a in conjunto['anuncios']] == [('Ad 4', 40.0, 2.0, 5.0)]
+    assert (datos['totales']['gasto'], datos['totales']['visitas']) == (100.0, 2)
+
+
 def test_editar_el_taller_no_pisa_lo_cargado_a_mano_con_lo_de_meta(client, db, talleres, make_user, auth_headers):
     """El panel manda el evento entero (con los valores de Meta) al resincronizar el embudo."""
     meta_ads_service.marcar_workshop('c-ws', True)

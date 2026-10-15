@@ -18,10 +18,13 @@ datos de Meta para esos días; si se desmarcan todas las campañas vuelven los c
 `recalcular()` corre después de cada sincronización con Meta, al marcar o desmarcar una campaña y al
 registrar o borrar un taller (la ventana del siguiente cambia). No hace commit.
 """
+from collections import defaultdict
 from datetime import datetime, timedelta
 
+import pytz
+
 from app import db
-from app.models import MetaAnuncio, MetaCampanaWorkshop, MetaGastoDiario, WorkshopEvent
+from app.models import LandingTracking, MetaAnuncio, MetaCampanaWorkshop, MetaGastoDiario, WorkshopEvent
 
 DIAS_SIN_ANTERIOR = 7
 
@@ -75,6 +78,98 @@ def recalcular():
         conteos = (None, None, None) if sin_conteos else (int(impresiones), int(clics), int(enlace))
         evento.meta_impresiones, evento.meta_clics, evento.meta_clics_enlace = conteos
         evento.meta_actualizado_at = datetime.utcnow()
+
+
+def _metricas(gasto, impresiones, clics, enlace):
+    return {
+        'gasto': round(gasto, 2), 'impresiones': impresiones, 'clics': clics, 'clics_enlace': enlace,
+        'cpm': round(gasto / impresiones * 1000, 2) if impresiones else None,
+        'cpc': round(gasto / enlace, 2) if enlace else None,
+        'ctr': round(clics / impresiones * 100, 2) if impresiones else None,
+    }
+
+
+def _limites_utc(desde, hasta, zona):
+    """[00:00 local de `desde`, 00:00 local del día siguiente a `hasta`) en UTC naive."""
+    inicio = zona.localize(datetime.combine(desde, datetime.min.time()))
+    fin = zona.localize(datetime.combine(hasta + timedelta(days=1), datetime.min.time()))
+    return (inicio.astimezone(pytz.utc).replace(tzinfo=None), fin.astimezone(pytz.utc).replace(tzinfo=None))
+
+
+def _landings_por_campana(desde, hasta, zona):
+    """{campana_id: (visitas, clics_whatsapp)} de las landings del taller en esos días. Los anuncios
+    de Meta mandan el id de la campaña en `utm_campaign` (visto el 15/10/2026); la grabación
+    (/replay/) es otro embudo y queda afuera."""
+    from app.api.metrics import EVENTO_CLIC_WHATSAPP
+
+    inicio, fin = _limites_utc(desde, hasta, zona)
+    filas = db.session.query(
+        LandingTracking.utm_campaign,
+        db.func.count(db.case((db.or_(LandingTracking.evento.is_(None),
+                                      LandingTracking.evento != EVENTO_CLIC_WHATSAPP), 1))),
+        db.func.count(db.case((LandingTracking.evento == EVENTO_CLIC_WHATSAPP, 1))),
+    ).filter(
+        LandingTracking.created_at >= inicio, LandingTracking.created_at < fin,
+        LandingTracking.utm_campaign.isnot(None), ~LandingTracking.page_path.like('%/replay%'),
+    ).group_by(LandingTracking.utm_campaign).all()
+    resultado = defaultdict(lambda: [0, 0])
+    for campana, visitas, clics in filas:
+        resultado[campana.strip()][0] += visitas
+        resultado[campana.strip()][1] += clics
+    return resultado
+
+
+def desglose(evento, zona=None):
+    """Los anuncios de las campañas de workshop en los días del taller, por campaña › conjunto ›
+    anuncio, con gasto, impresiones, clics, CPM, CPC y CTR, y por campaña las visitas a las landings
+    y los clics al grupo de WhatsApp que trajo."""
+    zona = zona or pytz.timezone('America/La_Paz')
+    desde, hasta = ventana_de(evento)
+    filas = _de_workshop().filter(
+        MetaGastoDiario.fecha >= desde, MetaGastoDiario.fecha <= hasta,
+    ).with_entities(
+        MetaAnuncio.campana_id, MetaAnuncio.campana, MetaAnuncio.conjunto_id, MetaAnuncio.conjunto,
+        MetaAnuncio.meta_ad_id, MetaAnuncio.nombre, MetaAnuncio.estado,
+        db.func.sum(MetaGastoDiario.gasto), db.func.coalesce(db.func.sum(MetaGastoDiario.impresiones), 0),
+        db.func.coalesce(db.func.sum(MetaGastoDiario.clics), 0),
+        db.func.coalesce(db.func.sum(MetaGastoDiario.clics_enlace), 0),
+    ).group_by(MetaAnuncio.campana_id, MetaAnuncio.campana, MetaAnuncio.conjunto_id, MetaAnuncio.conjunto,
+               MetaAnuncio.meta_ad_id, MetaAnuncio.nombre, MetaAnuncio.estado).all()
+    landings = _landings_por_campana(desde, hasta, zona)
+
+    campanas = {}
+    for cid, campana, sid, conjunto, ad_id, nombre, estado, gasto, imp, clics, enlace in filas:
+        c = campanas.setdefault(cid, {'campana_id': cid, 'nombre': campana, 'suma': [0.0, 0, 0, 0], 'conjuntos': {}})
+        s = c['conjuntos'].setdefault(sid or conjunto, {'nombre': conjunto, 'suma': [0.0, 0, 0, 0], 'anuncios': []})
+        valores = (float(gasto or 0), int(imp), int(clics), int(enlace))
+        for grupo in (c, s):
+            grupo['suma'] = [a + b for a, b in zip(grupo['suma'], valores)]
+        s['anuncios'].append({'meta_ad_id': ad_id, 'nombre': nombre, 'estado': estado, **_metricas(*valores)})
+
+    resultado, total = [], [0.0, 0, 0, 0]
+    total_visitas = total_whatsapp = 0
+    for c in sorted(campanas.values(), key=lambda x: -x['suma'][0]):
+        visitas, whatsapp = landings.get(c['campana_id'], (0, 0))
+        total = [a + b for a, b in zip(total, c['suma'])]
+        total_visitas += visitas
+        total_whatsapp += whatsapp
+        resultado.append({
+            'campana_id': c['campana_id'], 'nombre': c['nombre'], **_metricas(*c['suma']),
+            'visitas': visitas, 'clics_whatsapp': whatsapp,
+            'costo_whatsapp': round(c['suma'][0] / whatsapp, 2) if whatsapp else None,
+            'conjuntos': [
+                {'nombre': s['nombre'], **_metricas(*s['suma']),
+                 'anuncios': sorted(s['anuncios'], key=lambda a: -a['gasto'])}
+                for s in sorted(c['conjuntos'].values(), key=lambda x: -x['suma'][0])
+            ],
+        })
+    return {
+        'desde': desde.isoformat(), 'hasta': hasta.isoformat(),
+        'campanas_marcadas': MetaCampanaWorkshop.query.count(),
+        'totales': {**_metricas(*total), 'visitas': total_visitas, 'clics_whatsapp': total_whatsapp,
+                    'costo_whatsapp': round(total[0] / total_whatsapp, 2) if total_whatsapp else None},
+        'campanas': resultado,
+    }
 
 
 def _sin_meta(evento):

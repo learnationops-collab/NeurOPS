@@ -10,6 +10,7 @@ import WorkshopFunnelView from './components/WorkshopFunnelView';
 import WorkshopFormModal from './components/WorkshopFormModal';
 import WorkshopLandingView from './components/WorkshopLandingView';
 import WorkshopTraficoView from './components/WorkshopTraficoView';
+import WorkshopAnunciosView from './components/WorkshopAnunciosView';
 import WorkshopDiagnostico from './components/WorkshopDiagnostico';
 import WorkshopGoalsModal from './components/WorkshopGoalsModal';
 import WorkshopSimuladorView from './components/WorkshopSimuladorView';
@@ -576,18 +577,24 @@ const WorkshopDashboardPage = () => {
                         )}
                     </>
                 ) : activeTab === 'funnel' ? (
-                    <WorkshopFunnelView
-                        events={events}
-                        selectedEvent={selectedEventForFunnel}
-                        onSelectEvent={setSelectedEventForFunnel}
-                        onResync={handleResyncFunnel}
-                        resyncing={resyncing}
-                        formatDate={formatDate}
-                        formatCurrency={formatCurrency}
-                        desglose={desglose}
-                        ventana={ventana}
-                        cargandoDesglose={cargandoDesglose}
-                    />
+                    <>
+                        <WorkshopFunnelView
+                            events={events}
+                            selectedEvent={selectedEventForFunnel}
+                            onSelectEvent={setSelectedEventForFunnel}
+                            onResync={handleResyncFunnel}
+                            resyncing={resyncing}
+                            formatDate={formatDate}
+                            formatCurrency={formatCurrency}
+                            desglose={desglose}
+                            ventana={ventana}
+                            cargandoDesglose={cargandoDesglose}
+                        />
+                        {selectedEventForFunnel && (
+                            <WorkshopAnunciosView key={selectedEventForFunnel.id} evento={selectedEventForFunnel}
+                                formatCurrency={formatCurrency} />
+                        )}
+                    </>
                 ) : activeTab === 'simulador' ? (
                     <WorkshopSimuladorView
                         events={events}

@@ -196,6 +196,15 @@ def get_workshop_event(event_id):
     event = WorkshopEvent.query.get_or_404(event_id)
     return jsonify(_con_replay_local(event.to_dict(), event)), 200
 
+@bp.route('/events/<int:event_id>/anuncios', methods=['GET'])
+@workshop_required
+def get_workshop_event_anuncios(event_id):
+    """Los anuncios de Meta de las campañas de workshop en los días de este taller (del siguiente al
+    anterior hasta el del taller): campaña › conjunto › anuncio, ver workshop_meta_service.desglose."""
+    event = WorkshopEvent.query.get_or_404(event_id)
+    return jsonify(workshop_meta_service.desglose(event, _tz_usuario())), 200
+
+
 def _tz_usuario():
     try:
         return pytz.timezone(getattr(current_user, 'timezone', None) or 'America/La_Paz')

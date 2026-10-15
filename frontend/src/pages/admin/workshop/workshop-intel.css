@@ -571,3 +571,14 @@
 .ws-shell .form-field .de-meta { display: inline; font-weight: 600; color: var(--pink-light); }
 .ws-shell .form-field input[readonly] { opacity: .75; cursor: default; }
 .ws-shell .de-meta-nota { margin: -4px 0 0; font-size: 11px; line-height: 1.45; color: color-mix(in srgb, var(--ln-text-out, #ffffff) 60%, transparent); }
+
+/* Anuncios que llenaron el taller (pestaña Embudo, 15/10/2026): campaña › conjunto › anuncio. */
+.ws-shell .ws-anuncios { margin-top: 22px; }
+.ws-shell .ws-anuncios-vacio { text-align: center; padding: 32px 12px; }
+.ws-shell .ws-anuncios-tabla td, .ws-shell .ws-anuncios-tabla th { white-space: nowrap; }
+.ws-shell .ws-anuncios-tabla tbody th { max-width: 360px; overflow: hidden; text-overflow: ellipsis; }
+.ws-shell .ws-anuncios-abrir { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; text-align: left; }
+.ws-shell .ws-anuncios-conjunto th { padding-left: 34px; font-weight: 700; }
+.ws-shell .ws-anuncios-anuncio th { padding-left: 54px; font-weight: 500; }
+.ws-shell .ws-anuncios-anuncio td, .ws-shell .ws-anuncios-anuncio th { opacity: .82; }
+.ws-shell .ws-anuncios-total th, .ws-shell .ws-anuncios-total td { font-weight: 800; }
