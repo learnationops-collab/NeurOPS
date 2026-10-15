@@ -12,7 +12,6 @@ import SessionEntry from './pages/auth/SessionEntry';
 import AnalysisPage from './pages/admin/reports/AnalysisPage';
 import ConstructionPage from './pages/common/ConstructionPage';
 import DatabasePage from './pages/admin/database/DatabasePage';
-import MarketingPage from './pages/admin/marketing/MarketingPage';
 import AdminLeadsPage from './pages/admin/leads/LeadsPage';
 import CloserDashboard from './pages/closer/dashboard/CloserDashboard';
 import CloserLeadsPage from './pages/closer/leads/LeadsPage';

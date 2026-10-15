@@ -109,10 +109,14 @@ def asignar(client, user, auth_headers, appt, ad, **extra):
     return client.post(URL, headers=auth_headers(user), json={'appointment_id': appt.id, 'ad_id': ad.id, **extra})
 
 
+def tablero_de_marketing():
+    """La tabla de anuncios de Marketing de octubre: el cálculo con el que Marketing cuenta."""
+    from app.services import anuncios_service
+    return anuncios_service.tablero(date(2026, 10, 1), date(2026, 10, 31))
+
+
 def agendas_de_marketing(ad):
-    from app.services.marketing_service import MarketingService
-    filas = MarketingService.get_ad_performance_data(None, '2026-10-01', '2026-10-31')
-    return {f['ad_id']: f['agendas'] for f in filas}.get(ad.id, 0)
+    return {f['ad_id']: f['agendas'] for f in tablero_de_marketing()['filas']}.get(ad.id, 0)
 
 
 # --- 1. Qué agendas entran ------------------------------------------------------------------------
@@ -257,7 +261,10 @@ def test_quien_reagendo_queda_atribuido_en_sus_dos_agendas(client, db, equipo, a
 
     assert asignar(client, equipo['elias'], auth_headers, nueva, anuncios['GUIA']).status_code == 200
 
-    assert agendas_de_marketing(anuncios['GUIA']) == 2
+    # Marketing cuenta una agenda por persona y palabra clave: que la vieja también quedó atribuida
+    # lo dice que no quede ninguna sin atribuir.
+    assert agendas_de_marketing(anuncios['GUIA']) == 1
+    assert tablero_de_marketing()['sin_atribuir']['agendas'] == 0
     respuesta = LeadAnswer.query.filter(LeadAnswer.ad_id == anuncios['GUIA'].id).one()
     assert respuesta.created_at < datetime(2026, 10, 1, 9)
 

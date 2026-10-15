@@ -9,17 +9,17 @@ números) creadas desde `DESDE`, una por persona como en "Agendas generadas"
 (`ComercialService.generadas`): es literalmente esa tabla, sin las que ya tienen anuncio.
 
 **Qué es tener palabra clave.** La regla con la que Marketing reparte las agendas entre los
-anuncios (`MarketingService`, punto 4, y la bandeja «Sin anuncio» de `/public/marketing`): el
-Instagram del lead lleva a su conversación de ManyChat (`ManychatLead`) y ésta a una respuesta con
-anuncio (`LeadAnswer.ad_id`) de antes de la reunión. Así la agenda que sale de la bandeja es la que
-Marketing ya cuenta para ese anuncio, y la bandeja no puede vaciarse con agendas que Marketing
-sigue viendo sin atribuir. `Appointment.keyword` NO alcanza: Marketing no lo lee; se escribe igual
-al asignar (lo muestran el mazo y la ficha) y, si ya estaba, sirve de sugerencia.
+anuncios (la tabla de anuncios, `anuncios_service`, y la bandeja «Sin anuncio» de
+`/public/marketing`): el Instagram del lead lleva a su conversación de ManyChat (`ManychatLead`) y
+ésta a una respuesta con anuncio (`LeadAnswer.ad_id`) de antes de la reunión. Así la agenda que
+sale de la bandeja es la que Marketing ya cuenta para ese anuncio, y la bandeja no puede vaciarse
+con agendas que Marketing sigue viendo sin atribuir. `Appointment.keyword` NO alcanza: Marketing no
+lo lee; se escribe igual al asignar (lo muestran el mazo y la ficha) y, si ya estaba, sirve de
+sugerencia.
 
 **Por qué hace falta el Instagram.** Es lo único con lo que Marketing encuentra la conversación de
-la agenda (el respaldo por nombre de `MarketingService` compara contra la FUENTE de la agenda, no
-contra el lead, así que no encuentra a nadie). Sin Instagram no hay atribución posible: la tarjeta
-lo pide solo cuando falta.
+la agenda: la tabla de anuncios no busca por nombre. Sin Instagram no hay atribución posible: la
+tarjeta lo pide solo cuando falta.
 
 **Desde cuándo.** `DESDE` es julio de 2026, cuando ManyChat empezó a guardar el anuncio de cada
 conversación (la primera `LeadAnswer` es de ese mes; antes no hay ninguna). Una agenda anterior no
