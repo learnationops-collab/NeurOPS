@@ -180,6 +180,24 @@ def test_despues_de_la_agenda_cuenta_cada_resultado_con_su_porcentaje(db, elias,
 
 
 @freeze_time(HOY)
+def test_despues_de_la_agenda_parte_de_las_que_ya_se_dieron(db, elias, closer):
+    """Corrección del dueño (15/10/2026): «que aquí solamente aparezcan las que ya se dieron». Una
+    llamada de la semana que viene no está en la base del panel; una cancelada sí (el cancelar ya
+    pasó), aunque su reunión fuera a ser después."""
+    futura = datetime(2026, 10, 20, 15)
+    generada(db, elias, closer, creada=datetime(2026, 9, 28, 15), reunion=futura)
+    generada(db, elias, closer, creada=datetime(2026, 9, 28, 15), reunion=futura, closer_result='Cancelado')
+    for resultado in ('Show up', 'No Show', 'Pendiente'):
+        generada(db, elias, closer, closer_result=resultado)
+
+    b = bloque(elias)
+
+    assert (b['generadas'], b['ocurridas'], b['por_venir'], b['sin_reporte']) == (5, 4, 1, 1)
+    assert (b['canceladas'], b['canceladas_pct']) == (1, 25.0)
+    assert (b['realizadas'], b['show_up']) == (2, 50.0)
+
+
+@freeze_time(HOY)
 def test_las_ventas_originadas_salen_de_las_agendas_que_asistieron(db, elias, closer):
     compro = generada(db, elias, closer, closer_result='Show up')
     generada(db, elias, closer, closer_result='Show up')

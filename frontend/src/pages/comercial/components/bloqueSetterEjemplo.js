@@ -63,8 +63,14 @@ export const bloqueSetterEjemplo = ({ filas = GENERADAS, respondidos = null } = 
         realizadas, no_show: n(f => f.post_call.key === 'no_show'), asistieron, ventas_originadas: ventas,
         senas: 0,
     };
+    // Las que ya se dieron (15/10/2026): la llamada pasó, o se canceló o reagendó.
+    const ocurridas = filas.filter(f => f.ya_paso || ['cancelo', 'reagendo'].includes(f.post_call.key));
     Object.assign(despues, {
-        canceladas_pct: pct(despues.canceladas, generadas), reagendadas_pct: pct(despues.reagendadas, generadas),
+        ocurridas: ocurridas.length, por_venir: generadas - ocurridas.length,
+        sin_reporte: ocurridas.filter(f => f.post_call.key === 'pendiente').length,
+    });
+    Object.assign(despues, {
+        canceladas_pct: pct(despues.canceladas, despues.ocurridas), reagendadas_pct: pct(despues.reagendadas, despues.ocurridas),
         no_show_pct: pct(despues.no_show, realizadas), show_up: pct(asistieron, realizadas), cierre: pct(ventas, asistieron),
     });
     const etapas = [

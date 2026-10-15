@@ -157,21 +157,34 @@ def despues_de(generadas):
     """Lo que pasó con las agendas generadas: las mismas filas que lista Revisar › Agendas, una por
     persona y por fecha de creación (`ComercialService.generadas`).
 
-    Las canceladas y las reagendadas se miden sobre las generadas; el show up y el no show, sobre
-    las que ya tienen resultado (`realizadas`), que es el show up de todo el tablero: una llamada de
-    la semana que viene no es un no show. Las ventas, sobre las que asistieron.
+    Corrección del dueño (15/10/2026): «fijate que acá solamente aparezcan las que ya se dieron, no
+    las que todavía no se dieron». El panel parte de las agendas que YA SE DIERON (`ocurridas`): la
+    hora de la llamada ya pasó, o se canceló o reagendó (eso ya pasó aunque la llamada fuera a ser
+    la semana que viene). Las que todavía no ocurrieron quedan aparte (`por_venir`), y de las que
+    ocurrieron, las que nadie reportó (`sin_reporte`): son la diferencia entre las agendas y los
+    estados. `generadas` sigue siendo todas: es el cruce del embudo con las agendas reportadas.
+
+    Las canceladas y las reagendadas se miden sobre las ocurridas; el show up y el no show, sobre
+    las que ya tienen resultado (`realizadas`), que es el show up de todo el tablero. Las ventas,
+    sobre las que asistieron.
     """
     tot = ComercialService.totales_agendas(generadas)
     cuenta = {}
     for f in generadas:
         cuenta[f['post_call']['key']] = cuenta.get(f['post_call']['key'], 0) + 1
     n = tot['agendas']
+    ocurridas = [f for f in generadas if f.get('ya_paso') or f['post_call']['key'] in ('cancelo', 'reagendo')]
+    sin_reporte = sum(1 for f in ocurridas if f['post_call']['key'] == 'pendiente')
+    base = len(ocurridas)
     return {
         'generadas': n,
+        'ocurridas': base,
+        'por_venir': n - base,
+        'sin_reporte': sin_reporte,
         'canceladas': cuenta.get('cancelo', 0),
-        'canceladas_pct': pct(cuenta.get('cancelo', 0), n),
+        'canceladas_pct': pct(cuenta.get('cancelo', 0), base),
         'reagendadas': cuenta.get('reagendo', 0),
-        'reagendadas_pct': pct(cuenta.get('reagendo', 0), n),
+        'reagendadas_pct': pct(cuenta.get('reagendo', 0), base),
         'realizadas': tot['realizadas'],
         'no_show': tot['no_show'],
         'no_show_pct': tot['no_show_pct'],

@@ -205,17 +205,22 @@ const PanelDespues = ({ b, comision, canal, irA }) => (
             ayuda={enCanalNo('Del sistema: las agendas generadas, una por persona, y en qué terminaron.', canal)} />
     }>
         <div className="ds-despues">
-            <Caja rotulo="Agendas" valor={fmt.num(b.generadas)} irA={irA} destino={S.generadas}
+            {/* Solo las que ya se dieron (corrección del dueño, 15/10/2026): las de más adelante y las
+                que nadie reportó van en la bajada, así se ve por qué los estados no suman las agendas.
+                Un backend anterior no manda `ocurridas`: ahí, las generadas como antes. */}
+            <Caja rotulo="Agendas" valor={fmt.num(b.ocurridas ?? b.generadas)} irA={irA} destino={S.generadas}
                 detalle={`agendas generadas, ${b.generadas}`} color={v('brand-secondary')}
-                ayuda="Reservadas en el período, por fecha de creación y una por persona." />
+                sub={b.ocurridas === undefined ? null
+                    : `${fmt.num(b.sin_reporte)} sin reporte · ${fmt.num(b.por_venir)} por venir`}
+                ayuda="Las que ya se dieron: la llamada pasó, o se canceló o reagendó." />
             <Baja />
             <div className="ds-despues-estados">
                 <Caja rotulo="Canceladas" valor={fmt.num(b.canceladas)} sub={fmt.pct(b.canceladas_pct)}
                     irA={irA} destino={S.canceladas} detalle={`canceladas, ${b.canceladas}`} color={v('idle')}
-                    ayuda="Canceladas; el % es sobre las agendas generadas." />
+                    ayuda="Canceladas; el % es sobre las agendas que ya se dieron." />
                 <Caja rotulo="Reagendadas" valor={fmt.num(b.reagendadas)} sub={fmt.pct(b.reagendadas_pct)}
                     irA={irA} destino={S.reagendadas} detalle={`reagendadas, ${b.reagendadas}`} color={v('info')}
-                    ayuda="Reagendadas; el % es sobre las agendas generadas." />
+                    ayuda="Reagendadas; el % es sobre las agendas que ya se dieron." />
                 <Caja rotulo="No show" valor={fmt.num(b.no_show)} sub={fmt.pct(b.no_show_pct)}
                     irA={irA} destino={S.no_show} detalle={`no show, ${b.no_show}`} color={v('error')}
                     ayuda="No se presentaron; el % es sobre las agendas con resultado." />
