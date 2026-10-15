@@ -230,9 +230,13 @@ def texto_de_discord(stat, setter_name):
         f"📥 **Entrantes:** {tot['entrantes']} · Anuncios {ads['entrantes']} · Inbound {inb['entrantes']}",
         f"✅ **Cualificación:** {fmt_pct(pct(tot['cualificados'], tot['entrantes']))} "
         f"({tot['cualificados']} cualificados · Anuncios {fmt_pct(pct(ads['cualificados'], ads['entrantes']))}"
-        f" · Inbound {fmt_pct(pct(inb['cualificados'], inb['entrantes']))})",
+        f" · Inbound {fmt_pct(pct(inb['cualificados'], inb['entrantes']))})"
+        # Desde el 15/10/2026 el setter carga los leads: lo que sobra no contestó.
+        + (f" · {tot['no_contestaron']} no contestaron" if ads.get('leads') is not None else ''),
         f"💬 **Apertura:** {fmt_pct(pct(tot['aperturas'], tot['entrantes']))} "
-        f"({tot['ap_entrantes']} en entrantes · {tot['ap_dolor']} en dolor)",
+        f"({tot['ap_entrantes']} en entrantes · {tot['ap_dolor']} en dolor)"
+        + (f" · respondieron {tot['ap_respondidas']} ({fmt_pct(pct(tot['ap_respondidas'], tot['aperturas']))})"
+           if tot.get('ap_respondidas') is not None else ''),
         f"📅 **Agendas:** {tot['agendas']} · Anuncios {ads['agendas']} · Inbound {inb['agendas']}",
         f"👋 **Bienvenidas:** {b['hechas']} hechas · {b['respondidas']} respondidas "
         f"({fmt_pct(pct(b['respondidas'], b['hechas']))}) · {b['aperturas']} aperturas",
