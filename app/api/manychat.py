@@ -22,7 +22,7 @@ def receive_manychat_ad_lead():
     if request.method == 'GET':
         return jsonify({"status": "ok", "message": "Webhook activo"}), 200
 
-    from app.models import ManychatLead, LeadAnswer, Ad
+    from app.models import ManychatLead, LeadAnswer
 
     data = request.get_json(silent=True) or {}
     logger.info(f"[WEBHOOK NUEVO FORMATO] Recibido ({request.method}): {data}")
@@ -101,17 +101,20 @@ def receive_manychat_ad_lead():
             ad_id = None
             logger.warning(f"[WEBHOOK] ad_id no es un entero válido: '{ad_id_raw}', se guardará como None")
 
-    # Intentar resolver ad_id por keyword si no viene explícito
-    if not ad_id and is_valid_value(keyword):
-        try:
-            ad = Ad.query.filter_by(keyword=keyword, status='active').first()
+    try:
+        # El anuncio sale de la palabra clave (14/10/2026): ya no se registra antes a mano. Si es nueva,
+        # se crea (ver anuncios_service.anuncio_de_keyword). Un ad_id explícito (flujos viejos) manda.
+        if not ad_id and is_valid_value(keyword):
+            from app.services.anuncios_service import anuncio_de_keyword
+            ad = anuncio_de_keyword(keyword)
             if ad:
                 ad_id = ad.id
-                logger.info(f"[WEBHOOK] ad_id resuelto por keyword '{keyword}': {ad_id}")
-        except Exception:
-            pass
 
-    try:
+        def calificacion_nueva(actual):
+            # Un webhook sin `cualificacion` (o con la variable vacía) no borra la que ya se sabía.
+            nueva = resolve_qualification(qualification_raw)
+            return actual if nueva == 'null' and actual in ('true', 'false') else nueva
+
         # 1. UPSERT LEAD
         lead = ManychatLead.query.filter_by(manychat_id=str(manychat_id)).first()
         if lead:
@@ -179,14 +182,18 @@ def receive_manychat_ad_lead():
             if latest_send:
                 time_diff = datetime.utcnow() - latest_send.created_at
                 within_window = time_diff.total_seconds() < 1800
+                # La respuesta a un envío de OTRO anuncio no se mezcla con él: es otra conversación
+                # (antes le pisaba la palabra clave al envío y el lead quedaba en el anuncio equivocado).
+                if ad_id and latest_send.ad_id and latest_send.ad_id != ad_id:
+                    within_window = False
 
             if latest_send and within_window:
                 # Consolidamos la respuesta del Lead en el registro de envío existente
                 answer = latest_send
                 answer.id_option = opt_str
-                
+
                 # Procesar cualificación
-                answer.qualification = resolve_qualification(qualification_raw)
+                answer.qualification = calificacion_nueva(answer.qualification)
 
                 # Sincronizar otros campos si vienen
                 if is_valid_value(fecha): 
@@ -262,7 +269,7 @@ def receive_manychat_ad_lead():
             if not is_new_interaction and answer:
                 if ad_id and not answer.ad_id:
                     answer.ad_id = ad_id
-                answer.qualification = resolve_qualification(qualification_raw)
+                answer.qualification = calificacion_nueva(answer.qualification)
                 if is_valid_value(fecha): 
                     answer.fecha_recibida = fecha
                 if is_valid_value(opening): 
