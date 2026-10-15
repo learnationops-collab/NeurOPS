@@ -63,7 +63,9 @@ recientes; volver a pedir un día lo pisa, no lo suma) y cuando alguien toca **S
    Sirve un Schedule de n8n con un nodo HTTP o un cron de Railway.
 
 Sin `META_ADS_TOKEN` no se sincroniza nada: la pantalla lo avisa y los costos quedan en «—». Lo cargado a mano en el
-sistema viejo (hasta el 23/07/2026) sigue sumando en los días en que Meta no trae nada.
+sistema viejo (hasta el 23/07/2026) sigue sumando en los días en que Meta no trae nada. Sus tablas (`ad_period_spends`,
+`campaigns`, `ad_sets`) siguen, pero las pantallas y las rutas para cargarlo o corregirlo se retiraron el 14 y el
+15/10/2026: desde la app ya no se edita.
 
 **Alternativas descartadas:** cargar el gasto a mano todos los días (es lo que se dejó de hacer en julio); que un
 agente lo copie con el conector de Meta (depende de una computadora prendida); un conector pago tipo Supermetrics
