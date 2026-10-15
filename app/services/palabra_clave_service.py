@@ -33,6 +33,8 @@ resumen trae la bandeja partida por el mes en que se CREÓ cada agenda (la fecha
 """
 from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta
+import re
+import unicodedata
 import uuid
 
 import pytz
@@ -52,6 +54,18 @@ ACCION = 'palabra_clave'
 # El `keyword` de la respuesta que se crea cuando la conversación no tenía ninguna para marcar: la
 # misma marca que dejaba la atribución manual de Marketing, para distinguirla de las de ManyChat.
 KEYWORD_MANUAL = 'manual_attribution'
+
+# Palabras clave nuevas (15/10/2026). «Los setters no ven todas las palabras claves que llegan desde
+# ManyChat: permití que puedan agregar una que no esté en los registros». El buscador ofrece también
+# las palabras clave que llegaron por ManyChat y no tienen anuncio (`nueva: True`, sin id) y lo que
+# el setter escriba; al asignar se crea el anuncio. Un anuncio pide un conjunto (`ads.ad_set_id` no
+# admite NULL en main), así que los nuevos van a este conjunto de esta campaña, que Marketing después
+# reagrupa.
+CAMPANA_NUEVAS = 'Palabras clave de ManyChat'
+CONJUNTO_NUEVAS = 'Agregadas por los setters'
+LARGO_MAXIMO = 100
+# Lo que ManyChat manda cuando la variable no se reemplazó, o la marca de la atribución manual.
+NO_SON_PALABRAS = frozenset({'MANUAL ATTRIBUTION', 'NULL', 'NONE', 'UNDEFINED', 'INDETERMINADO', 'N A'})
 
 
 class ErrorDePalabraClave(ValueError):
@@ -289,18 +303,95 @@ def _canal(cita):
     return None
 
 
+def clave_de_palabra(texto):
+    """La palabra clave normalizada: sin tildes, en mayúsculas, solo letras y números separados por
+    un espacio («Guía perú» -> «GUIA PERU»). None si no queda nada. Es la misma cuenta que
+    `clave_de_palabra` de los modelos en develop."""
+    if not isinstance(texto, str):
+        return None
+    sin_tildes = ''.join(c for c in unicodedata.normalize('NFKD', texto) if not unicodedata.combining(c))
+    limpio = re.sub(r'[^A-Z0-9]+', ' ', sin_tildes.upper()).strip()
+    return limpio[:LARGO_MAXIMO] or None
+
+
+def es_palabra_valida(texto):
+    """¿Es una palabra clave de verdad? Descarta las variables sin reemplazar de ManyChat
+    (`{{keyword}}`, `cuf_…`), los vacíos y la marca de la atribución manual."""
+    if not isinstance(texto, str):
+        return False
+    texto = texto.strip()
+    if not texto or len(texto) > LARGO_MAXIMO or '{{' in texto or '}}' in texto or 'cuf_' in texto.lower():
+        return False
+    clave = clave_de_palabra(texto)
+    return bool(clave) and clave not in NO_SON_PALABRAS
+
+
+def _anuncio_vigente(anuncios):
+    """De varios anuncios con la misma palabra clave, el que manda: el activo más nuevo."""
+    return max(anuncios, key=lambda a: ((a.status or '').lower() == 'active', a.id)) if anuncios else None
+
+
+def anuncio_de_palabra(texto):
+    """El anuncio de esa palabra clave, comparando sin tildes ni mayúsculas; si no hay, lo crea en el
+    conjunto de las agregadas (`CONJUNTO_NUEVAS`). No hace commit: lo hace `asignar`."""
+    from app.models import AdSet, Campaign
+
+    if not es_palabra_valida(texto):
+        raise ErrorDePalabraClave('Esa palabra clave no sirve: escribila como llega de ManyChat.')
+    clave = clave_de_palabra(texto)
+    iguales = [a for a in Ad.query.all() if clave in (clave_de_palabra(a.keyword), clave_de_palabra(a.name))]
+    if iguales:
+        return _anuncio_vigente(iguales)
+    campana = Campaign.query.filter_by(name=CAMPANA_NUEVAS).first()
+    if not campana:
+        campana = Campaign(name=CAMPANA_NUEVAS, status='active')
+        db.session.add(campana)
+        db.session.flush()
+    conjunto = AdSet.query.filter_by(campaign_id=campana.id, name=CONJUNTO_NUEVAS).first()
+    if not conjunto:
+        conjunto = AdSet(campaign_id=campana.id, name=CONJUNTO_NUEVAS, status='active')
+        db.session.add(conjunto)
+        db.session.flush()
+    nuevo = texto.strip()[:LARGO_MAXIMO]
+    anuncio = Ad(ad_set_id=conjunto.id, name=nuevo, keyword=nuevo, status='active')
+    db.session.add(anuncio)
+    db.session.flush()
+    return anuncio
+
+
+def _palabras_sin_anuncio(conocidas):
+    """Las palabras clave que llegaron por ManyChat y no tienen anuncio, las más usadas primero: una
+    por palabra (sin tildes ni mayúsculas), escrita como llegó más veces."""
+    cuantas, como = Counter(), defaultdict(Counter)
+    for keyword, n in db.session.query(LeadAnswer.keyword, func.count(LeadAnswer.id)) \
+            .filter(LeadAnswer.keyword.isnot(None)).group_by(LeadAnswer.keyword):
+        if not es_palabra_valida(keyword):
+            continue
+        clave = clave_de_palabra(keyword)
+        if clave in conocidas:
+            continue
+        cuantas[clave] += n
+        como[clave][keyword.strip()] += n
+    return [como[clave].most_common(1)[0][0] for clave, _n in cuantas.most_common()]
+
+
 def anuncios(setter, filas=None, anuncio=None):
     """Los anuncios para el buscador, en un orden que sirva: los activos primero; entre ellos, los
-    que este setter más usó (sus agendas atribuidas a cada uno) y después los más nuevos."""
+    que este setter más usó (sus agendas atribuidas a cada uno) y después los más nuevos.
+
+    Al final, las palabras clave que llegaron por ManyChat y todavía no tienen anuncio (sin `id`,
+    `nueva: True`): elegir una crea su anuncio al asignar (ver `anuncio_de_palabra`)."""
     if filas is None:
         _pend, filas, anuncio = _bandeja(setter)
     usos = Counter((anuncio or {}).values())
     todos = [a for a in Ad.query.all() if (a.keyword or a.name)]
     todos.sort(key=lambda a: ((a.status or '').lower() != 'active', -usos.get(a.id, 0),
                               -(a.created_at.timestamp() if a.created_at else 0), a.id))
+    conocidas = {c for a in todos for c in (clave_de_palabra(a.keyword), clave_de_palabra(a.name)) if c}
     return [{'id': a.id, 'keyword': a.keyword or a.name, 'nombre': a.name or a.keyword,
              'activo': (a.status or '').lower() == 'active', 'usos': usos.get(a.id, 0)}
-            for a in todos]
+            for a in todos] + [{'id': None, 'keyword': k, 'nombre': k, 'activo': True, 'usos': 0, 'nueva': True}
+                               for k in _palabras_sin_anuncio(conocidas)]
 
 
 # --- El juego: hoy y la racha -------------------------------------------------------------------
@@ -378,7 +469,7 @@ def bandeja(setter):
 
 # --- Escritura ----------------------------------------------------------------------------------
 
-def asignar(setter, appointment_id, ad_id, instagram=None):
+def asignar(setter, appointment_id, ad_id, instagram=None, palabra=None):
     """Le pone a la agenda el anuncio por el que llegó el lead, de forma que Marketing la cuente.
 
     Deja lo mismo que la atribución manual de siempre (`/public/marketing/manual-attribution-agenda`),
@@ -407,9 +498,16 @@ def asignar(setter, appointment_id, ad_id, instagram=None):
     cita = Appointment.query.filter(Appointment.id == appointment_id, es_agenda_del_setter(setter.id)).first()
     if not cita:
         raise ErrorDePalabraClave('Esta agenda no es tuya.', 403)
-    anuncio = db.session.get(Ad, ad_id) if ad_id else None
-    if not anuncio:
-        raise ErrorDePalabraClave('Ese anuncio no existe: elegilo de la lista.', 404)
+    if ad_id:
+        anuncio = db.session.get(Ad, ad_id)
+        if not anuncio:
+            raise ErrorDePalabraClave('Ese anuncio no existe: elegilo de la lista.', 404)
+    elif palabra is not None:
+        # Una palabra clave que no está en la lista (o que llegó por ManyChat sin anuncio): se busca
+        # sin tildes ni mayúsculas y, si no hay, se crea su anuncio (15/10/2026).
+        anuncio = anuncio_de_palabra(palabra)
+    else:
+        raise ErrorDePalabraClave('Elegí el anuncio de la lista o escribí la palabra clave.')
 
     cliente = cita.client
     espejo = espejo_en_el_tablero(cita)
