@@ -9,7 +9,9 @@ de la Graph API. Sin las dos primeras variables no se sincroniza nada y la panta
   · los anuncios que gastaron en el período con su estado, su campaña, su conjunto y el TEXTO del
     creativo (`MetaAnuncio`): de ahí sale la palabra clave («Comenta QUIERO APLICAR y…»). Los que no
     gastaron no se piden: la cuenta tiene miles y no cambian ningún número;
-  · el gasto de cada anuncio por día (`MetaGastoDiario`, insights con `time_increment=1`). Por defecto
+  · el gasto de cada anuncio por día, con sus impresiones, clics y clics en el enlace
+    (`MetaGastoDiario`, insights con `time_increment=1`): de ahí salen el CPM, el CPC y los clics de
+    cada workshop (`workshop_meta_service`). Por defecto
     los últimos 7 días: Meta todavía ajusta el gasto de los días recientes y volver a pedirlos lo deja
     al día. Pedirlo de nuevo pisa el valor del día, no lo suma.
 
@@ -37,7 +39,7 @@ VERSION_POR_DEFECTO = 'v24.0'
 DIAS_POR_DEFECTO = 7
 DIAS_MAXIMOS = 180
 PAGINAS_MAXIMAS = 100
-CAMPOS_DEL_ANUNCIO = ('id,name,effective_status,campaign{name},adset{name},'
+CAMPOS_DEL_ANUNCIO = ('id,name,effective_status,campaign{id,name},adset{id,name},'
                       'creative{id,name,body,title,asset_feed_spec{bodies}}')
 
 
@@ -171,6 +173,14 @@ def _texto_del_creativo(creativo):
     return texto or creativo.get('name') or ''
 
 
+def _entero(valor):
+    """Meta manda los conteos como texto («1863»); sin el campo, 0 (no hubo)."""
+    try:
+        return int(float(valor or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
 def _guardar_anuncio(fila, cuenta, existentes):
     """`existentes` ({meta_ad_id: MetaAnuncio}) se lee una vez por sincronización: una consulta por
     anuncio son cientos de idas y vueltas a la base."""
@@ -183,6 +193,8 @@ def _guardar_anuncio(fila, cuenta, existentes):
     anuncio.nombre = (fila.get('name') or anuncio.nombre or '')[:255]
     anuncio.campana = ((fila.get('campaign') or {}).get('name') or anuncio.campana or '')[:255]
     anuncio.conjunto = ((fila.get('adset') or {}).get('name') or anuncio.conjunto or '')[:255]
+    anuncio.campana_id = str((fila.get('campaign') or {}).get('id') or anuncio.campana_id or '') or None
+    anuncio.conjunto_id = str((fila.get('adset') or {}).get('id') or anuncio.conjunto_id or '') or None
     anuncio.creative_id = str(creativo.get('id') or anuncio.creative_id or '') or None
     anuncio.texto = _texto_del_creativo(creativo) or anuncio.texto
     anuncio.estado = fila.get('effective_status') or anuncio.estado
@@ -213,7 +225,8 @@ def sincronizar(desde=None, hasta=None):
             'level': 'ad',
             'time_increment': 1,
             'time_range': json.dumps({'since': desde.isoformat(), 'until': hasta.isoformat()}),
-            'fields': 'ad_id,ad_name,campaign_name,adset_name,spend,account_currency',
+            'fields': ('ad_id,ad_name,campaign_id,campaign_name,adset_id,adset_name,spend,account_currency,'
+                       'impressions,clicks,inline_link_clicks'),
             'limit': 500,
             'access_token': token,
         }))
@@ -230,10 +243,15 @@ def sincronizar(desde=None, hasta=None):
             elif not (existentes.get(meta_ad_id) and existentes[meta_ad_id].texto):
                 # Borrado o sin acceso: queda con el nombre, la campaña y el conjunto de los insights.
                 _guardar_anuncio({'id': meta_ad_id, 'name': fila.get('ad_name'),
-                                  'campaign': {'name': fila.get('campaign_name')},
-                                  'adset': {'name': fila.get('adset_name')}}, cuenta, existentes)
+                                  'campaign': {'id': fila.get('campaign_id'), 'name': fila.get('campaign_name')},
+                                  'adset': {'id': fila.get('adset_id'), 'name': fila.get('adset_name')}},
+                                 cuenta, existentes)
             else:
                 existentes[meta_ad_id].cuenta_id = cuenta
+            # Los insights dicen siempre de qué campaña y conjunto es (aunque la ficha no se pueda pedir).
+            anuncio = existentes[meta_ad_id]
+            anuncio.campana_id = str(fila.get('campaign_id') or anuncio.campana_id or '') or None
+            anuncio.conjunto_id = str(fila.get('adset_id') or anuncio.conjunto_id or '') or None
             anuncios += 1
 
         # Los días pedidos se reemplazan enteros para los anuncios de la cuenta: un día que Meta ya no
@@ -258,6 +276,9 @@ def sincronizar(desde=None, hasta=None):
                 db.session.add(registro)
             registro.gasto = gasto
             registro.moneda = (fila.get('account_currency') or '')[:3] or None
+            registro.impresiones = _entero(fila.get('impressions'))
+            registro.clics = _entero(fila.get('clicks'))
+            registro.clics_enlace = _entero(fila.get('inline_link_clicks'))
             registro.actualizado_at = datetime.utcnow()
             filas_de_gasto += 1
             gasto_total += gasto

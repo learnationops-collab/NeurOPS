@@ -62,14 +62,15 @@ def meta(monkeypatch):
     class Falsa:
         anuncios = [
             {'id': '111', 'name': 'DMV | H2 | BRD', 'effective_status': 'ACTIVE',
-             'campaign': {'name': 'DMV | Test Públicos'}, 'adset': {'name': 'DMV | H2 | BRD'},
+             'campaign': {'id': 'c1', 'name': 'DMV | Test Públicos'}, 'adset': {'id': 's1', 'name': 'DMV | H2 | BRD'},
              'creative': {'id': '9', 'body': 'Comenta QUIERO APLICAR y te ayudo'}},
             {'id': '222', 'name': 'LP-TA -PSI-US: Crudo', 'effective_status': 'PAUSED',
              'campaign': {'name': 'LM Funnel'}, 'adset': {'name': 'Guía Steps'},
              'creative': {'id': '8', 'body': 'Descargá la guía gratis'}},
         ]
         gastos = [
-            {'ad_id': '111', 'date_start': '2026-10-12', 'spend': '10.50', 'account_currency': 'USD'},
+            {'ad_id': '111', 'date_start': '2026-10-12', 'spend': '10.50', 'account_currency': 'USD',
+             'campaign_id': 'c1', 'adset_id': 's1', 'impressions': '4200', 'clicks': '90', 'inline_link_clicks': '61'},
             {'ad_id': '111', 'date_start': '2026-10-13', 'spend': '4', 'account_currency': 'USD'},
             {'ad_id': '222', 'date_start': '2026-10-13', 'spend': '7.25', 'account_currency': 'USD'},
         ]
@@ -119,6 +120,11 @@ def test_sincroniza_anuncios_gasto_por_dia_y_palabra_clave(db, meta):
     assert (anuncios['222'].clave, anuncios['222'].mapeo, anuncios['222'].estado) == (None, None, 'PAUSED')
     assert sorted((g.meta_ad_id, g.fecha.isoformat(), g.gasto) for g in MetaGastoDiario.query.all()) == [
         ('111', '2026-10-12', 10.5), ('111', '2026-10-13', 4.0), ('222', '2026-10-13', 7.25)]
+    # Impresiones y clics de cada día (sin el campo, 0), y los ids de campaña y conjunto.
+    dia = MetaGastoDiario.query.filter_by(meta_ad_id='111', fecha=date(2026, 10, 12)).one()
+    assert (dia.impresiones, dia.clics, dia.clics_enlace) == (4200, 90, 61)
+    assert MetaGastoDiario.query.filter_by(meta_ad_id='222').one().impresiones == 0
+    assert (anuncios['111'].campana_id, anuncios['111'].conjunto_id) == ('c1', 's1')
     # La cuenta va sin «act_» duplicado y el token viaja en los parámetros.
     url, params = meta.pedidos[0]
     assert url.endswith('/v24.0/act_886943269514111/insights') and params['access_token'] == 'token-de-prueba'

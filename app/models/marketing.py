@@ -120,6 +120,10 @@ class MetaAnuncio(db.Model):
     nombre = db.Column(db.String(255))
     campana = db.Column(db.String(255))
     conjunto = db.Column(db.String(255))
+    # Los ids de Meta: el nombre se puede cambiar, el id no. El de la campaña es el que viaja en el
+    # `utm_campaign` de las landings y con el que se marcan las campañas de workshop.
+    campana_id = db.Column(db.String(40), nullable=True, index=True)
+    conjunto_id = db.Column(db.String(40), nullable=True)
     creative_id = db.Column(db.String(40))
     # El texto principal del creativo: de ahí sale la palabra clave.
     texto = db.Column(db.Text)
@@ -132,7 +136,8 @@ class MetaAnuncio(db.Model):
 
 
 class MetaGastoDiario(db.Model):
-    """Lo que gastó un anuncio de Meta en un día (el día de la cuenta publicitaria)."""
+    """Lo que gastó un anuncio de Meta en un día (el día de la cuenta publicitaria), con sus
+    impresiones y clics: de ahí salen el CPM, el CPC y los clics de cada workshop."""
     __tablename__ = 'meta_gastos_diarios'
     __table_args__ = (db.UniqueConstraint('meta_ad_id', 'fecha', name='uq_meta_gasto_anuncio_dia'),)
     id = db.Column(db.Integer, primary_key=True)
@@ -140,6 +145,10 @@ class MetaGastoDiario(db.Model):
     fecha = db.Column(db.Date, nullable=False, index=True)
     gasto = db.Column(db.Float, nullable=False, default=0.0)
     moneda = db.Column(db.String(3))
+    # Null en los días sincronizados antes del 15/10/2026 hasta que se vuelvan a pedir.
+    impresiones = db.Column(db.Integer, nullable=True)
+    clics = db.Column(db.Integer, nullable=True)  # todos los clics (`clicks`)
+    clics_enlace = db.Column(db.Integer, nullable=True)  # clics en el enlace (`inline_link_clicks`)
     actualizado_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
