@@ -65,10 +65,10 @@ describe('El Portal', () => {
         abrir();
         expect(screen.getByText('¿A dónde vamos?')).toBeTruthy();
         // Sin «Administrador» (10/10/2026): lo suyo que ningún otro rol ofrece va con Operador.
-        expect(tarjetas()).toEqual(['Operaciones', 'Marketing', 'Talent', 'Ventas', 'Agendamiento', 'Finances', 'Cortex', 'Simular a alguien']);
+        expect(tarjetas()).toEqual(['Operaciones', 'Marketing', 'Talent', 'Ventas', 'Agendamiento', 'Inbox', 'Finances', 'Cortex', 'Simular a alguien']);
         const sobre = screen.getAllByRole('button').filter((b) => b.className.includes('el-tarjeta'))
             .map((b) => b.querySelector('small').textContent);
-        expect(sobre).toEqual(['Operador', 'Operador', 'Operador', 'Dirección comercial', 'Dirección comercial', 'Dirección comercial', 'Para todos', 'Equipo']);
+        expect(sobre).toEqual(['Operador', 'Operador', 'Operador', 'Dirección comercial', 'Dirección comercial', 'Dirección comercial', 'Dirección comercial', 'Para todos', 'Equipo']);
     });
 
     it('con un solo rol: sus áreas y Cortex', () => {
@@ -118,7 +118,7 @@ describe('El Portal', () => {
         abrir();
         fireEvent.click(screen.getByRole('button', { name: /Simular a alguien/ }));
         fireEvent.keyDown(window, { key: 'Escape' });
-        expect(tarjetas()).toEqual(['Ventas', 'Agendamiento', 'Cortex', 'Simular a alguien']);
+        expect(tarjetas()).toEqual(['Ventas', 'Agendamiento', 'Inbox', 'Cortex', 'Simular a alguien']);
         fireEvent.keyDown(window, { key: 'Escape' });
         expect(portalAbierto()).toBeNull();
     });

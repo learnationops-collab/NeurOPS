@@ -396,3 +396,35 @@ def test_thalamus_da_a_cada_rol_lo_que_app_promete(client, make_user, auth_heade
     assert escribe.status_code == (200 if rol in CONFIGURAN_THALAMUS else 403), rol
     if entra:
         assert estado.get_json()['solo_lectura'] is (rol in MIRAN_THALAMUS)
+
+
+# --- Inbox (/api/inbox) ----------------------------------------------------------------------------
+#
+# Igual que Thalamus: guardia propia (app/automatizaciones/api.py). Arman flujos admin y la direccion;
+# el setter mira. Que App.jsx deje entrar a /inbox a los mismos roles que el backend deja leer.
+
+from app.automatizaciones.api import ROLES_CON_ACCESO as EDITAN_INBOX  # noqa: E402
+from app.automatizaciones.api import ROLES_DE_LECTURA as MIRAN_INBOX  # noqa: E402
+
+
+def _roles_del_inbox_en_app():
+    rutas, _ = _rutas_de_app()
+    return set(next(r['roles'] for r in rutas if r['path'] == '/inbox/*'))
+
+
+def test_app_deja_entrar_al_inbox_a_quien_el_backend_deja_leer():
+    assert _roles_del_inbox_en_app() == set(EDITAN_INBOX) | set(MIRAN_INBOX)
+
+
+@pytest.mark.parametrize('rol', sorted(ROLES_REALES))
+def test_el_inbox_da_a_cada_rol_lo_que_app_promete(client, make_user, auth_headers, rol):
+    cabecera = auth_headers(make_user(role=rol, username=f'ib_{rol}', email=f'ib_{rol}@inbox.test'))
+    entra = rol in _roles_del_inbox_en_app()
+
+    estado = client.get('/api/inbox/estado', headers=cabecera)
+    escribe = client.post('/api/inbox/flujos', headers=cabecera, json={'nombre': 'X'})
+
+    assert estado.status_code == (200 if entra else 403), rol
+    assert escribe.status_code == (201 if rol in EDITAN_INBOX else 403), rol
+    if entra:
+        assert estado.get_json()['puede_editar'] is (rol in EDITAN_INBOX)
