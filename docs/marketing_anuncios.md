@@ -9,6 +9,12 @@ Un anuncio es una **palabra clave de ManyChat**. Ya no se registra a mano (campa
 poner su id en ManyChat: el webhook `POST /api/manychat-webhook` trae `keyword` y, si es nueva, el anuncio se crea
 solo. «Guia chile», «GUÍA CHILE» y «guia-chile» son el mismo anuncio (se comparan sin tildes ni mayúsculas).
 
+Las palabras clave que habían llegado antes sin un anuncio registrado («Obtener Guia», las guías por país,
+«ACCEDER»…) recibieron el suyo con la migración `e5b8d2f4a1c7`, que además les puso ese anuncio a sus interacciones.
+Así los setters las encuentran en «Mis agendas» (una opción por palabra clave) y las agendas de esos leads, que
+ManyChat ya decía de qué anuncio venían, salen solas de su bandeja (en la copia local del 10/10: 19 de Elias y 14 de
+Paula).
+
 Cada fila de la tabla (pestaña **Anuncios**) es una palabra clave en el período elegido:
 
 | Columna | Qué cuenta |
