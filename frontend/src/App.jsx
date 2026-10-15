@@ -26,7 +26,6 @@ import OpsRuta from './pages/operations/OpsRuta';
 import BookingPage from './pages/public/BookingPage';
 import PublicCloserReportPage from './pages/public/PublicCloserReportPage';
 import PublicTriageReportPage from './pages/public/PublicTriageReportPage';
-import AdManagementPage from './pages/public/AdManagementPage';
 import FinancialAgendasPage from './pages/admin/reports/FinancialAgendasPage';
 import TriageWorkflowPage from './pages/triage/TriageWorkflowPage';
 import PublicWorkshopStatsPage from './pages/public/PublicWorkshopStatsPage';
