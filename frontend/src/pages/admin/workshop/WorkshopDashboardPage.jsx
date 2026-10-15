@@ -655,6 +655,9 @@ const WorkshopDashboardPage = () => {
                         onGuardar={() => guardarTaller({ cerrar: false })}
                         guardando={guardando}
                         formatCurrency={formatCurrency}
+                        deMeta={isEditMode && selectedEvent
+                            ? { inversion: selectedEvent.inversion_de_meta, clics: selectedEvent.clics_de_meta }
+                            : null}
                     />
                 )}
             </div>

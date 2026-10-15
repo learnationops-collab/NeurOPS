@@ -3,6 +3,7 @@ from flask_login import current_user
 from app import db
 from app.models import WorkshopTemplate, WorkshopButton, WorkshopTemplateSent, WorkshopInteraction, WorkshopEvent, WorkshopGoals, WorkshopAction
 from app.decorators import workshop_required
+from app.services import workshop_meta_service
 from datetime import datetime
 import pytz
 import logging
@@ -286,6 +287,9 @@ def create_workshop_event():
     
     try:
         db.session.add(event)
+        db.session.flush()
+        # Su inversión de Meta, y la del taller siguiente, cuya ventana ahora empieza en este.
+        workshop_meta_service.recalcular()
         db.session.commit()
         return jsonify(_con_replay_local(event.to_dict(), event)), 201
     except Exception as e:
@@ -300,13 +304,15 @@ def update_workshop_event(event_id):
     
     if 'name' in data:
         event.name = data['name']
-    if 'inversion' in data:
+    # Los que vienen de Meta no se pisan: el panel (el resync del embudo, el modal) manda el evento
+    # entero, con los valores de Meta, y quedarían como «cargados a mano».
+    if 'inversion' in data and not event.inversion_de_meta:
         event.inversion = float(data['inversion'])
-    if 'cpm' in data:
+    if 'cpm' in data and not event.clics_de_meta:
         event.cpm = float(data['cpm'])
-    if 'cpc' in data:
+    if 'cpc' in data and not event.clics_de_meta:
         event.cpc = float(data['cpc'])
-    if 'clics' in data:
+    if 'clics' in data and not event.clics_de_meta:
         event.clics = int(data['clics'])
     if 'leads' in data:
         event.leads = int(data['leads'])
@@ -361,6 +367,8 @@ def delete_workshop_event(event_id):
     event = WorkshopEvent.query.get_or_404(event_id)
     try:
         db.session.delete(event)
+        db.session.flush()
+        workshop_meta_service.recalcular()  # el taller siguiente recupera sus días
         db.session.commit()
         return jsonify({"message": "Evento eliminado con éxito"}), 200
     except Exception as e:

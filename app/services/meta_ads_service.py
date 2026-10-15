@@ -285,6 +285,8 @@ def sincronizar(desde=None, hasta=None):
 
     db.session.flush()
     mapear_automatico()
+    from app.services import workshop_meta_service
+    workshop_meta_service.recalcular()  # la inversión de cada workshop sale de este gasto
     db.session.commit()
     return {'desde': desde.isoformat(), 'hasta': hasta.isoformat(), 'anuncios': anuncios,
             'filas_de_gasto': filas_de_gasto, 'gasto': round(gasto_total, 2)}
@@ -459,4 +461,7 @@ def marcar_workshop(campana_id, workshop):
         db.session.add(MetaCampanaWorkshop(campana_id=campana_id, nombre=nombre[0]))
     elif not workshop and marcada:
         db.session.delete(marcada)
+    db.session.flush()
+    from app.services import workshop_meta_service
+    workshop_meta_service.recalcular()
     db.session.commit()

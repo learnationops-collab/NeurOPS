@@ -566,3 +566,8 @@
   .ws-shell .trafico-visitas { min-width: 120px; }
   .ws-shell .trafico-tabla table { min-width: 0; }
 }
+
+/* Inversión, CPM, CPC y clics de Meta Ads (15/10/2026): se leen, no se cargan. */
+.ws-shell .form-field .de-meta { display: inline; font-weight: 600; color: var(--pink-light); }
+.ws-shell .form-field input[readonly] { opacity: .75; cursor: default; }
+.ws-shell .de-meta-nota { margin: -4px 0 0; font-size: 11px; line-height: 1.45; color: color-mix(in srgb, var(--ln-text-out, #ffffff) 60%, transparent); }
