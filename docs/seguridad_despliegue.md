@@ -11,6 +11,9 @@
   `INGEST_API_TOKEN`. La tabla completa está en `app/access_policy.py`.
 - Los crons y el webhook de ManyChat ya no tienen un valor por defecto: sin su variable de entorno contestan
   503; con ella, exigen el secreto.
+- Desde el 15/10/2026 también el webhook de los anuncios, `POST /api/manychat-webhook`, exige el header
+  `X-ManyChat-Token` (el mismo `MANYCHAT_WEBHOOK_TOKEN`): antes aceptaba leads e interacciones de cualquiera. El
+  `GET` de verificación sigue abierto.
 - Backup y restauración exigen un admin **y** `BACKUP_SECRET_KEY`.
 
 Los valores que estuvieron escritos en el código o en el frontend (clave de respaldo, token de los crons, token de
@@ -26,7 +29,7 @@ más cortos se rechazan).
 | `SECRET_KEY` | firma de los JWT y las cookies (la app no arranca en Railway sin ella) | interna |
 | `BACKUP_SECRET_KEY` | `/api/backup/secret-*` | el admin, en `/admin/backup` y `/admin/restore` |
 | `CRON_SECRET` | `GET /api/sheets/cron-sync`, `GET /api/closer/followups/cron/send-reminders` y `GET /api/academia/cron/sincronizar` | el cron externo: `Authorization: Bearer <valor>` (o `?token=<valor>`) |
-| `MANYCHAT_WEBHOOK_TOKEN` | `POST /api/webhooks/manychat` | ManyChat: header `X-ManyChat-Token` |
+| `MANYCHAT_WEBHOOK_TOKEN` | `POST /api/manychat-webhook` (leads y palabras clave de los anuncios) y `POST /api/webhooks/manychat` | ManyChat: header `X-ManyChat-Token` en cada «Solicitud externa» (ver §3) |
 | `INGEST_API_TOKEN` | rutas de ingesta y consulta de n8n y Apps Script (ver §3) | n8n / Apps Script: header `X-Api-Token: <valor>` (o `Authorization: Bearer <valor>`) |
 | `INTEGRATIONS_AUTH_MODE` | **solo para migrar**: `log_only` deja pasar y registra (ver §4) | — |
 
@@ -37,7 +40,7 @@ más cortos se rechazan).
 | **n8n** (Calendly) | `POST /api/public/financial-agendas`, `POST /api/public/financial-agendas-form`, `POST /api/public/financial-agendas/verificar-hora` | `X-Api-Token: <INGEST_API_TOKEN>` |
 | **Apps Script** (hoja de ventas) | `POST /api/public/financial-sales` | `X-Api-Token: <INGEST_API_TOKEN>` |
 | **Otra página / integración de consulta de clientes** | `GET /api/public/clients/search`, `GET /api/public/new-clients`, `POST /api/public/clients/follow-up` | `X-Api-Token: <INGEST_API_TOKEN>` |
-| **ManyChat** (leads de Instagram) | `POST /api/webhooks/manychat` | `X-ManyChat-Token: <MANYCHAT_WEBHOOK_TOKEN>` |
+| **ManyChat** (leads de Instagram) | `POST /api/manychat-webhook` (todas las solicitudes externas de los flujos de anuncios) y `POST /api/webhooks/manychat` | `X-ManyChat-Token: <MANYCHAT_WEBHOOK_TOKEN>` |
 | **Cron externo** (Sheets, recordatorios, fotos de la Academia) | `GET /api/sheets/cron-sync`, `GET /api/closer/followups/cron/send-reminders`, `GET /api/academia/cron/sincronizar` | `Authorization: Bearer <CRON_SECRET>` |
 
 **Fotos de la Academia** (`GET /api/academia/cron/sincronizar`, ver `app/services/academy_snapshot_service.py`):
@@ -49,6 +52,36 @@ más seguido. Sin `ACADEMY_API_TOKEN` responde 200 sin consultar nada.
 En n8n: en el nodo *HTTP Request* → *Send Headers* → nombre `X-Api-Token`, valor el secreto. En Apps Script:
 `UrlFetchApp.fetch(url, { method: 'post', headers: { 'X-Api-Token': SECRETO }, ... })` (guarda el secreto en las
 *Propiedades del script*, no en el código).
+
+### ManyChat: el header de cada «Solicitud externa»
+
+Un solo secreto para todo ManyChat: `MANYCHAT_WEBHOOK_TOKEN`. Pasos, en este orden:
+
+1. Genera el valor (comando del §2) y cárgalo en Railway como `MANYCHAT_WEBHOOK_TOKEN`: producción (proyecto
+   `selfless-adventure`, servicio «learnation work») y, si quieres probar antes, staging («Servidor de prueba»).
+   Deja `INTEGRATIONS_AUTH_MODE=log_only` mientras tanto: lo que llegue sin el header sigue entrando.
+2. En ManyChat, en **cada flujo** con una acción **«Solicitud externa»** (External Request) que llame a
+   `https://work.thelearnation.com/api/manychat-webhook` (suele haber más de una por flujo, y una que falte se
+   ve en el paso 3): abre la acción → pestaña **Encabezados** (Headers) → **Agregar encabezado**:
+
+   | Clave | Valor |
+   |---|---|
+   | `X-ManyChat-Token` | el mismo valor que pusiste en Railway, tal cual (sin `Bearer`, sin comillas, sin espacios) |
+
+   Deja como está el resto (el cuerpo JSON y el `Content-Type`). Guarda la acción y **publica** el flujo: un
+   borrador no cambia nada. Ojo con «Probar la solicitud»: mientras siga `log_only` responde `201`/`200` aunque el
+   valor esté mal (y registra una interacción real con el contacto de prueba); lo que dice si el valor es el
+   correcto es el log del paso 3. Sin `log_only`, un valor equivocado responde `401`.
+3. Mira el log de Railway buscando **`[MIGRACION DE SECRETOS] POST /api/manychat-webhook`**. El motivo dice qué
+   falta: `no presento el secreto` = una solicitud externa sin el encabezado; `secreto incorrecto` = el valor no
+   coincide; `MANYCHAT_WEBHOOK_TOKEN sin configurar` = falta la variable en Railway. Cuando pasen unos días sin
+   esas líneas, ManyChat está migrado.
+4. `INTEGRATIONS_AUTH_MODE` es una sola llave para todas las integraciones (n8n, Apps Script, crons, ManyChat):
+   quítala recién cuando ninguna aparezca en el log (§4). Desde ese momento una solicitud sin el header recibe
+   `401` y ese dato de ManyChat **no entra**.
+
+El `GET` de verificación de ManyChat (`/api/manychat-webhook`) no pide el header. El webhook viejo
+`POST /api/webhooks/manychat` usa el mismo encabezado y el mismo valor.
 
 ## 4. Procedimiento de despliegue sin cortar flujos
 
@@ -76,9 +109,9 @@ Cambia el valor en Railway y, a la vez, en quien lo presenta (§3). Para un secr
 
 ## 6. Qué **no** cubre todavía (decisiones pendientes)
 
-- `POST /api/manychat-webhook` y `POST /api/workshop/interaction|plantilla-sent` son webhooks públicos por diseño: hoy
-  aceptan datos de cualquiera. Protegerlos con un secreto exige configurar ManyChat/n8n; los decoradores y el modo de
-  migración ya existen.
+- `POST /api/workshop/interaction|plantilla-sent` son webhooks públicos por diseño: hoy aceptan datos de cualquiera.
+  Protegerlos con un secreto exige configurarlo en quien los llama; los decoradores y el modo de migración ya existen
+  (`POST /api/manychat-webhook` ya lo exige desde el 15/10/2026, ver §3).
 - `POST /api/public/clients/check` (pagina de reservas) devuelve nombre y teléfono de un cliente conocido a quien acierte
   un email o un Instagram. Cerrarlo exige rehacer la experiencia de la reserva (verificar al visitante).
 - Los formularios públicos (`submit-lead`, `book`, postulaciones, `workshop-lead`) no tienen límite de intentos.
