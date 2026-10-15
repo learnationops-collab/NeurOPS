@@ -129,9 +129,9 @@ const ConexionMeta = ({ desde, hasta, filasTablero, onCambio }) => {
                             <p className="t-eyebrow">Meta Ads</p>
                             <h2 className="t-h3">{datos.conectado ? 'Conectado' : 'Sin conectar'}</h2>
                         </div>
-                        <span className="chip" style={{ '--c': `var(--${datos.conectado ? 'success' : 'warning'})` }}>
+                        <span className="chip" style={{ '--c': `var(--${datos.muestra ? 'info' : datos.conectado ? 'success' : 'warning'})` }}>
                             {datos.conectado ? <CheckCircle2 aria-hidden="true" /> : <CircleDashed aria-hidden="true" />}
-                            {datos.conectado ? 'Gasto automático' : 'Falta el token'}
+                            {datos.muestra ? 'Datos de muestra' : datos.conectado ? 'Gasto automático' : 'Falta el token'}
                         </span>
                     </div>
                     {datos.conectado ? (
@@ -155,8 +155,8 @@ const ConexionMeta = ({ desde, hasta, filasTablero, onCambio }) => {
                             </select>
                         </label>
                         <button type="button" className="btn btn--cta btn--sm" onClick={sincronizar}
-                            disabled={sincronizando || !datos.conectado}
-                            title={datos.conectado ? 'Traer ahora el gasto de Meta' : 'Primero hay que cargar el token en Railway'}>
+                            disabled={sincronizando || !datos.conectado || datos.muestra}
+                            title={datos.muestra ? 'Son datos de muestra del servidor de prueba' : datos.conectado ? 'Traer ahora el gasto de Meta' : 'Primero hay que cargar el token en Railway'}>
                             <RefreshCw className={sincronizando ? 'mk-gira' : ''} aria-hidden="true" />
                             {sincronizando ? 'Sincronizando…' : 'Sincronizar'}
                         </button>

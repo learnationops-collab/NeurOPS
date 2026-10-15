@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -131,6 +131,22 @@ describe('Marketing › Anuncios', () => {
         expect(api.post).toHaveBeenCalledWith('/marketing/anuncios/agrupar', { clave: 'OBTENER GUIA', campana: 'Guías', conjunto: 'Perú' });
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
         await waitFor(() => expect(api.get.mock.calls.length).toBeGreaterThan(pedidos));
+    });
+
+    it('en modo muestra se ve conectado, sin avisos de token, y no deja sincronizar', async () => {
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/anuncios'
+            ? { ...TABLERO, meta: { conectado: true, muestra: true, ultima_sincronizacion: '2026-10-15T10:00:00' } }
+            : { anuncios: [], claves: [], conectado: true, muestra: true, ultima_sincronizacion: '2026-10-15T10:00:00' } }));
+        abrir();
+        await screen.findByText('Obtener Guia');
+        expect(screen.queryByText(/El gasto todavía no llega de Meta Ads/)).not.toBeInTheDocument();
+
+        cleanup();
+        abrir('/admin/marketing?tab=meta');
+        expect(await screen.findByText('Conectado')).toBeInTheDocument();
+        expect(screen.getByText('Datos de muestra')).toBeInTheDocument();
+        expect(screen.queryByText(/META_ADS_TOKEN/)).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Sincronizar/ })).toBeDisabled();
     });
 
     it('la pestaña Meta Ads explica cómo conectarlo cuando falta el token', async () => {

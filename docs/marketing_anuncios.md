@@ -80,6 +80,13 @@ sistema viejo (hasta el 23/07/2026) sigue sumando en los días en que Meta no tr
 `campaigns`, `ad_sets`) siguen, pero las pantallas y las rutas para cargarlo o corregirlo se retiraron el 14 y el
 15/10/2026: desde la app ya no se edita.
 
+**Modo muestra (solo el servidor de prueba, 15/10/2026).** Con `META_ADS_DEMO=true` y sin token, la pantalla se ve
+conectada (sin avisos de token; la pestaña Meta Ads dice «Datos de muestra» y no deja sincronizar) con una foto real
+de la cuenta cargada a mano en la base de staging: los anuncios de Meta del 15/09 al 14/10 con su texto, y el gasto
+de cada uno repartido día a día según la curva real de la cuenta (el total por anuncio es real; el día a día, una
+aproximación). Al cargar el token deja de valer, y cada sincronización reemplaza enteros los días que pide: «Últimos
+180 días» borra la muestra.
+
 **Alternativas descartadas:** cargar el gasto a mano todos los días (es lo que se dejó de hacer en julio); que un
 agente lo copie con el conector de Meta (depende de una computadora prendida); un conector pago tipo Supermetrics
 (otra cuenta y otra plantilla para algo que la API da gratis).

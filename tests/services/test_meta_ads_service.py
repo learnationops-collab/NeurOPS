@@ -129,6 +129,30 @@ def test_volver_a_sincronizar_pisa_el_gasto_del_dia_no_lo_suma(db, meta):
     assert MetaGastoDiario.query.filter_by(meta_ad_id='111', fecha=date(2026, 10, 12)).one().gasto == 12.0
 
 
+def test_un_dia_que_meta_ya_no_devuelve_no_queda_con_el_valor_viejo_ni_con_el_de_muestra(db, meta):
+    servicio.sincronizar(date(2026, 10, 12), date(2026, 10, 13))
+    # Un día cargado de muestra (o con un gasto que Meta después corrigió a cero) dentro de la ventana.
+    db.session.add(MetaGastoDiario(meta_ad_id='222', fecha=date(2026, 10, 12), gasto=99.0, moneda='USD'))
+    db.session.commit()
+
+    servicio.sincronizar(date(2026, 10, 12), date(2026, 10, 13))
+
+    assert sorted((g.meta_ad_id, g.fecha.isoformat()) for g in MetaGastoDiario.query.all()) == [
+        ('111', '2026-10-12'), ('111', '2026-10-13'), ('222', '2026-10-13')]
+
+
+def test_el_modo_muestra_se_ve_conectado_pero_no_sincroniza(db, monkeypatch):
+    monkeypatch.setenv('META_ADS_DEMO', 'true')
+
+    assert servicio.modo_muestra() is True
+    with pytest.raises(servicio.ErrorDeMeta, match='muestra'):
+        servicio.sincronizar()
+    # Con el token cargado, manda lo real.
+    monkeypatch.setenv('META_ADS_TOKEN', 'token')
+    monkeypatch.setenv('META_AD_ACCOUNT_IDS', '1')
+    assert servicio.modo_muestra() is False
+
+
 def test_la_palabra_clave_elegida_a_mano_no_la_pisa_la_sincronizacion(db, meta):
     db.session.add_all([Ad(name='APLICAR', keyword='APLICAR'), Ad(name='Obtener Guia', keyword='Obtener Guia')])
     db.session.commit()

@@ -43,7 +43,9 @@ def _periodo():
 
 def _estado_de_meta():
     ultima = meta_ads_service.ultima_sincronizacion()
-    return {'conectado': meta_ads_service.configurado(),
+    muestra = meta_ads_service.modo_muestra()
+    return {'conectado': meta_ads_service.configurado() or muestra,
+            'muestra': muestra,
             'ultima_sincronizacion': ultima.isoformat() if ultima else None}
 
 

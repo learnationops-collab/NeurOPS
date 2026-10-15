@@ -56,6 +56,14 @@ def configurado():
     return bool(token and cuentas)
 
 
+def modo_muestra():
+    """Servidor de prueba sin token (15/10/2026, pedido de Kerwin para presentar la pantalla): con
+    `META_ADS_DEMO=true` la pantalla se ve conectada con los anuncios y el gasto que se cargaron de muestra
+    (una foto real de la cuenta). No sincroniza nada; con el token cargado deja de valer y la primera
+    sincronización reemplaza esos días (ver `sincronizar`)."""
+    return (os.environ.get('META_ADS_DEMO') or '').strip().lower() == 'true' and not configurado()
+
+
 def ultima_sincronizacion():
     ultima = db.session.query(db.func.max(MetaGastoDiario.actualizado_at)).scalar()
     anuncios = db.session.query(db.func.max(MetaAnuncio.actualizado_at)).scalar()
@@ -127,6 +135,8 @@ def sincronizar(desde=None, hasta=None):
     Devuelve un resumen. Hace commit."""
     token, cuentas, version = configuracion()
     if not (token and cuentas):
+        if modo_muestra():
+            raise ErrorDeMeta('Son datos de muestra: para traer los de verdad hay que cargar META_ADS_TOKEN.')
         raise ErrorDeMeta('Falta conectar Meta Ads: configurá META_ADS_TOKEN y META_AD_ACCOUNT_IDS.')
     hasta = hasta or date.today()
     desde = desde or hasta - timedelta(days=DIAS_POR_DEFECTO - 1)
@@ -145,14 +155,20 @@ def sincronizar(desde=None, hasta=None):
             conocidos.add(str(fila['id']))
             anuncios += 1
 
-        insights = _paginas(f'{base}/act_{cuenta}/insights', {
+        insights = list(_paginas(f'{base}/act_{cuenta}/insights', {
             'level': 'ad',
             'time_increment': 1,
             'time_range': json.dumps({'since': desde.isoformat(), 'until': hasta.isoformat()}),
             'fields': 'ad_id,ad_name,campaign_name,adset_name,spend,account_currency',
             'limit': 500,
             'access_token': token,
-        })
+        }))
+        # Los días pedidos se reemplazan enteros para los anuncios de la cuenta: un día que Meta ya no
+        # devuelve (gasto en cero) no puede quedar con un valor viejo, ni con uno de muestra.
+        de_la_cuenta = db.session.query(MetaAnuncio.meta_ad_id).filter(MetaAnuncio.cuenta_id == cuenta)
+        MetaGastoDiario.query.filter(MetaGastoDiario.fecha >= desde, MetaGastoDiario.fecha <= hasta,
+                                     MetaGastoDiario.meta_ad_id.in_(de_la_cuenta.scalar_subquery())) \
+            .delete(synchronize_session=False)
         sin_ficha = {}
         for fila in insights:
             meta_ad_id = str(fila.get('ad_id') or '')

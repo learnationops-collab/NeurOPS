@@ -44,8 +44,20 @@ def test_la_tabla_del_periodo(client, make_user, auth_headers, con_datos):
     assert respuesta.status_code == 200
     assert (datos['desde'], datos['hasta']) == ('2026-10-01', '2026-10-31')
     assert [(f['clave'], f['entrantes'], f['calificados']) for f in datos['filas']] == [('APLICAR', 1, 1)]
-    assert datos['meta'] == {'conectado': False, 'ultima_sincronizacion': None}
+    assert datos['meta'] == {'conectado': False, 'muestra': False, 'ultima_sincronizacion': None}
     assert set(datos['totales']) >= {'entrantes', 'gasto', 'cpl', 'costo_agenda', 'costo_venta', 'roas'}
+
+
+def test_en_modo_muestra_la_tabla_dice_conectado_y_sincronizar_explica_por_que_no(client, make_user, auth_headers,
+                                                                               monkeypatch):
+    monkeypatch.setenv('META_ADS_DEMO', 'true')
+    cabeceras = auth_headers(make_user(role='director_marketing'))
+
+    assert client.get(URL, headers=cabeceras).get_json()['meta'] == {
+        'conectado': True, 'muestra': True, 'ultima_sincronizacion': None}
+    respuesta = client.post(f'{URL}/meta/sincronizar', json={}, headers=cabeceras)
+    assert respuesta.status_code == 409
+    assert 'muestra' in respuesta.get_json()['error']
 
 
 def test_una_fecha_mal_escrita_es_400(client, make_user, auth_headers):
