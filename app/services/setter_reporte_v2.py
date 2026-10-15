@@ -90,7 +90,7 @@ def cualificados(entrantes, no_lead, inabribles, leads=None):
 
 
 def no_contestaron(entrantes, no_lead, inabribles, leads=None):
-    """Los entrantes que no fueron lead, ni no lead, ni in-abribles: no contestaron. 0 sin leads
+    """Los entrantes que no son leads cualificados, ni no leads, ni in-abribles: no contestaron. 0 sin leads
     cargados: en ese reporte estaban adentro de los cualificados."""
     if leads is None:
         return 0
@@ -291,7 +291,7 @@ def avisos(lectura):
     for canal, _ in CANALES:
         d = lectura['canales'][canal]
         if d['no_lead'] + d['inabribles'] + (d.get('leads') or 0) > d['entrantes']:
-            quienes = 'leads, no leads e in-abribles' if d.get('leads') is not None else 'no leads e in-abribles'
+            quienes = 'leads cualificados, no leads e in-abribles' if d.get('leads') is not None else 'no leads e in-abribles'
             salida.append({'paso': 'entrantes', 'nivel': 'err',
                            'msg': f"{nombres[canal]}: {quienes} superan los {d['entrantes']} mensajes"})
         if d['ap_entrantes'] + d['ap_dolor'] > d['entrantes']:

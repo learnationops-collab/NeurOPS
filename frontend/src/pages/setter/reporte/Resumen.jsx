@@ -94,7 +94,7 @@ export const Embudos = ({ estado }) => {
                                 </span>
                             </>
                         )}>
-                        <Flujo etapas={[{ n: 'Entrantes' }, { n: 'Leads' }, { n: 'Agendas' }]} color={c.c}
+                        <Flujo etapas={[{ n: 'Entrantes' }, { n: 'Cualificados' }, { n: 'Agendas' }]} color={c.c}
                             valores={[estado[c.k].entrantes, num[`${c.k}.net`], estado[c.k].agendas]} max={mE}
                             convs={[num[`${c.k}.cualRate`], num[`${c.k}.convRate`]]} fb={64} fg={fg} />
                     </ColResumen>

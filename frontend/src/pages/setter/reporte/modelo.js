@@ -95,10 +95,10 @@ export const tasa = (a, b) => (b > 0 ? (a / b) * 100 : null);
 export const fmtInt = (v) => (v === null || v === undefined ? '—' : Math.round(v).toLocaleString('es'));
 export const fmtPct = (v) => (v === null || v === undefined ? '—' : `${(Math.round(v * 10) / 10).toLocaleString('es')}%`);
 
-/** Los cualificados de un canal: los leads que cargó el setter. */
+/** Los cualificados de un canal: los leads cualificados que cargó el setter. */
 export const netoDe = (d) => d?.leads || 0;
 
-/** Los mensajes que no fueron lead, ni no lead, ni in-abribles: no contestaron. */
+/** Los mensajes que no son leads cualificados, ni no leads, ni in-abribles: no contestaron. */
 export const noContestaronDe = (d) => Math.max(0,
     (d?.entrantes || 0) - (d?.leads || 0) - (d?.no_lead || 0) - (d?.inabribles || 0));
 
@@ -125,7 +125,7 @@ export function calcular(s) {
         const ap = d.ap_entrantes + d.ap_dolor;
         const resp = d.ap_entrantes_resp + d.ap_dolor_resp;
         if (repartidos > d.entrantes) {
-            aviso('entrantes', 'err', `${c.n}: leads, no leads e in-abribles superan los ${d.entrantes} mensajes`);
+            aviso('entrantes', 'err', `${c.n}: leads cualificados, no leads e in-abribles superan los ${d.entrantes} mensajes`);
             marca(`${c.k}.leads`, 'err');
             marca(`${c.k}.no_lead`, 'err');
             marca(`${c.k}.inabribles`, 'err');
