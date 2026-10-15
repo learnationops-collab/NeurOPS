@@ -89,23 +89,24 @@ def anuncios_de_meta():
         return jsonify({'error': str(error)}), 400
     return jsonify({
         'anuncios': meta_ads_service.listado(desde, hasta),
-        'campanas': meta_ads_service.campanas(desde, hasta),
         'claves': sorted(anuncios_service.claves_conocidas()),
         **_estado_de_meta(),
     }), 200
 
 
-@bp.route('/meta/campanas/<campana_id>', methods=['PUT'])
-def marcar_campana_workshop(campana_id):
-    """Body: {"workshop": true|false}: si la campaña lleva a las landings del workshop."""
+@bp.route('/meta/<meta_ad_id>/embudo', methods=['PUT'])
+def asignar_embudo(meta_ad_id):
+    """Body: {"embudo": "setting"|"workshop"|"contratacion"|"otro"} o {"automatico": true}."""
     datos = request.get_json(silent=True) or {}
-    if not isinstance(datos.get('workshop'), bool):
-        return jsonify({'error': 'Falta decir si es de workshop (true o false).'}), 400
     try:
-        meta_ads_service.marcar_workshop(campana_id, datos['workshop'])
+        anuncio = meta_ads_service.asignar_embudo(meta_ad_id, datos.get('embudo'),
+                                                  automatico=bool(datos.get('automatico')))
     except LookupError as error:
         return jsonify({'error': str(error)}), 404
-    return jsonify({'campana_id': campana_id, 'workshop': datos['workshop']}), 200
+    except ValueError as error:
+        return jsonify({'error': str(error)}), 400
+    return jsonify({'meta_ad_id': anuncio.meta_ad_id, 'embudo': anuncio.embudo,
+                    'embudo_mapeo': anuncio.embudo_mapeo}), 200
 
 
 @bp.route('/meta/<meta_ad_id>', methods=['PUT'])
@@ -122,7 +123,8 @@ def asignar_clave(meta_ad_id):
         return jsonify({'error': str(error)}), 404
     except ValueError as error:
         return jsonify({'error': str(error)}), 400
-    return jsonify({'meta_ad_id': anuncio.meta_ad_id, 'clave': anuncio.clave, 'mapeo': anuncio.mapeo}), 200
+    return jsonify({'meta_ad_id': anuncio.meta_ad_id, 'clave': anuncio.clave, 'mapeo': anuncio.mapeo,
+                    'embudo': anuncio.embudo, 'embudo_mapeo': anuncio.embudo_mapeo}), 200
 
 
 @bp.route('/meta/sincronizar', methods=['POST'])

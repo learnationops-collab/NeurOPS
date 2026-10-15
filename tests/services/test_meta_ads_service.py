@@ -245,22 +245,43 @@ def test_si_ni_con_pocas_filas_alcanza_el_error_sale_igual(db, meta, monkeypatch
         servicio.sincronizar()
 
 
-def test_las_campanas_de_workshop_se_marcan_a_mano(db, meta):
+@pytest.mark.parametrize('texto, campana, clave, esperado', [
+    # Kerwin (15/10): «las que dicen al DM son de setting, la que dice clase gratis son de workshop».
+    ('Pide gratis al DM la guía de APROBACIÓN médica.', 'LM Funnel - Testing Ads - Generales', None, 'setting'),
+    ('CLASE GRATIS: Cómo estudiar para pasar tu examen de residencia médica.', 'WORKSHOP FUNNEL | TESTING ADS', None, 'workshop'),
+    ('Acceso gratis a la clase de APROBACIÓN STEOS.', 'LM Funnel', None, 'workshop'),
+    ('Comenta "DIAGNÓSTICO" para recibir tu acceso gratuito.', 'WB FUNNEL: Testing Creatives | Latam | WS', None, 'setting'),
+    ('Respondé EARN y te lo envío', '', None, 'setting'),
+    # Sin «DM» en el texto pero con palabra clave de ManyChat: va al DM.
+    ('Si tus manuales están llenos de resaltador…', 'DM FUNNEL: Scaling: Clase 26 | Latam', 'CLASE 26', 'setting'),
+    # El texto no dice nada: decide la campaña.
+    ('Tocá el botón del video para recibir tu acceso', 'DM FUNNEL: Scaling: Vacío [BT] | Latam', None, 'setting'),
+    ('', 'SPI-TRIPODE-LAUNCH', None, 'workshop'),
+    # Búsquedas de personal, aunque ManyChat les haya puesto una palabra clave.
+    ('Busco asistente personal para mi academia', 'ASIS_ARGENTINA', 'RESIDENCIA 100', 'contratacion'),
+    ('Buscamos Closer High Performer', 'HIRING CLOSER', None, 'contratacion'),
+    ('Algo sin pistas', 'CLINIC FOR FOUNDERS | TESTING 1', None, None),
+])
+def test_el_embudo_de_cada_anuncio(texto, campana, clave, esperado):
+    assert servicio.detectar_embudo(MetaAnuncio(texto=texto, campana=campana, clave=clave)) == esperado
+
+
+def test_el_embudo_lo_pone_la_sincronizacion_y_se_corrige_a_mano(db, meta):
+    db.session.add(Ad(name='QUIERO APLICAR', keyword='QUIERO APLICAR', status='active'))
+    db.session.commit()
     servicio.sincronizar(date(2026, 10, 12), date(2026, 10, 13))
 
-    # Ninguna es de workshop hasta que alguien la marca (no se adivina por el nombre).
-    assert servicio.campanas(date(2026, 10, 12), date(2026, 10, 13)) == [
-        {'campana_id': 'c1', 'nombre': 'DMV | Test Públicos', 'gasto': 14.5, 'anuncios': 1, 'workshop': False}]
-    servicio.marcar_workshop('c1', True)
-    servicio.marcar_workshop('c1', True)  # dos veces no la duplica
-    assert servicio.campanas_workshop() == {'c1': 'DMV | Test Públicos'}
-    # Marcada sigue en la lista aunque no gaste en el período.
-    assert servicio.campanas(date(2026, 1, 1), date(2026, 1, 2)) == [
-        {'campana_id': 'c1', 'nombre': 'DMV | Test Públicos', 'gasto': 0.0, 'anuncios': 0, 'workshop': True}]
-    servicio.marcar_workshop('c1', False)
-    assert servicio.campanas_workshop() == {}
-    with pytest.raises(LookupError):
-        servicio.marcar_workshop('no-existe', True)
+    anuncios = {a.meta_ad_id: a for a in MetaAnuncio.query.all()}
+    assert (anuncios['111'].embudo, anuncios['111'].embudo_mapeo) == ('setting', 'auto')  # tiene palabra clave
+    assert anuncios['222'].embudo == 'setting'  # «Descargá la guía gratis»: lo dice la campaña «LM Funnel»
+    servicio.asignar_embudo('222', 'workshop')
+    servicio.sincronizar(date(2026, 10, 12), date(2026, 10, 13))  # elegido a mano: no lo pisa
+    assert (MetaAnuncio.query.filter_by(meta_ad_id='222').one().embudo,
+            MetaAnuncio.query.filter_by(meta_ad_id='222').one().embudo_mapeo) == ('workshop', 'manual')
+    with pytest.raises(ValueError):
+        servicio.asignar_embudo('222', 'otra cosa')
+    servicio.asignar_embudo('222', automatico=True)
+    assert MetaAnuncio.query.filter_by(meta_ad_id='222').one().embudo_mapeo == 'auto'
 
 
 def test_un_token_vencido_es_un_error_claro(db, meta, monkeypatch):

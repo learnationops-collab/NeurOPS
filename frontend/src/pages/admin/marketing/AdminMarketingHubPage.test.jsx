@@ -165,23 +165,27 @@ describe('Marketing › Anuncios', () => {
             { dias: 30, hasta: null }, { dias: 30, hasta: '2026-09-15' }, { dias: 30, hasta: '2026-08-16' }]);
     });
 
-    it('las campañas de workshop se marcan a mano en la pestaña Meta Ads', async () => {
-        const campanas = [
-            { campana_id: '99', nombre: 'WORKSHOP FUNNEL | TESTING ADS', gasto: 120.5, anuncios: 3, workshop: true },
-            { campana_id: '55', nombre: 'DM Funnel | Testing Ads | Broad', gasto: 300, anuncios: 9, workshop: false },
-        ];
+    it('cada anuncio de Meta muestra su embudo, se filtra y se corrige a mano', async () => {
+        const anuncio = (id, nombre, embudo, texto) => ({
+            meta_ad_id: id, nombre, campana: 'C', conjunto: 'S', estado: 'ACTIVE', texto, clave: null, mapeo: null,
+            embudo, embudo_mapeo: embudo ? 'auto' : null, gasto: 10,
+        });
         api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/anuncios'
             ? { ...TABLERO, meta: { conectado: true, muestra: false, ultima_sincronizacion: null } }
-            : { anuncios: [], campanas, claves: [], conectado: true, muestra: false, ultima_sincronizacion: null } }));
-        api.put.mockResolvedValue({ data: { campana_id: '55', workshop: true } });
+            : { anuncios: [anuncio('1', 'B | PP | A3', 'workshop', 'CLASE GRATIS: Cómo estudiar'),
+                anuncio('2', 'LP-TA -PSI-Gral', 'setting', 'Pide gratis al DM la guía'), anuncio('3', 'Raro', null, '')],
+            claves: [], conectado: true, muestra: false, ultima_sincronizacion: null } }));
+        api.put.mockResolvedValue({ data: { meta_ad_id: '2', embudo: 'workshop', embudo_mapeo: 'manual' } });
         abrir('/admin/marketing?tab=meta');
 
-        const casilla = await screen.findByRole('checkbox', { name: 'DM Funnel | Testing Ads | Broad es de workshop' });
-        expect(screen.getByRole('checkbox', { name: 'WORKSHOP FUNNEL | TESTING ADS es de workshop' })).toBeChecked();
-        await userEvent.click(casilla);
+        const embudo = await screen.findByRole('combobox', { name: 'Embudo de LP-TA -PSI-Gral' });
+        expect(screen.getByRole('option', { name: 'Automático: Workshop' })).toBeInTheDocument();
+        await userEvent.selectOptions(embudo, 'workshop');
+        expect(api.put).toHaveBeenCalledWith('/marketing/anuncios/meta/2/embudo', { embudo: 'workshop' });
 
-        expect(api.put).toHaveBeenCalledWith('/marketing/anuncios/meta/campanas/55', { workshop: true });
-        await waitFor(() => expect(casilla).toBeChecked());
+        await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Filtrar por embudo' }), '__sin');
+        expect(screen.queryByText('B | PP | A3')).not.toBeInTheDocument();
+        expect(screen.getByText('Raro')).toBeInTheDocument();
     });
 
     it('la pestaña Meta Ads explica cómo conectarlo cuando falta el token', async () => {

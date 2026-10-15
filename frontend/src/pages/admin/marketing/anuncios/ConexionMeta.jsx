@@ -2,13 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { CheckCircle2, CircleDashed, RefreshCw, Search } from 'lucide-react';
 import { EsqueletoFilas } from '../../../comercial/components/Shared';
-import CampanasWorkshop from './CampanasWorkshop';
-import { diaLocal, formatear } from './metricas';
-import { asignarClaveDeMeta, mensajeDeError, pedirAnunciosDeMeta, sincronizarMeta } from './marketingApi';
+import { diaLocal, EMBUDOS, formatear } from './metricas';
+import { asignarClaveDeMeta, asignarEmbudoDeMeta, mensajeDeError, pedirAnunciosDeMeta, sincronizarMeta } from './marketingApi';
 
 /**
- * La conexión con Meta Ads: si está conectada, cuándo se sincronizó, qué anuncios publicados hay y a
- * qué palabra clave de ManyChat va el gasto de cada uno (ver `app/services/meta_ads_service.py`).
+ * La conexión con Meta Ads: si está conectada, cuándo se sincronizó, qué anuncios publicados hay, a
+ * qué embudo (setting, workshop…) y a qué palabra clave de ManyChat va el gasto de cada uno (ver
+ * `app/services/meta_ads_service.py`). El embudo lo pone solo la sincronización por el texto («al DM»,
+ * «clase gratis») y se corrige acá.
  *
  * «Automática» deja que la sincronización la busque en el texto del anuncio («Comenta QUIERO
  * APLICAR…»); elegir una la fija; «Ninguna» dice que ese anuncio no es de ManyChat (una landing, por
@@ -17,6 +18,8 @@ import { asignarClaveDeMeta, mensajeDeError, pedirAnunciosDeMeta, sincronizarMet
 
 const AUTO = '__auto';
 const NINGUNA = '__ninguna';
+const SIN_EMBUDO = '__sin';
+const etiquetaDeEmbudo = (key) => EMBUDOS.find((e) => e.key === key)?.label || key;
 const TRAMO = 30;
 
 const diaAnterior = (iso) => {
@@ -61,6 +64,7 @@ const ConexionMeta = ({ desde, hasta, filasTablero, onCambio }) => {
     const [guardando, setGuardando] = useState(null);
     const [busqueda, setBusqueda] = useState('');
     const [soloActivos, setSoloActivos] = useState(false);
+    const [filtroEmbudo, setFiltroEmbudo] = useState('');
 
     const cargar = useCallback(async (signal) => {
         try {
@@ -121,11 +125,25 @@ const ConexionMeta = ({ desde, hasta, filasTablero, onCambio }) => {
         }
     };
 
+    const elegirEmbudo = async (anuncio, valor) => {
+        setGuardando(anuncio.meta_ad_id);
+        try {
+            const r = await asignarEmbudoDeMeta(anuncio.meta_ad_id, valor === AUTO ? { automatico: true } : { embudo: valor });
+            setDatos((d) => ({ ...d, anuncios: d.anuncios.map((a) => (a.meta_ad_id === anuncio.meta_ad_id ? { ...a, ...r } : a)) }));
+            onCambio?.();
+        } catch (e) {
+            toast.error(mensajeDeError(e, 'No se pudo guardar el embudo.'));
+        } finally {
+            setGuardando(null);
+        }
+    };
+
     const anuncios = useMemo(() => {
         const texto = busqueda.trim().toLowerCase();
         return (datos?.anuncios || []).filter((a) => (!soloActivos || a.estado === 'ACTIVE')
+            && (!filtroEmbudo || (filtroEmbudo === SIN_EMBUDO ? !a.embudo : a.embudo === filtroEmbudo))
             && (!texto || [a.nombre, a.campana, a.conjunto, a.clave, a.texto].some((x) => (x || '').toLowerCase().includes(texto))));
-    }, [datos, busqueda, soloActivos]);
+    }, [datos, busqueda, soloActivos, filtroEmbudo]);
 
     const cobertura = useMemo(() => {
         const todos = datos?.anuncios || [];
@@ -221,17 +239,24 @@ const ConexionMeta = ({ desde, hasta, filasTablero, onCambio }) => {
                 </section>
             </div>
 
-            {datos.conectado && (
-                <CampanasWorkshop campanas={datos.campanas || []} />
-            )}
-
             <section className="panel mk-panel-tabla">
                 <div className="panel-cab mk-tabla-barra">
                     <div className="mk-cab-txt">
                         <h2 className="t-h3">Anuncios publicados en Meta</h2>
-                        <p className="t-cap mut40">A qué palabra clave de ManyChat va el gasto de cada uno.</p>
+                        <p className="t-cap mut40">
+                            A qué embudo y a qué palabra clave de ManyChat va el gasto de cada uno. Los de Workshop
+                            son la inversión de cada taller.
+                        </p>
                     </div>
                     <div className="panel-cab-der">
+                        <label className="mk-select-caja">
+                            <span className="sr-only">Filtrar por embudo</span>
+                            <select className="mk-select" value={filtroEmbudo} onChange={(e) => setFiltroEmbudo(e.target.value)}>
+                                <option value="">Todos los embudos</option>
+                                {EMBUDOS.map((e) => <option key={e.key} value={e.key}>{e.label}</option>)}
+                                <option value={SIN_EMBUDO}>Sin clasificar</option>
+                            </select>
+                        </label>
                         <label className="busca busca--sm mk-busca">
                             <Search aria-hidden="true" />
                             <input type="search" placeholder="Buscar anuncio" value={busqueda}
@@ -257,6 +282,7 @@ const ConexionMeta = ({ desde, hasta, filasTablero, onCambio }) => {
                                     <th className="mk-col-nombre" scope="col">Anuncio</th>
                                     <th scope="col">Estado</th>
                                     <th scope="col">Texto del anuncio</th>
+                                    <th scope="col">Embudo</th>
                                     <th scope="col">Palabra clave</th>
                                     <th scope="col" className="mk-num">Gastado en el período</th>
                                 </tr>
@@ -277,6 +303,18 @@ const ConexionMeta = ({ desde, hasta, filasTablero, onCambio }) => {
                                             </td>
                                             <td><span className="chip" style={{ '--c': `var(--${estado.tono})` }}>{estado.label}</span></td>
                                             <td className="mk-texto" title={a.texto}>{a.texto || '—'}</td>
+                                            <td>
+                                                <div className="mk-clave">
+                                                    <select className="mk-select" value={a.embudo_mapeo === 'manual' ? a.embudo : AUTO}
+                                                        disabled={guardando === a.meta_ad_id} aria-label={`Embudo de ${a.nombre}`}
+                                                        onChange={(e) => elegirEmbudo(a, e.target.value)}>
+                                                        <option value={AUTO}>
+                                                            {a.embudo_mapeo === 'auto' && a.embudo ? `Automático: ${etiquetaDeEmbudo(a.embudo)}` : 'Automático (sin clasificar)'}
+                                                        </option>
+                                                        {EMBUDOS.map((e) => <option key={e.key} value={e.key}>{e.label}</option>)}
+                                                    </select>
+                                                </div>
+                                            </td>
                                             <td>
                                                 <div className="mk-clave">
                                                     <select className="mk-select" value={valor} disabled={guardando === a.meta_ad_id}

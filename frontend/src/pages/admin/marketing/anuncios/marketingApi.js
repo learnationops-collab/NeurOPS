@@ -17,9 +17,10 @@ export const asignarClaveDeMeta = (metaAdId, cuerpo) =>
 export const sincronizarMeta = (dias, hasta) =>
     api.post('/marketing/anuncios/meta/sincronizar', { dias, hasta }, { timeout: 115000 }).then((r) => r.data);
 
-/** Marca (o desmarca) una campaña de Meta como de workshop: su gasto pasa a ser la inversión del taller. */
-export const marcarCampanaWorkshop = (campanaId, workshop) =>
-    api.put(`/marketing/anuncios/meta/campanas/${campanaId}`, { workshop }).then((r) => r.data);
+/** `cuerpo`: { embudo: 'setting' | 'workshop' | 'contratacion' | 'otro' } · { automatico: true }. El
+ * gasto de los de 'workshop' es la inversión de cada taller. */
+export const asignarEmbudoDeMeta = (metaAdId, cuerpo) =>
+    api.put(`/marketing/anuncios/meta/${metaAdId}/embudo`, cuerpo).then((r) => r.data);
 
 /** Campaña y conjunto elegidos a mano; con `campana` null vuelve a la automática (Meta). */
 export const agruparPalabraClave = (clave, campana, conjunto) =>

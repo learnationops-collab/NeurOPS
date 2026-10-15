@@ -22,6 +22,15 @@ export const PERIODOS = [
 ];
 export const PERIODO_POR_DEFECTO = 'ultimos_30';
 
+/** Los embudos de los anuncios de Meta (`MetaAnuncio.embudo`): adónde lleva cada anuncio. Setting es
+ *  al DM (ManyChat), Workshop a la clase en vivo. Ver `meta_ads_service.detectar_embudo`. */
+export const EMBUDOS = [
+    { key: 'setting', label: 'Setting', color: 'var(--brand-secondary)', ayuda: 'Anuncios que llevan al DM (ManyChat): los de las palabras clave.' },
+    { key: 'workshop', label: 'Workshop', color: 'var(--info)', ayuda: 'Anuncios que llevan a la clase en vivo: su gasto es la inversión de cada taller.' },
+    { key: 'contratacion', label: 'Contratación', color: 'var(--warning)', ayuda: 'Búsquedas de personal (HIRING, asistentes).' },
+    { key: 'otro', label: 'Otro', color: 'var(--text-muted)', ayuda: 'Elegidos a mano como de otro embudo.' },
+];
+
 /** { desde, hasta } de un período, en días locales. `null` para «Personalizado». */
 export const rangoDePeriodo = (key, hoy = new Date()) => {
     const h = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
