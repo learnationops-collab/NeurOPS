@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { CheckCircle2, CircleDashed, RefreshCw, Search } from 'lucide-react';
 import { EsqueletoFilas } from '../../../comercial/components/Shared';
-import { formatear } from './metricas';
+import { diaLocal, formatear } from './metricas';
 import { asignarClaveDeMeta, mensajeDeError, pedirAnunciosDeMeta, sincronizarMeta } from './marketingApi';
 
 /**
@@ -16,6 +16,12 @@ import { asignarClaveDeMeta, mensajeDeError, pedirAnunciosDeMeta, sincronizarMet
 
 const AUTO = '__auto';
 const NINGUNA = '__ninguna';
+const TRAMO = 30;
+
+const diaAnterior = (iso) => {
+    const [a, m, d] = iso.split('-').map(Number);
+    return diaLocal(new Date(a, m - 1, d - 1));
+};
 
 const ESTADOS = {
     ACTIVE: { label: 'Activo', tono: 'success' },
@@ -70,17 +76,33 @@ const ConexionMeta = ({ desde, hasta, filasTablero, onCambio }) => {
         return () => control.abort();
     }, [cargar]);
 
+    // De a tramos de 30 días, del más nuevo al más viejo: 180 días de una vez pasaban el tiempo que el
+    // servidor le da a un pedido. Si un tramo falla, lo ya traído queda guardado.
     const sincronizar = async () => {
-        setSincronizando(true);
+        const tramos = Math.ceil(dias / TRAMO);
+        let hasta = null;
+        let gasto = 0;
+        let desde = null;
+        let ultimo = null;
         try {
-            const r = await sincronizarMeta(dias);
-            toast.success(`Listo: ${r.anuncios} anuncios y ${formatear(r.gasto, 'money')} de gasto (${r.desde} a ${r.hasta}).`);
-            await cargar();
-            onCambio?.();
+            for (let i = 0; i < tramos; i += 1) {
+                setSincronizando({ hecho: i, total: tramos });
+                const r = await sincronizarMeta(Math.min(TRAMO, dias - i * TRAMO), hasta);
+                gasto += r.gasto;
+                ultimo = ultimo || r.hasta;
+                desde = r.desde;
+                hasta = diaAnterior(r.desde);
+            }
+            toast.success(`Listo: ${formatear(gasto, 'money')} de gasto de Meta (${desde} a ${ultimo}).`);
         } catch (e) {
-            toast.error(mensajeDeError(e, 'No se pudo sincronizar con Meta.'));
+            toast.error(mensajeDeError(e, 'No se pudo sincronizar con Meta.')
+                + (desde ? ` Quedó guardado del ${desde} al ${ultimo}.` : ''));
         } finally {
             setSincronizando(false);
+            if (desde) {
+                await cargar();
+                onCambio?.();
+            }
         }
     };
 
@@ -158,7 +180,9 @@ const ConexionMeta = ({ desde, hasta, filasTablero, onCambio }) => {
                             disabled={sincronizando || !datos.conectado || datos.muestra}
                             title={datos.muestra ? 'Son datos de muestra del servidor de prueba' : datos.conectado ? 'Traer ahora el gasto de Meta' : 'Primero hay que cargar el token en Railway'}>
                             <RefreshCw className={sincronizando ? 'mk-gira' : ''} aria-hidden="true" />
-                            {sincronizando ? 'Sincronizando…' : 'Sincronizar'}
+                            {!sincronizando ? 'Sincronizar'
+                                : sincronizando.total > 1 ? `Sincronizando ${sincronizando.hecho + 1} de ${sincronizando.total}…`
+                                    : 'Sincronizando…'}
                         </button>
                     </div>
                 </section>

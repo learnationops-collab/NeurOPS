@@ -12,8 +12,10 @@ export const pedirAnunciosDeMeta = (desde, hasta, config = {}) =>
 export const asignarClaveDeMeta = (metaAdId, cuerpo) =>
     api.put(`/marketing/anuncios/meta/${metaAdId}`, cuerpo).then((r) => r.data);
 
-export const sincronizarMeta = (dias) =>
-    api.post('/marketing/anuncios/meta/sincronizar', { dias }).then((r) => r.data);
+/** Un tramo de `dias` que termina en `hasta` (AAAA-MM-DD; sin ella, hoy). Un tramo de 30 días tarda
+ * ~30 s con la cuenta real, cerca de los 45 s del cliente: se le da el margen del servidor (120 s). */
+export const sincronizarMeta = (dias, hasta) =>
+    api.post('/marketing/anuncios/meta/sincronizar', { dias, hasta }, { timeout: 115000 }).then((r) => r.data);
 
 /** Campaña y conjunto elegidos a mano; con `campana` null vuelve a la automática (Meta). */
 export const agruparPalabraClave = (clave, campana, conjunto) =>

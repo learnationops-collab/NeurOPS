@@ -149,6 +149,22 @@ describe('Marketing › Anuncios', () => {
         expect(screen.getByRole('button', { name: /Sincronizar/ })).toBeDisabled();
     });
 
+    it('sincroniza 90 días en tramos de 30, cada uno termina el día antes del anterior', async () => {
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/anuncios'
+            ? { ...TABLERO, meta: { conectado: true, muestra: false, ultima_sincronizacion: null } }
+            : { anuncios: [], claves: [], conectado: true, muestra: false, ultima_sincronizacion: null } }));
+        const tramos = [['2026-09-16', '2026-10-15'], ['2026-08-17', '2026-09-15'], ['2026-07-18', '2026-08-16']];
+        tramos.forEach(([desde, hasta]) => api.post.mockResolvedValueOnce({ data: { desde, hasta, anuncios: 3, gasto: 10 } }));
+        abrir('/admin/marketing?tab=meta');
+
+        await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Días para atrás' }), '90');
+        await userEvent.click(screen.getByRole('button', { name: /Sincronizar/ }));
+
+        await waitFor(() => expect(api.post).toHaveBeenCalledTimes(3));
+        expect(api.post.mock.calls.map(([, cuerpo]) => cuerpo)).toEqual([
+            { dias: 30, hasta: null }, { dias: 30, hasta: '2026-09-15' }, { dias: 30, hasta: '2026-08-16' }]);
+    });
+
     it('la pestaña Meta Ads explica cómo conectarlo cuando falta el token', async () => {
         abrir('/admin/marketing?tab=meta');
         expect(await screen.findByText('Sin conectar')).toBeInTheDocument();

@@ -113,14 +113,19 @@ def asignar_clave(meta_ad_id):
 
 @bp.route('/meta/sincronizar', methods=['POST'])
 def sincronizar_meta():
-    """Body opcional: {"dias": 30} (hasta 180): cuántos días para atrás traer el gasto."""
+    """Body opcional: {"dias": 30} (hasta 180): cuántos días para atrás traer el gasto, terminando hoy o
+    en `"hasta": "AAAA-MM-DD"`. La pantalla pide 180 días en tramos de 30: de una sola vez, solo la
+    parte de Meta tarda casi los 120 s que gunicorn le da a un pedido."""
     datos = request.get_json(silent=True) or {}
     try:
         dias = int(datos.get('dias') or meta_ads_service.DIAS_POR_DEFECTO)
     except (TypeError, ValueError):
         return jsonify({'error': 'Los días tienen que ser un número.'}), 400
+    try:
+        hasta = min(date.fromisoformat(datos['hasta']), date.today()) if datos.get('hasta') else date.today()
+    except (TypeError, ValueError):
+        return jsonify({'error': 'La fecha «hasta» tiene que ser AAAA-MM-DD.'}), 400
     dias = max(1, min(dias, meta_ads_service.DIAS_MAXIMOS))
-    hasta = date.today()
     try:
         resumen = meta_ads_service.sincronizar(hasta - timedelta(days=dias - 1), hasta)
     except meta_ads_service.ErrorDeMeta as error:

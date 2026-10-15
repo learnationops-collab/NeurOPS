@@ -84,6 +84,22 @@ def test_sincronizar_sin_meta_conectado_avisa(client, make_user, auth_headers):
     assert 'META_ADS_TOKEN' in respuesta.get_json()['error']
 
 
+def test_sincronizar_un_tramo_que_termina_en_hasta(client, make_user, auth_headers, monkeypatch):
+    pedidos = []
+    monkeypatch.setattr('app.services.meta_ads_service.sincronizar',
+                        lambda desde, hasta: pedidos.append((desde, hasta)) or {'desde': str(desde), 'hasta': str(hasta)})
+    cabeceras = auth_headers(make_user(role='director_marketing'))
+
+    respuesta = client.post(f'{URL}/meta/sincronizar', json={'dias': 30, 'hasta': '2026-09-15'}, headers=cabeceras)
+
+    assert respuesta.status_code == 200
+    assert pedidos == [(date(2026, 8, 17), date(2026, 9, 15))]
+    # Una fecha futura se corta en hoy; una mal escrita es 400.
+    client.post(f'{URL}/meta/sincronizar', json={'dias': 1, 'hasta': '2999-01-01'}, headers=cabeceras)
+    assert pedidos[-1] == (date.today(), date.today())
+    assert client.post(f'{URL}/meta/sincronizar', json={'hasta': '15/09/2026'}, headers=cabeceras).status_code == 400
+
+
 def test_elegir_a_mano_la_palabra_clave_de_un_anuncio_de_meta(client, db, make_user, auth_headers, con_datos):
     db.session.add(MetaAnuncio(meta_ad_id='120248557648530532', nombre='LP-TA -PSI-US'))
     # La pestaña lista los que gastaron en el período (por defecto, los últimos 30 días).
