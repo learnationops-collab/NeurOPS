@@ -104,7 +104,7 @@ def test_alta_crea_cuenta_fulfillment_sin_clave(client, db):
     r = _alta(client)
     assert r.status_code == 200
     assert r.json == {'email': 'dari@thelearnation.com', 'calendar': 'no', 'calendario_elegido': False,
-                      'whatsapp': 'pendiente', 'numero': '5491122334455', 'invitar_personal': False, 'lista': False}
+                      'cuenta': None, 'calendario_nombre': None, 'whatsapp': 'pendiente', 'numero': '5491122334455', 'invitar_personal': False, 'lista': False}
     u = User.query.filter_by(email='dari@thelearnation.com').first()
     assert u.role == 'fulfillment' and u.timezone == BA
     assert not u.check_password('')
@@ -278,7 +278,9 @@ def test_listar_y_crear_su_calendario_en_la_cuenta_compartida(client, db, google
     r = client.post(f'{BASE}/equipo/dari@thelearnation.com/calendarios', json={'nombre': 'Sesiones Dari'}, headers=H)
     assert r.status_code == 200 and google['calendarios'] == ['Sesiones Dari']
     assert r.json['destino'] == 'cal-nuevo' and r.json['conflicto'] == ['cal-nuevo']
-    assert client.get(f'{BASE}/equipo/dari@thelearnation.com', headers=H).json['lista'] is True
+    estado = client.get(f'{BASE}/equipo/dari@thelearnation.com', headers=H).json
+    assert estado['lista'] is True and estado['cuenta'] == 'team@thelearnation.com'
+    assert estado['calendario_nombre'] == 'Sesiones Dari'
 
 
 def test_elegir_calendario_conflictos_e_invitar_al_personal(client, db, google):

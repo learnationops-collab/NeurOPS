@@ -75,6 +75,9 @@ def _estado(u):
         'email': u.email,
         'calendar': calendar,
         'calendario_elegido': elegido,
+        # Para mostrar sin consultar a Google: la cuenta conectada y el nombre de su calendario.
+        'cuenta': pref.get('cuenta') if elegido else None,
+        'calendario_nombre': pref.get('calendario_nombre') if elegido else None,
         'whatsapp': whatsapp,
         'numero': u.two_chat_number or None,
         'invitar_personal': bool(pref.get('invitar_personal')),
@@ -215,7 +218,7 @@ def agenda_crear_calendario(email):
         return _error('google', 502)
     listado = _calendarios(u, token)
     token.google_calendar_id, token.calendarios_conflicto = calendario_id, [calendario_id]
-    _guardar_preferencias(u, {'calendario_elegido': True, 'cuenta': listado['cuenta']})
+    _guardar_preferencias(u, {'calendario_elegido': True, 'cuenta': listado['cuenta'], 'calendario_nombre': nombre})
     db.session.commit()
     servicio._google_cache.pop(u.id, None)
     return jsonify(_calendarios(u, token)), 200
@@ -243,7 +246,8 @@ def agenda_elegir_calendario(email):
     conflicto = [c for c in (datos.get('conflicto') or []) if isinstance(c, str) and c in ids]
     token.google_calendar_id = destino
     token.calendarios_conflicto = list(dict.fromkeys([destino, *conflicto]))[:20]
-    _guardar_preferencias(u, {'calendario_elegido': True, 'cuenta': listado['cuenta'],
+    nombre = next((c['nombre'] for c in listado['calendarios'] if c['id'] == destino), None)
+    _guardar_preferencias(u, {'calendario_elegido': True, 'cuenta': listado['cuenta'], 'calendario_nombre': nombre,
                               'invitar_personal': bool(datos.get('invitar_personal'))})
     db.session.commit()
     servicio._google_cache.pop(u.id, None)
