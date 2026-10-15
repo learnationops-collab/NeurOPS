@@ -3,11 +3,11 @@
 Quién puede (admin y dirección de marketing; el cron, con CRON_SECRET) y la forma de lo que devuelve.
 Los números se prueban en tests/services/test_anuncios_service.py.
 """
-from datetime import datetime
+from datetime import date, datetime
 
 import pytest
 
-from app.models import Ad, LeadAnswer, ManychatLead, MetaAnuncio
+from app.models import Ad, LeadAnswer, ManychatLead, MetaAnuncio, MetaGastoDiario
 
 URL = '/api/marketing/anuncios'
 SECRETO = 'secreto-de-cron-de-prueba-con-mas-de-veinte'
@@ -86,6 +86,8 @@ def test_sincronizar_sin_meta_conectado_avisa(client, make_user, auth_headers):
 
 def test_elegir_a_mano_la_palabra_clave_de_un_anuncio_de_meta(client, db, make_user, auth_headers, con_datos):
     db.session.add(MetaAnuncio(meta_ad_id='120248557648530532', nombre='LP-TA -PSI-US'))
+    # La pestaña lista los que gastaron en el período (por defecto, los últimos 30 días).
+    db.session.add(MetaGastoDiario(meta_ad_id='120248557648530532', fecha=date.today(), gasto=5.0, moneda='USD'))
     db.session.commit()
     cabeceras = auth_headers(make_user(role='director_marketing'))
 

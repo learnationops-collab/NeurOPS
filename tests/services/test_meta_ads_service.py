@@ -80,8 +80,13 @@ def meta(monkeypatch):
     def get(url, params=None, timeout=None):
         falsa.pedidos.append((url, params))
         ruta = urlparse(url).path
-        if ruta.endswith('/act_886943269514111/ads'):
-            return _Respuesta({'data': falsa.anuncios})
+        if (params or {}).get('ids'):
+            # Como Meta: si uno de los ids no existe, falla el pedido entero.
+            por_id = {a['id']: a for a in falsa.anuncios}
+            ids = params['ids'].split(',')
+            if any(i not in por_id for i in ids):
+                return _Respuesta({'error': {'message': 'Some of the aliases you requested do not exist', 'code': 100}}, 404)
+            return _Respuesta({i: por_id[i] for i in ids})
         if ruta.endswith('/act_886943269514111/insights'):
             # Paginado: la primera página trae un `next`.
             if 'after' in parse_qs(urlparse(url).query):
@@ -116,7 +121,38 @@ def test_sincroniza_anuncios_gasto_por_dia_y_palabra_clave(db, meta):
         ('111', '2026-10-12', 10.5), ('111', '2026-10-13', 4.0), ('222', '2026-10-13', 7.25)]
     # La cuenta va sin «act_» duplicado y el token viaja en los parámetros.
     url, params = meta.pedidos[0]
-    assert url.endswith('/v24.0/act_886943269514111/ads') and params['access_token'] == 'token-de-prueba'
+    assert url.endswith('/v24.0/act_886943269514111/insights') and params['access_token'] == 'token-de-prueba'
+    # Las fichas de los anuncios que gastaron, juntas en un solo pedido.
+    assert [p['ids'] for _, p in meta.pedidos if p and p.get('ids')] == ['111,222']
+
+
+def test_solo_se_guardan_y_listan_los_anuncios_que_gastaron(db, meta):
+    meta.anuncios.append({'id': '333', 'name': 'Sin gasto', 'effective_status': 'PAUSED',
+                          'creative': {'id': '7', 'body': 'Comenta APLICAR'}})
+
+    servicio.sincronizar(date(2026, 10, 12), date(2026, 10, 13))
+
+    assert {a.meta_ad_id for a in MetaAnuncio.query.all()} == {'111', '222'}
+    db.session.add(MetaAnuncio(meta_ad_id='444', nombre='Viejo', cuenta_id='886943269514111'))
+    db.session.commit()
+    assert [f['meta_ad_id'] for f in servicio.listado(date(2026, 10, 12), date(2026, 10, 13))] == ['111', '222']
+
+
+def test_un_anuncio_borrado_no_tira_las_fichas_de_los_demas(db, meta):
+    """Meta rechaza el `?ids=` entero si uno no existe: se parte el grupo y el borrado queda con lo
+    que dicen los insights."""
+    meta.gastos.append({'ad_id': '999', 'ad_name': 'Borrado | A1', 'campaign_name': 'LM Funnel',
+                        'adset_name': 'Guía Steps', 'date_start': '2026-10-13', 'spend': '3',
+                        'account_currency': 'USD'})
+
+    resumen = servicio.sincronizar(date(2026, 10, 12), date(2026, 10, 13))
+
+    anuncios = {a.meta_ad_id: a for a in MetaAnuncio.query.all()}
+    assert resumen['anuncios'] == 3
+    assert anuncios['111'].texto == 'Comenta QUIERO APLICAR y te ayudo'
+    assert (anuncios['999'].nombre, anuncios['999'].campana, anuncios['999'].texto) == \
+        ('Borrado | A1', 'LM Funnel', None)
+    assert MetaGastoDiario.query.filter_by(meta_ad_id='999').one().gasto == 3.0
 
 
 def test_volver_a_sincronizar_pisa_el_gasto_del_dia_no_lo_suma(db, meta):
@@ -170,30 +206,29 @@ def test_la_palabra_clave_elegida_a_mano_no_la_pisa_la_sincronizacion(db, meta):
 
 
 def test_una_pagina_demasiado_pesada_se_pide_con_menos_filas(db, meta, monkeypatch):
-    """La cuenta real (15/10/2026): con 200 anuncios y sus creativos por página Meta responde «Please
-    reduce the amount of data you're asking for» (código 1). Se repite la página con la mitad."""
+    """La cuenta real (15/10/2026): con una página muy grande Meta responde «Please reduce the amount
+    of data you're asking for» (código 1). Se repite la página con la mitad de filas."""
     get_original = servicio.requests.get
 
     def get(url, params=None, timeout=None):
-        if urlparse(url).path.endswith('/ads'):
+        if urlparse(url).path.endswith('/insights'):
             meta.pedidos.append((url, params))
             consulta = {k: v[0] for k, v in parse_qs(urlparse(url).query).items()}
             limite = int((params or consulta).get('limit'))
-            if limite > 50:
+            if limite > 100:
                 return _Respuesta({'error': {'message': 'Please reduce the amount of data', 'code': 1}}, 500)
             if 'after' in consulta:
-                return _Respuesta({'data': meta.anuncios[1:]})
+                return _Respuesta({'data': meta.gastos[2:]})
             # El `next` de Meta trae el límite de la primera pedida: también se achica.
-            return _Respuesta({'data': meta.anuncios[:1],
-                               'paging': {'next': f'{url}?after=x&limit=200&access_token=token-de-prueba'}})
+            return _Respuesta({'data': meta.gastos[:2],
+                               'paging': {'next': f'{url}?after=x&limit=500&access_token=token-de-prueba'}})
         return get_original(url, params=params, timeout=timeout)
 
     monkeypatch.setattr(servicio.requests, 'get', get)
 
     resumen = servicio.sincronizar(date(2026, 10, 12), date(2026, 10, 13))
 
-    assert resumen['anuncios'] == 2
-    assert MetaAnuncio.query.count() == 2
+    assert (resumen['anuncios'], resumen['filas_de_gasto']) == (2, 3)
 
 
 def test_si_ni_con_pocas_filas_alcanza_el_error_sale_igual(db, meta, monkeypatch):
