@@ -4,6 +4,7 @@ import { Check, Flame, RefreshCw } from 'lucide-react';
 import api from '../../../services/api';
 import { EsqueletoFilas, Tip } from '../../comercial/components/Shared';
 import TarjetaAgenda from './TarjetaAgenda';
+import { agregarAnuncio } from './BuscadorAnuncio';
 import Premio from './Premio';
 import ListaCompletadas from './ListaCompletadas';
 import SetterUnclaimedAgendas from './SetterUnclaimedAgendas';
@@ -164,9 +165,14 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
     const asignar = async (agenda, anuncio, instagram) => {
         pedido.current += 1;
         try {
+            // Una palabra clave sin anuncio (la que llegó por ManyChat o la que escribió el setter)
+            // viaja como texto: el backend crea su anuncio (15/10/2026).
             const res = await api.post('/setter/palabras-clave', {
-                appointment_id: agenda.id, ad_id: anuncio.id, ...(instagram !== undefined ? { instagram } : {}),
+                appointment_id: agenda.id,
+                ...(anuncio.id ? { ad_id: anuncio.id } : { palabra_clave: anuncio.keyword }),
+                ...(instagram !== undefined ? { instagram } : {}),
             });
+            const creado = !anuncio.id ? res.data?.anuncio : null;
             const respuesta = res.data?.resumen;
             const lista = listaRef.current;
             const mesAhora = mesRef.current;
@@ -189,6 +195,9 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
             setDatos(d => ({
                 ...d, pendientes: d.pendientes.filter(a => a.id !== agenda.id), resumen: respuesta || d.resumen,
                 completadas: ordenarCompletadas([hecha, ...(d.completadas || []).filter(a => a.id !== agenda.id)]),
+                // El anuncio que se acaba de crear entra a la lista (y sale la palabra «nueva» que lo
+                // pidió): la próxima agenda ya lo encuentra como uno más.
+                anuncios: creado ? agregarAnuncio(d.anuncios || [], creado) : d.anuncios,
             }));
             if (respuesta) onResumen?.(respuesta);
             const enElMes = mesAhora ? ` en ${nombreDeMes(mesAhora)}` : '';
