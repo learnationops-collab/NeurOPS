@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { formatear } from './metricas';
 import { marcarCampanaWorkshop, mensajeDeError } from './marketingApi';
@@ -11,7 +11,12 @@ import { marcarCampanaWorkshop, mensajeDeError } from './marketingApi';
 const CampanasWorkshop = ({ campanas, onCambio }) => {
     const [guardando, setGuardando] = useState(null);
     const [lista, setLista] = useState(campanas);
-    useEffect(() => setLista(campanas), [campanas]);
+    // Al recargar (otro período, otra sincronización) manda la lista nueva.
+    const [base, setBase] = useState(campanas);
+    if (base !== campanas) {
+        setBase(campanas);
+        setLista(campanas);
+    }
     const [verTodas, setVerTodas] = useState(false);
 
     const marcar = async (campana) => {
