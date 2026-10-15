@@ -462,3 +462,123 @@ def agenda_cancelar(event_id):
     ok = GoogleService.delete_event(u.id, event_id, calendar_id=datos.get('calendar_id'), avisar=True)
     servicio._google_cache.pop(u.id, None)
     return jsonify({'ok': ok}), 200
+
+
+# --- Reuniones de equipo ----------------------------------------------------------------------
+# Reuniones que se repiten (las de equipo y las 1:1 diarias): la Academia las declara y acá se crea un solo
+# evento de Google que se repite, en el calendario elegido de quien la organiza, con Meet, invitando al email
+# de la cuenta de cada participante. Como el resto de la agenda, acá no se guarda nada.
+
+FECHA = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+BYDAY = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA']  # 0 = domingo, como la Academia
+EMAIL = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+
+
+def _reunion(datos):
+    """Valida el cuerpo de una reunión. → (inicio_local, fin_local, tz, recurrencia, invitados) o un error 400."""
+    from datetime import datetime
+
+    tz, fecha, hora = datos.get('tz'), datos.get('fecha'), datos.get('hora')
+    try:
+        zona = ZoneInfo(tz)
+    except Exception:  # noqa: BLE001
+        return None, _error('Zona horaria inválida', 400)
+    dur = _entero(datos.get('duracion'), 5, 480)
+    dias = datos.get('dias')
+    if not (isinstance(fecha, str) and FECHA.match(fecha)
+            and isinstance(hora, str) and HORA.match(hora) and hora != '24:00'
+            and dur is not None and isinstance(dias, list) and dias
+            and all(isinstance(d, int) and not isinstance(d, bool) and 0 <= d <= 6 for d in dias)):
+        return None, _error('Datos inválidos (fecha, hora, duracion o dias)', 400)
+    inicio = datetime.strptime(f'{fecha} {hora}', '%Y-%m-%d %H:%M')
+    regla = 'RRULE:FREQ=WEEKLY;BYDAY=' + ','.join(BYDAY[d] for d in sorted(set(dias)))
+    hasta = datos.get('hasta')
+    if hasta:
+        if not (isinstance(hasta, str) and FECHA.match(hasta)):
+            return None, _error('Datos inválidos (hasta)', 400)
+        # Con inicio en una zona, UNTIL va en UTC: el final de ese día en la zona de la reunión.
+        fin_dia = datetime.strptime(hasta, '%Y-%m-%d').replace(hour=23, minute=59, second=59, tzinfo=zona)
+        regla += ';UNTIL=' + fin_dia.astimezone(ZoneInfo('UTC')).strftime('%Y%m%dT%H%M%SZ')
+    recurrencia = [regla]
+    saltear = [f for f in (datos.get('saltear') or []) if isinstance(f, str) and FECHA.match(f)]
+    if saltear:
+        hhmm = hora.replace(':', '') + '00'
+        fechas = ','.join(f.replace('-', '') + 'T' + hhmm for f in sorted(set(saltear)))
+        recurrencia.append(f'EXDATE;TZID={tz}:{fechas}')
+    invitados = [e.strip().lower() for e in (datos.get('invitados') or [])
+                 if isinstance(e, str) and EMAIL.match(e.strip())]
+    return (inicio, inicio + timedelta(minutes=dur), tz, recurrencia, invitados), None
+
+
+def _textos(datos):
+    """(titulo, descripcion) de la reunión, recortados a lo que acepta Google."""
+    return str(datos.get('titulo') or 'Reunión')[:200], str(datos.get('descripcion') or '')[:4000]
+
+
+@bp.route('/agenda/reuniones', methods=['POST'])
+@require_academy_token
+def agenda_reunion_crear():
+    """{email (quien organiza), tz, fecha (la primera), hora, duracion, dias [0 = domingo], titulo, descripcion,
+    invitados [emails], saltear [fechas], hasta?} → {event_id, calendar_id, meet}. Solo pide su calendario elegido
+    (no el WhatsApp: acá no se avisa por WhatsApp)."""
+    from app.services.google_service import GoogleService
+
+    datos = _cuerpo()
+    u = _cuenta(datos.get('email'))
+    if not u:
+        return _error('No existe esa persona del equipo', 404)
+    if not _estado(u)['calendario_elegido']:
+        return _error('no_lista', 409)
+    r, error = _reunion(datos)
+    if error:
+        return error
+    inicio, fin, tz, recurrencia, invitados = r
+    calendar_id = GoogleService._calendario(u.id)
+    try:
+        event_id, meet = GoogleService.crear_reunion(
+            u.id, inicio, fin, tz, *_textos(datos), recurrencia, invitados)
+    except Exception as e:  # noqa: BLE001
+        current_app.logger.warning(f'[AGENDA ACADEMIA] No se pudo crear la reunión de #{u.id}: {e}')
+        return _error('google', 502)
+    servicio._google_cache.pop(u.id, None)
+    return jsonify({'event_id': event_id, 'calendar_id': calendar_id, 'meet': meet}), 200
+
+
+@bp.route('/agenda/reuniones/<event_id>', methods=['PATCH'])
+@require_academy_token
+def agenda_reunion_editar(event_id):
+    """Lo mismo que al crear, más calendar_id (donde se creó): reescribe la serie y Google avisa a los invitados.
+    Para terminarla sin borrar lo que ya pasó, se manda `hasta`."""
+    from app.services.google_service import GoogleService
+
+    datos = _cuerpo()
+    u = _cuenta(datos.get('email'))
+    if not u:
+        return _error('No existe esa persona del equipo', 404)
+    r, error = _reunion(datos)
+    if error:
+        return error
+    inicio, fin, tz, recurrencia, invitados = r
+    try:
+        GoogleService.editar_reunion(u.id, event_id, datos.get('calendar_id'), inicio, fin, tz, *_textos(datos),
+                                     recurrencia, invitados)
+    except Exception as e:  # noqa: BLE001
+        current_app.logger.warning(f'[AGENDA ACADEMIA] No se pudo editar la reunión {event_id} de #{u.id}: {e}')
+        return _error('google', 502)
+    servicio._google_cache.pop(u.id, None)
+    return jsonify({'ok': True}), 200
+
+
+@bp.route('/agenda/reuniones/<event_id>', methods=['DELETE'])
+@require_academy_token
+def agenda_reunion_borrar(event_id):
+    """{email, calendar_id}: borra la serie entera; Google les avisa a los invitados."""
+    from app.services.google_service import GoogleService
+
+    datos = {**request.args.to_dict(), **_cuerpo()}
+    u = _cuenta(datos.get('email'))
+    if not u:
+        return _error('No existe esa persona del equipo', 404)
+    ok = GoogleService.delete_event(u.id, event_id, calendar_id=datos.get('calendar_id'), avisar=True)
+    servicio._google_cache.pop(u.id, None)
+    return jsonify({'ok': ok}), 200

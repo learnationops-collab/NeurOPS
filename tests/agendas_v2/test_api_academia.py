@@ -308,3 +308,71 @@ def test_si_cambia_la_cuenta_de_google_hay_que_elegir_de_nuevo(client, db, monke
     assert r.json['destino'] is None
     assert client.get(f'{BASE}/equipo/dari@thelearnation.com', headers=H).json['lista'] is False
     assert GoogleCalendarToken.query.filter_by(user_id=u.id).first().google_calendar_id == 'primary'
+
+
+# --- Reuniones de equipo ---------------------------------------------------------------------
+
+
+@pytest.fixture
+def reuniones(monkeypatch):
+    llamadas = {'crear': [], 'editar': []}
+
+    def crear(user_id, inicio, fin, tz, titulo, descripcion, recurrencia, invitados):
+        llamadas['crear'].append({'inicio': inicio, 'fin': fin, 'tz': tz, 'titulo': titulo, 'recurrencia': recurrencia,
+                                  'invitados': invitados})
+        return 'serie1', 'https://meet.google.com/xyz'
+
+    def editar(user_id, event_id, calendar_id, inicio, fin, tz, titulo, descripcion, recurrencia, invitados):
+        llamadas['editar'].append({'event_id': event_id, 'calendar_id': calendar_id, 'recurrencia': recurrencia,
+                                   'invitados': invitados})
+
+    monkeypatch.setattr(GoogleService, 'crear_reunion', staticmethod(crear))
+    monkeypatch.setattr(GoogleService, 'editar_reunion', staticmethod(editar))
+    return llamadas
+
+
+def _reunion_cuerpo(**extra):
+    return {'email': 'dari@thelearnation.com', 'tz': BA, 'fecha': '2026-10-06', 'hora': '09:30', 'duracion': 15,
+            'dias': [1, 2, 3, 4, 5], 'titulo': 'Daily con Santi',
+            'invitados': ['Santi@thelearnation.com', 'dari@mail.com', 'no-es-mail'],
+            **extra}
+
+
+def test_reunion_crea_una_serie_lunes_a_viernes_e_invita_a_cada_email(client, db, reuniones):
+    _alta(client)
+    _lista(db)
+    r = client.post(f'{BASE}/reuniones', json=_reunion_cuerpo(saltear=['2026-10-12']), headers=H)
+    assert r.status_code == 200
+    assert r.json == {'event_id': 'serie1', 'calendar_id': 'cal-dari', 'meet': 'https://meet.google.com/xyz'}
+    c = reuniones['crear'][0]
+    assert c['inicio'] == datetime(2026, 10, 6, 9, 30) and c['fin'] == datetime(2026, 10, 6, 9, 45) and c['tz'] == BA
+    assert c['recurrencia'] == ['RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR', f'EXDATE;TZID={BA}:20261012T093000']
+    assert c['invitados'] == ['santi@thelearnation.com', 'dari@mail.com']
+
+
+def test_reunion_sin_calendario_elegido_no_se_crea(client, db, reuniones):
+    _alta(client)
+    r = client.post(f'{BASE}/reuniones', json=_reunion_cuerpo(), headers=H)
+    assert r.status_code == 409 and reuniones['crear'] == []
+
+
+def test_reunion_rechaza_datos_invalidos(client, db, reuniones):
+    _alta(client)
+    _lista(db)
+    assert client.post(f'{BASE}/reuniones', json=_reunion_cuerpo(dias=[]), headers=H).status_code == 400
+    assert client.post(f'{BASE}/reuniones', json=_reunion_cuerpo(hora='9:30'), headers=H).status_code == 400
+    assert client.post(f'{BASE}/reuniones', json=_reunion_cuerpo(tz='Marte/Base'), headers=H).status_code == 400
+
+
+def test_terminar_una_reunion_corta_la_serie_en_utc_y_borrar_la_quita(client, db, reuniones, google):
+    _alta(client)
+    _lista(db)
+    cuerpo = _reunion_cuerpo(calendar_id='cal-dari', hasta='2026-10-20')
+    r = client.patch(f'{BASE}/reuniones/serie1', json=cuerpo, headers=H)
+    assert r.status_code == 200
+    e = reuniones['editar'][0]
+    assert e['event_id'] == 'serie1' and e['calendar_id'] == 'cal-dari'
+    assert e['recurrencia'] == ['RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;UNTIL=20261021T025959Z']
+    cuerpo = {'email': 'dari@thelearnation.com', 'calendar_id': 'cal-dari'}
+    r = client.delete(f'{BASE}/reuniones/serie1', json=cuerpo, headers=H)
+    assert r.json == {'ok': True} and google['borrar'][-1] == ('serie1', 'cal-dari', True)

@@ -521,6 +521,59 @@ class GoogleService:
         ).execute()
 
     @staticmethod
+    def _cuerpo_reunion(inicio_local, fin_local, tz, titulo, descripcion, recurrencia, invitados):
+        """El evento de una reunión que se repite: inicio y fin en la hora local de `tz` (Google necesita la
+        zona para repetirla bien con los cambios de horario), sus líneas RRULE/EXDATE y los invitados."""
+        return {
+            'summary': titulo,
+            'description': descripcion,
+            'start': {'dateTime': inicio_local.replace(microsecond=0).isoformat(), 'timeZone': tz},
+            'end': {'dateTime': fin_local.replace(microsecond=0).isoformat(), 'timeZone': tz},
+            'recurrence': list(recurrencia),
+            'attendees': [{'email': e} for e in dict.fromkeys(invitados) if e],
+            'reminders': {'useDefault': False, 'overrides': [{'method': 'popup', 'minutes': 10}]},
+        }
+
+    @staticmethod
+    def crear_reunion(user_id, inicio_local, fin_local, tz, titulo, descripcion, recurrencia, invitados):
+        """Crea una reunión que se repite (reuniones de equipo de la Academia) en el calendario elegido del
+        usuario, con Meet, e invita a cada email (Google les manda la invitación y la serie aparece en su
+        calendario). inicio_local/fin_local: datetime sin zona, en `tz`. Devuelve (event_id, meet). Lanza
+        si Google falla."""
+        import uuid
+
+        service = GoogleService.get_service(user_id)
+        if not service:
+            raise RuntimeError('El usuario no tiene Google Calendar conectado.')
+        cuerpo = GoogleService._cuerpo_reunion(inicio_local, fin_local, tz, titulo, descripcion, recurrencia, invitados)
+        cuerpo['conferenceData'] = {
+            'createRequest': {'requestId': uuid.uuid4().hex, 'conferenceSolutionKey': {'type': 'hangoutsMeet'}}
+        }
+        evt = service.events().insert(
+            calendarId=GoogleService._calendario(user_id), body=cuerpo, conferenceDataVersion=1, sendUpdates='all',
+        ).execute()
+        entradas = (evt.get('conferenceData') or {}).get('entryPoints', [])
+        video = next((p.get('uri') for p in entradas if p.get('entryPointType') == 'video'), None)
+        meet = evt.get('hangoutLink') or video
+        return evt.get('id'), meet
+
+    @staticmethod
+    def editar_reunion(user_id, event_id, calendar_id, inicio_local, fin_local, tz, titulo, descripcion, recurrencia,
+                       invitados):
+        """Reescribe la serie entera (horario, días, fechas salteadas, invitados, título) y Google avisa a
+        los invitados. Conserva el Meet. Lanza si Google falla."""
+        service = GoogleService.get_service(user_id)
+        if not service:
+            raise RuntimeError('El usuario no tiene Google Calendar conectado.')
+        service.events().patch(
+            calendarId=calendar_id or GoogleService._calendario(user_id),
+            eventId=event_id,
+            body=GoogleService._cuerpo_reunion(inicio_local, fin_local, tz, titulo, descripcion, recurrencia,
+                                               invitados),
+            sendUpdates='all',
+        ).execute()
+
+    @staticmethod
     def delete_event(user_id, event_id, calendar_id=None, avisar=False):
         """Borra el evento. `calendar_id`: donde se creó (por defecto el de destino actual). `avisar`: Google
         les manda la cancelación a los invitados."""
