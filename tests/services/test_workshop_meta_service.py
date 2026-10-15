@@ -148,3 +148,20 @@ def test_editar_el_taller_no_pisa_lo_cargado_a_mano_con_lo_de_meta(client, db, t
     client.put(f'/api/workshop/events/{evento.id}', json=evento.to_dict(), headers=auth_headers(make_user(role='admin')))
 
     assert (evento.inversion, evento.cpm, evento.cpc, evento.clics) == (500.0, 4.6, 0.4, 1815)
+
+
+def test_mover_un_taller_de_dia_o_programar_semanas_mueve_las_ventanas(client, db, talleres, make_user, auth_headers):
+    """Desde que el día y la hora se editan en el panel y se programan semanas enteras (15/10/2026)."""
+    meta_ads_service.marcar_workshop('c-ws', True)
+    meta_ads_service.marcar_workshop('c-launch', True)
+    cabeceras = auth_headers(make_user(role='admin'))
+
+    # El del 14 pasa al 9: le queda solo el 09/07, y el 14/07 ya no es de ningún taller.
+    movido = client.put(f"/api/workshop/events/{talleres['jul14'].id}", json={'date': '2026-07-09'}, headers=cabeceras)
+    assert movido.status_code == 200
+    assert movido.get_json()['inversion'] == 40.0
+
+    programado = client.post('/api/workshop/events/programar', headers=cabeceras, json={
+        'inicio_local': '2026-07-14T17:00', 'zona': 'America/Argentina/Buenos_Aires', 'semanas': 1})
+    assert programado.status_code == 201
+    assert programado.get_json()['creados'][0]['inversion'] == 60.0  # del 10/07 al 14/07

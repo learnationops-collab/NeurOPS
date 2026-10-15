@@ -337,6 +337,9 @@ def programar_workshop_events():
             data.get('meet_url'),
             data.get('whatsapp_url'),
         )
+        if creados:
+            # Como al registrar uno: su inversión de Meta y la del anterior, cuya ventana se acorta.
+            workshop_meta_service.recalcular()
         db.session.commit()
     except workshop_agenda_service.DatoInvalido as e:
         db.session.rollback()
@@ -359,6 +362,7 @@ def update_workshop_event(event_id):
     
     if 'name' in data:
         event.name = data['name']
+    movido = False
 
     # Hora, Meet y WhatsApp (lo que leen las landings). Mover el taller a otro día cambia
     # de qué taller son las agendas de esos días: workshop_live_sync recalcula los dos.
@@ -375,6 +379,7 @@ def update_workshop_event(event_id):
         if WorkshopEvent.query.filter(WorkshopEvent.date == nuevo_dia, WorkshopEvent.id != event.id).first():
             return jsonify({"error": f"Ya existe un taller el {data['date']}"}), 400
         event.date = nuevo_dia
+        movido = True
     # Los que vienen de Meta no se pisan: el panel (el resync del embudo, el modal) manda el evento
     # entero, con los valores de Meta, y quedarían como «cargados a mano».
     if 'inversion' in data and not event.inversion_de_meta:
@@ -426,6 +431,10 @@ def update_workshop_event(event_id):
         event.synced_at = datetime.utcnow()
 
     try:
+        if movido:
+            db.session.flush()
+            # Cambió de qué días es la inversión de Meta de este taller y la de sus vecinos.
+            workshop_meta_service.recalcular()
         db.session.commit()
         return jsonify(_con_replay_local(event.to_dict(), event)), 200
     except Exception as e:
