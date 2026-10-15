@@ -245,6 +245,24 @@ def test_si_ni_con_pocas_filas_alcanza_el_error_sale_igual(db, meta, monkeypatch
         servicio.sincronizar()
 
 
+def test_las_campanas_de_workshop_se_marcan_a_mano(db, meta):
+    servicio.sincronizar(date(2026, 10, 12), date(2026, 10, 13))
+
+    # Ninguna es de workshop hasta que alguien la marca (no se adivina por el nombre).
+    assert servicio.campanas(date(2026, 10, 12), date(2026, 10, 13)) == [
+        {'campana_id': 'c1', 'nombre': 'DMV | Test Públicos', 'gasto': 14.5, 'anuncios': 1, 'workshop': False}]
+    servicio.marcar_workshop('c1', True)
+    servicio.marcar_workshop('c1', True)  # dos veces no la duplica
+    assert servicio.campanas_workshop() == {'c1': 'DMV | Test Públicos'}
+    # Marcada sigue en la lista aunque no gaste en el período.
+    assert servicio.campanas(date(2026, 1, 1), date(2026, 1, 2)) == [
+        {'campana_id': 'c1', 'nombre': 'DMV | Test Públicos', 'gasto': 0.0, 'anuncios': 0, 'workshop': True}]
+    servicio.marcar_workshop('c1', False)
+    assert servicio.campanas_workshop() == {}
+    with pytest.raises(LookupError):
+        servicio.marcar_workshop('no-existe', True)
+
+
 def test_un_token_vencido_es_un_error_claro(db, meta, monkeypatch):
     monkeypatch.setattr(servicio.requests, 'get', lambda *a, **k: _Respuesta(
         {'error': {'message': 'Session has expired', 'code': 190}}, 400))

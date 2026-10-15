@@ -165,6 +165,25 @@ describe('Marketing › Anuncios', () => {
             { dias: 30, hasta: null }, { dias: 30, hasta: '2026-09-15' }, { dias: 30, hasta: '2026-08-16' }]);
     });
 
+    it('las campañas de workshop se marcan a mano en la pestaña Meta Ads', async () => {
+        const campanas = [
+            { campana_id: '99', nombre: 'WORKSHOP FUNNEL | TESTING ADS', gasto: 120.5, anuncios: 3, workshop: true },
+            { campana_id: '55', nombre: 'DM Funnel | Testing Ads | Broad', gasto: 300, anuncios: 9, workshop: false },
+        ];
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/anuncios'
+            ? { ...TABLERO, meta: { conectado: true, muestra: false, ultima_sincronizacion: null } }
+            : { anuncios: [], campanas, claves: [], conectado: true, muestra: false, ultima_sincronizacion: null } }));
+        api.put.mockResolvedValue({ data: { campana_id: '55', workshop: true } });
+        abrir('/admin/marketing?tab=meta');
+
+        const casilla = await screen.findByRole('checkbox', { name: 'DM Funnel | Testing Ads | Broad es de workshop' });
+        expect(screen.getByRole('checkbox', { name: 'WORKSHOP FUNNEL | TESTING ADS es de workshop' })).toBeChecked();
+        await userEvent.click(casilla);
+
+        expect(api.put).toHaveBeenCalledWith('/marketing/anuncios/meta/campanas/55', { workshop: true });
+        await waitFor(() => expect(casilla).toBeChecked());
+    });
+
     it('la pestaña Meta Ads explica cómo conectarlo cuando falta el token', async () => {
         abrir('/admin/marketing?tab=meta');
         expect(await screen.findByText('Sin conectar')).toBeInTheDocument();

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { CheckCircle2, CircleDashed, RefreshCw, Search } from 'lucide-react';
 import { EsqueletoFilas } from '../../../comercial/components/Shared';
+import CampanasWorkshop from './CampanasWorkshop';
 import { diaLocal, formatear } from './metricas';
 import { asignarClaveDeMeta, mensajeDeError, pedirAnunciosDeMeta, sincronizarMeta } from './marketingApi';
 
@@ -219,6 +220,10 @@ const ConexionMeta = ({ desde, hasta, filasTablero, onCambio }) => {
                     )}
                 </section>
             </div>
+
+            {datos.conectado && (
+                <CampanasWorkshop campanas={datos.campanas || []} />
+            )}
 
             <section className="panel mk-panel-tabla">
                 <div className="panel-cab mk-tabla-barra">

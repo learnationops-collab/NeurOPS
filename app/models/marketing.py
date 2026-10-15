@@ -152,6 +152,17 @@ class MetaGastoDiario(db.Model):
     actualizado_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class MetaCampanaWorkshop(db.Model):
+    """Una campaña de Meta que lleva a las landings del workshop, marcada a mano en Marketing › Meta
+    Ads (decisión de Kerwin del 15/10/2026: no se adivina por el nombre). Su gasto, impresiones y
+    clics son la inversión, el CPM, el CPC y los clics de cada taller (`workshop_meta_service`)."""
+    __tablename__ = 'meta_campanas_workshop'
+    id = db.Column(db.Integer, primary_key=True)
+    campana_id = db.Column(db.String(40), unique=True, nullable=False)
+    nombre = db.Column(db.String(255))  # el que tenía al marcarla, por si deja de gastar
+    creado_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 class ManychatAdLead(db.Model):
     """Old lead table. Preserved for data migration."""
     __tablename__ = 'manychat_ad_leads'

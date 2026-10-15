@@ -186,3 +186,7 @@
   .dc-shell .mk-tope-meta{margin-left:0;justify-content:flex-start}
   .dc-shell .mk-col-nombre{min-width:190px;max-width:210px}
 }
+
+/* Campañas de workshop (15/10/2026): la casilla va al final, la primera columna es la fija del nombre. */
+.dc-shell .mk-tabla .mk-col-ws{text-align:center;width:1%;white-space:nowrap}
+.dc-shell .mk-ver-mas{margin:var(--s3) var(--s5) 0}

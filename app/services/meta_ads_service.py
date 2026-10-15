@@ -32,7 +32,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 import requests
 
 from app import db
-from app.models import MetaAnuncio, MetaGastoDiario
+from app.models import MetaAnuncio, MetaCampanaWorkshop, MetaGastoDiario
 
 GRAPH = 'https://graph.facebook.com'
 VERSION_POR_DEFECTO = 'v24.0'
@@ -421,3 +421,42 @@ def listado(desde, hasta):
         })
     filas.sort(key=lambda f: (f['estado'] != 'ACTIVE', -f['gasto'], f['nombre'] or ''))
     return filas
+
+
+# --- Las campañas de workshop --------------------------------------------------------------------
+
+def campanas_workshop():
+    """{campana_id: nombre} de las campañas marcadas como de workshop."""
+    return {c.campana_id: c.nombre for c in MetaCampanaWorkshop.query.all()}
+
+
+def campanas(desde, hasta):
+    """Las campañas que gastaron en [desde, hasta] y las marcadas como de workshop (aunque no hayan
+    gastado), con su gasto y si son de workshop, para marcarlas en la pestaña de conexión."""
+    marcadas = campanas_workshop()
+    gasto = {cid: (nombre, float(total), anuncios) for cid, nombre, total, anuncios in db.session.query(
+        MetaAnuncio.campana_id, db.func.max(MetaAnuncio.campana), db.func.sum(MetaGastoDiario.gasto),
+        db.func.count(db.distinct(MetaAnuncio.meta_ad_id)))
+        .join(MetaGastoDiario, MetaGastoDiario.meta_ad_id == MetaAnuncio.meta_ad_id)
+        .filter(MetaGastoDiario.fecha >= desde, MetaGastoDiario.fecha <= hasta, MetaAnuncio.campana_id.isnot(None))
+        .group_by(MetaAnuncio.campana_id).having(db.func.sum(MetaGastoDiario.gasto) > 0)}
+    filas = [{'campana_id': cid, 'nombre': nombre, 'gasto': round(total, 2), 'anuncios': anuncios,
+              'workshop': cid in marcadas} for cid, (nombre, total, anuncios) in gasto.items()]
+    filas += [{'campana_id': cid, 'nombre': nombre, 'gasto': 0.0, 'anuncios': 0, 'workshop': True}
+              for cid, nombre in marcadas.items() if cid not in gasto]
+    filas.sort(key=lambda f: (not f['workshop'], -f['gasto'], f['nombre'] or ''))
+    return filas
+
+
+def marcar_workshop(campana_id, workshop):
+    """Marca (o desmarca) una campaña como de workshop. Hace commit."""
+    campana_id = str(campana_id)
+    nombre = db.session.query(MetaAnuncio.campana).filter(MetaAnuncio.campana_id == campana_id).first()
+    marcada = MetaCampanaWorkshop.query.filter_by(campana_id=campana_id).first()
+    if workshop and not marcada:
+        if not nombre:
+            raise LookupError('Esa campaña de Meta no está sincronizada.')
+        db.session.add(MetaCampanaWorkshop(campana_id=campana_id, nombre=nombre[0]))
+    elif not workshop and marcada:
+        db.session.delete(marcada)
+    db.session.commit()
