@@ -101,6 +101,15 @@ const Leyenda = ({ items }) => (
     </div>
 );
 
+/** Cuántos de los mensajes no contestaron: lo que sobra de repartirlos en leads, no leads e
+ * in-abribles (corrección del 15/10/2026). Sin mensajes no se muestra. */
+const ChipNoContestaron = ({ n, entrantes }) => (entrantes > 0 ? (
+    <span className="rd-chip" style={{ '--c': n ? 'var(--warning)' : 'var(--success)' }}
+        title="Mensajes que no fueron lead, ni no lead, ni in-abribles">
+        <Numero valor={n} /><span>{n === 1 ? 'no contestó' : 'no contestaron'}</span>
+    </span>
+) : null);
+
 const PasoEntrantes = ({ ctx }) => {
     const { estado: s, num } = ctx;
     const mE = Math.max(1, s.anuncios.entrantes, s.inbound.entrantes);
@@ -108,13 +117,15 @@ const PasoEntrantes = ({ ctx }) => {
         <section className="rd-pasopanel rd-vidrio" style={{ '--n': 3 }} aria-label="Entrantes">
             {CANALES.map((c, i) => (
                 <Columna key={c.k} canal={c} indice={i}
+                    extra={<ChipNoContestaron n={num[`${c.k}.noCont`]} entrantes={s[c.k].entrantes} />}
                     campos={[
-                        <Campo key="e" ctx={ctx} ruta={`${c.k}.entrantes`} rotulo="Nuevos mensajes" canal={c} aria={`${c.n}, nuevos mensajes`} ancho />,
+                        <Campo key="e" ctx={ctx} ruta={`${c.k}.entrantes`} rotulo="Nuevos mensajes" canal={c} aria={`${c.n}, nuevos mensajes`} />,
+                        <Campo key="l" ctx={ctx} ruta={`${c.k}.leads`} rotulo="Leads" canal={c} aria={`${c.n}, leads`} />,
                         <Campo key="n" ctx={ctx} ruta={`${c.k}.no_lead`} rotulo="No leads" canal={c} aria={`${c.n}, no leads`} />,
                         <Campo key="i" ctx={ctx} ruta={`${c.k}.inabribles`} rotulo="In-abribles" canal={c} aria={`${c.n}, in-abribles`} />,
                     ]}
                     grande={<Numero valor={num[`${c.k}.cualRate`]} tipo="pct" />} rotulo="cualificación">
-                    <Flujo etapas={[{ n: 'Entrantes' }, { n: 'Cualificados' }]} color={c.c} fb={64} fg={104}
+                    <Flujo etapas={[{ n: 'Entrantes' }, { n: 'Leads' }]} color={c.c} fb={64} fg={104}
                         valores={[s[c.k].entrantes, num[`${c.k}.net`]]} max={mE} convs={[num[`${c.k}.cualRate`]]} />
                 </Columna>
             ))}
@@ -132,31 +143,45 @@ const PasoEntrantes = ({ ctx }) => {
     );
 };
 
-// Anuncios e Inbound se abren sobre sus entrantes; Bienvenidas, sobre las que respondieron.
+// Anuncios e Inbound se abren sobre sus entrantes; Bienvenidas, sobre las que respondieron. Debajo
+// de cada apertura, cuántos respondieron: «una cosa es las aperturas que hicieron y otra cosa es lo
+// que respondieron» (el dueño, 15/10/2026).
 const PasoAperturas = ({ ctx }) => {
     const { estado: s, num } = ctx;
     const mE = Math.max(1, s.anuncios.entrantes, s.inbound.entrantes);
     return (
         <section className="rd-pasopanel rd-vidrio" style={{ '--n': 3 }} aria-label="Aperturas">
             {CANALES.map((c, i) => (
-                <Columna key={c.k} canal={c} indice={i} extra={<ChipRespuesta d={s[c.k]} />}
+                <Columna key={c.k} canal={c} indice={i} extra={<ChipRespuesta tasa={num[`${c.k}.respRate`]} />}
                     campos={[
                         <Campo key="e" ctx={ctx} ruta={`${c.k}.ap_entrantes`} rotulo="En entrantes" canal={c} aria={`${c.n}, aperturas en entrantes`} />,
                         <Campo key="d" ctx={ctx} ruta={`${c.k}.ap_dolor`} rotulo="En dolor" canal={c} aria={`${c.n}, aperturas en dolor`} />,
+                        <Campo key="re" ctx={ctx} ruta={`${c.k}.ap_entrantes_resp`} rotulo="Respondieron" canal={c}
+                            aria={`${c.n}, respondieron las aperturas en entrantes`} />,
+                        <Campo key="rd" ctx={ctx} ruta={`${c.k}.ap_dolor_resp`} rotulo="Respondieron" canal={c}
+                            aria={`${c.n}, respondieron las aperturas en dolor`} />,
                     ]}
                     grande={<Numero valor={num[`${c.k}.apRate`]} tipo="pct" />} rotulo="apertura"
                     ley={<Leyenda items={[['En entrantes', 'claro'], ['En dolor', '']]} />}>
-                    <Flujo etapas={[{ n: 'Entrantes', ref: true }, { n: 'Aperturas', split: true }]} color={c.c} fb={64} fg={104}
-                        valores={[s[c.k].entrantes, [s[c.k].ap_entrantes, s[c.k].ap_dolor]]} max={mE}
-                        convs={[num[`${c.k}.apRate`]]} />
+                    <Flujo etapas={[{ n: 'Entrantes', ref: true }, { n: 'Aperturas', split: true }, { n: 'Respondieron', split: true }]}
+                        color={c.c} fb={56} fg={72} max={mE}
+                        valores={[s[c.k].entrantes, [s[c.k].ap_entrantes, s[c.k].ap_dolor],
+                            [s[c.k].ap_entrantes_resp, s[c.k].ap_dolor_resp]]}
+                        convs={[num[`${c.k}.apRate`], num[`${c.k}.respRate`]]} />
                 </Columna>
             ))}
-            <Columna canal={BIENVENIDAS} indice={2}
-                campos={[<Campo key="a" ctx={ctx} ruta="bienvenidas.aperturas" rotulo="Aperturas" canal={BIENVENIDAS} aria="Bienvenidas, aperturas" ancho />]}
+            <Columna canal={BIENVENIDAS} indice={2} extra={<ChipRespuesta tasa={num['bienvenidas.respRate']} />}
+                campos={[
+                    <Campo key="a" ctx={ctx} ruta="bienvenidas.aperturas" rotulo="Aperturas" canal={BIENVENIDAS} aria="Bienvenidas, aperturas" ancho />,
+                    <Campo key="r" ctx={ctx} ruta="bienvenidas.aperturas_resp" rotulo="Respondieron" canal={BIENVENIDAS}
+                        aria="Bienvenidas, respondieron las aperturas" ancho />,
+                ]}
                 grande={<Numero valor={num['bienvenidas.apRate']} tipo="pct" />} rotulo="apertura">
-                <Flujo etapas={[{ n: 'Respondidas', ref: true }, { n: 'Aperturas' }]} color={BIENVENIDAS.c} fb={64} fg={104}
-                    valores={[s.bienvenidas.respondidas, s.bienvenidas.aperturas]}
-                    max={Math.max(1, s.bienvenidas.respondidas, s.bienvenidas.aperturas)} convs={[num['bienvenidas.apRate']]} />
+                <Flujo etapas={[{ n: 'Respondidas', ref: true }, { n: 'Aperturas' }, { n: 'Respondieron' }]}
+                    color={BIENVENIDAS.c} fb={56} fg={72}
+                    valores={[s.bienvenidas.respondidas, s.bienvenidas.aperturas, s.bienvenidas.aperturas_resp]}
+                    max={Math.max(1, s.bienvenidas.respondidas, s.bienvenidas.aperturas)}
+                    convs={[num['bienvenidas.apRate'], num['bienvenidas.respRate']]} />
             </Columna>
         </section>
     );
@@ -279,9 +304,10 @@ const PasoReflexion = ({ ctx }) => (
 );
 
 const ORDEN = {
-    entrantes: [...CANALES.flatMap(c => ['entrantes', 'no_lead', 'inabribles'].map(f => `${c.k}.${f}`)),
+    entrantes: [...CANALES.flatMap(c => ['entrantes', 'leads', 'no_lead', 'inabribles'].map(f => `${c.k}.${f}`)),
         'bienvenidas.hechas', 'bienvenidas.respondidas'],
-    aperturas: [...CANALES.flatMap(c => [`${c.k}.ap_entrantes`, `${c.k}.ap_dolor`]), 'bienvenidas.aperturas'],
+    aperturas: [...CANALES.flatMap(c => ['ap_entrantes', 'ap_dolor', 'ap_entrantes_resp', 'ap_dolor_resp'].map(f => `${c.k}.${f}`)),
+        'bienvenidas.aperturas', 'bienvenidas.aperturas_resp'],
     embudo: [...ETAPAS.map(([k]) => `embudo.${k}`), ...CANALES.map(c => `${c.k}.agendas`)],
     followups: ['followups', 'followups_respondidos'].flatMap(sec => FOLLOWUPS.map(([k]) => `${sec}.${k}`)),
 };

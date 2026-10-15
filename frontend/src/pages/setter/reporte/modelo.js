@@ -8,10 +8,17 @@
  * Todo lo de este archivo es puro (sin React ni DOM): el formulario, el Historial y los tests lo
  * usan igual.
  *
- * Los cualificados no se cargan: son entrantes − no leads − in-abribles, por canal. El embudo
- * (dolor, oferta, link) y los follow-ups van en total; las agendas, por canal. Desde el 11/10/2026
- * cada follow-up lleva también cuántos respondieron (`followups_respondidos`), para el % de
- * respuesta que pidió Kerwin.
+ * El embudo (dolor, oferta, link) y los follow-ups van en total; las agendas, por canal. Desde el
+ * 11/10/2026 cada follow-up lleva también cuántos respondieron (`followups_respondidos`), para el %
+ * de respuesta que pidió Kerwin.
+ *
+ * Correcciones del dueño del 15/10/2026:
+ *   · Los cualificados SE CARGAN: son los leads de cada canal (`leads`). Antes eran entrantes − no
+ *     leads − in-abribles y el que no contestaba contaba como cualificado; lo que sobra ahora son
+ *     los que no contestaron.
+ *   · Cada apertura lleva cuántos respondieron (`ap_entrantes_resp`, `ap_dolor_resp` y, en las
+ *     bienvenidas, `aperturas_resp`): «una cosa es las aperturas que hicieron y otra lo que
+ *     respondieron».
  */
 
 export const CANALES = [
@@ -34,13 +41,16 @@ export const PASOS = [
     { k: 'resumen', n: 'Resumen' },
 ];
 
-const canalVacio = () => ({ entrantes: 0, no_lead: 0, inabribles: 0, ap_entrantes: 0, ap_dolor: 0, agendas: 0 });
+const canalVacio = () => ({
+    entrantes: 0, leads: 0, no_lead: 0, inabribles: 0,
+    ap_entrantes: 0, ap_dolor: 0, ap_entrantes_resp: 0, ap_dolor_resp: 0, agendas: 0,
+});
 
-/** Un reporte en cero: la forma de `vacio()` del backend. */
+/** Un reporte en cero: la forma de `vacio()` del backend, con los campos del 15/10. */
 export const vacio = () => ({
     anuncios: canalVacio(),
     inbound: canalVacio(),
-    bienvenidas: { hechas: 0, respondidas: 0, aperturas: 0 },
+    bienvenidas: { hechas: 0, respondidas: 0, aperturas: 0, aperturas_resp: 0 },
     embudo: { dolor: 0, oferta: 0, link: 0 },
     followups: { entrantes: 0, dolor: 0, oferta: 0, link: 0 },
     followups_respondidos: { entrantes: 0, dolor: 0, oferta: 0, link: 0 },
@@ -85,15 +95,20 @@ export const tasa = (a, b) => (b > 0 ? (a / b) * 100 : null);
 export const fmtInt = (v) => (v === null || v === undefined ? '—' : Math.round(v).toLocaleString('es'));
 export const fmtPct = (v) => (v === null || v === undefined ? '—' : `${(Math.round(v * 10) / 10).toLocaleString('es')}%`);
 
-export const netoDe = (d) => Math.max(0, (d?.entrantes || 0) - (d?.no_lead || 0) - (d?.inabribles || 0));
+/** Los cualificados de un canal: los leads que cargó el setter. */
+export const netoDe = (d) => d?.leads || 0;
+
+/** Los mensajes que no fueron lead, ni no lead, ni in-abribles: no contestaron. */
+export const noContestaronDe = (d) => Math.max(0,
+    (d?.entrantes || 0) - (d?.leads || 0) - (d?.no_lead || 0) - (d?.inabribles || 0));
 
 /**
  * Las cuentas del reporte: cada número que se muestra, los avisos y la marca de cada celda.
  *
- * Un solo aviso es un ERROR: no leads + in-abribles por encima de los mensajes del canal (los
- * cualificados darían negativos). Ese bloquea el envío. El resto son advertencias: se ven, pintan
- * la celda y el paso, pero el setter puede tener una razón (abrió en dolor a alguien que entró
- * ayer) y el reporte sale igual.
+ * Un solo aviso es un ERROR: leads + no leads + in-abribles por encima de los mensajes del canal
+ * (los que no contestaron darían negativos). Ese bloquea el envío. El resto son advertencias: se
+ * ven, pintan la celda y el paso, pero el setter puede tener una razón (abrió en dolor a alguien
+ * que entró ayer) y el reporte sale igual.
  */
 export function calcular(s) {
     const num = {};
@@ -101,15 +116,17 @@ export function calcular(s) {
     const marcas = new Map();
     const marca = (k, nivel) => { if (marcas.get(k) !== 'err') marcas.set(k, nivel); };
     const aviso = (paso, nivel, msg) => avisos.push({ paso, nivel, msg });
-    const t = { entr: 0, net: 0, ap: 0, apD: 0, ag: 0 };
+    const t = { entr: 0, net: 0, ap: 0, apD: 0, ag: 0, resp: 0 };
 
     for (const c of CANALES) {
         const d = s[c.k];
-        const perdidos = d.no_lead + d.inabribles;
+        const repartidos = d.leads + d.no_lead + d.inabribles;
         const net = netoDe(d);
         const ap = d.ap_entrantes + d.ap_dolor;
-        if (perdidos > d.entrantes) {
-            aviso('entrantes', 'err', `${c.n}: no leads e in-abribles superan los ${d.entrantes} mensajes`);
+        const resp = d.ap_entrantes_resp + d.ap_dolor_resp;
+        if (repartidos > d.entrantes) {
+            aviso('entrantes', 'err', `${c.n}: leads, no leads e in-abribles superan los ${d.entrantes} mensajes`);
+            marca(`${c.k}.leads`, 'err');
             marca(`${c.k}.no_lead`, 'err');
             marca(`${c.k}.inabribles`, 'err');
         }
@@ -118,16 +135,25 @@ export function calcular(s) {
             marca(`${c.k}.ap_entrantes`, 'warn');
             marca(`${c.k}.ap_dolor`, 'warn');
         }
+        for (const [k, n] of [['ap_entrantes', 'en entrantes'], ['ap_dolor', 'en dolor']]) {
+            if (d[`${k}_resp`] > d[k]) {
+                aviso('aperturas', 'warn', `${c.n}: más respuestas que aperturas ${n} (${d[k]})`);
+                marca(`${c.k}.${k}_resp`, 'warn');
+            }
+        }
         Object.assign(num, {
             [`${c.k}.entr`]: d.entrantes,
             [`${c.k}.net`]: net,
+            [`${c.k}.noCont`]: noContestaronDe(d),
             [`${c.k}.cualRate`]: tasa(net, d.entrantes),
             [`${c.k}.apRate`]: tasa(ap, d.entrantes),
             [`${c.k}.apTot`]: ap,
+            [`${c.k}.apResp`]: resp,
+            [`${c.k}.respRate`]: tasa(resp, ap),
             [`${c.k}.agendas`]: d.agendas,
             [`${c.k}.convRate`]: tasa(d.agendas, net),
         });
-        t.entr += d.entrantes; t.net += net; t.ap += ap; t.apD += d.ap_dolor; t.ag += d.agendas;
+        t.entr += d.entrantes; t.net += net; t.ap += ap; t.apD += d.ap_dolor; t.ag += d.agendas; t.resp += resp;
     }
 
     const b = s.bienvenidas;
@@ -138,6 +164,10 @@ export function calcular(s) {
     if (b.aperturas > b.respondidas) {
         aviso('aperturas', 'warn', `Bienvenidas: más aperturas que respuestas (${b.respondidas})`);
         marca('bienvenidas.aperturas', 'warn');
+    }
+    if (b.aperturas_resp > b.aperturas) {
+        aviso('aperturas', 'warn', `Bienvenidas: más respuestas que aperturas (${b.aperturas})`);
+        marca('bienvenidas.aperturas_resp', 'warn');
     }
 
     // El embudo total: los cualificados de los dos canales hasta las agendas.
@@ -173,6 +203,8 @@ export function calcular(s) {
         'tot.agendas': t.ag,
         'tot.cualRate': tasa(t.net, t.entr),
         'tot.apRate': tasa(t.ap, t.entr),
+        'tot.apResp': t.resp,
+        'tot.respRate': tasa(t.resp, t.ap),
         'tot.convRate': tasa(t.ag, t.net),
         'tot.fuTot': fuTot,
         'tot.fuResp': fuResp,
@@ -181,6 +213,7 @@ export function calcular(s) {
         'bienvenidas.resp': b.respondidas,
         'bienvenidas.rate': tasa(b.respondidas, b.hechas),
         'bienvenidas.apRate': tasa(b.aperturas, b.respondidas),
+        'bienvenidas.respRate': tasa(b.aperturas_resp, b.aperturas),
     });
     return { num, avisos, marcas, G, convG: G.map((v, i) => (i ? tasa(v, G[i - 1]) : null)) };
 }
@@ -204,6 +237,7 @@ export function referenciaDe(s, ruta) {
     if (sec === 'bienvenidas') {
         if (campo === 'respondidas') return s.bienvenidas.hechas;
         if (campo === 'aperturas') return s.bienvenidas.respondidas;
+        if (campo === 'aperturas_resp') return s.bienvenidas.aperturas;
         return null;
     }
     if (sec === 'embudo') {
@@ -211,7 +245,8 @@ export function referenciaDe(s, ruta) {
     }
     if (sec === 'followups') return null;
     if (sec === 'followups_respondidos') return s.followups[campo];
-    if (['no_lead', 'inabribles', 'ap_entrantes', 'ap_dolor'].includes(campo)) return s[sec].entrantes;
+    if (['leads', 'no_lead', 'inabribles', 'ap_entrantes', 'ap_dolor'].includes(campo)) return s[sec].entrantes;
+    if (campo === 'ap_entrantes_resp' || campo === 'ap_dolor_resp') return s[sec][campo.replace('_resp', '')];
     if (campo === 'agendas') return s.embudo.link;
     return null;
 }
@@ -248,8 +283,12 @@ export function topeDeArrastre(s, ruta) {
  */
 export const desdeLectura = (l) => {
     if (!l) return vacio();
+    // Un reporte de antes del 15/10 no trae leads (null): sus cualificados eran la cuenta vieja, y
+    // con eso se rellena el campo para que editarlo no los baje a cero. Las respuestas a las
+    // aperturas que no cargó vuelven en cero: hay que completarlas.
+    const canal = (d) => ({ ...d, leads: d.leads ?? d.cualificados });
     return fusionar(vacio(), {
-        ...(l.canales ? { anuncios: l.canales.anuncios, inbound: l.canales.inbound } : {}),
+        ...(l.canales ? { anuncios: canal(l.canales.anuncios), inbound: canal(l.canales.inbound) } : {}),
         ...(l.bienvenidas ? { bienvenidas: l.bienvenidas } : {}),
         embudo: l.embudo,
         followups: l.followups,

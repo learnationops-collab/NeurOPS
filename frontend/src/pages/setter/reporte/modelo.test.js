@@ -6,14 +6,18 @@ import {
 
 /**
  * Las cuentas del reporte diario v2: lo que el setter ve mientras carga y lo que bloquea el envío.
- * El día de ejemplo es el del diseño que aprobó Kerwin (anuncios 10/1/0, inbound 6/0/1...).
+ * El día de ejemplo es el del diseño que aprobó Kerwin (anuncios 10/1/0, inbound 6/0/1...), con los
+ * leads y las respuestas a las aperturas del 15/10/2026: todos contestaron (leads = la cuenta de antes)
+ * y respondieron la mitad de las aperturas.
  */
 const diaDelDiseno = () => {
     let s = vacio();
     s = fusionar(s, {
-        anuncios: { entrantes: 10, no_lead: 1, inabribles: 0, ap_entrantes: 3, ap_dolor: 5, agendas: 2 },
-        inbound: { entrantes: 6, no_lead: 0, inabribles: 1, ap_entrantes: 1, ap_dolor: 3, agendas: 1 },
-        bienvenidas: { hechas: 12, respondidas: 5, aperturas: 4 },
+        anuncios: { entrantes: 10, leads: 9, no_lead: 1, inabribles: 0, ap_entrantes: 3, ap_dolor: 5,
+            ap_entrantes_resp: 1, ap_dolor_resp: 3, agendas: 2 },
+        inbound: { entrantes: 6, leads: 5, no_lead: 0, inabribles: 1, ap_entrantes: 1, ap_dolor: 3,
+            ap_entrantes_resp: 0, ap_dolor_resp: 2, agendas: 1 },
+        bienvenidas: { hechas: 12, respondidas: 5, aperturas: 4, aperturas_resp: 2 },
         embudo: { dolor: 10, oferta: 7, link: 5 },
         followups: { entrantes: 9, dolor: 5, oferta: 3, link: 3 },
         followups_respondidos: { entrantes: 4, dolor: 2, oferta: 1, link: 1 },
@@ -22,7 +26,7 @@ const diaDelDiseno = () => {
 };
 
 describe('calcular', () => {
-    it('saca los cualificados por canal (entrantes − no leads − in-abribles) y sus tasas', () => {
+    it('los cualificados de cada canal son sus leads, con sus tasas', () => {
         const { num } = calcular(diaDelDiseno());
 
         expect(num['anuncios.net']).toBe(9);
@@ -40,6 +44,34 @@ describe('calcular', () => {
         expect(num['tot.fuRate']).toBe(40);
         expect(num['bienvenidas.rate']).toBeCloseTo(41.67, 1);
         expect(num['bienvenidas.apRate']).toBe(80);
+    });
+
+    it('lo que sobra de los mensajes no contestó, y cada apertura tiene su % de respuesta', () => {
+        const s = conRuta(diaDelDiseno(), 'anuncios.leads', 6);
+        const { num } = calcular(s);
+
+        expect(num['anuncios.noCont']).toBe(3);
+        expect(num['anuncios.cualRate']).toBe(60);
+        expect(num['inbound.noCont']).toBe(0);
+        expect(num['anuncios.respRate']).toBe(50);
+        expect(num['tot.apResp']).toBe(6);
+        expect(num['tot.respRate']).toBe(50);
+        expect(num['bienvenidas.respRate']).toBe(50);
+    });
+
+    it('más respuestas que aperturas es advertencia del paso Aperturas', () => {
+        let s = conRuta(diaDelDiseno(), 'anuncios.ap_dolor_resp', 6);
+        s = conRuta(s, 'bienvenidas.aperturas_resp', 5);
+        const { avisos, marcas } = calcular(s);
+
+        expect(avisos.map(a => a.msg)).toEqual([
+            'Anuncios: más respuestas que aperturas en dolor (5)',
+            'Bienvenidas: más respuestas que aperturas (4)',
+        ]);
+        expect(marcas.get('anuncios.ap_dolor_resp')).toBe('warn');
+        expect(estadoDelPaso(avisos, 'aperturas')).toBe('warn');
+        expect(referenciaDe(s, 'anuncios.ap_dolor_resp')).toBe(5);
+        expect(referenciaDe(s, 'anuncios.leads')).toBe(10);
     });
 
     it('sin denominador una tasa es null (se muestra «—», no 0%)', () => {
@@ -62,14 +94,13 @@ describe('calcular', () => {
         expect(calcular(diaDelDiseno()).avisos).toEqual([]);
     });
 
-    it('no leads + in-abribles por encima de los mensajes es ERROR, marca las dos celdas y bloquea', () => {
-        const s = conRuta(conRuta(diaDelDiseno(), 'inbound.no_lead', 5), 'inbound.inabribles', 3);
+    it('leads + no leads + in-abribles por encima de los mensajes es ERROR, marca las tres celdas y bloquea', () => {
+        const s = conRuta(diaDelDiseno(), 'inbound.no_lead', 2);    // 5 + 2 + 1 > 6 mensajes
         const { avisos, marcas } = calcular(s);
 
         expect(avisos.filter(a => a.nivel === 'err'))
-            .toEqual([{ paso: 'entrantes', nivel: 'err', msg: 'Inbound: no leads e in-abribles superan los 6 mensajes' }]);
-        // Sin cualificados de inbound, el dolor (10) pasa a superar a los cualificados (9).
-        expect(avisos).toContainEqual({ paso: 'embudo', nivel: 'warn', msg: 'Dolor supera a cualificados (9)' });
+            .toEqual([{ paso: 'entrantes', nivel: 'err', msg: 'Inbound: leads, no leads e in-abribles superan los 6 mensajes' }]);
+        expect(marcas.get('inbound.leads')).toBe('err');
         expect(marcas.get('inbound.no_lead')).toBe('err');
         expect(marcas.get('inbound.inabribles')).toBe('err');
         expect(primerError(avisos)?.paso).toBe('entrantes');
@@ -158,7 +189,9 @@ describe('ida y vuelta con el backend', () => {
         const p = aPayload(diaDelDiseno(), '2026-10-10', 7);
 
         expect(p).toMatchObject({ setter_id: 7, date: '2026-10-10', version: 2, is_non_working_day: false });
-        expect(p.anuncios).toEqual({ entrantes: 10, no_lead: 1, inabribles: 0, ap_entrantes: 3, ap_dolor: 5, agendas: 2 });
+        expect(p.anuncios).toEqual({ entrantes: 10, leads: 9, no_lead: 1, inabribles: 0, ap_entrantes: 3, ap_dolor: 5,
+            ap_entrantes_resp: 1, ap_dolor_resp: 3, agendas: 2 });
+        expect(p.bienvenidas.aperturas_resp).toBe(2);
         expect(Object.keys(p).sort()).toEqual(['anuncios', 'bienvenidas', 'date', 'embudo', 'followups',
             'followups_respondidos', 'inbound', 'is_non_working_day', 'reflexion', 'setter_id', 'version']);
         expect(p.followups_respondidos).toEqual({ entrantes: 4, dolor: 2, oferta: 1, link: 1 });
@@ -182,7 +215,9 @@ describe('ida y vuelta con el backend', () => {
         const s = desdeLectura(lectura);
         expect(s.followups_respondidos).toEqual({ entrantes: 4, dolor: 2, oferta: 1, link: 1 });
 
-        expect(s.anuncios).toEqual(diaDelDiseno().anuncios);
+        // Un reporte de antes del 15/10 no trae leads: el campo toma sus cualificados (la cuenta de
+        // antes), así editarlo no los baja a cero. Las respuestas que no cargó vuelven en cero.
+        expect(s.anuncios).toEqual({ ...diaDelDiseno().anuncios, ap_entrantes_resp: 0, ap_dolor_resp: 0 });
         expect(s.embudo).toEqual({ dolor: 10, oferta: 7, link: 5 });
         expect(s.reflexion.win_del_dia).toBe('Una fría');
         expect(calcular(s).num['tot.net']).toBe(14);
