@@ -151,8 +151,8 @@ def test_editar_el_taller_no_pisa_lo_cargado_a_mano_con_lo_de_meta(client, db, t
 
 def test_mover_un_taller_de_dia_o_programar_semanas_mueve_las_ventanas(client, db, talleres, make_user, auth_headers):
     """Desde que el día y la hora se editan en el panel y se programan semanas enteras (15/10/2026)."""
-    meta_ads_service.marcar_workshop('c-ws', True)
-    meta_ads_service.marcar_workshop('c-launch', True)
+    meta_ads_service.asignar_embudo('ws1', 'workshop')
+    meta_ads_service.asignar_embudo('ws2', 'workshop')
     cabeceras = auth_headers(make_user(role='admin'))
 
     # El del 14 pasa al 9: le queda solo el 09/07, y el 14/07 ya no es de ningún taller.
