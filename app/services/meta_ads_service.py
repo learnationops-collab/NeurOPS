@@ -24,6 +24,7 @@ import json
 import os
 import re
 from datetime import date, datetime, timedelta
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import requests
 
@@ -39,8 +40,17 @@ CAMPOS_DEL_ANUNCIO = ('id,name,effective_status,campaign{name},adset{name},'
                       'creative{id,name,body,title,asset_feed_spec{bodies}}')
 
 
+LIMITE_MINIMO = 5
+# «Please reduce the amount of data you're asking for»: la página pesa demasiado (pasa con los creativos).
+CODIGO_DEMASIADOS_DATOS = 1
+
+
 class ErrorDeMeta(Exception):
     """La sincronización no se pudo hacer (falta configurarla, el token venció, Meta respondió error)."""
+
+    def __init__(self, mensaje, codigo=None):
+        super().__init__(mensaje)
+        self.codigo = codigo
 
 
 def configuracion():
@@ -87,19 +97,41 @@ def _pedir(url, params=None):
         mensaje = error.get('message') or f'HTTP {respuesta.status_code}'
         if error.get('code') == 190:
             mensaje = f'El token de Meta venció o no es válido ({mensaje}).'
-        raise ErrorDeMeta(mensaje)
+        raise ErrorDeMeta(mensaje, error.get('code'))
     return datos
+
+
+def _con_limite(url, params, limite):
+    """La misma página pidiendo `limite` filas (el `limit` va en `params` o, en `paging.next`, en la URL)."""
+    if params is not None:
+        return url, {**params, 'limit': limite}
+    partes = urlsplit(url)
+    consulta = [(k, v) for k, v in parse_qsl(partes.query, keep_blank_values=True) if k != 'limit']
+    return urlunsplit(partes._replace(query=urlencode(consulta + [('limit', limite)]))), None
+
+
+def _pedir_pagina(url, params):
+    """Una página; si Meta dice que pesa demasiado, la pide de nuevo con la mitad de filas.
+    Devuelve los datos y el límite que funcionó (las páginas siguientes lo heredan en su URL)."""
+    while True:
+        try:
+            return _pedir(url, params)
+        except ErrorDeMeta as error:
+            limite = int((params or dict(parse_qsl(urlsplit(url).query))).get('limit') or 25)
+            if error.codigo != CODIGO_DEMASIADOS_DATOS or limite <= LIMITE_MINIMO:
+                raise
+            url, params = _con_limite(url, params, max(LIMITE_MINIMO, limite // 2))
 
 
 def _paginas(url, params):
     """Todas las filas de un listado, siguiendo `paging.next` (que ya trae el token y los filtros)."""
-    datos = _pedir(url, params)
+    datos = _pedir_pagina(url, params)
     for _ in range(PAGINAS_MAXIMAS):
         yield from datos.get('data') or []
         siguiente = (datos.get('paging') or {}).get('next')
         if not siguiente:
             return
-        datos = _pedir(siguiente)
+        datos = _pedir_pagina(siguiente, None)
 
 
 def _texto_del_creativo(creativo):

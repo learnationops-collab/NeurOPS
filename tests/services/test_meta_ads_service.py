@@ -169,6 +169,41 @@ def test_la_palabra_clave_elegida_a_mano_no_la_pisa_la_sincronizacion(db, meta):
         meta_ad_id='222').one().mapeo) == (None, None)
 
 
+def test_una_pagina_demasiado_pesada_se_pide_con_menos_filas(db, meta, monkeypatch):
+    """La cuenta real (15/10/2026): con 200 anuncios y sus creativos por página Meta responde «Please
+    reduce the amount of data you're asking for» (código 1). Se repite la página con la mitad."""
+    get_original = servicio.requests.get
+
+    def get(url, params=None, timeout=None):
+        if urlparse(url).path.endswith('/ads'):
+            meta.pedidos.append((url, params))
+            consulta = {k: v[0] for k, v in parse_qs(urlparse(url).query).items()}
+            limite = int((params or consulta).get('limit'))
+            if limite > 50:
+                return _Respuesta({'error': {'message': 'Please reduce the amount of data', 'code': 1}}, 500)
+            if 'after' in consulta:
+                return _Respuesta({'data': meta.anuncios[1:]})
+            # El `next` de Meta trae el límite de la primera pedida: también se achica.
+            return _Respuesta({'data': meta.anuncios[:1],
+                               'paging': {'next': f'{url}?after=x&limit=200&access_token=token-de-prueba'}})
+        return get_original(url, params=params, timeout=timeout)
+
+    monkeypatch.setattr(servicio.requests, 'get', get)
+
+    resumen = servicio.sincronizar(date(2026, 10, 12), date(2026, 10, 13))
+
+    assert resumen['anuncios'] == 2
+    assert MetaAnuncio.query.count() == 2
+
+
+def test_si_ni_con_pocas_filas_alcanza_el_error_sale_igual(db, meta, monkeypatch):
+    monkeypatch.setattr(servicio.requests, 'get', lambda *a, **k: _Respuesta(
+        {'error': {'message': 'Please reduce the amount of data', 'code': 1}}, 500))
+
+    with pytest.raises(servicio.ErrorDeMeta, match='reduce'):
+        servicio.sincronizar()
+
+
 def test_un_token_vencido_es_un_error_claro(db, meta, monkeypatch):
     monkeypatch.setattr(servicio.requests, 'get', lambda *a, **k: _Respuesta(
         {'error': {'message': 'Session has expired', 'code': 190}}, 400))
