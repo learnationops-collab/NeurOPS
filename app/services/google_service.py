@@ -225,9 +225,10 @@ class GoogleService:
             return None
 
     @staticmethod
-    def crear_evento_con_meet(user_id, inicio_utc, fin_utc, titulo, descripcion, invitado_email=None):
+    def crear_evento_con_meet(user_id, inicio_utc, fin_utc, titulo, descripcion, invitado_email=None, otros_invitados=None):
         """Crea el evento en el calendario elegido del usuario, con link de Google Meet, e invita a
-        `invitado_email` (Google le manda la invitacion por mail). Lo usa Agendas 2.0.
+        `invitado_email` (Google le manda la invitacion por mail). Lo usa Agendas 2.0. `otros_invitados`:
+        más emails a invitar (la Academia suma el calendario personal de quien da la sesión).
 
         inicio_utc/fin_utc: datetime UTC sin zona. Devuelve (event_id, link_de_meet). A diferencia de
         create_event, NO se traga los errores: quien llama decide que hacer si Google falla."""
@@ -249,8 +250,10 @@ class GoogleService:
                 'overrides': [{'method': 'email', 'minutes': 24 * 60}, {'method': 'popup', 'minutes': 10}],
             },
         }
-        if invitado_email:
-            cuerpo['attendees'] = [{'email': invitado_email}]
+        invitados = [e for e in [invitado_email, *(otros_invitados or [])] if e]
+        if invitados:
+            cuerpo['attendees'] = [{'email': e} for e in dict.fromkeys(invitados)]
+        invitado_email = invitados[0] if invitados else None
         evt = service.events().insert(
             calendarId=GoogleService._calendario(user_id),
             body=cuerpo,
@@ -492,12 +495,94 @@ class GoogleService:
         return (evt or {}).get('status') == 'cancelled'
 
     @staticmethod
-    def delete_event(user_id, event_id):
+    def crear_calendario(user_id, nombre, tz=None):
+        """Crea un calendario nuevo en la cuenta conectada (p. ej. uno por persona del equipo dentro de
+        una cuenta compartida) y devuelve su id. Lanza si Google falla."""
+        service = GoogleService.get_service(user_id)
+        if not service:
+            raise RuntimeError('El usuario no tiene Google Calendar conectado.')
+        cuerpo = {'summary': nombre}
+        if tz:
+            cuerpo['timeZone'] = tz
+        return service.calendars().insert(body=cuerpo).execute()['id']
+
+    @staticmethod
+    def mover_evento(user_id, event_id, inicio_utc, fin_utc, calendar_id=None):
+        """Cambia el horario del evento y Google avisa a los invitados. `calendar_id`: donde se creó (si
+        el usuario cambió de calendario después, el evento sigue en el original). Lanza si Google falla."""
+        service = GoogleService.get_service(user_id)
+        if not service:
+            raise RuntimeError('El usuario no tiene Google Calendar conectado.')
+        service.events().patch(
+            calendarId=calendar_id or GoogleService._calendario(user_id),
+            eventId=event_id,
+            body={'start': {'dateTime': inicio_utc.isoformat() + 'Z'}, 'end': {'dateTime': fin_utc.isoformat() + 'Z'}},
+            sendUpdates='all',
+        ).execute()
+
+    @staticmethod
+    def _cuerpo_reunion(inicio_local, fin_local, tz, titulo, descripcion, recurrencia, invitados):
+        """El evento de una reunión que se repite: inicio y fin en la hora local de `tz` (Google necesita la
+        zona para repetirla bien con los cambios de horario), sus líneas RRULE/EXDATE y los invitados."""
+        return {
+            'summary': titulo,
+            'description': descripcion,
+            'start': {'dateTime': inicio_local.replace(microsecond=0).isoformat(), 'timeZone': tz},
+            'end': {'dateTime': fin_local.replace(microsecond=0).isoformat(), 'timeZone': tz},
+            'recurrence': list(recurrencia),
+            'attendees': [{'email': e} for e in dict.fromkeys(invitados) if e],
+            'reminders': {'useDefault': False, 'overrides': [{'method': 'popup', 'minutes': 10}]},
+        }
+
+    @staticmethod
+    def crear_reunion(user_id, inicio_local, fin_local, tz, titulo, descripcion, recurrencia, invitados):
+        """Crea una reunión que se repite (reuniones de equipo de la Academia) en el calendario elegido del
+        usuario, con Meet, e invita a cada email (Google les manda la invitación y la serie aparece en su
+        calendario). inicio_local/fin_local: datetime sin zona, en `tz`. Devuelve (event_id, meet). Lanza
+        si Google falla."""
+        import uuid
+
+        service = GoogleService.get_service(user_id)
+        if not service:
+            raise RuntimeError('El usuario no tiene Google Calendar conectado.')
+        cuerpo = GoogleService._cuerpo_reunion(inicio_local, fin_local, tz, titulo, descripcion, recurrencia, invitados)
+        cuerpo['conferenceData'] = {
+            'createRequest': {'requestId': uuid.uuid4().hex, 'conferenceSolutionKey': {'type': 'hangoutsMeet'}}
+        }
+        evt = service.events().insert(
+            calendarId=GoogleService._calendario(user_id), body=cuerpo, conferenceDataVersion=1, sendUpdates='all',
+        ).execute()
+        entradas = (evt.get('conferenceData') or {}).get('entryPoints', [])
+        video = next((p.get('uri') for p in entradas if p.get('entryPointType') == 'video'), None)
+        meet = evt.get('hangoutLink') or video
+        return evt.get('id'), meet
+
+    @staticmethod
+    def editar_reunion(user_id, event_id, calendar_id, inicio_local, fin_local, tz, titulo, descripcion, recurrencia,
+                       invitados):
+        """Reescribe la serie entera (horario, días, fechas salteadas, invitados, título) y Google avisa a
+        los invitados. Conserva el Meet. Lanza si Google falla."""
+        service = GoogleService.get_service(user_id)
+        if not service:
+            raise RuntimeError('El usuario no tiene Google Calendar conectado.')
+        service.events().patch(
+            calendarId=calendar_id or GoogleService._calendario(user_id),
+            eventId=event_id,
+            body=GoogleService._cuerpo_reunion(inicio_local, fin_local, tz, titulo, descripcion, recurrencia,
+                                               invitados),
+            sendUpdates='all',
+        ).execute()
+
+    @staticmethod
+    def delete_event(user_id, event_id, calendar_id=None, avisar=False):
+        """Borra el evento. `calendar_id`: donde se creó (por defecto el de destino actual). `avisar`: Google
+        les manda la cancelación a los invitados."""
         service = GoogleService.get_service(user_id)
         if not service or not event_id:
             return False
         try:
-            service.events().delete(calendarId=GoogleService._calendario(user_id), eventId=event_id).execute()
+            service.events().delete(calendarId=calendar_id or GoogleService._calendario(user_id), eventId=event_id,
+                                    sendUpdates='all' if avisar else 'none').execute()
             return True
         except Exception as e:  # noqa: BLE001  (un evento ya borrado a mano no puede frenar nada)
             current_app.logger.warning(f'[GOOGLE] No se pudo borrar el evento {event_id} del usuario #{user_id}: {e}')

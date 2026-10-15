@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, RefreshCw, CalendarDays, Loader2, LayoutGrid, List, Layers, Target, Zap, Video, LayoutDashboard, Globe } from 'lucide-react';
+import { Plus, RefreshCw, CalendarDays, CalendarClock, Loader2, LayoutGrid, List, Layers, Target, Zap, Video, LayoutDashboard, Globe } from 'lucide-react';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
 import './workshop-intel.css';
@@ -16,10 +16,16 @@ import WorkshopGoalsModal from './components/WorkshopGoalsModal';
 import WorkshopSimuladorView from './components/WorkshopSimuladorView';
 import WorkshopAccionesView from './components/WorkshopAccionesView';
 import WorkshopCompareModal from './components/WorkshopCompareModal';
+import WorkshopProximosView from './components/WorkshopProximosView';
+import { aCamposLocales, aInicioUtc, esProximo, zonaNavegador } from './agendaTaller';
 
 const initialFormData = {
     date: '',
+    // Hora en la zona del navegador; viaja como `inicio_at` en UTC (ver agendaTaller.js)
+    hora: '',
     name: '',
+    meet_url: '',
+    whatsapp_url: '',
     inversion: 0.0,
     cpm: 0.0,
     cpc: 0.0,
@@ -52,7 +58,7 @@ const WorkshopDashboardPage = () => {
     const [isEditMode, setIsEditMode] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
     const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
-    const [activeTab, setActiveTab] = useState('resumen'); // 'resumen' | 'list' | 'funnel' | 'simulador' | 'acciones' | 'trafico' | 'landing'
+    const [activeTab, setActiveTab] = useState('resumen'); // 'resumen' | 'list' | 'proximos' | 'funnel' | 'simulador' | 'acciones' | 'trafico' | 'landing'
     const [selectedEventForFunnel, setSelectedEventForFunnel] = useState(null);
 
     // Diagnóstico / Metas / Simulador / Acciones (Workshop Intelligence 2.0)
@@ -156,7 +162,7 @@ const WorkshopDashboardPage = () => {
                 // quedaba con los numeros de cuando se selecciono, aunque
                 // el snapshot ya se hubiera sincronizado en el servidor.
                 setSelectedEventForFunnel(prev => {
-                    if (!prev) return res.data[0] || null;
+                    if (!prev) return res.data.find(e => !esProximo(e)) || res.data[0] || null;
                     return res.data.find(e => e.id === prev.id) || prev;
                 });
             }
@@ -225,9 +231,13 @@ const WorkshopDashboardPage = () => {
         setAgendaBreakdown(null);
         setCurrentStep(1);
         setPrefilledDate(event.date);
+        const local = aCamposLocales(event.inicio_at);
         setFormData({
-            date: event.date,
+            date: local.fecha || event.date,
+            hora: local.hora,
             name: event.name,
+            meet_url: event.meet_url || '',
+            whatsapp_url: event.whatsapp_url || '',
             inversion: event.inversion,
             cpm: event.cpm,
             cpc: event.cpc,
@@ -308,8 +318,13 @@ const WorkshopDashboardPage = () => {
             replay_activo_desde: formData.replay_activo_desde || null,
             replay_vence_hasta: formData.replay_vence_hasta || null,
             replay_info_segundos: Math.round((parseFloat(formData.replay_info_minutos) || 0) * 60),
-            replay_oferta_segundos: Math.round((parseFloat(formData.replay_oferta_minutos) || 0) * 60)
+            replay_oferta_segundos: Math.round((parseFloat(formData.replay_oferta_minutos) || 0) * 60),
+            inicio_at: aInicioUtc(formData.date, formData.hora),
+            zona: zonaNavegador(),
+            meet_url: formData.meet_url?.trim() || null,
+            whatsapp_url: formData.whatsapp_url?.trim() || null
         };
+        delete payload.hora;
         delete payload.replay_info_minutos;
         delete payload.replay_oferta_minutos;
 
@@ -383,6 +398,11 @@ const WorkshopDashboardPage = () => {
         }
     };
 
+    // Los talleres programados que todavía no empezaron tienen todo en cero: fuera de los totales,
+    // el diagnóstico y el historial. Se ven y se editan en «Próximos».
+    const realizados = useMemo(() => events.filter(e => !esProximo(e)), [events]);
+    const cantidadProximos = events.length - realizados.length;
+
     const totalStats = useMemo(() => {
         let inversion = 0;
         let clics = 0;
@@ -394,7 +414,7 @@ const WorkshopDashboardPage = () => {
         let cash_ventas = 0;
         let ventas_cobradas = 0;
 
-        events.forEach(e => {
+        realizados.forEach(e => {
             inversion += e.inversion || 0;
             clics += e.clics || 0;
             leads += e.leads || 0;
@@ -420,7 +440,7 @@ const WorkshopDashboardPage = () => {
             ventas_cobradas,
             roas
         };
-    }, [events]);
+    }, [realizados]);
 
     const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
     const formatDate = (dateStr) => {
@@ -463,7 +483,10 @@ const WorkshopDashboardPage = () => {
                             <LayoutDashboard size={14} /> Resumen
                         </button>
                         <button type="button" className={activeTab === 'list' ? 'active' : ''} onClick={() => setActiveTab('list')} aria-current={activeTab === 'list' ? 'page' : undefined}>
-                            <Layers size={14} /> Historial ({events.length})
+                            <Layers size={14} /> Historial ({realizados.length})
+                        </button>
+                        <button type="button" className={activeTab === 'proximos' ? 'active' : ''} onClick={() => setActiveTab('proximos')} aria-current={activeTab === 'proximos' ? 'page' : undefined}>
+                            <CalendarClock size={14} /> Próximos{cantidadProximos > 0 && ` (${cantidadProximos})`}
                         </button>
                         <button type="button" className={activeTab === 'funnel' ? 'active' : ''} onClick={() => setActiveTab('funnel')} aria-current={activeTab === 'funnel' ? 'page' : undefined}>
                             <CalendarDays size={14} /> Embudo
@@ -500,7 +523,14 @@ const WorkshopDashboardPage = () => {
                         <p className="eyebrow">Sincronizando</p>
                         <h2>Cargando inteligencia de workshops…</h2>
                     </section>
-                ) : events.length === 0 ? (
+                ) : activeTab === 'proximos' ? (
+                    <WorkshopProximosView
+                        events={events}
+                        onEdit={handleOpenEditModal}
+                        onDelete={handleDeleteEvent}
+                        onProgramado={() => fetchEvents(true)}
+                    />
+                ) : realizados.length === 0 ? (
                     <section className="empty-state">
                         <div><CalendarDays size={26} /></div>
                         <p className="eyebrow">Empezá por acá</p>
@@ -518,18 +548,18 @@ const WorkshopDashboardPage = () => {
                             quiere analizar un evento puntual. */}
                         <section className="hero" aria-labelledby="workshop-intel-title">
                             <div>
-                                <p className="eyebrow"><span className="live-dot" />Sistema actualizado · {events.length} talleres</p>
+                                <p className="eyebrow"><span className="live-dot" />Sistema actualizado · {realizados.length} talleres</p>
                                 <h1 id="workshop-intel-title">Rendimiento & Workshop Intelligence.</h1>
                                 <p className="hero-copy">Consola ejecutiva de análisis financiero, ROI publicitario y eficiencia de embudo para talleres y webinars.</p>
                             </div>
                             <div className="hero-period">
                                 <span>Período analizado</span>
-                                <strong>{formatDate(events[events.length - 1]?.date)} — {formatDate(events[0]?.date)}</strong>
+                                <strong>{formatDate(realizados[realizados.length - 1]?.date)} — {formatDate(realizados[0]?.date)}</strong>
                             </div>
                         </section>
-                        <WorkshopKpiCards totalStats={totalStats} eventsCount={events.length} />
+                        <WorkshopKpiCards totalStats={totalStats} eventsCount={realizados.length} />
                         <WorkshopDiagnostico
-                            events={events}
+                            events={realizados}
                             goals={goals}
                             actions={actions}
                             onEditGoals={() => setGoalsModalOpen(true)}
@@ -548,7 +578,7 @@ const WorkshopDashboardPage = () => {
                         </div>
                         {viewMode === 'cards' ? (
                             <WorkshopCardsView
-                                events={events}
+                                events={realizados}
                                 onSelectFunnel={(e) => {
                                     setSelectedEventForFunnel(e);
                                     setActiveTab('funnel');
@@ -562,7 +592,7 @@ const WorkshopDashboardPage = () => {
                             />
                         ) : (
                             <WorkshopTableView
-                                events={events}
+                                events={realizados}
                                 onSelectFunnel={(e) => {
                                     setSelectedEventForFunnel(e);
                                     setActiveTab('funnel');
@@ -579,7 +609,7 @@ const WorkshopDashboardPage = () => {
                 ) : activeTab === 'funnel' ? (
                     <>
                         <WorkshopFunnelView
-                            events={events}
+                            events={realizados}
                             selectedEvent={selectedEventForFunnel}
                             onSelectEvent={setSelectedEventForFunnel}
                             onResync={handleResyncFunnel}
@@ -597,7 +627,7 @@ const WorkshopDashboardPage = () => {
                     </>
                 ) : activeTab === 'simulador' ? (
                     <WorkshopSimuladorView
-                        events={events}
+                        events={realizados}
                         goals={goals}
                         highlightStage={highlightStage}
                         onGoalsUpdated={setGoals}
@@ -605,7 +635,7 @@ const WorkshopDashboardPage = () => {
                     />
                 ) : (
                     <WorkshopAccionesView
-                        events={events}
+                        events={realizados}
                         goals={goals}
                         actions={actions}
                         onActionsChanged={fetchActions}

@@ -248,3 +248,17 @@ def test_un_formulario_de_agendas_v2_que_no_es_del_workshop_no_suma(db):
     db.session.commit()
 
     assert leer(db, taller).aplicaciones_form == 0
+
+
+def test_mover_un_taller_de_dia_recalcula_el_que_gana_y_el_que_pierde_la_ventana(db):
+    # Desde que la hora se carga en el panel (15/10/2026) un taller se puede mover de día.
+    # Del 19 al 26 → del 19 al 23: el 19 pierde días y el movido arranca con los suyos.
+    taller, siguiente = crear_talleres(db, DIA, SIGUIENTE)
+    con_centinela(db)
+
+    evento = leer(db, siguiente)
+    evento.date = date(2026, 9, 23)
+    db.session.commit()
+
+    assert leer(db, taller).synced_at is not None
+    assert leer(db, siguiente).synced_at is not None

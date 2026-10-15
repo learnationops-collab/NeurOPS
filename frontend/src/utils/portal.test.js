@@ -31,7 +31,7 @@ afterEach(() => { window.location = original; });
 
 describe('roles y áreas en el Portal', () => {
     it('un rol es un grupo y sus áreas son las tarjetas', () => {
-        expect(claves(dir)).toEqual(['director_comercial:ventas', 'director_comercial:agendamiento']);
+        expect(claves(dir)).toEqual(['director_comercial:ventas', 'director_comercial:agendamiento', 'director_comercial:inbox']);
         const [g] = gruposDelPortal(dir);
         expect(g).toMatchObject({ clave: 'director_comercial', titulo: 'Dirección comercial' });
         expect(g.tarjetas[0]).toMatchObject({ titulo: 'Ventas', rol: 'director_comercial', ruta: '/admin/comercial' });
@@ -41,7 +41,7 @@ describe('roles y áreas en el Portal', () => {
         const mario = { id: 3, role: 'operator', roles: ['operator', 'director_comercial', 'closer'], can_view_finance: true };
         expect(gruposDelPortal(mario).map((g) => [g.titulo, g.tarjetas.map((t) => t.titulo)])).toEqual([
             ['Operador', ['Operaciones']],
-            ['Dirección comercial', ['Ventas', 'Agendamiento', 'Finances']],
+            ['Dirección comercial', ['Ventas', 'Agendamiento', 'Inbox', 'Finances']],
             ['Closer', ['Cierres']],
         ]);
         expect(tarjetasDelPortal(mario).find((t) => t.titulo === 'Finances')).toMatchObject({ clave: 'director_comercial:finanzas', rol: 'director_comercial', ruta: '/finanzas' });
@@ -53,7 +53,7 @@ describe('roles y áreas en el Portal', () => {
         const kerwin = { id: 4, role: 'operator', roles: ['operator', 'admin', 'director_comercial', 'director_marketing'], can_view_finance: true };
         expect(gruposDelPortal(kerwin).map((g) => [g.titulo, g.tarjetas.map((t) => t.titulo)])).toEqual([
             ['Operador', ['Operaciones', 'Talent']],
-            ['Dirección comercial', ['Ventas', 'Agendamiento', 'Finances']],
+            ['Dirección comercial', ['Ventas', 'Agendamiento', 'Inbox', 'Finances']],
             ['Dirección de marketing', ['Marketing']],
         ]);
         // Talent entra con el rol admin: es el que la abre en esa cuenta.
@@ -62,13 +62,13 @@ describe('roles y áreas en el Portal', () => {
         // Con hiring, Talent ya está en su grupo y Operador no la repite.
         const mario = { id: 3, role: 'operator', roles: ['operator', 'admin', 'hiring'] };
         expect(gruposDelPortal(mario).map((g) => [g.titulo, g.tarjetas.map((t) => t.titulo)])).toEqual([
-            ['Operador', ['Operaciones', 'Ventas', 'Agendamiento', 'Marketing']],
+            ['Operador', ['Operaciones', 'Ventas', 'Agendamiento', 'Inbox', 'Marketing']],
             ['Hiring', ['Talent']],
         ]);
 
         // Una cuenta que solo es admin sigue viendo su grupo, que arranca en Operaciones.
         expect(gruposDelPortal({ id: 5, role: 'admin', roles: ['admin'] })[0].tarjetas.map((t) => t.titulo))
-            .toEqual(['Operaciones', 'Ventas', 'Agendamiento', 'Marketing', 'Talent']);
+            .toEqual(['Operaciones', 'Ventas', 'Agendamiento', 'Inbox', 'Marketing', 'Talent']);
     });
 
     it('simulando, el Portal muestra solo el rol simulado, y no cuenta para entrar', () => {
@@ -166,7 +166,7 @@ describe('entrar por una tarjeta', () => {
 
     it('con un área de una cuenta vinculada pasa a esa cuenta y entra a esa área', async () => {
         post.mockResolvedValue({ data: { token: 'tk', user: { id: 2, role: 'closer', username: 'marlon_closer' } } });
-        await entrarPorTarjeta(marlon, tarjetasDelPortal(marlon)[2], vi.fn());
+        await entrarPorTarjeta(marlon, tarjetasDelPortal(marlon).find((t) => t.clave === 'cuenta-2:cierres'), vi.fn());
         expect(post).toHaveBeenCalledWith('/auth/switch-role', { user_id: 2, isolated: false });
         expect(localStorage.getItem('auth_token')).toBe('tk');
         expect(window.location.href).toBe('/closer/deck?step=confirmations');

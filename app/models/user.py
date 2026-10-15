@@ -22,6 +22,10 @@ ROLE_DIRECTOR_MARKETING = 'director_marketing'
 # `admin_required` (finanzas, equipo, base de datos) — ver `hiring_required`
 # en app/decorators.py.
 ROLE_HIRING = 'hiring'
+# Equipo de fulfillment de la Academia: la Academia crea estas cuentas por API para usar Thalamus como
+# servicio de agenda (app/api/external/agenda.py). No tienen pantallas en NeurOPS: lo configuran todo
+# desde la Academia.
+ROLE_FULFILLMENT = 'fulfillment'
 
 # Los personajes que se pueden elegir de avatar (page-mascot; las hojas y la misma lista están en
 # frontend/src/components/mascota/: hojas/ y mascotas.js).

@@ -2,11 +2,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { RefreshCw, Loader2, ArrowLeft, ArrowRight, X, Check, Save } from 'lucide-react';
 import InfoTooltip from '../../../../components/ui/InfoTooltip';
 import { extractLoomId } from '../../../../utils/loom';
+import { nombreZona } from '../agendaTaller';
 
+// El taller se crea antes (fecha, hora y links, que leen las landings), durante el evento se
+// cargan las pocas cifras que solo sabe quien lo corre, y el resto llega solo del sistema.
 const STEP_META = [
-    { n: 1, title: 'Tráfico & ads', copy: 'Evento e inversión' },
-    { n: 2, title: 'Embudo del webinar', copy: 'Leads y retención' },
-    { n: 3, title: 'Validación del sistema', copy: 'Agendas, ventas y cash' },
+    { n: 1, title: 'El taller', copy: 'Fecha, hora y links' },
+    { n: 2, title: 'En vivo', copy: 'Grupo, asistencia y pitch' },
+    { n: 3, title: 'Del sistema', copy: 'Se completa solo' },
 ];
 
 // Foto comparable del formulario: '' y 0, o '5' y 5, son el mismo valor guardado
@@ -42,7 +45,7 @@ const WorkshopFormModal = ({
     const [fotoGuardada, setFotoGuardada] = useState(() => fotoDe(formData));
     const [guardadoA, setGuardadoA] = useState(null);
     const hayCambios = fotoDe(formData) !== fotoGuardada;
-    const puedeGuardar = Boolean(formData.date && formData.name) && !guardando;
+    const puedeGuardar = Boolean(formData.date) && !guardando;
 
     const guardarProgreso = async () => {
         if (!puedeGuardar) return;
@@ -98,7 +101,7 @@ const WorkshopFormModal = ({
 
     const handleNextStep = () => {
         if (currentStep === 1) {
-            if (!formData.date || !formData.name) return;
+            if (!formData.date) return;
             setCurrentStep(2);
         } else if (currentStep === 2) {
             setCurrentStep(3);
@@ -181,35 +184,28 @@ const WorkshopFormModal = ({
                         {currentStep === 1 && (
                             <div className="form-grid">
                                 <label className="form-field">
-                                    <span>Fecha del evento</span>
-                                    <span className="field-control"><input type="date" disabled={isEditMode} required {...field('date')} /></span>
+                                    <span>Fecha</span>
+                                    <span className="field-control"><input type="date" required {...field('date')} /></span>
                                 </label>
                                 <label className="form-field">
+                                    <span>Hora <small className="hora-zona">· tu hora ({nombreZona()})</small></span>
+                                    <span className="field-control"><input type="time" {...field('hora')} /></span>
+                                </label>
+                                <label className="form-field wide">
                                     <span>Nombre del workshop</span>
-                                    <span className="field-control"><input type="text" placeholder="Ej: Webinar IA Ventas" required {...field('name')} /></span>
-                                </label>
-                                {/* Con campañas de workshop marcadas en Marketing › Meta Ads, estos
-                                    cuatro salen de Meta (ver workshop_meta_service) y no se editan. */}
-                                <label className="form-field wide">
-                                    <span>Inversión ads (USD){deMeta?.inversion && <small className="de-meta"> · de Meta Ads</small>}</span>
-                                    <span className="field-control money"><b>$</b><input type="number" step="any" {...field('inversion')} readOnly={!!deMeta?.inversion} /></span>
-                                </label>
-                                <label className="form-field">
-                                    <span>CPM (ads){deMeta?.clics && <small className="de-meta"> · de Meta Ads</small>}</span>
-                                    <span className="field-control"><input type="number" step="any" {...field('cpm')} readOnly={!!deMeta?.clics} /></span>
-                                </label>
-                                <label className="form-field">
-                                    <span>CPC (clic en el enlace){deMeta?.clics && <small className="de-meta"> · de Meta Ads</small>}</span>
-                                    <span className="field-control"><input type="number" step="any" {...field('cpc')} readOnly={!!deMeta?.clics} /></span>
+                                    <span className="field-control"><input type="text" placeholder="Si lo dejás vacío: WEBINAR 19 DE OCTUBRE 2026" {...field('name')} /></span>
                                 </label>
                                 <label className="form-field wide">
-                                    <span>Clics{deMeta?.clics && <small className="de-meta"> · de Meta Ads</small>}</span>
-                                    <span className="field-control"><input type="number" {...field('clics')} readOnly={!!deMeta?.clics} /></span>
+                                    <span>Link de Google Meet</span>
+                                    <span className="field-control"><input type="url" placeholder="https://meet.google.com/..." {...field('meet_url')} /></span>
                                 </label>
-                                <p className="form-field wide de-meta-nota">
-                                    {deMeta?.inversion
-                                        ? 'Inversión, CPM, CPC y clics vienen de las campañas de workshop marcadas en Marketing › Meta Ads, desde el día siguiente al taller anterior hasta el de este.'
-                                        : 'Si las campañas de workshop están marcadas en Marketing › Meta Ads, estos números se completan solos con lo que dice Meta.'}
+                                <label className="form-field wide">
+                                    <span>Link del grupo de WhatsApp</span>
+                                    <span className="field-control"><input type="url" placeholder="https://chat.whatsapp.com/..." {...field('whatsapp_url')} /></span>
+                                </label>
+                                <p className="form-field wide nota-landing">
+                                    La fecha, la hora y los dos links son los que muestran las landings de institute apenas guardás.
+                                    Cada uno ve la hora en su zona: la que escribas acá es la tuya.
                                 </p>
                             </div>
                         )}
@@ -217,15 +213,11 @@ const WorkshopFormModal = ({
                         {currentStep === 2 && (
                             <div className="form-grid">
                                 <label className="form-field">
-                                    <span>Leads totales</span>
-                                    <span className="field-control"><input type="number" {...field('leads')} /></span>
-                                </label>
-                                <label className="form-field">
-                                    <span>Leads en WhatsApp</span>
+                                    <span>Personas en el grupo de WhatsApp</span>
                                     <span className="field-control"><input type="number" {...field('whatsapp_leads')} /></span>
                                 </label>
-                                <label className="form-field wide">
-                                    <span>Show up en webinar</span>
+                                <label className="form-field">
+                                    <span>Personas en el taller (show up)</span>
                                     <span className="field-control"><input type="number" {...field('show_up')} /></span>
                                 </label>
                                 <label className="form-field">
@@ -236,6 +228,14 @@ const WorkshopFormModal = ({
                                     <span>Leads final pitch</span>
                                     <span className="field-control"><input type="number" {...field('pitch_final_leads')} /></span>
                                 </label>
+                                <label className="form-field wide">
+                                    <span>Leads totales</span>
+                                    <span className="field-control"><input type="number" {...field('leads')} /></span>
+                                </label>
+                                <p className="form-field wide nota-landing">
+                                    Es lo único que se carga a mano. Podés guardar durante el taller e ir actualizando:
+                                    formularios, agendas y ventas se llenan solos.
+                                </p>
                             </div>
                         )}
 
@@ -277,6 +277,35 @@ const WorkshopFormModal = ({
                                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>Cash collected (USD) <InfoTooltip label="Cash collected (USD)" text="Plata efectivamente cobrada de esas ventas. No incluye cuotas posteriores, renovaciones ni upsells." /></span>
                                             <span className="field-control money"><b style={{ color: 'var(--success)' }}>$</b><input type="number" step="any" {...field('cash_collected')} /></span>
                                         </label>
+                                    </div>
+
+                                    <div style={{ marginTop: 14, padding: 16, border: '1px solid var(--border)', borderRadius: 16, background: 'rgba(0,0,0,.2)' }}>
+                                        <p className="eyebrow">Publicidad</p>
+                                        {/* Con campañas de workshop marcadas en Marketing › Meta Ads, estos
+                                            cuatro salen de Meta (ver workshop_meta_service) y no se editan. */}
+                                        <div className="form-grid" style={{ marginTop: 10 }}>
+                                            <label className="form-field wide">
+                                                <span>Inversión ads (USD){deMeta?.inversion && <small className="de-meta"> · de Meta Ads</small>}</span>
+                                                <span className="field-control money"><b>$</b><input type="number" step="any" {...field('inversion')} readOnly={!!deMeta?.inversion} /></span>
+                                            </label>
+                                            <label className="form-field">
+                                                <span>CPM (ads){deMeta?.clics && <small className="de-meta"> · de Meta Ads</small>}</span>
+                                                <span className="field-control"><input type="number" step="any" {...field('cpm')} readOnly={!!deMeta?.clics} /></span>
+                                            </label>
+                                            <label className="form-field">
+                                                <span>CPC (clic en el enlace){deMeta?.clics && <small className="de-meta"> · de Meta Ads</small>}</span>
+                                                <span className="field-control"><input type="number" step="any" {...field('cpc')} readOnly={!!deMeta?.clics} /></span>
+                                            </label>
+                                            <label className="form-field wide">
+                                                <span>Clics{deMeta?.clics && <small className="de-meta"> · de Meta Ads</small>}</span>
+                                                <span className="field-control"><input type="number" {...field('clics')} readOnly={!!deMeta?.clics} /></span>
+                                            </label>
+                                            <p className="form-field wide de-meta-nota">
+                                                {deMeta?.inversion
+                                                    ? 'Inversión, CPM, CPC y clics vienen de las campañas de workshop marcadas en Marketing › Meta Ads, desde el día siguiente al taller anterior hasta el de este.'
+                                                    : 'Si las campañas de workshop están marcadas en Marketing › Meta Ads, estos números se completan solos con lo que dice Meta.'}
+                                            </p>
+                                        </div>
                                     </div>
 
                                     <div style={{ marginTop: 14, padding: 16, border: '1px solid var(--border)', borderRadius: 16, background: 'rgba(0,0,0,.2)' }}>
@@ -393,7 +422,7 @@ const WorkshopFormModal = ({
                                     className="secondary-action"
                                     onClick={guardarProgreso}
                                     disabled={!puedeGuardar}
-                                    title={formData.date && formData.name ? 'Guardar sin cerrar (Ctrl + S)' : 'Completá la fecha y el nombre para guardar'}
+                                    title={formData.date ? 'Guardar sin cerrar (Ctrl + S)' : 'Completá la fecha para guardar'}
                                 >
                                     {guardando ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Guardar
                                 </button>

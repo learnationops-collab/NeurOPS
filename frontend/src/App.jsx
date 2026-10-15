@@ -36,6 +36,7 @@ import PlaybookNotification from './components/playbook/PlaybookNotification';
 import PrivacyPolicyPage from './pages/public/PrivacyPolicyPage';
 import TermsOfServicePage from './pages/public/TermsOfServicePage';
 import AgendasV2Routes from './pages/agendas_v2/AgendasV2Routes';
+import InboxRoutes from './pages/inbox/InboxRoutes';
 import AgendasV2Publica from './pages/agendas_v2/AgendasV2Publica';
 import UnattributedLeadsPage from './pages/admin/marketing/UnattributedLeadsPage';
 import FormsManagementPage from './pages/shared/FormsManagementPage';
@@ -124,6 +125,17 @@ function App() {
               element={
                 <ProtectedRoute roles={['admin', 'director_comercial', 'setter']}>
                   <AgendasV2Routes />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Inbox: automatizaciones de Instagram (el motor propio que reemplaza a ManyChat) y conversaciones.
+                Admin y dirección comercial arman flujos; el setter mira (lo aplica app/automatizaciones/api.py). */}
+            <Route
+              path="/inbox/*"
+              element={
+                <ProtectedRoute roles={['admin', 'director_comercial', 'setter']}>
+                  <InboxRoutes />
                 </ProtectedRoute>
               }
             />

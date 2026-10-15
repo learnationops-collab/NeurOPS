@@ -94,6 +94,14 @@ def _anotar_cambios(session):
     for obj in list(session.new) + list(session.deleted):
         if isinstance(obj, WorkshopEvent) and obj.date:
             session.info.setdefault(_KEY_TALLERES, set()).add(obj.date)
+    # Un taller que se mueve de día: el anterior al día viejo recupera esos días, y en el día
+    # nuevo se recalculan él y el anterior (los dos que mira una fecha tocada).
+    for obj in session.dirty:
+        if isinstance(obj, WorkshopEvent):
+            historia = inspect(obj).attrs.date.history
+            if historia.has_changes():
+                session.info.setdefault(_KEY_TALLERES, set()).update(d for d in historia.deleted or () if d)
+                session.info.setdefault(_KEY_FECHAS, set()).update(d for d in historia.added or () if d)
 
 
 def _evento_vigente(dia):

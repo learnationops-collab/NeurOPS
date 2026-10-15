@@ -3,7 +3,7 @@ from flask_login import current_user
 from app import db
 from app.models import WorkshopTemplate, WorkshopButton, WorkshopTemplateSent, WorkshopInteraction, WorkshopEvent, WorkshopGoals, WorkshopAction
 from app.decorators import workshop_required
-from app.services import workshop_meta_service
+from app.services import workshop_agenda_service, workshop_meta_service
 from datetime import datetime
 import pytz
 import logging
@@ -252,16 +252,26 @@ def _con_replay_local(data, event):
 def create_workshop_event():
     data = request.get_json() or {}
     date_str = data.get('date')
-    name = data.get('name')
-    
-    if not date_str or not name:
-        return jsonify({"error": "La fecha y el nombre son obligatorios"}), 400
-        
+    tz_carga = workshop_agenda_service.zona(data.get('zona'), _tz_usuario().zone)
+
+    # Con la hora cargada alcanza: el día sale de ella, en la zona de quien la cargó.
+    if not date_str and data.get('inicio_at'):
+        try:
+            inicio = workshop_agenda_service.parsear_inicio(data['inicio_at'], tz_carga)
+        except workshop_agenda_service.DatoInvalido as e:
+            return jsonify({"error": str(e)}), 400
+        date_str = workshop_agenda_service.dia_local(inicio, tz_carga).isoformat()
+
+    if not date_str:
+        return jsonify({"error": "La fecha es obligatoria"}), 400
+
     try:
         event_date = datetime.strptime(date_str, "%Y-%m-%d").date()
     except ValueError:
         return jsonify({"error": "Formato de fecha inválido, debe ser YYYY-MM-DD"}), 400
-        
+
+    name = (data.get('name') or '').strip() or workshop_agenda_service.nombre_por_defecto(event_date)
+
     existing = WorkshopEvent.query.filter_by(date=event_date).first()
     if existing:
         return jsonify({"error": f"Ya existe un evento de workshop registrado para la fecha {date_str}"}), 400
@@ -293,7 +303,11 @@ def create_workshop_event():
         replay_info_segundos=int(data.get('replay_info_segundos') or 0),
         replay_oferta_segundos=int(data.get('replay_oferta_segundos') or 120)
     )
-    
+    try:
+        workshop_agenda_service.aplicar_agenda(event, data, tz_carga)
+    except workshop_agenda_service.DatoInvalido as e:
+        return jsonify({"error": str(e)}), 400
+
     try:
         db.session.add(event)
         db.session.flush()
@@ -305,6 +319,38 @@ def create_workshop_event():
         db.session.rollback()
         return jsonify({"error": f"Error al guardar en base de datos: {str(e)}"}), 500
 
+@bp.route('/events/programar', methods=['POST'])
+@workshop_required
+def programar_workshop_events():
+    """Crea de una vez los talleres de las próximas semanas, con su hora y sus links.
+
+    Body: `inicio_local` ('YYYY-MM-DDTHH:MM', la hora del primero en la zona `zona` de quien lo
+    carga), `semanas`, `meet_url`, `whatsapp_url`. Se crean con el nombre de siempre y las
+    métricas en cero; las del sistema se llenan solas cuando llegan agendas y ventas.
+    """
+    data = request.get_json() or {}
+    try:
+        creados, existentes = workshop_agenda_service.programar_semanal(
+            data.get('inicio_local'),
+            data.get('zona') or _tz_usuario().zone,
+            data.get('semanas', 1),
+            data.get('meet_url'),
+            data.get('whatsapp_url'),
+        )
+        db.session.commit()
+    except workshop_agenda_service.DatoInvalido as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+    except Exception:
+        db.session.rollback()
+        logger.exception('No se pudieron programar los talleres')
+        return jsonify({"error": "No se pudieron programar los talleres"}), 500
+    return jsonify({
+        "creados": [_con_replay_local(e.to_dict(), e) for e in creados],
+        "existentes": existentes,
+    }), 201
+
+
 @bp.route('/events/<int:event_id>', methods=['PUT'])
 @workshop_required
 def update_workshop_event(event_id):
@@ -313,6 +359,22 @@ def update_workshop_event(event_id):
     
     if 'name' in data:
         event.name = data['name']
+
+    # Hora, Meet y WhatsApp (lo que leen las landings). Mover el taller a otro día cambia
+    # de qué taller son las agendas de esos días: workshop_live_sync recalcula los dos.
+    try:
+        workshop_agenda_service.aplicar_agenda(
+            event, data, workshop_agenda_service.zona(data.get('zona'), _tz_usuario().zone))
+    except workshop_agenda_service.DatoInvalido as e:
+        return jsonify({"error": str(e)}), 400
+    if data.get('date') and data['date'] != event.date.isoformat():
+        try:
+            nuevo_dia = datetime.strptime(data['date'], "%Y-%m-%d").date()
+        except ValueError:
+            return jsonify({"error": "Formato de fecha inválido, debe ser YYYY-MM-DD"}), 400
+        if WorkshopEvent.query.filter(WorkshopEvent.date == nuevo_dia, WorkshopEvent.id != event.id).first():
+            return jsonify({"error": f"Ya existe un taller el {data['date']}"}), 400
+        event.date = nuevo_dia
     # Los que vienen de Meta no se pisan: el panel (el resync del embudo, el modal) manda el evento
     # entero, con los valores de Meta, y quedarían como «cargados a mano».
     if 'inversion' in data and not event.inversion_de_meta:

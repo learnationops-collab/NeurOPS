@@ -1,5 +1,5 @@
 import {
-    BarChart3, Brain, CalendarDays, Filter, Megaphone, MessageCircle, PhoneCall, UserPlus, Wallet, Wrench,
+    BarChart3, Brain, CalendarDays, Filter, Inbox, Megaphone, MessageCircle, PhoneCall, UserPlus, Wallet, Wrench,
 } from 'lucide-react';
 
 // Áreas (10/10/2026): un ROL gestiona un tipo de acceso a una o más ÁREAS. La dirección comercial, por
@@ -17,6 +17,7 @@ export const AREAS = {
     ventas: { id: 'ventas', label: 'Ventas', ruta: '/admin/comercial', Icono: BarChart3 },
     agendamiento: { id: 'agendamiento', label: 'Agendamiento', ruta: '/agendas-v2', Icono: CalendarDays },
     cierres: { id: 'cierres', label: 'Cierres', ruta: '/closer/deck?step=confirmations', Icono: PhoneCall },
+    inbox: { id: 'inbox', label: 'Inbox', ruta: '/inbox', Icono: Inbox },
     setting: { id: 'setting', label: 'Setting', ruta: '/setter/deck?step=agendas', Icono: MessageCircle },
     triage: { id: 'triage', label: 'Triage', ruta: '/triage/deck?step=confirmar', Icono: Filter },
     operaciones: { id: 'operaciones', label: 'Operaciones', ruta: '/ops/dashboard', Icono: Wrench },
@@ -28,10 +29,10 @@ export const AREAS = {
 
 // La primera es la de siempre del rol (ver roleLanding.js).
 const AREAS_POR_ROL = {
-    admin: ['operaciones', 'ventas', 'agendamiento', 'marketing', 'talent'],
-    director_comercial: ['ventas', 'agendamiento'],
+    admin: ['operaciones', 'ventas', 'agendamiento', 'inbox', 'marketing', 'talent'],
+    director_comercial: ['ventas', 'agendamiento', 'inbox'],
     closer: ['cierres'],
-    setter: ['setting'],
+    setter: ['setting', 'inbox'],
     triage: ['triage'],
     operator: ['operaciones'],
     director_marketing: ['marketing'],

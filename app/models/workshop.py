@@ -105,6 +105,14 @@ class WorkshopEvent(db.Model):
     replay_info_segundos = db.Column(db.Integer, default=0)
     replay_oferta_segundos = db.Column(db.Integer, default=120)
 
+    # Lo que antes vivia en workshops.csv de institute-site (15/10/2026): las landings leen
+    # los proximos talleres de /api/public/workshops/proximos. `inicio_at` es el instante
+    # exacto en UTC naive; el panel lo muestra y lo carga en la zona horaria de quien lo mira.
+    # Sin hora cargada, el taller no aparece en las landings.
+    inicio_at = db.Column(db.DateTime, nullable=True)
+    meet_url = db.Column(db.String(300), nullable=True)
+    whatsapp_url = db.Column(db.String(300), nullable=True)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # --- Inversión, CPM, CPC y clics: de Meta si hay, si no los cargados a mano ---
@@ -275,6 +283,11 @@ class WorkshopEvent(db.Model):
             "replay_vence_hasta": self.replay_vence_hasta.isoformat() if self.replay_vence_hasta else None,
             "replay_info_segundos": self.replay_info_segundos,
             "replay_oferta_segundos": self.replay_oferta_segundos,
+
+            # Con 'Z': el panel lo pasa a la hora de cada navegador.
+            "inicio_at": (self.inicio_at.isoformat() + 'Z') if self.inicio_at else None,
+            "meet_url": self.meet_url,
+            "whatsapp_url": self.whatsapp_url,
 
             # Calculadas
             "impresiones": round(self.impresiones, 2),
