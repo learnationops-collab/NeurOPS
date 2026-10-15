@@ -492,12 +492,29 @@ class GoogleService:
         return (evt or {}).get('status') == 'cancelled'
 
     @staticmethod
-    def delete_event(user_id, event_id):
+    def mover_evento(user_id, event_id, inicio_utc, fin_utc, calendar_id=None):
+        """Cambia el horario del evento y Google avisa a los invitados. `calendar_id`: donde se creó (si
+        el usuario cambió de calendario después, el evento sigue en el original). Lanza si Google falla."""
+        service = GoogleService.get_service(user_id)
+        if not service:
+            raise RuntimeError('El usuario no tiene Google Calendar conectado.')
+        service.events().patch(
+            calendarId=calendar_id or GoogleService._calendario(user_id),
+            eventId=event_id,
+            body={'start': {'dateTime': inicio_utc.isoformat() + 'Z'}, 'end': {'dateTime': fin_utc.isoformat() + 'Z'}},
+            sendUpdates='all',
+        ).execute()
+
+    @staticmethod
+    def delete_event(user_id, event_id, calendar_id=None, avisar=False):
+        """Borra el evento. `calendar_id`: donde se creó (por defecto el de destino actual). `avisar`: Google
+        les manda la cancelación a los invitados."""
         service = GoogleService.get_service(user_id)
         if not service or not event_id:
             return False
         try:
-            service.events().delete(calendarId=GoogleService._calendario(user_id), eventId=event_id).execute()
+            service.events().delete(calendarId=calendar_id or GoogleService._calendario(user_id), eventId=event_id,
+                                    sendUpdates='all' if avisar else 'none').execute()
             return True
         except Exception as e:  # noqa: BLE001  (un evento ya borrado a mano no puede frenar nada)
             current_app.logger.warning(f'[GOOGLE] No se pudo borrar el evento {event_id} del usuario #{user_id}: {e}')

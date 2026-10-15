@@ -95,3 +95,29 @@ En `POST /reservas` el servidor no confía en nada de lo que calculó el cliente
 Si el mismo lead (mismo email) manda dos veces el mismo horario, se devuelve la agenda que ya existe.
 
 **Límite por IP** (en memoria, por proceso): 30 pedidos por minuto a `/horarios` y 10 por minuto a `/reservas`. Al pasarlo responde 429.
+
+## API de agenda para la Academia: `/api/external/academy/agenda`
+
+Thalamus como **servicio** para las sesiones del programa que agenda el equipo de fulfillment de la Academia (código en `app/api/external/agenda.py`). La Academia decide todo y lo manda en cada pedido: quién da la sesión, duración, margen y horario semanal. Acá **no se guarda** horario, persona (`sched_personas`), funnel ni reserva, y nada toca `appointments`, `clients`, `financial_agendas` ni Discord de ventas. Thalamus pone lo ocupado en Google Calendar, el cálculo del núcleo (`slots_persona`), el evento con Meet que invita al alumno y el WhatsApp a quien da la sesión.
+
+**Auth:** `Authorization: Bearer ACADEMY_INBOUND_API_TOKEN` (el mismo de `/api/external/academy`).
+
+**Cuentas:** usuarios con el rol `fulfillment` (principal o adicional), buscados por email. No tienen pantallas en NeurOPS. Si el email ya es de una cuenta con otro rol, el alta solo le suma `fulfillment` y no toca su número ni su zona.
+
+| Método y ruta | Cuerpo | Respuesta |
+| :--- | :--- | :--- |
+| `PUT /equipo` | `{email, nombre, tz, telefono}` | estado |
+| `GET /equipo/<email>` | – | estado: `{email, calendar: conectado\|vencido\|no, whatsapp: confirmado\|pendiente\|sin_numero, numero, lista}` |
+| `POST /equipo/<email>/google` | `{volver}` (ruta de la Academia) | `{url}` |
+| `POST /equipo/<email>/whatsapp/prueba` | – | `{comprobante}` |
+| `POST /equipo/<email>/whatsapp/confirmar` | `{comprobante}` | estado |
+| `POST /horarios` | `{email, tz, horario, duracion, margen, antel_min, dias, ocupado: [{inicio, fin}], fresco}` | `{slots: [ms], google}` |
+| `POST /reservas` | `{email, tz, inicio, duracion, titulo, descripcion, invitado: {nombre, email}, aviso: {sesion, alumno}}` | `{event_id, calendar_id, meet}` |
+| `PATCH /reservas/<event_id>` | `{email, calendar_id, inicio, duracion}` | `{ok}` |
+| `DELETE /reservas/<event_id>` | `{email, calendar_id}` | `{ok}` |
+
+- **Conectar Google sin sesión:** la URL es `/google/conectar/<firma>` (itsdangerous, no JWT: `load_user_from_request` toma cualquier JWT con `id` como sesión). Vence a los 15 minutos y sirve una vez: si la cuenta ya tiene un token guardado después de emitida la firma, se rechaza. El callback guarda el token para la cuenta de la firma y vuelve a `ACADEMY_URL` (env, por defecto `https://academy.thelearnation.com`) + `volver?google=ok|cancelado|error`.
+- **WhatsApp sin sesión:** la prueba devuelve un comprobante firmado con el número (15 min); confirmar lo exige. Cambiar el número en el alta vuelve a pedir la confirmación.
+- **`/horarios`:** exige Google conectado y WhatsApp confirmado (409 `no_lista`). El horario usa 0 = domingo y acepta cualquier minuto. `ocupado` es lo que la persona tiene en la Academia (clases, días bloqueados, otras reservas) y se suma a su freebusy de Google (caché de 120 s; `fresco: true` lo lee en el momento).
+- **`/reservas`:** no revisa disponibilidad (la Academia la confirmó antes con `fresco`, o es una fecha acordada por fuera). El evento dura `duracion` (el margen no va al evento). El WhatsApp usa la plantilla del aviso de agenda con `grupo = Academia` y la hora en la zona de quien da la sesión; si falla, solo queda en el log. Google falla: 502 `google`.
+- **Mover y cancelar** van al calendario donde se creó (`calendar_id`) y Google avisa al alumno.

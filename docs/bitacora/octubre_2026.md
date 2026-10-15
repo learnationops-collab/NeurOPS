@@ -70,3 +70,9 @@
     - 60 tests de `tests/agendas_v2`: núcleo, gestión, y pública con carrera de dos leads, horario inventado, respuestas manipuladas, descalificado, idempotencia y límite por IP.
     - 54 tests de vitest.
     - Recorrido real con Flask y Vite sobre una SQLite local: el director arma y publica desde Thalamus, un visitante anónimo reserva (201, closer elegido en el servidor) y otro queda descalificado; el director ve la reserva en Available. Sin errores de consola.
+
+- **15 de Octubre de 2026** *(Thalamus como servicio de agenda para la Academia. [app/api/external/agenda.py](../../app/api/external/agenda.py) [NEW], [app/api/google_calendar.py](../../app/api/google_calendar.py) [MODIFY], [app/services/google_service.py](../../app/services/google_service.py) [MODIFY], [app/models/user.py](../../app/models/user.py) [MODIFY])*:
+  - La Academia agenda las sesiones del programa de su equipo con Thalamus por API: horarios contra Google Calendar, evento con Meet que invita al alumno y WhatsApp a quien da la sesión. Contrato en [agendas_v2_api.md](../agendas_v2_api.md).
+  - Rol nuevo `fulfillment`, sin pantallas. Las cuentas las crea la Academia; conectan Google con un link firmado de un solo uso y confirman el WhatsApp con un comprobante firmado.
+  - No guarda nada de agenda ni toca la operación de ventas. `GoogleService` suma `mover_evento` y `delete_event` acepta el calendario donde se creó.
+  - Verificación: `tests/agendas_v2/test_api_academia.py` (14 tests); `/google/conectar/<firma>` inventariada en `PUBLICAS_POR_DISENO`.
