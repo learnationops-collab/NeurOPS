@@ -1,0 +1,63 @@
+/* ============================================================================
+   Workshop — la cáscara (16/10/2026): fondo, cabecera y pestañas del estilo del dashboard comercial
+   y de Marketing (`.dc-shell`: `tope` + `Segmented`). El contenido que todavía usa el estilo viejo va
+   en `.ws-shell.ws-contenido` (ver workshop-intel.css); cada pestaña nueva arma su propio
+   `.dc-shell dc-shell--embebido` adentro.
+   ============================================================================ */
+
+/* El mismo fondo que Marketing (`.mk-espacio`): MainLayout pinta el del tema y la página es oscura. */
+.ws-espacio {
+    min-height: 100%;
+    background: linear-gradient(135deg, var(--ln-page-base, #020617) 0%, var(--ln-page-base, #0A0E3D) 50%, var(--ln-page-base, #05082D) 100%) fixed, var(--ln-page-base, #020617);
+    color: var(--ln-text-out, #e2e8f0);
+    /* MainLayout deja 8rem abajo para el dock: el fondo oscuro los cubre también. */
+    margin-bottom: -8rem;
+    padding-bottom: calc(8rem + 32px);
+}
+
+.ws-espacio > .ws-cabeza {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 24px clamp(16px, 3vw, 24px) 0;
+}
+
+/* El contenido de estilo viejo (`tabs/Legado.jsx`): sin el alto ni el fondo propios de `.ws-shell`,
+   que ya pone `.ws-espacio`. Lo nuevo (`.dc-shell`) va con el mismo ancho. */
+.ws-espacio .ws-shell.ws-legado { min-height: 0; background: none; }
+.ws-espacio .ws-contenido > .dc-shell { max-width: 1440px; margin: 0 auto; padding: 0 clamp(16px, 3vw, 24px) 48px; }
+.ws-espacio .ws-shell.ws-legado > .dashboard {
+    width: auto;
+    max-width: 1440px;
+    padding: 0 clamp(16px, 3vw, 24px) 48px;
+    min-height: 0;
+}
+
+.dc-shell .ws-h1 { font-size: clamp(28px, 3.4vw, 40px); }
+.dc-shell .ws-tope-meta { display: flex; align-items: center; gap: var(--s2); }
+
+@keyframes ws-gira { to { transform: rotate(360deg); } }
+.dc-shell .ws-gira { animation: ws-gira 1s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .dc-shell .ws-gira { animation: none; } }
+
+/* La cuenta regresiva del próximo taller, al lado del título. */
+.dc-shell .live-badge {
+    display: inline-flex; align-items: center; gap: 7px; align-self: center;
+    padding: 5px 11px 5px 9px; border: 1px solid color-mix(in srgb, var(--success) 35%, transparent);
+    border-radius: 999px; background: color-mix(in srgb, var(--success) 10%, transparent);
+    color: var(--success); font-size: 10px; font-weight: 900; letter-spacing: .1em;
+    text-transform: uppercase; white-space: nowrap;
+}
+.dc-shell .live-badge .live-dot {
+    display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--success);
+    animation: ws-live-pulse 1.8s ease-in-out infinite;
+}
+.dc-shell .live-badge--cuenta {
+    border-color: color-mix(in srgb, var(--brand-primary, #ff3fa4) 40%, transparent);
+    background: color-mix(in srgb, var(--brand-primary, #ff3fa4) 10%, transparent);
+    color: var(--brand-primary, #ff3fa4);
+}
+.dc-shell .live-badge-cuenta { font-size: 11px; letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+.dc-shell .live-badge--sin {
+    border-color: var(--border-subtle); background: transparent; color: var(--text-muted); cursor: pointer;
+}
+.dc-shell .live-badge--sin:hover { color: var(--text-on-surface); }

@@ -1,26 +1,48 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Plus, RefreshCw, CalendarDays, CalendarClock, Loader2, LayoutGrid, List, Layers, Target, Zap, Video, LayoutDashboard, Globe, Megaphone } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Plus, RefreshCw } from 'lucide-react';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
+import { Isotipo, Segmented } from '../../comercial/components/Shared';
+import '../../comercial/comercial.css';
 import './workshop-intel.css';
-import WorkshopKpiCards from './components/WorkshopKpiCards';
-import WorkshopCardsView from './components/WorkshopCardsView';
-import WorkshopTableView from './components/WorkshopTableView';
-import WorkshopFunnelView from './components/WorkshopFunnelView';
+import './workshop-shell.css';
 import WorkshopFormModal from './components/WorkshopFormModal';
-import WorkshopLandingView from './components/WorkshopLandingView';
 import WorkshopTraficoView from './components/WorkshopTraficoView';
-import WorkshopAnunciosView from './components/WorkshopAnunciosView';
-import WorkshopDiagnostico from './components/WorkshopDiagnostico';
 import WorkshopGoalsModal from './components/WorkshopGoalsModal';
-import WorkshopSimuladorView from './components/WorkshopSimuladorView';
-import WorkshopAccionesView from './components/WorkshopAccionesView';
-import WorkshopCompareModal from './components/WorkshopCompareModal';
-import WorkshopProximosView from './components/WorkshopProximosView';
 import TallerEnVivo from './components/TallerEnVivo';
-import WorkshopFiltroResumen from './components/WorkshopFiltroResumen';
-import { FILTRO_TODOS, filtrarTalleres, talleresAnteriores, totalesResumen, variaciones } from './filtroTalleres';
+import ResumenTab from './tabs/ResumenTab';
+import HistorialTab from './tabs/HistorialTab';
+import PlanificarTab from './tabs/PlanificarTab';
+import Legado from './tabs/Legado';
 import { aCamposLocales, aInicioUtc, esProximo, zonaNavegador } from './agendaTaller';
+
+/**
+ * Workshop: cuatro pestañas desde el 16/10/2026 (antes nueve sueltas).
+ *
+ *  - Resumen: KPIs y salud del embudo de los talleres elegidos.
+ *  - Talleres: el historial, con el embudo, los anuncios y la grabación de cada taller.
+ *  - Planificar: próximos talleres, simulador y acciones para los que vienen.
+ *  - Tráfico landings: visitas y clics de las landings (el único lugar donde está).
+ *
+ * La cabecera y las pestañas son las del dashboard comercial y Marketing (`.dc-shell`: `tope` +
+ * `Segmented`). El contenido de cada pestaña vive en `tabs/`; lo que todavía usa el estilo viejo se
+ * envuelve solo en `.ws-shell` (`tabs/Legado.jsx`). La pestaña va en la URL (`?tab=`), así un link lleva a lo mismo.
+ *
+ * La página guarda solo lo que comparten las pestañas: los talleres (con su polling), metas,
+ * acciones y el formulario de alta/edición.
+ */
+
+const PESTANAS = [
+    { key: 'resumen', label: 'Resumen' },
+    { key: 'talleres', label: 'Talleres' },
+    { key: 'planificar', label: 'Planificar' },
+    { key: 'trafico', label: 'Tráfico landings' },
+];
+
+// Las pestañas viejas siguen abriendo lo mismo desde un link guardado.
+const PESTANA_VIEJA = { list: 'talleres', funnel: 'talleres', anuncios: 'talleres', landing: 'talleres',
+    proximos: 'planificar', simulador: 'planificar', acciones: 'planificar' };
 
 const initialFormData = {
     date: '',
@@ -54,50 +76,39 @@ const initialFormData = {
 };
 
 const WorkshopDashboardPage = () => {
+    const [params, setParams] = useSearchParams();
+    const pedida = PESTANA_VIEJA[params.get('tab')] || params.get('tab');
+    const activeTab = PESTANAS.some((p) => p.key === pedida) ? pedida : 'resumen';
+    // Lo que una pestaña le pide a Planificar al mandar ahí (ver PlanificarTab).
+    const [enfoquePlan, setEnfoquePlan] = useState(null);
+
+    const irA = useCallback((tab, enfoque = null) => {
+        const siguiente = new URLSearchParams(params);
+        if (tab === 'resumen') siguiente.delete('tab'); else siguiente.set('tab', tab);
+        setParams(siguiente, { replace: true });
+        if (tab === 'planificar') setEnfoquePlan(enfoque ? { ...enfoque } : null);
+    }, [params, setParams]);
+
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [isEditMode, setIsEditMode] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
-    const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
-    const [activeTab, setActiveTab] = useState('resumen'); // 'resumen' | 'list' | 'proximos' | 'funnel' | 'anuncios' | 'simulador' | 'acciones' | 'trafico' | 'landing'
-    const [selectedEventForFunnel, setSelectedEventForFunnel] = useState(null);
 
-    // Diagnóstico / Metas / Simulador / Acciones (Workshop Intelligence 2.0)
     const [goals, setGoals] = useState(null);
     const [actions, setActions] = useState([]);
     const [goalsModalOpen, setGoalsModalOpen] = useState(false);
-    const [highlightStage, setHighlightStage] = useState(null);
-    const [compareIds, setCompareIds] = useState([]);
-    const [compareModalOpen, setCompareModalOpen] = useState(false);
-    // Qué talleres analiza el Resumen (ver filtroTalleres.js)
-    const [filtroResumen, setFiltroResumen] = useState(FILTRO_TODOS);
 
     // Formulario & Prefill
     const [formData, setFormData] = useState(initialFormData);
     const [loadingPrefill, setLoadingPrefill] = useState(false);
     const [agendaBreakdown, setAgendaBreakdown] = useState(null);
     const [prefilledDate, setPrefilledDate] = useState('');
-    const [resyncing, setResyncing] = useState(false);
     const [guardando, setGuardando] = useState(false);
-
-    // Desglose vivo / grabación del evento abierto en la pestaña de embudo
+    // Desglose vivo / grabación del taller abierto en el formulario
     const [desglose, setDesglose] = useState(null);
     const [ventana, setVentana] = useState(null);
-    const [cargandoDesglose, setCargandoDesglose] = useState(false);
-
-    // Alto de la barra de pestañas pegada: lo que se pega debajo de ella al scrollear (los títulos de
-    // la tabla de anuncios) arranca ahí. Cambia cuando la barra se parte en dos renglones.
-    const topbarRef = useRef(null);
-    const [altoTopbar, setAltoTopbar] = useState(0);
-    useEffect(() => {
-        const barra = topbarRef.current;
-        if (!barra || typeof ResizeObserver === 'undefined') return undefined;
-        const observador = new ResizeObserver(() => setAltoTopbar(barra.offsetHeight));
-        observador.observe(barra);
-        return () => observador.disconnect();
-    }, []);
 
     useEffect(() => {
         fetchEvents();
@@ -123,48 +134,6 @@ const WorkshopDashboardPage = () => {
         }
     };
 
-    const goToSimulador = (stageKey) => {
-        setHighlightStage(stageKey);
-        setActiveTab('simulador');
-    };
-
-    const toggleCompareId = (id) => {
-        setCompareIds((prev) => {
-            if (prev.includes(id)) return prev.filter((x) => x !== id);
-            if (prev.length >= 4) {
-                toast.error('Podés comparar hasta 4 talleres a la vez');
-                return prev;
-            }
-            return [...prev, id];
-        });
-    };
-
-    // El desglose por embudo se pide solo al abrir el análisis de un evento:
-    // recorre agendas y ventas, así que no vale la pena calcularlo para la lista.
-    // Mientras la pestaña sigue abierta se refresca solo cada 30s (silencioso,
-    // sin el spinner de "cargandoDesglose") para que una agenda o venta nueva
-    // se vea sin tener que salir y volver a entrar a la pestaña.
-    useEffect(() => {
-        if (activeTab !== 'funnel' || !selectedEventForFunnel?.date) return;
-        let cancelado = false;
-        const cargar = (silencioso) => {
-            if (!silencioso) setCargandoDesglose(true);
-            return api.get(`workshop/prefill?date=${selectedEventForFunnel.date}`)
-                .then(res => {
-                    if (cancelado) return;
-                    setDesglose(res.data.desglose || null);
-                    setVentana(res.data.ventana || null);
-                })
-                .catch(err => {
-                    if (!cancelado) console.error('Error cargando el desglose del workshop:', err);
-                })
-                .finally(() => { if (!cancelado && !silencioso) setCargandoDesglose(false); });
-        };
-        cargar(false);
-        const interval = setInterval(() => cargar(true), 30000);
-        return () => { cancelado = true; clearInterval(interval); };
-    }, [activeTab, selectedEventForFunnel?.date]);
-
     // `silent=true` es el modo que usa el polling en vivo: no prende el
     // spinner de carga ni molesta con un toast si falla un tick (el proximo
     // intento en 20s ya lo resuelve solo).
@@ -174,14 +143,6 @@ const WorkshopDashboardPage = () => {
             const res = await api.get('workshop/events');
             if (Array.isArray(res.data)) {
                 setEvents(res.data);
-                // Mantiene la MISMA seleccion (por id) pero con los datos
-                // frescos -- sin esto, el evento abierto en "Embudo" se
-                // quedaba con los numeros de cuando se selecciono, aunque
-                // el snapshot ya se hubiera sincronizado en el servidor.
-                setSelectedEventForFunnel(prev => {
-                    if (!prev) return res.data.find(e => !esProximo(e)) || res.data[0] || null;
-                    return res.data.find(e => e.id === prev.id) || prev;
-                });
             }
         } catch (err) {
             console.error("Error fetching events:", err);
@@ -383,51 +344,9 @@ const WorkshopDashboardPage = () => {
         guardarTaller({ cerrar: true });
     };
 
-    const handleResyncFunnel = async () => {
-        if (!selectedEventForFunnel || resyncing) return;
-        try {
-            setResyncing(true);
-            const res = await api.get(`workshop/prefill?date=${selectedEventForFunnel.date}`);
-            const data = res.data;
-            const patch = {
-                aplicaciones_form: data.aplicaciones_form,
-                agendas_exitosas: data.agendas_exitosas,
-                show_up_sales_call: data.show_up_sales_call,
-                sales: data.sales,
-                cash_collected: data.cash_collected,
-                cash_ventas: data.cash_ventas,
-                ventas_cobradas: data.ventas_cobradas
-            };
-            await api.put(`workshop/events/${selectedEventForFunnel.id}`, {
-                ...selectedEventForFunnel,
-                ...patch
-            });
-            toast.success('Datos del sistema actualizados correctamente');
-            setAgendaBreakdown(data.agendas_breakdown);
-            setDesglose(data.desglose || null);
-            setVentana(data.ventana || null);
-            fetchEvents();
-        } catch (err) {
-            console.error('Error resincronizando embudo:', err);
-            toast.error(err.response?.data?.error || 'Error al actualizar desde sistema');
-        } finally {
-            setResyncing(false);
-        }
-    };
-
     // Los talleres programados que todavía no empezaron tienen todo en cero: fuera de los totales,
-    // el diagnóstico y el historial. Se ven y se editan en «Próximos».
+    // el diagnóstico y el historial. Se ven y se editan en Planificar › Próximos.
     const realizados = useMemo(() => events.filter(e => !esProximo(e)), [events]);
-    const cantidadProximos = events.length - realizados.length;
-
-    // El Resumen analiza solo los talleres del filtro; las flechas comparan contra los anteriores.
-    const analizados = useMemo(() => filtrarTalleres(realizados, filtroResumen), [realizados, filtroResumen]);
-    const anteriores = useMemo(() => talleresAnteriores(realizados, filtroResumen), [realizados, filtroResumen]);
-    const totalStats = useMemo(() => totalesResumen(analizados), [analizados]);
-    const cambios = useMemo(
-        () => (anteriores ? variaciones(totalStats, analizados.length, totalesResumen(anteriores), anteriores.length) : null),
-        [totalStats, analizados.length, anteriores]
-    );
 
     const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
     const formatDate = (dateStr) => {
@@ -442,248 +361,95 @@ const WorkshopDashboardPage = () => {
     };
 
     return (
-        <div className="ws-shell" style={{ '--ws-topbar-h': `${altoTopbar}px` }}>
-            <div className="dashboard">
-                {/* Barra superior pegada: titulo compacto + pestañas SIEMPRE
-                    visibles arriba (calcado del topbar de la referencia) — antes
-                    la navegación vivía debajo del hero + KPIs + diagnóstico, así
-                    que cambiar de sección obligaba a scrollear cada vez. */}
-                <header className="ws-topbar" ref={topbarRef}>
-                    <div className="ws-topbar-row">
-                        <div className="ws-topbar-title">
-                            <h1>Workshop Intelligence</h1>
-                            <TallerEnVivo eventos={events} onIrAProximos={() => setActiveTab('proximos')} />
+        <div className="ws-espacio">
+            <div className="dc-shell dc-shell--embebido ws-cabeza">
+                <header className="tope">
+                    <div className="tope-id">
+                        <Isotipo idGrad="lnGradWorkshop" />
+                        <div>
+                            <p className="t-eyebrow">Workshop</p>
+                            <h1 className="t-h1 ws-h1">{PESTANAS.find((p) => p.key === activeTab).label}</h1>
                         </div>
-                        <div className="hero-actions">
-                            <button type="button" className="icon-button" onClick={() => fetchEvents()} title="Recargar eventos" aria-label="Recargar eventos">
-                                <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-                            </button>
-                            <button type="button" className="primary-action" onClick={handleOpenCreateModal}>
-                                <Plus size={16} /> Registrar taller
-                            </button>
-                        </div>
+                        <TallerEnVivo eventos={events} onIrAProximos={() => irA('planificar', { vista: 'proximos' })} />
                     </div>
-                    <nav className="section-tabs" role="tablist" aria-label="Secciones de Workshop Intelligence">
-                        <button type="button" className={activeTab === 'resumen' ? 'active' : ''} onClick={() => setActiveTab('resumen')} aria-current={activeTab === 'resumen' ? 'page' : undefined}>
-                            <LayoutDashboard size={14} /> Resumen
+                    <div className="tope-meta ws-tope-meta">
+                        <button type="button" className="ibtn" onClick={() => fetchEvents()} disabled={loading}
+                            title="Volver a cargar" aria-label="Volver a cargar">
+                            <RefreshCw className={loading ? 'ws-gira' : ''} aria-hidden="true" />
                         </button>
-                        <button type="button" className={activeTab === 'list' ? 'active' : ''} onClick={() => setActiveTab('list')} aria-current={activeTab === 'list' ? 'page' : undefined}>
-                            <Layers size={14} /> Historial ({realizados.length})
+                        <button type="button" className="btn btn--cta btn--sm" onClick={handleOpenCreateModal}>
+                            <Plus size={15} aria-hidden="true" /> Registrar taller
                         </button>
-                        <button type="button" className={activeTab === 'proximos' ? 'active' : ''} onClick={() => setActiveTab('proximos')} aria-current={activeTab === 'proximos' ? 'page' : undefined}>
-                            <CalendarClock size={14} /> Próximos{cantidadProximos > 0 && ` (${cantidadProximos})`}
-                        </button>
-                        <button type="button" className={activeTab === 'funnel' ? 'active' : ''} onClick={() => setActiveTab('funnel')} aria-current={activeTab === 'funnel' ? 'page' : undefined}>
-                            <CalendarDays size={14} /> Embudo
-                        </button>
-                        {/* Los anuncios de Meta que llenaron el taller abierto en Embudo (16/10/2026): antes
-                            vivían al pie del embudo y había que scrollear todo para encontrarlos. */}
-                        <button type="button" className={activeTab === 'anuncios' ? 'active' : ''} onClick={() => setActiveTab('anuncios')} aria-current={activeTab === 'anuncios' ? 'page' : undefined}>
-                            <Megaphone size={14} /> Anuncios
-                        </button>
-                        <button type="button" className={activeTab === 'simulador' ? 'active' : ''} onClick={() => setActiveTab('simulador')} aria-current={activeTab === 'simulador' ? 'page' : undefined}>
-                            <Target size={14} /> Simulador
-                        </button>
-                        <button type="button" className={activeTab === 'acciones' ? 'active' : ''} onClick={() => setActiveTab('acciones')} aria-current={activeTab === 'acciones' ? 'page' : undefined}>
-                            <Zap size={14} /> Acciones {actions.length > 0 && `(${actions.filter(a => a.status === 'pending').length})`}
-                        </button>
-                        {/* Visitas de todas las landings de institute-site y clics al grupo de WhatsApp. */}
-                        <button type="button" className={activeTab === 'trafico' ? 'active' : ''} onClick={() => setActiveTab('trafico')} aria-current={activeTab === 'trafico' ? 'page' : undefined}>
-                            <Globe size={14} /> Tráfico landings
-                        </button>
-                        {/* La grabación es OTRO embudo que el workshop en vivo: mismo
-                            producto, fuente distinta ('workshop landing'). */}
-                        <button type="button" className={activeTab === 'landing' ? 'active' : ''} onClick={() => setActiveTab('landing')} aria-current={activeTab === 'landing' ? 'page' : undefined}>
-                            <Video size={14} /> Landing grabación
-                        </button>
-                    </nav>
+                    </div>
                 </header>
+                <div className="barra">
+                    <Segmented opciones={PESTANAS} valor={activeTab} ariaLabel="Secciones de Workshop"
+                        onChange={(key) => irA(key)} />
+                </div>
+            </div>
 
-                {/* Area Principal de Contenido */}
-                {/* La landing va PRIMERO y fuera de los guards de abajo: sus datos
-                    no dependen de que haya workshops en vivo cargados, asi que el
-                    "no hay workshops registrados" no tiene que taparla. */}
-                {activeTab === 'trafico' ? (
-                    <WorkshopTraficoView />
-                ) : activeTab === 'landing' ? (
-                    <WorkshopLandingView events={events} onConfigSaved={() => fetchEvents(true)} formatDate={formatDate} />
-                ) : loading ? (
-                    <section className="empty-state loading-state" role="status">
-                        <div><span /></div>
-                        <p className="eyebrow">Sincronizando</p>
-                        <h2>Cargando inteligencia de workshops…</h2>
-                    </section>
-                ) : activeTab === 'proximos' ? (
-                    <WorkshopProximosView
-                        events={events}
-                        onEdit={handleOpenEditModal}
-                        onDelete={handleDeleteEvent}
-                        onProgramado={() => fetchEvents(true)}
-                    />
-                ) : realizados.length === 0 ? (
-                    <section className="empty-state">
-                        <div><CalendarDays size={26} /></div>
-                        <p className="eyebrow">Empezá por acá</p>
-                        <h2>No hay workshops registrados</h2>
-                        <p>Registrá el primero para empezar a medir el embudo.</p>
-                        <button type="button" className="primary-action" onClick={handleOpenCreateModal}>
-                            <Plus size={16} /> Registrar taller
-                        </button>
-                    </section>
-                ) : activeTab === 'resumen' ? (
-                    <>
-                        {/* Resumen ejecutivo: separado de las pestañas de datos
-                            (Historial/Embudo/Simulador/Acciones) para no tener que
-                            scrollear pasando KPIs y diagnóstico cada vez que se
-                            quiere analizar un evento puntual. */}
-                        <section className="hero" aria-labelledby="workshop-intel-title">
-                            <div>
-                                <p className="eyebrow"><span className="live-dot" />Sistema actualizado · {realizados.length} talleres</p>
-                                <h1 id="workshop-intel-title">Rendimiento & Workshop Intelligence.</h1>
-                                <p className="hero-copy">Consola ejecutiva de análisis financiero, ROI publicitario y eficiencia de embudo para talleres y webinars.</p>
-                            </div>
-                            <div className="hero-period">
-                                <span>Período analizado</span>
-                                <strong>
-                                    {analizados.length
-                                        ? `${formatDate(analizados[analizados.length - 1].date)} — ${formatDate(analizados[0].date)}`
-                                        : 'Sin talleres'}
-                                </strong>
-                            </div>
-                        </section>
-                        <WorkshopFiltroResumen
-                            talleres={realizados}
-                            filtro={filtroResumen}
-                            onCambiar={setFiltroResumen}
-                            formatDate={formatDate}
-                            cantidad={analizados.length}
-                            cantidadAnterior={anteriores?.length || 0}
-                        />
-                        {analizados.length === 0 ? (
-                            <section className="empty-state">
-                                <div><CalendarDays size={26} /></div>
-                                <p className="eyebrow">Sin talleres</p>
-                                <h2>Ningún taller entra en esta selección</h2>
-                                <p>Elegí al menos un taller o ampliá el período para ver los números.</p>
+            <div className="ws-contenido">
+                    {/* Tráfico no depende de los talleres cargados: va fuera de los guards de abajo. */}
+                    {activeTab === 'trafico' ? (
+                        <Legado><WorkshopTraficoView /></Legado>
+                    ) : loading ? (
+                        <Legado>
+                            <section className="empty-state loading-state" role="status">
+                                <div><span /></div>
+                                <p className="eyebrow">Sincronizando</p>
+                                <h2>Cargando inteligencia de workshops…</h2>
                             </section>
-                        ) : (
-                        <>
-                        <WorkshopKpiCards totalStats={totalStats} eventsCount={analizados.length} cambios={cambios} />
-                        <WorkshopDiagnostico
-                            events={analizados}
+                        </Legado>
+                    ) : activeTab === 'planificar' ? (
+                        <PlanificarTab
+                            events={events}
+                            realizados={realizados}
                             goals={goals}
+                            onGoalsUpdated={setGoals}
                             actions={actions}
-                            onEditGoals={() => setGoalsModalOpen(true)}
-                            onGoToSimulador={goToSimulador}
+                            onActionsChanged={fetchActions}
+                            enfoque={enfoquePlan}
+                            onEdit={handleOpenEditModal}
+                            onDelete={handleDeleteEvent}
+                            onProgramado={() => fetchEvents(true)}
+                            formatCurrency={formatCurrency}
                         />
-                        </>
-                        )}
-                    </>
-                ) : activeTab === 'list' ? (
-                    <>
-                        <div className="section-tabs" role="tablist" aria-label="Modo de vista" style={{ width: 'fit-content', marginBottom: 18 }}>
-                            <button type="button" className={viewMode === 'cards' ? 'active' : ''} onClick={() => setViewMode('cards')}>
-                                <LayoutGrid size={14} /> Tarjetas
-                            </button>
-                            <button type="button" className={viewMode === 'table' ? 'active' : ''} onClick={() => setViewMode('table')}>
-                                <List size={14} /> Tabla comparativa
-                            </button>
-                        </div>
-                        {viewMode === 'cards' ? (
-                            <WorkshopCardsView
-                                events={realizados}
-                                onSelectFunnel={(e) => {
-                                    setSelectedEventForFunnel(e);
-                                    setActiveTab('funnel');
-                                }}
-                                onEdit={handleOpenEditModal}
-                                onDelete={handleDeleteEvent}
-                                formatDate={formatDate}
-                                formatCurrency={formatCurrency}
-                                selectedIds={compareIds}
-                                onToggleSelect={toggleCompareId}
-                            />
-                        ) : (
-                            <WorkshopTableView
-                                events={realizados}
-                                onSelectFunnel={(e) => {
-                                    setSelectedEventForFunnel(e);
-                                    setActiveTab('funnel');
-                                }}
-                                onEdit={handleOpenEditModal}
-                                onDelete={handleDeleteEvent}
-                                formatDate={formatDate}
-                                formatCurrency={formatCurrency}
-                                selectedIds={compareIds}
-                                onToggleSelect={toggleCompareId}
-                            />
-                        )}
-                    </>
-                ) : activeTab === 'funnel' ? (
-                    <WorkshopFunnelView
-                        events={realizados}
-                        selectedEvent={selectedEventForFunnel}
-                        onSelectEvent={setSelectedEventForFunnel}
-                        onResync={handleResyncFunnel}
-                        resyncing={resyncing}
-                        formatDate={formatDate}
-                        formatCurrency={formatCurrency}
-                        desglose={desglose}
-                        ventana={ventana}
-                        cargandoDesglose={cargandoDesglose}
-                        onVerAnuncios={() => setActiveTab('anuncios')}
-                    />
-                ) : activeTab === 'anuncios' ? (
-                    selectedEventForFunnel && (
-                        <WorkshopAnunciosView
-                            key={selectedEventForFunnel.id}
-                            evento={selectedEventForFunnel}
-                            eventos={realizados}
-                            onSelectEvent={setSelectedEventForFunnel}
+                    ) : activeTab === 'talleres' ? (
+                        <HistorialTab
+                            events={events}
+                            realizados={realizados}
+                            onEdit={handleOpenEditModal}
+                            onDelete={handleDeleteEvent}
+                            onRefresh={fetchEvents}
                             formatDate={formatDate}
                             formatCurrency={formatCurrency}
                         />
-                    )
-                ) : activeTab === 'simulador' ? (
-                    <WorkshopSimuladorView
-                        events={realizados}
-                        goals={goals}
-                        highlightStage={highlightStage}
-                        onGoalsUpdated={setGoals}
-                        formatCurrency={formatCurrency}
-                    />
-                ) : (
-                    <WorkshopAccionesView
-                        events={realizados}
-                        goals={goals}
-                        actions={actions}
-                        onActionsChanged={fetchActions}
-                        formatCurrency={formatCurrency}
-                    />
-                )}
+                    ) : realizados.length === 0 ? (
+                        <Legado>
+                            <section className="empty-state">
+                                <p className="eyebrow">Empezá por acá</p>
+                                <h2>No hay workshops registrados</h2>
+                                <p>Registrá el primero para empezar a medir el embudo.</p>
+                                <button type="button" className="primary-action" onClick={handleOpenCreateModal}>
+                                    <Plus size={16} /> Registrar taller
+                                </button>
+                            </section>
+                        </Legado>
+                    ) : (
+                        <ResumenTab
+                            realizados={realizados}
+                            goals={goals}
+                            actions={actions}
+                            onEditGoals={() => setGoalsModalOpen(true)}
+                            onGoToSimulador={(etapa) => irA('planificar', { vista: 'simulador', etapa })}
+                            formatDate={formatDate}
+                        />
+                    )}
 
-                {/* Barra flotante de comparación (hasta 4 talleres) */}
-                {compareIds.length > 0 && activeTab === 'list' && (
-                    <div className="compare-bar">
-                        <span>{compareIds.length} seleccionados</span>
-                        <button type="button" className="confirm" onClick={() => setCompareModalOpen(true)} disabled={compareIds.length < 2}>
-                            Comparar
-                        </button>
-                        <button type="button" className="clear" onClick={() => setCompareIds([])}>
-                            Limpiar
-                        </button>
-                    </div>
-                )}
+            </div>
 
-                {compareModalOpen && (
-                    <WorkshopCompareModal
-                        events={events.filter((e) => compareIds.includes(e.id))}
-                        onClose={() => setCompareModalOpen(false)}
-                        formatDate={formatDate}
-                        formatCurrency={formatCurrency}
-                    />
-                )}
-
+            {/* Los modales todavía son del estilo viejo. */}
+            <Legado>
                 {goalsModalOpen && goals && (
                     <WorkshopGoalsModal
                         goals={goals}
@@ -716,7 +482,7 @@ const WorkshopDashboardPage = () => {
                             : null}
                     />
                 )}
-            </div>
+            </Legado>
         </div>
     );
 };
