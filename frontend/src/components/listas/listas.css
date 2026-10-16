@@ -161,3 +161,6 @@
 .dc-shell .lc-tabla .tabla-fila[data-abre]:focus-visible { outline: 2px solid var(--brand-secondary); outline-offset: -2px; }
 .dc-shell .lc-der { justify-content: flex-end; text-align: right; }
 .dc-shell .lc-vacio { padding: var(--s6) var(--s4); text-align: center; }
+
+.dc-shell .lc-tabla .tabla-fila[aria-current="true"] { background: var(--bg-element); box-shadow: inset 3px 0 0 var(--brand-secondary); }
+.dc-shell .lc-pie { height: 1px; }

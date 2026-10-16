@@ -3,6 +3,7 @@ import { ArrowDown, Check, ChevronDown, Columns, RotateCcw, Search, SlidersHoriz
 import PanelConfigurar from '../../pages/comercial/components/PanelConfigurar';
 import Tip from '../../pages/comercial/components/Tip';
 import { useColumnasVisibles } from './useColumnasVisibles';
+import { usePaginaProgresiva } from './usePaginaProgresiva';
 import './listas.css';
 
 /**
@@ -18,7 +19,9 @@ import './listas.css';
  *   facetas:  [{ key, label, de(fila) → texto o null }]  — el panel «Filtro completo» de Revisar.
  *
  * `claveGuardado` es la clave de `localStorage` de las columnas elegidas (una por lista).
- * `extra` va al final de la barra (botones propios de la lista).
+ * `extra` va al final de la barra (botones propios de la lista). `marcada` es la clave de la fila
+ * abierta, que se resalta. Las filas se dibujan de a páginas al scrollear (`usePaginaProgresiva`),
+ * así una lista de miles no traba la pantalla.
  */
 
 const normal = (t) => String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -72,7 +75,7 @@ const MenuColumnas = ({ columnas, visibles, alternar, restablecer, onCerrar }) =
 
 const ListaConfigurable = ({
     columnas, facetas = [], filas, clave, onAbrirFila, buscar, buscarPlaceholder = 'Buscar…',
-    claveGuardado, vacio = 'No hay filas para mostrar.', ayuda, extra, ordenInicial = null,
+    claveGuardado, vacio = 'No hay filas para mostrar.', ayuda, extra, ordenInicial = null, marcada = null,
 }) => {
     const { visibles, alternar, restablecer } = useColumnasVisibles(claveGuardado, columnas);
     const [query, setQuery] = useState('');
@@ -101,6 +104,8 @@ const ListaConfigurable = ({
         if (o?.key !== key) return { key, dir: 'desc' };
         return o.dir === 'desc' ? { key, dir: 'asc' } : null;
     });
+
+    const { pagina, hayMas, pie } = usePaginaProgresiva(mostradas);
 
     const plantilla = visibles.map((c) => c.width || 'minmax(0,1fr)').join(' ');
     const quitar = (key, valor) => setElegidas((e) => ({ ...e, [key]: e[key].filter((v) => v !== valor) }));
@@ -192,7 +197,7 @@ const ListaConfigurable = ({
                 </div>
                 {mostradas.length === 0 ? (
                     <p className="t-body mut40 lc-vacio">{vacio}</p>
-                ) : mostradas.map((fila) => (
+                ) : pagina.map((fila) => (
                     <div key={clave(fila)} className="tabla-fila" role="row" style={{ '--cols': plantilla }}
                         {...(onAbrirFila ? {
                             tabIndex: 0,
@@ -201,7 +206,8 @@ const ListaConfigurable = ({
                                 if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAbrirFila(fila); }
                             },
                         } : {})}
-                        data-abre={onAbrirFila ? '' : undefined}>
+                        data-abre={onAbrirFila ? '' : undefined}
+                        aria-current={marcada != null && clave(fila) === marcada ? 'true' : undefined}>
                         {visibles.map((c) => (
                             <div key={c.key} data-h={c.header} role="cell" className={c.alinear === 'der' ? 'lc-der num' : undefined}>
                                 {c.render ? c.render(fila) : (c.valor(fila) ?? '—')}
@@ -209,6 +215,7 @@ const ListaConfigurable = ({
                         ))}
                     </div>
                 ))}
+                {hayMas && <div ref={pie} className="lc-pie" aria-hidden="true" />}
             </div>
         </div>
     );
