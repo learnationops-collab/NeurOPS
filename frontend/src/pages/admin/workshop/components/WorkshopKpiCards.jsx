@@ -1,19 +1,39 @@
 import React from 'react';
-import { CircleDollarSign, TrendingUp, Gauge, Users, CalendarDays, Award } from 'lucide-react';
+import { CircleDollarSign, TrendingUp, Gauge, Users, CalendarDays, Award, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import InfoTooltip from '../../../../components/ui/InfoTooltip';
 import { ticketPromedio } from '../funnelMath';
 
+// Variación contra los talleres anteriores del filtro del Resumen (16/10/2026). La inversión no es
+// buena ni mala por subir: va en gris.
+const Cambio = ({ valor, neutro }) => {
+    if (valor == null || !Number.isFinite(valor)) return null;
+    const sube = valor >= 0;
+    const tono = neutro ? 'neutral' : (sube ? 'good' : 'bad');
+    const texto = `${sube ? '+' : ''}${valor.toFixed(1)}%`;
+    return (
+        <b className={`delta ${tono}`} title="Contra los talleres anteriores (promedio por taller)"
+            aria-label={`${texto} contra los talleres anteriores`}>
+            {sube ? <ArrowUpRight size={11} aria-hidden="true" /> : <ArrowDownRight size={11} aria-hidden="true" />}
+            {texto}
+        </b>
+    );
+};
+
 // Tarjeta KPI individual — vocabulario visual de la referencia (.kpi-card / .kpi-head / .kpi-foot)
-const KpiCard = ({ label, value, icon: Icon, subtitle, badge, ayuda }) => (
+const KpiCard = ({ label, value, icon: Icon, subtitle, badge, ayuda, cambio, neutro }) => (
     <article className="kpi-card">
         <div className="kpi-head">
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 {label}
                 {ayuda && <InfoTooltip label={label} text={ayuda} />}
             </span>
-            <Icon size={18} aria-hidden="true" />
+            <span className="kpi-head-derecha">
+                <Cambio valor={cambio} neutro={neutro} />
+                <Icon size={18} aria-hidden="true" />
+            </span>
         </div>
-        <strong>{value}</strong>
+        {/* key: al cambiar el filtro la cifra entra de nuevo, así se nota qué se movió */}
+        <strong key={value} className="kpi-cifra">{value}</strong>
         <div className="kpi-foot">
             <span>{subtitle}</span>
             {badge && <b className={`status ${badge.tone}`}>{badge.text}</b>}
@@ -21,7 +41,7 @@ const KpiCard = ({ label, value, icon: Icon, subtitle, badge, ayuda }) => (
     </article>
 );
 
-const WorkshopKpiCards = ({ totalStats, eventsCount }) => {
+const WorkshopKpiCards = ({ totalStats, eventsCount, cambios }) => {
     const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
 
     const netProfit = totalStats.cash - totalStats.inversion;
@@ -44,6 +64,7 @@ const WorkshopKpiCards = ({ totalStats, eventsCount }) => {
         <section className="kpi-grid" aria-label="Indicadores principales">
             <KpiCard
                 label="Inversión ads"
+                cambio={cambios?.inversion} neutro
                 ayuda="Cuánta plata se gastó en publicidad para estos workshops. Es el dinero que sale."
                 value={formatCurrency(totalStats.inversion)}
                 icon={CircleDollarSign}
@@ -51,6 +72,7 @@ const WorkshopKpiCards = ({ totalStats, eventsCount }) => {
             />
             <KpiCard
                 label="Cash collected"
+                cambio={cambios?.cash}
                 ayuda="Cuánta plata entró de verdad a la cuenta (no lo prometido ni lo facturado: lo cobrado). Beneficio neto = cobrado menos inversión en ads."
                 value={formatCurrency(totalStats.cash)}
                 icon={TrendingUp}
@@ -58,6 +80,7 @@ const WorkshopKpiCards = ({ totalStats, eventsCount }) => {
             />
             <KpiCard
                 label="ROAS global"
+                cambio={cambios?.roas}
                 ayuda="Por cada $1 gastado en publicidad, cuántos dólares volvieron. 1x es empatar; arriba de 3x va muy bien. Ticket promedio = cuánto deja en promedio cada venta nueva (pago completo o split pay); las señas y las cuotas no entran."
                 value={`${totalStats.roas.toFixed(2)}x`}
                 icon={Gauge}
@@ -66,6 +89,7 @@ const WorkshopKpiCards = ({ totalStats, eventsCount }) => {
             />
             <KpiCard
                 label="Leads & CPL"
+                cambio={cambios?.leads}
                 ayuda="Personas que se registraron al workshop. CPL = cuánto costó conseguir cada una (inversión ÷ leads)."
                 value={totalStats.leads.toLocaleString()}
                 icon={Users}
@@ -73,6 +97,7 @@ const WorkshopKpiCards = ({ totalStats, eventsCount }) => {
             />
             <KpiCard
                 label="Agendas & CPA"
+                cambio={cambios?.agendas}
                 ayuda="Llamadas de venta agendadas, sumando las que salen de la clase en vivo y las de la grabación. CPA = cuánto costó conseguir cada agenda."
                 value={totalStats.agendas.toLocaleString()}
                 icon={CalendarDays}
@@ -80,6 +105,7 @@ const WorkshopKpiCards = ({ totalStats, eventsCount }) => {
             />
             <KpiCard
                 label="Ventas & CAC"
+                cambio={cambios?.sales}
                 ayuda="Personas distintas que compraron (no transacciones: si alguien paga en dos partes cuenta una sola vez). CAC = cuánto costó en publicidad conseguir cada cliente."
                 value={totalStats.sales.toLocaleString()}
                 icon={Award}

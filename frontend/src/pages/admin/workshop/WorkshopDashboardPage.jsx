@@ -17,6 +17,8 @@ import WorkshopAccionesView from './components/WorkshopAccionesView';
 import WorkshopCompareModal from './components/WorkshopCompareModal';
 import WorkshopProximosView from './components/WorkshopProximosView';
 import TallerEnVivo from './components/TallerEnVivo';
+import WorkshopFiltroResumen from './components/WorkshopFiltroResumen';
+import { FILTRO_TODOS, filtrarTalleres, talleresAnteriores, totalesResumen, variaciones } from './filtroTalleres';
 import { aCamposLocales, aInicioUtc, esProximo, zonaNavegador } from './agendaTaller';
 
 const initialFormData = {
@@ -68,6 +70,8 @@ const WorkshopDashboardPage = () => {
     const [highlightStage, setHighlightStage] = useState(null);
     const [compareIds, setCompareIds] = useState([]);
     const [compareModalOpen, setCompareModalOpen] = useState(false);
+    // Qué talleres analiza el Resumen (ver filtroTalleres.js)
+    const [filtroResumen, setFiltroResumen] = useState(FILTRO_TODOS);
 
     // Formulario & Prefill
     const [formData, setFormData] = useState(initialFormData);
@@ -403,44 +407,14 @@ const WorkshopDashboardPage = () => {
     const realizados = useMemo(() => events.filter(e => !esProximo(e)), [events]);
     const cantidadProximos = events.length - realizados.length;
 
-    const totalStats = useMemo(() => {
-        let inversion = 0;
-        let clics = 0;
-        let leads = 0;
-        let whatsapp_leads = 0;
-        let agendas = 0;
-        let sales = 0;
-        let cash = 0;
-        let cash_ventas = 0;
-        let ventas_cobradas = 0;
-
-        realizados.forEach(e => {
-            inversion += e.inversion || 0;
-            clics += e.clics || 0;
-            leads += e.leads || 0;
-            whatsapp_leads += e.whatsapp_leads || 0;
-            agendas += e.agendas_exitosas || 0;
-            sales += e.sales || 0;
-            cash += e.cash_collected || 0;
-            cash_ventas += e.cash_ventas || 0;
-            ventas_cobradas += e.ventas_cobradas || 0;
-        });
-
-        const roas = inversion > 0 ? cash / inversion : 0;
-
-        return {
-            inversion,
-            clics,
-            leads,
-            whatsapp_leads,
-            agendas,
-            sales,
-            cash,
-            cash_ventas,
-            ventas_cobradas,
-            roas
-        };
-    }, [realizados]);
+    // El Resumen analiza solo los talleres del filtro; las flechas comparan contra los anteriores.
+    const analizados = useMemo(() => filtrarTalleres(realizados, filtroResumen), [realizados, filtroResumen]);
+    const anteriores = useMemo(() => talleresAnteriores(realizados, filtroResumen), [realizados, filtroResumen]);
+    const totalStats = useMemo(() => totalesResumen(analizados), [analizados]);
+    const cambios = useMemo(
+        () => (anteriores ? variaciones(totalStats, analizados.length, totalesResumen(anteriores), anteriores.length) : null),
+        [totalStats, analizados.length, anteriores]
+    );
 
     const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
     const formatDate = (dateStr) => {
@@ -552,17 +526,40 @@ const WorkshopDashboardPage = () => {
                             </div>
                             <div className="hero-period">
                                 <span>Período analizado</span>
-                                <strong>{formatDate(realizados[realizados.length - 1]?.date)} — {formatDate(realizados[0]?.date)}</strong>
+                                <strong>
+                                    {analizados.length
+                                        ? `${formatDate(analizados[analizados.length - 1].date)} — ${formatDate(analizados[0].date)}`
+                                        : 'Sin talleres'}
+                                </strong>
                             </div>
                         </section>
-                        <WorkshopKpiCards totalStats={totalStats} eventsCount={realizados.length} />
+                        <WorkshopFiltroResumen
+                            talleres={realizados}
+                            filtro={filtroResumen}
+                            onCambiar={setFiltroResumen}
+                            formatDate={formatDate}
+                            cantidad={analizados.length}
+                            cantidadAnterior={anteriores?.length || 0}
+                        />
+                        {analizados.length === 0 ? (
+                            <section className="empty-state">
+                                <div><CalendarDays size={26} /></div>
+                                <p className="eyebrow">Sin talleres</p>
+                                <h2>Ningún taller entra en esta selección</h2>
+                                <p>Elegí al menos un taller o ampliá el período para ver los números.</p>
+                            </section>
+                        ) : (
+                        <>
+                        <WorkshopKpiCards totalStats={totalStats} eventsCount={analizados.length} cambios={cambios} />
                         <WorkshopDiagnostico
-                            events={realizados}
+                            events={analizados}
                             goals={goals}
                             actions={actions}
                             onEditGoals={() => setGoalsModalOpen(true)}
                             onGoToSimulador={goToSimulador}
                         />
+                        </>
+                        )}
                     </>
                 ) : activeTab === 'list' ? (
                     <>

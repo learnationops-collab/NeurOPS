@@ -108,6 +108,36 @@
 .ws-shell .delta { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 3px; padding: 5px 8px; border-radius: 999px; font-size: 9px; font-weight: 900; font-variant-numeric: tabular-nums; }
 .ws-shell .delta.good { color: var(--success); background: var(--ln-success-bg, #071a24); border: 1px solid var(--ln-success-border, #10413d); }
 .ws-shell .delta.bad { color: var(--error); background: var(--ln-danger-bg, #1b0f1d); border: 1px solid var(--ln-danger-border, #4c2227); }
+.ws-shell .delta.neutral { color: var(--text-muted); background: color-mix(in srgb, var(--ln-text-out, #ffffff) 5%, transparent); border: 1px solid var(--border); }
+.ws-shell .kpi-head-derecha { display: inline-flex; align-items: center; gap: 10px; }
+.ws-shell .kpi-cifra { animation: ws-cifra-entra 420ms cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes ws-cifra-entra { from { opacity: 0; transform: translateY(6px); } }
+
+/* Filtro del Resumen (16/10/2026): qué talleres se analizan. */
+.ws-shell .ws-filtro { margin: -8px 0 22px; padding: 18px 22px; }
+.ws-shell .ws-filtro-fila { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px 24px; flex-wrap: wrap; }
+.ws-shell .ws-filtro-modo .eyebrow { display: flex; align-items: center; gap: 6px; margin-bottom: 9px; }
+.ws-shell .ws-filtro .pill-toggle button { min-height: 36px; }
+.ws-shell .ws-filtro-controles { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.ws-shell .ws-filtro-controles > span { align-self: center; color: var(--text-muted); font-size: 10px; font-weight: 800; }
+.ws-shell .ws-filtro-fechas label { display: grid; gap: 6px; }
+.ws-shell .ws-filtro-fechas label > span { color: var(--text-muted); font-size: 9px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.ws-shell .ws-filtro-fechas input { min-height: 40px; padding: 0 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--input); font-size: 12px; font-weight: 700; color-scheme: dark; }
+.ws-shell .ws-filtro-fechas input:focus { border-color: var(--blue); }
+.ws-shell .ws-filtro-acciones .text-action { min-height: 36px; }
+.ws-shell .ws-filtro-talleres { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin-top: 16px; }
+.ws-shell .ws-filtro-talleres label { position: relative; display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 52px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--input); cursor: pointer; transition: border-color 160ms ease, background-color 160ms ease; }
+.ws-shell .ws-filtro-talleres label:hover { background: color-mix(in srgb, var(--ln-text-out, #ffffff) 8%, transparent); }
+.ws-shell .ws-filtro-talleres label.elegido { border-color: color-mix(in srgb, var(--ln-brand-2, #1323c6) 70%, transparent); background: color-mix(in srgb, var(--ln-brand-2, #1323c6) 18%, transparent); }
+.ws-shell .ws-filtro-talleres input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.ws-shell .ws-filtro-talleres label:has(input:focus-visible) { box-shadow: 0 0 0 3px color-mix(in srgb, var(--ln-brand-2, #1323c6) 60%, transparent); }
+.ws-shell .ws-filtro-talleres i { width: 18px; height: 18px; display: grid; place-items: center; border: 1px solid color-mix(in srgb, var(--ln-text-out, #ffffff) 30%, transparent); border-radius: 6px; color: transparent; transition: background-color 160ms ease, color 160ms ease; }
+.ws-shell .ws-filtro-talleres label.elegido i { border-color: var(--blue); background: var(--blue); color: var(--ln-text-out, #fff); }
+.ws-shell .ws-filtro-talleres span { min-width: 0; }
+.ws-shell .ws-filtro-talleres strong { display: block; font-size: 11px; }
+.ws-shell .ws-filtro-talleres small { display: block; margin-top: 2px; overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.ws-shell .ws-filtro-talleres b { color: var(--success); font-size: 11px; font-variant-numeric: tabular-nums; }
+.ws-shell .ws-filtro-nota { margin: 14px 0 0; color: var(--text-muted); font-size: 10px; font-weight: 700; }
 
 /* Panels / content grid */
 .ws-shell .content-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(300px, .75fr); gap: 22px; }
