@@ -515,3 +515,118 @@ def test_el_mazo_viejo_tambien_avisa_la_momentum(client, db, make_user, auth_hea
 
     assert r.status_code == 200, r.get_json()
     assert avisar.call_args.args[1:3] == ('mazo', {'result': 'No Show'})
+
+
+# --- Su Google Calendar en la Agenda de la Academia ---------------------------------------------
+
+
+class _Pedido:
+    def __init__(self, respuesta):
+        self.respuesta = respuesta
+
+    def execute(self):
+        if isinstance(self.respuesta, Exception):
+            raise self.respuesta
+        return self.respuesta
+
+
+class _Eventos:
+    """El events() de Google: list por calendario, get y patch de un evento."""
+
+    def __init__(self, por_calendario, evento=None):
+        self.por_calendario, self.evento, self.parches = por_calendario, evento or {}, []
+
+    def list(self, calendarId, **kw):
+        return _Pedido(self.por_calendario.get(calendarId, RuntimeError('sin acceso')))
+
+    def get(self, calendarId, eventId):
+        return _Pedido(self.evento)
+
+    def patch(self, calendarId, eventId, body, **kw):
+        self.parches.append({'calendar_id': calendarId, 'event_id': eventId, 'body': body, **kw})
+        return _Pedido({**self.evento, 'hangoutLink': self.evento.get('hangoutLink') or 'https://meet.google.com/nuevo'})
+
+
+class _Servicio:
+    def __init__(self, eventos):
+        self._eventos = eventos
+
+    def events(self):
+        return self._eventos
+
+
+def _evento(id_, inicio, fin, titulo='Llamada', **extra):
+    return {'id': id_, 'summary': titulo, 'start': {'dateTime': inicio}, 'end': {'dateTime': fin}, 'status': 'confirmed', **extra}
+
+
+def test_eventos_de_su_calendario_para_la_agenda(client, db, monkeypatch):
+    _alta(client)
+    _lista(db)
+    eventos = _Eventos({
+        'cal-dari': {'timeZone': BA, 'accessRole': 'owner', 'items': [
+            _evento('a1', '2026-10-06T13:00:00Z', '2026-10-06T14:00:00Z', 'Sesión con Juan'),
+            _evento('a2', '2026-10-06T15:00:00Z', '2026-10-06T16:00:00Z', 'Médico', visibility='private'),
+            _evento('a3', '2026-10-06T17:00:00Z', '2026-10-06T18:00:00Z', 'Libre', transparency='transparent'),
+            _evento('a4', '2026-10-06T19:00:00Z', '2026-10-06T20:00:00Z', 'No voy',
+                    attendees=[{'self': True, 'responseStatus': 'declined'}]),
+            _evento('a5_20261007', '2026-10-07T13:00:00Z', '2026-10-07T13:30:00Z', 'Daily', recurringEventId='a5',
+                    hangoutLink='https://meet.google.com/daily'),
+        ]},
+    })
+    monkeypatch.setattr(GoogleService, 'get_service', staticmethod(lambda user_id: _Servicio(eventos)))
+    desde = calendar.timegm(datetime(2026, 10, 5).timetuple()) * 1000
+    r = client.get(f'{BASE}/equipo/dari@thelearnation.com/eventos?desde={desde}&hasta={desde + 7 * 86400000}', headers=H)
+    assert r.status_code == 200
+    ids = [e['id'] for e in r.json['eventos']]
+    assert ids == ['a1', 'a2', 'a5_20261007']
+    a1, a2, daily = r.json['eventos']
+    assert a1['titulo'] == 'Sesión con Juan' and a1['calendar_id'] == 'cal-dari' and a1['escribe'] is True
+    assert a1['inicio'] == calendar.timegm(datetime(2026, 10, 6, 13).timetuple()) * 1000
+    assert a2['titulo'] is None  # privado
+    assert daily['serie'] == 'a5' and daily['meet'] == 'https://meet.google.com/daily'
+
+
+def test_eventos_piden_calendario_elegido_y_rango_corto(client, db):
+    _alta(client)
+    r = client.get(f'{BASE}/equipo/dari@thelearnation.com/eventos?desde=0&hasta=1', headers=H)
+    assert r.status_code == 409
+    _lista(db)
+    r = client.get(f'{BASE}/equipo/dari@thelearnation.com/eventos?desde=0&hasta={11 * 86400000}', headers=H)
+    assert r.status_code == 400
+
+
+def test_estado_de_un_evento_movido_o_borrado(client, db, monkeypatch):
+    _alta(client)
+    _lista(db)
+    monkeypatch.setattr(GoogleService, 'evento_para_traza', staticmethod(
+        lambda user_id, cal, eid: 'borrado' if eid == 'x' else {'estado': 'confirmed', 'inicio': 1, 'fin': 2}))
+    r = client.get(f'{BASE}/equipo/dari@thelearnation.com/eventos/x?calendar_id=cal-dari', headers=H)
+    assert r.json == {'estado': 'borrado', 'inicio': None, 'fin': None}
+    r = client.get(f'{BASE}/equipo/dari@thelearnation.com/eventos/a1?calendar_id=cal-dari', headers=H)
+    assert r.json == {'estado': 'confirmed', 'inicio': 1, 'fin': 2}
+
+
+def test_vincular_invita_al_alumno_y_agrega_meet(client, db, monkeypatch):
+    _alta(client)
+    _lista(db)
+    eventos = _Eventos({}, evento=_evento('a1', '2026-10-06T13:00:00Z', '2026-10-06T14:00:00Z',
+                                          attendees=[{'email': 'otro@x.com'}]))
+    monkeypatch.setattr(GoogleService, 'get_service', staticmethod(lambda user_id: _Servicio(eventos)))
+    r = client.post(f'{BASE}/equipo/dari@thelearnation.com/eventos/a1/vincular',
+                    json={'calendar_id': 'cal-dari', 'invitado': {'email': 'Alumno@x.com'}}, headers=H)
+    assert r.status_code == 200 and r.json == {'meet': 'https://meet.google.com/nuevo'}
+    (p,) = eventos.parches
+    assert p['calendar_id'] == 'cal-dari' and p['sendUpdates'] == 'all' and p['conferenceDataVersion'] == 1
+    assert [a['email'] for a in p['body']['attendees']] == ['otro@x.com', 'alumno@x.com']
+    assert 'conferenceData' in p['body'] and 'start' not in p['body']
+
+
+def test_vincular_un_evento_que_ya_tiene_todo_no_lo_toca(client, db, monkeypatch):
+    _alta(client)
+    _lista(db)
+    eventos = _Eventos({}, evento=_evento('a1', '2026-10-06T13:00:00Z', '2026-10-06T14:00:00Z',
+                                          attendees=[{'email': 'alumno@x.com'}], hangoutLink='https://meet.google.com/ya'))
+    monkeypatch.setattr(GoogleService, 'get_service', staticmethod(lambda user_id: _Servicio(eventos)))
+    r = client.post(f'{BASE}/equipo/dari@thelearnation.com/eventos/a1/vincular',
+                    json={'calendar_id': 'cal-dari', 'invitado': {'email': 'alumno@x.com'}}, headers=H)
+    assert r.json == {'meet': 'https://meet.google.com/ya'} and eventos.parches == []

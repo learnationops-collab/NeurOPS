@@ -401,6 +401,95 @@ class GoogleService:
                 return out
 
     @staticmethod
+    def eventos_de_agenda(user_id, desde, hasta):
+        """Los eventos de los calendarios de conflicto del usuario entre `desde` y `hasta` (datetime UTC sin
+        zona), para que la Academia se los muestre a esa misma persona en su Agenda y pueda convertir uno en
+        una sesión: [{id, calendar_id, serie, titulo, inicio, fin (ms), meet, escribe}]. Los recurrentes van
+        cada uno por separado (`serie`: el id del evento que se repite). Cuenta lo mismo que freebusy: no
+        los cancelados, los marcados «Disponible» ni los que rechazó. El título va salvo en los privados o
+        confidenciales. `escribe`: se puede editar (invitar al alumno al convertirlo). Un mismo evento leído
+        por su calendario y como 'primary' va una vez. None si no se pudo leer ningún calendario."""
+        token = GoogleService.token_vigente(user_id)
+        calendarios = GoogleService.calendarios_de_conflicto(token)
+        if not calendarios:
+            return []
+        try:
+            service = GoogleService.get_service(user_id)
+        except Exception as e:  # noqa: BLE001
+            current_app.logger.warning(f'[GOOGLE] Sin servicio para leer la agenda del usuario #{user_id}: {e}')
+            return None
+        if not service:
+            return None
+        unicos, leidos = {}, 0
+        for cal in calendarios:
+            pagina = None
+            try:
+                while True:
+                    r = service.events().list(
+                        calendarId=cal, timeMin=_iso_utc(desde), timeMax=_iso_utc(hasta), singleEvents=True,
+                        maxResults=250, pageToken=pagina,
+                        fields='timeZone,accessRole,nextPageToken,'
+                               'items(id,recurringEventId,summary,start,end,status,transparency,visibility,'
+                               'hangoutLink,attendees(self,responseStatus))',
+                    ).execute()
+                    zona, escribe = r.get('timeZone') or 'UTC', r.get('accessRole') in ('owner', 'writer')
+                    for e in r.get('items') or []:
+                        if not e.get('id') or e.get('status') == 'cancelled' or e.get('transparency') == 'transparent':
+                            continue
+                        if any(a.get('self') and a.get('responseStatus') == 'declined' for a in e.get('attendees') or []):
+                            continue
+                        inicio, fin = _ms_punto(e.get('start'), zona), _ms_punto(e.get('end'), zona)
+                        if inicio is None or fin is None or fin <= inicio:
+                            continue
+                        if e['id'] in unicos and unicos[e['id']]['calendar_id'] != 'primary':
+                            continue
+                        privado = e.get('visibility') in ('private', 'confidential')
+                        unicos[e['id']] = {
+                            'id': e['id'], 'calendar_id': cal, 'serie': e.get('recurringEventId'),
+                            'titulo': None if privado else ((e.get('summary') or '').strip() or None),
+                            'inicio': inicio, 'fin': fin, 'meet': e.get('hangoutLink'), 'escribe': escribe,
+                        }
+                    pagina = r.get('nextPageToken')
+                    if not pagina:
+                        break
+                leidos += 1
+            except Exception as e:  # noqa: BLE001  (un calendario que no se puede leer no frena a los otros)
+                current_app.logger.info(f'[GOOGLE] No se pudo leer el calendario {cal} del usuario #{user_id}: {e}')
+        if not leidos:
+            return None
+        return sorted(unicos.values(), key=lambda x: (x['inicio'], x['fin']))
+
+    @staticmethod
+    def vincular_evento(user_id, calendar_id, event_id, invitado_email=None):
+        """Convierte un evento que ya existe en una sesión de la Academia: invita a `invitado_email` (si no
+        estaba) y le agrega Meet si no tenía; Google le manda la invitación. El horario y el título no se
+        tocan. Devuelve el link de Meet. Lanza si Google falla."""
+        import uuid
+
+        service = GoogleService.get_service(user_id)
+        if not service:
+            raise RuntimeError('El usuario no tiene Google Calendar conectado.')
+        evt = service.events().get(calendarId=calendar_id, eventId=event_id).execute()
+        cambios = {}
+        invitados = evt.get('attendees') or []
+        email = (invitado_email or '').strip().lower()
+        if email and not any((a.get('email') or '').lower() == email for a in invitados):
+            cambios['attendees'] = [*invitados, {'email': email}]
+        if not evt.get('hangoutLink'):
+            cambios['conferenceData'] = {
+                'createRequest': {'requestId': uuid.uuid4().hex, 'conferenceSolutionKey': {'type': 'hangoutsMeet'}}
+            }
+        if cambios:
+            evt = service.events().patch(
+                calendarId=calendar_id, eventId=event_id, body=cambios, conferenceDataVersion=1,
+                sendUpdates='all' if 'attendees' in cambios else 'none',
+            ).execute()
+        return evt.get('hangoutLink') or next(
+            (p.get('uri') for p in (evt.get('conferenceData') or {}).get('entryPoints', []) if p.get('entryPointType') == 'video'),
+            None,
+        )
+
+    @staticmethod
     def _traza_de(e, calendario, zona):
         """Lo de un evento que sirve para seguir una agenda (eventos_para_traza)."""
         return {

@@ -337,6 +337,78 @@ def agenda_whatsapp_confirmar(email):
     return jsonify(_estado(u)), 200
 
 
+# --- Su Google Calendar en la Agenda de la Academia ------------------------------------------
+# La Academia le muestra a cada persona los eventos de su calendario (los que eligió para ver lo ocupado)
+# y le deja convertir uno en una sesión: la reserva queda atada a ese mismo evento, y desde ahí mover y
+# cancelar en la Academia lo actualizan (PATCH y DELETE /agenda/reservas). Acá tampoco se guarda nada.
+
+RANGO_EVENTOS_DIAS = 10
+
+
+@bp.route('/agenda/equipo/<path:email>/eventos', methods=['GET'])
+@require_academy_token
+def agenda_eventos(email):
+    """?desde&hasta (ms, hasta 10 días) → {eventos: [{id, calendar_id, serie, titulo, inicio, fin, meet,
+    escribe}]} de sus calendarios de conflicto (GoogleService.eventos_de_agenda). Pide su calendario elegido
+    (con la cuenta compartida team@, sin elegir vería los de todos)."""
+    from app.services.google_service import GoogleService
+
+    u = _cuenta(email)
+    if not u:
+        return _error('No existe esa persona del equipo', 404)
+    if not _estado(u)['calendario_elegido']:
+        return _error('no_lista', 409)
+    desde, hasta = request.args.get('desde', type=int), request.args.get('hasta', type=int)
+    if desde is None or hasta is None or not 0 < hasta - desde <= RANGO_EVENTOS_DIAS * DIA_MS:
+        return _error('Rango inválido', 400)
+    eventos = GoogleService.eventos_de_agenda(u.id, servicio.ms_a_dt(desde), servicio.ms_a_dt(hasta))
+    if eventos is None:
+        return _error('google', 502)
+    return jsonify({'eventos': eventos}), 200
+
+
+@bp.route('/agenda/equipo/<path:email>/eventos/<event_id>', methods=['GET'])
+@require_academy_token
+def agenda_evento(email, event_id):
+    """?calendar_id → {estado: confirmed|tentative|cancelled|borrado, inicio, fin}: cómo sigue el evento de
+    una reserva (si lo movió o lo borró en Google). 502 si no se pudo saber."""
+    from app.services.google_service import GoogleService
+
+    u = _cuenta(email)
+    if not u:
+        return _error('No existe esa persona del equipo', 404)
+    e = GoogleService.evento_para_traza(u.id, request.args.get('calendar_id') or GoogleService._calendario(u.id), event_id)
+    if e is None:
+        return _error('google', 502)
+    if e == 'borrado':
+        return jsonify({'estado': 'borrado', 'inicio': None, 'fin': None}), 200
+    return jsonify({'estado': e['estado'], 'inicio': e['inicio'], 'fin': e['fin']}), 200
+
+
+@bp.route('/agenda/equipo/<path:email>/eventos/<event_id>/vincular', methods=['POST'])
+@require_academy_token
+def agenda_vincular_evento(email, event_id):
+    """{calendar_id, invitado: {email}} → {meet}: el evento pasa a ser una sesión. Invita al alumno (si no
+    estaba) y le agrega Meet si no tenía; no cambia el horario ni el título. No manda WhatsApp: el evento ya
+    estaba en su calendario."""
+    from app.services.google_service import GoogleService
+
+    u = _cuenta(email)
+    if not u:
+        return _error('No existe esa persona del equipo', 404)
+    datos = _cuerpo()
+    calendar_id = datos.get('calendar_id')
+    if not isinstance(calendar_id, str) or not calendar_id:
+        return _error('Falta el calendar_id', 400)
+    try:
+        meet = GoogleService.vincular_evento(u.id, calendar_id, event_id, (datos.get('invitado') or {}).get('email'))
+    except Exception as e:  # noqa: BLE001
+        current_app.logger.warning(f'[AGENDA ACADEMIA] No se pudo vincular el evento {event_id} de #{u.id}: {e}')
+        return _error('google', 502)
+    servicio._google_cache.pop(u.id, None)
+    return jsonify({'meet': meet}), 200
+
+
 # --- El closer de cada alumno -----------------------------------------------------------------
 
 MAX_ALUMNOS = 1000
