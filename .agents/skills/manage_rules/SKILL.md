@@ -5,13 +5,13 @@ description: Create, update, and maintain project rules and documentation.
 
 # Manage Rules Skill
 
-This skill empowers you to autonomously manage the project's "brain" by creating and updating rule files in `.agent/rules/`.
+This skill empowers you to autonomously manage the project's "brain" by creating and updating rule files in `.agents/rules/`.
 
 ## When to Use This Skill
 
 - **New Patterns**: When you identify a recurring coding pattern or architectural decision that should be standardized.
 - **Tech Stack Changes**: When you add a new library, framework, or tool that changes the development workflow.
-- **Documentation Gaps**: When you find that existing documentation (`.agent/rules/*.md`) contradicts the actual codebase.
+- **Documentation Gaps**: When you find that existing documentation (`.agents/rules/*.md`) contradicts the actual codebase.
 - **Explicit Instruction**: When the user asks you to "add a rule" or "update the documentation".
 
 ## Instructions
@@ -25,7 +25,7 @@ Before writing a rule, verify:
 
 ### 2. Creating a New Rule File
 
-If no suitable existing file is found, create a new markdown file in `.agent/rules/`.
+If no suitable existing file is found, create a new markdown file in `.agents/rules/`.
 - **Naming**: Use `snake_case.md` (e.g., `testing_standards.md`, `deployment_workflow.md`).
 - **Frontmatter**: Always include the trigger configuration.
   ```yaml
@@ -57,6 +57,6 @@ If no suitable existing file is found, create a new markdown file in `.agent/rul
 ## Example Workflow
 
 1. You notice `frontend/` has migrated from `vite` to `next.js`.
-2. You check `.agent/rules/arquitectura.md`.
+2. You check `.agents/rules/arquitectura.md`.
 3. You see it still says "Vite".
-4. You invoke this skill logic to update `.agent/rules/arquitectura.md` replacing "Vite" with "Next.js" and updating the start command.
+4. You invoke this skill logic to update `.agents/rules/arquitectura.md` replacing "Vite" with "Next.js" and updating the start command.

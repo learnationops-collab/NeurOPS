@@ -11,7 +11,7 @@ Arquitectura:
 1. ESPECIFICACIONES TÉCNICAS
 --------------------------------
 Backend (Monolito API):
-- Lenguaje: Python 3.9+
+- Lenguaje: Python 3.11 (la imagen de producción del Dockerfile)
 - Framework: Flask (Modularizado con Blueprints)
 - ORM: SQLAlchemy (Flask-SQLAlchemy)
 - Migraciones: Flask-Migrate (Alembic)
@@ -24,7 +24,7 @@ Frontend (Single Page Application):
 - Ubicación: Carpeta `frontend/`
 - Servidor de Desarrollo: `npm run dev` (Puerto 5173 por defecto)
 - Producción: El backend Flask sirve los archivos estáticos compilados desde `frontend/dist` en la ruta `/`.
-- Estilos: Tailwind CSS (Clases utilitarias) + ShadcnUI (Componentes)
+- Estilos: Tailwind CSS (clases utilitarias, pantallas viejas) + temas propios (`frontend/src/temas/`: Classic y Modern, claro/oscuro, variables `--ln-*`) + componentes estándar (`frontend/src/components/standard/`). Para construir UI, ver `.agents/rules/ui.md`. `components/rare-ui` es el destino de shadcn (`frontend/components.json`).
 - Estado: React Context / Hooks
 
 Estructura del Proyecto:
