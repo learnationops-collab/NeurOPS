@@ -40,8 +40,8 @@ export const rangoDePeriodo = (key, hoy = new Date()) => {
     }
 };
 
-/** Tope del detalle de visitas que se pide: la lista dibuja todas las filas a la vez (no pagina). */
-export const LIMITE_DETALLE = 2000;
+/** Tope del detalle de visitas que se pide: la lista las dibuja de a páginas al scrollear. */
+export const LIMITE_DETALLE = 5000;
 
 export const num = (n) => (n == null ? '—' : Number(n).toLocaleString('en-US'));
 export const pct = (n) => (n == null ? '—' : `${Number(n).toFixed(1).replace(/\.0$/, '')}%`);

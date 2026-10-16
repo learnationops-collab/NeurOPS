@@ -35,7 +35,7 @@ const visita = (id, extra) => ({
 });
 
 const detalle = (extra) => ({
-    rango: TRAFICO.rango, limite: 2000, recortado: false, puede_borrar: false,
+    rango: TRAFICO.rango, limite: 5000, recortado: false, puede_borrar: false,
     visitas: [visita(1), visita(2, { landing: '/bienvenido/', fuente: 'Facebook', utm_source: 'fb', utm_campaign: null })],
     ...extra,
 });
@@ -62,7 +62,7 @@ describe('Workshop › Tráfico landings', () => {
         await waitFor(() => expect(api.get).toHaveBeenCalledWith('/workshop/landing/trafico/visitas', expect.anything()));
         const pedidos = Object.fromEntries(api.get.mock.calls.map(([url, config]) => [url, config.params]));
         expect(pedidos['/workshop/landing/trafico']).toEqual(esperado);
-        expect(pedidos['/workshop/landing/trafico/visitas']).toEqual({ ...esperado, limite: 2000 });
+        expect(pedidos['/workshop/landing/trafico/visitas']).toEqual({ ...esperado, limite: 5000 });
     });
 
     it('un período personalizado de la URL es el que se pide', async () => {
@@ -113,6 +113,6 @@ describe('Workshop › Tráfico landings', () => {
     it('avisa cuando el detalle quedó recortado por el tope', async () => {
         responder(detalle({ recortado: true }));
         abrir();
-        expect(await screen.findByText(/las 2,000 más recientes/)).toBeInTheDocument();
+        expect(await screen.findByText(/las 5,000 más recientes/)).toBeInTheDocument();
     });
 });
