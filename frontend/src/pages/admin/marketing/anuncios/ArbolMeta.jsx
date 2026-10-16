@@ -321,7 +321,7 @@ const ArbolMeta = ({ anuncios, claves, leadsPorClave, cuentas, moneda, guardando
                 </label>
                 <span className="barra-cuenta">
                     <span className="t-cap mut40 num">mostrando {filtrados.length} de {(anuncios || []).length} anuncios</span>
-                    <Tip titulo="Qué estás mirando" texto="Los anuncios de Meta que gastaron en el período, agrupados como en el Administrador de anuncios. Cada nivel suma a sus anuncios. El ícono de la flecha abre esa fila en Meta para editarla allá." />
+                    <Tip titulo="Qué estás mirando" texto="Los anuncios de Meta que gastaron en el período, agrupados como en el Administrador de anuncios. Cada nivel suma a sus anuncios. El ícono de la flecha abre esa fila en Meta para editarla allá; al volver, la página trae lo que cambió." />
                 </span>
             </div>
 

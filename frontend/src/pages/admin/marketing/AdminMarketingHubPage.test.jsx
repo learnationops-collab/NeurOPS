@@ -145,6 +145,9 @@ describe('Marketing › Anuncios', () => {
         expect(await screen.findByText('Datos de muestra')).toBeInTheDocument();
         expect(screen.queryByText(/META_ADS_TOKEN/)).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Sincronizar/ })).toBeDisabled();
+        // Con datos de muestra no hay nada que traer de Meta, ni solo.
+        expect(screen.getByRole('button', { name: /Actualizar/ })).toBeDisabled();
+        expect(api.post).not.toHaveBeenCalled();
     });
 
     it('sincroniza 90 días en tramos de 30, cada uno termina el día antes del anterior', async () => {
@@ -257,6 +260,30 @@ describe('Marketing › Anuncios', () => {
         expect(screen.getByRole('link', { name: 'Abrir anuncio Anuncio 2 en Meta' })).toHaveAttribute('href',
             'https://adsmanager.facebook.com/adsmanager/manage/ads?act=886943269514111&selected_campaign_ids=c1&selected_adset_ids=s1&selected_ad_ids=2');
         expect(within(screen.getByText('Total · 2 campañas').closest('tr')).getByText('$45.00')).toBeInTheDocument();
+    });
+
+    it('al volver de Meta trae lo que cambió allá y recarga, y «Actualizar» lo pide a mano', async () => {
+        const recien = new Date().toISOString().slice(0, 19);
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/anuncios'
+            ? { ...TABLERO, meta: { conectado: true, muestra: false, cuentas: ['1'], ultima_sincronizacion: recien } }
+            : { anuncios: [], claves: [], conectado: true, muestra: false, ultima_sincronizacion: recien } }));
+        api.post.mockResolvedValue({ data: { omitido: false, cambios: 2 } });
+        abrir('/admin/marketing?tab=meta');
+        const enlace = await screen.findByRole('link', { name: /Administrador de anuncios/ });
+        // Recién sincronizado: al abrir no se pide nada.
+        expect(api.post).not.toHaveBeenCalled();
+        const pedidos = api.get.mock.calls.length;
+
+        enlace.addEventListener('click', (e) => e.preventDefault());
+        await userEvent.click(enlace);
+        window.dispatchEvent(new Event('focus'));
+
+        await waitFor(() => expect(api.post).toHaveBeenCalledWith('/marketing/anuncios/meta/estado', { forzar: true }, expect.anything()));
+        await waitFor(() => expect(api.get.mock.calls.length).toBeGreaterThan(pedidos));
+
+        api.post.mockClear();
+        await userEvent.click(screen.getByRole('button', { name: /Actualizar/ }));
+        expect(api.post).toHaveBeenCalledWith('/marketing/anuncios/meta/estado', { forzar: true }, expect.anything());
     });
 
     it('la pestaña Meta Ads explica cómo conectarlo cuando falta el token', async () => {

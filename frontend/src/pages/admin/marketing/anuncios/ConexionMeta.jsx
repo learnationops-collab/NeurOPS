@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { CheckCircle2, CircleDashed, History } from 'lucide-react';
+import { CheckCircle2, CircleDashed, History, RefreshCw } from 'lucide-react';
 import { EsqueletoFilas, Tip } from '../../../comercial/components/Shared';
 import ArbolMeta, { AUTO, NINGUNA } from './ArbolMeta';
 import EnlaceMeta from './EnlaceMeta';
@@ -13,8 +13,11 @@ import { asignarClaveDeMeta, asignarEmbudoDeMeta, mensajeDeError, pedirAnunciosD
  * Administrador de anuncios (campaña › conjunto › anuncio, `ArbolMeta`), con el embudo y la palabra
  * clave de ManyChat de cada uno (ver `app/services/meta_ads_service.py`).
  *
- * «Sincronizar» N días trae el historial de gasto con los creativos, en tramos de 30 días (180 días de
- * una vez pasaban el tiempo que el servidor le da a un pedido). Si un tramo falla, lo traído queda.
+ * Dos maneras de traer de Meta:
+ *   · «Actualizar» (`estadoMeta`, del hub): lo que se cambió allá —nombres, estados, campaña,
+ *     conjunto— y el gasto de los últimos días. Unos segundos; corre sola al volver de Meta.
+ *   · «Sincronizar» N días: el historial de gasto con los creativos, en tramos de 30 días (180 días de
+ *     una vez pasaban el tiempo que el servidor le da a un pedido). Si un tramo falla, lo traído queda.
  *
  * «Automática» deja que la sincronización busque la palabra clave en el texto del anuncio («Comenta
  * QUIERO APLICAR…»); elegir una la fija; «Ninguna» dice que ese anuncio no es de ManyChat y su gasto
@@ -46,7 +49,7 @@ const hace = (iso) => {
     return f.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 };
 
-const ConexionMeta = ({ desde, hasta, filasTablero, moneda, cuentas, version = 0, onCambio }) => {
+const ConexionMeta = ({ desde, hasta, filasTablero, moneda, cuentas, estadoMeta, version = 0, onCambio }) => {
     const [datos, setDatos] = useState(null);
     const [error, setError] = useState(null);
     const [dias, setDias] = useState(30);
@@ -148,6 +151,8 @@ const ConexionMeta = ({ desde, hasta, filasTablero, moneda, cuentas, version = 0
     if (!datos) return <section className="panel"><EsqueletoFilas rotulo="Cargando los anuncios de Meta…" lineas={6} /></section>;
 
     const listaCuentas = cuentas?.length ? cuentas : (datos.cuentas || []);
+    const activo = estadoMeta?.activo;
+    const actualizando = estadoMeta?.actualizando;
     const tono = datos.muestra ? 'info' : datos.conectado ? 'success' : 'warning';
 
     return (
@@ -163,9 +168,15 @@ const ConexionMeta = ({ desde, hasta, filasTablero, moneda, cuentas, version = 0
                             {datos.conectado ? <>Traído de Meta <b>{hace(datos.ultima_sincronizacion)}</b></> : 'Falta el token de Meta'}
                         </span>
                         <Tip titulo="Cómo se mantiene al día"
-                            texto="«Sincronizar» trae el historial de gasto con los textos de los anuncios. El cron trae cada mañana los últimos 7 días. Lo que se clasifica acá a mano no lo pisa ninguna sincronización." />
+                            texto="«Actualizar» trae lo que cambió en el Administrador de anuncios (nombres, estados, campaña y conjunto) y el gasto de los últimos días; corre sola al volver de Meta. «Sincronizar» trae el historial de gasto con los textos de los anuncios. El cron trae cada mañana los últimos 7 días. Lo que se clasifica acá a mano no lo pisa ninguna." />
                     </div>
                     <div className="mk-conexion-acc">
+                        <button type="button" className="btn btn--cta btn--sm" disabled={!activo || actualizando}
+                            onClick={() => estadoMeta.actualizar({ forzar: true })}
+                            title={activo ? 'Traer de Meta los nombres, estados y el gasto de hoy' : 'Hace falta Meta conectado con el token'}>
+                            <RefreshCw className={actualizando ? 'mk-gira' : ''} aria-hidden="true" />
+                            {actualizando ? 'Actualizando…' : 'Actualizar'}
+                        </button>
                         <EnlaceMeta href={enlaceAdministrador(listaCuentas[0])}>Administrador de anuncios</EnlaceMeta>
                         <span className="mk-sinc">
                             <label className="mk-select-caja">

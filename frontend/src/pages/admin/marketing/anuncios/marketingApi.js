@@ -17,6 +17,11 @@ export const asignarClaveDeMeta = (metaAdId, cuerpo) =>
 export const sincronizarMeta = (dias, hasta) =>
     api.post('/marketing/anuncios/meta/sincronizar', { dias, hasta }, { timeout: 115000 }).then((r) => r.data);
 
+/** Lo que se cambió en el Administrador de anuncios (nombres, estados, campaña, conjunto) y el gasto de
+ * los últimos días. Sin `forzar` el servidor no repite si se sincronizó hace unos minutos. */
+export const sincronizarEstadoMeta = (forzar = false) =>
+    api.post('/marketing/anuncios/meta/estado', { forzar }, { timeout: 60000 }).then((r) => r.data);
+
 /** Rendimiento › Workshop: los anuncios de Workshop del período, por campaña › conjunto › anuncio. */
 export const pedirWorkshopDelPeriodo = (desde, hasta, config = {}) =>
     api.get('/marketing/anuncios/embudos/workshop', { params: { desde, hasta }, ...config }).then((r) => r.data);

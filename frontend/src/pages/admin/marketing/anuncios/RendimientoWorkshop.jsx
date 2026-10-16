@@ -33,7 +33,7 @@ const Celdas = ({ fila, moneda, landings }) => (
     </>
 );
 
-const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, cuentas, irAMeta }) => {
+const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, cuentas, version = 0, irAMeta }) => {
     const [datos, setDatos] = useState(null);
     const [error, setError] = useState(null);
     const [abiertas, setAbiertas] = useState({});
@@ -48,7 +48,7 @@ const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, cuentas, irAMeta }
             })
             .catch((e) => { if (e?.name !== 'CanceledError') setError(mensajeDeError(e, 'No se pudieron traer los anuncios de Workshop.')); });
         return () => control.abort();
-    }, [desde, hasta]);
+    }, [desde, hasta, version]);
 
     const dias = useMemo(() => serieDeEmbudos((embudos || []).filter((e) => e.embudo === 'workshop'), desde, hasta),
         [embudos, desde, hasta]);
