@@ -7,12 +7,12 @@ import { almacen, useDatos, useUi } from '../../data/hooks';
 import { buscar } from '../../core/datos';
 import { problemaVideo, soltarVideo, subirVideo, urlVideo } from '../../data/videos';
 import { embedDe, rutaGracias, rutaPlan } from '../../reserva/gracias/contenido';
-import { Humo, HUMO_MARCA, Icono, Paso, Seg, Switch } from '../../ui/base';
+import { HUMO_MARCA, Icono, Paso, Seg, Switch } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
 import { InputVivo } from '../eventos/comun';
 import { ConfirmarBorrarGracias } from './ListaGracias';
 import './gracias.css';
-import { Button, FieldError, IconButton, InputGroup } from '../../../../components/standard';
+import { Button, FieldError, IconButton, InputGroup, Panel } from '../../../../components/standard';
 
 function cerrar() { almacen.flush(); ui.set({ gracias: null }); window.scrollTo({ top: 0 }); }
 
@@ -56,8 +56,7 @@ function CampoVideo({ g, campo, tit, ayuda }) {
     const linkMal = !!v.url && !embedDe(v.url);
 
     return (
-        <section className="panel caja gx-video">
-            <Humo clase="humo--tarjeta humo--suave" cols={HUMO_MARCA} />
+        <Panel as="section" className="gx-video" aura={HUMO_MARCA} soft>
             <h2 className="ev-bloque-tit"><Icono n="video" s={15} />{tit}</h2>
             <p className="t-sm mut">{ayuda}</p>
             <div className="gx-previa">
@@ -100,7 +99,7 @@ function CampoVideo({ g, campo, tit, ayuda }) {
                 </>
             )}
             {error && <FieldError><span>{error}</span></FieldError>}
-        </section>
+        </Panel>
     );
 }
 
@@ -144,22 +143,22 @@ export default function EditorGracias() {
                 <IconButton label="Eliminar página" icon={<Icono n="basura" s={15} />} size="sm" danger style={{ marginLeft: 'auto' }} title="Eliminar página"
                     aria-expanded={borrar} onClick={() => setBorrar(b => !b)} />
             </div>
-            {borrar && <div className="panel caja"><ConfirmarBorrarGracias g={g} d={d} onCancelar={() => setBorrar(false)} /></div>}
+            {borrar && <Panel className="caja"><ConfirmarBorrarGracias g={g} d={d} onCancelar={() => setBorrar(false)} /></Panel>}
             <div className="gx-editor">
                 <div className="gx-campos">
                     <CampoVideo g={g} campo="video" tit="Video para completar la reserva"
                         ayuda="Lo primero que ve el lead al agendar. «Ver mi plan» aparece después de que le da play." />
-                    <section className="panel caja">
+                    <Panel as="section" className="caja">
                         <h2 className="ev-bloque-tit"><Icono n="clock" s={15} />«Ver mi plan»</h2>
                         <div className="ffila">
                             <span>Aparece después de</span>
                             <div><Paso label="Segundos de video" valor={g.segundos} min={0} max={60} texto={g.segundos + ' s'}
                                 onChange={x => editar(g.id, { segundos: x })} /></div>
                         </div>
-                    </section>
+                    </Panel>
                     <CampoVideo g={g} campo="plan" tit="Video del plan"
                         ayuda="La segunda pantalla: el protocolo de aprobación. Sin video, muestra solo los casos." />
-                    <section className="panel caja">
+                    <Panel as="section" className="caja">
                         <h2 className="ev-bloque-tit"><Icono n="estrella" s={15} />Casos de éxito</h2>
                         <div className="ffila">
                             <span>De la Academia</span>
@@ -168,7 +167,7 @@ export default function EditorGracias() {
                                 <label htmlFor="gx-casos" className="t-sm">{g.casos ? 'Se muestran debajo del plan' : 'No se muestran'}</label>
                             </div>
                         </div>
-                    </section>
+                    </Panel>
                 </div>
                 <Vista g={g} pantalla={abierta.pantalla || 'gracias'} />
             </div>

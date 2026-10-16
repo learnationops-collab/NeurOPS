@@ -17,7 +17,7 @@ import { abrirHorario } from './Horario';
 import ElegirCloser, { useUsuariosReales } from './ElegirCloser';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { SIMULAN_CLOSERS, simularParaConfigurar } from '../conf/TabEquipo';
-import { Card, ConfirmDelete, EmptyState, IconButton } from '../../../../components/standard';
+import { Card, ConfirmDelete, EmptyState, Grid, IconButton } from '../../../../components/standard';
 
 // El Top es solo una etiqueta del equipo: no cambia el reparto (eso lo decide cada estrategia).
 function Nivel({ p, onChange }) {
@@ -197,8 +197,8 @@ export default function Personas() {
     return (
         <>
             {!lectura && compo}
-            <div className="columna" style={{ width: '100%' }}>
-                <div className="lista" ref={ordenCont}>
+            <Grid variant="column" style={{ width: '100%' }}>
+                <Grid variant="list" ref={ordenCont}>
                     {porIdsOrden(ps, orden.lista).map(p => (
                         <Persona key={p.id} p={p} ordenable={orden} borrando={borrando === p.id} setBorrando={setBorrando}
                             sinCuenta={reales && usuarios !== null && !cuentas.has((p.email || '').toLowerCase())}
@@ -207,8 +207,8 @@ export default function Personas() {
                             simularId={simula && cuentas.has((p.email || '').toLowerCase()) && cuentas.get((p.email || '').toLowerCase()).id !== (user && user.id)
                                 ? cuentas.get((p.email || '').toLowerCase()).id : null} />
                     ))}
-                </div>
-            </div>
+                </Grid>
+            </Grid>
         </>
     );
 }

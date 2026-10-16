@@ -11,7 +11,7 @@ import { soltarVideo } from '../../data/videos';
 import { VIDEOS_INICIALES, rutaGracias } from '../../reserva/gracias/contenido';
 import Compo from './Compo';
 import './gracias.css';
-import { Button, Card, Chip, ConfirmDelete, IconButton } from '../../../../components/standard';
+import { Button, Card, Chip, ConfirmDelete, Grid, IconButton } from '../../../../components/standard';
 
 export function abrirGracias(id) {
     almacen.flush();
@@ -96,9 +96,9 @@ export default function ListaGracias() {
             <Compo vacio={!gs.length} id="nueva-gracias" tit="Nueva página de gracias" soloTit="Armá tu primera página de gracias"
                 ph="Nombre, ej. Gracias Workshop" onCrear={crearGracias} />
             {gs.length > 0 && (
-                <div className="grilla">
+                <Grid variant="cards">
                     {gs.map(g => <Tarjeta key={g.id} g={g} d={d} borrando={borrar === g.id} setBorrando={setBorrando} />)}
-                </div>
+                </Grid>
             )}
         </>
     );

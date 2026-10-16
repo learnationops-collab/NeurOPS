@@ -7,7 +7,7 @@ import { copiarPregunta, personalizar } from '../../core/formulario';
 import { Humo, Icono, Modal, Sx } from '../../ui/base';
 import { toast } from '../../ui/toast';
 import { TituloConToken, mutarForm, useBorrador } from './comun';
-import { Button, Chip, IconButton, Input } from '../../../../components/standard';
+import { Button, Chip, Grid, IconButton, Input } from '../../../../components/standard';
 
 export function fuentesImport(d, fid) { return ord(d, 'formularios').filter(x => x.id !== fid && x.preguntas.length); }
 
@@ -38,7 +38,7 @@ export function ModalImportar({ f, d, onCerrar, onImportado }) {
                     onChange={v => { setFuente(v); setSel({}); }} />
                 <Button onClick={todas}>Todas</Button>
             </div>
-            <div className="lista" style={{ maxHeight: 'min(50vh,440px)', overflow: 'auto' }}>
+            <Grid variant="list" style={{ maxHeight: 'min(50vh,440px)', overflow: 'auto' }}>
                 {fo.preguntas.map(q => {
                     const on = !!sel[q.id];
                     return (
@@ -51,7 +51,7 @@ export function ModalImportar({ f, d, onCerrar, onImportado }) {
                         </button>
                     );
                 })}
-            </div>
+            </Grid>
             <div className="barra" style={{ marginTop: 16 }}>
                 <span className="t-sm mut">{n ? n + ' seleccionadas' : 'Elegí preguntas'}</span>
                 <div className="barra-der">

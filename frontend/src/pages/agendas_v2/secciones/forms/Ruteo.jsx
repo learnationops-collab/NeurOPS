@@ -13,7 +13,7 @@ import Lienzo from '../../ui/Lienzo';
 import { useOrdenable } from '../../ui/useOrdenable';
 import { colorNivel, mutarForm, opcionesPrioridad, setFormUi, useEnfocar } from './comun';
 import RuteoFlujo from './RuteoFlujo';
-import { FieldError, IconButton, Input, Segmented } from '../../../../components/standard';
+import { FieldError, Grid, IconButton, Input, Segmented } from '../../../../components/standard';
 
 const AYUDA_RUTEO = 'Se revisan de arriba a abajo: la primera regla que se cumple elige la estrategia. En cada condición alcanza cualquiera de las respuestas marcadas.';
 
@@ -186,12 +186,12 @@ export default function Ruteo({ f, d, modo, msel }) {
                     </>
                 ) : (
                     <>
-                        <div className="lista reglas" ref={contenedor}>
+                        <Grid variant="list" className="reglas" ref={contenedor}>
                             {lista.map(id => porId[id] && (
                                 <Regla key={id} r={porId[id]} i={f.reglas.indexOf(porId[id])} f={f} d={d} qs={qs} msel={msel}
                                     rota={rotas.includes(f.reglas.indexOf(porId[id]))} ord={ord} enfocar={enfocar} />
                             ))}
-                        </div>
+                        </Grid>
                         <button type="button" className="agregar agregar--sm" data-regla-add="" onClick={agregar}><Icono n="plus" />Regla</button>
                         <div className="regla regla--resto"><span className="regla-resto-t">Todo lo demás</span>{resto}<span /></div>
                     </>

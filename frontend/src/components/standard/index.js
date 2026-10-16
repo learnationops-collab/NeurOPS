@@ -5,3 +5,4 @@ export { Card, Aura, BRAND_AURA } from './Card';
 export { EmptyState, ConfirmDelete, Chip } from './Feedback';
 export { Segmented, Select, Switch, Stepper, Modal, Avatar, initials } from './Controls';
 export { Input, InputGroup, FieldError } from './Fields';
+export { Panel, Grid, Kpi } from './Layout';

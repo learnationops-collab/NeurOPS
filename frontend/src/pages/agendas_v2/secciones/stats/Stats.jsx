@@ -4,9 +4,9 @@
 // En vista de closer se ve solo lo propio: sin "No califican" ni los rankings del equipo.
 
 import { useMemo } from 'react';
-import { Avatar, Humo, HUMO_MARCA, Icono, Seg, Sx } from '../../ui/base';
+import { Avatar, HUMO_MARCA, Icono, Seg, Sx } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
-import { Button, EmptyState, HeaderActions } from '../../../../components/standard';
+import { Button, EmptyState, Grid, HeaderActions, Kpi } from '../../../../components/standard';
 import { useDatos, usePermisos, useUi } from '../../data/hooks';
 import { COLORES } from '../../core/catalogos';
 import { buscar, closers, colorVar, ord, setters } from '../../core/datos';
@@ -188,17 +188,12 @@ export default function Stats() {
                     {ejemplo && <div className="barra-der"><span className="aviso-ej"><Icono n="alerta" />Datos de ejemplo</span></div>}
                 </div>
             </HeaderActions>
-            <div className="kpis">
+            <Grid variant="kpis">
                 {kpis.map(k => (
-                    <div key={k[0]} className="kpi">
-                        <Humo cols={[k[3][0], k[3][1], k[3][0], 'var(--brand-navy)']} />
-                        <span className="t-eyebrow">{k[0]}</span>
-                        <span className="kpi-n">{k[1]}</span>
-                        <div>{k[2]}</div>
-                    </div>
+                    <Kpi key={k[0]} label={k[0]} value={k[1]} aura={[k[3][0], k[3][1], k[3][0], 'var(--brand-navy)']}>{k[2]}</Kpi>
                 ))}
-            </div>
-            <div className="graficos">
+            </Grid>
+            <Grid variant="charts">
                 <Grafico t="Agendas por día" sub={'Promedio ' + fmt(sumA / st.dias, 1) + ' por día · mejor día ' + mejor} ancho aura={HUMO_MARCA}
                     extra={<span className="leyenda"><span style={{ '--c': 'var(--brand-secondary)' }}><i />Este período</span><span className="ley-pun"><i />Período anterior</span></span>}>
                     <Linea s={serie} s2={serieAnt} ahora={ahora} />
@@ -211,7 +206,7 @@ export default function Stats() {
                     extra={<span className="hc-esc"><span>menos</span><i /><span>más</span></span>}>
                     <MapaHorarios agendas={ag} />
                 </Grafico>
-            </div>
+            </Grid>
         </>
     );
 }

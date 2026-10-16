@@ -8,7 +8,7 @@ import api from '../../../../services/api';
 import { uid } from '../../core/util';
 import { Icono, Switch, Sx } from '../../ui/base';
 import { CampoMinutos } from '../team/Sesiones';
-import { Button, FieldError, IconButton, Input, InputGroup } from '../../../../components/standard';
+import { Button, FieldError, Grid, IconButton, Input, InputGroup, Panel } from '../../../../components/standard';
 
 const urlDe = (link) => window.location.origin + '/agendas-v2' + link;
 const SIN_FORM = '';
@@ -21,7 +21,7 @@ function Evento({ e, formularios, onCambio, onBorrar }) {
         try { await navigator.clipboard.writeText(urlDe(e.link)); setCopiado(true); setTimeout(() => setCopiado(false), 1600); } catch { /* sin portapapeles */ }
     };
     return (
-        <article className="panel me-ev" data-id={e.id}>
+        <Panel as="article" className="me-ev" data-id={e.id}>
             <div className="me-fila">
                 <label className="sr" htmlFor={'me-n-' + e.id}>Nombre del evento</label>
                 <Input id={'me-n-' + e.id} className="me-nom" maxLength={80} value={nombre} onChange={x => setNombre(x.target.value)}
@@ -55,7 +55,7 @@ function Evento({ e, formularios, onCambio, onBorrar }) {
                     )}
                 </div>
             </div>
-        </article>
+        </Panel>
     );
 }
 
@@ -86,7 +86,7 @@ export default function MisEventos() {
     });
 
     return (
-        <section className="panel cu-tarjeta">
+        <Panel as="section" className="cu-tarjeta">
             <header className="cu-cab">
                 <span className="icono-m"><Icono n="calendar" s={19} /></span>
                 <div className="cu-tit">
@@ -97,11 +97,11 @@ export default function MisEventos() {
             {!datos ? <p className="t-sm mut">{error || 'Cargando…'}</p> : (
                 <>
                     {datos.eventos.length ? (
-                        <div className="lista">
+                        <Grid variant="list">
                             {datos.eventos.map(e => (
                                 <Evento key={e.id} e={e} formularios={datos.formularios} onCambio={c => guardar(e.id, c)} onBorrar={() => borrar(e.id)} />
                             ))}
-                        </div>
+                        </Grid>
                     ) : <p className="t-sm mut">Todavía no creaste eventos propios.</p>}
                     <InputGroup as="form" prefix={<Icono n="plus" />} noValidate onSubmit={crear}>
                         <label className="sr" htmlFor="me-nuevo">Nuevo evento</label>
@@ -111,6 +111,6 @@ export default function MisEventos() {
                     {error && <FieldError>{error}</FieldError>}
                 </>
             )}
-        </section>
+        </Panel>
     );
 }

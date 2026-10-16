@@ -11,7 +11,7 @@ import { gruposDeForm } from '../../core/formulario';
 import { useDatos, usePermisos, useUi } from '../../data/hooks';
 import { HUMO_MARCA, Humo, Icono } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
-import { Button, Card, Chip, EmptyState, FieldError, HeaderActions, IconButton, InputGroup, Segmented } from '../../../../components/standard';
+import { Button, Card, Chip, EmptyState, FieldError, Grid, HeaderActions, IconButton, InputGroup, Segmented } from '../../../../components/standard';
 import { EstadoEv, LinksSetters, PasosPendientes, abrirEvento, copiarLink, crearEvento, probarEvento, probarSegmento, settersDe, useSetters } from './comun';
 import { urlPrueba } from '../../reserva/segmentos';
 import { copiarTexto } from '../../ui/toast';
@@ -172,7 +172,7 @@ export default function ListaEventos() {
                                 )}
                             </div>
                         )}
-                        {lista.length ? <div className="lista">{lista.map(e => <TarjetaEvento key={e.id} d={d} e={e} />)}</div> : (
+                        {lista.length ? <Grid variant="list">{lista.map(e => <TarjetaEvento key={e.id} d={d} e={e} />)}</Grid> : (
                             <Card className="ev-card ev-fila">
                                 <span className="t-sm mut">Sin agendamientos: este funnel no genera agendas.</span>
                                 <div className="barra-der" hidden={lectura}>

@@ -9,7 +9,7 @@ import '../agendas_v2/thalamus.css';
 import '../comercial/comercial.css';
 import './catalogo.css';
 import {
-    Avatar, BRAND_AURA, Button, Card, Chip, ConfirmDelete, EmptyState, FieldError, IconButton, Input, InputGroup, LinkButton, Modal, PageHeader, Segmented, Select,
+    Avatar, BRAND_AURA, Button, Card, Chip, ConfirmDelete, EmptyState, FieldError, Grid, IconButton, Input, InputGroup, Kpi, LinkButton, Modal, PageHeader, Panel, Segmented, Select,
     Stepper, Switch,
 } from '../../components/standard';
 
@@ -159,6 +159,36 @@ const SECCIONES = [
                 </Card>
             </div>
         ),
+    },
+    {
+        nombre: 'Panel',
+        para: 'Bloque de una pantalla (una sección de configuración, una columna). Más liviano que Card.',
+        props: 'as · size: md · sm · aura · soft',
+        demo: () => (
+            <Grid variant="cards">
+                <Panel><b>Panel</b><p className="cat-mut">Bloque de configuración</p></Panel>
+                <Panel size="sm" aura={BRAND_AURA} soft><b>Chico con aura</b><p className="cat-mut">Revisión, avisos</p></Panel>
+            </Grid>
+        ),
+    },
+    {
+        nombre: 'Grid',
+        para: 'Cómo se acomodan varios elementos. Las columnas se ajustan solas al ancho disponible.',
+        props: 'variant: list · cards · charts · kpis · column — as',
+        demo: () => (
+            <Grid variant="kpis">
+                <Kpi label="Agendas" value="128" aura={BRAND_AURA}><small>vs 112 el mes anterior</small></Kpi>
+                <Kpi label="Asistencia" value="74%"><small>de las confirmadas</small></Kpi>
+                <Kpi label="Ventas" value="23" />
+                <Kpi label="Tasa de cierre" value="18%" />
+            </Grid>
+        ),
+    },
+    {
+        nombre: 'Kpi',
+        para: 'Número grande con su rótulo y un detalle debajo. Los de arriba están en un Grid kpis.',
+        props: 'label · value · aura — children: el detalle (con <small> para lo secundario)',
+        demo: () => <Kpi label="Leads" value="1.240" aura={BRAND_AURA}><small>últimos 30 días</small></Kpi>,
     },
     {
         nombre: 'EmptyState',

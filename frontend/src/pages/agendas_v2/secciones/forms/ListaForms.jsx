@@ -10,7 +10,7 @@ import { HUMO_MARCA, Icono } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
 import { toast } from '../../ui/toast';
 import Compo from './Compo';
-import { Button, Card, ConfirmDelete, EmptyState, IconButton } from '../../../../components/standard';
+import { Button, Card, ConfirmDelete, EmptyState, Grid, IconButton } from '../../../../components/standard';
 
 export function abrirForm(id) {
     almacen.flush();
@@ -104,9 +104,9 @@ export default function ListaForms() {
                 ? !fs.length && <EmptyState>Todavía no hay formularios.</EmptyState>
                 : <Compo vacio={!fs.length} tit="Nuevo formulario" soloTit="Armá tu primer formulario" ph="Nombre, ej. Calificación Workshop" onCrear={crearForm} />}
             {fs.length > 0 && (
-                <div className="grilla">
+                <Grid variant="cards">
                     {fs.map(f => <Tarjeta key={f.id} f={f} d={d} borrando={borrar === f.id} setBorrando={setBorrando} />)}
-                </div>
+                </Grid>
             )}
         </>
     );

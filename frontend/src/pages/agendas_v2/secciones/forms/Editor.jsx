@@ -7,7 +7,7 @@ import { buscar } from '../../core/datos';
 import { nuevaPregunta, resumenForm } from '../../core/formulario';
 import { Humo, HUMO_MARCA, Icono } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
-import { Button, EmptyState, HeaderActions, IconButton, Segmented } from '../../../../components/standard';
+import { Button, EmptyState, Grid, HeaderActions, IconButton, Segmented } from '../../../../components/standard';
 import { useOrdenable } from '../../ui/useOrdenable';
 import { mutarForm, setFormUi, useBorrador, useEnfocar } from './comun';
 import { borrarForm } from './ListaForms';
@@ -125,15 +125,15 @@ function VistaPreguntas({ f, sel, raiz, onImportar }) {
         enfocar('#pt-' + nq.id);
     };
     return (
-        <div className="columna">
+        <Grid variant="column">
             <Cabecera f={f} />
             <div className="panel-cab" style={{ margin: 0, padding: '0 4px' }}><h2 className="t-h3">Preguntas</h2></div>
             {f.preguntas.length ? (
-                <div className="lista" ref={contenedor}>
+                <Grid variant="list" ref={contenedor}>
                     {lista.map((id) => porId[id] && (
                         <Pregunta key={id} q={porId[id]} i={lista.indexOf(id)} f={f} on={sel === id} ord={ord} enfocar={enfocar} />
                     ))}
-                </div>
+                </Grid>
             ) : (
                 <EmptyState action={!lectura && <Button icon={<Icono n="importar" />} onClick={e => onImportar(e.currentTarget)}>Importar preguntas</Button>}>
                     {lectura ? 'Sin preguntas propias: solo pide los datos de contacto.' : 'Sin preguntas propias todavía. Agregá una o traelas de otro formulario.'}
@@ -149,7 +149,7 @@ function VistaPreguntas({ f, sel, raiz, onImportar }) {
                     <span className="fe-mas-ico"><Icono n="importar" s={18} /></span><span><b>Importar</b><em>De otro formulario</em></span>
                 </button>
             </div>
-        </div>
+        </Grid>
     );
 }
 
@@ -179,7 +179,7 @@ export default function Editor() {
         <div ref={raiz} style={{ display: 'contents' }}>
             <HeaderActions replaceTitle><Barra f={f} vista={vista} prevModo={prevModo} finRef={finRef} onFin={() => abrir('fin', finRef.current)} onImportar={importar} /></HeaderActions>
             {vista === 'previa' ? <Previa f={f} prevModo={prevModo} />
-                : vista === 'ruteo' ? <div className="columna"><Ruteo f={f} d={d} modo={form.ruteoModo || 'reglas'} msel={form.msel || null} /></div>
+                : vista === 'ruteo' ? <Grid variant="column"><Ruteo f={f} d={d} modo={form.ruteoModo || 'reglas'} msel={form.msel || null} /></Grid>
                     : <VistaPreguntas f={f} sel={form.sel || null} raiz={raiz} onImportar={importar} />}
             {modal === 'fin' && <ModalNoCalifica f={f} onCerrar={cerrar} />}
             {modal === 'imp' && <ModalImportar f={f} d={d} onCerrar={cerrar} onImportado={(qid) => {

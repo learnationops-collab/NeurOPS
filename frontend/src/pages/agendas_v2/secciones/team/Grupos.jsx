@@ -12,7 +12,7 @@ import { useOrdenable } from '../../ui/useOrdenable';
 import { avisoPrioridad, textoEstrategia } from './cobertura';
 import { CampoNombre, Compo, Nivel, colorNivel } from './comun';
 import ElegirCloser, { useUsuariosReales } from './ElegirCloser';
-import { Card, EmptyState, IconButton, Input, Segmented } from '../../../../components/standard';
+import { Card, EmptyState, Grid, IconButton, Input, Segmented } from '../../../../components/standard';
 
 const SUGERIDAS = ['Ultra cualificado', 'Medio cualificado', 'General'];
 
@@ -155,11 +155,11 @@ export default function Grupos() {
     return (
         <>
             {!lectura && compo}
-            <div className="lista" ref={ordenCont}>
+            <Grid variant="list" ref={ordenCont}>
                 {orden.lista.map(id => gs.find(g => g.id === id)).filter(Boolean).map((g, i) => (
                     <Prioridad key={g.id} g={g} i={i} ordenable={orden} usuarios={usuarios} />
                 ))}
-            </div>
+            </Grid>
         </>
     );
 }

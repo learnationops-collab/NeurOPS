@@ -608,10 +608,10 @@
 .thalamus .check b{display:block;font-weight:700}
 .thalamus .check span{color:var(--text-muted-40);font-size:12px}
 .thalamus .ev-col{display:grid;gap:var(--s4);min-width:0}
-.thalamus .ev-bloque{padding:var(--s4) var(--s6) var(--s3)}
+.thalamus :is(.panel,.ui-panel).ev-bloque{padding:var(--s4) var(--s6) var(--s3)}
 .thalamus .ev-bloque-tit{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--text-on-surface);padding:4px 0 8px}
 .thalamus .ev-bloque-tit svg{color:var(--brand-secondary)}
-.thalamus .ev-rev{position:sticky;top:16px}
+.thalamus :is(.panel,.ui-panel).ev-rev{position:sticky;top:16px}
 .thalamus .ffila--top{align-items:start}
 .thalamus .ffila--top > div{align-items:flex-start}
 .thalamus .ev-origenes{display:flex;flex-wrap:wrap;gap:6px;width:100%}
@@ -1064,7 +1064,7 @@
   background:var(--bg-flotante);border:1px solid var(--border-main);box-shadow:var(--shadow-main);font-size:12px;font-weight:600;line-height:1.45;letter-spacing:0;text-transform:none;color:var(--text-on-surface);
   opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;z-index:20;text-align:left}
 .thalamus .ayuda:hover::after,.thalamus .ayuda:focus-visible::after{opacity:1;transform:translateX(-50%) translateY(0)}
-.thalamus .reglas{gap:10px}
+.thalamus :is(.lista,.ui-grid).reglas{gap:10px}
 .thalamus .regla{display:grid;grid-template-columns:24px minmax(0,1fr) 250px 30px;gap:12px;align-items:start;padding:12px 10px 12px 4px;border-radius:18px;background:var(--bg-element);border:1px solid var(--border-subtle)}
 .thalamus .regla > .grip{margin-top:4px}
 .thalamus .regla-x{margin-top:4px}
@@ -1270,7 +1270,7 @@
   .thalamus .compo .t-h3{font-size:17px}
   .thalamus .compo :is(.entrada,.ui-entry){height:46px}
   .thalamus .panel{padding:var(--s4)}
-  .thalamus .ev-bloque{padding:var(--s4)}
+  .thalamus :is(.panel,.ui-panel).ev-bloque{padding:var(--s4)}
   .thalamus .barra{gap:8px}
   .thalamus .scrim{padding:0}
   .thalamus .modal{width:100%!important;max-height:94dvh;border-radius:26px 26px 0 0}
@@ -1592,7 +1592,7 @@
 /* Configuración: tarjetas de la cuenta (datos, Calendar, WhatsApp, disponibilidad) y Equipo.
    Se usan en Agendamiento y en la Configuración del closer (.cu-hoja). */
 .thalamus .conf-cuerpo{gap:var(--s4)}
-.thalamus .cu-tarjeta{display:grid;gap:var(--s4);border-radius:28px}
+.thalamus :is(.panel,.ui-panel).cu-tarjeta{display:grid;gap:var(--s4);border-radius:28px}
 .thalamus .cu-cab{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap}
 .thalamus .cu-tit{flex:1 1 220px;min-width:0;display:grid;gap:2px}
 .thalamus .cu-fila{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap}
@@ -1600,8 +1600,8 @@
 .thalamus .cu-fila--fin{justify-content:flex-end}
 .thalamus .cu-fila--fin :is(.campo-err,.ui-field-error),.thalamus .cu-fila--fin .cu-ok{margin-right:auto}
 .thalamus .cu-ok{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--success)}
-.thalamus .cu-datos{grid-template-columns:auto minmax(0,1fr);align-items:center;gap:var(--s6)}
-@media (max-width:620px){.thalamus .cu-datos{grid-template-columns:minmax(0,1fr);justify-items:start}}
+.thalamus :is(.panel,.ui-panel).cu-datos{grid-template-columns:auto minmax(0,1fr);align-items:center;gap:var(--s6)}
+@media (max-width:620px){.thalamus :is(.panel,.ui-panel).cu-datos{grid-template-columns:minmax(0,1fr);justify-items:start}}
 .thalamus .cu-datos-txt{display:grid;gap:8px;min-width:0}
 .thalamus .cu-datos-txt .t-sm{display:inline-flex;align-items:center;gap:6px}
 .thalamus .cu-roles{display:flex;flex-wrap:wrap;gap:6px}
@@ -1666,7 +1666,7 @@
 }
 .thalamus .horario--horizontal{container-type:inline-size}
 /* Mis eventos del closer (conf/MisEventos.jsx) */
-.thalamus .me-ev{display:grid;gap:10px;padding:var(--s4)}
+.thalamus :is(.panel,.ui-panel).me-ev{display:grid;gap:10px;padding:var(--s4)}
 .thalamus .me-fila{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
 .thalamus :is(.input,.ui-input).me-nom{flex:1 1 220px;font-weight:800}
 .thalamus .me-activo{display:inline-flex;align-items:center;gap:8px}

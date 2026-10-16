@@ -12,7 +12,7 @@ import { Icono, Sx } from '../../ui/base';
 import { HorarioEditor } from '../team/Horario';
 import { EditorSesiones } from '../team/Sesiones';
 import FotoCuenta from './FotoCuenta';
-import { Button, Chip, FieldError, InputGroup, Switch } from '../../../../components/standard';
+import { Button, Chip, FieldError, InputGroup, Panel, Switch } from '../../../../components/standard';
 
 function Estado({ ok, si, no }) {
     return ok
@@ -23,14 +23,14 @@ function Estado({ ok, si, no }) {
 // Tarjeta de un ajuste: ícono, título, para qué sirve y su estado.
 function Tarjeta({ icono, titulo, texto, estado, children }) {
     return (
-        <section className="panel cu-tarjeta">
+        <Panel as="section" className="cu-tarjeta">
             <header className="cu-cab">
                 <span className="icono-m"><Icono n={icono} s={19} /></span>
                 <div className="cu-tit"><h3 className="t-h3">{titulo}</h3>{texto && <p className="t-sm mut">{texto}</p>}</div>
                 {estado}
             </header>
             {children}
-        </section>
+        </Panel>
     );
 }
 
@@ -62,7 +62,7 @@ export function DatosCuenta({ user }) {
         } finally { setOcupado(false); }
     };
     return (
-        <section className="panel cu-tarjeta cu-datos">
+        <Panel as="section" className="cu-tarjeta cu-datos">
             <FotoCuenta nombre={user.username} />
             <div className="cu-datos-txt">
                 <p className="t-eyebrow">Tu cuenta</p>
@@ -81,7 +81,7 @@ export function DatosCuenta({ user }) {
                 </div>
                 <Mensajes error={error} />
             </div>
-        </section>
+        </Panel>
     );
 }
 

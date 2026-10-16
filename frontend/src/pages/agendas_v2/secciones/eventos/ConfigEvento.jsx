@@ -10,7 +10,7 @@ import { fechaOk, urlOk } from '../../core/normalizar';
 import { claveDia, gmtTxt } from '../../core/tiempo';
 import { clonar, entero, slugify } from '../../core/util';
 import { almacen, useDatos, usePermisos } from '../../data/hooks';
-import { Avatar, HUMO_MARCA, Humo, Icono, Seg, Sx } from '../../ui/base';
+import { Avatar, HUMO_MARCA, Icono, Seg, Sx } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
 import { copiarTexto, toast } from '../../ui/toast';
 import { ModalNoCalifica } from '../forms/Modales';
@@ -18,7 +18,7 @@ import { CampoMinutos, SesionesDelEvento } from '../team/Sesiones';
 import TablaTurnos from '../team/Turnos.jsx';
 import { abrirGracias } from '../forms/ListaGracias';
 import { InputVivo, LinksSetters, slugOrigen, urlPublica, useBorrador } from './comun';
-import { Button, ConfirmDelete, Input, InputGroup, LinkButton } from '../../../../components/standard';
+import { Button, ConfirmDelete, Input, InputGroup, LinkButton, Panel } from '../../../../components/standard';
 
 const DIA = 86400000;
 
@@ -35,11 +35,10 @@ function Fila({ l, cls, children }) {
 function Bloque({ tit, icono, i, children }) {
     const cols = i % 2 ? ['var(--brand-primary)', 'var(--brand-navy)', 'var(--brand-secondary)', 'var(--brand-navy)'] : HUMO_MARCA;
     return (
-        <section className="panel caja ev-bloque" style={{ overflow: 'hidden' }}>
-            <Humo clase="humo--tarjeta humo--suave" cols={cols} />
+        <Panel as="section" className="ev-bloque" aura={cols} soft>
             <h2 className="ev-bloque-tit"><Icono n={icono} s={15} />{tit}</h2>
             <div className="form-filas">{children}</div>
-        </section>
+        </Panel>
     );
 }
 function Num({ id, valor, min, max, label, onGuardar }) {
@@ -267,8 +266,7 @@ export default function ConfigEvento({ e }) {
                     )}
                     <Bloque tit="Página de reserva" icono="monitor" i={2}><Pagina d={d} e={e} /></Bloque>
                 </div>
-                <aside className="panel panel--sm caja ev-rev" style={{ overflow: 'hidden' }} aria-label="Revisión">
-                    <Humo clase="humo--tarjeta humo--suave" cols={['var(--success)', 'var(--brand-primary)', 'var(--brand-secondary)', 'var(--brand-navy)']} />
+                <Panel as="aside" size="sm" className="ev-rev" aria-label="Revisión" aura={['var(--success)', 'var(--brand-primary)', 'var(--brand-secondary)', 'var(--brand-navy)']} soft>
                     <div className="panel-cab"><span className="t-rotulo">Revisión</span></div>
                     {revision(d, e).filter((c, i) => i > 0 || !c[0]).map((c, i) => (
                         <div key={i} className="check" style={{ '--c': c[0] ? 'var(--success)' : 'var(--warning)' }}>
@@ -276,7 +274,7 @@ export default function ConfigEvento({ e }) {
                             <div><b>{c[1]}</b><span>{c[2]}</span></div>
                         </div>
                     ))}
-                </aside>
+                </Panel>
             </div>
             <Bloque tit="Turnos de la semana" icono="users" i={1}>
                 <TablaTurnos evento={e} personas={personas} />

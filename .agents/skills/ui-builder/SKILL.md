@@ -60,6 +60,9 @@ Import: `import { Button, … } from '<ruta>/components/standard';`
 | `LinkButton` | Acción con aspecto de link («+ Opción») | `icon`, `subtle` |
 | `PageHeader` | Cabecera de la página | `title`, `logo`, `badges`, `actions` |
 | `HeaderActions` | Desde una sección, mandar botones y filtros a la cabecera | `replaceTitle` (la barra trae su propio «volver») |
+| `Panel` | Bloque de una pantalla (sección de configuración, columna) | `as`, `size`: `md` · `sm`, `aura`, `soft` |
+| `Grid` | Cómo se acomodan varios elementos | `variant`: `list` · `cards` (desde 330px) · `charts` (desde 380px) · `kpis` (4 → 2 → 1) · `column`; `as`, `ref` |
+| `Kpi` | Número grande con rótulo y detalle | `label`, `value`, `aura`; `children` es el detalle (`<small>` para lo secundario) |
 | `Card` | Tarjeta | `as`, `aura` (hasta 4 colores de fondo), `soft` |
 | `Aura` | Nubes de color difusas de fondo | `colors`, `size`: `card` · `hero`, `soft` |
 | `EmptyState` | Vacío, cargando o sin permiso | `icon`, `title`, `aura`, `action`, `children` (el texto) |
@@ -87,9 +90,10 @@ En Thalamus, `Seg`, `Sx`, `Switch`, `Paso`, `Modal` y `Avatar` de `ui/base.jsx` 
 
 1. Código en `frontend/src/components/standard/`, exportado en `index.js`.
 2. Estilos solo en `standard.css`, con clases `ui-*` y variables `--ui-*`. Nunca colores fijos: cada `--ui-*` lee el tema (`--ln-*`), después la variable de la pantalla y, al final, un valor de respaldo.
-3. Test en `standard.test.jsx`.
-4. Ejemplo en la página `/ui` (`pages/ui/Catalogo.jsx`, array `SECCIONES`).
-5. Fila en el catálogo de este archivo, en el mismo commit.
+3. Si el componente tiene base propia (`.ui-x.ui-x{…}`), sumá `.ui-x` al bloque `:where(…)` de variables del principio de `standard.css`. Si falta, sus `var(--ui-…)` quedan vacías sin error visible; `css.test.js` lo detecta.
+4. Test en `standard.test.jsx` (o el archivo de su familia: `controls`, `fields`).
+5. Ejemplo en la página `/ui` (`pages/ui/Catalogo.jsx`, array `SECCIONES`).
+6. Fila en el catálogo de este archivo, en el mismo commit.
 
 Si una pantalla necesita ajustar el componente según el contexto (por ejemplo, más bajo dentro de un campo), la regla va en el CSS de esa pantalla, apuntando a la clase `ui-*`. Así le gana a la base sin tocar las otras pantallas.
 
