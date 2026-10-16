@@ -53,6 +53,11 @@
 .setter-espacio .hola h1 .sub{color:var(--text-muted);font-weight:600;letter-spacing:-.015em}
 .setter-espacio .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .setter-espacio .setter-volver{margin-left:auto}
+/* Sus links de agendamiento, al final de la línea: tocar uno lo copia. */
+.setter-espacio .setter-links{display:flex;flex-wrap:wrap;gap:var(--s2);margin-left:auto;min-width:0}
+.setter-espacio .setter-links + .setter-volver{margin-left:0}
+.setter-espacio .setter-link{max-width:260px;min-width:0}
+.setter-espacio .setter-link-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* Las pestañas del encabezado, como en el artifact: la elegida en el rosa de marca. */
 .setter-espacio .setter-top .tabs{background:var(--bg-input);border-color:var(--border-subtle)}

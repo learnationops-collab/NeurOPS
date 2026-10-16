@@ -1,8 +1,8 @@
 """/api/webhooks/instagram: el webhook de la app propia de Meta para Instagram.
 
-Por ahora SOLO escucha: verifica la suscripción, comprueba la firma y guarda cada evento en
-`instagram_webhook_eventos`. No responde mensajes ni toca leads; ManyChat y Kommo siguen
-atendiendo la cuenta. Ver docs de Meta: Instagram Platform > Webhooks.
+Verifica la suscripción, comprueba la firma, guarda cada evento en `instagram_webhook_eventos` y
+despierta al motor de automatizaciones, que lo procesa fuera de la request (con IG_MOTOR_MODO
+apagado solo guarda). Ver docs de Meta: Instagram Platform > Webhooks.
 
 Variables de entorno (sin ellas la ruta queda CERRADA, nunca abierta):
   · IG_WEBHOOK_VERIFY_TOKEN: el «token de verificación» que se carga en el panel de Meta.
@@ -18,6 +18,7 @@ from flask_login import login_required
 
 from app import db
 from app.decorators import LARGO_MINIMO_DE_SECRETO, _iguales_en_tiempo_constante, admin_required
+from app.automatizaciones import servicio as motor
 from app.models.instagram import InstagramWebhookEvento
 
 bp = Blueprint('instagram_webhook', __name__)
@@ -99,6 +100,10 @@ def recibir_evento():
     db.session.add(evento)
     db.session.commit()
     current_app.logger.info('[IG WEBHOOK] Evento %s guardado (%s)', evento.id, evento.tipos or 'sin tipo')
+    try:
+        motor.avisar(current_app._get_current_object())
+    except Exception:  # el evento ya está guardado: el reloj lo levanta en su próxima vuelta
+        current_app.logger.exception('[IG WEBHOOK] No se pudo despertar al motor')
     # Meta solo necesita un 200 rápido; si no lo recibe reintenta y termina desactivando el webhook.
     return 'EVENT_RECEIVED', 200, {'Content-Type': 'text/plain; charset=utf-8'}
 

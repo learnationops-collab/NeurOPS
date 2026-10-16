@@ -6,6 +6,7 @@ Reglas que garantiza:
   · Si la cuenta manda algo que no salió de este motor (una persona del equipo), el bot se pausa
     para ese contacto y se cancela lo que tenía abierto.
   · Nunca escribe fuera de la ventana de 24 h, salvo la respuesta privada a un comentario.
+  · Un flujo solo atrapa mensajes posteriores a su activación.
   · Un `mid` se procesa una sola vez, así reprocesar un evento no duplica nada.
 """
 from datetime import timedelta
@@ -45,7 +46,7 @@ class Motor:
                 return self._boton(contacto, *datos)
 
         canal = 'comentario' if evento.tipo == ev.COMENTARIO else 'dm'
-        version = self._version_disparada(evento.texto, canal, evento.publicacion_id)
+        version = self._version_disparada(evento.texto, canal, evento.publicacion_id, evento.momento)
         if version:
             self._iniciar(contacto, version, comentario_id=evento.comentario_id)
             return 'flujo_iniciado'
@@ -124,10 +125,12 @@ class Motor:
                                           AutEjecucion.estado.in_(AutEjecucion.ABIERTOS))
                 .order_by(AutEjecucion.id.desc()).first())
 
-    def _version_disparada(self, texto, canal, publicacion_id):
+    def _version_disparada(self, texto, canal, publicacion_id, momento):
         activos = (AutFlujo.query.filter(AutFlujo.estado == AutFlujo.ACTIVO, AutFlujo.version_publicada_id.isnot(None))
                    .order_by(AutFlujo.id).all())
         for flujo in activos:
+            if flujo.activo_desde and momento < flujo.activo_desde:
+                continue  # el mensaje es anterior a la activación: no es retroactiva
             version = flujo.version_publicada
             for disparador in version.grafo.get('disparadores') or []:
                 if g.coincide(disparador, texto, canal, publicacion_id):

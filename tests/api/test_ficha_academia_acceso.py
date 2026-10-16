@@ -83,7 +83,9 @@ def test_renovar_reasigna_el_producto_que_pago_por_el_id_del_alumno(client, db, 
 
     assert r.status_code == 200, r.get_json()
     assert r.get_json()['accion'] == 'renovado'
-    academia.escribe.assign_product.assert_called_once_with(87, 'residency-roadmap', expires_at=vence)
+    # Lo renueva un closer: el alumno pasa a depender de él en la Academia.
+    academia.escribe.assign_product.assert_called_once_with(87, 'residency-roadmap', expires_at=vence,
+                                                            closer_email='vendedor@neuro.com')
     # Sin alta: el alumno ya existe, y el correo del cliente no se toca.
     academia.alta.upsert_user.assert_not_called()
     c = db.session.get(Client, alumno.id)
@@ -118,7 +120,8 @@ def test_dar_a_quien_no_es_alumno_lo_crea_con_el_correo_confirmado(client, db, a
     assert r.get_json()['creada'] is True
     academia.alta.upsert_user.assert_called_once()
     assert academia.alta.upsert_user.call_args.args[0] == 'luis.real@x.com'
-    academia.alta.assign_product.assert_called_once_with(501, 'residency-roadmap', expires_at=vence)
+    academia.alta.assign_product.assert_called_once_with(501, 'residency-roadmap', expires_at=vence,
+                                                         closer_email='vendedor@neuro.com')
     assert db.session.get(Client, alumno.id).learnation_user_id == 501
 
 
@@ -234,3 +237,70 @@ def test_la_sugerencia_de_correo_saltea_el_inventado():
 
     assert ficha_fulfillment_service.sugerencias_de_acceso(
         cliente, [_venta('RR - Parcial', 'real@x.com')])['email_sugerido'] == 'real@x.com'
+
+
+# --- De qué closer depende el alumno -------------------------------------------------------------
+
+def test_si_renueva_otro_del_equipo_el_closer_es_el_vendedor_de_su_ultima_venta(client, db, alumno, equipo,
+                                                                                 auth_headers, academia):
+    FinancialSale.query.update({'client_id': alumno.id})
+    db.session.commit()
+
+    _post(client, auth_headers, equipo['director'], alumno, 'acceso', {'vence': _en(30, equipo['director'])})
+
+    assert academia.escribe.assign_product.call_args.kwargs['closer_email'] == 'vendedor@neuro.com'
+
+
+def test_sin_closer_activo_no_se_manda_ninguno(client, db, alumno, equipo, auth_headers, academia):
+    equipo['closer'].is_active = False
+    FinancialSale.query.update({'client_id': alumno.id})
+    db.session.commit()
+
+    _post(client, auth_headers, equipo['director'], alumno, 'acceso', {'vence': _en(30, equipo['director'])})
+
+    assert 'closer_email' not in academia.escribe.assign_product.call_args.kwargs
+
+
+def test_desactivar_un_closer_le_avisa_a_la_academia_con_los_que_siguen_activos(client, db, equipo, make_user,
+                                                                                auth_headers):
+    admin = make_user(role='admin', username='jefa', email='jefa@neuro.com')
+    otro = make_user(role='closer', username='otro', email='Otro@neuro.com')
+    make_user(role='closer', username='inactivo', email='inactivo@neuro.com', is_active=False)
+
+    with patch.object(academy_access_service.AcademyAccessService, 'avisar_baja') as avisar:
+        r = client.put(f"/api/admin/users/{equipo['closer'].id}", json={'is_active': False}, headers=auth_headers(admin))
+        assert r.status_code == 200, r.get_json()
+        avisar.assert_called_once()
+        # Volver a guardarlo ya desactivado no avisa de nuevo.
+        client.put(f"/api/admin/users/{equipo['closer'].id}", json={'is_active': False}, headers=auth_headers(admin))
+        avisar.assert_called_once()
+
+    with patch.object(academy_access_service, 'threading') as hilo, \
+            patch.object(academy_access_service, 'LearnationService') as academia:
+        academy_access_service.AcademyAccessService.avisar_baja(equipo['closer'])
+        hilo.Thread.call_args.kwargs['target']()
+    payload = academia.report_closer_deactivated.call_args.args[0]
+    assert payload['email'] == 'vendedor@neuro.com'
+    assert [a['email'] for a in payload['activos']] == [otro.email.lower()]
+
+
+def test_un_admin_con_rol_closer_no_cuenta_como_closer_y_un_director_comercial_si(client, db, alumno, equipo,
+                                                                                    make_user, auth_headers, academia):
+    FinancialSale.query.update({'client_id': alumno.id})
+    jefe = make_user(role='operator', roles_extra='closer,director_comercial', username='jefe', email='jefe@neuro.com')
+    db.session.commit()
+
+    _post(client, auth_headers, jefe, alumno, 'acceso', {'vence': _en(30, jefe)})
+    # No cuenta: queda el vendedor de la venta.
+    assert academia.escribe.assign_product.call_args.kwargs['closer_email'] == 'vendedor@neuro.com'
+
+    marlon = make_user(role='director_comercial', roles_extra='closer', username='marlon', email='marlon@neuro.com')
+    db.session.commit()
+    _post(client, auth_headers, marlon, alumno, 'acceso', {'vence': _en(30, marlon)})
+    assert academia.escribe.assign_product.call_args.kwargs['closer_email'] == 'marlon@neuro.com'
+
+    with patch.object(academy_access_service, 'threading') as hilo, \
+            patch.object(academy_access_service, 'LearnationService') as api:
+        academy_access_service.AcademyAccessService.avisar_baja(equipo['closer'])
+        hilo.Thread.call_args.kwargs['target']()
+    assert [a['email'] for a in api.report_closer_deactivated.call_args.args[0]['activos']] == ['marlon@neuro.com']

@@ -30,6 +30,8 @@ class AutFlujo(db.Model):
     version_publicada_id = db.Column(
         db.Integer, db.ForeignKey('aut_flujo_versiones.id', use_alter=True, name='fk_aut_flujos_version_publicada'),
         nullable=True)
+    # Desde cuándo está activo: solo atrapa mensajes posteriores (la activación nunca es retroactiva).
+    activo_desde = db.Column(db.DateTime, nullable=True)
     creado_en = db.Column(db.DateTime, nullable=False, default=ahora)
     actualizado_en = db.Column(db.DateTime, nullable=False, default=ahora, onupdate=ahora)
 

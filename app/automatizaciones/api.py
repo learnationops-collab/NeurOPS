@@ -181,8 +181,7 @@ def activar_flujo(flujo_id):
         return error
     if not flujo.version_publicada_id:
         return jsonify({'message': 'Publicalo primero: no hay ninguna versión para activar'}), 409
-    flujo.estado = AutFlujo.ACTIVO
-    db.session.commit()
+    servicio.activar(flujo)
     return jsonify(_resumen_flujo(flujo))
 
 

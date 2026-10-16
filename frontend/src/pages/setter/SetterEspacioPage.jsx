@@ -18,6 +18,7 @@ import { REVISAR_DEL_SETTER } from '../comercial/components/tablasSetter';
 import '../comercial/comercial.css';
 import './setterEspacio.css';
 import MisAgendas from './agendas/MisAgendas';
+import MisLinks, { copiar } from './MisLinks';
 import { marcaDelDock } from './agendas/meses';
 import ReporteDiario from './reporte/ReporteDiario';
 import Historial from './reporte/Historial';
@@ -238,6 +239,8 @@ const SetterEspacioPage = () => {
                             <Segmented opciones={seccionActual.tabs} valor={tab} onChange={elegirTab}
                                 ariaLabel={`Vistas de ${seccionActual.label}`} />
                         )}
+                        {/* Su link de agendamiento, a la vista en todas las secciones (14/10/2026). */}
+                        <MisLinks />
                         {/* Simulando, la salida es terminar la simulación. Ya no es la ÚNICA
                             salida de ningún lado: moverse entre secciones es el dock. También está
                             en el menú del avatar, pero acá se ve sin buscarla. */}
@@ -301,11 +304,6 @@ const SetterEspacioPage = () => {
 
         </div>
     );
-};
-
-// Tocar un link lo copia: es lo que el setter pega en WhatsApp o Instagram.
-const copiar = async (url) => {
-    try { await navigator.clipboard.writeText(url); toast.success('Link copiado'); } catch { window.prompt('Copiá tu link:', url); }
 };
 
 // Van también los links de los eventos viejos (`/book/<slug>`, los que daba el botón "Links de

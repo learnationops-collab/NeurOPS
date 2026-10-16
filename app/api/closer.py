@@ -2549,7 +2549,8 @@ def grant_academy_access(client_id):
 
     from app.services.academy_access_service import AcademyAccessService, AcademyAccessError
     try:
-        result = AcademyAccessService.grant_access(client, programa_code, tipo_venta, expires_at_override, email_override)
+        result = AcademyAccessService.grant_access(client, programa_code, tipo_venta, expires_at_override, email_override,
+                                                   usuario=current_user)
     except AcademyAccessError as e:
         return jsonify({"error": str(e)}), e.status_code
 

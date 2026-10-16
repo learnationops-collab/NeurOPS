@@ -126,6 +126,23 @@ def test_un_cuerpo_firmado_que_no_es_un_objeto_json_es_400(client, configurado):
     assert InstagramWebhookEvento.query.count() == 0
 
 
+def test_guardado_el_evento_despierta_al_motor(client, configurado, monkeypatch):
+    avisos = []
+    monkeypatch.setattr('app.automatizaciones.servicio.avisar', lambda app: avisos.append(app))
+
+    assert enviar(client, DM).status_code == 200
+    assert len(avisos) == 1
+
+
+def test_si_el_motor_no_despierta_el_evento_igual_queda_guardado(client, configurado, monkeypatch):
+    def falla(app):
+        raise RuntimeError('boom')
+    monkeypatch.setattr('app.automatizaciones.servicio.avisar', falla)
+
+    assert enviar(client, DM).status_code == 200
+    assert InstagramWebhookEvento.query.count() == 1
+
+
 # --- Listado para revisar la prueba -----------------------------------------------------------
 
 def test_el_admin_ve_los_ultimos_eventos_primero(client, configurado, make_user, auth_headers):

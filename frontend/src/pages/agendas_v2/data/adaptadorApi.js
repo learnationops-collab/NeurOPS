@@ -169,6 +169,12 @@ export function crearAdaptadorApi() {
             try { const { data } = await api.get('/agendas-v2/ocupacion', { params: { desde, hasta }, skipBugReport: true }); return (data && data.ocupacion) || {}; } catch (e) { throw errorDeApi(e); }
         },
 
+        // La ficha de Closing de cada agenda que empieza entre desde y hasta (ms), para el Filtro completo de
+        // Available: {appointment_id: {fuente, setter, pre_call, post_call, asistio, ...}}, sin el contacto del lead.
+        async fichas(desde, hasta) {
+            try { const { data } = await api.get('/agendas-v2/fichas', { params: { desde, hasta }, skipBugReport: true }); return (data && data.fichas) || {}; } catch (e) { throw errorDeApi(e); }
+        },
+
         async crearReserva() {
             const e = new Error('Con la API, las reservas se crean solo desde la página pública del lead (POST /api/agendas-v2/publico/reservas).');
             e.code = 'no_soportado';

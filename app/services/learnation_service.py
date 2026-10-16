@@ -67,13 +67,16 @@ class LearnationService:
         return LearnationService._request('POST', '/users/upsert', json=body)
 
     @staticmethod
-    def assign_product(learnation_user_id, product_slug, expires_at=None):
+    def assign_product(learnation_user_id, product_slug, expires_at=None, closer_email=None):
         """`expires_at` (YYYY-MM-DD): NeurOPS siempre manda la fecha exacta que calculó su
         propia lógica de negocio (ver AcademyAccessService) en vez de delegarle a la Academia
-        el cálculo automático por `payment_type` — ver docs/integracion_learnation_api.md §2.4."""
+        el cálculo automático por `payment_type` — ver docs/integracion_learnation_api.md §2.4.
+        `closer_email`: el closer del que pasa a depender el alumno (AcademyAccessService.closer_de)."""
         body = {'product_slug': product_slug}
         if expires_at:
             body['expires_at'] = expires_at
+        if closer_email:
+            body['closer_email'] = closer_email
         return LearnationService._request('POST', f'/users/{learnation_user_id}/products', json=body)
 
     @staticmethod
@@ -89,6 +92,11 @@ class LearnationService:
         """Avisa un pago a la Academia (ver app/services/academy_payment_sync.py). Idempotente
         del lado de la Academia por `sale_id`."""
         return LearnationService._request('POST', '/payments', json=payload)
+
+    @staticmethod
+    def report_closer_deactivated(payload):
+        """Avisa que un closer se desactivó: la Academia reparte sus alumnos (AcademyAccessService.avisar_baja)."""
+        return LearnationService._request('POST', '/closers/deactivated', json=payload)
 
     @staticmethod
     def report_momentum_result(payload):

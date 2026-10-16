@@ -147,9 +147,12 @@
 .rd .rd-pasopanel--1 .rd-pcol{padding-inline:var(--s8)}
 .rd .rd-campos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s3)}
 .rd .rd-campos--n{grid-template-columns:repeat(var(--m),minmax(0,1fr))}
-.rd .rd-campo2{display:grid;gap:6px;min-width:0}
+/* Un rótulo largo («Entrantes cualificados») baja de renglón en vez de cortarse con «…» (y si una palabra
+   no entra, se parte en su guion opcional: «cuali-ficados»). Cada campo se apoya abajo, así las celdas
+   de una fila siguen alineadas aunque sus rótulos no midan igual. */
+.rd .rd-campo2{display:grid;gap:6px;min-width:0;align-content:end}
 .rd .rd-campo2.span{grid-column:1/-1}
-.rd .rd-campo2 .rd-k{color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rd .rd-campo2 .rd-k{min-width:0;color:var(--text-muted);text-wrap:balance;overflow-wrap:break-word}
 .rd .rd-campo2 .rd-k .rd-punto{width:6px;height:6px;margin-right:6px;vertical-align:1px}
 /* Los follow-ups en tabla: enviados y respondidos por etapa. Cada celda trae su lugar en las dos
    grillas (`--dc`/`--dr` acá, `--mc`/`--mr` a lo angosto, donde las etapas pasan a ser filas). */
@@ -236,7 +239,8 @@
 .rd .rd-nav{display:flex;align-items:center;gap:var(--s3)}
 .rd .rd-nav--centro{justify-content:center;margin-top:var(--s3);flex-wrap:wrap}
 .rd .rd-avisos{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:0}
-.rd .rd-hint{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text-muted-40);white-space:nowrap}
+/* Un aviso se lee entero: el error que frena el envío dice la suma y no entra en un renglón angosto. */
+.rd .rd-avisos .rd-chip{height:auto;min-height:26px;padding-block:4px;border-radius:13px;white-space:normal}.rd .rd-hint{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text-muted-40);white-space:nowrap}
 .rd .rd-tecla{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:20px;padding:0 6px;border-radius:6px;
   background:var(--bg-element);border:1px solid var(--border-subtle);font-size:11px;font-weight:900;color:var(--text-muted)}
 

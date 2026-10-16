@@ -1773,3 +1773,16 @@
 .thalamus .av-ley .av-l-ag,.thalamus .av-fil--tipo > i.av-l-ag{background:var(--info)!important}
 .thalamus .av-fil--tipo > i.av-l-tu{background:color-mix(in srgb,var(--success) 45%,transparent)}
 .thalamus .tip span{white-space:pre-line}
+/* Available: la segunda línea de una tarjeta (el lead, debajo del closer), la agenda fuera del horario, los
+   nombres de los carriles en la vista de un día y el Filtro completo (el panel es el de Closing). */
+.thalamus .av-card-linea{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thalamus .av-bloque--fuera{background:transparent;border:1px dashed color-mix(in srgb,var(--c) 45%,transparent)}
+.thalamus .av-carriles{display:grid;width:100%;gap:4px;margin-top:6px}
+.thalamus .av-carril-n{display:flex;align-items:center;justify-content:center;gap:5px;font-size:11.5px;font-weight:800;color:var(--text-on-surface)}
+.thalamus .av-vista{margin-left:var(--s2)}
+.thalamus .av-vista button{height:28px;padding:0 12px;font-size:12px}
+.thalamus .av-config .pastilla{height:28px;padding:0 11px;font-size:12px;gap:6px}
+.thalamus .av-config .cuenta-burbuja{min-width:17px;height:17px;font-size:10px;padding:0 5px}
+.thalamus .av-condiciones{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.thalamus .av-fil--tag{border-color:var(--brand-secondary-border);background:var(--brand-secondary-surface);gap:5px}
+.thalamus .av-config .config-panel{max-height:min(560px,calc(100vh - 150px))}

@@ -1,7 +1,8 @@
 """Cómo salen los mensajes. El motor no sabe si manda de verdad o en simulación.
 
   · Simulado: no sale a la red; inventa un `mid` y deja registro de lo que habría mandado.
-  · Meta: la API de Instagram con el token de la cuenta (IG_ACCESS_TOKEN / IG_USER_ID).
+  · Meta: la API de Instagram con el token de la cuenta (IG_ACCESS_TOKEN). IG_USER_ID es opcional:
+    sin él manda por /me, que es la cuenta dueña del token.
 """
 import itertools
 import os
@@ -37,12 +38,12 @@ class TransporteMeta:
 
     def __init__(self, token=None, cuenta_id=None, sesion=None):
         self.token = token or os.environ.get('IG_ACCESS_TOKEN')
-        self.cuenta_id = cuenta_id or os.environ.get('IG_USER_ID')
+        self.cuenta_id = cuenta_id or (os.environ.get('IG_USER_ID') or '').strip() or 'me'
         self.sesion = sesion or requests
 
     def enviar(self, destinatario, cuerpo):
         if not self.token or not self.cuenta_id:
-            raise ErrorDeEnvio('Falta IG_ACCESS_TOKEN o IG_USER_ID')
+            raise ErrorDeEnvio('Falta IG_ACCESS_TOKEN')
         respuesta = self.sesion.post(
             f'{API}/{self.cuenta_id}/messages', json={'recipient': destinatario, 'message': cuerpo},
             headers={'Authorization': f'Bearer {self.token}'}, timeout=15)

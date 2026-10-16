@@ -101,11 +101,11 @@ const Leyenda = ({ items }) => (
     </div>
 );
 
-/** Cuántos de los mensajes quedaron sin respuesta: lo que sobra de repartirlos en leads cualificados, no leads e
+/** Cuántos de los mensajes quedaron sin respuesta: lo que sobra de repartirlos en entrantes cualificados, no leads e
  * in-abribles (corrección del 15/10/2026). Sin mensajes no se muestra. */
 const ChipNoContestaron = ({ n, entrantes }) => (entrantes > 0 ? (
     <span className="rd-chip" style={{ '--c': n ? 'var(--warning)' : 'var(--success)' }}
-        title="Mensajes que no son leads cualificados, ni no leads, ni in-abribles">
+        title="Mensajes que no son entrantes cualificados, ni no leads, ni in-abribles">
         <Numero valor={n} /><span>sin respuesta</span>
     </span>
 ) : null);
@@ -120,7 +120,7 @@ const PasoEntrantes = ({ ctx }) => {
                     extra={<ChipNoContestaron n={num[`${c.k}.noCont`]} entrantes={s[c.k].entrantes} />}
                     campos={[
                         <Campo key="e" ctx={ctx} ruta={`${c.k}.entrantes`} rotulo="Nuevos mensajes" canal={c} aria={`${c.n}, nuevos mensajes`} />,
-                        <Campo key="l" ctx={ctx} ruta={`${c.k}.leads`} rotulo="Leads cualificados" canal={c} aria={`${c.n}, leads cualificados`} />,
+                        <Campo key="l" ctx={ctx} ruta={`${c.k}.leads`} rotulo={'Entrantes cuali­ficados'} canal={c} aria={`${c.n}, entrantes cualificados`} />,
                         <Campo key="n" ctx={ctx} ruta={`${c.k}.no_lead`} rotulo="No leads" canal={c} aria={`${c.n}, no leads`} />,
                         <Campo key="i" ctx={ctx} ruta={`${c.k}.inabribles`} rotulo="In-abribles" canal={c} aria={`${c.n}, in-abribles`} />,
                     ]}
