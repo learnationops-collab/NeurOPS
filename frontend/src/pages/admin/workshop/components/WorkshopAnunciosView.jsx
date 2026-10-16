@@ -1,25 +1,24 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
-import { ChevronRight, Megaphone } from 'lucide-react';
-import api from '../../../../services/api';
-import InfoTooltip from '../../../../components/ui/InfoTooltip';
+import { Fragment, useEffect, useState } from 'react';
+import { ChevronRight } from 'lucide-react';
+import { EsqueletoFilas, PanelCab, Tip } from '../../../comercial/components/Shared';
+import { useAnunciosTaller } from '../talleres/datosTaller';
+import { diaMes } from '../talleres/formato';
 
 /**
  * Los anuncios de Meta que llenaron este taller: los de embudo Workshop (Marketing › Meta Ads), del
- * día siguiente al taller anterior al día de este (los mismos días que su
- * inversión). Campaña › conjunto › anuncio con gasto, impresiones, clics, CTR, CPC y CPM; por
- * campaña, además, las visitas a las landings y los clics al grupo de WhatsApp que trajo (el id de
- * la campaña viaja en el utm_campaign). Ver `app/services/workshop_meta_service.py`.
+ * día siguiente al taller anterior al día de este (los mismos días que su inversión). Campaña ›
+ * conjunto › anuncio con gasto, impresiones, clics, CTR, CPC y CPM; por campaña, además, las visitas
+ * a las landings y los clics al grupo de WhatsApp que trajo (el id de la campaña viaja en el
+ * utm_campaign). Ver `app/services/workshop_meta_service.py`.
  *
- * Los títulos de las columnas quedan pegados debajo de la barra de pestañas mientras se scrollea la
- * página (16/10/2026). No pueden ir en el <thead> de la tabla: la tabla scrollea de costado y un
- * contenedor con scroll horizontal se queda con el `sticky`. Van en una segunda tabla con las mismas
- * columnas (mismo ancho y `table-layout: fixed`, así coinciden sin medir) que copia el scroll
- * horizontal; la tabla de datos conserva un <thead> oculto para los lectores de pantalla.
+ * Vive en el detalle de un taller (Talleres › detalle › Anuncios). La tabla scrollea dentro de su
+ * caja, con los títulos pegados arriba: un `thead` sticky funciona porque el scroll de los dos ejes
+ * es de la misma caja.
  */
 
 const fmtNum = (v) => (v == null ? '—' : Number(v).toLocaleString('es-AR'));
 const fmtPct = (v) => (v == null ? '—' : `${Number(v).toFixed(2)}%`);
-const fmtFecha = (iso) => (iso ? iso.split('-').reverse().slice(0, 2).join('/') : '');
+const dineroPorDefecto = (v) => `$${Number(v).toFixed(2)}`;
 
 const NOMBRE = {
     titulo: 'Campaña › conjunto › anuncio',
@@ -29,7 +28,7 @@ const NOMBRE = {
 };
 
 // `landings`: se mide por campaña (el utm_campaign trae el id de la campaña), no por conjunto ni anuncio.
-const COLUMNAS = [
+export const COLUMNAS = [
     { clave: 'gasto', titulo: 'Gasto', dinero: true,
       ayuda: 'Lo que cobró Meta en los días de este taller: del día siguiente al taller anterior hasta el día de '
         + 'este. La suma de todas las campañas es la inversión del taller.' },
@@ -67,10 +66,10 @@ const valor = (col, v, formatCurrency) => {
 
 // `total`: el gasto del taller. Con él, debajo del gasto va una barrita con la parte que se llevó la fila.
 const Celdas = ({ fila, formatCurrency, landings, total }) => COLUMNAS.map((col) => (
-    <td key={col.clave} data-workshop={col.titulo}>
+    <td key={col.clave} className="num">
         {col.landings && !landings ? '' : valor(col, fila[col.clave], formatCurrency)}
         {col.clave === 'gasto' && total > 0 && (
-            <i className="ws-anuncios-parte" aria-hidden="true" title={`${Math.round((fila.gasto / total) * 100)}% del gasto`}>
+            <i className="wt-parte" aria-hidden="true" title={`${Math.round((fila.gasto / total) * 100)}% del gasto`}>
                 <b style={{ width: `${Math.min(100, (fila.gasto / total) * 100)}%` }} />
             </i>
         )}
@@ -78,172 +77,134 @@ const Celdas = ({ fila, formatCurrency, landings, total }) => COLUMNAS.map((col)
 ));
 
 // Lo que se mira primero: cuánto se gastó y qué trajo. Ocho, en dos filas de cuatro.
-const RESUMEN = ['gasto', 'impresiones', 'ctr', 'cpc', 'cpm', 'visitas', 'clics_whatsapp', 'costo_whatsapp']
-    .map((clave) => COLUMNAS.find((col) => col.clave === clave));
+const RESUMEN = [
+    ['gasto', 'impresiones', 'ctr', 'cpc'],
+    ['cpm', 'visitas', 'clics_whatsapp', 'costo_whatsapp'],
+].map((fila) => fila.map((clave) => COLUMNAS.find((col) => col.clave === clave)));
 
-const Columnas = () => (
-    <colgroup>
-        <col className="ws-anuncios-col-nombre" />
-        {COLUMNAS.map((col) => <col key={col.clave} />)}
-    </colgroup>
-);
-
-const WorkshopAnunciosView = ({ evento, eventos = [], onSelectEvent, formatDate = (d) => d, formatCurrency }) => {
-    const [datos, setDatos] = useState(null);
-    const [error, setError] = useState(null);
+const WorkshopAnunciosView = ({ evento, formatCurrency = dineroPorDefecto }) => {
+    const { datos, error } = useAnunciosTaller(evento?.id);
     const [abiertas, setAbiertas] = useState({});
-    const cabezaRef = useRef(null);
 
-    // Un taller por montaje: el panel la monta con key={evento.id}, así que arranca vacía.
+    // La campaña que más gastó, abierta.
     useEffect(() => {
-        if (!evento?.id) return undefined;
-        const control = new AbortController();
-        api.get(`workshop/events/${evento.id}/anuncios`, { signal: control.signal })
-            .then((r) => {
-                setDatos(r.data);
-                // La campaña que más gastó, abierta.
-                setAbiertas(r.data.campanas.length ? { [r.data.campanas[0].campana_id]: true } : {});
-            })
-            .catch((e) => { if (e?.name !== 'CanceledError') setError('No se pudieron traer los anuncios de Meta.'); });
-        return () => control.abort();
-    }, [evento?.id]);
+        if (datos?.campanas?.length) setAbiertas({ [datos.campanas[0].campana_id]: true });
+    }, [datos]);
 
     const alternar = (id) => setAbiertas((a) => ({ ...a, [id]: !a[id] }));
     const abrirTodas = (abrir) => setAbiertas(abrir
         ? Object.fromEntries(datos.campanas.map((c) => [c.campana_id, true])) : {});
-    const cantidadAnuncios = datos?.campanas.reduce(
+    const cantidadAnuncios = datos?.campanas?.reduce(
         (n, c) => n + c.conjuntos.reduce((m, s) => m + s.anuncios.length, 0), 0) ?? 0;
-    const todasAbiertas = !!datos?.campanas.length && datos.campanas.every((c) => abiertas[c.campana_id]);
+    const todasAbiertas = !!datos?.campanas?.length && datos.campanas.every((c) => abiertas[c.campana_id]);
     const gastoTotal = datos?.totales?.gasto || 0;
-    // Los títulos pegados siguen el scroll horizontal de la tabla.
-    const copiarScroll = (e) => { if (cabezaRef.current) cabezaRef.current.scrollLeft = e.currentTarget.scrollLeft; };
 
     return (
-        <section className="panel ws-anuncios" aria-labelledby="ws-anuncios-titulo">
-            <div className="section-heading">
-                <div>
-                    <p className="eyebrow">
-                        Meta Ads{datos && ` · del ${fmtFecha(datos.desde)} al ${fmtFecha(datos.hasta)}`}
-                    </p>
-                    <h2 id="ws-anuncios-titulo" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                        <Megaphone size={18} /> Anuncios que llenaron este taller
-                    </h2>
-                </div>
-                {/* El mismo taller que está abierto en Embudo: cambiarlo acá lo cambia allá. */}
-                {onSelectEvent && eventos.length > 0 && (
-                    <label className="ws-anuncios-taller">
-                        <span>Taller</span>
-                        <select value={evento.id}
-                            onChange={(e) => onSelectEvent(eventos.find((x) => String(x.id) === e.target.value))}>
-                            {eventos.map((x) => (
-                                <option key={x.id} value={x.id}>{formatDate(x.date)} · {x.name}</option>
-                            ))}
-                        </select>
-                    </label>
-                )}
-            </div>
+        <div className="vista wt-vista">
             {error ? (
-                <p className="all-target ws-anuncios-vacio">{error}</p>
+                <section className="panel wt-panel"><p className="t-body mut">No se pudieron traer los anuncios de Meta.</p></section>
             ) : !datos ? (
-                <p className="all-target ws-anuncios-vacio" role="status">Cargando los anuncios…</p>
+                <section className="panel wt-panel"><EsqueletoFilas rotulo="Cargando los anuncios…" lineas={6} /></section>
             ) : !datos.anuncios_workshop ? (
-                <p className="all-target ws-anuncios-vacio">
-                    Todavía no hay anuncios clasificados como Workshop. Se clasifican solos al sincronizar con Meta y se
-                    corrigen en Marketing › Meta Ads: acá vas a ver el gasto y los resultados de cada uno entre este
-                    taller y el anterior.
-                </p>
+                <section className="panel wt-panel">
+                    <p className="t-body mut">
+                        Todavía no hay anuncios clasificados como Workshop. Se clasifican solos al sincronizar con Meta y se
+                        corrigen en Marketing › Meta Ads.
+                    </p>
+                </section>
             ) : !datos.campanas.length ? (
-                <p className="all-target ws-anuncios-vacio">Los anuncios de Workshop no gastaron en estos días.</p>
+                <section className="panel wt-panel">
+                    <p className="t-body mut">Los anuncios de Workshop no gastaron del {diaMes(datos.desde)} al {diaMes(datos.hasta)}.</p>
+                </section>
             ) : (
                 <>
-                <dl className="ws-anuncios-resumen">
-                    {RESUMEN.map((col) => (
-                        <div key={col.clave}>
-                            <dt>{col.titulo} <InfoTooltip label={col.titulo} text={col.ayuda} size={11} /></dt>
-                            <dd>{valor(col, datos.totales[col.clave], formatCurrency)}</dd>
-                        </div>
-                    ))}
-                </dl>
-                <div className="ws-anuncios-barra">
-                    <span>
-                        {datos.campanas.length} {datos.campanas.length === 1 ? 'campaña' : 'campañas'} · {cantidadAnuncios}{' '}
-                        {cantidadAnuncios === 1 ? 'anuncio' : 'anuncios'} con gasto
-                    </span>
-                    <button type="button" className="text-action" onClick={() => abrirTodas(!todasAbiertas)}>
-                        {todasAbiertas ? 'Cerrar todas' : 'Abrir todas'}
-                    </button>
-                </div>
-                <div className="ws-anuncios-marco">
-                    {/* Títulos pegados: lo visible. La tabla es de presentación; los tooltips sí se leen. */}
-                    <div className="ws-anuncios-cabeza" ref={cabezaRef}>
-                        <table className="ws-anuncios-tabla" role="presentation">
-                            <Columnas />
-                            <thead>
-                                <tr>
-                                    {[NOMBRE, ...COLUMNAS].map((col) => (
-                                        <th key={col.titulo}>
-                                            <span className="ws-anuncios-titulo">
-                                                <span>{col.titulo}</span>
-                                                <InfoTooltip label={col.titulo} text={col.ayuda} size={11} />
-                                            </span>
-                                        </th>
+                    <section className="panel wt-panel">
+                        <PanelCab titulo="Lo que trajeron"
+                            tip="Los totales de los anuncios de Workshop en los días de este taller: del día siguiente al taller anterior hasta el día de este.">
+                            <span className="t-cap mut num">Meta Ads · del {diaMes(datos.desde)} al {diaMes(datos.hasta)}</span>
+                        </PanelCab>
+                        <div className="wt-resumen-anuncios">
+                            {RESUMEN.map((fila, i) => (
+                                <dl key={i} className="pareja wt-cifras" style={{ '--min': '130px', '--g': 'var(--s3)' }}>
+                                    {fila.map((col) => (
+                                        <div key={col.clave} className="tarjeta wt-cifra">
+                                            <dt>{col.titulo} <Tip titulo={col.titulo} texto={col.ayuda} /></dt>
+                                            <dd className="num">{valor(col, datos.totales[col.clave], formatCurrency)}</dd>
+                                        </div>
                                     ))}
-                                </tr>
-                            </thead>
-                        </table>
-                    </div>
-                    <div className="ws-anuncios-scroll" onScroll={copiarScroll}>
-                        <table className="ws-anuncios-tabla">
-                            <Columnas />
-                            <thead className="ws-anuncios-thead-lector">
-                                <tr>
-                                    {[NOMBRE, ...COLUMNAS].map((col) => <th key={col.titulo} scope="col">{col.titulo}</th>)}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {datos.campanas.map((c) => (
-                                    <Fragment key={c.campana_id}>
-                                        <tr className="ws-anuncios-campana">
-                                            <th scope="row">
-                                                <button type="button" className="ws-anuncios-abrir" onClick={() => alternar(c.campana_id)}
-                                                    aria-expanded={!!abiertas[c.campana_id]} title={c.nombre}>
-                                                    <ChevronRight size={14} className="ws-anuncios-flecha" />
-                                                    <strong>{c.nombre}</strong>
-                                                </button>
+                                </dl>
+                            ))}
+                        </div>
+                    </section>
+
+                    <section className="panel wt-panel">
+                        <PanelCab titulo="Campañas, conjuntos y anuncios" tip={NOMBRE.ayuda}>
+                            <span className="t-cap mut num">
+                                {datos.campanas.length} {datos.campanas.length === 1 ? 'campaña' : 'campañas'} · {cantidadAnuncios}{' '}
+                                {cantidadAnuncios === 1 ? 'anuncio' : 'anuncios'} con gasto
+                            </span>
+                            <button type="button" className="btn btn--linea btn--sm" onClick={() => abrirTodas(!todasAbiertas)}>
+                                {todasAbiertas ? 'Cerrar todas' : 'Abrir todas'}
+                            </button>
+                        </PanelCab>
+                        <div className="wt-anuncios-caja">
+                            <table className="wt-anuncios">
+                                <thead>
+                                    <tr>
+                                        {[NOMBRE, ...COLUMNAS].map((col) => (
+                                            <th key={col.titulo} scope="col">
+                                                <span className="wt-anuncios-titulo">
+                                                    <span>{col.titulo}</span>
+                                                    <Tip titulo={col.titulo} texto={col.ayuda} />
+                                                </span>
                                             </th>
-                                            <Celdas fila={c} formatCurrency={formatCurrency} landings total={gastoTotal} />
-                                        </tr>
-                                        {abiertas[c.campana_id] && c.conjuntos.map((s) => (
-                                            <Fragment key={`${c.campana_id}-${s.nombre}`}>
-                                                <tr className="ws-anuncios-conjunto">
-                                                    <th scope="row" title={s.nombre || 'Sin conjunto'}>
-                                                        <span>{s.nombre || 'Sin conjunto'}</span>
-                                                    </th>
-                                                    <Celdas fila={s} formatCurrency={formatCurrency} total={gastoTotal} />
-                                                </tr>
-                                                {s.anuncios.map((a) => (
-                                                    <tr key={a.meta_ad_id} className="ws-anuncios-anuncio">
-                                                        <th scope="row" title={a.nombre}><span>{a.nombre}</span></th>
-                                                        <Celdas fila={a} formatCurrency={formatCurrency} total={gastoTotal} />
-                                                    </tr>
-                                                ))}
-                                            </Fragment>
                                         ))}
-                                    </Fragment>
-                                ))}
-                            </tbody>
-                            <tfoot>
-                                <tr className="ws-anuncios-total">
-                                    <th scope="row">Total del taller</th>
-                                    <Celdas fila={datos.totales} formatCurrency={formatCurrency} landings />
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {datos.campanas.map((c) => (
+                                        <Fragment key={c.campana_id}>
+                                            <tr className="wt-anuncios-campana">
+                                                <th scope="row">
+                                                    <button type="button" className="wt-anuncios-abrir" onClick={() => alternar(c.campana_id)}
+                                                        aria-expanded={!!abiertas[c.campana_id]} title={c.nombre}>
+                                                        <ChevronRight className="wt-anuncios-flecha" aria-hidden="true" />
+                                                        <span className="trunc">{c.nombre}</span>
+                                                    </button>
+                                                </th>
+                                                <Celdas fila={c} formatCurrency={formatCurrency} landings total={gastoTotal} />
+                                            </tr>
+                                            {abiertas[c.campana_id] && c.conjuntos.map((s) => (
+                                                <Fragment key={`${c.campana_id}-${s.nombre}`}>
+                                                    <tr className="wt-anuncios-conjunto">
+                                                        <th scope="row" title={s.nombre || 'Sin conjunto'}>
+                                                            <span className="trunc">{s.nombre || 'Sin conjunto'}</span>
+                                                        </th>
+                                                        <Celdas fila={s} formatCurrency={formatCurrency} total={gastoTotal} />
+                                                    </tr>
+                                                    {s.anuncios.map((a) => (
+                                                        <tr key={a.meta_ad_id} className="wt-anuncios-anuncio">
+                                                            <th scope="row" title={a.nombre}><span className="trunc">{a.nombre}</span></th>
+                                                            <Celdas fila={a} formatCurrency={formatCurrency} total={gastoTotal} />
+                                                        </tr>
+                                                    ))}
+                                                </Fragment>
+                                            ))}
+                                        </Fragment>
+                                    ))}
+                                </tbody>
+                                <tfoot>
+                                    <tr className="wt-anuncios-total">
+                                        <th scope="row">Total del taller</th>
+                                        <Celdas fila={datos.totales} formatCurrency={formatCurrency} landings />
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </section>
                 </>
             )}
-        </section>
+        </div>
     );
 };
 

@@ -1,106 +1,79 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import {
-    Loader2, Users, PlayCircle, Timer, Target, RefreshCw,
-    MonitorSmartphone, Video, MousePointerClick, Radio
-} from 'lucide-react';
-import api from '../../../../services/api';
+import React, { useCallback, useEffect, useState } from 'react';
+import { RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
-import InfoTooltip from '../../../../components/ui/InfoTooltip';
-import WorkshopReplayConfigPanel from './WorkshopReplayConfigPanel';
+import api from '../../../../services/api';
+import FlujoEmbudo from '../../../comercial/components/FlujoEmbudo';
+import { EsqueletoTablero, PanelCab, Segmented } from '../../../comercial/components/Shared';
+import ListaConfigurable from '../../../../components/listas/ListaConfigurable';
+import { Kpi } from './WorkshopFunnelView';
+import { diaMes, duracion, numero } from '../talleres/formato';
 
 /*
- * Panel de la landing de la GRABACIÓN (/replay/).
+ * El embudo GENERAL de la landing de la grabación (/replay/), de todos los talleres juntos, por
+ * período. Se abre desde Talleres («Landing de la grabación»); la grabación de cada taller y su
+ * publicación se configuran en el detalle de ese taller.
  *
- * Ojo con no confundir los dos embudos que viven en esta pestaña:
+ * Ojo con no confundir los dos embudos:
  *   · Workshop en vivo  -> la clase en vivo, fuente 'workshop'
  *   · Workshop landing  -> esta grabación, fuente 'workshop landing'
- * Hasta ahora las agendas de los dos caían en la misma bolsa porque la fuente
- * se detectaba con un substring de 'workshop'.
  */
 
-const fmtDuracion = (segundos) => {
-    const s = Math.max(0, Math.round(segundos || 0));
-    if (s < 60) return `${s}s`;
-    const m = Math.floor(s / 60);
-    const r = s % 60;
-    if (m < 60) return `${m}m ${String(r).padStart(2, '0')}s`;
-    return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`;
-};
-
-const fmtFecha = (iso) => {
-    if (!iso) return '—';
-    const d = new Date(iso);
-    return d.toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-};
-
 const ETAPAS = {
-    entro: { texto: 'Entró', tone: '' },
-    abrio_gate: { texto: 'Abrió el registro', tone: 'warning' },
-    completo_gate: { texto: 'Se registró', tone: 'success' },
-    dio_play: { texto: 'Dio play', tone: 'success' },
-    vio_oferta: { texto: 'Llegó a la oferta', tone: 'success' },
-    clic_agenda: { texto: 'Clic en Calendly', tone: 'success' },
+    entro: { texto: 'Entró', tono: 'idle' },
+    abrio_gate: { texto: 'Abrió el registro', tono: 'warning' },
+    completo_gate: { texto: 'Se registró', tono: 'info' },
+    dio_play: { texto: 'Dio play', tono: 'info' },
+    vio_oferta: { texto: 'Llegó a la oferta', tono: 'success' },
+    clic_agenda: { texto: 'Clic en Calendly', tono: 'success' },
+};
+const etapaDe = (s) => ETAPAS[s.etapa] || ETAPAS.entro;
+
+const fechaHora = (iso) => {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
 };
 
-const Chip = ({ etapa }) => {
-    const e = ETAPAS[etapa] || ETAPAS.entro;
-    return <span className={`status ${e.tone}`}>{e.texto}</span>;
-};
+const QUE_MIDE = 'Entraron: cargaron /replay/, una fila por visita. Abrieron el registro: tocaron «Ver la clase» y se abrió el '
+    + 'formulario de 4 pasos (no es Calendly). Se registraron: completaron esos pasos. Dieron play: se montó el reproductor '
+    + 'de Loom. Llegaron a la oferta: el bloque de la oferta entró de verdad en su pantalla. Clic en Calendly: tocaron agendar. '
+    + 'Cada visita se mide por separado: quien ya se registró y vuelve entra directo a la clase.';
 
-const Kpi = ({ label, value, sub, icon: Icon, ayuda }) => (
-    <article className="kpi-card">
-        <div className="kpi-head">
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                {label}
-                {ayuda && <InfoTooltip label={label} text={ayuda} />}
-            </span>
-            <Icon size={18} aria-hidden="true" />
-        </div>
-        <strong>{value}</strong>
-        <div className="kpi-foot"><span>{sub}</span></div>
-    </article>
-);
+const COLUMNAS_SESIONES = [
+    { key: 'persona', header: 'Persona', fija: true, width: 'minmax(150px,2fr)',
+      valor: (s) => s.lead?.full_name || null,
+      render: (s) => (s.lead
+          ? <span className="celda" title={s.lead.full_name}>{s.lead.full_name}</span>
+          : <span className="celda mut40">Sin registrarse</span>) },
+    { key: 'examen', header: 'Examen', width: 'minmax(80px,1fr)', valor: (s) => s.lead?.examen || null,
+      render: (s) => <span className="celda">{s.lead?.examen || '—'}</span> },
+    { key: 'etapa', header: 'Etapa', width: 'minmax(120px,1.2fr)', valor: (s) => etapaDe(s).texto,
+      render: (s) => <span className="chip" style={{ '--c': `var(--${etapaDe(s).tono})` }}><span className="trunc">{etapaDe(s).texto}</span></span> },
+    { key: 'permanencia', header: 'Permanencia', alinear: 'der', width: 'minmax(80px,1fr)', valor: (s) => s.segundos_visible || 0,
+      render: (s) => duracion(s.segundos_visible) },
+    { key: 'video', header: 'Video', alinear: 'der', width: 'minmax(70px,1fr)', valor: (s) => (s.dio_play ? s.segundos_video || 0 : null),
+      render: (s) => (s.dio_play ? duracion(s.segundos_video) : '—') },
+    { key: 'origen', header: 'Origen', width: 'minmax(90px,1fr)', valor: (s) => s.utm_source || 'directo',
+      render: (s) => <span className="celda">{s.utm_source || 'directo'}{s.dispositivo === 'movil' ? ' · móvil' : ''}</span> },
+    { key: 'entro', header: 'Entró', width: 'minmax(100px,1fr)', valor: (s) => s.created_at,
+      render: (s) => <span className="celda num">{fechaHora(s.created_at)}</span> },
+];
 
-/* Barra del embudo. El ancho es relativo a las VISITAS, no al paso anterior:
-   así se ve de un vistazo dónde se cae la gente respecto del total. */
-const PasoEmbudo = ({ idx, label, ayuda, valor, base, pctPaso }) => {
-    const share = base > 0 ? (valor / base) * 100 : 0;
-    // Cero es nada: sin barra (16/10/2026).
-    const width = base > 0 && valor > 0 ? 14 + 86 * Math.sqrt(valor / base) : 0;
-    return (
-        <React.Fragment>
-            {idx > 0 && pctPaso !== null && (
-                <div className="rate-pill green">
-                    <strong>{pctPaso}%</strong>
-                    <span>{label}</span>
-                    <small>retención del paso anterior</small>
-                </div>
-            )}
-            <div className="funnel-stage">
-                <span className="stage-index">{idx + 1}</span>
-                <div>
-                    <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        {label}
-                        {ayuda && <InfoTooltip label={label} text={ayuda} />}
-                    </strong>
-                </div>
-                <div className="stage-bar" role="img" aria-label={`${label}: ${valor}, ${share.toFixed(1)}% del total`}>
-                    {valor > 0
-                        ? <i style={{ width: `${width}%` }}><b>{valor.toLocaleString()}</b></i>
-                        : <span className="stage-bar-cero">0</span>}
-                </div>
-                <span className="stage-share">{share.toFixed(1)}%<small>del total</small></span>
-            </div>
-        </React.Fragment>
-    );
-};
+const FACETAS_SESIONES = [
+    { key: 'etapa', label: 'Etapa', de: (s) => etapaDe(s).texto },
+    { key: 'registro', label: 'Registro', de: (s) => (s.lead ? 'Registrado' : 'Sin registrarse') },
+    { key: 'play', label: 'Video', de: (s) => (s.dio_play ? 'Dio play' : 'Sin play') },
+    { key: 'examen', label: 'Examen', de: (s) => s.lead?.examen || null },
+    { key: 'origen', label: 'Origen', de: (s) => s.utm_source || 'directo' },
+    { key: 'dispositivo', label: 'Dispositivo', de: (s) => (s.dispositivo === 'movil' ? 'Móvil' : 'Compu') },
+];
 
-const WorkshopLandingView = ({ events, onConfigSaved, formatDate }) => {
+const RANGOS = [{ key: 7, label: '7 días' }, { key: 30, label: '30 días' }, { key: 90, label: '90 días' }];
+
+const WorkshopLandingView = () => {
     const [stats, setStats] = useState(null);
     const [sesiones, setSesiones] = useState([]);
     const [agendas, setAgendas] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [filtro, setFiltro] = useState('todas');   // 'todas' | 'dio_play' | 'sin_registro'
     const [dias, setDias] = useState(30);
 
     const cargar = useCallback(async () => {
@@ -109,11 +82,9 @@ const WorkshopLandingView = ({ events, onConfigSaved, formatDate }) => {
             const hasta = new Date();
             const desde = new Date(hasta.getTime() - dias * 86400000);
             const rango = `desde=${desde.toISOString().slice(0, 10)}&hasta=${hasta.toISOString().slice(0, 10)}`;
-            const etapa = filtro === 'todas' ? '' : `&etapa=${filtro}`;
-
             const [rStats, rSes, rAg] = await Promise.all([
                 api.get(`/workshop/landing/stats?${rango}`),
-                api.get(`/workshop/landing/sesiones?${rango}${etapa}`),
+                api.get(`/workshop/landing/sesiones?${rango}&limit=1000`),
                 api.get(`/workshop/landing/agendas?${rango}`),
             ]);
             setStats(rStats.data);
@@ -125,198 +96,96 @@ const WorkshopLandingView = ({ events, onConfigSaved, formatDate }) => {
         } finally {
             setLoading(false);
         }
-    }, [dias, filtro]);
+    }, [dias]);
 
     useEffect(() => { cargar(); }, [cargar]);
 
-    if (loading && !stats) {
-        return (
-            <section className="empty-state loading-state" role="status">
-                <div><span /></div>
-                <p className="eyebrow">Sincronizando</p>
-                <h2>Cargando métricas de la grabación…</h2>
-            </section>
-        );
-    }
+    const barra = (
+        <div className="fila wt-landing-barra">
+            <Segmented chico opciones={RANGOS} valor={dias} onChange={setDias} ariaLabel="Período de la landing" />
+            <button type="button" className="ibtn ibtn--sm" onClick={cargar} disabled={loading}
+                title="Volver a cargar" aria-label="Volver a cargar">
+                <RefreshCw className={loading ? 'ws-gira' : ''} aria-hidden="true" />
+            </button>
+            {stats?.rango && <span className="t-cap mut num">Del {diaMes(stats.rango.desde)} al {diaMes(stats.rango.hasta)}</span>}
+        </div>
+    );
+
+    if (loading && !stats) return <div className="vista wt-vista">{barra}<EsqueletoTablero rotulo="Cargando la landing…" /></div>;
 
     const e = stats?.embudo || {};
     const c = stats?.conversion || {};
     const p = stats?.permanencia || {};
     const visitas = e.visitas || 0;
 
-    const pasos = [
-        { label: 'Entraron', ayuda: 'Todas las visitas a la página. Es la base contra la que se dibujan las barras.', valor: visitas, pctPaso: null },
-        { label: 'Abrieron el registro', ayuda: 'Abrieron el formulario de la página (no es Calendly: es el formulario que destraba el video).', valor: e.abrio_gate || 0, pctPaso: c.visita_a_gate },
-        { label: 'Se registraron', ayuda: 'Completaron ese formulario. Ojo: el formulario no pide dato de contacto, así que sirve para medir, no para escribirle a nadie.', valor: e.completo_gate || 0, pctPaso: c.gate_a_registro },
-        { label: 'Dieron play', ayuda: 'Arrancaron el video de la grabación.', valor: e.dio_play || 0, pctPaso: c.registro_a_play },
-        { label: 'Llegaron a la oferta (en pantalla)', ayuda: 'Siguieron en la página hasta el momento del video donde aparece la oferta.', valor: e.vio_oferta || 0, pctPaso: c.play_a_oferta },
-        { label: 'Clic en Calendly', ayuda: 'Hicieron clic en el botón para agendar la llamada. Es el paso que después se convierte en agenda.', valor: e.clic_agenda || 0, pctPaso: c.oferta_a_agenda },
-    ];
-
     return (
-        <>
-            <WorkshopReplayConfigPanel events={events} onSaved={onConfigSaved} formatDate={formatDate} />
+        <div className={`vista wt-vista${loading ? ' wt-recargando' : ''}`}>
+            {barra}
 
-            {/* Controles */}
-            <div className="hero-actions" style={{ marginBottom: 22 }}>
-                <div className="pill-toggle">
-                    {[7, 30, 90].map((d) => (
-                        <button type="button" key={d} className={dias === d ? 'active' : ''} onClick={() => setDias(d)}>{d} días</button>
-                    ))}
-                </div>
-                <button type="button" className="secondary-action" onClick={cargar}>
-                    <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Actualizar
-                </button>
-                {stats?.rango && <span className="secondary-copy">{stats.rango.desde} → {stats.rango.hasta}</span>}
+            <div className="pareja" style={{ '--min': '180px', '--g': 'var(--s3)' }}>
+                <Kpi i={0} titulo="Visitas" valor={numero(visitas)} sub="Sesiones únicas"
+                    tip="Cuánta gente distinta abrió la página de la grabación, se haya registrado o no." />
+                <Kpi i={1} titulo="Registrados" valor={numero(e.completo_gate || 0)} sub={`${c.visita_a_registro || 0}% de las visitas`}
+                    tip="De esas visitas, cuántas completaron el formulario para poder ver la clase." />
+                <Kpi i={2} titulo="Dieron play" valor={numero(e.dio_play || 0)} sub={`${c.registro_a_play || 0}% de los registrados`}
+                    tip="Si hay muchos registrados y pocos plays, el problema está en la página, no en el anuncio." />
+                <Kpi i={3} titulo="Permanencia" valor={duracion(p.mediana_segundos)} sub={`Promedio ${duracion(p.promedio_segundos)}`}
+                    tip="La mediana: la mitad se queda menos y la mitad más. El promedio se distorsiona con quien deja la pestaña abierta." />
             </div>
 
-            {/* KPIs */}
-            <section className="kpi-grid kpi-grid--cuatro" aria-label="Indicadores de la landing">
-                <Kpi label="Visitas" ayuda="Cuánta gente distinta abrió la página de la grabación, se haya registrado o no." value={visitas} sub="Sesiones únicas" icon={MonitorSmartphone} />
-                <Kpi label="Registrados" ayuda="De esas visitas, cuántas completaron el formulario para poder ver la clase." value={e.completo_gate || 0} sub={`${c.visita_a_registro || 0}% de las visitas`} icon={Users} />
-                <Kpi label="Dieron play" ayuda="Cuántos le dieron play al video. Si hay muchos registrados y pocos plays, el problema está en la página, no en el anuncio." value={e.dio_play || 0} sub={`${c.registro_a_play || 0}% de los registrados`} icon={PlayCircle} />
-                <Kpi label="Permanencia media" ayuda="Cuánto tiempo se queda la persona típica en la página (mediana: la mitad se queda menos y la mitad más). El promedio se distorsiona con quien deja la pestaña abierta." value={fmtDuracion(p.mediana_segundos)} sub={`Promedio ${fmtDuracion(p.promedio_segundos)}`} icon={Timer} />
+            <section className="panel wt-panel">
+                <PanelCab titulo="Embudo de la grabación" tip={QUE_MIDE}>
+                    <span className="t-cap mut num">Video visto {duracion(p.promedio_video_segundos)} en promedio</span>
+                </PanelCab>
+                <FlujoEmbudo raiz color="var(--brand-secondary)" etapas={[
+                    { key: 'visitas', label: 'Entraron', n: visitas },
+                    { key: 'gate', label: 'Abrieron registro', n: e.abrio_gate || 0 },
+                    { key: 'registro', label: 'Se registraron', n: e.completo_gate || 0 },
+                    { key: 'play', label: 'Dieron play', n: e.dio_play || 0 },
+                    { key: 'oferta', label: 'Vieron la oferta', n: e.vio_oferta || 0 },
+                    { key: 'calendly', label: 'Clic Calendly', n: e.clic_agenda || 0 },
+                ]} />
             </section>
 
-            <section className="detail-grid">
-                {/* Embudo */}
-                <article className="panel funnel-panel">
-                    <div className="section-heading">
-                        <div>
-                            <p className="eyebrow">Landing de la grabación</p>
-                            <h2 style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Target size={18} /> Embudo de la grabación</h2>
-                        </div>
-                    </div>
-                    <div className="funnel-list">
-                        {pasos.map((paso, idx) => <PasoEmbudo key={paso.label} idx={idx} base={visitas} {...paso} />)}
-                    </div>
-                    <p className="secondary-copy" style={{ marginTop: 12, fontSize: 10 }}>
-                        El porcentaje es respecto del paso anterior. La barra, respecto del total de visitas.
-                    </p>
-
-                    {/* Qué mide cada paso. Sin esto "abrió el registro" y "llegó a
-                        la oferta" se prestan a confundirse con Calendly. */}
-                    <div style={{ marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
-                        <p className="eyebrow">De dónde sale cada dato</p>
-                        <dl style={{ display: 'grid', gap: 8, marginTop: 10 }}>
-                            {[
-                                ['Entraron', 'Cargaron /replay/. Una fila por visita.'],
-                                ['Abrieron el registro', 'Tocaron un botón de "Ver la clase" y se les abrió el formulario de 4 pasos (nombre, profesión, etapa, examen). NO es Calendly.'],
-                                ['Se registraron', 'Completaron esos 4 pasos. Acá es donde aparecen en la lista de abajo con nombre.'],
-                                ['Dieron play', 'Tocaron el póster y se montó el reproductor de Loom.'],
-                                ['Llegaron a la oferta', 'El bloque de la Sesión de Aceleración entró de verdad en su pantalla, al menos un cuarto. No alcanza con que se haya desbloqueado.'],
-                                ['Clic en Calendly', 'Tocaron el botón de agendar. Recién acá aparece el formulario de Calendly, que es otro y vive fuera de la landing.'],
-                            ].map(([t, d]) => (
-                                <div key={t} style={{ display: 'flex', gap: 8, fontSize: 10, lineHeight: 1.5 }}>
-                                    <dt style={{ fontWeight: 900, color: '#fff', flex: '0 0 auto' }}>{t}:</dt>
-                                    <dd style={{ margin: 0, color: 'var(--text-muted)' }}>{d}</dd>
-                                </div>
-                            ))}
-                        </dl>
-                        <p className="secondary-copy" style={{ marginTop: 10, fontSize: 10 }}>
-                            El embudo mide <strong style={{ color: '#fff' }}>cada visita por separado</strong>. Quien ya se
-                            registró antes y vuelve entra directo a la clase: va a figurar como "entró → dio play" sin los pasos
-                            de registro, porque en esa visita no los hizo.
-                        </p>
-                    </div>
-                </article>
-
-                <aside className="detail-sidebar">
-                    {/* Fuente: vivo vs grabación */}
-                    <article className="panel" style={{ padding: 22 }}>
-                        <p className="eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Radio size={14} /> Agendas por fuente</p>
-                        <div className="source-grid" style={{ marginTop: 14 }}>
-                            <article>
-                                <div className="source-title"><span>Workshop en vivo</span></div>
-                                <strong style={{ display: 'block', fontSize: 26, fontVariantNumeric: 'tabular-nums' }}>{agendas?.workshop_vivo?.total ?? 0}</strong>
-                                <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 800, textTransform: 'uppercase' }}>{agendas?.workshop_vivo?.con_closer ?? 0} con closer</span>
-                            </article>
-                            <article>
-                                <div className="source-title"><span>Workshop landing</span></div>
-                                <strong style={{ display: 'block', fontSize: 26, fontVariantNumeric: 'tabular-nums', color: 'var(--pink)' }}>{agendas?.workshop_landing?.total ?? 0}</strong>
-                                <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 800, textTransform: 'uppercase' }}>{agendas?.workshop_landing?.con_closer ?? 0} con closer</span>
-                            </article>
-                        </div>
-                        <p className="secondary-copy" style={{ marginTop: 14, fontSize: 10 }}>
-                            Antes las dos caían juntas: la fuente se detectaba buscando "workshop" dentro del texto,
-                            así que "workshop landing" también entraba en el vivo.
-                        </p>
-                    </article>
-
-                    <div className="kpi-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                        <Kpi label="Video visto" value={fmtDuracion(p.promedio_video_segundos)} sub="Prom. de quienes dieron play" icon={Video} />
-                        <Kpi label="Clic Calendly" value={e.clic_agenda || 0} sub={`${c.oferta_a_agenda || 0}% vieron oferta`} icon={MousePointerClick} />
-                    </div>
-
-                    {(stats?.por_examen?.length > 0) && (
-                        <article className="panel" style={{ padding: 22 }}>
-                            <p className="eyebrow">Registrados por examen</p>
-                            <div className="rating-chips" style={{ marginTop: 10 }}>
-                                {stats.por_examen.map((x) => (
-                                    <span key={x.examen}>{x.examen} · {x.total}</span>
-                                ))}
-                            </div>
-                        </article>
-                    )}
-                </aside>
-            </section>
-
-            {/* Listado */}
-            <section className="panel comparison-panel" style={{ marginTop: 22 }}>
-                <div className="section-heading">
-                    <div><p className="eyebrow">Sesiones</p><h2>Personas que entraron ({sesiones.length})</h2></div>
-                    <div className="pill-toggle">
+            <div className="pareja" style={{ '--min': '300px', '--g': 'var(--s4)' }}>
+                <section className="panel wt-panel">
+                    <PanelCab titulo="Agendas por fuente"
+                        tip="Agendas creadas en el período que vinieron de la clase en vivo y de la grabación. Antes caían juntas (la fuente se detectaba buscando «workshop» en el texto)." />
+                    <div className="pareja" style={{ '--min': '120px', '--g': 'var(--s3)' }}>
                         {[
-                            { k: 'todas', t: 'Todas' },
-                            { k: 'dio_play', t: 'Dieron play' },
-                            { k: 'sin_registro', t: 'Sin registrarse' },
-                        ].map((o) => (
-                            <button type="button" key={o.k} className={filtro === o.k ? 'active' : ''} onClick={() => setFiltro(o.k)}>{o.t}</button>
+                            ['Clase en vivo', agendas?.workshop_vivo, 'var(--info)'],
+                            ['Grabación', agendas?.workshop_landing, 'var(--brand-secondary)'],
+                        ].map(([titulo, d, color]) => (
+                            <div key={titulo} className="tarjeta wt-fuente" style={{ '--c': color }}>
+                                <p className="wt-fuente-titulo">{titulo}</p>
+                                <b className="wt-fuente-n num">{numero(d?.total ?? 0)}</b>
+                                <span className="t-cap mut40 num">{numero(d?.con_closer ?? 0)} con closer</span>
+                            </div>
                         ))}
                     </div>
-                </div>
+                </section>
+                <section className="panel wt-panel">
+                    <PanelCab titulo="Registrados por examen" tip="A quién atrae la grabación: el examen que dijo cada registrado." />
+                    {stats?.por_examen?.length ? (
+                        <div className="wt-chips">
+                            {stats.por_examen.map((x) => (
+                                <span key={x.examen} className="chip" style={{ '--c': 'var(--text-muted)' }}>
+                                    <span className="trunc">{x.examen}</span> <b className="num">{x.total}</b>
+                                </span>
+                            ))}
+                        </div>
+                    ) : <p className="t-cap mut40">Sin registrados en el período.</p>}
+                </section>
+            </div>
 
-                {sesiones.length === 0 ? (
-                    <p className="all-target" style={{ textAlign: 'center', padding: '40px 0' }}>
-                        <Users size={32} style={{ display: 'block', margin: '0 auto 12px', opacity: .5 }} />
-                        Todavía no hay visitas en este rango.
-                    </p>
-                ) : (
-                    <div className="comparison-scroll">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th scope="col" style={{ textAlign: 'left' }}>Persona</th>
-                                    <th scope="col" style={{ textAlign: 'left' }}>Examen</th>
-                                    <th scope="col" style={{ textAlign: 'left' }}>Etapa</th>
-                                    <th scope="col">Permanencia</th>
-                                    <th scope="col">Video</th>
-                                    <th scope="col" style={{ textAlign: 'left' }}>Origen</th>
-                                    <th scope="col" style={{ textAlign: 'left' }}>Entró</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {sesiones.map((s) => (
-                                    <tr key={s.id}>
-                                        <td style={{ textAlign: 'left' }}>
-                                            {s.lead ? <strong style={{ color: '#fff' }}>{s.lead.full_name}</strong> : <em style={{ color: 'var(--text-muted)' }}>Sin registrarse</em>}
-                                        </td>
-                                        <td style={{ textAlign: 'left' }}>{s.lead?.examen || '—'}</td>
-                                        <td style={{ textAlign: 'left' }}><Chip etapa={s.etapa} /></td>
-                                        <td>{fmtDuracion(s.segundos_visible)}</td>
-                                        <td>{s.dio_play ? fmtDuracion(s.segundos_video) : '—'}</td>
-                                        <td style={{ textAlign: 'left' }}>
-                                            {s.utm_source || 'directo'}{s.dispositivo === 'movil' && ' · móvil'}
-                                        </td>
-                                        <td style={{ textAlign: 'left' }}>{fmtFecha(s.created_at)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
+            <section className="panel wt-panel">
+                <PanelCab titulo="Personas que entraron" tip="Cada visita a la landing de la grabación, con hasta dónde llegó." />
+                <ListaConfigurable columnas={COLUMNAS_SESIONES} facetas={FACETAS_SESIONES} filas={sesiones}
+                    clave={(s) => s.id} buscar={(s) => `${s.lead?.full_name || ''} ${s.lead?.examen || ''} ${s.utm_source || ''}`}
+                    buscarPlaceholder="Buscar persona…" claveGuardado="workshop_landing_sesiones_columnas"
+                    vacio="Todavía no hay visitas en este rango." />
             </section>
-        </>
+        </div>
     );
 };
 

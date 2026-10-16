@@ -14,18 +14,15 @@ const enHoras = (h) => {
     return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 19);
 };
 
-const PASADO = { id: 15, date: '2026-10-12', name: 'WEBINAR 12 DE OCTUBRE', inicio_at: '2026-10-12T23:00:00' };
-const FUTURO = { id: 16, date: '2099-11-02', name: 'WEBINAR 2 DE NOVIEMBRE', inicio_at: '2099-11-02T23:00:00' };
+const TALLER = { id: 15, date: '2026-10-12', name: 'WEBINAR 12 DE OCTUBRE', inicio_at: '2026-10-12T23:00:00' };
 
-describe('Workshop › Landing grabación › grabación y publicación separadas', () => {
+describe('Workshop › Talleres › Grabación: guardar y publicar son dos cosas', () => {
     beforeEach(() => api.put.mockReset().mockResolvedValue({ data: {} }));
 
-    it('arranca en el último taller que ya pasó y guardar la grabación no la publica', async () => {
-        render(<WorkshopReplayConfigPanel events={[FUTURO, PASADO]} />);
+    it('guardar la grabación no la publica, y sin guardarla no se puede publicar', async () => {
+        render(<WorkshopReplayConfigPanel evento={TALLER} />);
 
-        expect(screen.getByRole('combobox', { name: /Taller/ })).toHaveValue('15');
-        expect(screen.getByText('No publicada')).toBeInTheDocument();
-        // Sin grabación guardada no se puede publicar.
+        expect(screen.getByText('Sin grabación')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Publicar ahora/ })).toBeDisabled();
 
         await userEvent.click(screen.getByLabelText(/Link o ID del video de Loom/));
@@ -36,8 +33,9 @@ describe('Workshop › Landing grabación › grabación y publicación separada
     });
 
     it('publicar pone desde y vence; con una publicada, «Dejar de publicar» la cierra ya', async () => {
-        const { rerender } = render(<WorkshopReplayConfigPanel events={[{ ...PASADO, replay_loom_id: 'abc123def' }]} />);
+        const { rerender } = render(<WorkshopReplayConfigPanel evento={{ ...TALLER, replay_loom_id: 'abc123def' }} />);
 
+        expect(screen.getByText('Sin publicar')).toBeInTheDocument();
         expect(screen.getByRole('link', { name: /Ver grabación/ })).toHaveAttribute('href', 'https://www.loom.com/share/abc123def');
         await userEvent.click(screen.getByRole('button', { name: /Publicar ahora \(48 h\)/ }));
         const cuerpo = api.put.mock.calls[0][1];
@@ -46,8 +44,8 @@ describe('Workshop › Landing grabación › grabación y publicación separada
         expect(cuerpo.replay_vence_hasta).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
 
         api.put.mockClear();
-        rerender(<WorkshopReplayConfigPanel events={[{ ...PASADO, replay_loom_id: 'abc123def',
-            replay_activo_desde: enHoras(-1), replay_vence_hasta: enHoras(47) }]} />);
+        rerender(<WorkshopReplayConfigPanel evento={{ ...TALLER, replay_loom_id: 'abc123def',
+            replay_activo_desde: enHoras(-1), replay_vence_hasta: enHoras(47) }} />);
         expect(screen.getByText('Publicada')).toBeInTheDocument();
         await userEvent.click(screen.getByRole('button', { name: 'Dejar de publicar' }));
         expect(Object.keys(api.put.mock.calls[0][1])).toEqual(['replay_vence_hasta']);
