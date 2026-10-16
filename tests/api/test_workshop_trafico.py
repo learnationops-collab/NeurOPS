@@ -8,7 +8,7 @@ from datetime import datetime
 
 import pytest
 
-from app.models import LandingTracking, LandingSession
+from app.models import LandingTracking, LandingSession, MetaAnuncio
 
 RANGO = 'desde=2026-10-01&hasta=2026-10-05'
 
@@ -18,9 +18,9 @@ def director(make_user, auth_headers):
     return auth_headers(make_user(role='director_marketing'))
 
 
-def visita(db, path, *, fuente='ig', campana='T5', evento=None, cuando=datetime(2026, 10, 3, 15, 0)):
+def visita(db, path, *, fuente='ig', campana='T5', contenido=None, evento=None, cuando=datetime(2026, 10, 3, 15, 0)):
     db.session.add(LandingTracking(page_path=path, utm_source=fuente, utm_campaign=campana,
-                                   evento=evento, created_at=cuando))
+                                   utm_content=contenido, evento=evento, created_at=cuando))
     db.session.commit()
 
 
@@ -188,3 +188,29 @@ def test_el_detalle_respeta_el_rango_el_limite_y_deja_fuera_la_grabacion(client,
     assert data['recortado'] is True
     assert all(v['landing'] == '/live-class-t5/' for v in data['visitas'])
     assert data['visitas'][0]['created_at'].startswith('2026-10-03T15:02')
+
+
+def test_campanas_y_anuncios_de_meta_llevan_su_nombre(client, db, director):
+    # Meta manda IDs en el link: utm_campaign = campaña, utm_content = anuncio.
+    db.session.add(MetaAnuncio(meta_ad_id='900', nombre='B | PP | A3', campana='WORKSHOP FUNNEL | TESTING ADS',
+                               campana_id='111'))
+    db.session.commit()
+    visita(db, '/live-class-t4/', campana='111', contenido='900')
+    visita(db, '/live-class-t4/', campana='111', contenido='900')
+    visita(db, '/live-class-t4/', campana='222', contenido='999')
+
+    datos = trafico(client, director)
+    campanas = {c['campana']: c for c in datos['por_campana']}
+    assert campanas['111']['nombre'] == 'WORKSHOP FUNNEL | TESTING ADS'
+    assert campanas['111']['visitas'] == 2
+    # Un ID que Meta Ads no sincronizó queda sin nombre y se muestra tal cual.
+    assert campanas['222']['nombre'] is None
+    anuncios = {a['anuncio']: a for a in datos['por_anuncio']}
+    assert anuncios['900']['nombre'] == 'B | PP | A3'
+    assert anuncios['900']['campana_nombre'] == 'WORKSHOP FUNNEL | TESTING ADS'
+    assert anuncios['999']['nombre'] is None
+
+    filas = detalle(client, director).get_json()['visitas']
+    con_nombre = [f for f in filas if f['utm_campaign'] == '111']
+    assert {f['campana_nombre'] for f in con_nombre} == {'WORKSHOP FUNNEL | TESTING ADS'}
+    assert {f['anuncio_nombre'] for f in con_nombre} == {'B | PP | A3'}

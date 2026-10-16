@@ -14,6 +14,10 @@ contarla dos veces. Su embudo completo vive en la pestaña «Landing grabación�
 Solo agregados, sin datos personales: mismo permiso que el resto del panel. El detalle
 (`/landing/trafico/visitas`, 16/10/2026) es cada fila de track-visit con sus UTM: lo que antes
 mostraba Marketing pidiendo un endpoint de admin, que al director de marketing le daba error.
+
+Los anuncios de Meta mandan IDs: `utm_campaign` es el de la campaña y `utm_content` el del anuncio
+(`{{campaign.id}}`/`{{ad.id}}`). Sus nombres salen de lo que ya sincroniza Meta Ads (`MetaAnuncio`);
+un ID que no está ahí (otra cuenta, o Meta sin conectar) se muestra tal cual.
 """
 from collections import defaultdict
 from datetime import timedelta
@@ -24,7 +28,7 @@ from flask import jsonify, request
 from flask_login import login_required, current_user
 
 from app import db
-from app.models import LandingTracking, LandingSession
+from app.models import LandingTracking, LandingSession, MetaAnuncio
 from app.decorators import ROLE_ADMIN, workshop_required
 from app.models.user import ROLE_OPERATOR
 from app.api.metrics import EVENTO_CLIC_WHATSAPP
@@ -92,6 +96,28 @@ def _nuevo():
     return {'visitas': 0, 'clics_whatsapp': 0, 'visitas_medidas': 0}
 
 
+def _limpio(valor):
+    return (valor or '').strip() or None
+
+
+def nombres_de_meta(campanas=(), anuncios=()):
+    """Los nombres de Meta para los IDs que mandan los links: ({id campaña: nombre}, {id anuncio: nombre})."""
+    campanas = {c for c in campanas if c}
+    anuncios = {a for a in anuncios if a}
+    de_campana, de_anuncio = {}, {}
+    if campanas:
+        filas = db.session.query(MetaAnuncio.campana_id, MetaAnuncio.campana).filter(
+            MetaAnuncio.campana_id.in_(campanas), MetaAnuncio.campana.isnot(None),
+        ).order_by(MetaAnuncio.actualizado_at.desc()).all()
+        for cid, nombre in filas:
+            de_campana.setdefault(cid, nombre)
+    if anuncios:
+        filas = db.session.query(MetaAnuncio.meta_ad_id, MetaAnuncio.nombre).filter(
+            MetaAnuncio.meta_ad_id.in_(anuncios)).all()
+        de_anuncio = {aid: nombre for aid, nombre in filas if nombre}
+    return de_campana, de_anuncio
+
+
 def _rango_utc(zona):
     """El rango pedido en dias locales (los del selector: 00:00 de La Paz, no de UTC), en local y en UTC."""
     desde_local, hasta_local = _rango()
@@ -120,13 +146,15 @@ def trafico_landings():
 
     filas = db.session.query(
         LandingTracking.page_path, LandingTracking.utm_source,
-        LandingTracking.utm_campaign, LandingTracking.evento, LandingTracking.created_at,
+        LandingTracking.utm_campaign, LandingTracking.utm_content, LandingTracking.evento,
+        LandingTracking.created_at,
     ).filter(
         LandingTracking.created_at >= desde, LandingTracking.created_at < hasta,
     ).all()
 
     sesiones_replay = db.session.query(
-        LandingSession.utm_source, LandingSession.utm_campaign, LandingSession.created_at,
+        LandingSession.utm_source, LandingSession.utm_campaign, LandingSession.utm_content,
+        LandingSession.created_at,
     ).filter(
         LandingSession.created_at >= desde, LandingSession.created_at < hasta,
     ).all()
@@ -134,9 +162,11 @@ def trafico_landings():
     por_landing = defaultdict(lambda: {**_nuevo(), 'fuentes': defaultdict(int), 'ultima': None})
     por_fuente = defaultdict(_nuevo)
     por_campana = defaultdict(_nuevo)
+    por_anuncio = defaultdict(lambda: {**_nuevo(), 'campana_id': None})
     por_dia = defaultdict(_nuevo)
 
-    def sumar(path, utm_source, utm_campaign, es_clic, creado):
+    def sumar(path, utm_source, utm_campaign, utm_content, es_clic, creado):
+        utm_campaign, utm_content = _limpio(utm_campaign), _limpio(utm_content)
         clave = 'clics_whatsapp' if es_clic else 'visitas'
         fuente = normalizar_fuente(utm_source)
         landing = por_landing[path]
@@ -149,24 +179,29 @@ def trafico_landings():
             landing['visitas_medidas'] += 1
             por_fuente[fuente]['visitas_medidas'] += 1
             if utm_campaign:
-                por_campana[utm_campaign.strip()]['visitas_medidas'] += 1
+                por_campana[utm_campaign]['visitas_medidas'] += 1
+            if utm_content:
+                por_anuncio[utm_content]['visitas_medidas'] += 1
         if not es_clic:
             landing['fuentes'][fuente] += 1
             if landing['ultima'] is None or creado > landing['ultima']:
                 landing['ultima'] = creado
         por_fuente[fuente][clave] += 1
         if utm_campaign:
-            por_campana[utm_campaign.strip()][clave] += 1
+            por_campana[utm_campaign][clave] += 1
+        if utm_content:
+            por_anuncio[utm_content][clave] += 1
+            por_anuncio[utm_content]['campana_id'] = por_anuncio[utm_content]['campana_id'] or utm_campaign
         por_dia[dia_local(creado)][clave] += 1
 
-    for page_path, utm_source, utm_campaign, evento, creado in filas:
+    for page_path, utm_source, utm_campaign, utm_content, evento, creado in filas:
         path = normalizar_path(page_path)
         if path == PATH_REPLAY:
             continue
-        sumar(path, utm_source, utm_campaign, evento == EVENTO_CLIC_WHATSAPP, creado)
+        sumar(path, utm_source, utm_campaign, utm_content, evento == EVENTO_CLIC_WHATSAPP, creado)
 
-    for utm_source, utm_campaign, creado in sesiones_replay:
-        sumar(PATH_REPLAY, utm_source, utm_campaign, False, creado)
+    for utm_source, utm_campaign, utm_content, creado in sesiones_replay:
+        sumar(PATH_REPLAY, utm_source, utm_campaign, utm_content, False, creado)
 
     landings = []
     for path, d in por_landing.items():
@@ -203,6 +238,16 @@ def trafico_landings():
         d = por_dia.get(clave, _nuevo())
         dias.append({'dia': clave, 'visitas': d['visitas'], 'clics_whatsapp': d['clics_whatsapp']})
 
+    campanas = lista(por_campana, 'campana', tope=12)
+    anuncios = lista(por_anuncio, 'anuncio', tope=12)
+    de_campana, de_anuncio = nombres_de_meta(
+        [x['campana'] for x in campanas] + [x['campana_id'] for x in anuncios], [x['anuncio'] for x in anuncios])
+    for x in campanas:
+        x['nombre'] = de_campana.get(x['campana'])
+    for x in anuncios:
+        x['nombre'] = de_anuncio.get(x['anuncio'])
+        x['campana_nombre'] = de_campana.get(x['campana_id'])
+
     visitas = sum(x['visitas'] for x in landings)
     visitas_wa = sum(x['visitas'] for x in landings if x['lleva_whatsapp'])
     visitas_wa_medidas = sum(por_landing[x['path']]['visitas_medidas'] for x in landings if x['lleva_whatsapp'])
@@ -219,7 +264,8 @@ def trafico_landings():
         },
         'por_landing': landings,
         'por_fuente': lista(por_fuente, 'fuente'),
-        'por_campana': lista(por_campana, 'campana', tope=12),
+        'por_campana': campanas,
+        'por_anuncio': anuncios,
         'por_dia': dias,
         'whatsapp_medido_desde': primer_clic.isoformat() + 'Z' if primer_clic else None,
     }), 200
@@ -246,6 +292,8 @@ def visitas_landings():
         LandingTracking.created_at >= desde, LandingTracking.created_at < hasta,
     ).order_by(LandingTracking.created_at.desc(), LandingTracking.id.desc()).limit(limite + 1).all()
 
+    de_campana, de_anuncio = nombres_de_meta(
+        {_limpio(v.utm_campaign) for v in filas}, {_limpio(v.utm_content) for v in filas})
     visitas = []
     for v in filas:
         landing = normalizar_path(v.page_path)
@@ -259,8 +307,10 @@ def visitas_landings():
             'fuente': normalizar_fuente(v.utm_source),
             'utm_source': v.utm_source,
             'utm_medium': v.utm_medium,
-            'utm_campaign': (v.utm_campaign or '').strip() or None,
+            'utm_campaign': _limpio(v.utm_campaign),
             'utm_content': v.utm_content,
+            'campana_nombre': de_campana.get(_limpio(v.utm_campaign)),
+            'anuncio_nombre': de_anuncio.get(_limpio(v.utm_content)),
             'referrer': v.referrer,
             'created_at': v.created_at.isoformat() + 'Z' if v.created_at else None,
         })
