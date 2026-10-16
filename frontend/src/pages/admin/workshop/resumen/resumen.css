@@ -1,0 +1,184 @@
+/* ============================================================================
+   Workshop › Resumen (16/10/2026), en el estilo del dashboard comercial. Todo bajo `.dc-shell .wr-…`;
+   las piezas compartidas (`.kpi`, `.panel`, `.pastilla`, `.delta`, `.chip`, `.riel`) vienen de
+   comercial.css.
+   ============================================================================ */
+
+
+/* ---- Las pastillas ------------------------------------------------------- */
+.dc-shell .wr-filtros { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+.dc-shell .wr-vs { font-size: 10px; font-weight: 900; letter-spacing: .14em; color: var(--text-muted); }
+
+/* La lista de «Elegir talleres» dentro del menú */
+.dc-shell .wr-lista { display: grid; gap: var(--s2); }
+.dc-shell .wr-lista-acc { display: flex; align-items: center; gap: var(--s2); padding: 0 4px; }
+.dc-shell .wr-lista-btn {
+    height: 26px; padding: 0 10px; border-radius: var(--radius-pill); border: 1px solid var(--border-subtle);
+    font-size: 11px; font-weight: 700; color: var(--text-muted);
+}
+.dc-shell .wr-lista-btn:hover { color: var(--text-on-surface); border-color: var(--border-control); }
+.dc-shell .wr-lista-cuenta { margin-left: auto; font-size: 11px; color: var(--text-muted-40); }
+.dc-shell .wr-lista-filas {
+    display: grid; gap: 2px; max-height: min(300px, 38vh); overflow-y: auto; overscroll-behavior: contain;
+    padding-right: 2px;
+}
+.dc-shell .wr-lista-fila {
+    display: grid; grid-template-columns: 16px 42px minmax(0, 1fr) auto; align-items: center; gap: var(--s2);
+    padding: 7px 8px; border-radius: 10px; cursor: pointer; font-size: 12.5px; color: var(--text-muted);
+    transition: background-color .15s ease, color .15s ease;
+}
+.dc-shell .wr-lista-fila:hover { background: var(--bg-element); color: var(--text-on-surface); }
+.dc-shell .wr-lista-fila input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.dc-shell .wr-lista-fila > i {
+    width: 16px; height: 16px; border-radius: 5px; border: 1px solid var(--border-control);
+    display: grid; place-items: center; color: transparent;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.dc-shell .wr-lista-fila--on { color: var(--text-on-surface); }
+.dc-shell .wr-lista-fila--on > i { background: var(--brand-secondary); border-color: var(--brand-secondary); color: var(--on-brand); }
+.dc-shell .wr-lista-fila:has(input:focus-visible) { box-shadow: var(--focus-ring); }
+.dc-shell .wr-lista-dia { font-weight: 700; }
+.dc-shell .wr-lista-roas { font-size: 11px; color: var(--text-muted-40); }
+
+/* ---- KPIs: 6 en fila, 3 × 2, 2 × 3 o apilados (nunca uno suelto) ---------- */
+/* Se mide el ancho del Resumen (no el de la ventana): es lo que importa para cuántas entran. */
+.dc-shell .wr-resumen { container-type: inline-size; }
+.dc-shell .wr-kpis { display: grid; gap: var(--s3); grid-template-columns: minmax(0, 1fr); }
+@container (min-width: 420px) { .dc-shell .wr-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container (min-width: 600px) { .dc-shell .wr-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container (min-width: 1180px) { .dc-shell .wr-kpis { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+
+.dc-shell .wr-kpi { gap: var(--s3); }
+.dc-shell .wr-kpi .kpi-cab .t-eyebrow { letter-spacing: .2em; }
+.dc-shell .wr-kpi-n { font-size: clamp(26px, 2.4vw, 32px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dc-shell .wr-kpi-pie { flex-wrap: wrap; row-gap: 6px; min-width: 0; }
+.dc-shell .wr-kpi-pie .delta { flex-shrink: 0; }
+
+/* ---- Salud del embudo + lado ----------------------------------------------- */
+.dc-shell .wr-diag { display: grid; gap: var(--s4); grid-template-columns: minmax(0, 1fr); }
+@container (min-width: 1180px) { .dc-shell .wr-diag { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; } }
+
+.dc-shell .wr-lado { display: grid; gap: var(--s4); grid-template-columns: minmax(0, 1fr); }
+@container (min-width: 620px) and (max-width: 1179px) { .dc-shell .wr-lado { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.dc-shell .wr-salud { container-type: inline-size; }
+.dc-shell .wr-etapas { display: grid; gap: 2px; }
+
+/* Columnas fijas para las cifras: nada se monta sobre nada. */
+.dc-shell .wr-etapa {
+    display: grid; align-items: center; column-gap: var(--s3);
+    grid-template-columns: minmax(140px, 190px) minmax(110px, 1fr) 62px 86px 58px 52px 104px;
+    grid-template-areas: "nombre pista n delta antes meta estado";
+    padding: 9px 0; border-top: 1px solid var(--border-subtle);
+}
+.dc-shell .wr-etapas--sin-vs .wr-etapa {
+    grid-template-columns: minmax(140px, 200px) minmax(110px, 1fr) 62px 52px 104px;
+    grid-template-areas: "nombre pista n meta estado";
+}
+.dc-shell .wr-etapas--sin-vs .wr-etapa-delta,
+.dc-shell .wr-etapas--sin-vs .wr-etapa-antes { display: none; }
+.dc-shell .wr-etapa--cab { border-top: 0; padding: 0 0 6px; }
+.dc-shell .wr-etapa--cab > :nth-child(2) { grid-area: pista; }
+.dc-shell .wr-etapa--cab small {
+    font-size: 10px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted-40);
+}
+.dc-shell .wr-etapa-nombre { grid-area: nombre; min-width: 0; font-size: 13.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dc-shell .wr-etapa-pista { grid-area: pista; display: grid; gap: 4px; min-width: 0; }
+.dc-shell .wr-etapa-n { grid-area: n; text-align: right; font-size: 15px; font-weight: 900; letter-spacing: -.02em; }
+.dc-shell .wr-etapa-delta { grid-area: delta; display: flex; justify-content: flex-end; }
+.dc-shell .wr-etapa-antes { grid-area: antes; text-align: right; font-size: 12.5px; font-weight: 700; color: var(--text-muted); }
+.dc-shell .wr-etapa-meta { grid-area: meta; text-align: right; font-size: 12.5px; font-weight: 700; color: var(--text-muted); }
+.dc-shell .wr-etapa-estado { grid-area: estado; display: flex; justify-content: flex-end; }
+.dc-shell .wr-etapa-estado .chip { height: 24px; padding: 0 9px; font-size: 10px; }
+
+.dc-shell .wr-etapa-riel {
+    position: relative; display: block; height: 10px; border-radius: var(--radius-pill); background: var(--hundido);
+}
+.dc-shell .wr-etapa-riel > i {
+    display: block; height: 100%; width: 0; border-radius: var(--radius-pill);
+    transition: width .9s var(--crecer, cubic-bezier(.22, .7, .2, 1));
+}
+.dc-shell .wr-etapa-riel > em {
+    position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; border-radius: 2px;
+    background: var(--text-on-surface); box-shadow: 0 0 0 2px var(--mat-1);
+}
+.dc-shell .wr-etapa-riel--antes { height: 4px; background: transparent; }
+.dc-shell .wr-etapa-riel--antes > i { background: var(--text-muted-40); }
+
+.dc-shell .wr-leyenda { margin-top: var(--s4); }
+.dc-shell .wr-leyenda .wr-leyenda-antes { height: 4px; background: var(--text-muted-40); }
+.dc-shell .wr-leyenda .wr-leyenda-meta { width: 2px; height: 12px; border-radius: 1px; background: var(--text-on-surface); }
+
+/* Angosto: cada etapa en tres renglones — nombre y estado, la barra, las cifras. */
+@container (max-width: 700px) {
+    .dc-shell .wr-etapa,
+    .dc-shell .wr-etapas--sin-vs .wr-etapa {
+        grid-template-columns: auto auto auto 1fr auto;
+        grid-template-areas:
+            "nombre nombre nombre nombre estado"
+            "pista pista pista pista pista"
+            "n delta antes . meta";
+        row-gap: 8px;
+    }
+    .dc-shell .wr-etapa--cab { display: none; }
+    .dc-shell .wr-etapa-n, .dc-shell .wr-etapa-antes, .dc-shell .wr-etapa-meta { text-align: left; }
+    .dc-shell .wr-etapa-antes:not(:empty)::before { content: 'vs '; color: var(--text-muted-40); }
+    .dc-shell .wr-etapa-meta::before { content: 'meta '; color: var(--text-muted-40); }
+    .dc-shell .wr-etapas--sin-vs .wr-etapa { grid-template-areas:
+            "nombre nombre nombre nombre estado"
+            "pista pista pista pista pista"
+            "n . . . meta"; }
+}
+
+/* Prioridad */
+.dc-shell .wr-prioridad .panel-cab,
+.dc-shell .wr-clarity .panel-cab { margin-bottom: var(--s3); align-items: center; }
+.dc-shell .wr-prioridad-etapa { margin-bottom: var(--s3); }
+.dc-shell .wr-prioridad-cifras { display: flex; align-items: center; gap: var(--s2); font-size: 22px; letter-spacing: -.02em; }
+.dc-shell .wr-prioridad-cifras b { font-weight: 900; }
+.dc-shell .wr-prioridad-cifras svg { width: 16px; height: 16px; color: var(--text-muted-40); }
+.dc-shell .wr-prioridad-btn { margin-top: var(--s4); }
+
+/* Clarity */
+.dc-shell .wr-clarity-cuerpo { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s4); align-items: center; }
+/* El aro va en un pseudo con máscara: el fondo del panel es translúcido y un disco encima no lo tapa. */
+.dc-shell .wr-anillo {
+    position: relative; width: 84px; height: 84px; border-radius: 50%; display: grid; place-content: center; text-align: center;
+}
+.dc-shell .wr-anillo::before {
+    content: ''; position: absolute; inset: 0; border-radius: 50%; z-index: -1;
+    background: conic-gradient(var(--brand-secondary) var(--score), var(--hundido) 0);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 8px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 8px));
+}
+.dc-shell .wr-anillo { isolation: isolate; }
+.dc-shell .wr-anillo b { font-size: 26px; font-weight: 900; line-height: 1; letter-spacing: -.03em; }
+.dc-shell .wr-anillo small { font-size: 10px; font-weight: 700; color: var(--text-muted-40); }
+.dc-shell .wr-clarity-partes { display: grid; gap: var(--s2); min-width: 0; }
+.dc-shell .wr-clarity-parte { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--s2); row-gap: 4px; }
+.dc-shell .wr-clarity-parte .riel { grid-column: 1 / -1; }
+
+.dc-shell .wr-vacio { display: grid; gap: var(--s2); text-align: center; padding-block: var(--s8, 48px); }
+
+/* ---- Modal de metas ----------------------------------------------------- */
+.dc-shell .wr-metas { width: min(560px, 100%); display: grid; gap: var(--s4); }
+.dc-shell .wr-metas-cab { display: flex; align-items: center; gap: var(--s2); }
+.dc-shell .wr-metas-cerrar { margin-left: auto; }
+.dc-shell .wr-metas-grilla { display: grid; gap: var(--s3); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 480px) { .dc-shell .wr-metas-grilla { grid-template-columns: minmax(0, 1fr); } }
+.dc-shell .wr-meta { display: grid; gap: 6px; min-width: 0; }
+.dc-shell .wr-meta > .t-cap { color: var(--text-muted); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dc-shell .wr-meta--banda { padding-top: var(--s3); border-top: 1px solid var(--border-subtle); }
+.dc-shell .wr-meta-campo {
+    display: flex; align-items: center; height: 40px; padding: 0 12px; border-radius: var(--radius-control, 12px);
+    background: var(--bg-input); border: 1px solid var(--border-control);
+}
+.dc-shell .wr-meta-campo:focus-within { border-color: var(--brand-secondary-border); }
+.dc-shell .wr-meta-campo input {
+    flex: 1; min-width: 0; background: none; border: 0; outline: none; font-size: 15px; font-weight: 700;
+    -moz-appearance: textfield;
+}
+.dc-shell .wr-meta-campo input::-webkit-outer-spin-button,
+.dc-shell .wr-meta-campo input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.dc-shell .wr-meta-campo small { font-size: 11px; font-weight: 800; color: var(--text-muted-40); }
+.dc-shell .wr-metas-pie { display: flex; justify-content: flex-end; gap: var(--s2); }
