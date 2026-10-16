@@ -446,6 +446,8 @@ def update_workshop_event(event_id):
 def delete_workshop_event(event_id):
     event = WorkshopEvent.query.get_or_404(event_id)
     try:
+        # Sus acciones quedan sin taller (no se pierden): SQLite no aplica el ON DELETE SET NULL.
+        WorkshopAction.query.filter_by(event_id=event.id).update({'event_id': None})
         db.session.delete(event)
         db.session.flush()
         workshop_meta_service.recalcular()  # el taller siguiente recupera sus días
@@ -529,6 +531,23 @@ def update_workshop_goals():
 # PLAN DE ACCIONES (WorkshopAction)
 # ==========================================================================
 
+class _TallerInvalido(ValueError):
+    pass
+
+
+def _taller_destino(valor):
+    """El taller al que se asigna una acción: None (sin taller) o el id de un taller que existe."""
+    if valor in (None, ''):
+        return None
+    try:
+        event_id = int(valor)
+    except (TypeError, ValueError):
+        raise _TallerInvalido('El taller elegido no es válido')
+    if not db.session.get(WorkshopEvent, event_id):
+        raise _TallerInvalido('El taller elegido no existe')
+    return event_id
+
+
 @bp.route('/actions', methods=['GET'])
 @workshop_required
 def get_workshop_actions():
@@ -547,7 +566,13 @@ def create_workshop_action():
         return jsonify({"error": "El título de la acción es obligatorio"}), 400
 
     try:
+        event_id = _taller_destino(data.get('event_id'))
+    except _TallerInvalido as e:
+        return jsonify({"error": str(e)}), 400
+
+    try:
         action = WorkshopAction(
+            event_id=event_id,
             stage_key=data.get('stage_key') or None,
             title=title,
             note=data.get('note') or None,
@@ -584,6 +609,8 @@ def update_workshop_action(action_id):
             action.title = title
         if 'stage_key' in data:
             action.stage_key = data['stage_key'] or None
+        if 'event_id' in data:
+            action.event_id = _taller_destino(data['event_id'])
         if 'note' in data:
             action.note = data['note'] or None
         for campo in ('value_score', 'speed_score', 'simplicity_score', 'urgency_score'):
@@ -594,6 +621,8 @@ def update_workshop_action(action_id):
         if 'status' in data and data['status'] in ('pending', 'done'):
             action.status = data['status']
             action.completed_at = datetime.utcnow() if data['status'] == 'done' else None
+    except _TallerInvalido as e:
+        return jsonify({"error": str(e)}), 400
     except (TypeError, ValueError):
         return jsonify({"error": "Datos numéricos inválidos"}), 400
 

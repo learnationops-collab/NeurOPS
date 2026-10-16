@@ -365,6 +365,10 @@ class WorkshopAction(db.Model):
     # que el Simulador).
     target_delta_pp = db.Column(db.Float, default=0.0)
     status = db.Column(db.String(20), default='pending')  # pending | done
+    # Taller en el que hay que cumplirla (Planificar: una acción asignada a un próximo taller).
+    # Opcional: las acciones de antes no tienen y se ven aparte. Al borrar el taller, queda sin.
+    event_id = db.Column(db.Integer, db.ForeignKey('workshop_events.id', ondelete='SET NULL'),
+                         nullable=True, index=True)
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime, nullable=True)
@@ -388,6 +392,7 @@ class WorkshopAction(db.Model):
             "score": round(sum(scores) / len(scores), 1),
             "target_delta_pp": self.target_delta_pp,
             "status": self.status,
+            "event_id": self.event_id,
             "created_by": self.creator.username if self.creator else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "completed_at": self.completed_at.isoformat() if self.completed_at else None
