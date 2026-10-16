@@ -16,7 +16,9 @@ de la Graph API. Sin las dos primeras variables no se sincroniza nada y la panta
     al día. Pedirlo de nuevo pisa el valor del día, no lo suma.
 
 **Cuándo.** Una vez por día con el cron (`GET /api/marketing/anuncios/cron/meta`, con `CRON_SECRET`) y
-cuando alguien toca «Sincronizar» en la pantalla.
+cuando alguien toca «Sincronizar» en la pantalla. Además, `sincronizar_estado` (16/10/2026) trae solo lo
+que se cambia en el Administrador de anuncios (nombres, estados, campaña y conjunto) y el gasto de los
+últimos días: la pantalla lo pide con «Actualizar» y sola al volver de Meta.
 
 **La palabra clave de cada anuncio de Meta** (`mapear_automatico`): si nadie la eligió a mano, se busca
 la que el anuncio pide escribir (así se escriben: «Respondé EARN», «comentá CURSO GRATUITO»), ver
@@ -45,6 +47,12 @@ CAMPOS_DEL_ANUNCIO = ('id,name,effective_status,campaign{id,name},adset{id,name}
                       'creative{id,name,body,title,call_to_action_type,'
                       'object_story_spec{link_data{link,call_to_action},video_data{call_to_action}},'
                       'asset_feed_spec{bodies,link_urls{website_url}}}')
+# La ficha liviana (16/10/2026): lo que se cambia a mano en el Administrador de anuncios (nombre, estado,
+# campaña y conjunto), sin el creativo, que es lo que pesa. `effective_status` del anuncio ya dice si su
+# conjunto o su campaña están pausados (ADSET_PAUSED, CAMPAIGN_PAUSED).
+CAMPOS_DE_ESTADO = 'id,name,effective_status,campaign{id,name},adset{id,name}'
+CAMPOS_DE_INSIGHTS = ('ad_id,ad_name,campaign_id,campaign_name,adset_id,adset_name,spend,account_currency,'
+                      'impressions,clicks,inline_link_clicks')
 
 
 FICHAS_POR_PEDIDO = 50  # el máximo de `?ids=` de la Graph API
@@ -162,7 +170,7 @@ def _paginas(url, params):
         datos = _pedir_pagina(siguiente, None)
 
 
-def _fichas(base, ids, token):
+def _fichas(base, ids, token, campos=CAMPOS_DEL_ANUNCIO):
     """La ficha (nombre, estado, campaña, conjunto, creativo) de cada anuncio, de a FICHAS_POR_PEDIDO
     con `?ids=`. Si Meta rechaza un grupo (un anuncio borrado lo tira entero, o pesa demasiado) se parte
     en dos hasta aislar al que falla, que queda afuera. Devuelve {meta_ad_id: ficha}."""
@@ -170,7 +178,7 @@ def _fichas(base, ids, token):
 
     def pedir(grupo):
         try:
-            datos = _pedir(f'{base}/', {'ids': ','.join(grupo), 'fields': CAMPOS_DEL_ANUNCIO,
+            datos = _pedir(f'{base}/', {'ids': ','.join(grupo), 'fields': campos,
                                         'access_token': token})
         except ErrorDeMeta as error:
             if error.codigo == 190:
@@ -243,94 +251,194 @@ def _guardar_anuncio(fila, cuenta, existentes):
     return anuncio
 
 
-def sincronizar(desde=None, hasta=None):
-    """Trae de Meta los anuncios y el gasto por día de [desde, hasta] (por defecto, la última semana).
-    Devuelve un resumen. Hace commit."""
+def _ventana(desde, hasta, dias_por_defecto):
+    hasta = hasta or date.today()
+    desde = desde or hasta - timedelta(days=dias_por_defecto - 1)
+    if desde > hasta:
+        desde, hasta = hasta, desde
+    if (hasta - desde).days + 1 > DIAS_MAXIMOS:
+        desde = hasta - timedelta(days=DIAS_MAXIMOS - 1)
+    return desde, hasta
+
+
+def _exigir_configuracion():
+    """(token, cuentas, url base de la Graph API), o ErrorDeMeta si falta conectar."""
     token, cuentas, version = configuracion()
     if not (token and cuentas):
         if modo_muestra():
             raise ErrorDeMeta('Son datos de muestra: para traer los de verdad hay que cargar META_ADS_TOKEN.')
         raise ErrorDeMeta('Falta conectar Meta Ads: configurá META_ADS_TOKEN y META_AD_ACCOUNT_IDS.')
-    hasta = hasta or date.today()
-    desde = desde or hasta - timedelta(days=DIAS_POR_DEFECTO - 1)
-    if desde > hasta:
-        desde, hasta = hasta, desde
-    if (hasta - desde).days + 1 > DIAS_MAXIMOS:
-        desde = hasta - timedelta(days=DIAS_MAXIMOS - 1)
+    return token, cuentas, f'{GRAPH}/{version}'
 
-    base = f'{GRAPH}/{version}'
-    anuncios, filas_de_gasto, gasto_total = 0, 0, 0.0
-    existentes = {a.meta_ad_id: a for a in MetaAnuncio.query.all()}
-    for cuenta in cuentas:
-        insights = list(_paginas(f'{base}/act_{cuenta}/insights', {
-            'level': 'ad',
-            'time_increment': 1,
-            'time_range': json.dumps({'since': desde.isoformat(), 'until': hasta.isoformat()}),
-            'fields': ('ad_id,ad_name,campaign_id,campaign_name,adset_id,adset_name,spend,account_currency,'
-                       'impressions,clicks,inline_link_clicks'),
-            'limit': 500,
-            'access_token': token,
-        }))
-        # Solo los anuncios que gastaron en el período: la cuenta real tiene unos 2000 y recorrerlos
-        # todos pasaba los 120 s que gunicorn le da a un pedido (el botón y el cron se cortaban).
-        de_insights = {}
-        for fila in insights:
-            if fila.get('ad_id'):
-                de_insights.setdefault(str(fila['ad_id']), fila)
-        fichas = _fichas(base, sorted(de_insights), token)
-        for meta_ad_id, fila in de_insights.items():
-            if meta_ad_id in fichas:
-                _guardar_anuncio(fichas[meta_ad_id], cuenta, existentes)
-            elif not (existentes.get(meta_ad_id) and existentes[meta_ad_id].texto):
-                # Borrado o sin acceso: queda con el nombre, la campaña y el conjunto de los insights.
-                _guardar_anuncio({'id': meta_ad_id, 'name': fila.get('ad_name'),
-                                  'campaign': {'id': fila.get('campaign_id'), 'name': fila.get('campaign_name')},
-                                  'adset': {'id': fila.get('adset_id'), 'name': fila.get('adset_name')}},
-                                 cuenta, existentes)
-            else:
-                existentes[meta_ad_id].cuenta_id = cuenta
-            # Los insights dicen siempre de qué campaña y conjunto es (aunque la ficha no se pueda pedir).
-            anuncio = existentes[meta_ad_id]
-            anuncio.campana_id = str(fila.get('campaign_id') or anuncio.campana_id or '') or None
-            anuncio.conjunto_id = str(fila.get('adset_id') or anuncio.conjunto_id or '') or None
-            anuncios += 1
 
-        # Los días pedidos se reemplazan enteros para los anuncios de la cuenta: un día que Meta ya no
-        # devuelve (gasto en cero) no puede quedar con un valor viejo, ni con uno de muestra.
-        de_la_cuenta = db.session.query(MetaAnuncio.meta_ad_id).filter(MetaAnuncio.cuenta_id == cuenta)
-        MetaGastoDiario.query.filter(MetaGastoDiario.fecha >= desde, MetaGastoDiario.fecha <= hasta,
-                                     MetaGastoDiario.meta_ad_id.in_(de_la_cuenta.scalar_subquery())) \
-            .delete(synchronize_session=False)
-        # Lo que quede en la ventana es de un anuncio que todavía no era de la cuenta: se pisa igual.
-        del_periodo = {(g.meta_ad_id, g.fecha): g for g in MetaGastoDiario.query.filter(
-            MetaGastoDiario.fecha >= desde, MetaGastoDiario.fecha <= hasta)}
-        for fila in insights:
-            meta_ad_id = str(fila.get('ad_id') or '')
-            fecha = fila.get('date_start')
-            if not meta_ad_id or not fecha:
-                continue
-            gasto = float(fila.get('spend') or 0)
-            dia = date.fromisoformat(fecha)
-            registro = del_periodo.get((meta_ad_id, dia))
-            if not registro:
-                registro = del_periodo[(meta_ad_id, dia)] = MetaGastoDiario(meta_ad_id=meta_ad_id, fecha=dia)
-                db.session.add(registro)
-            registro.gasto = gasto
-            registro.moneda = (fila.get('account_currency') or '')[:3] or None
-            registro.impresiones = _entero(fila.get('impressions'))
-            registro.clics = _entero(fila.get('clicks'))
-            registro.clics_enlace = _entero(fila.get('inline_link_clicks'))
-            registro.actualizado_at = datetime.utcnow()
-            filas_de_gasto += 1
-            gasto_total += gasto
+def _insights(base, cuenta, desde, hasta, token):
+    """El gasto de cada anuncio de la cuenta, por día, en [desde, hasta]."""
+    return list(_paginas(f'{base}/act_{cuenta}/insights', {
+        'level': 'ad',
+        'time_increment': 1,
+        'time_range': json.dumps({'since': desde.isoformat(), 'until': hasta.isoformat()}),
+        'fields': CAMPOS_DE_INSIGHTS,
+        'limit': 500,
+        'access_token': token,
+    }))
 
+
+def _por_anuncio(insights):
+    """{meta_ad_id: su primera fila de insights}."""
+    de_insights = {}
+    for fila in insights:
+        if fila.get('ad_id'):
+            de_insights.setdefault(str(fila['ad_id']), fila)
+    return de_insights
+
+
+def _guardar_de_insights(meta_ad_id, fila, fichas, cuenta, existentes):
+    """Guarda un anuncio que gastó: con su ficha si Meta la dio; si no (borrado o sin acceso), con el
+    nombre, la campaña y el conjunto que dicen los insights."""
+    if meta_ad_id in fichas:
+        _guardar_anuncio(fichas[meta_ad_id], cuenta, existentes)
+    elif not (existentes.get(meta_ad_id) and existentes[meta_ad_id].texto):
+        _guardar_anuncio({'id': meta_ad_id, 'name': fila.get('ad_name'),
+                          'campaign': {'id': fila.get('campaign_id'), 'name': fila.get('campaign_name')},
+                          'adset': {'id': fila.get('adset_id'), 'name': fila.get('adset_name')}},
+                         cuenta, existentes)
+    else:
+        existentes[meta_ad_id].cuenta_id = cuenta
+    # Los insights dicen siempre de qué campaña y conjunto es (aunque la ficha no se pueda pedir).
+    anuncio = existentes[meta_ad_id]
+    anuncio.campana_id = str(fila.get('campaign_id') or anuncio.campana_id or '') or None
+    anuncio.conjunto_id = str(fila.get('adset_id') or anuncio.conjunto_id or '') or None
+
+
+def _guardar_gastos(cuenta, insights, desde, hasta):
+    """Reemplaza el gasto de [desde, hasta] de los anuncios de la cuenta por el de los insights.
+    Devuelve (filas guardadas, gasto total)."""
+    filas, total = 0, 0.0
+    # Los días pedidos se reemplazan enteros para los anuncios de la cuenta: un día que Meta ya no
+    # devuelve (gasto en cero) no puede quedar con un valor viejo, ni con uno de muestra.
+    de_la_cuenta = db.session.query(MetaAnuncio.meta_ad_id).filter(MetaAnuncio.cuenta_id == cuenta)
+    MetaGastoDiario.query.filter(MetaGastoDiario.fecha >= desde, MetaGastoDiario.fecha <= hasta,
+                                 MetaGastoDiario.meta_ad_id.in_(de_la_cuenta.scalar_subquery())) \
+        .delete(synchronize_session=False)
+    # Lo que quede en la ventana es de un anuncio que todavía no era de la cuenta: se pisa igual.
+    del_periodo = {(g.meta_ad_id, g.fecha): g for g in MetaGastoDiario.query.filter(
+        MetaGastoDiario.fecha >= desde, MetaGastoDiario.fecha <= hasta)}
+    for fila in insights:
+        meta_ad_id = str(fila.get('ad_id') or '')
+        fecha = fila.get('date_start')
+        if not meta_ad_id or not fecha:
+            continue
+        gasto = float(fila.get('spend') or 0)
+        dia = date.fromisoformat(fecha)
+        registro = del_periodo.get((meta_ad_id, dia))
+        if not registro:
+            registro = del_periodo[(meta_ad_id, dia)] = MetaGastoDiario(meta_ad_id=meta_ad_id, fecha=dia)
+            db.session.add(registro)
+        registro.gasto = gasto
+        registro.moneda = (fila.get('account_currency') or '')[:3] or None
+        registro.impresiones = _entero(fila.get('impressions'))
+        registro.clics = _entero(fila.get('clicks'))
+        registro.clics_enlace = _entero(fila.get('inline_link_clicks'))
+        registro.actualizado_at = datetime.utcnow()
+        filas += 1
+        total += gasto
+    return filas, total
+
+
+def _cerrar_sincronizacion():
     db.session.flush()
-    mapear_automatico()
+    mapear_automatico()  # respeta lo elegido a mano (mapeo / embudo_mapeo = 'manual')
     from app.services import workshop_meta_service
     workshop_meta_service.recalcular()  # la inversión de cada workshop sale de este gasto
     db.session.commit()
+
+
+def sincronizar(desde=None, hasta=None):
+    """Trae de Meta los anuncios y el gasto por día de [desde, hasta] (por defecto, la última semana).
+    Devuelve un resumen. Hace commit."""
+    token, cuentas, base = _exigir_configuracion()
+    desde, hasta = _ventana(desde, hasta, DIAS_POR_DEFECTO)
+
+    anuncios, filas_de_gasto, gasto_total = 0, 0, 0.0
+    existentes = {a.meta_ad_id: a for a in MetaAnuncio.query.all()}
+    for cuenta in cuentas:
+        insights = _insights(base, cuenta, desde, hasta, token)
+        # Solo los anuncios que gastaron en el período: la cuenta real tiene unos 2000 y recorrerlos
+        # todos pasaba los 120 s que gunicorn le da a un pedido (el botón y el cron se cortaban).
+        de_insights = _por_anuncio(insights)
+        fichas = _fichas(base, sorted(de_insights), token)
+        for meta_ad_id, fila in de_insights.items():
+            _guardar_de_insights(meta_ad_id, fila, fichas, cuenta, existentes)
+            anuncios += 1
+        filas, gasto = _guardar_gastos(cuenta, insights, desde, hasta)
+        filas_de_gasto += filas
+        gasto_total += gasto
+
+    _cerrar_sincronizacion()
     return {'desde': desde.isoformat(), 'hasta': hasta.isoformat(), 'anuncios': anuncios,
             'filas_de_gasto': filas_de_gasto, 'gasto': round(gasto_total, 2)}
+
+
+# --- La sincronización liviana: lo que se cambió en Meta (16/10/2026) ----------------------------
+
+# Kerwin (16/10/2026): «que lo que cambia en Meta se refleje en la página». Se edita en el Administrador
+# de anuncios (el token es de solo lectura) y al volver la pantalla pide esto: las fichas SIN el creativo
+# de los anuncios vigentes y el gasto de los últimos días (hoy incluido). Unos segundos, no los ~30 s de
+# un tramo de 30 días con creativos.
+DIAS_DE_ESTADO = 3
+# Vigentes = gastaron en estos días o estaban activos: un pausado hace meses no cambia ningún número.
+DIAS_VIGENTES = 30
+# Mínimo entre dos corridas sin `forzar` (volver a la pestaña varias veces no repite el pedido).
+MINUTOS_ENTRE_ESTADOS = 3
+_LO_QUE_CAMBIA = ('nombre', 'estado', 'campana', 'conjunto')
+
+
+def sincronizar_estado(forzar=False, dias=DIAS_DE_ESTADO):
+    """Nombres, estados (activo, pausado, rechazado…), campaña y conjunto de los anuncios vigentes, y el
+    gasto de los últimos `dias` días. No pisa la palabra clave ni el embudo elegidos a mano. Sin
+    `forzar`, no hace nada si la última sincronización fue hace menos de MINUTOS_ENTRE_ESTADOS.
+    Devuelve un resumen con `cambios`: cuántos anuncios cambiaron de nombre, estado, campaña o
+    conjunto. Hace commit."""
+    token, cuentas, base = _exigir_configuracion()
+    ultima = ultima_sincronizacion()
+    if not forzar and ultima and datetime.utcnow() - ultima < timedelta(minutes=MINUTOS_ENTRE_ESTADOS):
+        return {'omitido': True, 'ultima_sincronizacion': ultima.isoformat()}
+    desde, hasta = _ventana(None, None, max(1, min(int(dias), DIAS_VIGENTES)))
+
+    existentes = {a.meta_ad_id: a for a in MetaAnuncio.query.all()}
+    antes = {k: tuple(getattr(a, c) for c in _LO_QUE_CAMBIA) for k, a in existentes.items()}
+    con_gasto = {k for (k,) in db.session.query(MetaGastoDiario.meta_ad_id).filter(
+        MetaGastoDiario.fecha >= hasta - timedelta(days=DIAS_VIGENTES - 1), MetaGastoDiario.gasto > 0).distinct()}
+    anuncios, gasto_total, tocados = 0, 0.0, set()
+    for cuenta in cuentas:
+        insights = _insights(base, cuenta, desde, hasta, token)
+        de_insights = _por_anuncio(insights)
+        vigentes = {k for k, a in existentes.items()
+                    if a.cuenta_id == cuenta and (k in con_gasto or a.estado == 'ACTIVE')} | set(de_insights)
+        # Uno nuevo (o que nunca trajo su texto) necesita el creativo: de ahí salen su palabra clave y
+        # su embudo. Los demás, la ficha liviana.
+        nuevos = sorted(k for k in vigentes if not (existentes.get(k) and existentes[k].texto))
+        fichas = _fichas(base, nuevos, token) if nuevos else {}
+        conocidos = sorted(vigentes - set(nuevos))
+        if conocidos:
+            fichas.update(_fichas(base, conocidos, token, CAMPOS_DE_ESTADO))
+        for meta_ad_id in sorted(vigentes):
+            if meta_ad_id in de_insights:
+                _guardar_de_insights(meta_ad_id, de_insights[meta_ad_id], fichas, cuenta, existentes)
+            elif meta_ad_id in fichas:
+                _guardar_anuncio(fichas[meta_ad_id], cuenta, existentes)
+            else:
+                continue  # borrado en Meta: queda como estaba
+            tocados.add(meta_ad_id)
+            anuncios += 1
+        _, gasto = _guardar_gastos(cuenta, insights, desde, hasta)
+        gasto_total += gasto
+
+    cambios = sum(1 for k in tocados
+                  if antes.get(k) != tuple(getattr(existentes[k], c) for c in _LO_QUE_CAMBIA))
+    _cerrar_sincronizacion()
+    return {'omitido': False, 'desde': desde.isoformat(), 'hasta': hasta.isoformat(), 'anuncios': anuncios,
+            'cambios': cambios, 'gasto': round(gasto_total, 2)}
 
 
 # --- La palabra clave de cada anuncio de Meta ----------------------------------------------------

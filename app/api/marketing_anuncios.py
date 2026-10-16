@@ -165,6 +165,19 @@ def sincronizar_meta():
     return jsonify(resumen), 200
 
 
+@bp.route('/meta/estado', methods=['POST'])
+def sincronizar_estado_meta():
+    """Lo que se cambió en el Administrador de anuncios (nombres, estados, campaña, conjunto) y el gasto
+    de los últimos días. Body opcional: {"forzar": true} (el botón; sin él —la pantalla al volver de
+    Meta— no corre si la última sincronización fue hace menos de unos minutos)."""
+    datos = request.get_json(silent=True) or {}
+    try:
+        resumen = meta_ads_service.sincronizar_estado(forzar=bool(datos.get('forzar')))
+    except meta_ads_service.ErrorDeMeta as error:
+        return jsonify({'error': str(error)}), 502 if meta_ads_service.configurado() else 409
+    return jsonify({**resumen, **_estado_de_meta()}), 200
+
+
 @bp.route('/cron/meta', methods=['GET'])
 @require_cron_secret
 def cron_meta():

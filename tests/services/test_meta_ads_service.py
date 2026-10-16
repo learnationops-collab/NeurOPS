@@ -4,7 +4,7 @@ Los textos son los de los creativos reales de la cuenta (vistos con el conector 
 «Comenta QUIERO APLICAR y te ayudo…», «Tocá el botón del video o comentá CURSO GRATUITO…»,
 «Respondé APROBACIÓN y te lo envío el DM». La Graph API se simula: ningún test sale a la red.
 """
-from datetime import date
+from datetime import date, datetime, timedelta
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -358,3 +358,64 @@ def test_un_token_vencido_es_un_error_claro(db, meta, monkeypatch):
 
     with pytest.raises(servicio.ErrorDeMeta, match='venció'):
         servicio.sincronizar()
+
+
+# --- La sincronización liviana: lo que se cambió en Meta (16/10/2026) ----------------------------
+
+def test_actualizar_trae_nombres_estados_y_el_gasto_de_hoy_sin_pisar_lo_elegido_a_mano(db, meta):
+    db.session.add_all([Ad(name='QUIERO APLICAR', keyword='QUIERO APLICAR'), Ad(name='Obtener Guia', keyword='Obtener Guia')])
+    db.session.commit()
+    servicio.sincronizar(date(2026, 10, 12), date(2026, 10, 13))
+    servicio.asignar_clave('222', 'OBTENER GUIA')
+    servicio.asignar_embudo('222', 'workshop')
+    # En el Administrador de anuncios: se renombra uno, se rechaza el otro y hoy gastó.
+    meta.anuncios[0] = {**meta.anuncios[0], 'name': 'DMV | H2 | BRD v2'}
+    meta.anuncios[1] = {**meta.anuncios[1], 'effective_status': 'DISAPPROVED'}
+    hoy = date.today().isoformat()
+    meta.gastos[:] = [{'ad_id': '111', 'date_start': hoy, 'spend': '3.5', 'account_currency': 'USD',
+                       'impressions': '100', 'clicks': '4', 'inline_link_clicks': '2'}]
+    meta.pedidos.clear()
+
+    resumen = servicio.sincronizar_estado(forzar=True)
+
+    assert (resumen['omitido'], resumen['cambios'], resumen['gasto']) == (False, 2, 3.5)
+    anuncios = {a.meta_ad_id: a for a in MetaAnuncio.query.all()}
+    assert anuncios['111'].nombre == 'DMV | H2 | BRD v2'
+    assert anuncios['222'].estado == 'DISAPPROVED'
+    # Lo elegido a mano sigue; la palabra clave automática y el texto del creativo, también.
+    assert (anuncios['222'].clave, anuncios['222'].mapeo, anuncios['222'].embudo_mapeo) == (
+        'OBTENER GUIA', 'manual', 'manual')
+    assert (anuncios['111'].clave, anuncios['111'].texto) == ('QUIERO APLICAR', 'Comenta QUIERO APLICAR y te ayudo')
+    assert MetaGastoDiario.query.filter_by(meta_ad_id='111', fecha=date.today()).one().gasto == 3.5
+    # Los días viejos no se tocan: la ventana es la de los últimos días.
+    assert MetaGastoDiario.query.filter_by(meta_ad_id='222', fecha=date(2026, 10, 13)).one().gasto == 7.25
+    # Las fichas van sin el creativo (lo que pesa).
+    fichas = [p for _, p in meta.pedidos if p and p.get('ids')]
+    assert [p['fields'] for p in fichas] == [servicio.CAMPOS_DE_ESTADO]
+
+
+def test_actualizar_pide_el_creativo_de_un_anuncio_nuevo(db, meta):
+    db.session.add(Ad(name='QUIERO APLICAR', keyword='QUIERO APLICAR'))
+    db.session.commit()
+    meta.gastos[:] = [{'ad_id': '111', 'date_start': date.today().isoformat(), 'spend': '1', 'account_currency': 'USD'}]
+
+    servicio.sincronizar_estado(forzar=True)
+
+    anuncio = MetaAnuncio.query.filter_by(meta_ad_id='111').one()
+    assert (anuncio.clave, anuncio.embudo) == ('QUIERO APLICAR', 'setting')
+    assert [p['fields'] for _, p in meta.pedidos if p and p.get('ids')] == [servicio.CAMPOS_DEL_ANUNCIO]
+
+
+def test_actualizar_sola_no_repite_si_se_sincronizo_hace_un_rato(db, meta, monkeypatch):
+    meta.gastos[:] = []
+    db.session.add(MetaAnuncio(meta_ad_id='111', cuenta_id='886943269514111', estado='ACTIVE', texto='x',
+                               actualizado_at=datetime.utcnow()))
+    db.session.commit()
+
+    assert servicio.sincronizar_estado()['omitido'] is True
+    assert meta.pedidos == []
+    # Pasados los minutos, o con el botón, corre.
+    MetaAnuncio.query.one().actualizado_at = datetime.utcnow() - timedelta(minutes=servicio.MINUTOS_ENTRE_ESTADOS + 1)
+    db.session.commit()
+    assert servicio.sincronizar_estado()['omitido'] is False
+

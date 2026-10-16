@@ -182,3 +182,23 @@ def test_elegir_campana_y_conjunto_a_mano(client, make_user, auth_headers, con_d
     assert client.post(f'{URL}/agrupar', json={'clave': 'APLICAR', 'campana': 5}, headers=cabeceras).status_code == 400
     assert client.post(f'{URL}/agrupar', json={'clave': 'APLICAR'},
                        headers=auth_headers(make_user(role='setter'))).status_code == 403
+
+
+def test_actualizar_lo_que_cambio_en_meta(client, make_user, auth_headers, monkeypatch):
+    cabeceras = auth_headers(make_user(role='director_marketing'))
+    # Sin Meta conectado avisa (409), como Sincronizar.
+    respuesta = client.post(f'{URL}/meta/estado', json={}, headers=cabeceras)
+    assert respuesta.status_code == 409 and 'META_ADS_TOKEN' in respuesta.get_json()['error']
+
+    pedidos = []
+    monkeypatch.setattr('app.services.meta_ads_service.sincronizar_estado',
+                        lambda forzar=False: pedidos.append(forzar) or {'omitido': False, 'cambios': 2})
+    respuesta = client.post(f'{URL}/meta/estado', json={'forzar': True}, headers=cabeceras)
+    datos = respuesta.get_json()
+    assert respuesta.status_code == 200 and pedidos == [True]
+    assert (datos['cambios'], datos['conectado']) == (2, False)
+    assert 'ultima_sincronizacion' in datos
+    client.post(f'{URL}/meta/estado', headers=cabeceras)
+    assert pedidos[-1] is False
+    setter = auth_headers(make_user(role='setter', username='s2', email='s2@x.com'))
+    assert client.post(f'{URL}/meta/estado', json={}, headers=setter).status_code == 403
