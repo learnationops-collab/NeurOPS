@@ -1,5 +1,5 @@
 """API del área Inbox (/api/inbox): la dirección arma y publica flujos; el setter solo mira."""
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -136,8 +136,8 @@ def test_las_conversaciones_muestran_el_historial(client, como, db):
     flujo = AutFlujo(nombre='Guía', grafo=f.guia())
     db.session.add(flujo)
     db.session.commit()
-    servicio.publicar(flujo)
     ahora = datetime(2026, 10, 15, 13, 0)
+    servicio.publicar(flujo, momento=ahora - timedelta(minutes=1))
     db.session.add(InstagramWebhookEvento(tipos='messages', payload=f.dm('OBTENER GUIA', 'm1', 1792069200000),
                                           recibido_en=ahora))
     db.session.commit()

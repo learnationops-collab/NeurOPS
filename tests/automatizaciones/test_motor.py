@@ -63,7 +63,7 @@ def flujo(db):
         nuevo = AutFlujo(nombre=nombre, grafo=grafo or f.guia())
         db.session.add(nuevo)
         db.session.commit()
-        assert servicio.publicar(nuevo) == []
+        assert servicio.publicar(nuevo, momento=T0 - timedelta(minutes=1)) == []
         return nuevo
     return _crear
 
@@ -338,7 +338,7 @@ def test_publicar_valida_y_congela_la_version(flujo, lead):
     lead.escribe('estudiante')  # quien ya estaba sigue con la versión con la que entró
     assert lead.textos()[-2] == 'Recursos generales'
 
-    assert servicio.publicar(guia) == []
+    assert servicio.publicar(guia, momento=lead.ahora) == []
     lead.escribe('OBTENER GUIA')
     assert lead.textos()[-1] == '¿Qué perfil tenés?'
     assert guia.version_publicada.numero == 2
@@ -361,6 +361,91 @@ def test_un_flujo_pausado_no_atrapa_a_nadie(flujo, lead):
     lead.escribe('OBTENER GUIA')
 
     assert lead.transporte.enviados == []
+
+
+# --- Activación hacia adelante -------------------------------------------------------------------
+
+def test_un_flujo_no_atrapa_mensajes_anteriores_a_su_activacion(db, lead):
+    guia = AutFlujo(nombre='Guía', grafo=f.guia())
+    db.session.add(guia)
+    db.session.commit()
+    servicio.publicar(guia, momento=T0 + timedelta(minutes=5))
+
+    # Escrito antes de activarlo, procesado después (p. ej. llegó con demora).
+    lead.ahora = T0 + timedelta(minutes=6)
+    lead.llega(f.dm('OBTENER GUIA', 'viejo', ms(T0)))
+    assert lead.transporte.enviados == []
+
+    lead.escribe('OBTENER GUIA')
+    assert lead.textos() == ['¿Cuál es tu perfil?']
+
+
+def test_reactivar_un_flujo_pausado_tampoco_es_retroactivo(flujo, lead):
+    guia = flujo()
+    guia.estado = AutFlujo.PAUSADO
+    _db.session.commit()
+    escrito_en_pausa = ms(lead.ahora)
+    servicio.activar(guia, momento=lead.ahora + timedelta(minutes=1))
+
+    lead.llega(f.dm('OBTENER GUIA', 'en-pausa', escrito_en_pausa), minutos=2)
+    assert lead.transporte.enviados == []
+    lead.escribe('OBTENER GUIA')
+    assert lead.textos() == ['¿Cuál es tu perfil?']
+
+
+def test_republicar_un_flujo_activo_no_le_cambia_el_inicio(flujo, lead):
+    guia = flujo()
+    inicio = guia.activo_desde
+
+    servicio.publicar(guia, momento=T0 + timedelta(hours=1))
+
+    assert guia.activo_desde == inicio
+
+
+# --- Cómo se corre ------------------------------------------------------------------------------
+
+def test_procesa_toda_la_cola_aunque_supere_el_lote(flujo, lead):
+    flujo()
+    for i in range(3):
+        _db.session.add(InstagramWebhookEvento(tipos='m', payload=f.dm('hola', f'm{i}', ms(T0)), recibido_en=T0))
+    _db.session.commit()
+
+    assert servicio.procesar_pendientes(T0, lead.transporte, limite=1) == {'procesados': 3}
+    assert InstagramWebhookEvento.query.filter(InstagramWebhookEvento.procesado_en.is_(None)).count() == 0
+
+
+def test_lo_acumulado_se_marca_antiguo_de_una_vez_y_lo_nuevo_se_contesta(flujo, lead):
+    flujo()
+    for i in range(3):
+        _db.session.add(InstagramWebhookEvento(tipos='m', payload=f.dm('OBTENER GUIA', f'v{i}', ms(T0)), recibido_en=T0))
+    _db.session.commit()
+
+    lead.ahora = T0 + timedelta(hours=3)
+    lead.escribe('OBTENER GUIA')
+
+    resultados = [e.resultado for e in InstagramWebhookEvento.query.order_by(InstagramWebhookEvento.id)]
+    assert resultados == ['antiguo', 'antiguo', 'antiguo', 'flujo_iniciado']
+    assert lead.textos() == ['¿Cuál es tu perfil?']
+
+
+def test_apagado_el_reloj_no_corre_ni_arranca(monkeypatch):
+    monkeypatch.delenv('IG_MOTOR_MODO', raising=False)
+    monkeypatch.setattr(servicio, '_reloj', None)
+
+    assert servicio.correr_una_vuelta() is None
+    servicio.avisar(object())
+    assert servicio._reloj is None
+
+
+def test_una_vuelta_del_reloj_procesa_y_despierta(flujo, lead, monkeypatch):
+    flujo()
+    monkeypatch.setenv('IG_MOTOR_MODO', 'simulado')
+    _db.session.add(InstagramWebhookEvento(tipos='m', payload=f.dm('OBTENER GUIA', 'r1', ms(servicio.ahora())),
+                                           recibido_en=servicio.ahora()))
+    _db.session.commit()
+
+    assert servicio.correr_una_vuelta() == {'procesados': 1, 'despertadas': 0}
+    assert InstagramWebhookEvento.query.one().resultado == 'flujo_iniciado'
 
 
 # --- Transporte real ----------------------------------------------------------------------------
@@ -400,6 +485,15 @@ def test_los_errores_de_meta_dicen_si_es_por_la_ventana(codigo, ventana):
     with pytest.raises(ErrorDeEnvio) as error:
         TransporteMeta(token='tok', cuenta_id=f.CUENTA, sesion=sesion).enviar({'id': f.LEAD}, {'text': 'x'})
     assert error.value.ventana_cerrada is ventana
+
+
+def test_sin_id_de_cuenta_manda_por_me(monkeypatch):
+    monkeypatch.delenv('IG_USER_ID', raising=False)
+    sesion = SesionFalsa(200, {'message_id': 'mid-real'})
+
+    TransporteMeta(token='tok', sesion=sesion).enviar({'id': f.LEAD}, {'text': 'hola'})
+
+    assert sesion.llamadas[0][0] == 'https://graph.instagram.com/v24.0/me/messages'
 
 
 def test_sin_token_no_intenta_mandar():
