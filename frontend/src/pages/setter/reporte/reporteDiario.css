@@ -238,7 +238,9 @@
 /* --- Abajo: Atrás, los avisos del paso y Siguiente ------------------------------------------ */
 .rd .rd-nav{display:flex;align-items:center;gap:var(--s3)}
 .rd .rd-nav--centro{justify-content:center;margin-top:var(--s3);flex-wrap:wrap}
-.rd .rd-avisos{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:0}.rd .rd-hint{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text-muted-40);white-space:nowrap}
+.rd .rd-avisos{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:0}
+/* Un aviso se lee entero: el error que frena el envío dice la suma y no entra en un renglón angosto. */
+.rd .rd-avisos .rd-chip{height:auto;min-height:26px;padding-block:4px;border-radius:13px;white-space:normal}.rd .rd-hint{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text-muted-40);white-space:nowrap}
 .rd .rd-tecla{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:20px;padding:0 6px;border-radius:6px;
   background:var(--bg-element);border:1px solid var(--border-subtle);font-size:11px;font-weight:900;color:var(--text-muted)}
 
