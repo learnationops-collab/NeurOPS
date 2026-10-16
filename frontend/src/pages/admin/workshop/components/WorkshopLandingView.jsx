@@ -65,7 +65,8 @@ const Kpi = ({ label, value, sub, icon: Icon, ayuda }) => (
    así se ve de un vistazo dónde se cae la gente respecto del total. */
 const PasoEmbudo = ({ idx, label, ayuda, valor, base, pctPaso }) => {
     const share = base > 0 ? (valor / base) * 100 : 0;
-    const width = base > 0 ? 14 + 86 * Math.sqrt(Math.max(0, valor) / base) : 14;
+    // Cero es nada: sin barra (16/10/2026).
+    const width = base > 0 && valor > 0 ? 14 + 86 * Math.sqrt(valor / base) : 0;
     return (
         <React.Fragment>
             {idx > 0 && pctPaso !== null && (
@@ -84,7 +85,9 @@ const PasoEmbudo = ({ idx, label, ayuda, valor, base, pctPaso }) => {
                     </strong>
                 </div>
                 <div className="stage-bar" role="img" aria-label={`${label}: ${valor}, ${share.toFixed(1)}% del total`}>
-                    <i style={{ width: `${width}%` }}><b>{valor.toLocaleString()}</b></i>
+                    {valor > 0
+                        ? <i style={{ width: `${width}%` }}><b>{valor.toLocaleString()}</b></i>
+                        : <span className="stage-bar-cero">0</span>}
                 </div>
                 <span className="stage-share">{share.toFixed(1)}%<small>del total</small></span>
             </div>
@@ -92,7 +95,7 @@ const PasoEmbudo = ({ idx, label, ayuda, valor, base, pctPaso }) => {
     );
 };
 
-const WorkshopLandingView = ({ events, onConfigSaved }) => {
+const WorkshopLandingView = ({ events, onConfigSaved, formatDate }) => {
     const [stats, setStats] = useState(null);
     const [sesiones, setSesiones] = useState([]);
     const [agendas, setAgendas] = useState(null);
@@ -152,7 +155,7 @@ const WorkshopLandingView = ({ events, onConfigSaved }) => {
 
     return (
         <>
-            <WorkshopReplayConfigPanel events={events} onSaved={onConfigSaved} />
+            <WorkshopReplayConfigPanel events={events} onSaved={onConfigSaved} formatDate={formatDate} />
 
             {/* Controles */}
             <div className="hero-actions" style={{ marginBottom: 22 }}>
@@ -168,7 +171,7 @@ const WorkshopLandingView = ({ events, onConfigSaved }) => {
             </div>
 
             {/* KPIs */}
-            <section className="kpi-grid" aria-label="Indicadores de la landing">
+            <section className="kpi-grid kpi-grid--cuatro" aria-label="Indicadores de la landing">
                 <Kpi label="Visitas" ayuda="Cuánta gente distinta abrió la página de la grabación, se haya registrado o no." value={visitas} sub="Sesiones únicas" icon={MonitorSmartphone} />
                 <Kpi label="Registrados" ayuda="De esas visitas, cuántas completaron el formulario para poder ver la clase." value={e.completo_gate || 0} sub={`${c.visita_a_registro || 0}% de las visitas`} icon={Users} />
                 <Kpi label="Dieron play" ayuda="Cuántos le dieron play al video. Si hay muchos registrados y pocos plays, el problema está en la página, no en el anuncio." value={e.dio_play || 0} sub={`${c.registro_a_play || 0}% de los registrados`} icon={PlayCircle} />

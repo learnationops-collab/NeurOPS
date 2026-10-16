@@ -22,7 +22,7 @@ const HEALTH_CHIP = {
 const QualityMeter = ({ label, value, num, den, unit, metric, weakest, irA }) => {
     const t = tip(metric);
     const health = rateHealth(value, t.benchmark);
-    const fill = Math.max(2, Math.min(100, value));
+    const fill = value > 0 ? Math.max(2, Math.min(100, value)) : 0; // cero es nada
 
     // Nota: `border-base-hover` (usado en el resto del dashboard) mapea a --color-border-hover,
     // que no está definido en el tema, así que ese hover no hace nada. Acá se usa el color de marca.

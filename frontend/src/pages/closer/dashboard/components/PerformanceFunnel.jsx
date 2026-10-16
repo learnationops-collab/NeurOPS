@@ -55,7 +55,8 @@ const PerformanceFunnel = ({ funnel, perdidas, coverage, cashMix, irA }) => {
 
     let worst = { idx: 1, rate: 100 };
     const rows = values.map((v, i) => {
-        const width = Math.max(6, Math.round((v / max) * 100));
+        // Cero es nada: sin barra (16/10/2026); el número queda, apagado.
+        const width = v > 0 ? Math.max(6, Math.round((v / max) * 100)) : 0;
         // Sin agendas previas para dividir no hay conversión que mostrar -- antes se mostraba
         // "0%", que se lee como "0% de conversión" en vez de "no hay datos" (pasaba siempre
         // que Slots venía en 0 por falta de reporte, antes de que se empezara a estimar).
@@ -111,10 +112,10 @@ const PerformanceFunnel = ({ funnel, perdidas, coverage, cashMix, irA }) => {
                                     subrayar={false} vacio={!r.v}
                                     detalle={`${r.v} · ${r.label}`}
                                     envoltura="div"
-                                    className="h-full flex items-center pl-3 text-[12px] font-black text-white transition-all"
+                                    className={`h-full flex items-center pl-3 text-[12px] font-black transition-all ${r.v ? 'text-white' : 'text-muted'}`}
                                     style={{
-                                        width: `${r.width}%`,
-                                        background: FUNNEL_COLORS[i],
+                                        width: r.v ? `${r.width}%` : 'auto',
+                                        background: r.v ? FUNNEL_COLORS[i] : 'transparent',
                                         // Rayado sutil en vez de sólido: la barra de Slots avisa a simple
                                         // vista que el número no es 100% real cuando incluye días sin
                                         // reportar (ver funnel_slots en metricSources.js).

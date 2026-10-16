@@ -276,7 +276,7 @@ const EmbudoFila = ({ etapa, cantidad, deltaPct, max }) => (
         <div className="h-[26px] overflow-hidden rounded-[9px] bg-white/[.06]">
             <div
                 className="h-full rounded-[9px] bg-gradient-to-r from-blue-600 to-pink-500 transition-all duration-700"
-                style={{ width: `${Math.max((cantidad / max) * 100, 3)}%` }}
+                style={{ width: cantidad > 0 ? `${Math.max((cantidad / max) * 100, 3)}%` : 0 }}
             />
         </div>
     </div>

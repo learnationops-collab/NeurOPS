@@ -1081,6 +1081,13 @@
     color: var(--text-muted);
 }
 
+/* Un paso en cero no tiene banda: solo el número, apagado (16/10/2026). */
+.dc-shell .dc-funnel-bar.dc-funnel-bar--cero {
+    width: auto;
+    background: none;
+    color: var(--text-muted);
+}
+
 .dc-shell .dc-funnel-bar {
     display: flex;
     align-items: center;

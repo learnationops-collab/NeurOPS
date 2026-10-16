@@ -98,6 +98,8 @@
 
 /* KPI grid */
 .ws-shell .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; overflow: hidden; margin-bottom: 22px; padding: 1px; border-radius: var(--radius); background: var(--border); box-shadow: 0 18px 50px rgba(0, 0, 0, .25); }
+/* Cuatro tarjetas en una fila, no tres y una sola abajo (Landing grabación, 16/10/2026). */
+.ws-shell .kpi-grid--cuatro { grid-template-columns: repeat(4, 1fr); }
 .ws-shell .kpi-card { min-width: 0; padding: 24px; background: color-mix(in srgb, var(--ln-page-base, #0a0e3d) 90%, transparent); transition: background-color 180ms ease; }
 .ws-shell .kpi-card:hover { background: var(--ln-page-base, #101550); }
 .ws-shell .kpi-head, .ws-shell .kpi-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -253,6 +255,8 @@
 .ws-shell .stage-bar i { position: absolute; inset: 0 auto 0 0; min-width: 44px; display: flex; align-items: center; justify-content: flex-end; padding: 0 11px; border-radius: inherit; background: linear-gradient(90deg, var(--ln-brand-2, #1323c6), #384af4); transition: width 580ms cubic-bezier(.4, 0, .2, 1); font-style: normal; }
 .ws-shell .funnel-stage.leak .stage-bar i { background: linear-gradient(90deg, var(--ln-brand, #ff3fa4), var(--ln-brand-accent, #ff6ad5)); color: var(--ink); }
 .ws-shell .stage-bar b { font-size: 12px; font-style: normal; font-variant-numeric: tabular-nums; }
+/* Un paso en cero no tiene barra (cero es nada): solo el número, apagado, al principio de la pista. */
+.ws-shell .stage-bar-cero { position: absolute; inset: 0 auto 0 14px; display: flex; align-items: center; color: var(--text-muted); font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .ws-shell .stage-share { text-align: right; font-size: 12px; font-weight: 900; font-variant-numeric: tabular-nums; }
 .ws-shell .stage-share small { display: block; margin-top: 4px; font-size: 9px; font-weight: 600; }
 .ws-shell .rate-pill { justify-self: start; display: inline-grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 8px; min-height: 40px; margin: 2px 0 2px 44px; padding: 5px 11px; border: 1px solid; border-radius: 999px; background: var(--ln-success-bg, #071a24); cursor: pointer; text-align: left; transition: transform 180ms ease, filter 180ms ease; }
@@ -495,7 +499,7 @@
 .ws-shell .trafico-chart-plot { height: 180px; display: flex; align-items: flex-end; gap: 2px; padding-bottom: 1px; border-bottom: 1px solid color-mix(in srgb, var(--ln-text-out, #ffffff) 14%, transparent); background: repeating-linear-gradient(to top, color-mix(in srgb, var(--ln-text-out, #ffffff) 5%, transparent) 0 1px, transparent 1px 25%); }
 .ws-shell .trafico-chart-col { flex: 1 1 0; min-width: 0; height: 100%; display: flex; align-items: flex-end; padding: 0; border: 0; background: transparent; cursor: default; }
 .ws-shell .trafico-chart-col:focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; }
-.ws-shell .trafico-chart-col i { display: block; width: 100%; min-height: 2px; border-radius: 4px 4px 0 0; background: var(--pink); opacity: .78; transform-origin: bottom; animation: ws-barra-crece 520ms cubic-bezier(.2, .8, .2, 1) both; transition: opacity 120ms ease; }
+.ws-shell .trafico-chart-col i { display: block; width: 100%; border-radius: 4px 4px 0 0; background: var(--pink); opacity: .78; transform-origin: bottom; animation: ws-barra-crece 520ms cubic-bezier(.2, .8, .2, 1) both; transition: opacity 120ms ease; }
 .ws-shell .trafico-chart-col.activo i { opacity: 1; }
 .ws-shell .trafico-chart-plot:hover .trafico-chart-col:not(.activo) i { opacity: .45; }
 @keyframes ws-barra-crece { from { transform: scaleY(0); } to { transform: scaleY(1); } }
@@ -531,6 +535,7 @@
 
 @media (max-width: 1100px) {
   .ws-shell .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .ws-shell .kpi-grid--cuatro { grid-template-columns: repeat(2, 1fr); }
   .ws-shell .content-grid { grid-template-columns: 1fr; }
   .ws-shell .insight-stack { grid-template-columns: 1fr 1fr; }
 }
@@ -685,6 +690,30 @@
   .ws-shell .ws-anuncios-col-nombre { width: 180px; }
   .ws-shell .ws-anuncios-conjunto th:first-child { padding-left: 24px; }
   .ws-shell .ws-anuncios-anuncio th:first-child { padding-left: 34px; }
+}
+
+/* Grabación del taller y su publicación en la landing, separadas (16/10/2026). */
+.ws-shell .event-grabacion { display: inline-flex; align-items: center; gap: 5px; margin-left: 10px; color: var(--pink-light); font-size: 10px; font-weight: 800; text-transform: none; transition: color 160ms ease; }
+.ws-shell .event-grabacion:hover { color: var(--ln-text-out, #fff); }
+.ws-shell .section-heading .event-grabacion { margin: 8px 0 0; }
+.ws-shell .ws-grabacion { padding: 22px; margin-bottom: 22px; }
+.ws-shell .ws-grabacion-taller { display: grid; gap: 6px; min-width: min(340px, 100%); }
+.ws-shell .ws-grabacion-taller > span { color: var(--text-muted); font-size: 9px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.ws-shell .ws-grabacion-taller select { min-height: 42px; padding: 0 12px; border: 1px solid var(--border); border-radius: 13px; background: var(--input); font-size: 12px; font-weight: 700; cursor: pointer; }
+.ws-shell .ws-grabacion-taller option { background: var(--ln-page-base, #0a0e3d); }
+.ws-shell .ws-grabacion-link { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; }
+.ws-shell .ws-grabacion-link .form-field > small { display: none; }
+.ws-shell .ws-grabacion-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ws-shell .ws-grabacion-acciones .secondary-action:disabled, .ws-shell .ws-grabacion-acciones .primary-action:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.ws-shell .ws-grabacion-nota { margin: 8px 0 0; color: var(--text-muted); font-size: 11px; }
+.ws-shell .ws-publicacion { margin-top: 22px; padding: 20px; border: 1px solid var(--border); border-radius: 20px; background: var(--ln-inset-bg, rgba(0, 0, 0, .18)); }
+.ws-shell .ws-publicacion-cabeza { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.ws-shell .ws-publicacion-cabeza h3 { display: inline-flex; align-items: center; gap: 8px; margin: 0; font-size: 14px; font-weight: 900; }
+.ws-shell .ws-publicacion-cabeza p { max-width: 640px; margin: 6px 0 0; color: var(--text-muted); font-size: 11px; line-height: 1.5; }
+.ws-shell .ws-despublicar:hover { color: var(--error); border-color: color-mix(in srgb, var(--ln-danger, #e85c4a) 45%, transparent); }
+@media (max-width: 720px) {
+  .ws-shell .ws-grabacion-link { grid-template-columns: 1fr; }
+  .ws-shell .ws-publicacion-cabeza { flex-direction: column; }
 }
 
 /* Hora y links del taller (15/10/2026): lo que leen las landings de institute, antes workshops.csv. */

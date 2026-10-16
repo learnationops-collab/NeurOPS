@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { ArrowRight, Loader2, Zap } from 'lucide-react';
+import { ArrowRight, Loader2, PlayCircle, Zap } from 'lucide-react';
+import { urlLoom } from '../../../../utils/loom';
 import InfoTooltip from '../../../../components/ui/InfoTooltip';
 import WorkshopSourceSplit from './WorkshopSourceSplit';
 
@@ -78,6 +79,11 @@ const WorkshopFunnelView = ({
                         <div>
                             <p className="eyebrow">{formatDate(selectedEvent?.date)}</p>
                             <h2>{selectedEvent?.name}</h2>
+                            {selectedEvent?.replay_loom_id && (
+                                <a className="event-grabacion" href={urlLoom(selectedEvent.replay_loom_id)} target="_blank" rel="noopener noreferrer">
+                                    <PlayCircle size={12} aria-hidden="true" /> Ver la grabación de este taller
+                                </a>
+                            )}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
@@ -121,7 +127,8 @@ const WorkshopFunnelView = ({
                             const prev = activeFunnelData[idx - 1];
                             const pctFromPrev = idx > 0 && prev?.value > 0 ? (step.value / prev.value) * 100 : null;
                             const share = leadsBase ? (step.value / leadsBase) * 100 : 0;
-                            const width = leadsBase ? 14 + 86 * Math.sqrt(Math.max(0, step.value) / leadsBase) : 14;
+                            // Cero es nada: sin barra (16/10/2026). El piso de 14% es solo para lo que tiene algo.
+                            const width = leadsBase && step.value > 0 ? 14 + 86 * Math.sqrt(step.value / leadsBase) : 0;
                             return (
                                 <React.Fragment key={step.label}>
                                     {idx > 0 && (
@@ -141,7 +148,9 @@ const WorkshopFunnelView = ({
                                             <small>{step.detail}</small>
                                         </div>
                                         <div className="stage-bar" role="img" aria-label={`${step.label}: ${step.value}, ${share.toFixed(1)}% del total`}>
-                                            <i style={{ width: `${width}%` }}><b>{step.value.toLocaleString()}</b></i>
+                                            {step.value > 0
+                                                ? <i style={{ width: `${width}%` }}><b>{step.value.toLocaleString()}</b></i>
+                                                : <span className="stage-bar-cero">0</span>}
                                         </div>
                                         <span className="stage-share">{share.toFixed(1)}%<small>del total</small></span>
                                     </div>

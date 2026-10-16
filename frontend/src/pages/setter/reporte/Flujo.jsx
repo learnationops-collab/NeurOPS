@@ -35,7 +35,7 @@ const Flujo = ({ etapas, color, valores, max, convs = [], bandas = true, fb = 60
         if (!svg) return;
         const altos = [];
         actual.current.forEach(([ha, hb], i) => {
-            const t = Math.max(2, ha + hb);
+            const t = ha + hb > 0 ? Math.max(2, ha + hb) : 0; // cero es nada
             const y0 = FCY - t / 2;
             const g = svg.querySelector(`[data-e="${i}"]`);
             const ra = g.querySelector('[data-r="a"]');

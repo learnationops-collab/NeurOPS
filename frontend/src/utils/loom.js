@@ -10,3 +10,8 @@ export function extractLoomId(valor) {
     const match = limpio.match(/loom\.com\/(?:share|embed)\/([a-zA-Z0-9]+)/i);
     return match ? match[1] : limpio;
 }
+
+// El link para abrir la grabación a partir del ID guardado.
+export function urlLoom(id) {
+    return id ? `https://www.loom.com/share/${encodeURIComponent(id)}` : '';
+}

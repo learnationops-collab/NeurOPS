@@ -1,5 +1,6 @@
 import React from 'react';
-import { Edit2, Trash2, ArrowRight, Check } from 'lucide-react';
+import { Edit2, Trash2, ArrowRight, Check, PlayCircle } from 'lucide-react';
+import { urlLoom } from '../../../../utils/loom';
 
 const roasTone = (roas) => (roas >= 3 ? 'success' : roas >= 1.5 ? 'success' : roas >= 1 ? 'warning' : 'error');
 const roasLabel = (roas) => (roas >= 3 ? 'Sobresaliente' : roas >= 1.5 ? 'Rentable' : roas >= 1 ? 'En equilibrio' : 'A pérdida');
@@ -32,7 +33,15 @@ const WorkshopCardsView = ({ events, onSelectFunnel, onEdit, onDelete, formatDat
                             ) : <span />}
                         </div>
 
-                        <p className="event-date">{formatDate(e.date)}</p>
+                        <p className="event-date">
+                            {formatDate(e.date)}
+                            {/* La grabación guardada del taller, para ver qué se hizo (16/10/2026). */}
+                            {e.replay_loom_id && (
+                                <a className="event-grabacion" href={urlLoom(e.replay_loom_id)} target="_blank" rel="noopener noreferrer">
+                                    <PlayCircle size={12} aria-hidden="true" /> Ver grabación
+                                </a>
+                            )}
+                        </p>
                         <h2>{e.name}</h2>
 
                         <div className="event-economy">

@@ -113,17 +113,23 @@ def stats_workshop_lead():
 
 @bp.route('/public/workshop-lead/replay-config', methods=['GET'])
 def replay_config():
-    """Config del replay activo para institute-site/replay/.
+    """Config del replay publicado para institute-site/replay/.
 
-    "El replay activo" es siempre el WorkshopEvent mas reciente (por fecha) que
-    tenga un Loom cargado: el director de marketing configura Loom + fechas +
-    timings en el panel de Workshop de NeurOPS cada vez que sube una grabacion
-    nueva, sin tocar codigo del lado de la landing. Devuelve {} si todavia no
-    hay ninguno configurado, para que la landing caiga a sus defaults.
+    Desde el 16/10/2026 guardar la grabacion de un taller NO la publica: el link
+    queda en el taller como registro de lo que se hizo. Se publica solo con
+    «Publicar» en el panel de Workshop, que le pone las dos fechas (desde y
+    vence). Antes bastaba el Loom: un taller con link y sin fechas salia en la
+    landing con su ciclo semanal generico (lunes a jueves).
+
+    Se sirve el ultimo publicado (por fecha de publicacion), aunque ya haya
+    vencido: asi la landing muestra "vencido" en vez de caer a su video por
+    defecto. Devuelve {} si nunca se publico ninguno.
     """
     evento = WorkshopEvent.query.filter(
-        WorkshopEvent.replay_loom_id.isnot(None)
-    ).order_by(WorkshopEvent.date.desc()).first()
+        WorkshopEvent.replay_loom_id.isnot(None),
+        WorkshopEvent.replay_activo_desde.isnot(None),
+        WorkshopEvent.replay_vence_hasta.isnot(None),
+    ).order_by(WorkshopEvent.replay_activo_desde.desc()).first()
 
     if not evento:
         return jsonify({}), 200
