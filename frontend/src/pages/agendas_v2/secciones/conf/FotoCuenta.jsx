@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import api from '../../../../services/api';
 import { Icono } from '../../ui/base';
-import { Button, IconButton } from '../../../../components/standard';
+import { Button, FieldError, IconButton } from '../../../../components/standard';
 
 const LADO = 256, MAX = 140000;
 const iniciales = (nombre) => (nombre || '?').split(/[\s._-]+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('');
@@ -61,7 +61,7 @@ export default function FotoCuenta({ nombre }) {
                 </Button>
                 {foto && <IconButton label="Quitar foto" icon={<Icono n="basura" s={15} />} size="sm" danger title="Quitar foto" disabled={ocupado} onClick={() => guardar('')} />}
             </div>
-            {error && <p className="campo-err" role="alert"><Icono n="alerta" s={14} />{error}</p>}
+            {error && <FieldError>{error}</FieldError>}
         </div>
     );
 }

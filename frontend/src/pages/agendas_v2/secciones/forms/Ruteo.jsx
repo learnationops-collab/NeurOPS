@@ -13,7 +13,7 @@ import Lienzo from '../../ui/Lienzo';
 import { useOrdenable } from '../../ui/useOrdenable';
 import { colorNivel, mutarForm, opcionesPrioridad, setFormUi, useEnfocar } from './comun';
 import RuteoFlujo from './RuteoFlujo';
-import { IconButton } from '../../../../components/standard';
+import { FieldError, IconButton, Input, Segmented } from '../../../../components/standard';
 
 const AYUDA_RUTEO = 'Se revisan de arriba a abajo: la primera regla que se cumple elige la estrategia. En cada condición alcanza cualquiera de las respuestas marcadas.';
 
@@ -63,7 +63,7 @@ function DestinoRegla({ d, r, onGrupo, onUrl }) {
     return (
         <div className="destino destino--url" style={{ '--c': 'var(--info)' }}>
             <span className="destino-flecha" aria-hidden="true"><Icono n="link" s={15} /></span>
-            <input className={'input' + (mal ? ' mal' : '')} type="url" value={borrador} aria-label="Página a la que va el lead" placeholder="https://…"
+            <Input invalid={mal} type="url" value={borrador} aria-label="Página a la que va el lead" placeholder="https://…"
                 onChange={e => { setBorrador(e.target.value); if (urlOk(e.target.value)) onUrl(urlOk(e.target.value)); }} />
             <IconButton label="Mandar a una estrategia" icon={<Icono n="x" />} size="xs" title="Mandar a una estrategia"
                 onClick={() => { setEnUrl(false); setBorrador('https://'); onUrl(''); }} />
@@ -137,9 +137,8 @@ function Regla({ r, i, f, d, qs, msel, rota, ord, enfocar }) {
                     <Icono n="plus" />Condición
                 </button>
                 {rota && (
-                    <p className="campo-err" role="note">
-                        <Icono n="alerta" s={14} /><span>Esta regla usa una pregunta o respuesta que ya no existe: nunca se va a cumplir.</span>
-                    </p>
+                    <FieldError role="note"><span>Esta regla usa una pregunta o respuesta que ya no existe: nunca se va a cumplir.</span>
+                    </FieldError>
                 )}
             </div>
             <DestinoRegla d={d} r={r} onGrupo={v => cambiar(x => { x.grupo = v; x.url = ''; })} onUrl={u => cambiar(x => { x.url = u; if (u) x.grupo = ''; })} />
@@ -174,10 +173,9 @@ export default function Ruteo({ f, d, modo, msel }) {
             <div className="ruteo-cab">
                 <h2 className="t-h3">Segmentación</h2>
                 <span className="ayuda" tabIndex={0} role="note" aria-label={AYUDA_RUTEO} data-tip={AYUDA_RUTEO}>?</span>
-                <div className="seg seg--sm" role="group" aria-label="Vista del ruteo" style={{ marginLeft: 'auto' }}>
-                    <button type="button" data-nav="" aria-pressed={modo === 'reglas'} onClick={() => setFormUi({ ruteoModo: 'reglas', msel: null })}><Icono n="lista" />Reglas</button>
-                    <button type="button" data-nav="" aria-pressed={modo === 'flujo'} onClick={() => setFormUi({ ruteoModo: 'flujo', msel: null })}><Icono n="flujo" />Flujo</button>
-                </div>
+                <Segmented size="sm" label="Vista del ruteo" style={{ marginLeft: 'auto' }} itemProps={{ 'data-nav': '' }} value={modo}
+                    onChange={v => setFormUi({ ruteoModo: v, msel: null })}
+                    options={[{ value: 'reglas', label: 'Reglas', icon: <Icono n="lista" /> }, { value: 'flujo', label: 'Flujo', icon: <Icono n="flujo" /> }]} />
             </div>
             <Revision avisos={avisos} />
             {modo === 'flujo' ? <Lienzo etiqueta="Flujo de la segmentación"><RuteoFlujo f={f} d={d} rotas={rotas} avisos={conAviso} /></Lienzo>

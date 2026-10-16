@@ -12,7 +12,7 @@ import { useOrdenable } from '../../ui/useOrdenable';
 import { avisoPrioridad, textoEstrategia } from './cobertura';
 import { CampoNombre, Compo, Nivel, colorNivel } from './comun';
 import ElegirCloser, { useUsuariosReales } from './ElegirCloser';
-import { Card, EmptyState, IconButton } from '../../../../components/standard';
+import { Card, EmptyState, IconButton, Input, Segmented } from '../../../../components/standard';
 
 const SUGERIDAS = ['Ultra cualificado', 'Medio cualificado', 'General'];
 
@@ -68,7 +68,7 @@ function Miembro({ p, j, g, numerar, ordenable, pct }) {
             {pct && (
                 <label className="pm-pct">
                     <span className="sr">{'Porcentaje de ' + p.nombre}</span>
-                    <input className="input num" type="number" min={0} max={100} step={5} value={pctDe(g, p.id)}
+                    <Input className="num" type="number" min={0} max={100} step={5} value={pctDe(g, p.id)}
                         onChange={ev => cambiarPct(g, p.id, ev.target.value)} />%
                 </label>
             )}
@@ -106,14 +106,9 @@ function Prioridad({ g, i, ordenable, usuarios }) {
                 <span className="pr-n num" title={'Estrategia ' + (i + 1)}>{i + 1}</span>
                 <label className="sr" htmlFor={'gn-' + g.id}>Nombre de la estrategia</label>
                 <CampoNombre className="pr-nom" id={'gn-' + g.id} maxLength={60} valor={g.nombre} onGuardar={v => almacen.editar('grupos', g.id, { nombre: v })} />
-                <div className="seg seg--sm pr-est" role="radiogroup" aria-label="Cómo reparte">
-                    {Object.keys(ESTRATEGIAS).map(k => (
-                        <button key={k} type="button" role="radio" aria-checked={g.estrategia === k} aria-pressed={g.estrategia === k} style={{ '--ec': COLOR_EST[k] }}
-                            onClick={() => almacen.editar('grupos', g.id, { estrategia: k }, true)}>
-                            <Icono n={ICO_EST[k]} s={14} />{ESTRATEGIAS[k]}
-                        </button>
-                    ))}
-                </div>
+                <Segmented radio size="sm" className="pr-est" label="Cómo reparte" value={g.estrategia}
+                    onChange={k => almacen.editar('grupos', g.id, { estrategia: k }, true)}
+                    options={Object.keys(ESTRATEGIAS).map(k => ({ value: k, label: ESTRATEGIAS[k], icon: <Icono n={ICO_EST[k]} s={14} />, props: { style: { '--ec': COLOR_EST[k] } } }))} />
                 <IconButton label={'Eliminar estrategia ' + g.nombre} icon={<Icono n="basura" s={15} />} size="sm" danger onClick={() => borrarGrupo(g)} />
             </div>
             <div className={'pr-flujo lista--h' + (enOrden ? ' pr-flujo--orden' : '')} ref={omCont}>

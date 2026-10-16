@@ -7,6 +7,7 @@ import { mayus } from '../../core/util';
 import { HUMO_MARCA, Humo, Icono } from '../../ui/base';
 import { ICON } from '../../ui/iconos';
 import { ui } from '../../ui/estadoUi';
+import { Button, FieldError, InputGroup } from '../../../../components/standard';
 
 // Cambia solo una parte del estado de Team en la interfaz.
 export function setTeam(parcial) { ui.set(e => ({ team: { ...e.team, ...parcial } })); }
@@ -82,13 +83,13 @@ export function Compo({ vacio, tit, soloTit, ph, onCrear, sug, nav, bloqueado, i
                 <div style={{ display: 'grid', gap: 4 }}><h2 className="t-h3">{vacio ? soloTit : tit}</h2></div>
             </div>
             <div className="compo-accion">
-                <form className={'entrada' + (err ? ' mal' : '')} noValidate onSubmit={enviar}>
+                <InputGroup as="form" invalid={err} noValidate onSubmit={enviar}>
                     <label className="sr" htmlFor={id}>{tit}</label>
                     <input id={id} type="text" maxLength={80} autoComplete="off" placeholder={ph} value={val} aria-invalid={!!err || undefined}
                         aria-describedby={err ? id + '-err' : undefined} onChange={e => { setVal(e.target.value); if (err) setErr(''); }} {...extra} />
-                    <button type="submit" {...extra} className={'btn btn--cta btn--sm' + (bloqueado ? ' bloq' : '')}><Icono n="plus" />Crear</button>
-                </form>
-                {err && <p className="campo-err" id={id + '-err'} role="alert"><Icono n="alerta" s={14} /><span>{err}</span></p>}
+                    <Button variant="primary" type="submit" {...extra} className={bloqueado ? 'bloq' : undefined} icon={<Icono n="plus" />}>Crear</Button>
+                </InputGroup>
+                {err && <FieldError id={id + '-err'}><span>{err}</span></FieldError>}
                 {sug}
             </div>
         </section>

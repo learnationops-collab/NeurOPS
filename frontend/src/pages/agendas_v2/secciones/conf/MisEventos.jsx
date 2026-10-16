@@ -8,7 +8,7 @@ import api from '../../../../services/api';
 import { uid } from '../../core/util';
 import { Icono, Switch, Sx } from '../../ui/base';
 import { CampoMinutos } from '../team/Sesiones';
-import { Button, IconButton } from '../../../../components/standard';
+import { Button, FieldError, IconButton, Input, InputGroup } from '../../../../components/standard';
 
 const urlDe = (link) => window.location.origin + '/agendas-v2' + link;
 const SIN_FORM = '';
@@ -24,7 +24,7 @@ function Evento({ e, formularios, onCambio, onBorrar }) {
         <article className="panel me-ev" data-id={e.id}>
             <div className="me-fila">
                 <label className="sr" htmlFor={'me-n-' + e.id}>Nombre del evento</label>
-                <input id={'me-n-' + e.id} className="input me-nom" maxLength={80} value={nombre} onChange={x => setNombre(x.target.value)}
+                <Input id={'me-n-' + e.id} className="me-nom" maxLength={80} value={nombre} onChange={x => setNombre(x.target.value)}
                     onBlur={() => { const v = nombre.trim(); if (v && v !== e.nombre) onCambio({ nombre: v }); else setNombre(e.nombre); }} />
                 <label className="me-activo">
                     <Switch on={e.activo} label={e.nombre + ' recibe agendas'} onChange={v => onCambio({ activo: v })} />
@@ -103,13 +103,12 @@ export default function MisEventos() {
                             ))}
                         </div>
                     ) : <p className="t-sm mut">Todavía no creaste eventos propios.</p>}
-                    <form className="entrada" noValidate onSubmit={crear}>
-                        <span className="prefijo"><Icono n="plus" /></span>
+                    <InputGroup as="form" prefix={<Icono n="plus" />} noValidate onSubmit={crear}>
                         <label className="sr" htmlFor="me-nuevo">Nuevo evento</label>
                         <input id="me-nuevo" type="text" maxLength={80} autoComplete="off" placeholder="Nuevo evento, ej. Seguimiento" value={nuevo} onChange={e => setNuevo(e.target.value)} />
                         <Button variant="primary" type="submit" disabled={ocupado || !nuevo.trim()}>Crear</Button>
-                    </form>
-                    {error && <p className="campo-err" role="alert"><Icono n="alerta" s={14} />{error}</p>}
+                    </InputGroup>
+                    {error && <FieldError>{error}</FieldError>}
                 </>
             )}
         </section>

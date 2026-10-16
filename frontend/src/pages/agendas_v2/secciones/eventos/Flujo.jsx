@@ -11,7 +11,7 @@ import { ui } from '../../ui/estadoUi';
 import { reachEvento, useLeads } from '../stats/leads';
 import { armarFlujo, caminoArista } from './armarFlujo';
 import { textoEstrategia } from './comun';
-import { Button, Chip, IconButton } from '../../../../components/standard';
+import { Button, Chip, IconButton, Switch } from '../../../../components/standard';
 
 const LEYENDA = [['var(--info)', 'Preguntas'], ['var(--brand-secondary)', 'Función'], ['var(--warning)', 'Estrategia'], ['var(--success)', 'Agenda'], ['var(--error)', 'No califica']];
 
@@ -149,7 +149,7 @@ export default function Flujo({ e, ev }) {
                         : <span className="t-sm mut">Últimos 30 días</span>)}
                     <span className="sw">
                         <Icono n="fuego" />Mapa de calor
-                        <button type="button" className="switch" role="switch" data-nav="" aria-checked={calor} aria-label="Mapa de calor" onClick={() => setEv({ calor: !calor })} />
+                        <Switch checked={calor} data-nav="" label="Mapa de calor" onChange={v => setEv({ calor: v })} />
                     </span>
                 </div>
             </div>

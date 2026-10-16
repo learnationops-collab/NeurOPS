@@ -10,6 +10,7 @@ import { ui } from '../ui/estadoUi';
 import PantallaLead from './PantallaLead';
 import PruebaSegmento from './PruebaSegmento';
 import { proveedorLocal } from './proveedores';
+import { Segmented } from '../../../components/standard';
 
 // ui.prueba acepta los documentos o sus ids.
 function resolver(prueba, d) {
@@ -49,10 +50,8 @@ export default function PruebaLead() {
             {porSegmento
                 ? <PruebaSegmento prueba={prueba} d={d} reservas={reservas} cargando={cargando} prevModo={prevModo} onSalir={salir} />
                 : <PantallaLead fuente={fuente} proveedor={proveedor} modo="prueba" prevModo={prevModo} onSalir={salir} />}
-            <div className="seg seg--sm rv-dispo" role="group" aria-label="Pantalla">
-                <button type="button" data-nav="" aria-pressed={!cel} onClick={() => dispo('escritorio')}><Icono n="monitor" />Computadora</button>
-                <button type="button" data-nav="" aria-pressed={cel} onClick={() => dispo('celular')}><Icono n="celular" />Teléfono</button>
-            </div>
+            <Segmented size="sm" className="rv-dispo" label="Pantalla" itemProps={{ 'data-nav': '' }} value={cel ? 'celular' : 'escritorio'} onChange={dispo}
+                options={[{ value: 'escritorio', label: 'Computadora', icon: <Icono n="monitor" /> }, { value: 'celular', label: 'Teléfono', icon: <Icono n="celular" /> }]} />
         </>
     );
 }

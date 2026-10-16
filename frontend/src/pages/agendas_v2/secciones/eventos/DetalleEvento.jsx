@@ -6,7 +6,7 @@ import { buscar } from '../../core/datos';
 import { camposPublicados, configDe, estadoEvento, sinPublicar } from '../../core/eventos';
 import { almacen, useDatos, usePermisos } from '../../data/hooks';
 import { Icono } from '../../ui/base';
-import { Button, HeaderActions, IconButton } from '../../../../components/standard';
+import { Button, HeaderActions, IconButton, Segmented } from '../../../../components/standard';
 import { ui } from '../../ui/estadoUi';
 import { toast } from '../../ui/toast';
 import ConfigEvento from './ConfigEvento';
@@ -42,10 +42,8 @@ export default function DetalleEvento({ e, ev }) {
     const barra = (
             <div className="barra">
                 <Button icon={<Icono n="volver" />} data-nav="" onClick={cerrar}>Funnels</Button>
-                <div className="seg" role="group" aria-label="Vista" style={{ marginInline: 'auto' }}>
-                    <button type="button" data-nav="" aria-pressed={ev.tab !== 'flujo'} onClick={() => tab('config')}><Icono n="ajustes" />Configuración</button>
-                    <button type="button" data-nav="" aria-pressed={ev.tab === 'flujo'} onClick={() => tab('flujo')}><Icono n="flujo" />Flujo</button>
-                </div>
+                <Segmented label="Vista" style={{ marginInline: 'auto' }} itemProps={{ 'data-nav': '' }} value={ev.tab === 'flujo' ? 'flujo' : 'config'} onChange={tab}
+                    options={[{ value: 'config', label: 'Configuración', icon: <Icono n="ajustes" /> }, { value: 'flujo', label: 'Flujo', icon: <Icono n="flujo" /> }]} />
                 <div className="barra-der ev-acc">
                     <EstadoEv est={estadoEvento(e, fo)} />
                     <IconButton label="Copiar link" icon={<Icono n="copiar" s={15} />} size="sm" data-nav="" title="Copiar link" onClick={() => copiarLink(d, e)} />

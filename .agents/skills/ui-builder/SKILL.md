@@ -64,8 +64,11 @@ Import: `import { Button, … } from '<ruta>/components/standard';`
 | `Aura` | Nubes de color difusas de fondo | `colors`, `size`: `card` · `hero`, `soft` |
 | `EmptyState` | Vacío, cargando o sin permiso | `icon`, `title`, `aura`, `action`, `children` (el texto) |
 | `ConfirmDelete` | «¿Eliminar X?» con Cancelar / Eliminar | `name`, `article` («a »), `detail`, `onCancel`, `onConfirm`, `confirmLabel`, `icon`, `extraActions`, `children` |
-| `Segmented` | Pestañas, períodos, vistas (opciones excluyentes) | `value`, `options` `[{value, label, icon}]`, `onChange`, `size`: `md` · `sm`, `label`, `itemProps` (va a cada botón) |
+| `Segmented` | Pestañas, períodos, vistas (opciones excluyentes) | `value`, `options` `[{value, label, icon, props}]` (`props` va a ese botón: `title`, `aria-label` si es solo ícono, `style`), `onChange`, `size`: `md` · `sm`, `label`, `itemProps` (va a todos), `prefix` (antes de las opciones), `radio` (se anuncia como grupo de radio) |
 | `Select` | Desplegable propio (teclado completo, búsqueda tipeando) | `value`, `options` `[{value, label, icon, iconColor}]` (`value: ''` = opción vacía), `onChange`, `size`, `label`; los atributos extra van al botón y `data-nav` también a las opciones |
+| `Input` | Campo suelto | `variant`: `number` (corto y centrado) · `date`, `invalid`, `as="textarea"`; el resto va al `<input>` (y `ref`) |
+| `InputGroup` | Campo con ícono o texto fijo adelante y, a veces, botón pegado | `prefix`, `invalid`, `as="form"`; el `<input>` va como hijo, sin clase |
+| `FieldError` | Mensaje de error de un campo | `role` (`alert` por defecto; `note` para una aclaración), `icon` (`false` lo saca), `as` |
 | `Switch` | Interruptor sí/no | `checked`, `onChange`, `label` |
 | `Stepper` | Contador con − y + | `value`, `min`, `max`, `onChange`, `display` (texto en lugar del número), `label` |
 | `Modal` | Ventana sobre la página (Escape, clic afuera, foco, bloquea el scroll) | `onClose`, `className` (ancho propio), `labelledBy`, `id` |
@@ -104,6 +107,7 @@ Si una pantalla necesita ajustar el componente según el contexto (por ejemplo, 
 - El botón que abre la confirmación es `danger` en Evento y `secondary` en Funnel.
 - En el CSS viejo, `link-btn--sutil` nunca tuvo efecto: la regla base, escrita después, le pisaba el color. Los dos usos (Configurar evento › funnel, Sesiones › «Usar la propuesta») se ven como links normales y se migraron así. ¿Deberían ser `subtle`?
 - Avatar `lg` hoy solo suma una sombra: en el CSS viejo `.avatar--l` quedaba antes que `.avatar` y la base le pisaba el tamaño. ¿Debería medir 48px, como decía la regla?
-- En Thalamus quedan a mano 8 segmentados y 4 switches (con contenido propio, como el «Agrupar» de Eventos): pasarlos a `Segmented` y `Switch`.
+- El switch del modal de importar preguntas es solo un indicador dentro de una fila que ya es botón (un `Switch` ahí sería un botón dentro de otro): falta una variante decorativa.
+- El error de «Nuevo evento» de la lista de Eventos usa `.err-nuevo` (12px, peso normal) y el de arriba `FieldError` (12,5px, negrita): unificar.
 - La textarea que crece sola (`AreaAuto`) no pasó: la usa también la pantalla del lead con estilos propios.
 - Próximos componentes: `Input` (campo con ícono, label oculto y botón), `Grid` (`kpis` · `auto` · `list`), `Calendar` (`month` · `week` · `day`) y `Modal`.

@@ -7,7 +7,7 @@ import { buscar } from '../../core/datos';
 import { nuevaPregunta, resumenForm } from '../../core/formulario';
 import { Humo, HUMO_MARCA, Icono } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
-import { Button, EmptyState, HeaderActions, IconButton } from '../../../../components/standard';
+import { Button, EmptyState, HeaderActions, IconButton, Segmented } from '../../../../components/standard';
 import { useOrdenable } from '../../ui/useOrdenable';
 import { mutarForm, setFormUi, useBorrador, useEnfocar } from './comun';
 import { borrarForm } from './ListaForms';
@@ -31,20 +31,16 @@ function Barra({ f, vista, prevModo, onFin, finRef, onImportar }) {
     return (
         <div className="barra">
             <Button icon={<Icono n="volver" />} data-nav="" onClick={cerrarForm}>Formularios</Button>
-            <div className="seg" role="group" aria-label="Vista" style={{ marginInline: 'auto' }}>
-                {VISTAS.map(o => (
-                    <button key={o.v} type="button" data-nav="" aria-pressed={vista === o.v}
-                        onClick={() => { almacen.flush(); setFormUi({ vista: o.v, msel: null }); }}>
-                        <Icono n={o.icono} />{o.n}
-                    </button>
-                ))}
-            </div>
+            <Segmented label="Vista" style={{ marginInline: 'auto' }} itemProps={{ 'data-nav': '' }} value={vista}
+                onChange={v => { almacen.flush(); setFormUi({ vista: v, msel: null }); }}
+                options={VISTAS.map(o => ({ value: o.v, label: o.n, icon: <Icono n={o.icono} /> }))} />
             <div className="barra-der fe-acc" style={{ minWidth: 132, justifyContent: 'flex-end' }}>
                 {vista === 'previa' ? (
-                    <div className="seg seg--sm" role="group" aria-label="Pantalla">
-                        <button type="button" data-nav="" aria-pressed={prevModo === 'escritorio'} aria-label="Escritorio" title="Escritorio" onClick={() => ui.set({ prevModo: 'escritorio' })}><Icono n="monitor" /></button>
-                        <button type="button" data-nav="" aria-pressed={prevModo === 'celular'} aria-label="Celular" title="Celular" onClick={() => ui.set({ prevModo: 'celular' })}><Icono n="celular" /></button>
-                    </div>
+                    <Segmented size="sm" label="Pantalla" itemProps={{ 'data-nav': '' }} value={prevModo} onChange={v => ui.set({ prevModo: v })}
+                        options={[
+                            { value: 'escritorio', icon: <Icono n="monitor" />, props: { 'aria-label': 'Escritorio', title: 'Escritorio' } },
+                            { value: 'celular', icon: <Icono n="celular" />, props: { 'aria-label': 'Celular', title: 'Celular' } },
+                        ]} />
                 ) : !lectura && (
                     <>
                         <button type="button" className="fe-btn" title="Traer preguntas de otro formulario" onClick={e => onImportar(e.currentTarget)}>

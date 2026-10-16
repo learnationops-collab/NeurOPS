@@ -12,7 +12,7 @@ import { Icono, Sx } from '../../ui/base';
 import { HorarioEditor } from '../team/Horario';
 import { EditorSesiones } from '../team/Sesiones';
 import FotoCuenta from './FotoCuenta';
-import { Button, Chip } from '../../../../components/standard';
+import { Button, Chip, FieldError, InputGroup, Switch } from '../../../../components/standard';
 
 function Estado({ ok, si, no }) {
     return ok
@@ -37,7 +37,7 @@ function Tarjeta({ icono, titulo, texto, estado, children }) {
 function Mensajes({ error, aviso }) {
     return (
         <>
-            {error && <p className="campo-err" role="alert"><Icono n="alerta" s={14} />{error}</p>}
+            {error && <FieldError>{error}</FieldError>}
             {aviso && <p className="cu-ok" role="status"><Icono n="check" s={14} />{aviso}</p>}
         </>
     );
@@ -68,12 +68,11 @@ export function DatosCuenta({ user }) {
                 <p className="t-eyebrow">Tu cuenta</p>
                 <h3 className="t-h2">{user.username}</h3>
                 {guardado ? <p className="t-sm mut"><Icono n="mail" s={14} /> {guardado}</p> : (
-                    <form className="entrada cu-email" onSubmit={cargar} noValidate>
-                        <span className="prefijo"><Icono n="mail" /></span>
+                    <InputGroup as="form" className="cu-email" prefix={<Icono n="mail" />} onSubmit={cargar} noValidate>
                         <label className="sr" htmlFor="cu-email">Tu email</label>
                         <input id="cu-email" type="email" placeholder="Cargá tu email para entrar con Google" value={email} onChange={(e) => setEmail(e.target.value)} />
                         <Button variant="primary" type="submit" disabled={ocupado || !email.trim()}>Guardar</Button>
-                    </form>
+                    </InputGroup>
                 )}
                 <div className="cu-roles">
                     {roles.map((r) => (
@@ -161,8 +160,7 @@ export function TarjetaCalendar({ volver }) {
                                 const on = (st.conflicto || []).includes(c.id);
                                 return (
                                     <label key={c.id} className="cu-cal">
-                                        <button type="button" className="switch" role="switch" aria-checked={on} disabled={ocupado}
-                                            aria-label={'Revisar conflictos en ' + c.summary} onClick={() => alternarConflicto(c.id, !on)} />
+                                        <Switch checked={on} disabled={ocupado} label={'Revisar conflictos en ' + c.summary} onChange={v => alternarConflicto(c.id, v)} />
                                         <span className="trunc">{c.summary}</span>
                                         {c.primary && <Chip color="var(--idle)" subtle>Principal</Chip>}
                                         {c.id === destino && <Chip color="var(--info)" subtle>Agendamiento</Chip>}
@@ -225,12 +223,11 @@ export function TarjetaWhatsapp() {
             estado={estado && <Estado ok={estado.confirmado && !cambio} si="Confirmado" no="Sin confirmar" />}>
             {!estado && !error ? <p className="t-sm mut">Cargando…</p> : (
                 <div className="cu-fila">
-                    <div className="entrada" style={{ flex: '1 1 240px' }}>
-                        <span className="prefijo">+</span>
+                    <InputGroup prefix={<>+</>} style={{ flex: '1 1 240px' }}>
                         <label className="sr" htmlFor="cu-wa">Tu número, con código de país</label>
                         <input id="cu-wa" type="tel" inputMode="numeric" placeholder="5491122334455" value={numero}
                             onChange={(e) => { setNumero(e.target.value); setPaso('editar'); }} />
-                    </div>
+                    </InputGroup>
                     {paso === 'enviado' ? (
                         <>
                             <Button disabled={ocupado} onClick={probar}>No me llegó, reenviar</Button>

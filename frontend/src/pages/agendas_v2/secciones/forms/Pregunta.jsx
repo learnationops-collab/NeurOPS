@@ -10,7 +10,7 @@ import { ui } from '../../ui/estadoUi';
 import { toast } from '../../ui/toast';
 import { useOrdenable } from '../../ui/useOrdenable';
 import { TituloConToken, mutarForm, setFormUi } from './comun';
-import { Chip, IconButton, LinkButton } from '../../../../components/standard';
+import { Chip, IconButton, Input, LinkButton, Switch } from '../../../../components/standard';
 
 const OPC_TIPO = TIPOS.map(t => ({ v: t.k, n: t.n, icono: t.ico }));
 function ptsColor(v) { return v == null ? 'var(--text-muted-40)' : v >= 8 ? 'var(--success)' : v >= 5 ? 'var(--warning)' : 'var(--error)'; }
@@ -80,7 +80,7 @@ function Opciones({ q, cambiar, enfocar }) {
                         <div key={id} data-item={id} data-i={j} className={'op-fila' + (o.descalifica ? ' op-fila--desc' : '') + ord.claseItem(id)}>
                             <button type="button" className="grip" {...ord.grip(id, 'Mover opción ' + letra(k))}><Icono n="grip" /></button>
                             <span className="op-letra">{letra(k)}</span>
-                            <input className="input op-in" id={'op-' + o.id} maxLength={200} value={o.texto} placeholder={'Opción ' + (k + 1)} aria-label={'Opción ' + letra(k)}
+                            <Input className="op-in" id={'op-' + o.id} maxLength={200} value={o.texto} placeholder={'Opción ' + (k + 1)} aria-label={'Opción ' + letra(k)}
                                 onChange={e => { const v = e.target.value; cambiar(x => { x.opciones[j].texto = v; }); }} onPaste={e => pegar(e, j)} />
                             <span className="pts" role="group" aria-label={'Puntos de la opción ' + letra(k)}>
                                 <button type="button" data-pts="-1" aria-label="Menos puntos" disabled={!q.peso || o.puntos == null} onClick={() => pts(j, -1)}><Icono n="minus" /></button>
@@ -132,7 +132,7 @@ function Cuerpo({ q, cambiar, enfocar }) {
                         </span>
                     )}
                     <span className="sw">Obligatoria
-                        <button type="button" className="switch" role="switch" aria-checked={q.obligatoria} aria-label="Obligatoria" onClick={() => cambiar(x => { x.obligatoria = !x.obligatoria; })} />
+                        <Switch checked={q.obligatoria} label="Obligatoria" onChange={() => cambiar(x => { x.obligatoria = !x.obligatoria; })} />
                     </span>
                 </div>
             </div>
@@ -145,7 +145,7 @@ function Cuerpo({ q, cambiar, enfocar }) {
                 </button>
             </div>
             <label className="sr" htmlFor={'pa-' + q.id}>Texto de ayuda</label>
-            <input className="input" id={'pa-' + q.id} maxLength={300} value={q.ayuda} placeholder="Texto de ayuda (opcional)"
+            <Input id={'pa-' + q.id} maxLength={300} value={q.ayuda} placeholder="Texto de ayuda (opcional)"
                 onChange={e => { const v = e.target.value; cambiar(x => { x.ayuda = v; }); }} />
             {op && <Opciones q={q} cambiar={cambiar} enfocar={enfocar} />}
         </div>

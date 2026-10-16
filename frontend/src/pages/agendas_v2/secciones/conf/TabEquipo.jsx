@@ -9,6 +9,7 @@ import { rotuloDeRol } from '../../../../utils/cuentasVinculadas';
 import { almacen, useDatos } from '../../data/hooks';
 import { Icono } from '../../ui/base';
 import { toast } from '../../ui/toast';
+import { Button } from '../../../../components/standard';
 
 // Quién puede simular a un closer (lo decide el backend, /auth/impersonate; esto evita ofrecerlo de más).
 export const SIMULAN_CLOSERS = ['director_comercial', 'admin', 'operator'];
@@ -60,9 +61,9 @@ export default function TabEquipo() {
                                 <Marca ok={enTeam.has((u.email || '').toLowerCase())} n="En Team" />
                             </div>
                             {closer && simula && !yo ? (
-                                <button type="button" className={'btn btn--sm ' + (listo ? 'btn--linea' : 'btn--cta')} onClick={() => simularParaConfigurar(u.id)}>
-                                    <Icono n="mascara" />{listo ? 'Simular' : 'Simular para configurar'}
-                                </button>
+                                <Button variant={listo ? 'secondary' : 'primary'} icon={<Icono n="mascara" />} onClick={() => simularParaConfigurar(u.id)}>
+                                    {listo ? 'Simular' : 'Simular para configurar'}
+                                </Button>
                             ) : <span />}
                         </li>
                     );

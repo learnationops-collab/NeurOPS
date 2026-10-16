@@ -4,12 +4,12 @@
 // Agregar un componente al catálogo = sumar una entrada a SECCIONES.
 
 import { useEffect, useState } from 'react';
-import { Bell, CalendarDays, Copy, Pencil, Play, Plus, Settings, Trash2, Users, X } from 'lucide-react';
+import { Bell, CalendarDays, Copy, Link, Mail, Pencil, Play, Plus, Settings, Trash2, Users, X } from 'lucide-react';
 import '../agendas_v2/thalamus.css';
 import '../comercial/comercial.css';
 import './catalogo.css';
 import {
-    Avatar, BRAND_AURA, Button, Card, Chip, ConfirmDelete, EmptyState, IconButton, LinkButton, Modal, PageHeader, Segmented, Select,
+    Avatar, BRAND_AURA, Button, Card, Chip, ConfirmDelete, EmptyState, FieldError, IconButton, Input, InputGroup, LinkButton, Modal, PageHeader, Segmented, Select,
     Stepper, Switch,
 } from '../../components/standard';
 
@@ -183,8 +183,33 @@ const SECCIONES = [
     {
         nombre: 'Segmented · Select · Switch · Stepper',
         para: 'Controles de formulario y filtros. Las opciones las arma la pantalla; el control solo las muestra.',
-        props: 'Segmented: value · options[{value,label,icon}] · onChange · size · itemProps — Select: value · options[{value,label,icon,iconColor}] · size — Switch: checked · onChange · label — Stepper: value · min · max · display',
+        props: 'Segmented: value · options[{value,label,icon,props}] · onChange · size · itemProps · prefix · radio — Select: value · options[{value,label,icon,iconColor}] · size — Switch: checked · onChange · label — Stepper: value · min · max · display',
         demo: () => <DemoControles />,
+    },
+    {
+        nombre: 'Input · InputGroup · FieldError',
+        para: 'Campos de texto. InputGroup suma un ícono o texto fijo adelante y, como formulario, un botón pegado.',
+        props: 'Input: variant (number · date) · invalid · as="textarea" — InputGroup: prefix · invalid · as="form" — FieldError: role · icon',
+        demo: () => (
+            <>
+                <Demo titulo="Input">
+                    <Input placeholder="Nombre del evento" aria-label="Nombre" style={{ maxWidth: 260 }} />
+                    <Input variant="number" type="number" defaultValue={30} aria-label="Minutos" />
+                    <Input variant="date" type="date" aria-label="Desde" />
+                    <Input invalid defaultValue="sin arroba" aria-label="Email" style={{ maxWidth: 200 }} />
+                </Demo>
+                <Demo titulo="InputGroup">
+                    <InputGroup prefix={<><Link />/agenda/</>} style={{ flex: '1 1 260px' }}><input aria-label="Link" defaultValue="workshop" /></InputGroup>
+                    <InputGroup as="form" prefix={<Mail />} style={{ flex: '1 1 320px' }} onSubmit={e => e.preventDefault()}>
+                        <input aria-label="Email" placeholder="Tu email" />
+                        <Button variant="primary" type="submit">Guardar</Button>
+                    </InputGroup>
+                </Demo>
+                <Demo titulo="FieldError">
+                    <FieldError>Ese link ya existe.</FieldError>
+                </Demo>
+            </>
+        ),
     },
     {
         nombre: 'Modal',

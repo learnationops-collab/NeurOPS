@@ -15,13 +15,17 @@ function Svg({ d, s = 16 }) {
 }
 const CHEVRON = 'm6 9 6 6 6-6', CHECK = 'M20 6 9 17l-5-5', MINUS = 'M5 12h14', PLUS = 'M12 5v14M5 12h14';
 
-// Botones excluyentes (pestañas, períodos, vistas). options: [{ value, label, icon }].
-// `itemProps` va a cada botón (en Thalamus, data-nav para que siga activo en solo lectura).
-export function Segmented({ value, options, onChange, size = 'md', label, itemProps, className, ...rest }) {
+// Botones excluyentes (pestañas, períodos, vistas). options: [{ value, label, icon, props }]: `props` va
+// a ese botón (title, aria-label de uno de solo ícono, style). `itemProps` va a todos (en Thalamus,
+// data-nav para que sigan activos en solo lectura). `prefix` se dibuja antes de las opciones. `radio`
+// lo anuncia como grupo de radio (una elección entre varias) en lugar de botones.
+export function Segmented({ value, options, onChange, size = 'md', label, itemProps, prefix, radio = false, className, ...rest }) {
     return (
-        <div className={clsx('ui-seg', size === 'sm' && 'ui-seg--sm', className)} role="group" aria-label={label} {...rest}>
+        <div className={clsx('ui-seg', size === 'sm' && 'ui-seg--sm', className)} role={radio ? 'radiogroup' : 'group'} aria-label={label} {...rest}>
+            {prefix}
             {options.map(o => (
-                <button key={o.value} type="button" className="ui-seg__item" aria-pressed={value === o.value} {...itemProps} onClick={() => onChange(o.value)}>
+                <button key={o.value} type="button" className="ui-seg__item" aria-pressed={value === o.value}
+                    {...(radio ? { role: 'radio', 'aria-checked': value === o.value } : null)} {...itemProps} {...o.props} onClick={() => onChange(o.value)}>
                     {o.icon}{o.label}
                 </button>
             ))}

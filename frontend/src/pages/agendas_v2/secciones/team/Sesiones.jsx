@@ -7,7 +7,7 @@ import { DIAS, DURACIONES, DURACION_MAX, DURACION_MIN, MARGENES, MARGEN_MAX } fr
 import { entero } from '../../core/util';
 import { Avatar, Icono, Sx } from '../../ui/base';
 import { capacidadSemana } from './turnos';
-import { LinkButton } from '../../../../components/standard';
+import { Input, LinkButton } from '../../../../components/standard';
 
 const OTRO = 'otro';
 
@@ -29,7 +29,7 @@ export function CampoMinutos({ valor, onCambio, margen = false, label, id, disab
                     .concat([{ v: OTRO, n: 'Otro…', icono: 'edit', color: 'var(--brand-secondary)' }])} />
             {libre && (
                 <span className="ses-otro">
-                    <input key={valor} className="input input--num num" type="number" inputMode="numeric" min={min} max={max}
+                    <Input key={valor} variant="number" className="num" type="number" inputMode="numeric" min={min} max={max}
                         aria-label={label + ' en minutos'} defaultValue={valor} disabled={disabled}
                         onBlur={e => confirmar(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }} />

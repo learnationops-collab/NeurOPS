@@ -26,7 +26,7 @@ import { VISUAL, apilar } from './tarjetas';
 import { FACETAS, agendasDe, aplicarFacetas, condiciones, fichaDe } from './filtro';
 import PanelConfigurar from '../../../comercial/components/PanelConfigurar';
 import { gruposDeSesion, turnosSemana } from './turnos';
-import { Button, EmptyState, IconButton } from '../../../../components/standard';
+import { Button, EmptyState, IconButton, Segmented } from '../../../../components/standard';
 
 const hm = (m) => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
 
@@ -384,11 +384,8 @@ export default function Available({ solo = null }) {
                         <IconButton label={unDia ? 'Día siguiente' : 'Semana siguiente'} icon={<Icono n="chevron-right" />} size="sm" data-nav="" onClick={() => irSemana(1)} />
                         <b className="av-rango" aria-live="polite">{rango}</b>
                         {!solo && (
-                            <div className="seg av-vista" role="group" aria-label="Vista">
-                                {[['dia', 'Día'], ['semana', 'Semana']].map(([k, label]) => (
-                                    <button key={k} type="button" data-nav="" aria-pressed={(k === 'dia') === unDia} onClick={() => cambiarVista(k)}>{label}</button>
-                                ))}
-                            </div>
+                            <Segmented className="av-vista" label="Vista" itemProps={{ 'data-nav': '' }} value={unDia ? 'dia' : 'semana'} onChange={cambiarVista}
+                                options={[{ value: 'dia', label: 'Día' }, { value: 'semana', label: 'Semana' }]} />
                         )}
                     </div>
                     {grupo && (

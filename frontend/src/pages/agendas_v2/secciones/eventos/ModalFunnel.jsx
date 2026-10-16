@@ -19,7 +19,7 @@ import { buscar, colorLibre, maxOrden, nombreOrigen, ord } from '../../core/dato
 import { linkEvento } from '../../core/eventos';
 import { slugify, uid } from '../../core/util';
 import { LinksSetters, abrirEvento, crearEvento, useSetters } from './comun';
-import { Button, Chip, IconButton, LinkButton } from '../../../../components/standard';
+import { Button, Chip, FieldError, IconButton, Input, InputGroup, LinkButton } from '../../../../components/standard';
 
 const TIPOS = [
     { v: 'workshop', n: 'Workshop', ico: 'monitor', ayuda: 'Clase en vivo. Un link «Grabación» cuenta como la grabación.' },
@@ -130,15 +130,14 @@ function ConIA({ evento, funnel, onListo }) {
             </p>
             <Button variant="primary" icon={<Icono n="copiar" />} onClick={copiarPrompt}>Copiar prompt</Button>
             <label className="sr" htmlFor="ia-json">JSON del funnel</label>
-            <textarea id="ia-json" className="input" rows={8} spellCheck={false} placeholder='{ "paquete_thalamus": 1, ... }' value={texto}
+            <Input id="ia-json" as="textarea" rows={8} spellCheck={false} placeholder='{ "paquete_thalamus": 1, ... }' value={texto}
                 aria-invalid={errores.length > 0 || undefined} aria-describedby={errores.length ? 'ia-errores' : undefined}
                 onChange={e => { setTexto(e.target.value); setPaso('editar'); setResumen(null); setErrores([]); }}
                 style={{ fontFamily: 'ui-monospace, monospace', width: '100%' }} />
             {errores.length > 0 && (
-                <div className="campo-err" id="ia-errores" role="alert">
-                    <Icono n="alerta" s={14} />
+                <FieldError as="div" id="ia-errores">
                     <div><b>Hay que corregir esto (podés pedírselo a la IA):</b><ul>{errores.map((e, i) => <li key={i}>{e}</li>)}</ul></div>
-                </div>
+                </FieldError>
             )}
             {resumen && <Resumen r={resumen} />}
             <div className="fm-acc">
@@ -234,12 +233,12 @@ function NuevoFunnel({ d, cerrar }) {
         <>
             <form className="fm-nuevo" noValidate onSubmit={crear}>
                 <label className="t-rotulo" htmlFor="fm-nombre">Nombre</label>
-                <input id="fm-nombre" className="input" type="text" maxLength={80} autoComplete="off" placeholder="Ej. Workshop octubre"
+                <Input id="fm-nombre"  type="text" maxLength={80} autoComplete="off" placeholder="Ej. Workshop octubre"
                     value={nombre} onChange={e => setNombre(e.target.value)} />
                 <span className="t-rotulo">Tipo</span>
                 <Tipos valor={tipo} onChange={setTipo} />
                 <label className="t-rotulo" htmlFor="fm-evento">Primer agendamiento</label>
-                <input id="fm-evento" className="input" type="text" maxLength={80} autoComplete="off"
+                <Input id="fm-evento"  type="text" maxLength={80} autoComplete="off"
                     placeholder={nombre.trim() ? 'Ej. Diagnóstico (si lo dejás vacío: ' + nombre.trim() + ')' : 'Ej. Diagnóstico'}
                     value={evento} onChange={e => setEvento(e.target.value)} />
                 <div className="fm-acc"><Button variant="primary" icon={<Icono n="plus" />} type="submit" disabled={!nombre.trim()}>Crear funnel</Button></div>
@@ -308,7 +307,7 @@ function AgregarAgendamiento({ d, f, cerrar }) {
         <form className="fm-nuevo" noValidate onSubmit={crear}>
             <p className="t-sm">Sin agendamientos, este funnel no genera agendas.</p>
             <label className="sr" htmlFor="fm-evento">Nombre del agendamiento</label>
-            <input id="fm-evento" className="input" type="text" maxLength={80} autoComplete="off"
+            <Input id="fm-evento"  type="text" maxLength={80} autoComplete="off"
                 placeholder={'Ej. Diagnóstico (si lo dejás vacío: ' + f.nombre + ')'} value={nombre} onChange={e => setNombre(e.target.value)} />
             <div className="fm-acc"><Button variant="primary" icon={<Icono n="plus" />} type="submit">Agregar agendamiento</Button></div>
         </form>
@@ -332,13 +331,12 @@ function EditarFunnel({ d, f, cerrar }) {
         <>
             <Bloque titulo="Funnel">
                 <label className="sr" htmlFor="fm-nombre">Nombre del funnel</label>
-                <input id="fm-nombre" className="input" type="text" maxLength={80} defaultValue={f.nombre}
+                <Input id="fm-nombre"  type="text" maxLength={80} defaultValue={f.nombre}
                     onBlur={e => { const v = e.target.value.trim(); if (v && v !== f.nombre) editar({ nombre: v }, true); }} />
-                <div className="entrada">
-                    <span className="prefijo"><Icono n="link" />/agenda/</span>
+                <InputGroup prefix={<><Icono n="link" />/agenda/</>}>
                     <input key={f.slug} id="fm-slug" type="text" maxLength={60} spellCheck={false} autoComplete="off" aria-label="Link del funnel"
                         defaultValue={f.slug} onBlur={e => cambiarSlug(e.target)} />
-                </div>
+                </InputGroup>
                 <Tipos valor={f.tipo} onChange={v => editar({ tipo: v, setting: v === 'setting' }, true)} />
                 <label className="fm-fila">
                     <Switch on={f.activo} label={f.nombre + ' recibe agendas'} onChange={v => editar({ activo: v }, true)} />

@@ -8,6 +8,7 @@ import { almacen, usePermisos } from '../../data/hooks';
 import { Icono } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
 import { copiarTexto } from '../../ui/toast';
+import { Input } from '../../../../components/standard';
 
 // Slug de un origen en el link (?o=...): el nombre del setter o del origen.
 export function slugOrigen(d, o) { return slugify(nombreOrigen(d, o)) || o.id; }
@@ -159,13 +160,14 @@ export function useBorrador(valor) {
     };
 }
 
-export function InputVivo({ valor, guardar, className = 'input', ...rest }) {
+export function InputVivo({ valor, guardar, bare = false, className, ...rest }) {
     const b = useBorrador(valor);
     const [mal, setMal] = useState(false);
+    const Campo = bare ? 'input' : Input;
     return (
-        <input
+        <Campo
             {...rest}
-            className={className + (mal ? ' mal' : '')}
+            {...(bare ? { className: className || undefined } : { className, invalid: mal })}
             value={b.value}
             onChange={ev => { const t = ev.target.value; b.set(t); setMal(guardar(t) === false); }}
             onBlur={() => { b.soltar(); setMal(false); almacen.flush(); }}

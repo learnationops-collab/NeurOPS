@@ -17,7 +17,7 @@
    ============================================================================ */
 
 :where(.ui-btn,.ui-ibtn,.ui-link,.ui-chip,.ui-card,.ui-aura,.ui-empty,.ui-confirm,.ui-header,
-  .ui-seg,.ui-select,.ui-select__pop,.ui-switch,.ui-stepper,.ui-scrim,.ui-modal,.ui-avatar){
+  .ui-seg,.ui-select,.ui-select__pop,.ui-switch,.ui-stepper,.ui-scrim,.ui-modal,.ui-avatar,.ui-input,.ui-entry,.ui-field-error){
   --ui-brand:var(--ln-brand, var(--brand-secondary, #FF3FA4));
   --ui-brand-accent:var(--ln-brand-accent, var(--brand-secondary-light, #FF6AD5));
   --ui-brand-2:var(--ln-brand-2, var(--brand-primary, #1323C6));
@@ -223,3 +223,29 @@
 .ui-avatar.ui-avatar--xs{width:22px;height:22px;border-radius:50%;font-size:9px}
 .ui-avatar.ui-avatar--photo{position:relative;overflow:hidden}
 .ui-avatar__img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+
+/* --- Input, InputGroup y FieldError ------------------------------------------------------------ */
+.ui-input.ui-input{height:44px;padding:0 14px;border-radius:14px;background:var(--ui-input-bg);border:1px solid var(--ui-border-main);
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.18);font-family:inherit;line-height:inherit;color:inherit;outline:none;font-size:14px;font-weight:600;min-width:0;width:100%;
+  transition:border-color .16s,box-shadow .16s,background-color .16s}
+.ui-input.ui-input:hover{border-color:var(--ui-border-strong)}
+.ui-input.ui-input:focus{border-color:var(--ui-focus);box-shadow:0 0 0 3px rgba(91,124,255,.18)}
+.ui-input.ui-input::placeholder{color:var(--ui-faint);font-weight:600}
+.ui-input.ui-input.is-invalid{border-color:var(--ui-danger)}
+.ui-input.ui-input--number{flex-shrink:0;width:76px;height:38px;padding:0 10px;text-align:center;font-weight:900;border-radius:12px;-moz-appearance:textfield}
+.ui-input.ui-input--number::-webkit-outer-spin-button,.ui-input.ui-input--number::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.ui-input.ui-input--date{width:auto;height:38px;padding:0 10px;border-radius:12px;font-size:13px;color-scheme:inherit}
+@media (max-width:640px){.ui-input.ui-input--date{width:140px}}
+
+.ui-entry.ui-entry{display:flex;align-items:center;gap:var(--ui-s2);height:44px;padding:0 6px 0 14px;border-radius:var(--ui-radius-control);background:var(--ui-input-bg);
+  border:1px solid var(--ui-border-subtle);min-width:0;transition:border-color .16s}
+.ui-entry.ui-entry:focus-within{border-color:var(--ui-focus)}
+.ui-entry.ui-entry.is-invalid{border-color:var(--ui-danger)}
+.ui-entry.ui-entry input{flex:1;min-width:0;border:0;background:none;outline:none;font-family:inherit;line-height:inherit;font-size:14px;font-weight:600;color:inherit}
+.ui-entry.ui-entry input:focus-visible{box-shadow:none}
+.ui-entry.ui-entry input::placeholder{color:var(--ui-faint)}
+.ui-entry__prefix{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;font-size:13px;font-weight:600;color:var(--ui-faint);white-space:nowrap}
+.ui-entry__prefix svg{width:13px;height:13px}
+
+.ui-field-error.ui-field-error{display:flex;align-items:center;gap:6px;margin:0;font-size:12.5px;font-weight:700;color:var(--ui-danger)}
+.ui-field-error.ui-field-error svg{width:14px;height:14px}

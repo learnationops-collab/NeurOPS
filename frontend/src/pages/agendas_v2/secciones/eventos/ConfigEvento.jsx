@@ -18,7 +18,7 @@ import { CampoMinutos, SesionesDelEvento } from '../team/Sesiones';
 import TablaTurnos from '../team/Turnos.jsx';
 import { abrirGracias } from '../forms/ListaGracias';
 import { InputVivo, LinksSetters, slugOrigen, urlPublica, useBorrador } from './comun';
-import { Button, ConfirmDelete, LinkButton } from '../../../../components/standard';
+import { Button, ConfirmDelete, Input, InputGroup, LinkButton } from '../../../../components/standard';
 
 const DIA = 86400000;
 
@@ -44,7 +44,7 @@ function Bloque({ tit, icono, i, children }) {
 }
 function Num({ id, valor, min, max, label, onGuardar }) {
     return (
-        <InputVivo className="input input--num num" type="number" inputMode="numeric" id={id} min={min} max={max} aria-label={label}
+        <InputVivo variant="number" className="num" type="number" inputMode="numeric" id={id} min={min} max={max} aria-label={label}
             valor={String(valor)} guardar={t => { const v = t.trim(); if (v === '') return false; onGuardar(entero(v, min, max, min)); }} />
     );
 }
@@ -88,16 +88,15 @@ function General({ d, e, f, cm }) {
                 <span className="t-sm mut">Después de cada sesión, para poder extenderla. Bloquea la agenda; el lead no lo ve.</span>
             </Fila>
             <Fila l="Link" cls="ffila--top">
-                <div className="entrada" style={{ flex: '1 1 100%', minWidth: 0 }}>
-                    <span className="prefijo"><Icono n="link" />/agenda/{f ? f.slug + '/' : ''}</span>
-                    <InputVivo className="" id="ev-slug" maxLength={60} spellCheck={false} aria-label="Link" valor={e.slug}
+                <InputGroup prefix={<><Icono n="link" />/agenda/{f ? f.slug + '/' : ''}</>} style={{ flex: '1 1 100%', minWidth: 0 }}>
+                    <InputVivo bare id="ev-slug" maxLength={60} spellCheck={false} aria-label="Link" valor={e.slug}
                         guardar={t => {
                             const sl = slugify(t); if (!sl) return false;
                             const libre = slugLibre(d, e, sl);
                             almacen.editar('eventos', e.id, { slug: libre });
                             if (libre !== sl) toast('Ese link ya existe: quedó /' + libre);
                         }} />
-                </div>
+                </InputGroup>
                 {f && f.setting ? <LinksSetters d={d} e={e} /> : f && f.origenes.length ? (
                     <div className="ev-origenes">
                         {f.origenes.map(o => {
@@ -152,10 +151,10 @@ function Disponibilidad({ e }) {
                 )}
                 {r.modo === 'rango' && (
                     <div className="combo">
-                        <input className={'input input--fecha' + (rangoMal ? ' mal' : '')} type="date" id="ev-rdesde" value={r.desde} aria-label="Desde"
+                        <Input variant="date" invalid={rangoMal} type="date" id="ev-rdesde" value={r.desde} aria-label="Desde"
                             onChange={ev => setEv(e.id, 'reservas', 'desde', fechaOk(ev.target.value), true)} />
                         <span className="combo-t">a</span>
-                        <input className={'input input--fecha' + (rangoMal ? ' mal' : '')} type="date" id="ev-rhasta" value={r.hasta} aria-label="Hasta"
+                        <Input variant="date" invalid={rangoMal} type="date" id="ev-rhasta" value={r.hasta} aria-label="Hasta"
                             onChange={ev => setEv(e.id, 'reservas', 'hasta', fechaOk(ev.target.value), true)} />
                     </div>
                 )}
@@ -202,8 +201,7 @@ function Pagina({ d, e }) {
                     : !gs.length && <Button icon={<Icono n="plus" />} onClick={() => ui.set({ seccion: 'preguntas', recurso: 'gracias', ev: null })}>Crear una</Button>}
             </Fila>
             <Fila l="Redirigir a">
-                <div className={'entrada' + (redirMal ? ' mal' : '')} style={{ flex: 1, minWidth: 0 }}>
-                    <span className="prefijo"><Icono n="link" /></span>
+                <InputGroup invalid={redirMal} prefix={<Icono n="link" />} style={{ flex: 1, minWidth: 0 }}>
                     <input id="ev-redir" type="url" inputMode="url" maxLength={500} spellCheck={false} placeholder="https://… (opcional)"
                         aria-label="Link después de agendar" aria-invalid={redirMal} value={redir.value}
                         onChange={ev => {
@@ -212,7 +210,7 @@ function Pagina({ d, e }) {
                             if (!u || urlOk(u)) almacen.editar('eventos', e.id, { redir: urlOk(u) });
                         }}
                         onBlur={() => { redir.soltar(); almacen.flush(); }} />
-                </div>
+                </InputGroup>
                 {gracias && e.redir && <span className="t-sm mut">No se usa: el lead va a la página de gracias.</span>}
             </Fila>
             <Fila l="Si no califica">

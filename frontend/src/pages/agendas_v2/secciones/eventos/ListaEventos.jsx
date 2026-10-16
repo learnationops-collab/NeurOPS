@@ -11,7 +11,7 @@ import { gruposDeForm } from '../../core/formulario';
 import { useDatos, usePermisos, useUi } from '../../data/hooks';
 import { HUMO_MARCA, Humo, Icono } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
-import { Button, Card, Chip, EmptyState, HeaderActions, IconButton } from '../../../../components/standard';
+import { Button, Card, Chip, EmptyState, FieldError, HeaderActions, IconButton, InputGroup, Segmented } from '../../../../components/standard';
 import { EstadoEv, LinksSetters, PasosPendientes, abrirEvento, copiarLink, crearEvento, probarEvento, probarSegmento, settersDe, useSetters } from './comun';
 import { urlPrueba } from '../../reserva/segmentos';
 import { copiarTexto } from '../../ui/toast';
@@ -38,13 +38,13 @@ function Compo({ cm, onCrear, err }) {
                 <div style={{ display: 'grid', gap: 4 }}><h2 className="t-h3">{cm ? 'Creá tu primer evento propio' : 'Creá tu primer evento'}</h2></div>
             </div>
             <div className="compo-accion">
-                <form className="entrada" noValidate onSubmit={ev => { ev.preventDefault(); onCrear(inp.current.value); }}>
+                <InputGroup as="form" noValidate onSubmit={ev => { ev.preventDefault(); onCrear(inp.current.value); }}>
                     <label className="sr" htmlFor="nuevo-nombre">Nuevo evento</label>
                     <input ref={inp} id="nuevo-nombre" type="text" maxLength={80} autoComplete="off" placeholder="Nombre, ej. Diagnóstico Workshop"
                         aria-describedby="nuevo-err" aria-invalid={!!err} />
                     <Button variant="primary" icon={<Icono n="plus" />} type="submit">Crear</Button>
-                </form>
-                <ErrNuevo err={err} clase="campo-err" />
+                </InputGroup>
+                <FieldError id="nuevo-err" hidden={!err}>{err && <span>{err}</span>}</FieldError>
             </div>
         </section>
     );
@@ -142,22 +142,16 @@ export default function ListaEventos() {
             <HeaderActions>
                 <div className="ev-top">
                     {cm && <span className="ev-mios"><Icono n="user" s={14} />Tus eventos</span>}
-                    <div hidden={!!cm} className="seg seg--sm ev-agr" role="group" aria-label="Agrupar">
-                        <span className="ev-agr-ico" title="Agrupar"><Icono n="capas" s={15} /></span>
-                        {AGRUPAR.map(o => (
-                            <button key={o[0]} type="button" data-nav="" aria-pressed={agrupar === o[0]} onClick={() => ui.set({ evAgrupar: o[0] })}>
-                                <Icono n={o[2]} s={13} />{o[1]}
-                            </button>
-                        ))}
-                    </div>
+                    <Segmented hidden={!!cm} size="sm" className="ev-agr" label="Agrupar" itemProps={{ 'data-nav': '' }} value={agrupar} onChange={v => ui.set({ evAgrupar: v })}
+                        prefix={<span className="ev-agr-ico" title="Agrupar"><Icono n="capas" s={15} /></span>}
+                        options={AGRUPAR.map(o => ({ value: o[0], label: o[1], icon: <Icono n={o[2]} s={13} /> }))} />
                     {!cm && !lectura && <Button icon={<Icono n="funnel" />} onClick={() => ui.set({ funnel: {} })}>Nuevo funnel</Button>}
-                    <form className="entrada ev-nuevo" hidden={lectura} noValidate onSubmit={ev => { ev.preventDefault(); crear(inp.current.value); }}>
+                    <InputGroup as="form" className="ev-nuevo" prefix={<Icono n="plus" />} hidden={lectura} noValidate onSubmit={ev => { ev.preventDefault(); crear(inp.current.value); }}>
                         <label className="sr" htmlFor="nuevo-nombre">Nuevo evento</label>
-                        <span className="prefijo"><Icono n="plus" /></span>
                         <input ref={inp} id="nuevo-nombre" type="text" maxLength={80} autoComplete="off" placeholder="Nuevo evento, ej. Diagnóstico Workshop"
                             aria-describedby="nuevo-err" aria-invalid={!!err} onChange={() => { if (err) setErr(''); }} />
                         <Button variant="primary" type="submit">Crear</Button>
-                    </form>
+                    </InputGroup>
                 </div>
             </HeaderActions>
             <ErrNuevo err={err} clase="err-nuevo" />

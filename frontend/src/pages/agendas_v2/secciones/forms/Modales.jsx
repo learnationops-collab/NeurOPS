@@ -7,7 +7,7 @@ import { copiarPregunta, personalizar } from '../../core/formulario';
 import { Humo, Icono, Modal, Sx } from '../../ui/base';
 import { toast } from '../../ui/toast';
 import { TituloConToken, mutarForm, useBorrador } from './comun';
-import { Button, Chip, IconButton } from '../../../../components/standard';
+import { Button, Chip, IconButton, Input } from '../../../../components/standard';
 
 export function fuentesImport(d, fid) { return ord(d, 'formularios').filter(x => x.id !== fid && x.preguntas.length); }
 
@@ -79,9 +79,9 @@ export function ModalNoCalifica({ f, onCerrar }) {
             <div className="fin-grid">
                 <div className="fin-campos">
                     <label className="t-rotulo" htmlFor="fin-titulo">Título</label>
-                    <input className="input" id="fin-titulo" maxLength={120} {...titulo} />
+                    <Input id="fin-titulo" maxLength={120} {...titulo} />
                     <label className="t-rotulo" htmlFor="fin-texto">Texto</label>
-                    <textarea className="input fin-area" id="fin-texto" maxLength={300} rows={3} {...texto} />
+                    <Input as="textarea" className="fin-area" id="fin-texto" maxLength={300} rows={3} {...texto} />
                     <p className="t-cap mut40">Usá {'{nombre}'} para el nombre del lead.</p>
                 </div>
                 <div className="fin-prev" aria-label="Vista previa">

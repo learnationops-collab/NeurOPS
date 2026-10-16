@@ -12,7 +12,7 @@ import { ui } from '../../ui/estadoUi';
 import { InputVivo } from '../eventos/comun';
 import { ConfirmarBorrarGracias } from './ListaGracias';
 import './gracias.css';
-import { Button, IconButton } from '../../../../components/standard';
+import { Button, FieldError, IconButton, InputGroup } from '../../../../components/standard';
 
 function cerrar() { almacen.flush(); ui.set({ gracias: null }); window.scrollTo({ top: 0 }); }
 
@@ -86,9 +86,8 @@ function CampoVideo({ g, campo, tit, ayuda }) {
                             </Button>
                         )}
                     </div>
-                    <div className={'entrada' + (linkMal ? ' mal' : '')}>
-                        <span className="prefijo"><Icono n="link" /></span>
-                        <InputVivo className="gx-link" type="url" inputMode="url" maxLength={500} spellCheck={false}
+                    <InputGroup invalid={linkMal} prefix={<Icono n="link" />}>
+                        <InputVivo bare className="gx-link" type="url" inputMode="url" maxLength={500} spellCheck={false}
                             placeholder="O pegá un link de Loom, YouTube, Vimeo o Drive" aria-label={'Link de ' + tit}
                             valor={v.archivo ? '' : v.url}
                             guardar={t => {
@@ -97,10 +96,10 @@ function CampoVideo({ g, campo, tit, ayuda }) {
                                 if (u && !embedDe(u)) return false;
                                 reemplazar({ archivo: '', nombre: '', url: u });
                             }} />
-                    </div>
+                    </InputGroup>
                 </>
             )}
-            {error && <p className="campo-err" role="alert"><Icono n="alerta" s={14} /><span>{error}</span></p>}
+            {error && <FieldError><span>{error}</span></FieldError>}
         </section>
     );
 }
@@ -140,7 +139,7 @@ export default function EditorGracias() {
         <>
             <div className="barra">
                 <Button icon={<Icono n="volver" />} data-nav="" onClick={cerrar}>Páginas de gracias</Button>
-                <InputVivo className="input gx-nom" maxLength={80} aria-label="Nombre de la página" valor={g.nombre}
+                <InputVivo className="gx-nom" maxLength={80} aria-label="Nombre de la página" valor={g.nombre}
                     guardar={t => { if (!t.trim()) return false; almacen.editar('gracias', g.id, { nombre: t.trim() }); }} />
                 <IconButton label="Eliminar página" icon={<Icono n="basura" s={15} />} size="sm" danger style={{ marginLeft: 'auto' }} title="Eliminar página"
                     aria-expanded={borrar} onClick={() => setBorrar(b => !b)} />

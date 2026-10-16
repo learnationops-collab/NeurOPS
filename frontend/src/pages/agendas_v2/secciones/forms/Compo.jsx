@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { Humo, HUMO_MARCA, Icono } from '../../ui/base';
-import { Button } from '../../../../components/standard';
+import { Button, FieldError, InputGroup } from '../../../../components/standard';
 
 export default function Compo({ vacio, tit, soloTit, ph, onCrear, sug, id = 'nuevo-nombre', maxLength = 80 }) {
     const [valor, setValor] = useState('');
@@ -25,14 +25,14 @@ export default function Compo({ vacio, tit, soloTit, ph, onCrear, sug, id = 'nue
                 <div style={{ display: 'grid', gap: 4 }}><h2 className="t-h3">{vacio ? soloTit : tit}</h2></div>
             </div>
             <div className="compo-accion">
-                <form className="entrada" noValidate onSubmit={enviar}>
+                <InputGroup as="form" noValidate onSubmit={enviar}>
                     <label className="sr" htmlFor={id}>{tit}</label>
                     <input id={id} type="text" maxLength={maxLength} autoComplete="off" placeholder={ph} value={valor}
                         aria-invalid={err ? true : undefined} aria-describedby={err ? id + '-err' : undefined}
                         onChange={e => { setValor(e.target.value); if (err) setErr(''); }} />
                     <Button variant="primary" icon={<Icono n="plus" />} type="submit">Crear</Button>
-                </form>
-                {err && <p className="campo-err" id={id + '-err'} role="alert"><Icono n="alerta" s={14} /><span>{err}</span></p>}
+                </InputGroup>
+                {err && <FieldError id={id + '-err'}><span>{err}</span></FieldError>}
                 {sug}
             </div>
         </section>
