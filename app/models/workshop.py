@@ -86,6 +86,9 @@ class WorkshopEvent(db.Model):
     meta_impresiones = db.Column(db.Integer, nullable=True)
     meta_clics = db.Column(db.Integer, nullable=True)
     meta_clics_enlace = db.Column(db.Integer, nullable=True)
+    # Los Leads de Meta de esos anuncios (16/10/2026): reemplazan a `leads` cargado a mano. Null si
+    # algún día de la ventana se sincronizó antes de que se trajeran.
+    meta_leads = db.Column(db.Integer, nullable=True)
     meta_actualizado_at = db.Column(db.DateTime, nullable=True)
 
     # Ultima vez que las 5 metricas automaticas de arriba se recalcularon desde
@@ -143,6 +146,14 @@ class WorkshopEvent(db.Model):
         return self.meta_inversion / self.meta_clics_enlace if self.meta_clics_enlace else 0.0
 
     @property
+    def leads_de_meta(self):
+        return self.meta_inversion is not None and self.meta_leads is not None
+
+    @property
+    def leads_reales(self):
+        return self.meta_leads if self.leads_de_meta else (self.leads or 0)
+
+    @property
     def clics_reales(self):
         return self.meta_clics if self.clics_de_meta else (self.clics or 0)
 
@@ -164,19 +175,19 @@ class WorkshopEvent(db.Model):
     @property
     def conversion_leads(self):
         if self.clics_reales > 0:
-            return (self.leads / self.clics_reales) * 100
+            return (self.leads_reales / self.clics_reales) * 100
         return 0.0
 
     @property
     def cpl(self):
-        if self.leads and self.leads > 0:
-            return self.inversion_real / self.leads
+        if self.leads_reales > 0:
+            return self.inversion_real / self.leads_reales
         return 0.0
 
     @property
     def tx_entrada_whatsapp(self):
-        if self.leads and self.leads > 0:
-            return (self.whatsapp_leads / self.leads) * 100
+        if self.leads_reales > 0:
+            return (self.whatsapp_leads / self.leads_reales) * 100
         return 0.0
 
     @property
@@ -263,8 +274,10 @@ class WorkshopEvent(db.Model):
             "inversion_de_meta": self.inversion_de_meta,
             "clics_de_meta": self.clics_de_meta,
             "meta_actualizado_at": self.meta_actualizado_at.isoformat() if self.meta_actualizado_at else None,
-            "a_mano": {"inversion": self.inversion, "cpm": self.cpm, "cpc": self.cpc, "clics": self.clics},
-            "leads": self.leads,
+            "leads_de_meta": self.leads_de_meta,
+            "a_mano": {"inversion": self.inversion, "cpm": self.cpm, "cpc": self.cpc, "clics": self.clics,
+                       "leads": self.leads},
+            "leads": self.leads_reales,
             "whatsapp_leads": self.whatsapp_leads,
             "show_up": self.show_up,
             "pitch_leads": self.pitch_leads,

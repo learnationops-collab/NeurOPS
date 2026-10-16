@@ -52,7 +52,19 @@ CAMPOS_DEL_ANUNCIO = ('id,name,effective_status,campaign{id,name},adset{id,name}
 # conjunto o su campaña están pausados (ADSET_PAUSED, CAMPAIGN_PAUSED).
 CAMPOS_DE_ESTADO = 'id,name,effective_status,campaign{id,name},adset{id,name}'
 CAMPOS_DE_INSIGHTS = ('ad_id,ad_name,campaign_id,campaign_name,adset_id,adset_name,spend,account_currency,'
-                      'impressions,clicks,inline_link_clicks')
+                      'impressions,clicks,inline_link_clicks,actions')
+
+# La columna Leads de Meta: `lead` junta el píxel y los formularios de Meta; si no viene, el del píxel.
+TIPOS_DE_LEAD = ('lead', 'offsite_conversion.fb_pixel_lead')
+
+
+def leads_de(fila):
+    """Los Leads de una fila de insights (0 si no tuvo)."""
+    acciones = {a.get('action_type'): a.get('value') for a in (fila.get('actions') or [])}
+    for tipo in TIPOS_DE_LEAD:
+        if tipo in acciones:
+            return _entero(acciones[tipo]) or 0
+    return 0
 
 
 FICHAS_POR_PEDIDO = 50  # el máximo de `?ids=` de la Graph API
@@ -339,6 +351,7 @@ def _guardar_gastos(cuenta, insights, desde, hasta):
         registro.impresiones = _entero(fila.get('impressions'))
         registro.clics = _entero(fila.get('clicks'))
         registro.clics_enlace = _entero(fila.get('inline_link_clicks'))
+        registro.leads = leads_de(fila)
         registro.actualizado_at = datetime.utcnow()
         filas += 1
         total += gasto

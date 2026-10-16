@@ -390,7 +390,7 @@ def update_workshop_event(event_id):
         event.cpc = float(data['cpc'])
     if 'clics' in data and not event.clics_de_meta:
         event.clics = int(data['clics'])
-    if 'leads' in data:
+    if 'leads' in data and not event.leads_de_meta:
         event.leads = int(data['leads'])
     if 'whatsapp_leads' in data:
         event.whatsapp_leads = int(data['whatsapp_leads'])

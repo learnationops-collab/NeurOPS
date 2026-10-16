@@ -13,7 +13,8 @@ El primer taller registrado no tiene anterior: se le cuentan los 7 días que ter
 agendas y ventas usan otra ventana, la que EMPIEZA en el taller (`workshop_metrics_service`).
 
 **Qué números** (comparados con lo cargado a mano el 15/10): inversión = gasto; clics = todos los
-clics (`clicks`); CPC = gasto / clics en el ENLACE; CPM = gasto / impresiones × 1000.
+clics (`clicks`); CPC = gasto / clics en el ENLACE; CPM = gasto / impresiones × 1000; leads = la
+columna Leads de Meta (16/10/2026: el 19/09 dio 179, igual que lo cargado a mano).
 
 Los resultados se guardan en `WorkshopEvent.meta_*` y reemplazan a los cargados a mano mientras haya
 datos de Meta para esos días; si no queda ningún anuncio de workshop vuelven los cargados a mano.
@@ -69,7 +70,7 @@ def recalcular():
         if not hay_de_workshop or primer_dia is None or desde < primer_dia:
             _sin_meta(evento)
             continue
-        gasto, impresiones, clics, enlace, sin_conteos = _de_workshop().filter(
+        gasto, impresiones, clics, enlace, sin_conteos, leads, sin_leads = _de_workshop().filter(
             MetaGastoDiario.fecha >= desde, MetaGastoDiario.fecha <= hasta,
         ).with_entities(
             db.func.coalesce(db.func.sum(MetaGastoDiario.gasto), 0.0),
@@ -77,11 +78,15 @@ def recalcular():
             db.func.coalesce(db.func.sum(MetaGastoDiario.clics), 0),
             db.func.coalesce(db.func.sum(MetaGastoDiario.clics_enlace), 0),
             db.func.count(db.case((MetaGastoDiario.impresiones.is_(None), 1))),
+            db.func.coalesce(db.func.sum(MetaGastoDiario.leads), 0),
+            db.func.count(db.case((MetaGastoDiario.leads.is_(None), 1))),
         ).one()
         evento.meta_inversion = round(float(gasto), 2)
         # Días sincronizados antes de que se trajeran impresiones y clics: esos tres siguen a mano.
         conteos = (None, None, None) if sin_conteos else (int(impresiones), int(clics), int(enlace))
         evento.meta_impresiones, evento.meta_clics, evento.meta_clics_enlace = conteos
+        # Ídem los leads: con algún día sin traerlos, siguen los cargados a mano.
+        evento.meta_leads = None if sin_leads else int(leads)
         evento.meta_actualizado_at = datetime.utcnow()
 
 
@@ -183,4 +188,5 @@ def desglose_periodo(desde, hasta, zona=None):
 
 def _sin_meta(evento):
     evento.meta_inversion = evento.meta_impresiones = evento.meta_clics = evento.meta_clics_enlace = None
+    evento.meta_leads = None
     evento.meta_actualizado_at = None

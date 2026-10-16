@@ -158,6 +158,8 @@ class MetaGastoDiario(db.Model):
     impresiones = db.Column(db.Integer, nullable=True)
     clics = db.Column(db.Integer, nullable=True)  # todos los clics (`clicks`)
     clics_enlace = db.Column(db.Integer, nullable=True)  # clics en el enlace (`inline_link_clicks`)
+    # La columna Leads de Meta (evento Lead del píxel; 16/10/2026). Null en los días sincronizados antes.
+    leads = db.Column(db.Integer, nullable=True)
     actualizado_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 

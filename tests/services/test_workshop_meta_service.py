@@ -11,16 +11,17 @@ from app.models import MetaAnuncio, MetaGastoDiario, WorkshopEvent
 from app.services import meta_ads_service, workshop_meta_service
 
 
-def _dia(ad, fecha, gasto, impresiones=1000, clics=50, enlace=20):
+def _dia(ad, fecha, gasto, impresiones=1000, clics=50, enlace=20, leads=10):
     return MetaGastoDiario(meta_ad_id=ad, fecha=date.fromisoformat(fecha), gasto=gasto, moneda='USD',
-                           impresiones=impresiones, clics=clics, clics_enlace=enlace)
+                           impresiones=impresiones, clics=clics, clics_enlace=enlace, leads=leads)
 
 
 @pytest.fixture()
 def talleres(db):
     eventos = {
         'jul8': WorkshopEvent(date=date(2026, 7, 8), name='Webinar 8 de julio', inversion=500.0, cpm=4.6, cpc=0.4, clics=1815),
-        'jul14': WorkshopEvent(date=date(2026, 7, 14), name='Webinar 14 de julio', inversion=450.0, cpm=3.7, cpc=0.42, clics=1618),
+        'jul14': WorkshopEvent(date=date(2026, 7, 14), name='Webinar 14 de julio', inversion=450.0, cpm=3.7, cpc=0.42, clics=1618,
+                               leads=300, whatsapp_leads=150),
     }
     db.session.add_all(eventos.values())
     db.session.add_all([
@@ -58,7 +59,7 @@ def test_cada_taller_suma_el_gasto_desde_el_dia_siguiente_al_anterior(db, taller
     assert (jul14['cpm'], jul14['cpc'], jul14['clics']) == (50.0, 2.5, 100)
     assert jul14['inversion_de_meta'] and jul14['clics_de_meta']
     # Lo cargado a mano queda guardado aparte, y el ROAS y el CPL usan lo de Meta.
-    assert jul14['a_mano'] == {'inversion': 450.0, 'cpm': 3.7, 'cpc': 0.42, 'clics': 1618}
+    assert jul14['a_mano'] == {'inversion': 450.0, 'cpm': 3.7, 'cpc': 0.42, 'clics': 1618, 'leads': 300}
     assert talleres['jul14'].inversion_real == 100.0
 
 
@@ -164,3 +165,51 @@ def test_mover_un_taller_de_dia_o_programar_semanas_mueve_las_ventanas(client, d
         'inicio_local': '2026-07-14T17:00', 'zona': 'America/Argentina/Buenos_Aires', 'semanas': 1})
     assert programado.status_code == 201
     assert programado.get_json()['creados'][0]['inversion'] == 60.0  # del 10/07 al 14/07
+
+
+def test_los_leads_del_taller_son_los_de_meta(db, talleres):
+    """«Leads totales» es la columna Leads de Meta de los anuncios de workshop (16/10/2026)."""
+    meta_ads_service.asignar_embudo('ws1', 'workshop')
+    meta_ads_service.asignar_embudo('ws2', 'workshop')
+
+    jul14 = talleres['jul14']
+    datos = jul14.to_dict()
+    assert (datos['leads'], datos['leads_de_meta']) == (20, True)  # 09/07 + 14/07, 10 cada uno
+    assert datos['a_mano']['leads'] == 300
+    # El CPL y la conversión a WhatsApp usan los de Meta.
+    assert jul14.cpl == 5.0  # 100 / 20
+    assert jul14.tx_entrada_whatsapp == 750.0
+
+
+def test_dias_sin_leads_dejan_los_cargados_a_mano(db, talleres):
+    """Días sincronizados antes de que se trajeran los leads: siguen los cargados a mano."""
+    MetaGastoDiario.query.filter_by(meta_ad_id='ws1', fecha=date(2026, 7, 9)).one().leads = None
+    db.session.commit()
+    meta_ads_service.asignar_embudo('ws1', 'workshop')
+
+    datos = talleres['jul14'].to_dict()
+    assert (datos['leads'], datos['leads_de_meta'], datos['inversion_de_meta']) == (300, False, True)
+
+
+@pytest.mark.parametrize('acciones, esperados', [
+    ([{'action_type': 'link_click', 'value': '40'}, {'action_type': 'lead', 'value': '7'},
+      {'action_type': 'offsite_conversion.fb_pixel_lead', 'value': '7'}], 7),
+    ([{'action_type': 'offsite_conversion.fb_pixel_lead', 'value': '3'}], 3),
+    ([{'action_type': 'link_click', 'value': '40'}], 0),
+    (None, 0),
+])
+def test_los_leads_de_una_fila_de_insights(acciones, esperados):
+    assert meta_ads_service.leads_de({'actions': acciones} if acciones is not None else {}) == esperados
+
+
+def test_guardar_el_taller_no_pisa_los_leads_de_meta(client, db, talleres, make_user, auth_headers):
+    meta_ads_service.asignar_embudo('ws1', 'workshop')
+    cabeceras = auth_headers(make_user(role='admin'))
+
+    respuesta = client.put(f"/api/workshop/events/{talleres['jul14'].id}", json={'leads': 999, 'show_up': 80},
+                           headers=cabeceras)
+
+    assert respuesta.status_code == 200
+    assert respuesta.get_json()['leads'] == 10  # el 09/07 de Meta
+    assert talleres['jul14'].leads == 300  # lo cargado a mano no se tocó
+    assert talleres['jul14'].show_up == 80
