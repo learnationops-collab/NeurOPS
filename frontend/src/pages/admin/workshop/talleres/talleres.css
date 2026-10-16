@@ -1,0 +1,299 @@
+/* ============================================================================
+   Workshop › Talleres (16/10/2026): tarjetas, tabla y el detalle de cada taller, con el sistema del
+   dashboard comercial (`.dc-shell`: tokens, `.panel`, `.kpi`, `.tabs`, `.btn`, `.chip`, `.tabla`).
+   Todo lo propio va bajo `.dc-shell .wt-…`. Colores solo por token; el de un dato, por `--c`.
+   ============================================================================ */
+
+.dc-shell .wt-talleres { gap: var(--s4); }
+.dc-shell .wt-vista { gap: var(--s4); }
+.dc-shell .wt-panel { padding: var(--s5); }
+.dc-shell .wt-panel .panel-cab { margin-bottom: var(--s3); align-items: center; }
+.dc-shell .wt-barra { flex-wrap: wrap; }
+.dc-shell .wt-recargando { opacity: .6; transition: opacity .2s ease; }
+
+/* La barra de la lista (`.barra-tabla`) ya existe en ListaConfigurable; en tarjetas se usa igual. */
+.dc-shell .wt-barra .barra-cuenta { margin-left: auto; }
+
+/* --- Vacío ----------------------------------------------------------------------------------- */
+.dc-shell .wt-vacio { display: grid; gap: var(--s3); justify-items: start; padding: var(--s8) var(--s6); }
+
+/* --- Tarjetas -------------------------------------------------------------------------------- */
+.dc-shell .wt-tarjetas {
+    display: grid;
+    gap: var(--s4);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+    align-items: start;
+}
+
+.dc-shell .wt-tarjeta {
+    display: grid;
+    gap: var(--s3);
+    align-content: start;
+    min-width: 0;
+    padding: var(--s5);
+    background: var(--mat-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-main);
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+.dc-shell .wt-tarjeta:hover { border-color: var(--border-main); }
+.dc-shell .wt-tarjeta--elegida {
+    border-color: var(--brand-secondary-border);
+    box-shadow: 0 0 0 1px var(--brand-secondary-border) inset;
+}
+
+.dc-shell .wt-tarjeta-cab { display: flex; align-items: center; gap: var(--s2); min-width: 0; min-height: 34px; }
+.dc-shell .wt-tarjeta-cab > .t-rotulo { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dc-shell .wt-tarjeta-acciones { margin-left: auto; display: flex; align-items: center; gap: var(--s2); flex-shrink: 0; }
+
+.dc-shell .wt-comparar {
+    display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 11px 0 8px;
+    border-radius: var(--radius-pill); border: 1px solid var(--border-subtle); background: var(--bg-input);
+    color: var(--text-muted); font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+    cursor: pointer; transition: color .16s ease, border-color .16s ease, background-color .16s ease;
+}
+.dc-shell .wt-comparar:hover { color: var(--text-on-surface); border-color: var(--border-control); }
+.dc-shell .wt-comparar--on {
+    color: var(--brand-secondary); border-color: var(--brand-secondary-border); background: var(--brand-secondary-surface);
+}
+.dc-shell .wt-comparar-caja,
+.dc-shell .wt-casilla {
+    width: 16px; height: 16px; flex-shrink: 0; border-radius: 5px; display: inline-grid; place-items: center;
+    border: 1px solid var(--border-control); background: transparent; color: var(--on-brand);
+}
+.dc-shell .wt-comparar--on .wt-comparar-caja,
+.dc-shell .wt-casilla--on { background: var(--brand-secondary); border-color: var(--brand-secondary); }
+.dc-shell .wt-comparar-caja svg,
+.dc-shell .wt-casilla svg { width: 11px; height: 11px; stroke-width: 3; }
+
+.dc-shell .wt-tarjeta-nom {
+    margin: 0; min-width: 0; font-size: 17px; font-weight: 900; letter-spacing: -.02em; line-height: 1.25;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Las cuatro cifras de arriba de la tarjeta y las de los resúmenes: rótulo chico, número grande. */
+.dc-shell .wt-tarjeta-cifras,
+.dc-shell .wt-mini-cifras { margin: 0; }
+.dc-shell .wt-tarjeta-cifras > div,
+.dc-shell .wt-mini-cifras > div {
+    display: grid; gap: 2px; min-width: 0; padding: var(--s2) 8px;
+    background: var(--hundido); border: 1px solid var(--border-subtle); border-radius: 12px;
+}
+.dc-shell .wt-tarjeta-cifras dt,
+.dc-shell .wt-mini-cifras dt {
+    font-size: 9px; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted-40);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dc-shell .wt-tarjeta-cifras dd,
+.dc-shell .wt-mini-cifras dd {
+    margin: 0; font-size: 16px; font-weight: 900; letter-spacing: -.02em; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+}
+.dc-shell .wt-mini-cifras dd { font-size: 14px; }
+.dc-shell .wt-tarjeta-cifras dd small { font-size: 11px; font-weight: 700; letter-spacing: 0; }
+.dc-shell .wt-tarjeta-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* El conmutador de la tarjeta ocupa el ancho: tres pestañas iguales. */
+.dc-shell .wt-tarjeta > .tabs { width: 100%; }
+.dc-shell .wt-tarjeta > .tabs .tab { flex: 1 1 0; justify-content: center; }
+
+/* El cuerpo mide lo mismo en las tres vistas: cambiar de vista no hace saltar la grilla. */
+.dc-shell .wt-tarjeta-cuerpo { min-height: 192px; min-width: 0; display: grid; align-content: start; }
+
+.dc-shell .wt-tarjeta-pie {
+    display: inline-flex; align-items: center; justify-content: space-between; gap: var(--s2); width: 100%;
+    height: 38px; padding: 0 var(--s3); border-radius: var(--radius-control); cursor: pointer;
+    border: 1px solid var(--brand-secondary-border); background: var(--brand-secondary-surface);
+    color: var(--brand-secondary); font-size: 11px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase;
+    transition: background-color .16s ease;
+}
+.dc-shell .wt-tarjeta-pie svg { width: 15px; height: 15px; transition: transform .22s var(--spring); }
+.dc-shell .wt-tarjeta-pie:hover { background: color-mix(in srgb, var(--brand-secondary) 18%, transparent); }
+.dc-shell .wt-tarjeta-pie:hover svg { transform: translateX(3px); }
+
+/* --- Resúmenes dentro de la tarjeta ---------------------------------------------------------- */
+.dc-shell .wt-riel { position: relative; display: block; height: 8px; min-width: 0; border-radius: 99px; background: var(--hueco); overflow: hidden; }
+.dc-shell .wt-riel > i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; }
+
+.dc-shell .wt-mini-embudo { display: grid; gap: 7px; }
+.dc-shell .wt-mini-paso {
+    display: grid; grid-template-columns: 74px minmax(0, 1fr) 46px 44px; align-items: center; gap: var(--s2);
+    min-height: 20px;
+}
+.dc-shell .wt-mini-paso > small {
+    font-size: 9.5px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dc-shell .wt-mini-paso > b { font-size: 13px; font-weight: 800; text-align: right; }
+.dc-shell .wt-mini-paso > span { font-size: 11px; font-weight: 700; text-align: right; }
+
+.dc-shell .wt-mini-vacio { display: flex; align-items: center; gap: var(--s2); padding: var(--s4) 0; }
+
+.dc-shell .wt-mini-anuncios { display: grid; gap: var(--s3); }
+.dc-shell .wt-mini-campanas { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); }
+.dc-shell .wt-mini-campanas li {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--s2); row-gap: 4px; align-items: baseline;
+}
+.dc-shell .wt-mini-campanas li > .trunc { font-size: 12px; font-weight: 700; }
+.dc-shell .wt-mini-campanas li > b { font-size: 12px; font-weight: 800; }
+.dc-shell .wt-mini-campanas li > .wt-riel { grid-column: 1 / -1; height: 5px; }
+
+.dc-shell .wt-mini-grabacion { display: grid; gap: var(--s3); }
+.dc-shell .wt-mini-fila { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; min-width: 0; min-height: 34px; }
+.dc-shell .wt-mini-interruptor { margin-left: auto; display: inline-flex; align-items: center; gap: var(--s2); }
+
+/* --- Interruptor ------------------------------------------------------------------------------ */
+.dc-shell .wt-interruptor {
+    display: inline-flex; align-items: center; justify-content: flex-start; width: 44px; height: 26px; padding: 3px;
+    border-radius: 99px; border: 1px solid var(--border-control); background: var(--bg-input); cursor: pointer;
+    transition: background-color .2s ease, border-color .2s ease;
+}
+.dc-shell .wt-interruptor > i { display: block; width: 18px; height: 18px; border-radius: 50%; background: var(--text-muted); }
+.dc-shell .wt-interruptor--on { justify-content: flex-end; background: var(--success); border-color: var(--success); }
+.dc-shell .wt-interruptor--on > i { background: var(--on-state); }
+.dc-shell .wt-interruptor:disabled { opacity: .45; cursor: not-allowed; }
+.dc-shell .wt-interruptor--ocupado { opacity: .7; cursor: progress; }
+.dc-shell .wt-interruptor:focus-visible { outline: 2px solid var(--brand-secondary); outline-offset: 2px; }
+
+/* --- Tabla ------------------------------------------------------------------------------------ */
+.dc-shell .wt-celda-nom { display: flex; align-items: center; gap: var(--s2); min-width: 0; }
+.dc-shell .wt-casilla { width: 18px; height: 18px; cursor: pointer; padding: 0; }
+.dc-shell .wt-casilla:hover { border-color: var(--text-muted); }
+.dc-shell .wt-tabla .barra-tabla { flex-wrap: wrap; }
+
+/* --- Hoja (detalle, landing, comparar) --------------------------------------------------------- */
+.dc-shell.wt-velo { z-index: 170; }
+.dc-shell .wt-hoja {
+    width: min(1180px, 100%); height: min(92vh, 1100px); max-height: none; padding: 0; overflow: hidden; animation: none;
+    display: flex; flex-direction: column;
+}
+.dc-shell .wt-hoja-cabeza {
+    display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s5) var(--s6) var(--s4);
+    border-bottom: 1px solid var(--border-subtle); flex-shrink: 0;
+}
+.dc-shell .wt-hoja-cabeza-txt { flex: 1 1 auto; min-width: 0; display: grid; gap: 4px; }
+.dc-shell .wt-hoja-cuerpo { overflow: auto; overscroll-behavior: contain; padding: var(--s5) var(--s6) var(--s6); min-height: 0; }
+
+.dc-shell .wt-detalle-cab { display: grid; gap: var(--s3); min-width: 0; }
+.dc-shell .wt-detalle-id { display: flex; align-items: center; gap: var(--s2) var(--s3); flex-wrap: wrap; min-width: 0; }
+.dc-shell .wt-detalle-id > .t-eyebrow { flex: 1 1 100%; }
+.dc-shell .wt-detalle-nom { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dc-shell .wt-detalle-barra { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; min-width: 0; }
+.dc-shell .wt-detalle-barra > .tabs { max-width: 100%; }
+.dc-shell .wt-detalle-acciones { margin-left: auto; display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
+
+@media (max-width: 640px) {
+    .dc-shell .wt-hoja-cabeza { padding: var(--s4); }
+    .dc-shell .wt-hoja-cuerpo { padding: var(--s4); }
+}
+
+/* --- Embudo del detalle ----------------------------------------------------------------------- */
+.dc-shell .wt-kpi { padding: var(--s4) var(--s5); gap: var(--s2); }
+.dc-shell .wt-kpi .kpi-n { font-size: clamp(24px, 2.4vw, 30px); }
+.dc-shell .wt-sync { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.dc-shell .wt-punto-vivo { width: 6px; height: 6px; border-radius: 50%; background: var(--success); display: inline-block; }
+.dc-shell .wt-pie-embudo { margin-top: var(--s3); }
+
+.dc-shell .wt-fuente { display: grid; gap: var(--s3); align-content: start; border-color: color-mix(in srgb, var(--c) 30%, transparent); }
+.dc-shell .wt-fuente-titulo {
+    display: flex; align-items: center; gap: var(--s2); color: var(--c);
+    font-size: 11px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase;
+}
+.dc-shell .wt-fuente-titulo svg { width: 15px; height: 15px; }
+.dc-shell .wt-fuente-datos { margin: 0; display: grid; gap: 6px; }
+.dc-shell .wt-fuente-datos > div { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); }
+.dc-shell .wt-fuente-datos dt { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.dc-shell .wt-fuente-datos dd { margin: 0; font-size: 14px; font-weight: 800; }
+.dc-shell .wt-fuente-n { font-size: 28px; font-weight: 900; letter-spacing: -.025em; line-height: 1; color: var(--c); }
+.dc-shell .wt-chip-sm { height: 22px; margin-left: var(--s2); font-size: 10px; }
+
+/* --- Anuncios del detalle --------------------------------------------------------------------- */
+.dc-shell .wt-resumen-anuncios { display: grid; gap: var(--s3); }
+.dc-shell .wt-cifras { margin: 0; }
+.dc-shell .wt-cifra { display: grid; gap: 6px; padding: var(--s3) var(--s4); }
+.dc-shell .wt-cifra dt {
+    display: flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 900; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--text-muted-40); white-space: nowrap;
+}
+.dc-shell .wt-cifra dd { margin: 0; font-size: 20px; font-weight: 900; letter-spacing: -.02em; }
+
+/* La caja scrollea en los dos ejes y el thead se pega a su borde de arriba. */
+.dc-shell .wt-anuncios-caja {
+    max-height: min(62vh, 640px); overflow: auto; border-radius: var(--radius-control);
+    background: var(--hundido); border: 1px solid var(--border-subtle);
+}
+.dc-shell .wt-anuncios { width: 100%; min-width: 1060px; border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
+.dc-shell .wt-anuncios th,
+.dc-shell .wt-anuncios td { padding: 9px 12px; border-bottom: 1px solid var(--border-subtle); text-align: right; white-space: nowrap; }
+.dc-shell .wt-anuncios thead th {
+    position: sticky; top: 0; z-index: 2; background: var(--bg-flotante);
+    font-size: 10px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted-40);
+    vertical-align: bottom;
+}
+.dc-shell .wt-anuncios-titulo { display: inline-flex; align-items: center; gap: 4px; }
+.dc-shell .wt-anuncios th:first-child,
+.dc-shell .wt-anuncios td:first-child { text-align: left; }
+.dc-shell .wt-anuncios tbody th,
+.dc-shell .wt-anuncios tfoot th { max-width: 320px; width: 320px; font-weight: 700; color: var(--text-on-surface); }
+.dc-shell .wt-anuncios tbody th > .trunc { display: block; }
+.dc-shell .wt-anuncios-campana th,
+.dc-shell .wt-anuncios-campana td { background: var(--mat-1); font-weight: 800; }
+.dc-shell .wt-anuncios-conjunto th { padding-left: 34px; color: var(--text-muted); }
+.dc-shell .wt-anuncios-anuncio th { padding-left: 50px; font-weight: 600; color: var(--text-muted); }
+.dc-shell .wt-anuncios-total th,
+.dc-shell .wt-anuncios-total td {
+    position: sticky; bottom: 0; background: var(--bg-flotante); font-weight: 900; border-bottom: 0;
+    border-top: 1px solid var(--border-main);
+}
+.dc-shell .wt-anuncios-abrir {
+    display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; padding: 0; border: 0; background: none;
+    color: inherit; font: inherit; font-weight: 800; text-align: left; cursor: pointer;
+}
+.dc-shell .wt-anuncios-flecha { width: 14px; height: 14px; flex-shrink: 0; transition: transform .22s var(--spring); }
+.dc-shell .wt-anuncios-abrir[aria-expanded="true"] .wt-anuncios-flecha { transform: rotate(90deg); }
+.dc-shell .wt-parte { display: block; height: 3px; margin-top: 4px; border-radius: 99px; background: var(--hueco); overflow: hidden; }
+.dc-shell .wt-parte > b { display: block; height: 100%; background: var(--info); border-radius: inherit; }
+
+/* --- Grabación del detalle -------------------------------------------------------------------- */
+.dc-shell .wt-grabacion-link { display: grid; gap: var(--s3); grid-template-columns: minmax(0, 1fr) auto; align-items: end; margin-bottom: var(--s2); }
+@media (max-width: 720px) { .dc-shell .wt-grabacion-link { grid-template-columns: minmax(0, 1fr); } }
+.dc-shell .wt-botones { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
+.dc-shell .wt-campos { margin: var(--s3) 0 var(--s4); }
+.dc-shell .wt-publicacion-estado { margin-top: calc(-1 * var(--s2)); }
+.dc-shell .wt-btn-peligro { color: var(--error); border-color: var(--error-border); }
+.dc-shell .wt-btn-peligro:hover { color: var(--error); border-color: var(--error); }
+.dc-shell a.btn { text-decoration: none; }
+
+/* --- Landing general -------------------------------------------------------------------------- */
+.dc-shell .wt-landing-barra { flex-wrap: wrap; }
+.dc-shell .wt-chips { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.dc-shell .wt-chips .chip { text-transform: none; letter-spacing: 0; }
+
+/* --- Comparar --------------------------------------------------------------------------------- */
+.dc-shell .wt-cmp-caja { border-radius: var(--radius-control); background: var(--hundido); border: 1px solid var(--border-subtle); }
+.dc-shell .wt-cmp { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+.dc-shell .wt-cmp th,
+.dc-shell .wt-cmp td { padding: 10px 14px; border-bottom: 1px solid var(--border-subtle); text-align: right; }
+.dc-shell .wt-cmp th:first-child { text-align: left; width: 200px; font-weight: 700; color: var(--text-muted); }
+.dc-shell .wt-cmp thead th { vertical-align: bottom; }
+.dc-shell .wt-cmp thead small {
+    display: block; font-size: 10px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted-40);
+}
+.dc-shell .wt-cmp-nom { display: block; font-size: 13px; font-weight: 800; color: var(--text-on-surface); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dc-shell .wt-cmp td { font-weight: 700; }
+.dc-shell .wt-cmp tbody tr:last-child > * { border-bottom: 0; }
+.dc-shell .wt-cmp-gana { color: var(--success); background: color-mix(in srgb, var(--success) 8%, transparent); }
+
+/* La barra de comparar flota abajo, sobre el dock. */
+.dc-shell .wt-comparar-barra {
+    position: sticky; bottom: calc(108px + env(safe-area-inset-bottom, 0px)); z-index: 40; justify-self: center;
+    display: inline-flex; align-items: center; gap: var(--s3); padding: 8px 8px 8px 18px;
+    border-radius: var(--radius-pill); background: var(--bg-flotante); border: 1px solid var(--border-main);
+    box-shadow: var(--shadow-main);
+}
+.dc-shell .wt-comparar-barra b { color: var(--brand-secondary); font-weight: 900; }
+
+@media (prefers-reduced-motion: reduce) {
+    .dc-shell .wt-tarjeta-pie svg,
+    .dc-shell .wt-anuncios-flecha { transition: none; }
+}

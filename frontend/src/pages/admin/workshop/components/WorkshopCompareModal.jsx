@@ -1,95 +1,87 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
+import Hoja from '../talleres/Hoja';
+import { cac, dinero, numero, porcentaje, roasTono, veces } from '../talleres/formato';
 
-const ROWS = [
-    { key: 'inversion', label: 'Inversión', fmt: 'currency' },
-    { key: 'leads', label: 'Leads', fmt: 'number' },
-    { key: 'whatsapp_leads', label: 'Leads en WhatsApp', fmt: 'number' },
-    { key: 'show_up', label: 'Show up webinar', fmt: 'number' },
-    { key: 'agendas_exitosas', label: 'Agendas exitosas', fmt: 'number' },
-    { key: 'show_up_sales_call', label: 'Show up cita', fmt: 'number' },
-    { key: 'sales', label: 'Ventas', fmt: 'number' },
-    { key: 'cash_collected', label: 'Cash cobrado', fmt: 'currency' },
-    { key: 'cpl', label: 'CPL', fmt: 'currency' },
-    { key: 'costo_por_agenda', label: 'Costo por agenda', fmt: 'currency' },
-    { key: 'ticket_promedio', label: 'Ticket promedio', fmt: 'currency' },
-    { key: 'roas', label: 'ROAS', fmt: 'roas' },
+/**
+ * Comparar hasta cuatro talleres lado a lado. El mejor valor de cada fila se marca en verde (en
+ * CPL, costo por agenda y CAC gana el menor). La inversión no tiene ganador: gastar más o menos no
+ * es bueno ni malo por sí solo.
+ */
+
+const FILAS = [
+    { key: 'inversion', label: 'Inversión', fmt: dinero, sinGanador: true },
+    { key: 'leads', label: 'Leads', fmt: numero },
+    { key: 'cpl', label: 'CPL', fmt: (v) => (v == null ? '—' : `$${Number(v).toFixed(2)}`), menor: true },
+    { key: 'whatsapp_leads', label: 'En WhatsApp', fmt: numero },
+    { key: 'show_up', label: 'Show up', fmt: numero },
+    { key: 'show_up_rate', label: 'Show up %', fmt: porcentaje },
+    { key: 'agendas_exitosas', label: 'Agendas', fmt: numero },
+    { key: 'costo_por_agenda', label: 'Costo por agenda', fmt: dinero, menor: true },
+    { key: 'show_up_sales_call', label: 'Asistieron a la llamada', fmt: numero },
+    { key: 'sales', label: 'Ventas', fmt: numero },
+    { key: 'pct_close_rate', label: 'Close rate', fmt: porcentaje },
+    { key: 'cash_collected', label: 'Cash cobrado', fmt: dinero },
+    { key: 'ticket_promedio', label: 'Ticket promedio', fmt: dinero },
+    { key: 'cac', label: 'CAC', fmt: dinero, menor: true, de: cac },
+    { key: 'roas', label: 'ROAS', fmt: veces },
 ];
 
-const WorkshopCompareModal = ({ events, onClose, formatDate, formatCurrency }) => {
-    const fmtVal = (val, fmt) => {
-        // Un taller viejo puede no tener todavía el ticket calculado (llega null): mejor
-        // una raya que un $0 que parece un dato.
-        if (val == null) return '—';
-        if (fmt === 'currency') return formatCurrency(val || 0);
-        if (fmt === 'roas') return `${(val || 0).toFixed(2)}x`;
-        return (val || 0).toLocaleString('en-US');
-    };
+const valorDe = (fila, e) => (fila.de ? fila.de(e) : e[fila.key]);
 
-    // Mejor valor de cada fila resaltado en verde — a simple vista, cuál
-    // taller gana en cada métrica (costo por agenda/CPL: menor es mejor).
-    // "Inversión" queda sin ganador: gastar más o menos no es en sí mismo
-    // bueno ni malo, depende de lo que devolvió — no confundir marcando un
-    // monto más alto como "mejor".
-    const bestId = (row) => {
-        if (row.key === 'inversion') return null;
-        const lowerIsBetter = row.key === 'cpl' || row.key === 'costo_por_agenda';
-        return events.reduce((best, e) => {
-            const v = e[row.key] || 0;
-            const bv = best ? best[row.key] || 0 : null;
-            if (bv === null) return e;
-            return lowerIsBetter ? (v < bv ? e : best) : (v > bv ? e : best);
-        }, null)?.id;
-    };
+const ganadorDe = (fila, eventos) => {
+    if (fila.sinGanador) return null;
+    let mejor = null;
+    eventos.forEach((e) => {
+        const v = valorDe(fila, e);
+        if (v == null) return;
+        if (!mejor || (fila.menor ? v < mejor.v : v > mejor.v)) mejor = { id: e.id, v };
+    });
+    return mejor?.id ?? null;
+};
 
+const WorkshopCompareModal = ({ events, onClose, formatDate }) => {
+    const quieto = useReducedMotion();
     return (
-        <div className="modal-overlay">
-            <button type="button" className="modal-backdrop" aria-label="Cerrar ventana de comparación" onClick={onClose} />
-            <div className="action-modal wide" role="dialog" aria-modal="true" aria-label="Comparar talleres">
-                <header>
-                    <div>
-                        <p className="eyebrow">Lectura lado a lado</p>
-                        <h2>Comparar talleres</h2>
-                        <p>{events.length} seleccionados</p>
-                    </div>
-                    <button type="button" onClick={onClose} aria-label="Cerrar"><X size={20} /></button>
-                </header>
-                <div className="modal-body">
-                    <div className="comparison-panel" style={{ padding: 0, border: 0, background: 'transparent', boxShadow: 'none' }}>
-                    <div className="comparison-scroll">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th scope="col" style={{ textAlign: 'left' }}>Métrica</th>
-                                    {events.map((e) => (
-                                        <th key={e.id} scope="col">
-                                            <span>{formatDate(e.date)}</span>
-                                            {e.name}
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {ROWS.map((row) => {
-                                    const winnerId = bestId(row);
-                                    return (
-                                        <tr key={row.key}>
-                                            <th scope="row" style={{ textAlign: 'left' }}>{row.label}</th>
-                                            {events.map((e) => (
-                                                <td key={e.id} className={e.id === winnerId ? 'positive' : ''} data-workshop={`${formatDate(e.date)} · ${e.name}`}>
-                                                    {fmtVal(e[row.key], row.fmt)}
-                                                </td>
-                                            ))}
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                    </div>
-                </div>
+        <Hoja titulo="Comparar talleres" onCerrar={onClose}
+            cabeza={<><p className="t-eyebrow">Lado a lado</p><h2 className="t-h2">Comparar talleres</h2></>}>
+            <div className="cmp-scroll wt-cmp-caja">
+                <table className="wt-cmp" style={{ '--n': events.length }}>
+                    <thead>
+                        <tr>
+                            <th scope="col"><span className="t-rotulo">Métrica</span></th>
+                            {events.map((e) => (
+                                <th key={e.id} scope="col">
+                                    <small className="num">{formatDate(e.date)}</small>
+                                    <span className="wt-cmp-nom" title={e.name}>{e.name}</span>
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {FILAS.map((fila, i) => {
+                            const ganador = ganadorDe(fila, events);
+                            return (
+                                <motion.tr key={fila.key}
+                                    initial={quieto ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                                    transition={quieto ? { duration: 0 } : { duration: 0.24, delay: i * 0.02 }}>
+                                    <th scope="row">{fila.label}</th>
+                                    {events.map((e) => {
+                                        const v = valorDe(fila, e);
+                                        const color = fila.key === 'roas' ? `var(--${roasTono(v)})` : undefined;
+                                        return (
+                                            <td key={e.id} className={`num${e.id === ganador ? ' wt-cmp-gana' : ''}`} style={color ? { color } : undefined}>
+                                                {fila.fmt(v)}
+                                            </td>
+                                        );
+                                    })}
+                                </motion.tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
             </div>
-        </div>
+        </Hoja>
     );
 };
 

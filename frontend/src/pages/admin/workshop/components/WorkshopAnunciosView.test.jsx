@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 vi.mock('../../../../services/api', () => ({ default: { get: vi.fn() } }));
 
 import api from '../../../../services/api';
+import { olvidarDatosTaller } from '../talleres/datosTaller';
 import WorkshopAnunciosView from './WorkshopAnunciosView';
 
 const dinero = (v) => `$${Number(v).toFixed(2)}`;
@@ -22,12 +23,14 @@ const DESGLOSE = {
     ],
 };
 
-describe('Workshop › Anuncios del taller', () => {
-    beforeEach(() => api.get.mockReset());
+const armar = () => render(<div className="dc-shell"><WorkshopAnunciosView evento={{ id: 15 }} formatCurrency={dinero} /></div>);
+
+describe('Workshop › Talleres › Anuncios del taller', () => {
+    beforeEach(() => { api.get.mockReset(); olvidarDatosTaller(); });
 
     it('pide los anuncios del taller y abre la campaña que más gastó', async () => {
         api.get.mockResolvedValue({ data: DESGLOSE });
-        render(<WorkshopAnunciosView evento={{ id: 15 }} formatCurrency={dinero} />);
+        armar();
 
         expect(await screen.findByText('Ad 8 - Aprobación')).toBeInTheDocument();
         expect(api.get.mock.calls[0][0]).toBe('workshop/events/15/anuncios');
@@ -41,31 +44,28 @@ describe('Workshop › Anuncios del taller', () => {
         expect(within(total).getByText('61')).toBeInTheDocument();
     });
 
-    it('cada columna explica qué es con su tooltip y la tabla conserva sus encabezados', async () => {
+    it('cada columna explica qué es con su «i» y la tabla tiene sus encabezados', async () => {
         api.get.mockResolvedValue({ data: DESGLOSE });
-        const { container } = render(<WorkshopAnunciosView evento={{ id: 15 }} formatCurrency={dinero} />);
+        armar();
 
         await screen.findByText('Ad 8 - Aprobación');
         const columnas = ['Campaña › conjunto › anuncio', 'Gasto', 'Impresiones', 'Clics (todos)', 'CTR', 'CPC (enlace)',
             'CPM', 'Visitas a la landing', 'Clics al grupo', 'Costo por clic al grupo'];
-        const cabeza = container.querySelector('.ws-anuncios-cabeza');
-        for (const col of columnas) {
-            expect(within(cabeza).getByRole('button', { name: `Qué significa ${col}` })).toBeInTheDocument();
-        }
-        // Los títulos pegados son de presentación: la única tabla es la de datos, con sus encabezados.
         const tabla = screen.getByRole('table');
-        expect(within(tabla).getAllByRole('columnheader').map((th) => th.textContent)).toEqual(columnas);
-
-        await userEvent.hover(within(cabeza).getByRole('button', { name: 'Qué significa CPC (enlace)' }));
-        expect(screen.getByRole('tooltip')).toHaveTextContent(/clics que llevaron a la landing/);
+        const cabeceras = within(tabla).getAllByRole('columnheader');
+        // El texto de cada título, sin la «i» del Tip.
+        expect(cabeceras.map((th) => th.querySelector('.wt-anuncios-titulo > span').textContent)).toEqual(columnas);
+        cabeceras.forEach((th, i) => {
+            expect(within(th).getByRole('note').getAttribute('aria-label').startsWith(`${columnas[i]}:`)).toBe(true);
+        });
     });
 
     it('arriba resume el taller y «Abrir todas» despliega cada campaña', async () => {
         api.get.mockResolvedValue({ data: DESGLOSE });
-        const { container } = render(<WorkshopAnunciosView evento={{ id: 15 }} formatCurrency={dinero} />);
+        const { container } = armar();
 
         await screen.findByText('Ad 8 - Aprobación');
-        const resumen = container.querySelector('.ws-anuncios-resumen');
+        const resumen = container.querySelector('.wt-resumen-anuncios');
         expect(within(resumen).getByText('$205.27')).toBeInTheDocument();
         expect(within(resumen).getByText('$3.37')).toBeInTheDocument();
         expect(screen.getByText(/2 campañas · 2 anuncios con gasto/)).toBeInTheDocument();
@@ -76,20 +76,9 @@ describe('Workshop › Anuncios del taller', () => {
         expect(screen.queryByText('Ad 8 - Aprobación')).not.toBeInTheDocument();
     });
 
-    it('el selector cambia el taller (el mismo que está abierto en Embudo)', async () => {
-        api.get.mockResolvedValue({ data: DESGLOSE });
-        const onSelectEvent = vi.fn();
-        const eventos = [{ id: 15, date: '2026-10-12', name: 'Webinar 12' }, { id: 14, date: '2026-10-03', name: 'Webinar 3' }];
-        render(<WorkshopAnunciosView evento={eventos[0]} eventos={eventos} onSelectEvent={onSelectEvent}
-            formatCurrency={dinero} />);
-
-        await userEvent.selectOptions(screen.getByRole('combobox', { name: /Taller/ }), '14');
-        expect(onSelectEvent).toHaveBeenCalledWith(eventos[1]);
-    });
-
     it('sin anuncios de Workshop dice dónde se clasifican', async () => {
         api.get.mockResolvedValue({ data: { ...DESGLOSE, anuncios_workshop: 0, campanas: [] } });
-        render(<WorkshopAnunciosView evento={{ id: 15 }} formatCurrency={dinero} />);
+        armar();
 
         expect(await screen.findByText(/se\s+corrigen en Marketing › Meta Ads/)).toBeInTheDocument();
     });

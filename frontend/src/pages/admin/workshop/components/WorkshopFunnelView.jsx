@@ -1,193 +1,100 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { ArrowRight, Loader2, PlayCircle, Zap } from 'lucide-react';
-import { urlLoom } from '../../../../utils/loom';
-import InfoTooltip from '../../../../components/ui/InfoTooltip';
+import React, { useEffect, useState } from 'react';
+import { RefreshCw } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
+import Cifra from '../../../comercial/components/Cifra';
+import FlujoEmbudo from '../../../comercial/components/FlujoEmbudo';
+import { PanelCab, Tip } from '../../../comercial/components/Shared';
 import WorkshopSourceSplit from './WorkshopSourceSplit';
+import { cac, dinero, ganancia, pasosEmbudo, porcentaje, tasaPaso } from '../talleres/formato';
 
-// Texto relativo tipo "hace 2 min" para `synced_at`. Se recalcula cada 30s
-// (no solo cuando cambian los props) para que no se quede pegado en "hace 5s"
-// mientras el usuario sigue mirando la misma pestaña.
-function useRelativeTime(iso) {
-    const [, forceTick] = useState(0);
+/**
+ * El embudo completo de un taller (Talleres › detalle › Embudo): la plata arriba, los nueve pasos
+ * de leads a ventas y cuánto aportó la clase en vivo contra la grabación (`WorkshopSourceSplit`).
+ * El desglose lo pide quien lo abre (`DetalleTaller`), que lo refresca mientras está abierto.
+ */
+
+// «hace 2 min» para `synced_at`; se recalcula cada 30 s para no quedar pegado en «hace un momento».
+function useHace(iso) {
+    const [, tic] = useState(0);
     useEffect(() => {
-        if (!iso) return;
-        const id = setInterval(() => forceTick((n) => n + 1), 30000);
+        if (!iso) return undefined;
+        const id = setInterval(() => tic((n) => n + 1), 30000);
         return () => clearInterval(id);
     }, [iso]);
     if (!iso) return null;
-    const diffSec = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
-    if (diffSec < 45) return 'hace un momento';
-    const diffMin = Math.round(diffSec / 60);
-    if (diffMin < 60) return `hace ${diffMin} min`;
-    const diffH = Math.round(diffMin / 60);
-    if (diffH < 24) return `hace ${diffH} h`;
-    return `hace ${Math.round(diffH / 24)} d`;
+    const seg = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+    if (seg < 45) return 'hace un momento';
+    const min = Math.round(seg / 60);
+    if (min < 60) return `hace ${min} min`;
+    const h = Math.round(min / 60);
+    if (h < 24) return `hace ${h} h`;
+    return `hace ${Math.round(h / 24)} d`;
 }
 
-const WorkshopFunnelView = ({
-    events,
-    selectedEvent,
-    onSelectEvent,
-    onResync,
-    resyncing,
-    formatDate,
-    formatCurrency,
-    desglose,
-    ventana,
-    cargandoDesglose,
-    onVerAnuncios
-}) => {
-    const activeFunnelData = useMemo(() => {
-        if (!selectedEvent) return [];
-        const e = selectedEvent;
-        const leads = e.leads || 0;
+export const Kpi = ({ titulo, valor, sub, tip, color, i = 0 }) => {
+    const quieto = useReducedMotion();
+    return (
+        <motion.section className="kpi wt-kpi"
+            initial={quieto ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+            transition={quieto ? { duration: 0 } : { duration: 0.3, delay: i * 0.05, ease: [0.22, 0.7, 0.2, 1] }}>
+            <div className="kpi-cab">
+                <p className="t-eyebrow">{titulo}</p>
+                {tip && <Tip texto={tip} titulo={titulo} />}
+            </div>
+            <div className="kpi-cifra">
+                <Cifra valor={valor} className="kpi-n" style={color ? { color } : undefined} desdeAnterior />
+                {sub && <p className="kpi-sub">{sub}</p>}
+            </div>
+        </motion.section>
+    );
+};
 
-        const pct = (val) => leads > 0 ? ((val / leads) * 100).toFixed(1) + '%' : '0%';
-
-        return [
-            { label: 'Leads captados', value: leads, rate: '100%', detail: 'Base del embudo — prospectos registrados',
-              ayuda: 'Cuánta gente se anotó al workshop. Es la base contra la que se comparan todos los pasos de abajo: los porcentajes son "de cada 100 anotados, cuántos llegaron hasta acá".' },
-            { label: 'Leads en WhatsApp', value: e.whatsapp_leads, rate: pct(e.whatsapp_leads), sub: 'Entrada WA', detail: 'Leads que ingresaron al grupo de WhatsApp',
-              ayuda: 'De los anotados, cuántos entraron al grupo de WhatsApp donde se mandan los recordatorios. Si este número es bajo, mucha gente ni se entera de que la clase empieza.' },
-            { label: 'Asistencia webinar (show up)', value: e.show_up, rate: pct(e.show_up), sub: 'Show up webinar', detail: 'Conectados en vivo al webinar',
-              ayuda: 'Cuántos se conectaron a la clase en vivo. Un show up bajo casi siempre es problema de recordatorios o del horario, no del contenido.' },
-            { label: 'Leads en pitch', value: e.pitch_leads, rate: pct(e.pitch_leads), sub: 'Retención clase', detail: 'Permanecieron hasta la presentación del pitch',
-              ayuda: 'Cuántos seguían conectados cuando arrancó la parte de la oferta. Mide si la clase los mantuvo enganchados hasta el final.' },
-            { label: 'Final de pitch', value: e.pitch_final_leads, rate: pct(e.pitch_final_leads), sub: 'Retención pitch', detail: 'Presenciaron la oferta completa',
-              ayuda: 'Cuántos se quedaron hasta que terminó la oferta. Si cae fuerte respecto del paso anterior, la oferta está perdiendo gente mientras se presenta.' },
-            { label: 'Aplicaciones form (Calendly)', value: e.aplicaciones_form, rate: pct(e.aplicaciones_form), sub: 'Tasa aplicación', detail: 'Completaron formulario de calificación',
-              ayuda: 'Cuántos llenaron el formulario para pedir una llamada. Incluye los que lo llenaron desde la clase en vivo y los que lo llenaron viendo la grabación.' },
-            { label: 'Agendas exitosas', value: e.agendas_exitosas, rate: pct(e.agendas_exitosas), sub: 'Aplicación a cita', detail: 'Agendaron sesión uno a uno con closer',
-              ayuda: 'Cuántas llamadas de venta quedaron efectivamente agendadas. Suma la clase en vivo y la grabación: el detalle de cada una está más abajo.' },
-            { label: 'Asistencia cita (show up)', value: e.show_up_sales_call, rate: pct(e.show_up_sales_call), sub: 'Show up en cita', detail: 'Asistieron a la llamada de ventas',
-              ayuda: 'De las llamadas agendadas, a cuántas la persona realmente se presentó. La diferencia con el paso anterior son los "no show".' },
-            { label: 'Ventas cerradas (compradores)', value: e.sales, rate: pct(e.sales), sub: 'Tasa de cierre global', detail: 'Leads compradores únicos (Split Pay o Completo).',
-              ayuda: 'Personas distintas que compraron, no cantidad de pagos: si alguien paga en dos partes cuenta una sola vez. Solo cuentan Split Pay y pago Completo. Una seña es una reserva, no una venta: suma al cash del taller pero no hace compradora a nadie. Cuotas, renovaciones y upsells quedan afuera.' }
-        ];
-    }, [selectedEvent]);
-
-    const profit = selectedEvent ? selectedEvent.cash_collected - selectedEvent.inversion : 0;
-    const cac = selectedEvent && selectedEvent.sales > 0 ? selectedEvent.inversion / selectedEvent.sales : 0;
-    const leadsBase = selectedEvent?.leads || 0;
-    const syncedLabel = useRelativeTime(selectedEvent?.synced_at);
+const WorkshopFunnelView = ({ evento, desglose, ventana, cargandoDesglose, onResync, resyncing }) => {
+    const hace = useHace(evento?.synced_at);
+    if (!evento) return null;
+    const e = evento;
+    const pasos = pasosEmbudo(e);
+    const ventas = pasos[pasos.length - 1].n;
+    const g = ganancia(e);
 
     return (
-        <>
-            <section className="detail-grid">
-                <article className="panel funnel-panel">
-                    <div className="section-heading">
-                        <div>
-                            <p className="eyebrow">{formatDate(selectedEvent?.date)}</p>
-                            <h2>{selectedEvent?.name}</h2>
-                            {selectedEvent?.replay_loom_id && (
-                                <a className="event-grabacion" href={urlLoom(selectedEvent.replay_loom_id)} target="_blank" rel="noopener noreferrer">
-                                    <PlayCircle size={12} aria-hidden="true" /> Ver la grabación de este taller
-                                </a>
-                            )}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-                                <button type="button" className="secondary-action" onClick={onResync} disabled={resyncing} title="Forzar un resync manual ahora mismo (las agendas, ventas y formularios nuevos ya se sincronizan solos)">
-                                    {resyncing ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
-                                    {resyncing ? 'Sincronizando…' : 'Resync sistema'}
-                                </button>
-                                {syncedLabel && (
-                                    <span className="sync-status" title="Las agendas, ventas y formularios nuevos actualizan este evento solos, sin recargar la página">
-                                        <span className="live-dot" style={{ width: 5, height: 5 }} /> Sincronizado {syncedLabel}
-                                    </span>
-                                )}
-                            </div>
-                            <div style={{ textAlign: 'right' }}>
-                                <strong style={{ display: 'block', fontSize: 22, color: 'var(--success)', fontVariantNumeric: 'tabular-nums' }}>
-                                    {selectedEvent && `${selectedEvent.roas.toFixed(2)}x`}
-                                </strong>
-                                <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 800, textTransform: 'uppercase' }}>ROAS</span>
-                            </div>
-                        </div>
-                    </div>
+        <div className="vista wt-vista">
+            <div className="pareja" style={{ '--min': '190px', '--g': 'var(--s3)' }}>
+                <Kpi i={0} titulo="Inversión" valor={dinero(e.inversion)}
+                    sub={e.inversion_de_meta ? 'De Meta Ads' : 'Cargada a mano'}
+                    tip="Lo que se gastó en anuncios para este taller. Si hay datos de Meta, salen de ahí; si no, lo cargado en el taller." />
+                <Kpi i={1} titulo="Cash cobrado" valor={dinero(e.cash_collected)}
+                    sub={`ROAS ${Number(e.roas || 0).toFixed(2)}x`}
+                    tip="Todo lo cobrado a las personas del taller, señas incluidas." />
+                <Kpi i={2} titulo="Ganancia" valor={dinero(g)} color={g < 0 ? 'var(--error)' : undefined}
+                    sub="Cash menos inversión" />
+                <Kpi i={3} titulo="CAC" valor={dinero(cac(e))}
+                    sub={`${ventas} ${ventas === 1 ? 'venta' : 'ventas'}`}
+                    tip="Lo que costó cada venta: la inversión dividida las ventas." />
+            </div>
 
-                    {selectedEvent && (
-                        <div className="economy-strip" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-                            <div>
-                                <span>Inversión</span><strong>{formatCurrency(selectedEvent.inversion)}</strong>
-                                {onVerAnuncios && (
-                                    <button type="button" className="quiet-button ws-ver-anuncios" onClick={onVerAnuncios}>
-                                        Ver los anuncios <ArrowRight size={12} />
-                                    </button>
-                                )}
-                            </div>
-                            <div><span>Recaudado</span><strong>{formatCurrency(selectedEvent.cash_collected)}</strong></div>
-                            <div><span>Profit neto</span><strong className={profit < 0 ? 'negative' : ''}>{formatCurrency(profit)}</strong></div>
-                            <div><span>CAC real</span><strong>{formatCurrency(cac)}</strong></div>
-                        </div>
+            <section className="panel wt-panel">
+                <PanelCab titulo="Embudo"
+                    tip="De los anotados a las ventas. Cada píldora es el paso contra el anterior; pasá el mouse por una barra para ver qué mide. Agendas y asistencias cuentan personas.">
+                    {hace && <span className="t-cap mut40 wt-sync"><i className="wt-punto-vivo" aria-hidden="true" /> Sincronizado {hace}</span>}
+                    {onResync && (
+                        <button type="button" className="btn btn--linea btn--sm" onClick={onResync} disabled={resyncing}
+                            title="Las agendas, ventas y formularios nuevos se sincronizan solos; esto fuerza un resync ahora">
+                            <RefreshCw className={resyncing ? 'ws-gira' : ''} aria-hidden="true" />
+                            {resyncing ? 'Sincronizando…' : 'Resync'}
+                        </button>
                     )}
-
-                    <div className="funnel-list">
-                        {activeFunnelData.map((step, idx) => {
-                            const prev = activeFunnelData[idx - 1];
-                            const pctFromPrev = idx > 0 && prev?.value > 0 ? (step.value / prev.value) * 100 : null;
-                            const share = leadsBase ? (step.value / leadsBase) * 100 : 0;
-                            // Cero es nada: sin barra (16/10/2026). El piso de 14% es solo para lo que tiene algo.
-                            const width = leadsBase && step.value > 0 ? 14 + 86 * Math.sqrt(step.value / leadsBase) : 0;
-                            return (
-                                <React.Fragment key={step.label}>
-                                    {idx > 0 && (
-                                        <div className="rate-pill green">
-                                            <strong>{pctFromPrev !== null ? `${pctFromPrev.toFixed(1)}%` : '—'}</strong>
-                                            <span>{step.sub || step.label}</span>
-                                            <small>{step.value} de {prev.value}</small>
-                                        </div>
-                                    )}
-                                    <div className="funnel-stage">
-                                        <span className="stage-index">{idx + 1}</span>
-                                        <div>
-                                            <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                                                {step.label}
-                                                {step.ayuda && <InfoTooltip label={step.label} text={step.ayuda} />}
-                                            </strong>
-                                            <small>{step.detail}</small>
-                                        </div>
-                                        <div className="stage-bar" role="img" aria-label={`${step.label}: ${step.value}, ${share.toFixed(1)}% del total`}>
-                                            {step.value > 0
-                                                ? <i style={{ width: `${width}%` }}><b>{step.value.toLocaleString()}</b></i>
-                                                : <span className="stage-bar-cero">0</span>}
-                                        </div>
-                                        <span className="stage-share">{share.toFixed(1)}%<small>del total</small></span>
-                                    </div>
-                                </React.Fragment>
-                            );
-                        })}
-                    </div>
-                </article>
-
-                <aside className="detail-sidebar">
-                    <article className="panel event-selector">
-                        <p className="eyebrow">Cambiar de taller</p>
-                        <div className="event-selector-list">
-                            {events.map((e) => (
-                                <button
-                                    type="button"
-                                    key={e.id}
-                                    className={selectedEvent?.id === e.id ? 'active' : ''}
-                                    onClick={() => onSelectEvent(e)}
-                                >
-                                    <span>{formatDate(e.date)} · {e.name}</span>
-                                    <strong>{e.roas.toFixed(2)}x</strong>
-                                </button>
-                            ))}
-                        </div>
-                    </article>
-                </aside>
+                </PanelCab>
+                <FlujoEmbudo raiz color="var(--brand-secondary)"
+                    etapas={pasos.map((p) => ({ key: p.key, label: p.label, n: p.n, ayuda: p.ayuda }))} />
+                <p className="t-cap mut num wt-pie-embudo">
+                    De {pasos[0].n.toLocaleString('en-US')} leads a {ventas} {ventas === 1 ? 'venta' : 'ventas'}:{' '}
+                    {porcentaje(tasaPaso(ventas, pasos[0].n))} final
+                </p>
             </section>
 
-            {/* Cuánto aportó la clase en vivo y cuánto la grabación */}
-            <WorkshopSourceSplit
-                desglose={desglose}
-                ventana={ventana}
-                cargando={cargandoDesglose}
-                formatCurrency={formatCurrency}
-            />
-        </>
+            <WorkshopSourceSplit desglose={desglose} ventana={ventana} cargando={cargandoDesglose} />
+        </div>
     );
 };
 
