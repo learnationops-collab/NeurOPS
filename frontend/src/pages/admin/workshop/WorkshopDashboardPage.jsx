@@ -482,7 +482,8 @@ const WorkshopDashboardPage = () => {
                         guardando={guardando}
                         formatCurrency={formatCurrency}
                         deMeta={isEditMode && selectedEvent
-                            ? { inversion: selectedEvent.inversion_de_meta, clics: selectedEvent.clics_de_meta }
+                            ? { inversion: selectedEvent.inversion_de_meta, clics: selectedEvent.clics_de_meta,
+                                leads: selectedEvent.leads_de_meta }
                             : null}
                     />
                 )}

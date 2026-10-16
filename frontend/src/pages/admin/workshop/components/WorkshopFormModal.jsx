@@ -229,12 +229,12 @@ const WorkshopFormModal = ({
                                     <span className="field-control"><input type="number" {...field('pitch_final_leads')} /></span>
                                 </label>
                                 <label className="form-field wide">
-                                    <span>Leads totales</span>
-                                    <span className="field-control"><input type="number" {...field('leads')} /></span>
+                                    <span>Leads (Meta Ads){deMeta?.leads && <small className="de-meta"> · de Meta Ads</small>}</span>
+                                    <span className="field-control"><input type="number" {...field('leads')} readOnly={!!deMeta?.leads} /></span>
                                 </label>
                                 <p className="form-field wide nota-landing">
-                                    Es lo único que se carga a mano. Podés guardar durante el taller e ir actualizando:
-                                    formularios, agendas y ventas se llenan solos.
+                                    {deMeta?.leads ? 'Los leads llegan de Meta. ' : 'Leads: la columna Leads de Meta Ads. '}
+                                    Formularios, agendas y ventas se llenan solos.
                                 </p>
                             </div>
                         )}
