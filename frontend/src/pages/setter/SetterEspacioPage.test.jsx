@@ -1,6 +1,6 @@
 import React from 'react';
 import { MemoryRouter, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SetterEspacioPage from './SetterEspacioPage';
 import api from '../../services/api';
@@ -374,6 +374,22 @@ describe('SetterEspacioPage · la sesión en el dock', () => {
         await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Tálamus' })); });
 
         expect(screen.getByTestId('ruta')).toHaveTextContent(/^\/agendas-v2$/);
+    });
+
+    it('su link de agendamiento se ve en el encabezado, en cualquier sección, y tocarlo lo copia', async () => {
+        const escribir = vi.fn(async () => {});
+        Object.defineProperty(navigator, 'clipboard', { value: { writeText: escribir }, configurable: true });
+        api.get.mockImplementation((ruta) => Promise.resolve({
+            data: ruta === '/setter/agendas-links'
+                ? { links: [{ funnel: 'Setting', evento: 'Llamada', ruta: '/agendas-v2/agenda/setting/llamada?o=k3x9p2' }] }
+                : { total: 0 },
+        }));
+        await montar('/setter/deck?step=reporte');
+
+        const link = within(document.querySelector('header.tope')).getByRole('button', { name: /Tu link de agendamiento/ });
+        await act(async () => { fireEvent.click(link); });
+
+        expect(escribir).toHaveBeenCalledWith(window.location.origin + '/agendas-v2/agenda/setting/llamada?o=k3x9p2');
     });
 
     it('"Mis links de agendamiento" trae los de Agendas 2.0 y también los de los eventos viejos', async () => {
