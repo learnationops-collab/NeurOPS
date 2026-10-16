@@ -476,6 +476,14 @@ _LLAMADO = re.compile(
     r"((?:[A-Z0-9]{2,}|[0-9]+)(?:\s+(?:[A-Z0-9]{2,}|[0-9]+))*)")
 
 
+# Los anuncios de guía por DM que no piden escribir nada («Pide gratis al DM la guía de APROBACIÓN…»):
+# ManyChat les pone la palabra de la guía del país o del examen («GUIA CHILE», «GUIA MIR») y, a los
+# generales, la de siempre (Kerwin 16/10/2026: estaban «Sin campaña» en Rendimiento).
+_GUIA_POR_DM = re.compile(r'\bDM\b.*\bguia\b|\bguia\b.*\bDM\b', re.I | re.S)
+PREFIJO_GUIA = 'GUIA '
+GUIA_GENERAL = 'OBTENER GUIA'
+
+
 def _sin_tildes(texto):
     import unicodedata
     return ''.join(c for c in unicodedata.normalize('NFKD', texto or '') if not unicodedata.combining(c))
@@ -491,7 +499,10 @@ def detectar_clave(texto, nombre, claves, contexto=()):
          APROBACIÓN»). En el texto no: «la guía de APROBACIÓN médica» es el título de la guía de otro
          embudo, no lo que el lead tiene que escribir;
       3. una palabra clave de varias palabras dentro del texto, del nombre o de `contexto` (el conjunto y
-         la campaña): el conjunto «LPF - TA - PSI: Guía Steps» es la palabra clave «Guia Steps».
+         la campaña): el conjunto «LPF - TA - PSI: Guía Steps» es la palabra clave «Guia Steps»;
+      4. un anuncio de guía por DM que no pide escribir nada («Pide gratis al DM la guía…»): la guía del
+         país o examen que nombra el conjunto, el nombre o el texto («Setting - Chile» -> «GUIA CHILE»,
+         «…la guía de APROBACIÓN MIR» -> «GUIA MIR»); si no nombra ninguno, la general «OBTENER GUIA».
     """
     from app.services.anuncios_service import clave_de
 
@@ -509,6 +520,16 @@ def detectar_clave(texto, nombre, claves, contexto=()):
         for clave in ordenadas:
             if ' ' in clave and f' {clave} ' in normalizada:
                 return clave
+    if _GUIA_POR_DM.search(_sin_tildes(texto)):
+        guias = sorted(((c[len(PREFIJO_GUIA):], c) for c in claves if c.startswith(PREFIJO_GUIA)),
+                       key=lambda par: (-len(par[0]), par[0]))
+        for fuente in (*contexto, nombre, texto):
+            palabras = f" {clave_de(fuente or '') or ''} "
+            for de_que, clave in guias:
+                if f' {de_que} ' in palabras:
+                    return clave
+        if GUIA_GENERAL in claves:
+            return GUIA_GENERAL
     return None
 
 

@@ -13,7 +13,7 @@ from app.models import Ad, MetaAnuncio, MetaGastoDiario
 from app.services import meta_ads_service as servicio
 
 CLAVES = {'APLICAR', 'QUIERO APLICAR', 'CURSO GRATUITO', 'APROBACION', 'EARN', 'GUIA', 'GUIA PERU',
-          'GUIA STEPS', 'STEP', 'SISTEMA', 'OBTENER GUIA'}
+          'GUIA STEPS', 'STEP', 'SISTEMA', 'OBTENER GUIA', 'GUIA CHILE', 'GUIA MEXICO', 'GUIA MIR'}
 
 
 @pytest.mark.parametrize('texto, nombre, conjunto, esperada', [
@@ -27,8 +27,16 @@ CLAVES = {'APLICAR', 'QUIERO APLICAR', 'CURSO GRATUITO', 'APROBACION', 'EARN', '
     # conjunto dice cuál es («Guía Steps»).
     ('Pide gratis al DM la guía de APROBACIÓN STEPS.', 'LP-TA -PSI-US: Titulo Específico', 'LPF - TA - PSI: Guía Steps',
      'GUIA STEPS'),
+    # La guía por DM sin palabra escrita (16/10/2026): la general es «OBTENER GUIA»; la del país sale del
+    # conjunto («Setting - Chile», «Setting - México») y la del examen, del texto (MIR).
     ('Pide gratis al DM la guía de APROBACIÓN médica.', 'LP-TA -PSI-Gral: Crudos', 'LPF - TA - PSI: General [CO + PE + MX]',
-     None),
+     'OBTENER GUIA'),
+    ('Pide gratis al DM la guía de aprobación para el EUNACOM', 'Setting - Chile - V2 IG Text Style (EUNACOM)',
+     'Setting - Chile', 'GUIA CHILE'),
+    ('Pide gratis al DM la guía de APROBACIÓN ENARM', 'Setting - México - V1 Sin texto', 'Setting - México', 'GUIA MEXICO'),
+    ('Pide gratis al DM la guía de APROBACIÓN MIR', 'Setting - España - V1 Sin texto', 'Setting - España', 'GUIA MIR'),
+    ('Pide gratis al DM la guía de aprobación para el ENARM', 'Setting - Perú - V1 Sin texto (ENARM)', 'Setting - Perú',
+     'GUIA PERU'),
     ('CLASE GRATIS: Cómo estudiar para pasar tu examen de residencia médica.', 'B | PP | A3', 'Broad | Pizarra Problem', None),
     # «guía» en minúsculas es una palabra del texto, no la palabra clave.
     ('Descargá la guía gratis para tu examen', 'LP-TA -PSI-Gral: Crudos', '', None),
