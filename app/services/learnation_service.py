@@ -91,6 +91,11 @@ class LearnationService:
         return LearnationService._request('POST', '/payments', json=payload)
 
     @staticmethod
+    def report_momentum_result(payload):
+        """Avisa el reporte de una Momentum a la Academia (ver app/services/momentum_academia.py)."""
+        return LearnationService._request('POST', '/sessions/momentum-result', json=payload)
+
+    @staticmethod
     def get_success_cases():
         """Los casos de éxito publicados para landings (el Muro de Honor): los muestra la página de
         gracias de Agendas 2.0."""
