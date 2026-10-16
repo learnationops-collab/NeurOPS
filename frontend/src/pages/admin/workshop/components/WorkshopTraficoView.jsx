@@ -9,7 +9,7 @@ import RangoFechas, { esFecha, textoRango } from '../../../comercial/components/
 import ListaConfigurable from '../../../../components/listas/ListaConfigurable';
 import SerieVisitas from '../trafico/SerieVisitas';
 import DetalleVisitas from '../trafico/DetalleVisitas';
-import { AGRUPACIONES, FACETAS_RANKING, claveRanking, columnasRanking, filasRanking } from '../trafico/columnas';
+import { AGRUPACIONES, FACETAS_RANKING, buscarRanking, claveRanking, columnasRanking, filasRanking } from '../trafico/columnas';
 import { PERIODOS, PERIODO_POR_DEFECTO, fechaHora, num, pct, rangoDePeriodo } from '../trafico/trafico';
 import '../../../../components/dashboard/pareja.css';
 import '../trafico/trafico.css';
@@ -61,6 +61,7 @@ const Ranking = ({ datos, medido }) => {
     const columnas = useMemo(() => columnasRanking(agrupacion, total, medido), [agrupacion, total, medido]);
     const filas = filasRanking(datos, agrupacion);
     const clave = useMemo(() => claveRanking(agrupacion), [agrupacion]);
+    const buscador = useMemo(() => buscarRanking(agrupacion), [agrupacion]);
     return (
         <section className="panel wf-panel" aria-label="Qué trae el tráfico">
             <PanelCab titulo="Qué trae el tráfico" tip={AYUDA.ranking}>
@@ -69,7 +70,7 @@ const Ranking = ({ datos, medido }) => {
             </PanelCab>
             {/* `key`: cada agrupación tiene sus columnas (y su elección guardada): se monta de nuevo. */}
             <ListaConfigurable key={agrupacion} columnas={columnas} facetas={FACETAS_RANKING[agrupacion]}
-                filas={filas} clave={clave} buscar={clave}
+                filas={filas} clave={clave} buscar={buscador}
                 buscarPlaceholder="Buscar…" claveGuardado={`ws_trafico_${agrupacion}_cols`}
                 ordenInicial={{ key: 'visitas', dir: 'desc' }} vacio="Sin visitas en este período." />
         </section>

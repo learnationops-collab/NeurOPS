@@ -19,7 +19,14 @@ const TRAFICO = {
             fuente_principal: 'Facebook', ultima_visita: '2026-10-02T15:00:00Z', origen_datos: 'track-visit' },
     ],
     por_fuente: [{ fuente: 'Instagram', visitas: 22, clics_whatsapp: 5, tasa_whatsapp: 25 }],
-    por_campana: [{ campana: '120211', visitas: 12, clics_whatsapp: 2, tasa_whatsapp: 20 }],
+    por_campana: [
+        { campana: '120211', nombre: 'WORKSHOP FUNNEL | TESTING ADS', visitas: 12, clics_whatsapp: 2, tasa_whatsapp: 20 },
+        { campana: '120999', nombre: null, visitas: 3, clics_whatsapp: 0, tasa_whatsapp: 0 },
+    ],
+    por_anuncio: [
+        { anuncio: '900', nombre: 'B | PP | A3', campana_id: '120211', campana_nombre: 'WORKSHOP FUNNEL | TESTING ADS',
+            visitas: 12, clics_whatsapp: 2, tasa_whatsapp: 20 },
+    ],
     por_dia: [
         { dia: '2026-10-01', visitas: 10, clics_whatsapp: 1 },
         { dia: '2026-10-02', visitas: 0, clics_whatsapp: 0 },
@@ -72,14 +79,23 @@ describe('Workshop › Tráfico landings', () => {
         expect(api.get.mock.calls[0][1].params).toEqual({ desde: '2026-10-01', hasta: '2026-10-03' });
     });
 
-    it('el ranking cambia de landing a fuente y a campaña', async () => {
+    it('el ranking cambia de landing a campaña y anuncio, con los nombres de Meta', async () => {
         responder();
         abrir();
         const ranking = within(await screen.findByRole('region', { name: 'Qué trae el tráfico' }));
         expect(ranking.getByText('/bienvenido/')).toBeInTheDocument();
         fireEvent.click(ranking.getByRole('tab', { name: 'Por campaña' }));
+        // El ID de Meta se muestra con su nombre; el que no está sincronizado, tal cual.
+        expect(ranking.getByText('WORKSHOP FUNNEL | TESTING ADS')).toBeInTheDocument();
         expect(ranking.getByText('120211')).toBeInTheDocument();
+        expect(ranking.getByText('120999')).toBeInTheDocument();
         expect(ranking.queryByText('/bienvenido/')).not.toBeInTheDocument();
+        fireEvent.change(ranking.getByLabelText('Buscar'), { target: { value: 'testing ads' } });
+        expect(ranking.getByText('mostrando 1 de 2')).toBeInTheDocument();
+        fireEvent.change(ranking.getByLabelText('Buscar'), { target: { value: '' } });
+        fireEvent.click(ranking.getByRole('tab', { name: 'Por anuncio' }));
+        expect(ranking.getByText('B | PP | A3')).toBeInTheDocument();
+        expect(ranking.getByText('WORKSHOP FUNNEL | TESTING ADS')).toBeInTheDocument();
     });
 
     it('el detalle filtra por búsqueda y abre la visita con sus UTM, sin borrar si no puede', async () => {

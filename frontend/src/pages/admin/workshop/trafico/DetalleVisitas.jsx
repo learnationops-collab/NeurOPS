@@ -50,7 +50,9 @@ const FichaVisita = ({ visita, puedeBorrar, onBorrar, onCerrar }) => {
                 <Campo rotulo="Fuente" valor={visita.fuente} />
                 <Campo rotulo="utm_source" valor={visita.utm_source} />
                 <Campo rotulo="utm_medium" valor={visita.utm_medium} />
+                <Campo rotulo="Campaña" valor={visita.campana_nombre} />
                 <Campo rotulo="utm_campaign" valor={visita.utm_campaign} />
+                <Campo rotulo="Anuncio" valor={visita.anuncio_nombre} />
                 <Campo rotulo="utm_content" valor={visita.utm_content} />
                 <Campo rotulo="Referrer" valor={visita.referrer} />
             </div>

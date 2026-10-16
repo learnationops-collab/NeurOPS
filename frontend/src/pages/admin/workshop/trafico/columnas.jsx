@@ -26,6 +26,19 @@ const Texto = ({ v }) => (v == null || v === ''
 const conCeldas = (columnas) => columnas.map((c) => (c.render || c.alinear === 'der'
     ? c : { ...c, render: (f) => <Texto v={c.valor(f)} /> }));
 
+/** Un ID de Meta con su nombre: el nombre arriba y abajo, chico, la campaña (`de`) o el ID. Sin nombre (no
+ *  sincronizado en Meta Ads) va el ID, con su campaña abajo si se conoce. */
+const DeMeta = ({ nombre, id, de }) => {
+    const abajo = de || (nombre ? id : null);
+    return (
+        <span className="wf-meta" title={nombre ? `${nombre}${de ? ` · ${de}` : ''} (ID ${id})`
+            : `ID ${id}: no está en lo sincronizado de Meta Ads${de ? ` · ${de}` : ''}`}>
+            <span className="celda">{nombre || id}</span>
+            {abajo && <small className="celda mut40">{abajo}</small>}
+        </span>
+    );
+};
+
 const Evento = ({ evento }) => (
     <span className={`chip wf-evento${evento === 'clic_whatsapp' ? ' wf-evento--clic' : ''}`}>
         <span className="trunc">{EVENTO[evento] || evento}</span>
@@ -38,6 +51,7 @@ export const AGRUPACIONES = [
     { key: 'landing', label: 'Por landing' },
     { key: 'fuente', label: 'Por fuente' },
     { key: 'campana', label: 'Por campaña' },
+    { key: 'anuncio', label: 'Por anuncio' },
 ];
 
 const AYUDA_TASA = 'De las visitas a landings con botón al grupo, qué porcentaje hizo clic. Solo cuenta las visitas posteriores al primer clic medido.';
@@ -56,8 +70,12 @@ export const columnasRanking = (agrupacion, total, medido) => {
             ) },
         fuente: { key: 'fuente', header: 'Fuente', valor: (f) => f.fuente,
             ayuda: 'El utm_source del link. ig e instagram, fb y facebook se suman juntos.' },
-        campana: { key: 'campana', header: 'Campaña', valor: (f) => f.campana,
-            ayuda: 'El utm_campaign. Meta manda el ID de la campaña: se busca tal cual en el Administrador de anuncios. Las 12 con más visitas.' },
+        campana: { key: 'campana', header: 'Campaña', valor: (f) => f.nombre || f.campana,
+            ayuda: 'El utm_campaign: Meta manda el ID de la campaña y acá se muestra su nombre (el de Meta Ads). Las 12 con más visitas.',
+            render: (f) => <DeMeta nombre={f.nombre} id={f.campana} /> },
+        anuncio: { key: 'anuncio', header: 'Anuncio', valor: (f) => f.nombre || f.anuncio,
+            ayuda: 'El utm_content: Meta manda el ID del anuncio y acá se muestra su nombre, con la campaña abajo. Los 12 con más visitas.',
+            render: (f) => <DeMeta nombre={f.nombre} id={f.anuncio} de={f.campana_nombre} /> },
     }[agrupacion];
     const parte = (f) => (total ? (f.visitas / total) * 100 : 0);
     const columnas = [
@@ -91,17 +109,25 @@ export const FACETAS_RANKING = {
     ],
     fuente: [],
     campana: [],
+    anuncio: [
+        { key: 'campana', label: 'Campaña', de: (f) => f.campana_nombre || f.campana_id || null },
+    ],
 };
 
 export const filasRanking = (datos, agrupacion) => {
     if (!datos) return [];
     if (agrupacion === 'fuente') return datos.por_fuente || [];
     if (agrupacion === 'campana') return datos.por_campana || [];
+    if (agrupacion === 'anuncio') return datos.por_anuncio || [];
     return datos.por_landing || [];
 };
 
 export const claveRanking = (agrupacion) => (f) => (
-    agrupacion === 'fuente' ? f.fuente : agrupacion === 'campana' ? f.campana : f.path);
+    { fuente: f.fuente, campana: f.campana, anuncio: f.anuncio }[agrupacion] ?? f.path);
+
+/** Lo que encuentra el buscador del ranking: la clave y, en campañas y anuncios, sus nombres de Meta. */
+export const buscarRanking = (agrupacion) => (f) => [claveRanking(agrupacion)(f), f.nombre, f.campana_nombre]
+    .filter(Boolean).join(' ');
 
 /* --- Detalle: cada visita --------------------------------------------------------------------- */
 
@@ -114,8 +140,12 @@ export const COLUMNAS_DETALLE = conCeldas([
     { key: 'fuente', header: 'Fuente', valor: (f) => f.fuente, width: 'minmax(110px,1fr)',
         ayuda: 'utm_source normalizado: ig e instagram, fb y facebook son la misma fuente.' },
     { key: 'utm_medium', header: 'Medio', valor: (f) => f.utm_medium, width: 'minmax(90px,.9fr)' },
-    { key: 'utm_campaign', header: 'Campaña', valor: (f) => f.utm_campaign, width: 'minmax(120px,1.1fr)' },
-    { key: 'utm_content', header: 'Contenido', valor: (f) => f.utm_content, width: 'minmax(120px,1.1fr)', oculta: true },
+    { key: 'utm_campaign', header: 'Campaña', valor: (f) => f.campana_nombre || f.utm_campaign, width: 'minmax(140px,1.3fr)',
+        ayuda: 'El nombre de la campaña de Meta (el link manda su ID en utm_campaign).',
+        render: (f) => (f.utm_campaign ? <DeMeta nombre={f.campana_nombre} id={f.utm_campaign} /> : <Texto v={null} />) },
+    { key: 'utm_content', header: 'Anuncio', valor: (f) => f.anuncio_nombre || f.utm_content, width: 'minmax(140px,1.3fr)', oculta: true,
+        ayuda: 'El nombre del anuncio de Meta (el link manda su ID en utm_content).',
+        render: (f) => (f.utm_content ? <DeMeta nombre={f.anuncio_nombre} id={f.utm_content} /> : <Texto v={null} />) },
     { key: 'utm_source', header: 'utm_source', valor: (f) => f.utm_source, width: 'minmax(90px,.9fr)', oculta: true,
         ayuda: 'Tal cual llegó en el link, sin unificar.' },
     { key: 'page_path', header: 'Página', valor: (f) => f.page_path, width: 'minmax(160px,1.6fr)', oculta: true,
@@ -128,9 +158,9 @@ export const FACETAS_DETALLE = [
     { key: 'landing', label: 'Landing', de: (f) => f.landing },
     { key: 'fuente', label: 'Fuente', de: (f) => f.fuente },
     { key: 'medio', label: 'Medio', de: (f) => o(f.utm_medium, 'Sin medio') },
-    { key: 'campana', label: 'Campaña', de: (f) => o(f.utm_campaign, 'Sin campaña') },
-    { key: 'contenido', label: 'Contenido', de: (f) => o(f.utm_content, 'Sin contenido') },
+    { key: 'campana', label: 'Campaña', de: (f) => o(f.campana_nombre || f.utm_campaign, 'Sin campaña') },
+    { key: 'contenido', label: 'Anuncio', de: (f) => o(f.anuncio_nombre || f.utm_content, 'Sin anuncio') },
 ];
 
 export const buscarEnVisita = (f) => [f.landing, f.page_path, f.fuente, f.utm_source, f.utm_medium,
-    f.utm_campaign, f.utm_content, f.referrer].filter(Boolean).join(' ');
+    f.utm_campaign, f.campana_nombre, f.utm_content, f.anuncio_nombre, f.referrer].filter(Boolean).join(' ');

@@ -102,3 +102,7 @@
 /* La barra (filtro completo, columnas) por encima de la tabla: la cabecera fija con blur arma su propio
    apilamiento y tapaba los menús que se abren hacia abajo. */
 .dc-shell .wf-detalle .barra-tabla { position: relative; z-index: 3; }
+
+/* Campaña o anuncio de Meta: el nombre arriba y el ID (o la campaña) chico abajo, cada uno en una línea. */
+.dc-shell .wf-meta { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.dc-shell .wf-meta small { font-size: 11px; }
