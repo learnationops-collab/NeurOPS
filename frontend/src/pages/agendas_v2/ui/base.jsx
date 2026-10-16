@@ -2,6 +2,7 @@
 // las define el prototipo, así que el aspecto es el mismo.
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { Aura, BRAND_AURA } from '../../../components/standard';
 import { BANDERAS, ICON, MEET_SVG } from './iconos';
 import { cerrarToast, toastStore } from './toast';
 import { colorVar } from '../core/datos';
@@ -20,12 +21,9 @@ export function Bandera({ c }) {
     return <span className="bandera" aria-hidden="true"><svg viewBox="0 0 30 20" preserveAspectRatio="none" dangerouslySetInnerHTML={{ __html: BANDERAS[c] }} /></span>;
 }
 
-export const HUMO_MARCA = ['var(--brand-secondary)', 'var(--brand-primary)', 'var(--brand-secondary-light)', 'var(--brand-navy)'];
-export function Humo({ clase = '', cols = HUMO_MARCA }) {
-    const style = {};
-    cols.forEach((c, i) => { style['--h' + (i + 1)] = c; });
-    return <span className={'humo' + (clase ? ' ' + clase : '')} aria-hidden="true" style={style}><i /><i /><i /><i /></span>;
-}
+// El aura vive en los componentes estándar; Humo es su nombre en Thalamus.
+export const HUMO_MARCA = BRAND_AURA;
+export function Humo({ clase = '', cols = HUMO_MARCA }) { return <Aura colors={cols} className={clase || undefined} />; }
 
 // Isotipo de Configuración (el dial).
 export function Dial({ tile = false, className = '', label }) {

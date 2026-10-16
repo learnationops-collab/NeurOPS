@@ -10,6 +10,7 @@ import { Humo, HUMO_MARCA, Icono } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
 import { toast } from '../../ui/toast';
 import Compo from './Compo';
+import { Button, ConfirmDelete, EmptyState, IconButton } from '../../../../components/standard';
 
 export function abrirForm(id) {
     almacen.flush();
@@ -43,13 +44,8 @@ export function borrarForm(f) {
 function ConfirmarBorrar({ f, d, onCancelar }) {
     const n = d.eventos.filter(e => e.formulario === f.id).length;
     return (
-        <div className="ed-pie--borrar" style={{ marginTop: 'auto' }}>
-            <p className="t-sm">¿Eliminar <b>{f.nombre}</b>?{n ? ' Lo usa' + (n > 1 ? 'n ' + n + ' eventos' : ' 1 evento') + '.' : ''}</p>
-            <div className="der">
-                <button type="button" className="btn btn--linea btn--sm" autoFocus onClick={onCancelar}>Cancelar</button>
-                <button type="button" className="btn btn--borrar btn--sm" onClick={() => borrarForm(f)}><Icono n="basura" />Eliminar</button>
-            </div>
-        </div>
+        <ConfirmDelete name={f.nombre} detail={n ? 'Lo usa' + (n > 1 ? 'n ' + n + ' eventos' : ' 1 evento') + '.' : null} style={{ marginTop: 'auto' }}
+            icon={<Icono n="basura" />} onCancel={onCancelar} onConfirm={() => borrarForm(f)} />
     );
 }
 
@@ -75,19 +71,17 @@ function Tarjeta({ f, d, borrando, setBorrando }) {
             </div>
             {borrando ? <ConfirmarBorrar f={f} d={d} onCancelar={() => setBorrando(null, f.id)} /> : (
                 <div className="fcard-pie">
-                    <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={() => ui.set({ prueba: { form: f } })}><Icono n="play" />Probar</button>
+                    <Button icon={<Icono n="play" />} data-nav="" onClick={() => ui.set({ prueba: { form: f } })}>Probar</Button>
                     <div className="der">
                         {!lectura && (
                             <>
-                                <button type="button" className="ibtn ibtn--sm" aria-label={'Duplicar ' + f.nombre} title="Duplicar" onClick={duplicar}><Icono n="copiar" s={15} /></button>
-                                <button type="button" className="ibtn ibtn--sm ibtn--peligro" data-borrar={f.id} aria-label={'Eliminar ' + f.nombre} title="Eliminar" onClick={() => setBorrando(f.id)}>
-                                    <Icono n="basura" s={15} />
-                                </button>
+                                <IconButton label={'Duplicar ' + f.nombre} icon={<Icono n="copiar" s={15} />} size="sm" title="Duplicar" onClick={duplicar} />
+                                <IconButton label={'Eliminar ' + f.nombre} icon={<Icono n="basura" s={15} />} size="sm" danger data-borrar={f.id} title="Eliminar" onClick={() => setBorrando(f.id)} />
                             </>
                         )}
-                        <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={() => abrirForm(f.id)}>
-                            <Icono n={lectura ? 'ojo' : 'edit'} />{lectura ? 'Ver' : 'Editar'}
-                        </button>
+                        <Button icon={<Icono n={lectura ? 'ojo' : 'edit'} />} data-nav="" onClick={() => abrirForm(f.id)}>
+                            {lectura ? 'Ver' : 'Editar'}
+                        </Button>
                     </div>
                 </div>
             )}
@@ -108,7 +102,7 @@ export default function ListaForms() {
     return (
         <>
             {lectura
-                ? !fs.length && <div className="panel vacio"><p className="t-sm mut">Todavía no hay formularios.</p></div>
+                ? !fs.length && <EmptyState>Todavía no hay formularios.</EmptyState>
                 : <Compo vacio={!fs.length} tit="Nuevo formulario" soloTit="Armá tu primer formulario" ph="Nombre, ej. Calificación Workshop" onCrear={crearForm} />}
             {fs.length > 0 && (
                 <div className="grilla">

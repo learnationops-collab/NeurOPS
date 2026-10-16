@@ -6,7 +6,7 @@ import { buscar } from '../../core/datos';
 import { camposPublicados, configDe, estadoEvento, sinPublicar } from '../../core/eventos';
 import { almacen, useDatos, usePermisos } from '../../data/hooks';
 import { Icono } from '../../ui/base';
-import EnTope from '../../ui/EnTope';
+import { Button, HeaderActions, IconButton } from '../../../../components/standard';
 import { ui } from '../../ui/estadoUi';
 import { toast } from '../../ui/toast';
 import ConfigEvento from './ConfigEvento';
@@ -41,34 +41,32 @@ export default function DetalleEvento({ e, ev }) {
 
     const barra = (
             <div className="barra">
-                <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={cerrar}><Icono n="volver" />Funnels</button>
+                <Button icon={<Icono n="volver" />} data-nav="" onClick={cerrar}>Funnels</Button>
                 <div className="seg" role="group" aria-label="Vista" style={{ marginInline: 'auto' }}>
                     <button type="button" data-nav="" aria-pressed={ev.tab !== 'flujo'} onClick={() => tab('config')}><Icono n="ajustes" />Configuración</button>
                     <button type="button" data-nav="" aria-pressed={ev.tab === 'flujo'} onClick={() => tab('flujo')}><Icono n="flujo" />Flujo</button>
                 </div>
                 <div className="barra-der ev-acc">
                     <EstadoEv est={estadoEvento(e, fo)} />
-                    <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label="Copiar link" title="Copiar link" onClick={() => copiarLink(d, e)}>
-                        <Icono n="copiar" s={15} />
-                    </button>
-                    <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={() => probarEvento(d, e)}><Icono n="play" />Probar borrador</button>
-                    {!lectura && <button type="button" className="btn btn--linea btn--sm" data-nav="" title="Saltear el formulario y ver lo que vería el lead de cada segmentación" onClick={() => probarSegmento(e)}><Icono n="users" />Probar segmento</button>}
+                    <IconButton label="Copiar link" icon={<Icono n="copiar" s={15} />} size="sm" data-nav="" title="Copiar link" onClick={() => copiarLink(d, e)} />
+                    <Button icon={<Icono n="play" />} data-nav="" onClick={() => probarEvento(d, e)}>Probar borrador</Button>
+                    {!lectura && <Button icon={<Icono n="users" />} data-nav="" title="Saltear el formulario y ver lo que vería el lead de cada segmentación" onClick={() => probarSegmento(e)}>Probar segmento</Button>}
                     {evCambio && !lectura && (
-                        <button type="button" className="btn btn--linea btn--sm" onClick={descartar} disabled={!puedePublicar} title={sinPermiso}>
-                            <Icono n="rotar" />Descartar
-                        </button>
+                        <Button icon={<Icono n="rotar" />} onClick={descartar} disabled={!puedePublicar} title={sinPermiso}>
+                            Descartar
+                        </Button>
                     )}
                     {!lectura && (
-                        <button type="button" className="btn btn--cta btn--sm" onClick={publicar} disabled={!pendiente || !puedePublicar} title={sinPermiso}>
-                            <Icono n="publicar" />Publicar
-                        </button>
+                        <Button variant="primary" icon={<Icono n="publicar" />} onClick={publicar} disabled={!pendiente || !puedePublicar} title={sinPermiso}>
+                            Publicar
+                        </Button>
                     )}
                 </div>
             </div>
     );
     return (
         <>
-            <EnTope reemplaza>{barra}</EnTope>
+            <HeaderActions replaceTitle>{barra}</HeaderActions>
             <div data-id={e.id}>
                 {ev.tab === 'flujo' ? <Flujo e={e} ev={ev} /> : <ConfigEvento e={e} />}
             </div>

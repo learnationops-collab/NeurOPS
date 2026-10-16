@@ -19,6 +19,7 @@ import { buscar, colorLibre, maxOrden, nombreOrigen, ord } from '../../core/dato
 import { linkEvento } from '../../core/eventos';
 import { slugify, uid } from '../../core/util';
 import { LinksSetters, abrirEvento, crearEvento, useSetters } from './comun';
+import { Button, IconButton, LinkButton } from '../../../../components/standard';
 
 const TIPOS = [
     { v: 'workshop', n: 'Workshop', ico: 'monitor', ayuda: 'Clase en vivo. Un link «Grabación» cuenta como la grabación.' },
@@ -127,7 +128,7 @@ function ConIA({ evento, funnel, onListo }) {
                     : funnel ? 'Copiá el prompt (lleva este funnel y lo que ya existe para reusar), la IA arma lo que falta y pegá acá el JSON.'
                         : 'Copiá el prompt, la IA te pregunta lo necesario (y reusa lo que ya existe) y pegá acá el JSON.'}
             </p>
-            <button type="button" className="btn btn--cta btn--sm" onClick={copiarPrompt}><Icono n="copiar" />Copiar prompt</button>
+            <Button variant="primary" icon={<Icono n="copiar" />} onClick={copiarPrompt}>Copiar prompt</Button>
             <label className="sr" htmlFor="ia-json">JSON del funnel</label>
             <textarea id="ia-json" className="input" rows={8} spellCheck={false} placeholder='{ "paquete_thalamus": 1, ... }' value={texto}
                 aria-invalid={errores.length > 0 || undefined} aria-describedby={errores.length ? 'ia-errores' : undefined}
@@ -141,12 +142,12 @@ function ConIA({ evento, funnel, onListo }) {
             )}
             {resumen && <Resumen r={resumen} />}
             <div className="fm-acc">
-                <button type="button" className="btn btn--linea btn--sm" disabled={!texto.trim() || ocupado} onClick={() => enviar(true)}>
+                <Button disabled={!texto.trim() || ocupado} onClick={() => enviar(true)}>
                     {paso === 'revisando' ? 'Revisando…' : 'Revisar'}
-                </button>
-                <button type="button" className="btn btn--cta btn--sm" disabled={paso !== 'listo'} onClick={() => enviar(false)}>
-                    <Icono n="check" />{paso === 'aplicando' ? 'Aplicando…' : evento ? 'Aplicar cambios' : funnel ? 'Completar funnel' : 'Crear todo'}
-                </button>
+                </Button>
+                <Button variant="primary" icon={<Icono n="check" />} disabled={paso !== 'listo'} onClick={() => enviar(false)}>
+                    {paso === 'aplicando' ? 'Aplicando…' : evento ? 'Aplicar cambios' : funnel ? 'Completar funnel' : 'Crear todo'}
+                </Button>
             </div>
         </div>
     );
@@ -241,7 +242,7 @@ function NuevoFunnel({ d, cerrar }) {
                 <input id="fm-evento" className="input" type="text" maxLength={80} autoComplete="off"
                     placeholder={nombre.trim() ? 'Ej. Diagnóstico (si lo dejás vacío: ' + nombre.trim() + ')' : 'Ej. Diagnóstico'}
                     value={evento} onChange={e => setEvento(e.target.value)} />
-                <div className="fm-acc"><button type="submit" className="btn btn--cta btn--sm" disabled={!nombre.trim()}><Icono n="plus" />Crear funnel</button></div>
+                <div className="fm-acc"><Button variant="primary" icon={<Icono n="plus" />} type="submit" disabled={!nombre.trim()}>Crear funnel</Button></div>
             </form>
             <PlegableIA titulo="Armarlo con IA: formulario, estrategias y evento de una">
                 <ConIA onListo={conIA} />
@@ -309,7 +310,7 @@ function AgregarAgendamiento({ d, f, cerrar }) {
             <label className="sr" htmlFor="fm-evento">Nombre del agendamiento</label>
             <input id="fm-evento" className="input" type="text" maxLength={80} autoComplete="off"
                 placeholder={'Ej. Diagnóstico (si lo dejás vacío: ' + f.nombre + ')'} value={nombre} onChange={e => setNombre(e.target.value)} />
-            <div className="fm-acc"><button type="submit" className="btn btn--cta btn--sm"><Icono n="plus" />Agregar agendamiento</button></div>
+            <div className="fm-acc"><Button variant="primary" icon={<Icono n="plus" />} type="submit">Agregar agendamiento</Button></div>
         </form>
     );
 }
@@ -359,7 +360,7 @@ function EditarFunnel({ d, f, cerrar }) {
                     <ul className="fm-evs">
                         {eventos.map(e => (
                             <li key={e.id}>
-                                <button type="button" className="link-btn" onClick={() => { cerrar(); abrirEvento(e.id); }}><Icono n="calendar" />{e.nombre}</button>
+                                <LinkButton icon={<Icono n="calendar" />} onClick={() => { cerrar(); abrirEvento(e.id); }}>{e.nombre}</LinkButton>
                             </li>
                         ))}
                     </ul>
@@ -386,13 +387,13 @@ function EditarFunnel({ d, f, cerrar }) {
                 {borrar ? (
                     <>
                         <span className="t-sm">¿Eliminar <b>{f.nombre}</b>? Sus links dejan de funcionar.</span>
-                        <button type="button" className="btn btn--linea btn--sm" onClick={() => setBorrar(false)}>Cancelar</button>
-                        <button type="button" className="btn btn--borrar btn--sm" autoFocus
+                        <Button onClick={() => setBorrar(false)}>Cancelar</Button>
+                        <Button variant="dangerSolid" icon={<Icono n="basura" />} autoFocus
                             onClick={() => { almacen.borrar('funnels', f.id); toast(f.nombre + ' eliminado'); cerrar(); }}>
-                            <Icono n="basura" />Eliminar
-                        </button>
+                            Eliminar
+                        </Button>
                     </>
-                ) : <button type="button" className="btn btn--linea btn--sm" onClick={() => setBorrar(true)}><Icono n="basura" />Eliminar funnel</button>}
+                ) : <Button icon={<Icono n="basura" />} onClick={() => setBorrar(true)}>Eliminar funnel</Button>}
             </div>
         </>
     );
@@ -406,7 +407,7 @@ export default function ModalFunnel({ estado }) {
         <Modal onCerrar={cerrar} id="funnel" labelledBy="fm-tit" clase="modal--conf">
             <div className="fm-cab">
                 <h2 className="t-h2" id="fm-tit">{f ? f.nombre : 'Nuevo funnel'}</h2>
-                <button type="button" className="ibtn" aria-label="Cerrar" onClick={cerrar}><Icono n="x" /></button>
+                <IconButton label="Cerrar" icon={<Icono n="x" />} onClick={cerrar} />
             </div>
             <div className="conf-cuerpo">
                 {f ? <EditarFunnel d={d} f={f} cerrar={cerrar} /> : <NuevoFunnel d={d} cerrar={cerrar} />}

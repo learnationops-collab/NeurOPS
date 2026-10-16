@@ -18,6 +18,7 @@ import { CampoMinutos, SesionesDelEvento } from '../team/Sesiones';
 import TablaTurnos from '../team/Turnos.jsx';
 import { abrirGracias } from '../forms/ListaGracias';
 import { InputVivo, LinksSetters, slugOrigen, urlPublica, useBorrador } from './comun';
+import { Button, ConfirmDelete, LinkButton } from '../../../../components/standard';
 
 const DIA = 86400000;
 
@@ -110,9 +111,9 @@ function General({ d, e, f, cm }) {
                         })}
                     </div>
                 ) : (
-                    <button type="button" className="link-btn link-btn--sutil" onClick={() => ui.set({ funnel: { id: e.funnel } })}>
-                        <Icono n="plus" />Links por procedencia
-                    </button>
+                    <LinkButton subtle icon={<Icono n="plus" />} onClick={() => ui.set({ funnel: { id: e.funnel } })}>
+                        Links por procedencia
+                    </LinkButton>
                 )}
             </Fila>
             {!cm && (
@@ -197,8 +198,8 @@ function Pagina({ d, e }) {
                     onChange={v => { almacen.editar('eventos', e.id, { gracias: v }); almacen.flush(); }}
                     opciones={[{ v: '', n: 'Ninguna' }, ...gs.map(g => ({ v: g.id, n: g.nombre, icono: 'video' }))]} />
                 {gracias
-                    ? <button type="button" className="btn btn--linea btn--sm" onClick={() => abrirGracias(gracias.id)}><Icono n="edit" />Editar</button>
-                    : !gs.length && <button type="button" className="btn btn--linea btn--sm" onClick={() => ui.set({ seccion: 'preguntas', recurso: 'gracias', ev: null })}><Icono n="plus" />Crear una</button>}
+                    ? <Button icon={<Icono n="edit" />} onClick={() => abrirGracias(gracias.id)}>Editar</Button>
+                    : !gs.length && <Button icon={<Icono n="plus" />} onClick={() => ui.set({ seccion: 'preguntas', recurso: 'gracias', ev: null })}>Crear una</Button>}
             </Fila>
             <Fila l="Redirigir a">
                 <div className={'entrada' + (redirMal ? ' mal' : '')} style={{ flex: 1, minWidth: 0 }}>
@@ -218,7 +219,7 @@ function Pagina({ d, e }) {
                 {fo ? (
                     <>
                         <span className="t-sm trunc" style={{ flex: '1 1 160px' }}>«{fo.fin.titulo}»</span>
-                        <button type="button" className="btn btn--linea btn--sm" onClick={() => setFin(true)}><Icono n="edit" />Editar</button>
+                        <Button icon={<Icono n="edit" />} onClick={() => setFin(true)}>Editar</Button>
                     </>
                 ) : <span className="t-sm mut">Elegí un formulario.</span>}
             </Fila>
@@ -249,21 +250,13 @@ export default function ConfigEvento({ e }) {
                 <div className="ev-col">
                     <Bloque tit="General" icono="ajustes" i={0}><General d={d} e={e} f={f} cm={cm} /></Bloque>
                     {borrar ? (
-                        <div className="ed-pie--borrar">
-                            <p className="t-sm">¿Eliminar <b>{e.nombre}</b>? El link deja de funcionar.</p>
+                        <ConfirmDelete name={e.nombre} detail="El link deja de funcionar." icon={<Icono n="basura" />}
+                            onCancel={() => setBorrar(false)} onConfirm={() => eliminar(!!ultimo)} confirmLabel={ultimo ? 'Eliminar evento y funnel' : 'Eliminar'}
+                            extraActions={ultimo && <Button onClick={() => eliminar(false)}>Solo el evento</Button>}>
                             {ultimo && <p className="t-sm">Es el único agendamiento de <b>{f.nombre}</b>: sin él, el funnel no genera agendas.</p>}
-                            <div className="der">
-                                <button type="button" className="btn btn--linea btn--sm" autoFocus onClick={() => setBorrar(false)}>Cancelar</button>
-                                {ultimo ? (
-                                    <>
-                                        <button type="button" className="btn btn--linea btn--sm" onClick={() => eliminar(false)}>Solo el evento</button>
-                                        <button type="button" className="btn btn--borrar btn--sm" onClick={() => eliminar(true)}><Icono n="basura" />Eliminar evento y funnel</button>
-                                    </>
-                                ) : <button type="button" className="btn btn--borrar btn--sm" onClick={() => eliminar(false)}><Icono n="basura" />Eliminar</button>}
-                            </div>
-                        </div>
+                        </ConfirmDelete>
                     ) : (
-                        <div><button type="button" className="btn btn--peligro btn--sm" onClick={() => setBorrar(true)}><Icono n="basura" />Eliminar evento</button></div>
+                        <div><Button variant="danger" icon={<Icono n="basura" />} onClick={() => setBorrar(true)}>Eliminar evento</Button></div>
                     )}
                 </div>
                 <div className="ev-col">

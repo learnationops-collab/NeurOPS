@@ -15,6 +15,7 @@ import { roleLandingPath } from '../../utils/roleLanding';
 import { SECCIONES } from './core/catalogos';
 import { almacen, useDatos, useIniciarAlmacen, usePermisos, useUi } from './data/hooks';
 import { Icono, LogoThalamus, Toasts, Tooltip } from './ui/base';
+import { Button, Chip, EmptyState, PageHeader } from '../../components/standard';
 import { ui } from './ui/estadoUi';
 import { toast } from './ui/toast';
 import { irA } from './ui/navegacion';
@@ -76,16 +77,11 @@ function Vista() {
     const perm = usePermisos();
 
     let cuerpo;
-    if (cargando) cuerpo = <div className="panel vacio"><p className="t-sm mut">Cargando…</p></div>;
+    if (cargando) cuerpo = <EmptyState>Cargando…</EmptyState>;
     else if (seccion === 'horas' && !perm.secOk('horas') && !sim) {
-        cuerpo = (
-            <div className="panel vacio">
-                <Icono n="clock" s={22} />
-                <p className="t-sm mut">Pedile a la dirección comercial que te sume en Team para ver tus horas.</p>
-            </div>
-        );
+        cuerpo = <EmptyState icon={<Icono n="clock" s={22} />}>Pedile a la dirección comercial que te sume en Team para ver tus horas.</EmptyState>;
     } else if (!perm.secOk(seccion)) {
-        cuerpo = <div className="panel vacio"><Icono n="prohibido" s={22} /><p className="t-sm mut">Este rol no tiene acceso a esta sección.</p></div>;
+        cuerpo = <EmptyState icon={<Icono n="prohibido" s={22} />}>Este rol no tiene acceso a esta sección.</EmptyState>;
     } else if (seccion === 'preguntas') cuerpo = <Forms />;
     else if (seccion === 'team') cuerpo = <Team />;
     else if (seccion === 'horas') cuerpo = <Horas />;
@@ -106,9 +102,9 @@ class ErrorDeVista extends React.Component {
         return (
             <div className="panel vacio">
                 <p className="t-sm">Esta vista tuvo un error.</p>
-                <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={() => { ui.set({ form: null, gracias: null, ev: null }); this.setState({ error: null }); }}>
-                    <Icono n="rotar" />Volver
-                </button>
+                <Button icon={<Icono n="rotar" />} data-nav="" onClick={() => { ui.set({ form: null, gracias: null, ev: null }); this.setState({ error: null }); }}>
+                    Volver
+                </Button>
             </div>
         );
     }
@@ -213,19 +209,13 @@ export default function ThalamusApp() {
         <div ref={raiz} className={'thalamus thalamus-app' + (lectura ? ' thalamus-app--lectura' : '')} data-theme={dataThemeDe(apariencia, atributoTema(estado.tema))}>
             <Degradados />
             <div className="wrap">
-                <header className="tope">
-                    <div className="tope-id">
-                        <LogoThalamus />
-                        <h1 className="t-h1">{sec.label}</h1>
-                        {lectura && (
-                            <span className="chip chip-lectura" style={{ '--c': 'var(--info)' }} data-tip="Solo lectura|Lo que se configura lo cambia la dirección comercial.">
-                                <Icono n="candado" s={13} />Solo lectura
-                            </span>
-                        )}
-                    </div>
-                    {/* Los botones y filtros de la sección van acá, a la derecha del título (ui/EnTope). */}
-                    <div className="tope-acc" id="tope-acc" />
-                </header>
+                {/* Los botones y filtros de cada sección llegan a la derecha del título con <HeaderActions>. */}
+                <PageHeader title={sec.label} logo={<LogoThalamus />}
+                    badges={lectura && (
+                        <Chip color="var(--info)" icon={<Icono n="candado" s={13} />} className="chip-lectura" data-tip="Solo lectura|Lo que se configura lo cambia la dirección comercial.">
+                            Solo lectura
+                        </Chip>
+                    )} />
                 <Vista />
             </div>
             {/* Funnel, Configuración y Crear rápido son para configurar: en solo lectura no se abren. */}

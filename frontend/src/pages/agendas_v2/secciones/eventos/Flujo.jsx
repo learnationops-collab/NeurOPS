@@ -11,6 +11,7 @@ import { ui } from '../../ui/estadoUi';
 import { reachEvento, useLeads } from '../stats/leads';
 import { armarFlujo, caminoArista } from './armarFlujo';
 import { textoEstrategia } from './comun';
+import { Button, IconButton } from '../../../../components/standard';
 
 const LEYENDA = [['var(--info)', 'Preguntas'], ['var(--brand-secondary)', 'Función'], ['var(--warning)', 'Estrategia'], ['var(--success)', 'Agenda'], ['var(--error)', 'No califica']];
 
@@ -57,7 +58,7 @@ function Inspector({ d, e, n }) {
     const cab = (t) => (
         <div className="barra">
             <span className="t-rotulo">{t}</span>
-            <button type="button" className="ibtn ibtn--xs" data-nav="" aria-label="Cerrar" style={{ marginLeft: 'auto' }} onClick={() => setEv({ nodo: null })}><Icono n="x" /></button>
+            <IconButton label="Cerrar" icon={<Icono n="x" />} size="xs" data-nav="" style={{ marginLeft: 'auto' }} onClick={() => setEv({ nodo: null })} />
         </div>
     );
     let cuerpo;
@@ -88,7 +89,7 @@ function Inspector({ d, e, n }) {
                             </div>
                         ))}
                         <b className="t-sm">Todo lo demás → {nombreGrupo(d, fo.resto)}</b>
-                        <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={() => irForm(fo.id, 'ruteo')}><Icono n="edit" />Editar en Forms</button>
+                        <Button icon={<Icono n="edit" />} data-nav="" onClick={() => irForm(fo.id, 'ruteo')}>Editar en Forms</Button>
                     </>
                 ) : <p className="t-sm mut">Elegí un formulario.</p>}
             </>
@@ -102,7 +103,7 @@ function Inspector({ d, e, n }) {
                     <Sx id={'ige-' + g.id} label="Estrategia" valor={g.estrategia} onChange={v => almacen.editar('grupos', g.id, { estrategia: v }, true)}
                         opciones={Object.keys(ESTRATEGIAS).map(k => ({ v: k, n: ESTRATEGIAS[k] }))} />
                     <p className="t-cap mut">{textoEstrategia(d, g)}</p>
-                    <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={irTeam}><Icono n="users" />Abrir en Team</button>
+                    <Button icon={<Icono n="users" />} data-nav="" onClick={irTeam}>Abrir en Team</Button>
                 </div>
             </>
         );
@@ -121,11 +122,11 @@ function Inspector({ d, e, n }) {
                             : <span className="chip chip--n" style={{ '--c': 'var(--idle)' }}>{o.puntos == null ? '–' : o.puntos} pts</span>}
                     </div>
                 ))}
-                <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={() => irForm(fo.id, 'preguntas', q.id)}><Icono n="edit" />Editar en Forms</button>
+                <Button icon={<Icono n="edit" />} data-nav="" onClick={() => irForm(fo.id, 'preguntas', q.id)}>Editar en Forms</Button>
             </>
         );
     } else if (n === 'contacto' && fo) {
-        cuerpo = <>{cab('Contacto')}<button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={() => irForm(fo.id, 'preguntas')}><Icono n="edit" />Editar formulario</button></>;
+        cuerpo = <>{cab('Contacto')}<Button icon={<Icono n="edit" />} data-nav="" onClick={() => irForm(fo.id, 'preguntas')}>Editar formulario</Button></>;
     } else {
         cuerpo = <>{cab('Paso')}<p className="t-sm mut">Sin ajustes para este paso.</p></>;
     }

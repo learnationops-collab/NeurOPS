@@ -12,6 +12,7 @@ import { useOrdenable } from '../../ui/useOrdenable';
 import { avisoPrioridad, textoEstrategia } from './cobertura';
 import { CampoNombre, Compo, Nivel, colorNivel } from './comun';
 import ElegirCloser, { useUsuariosReales } from './ElegirCloser';
+import { EmptyState, IconButton } from '../../../../components/standard';
 
 const SUGERIDAS = ['Ultra cualificado', 'Medio cualificado', 'General'];
 
@@ -113,7 +114,7 @@ function Prioridad({ g, i, ordenable, usuarios }) {
                         </button>
                     ))}
                 </div>
-                <button type="button" className="ibtn ibtn--sm ibtn--peligro" aria-label={'Eliminar estrategia ' + g.nombre} onClick={() => borrarGrupo(g)}><Icono n="basura" s={15} /></button>
+                <IconButton label={'Eliminar estrategia ' + g.nombre} icon={<Icono n="basura" s={15} />} size="sm" danger onClick={() => borrarGrupo(g)} />
             </div>
             <div className={'pr-flujo lista--h' + (enOrden ? ' pr-flujo--orden' : '')} ref={omCont}>
                 {msOrden.map((p, j) => <Miembro key={p.id} p={p} j={j} g={g} numerar={enOrden} ordenable={om} pct={pct} />)}
@@ -155,7 +156,7 @@ export default function Grupos() {
                 </div>
             )} />
     );
-    if (!gs.length) return lectura ? <div className="panel vacio"><p className="t-sm mut">Todavía no hay estrategias.</p></div> : compo;
+    if (!gs.length) return lectura ? <EmptyState>Todavía no hay estrategias.</EmptyState> : compo;
     return (
         <>
             {!lectura && compo}

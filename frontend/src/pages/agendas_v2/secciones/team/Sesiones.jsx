@@ -7,6 +7,7 @@ import { DIAS, DURACIONES, DURACION_MAX, DURACION_MIN, MARGENES, MARGEN_MAX } fr
 import { entero } from '../../core/util';
 import { Avatar, Icono, Sx } from '../../ui/base';
 import { capacidadSemana } from './turnos';
+import { LinkButton } from '../../../../components/standard';
 
 const OTRO = 'otro';
 
@@ -83,7 +84,7 @@ export function FilaSesion({ titulo, persona, propuesta, propia, onCambio, bloqu
             </div>
             {horario ? <Capacidad horario={horario} dur={dur} margen={margen} onVer={onVer} /> : <span />}
             {ajustada && !bloqueado
-                ? <button type="button" className="link-btn link-btn--sutil ses-volver" onClick={() => onCambio(null)}><Icono n="volver" s={13} />Usar la propuesta</button>
+                ? <LinkButton subtle className="ses-volver" icon={<Icono n="volver" s={13} />} onClick={() => onCambio(null)}>Usar la propuesta</LinkButton>
                 : <span className="ses-volver" />}
         </div>
     );

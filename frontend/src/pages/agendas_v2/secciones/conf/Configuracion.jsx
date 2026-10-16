@@ -12,6 +12,7 @@ import { almacen, useUi } from '../../data/hooks';
 import { DatosCuenta, TarjetaCalendar, TarjetaDisponibilidad, TarjetaWhatsapp } from './cuenta';
 import TabEquipo from './TabEquipo';
 import TabApariencia from '../../../../temas/TabApariencia';
+import { IconButton } from '../../../../components/standard';
 
 export const TABS = [
     ['datos', 'Datos', 'user'], ['disponibilidad', 'Disponibilidad', 'clock'], ['integraciones', 'Integraciones', 'enchufe'],
@@ -40,7 +41,7 @@ function MenuVisualizacion({ abierto, setAbierto }) {
                 <div className="vis-pop" role="menu" aria-label="Visualización">
                     <div className="vis-cab">
                         <span className="t-rotulo">Visualización</span>
-                        <button type="button" className="ibtn ibtn--xs" aria-label="Cerrar" onClick={cerrar}><Icono n="x" /></button>
+                        <IconButton label="Cerrar" icon={<Icono n="x" />} size="xs" onClick={cerrar} />
                     </div>
                     {VISTAS.map(([v, n]) => (
                         <button key={v} type="button" className="vis-op" role="menuitemradio" aria-checked={confVis === v} onClick={() => { ui.set({ confVis: v }); cerrar(); }}>
@@ -90,7 +91,7 @@ export default function Configuracion() {
                     ))}
                 </div>
                 <MenuVisualizacion abierto={visAbierto} setAbierto={setVisAbierto} />
-                <button type="button" className="ibtn" data-nav="" aria-label="Cerrar" onClick={cerrar}><Icono n="x" /></button>
+                <IconButton label="Cerrar" icon={<Icono n="x" />} data-nav="" onClick={cerrar} />
             </div>
             <div className="conf-cuerpo" id="conf-cuerpo" role="tabpanel" aria-labelledby="conf-tit">{cuerpo}</div>
         </Modal>

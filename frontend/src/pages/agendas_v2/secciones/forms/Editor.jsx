@@ -7,7 +7,7 @@ import { buscar } from '../../core/datos';
 import { nuevaPregunta, resumenForm } from '../../core/formulario';
 import { Humo, HUMO_MARCA, Icono } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
-import EnTope from '../../ui/EnTope';
+import { Button, EmptyState, HeaderActions, IconButton } from '../../../../components/standard';
 import { useOrdenable } from '../../ui/useOrdenable';
 import { mutarForm, setFormUi, useBorrador, useEnfocar } from './comun';
 import { borrarForm } from './ListaForms';
@@ -30,7 +30,7 @@ function Barra({ f, vista, prevModo, onFin, finRef, onImportar }) {
     const cerrarPop = () => { setBorrar(false); papelera.current?.focus(); };
     return (
         <div className="barra">
-            <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={cerrarForm}><Icono n="volver" />Formularios</button>
+            <Button icon={<Icono n="volver" />} data-nav="" onClick={cerrarForm}>Formularios</Button>
             <div className="seg" role="group" aria-label="Vista" style={{ marginInline: 'auto' }}>
                 {VISTAS.map(o => (
                     <button key={o.v} type="button" data-nav="" aria-pressed={vista === o.v}
@@ -54,16 +54,14 @@ function Barra({ f, vista, prevModo, onFin, finRef, onImportar }) {
                             <Icono n="prohibido" s={15} /><span>No califica</span>{r.filtra > 0 && <b className="num">{r.filtra}</b>}
                         </button>
                         <div className="fe-borrar-caja" onKeyDown={e => { if (e.key === 'Escape' && borrar) { e.stopPropagation(); cerrarPop(); } }}>
-                            <button type="button" ref={papelera} className="ibtn ibtn--sm ibtn--peligro" aria-label="Eliminar formulario" title="Eliminar formulario" aria-expanded={borrar}
-                                onClick={() => setBorrar(b => !b)}>
-                                <Icono n="basura" s={15} />
-                            </button>
+                            <IconButton label="Eliminar formulario" icon={<Icono n="basura" s={15} />} size="sm" danger ref={papelera} title="Eliminar formulario" aria-expanded={borrar}
+                                onClick={() => setBorrar(b => !b)} />
                             {borrar && (
                                 <div className="pop-borrar" role="dialog" aria-label="Confirmar">
                                     <p className="t-sm">¿Eliminar <b>{f.nombre}</b>? No se puede recuperar.</p>
                                     <div className="der">
-                                        <button type="button" ref={cancelar} className="btn btn--linea btn--sm" onClick={cerrarPop}>Cancelar</button>
-                                        <button type="button" className="btn btn--borrar btn--sm" onClick={() => { ui.set({ form: null }); borrarForm(f); }}><Icono n="basura" />Eliminar</button>
+                                        <Button ref={cancelar} onClick={cerrarPop}>Cancelar</Button>
+                                        <Button variant="dangerSolid" icon={<Icono n="basura" />} onClick={() => { ui.set({ form: null }); borrarForm(f); }}>Eliminar</Button>
                                     </div>
                                 </div>
                             )}
@@ -141,10 +139,9 @@ function VistaPreguntas({ f, sel, raiz, onImportar }) {
                     ))}
                 </div>
             ) : (
-                <div className="panel vacio">
-                    <p className="t-sm mut">{lectura ? 'Sin preguntas propias: solo pide los datos de contacto.' : 'Sin preguntas propias todavía. Agregá una o traelas de otro formulario.'}</p>
-                    {!lectura && <button type="button" className="btn btn--linea btn--sm" onClick={e => onImportar(e.currentTarget)}><Icono n="importar" />Importar preguntas</button>}
-                </div>
+                <EmptyState action={!lectura && <Button icon={<Icono n="importar" />} onClick={e => onImportar(e.currentTarget)}>Importar preguntas</Button>}>
+                    {lectura ? 'Sin preguntas propias: solo pide los datos de contacto.' : 'Sin preguntas propias todavía. Agregá una o traelas de otro formulario.'}
+                </EmptyState>
             )}
             <div className="fe-mas" hidden={lectura}>
                 <button type="button" className="fe-mas-b caja" onClick={agregar}>
@@ -184,7 +181,7 @@ export default function Editor() {
 
     return (
         <div ref={raiz} style={{ display: 'contents' }}>
-            <EnTope reemplaza><Barra f={f} vista={vista} prevModo={prevModo} finRef={finRef} onFin={() => abrir('fin', finRef.current)} onImportar={importar} /></EnTope>
+            <HeaderActions replaceTitle><Barra f={f} vista={vista} prevModo={prevModo} finRef={finRef} onFin={() => abrir('fin', finRef.current)} onImportar={importar} /></HeaderActions>
             {vista === 'previa' ? <Previa f={f} prevModo={prevModo} />
                 : vista === 'ruteo' ? <div className="columna"><Ruteo f={f} d={d} modo={form.ruteoModo || 'reglas'} msel={form.msel || null} /></div>
                     : <VistaPreguntas f={f} sel={form.sel || null} raiz={raiz} onImportar={importar} />}

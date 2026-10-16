@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import api from '../../../../services/api';
 import { Icono } from '../../ui/base';
+import { Button, IconButton } from '../../../../components/standard';
 
 const LADO = 256, MAX = 140000;
 const iniciales = (nombre) => (nombre || '?').split(/[\s._-]+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('');
@@ -55,10 +56,10 @@ export default function FotoCuenta({ nombre }) {
             </span>
             <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={elegir} />
             <div className="cu-foto-acc">
-                <button type="button" className="btn btn--linea btn--sm" disabled={ocupado || foto === null} onClick={() => input.current?.click()}>
-                    <Icono n="user" />{ocupado ? 'Guardando…' : foto ? 'Cambiar foto' : 'Subir foto'}
-                </button>
-                {foto && <button type="button" className="ibtn ibtn--sm ibtn--peligro" aria-label="Quitar foto" title="Quitar foto" disabled={ocupado} onClick={() => guardar('')}><Icono n="basura" s={15} /></button>}
+                <Button icon={<Icono n="user" />} disabled={ocupado || foto === null} onClick={() => input.current?.click()}>
+                    {ocupado ? 'Guardando…' : foto ? 'Cambiar foto' : 'Subir foto'}
+                </Button>
+                {foto && <IconButton label="Quitar foto" icon={<Icono n="basura" s={15} />} size="sm" danger title="Quitar foto" disabled={ocupado} onClick={() => guardar('')} />}
             </div>
             {error && <p className="campo-err" role="alert"><Icono n="alerta" s={14} />{error}</p>}
         </div>

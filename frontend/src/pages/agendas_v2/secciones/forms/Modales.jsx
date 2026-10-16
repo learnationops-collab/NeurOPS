@@ -7,6 +7,7 @@ import { copiarPregunta, personalizar } from '../../core/formulario';
 import { Humo, Icono, Modal, Sx } from '../../ui/base';
 import { toast } from '../../ui/toast';
 import { TituloConToken, mutarForm, useBorrador } from './comun';
+import { Button, IconButton } from '../../../../components/standard';
 
 export function fuentesImport(d, fid) { return ord(d, 'formularios').filter(x => x.id !== fid && x.preguntas.length); }
 
@@ -30,12 +31,12 @@ export function ModalImportar({ f, d, onCerrar, onImportado }) {
             <div className="modal-cab">
                 <span className="icono-m"><Icono n="importar" s={19} /></span>
                 <div className="modal-tit"><h2 className="t-h2" id="imp-tit">Importar preguntas</h2></div>
-                <button type="button" className="ibtn" data-nav="" aria-label="Cerrar" onClick={onCerrar}><Icono n="x" /></button>
+                <IconButton label="Cerrar" icon={<Icono n="x" />} data-nav="" onClick={onCerrar} />
             </div>
             <div className="barra" style={{ marginBottom: 12 }}>
                 <Sx id="imp-f" label="Formulario" valor={fo.id} opciones={fs.map(x => ({ v: x.id, n: x.nombre + ' · ' + x.preguntas.length }))}
                     onChange={v => { setFuente(v); setSel({}); }} />
-                <button type="button" className="btn btn--linea btn--sm" onClick={todas}>Todas</button>
+                <Button onClick={todas}>Todas</Button>
             </div>
             <div className="lista" style={{ maxHeight: 'min(50vh,440px)', overflow: 'auto' }}>
                 {fo.preguntas.map(q => {
@@ -54,8 +55,8 @@ export function ModalImportar({ f, d, onCerrar, onImportado }) {
             <div className="barra" style={{ marginTop: 16 }}>
                 <span className="t-sm mut">{n ? n + ' seleccionadas' : 'Elegí preguntas'}</span>
                 <div className="barra-der">
-                    <button type="button" className="btn btn--linea" data-nav="" onClick={onCerrar}>Cancelar</button>
-                    <button type="button" className="btn btn--cta" disabled={!n} onClick={importar}><Icono n="importar" />Importar{n ? ' ' + n : ''}</button>
+                    <Button size="md" data-nav="" onClick={onCerrar}>Cancelar</Button>
+                    <Button variant="primary" size="md" icon={<Icono n="importar" />} disabled={!n} onClick={importar}>Importar{n ? ' ' + n : ''}</Button>
                 </div>
             </div>
         </Modal>
@@ -73,7 +74,7 @@ export function ModalNoCalifica({ f, onCerrar }) {
             <div className="modal-cab">
                 <span className="fin-ico"><Icono n="prohibido" s={18} /></span>
                 <h2 className="t-h3" id="fin-tit" style={{ flex: 1 }}>Si no califica</h2>
-                <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label="Cerrar" onClick={onCerrar}><Icono n="x" /></button>
+                <IconButton label="Cerrar" icon={<Icono n="x" />} size="sm" data-nav="" onClick={onCerrar} />
             </div>
             <div className="fin-grid">
                 <div className="fin-campos">

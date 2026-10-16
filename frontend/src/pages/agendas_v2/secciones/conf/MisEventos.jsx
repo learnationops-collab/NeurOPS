@@ -8,6 +8,7 @@ import api from '../../../../services/api';
 import { uid } from '../../core/util';
 import { Icono, Switch, Sx } from '../../ui/base';
 import { CampoMinutos } from '../team/Sesiones';
+import { Button, IconButton } from '../../../../components/standard';
 
 const urlDe = (link) => window.location.origin + '/agendas-v2' + link;
 const SIN_FORM = '';
@@ -43,16 +44,14 @@ function Evento({ e, formularios, onCambio, onBorrar }) {
             <div className="me-fila">
                 <span className="ev-link me-link"><Icono n="link" /><span className="trunc">{urlDe(e.link)}</span></span>
                 <div className="barra-der">
-                    <button type="button" className="btn btn--linea btn--sm" onClick={copiar}><Icono n={copiado ? 'check' : 'copiar'} />{copiado ? 'Copiado' : 'Copiar link'}</button>
+                    <Button icon={<Icono n={copiado ? 'check' : 'copiar'} />} onClick={copiar}>{copiado ? 'Copiado' : 'Copiar link'}</Button>
                     {borrar ? (
                         <>
-                            <button type="button" className="btn btn--linea btn--sm" onClick={() => setBorrar(false)}>Cancelar</button>
-                            <button type="button" className="btn btn--borrar btn--sm" onClick={onBorrar}><Icono n="basura" />Eliminar</button>
+                            <Button onClick={() => setBorrar(false)}>Cancelar</Button>
+                            <Button variant="dangerSolid" icon={<Icono n="basura" />} onClick={onBorrar}>Eliminar</Button>
                         </>
                     ) : (
-                        <button type="button" className="ibtn ibtn--sm ibtn--peligro" aria-label={'Eliminar ' + e.nombre} title="Eliminar" onClick={() => setBorrar(true)}>
-                            <Icono n="basura" s={15} />
-                        </button>
+                        <IconButton label={'Eliminar ' + e.nombre} icon={<Icono n="basura" s={15} />} size="sm" danger title="Eliminar" onClick={() => setBorrar(true)} />
                     )}
                 </div>
             </div>
@@ -108,7 +107,7 @@ export default function MisEventos() {
                         <span className="prefijo"><Icono n="plus" /></span>
                         <label className="sr" htmlFor="me-nuevo">Nuevo evento</label>
                         <input id="me-nuevo" type="text" maxLength={80} autoComplete="off" placeholder="Nuevo evento, ej. Seguimiento" value={nuevo} onChange={e => setNuevo(e.target.value)} />
-                        <button type="submit" className="btn btn--cta btn--sm" disabled={ocupado || !nuevo.trim()}>Crear</button>
+                        <Button variant="primary" type="submit" disabled={ocupado || !nuevo.trim()}>Crear</Button>
                     </form>
                     {error && <p className="campo-err" role="alert"><Icono n="alerta" s={14} />{error}</p>}
                 </>

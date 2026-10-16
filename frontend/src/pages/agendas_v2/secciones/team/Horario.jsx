@@ -17,6 +17,7 @@ import Available from './Available';
 import { MAX_FRANJAS, horarioLaV } from './cobertura';
 import { HUMO_PERSONA, SemanaMini, setTeam } from './comun';
 import { EditorSesiones } from './Sesiones';
+import { Button, IconButton } from '../../../../components/standard';
 
 const OPS_DESDE = HORAS.slice(0, -1).map(h => ({ v: h, n: h }));
 const OPS_HASTA = HORAS.slice(1).map(h => ({ v: h, n: h }));
@@ -43,8 +44,8 @@ function CopiarA({ desde, onAplicar, onCerrar }) {
                     <input type="checkbox" checked={x.d === desde || !!sel[x.d]} disabled={x.d === desde} onChange={e => setSel({ ...sel, [x.d]: e.target.checked })} />
                 </label>
             ))}
-            <button type="button" className="btn btn--cta btn--sm" style={{ marginTop: 6 }}
-                onClick={() => onAplicar(Object.keys(sel).filter(k => sel[k]).map(Number))}>Aplicar</button>
+            <Button variant="primary" style={{ marginTop: 6 }}
+                onClick={() => onAplicar(Object.keys(sel).filter(k => sel[k]).map(Number))}>Aplicar</Button>
         </div>
     );
 }
@@ -97,7 +98,7 @@ export function HorarioEditor({ p, bloqueado = false, onGuardar = null }) {
                             opciones={[{ v: '', n: 'Copiar de…' }, ...otros.map(o => ({ v: o.id, n: o.nombre }))]}
                             onChange={v => { const o = otros.find(x => x.id === v); if (!o) return; guardar(clonar(o.horario), { tz: o.tz }); toast('Horario copiado de ' + o.nombre); }} />
                     )}
-                    <button type="button" className="btn btn--linea btn--sm" disabled={dis} onClick={() => guardar(normalHorario({}))}>Vaciar</button>
+                    <Button disabled={dis} onClick={() => guardar(normalHorario({}))}>Vaciar</Button>
                 </div>
             </div>
             <div className="dias">
@@ -109,19 +110,19 @@ export function HorarioEditor({ p, bloqueado = false, onGuardar = null }) {
                             <div className="dia-cuerpo">
                                 {!rs.length && (
                                     <div className="dia-no">No disponible
-                                        <button type="button" className="ibtn ibtn--xs" disabled={dis} aria-label={'Agregar horario el ' + dd.n} onClick={() => sumar(dd.d)}><Icono n="plus" /></button>
+                                        <IconButton label={'Agregar horario el ' + dd.n} icon={<Icono n="plus" />} size="xs" disabled={dis} onClick={() => sumar(dd.d)} />
                                     </div>
                                 )}
                                 {rs.map((r, j) => (
                                     <div key={j} className={'rango' + (aMin(r[1]) <= aMin(r[0]) ? ' mal' : '')} data-r={j}>
                                         <Sx sm label={'Desde, ' + dd.n} valor={r[0]} opciones={OPS_DESDE} disabled={dis} onChange={v => fijar(dd.d, j, 0, v)} />–
                                         <Sx sm label={'Hasta, ' + dd.n} valor={r[1]} opciones={OPS_HASTA} disabled={dis} onChange={v => fijar(dd.d, j, 1, v)} />
-                                        <button type="button" className="ibtn ibtn--xs ibtn--peligro" disabled={dis} aria-label={'Quitar ' + r[0] + '–' + r[1] + ', ' + dd.n} onClick={() => quitar(dd.d, j)}><Icono n="x" /></button>
+                                        <IconButton label={'Quitar ' + r[0] + '–' + r[1] + ', ' + dd.n} icon={<Icono n="x" />} size="xs" danger disabled={dis} onClick={() => quitar(dd.d, j)} />
                                         {j === 0 && (
                                             <div className="dia-acc">
-                                                <button type="button" className="ibtn ibtn--xs" disabled={dis || rs.length >= MAX_FRANJAS} aria-label="Agregar otro horario" onClick={() => sumar(dd.d)}><Icono n="plus" /></button>
-                                                <button type="button" className="ibtn ibtn--xs" data-copiar-btn="" disabled={dis} aria-label="Copiar a otros días" aria-expanded={copiar === dd.d}
-                                                    onClick={() => setCopiar(copiar === dd.d ? null : dd.d)}><Icono n="copiar" /></button>
+                                                <IconButton label="Agregar otro horario" icon={<Icono n="plus" />} size="xs" disabled={dis || rs.length >= MAX_FRANJAS} onClick={() => sumar(dd.d)} />
+                                                <IconButton label="Copiar a otros días" icon={<Icono n="copiar" />} size="xs" data-copiar-btn="" disabled={dis} aria-expanded={copiar === dd.d}
+                                                    onClick={() => setCopiar(copiar === dd.d ? null : dd.d)} />
                                             </div>
                                         )}
                                     </div>
@@ -162,9 +163,9 @@ function VerSemana() {
     return (
         <div className="hor-pie">
             <span className="t-sm mut">Los turnos que se ofrecen salen de este horario y de la sesión de cada evento.</span>
-            <button type="button" className="btn btn--linea btn--sm" onClick={() => { almacen.flush(); setTeam({ horTab: 'semana' }); }}>
-                <Icono n="calendar" />Ver cómo queda la semana
-            </button>
+            <Button icon={<Icono n="calendar" />} onClick={() => { almacen.flush(); setTeam({ horTab: 'semana' }); }}>
+                Ver cómo queda la semana
+            </Button>
         </div>
     );
 }
@@ -223,7 +224,7 @@ export function ModalHorario() {
                         </div>
                         <Seg sm nav label="Vista" valor={tab} onChange={v => setTeam({ horTab: v })}
                             opciones={[{ v: 'config', n: 'Horario', icono: 'ajustes' }, { v: 'sesiones', n: 'Sesiones', icono: 'clock' }, { v: 'semana', n: 'Semana', icono: 'calendar' }]} />
-                        <button type="button" className="ibtn" data-nav="" aria-label="Cerrar" onClick={cerrar}><Icono n="x" /></button>
+                        <IconButton label="Cerrar" icon={<Icono n="x" />} data-nav="" onClick={cerrar} />
                     </div>
                     {tab === 'semana'
                         ? <div className="hor-semana"><Available solo={p} /></div>

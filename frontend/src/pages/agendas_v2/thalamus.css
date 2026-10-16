@@ -1472,7 +1472,7 @@
 .thalamus .lc--no{color:var(--error);background:color-mix(in srgb,var(--error) 12%,transparent);border:1px solid color-mix(in srgb,var(--error) 35%,transparent)}
 
 /* Editor de evento: la barra en la fila del título (sin el h1, que ya dice la sección) y 3 columnas. */
-/* Fila del título: título a la izquierda; botones y filtros de la sección a la derecha (ui/EnTope). */
+/* Fila del título: título a la izquierda; botones y filtros de la sección a la derecha (HeaderActions, components/standard). */
 .thalamus .tope-acc{flex:1 1 auto;min-width:0;display:flex;justify-content:flex-end}
 .thalamus .tope-acc:empty{display:none}
 .thalamus .tope-barra{flex:1;min-width:0;display:flex;justify-content:flex-end}

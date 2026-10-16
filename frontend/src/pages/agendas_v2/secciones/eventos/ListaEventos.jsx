@@ -11,7 +11,7 @@ import { gruposDeForm } from '../../core/formulario';
 import { useDatos, usePermisos, useUi } from '../../data/hooks';
 import { HUMO_MARCA, Humo, Icono } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
-import EnTope from '../../ui/EnTope';
+import { Button, EmptyState, HeaderActions, IconButton } from '../../../../components/standard';
 import { EstadoEv, LinksSetters, PasosPendientes, abrirEvento, copiarLink, crearEvento, probarEvento, probarSegmento, settersDe, useSetters } from './comun';
 import { urlPrueba } from '../../reserva/segmentos';
 import { copiarTexto } from '../../ui/toast';
@@ -42,7 +42,7 @@ function Compo({ cm, onCrear, err }) {
                     <label className="sr" htmlFor="nuevo-nombre">Nuevo evento</label>
                     <input ref={inp} id="nuevo-nombre" type="text" maxLength={80} autoComplete="off" placeholder="Nombre, ej. Diagnóstico Workshop"
                         aria-describedby="nuevo-err" aria-invalid={!!err} />
-                    <button type="submit" className="btn btn--cta btn--sm"><Icono n="plus" />Crear</button>
+                    <Button variant="primary" icon={<Icono n="plus" />} type="submit">Crear</Button>
                 </form>
                 <ErrNuevo err={err} clase="campo-err" />
             </div>
@@ -75,24 +75,18 @@ function TarjetaEvento({ d, e }) {
                 <span className="chip chip--n" style={{ '--c': 'var(--brand-secondary)' }}><Icono n="rayo" />{rut.join(' · ')}</span>
                 <span className="chip chip--n" style={{ '--c': 'var(--idle)' }}>{e.duracion} min</span>
                 <div className="barra-der">
-                    <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label={'Copiar link de ' + e.nombre} title="Copiar link" onClick={() => copiarLink(d, e)}>
-                        <Icono n="copiar" s={15} />
-                    </button>
-                    <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label={'Probar ' + e.nombre} title="Probar" onClick={() => probarEvento(d, e)}>
-                        <Icono n="play" s={15} />
-                    </button>
+                    <IconButton label={'Copiar link de ' + e.nombre} icon={<Icono n="copiar" s={15} />} size="sm" data-nav="" title="Copiar link" onClick={() => copiarLink(d, e)} />
+                    <IconButton label={'Probar ' + e.nombre} icon={<Icono n="play" s={15} />} size="sm" data-nav="" title="Probar" onClick={() => probarEvento(d, e)} />
                     {!lectura && (
                         <>
-                            <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label={'Copiar enlace de prueba de ' + e.nombre} title="Copiar enlace de prueba por segmento"
-                                onClick={() => copiarTexto(urlPrueba(e.id), 'Enlace de prueba copiado')}>
-                                <Icono n="link" s={15} />
-                            </button>
-                            <button type="button" className="btn btn--linea btn--sm" data-nav="" title="Saltear el formulario y ver lo que vería el lead de cada segmentación" onClick={() => probarSegmento(e)}>
-                                <Icono n="users" />Probar segmento
-                            </button>
+                            <IconButton label={'Copiar enlace de prueba de ' + e.nombre} icon={<Icono n="link" s={15} />} size="sm" data-nav="" title="Copiar enlace de prueba por segmento"
+                                onClick={() => copiarTexto(urlPrueba(e.id), 'Enlace de prueba copiado')} />
+                            <Button icon={<Icono n="users" />} data-nav="" title="Saltear el formulario y ver lo que vería el lead de cada segmentación" onClick={() => probarSegmento(e)}>
+                                Probar segmento
+                            </Button>
                         </>
                     )}
-                    <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={() => abrirEvento(e.id)}><Icono n={lectura ? 'ojo' : 'edit'} />Abrir</button>
+                    <Button icon={<Icono n={lectura ? 'ojo' : 'edit'} />} data-nav="" onClick={() => abrirEvento(e.id)}>Abrir</Button>
                 </div>
             </div>
         </article>
@@ -130,7 +124,7 @@ export default function ListaEventos() {
     };
 
     if (!es.length) {
-        return lectura ? <div className="panel vacio"><p className="t-sm mut">Todavía no hay eventos.</p></div>
+        return lectura ? <EmptyState>Todavía no hay eventos.</EmptyState>
             : <Compo cm={cm} onCrear={crear} err={err} />;
     }
 
@@ -146,7 +140,7 @@ export default function ListaEventos() {
 
     return (
         <>
-            <EnTope>
+            <HeaderActions>
                 <div className="ev-top">
                     {cm && <span className="ev-mios"><Icono n="user" s={14} />Tus eventos</span>}
                     <div hidden={!!cm} className="seg seg--sm ev-agr" role="group" aria-label="Agrupar">
@@ -157,16 +151,16 @@ export default function ListaEventos() {
                             </button>
                         ))}
                     </div>
-                    {!cm && !lectura && <button type="button" className="btn btn--linea btn--sm" onClick={() => ui.set({ funnel: {} })}><Icono n="funnel" />Nuevo funnel</button>}
+                    {!cm && !lectura && <Button icon={<Icono n="funnel" />} onClick={() => ui.set({ funnel: {} })}>Nuevo funnel</Button>}
                     <form className="entrada ev-nuevo" hidden={lectura} noValidate onSubmit={ev => { ev.preventDefault(); crear(inp.current.value); }}>
                         <label className="sr" htmlFor="nuevo-nombre">Nuevo evento</label>
                         <span className="prefijo"><Icono n="plus" /></span>
                         <input ref={inp} id="nuevo-nombre" type="text" maxLength={80} autoComplete="off" placeholder="Nuevo evento, ej. Diagnóstico Workshop"
                             aria-describedby="nuevo-err" aria-invalid={!!err} onChange={() => { if (err) setErr(''); }} />
-                        <button type="submit" className="btn btn--cta btn--sm">Crear</button>
+                        <Button variant="primary" type="submit">Crear</Button>
                     </form>
                 </div>
-            </EnTope>
+            </HeaderActions>
             <ErrNuevo err={err} clase="err-nuevo" />
             {[...grupos.entries()].map(([k, lista]) => {
                 const ref = agrupar === 'nada' ? null : buscar(d, agrupar === 'funnel' ? 'funnels' : 'formularios', k);
@@ -180,8 +174,8 @@ export default function ListaEventos() {
                                 {agrupar === 'funnel' && ref && <EstadoFunnel f={ref} />}
                                 <span className="t-cap mut40">{lista.length}</span>
                                 {agrupar === 'funnel' && ref && !lectura && (
-                                    <button type="button" className="ibtn ibtn--sm" aria-label={'Editar funnel ' + ref.nombre} title="Editar funnel"
-                                        onClick={() => ui.set({ funnel: { id: ref.id } })}><Icono n="ajustes" s={15} /></button>
+                                    <IconButton label={'Editar funnel ' + ref.nombre} icon={<Icono n="ajustes" s={15} />} size="sm" title="Editar funnel"
+                                        onClick={() => ui.set({ funnel: { id: ref.id } })} />
                                 )}
                             </div>
                         )}
@@ -189,9 +183,9 @@ export default function ListaEventos() {
                             <div className="tarjeta caja ev-card ev-fila">
                                 <span className="t-sm mut">Sin agendamientos: este funnel no genera agendas.</span>
                                 <div className="barra-der" hidden={lectura}>
-                                    <button type="button" className="btn btn--cta btn--sm" onClick={() => ui.set({ funnel: { id: ref.id } })}>
-                                        <Icono n="plus" />Agregar agendamiento
-                                    </button>
+                                    <Button variant="primary" icon={<Icono n="plus" />} onClick={() => ui.set({ funnel: { id: ref.id } })}>
+                                        Agregar agendamiento
+                                    </Button>
                                 </div>
                             </div>
                         )}

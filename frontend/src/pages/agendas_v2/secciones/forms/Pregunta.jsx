@@ -10,6 +10,7 @@ import { ui } from '../../ui/estadoUi';
 import { toast } from '../../ui/toast';
 import { useOrdenable } from '../../ui/useOrdenable';
 import { TituloConToken, mutarForm, setFormUi } from './comun';
+import { IconButton, LinkButton } from '../../../../components/standard';
 
 const OPC_TIPO = TIPOS.map(t => ({ v: t.k, n: t.n, icono: t.ico }));
 function ptsColor(v) { return v == null ? 'var(--text-muted-40)' : v >= 8 ? 'var(--success)' : v >= 5 ? 'var(--warning)' : 'var(--error)'; }
@@ -86,16 +87,14 @@ function Opciones({ q, cambiar, enfocar }) {
                                 <b className="num" style={{ '--c': ptsColor(o.puntos) }}>{o.puntos == null ? '–' : o.puntos}</b>
                                 <button type="button" data-pts="1" aria-label="Más puntos" disabled={!q.peso || o.puntos === 10} onClick={() => pts(j, 1)}><Icono n="plus" /></button>
                             </span>
-                            <button type="button" className="ibtn ibtn--xs" aria-pressed={o.descalifica} aria-label="Descalifica" title="Descalifica: no agenda"
-                                onClick={() => cambiar(x => { x.opciones[j].descalifica = !x.opciones[j].descalifica; })}>
-                                <Icono n="prohibido" />
-                            </button>
-                            <button type="button" className="ibtn ibtn--xs ibtn--peligro" aria-label="Eliminar opción" onClick={() => borrar(j)}><Icono n="x" /></button>
+                            <IconButton label="Descalifica" icon={<Icono n="prohibido" />} size="xs" pressed={o.descalifica} title="Descalifica: no agenda"
+                                onClick={() => cambiar(x => { x.opciones[j].descalifica = !x.opciones[j].descalifica; })} />
+                            <IconButton label="Eliminar opción" icon={<Icono n="x" />} size="xs" danger onClick={() => borrar(j)} />
                         </div>
                     );
                 })}
             </div>
-            <div><button type="button" className="link-btn" data-op-add="" onClick={agregar}><Icono n="plus" />Opción</button></div>
+            <div><LinkButton icon={<Icono n="plus" />} data-op-add="" onClick={agregar}>Opción</LinkButton></div>
         </div>
     );
 }
@@ -190,8 +189,8 @@ export default function Pregunta({ q, i, f, on, ord, enfocar }) {
                 </button>
                 <Fichas q={q} />
                 <div className="pq-acc">
-                    <button type="button" className="ibtn ibtn--xs" aria-label="Duplicar" title="Duplicar" onClick={duplicar}><Icono n="copiar" /></button>
-                    <button type="button" className="ibtn ibtn--xs ibtn--peligro" aria-label="Eliminar" title="Eliminar" onClick={borrar}><Icono n="basura" /></button>
+                    <IconButton label="Duplicar" icon={<Icono n="copiar" />} size="xs" title="Duplicar" onClick={duplicar} />
+                    <IconButton label="Eliminar" icon={<Icono n="basura" />} size="xs" danger title="Eliminar" onClick={borrar} />
                 </div>
             </div>
             {on && <Cuerpo q={q} cambiar={cambiar} enfocar={enfocar} />}

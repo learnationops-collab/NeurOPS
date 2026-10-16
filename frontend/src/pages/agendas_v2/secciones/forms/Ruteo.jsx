@@ -13,6 +13,7 @@ import Lienzo from '../../ui/Lienzo';
 import { useOrdenable } from '../../ui/useOrdenable';
 import { colorNivel, mutarForm, opcionesPrioridad, setFormUi, useEnfocar } from './comun';
 import RuteoFlujo from './RuteoFlujo';
+import { IconButton } from '../../../../components/standard';
 
 const AYUDA_RUTEO = 'Se revisan de arriba a abajo: la primera regla que se cumple elige la estrategia. En cada condición alcanza cualquiera de las respuestas marcadas.';
 
@@ -64,8 +65,8 @@ function DestinoRegla({ d, r, onGrupo, onUrl }) {
             <span className="destino-flecha" aria-hidden="true"><Icono n="link" s={15} /></span>
             <input className={'input' + (mal ? ' mal' : '')} type="url" value={borrador} aria-label="Página a la que va el lead" placeholder="https://…"
                 onChange={e => { setBorrador(e.target.value); if (urlOk(e.target.value)) onUrl(urlOk(e.target.value)); }} />
-            <button type="button" className="ibtn ibtn--xs" aria-label="Mandar a una estrategia" title="Mandar a una estrategia"
-                onClick={() => { setEnUrl(false); setBorrador('https://'); onUrl(''); }}><Icono n="x" /></button>
+            <IconButton label="Mandar a una estrategia" icon={<Icono n="x" />} size="xs" title="Mandar a una estrategia"
+                onClick={() => { setEnUrl(false); setBorrador('https://'); onUrl(''); }} />
         </div>
     );
 }
@@ -127,10 +128,8 @@ function Regla({ r, i, f, d, qs, msel, rota, ord, enfocar }) {
                             <Msel id={'ms-' + r.id + '-' + j} q={q} ops={c.ops} abierto={msel === clave}
                                 onAbrir={() => setFormUi({ msel: clave })} onCerrar={(foco) => cerrarMsel(foco ? String(j) : null)}
                                 onToggle={o => cambiar(x => { const cs = x.cond[j]; cs.ops = cs.ops.includes(o) ? cs.ops.filter(y => y !== o) : cs.ops.concat([o]); })} />
-                            <button type="button" className="ibtn ibtn--xs" aria-label="Quitar condición" disabled={r.cond.length < 2}
-                                onClick={() => { cambiar(x => { x.cond.splice(j, 1); }); enfocar('[data-r="' + i + '"] .cond-mas'); }}>
-                                <Icono n="x" />
-                            </button>
+                            <IconButton label="Quitar condición" icon={<Icono n="x" />} size="xs" disabled={r.cond.length < 2}
+                                onClick={() => { cambiar(x => { x.cond.splice(j, 1); }); enfocar('[data-r="' + i + '"] .cond-mas'); }} />
                         </div>
                     );
                 })}
@@ -144,10 +143,8 @@ function Regla({ r, i, f, d, qs, msel, rota, ord, enfocar }) {
                 )}
             </div>
             <DestinoRegla d={d} r={r} onGrupo={v => cambiar(x => { x.grupo = v; x.url = ''; })} onUrl={u => cambiar(x => { x.url = u; if (u) x.grupo = ''; })} />
-            <button type="button" className="ibtn ibtn--xs ibtn--peligro regla-x" aria-label={'Eliminar regla ' + (i + 1)}
-                onClick={() => { mutarForm(f.id, 'reglas', rs => rs.filter(y => y.id !== r.id)); enfocar('[data-regla-add]'); }}>
-                <Icono n="basura" />
-            </button>
+            <IconButton label={'Eliminar regla ' + (i + 1)} icon={<Icono n="basura" />} size="xs" danger className="regla-x"
+                onClick={() => { mutarForm(f.id, 'reglas', rs => rs.filter(y => y.id !== r.id)); enfocar('[data-regla-add]'); }} />
         </div>
     );
 }

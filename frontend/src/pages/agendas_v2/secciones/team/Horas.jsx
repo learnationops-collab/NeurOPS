@@ -5,7 +5,7 @@ import { fmt } from '../../core/util';
 import { usePermisos, useUi } from '../../data/hooks';
 import { Avatar, Humo, Seg } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
-import EnTope from '../../ui/EnTope';
+import { EmptyState, HeaderActions } from '../../../../components/standard';
 import Available from './Available';
 import { HorarioEditor } from './Horario';
 import { HUMO_PERSONA } from './comun';
@@ -15,11 +15,11 @@ const TABS = [{ v: 'available', n: 'Available', icono: 'calendar' }, { v: 'sched
 export default function Horas() {
     const { yo } = usePermisos();
     const { horasTab } = useUi();
-    if (!yo) return <div className="panel vacio"><p className="t-sm mut">Sin persona vinculada.</p></div>;
+    if (!yo) return <EmptyState>Sin persona vinculada.</EmptyState>;
     const tab = horasTab === 'schedule' ? 'schedule' : 'available', hs = horasSemana(yo);
     return (
         <>
-            <EnTope>
+            <HeaderActions>
                 <div className="barra">
                     <Seg nav label="Hours" valor={tab} opciones={TABS} onChange={v => ui.set({ horasTab: v })} />
                     <div className="barra-der hrs-yo">
@@ -28,7 +28,7 @@ export default function Horas() {
                         <span className="num">{hs ? fmt(hs, 1) + ' h/sem' : 'Sin horario'}</span>
                     </div>
                 </div>
-            </EnTope>
+            </HeaderActions>
             {tab === 'available'
                 ? <Available solo={yo} />
                 : (

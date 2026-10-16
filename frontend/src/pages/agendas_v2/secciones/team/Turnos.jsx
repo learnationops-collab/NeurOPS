@@ -12,6 +12,7 @@ import { agendasDeVista, googleDeOcupacion, useAhora, useOcupacionGoogle, useZon
 import { textoSesion } from './Sesiones';
 import { rangoSemana } from './cobertura';
 import { turnosSemana } from './turnos';
+import { Button, IconButton } from '../../../../components/standard';
 
 const AVISO = {
     error: 'No se pudo leer su calendario: puede tener menos libres',
@@ -38,9 +39,9 @@ export default function TablaTurnos({ evento, personas }) {
         <div className="tu">
             <div className="tu-cab">
                 <div className="av-nav">
-                    <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label="Semana anterior" onClick={() => ir(-1)}><Icono n="chevron-left" /></button>
-                    <button type="button" className="btn btn--linea btn--sm" data-nav="" disabled={!semana} onClick={() => ir(0)}>Hoy</button>
-                    <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label="Semana siguiente" onClick={() => ir(1)}><Icono n="chevron-right" /></button>
+                    <IconButton label="Semana anterior" icon={<Icono n="chevron-left" />} size="sm" data-nav="" onClick={() => ir(-1)} />
+                    <Button data-nav="" disabled={!semana} onClick={() => ir(0)}>Hoy</Button>
+                    <IconButton label="Semana siguiente" icon={<Icono n="chevron-right" />} size="sm" data-nav="" onClick={() => ir(1)} />
                     <b className="av-rango" aria-live="polite">{fechaCorta(t.claves[0]) + ' – ' + fechaCorta(t.claves[6])}</b>
                 </div>
                 <p className="tu-total"><b className="num">{t.nLibres}</b> turnos libres <span className="mut">de {t.nTotal}</span>{google == null && <span className="mut"> · leyendo calendarios…</span>}</p>

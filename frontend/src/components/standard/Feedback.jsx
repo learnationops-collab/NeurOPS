@@ -1,0 +1,44 @@
+// Estados de una pantalla y avisos: vacío/cargando, confirmación de borrado y la etiqueta (chip).
+
+import clsx from 'clsx';
+import { Button } from './Button';
+import { Aura } from './Card';
+
+// Lo que se muestra cuando no hay nada (o todavía está cargando). `title` va arriba del texto,
+// `action` debajo y `aura` le pone fondo de color (la versión grande, para una sección vacía).
+export function EmptyState({ icon, title, aura, action, className, children }) {
+    return (
+        <div className={clsx('panel vacio', className)}>
+            {aura && <Aura colors={aura} className="humo--hero" />}
+            {icon}
+            {title && <h2 className="t-h3">{title}</h2>}
+            {children && <p className="t-sm mut">{children}</p>}
+            {action}
+        </div>
+    );
+}
+
+// «¿Eliminar X? …» con Cancelar y Eliminar. `detail` sigue a la pregunta; `children` va en un párrafo
+// aparte; `extraActions` va entre Cancelar y Eliminar. `article` es para «¿Eliminar a Juan?».
+export function ConfirmDelete({ name, article = '', detail, onCancel, onConfirm, confirmLabel = 'Eliminar', icon, extraActions, autoFocusCancel = true, className, style, children }) {
+    return (
+        <div className={clsx('ed-pie--borrar', className)} style={style} role="alertdialog" aria-label={'Eliminar ' + article + name}>
+            <p className="t-sm">¿Eliminar {article}<b>{name}</b>?{detail ? ' ' : ''}{detail}</p>
+            {children}
+            <div className="der">
+                <Button autoFocus={autoFocusCancel} onClick={onCancel}>Cancelar</Button>
+                {extraActions}
+                <Button variant="dangerSolid" icon={icon} onClick={onConfirm}>{confirmLabel}</Button>
+            </div>
+        </div>
+    );
+}
+
+// Etiqueta de estado o categoría. `color` tiñe borde y texto; `subtle` es la versión sin mayúsculas.
+export function Chip({ color, icon, subtle = false, className, children, ...rest }) {
+    return (
+        <span className={clsx('chip', subtle && 'chip--n', className)} style={color ? { '--c': color } : undefined} {...rest}>
+            {icon}{children}
+        </span>
+    );
+}

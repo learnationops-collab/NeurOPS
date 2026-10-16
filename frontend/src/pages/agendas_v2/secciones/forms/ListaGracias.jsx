@@ -11,6 +11,7 @@ import { soltarVideo } from '../../data/videos';
 import { VIDEOS_INICIALES, rutaGracias } from '../../reserva/gracias/contenido';
 import Compo from './Compo';
 import './gracias.css';
+import { Button, ConfirmDelete, IconButton } from '../../../../components/standard';
 
 export function abrirGracias(id) {
     almacen.flush();
@@ -44,13 +45,8 @@ export function borrarGracias(g) {
 export function ConfirmarBorrarGracias({ g, d, onCancelar, autoFocus = true }) {
     const n = d.eventos.filter(e => e.gracias === g.id).length;
     return (
-        <div className="ed-pie--borrar" style={{ marginTop: 'auto' }}>
-            <p className="t-sm">¿Eliminar <b>{g.nombre}</b>?{n ? ' La usa' + (n > 1 ? 'n ' + n + ' eventos' : ' 1 evento') + '.' : ''}</p>
-            <div className="der">
-                <button type="button" className="btn btn--linea btn--sm" autoFocus={autoFocus} onClick={onCancelar}>Cancelar</button>
-                <button type="button" className="btn btn--borrar btn--sm" onClick={() => borrarGracias(g)}><Icono n="basura" />Eliminar</button>
-            </div>
-        </div>
+        <ConfirmDelete name={g.nombre} detail={n ? 'La usa' + (n > 1 ? 'n ' + n + ' eventos' : ' 1 evento') + '.' : null} style={{ marginTop: 'auto' }}
+            icon={<Icono n="basura" />} autoFocusCancel={autoFocus} onCancel={onCancelar} onConfirm={() => borrarGracias(g)} />
     );
 }
 
@@ -79,10 +75,8 @@ function Tarjeta({ g, d, borrando, setBorrando }) {
                 <div className="fcard-pie">
                     <a className="btn btn--linea btn--sm" href={rutaGracias(g.id)} target="_blank" rel="noopener noreferrer"><Icono n="ojo" />Ver</a>
                     <div className="der">
-                        <button type="button" className="ibtn ibtn--sm ibtn--peligro" data-borrar={g.id} aria-label={'Eliminar ' + g.nombre} title="Eliminar" onClick={() => setBorrando(g.id)}>
-                            <Icono n="basura" s={15} />
-                        </button>
-                        <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={() => abrirGracias(g.id)}><Icono n="edit" />Editar</button>
+                        <IconButton label={'Eliminar ' + g.nombre} icon={<Icono n="basura" s={15} />} size="sm" danger data-borrar={g.id} title="Eliminar" onClick={() => setBorrando(g.id)} />
+                        <Button icon={<Icono n="edit" />} data-nav="" onClick={() => abrirGracias(g.id)}>Editar</Button>
                     </div>
                 </div>
             )}

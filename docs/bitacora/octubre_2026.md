@@ -77,3 +77,9 @@
   - No guarda nada de agenda ni toca la operación de ventas. `GoogleService` suma `mover_evento` y `delete_event` acepta el calendario donde se creó.
   - Verificación: `tests/agendas_v2/test_api_academia.py` (14 tests); `/google/conectar/<firma>` inventariada en `PUBLICAS_POR_DISENO`.
   - Cuenta compartida: el equipo conecta team@ (la que graba los Meet) y cada uno elige o crea su calendario dentro de ella; sin calendario elegido no está lista. Opcional: invitar también a su calendario personal.
+
+- **16 de Octubre de 2026** *(Componentes estándar de UI y reglas de agentes unificadas. [frontend/src/components/standard/](../../frontend/src/components/standard/) [NEW], [.agents/](../../.agents/) [MODIFY], [CLAUDE.md](../../CLAUDE.md) [NEW])*:
+  - Componentes estándar: `Button`, `IconButton`, `LinkButton`, `PageHeader` + `HeaderActions`, `Card` + `Aura`, `EmptyState`, `ConfirmDelete` y `Chip`. Dibujan con las clases de thalamus.css, así que la pantalla se ve igual.
+  - Thalamus los usa en todas sus secciones: 106 botones, la cabecera (reemplaza a `ui/EnTope`), 12 estados vacíos y 4 confirmaciones de borrado que estaban copiadas. `Humo` pasa a ser el `Aura` estándar.
+  - Reglas de agentes: `.agent/` y `.agents/` quedan unificadas en `.agents/`. Se corrigió `arquitectura.md` (Python 3.11, temas propios y componentes estándar). Regla nueva `ui.md` y skill `ui-builder`, con el catálogo de componentes. `CLAUDE.md` importa las reglas para Claude Code.
+  - Verificación: 178 tests de Thalamus, 11 de los componentes y 15 de la Configuración de sesión (que usa piezas de Thalamus); build de producción.

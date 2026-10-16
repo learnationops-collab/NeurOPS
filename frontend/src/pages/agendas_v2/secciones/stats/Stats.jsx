@@ -6,7 +6,7 @@
 import { useMemo } from 'react';
 import { Avatar, Humo, HUMO_MARCA, Icono, Seg, Sx } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
-import EnTope from '../../ui/EnTope';
+import { Button, EmptyState, HeaderActions } from '../../../../components/standard';
 import { useDatos, usePermisos, useUi } from '../../data/hooks';
 import { COLORES } from '../../core/catalogos';
 import { buscar, closers, colorVar, ord, setters } from '../../core/datos';
@@ -79,22 +79,18 @@ export default function Stats() {
 
     if (hayEventos && !calc) {
         return (
-            <div className="panel vacio">
-                <span className="icono-m"><Icono n="chart" s={19} /></span>
-                <h2 className="t-h3">{error ? 'No se pudieron traer las estadísticas' : 'Cargando estadísticas…'}</h2>
-                {error && <p className="t-sm mut">Revisá la conexión y volvé a entrar a Stats.</p>}
-            </div>
+            <EmptyState icon={<span className="icono-m"><Icono n="chart" s={19} /></span>}
+                title={error ? 'No se pudieron traer las estadísticas' : 'Cargando estadísticas…'}>
+                {error && 'Revisá la conexión y volvé a entrar a Stats.'}
+            </EmptyState>
         );
     }
     if (!calc) {
         return (
-            <div className="panel vacio">
-                <Humo clase="humo--hero" cols={HUMO_MARCA} />
-                <span className="icono-m"><Icono n="chart" s={19} /></span>
-                <h2 className="t-h3">Sin eventos todavía</h2>
-                <p className="t-sm mut">Creá un evento para ver estadísticas.</p>
-                <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={() => irA('eventos')}>Ir a Eventos</button>
-            </div>
+            <EmptyState aura={HUMO_MARCA} icon={<span className="icono-m"><Icono n="chart" s={19} /></span>} title="Sin eventos todavía"
+                action={<Button data-nav="" onClick={() => irA('eventos')}>Ir a Eventos</Button>}>
+                Creá un evento para ver estadísticas.
+            </EmptyState>
         );
     }
 
@@ -180,7 +176,7 @@ export default function Stats() {
 
     return (
         <>
-            <EnTope>
+            <HeaderActions>
                 <div className="barra">
                     <Seg label="Período" nav valor={st.dias} onChange={v => setEst({ dias: v })} opciones={[7, 30, 90].map(n => ({ v: n, n: n + ' días' }))} />
                     <Sx label="Evento" nav valor={st.evento} onChange={v => setEst({ evento: v })}
@@ -191,7 +187,7 @@ export default function Stats() {
                     )}
                     {ejemplo && <div className="barra-der"><span className="aviso-ej"><Icono n="alerta" />Datos de ejemplo</span></div>}
                 </div>
-            </EnTope>
+            </HeaderActions>
             <div className="kpis">
                 {kpis.map(k => (
                     <div key={k[0]} className="kpi">

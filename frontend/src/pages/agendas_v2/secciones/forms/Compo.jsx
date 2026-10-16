@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { Humo, HUMO_MARCA, Icono } from '../../ui/base';
+import { Button } from '../../../../components/standard';
 
 export default function Compo({ vacio, tit, soloTit, ph, onCrear, sug, id = 'nuevo-nombre', maxLength = 80 }) {
     const [valor, setValor] = useState('');
@@ -29,7 +30,7 @@ export default function Compo({ vacio, tit, soloTit, ph, onCrear, sug, id = 'nue
                     <input id={id} type="text" maxLength={maxLength} autoComplete="off" placeholder={ph} value={valor}
                         aria-invalid={err ? true : undefined} aria-describedby={err ? id + '-err' : undefined}
                         onChange={e => { setValor(e.target.value); if (err) setErr(''); }} />
-                    <button type="submit" className="btn btn--cta btn--sm"><Icono n="plus" />Crear</button>
+                    <Button variant="primary" icon={<Icono n="plus" />} type="submit">Crear</Button>
                 </form>
                 {err && <p className="campo-err" id={id + '-err'} role="alert"><Icono n="alerta" s={14} /><span>{err}</span></p>}
                 {sug}

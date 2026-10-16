@@ -26,6 +26,7 @@ import { VISUAL, apilar } from './tarjetas';
 import { FACETAS, agendasDe, aplicarFacetas, condiciones, fichaDe } from './filtro';
 import PanelConfigurar from '../../../comercial/components/PanelConfigurar';
 import { gruposDeSesion, turnosSemana } from './turnos';
+import { Button, EmptyState, IconButton } from '../../../../components/standard';
 
 const hm = (m) => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
 
@@ -204,21 +205,15 @@ export default function Available({ solo = null }) {
     if (!cob) {
         if (!solo && csChips.length) {
             return (
-                <div className="panel vacio">
-                    <p className="t-sm mut">Ningún closer cumple el filtro.</p>
-                    <button type="button" data-nav="" className="btn btn--linea btn--sm" onClick={() => setFacetas({})}>Limpiar el filtro</button>
-                </div>
+                <EmptyState action={<Button data-nav="" onClick={() => setFacetas({})}>Limpiar el filtro</Button>}>Ningún closer cumple el filtro.</EmptyState>
             );
         }
         if (!solo && todos.length) {
             return (
-                <div className="panel vacio">
-                    <p className="t-sm mut">Ocultaste a todos los closers.</p>
-                    <button type="button" className="btn btn--linea btn--sm" onClick={() => setOculto({})}>Mostrar todos</button>
-                </div>
+                <EmptyState action={<Button onClick={() => setOculto({})}>Mostrar todos</Button>}>Ocultaste a todos los closers.</EmptyState>
             );
         }
-        return <div className="panel vacio"><p className="t-sm mut">{solo ? 'Cargá tu horario para ver tu semana.' : 'Cargá horarios en People para ver la cobertura.'}</p></div>;
+        return <EmptyState>{solo ? 'Cargá tu horario para ver tu semana.' : 'Cargá horarios en People para ver la cobertura.'}</EmptyState>;
     }
     const { tz, dias, bloques, huecos, porDia, minH, maxH, hoyK, mAhora, kpi, sinLeer, sinGoogle } = cob;
     const conApi = !!almacen.adaptador.ocupacion, leyendo = conApi && google == null;
@@ -384,9 +379,9 @@ export default function Available({ solo = null }) {
                 <Humo clase="humo--tarjeta humo--suave" cols={HUMO_MARCA} />
                 <div className="av-barra-sup">
                     <div className="av-nav">
-                        <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label={unDia ? 'Día anterior' : 'Semana anterior'} onClick={() => irSemana(-1)}><Icono n="chevron-left" /></button>
-                        <button type="button" className="btn btn--linea btn--sm" data-nav="" disabled={enHoy} onClick={() => irSemana(0)}>Hoy</button>
-                        <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label={unDia ? 'Día siguiente' : 'Semana siguiente'} onClick={() => irSemana(1)}><Icono n="chevron-right" /></button>
+                        <IconButton label={unDia ? 'Día anterior' : 'Semana anterior'} icon={<Icono n="chevron-left" />} size="sm" data-nav="" onClick={() => irSemana(-1)} />
+                        <Button data-nav="" disabled={enHoy} onClick={() => irSemana(0)}>Hoy</Button>
+                        <IconButton label={unDia ? 'Día siguiente' : 'Semana siguiente'} icon={<Icono n="chevron-right" />} size="sm" data-nav="" onClick={() => irSemana(1)} />
                         <b className="av-rango" aria-live="polite">{rango}</b>
                         {!solo && (
                             <div className="seg av-vista" role="group" aria-label="Vista">
@@ -445,7 +440,7 @@ export default function Available({ solo = null }) {
                                 {v === 'Sí' || v === 'No' ? fa.label + ': ' + v : v}<Icono n="x" s={11} />
                             </button>
                         )))}
-                        <button type="button" data-nav="" className="btn btn--linea btn--sm" onClick={() => setFacetas({})}>Limpiar</button>
+                        <Button data-nav="" onClick={() => setFacetas({})}>Limpiar</Button>
                     </div>
                 )}
                 <div className="av-ley">

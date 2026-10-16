@@ -4,6 +4,7 @@ import React from 'react';
 import { Humo, HUMO_MARCA, Icono } from '../../ui/base';
 import { DIAS } from '../../core/catalogos';
 import { fmt, mayus, pad } from '../../core/util';
+import { LinkButton } from '../../../../components/standard';
 
 const DIA = 86400000;
 
@@ -26,7 +27,7 @@ export function VacioGrafico({ icono, txt, accion, onAccion }) {
         <div className="g-vacio">
             <span className="g-vacio-ico"><Icono n={icono} s={18} /></span>
             <p>{txt}</p>
-            {accion && <button type="button" className="link-btn" data-nav="" onClick={onAccion}><Icono n="plus" />{accion}</button>}
+            {accion && <LinkButton icon={<Icono n="plus" />} data-nav="" onClick={onAccion}>{accion}</LinkButton>}
         </div>
     );
 }

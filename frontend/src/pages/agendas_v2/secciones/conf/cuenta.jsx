@@ -12,6 +12,7 @@ import { Icono, Sx } from '../../ui/base';
 import { HorarioEditor } from '../team/Horario';
 import { EditorSesiones } from '../team/Sesiones';
 import FotoCuenta from './FotoCuenta';
+import { Button } from '../../../../components/standard';
 
 function Estado({ ok, si, no }) {
     return ok
@@ -71,7 +72,7 @@ export function DatosCuenta({ user }) {
                         <span className="prefijo"><Icono n="mail" /></span>
                         <label className="sr" htmlFor="cu-email">Tu email</label>
                         <input id="cu-email" type="email" placeholder="Cargá tu email para entrar con Google" value={email} onChange={(e) => setEmail(e.target.value)} />
-                        <button type="submit" className="btn btn--cta btn--sm" disabled={ocupado || !email.trim()}>Guardar</button>
+                        <Button variant="primary" type="submit" disabled={ocupado || !email.trim()}>Guardar</Button>
                     </form>
                 )}
                 <div className="cu-roles">
@@ -151,7 +152,7 @@ export function TarjetaCalendar({ volver }) {
                     <span className="t-rotulo">Calendario de destino</span>
                     <Sx id="cu-cal" label="Calendario de destino" valor={destino} disabled={ocupado} onChange={elegir}
                         opciones={(st.calendars || []).map((c) => ({ v: c.id, n: c.summary + (c.primary ? ' (principal)' : ''), icono: 'calendar', color: 'var(--info)' }))} />
-                    <button type="button" className="btn btn--peligro btn--sm" disabled={ocupado} onClick={desconectar}>Desconectar</button>
+                    <Button variant="danger" disabled={ocupado} onClick={desconectar}>Desconectar</Button>
                     {(st.todos || []).length > 0 && (
                         <div className="cu-cals" role="group" aria-labelledby="cu-conf-tit">
                             <span className="t-rotulo" id="cu-conf-tit">Revisar conflictos en</span>
@@ -177,9 +178,9 @@ export function TarjetaCalendar({ volver }) {
                     <p className="t-sm mut" style={{ flex: '1 1 220px' }}>
                         {st.vencido ? 'Google dejó de aceptar tu conexión. Volvé a conectar tu cuenta para seguir recibiendo agendas.' : 'Conectá tu cuenta de Google para recibir agendas.'}
                     </p>
-                    <button type="button" className="btn btn--cta btn--sm" disabled={ocupado} onClick={conectar}>
-                        <Icono n="enchufe" />{st.vencido ? 'Volver a conectar' : 'Conectar con Google'}
-                    </button>
+                    <Button variant="primary" icon={<Icono n="enchufe" />} disabled={ocupado} onClick={conectar}>
+                        {st.vencido ? 'Volver a conectar' : 'Conectar con Google'}
+                    </Button>
                 </div>
             )}
             <Mensajes error={msg.error} aviso={msg.aviso} />
@@ -232,13 +233,13 @@ export function TarjetaWhatsapp() {
                     </div>
                     {paso === 'enviado' ? (
                         <>
-                            <button type="button" className="btn btn--linea btn--sm" disabled={ocupado} onClick={probar}>No me llegó, reenviar</button>
-                            <button type="button" className="btn btn--cta btn--sm" disabled={ocupado} onClick={confirmar}><Icono n="check" />Sí, me llegó</button>
+                            <Button disabled={ocupado} onClick={probar}>No me llegó, reenviar</Button>
+                            <Button variant="primary" icon={<Icono n="check" />} disabled={ocupado} onClick={confirmar}>Sí, me llegó</Button>
                         </>
                     ) : (!estado?.confirmado || cambio) && (
-                        <button type="button" className="btn btn--cta btn--sm" disabled={ocupado || numero.replace(/\D/g, '').length < 8} onClick={probar}>
-                            <Icono n="whatsapp" />Mandarme una prueba
-                        </button>
+                        <Button variant="primary" icon={<Icono n="whatsapp" />} disabled={ocupado || numero.replace(/\D/g, '').length < 8} onClick={probar}>
+                            Mandarme una prueba
+                        </Button>
                     )}
                 </div>
             )}
@@ -289,9 +290,9 @@ export function TarjetaDisponibilidad() {
                     <div className="horario--horizontal"><HorarioEditor p={{ id: 'yo', horario, tz }} onGuardar={editar} /></div>
                     <div className="cu-fila cu-fila--fin">
                         <Mensajes error={error} aviso={aviso} />
-                        <button type="button" className="btn btn--cta btn--sm" disabled={ocupado || !cambios} onClick={guardar}>
+                        <Button variant="primary" disabled={ocupado || !cambios} onClick={guardar}>
                             {ocupado ? 'Guardando…' : 'Guardar disponibilidad'}
-                        </button>
+                        </Button>
                     </div>
                 </>
             )}
@@ -342,9 +343,9 @@ export function TarjetaSesiones() {
                         onCambio={(s) => { setSesiones(s); setCambios(true); setAviso(null); }} />
                     <div className="cu-fila cu-fila--fin">
                         <Mensajes error={error} aviso={aviso} />
-                        <button type="button" className="btn btn--cta btn--sm" disabled={ocupado || !cambios} onClick={guardar}>
+                        <Button variant="primary" disabled={ocupado || !cambios} onClick={guardar}>
                             {ocupado ? 'Guardando…' : 'Guardar sesiones'}
-                        </button>
+                        </Button>
                     </div>
                 </>
             )}

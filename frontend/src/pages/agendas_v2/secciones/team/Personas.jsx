@@ -17,6 +17,7 @@ import { abrirHorario } from './Horario';
 import ElegirCloser, { useUsuariosReales } from './ElegirCloser';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { SIMULAN_CLOSERS, simularParaConfigurar } from '../conf/TabEquipo';
+import { ConfirmDelete, EmptyState, IconButton } from '../../../../components/standard';
 
 // El Top es solo una etiqueta del equipo: no cambia el reparto (eso lo decide cada estrategia).
 function Nivel({ p, onChange }) {
@@ -128,17 +129,12 @@ function Persona({ p, ordenable, borrando, setBorrando, sinCuenta, sinCalendar, 
                         </>
                     ) : <><span /><span /></>}
                 </div>
-                <button type="button" className="ibtn ibtn--sm ibtn--peligro" aria-label={'Eliminar ' + p.nombre} onClick={() => setBorrando(p.id)}><Icono n="basura" s={15} /></button>
+                <IconButton label={'Eliminar ' + p.nombre} icon={<Icono n="basura" s={15} />} size="sm" danger onClick={() => setBorrando(p.id)} />
             </div>
             {borrando && (
                 <div style={{ padding: '0 10px 10px' }}>
-                    <div className="ed-pie--borrar" role="alertdialog" aria-label={'Eliminar a ' + p.nombre}>
-                        <p className="t-sm">¿Eliminar a <b>{p.nombre}</b>? Sale de todas las estrategias.</p>
-                        <div className="der">
-                            <button type="button" className="btn btn--linea btn--sm" autoFocus onClick={() => setBorrando(null)}>Cancelar</button>
-                            <button type="button" className="btn btn--borrar btn--sm" onClick={borrar}><Icono n="basura" />Eliminar</button>
-                        </div>
-                    </div>
+                    <ConfirmDelete name={p.nombre} article="a " detail="Sale de todas las estrategias."
+                        icon={<Icono n="basura" />} onCancel={() => setBorrando(null)} onConfirm={borrar} />
                 </div>
             )}
         </article>
@@ -198,7 +194,7 @@ export default function Personas() {
         <Compo vacio={!ps.length} tit="Sumar persona" soloTit="Sumá a tu equipo" ph="Nombre, ej. Giancarlo" onCrear={crear}
             nav={!!sim && sumar} bloqueado={!!sim && !sumar} />
     );
-    if (!ps.length) return lectura ? <div className="panel vacio"><p className="t-sm mut">Todavía no hay nadie en Team.</p></div> : compo;
+    if (!ps.length) return lectura ? <EmptyState>Todavía no hay nadie en Team.</EmptyState> : compo;
     return (
         <>
             {!lectura && compo}

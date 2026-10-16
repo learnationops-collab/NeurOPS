@@ -4,6 +4,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Icono } from './base';
+import { IconButton } from '../../../components/standard';
 
 const MIN = 0.3, MAX = 2, PASO = 1.2, MARGEN = 32;
 const limitar = (k) => Math.min(MAX, Math.max(MIN, k));
@@ -92,14 +93,12 @@ export default function Lienzo({ children, alto = '68vh', etiqueta = 'Lienzo', a
             </div>
             {encima}
             <div className="lienzo-ctl" role="toolbar" aria-label="Zoom">
-                <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label="Alejar" title="Alejar" onClick={() => zoom(1 / PASO)}><Icono n="zoom-out" s={15} /></button>
+                <IconButton label="Alejar" icon={<Icono n="zoom-out" s={15} />} size="sm" data-nav="" title="Alejar" onClick={() => zoom(1 / PASO)} />
                 <span className="lienzo-pct num" aria-live="polite">{Math.round(t.k * 100)}%</span>
-                <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label="Acercar" title="Acercar" onClick={() => zoom(PASO)}><Icono n="zoom-in" s={15} /></button>
-                <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label="Ajustar a la pantalla" title="Ajustar" onClick={ajustar}><Icono n="encuadre" s={15} /></button>
-                <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label={grande ? 'Salir de pantalla completa' : 'Pantalla completa'}
-                    title={grande ? 'Salir (Esc)' : 'Pantalla completa'} aria-pressed={grande} onClick={() => setGrande(g => !g)}>
-                    <Icono n={grande ? 'contraer' : 'expandir'} s={15} />
-                </button>
+                <IconButton label="Acercar" icon={<Icono n="zoom-in" s={15} />} size="sm" data-nav="" title="Acercar" onClick={() => zoom(PASO)} />
+                <IconButton label="Ajustar a la pantalla" icon={<Icono n="encuadre" s={15} />} size="sm" data-nav="" title="Ajustar" onClick={ajustar} />
+                <IconButton label={grande ? 'Salir de pantalla completa' : 'Pantalla completa'} icon={<Icono n={grande ? 'contraer' : 'expandir'} s={15} />} size="sm" pressed={grande} data-nav=""
+                    title={grande ? 'Salir (Esc)' : 'Pantalla completa'} onClick={() => setGrande(g => !g)} />
             </div>
         </div>
     );

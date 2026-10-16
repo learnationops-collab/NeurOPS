@@ -12,6 +12,7 @@ import { ui } from '../../ui/estadoUi';
 import { InputVivo } from '../eventos/comun';
 import { ConfirmarBorrarGracias } from './ListaGracias';
 import './gracias.css';
+import { Button, IconButton } from '../../../../components/standard';
 
 function cerrar() { almacen.flush(); ui.set({ gracias: null }); window.scrollTo({ top: 0 }); }
 
@@ -68,21 +69,21 @@ function CampoVideo({ g, campo, tit, ayuda }) {
                 <div className="gx-subida" role="status">
                     <div className="gx-subida-txt"><span className="trunc">Subiendo {subida.nombre}</span><b className="num">{Math.round(subida.progreso * 100)}%</b></div>
                     <div className="gx-barra"><i style={{ width: (subida.progreso * 100) + '%' }} /></div>
-                    <button type="button" className="btn btn--linea btn--sm" onClick={() => corte.current?.abort()}>Cancelar</button>
+                    <Button onClick={() => corte.current?.abort()}>Cancelar</Button>
                 </div>
             ) : (
                 <>
                     {v.archivo && <p className="t-sm gx-nombre"><Icono n="video" s={14} /><span className="trunc">{v.nombre || 'Video subido'}</span></p>}
                     <div className="gx-acc">
-                        <button type="button" className="btn btn--linea btn--sm" onClick={() => archivo.current?.click()}>
-                            <Icono n="sube" />{v.archivo ? 'Cambiar video' : 'Subir video'}
-                        </button>
+                        <Button icon={<Icono n="sube" />} onClick={() => archivo.current?.click()}>
+                            {v.archivo ? 'Cambiar video' : 'Subir video'}
+                        </Button>
                         <input ref={archivo} type="file" accept="video/mp4,video/webm,video/quicktime" hidden
                             onChange={e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) subir(f); }} />
                         {(v.archivo || v.url) && (
-                            <button type="button" className="btn btn--linea btn--sm" onClick={() => reemplazar({ archivo: '', nombre: '', url: '' })}>
-                                <Icono n="basura" />Quitar
-                            </button>
+                            <Button icon={<Icono n="basura" />} onClick={() => reemplazar({ archivo: '', nombre: '', url: '' })}>
+                                Quitar
+                            </Button>
                         )}
                     </div>
                     <div className={'entrada' + (linkMal ? ' mal' : '')}>
@@ -138,13 +139,11 @@ export default function EditorGracias() {
     return (
         <>
             <div className="barra">
-                <button type="button" className="btn btn--linea btn--sm" data-nav="" onClick={cerrar}><Icono n="volver" />Páginas de gracias</button>
+                <Button icon={<Icono n="volver" />} data-nav="" onClick={cerrar}>Páginas de gracias</Button>
                 <InputVivo className="input gx-nom" maxLength={80} aria-label="Nombre de la página" valor={g.nombre}
                     guardar={t => { if (!t.trim()) return false; almacen.editar('gracias', g.id, { nombre: t.trim() }); }} />
-                <button type="button" className="ibtn ibtn--sm ibtn--peligro" style={{ marginLeft: 'auto' }} aria-label="Eliminar página" title="Eliminar página"
-                    aria-expanded={borrar} onClick={() => setBorrar(b => !b)}>
-                    <Icono n="basura" s={15} />
-                </button>
+                <IconButton label="Eliminar página" icon={<Icono n="basura" s={15} />} size="sm" danger style={{ marginLeft: 'auto' }} title="Eliminar página"
+                    aria-expanded={borrar} onClick={() => setBorrar(b => !b)} />
             </div>
             {borrar && <div className="panel caja"><ConfirmarBorrarGracias g={g} d={d} onCancelar={() => setBorrar(false)} /></div>}
             <div className="gx-editor">

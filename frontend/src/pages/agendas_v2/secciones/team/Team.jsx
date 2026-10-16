@@ -3,7 +3,7 @@
 
 import { almacen, useUi } from '../../data/hooks';
 import { Seg } from '../../ui/base';
-import EnTope from '../../ui/EnTope';
+import { HeaderActions } from '../../../../components/standard';
 import Available from './Available';
 import Grupos from './Grupos';
 import { ModalHorario } from './Horario';
@@ -21,11 +21,11 @@ export default function Team() {
     const tab = TABS.some(t => t.v === team.tab) ? team.tab : 'personas';
     return (
         <>
-            <EnTope>
+            <HeaderActions>
                 <div className="barra">
                     <Seg nav label="Team" valor={tab} opciones={TABS} onChange={v => { almacen.flush(); setTeam({ tab: v }); }} />
                 </div>
-            </EnTope>
+            </HeaderActions>
             {tab === 'personas' ? <Personas /> : tab === 'available' ? <Available /> : <Grupos />}
             <ModalHorario />
         </>
