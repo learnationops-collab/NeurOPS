@@ -171,7 +171,7 @@ const WorkshopLandingView = ({ events, onConfigSaved, formatDate }) => {
             </div>
 
             {/* KPIs */}
-            <section className="kpi-grid" aria-label="Indicadores de la landing">
+            <section className="kpi-grid kpi-grid--cuatro" aria-label="Indicadores de la landing">
                 <Kpi label="Visitas" ayuda="Cuánta gente distinta abrió la página de la grabación, se haya registrado o no." value={visitas} sub="Sesiones únicas" icon={MonitorSmartphone} />
                 <Kpi label="Registrados" ayuda="De esas visitas, cuántas completaron el formulario para poder ver la clase." value={e.completo_gate || 0} sub={`${c.visita_a_registro || 0}% de las visitas`} icon={Users} />
                 <Kpi label="Dieron play" ayuda="Cuántos le dieron play al video. Si hay muchos registrados y pocos plays, el problema está en la página, no en el anuncio." value={e.dio_play || 0} sub={`${c.registro_a_play || 0}% de los registrados`} icon={PlayCircle} />
