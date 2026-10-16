@@ -1,7 +1,7 @@
 // Campos estándar: Input (campo suelto), InputGroup (campo con ícono o prefijo adelante y, a veces, un
 // botón pegado: «Nuevo evento… [Crear]») y FieldError (el mensaje de error debajo de un campo).
 
-import { forwardRef } from 'react';
+import { forwardRef, useLayoutEffect, useRef } from 'react';
 import clsx from 'clsx';
 import './standard.css';
 
@@ -20,6 +20,15 @@ export function InputGroup({ as: Tag = 'div', prefix, invalid = false, className
         </Tag>
     );
 }
+
+// Textarea que crece con el contenido. `bare` la deja sin el estilo de campo (para una pantalla con
+// estilo propio, como la del lead).
+export const TextArea = forwardRef(function TextArea({ value, bare = false, invalid = false, className, ...rest }, fwd) {
+    const ref = useRef(null);
+    useLayoutEffect(() => { const t = ref.current; if (t) { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; } }, [value]);
+    const setRef = (el) => { ref.current = el; if (typeof fwd === 'function') fwd(el); else if (fwd) fwd.current = el; };
+    return <textarea ref={setRef} className={clsx(!bare && 'ui-textarea', !bare && invalid && 'is-invalid', className) || undefined} value={value} rows={1} {...rest} />;
+});
 
 // Mensaje de error de un campo. role="alert" lo anuncia apenas aparece (para una aclaración, role="note").
 export function FieldError({ as: Tag = 'p', icon = true, className, children, ...rest }) {

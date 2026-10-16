@@ -404,7 +404,7 @@
 .thalamus .pq-ajustes{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap;padding-top:var(--s3)}
 .thalamus .pq-ajustes .der{margin-left:auto;display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap}
 .thalamus .campo-q{position:relative}
-.thalamus .campo-q .area{padding-right:44px}
+.thalamus .campo-q :is(.area,.ui-textarea){padding-right:44px}
 .thalamus .token-btn{position:absolute;right:8px;top:8px;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:var(--brand-secondary);background:var(--brand-secondary-surface);border:1px solid var(--brand-secondary-border)}
 .thalamus .token-btn svg{width:14px;height:14px}
 .thalamus .token{display:inline-flex;align-items:center;height:19px;padding:0 6px;border-radius:6px;background:var(--brand-secondary-surface);border:1px solid var(--brand-secondary-border);color:var(--brand-secondary);font-size:.86em;font-weight:900;vertical-align:1px}

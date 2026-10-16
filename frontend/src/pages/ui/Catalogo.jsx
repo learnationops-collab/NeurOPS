@@ -9,7 +9,7 @@ import '../agendas_v2/thalamus.css';
 import '../comercial/comercial.css';
 import './catalogo.css';
 import {
-    Avatar, BRAND_AURA, Button, Calendar, CalendarEvent, calendarY, Card, Chip, ConfirmDelete, EmptyState, FieldError, Grid, IconButton, Input, InputGroup, Kpi, LinkButton, Modal, PageHeader, Panel, Segmented, Select,
+    Avatar, BRAND_AURA, Button, Calendar, CalendarEvent, calendarY, Card, Chip, ModalHeader, TextArea, toast, Toaster, Tooltip, ConfirmDelete, EmptyState, FieldError, Grid, IconButton, Input, InputGroup, Kpi, LinkButton, Modal, PageHeader, Panel, Segmented, Select,
     Stepper, Switch,
 } from '../../components/standard';
 
@@ -83,8 +83,7 @@ function DemoModal() {
             {abierto && (
                 <Modal onClose={() => setAbierto(false)} labelledBy="cat-modal-t">
                     <div style={{ display: 'grid', gap: 16 }}>
-                        <h3 id="cat-modal-t" style={{ margin: 0, fontSize: 19, fontWeight: 900 }}>Nuevo evento</h3>
-                        <p style={{ margin: 0 }}>Escape o un clic en el fondo la cierran.</p>
+                        <ModalHeader title="Nuevo evento" subtitle="Escape o un clic en el fondo la cierran." titleId="cat-modal-t" onClose={() => setAbierto(false)} />
                         <div className="cat-fila"><Button onClick={() => setAbierto(false)}>Cancelar</Button><Button variant="primary">Crear</Button></div>
                     </div>
                 </Modal>
@@ -267,10 +266,27 @@ const SECCIONES = [
         ),
     },
     {
-        nombre: 'Modal',
+        nombre: 'Modal · ModalHeader',
         para: 'Ventana sobre la página. Cierra con Escape o clic en el fondo, bloquea el scroll y enfoca el primer campo.',
-        props: 'onClose · className · labelledBy · id — children: el contenido',
+        props: 'Modal: onClose · className · labelledBy · id — ModalHeader: title · subtitle · icon · titleId · size: md · lg · onClose · closeProps',
         demo: () => <DemoModal />,
+    },
+    {
+        nombre: 'TextArea · Toaster · Tooltip',
+        para: 'Texto largo que crece solo; avisos cortos abajo (toast) y la ayuda al pasar el mouse por cualquier elemento con data-tip.',
+        props: 'TextArea: value · bare · invalid — toast(texto, tone: success · error, action: {label, onClick}) — <Toaster /> y <Tooltip /> una vez por app',
+        demo: () => (
+            <>
+                <Demo titulo="TextArea">
+                    <TextArea aria-label="Pregunta" defaultValue="¿Qué te gustaría lograr en los próximos 6 meses?" style={{ maxWidth: 420 }} />
+                </Demo>
+                <Demo titulo="toast y data-tip">
+                    <Button onClick={() => toast('Evento creado', 'success', { label: 'Deshacer', onClick: nada })}>Mostrar aviso</Button>
+                    <Button variant="danger" onClick={() => toast('No se pudo guardar', 'error')}>Aviso de error</Button>
+                    <Chip color="var(--ln-info, #4E8BD8)" data-tip="Solo lectura|Lo que se configura lo cambia la dirección comercial.">Pasá el mouse</Chip>
+                </Demo>
+            </>
+        ),
     },
     {
         nombre: 'Avatar',
@@ -325,6 +341,8 @@ export default function Catalogo() {
                         {s.demo()}
                     </section>
                 ))}
+                <Toaster />
+                <Tooltip />
             </div>
         </div>
     );

@@ -8,7 +8,7 @@ import { toast } from '../../ui/toast';
 import { almacen } from '../../data/hooks';
 import { buscar, ord } from '../../core/datos';
 import { normalPregunta } from '../../core/normalizar';
-import { IconButton } from '../../../../components/standard';
+import { ModalHeader } from '../../../../components/standard';
 
 export const CREAR = [
     ['pregunta', 'Pregunta', 'pregunta'], ['formulario', 'Formulario', 'form'], ['persona', 'Persona', 'user'], ['grupo', 'Estrategia', 'rayo'],
@@ -87,10 +87,7 @@ export default function CrearRapido() {
 
     return (
         <Modal onCerrar={cerrar} id="crear" labelledBy="crear-tit" style={{ width: 'min(560px,100%)' }}>
-            <div className="modal-cab" style={{ marginBottom: 'var(--s3)' }}>
-                <h2 className="t-h3" id="crear-tit" style={{ flex: 1 }}>¿Qué querés crear?</h2>
-                <IconButton label="Cerrar" icon={<Icono n="x" />} size="sm" onClick={cerrar} />
-            </div>
+            <ModalHeader title="¿Qué querés crear?" titleId="crear-tit" onClose={cerrar} style={{ marginBottom: 'var(--s3)' }} />
             <div className="crear-ops">
                 {CREAR.map((c, i) => (
                     <button key={c[0]} type="button" className="crear-op" aria-keyshortcuts={String(i + 1)} onClick={() => crearDesdeAtajo(c[0])}>

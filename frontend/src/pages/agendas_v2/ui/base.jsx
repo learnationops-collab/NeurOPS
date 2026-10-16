@@ -1,10 +1,8 @@
 // Piezas de interfaz compartidas por todas las secciones. Usan las clases de thalamus.css tal cual
 // las define el prototipo, así que el aspecto es el mismo.
 
-import { useEffect, useLayoutEffect, useRef, useSyncExternalStore } from 'react';
-import { Avatar as AvatarStd, BRAND_AURA, Modal as ModalStd, Segmented, Select, Stepper, Switch as SwitchStd } from '../../../components/standard';
+import { Avatar as AvatarStd, BRAND_AURA, Modal as ModalStd, Segmented, Select, Stepper, Switch as SwitchStd, TextArea } from '../../../components/standard';
 import { BANDERAS, ICON, MEET_SVG } from './iconos';
-import { cerrarToast, toastStore } from './toast';
 import { colorVar } from '../core/datos';
 
 // SVG fijos del código (nunca datos de usuarios): por eso se pueden inyectar.
@@ -97,44 +95,13 @@ export function Modal({ onCerrar, clase = '', style, labelledBy, children, id })
     return <ModalStd onClose={onCerrar} className={clase || undefined} style={style} labelledBy={labelledBy} id={id}>{children}</ModalStd>;
 }
 
-export function Toasts() {
-    const t = useSyncExternalStore(toastStore.subscribe, toastStore.getState);
-    if (!t) return null;
-    return (
-        <div className="toast" role="status" data-tono={t.tono} key={t.id}>
-            <Icono n={t.tono === 'error' ? 'alerta' : 'check'} s={16} />
-            <span>{t.texto}</span>
-            {t.accion && <button type="button" className="toast-acc" onClick={() => { cerrarToast(); t.accion.fn(); }}>{t.accion.txt}</button>}
-        </div>
-    );
-}
+// Avisos y tooltip: los estándar (components/standard).
+export { Toaster as Toasts, Tooltip } from '../../../components/standard';
 
-// Tooltip global: cualquier elemento con data-tip="Título|detalle" lo muestra al pasar el mouse.
-export function Tooltip() {
-    const ref = useRef(null);
-    useEffect(() => {
-        const tip = ref.current;
-        const sobre = (e) => {
-            const t = e.target.closest && e.target.closest('[data-tip]');
-            if (!t) { tip.hidden = true; return; }
-            const [a, b] = t.getAttribute('data-tip').split('|');
-            tip.textContent = a;
-            if (b) { const s = document.createElement('span'); s.textContent = b; tip.appendChild(s); }
-            tip.hidden = false;
-        };
-        const mover = (e) => { if (!tip.hidden) { tip.style.left = Math.min(window.innerWidth - tip.offsetWidth - 8, e.clientX + 14) + 'px'; tip.style.top = (e.clientY + 16) + 'px'; } };
-        document.addEventListener('mouseover', sobre);
-        document.addEventListener('mousemove', mover);
-        return () => { document.removeEventListener('mouseover', sobre); document.removeEventListener('mousemove', mover); };
-    }, []);
-    return <div className="tip" ref={ref} hidden />;
-}
-
-// Textarea que crece con el contenido (class "area").
-export function AreaAuto({ value, onChange, className = 'area', ...rest }) {
-    const ref = useRef(null);
-    useLayoutEffect(() => { const t = ref.current; if (t) { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; } }, [value]);
-    return <textarea ref={ref} className={className} value={value} onChange={onChange} rows={1} {...rest} />;
+// Textarea que crece con el contenido: TextArea estándar. Con una clase propia (la pantalla del lead),
+// sin el estilo de campo.
+export function AreaAuto({ className, ...rest }) {
+    return <TextArea bare={!!className} className={className} {...rest} />;
 }
 
 // Achica una imagen a 256 px y la devuelve como dato (data URL), para guardarla sin archivos externos.

@@ -1,8 +1,8 @@
-import { createRef } from 'react';
+import { act, createRef } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { FieldError, Input, InputGroup, Segmented } from './index';
+import { FieldError, Input, InputGroup, ModalHeader, Segmented, TextArea, Toaster, toast } from './index';
 
 describe('Input', () => {
     it('variante, estado de error, ref y textarea', () => {
@@ -51,3 +51,33 @@ describe('Segmented: prefix, radio y props por opción', () => {
         expect(screen.getByRole('radio', { name: 'Repartir' }).getAttribute('title')).toBe('Parejo');
     });
 });
+
+describe('TextArea, ModalHeader y Toaster', () => {
+    it('TextArea con estilo de campo o sin él (bare)', () => {
+        const { rerender } = render(<TextArea aria-label="Pregunta" value="Hola" onChange={() => {}} />);
+        expect(screen.getByRole('textbox', { name: 'Pregunta' }).className).toBe('ui-textarea');
+        rerender(<TextArea bare className="rv-input" aria-label="Pregunta" value="Hola" onChange={() => {}} />);
+        expect(screen.getByRole('textbox', { name: 'Pregunta' }).className).toBe('rv-input');
+    });
+
+    it('ModalHeader: el título nombra al modal y cerrar llama a onClose', async () => {
+        const onClose = vi.fn();
+        render(<ModalHeader title="Importar preguntas" titleId="t" size="lg" onClose={onClose} closeProps={{ 'data-nav': '' }} />);
+        expect(screen.getByRole('heading', { name: 'Importar preguntas' }).id).toBe('t');
+        const cerrar = screen.getByRole('button', { name: 'Cerrar' });
+        expect(cerrar.hasAttribute('data-nav')).toBe(true);
+        await userEvent.click(cerrar);
+        expect(onClose).toHaveBeenCalledOnce();
+    });
+
+    it('toast muestra el aviso con su acción, y la acción lo cierra', async () => {
+        const deshacer = vi.fn();
+        render(<Toaster />);
+        act(() => toast('Evento eliminado', 'success', { label: 'Deshacer', onClick: deshacer }));
+        expect(screen.getByRole('status').textContent).toContain('Evento eliminado');
+        await userEvent.click(screen.getByRole('button', { name: 'Deshacer' }));
+        expect(deshacer).toHaveBeenCalledOnce();
+        expect(screen.queryByRole('status')).toBeNull();
+    });
+});
+

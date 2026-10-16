@@ -1,17 +1,12 @@
 // Aviso corto abajo de la pantalla. toast(texto, 'ok'|'error', {txt, fn}) — la acción (ej. "Deshacer") dura 6 s.
+// Lo dibuja el Toaster estándar (components/standard); esto traduce la forma de Thalamus a la suya.
 
-let actual = null, t = null;
-const subs = new Set();
-const emitir = () => subs.forEach(fn => fn());
+import { closeToast, toast as toastStd } from '../../../components/standard';
 
 export function toast(texto, tono = 'ok', accion = null) {
-    clearTimeout(t);
-    actual = { texto, tono, accion, id: Date.now() };
-    emitir();
-    t = setTimeout(() => { actual = null; emitir(); }, accion ? 6000 : tono === 'error' ? 5200 : 2400);
+    toastStd(texto, tono === 'error' ? 'error' : 'success', accion && { label: accion.txt, onClick: accion.fn });
 }
-export function cerrarToast() { clearTimeout(t); actual = null; emitir(); }
-export const toastStore = { subscribe(fn) { subs.add(fn); return () => subs.delete(fn); }, getState: () => actual };
+export const cerrarToast = closeToast;
 
 export function copiarTexto(txt, aviso = 'Link copiado') {
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(() => toast(aviso), () => toast(txt));

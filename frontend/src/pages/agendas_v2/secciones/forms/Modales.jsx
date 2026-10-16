@@ -7,7 +7,7 @@ import { copiarPregunta, personalizar } from '../../core/formulario';
 import { Humo, Icono, Modal, Sx } from '../../ui/base';
 import { toast } from '../../ui/toast';
 import { TituloConToken, mutarForm, useBorrador } from './comun';
-import { Button, Chip, Grid, IconButton, Input } from '../../../../components/standard';
+import { Button, Chip, Grid, Input, ModalHeader } from '../../../../components/standard';
 
 export function fuentesImport(d, fid) { return ord(d, 'formularios').filter(x => x.id !== fid && x.preguntas.length); }
 
@@ -28,11 +28,8 @@ export function ModalImportar({ f, d, onCerrar, onImportado }) {
     };
     return (
         <Modal onCerrar={onCerrar} style={{ width: 'min(760px,100%)' }} labelledBy="imp-tit">
-            <div className="modal-cab">
-                <span className="icono-m"><Icono n="importar" s={19} /></span>
-                <div className="modal-tit"><h2 className="t-h2" id="imp-tit">Importar preguntas</h2></div>
-                <IconButton label="Cerrar" icon={<Icono n="x" />} data-nav="" onClick={onCerrar} />
-            </div>
+            <ModalHeader size="lg" icon={<span className="icono-m"><Icono n="importar" s={19} /></span>} title="Importar preguntas" titleId="imp-tit"
+                onClose={onCerrar} closeProps={{ 'data-nav': '' }} />
             <div className="barra" style={{ marginBottom: 12 }}>
                 <Sx id="imp-f" label="Formulario" valor={fo.id} opciones={fs.map(x => ({ v: x.id, n: x.nombre + ' · ' + x.preguntas.length }))}
                     onChange={v => { setFuente(v); setSel({}); }} />
@@ -71,11 +68,8 @@ export function ModalNoCalifica({ f, onCerrar }) {
     return (
         <Modal onCerrar={onCerrar} clase="modal--fin" labelledBy="fin-tit">
             <Humo clase="humo--tarjeta humo--suave" cols={['var(--error)', 'var(--brand-primary)', 'var(--brand-secondary)', 'var(--brand-navy)']} />
-            <div className="modal-cab">
-                <span className="fin-ico"><Icono n="prohibido" s={18} /></span>
-                <h2 className="t-h3" id="fin-tit" style={{ flex: 1 }}>Si no califica</h2>
-                <IconButton label="Cerrar" icon={<Icono n="x" />} size="sm" data-nav="" onClick={onCerrar} />
-            </div>
+            <ModalHeader icon={<span className="fin-ico"><Icono n="prohibido" s={18} /></span>} title="Si no califica" titleId="fin-tit"
+                onClose={onCerrar} closeProps={{ 'data-nav': '' }} />
             <div className="fin-grid">
                 <div className="fin-campos">
                     <label className="t-rotulo" htmlFor="fin-titulo">Título</label>

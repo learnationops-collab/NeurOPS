@@ -4,6 +4,7 @@
 
 import { forwardRef, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
+import { IconButton } from './Button';
 import './standard.css';
 
 // Íconos propios (Lucide, trazo 1.75): un componente estándar no depende del set de una pantalla.
@@ -153,6 +154,21 @@ export function Modal({ onClose, className, style, labelledBy, id, children }) {
             <div ref={ref} id={id} className={clsx('ui-modal', className)} style={style} role="dialog" aria-modal="true" aria-labelledby={labelledBy} tabIndex={-1}>
                 {children}
             </div>
+        </div>
+    );
+}
+
+// Cabecera de un modal: ícono (opcional), título y subtítulo, y el botón de cerrar. size: md · lg.
+// `titleId` va en el título, para el aria-labelledby del Modal. `closeProps` va al botón de cerrar.
+export function ModalHeader({ icon, title, subtitle, titleId, size = 'md', onClose, closeProps, className, style }) {
+    return (
+        <div className={clsx('ui-modal-head', size === 'lg' && 'ui-modal-head--lg', className)} style={style}>
+            {icon}
+            <div className="ui-modal-head__text">
+                <h2 className="ui-modal-head__title" id={titleId}>{title}</h2>
+                {subtitle && <p className="ui-modal-head__sub">{subtitle}</p>}
+            </div>
+            {onClose && <IconButton label="Cerrar" icon={<Svg d="M18 6 6 18M6 6l12 12" />} size={size === 'lg' ? 'md' : 'sm'} onClick={onClose} {...closeProps} />}
         </div>
     );
 }

@@ -77,6 +77,10 @@ Import: `import { Button, … } from '<ruta>/components/standard';`
 | `Switch` | Interruptor sí/no | `checked`, `onChange`, `label` |
 | `Stepper` | Contador con − y + | `value`, `min`, `max`, `onChange`, `display` (texto en lugar del número), `label` |
 | `Modal` | Ventana sobre la página (Escape, clic afuera, foco, bloquea el scroll) | `onClose`, `className` (ancho propio), `labelledBy`, `id` |
+| `ModalHeader` | Cabecera de un modal: ícono, título, subtítulo y cerrar | `title`, `subtitle`, `icon`, `titleId` (para `labelledBy` del Modal), `size`: `md` · `lg`, `onClose`, `closeProps` |
+| `TextArea` | Texto largo que crece solo | `value`, `invalid`, `bare` (sin el estilo de campo, para pantallas con estilo propio) |
+| `toast()` + `Toaster` | Aviso corto abajo de la pantalla | `toast(texto, tone: success · error, action: {label, onClick})`; `<Toaster />` una vez en la app; `--ui-toast-bottom` si no hay dock |
+| `Tooltip` | Ayuda al pasar el mouse | `<Tooltip />` una vez en la app; cualquier elemento con `data-tip="Título|detalle"` |
 | `Avatar` | Foto o iniciales sobre un color | `name`, `photo`, `color`, `size`: `md` · `lg` · `sm` · `xs` |
 | `Chip` | Etiqueta de estado o categoría | `color`, `icon`, `subtle`, `square` (solo ícono), `as="button"` (filtro con `aria-pressed`) |
 
@@ -115,7 +119,7 @@ Si una pantalla necesita ajustar el componente según el contexto (por ejemplo, 
 - Avatar `lg` hoy solo suma una sombra: en el CSS viejo `.avatar--l` quedaba antes que `.avatar` y la base le pisaba el tamaño. ¿Debería medir 48px, como decía la regla?
 - El switch del modal de importar preguntas es solo un indicador dentro de una fila que ya es botón (un `Switch` ahí sería un botón dentro de otro): falta una variante decorativa.
 - El error de «Nuevo evento» de la lista de Eventos usa `.err-nuevo` (12px, peso normal) y el de arriba `FieldError` (12,5px, negrita): unificar.
-- La textarea que crece sola (`AreaAuto`) no pasó: la usa también la pantalla del lead con estilos propios.
+- Hay tres cabeceras de modal con diseño propio (Horario `hor-cab`, Configuración `conf-cab` con pestañas, Funnel `fm-cab`): candidatas a unificar con `ModalHeader` (cambia lo que se ve).
 - Calendar: los tonos de las tarjetas (llamada, libre, margen, ocupado, cancelada, hueco) viven en thalamus.css. Cuando otra pantalla use el calendario, pasarlos a variantes genéricas de CalendarEvent (`tone`: solid · soft · muted · success · dashed · hatched).
 - Calendar vista de mes: falta. La usan la página pública del lead (PasoCalendario) y la ficha del closer (SelectorFecha); son pantallas activas, migrar con cuidado.
-- Próximos componentes: `Toaster` y `Tooltip` (hoy en el store de Thalamus), `TextArea` que crece sola y la cabecera de los modales.
+- Inbox: pasar su UI a los componentes (ya comparte el CSS de Thalamus; arma su cabecera a mano).

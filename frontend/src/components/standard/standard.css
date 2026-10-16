@@ -17,7 +17,7 @@
    ============================================================================ */
 
 :where(.ui-btn,.ui-ibtn,.ui-link,.ui-chip,.ui-card,.ui-aura,.ui-empty,.ui-confirm,.ui-header,
-  .ui-seg,.ui-select,.ui-select__pop,.ui-switch,.ui-stepper,.ui-scrim,.ui-modal,.ui-avatar,.ui-input,.ui-entry,.ui-field-error,.ui-panel,.ui-kpi,.ui-grid,.ui-cal,.ui-cal-event){
+  .ui-seg,.ui-select,.ui-select__pop,.ui-switch,.ui-stepper,.ui-scrim,.ui-modal,.ui-avatar,.ui-input,.ui-entry,.ui-field-error,.ui-panel,.ui-kpi,.ui-grid,.ui-cal,.ui-cal-event,.ui-toast,.ui-tip,.ui-textarea,.ui-modal-head){
   --ui-brand:var(--ln-brand, var(--brand-secondary, #FF3FA4));
   --ui-brand-accent:var(--ln-brand-accent, var(--brand-secondary-light, #FF6AD5));
   --ui-brand-2:var(--ln-brand-2, var(--brand-primary, #1323C6));
@@ -36,6 +36,9 @@
   --ui-panel-bg:var(--ln-ct2-bg, var(--mat-1, rgba(255,255,255,.04)));
   --ui-card-bg:var(--ln-ct3-bg, var(--bg-element, rgba(255,255,255,.07)));
   --ui-danger:var(--ln-danger, var(--error, #E85C4A));
+  --ui-success:var(--ln-success, var(--success, #2FBF8F));
+  --ui-brand-soft:var(--ln-brand-soft, var(--brand-secondary-surface, rgba(255,63,164,.10)));
+  --ui-brand-soft-border:var(--ln-brand-soft-border, var(--brand-secondary-border, rgba(255,63,164,.35)));
   --ui-danger-bg:var(--ln-danger-bg, var(--error-surface, #1B0F1D));
   --ui-danger-border:var(--ln-danger-border, var(--error-border, #4C2227));
   --ui-aura-op:var(--ln-humo-op, var(--humo-op, .42));
@@ -303,3 +306,35 @@
 .ui-cal-event__title{min-width:0;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ui-cal-event__line{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ui-cal-event__time{font-size:11px;font-weight:600;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* --- Toaster y Tooltip ------------------------------------------------------------------------- */
+/* --ui-toast-bottom: alto libre abajo (el dock de Thalamus e Inbox ocupa 116px). */
+.ui-toast.ui-toast{position:fixed;left:0;right:0;margin-inline:auto;width:max-content;max-width:calc(100vw - 32px);
+  bottom:calc(var(--ui-toast-bottom, 116px) + env(safe-area-inset-bottom,0px));z-index:120;
+  display:flex;align-items:center;gap:10px;padding:9px 10px 9px 14px;border-radius:999px;background:var(--ui-popover-bg);border:1px solid var(--ui-border-main);
+  box-shadow:var(--ui-shadow);font-size:13px;font-weight:700;color:var(--ui-text);animation:ui-pop-in .22s ease-out both}
+.ui-toast.ui-toast > svg{width:16px;height:16px;color:var(--ui-success)}
+.ui-toast.ui-toast[data-tone="error"] > svg{color:var(--ui-danger)}
+.ui-toast.ui-toast > span{padding-right:8px}
+.ui-toast__action.ui-toast__action{height:30px;padding:0 12px;border-radius:999px;cursor:pointer;font-family:inherit;line-height:inherit;
+  background:var(--ui-brand-soft);border:1px solid var(--ui-brand-soft-border);color:var(--ui-brand);
+  font-size:11px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+.ui-tip.ui-tip{position:fixed;z-index:200;pointer-events:none;padding:8px 12px;border-radius:12px;background:var(--ui-popover-bg);border:1px solid var(--ui-border-main);
+  box-shadow:var(--ui-shadow);font-size:12.5px;font-weight:700;color:var(--ui-text);white-space:nowrap;max-width:280px}
+.ui-tip.ui-tip span{display:block;font-size:11px;font-weight:600;color:var(--ui-muted);white-space:pre-line}
+
+/* --- TextArea ---------------------------------------------------------------------------------- */
+.ui-textarea.ui-textarea{width:100%;min-height:48px;padding:12px 14px;border-radius:14px;border:1px solid var(--ui-border-main);background:var(--ui-input-bg);color:var(--ui-text);
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.18);font-family:var(--font, inherit);font-size:15px;font-weight:700;line-height:1.45;outline:none;resize:none;overflow:hidden;
+  transition:border-color .16s,box-shadow .16s}
+.ui-textarea.ui-textarea:hover{border-color:var(--ui-border-strong)}
+.ui-textarea.ui-textarea:focus{border-color:var(--ui-focus);box-shadow:0 0 0 3px rgba(91,124,255,.18)}
+.ui-textarea.ui-textarea::placeholder{color:var(--ui-faint)}
+.ui-textarea.ui-textarea.is-invalid{border-color:var(--ui-danger)}
+
+/* --- ModalHeader ------------------------------------------------------------------------------- */
+.ui-modal-head.ui-modal-head{display:flex;align-items:center;gap:var(--ui-s4);margin-bottom:var(--ui-s4);flex-wrap:wrap}
+.ui-modal-head__text{display:grid;gap:6px;min-width:0;flex:1}
+.ui-modal-head__title{margin:0;font-size:19px;font-weight:900;letter-spacing:-.025em;line-height:1.2;text-wrap:balance}
+.ui-modal-head--lg .ui-modal-head__title{font-size:clamp(24px,2.6vw,30px);line-height:1.1}
+.ui-modal-head__sub{margin:0;font-size:14px;line-height:1.5;color:var(--ui-muted)}
