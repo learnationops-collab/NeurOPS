@@ -484,7 +484,9 @@ def get_entrantes():
             'ultima_at': historia[-1][0].isoformat() + 'Z',
         })
     filas.sort(key=lambda f: f['ultima_at'], reverse=True)
-    return jsonify({'desde': desde.isoformat(), 'hasta': hasta.isoformat(), 'filas': filas}), 200
+    return jsonify({'desde': desde.isoformat(), 'hasta': hasta.isoformat(), 'filas': filas,
+                    # El catálogo, para nombrar cada paso del historial de una persona.
+                    'mensajes': {mid: {'titulo': t, 'categoria': c} for mid, (t, c) in mensajes.items()}}), 200
 
 
 @bp.route('/manychat-webhook/answer/<int:answer_id>', methods=['PUT'])
