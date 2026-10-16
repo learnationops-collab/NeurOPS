@@ -34,11 +34,13 @@ export function ConfirmDelete({ name, article = '', detail, onCancel, onConfirm,
     );
 }
 
-// Etiqueta de estado o categoría. `color` tiñe borde y texto; `subtle` es la versión sin mayúsculas.
-export function Chip({ color, icon, subtle = false, className, children, ...rest }) {
+// Etiqueta de estado o categoría. `color` tiñe borde y texto; `subtle` es la versión sin mayúsculas;
+// `square`, la de solo ícono. Con `as="button"` es un filtro que se prende y se apaga (aria-pressed).
+export function Chip({ as: Tag = 'span', color, icon, subtle = false, square = false, className, style, children, ...rest }) {
     return (
-        <span className={clsx('ui-chip', subtle && 'ui-chip--subtle', className)} style={color ? { '--c': color } : undefined} {...rest}>
+        <Tag className={clsx('ui-chip', subtle && 'ui-chip--subtle', square && 'ui-chip--square', className)}
+            style={color ? { '--c': color, ...style } : style} {...(Tag === 'button' ? { type: 'button' } : null)} {...rest}>
             {icon}{children}
-        </span>
+        </Tag>
     );
 }

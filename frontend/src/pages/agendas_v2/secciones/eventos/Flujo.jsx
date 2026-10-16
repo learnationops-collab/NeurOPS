@@ -11,7 +11,7 @@ import { ui } from '../../ui/estadoUi';
 import { reachEvento, useLeads } from '../stats/leads';
 import { armarFlujo, caminoArista } from './armarFlujo';
 import { textoEstrategia } from './comun';
-import { Button, IconButton } from '../../../../components/standard';
+import { Button, Chip, IconButton } from '../../../../components/standard';
 
 const LEYENDA = [['var(--info)', 'Preguntas'], ['var(--brand-secondary)', 'Función'], ['var(--warning)', 'Estrategia'], ['var(--success)', 'Agenda'], ['var(--error)', 'No califica']];
 
@@ -34,7 +34,7 @@ function Nodo({ n, sel, cuello, calor, max }) {
         <button type="button" className={'nodo' + (sel ? ' nodo--sel' : '') + (cuello && calor ? ' nodo--cuello' : '')} data-nav=""
             aria-pressed={sel} aria-label={n.tipo + ': ' + n.tit} style={{ left: n.x, top: n.y, '--c': n.c }}
             onClick={() => setEv({ nodo: sel ? null : n.id })}>
-            {cuello && calor && <span className="chip cuello-chip" style={{ '--c': 'var(--error)' }}><Icono n="fuego" />Cuello de botella</span>}
+            {cuello && calor && <Chip color="var(--error)" className="cuello-chip" icon={<Icono n="fuego" />}>Cuello de botella</Chip>}
             <span className="nodo-cab"><Icono n={n.ico} />{n.tipo}{n.var_ ? <em>{n.var_}</em> : null}</span>
             <span className="nodo-tit">{n.tit}</span>
             {n.filas.map((r, i) => (
@@ -118,8 +118,8 @@ function Inspector({ d, e, n }) {
                     <div key={o.id} className="barra">
                         <span className="t-cap" style={{ flex: 1 }}>{o.texto}</span>
                         {o.descalifica
-                            ? <span className="chip" style={{ '--c': 'var(--error)' }} title="No califica"><Icono n="prohibido" /></span>
-                            : <span className="chip chip--n" style={{ '--c': 'var(--idle)' }}>{o.puntos == null ? '–' : o.puntos} pts</span>}
+                            ? <Chip color="var(--error)" icon={<Icono n="prohibido" />} title="No califica" />
+                            : <Chip color="var(--idle)" subtle>{o.puntos == null ? '–' : o.puntos} pts</Chip>}
                     </div>
                 ))}
                 <Button icon={<Icono n="edit" />} data-nav="" onClick={() => irForm(fo.id, 'preguntas', q.id)}>Editar en Forms</Button>

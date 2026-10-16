@@ -11,7 +11,7 @@ import { gruposDeForm } from '../../core/formulario';
 import { useDatos, usePermisos, useUi } from '../../data/hooks';
 import { HUMO_MARCA, Humo, Icono } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
-import { Button, EmptyState, HeaderActions, IconButton } from '../../../../components/standard';
+import { Button, Card, Chip, EmptyState, HeaderActions, IconButton } from '../../../../components/standard';
 import { EstadoEv, LinksSetters, PasosPendientes, abrirEvento, copiarLink, crearEvento, probarEvento, probarSegmento, settersDe, useSetters } from './comun';
 import { urlPrueba } from '../../reserva/segmentos';
 import { copiarTexto } from '../../ui/toast';
@@ -58,8 +58,7 @@ function TarjetaEvento({ d, e }) {
     if (!rut.length) rut = ['Sin segmentación'];
     const cc = f ? colorVar(f.color) : 'var(--brand-secondary)';
     return (
-        <article className="tarjeta ev-card caja" data-id={e.id}>
-            <Humo clase="humo--tarjeta humo--suave" cols={[cc, 'var(--brand-primary)', cc, 'var(--brand-navy)']} />
+        <Card as="article" className="ev-card" data-id={e.id} aura={[cc, 'var(--brand-primary)', cc, 'var(--brand-navy)']} soft>
             <div className="ev-fila">
                 <button type="button" className="ev-nom" data-nav="" onClick={() => abrirEvento(e.id)}>{e.nombre}</button>
                 <EstadoEv est={estadoEvento(e, fo)} />
@@ -68,12 +67,12 @@ function TarjetaEvento({ d, e }) {
             {f && f.setting && <LinksSetters d={d} e={e} compacto />}
             <PasosPendientes d={d} e={e} />
             <div className="ev-fila">
-                {f ? <span className="chip chip--n" style={{ '--c': colorVar(f.color) }}>{f.nombre}</span>
-                    : <span className="chip" style={{ '--c': 'var(--warning)' }}>Sin funnel</span>}
-                {fo ? <span className="chip chip--n" style={{ '--c': 'var(--info)' }}><Icono n="form" />{fo.nombre}</span>
-                    : <span className="chip" style={{ '--c': 'var(--warning)' }}>Sin formulario</span>}
-                <span className="chip chip--n" style={{ '--c': 'var(--brand-secondary)' }}><Icono n="rayo" />{rut.join(' · ')}</span>
-                <span className="chip chip--n" style={{ '--c': 'var(--idle)' }}>{e.duracion} min</span>
+                {f ? <Chip color={colorVar(f.color)} subtle>{f.nombre}</Chip>
+                    : <Chip color="var(--warning)">Sin funnel</Chip>}
+                {fo ? <Chip color="var(--info)" subtle icon={<Icono n="form" />}>{fo.nombre}</Chip>
+                    : <Chip color="var(--warning)">Sin formulario</Chip>}
+                <Chip color="var(--brand-secondary)" subtle icon={<Icono n="rayo" />}>{rut.join(' · ')}</Chip>
+                <Chip color="var(--idle)" subtle>{e.duracion} min</Chip>
                 <div className="barra-der">
                     <IconButton label={'Copiar link de ' + e.nombre} icon={<Icono n="copiar" s={15} />} size="sm" data-nav="" title="Copiar link" onClick={() => copiarLink(d, e)} />
                     <IconButton label={'Probar ' + e.nombre} icon={<Icono n="play" s={15} />} size="sm" data-nav="" title="Probar" onClick={() => probarEvento(d, e)} />
@@ -89,7 +88,7 @@ function TarjetaEvento({ d, e }) {
                     <Button icon={<Icono n={lectura ? 'ojo' : 'edit'} />} data-nav="" onClick={() => abrirEvento(e.id)}>Abrir</Button>
                 </div>
             </div>
-        </article>
+        </Card>
     );
 }
 
@@ -101,10 +100,10 @@ function EstadoFunnel({ f }) {
         <>
             <EstadoEv est={f.activo ? { n: 'Activo', c: 'var(--success)' } : { n: 'Pausado', c: 'var(--idle)' }} />
             {f.setting && (
-                <span className="chip chip--n" style={{ '--c': 'var(--brand-secondary)' }} title="Setters de este funnel">
-                    <Icono n="users" s={13} />
+                <Chip color="var(--brand-secondary)" subtle icon={<Icono n="users" s={13} />} title="Setters de este funnel">
+                    
                     {suyos === null ? 'Setters…' : !suyos.length ? 'Sin setters' : suyos.length > 3 ? suyos.length + ' setters' : suyos.map(x => x.nombre).join(', ')}
-                </span>
+                </Chip>
             )}
         </>
     );
@@ -170,7 +169,7 @@ export default function ListaEventos() {
                             <div className="ev-grupo-tit">
                                 {agrupar === 'funnel' && ref ? <span className="cf-punto" style={{ '--c': colorVar(ref.color) }} /> : <Icono n={agrupar === 'funnel' ? 'funnel' : 'form'} />}
                                 <span className="t-rotulo">{ref ? ref.nombre : 'Sin ' + agrupar}</span>
-                                {agrupar === 'funnel' && ref && <span className="chip chip--n" style={{ '--c': 'var(--idle)' }}>{TIPO[ref.tipo] || 'Otro'}</span>}
+                                {agrupar === 'funnel' && ref && <Chip color="var(--idle)" subtle>{TIPO[ref.tipo] || 'Otro'}</Chip>}
                                 {agrupar === 'funnel' && ref && <EstadoFunnel f={ref} />}
                                 <span className="t-cap mut40">{lista.length}</span>
                                 {agrupar === 'funnel' && ref && !lectura && (
@@ -180,14 +179,14 @@ export default function ListaEventos() {
                             </div>
                         )}
                         {lista.length ? <div className="lista">{lista.map(e => <TarjetaEvento key={e.id} d={d} e={e} />)}</div> : (
-                            <div className="tarjeta caja ev-card ev-fila">
+                            <Card className="ev-card ev-fila">
                                 <span className="t-sm mut">Sin agendamientos: este funnel no genera agendas.</span>
                                 <div className="barra-der" hidden={lectura}>
                                     <Button variant="primary" icon={<Icono n="plus" />} onClick={() => ui.set({ funnel: { id: ref.id } })}>
                                         Agregar agendamiento
                                     </Button>
                                 </div>
-                            </div>
+                            </Card>
                         )}
                     </React.Fragment>
                 );

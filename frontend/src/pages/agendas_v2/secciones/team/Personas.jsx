@@ -17,7 +17,7 @@ import { abrirHorario } from './Horario';
 import ElegirCloser, { useUsuariosReales } from './ElegirCloser';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { SIMULAN_CLOSERS, simularParaConfigurar } from '../conf/TabEquipo';
-import { ConfirmDelete, EmptyState, IconButton } from '../../../../components/standard';
+import { Card, ConfirmDelete, EmptyState, IconButton } from '../../../../components/standard';
 
 // El Top es solo una etiqueta del equipo: no cambia el reparto (eso lo decide cada estrategia).
 function Nivel({ p, onChange }) {
@@ -92,8 +92,7 @@ function Persona({ p, ordenable, borrando, setBorrando, sinCuenta, sinCalendar, 
     };
 
     return (
-        <article data-item={p.id} className={'tarjeta persona caja' + ordenable.claseItem(p.id)} style={{ '--c': colorVar(p.color) }}>
-            <Humo clase="humo--tarjeta humo--suave" cols={HUMO_PERSONA} />
+        <Card as="article" data-item={p.id} className={'persona' + ordenable.claseItem(p.id)} style={{ '--c': colorVar(p.color) }} aura={HUMO_PERSONA} soft>
             <div className="persona-cab">
                 <button type="button" className="grip" {...ordenable.grip(p.id, 'Mover ' + p.nombre)}><Icono n="grip" /></button>
                 <label className="avatar avatar--l foto" style={{ '--c': colorVar(p.color) }} title="Cambiar foto">
@@ -137,7 +136,7 @@ function Persona({ p, ordenable, borrando, setBorrando, sinCuenta, sinCalendar, 
                         icon={<Icono n="basura" />} onCancel={() => setBorrando(null)} onConfirm={borrar} />
                 </div>
             )}
-        </article>
+        </Card>
     );
 }
 

@@ -6,11 +6,11 @@ import { FIN_DEF } from '../../core/catalogos';
 import { maxOrden, ord } from '../../core/datos';
 import { duplicarForm, resumenForm } from '../../core/formulario';
 import { clonar } from '../../core/util';
-import { Humo, HUMO_MARCA, Icono } from '../../ui/base';
+import { HUMO_MARCA, Icono } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
 import { toast } from '../../ui/toast';
 import Compo from './Compo';
-import { Button, ConfirmDelete, EmptyState, IconButton } from '../../../../components/standard';
+import { Button, Card, ConfirmDelete, EmptyState, IconButton } from '../../../../components/standard';
 
 export function abrirForm(id) {
     almacen.flush();
@@ -58,8 +58,7 @@ function Tarjeta({ f, d, borrando, setBorrando }) {
         toast('Duplicado');
     };
     return (
-        <article className="tarjeta fcard caja" data-id={f.id}>
-            <Humo clase="humo--tarjeta" cols={HUMO_MARCA} />
+        <Card as="article" className="fcard" data-id={f.id} aura={HUMO_MARCA}>
             <div className="fcard-cab">
                 <span className="icono-m"><Icono n="form" s={19} /></span>
                 <button type="button" className="fcard-nom" data-nav="" onClick={() => abrirForm(f.id)}>{f.nombre}</button>
@@ -85,7 +84,7 @@ function Tarjeta({ f, d, borrando, setBorrando }) {
                     </div>
                 </div>
             )}
-        </article>
+        </Card>
     );
 }
 

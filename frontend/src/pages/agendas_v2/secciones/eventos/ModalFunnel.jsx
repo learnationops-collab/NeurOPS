@@ -19,7 +19,7 @@ import { buscar, colorLibre, maxOrden, nombreOrigen, ord } from '../../core/dato
 import { linkEvento } from '../../core/eventos';
 import { slugify, uid } from '../../core/util';
 import { LinksSetters, abrirEvento, crearEvento, useSetters } from './comun';
-import { Button, IconButton, LinkButton } from '../../../../components/standard';
+import { Button, Chip, IconButton, LinkButton } from '../../../../components/standard';
 
 const TIPOS = [
     { v: 'workshop', n: 'Workshop', ico: 'monitor', ayuda: 'Clase en vivo. Un link «Grabación» cuenta como la grabación.' },
@@ -269,10 +269,10 @@ function SettersDelFunnel({ f, editar }) {
             {sts.map(s => {
                 const on = todos || el.has(Number(s.id));
                 return (
-                    <button key={s.id} type="button" className="chip chip--n fm-setter" aria-pressed={on}
-                        style={{ '--c': on ? 'var(--brand-secondary)' : 'var(--idle)' }} onClick={() => alternar(Number(s.id))}>
-                        <Icono n={on ? 'check' : 'plus'} s={13} />{s.nombre}
-                    </button>
+                    <Chip as="button" key={s.id} subtle className="fm-setter" aria-pressed={on} color={on ? 'var(--brand-secondary)' : 'var(--idle)'}
+                        icon={<Icono n={on ? 'check' : 'plus'} s={13} />} onClick={() => alternar(Number(s.id))}>
+                        {s.nombre}
+                    </Chip>
                 );
             })}
             <p className="t-xs mut">{todos ? 'Todos los setters activos trabajan este funnel. Desmarcá los que no.' : el.size + ' de ' + sts.length + ' setters trabajan este funnel.'}</p>

@@ -394,7 +394,7 @@
 .thalamus .pq-abrir{min-width:0;display:flex;align-items:center;gap:14px;text-align:left;padding:4px 0;border-radius:12px}
 .thalamus .pq-c{display:flex;justify-content:center;min-width:0}
 .thalamus .pq-c :is(.chip,.ui-chip){width:100%;justify-content:center}
-.thalamus .pq-c .chip--sq{width:34px;padding:0}
+.thalamus .pq-c :is(.chip--sq,.ui-chip--square){width:34px;padding:0}
 .thalamus .pq-num{width:30px;height:30px;flex-shrink:0;border-radius:8px;display:grid;place-items:center;font-size:11.5px;font-weight:900;background:var(--bg-input);border:1px solid var(--border-subtle);color:var(--text-muted)}
 .thalamus .pq--on .pq-num{background:var(--brand-secondary);border-color:var(--brand-secondary);color:var(--on-brand)}
 .thalamus .pq-tit{flex:1;min-width:0;font-size:15px;font-weight:700;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
@@ -1560,7 +1560,7 @@
 .thalamus .fm-evlinks{display:grid;gap:var(--s3);width:100%}
 .thalamus .fm-setters{display:flex;flex-wrap:wrap;gap:var(--s2);align-items:center}
 .thalamus .fm-setters .t-xs{flex-basis:100%}
-.thalamus .fm-setter{cursor:pointer;border:0}
+.thalamus .fm-setters .fm-setter{cursor:pointer;border:0}
 .thalamus .fm-setter[aria-pressed="false"]{opacity:.65}
 .thalamus .fm-evlink{display:grid;gap:6px;padding:12px;border-radius:16px;border:1px solid var(--border-subtle);background:var(--mat-1)}
 .thalamus .fm-evlink .ls-tit{display:none}

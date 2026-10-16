@@ -6,13 +6,13 @@ import { pesoDe } from '../../core/asignacion';
 import { COLOR_EST, ESTRATEGIAS, ICO_EST } from '../../core/catalogos';
 import { closers, colorVar, esCloser, horasSemana, maxOrden, ord } from '../../core/datos';
 import { almacen, useDatos, usePermisos } from '../../data/hooks';
-import { HUMO_MARCA, Avatar, Humo, Icono } from '../../ui/base';
+import { HUMO_MARCA, Avatar, Icono } from '../../ui/base';
 import { toast } from '../../ui/toast';
 import { useOrdenable } from '../../ui/useOrdenable';
 import { avisoPrioridad, textoEstrategia } from './cobertura';
 import { CampoNombre, Compo, Nivel, colorNivel } from './comun';
 import ElegirCloser, { useUsuariosReales } from './ElegirCloser';
-import { EmptyState, IconButton } from '../../../../components/standard';
+import { Card, EmptyState, IconButton } from '../../../../components/standard';
 
 const SUGERIDAS = ['Ultra cualificado', 'Medio cualificado', 'General'];
 
@@ -99,8 +99,8 @@ function Prioridad({ g, i, ordenable, usuarios }) {
     const msOrden = om.lista.map(id => ms.find(p => p.id === id)).filter(Boolean);
 
     return (
-        <article data-item={g.id} className={'tarjeta pr caja' + ordenable.claseItem(g.id)} style={{ '--pc': pc }}>
-            <Humo clase={'humo--tarjeta' + (i ? ' humo--suave' : '')} cols={i ? ['var(--brand-primary)', 'var(--brand-navy)', pc, 'var(--brand-navy)'] : HUMO_MARCA} />
+        <Card as="article" data-item={g.id} className={'pr' + ordenable.claseItem(g.id)} style={{ '--pc': pc }}
+            aura={i ? ['var(--brand-primary)', 'var(--brand-navy)', pc, 'var(--brand-navy)'] : HUMO_MARCA} soft={!!i}>
             <div className="pr-cab">
                 <button type="button" className="grip" {...ordenable.grip(g.id, 'Mover estrategia ' + g.nombre)}><Icono n="grip" /></button>
                 <span className="pr-n num" title={'Estrategia ' + (i + 1)}>{i + 1}</span>
@@ -130,7 +130,7 @@ function Prioridad({ g, i, ordenable, usuarios }) {
                 <span className="num">{ms.length}{ms.length === 1 ? ' closer' : ' closers'}</span> · {textoEstrategia(d, g)}
                 {aviso && <><br /><span style={{ color: 'var(--warning)' }}>{aviso}</span></>}
             </p>
-        </article>
+        </Card>
     );
 }
 

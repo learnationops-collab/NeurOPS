@@ -10,7 +10,7 @@ import { ui } from '../../ui/estadoUi';
 import { toast } from '../../ui/toast';
 import { useOrdenable } from '../../ui/useOrdenable';
 import { TituloConToken, mutarForm, setFormUi } from './comun';
-import { IconButton, LinkButton } from '../../../../components/standard';
+import { Chip, IconButton, LinkButton } from '../../../../components/standard';
 
 const OPC_TIPO = TIPOS.map(t => ({ v: t.k, n: t.n, icono: t.ico }));
 function ptsColor(v) { return v == null ? 'var(--text-muted-40)' : v >= 8 ? 'var(--success)' : v >= 5 ? 'var(--warning)' : 'var(--error)'; }
@@ -23,11 +23,11 @@ function Fichas({ q }) {
     const filtra = op && q.opciones.some(o => o.descalifica);
     return (
         <>
-            <span className="pq-c pq-c--tipo"><span className="chip chip--n" style={{ '--c': 'var(--idle)' }}>{tipo(q.tipo).n}</span></span>
-            <span className="pq-c pq-c--peso">{op && q.peso > 0 && <span className="chip" style={{ '--c': 'var(--success)' }} title="Peso">×{q.peso}</span>}</span>
+            <span className="pq-c pq-c--tipo"><Chip color="var(--idle)" subtle>{tipo(q.tipo).n}</Chip></span>
+            <span className="pq-c pq-c--peso">{op && q.peso > 0 && <Chip color="var(--success)" title="Peso">×{q.peso}</Chip>}</span>
             <span className="pq-c">
-                {falta ? <span className="chip chip--sq" style={{ '--c': 'var(--warning)' }} title="Incompleta"><Icono n="alerta" /></span>
-                    : filtra ? <span className="chip chip--sq" style={{ '--c': 'var(--error)' }} title="Filtra"><Icono n="prohibido" /></span> : null}
+                {falta ? <Chip color="var(--warning)" square icon={<Icono n="alerta" />} title="Incompleta" />
+                    : filtra ? <Chip color="var(--error)" square icon={<Icono n="prohibido" />} title="Filtra" /> : null}
             </span>
         </>
     );

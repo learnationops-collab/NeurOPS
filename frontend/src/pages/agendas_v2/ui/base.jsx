@@ -65,10 +65,6 @@ export function Avatar({ p, clase = '', foto = true }) {
     );
 }
 
-export function Chip({ c = 'var(--text-muted)', icono, children, clase = '', title }) {
-    return <span className={'chip' + (clase ? ' ' + clase : '')} style={{ '--c': c }} title={title}>{icono && <Icono n={icono} s={13} />}{children}</span>;
-}
-
 export function Switch({ on, onChange, label, disabled, id }) {
     return <button type="button" id={id} className="switch" role="switch" aria-checked={!!on} aria-label={label} disabled={disabled} onClick={() => onChange(!on)} />;
 }

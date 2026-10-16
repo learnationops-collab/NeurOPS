@@ -3,9 +3,9 @@
 import { colorVar, horasSemana } from '../../core/datos';
 import { fmt } from '../../core/util';
 import { usePermisos, useUi } from '../../data/hooks';
-import { Avatar, Humo, Seg } from '../../ui/base';
+import { Avatar, Seg } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
-import { EmptyState, HeaderActions } from '../../../../components/standard';
+import { Card, EmptyState, HeaderActions } from '../../../../components/standard';
 import Available from './Available';
 import { HorarioEditor } from './Horario';
 import { HUMO_PERSONA } from './comun';
@@ -32,10 +32,9 @@ export default function Horas() {
             {tab === 'available'
                 ? <Available solo={yo} />
                 : (
-                    <section className="tarjeta persona caja hrs-disp" style={{ '--c': colorVar(yo.color) }}>
-                        <Humo clase="humo--tarjeta humo--suave" cols={HUMO_PERSONA} />
+                    <Card as="section" className="persona hrs-disp" style={{ '--c': colorVar(yo.color) }} aura={HUMO_PERSONA} soft>
                         <HorarioEditor p={yo} />
-                    </section>
+                    </Card>
                 )}
         </>
     );

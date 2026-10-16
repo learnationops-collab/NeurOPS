@@ -7,7 +7,7 @@ import { copiarPregunta, personalizar } from '../../core/formulario';
 import { Humo, Icono, Modal, Sx } from '../../ui/base';
 import { toast } from '../../ui/toast';
 import { TituloConToken, mutarForm, useBorrador } from './comun';
-import { Button, IconButton } from '../../../../components/standard';
+import { Button, Chip, IconButton } from '../../../../components/standard';
 
 export function fuentesImport(d, fid) { return ord(d, 'formularios').filter(x => x.id !== fid && x.preguntas.length); }
 
@@ -47,7 +47,7 @@ export function ModalImportar({ f, d, onCerrar, onImportado }) {
                             onClick={() => setSel(s => ({ ...s, [q.id]: !s[q.id] }))}>
                             <span className="switch" aria-hidden="true" style={{ pointerEvents: 'none' }} aria-checked={on} />
                             <b><TituloConToken t={q.titulo} /></b>
-                            <span className="chip chip--n" style={{ '--c': 'var(--idle)' }}>{tipo(q.tipo).n}</span>
+                            <Chip color="var(--idle)" subtle>{tipo(q.tipo).n}</Chip>
                         </button>
                     );
                 })}

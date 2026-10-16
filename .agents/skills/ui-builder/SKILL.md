@@ -64,7 +64,7 @@ Import: `import { Button, … } from '<ruta>/components/standard';`
 | `Aura` | Nubes de color difusas de fondo | `colors`, `size`: `card` · `hero`, `soft` |
 | `EmptyState` | Vacío, cargando o sin permiso | `icon`, `title`, `aura`, `action`, `children` (el texto) |
 | `ConfirmDelete` | «¿Eliminar X?» con Cancelar / Eliminar | `name`, `article` («a »), `detail`, `onCancel`, `onConfirm`, `confirmLabel`, `icon`, `extraActions`, `children` |
-| `Chip` | Etiqueta de estado o categoría | `color`, `icon`, `subtle` |
+| `Chip` | Etiqueta de estado o categoría | `color`, `icon`, `subtle`, `square` (solo ícono), `as="button"` (filtro con `aria-pressed`) |
 
 Todo lo que no es prop (`onClick`, `disabled`, `ref`, `data-nav`, `autoFocus`, `title`, `data-tip`…) pasa directo al elemento HTML.
 
@@ -81,6 +81,8 @@ En Thalamus, `data-nav` marca lo que sigue habilitado en solo lectura (el setter
 5. Fila en el catálogo de este archivo, en el mismo commit.
 
 Si una pantalla necesita ajustar el componente según el contexto (por ejemplo, más bajo dentro de un campo), la regla va en el CSS de esa pantalla, apuntando a la clase `ui-*`. Así le gana a la base sin tocar las otras pantallas.
+
+**Especificidad:** la base de cada componente pesa dos clases (`.ui-btn.ui-btn`). Un ajuste por contexto tiene que pesar **al menos tres** (`.thalamus .ev-acc .ui-btn--secondary`, `.thalamus .fm-setters .fm-setter`). Con dos (`.thalamus .fm-setter`) empata con la base, y gana la hoja que el bundle cargue última: hoy anda, mañana no.
 
 ## Estilos y temas
 

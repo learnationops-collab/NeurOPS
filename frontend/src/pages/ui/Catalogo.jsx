@@ -84,7 +84,7 @@ const SECCIONES = [
     {
         nombre: 'Chip',
         para: 'Etiqueta de estado o categoría. El color lo decide la pantalla.',
-        props: 'color · icon — subtle',
+        props: 'color · icon — subtle · square — as="button" (filtro)',
         demo: () => (
             <Demo titulo="Estados y versión suave">
                 <Chip color="var(--ui-brand)">Publicado</Chip>
@@ -92,6 +92,8 @@ const SECCIONES = [
                 <Chip color="var(--ln-warning, #D9A441)">Sin funnel</Chip>
                 <Chip color="var(--ln-info, #4E8BD8)" icon={<Bell />}>Solo lectura</Chip>
                 <Chip subtle>30 min</Chip>
+                <Chip color="var(--ln-danger, #E85C4A)" square icon={<X />} title="Filtra" />
+                <Chip as="button" subtle color="var(--ui-brand)" aria-pressed="true" icon={<Plus />}>Filtro</Chip>
             </Demo>
         ),
     },

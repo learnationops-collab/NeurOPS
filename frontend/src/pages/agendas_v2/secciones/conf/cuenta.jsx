@@ -12,12 +12,12 @@ import { Icono, Sx } from '../../ui/base';
 import { HorarioEditor } from '../team/Horario';
 import { EditorSesiones } from '../team/Sesiones';
 import FotoCuenta from './FotoCuenta';
-import { Button } from '../../../../components/standard';
+import { Button, Chip } from '../../../../components/standard';
 
 function Estado({ ok, si, no }) {
     return ok
-        ? <span className="chip" style={{ '--c': 'var(--success)' }}><Icono n="check" />{si}</span>
-        : <span className="chip" style={{ '--c': 'var(--warning)' }}><Icono n="alerta" />{no}</span>;
+        ? <Chip color="var(--success)" icon={<Icono n="check" />}>{si}</Chip>
+        : <Chip color="var(--warning)" icon={<Icono n="alerta" />}>{no}</Chip>;
 }
 
 // Tarjeta de un ajuste: ícono, título, para qué sirve y su estado.
@@ -77,7 +77,7 @@ export function DatosCuenta({ user }) {
                 )}
                 <div className="cu-roles">
                     {roles.map((r) => (
-                        <span key={r} className="chip chip--n" style={{ '--c': r === user.role ? 'var(--brand-secondary)' : 'var(--idle)' }}>{rotuloDeRol(r)}</span>
+                        <Chip key={r} color={r === user.role ? 'var(--brand-secondary)' : 'var(--idle)'} subtle>{rotuloDeRol(r)}</Chip>
                     ))}
                 </div>
                 <Mensajes error={error} />
@@ -164,8 +164,8 @@ export function TarjetaCalendar({ volver }) {
                                         <button type="button" className="switch" role="switch" aria-checked={on} disabled={ocupado}
                                             aria-label={'Revisar conflictos en ' + c.summary} onClick={() => alternarConflicto(c.id, !on)} />
                                         <span className="trunc">{c.summary}</span>
-                                        {c.primary && <span className="chip chip--n" style={{ '--c': 'var(--idle)' }}>Principal</span>}
-                                        {c.id === destino && <span className="chip chip--n" style={{ '--c': 'var(--info)' }}>Agendamiento</span>}
+                                        {c.primary && <Chip color="var(--idle)" subtle>Principal</Chip>}
+                                        {c.id === destino && <Chip color="var(--info)" subtle>Agendamiento</Chip>}
                                         {!c.escribe && <span className="t-cap mut40">solo lectura</span>}
                                     </label>
                                 );

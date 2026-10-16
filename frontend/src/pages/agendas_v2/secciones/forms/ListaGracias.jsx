@@ -4,14 +4,14 @@
 import { useState } from 'react';
 import { almacen, useDatos } from '../../data/hooks';
 import { maxOrden, ord } from '../../core/datos';
-import { Chip, Humo, HUMO_MARCA, Icono } from '../../ui/base';
+import { HUMO_MARCA, Icono } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
 import { toast } from '../../ui/toast';
 import { soltarVideo } from '../../data/videos';
 import { VIDEOS_INICIALES, rutaGracias } from '../../reserva/gracias/contenido';
 import Compo from './Compo';
 import './gracias.css';
-import { Button, ConfirmDelete, IconButton } from '../../../../components/standard';
+import { Button, Card, Chip, ConfirmDelete, IconButton } from '../../../../components/standard';
 
 export function abrirGracias(id) {
     almacen.flush();
@@ -59,16 +59,15 @@ function Tarjeta({ g, d, borrando, setBorrando }) {
     const usan = d.eventos.filter(e => e.gracias === g.id).length;
     const ov = origenVideo(g.video), op = origenVideo(g.plan);
     return (
-        <article className="tarjeta fcard caja" data-id={g.id}>
-            <Humo clase="humo--tarjeta" cols={HUMO_MARCA} />
+        <Card as="article" className="fcard" data-id={g.id} aura={HUMO_MARCA}>
             <div className="fcard-cab">
                 <span className="icono-m"><Icono n="video" s={19} /></span>
                 <button type="button" className="fcard-nom" data-nav="" onClick={() => abrirGracias(g.id)}>{g.nombre}</button>
             </div>
             <div className="gx-chips">
-                <Chip c={ov.c} icono="video">Video · {ov.n}</Chip>
-                <Chip c={op.c} icono="play">Plan · {op.n}</Chip>
-                <Chip c={g.casos ? 'var(--success)' : 'var(--text-muted)'} icono="estrella">{g.casos ? 'Con casos de éxito' : 'Sin casos'}</Chip>
+                <Chip color={ov.c} icon={<Icono n="video" s={13} />}>Video · {ov.n}</Chip>
+                <Chip color={op.c} icon={<Icono n="play" s={13} />}>Plan · {op.n}</Chip>
+                <Chip color={g.casos ? 'var(--success)' : 'var(--text-muted)'} icon={<Icono n="estrella" s={13} />}>{g.casos ? 'Con casos de éxito' : 'Sin casos'}</Chip>
             </div>
             <p className="t-sm mut">{usan ? 'La usa' + (usan > 1 ? 'n ' + usan + ' eventos' : ' 1 evento') : 'Ningún evento la usa todavía'}</p>
             {borrando ? <ConfirmarBorrarGracias g={g} d={d} onCancelar={() => setBorrando(null, g.id)} /> : (
@@ -80,7 +79,7 @@ function Tarjeta({ g, d, borrando, setBorrando }) {
                     </div>
                 </div>
             )}
-        </article>
+        </Card>
     );
 }
 
