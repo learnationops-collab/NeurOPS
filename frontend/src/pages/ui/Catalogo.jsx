@@ -9,7 +9,7 @@ import '../agendas_v2/thalamus.css';
 import '../comercial/comercial.css';
 import './catalogo.css';
 import {
-    Avatar, BRAND_AURA, Button, Card, Chip, ConfirmDelete, EmptyState, FieldError, Grid, IconButton, Input, InputGroup, Kpi, LinkButton, Modal, PageHeader, Panel, Segmented, Select,
+    Avatar, BRAND_AURA, Button, Calendar, CalendarEvent, calendarY, Card, Chip, ConfirmDelete, EmptyState, FieldError, Grid, IconButton, Input, InputGroup, Kpi, LinkButton, Modal, PageHeader, Panel, Segmented, Select,
     Stepper, Switch,
 } from '../../components/standard';
 
@@ -25,6 +25,25 @@ const CONTEXTOS = [
 ];
 
 const nada = () => {};
+
+// Una semana corta de ejemplo: los tonos de las tarjetas los pone la pantalla (acá, colores inline).
+const DIAS_CAL = [['lun', 19], ['mar', 20], ['mié', 21]];
+const EVENTOS_CAL = [
+    [0, 9 * 60, 60, 'Llamada', 'Lucía Pérez', 'var(--ln-info, #4E8BD8)'],
+    [1, 10 * 60, 45, 'Libre', null, 'var(--ln-success, #2FBF8F)'],
+    [2, 9 * 60 + 30, 90, 'Ocupado', 'Reunión de equipo', 'var(--fc-violeta, #7D63E6)'],
+];
+function DemoCalendario() {
+    const desde = 8, hasta = 13, alto = 44;
+    return (
+        <Calendar startHour={desde} endHour={hasta} hourHeight={alto} zoneLabel="GMT-4" minWidth={420} nowMinutes={10 * 60 + 20}
+            days={DIAS_CAL.map(([w, n], i) => ({ key: w, weekday: w, number: n, today: i === 1, caption: i === 1 ? 'hoy' : '' }))}
+            renderColumn={(_, i) => EVENTOS_CAL.filter(e => e[0] === i).map(([, m, dur, t, l, c]) => (
+                <CalendarEvent key={m} top={calendarY(m, desde, alto)} height={dur / 60 * alto} title={t} line={l}
+                    time={Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0')} style={{ background: c, color: '#fff' }} />
+            ))} />
+    );
+}
 
 // Los controles del catálogo funcionan de verdad: cada uno guarda su estado.
 function DemoControles() {
@@ -159,6 +178,12 @@ const SECCIONES = [
                 </Card>
             </div>
         ),
+    },
+    {
+        nombre: 'Calendar · CalendarEvent',
+        para: 'Calendario de horas (semana o día). La pantalla decide qué va en cada columna; el calendario lo ubica.',
+        props: 'Calendar: days[{key,weekday,number,today,caption,extra}] · startHour · endHour · hourHeight · zoneLabel · nowMinutes · renderColumn · columnProps — CalendarEvent: top · height · title · line · time · icon · marker — calendarY(minutos)',
+        demo: () => <DemoCalendario />,
     },
     {
         nombre: 'Panel',

@@ -63,6 +63,8 @@ Import: `import { Button, … } from '<ruta>/components/standard';`
 | `Panel` | Bloque de una pantalla (sección de configuración, columna) | `as`, `size`: `md` · `sm`, `aura`, `soft` |
 | `Grid` | Cómo se acomodan varios elementos | `variant`: `list` · `cards` (desde 330px) · `charts` (desde 380px) · `kpis` (4 → 2 → 1) · `column`; `as`, `ref` |
 | `Kpi` | Número grande con rótulo y detalle | `label`, `value`, `aura`; `children` es el detalle (`<small>` para lo secundario) |
+| `Calendar` | Calendario de horas (semana o día) | `days` `[{key, weekday, number, today, caption, extra}]`, `startHour`, `endHour`, `hourHeight`, `zoneLabel`, `minWidth`, `nowMinutes`, `renderColumn(day, i)` (lo que va en cada columna), `columnProps(day, i)` (eventos de la columna, como arrastrar); `calendarY(minutos, startHour, hourHeight)` da la posición vertical |
+| `CalendarEvent` | Tarjeta de un evento en el calendario | `top`, `height`, `title`, `line`, `time`, `sub`, `icon`, `marker`, `tooltip`; `className` (el tono) y `style` (la posición horizontal si se pisa con otras) |
 | `Card` | Tarjeta | `as`, `aura` (hasta 4 colores de fondo), `soft` |
 | `Aura` | Nubes de color difusas de fondo | `colors`, `size`: `card` · `hero`, `soft` |
 | `EmptyState` | Vacío, cargando o sin permiso | `icon`, `title`, `aura`, `action`, `children` (el texto) |
@@ -114,4 +116,6 @@ Si una pantalla necesita ajustar el componente según el contexto (por ejemplo, 
 - El switch del modal de importar preguntas es solo un indicador dentro de una fila que ya es botón (un `Switch` ahí sería un botón dentro de otro): falta una variante decorativa.
 - El error de «Nuevo evento» de la lista de Eventos usa `.err-nuevo` (12px, peso normal) y el de arriba `FieldError` (12,5px, negrita): unificar.
 - La textarea que crece sola (`AreaAuto`) no pasó: la usa también la pantalla del lead con estilos propios.
-- Próximos componentes: `Input` (campo con ícono, label oculto y botón), `Grid` (`kpis` · `auto` · `list`), `Calendar` (`month` · `week` · `day`) y `Modal`.
+- Calendar: los tonos de las tarjetas (llamada, libre, margen, ocupado, cancelada, hueco) viven en thalamus.css. Cuando otra pantalla use el calendario, pasarlos a variantes genéricas de CalendarEvent (`tone`: solid · soft · muted · success · dashed · hatched).
+- Calendar vista de mes: falta. La usan la página pública del lead (PasoCalendario) y la ficha del closer (SelectorFecha); son pantallas activas, migrar con cuidado.
+- Próximos componentes: `Toaster` y `Tooltip` (hoy en el store de Thalamus), `TextArea` que crece sola y la cabecera de los modales.

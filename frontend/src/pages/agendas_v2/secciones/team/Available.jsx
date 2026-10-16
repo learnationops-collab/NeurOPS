@@ -26,7 +26,7 @@ import { VISUAL, apilar } from './tarjetas';
 import { FACETAS, agendasDe, aplicarFacetas, condiciones, fichaDe } from './filtro';
 import PanelConfigurar from '../../../comercial/components/PanelConfigurar';
 import { gruposDeSesion, turnosSemana } from './turnos';
-import { Button, EmptyState, IconButton, Segmented } from '../../../../components/standard';
+import { Button, Calendar, CalendarEvent, EmptyState, IconButton, Segmented } from '../../../../components/standard';
 
 const hm = (m) => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
 
@@ -56,17 +56,8 @@ function Tarjeta({ tipo, clase, top, alto, titulo, linea = null, hora, sub, tip,
         : ncols > 1 ? { left: 'calc(' + (col / ncols * 100) + '% + 2px)', width: 'calc(' + (100 / ncols) + '% - 3px)', right: 'auto' } : null;
     const icono = VISUAL[tipo] && VISUAL[tipo].icono;
     return (
-        <div className={'av-card ' + clase} style={{ top, height: alto, ...pos }} data-tip={tip}>
-            {alto >= 15 && (
-                <span className="av-card-cab">
-                    {icono && <Icono n={icono} s={12} className="av-card-ico" />}
-                    {puntos}
-                    <b className="av-card-tit">{titulo}</b>
-                </span>
-            )}
-            {alto >= 27 && linea && <span className="av-card-linea">{linea}</span>}
-            {alto >= (linea ? 41 : 32) && hora && <span className="av-card-hora">{hora}{sub ? ' · ' + sub : ''}</span>}
-        </div>
+        <CalendarEvent className={clase} style={pos} top={top} height={alto} tooltip={tip} title={titulo} line={linea} time={hora} sub={sub}
+            icon={icono && <Icono n={icono} s={12} />} marker={puntos} />
     );
 }
 
@@ -217,13 +208,12 @@ export default function Available({ solo = null }) {
     }
     const { tz, dias, bloques, huecos, porDia, minH, maxH, hoyK, mAhora, kpi, sinLeer, sinGoogle } = cob;
     const conApi = !!almacen.adaptador.ocupacion, leyendo = conApi && google == null;
-    const n = cs.length, alto = (maxH - minH) * HPX;
+    const n = cs.length;
     // Con varios closers, agrupadas: cada día es una columna angosta. Sin agrupar, lo bastante ancho para
     // leer los carriles de todos (si no entra, se desplaza). Un día: un carril ancho por closer.
     const agrupado = !solo && !unDia && n > 1 && agrupar_;
     const anchoMin = unDia ? 56 + Math.max(600, n * 190) : 56 + 7 * (agrupado ? 160 : Math.max(120, n * 112));
     const diasVista = unDia ? [diaSel] : [0, 1, 2, 3, 4, 5, 6];
-    const columnasDias = { gridTemplateColumns: 'repeat(' + diasVista.length + ',minmax(0,1fr))' };
     const rango = unDia
         ? mayus(DIAS[diaSel].n) + ' ' + fechaCorta(dias[diaSel].k)
         : fechaCorta(dias[0].k) + ' – ' + fechaCorta(dias[6].k);
@@ -450,80 +440,75 @@ export default function Available({ solo = null }) {
                     {sinLeer.length > 0 && <span className="av-ley-s av-ley-aviso"><Icono n="alerta" s={12} />No se pudo leer el calendario de {nombres(sinLeer)}</span>}
                     {sinGoogle.length > 0 && <span className="av-ley-s"><Icono n="calendar" s={12} />Sin Google Calendar: {nombres(sinGoogle)} (solo agendas)</span>}
                 </div>
-                <div className="av-cal">
-                    <div className="av-cab" style={{ minWidth: anchoMin, gridTemplateColumns: '56px repeat(' + diasVista.length + ',minmax(0,1fr))' }}>
-                        <span className="av-tz">{gmtTxt(tz, ahora)}</span>
-                        {diasVista.map(di => {
-                            const dd = dias[di], pd = porDia[di], esHoy = dd.k === hoyK;
-                            return (
-                                <div key={dd.k} className={'av-dia' + (esHoy ? ' av-dia--hoy' : '')}>
-                                    <span>{DIAS[(dd.d.getUTCDay() + 6) % 7].n.slice(0, 3)}</span><b>{dd.d.getUTCDate()}</b>
-                                    <em>{turnos ? libresDe(di) + ' libres' : pd.t ? Math.round(pd.a / pd.t * 100) + '%' : '—'}</em>
-                                    {unDia && (
-                                        <span className="av-carriles" style={{ gridTemplateColumns: 'repeat(' + n + ',minmax(0,1fr))' }}>
-                                            {cs.map(p => <span key={p.id} className="av-carril-n trunc" style={{ '--c': colorVar(p.color) }}><i className="av-dot" />{p.nombre}</span>)}
-                                        </span>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                    <div className="av-cuerpo" style={{ height: alto, minWidth: anchoMin }}>
-                        <div className="av-horas">
-                            {Array.from({ length: maxH - minH }, (_, i) => <span key={i} style={{ top: i * HPX }}>{pad(minH + i)}:00</span>)}
-                        </div>
-                        <div className="av-grilla" style={{ '--hpx': HPX + 'px', ...columnasDias }}>
-                            {diasVista.map(di => {
-                                const dd = dias[di], esHoy = dd.k === hoyK, dow = dd.d.getUTCDay();
-                                const bls = bloques.filter(x => x.di === di);
-                                const enArr = arr && arr.dow === dow;
-                                return (
-                                    <div key={dd.k} className={'av-col' + (esHoy ? ' av-col--hoy' : '')}
-                                        onPointerDown={edit ? (e => { const el = e.target.closest('.av-bloque'); const bl = el ? bls[+el.dataset.i] : null; if (bl && bl.fuera) return; empezar(e, dow, bl); }) : undefined}>
-                                        {huecos.filter(x => x.di === di).map(x => (
-                                            <div key={x.m0} className="av-hueco" style={{ top: y(x.m0), height: (x.m1 - x.m0) / 60 * HPX }} data-tip={'Sin closer|' + hm(x.m0) + ' a ' + hm(x.m1)} />
-                                        ))}
-                                        {agrupado && apilar(visibles(bls.flatMap(piezasDe))).map(tarjetaCarta)}
-                                        {!agrupado && bls.map((x, i) => {
-                                            const vivo = enArr && arr.modo !== 'crear' && !x.fuera && arr.ri === x.ri;
-                                            const m0 = vivo ? arr.a : x.m0, m1 = vivo ? arr.b : x.m1;
-                                            const txtH = vivo ? hmTxt(m0) + '–' + hmTxt(m1) : horaTxt(x.t0, tz) + '–' + horaTxt(x.t1, tz);
-                                            return (
-                                                <div key={x.p.id + '-' + x.dow + '-' + x.ri + (x.fuera ? '-' + x.t0 : '')} data-i={i} className={'av-bloque' + (vivo ? ' av-bloque--drag' : '') + (x.sinLeer ? ' av-bloque--sinleer' : '') + (x.fuera ? ' av-bloque--fuera' : '')}
-                                                    style={{ '--c': colorVar(x.p.color), top: y(m0), height: (m1 - m0) / 60 * HPX, left: 'calc(' + (x.li / n * 100) + '% + 2px)', width: 'calc(' + (100 / n) + '% - 4px)' }}
-                                                    data-tip={x.fuera ? x.p.nombre + '|Fuera de su horario' : x.p.nombre + ' · ' + horaTxt(x.t0, tz) + '–' + horaTxt(x.t1, tz) + '|' + resumenBloque(x)}>
-                                                    {edit && !x.fuera ? (
-                                                        <>
-                                                            <span className="av-asa av-asa--t" data-av="t" />
-                                                            <span className="av-asa av-asa--b" data-av="b" />
-                                                            <button type="button" className="av-del" aria-label={'Quitar ' + txtH} onClick={() => quitar(x)}><Icono n="x" s={11} /></button>
-                                                            <span className="av-hora">{txtH}</span>
-                                                        </>
-                                                    ) : null}
-                                                    {!vivo && visibles(piezasDe(x)).map((z, k) => {
-                                                        const hora = horaTxt(z.a, tz) + ' – ' + horaTxt(z.b, tz);
-                                                        return (
-                                                            <Tarjeta key={z.tipo + z.a + '-' + k} tipo={z.tipo} clase={claseDe(z.tipo, [z])}
-                                                                top={(z.a - x.t0) / 3600000 * HPX} alto={(z.b - z.a) / 3600000 * HPX} col={z.col} ncols={z.ncols}
-                                                                titulo={n > 1 ? x.p.nombre : z.etiqueta} linea={n > 1 ? z.lead : null} hora={hora}
-                                                                tip={sinBarra(VISUAL[z.tipo].n + ' · ' + x.p.nombre) + '|' + sinBarra(hora + ' · ' + z.detalle)} />
-                                                        );
-                                                    })}
-                                                </div>
-                                            );
-                                        })}
-                                        {enArr && arr.modo === 'crear' && (
-                                            <div className="av-bloque av-ghost" style={{ left: 2, right: 2, top: y(arr.a), height: (arr.b - arr.a) / 60 * HPX, '--c': colorVar(solo.color) }}>
-                                                <span className="av-hora">{hmTxt(arr.a) + '–' + hmTxt(arr.b)}</span>
-                                            </div>
-                                        )}
-                                        {esHoy && mAhora >= minH * 60 && mAhora <= maxH * 60 && <div className="av-ahora" style={{ top: y(mAhora) }} />}
+                <Calendar className="av-cal" startHour={minH} endHour={maxH} hourHeight={HPX} zoneLabel={gmtTxt(tz, ahora)} minWidth={anchoMin}
+                    nowMinutes={mAhora}
+                    days={diasVista.map(di => {
+                        const dd = dias[di], pd = porDia[di];
+                        return {
+                            key: dd.k, di, dow: dd.d.getUTCDay(), today: dd.k === hoyK,
+                            weekday: DIAS[(dd.d.getUTCDay() + 6) % 7].n.slice(0, 3), number: dd.d.getUTCDate(),
+                            caption: turnos ? libresDe(di) + ' libres' : pd.t ? Math.round(pd.a / pd.t * 100) + '%' : '—',
+                            extra: unDia && (
+                                <span className="av-carriles" style={{ gridTemplateColumns: 'repeat(' + n + ',minmax(0,1fr))' }}>
+                                    {cs.map(p => <span key={p.id} className="av-carril-n trunc" style={{ '--c': colorVar(p.color) }}><i className="av-dot" />{p.nombre}</span>)}
+                                </span>
+                            ),
+                        };
+                    })}
+                    columnProps={edit ? (dia => ({
+                        onPointerDown: e => {
+                            const bls = bloques.filter(x => x.di === dia.di);
+                            const el = e.target.closest('.av-bloque'); const bl = el ? bls[+el.dataset.i] : null;
+                            if (bl && bl.fuera) return;
+                            empezar(e, dia.dow, bl);
+                        },
+                    })) : undefined}
+                    renderColumn={dia => {
+                        const { di, dow } = dia;
+                        const bls = bloques.filter(x => x.di === di);
+                        const enArr = arr && arr.dow === dow;
+                        return (
+                            <>
+                                {huecos.filter(x => x.di === di).map(x => (
+                                    <div key={x.m0} className="av-hueco" style={{ top: y(x.m0), height: (x.m1 - x.m0) / 60 * HPX }} data-tip={'Sin closer|' + hm(x.m0) + ' a ' + hm(x.m1)} />
+                                ))}
+                                {agrupado && apilar(visibles(bls.flatMap(piezasDe))).map(tarjetaCarta)}
+                                {!agrupado && bls.map((x, i) => {
+                                    const vivo = enArr && arr.modo !== 'crear' && !x.fuera && arr.ri === x.ri;
+                                    const m0 = vivo ? arr.a : x.m0, m1 = vivo ? arr.b : x.m1;
+                                    const txtH = vivo ? hmTxt(m0) + '–' + hmTxt(m1) : horaTxt(x.t0, tz) + '–' + horaTxt(x.t1, tz);
+                                    return (
+                                        <div key={x.p.id + '-' + x.dow + '-' + x.ri + (x.fuera ? '-' + x.t0 : '')} data-i={i} className={'av-bloque' + (vivo ? ' av-bloque--drag' : '') + (x.sinLeer ? ' av-bloque--sinleer' : '') + (x.fuera ? ' av-bloque--fuera' : '')}
+                                            style={{ '--c': colorVar(x.p.color), top: y(m0), height: (m1 - m0) / 60 * HPX, left: 'calc(' + (x.li / n * 100) + '% + 2px)', width: 'calc(' + (100 / n) + '% - 4px)' }}
+                                            data-tip={x.fuera ? x.p.nombre + '|Fuera de su horario' : x.p.nombre + ' · ' + horaTxt(x.t0, tz) + '–' + horaTxt(x.t1, tz) + '|' + resumenBloque(x)}>
+                                            {edit && !x.fuera ? (
+                                                <>
+                                                    <span className="av-asa av-asa--t" data-av="t" />
+                                                    <span className="av-asa av-asa--b" data-av="b" />
+                                                    <button type="button" className="av-del" aria-label={'Quitar ' + txtH} onClick={() => quitar(x)}><Icono n="x" s={11} /></button>
+                                                    <span className="av-hora">{txtH}</span>
+                                                </>
+                                            ) : null}
+                                            {!vivo && visibles(piezasDe(x)).map((z, k) => {
+                                                const hora = horaTxt(z.a, tz) + ' – ' + horaTxt(z.b, tz);
+                                                return (
+                                                    <Tarjeta key={z.tipo + z.a + '-' + k} tipo={z.tipo} clase={claseDe(z.tipo, [z])}
+                                                        top={(z.a - x.t0) / 3600000 * HPX} alto={(z.b - z.a) / 3600000 * HPX} col={z.col} ncols={z.ncols}
+                                                        titulo={n > 1 ? x.p.nombre : z.etiqueta} linea={n > 1 ? z.lead : null} hora={hora}
+                                                        tip={sinBarra(VISUAL[z.tipo].n + ' · ' + x.p.nombre) + '|' + sinBarra(hora + ' · ' + z.detalle)} />
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                })}
+                                {enArr && arr.modo === 'crear' && (
+                                    <div className="av-bloque av-ghost" style={{ left: 2, right: 2, top: y(arr.a), height: (arr.b - arr.a) / 60 * HPX, '--c': colorVar(solo.color) }}>
+                                        <span className="av-hora">{hmTxt(arr.a) + '–' + hmTxt(arr.b)}</span>
                                     </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </div>
+                                )}
+                            </>
+                        );
+                    }} />
             </section>
         </>
     );

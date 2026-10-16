@@ -43,7 +43,7 @@ describe('Available', () => {
         expect(screen.getAllByText('Lucía Pérez').length).toBeGreaterThan(0);
         expect(screen.getAllByText('Marta Gómez').length).toBeGreaterThan(0);
         expect(screen.getAllByText('Pablo Ruiz').length).toBeGreaterThan(0);
-        const tarjeta = screen.getAllByText('Lucía Pérez')[0].closest('.av-card');
+        const tarjeta = screen.getAllByText('Lucía Pérez')[0].closest('.ui-cal-event');
         expect(within(tarjeta).getByText('Jean Carlo')).toBeTruthy();
     });
 
