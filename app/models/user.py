@@ -187,8 +187,8 @@ class User(UserMixin, db.Model):
     @property
     def es_closer_de_ventas(self):
         """Closer que vende: tiene el rol closer y, como mucho, director comercial. Quien además es
-        admin u operador (Mario, Santiago) no cuenta para la Academia: sus inscripciones no le asignan
-        alumnos y no recibe los de un closer dado de baja."""
+        admin u operador (Mario, Santiago) no cuenta como quien inscribe ni recibe los alumnos de un
+        closer dado de baja; si figura como vendedor de una venta, esa venta sí se le registra."""
         return 'closer' in self.roles and set(self.roles) <= ROLES_CLOSER_DE_VENTAS
 
     def activar_rol(self, rol):
