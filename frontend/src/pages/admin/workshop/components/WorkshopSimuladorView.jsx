@@ -1,18 +1,31 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { RotateCcw, Flag } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import { Flag, Plus, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../../services/api';
-import { STAGE_ORDER, aggregateTotals, projectSales, computeFuga, money, ticketPromedio } from '../funnelMath';
+import { PanelCab } from '../../../comercial/components/Shared';
+import Cifra from '../../../comercial/components/Cifra';
+import { STAGE_ORDER, aggregateTotals, money, projectSales, ticketPromedio } from '../funnelMath';
+import { borradorDesdePalanca } from '../planificar/plan';
 
 const clamp = (v) => Math.min(100, Math.max(0, v || 0));
+const pct1 = (r) => Math.round(r * 1000) / 10;
 
-// Simulador de escenarios — 100% cálculo en el cliente, no lee/escribe datos
-// reales (salvo "Fijar como meta", que sí persiste en WorkshopGoals a
-// pedido explícito del closer/director). El baseline es el promedio de los
-// talleres ya cargados; los deltas de la proyección siempre comparan contra
-// ese mismo promedio, igual que la herramienta de referencia.
-const WorkshopSimuladorView = ({ events, goals, highlightStage, onGoalsUpdated, formatCurrency }) => {
-    const totals = useMemo(() => aggregateTotals(events), [events]);
+/**
+ * Simulador de escenarios: cálculo en el cliente sobre el promedio de los talleres realizados. No
+ * escribe datos salvo «Fijar como meta» (WorkshopGoals) y, desde el 16/10/2026, la acción que sale de
+ * una palanca subida: `onCrearAccion` recibe el borrador (etapa, puntos y título) y lo abre para
+ * asignarlo a un próximo taller.
+ *
+ * `etapaEnfocada` resalta una palanca (llega desde «Simular mejora» del Resumen).
+ */
+const WorkshopSimuladorView = ({ events, goals, etapaEnfocada, onGoalsUpdated, onCrearAccion, formatCurrency }) => {
+    const reducir = useReducedMotion();
+    // El polling de la página trae un arreglo nuevo cada 20 s aunque nada cambie: el promedio se
+    // recalcula (y el escenario vuelve a él) solo si cambian los números.
+    const crudos = aggregateTotals(events);
+    const firma = `${events.length}|${JSON.stringify(crudos)}`;
+    const totals = useMemo(() => crudos, [firma]); // eslint-disable-line react-hooks/exhaustive-deps
     const n = events.length || 1;
 
     const baseline = useMemo(() => {
@@ -21,14 +34,16 @@ const WorkshopSimuladorView = ({ events, goals, highlightStage, onGoalsUpdated, 
             const den = totals[s.den] || 0;
             rates[s.key] = den > 0 ? (totals[s.num] || 0) / den : 0;
         });
-        const inversion = totals.inversion / n;
-        const cpl = totals.leads > 0 ? totals.inversion / totals.leads : 0;
-        const ticket = ticketPromedio(totals);
-        const sales = totals.sales / n;
-        const cash = totals.cash_collected / n;
-        const roas = totals.inversion > 0 ? totals.cash_collected / totals.inversion : 0;
-        const cac = totals.sales > 0 ? totals.inversion / totals.sales : 0;
-        return { rates, inversion, cpl, ticket, sales, cash, roas, cac };
+        return {
+            rates,
+            inversion: totals.inversion / n,
+            cpl: totals.leads > 0 ? totals.inversion / totals.leads : 0,
+            ticket: ticketPromedio(totals),
+            sales: totals.sales / n,
+            cash: totals.cash_collected / n,
+            roas: totals.inversion > 0 ? totals.cash_collected / totals.inversion : 0,
+            cac: totals.sales > 0 ? totals.inversion / totals.sales : 0,
+        };
     }, [totals, n]);
 
     const [rates, setRates] = useState(baseline.rates);
@@ -36,37 +51,36 @@ const WorkshopSimuladorView = ({ events, goals, highlightStage, onGoalsUpdated, 
     const [cpl, setCpl] = useState(baseline.cpl);
     const [ticket, setTicket] = useState(baseline.ticket);
 
-    // Si cambia el set de eventos cargados (recarga), el baseline se recalcula
-    // y el escenario se reinicia sobre el promedio nuevo.
-    useEffect(() => {
-        setRates(baseline.rates);
-        setInversion(baseline.inversion);
-        setCpl(baseline.cpl);
-        setTicket(baseline.ticket);
-    }, [baseline]);
-
     const reset = () => {
         setRates(baseline.rates);
         setInversion(baseline.inversion);
         setCpl(baseline.cpl);
         setTicket(baseline.ticket);
     };
+    // Otros números en los talleres recalculan el promedio: el escenario vuelve a él (en el render).
+    const [baseVista, setBaseVista] = useState(baseline);
+    if (baseVista !== baseline) {
+        setBaseVista(baseline);
+        reset();
+    }
 
+    const fmt = formatCurrency || money;
     const leadsProyectados = cpl > 0 ? inversion / cpl : 0;
-    const ventasProyectadas = projectSales(leadsProyectados, rates);
-    const cashProyectado = ventasProyectadas * ticket;
-    const roasProyectado = inversion > 0 ? cashProyectado / inversion : 0;
-    const cacProyectado = ventasProyectadas > 0 ? inversion / ventasProyectadas : 0;
+    const ventas = projectSales(leadsProyectados, rates);
+    const cash = ventas * ticket;
+    const roas = inversion > 0 ? cash / inversion : 0;
+    const cac = ventas > 0 ? inversion / ventas : 0;
+    const delta = (v, base) => (base > 0 ? ((v - base) / base) * 100 : 0);
 
-    const deltaPct = (proyectado, base) => base > 0 ? ((proyectado - base) / base) * 100 : 0;
-
-    const fugas = useMemo(() => computeFuga(totals, rates, goals), [totals, rates, goals]);
+    const cambiado = STAGE_ORDER.some((s) => pct1(rates[s.key]) !== pct1(baseline.rates[s.key]))
+        || Math.round(inversion) !== Math.round(baseline.inversion)
+        || cpl.toFixed(2) !== baseline.cpl.toFixed(2)
+        || Math.round(ticket) !== Math.round(baseline.ticket);
 
     const fijarMeta = async (stage) => {
         if (!goals) return;
         try {
-            const payload = { [stage.goalKey]: Math.round(rates[stage.key] * 1000) / 10 };
-            const res = await api.put('workshop/goals', payload);
+            const res = await api.put('workshop/goals', { [stage.goalKey]: pct1(rates[stage.key]) });
             toast.success(`${stage.label}: meta actualizada`);
             onGoalsUpdated?.(res.data);
         } catch (err) {
@@ -75,123 +89,104 @@ const WorkshopSimuladorView = ({ events, goals, highlightStage, onGoalsUpdated, 
         }
     };
 
-    const fmt = formatCurrency || money;
-
-    const projectionMetrics = [
-        { label: 'Ventas', value: ventasProyectadas.toFixed(1), base: baseline.sales },
-        { label: 'Cash', value: fmt(cashProyectado), base: baseline.cash, raw: cashProyectado },
-        { label: 'ROAS', value: `${roasProyectado.toFixed(1)}x`, base: baseline.roas, raw: roasProyectado },
-        { label: 'CAC', value: fmt(cacProyectado), base: baseline.cac, raw: cacProyectado, invert: true },
+    const economia = [
+        { key: 'inv', label: 'Inversión', valor: Math.round(inversion), set: setInversion, paso: 1 },
+        { key: 'cpl', label: 'Costo por lead', valor: cpl.toFixed(2), set: setCpl, paso: 0.01 },
+        { key: 'ticket', label: 'Ticket promedio', valor: Math.round(ticket), set: setTicket, paso: 1 },
+    ];
+    const proyeccion = [
+        { label: 'Ventas', valor: ventas.toFixed(1), d: delta(ventas, baseline.sales) },
+        { label: 'Cash', valor: fmt(cash), d: delta(cash, baseline.cash) },
+        { label: 'ROAS', valor: `${roas.toFixed(1)}x`, d: delta(roas, baseline.roas) },
+        { label: 'CAC', valor: fmt(cac), d: delta(cac, baseline.cac), invertido: true },
     ];
 
-    const workItems = fugas.filter((f) => f.estado !== 'ok').slice(0, 5);
-
     return (
-        <section className="sim-grid">
-            <div className="sim-controls">
-                <article className="panel money-controls">
-                    <div className="section-heading">
-                        <div><p className="eyebrow">Variables comerciales</p><h2>Economía del escenario</h2></div>
-                        <button type="button" className="icon-text-button" onClick={reset}><RotateCcw size={15} /> Restablecer</button>
-                    </div>
-                    <div className="input-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-                        <label className="money-field">
-                            <span>Inversión ads</span>
-                            <span><b>$</b><input type="number" value={Math.round(inversion)} onChange={(e) => setInversion(parseFloat(e.target.value) || 0)} /></span>
-                        </label>
-                        <label className="money-field">
-                            <span>Costo por lead</span>
-                            <span><b>$</b><input type="number" step="0.01" value={cpl.toFixed(2)} onChange={(e) => setCpl(parseFloat(e.target.value) || 0)} /></span>
-                        </label>
-                        <label className="money-field">
-                            <span>Ticket promedio</span>
-                            <span><b>$</b><input type="number" value={Math.round(ticket)} onChange={(e) => setTicket(parseFloat(e.target.value) || 0)} /></span>
-                        </label>
-                        <div className="derived-field">
-                            <span>Leads proyectados</span>
-                            <strong>{Math.round(leadsProyectados)}</strong>
-                            <small>inversión ÷ CPL</small>
-                        </div>
-                    </div>
-                </article>
+        <section className="panel wp-panel" id="wp-simulador" aria-label="Simulador">
+            <PanelCab titulo="Simulador"
+                tip="Mové una palanca y mirá cuánto cambia el resultado de un taller promedio. Si la subiste, «Acción» la convierte en algo que hay que cumplir en un próximo taller. Modelo lineal: las tasas se multiplican con techo de 95%. Sirve para priorizar; no es una predicción.">
+                <button type="button" className="btn btn--linea btn--sm" onClick={reset} disabled={!cambiado}>
+                    <RotateCcw aria-hidden="true" /> Restablecer
+                </button>
+            </PanelCab>
 
-                <article className="panel lever-controls">
-                    <div className="section-heading">
-                        <div><p className="eyebrow">Palancas de conversión</p><h2>Ajustá las 8 tasas</h2></div>
-                        <span className="legend"><i /> Promedio <i className="goal" /> Meta</span>
+            <div className="wp-sim-tope">
+                <div className="wp-eco hundido">
+                    {economia.map((c) => (
+                        <label key={c.key} className="wp-eco-celda">
+                            <span className="t-rotulo">{c.label}</span>
+                            <span className="wp-plata"><b>$</b>
+                                <input type="number" step={c.paso} min="0" value={c.valor}
+                                    onChange={(e) => c.set(parseFloat(e.target.value) || 0)} />
+                            </span>
+                        </label>
+                    ))}
+                    <div className="wp-eco-celda">
+                        <span className="t-rotulo">Leads</span>
+                        <span className="wp-eco-n num">{Math.round(leadsProyectados)}</span>
                     </div>
-                    <div className="slider-list">
-                        {STAGE_ORDER.map((s) => {
-                            const pct = Math.round(rates[s.key] * 1000) / 10;
-                            const metaPct = goals?.[s.goalKey] ?? 0;
-                            const enMeta = pct >= metaPct;
-                            const active = highlightStage === s.key;
-                            return (
-                                <div className="slider-row" key={s.key} style={active ? { background: 'rgba(19,35,198,.14)', borderRadius: 16 } : undefined}>
-                                    <div><span>{s.label}</span><strong>{pct.toFixed(1)}%</strong></div>
-                                    <div className="range-wrap">
-                                        <input
-                                            aria-label={`${s.label}: ${pct.toFixed(1)}%`}
-                                            type="range" min="0" max="100" step="0.5" value={pct}
-                                            onChange={(e) => setRates((prev) => ({ ...prev, [s.key]: parseFloat(e.target.value) / 100 }))}
-                                        />
-                                        <i className="average-marker" style={{ left: `${clamp(baseline.rates[s.key] * 100)}%` }} />
-                                        <i className="target-marker" style={{ left: `${clamp(metaPct)}%` }} />
-                                    </div>
-                                    <div className="slider-actions">
-                                        <button type="button" onClick={() => fijarMeta(s)} title={`Fijar ${pct.toFixed(1)}% como meta`}>
-                                            <Flag size={12} style={{ marginRight: 4 }} />
-                                            {enMeta ? 'Ya está en meta' : 'Fijar como meta'}
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </article>
+                </div>
+                <div className="wp-proy" aria-live="polite">
+                    {proyeccion.map((k) => {
+                        const bien = k.invertido ? k.d <= 0 : k.d >= 0;
+                        const quieto = Math.abs(k.d) < 0.05;
+                        return (
+                            <div key={k.label} className="wp-proy-celda">
+                                <span className="t-rotulo">{k.label}</span>
+                                <Cifra valor={k.valor} className="wp-proy-n num" desdeAnterior duracion={420} />
+                                <span className="wp-proy-d num" style={{ '--c': quieto ? 'var(--text-muted-40)' : `var(--${bien ? 'success' : 'error'})` }}>
+                                    {quieto ? 'igual al prom.' : `${k.d > 0 ? '+' : ''}${k.d.toFixed(1)}% vs prom.`}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
 
-            <aside className="sim-results" aria-live="polite">
-                <article className="projection-card">
-                    <p className="eyebrow">Proyección</p>
-                    <h2>Con este escenario</h2>
-                    <div className="projection-kpis">
-                        {projectionMetrics.map((k) => {
-                            const rawVal = k.raw !== undefined ? k.raw : parseFloat(k.value);
-                            const d = deltaPct(rawVal, k.base);
-                            const good = k.invert ? d <= 0 : d >= 0;
-                            return (
-                                <div key={k.label}>
-                                    <span>{k.label}</span>
-                                    <strong>{k.value}</strong>
-                                    <small className={good ? 'positive' : 'negative'}>{d >= 0 ? '+' : ''}{d.toFixed(1)}% vs prom.</small>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </article>
-
-                <article className="panel work-order">
-                    <p className="eyebrow">Orden de trabajo</p>
-                    <h2>Mayor impacto primero</h2>
-                    <div>
-                        {workItems.map((f, i) => (
-                            <article key={f.key}>
-                                <span className="rank">{i + 1}</span>
-                                <div><strong>{f.label}</strong><p>{f.real}% → {f.meta}%</p></div>
-                                <b>+{f.impactoVentas.toFixed(1)} ventas</b>
-                            </article>
-                        ))}
-                    </div>
-                    {fugas.every((f) => f.estado === 'ok') && (
-                        <p className="all-target">Todo está en meta. Sostené el resultado.</p>
-                    )}
-                </article>
-
-                <p className="secondary-copy" style={{ fontSize: 10 }}>
-                    Modelo lineal: los puntos porcentuales se suman por palanca con techo de 95%. Sirve para priorizar; no es una predicción.
-                </p>
-            </aside>
+            <div className="wp-palancas">
+                {STAGE_ORDER.map((s) => {
+                    const pct = pct1(rates[s.key]);
+                    const base = pct1(baseline.rates[s.key]);
+                    const meta = goals?.[s.goalKey] ?? 0;
+                    const banda = goals?.banda_limite ?? 5;
+                    const estado = pct >= meta ? 'success' : meta - pct <= banda ? 'warning' : 'error';
+                    const subio = pct > base;
+                    const enfocada = etapaEnfocada === s.key;
+                    return (
+                        <motion.div key={s.key} className="palanca wp-palanca" data-enfocada={enfocada ? '1' : undefined}
+                            animate={enfocada && !reducir ? { scale: [1, 1.025, 1] } : undefined}
+                            transition={{ duration: 0.5 }}>
+                            <div className="palanca-cab">
+                                <i className="wp-punto" style={{ '--c': `var(--${estado})` }}
+                                    title={estado === 'success' ? 'En meta' : estado === 'warning' ? 'Cerca de la meta' : 'Lejos de la meta'} />
+                                <span className="wp-pal-nom">{s.label}</span>
+                                <span className="palanca-v num" data-cambiada={pct !== base ? '1' : undefined}>{pct.toFixed(1)}%</span>
+                            </div>
+                            <div className="wp-riel">
+                                <input className="slider" type="range" min="0" max="100" step="0.5" value={pct}
+                                    aria-label={`${s.label}: ${pct.toFixed(1)}%`}
+                                    onChange={(e) => setRates((p) => ({ ...p, [s.key]: parseFloat(e.target.value) / 100 }))} />
+                                <i className="wp-marca wp-marca--prom" style={{ left: `${clamp(base)}%` }} title={`Promedio ${base}%`} />
+                                <i className="wp-marca wp-marca--meta" style={{ left: `${clamp(meta)}%` }} title={`Meta ${meta}%`} />
+                            </div>
+                            <div className="wp-pal-pie">
+                                <span className="t-cap mut40 num">prom. {base}% · meta {meta}%</span>
+                                <button type="button" className="ibtn ibtn--sm wp-pal-btn" onClick={() => fijarMeta(s)}
+                                    title={`Fijar ${pct.toFixed(1)}% como meta`} aria-label={`Fijar ${pct.toFixed(1)}% como meta de ${s.label}`}
+                                    disabled={!goals || pct === meta}>
+                                    <Flag aria-hidden="true" />
+                                </button>
+                                <button type="button" className="wp-agregar" disabled={!subio}
+                                    title={subio ? 'Crear una acción para lograr este cambio' : 'Subí la palanca para convertirla en acción'}
+                                    aria-label={`Crear acción: ${s.label}`}
+                                    onClick={() => onCrearAccion?.(borradorDesdePalanca(s.key, baseline.rates[s.key], rates[s.key]))}>
+                                    <Plus aria-hidden="true" /> Acción
+                                </button>
+                            </div>
+                        </motion.div>
+                    );
+                })}
+            </div>
         </section>
     );
 };
