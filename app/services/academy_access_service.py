@@ -66,9 +66,9 @@ class AcademyAccessService:
     @staticmethod
     def closer_de(client, usuario=None):
         """El email del closer del que pasa a depender el alumno al inscribirlo en un producto: quien lo
-        inscribe, si es un closer activo; si lo hace otro del equipo, el vendedor de la venta más reciente
+        inscribe, si es un closer de ventas activo (`User.es_closer_de_ventas`); si lo hace otro del equipo, el vendedor de la venta más reciente
         del cliente (si resuelve a un closer activo). None = la Academia le deja el closer que tenía."""
-        if usuario is not None and usuario.is_active and usuario.tiene_rol('closer') and usuario.email:
+        if usuario is not None and usuario.is_active and usuario.es_closer_de_ventas and usuario.email:
             return usuario.email.strip().lower()
         if client is None or not client.id:
             return None
@@ -79,7 +79,7 @@ class AcademyAccessService:
             FinancialSale.client_id == client.id, FinancialSale.email_vendedor.isnot(None),
             FinancialSale.email_vendedor != '').order_by(FinancialSale.date.desc(), FinancialSale.id.desc()).first()
         closer = CloserFollowUpService._resolve_closer_for_email_vendedor(venta.email_vendedor) if venta else None
-        if closer and closer.is_active and closer.tiene_rol('closer') and closer.email:
+        if closer and closer.is_active and closer.es_closer_de_ventas and closer.email:
             return closer.email.strip().lower()
         return None
 
@@ -91,8 +91,9 @@ class AcademyAccessService:
         from app.models import User
 
         try:
-            activos = User.query.filter(User.role == 'closer', User.is_active.is_(True), User.id != usuario.id,
-                                        User.email.isnot(None), func.trim(User.email) != '').all()
+            activos = [u for u in User.query.filter(User.role == 'closer', User.is_active.is_(True), User.id != usuario.id,
+                                                    User.email.isnot(None), func.trim(User.email) != '').all()
+                       if u.es_closer_de_ventas]
             payload = {'email': (usuario.email or '').strip().lower(),
                        'activos': [{'email': u.email.strip().lower(), 'nombre': u.username} for u in activos]}
         except Exception as e:  # noqa: BLE001

@@ -26,6 +26,8 @@ ROLE_HIRING = 'hiring'
 # servicio de agenda (app/api/external/agenda.py). No tienen pantallas en NeurOPS: lo configuran todo
 # desde la Academia.
 ROLE_FULFILLMENT = 'fulfillment'
+# Closer de ventas para la Academia (User.es_closer_de_ventas): closer y, como mucho, director comercial.
+ROLES_CLOSER_DE_VENTAS = {ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL}
 
 # Los personajes que se pueden elegir de avatar (page-mascot; las hojas y la misma lista están en
 # frontend/src/components/mascota/: hojas/ y mascotas.js).
@@ -181,6 +183,13 @@ class User(UserMixin, db.Model):
 
     def tiene_rol(self, rol):
         return rol in self.roles
+
+    @property
+    def es_closer_de_ventas(self):
+        """Closer que vende: tiene el rol closer y, como mucho, director comercial. Quien además es
+        admin u operador (Mario, Santiago) no cuenta para la Academia: sus inscripciones no le asignan
+        alumnos y no recibe los de un closer dado de baja."""
+        return 'closer' in self.roles and set(self.roles) <= ROLES_CLOSER_DE_VENTAS
 
     def activar_rol(self, rol):
         """Fija el rol activo de este request. Un rol que la persona no tiene se ignora (queda el

@@ -488,7 +488,7 @@ def user_operations(id):
             user.set_password(data['password'])
             
         db.session.commit()
-        if se_desactiva and user.tiene_rol('closer'):
+        if se_desactiva and user.es_closer_de_ventas:
             # La Academia reparte sus alumnos entre los closers que siguen activos.
             from app.services.academy_access_service import AcademyAccessService
             AcademyAccessService.avisar_baja(user)

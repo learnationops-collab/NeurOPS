@@ -282,3 +282,25 @@ def test_desactivar_un_closer_le_avisa_a_la_academia_con_los_que_siguen_activos(
     payload = academia.report_closer_deactivated.call_args.args[0]
     assert payload['email'] == 'vendedor@neuro.com'
     assert [a['email'] for a in payload['activos']] == [otro.email.lower()]
+
+
+def test_un_admin_con_rol_closer_no_cuenta_como_closer_y_un_director_comercial_si(client, db, alumno, equipo,
+                                                                                    make_user, auth_headers, academia):
+    FinancialSale.query.update({'client_id': alumno.id})
+    jefe = make_user(role='operator', roles_extra='closer,director_comercial', username='jefe', email='jefe@neuro.com')
+    db.session.commit()
+
+    _post(client, auth_headers, jefe, alumno, 'acceso', {'vence': _en(30, jefe)})
+    # No cuenta: queda el vendedor de la venta.
+    assert academia.escribe.assign_product.call_args.kwargs['closer_email'] == 'vendedor@neuro.com'
+
+    marlon = make_user(role='director_comercial', roles_extra='closer', username='marlon', email='marlon@neuro.com')
+    db.session.commit()
+    _post(client, auth_headers, marlon, alumno, 'acceso', {'vence': _en(30, marlon)})
+    assert academia.escribe.assign_product.call_args.kwargs['closer_email'] == 'marlon@neuro.com'
+
+    with patch.object(academy_access_service, 'threading') as hilo, \
+            patch.object(academy_access_service, 'LearnationService') as api:
+        academy_access_service.AcademyAccessService.avisar_baja(equipo['closer'])
+        hilo.Thread.call_args.kwargs['target']()
+    assert [a['email'] for a in api.report_closer_deactivated.call_args.args[0]['activos']] == ['marlon@neuro.com']
