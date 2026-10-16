@@ -164,3 +164,6 @@
 
 .dc-shell .lc-tabla .tabla-fila[aria-current="true"] { background: var(--bg-element); box-shadow: inset 3px 0 0 var(--brand-secondary); }
 .dc-shell .lc-pie { height: 1px; }
+
+/* Agrupada, la lista de grupos va dentro de la misma caja que el encabezado de columnas. */
+.dc-shell .lc-tabla > .tabla { border: 0; border-radius: 0; background: none; }

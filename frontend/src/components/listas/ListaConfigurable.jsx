@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, Check, ChevronDown, Columns, RotateCcw, Search, SlidersHorizontal, X } from 'lucide-react';
+import { ArrowDown, Check, ChevronDown, Columns, RotateCcw, Rows, Search, SlidersHorizontal, X } from 'lucide-react';
 import PanelConfigurar from '../../pages/comercial/components/PanelConfigurar';
 import Tip from '../../pages/comercial/components/Tip';
 import { useColumnasVisibles } from './useColumnasVisibles';
 import { useEnPantalla } from '../ui/useEnPantalla';
 import { usePaginaProgresiva } from './usePaginaProgresiva';
+import ListaAgrupable from './ListaAgrupable';
 import './listas.css';
 
 /**
@@ -20,6 +21,9 @@ import './listas.css';
  *   facetas:  [{ key, label, de(fila) → texto o null }]  — el panel «Filtro completo» de Revisar.
  *
  * `claveGuardado` es la clave de `localStorage` de las columnas elegidas (una por lista).
+ *   agrupables: [{ key, label, de(fila) → texto o null }] — «Agrupar por», como en Revisar: grupos
+ *               colapsables con su cantidad (`ListaAgrupable`).
+ *
  * `extra` va al final de la barra (botones propios de la lista). `marcada` es la clave de la fila
  * abierta, que se resalta. Las filas se dibujan de a páginas al scrollear (`usePaginaProgresiva`),
  * así una lista de miles no traba la pantalla.
@@ -75,10 +79,44 @@ const MenuColumnas = ({ columnas, visibles, alternar, restablecer, onCerrar }) =
     );
 };
 
+/** «Agrupar por»: sin agrupar o una dimensión, con cuántos grupos deja cada una. */
+const MenuAgrupar = ({ agrupables, filas, valor, onElegir, onCerrar }) => {
+    const caja = useRef(null);
+    const enPantalla = useEnPantalla(caja);
+    useEffect(() => {
+        const fuera = (e) => { if (!caja.current?.contains(e.target)) onCerrar(); };
+        const escape = (e) => { if (e.key === 'Escape') onCerrar(); };
+        document.addEventListener('mousedown', fuera);
+        document.addEventListener('keydown', escape);
+        return () => {
+            document.removeEventListener('mousedown', fuera);
+            document.removeEventListener('keydown', escape);
+        };
+    }, [onCerrar]);
+    return (
+        <div className="menu" role="menu" aria-label="Agrupar por" ref={enPantalla}>
+            <button type="button" className="menu-item" role="menuitemradio" aria-checked={!valor}
+                onClick={() => onElegir(null)}>
+                <span className="trunc">Sin agrupar</span>
+            </button>
+            {agrupables.map((d) => (
+                <button key={d.key} type="button" className="menu-item" role="menuitemradio"
+                    aria-checked={valor === d.key} onClick={() => onElegir(d.key)}>
+                    <span className="trunc">{d.label}</span>
+                    <span className="cuenta">{new Set(filas.map((f) => d.de(f) || '—')).size}</span>
+                </button>
+            ))}
+        </div>
+    );
+};
+
 const ListaConfigurable = ({
     columnas, facetas = [], filas, clave, onAbrirFila, buscar, buscarPlaceholder = 'Buscar…',
     claveGuardado, vacio = 'No hay filas para mostrar.', ayuda, extra, ordenInicial = null, marcada = null,
+    agrupables = [],
 }) => {
+    const [agrupacion, setAgrupacion] = useState(null);
+    const dimension = agrupables.find((d) => d.key === agrupacion) || null;
     const { visibles, alternar, restablecer } = useColumnasVisibles(claveGuardado, columnas);
     const [query, setQuery] = useState('');
     const [elegidas, setElegidas] = useState({});
@@ -108,6 +146,25 @@ const ListaConfigurable = ({
     });
 
     const { pagina, hayMas, pie } = usePaginaProgresiva(mostradas);
+
+    const dibujarFila = (fila) => (
+        <div key={clave(fila)} className="tabla-fila" role="row" style={{ '--cols': plantilla }}
+            {...(onAbrirFila ? {
+                tabIndex: 0,
+                onClick: () => onAbrirFila(fila),
+                onKeyDown: (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAbrirFila(fila); }
+                },
+            } : {})}
+            data-abre={onAbrirFila ? '' : undefined}
+            aria-current={marcada != null && clave(fila) === marcada ? 'true' : undefined}>
+            {visibles.map((c) => (
+                <div key={c.key} data-h={c.header} role="cell" className={c.alinear === 'der' ? 'lc-der num' : undefined}>
+                    {c.render ? c.render(fila) : (c.valor(fila) ?? '—')}
+                </div>
+            ))}
+        </div>
+    );
 
     const plantilla = visibles.map((c) => c.width || 'minmax(0,1fr)').join(' ');
     const quitar = (key, valor) => setElegidas((e) => ({ ...e, [key]: e[key].filter((v) => v !== valor) }));
@@ -146,6 +203,23 @@ const ListaConfigurable = ({
                             restablecer={restablecer} onCerrar={() => setMenu(null)} />
                     )}
                 </div>
+
+                {agrupables.length > 0 && (
+                    <div style={{ position: 'relative' }}>
+                        <button type="button" className={`pastilla${dimension ? ' pastilla--on' : ''}`}
+                            aria-expanded={menu === 'agrupar'} aria-haspopup="menu"
+                            onClick={() => setMenu((m) => (m === 'agrupar' ? null : 'agrupar'))}>
+                            <Rows size={15} />
+                            {dimension ? `Por ${dimension.label.toLowerCase()}` : 'Sin agrupar'}
+                            <ChevronDown size={14} />
+                        </button>
+                        {menu === 'agrupar' && (
+                            <MenuAgrupar agrupables={agrupables} filas={mostradas} valor={agrupacion}
+                                onElegir={(key) => { setAgrupacion(key); setMenu(null); }}
+                                onCerrar={() => setMenu(null)} />
+                        )}
+                    </div>
+                )}
 
                 {extra}
 
@@ -199,24 +273,10 @@ const ListaConfigurable = ({
                 </div>
                 {mostradas.length === 0 ? (
                     <p className="t-body mut40 lc-vacio">{vacio}</p>
-                ) : pagina.map((fila) => (
-                    <div key={clave(fila)} className="tabla-fila" role="row" style={{ '--cols': plantilla }}
-                        {...(onAbrirFila ? {
-                            tabIndex: 0,
-                            onClick: () => onAbrirFila(fila),
-                            onKeyDown: (e) => {
-                                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAbrirFila(fila); }
-                            },
-                        } : {})}
-                        data-abre={onAbrirFila ? '' : undefined}
-                        aria-current={marcada != null && clave(fila) === marcada ? 'true' : undefined}>
-                        {visibles.map((c) => (
-                            <div key={c.key} data-h={c.header} role="cell" className={c.alinear === 'der' ? 'lc-der num' : undefined}>
-                                {c.render ? c.render(fila) : (c.valor(fila) ?? '—')}
-                            </div>
-                        ))}
-                    </div>
-                ))}
+                ) : dimension ? (
+                    <ListaAgrupable filas={mostradas} dimension={dimension}
+                        renderFilas={(filasGrupo) => filasGrupo.map(dibujarFila)} />
+                ) : pagina.map(dibujarFila)}
                 {hayMas && <div ref={pie} className="lc-pie" aria-hidden="true" />}
             </div>
         </div>

@@ -64,3 +64,21 @@ describe('pasaFacetas', () => {
         expect(pasaFacetas(filas[1], facetas, { mes: ['Oct'] }, 'todas')).toBe(true);
     });
 });
+
+describe('ListaConfigurable · agrupar', () => {
+    beforeEach(() => window.localStorage.clear());
+
+    it('agrupa por una dimensión en grupos con su cantidad', () => {
+        render(
+            <div className="dc-shell">
+                <ListaConfigurable columnas={columnas} facetas={facetas} filas={filas} clave={(f) => f.id}
+                    agrupables={[{ key: 'mes', label: 'Mes', de: (f) => f.mes }]} />
+            </div>,
+        );
+        fireEvent.click(screen.getByRole('button', { name: /Sin agrupar/ }));
+        fireEvent.click(within(screen.getByRole('menu', { name: 'Agrupar por' })).getByText('Mes'));
+        expect(screen.getByRole('button', { name: /Por mes/ })).toBeInTheDocument();
+        expect(screen.getByText('Sep')).toBeInTheDocument();
+        expect(screen.getByText('Oct')).toBeInTheDocument();
+    });
+});
