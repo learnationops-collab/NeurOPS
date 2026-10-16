@@ -51,6 +51,15 @@ describe('Marketing › Anuncios', () => {
             anuncios: [], claves: ['APLICAR'], conectado: false, ultima_sincronizacion: null } }));
     });
 
+    it('los descalificados se ven siempre, aunque sean 0', async () => {
+        abrir();
+        await screen.findByText('Obtener Guia');
+        expect(screen.getByText(/calificados · 0% descalificados · .* pendientes/)).toBeInTheDocument();
+        const leyenda = screen.getAllByLabelText('Leyenda').find((l) => l.textContent.includes('Calificados'));
+        ['Calificados', 'Descalificados', 'En conversación', 'Sin respuesta']
+            .forEach((estado) => expect(within(leyenda).getByText(estado)).toBeInTheDocument());
+    });
+
     it('pide la tabla del período y muestra una fila por palabra clave, sin las archivadas', async () => {
         abrir();
         expect(await screen.findByText('Obtener Guia')).toBeInTheDocument();

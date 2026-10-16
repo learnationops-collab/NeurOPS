@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useMontado } from '../../../comercial/components/Shared';
 import { dinero } from './metricas';
 
@@ -62,22 +62,18 @@ export const Columnas = ({ dias, capas, formato, etiqueta, vacio }) => {
     );
 };
 
-/** De abajo hacia arriba: lo resuelto, lo que está en curso y lo que no avanzó. */
-const ESTADOS = [
+/** De abajo hacia arriba: los resueltos (calificados y descalificados) y los pendientes. Los cuatro se
+ *  ven siempre, aunque alguno dé 0 en el período (Kerwin, 16/10/2026: «ya no veo los descalificados»). */
+const ENTRANTES = [
     { key: 'calificados', label: 'Calificados', color: 'var(--cat-2)' },
+    { key: 'descalificados', label: 'Descalificados', color: 'var(--cat-3)' },
     { key: 'en_conversacion', label: 'En conversación', color: 'var(--cat-6)' },
     { key: 'sin_respuesta', label: 'Sin respuesta', color: 'var(--mk-resto)' },
-    { key: 'descalificados', label: 'Descalificados', color: 'var(--cat-3)' },
 ];
 
 /** Los dos gráficos del período: leads por día (por estado) y gasto por día. */
 const SerieDiaria = ({ serie, moneda, alcance, metaConectado }) => {
     const dias = serie;
-    // Un estado sin nadie en el período no ocupa la leyenda (hoy ManyChat no marca descalificados).
-    const ENTRANTES = useMemo(
-        () => ESTADOS.filter((c) => c.key === 'calificados' || dias.some((d) => d[c.key] > 0)),
-        [dias],
-    );
     const entero = (v) => Number(v).toLocaleString('en-US');
     return (
         <div className="grid-2 mk-series">

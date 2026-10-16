@@ -164,10 +164,7 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
     const conGasto = totales.gasto > 0;
     const kpis = [
         { titulo: 'Leads entrantes', valor: formatear(totales.entrantes, 'num'),
-          sub: [['pct_calificados', 'calificados'], ['pct_en_conversacion', 'en conversación'],
-              ['pct_sin_respuesta', 'sin respuesta'], ['pct_descalificados', 'descalificados']]
-              .filter(([k], i) => i === 0 || totales[k] > 0)
-              .map(([k, rotulo]) => `${formatear(totales[k], 'pct')} ${rotulo}`).join(' · '),
+          sub: `${formatear(totales.pct_calificados, 'pct')} calificados · ${formatear(totales.pct_descalificados, 'pct')} descalificados · ${formatear(totales.pct_pendientes, 'pct')} pendientes`,
           tip: 'Personas que entraron, por estado en ManyChat.' },
         { titulo: 'Importe gastado', valor: formatear(totales.gasto, 'money', moneda),
           sub: conGasto ? `${formatear(totales.cpl, 'money', moneda)} por lead · ${formatear(totales.cpl_calificado, 'money', moneda)} por calificado` : 'Sin gasto cargado en el período',

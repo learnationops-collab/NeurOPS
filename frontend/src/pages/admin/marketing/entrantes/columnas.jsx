@@ -9,7 +9,7 @@ export const ESTADOS = {
     sin_respuesta: { label: 'Sin respuesta', c: 'var(--idle)' },
     descalificado: { label: 'Descalificado', c: 'var(--error)' },
 };
-export const ORDEN_ESTADOS = ['calificado', 'en_conversacion', 'sin_respuesta', 'descalificado'];
+export const ORDEN_ESTADOS = ['calificado', 'descalificado', 'en_conversacion', 'sin_respuesta'];
 
 const CATEGORIAS = { opening: 'Apertura', cualificacion: 'Cualificación', dolor: 'Dolor', seguimiento: 'Seguimiento' };
 export const categoriaDe = (mensaje) => CATEGORIAS[mensaje?.categoria] || null;

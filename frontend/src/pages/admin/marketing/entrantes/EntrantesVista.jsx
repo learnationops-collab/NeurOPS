@@ -158,12 +158,11 @@ const EntrantesVista = ({ desde, hasta, version = 0, onHerramientas, herramienta
                     sub={`${num(seguidores)} ya seguían la cuenta`} />
                 <Kpi i={1} titulo="Calificados" valor={num(cuenta.calificado)} tip="ManyChat los marcó calificados."
                     sub={`${pct(cuenta.calificado, total)} de los entrantes`} />
-                <Kpi i={2} titulo="En conversación" valor={num(cuenta.en_conversacion)} tip="Respondieron, todavía sin calificar."
-                    sub={`${pct(cuenta.en_conversacion, total)} de los entrantes`} />
-                <Kpi i={3} titulo="Sin respuesta" valor={num(cuenta.sin_respuesta)} tip="No contestaron la apertura."
-                    sub={cuenta.descalificado
-                        ? `${pct(cuenta.sin_respuesta, total)} · ${cuenta.descalificado} descalificados`
-                        : `${pct(cuenta.sin_respuesta, total)} de los entrantes`} />
+                <Kpi i={2} titulo="Descalificados" valor={num(cuenta.descalificado)} tip="ManyChat los marcó no calificados."
+                    sub={`${pct(cuenta.descalificado, total)} de los entrantes`} />
+                <Kpi i={3} titulo="Pendientes" valor={num(cuenta.en_conversacion + cuenta.sin_respuesta)}
+                    tip="Todavía sin calificar."
+                    sub={`${num(cuenta.en_conversacion)} en conversación · ${num(cuenta.sin_respuesta)} sin respuesta`} />
             </div>
 
             <PorPaso filas={filas} />
