@@ -1,0 +1,204 @@
+/* ============================================================================
+   Workshop › Planificar (16/10/2026): próximos talleres con sus acciones, el plan y el simulador, con
+   el sistema del dashboard comercial (`.dc-shell`, ver comercial.css). Todo bajo `.dc-shell .wp-…`.
+   Las grillas se acomodan al ancho de SU panel (container queries), no al de la ventana: el mismo
+   panel vive al lado de otro en una pantalla ancha y solo en una angosta.
+   ============================================================================ */
+
+.dc-shell.wp-plan { display: grid; gap: var(--s4); }
+.dc-shell .wp-arriba { display: grid; gap: var(--s4); align-items: start; }
+@media (min-width: 1200px) {
+    .dc-shell .wp-arriba { grid-template-columns: minmax(0, 1.75fr) minmax(360px, 1fr); }
+}
+.dc-shell .wp-panel { container-type: inline-size; padding: var(--s5); scroll-margin-top: 16px; }
+.dc-shell .wp-panel .panel-cab { margin-bottom: var(--s4); align-items: center; }
+
+.dc-shell .wp-aviso {
+    display: flex; align-items: center; gap: var(--s2); margin-bottom: var(--s3);
+    padding: var(--s2) var(--s3); border-radius: var(--radius-control);
+    background: var(--warning-surface); border: 1px solid var(--warning-border);
+    color: var(--text-muted); font-size: 12.5px; font-weight: 600;
+}
+.dc-shell .wp-aviso svg { width: 15px; height: 15px; color: var(--warning); }
+.dc-shell .wp-vacio { padding: var(--s4) 0; }
+
+.dc-shell .wp-cuenta {
+    display: inline-flex; align-items: center; height: 20px; padding: 0 7px; margin-left: 6px;
+    border-radius: var(--radius-pill); background: var(--mat-3); color: var(--text-on-surface);
+    font-size: 11px; font-weight: 900; letter-spacing: 0; vertical-align: middle;
+}
+
+/* Botón chico de texto: «Agregar», «Acción». */
+.dc-shell .wp-agregar {
+    display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 11px;
+    border-radius: var(--radius-pill); border: 1px solid var(--brand-secondary-border);
+    background: var(--brand-secondary-surface); color: var(--brand-secondary);
+    font-size: 11px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap;
+    transition: background-color .16s ease, transform .16s var(--spring), opacity .16s ease;
+}
+.dc-shell .wp-agregar svg { width: 13px; height: 13px; }
+.dc-shell .wp-agregar:hover:not(:disabled) { background: color-mix(in srgb, var(--brand-secondary) 22%, transparent); }
+.dc-shell .wp-agregar:active:not(:disabled) { transform: scale(.95); }
+.dc-shell .wp-agregar:disabled { opacity: .32; cursor: not-allowed; border-color: var(--border-main);
+    background: transparent; color: var(--text-muted); }
+
+/* --- Próximos talleres --------------------------------------------------------------------- */
+.dc-shell .wp-talleres { display: grid; gap: var(--s2); margin: 0; padding: 0; list-style: none; }
+.dc-shell .wp-taller {
+    position: relative; display: grid; gap: var(--s3) var(--s4); align-items: start;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: var(--s3) var(--s4); border-radius: var(--radius-control);
+    background: var(--mat-0); border: 1px solid var(--border-subtle);
+}
+.dc-shell .wp-taller[data-con-plan] { grid-template-columns: minmax(240px, 290px) minmax(0, 1fr) auto; }
+.dc-shell .wp-taller[data-vigente] { border-color: var(--brand-secondary-border); background: var(--brand-secondary-surface); }
+.dc-shell .wp-taller-id { display: grid; gap: 6px; min-width: 0; }
+.dc-shell .wp-cuando { display: flex; align-items: baseline; gap: var(--s2); flex-wrap: wrap; min-width: 0; }
+.dc-shell .wp-cuando .chip { align-self: center; height: 22px; padding: 0 8px; font-size: 10px; }
+.dc-shell .wp-dia { font-size: 15px; font-weight: 900; letter-spacing: -.01em; text-transform: capitalize; }
+.dc-shell .wp-hora { font-size: 15px; font-weight: 900; color: var(--text-muted); }
+.dc-shell .wp-taller-nom { font-size: 12px; font-weight: 600; color: var(--text-muted-40); min-width: 0; }
+.dc-shell .wp-enlaces { display: flex; gap: 6px; flex-wrap: wrap; }
+.dc-shell .wp-enlaces .chip { height: 22px; padding: 0 7px; gap: 4px; font-size: 9.5px; letter-spacing: .03em; }
+.dc-shell .wp-enlaces .chip svg { width: 12px; height: 12px; }
+.dc-shell a.wp-enlace:hover { background: color-mix(in srgb, var(--c) 24%, transparent); }
+
+.dc-shell .wp-taller-plan { display: grid; gap: 6px; min-width: 0; padding-left: var(--s4);
+    border-left: 1px solid var(--border-subtle); }
+.dc-shell .wp-plan-cab { display: flex; align-items: center; gap: 6px; min-height: 28px; }
+.dc-shell .wp-plan-cab .wp-agregar { margin-left: auto; }
+.dc-shell .wp-taller-btns { display: flex; gap: 6px; }
+
+@container (max-width: 620px) {
+    .dc-shell .wp-taller[data-con-plan] { grid-template-columns: minmax(0, 1fr) auto; }
+    .dc-shell .wp-taller[data-con-plan] .wp-taller-plan {
+        grid-column: 1 / -1; grid-row: 2; padding-left: 0; padding-top: var(--s3);
+        border-left: 0; border-top: 1px solid var(--border-subtle);
+    }
+    .dc-shell .wp-taller[data-con-plan] .wp-taller-btns { grid-column: 2; grid-row: 1; }
+}
+
+/* --- Una acción ---------------------------------------------------------------------------- */
+.dc-shell .wp-acciones { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; min-width: 0; }
+.dc-shell .wp-accion {
+    display: flex; align-items: center; gap: var(--s2); min-width: 0; min-height: 36px;
+    padding: 3px 4px 3px 2px; border-radius: 12px; transition: background-color .16s ease;
+}
+.dc-shell .wp-accion:hover { background: var(--mat-1); }
+.dc-shell .wp-check {
+    width: 22px; height: 22px; flex-shrink: 0; border-radius: 7px; display: inline-grid; place-items: center;
+    border: 1.5px solid var(--border-control); background: var(--bg-input); color: var(--on-state);
+    transition: background-color .16s ease, border-color .16s ease;
+}
+.dc-shell .wp-check svg { width: 14px; height: 14px; stroke-width: 3; }
+.dc-shell .wp-check[aria-checked="true"] { background: var(--success); border-color: var(--success); }
+.dc-shell .wp-accion-txt { display: grid; gap: 1px; flex: 1 1 auto; min-width: 0; }
+.dc-shell .wp-accion-tit {
+    text-align: left; font-size: 13px; font-weight: 700; line-height: 1.3; min-width: 0; color: var(--text-on-surface);
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere;
+}
+.dc-shell .wp-accion-tit:hover { text-decoration: underline; text-underline-offset: 3px; }
+.dc-shell .wp-accion-meta { font-size: 11px; font-weight: 600; color: var(--text-muted-40);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dc-shell .wp-accion[data-hecha] .wp-accion-tit { color: var(--text-muted-40); text-decoration: line-through; }
+
+/* --- Campos (también en los modales) ------------------------------------------------------- */
+.dc-shell .wp-campo { display: grid; gap: 6px; min-width: 0; }
+.dc-shell .wp-campo input,
+.dc-shell .wp-select {
+    height: 42px; width: 100%; min-width: 0; padding: 0 12px; border-radius: var(--radius-control);
+    background: var(--bg-input); border: 1px solid var(--border-subtle); outline: none;
+    font-size: 14px; font-weight: 600; transition: border-color .16s ease;
+}
+.dc-shell .wp-campo input:focus,
+.dc-shell .wp-select:focus { border-color: var(--border-control); }
+.dc-shell .wp-select option { background: var(--bg-flotante); color: var(--text-on-surface); }
+.dc-shell .wp-select--sm { width: auto; max-width: 150px; height: 30px; padding: 0 8px; font-size: 12px; flex-shrink: 0; }
+.dc-shell .wp-campos-2, .dc-shell .wp-campos-3 { display: grid; gap: var(--s3); }
+.dc-shell .wp-campos-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.dc-shell .wp-campos-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 560px) {
+    .dc-shell .wp-campos-2, .dc-shell .wp-campos-3 { grid-template-columns: minmax(0, 1fr); }
+}
+.dc-shell .wp-puntajes { display: grid; gap: var(--s3); grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin: 0; padding: 0; border: 0; min-width: 0; }
+.dc-shell .wp-puntajes legend { grid-column: 1 / -1; padding: 0; margin-bottom: var(--s2); }
+@media (max-width: 560px) { .dc-shell .wp-puntajes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* --- Modal --------------------------------------------------------------------------------- */
+/* Por encima del dock y la cabecera, por debajo del widget de bugs (como `Modal.jsx`). */
+.dc-shell.scrim.wp-velo { z-index: 170; min-height: 0; }
+.dc-shell .wp-modal { width: min(620px, 100%); display: grid; gap: var(--s4); padding: var(--s6); }
+.dc-shell .wp-modal:focus { outline: none; }
+.dc-shell .wp-modal-cab { margin-bottom: 0; align-items: center; }
+.dc-shell .wp-modal-tit { display: grid; gap: 4px; flex: 1; min-width: 0; }
+.dc-shell .wp-modal-cuerpo { display: grid; gap: var(--s3); }
+.dc-shell .wp-modal-pie { display: flex; justify-content: flex-end; gap: var(--s2); flex-wrap: wrap;
+    padding-top: var(--s4); border-top: 1px solid var(--border-subtle); }
+.dc-shell .wp-vista-previa { display: grid; gap: 4px; margin: 0; padding: var(--s3) var(--s4); list-style: none;
+    border-radius: var(--radius-control); background: var(--hundido); border: 1px solid var(--border-subtle);
+    font-size: 13px; font-weight: 600; text-transform: capitalize; }
+.dc-shell .wp-vista-previa li[data-ocupada] { color: var(--text-muted-40); text-decoration: line-through; }
+.dc-shell .wp-vista-previa li[data-ocupada] span { text-transform: none; text-decoration: none; display: inline-block; }
+
+/* --- Plan de acciones ---------------------------------------------------------------------- */
+.dc-shell .wp-cifras { display: grid; gap: var(--s2); grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: var(--s4); }
+@container (min-width: 700px) { .dc-shell .wp-cifras { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.dc-shell .wp-cifra { display: grid; gap: 4px; padding: var(--s3); min-width: 0; align-content: start; }
+.dc-shell .wp-cifra-cab { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.dc-shell .wp-cifra-cab .t-rotulo { font-size: 10px; letter-spacing: .1em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dc-shell .wp-cifra-n { font-size: 24px; line-height: 1.05; font-weight: 900; letter-spacing: -.025em; }
+.dc-shell .wp-cifra .t-cap { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dc-shell .wp-sueltas { display: grid; gap: var(--s2); }
+.dc-shell .wp-ver { display: inline-flex; align-items: center; gap: 6px; justify-self: start; padding: 4px 0;
+    font-size: 12px; font-weight: 700; color: var(--text-muted); }
+.dc-shell .wp-ver:hover { color: var(--text-on-surface); }
+.dc-shell .wp-ver svg { width: 14px; height: 14px; transition: transform .2s var(--spring); }
+.dc-shell .wp-ver svg[data-abierto] { transform: rotate(180deg); }
+
+/* --- Simulador ----------------------------------------------------------------------------- */
+.dc-shell .wp-sim-tope { display: grid; gap: var(--s3); margin-bottom: var(--s4); }
+@container (min-width: 1240px) { .dc-shell .wp-sim-tope { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.dc-shell .wp-eco, .dc-shell .wp-proy { display: grid; gap: var(--s2); grid-template-columns: repeat(4, minmax(0, 1fr)); min-width: 0; }
+.dc-shell .wp-eco { padding: var(--s3); }
+@container (max-width: 520px) {
+    .dc-shell .wp-eco, .dc-shell .wp-proy { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.dc-shell .wp-eco-celda, .dc-shell .wp-proy-celda { display: grid; gap: 4px; align-content: start; min-width: 0; }
+.dc-shell .wp-eco-celda .t-rotulo, .dc-shell .wp-proy-celda .t-rotulo { font-size: 10px; letter-spacing: .1em;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dc-shell .wp-plata { display: flex; align-items: center; gap: 4px; height: 38px; padding: 0 10px; min-width: 0;
+    border-radius: 12px; background: var(--bg-input); border: 1px solid var(--border-subtle); transition: border-color .16s ease; }
+.dc-shell .wp-plata:focus-within { border-color: var(--border-control); }
+.dc-shell .wp-plata b { font-size: 13px; font-weight: 900; color: var(--text-muted-40); }
+.dc-shell .wp-plata input { flex: 1; min-width: 0; width: 100%; border: 0; background: none; outline: none;
+    font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.dc-shell .wp-plata input:focus-visible { box-shadow: none; }
+.dc-shell .wp-eco-n { display: flex; align-items: center; height: 38px; font-size: 19px; font-weight: 900; letter-spacing: -.02em; }
+.dc-shell .wp-proy-celda { padding: var(--s3); border-radius: var(--radius-control); background: var(--bg-element);
+    border: 1px solid var(--border-subtle); }
+.dc-shell .wp-proy-n { font-size: 22px; line-height: 1.1; font-weight: 900; letter-spacing: -.025em;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dc-shell .wp-proy-d { font-size: 11px; font-weight: 700; color: var(--c); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.dc-shell .wp-palancas { display: grid; gap: var(--s2); grid-template-columns: minmax(0, 1fr); }
+@container (min-width: 460px) { .dc-shell .wp-palancas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container (min-width: 1150px) { .dc-shell .wp-palancas { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.dc-shell .wp-palanca { padding: var(--s3); gap: 6px; transition: border-color .2s ease, box-shadow .2s ease; }
+.dc-shell .wp-palanca[data-enfocada] { border-color: var(--brand-secondary-border);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-secondary) 22%, transparent); }
+.dc-shell .wp-palanca .palanca-cab { flex-wrap: nowrap; align-items: center; min-width: 0; }
+.dc-shell .wp-punto { width: 8px; height: 8px; flex-shrink: 0; border-radius: 50%; background: var(--c); }
+.dc-shell .wp-pal-nom { font-size: 12px; font-weight: 700; color: var(--text-muted); min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dc-shell .wp-palanca .palanca-v { font-size: 17px; }
+.dc-shell .wp-riel { position: relative; }
+.dc-shell .wp-marca { position: absolute; top: -3px; width: 2px; height: 24px; margin-left: -1px; border-radius: 2px;
+    pointer-events: none; }
+.dc-shell .wp-marca--prom { background: var(--text-muted-40); }
+.dc-shell .wp-marca--meta { background: var(--success); }
+.dc-shell .wp-pal-pie { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.dc-shell .wp-pal-pie .t-cap { flex: 1; min-width: 0; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dc-shell .wp-pal-btn { width: 28px; height: 28px; }
+.dc-shell .wp-pal-btn svg { width: 13px; height: 13px; }
+.dc-shell .wp-pal-btn:disabled { opacity: .35; cursor: not-allowed; }
