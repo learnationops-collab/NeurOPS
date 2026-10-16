@@ -61,3 +61,6 @@
     border-color: var(--border-subtle); background: transparent; color: var(--text-muted); cursor: pointer;
 }
 .dc-shell .live-badge--sin:hover { color: var(--text-on-surface); }
+
+/* En el teléfono la cuenta regresiva baja de renglón en vez de salirse por la derecha. */
+.dc-shell.ws-cabeza .tope-id { flex-wrap: wrap; row-gap: var(--s2); }
