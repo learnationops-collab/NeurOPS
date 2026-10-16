@@ -7,6 +7,13 @@ WhatsApp a quien da la sesión. Nada de esto toca Appointment, Client, Financial
 
 Las cuentas son usuarios con el rol `fulfillment` que crea la Academia (PUT /agenda/equipo); se buscan por
 email. Contrato completo en docs/agendas_v2_api.md («API de agenda para la Academia»).
+
+**Modo ventas** (`ventas: true` en el pedido; `?ventas=1` en el estado): las Momentum, que el closer da a
+sus alumnos. La cuenta es la del closer (rol closer) y se usa su configuración de ventas sin tocarla: su
+horario (su persona de Team), su calendario de ventas y lo ocupado en Google. Cada reserva es una
+`Appointment` con origen «Momentum» que el closer ve en el mazo y reporta en la ficha; el resultado vuelve
+a la Academia (app/services/momentum_academia.py). Es por pedido y no por cuenta: un closer que además
+da sesiones comunes de la Academia (rol fulfillment) las sigue dando como fulfillment.
 """
 
 import re
@@ -24,12 +31,13 @@ from app.agendas_v2.nucleo.disponibilidad import agenda_opt, ahora_ms, se_solapa
 from app.api.external import bp
 from app.decorators import require_academy_token
 from app.models import GoogleCalendarToken, User
-from app.models.user import ROLE_FULFILLMENT
+from app.models.user import ROLE_CLOSER, ROLE_FULFILLMENT
 
 DIA_MS = 86400000
 HORA = re.compile(r'^([01]\d|2[0-3]):[0-5]\d$|^24:00$')
 SAL_WHATSAPP = 'academia-whatsapp'
 VIGENCIA_PRUEBA_S = 15 * 60
+ORIGEN_MOMENTUM = 'Momentum'
 
 
 def _error(mensaje, codigo):
@@ -40,13 +48,19 @@ def _cuerpo():
     return request.get_json(silent=True) or {}
 
 
-def _cuenta(email):
-    """La cuenta activa con rol fulfillment (principal o adicional) de ese email, o None."""
+def _cuenta(email, ventas=False):
+    """La cuenta activa de ese email con rol fulfillment (principal o adicional), o con rol closer en
+    modo ventas; o None."""
     email = (email or '').strip().lower()
     if not email:
         return None
     u = User.query.filter(func.lower(User.email) == email).first()
-    return u if u and u.is_active and u.tiene_rol(ROLE_FULFILLMENT) else None
+    return u if u and u.is_active and u.tiene_rol(ROLE_CLOSER if ventas else ROLE_FULFILLMENT) else None
+
+
+def _ventas(datos):
+    """¿Es un pedido en modo ventas (una Momentum con el closer del alumno)?"""
+    return datos.get('ventas') in (True, 1, '1', 'true')
 
 
 def _preferencias(u):
@@ -84,6 +98,29 @@ def _estado(u):
         # Sin calendario elegido no se agenda: con una cuenta compartida (team@) caería en su calendario
         # principal y las sesiones de uno bloquearían a los demás.
         'lista': elegido and whatsapp == 'confirmado',
+    }
+
+
+def _estado_de_ventas(u):
+    """El de un closer en modo ventas: lista si conectó su Google Calendar en NeurOPS y tiene horario de
+    ventas. Su WhatsApp es el de sus avisos de ventas (no se confirma desde la Academia)."""
+    token = GoogleCalendarToken.query.filter_by(user_id=u.id).first()
+    calendar = 'no' if token is None else ('vencido' if token.vencido_en else 'conectado')
+    horario = servicio.disponibilidad_de(u)['horario']
+    con_horario = any(horario.get(d) for d in range(7))
+    conectado = calendar == 'conectado'
+    return {
+        'email': u.email,
+        'calendar': calendar,
+        'calendario_elegido': conectado,
+        'cuenta': None,
+        'calendario_nombre': 'Su calendario de ventas' if conectado else None,
+        'whatsapp': 'confirmado' if u.two_chat_number else 'sin_numero',
+        'numero': u.two_chat_number or None,
+        'invitar_personal': False,
+        'ventas': True,
+        'con_horario': con_horario,
+        'lista': conectado and con_horario,
     }
 
 
@@ -138,8 +175,11 @@ def agenda_alta():
 @bp.route('/agenda/equipo/<path:email>', methods=['GET'])
 @require_academy_token
 def agenda_estado(email):
-    u = _cuenta(email)
-    return jsonify(_estado(u)) if u else _error('No existe esa persona del equipo', 404)
+    ventas = _ventas(request.args)
+    u = _cuenta(email, ventas)
+    if not u:
+        return _error('No existe esa persona del equipo', 404)
+    return jsonify(_estado_de_ventas(u) if ventas else _estado(u))
 
 
 @bp.route('/agenda/equipo/<path:email>/google', methods=['POST'])
@@ -297,6 +337,55 @@ def agenda_whatsapp_confirmar(email):
     return jsonify(_estado(u)), 200
 
 
+# --- El closer de cada alumno -----------------------------------------------------------------
+
+MAX_ALUMNOS = 1000
+
+
+@bp.route('/agenda/closers', methods=['POST'])
+@require_academy_token
+def agenda_closers():
+    """{alumnos: [{email, work_client_id}]} → {closers: [{email, work_client_id, cliente_id, closer}]}.
+
+    Quién le vendió a cada alumno de la Academia, para que sus Momentum las dé ese closer: el de su venta
+    más reciente con vendedor (`FinancialSale.email_vendedor`, resuelto por email o por los alias del
+    closer). El cliente se busca por `work_client_id` y, si no, por email. `closer`: {email, nombre,
+    activo, rol} de la cuenta de NeurOPS, o null si no tiene venta con vendedor o no se resuelve."""
+    from app.models import Client
+    from app.models.financial import FinancialSale
+    from app.services.closer_followup_service import CloserFollowUpService
+
+    alumnos = _cuerpo().get('alumnos')
+    if not isinstance(alumnos, list) or len(alumnos) > MAX_ALUMNOS:
+        return _error(f'Mandá `alumnos` (hasta {MAX_ALUMNOS})', 400)
+
+    resueltos = {}
+
+    def closer_de(vendedor):
+        clave = vendedor.strip().lower()
+        if clave not in resueltos:
+            u = CloserFollowUpService._resolve_closer_for_email_vendedor(vendedor)
+            resueltos[clave] = {'email': (u.email or '').lower() or None, 'nombre': u.username,
+                                'activo': bool(u.is_active), 'rol': u._role} if u else None
+        return resueltos[clave]
+
+    salida = []
+    for a in alumnos:
+        a = a if isinstance(a, dict) else {}
+        email = (a.get('email') or '').strip().lower() or None
+        cid = a.get('work_client_id') if isinstance(a.get('work_client_id'), int) else None
+        cliente = db.session.get(Client, cid) if cid else None
+        if not cliente and email:
+            cliente = Client.query.filter(func.lower(Client.email) == email).first()
+        venta = FinancialSale.query.filter(
+            FinancialSale.client_id == cliente.id, FinancialSale.email_vendedor.isnot(None),
+            FinancialSale.email_vendedor != '').order_by(FinancialSale.date.desc(), FinancialSale.id.desc()).first() \
+            if cliente else None
+        salida.append({'email': email, 'work_client_id': cid, 'cliente_id': cliente.id if cliente else None,
+                       'closer': closer_de(venta.email_vendedor) if venta else None})
+    return jsonify({'closers': salida}), 200
+
+
 # --- Horarios y reservas ----------------------------------------------------------------------
 
 
@@ -343,13 +432,18 @@ def agenda_horarios():
     from app.services.google_service import GoogleService
 
     datos = _cuerpo()
-    u = _cuenta(datos.get('email'))
+    ventas = _ventas(datos)
+    u = _cuenta(datos.get('email'), ventas)
     if not u:
         return _error('No existe esa persona del equipo', 404)
-    estado = _estado(u)
+    estado = _estado_de_ventas(u) if ventas else _estado(u)
     if not estado['lista']:
         return jsonify({'error': 'no_lista', **estado}), 409
     tz, horario = datos.get('tz') or u.timezone, _horario(datos.get('horario'))
+    if ventas:
+        # Un closer: su horario de ventas, en su zona. El que manda la Academia no aplica.
+        disp = servicio.disponibilidad_de(u)
+        tz, horario = disp['tz'], disp['horario']
     try:
         ZoneInfo(tz)
     except Exception:  # noqa: BLE001
@@ -399,10 +493,11 @@ def agenda_reservar():
     from app.services.google_service import GoogleService
 
     datos = _cuerpo()
-    u = _cuenta(datos.get('email'))
+    ventas = _ventas(datos)
+    u = _cuenta(datos.get('email'), ventas)
     if not u:
         return _error('No existe esa persona del equipo', 404)
-    estado = _estado(u)
+    estado = _estado_de_ventas(u) if ventas else _estado(u)
     if not estado['calendario_elegido']:
         return _error('no_lista', 409)
     inicio, dur = datos.get('inicio'), _entero(datos.get('duracion'), 5, 240)
@@ -411,6 +506,8 @@ def agenda_reservar():
     invitado = datos.get('invitado') or {}
     aviso = datos.get('aviso') or {}
     inicio_dt = servicio.ms_a_dt(inicio)
+    if ventas:
+        return _reservar_momentum(u, datos, inicio, inicio_dt, dur)
     calendar_id = GoogleService._calendario(u.id)
     # Su calendario personal (su email), si lo pidió y no es la misma cuenta que la conectada.
     personal = [u.email] if estado['invitar_personal'] and u.email != _preferencias(u).get('cuenta') else []
@@ -427,14 +524,74 @@ def agenda_reservar():
     return jsonify({'event_id': event_id, 'calendar_id': calendar_id, 'meet': meet}), 200
 
 
+def _reservar_momentum(u, datos, inicio, inicio_dt, dur):
+    """La reserva de una Momentum con un closer: una `Appointment` (origen «Momentum») para el cliente
+    del alumno (por email; se crea si no está), con el evento con Meet en su calendario de ventas y el
+    WhatsApp. No pasa por create_appointment: no es un lead nuevo y no tiene que tocar su pipeline.
+    `academia` (reserva, sesión, tipo, alumno) queda en agenda_payload: con eso vuelve el resultado."""
+    from app.agendas_v2.operacion import cliente_por_email
+    from app.models import Appointment, Notification
+    from app.services.booking_service import BookingService
+    from app.services.google_service import GoogleService
+
+    invitado = datos.get('invitado') or {}
+    aviso = datos.get('aviso') or {}
+    email = (invitado.get('email') or '').strip().lower() or None
+    if not email:
+        return _error('Falta el email del alumno', 400)
+    cliente = cliente_por_email(email) or BookingService.find_or_create_client(
+        nombre=(invitado.get('nombre') or '').strip() or 'Alumno', email=email, instagram=None, phone=None)
+    choca = Appointment.query.filter(
+        Appointment.closer_id == u.id, Appointment.start_time == inicio_dt, Appointment.closer_processed.is_(False),
+        db.or_(Appointment.result.is_(None), Appointment.result.notin_(['Cancelada', 'Reprogramada']))).first()
+    if choca:
+        return _error('ocupado', 409)
+    titulo = str(datos.get('titulo') or 'Momentum')[:200]
+    appt = Appointment(closer_id=u.id, client_id=cliente.id, start_time=inicio_dt, origin=ORIGEN_MOMENTUM,
+                       last_stage='Nueva', closer_result='Pendiente',
+                       agenda_payload={'academia': dict(datos.get('academia') or {}), 'duracion_min': dur,
+                                       'titulo': titulo, 'lead': {'nombre': invitado.get('nombre'), 'email': email}})
+    db.session.add(appt)
+    db.session.flush()
+    try:
+        event_id, meet = GoogleService.crear_evento_con_meet(
+            u.id, inicio_dt, inicio_dt + timedelta(minutes=dur), titulo, str(datos.get('descripcion') or '')[:4000],
+            invitado_email=email)
+    except Exception as e:  # noqa: BLE001
+        db.session.rollback()
+        current_app.logger.warning(f'[AGENDA ACADEMIA] No se pudo crear la Momentum de #{u.id}: {e}')
+        return _error('google', 502)
+    appt.google_event_id = event_id
+    appt.agenda_payload = {**appt.agenda_payload, 'meet': meet}
+    cuando = inicio_dt.strftime('%d/%m/%Y %H:%M')
+    db.session.add(Notification(
+        subject='Nueva Momentum',
+        content=f'{cliente.full_name or email} tiene su {aviso.get("sesion") or "Momentum"} el {cuando} UTC.',
+        target_users=[int(u.id)], associated_id=appt.id, associated_type='appointment'))
+    db.session.commit()
+    servicio._google_cache.pop(u.id, None)
+    _aviso(u, inicio, servicio.zona_de_usuario(u), aviso.get('sesion'), aviso.get('alumno') or invitado.get('nombre'))
+    return jsonify({'event_id': event_id, 'calendar_id': GoogleService._calendario(u.id), 'meet': meet,
+                    'appointment_id': appt.id}), 200
+
+
+def _momentum_de(u, event_id):
+    """La `Appointment` de la Momentum de ese evento (modo ventas), o None."""
+    from app.models import Appointment
+
+    return Appointment.query.filter_by(closer_id=u.id, google_event_id=event_id, origin=ORIGEN_MOMENTUM).first()
+
+
 @bp.route('/agenda/reservas/<event_id>', methods=['PATCH'])
 @require_academy_token
 def agenda_mover(event_id):
-    """{email, calendar_id, inicio (ms), duracion}: mueve el evento; Google avisa al alumno."""
+    """{email, calendar_id, inicio (ms), duracion, ventas}: mueve el evento; Google avisa al alumno. En modo
+    ventas también mueve la llamada del closer."""
     from app.services.google_service import GoogleService
 
     datos = _cuerpo()
-    u = _cuenta(datos.get('email'))
+    ventas = _ventas(datos)
+    u = _cuenta(datos.get('email'), ventas)
     if not u:
         return _error('No existe esa persona del equipo', 404)
     inicio, dur = datos.get('inicio'), _entero(datos.get('duracion'), 5, 240)
@@ -447,6 +604,10 @@ def agenda_mover(event_id):
     except Exception as e:  # noqa: BLE001
         current_app.logger.warning(f'[AGENDA ACADEMIA] No se pudo mover el evento {event_id} de #{u.id}: {e}')
         return _error('google', 502)
+    appt = _momentum_de(u, event_id) if ventas else None
+    if appt:
+        appt.start_time, appt.is_rescheduled = inicio_dt, True
+        db.session.commit()
     servicio._google_cache.pop(u.id, None)
     return jsonify({'ok': True}), 200
 
@@ -454,14 +615,20 @@ def agenda_mover(event_id):
 @bp.route('/agenda/reservas/<event_id>', methods=['DELETE'])
 @require_academy_token
 def agenda_cancelar(event_id):
-    """{email, calendar_id}: borra el evento; Google le avisa la cancelación al alumno."""
+    """{email, calendar_id, ventas}: borra el evento; Google le avisa la cancelación al alumno. En modo
+    ventas, la llamada del closer queda cancelada."""
     from app.services.google_service import GoogleService
 
     datos = {**request.args.to_dict(), **_cuerpo()}
-    u = _cuenta(datos.get('email'))
+    ventas = _ventas(datos)
+    u = _cuenta(datos.get('email'), ventas)
     if not u:
         return _error('No existe esa persona del equipo', 404)
     ok = GoogleService.delete_event(u.id, event_id, calendar_id=datos.get('calendar_id'), avisar=True)
+    appt = _momentum_de(u, event_id) if ventas else None
+    if appt:
+        appt.result = 'Cancelada'  # La canceló la Academia: deja de ocupar el horario y sale del mazo.
+        db.session.commit()
     servicio._google_cache.pop(u.id, None)
     return jsonify({'ok': ok}), 200
 

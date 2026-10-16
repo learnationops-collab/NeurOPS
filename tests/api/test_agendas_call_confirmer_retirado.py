@@ -7,7 +7,7 @@ Lo que se queda a propósito: el dato. La columna sigue en la base, la ingesta d
 llega y el PUT lo sigue escribiendo, porque la pantalla del rol triage (/triage/deck) manda su
 usuario al confirmar y el prefill de su reporte diario cuenta las agendas por ese campo.
 """
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 
 import pytest
 
@@ -21,7 +21,10 @@ def admin(make_user, auth_headers):
 
 @pytest.fixture()
 def agendas(db):
-    manana = datetime.utcnow().replace(microsecond=0) + timedelta(days=1)
+    # Mañana al mediodía (UTC), no «dentro de 24 h»: la segunda agenda es 2 h después y, si el test
+    # corría después de las 22 UTC, caía al día siguiente y el listado de UN día traía una sola
+    # (pasó el 15/10/2026 a las 23:19 UTC). 12 y 14 UTC son el mismo día también en La Paz (UTC−4).
+    manana = datetime.combine(datetime.utcnow().date() + timedelta(days=1), time(12, 0))
     filas = [
         FinancialAgenda(nombre='workshop', lead='Ana Gomez', closer='cerrador', date=manana,
                         fecha_meet=manana.isoformat(), estado='Pendiente', encargado_triage='confirmadora'),

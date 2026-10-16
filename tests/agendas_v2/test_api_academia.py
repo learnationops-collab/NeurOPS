@@ -384,3 +384,106 @@ def test_terminar_una_reunion_corta_la_serie_en_utc_y_borrar_la_quita(client, db
     cuerpo = {'email': 'dari@thelearnation.com', 'calendar_id': 'cal-dari'}
     r = client.delete(f'{BASE}/reuniones/serie1', json=cuerpo, headers=H)
     assert r.json == {'ok': True} and google['borrar'][-1] == ('serie1', 'cal-dari', True)
+
+
+# --- Momentum con un closer (modo ventas) ------------------------------------------------------
+
+
+@pytest.fixture
+def closer(db, monkeypatch):
+    """Un closer con Google conectado (su calendario de ventas) y horario de ventas de 10 a 12."""
+    u = User(username='Allan', email='allan@thelearnation.com', role='closer', two_chat_number='5491100001111')
+    u.set_unusable_password()
+    db.session.add(u)
+    db.session.flush()
+    db.session.add(GoogleCalendarToken(user_id=u.id, token_json='{}', google_calendar_id='cal-ventas'))
+    db.session.commit()
+    horario = {d: ([['10:00', '12:00']] if 1 <= d <= 5 else []) for d in range(7)}
+    monkeypatch.setattr(servicio, 'disponibilidad_de', lambda user: {'en_team': True, 'horario': horario, 'tz': BA})
+    return u
+
+
+def _momentum(client, **extra):
+    cuerpo = {'email': 'allan@thelearnation.com', 'inicio': LUNES_10, 'duracion': 45, 'titulo': 'Momentum Session: Ana y Allan',
+              'invitado': {'nombre': 'Ana', 'email': 'Ana@Mail.com'}, 'aviso': {'sesion': 'Momentum Session', 'alumno': 'Ana'},
+              'academia': {'reserva_id': 501, 'sesion_id': 770, 'sesion': 'Momentum Session', 'tipo': 'sena', 'alumno_id': 9},
+              'ventas': True, **extra}
+    return client.post(f'{BASE}/reservas', json=cuerpo, headers=H)
+
+
+def test_closer_da_la_momentum_con_su_configuracion_de_ventas(client, db, closer):
+    # Solo en modo ventas: como fulfillment no existe.
+    assert client.get(f'{BASE}/equipo/allan@thelearnation.com', headers=H).status_code == 404
+    r = client.get(f'{BASE}/equipo/allan@thelearnation.com?ventas=1', headers=H)
+    assert r.json['ventas'] is True and r.json['lista'] is True and r.json['calendario_nombre'] == 'Su calendario de ventas'
+    # Sus horarios salen de su horario de ventas, no del que manda la Academia.
+    r = _horarios(client, email='allan@thelearnation.com', horario={'0': [['20:00', '21:00']]}, ventas=True)
+    assert r.status_code == 200 and _del_lunes(r) == [LUNES_10, LUNES_10 + 3600000]
+
+
+def test_la_momentum_es_una_llamada_del_closer_en_el_mazo(client, db, closer, google, whatsapp):
+    r = _momentum(client)
+    assert r.status_code == 200 and r.json['calendar_id'] == 'cal-ventas'
+    appt = db.session.get(Appointment, r.json['appointment_id'])
+    assert appt.closer_id == closer.id and appt.origin == 'Momentum' and appt.google_event_id == 'evt1'
+    assert appt.client.email == 'ana@mail.com' and appt.agenda_payload['academia']['reserva_id'] == 501
+    assert google['crear'][0]['user_id'] == closer.id and google['crear'][0]['invitado'] == 'ana@mail.com'
+    assert whatsapp[0]['numero'] == '5491100001111' and whatsapp[0]['grupo'] == 'Academia'
+    # Sin lead nuevo ni espejo de ventas: no toca su pipeline.
+    assert FinancialAgenda.query.count() == 0
+    # Mismo horario: no se pisa.
+    assert _momentum(client).status_code == 409
+    # La Academia la mueve y la cancela.
+    nuevo = LUNES_10 + 3600000
+    cuerpo = {'email': 'allan@thelearnation.com', 'inicio': nuevo, 'duracion': 45, 'ventas': True}
+    assert client.patch(f'{BASE}/reservas/evt1', json=cuerpo, headers=H).status_code == 200
+    db.session.refresh(appt)
+    assert appt.start_time == servicio.ms_a_dt(nuevo) and appt.is_rescheduled
+    cuerpo = {'email': 'allan@thelearnation.com', 'ventas': True}
+    assert client.delete(f'{BASE}/reservas/evt1', json=cuerpo, headers=H).status_code == 200
+    db.session.refresh(appt)
+    assert appt.result == 'Cancelada'
+
+
+def test_la_momentum_sin_google_no_deja_la_llamada(client, db, closer, google):
+    google['falla'] = RuntimeError('google caído')
+    assert _momentum(client).status_code == 502
+    assert Appointment.query.count() == 0
+
+
+def test_el_reporte_de_la_ficha_se_traduce_para_la_academia(app):
+    from app.services.momentum_academia import traducir
+
+    with app.app_context():
+        assert traducir('venta', {}) == {'asistencia': 'asistio', 'resultado': 'pago'}
+        no_cerro = {'resultado': 'asistio', 'deck': {'offer_presented': True}, 'objecion': 'Precio'}
+        assert traducir('resultado', no_cerro) == {'asistencia': 'asistio', 'resultado': 'pensando'}
+        assert traducir('resultado', {'resultado': 'asistio', 'deck': {}}) == {'asistencia': 'asistio', 'resultado': None}
+        assert traducir('resultado', {'resultado': 'no_asistio', 'deck': {}}) == {'asistencia': 'no_asistio'}
+        assert traducir('resultado', {'contacto_result': 'no_paga', 'deck': {}}) == {'resultado': 'no_sigue'}
+        reagenda = {'resultado': 'reagenda', 'deck': {}, 'reagenda': {'start_time': '2026-10-08T15:00:00Z'}}
+        assert traducir('resultado', reagenda) == {'asistencia': 'reagenda', 'inicio': '2026-10-08T15:00:00Z'}
+        assert traducir('resultado', {'deck': {'closer_notes': 'x'}}) is None
+
+
+def test_el_closer_de_cada_alumno_sale_de_su_venta_mas_reciente(client, db, closer):
+    from app.models.financial import FinancialSale
+
+    ana = Client(full_name='Ana', email='ana@mail.com')
+    beto = Client(full_name='Beto', email='beto@mail.com')
+    db.session.add_all([ana, beto])
+    db.session.flush()
+    db.session.add_all([
+        FinancialSale(client_id=ana.id, email_vendedor='otro@x.com', date=datetime(2026, 9, 1)),
+        FinancialSale(client_id=ana.id, email_vendedor='Allan@TheLearnation.com', date=datetime(2026, 10, 1)),
+        FinancialSale(client_id=beto.id, email_vendedor=None, date=datetime(2026, 10, 1)),
+    ])
+    db.session.commit()
+    alumnos = [{'email': 'x@x.com', 'work_client_id': ana.id}, {'email': 'Beto@mail.com'}, {'email': 'nadie@mail.com'}]
+    r = client.post(f'{BASE}/closers', json={'alumnos': alumnos}, headers=H)
+    assert r.status_code == 200
+    a, b, c = r.json['closers']
+    assert a['cliente_id'] == ana.id and a['closer'] == {'email': 'allan@thelearnation.com', 'nombre': 'Allan', 'activo': True, 'rol': 'closer'}
+    assert b['cliente_id'] == beto.id and b['closer'] is None
+    assert c['cliente_id'] is None and c['closer'] is None
+    assert client.post(f'{BASE}/closers', json={'alumnos': 'x'}, headers=H).status_code == 400

@@ -358,3 +358,18 @@ Hasta ahora el acceso en la Academia se fijaba solo al declarar la venta o con �
   - Es idempotente por `sale_id` y por fecha + monto + tipo, porque el mismo pago puede entrar por dos caminos.
 - **Fallos:** quedan en el log (`[ACADEMY PAYMENTS]`). La venta nunca se toca.
 - **Sigue pendiente:** acortar el acceso cuando una cuota se vence sin pagar (§5.3).
+
+## 8. El resultado de cada Momentum vuelve a la Academia (2026-10-15)
+
+> **Estado**: implementado. Del lado de la Academia es su ADR-137 y `POST /api/v1/sessions/momentum-result` (doc de la Academia: `docs/MODELO/API.md`).
+
+Las Momentum son las llamadas del closer con sus alumnos: la de seña (después de la Scale; define si el alumno sigue) y la del cierre (después de la Exam; upsell). La Academia las agenda con el closer del alumno por la API de agenda en modo ventas (`agendas_v2_api.md`) y quedan como `Appointment` con origen `Momentum`. El closer las reporta en la ficha como cualquier llamada, y `app/services/momentum_academia.py` le avisa a la Academia en un hilo aparte:
+
+- **Dónde se engancha:** `POST /api/ficha/<appt>/resultado` y `/venta` (`_ejecutar` en `app/api/ficha/escritura.py`), solo en las agendas con `agenda_payload.academia.reserva_id`.
+- **Qué se manda:** `reserva_id`, `appointment_id`, `closer_email`, `nota` (la objeción o la nota) y lo que dice el reporte:
+  - `asistencia`: `asistio`, `no_asistio`, `cancelo` o `reagenda` (con `inicio`);
+  - `resultado`: `pago` (declaró la venta), `pensando` (no cerró: sigue en seguimiento) o `no_sigue` («No va a pagar», o descartado).
+- **El pago no viaja acá:** llega como siempre por §7 y convierte la seña. Si el alumno no sigue, la seña vence sola.
+- **Fallos:** quedan en el log (`[MOMENTUM]`). El reporte nunca se toca.
+- **Pendiente:** el mazo viejo (`POST /api/closer/deck/<id>`) no avisa; solo la ficha.
+

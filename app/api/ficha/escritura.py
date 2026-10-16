@@ -55,12 +55,15 @@ def _con_accesos_de_bajas(resultado):
     return resultado
 
 
-def _ejecutar(appt_id, permiso, accion, exito=200):
+def _ejecutar(appt_id, permiso, accion, exito=200, momentum=None):
+    """`momentum`: 'resultado' o 'venta' si la acción reporta la llamada; en una Momentum de la
+    Academia, se le avisa el resultado (app/services/momentum_academia.py)."""
     appt, error = _agenda_y_permiso(appt_id, permiso)
     if error:
         return error
+    datos = _datos()
     try:
-        resultado = accion(appt, _datos(), current_user)
+        resultado = accion(appt, datos, current_user)
     except acciones.ErrorDeAccion as e:
         return _error_de_accion(e)
     except Exception as e:
@@ -68,6 +71,10 @@ def _ejecutar(appt_id, permiso, accion, exito=200):
         # reagenda requerida"): se devuelve tal cual en vez de un 500 sin explicacion.
         db.session.rollback()
         return jsonify({'message': str(e)}), 400
+    if momentum:
+        from app.services import momentum_academia
+
+        momentum_academia.avisar(appt, momentum, datos, current_user)
     return jsonify(_con_accesos_de_bajas(resultado)), exito
 
 
@@ -80,7 +87,7 @@ def confirmacion(appt_id):
 @bp.route('/<int:appt_id>/resultado', methods=['POST'])
 def resultado(appt_id):
     """El arbol de reporte de la llamada."""
-    return _ejecutar(appt_id, 'reportar', acciones.resultado)
+    return _ejecutar(appt_id, 'reportar', acciones.resultado, momentum='resultado')
 
 
 @bp.route('/<int:appt_id>/fathom', methods=['PATCH'])
@@ -98,7 +105,7 @@ def fathom(appt_id):
 @bp.route('/<int:appt_id>/venta', methods=['POST'])
 def venta(appt_id):
     """Declara una venta o cobra una cuota (via `SheetsService.post_to_sheets`)."""
-    return _ejecutar(appt_id, 'reportar', acciones.venta, exito=201)
+    return _ejecutar(appt_id, 'reportar', acciones.venta, exito=201, momentum='venta')
 
 
 @bp.route('/cliente/<int:client_id>/agenda-de-venta', methods=['POST'])
