@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Loader2, Zap } from 'lucide-react';
+import { Loader2, PlayCircle, Zap } from 'lucide-react';
+import { urlLoom } from '../../../../utils/loom';
 import InfoTooltip from '../../../../components/ui/InfoTooltip';
 import WorkshopSourceSplit from './WorkshopSourceSplit';
 
@@ -77,6 +78,11 @@ const WorkshopFunnelView = ({
                         <div>
                             <p className="eyebrow">{formatDate(selectedEvent?.date)}</p>
                             <h2>{selectedEvent?.name}</h2>
+                            {selectedEvent?.replay_loom_id && (
+                                <a className="event-grabacion" href={urlLoom(selectedEvent.replay_loom_id)} target="_blank" rel="noopener noreferrer">
+                                    <PlayCircle size={12} aria-hidden="true" /> Ver la grabación de este taller
+                                </a>
+                            )}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
