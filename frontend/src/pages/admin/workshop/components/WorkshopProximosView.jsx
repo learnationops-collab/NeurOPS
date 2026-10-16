@@ -1,14 +1,19 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { CalendarPlus, Edit2, Trash2, Video, MessageCircle, Radio, AlertTriangle, X, Loader2, Check } from 'lucide-react';
+import { AlertTriangle, CalendarPlus, Check, Edit2, Loader2, MessageCircle, Plus, Radio, Trash2, Video } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../../services/api';
+import { PanelCab } from '../../../comercial/components/Shared';
+import ModalPlan from '../planificar/ModalPlan';
+import FilaAccion from '../planificar/FilaAccion';
+import { talleresPorDelante } from '../planificar/plan';
 import {
     aInicioUtc, enLaLanding, esProximo, formatearInicio, nombreZona, sugerenciaProgramar, zonaNavegador,
 } from '../agendaTaller';
 
 /*
- * Próximos talleres: lo que antes se editaba en workshops.csv de institute-site.
+ * Próximos talleres: lo que antes se editaba en workshops.csv de institute-site, y desde el 16/10/2026
+ * también lo que hay que cumplir en cada uno (sus acciones, que se tildan acá).
  *
  * Las landings leen de /api/public/workshops/proximos la fecha, el Google Meet y el grupo de
  * WhatsApp de cada taller. Acá se ven y se cargan en la hora de quien mira el panel; el que
@@ -17,17 +22,18 @@ import {
 
 const MAX_SEMANAS = 26;
 
-const Enlace = ({ url, icon: Icon, heredado }) => {
-    if (!url) {
-        return heredado
-            ? <span className="prox-heredado">El del anterior</span>
-            : <span className="prox-falta">Sin link</span>;
+/** El link de un taller: el suyo, el que hereda del anterior o ninguno. */
+const Enlace = ({ url, icon: Icon, nombre, heredado }) => {
+    if (url) {
+        return (
+            <a className="chip wp-enlace" style={{ '--c': 'var(--success)' }} href={url} target="_blank" rel="noreferrer" title={url}>
+                <Icon aria-hidden="true" /> {nombre}
+            </a>
+        );
     }
-    return (
-        <a className="prox-enlace" href={url} target="_blank" rel="noreferrer" title={url}>
-            <Icon size={13} aria-hidden="true" /> {url.replace(/^https?:\/\//, '')}
-        </a>
-    );
+    return heredado
+        ? <span className="chip" style={{ '--c': 'var(--idle)' }} title="Las landings usan el del taller anterior"><Icon aria-hidden="true" /> {nombre} heredado</span>
+        : <span className="chip" style={{ '--c': 'var(--warning)' }}><Icon aria-hidden="true" /> Sin {nombre}</span>;
 };
 
 /** Fechas (en la hora del navegador) que crearía «Programar». */
@@ -54,8 +60,7 @@ const ProgramarModal = ({ eventos, onClose, onProgramado }) => {
         onChange: (e) => setForm((prev) => ({ ...prev, [clave]: e.target.value })),
     });
 
-    const programar = async (e) => {
-        e.preventDefault();
+    const programar = async () => {
         if (!fechas.length || enviando) return;
         setEnviando(true);
         try {
@@ -81,160 +86,164 @@ const ProgramarModal = ({ eventos, onClose, onProgramado }) => {
     };
 
     return (
-        <div className="modal-overlay">
-            <button type="button" className="modal-backdrop" aria-label="Cerrar" onClick={onClose} />
-            <div className="action-modal" role="dialog" aria-modal="true" aria-label="Programar talleres">
-                <header>
-                    <div>
-                        <p className="eyebrow">Un taller por semana</p>
-                        <h2>Programar talleres</h2>
-                    </div>
-                    <button type="button" onClick={onClose} aria-label="Cerrar"><X size={20} /></button>
-                </header>
-                <div className="modal-body">
-                    <form onSubmit={programar}>
-                        <div className="form-grid">
-                            <label className="form-field">
-                                <span>Primer taller</span>
-                                <span className="field-control"><input type="date" required {...campo('fecha')} /></span>
-                            </label>
-                            <label className="form-field">
-                                <span>Hora <small className="hora-zona">· tu hora ({nombreZona()})</small></span>
-                                <span className="field-control"><input type="time" required {...campo('hora')} /></span>
-                            </label>
-                            <label className="form-field wide">
-                                <span>Cuántas semanas</span>
-                                <span className="field-control"><input type="number" min="1" max={MAX_SEMANAS} required {...campo('semanas')} /></span>
-                            </label>
-                            <label className="form-field wide">
-                                <span>Link de Google Meet</span>
-                                <span className="field-control"><input type="url" placeholder="https://meet.google.com/..." {...campo('meet_url')} /></span>
-                            </label>
-                            <label className="form-field wide">
-                                <span>Link del grupo de WhatsApp</span>
-                                <span className="field-control"><input type="url" placeholder="https://chat.whatsapp.com/..." {...campo('whatsapp_url')} /></span>
-                            </label>
-                        </div>
-
-                        {fechas.length > 0 && (
-                            <ul className="prox-vista" aria-label="Talleres que se van a crear">
-                                {fechas.map((iso) => {
-                                    const dia = iso && new Date(iso);
-                                    const clave = `${dia.getFullYear()}-${String(dia.getMonth() + 1).padStart(2, '0')}-${String(dia.getDate()).padStart(2, '0')}`;
-                                    const ya = ocupadas.has(clave);
-                                    return (
-                                        <li key={iso} className={ya ? 'ocupada' : ''}>
-                                            {formatearInicio(iso)}{ya && <small> · ya tiene taller, no se toca</small>}
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        )}
-
-                        <div className="wizard-footer">
-                            <div>
-                                <button type="button" className="secondary-action" onClick={onClose}>Cancelar</button>
-                            </div>
-                            <div className="wizard-acciones">
-                                <button type="submit" className="primary-action" disabled={!fechas.length || enviando}>
-                                    {enviando ? <Loader2 size={15} className="animate-spin" /> : <Check size={16} />} Programar
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
+        <ModalPlan titulo="Programar talleres" eyebrow="Un taller por semana" onCerrar={onClose} onSubmit={programar}
+            cerrable={!enviando}
+            pie={(
+                <>
+                    <button type="button" className="btn btn--linea btn--sm" onClick={onClose} disabled={enviando}>Cancelar</button>
+                    <button type="submit" className="btn btn--cta btn--sm" disabled={!fechas.length || enviando}>
+                        {enviando ? <Loader2 className="ws-gira" aria-hidden="true" /> : <Check aria-hidden="true" />} Programar
+                    </button>
+                </>
+            )}>
+            <div className="wp-campos-3">
+                <label className="wp-campo">
+                    <span className="t-rotulo">Primer taller</span>
+                    <input type="date" required {...campo('fecha')} />
+                </label>
+                <label className="wp-campo">
+                    <span className="t-rotulo">Hora · {nombreZona()}</span>
+                    <input type="time" required {...campo('hora')} />
+                </label>
+                <label className="wp-campo">
+                    <span className="t-rotulo">Semanas</span>
+                    <input type="number" min="1" max={MAX_SEMANAS} required {...campo('semanas')} />
+                </label>
             </div>
-        </div>
+            <label className="wp-campo">
+                <span className="t-rotulo">Google Meet</span>
+                <input type="url" placeholder="https://meet.google.com/..." {...campo('meet_url')} />
+            </label>
+            <label className="wp-campo">
+                <span className="t-rotulo">Grupo de WhatsApp</span>
+                <input type="url" placeholder="https://chat.whatsapp.com/..." {...campo('whatsapp_url')} />
+            </label>
+
+            {fechas.length > 0 && (
+                <ul className="wp-vista-previa" aria-label="Talleres que se van a crear">
+                    {fechas.map((iso) => {
+                        const dia = new Date(iso);
+                        const clave = `${dia.getFullYear()}-${String(dia.getMonth() + 1).padStart(2, '0')}-${String(dia.getDate()).padStart(2, '0')}`;
+                        const ya = ocupadas.has(clave);
+                        return (
+                            <li key={iso} data-ocupada={ya ? '1' : undefined}>
+                                {formatearInicio(iso)}{ya && <span className="mut40"> · ya tiene taller, no se toca</span>}
+                            </li>
+                        );
+                    })}
+                </ul>
+            )}
+        </ModalPlan>
     );
 };
 
-const WorkshopProximosView = ({ events, onEdit, onDelete, onProgramado }) => {
+const Cuando = ({ taller }) => {
+    if (!taller.inicio_at) {
+        return (
+            <>
+                <span className="wp-dia">{taller.date.split('-').reverse().join('/')}</span>
+                <span className="chip" style={{ '--c': 'var(--warning)' }}>Sin hora: no sale en las landings</span>
+            </>
+        );
+    }
+    const [dia, hora] = formatearInicio(taller.inicio_at).split(' · ');
+    return <><span className="wp-dia">{dia}</span><span className="wp-hora num">{hora}</span></>;
+};
+
+/**
+ * `acciones`: las de cada taller, por id (ver `agruparAcciones`). Sin `acciones` se ve solo la
+ * configuración de los talleres.
+ */
+const WorkshopProximosView = ({
+    events, onEdit, onDelete, onProgramado, acciones, onNuevaAccion, onTildar, onEditarAccion, onBorrarAccion,
+}) => {
     const [programando, setProgramando] = useState(false);
     const reducir = useReducedMotion();
     const ahora = new Date();
     const vigente = enLaLanding(events, ahora);
-    const proximos = events
-        .filter((e) => esProximo(e, ahora))
-        .sort((a, b) => (a.inicio_at || `${a.date}T23:59`).localeCompare(b.inicio_at || `${b.date}T23:59`));
-    const hayProximoConHora = proximos.some((e) => e.inicio_at);
+    const talleres = talleresPorDelante(events, ahora);
+    const hayProximoConHora = talleres.some((e) => e.inicio_at && esProximo(e, ahora));
 
     return (
-        <section className="panel prox-panel" aria-labelledby="prox-titulo">
-            <div className="section-heading">
-                <div>
-                    <p className="eyebrow">Lo que ven las landings</p>
-                    <h2 id="prox-titulo">Próximos talleres</h2>
-                    <p className="secondary-copy">
-                        Horas en tu zona ({nombreZona()}). Lo que cambies se ve en las landings de institute en un minuto;
-                        quien entre desde otro país lo ve en su hora.
-                    </p>
-                </div>
-                <button type="button" className="primary-action" onClick={() => setProgramando(true)}>
-                    <CalendarPlus size={16} /> Programar semanas
+        <section className="panel wp-panel" id="wp-proximos" aria-label="Próximos talleres">
+            <PanelCab titulo="Próximos talleres"
+                tip={`Horas en tu zona (${nombreZona()}). Lo que cambies se ve en las landings de institute en un minuto; quien entre desde otro país lo ve en su hora. Un taller sin link usa el del anterior. Cada taller lleva las acciones que hay que cumplir en él.`}>
+                <button type="button" className="btn btn--linea btn--sm" onClick={() => setProgramando(true)}>
+                    <CalendarPlus aria-hidden="true" /> Programar semanas
                 </button>
-            </div>
-
-            {vigente ? (
-                <article className="prox-vigente">
-                    <span className="prox-vigente-tag"><Radio size={13} aria-hidden="true" /> En la landing ahora</span>
-                    <strong>{formatearInicio(vigente.inicio_at)}</strong>
-                    <span className="prox-vigente-nombre">{vigente.name}</span>
-                    <div className="prox-vigente-links">
-                        <Enlace url={vigente.meet_url} icon={Video} heredado />
-                        <Enlace url={vigente.whatsapp_url} icon={MessageCircle} heredado />
-                    </div>
-                </article>
-            ) : null}
+            </PanelCab>
 
             {!hayProximoConHora && (
-                <p className="trafico-aviso">
-                    <AlertTriangle size={14} aria-hidden="true" />
-                    No hay ningún taller con hora por delante: las landings repiten el último cada semana con sus links.
-                    Programá los próximos para que muestren la fecha y el grupo correctos.
+                <p className="wp-aviso" role="status">
+                    <AlertTriangle aria-hidden="true" />
+                    <span>Ningún taller con hora por delante: las landings repiten el último con sus links.</span>
                 </p>
             )}
 
-            {proximos.length > 0 && (
-                <div className="comparison-scroll prox-tabla">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th scope="col">Fecha y hora</th>
-                                <th scope="col">Taller</th>
-                                <th scope="col">Google Meet</th>
-                                <th scope="col">Grupo de WhatsApp</th>
-                                <th scope="col"><span className="sr-only">Acciones</span></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {proximos.map((e, i) => (
-                                <motion.tr
-                                    key={e.id}
-                                    initial={reducir ? false : { opacity: 0, y: 6 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.22, delay: Math.min(i, 8) * 0.04 }}
-                                >
-                                    <th scope="row">
-                                        {e.inicio_at
-                                            ? formatearInicio(e.inicio_at)
-                                            : <><span>{e.date.split('-').reverse().join('/')}</span> <span className="prox-falta">Sin hora: no sale en las landings</span></>}
-                                    </th>
-                                    <td>{e.name}</td>
-                                    <td><Enlace url={e.meet_url} icon={Video} heredado={i > 0 || Boolean(vigente)} /></td>
-                                    <td><Enlace url={e.whatsapp_url} icon={MessageCircle} heredado={i > 0 || Boolean(vigente)} /></td>
-                                    <td className="prox-acciones">
-                                        <button type="button" className="icon-button" onClick={() => onEdit(e)} title="Editar taller" aria-label={`Editar ${e.name}`}>
-                                            <Edit2 size={14} />
-                                        </button>
-                                        <button type="button" className="icon-button" onClick={() => onDelete(e.id)} title="Eliminar taller" aria-label={`Eliminar ${e.name}`}>
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </td>
-                                </motion.tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+            {talleres.length === 0 ? (
+                <p className="t-sm mut wp-vacio">No hay talleres programados.</p>
+            ) : (
+                <ol className="wp-talleres" aria-label="Talleres por delante">
+                    {talleres.map((e, i) => {
+                        const enLanding = Boolean(vigente && e.id === vigente.id);
+                        const suyas = acciones?.[e.id] || [];
+                        const hechas = suyas.filter((a) => a.status === 'done').length;
+                        return (
+                            <motion.li key={e.id} className="wp-taller" data-vigente={enLanding ? '1' : undefined}
+                                data-con-plan={acciones ? '1' : undefined} aria-label={e.name}
+                                initial={reducir ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.22, delay: Math.min(i, 8) * 0.04 }}>
+                                <div className="wp-taller-id">
+                                    <div className="wp-cuando">
+                                        <Cuando taller={e} />
+                                        {enLanding && (
+                                            <span className="chip" style={{ '--c': 'var(--brand-secondary)' }}>
+                                                <Radio aria-hidden="true" /> En la landing ahora
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="wp-taller-nom trunc" title={e.name}>{e.name}</p>
+                                    <div className="wp-enlaces">
+                                        <Enlace url={e.meet_url} icon={Video} nombre="Meet" heredado={i > 0} />
+                                        <Enlace url={e.whatsapp_url} icon={MessageCircle} nombre="Grupo" heredado={i > 0} />
+                                    </div>
+                                </div>
+
+                                {acciones && (
+                                    <div className="wp-taller-plan">
+                                        <div className="wp-plan-cab">
+                                            <span className="t-rotulo">Acciones</span>
+                                            {suyas.length > 0 && <span className="wp-cuenta num">{hechas}/{suyas.length}</span>}
+                                            <button type="button" className="wp-agregar" onClick={() => onNuevaAccion(e)}
+                                                aria-label={`Agregar acción a ${e.name}`}>
+                                                <Plus aria-hidden="true" /> Agregar
+                                            </button>
+                                        </div>
+                                        {suyas.length === 0 ? (
+                                            <p className="t-cap mut40">Sin acciones para este taller.</p>
+                                        ) : (
+                                            <ul className="wp-acciones" aria-label={`Acciones de ${e.name}`}>
+                                                {suyas.map((a) => (
+                                                    <FilaAccion key={a.id} accion={a} onTildar={onTildar}
+                                                        onEditar={onEditarAccion} onBorrar={onBorrarAccion} />
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="wp-taller-btns">
+                                    <button type="button" className="ibtn ibtn--sm" onClick={() => onEdit(e)} title="Editar taller" aria-label={`Editar ${e.name}`}>
+                                        <Edit2 aria-hidden="true" />
+                                    </button>
+                                    <button type="button" className="ibtn ibtn--sm" onClick={() => onDelete(e.id)} title="Eliminar taller" aria-label={`Eliminar ${e.name}`}>
+                                        <Trash2 aria-hidden="true" />
+                                    </button>
+                                </div>
+                            </motion.li>
+                        );
+                    })}
+                </ol>
             )}
 
             {programando && (
