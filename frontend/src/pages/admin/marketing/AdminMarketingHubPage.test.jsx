@@ -7,7 +7,6 @@ vi.mock('../../../services/api', () => ({ default: { get: vi.fn(), post: vi.fn()
 vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 // Las herramientas de siempre no son lo que se prueba acá.
 vi.mock('../../../components/operations/UTMGenerator', () => ({ default: () => <p>Generador UTM viejo</p> }));
-vi.mock('../../../components/marketing/LandingTrafficTable', () => ({ default: () => <p>Tráfico viejo</p> }));
 vi.mock('../../public/WebhookMonitorTab', () => ({ default: () => <p>Monitor de webhooks</p> }));
 
 import api from '../../../services/api';

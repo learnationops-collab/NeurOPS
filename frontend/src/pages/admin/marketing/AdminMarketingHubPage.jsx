@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { CalendarDays, RefreshCw } from 'lucide-react';
 import { EsqueletoTablero, Isotipo, PillMenu, Segmented } from '../../comercial/components/Shared';
 import RangoFechas, { esFecha, textoRango } from '../../comercial/components/RangoFechas';
 import UTMGenerator from '../../../components/operations/UTMGenerator';
-import LandingTrafficTable from '../../../components/marketing/LandingTrafficTable';
 import WebhookMonitorTab from '../../public/WebhookMonitorTab';
 import TablaAnuncios from './anuncios/TablaAnuncios';
 import ConexionMeta from './anuncios/ConexionMeta';
@@ -25,7 +24,9 @@ import './anuncios/anuncios.css';
  * anuncios de Meta (14/10/2026). Reemplaza a la «Gestión de anuncios» vieja (Estructura de campañas ›
  * conjuntos › anuncios cargada a mano, Inversión por período y Rend. por anuncio): ahora el anuncio se
  * crea solo cuando ManyChat manda una palabra clave nueva y el gasto llega de Meta Ads («Meta Ads»).
- * «Webhooks», «Generador UTM» y «Tráfico landings» siguen como estaban.
+ * «Webhooks» y «Generador UTM» siguen como estaban. «Tráfico landings» vive solo en Workshop desde el
+ * 16/10/2026 (acá pedía un endpoint de admin y al director de marketing le daba error); el link viejo
+ * lleva allá.
  *
  * Rendimiento separa el gasto por embudo (15/10/2026): «Todo» (resumen por embudo + la tabla de palabras
  * clave), «Setting» (la tabla sola) y «Workshop» (los anuncios que llevan a la clase en vivo).
@@ -39,7 +40,6 @@ const PESTANAS = [
     { key: 'meta', label: 'Meta Ads' },
     { key: 'webhooks', label: 'Webhooks' },
     { key: 'utms', label: 'Generador UTM' },
-    { key: 'trafico', label: 'Tráfico landings' },
 ];
 const CON_PERIODO = ['anuncios', 'meta'];
 // Rendimiento por embudo (15/10/2026): «Todo» suma el resumen por embudo arriba de la tabla de
@@ -117,6 +117,8 @@ const AdminMarketingHubPage = () => {
         ? textoRango(rango)
         : PERIODOS.find((p) => p.key === periodo)?.label;
 
+    if (params.get('tab') === 'trafico') return <Navigate to="/admin/workshops?tab=trafico" replace />;
+
     return (
         <div className="mk-espacio">
             <div className="dc-shell dc-shell--embebido mk-shell">
@@ -192,14 +194,13 @@ const AdminMarketingHubPage = () => {
                 </div>
             </div>
 
-            {/* Las tres herramientas de siempre: son Tailwind y van FUERA del `.dc-shell` (su reset de
+            {/* Las dos herramientas de siempre: son Tailwind y van FUERA del `.dc-shell` (su reset de
                 botones les borraría los estilos), sobre su propia superficie oscura. */}
             {!CON_PERIODO.includes(pestana) && (
                 <div className="mk-wrap">
                     <div className="mk-legado">
                         {pestana === 'webhooks' && <WebhookMonitorTab />}
                         {pestana === 'utms' && <UTMGenerator />}
-                        {pestana === 'trafico' && <LandingTrafficTable />}
                     </div>
                 </div>
             )}
