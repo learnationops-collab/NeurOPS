@@ -79,8 +79,10 @@ const WorkshopDashboardPage = () => {
     const [params, setParams] = useSearchParams();
     const pedida = PESTANA_VIEJA[params.get('tab')] || params.get('tab');
     const activeTab = PESTANAS.some((p) => p.key === pedida) ? pedida : 'resumen';
-    // Lo que una pestaña le pide a Planificar al mandar ahí (ver PlanificarTab).
-    const [enfoquePlan, setEnfoquePlan] = useState(null);
+    // Lo que una pestaña le pide a Planificar al mandar ahí (ver PlanificarTab). Un link viejo a
+    // «Simulador» o «Acciones» abre esa sección.
+    const [enfoquePlan, setEnfoquePlan] = useState(() => (
+        PESTANA_VIEJA[params.get('tab')] === 'planificar' ? { vista: params.get('tab') } : null));
 
     const irA = useCallback((tab, enfoque = null) => {
         const siguiente = new URLSearchParams(params);
@@ -373,10 +375,13 @@ const WorkshopDashboardPage = () => {
                         <TallerEnVivo eventos={events} onIrAProximos={() => irA('planificar', { vista: 'proximos' })} />
                     </div>
                     <div className="tope-meta ws-tope-meta">
-                        <button type="button" className="ibtn" onClick={() => fetchEvents()} disabled={loading}
-                            title="Volver a cargar" aria-label="Volver a cargar">
-                            <RefreshCw className={loading ? 'ws-gira' : ''} aria-hidden="true" />
-                        </button>
+                        {/* Tráfico tiene su propio recargar junto al período: este recarga los talleres. */}
+                        {activeTab !== 'trafico' && (
+                            <button type="button" className="ibtn" onClick={() => fetchEvents()} disabled={loading}
+                                title="Volver a cargar" aria-label="Volver a cargar">
+                                <RefreshCw className={loading ? 'ws-gira' : ''} aria-hidden="true" />
+                            </button>
+                        )}
                         <button type="button" className="btn btn--cta btn--sm" onClick={handleOpenCreateModal}>
                             <Plus size={15} aria-hidden="true" /> Registrar taller
                         </button>
@@ -442,7 +447,6 @@ const WorkshopDashboardPage = () => {
                             actions={actions}
                             onEditGoals={() => setGoalsModalOpen(true)}
                             onGoToSimulador={(etapa) => irA('planificar', { vista: 'simulador', etapa })}
-                            formatDate={formatDate}
                         />
                     )}
 
