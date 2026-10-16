@@ -30,7 +30,7 @@ const Celdas = ({ fila, formatCurrency, landings }) => (
     </>
 );
 
-const WorkshopAnunciosView = ({ evento, formatCurrency }) => {
+const WorkshopAnunciosView = ({ evento, eventos = [], onSelectEvent, formatDate = (d) => d, formatCurrency }) => {
     const [datos, setDatos] = useState(null);
     const [error, setError] = useState(null);
     const [abiertas, setAbiertas] = useState({});
@@ -62,6 +62,18 @@ const WorkshopAnunciosView = ({ evento, formatCurrency }) => {
                         <Megaphone size={18} /> Anuncios que llenaron este taller
                     </h2>
                 </div>
+                {/* El mismo taller que está abierto en Embudo: cambiarlo acá lo cambia allá. */}
+                {onSelectEvent && eventos.length > 0 && (
+                    <label className="ws-anuncios-taller">
+                        <span>Taller</span>
+                        <select value={evento.id}
+                            onChange={(e) => onSelectEvent(eventos.find((x) => String(x.id) === e.target.value))}>
+                            {eventos.map((x) => (
+                                <option key={x.id} value={x.id}>{formatDate(x.date)} · {x.name}</option>
+                            ))}
+                        </select>
+                    </label>
+                )}
             </div>
             {error ? (
                 <p className="all-target ws-anuncios-vacio">{error}</p>

@@ -22,7 +22,7 @@ const DESGLOSE = {
     ],
 };
 
-describe('Workshop › Embudo › anuncios del taller', () => {
+describe('Workshop › Anuncios del taller', () => {
     beforeEach(() => api.get.mockReset());
 
     it('pide los anuncios del taller y abre la campaña que más gastó', async () => {
@@ -39,6 +39,17 @@ describe('Workshop › Embudo › anuncios del taller', () => {
         const total = screen.getByText('Total del taller').closest('tr');
         expect(within(total).getByText('$205.27')).toBeInTheDocument();
         expect(within(total).getByText('61')).toBeInTheDocument();
+    });
+
+    it('el selector cambia el taller (el mismo que está abierto en Embudo)', async () => {
+        api.get.mockResolvedValue({ data: DESGLOSE });
+        const onSelectEvent = vi.fn();
+        const eventos = [{ id: 15, date: '2026-10-12', name: 'Webinar 12' }, { id: 14, date: '2026-10-03', name: 'Webinar 3' }];
+        render(<WorkshopAnunciosView evento={eventos[0]} eventos={eventos} onSelectEvent={onSelectEvent}
+            formatCurrency={dinero} />);
+
+        await userEvent.selectOptions(screen.getByRole('combobox', { name: /Taller/ }), '14');
+        expect(onSelectEvent).toHaveBeenCalledWith(eventos[1]);
     });
 
     it('sin anuncios de Workshop dice dónde se clasifican', async () => {

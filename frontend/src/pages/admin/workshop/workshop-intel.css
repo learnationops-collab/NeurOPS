@@ -577,8 +577,15 @@
 .ws-shell .form-field input[readonly] { opacity: .75; cursor: default; }
 .ws-shell .de-meta-nota { margin: -4px 0 0; font-size: 11px; line-height: 1.45; color: color-mix(in srgb, var(--ln-text-out, #ffffff) 60%, transparent); }
 
-/* Anuncios que llenaron el taller (pestaña Embudo, 15/10/2026): campaña › conjunto › anuncio. */
-.ws-shell .ws-anuncios { margin-top: 22px; }
+/* Anuncios que llenaron el taller (15/10/2026; pestaña propia desde 16/10): campaña › conjunto › anuncio. */
+.ws-shell .ws-anuncios { margin-top: 0; }
+.ws-shell .ws-anuncios-taller { display: grid; gap: 6px; min-width: min(340px, 100%); }
+.ws-shell .ws-anuncios-taller > span { color: var(--text-muted); font-size: 9px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.ws-shell .ws-anuncios-taller select { min-height: 42px; padding: 0 12px; border: 1px solid var(--border); border-radius: 13px; background: var(--input); font-size: 12px; font-weight: 700; cursor: pointer; }
+.ws-shell .ws-anuncios-taller option { background: var(--ln-page-base, #0a0e3d); }
+.ws-shell .ws-ver-anuncios { min-height: 0; margin-top: 8px; padding: 0; color: var(--pink-light); }
+.ws-shell .ws-ver-anuncios:hover { color: var(--ln-text-out, #fff); }
+.ws-shell .economy-strip .ws-ver-anuncios { display: flex; }
 .ws-shell .ws-anuncios-vacio { text-align: center; padding: 32px 12px; }
 .ws-shell .ws-anuncios-tabla td, .ws-shell .ws-anuncios-tabla th { white-space: nowrap; }
 .ws-shell .ws-anuncios-tabla tbody th { max-width: 360px; overflow: hidden; text-overflow: ellipsis; }

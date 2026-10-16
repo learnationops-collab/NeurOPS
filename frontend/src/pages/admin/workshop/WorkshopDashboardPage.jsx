@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, RefreshCw, CalendarDays, CalendarClock, Loader2, LayoutGrid, List, Layers, Target, Zap, Video, LayoutDashboard, Globe } from 'lucide-react';
+import { Plus, RefreshCw, CalendarDays, CalendarClock, Loader2, LayoutGrid, List, Layers, Target, Zap, Video, LayoutDashboard, Globe, Megaphone } from 'lucide-react';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
 import './workshop-intel.css';
@@ -59,7 +59,7 @@ const WorkshopDashboardPage = () => {
     const [isEditMode, setIsEditMode] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
     const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
-    const [activeTab, setActiveTab] = useState('resumen'); // 'resumen' | 'list' | 'proximos' | 'funnel' | 'simulador' | 'acciones' | 'trafico' | 'landing'
+    const [activeTab, setActiveTab] = useState('resumen'); // 'resumen' | 'list' | 'proximos' | 'funnel' | 'anuncios' | 'simulador' | 'acciones' | 'trafico' | 'landing'
     const [selectedEventForFunnel, setSelectedEventForFunnel] = useState(null);
 
     // Diagnóstico / Metas / Simulador / Acciones (Workshop Intelligence 2.0)
@@ -490,6 +490,11 @@ const WorkshopDashboardPage = () => {
                         <button type="button" className={activeTab === 'funnel' ? 'active' : ''} onClick={() => setActiveTab('funnel')} aria-current={activeTab === 'funnel' ? 'page' : undefined}>
                             <CalendarDays size={14} /> Embudo
                         </button>
+                        {/* Los anuncios de Meta que llenaron el taller abierto en Embudo (16/10/2026): antes
+                            vivían al pie del embudo y había que scrollear todo para encontrarlos. */}
+                        <button type="button" className={activeTab === 'anuncios' ? 'active' : ''} onClick={() => setActiveTab('anuncios')} aria-current={activeTab === 'anuncios' ? 'page' : undefined}>
+                            <Megaphone size={14} /> Anuncios
+                        </button>
                         <button type="button" className={activeTab === 'simulador' ? 'active' : ''} onClick={() => setActiveTab('simulador')} aria-current={activeTab === 'simulador' ? 'page' : undefined}>
                             <Target size={14} /> Simulador
                         </button>
@@ -606,24 +611,30 @@ const WorkshopDashboardPage = () => {
                         )}
                     </>
                 ) : activeTab === 'funnel' ? (
-                    <>
-                        <WorkshopFunnelView
-                            events={realizados}
-                            selectedEvent={selectedEventForFunnel}
+                    <WorkshopFunnelView
+                        events={realizados}
+                        selectedEvent={selectedEventForFunnel}
+                        onSelectEvent={setSelectedEventForFunnel}
+                        onResync={handleResyncFunnel}
+                        resyncing={resyncing}
+                        formatDate={formatDate}
+                        formatCurrency={formatCurrency}
+                        desglose={desglose}
+                        ventana={ventana}
+                        cargandoDesglose={cargandoDesglose}
+                        onVerAnuncios={() => setActiveTab('anuncios')}
+                    />
+                ) : activeTab === 'anuncios' ? (
+                    selectedEventForFunnel && (
+                        <WorkshopAnunciosView
+                            key={selectedEventForFunnel.id}
+                            evento={selectedEventForFunnel}
+                            eventos={realizados}
                             onSelectEvent={setSelectedEventForFunnel}
-                            onResync={handleResyncFunnel}
-                            resyncing={resyncing}
                             formatDate={formatDate}
                             formatCurrency={formatCurrency}
-                            desglose={desglose}
-                            ventana={ventana}
-                            cargandoDesglose={cargandoDesglose}
                         />
-                        {selectedEventForFunnel && (
-                            <WorkshopAnunciosView key={selectedEventForFunnel.id} evento={selectedEventForFunnel}
-                                formatCurrency={formatCurrency} />
-                        )}
-                    </>
+                    )
                 ) : activeTab === 'simulador' ? (
                     <WorkshopSimuladorView
                         events={realizados}
