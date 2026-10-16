@@ -37,6 +37,7 @@ import PrivacyPolicyPage from './pages/public/PrivacyPolicyPage';
 import TermsOfServicePage from './pages/public/TermsOfServicePage';
 import AgendasV2Routes from './pages/agendas_v2/AgendasV2Routes';
 import InboxRoutes from './pages/inbox/InboxRoutes';
+import CatalogoUi from './pages/ui/Catalogo';
 import AgendasV2Publica from './pages/agendas_v2/AgendasV2Publica';
 import UnattributedLeadsPage from './pages/admin/marketing/UnattributedLeadsPage';
 import FormsManagementPage from './pages/shared/FormsManagementPage';
@@ -125,6 +126,16 @@ function App() {
               element={
                 <ProtectedRoute roles={['admin', 'director_comercial', 'setter']}>
                   <AgendasV2Routes />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Catálogo de los componentes estándar (components/standard): la referencia para construir UI. */}
+            <Route
+              path="/ui"
+              element={
+                <ProtectedRoute roles={['admin', 'director_comercial']}>
+                  <CatalogoUi />
                 </ProtectedRoute>
               }
             />

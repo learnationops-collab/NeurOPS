@@ -2,7 +2,7 @@
 // las define el prototipo, así que el aspecto es el mismo.
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { Aura, BRAND_AURA } from '../../../components/standard';
+import { BRAND_AURA } from '../../../components/standard';
 import { BANDERAS, ICON, MEET_SVG } from './iconos';
 import { cerrarToast, toastStore } from './toast';
 import { colorVar } from '../core/datos';
@@ -21,9 +21,14 @@ export function Bandera({ c }) {
     return <span className="bandera" aria-hidden="true"><svg viewBox="0 0 30 20" preserveAspectRatio="none" dangerouslySetInnerHTML={{ __html: BANDERAS[c] }} /></span>;
 }
 
-// El aura vive en los componentes estándar; Humo es su nombre en Thalamus.
+// Fondo de nubes propio de Thalamus (con sus variantes por contexto: dock, kpi, lead). El de los
+// componentes estándar es Aura (components/standard).
 export const HUMO_MARCA = BRAND_AURA;
-export function Humo({ clase = '', cols = HUMO_MARCA }) { return <Aura colors={cols} className={clase || undefined} />; }
+export function Humo({ clase = '', cols = HUMO_MARCA }) {
+    const style = {};
+    cols.forEach((c, i) => { style['--h' + (i + 1)] = c; });
+    return <span className={'humo' + (clase ? ' ' + clase : '')} aria-hidden="true" style={style}><i /><i /><i /><i /></span>;
+}
 
 // Isotipo de Configuración (el dial).
 export function Dial({ tile = false, className = '', label }) {
@@ -182,7 +187,7 @@ export function Modal({ onCerrar, clase = '', style, labelledBy, children, id })
         document.body.style.overflow = 'hidden';
         const esc = (e) => { if (e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); onCerrar(); } };
         document.addEventListener('keydown', esc);
-        const foco = ref.current?.querySelector('input,textarea,button:not(.ibtn)') || ref.current;
+        const foco = ref.current?.querySelector('input,textarea,button:not(.ibtn):not(.ui-ibtn)') || ref.current;
         foco?.focus({ preventScroll: true });
         return () => { document.body.style.overflow = prev; document.removeEventListener('keydown', esc); };
         // eslint-disable-next-line react-hooks/exhaustive-deps

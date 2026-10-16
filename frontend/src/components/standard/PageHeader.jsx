@@ -4,18 +4,19 @@
 
 import { useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import './standard.css';
 
-const DESTINO = 'tope-acc';
+const DESTINO = 'ui-header-actions';
 
 export function PageHeader({ title, logo, badges, actions }) {
     return (
-        <header className="tope">
-            <div className="tope-id">
+        <header className="ui-header">
+            <div className="ui-header__id">
                 {logo}
-                <h1 className="t-h1">{title}</h1>
+                <h1 className="ui-header__title">{title}</h1>
                 {badges}
             </div>
-            <div className="tope-acc" id={DESTINO}>{actions}</div>
+            <div className="ui-header__actions" id={DESTINO}>{actions}</div>
         </header>
     );
 }
@@ -26,6 +27,6 @@ export function HeaderActions({ children, replaceTitle = false }) {
     const [destino, setDestino] = useState(undefined);
     useLayoutEffect(() => { setDestino(document.getElementById(DESTINO)); }, []);
     if (destino === undefined) return null;
-    const el = <div className={'tope-barra' + (replaceTitle ? ' tope-barra--reemplaza' : '')}>{children}</div>;
+    const el = <div className={'ui-header__bar' + (replaceTitle ? ' ui-header__bar--replace' : '')}>{children}</div>;
     return destino ? createPortal(el, destino) : el;
 }

@@ -1,0 +1,31 @@
+/* Catálogo de componentes estándar (/ui). La página es neutra; el marco toma el tema y el contexto
+   elegidos (.thalamus o .dc-shell, con data-tema) para mostrar los componentes como en una pantalla real. */
+
+.cat{min-height:100vh;padding:32px clamp(16px,4vw,48px) 64px;background:#0B0E1A;color:#E8EAF2;font-family:'Montserrat','Helvetica Neue',Arial,sans-serif}
+.cat-cab{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-content:space-between;margin:0 auto 24px;max-width:1120px}
+.cat-cab h1{margin:0 0 6px;font-size:28px;font-weight:900 !important;letter-spacing:-.02em !important}
+.cat-cab p{margin:0;font-size:14px;color:#A3A9BF}
+.cat-cab code,.cat-sec-cab code{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.cat-ctl{display:grid;gap:8px}
+.cat-sel{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.cat-sel span{width:72px;font-size:11px;font-weight:800 !important;letter-spacing:.12em !important;text-transform:uppercase;color:#7D849C}
+.cat-sel button{height:30px;padding:0 12px;border-radius:999px;border:1px solid #2A3047;background:none;color:#C9CDDC;font:inherit;font-size:12px;cursor:pointer}
+.cat-sel button[aria-pressed="true"]{background:#E8EAF2;color:#0B0E1A;border-color:#E8EAF2}
+
+/* El marco: un pedazo de pantalla real (sin el alto mínimo ni el colchón del dock de cada shell). */
+/* Clase doble: le gana a `.dc-shell{min-height:100vh;padding-bottom:…;background:…}` sin depender del orden de las hojas. */
+.cat-marco.cat-marco{max-width:1120px;margin:0 auto;border-radius:28px;padding:clamp(16px,3vw,32px);display:grid;gap:20px;min-height:0;
+  background:var(--ln-page-bg, var(--gradient-page)),var(--ln-page-base, var(--page-base, #020617));
+  color:var(--ln-text-out, var(--text-on-surface));font-family:var(--font);font-size:16px;line-height:1.5;
+  color-scheme:var(--ln-scheme, dark)}
+.cat-sec{display:grid;gap:14px;padding:20px;border-radius:24px;border:1px solid var(--ln-border-subtle, var(--border-subtle));background:var(--ln-ct2-bg-subtle, var(--mat-0))}
+.cat-sec-cab{display:grid;gap:4px}
+.cat-sec-cab h2{margin:0;font-size:19px;font-weight:900;letter-spacing:-.02em}
+.cat-sec-cab p{margin:0;font-size:14px;color:var(--ln-text-muted, var(--text-muted))}
+.cat-sec-cab code{color:var(--ln-text-faint, var(--text-muted-40))}
+.cat-demo{display:grid;gap:8px}
+.cat-demo-t{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--ln-text-faint, var(--text-muted-40))}
+.cat-demo-c,.cat-fila{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.cat-grilla{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+.cat-card{display:grid;gap:4px;padding:18px 20px}
+.cat-mut{font-size:13px;color:var(--ln-text-muted, var(--text-muted))}

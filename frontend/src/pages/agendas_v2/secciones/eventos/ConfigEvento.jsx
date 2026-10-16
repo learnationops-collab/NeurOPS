@@ -111,7 +111,7 @@ function General({ d, e, f, cm }) {
                         })}
                     </div>
                 ) : (
-                    <LinkButton subtle icon={<Icono n="plus" />} onClick={() => ui.set({ funnel: { id: e.funnel } })}>
+                    <LinkButton icon={<Icono n="plus" />} onClick={() => ui.set({ funnel: { id: e.funnel } })}>
                         Links por procedencia
                     </LinkButton>
                 )}

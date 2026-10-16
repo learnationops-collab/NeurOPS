@@ -8,19 +8,19 @@ describe('Button', () => {
     it('chico y secundario por defecto, type="button"', () => {
         render(<Button>Guardar</Button>);
         const b = screen.getByRole('button', { name: 'Guardar' });
-        expect(b.className).toBe('btn btn--linea btn--sm');
+        expect(b.className).toBe('ui-btn ui-btn--secondary ui-btn--sm');
         expect(b.getAttribute('type')).toBe('button');
     });
 
     it('cada variante usa su clase', () => {
-        const casos = { primary: 'btn--cta', danger: 'btn--peligro', dangerSolid: 'btn--borrar' };
+        const casos = { primary: 'ui-btn--primary', danger: 'ui-btn--danger', dangerSolid: 'ui-btn--danger-solid' };
         Object.entries(casos).forEach(([variant, clase]) => {
             const { unmount } = render(<Button variant={variant}>x</Button>);
             expect(screen.getByRole('button').classList.contains(clase)).toBe(true);
             unmount();
         });
         render(<Button variant="ghost" size="md">x</Button>);
-        expect(screen.getByRole('button').className).toBe('btn');
+        expect(screen.getByRole('button').className).toBe('ui-btn');
     });
 
     it('pasa ref, data-nav y el resto de atributos al <button>', () => {
@@ -37,13 +37,13 @@ describe('IconButton y LinkButton', () => {
     it('el label es el nombre accesible; tamaño, peligro y presionado', () => {
         render(<IconButton icon={<svg />} label="Cerrar" size="xs" danger pressed />);
         const b = screen.getByRole('button', { name: 'Cerrar' });
-        expect(b.className).toBe('ibtn ibtn--xs ibtn--peligro');
+        expect(b.className).toBe('ui-ibtn ui-ibtn--xs ui-ibtn--danger');
         expect(b.getAttribute('aria-pressed')).toBe('true');
     });
 
     it('LinkButton sutil', () => {
         render(<LinkButton subtle>Usar la propuesta</LinkButton>);
-        expect(screen.getByRole('button').className).toBe('link-btn link-btn--sutil');
+        expect(screen.getByRole('button').className).toBe('ui-link ui-link--subtle');
     });
 });
 
@@ -87,14 +87,14 @@ describe('EmptyState, Card y Chip', () => {
     it('Card con aura suave', () => {
         const { container } = render(<Card as="article" aura={['red']} soft className="ev-card">x</Card>);
         const card = container.querySelector('article');
-        expect(card.className).toBe('tarjeta caja ev-card');
-        expect(card.querySelector('.humo').className).toBe('humo humo--tarjeta humo--suave');
+        expect(card.className).toBe('ui-card ev-card');
+        expect(card.querySelector('.ui-aura').className).toBe('ui-aura ui-aura--card ui-aura--soft');
     });
 
     it('Chip con color y versión suave', () => {
         render(<Chip color="var(--info)" subtle>Info</Chip>);
         const c = screen.getByText('Info');
-        expect(c.className).toBe('chip chip--n');
+        expect(c.className).toBe('ui-chip ui-chip--subtle');
         expect(c.style.getPropertyValue('--c')).toBe('var(--info)');
     });
 });

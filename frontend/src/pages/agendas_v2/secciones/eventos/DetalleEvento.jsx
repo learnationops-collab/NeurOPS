@@ -1,5 +1,5 @@
 // Evento abierto: barra con estado, copiar link, probar, descartar y publicar; pestañas Configuración y Flujo.
-// La barra va en la fila del título de la página (#tope-acc en ThalamusApp) para no gastar alto.
+// La barra va en la fila del título de la página (HeaderActions, en la cabecera de ThalamusApp) para no gastar alto.
 
 
 import { buscar } from '../../core/datos';

@@ -84,7 +84,7 @@ export function FilaSesion({ titulo, persona, propuesta, propia, onCambio, bloqu
             </div>
             {horario ? <Capacidad horario={horario} dur={dur} margen={margen} onVer={onVer} /> : <span />}
             {ajustada && !bloqueado
-                ? <LinkButton subtle className="ses-volver" icon={<Icono n="volver" s={13} />} onClick={() => onCambio(null)}>Usar la propuesta</LinkButton>
+                ? <LinkButton className="ses-volver" icon={<Icono n="volver" s={13} />} onClick={() => onCambio(null)}>Usar la propuesta</LinkButton>
                 : <span className="ses-volver" />}
         </div>
     );

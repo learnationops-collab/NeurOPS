@@ -291,7 +291,7 @@
 .thalamus .compo-icono svg,.thalamus .icono-m svg{width:19px;height:19px}
 .thalamus .compo-accion{display:grid;gap:var(--s2);min-width:0}
 .thalamus .compo .entrada{height:50px;padding:0 6px 0 16px}
-.thalamus .compo .entrada .btn{height:38px}
+.thalamus .compo .entrada :is(.btn,.ui-btn){height:38px}
 .thalamus .compo--solo{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center;padding:var(--s12) var(--s6)}
 .thalamus .compo--solo .compo-txt{flex-direction:column}
 .thalamus .compo--solo .compo-accion{width:min(540px,100%)}
@@ -349,7 +349,7 @@
 .thalamus .ev-agr-ico{display:grid;place-items:center;width:30px;color:var(--brand-secondary)}
 .thalamus .ev-nuevo{flex:1 1 320px;height:44px;padding:0 5px 0 12px}
 .thalamus .ev-nuevo .prefijo{color:var(--brand-secondary)}
-.thalamus .ev-nuevo .btn{height:34px}
+.thalamus .ev-nuevo :is(.btn,.ui-btn){height:34px}
 .thalamus .err-nuevo{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--error)}
 .thalamus .err-nuevo[hidden]{display:none}
 .thalamus .fe-mas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s3)}
@@ -393,7 +393,7 @@
 .thalamus .pq-cab{display:grid;grid-template-columns:28px minmax(0,1fr) 116px 46px 34px 74px;align-items:center;column-gap:10px;padding:10px 14px 10px 10px;min-width:0}
 .thalamus .pq-abrir{min-width:0;display:flex;align-items:center;gap:14px;text-align:left;padding:4px 0;border-radius:12px}
 .thalamus .pq-c{display:flex;justify-content:center;min-width:0}
-.thalamus .pq-c .chip{width:100%;justify-content:center}
+.thalamus .pq-c :is(.chip,.ui-chip){width:100%;justify-content:center}
 .thalamus .pq-c .chip--sq{width:34px;padding:0}
 .thalamus .pq-num{width:30px;height:30px;flex-shrink:0;border-radius:8px;display:grid;place-items:center;font-size:11.5px;font-weight:900;background:var(--bg-input);border:1px solid var(--border-subtle);color:var(--text-muted)}
 .thalamus .pq--on .pq-num{background:var(--brand-secondary);border-color:var(--brand-secondary);color:var(--on-brand)}
@@ -867,7 +867,7 @@
 .thalamus .conf-cab{display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap;padding:var(--s6) var(--s6) var(--s4);border-bottom:1px solid var(--border-subtle)}
 .thalamus .conf-cab{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;row-gap:var(--s4)}
 .thalamus .conf-cab .tabs{grid-column:1 / -1;grid-row:2;justify-self:start}
-.thalamus .conf-cab > .ibtn{grid-column:4;grid-row:1}
+.thalamus .conf-cab > :is(.ibtn,.ui-ibtn){grid-column:4;grid-row:1}
 .thalamus .conf-cuerpo{padding:var(--s6);display:grid;gap:var(--s6)}
 .thalamus .fm-cab{display:flex;align-items:center;justify-content:space-between;gap:var(--s4);padding:var(--s6) var(--s6) var(--s4);border-bottom:1px solid var(--border-subtle)}
 .thalamus .fm-bloque{display:grid;gap:var(--s3);justify-items:start}
@@ -949,7 +949,7 @@
 .thalamus .rl-ab{height:38px;width:100%;padding:0 8px;border-radius:12px;border:1px solid var(--border-subtle);background:var(--bg-input);outline:none;text-align:center;font-size:13px;font-weight:900;letter-spacing:.1em}
 .thalamus .rl-ab:focus{border-color:var(--focus-blue)}
 .thalamus .rl-n{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800;color:var(--text-muted-40);padding:0 4px}
-@media (max-width:860px){.thalamus .rl{grid-template-columns:22px 38px minmax(0,1fr) 64px}.thalamus .rl .sx,.thalamus .rl-n,.thalamus .rl .ibtn{grid-row:2}.thalamus .rl > .sx:nth-of-type(1){grid-column:3}}
+@media (max-width:860px){.thalamus .rl{grid-template-columns:22px 38px minmax(0,1fr) 64px}.thalamus .rl .sx,.thalamus .rl-n,.thalamus .rl :is(.ibtn,.ui-ibtn){grid-row:2}.thalamus .rl > .sx:nth-of-type(1){grid-column:3}}
 .thalamus .vis-caja{position:relative;grid-column:3;grid-row:1}
 .thalamus .vis-btn{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:var(--mat-3);border:1px solid var(--border-main)}
 .thalamus .vis-btn:hover{border-color:var(--border-control)}
@@ -1036,8 +1036,8 @@
    solo se vuelve invisible: sacarlo correría las demás columnas. */
 .thalamus.thalamus-app--lectura :is(button,input,select,textarea):disabled:not([data-nav]){cursor:default}
 .thalamus.thalamus-app--lectura button:disabled:not([data-nav]):not(.sx):not([aria-pressed]):not([aria-checked]){opacity:.55}
-.thalamus.thalamus-app--lectura :is(.grip,.ibtn--peligro,.pq-acc){visibility:hidden}
-.thalamus.thalamus-app--lectura :is(.btn--peligro,.btn--borrar,.compo,.fe-mas,.agregar,.cond-mas,.sug,[data-op-add]){display:none}
+.thalamus.thalamus-app--lectura :is(.grip,.ibtn--peligro,.ui-ibtn--danger,.pq-acc){visibility:hidden}
+.thalamus.thalamus-app--lectura :is(.btn--peligro,.btn--borrar,.ui-btn--danger,.ui-btn--danger-solid,.compo,.fe-mas,.agregar,.cond-mas,.sug,[data-op-add]){display:none}
 .thalamus.thalamus-app--lectura .foto{cursor:default}
 .thalamus .chip-lectura{flex-shrink:0;cursor:default}
 .thalamus .mtz{min-width:700px;display:grid}
@@ -1281,9 +1281,9 @@
   .thalamus .rte-texto{min-height:120px}
   .thalamus .input--fecha{width:140px}
   .thalamus .ev-acc{width:100%}
-  .thalamus .ev-acc .btn--linea{font-size:0;gap:0;width:36px;padding:0;justify-content:center}
-  .thalamus .ev-acc .btn--linea svg{width:16px;height:16px}
-  .thalamus .ev-acc .btn--cta{margin-left:auto}
+  .thalamus .ev-acc :is(.btn--linea,.ui-btn--secondary){font-size:0;gap:0;width:36px;padding:0;justify-content:center}
+  .thalamus .ev-acc :is(.btn--linea,.ui-btn--secondary) svg{width:16px;height:16px}
+  .thalamus .ev-acc :is(.btn--cta,.ui-btn--primary){margin-left:auto}
 }
 
 /* ============ PANTALLA DEL LEAD ============ */
@@ -1476,8 +1476,8 @@
 .thalamus .tope-acc{flex:1 1 auto;min-width:0;display:flex;justify-content:flex-end}
 .thalamus .tope-acc:empty{display:none}
 .thalamus .tope-barra{flex:1;min-width:0;display:flex;justify-content:flex-end}
-.thalamus .tope-barra > .barra,.thalamus .tope-barra > .ev-top{flex:1;min-width:0;justify-content:flex-end;margin:0}
-.thalamus .tope-barra--reemplaza > .barra{justify-content:flex-start}
+.thalamus :is(.tope-barra,.ui-header__bar) > :is(.barra,.ev-top){flex:1;min-width:0;justify-content:flex-end;margin:0}
+.thalamus :is(.tope-barra--reemplaza,.ui-header__bar--replace) > .barra{justify-content:flex-start}
 .thalamus .tope:has(.tope-barra--reemplaza) .tope-id h1{display:none}
 .thalamus .ev-grid--3{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(260px,.8fr)}
 @container (max-width:1180px){.thalamus .ev-grid--3{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.thalamus .ev-grid--3 .ev-rev{grid-column:1 / -1;position:static}}
@@ -1615,7 +1615,7 @@
 .thalamus .eq-marcas{display:flex;gap:6px;flex-wrap:wrap}
 .thalamus .eq-marca{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:800;color:var(--warning);background:var(--warning-surface);border:1px solid var(--warning-border)}
 .thalamus .eq-marca--ok{color:var(--success);background:var(--success-surface);border-color:var(--success-border)}
-@media (max-width:720px){.thalamus .eq-fila{grid-template-columns:28px minmax(0,1fr)}.thalamus .eq-marcas,.thalamus .eq-fila > .btn{grid-column:2}}
+@media (max-width:720px){.thalamus .eq-fila{grid-template-columns:28px minmax(0,1fr)}.thalamus .eq-marcas,.thalamus .eq-fila > :is(.btn,.ui-btn){grid-column:2}}
 /* Calendar › Revisar conflictos en: un interruptor por calendario de Google. */
 .thalamus .cu-cals{flex:1 1 100%;display:grid;gap:6px;margin-top:4px;padding:14px;border-radius:20px;background:var(--hundido);border:1px solid var(--border-subtle)}
 .thalamus .cu-cal{display:flex;align-items:center;gap:10px;min-width:0;padding:4px 0;font-size:14px;font-weight:700}
