@@ -10,6 +10,9 @@ ese reporte a lo que la Academia entiende y se le avisa:
 - `resultado`: pago (declaró la venta) | pensando (no cerró: sigue en seguimiento) | no_sigue
   («No va a pagar» o descartado).
 
+El mazo viejo (POST /api/closer/deck/<id>) también avisa (`traducir('mazo', ...)`).
+En la Academia, «no sigue» da de baja el proceso del alumno.
+
 El pago en sí no viaja acá: llega como siempre por /api/v1/payments y convierte la seña.
 El HTTP corre en un hilo aparte (el reporte ya está guardado); si falla, queda en el log.
 """
@@ -30,6 +33,8 @@ def traducir(accion, datos):
     """{asistencia?, resultado?, inicio?} del pedido de la ficha, o None si no dice nada de la llamada."""
     if accion == 'venta':
         return {'asistencia': 'asistio', 'resultado': 'pago'}
+    if accion == 'mazo':
+        return _traducir_mazo(datos)
     from app.services.ficha_acciones_service import _no_cerro
 
     clave = datos.get('resultado')
@@ -51,6 +56,23 @@ def traducir(accion, datos):
     return None
 
 
+def _traducir_mazo(datos):
+    """El guardado del mazo viejo: `result` es el resultado de la llamada (`closer_result`) y
+    `contact_result` el del seguimiento de cobro."""
+    if datos.get('contact_result') == 'no_paga':
+        return {'resultado': 'no_sigue'}
+    resultado = (datos.get('result') or '').strip()
+    if resultado == 'Lead Perdido':
+        return {'asistencia': 'asistio', 'resultado': 'no_sigue'}
+    if resultado == 'No Lead':
+        return {'resultado': 'no_sigue'}
+    if resultado in ('Show up', 'Asistió'):
+        return {'asistencia': 'asistio', 'resultado': 'pensando' if datos.get('fecha_seguimiento') else None}
+    if resultado == 'No Show':
+        return {'asistencia': 'no_asistio'}
+    return None
+
+
 def avisar(appt, accion, datos, usuario):
     """Le avisa a la Academia el reporte de una Momentum. Nunca levanta: el reporte ya está guardado."""
     try:
@@ -64,7 +86,8 @@ def avisar(appt, accion, datos, usuario):
             'reserva_id': academia.get('reserva_id'),
             'appointment_id': appt.id,
             'closer_email': (usuario.email or '').lower() if usuario else None,
-            'nota': (datos or {}).get('objecion') or ((datos or {}).get('deck') or {}).get('closer_notes') or None,
+            'nota': (datos or {}).get('objecion') or ((datos or {}).get('deck') or {}).get('closer_notes')
+                    or (datos or {}).get('closer_notes') or None,
             **{k: v for k, v in cambio.items() if v is not None},
         }
     except Exception as e:  # noqa: BLE001

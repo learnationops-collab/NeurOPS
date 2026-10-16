@@ -464,6 +464,13 @@ def test_el_reporte_de_la_ficha_se_traduce_para_la_academia(app):
         reagenda = {'resultado': 'reagenda', 'deck': {}, 'reagenda': {'start_time': '2026-10-08T15:00:00Z'}}
         assert traducir('resultado', reagenda) == {'asistencia': 'reagenda', 'inicio': '2026-10-08T15:00:00Z'}
         assert traducir('resultado', {'deck': {'closer_notes': 'x'}}) is None
+        # El mazo viejo.
+        assert traducir('mazo', {'result': 'Show up'}) == {'asistencia': 'asistio', 'resultado': None}
+        assert traducir('mazo', {'result': 'Show up', 'fecha_seguimiento': '2026-10-20'}) == {'asistencia': 'asistio', 'resultado': 'pensando'}
+        assert traducir('mazo', {'result': 'No Show'}) == {'asistencia': 'no_asistio'}
+        assert traducir('mazo', {'result': 'Lead Perdido'}) == {'asistencia': 'asistio', 'resultado': 'no_sigue'}
+        assert traducir('mazo', {'contact_result': 'no_paga'}) == {'resultado': 'no_sigue'}
+        assert traducir('mazo', {'closer_notes': 'x'}) is None
 
 
 def test_el_closer_de_cada_alumno_sale_de_su_venta_mas_reciente(client, db, closer):
@@ -487,3 +494,24 @@ def test_el_closer_de_cada_alumno_sale_de_su_venta_mas_reciente(client, db, clos
     assert b['cliente_id'] == beto.id and b['closer'] is None
     assert c['cliente_id'] is None and c['closer'] is None
     assert client.post(f'{BASE}/closers', json={'alumnos': 'x'}, headers=H).status_code == 400
+
+
+def test_el_mazo_viejo_tambien_avisa_la_momentum(client, db, make_user, auth_headers):
+    from unittest.mock import patch
+
+    from app.services import momentum_academia
+
+    closer = make_user(role='closer', username='mazo', email='mazo@neuro.com')
+    cliente = Client(full_name='Alumna', email='alumna@x.com')
+    db.session.add(cliente)
+    db.session.commit()
+    appt = Appointment(closer_id=closer.id, client_id=cliente.id, start_time=datetime(2026, 10, 1, 15), origin='Momentum',
+                       agenda_payload={'academia': {'reserva_id': 77}})
+    db.session.add(appt)
+    db.session.commit()
+
+    with patch.object(momentum_academia, 'avisar') as avisar:
+        r = client.post(f'/api/closer/deck/{appt.id}', json={'result': 'No Show'}, headers=auth_headers(closer))
+
+    assert r.status_code == 200, r.get_json()
+    assert avisar.call_args.args[1:3] == ('mazo', {'result': 'No Show'})
