@@ -448,6 +448,71 @@ def test_una_vuelta_del_reloj_procesa_y_despierta(flujo, lead, monkeypatch):
     assert InstagramWebhookEvento.query.one().resultado == 'flujo_iniciado'
 
 
+# --- Control de la conversación (otra app es la dueña) -------------------------------------------
+
+class TransporteAjeno(TransporteSimulado):
+    """La conversación es de ManyChat hasta que el motor toma el control."""
+
+    def __init__(self, puede_tomar=True):
+        super().__init__()
+        self.puede_tomar = puede_tomar
+        self.controla = False
+        self.llamadas = []
+
+    def enviar(self, destinatario, cuerpo):
+        if not self.controla:
+            raise ErrorDeEnvio("The action is invalid since it's not the thread owner.", sin_control=True)
+        return super().enviar(destinatario, cuerpo)
+
+    def tomar_control(self, igsid):
+        self.llamadas.append(('tomar', igsid))
+        if not self.puede_tomar:
+            raise ErrorDeEnvio('Not allowed to take control')
+        self.controla = True
+        return True
+
+    def liberar_control(self, igsid):
+        self.llamadas.append(('liberar', igsid))
+        self.controla = False
+        return True
+
+
+def test_toma_el_control_reintenta_y_lo_devuelve_al_terminar(flujo, lead):
+    guia = flujo()
+    lead.transporte = TransporteAjeno()
+
+    lead.escribe('OBTENER GUIA')
+    assert lead.textos() == ['¿Cuál es tu perfil?']
+    assert lead.transporte.llamadas == [('tomar', f.LEAD)]
+
+    lead.toca(payload(guia, 'perfil', 'medico'), 'Médico graduado')
+    lead.escribe('ENARM')
+
+    assert lead.ejecucion().estado == AutEjecucion.TERMINADA
+    assert lead.transporte.llamadas == [('tomar', f.LEAD), ('liberar', f.LEAD)]
+    assert '_control_tomado' not in IgContacto.query.one().variables
+
+
+def test_si_no_puede_tomar_el_control_la_ejecucion_queda_en_error(flujo, lead):
+    flujo()
+    lead.transporte = TransporteAjeno(puede_tomar=False)
+
+    lead.escribe('OBTENER GUIA')
+
+    assert lead.transporte.enviados == []
+    assert lead.ejecucion().estado == AutEjecucion.ERROR
+
+
+def test_otra_palabra_clave_no_suelta_el_control_entre_flujos(flujo, lead):
+    flujo()
+    lead.transporte = TransporteAjeno()
+
+    lead.escribe('OBTENER GUIA')
+    lead.escribe('OBTENER GUIA')
+
+    assert lead.transporte.llamadas == [('tomar', f.LEAD)]
+
+
 # --- Transporte real ----------------------------------------------------------------------------
 
 class SesionFalsa:
@@ -494,6 +559,25 @@ def test_sin_id_de_cuenta_manda_por_me(monkeypatch):
     TransporteMeta(token='tok', sesion=sesion).enviar({'id': f.LEAD}, {'text': 'hola'})
 
     assert sesion.llamadas[0][0] == 'https://graph.instagram.com/v24.0/me/messages'
+
+
+def test_el_error_de_dueno_de_la_conversacion_se_reconoce():
+    sesion = SesionFalsa(400, {'error': {'message': "The action is invalid since it's not the thread owner.",
+                                         'code': 100}})
+
+    with pytest.raises(ErrorDeEnvio) as error:
+        TransporteMeta(token='tok', cuenta_id=f.CUENTA, sesion=sesion).enviar({'id': f.LEAD}, {'text': 'x'})
+    assert error.value.sin_control and not error.value.ventana_cerrada
+
+
+def test_tomar_y_liberar_el_control_llaman_a_meta():
+    sesion = SesionFalsa(200, {'success': True})
+    transporte = TransporteMeta(token='tok', cuenta_id=f.CUENTA, sesion=sesion)
+
+    assert transporte.tomar_control(f.LEAD) and transporte.liberar_control(f.LEAD)
+    assert [(u.rsplit('/', 1)[1], c) for u, c, _ in sesion.llamadas] == [
+        ('take_thread_control', {'recipient': {'id': f.LEAD}}),
+        ('release_thread_control', {'recipient': {'id': f.LEAD}})]
 
 
 def test_sin_token_no_intenta_mandar():

@@ -19,6 +19,8 @@ from app.automatizaciones.nucleo import mensajes
 from app.automatizaciones.transporte import ErrorDeEnvio
 
 VENTANA = timedelta(hours=24)
+# En las variables del contacto: el motor tomó el control de la conversación y tiene que devolverlo.
+CONTROL_TOMADO = '_control_tomado'
 HORAS_DE_PAUSA = 24
 MAX_PASOS = 50  # corta un grafo con un ciclo sin esperas
 
@@ -140,7 +142,7 @@ class Motor:
     def _iniciar(self, contacto, version, comentario_id=None, nodo=None):
         abierta = self._abierta(contacto)
         if abierta:
-            self._cerrar(abierta, AutEjecucion.CANCELADA, 'Entró a otro flujo')
+            self._cerrar(abierta, AutEjecucion.CANCELADA, 'Entró a otro flujo', liberar=False)
         ejecucion = AutEjecucion(contacto=contacto, version=version, estado=AutEjecucion.EN_CURSO,
                                  nodo_actual=nodo or version.grafo.get('inicio'), comentario_id=comentario_id,
                                  iniciada_en=self.ahora)
@@ -197,11 +199,23 @@ class Motor:
         ejecucion.despertar_en = None
         self._correr(ejecucion)
 
-    def _cerrar(self, ejecucion, estado, detalle=None):
+    def _cerrar(self, ejecucion, estado, detalle=None, liberar=True):
         ejecucion.estado = estado
         ejecucion.despertar_en = None
         ejecucion.detalle = (detalle or '')[:300] or None
+        if liberar:
+            self._liberar_control(ejecucion.contacto)
         db.session.flush()
+
+    def _liberar_control(self, contacto):
+        """Devuelve la conversación a la app predeterminada si el motor la había tomado."""
+        if not (contacto.variables or {}).get(CONTROL_TOMADO):
+            return
+        try:
+            self.transporte.liberar_control(contacto.igsid)
+        except ErrorDeEnvio:
+            pass  # el control vence solo a las 24 h sin actividad
+        contacto.variables = {k: v for k, v in contacto.variables.items() if k != CONTROL_TOMADO}
 
     def _correr(self, ejecucion):
         """Ejecuta nodos hasta llegar a una espera o al final."""
@@ -258,7 +272,7 @@ class Motor:
             else:
                 destinatario = {'id': contacto.igsid}
             try:
-                mid = self.transporte.enviar(destinatario, cuerpo)
+                mid = self._enviar_con_control(contacto, destinatario, cuerpo)
             except ErrorDeEnvio as error:
                 estado = AutEjecucion.VENTANA_VENCIDA if error.ventana_cerrada else AutEjecucion.ERROR
                 self._cerrar(ejecucion, estado, f'Meta rechazó el mensaje: {error}')
@@ -268,6 +282,18 @@ class Motor:
                                      ejecucion_id=ejecucion.id, nodo_id=nodo['id'], enviado_en=self.ahora))
             db.session.flush()
         return True
+
+    def _enviar_con_control(self, contacto, destinatario, cuerpo):
+        """Si la conversación es de otra app, toma el control una vez y reintenta."""
+        try:
+            return self.transporte.enviar(destinatario, cuerpo)
+        except ErrorDeEnvio as error:
+            if not error.sin_control or 'id' not in destinatario:
+                raise
+            if not self.transporte.tomar_control(contacto.igsid):
+                raise
+            self._guardar(contacto, {CONTROL_TOMADO: True})
+            return self.transporte.enviar(destinatario, cuerpo)
 
     def _guardar(self, contacto, nuevas):
         contacto.variables = {**(contacto.variables or {}), **nuevas}

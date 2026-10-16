@@ -371,12 +371,13 @@ Las Momentum son las llamadas del closer con sus alumnos: la de seña (después 
   - `resultado`: `pago` (declaró la venta), `pensando` (no cerró: sigue en seguimiento) o `no_sigue` («No va a pagar», o descartado).
 - **El pago no viaja acá:** llega como siempre por §7 y convierte la seña. Si el alumno no sigue, la seña vence sola.
 - **Fallos:** quedan en el log (`[MOMENTUM]`). El reporte nunca se toca.
-- **Pendiente:** el mazo viejo (`POST /api/closer/deck/<id>`) no avisa; solo la ficha.
+- **El mazo viejo** (`POST /api/closer/deck/<id>`) también avisa (`traducir('mazo', ...)`): «Show up» asistió (con fecha de seguimiento, «lo está pensando»), «No Show» no asistió, «Lead Perdido» / «No Lead» o «No va a pagar» no sigue.
+- **En la Academia, «no sigue» en la Momentum de seña da de baja el proceso** del alumno; en la del cierre (upsell) solo queda registrado.
 
 ## 9. De qué closer depende cada alumno (2026-10-16)
 
 > **Estado**: implementado. Del lado de la Academia: ADR-137 punto 8, `docs/MODELO/API.md` §2.4 y §2.10.
 
-- **Quién cuenta como closer (`User.es_closer_de_ventas`):** quien tiene el rol closer y, como mucho, director comercial. Un admin u operador con el rol closer de más (Mario, Santiago) no cuenta.
+- **Quién cuenta como closer (`User.es_closer_de_ventas`):** quien tiene el rol closer y, como mucho, director comercial. Un admin u operador con el rol closer de más (Mario, Santiago) no cuenta como quien inscribe ni recibe repartos; si figura como vendedor de la venta, sí se le registra.
 - **Con la inscripción:** cada `assign_product` lleva `closer_email` (`AcademyAccessService.closer_de`): quien inscribe al alumno, si es un closer activo; si lo hace otro del equipo, el vendedor de la venta más reciente del cliente (resuelto como en `/agenda/closers`), si es un closer activo. Sin ninguno, no se manda y la Academia le deja el que tenía. El alumno pasa a depender solo de ese closer. Vale para dar el acceso (venta, ficha, mazo) y renovarlo; quitarlo no lo cambia.
 - **Baja de un closer:** al desactivar en `PUT /api/admin/users/<id>` a alguien con rol closer, `AcademyAccessService.avisar_baja` manda en un hilo aparte `POST /closers/deactivated` con su email y los closers activos (`[{email, nombre}]`). La Academia reparte sus alumnos activos en partes iguales entre ellos. Fallos al log (`[ACADEMY CLOSERS]`).
