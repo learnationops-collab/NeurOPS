@@ -120,7 +120,7 @@ const PasoEntrantes = ({ ctx }) => {
                     extra={<ChipNoContestaron n={num[`${c.k}.noCont`]} entrantes={s[c.k].entrantes} />}
                     campos={[
                         <Campo key="e" ctx={ctx} ruta={`${c.k}.entrantes`} rotulo="Nuevos mensajes" canal={c} aria={`${c.n}, nuevos mensajes`} />,
-                        <Campo key="l" ctx={ctx} ruta={`${c.k}.leads`} rotulo="Entrantes cualificados" canal={c} aria={`${c.n}, entrantes cualificados`} />,
+                        <Campo key="l" ctx={ctx} ruta={`${c.k}.leads`} rotulo={'Entrantes cuali­ficados'} canal={c} aria={`${c.n}, entrantes cualificados`} />,
                         <Campo key="n" ctx={ctx} ruta={`${c.k}.no_lead`} rotulo="No leads" canal={c} aria={`${c.n}, no leads`} />,
                         <Campo key="i" ctx={ctx} ruta={`${c.k}.inabribles`} rotulo="In-abribles" canal={c} aria={`${c.n}, in-abribles`} />,
                     ]}
