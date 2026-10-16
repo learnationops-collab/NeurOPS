@@ -664,19 +664,38 @@ def asignar_clave(meta_ad_id, clave=None, automatico=False):
     return anuncio
 
 
+def cuentas_publicitarias():
+    """Las cuentas publicitarias (sin «act_»), para los enlaces al Administrador de anuncios: las
+    configuradas o, en modo muestra, las de los anuncios guardados."""
+    _, cuentas, _ = configuracion()
+    if cuentas:
+        return cuentas
+    return sorted(c for (c,) in db.session.query(MetaAnuncio.cuenta_id)
+                  .filter(MetaAnuncio.cuenta_id.isnot(None)).distinct())
+
+
 def listado(desde, hasta):
-    """Los anuncios de Meta que gastaron en [desde, hasta], para la pestaña de conexión (los que no
-    gastaron no mueven ningún número y la cuenta real tiene miles)."""
-    gasto = dict(db.session.query(MetaGastoDiario.meta_ad_id, db.func.sum(MetaGastoDiario.gasto))
-                 .filter(MetaGastoDiario.fecha >= desde, MetaGastoDiario.fecha <= hasta)
-                 .group_by(MetaGastoDiario.meta_ad_id).having(db.func.sum(MetaGastoDiario.gasto) > 0).all())
+    """Los anuncios de Meta que gastaron en [desde, hasta], para la pestaña Meta Ads (los que no
+    gastaron no mueven ningún número y la cuenta real tiene miles), con sus métricas del período y los
+    ids de su cuenta, campaña y conjunto: el desglose campaña › conjunto › anuncio y los enlaces al
+    Administrador de anuncios salen de ahí."""
+    suma = db.func.sum
+    metricas = {fila[0]: fila[1:] for fila in db.session.query(
+        MetaGastoDiario.meta_ad_id, suma(MetaGastoDiario.gasto), suma(MetaGastoDiario.impresiones),
+        suma(MetaGastoDiario.clics), suma(MetaGastoDiario.clics_enlace))
+        .filter(MetaGastoDiario.fecha >= desde, MetaGastoDiario.fecha <= hasta)
+        .group_by(MetaGastoDiario.meta_ad_id).having(suma(MetaGastoDiario.gasto) > 0).all()}
     filas = []
-    for anuncio in MetaAnuncio.query.filter(MetaAnuncio.meta_ad_id.in_(list(gasto))).all():
+    for anuncio in MetaAnuncio.query.filter(MetaAnuncio.meta_ad_id.in_(list(metricas))).all():
+        gasto, impresiones, clics, clics_enlace = metricas[anuncio.meta_ad_id]
         filas.append({
             'meta_ad_id': anuncio.meta_ad_id,
+            'cuenta_id': anuncio.cuenta_id,
             'nombre': anuncio.nombre,
             'campana': anuncio.campana,
+            'campana_id': anuncio.campana_id,
             'conjunto': anuncio.conjunto,
+            'conjunto_id': anuncio.conjunto_id,
             'estado': anuncio.estado,
             'texto': (anuncio.texto or '')[:280],
             'clave': anuncio.clave,
@@ -684,7 +703,10 @@ def listado(desde, hasta):
             'embudo': anuncio.embudo,
             'embudo_mapeo': anuncio.embudo_mapeo,
             'destino': anuncio.destino,
-            'gasto': round(float(gasto.get(anuncio.meta_ad_id) or 0), 2),
+            'gasto': round(float(gasto or 0), 2),
+            'impresiones': int(impresiones or 0),
+            'clics': int(clics or 0),
+            'clics_enlace': int(clics_enlace or 0),
         })
     filas.sort(key=lambda f: (f['estado'] != 'ACTIVE', -f['gasto'], f['nombre'] or ''))
     return filas

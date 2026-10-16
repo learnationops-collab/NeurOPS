@@ -419,3 +419,12 @@ def test_actualizar_sola_no_repite_si_se_sincronizo_hace_un_rato(db, meta, monke
     db.session.commit()
     assert servicio.sincronizar_estado()['omitido'] is False
 
+
+def test_el_listado_trae_las_metricas_y_los_ids_para_el_desglose(db, meta):
+    servicio.sincronizar(date(2026, 10, 12), date(2026, 10, 13))
+
+    fila = next(f for f in servicio.listado(date(2026, 10, 12), date(2026, 10, 13)) if f['meta_ad_id'] == '111')
+
+    assert (fila['gasto'], fila['impresiones'], fila['clics'], fila['clics_enlace']) == (14.5, 4200, 90, 61)
+    assert (fila['cuenta_id'], fila['campana_id'], fila['conjunto_id']) == ('886943269514111', 'c1', 's1')
+    assert servicio.cuentas_publicitarias() == ['886943269514111']

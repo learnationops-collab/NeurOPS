@@ -46,8 +46,10 @@ def _periodo():
 def _estado_de_meta():
     ultima = meta_ads_service.ultima_sincronizacion()
     muestra = meta_ads_service.modo_muestra()
+    # `cuentas`: las cuentas publicitarias, para los enlaces al Administrador de anuncios (`act=`).
     return {'conectado': meta_ads_service.configurado() or muestra,
             'muestra': muestra,
+            'cuentas': meta_ads_service.cuentas_publicitarias(),
             'ultima_sincronizacion': ultima.isoformat() if ultima else None}
 
 
