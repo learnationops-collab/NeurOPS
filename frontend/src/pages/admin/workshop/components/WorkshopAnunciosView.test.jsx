@@ -43,20 +43,37 @@ describe('Workshop › Anuncios del taller', () => {
 
     it('cada columna explica qué es con su tooltip y la tabla conserva sus encabezados', async () => {
         api.get.mockResolvedValue({ data: DESGLOSE });
-        render(<WorkshopAnunciosView evento={{ id: 15 }} formatCurrency={dinero} />);
+        const { container } = render(<WorkshopAnunciosView evento={{ id: 15 }} formatCurrency={dinero} />);
 
         await screen.findByText('Ad 8 - Aprobación');
         const columnas = ['Campaña › conjunto › anuncio', 'Gasto', 'Impresiones', 'Clics (todos)', 'CTR', 'CPC (enlace)',
             'CPM', 'Visitas a la landing', 'Clics al grupo', 'Costo por clic al grupo'];
+        const cabeza = container.querySelector('.ws-anuncios-cabeza');
         for (const col of columnas) {
-            expect(screen.getByRole('button', { name: `Qué significa ${col}` })).toBeInTheDocument();
+            expect(within(cabeza).getByRole('button', { name: `Qué significa ${col}` })).toBeInTheDocument();
         }
         // Los títulos pegados son de presentación: la única tabla es la de datos, con sus encabezados.
         const tabla = screen.getByRole('table');
         expect(within(tabla).getAllByRole('columnheader').map((th) => th.textContent)).toEqual(columnas);
 
-        await userEvent.hover(screen.getByRole('button', { name: 'Qué significa CPC (enlace)' }));
+        await userEvent.hover(within(cabeza).getByRole('button', { name: 'Qué significa CPC (enlace)' }));
         expect(screen.getByRole('tooltip')).toHaveTextContent(/clics que llevaron a la landing/);
+    });
+
+    it('arriba resume el taller y «Abrir todas» despliega cada campaña', async () => {
+        api.get.mockResolvedValue({ data: DESGLOSE });
+        const { container } = render(<WorkshopAnunciosView evento={{ id: 15 }} formatCurrency={dinero} />);
+
+        await screen.findByText('Ad 8 - Aprobación');
+        const resumen = container.querySelector('.ws-anuncios-resumen');
+        expect(within(resumen).getByText('$205.27')).toBeInTheDocument();
+        expect(within(resumen).getByText('$3.37')).toBeInTheDocument();
+        expect(screen.getByText(/2 campañas · 2 anuncios con gasto/)).toBeInTheDocument();
+
+        await userEvent.click(screen.getByRole('button', { name: 'Abrir todas' }));
+        expect(screen.getByText('Launch CL')).toBeInTheDocument();
+        await userEvent.click(screen.getByRole('button', { name: 'Cerrar todas' }));
+        expect(screen.queryByText('Ad 8 - Aprobación')).not.toBeInTheDocument();
     });
 
     it('el selector cambia el taller (el mismo que está abierto en Embudo)', async () => {

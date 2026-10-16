@@ -65,11 +65,21 @@ const valor = (col, v, formatCurrency) => {
     return fmtNum(v);
 };
 
-const Celdas = ({ fila, formatCurrency, landings }) => COLUMNAS.map((col) => (
+// `total`: el gasto del taller. Con él, debajo del gasto va una barrita con la parte que se llevó la fila.
+const Celdas = ({ fila, formatCurrency, landings, total }) => COLUMNAS.map((col) => (
     <td key={col.clave} data-workshop={col.titulo}>
         {col.landings && !landings ? '' : valor(col, fila[col.clave], formatCurrency)}
+        {col.clave === 'gasto' && total > 0 && (
+            <i className="ws-anuncios-parte" aria-hidden="true" title={`${Math.round((fila.gasto / total) * 100)}% del gasto`}>
+                <b style={{ width: `${Math.min(100, (fila.gasto / total) * 100)}%` }} />
+            </i>
+        )}
     </td>
 ));
+
+// Lo que se mira primero: cuánto se gastó y qué trajo. Ocho, en dos filas de cuatro.
+const RESUMEN = ['gasto', 'impresiones', 'ctr', 'cpc', 'cpm', 'visitas', 'clics_whatsapp', 'costo_whatsapp']
+    .map((clave) => COLUMNAS.find((col) => col.clave === clave));
 
 const Columnas = () => (
     <colgroup>
@@ -99,6 +109,12 @@ const WorkshopAnunciosView = ({ evento, eventos = [], onSelectEvent, formatDate 
     }, [evento?.id]);
 
     const alternar = (id) => setAbiertas((a) => ({ ...a, [id]: !a[id] }));
+    const abrirTodas = (abrir) => setAbiertas(abrir
+        ? Object.fromEntries(datos.campanas.map((c) => [c.campana_id, true])) : {});
+    const cantidadAnuncios = datos?.campanas.reduce(
+        (n, c) => n + c.conjuntos.reduce((m, s) => m + s.anuncios.length, 0), 0) ?? 0;
+    const todasAbiertas = !!datos?.campanas.length && datos.campanas.every((c) => abiertas[c.campana_id]);
+    const gastoTotal = datos?.totales?.gasto || 0;
     // Los títulos pegados siguen el scroll horizontal de la tabla.
     const copiarScroll = (e) => { if (cabezaRef.current) cabezaRef.current.scrollLeft = e.currentTarget.scrollLeft; };
 
@@ -139,6 +155,24 @@ const WorkshopAnunciosView = ({ evento, eventos = [], onSelectEvent, formatDate 
             ) : !datos.campanas.length ? (
                 <p className="all-target ws-anuncios-vacio">Los anuncios de Workshop no gastaron en estos días.</p>
             ) : (
+                <>
+                <dl className="ws-anuncios-resumen">
+                    {RESUMEN.map((col) => (
+                        <div key={col.clave}>
+                            <dt>{col.titulo} <InfoTooltip label={col.titulo} text={col.ayuda} size={11} /></dt>
+                            <dd>{valor(col, datos.totales[col.clave], formatCurrency)}</dd>
+                        </div>
+                    ))}
+                </dl>
+                <div className="ws-anuncios-barra">
+                    <span>
+                        {datos.campanas.length} {datos.campanas.length === 1 ? 'campaña' : 'campañas'} · {cantidadAnuncios}{' '}
+                        {cantidadAnuncios === 1 ? 'anuncio' : 'anuncios'} con gasto
+                    </span>
+                    <button type="button" className="text-action" onClick={() => abrirTodas(!todasAbiertas)}>
+                        {todasAbiertas ? 'Cerrar todas' : 'Abrir todas'}
+                    </button>
+                </div>
                 <div className="ws-anuncios-marco">
                     {/* Títulos pegados: lo visible. La tabla es de presentación; los tooltips sí se leen. */}
                     <div className="ws-anuncios-cabeza" ref={cabezaRef}>
@@ -177,7 +211,7 @@ const WorkshopAnunciosView = ({ evento, eventos = [], onSelectEvent, formatDate 
                                                     <strong>{c.nombre}</strong>
                                                 </button>
                                             </th>
-                                            <Celdas fila={c} formatCurrency={formatCurrency} landings />
+                                            <Celdas fila={c} formatCurrency={formatCurrency} landings total={gastoTotal} />
                                         </tr>
                                         {abiertas[c.campana_id] && c.conjuntos.map((s) => (
                                             <Fragment key={`${c.campana_id}-${s.nombre}`}>
@@ -185,12 +219,12 @@ const WorkshopAnunciosView = ({ evento, eventos = [], onSelectEvent, formatDate 
                                                     <th scope="row" title={s.nombre || 'Sin conjunto'}>
                                                         <span>{s.nombre || 'Sin conjunto'}</span>
                                                     </th>
-                                                    <Celdas fila={s} formatCurrency={formatCurrency} />
+                                                    <Celdas fila={s} formatCurrency={formatCurrency} total={gastoTotal} />
                                                 </tr>
                                                 {s.anuncios.map((a) => (
                                                     <tr key={a.meta_ad_id} className="ws-anuncios-anuncio">
                                                         <th scope="row" title={a.nombre}><span>{a.nombre}</span></th>
-                                                        <Celdas fila={a} formatCurrency={formatCurrency} />
+                                                        <Celdas fila={a} formatCurrency={formatCurrency} total={gastoTotal} />
                                                     </tr>
                                                 ))}
                                             </Fragment>
@@ -207,6 +241,7 @@ const WorkshopAnunciosView = ({ evento, eventos = [], onSelectEvent, formatDate 
                         </table>
                     </div>
                 </div>
+                </>
             )}
         </section>
     );
