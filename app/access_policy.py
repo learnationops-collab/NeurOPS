@@ -67,6 +67,7 @@ POLITICA = {
     ('POST', '/api/manychat-webhook/cleanup-cuf'): _p(MARKETING),
     ('POST', '/api/manychat-webhook/cleanup-duplicates'): _p(MARKETING),
     ('GET', '/api/manychat-webhook/log'): _p(COMERCIAL, MARKETING, SETTER),
+    ('GET', '/api/manychat-webhook/entrantes'): _p(COMERCIAL, MARKETING, SETTER),
     ('POST', '/api/manychat-webhook/migrate'): _p(MARKETING),
 
     # --- Marketing: la lista de anuncios y la atribucion manual de la bandeja «Sin anuncio» -------------
