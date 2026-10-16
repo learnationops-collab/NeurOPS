@@ -48,7 +48,8 @@ export const rangoDePeriodo = (key, hoy = new Date()) => {
     }
 };
 
-export const SUMABLES = ['entrantes', 'calificados', 'descalificados', 'agendas', 'ventas', 'gasto', 'cobrado'];
+export const SUMABLES = ['entrantes', 'calificados', 'descalificados', 'en_conversacion', 'agendas', 'ventas', 'gasto',
+    'cobrado'];
 
 const division = (num, den, decimales = 2) => (den ? Number((num / den).toFixed(decimales)) : null);
 
@@ -56,6 +57,9 @@ const division = (num, den, decimales = 2) => (den ? Number((num / den).toFixed(
  *  un 0 diría que el lead salió gratis. */
 export const completar = (base) => {
     const { entrantes, calificados, agendas, ventas, cobrado } = base;
+    const descalificados = base.descalificados || 0;
+    const enConversacion = base.en_conversacion || 0;
+    const sinRespuesta = entrantes - calificados - descalificados - enConversacion;
     const gasto = Number((base.gasto || 0).toFixed(2));
     const conGasto = gasto > 0;
     return {
@@ -64,6 +68,12 @@ export const completar = (base) => {
         no_calificados: entrantes - calificados,
         pct_calificados: division(calificados * 100, entrantes, 1),
         pct_no_calificados: division((entrantes - calificados) * 100, entrantes, 1),
+        descalificados,
+        en_conversacion: enConversacion,
+        sin_respuesta: sinRespuesta,
+        pct_descalificados: division(descalificados * 100, entrantes, 1),
+        pct_en_conversacion: division(enConversacion * 100, entrantes, 1),
+        pct_sin_respuesta: division(sinRespuesta * 100, entrantes, 1),
         cpl: conGasto ? division(gasto, entrantes) : null,
         cpl_calificado: conGasto ? division(gasto, calificados) : null,
         costo_agenda: conGasto ? division(gasto, agendas) : null,
@@ -85,8 +95,12 @@ export const COLUMNAS = [
         ayuda: 'Personas que escribieron esta palabra clave.' },
     { key: 'calificados', label: 'Calificados', formato: 'num', pct: 'pct_calificados',
         ayuda: 'Entrantes que ManyChat marcó como calificados.' },
-    { key: 'no_calificados', label: 'No calificados', formato: 'num', pct: 'pct_no_calificados',
-        ayuda: 'No califican o todavía sin respuesta.' },
+    { key: 'en_conversacion', label: 'En conversación', formato: 'num', pct: 'pct_en_conversacion',
+        ayuda: 'Respondieron, todavía sin calificar.' },
+    { key: 'sin_respuesta', label: 'Sin respuesta', formato: 'num', pct: 'pct_sin_respuesta',
+        ayuda: 'No contestaron la apertura.' },
+    { key: 'descalificados', label: 'Descalificados', formato: 'num', pct: 'pct_descalificados',
+        ayuda: 'ManyChat los marcó como no calificados.' },
     { key: 'gasto', label: 'Importe gastado', formato: 'money',
         ayuda: 'Gasto en Meta de esta palabra clave.' },
     { key: 'cpl', label: 'Costo por lead', formato: 'money', menor: true,
@@ -145,7 +159,8 @@ export const ordenar = (filas, clave, dir) => {
 
 /**
  * La serie por día de las filas dadas, con todos los días del período (los vacíos en cero: un día sin
- * leads también es un dato). Cada fila trae `dias: { 'AAAA-MM-DD': [entrantes, calificados, gasto, agendas] }`.
+ * leads también es un dato). Cada fila trae `dias: { 'AAAA-MM-DD': [entrantes, calificados, gasto, agendas,
+ * descalificados, en conversación] }`.
  */
 /** Los días de [desde, hasta] (AAAA-MM-DD), como objetos `{ dia, ...ceros }`. */
 const diasDelRango = (desde, hasta, ceros) => {
@@ -175,20 +190,27 @@ export const serieDeEmbudos = (embudos, desde, hasta) => {
 };
 
 export const serieDe = (filas, desde, hasta) => {
-    const dias = diasDelRango(desde, hasta, { entrantes: 0, calificados: 0, gasto: 0, agendas: 0 });
+    const dias = diasDelRango(desde, hasta,
+        { entrantes: 0, calificados: 0, gasto: 0, agendas: 0, descalificados: 0, en_conversacion: 0 });
     if (!dias.length) return [];
     const indice = Object.fromEntries(dias.map((x, i) => [x.dia, i]));
     filas.forEach((fila) => {
-        Object.entries(fila.dias || {}).forEach(([dia, [e, c, g, ag]]) => {
+        Object.entries(fila.dias || {}).forEach(([dia, [e, c, g, ag, d, cv]]) => {
             const x = dias[indice[dia]];
             if (!x) return;
             x.entrantes += e || 0;
             x.calificados += c || 0;
             x.gasto += g || 0;
             x.agendas += ag || 0;
+            x.descalificados += d || 0;
+            x.en_conversacion += cv || 0;
         });
     });
-    return dias.map((x) => ({ ...x, gasto: Number(x.gasto.toFixed(2)) }));
+    return dias.map((x) => ({
+        ...x,
+        gasto: Number(x.gasto.toFixed(2)),
+        sin_respuesta: x.entrantes - x.calificados - x.descalificados - x.en_conversacion,
+    }));
 };
 
 /**
@@ -209,7 +231,8 @@ export const claveDeCampana = (campana) => campana ?? '';
 export const claveDeConjunto = (campana, conjunto) => `${campana ?? ''}${SEP}${conjunto ?? ''}`;
 export const claveDeAnuncio = (fila) => fila.clave ?? '__sin';
 
-const SUMADAS_POR_GRUPO = ['entrantes', 'calificados', 'descalificados', 'agendas', 'ventas', 'cobrado'];
+const SUMADAS_POR_GRUPO = ['entrantes', 'calificados', 'descalificados', 'en_conversacion', 'agendas', 'ventas',
+    'cobrado'];
 
 /** Las filas de campañas o de conjuntos a partir de las de palabras clave. */
 export const agruparFilas = (filas, nivel) => {
@@ -236,7 +259,7 @@ export const agruparFilas = (filas, nivel) => {
         if (f.agrupacion) g.origenes.add(f.agrupacion);
         if (f.gasto || f.meta?.anuncios) g.medido = true;
         Object.entries(f.dias || {}).forEach(([dia, valores]) => {
-            const previo = g.dias[dia] || [0, 0, 0, 0];
+            const previo = g.dias[dia] || [0, 0, 0, 0, 0, 0];
             g.dias[dia] = previo.map((v, i) => v + (valores[i] || 0));
         });
         (f.gasto_por_grupo || []).forEach(([c, j, monto]) => {

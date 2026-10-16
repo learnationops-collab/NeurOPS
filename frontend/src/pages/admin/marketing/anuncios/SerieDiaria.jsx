@@ -62,14 +62,22 @@ export const Columnas = ({ dias, capas, formato, etiqueta, vacio }) => {
     );
 };
 
-const ENTRANTES = [
+/** De abajo hacia arriba: lo resuelto, lo que está en curso y lo que no avanzó. */
+const ESTADOS = [
     { key: 'calificados', label: 'Calificados', color: 'var(--cat-2)' },
-    { key: 'no_calificados', label: 'No calificados', color: 'var(--mk-resto)' },
+    { key: 'en_conversacion', label: 'En conversación', color: 'var(--cat-6)' },
+    { key: 'sin_respuesta', label: 'Sin respuesta', color: 'var(--mk-resto)' },
+    { key: 'descalificados', label: 'Descalificados', color: 'var(--cat-3)' },
 ];
 
-/** Los dos gráficos del período: leads por día (calificados abajo) y gasto por día. */
+/** Los dos gráficos del período: leads por día (por estado) y gasto por día. */
 const SerieDiaria = ({ serie, moneda, alcance, metaConectado }) => {
-    const dias = useMemo(() => serie.map((d) => ({ ...d, no_calificados: d.entrantes - d.calificados })), [serie]);
+    const dias = serie;
+    // Un estado sin nadie en el período no ocupa la leyenda (hoy ManyChat no marca descalificados).
+    const ENTRANTES = useMemo(
+        () => ESTADOS.filter((c) => c.key === 'calificados' || dias.some((d) => d[c.key] > 0)),
+        [dias],
+    );
     const entero = (v) => Number(v).toLocaleString('en-US');
     return (
         <div className="grid-2 mk-series">

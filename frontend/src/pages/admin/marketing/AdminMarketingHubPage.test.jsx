@@ -66,10 +66,10 @@ describe('Marketing › Anuncios', () => {
     it('sin anuncio en Meta el gasto es «—», no $0.00, y avisa que falta conectar Meta', async () => {
         abrir();
         const filaGuia = (await screen.findByText('Obtener Guia')).closest('tr');
-        // Celdas: elegir, palabra clave, entrantes, calificados, no calificados, gasto…
-        expect(within(filaGuia).getAllByRole('cell')[5].textContent).toBe('—');
+        // Celdas: elegir, palabra clave, entrantes, calificados, en conversación, sin respuesta, descalificados, gasto…
+        expect(within(filaGuia).getAllByRole('cell')[7].textContent).toBe('—');
         const filaAplicar = screen.getByText('APLICAR').closest('tr');
-        expect(within(filaAplicar).getAllByRole('cell')[5].textContent).toBe('$431');
+        expect(within(filaAplicar).getAllByRole('cell')[7].textContent).toBe('$431');
         expect(screen.getByText(/El gasto todavía no llega de Meta Ads/)).toBeInTheDocument();
         expect(screen.getByText(/\$1,572 gastados en anuncios de Meta sin palabra clave/)).toBeInTheDocument();
     });

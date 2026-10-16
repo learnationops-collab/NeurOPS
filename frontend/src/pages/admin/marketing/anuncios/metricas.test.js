@@ -51,13 +51,15 @@ describe('metricas de la tabla de anuncios', () => {
 
     it('la serie trae todos los días del período y suma las filas', () => {
         const serie = serieDe([
-            { dias: { '2026-10-01': [3, 2, 10.5, 1], '2026-10-03': [1, 0, 0, 0] } },
+            { dias: { '2026-10-01': [3, 2, 10.5, 1, 0, 1], '2026-10-03': [1, 0, 0, 0] } },
             { dias: { '2026-10-01': [1, 1, 4.25, 0], '2026-09-30': [9, 9, 9, 9] } },
         ], '2026-10-01', '2026-10-03');
+        // Sin calificar: en conversación (respondió) o sin respuesta; una fila vieja de 4 valores sigue andando.
+        const cero = { descalificados: 0, en_conversacion: 0 };
         expect(serie).toEqual([
-            { dia: '2026-10-01', entrantes: 4, calificados: 3, gasto: 14.75, agendas: 1 },
-            { dia: '2026-10-02', entrantes: 0, calificados: 0, gasto: 0, agendas: 0 },
-            { dia: '2026-10-03', entrantes: 1, calificados: 0, gasto: 0, agendas: 0 },
+            { dia: '2026-10-01', entrantes: 4, calificados: 3, gasto: 14.75, agendas: 1, ...cero, en_conversacion: 1, sin_respuesta: 0 },
+            { dia: '2026-10-02', entrantes: 0, calificados: 0, gasto: 0, agendas: 0, ...cero, sin_respuesta: 0 },
+            { dia: '2026-10-03', entrantes: 1, calificados: 0, gasto: 0, agendas: 0, ...cero, sin_respuesta: 1 },
         ]);
     });
 
