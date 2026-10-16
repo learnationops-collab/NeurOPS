@@ -372,7 +372,7 @@ Las Momentum son las llamadas del closer con sus alumnos: la de seña (después 
 - **El pago no viaja acá:** llega como siempre por §7 y convierte la seña. Si el alumno no sigue, la seña vence sola.
 - **Fallos:** quedan en el log (`[MOMENTUM]`). El reporte nunca se toca.
 - **El mazo viejo** (`POST /api/closer/deck/<id>`) también avisa (`traducir('mazo', ...)`): «Show up» asistió (con fecha de seguimiento, «lo está pensando»), «No Show» no asistió, «Lead Perdido» / «No Lead» o «No va a pagar» no sigue.
-- **En la Academia, «no sigue» da de baja el proceso** del alumno.
+- **En la Academia, «no sigue» en la Momentum de seña da de baja el proceso** del alumno; en la del cierre (upsell) solo queda registrado.
 
 ## 9. De qué closer depende cada alumno (2026-10-16)
 
