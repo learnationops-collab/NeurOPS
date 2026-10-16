@@ -1,211 +1,92 @@
-import React, { useMemo, useState } from 'react';
-import { Plus, CheckCircle2, Trash2, Loader2 } from 'lucide-react';
-import toast from 'react-hot-toast';
-import api from '../../../../services/api';
-import { STAGE_ORDER, aggregateTotals, stageRates, computeFuga, computeClarityScore, projectSales, money, ticketPromedio as calcularTicket } from '../funnelMath';
+import { useMemo, useState } from 'react';
+import { ChevronDown, Plus } from 'lucide-react';
+import { PanelCab, Tip } from '../../../comercial/components/Shared';
+import Cifra from '../../../comercial/components/Cifra';
+import FilaAccion from '../planificar/FilaAccion';
+import { estimarImpacto } from '../planificar/plan';
+import { aggregateTotals, computeClarityScore, computeFuga, money, stageRates, ticketPromedio } from '../funnelMath';
 
-const SCORE_FIELDS = [
-    { key: 'value_score', label: 'Valor' },
-    { key: 'speed_score', label: 'Velocidad' },
-    { key: 'simplicity_score', label: 'Simplicidad' },
-    { key: 'urgency_score', label: 'Urgencia' },
-];
-
-const emptyForm = { stage_key: '', title: '', note: '', value_score: 3, speed_score: 3, simplicity_score: 3, urgency_score: 3, target_delta_pp: 5 };
-
-// Estima el impacto en ventas/cash de una acción: aplica `target_delta_pp`
-// como mejora SOLO sobre la etapa elegida, con las demás en su tasa real
-// actual — mismo modelo lineal que el Simulador (`projectSales`).
-const estimateImpact = (action, totals, rates, ticketPromedio) => {
-    if (!action.stage_key) return { ventas: 0, cash: 0 };
-    const leadsBase = totals.leads || 0;
-    const ventasActuales = projectSales(leadsBase, rates);
-    const ratesConMejora = { ...rates, [action.stage_key]: Math.min(0.95, (rates[action.stage_key] || 0) + (action.target_delta_pp || 0) / 100) };
-    const ventasConMejora = projectSales(leadsBase, ratesConMejora);
-    const deltaVentas = Math.max(0, ventasConMejora - ventasActuales);
-    return { ventas: deltaVentas, cash: deltaVentas * ticketPromedio };
-};
-
-const WorkshopAccionesView = ({ events, goals, actions, onActionsChanged, formatCurrency }) => {
-    const [form, setForm] = useState(emptyForm);
-    const [saving, setSaving] = useState(false);
-    const [showForm, setShowForm] = useState(false);
-
+/**
+ * El plan de acciones en números (impacto estimado, Clarity Score) y las acciones que no están en un
+ * próximo taller: las que no tienen taller (todas las de antes del 16/10/2026) y las de talleres que
+ * ya pasaron. Las de cada próximo taller se ven y se tildan en su fila, arriba.
+ */
+const WorkshopAccionesView = ({
+    events, goals, actions, sinTaller, pasadas, talleres, formatCurrency,
+    onNueva, onTildar, onEditar, onBorrar, onAsignar,
+}) => {
+    const [verHechas, setVerHechas] = useState(false);
     const totals = useMemo(() => aggregateTotals(events), [events]);
     const rates = useMemo(() => stageRates(totals), [totals]);
     const fugas = useMemo(() => computeFuga(totals, rates, goals), [totals, rates, goals]);
     const clarity = useMemo(() => computeClarityScore(goals, actions, fugas), [goals, actions, fugas]);
-    const ticketPromedio = calcularTicket(totals);
+    const ticket = ticketPromedio(totals);
     const fmt = formatCurrency || money;
 
-    const stageLabel = (key) => STAGE_ORDER.find((s) => s.key === key)?.label;
+    const pendientes = actions.filter((a) => a.status === 'pending');
+    const impacto = pendientes.reduce((acc, a) => {
+        const i = estimarImpacto(a, totals, rates, ticket);
+        return { ventas: acc.ventas + i.ventas, cash: acc.cash + i.cash };
+    }, { ventas: 0, cash: 0 });
 
-    const totalImpact = useMemo(() => {
-        return (actions || []).filter((a) => a.status === 'pending').reduce((acc, a) => {
-            const imp = estimateImpact(a, totals, rates, ticketPromedio);
-            return { ventas: acc.ventas + imp.ventas, cash: acc.cash + imp.cash };
-        }, { ventas: 0, cash: 0 });
-    }, [actions, totals, rates, ticketPromedio]);
+    const sueltas = [...sinTaller, ...pasadas].filter((a) => a.status === 'pending');
+    const hechasPasadas = [...sinTaller, ...pasadas].filter((a) => a.status === 'done');
+    const fila = (a, conTaller) => (
+        <FilaAccion key={a.id} accion={a} onTildar={onTildar} onEditar={onEditar} onBorrar={onBorrar}
+            talleres={conTaller ? talleres : undefined} onAsignar={conTaller ? onAsignar : undefined} />
+    );
 
-    const resetForm = () => { setForm(emptyForm); setShowForm(false); };
-
-    const handleCreate = async (e) => {
-        e.preventDefault();
-        if (!form.title.trim()) return;
-        setSaving(true);
-        try {
-            await api.post('workshop/actions', { ...form, stage_key: form.stage_key || null });
-            toast.success('Acción creada');
-            resetForm();
-            onActionsChanged();
-        } catch (err) {
-            console.error('Error creando acción:', err);
-            toast.error('No se pudo crear la acción');
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const toggleStatus = async (action) => {
-        try {
-            await api.put(`workshop/actions/${action.id}`, { status: action.status === 'done' ? 'pending' : 'done' });
-            onActionsChanged();
-        } catch (err) {
-            console.error('Error actualizando acción:', err);
-            toast.error('No se pudo actualizar la acción');
-        }
-    };
-
-    const handleDelete = async (action) => {
-        if (!window.confirm(`¿Eliminar la acción "${action.title}"?`)) return;
-        try {
-            await api.delete(`workshop/actions/${action.id}`);
-            toast.success('Acción eliminada');
-            onActionsChanged();
-        } catch (err) {
-            console.error('Error eliminando acción:', err);
-            toast.error('No se pudo eliminar la acción');
-        }
-    };
-
-    const sorted = [...(actions || [])].sort((a, b) => (a.status === b.status ? b.score - a.score : a.status === 'done' ? 1 : -1));
+    const cifras = [
+        { key: 'pend', label: 'Pendientes', valor: String(pendientes.length), sub: actions.length - pendientes.length === 1 ? '1 hecha' : `${actions.length - pendientes.length} hechas` },
+        { key: 'ventas', label: 'Si se cumplen', valor: `+${impacto.ventas.toFixed(1)}`, sub: `+${fmt(impacto.cash)} cash`,
+          tip: 'Suma lo que movería cada acción pendiente que ataca una etapa (sus puntos sobre la tasa real). Sirve para priorizar; no es una predicción.' },
+        { key: 'clarity', label: 'Clarity Score', valor: String(clarity.score), sub: `Diagnóstico ${clarity.diagnostico}% · plan ${clarity.plan}%`,
+          tip: 'Promedio de tres cosas: metas cargadas (diagnóstico), etapas con fuga que tienen una acción (plan) y acciones hechas (ejecución).' },
+        { key: 'ejec', label: 'Ejecución', valor: `${clarity.ejecucion}%`, sub: 'de las acciones, hechas' },
+    ];
 
     return (
-        <section className="actions-grid">
-            <div className="action-groups">
-                <article className="panel action-group">
-                    <div className="action-group-head">
-                        <div>
-                            <p className="eyebrow">{(actions || []).length} acciones en el plan</p>
-                            <h2>Del hallazgo a la ejecución</h2>
-                        </div>
-                        <button type="button" className="secondary-action" onClick={() => setShowForm((v) => !v)}>
-                            <Plus size={15} /> Nueva acción
-                        </button>
-                    </div>
+        <section className="panel wp-panel" id="wp-acciones" aria-label="Plan de acciones">
+            <PanelCab titulo="Plan de acciones"
+                tip="Las acciones de cada próximo taller están en su fila. Acá quedan las pendientes que no tienen taller o cuyo taller ya pasó: asignalas a uno o tildalas.">
+                <button type="button" className="btn btn--cta btn--sm" onClick={onNueva}>
+                    <Plus aria-hidden="true" /> Nueva acción
+                </button>
+            </PanelCab>
 
-                    {showForm && (
-                        <form onSubmit={handleCreate} className="inline-form" style={{ marginTop: 22 }}>
-                            <div className="form-grid">
-                                <label className="form-field wide">
-                                    <span>Título</span>
-                                    <span className="field-control">
-                                        <input type="text" value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-                                            placeholder="Ej: Mejorar el botón de WhatsApp en LP" required />
-                                    </span>
-                                </label>
-                                <label className="form-field">
-                                    <span>Etapa que ataca</span>
-                                    <span className="field-control">
-                                        <select value={form.stage_key} onChange={(e) => setForm((p) => ({ ...p, stage_key: e.target.value }))} style={{ width: '100%', height: '100%', background: 'transparent', padding: '0 14px' }}>
-                                            <option value="">General (ninguna etapa)</option>
-                                            {STAGE_ORDER.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
-                                        </select>
-                                    </span>
-                                </label>
-                                <label className="form-field">
-                                    <span>Impacto esperado (pp)</span>
-                                    <span className="field-control">
-                                        <input type="number" step="0.5" value={form.target_delta_pp}
-                                            onChange={(e) => setForm((p) => ({ ...p, target_delta_pp: parseFloat(e.target.value) || 0 }))} />
-                                    </span>
-                                </label>
-                            </div>
-                            <div className="custom-ratings" style={{ marginTop: 16 }}>
-                                {SCORE_FIELDS.map((f) => (
-                                    <label key={f.key}>
-                                        <span>{f.label}</span>
-                                        <select value={form[f.key]} onChange={(e) => setForm((p) => ({ ...p, [f.key]: parseInt(e.target.value) }))}>
-                                            {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
-                                        </select>
-                                    </label>
-                                ))}
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 }}>
-                                <button type="button" className="secondary-action" onClick={resetForm}>Cancelar</button>
-                                <button type="submit" className="primary-action" disabled={saving}>
-                                    {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Crear acción
-                                </button>
-                            </div>
-                        </form>
-                    )}
-
-                    <div className="plan-list" style={{ marginTop: 20 }}>
-                        {sorted.length === 0 ? (
-                            <p className="all-target" style={{ textAlign: 'center', padding: '24px 0' }}>Todavía no hay acciones cargadas.</p>
-                        ) : sorted.map((a) => {
-                            const impact = estimateImpact(a, totals, rates, ticketPromedio);
-                            const done = a.status === 'done';
-                            return (
-                                <article className={`plan-item ${done ? 'done' : ''}`} key={a.id}>
-                                    <button type="button" className="done-toggle" aria-pressed={done} title={done ? 'Marcar pendiente' : 'Marcar hecha'} onClick={() => toggleStatus(a)}>
-                                        {done ? <CheckCircle2 size={20} /> : <span />}
-                                    </button>
-                                    <div>
-                                        <h3>{a.title}</h3>
-                                        <div className="rating-chips">
-                                            {a.stage_key && <span>{stageLabel(a.stage_key)}</span>}
-                                            <span>Score {a.score}</span>
-                                            {a.target_delta_pp > 0 && <span>+{a.target_delta_pp}pp · +{impact.ventas.toFixed(1)} ventas · {fmt(impact.cash)}</span>}
-                                            {a.created_by && <span>por {a.created_by}</span>}
-                                        </div>
-                                    </div>
-                                    <button type="button" className="remove-action" title="Eliminar acción" onClick={() => handleDelete(a)}>
-                                        <Trash2 size={16} />
-                                    </button>
-                                </article>
-                            );
-                        })}
+            <div className="wp-cifras">
+                {cifras.map((c) => (
+                    <div key={c.key} className="tarjeta wp-cifra">
+                        <span className="wp-cifra-cab"><span className="t-rotulo">{c.label}</span>{c.tip && <Tip texto={c.tip} titulo={c.label} />}</span>
+                        <Cifra valor={c.valor} className="wp-cifra-n num" desdeAnterior />
+                        <span className="t-cap mut40">{c.sub}</span>
                     </div>
-                </article>
+                ))}
             </div>
 
-            <aside className="action-summary">
-                <article className="projection-card">
-                    <p className="eyebrow">Si ejecutás el plan</p>
-                    <h2>Impacto total estimado</h2>
-                    <div className="projection-kpis" style={{ gridTemplateColumns: '1fr' }}>
-                        <div>
-                            <span>Ventas</span>
-                            <strong>+{totalImpact.ventas.toFixed(1)}</strong>
-                            <small className="positive">+{fmt(totalImpact.cash)} cash</small>
-                        </div>
-                    </div>
-                    <p className="model-note">Suma el impacto de las acciones pendientes que atacan una etapa específica. Sirve para priorizar; no es una predicción.</p>
-                </article>
-
-                <article className="clarity-card">
-                    <div>
-                        <p className="eyebrow">Clarity Score</p>
-                        <h2>{clarity.score}<span style={{ fontSize: 12, color: 'var(--text-muted)' }}>/100</span></h2>
-                        <div className="clarity-parts">
-                            <span>Diagnóstico {clarity.diagnostico}%</span>
-                            <span>Plan {clarity.plan}%</span>
-                            <span>Ejecución {clarity.ejecucion}%</span>
-                        </div>
-                    </div>
-                </article>
-            </aside>
+            <div className="wp-sueltas">
+                <p className="t-rotulo">Sin un próximo taller {sueltas.length > 0 && <span className="wp-cuenta num">{sueltas.length}</span>}</p>
+                {sueltas.length === 0 ? (
+                    <p className="t-cap mut40">Todas las acciones pendientes tienen un próximo taller.</p>
+                ) : (
+                    <ul className="wp-acciones" aria-label="Acciones sin un próximo taller">
+                        {sueltas.map((a) => fila(a, true))}
+                    </ul>
+                )}
+                {hechasPasadas.length > 0 && (
+                    <>
+                        <button type="button" className="wp-ver" aria-expanded={verHechas} onClick={() => setVerHechas((v) => !v)}>
+                            <ChevronDown aria-hidden="true" data-abierto={verHechas ? '1' : undefined} />
+                            {verHechas ? 'Ocultar' : 'Ver'} {hechasPasadas.length === 1 ? 'la hecha' : `las ${hechasPasadas.length} hechas`}
+                        </button>
+                        {verHechas && (
+                            <ul className="wp-acciones" aria-label="Acciones hechas">
+                                {hechasPasadas.map((a) => fila(a, false))}
+                            </ul>
+                        )}
+                    </>
+                )}
+            </div>
         </section>
     );
 };
