@@ -59,6 +59,36 @@ export const enLaLanding = (eventos, ahora = new Date()) => eventos
     .filter((e) => e.inicio_at && new Date(e.inicio_at).getTime() + DURACION_MS > ahora.getTime())
     .sort((a, b) => new Date(a.inicio_at) - new Date(b.inicio_at))[0] || null;
 
+/** Lo que dura «En vivo» en el panel desde que empieza el taller (Kerwin, 16/10/2026: «por 2 horas,
+ *  mientras termina el evento»). Las landings lo dan por terminado antes (DURACION_MS). */
+export const EN_VIVO_MS = 2 * 60 * 60 * 1000;
+
+/**
+ * El rótulo de arriba del panel: `{ fase: 'en_vivo', evento, terminaEn }` si un taller empezó hace
+ * menos de 2 horas; si no, `{ fase: 'cuenta', evento, faltan }` con el próximo programado (ms que
+ * faltan); `null` si no hay ninguno con hora por delante.
+ */
+export const estadoDelTaller = (eventos, ahora = new Date()) => {
+    const t = ahora.getTime();
+    const conHora = (eventos || []).filter((e) => e.inicio_at && !Number.isNaN(new Date(e.inicio_at).getTime()))
+        .sort((a, b) => new Date(a.inicio_at) - new Date(b.inicio_at));
+    const enVivo = conHora.find((e) => {
+        const inicio = new Date(e.inicio_at).getTime();
+        return inicio <= t && t < inicio + EN_VIVO_MS;
+    });
+    if (enVivo) return { fase: 'en_vivo', evento: enVivo, terminaEn: new Date(enVivo.inicio_at).getTime() + EN_VIVO_MS - t };
+    const proximo = conHora.find((e) => new Date(e.inicio_at).getTime() > t);
+    return proximo ? { fase: 'cuenta', evento: proximo, faltan: new Date(proximo.inicio_at).getTime() - t } : null;
+};
+
+/** 93_784_000 ms → '1 d 02:03:04'; menos de un día → '02:03:04'. */
+export const formatearCuenta = (ms) => {
+    const total = Math.max(0, Math.floor(ms / 1000));
+    const dias = Math.floor(total / 86400);
+    const resto = `${dos(Math.floor((total % 86400) / 3600))}:${dos(Math.floor((total % 3600) / 60))}:${dos(total % 60)}`;
+    return dias ? `${dias} d ${resto}` : resto;
+};
+
 /** Propuesta para «Programar»: una semana después del último, a la misma hora y con sus links. */
 export const sugerenciaProgramar = (eventos, ahora = new Date()) => {
     const conHora = eventos.filter((e) => e.inicio_at)
