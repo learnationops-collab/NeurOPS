@@ -212,8 +212,8 @@
 .dc-shell .mk-clave:has(.mk-destino){display:flex;flex-direction:column;gap:4px;align-items:flex-start}
 .dc-shell .mk-destino{display:block;max-width:220px;font-size:11px}
 
-/* --- Los enlaces al Administrador de anuncios de Meta (16/10/2026): los que salen de la app llevan el
-   ícono ↗; los botones que llevan a la pestaña Meta Ads de acá, no. --- */
+/* --- Meta Ads (16/10/2026): conexión compacta, desglose campaña › conjunto › anuncio y enlaces al
+   Administrador de anuncios de Meta (los que salen de la app llevan el ícono ↗). --- */
 .dc-shell a.mk-enlace-meta{text-decoration:none}
 .dc-shell .mk-enlace-meta.btn svg{width:13px;height:13px;opacity:.75}
 .dc-shell .mk-ibtn-meta{width:26px;height:26px;opacity:.5;transition:opacity .16s ease,color .16s ease,border-color .16s ease}
@@ -221,4 +221,48 @@
 .dc-shell tr:hover .mk-ibtn-meta,
 .dc-shell .mk-ibtn-meta:focus-visible{opacity:1}
 @media (hover:none){.dc-shell .mk-ibtn-meta{opacity:1}}
+
+.dc-shell .mk-conexion{padding:var(--s5);display:grid;gap:var(--s4)}
+.dc-shell .mk-conexion-fila{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);flex-wrap:wrap}
+.dc-shell .mk-conexion-id{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;min-width:0}
+.dc-shell .mk-conexion-id b{color:var(--text-on-surface)}
+.dc-shell .mk-conexion-acc{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+.dc-shell .mk-conexion .mk-sinc{margin-top:0}
+.dc-shell .mk-conexion .mk-pasos{margin:0}
+.dc-shell .mk-cobertura .tarjeta{padding:var(--s4);min-width:0}
+.dc-shell .mk-cobertura .mk-cob-n{font-size:22px;margin:6px 0 2px}
+.dc-shell .mk-eyebrow-tip{display:flex;align-items:center;gap:4px}
+
+.dc-shell .mk-arbol-barra{padding:0 var(--s5)}
+.dc-shell .mk-arbol > .filtro-fila{padding:0 var(--s5)}
+.dc-shell .mk-arbol-barra .busca{min-width:min(260px,100%)}
+.dc-shell .mk-tabla.mk-tabla--arbol{min-width:1180px}
+.dc-shell .mk-tabla--arbol th.mk-num{min-width:84px}
+.dc-shell .mk-tabla--arbol .mk-col-nombre{min-width:300px;max-width:360px}
+.dc-shell .mk-tabla--arbol tbody th,
+.dc-shell .mk-tabla--arbol tfoot th{text-transform:none;letter-spacing:0;font-size:13px;color:var(--text-on-surface);
+  vertical-align:middle;padding:10px 12px;border-bottom:1px solid var(--border-subtle);background:var(--mk-fondo)}
+.dc-shell .mk-tabla--arbol tbody tr:hover th{background:var(--mk-fondo-hover)}
+.dc-shell .mk-arbol-nombre{display:flex;align-items:center;gap:8px;min-width:0}
+.dc-shell .mk-arbol-nombre .mk-nombre-txt{flex:1 1 auto}
+.dc-shell .mk-arbol-fila--conjunto .mk-arbol-nombre{padding-left:22px}
+.dc-shell .mk-arbol-fila--anuncio .mk-arbol-nombre{padding-left:44px}
+.dc-shell .mk-arbol-fila--anuncio .mk-nombre-kw{font-size:13px;font-weight:600}
+.dc-shell .mk-arbol-fila--campana th,
+.dc-shell .mk-arbol-fila--campana td{border-top:1px solid var(--border-main)}
+.dc-shell .mk-arbol-abrir{width:24px;height:24px;flex-shrink:0;display:inline-grid;place-items:center;
+  border-radius:var(--radius-pill);color:var(--text-muted);transition:background-color .16s ease,color .16s ease}
+.dc-shell .mk-arbol-abrir:hover{background:var(--mat-1);color:var(--text-on-surface)}
+.dc-shell .mk-arbol-hueco{width:24px;flex-shrink:0}
+.dc-shell .mk-chip-estado{max-width:150px}
+.dc-shell .mk-sub-estado{display:block;margin-top:4px;font-size:11px}
+.dc-shell .mk-celda-txt{display:block;max-width:200px}
+.dc-shell .mk-tabla--arbol .mk-select{min-width:150px;max-width:186px;text-overflow:ellipsis}
+.dc-shell .mk-cab-celda--izq{justify-content:flex-start}
+.dc-shell .mk-flecha{opacity:1;color:var(--brand-secondary)}
+.dc-shell .mk-arbol-total th,
+.dc-shell .mk-arbol-total td{font-weight:700;border-top:1px solid var(--border-main);border-bottom:0;background:var(--mk-fondo-cab)}
 .dc-shell .mk-ws-nombre{display:flex;align-items:center;gap:8px;min-width:0}
+@media (max-width:720px){
+  .dc-shell .mk-tabla--arbol .mk-col-nombre{min-width:220px;max-width:240px}
+}

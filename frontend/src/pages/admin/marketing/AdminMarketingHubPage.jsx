@@ -190,6 +190,7 @@ const AdminMarketingHubPage = () => {
                         )}
                         {pestana === 'meta' && (
                             <ConexionMeta desde={rango.desde} hasta={rango.hasta} filasTablero={datos?.filas}
+                                moneda={datos?.moneda} cuentas={cuentas} version={version}
                                 onCambio={recargar} />
                         )}
                     </motion.div>
