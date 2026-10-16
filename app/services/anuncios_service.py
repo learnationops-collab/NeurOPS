@@ -8,9 +8,10 @@ Marketing es una tabla al estilo del Administrador de anuncios de Meta, una fila
   · **Entrantes**: personas que llegaron por esa palabra clave en el período. Una persona cuenta
     una vez por palabra clave, el día de su PRIMERA interacción con ella (sus otros webhooks del
     mismo flujo no suman). Si después vuelve por otro anuncio, cuenta también en ese.
-  · **Calificados / No calificados**: el último valor de `cualificacion` que mandó ManyChat para esa
-    persona y esa palabra clave. «No calificados» son el resto de los entrantes: los que ManyChat
-    marcó que no y los que todavía no tienen respuesta.
+  · **Calificados / Descalificados**: el último valor de `cualificacion` que mandó ManyChat para esa
+    persona y esa palabra clave. El resto está pendiente, en dos partes (Kerwin 16/10/2026: «hay leads
+    que se quedan en el inicio»): **En conversación** respondió algún mensaje del flujo (`id_option`,
+    el mensaje que contestó, distinto de 0) y **Sin respuesta** nunca contestó la apertura.
   · **Agendas**: las agendas creadas en el período (sin el marcador «Cualificado» del setter), una por
     persona y palabra clave. Se atribuyen como en «Mis agendas» del setter: el Instagram del cliente
     lleva a su conversación de ManyChat y de ahí a la última interacción de antes de la reunión. Si
@@ -120,14 +121,19 @@ def _en_tandas(valores):
         yield valores[i:i + TANDA]
 
 
+def _respondio(opcion):
+    """`id_option` es el mensaje del flujo que la persona contestó; 0 (o vacío) es que no contestó."""
+    return (opcion or '').strip() not in ('', '0', '0.0')
+
+
 def _interacciones(lead_ids, clave_de_anuncio):
-    """{lead_id: [(instante, clave, calificacion), ...]} ordenadas, con la palabra clave ya resuelta
+    """{lead_id: [(instante, clave, calificacion, respondio), ...]} ordenadas, con la palabra clave ya resuelta
     (ver el docstring del módulo: la interacción sin palabra clave toma la de la conversación)."""
     crudas = defaultdict(list)
     for tanda in _en_tandas(lead_ids):
-        for lead_id, ad_id, keyword, calificacion, creada in db.session.query(
+        for lead_id, ad_id, keyword, calificacion, opcion, creada in db.session.query(
                 LeadAnswer.lead_id, LeadAnswer.ad_id, LeadAnswer.keyword, LeadAnswer.qualification,
-                LeadAnswer.created_at).filter(LeadAnswer.lead_id.in_(tanda)):
+                LeadAnswer.id_option, LeadAnswer.created_at).filter(LeadAnswer.lead_id.in_(tanda)):
             if creada is None:
                 continue
             clave = clave_de(keyword) if es_keyword_valida(keyword) else None
@@ -135,17 +141,17 @@ def _interacciones(lead_ids, clave_de_anuncio):
             # interacción que ya existía, y ése es el anuncio que eligió.
             if ad_id and clave_de_anuncio.get(ad_id):
                 clave = clave_de_anuncio[ad_id]
-            crudas[lead_id].append((creada, clave, calificacion))
+            crudas[lead_id].append((creada, clave, calificacion, _respondio(opcion)))
 
     resultado = {}
     for lead_id, filas in crudas.items():
         filas.sort(key=lambda f: f[0])
-        primera = next((clave for _, clave, _ in filas if clave), None)
+        primera = next((fila[1] for fila in filas if fila[1]), None)
         actual, resueltas = primera, []
-        for creada, clave, calificacion in filas:
+        for creada, clave, calificacion, respondio in filas:
             if clave:
                 actual = clave
-            resueltas.append((creada, actual, calificacion))
+            resueltas.append((creada, actual, calificacion, respondio))
         resultado[lead_id] = resueltas
     return resultado
 
@@ -208,7 +214,7 @@ class _Atribuidor:
     def _ultima(self, lead_ids, tope):
         mejor = None
         for lead_id in lead_ids:
-            for creada, clave, _ in self.interacciones.get(lead_id, ()):
+            for creada, clave, *_ in self.interacciones.get(lead_id, ()):
                 if clave and (tope is None or creada <= tope) and (mejor is None or creada > mejor[0]):
                     mejor = (creada, clave)
         return mejor[1] if mejor else None
@@ -222,18 +228,21 @@ class _Atribuidor:
 # --- El tablero --------------------------------------------------------------------------------
 
 def _entrantes(desde_dt, hasta_dt, clave_de_anuncio):
-    """{clave: {'entrantes', 'calificados', 'descalificados', 'dias': {fecha: [entrantes, calificados]}}}
+    """{clave: {'entrantes', 'calificados', 'descalificados', 'en_conversacion',
+    'dias': {fecha: [entrantes, calificados, descalificados, en conversación]}}}
     y la cantidad de personas cuya conversación no tiene ninguna palabra clave (clave None)."""
     lead_ids = {lid for (lid,) in db.session.query(LeadAnswer.lead_id).filter(
         LeadAnswer.created_at >= desde_dt, LeadAnswer.created_at <= hasta_dt).distinct()}
     por_clave = defaultdict(lambda: {'entrantes': 0, 'calificados': 0, 'descalificados': 0,
-                                     'dias': defaultdict(lambda: [0, 0])})
+                                     'en_conversacion': 0, 'dias': defaultdict(lambda: [0, 0, 0, 0])})
     for lead_id, filas in _interacciones(lead_ids, clave_de_anuncio).items():
-        primera, calificacion = {}, {}
-        for creada, clave, valor in filas:
+        primera, calificacion, respondio = {}, {}, set()
+        for creada, clave, valor, contesto in filas:
             primera.setdefault(clave, creada)
             if valor in ('true', 'false'):
                 calificacion[clave] = valor
+            if contesto:
+                respondio.add(clave)
         for clave, cuando in primera.items():
             if not (desde_dt <= cuando <= hasta_dt):
                 continue
@@ -246,6 +255,10 @@ def _entrantes(desde_dt, hasta_dt, clave_de_anuncio):
                 dia[1] += 1
             elif calificacion.get(clave) == 'false':
                 fila['descalificados'] += 1
+                dia[2] += 1
+            elif clave in respondio:
+                fila['en_conversacion'] += 1
+                dia[3] += 1
     return por_clave
 
 
@@ -367,6 +380,8 @@ def metricas(base):
     """Completa una fila (o los totales) con los porcentajes y los costos. Un costo sin denominador
     (o sin gasto) es None: la pantalla muestra «—», no un 0 que parezca gratis."""
     entrantes, calificados = base['entrantes'], base['calificados']
+    descalificados, en_conversacion = base.get('descalificados', 0), base.get('en_conversacion', 0)
+    sin_respuesta = entrantes - calificados - descalificados - en_conversacion
     gasto = round(base['gasto'], 2)
     con_gasto = gasto > 0
     return {
@@ -376,6 +391,10 @@ def metricas(base):
         'no_calificados': entrantes - calificados,
         'pct_calificados': _division(calificados * 100, entrantes, 1),
         'pct_no_calificados': _division((entrantes - calificados) * 100, entrantes, 1),
+        'sin_respuesta': sin_respuesta,
+        'pct_descalificados': _division(descalificados * 100, entrantes, 1),
+        'pct_en_conversacion': _division(en_conversacion * 100, entrantes, 1),
+        'pct_sin_respuesta': _division(sin_respuesta * 100, entrantes, 1),
         'cpl': _division(gasto, entrantes) if con_gasto else None,
         'cpl_calificado': _division(gasto, calificados) if con_gasto else None,
         'costo_agenda': _division(gasto, base['agendas']) if con_gasto else None,
@@ -384,7 +403,7 @@ def metricas(base):
     }
 
 
-SUMABLES = ('entrantes', 'calificados', 'descalificados', 'agendas', 'ventas', 'gasto', 'cobrado')
+SUMABLES = ('entrantes', 'calificados', 'descalificados', 'en_conversacion', 'agendas', 'ventas', 'gasto', 'cobrado')
 
 
 def tablero(desde, hasta):
@@ -420,9 +439,11 @@ def tablero(desde, hasta):
         suyos = anuncios_por_clave.get(clave, [])
         vigente = _vigente(suyos)
         de_meta = meta_por_clave.get(clave, [])
-        dias = defaultdict(lambda: [0, 0, 0.0, 0])
-        for fecha, (n, calif) in (e['dias'].items() if e else ()):
-            dias[fecha][0], dias[fecha][1] = n, calif
+        # [entrantes, calificados, gasto, agendas, descalificados, en conversación]: los dos últimos se
+        # sumaron al final (16/10/2026) para no correr los índices que ya lee la pantalla.
+        dias = defaultdict(lambda: [0, 0, 0.0, 0, 0, 0])
+        for fecha, (n, calif, descalif, conversando) in (e['dias'].items() if e else ()):
+            dias[fecha][0], dias[fecha][1], dias[fecha][4], dias[fecha][5] = n, calif, descalif, conversando
         for fecha, monto in g.items():
             dias[fecha][2] = round(monto, 2)
         for fecha, n in (a['dias'].items() if a else ()):
@@ -443,6 +464,7 @@ def tablero(desde, hasta):
             'entrantes': e['entrantes'] if e else 0,
             'calificados': e['calificados'] if e else 0,
             'descalificados': e['descalificados'] if e else 0,
+            'en_conversacion': e['en_conversacion'] if e else 0,
             'agendas': a['agendas'] if a else 0,
             'ventas': v['ventas'] if v else 0,
             'cobrado': v['cobrado'] if v else 0.0,

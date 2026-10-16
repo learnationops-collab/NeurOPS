@@ -25,8 +25,8 @@ from app.services import anuncios_service as servicio
 _n = itertools.count(1)
 
 
-def interaccion(db, lead, cuando, keyword=None, calificacion='null', ad=None):
-    respuesta = LeadAnswer(lead_id=lead.id, keyword=keyword, qualification=calificacion,
+def interaccion(db, lead, cuando, keyword=None, calificacion='null', ad=None, opcion=None):
+    respuesta = LeadAnswer(lead_id=lead.id, keyword=keyword, qualification=calificacion, id_option=opcion,
                            ad_id=ad.id if ad else None, created_at=cuando, updated_at=cuando)
     db.session.add(respuesta)
     db.session.commit()
@@ -80,7 +80,7 @@ def test_una_persona_entra_una_vez_por_palabra_clave_el_dia_de_su_primera_intera
     assert (aplicar['entrantes'], aplicar['calificados']) == (1, 0)  # Ana entró en septiembre
     guia = fila(resultado, 'OBTENER GUIA')
     assert (guia['entrantes'], guia['calificados'], guia['nombre']) == (1, 1, 'Obtener Guia')
-    assert aplicar['dias'] == {'2026-10-03': [1, 0, 0.0, 0]}
+    assert aplicar['dias'] == {'2026-10-03': [1, 0, 0.0, 0, 0, 0]}
 
 
 def test_la_calificacion_es_la_ultima_que_llego_y_el_resto_son_no_calificados(db):
@@ -93,6 +93,21 @@ def test_la_calificacion_es_la_ultima_que_llego_y_el_resto_son_no_calificados(db
 
     assert (f['entrantes'], f['calificados'], f['descalificados'], f['no_calificados']) == (5, 3, 1, 2)
     assert (f['pct_calificados'], f['pct_no_calificados']) == (60.0, 40.0)
+
+
+def test_los_pendientes_se_separan_en_conversacion_y_sin_respuesta(db):
+    """Sin calificación: si contestó algún mensaje del flujo (id_option ≠ 0) está en conversación;
+    si nunca contestó la apertura, sin respuesta (Kerwin 16/10/2026)."""
+    casos = [('true', '4'), ('false', '1'), ('null', '1'), ('null', '0'), ('null', None)]
+    for valor, opcion in casos:
+        lead = conversacion(db)
+        interaccion(db, lead, datetime(2026, 10, 5, 12), 'EARN', valor, opcion=opcion)
+
+    f = fila(servicio.tablero(date(2026, 10, 1), date(2026, 10, 31)), 'EARN')
+
+    assert (f['calificados'], f['descalificados'], f['en_conversacion'], f['sin_respuesta']) == (1, 1, 1, 2)
+    assert (f['pct_en_conversacion'], f['pct_sin_respuesta']) == (20.0, 40.0)
+    assert f['dias']['2026-10-05'] == [5, 1, 0.0, 0, 1, 1]
 
 
 def test_la_interaccion_sin_palabra_clave_sigue_a_la_conversacion(db):
