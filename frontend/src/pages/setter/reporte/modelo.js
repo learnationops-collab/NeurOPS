@@ -106,7 +106,8 @@ export const noContestaronDe = (d) => Math.max(0,
  * Las cuentas del reporte: cada número que se muestra, los avisos y la marca de cada celda.
  *
  * Un solo aviso es un ERROR: leads + no leads + in-abribles por encima de los mensajes del canal
- * (los que no contestaron darían negativos). Ese bloquea el envío. El resto son advertencias: se
+ * (los que no contestaron darían negativos). Ese bloquea el envío, y dice la suma: los tres son
+ * partes de los mensajes, no se restan después (Elias, 16/10/2026). El resto son advertencias: se
  * ven, pintan la celda y el paso, pero el setter puede tener una razón (abrió en dolor a alguien
  * que entró ayer) y el reporte sale igual.
  */
@@ -125,7 +126,7 @@ export function calcular(s) {
         const ap = d.ap_entrantes + d.ap_dolor;
         const resp = d.ap_entrantes_resp + d.ap_dolor_resp;
         if (repartidos > d.entrantes) {
-            aviso('entrantes', 'err', `${c.n}: leads cualificados, no leads e in-abribles superan los ${d.entrantes} mensajes`);
+            aviso('entrantes', 'err', `${c.n}: ${d.leads} cualificados + ${d.no_lead} no leads + ${d.inabribles} in-abribles = ${repartidos}, más que los ${d.entrantes} mensajes de los que salen`);
             marca(`${c.k}.leads`, 'err');
             marca(`${c.k}.no_lead`, 'err');
             marca(`${c.k}.inabribles`, 'err');

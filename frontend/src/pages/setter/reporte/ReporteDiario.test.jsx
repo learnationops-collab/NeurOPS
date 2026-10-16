@@ -175,14 +175,14 @@ describe('ReporteDiario · los avisos', () => {
         escribir('Inbound, nuevos mensajes', 2);
         escribir('Inbound, no leads', 3);
 
-        expect(screen.getByText('Inbound: leads cualificados, no leads e in-abribles superan los 2 mensajes')).toBeInTheDocument();
+        expect(screen.getByText('Inbound: 0 cualificados + 3 no leads + 0 in-abribles = 3, más que los 2 mensajes de los que salen')).toBeInTheDocument();
         expect(celda('Inbound, no leads')).toHaveAttribute('aria-invalid', 'true');
 
         fireEvent.click(screen.getByRole('button', { name: /Resumen/ }));
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Enviar reporte' })); });
 
         expect(red.post).toBeNull();
-        expect(toast.error).toHaveBeenCalledWith('Inbound: leads cualificados, no leads e in-abribles superan los 2 mensajes');
+        expect(toast.error).toHaveBeenCalledWith('Inbound: 0 cualificados + 3 no leads + 0 in-abribles = 3, más que los 2 mensajes de los que salen');
         expect(pasoActual()).toContain('Entrantes');
     });
 
