@@ -147,3 +147,17 @@
 @media (prefers-reduced-motion: reduce) {
     .dc-shell .reg-tarjeta:hover { transform: none; }
 }
+
+/* --- ListaConfigurable --------------------------------------------------------------------- */
+
+/* El menú de columnas se ancla a su botón y deja ver la lista entera aunque sean muchas. */
+.dc-shell .lc-menu-columnas { max-height: min(420px, 70vh); overflow-y: auto; }
+.dc-shell .lc-menu-columnas .menu-item { align-items: center; }
+.dc-shell .lc-menu-columnas .menu-item:disabled { opacity: .55; cursor: default; }
+.dc-shell .lc-restablecer { border-top: 1px solid var(--border-subtle); margin-top: var(--s1); }
+
+.dc-shell .lc-tabla .tabla-fila[data-abre] { cursor: pointer; }
+.dc-shell .lc-tabla .tabla-fila[data-abre]:hover { background: var(--mat-1); }
+.dc-shell .lc-tabla .tabla-fila[data-abre]:focus-visible { outline: 2px solid var(--brand-secondary); outline-offset: -2px; }
+.dc-shell .lc-der { justify-content: flex-end; text-align: right; }
+.dc-shell .lc-vacio { padding: var(--s6) var(--s4); text-align: center; }
