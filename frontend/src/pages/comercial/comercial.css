@@ -317,16 +317,16 @@
 .dc-shell button.chip:hover{background:color-mix(in srgb,var(--c) 24%,transparent);
   border-color:color-mix(in srgb,var(--c) 54%,transparent)}
 
-.dc-shell .pastilla{display:inline-flex;align-items:center;gap:var(--s2);height:38px;padding:0 14px;
+.dc-shell .pastilla,.thalamus .pastilla{display:inline-flex;align-items:center;gap:var(--s2);height:38px;padding:0 14px;
   border-radius:var(--radius-pill);border:1px solid var(--border-control);
   background:var(--mat-1);color:var(--text-on-surface);
   font-size:13px;font-weight:600;white-space:nowrap;
   transition:background-color .16s ease,border-color .16s ease}
-.dc-shell .pastilla:hover{border-color:var(--text-muted);background:var(--bg-element)}
-.dc-shell .pastilla svg{width:15px;height:15px;color:var(--text-muted)}
-.dc-shell .pastilla[aria-expanded="true"]{border-color:var(--brand-secondary-border);background:var(--brand-secondary-surface)}
-.dc-shell .pastilla--on{border-color:var(--brand-secondary-border);background:var(--brand-secondary-surface)}
-.dc-shell .pastilla--sm{height:34px;padding:0 13px;font-size:12.5px}
+.dc-shell .pastilla:hover,.thalamus .pastilla:hover{border-color:var(--text-muted);background:var(--bg-element)}
+.dc-shell .pastilla svg,.thalamus .pastilla svg{width:15px;height:15px;color:var(--text-muted)}
+.dc-shell .pastilla[aria-expanded="true"],.thalamus .pastilla[aria-expanded="true"]{border-color:var(--brand-secondary-border);background:var(--brand-secondary-surface)}
+.dc-shell .pastilla--on,.thalamus .pastilla--on{border-color:var(--brand-secondary-border);background:var(--brand-secondary-surface)}
+.dc-shell .pastilla--sm,.thalamus .pastilla--sm{height:34px;padding:0 13px;font-size:12.5px}
 
 .dc-shell .tabs{display:inline-flex;align-items:center;gap:var(--s1);padding:5px;border-radius:var(--radius-pill);
   background:var(--mat-0);border:1px solid var(--border-main);max-width:100%;
@@ -1333,11 +1333,11 @@
    ============================================================ */
 /* Desde el 10/10/2026 la envoltura lleva también «Exportar» (Revisar.jsx): los dos botones en fila
    y los dos paneles anclados al mismo borde. */
-.dc-shell .config-envoltura{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2)}
+.dc-shell .config-envoltura,.thalamus .config-envoltura{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2)}
 /* Se ancla al borde IZQUIERDO de su boton: el panel es ancho y el boton
    vive a la izquierda de la barra, asi que alinearlo a la derecha lo sacaba
    de la pantalla. Debajo de 900px deja de flotar y se despliega en su fila. */
-.dc-shell .config-panel{position:absolute;top:46px;left:0;right:auto;z-index:75;
+.dc-shell .config-panel,.thalamus .config-panel{position:absolute;top:46px;left:0;right:auto;z-index:75;
   width:min(680px,calc(100vw - 32px));
   max-height:calc(100vh - 150px);overflow-y:auto;overscroll-behavior:contain;
   padding:var(--s4);background:var(--bg-flotante);
@@ -1347,47 +1347,47 @@
 /* En pantalla chica el panel deja de flotar y se despliega en su lugar:
    ocupa la fila entera y empuja la tabla, sin anclajes que se salgan. */
 @media (max-width:900px){
-  .dc-shell .config-envoltura{flex:1 1 100%;min-width:0}
+  .dc-shell .config-envoltura,.thalamus .config-envoltura{flex:1 1 100%;min-width:0}
   /* En su propia línea de la envoltura (flex): 4px + el hueco de 8px = los 12px de antes. El
      `min-width:0` es lo que impide que la vista previa de Exportar (celdas sin cortar) lo
      estire más allá de la pantalla: un ítem flex no se angosta por debajo de su contenido. */
-  .dc-shell .config-panel{position:static;width:auto;flex:1 1 100%;min-width:0;margin-top:var(--s1);
+  .dc-shell .config-panel,.thalamus .config-panel{position:static;width:auto;flex:1 1 100%;min-width:0;margin-top:var(--s1);
     max-height:none;overflow:visible;animation:none}
-  .dc-shell .config-lista{max-height:none}
+  .dc-shell .config-lista,.thalamus .config-lista{max-height:none}
 }
-.dc-shell .config-cab{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s4)}
-.dc-shell .config-grid{display:grid;gap:var(--s4) var(--s3);
+.dc-shell .config-cab,.thalamus .config-cab{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s4)}
+.dc-shell .config-grid,.thalamus .config-grid{display:grid;gap:var(--s4) var(--s3);
   grid-template-columns:repeat(auto-fit,minmax(min(100%,138px),1fr))}
 /* Nueve facetas (Ventas, desde que tiene Fuente) en el panel de 680px entraban 4 + 4 + 1: la última
    sola abajo, lo que el usuario no quiere ver en una grilla. Van 3 × 3 mientras cada columna mida
    al menos 110px; más angosto, como antes. El salto es aritmético, como en `.pareja`: cuando la
    grilla no llega a los 354px (3 × 110 + 2 huecos) el segundo término vale 138px y manda el
    `auto-fit` de siempre; cuando llega, es negativo y manda el tercio. */
-.dc-shell .config-grid:has(> :nth-child(9):last-child){
+.dc-shell .config-grid:has(> :nth-child(9):last-child),.thalamus .config-grid:has(> :nth-child(9):last-child){
   grid-template-columns:repeat(auto-fit,minmax(max(
     calc((100% - 2 * var(--s3)) / 3 - 1px),
     min(min(100%,138px),calc((3 * 110px + 2 * var(--s3) - 100%) * 999))
   ),1fr))}
-.dc-shell .config-col{display:grid;gap:var(--s2);align-content:start;min-width:0}
-.dc-shell .config-lista{display:grid;gap:2px;max-height:186px;overflow-y:auto;overflow-x:hidden;
+.dc-shell .config-col,.thalamus .config-col{display:grid;gap:var(--s2);align-content:start;min-width:0}
+.dc-shell .config-lista,.thalamus .config-lista{display:grid;gap:2px;max-height:186px;overflow-y:auto;overflow-x:hidden;
   overscroll-behavior:contain;margin:-2px;padding:2px}
-.dc-shell .config-op{display:flex;align-items:center;gap:9px;width:100%;min-width:0;text-align:left;
+.dc-shell .config-op,.thalamus .config-op{display:flex;align-items:center;gap:9px;width:100%;min-width:0;text-align:left;
   padding:7px 9px;border-radius:10px;font-size:12.5px;font-weight:600;
   color:var(--text-muted);transition:background-color .15s ease,color .15s ease}
-.dc-shell .config-op:hover{background:var(--bg-element);color:var(--text-on-surface)}
-.dc-shell .config-op[aria-checked="true"],
-.dc-shell .config-op[aria-pressed="true"]{
+.dc-shell .config-op:hover,.thalamus .config-op:hover{background:var(--bg-element);color:var(--text-on-surface)}
+.dc-shell .config-op[aria-checked="true"], .thalamus .config-op[aria-checked="true"],
+.dc-shell .config-op[aria-pressed="true"],.thalamus .config-op[aria-pressed="true"]{
   background:var(--bg-element);color:var(--text-on-surface);font-weight:700}
-.dc-shell .config-op .trunc{flex:1}
-.dc-shell .config-op .cuenta{font-size:11px;color:var(--text-muted-40);font-variant-numeric:tabular-nums}
-.dc-shell .config-caja{width:15px;height:15px;flex-shrink:0;border-radius:5px;
+.dc-shell .config-op .trunc,.thalamus .config-op .trunc{flex:1}
+.dc-shell .config-op .cuenta,.thalamus .config-op .cuenta{font-size:11px;color:var(--text-muted-40);font-variant-numeric:tabular-nums}
+.dc-shell .config-caja,.thalamus .config-caja{width:15px;height:15px;flex-shrink:0;border-radius:5px;
   display:inline-flex;align-items:center;justify-content:center;
   border:1px solid var(--border-control);color:var(--on-brand);
   font-size:9px;font-weight:900;transition:background-color .15s ease,border-color .15s ease}
-.dc-shell .config-op[aria-checked="true"] .config-caja{background:var(--brand-secondary);border-color:var(--brand-secondary)}
-.dc-shell .config-pie{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;
+.dc-shell .config-op[aria-checked="true"] .config-caja,.thalamus .config-op[aria-checked="true"] .config-caja{background:var(--brand-secondary);border-color:var(--brand-secondary)}
+.dc-shell .config-pie,.thalamus .config-pie{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;
   margin-top:var(--s4);padding-top:var(--s3);border-top:1px solid var(--border-subtle)}
-.dc-shell .cuenta-burbuja{display:inline-flex;align-items:center;justify-content:center;
+.dc-shell .cuenta-burbuja,.thalamus .cuenta-burbuja{display:inline-flex;align-items:center;justify-content:center;
   min-width:19px;height:19px;padding:0 6px;border-radius:var(--radius-pill);
   background:var(--brand-secondary);color:var(--on-brand);
   font-size:11px;font-weight:900;font-variant-numeric:tabular-nums}
@@ -1400,15 +1400,15 @@
    ============================================================ */
 /* La entrada la anima framer-motion (con movimiento reducido, quieto): la del CSS se apaga para
    no animar dos veces. */
-.dc-shell .config-panel--exportar{animation:none}
+.dc-shell .config-panel--exportar,.thalamus .config-panel--exportar{animation:none}
 .dc-shell .exp-tipo{padding:2px 8px;border-radius:var(--radius-pill);border:1px solid var(--border-control);
   font-size:10.5px;font-weight:900;letter-spacing:.12em;color:var(--text-muted)}
 /* Qué filas | Formato: dos de dos, lado a lado; angosto, una debajo de la otra. */
 .dc-shell .exp-dos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s4) var(--s3);
   margin-bottom:var(--s4)}
 @media (max-width:560px){.dc-shell .exp-dos{grid-template-columns:minmax(0,1fr)}}
-.dc-shell .config-caja--radio{border-radius:50%}
-.dc-shell .config-op[aria-checked="true"] .config-caja--radio{box-shadow:inset 0 0 0 3px var(--bg-flotante)}
+.dc-shell .config-caja--radio,.thalamus .config-caja--radio{border-radius:50%}
+.dc-shell .config-op[aria-checked="true"] .config-caja--radio,.thalamus .config-op[aria-checked="true"] .config-caja--radio{box-shadow:inset 0 0 0 3px var(--bg-flotante)}
 .dc-shell .exp-seccion{margin-bottom:var(--s4)}
 .dc-shell .exp-cab{display:flex;align-items:center;gap:var(--s2);margin-bottom:var(--s2);min-height:34px}
 .dc-shell .exp-cab > .t-rotulo{margin-right:auto;white-space:nowrap}

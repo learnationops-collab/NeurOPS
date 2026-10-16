@@ -99,6 +99,34 @@ describe('calcularCobertura', () => {
         expect(c.kpi.ocupacion).toBeCloseTo(2.25 / 4);
         expect(c.sinLeer.map(x => x.id)).toEqual(['b']);
     });
+    it('una agenda fuera del horario se dibuja y se cuenta, sin sumar horas', () => {
+        // Horario de 9 a 13: una agenda a las 15 y una cancelada a las 18 el mismo lunes.
+        const rs = () => [{ id: 'r1', inicio_ms: H(12), fin_ms: H(12, 45) }, { id: 'r2', inicio_ms: H(15), fin_ms: H(15, 45) }];
+        const cx = () => [{ id: 'r3', inicio_ms: H(18), fin_ms: H(19), motivo: 'cancelada' }];
+        const c = calcularCobertura({ todos: [p], cs: [p], ahora, reservasDe: rs, canceladasDe: cx });
+        expect(c.kpi.nAg).toBe(2);
+        expect(c.kpi.nCx).toBe(1);
+        expect(c.kpi.hDisp).toBe(4);
+        expect(c.kpi.hAg).toBe(0.75);
+        const fuera = c.bloques.filter(x => x.fuera);
+        expect(fuera.map(x => [x.items[0].tipo, x.items[0].reserva.id])).toEqual([['ag', 'r2'], ['cx', 'r3']]);
+        expect(c.maxH).toBeGreaterThanOrEqual(19);
+        // Lo de fuera del horario no tapa lo rayado «Sin closer».
+        expect(c.huecos.some(x => x.m0 <= 15 * 60 && x.m1 > 15 * 60)).toBe(false);
+    });
+    it('un closer sin horario igual muestra sus agendas', () => {
+        const q = normalPersona('b', { nombre: 'Beto', tz: 'America/La_Paz', horario: normalHorario({}) });
+        const c = calcularCobertura({ todos: [p, q], cs: [p, q], ahora, reservasDe: (id) => (id === 'b' ? reservas() : []) });
+        expect(c.kpi.nAg).toBe(1);
+        expect(c.bloques.filter(x => x.p.id === 'b').map(x => x.fuera)).toEqual([true]);
+    });
+    it('con un día elegido, las métricas son las de ese día', () => {
+        const q = normalPersona('a', { nombre: 'Ana', tz: 'America/La_Paz', horario: normalHorario({ 1: [['09:00', '13:00']], 2: [['09:00', '11:00']] }) });
+        const rs = () => [{ inicio_ms: H(12), fin_ms: H(12, 45) }, { inicio_ms: H(24 + 9), fin_ms: H(24 + 9, 30) }];
+        expect(calcularCobertura({ todos: [q], cs: [q], ahora, reservasDe: rs }).kpi.nAg).toBe(2);
+        const martes = calcularCobertura({ todos: [q], cs: [q], ahora, reservasDe: rs, dia: 1 }).kpi;
+        expect([martes.nAg, martes.hDisp]).toEqual([1, 2]);
+    });
     it('sin datos de Google cuenta solo las reservas', () => {
         const c = calcularCobertura({ todos: [p], cs: [p], ahora, reservasDe: reservas });
         expect(c.kpi.ocupacion).toBeCloseTo(0.75 / 4);

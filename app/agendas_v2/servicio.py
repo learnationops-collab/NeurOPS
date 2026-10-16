@@ -798,6 +798,25 @@ def ocupacion_google(desde, hasta):
     return out
 
 
+# Lo que el Filtro completo de Available lee de cada agenda: lo mismo que filtra la tabla de Agendas de
+# Closing. Fuera queda el contacto del lead (nombre, email, instagram, teléfono): el visor ya tiene el
+# nombre por su lado, y el setter, que también mira, no lo recibe.
+CAMPOS_DE_FICHA = (
+    'id', 'fecha', 'fuente', 'closer', 'setter', 'pre_call', 'post_call', 'asistio', 'presento', 'no_cerrada',
+    'retraso_dias', 'ya_paso', 'descartada',
+)
+
+
+def fichas_de_agendas(desde, hasta):
+    """{appointment_id (str): ficha} de las agendas que empiezan entre desde y hasta (ms), con las filas de
+    Closing (ComercialService.agendas): así el calendario filtra por estado, pre call, post call, fuente,
+    setter, confirmada, asistió y presentó con los mismos datos que la tabla, y no puede dar otro número."""
+    from app.services.comercial_service import ComercialService
+
+    filas = ComercialService.agendas(ms_a_dt(desde).date(), ms_a_dt(hasta).date())
+    return {str(f['id']): {k: f.get(k) for k in CAMPOS_DE_FICHA} for f in filas}
+
+
 # --- Pagina publica -----------------------------------------------------------------------------
 
 CAMPOS_EVENTO_PUBLICO = (

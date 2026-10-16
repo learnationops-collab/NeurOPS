@@ -98,13 +98,13 @@ const largoMin = (ts) => ts.reduce((s, [a, b]) => s + b - a, 0) / 60000;
 
 // La semana que se ve: su zona (`tz`, o la que más se repite entre esos closers), su lunes (fecha UTC) y
 // el rango de instantes a pedir a Google (un día de margen a cada lado: los horarios de otras zonas
-// pueden caer en el día vecino).
+// pueden caer en el día vecino). idxHoy: qué día de la semana es hoy (0 = lunes).
 export function rangoSemana(cs, semana = 0, ahora = Date.now(), tz = null) {
     tz = tz || tzEquipo(cs);
     const hoy = claveDia(ahora, tz).split('-').map(Number);
     const dHoy = Date.UTC(hoy[0], hoy[1] - 1, hoy[2]);
     const lunes = dHoy - ((new Date(dHoy).getUTCDay() + 6) % 7) * DIA_MS + semana * 7 * DIA_MS;
-    return { tz, lunes, desde: lunes - DIA_MS, hasta: lunes + 8 * DIA_MS };
+    return { tz, lunes, desde: lunes - DIA_MS, hasta: lunes + 8 * DIA_MS, idxHoy: (new Date(dHoy).getUTCDay() + 6) % 7 };
 }
 
 /**
@@ -123,9 +123,13 @@ export function rangoSemana(cs, semana = 0, ahora = Date.now(), tz = null) {
  * en una agenda o su margen no va: es el de la propia agenda. Las agendas canceladas
  * (canceladasDe(personaId) → [{inicio_ms, fin_ms, motivo}]) van como `cx`: se muestran pero no ocupan.
  * Un closer cuyo calendario no se pudo leer ('error') queda fuera de la ocupación: no se sabe.
+ * Una agenda que empieza fuera de todo el horario de su closer (o de un closer sin horario) también va: un
+ * bloque propio `fuera` que cuenta la agenda pero no suma horas disponibles ni ocupadas. Antes no se
+ * dibujaba ni se contaba, y el «N agendas» quedaba corto (16 cuando eran más de 20, 14/10/2026).
  * tz: en qué zona se muestra (la de quien mira); sin ella, la que más se repite entre los closers.
+ * dia: con la vista de un día (0 = lunes), las métricas son las de ese día.
  */
-export function calcularCobertura({ todos, cs, semana = 0, ahora = Date.now(), reservasDe = () => [], canceladasDe = () => [], googleDe = () => null, edit = false, tz = null }) {
+export function calcularCobertura({ todos, cs, semana = 0, ahora = Date.now(), reservasDe = () => [], canceladasDe = () => [], googleDe = () => null, edit = false, tz = null, dia = null }) {
     const { tz: zona, lunes } = rangoSemana(cs, semana, ahora, tz);
     tz = zona;
     const dias = [];
@@ -147,6 +151,7 @@ export function calcularCobertura({ todos, cs, semana = 0, ahora = Date.now(), r
         const eventos = g && g.estado === 'ok' ? (g.eventos || []) : [];
         // Sin el detalle de los eventos, cada franja ocupada es uno sin título.
         const tarjetasEv = eventos.length ? eventos : ev.map(([a, b]) => ({ inicio: a, fin: b, titulo: null }));
+        const propios = [];
         for (let j = -1; j < 8; j++) {
             const b = new Date(lunes + j * DIA_MS), dow = b.getUTCDay();
             ((p.horario || {})[dow] || []).forEach((r, ri) => {
@@ -171,6 +176,7 @@ export function calcularCobertura({ todos, cs, semana = 0, ahora = Date.now(), r
                     .concat(cxs.filter(r => r.inicio_ms >= t0 && r.inicio_ms < t1)
                         .map(r => ({ tipo: 'cx', a: r.inicio_ms, b: Math.min(finDe(r), t1), reserva: r })));
                 const m0 = minutoDelDia(t0, tz), m1 = m0 + (t1 - t0) / 60000;
+                propios.push([t0, t1]);
                 todosBloques.push({
                     p, li, di, m0, m1: Math.min(m1, 1440), t0, t1, dow, ri, segs, items, sinLeer,
                     mDisp: (t1 - t0) / 60000, mAg: largoMin(enAg), mMg: largoMin(enMg), mEv: largoMin(enEv),
@@ -179,8 +185,23 @@ export function calcularCobertura({ todos, cs, semana = 0, ahora = Date.now(), r
                 });
             });
         }
+        // Las agendas (y canceladas) que no empiezan dentro de ningún bloque de su horario: cada una, su bloque.
+        const fuera = (r) => r.inicio_ms != null && !propios.some(([a, b]) => a <= r.inicio_ms && r.inicio_ms < b);
+        rs.filter(fuera).map(r => ['ag', r]).concat(cxs.filter(fuera).map(r => ['cx', r])).forEach(([tipo, r]) => {
+            const t0 = r.inicio_ms, t1 = Math.max(finDe(r), t0 + 15 * 60000);
+            const di = claves.indexOf(claveDia(t0, tz));
+            if (di < 0) return;
+            const m0 = minutoDelDia(t0, tz);
+            todosBloques.push({
+                p, li, di, m0, m1: Math.min(m0 + (t1 - t0) / 60000, 1440), t0, t1, dow: dias[di].d.getUTCDay(), ri: -1, fuera: true,
+                segs: [], items: [{ tipo, a: t0, b: t1, reserva: r, col: 0, ncols: 1 }], sinLeer,
+                mDisp: 0, mAg: 0, mMg: 0, mEv: 0, nAg: tipo === 'ag' ? 1 : 0, nCx: tipo === 'cx' ? 1 : 0,
+            });
+        });
     });
     const bloques = todosBloques.filter(x => x.li >= 0);
+    // La cobertura (lo rayado «Sin closer») sale solo del horario: una agenda fuera de él no lo cubre.
+    const deHorario = todosBloques.filter(x => !x.fuera);
 
     let minH = 24, maxH = 0;
     todosBloques.forEach(x => { minH = Math.min(minH, Math.floor(x.m0 / 60)); maxH = Math.max(maxH, Math.ceil(x.m1 / 60)); });
@@ -191,22 +212,22 @@ export function calcularCobertura({ todos, cs, semana = 0, ahora = Date.now(), r
 
     // Métricas (en minutos). Agendado incluye el margen de cada agenda. La ocupación se mide solo sobre lo que se sabe.
     let mDisp = 0, mAg = 0, mMg = 0, mEv = 0, nAg = 0, nCx = 0, mBase = 0, mAgBase = 0, mEvBase = 0;
-    bloques.forEach(x => {
+    bloques.filter(x => dia == null || x.di === dia).forEach(x => {
         mDisp += x.mDisp; mAg += x.mAg + x.mMg; mMg += x.mMg; mEv += x.mEv; nAg += x.nAg; nCx += x.nCx;
         if (!x.sinLeer) { mBase += x.mDisp; mAgBase += x.mAg + x.mMg; mEvBase += x.mEv; }
     });
     const huecos = [];
     let hHueco = 0;
     const ventana = [Infinity, 0];
-    todosBloques.forEach(x => { ventana[0] = Math.min(ventana[0], x.m0); ventana[1] = Math.max(ventana[1], x.m1); });
+    deHorario.forEach(x => { ventana[0] = Math.min(ventana[0], x.m0); ventana[1] = Math.max(ventana[1], x.m1); });
     dias.forEach((dd, di) => {
         const cub = [];
-        for (let m = ventana[0]; m < ventana[1]; m += 30) cub.push(todosBloques.some(x => x.di === di && x.m0 <= m && x.m1 >= m + 30));
+        for (let m = ventana[0]; m < ventana[1]; m += 30) cub.push(deHorario.some(x => x.di === di && x.m0 <= m && x.m1 >= m + 30));
         let ini = null;
         cub.concat([true]).forEach((c, idx) => {
             const m = ventana[0] + idx * 30;
             if (!c && ini == null) ini = m;
-            if (c && ini != null) { huecos.push({ di, m0: ini, m1: m }); hHueco += (m - ini) / 60; ini = null; }
+            if (c && ini != null) { huecos.push({ di, m0: ini, m1: m }); if (dia == null || di === dia) hHueco += (m - ini) / 60; ini = null; }
         });
     });
     // Por día: minutos ocupados (a) de los disponibles (t), sin los calendarios que no se pudieron leer.

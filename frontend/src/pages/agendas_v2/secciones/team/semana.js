@@ -40,6 +40,24 @@ export function useOcupacionGoogle(desde, hasta, activo) {
     return res && res.k === k ? res.datos : null;
 }
 
+// La ficha de Closing de cada agenda de la semana ({appointment_id: ficha}), para el Filtro completo. {}
+// mientras no llega, sin API o si falla: el calendario se ve igual, solo no se filtra por lo de Closing.
+export function useFichas(desde, hasta, activo) {
+    const [res, setRes] = useState(null);   // {k, fichas}
+    const k = desde + '-' + hasta;
+    useEffect(() => {
+        const ad = almacen.adaptador;
+        if (!activo || !ad.fichas) return undefined;
+        let vivo = true;
+        const pedir = () => ad.fichas(desde, hasta).then((fichas) => { if (vivo) setRes({ k, fichas }); }, () => {});
+        pedir();
+        const t = setInterval(pedir, 120000);
+        return () => { vivo = false; clearInterval(t); };
+    }, [k, activo]); // eslint-disable-line react-hooks/exhaustive-deps
+    return res && res.k === k ? res.fichas : SIN_FICHAS;
+}
+const SIN_FICHAS = {};
+
 const SIN_LEER = { estado: 'error', franjas: [] };
 
 // googleDe(personaId) a partir de lo que devolvió useOcupacionGoogle.

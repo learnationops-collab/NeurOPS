@@ -3,12 +3,15 @@
 // «Libre»: verde con un check lo libre, azul con un teléfono las llamadas, un reloj lo ocupado por otro
 // evento. Con varios closers se agrupan como cartas (tarjetas.js): cada día es una columna con todas las
 // tarjetas, una por turno, y lo que se pisa queda encimado (lo ocupado atrás, lo libre adelante), con el
-// primer nombre del closer y el detalle al pasar el mouse; sin agrupar, cada closer es un carril.
-// Rayado rojo = franja del día sin ningún closer. Se filtra por closer y por tipo de tarjeta.
+// nombre del closer y, en cada agenda, el del lead, sin pasar el mouse; sin agrupar, cada closer es un carril.
+// Se ve la semana o un día (un carril ancho por closer). Rayado rojo = franja del día sin ningún closer.
+// Se filtra por closer y por tipo de tarjeta, y con el Filtro completo de Closing (filtro.js): estado, pre
+// call, post call, fuente, setter, funnel, confirmada, asistió y presentó. «N agendas» cuenta lo que se ve.
 // Con una sola persona y permiso, se edita arrastrando: crear, mover y estirar franjas (de a 30 min).
 
 import { useMemo, useRef, useState } from 'react';
-import { closers, colorVar, horasSemana } from '../../core/datos';
+import { SlidersHorizontal } from 'lucide-react';
+import { buscar, closers, colorVar, horasSemana } from '../../core/datos';
 import { puedeHorarioDe } from '../../core/permisos';
 import { fechaCorta, gmtTxt, horaTxt } from '../../core/tiempo';
 import { clonar, fmt, mayus, pad } from '../../core/util';
@@ -18,8 +21,10 @@ import { toast } from '../../ui/toast';
 import { DIAS } from '../../core/catalogos';
 import { HPX, avUnir, calcularCobertura, durTxt, hmTxt, huecosLibres, nombreDia, rangoSemana } from './cobertura';
 import { setTeam } from './comun';
-import { agendasDeVista, googleDeOcupacion, useAhora, useOcupacionGoogle, useZonaVista } from './semana';
-import { VISUAL, apilar, primerNombre } from './tarjetas';
+import { agendasDeVista, googleDeOcupacion, useAhora, useFichas, useOcupacionGoogle, useZonaVista } from './semana';
+import { VISUAL, apilar } from './tarjetas';
+import { FACETAS, agendasDe, aplicarFacetas, condiciones, fichaDe } from './filtro';
+import PanelConfigurar from '../../../comercial/components/PanelConfigurar';
 import { gruposDeSesion, turnosSemana } from './turnos';
 
 const hm = (m) => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
@@ -41,11 +46,11 @@ const tituloEv = (e) => (e.titulo || 'Ocupado' + (e.calendario ? ' · ' + e.cale
 // El nombre del lead de una agenda.
 const nombreLead = (r) => ((r.lead && r.lead.nombre) || 'Agenda').replace(/\|/g, '/');
 
-// Una tarjeta del calendario, al estilo de Google Calendar: el ícono de su tipo (VISUAL), el título y, si
-// entra, la hora (y `sub`). `col` de `ncols`: su lugar cuando se pisa con otras, lado a lado; `capa`: cuánto
+// Una tarjeta del calendario, al estilo de Google Calendar: el ícono de su tipo (VISUAL), el título, la
+// `linea` de abajo (el lead de una agenda, cuando el título es el closer) y, si entra, la hora (y `sub`). `col` de `ncols`: su lugar cuando se pisa con otras, lado a lado; `capa`: cuánto
 // se corre cuando va encimada como carta (agrupadas). `puntos`: el color del closer.
 const CORRE_PX = 14;
-function Tarjeta({ tipo, clase, top, alto, titulo, hora, sub, tip, col = 0, ncols = 1, capa = null, puntos = null }) {
+function Tarjeta({ tipo, clase, top, alto, titulo, linea = null, hora, sub, tip, col = 0, ncols = 1, capa = null, puntos = null }) {
     const pos = capa != null ? { left: 'calc(min(' + capa * CORRE_PX + 'px, 55%) + 2px)', right: 3 }
         : ncols > 1 ? { left: 'calc(' + (col / ncols * 100) + '% + 2px)', width: 'calc(' + (100 / ncols) + '% - 3px)', right: 'auto' } : null;
     const icono = VISUAL[tipo] && VISUAL[tipo].icono;
@@ -58,7 +63,8 @@ function Tarjeta({ tipo, clase, top, alto, titulo, hora, sub, tip, col = 0, ncol
                     <b className="av-card-tit">{titulo}</b>
                 </span>
             )}
-            {alto >= 32 && hora && <span className="av-card-hora">{hora}{sub ? ' · ' + sub : ''}</span>}
+            {alto >= 27 && linea && <span className="av-card-linea">{linea}</span>}
+            {alto >= (linea ? 41 : 32) && hora && <span className="av-card-hora">{hora}{sub ? ' · ' + sub : ''}</span>}
         </div>
     );
 }
@@ -138,13 +144,36 @@ export default function Available({ solo = null }) {
     const ahora = useAhora();
     const edit = !!solo && !lectura && puedeHorarioDe(d, sim, perfil, solo);
     const semana = team.semana || 0;
-    const todos = useMemo(() => closers(d).filter(p => horasSemana(p) > 0), [d]);
-    // Filtros: closers y tipos de tarjeta ocultos ({'p:<id>': true, ag|mg|ev|tl: true}).
+    const conHoras = useMemo(() => closers(d).filter(p => horasSemana(p) > 0), [d]);
+    // Filtros: closers y tipos de tarjeta ocultos ({'p:<id>': true, ag|mg|ev|tl|cx: true}) y el Filtro
+    // completo ({faceta: [valores]}, que cumplan todas o alguna).
     const [oculto, setOculto] = useState({});
     const [agrupar_, setAgrupar] = useState(true);
+    const [facetas, setFacetas] = useState({});
+    const [modo, setModo] = useState('todas');
+    const [panel, setPanel] = useState(false);
     const alternar = (k) => setOculto(o => ({ ...o, [k]: !o[k] }));
     const ver = (k) => !oculto[k];
-    const cs = useMemo(() => (solo ? (horasSemana(solo) > 0 || edit ? [solo] : []) : todos.filter(p => !oculto['p:' + p.id])), [solo, edit, todos, oculto]);
+
+    // El equipo se ve en la hora de quien mira; la semana de un closer, en la suya (ahí se edita su horario).
+    const zonaVista = useZonaVista(), tzVista = solo ? null : zonaVista;
+    const activo = solo ? horasSemana(solo) > 0 || edit : closers(d).length > 0;
+    const { desde, hasta, idxHoy } = rangoSemana(solo ? [solo] : conHoras, semana, ahora, tzVista);
+    const google = useOcupacionGoogle(desde, hasta, activo);
+    const fichas = useFichas(desde, hasta, activo);
+    // Las agendas de Agendas 2.0 y las de n8n; las canceladas, aparte.
+    const vista = useMemo(() => agendasDeVista(reservas, google), [reservas, google]);
+    // Un closer sin horario que igual tiene agendas en la semana también se ve: si no, no se contaban.
+    const todos = useMemo(() => closers(d).filter(p => horasSemana(p) > 0
+        || vista.ocupan(p.id).concat(vista.canceladas(p.id)).some(r => r.inicio_ms >= desde && r.inicio_ms < hasta)), [d, vista, desde, hasta]);
+    const csChips = useMemo(() => (solo ? (horasSemana(solo) > 0 || edit ? [solo] : []) : todos.filter(p => !oculto['p:' + p.id])), [solo, edit, todos, oculto]);
+    // La faceta Closer del Filtro completo deja solo sus carriles.
+    const selCloser = facetas.closer;
+    const cs = useMemo(() => (selCloser && selCloser.length ? csChips.filter(p => selCloser.includes(p.nombre)) : csChips), [csChips, selCloser]);
+
+    // Vista de la semana o de un día (team.dia: 0 = lunes de la semana que se ve). El día es del equipo.
+    const unDia = !solo && team.vista === 'dia';
+    const diaSel = unDia ? Math.max(0, Math.min(6, team.dia ?? idxHoy)) : null;
 
     // Los turnos libres dependen de cuánto dura cada sesión: se elige el evento (agrupados los que dan
     // las mismas sesiones a quienes se ven).
@@ -152,26 +181,35 @@ export default function Available({ solo = null }) {
     const grupo = grupos.find(x => x.eventos.some(e => e.id === team.evento)) || grupos[0] || null;
     const evento = grupo ? grupo.evento : null;
 
-    // El equipo se ve en la hora de quien mira; la semana de un closer, en la suya (ahí se edita su horario).
-    const zonaVista = useZonaVista(), tzVista = solo ? null : zonaVista;
-    const { desde, hasta } = rangoSemana(cs, semana, ahora, tzVista);
-    const google = useOcupacionGoogle(desde, hasta, cs.length > 0);
-    // Las agendas de Agendas 2.0 y las de n8n; las canceladas, aparte.
-    const vista = useMemo(() => agendasDeVista(reservas, google), [reservas, google]);
-
-    const cob = useMemo(() => (cs.length ? calcularCobertura({
-        todos, cs, semana, ahora, edit, reservasDe: vista.ocupan, canceladasDe: vista.canceladas,
-        googleDe: googleDeOcupacion(google), tz: tzVista,
-    }) : null), [todos, cs, semana, ahora, edit, vista, google, tzVista]);
-    const turnos = useMemo(() => (evento && cs.length ? turnosSemana({
-        personas: cs, evento, semana, ahora, reservasDe: vista.ocupan, googleDe: googleDeOcupacion(google), tz: tzVista,
-    }) : null), [evento, cs, semana, ahora, vista, google, tzVista]);
+    const calcular = (personas) => calcularCobertura({
+        todos, cs: personas, semana, ahora, edit, reservasDe: vista.ocupan, canceladasDe: vista.canceladas,
+        googleDe: googleDeOcupacion(google), tz: tzVista, dia: diaSel,
+    });
+    const cob = useMemo(() => (cs.length ? calcular(cs) : null), [todos, cs, semana, ahora, edit, vista, google, tzVista, diaSel]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Las opciones del Filtro completo se cuentan sobre todos los closers de los chips, no solo los que deja
+    // la faceta Closer: si no, elegir uno haría desaparecer a los demás del panel.
+    const cobChips = useMemo(() => (cs === csChips ? cob : csChips.length ? calcular(csChips) : null), [cob, cs, csChips]); // eslint-disable-line react-hooks/exhaustive-deps
+    const turnos = useMemo(() => (evento && csChips.length ? turnosSemana({
+        personas: csChips, evento, semana, ahora, reservasDe: vista.ocupan, googleDe: googleDeOcupacion(google), tz: tzVista,
+    }) : null), [evento, csChips, semana, ahora, vista, google, tzVista]);
     const filaDe = (id) => (turnos ? turnos.filas.find(f => f.p.id === id) : null);
+    // Los turnos de los carriles que se ven.
+    const filasT = turnos ? turnos.filas.filter(f => cs.some(p => p.id === f.p.id)) : [];
+    const libresDe = (di) => filasT.reduce((s, f) => s + (di == null ? f.nLibres : f.libres[di]), 0);
+    const totalDe = (di) => filasT.reduce((s, f) => s + (di == null ? f.nTotal : f.total[di]), 0);
 
     const [arr, setArr] = useState(null);   // franja que se está arrastrando: {dow, ri, a, b, modo}
     const drag = useRef(null);
 
     if (!cob) {
+        if (!solo && csChips.length) {
+            return (
+                <div className="panel vacio">
+                    <p className="t-sm mut">Ningún closer cumple el filtro.</p>
+                    <button type="button" data-nav="" className="btn btn--linea btn--sm" onClick={() => setFacetas({})}>Limpiar el filtro</button>
+                </div>
+            );
+        }
         if (!solo && todos.length) {
             return (
                 <div className="panel vacio">
@@ -186,10 +224,14 @@ export default function Available({ solo = null }) {
     const conApi = !!almacen.adaptador.ocupacion, leyendo = conApi && google == null;
     const n = cs.length, alto = (maxH - minH) * HPX;
     // Con varios closers, agrupadas: cada día es una columna angosta. Sin agrupar, lo bastante ancho para
-    // leer los carriles de todos (si no entra, se desplaza).
-    const agrupado = !solo && n > 1 && agrupar_;
-    const anchoMin = 56 + 7 * (agrupado ? 160 : Math.max(120, n * 112));
-    const rango = fechaCorta(dias[0].k) + ' – ' + fechaCorta(dias[6].k);
+    // leer los carriles de todos (si no entra, se desplaza). Un día: un carril ancho por closer.
+    const agrupado = !solo && !unDia && n > 1 && agrupar_;
+    const anchoMin = unDia ? 56 + Math.max(600, n * 190) : 56 + 7 * (agrupado ? 160 : Math.max(120, n * 112));
+    const diasVista = unDia ? [diaSel] : [0, 1, 2, 3, 4, 5, 6];
+    const columnasDias = { gridTemplateColumns: 'repeat(' + diasVista.length + ',minmax(0,1fr))' };
+    const rango = unDia
+        ? mayus(DIAS[diaSel].n) + ' ' + fechaCorta(dias[diaSel].k)
+        : fechaCorta(dias[0].k) + ' – ' + fechaCorta(dias[6].k);
     const y = (m) => (m - minH * 60) / 60 * HPX;
 
     // Minuto del día bajo el puntero, redondeado a 30 min y dentro de la grilla.
@@ -251,60 +293,86 @@ export default function Available({ solo = null }) {
         toast(mayus(nombreDia(bl.dow)) + ' ' + horaTxt(bl.t0, tz) + '–' + horaTxt(bl.t1, tz) + ' quitado');
     };
 
-    // Las piezas de un bloque (un closer en una franja), según los filtros: cada una con su tipo visual
-    // (VISUAL), sus instantes (a, b) y minutos del día (m0, m1), lo que dice (etiqueta) y su detalle.
+    // Las piezas de un bloque (un closer en una franja): cada una con su tipo visual (VISUAL), de qué tipo de
+    // tarjeta sale (`src`, el de los chips), sus instantes (a, b) y minutos del día (m0, m1), lo que dice
+    // (etiqueta), el lead (en las agendas) y su detalle. Las agendas llevan además su reserva, su ficha de
+    // Closing y su funnel, para el Filtro completo.
+    const nombreFunnel = (r) => { const f = r.funnel_id && buscar(d, 'funnels', r.funnel_id); return f ? f.nombre : null; };
     const piezasDe = (x) => {
         const out = [], f = filaDe(x.p.id);
-        const pieza = (tipo, a, b, extra) => out.push({
-            tipo, a, b, m0: x.m0 + (a - x.t0) / 60000, m1: x.m0 + (b - x.t0) / 60000, p: x.p, pas: b <= ahora, ...extra,
+        const pieza = (tipo, src, a, b, extra) => out.push({
+            tipo, src, a, b, m0: x.m0 + (a - x.t0) / 60000, m1: x.m0 + (b - x.t0) / 60000, p: x.p, pas: b <= ahora, ...extra,
         });
+        const deAgenda = (r) => ({ reserva: r, ficha: fichaDe(fichas, r), funnel: nombreFunnel(r) });
         x.items.forEach(it => {
-            if (!ver(it.tipo)) return;
             const lugar = { col: it.col, ncols: it.ncols };
             if (it.tipo === 'ag') {
                 const lead = nombreLead(it.reserva), t = it.reserva.calendar;
-                pieza('llamada', it.a, it.b, { ...lugar, aviso: !!t && t.estado === 'rechazado', etiqueta: lead, detalle: 'Llamada con ' + lead + textoTraza(t) });
+                pieza('llamada', 'ag', it.a, it.b, { ...lugar, ...deAgenda(it.reserva), aviso: !!t && t.estado === 'rechazado', etiqueta: lead, lead, detalle: 'Llamada con ' + lead + textoTraza(t) + (x.fuera ? ' · Fuera de su horario' : '') });
             } else if (it.tipo === 'mg') {
-                pieza('margen', it.a, it.b, { ...lugar, etiqueta: 'Margen', detalle: 'margen después de la llamada' });
+                pieza('margen', 'mg', it.a, it.b, { ...lugar, etiqueta: 'Margen', detalle: 'margen después de la llamada' });
             } else if (it.tipo === 'ev') {
                 const e = it.evento, tit = tituloEv(e);
-                pieza(e.titulo ? 'llamada' : 'ocupado', it.a, it.b, { ...lugar, etiqueta: tit, detalle: (e.titulo ? 'En su calendario de agendamiento: ' : '') + tit });
+                pieza(e.titulo ? 'llamada' : 'ocupado', 'ev', it.a, it.b, { ...lugar, etiqueta: tit, lead: e.titulo ? tit : null, detalle: (e.titulo ? 'En su calendario de agendamiento: ' : '') + tit });
             } else if (it.tipo === 'cx') {
                 const c = textoCancelada(it.reserva, tz);
-                pieza('cancelada', it.a, it.b, { duda: it.reserva.motivo === 'sin_evento', etiqueta: c.titulo, detalle: c.titulo + '. ' + c.por });
+                pieza('cancelada', 'cx', it.a, it.b, { ...deAgenda(it.reserva), duda: it.reserva.motivo === 'sin_evento', etiqueta: c.titulo, lead: c.titulo, detalle: c.titulo + '. ' + c.por });
             }
         });
-        if (ver('tl')) {
-            (f ? f.inicios : []).filter(t => t >= x.t0 && t < x.t1).forEach(t => pieza('libre', t, t + f.dur * 60000, {
-                etiqueta: 'Libre', detalle: 'turno libre de ' + f.dur + ' min' + (f.margen ? ' (+' + f.margen + ' de margen)' : ''),
-            }));
-            huecosLibres(x, { ahora, turnos: f ? f.inicios : [], largoTurno: f ? (f.dur + f.margen) * 60000 : 0 }).forEach(([a, b]) => pieza('hueco', a, b, {
+        (f ? f.inicios : []).filter(t => t >= x.t0 && t < x.t1).forEach(t => pieza('libre', 'tl', t, t + f.dur * 60000, {
+            etiqueta: 'Libre', detalle: 'turno libre de ' + f.dur + ' min' + (f.margen ? ' (+' + f.margen + ' de margen)' : ''),
+        }));
+        if (!x.fuera) {
+            huecosLibres(x, { ahora, turnos: f ? f.inicios : [], largoTurno: f ? (f.dur + f.margen) * 60000 : 0 }).forEach(([a, b]) => pieza('hueco', 'tl', a, b, {
                 etiqueta: 'Libre · ' + durTxt((b - a) / 60000), detalle: 'tiempo libre' + (f ? ', no entra una sesión de ' + f.dur + ' min' : ''),
             }));
         }
         return out;
     };
-    // Una pieza encimada como carta (agrupadas): el primer nombre del closer con su color y, al pasar el
-    // mouse, el detalle.
+    // Lo que se ve de un bloque: los tipos que dejan los chips y lo que cumple el Filtro completo.
+    const visibles = (zs) => aplicarFacetas(zs.filter(z => ver(z.src)), facetas, modo);
+    const enVista = (x) => diaSel == null || x.di === diaSel;
+    const todasLasPiezas = bloques.filter(enVista).flatMap(piezasDe);
+    const piezasVistas = visibles(todasLasPiezas);
+    // Las opciones del panel: lo de los closers de los chips en lo que se ve (la semana o el día). Una faceta
+    // sin ningún valor (la de Closing antes de que lleguen las fichas) no ocupa columna.
+    const piezasPanel = (cobChips || cob).bloques.filter(enVista).flatMap(piezasDe);
+    const defPanel = { facetas: FACETAS.filter(fa => (facetas[fa.key] || []).length || piezasPanel.some(z => fa.de(z))) };
+    const nCond = condiciones(facetas);
+    const nAgVistas = agendasDe(piezasVistas), nAgTotal = agendasDe(todasLasPiezas);
+    const quitarValor = (k, v) => setFacetas(fs => ({ ...fs, [k]: (fs[k] || []).filter(x => x !== v) }));
+
+    // Una pieza encimada como carta (agrupadas): el nombre del closer con su color, el del lead en las
+    // agendas y, al pasar el mouse, el detalle.
     const tarjetaCarta = (z, k) => {
         const hora = horaTxt(z.a, tz) + ' – ' + horaTxt(z.b, tz);
         return (
             <Tarjeta key={z.p.id + z.tipo + z.a + '-' + k} tipo={z.tipo} clase={claseDe(z.tipo, [z])} top={y(z.m0)} alto={(z.m1 - z.m0) / 60 * HPX}
-                capa={z.capa} titulo={primerNombre(z.p.nombre)} hora={hora} puntos={<i className="av-dot" style={{ '--c': colorVar(z.p.color) }} />}
+                capa={z.capa} titulo={z.p.nombre} linea={z.lead} hora={hora} puntos={<i className="av-dot" style={{ '--c': colorVar(z.p.color) }} />}
                 tip={sinBarra(VISUAL[z.tipo].n + ' · ' + z.p.nombre) + '|' + sinBarra(hora + ' · ' + z.detalle)} />
         );
     };
 
-    const irSemana = (v) => setTeam({ semana: v === 0 ? 0 : semana + v });
+    // Las flechas mueven una semana o, en la vista de un día, un día (pasando de semana en los bordes).
+    const irSemana = (v) => {
+        if (!unDia) return setTeam({ semana: v === 0 ? 0 : semana + v });
+        if (v === 0) return setTeam({ semana: 0, dia: idxHoy });
+        const nd = diaSel + v;
+        return setTeam(nd < 0 ? { semana: semana - 1, dia: 6 } : nd > 6 ? { semana: semana + 1, dia: 0 } : { dia: nd });
+    };
+    const enHoy = !semana && (!unDia || diaSel === idxHoy);
+    const cambiarVista = (v) => setTeam(v === 'dia' ? { vista: 'dia', dia: semana ? 0 : idxHoy } : { vista: 'semana' });
     const ocupPct = Math.round(kpi.ocupacion * 100);
     const nadieLeido = sinLeer.length > 0 && sinLeer.length === cs.length;
 
     return (
         <>
             <div className="av-kpis">
-                {turnos && <div className="av-kpi av-kpi--turnos"><span>Turnos libres</span><b className="num">{turnos.nLibres}<em>/{turnos.nTotal}</em></b></div>}
+                {turnos && <div className="av-kpi av-kpi--turnos"><span>Turnos libres</span><b className="num">{libresDe(diaSel)}<em>/{totalDe(diaSel)}</em></b></div>}
                 <div className="av-kpi"><span>{solo ? 'Tus horas' : 'Horas disponibles'}</span><b className="num">{fmt(kpi.hDisp, 0)}</b></div>
-                <div className="av-kpi"><span>Agendado</span><b className="num">{fmt(kpi.hAg, 1)} h<em> · {kpi.nAg} {kpi.nAg === 1 ? 'agenda' : 'agendas'}</em></b></div>
+                <div className="av-kpi" data-tip={'Agendas|Las vigentes ' + (unDia ? 'del día' : 'de la semana') + ', también las que caen fuera del horario del closer.' + (nAgVistas !== nAgTotal ? ' Con los filtros se ven ' + nAgVistas + ' de ' + nAgTotal + '.' : '')}>
+                    <span>Agendado</span><b className="num">{fmt(kpi.hAg, 1)} h<em> · {nAgVistas !== nAgTotal ? nAgVistas + ' de ' + nAgTotal : nAgTotal} {nAgTotal === 1 ? 'agenda' : 'agendas'}</em></b>
+                </div>
                 <div className="av-kpi"><span>Por eventos</span><b className="num">{conApi && !leyendo && !nadieLeido ? fmt(kpi.hEv, 1) + ' h' : '—'}</b></div>
                 <div className="av-kpi" data-tip={'Ocupación|Tiempo efectivo de agendas y eventos dentro del horario: lo que se pisa cuenta una vez.' + (sinLeer.length ? ' Sin contar a ' + nombres(sinLeer) + '.' : '')}>
                     <span>Ocupación</span><b className="num">{nadieLeido ? '—' : ocupPct + '%'}<em> · {fmt(kpi.hLibre, 1)} h libres</em></b>
@@ -316,10 +384,17 @@ export default function Available({ solo = null }) {
                 <Humo clase="humo--tarjeta humo--suave" cols={HUMO_MARCA} />
                 <div className="av-barra-sup">
                     <div className="av-nav">
-                        <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label="Semana anterior" onClick={() => irSemana(-1)}><Icono n="chevron-left" /></button>
-                        <button type="button" className="btn btn--linea btn--sm" data-nav="" disabled={!semana} onClick={() => irSemana(0)}>Hoy</button>
-                        <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label="Semana siguiente" onClick={() => irSemana(1)}><Icono n="chevron-right" /></button>
+                        <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label={unDia ? 'Día anterior' : 'Semana anterior'} onClick={() => irSemana(-1)}><Icono n="chevron-left" /></button>
+                        <button type="button" className="btn btn--linea btn--sm" data-nav="" disabled={enHoy} onClick={() => irSemana(0)}>Hoy</button>
+                        <button type="button" className="ibtn ibtn--sm" data-nav="" aria-label={unDia ? 'Día siguiente' : 'Semana siguiente'} onClick={() => irSemana(1)}><Icono n="chevron-right" /></button>
                         <b className="av-rango" aria-live="polite">{rango}</b>
+                        {!solo && (
+                            <div className="seg av-vista" role="group" aria-label="Vista">
+                                {[['dia', 'Día'], ['semana', 'Semana']].map(([k, label]) => (
+                                    <button key={k} type="button" data-nav="" aria-pressed={(k === 'dia') === unDia} onClick={() => cambiarVista(k)}>{label}</button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                     {grupo && (
                         <div className="av-evento">
@@ -330,27 +405,49 @@ export default function Available({ solo = null }) {
                     )}
                 </div>
                 <div className="av-filtros" role="group" aria-label="Filtros">
+                    <div className="config-envoltura av-config">
+                        <button type="button" data-nav="" className={'pastilla pastilla--sm' + (nCond ? ' pastilla--on' : '')} aria-expanded={panel} aria-haspopup="dialog" onClick={() => setPanel(v => !v)}>
+                            <SlidersHorizontal size={14} />Filtro completo
+                            {nCond > 0 && <span className="cuenta-burbuja">{nCond}</span>}
+                        </button>
+                        {panel && (
+                            <PanelConfigurar def={defPanel} filas={piezasPanel} facetas={facetas} setFacetas={setFacetas} modo={modo} setModo={setModo}
+                                tabla="calendario" onLimpiar={() => setFacetas({})} onCerrar={() => setPanel(false)} />
+                        )}
+                    </div>
+                    <span className="av-fil-sep" />
                     {!solo && todos.map(p => {
                         const f = filaDe(p.id), on = ver('p:' + p.id);
                         return (
-                            <button key={p.id} type="button" className="av-fil" aria-pressed={on} style={{ '--c': colorVar(p.color) }} onClick={() => alternar('p:' + p.id)}>
+                            <button key={p.id} type="button" data-nav="" className="av-fil" aria-pressed={on} style={{ '--c': colorVar(p.color) }} onClick={() => alternar('p:' + p.id)}>
                                 <i />{p.nombre}{f && on && <b className="av-ley-n">{f.nLibres} libres</b>}
                             </button>
                         );
                     })}
                     {!solo && <span className="av-fil-sep" />}
                     {!solo && n > 1 && (
-                        <button type="button" className="av-fil av-fil--tipo" aria-pressed={agrupar_} onClick={() => setAgrupar(v => !v)}
+                        <button type="button" data-nav="" className="av-fil av-fil--tipo" aria-pressed={agrupar_} onClick={() => setAgrupar(v => !v)}
                             data-tip="Agrupar|Todos los closers en una columna por día, con lo que se pisa encimado como cartas: lo libre adelante, lo ocupado atrás. Sin agrupar, cada closer tiene su carril.">
                             <Icono n="capas" s={13} />Agrupar
                         </button>
                     )}
                     {TIPOS.filter(t => (t.v !== 'ev' || conApi) && (t.v !== 'mg' || bloques.some(x => x.mMg > 0)) && (t.v !== 'cx' || kpi.nCx > 0)).map(t => (
-                        <button key={t.v} type="button" className="av-fil av-fil--tipo" aria-pressed={ver(t.v)} data-tip={t.tip} onClick={() => alternar(t.v)}>
+                        <button key={t.v} type="button" data-nav="" className="av-fil av-fil--tipo" aria-pressed={ver(t.v)} data-tip={t.tip} onClick={() => alternar(t.v)}>
                             <i className={t.cls} />{t.n}
                         </button>
                     ))}
                 </div>
+                {nCond > 0 && (
+                    <div className="av-condiciones">
+                        <span className="t-rotulo">{modo === 'alguna' ? 'Cumple alguna:' : 'Cumple todas:'}</span>
+                        {FACETAS.flatMap(fa => (facetas[fa.key] || []).map(v => (
+                            <button key={fa.key + v} type="button" data-nav="" className="av-fil av-fil--tag" aria-label={'Quitar ' + fa.label + ': ' + v} onClick={() => quitarValor(fa.key, v)}>
+                                {v === 'Sí' || v === 'No' ? fa.label + ': ' + v : v}<Icono n="x" s={11} />
+                            </button>
+                        )))}
+                        <button type="button" data-nav="" className="btn btn--linea btn--sm" onClick={() => setFacetas({})}>Limpiar</button>
+                    </div>
+                )}
                 <div className="av-ley">
                     {solo && turnos && <span className="av-ley-s"><b className="av-ley-n">{turnos.nLibres} turnos libres</b> de {turnos.nTotal} esta semana</span>}
                     {edit && <span className="av-ley-s av-ley-edit"><Icono n="edit" s={12} />Arrastrá para crear o mover · se repite cada semana</span>}
@@ -362,14 +459,19 @@ export default function Available({ solo = null }) {
                     {sinGoogle.length > 0 && <span className="av-ley-s"><Icono n="calendar" s={12} />Sin Google Calendar: {nombres(sinGoogle)} (solo agendas)</span>}
                 </div>
                 <div className="av-cal">
-                    <div className="av-cab" style={{ minWidth: anchoMin }}>
+                    <div className="av-cab" style={{ minWidth: anchoMin, gridTemplateColumns: '56px repeat(' + diasVista.length + ',minmax(0,1fr))' }}>
                         <span className="av-tz">{gmtTxt(tz, ahora)}</span>
-                        {dias.map((dd, di) => {
-                            const pd = porDia[di], esHoy = dd.k === hoyK;
+                        {diasVista.map(di => {
+                            const dd = dias[di], pd = porDia[di], esHoy = dd.k === hoyK;
                             return (
                                 <div key={dd.k} className={'av-dia' + (esHoy ? ' av-dia--hoy' : '')}>
                                     <span>{DIAS[(dd.d.getUTCDay() + 6) % 7].n.slice(0, 3)}</span><b>{dd.d.getUTCDate()}</b>
-                                    <em>{turnos ? turnos.filas.reduce((s, f) => s + f.libres[di], 0) + ' libres' : pd.t ? Math.round(pd.a / pd.t * 100) + '%' : '—'}</em>
+                                    <em>{turnos ? libresDe(di) + ' libres' : pd.t ? Math.round(pd.a / pd.t * 100) + '%' : '—'}</em>
+                                    {unDia && (
+                                        <span className="av-carriles" style={{ gridTemplateColumns: 'repeat(' + n + ',minmax(0,1fr))' }}>
+                                            {cs.map(p => <span key={p.id} className="av-carril-n trunc" style={{ '--c': colorVar(p.color) }}><i className="av-dot" />{p.nombre}</span>)}
+                                        </span>
+                                    )}
                                 </div>
                             );
                         })}
@@ -378,27 +480,27 @@ export default function Available({ solo = null }) {
                         <div className="av-horas">
                             {Array.from({ length: maxH - minH }, (_, i) => <span key={i} style={{ top: i * HPX }}>{pad(minH + i)}:00</span>)}
                         </div>
-                        <div className="av-grilla" style={{ '--hpx': HPX + 'px' }}>
-                            {dias.map((dd, di) => {
-                                const esHoy = dd.k === hoyK, dow = dd.d.getUTCDay();
+                        <div className="av-grilla" style={{ '--hpx': HPX + 'px', ...columnasDias }}>
+                            {diasVista.map(di => {
+                                const dd = dias[di], esHoy = dd.k === hoyK, dow = dd.d.getUTCDay();
                                 const bls = bloques.filter(x => x.di === di);
                                 const enArr = arr && arr.dow === dow;
                                 return (
                                     <div key={dd.k} className={'av-col' + (esHoy ? ' av-col--hoy' : '')}
-                                        onPointerDown={edit ? (e => { const el = e.target.closest('.av-bloque'); empezar(e, dow, el ? bls[+el.dataset.i] : null); }) : undefined}>
+                                        onPointerDown={edit ? (e => { const el = e.target.closest('.av-bloque'); const bl = el ? bls[+el.dataset.i] : null; if (bl && bl.fuera) return; empezar(e, dow, bl); }) : undefined}>
                                         {huecos.filter(x => x.di === di).map(x => (
                                             <div key={x.m0} className="av-hueco" style={{ top: y(x.m0), height: (x.m1 - x.m0) / 60 * HPX }} data-tip={'Sin closer|' + hm(x.m0) + ' a ' + hm(x.m1)} />
                                         ))}
-                                        {agrupado && apilar(bls.flatMap(piezasDe)).map(tarjetaCarta)}
+                                        {agrupado && apilar(visibles(bls.flatMap(piezasDe))).map(tarjetaCarta)}
                                         {!agrupado && bls.map((x, i) => {
-                                            const vivo = enArr && arr.modo !== 'crear' && arr.ri === x.ri;
+                                            const vivo = enArr && arr.modo !== 'crear' && !x.fuera && arr.ri === x.ri;
                                             const m0 = vivo ? arr.a : x.m0, m1 = vivo ? arr.b : x.m1;
                                             const txtH = vivo ? hmTxt(m0) + '–' + hmTxt(m1) : horaTxt(x.t0, tz) + '–' + horaTxt(x.t1, tz);
                                             return (
-                                                <div key={x.p.id + '-' + x.dow + '-' + x.ri} data-i={i} className={'av-bloque' + (vivo ? ' av-bloque--drag' : '') + (x.sinLeer ? ' av-bloque--sinleer' : '')}
+                                                <div key={x.p.id + '-' + x.dow + '-' + x.ri + (x.fuera ? '-' + x.t0 : '')} data-i={i} className={'av-bloque' + (vivo ? ' av-bloque--drag' : '') + (x.sinLeer ? ' av-bloque--sinleer' : '') + (x.fuera ? ' av-bloque--fuera' : '')}
                                                     style={{ '--c': colorVar(x.p.color), top: y(m0), height: (m1 - m0) / 60 * HPX, left: 'calc(' + (x.li / n * 100) + '% + 2px)', width: 'calc(' + (100 / n) + '% - 4px)' }}
-                                                    data-tip={x.p.nombre + ' · ' + horaTxt(x.t0, tz) + '–' + horaTxt(x.t1, tz) + '|' + resumenBloque(x)}>
-                                                    {edit ? (
+                                                    data-tip={x.fuera ? x.p.nombre + '|Fuera de su horario' : x.p.nombre + ' · ' + horaTxt(x.t0, tz) + '–' + horaTxt(x.t1, tz) + '|' + resumenBloque(x)}>
+                                                    {edit && !x.fuera ? (
                                                         <>
                                                             <span className="av-asa av-asa--t" data-av="t" />
                                                             <span className="av-asa av-asa--b" data-av="b" />
@@ -406,12 +508,12 @@ export default function Available({ solo = null }) {
                                                             <span className="av-hora">{txtH}</span>
                                                         </>
                                                     ) : null}
-                                                    {!vivo && piezasDe(x).map((z, k) => {
+                                                    {!vivo && visibles(piezasDe(x)).map((z, k) => {
                                                         const hora = horaTxt(z.a, tz) + ' – ' + horaTxt(z.b, tz);
                                                         return (
                                                             <Tarjeta key={z.tipo + z.a + '-' + k} tipo={z.tipo} clase={claseDe(z.tipo, [z])}
                                                                 top={(z.a - x.t0) / 3600000 * HPX} alto={(z.b - z.a) / 3600000 * HPX} col={z.col} ncols={z.ncols}
-                                                                titulo={n > 1 ? primerNombre(x.p.nombre) : z.etiqueta} hora={hora}
+                                                                titulo={n > 1 ? x.p.nombre : z.etiqueta} linea={n > 1 ? z.lead : null} hora={hora}
                                                                 tip={sinBarra(VISUAL[z.tipo].n + ' · ' + x.p.nombre) + '|' + sinBarra(hora + ' · ' + z.detalle)} />
                                                         );
                                                     })}

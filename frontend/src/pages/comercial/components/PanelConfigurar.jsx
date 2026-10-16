@@ -8,6 +8,9 @@ import { esTablaDeAgendas } from './tablasDef';
  * Se ancla al borde IZQUIERDO de su botón (`.config-panel`): el panel es ancho (680px) y el botón
  * vive a la izquierda de la barra, así que alinearlo a la derecha lo sacaba de la pantalla. Debajo
  * de 900px el CSS lo saca del flujo flotante y lo despliega en su propia fila, empujando la tabla.
+ *
+ * Lo usa también el calendario de Thalamus (Available). Sus botones llevan `data-nav`: solo cambian lo que
+ * se ve, así que el modo solo lectura de Thalamus (ui/soloLectura.js) no los bloquea.
  */
 const PanelConfigurar = ({ def, filas, facetas, setFacetas, modo, setModo, tabla, basis, setBasis,
     onLimpiar, onCerrar }) => {
@@ -50,7 +53,7 @@ const PanelConfigurar = ({ def, filas, facetas, setFacetas, modo, setModo, tabla
             <div className="config-cab">
                 <p className="t-h3" style={{ fontSize: 16 }}>Filtro completo</p>
                 {seleccionados > 0 && <span className="cuenta-burbuja">{seleccionados}</span>}
-                <button type="button" className="ibtn ibtn--sm" style={{ marginLeft: 'auto' }}
+                <button type="button" data-nav="" className="ibtn ibtn--sm" style={{ marginLeft: 'auto' }}
                     onClick={onCerrar} aria-label="Cerrar">
                     <X size={15} />
                 </button>
@@ -62,7 +65,7 @@ const PanelConfigurar = ({ def, filas, facetas, setFacetas, modo, setModo, tabla
                         <span className="t-rotulo">Fecha</span>
                         <div className="seg">
                             {[['meet', 'Fecha meet'], ['creacion', 'F. creación']].map(([k, label]) => (
-                                <button key={k} type="button" aria-pressed={basis === k}
+                                <button key={k} type="button" data-nav="" aria-pressed={basis === k}
                                     onClick={() => setBasis(k)}>
                                     {label}
                                 </button>
@@ -73,7 +76,7 @@ const PanelConfigurar = ({ def, filas, facetas, setFacetas, modo, setModo, tabla
                 <span className="t-rotulo">Cumple</span>
                 <div className="seg">
                     {[['todas', 'Todas'], ['alguna', 'Alguna']].map(([k, label]) => (
-                        <button key={k} type="button" aria-pressed={modo === k}
+                        <button key={k} type="button" data-nav="" aria-pressed={modo === k}
                             onClick={() => setModo(k)}>
                             {label}
                         </button>
@@ -93,7 +96,7 @@ const PanelConfigurar = ({ def, filas, facetas, setFacetas, modo, setModo, tabla
                                 {opcionesDe(faceta).map(([valor, n]) => {
                                     const on = sel.includes(valor);
                                     return (
-                                        <button key={valor} type="button" className="config-op"
+                                        <button key={valor} type="button" data-nav="" className="config-op"
                                             role="checkbox" aria-checked={on} title={ayudaDe(faceta, valor)}
                                             onClick={() => alternar(faceta, valor)}>
                                             <span className="config-caja">{on ? '✓' : ''}</span>
@@ -114,7 +117,7 @@ const PanelConfigurar = ({ def, filas, facetas, setFacetas, modo, setModo, tabla
                         ? 'Sin condiciones: se ve todo el período.'
                         : `${seleccionados} ${seleccionados === 1 ? 'condición' : 'condiciones'} sobre ${visibles.length} facetas.`}
                 </span>
-                <button type="button" className="btn btn--linea btn--sm" style={{ marginLeft: 'auto' }}
+                <button type="button" data-nav="" className="btn btn--linea btn--sm" style={{ marginLeft: 'auto' }}
                     disabled={seleccionados === 0} onClick={onLimpiar}>
                     <RotateCcw size={13} />
                     Limpiar

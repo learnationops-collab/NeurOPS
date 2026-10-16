@@ -341,6 +341,37 @@ def test_ocupacion_exige_un_rango_valido_y_no_es_para_el_closer(client, gente, d
     assert _ocupacion(client, auth_headers(gente['closer'])).status_code == 403
 
 
+def test_fichas_trae_lo_que_filtra_closing_sin_el_contacto_del_lead(client, db, dir_h, gente, auth_headers):
+    from datetime import datetime
+
+    from app.models import Appointment, Client
+
+    setter = gente['setter']
+    cli = Client(full_name='Lucía', email='lucia@x.com', phone='+5491100000000')
+    db.session.add(cli)
+    db.session.flush()
+    dentro = Appointment(client_id=cli.id, closer_id=gente['closer'].id, setter_id=setter.id,
+                         start_time=datetime(1970, 1, 3, 10), result='Pendiente', origin='Instagram')
+    fuera = Appointment(client_id=cli.id, closer_id=gente['closer'].id, start_time=datetime(1970, 1, 20, 10))
+    db.session.add_all([dentro, fuera])
+    db.session.commit()
+
+    r = client.get(f'/api/agendas-v2/fichas?desde=0&hasta={7 * 86400000}', headers=dir_h)
+
+    assert r.status_code == 200
+    fichas = r.get_json()['fichas']
+    assert list(fichas) == [str(dentro.id)]
+    f = fichas[str(dentro.id)]
+    assert f['fuente'] == 'Instagram' and f['setter'] == setter.username and f['closer'] == gente['closer'].username
+    assert {'key', 'label'} <= set(f['pre_call']) and {'key', 'label'} <= set(f['post_call'])
+    texto = r.get_data(as_text=True).lower()
+    assert 'lucia' not in texto and 'lucía' not in texto and '5491100000000' not in texto
+    # El setter también mira el calendario; el closer no entra, y el rango se valida como en /ocupacion.
+    assert client.get(f'/api/agendas-v2/fichas?desde=0&hasta={86400000}', headers=auth_headers(setter)).status_code == 200
+    assert client.get(f'/api/agendas-v2/fichas?desde=0&hasta={86400000}', headers=auth_headers(gente['closer'])).status_code == 403
+    assert client.get(f'/api/agendas-v2/fichas?desde=0&hasta={11 * 86400000}', headers=dir_h).status_code == 400
+
+
 def test_el_estado_dice_en_que_zona_mira_cada_uno(client, db, gente, dir_h):
     # Sin WhatsApp ni zona elegida: decide el navegador.
     assert client.get('/api/agendas-v2/estado', headers=dir_h).get_json()['zona'] is None

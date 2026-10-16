@@ -21,7 +21,7 @@ ROLES_CON_ACCESO = (ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL)
 # agendamiento. Lo que se configura es de todos (un funnel o un evento borrado deja sin agendas a todo
 # el equipo), asi que queda para la direccion. Vale el rol ACTIVO, como en toda la app.
 ROLES_DE_LECTURA = (ROLE_SETTER,)
-VISTAS_DE_LECTURA = frozenset({'estado', 'estadisticas', 'version', 'ocupacion', 'usuarios'})
+VISTAS_DE_LECTURA = frozenset({'estado', 'estadisticas', 'version', 'ocupacion', 'fichas', 'usuarios'})
 ID_VALIDO = re.compile(r'^[A-Za-z0-9_-]{1,40}$')
 
 # Lo que un rol de lectura recibe de cada reserva: lo que dibuja la ocupacion de cada closer. Fuera
@@ -154,6 +154,16 @@ def ocupacion():
             for pid, o in ocupacion.items()
         }
     return jsonify({'ocupacion': ocupacion})
+
+
+@bp.route('/fichas', methods=['GET'])
+def fichas():
+    """La ficha de Closing de cada agenda que empieza entre ?desde y ?hasta (ms), para el Filtro completo
+    de Available. Sin el contacto del lead (servicio.CAMPOS_DE_FICHA). El mismo rango que /ocupacion."""
+    desde, hasta = request.args.get('desde', type=int), request.args.get('hasta', type=int)
+    if desde is None or hasta is None or not 0 < hasta - desde <= servicio.RANGO_MAX_OCUPACION_DIAS * servicio.DIA_MS:
+        return jsonify({'message': 'Rango inválido'}), 400
+    return jsonify({'fichas': servicio.fichas_de_agendas(desde, hasta)})
 
 
 @bp.route('/eventos/<evento_id>/prueba', methods=['POST'])
