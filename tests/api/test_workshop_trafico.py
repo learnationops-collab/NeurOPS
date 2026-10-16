@@ -126,3 +126,65 @@ def test_el_rango_son_dias_de_la_paz_y_no_de_utc(client, db, director):
 
     assert data['totales']['visitas'] == 1
     assert data['por_dia'][0] == {'dia': '2026-10-01', 'visitas': 1, 'clics_whatsapp': 0}
+
+
+# --- Detalle de visitas (16/10/2026): lo que mostraba Marketing con un endpoint de admin ---
+
+def detalle(client, headers, extra=''):
+    return client.get(f'/api/workshop/landing/trafico/visitas?{RANGO}{extra}', headers=headers)
+
+
+def test_el_director_de_marketing_ve_el_detalle_de_visitas(client, db, director):
+    visita(db, '/live-class-t5/?utm_source=ig', fuente='ig', campana=' 1203 ')
+    visita(db, '/live-class-t5/', evento='clic_whatsapp', cuando=datetime(2026, 10, 3, 16, 0))
+
+    respuesta = detalle(client, director)
+
+    assert respuesta.status_code == 200
+    data = respuesta.get_json()
+    assert [(v['landing'], v['evento']) for v in data['visitas']] == [
+        ('/live-class-t5/', 'clic_whatsapp'), ('/live-class-t5/', 'visita')]
+    vieja = data['visitas'][1]
+    assert (vieja['fuente'], vieja['utm_source'], vieja['utm_campaign']) == ('Instagram', 'ig', '1203')
+    assert data['puede_borrar'] is False
+    assert data['recortado'] is False
+
+
+def test_el_admin_ve_el_detalle_y_puede_borrar(client, db, make_user, auth_headers):
+    visita(db, '/live-class-t5/')
+    admin = auth_headers(make_user(role='admin'))
+
+    data = detalle(client, admin).get_json()
+
+    assert data['puede_borrar'] is True
+    assert client.delete(f"/api/v1/metrics/track-visit/{data['visitas'][0]['id']}", headers=admin).status_code == 200
+    assert LandingTracking.query.count() == 0
+
+
+def test_el_director_de_marketing_no_borra_visitas(client, db, director):
+    visita(db, '/live-class-t5/')
+    fila = LandingTracking.query.first()
+
+    assert client.delete(f'/api/v1/metrics/track-visit/{fila.id}', headers=director).status_code == 403
+    assert LandingTracking.query.count() == 1
+
+
+@pytest.mark.parametrize('rol', ['closer', 'setter', 'director_comercial', 'hiring'])
+def test_un_rol_sin_workshop_no_ve_el_detalle(client, db, make_user, auth_headers, rol):
+    visita(db, '/live-class-t5/')
+
+    assert detalle(client, auth_headers(make_user(role=rol))).status_code == 403
+
+
+def test_el_detalle_respeta_el_rango_el_limite_y_deja_fuera_la_grabacion(client, db, director):
+    visita(db, '/replay/')
+    visita(db, '/live-class-t5/', cuando=datetime(2026, 9, 30, 15, 0))      # antes del rango
+    for minuto in range(3):
+        visita(db, '/live-class-t5/', cuando=datetime(2026, 10, 3, 15, minuto))
+
+    data = detalle(client, director, '&limite=2').get_json()
+
+    assert len(data['visitas']) == 2
+    assert data['recortado'] is True
+    assert all(v['landing'] == '/live-class-t5/' for v in data['visitas'])
+    assert data['visitas'][0]['created_at'].startswith('2026-10-03T15:02')

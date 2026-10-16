@@ -391,7 +391,7 @@ const WorkshopDashboardPage = () => {
             <div className="ws-contenido">
                     {/* Tráfico no depende de los talleres cargados: va fuera de los guards de abajo. */}
                     {activeTab === 'trafico' ? (
-                        <Legado><WorkshopTraficoView /></Legado>
+                        <WorkshopTraficoView />
                     ) : loading ? (
                         <Legado>
                             <section className="empty-state loading-state" role="status">

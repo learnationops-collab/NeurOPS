@@ -1,301 +1,184 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, MonitorSmartphone, MessageCircle, Percent, Globe, BarChart3, Megaphone } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { motion, useReducedMotion } from 'framer-motion';
+import { CalendarDays, MessageCircle, RefreshCw } from 'lucide-react';
 import api from '../../../../services/api';
-import toast from 'react-hot-toast';
-import InfoTooltip from '../../../../components/ui/InfoTooltip';
+import Cifra from '../../../comercial/components/Cifra';
+import { EsqueletoTablero, PanelCab, PillMenu, Segmented, Tip } from '../../../comercial/components/Shared';
+import RangoFechas, { esFecha, textoRango } from '../../../comercial/components/RangoFechas';
+import ListaConfigurable from '../../../../components/listas/ListaConfigurable';
+import SerieVisitas from '../trafico/SerieVisitas';
+import DetalleVisitas from '../trafico/DetalleVisitas';
+import { AGRUPACIONES, FACETAS_RANKING, claveRanking, columnasRanking, filasRanking } from '../trafico/columnas';
+import { PERIODOS, PERIODO_POR_DEFECTO, fechaHora, num, pct, rangoDePeriodo } from '../trafico/trafico';
+import '../../../../components/dashboard/pareja.css';
+import '../trafico/trafico.css';
 
 /*
- * Tráfico de las landings de institute-site.
+ * Tráfico de las landings de institute-site: el único lugar con este dato desde el 16/10/2026 (antes
+ * había otra vista en Marketing, con un endpoint de admin que al director de marketing le daba error).
  *
- * Visitas: cada carga de página que la landing reporta a /api/v1/metrics/track-visit.
- * Clics al grupo: el botón que lleva al grupo de WhatsApp del evento (live-class*, live,
- * acceso, crear-evento). Se miden desde que institute-site empezó a mandarlos, así que la
- * tasa solo usa las visitas posteriores a ese primer clic (ver app/api/workshop_trafico.py).
- * La grabación (/replay/) sale de sus sesiones: su embudo está en «Landing grabación».
+ * Visitas: cada carga de página que la landing reporta a /api/v1/metrics/track-visit. Clics al grupo:
+ * el botón que lleva al grupo de WhatsApp del evento (live-class*, live, acceso, crear-evento). Se miden
+ * desde que institute-site empezó a mandarlos, así que la tasa solo usa las visitas posteriores a ese
+ * primer clic (ver app/api/workshop_trafico.py). La grabación (/replay/) sale de sus sesiones.
+ *
+ * Estilo del dashboard comercial y Marketing (`.dc-shell`): período con `PillMenu` + `RangoFechas` (en la
+ * URL: `periodo`, `desde`, `hasta`), KPIs con `Cifra`, la serie por día y dos `ListaConfigurable`: el
+ * ranking (por landing, fuente o campaña) y el detalle de cada visita.
  */
 
-const diaLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-const fmtNum = (n) => (n ?? 0).toLocaleString('es');
-const fmtPct = (n) => (n == null ? '—' : `${n.toLocaleString('es', { maximumFractionDigits: 1 })}%`);
-const fmtDia = (iso) => {
-    const [, m, d] = iso.split('-');
-    return `${d}/${m}`;
+const AYUDA = {
+    visitas: 'Cada vez que alguien abre una landing de institute-site. Si la misma persona recarga, cuenta dos veces: es tráfico, no personas.',
+    landings: 'Cuántas landings distintas tuvieron al menos una visita en el período.',
+    clics: 'Clics al botón que lleva al grupo de WhatsApp del evento. Es la entrada a la clase en vivo: quien no entra al grupo no recibe el link.',
+    tasa: 'De las visitas a landings con botón al grupo, qué porcentaje hizo clic. Solo cuenta las visitas posteriores al primer clic medido.',
+    serie: 'Visitas de todas las landings, día por día (hora de La Paz). Pasá el mouse por un día para ver también los clics al grupo.',
+    ranking: 'Qué trae el tráfico: cada landing, cada fuente (utm_source) o cada campaña (utm_campaign), con su parte del total y su tasa al grupo.',
 };
-const fmtFechaHora = (iso) => (iso
-    ? new Date(iso).toLocaleString('es', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-    : '—');
 
-const Kpi = ({ label, value, sub, icon: Icon, ayuda }) => (
-    <article className="kpi-card">
-        <div className="kpi-head">
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                {label}
-                {ayuda && <InfoTooltip label={label} text={ayuda} />}
-            </span>
-            <Icon size={18} aria-hidden="true" />
-        </div>
-        <strong>{value}</strong>
-        <div className="kpi-foot"><span>{sub}</span></div>
-    </article>
-);
-
-/* Visitas por día: una sola serie y un solo eje. Los clics al grupo van en el
-   tooltip (escala muy distinta: dibujarlos encima pediría un segundo eje). */
-const GraficoDiario = ({ dias }) => {
-    const [activo, setActivo] = useState(null);
-    const max = Math.max(1, ...dias.map((d) => d.visitas));
-    const marcas = dias.length <= 10 ? 1 : dias.length <= 31 ? 5 : 14;
-    const dia = activo != null ? dias[activo] : null;
-
+const Kpi = ({ titulo, valor, sub, tip, i }) => {
+    const reducir = useReducedMotion();
     return (
-        <div className="trafico-chart" onMouseLeave={() => setActivo(null)}>
-            <div className="trafico-chart-tip" aria-live="polite">
-                {dia ? (
-                    <>
-                        <strong>{fmtDia(dia.dia)}</strong>
-                        <span>{fmtNum(dia.visitas)} visitas</span>
-                        <span>{fmtNum(dia.clics_whatsapp)} clics al grupo</span>
-                    </>
-                ) : (
-                    <span>Pasá el mouse por una barra para ver el día · máximo {fmtNum(max)} visitas</span>
-                )}
+        <motion.section className="kpi wf-kpi"
+            initial={reducir ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.32, delay: i * 0.05, ease: [0.22, 0.7, 0.2, 1] }}>
+            <div className="kpi-cab">
+                <p className="t-eyebrow">{titulo}</p>
+                <Tip texto={tip} titulo={titulo} />
             </div>
-            <div className="trafico-chart-plot" role="img" aria-label={`Visitas por día, ${dias.length} días, máximo ${max}`}>
-                {dias.map((d, i) => (
-                    <button
-                        type="button"
-                        key={d.dia}
-                        className={`trafico-chart-col${activo === i ? ' activo' : ''}`}
-                        onMouseEnter={() => setActivo(i)}
-                        onFocus={() => setActivo(i)}
-                        onBlur={() => setActivo(null)}
-                        aria-label={`${fmtDia(d.dia)}: ${d.visitas} visitas, ${d.clics_whatsapp} clics al grupo`}
-                    >
-                        <i style={{ height: `${(d.visitas / max) * 100}%`, animationDelay: `${Math.min(i * 12, 400)}ms` }} />
-                    </button>
-                ))}
+            <div className="kpi-cifra">
+                <Cifra valor={valor} className="kpi-n" desdeAnterior />
+                <p className="kpi-sub">{sub}</p>
             </div>
-            <div className="trafico-chart-axis" aria-hidden="true">
-                {dias.map((d, i) => (
-                    <span key={d.dia}>{(i % marcas === 0 || i === dias.length - 1) ? fmtDia(d.dia) : ''}</span>
-                ))}
-            </div>
-        </div>
+        </motion.section>
     );
 };
 
-const TablaAgrupada = ({ titulo, icono: Icono, filas, campo, etiqueta, medido, ayudaCampo }) => (
-    <article className="panel comparison-panel trafico-tabla">
-        <div className="section-heading">
-            <div>
-                <p className="eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    <Icono size={14} /> {titulo}
-                    {ayudaCampo && <InfoTooltip label={titulo} text={ayudaCampo} />}
-                </p>
-            </div>
-        </div>
-        {filas.length === 0 ? (
-            <p className="secondary-copy" style={{ padding: '18px 0' }}>Sin datos en este rango.</p>
-        ) : (
-            <div className="comparison-scroll">
-                <table>
-                    <thead>
-                        <tr>
-                            <th scope="col">{etiqueta}</th>
-                            <th scope="col">Visitas</th>
-                            <th scope="col">Clics al grupo</th>
-                            <th scope="col">Tasa</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filas.map((f) => (
-                            <tr key={f[campo]}>
-                                <th scope="row" className={campo === 'campana' ? 'trafico-id' : ''}>{f[campo]}</th>
-                                <td data-workshop="Visitas">{fmtNum(f.visitas)}</td>
-                                <td data-workshop="Clics al grupo">{medido ? fmtNum(f.clics_whatsapp) : '—'}</td>
-                                <td data-workshop="Tasa">{fmtPct(f.tasa_whatsapp)}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        )}
-    </article>
-);
+const Ranking = ({ datos, medido }) => {
+    const [agrupacion, setAgrupacion] = useState('landing');
+    const total = datos?.totales?.visitas || 0;
+    const columnas = useMemo(() => columnasRanking(agrupacion, total, medido), [agrupacion, total, medido]);
+    const filas = filasRanking(datos, agrupacion);
+    const clave = useMemo(() => claveRanking(agrupacion), [agrupacion]);
+    return (
+        <section className="panel wf-panel" aria-label="Qué trae el tráfico">
+            <PanelCab titulo="Qué trae el tráfico" tip={AYUDA.ranking}>
+                <Segmented chico opciones={AGRUPACIONES} valor={agrupacion} onChange={setAgrupacion}
+                    ariaLabel="Agrupar el tráfico" />
+            </PanelCab>
+            {/* `key`: cada agrupación tiene sus columnas (y su elección guardada): se monta de nuevo. */}
+            <ListaConfigurable key={agrupacion} columnas={columnas} facetas={FACETAS_RANKING[agrupacion]}
+                filas={filas} clave={clave} buscar={clave}
+                buscarPlaceholder="Buscar…" claveGuardado={`ws_trafico_${agrupacion}_cols`}
+                ordenInicial={{ key: 'visitas', dir: 'desc' }} vacio="Sin visitas en este período." />
+        </section>
+    );
+};
 
 const WorkshopTraficoView = () => {
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [dias, setDias] = useState(30);
+    const [params, setParams] = useSearchParams();
+    const reducir = useReducedMotion();
+    const periodo = PERIODOS.some((p) => p.key === params.get('periodo')) ? params.get('periodo') : PERIODO_POR_DEFECTO;
+    const pDesde = params.get('desde');
+    const pHasta = params.get('hasta');
+    const rango = useMemo(() => {
+        if (periodo === 'personalizado' && esFecha(pDesde) && esFecha(pHasta)) return { desde: pDesde, hasta: pHasta };
+        return rangoDePeriodo(periodo === 'personalizado' ? PERIODO_POR_DEFECTO : periodo);
+    }, [periodo, pDesde, pHasta]);
 
-    const cargar = useCallback(async () => {
-        setLoading(true);
-        try {
-            // Días locales: el backend corta el rango a las 00:00 de La Paz, y
-            // toISOString() daría el día de UTC (de noche, ya el siguiente).
-            const hasta = new Date();
-            const desde = new Date(hasta.getTime() - (dias - 1) * 86400000);
-            const rango = `desde=${diaLocal(desde)}&hasta=${diaLocal(hasta)}`;
-            const res = await api.get(`/workshop/landing/trafico?${rango}`);
-            setData(res.data);
-        } catch (e) {
-            console.error('[trafico] Error al cargar', e);
-            toast.error('No se pudo cargar el tráfico de las landings');
-        } finally {
-            setLoading(false);
-        }
-    }, [dias]);
+    const [datos, setDatos] = useState(null);
+    const [error, setError] = useState(null);
+    const [cargando, setCargando] = useState(false);
+    const [version, setVersion] = useState(0);
 
-    useEffect(() => { cargar(); }, [cargar]);
+    const cambiar = useCallback((cambios) => {
+        const siguiente = new URLSearchParams(params);
+        Object.entries(cambios).forEach(([k, v]) => (v ? siguiente.set(k, v) : siguiente.delete(k)));
+        setParams(siguiente, { replace: true });
+    }, [params, setParams]);
 
-    if (loading && !data) {
-        return (
-            <section className="empty-state loading-state" role="status">
-                <div><span /></div>
-                <p className="eyebrow">Sincronizando</p>
-                <h2>Cargando el tráfico de las landings…</h2>
-            </section>
-        );
-    }
+    useEffect(() => {
+        const control = new AbortController();
+        setCargando(true);
+        api.get('/workshop/landing/trafico', { params: { desde: rango.desde, hasta: rango.hasta }, signal: control.signal })
+            .then((r) => { setDatos(r.data); setError(null); })
+            .catch((e) => {
+                if (e?.name !== 'CanceledError') setError('No se pudo cargar el tráfico de las landings.');
+            })
+            .finally(() => { if (!control.signal.aborted) setCargando(false); });
+        return () => control.abort();
+    }, [rango.desde, rango.hasta, version]);
 
-    const t = data?.totales || {};
-    const landings = data?.por_landing || [];
-    const medido = Boolean(data?.whatsapp_medido_desde);
-    const desdeMedido = medido ? fmtFechaHora(data.whatsapp_medido_desde) : null;
+    const recargar = useCallback(() => setVersion((v) => v + 1), []);
+
+    const t = datos?.totales || {};
+    const medido = Boolean(datos?.whatsapp_medido_desde);
+    const diasDelRango = datos?.por_dia?.length || 0;
+    const kpis = [
+        { titulo: 'Visitas', valor: num(t.visitas ?? 0), tip: AYUDA.visitas,
+            sub: diasDelRango ? `${num(Math.round((t.visitas || 0) / diasDelRango))} por día` : '—' },
+        { titulo: 'Landings', valor: num(t.landings ?? 0), tip: AYUDA.landings,
+            sub: `${num(t.visitas_landings_whatsapp ?? 0)} con botón al grupo` },
+        { titulo: 'Clics al grupo', valor: medido ? num(t.clics_whatsapp ?? 0) : '—', tip: AYUDA.clics,
+            sub: medido ? `medidos desde el ${fechaHora(datos.whatsapp_medido_desde)}` : 'sin medir todavía' },
+        { titulo: 'Visita → grupo', valor: pct(t.tasa_whatsapp), tip: AYUDA.tasa,
+            sub: 'de las visitas con botón al grupo' },
+    ];
+
+    const textoPeriodo = periodo === 'personalizado' ? textoRango(rango) : PERIODOS.find((p) => p.key === periodo)?.label;
 
     return (
-        <>
-            <div className="hero-actions" style={{ marginBottom: 22 }}>
-                <div className="pill-toggle">
-                    {[7, 30, 90].map((d) => (
-                        <button type="button" key={d} className={dias === d ? 'active' : ''} onClick={() => setDias(d)}>{d} días</button>
-                    ))}
-                </div>
-                <button type="button" className="secondary-action" onClick={cargar}>
-                    <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Actualizar
+        <div className="dc-shell dc-shell--embebido wf-trafico">
+            <div className="fila wf-barra">
+                <PillMenu icono={<CalendarDays />} texto={textoPeriodo} rotulo="Período"
+                    detalle={periodo === 'personalizado' ? null : textoRango(rango)}
+                    opciones={PERIODOS} valor={periodo} ancho={230}
+                    onChange={(key) => cambiar(key === 'personalizado'
+                        ? { periodo: key, desde: rango.desde, hasta: rango.hasta }
+                        : { periodo: key === PERIODO_POR_DEFECTO ? null : key, desde: null, hasta: null })}
+                    pie={periodo === 'personalizado' && (
+                        <RangoFechas desde={rango.desde} hasta={rango.hasta} rotulo="Período"
+                            onCambiar={({ desde, hasta }) => {
+                                if (esFecha(desde) && esFecha(hasta)) cambiar({ periodo: 'personalizado', desde, hasta });
+                            }} />
+                    )} />
+                <button type="button" className="ibtn" onClick={recargar} disabled={cargando}
+                    title="Volver a cargar el tráfico" aria-label="Volver a cargar el tráfico">
+                    <RefreshCw className={cargando ? 'wf-gira' : ''} aria-hidden="true" />
                 </button>
-                {data?.rango && <span className="secondary-copy">{data.rango.desde} → {data.rango.hasta}</span>}
             </div>
 
-            {!medido && (
-                <p className="trafico-aviso" role="note">
-                    <MessageCircle size={14} aria-hidden="true" />
-                    Los clics al grupo de WhatsApp todavía no se están midiendo: empiezan a contar cuando se
-                    publique en institute-site la versión que los reporta. Hasta entonces la tasa queda vacía.
-                </p>
+            {error && !datos ? (
+                <section className="panel"><p className="t-body">{error}</p></section>
+            ) : !datos ? (
+                <EsqueletoTablero rotulo="Cargando el tráfico de las landings…" />
+            ) : (
+                <motion.div className={`wf-vista${cargando ? ' wf-recargando' : ''}`} aria-busy={cargando}
+                    initial={reducir ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.28, ease: [0.22, 0.7, 0.2, 1] }}>
+                    {!medido && (
+                        <p className="wf-aviso" role="note">
+                            <MessageCircle size={15} aria-hidden="true" />
+                            <span>Los clics al grupo de WhatsApp todavía no se miden: la tasa queda vacía hasta que llegue el primero.</span>
+                        </p>
+                    )}
+
+                    <div className="pareja wf-kpis" style={{ '--min': '230px', '--g': 'var(--s4)' }}>
+                        {kpis.map((k, i) => <Kpi key={k.titulo} {...k} i={i} />)}
+                    </div>
+
+                    <section className="panel wf-panel" aria-label="Visitas por día">
+                        <PanelCab titulo="Visitas por día" tip={AYUDA.serie} />
+                        <SerieVisitas dias={datos.por_dia || []} />
+                    </section>
+
+                    <Ranking datos={datos} medido={medido} />
+
+                    <DetalleVisitas desde={rango.desde} hasta={rango.hasta} version={version} onBorrada={recargar} />
+                </motion.div>
             )}
-
-            <section className="kpi-grid" aria-label="Indicadores de tráfico de las landings">
-                <Kpi
-                    label="Visitas"
-                    ayuda="Cada vez que alguien abre una landing de institute-site. Si la misma persona recarga, cuenta dos veces: es tráfico, no personas."
-                    value={fmtNum(t.visitas)}
-                    sub={`${t.landings || 0} landings con tráfico`}
-                    icon={MonitorSmartphone}
-                />
-                <Kpi
-                    label="Clics al grupo de WhatsApp"
-                    ayuda="Clics al botón que lleva al grupo de WhatsApp del evento. Es la entrada a la clase en vivo: quien no entra al grupo no recibe el link."
-                    value={medido ? fmtNum(t.clics_whatsapp) : '—'}
-                    sub={medido ? `Se miden desde el ${desdeMedido}` : 'Sin medir todavía'}
-                    icon={MessageCircle}
-                />
-                <Kpi
-                    label="Visita → grupo"
-                    ayuda="De las visitas a landings con botón al grupo, qué porcentaje hizo clic. Solo cuenta las visitas posteriores al primer clic medido."
-                    value={fmtPct(t.tasa_whatsapp)}
-                    sub={`${fmtNum(t.visitas_landings_whatsapp)} visitas a landings con grupo`}
-                    icon={Percent}
-                />
-            </section>
-
-            <article className="panel" style={{ padding: 26, marginBottom: 22 }}>
-                <div className="section-heading">
-                    <div>
-                        <p className="eyebrow">Todas las landings</p>
-                        <h2 style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><BarChart3 size={18} /> Visitas por día</h2>
-                    </div>
-                </div>
-                <GraficoDiario dias={data?.por_dia || []} />
-            </article>
-
-            <section className="panel comparison-panel" style={{ marginTop: 0 }}>
-                <div className="section-heading">
-                    <div><p className="eyebrow">Por landing</p><h2>Qué landing trae el tráfico ({landings.length})</h2></div>
-                </div>
-                {landings.length === 0 ? (
-                    <p className="all-target" style={{ textAlign: 'center', padding: '40px 0' }}>
-                        <Globe size={32} style={{ display: 'block', margin: '0 auto 12px', opacity: .5 }} />
-                        Todavía no hay visitas en este rango.
-                    </p>
-                ) : (
-                    <div className="comparison-scroll">
-                        <table className="trafico-landings">
-                            <thead>
-                                <tr>
-                                    <th scope="col">Landing</th>
-                                    <th scope="col">Visitas</th>
-                                    <th scope="col">Clics al grupo</th>
-                                    <th scope="col">Tasa</th>
-                                    <th scope="col">Fuente principal</th>
-                                    <th scope="col">Última visita</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {landings.map((l) => {
-                                    const share = t.visitas ? (l.visitas / t.visitas) * 100 : 0;
-                                    return (
-                                        <tr key={l.path}>
-                                            <th scope="row">
-                                                <strong>{l.path}</strong>
-                                                <span className="trafico-chips">
-                                                    {l.lleva_whatsapp && <span className="status success">Grupo de WhatsApp</span>}
-                                                    {l.origen_datos === 'sesiones' && <span className="status">Sesiones de la grabación</span>}
-                                                </span>
-                                            </th>
-                                            <td data-workshop="Visitas">
-                                                <span className="trafico-visitas">
-                                                    {fmtNum(l.visitas)}
-                                                    <span className="trafico-share" aria-label={`${share.toFixed(1)}% del total`}>
-                                                        <i style={{ width: `${share > 0 ? Math.max(share, 1.5) : 0}%` }} />
-                                                    </span>
-                                                    <small className="trafico-share-pct">{share.toFixed(1)}% del total</small>
-                                                </span>
-                                            </td>
-                                            <td data-workshop="Clics al grupo">{l.lleva_whatsapp && medido ? fmtNum(l.clics_whatsapp) : '—'}</td>
-                                            <td data-workshop="Tasa">{fmtPct(l.tasa_whatsapp)}</td>
-                                            <td data-workshop="Fuente principal">{l.fuente_principal || '—'}</td>
-                                            <td data-workshop="Última visita">{fmtFechaHora(l.ultima_visita)}</td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </section>
-
-            <section className="trafico-pareja">
-                <TablaAgrupada
-                    titulo="Por fuente"
-                    icono={Globe}
-                    filas={data?.por_fuente || []}
-                    campo="fuente"
-                    etiqueta="Fuente"
-                    medido={medido}
-                    ayudaCampo="El utm_source del link del anuncio. ig e instagram, fb y facebook se suman juntos."
-                />
-                <TablaAgrupada
-                    titulo="Por campaña"
-                    icono={Megaphone}
-                    filas={data?.por_campana || []}
-                    campo="campana"
-                    etiqueta="Campaña"
-                    medido={medido}
-                    ayudaCampo="El utm_campaign del anuncio. Meta manda el ID de la campaña: se busca tal cual en el Administrador de anuncios. Las 12 con más visitas."
-                />
-            </section>
-        </>
+        </div>
     );
 };
 

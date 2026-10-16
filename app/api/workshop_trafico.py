@@ -11,19 +11,22 @@ La grabacion (/replay/) no usa track-visit sino el latido de `landing_sessions`
 landings, y las filas viejas de track-visit de /replay/ se descartan para no
 contarla dos veces. Su embudo completo vive en la pestaña «Landing grabación».
 
-Solo agregados, sin datos personales: mismo permiso que el resto del panel.
+Solo agregados, sin datos personales: mismo permiso que el resto del panel. El detalle
+(`/landing/trafico/visitas`, 16/10/2026) es cada fila de track-visit con sus UTM: lo que antes
+mostraba Marketing pidiendo un endpoint de admin, que al director de marketing le daba error.
 """
 from collections import defaultdict
 from datetime import timedelta
 from urllib.parse import urlsplit
 
 import pytz
-from flask import jsonify
+from flask import jsonify, request
 from flask_login import login_required, current_user
 
 from app import db
 from app.models import LandingTracking, LandingSession
-from app.decorators import workshop_required
+from app.decorators import ROLE_ADMIN, workshop_required
+from app.models.user import ROLE_OPERATOR
 from app.api.metrics import EVENTO_CLIC_WHATSAPP
 from app.api.workshop import bp
 from app.api.workshop_landing import _rango, _pct
@@ -43,6 +46,14 @@ FUENTES = {
     'google': 'Google',
 }
 SIN_UTM = 'Directo / sin UTM'
+
+# Tope del detalle de visitas: las más recientes del rango. 90 días de tráfico real rondan las
+# 3.000 filas; más que esto no se lee en una lista y pesa en el navegador.
+LIMITE_VISITAS = 5000
+LIMITE_VISITAS_MAXIMO = 20000
+
+# Quien puede borrar una visita: los mismos de DELETE /api/v1/metrics/track-visit/<id> (admin_required).
+ROLES_QUE_BORRAN = (ROLE_ADMIN, ROLE_OPERATOR)
 
 
 def normalizar_path(raw):
@@ -81,16 +92,21 @@ def _nuevo():
     return {'visitas': 0, 'clics_whatsapp': 0, 'visitas_medidas': 0}
 
 
-@bp.route('/landing/trafico', methods=['GET'])
-@login_required
-@workshop_required
-def trafico_landings():
-    # El rango se pide en dias locales (los del selector): 00:00 de La Paz, no de UTC.
-    zona = _zona()
+def _rango_utc(zona):
+    """El rango pedido en dias locales (los del selector: 00:00 de La Paz, no de UTC), en local y en UTC."""
     desde_local, hasta_local = _rango()
     desde_local = desde_local.replace(hour=0, minute=0, second=0, microsecond=0)
     hasta_local = hasta_local.replace(hour=0, minute=0, second=0, microsecond=0)
     desde, hasta = (zona.localize(x).astimezone(pytz.utc).replace(tzinfo=None) for x in (desde_local, hasta_local))
+    return desde_local, hasta_local, desde, hasta
+
+
+@bp.route('/landing/trafico', methods=['GET'])
+@login_required
+@workshop_required
+def trafico_landings():
+    zona = _zona()
+    desde_local, hasta_local, desde, hasta = _rango_utc(zona)
 
     def dia_local(dt):
         return pytz.utc.localize(dt).astimezone(zona).strftime('%Y-%m-%d')
@@ -206,4 +222,54 @@ def trafico_landings():
         'por_campana': lista(por_campana, 'campana', tope=12),
         'por_dia': dias,
         'whatsapp_medido_desde': primer_clic.isoformat() + 'Z' if primer_clic else None,
+    }), 200
+
+
+@bp.route('/landing/trafico/visitas', methods=['GET'])
+@login_required
+@workshop_required
+def visitas_landings():
+    """Cada visita y cada clic al grupo del rango, con sus UTM, de la más nueva a la más vieja.
+
+    `landing` y `fuente` llegan ya normalizadas (las mismas claves que la tabla por landing), y los
+    valores crudos también, para buscarlos tal cual. /replay/ queda fuera, como en los totales: sus
+    filas viejas de track-visit duplican las sesiones de la grabación.
+    """
+    zona = _zona()
+    desde_local, hasta_local, desde, hasta = _rango_utc(zona)
+    try:
+        limite = min(max(int(request.args.get('limite', LIMITE_VISITAS)), 1), LIMITE_VISITAS_MAXIMO)
+    except ValueError:
+        limite = LIMITE_VISITAS
+
+    filas = LandingTracking.query.filter(
+        LandingTracking.created_at >= desde, LandingTracking.created_at < hasta,
+    ).order_by(LandingTracking.created_at.desc(), LandingTracking.id.desc()).limit(limite + 1).all()
+
+    visitas = []
+    for v in filas:
+        landing = normalizar_path(v.page_path)
+        if landing == PATH_REPLAY:
+            continue
+        visitas.append({
+            'id': v.id,
+            'landing': landing,
+            'page_path': v.page_path,
+            'evento': EVENTO_CLIC_WHATSAPP if v.evento == EVENTO_CLIC_WHATSAPP else 'visita',
+            'fuente': normalizar_fuente(v.utm_source),
+            'utm_source': v.utm_source,
+            'utm_medium': v.utm_medium,
+            'utm_campaign': (v.utm_campaign or '').strip() or None,
+            'utm_content': v.utm_content,
+            'referrer': v.referrer,
+            'created_at': v.created_at.isoformat() + 'Z' if v.created_at else None,
+        })
+
+    recortado = len(filas) > limite
+    return jsonify({
+        'rango': {'desde': desde_local.strftime('%Y-%m-%d'), 'hasta': (hasta_local - timedelta(days=1)).strftime('%Y-%m-%d')},
+        'visitas': visitas[:limite],
+        'limite': limite,
+        'recortado': recortado,
+        'puede_borrar': current_user.role in ROLES_QUE_BORRAN,
     }), 200

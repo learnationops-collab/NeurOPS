@@ -1,0 +1,104 @@
+/* ============================================================================
+   Workshop › Tráfico landings (16/10/2026), dentro de `.dc-shell.dc-shell--embebido`: tokens, `.panel`,
+   `.kpi`, `.tabla`, `.chip` y `.riel` son los de comercial.css. Acá solo lo propio, con prefijo `wf-`.
+   ============================================================================ */
+
+.dc-shell.wf-trafico { display: grid; gap: var(--s4); }
+.dc-shell .wf-vista { display: grid; gap: var(--s4); min-width: 0; }
+.dc-shell .wf-barra { justify-content: flex-end; flex-wrap: wrap; gap: var(--s2); }
+.dc-shell .wf-recargando { opacity: .6; transition: opacity .2s ease; }
+.dc-shell .wf-panel { padding: var(--s5); }
+
+@keyframes wfGira { to { transform: rotate(360deg); } }
+.dc-shell .wf-gira { animation: wfGira .9s linear infinite; }
+
+/* --- Aviso de clics sin medir --- */
+.dc-shell .wf-aviso {
+    display: flex; align-items: center; gap: var(--s3); margin: 0;
+    padding: var(--s3) var(--s4); border-radius: var(--radius-control);
+    background: var(--warning-surface); border: 1px solid var(--warning-border); color: var(--text-muted);
+    font-size: 13px;
+}
+.dc-shell .wf-aviso > svg { color: var(--warning); flex-shrink: 0; }
+
+/* --- KPIs --- */
+.dc-shell .wf-kpi { gap: var(--s3); padding: var(--s5); }
+.dc-shell .wf-kpi .kpi-sub { font-size: 12px; line-height: 1.4; }
+
+/* --- Visitas por día --- */
+.dc-shell .wf-serie { display: grid; gap: 6px; min-width: 0; }
+.dc-shell .wf-serie-tope { font-size: 11px; font-weight: 700; color: var(--text-muted-40); min-height: 14px; }
+.dc-shell .wf-serie-lienzo {
+    position: relative; display: flex; align-items: stretch; gap: 3px; height: 170px;
+    border-bottom: 1px solid var(--border-main);
+}
+.dc-shell .wf-serie-guia {
+    position: absolute; left: 0; right: 0; bottom: 50%; height: 0;
+    border-top: 1px dashed var(--border-subtle); pointer-events: none;
+}
+.dc-shell .wf-serie-col {
+    position: relative; flex: 1 1 0; min-width: 0; display: flex; flex-direction: column-reverse;
+    padding: 0; border: 0; background: transparent; border-radius: 4px 4px 0 0; cursor: default;
+    transition: background-color .14s ease;
+}
+.dc-shell .wf-serie-col > i {
+    display: block; width: 100%; min-height: 0; border-radius: 3px 3px 0 0;
+    background: var(--brand-secondary);
+    transition: height .7s var(--crecer, cubic-bezier(.22,.7,.2,1)), filter .14s ease;
+}
+.dc-shell .wf-serie-col--on { background: color-mix(in srgb, var(--text-on-surface) 6%, transparent); }
+.dc-shell .wf-serie-col--on > i { filter: brightness(1.18); }
+.dc-shell .wf-serie-col:focus-visible { outline: 2px solid var(--brand-secondary); outline-offset: 1px; }
+.dc-shell .wf-serie-col > .wf-serie-cero { height: 2px !important; background: var(--hueco); border-radius: 2px; }
+.dc-shell .wf-serie-vacio { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; }
+.dc-shell .wf-serie-eje { display: flex; gap: 3px; font-size: 10.5px; color: var(--text-muted-40); min-width: 0; }
+.dc-shell .wf-serie-eje > span { flex: 1 1 0; min-width: 0; text-align: center; overflow: visible; white-space: nowrap; }
+.dc-shell .wf-serie-tip {
+    position: absolute; bottom: calc(100% + 8px); transform: translateX(-50%); z-index: 3;
+    display: grid; gap: 4px; min-width: 150px; padding: var(--s2) var(--s3);
+    border-radius: var(--radius-control); background: var(--mat-2, var(--bg-element));
+    border: 1px solid var(--border-subtle); box-shadow: 0 10px 24px rgba(0, 0, 0, .35);
+    font-size: 12px; pointer-events: none;
+}
+.dc-shell .wf-serie-tip b { font-size: 10px; font-weight: 900; letter-spacing: .16em; color: var(--text-muted); }
+.dc-shell .wf-serie-tip span { display: flex; align-items: center; gap: 6px; color: var(--text-muted); white-space: nowrap; }
+.dc-shell .wf-serie-tip strong { margin-left: auto; padding-left: 12px; color: var(--text-on-surface); font-weight: 800; }
+
+/* --- Ranking --- */
+.dc-shell .wf-landing { display: flex; align-items: center; gap: var(--s2); min-width: 0; }
+.dc-shell .wf-landing .celda { flex: 0 1 auto; }
+.dc-shell .wf-marca {
+    flex-shrink: 0; font-size: 9.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--info); padding: 2px 7px; border-radius: var(--radius-pill);
+    border: 1px solid color-mix(in srgb, var(--info) 38%, transparent);
+}
+.dc-shell .wf-parte { display: grid; grid-template-columns: minmax(0, 1fr) 44px; align-items: center; gap: var(--s2); width: 100%; }
+.dc-shell .wf-parte .riel > i { background: var(--brand-secondary); }
+.dc-shell .wf-parte small { font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-align: right; }
+
+/* --- Detalle de visitas --- */
+.dc-shell .wf-evento { --c: var(--text-muted); }
+.dc-shell .wf-evento--clic { --c: var(--success); }
+.dc-shell .wf-ficha { display: grid; gap: var(--s3); padding: var(--s4); margin-bottom: var(--s4); }
+.dc-shell .wf-ficha-cab { display: flex; align-items: center; gap: var(--s3); }
+.dc-shell .wf-ficha-acc { margin-left: auto; display: flex; align-items: center; gap: var(--s2); }
+.dc-shell .wf-campos { display: grid; gap: var(--s3) var(--s4); grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
+.dc-shell .wf-campo { display: grid; gap: 2px; min-width: 0; }
+.dc-shell .wf-campo-v { font-size: 13px; color: var(--text-on-surface); overflow-wrap: anywhere; }
+
+@media (prefers-reduced-motion: reduce) {
+    .dc-shell .wf-gira { animation: none; }
+    .dc-shell .wf-serie-col > i { transition: none; }
+}
+
+/* El detalle trae hasta 2.000 filas y `ListaConfigurable` las dibuja todas: la tabla scrollea dentro de
+   su caja (con la cabecera fija) en vez de alargar la página varios metros. */
+.dc-shell .wf-detalle .lc-tabla { max-height: min(70vh, 680px); overflow-y: auto; overscroll-behavior: contain; }
+.dc-shell .wf-detalle .lc-tabla .tabla-cab {
+    position: sticky; top: 0; z-index: 1;
+    background: linear-gradient(var(--hundido), var(--hundido)), var(--ln-page-base, #070b2c);
+    backdrop-filter: blur(14px);
+}
+/* La barra (filtro completo, columnas) por encima de la tabla: la cabecera fija con blur arma su propio
+   apilamiento y tapaba los menús que se abren hacia abajo. */
+.dc-shell .wf-detalle .barra-tabla { position: relative; z-index: 3; }
