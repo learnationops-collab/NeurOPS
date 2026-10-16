@@ -173,7 +173,7 @@ function VerSemana() {
 // Mantiene el foco dentro de la ventana con Tab.
 function atrapar(e) {
     if (e.key !== 'Tab') return;
-    const cont = e.currentTarget.closest('.modal');
+    const cont = e.currentTarget.closest('.modal, .ui-modal');
     const fs = [...cont.querySelectorAll('button,input,textarea,select')].filter(x => !x.disabled && x.offsetParent !== null);
     if (!fs.length) return;
     const a = fs[0], z = fs[fs.length - 1];

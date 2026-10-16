@@ -4,12 +4,13 @@
 // Agregar un componente al catálogo = sumar una entrada a SECCIONES.
 
 import { useEffect, useState } from 'react';
-import { Bell, Copy, Pencil, Play, Plus, Settings, Trash2, X } from 'lucide-react';
+import { Bell, CalendarDays, Copy, Pencil, Play, Plus, Settings, Trash2, Users, X } from 'lucide-react';
 import '../agendas_v2/thalamus.css';
 import '../comercial/comercial.css';
 import './catalogo.css';
 import {
-    BRAND_AURA, Button, Card, Chip, ConfirmDelete, EmptyState, IconButton, LinkButton, PageHeader,
+    Avatar, BRAND_AURA, Button, Card, Chip, ConfirmDelete, EmptyState, IconButton, LinkButton, Modal, PageHeader, Segmented, Select,
+    Stepper, Switch,
 } from '../../components/standard';
 
 const TEMAS = [
@@ -24,6 +25,54 @@ const CONTEXTOS = [
 ];
 
 const nada = () => {};
+
+// Los controles del catálogo funcionan de verdad: cada uno guarda su estado.
+function DemoControles() {
+    const [vista, setVista] = useState('semana');
+    const [evento, setEvento] = useState('');
+    const [on, setOn] = useState(true);
+    const [n, setN] = useState(3);
+    return (
+        <>
+            <Demo titulo="Segmented (md y sm)">
+                <Segmented label="Vista" value={vista} onChange={setVista}
+                    options={[{ value: 'semana', label: 'Semana', icon: <CalendarDays /> }, { value: 'equipo', label: 'Equipo', icon: <Users /> }]} />
+                <Segmented size="sm" label="Período" value={vista === 'semana' ? '7' : '30'} onChange={v => setVista(v === '7' ? 'semana' : 'equipo')}
+                    options={[{ value: '7', label: '7 días' }, { value: '30', label: '30 días' }]} />
+            </Demo>
+            <Demo titulo="Select (md y sm), con ícono y opción vacía">
+                <Select label="Evento" value={evento} onChange={setEvento} options={[
+                    { value: '', label: 'Todos los eventos' },
+                    { value: 'diag', label: 'Diagnóstico', icon: <CalendarDays size={15} />, iconColor: 'var(--ln-info, #4E8BD8)' },
+                    { value: 'ws', label: 'Workshop' },
+                ]} />
+                <Select size="sm" label="Closer" value="ana" onChange={nada} options={[{ value: 'ana', label: 'Ana Pérez' }, { value: 'leo', label: 'Leo Díaz' }]} />
+            </Demo>
+            <Demo titulo="Switch y Stepper">
+                <Switch checked={on} onChange={setOn} label="Obligatoria" />
+                <Stepper value={n} min={1} max={6} onChange={setN} display={n * 15 + ' min'} label="Duración" />
+            </Demo>
+        </>
+    );
+}
+
+function DemoModal() {
+    const [abierto, setAbierto] = useState(false);
+    return (
+        <Demo titulo="Se abre sobre la página">
+            <Button onClick={() => setAbierto(true)}>Abrir modal</Button>
+            {abierto && (
+                <Modal onClose={() => setAbierto(false)} labelledBy="cat-modal-t">
+                    <div style={{ display: 'grid', gap: 16 }}>
+                        <h3 id="cat-modal-t" style={{ margin: 0, fontSize: 19, fontWeight: 900 }}>Nuevo evento</h3>
+                        <p style={{ margin: 0 }}>Escape o un clic en el fondo la cierran.</p>
+                        <div className="cat-fila"><Button onClick={() => setAbierto(false)}>Cancelar</Button><Button variant="primary">Crear</Button></div>
+                    </div>
+                </Modal>
+            )}
+        </Demo>
+    );
+}
 
 function Demo({ titulo, children }) {
     return (
@@ -129,6 +178,31 @@ const SECCIONES = [
         demo: () => (
             <ConfirmDelete name="Diagnóstico Workshop" detail="El link deja de funcionar." icon={<Trash2 />}
                 autoFocusCancel={false} onCancel={nada} onConfirm={nada} />
+        ),
+    },
+    {
+        nombre: 'Segmented · Select · Switch · Stepper',
+        para: 'Controles de formulario y filtros. Las opciones las arma la pantalla; el control solo las muestra.',
+        props: 'Segmented: value · options[{value,label,icon}] · onChange · size · itemProps — Select: value · options[{value,label,icon,iconColor}] · size — Switch: checked · onChange · label — Stepper: value · min · max · display',
+        demo: () => <DemoControles />,
+    },
+    {
+        nombre: 'Modal',
+        para: 'Ventana sobre la página. Cierra con Escape o clic en el fondo, bloquea el scroll y enfoca el primer campo.',
+        props: 'onClose · className · labelledBy · id — children: el contenido',
+        demo: () => <DemoModal />,
+    },
+    {
+        nombre: 'Avatar',
+        para: 'Foto o iniciales sobre el color de la persona.',
+        props: 'name · photo · color — size: md · lg · sm · xs',
+        demo: () => (
+            <Demo titulo="Tamaños">
+                <Avatar name="Ana Pérez" color="var(--fc-azul, #317DE9)" size="lg" />
+                <Avatar name="Leo Díaz" color="var(--fc-violeta, #7D63E6)" />
+                <Avatar name="Sol Ríos" color="var(--fc-verde, #3B9555)" size="sm" />
+                <Avatar name="Tomás Gil" color="var(--fc-ambar, #C06F0A)" size="xs" />
+            </Demo>
         ),
     },
     {

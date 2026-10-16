@@ -64,6 +64,12 @@ Import: `import { Button, … } from '<ruta>/components/standard';`
 | `Aura` | Nubes de color difusas de fondo | `colors`, `size`: `card` · `hero`, `soft` |
 | `EmptyState` | Vacío, cargando o sin permiso | `icon`, `title`, `aura`, `action`, `children` (el texto) |
 | `ConfirmDelete` | «¿Eliminar X?» con Cancelar / Eliminar | `name`, `article` («a »), `detail`, `onCancel`, `onConfirm`, `confirmLabel`, `icon`, `extraActions`, `children` |
+| `Segmented` | Pestañas, períodos, vistas (opciones excluyentes) | `value`, `options` `[{value, label, icon}]`, `onChange`, `size`: `md` · `sm`, `label`, `itemProps` (va a cada botón) |
+| `Select` | Desplegable propio (teclado completo, búsqueda tipeando) | `value`, `options` `[{value, label, icon, iconColor}]` (`value: ''` = opción vacía), `onChange`, `size`, `label`; los atributos extra van al botón y `data-nav` también a las opciones |
+| `Switch` | Interruptor sí/no | `checked`, `onChange`, `label` |
+| `Stepper` | Contador con − y + | `value`, `min`, `max`, `onChange`, `display` (texto en lugar del número), `label` |
+| `Modal` | Ventana sobre la página (Escape, clic afuera, foco, bloquea el scroll) | `onClose`, `className` (ancho propio), `labelledBy`, `id` |
+| `Avatar` | Foto o iniciales sobre un color | `name`, `photo`, `color`, `size`: `md` · `lg` · `sm` · `xs` |
 | `Chip` | Etiqueta de estado o categoría | `color`, `icon`, `subtle`, `square` (solo ícono), `as="button"` (filtro con `aria-pressed`) |
 
 Todo lo que no es prop (`onClick`, `disabled`, `ref`, `data-nav`, `autoFocus`, `title`, `data-tip`…) pasa directo al elemento HTML.
@@ -71,6 +77,8 @@ Todo lo que no es prop (`onClick`, `disabled`, `ref`, `data-nav`, `autoFocus`, `
 En Thalamus, `data-nav` marca lo que sigue habilitado en solo lectura (el setter): navegar, copiar, probar. Lo que cambia la configuración no lo lleva.
 
 Íconos: los componentes reciben un nodo. En Thalamus, `<Icono n="plus" />` (`pages/agendas_v2/ui/base.jsx`); en el resto, lucide-react.
+
+En Thalamus, `Seg`, `Sx`, `Switch`, `Paso`, `Modal` y `Avatar` de `ui/base.jsx` son **adaptadores**: traducen la forma de Thalamus (opciones `{v, n, icono}`, `nav`) a los estándar, que son los que dibujan. Código nuevo usa los estándar directamente.
 
 ## Al crear o cambiar un componente estándar
 
@@ -95,4 +103,7 @@ Si una pantalla necesita ajustar el componente según el contexto (por ejemplo, 
 - Hay tres formas de confirmar un borrado: caja (`ConfirmDelete`), popover (editor de formularios) y en línea (Mis eventos, Funnel). Falta elegir una.
 - El botón que abre la confirmación es `danger` en Evento y `secondary` en Funnel.
 - En el CSS viejo, `link-btn--sutil` nunca tuvo efecto: la regla base, escrita después, le pisaba el color. Los dos usos (Configurar evento › funnel, Sesiones › «Usar la propuesta») se ven como links normales y se migraron así. ¿Deberían ser `subtle`?
+- Avatar `lg` hoy solo suma una sombra: en el CSS viejo `.avatar--l` quedaba antes que `.avatar` y la base le pisaba el tamaño. ¿Debería medir 48px, como decía la regla?
+- En Thalamus quedan a mano 8 segmentados y 4 switches (con contenido propio, como el «Agrupar» de Eventos): pasarlos a `Segmented` y `Switch`.
+- La textarea que crece sola (`AreaAuto`) no pasó: la usa también la pantalla del lead con estilos propios.
 - Próximos componentes: `Input` (campo con ícono, label oculto y botón), `Grid` (`kpis` · `auto` · `list`), `Calendar` (`month` · `week` · `day`) y `Modal`.
