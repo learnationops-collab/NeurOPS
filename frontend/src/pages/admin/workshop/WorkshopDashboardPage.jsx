@@ -17,6 +17,7 @@ import WorkshopSimuladorView from './components/WorkshopSimuladorView';
 import WorkshopAccionesView from './components/WorkshopAccionesView';
 import WorkshopCompareModal from './components/WorkshopCompareModal';
 import WorkshopProximosView from './components/WorkshopProximosView';
+import TallerEnVivo from './components/TallerEnVivo';
 import { aCamposLocales, aInicioUtc, esProximo, zonaNavegador } from './agendaTaller';
 
 const initialFormData = {
@@ -465,9 +466,7 @@ const WorkshopDashboardPage = () => {
                     <div className="ws-topbar-row">
                         <div className="ws-topbar-title">
                             <h1>Workshop Intelligence</h1>
-                            <span className="live-badge" title="Las agendas, ventas y formularios nuevos se reflejan solos en el panel, sin recargar ni sincronizar a mano.">
-                                <span className="live-dot" /> En vivo
-                            </span>
+                            <TallerEnVivo eventos={events} onIrAProximos={() => setActiveTab('proximos')} />
                         </div>
                         <div className="hero-actions">
                             <button type="button" className="icon-button" onClick={() => fetchEvents()} title="Recargar eventos" aria-label="Recargar eventos">

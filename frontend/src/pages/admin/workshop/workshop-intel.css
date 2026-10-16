@@ -85,6 +85,11 @@
 .ws-shell .ws-topbar-title h1 { margin: 0; font-size: 19px; font-weight: 900; letter-spacing: -.02em; }
 .ws-shell .live-badge { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px 5px 9px; border: 1px solid color-mix(in srgb, var(--ln-success, #2fbf8f) 35%, transparent); border-radius: 999px; background: color-mix(in srgb, var(--ln-success, #2fbf8f) 10%, transparent); color: var(--success); font-size: 9px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
 .ws-shell .live-badge .live-dot { margin-right: 0; animation: ws-live-pulse 1.8s ease-in-out infinite; }
+/* Cuenta regresiva al próximo taller (16/10/2026); a cero pasa a «En vivo» (el verde de arriba) 2 horas. */
+.ws-shell .live-badge--cuenta { border-color: color-mix(in srgb, var(--pink-light) 40%, transparent); background: color-mix(in srgb, var(--pink-light) 10%, transparent); color: var(--pink-light); }
+.ws-shell .live-badge-cuenta { font-size: 11px; letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+.ws-shell .live-badge--sin { border-color: color-mix(in srgb, var(--ln-text-out, #ffffff) 22%, transparent); background: transparent; color: color-mix(in srgb, var(--ln-text-out, #ffffff) 60%, transparent); cursor: pointer; }
+.ws-shell .live-badge--sin:hover { color: var(--ln-text-out, #ffffff); }
 .ws-shell .ws-topbar .section-tabs { width: 100%; }
 @keyframes ws-live-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ln-success, #2fbf8f) 45%, transparent); } 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--ln-success, #2fbf8f) 0%, transparent); } }
 
