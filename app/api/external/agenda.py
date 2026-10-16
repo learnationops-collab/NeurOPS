@@ -337,6 +337,55 @@ def agenda_whatsapp_confirmar(email):
     return jsonify(_estado(u)), 200
 
 
+# --- El closer de cada alumno -----------------------------------------------------------------
+
+MAX_ALUMNOS = 1000
+
+
+@bp.route('/agenda/closers', methods=['POST'])
+@require_academy_token
+def agenda_closers():
+    """{alumnos: [{email, work_client_id}]} → {closers: [{email, work_client_id, cliente_id, closer}]}.
+
+    Quién le vendió a cada alumno de la Academia, para que sus Momentum las dé ese closer: el de su venta
+    más reciente con vendedor (`FinancialSale.email_vendedor`, resuelto por email o por los alias del
+    closer). El cliente se busca por `work_client_id` y, si no, por email. `closer`: {email, nombre,
+    activo, rol} de la cuenta de NeurOPS, o null si no tiene venta con vendedor o no se resuelve."""
+    from app.models import Client
+    from app.models.financial import FinancialSale
+    from app.services.closer_followup_service import CloserFollowUpService
+
+    alumnos = _cuerpo().get('alumnos')
+    if not isinstance(alumnos, list) or len(alumnos) > MAX_ALUMNOS:
+        return _error(f'Mandá `alumnos` (hasta {MAX_ALUMNOS})', 400)
+
+    resueltos = {}
+
+    def closer_de(vendedor):
+        clave = vendedor.strip().lower()
+        if clave not in resueltos:
+            u = CloserFollowUpService._resolve_closer_for_email_vendedor(vendedor)
+            resueltos[clave] = {'email': (u.email or '').lower() or None, 'nombre': u.username,
+                                'activo': bool(u.is_active), 'rol': u._role} if u else None
+        return resueltos[clave]
+
+    salida = []
+    for a in alumnos:
+        a = a if isinstance(a, dict) else {}
+        email = (a.get('email') or '').strip().lower() or None
+        cid = a.get('work_client_id') if isinstance(a.get('work_client_id'), int) else None
+        cliente = db.session.get(Client, cid) if cid else None
+        if not cliente and email:
+            cliente = Client.query.filter(func.lower(Client.email) == email).first()
+        venta = FinancialSale.query.filter(
+            FinancialSale.client_id == cliente.id, FinancialSale.email_vendedor.isnot(None),
+            FinancialSale.email_vendedor != '').order_by(FinancialSale.date.desc(), FinancialSale.id.desc()).first() \
+            if cliente else None
+        salida.append({'email': email, 'work_client_id': cid, 'cliente_id': cliente.id if cliente else None,
+                       'closer': closer_de(venta.email_vendedor) if venta else None})
+    return jsonify({'closers': salida}), 200
+
+
 # --- Horarios y reservas ----------------------------------------------------------------------
 
 

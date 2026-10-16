@@ -464,3 +464,26 @@ def test_el_reporte_de_la_ficha_se_traduce_para_la_academia(app):
         reagenda = {'resultado': 'reagenda', 'deck': {}, 'reagenda': {'start_time': '2026-10-08T15:00:00Z'}}
         assert traducir('resultado', reagenda) == {'asistencia': 'reagenda', 'inicio': '2026-10-08T15:00:00Z'}
         assert traducir('resultado', {'deck': {'closer_notes': 'x'}}) is None
+
+
+def test_el_closer_de_cada_alumno_sale_de_su_venta_mas_reciente(client, db, closer):
+    from app.models.financial import FinancialSale
+
+    ana = Client(full_name='Ana', email='ana@mail.com')
+    beto = Client(full_name='Beto', email='beto@mail.com')
+    db.session.add_all([ana, beto])
+    db.session.flush()
+    db.session.add_all([
+        FinancialSale(client_id=ana.id, email_vendedor='otro@x.com', date=datetime(2026, 9, 1)),
+        FinancialSale(client_id=ana.id, email_vendedor='Allan@TheLearnation.com', date=datetime(2026, 10, 1)),
+        FinancialSale(client_id=beto.id, email_vendedor=None, date=datetime(2026, 10, 1)),
+    ])
+    db.session.commit()
+    alumnos = [{'email': 'x@x.com', 'work_client_id': ana.id}, {'email': 'Beto@mail.com'}, {'email': 'nadie@mail.com'}]
+    r = client.post(f'{BASE}/closers', json={'alumnos': alumnos}, headers=H)
+    assert r.status_code == 200
+    a, b, c = r.json['closers']
+    assert a['cliente_id'] == ana.id and a['closer'] == {'email': 'allan@thelearnation.com', 'nombre': 'Allan', 'activo': True, 'rol': 'closer'}
+    assert b['cliente_id'] == beto.id and b['closer'] is None
+    assert c['cliente_id'] is None and c['closer'] is None
+    assert client.post(f'{BASE}/closers', json={'alumnos': 'x'}, headers=H).status_code == 400
