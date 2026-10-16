@@ -1,6 +1,7 @@
-import { Fragment, useEffect, useState } from 'react';
-import { ChevronDown, ChevronRight, Megaphone } from 'lucide-react';
+import { Fragment, useEffect, useRef, useState } from 'react';
+import { ChevronRight, Megaphone } from 'lucide-react';
 import api from '../../../../services/api';
+import InfoTooltip from '../../../../components/ui/InfoTooltip';
 
 /**
  * Los anuncios de Meta que llenaron este taller: los de embudo Workshop (Marketing › Meta Ads), del
@@ -8,32 +9,80 @@ import api from '../../../../services/api';
  * inversión). Campaña › conjunto › anuncio con gasto, impresiones, clics, CTR, CPC y CPM; por
  * campaña, además, las visitas a las landings y los clics al grupo de WhatsApp que trajo (el id de
  * la campaña viaja en el utm_campaign). Ver `app/services/workshop_meta_service.py`.
+ *
+ * Los títulos de las columnas quedan pegados debajo de la barra de pestañas mientras se scrollea la
+ * página (16/10/2026). No pueden ir en el <thead> de la tabla: la tabla scrollea de costado y un
+ * contenedor con scroll horizontal se queda con el `sticky`. Van en una segunda tabla con las mismas
+ * columnas (mismo ancho y `table-layout: fixed`, así coinciden sin medir) que copia el scroll
+ * horizontal; la tabla de datos conserva un <thead> oculto para los lectores de pantalla.
  */
 
 const fmtNum = (v) => (v == null ? '—' : Number(v).toLocaleString('es-AR'));
 const fmtPct = (v) => (v == null ? '—' : `${Number(v).toFixed(2)}%`);
 const fmtFecha = (iso) => (iso ? iso.split('-').reverse().slice(0, 2).join('/') : '');
 
-const Celdas = ({ fila, formatCurrency, landings }) => (
-    <>
-        <td data-workshop="Gasto">{formatCurrency(fila.gasto)}</td>
-        <td data-workshop="Impresiones">{fmtNum(fila.impresiones)}</td>
-        <td data-workshop="Clics">{fmtNum(fila.clics)}</td>
-        <td data-workshop="CTR">{fmtPct(fila.ctr)}</td>
-        <td data-workshop="CPC (enlace)">{fila.cpc == null ? '—' : formatCurrency(fila.cpc)}</td>
-        <td data-workshop="CPM">{fila.cpm == null ? '—' : formatCurrency(fila.cpm)}</td>
-        <td data-workshop="Visitas a la landing">{landings ? fmtNum(fila.visitas) : ''}</td>
-        <td data-workshop="Clics al grupo">{landings ? fmtNum(fila.clics_whatsapp) : ''}</td>
-        <td data-workshop="Costo por clic al grupo">
-            {landings ? (fila.costo_whatsapp == null ? '—' : formatCurrency(fila.costo_whatsapp)) : ''}
-        </td>
-    </>
+const NOMBRE = {
+    titulo: 'Campaña › conjunto › anuncio',
+    ayuda: 'Cómo está armado en Meta: cada campaña agrupa conjuntos (a quién se le muestra) y cada conjunto sus '
+        + 'anuncios (lo que la gente ve). Tocá una campaña para abrirla. Solo entran los anuncios clasificados como '
+        + 'Workshop en Marketing › Meta Ads.',
+};
+
+// `landings`: se mide por campaña (el utm_campaign trae el id de la campaña), no por conjunto ni anuncio.
+const COLUMNAS = [
+    { clave: 'gasto', titulo: 'Gasto', dinero: true,
+      ayuda: 'Lo que cobró Meta en los días de este taller: del día siguiente al taller anterior hasta el día de '
+        + 'este. La suma de todas las campañas es la inversión del taller.' },
+    { clave: 'impresiones', titulo: 'Impresiones',
+      ayuda: 'Cuántas veces se mostró. Una misma persona puede verlo varias veces: no son personas distintas.' },
+    { clave: 'clics', titulo: 'Clics (todos)',
+      ayuda: 'Todos los clics en el anuncio, también los que no llevan a la landing (abrir el perfil, ver más '
+        + 'texto, reaccionar…). Es lo que Meta llama «Clics (todos)».' },
+    { clave: 'ctr', titulo: 'CTR', pct: true,
+      ayuda: 'Clics sobre impresiones: de cada 100 veces que se mostró, cuántas alguien hizo clic. Sirve para ver '
+        + 'qué anuncio engancha más.' },
+    { clave: 'cpc', titulo: 'CPC (enlace)', dinero: true,
+      ayuda: 'Costo por clic en el enlace: el gasto dividido los clics que llevaron a la landing (no todos los '
+        + 'clics). Cuánto costó cada persona que fue a ver la página.' },
+    { clave: 'cpm', titulo: 'CPM', dinero: true,
+      ayuda: 'Costo por mil impresiones: lo que cobró Meta por mostrar el anuncio 1.000 veces. Si sube, el público '
+        + 'se está encareciendo o saturando.' },
+    { clave: 'visitas', titulo: 'Visitas a la landing', landings: true,
+      ayuda: 'Visitas a las landings del taller que llegaron con el id de esta campaña en el link (utm_campaign), '
+        + 'en los mismos días. Se mide por campaña, no por anuncio: por eso los conjuntos y los anuncios quedan '
+        + 'vacíos. La grabación no cuenta.' },
+    { clave: 'clics_whatsapp', titulo: 'Clics al grupo', landings: true,
+      ayuda: 'Clics al botón del grupo de WhatsApp en esas landings, de visitas que vinieron de esta campaña.' },
+    { clave: 'costo_whatsapp', titulo: 'Costo por clic al grupo', dinero: true, landings: true,
+      ayuda: 'El gasto de la campaña dividido los clics al grupo: cuánto costó cada persona que fue a entrar al '
+        + 'grupo de WhatsApp.' },
+];
+
+const valor = (col, v, formatCurrency) => {
+    if (v == null) return '—';
+    if (col.dinero) return formatCurrency(v);
+    if (col.pct) return fmtPct(v);
+    return fmtNum(v);
+};
+
+const Celdas = ({ fila, formatCurrency, landings }) => COLUMNAS.map((col) => (
+    <td key={col.clave} data-workshop={col.titulo}>
+        {col.landings && !landings ? '' : valor(col, fila[col.clave], formatCurrency)}
+    </td>
+));
+
+const Columnas = () => (
+    <colgroup>
+        <col className="ws-anuncios-col-nombre" />
+        {COLUMNAS.map((col) => <col key={col.clave} />)}
+    </colgroup>
 );
 
 const WorkshopAnunciosView = ({ evento, eventos = [], onSelectEvent, formatDate = (d) => d, formatCurrency }) => {
     const [datos, setDatos] = useState(null);
     const [error, setError] = useState(null);
     const [abiertas, setAbiertas] = useState({});
+    const cabezaRef = useRef(null);
 
     // Un taller por montaje: el panel la monta con key={evento.id}, así que arranca vacía.
     useEffect(() => {
@@ -50,9 +99,11 @@ const WorkshopAnunciosView = ({ evento, eventos = [], onSelectEvent, formatDate 
     }, [evento?.id]);
 
     const alternar = (id) => setAbiertas((a) => ({ ...a, [id]: !a[id] }));
+    // Los títulos pegados siguen el scroll horizontal de la tabla.
+    const copiarScroll = (e) => { if (cabezaRef.current) cabezaRef.current.scrollLeft = e.currentTarget.scrollLeft; };
 
     return (
-        <section className="panel comparison-panel ws-anuncios" aria-labelledby="ws-anuncios-titulo">
+        <section className="panel ws-anuncios" aria-labelledby="ws-anuncios-titulo">
             <div className="section-heading">
                 <div>
                     <p className="eyebrow">
@@ -88,59 +139,73 @@ const WorkshopAnunciosView = ({ evento, eventos = [], onSelectEvent, formatDate 
             ) : !datos.campanas.length ? (
                 <p className="all-target ws-anuncios-vacio">Los anuncios de Workshop no gastaron en estos días.</p>
             ) : (
-                <div className="comparison-scroll">
-                    <table className="trafico-landings ws-anuncios-tabla">
-                        <thead>
-                            <tr>
-                                <th scope="col">Campaña › conjunto › anuncio</th>
-                                <th scope="col">Gasto</th>
-                                <th scope="col">Impresiones</th>
-                                <th scope="col">Clics</th>
-                                <th scope="col">CTR</th>
-                                <th scope="col">CPC (enlace)</th>
-                                <th scope="col">CPM</th>
-                                <th scope="col">Visitas a la landing</th>
-                                <th scope="col">Clics al grupo</th>
-                                <th scope="col">Costo por clic al grupo</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {datos.campanas.map((c) => (
-                                <Fragment key={c.campana_id}>
-                                    <tr className="ws-anuncios-campana">
-                                        <th scope="row">
-                                            <button type="button" className="ws-anuncios-abrir" onClick={() => alternar(c.campana_id)}
-                                                aria-expanded={!!abiertas[c.campana_id]}>
-                                                {abiertas[c.campana_id] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                                                <strong>{c.nombre}</strong>
-                                            </button>
+                <div className="ws-anuncios-marco">
+                    {/* Títulos pegados: lo visible. La tabla es de presentación; los tooltips sí se leen. */}
+                    <div className="ws-anuncios-cabeza" ref={cabezaRef}>
+                        <table className="ws-anuncios-tabla" role="presentation">
+                            <Columnas />
+                            <thead>
+                                <tr>
+                                    {[NOMBRE, ...COLUMNAS].map((col) => (
+                                        <th key={col.titulo}>
+                                            <span className="ws-anuncios-titulo">
+                                                <span>{col.titulo}</span>
+                                                <InfoTooltip label={col.titulo} text={col.ayuda} size={11} />
+                                            </span>
                                         </th>
-                                        <Celdas fila={c} formatCurrency={formatCurrency} landings />
-                                    </tr>
-                                    {abiertas[c.campana_id] && c.conjuntos.map((s) => (
-                                        <Fragment key={`${c.campana_id}-${s.nombre}`}>
-                                            <tr className="ws-anuncios-conjunto">
-                                                <th scope="row">{s.nombre || 'Sin conjunto'}</th>
-                                                <Celdas fila={s} formatCurrency={formatCurrency} />
-                                            </tr>
-                                            {s.anuncios.map((a) => (
-                                                <tr key={a.meta_ad_id} className="ws-anuncios-anuncio">
-                                                    <th scope="row">{a.nombre}</th>
-                                                    <Celdas fila={a} formatCurrency={formatCurrency} />
-                                                </tr>
-                                            ))}
-                                        </Fragment>
                                     ))}
-                                </Fragment>
-                            ))}
-                        </tbody>
-                        <tfoot>
-                            <tr className="ws-anuncios-total">
-                                <th scope="row">Total del taller</th>
-                                <Celdas fila={datos.totales} formatCurrency={formatCurrency} landings />
-                            </tr>
-                        </tfoot>
-                    </table>
+                                </tr>
+                            </thead>
+                        </table>
+                    </div>
+                    <div className="ws-anuncios-scroll" onScroll={copiarScroll}>
+                        <table className="ws-anuncios-tabla">
+                            <Columnas />
+                            <thead className="ws-anuncios-thead-lector">
+                                <tr>
+                                    {[NOMBRE, ...COLUMNAS].map((col) => <th key={col.titulo} scope="col">{col.titulo}</th>)}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {datos.campanas.map((c) => (
+                                    <Fragment key={c.campana_id}>
+                                        <tr className="ws-anuncios-campana">
+                                            <th scope="row">
+                                                <button type="button" className="ws-anuncios-abrir" onClick={() => alternar(c.campana_id)}
+                                                    aria-expanded={!!abiertas[c.campana_id]} title={c.nombre}>
+                                                    <ChevronRight size={14} className="ws-anuncios-flecha" />
+                                                    <strong>{c.nombre}</strong>
+                                                </button>
+                                            </th>
+                                            <Celdas fila={c} formatCurrency={formatCurrency} landings />
+                                        </tr>
+                                        {abiertas[c.campana_id] && c.conjuntos.map((s) => (
+                                            <Fragment key={`${c.campana_id}-${s.nombre}`}>
+                                                <tr className="ws-anuncios-conjunto">
+                                                    <th scope="row" title={s.nombre || 'Sin conjunto'}>
+                                                        <span>{s.nombre || 'Sin conjunto'}</span>
+                                                    </th>
+                                                    <Celdas fila={s} formatCurrency={formatCurrency} />
+                                                </tr>
+                                                {s.anuncios.map((a) => (
+                                                    <tr key={a.meta_ad_id} className="ws-anuncios-anuncio">
+                                                        <th scope="row" title={a.nombre}><span>{a.nombre}</span></th>
+                                                        <Celdas fila={a} formatCurrency={formatCurrency} />
+                                                    </tr>
+                                                ))}
+                                            </Fragment>
+                                        ))}
+                                    </Fragment>
+                                ))}
+                            </tbody>
+                            <tfoot>
+                                <tr className="ws-anuncios-total">
+                                    <th scope="row">Total del taller</th>
+                                    <Celdas fila={datos.totales} formatCurrency={formatCurrency} landings />
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
                 </div>
             )}
         </section>

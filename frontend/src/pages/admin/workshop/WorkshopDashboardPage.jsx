@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Plus, RefreshCw, CalendarDays, CalendarClock, Loader2, LayoutGrid, List, Layers, Target, Zap, Video, LayoutDashboard, Globe, Megaphone } from 'lucide-react';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
@@ -82,6 +82,18 @@ const WorkshopDashboardPage = () => {
     const [desglose, setDesglose] = useState(null);
     const [ventana, setVentana] = useState(null);
     const [cargandoDesglose, setCargandoDesglose] = useState(false);
+
+    // Alto de la barra de pestañas pegada: lo que se pega debajo de ella al scrollear (los títulos de
+    // la tabla de anuncios) arranca ahí. Cambia cuando la barra se parte en dos renglones.
+    const topbarRef = useRef(null);
+    const [altoTopbar, setAltoTopbar] = useState(0);
+    useEffect(() => {
+        const barra = topbarRef.current;
+        if (!barra || typeof ResizeObserver === 'undefined') return undefined;
+        const observador = new ResizeObserver(() => setAltoTopbar(barra.offsetHeight));
+        observador.observe(barra);
+        return () => observador.disconnect();
+    }, []);
 
     useEffect(() => {
         fetchEvents();
@@ -456,13 +468,13 @@ const WorkshopDashboardPage = () => {
     };
 
     return (
-        <div className="ws-shell">
+        <div className="ws-shell" style={{ '--ws-topbar-h': `${altoTopbar}px` }}>
             <div className="dashboard">
                 {/* Barra superior pegada: titulo compacto + pestañas SIEMPRE
                     visibles arriba (calcado del topbar de la referencia) — antes
                     la navegación vivía debajo del hero + KPIs + diagnóstico, así
                     que cambiar de sección obligaba a scrollear cada vez. */}
-                <header className="ws-topbar">
+                <header className="ws-topbar" ref={topbarRef}>
                     <div className="ws-topbar-row">
                         <div className="ws-topbar-title">
                             <h1>Workshop Intelligence</h1>
