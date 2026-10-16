@@ -7,6 +7,7 @@ import { EsqueletoTablero, Isotipo, PillMenu, Segmented } from '../../comercial/
 import RangoFechas, { esFecha, textoRango } from '../../comercial/components/RangoFechas';
 import UTMGenerator from '../../../components/operations/UTMGenerator';
 import WebhookMonitorTab from '../../public/WebhookMonitorTab';
+import EntrantesVista from './entrantes/EntrantesVista';
 import TablaAnuncios from './anuncios/TablaAnuncios';
 import ConexionMeta from './anuncios/ConexionMeta';
 import EmbudosResumen from './anuncios/EmbudosResumen';
@@ -42,11 +43,13 @@ import './anuncios/anuncios.css';
 
 const PESTANAS = [
     { key: 'anuncios', label: 'Rendimiento' },
+    { key: 'entrantes', label: 'Entrantes' },
     { key: 'meta', label: 'Meta Ads' },
-    { key: 'webhooks', label: 'Webhooks' },
     { key: 'utms', label: 'Generador UTM' },
 ];
-const CON_PERIODO = ['anuncios', 'meta'];
+// «Webhooks» pasó a ser «Entrantes» (16/10/2026): un link viejo abre la nueva.
+const PESTANA_VIEJA = { webhooks: 'entrantes' };
+const CON_PERIODO = ['anuncios', 'entrantes', 'meta'];
 // Rendimiento por embudo (15/10/2026): «Todo» suma el resumen por embudo arriba de la tabla de
 // palabras clave; «Setting» es esa tabla sola y «Workshop», los anuncios que llevan a la clase.
 const EMBUDOS_DE_RENDIMIENTO = [
@@ -58,7 +61,10 @@ const EMBUDOS_DE_RENDIMIENTO = [
 const AdminMarketingHubPage = () => {
     const [params, setParams] = useSearchParams();
     const reducir = useReducedMotion();
-    const pestana = PESTANAS.some((p) => p.key === params.get('tab')) ? params.get('tab') : 'anuncios';
+    const pedida = PESTANA_VIEJA[params.get('tab')] || params.get('tab');
+    const pestana = PESTANAS.some((p) => p.key === pedida) ? pedida : 'anuncios';
+    // Las herramientas del monitor viejo (limpiar CUF, migrar, reasignar), abiertas desde Entrantes.
+    const herramientas = pestana === 'entrantes' && params.get('herr') === '1';
     const periodo = PERIODOS.some((p) => p.key === params.get('periodo')) ? params.get('periodo') : PERIODO_POR_DEFECTO;
     const embudo = EMBUDOS_DE_RENDIMIENTO.some((e) => e.key === params.get('embudo')) ? params.get('embudo') : 'todo';
     const rango = useMemo(() => {
@@ -162,7 +168,7 @@ const AdminMarketingHubPage = () => {
 
                     <div className="barra">
                         <Segmented opciones={PESTANAS} valor={pestana} ariaLabel="Secciones de Marketing"
-                            onChange={(key) => cambiar({ tab: key === 'anuncios' ? null : key })} />
+                            onChange={(key) => cambiar({ tab: key === 'anuncios' ? null : key, herr: null })} />
                     </div>
 
                     <motion.div key={pestana}
@@ -194,6 +200,11 @@ const AdminMarketingHubPage = () => {
                                         </div>
                                     )
                         )}
+                        {pestana === 'entrantes' && (
+                            <EntrantesVista desde={rango.desde} hasta={rango.hasta} version={version}
+                                herramientasAbiertas={herramientas}
+                                onHerramientas={() => cambiar({ herr: herramientas ? null : '1' })} />
+                        )}
                         {pestana === 'meta' && (
                             <ConexionMeta desde={rango.desde} hasta={rango.hasta} filasTablero={datos?.filas}
                                 moneda={datos?.moneda} cuentas={cuentas} estadoMeta={estadoMeta} version={version}
@@ -203,12 +214,12 @@ const AdminMarketingHubPage = () => {
                 </div>
             </div>
 
-            {/* Las dos herramientas de siempre: son Tailwind y van FUERA del `.dc-shell` (su reset de
-                botones les borraría los estilos), sobre su propia superficie oscura. */}
-            {!CON_PERIODO.includes(pestana) && (
-                <div className="mk-wrap">
+            {/* Lo de siempre que es Tailwind va FUERA del `.dc-shell` (su reset de botones les borraría los
+                estilos), sobre su propia superficie oscura: el generador de UTM y las herramientas del monitor. */}
+            {(!CON_PERIODO.includes(pestana) || herramientas) && (
+                <div className="mk-wrap mk-wrap--legado">
                     <div className="mk-legado">
-                        {pestana === 'webhooks' && <WebhookMonitorTab />}
+                        {herramientas && <WebhookMonitorTab />}
                         {pestana === 'utms' && <UTMGenerator />}
                     </div>
                 </div>

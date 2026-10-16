@@ -1,0 +1,46 @@
+/* Marketing › Entrantes (16/10/2026). Todo bajo `.dc-shell .en-…`, con los tokens del dashboard comercial. */
+
+.dc-shell .en-vista { display: grid; gap: var(--s5); }
+.dc-shell .en-kpi { gap: var(--s3); padding: var(--s5); }
+.dc-shell .en-kpi .kpi-sub { font-size: 12px; line-height: 1.4; }
+
+.dc-shell .en-estado { text-transform: none; letter-spacing: 0; font-weight: 700; max-width: 100%; }
+.dc-shell .en-celda { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.dc-shell .en-celda small { font-size: 11px; }
+
+/* Pendientes por paso: nombre · barra apilada · cantidad, en columnas fijas para que nada se monte. */
+.dc-shell .en-pasos-lista { display: grid; gap: var(--s2); margin-top: var(--s3); }
+.dc-shell .en-paso {
+    display: grid; grid-template-columns: minmax(120px, 220px) minmax(0, 1fr) 56px;
+    align-items: center; gap: var(--s3); min-height: 32px;
+}
+.dc-shell .en-paso-nombre { display: flex; flex-direction: column; min-width: 0; font-size: 13px; font-weight: 700; }
+.dc-shell .en-paso-nombre small { font-size: 11px; font-weight: 600; }
+.dc-shell .en-paso-barra {
+    display: flex; height: 10px; border-radius: 99px; overflow: hidden; background: var(--hundido);
+}
+.dc-shell .en-paso-barra i { display: block; height: 100%; transition: width .5s cubic-bezier(.22, .7, .2, 1); }
+.dc-shell .en-paso-n { text-align: right; font-weight: 800; }
+.dc-shell .en-leyenda { margin-top: var(--s3); display: flex; flex-wrap: wrap; gap: var(--s3); }
+
+/* El historial de una persona, arriba de la lista. */
+.dc-shell .en-ficha { padding: var(--s4); border-radius: var(--radius-control); margin-bottom: var(--s4); }
+.dc-shell .en-ficha-cab { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; }
+.dc-shell .en-ficha-quien { display: flex; flex-direction: column; min-width: 0; flex: 1 1 200px; }
+.dc-shell .en-historia {
+    list-style: none; margin: var(--s3) 0 0; padding: 0; display: grid; gap: var(--s2);
+    max-height: 280px; overflow-y: auto;
+}
+.dc-shell .en-historia li {
+    display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; align-items: center; gap: var(--s3);
+    font-size: 13px; padding: var(--s2) 0; border-top: 1px solid var(--border-subtle);
+}
+.dc-shell .en-historia-paso { min-width: 0; overflow-wrap: anywhere; }
+
+@media (max-width: 640px) {
+    .dc-shell .en-paso { grid-template-columns: minmax(0, 1fr) 48px; }
+    .dc-shell .en-paso-barra { grid-column: 1 / -1; grid-row: 2; }
+    .dc-shell .en-historia li { grid-template-columns: minmax(0, 1fr) auto; }
+    .dc-shell .en-historia li > .num { grid-column: 1 / -1; }
+}
+@media (prefers-reduced-motion: reduce) { .dc-shell .en-paso-barra i { transition: none; } }
