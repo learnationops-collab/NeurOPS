@@ -65,7 +65,8 @@ const Kpi = ({ label, value, sub, icon: Icon, ayuda }) => (
    así se ve de un vistazo dónde se cae la gente respecto del total. */
 const PasoEmbudo = ({ idx, label, ayuda, valor, base, pctPaso }) => {
     const share = base > 0 ? (valor / base) * 100 : 0;
-    const width = base > 0 ? 14 + 86 * Math.sqrt(Math.max(0, valor) / base) : 14;
+    // Cero es nada: sin barra (16/10/2026).
+    const width = base > 0 && valor > 0 ? 14 + 86 * Math.sqrt(valor / base) : 0;
     return (
         <React.Fragment>
             {idx > 0 && pctPaso !== null && (
@@ -84,7 +85,9 @@ const PasoEmbudo = ({ idx, label, ayuda, valor, base, pctPaso }) => {
                     </strong>
                 </div>
                 <div className="stage-bar" role="img" aria-label={`${label}: ${valor}, ${share.toFixed(1)}% del total`}>
-                    <i style={{ width: `${width}%` }}><b>{valor.toLocaleString()}</b></i>
+                    {valor > 0
+                        ? <i style={{ width: `${width}%` }}><b>{valor.toLocaleString()}</b></i>
+                        : <span className="stage-bar-cero">0</span>}
                 </div>
                 <span className="stage-share">{share.toFixed(1)}%<small>del total</small></span>
             </div>

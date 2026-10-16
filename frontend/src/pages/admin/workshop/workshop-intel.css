@@ -253,6 +253,8 @@
 .ws-shell .stage-bar i { position: absolute; inset: 0 auto 0 0; min-width: 44px; display: flex; align-items: center; justify-content: flex-end; padding: 0 11px; border-radius: inherit; background: linear-gradient(90deg, var(--ln-brand-2, #1323c6), #384af4); transition: width 580ms cubic-bezier(.4, 0, .2, 1); font-style: normal; }
 .ws-shell .funnel-stage.leak .stage-bar i { background: linear-gradient(90deg, var(--ln-brand, #ff3fa4), var(--ln-brand-accent, #ff6ad5)); color: var(--ink); }
 .ws-shell .stage-bar b { font-size: 12px; font-style: normal; font-variant-numeric: tabular-nums; }
+/* Un paso en cero no tiene barra (cero es nada): solo el número, apagado, al principio de la pista. */
+.ws-shell .stage-bar-cero { position: absolute; inset: 0 auto 0 14px; display: flex; align-items: center; color: var(--text-muted); font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .ws-shell .stage-share { text-align: right; font-size: 12px; font-weight: 900; font-variant-numeric: tabular-nums; }
 .ws-shell .stage-share small { display: block; margin-top: 4px; font-size: 9px; font-weight: 600; }
 .ws-shell .rate-pill { justify-self: start; display: inline-grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 8px; min-height: 40px; margin: 2px 0 2px 44px; padding: 5px 11px; border: 1px solid; border-radius: 999px; background: var(--ln-success-bg, #071a24); cursor: pointer; text-align: left; transition: transform 180ms ease, filter 180ms ease; }
@@ -495,7 +497,7 @@
 .ws-shell .trafico-chart-plot { height: 180px; display: flex; align-items: flex-end; gap: 2px; padding-bottom: 1px; border-bottom: 1px solid color-mix(in srgb, var(--ln-text-out, #ffffff) 14%, transparent); background: repeating-linear-gradient(to top, color-mix(in srgb, var(--ln-text-out, #ffffff) 5%, transparent) 0 1px, transparent 1px 25%); }
 .ws-shell .trafico-chart-col { flex: 1 1 0; min-width: 0; height: 100%; display: flex; align-items: flex-end; padding: 0; border: 0; background: transparent; cursor: default; }
 .ws-shell .trafico-chart-col:focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; }
-.ws-shell .trafico-chart-col i { display: block; width: 100%; min-height: 2px; border-radius: 4px 4px 0 0; background: var(--pink); opacity: .78; transform-origin: bottom; animation: ws-barra-crece 520ms cubic-bezier(.2, .8, .2, 1) both; transition: opacity 120ms ease; }
+.ws-shell .trafico-chart-col i { display: block; width: 100%; border-radius: 4px 4px 0 0; background: var(--pink); opacity: .78; transform-origin: bottom; animation: ws-barra-crece 520ms cubic-bezier(.2, .8, .2, 1) both; transition: opacity 120ms ease; }
 .ws-shell .trafico-chart-col.activo i { opacity: 1; }
 .ws-shell .trafico-chart-plot:hover .trafico-chart-col:not(.activo) i { opacity: .45; }
 @keyframes ws-barra-crece { from { transform: scaleY(0); } to { transform: scaleY(1); } }

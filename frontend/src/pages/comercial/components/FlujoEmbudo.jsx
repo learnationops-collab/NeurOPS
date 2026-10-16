@@ -37,7 +37,7 @@ const PILDORA = { alto: 22, ancho: 44 };
 const ANCHO_SUPUESTO = 960;    // sin medida (jsdom, primer cuadro)
 // Lo mínimo que mide una etapa que no está en cero: en un embudo de 494 entrantes a 2 ventas las
 // últimas etapas eran una raya de 2 px y no se leían como barras (Comparativas, 10/10/2026). El cero
-// sí queda en una raya: es la diferencia que tiene que verse.
+// no tiene barra (16/10/2026): cero es nada, y esa es la diferencia que tiene que verse.
 const ALTO_MIN = 8;
 const PCT_MIN = 6;
 
@@ -102,7 +102,7 @@ const Horizontal = ({ etapas, escala, raiz, ancho, rotulos, bandas, color, monta
     const { anchoBarra: fb, hueco: fg } = geometria(ancho, n, rotulos);
     const alto = ARRIBA + ALTO_MAX + (rotulos ? CON_ROTULOS : 6);
     const cy = ARRIBA + ALTO_MAX / 2;
-    const altoDe = (v) => Math.max(v > 0 ? ALTO_MIN : 2, proporcion(v, escala, raiz) * ALTO_MAX);
+    const altoDe = (v) => (v > 0 ? Math.max(ALTO_MIN, proporcion(v, escala, raiz) * ALTO_MAX) : 0);
     const x = (i) => MX + i * (fb + fg);
     return (
         <svg className="flj-svg" width="100%" height={alto} viewBox={`0 0 ${ancho} ${alto}`} role="group"
@@ -162,7 +162,7 @@ const Horizontal = ({ etapas, escala, raiz, ancho, rotulos, bandas, color, monta
 
 /** El mismo embudo girado: una fila por etapa, la barra centrada en su pista. */
 const Vertical = ({ etapas, escala, raiz, bandas, color, montado }) => {
-    const pct = (v) => Math.max(v > 0 ? PCT_MIN : 2, proporcion(v, escala, raiz) * 100);
+    const pct = (v) => (v > 0 ? Math.max(PCT_MIN, proporcion(v, escala, raiz) * 100) : 0);
     return (
         <div className="flj-v" role="list">
             {etapas.map((e, i) => {

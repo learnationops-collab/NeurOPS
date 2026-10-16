@@ -113,7 +113,8 @@ const WorkshopFunnelView = ({
                             const prev = activeFunnelData[idx - 1];
                             const pctFromPrev = idx > 0 && prev?.value > 0 ? (step.value / prev.value) * 100 : null;
                             const share = leadsBase ? (step.value / leadsBase) * 100 : 0;
-                            const width = leadsBase ? 14 + 86 * Math.sqrt(Math.max(0, step.value) / leadsBase) : 14;
+                            // Cero es nada: sin barra (16/10/2026). El piso de 14% es solo para lo que tiene algo.
+                            const width = leadsBase && step.value > 0 ? 14 + 86 * Math.sqrt(step.value / leadsBase) : 0;
                             return (
                                 <React.Fragment key={step.label}>
                                     {idx > 0 && (
@@ -133,7 +134,9 @@ const WorkshopFunnelView = ({
                                             <small>{step.detail}</small>
                                         </div>
                                         <div className="stage-bar" role="img" aria-label={`${step.label}: ${step.value}, ${share.toFixed(1)}% del total`}>
-                                            <i style={{ width: `${width}%` }}><b>{step.value.toLocaleString()}</b></i>
+                                            {step.value > 0
+                                                ? <i style={{ width: `${width}%` }}><b>{step.value.toLocaleString()}</b></i>
+                                                : <span className="stage-bar-cero">0</span>}
                                         </div>
                                         <span className="stage-share">{share.toFixed(1)}%<small>del total</small></span>
                                     </div>

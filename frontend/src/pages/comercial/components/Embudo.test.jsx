@@ -16,6 +16,14 @@ describe('Embudo · el pie', () => {
         expect(screen.getByText('10.0% final')).toBeInTheDocument();
     });
 
+    it('un paso en cero no tiene banda: solo su número (cero es nada, 16/10/2026)', () => {
+        const { container } = render(<Embudo pasos={[{ paso: 'Agendas', n: 12 }, { paso: 'Ventas', n: 0 }]} />);
+        const cero = container.querySelector('.dc-funnel-bar--cero');
+        expect(cero).toHaveTextContent('0');
+        expect(cero.style.width).toBe('');
+        expect(cero.style.background).toBe('');
+    });
+
     it('con `sinFinal` deja el conteo y quita la tasa de ventas sobre agendas', () => {
         render(<Embudo pasos={PASOS_PIE} sinFinal />);
         expect(screen.getByText('de 100 agendas a 10 ventas')).toBeInTheDocument();

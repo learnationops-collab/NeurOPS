@@ -159,7 +159,7 @@ const PanelSeguimientos = ({ fu, delta, canal }) => {
                         <div key={e.key} className="ds-fu-col">
                             <Cifra tag="b" className="ds-fu-n num" valor={fmt.num(e.hechos)} />
                             <span className="ds-fu-pista" aria-hidden="true">
-                                <i style={{ height: montado ? `${Math.max(4, (e.hechos / tope) * 100)}%` : 0,
+                                <i style={{ height: montado && e.hechos > 0 ? `${Math.max(4, (e.hechos / tope) * 100)}%` : 0,
                                     transitionDelay: `${i * 70}ms` }} />
                             </span>
                             <small className="ds-fu-rotulo">{ETAPAS_FU[e.key]}</small>

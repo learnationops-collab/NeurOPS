@@ -50,7 +50,7 @@ const Verticales = ({ items }) => {
                 return (
                     <div key={l} className="tl-vb">
                         <b style={top ? { color: 'var(--brand-secondary)' } : undefined}>{n}</b>
-                        <i style={{ height: `${Math.max(3, Math.round((n / max) * 100))}%`, background: top ? 'var(--brand-secondary)' : 'var(--barra)', animationDelay: `${j * 60}ms` }} />
+                        <i style={{ height: n > 0 ? `${Math.max(3, Math.round((n / max) * 100))}%` : 0, background: top ? 'var(--brand-secondary)' : 'var(--barra)', animationDelay: `${j * 60}ms` }} />
                         <span>{l}</span>
                     </div>
                 );

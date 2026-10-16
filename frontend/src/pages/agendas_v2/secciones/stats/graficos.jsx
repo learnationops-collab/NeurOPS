@@ -98,7 +98,7 @@ export function Embudo({ pasos, vals }) {
                         <div key={j} className={'emb2-f' + (mal ? ' emb2-f--mal' : '')} style={{ '--d': (j * 45) + 'ms' }} data-tip={p[0] + '|' + vals[j] + ' leads · ' + fmt(pc, 0) + '% de los que entraron'}>
                             <span className="emb2-ico"><Icono n={mal ? 'fuego' : p[2]} s={13} /></span>
                             <span className="emb2-n">{p[0]}</span>
-                            <span className="emb2-pista"><i style={{ width: Math.max(pc, 1.5) + '%' }} /></span>
+                            <span className="emb2-pista"><i style={{ width: (pc > 0 ? Math.max(pc, 1.5) : 0) + '%' }} /></span>
                             <span className="emb2-v num"><b>{vals[j]}</b><em>{fmt(pc, 0)}%</em></span>
                             <span className="emb2-c num">{caida ? '−' + caida : ''}</span>
                         </div>

@@ -257,7 +257,7 @@ const WorkshopTraficoView = () => {
                                                 <span className="trafico-visitas">
                                                     {fmtNum(l.visitas)}
                                                     <span className="trafico-share" aria-label={`${share.toFixed(1)}% del total`}>
-                                                        <i style={{ width: `${Math.max(share, 1.5)}%` }} />
+                                                        <i style={{ width: `${share > 0 ? Math.max(share, 1.5) : 0}%` }} />
                                                     </span>
                                                     <small className="trafico-share-pct">{share.toFixed(1)}% del total</small>
                                                 </span>

@@ -27,7 +27,8 @@ import { CardHead, Tip, useMontado } from './Shared';
 const Embudo = ({ pasos, sinCuello = false, sinFinal = false }) => {
     const montado = useMontado();
     const primero = pasos[0]?.n || 0;
-    const ancho = (n) => Math.max(14, primero ? (n / primero) * 100 : 14);
+    // Cero es nada: un paso en cero no tiene banda, solo su número (16/10/2026).
+    const ancho = (n) => (n > 0 && primero ? Math.max(14, (n / primero) * 100) : 0);
 
     // Cuello de botella: el salto de menor conversión a partir del SEGUNDO (i >= 2). El primer
     // salto queda fuera a propósito: "de agendas a asistieron" (o "de entrantes a respondieron")
@@ -65,8 +66,8 @@ const Embudo = ({ pasos, sinCuello = false, sinFinal = false }) => {
             </CardHead>
             {pasos.map((p, i) => {
                 const pct = i === 0 ? null : pasos[i - 1].n ? ((p.n / pasos[i - 1].n) * 100).toFixed(1) : null;
-                const anchoAqui = montado ? ancho(p.n) : 14;
-                const anchoSig = i < pasos.length - 1 ? (montado ? ancho(pasos[i + 1].n) : 14) : null;
+                const anchoAqui = montado ? ancho(p.n) : 0;
+                const anchoSig = i < pasos.length - 1 ? (montado ? ancho(pasos[i + 1].n) : 0) : null;
                 const estiloCuello = i === cuello ? { color: 'var(--error)' } : undefined;
                 return (
                     <div key={p.paso}>
@@ -85,10 +86,14 @@ const Embudo = ({ pasos, sinCuello = false, sinFinal = false }) => {
                                 {p.ayuda && <Tip texto={p.ayuda} />}
                             </span>
                             <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                <div className="dc-funnel-bar"
-                                    style={{ width: `${anchoAqui}%`, background: color(i), transitionDelay: `${120 + i * 90}ms` }}>
-                                    {p.n}
-                                </div>
+                                {p.n > 0 ? (
+                                    <div className="dc-funnel-bar"
+                                        style={{ width: `${anchoAqui}%`, background: color(i), transitionDelay: `${120 + i * 90}ms` }}>
+                                        {p.n}
+                                    </div>
+                                ) : (
+                                    <div className="dc-funnel-bar dc-funnel-bar--cero">0</div>
+                                )}
                             </div>
                             <span className="dc-funnel-pct" style={estiloCuello}>
                                 {pct === null ? '' : `${pct}%`}
