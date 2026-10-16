@@ -77,6 +77,17 @@ class WorkshopEvent(db.Model):
     cash_ventas = db.Column(db.Float, nullable=True)
     ventas_cobradas = db.Column(db.Integer, nullable=True)
 
+    # Lo que dice Meta de los anuncios de embudo 'workshop' (`MetaAnuncio.embudo`) entre el
+    # día siguiente al taller anterior y el día de este (15/10/2026, `workshop_meta_service`). Si
+    # hay, reemplazan a la inversión, el CPM, el CPC y los clics cargados a mano (que quedan en sus
+    # columnas, por si se desmarcan las campañas). `meta_impresiones` null con `meta_inversion`
+    # cargada: días sincronizados antes de que se trajeran impresiones y clics; esos tres siguen a mano.
+    meta_inversion = db.Column(db.Float, nullable=True)
+    meta_impresiones = db.Column(db.Integer, nullable=True)
+    meta_clics = db.Column(db.Integer, nullable=True)
+    meta_clics_enlace = db.Column(db.Integer, nullable=True)
+    meta_actualizado_at = db.Column(db.DateTime, nullable=True)
+
     # Ultima vez que las 5 metricas automaticas de arriba se recalcularon desde
     # el sistema (agendas/ventas reales) -- ya sea por el hook de sincronizacion
     # en vivo (workshop_live_sync.py) o por un resync manual. Null si el evento
@@ -104,29 +115,62 @@ class WorkshopEvent(db.Model):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # --- Inversión, CPM, CPC y clics: de Meta si hay, si no los cargados a mano ---
+
+    @property
+    def inversion_de_meta(self):
+        return self.meta_inversion is not None
+
+    @property
+    def clics_de_meta(self):
+        return self.meta_inversion is not None and self.meta_impresiones is not None
+
+    @property
+    def inversion_real(self):
+        return self.meta_inversion if self.inversion_de_meta else (self.inversion or 0.0)
+
+    @property
+    def cpm_real(self):
+        if not self.clics_de_meta:
+            return self.cpm or 0.0
+        return self.meta_inversion / self.meta_impresiones * 1000 if self.meta_impresiones else 0.0
+
+    @property
+    def cpc_real(self):
+        """Por clic en el ENLACE, como lo cargaba el equipo (los clics son todos los clics)."""
+        if not self.clics_de_meta:
+            return self.cpc or 0.0
+        return self.meta_inversion / self.meta_clics_enlace if self.meta_clics_enlace else 0.0
+
+    @property
+    def clics_reales(self):
+        return self.meta_clics if self.clics_de_meta else (self.clics or 0)
+
     @property
     def impresiones(self):
+        if self.clics_de_meta:
+            return float(self.meta_impresiones)
         if self.cpm and self.cpm > 0:
-            return (self.inversion / self.cpm) * 1000
+            return (self.inversion_real / self.cpm) * 1000
         return 0.0
 
     @property
     def ctr(self):
         imp = self.impresiones
         if imp > 0:
-            return (self.clics / imp) * 100
+            return (self.clics_reales / imp) * 100
         return 0.0
 
     @property
     def conversion_leads(self):
-        if self.clics and self.clics > 0:
-            return (self.leads / self.clics) * 100
+        if self.clics_reales > 0:
+            return (self.leads / self.clics_reales) * 100
         return 0.0
 
     @property
     def cpl(self):
         if self.leads and self.leads > 0:
-            return self.inversion / self.leads
+            return self.inversion_real / self.leads
         return 0.0
 
     @property
@@ -174,7 +218,7 @@ class WorkshopEvent(db.Model):
     @property
     def costo_por_agenda(self):
         if self.agendas_exitosas and self.agendas_exitosas > 0:
-            return self.inversion / self.agendas_exitosas
+            return self.inversion_real / self.agendas_exitosas
         return 0.0
 
     @property
@@ -202,8 +246,8 @@ class WorkshopEvent(db.Model):
 
     @property
     def roas(self):
-        if self.inversion and self.inversion > 0:
-            return self.cash_collected / self.inversion
+        if self.inversion_real > 0:
+            return self.cash_collected / self.inversion_real
         return 0.0
 
     def to_dict(self):
@@ -211,10 +255,15 @@ class WorkshopEvent(db.Model):
             "id": self.id,
             "date": self.date.isoformat(),
             "name": self.name,
-            "inversion": self.inversion,
-            "cpm": self.cpm,
-            "cpc": self.cpc,
-            "clics": self.clics,
+            # Los de Meta si hay (ver `meta_inversion`); los cargados a mano, aparte.
+            "inversion": round(self.inversion_real, 2),
+            "cpm": round(self.cpm_real, 2),
+            "cpc": round(self.cpc_real, 2),
+            "clics": self.clics_reales,
+            "inversion_de_meta": self.inversion_de_meta,
+            "clics_de_meta": self.clics_de_meta,
+            "meta_actualizado_at": self.meta_actualizado_at.isoformat() if self.meta_actualizado_at else None,
+            "a_mano": {"inversion": self.inversion, "cpm": self.cpm, "cpc": self.cpc, "clics": self.clics},
             "leads": self.leads,
             "whatsapp_leads": self.whatsapp_leads,
             "show_up": self.show_up,

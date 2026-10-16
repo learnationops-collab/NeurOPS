@@ -1,0 +1,232 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
+
+vi.mock('../../../services/api', () => ({ default: { get: vi.fn(), post: vi.fn(), put: vi.fn() } }));
+vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() } }));
+// Las herramientas de siempre no son lo que se prueba acá.
+vi.mock('../../../components/operations/UTMGenerator', () => ({ default: () => <p>Generador UTM viejo</p> }));
+vi.mock('../../../components/marketing/LandingTrafficTable', () => ({ default: () => <p>Tráfico viejo</p> }));
+vi.mock('../../public/WebhookMonitorTab', () => ({ default: () => <p>Monitor de webhooks</p> }));
+
+import api from '../../../services/api';
+import AdminMarketingHubPage from './AdminMarketingHubPage';
+
+const fila = (extra) => ({
+    clave: 'APLICAR', nombre: 'APLICAR', ad_id: 1, archivado: false,
+    meta: { anuncios: 7, activos: 1, nombres: ['DMV | H2 | BRD'] },
+    entrantes: 227, calificados: 147, descalificados: 0, no_calificados: 80, pct_calificados: 64.8, pct_no_calificados: 35.2,
+    gasto: 431, cpl: 1.9, cpl_calificado: 2.93, agendas: 21, costo_agenda: 20.52, ventas: 1, costo_venta: 431,
+    cobrado: 1000, roas: 2.32, dias: { '2026-10-01': [10, 6, 14.37, 1] },
+    campana: 'DM Funnel', conjunto: 'AD 5', agrupacion: 'meta', gasto_por_grupo: [['DM Funnel', 'AD 5', 431]],
+    ...extra,
+});
+
+const TABLERO = {
+    desde: '2026-09-15', hasta: '2026-10-14', moneda: 'USD',
+    filas: [
+        fila(),
+        fila({ clave: 'OBTENER GUIA', nombre: 'Obtener Guia', ad_id: null, meta: { anuncios: 0, activos: 0, nombres: [] },
+            entrantes: 925, calificados: 693, no_calificados: 232, gasto: 0, cpl: null, cpl_calificado: null,
+            costo_agenda: null, costo_venta: null, roas: null, cobrado: 0, ventas: 2, agendas: 20,
+            campana: null, conjunto: null, agrupacion: null, gasto_por_grupo: [] }),
+        fila({ clave: 'VIEJA', nombre: 'VIEJA', archivado: true, entrantes: 3 }),
+    ],
+    totales: {},
+    sin_atribuir: { agendas: 220, ventas: 0, gasto_meta: 1572 },
+    agrupaciones: [{ campana: 'DM Funnel', conjuntos: ['AD 5'] }],
+    meta: { conectado: false, ultima_sincronizacion: null },
+};
+
+const niveles = () => within(screen.getByRole('tablist', { name: 'Nivel de la tabla' }));
+
+const abrir = (ruta = '/admin/marketing') => render(
+    <MemoryRouter initialEntries={[ruta]}><AdminMarketingHubPage /></MemoryRouter>,
+);
+
+describe('Marketing › Anuncios', () => {
+    beforeEach(() => {
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/anuncios' ? TABLERO : {
+            anuncios: [], claves: ['APLICAR'], conectado: false, ultima_sincronizacion: null } }));
+    });
+
+    it('pide la tabla del período y muestra una fila por palabra clave, sin las archivadas', async () => {
+        abrir();
+        expect(await screen.findByText('Obtener Guia')).toBeInTheDocument();
+        const [url, config] = api.get.mock.calls[0];
+        expect(url).toBe('/marketing/anuncios');
+        expect(config.params.desde < config.params.hasta).toBe(true);
+        expect(screen.getByText('7 anuncios en Meta · 1 activo')).toBeInTheDocument();
+        expect(screen.queryByText('VIEJA')).not.toBeInTheDocument();
+        // Los totales son de las filas visibles: 227 + 925 (la archivada no suma).
+        const total = screen.getByText(/Resultados de 2 palabras clave/).closest('tr');
+        expect(within(total).getByText('1,152')).toBeInTheDocument();
+    });
+
+    it('sin anuncio en Meta el gasto es «—», no $0.00, y avisa que falta conectar Meta', async () => {
+        abrir();
+        const filaGuia = (await screen.findByText('Obtener Guia')).closest('tr');
+        // Celdas: elegir, palabra clave, entrantes, calificados, no calificados, gasto…
+        expect(within(filaGuia).getAllByRole('cell')[5].textContent).toBe('—');
+        const filaAplicar = screen.getByText('APLICAR').closest('tr');
+        expect(within(filaAplicar).getAllByRole('cell')[5].textContent).toBe('$431');
+        expect(screen.getByText(/El gasto todavía no llega de Meta Ads/)).toBeInTheDocument();
+        expect(screen.getByText(/\$1,572 gastados en anuncios de Meta sin palabra clave/)).toBeInTheDocument();
+    });
+
+    it('ordena por una columna al tocar su encabezado', async () => {
+        const user = userEvent.setup();
+        abrir();
+        await screen.findByText('Obtener Guia');
+        const nombres = () => screen.getAllByRole('row').slice(1, 3).map((r) => within(r).getAllByRole('cell')[1].textContent);
+        expect(nombres()[0]).toMatch(/Obtener Guia/); // por entrantes, de mayor a menor
+        await user.click(screen.getByRole('button', { name: /Costo por lead/ }));
+        expect(nombres()[0]).toMatch(/APLICAR/); // el costo menor primero; el vacío al final
+    });
+
+    it('archivar avisa al backend y saca la fila', async () => {
+        const user = userEvent.setup();
+        api.post.mockResolvedValue({ data: { clave: 'APLICAR', archivado: true } });
+        abrir();
+        await user.click(await screen.findByRole('button', { name: 'Archivar APLICAR' }));
+        expect(api.post).toHaveBeenCalledWith('/marketing/anuncios/archivar', { clave: 'APLICAR', archivado: true });
+        await waitFor(() => expect(screen.queryByText('7 anuncios en Meta · 1 activo')).not.toBeInTheDocument());
+        expect(screen.getByRole('button', { name: /Ver archivadas \(2\)/ })).toBeInTheDocument();
+    });
+
+    it('de Campañas se baja a Conjuntos y a Anuncios con lo elegido, como en Meta', async () => {
+        const user = userEvent.setup();
+        abrir();
+        await screen.findByText('Obtener Guia');
+
+        await user.click(niveles().getByRole('tab', { name: 'Campañas' }));
+        const nombres = () => screen.getAllByRole('row').slice(1, -1).map((r) => within(r).getAllByRole('cell')[1].textContent);
+        expect(nombres().join(' | ')).toMatch(/Obtener|Sin campaña/);
+        expect(nombres().some((n) => n.startsWith('DM Funnel'))).toBe(true);
+
+        await user.click(screen.getByRole('button', { name: /^DM Funnel/ }));
+        expect(niveles().getByRole('tab', { name: /Conjuntos/ })).toHaveAttribute('aria-selected', 'true');
+        expect(nombres()).toHaveLength(1);
+        expect(nombres()[0]).toMatch(/^AD 5/);
+
+        await user.click(screen.getByRole('button', { name: /^AD 5/ }));
+        expect(niveles().getByRole('tab', { name: /Anuncios/ })).toHaveAttribute('aria-selected', 'true');
+        expect(nombres()).toHaveLength(1);
+        expect(nombres()[0]).toMatch(/^APLICAR/);
+    });
+
+    it('elegir a mano la campaña y el conjunto de una palabra clave', async () => {
+        const user = userEvent.setup();
+        api.post.mockResolvedValue({ data: { clave: 'OBTENER GUIA', campana: 'Guías', conjunto: 'Perú' } });
+        abrir();
+        await user.click(await screen.findByRole('button', { name: /Sin campaña · elegir/ }));
+        const dialogo = screen.getByRole('dialog');
+        await user.type(within(dialogo).getByPlaceholderText('Escribí o elegí una campaña'), 'Guías');
+        await user.type(within(dialogo).getByPlaceholderText('Opcional'), 'Perú');
+        const pedidos = api.get.mock.calls.length;
+
+        await user.click(within(dialogo).getByRole('button', { name: 'Guardar' }));
+
+        expect(api.post).toHaveBeenCalledWith('/marketing/anuncios/agrupar', { clave: 'OBTENER GUIA', campana: 'Guías', conjunto: 'Perú' });
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+        await waitFor(() => expect(api.get.mock.calls.length).toBeGreaterThan(pedidos));
+    });
+
+    it('en modo muestra se ve conectado, sin avisos de token, y no deja sincronizar', async () => {
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/anuncios'
+            ? { ...TABLERO, meta: { conectado: true, muestra: true, ultima_sincronizacion: '2026-10-15T10:00:00' } }
+            : { anuncios: [], claves: [], conectado: true, muestra: true, ultima_sincronizacion: '2026-10-15T10:00:00' } }));
+        abrir();
+        await screen.findByText('Obtener Guia');
+        expect(screen.queryByText(/El gasto todavía no llega de Meta Ads/)).not.toBeInTheDocument();
+
+        cleanup();
+        abrir('/admin/marketing?tab=meta');
+        expect(await screen.findByText('Conectado')).toBeInTheDocument();
+        expect(screen.getByText('Datos de muestra')).toBeInTheDocument();
+        expect(screen.queryByText(/META_ADS_TOKEN/)).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Sincronizar/ })).toBeDisabled();
+    });
+
+    it('sincroniza 90 días en tramos de 30, cada uno termina el día antes del anterior', async () => {
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/anuncios'
+            ? { ...TABLERO, meta: { conectado: true, muestra: false, ultima_sincronizacion: null } }
+            : { anuncios: [], claves: [], conectado: true, muestra: false, ultima_sincronizacion: null } }));
+        const tramos = [['2026-09-16', '2026-10-15'], ['2026-08-17', '2026-09-15'], ['2026-07-18', '2026-08-16']];
+        tramos.forEach(([desde, hasta]) => api.post.mockResolvedValueOnce({ data: { desde, hasta, anuncios: 3, gasto: 10 } }));
+        abrir('/admin/marketing?tab=meta');
+
+        await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Días para atrás' }), '90');
+        await userEvent.click(screen.getByRole('button', { name: /Sincronizar/ }));
+
+        await waitFor(() => expect(api.post).toHaveBeenCalledTimes(3));
+        expect(api.post.mock.calls.map(([, cuerpo]) => cuerpo)).toEqual([
+            { dias: 30, hasta: null }, { dias: 30, hasta: '2026-09-15' }, { dias: 30, hasta: '2026-08-16' }]);
+    });
+
+    it('Rendimiento muestra el gasto por embudo y Workshop abre sus anuncios', async () => {
+        const embudos = [
+            { embudo: 'setting', gasto: 300, anuncios: 12, dias: { '2026-10-01': 300 } },
+            { embudo: 'workshop', gasto: 100, anuncios: 4, dias: { '2026-10-01': 100 } },
+            { embudo: 'contratacion', gasto: 0, anuncios: 0, dias: {} },
+            { embudo: 'otro', gasto: 0, anuncios: 0, dias: {} },
+        ];
+        const workshop = {
+            desde: '2026-09-15', hasta: '2026-10-14', anuncios_workshop: 4,
+            totales: { gasto: 100, impresiones: 50000, clics: 1500, clics_enlace: 900, cpm: 2, cpc: 0.11, ctr: 3, visitas: 800, clics_whatsapp: 40, costo_whatsapp: 2.5 },
+            campanas: [{ campana_id: '120247656795310532', nombre: 'WORKSHOP FUNNEL | TESTING ADS', gasto: 100, impresiones: 50000,
+                clics: 1500, clics_enlace: 900, cpm: 2, cpc: 0.11, ctr: 3, visitas: 800, clics_whatsapp: 40, costo_whatsapp: 2.5,
+                conjuntos: [{ nombre: 'Broad | Pizarra Problem', gasto: 100, impresiones: 50000, clics: 1500, clics_enlace: 900, cpm: 2, cpc: 0.11, ctr: 3,
+                    anuncios: [{ meta_ad_id: '9', nombre: 'Ad 4', estado: 'ACTIVE', gasto: 100, impresiones: 50000, clics: 1500, clics_enlace: 900, cpm: 2, cpc: 0.11, ctr: 3 }] }] }],
+        };
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/anuncios' ? { ...TABLERO, embudos }
+            : url === '/marketing/anuncios/embudos/workshop' ? workshop : { anuncios: [], claves: [] } }));
+        abrir();
+
+        const tarjetaWorkshop = await screen.findByRole('button', { name: 'Ver Workshop: $100' });
+        expect(screen.getByText('75% del gasto · 12 anuncios')).toBeInTheDocument();
+        await userEvent.click(tarjetaWorkshop);
+
+        expect(await screen.findByText('Ad 4')).toBeInTheDocument();
+        expect(api.get).toHaveBeenCalledWith('/marketing/anuncios/embudos/workshop', expect.anything());
+        // La tabla de palabras clave (Setting) no está en la vista de Workshop.
+        expect(screen.queryByText('Obtener Guia')).not.toBeInTheDocument();
+        expect(within(screen.getByText('Total de Workshop').closest('tr')).getByText('40')).toBeInTheDocument();
+    });
+
+    it('cada anuncio de Meta muestra su embudo, se filtra y se corrige a mano', async () => {
+        const anuncio = (id, nombre, embudo, texto) => ({
+            meta_ad_id: id, nombre, campana: 'C', conjunto: 'S', estado: 'ACTIVE', texto, clave: null, mapeo: null,
+            embudo, embudo_mapeo: embudo ? 'auto' : null, gasto: 10,
+        });
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/anuncios'
+            ? { ...TABLERO, meta: { conectado: true, muestra: false, ultima_sincronizacion: null } }
+            : { anuncios: [anuncio('1', 'B | PP | A3', 'workshop', 'CLASE GRATIS: Cómo estudiar'),
+                anuncio('2', 'LP-TA -PSI-Gral', 'setting', 'Pide gratis al DM la guía'), anuncio('3', 'Raro', null, '')],
+            claves: [], conectado: true, muestra: false, ultima_sincronizacion: null } }));
+        api.put.mockResolvedValue({ data: { meta_ad_id: '2', embudo: 'workshop', embudo_mapeo: 'manual' } });
+        abrir('/admin/marketing?tab=meta');
+
+        const embudo = await screen.findByRole('combobox', { name: 'Embudo de LP-TA -PSI-Gral' });
+        expect(screen.getByRole('option', { name: 'Automático: Workshop' })).toBeInTheDocument();
+        await userEvent.selectOptions(embudo, 'workshop');
+        expect(api.put).toHaveBeenCalledWith('/marketing/anuncios/meta/2/embudo', { embudo: 'workshop' });
+
+        await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Filtrar por embudo' }), '__sin');
+        expect(screen.queryByText('B | PP | A3')).not.toBeInTheDocument();
+        expect(screen.getByText('Raro')).toBeInTheDocument();
+    });
+
+    it('la pestaña Meta Ads explica cómo conectarlo cuando falta el token', async () => {
+        abrir('/admin/marketing?tab=meta');
+        expect(await screen.findByText('Sin conectar')).toBeInTheDocument();
+        expect(screen.getByText(/META_ADS_TOKEN/)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Sincronizar/ })).toBeDisabled();
+    });
+
+    it('las herramientas de siempre siguen en sus pestañas', async () => {
+        abrir('/admin/marketing?tab=webhooks');
+        expect(await screen.findByText('Monitor de webhooks')).toBeInTheDocument();
+    });
+});

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, RefreshCw, CalendarDays, CalendarClock, Loader2, LayoutGrid, List, Layers, Target, Zap, Video, LayoutDashboard, Globe } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Plus, RefreshCw, CalendarDays, CalendarClock, Loader2, LayoutGrid, List, Layers, Target, Zap, Video, LayoutDashboard, Globe, Megaphone } from 'lucide-react';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
 import './workshop-intel.css';
@@ -10,6 +10,7 @@ import WorkshopFunnelView from './components/WorkshopFunnelView';
 import WorkshopFormModal from './components/WorkshopFormModal';
 import WorkshopLandingView from './components/WorkshopLandingView';
 import WorkshopTraficoView from './components/WorkshopTraficoView';
+import WorkshopAnunciosView from './components/WorkshopAnunciosView';
 import WorkshopDiagnostico from './components/WorkshopDiagnostico';
 import WorkshopGoalsModal from './components/WorkshopGoalsModal';
 import WorkshopSimuladorView from './components/WorkshopSimuladorView';
@@ -60,7 +61,7 @@ const WorkshopDashboardPage = () => {
     const [isEditMode, setIsEditMode] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
     const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
-    const [activeTab, setActiveTab] = useState('resumen'); // 'resumen' | 'list' | 'proximos' | 'funnel' | 'simulador' | 'acciones' | 'trafico' | 'landing'
+    const [activeTab, setActiveTab] = useState('resumen'); // 'resumen' | 'list' | 'proximos' | 'funnel' | 'anuncios' | 'simulador' | 'acciones' | 'trafico' | 'landing'
     const [selectedEventForFunnel, setSelectedEventForFunnel] = useState(null);
 
     // Diagnóstico / Metas / Simulador / Acciones (Workshop Intelligence 2.0)
@@ -85,6 +86,18 @@ const WorkshopDashboardPage = () => {
     const [desglose, setDesglose] = useState(null);
     const [ventana, setVentana] = useState(null);
     const [cargandoDesglose, setCargandoDesglose] = useState(false);
+
+    // Alto de la barra de pestañas pegada: lo que se pega debajo de ella al scrollear (los títulos de
+    // la tabla de anuncios) arranca ahí. Cambia cuando la barra se parte en dos renglones.
+    const topbarRef = useRef(null);
+    const [altoTopbar, setAltoTopbar] = useState(0);
+    useEffect(() => {
+        const barra = topbarRef.current;
+        if (!barra || typeof ResizeObserver === 'undefined') return undefined;
+        const observador = new ResizeObserver(() => setAltoTopbar(barra.offsetHeight));
+        observador.observe(barra);
+        return () => observador.disconnect();
+    }, []);
 
     useEffect(() => {
         fetchEvents();
@@ -429,13 +442,13 @@ const WorkshopDashboardPage = () => {
     };
 
     return (
-        <div className="ws-shell">
+        <div className="ws-shell" style={{ '--ws-topbar-h': `${altoTopbar}px` }}>
             <div className="dashboard">
                 {/* Barra superior pegada: titulo compacto + pestañas SIEMPRE
                     visibles arriba (calcado del topbar de la referencia) — antes
                     la navegación vivía debajo del hero + KPIs + diagnóstico, así
                     que cambiar de sección obligaba a scrollear cada vez. */}
-                <header className="ws-topbar">
+                <header className="ws-topbar" ref={topbarRef}>
                     <div className="ws-topbar-row">
                         <div className="ws-topbar-title">
                             <h1>Workshop Intelligence</h1>
@@ -462,6 +475,11 @@ const WorkshopDashboardPage = () => {
                         </button>
                         <button type="button" className={activeTab === 'funnel' ? 'active' : ''} onClick={() => setActiveTab('funnel')} aria-current={activeTab === 'funnel' ? 'page' : undefined}>
                             <CalendarDays size={14} /> Embudo
+                        </button>
+                        {/* Los anuncios de Meta que llenaron el taller abierto en Embudo (16/10/2026): antes
+                            vivían al pie del embudo y había que scrollear todo para encontrarlos. */}
+                        <button type="button" className={activeTab === 'anuncios' ? 'active' : ''} onClick={() => setActiveTab('anuncios')} aria-current={activeTab === 'anuncios' ? 'page' : undefined}>
+                            <Megaphone size={14} /> Anuncios
                         </button>
                         <button type="button" className={activeTab === 'simulador' ? 'active' : ''} onClick={() => setActiveTab('simulador')} aria-current={activeTab === 'simulador' ? 'page' : undefined}>
                             <Target size={14} /> Simulador
@@ -613,7 +631,19 @@ const WorkshopDashboardPage = () => {
                         desglose={desglose}
                         ventana={ventana}
                         cargandoDesglose={cargandoDesglose}
+                        onVerAnuncios={() => setActiveTab('anuncios')}
                     />
+                ) : activeTab === 'anuncios' ? (
+                    selectedEventForFunnel && (
+                        <WorkshopAnunciosView
+                            key={selectedEventForFunnel.id}
+                            evento={selectedEventForFunnel}
+                            eventos={realizados}
+                            onSelectEvent={setSelectedEventForFunnel}
+                            formatDate={formatDate}
+                            formatCurrency={formatCurrency}
+                        />
+                    )
                 ) : activeTab === 'simulador' ? (
                     <WorkshopSimuladorView
                         events={realizados}
@@ -681,6 +711,9 @@ const WorkshopDashboardPage = () => {
                         onGuardar={() => guardarTaller({ cerrar: false })}
                         guardando={guardando}
                         formatCurrency={formatCurrency}
+                        deMeta={isEditMode && selectedEvent
+                            ? { inversion: selectedEvent.inversion_de_meta, clics: selectedEvent.clics_de_meta }
+                            : null}
                     />
                 )}
             </div>

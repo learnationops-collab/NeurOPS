@@ -36,7 +36,8 @@ const WorkshopFormModal = ({
     onSubmit,
     onGuardar,
     guardando,
-    formatCurrency
+    formatCurrency,
+    deMeta
 }) => {
     // Guardado parcial: el taller se va completando mientras corre el evento, así que
     // se guarda sin cerrar el modal. La foto del último guardado dice si quedaron
@@ -280,23 +281,30 @@ const WorkshopFormModal = ({
 
                                     <div style={{ marginTop: 14, padding: 16, border: '1px solid var(--border)', borderRadius: 16, background: 'rgba(0,0,0,.2)' }}>
                                         <p className="eyebrow">Publicidad</p>
+                                        {/* Con campañas de workshop marcadas en Marketing › Meta Ads, estos
+                                            cuatro salen de Meta (ver workshop_meta_service) y no se editan. */}
                                         <div className="form-grid" style={{ marginTop: 10 }}>
                                             <label className="form-field wide">
-                                                <span>Inversión ads (USD)</span>
-                                                <span className="field-control money"><b>$</b><input type="number" step="any" {...field('inversion')} /></span>
+                                                <span>Inversión ads (USD){deMeta?.inversion && <small className="de-meta"> · de Meta Ads</small>}</span>
+                                                <span className="field-control money"><b>$</b><input type="number" step="any" {...field('inversion')} readOnly={!!deMeta?.inversion} /></span>
                                             </label>
                                             <label className="form-field">
-                                                <span>CPM (ads)</span>
-                                                <span className="field-control"><input type="number" step="any" {...field('cpm')} /></span>
+                                                <span>CPM (ads){deMeta?.clics && <small className="de-meta"> · de Meta Ads</small>}</span>
+                                                <span className="field-control"><input type="number" step="any" {...field('cpm')} readOnly={!!deMeta?.clics} /></span>
                                             </label>
                                             <label className="form-field">
-                                                <span>CPC único</span>
-                                                <span className="field-control"><input type="number" step="any" {...field('cpc')} /></span>
+                                                <span>CPC (clic en el enlace){deMeta?.clics && <small className="de-meta"> · de Meta Ads</small>}</span>
+                                                <span className="field-control"><input type="number" step="any" {...field('cpc')} readOnly={!!deMeta?.clics} /></span>
                                             </label>
                                             <label className="form-field wide">
-                                                <span>Clics únicos</span>
-                                                <span className="field-control"><input type="number" {...field('clics')} /></span>
+                                                <span>Clics{deMeta?.clics && <small className="de-meta"> · de Meta Ads</small>}</span>
+                                                <span className="field-control"><input type="number" {...field('clics')} readOnly={!!deMeta?.clics} /></span>
                                             </label>
+                                            <p className="form-field wide de-meta-nota">
+                                                {deMeta?.inversion
+                                                    ? 'Inversión, CPM, CPC y clics vienen de las campañas de workshop marcadas en Marketing › Meta Ads, desde el día siguiente al taller anterior hasta el de este.'
+                                                    : 'Si las campañas de workshop están marcadas en Marketing › Meta Ads, estos números se completan solos con lo que dice Meta.'}
+                                            </p>
                                         </div>
                                     </div>
 

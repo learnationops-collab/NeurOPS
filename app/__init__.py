@@ -162,6 +162,11 @@ def create_app(config_class=Config):
     from app.api.marketing import bp as marketing_bp
     app.register_blueprint(marketing_bp, url_prefix='/api/marketing')
 
+    # La tabla de anuncios por palabra clave de ManyChat y el gasto de Meta Ads: sesión de marketing en
+    # su before_request; el cron diario de Meta, con CRON_SECRET (ver app/api/marketing_anuncios.py).
+    from app.api.marketing_anuncios import bp as marketing_anuncios_bp
+    app.register_blueprint(marketing_anuncios_bp, url_prefix='/api/marketing/anuncios')
+
     from app.api.backup import bp as backup_bp
     app.register_blueprint(backup_bp, url_prefix='/api/backup')
     csrf.exempt(backup_bp) # Exento para tareas externas de backup

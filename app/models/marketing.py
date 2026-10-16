@@ -1,5 +1,18 @@
+import re
+import unicodedata
 from datetime import datetime
 from app import db
+
+
+def clave_de_palabra(texto):
+    """La palabra clave normalizada: sin tildes, en mayúsculas, solo letras y números separados por un
+    espacio. «Guía chile» -> «GUIA CHILE». None si no queda nada. (La migración d3f7a1c9e5b2 tiene una
+    copia congelada.)"""
+    if not isinstance(texto, str):
+        return None
+    sin_tildes = ''.join(c for c in unicodedata.normalize('NFKD', texto) if not unicodedata.combining(c))
+    limpio = re.sub(r'[^A-Z0-9]+', ' ', sin_tildes.upper()).strip()
+    return limpio[:100] or None
 
 class Campaign(db.Model):
     __tablename__ = 'campaigns'
@@ -31,18 +44,38 @@ class AdSet(db.Model):
     ads = db.relationship('Ad', backref='ad_set', lazy='dynamic', cascade="all, delete-orphan")
 
 class Ad(db.Model):
+    """Un anuncio es una PALABRA CLAVE de ManyChat (14/10/2026).
+
+    Antes cada anuncio se registraba a mano dentro de una campaña y un conjunto, y ManyChat mandaba
+    su id. Ahora ManyChat manda la palabra clave y el anuncio se crea solo la primera vez que llega
+    una nueva (ver `anuncios_service.anuncio_de_keyword`): por eso `ad_set_id` puede quedar vacío.
+    `clave` es la palabra clave normalizada (sin tildes, en mayúsculas): «Guia chile» y «GUÍA
+    CHILE» son el mismo anuncio. Los anuncios viejos con la misma clave se leen como uno solo.
+    """
     __tablename__ = 'ads'
     id = db.Column(db.Integer, primary_key=True)
-    ad_set_id = db.Column(db.Integer, db.ForeignKey('ad_sets.id'), nullable=False)
+    ad_set_id = db.Column(db.Integer, db.ForeignKey('ad_sets.id'), nullable=True)
     name = db.Column(db.String(100), nullable=False)
     external_id = db.Column(db.String(100), unique=True)
     keyword = db.Column(db.String(100))
+    clave = db.Column(db.String(100), nullable=True, index=True)
+    # La campaña y el conjunto (`ad_set_id`) los eligió alguien en la tabla de Marketing (15/10/2026): mandan
+    # sobre los que salen de Meta Ads. Sin la marca, el conjunto es el de la carga vieja y Meta lo reemplaza.
+    agrupado_a_mano = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     stage = db.Column(db.String(50))
     status = db.Column(db.String(20))
     details = db.Column(db.Text)
     total_spend = db.Column(db.Float, default=0.0)
     event_id = db.Column(db.Integer, db.ForeignKey('events.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+@db.event.listens_for(Ad, 'before_insert')
+@db.event.listens_for(Ad, 'before_update')
+def _clave_del_anuncio(_mapper, _conexion, anuncio):
+    # La clave sigue a la palabra clave por cualquier camino que se cree o edite el anuncio.
+    anuncio.clave = clave_de_palabra(anuncio.keyword) or clave_de_palabra(anuncio.name)
+
 
 class MarketingBudget(db.Model):
     __tablename__ = 'marketing_budgets'
@@ -70,6 +103,62 @@ class AdPeriodSpend(db.Model):
     ad = db.relationship('Ad', backref=db.backref('period_spends', lazy='dynamic'))
     campaign = db.relationship('Campaign', backref=db.backref('period_spends', lazy='dynamic'))
     ad_set = db.relationship('AdSet', backref=db.backref('period_spends', lazy='dynamic'))
+
+
+class MetaAnuncio(db.Model):
+    """Un anuncio publicado en Meta Ads, tal como lo trae la sincronización (`meta_ads_service`).
+
+    `clave` es la palabra clave de ManyChat a la que se le carga su gasto. La pone la sincronización
+    sola cuando el texto del anuncio la nombra («Comenta QUIERO APLICAR…») y `mapeo='auto'`; si
+    alguien la elige a mano, `mapeo='manual'` y la sincronización ya no la toca. Varios anuncios de
+    Meta pueden ir a la misma palabra clave (el mismo creativo probado en distintos públicos).
+    """
+    __tablename__ = 'meta_anuncios'
+    id = db.Column(db.Integer, primary_key=True)
+    meta_ad_id = db.Column(db.String(40), unique=True, nullable=False)
+    cuenta_id = db.Column(db.String(40))
+    nombre = db.Column(db.String(255))
+    campana = db.Column(db.String(255))
+    conjunto = db.Column(db.String(255))
+    # Los ids de Meta: el nombre se puede cambiar, el id no. El de la campaña es el que viaja en el
+    # `utm_campaign` de las landings y con el que se marcan las campañas de workshop.
+    campana_id = db.Column(db.String(40), nullable=True, index=True)
+    conjunto_id = db.Column(db.String(40), nullable=True)
+    creative_id = db.Column(db.String(40))
+    # El texto principal del creativo: de ahí sale la palabra clave.
+    texto = db.Column(db.Text)
+    # effective_status de Meta: ACTIVE, PAUSED, ADSET_PAUSED, CAMPAIGN_PAUSED, ...
+    estado = db.Column(db.String(40))
+    clave = db.Column(db.String(100), nullable=True, index=True)
+    mapeo = db.Column(db.String(10), nullable=True)  # 'auto' | 'manual'
+    # A qué embudo va (15/10/2026): 'setting' (al DM, ManyChat), 'workshop' (a la clase en vivo),
+    # 'contratacion' (búsquedas de personal) u 'otro'; null = sin clasificar. Lo pone la
+    # sincronización (`meta_ads_service.detectar_embudo`, `embudo_mapeo='auto'`) salvo que alguien lo
+    # elija a mano (`'manual'`). La inversión de cada workshop es el gasto de los de 'workshop'.
+    embudo = db.Column(db.String(20), nullable=True, index=True)
+    embudo_mapeo = db.Column(db.String(10), nullable=True)
+    # Adónde lleva el anuncio, del creativo: el link (instagram.com = al DM; la landing de la clase =
+    # workshop) o «cta:INSTAGRAM_MESSAGE» si no trae link. Es lo que más pesa para el embudo.
+    destino = db.Column(db.String(500), nullable=True)
+    creado_at = db.Column(db.DateTime, default=datetime.utcnow)
+    actualizado_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class MetaGastoDiario(db.Model):
+    """Lo que gastó un anuncio de Meta en un día (el día de la cuenta publicitaria), con sus
+    impresiones y clics: de ahí salen el CPM, el CPC y los clics de cada workshop."""
+    __tablename__ = 'meta_gastos_diarios'
+    __table_args__ = (db.UniqueConstraint('meta_ad_id', 'fecha', name='uq_meta_gasto_anuncio_dia'),)
+    id = db.Column(db.Integer, primary_key=True)
+    meta_ad_id = db.Column(db.String(40), nullable=False, index=True)
+    fecha = db.Column(db.Date, nullable=False, index=True)
+    gasto = db.Column(db.Float, nullable=False, default=0.0)
+    moneda = db.Column(db.String(3))
+    # Null en los días sincronizados antes del 15/10/2026 hasta que se vuelvan a pedir.
+    impresiones = db.Column(db.Integer, nullable=True)
+    clics = db.Column(db.Integer, nullable=True)  # todos los clics (`clicks`)
+    clics_enlace = db.Column(db.Integer, nullable=True)  # clics en el enlace (`inline_link_clicks`)
+    actualizado_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class ManychatAdLead(db.Model):

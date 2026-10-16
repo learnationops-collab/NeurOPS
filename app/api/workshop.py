@@ -3,7 +3,7 @@ from flask_login import current_user
 from app import db
 from app.models import WorkshopTemplate, WorkshopButton, WorkshopTemplateSent, WorkshopInteraction, WorkshopEvent, WorkshopGoals, WorkshopAction
 from app.decorators import workshop_required
-from app.services import workshop_agenda_service
+from app.services import workshop_agenda_service, workshop_meta_service
 from datetime import datetime
 import pytz
 import logging
@@ -196,6 +196,15 @@ def get_workshop_event(event_id):
     event = WorkshopEvent.query.get_or_404(event_id)
     return jsonify(_con_replay_local(event.to_dict(), event)), 200
 
+@bp.route('/events/<int:event_id>/anuncios', methods=['GET'])
+@workshop_required
+def get_workshop_event_anuncios(event_id):
+    """Los anuncios de Meta de las campañas de workshop en los días de este taller (del siguiente al
+    anterior hasta el del taller): campaña › conjunto › anuncio, ver workshop_meta_service.desglose."""
+    event = WorkshopEvent.query.get_or_404(event_id)
+    return jsonify(workshop_meta_service.desglose(event, _tz_usuario())), 200
+
+
 def _tz_usuario():
     try:
         return pytz.timezone(getattr(current_user, 'timezone', None) or 'America/La_Paz')
@@ -301,6 +310,9 @@ def create_workshop_event():
 
     try:
         db.session.add(event)
+        db.session.flush()
+        # Su inversión de Meta, y la del taller siguiente, cuya ventana ahora empieza en este.
+        workshop_meta_service.recalcular()
         db.session.commit()
         return jsonify(_con_replay_local(event.to_dict(), event)), 201
     except Exception as e:
@@ -325,6 +337,9 @@ def programar_workshop_events():
             data.get('meet_url'),
             data.get('whatsapp_url'),
         )
+        if creados:
+            # Como al registrar uno: su inversión de Meta y la del anterior, cuya ventana se acorta.
+            workshop_meta_service.recalcular()
         db.session.commit()
     except workshop_agenda_service.DatoInvalido as e:
         db.session.rollback()
@@ -347,6 +362,7 @@ def update_workshop_event(event_id):
     
     if 'name' in data:
         event.name = data['name']
+    movido = False
 
     # Hora, Meet y WhatsApp (lo que leen las landings). Mover el taller a otro día cambia
     # de qué taller son las agendas de esos días: workshop_live_sync recalcula los dos.
@@ -363,14 +379,16 @@ def update_workshop_event(event_id):
         if WorkshopEvent.query.filter(WorkshopEvent.date == nuevo_dia, WorkshopEvent.id != event.id).first():
             return jsonify({"error": f"Ya existe un taller el {data['date']}"}), 400
         event.date = nuevo_dia
-
-    if 'inversion' in data:
+        movido = True
+    # Los que vienen de Meta no se pisan: el panel (el resync del embudo, el modal) manda el evento
+    # entero, con los valores de Meta, y quedarían como «cargados a mano».
+    if 'inversion' in data and not event.inversion_de_meta:
         event.inversion = float(data['inversion'])
-    if 'cpm' in data:
+    if 'cpm' in data and not event.clics_de_meta:
         event.cpm = float(data['cpm'])
-    if 'cpc' in data:
+    if 'cpc' in data and not event.clics_de_meta:
         event.cpc = float(data['cpc'])
-    if 'clics' in data:
+    if 'clics' in data and not event.clics_de_meta:
         event.clics = int(data['clics'])
     if 'leads' in data:
         event.leads = int(data['leads'])
@@ -413,6 +431,10 @@ def update_workshop_event(event_id):
         event.synced_at = datetime.utcnow()
 
     try:
+        if movido:
+            db.session.flush()
+            # Cambió de qué días es la inversión de Meta de este taller y la de sus vecinos.
+            workshop_meta_service.recalcular()
         db.session.commit()
         return jsonify(_con_replay_local(event.to_dict(), event)), 200
     except Exception as e:
@@ -425,6 +447,8 @@ def delete_workshop_event(event_id):
     event = WorkshopEvent.query.get_or_404(event_id)
     try:
         db.session.delete(event)
+        db.session.flush()
+        workshop_meta_service.recalcular()  # el taller siguiente recupera sus días
         db.session.commit()
         return jsonify({"message": "Evento eliminado con éxito"}), 200
     except Exception as e:

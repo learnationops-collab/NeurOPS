@@ -1,0 +1,213 @@
+/* ============================================================================
+   MARKETING — el espacio de la dirección de marketing con el sistema del dashboard comercial.
+
+   La cabecera, las pestañas, la tabla de anuncios y la conexión con Meta viven dentro de un
+   `.dc-shell.dc-shell--embebido` (ver comercial.css: tokens, `.panel`, `.kpi`, `.tabs`, `.btn`).
+   Las herramientas viejas (Webhooks, UTM, Tráfico) son Tailwind y van FUERA del shell, en
+   `.mk-legado`: el reset de botones del shell les borraría los estilos.
+   ============================================================================ */
+
+/* El mismo fondo que `--gradient-page`: MainLayout pinta el del tema y la página es oscura. */
+.mk-espacio{
+  min-height:100%;
+  background:linear-gradient(135deg,var(--ln-page-base, #020617) 0%,var(--ln-page-base, #0A0E3D) 50%,var(--ln-page-base, #05082D) 100%) fixed,var(--ln-page-base, #020617);
+  color:var(--ln-text-out, #e2e8f0);
+  /* MainLayout deja 8rem abajo para el dock: el fondo oscuro los cubre también. */
+  margin-bottom:-8rem;
+  padding-bottom:calc(8rem + 32px);
+}
+.mk-wrap{max-width:1440px;margin:0 auto;padding:24px clamp(16px,3vw,24px) 0}
+.mk-shell .mk-wrap{padding-inline:0}
+.mk-espacio > .mk-shell{max-width:1440px;margin:0 auto;padding-inline:clamp(16px,3vw,24px)}
+
+.mk-legado{
+  background:var(--ln-page-base, #020617);
+  border:1px solid color-mix(in srgb, var(--ln-text-out, #ffffff) 8%, transparent);
+  border-radius:28px;padding:clamp(16px,2.4vw,28px);overflow-x:auto;
+}
+
+.dc-shell .mk-h1{font-size:clamp(28px,3.4vw,40px)}
+.dc-shell .mk-tope-meta{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;justify-content:flex-end}
+.dc-shell .mk-vista{gap:var(--s5)}
+.dc-shell .mk-cab-txt{display:grid;gap:4px;min-width:0}
+.dc-shell .mk-recargando{opacity:.6;transition:opacity .2s ease}
+
+@keyframes mkGira{to{transform:rotate(360deg)}}
+.dc-shell .mk-gira{animation:mkGira .9s linear infinite}
+@media (prefers-reduced-motion: reduce){.dc-shell .mk-gira{animation:none}}
+
+/* --- Aviso de Meta sin conectar --- */
+.dc-shell .mk-aviso{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap;
+  padding:var(--s3) var(--s4);border-radius:var(--radius-control);
+  background:var(--warning-surface);border:1px solid var(--warning-border);color:var(--text-muted)}
+.dc-shell .mk-aviso > svg{color:var(--warning)}
+.dc-shell .mk-aviso p{flex:1 1 320px;min-width:0}
+.dc-shell .mk-aviso b{color:var(--text-on-surface)}
+
+/* --- KPIs --- */
+.dc-shell .mk-kpi{gap:var(--s3);padding:var(--s5)}
+.dc-shell .mk-kpi .kpi-sub{font-size:12px;line-height:1.4}
+
+/* --- Gráficos por día --- */
+.dc-shell .mk-shell, .dc-shell.mk-shell{--mk-resto:color-mix(in srgb,var(--text-on-surface) 24%,transparent)}
+.dc-shell .mk-panel-serie{padding:var(--s5)}
+.dc-shell .mk-leyenda{gap:var(--s3);font-size:12px;color:var(--text-muted)}
+.dc-shell .mk-leyenda span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.dc-shell .mk-leyenda i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.dc-shell .mk-serie{display:grid;gap:6px;min-width:0}
+.dc-shell .mk-serie-tope{font-size:11px;font-weight:700;color:var(--text-muted-40);min-height:14px}
+.dc-shell .mk-serie-lienzo{position:relative;display:flex;align-items:stretch;gap:3px;height:150px;
+  border-bottom:1px solid var(--border-main)}
+.dc-shell .mk-serie-guia{position:absolute;left:0;right:0;height:0;border-top:1px dashed var(--border-subtle);pointer-events:none}
+.dc-shell .mk-serie-col{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column-reverse;
+  gap:2px;border-radius:4px 4px 0 0;cursor:default}
+.dc-shell .mk-serie-col > i{display:block;width:100%;min-height:0;border-radius:3px;
+  transition:height .7s var(--crecer)}
+.dc-shell .mk-serie-col > i:first-child{border-radius:3px 3px 0 0}
+.dc-shell .mk-serie-col--on{background:color-mix(in srgb,var(--text-on-surface) 6%,transparent)}
+.dc-shell .mk-serie-col--on > i{filter:brightness(1.18)}
+.dc-shell .mk-serie-col > .mk-serie-cero{height:2px!important;background:var(--hueco);border-radius:2px}
+.dc-shell .mk-serie-eje{display:flex;gap:3px;font-size:10.5px;color:var(--text-muted-40);min-width:0}
+.dc-shell .mk-serie-eje > span{flex:1 1 0;min-width:0;text-align:center;overflow:visible;white-space:nowrap}
+.dc-shell .mk-serie-vacio{position:absolute;inset:0;display:grid;place-items:center;padding:var(--s4);
+  text-align:center;font-size:12px;color:var(--text-muted-40)}
+.dc-shell .mk-serie-tip{position:absolute;bottom:calc(100% + 8px);transform:translateX(-50%);z-index:3;
+  display:grid;gap:4px;min-width:150px;padding:10px 12px;border-radius:12px;pointer-events:none;
+  background:var(--bg-flotante);border:1px solid var(--border-main);box-shadow:var(--shadow-main);font-size:12px}
+.dc-shell .mk-serie-tip b{font-size:10px;font-weight:900;letter-spacing:.16em;color:var(--text-muted)}
+.dc-shell .mk-serie-tip-fila{display:flex;align-items:center;gap:6px;color:var(--text-muted);white-space:nowrap}
+.dc-shell .mk-serie-tip-fila i{width:8px;height:8px;border-radius:2px;display:inline-block}
+.dc-shell .mk-serie-tip-fila strong{margin-left:auto;padding-left:12px;color:var(--text-on-surface);font-weight:800}
+
+/* --- La tabla (Meta Ads Manager) --- */
+.dc-shell .mk-panel-tabla{padding:var(--s5) 0 var(--s4)}
+.dc-shell .mk-panel-tabla > .panel-cab,
+.dc-shell .mk-panel-tabla > .mk-pie,
+.dc-shell .mk-panel-tabla > .mk-vacio{padding-inline:var(--s5)}
+.dc-shell .mk-tabla-barra{align-items:center}
+.dc-shell .mk-busca{height:36px;min-width:min(240px,100%)}
+/* Fondo opaco en toda la tabla: la columna fija lo necesita (pasa por encima de las otras al
+   desplazar) y, si solo ella lo tuviera, se vería como una franja más oscura. */
+.dc-shell .mk-tabla-caja{--mk-fondo:var(--bg-flotante);--mk-fondo-cab:color-mix(in srgb,var(--text-on-surface) 4%,var(--bg-flotante));
+  --mk-fondo-hover:color-mix(in srgb,var(--text-on-surface) 5%,var(--bg-flotante));
+  --mk-fondo-elegida:color-mix(in srgb,var(--brand-secondary) 9%,var(--bg-flotante));
+  background:var(--mk-fondo);overflow-x:auto;border-top:1px solid var(--border-subtle);
+  scrollbar-width:thin;scrollbar-color:var(--border-main) transparent}
+.dc-shell .mk-tabla{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;min-width:1280px}
+.dc-shell .mk-tabla th{text-align:left;font-size:10.5px;font-weight:900;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--text-muted);padding:12px 12px;white-space:nowrap;
+  border-bottom:1px solid var(--border-main);background:var(--mk-fondo-cab);vertical-align:bottom}
+.dc-shell .mk-tabla td{padding:10px 12px;border-bottom:1px solid var(--border-subtle);vertical-align:middle;white-space:nowrap;
+  background:var(--mk-fondo)}
+.dc-shell .mk-tabla tbody tr{transition:background-color .15s ease}
+.dc-shell .mk-tabla tbody tr:hover td{background:var(--mk-fondo-hover)}
+.dc-shell .mk-tabla .mk-num{text-align:right}
+/* Un encabezado más ancho que su columna se salía por la izquierda, debajo de la columna fija. */
+.dc-shell .mk-tabla th.mk-num{min-width:100px}
+.dc-shell .mk-cab-celda{display:inline-flex;align-items:center;justify-content:flex-end;gap:4px;width:100%}
+.dc-shell .mk-cab-celda .tip-dot{width:15px;height:15px;font-size:9px}
+.dc-shell .mk-cab{display:inline-flex;align-items:center;gap:4px;font:inherit;letter-spacing:inherit;
+  text-transform:inherit;color:inherit;text-align:inherit;white-space:normal;max-width:120px;line-height:1.25}
+.dc-shell .mk-cab:hover{color:var(--text-on-surface)}
+.dc-shell .mk-tabla th[aria-sort="ascending"] .mk-cab,
+.dc-shell .mk-tabla th[aria-sort="descending"] .mk-cab{color:var(--text-on-surface)}
+.dc-shell .mk-valor{display:block;font-weight:700;color:var(--text-on-surface)}
+.dc-shell .mk-pct{display:block;font-size:11px;font-weight:600;color:var(--text-muted-40);margin-top:2px}
+
+/* Las dos primeras columnas quedan fijas al desplazar la tabla de lado, como en Meta. */
+.dc-shell .mk-tabla .mk-col-sel{position:sticky;left:0;z-index:2;width:44px;min-width:44px;text-align:center}
+.dc-shell .mk-tabla .mk-col-nombre{position:sticky;left:44px;z-index:2;min-width:230px;max-width:280px;
+  box-shadow:inset -1px 0 0 var(--border-subtle)}
+.dc-shell .mk-tabla--meta .mk-col-nombre{left:0;min-width:260px}
+.dc-shell .mk-col-acc{width:52px;text-align:center}
+.dc-shell .mk-tabla input[type="checkbox"]{width:16px;height:16px;accent-color:var(--brand-secondary);cursor:pointer}
+
+.dc-shell .mk-tabla tbody tr.mk-fila--elegida td{background:var(--mk-fondo-elegida)}
+.dc-shell .mk-fila--archivada .mk-valor,
+.dc-shell .mk-fila--archivada .mk-nombre-kw{color:var(--text-muted)}
+
+.dc-shell .mk-nombre{display:flex;align-items:center;gap:10px;min-width:0}
+.dc-shell .mk-nombre-txt{display:grid;gap:2px;min-width:0}
+.dc-shell .mk-nombre-kw{font-size:13.5px;font-weight:800;color:var(--text-on-surface)}
+.dc-shell .mk-nombre-sub{font-size:11.5px;color:var(--text-muted-40)}
+.dc-shell .mk-chip{height:22px;font-size:9.5px;flex-shrink:0;margin-left:auto}
+.dc-shell .mk-punto{width:9px;height:9px;border-radius:var(--radius-pill);flex-shrink:0;display:inline-block}
+.dc-shell .mk-punto--activo{background:var(--success);box-shadow:0 0 0 3px color-mix(in srgb,var(--success) 22%,transparent)}
+.dc-shell .mk-punto--pausado{background:var(--idle)}
+.dc-shell .mk-punto--sin{border:1.5px solid var(--text-muted-40)}
+
+.dc-shell .mk-tabla .mk-total td{border-top:1px solid var(--border-main);border-bottom:0;background:var(--mk-fondo-cab)}
+.dc-shell .mk-total-rot{font-size:10.5px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted)}
+.dc-shell .mk-vacio{text-align:center;padding:var(--s8) var(--s4)!important;color:var(--text-muted);white-space:normal!important}
+.dc-shell .mk-pie{margin-top:var(--s3)}
+
+/* --- Campañas y conjuntos (15/10/2026) --- */
+.dc-shell .mk-tabla-barra .tabs{flex-shrink:0}
+.dc-shell .mk-agrupar{display:inline-flex;align-items:center;gap:5px;max-width:100%;margin-top:2px;
+  font-size:11.5px;font-weight:600;color:var(--text-muted);text-align:left;border-radius:6px;padding:1px 4px 1px 0}
+.dc-shell .mk-agrupar svg{flex-shrink:0;opacity:.6}
+.dc-shell .mk-agrupar:hover{color:var(--text-on-surface)}
+.dc-shell .mk-agrupar:hover svg{opacity:1}
+.dc-shell .mk-abrir{width:100%;text-align:left;border-radius:10px}
+.dc-shell .mk-abrir .mk-abrir-flecha{margin-left:auto;color:var(--text-muted-40);transition:transform .18s var(--spring)}
+.dc-shell .mk-abrir:hover .mk-nombre-kw{text-decoration:underline;text-underline-offset:3px}
+.dc-shell .mk-abrir:hover .mk-abrir-flecha{transform:translateX(3px);color:var(--text-on-surface)}
+
+/* El editor va en un portal sobre toda la página. */
+.dc-shell.mk-capa{position:fixed;inset:0;z-index:160;min-height:0;padding:16px;
+  display:grid;place-items:center;background:var(--bg-scrim)}
+@keyframes mkEntra{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+.dc-shell .mk-editor{width:min(440px,100%);display:grid;gap:var(--s4);padding:var(--s6);
+  background:var(--bg-flotante);border:1px solid var(--border-main);border-radius:24px;box-shadow:var(--shadow-main);
+  animation:mkEntra .22s var(--spring)}
+@media (prefers-reduced-motion: reduce){.dc-shell .mk-editor{animation:none}}
+.dc-shell .mk-editor-cab{display:flex;align-items:flex-start;gap:var(--s3);justify-content:space-between}
+.dc-shell .mk-campo{display:grid;gap:6px}
+.dc-shell .mk-input{height:42px;padding:0 14px;border-radius:var(--radius-control);font-size:14px;
+  background:var(--bg-input);border:1px solid var(--border-control);color:var(--text-on-surface);outline:none}
+.dc-shell .mk-input:focus{border-color:var(--focus-blue)}
+.dc-shell .mk-editor-pie{display:flex;justify-content:flex-end;gap:var(--s2);flex-wrap:wrap}
+
+/* --- Meta Ads --- */
+.dc-shell .mk-pasos{margin:0 0 var(--s4);padding-left:20px;display:grid;gap:6px}
+.dc-shell .mk-sinc{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;margin-top:var(--s4)}
+.dc-shell .mk-select{height:34px;padding:0 30px 0 12px;border-radius:var(--radius-pill);font-size:12.5px;font-weight:600;
+  background:var(--bg-input);border:1px solid var(--border-control);color:var(--text-on-surface);max-width:260px;
+  appearance:none;-webkit-appearance:none;cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,var(--text-muted) 50%),linear-gradient(135deg,var(--text-muted) 50%,transparent 50%);
+  background-position:calc(100% - 16px) 15px,calc(100% - 11px) 15px;background-size:5px 5px;background-repeat:no-repeat}
+.dc-shell .mk-select:disabled{opacity:.5;cursor:wait}
+.dc-shell .mk-select option{background:var(--bg-flotante);color:var(--text-on-surface)}
+.dc-shell .mk-cob-n{font-size:28px;font-weight:900;letter-spacing:-.02em;line-height:1.1;margin:8px 0 4px}
+.dc-shell .mk-organicas{margin-top:var(--s3)}
+.dc-shell .mk-texto{max-width:340px;overflow:hidden;text-overflow:ellipsis;color:var(--text-muted);font-size:12px}
+
+@media (max-width:720px){
+  .dc-shell .mk-tope-meta{margin-left:0;justify-content:flex-start}
+  .dc-shell .mk-col-nombre{min-width:190px;max-width:210px}
+}
+
+/* Rendimiento por embudo (15/10/2026): selector, resumen de gasto por embudo y la vista de Workshop. */
+.dc-shell .mk-embudo-selector{display:flex;justify-content:flex-start;margin-bottom:var(--s4)}
+.dc-shell .mk-embudos{padding:var(--s5);margin-bottom:var(--s5)}
+.dc-shell .mk-embudos-tarjetas{margin-top:var(--s4)}
+.dc-shell .mk-embudo{display:flex;flex-direction:column;gap:6px;text-align:left;min-width:0}
+.dc-shell .mk-embudo--abre{cursor:pointer;transition:border-color .2s,transform .2s}
+.dc-shell .mk-embudo--abre:hover{border-color:color-mix(in srgb,var(--brand-secondary) 55%,transparent);transform:translateY(-1px)}
+.dc-shell .mk-embudo--abre:focus-visible{outline:2px solid var(--brand-secondary);outline-offset:2px}
+.dc-shell .mk-embudo-cab{display:flex;align-items:center;gap:8px}
+.dc-shell .mk-embudo-cab > i{width:10px;height:10px;border-radius:3px;flex:none}
+.dc-shell .mk-embudo-n{font-size:22px;font-weight:700;line-height:1.1}
+.dc-shell .mk-embudo-barra{display:block;height:4px;border-radius:99px;background:var(--mk-resto);overflow:hidden}
+.dc-shell .mk-embudo-barra i{display:block;height:100%;border-radius:inherit}
+.dc-shell .mk-embudos-serie{margin-top:var(--s5);display:flex;flex-direction:column;gap:var(--s3)}
+.dc-shell .mk-embudos-serie .mk-leyenda{display:flex;flex-wrap:wrap;justify-content:flex-end}
+.dc-shell .mk-tabla--ws .mk-ws-abrir{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;font-weight:700;cursor:pointer;text-align:left}
+.dc-shell .mk-tabla--ws .mk-ws-conjunto th{padding-left:calc(var(--s4) + 20px);font-weight:600}
+.dc-shell .mk-tabla--ws .mk-ws-anuncio th{padding-left:calc(var(--s4) + 40px);font-weight:500;color:var(--text-muted)}
+.dc-shell .mk-tabla--ws .mk-ws-total th,.dc-shell .mk-tabla--ws .mk-ws-total td{font-weight:700}
+.dc-shell .mk-tabla--ws th.mk-col-nombre{max-width:360px}
+
+/* Adónde lleva cada anuncio de Meta, debajo de su embudo (16/10/2026). */
+.dc-shell .mk-clave:has(.mk-destino){display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+.dc-shell .mk-destino{display:block;max-width:220px;font-size:11px}

@@ -109,10 +109,14 @@ def asignar(client, user, auth_headers, appt, ad, **extra):
     return client.post(URL, headers=auth_headers(user), json={'appointment_id': appt.id, 'ad_id': ad.id, **extra})
 
 
+def tablero_de_marketing():
+    """La tabla de anuncios de Marketing de octubre: el cálculo con el que Marketing cuenta."""
+    from app.services import anuncios_service
+    return anuncios_service.tablero(date(2026, 10, 1), date(2026, 10, 31))
+
+
 def agendas_de_marketing(ad):
-    from app.services.marketing_service import MarketingService
-    filas = MarketingService.get_ad_performance_data(None, '2026-10-01', '2026-10-31')
-    return {f['ad_id']: f['agendas'] for f in filas}.get(ad.id, 0)
+    return {f['ad_id']: f['agendas'] for f in tablero_de_marketing()['filas']}.get(ad.id, 0)
 
 
 # --- 1. Qué agendas entran ------------------------------------------------------------------------
@@ -150,6 +154,30 @@ def test_la_bandeja_son_sus_agendas_sin_anuncio_una_por_persona(client, db, equi
     assert ana_fila['estado']['label']
     # Dani: la de la reunión más reciente, como "Agendas generadas".
     assert datos['pendientes'][2]['reunion'] == '2026-10-06T14:00:00'
+
+
+@freeze_time(HOY)
+def test_sin_instagram_que_coincida_se_conecta_por_el_nombre_completo(client, db, equipo, anuncios, auth_headers):
+    """Kerwin (15/10/2026): las agendas que llegaron por ManyChat deberían tener ya su palabra clave.
+    El setter escribió mal el Instagram («julio_garca» por «juliocgarca»): el nombre completo exacto,
+    sin tildes ni mayúsculas, lo encuentra; Marketing la cuenta igual."""
+    julio = agenda(db, equipo, cliente(db, 'JULIO GARCIA', 'julio_garca'))
+    lead = conversacion(db, 'juliocgarca', anuncios['GUIA'])
+    lead.name = 'Julio García'
+    # Dos conversaciones con el mismo nombre: no se elige ninguna.
+    agenda(db, equipo, cliente(db, 'Ana Pérez', 'ana_typo'))
+    for ig in ('anaperez1', 'anaperez2'):
+        conversacion(db, ig, anuncios['GUIA']).name = 'Ana Perez'
+    # Un nombre solo no identifica a nadie.
+    agenda(db, equipo, cliente(db, 'Mariana', 'mari_typo'))
+    conversacion(db, 'mariana_ok', anuncios['GUIA']).name = 'Mariana'
+    db.session.commit()
+
+    pendientes = bandeja(client, equipo['elias'], auth_headers)['pendientes']
+
+    assert sorted(p['cliente'] for p in pendientes) == ['Ana Pérez', 'Mariana']
+    assert julio.id not in {p['id'] for p in pendientes}
+    assert agendas_de_marketing(anuncios['GUIA']) == 1
 
 
 @freeze_time(HOY)
@@ -193,6 +221,37 @@ def test_los_anuncios_van_activos_primero_y_despues_los_que_mas_usa(client, db, 
     assert [a['keyword'] for a in datos['anuncios'] if not a['id']] == ['Obtener Guia']
 
 
+@freeze_time(HOY)
+def test_una_sola_opcion_por_palabra_clave_aunque_haya_anuncios_repetidos(client, db, equipo, anuncios, auth_headers):
+    """15/10/2026: los anuncios cargados a mano repetían palabras clave («GUÍA» y «GUIA»). Se ofrece la del
+    anuncio vigente (el más nuevo sin archivar) con los usos de los dos."""
+    viejo = Ad(ad_set_id=anuncios['GUIA'].ad_set_id, name='Guía vieja', keyword='GUÍA', status='archived',
+               created_at=datetime(2026, 4, 25))
+    db.session.add(viejo)
+    db.session.commit()
+    agenda(db, equipo, cliente(db, 'Ana', 'ana'))
+    conversacion(db, 'ana', viejo)
+    agenda(db, equipo, cliente(db, 'Beto', 'beto'))
+    conversacion(db, 'beto', anuncios['GUIA'])
+
+    opciones = bandeja(client, equipo['elias'], auth_headers)['anuncios']
+
+    assert [(a['id'], a['keyword'], a['usos']) for a in opciones if a['keyword'] in ('GUIA', 'GUÍA')] == [
+        (anuncios['GUIA'].id, 'GUIA', 2)]
+
+
+@freeze_time(HOY)
+def test_la_palabra_clave_de_la_cita_se_sugiere_aunque_este_escrita_distinto(client, db, equipo, anuncios,
+                                                                            auth_headers):
+    cita = agenda(db, equipo, cliente(db, 'Ana', 'ana'))
+    cita.keyword = 'protocolo '
+    db.session.commit()
+
+    pendiente = bandeja(client, equipo['elias'], auth_headers)['pendientes'][0]
+
+    assert pendiente['sugerido'] == anuncios['PROTOCOLO'].id
+
+
 # --- 2. Asignar ---------------------------------------------------------------------------------
 
 @freeze_time(HOY)
@@ -228,7 +287,10 @@ def test_quien_reagendo_queda_atribuido_en_sus_dos_agendas(client, db, equipo, a
 
     assert asignar(client, equipo['elias'], auth_headers, nueva, anuncios['GUIA']).status_code == 200
 
-    assert agendas_de_marketing(anuncios['GUIA']) == 2
+    # Marketing cuenta una agenda por persona y palabra clave: que la vieja también quedó atribuida
+    # lo dice que no quede ninguna sin atribuir.
+    assert agendas_de_marketing(anuncios['GUIA']) == 1
+    assert tablero_de_marketing()['sin_atribuir']['agendas'] == 0
     respuesta = LeadAnswer.query.filter(LeadAnswer.ad_id == anuncios['GUIA'].id).one()
     assert respuesta.created_at < datetime(2026, 10, 1, 9)
 
@@ -517,8 +579,8 @@ def test_asignar_una_palabra_clave_nueva_crea_su_anuncio_y_marketing_la_cuenta(c
     assert r.status_code == 200, r.get_json()
     nuevo = db.session.get(Ad, r.get_json()['anuncio']['id'])
     assert (nuevo.keyword, nuevo.name, nuevo.status) == ('guia peru', 'guia peru', 'active')
-    assert nuevo.ad_set.name == servicio.CONJUNTO_NUEVAS
-    assert nuevo.ad_set.campaign.name == servicio.CAMPANA_NUEVAS
+    # Como lo crea el webhook de ManyChat: con su clave y sin campaña ni conjunto (Marketing lo agrupa).
+    assert (nuevo.clave, nuevo.ad_set_id) == ('GUIA PERU', None)
     assert agendas_de_marketing(nuevo) == 1
     assert bandeja(client, equipo['elias'], auth_headers)['pendientes'] == []
 
@@ -527,8 +589,7 @@ def test_asignar_una_palabra_clave_nueva_crea_su_anuncio_y_marketing_la_cuenta(c
     r = client.post(URL, headers=auth_headers(equipo['elias']),
                     json={'appointment_id': b.id, 'palabra_clave': 'Guía Perú'})
     assert r.get_json()['anuncio']['id'] == nuevo.id
-    assert sum(1 for x in Ad.query.all() if servicio.clave_de_palabra(x.keyword) == 'GUIA PERU') == 1
-    assert AdSet.query.filter_by(name=servicio.CONJUNTO_NUEVAS).count() == 1
+    assert Ad.query.filter_by(clave='GUIA PERU').count() == 1
 
 
 @freeze_time(HOY)

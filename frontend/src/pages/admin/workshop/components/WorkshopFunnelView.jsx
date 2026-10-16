@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Loader2, PlayCircle, Zap } from 'lucide-react';
+import { ArrowRight, Loader2, PlayCircle, Zap } from 'lucide-react';
 import { urlLoom } from '../../../../utils/loom';
 import InfoTooltip from '../../../../components/ui/InfoTooltip';
 import WorkshopSourceSplit from './WorkshopSourceSplit';
@@ -34,7 +34,8 @@ const WorkshopFunnelView = ({
     formatCurrency,
     desglose,
     ventana,
-    cargandoDesglose
+    cargandoDesglose,
+    onVerAnuncios
 }) => {
     const activeFunnelData = useMemo(() => {
         if (!selectedEvent) return [];
@@ -107,7 +108,14 @@ const WorkshopFunnelView = ({
 
                     {selectedEvent && (
                         <div className="economy-strip" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-                            <div><span>Inversión</span><strong>{formatCurrency(selectedEvent.inversion)}</strong></div>
+                            <div>
+                                <span>Inversión</span><strong>{formatCurrency(selectedEvent.inversion)}</strong>
+                                {onVerAnuncios && (
+                                    <button type="button" className="quiet-button ws-ver-anuncios" onClick={onVerAnuncios}>
+                                        Ver los anuncios <ArrowRight size={12} />
+                                    </button>
+                                )}
+                            </div>
                             <div><span>Recaudado</span><strong>{formatCurrency(selectedEvent.cash_collected)}</strong></div>
                             <div><span>Profit neto</span><strong className={profit < 0 ? 'negative' : ''}>{formatCurrency(profit)}</strong></div>
                             <div><span>CAC real</span><strong>{formatCurrency(cac)}</strong></div>

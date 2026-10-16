@@ -12,8 +12,8 @@
 - Los crons y el webhook de ManyChat ya no tienen un valor por defecto: sin su variable de entorno contestan
   503; con ella, exigen el secreto.
 - Desde el 15/10/2026 también el webhook de los anuncios, `POST /api/manychat-webhook`, exige el header
-  `X-ManyChat-Token` (el mismo `MANYCHAT_WEBHOOK_TOKEN`): antes aceptaba leads e interacciones de cualquiera. El
-  `GET` de verificación sigue abierto.
+  `X-ManyChat-Token` (el mismo `MANYCHAT_WEBHOOK_TOKEN`): desde el 14/10 una palabra clave nueva crea un anuncio, y
+  antes cualquiera podía crearlos. El `GET` de verificación sigue abierto.
 - Backup y restauración exigen un admin **y** `BACKUP_SECRET_KEY`.
 
 Los valores que estuvieron escritos en el código o en el frontend (clave de respaldo, token de los crons, token de
@@ -28,7 +28,7 @@ más cortos se rechazan).
 |---|---|---|
 | `SECRET_KEY` | firma de los JWT y las cookies (la app no arranca en Railway sin ella) | interna |
 | `BACKUP_SECRET_KEY` | `/api/backup/secret-*` | el admin, en `/admin/backup` y `/admin/restore` |
-| `CRON_SECRET` | `GET /api/sheets/cron-sync`, `GET /api/closer/followups/cron/send-reminders` y `GET /api/academia/cron/sincronizar` | el cron externo: `Authorization: Bearer <valor>` (o `?token=<valor>`) |
+| `CRON_SECRET` | `GET /api/sheets/cron-sync`, `GET /api/closer/followups/cron/send-reminders`, `GET /api/academia/cron/sincronizar` y `GET /api/marketing/anuncios/cron/meta` (ver docs/marketing_anuncios.md) | el cron externo: `Authorization: Bearer <valor>` (o `?token=<valor>`) |
 | `MANYCHAT_WEBHOOK_TOKEN` | `POST /api/manychat-webhook` (leads y palabras clave de los anuncios) y `POST /api/webhooks/manychat` | ManyChat: header `X-ManyChat-Token` en cada «Solicitud externa» (ver §3) |
 | `INGEST_API_TOKEN` | rutas de ingesta y consulta de n8n y Apps Script (ver §3) | n8n / Apps Script: header `X-Api-Token: <valor>` (o `Authorization: Bearer <valor>`) |
 | `INTEGRATIONS_AUTH_MODE` | **solo para migrar**: `log_only` deja pasar y registra (ver §4) | — |

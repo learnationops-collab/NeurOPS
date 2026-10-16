@@ -607,6 +607,91 @@
   .ws-shell .trafico-tabla table { min-width: 0; }
 }
 
+/* Inversión, CPM, CPC y clics de Meta Ads (15/10/2026): se leen, no se cargan. */
+.ws-shell .form-field .de-meta { display: inline; font-weight: 600; color: var(--pink-light); }
+.ws-shell .form-field input[readonly] { opacity: .75; cursor: default; }
+.ws-shell .de-meta-nota { margin: -4px 0 0; font-size: 11px; line-height: 1.45; color: color-mix(in srgb, var(--ln-text-out, #ffffff) 60%, transparent); }
+
+/* Anuncios que llenaron el taller (15/10/2026; pestaña propia desde 16/10): campaña › conjunto › anuncio. */
+.ws-shell .ws-anuncios { padding: 26px; }
+.ws-shell .ws-anuncios-taller { display: grid; gap: 6px; min-width: min(340px, 100%); }
+.ws-shell .ws-anuncios-taller > span { color: var(--text-muted); font-size: 9px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.ws-shell .ws-anuncios-taller select { min-height: 42px; padding: 0 12px; border: 1px solid var(--border); border-radius: 13px; background: var(--input); font-size: 12px; font-weight: 700; cursor: pointer; }
+.ws-shell .ws-anuncios-taller option { background: var(--ln-page-base, #0a0e3d); }
+.ws-shell .ws-ver-anuncios { min-height: 0; margin-top: 8px; padding: 0; color: var(--pink-light); }
+.ws-shell .ws-ver-anuncios:hover { color: var(--ln-text-out, #fff); }
+.ws-shell .economy-strip .ws-ver-anuncios { display: flex; }
+.ws-shell .ws-anuncios-vacio { text-align: center; padding: 32px 12px; }
+.ws-shell .ws-anuncios-resumen { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; margin: 0 0 18px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--ln-text-out, #ffffff) 10%, transparent); border-radius: 18px; background: color-mix(in srgb, var(--ln-text-out, #ffffff) 9%, transparent); }
+.ws-shell .ws-anuncios-resumen > div { min-width: 0; padding: 14px 16px; background: color-mix(in srgb, var(--ln-text-out, #ffffff) 3%, var(--ln-page-base, #0a0e3d)); animation: ws-resumen-entra 360ms cubic-bezier(.2, .8, .2, 1) both; }
+.ws-shell .ws-anuncios-resumen > div:nth-child(n + 5) { animation-delay: 60ms; }
+.ws-shell .ws-anuncios-resumen > div:first-child { background: color-mix(in srgb, var(--ln-brand-2, #1323c6) 22%, var(--ln-page-base, #0a0e3d)); }
+.ws-shell .ws-anuncios-resumen dt { display: flex; align-items: center; gap: 5px; color: var(--text-muted); font-size: 10px; font-weight: 800; }
+.ws-shell .ws-anuncios-resumen dt button { min-height: 0; }
+.ws-shell .ws-anuncios-resumen dd { margin: 8px 0 0; font-size: 19px; font-weight: 900; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+@keyframes ws-resumen-entra { from { opacity: 0; transform: translateY(6px); } }
+.ws-shell .ws-anuncios-barra { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; color: var(--text-muted); font-size: 11px; font-weight: 700; }
+.ws-shell .ws-anuncios-barra .text-action { min-height: 34px; }
+
+/* La tabla. Los fondos son opacos: la columna del nombre queda pegada a la izquierda al scrollear de
+   costado y los títulos pegados arriba (debajo de la barra de pestañas, `--ws-topbar-h` lo mide
+   WorkshopDashboardPage) al scrollear la página; sin fondo se verían las filas pasando por detrás.
+   `overflow: clip` redondea las esquinas sin volverse un contenedor con scroll, que rompería el sticky. */
+.ws-shell .ws-anuncios-marco {
+    --ws-fondo: color-mix(in srgb, var(--ln-text-out, #ffffff) 4%, var(--ln-page-base, #0a0e3d));
+    --ws-linea: color-mix(in srgb, var(--ln-text-out, #ffffff) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--ln-text-out, #ffffff) 10%, transparent); border-radius: 18px; background: var(--ws-fondo); overflow: clip;
+}
+.ws-shell .ws-anuncios-cabeza { position: sticky; top: var(--ws-topbar-h, 0px); z-index: 6; overflow: hidden; background: color-mix(in srgb, var(--ln-text-out, #ffffff) 8%, var(--ln-page-base, #0a0e3d)); border-bottom: 1px solid color-mix(in srgb, var(--ln-text-out, #ffffff) 14%, transparent); box-shadow: 0 10px 22px rgba(0, 0, 0, .28); }
+.ws-shell .ws-anuncios-scroll { overflow-x: auto; scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--ln-text-out, #ffffff) 22%, transparent) transparent; }
+.ws-shell .ws-anuncios-tabla { width: 100%; min-width: 1180px; table-layout: fixed; border-collapse: separate; border-spacing: 0; font-size: 11px; font-variant-numeric: tabular-nums; }
+.ws-shell .ws-anuncios-col-nombre { width: 270px; }
+.ws-shell .ws-anuncios-tabla th, .ws-shell .ws-anuncios-tabla td { padding: 12px 12px; text-align: right; vertical-align: middle; }
+.ws-shell .ws-anuncios-tabla tbody th, .ws-shell .ws-anuncios-tabla tbody td { border-bottom: 1px solid var(--ws-linea); background: var(--ws-fila, var(--ws-fondo)); transition: background-color 140ms ease; }
+.ws-shell .ws-anuncios-parte { display: block; height: 3px; margin: 6px 0 0 auto; max-width: 84px; overflow: hidden; border-radius: 3px; background: color-mix(in srgb, var(--ln-text-out, #ffffff) 9%, transparent); }
+.ws-shell .ws-anuncios-parte b { display: block; height: 100%; margin-left: auto; border-radius: inherit; background: var(--pink); transform-origin: right; animation: ws-parte-crece 520ms cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes ws-parte-crece { from { transform: scaleX(0); } }
+.ws-shell .ws-anuncios-tabla td { border-left: 1px solid color-mix(in srgb, var(--ln-text-out, #ffffff) 5%, transparent); color: color-mix(in srgb, var(--ln-text-out, #ffffff) 88%, transparent); }
+.ws-shell .ws-anuncios-tabla th:first-child { position: sticky; left: 0; z-index: 2; text-align: left; box-shadow: 1px 0 0 color-mix(in srgb, var(--ln-text-out, #ffffff) 10%, transparent); }
+
+/* Títulos: dos líneas como mucho, el tooltip al lado y nada que se salga de su columna. */
+.ws-shell .ws-anuncios-cabeza th { padding: 13px 10px; vertical-align: bottom; background: color-mix(in srgb, var(--ln-text-out, #ffffff) 8%, var(--ln-page-base, #0a0e3d)); color: color-mix(in srgb, var(--ln-text-out, #ffffff) 78%, transparent); font-size: 10px; font-weight: 800; line-height: 1.3; }
+.ws-shell .ws-anuncios-cabeza th + th { border-left: 1px solid color-mix(in srgb, var(--ln-text-out, #ffffff) 6%, transparent); }
+.ws-shell .ws-anuncios-titulo { display: flex; align-items: flex-end; justify-content: flex-end; gap: 4px; min-width: 0; }
+.ws-shell .ws-anuncios-cabeza th:first-child .ws-anuncios-titulo { justify-content: flex-start; }
+.ws-shell .ws-anuncios-titulo > span { min-width: 0; text-wrap: balance; }
+.ws-shell .ws-anuncios-titulo > button { flex: 0 0 auto; min-height: 0; margin-bottom: 1px; color: color-mix(in srgb, var(--ln-text-out, #ffffff) 45%, transparent); }
+.ws-shell .ws-anuncios-titulo > button:hover { color: var(--pink-light); }
+/* El <thead> de la tabla de datos existe para los lectores de pantalla; a la vista están los pegados. */
+.ws-shell .ws-anuncios-thead-lector th { height: 0; padding: 0; border: 0; font-size: 0; line-height: 0; overflow: hidden; }
+
+/* Filas: campaña › conjunto › anuncio, con el nombre en dos líneas como mucho (el completo, al pasar el mouse). */
+.ws-shell .ws-anuncios-campana { --ws-fila: color-mix(in srgb, var(--ln-brand-2, #1323c6) 14%, var(--ws-fondo)); }
+.ws-shell .ws-anuncios-campana td { color: var(--ln-text-out, #fff); font-weight: 800; }
+.ws-shell .ws-anuncios-campana th:first-child { box-shadow: inset 3px 0 0 var(--blue), 1px 0 0 color-mix(in srgb, var(--ln-text-out, #ffffff) 10%, transparent); }
+.ws-shell .ws-anuncios-tabla tbody tr:hover { --ws-fila: color-mix(in srgb, var(--ln-text-out, #ffffff) 9%, var(--ws-fondo)); }
+.ws-shell .ws-anuncios-abrir { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px; padding: 0; border: 0; background: none; color: var(--ln-text-out, #fff); font: inherit; cursor: pointer; text-align: left; }
+.ws-shell .ws-anuncios-flecha { flex: 0 0 auto; color: var(--text-muted); transition: transform 180ms ease, color 180ms ease; }
+.ws-shell .ws-anuncios-abrir[aria-expanded="true"] .ws-anuncios-flecha { transform: rotate(90deg); color: var(--pink-light); }
+.ws-shell .ws-anuncios-abrir strong, .ws-shell .ws-anuncios-tabla tbody th > span { display: -webkit-box; min-width: 0; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.35; overflow-wrap: anywhere; }
+.ws-shell .ws-anuncios-abrir strong { font-size: 11px; font-weight: 900; letter-spacing: .01em; }
+.ws-shell .ws-anuncios-conjunto th:first-child { padding-left: 36px; color: color-mix(in srgb, var(--ln-text-out, #ffffff) 86%, transparent); font-weight: 700; }
+.ws-shell .ws-anuncios-anuncio th:first-child { padding-left: 52px; color: var(--text-muted); font-weight: 500; }
+.ws-shell .ws-anuncios-anuncio td { color: color-mix(in srgb, var(--ln-text-out, #ffffff) 70%, transparent); }
+.ws-shell .ws-anuncios-conjunto, .ws-shell .ws-anuncios-anuncio { animation: ws-fila-entra 240ms ease both; }
+@keyframes ws-fila-entra { from { opacity: 0; } }
+.ws-shell .ws-anuncios-total th, .ws-shell .ws-anuncios-total td { padding-top: 15px; padding-bottom: 15px; border-top: 1px solid color-mix(in srgb, var(--ln-text-out, #ffffff) 16%, transparent); background: color-mix(in srgb, var(--ln-brand, #ff3fa4) 8%, var(--ws-fondo)); color: var(--ln-text-out, #fff); font-weight: 900; }
+
+@media (max-width: 720px) {
+  .ws-shell .ws-anuncios { padding: 18px; }
+  .ws-shell .ws-anuncios-resumen { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ws-shell .ws-anuncios-resumen dd { font-size: 16px; }
+  .ws-shell .ws-anuncios-tabla { min-width: 1000px; }
+  .ws-shell .ws-anuncios-col-nombre { width: 180px; }
+  .ws-shell .ws-anuncios-conjunto th:first-child { padding-left: 24px; }
+  .ws-shell .ws-anuncios-anuncio th:first-child { padding-left: 34px; }
+}
+
 /* Grabación del taller y su publicación en la landing, separadas (16/10/2026). */
 .ws-shell .event-grabacion { display: inline-flex; align-items: center; gap: 5px; margin-left: 10px; color: var(--pink-light); font-size: 10px; font-weight: 800; text-transform: none; transition: color 160ms ease; }
 .ws-shell .event-grabacion:hover { color: var(--ln-text-out, #fff); }

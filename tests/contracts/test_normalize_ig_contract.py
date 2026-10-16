@@ -20,9 +20,7 @@ NOMBRES = {'normalize_ig', 'normalize_email'}
 # Modulos que usaban su propia copia de normalize_ig y hoy la importan.
 USUARIOS_DE_NORMALIZE_IG = [
     'app.services.attribution_service',
-    'app.services.marketing_service',
     'app.api.conversational',
-    'app.api.manychat',
     'app.api.public.marketing',
     'app.api.public.financial_sales',
     'app.api.public.lead_roadmap',
