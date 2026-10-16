@@ -142,10 +142,12 @@ describe('Marketing › Anuncios', () => {
 
         cleanup();
         abrir('/admin/marketing?tab=meta');
-        expect(await screen.findByText('Conectado')).toBeInTheDocument();
-        expect(screen.getByText('Datos de muestra')).toBeInTheDocument();
+        expect(await screen.findByText('Datos de muestra')).toBeInTheDocument();
         expect(screen.queryByText(/META_ADS_TOKEN/)).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Sincronizar/ })).toBeDisabled();
+        // Con datos de muestra no hay nada que traer de Meta, ni solo.
+        expect(screen.getByRole('button', { name: /Actualizar/ })).toBeDisabled();
+        expect(api.post).not.toHaveBeenCalled();
     });
 
     it('sincroniza 90 días en tramos de 30, cada uno termina el día antes del anterior', async () => {
@@ -153,14 +155,17 @@ describe('Marketing › Anuncios', () => {
             ? { ...TABLERO, meta: { conectado: true, muestra: false, ultima_sincronizacion: null } }
             : { anuncios: [], claves: [], conectado: true, muestra: false, ultima_sincronizacion: null } }));
         const tramos = [['2026-09-16', '2026-10-15'], ['2026-08-17', '2026-09-15'], ['2026-07-18', '2026-08-16']];
-        tramos.forEach(([desde, hasta]) => api.post.mockResolvedValueOnce({ data: { desde, hasta, anuncios: 3, gasto: 10 } }));
+        const respuestas = tramos.map(([desde, hasta]) => ({ data: { desde, hasta, anuncios: 3, gasto: 10 } }));
+        api.post.mockImplementation((url) => Promise.resolve(url === '/marketing/anuncios/meta/sincronizar'
+            ? respuestas.shift() : { data: { omitido: true } }));
         abrir('/admin/marketing?tab=meta');
 
         await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Días para atrás' }), '90');
         await userEvent.click(screen.getByRole('button', { name: /Sincronizar/ }));
 
-        await waitFor(() => expect(api.post).toHaveBeenCalledTimes(3));
-        expect(api.post.mock.calls.map(([, cuerpo]) => cuerpo)).toEqual([
+        const tramosPedidos = () => api.post.mock.calls.filter(([url]) => url === '/marketing/anuncios/meta/sincronizar');
+        await waitFor(() => expect(tramosPedidos()).toHaveLength(3));
+        expect(tramosPedidos().map(([, cuerpo]) => cuerpo)).toEqual([
             { dias: 30, hasta: null }, { dias: 30, hasta: '2026-09-15' }, { dias: 30, hasta: '2026-08-16' }]);
     });
 
@@ -205,16 +210,80 @@ describe('Marketing › Anuncios', () => {
                 anuncio('2', 'LP-TA -PSI-Gral', 'setting', 'Pide gratis al DM la guía'), anuncio('3', 'Raro', null, '')],
             claves: [], conectado: true, muestra: false, ultima_sincronizacion: null } }));
         api.put.mockResolvedValue({ data: { meta_ad_id: '2', embudo: 'workshop', embudo_mapeo: 'manual' } });
+        api.post.mockResolvedValue({ data: { omitido: true } });
         abrir('/admin/marketing?tab=meta');
 
+        // Campaña › conjunto › anuncio: arranca cerrado; «Abrir todo» baja hasta los anuncios.
+        await userEvent.click(await screen.findByRole('button', { name: 'Abrir todo' }));
         const embudo = await screen.findByRole('combobox', { name: 'Embudo de LP-TA -PSI-Gral' });
         expect(screen.getByRole('option', { name: 'Automático: Workshop' })).toBeInTheDocument();
         await userEvent.selectOptions(embudo, 'workshop');
         expect(api.put).toHaveBeenCalledWith('/marketing/anuncios/meta/2/embudo', { embudo: 'workshop' });
 
-        await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Filtrar por embudo' }), '__sin');
+        await userEvent.click(screen.getByRole('button', { name: /Filtro completo/ }));
+        await userEvent.click(within(screen.getByRole('dialog', { name: 'Filtro completo' }))
+            .getByRole('checkbox', { name: /Sin clasificar/ }));
         expect(screen.queryByText('B | PP | A3')).not.toBeInTheDocument();
         expect(screen.getByText('Raro')).toBeInTheDocument();
+    });
+
+    it('Meta Ads desglosa campaña › conjunto › anuncio con lo sumado y lleva a cada uno en Meta', async () => {
+        const anuncio = (id, campana, conjunto, extra) => ({
+            meta_ad_id: id, cuenta_id: '886943269514111', nombre: `Anuncio ${id}`, campana: `Campaña ${campana}`,
+            campana_id: `c${campana}`, conjunto: `Conjunto ${conjunto}`, conjunto_id: `s${conjunto}`, estado: 'ACTIVE',
+            texto: '', clave: 'APLICAR', mapeo: 'auto', embudo: 'setting', embudo_mapeo: 'auto',
+            gasto: 10, impresiones: 1000, clics: 30, clics_enlace: 20, ...extra,
+        });
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/anuncios'
+            ? { ...TABLERO, meta: { conectado: true, muestra: false, cuentas: ['886943269514111'], ultima_sincronizacion: null } }
+            : { anuncios: [anuncio('1', 1, 1), anuncio('2', 1, 1, { gasto: 30, estado: 'PAUSED' }), anuncio('3', 2, 2, { gasto: 5 })],
+                claves: ['APLICAR'], conectado: true, muestra: false, ultima_sincronizacion: null } }));
+        api.post.mockResolvedValue({ data: { omitido: false, cambios: 0 } });
+        abrir('/admin/marketing?tab=meta');
+
+        // El Administrador de anuncios de verdad, con la cuenta que manda el backend, en otra pestaña.
+        const administrador = await screen.findByRole('link', { name: /Administrador de anuncios/ });
+        expect(administrador).toHaveAttribute('href', 'https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=886943269514111');
+        expect(administrador).toHaveAttribute('target', '_blank');
+
+        // Ordenado por gasto: la campaña 1 suma sus dos anuncios ($40) y los leads de su palabra clave.
+        const fila1 = (await screen.findByText('Campaña 1')).closest('tr');
+        expect(within(fila1).getByText('$40.00')).toBeInTheDocument();
+        expect(within(fila1).getByText('1 de 2 activos')).toBeInTheDocument();
+        expect(within(fila1).getByText('227')).toBeInTheDocument();
+        expect(within(fila1).getByRole('link', { name: 'Abrir campaña Campaña 1 en Meta' })).toHaveAttribute('href',
+            'https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=886943269514111&selected_campaign_ids=c1');
+        expect(screen.queryByText('Anuncio 1')).not.toBeInTheDocument();
+
+        await userEvent.click(within(fila1).getByRole('button', { name: 'Abrir campaña Campaña 1' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Abrir conjunto Conjunto 1' }));
+        expect(screen.getByRole('link', { name: 'Abrir anuncio Anuncio 2 en Meta' })).toHaveAttribute('href',
+            'https://adsmanager.facebook.com/adsmanager/manage/ads?act=886943269514111&selected_campaign_ids=c1&selected_adset_ids=s1&selected_ad_ids=2');
+        expect(within(screen.getByText('Total · 2 campañas').closest('tr')).getByText('$45.00')).toBeInTheDocument();
+    });
+
+    it('al volver de Meta trae lo que cambió allá y recarga, y «Actualizar» lo pide a mano', async () => {
+        const recien = new Date().toISOString().slice(0, 19);
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/anuncios'
+            ? { ...TABLERO, meta: { conectado: true, muestra: false, cuentas: ['1'], ultima_sincronizacion: recien } }
+            : { anuncios: [], claves: [], conectado: true, muestra: false, ultima_sincronizacion: recien } }));
+        api.post.mockResolvedValue({ data: { omitido: false, cambios: 2 } });
+        abrir('/admin/marketing?tab=meta');
+        const enlace = await screen.findByRole('link', { name: /Administrador de anuncios/ });
+        // Recién sincronizado: al abrir no se pide nada.
+        expect(api.post).not.toHaveBeenCalled();
+        const pedidos = api.get.mock.calls.length;
+
+        enlace.addEventListener('click', (e) => e.preventDefault());
+        await userEvent.click(enlace);
+        window.dispatchEvent(new Event('focus'));
+
+        await waitFor(() => expect(api.post).toHaveBeenCalledWith('/marketing/anuncios/meta/estado', { forzar: true }, expect.anything()));
+        await waitFor(() => expect(api.get.mock.calls.length).toBeGreaterThan(pedidos));
+
+        api.post.mockClear();
+        await userEvent.click(screen.getByRole('button', { name: /Actualizar/ }));
+        expect(api.post).toHaveBeenCalledWith('/marketing/anuncios/meta/estado', { forzar: true }, expect.anything());
     });
 
     it('la pestaña Meta Ads explica cómo conectarlo cuando falta el token', async () => {

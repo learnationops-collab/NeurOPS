@@ -1,8 +1,10 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Tags } from 'lucide-react';
 import { EsqueletoFilas } from '../../../comercial/components/Shared';
 import { Columnas } from './SerieDiaria';
 import { Kpi } from './TablaAnuncios';
+import EnlaceMeta from './EnlaceMeta';
+import { enlaceAdministrador } from './enlacesMeta';
 import { dinero, formatear, serieDeEmbudos } from './metricas';
 import { mensajeDeError, pedirWorkshopDelPeriodo } from './marketingApi';
 
@@ -11,6 +13,9 @@ import { mensajeDeError, pedirWorkshopDelPeriodo } from './marketingApi';
  * período. No tienen palabra clave de ManyChat, así que no están en la tabla de Setting: acá van su
  * gasto, impresiones, clics y lo que trajeron a las landings (visitas y clics al grupo de WhatsApp, por
  * el id de la campaña en `utm_campaign`). Por taller, en Workshop Intelligence › Embudo.
+ *
+ * «Ver en Meta» abre el Administrador de anuncios con estas campañas elegidas (y cada fila, la suya);
+ * «Corregir embudos» lleva a la pestaña Meta Ads de acá, donde se cambia el embudo de un anuncio.
  */
 const pct = (v) => (v == null ? '—' : `${Number(v).toFixed(2)}%`);
 
@@ -28,7 +33,7 @@ const Celdas = ({ fila, moneda, landings }) => (
     </>
 );
 
-const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, irAMeta }) => {
+const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, cuentas, version = 0, irAMeta }) => {
     const [datos, setDatos] = useState(null);
     const [error, setError] = useState(null);
     const [abiertas, setAbiertas] = useState({});
@@ -43,7 +48,7 @@ const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, irAMeta }) => {
             })
             .catch((e) => { if (e?.name !== 'CanceledError') setError(mensajeDeError(e, 'No se pudieron traer los anuncios de Workshop.')); });
         return () => control.abort();
-    }, [desde, hasta]);
+    }, [desde, hasta, version]);
 
     const dias = useMemo(() => serieDeEmbudos((embudos || []).filter((e) => e.embudo === 'workshop'), desde, hasta),
         [embudos, desde, hasta]);
@@ -67,6 +72,9 @@ const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, irAMeta }) => {
           tip: 'Clics al botón del grupo de WhatsApp de la clase desde esas visitas (se miden desde el 03/10/2026).' },
     ];
     const alternar = (id) => setAbiertas((a) => ({ ...a, [id]: !a[id] }));
+    const cuenta = cuentas?.[0];
+    const deCampana = (c) => enlaceAdministrador(cuenta, 'campana', { campanas: [c.campana_id] });
+    const deAnuncio = (c, a) => enlaceAdministrador(cuenta, 'anuncio', { campanas: [c.campana_id], anuncios: [a.meta_ad_id] });
 
     return (
         <div className="vista mk-vista">
@@ -90,11 +98,20 @@ const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, irAMeta }) => {
                     <div className="mk-cab-txt">
                         <h2 className="t-h3">Campañas, conjuntos y anuncios de Workshop</h2>
                         <p className="t-cap mut40">
-                            Los que llevan a la clase en vivo. ¿Falta uno o sobra? Se corrige su embudo en Meta Ads.
+                            Los que llevan a la clase en vivo.
                         </p>
                     </div>
                     <div className="panel-cab-der">
-                        <button type="button" className="btn btn--linea btn--sm" onClick={irAMeta}>Ver en Meta Ads</button>
+                        <button type="button" className="btn btn--linea btn--sm" onClick={irAMeta}
+                            title="¿Falta un anuncio o sobra? Se cambia su embudo en la pestaña Meta Ads">
+                            <Tags aria-hidden="true" />
+                            Corregir embudos
+                        </button>
+                        <EnlaceMeta href={datos.campanas.length
+                            ? enlaceAdministrador(cuenta, 'campana', { campanas: datos.campanas.map((c) => c.campana_id) })
+                            : enlaceAdministrador(cuenta)}>
+                            Ver en Meta
+                        </EnlaceMeta>
                     </div>
                 </div>
                 {!datos.campanas.length ? (
@@ -125,11 +142,15 @@ const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, irAMeta }) => {
                                     <Fragment key={c.campana_id}>
                                         <tr className="mk-ws-campana">
                                             <th className="mk-col-nombre" scope="row">
-                                                <button type="button" className="mk-ws-abrir" onClick={() => alternar(c.campana_id)}
-                                                    aria-expanded={!!abiertas[c.campana_id]}>
-                                                    {abiertas[c.campana_id] ? <ChevronDown size={14} aria-hidden="true" /> : <ChevronRight size={14} aria-hidden="true" />}
-                                                    <span className="trunc" title={c.nombre}>{c.nombre}</span>
-                                                </button>
+                                                <span className="mk-ws-nombre">
+                                                    <button type="button" className="mk-ws-abrir" onClick={() => alternar(c.campana_id)}
+                                                        aria-expanded={!!abiertas[c.campana_id]}>
+                                                        {abiertas[c.campana_id] ? <ChevronDown size={14} aria-hidden="true" /> : <ChevronRight size={14} aria-hidden="true" />}
+                                                        <span className="trunc" title={c.nombre}>{c.nombre}</span>
+                                                    </button>
+                                                    <EnlaceMeta href={deCampana(c)} className="ibtn mk-ibtn-meta"
+                                                        rotulo={`Abrir campaña ${c.nombre} en Meta`} />
+                                                </span>
                                             </th>
                                             <Celdas fila={c} moneda={moneda} landings />
                                         </tr>
@@ -141,7 +162,13 @@ const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, irAMeta }) => {
                                                 </tr>
                                                 {s.anuncios.map((a) => (
                                                     <tr key={a.meta_ad_id} className="mk-ws-anuncio">
-                                                        <th className="mk-col-nombre" scope="row"><span className="trunc" title={a.nombre}>{a.nombre}</span></th>
+                                                        <th className="mk-col-nombre" scope="row">
+                                                            <span className="mk-ws-nombre">
+                                                                <span className="trunc" title={a.nombre}>{a.nombre}</span>
+                                                                <EnlaceMeta href={deAnuncio(c, a)} className="ibtn mk-ibtn-meta"
+                                                                    rotulo={`Abrir anuncio ${a.nombre} en Meta`} />
+                                                            </span>
+                                                        </th>
                                                         <Celdas fila={a} moneda={moneda} />
                                                     </tr>
                                                 ))}

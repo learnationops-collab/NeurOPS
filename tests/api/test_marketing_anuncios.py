@@ -44,7 +44,7 @@ def test_la_tabla_del_periodo(client, make_user, auth_headers, con_datos):
     assert respuesta.status_code == 200
     assert (datos['desde'], datos['hasta']) == ('2026-10-01', '2026-10-31')
     assert [(f['clave'], f['entrantes'], f['calificados']) for f in datos['filas']] == [('APLICAR', 1, 1)]
-    assert datos['meta'] == {'conectado': False, 'muestra': False, 'ultima_sincronizacion': None}
+    assert datos['meta'] == {'conectado': False, 'muestra': False, 'cuentas': [], 'ultima_sincronizacion': None}
     assert set(datos['totales']) >= {'entrantes', 'gasto', 'cpl', 'costo_agenda', 'costo_venta', 'roas'}
 
 
@@ -54,7 +54,7 @@ def test_en_modo_muestra_la_tabla_dice_conectado_y_sincronizar_explica_por_que_n
     cabeceras = auth_headers(make_user(role='director_marketing'))
 
     assert client.get(URL, headers=cabeceras).get_json()['meta'] == {
-        'conectado': True, 'muestra': True, 'ultima_sincronizacion': None}
+        'conectado': True, 'muestra': True, 'cuentas': [], 'ultima_sincronizacion': None}
     respuesta = client.post(f'{URL}/meta/sincronizar', json={}, headers=cabeceras)
     assert respuesta.status_code == 409
     assert 'muestra' in respuesta.get_json()['error']
@@ -182,3 +182,33 @@ def test_elegir_campana_y_conjunto_a_mano(client, make_user, auth_headers, con_d
     assert client.post(f'{URL}/agrupar', json={'clave': 'APLICAR', 'campana': 5}, headers=cabeceras).status_code == 400
     assert client.post(f'{URL}/agrupar', json={'clave': 'APLICAR'},
                        headers=auth_headers(make_user(role='setter'))).status_code == 403
+
+
+def test_la_cuenta_publicitaria_viaja_para_los_enlaces_al_administrador_de_anuncios(client, make_user, auth_headers,
+                                                                                   monkeypatch):
+    monkeypatch.setenv('META_ADS_TOKEN', 'token')
+    monkeypatch.setenv('META_AD_ACCOUNT_IDS', 'act_886943269514111, 1840246836355897')
+
+    datos = client.get(URL, headers=auth_headers(make_user(role='director_marketing'))).get_json()
+
+    assert datos['meta']['cuentas'] == ['886943269514111', '1840246836355897']
+
+
+def test_actualizar_lo_que_cambio_en_meta(client, make_user, auth_headers, monkeypatch):
+    cabeceras = auth_headers(make_user(role='director_marketing'))
+    # Sin Meta conectado avisa (409), como Sincronizar.
+    respuesta = client.post(f'{URL}/meta/estado', json={}, headers=cabeceras)
+    assert respuesta.status_code == 409 and 'META_ADS_TOKEN' in respuesta.get_json()['error']
+
+    pedidos = []
+    monkeypatch.setattr('app.services.meta_ads_service.sincronizar_estado',
+                        lambda forzar=False: pedidos.append(forzar) or {'omitido': False, 'cambios': 2})
+    respuesta = client.post(f'{URL}/meta/estado', json={'forzar': True}, headers=cabeceras)
+    datos = respuesta.get_json()
+    assert respuesta.status_code == 200 and pedidos == [True]
+    assert (datos['cambios'], datos['conectado']) == (2, False)
+    assert 'ultima_sincronizacion' in datos
+    client.post(f'{URL}/meta/estado', headers=cabeceras)
+    assert pedidos[-1] is False
+    setter = auth_headers(make_user(role='setter', username='s2', email='s2@x.com'))
+    assert client.post(f'{URL}/meta/estado', json={}, headers=setter).status_code == 403

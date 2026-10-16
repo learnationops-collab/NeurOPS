@@ -11,6 +11,7 @@ import TablaAnuncios from './anuncios/TablaAnuncios';
 import ConexionMeta from './anuncios/ConexionMeta';
 import EmbudosResumen from './anuncios/EmbudosResumen';
 import RendimientoWorkshop from './anuncios/RendimientoWorkshop';
+import { useEstadoDeMeta } from './anuncios/useEstadoDeMeta';
 import { PERIODOS, PERIODO_POR_DEFECTO, rangoDePeriodo } from './anuncios/metricas';
 import { agruparPalabraClave, archivarPalabraClave, mensajeDeError, pedirTablero } from './anuncios/marketingApi';
 import '../../comercial/comercial.css';
@@ -30,6 +31,10 @@ import './anuncios/anuncios.css';
  *
  * Rendimiento separa el gasto por embudo (15/10/2026): «Todo» (resumen por embudo + la tabla de palabras
  * clave), «Setting» (la tabla sola) y «Workshop» (los anuncios que llevan a la clase en vivo).
+ *
+ * Meta Ads (16/10/2026) desglosa campaña › conjunto › anuncio y cada fila abre el Administrador de
+ * anuncios de Meta (otra pestaña: el token es de solo lectura). Lo que se cambie allá se trae solo al
+ * volver (`useEstadoDeMeta`), en cualquier pestaña, y recarga lo que se esté mirando.
  *
  * La pestaña, el embudo y el período viven en la URL (`tab`, `embudo`, `periodo`, `desde`, `hasta`), así
  * un link lleva a lo mismo que se estaba mirando.
@@ -87,6 +92,8 @@ const AdminMarketingHubPage = () => {
     }, [rango.desde, rango.hasta, version]);
 
     const recargar = useCallback(() => setVersion((v) => v + 1), []);
+    const estadoMeta = useEstadoDeMeta({ meta: datos?.meta, onActualizado: recargar });
+    const cuentas = datos?.meta?.cuentas || [];
 
     const archivar = async (fila, archivado) => {
         try {
@@ -174,11 +181,12 @@ const AdminMarketingHubPage = () => {
                                             {embudo === 'todo' && (
                                                 <EmbudosResumen embudos={datos.embudos} desde={rango.desde} hasta={rango.hasta}
                                                     moneda={datos.moneda} onElegir={(key) => cambiar({ embudo: key })}
-                                                    irAMeta={() => cambiar({ tab: 'meta' })} />
+                                                    cuentas={cuentas} irAMeta={() => cambiar({ tab: 'meta' })} />
                                             )}
                                             {embudo === 'workshop' ? (
                                                 <RendimientoWorkshop desde={rango.desde} hasta={rango.hasta} moneda={datos.moneda}
-                                                    embudos={datos.embudos} irAMeta={() => cambiar({ tab: 'meta' })} />
+                                                    embudos={datos.embudos} cuentas={cuentas} version={version}
+                                                    irAMeta={() => cambiar({ tab: 'meta' })} />
                                             ) : (
                                                 <TablaAnuncios datos={datos} onArchivar={archivar} onAgrupar={agrupar}
                                                     irAMeta={() => cambiar({ tab: 'meta' })} />
@@ -188,6 +196,7 @@ const AdminMarketingHubPage = () => {
                         )}
                         {pestana === 'meta' && (
                             <ConexionMeta desde={rango.desde} hasta={rango.hasta} filasTablero={datos?.filas}
+                                moneda={datos?.moneda} cuentas={cuentas} estadoMeta={estadoMeta} version={version}
                                 onCambio={recargar} />
                         )}
                     </motion.div>
