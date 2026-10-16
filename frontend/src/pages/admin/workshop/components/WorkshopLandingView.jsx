@@ -95,7 +95,7 @@ const PasoEmbudo = ({ idx, label, ayuda, valor, base, pctPaso }) => {
     );
 };
 
-const WorkshopLandingView = ({ events, onConfigSaved }) => {
+const WorkshopLandingView = ({ events, onConfigSaved, formatDate }) => {
     const [stats, setStats] = useState(null);
     const [sesiones, setSesiones] = useState([]);
     const [agendas, setAgendas] = useState(null);
@@ -155,7 +155,7 @@ const WorkshopLandingView = ({ events, onConfigSaved }) => {
 
     return (
         <>
-            <WorkshopReplayConfigPanel events={events} onSaved={onConfigSaved} />
+            <WorkshopReplayConfigPanel events={events} onSaved={onConfigSaved} formatDate={formatDate} />
 
             {/* Controles */}
             <div className="hero-actions" style={{ marginBottom: 22 }}>

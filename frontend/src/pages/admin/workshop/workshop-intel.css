@@ -604,6 +604,27 @@
   .ws-shell .trafico-tabla table { min-width: 0; }
 }
 
+/* Grabación del taller y su publicación en la landing, separadas (16/10/2026). */
+.ws-shell .ws-grabacion { padding: 22px; margin-bottom: 22px; }
+.ws-shell .ws-grabacion-taller { display: grid; gap: 6px; min-width: min(340px, 100%); }
+.ws-shell .ws-grabacion-taller > span { color: var(--text-muted); font-size: 9px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.ws-shell .ws-grabacion-taller select { min-height: 42px; padding: 0 12px; border: 1px solid var(--border); border-radius: 13px; background: var(--input); font-size: 12px; font-weight: 700; cursor: pointer; }
+.ws-shell .ws-grabacion-taller option { background: var(--ln-page-base, #0a0e3d); }
+.ws-shell .ws-grabacion-link { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; }
+.ws-shell .ws-grabacion-link .form-field > small { display: none; }
+.ws-shell .ws-grabacion-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ws-shell .ws-grabacion-acciones .secondary-action:disabled, .ws-shell .ws-grabacion-acciones .primary-action:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.ws-shell .ws-grabacion-nota { margin: 8px 0 0; color: var(--text-muted); font-size: 11px; }
+.ws-shell .ws-publicacion { margin-top: 22px; padding: 20px; border: 1px solid var(--border); border-radius: 20px; background: var(--ln-inset-bg, rgba(0, 0, 0, .18)); }
+.ws-shell .ws-publicacion-cabeza { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.ws-shell .ws-publicacion-cabeza h3 { display: inline-flex; align-items: center; gap: 8px; margin: 0; font-size: 14px; font-weight: 900; }
+.ws-shell .ws-publicacion-cabeza p { max-width: 640px; margin: 6px 0 0; color: var(--text-muted); font-size: 11px; line-height: 1.5; }
+.ws-shell .ws-despublicar:hover { color: var(--error); border-color: color-mix(in srgb, var(--ln-danger, #e85c4a) 45%, transparent); }
+@media (max-width: 720px) {
+  .ws-shell .ws-grabacion-link { grid-template-columns: 1fr; }
+  .ws-shell .ws-publicacion-cabeza { flex-direction: column; }
+}
+
 /* Hora y links del taller (15/10/2026): lo que leen las landings de institute, antes workshops.csv. */
 .ws-shell .hora-zona { display: inline; font-weight: 600; color: var(--text-muted); }
 .ws-shell .nota-landing { margin: -4px 0 0; font-size: 11px; line-height: 1.45; color: var(--text-muted); }

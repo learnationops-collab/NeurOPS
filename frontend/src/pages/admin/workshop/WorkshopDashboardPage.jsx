@@ -488,7 +488,7 @@ const WorkshopDashboardPage = () => {
                 {activeTab === 'trafico' ? (
                     <WorkshopTraficoView />
                 ) : activeTab === 'landing' ? (
-                    <WorkshopLandingView events={events} onConfigSaved={() => fetchEvents(true)} />
+                    <WorkshopLandingView events={events} onConfigSaved={() => fetchEvents(true)} formatDate={formatDate} />
                 ) : loading ? (
                     <section className="empty-state loading-state" role="status">
                         <div><span /></div>

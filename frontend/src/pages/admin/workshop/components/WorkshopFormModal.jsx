@@ -303,7 +303,7 @@ const WorkshopFormModal = ({
                                     <div style={{ marginTop: 14, padding: 16, border: '1px solid var(--border)', borderRadius: 16, background: 'rgba(0,0,0,.2)' }}>
                                         <p className="eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                                             Replay público (institute-site)
-                                            <InfoTooltip label="Replay público" text="Controla la grabación que se muestra en la landing pública de institute-site (/replay/): qué video de Loom, entre qué fechas está disponible, y a los cuántos minutos de reproducción aparecen la información principal y la oferta con agendamiento. El más reciente evento con un Loom cargado es el que la landing muestra." />
+                                            <InfoTooltip label="Replay público" text="Controla la grabación que se muestra en la landing pública de institute-site (/replay/): qué video de Loom, entre qué fechas está disponible, y a los cuántos minutos de reproducción aparecen la información principal y la oferta con agendamiento. Con solo el Loom la grabación queda guardada en el taller y NO se publica: la landing muestra el último taller que tiene las dos fechas (desde y vence). Lo más simple es publicarla desde «Landing grabación»." />
                                         </p>
                                         <div className="form-grid" style={{ marginTop: 10 }}>
                                             <label className="form-field wide">
