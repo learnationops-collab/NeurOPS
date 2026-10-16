@@ -69,7 +69,7 @@ export const ResumenAnuncios = ({ evento }) => {
         return (
             <p className="t-cap mut wt-mini-vacio">
                 Todavía no hay anuncios clasificados como Workshop.
-                <Tip titulo="Anuncios de Workshop" texto="Se clasifican solos al sincronizar con Meta y se corrigen en Marketing › Meta Ads." />
+                <Tip titulo="Anuncios de Workshop" texto="Se corrigen en Marketing › Meta Ads." />
             </p>
         );
     }
@@ -155,7 +155,7 @@ export const ResumenGrabacion = ({ evento, ahora, onGuardado }) => {
                         title={sinLoom ? 'Primero cargá el Loom en la grabación del taller' : publicada ? 'Dejar de publicar' : 'Publicar 48 h'}
                         onCambiar={(prender) => (prender ? publicar({ horas: 48 }) : despublicar(estado))} />
                     <Tip titulo="Landing de la grabación"
-                        texto="Prenderla publica la grabación de este taller 48 horas desde ahora (se ajusta en el detalle). Apagarla la cierra ya. La landing muestra solo el último taller que se publicó." />
+                        texto="Prendida: publicada 48 h. La landing muestra el último." />
                 </div>
             </div>
             <MiniLanding evento={evento} />

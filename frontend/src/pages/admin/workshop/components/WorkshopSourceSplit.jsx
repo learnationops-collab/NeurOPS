@@ -48,9 +48,7 @@ const WorkshopSourceSplit = ({ desglose, ventana, cargando }) => {
     }
     if (!desglose) return null;
 
-    const tip = 'Un taller tiene dos puertas: la clase en vivo y la grabación publicada después. En los totales cuentan juntas; '
-        + 'acá se ven separadas. Se cuentan las agendas creadas desde el día del taller hasta el día anterior al siguiente taller. '
-        + 'Si una persona aparece en las dos, cuenta una vez, del lado del vivo: así los dos bloques suman el total.';
+    const tip = 'Clase en vivo vs. grabación. Quien está en las dos cuenta en vivo.';
 
     return (
         <section className="panel wt-panel" aria-label="Clase en vivo contra grabación">

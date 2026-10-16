@@ -73,7 +73,7 @@ const WorkshopReplayConfigPanel = ({ evento, onSaved }) => {
         <div className="vista wt-vista">
             <section className="panel wt-panel" aria-label="Grabación del taller">
                 <PanelCab titulo="Grabación del taller"
-                    tip="El link de Loom queda guardado en el taller, para volver a ver qué se hizo en los que rindieron bien. Guardarlo no lo publica: publicar en la landing es otra decisión, abajo." />
+                    tip="Guardarlo no lo publica en la landing." />
                 <div className="wt-grabacion-link">
                     <label className="campo">
                         <span className="t-rotulo">Link o ID del video de Loom</span>
@@ -101,7 +101,7 @@ const WorkshopReplayConfigPanel = ({ evento, onSaved }) => {
 
             <section className="panel wt-panel" aria-label="Landing de la grabación">
                 <PanelCab titulo="Landing de la grabación"
-                    tip="Publicar la muestra en la landing desde ahora y la cierra sola a las horas elegidas. La landing muestra solo el último taller que se publicó.">
+                    tip="Se publica ahora y se cierra sola. La landing muestra el último.">
                     <span className="chip" style={{ '--c': `var(--${badge.tono})` }}>{badge.texto}</span>
                 </PanelCab>
                 <p className="t-cap mut num wt-publicacion-estado">

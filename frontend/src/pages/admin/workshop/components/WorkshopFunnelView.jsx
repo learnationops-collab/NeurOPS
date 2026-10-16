@@ -62,7 +62,7 @@ const WorkshopFunnelView = ({ evento, desglose, ventana, cargandoDesglose, onRes
             <div className="pareja" style={{ '--min': '190px', '--g': 'var(--s3)' }}>
                 <Kpi i={0} titulo="Inversión" valor={dinero(e.inversion)}
                     sub={e.inversion_de_meta ? 'De Meta Ads' : 'Cargada a mano'}
-                    tip="Lo que se gastó en anuncios para este taller. Si hay datos de Meta, salen de ahí; si no, lo cargado en el taller." />
+                    tip="Gasto en anuncios de este taller (de Meta si hay)." />
                 <Kpi i={1} titulo="Cash cobrado" valor={dinero(e.cash_collected)}
                     sub={`ROAS ${Number(e.roas || 0).toFixed(2)}x`}
                     tip="Todo lo cobrado a las personas del taller, señas incluidas." />
@@ -75,7 +75,7 @@ const WorkshopFunnelView = ({ evento, desglose, ventana, cargandoDesglose, onRes
 
             <section className="panel wt-panel">
                 <PanelCab titulo="Embudo"
-                    tip="De los anotados a las ventas. Cada píldora es el paso contra el anterior; pasá el mouse por una barra para ver qué mide. Agendas y asistencias cuentan personas.">
+                    tip="Cada % es contra el paso anterior.">
                     {hace && <span className="t-cap mut40 wt-sync"><i className="wt-punto-vivo" aria-hidden="true" /> Sincronizado {hace}</span>}
                     {onResync && (
                         <button type="button" className="btn btn--linea btn--sm" onClick={onResync} disabled={resyncing}

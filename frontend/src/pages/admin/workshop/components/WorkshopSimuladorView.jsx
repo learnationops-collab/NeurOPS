@@ -104,7 +104,7 @@ const WorkshopSimuladorView = ({ events, goals, etapaEnfocada, onGoalsUpdated, o
     return (
         <section className="panel wp-panel" id="wp-simulador" aria-label="Simulador">
             <PanelCab titulo="Simulador"
-                tip="Mové una palanca y mirá cuánto cambia el resultado de un taller promedio. Si la subiste, «Acción» la convierte en algo que hay que cumplir en un próximo taller. Modelo lineal: las tasas se multiplican con techo de 95%. Sirve para priorizar; no es una predicción.">
+                tip="Mové una palanca y mirá el efecto en un taller promedio.">
                 <button type="button" className="btn btn--linea btn--sm" onClick={reset} disabled={!cambiado}>
                     <RotateCcw aria-hidden="true" /> Restablecer
                 </button>

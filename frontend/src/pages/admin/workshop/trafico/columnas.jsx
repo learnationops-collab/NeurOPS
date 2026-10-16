@@ -71,10 +71,10 @@ export const columnasRanking = (agrupacion, total, medido) => {
         fuente: { key: 'fuente', header: 'Fuente', valor: (f) => f.fuente,
             ayuda: 'El utm_source del link. ig e instagram, fb y facebook se suman juntos.' },
         campana: { key: 'campana', header: 'Campaña', valor: (f) => f.nombre || f.campana,
-            ayuda: 'El utm_campaign: Meta manda el ID de la campaña y acá se muestra su nombre (el de Meta Ads). Las 12 con más visitas.',
+            ayuda: 'Las 12 campañas con más visitas.',
             render: (f) => <DeMeta nombre={f.nombre} id={f.campana} /> },
         anuncio: { key: 'anuncio', header: 'Anuncio', valor: (f) => f.nombre || f.anuncio,
-            ayuda: 'El utm_content: Meta manda el ID del anuncio y acá se muestra su nombre, con la campaña abajo. Los 12 con más visitas.',
+            ayuda: 'Los 12 anuncios con más visitas.',
             render: (f) => <DeMeta nombre={f.nombre} id={f.anuncio} de={f.campana_nombre} /> },
     }[agrupacion];
     const parte = (f) => (total ? (f.visitas / total) * 100 : 0);
@@ -138,7 +138,7 @@ export const COLUMNAS_DETALLE = conCeldas([
     { key: 'evento', header: 'Tipo', valor: (f) => EVENTO[f.evento] || f.evento, width: 'minmax(104px,.8fr)',
         render: (f) => <Evento evento={f.evento} /> },
     { key: 'fuente', header: 'Fuente', valor: (f) => f.fuente, width: 'minmax(110px,1fr)',
-        ayuda: 'utm_source normalizado: ig e instagram, fb y facebook son la misma fuente.' },
+        ayuda: 'ig e instagram cuentan juntas; fb y facebook también.' },
     { key: 'utm_medium', header: 'Medio', valor: (f) => f.utm_medium, width: 'minmax(90px,.9fr)' },
     { key: 'utm_campaign', header: 'Campaña', valor: (f) => f.campana_nombre || f.utm_campaign, width: 'minmax(140px,1.3fr)',
         ayuda: 'El nombre de la campaña de Meta (el link manda su ID en utm_campaign).',

@@ -39,16 +39,16 @@ const WorkshopAccionesView = ({
     const cifras = [
         { key: 'pend', label: 'Pendientes', valor: String(pendientes.length), sub: actions.length - pendientes.length === 1 ? '1 hecha' : `${actions.length - pendientes.length} hechas` },
         { key: 'ventas', label: 'Si se cumplen', valor: `+${impacto.ventas.toFixed(1)}`, sub: `+${fmt(impacto.cash)} cash`,
-          tip: 'Suma lo que movería cada acción pendiente que ataca una etapa (sus puntos sobre la tasa real). Sirve para priorizar; no es una predicción.' },
+          tip: 'Ventas que sumarían las pendientes. Estimación para priorizar.' },
         { key: 'clarity', label: 'Clarity Score', valor: String(clarity.score), sub: `Diagnóstico ${clarity.diagnostico}% · plan ${clarity.plan}%`,
-          tip: 'Promedio de tres cosas: metas cargadas (diagnóstico), etapas con fuga que tienen una acción (plan) y acciones hechas (ejecución).' },
+          tip: 'Promedio de metas, plan y acciones hechas.' },
         { key: 'ejec', label: 'Ejecución', valor: `${clarity.ejecucion}%`, sub: 'de las acciones, hechas' },
     ];
 
     return (
         <section className="panel wp-panel" id="wp-acciones" aria-label="Plan de acciones">
             <PanelCab titulo="Plan de acciones"
-                tip="Las acciones de cada próximo taller están en su fila. Acá quedan las pendientes que no tienen taller o cuyo taller ya pasó: asignalas a uno o tildalas.">
+                tip="Pendientes sin un próximo taller: asignalas o tildalas.">
                 <button type="button" className="btn btn--cta btn--sm" onClick={onNueva}>
                     <Plus aria-hidden="true" /> Nueva acción
                 </button>

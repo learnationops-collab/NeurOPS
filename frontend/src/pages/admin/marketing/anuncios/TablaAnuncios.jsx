@@ -165,16 +165,16 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
     const kpis = [
         { titulo: 'Leads entrantes', valor: formatear(totales.entrantes, 'num'),
           sub: `${formatear(totales.pct_calificados, 'pct')} calificados · ${formatear(totales.pct_no_calificados, 'pct')} no`,
-          tip: 'Personas que llegaron por las palabras clave de la tabla, y qué parte calificó.' },
+          tip: 'Personas que entraron y cuántas calificaron.' },
         { titulo: 'Importe gastado', valor: formatear(totales.gasto, 'money', moneda),
           sub: conGasto ? `${formatear(totales.cpl, 'money', moneda)} por lead · ${formatear(totales.cpl_calificado, 'money', moneda)} por calificado` : 'Sin gasto cargado en el período',
-          tip: 'Lo que gastó Meta Ads en los anuncios asociados a estas palabras clave.' },
+          tip: 'Gasto en Meta de estas palabras clave.' },
         { titulo: 'Agendas', valor: formatear(totales.agendas, 'num'),
           sub: conGasto ? `${formatear(totales.costo_agenda, 'money', moneda)} por agenda` : 'Costo por agenda: —',
-          tip: 'Agendas creadas en el período de personas que llegaron por estas palabras clave.' },
+          tip: 'Agendas de estas personas en el período.' },
         { titulo: 'Ventas', valor: formatear(totales.ventas, 'num'),
           sub: conGasto ? `${formatear(totales.costo_venta, 'money', moneda)} por venta · ROAS ${formatear(totales.roas, 'veces')}` : `${formatear(totales.cobrado, 'money', moneda)} cobrado`,
-          tip: 'Pagos completos y split pay del período de estas personas. ROAS: cobrado ÷ gastado.' },
+          tip: 'Pago completo o split. ROAS = cobrado ÷ gastado.' },
     ];
 
     return (

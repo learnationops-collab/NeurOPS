@@ -118,7 +118,7 @@ const TalleresVista = ({ events, realizados, onEdit, onRefresh, formatDate }) =>
                         <span className="barra-cuenta">
                             <span className="t-cap mut40 num">{realizados.length} {realizados.length === 1 ? 'taller' : 'talleres'}</span>
                             <Tip titulo="Qué estás mirando"
-                                texto="Un taller por tarjeta, del más nuevo al más viejo. Cada una cambia entre su embudo, sus anuncios y su grabación; el pie abre el detalle completo. Para filtrar y elegir columnas, pasá a la tabla." />
+                                texto="Para filtrar y elegir columnas, pasá a la tabla." />
                         </span>
                     </div>
                     <div className="wt-tarjetas">

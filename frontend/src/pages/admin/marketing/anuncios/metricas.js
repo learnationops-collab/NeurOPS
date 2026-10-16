@@ -26,7 +26,7 @@ export const PERIODO_POR_DEFECTO = 'ultimos_30';
  *  al DM (ManyChat), Workshop a la clase en vivo. Ver `meta_ads_service.detectar_embudo`. */
 export const EMBUDOS = [
     { key: 'setting', label: 'Setting', color: 'var(--brand-secondary)', ayuda: 'Anuncios que llevan al DM (ManyChat): los de las palabras clave.' },
-    { key: 'workshop', label: 'Workshop', color: 'var(--info)', ayuda: 'Anuncios que llevan a la clase en vivo: su gasto es la inversión de cada taller.' },
+    { key: 'workshop', label: 'Workshop', color: 'var(--info)', ayuda: 'Anuncios que llevan a la clase en vivo.' },
     { key: 'contratacion', label: 'Contratación', color: 'var(--warning)', ayuda: 'Búsquedas de personal (HIRING, asistentes).' },
     { key: 'otro', label: 'Otro', color: 'var(--text-muted)', ayuda: 'Elegidos a mano como de otro embudo.' },
 ];
@@ -82,27 +82,27 @@ export const totalesDe = (filas) => completar(Object.fromEntries(
  */
 export const COLUMNAS = [
     { key: 'entrantes', label: 'Leads entrantes', formato: 'num',
-        ayuda: 'Personas que llegaron por esta palabra clave en el período, una vez cada una (el día de su primer mensaje con ella).' },
+        ayuda: 'Personas que escribieron esta palabra clave.' },
     { key: 'calificados', label: 'Calificados', formato: 'num', pct: 'pct_calificados',
-        ayuda: 'Los entrantes que ManyChat marcó como calificados (la última calificación que mandó), y su porcentaje sobre los entrantes.' },
+        ayuda: 'Entrantes que ManyChat marcó como calificados.' },
     { key: 'no_calificados', label: 'No calificados', formato: 'num', pct: 'pct_no_calificados',
-        ayuda: 'El resto de los entrantes: los que ManyChat marcó que no califican y los que todavía no tienen respuesta.' },
+        ayuda: 'No califican o todavía sin respuesta.' },
     { key: 'gasto', label: 'Importe gastado', formato: 'money',
-        ayuda: 'Lo que gastaron en Meta Ads los anuncios asociados a esta palabra clave, día por día.' },
+        ayuda: 'Gasto en Meta de esta palabra clave.' },
     { key: 'cpl', label: 'Costo por lead', formato: 'money', menor: true,
         ayuda: 'Importe gastado ÷ leads entrantes.' },
     { key: 'cpl_calificado', label: 'Costo por calificado', formato: 'money', menor: true,
         ayuda: 'Importe gastado ÷ leads calificados.' },
     { key: 'agendas', label: 'Agendas', formato: 'num',
-        ayuda: 'Agendas creadas en el período de personas cuya conversación de ManyChat vino por esta palabra clave (una por persona).' },
+        ayuda: 'Personas con agenda, de esta palabra clave.' },
     { key: 'costo_agenda', label: 'Costo por agenda', formato: 'money', menor: true,
         ayuda: 'Importe gastado ÷ agendas.' },
     { key: 'ventas', label: 'Ventas', formato: 'num',
-        ayuda: 'Pagos completos y split pay completados en el período, de personas que llegaron por esta palabra clave.' },
+        ayuda: 'Pago completo o split, de esta palabra clave.' },
     { key: 'costo_venta', label: 'Costo por venta', formato: 'money', menor: true,
         ayuda: 'Importe gastado ÷ ventas.' },
     { key: 'cobrado', label: 'Cobrado', formato: 'money',
-        ayuda: 'Todo lo cobrado en el período a las personas de esta palabra clave: ventas nuevas, cuotas y señas.' },
+        ayuda: 'Todo lo cobrado: ventas, cuotas y señas.' },
     { key: 'roas', label: 'ROAS', formato: 'veces',
         ayuda: 'Cobrado ÷ importe gastado.' },
 ];

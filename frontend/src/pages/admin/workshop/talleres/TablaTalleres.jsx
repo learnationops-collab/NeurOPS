@@ -50,18 +50,18 @@ const columnasDe = ({ formatDate, elegidos, onComparar }) => [
       ayuda: 'Personas que se presentaron a la llamada de venta.' },
     { key: 'ventas', header: 'Ventas', ...der, valor: (e) => e.sales, render: (e) => numero(e.sales) },
     { key: 'close_rate', header: 'Close rate', ...der, oculta: true, valor: (e) => e.pct_close_rate, render: (e) => porcentaje(e.pct_close_rate),
-      ayuda: 'Ventas (completo + split) sobre las personas que asistieron a la llamada. Sin señas.' },
+      ayuda: 'Ventas ÷ asistieron a la llamada. Sin señas.' },
     { key: 'cash', header: 'Cash', ...der, valor: (e) => e.cash_collected, render: (e) => dinero(e.cash_collected),
       ayuda: 'Todo lo cobrado a las personas del taller, señas incluidas.' },
     { key: 'ganancia', header: 'Ganancia', ...der, oculta: true, valor: ganancia,
       render: (e) => <span style={ganancia(e) < 0 ? { color: 'var(--error)' } : undefined}>{dinero(ganancia(e))}</span> },
     { key: 'ticket', header: 'Ticket', ...der, oculta: true, valor: (e) => e.ticket_promedio, render: (e) => dinero(e.ticket_promedio),
-      ayuda: 'Monto de las ventas nuevas dividido su cantidad (cuotas y señas fuera).' },
+      ayuda: 'Ventas nuevas ÷ cantidad. Sin cuotas ni señas.' },
     { key: 'cac', header: 'CAC', ...der, oculta: true, valor: cac, render: (e) => dinero(cac(e)),
       ayuda: 'Lo que costó cada venta: la inversión dividida las ventas.' },
     { key: 'roas', header: 'ROAS', ...der, valor: (e) => e.roas,
       render: (e) => <b className="num" style={{ color: `var(--${roasTono(e.roas)})` }} title={roasRotulo(e.roas)}>{veces(e.roas)}</b>,
-      ayuda: 'Cash cobrado dividido la inversión. Desde 1,5x es rentable; debajo de 1x, a pérdida.' },
+      ayuda: 'Cobrado ÷ inversión. Desde 1,5x es sano.' },
     { key: 'grabacion', header: 'Grabación', width: 'minmax(96px,1fr)', oculta: true,
       valor: (e) => ESTADOS_GRABACION[estadoGrabacion(e).tipo].texto,
       render: (e) => {
@@ -86,7 +86,7 @@ const TablaTalleres = ({ talleres, formatDate, elegidos, onComparar, onAbrir, ex
                 onAbrirFila={(e) => onAbrir(e, 'embudo')} buscar={(e) => `${e.name} ${e.date}`}
                 buscarPlaceholder="Buscar taller…" claveGuardado="workshop_talleres_columnas"
                 vacio="Ningún taller cumple el filtro." extra={extra}
-                ayuda="Un taller por fila. Elegí qué columnas ver y filtrá por mes, ventas, ROAS, grabación o de dónde sale la inversión. La fila abre el detalle; la casilla del nombre lo suma a la comparación." />
+                ayuda="La fila abre el detalle; la casilla suma a comparar." />
         </div>
     );
 };

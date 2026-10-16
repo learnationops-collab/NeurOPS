@@ -168,7 +168,7 @@ const ConexionMeta = ({ desde, hasta, filasTablero, moneda, cuentas, estadoMeta,
                             {datos.conectado ? <>Traído de Meta <b>{hace(datos.ultima_sincronizacion)}</b></> : 'Falta el token de Meta'}
                         </span>
                         <Tip titulo="Cómo se mantiene al día"
-                            texto="«Actualizar» trae lo que cambió en el Administrador de anuncios (nombres, estados, campaña y conjunto) y el gasto de los últimos días; corre sola al volver de Meta. «Sincronizar» trae el historial de gasto con los textos de los anuncios. El cron trae cada mañana los últimos 7 días. Lo que se clasifica acá a mano no lo pisa ninguna." />
+                            texto="Actualizar: cambios recientes de Meta. Sincronizar: historial de gasto." />
                     </div>
                     <div className="mk-conexion-acc">
                         <button type="button" className="btn btn--cta btn--sm" disabled={!activo || actualizando}
@@ -218,7 +218,7 @@ const ConexionMeta = ({ desde, hasta, filasTablero, moneda, cuentas, estadoMeta,
                     <div className="tarjeta">
                         <p className="t-eyebrow mk-eyebrow-tip">
                             Sin clave
-                            <Tip titulo="Sin palabra clave" texto="Gasto de anuncios de Setting (o sin clasificar) que no tienen palabra clave de ManyChat: no suma en la tabla de Rendimiento. Se elige en su fila." />
+                            <Tip titulo="Sin palabra clave" texto="Gasto de Setting sin palabra clave: no suma en Rendimiento." />
                         </p>
                         <p className="mk-cob-n num">{formatear(cobertura.gastoSinClave, 'money', moneda)}</p>
                         <p className="t-cap mut40">{cobertura.sinClave.length} anuncios sin palabra clave</p>

@@ -80,10 +80,10 @@ const COLUMNAS = [
     { key: 'cpm', header: 'CPM', num: true, valor: (n) => n.cpm, formato: 'money', oculta: true,
       ayuda: 'Costo por mil impresiones.' },
     { key: 'leads', header: 'Leads', num: true, valor: (n) => n.leads, formato: 'num',
-      ayuda: 'Los que entraron por la palabra clave del anuncio en el período (Rendimiento). En un grupo, cada palabra clave cuenta una vez; ManyChat no dice de qué anuncio vino cada lead.' },
-    { key: 'embudo', header: 'Embudo', ayuda: 'A qué embudo va el gasto. Lo pone la sincronización por adónde lleva el anuncio; se corrige por anuncio.',
+      ayuda: 'Entrantes por su palabra clave. En un grupo, cada clave cuenta una vez.' },
+    { key: 'embudo', header: 'Embudo', ayuda: 'A qué embudo va el gasto. Se corrige por anuncio.',
       valor: (n) => (n.tipo === 'anuncio' ? etiquetaDeEmbudo(n.anuncio.embudo) : embudosDeGrupo(n.embudos)) },
-    { key: 'clave', header: 'Palabra clave', ayuda: 'La palabra clave de ManyChat a la que va el gasto (Rendimiento). Automática: la que el anuncio pide escribir.',
+    { key: 'clave', header: 'Palabra clave', ayuda: 'La palabra clave de ManyChat a la que va el gasto.',
       valor: (n) => n.claves.join(', ') || null },
     { key: 'texto', header: 'Texto del anuncio', oculta: true, valor: (n) => n.anuncio?.texto || null },
     { key: 'destino', header: 'Lleva a', oculta: true, valor: (n) => textoDestino(n.anuncio?.destino) },
@@ -323,7 +323,7 @@ const ArbolMeta = ({ anuncios, claves, leadsPorClave, cuentas, moneda, guardando
                 </label>
                 <span className="barra-cuenta">
                     <span className="t-cap mut40 num">mostrando {filtrados.length} de {(anuncios || []).length} anuncios</span>
-                    <Tip titulo="Qué estás mirando" texto="Los anuncios de Meta que gastaron en el período, agrupados como en el Administrador de anuncios. Cada nivel suma a sus anuncios. El ícono de la flecha abre esa fila en Meta para editarla allá; al volver, la página trae lo que cambió." />
+                    <Tip titulo="Qué estás mirando" texto="Como en el Administrador de anuncios. La flecha abre la fila en Meta." />
                 </span>
             </div>
 

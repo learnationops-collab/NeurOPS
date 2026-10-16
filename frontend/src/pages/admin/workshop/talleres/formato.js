@@ -42,23 +42,23 @@ export const roasRango = (r) => (r >= 3 ? ROAS_RANGOS[3] : r >= 1.5 ? ROAS_RANGO
 export const pasosEmbudo = (e, { corto = false } = {}) => {
     const pasos = [
         { key: 'leads', label: 'Leads', n: e.leads || 0,
-          ayuda: 'Cuánta gente se anotó al taller. Es la base: cada porcentaje es contra el paso anterior.' },
+          ayuda: 'Anotados al taller (Leads de Meta).' },
         { key: 'whatsapp', label: 'WhatsApp', n: e.whatsapp_leads || 0,
-          ayuda: 'Entraron al grupo de WhatsApp donde van los recordatorios. Si es bajo, mucha gente ni se entera de que la clase empieza.' },
+          ayuda: 'Entraron al grupo de WhatsApp.' },
         { key: 'show_up', label: 'Show up', n: e.show_up || 0,
-          ayuda: 'Se conectaron a la clase en vivo. Un show up bajo casi siempre es de recordatorios u horario, no del contenido.' },
+          ayuda: 'Se conectaron a la clase en vivo.' },
         { key: 'pitch', label: 'En el pitch', n: e.pitch_leads || 0, largo: true,
-          ayuda: 'Seguían conectados cuando arrancó la oferta: mide si la clase los mantuvo.' },
+          ayuda: 'Seguían cuando arrancó la oferta.' },
         { key: 'pitch_final', label: 'Fin del pitch', n: e.pitch_final_leads || 0, largo: true,
-          ayuda: 'Se quedaron hasta que terminó la oferta. Si cae fuerte, la oferta pierde gente mientras se presenta.' },
+          ayuda: 'Seguían cuando terminó la oferta.' },
         { key: 'aplicaciones', label: 'Aplicaron', n: e.aplicaciones_form || 0,
-          ayuda: 'Llenaron el formulario para pedir una llamada, desde la clase en vivo o desde la grabación.' },
+          ayuda: 'Pidieron una llamada por formulario.' },
         { key: 'agendas', label: 'Agendas', n: e.agendas_exitosas || 0,
-          ayuda: 'Personas con una llamada de venta agendada (una por persona). Suma la clase en vivo y la grabación.' },
+          ayuda: 'Personas con llamada agendada.' },
         { key: 'asistieron', label: 'Asistieron', n: e.show_up_sales_call || 0,
-          ayuda: 'De las agendas, a cuántas la persona se presentó. La diferencia son los no show.' },
+          ayuda: 'Se presentaron a la llamada.' },
         { key: 'ventas', label: 'Ventas', n: e.sales || 0,
-          ayuda: 'Compradores distintos con pago completo o split. Una seña es una reserva: suma al cash pero no es venta.' },
+          ayuda: 'Pago completo o split. Las señas no cuentan.' },
     ];
     return corto ? pasos.filter((p) => !p.largo) : pasos;
 };

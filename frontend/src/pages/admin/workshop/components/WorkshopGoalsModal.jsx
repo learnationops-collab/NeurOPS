@@ -61,7 +61,7 @@ const WorkshopGoalsModal = ({ goals, onClose, onSaved }) => {
                 <div className="wr-metas-cab">
                     <h2 className="t-h3">Metas del embudo</h2>
                     <Tip titulo="Metas del embudo"
-                        texto="La tasa que se espera de cada etapa, en %: de cada 100 que llegaron al paso anterior, cuántos llegan a este. La banda es cuántos puntos por debajo de la meta todavía cuentan como «al límite» y no como bajo meta." />
+                        texto="% esperado por etapa. Banda: puntos bajo la meta que siguen «al límite»." />
                     <button type="button" className="ibtn ibtn--sm wr-metas-cerrar" onClick={onClose} aria-label="Cerrar">
                         <X aria-hidden="true" />
                     </button>

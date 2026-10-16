@@ -70,13 +70,13 @@ const WorkshopKpiCards = ({ totalStats, eventsCount, cambios, anterior }) => {
         {
             key: 'cash', label: 'Cash collected', valor: dinero(t.cash),
             sub: `Neto ${dinero(neto)} · ${margen}%`, titulo: porTaller('cash', dinero),
-            ayuda: 'Lo que entró de verdad (no lo prometido ni lo facturado). Neto = cobrado menos inversión.',
+            ayuda: 'Lo cobrado. Neto = cobrado − inversión.',
         },
         {
             key: 'roas', label: 'ROAS', valor: `${t.roas.toFixed(2)}x`, color: roasTono,
             sub: `Ticket ${dinero(ticketPromedio(t))}`,
             titulo: anterior ? `${t.roas.toFixed(2)}x vs ${anterior.totales.roas.toFixed(2)}x` : undefined,
-            ayuda: 'Cuántos dólares volvieron por cada $1 de publicidad: 1x es empatar, desde 1,5x es sano. Ticket = lo cobrado en ventas nuevas (pago completo o split) ÷ esas ventas; señas y cuotas no entran.',
+            ayuda: 'Cobrado ÷ inversión. Desde 1,5x es sano.',
         },
         {
             key: 'leads', label: 'Leads', valor: entero(t.leads),
@@ -86,12 +86,12 @@ const WorkshopKpiCards = ({ totalStats, eventsCount, cambios, anterior }) => {
         {
             key: 'agendas', label: 'Agendas', valor: entero(t.agendas),
             sub: `CPA ${dinero(costo(t.agendas))}`, titulo: porTaller('agendas', entero),
-            ayuda: 'Llamadas de venta agendadas, de la clase en vivo y de la grabación. CPA = inversión ÷ agendas.',
+            ayuda: 'Llamadas agendadas. CPA = inversión ÷ agendas.',
         },
         {
             key: 'sales', label: 'Ventas', valor: entero(t.sales),
             sub: `CAC ${dinero(costo(t.sales))}`, titulo: porTaller('sales', entero),
-            ayuda: 'Personas distintas que compraron (si alguien paga en dos partes cuenta una vez). CAC = inversión ÷ ventas.',
+            ayuda: 'Compradores distintos. CAC = inversión ÷ ventas.',
         },
     ];
 

@@ -88,7 +88,7 @@ const WorkshopDiagnostico = ({ events, comparados, goals, actions, onEditGoals, 
         <div className="wr-diag">
             <motion.section className="panel wr-salud" {...entrada(0)}>
                 <PanelCab titulo="Salud del embudo"
-                    tip="La tasa de cada etapa (de cada 100 que llegaron al paso anterior, cuántos llegaron a este) contra su meta. Verde: en meta. Ámbar: al límite, dentro de la banda de tolerancia. Rojo: bajo meta. Con una comparación elegida, la barra fina es lo que daba la comparación y el cambio va en puntos.">
+                    tip="Cada etapa contra su meta. La barra fina es la comparación.">
                     <button type="button" className="btn btn--linea btn--sm" onClick={onEditGoals}>
                         <Settings2 aria-hidden="true" /> Editar metas
                     </button>
@@ -120,7 +120,7 @@ const WorkshopDiagnostico = ({ events, comparados, goals, actions, onEditGoals, 
                     <div className="panel-cab">
                         <p className="t-eyebrow">Prioridad</p>
                         <Tip titulo="Prioridad"
-                            texto="La etapa más lejos de su meta. Las ventas son las que se sumarían por taller si solo esa etapa llegara a la meta y las demás quedaran igual: sirve para priorizar, no es una predicción." />
+                            texto="La etapa más lejos de su meta y lo que sumaría llegar." />
                     </div>
                     {principal ? (
                         <>
@@ -145,7 +145,7 @@ const WorkshopDiagnostico = ({ events, comparados, goals, actions, onEditGoals, 
                     <div className="panel-cab">
                         <p className="t-eyebrow">Clarity score</p>
                         <Tip titulo="Clarity score"
-                            texto="Qué tan cubierto está el ciclo. Diagnóstico: las 8 metas cargadas. Plan: las etapas bajo meta que tienen una acción. Ejecución: las acciones hechas. El puntaje es el promedio de las tres." />
+                            texto="Promedio de metas cargadas, plan y acciones hechas." />
                     </div>
                     <div className="wr-clarity-cuerpo">
                         <Anillo score={clarity.score} />

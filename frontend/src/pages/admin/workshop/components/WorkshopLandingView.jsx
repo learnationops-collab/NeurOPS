@@ -124,13 +124,13 @@ const WorkshopLandingView = () => {
 
             <div className="pareja" style={{ '--min': '180px', '--g': 'var(--s3)' }}>
                 <Kpi i={0} titulo="Visitas" valor={numero(visitas)} sub="Sesiones únicas"
-                    tip="Cuánta gente distinta abrió la página de la grabación, se haya registrado o no." />
+                    tip="Personas que abrieron la página." />
                 <Kpi i={1} titulo="Registrados" valor={numero(e.completo_gate || 0)} sub={`${c.visita_a_registro || 0}% de las visitas`}
-                    tip="De esas visitas, cuántas completaron el formulario para poder ver la clase." />
+                    tip="Completaron el formulario." />
                 <Kpi i={2} titulo="Dieron play" valor={numero(e.dio_play || 0)} sub={`${c.registro_a_play || 0}% de los registrados`}
-                    tip="Si hay muchos registrados y pocos plays, el problema está en la página, no en el anuncio." />
+                    tip="Registrados que le dieron play." />
                 <Kpi i={3} titulo="Permanencia" valor={duracion(p.mediana_segundos)} sub={`Promedio ${duracion(p.promedio_segundos)}`}
-                    tip="La mediana: la mitad se queda menos y la mitad más. El promedio se distorsiona con quien deja la pestaña abierta." />
+                    tip="Mediana de tiempo visto." />
             </div>
 
             <section className="panel wt-panel">
@@ -150,7 +150,7 @@ const WorkshopLandingView = () => {
             <div className="pareja" style={{ '--min': '300px', '--g': 'var(--s4)' }}>
                 <section className="panel wt-panel">
                     <PanelCab titulo="Agendas por fuente"
-                        tip="Agendas creadas en el período que vinieron de la clase en vivo y de la grabación. Antes caían juntas (la fuente se detectaba buscando «workshop» en el texto)." />
+                        tip="Agendas de la clase en vivo y de la grabación." />
                     <div className="pareja" style={{ '--min': '120px', '--g': 'var(--s3)' }}>
                         {[
                             ['Clase en vivo', agendas?.workshop_vivo, 'var(--info)'],

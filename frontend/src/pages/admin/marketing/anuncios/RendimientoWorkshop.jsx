@@ -60,16 +60,16 @@ const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, cuentas, version =
     const kpis = [
         { titulo: 'Importe gastado', valor: formatear(t.gasto, 'money', moneda),
           sub: `CPM ${formatear(t.cpm, 'money', moneda)} · ${formatear(t.impresiones, 'num')} impresiones`,
-          tip: 'Lo que gastó Meta en los anuncios de Workshop del período: la inversión de los talleres.' },
+          tip: 'Gasto de los anuncios de Workshop.' },
         { titulo: 'Clics', valor: formatear(t.clics, 'num'),
           sub: `CTR ${pct(t.ctr)} · ${formatear(t.cpc, 'money', moneda)} por clic en el enlace`,
-          tip: 'Todos los clics de Meta. El CPC es por clic en el enlace, como se cargaba en cada taller.' },
+          tip: 'Todos los clics. El CPC es por clic en el enlace.' },
         { titulo: 'Visitas a la landing', valor: formatear(t.visitas, 'num'),
           sub: 'de los anuncios de Workshop (utm_campaign)',
-          tip: 'Cargas de las landings de la clase que llegaron con el id de una campaña de Workshop.' },
+          tip: 'Visitas a la landing desde estas campañas.' },
         { titulo: 'Clics al grupo', valor: formatear(t.clics_whatsapp, 'num'),
           sub: `${formatear(t.costo_whatsapp, 'money', moneda)} por clic al grupo`,
-          tip: 'Clics al botón del grupo de WhatsApp de la clase desde esas visitas (se miden desde el 03/10/2026).' },
+          tip: 'Clics al grupo de WhatsApp desde esas visitas.' },
     ];
     const alternar = (id) => setAbiertas((a) => ({ ...a, [id]: !a[id] }));
     const cuenta = cuentas?.[0];

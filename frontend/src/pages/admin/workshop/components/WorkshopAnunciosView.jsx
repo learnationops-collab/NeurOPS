@@ -22,39 +22,29 @@ const dineroPorDefecto = (v) => `$${Number(v).toFixed(2)}`;
 
 const NOMBRE = {
     titulo: 'Campaña › conjunto › anuncio',
-    ayuda: 'Cómo está armado en Meta: cada campaña agrupa conjuntos (a quién se le muestra) y cada conjunto sus '
-        + 'anuncios (lo que la gente ve). Tocá una campaña para abrirla. Solo entran los anuncios clasificados como '
-        + 'Workshop en Marketing › Meta Ads.',
+    ayuda: 'Campaña › conjunto › anuncio. Solo los clasificados como Workshop.',
 };
 
 // `landings`: se mide por campaña (el utm_campaign trae el id de la campaña), no por conjunto ni anuncio.
 export const COLUMNAS = [
     { clave: 'gasto', titulo: 'Gasto', dinero: true,
-      ayuda: 'Lo que cobró Meta en los días de este taller: del día siguiente al taller anterior hasta el día de '
-        + 'este. La suma de todas las campañas es la inversión del taller.' },
+      ayuda: 'Gasto en los días de este taller. La suma es su inversión.' },
     { clave: 'impresiones', titulo: 'Impresiones',
-      ayuda: 'Cuántas veces se mostró. Una misma persona puede verlo varias veces: no son personas distintas.' },
+      ayuda: 'Veces que se mostró (no personas).' },
     { clave: 'clics', titulo: 'Clics (todos)',
-      ayuda: 'Todos los clics en el anuncio, también los que no llevan a la landing (abrir el perfil, ver más '
-        + 'texto, reaccionar…). Es lo que Meta llama «Clics (todos)».' },
+      ayuda: 'Todos los clics, no solo al enlace.' },
     { clave: 'ctr', titulo: 'CTR', pct: true,
-      ayuda: 'Clics sobre impresiones: de cada 100 veces que se mostró, cuántas alguien hizo clic. Sirve para ver '
-        + 'qué anuncio engancha más.' },
+      ayuda: 'Clics ÷ impresiones.' },
     { clave: 'cpc', titulo: 'CPC (enlace)', dinero: true,
-      ayuda: 'Costo por clic en el enlace: el gasto dividido los clics que llevaron a la landing (no todos los '
-        + 'clics). Cuánto costó cada persona que fue a ver la página.' },
+      ayuda: 'Gasto ÷ clics al enlace.' },
     { clave: 'cpm', titulo: 'CPM', dinero: true,
-      ayuda: 'Costo por mil impresiones: lo que cobró Meta por mostrar el anuncio 1.000 veces. Si sube, el público '
-        + 'se está encareciendo o saturando.' },
+      ayuda: 'Costo por 1.000 impresiones.' },
     { clave: 'visitas', titulo: 'Visitas a la landing', landings: true,
-      ayuda: 'Visitas a las landings del taller que llegaron con el id de esta campaña en el link (utm_campaign), '
-        + 'en los mismos días. Se mide por campaña, no por anuncio: por eso los conjuntos y los anuncios quedan '
-        + 'vacíos. La grabación no cuenta.' },
+      ayuda: 'Visitas a la landing desde esta campaña (solo por campaña).' },
     { clave: 'clics_whatsapp', titulo: 'Clics al grupo', landings: true,
-      ayuda: 'Clics al botón del grupo de WhatsApp en esas landings, de visitas que vinieron de esta campaña.' },
+      ayuda: 'Clics al grupo de WhatsApp desde esta campaña.' },
     { clave: 'costo_whatsapp', titulo: 'Costo por clic al grupo', dinero: true, landings: true,
-      ayuda: 'El gasto de la campaña dividido los clics al grupo: cuánto costó cada persona que fue a entrar al '
-        + 'grupo de WhatsApp.' },
+      ayuda: 'Gasto ÷ clics al grupo.' },
 ];
 
 const valor = (col, v, formatCurrency) => {
@@ -120,7 +110,7 @@ const WorkshopAnunciosView = ({ evento, formatCurrency = dineroPorDefecto }) => 
                 <>
                     <section className="panel wt-panel">
                         <PanelCab titulo="Lo que trajeron"
-                            tip="Los totales de los anuncios de Workshop en los días de este taller: del día siguiente al taller anterior hasta el día de este.">
+                            tip="Desde el día después del taller anterior hasta este.">
                             <span className="t-cap mut num">Meta Ads · del {diaMes(datos.desde)} al {diaMes(datos.hasta)}</span>
                         </PanelCab>
                         <div className="wt-resumen-anuncios">
