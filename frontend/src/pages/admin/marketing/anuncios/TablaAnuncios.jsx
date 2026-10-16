@@ -186,7 +186,10 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
                         <b>El gasto todavía no llega de Meta Ads.</b> Sin él, los costos quedan en «—».
                         {' '}Mirá cómo conectarlo para que se actualice solo cada día.
                     </p>
-                    <button type="button" className="btn btn--linea btn--sm" onClick={irAMeta}>Conectar Meta Ads</button>
+                    <button type="button" className="btn btn--linea btn--sm" onClick={irAMeta}
+                        title="Los pasos para conectar Meta, en la pestaña Meta Ads">
+                        Ver cómo conectar
+                    </button>
                 </div>
             )}
 

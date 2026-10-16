@@ -1,5 +1,8 @@
 import { useMemo } from 'react';
+import { Tags } from 'lucide-react';
 import { Tip } from '../../../comercial/components/Shared';
+import EnlaceMeta from './EnlaceMeta';
+import { enlaceAdministrador } from './enlacesMeta';
 import { Columnas } from './SerieDiaria';
 import { EMBUDOS, dinero, formatear, serieDeEmbudos } from './metricas';
 
@@ -7,11 +10,12 @@ import { EMBUDOS, dinero, formatear, serieDeEmbudos } from './metricas';
  * Rendimiento › Todo: cuánto se gastó en Meta en cada embudo del período (Kerwin, 15/10/2026: «así
  * puedo ver cómo se va gastando en workshop, cómo se va gastando en setting»). Una tarjeta por embudo
  * (Setting y Workshop abren su vista) y el gasto de cada día apilado por embudo. El embudo de cada
- * anuncio lo pone la sincronización y se corrige en Meta Ads (`meta_ads_service.detectar_embudo`).
+ * anuncio lo pone la sincronización y se corrige en la pestaña Meta Ads («Clasificar anuncios»,
+ * `meta_ads_service.detectar_embudo`); «Abrir Meta» va al Administrador de anuncios de verdad.
  */
 const SIN = { key: 'sin', label: 'Sin clasificar', color: 'var(--mk-resto)', ayuda: 'Anuncios que no dicen adónde llevan: se clasifican a mano en Meta Ads.' };
 
-const EmbudosResumen = ({ embudos, desde, hasta, moneda, onElegir, irAMeta }) => {
+const EmbudosResumen = ({ embudos, desde, hasta, moneda, cuentas, onElegir, irAMeta }) => {
     const porClave = useMemo(() => Object.fromEntries((embudos || []).map((e) => [e.embudo || 'sin', e])), [embudos]);
     const total = (embudos || []).reduce((s, e) => s + e.gasto, 0);
     const tarjetas = [...EMBUDOS, SIN].filter((e) => e.key === 'setting' || e.key === 'workshop' || porClave[e.key]?.gasto);
@@ -25,9 +29,16 @@ const EmbudosResumen = ({ embudos, desde, hasta, moneda, onElegir, irAMeta }) =>
                     <p className="t-eyebrow">Gasto en Meta por embudo</p>
                     <h2 className="t-h3" id="mk-embudos-titulo">{formatear(total, 'money', moneda)} en el período</h2>
                 </div>
-                {porClave.sin?.gasto > 0 && (
-                    <button type="button" className="btn btn--linea btn--sm" onClick={irAMeta}>Clasificar anuncios</button>
-                )}
+                <div className="panel-cab-der">
+                    {porClave.sin?.gasto > 0 && (
+                        <button type="button" className="btn btn--linea btn--sm" onClick={irAMeta}
+                            title="Elegir el embudo de los anuncios sin clasificar, en la pestaña Meta Ads">
+                            <Tags aria-hidden="true" />
+                            Clasificar anuncios
+                        </button>
+                    )}
+                    <EnlaceMeta href={enlaceAdministrador(cuentas?.[0])}>Abrir Meta</EnlaceMeta>
+                </div>
             </div>
             <div className="pareja mk-embudos-tarjetas" style={{ '--min': '170px', '--g': 'var(--s3)' }}>
                 {tarjetas.map((e) => {

@@ -211,3 +211,14 @@
 /* Adónde lleva cada anuncio de Meta, debajo de su embudo (16/10/2026). */
 .dc-shell .mk-clave:has(.mk-destino){display:flex;flex-direction:column;gap:4px;align-items:flex-start}
 .dc-shell .mk-destino{display:block;max-width:220px;font-size:11px}
+
+/* --- Los enlaces al Administrador de anuncios de Meta (16/10/2026): los que salen de la app llevan el
+   ícono ↗; los botones que llevan a la pestaña Meta Ads de acá, no. --- */
+.dc-shell a.mk-enlace-meta{text-decoration:none}
+.dc-shell .mk-enlace-meta.btn svg{width:13px;height:13px;opacity:.75}
+.dc-shell .mk-ibtn-meta{width:26px;height:26px;opacity:.5;transition:opacity .16s ease,color .16s ease,border-color .16s ease}
+.dc-shell .mk-ibtn-meta svg{width:12px;height:12px}
+.dc-shell tr:hover .mk-ibtn-meta,
+.dc-shell .mk-ibtn-meta:focus-visible{opacity:1}
+@media (hover:none){.dc-shell .mk-ibtn-meta{opacity:1}}
+.dc-shell .mk-ws-nombre{display:flex;align-items:center;gap:8px;min-width:0}

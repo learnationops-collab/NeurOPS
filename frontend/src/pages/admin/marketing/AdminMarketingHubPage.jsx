@@ -87,6 +87,7 @@ const AdminMarketingHubPage = () => {
     }, [rango.desde, rango.hasta, version]);
 
     const recargar = useCallback(() => setVersion((v) => v + 1), []);
+    const cuentas = datos?.meta?.cuentas || [];
 
     const archivar = async (fila, archivado) => {
         try {
@@ -174,11 +175,12 @@ const AdminMarketingHubPage = () => {
                                             {embudo === 'todo' && (
                                                 <EmbudosResumen embudos={datos.embudos} desde={rango.desde} hasta={rango.hasta}
                                                     moneda={datos.moneda} onElegir={(key) => cambiar({ embudo: key })}
-                                                    irAMeta={() => cambiar({ tab: 'meta' })} />
+                                                    cuentas={cuentas} irAMeta={() => cambiar({ tab: 'meta' })} />
                                             )}
                                             {embudo === 'workshop' ? (
                                                 <RendimientoWorkshop desde={rango.desde} hasta={rango.hasta} moneda={datos.moneda}
-                                                    embudos={datos.embudos} irAMeta={() => cambiar({ tab: 'meta' })} />
+                                                    embudos={datos.embudos} cuentas={cuentas}
+                                                    irAMeta={() => cambiar({ tab: 'meta' })} />
                                             ) : (
                                                 <TablaAnuncios datos={datos} onArchivar={archivar} onAgrupar={agrupar}
                                                     irAMeta={() => cambiar({ tab: 'meta' })} />
