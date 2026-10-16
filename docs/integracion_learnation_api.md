@@ -373,3 +373,9 @@ Las Momentum son las llamadas del closer con sus alumnos: la de seña (después 
 - **Fallos:** quedan en el log (`[MOMENTUM]`). El reporte nunca se toca.
 - **Pendiente:** el mazo viejo (`POST /api/closer/deck/<id>`) no avisa; solo la ficha.
 
+## 9. De qué closer depende cada alumno (2026-10-16)
+
+> **Estado**: implementado. Del lado de la Academia: ADR-137 punto 8, `docs/MODELO/API.md` §2.4 y §2.10.
+
+- **Con la inscripción:** cada `assign_product` lleva `closer_email` (`AcademyAccessService.closer_de`): quien inscribe al alumno, si es un closer activo; si lo hace otro del equipo, el vendedor de la venta más reciente del cliente (resuelto como en `/agenda/closers`), si es un closer activo. Sin ninguno, no se manda y la Academia le deja el que tenía. El alumno pasa a depender solo de ese closer. Vale para dar el acceso (venta, ficha, mazo) y renovarlo; quitarlo no lo cambia.
+- **Baja de un closer:** al desactivar en `PUT /api/admin/users/<id>` a alguien con rol closer, `AcademyAccessService.avisar_baja` manda en un hilo aparte `POST /closers/deactivated` con su email y los closers activos (`[{email, nombre}]`). La Academia reparte sus alumnos activos en partes iguales entre ellos. Fallos al log (`[ACADEMY CLOSERS]`).

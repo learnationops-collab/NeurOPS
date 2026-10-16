@@ -577,7 +577,7 @@ def _cuota_a_cobrar(appt, bloque):
     return cuota
 
 
-def _dar_acceso_a_la_academia(client_id, bloque):
+def _dar_acceso_a_la_academia(client_id, bloque, usuario):
     from app.models import Client
     from app.services.academy_access_service import AcademyAccessService
 
@@ -589,7 +589,7 @@ def _dar_acceso_a_la_academia(client_id, bloque):
         raise ErrorDeAccion('falta el programa')
     resultado = AcademyAccessService.grant_access(cliente, programa,
                                                   bloque.get('tipo_venta') or 'completo',
-                                                  None, bloque.get('email') or None) or {}
+                                                  None, bloque.get('email') or None, usuario=usuario) or {}
     return {'creada': bool(resultado.get('was_created'))}
 
 
@@ -674,7 +674,7 @@ def _venta_del_arbol(appt, datos, usuario):
     if isinstance(datos.get('acceso_academia'), dict):
         academia = _despues_de_la_venta(
             avisos, 'La venta se guardó, pero no se pudo dar el acceso a la Academia',
-            lambda: _dar_acceso_a_la_academia(client_id, datos['acceso_academia']))
+            lambda: _dar_acceso_a_la_academia(client_id, datos['acceso_academia'], usuario))
 
     quien = venta_.get('nombre_cliente') or (appt.client.full_name if appt.client else 'el cliente')
     referidos = _despues_de_la_venta(avisos, 'La venta se guardó, pero los referidos no',

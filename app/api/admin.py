@@ -475,9 +475,11 @@ def user_operations(id):
             user.two_chat_number = data['two_chat_number']
             user.whatsapp_confirmado_en = None  # número nuevo: el closer lo vuelve a confirmar
         if 'timezone' in data: user.timezone = data['timezone']
+        se_desactiva = False
         if 'is_active' in data:
             if user.id == current_user.id and data['is_active'] is False:
                 return jsonify({"message": "No puedes desactivar tu propia cuenta"}), 400
+            se_desactiva = user.is_active is not False and data['is_active'] is False
             user.is_active = data['is_active']
         if 'can_view_finance' in data:
             user.can_view_finance = bool(data['can_view_finance'])
@@ -486,6 +488,10 @@ def user_operations(id):
             user.set_password(data['password'])
             
         db.session.commit()
+        if se_desactiva and user.tiene_rol('closer'):
+            # La Academia reparte sus alumnos entre los closers que siguen activos.
+            from app.services.academy_access_service import AcademyAccessService
+            AcademyAccessService.avisar_baja(user)
         return jsonify({"message": "User updated"}), 200
 
 @bp.route('/admin/users/bulk-delete-legacy', methods=['DELETE'])

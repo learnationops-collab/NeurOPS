@@ -1,4 +1,9 @@
+import threading
 from datetime import date, datetime, timedelta
+
+from flask import current_app
+from sqlalchemy import func
+
 from app import db
 from app.models import Integration
 from app.services.learnation_service import LearnationService, LearnationAPIError
@@ -59,7 +64,57 @@ class AcademyAccessService:
         return _add_months(base, 4)
 
     @staticmethod
-    def grant_access(client, programa_code, tipo_venta, expires_at_override=None, email_override=None):
+    def closer_de(client, usuario=None):
+        """El email del closer del que pasa a depender el alumno al inscribirlo en un producto: quien lo
+        inscribe, si es un closer activo; si lo hace otro del equipo, el vendedor de la venta más reciente
+        del cliente (si resuelve a un closer activo). None = la Academia le deja el closer que tenía."""
+        if usuario is not None and usuario.is_active and usuario.tiene_rol('closer') and usuario.email:
+            return usuario.email.strip().lower()
+        if client is None or not client.id:
+            return None
+        from app.models.financial import FinancialSale
+        from app.services.closer_followup_service import CloserFollowUpService
+
+        venta = FinancialSale.query.filter(
+            FinancialSale.client_id == client.id, FinancialSale.email_vendedor.isnot(None),
+            FinancialSale.email_vendedor != '').order_by(FinancialSale.date.desc(), FinancialSale.id.desc()).first()
+        closer = CloserFollowUpService._resolve_closer_for_email_vendedor(venta.email_vendedor) if venta else None
+        if closer and closer.is_active and closer.tiene_rol('closer') and closer.email:
+            return closer.email.strip().lower()
+        return None
+
+    @staticmethod
+    def avisar_baja(usuario):
+        """Un closer se desactivó: la Academia reparte sus alumnos activos en partes iguales entre los
+        closers que siguen activos (los manda Work, que es quien sabe quién está activo). Fuera de la
+        request y sin levantar: la desactivación ya está guardada."""
+        from app.models import User
+
+        try:
+            activos = User.query.filter(User.role == 'closer', User.is_active.is_(True), User.id != usuario.id,
+                                        User.email.isnot(None), func.trim(User.email) != '').all()
+            payload = {'email': (usuario.email or '').strip().lower(),
+                       'activos': [{'email': u.email.strip().lower(), 'nombre': u.username} for u in activos]}
+        except Exception as e:  # noqa: BLE001
+            current_app.logger.error(f'[ACADEMY CLOSERS] No se pudo armar el aviso de la baja de #{usuario.id}: {e}')
+            return
+        if not payload['email']:
+            return
+        app = current_app._get_current_object()
+
+        def _correr():
+            with app.app_context():
+                try:
+                    LearnationService.report_closer_deactivated(payload)
+                except LearnationAPIError as e:
+                    app.logger.warning(f"[ACADEMY CLOSERS] Baja de {payload['email']}: {e} ({e.status_code})")
+                except Exception as e:  # noqa: BLE001
+                    app.logger.error(f"[ACADEMY CLOSERS] Baja de {payload['email']}: {e}")
+
+        threading.Thread(target=_correr, daemon=True, name='academy-closer-baja').start()
+
+    @staticmethod
+    def grant_access(client, programa_code, tipo_venta, expires_at_override=None, email_override=None, usuario=None):
         """Da (o renueva) el acceso de `client` en la Academia: upsert del usuario por email +
         asignación del producto vinculado a `programa_code`, con el vencimiento que decide esta
         función (o el que mande el closer a mano). Persiste el resultado en el propio `client`.
@@ -115,7 +170,8 @@ class AcademyAccessService:
         was_created = upsert_result.get('action') == 'created'
 
         try:
-            assign_result = LearnationService.assign_product(learnation_user_id, product_slug, expires_at=expires_at.isoformat())
+            assign_result = LearnationService.assign_product(learnation_user_id, product_slug, expires_at=expires_at.isoformat(),
+                                                             closer_email=AcademyAccessService.closer_de(client, usuario))
         except LearnationAPIError as e:
             raise AcademyAccessError(f'No se pudo asignar el producto en la Academia: {e}', status_code=e.status_code or 502)
 

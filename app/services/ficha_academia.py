@@ -98,9 +98,11 @@ def _alumno(client):
     return alumno_id
 
 
-def _asignar(alumno_id, slug, dia):
+def _asignar(alumno_id, slug, dia, closer_email=None):
+    """`closer_email` solo al dar o renovar (el alumno pasa a depender de ese closer); quitar no lo cambia."""
+    extra = {'closer_email': closer_email} if closer_email else {}
     try:
-        LearnationService.assign_product(alumno_id, slug, expires_at=dia.isoformat())
+        LearnationService.assign_product(alumno_id, slug, expires_at=dia.isoformat(), **extra)
     except LearnationAPIError as e:
         raise ErrorDeAccion(f'La Academia no aceptó el cambio: {e}')
 
@@ -122,7 +124,7 @@ def acceso(appt, datos, usuario):
 
     creada = False
     if alumno_id:
-        _asignar(alumno_id, slug, dia)
+        _asignar(alumno_id, slug, dia, AcademyAccessService.closer_de(client, usuario))
         client.academy_product_slug = slug
         client.academy_expires_at = datetime.combine(dia, time.min)
         accion = 'renovado'
@@ -133,7 +135,7 @@ def acceso(appt, datos, usuario):
                                 'va a entrar.', 'email')
         try:
             alta = AcademyAccessService.grant_access(client, codigo, None, expires_at_override=dia,
-                                                     email_override=email) or {}
+                                                     email_override=email, usuario=usuario) or {}
         except AcademyAccessError as e:
             raise ErrorDeAccion(str(e), 'email' if e.status_code == 422 else None)
         accion = 'dado'
