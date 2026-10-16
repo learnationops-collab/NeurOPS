@@ -54,11 +54,11 @@ const pasoActual = () => screen.getByRole('navigation', { name: 'Pasos del repor
 
 const cargarDiaDelDiseno = () => {
     escribir('Anuncios, nuevos mensajes', 10);
-    escribir('Anuncios, leads cualificados', 9);
+    escribir('Anuncios, entrantes cualificados', 9);
     escribir('Anuncios, no leads', 1);
     escribir('Anuncios, in-abribles', 0);
     escribir('Inbound, nuevos mensajes', 6);
-    escribir('Inbound, leads cualificados', 5);
+    escribir('Inbound, entrantes cualificados', 5);
     escribir('Inbound, in-abribles', 1);
     escribir('Bienvenidas, hechas', 12);
     escribir('Bienvenidas, respondidas', 5);
@@ -109,7 +109,7 @@ describe('ReporteDiario · los pasos', () => {
     it('lo que sobra de los mensajes quedó sin respuesta', async () => {
         await montar();
         cargarDiaDelDiseno();
-        escribir('Anuncios, leads cualificados', 6);
+        escribir('Anuncios, entrantes cualificados', 6);
 
         const paso = screen.getByRole('region', { name: 'Entrantes' });
         expect(paso.querySelector('.rd-rbig > b').textContent).toBe('60%');
@@ -128,7 +128,7 @@ describe('ReporteDiario · los pasos', () => {
         expect(entr).toHaveValue('10');
 
         fireEvent.keyDown(entr, { key: 'Enter' });
-        expect(celda('Anuncios, leads cualificados')).toHaveFocus();
+        expect(celda('Anuncios, entrantes cualificados')).toHaveFocus();
 
         celda('Bienvenidas, respondidas').focus();
         fireEvent.keyDown(celda('Bienvenidas, respondidas'), { key: 'Enter' });
