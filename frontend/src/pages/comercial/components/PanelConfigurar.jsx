@@ -1,6 +1,7 @@
 import React from 'react';
 import { RotateCcw, X } from 'lucide-react';
 import { esTablaDeAgendas } from './tablasDef';
+import { useEnPantalla } from '../../../components/ui/useEnPantalla';
 
 /**
  * Panel de Configurar: un solo botón abre TODAS las facetas, cada una en su columna.
@@ -14,6 +15,7 @@ import { esTablaDeAgendas } from './tablasDef';
  */
 const PanelConfigurar = ({ def, filas, facetas, setFacetas, modo, setModo, tabla, basis, setBasis,
     onLimpiar, onCerrar }) => {
+    const enPantalla = useEnPantalla();
     const opcionesDe = (faceta) => {
         // Las opciones se cuentan sobre TODAS las filas del período, no sobre lo ya filtrado: si
         // se contaran sobre lo filtrado, tildar un valor haría desaparecer a sus vecinos.
@@ -49,7 +51,7 @@ const PanelConfigurar = ({ def, filas, facetas, setFacetas, modo, setModo, tabla
     const visibles = def.facetas.filter(fa => !fa.oculta);
 
     return (
-        <div className="config-panel" role="dialog" aria-label="Filtro completo">
+        <div ref={enPantalla} className="config-panel" role="dialog" aria-label="Filtro completo">
             <div className="config-cab">
                 <p className="t-h3" style={{ fontSize: 16 }}>Filtro completo</p>
                 {seleccionados > 0 && <span className="cuenta-burbuja">{seleccionados}</span>}

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, Download, FileText, X } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { fmt } from './Shared';
+import { useEnPantalla } from '../../../components/ui/useEnPantalla';
 import { alternarColumna, columnasElegidas, columnasExportables, eleccionInicial, marcarTodas,
     moverColumna } from './exportarColumnas';
 import { FORMATOS, armarCsv, celdasDe, descargarCsv, formatoDe, nombreDeArchivo, nombreValido } from './exportarCsv';
@@ -62,6 +63,7 @@ const Opcion = ({ on, onClick, children, cuenta }) => (
 
 const PanelExportar = ({ def, tabla, colsVistas, filasVista, filasTodas, fechas, onCerrar }) => {
     const quieto = useReducedMotion();
+    const enPantalla = useEnPantalla();
     const exportables = useMemo(() => columnasExportables(def), [def]);
     const [eleccion, setEleccion] = useState(
         () => eleccionInicial(exportables, colsVistas, leer(CLAVE_COLUMNAS(tabla))));
@@ -100,7 +102,7 @@ const PanelExportar = ({ def, tabla, colsVistas, filasVista, filasTodas, fechas,
     const posicion = new Map(elegidas.map((c, i) => [c.key, i + 1]));
 
     return (
-        <motion.div className="config-panel config-panel--exportar" role="dialog" aria-label="Exportar"
+        <motion.div ref={enPantalla} className="config-panel config-panel--exportar" role="dialog" aria-label="Exportar"
             initial={quieto ? false : { opacity: 0, y: -8, scale: 0.985 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={quieto ? { duration: 0 } : { duration: 0.24, ease: [0.22, 1, 0.36, 1] }}>

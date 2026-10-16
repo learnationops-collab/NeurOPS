@@ -6,6 +6,7 @@ import VistaTarjetas from '../../../components/listas/VistaTarjetas';
 import { usePaginaProgresiva } from '../../../components/listas/usePaginaProgresiva';
 import { Esqueleto, Hueso, Renglon, escalonDe } from '../../../components/huesos/Huesos';
 import { Tip, cuandoDe, fmt } from './Shared';
+import { useEnPantalla } from '../../../components/ui/useEnPantalla';
 import { DIAS_DATO_VIEJO, diasDesde, formatoAcademia, haceCuanto } from './academia';
 import { SIN_PALABRA_CLAVE } from './tablasSetter';
 
@@ -272,6 +273,7 @@ const CasillaFila = ({ fila, marcada, onAlternar }) => (
 const MenuFila = ({ fila, acciones, onAccion }) => {
     const [abierto, setAbierto] = useState(false);
     const caja = useRef(null);
+    const enPantalla = useEnPantalla();
     useEffect(() => {
         if (!abierto) return undefined;
         const fuera = (e) => { if (!caja.current?.contains(e.target)) setAbierto(false); };
@@ -292,7 +294,7 @@ const MenuFila = ({ fila, acciones, onAccion }) => {
                         <MoreHorizontal size={16} />
                     </button>
                     {abierto && (
-                        <div className="menu op-menu" role="menu" aria-label={`Acciones de ${fila.cliente}`}>
+                        <div ref={enPantalla} className="menu op-menu" role="menu" aria-label={`Acciones de ${fila.cliente}`}>
                             {acciones.map(({ id, label, Icono }) => (
                                 <button key={id} type="button" className="menu-item" role="menuitem"
                                     onClick={() => { setAbierto(false); onAccion(acciones.find((a) => a.id === id), fila); }}>

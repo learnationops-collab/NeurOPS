@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowDownUp, ChevronDown } from 'lucide-react';
+import { useEnPantalla } from '../../../components/ui/useEnPantalla';
 
 /**
  * "Ordenar" de la barra de Revisar: el mismo orden que los encabezados de la tabla, pero también
@@ -10,6 +11,7 @@ import { ArrowDownUp, ChevronDown } from 'lucide-react';
  * cierra al clickear afuera de la barra): acá solo se dibuja y se avisa qué se eligió.
  */
 const MenuOrdenar = ({ ordenables, orden, abierto, onAlternar, onElegir }) => {
+    const enPantalla = useEnPantalla();
     if (!ordenables.length) return null;
     const activa = ordenables.find(c => c.key === orden?.key) || null;
 
@@ -22,7 +24,7 @@ const MenuOrdenar = ({ ordenables, orden, abierto, onAlternar, onElegir }) => {
                 <ChevronDown size={14} />
             </button>
             {abierto && (
-                <div className="menu" role="menu" aria-label="Ordenar por">
+                <div ref={enPantalla} className="menu" role="menu" aria-label="Ordenar por">
                     <button type="button" className="menu-item" role="menuitemradio" aria-checked={!activa}
                         onClick={() => onElegir(null)}>
                         <span className="trunc">Orden de la tabla</span>

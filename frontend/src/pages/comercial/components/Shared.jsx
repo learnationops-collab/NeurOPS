@@ -1,6 +1,7 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 import Tip from './Tip';
+import { useEnPantalla } from '../../../components/ui/useEnPantalla';
 import { Esqueleto, Hueso } from '../../../components/huesos/Huesos';
 import { parseUtcIso } from '../../../utils/datetime';
 
@@ -203,21 +204,11 @@ export const PillMenu = ({ icono, texto, detalle, opciones, valor, onChange, anc
     }, [abierto]);
 
     /**
-     * El menú cuelga del borde derecho de su píldora. En el teléfono la barra se parte en renglones
-     * y una píldora puede quedar contra el borde izquierdo: el menú, más ancho que ella, se salía de
-     * la pantalla por la izquierda (el del VS, 250px, desde una píldora de 186). Se corre lo justo
-     * para quedar entero, con el mismo margen de 16px que la página.
+     * El menú cuelga del borde derecho de su píldora. Una píldora contra el borde izquierdo (el
+     * teléfono, o la primera de la barra) con un menú más ancho que ella lo sacaba de la pantalla:
+     * `useEnPantalla` lo corre lo justo, también cuando crece al abrirse su pie (las fechas).
      */
-    const conPie = Boolean(pie);
-    useLayoutEffect(() => {
-        const menu = menuRef.current;
-        if (!abierto || !menu) return;
-        menu.style.transform = '';
-        const caja = menu.getBoundingClientRect();
-        const borde = document.documentElement.clientWidth - 16;
-        const corrimiento = caja.left < 16 ? 16 - caja.left : caja.right > borde ? borde - caja.right : 0;
-        if (corrimiento) menu.style.transform = `translateX(${Math.round(corrimiento)}px)`;
-    }, [abierto, conPie, ancho]);
+    const enPantalla = useEnPantalla(menuRef);
 
     return (
         <div style={{ position: 'relative' }} ref={ref}>
@@ -229,7 +220,7 @@ export const PillMenu = ({ icono, texto, detalle, opciones, valor, onChange, anc
                 <ChevronDown size={14} />
             </button>
             {abierto && (
-                <div ref={menuRef} className={`menu menu--der${pie ? ' menu--pie' : ''}`} role="menu"
+                <div ref={enPantalla} className={`menu menu--der${pie ? ' menu--pie' : ''}`} role="menu"
                     aria-label={ariaLabel_(rotulo || texto)}
                     style={ancho ? { minWidth: ancho } : undefined}>
                     {opciones.map(o => (

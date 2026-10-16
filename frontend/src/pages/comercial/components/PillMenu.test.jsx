@@ -23,12 +23,12 @@ const abrir = () => {
 describe('PillMenu · el menú no se sale de la pantalla', () => {
     it('si se saldría por la izquierda, se corre hasta el margen', () => {
         vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue(caja(-48, 250));
-        expect(abrir().style.transform).toBe('translateX(64px)');
+        expect(abrir().style.translate).toBe('64px 0');
     });
 
     it('si entra, queda donde estaba', () => {
         vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue(caja(100, 250));
         Object.defineProperty(document.documentElement, 'clientWidth', { value: 1100, configurable: true });
-        expect(abrir().style.transform).toBe('');
+        expect(abrir().style.translate).toBe('');
     });
 });

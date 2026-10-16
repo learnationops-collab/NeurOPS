@@ -9,6 +9,7 @@ import { DIMENSION_PROPIA, TABLAS_POR_ROL, defDe, valoresVigentes, ventaSuma } f
 import { defDeTabla } from './tablasSetter';
 import PanelConfigurar from './PanelConfigurar';
 import PanelExportar from './PanelExportar';
+import { useEnPantalla } from '../../../components/ui/useEnPantalla';
 import RevisarLista, { EsqueletoRevisar, claveDe } from './RevisarLista';
 import { columnasOrdenables, ordenarFilas, siguienteOrden } from './ordenFilas';
 import MenuOrdenar from './MenuOrdenar';
@@ -154,6 +155,9 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     const [modo, setModo] = useState('todas');
     const [chip, setChip] = useState(null);
     const [menu, setMenu] = useState(null);
+    // Los menús de la barra quedan enteros en la pantalla (ver `useEnPantalla`).
+    const rapidoEnPantalla = useEnPantalla();
+    const agruparEnPantalla = useEnPantalla();
     const [agrupacion, setAgrupacion] = useState(null);
     // `{ key, dir }` de la columna por la que se ordena, o null para el orden de la tabla.
     const [orden, setOrden] = useState(null);
@@ -595,7 +599,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                         <ChevronDown size={14} />
                     </button>
                     {menu === 'rapido' && (
-                        <div className="menu" role="menu" aria-label="Filtro rápido">
+                        <div ref={rapidoEnPantalla} className="menu" role="menu" aria-label="Filtro rápido">
                             {chips.map(c => (
                                 <button key={c.key} type="button" className="menu-item"
                                     role="menuitemradio" aria-checked={chipActivo === c.key}
@@ -673,7 +677,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                             <ChevronDown size={14} />
                         </button>
                         {menu === 'agrupar' && (
-                            <div className="menu" role="menu" aria-label="Agrupar por">
+                            <div ref={agruparEnPantalla} className="menu" role="menu" aria-label="Agrupar por">
                                 <button type="button" className="menu-item" role="menuitemradio"
                                     aria-checked={!agrupacion}
                                     onClick={() => { setAgrupacion(null); setMenu(null); }}>

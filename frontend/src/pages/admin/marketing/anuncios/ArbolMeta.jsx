@@ -6,6 +6,7 @@ import PanelConfigurar from '../../../comercial/components/PanelConfigurar';
 import { Tip } from '../../../comercial/components/Shared';
 import { pasaFacetas } from '../../../../components/listas/ListaConfigurable';
 import { useColumnasVisibles } from '../../../../components/listas/useColumnasVisibles';
+import { useEnPantalla } from '../../../../components/ui/useEnPantalla';
 import EnlaceMeta from './EnlaceMeta';
 import { armarDesglose, clavesAbribles, ordenarDesglose, totalDelDesglose } from './desgloseMeta';
 import { enlaceAdministrador } from './enlacesMeta';
@@ -99,6 +100,7 @@ const normal = (t) => String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').t
 
 const MenuColumnas = ({ columnas, visibles, alternar, restablecer, onCerrar }) => {
     const caja = useRef(null);
+    const enPantalla = useEnPantalla(caja);
     useEffect(() => {
         const fuera = (e) => { if (!caja.current?.contains(e.target)) onCerrar(); };
         const escape = (e) => { if (e.key === 'Escape') onCerrar(); };
@@ -111,7 +113,7 @@ const MenuColumnas = ({ columnas, visibles, alternar, restablecer, onCerrar }) =
     }, [onCerrar]);
     const vistas = new Set(visibles.map((c) => c.key));
     return (
-        <div className="menu lc-menu-columnas" role="menu" aria-label="Columnas" ref={caja}>
+        <div className="menu lc-menu-columnas" role="menu" aria-label="Columnas" ref={enPantalla}>
             {columnas.map((c) => (
                 <button key={c.key} type="button" className="menu-item" role="menuitemcheckbox"
                     aria-checked={vistas.has(c.key)} disabled={c.fija} onClick={() => alternar(c.key)}>

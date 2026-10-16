@@ -3,6 +3,7 @@ import { ArrowDown, Check, ChevronDown, Columns, RotateCcw, Search, SlidersHoriz
 import PanelConfigurar from '../../pages/comercial/components/PanelConfigurar';
 import Tip from '../../pages/comercial/components/Tip';
 import { useColumnasVisibles } from './useColumnasVisibles';
+import { useEnPantalla } from '../ui/useEnPantalla';
 import { usePaginaProgresiva } from './usePaginaProgresiva';
 import './listas.css';
 
@@ -44,6 +45,7 @@ export const pasaFacetas = (fila, facetas, elegidas, modo) => {
 
 const MenuColumnas = ({ columnas, visibles, alternar, restablecer, onCerrar }) => {
     const caja = useRef(null);
+    const enPantalla = useEnPantalla(caja);
     useEffect(() => {
         const fuera = (e) => { if (!caja.current?.contains(e.target)) onCerrar(); };
         const escape = (e) => { if (e.key === 'Escape') onCerrar(); };
@@ -56,7 +58,7 @@ const MenuColumnas = ({ columnas, visibles, alternar, restablecer, onCerrar }) =
     }, [onCerrar]);
     const vistas = new Set(visibles.map((c) => c.key));
     return (
-        <div className="menu lc-menu-columnas" role="menu" aria-label="Columnas" ref={caja}>
+        <div className="menu lc-menu-columnas" role="menu" aria-label="Columnas" ref={enPantalla}>
             {columnas.map((c) => (
                 <button key={c.key} type="button" className="menu-item" role="menuitemcheckbox"
                     aria-checked={vistas.has(c.key)} disabled={c.fija}

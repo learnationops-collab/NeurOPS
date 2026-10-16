@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { Calendar, Check, ChevronDown, Compass, Eye, Minus, UserCheck, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -8,6 +8,7 @@ import ExcluirVentas from './ExcluirVentas';
 import DetalleNomina from './DetalleNomina';
 import VentasDePersona from './VentasDePersona';
 import Cifra from '../Cifra';
+import { useEnPantalla } from '../../../../components/ui/useEnPantalla';
 import RangoFechas, { rangoDe, textoRango } from '../RangoFechas';
 import { Cifron, HUMOS, dinero } from './comun';
 import * as apiFz from './finanzasApi';
@@ -201,15 +202,7 @@ export const FiltroPersonas = ({ grupos, elegidas, onCambiar }) => {
     }, [abierto]);
 
     // Como el de `PillMenu`: si el menú no entra en la pantalla, se corre lo justo.
-    useLayoutEffect(() => {
-        const menu = menuRef.current;
-        if (!abierto || !menu) return;
-        menu.style.transform = '';
-        const caja = menu.getBoundingClientRect();
-        const borde = document.documentElement.clientWidth - 16;
-        const corrimiento = caja.left < 16 ? 16 - caja.left : caja.right > borde ? borde - caja.right : 0;
-        if (corrimiento) menu.style.transform = `translateX(${Math.round(corrimiento)}px)`;
-    }, [abierto]);
+    const enPantalla = useEnPantalla(menuRef);
 
     const cambiar = (ids) => { guardarPersonas(ids); onCambiar(ids); };
     const alternar = (id) => cambiar(elegidas.includes(id) ? elegidas.filter(x => x !== id)
@@ -229,7 +222,7 @@ export const FiltroPersonas = ({ grupos, elegidas, onCambiar }) => {
                 <ChevronDown size={14} />
             </button>
             {abierto && (
-                <div ref={menuRef} className="menu" role="menu" aria-label="Personas de la nómina">
+                <div ref={enPantalla} className="menu" role="menu" aria-label="Personas de la nómina">
                     <button type="button" className="menu-item" role="menuitemradio"
                         aria-checked={!marcadas.length} onClick={() => cambiar([])}>
                         <span className="trunc">Todas las personas</span>
