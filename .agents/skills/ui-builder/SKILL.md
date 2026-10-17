@@ -119,6 +119,7 @@ Nada de spinners ni tarjetas «Cargando…» que tapan la pantalla. **Cada bloqu
 6. `step` escalona la ola del brillo y la entrada dentro de un esqueleto (0, 1, 2…).
 7. Recargar no vuelve a vaciar la pantalla: se deja el dato viejo a la vista (atenuado si hace falta) hasta que llegue el nuevo. El esqueleto es solo para la primera carga.
 8. Listas largas con las filas reales entrando escalonadas: `useEntryWindow()` + `skeletonDelay(i)`.
+9. Una `ListaConfigurable` cargando: `EsqueletoLista` (`components/listas/`) con sus mismas `columnas`, `claveGuardado`, `facetas` y `agrupables`. Dibuja la barra, la cabecera con los nombres reales y filas con la misma grilla (lee las columnas que la persona eligió).
 
 ```jsx
 <Reveal ready={goals != null} skeleton={<Skeleton label="Cargando las metas…"><SkeletonPanel className="panel" rows={8} rowHeight={44} /></Skeleton>}>
