@@ -106,3 +106,7 @@
   - Conversaciones: buscador y filtro (Todas · Sin responder · Bot pausado) en la cabecera; avatares, marca de «sin responder», variables del contacto como chips y el chat abre en el último mensaje.
   - Componente estándar nuevo `Status` (estado con punto de color), que también usa Thalamus en lugar de `EstadoEv`. Está en el catálogo `/ui` y en la skill.
   - Verificación: 43 tests (Inbox, componentes estándar y Eventos de Thalamus), lint y build de producción.
+
+- **17 de Octubre de 2026** *(Marketing › Entrantes sin «Cargar calificaciones» ni «Herramientas». [frontend/src/pages/admin/marketing/entrantes/EntrantesVista.jsx](../../frontend/src/pages/admin/marketing/entrantes/EntrantesVista.jsx) [MODIFY], [frontend/src/pages/admin/marketing/AdminMarketingHubPage.jsx](../../frontend/src/pages/admin/marketing/AdminMarketingHubPage.jsx) [MODIFY])*:
+  - Se quitaron los dos botones de la cabecera de «Leads entrantes», junto con el modal de carga en lote y el monitor viejo de webhooks que abrían (`CargarCalificaciones`, `WebhookMonitorTab`). La calificación se sigue corrigiendo de a uno desde la ficha; el endpoint de carga en lote del backend queda.
+  - Verificación: 33 tests de vitest de Marketing y build de producción.
