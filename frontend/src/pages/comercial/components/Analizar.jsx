@@ -3,7 +3,8 @@ import { ChevronDown, CreditCard, PieChart, Rows } from 'lucide-react';
 import Embudo from './Embudo';
 // El "i" era una copia local con una prop `der` para forzar el lado a mano. El `Tip` compartido
 // mide y elige el lado que entra, así que la prop desapareció de todas las llamadas.
-import { EsqueletoTablero, Tip, fmt, useMontado } from './Shared';
+import { FalloCarga, Segmented, Tip, fmt, useMontado } from './Shared';
+import EsqueletoAnalizar from './EsqueletoAnalizar';
 // La cifra que sube hasta su valor: vive aparte porque la usa también la tira de Revisar.
 import Cifra from './Cifra';
 import MetricaClicable, { abrir } from '../../../components/dashboard/MetricaClicable';
@@ -16,7 +17,7 @@ import {
 } from './destinos';
 // El tile, la barra gruesa y el panel los comparte el tablero de setters (10/10/2026).
 import { Delta, Panel, PanelCab, Riel, Tabs, Tile, Vacio, tasa, v } from './PiezasAnalizar';
-import DashboardSetters from './DashboardSetters';
+import DashboardSetters, { VISTAS_CANAL } from './DashboardSetters';
 
 /**
  * Analizar → Dashboard.
@@ -889,14 +890,24 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, fuentes, irA, cargarNoCer
  * `canal` / `onCanal`: la pestaña General · Anuncios · Inbound del tablero de setters, que vive en la
  * URL como el resto de los filtros (ver `DashboardComercial`). El de closers no la usa.
  */
-const Analizar = ({ datos, rol, irA, cargarNoCerradas = null, onAbrirFila = null, canal = null, onCanal = null }) => {
-    if (!datos) return <EsqueletoTablero />;
+const Analizar = ({ datos, rol, irA, cargarNoCerradas = null, onAbrirFila = null, canal = null, onCanal = null,
+    fallo = false, onReintentar = null }) => {
     // El resumen que hay en mano puede ser todavía el del rol anterior: el `rol` de arriba cambia
     // en el momento y el fetch llega después. Dibujar el dashboard de closers con un payload de
     // setters no muestra números raros — revienta el árbol entero y deja la pantalla en blanco,
     // el mismo modo de falla que ya pasó con las tablas de Revisar. El payload dice de qué rol
     // es, así que se espera al que corresponde.
-    if (datos.rol !== rol) return <EsqueletoTablero />;
+    if (!datos || datos.rol !== rol) {
+        if (fallo) return <FalloCarga texto="No se pudo cargar el tablero" onReintentar={onReintentar} />;
+        // Las pestañas de canal no dependen del dato: se ven (y se eligen) desde el principio.
+        const pestanas = rol === 'setters' && onCanal ? (
+            <div className="fila ds-vistas">
+                <Segmented opciones={VISTAS_CANAL} valor={canal || 'general'} ariaLabel="Canal"
+                    onChange={(k) => onCanal(k === 'general' ? null : k)} />
+            </div>
+        ) : null;
+        return <EsqueletoAnalizar rol={rol} antes={pestanas} />;
+    }
     const { actual, deltas } = datos;
     return rol === 'setters'
         ? <DashboardSetters bloque={actual} deltas={deltas} deltasCanales={datos.deltas_canales}

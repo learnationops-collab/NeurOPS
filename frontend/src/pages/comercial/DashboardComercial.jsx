@@ -12,7 +12,8 @@ import { useConfiguracion } from '../../sesion/ConfiguracionContext';
 import './comercial.css';
 import '../../components/dashboard/pareja.css';
 import '../../components/learnation-ds/learnation-ds.css';
-import { EsqueletoPagina, Humo, Isotipo, PillMenu, Segmented } from './components/Shared';
+import { EsqueletoPagina, FalloCarga, Humo, Isotipo, PillMenu, Segmented } from './components/Shared';
+import usePedidos from './usePedidos';
 import DockSecciones, { HUMO_DOCK } from './components/DockSecciones';
 import MenuSesion from './components/MenuSesion';
 import Analizar from './components/Analizar';
@@ -303,9 +304,11 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         return siguiente;
     }, [params, setParams]);
 
-    useEffect(() => {
-        getContexto().then(setContexto).catch(() => toast.error('No se pudo abrir el dashboard comercial'));
-    }, []);
+    // Cada bloque espera solo SU pedido y, si falla, ofrece reintentar (ver `usePedidos`).
+    const { pedir, fallas } = usePedidos();
+    const cargarContexto = useCallback(() => pedir('contexto', getContexto(), setContexto,
+        'No se pudo abrir el dashboard comercial'), [pedir]);
+    useEffect(() => { cargarContexto(); }, [cargarContexto]);
 
     // El rol y la persona efectivos: para un closer o un setter los manda el backend y la query
     // string no puede cambiarlos (ver `alcance_de` en app/api/comercial.py).
@@ -377,20 +380,6 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     }, [tabsVisibles, tab]);
 
     /**
-     * Solo la respuesta del ÚLTIMO pedido de cada cosa llega a la pantalla.
-     *
-     * Cambiar de filtro dispara un pedido nuevo sin cancelar el anterior, y no vuelven en orden:
-     * 90 días tarda más que un día. Si la respuesta vieja llegaba después, pisaba los números con
-     * los de un período que ya no estaba elegido, debajo de la píldora que decía el nuevo.
-     */
-    const pedidos = useRef({});
-    const soloElUltimo = useCallback((clave, poner) => {
-        const n = (pedidos.current[clave] || 0) + 1;
-        pedidos.current[clave] = n;
-        return (datos) => { if (pedidos.current[clave] === n) poner(datos); };
-    }, []);
-
-    /**
      * ¿Hay que esperar una fecha antes de pedir esta vista? Revisar no compara (su VS ni se
      * muestra), así que solo espera al período; y la cartera (tabla Clientes) es un saldo a hoy que
      * no se acota al período, así que se pide igual.
@@ -400,29 +389,24 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
 
     const cargarAnalizar = useCallback(() => {
         if (!rol || faltaPeriodo || faltaVs) return;
-        getResumen(filtros).then(soloElUltimo('resumen', setResumen))
-            .catch(() => toast.error('No se pudieron cargar los KPIs'));
+        pedir('resumen', getResumen(filtros), setResumen, 'No se pudieron cargar los KPIs');
         if (tab === 'comparativas' && contexto?.puede_comparar) {
-            getComparativas(filtros).then(soloElUltimo('comparativas', setComparativas))
-                .catch(() => toast.error('No se pudieron cargar las comparativas'));
+            pedir('comparativas', getComparativas(filtros), setComparativas, 'No se pudieron cargar las comparativas');
         }
         // Las series por dia se piden solo al abrir su pestania: son seis y no hacen falta para
-        // ver el dashboard. Se limpian antes de pedirlas para no mostrar las del rol anterior.
+        // ver el dashboard. Las de otro rol no se muestran (ver `Variabilidad`).
         if (tab === 'variabilidad') {
-            setVariabilidad(null);
-            getVariabilidad(filtros).then(soloElUltimo('variabilidad', setVariabilidad))
-                .catch(() => toast.error('No se pudieron cargar las series por dia'));
+            pedir('variabilidad', getVariabilidad(filtros), (d) => setVariabilidad({ ...d, rol }),
+                'No se pudieron cargar las series por dia');
         }
-    }, [filtros, rol, tab, contexto, soloElUltimo, faltaPeriodo, faltaVs]);
+    }, [filtros, rol, tab, contexto, pedir, faltaPeriodo, faltaVs]);
 
     const cargarTabla = useCallback(() => {
         if (!rol || !tablaActual || (faltaPeriodo && tablaActual !== 'clientes')) return;
         setCargandoTabla(true);
-        getTabla(filtros, tablaActual, basis, { operar })
-            .then(soloElUltimo('tabla', setDatosTabla))
-            .catch(() => toast.error('No se pudo cargar la tabla'))
+        pedir('tabla', getTabla(filtros, tablaActual, basis, { operar }), setDatosTabla, 'No se pudo cargar la tabla')
             .finally(() => setCargandoTabla(false));
-    }, [filtros, rol, tablaActual, basis, operar, soloElUltimo, faltaPeriodo]);
+    }, [filtros, rol, tablaActual, basis, operar, pedir, faltaPeriodo]);
 
     useEffect(() => { if (seccion === 'analizar') cargarAnalizar(); }, [seccion, cargarAnalizar]);
 
@@ -590,7 +574,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     if (!contexto) {
         return (
             <div className={embebido ? 'dc-shell dc-shell--embebido' : 'dc-shell'}>
-                <div className="wrap"><EsqueletoPagina /></div>
+                <div className="wrap">
+                    {fallas.contexto ? <FalloCarga texto="No se pudo abrir el dashboard" onReintentar={cargarContexto} />
+                        : <EsqueletoPagina />}
+                </div>
             </div>
         );
     }
@@ -809,25 +796,27 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     )}
                     {!esperaFechas && seccion === 'analizar' && tab === 'dashboard' && (
                         <Analizar datos={resumen} rol={rol} irA={irADetalle}
+                            fallo={fallas.resumen} onReintentar={cargarAnalizar}
                             cargarNoCerradas={cargarNoCerradas} onAbrirFila={abrirFila}
                             canal={canal} onCanal={(c) => set({ canal: c })} />
                     )}
                     {!esperaFechas && seccion === 'analizar' && tab === 'comparativas' && contexto.puede_comparar && (
                         // Un closer ve a sus compañeros pero no puede abrir sus listas (el backend
                         // lo acota a él): sin `irAPersona` las filas no son clickeables.
-                        <Comparativas datos={comparativas}
+                        <Comparativas datos={comparativas} fallo={fallas.comparativas} onReintentar={cargarAnalizar}
                             irAPersona={contexto.puede_elegir_equipo ? irAPersona : null} />
                     )}
                     {!esperaFechas && seccion === 'analizar' && tab === 'variabilidad' && (
-                        <Variabilidad datos={variabilidad} rol={rol} irA={irADetalle} />
+                        <Variabilidad datos={variabilidad} rol={rol} irA={irADetalle}
+                            fallo={fallas.variabilidad} onReintentar={cargarAnalizar} />
                     )}
                     {/* Cambiar de tabla o quitar el filtro a mano también lo saca de la URL: si
                         no, salir de Revisar y volver lo resucitaba, porque la URL es la que manda
                         y el estado interno de Revisar se pierde al desmontarse. */}
                     {!esperaFechas && seccion === 'revisar' && (
                         <Revisar tabla={tablaActual} setTabla={(t) => set({ t, f: null, ft: null })}
-                            datos={datosVigentes}
-                            cargando={cargandoTabla || !datosVigentes} rol={rol} basis={basis} setBasis={setBasis}
+                            datos={datosVigentes} fallo={fallas.tabla && !datosVigentes}
+                            onReintentar={cargarTabla} cargando={cargandoTabla || !datosVigentes} rol={rol} basis={basis} setBasis={setBasis}
                             alcance={alcance} filtroInicial={filtroInicial}
                             puedeElegirEquipo={!!contexto.puede_elegir_equipo}
                             tablas={tablaFija ? [tablaFija] : null}

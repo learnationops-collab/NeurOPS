@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, RotateCcw } from 'lucide-react';
+import { Button, EmptyState } from '../../../components/standard';
 import Tip from './Tip';
 import { useEnPantalla } from '../../../components/ui/useEnPantalla';
 import { Esqueleto, Hueso } from '../../../components/huesos/Huesos';
@@ -302,6 +303,21 @@ export const EsqueletoPagina = ({ rotulo = 'Abriendo el dashboard…' }) => (
         <EsqueletoTablero rotulo={rotulo} />
     </div>
 );
+
+/**
+ * Lo que queda en lugar del esqueleto si la PRIMERA carga de un bloque falló: el aviso y
+ * «Reintentar», nunca un esqueleto eterno. `enPanel={false}` cuando ya va dentro de un panel.
+ */
+export const FalloCarga = ({ texto = 'No se pudo cargar', onReintentar, enPanel = true }) => {
+    const aviso = (
+        <EmptyState title={texto} action={onReintentar && (
+            <Button icon={<RotateCcw size={14} />} onClick={onReintentar}>Reintentar</Button>
+        )}>
+            Revisá la conexión y volvé a intentar.
+        </EmptyState>
+    );
+    return enPanel ? <section className="panel" role="alert">{aviso}</section> : <div role="alert">{aviso}</div>;
+};
 
 /** Barra que anima de 0 al valor al montar (1s, la curva `--crecer` del diseño). */
 export const useMontado = () => {

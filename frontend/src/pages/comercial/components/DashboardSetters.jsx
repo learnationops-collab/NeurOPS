@@ -29,7 +29,7 @@ import './dashboardSetters.css';
  * setter cargó.
  */
 
-const VISTAS = [
+export const VISTAS_CANAL = [
     { key: 'general', label: 'General' },
     { key: 'anuncios', label: 'Anuncios' },
     { key: 'inbound', label: 'Inbound' },
@@ -388,7 +388,7 @@ const DashboardSetters = ({ bloque, deltas = {}, deltasCanales = {}, comision = 
         <>
             {onCanal && (
                 <div className="fila ds-vistas">
-                    <Segmented opciones={VISTAS} valor={enCanal || 'general'} ariaLabel="Canal"
+                    <Segmented opciones={VISTAS_CANAL} valor={enCanal || 'general'} ariaLabel="Canal"
                         onChange={(k) => onCanal(k === 'general' ? null : k)} />
                 </div>
             )}

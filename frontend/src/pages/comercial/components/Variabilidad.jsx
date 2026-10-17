@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { EsqueletoPanel, Humo, PanelCab, Segmented, fmt, useMontado } from './Shared';
+import { FalloCarga, Humo, PanelCab, Segmented, fmt, useMontado } from './Shared';
+import { Skeleton, SkeletonChart } from '../../../components/standard';
 import { abrir } from '../../../components/dashboard/MetricaClicable';
 import { conDia, destinoDeSerie, serieCortable } from './destinos';
 
@@ -40,6 +41,9 @@ const valorDe = (serie, v) => {
 };
 
 const diaCorto = (iso) => Number(iso.slice(8, 10));
+
+// El alto del gráfico del esqueleto: el panel de una serie mide eso más su cabecera (a 1330 px).
+const SERIE_ALTO = 238;
 
 /**
  * El eje rotula uno de cada cuatro días. Con un mes entero, rotular todos deja una tira de
@@ -258,13 +262,26 @@ const PanelSerie = ({ serie, dias, vista, rol, irA }) => {
     );
 };
 
-const Variabilidad = ({ datos, rol, irA }) => {
+/** Los paneles de las series mientras llegan: seis los de closers, cinco los de setters. */
+const EsqueletoSeries = ({ rol }) => (
+    <Skeleton label="Cargando las series del período…">
+        <div className="grid-2 grid-2--series">
+            {Array.from({ length: rol === 'setters' ? 5 : 6 }, (_, i) => (
+                <SkeletonChart key={i} className="panel caja" height={SERIE_ALTO} bars={16} step={i} />
+            ))}
+        </div>
+    </Skeleton>
+);
+
+const Variabilidad = ({ datos, rol, irA, fallo = false, onReintentar = null }) => {
     const [vista, setVista] = useState('barras');
 
-    if (!datos) return <EsqueletoPanel rotulo="Cargando las series del período…" lineas={1} alto={248} />;
+    // Las series de otro rol (las de closers recién cambiado a setters) no se dibujan.
+    const listo = !!datos && (!datos.rol || datos.rol === rol);
+    if (!listo && fallo) return <FalloCarga texto="No se pudieron cargar las series" onReintentar={onReintentar} />;
 
-    const { dias, series } = datos;
-    if (!series?.length || !dias?.length) {
+    const { dias, series } = listo ? datos : {};
+    if (listo && (!series?.length || !dias?.length)) {
         return (
             <section className="panel">
                 <div className="vacio">
@@ -281,18 +298,20 @@ const Variabilidad = ({ datos, rol, irA }) => {
                 <span className="t-rotulo">Vista</span>
                 <Segmented chico opciones={VISTAS} valor={vista} onChange={setVista}
                     ariaLabel="Tipo de vista" />
-                <span className="t-cap mut40" style={{ marginLeft: 'auto' }}>
-                    {fmt.fechaLarga(dias[0])} al {fmt.fechaLarga(dias[dias.length - 1])}
-                </span>
+                {listo && (
+                    <span className="t-cap mut40" style={{ marginLeft: 'auto' }}>
+                        {fmt.fechaLarga(dias[0])} al {fmt.fechaLarga(dias[dias.length - 1])}
+                    </span>
+                )}
             </div>
             {/* `grid-2--series`: con un número impar de series (las cinco del setter) la última
                 ocupa la fila entera en vez de quedar sola debajo de una columna. */}
-            <div className="grid-2 grid-2--series">
+            {!listo ? <EsqueletoSeries rol={rol} /> : <div className="grid-2 grid-2--series">
                 {series.map(serie => (
                     <PanelSerie key={serie.key} serie={serie} dias={dias} vista={vista}
                         rol={rol} irA={irA} />
                 ))}
-            </div>
+            </div>}
         </>
     );
 };

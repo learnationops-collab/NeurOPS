@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Revisar from './Revisar';
 
 /**
@@ -56,8 +56,10 @@ describe('Revisar · los grupos abiertos', () => {
         // de fecha: `cargando` pasa a true, llegan filas nuevas y `cargando` vuelve a false.
         const { rerender } = abrirNerina();
 
+        // Recargar no vacía: las filas de antes siguen a la vista (atenuadas) mientras llegan las nuevas.
         rerender(<Revisar {...props({ cargando: true, basis: 'creacion' })} />);
-        expect(screen.queryByRole('button', { name: /^Nerina/ })).toBeNull();
+        expect(grupo('Nerina').closest('section')).toHaveAttribute('aria-busy', 'true');
+        expect(screen.queryByRole('status')).toBeNull();
         rerender(<Revisar {...props({ datos: { filas: FILAS.slice() }, basis: 'creacion' })} />);
 
         expect(screen.getByRole('button', { name: 'Por closer' })).toBeInTheDocument();
@@ -111,5 +113,20 @@ describe('Revisar · los grupos abiertos', () => {
 
         expect(grupo('Nerina')).toHaveAttribute('aria-expanded', 'false');
         expect(registros()).toHaveLength(0);
+    });
+});
+
+describe('Revisar · la primera carga', () => {
+    it('sin filas todavía, muestra el esqueleto', () => {
+        render(<Revisar {...props({ datos: null, cargando: true })} />);
+        expect(screen.getByRole('status', { name: 'Cargando los registros…' })).toBeInTheDocument();
+    });
+
+    it('si falló, ofrece reintentar en vez de un esqueleto eterno', () => {
+        const onRecargar = vi.fn();
+        render(<Revisar {...props({ datos: null, cargando: false, fallo: true, onRecargar })} />);
+        expect(screen.queryByRole('status')).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+        expect(onRecargar).toHaveBeenCalledTimes(1);
     });
 });

@@ -3,7 +3,7 @@ import { ChevronDown, Download, Filter, Inbox, LayoutGrid, List, Plus, Rows, Rot
     SlidersHorizontal, X } from 'lucide-react';
 // El ícono "i" es el `Tip` compartido: la burbuja va en un portal porque acá cae al final de la
 // barra, pegada al borde derecho, y antes se cortaba (ver `Tip.jsx`).
-import { Tip, fmt } from './Shared';
+import { FalloCarga, Tip, fmt } from './Shared';
 import Cifra from './Cifra';
 import { DIMENSION_PROPIA, TABLAS_POR_ROL, defDe, valoresVigentes, ventaSuma } from './tablasDef';
 import { defDeTabla } from './tablasSetter';
@@ -149,7 +149,7 @@ const TotalesTira = ({ items, alcance, filtrada }) => (
  */
 const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcance, onAbrirFila,
     filtroInicial, onOlvidarFiltro, puedeElegirEquipo = true, onSincronizarAcademia = null,
-    tablas = null, puedeExportar = false, operacion = null, onRecargar = null }) => {
+    tablas = null, puedeExportar = false, operacion = null, onRecargar = null, fallo = false }) => {
     const [query, setQuery] = useState('');
     const [facetas, setFacetas] = useState({});
     const [modo, setModo] = useState('todas');
@@ -573,7 +573,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     const filtrando = chipActivo !== def.chips[0].key || activas > 0 || query.trim() !== '';
 
     return (
-        <section className="panel" ref={panel}>
+        <section className={cargando && datos ? 'panel revisar--recargando' : 'panel'} ref={panel} aria-busy={cargando || undefined}>
             {deLaFila.length > 1 && (
                 <div className="tabs" role="tablist" aria-label="Tabla"
                     style={{ marginBottom: 'var(--s4)' }}>
@@ -795,8 +795,8 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                 </div>
             )}
 
-            {cargando ? <EsqueletoRevisar def={defVista} plantilla={plantilla} modo={modoVista}
-                totales={totales.length} operar={operar} /> : (
+            {!datos ? (fallo ? <FalloCarga texto="No se pudo cargar la tabla" onReintentar={onRecargar} enPanel={false} />
+                : <EsqueletoRevisar def={defVista} plantilla={plantilla} modo={modoVista} totales={totales.length} operar={operar} />) : (
                 <>
                     {conAcademia && <AcademiaBarra filas={filas} onSincronizar={onSincronizarAcademia} />}
                     <TotalesTira items={totales} alcance={alcance} filtrada={filtrando} />

@@ -240,6 +240,12 @@
 
 .dc-shell .secciones{display:grid;gap:var(--s4)}
 .dc-shell .vista{display:grid;gap:var(--s4);min-width:0}
+/* El esqueleto de un tablero entero separa sus filas como `.vista` (ver EsqueletoAnalizar). */
+.dc-shell .analizar-huesos{display:grid;gap:var(--s4);min-width:0}
+/* Recargar no vacía: las filas viejas quedan atenuadas hasta que llegan las nuevas. */
+.dc-shell .revisar--recargando .tot-tira,
+.dc-shell .revisar--recargando .tabla,
+.dc-shell .revisar--recargando .tarjetas{opacity:.55;transition:opacity .2s ease}
 
 /* ============================================================
    6 · SUPERFICIES

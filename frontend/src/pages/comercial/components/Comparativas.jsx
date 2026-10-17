@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Delta, EsqueletoPanel, fmt, Segmented, Tip, useMontado } from './Shared';
+import { Delta, FalloCarga, fmt, Segmented, Tip, useMontado } from './Shared';
+import { Skeleton, SkeletonPanel } from '../../../components/standard';
 import { DESTINOS_METRICA, DESTINOS_SETTER } from './destinos';
 import FlujoEmbudo from './FlujoEmbudo';
 import { COLOR_CANAL, COLOR_FUENTE, etapasParaDibujar, puntaAPunta } from './embudoSetter';
@@ -324,10 +325,18 @@ const EmbudosSetters = ({ embudos, yo, rol, irAPersona }) => {
     );
 };
 
-const Comparativas = ({ datos, irAPersona }) => {
+const Comparativas = ({ datos, irAPersona, fallo = false, onReintentar = null }) => {
     const [metricaKey, setMetricaKey] = useState(null);
 
-    if (!datos) return <EsqueletoPanel rotulo="Cargando las comparativas…" lineas={7} />;
+    if (!datos && fallo) return <FalloCarga texto="No se pudieron cargar las comparativas" onReintentar={onReintentar} />;
+    // Ranking + mapa del equipo: unos 1070 px de alto con el equipo de hoy (medido a 1330 px).
+    if (!datos) {
+        return (
+            <Skeleton label="Cargando las comparativas…">
+                <SkeletonPanel className="panel" rows={18} rowHeight={26} style={{ minHeight: 1066 }} />
+            </Skeleton>
+        );
+    }
 
     const metrica = datos.metricas.find(m => m.key === metricaKey) || datos.metricas[0];
     const filas = [...datos.filas].sort((a, b) => {
