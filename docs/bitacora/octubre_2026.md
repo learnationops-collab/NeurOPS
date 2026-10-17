@@ -161,3 +161,8 @@
   - En el detalle de cada taller, la pestaña Grabación tiene «Ver grabación en Drive». Si el taller no la tiene, dice «Sin la grabación de Drive.».
   - Ya se cargaron las grabaciones, así que se sacó el botón «Cargar grabaciones» de Talleres junto con su modal. El endpoint `POST /api/workshop/events/grabaciones` sigue, por si hay que volver a cargar en masa.
   - Verificación: 76 tests de vitest de Workshop.
+
+- **17 de Octubre de 2026** *(El reporte del setter acepta lo que escribe el setter. [frontend/src/pages/setter/reporte/modelo.js](../../frontend/src/pages/setter/reporte/modelo.js) [MODIFY], [app/services/setter_reporte_v2.py](../../app/services/setter_reporte_v2.py) [MODIFY])*:
+  - Elias no podía enviar el reporte («31 cualificados + 11 no leads + 0 in-abribles = 42, más que los 37 mensajes de los que salen»). Los setters califican también a gente que escribió otros días, y el reporte tiene que medir lo que ellos dicen.
+  - Cualificados + no leads + in-abribles por encima de los mensajes ya no es error ni aviso: el formulario lo envía y la lectura del reporte y Discord ya no lo marcan. «Sin respuesta» queda en 0 en ese caso. Las demás advertencias siguen igual y ninguna bloquea.
+  - Verificación: 66 tests de pytest del reporte del setter y 619 de vitest del setter y del comercial.
