@@ -61,7 +61,9 @@ const Opcion = ({ on, onClick, children, cuenta }) => (
     </button>
 );
 
-const PanelExportar = ({ def, tabla, colsVistas, filasVista, filasTodas, fechas, onCerrar }) => {
+// `rotulos` ({ vista, todas }) cambia cómo se llaman las dos opciones de filas: Marketing las usa
+// para «Las filas elegidas» / «Toda la tabla» (17/10/2026).
+const PanelExportar = ({ def, tabla, colsVistas, filasVista, filasTodas, fechas, onCerrar, rotulos }) => {
     const quieto = useReducedMotion();
     const enPantalla = useEnPantalla();
     const exportables = useMemo(() => columnasExportables(def), [def]);
@@ -98,7 +100,7 @@ const PanelExportar = ({ def, tabla, colsVistas, filasVista, filasTodas, fechas,
     };
 
     // La cartera no es «del período» (es un saldo a hoy): decirlo así sería decir algo que no es.
-    const rotuloTodas = tabla === 'clientes' ? 'Toda la cartera' : 'Todo el período';
+    const rotuloTodas = rotulos?.todas || (tabla === 'clientes' ? 'Toda la cartera' : 'Todo el período');
     const posicion = new Map(elegidas.map((c, i) => [c.key, i + 1]));
 
     return (
@@ -121,7 +123,7 @@ const PanelExportar = ({ def, tabla, colsVistas, filasVista, filasTodas, fechas,
                     <p className="t-rotulo">Qué filas</p>
                     <Opcion on={cuales === 'vista'} onClick={() => setCuales('vista')}
                         cuenta={fmt.num(filasVista.length)}>
-                        Lo que estás viendo
+                        {rotulos?.vista || 'Lo que estás viendo'}
                     </Opcion>
                     <Opcion on={cuales === 'todas'} onClick={() => setCuales('todas')}
                         cuenta={fmt.num(filasTodas.length)}>
