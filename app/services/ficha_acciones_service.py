@@ -1316,16 +1316,13 @@ def estado_agenda(appt, datos, usuario, *, desde='el historial de la ficha'):
 def crear_agenda(appt, datos, usuario):
     """Agenda otra llamada con el MISMO cliente, desde el historial.
 
-    Pasa por `BookingService.create_appointment` y no por un `Appointment(...)` propio porque esa
-    funcion hace ademas todo lo que una agenda implica y que no se ve: la notificacion al closer,
-    el espejo al `Lead` del pipeline y su cambio de etapa. Crear la fila a mano dejaria una agenda
-    que no existe para ninguna de las otras pantallas.
+    Pasa por el camino de Thalamus (`app/agendas_v2/manual.py`), que a su vez usa
+    `BookingService.create_appointment`: la notificacion al closer, el espejo al `Lead` del pipeline
+    y su cambio de etapa, mas el evento con Meet, la invitacion al lead y los avisos.
 
     El closer por defecto es el de la agenda desde la que se abre la ficha, no quien aprieta el
     boton: la direccion comercial agenda PARA el closer del lead, no para si misma.
     """
-    from app.services.booking_service import BookingService
-
     if not appt.client_id:
         raise ErrorDeAccion('Esta agenda no tiene cliente: no hay a quién agendarle.')
 
@@ -1338,18 +1335,20 @@ def crear_agenda(appt, datos, usuario):
     closer_id = datos.get('closer_id') or appt.closer_id
     if not closer_id:
         raise ErrorDeAccion('Falta el closer al que se le agenda la llamada.')
+    closer = db.session.get(User, int(closer_id))
+    if not closer:
+        raise ErrorDeAccion('No se encontró el closer al que se le agenda la llamada.')
 
-    nueva = BookingService.create_appointment(
-        appt.client_id, closer_id, inicio,
-        origin=(datos.get('fuente') or appt.origin or 'ficha'),
-        setter_id=appt.setter_id)
-    if not nueva:
-        # `create_appointment` devuelve None cuando ese closer ya tiene una cita sin resolver a
-        # esa misma hora. Es una guarda, no un fallo: se dice cual es.
-        raise ErrorDeAccion('Ese closer ya tiene una llamada sin resolver a esa misma hora.')
-
-    db.session.commit()
-    return {'id': nueva.id, 'fecha': _iso_dt(nueva.start_time)}
+    # El camino de Thalamus (Meet con invitación, payload, avisos). Es OTRA llamada a propósito, así que
+    # si el lead ya tiene una abierta se suma como adicional, no se la mueve.
+    from app.agendas_v2 import manual
+    try:
+        nueva, con_evento = manual.agendar(
+            appt.client, closer, inicio, usuario, via='ficha', fuente=(datos.get('fuente') or appt.origin or 'ficha'),
+            decision='adicional', anterior=appt)
+    except manual.AgendaManualError as e:
+        raise ErrorDeAccion(e.mensaje) from None
+    return {'id': nueva.id, 'fecha': _iso_dt(nueva.start_time), 'con_evento': con_evento}
 
 
 # --- Agenda de una venta ----------------------------------------------------------------------

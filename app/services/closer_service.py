@@ -1065,6 +1065,20 @@ class CloserService:
         role = data.get('role', 'closer') # 'closer' por defecto si no viene
         note = data.get('note') # Razón guardada en Lead Roadmap
 
+        # Reprogramar y 2da llamada siguen el camino de Thalamus (app/agendas_v2/manual.py): Meet con
+        # invitación al lead, payload y avisos. El horario se chequea ANTES de tocar nada: leer Google
+        # puede hacer commit, y si choca no se tiene que haber movido ni borrado nada.
+        nueva_agenda, payload_nueva = None, None
+        if new_status in ('Reagendado', '2da call') and reschedule_date and appt.closer and appt.client:
+            from app.agendas_v2 import manual
+            if new_status == '2da call':
+                payload_nueva = manual.armar_payload(appt.client, appt.closer, user, '2da_call', anterior=appt)
+            else:
+                payload_nueva = {**manual.payload_reprogramada(appt, appt.closer, user),
+                                 'reprogramada_desde': appt.start_time.isoformat() + 'Z'}
+            manual.verificar_horario(appt.closer_id, datetime.fromisoformat(reschedule_date.replace('Z', '')),
+                                     payload_nueva, propia=appt)
+
         formatted_reschedule = reschedule_date
         if reschedule_date:
             try:
@@ -1164,14 +1178,9 @@ class CloserService:
                 if new_appt:
                     new_appt.is_rescheduled = True
                     db.session.add(new_appt)
-                    # Sync GCal
-                    try:
-                        from app.services.google_service import GoogleService
-                        evt_id = GoogleService.create_event(new_appt.closer_id, new_appt)
-                        if evt_id:
-                            new_appt.google_event_id = evt_id
-                    except Exception as e:
-                        print(f"Error syncing GCal event for rescheduled appointment: {e}")
+                    # El evento con Meet y los avisos van después del commit (manual.terminar).
+                    new_appt.agenda_payload = payload_nueva
+                    nueva_agenda = new_appt
 
             elif new_status == '2da call':
                 appt.closer_processed = True
@@ -1244,14 +1253,9 @@ class CloserService:
                     except Exception as e:
                         print(f"Error creating FinancialAgenda for 2TH Call: {e}")
 
-                    # Sync GCal
-                    try:
-                        from app.services.google_service import GoogleService
-                        evt_id = GoogleService.create_event(new_appt.closer_id, new_appt)
-                        if evt_id:
-                            new_appt.google_event_id = evt_id
-                    except Exception as e:
-                        print(f"Error syncing GCal event for 2nd agenda: {e}")
+                    # El evento con Meet y los avisos van después del commit (manual.terminar).
+                    new_appt.agenda_payload = payload_nueva
+                    nueva_agenda = new_appt
 
         else:
             # Manejo del estado del Call Confirmer (result)
@@ -1280,14 +1284,9 @@ class CloserService:
                 if new_appt:
                     new_appt.is_rescheduled = True
                     db.session.add(new_appt)
-                    # Sync GCal
-                    try:
-                        from app.services.google_service import GoogleService
-                        evt_id = GoogleService.create_event(new_appt.closer_id, new_appt)
-                        if evt_id:
-                            new_appt.google_event_id = evt_id
-                    except Exception as e:
-                        print(f"Error syncing GCal event for rescheduled appointment: {e}")
+                    # El evento con Meet y los avisos van después del commit (manual.terminar).
+                    new_appt.agenda_payload = payload_nueva
+                    nueva_agenda = new_appt
 
             elif new_status == 'Cancelado':
                 if note:
@@ -1309,6 +1308,9 @@ class CloserService:
             print(f"[SYNC ERROR] No se pudo sincronizar de vuelta a FinancialAgenda: {sync_err}")
 
         db.session.commit()
+        if nueva_agenda is not None and payload_nueva is not None:
+            from app.agendas_v2 import manual
+            manual.terminar(nueva_agenda)
         return appt
 
     @staticmethod

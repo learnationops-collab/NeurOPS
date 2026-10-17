@@ -634,7 +634,7 @@ def test_no_se_agenda_dos_veces_al_mismo_closer_a_la_misma_hora(client, db, lead
                     headers=auth_headers(equipo['closer']))
 
     assert r.status_code == 400
-    assert 'misma hora' in r.get_json()['message']
+    assert 'esa hora' in r.get_json()['message']
 
 
 def test_una_agenda_sin_fecha_no_se_crea(client, db, lead, equipo, auth_headers):

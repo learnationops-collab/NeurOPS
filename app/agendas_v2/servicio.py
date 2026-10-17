@@ -1342,6 +1342,11 @@ def _leads_de_agendas(desde):
     leads = []
     for a in filas:
         p = a.agenda_payload or {}
+        # Lo que carga el equipo desde NeurOPS (manual.py) no es una conversión del link: una llamada
+        # nueva no entró por ningún funnel, y una reagenda es otra fila del MISMO lead (la original
+        # ya cuenta).
+        if p.get('manual'):
+            continue
         leads.append({
             't': dt_a_ms(a.created_at), 'ev': p.get('evento_id') or '', 'llego': 999, 'desc': False, 'agenda': True,
             'score': p.get('nota'), 'closer': p.get('closer_id'), 'setter': setters.get(p.get('setter_user_id')),

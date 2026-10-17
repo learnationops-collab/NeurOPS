@@ -302,11 +302,13 @@ def _canal(cita):
     """Por dónde reservó el lead, cuando se sabe: el link de Agendas 2.0 o una carga a mano."""
     if not cita:
         return None
-    if cita.agenda_payload:
-        payload = cita.agenda_payload or {}
+    payload = cita.agenda_payload or {}
+    # Una llamada que el equipo cargó desde NeurOPS (agendas_v2/manual.py) también lleva payload.
+    a_mano = bool(payload.get('manual')) and not payload.get('evento_id')
+    if payload and not a_mano:
         return payload.get('funnel_nombre') or payload.get('funnel') or 'Link de agendas'
     origen = (cita.origin or '').strip().lower()
-    if origen.startswith('manual'):
+    if a_mano or origen.startswith('manual'):
         return 'Cargada a mano'
     if origen.startswith('manychat'):
         return 'ManyChat'

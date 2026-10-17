@@ -798,65 +798,27 @@ def create_appointment():
         if not start_time:
             return jsonify({"error": "Formato de fecha inválido (start_time)"}), 400
 
-        if not Client.query.get(lead_id):
+        cliente = Client.query.get(lead_id)
+        if not cliente:
             return jsonify({"error": "No se encontró el cliente indicado para esta agenda."}), 400
 
-        # BookingService create_appointment signature: (client_id, closer_id, start_time_utc, origin='manual', setter_id=None)
-        setter_id = current_user.id if current_user.role in ['setter', 'closer'] else None
+        from app.models import User
         target_closer_id = current_user.id if current_user.role == 'closer' else (data.get('closer_id') or current_user.id) # Fallback mostly for admins/setters to pick closer
+        closer = User.query.get(target_closer_id)
+        if not closer:
+            return jsonify({"error": "No se encontró el closer de esta agenda."}), 400
 
-        # Chequeo de conflicto de horario ANTES de crear, con el mismo criterio que usa
-        # BookingService.create_appointment internamente (closer_processed == False y result no
-        # cancelado/reprogramado) — así el mensaje puede decir exactamente CUÁL es la cita que
-        # choca (con quién y a qué hora) en vez del genérico "ya existe una cita o no se pudo
-        # crear la agenda" que no distinguía esto de cualquier otro fallo (reportado por un
-        # closer real: el error no explicaba la causa).
-        conflicting = Appointment.query.filter_by(closer_id=target_closer_id, start_time=start_time).filter(
-            Appointment.closer_processed == False,
-            or_(Appointment.result == None, Appointment.result == '', Appointment.result.notin_(['Cancelada', 'Reprogramada']))
-        ).first()
-        if conflicting:
-            conflicting_name = conflicting.client.full_name if conflicting.client else 'otro lead'
-            return jsonify({
-                "error": f"Ya tenés una agenda con {conflicting_name} a esa misma hora ({start_time.strftime('%d/%m/%Y %H:%M')}) — elegí otro horario.",
-                "conflicting_appointment_id": conflicting.id
-            }), 409
-
-        appt = BookingService.create_appointment(
-            client_id=lead_id,
-            closer_id=target_closer_id,
-            start_time_utc=start_time,
-            origin=data.get('origin') or 'Manual Closer',
-            setter_id=setter_id
-        )
-
-        if not appt:
-            return jsonify({"error": "No se pudo crear la agenda por un motivo inesperado — probá de nuevo o avisá a soporte si se repite."}), 400
-
-        db.session.commit()
-        
-        # Sincronizar con agenda financiera
+        # Mismo camino que una reserva de Thalamus: Meet con invitación al lead, payload, avisos y la
+        # pregunta de qué hacer si el lead ya tiene una agenda abierta (app/agendas_v2/manual.py).
+        from app.agendas_v2 import manual
         try:
-            BookingService.sync_appointment_to_financial_agenda(appt)
-            db.session.commit()
-        except Exception as f_err:
-            print(f"[FinancialAgenda Sync Error] {f_err}")
+            appt, con_evento = manual.agendar(
+                cliente, closer, start_time, current_user, via='nueva_agenda',
+                fuente=data.get('origin') or 'Manual Closer', decision=data.get('si_ya_tiene'))
+        except manual.AgendaManualError as e:
+            return jsonify({"error": e.mensaje, "codigo": e.codigo, **e.datos}), 409
 
-        # Webhook trigger
-        if data.get('trigger_webhook', False):
-             BookingService.trigger_agenda_webhook(appt)
-
-        # Sync con Google Calendar
-        try:
-            from app.services.google_service import GoogleService
-            evt_id = GoogleService.create_event(current_user.id, appt)
-            if evt_id: 
-                appt.google_event_id = evt_id
-                db.session.commit()
-        except Exception as e:
-            print(f"GCal Sync Error: {e}")
-        
-        return jsonify({"message": "Agenda creada", "id": appt.id}), 201
+        return jsonify({"message": "Agenda creada", "id": appt.id, "con_evento": con_evento}), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400

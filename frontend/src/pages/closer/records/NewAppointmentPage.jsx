@@ -7,12 +7,14 @@ import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import YaTieneAgenda from '../components/YaTieneAgenda';
 
 const CloserNewAppointmentPage = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
+    const [yaTieneAgenda, setYaTieneAgenda] = useState(null);
     const [leads, setLeads] = useState([]);
 
     // Slots State
@@ -52,17 +54,25 @@ const CloserNewAppointmentPage = () => {
         fetchData();
     }, []);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const handleSubmit = async (e, siYaTiene = null) => {
+        e?.preventDefault?.();
         if (!form.lead_id) return setError("Selecciona un lead");
         if (!form.start_time) return setError("Selecciona un horario");
 
         setSubmitting(true);
         try {
-            await api.post('/closer/appointments', form);
-            toast.success("Agenda registrada con éxito 🚀");
+            const { data } = await api.post('/closer/appointments', { ...form, ...(siYaTiene ? { si_ya_tiene: siYaTiene } : {}) });
+            if (data?.con_evento === false) {
+                toast.error("Agenda creada, pero sin evento en tu Google Calendar: creálo a mano con Meet e invitá al lead.");
+            } else {
+                toast.success("Agenda creada: el lead recibe la invitación con el Meet");
+            }
             navigate('/closer/leads'); // Redirect to agendas db
         } catch (err) {
+            if (err.response?.data?.codigo === 'ya_tiene') {
+                setYaTieneAgenda(err.response.data);
+                return;
+            }
             setError(err.response?.data?.error || "Error al crear agenda");
         } finally {
             setSubmitting(false);
@@ -218,6 +228,12 @@ const CloserNewAppointmentPage = () => {
                         </Card>
 
                         <div className="flex flex-col justify-end gap-6">
+                            <YaTieneAgenda
+                                aviso={yaTieneAgenda}
+                                cargando={submitting}
+                                onElegir={(decision) => handleSubmit(null, decision)}
+                                onCancelar={() => setYaTieneAgenda(null)}
+                            />
                             <Button
                                 onClick={handleSubmit}
                                 loading={submitting}

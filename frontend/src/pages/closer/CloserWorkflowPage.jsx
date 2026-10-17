@@ -31,6 +31,7 @@ import '../comercial/comercial.css';
 import '../../components/dashboard/pareja.css';
 import ComisionMesCard from './components/ComisionMesCard';
 import ProcrastinarModal from './components/ProcrastinarModal';
+import YaTieneAgenda from './components/YaTieneAgenda';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, localToday, localDateFromNow, formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
 import AgendaCountdown from '../../components/shared/AgendaCountdown';
 import FichaLeadModal from '../../components/ficha/FichaLeadModal';
@@ -420,6 +421,8 @@ const CloserWorkflowPage = () => {
 
     // Modales secundarios v7: Nueva Agenda y Referido Manual
     const [newAgendaModalOpen, setNewAgendaModalOpen] = useState(false);
+    // El lead ya tiene una agenda abierta: se pregunta si se reprograma o se suma otra (como Thalamus).
+    const [yaTieneAgenda, setYaTieneAgenda] = useState(null);
     const [newAgendaForm, setNewAgendaForm] = useState({
         lead_name: '',
         instagram: '',
@@ -634,7 +637,7 @@ const CloserWorkflowPage = () => {
     };
 
     // Crear Nueva Agenda (Modal v7)
-    const handleCreateAgenda = async () => {
+    const handleCreateAgenda = async (siYaTiene = null) => {
         if (!newAgendaForm.lead_name.trim()) {
             toast.error("El nombre del prospecto es obligatorio");
             return;
@@ -669,10 +672,16 @@ const CloserWorkflowPage = () => {
                     instagram: newAgendaForm.instagram.replace('@', '').trim(),
                     phone: newAgendaForm.phone.trim(),
                     email: newAgendaForm.email.trim()
-                }
+                },
+                ...(siYaTiene ? { si_ya_tiene: siYaTiene } : {})
             };
-            await api.post('/closer/appointments', payload);
-            toast.success("Agenda creada correctamente");
+            const { data } = await api.post('/closer/appointments', payload);
+            if (data?.con_evento === false) {
+                toast.error("Agenda creada, pero sin evento en tu Google Calendar: creálo a mano con Meet e invitá al lead.");
+            } else {
+                toast.success("Agenda creada: el lead recibe la invitación con el Meet");
+            }
+            setYaTieneAgenda(null);
             setNewAgendaModalOpen(false);
             setNewAgendaForm({
                 lead_name: '',
@@ -686,6 +695,10 @@ const CloserWorkflowPage = () => {
             });
             fetchAgendas();
         } catch (err) {
+            if (err.response?.data?.codigo === 'ya_tiene') {
+                setYaTieneAgenda(err.response.data);
+                return;
+            }
             console.error("Error al crear agenda:", err);
             toast.error(err.response?.data?.error || "Error al crear la agenda");
         } finally {
@@ -1445,7 +1458,7 @@ const CloserWorkflowPage = () => {
     const gruposDeSesion = armarMenuSesion({
         user, logout, navigate: (ruta) => window.location.assign(ruta),
         acciones: [
-            { id: 'agenda', label: 'Nueva agenda', Icono: CalendarPlus, onClick: () => setNewAgendaModalOpen(true) },
+            { id: 'agenda', label: 'Nueva agenda', Icono: CalendarPlus, onClick: () => { setYaTieneAgenda(null); setNewAgendaModalOpen(true); } },
             { id: 'referido', label: 'Referido manual', Icono: Gift, onClick: () => setManualRefModalOpen(true) },
             ...(counts.seguimientos > 0
                 ? [{ id: 'procrastinar', label: 'Quiero procrastinar', Icono: Hourglass, onClick: () => setShowProcrastinar(true) }]
@@ -2560,13 +2573,20 @@ const CloserWorkflowPage = () => {
                                 </div>
                             </div>
 
+                            <YaTieneAgenda
+                                aviso={yaTieneAgenda}
+                                cargando={processingId === 'new_agenda'}
+                                onElegir={(decision) => handleCreateAgenda(decision)}
+                                onCancelar={() => setYaTieneAgenda(null)}
+                            />
+
                             <div className="flex justify-between items-center pt-3 border-t border-slate-800">
-                                <button type="button" onClick={() => setNewAgendaModalOpen(false)} className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold uppercase">
+                                <button type="button" onClick={() => { setYaTieneAgenda(null); setNewAgendaModalOpen(false); }} className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold uppercase">
                                     Cancelar
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={handleCreateAgenda}
+                                    onClick={() => handleCreateAgenda()}
                                     disabled={processingId === 'new_agenda'}
                                     className="px-5 py-2 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all"
                                 >

@@ -185,7 +185,8 @@ def proxima_de(cliente_id, ahora):
     return None
 
 
-def registrar_agenda(payload, closer, setter, inicio, ahora=None, decision=None, ignorar_ids=(), asegurar=None):
+def registrar_agenda(payload, closer, setter, inicio, ahora=None, decision=None, ignorar_ids=(), asegurar=None,
+                     cliente=None, fuente=None, setter_id=None):
     """Crea (o reprograma) la agenda en la operacion. `inicio`: datetime UTC sin zona.
     `decision`: lo que eligió el lead que ya tenía una agenda próxima: 'reprogramar' la mueve;
     cualquier otra cosa ('adicional') crea otra y le avisa al closer, que decide si cancela la
@@ -193,12 +194,14 @@ def registrar_agenda(payload, closer, setter, inicio, ahora=None, decision=None,
     `ignorar_ids`: agendas del closer a esa hora que ya no están en su Google Calendar (no la frenan).
     `asegurar()`: vuelve a bloquear al closer y devuelve (choca, ignorar_ids). Se llama justo antes de
     escribir, porque buscar la agenda previa lee Google y puede haber hecho commit (soltando el bloqueo).
+    `cliente`, `fuente`, `setter_id`: los de una agenda manual (manual.py): el cliente ya existe y su
+    formulario no se toca; la fuente y el setter van tal cual.
     Devuelve (appointment, evento_a_borrar): evento_a_borrar es (user_id, google_event_id) del evento
     viejo de una agenda reprogramada, o None; (None, None) si el horario ya no está libre. Hace commit."""
     from app.services.booking_service import BookingService
 
     ahora = ahora or datetime.utcnow()
-    cliente = _cliente(payload)
+    cliente = cliente or _cliente(payload)
     db.session.flush()
 
     previa = proxima_de(cliente.id, ahora)
@@ -215,7 +218,7 @@ def registrar_agenda(payload, closer, setter, inicio, ahora=None, decision=None,
         evento_viejo = (previa.closer_id, previa.google_event_id) if previa.google_event_id else None
         previa.start_time = inicio
         previa.closer_id = closer.id
-        previa.setter_id = setter.id if setter else previa.setter_id
+        previa.setter_id = setter.id if setter else (setter_id or previa.setter_id)
         previa.is_rescheduled = True
         previa.google_event_id = None
         previa.agenda_payload = {**payload, 'reprogramada_desde': anterior.isoformat() + 'Z' if anterior else None}
@@ -249,8 +252,8 @@ def registrar_agenda(payload, closer, setter, inicio, ahora=None, decision=None,
         client_id=cliente.id,
         closer_id=closer.id,
         start_time_utc=inicio,
-        origin=_fuente(payload, setter),
-        setter_id=setter.id if setter else None,
+        origin=fuente or _fuente(payload, setter),
+        setter_id=setter.id if setter else setter_id,
         ignorar_ids=ignorar_ids,
     )
     if not appt:
