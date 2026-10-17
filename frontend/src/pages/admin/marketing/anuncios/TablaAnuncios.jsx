@@ -10,6 +10,8 @@ import HerramientasTabla from './HerramientasTabla';
 import { Borde, Celda, Encabezado, Flecha } from './CeldasTabla';
 import { columnasDelCsv } from './columnasTabla';
 import { useVistaDeColumnas } from './useVistaDeColumnas';
+import { referenciasDe } from './tonos';
+import LeyendaTonos from './LeyendaTonos';
 import TarjetasAnuncios, { SelectorModo } from './TarjetasAnuncios';
 import { useModoVista } from '../../../../components/listas/useModoVista';
 import {
@@ -102,6 +104,9 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
     const delNivel = elegidas[nivel];
     const elegidasVisibles = visibles.filter((f) => delNivel.has(idDe(f)));
     const totales = useMemo(() => totalesDe(visibles), [visibles]);
+    // Cada fila se pinta contra el total de lo que se ve (`tonos.js`).
+    const refs = useMemo(() => (vista.colores ? referenciasDe(totales, visibles.length) : null),
+        [vista.colores, totales, visibles.length]);
     // El gráfico: las palabras clave de lo elegido en este nivel o, sin elección, las de la tabla.
     const paraElGrafico = useMemo(() => {
         if (!delNivel.size) return nivel === 'campanas' ? base : nivel === 'conjuntos' ? deCampanas : deConjuntos;
@@ -211,14 +216,15 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
             <SerieDiaria serie={serie} moneda={moneda} alcance={alcance} metaConectado={datos.meta?.conectado} />
 
             <section className="panel mk-panel-tabla">
-                <div className="panel-cab mk-tabla-barra">
+                <div className="mk-tabla-barra">
                     <div className="mk-cab-txt">
                         <h2 className="t-h3">Campañas, conjuntos y anuncios</h2>
                         <p className="t-cap mut40">
                             Cada palabra clave que llega de ManyChat es un anuncio. Elegí filas para filtrar el nivel siguiente y el gráfico.
                         </p>
                     </div>
-                    <div className="panel-cab-der">
+                    {/* Todos los filtros en una sola línea (Kerwin, 17/10/2026: «se ve todo desordenado»). */}
+                    <div className="mk-filtros">
                         <Segmented chico ariaLabel="Nivel de la tabla" valor={nivel} onChange={setNivel}
                             opciones={NIVELES.map((n) => ({ ...n, cuenta: elegidas[n.key].size || null }))} />
                         <label className="busca busca--sm mk-busca">
@@ -226,21 +232,25 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
                             <input type="search" placeholder="Buscar" value={busqueda}
                                 onChange={(e) => setBusqueda(e.target.value)} aria-label="Buscar palabra clave, campaña o conjunto" />
                         </label>
-                        <SelectorModo modo={modo} setModo={setModo} />
-                        <HerramientasTabla vista={vista} exportar={exportar} />
                         {archivados > 0 && (
                             <button type="button" className={`pastilla pastilla--sm${verArchivados ? ' pastilla--on' : ''}`}
-                                aria-pressed={verArchivados} onClick={() => setVerArchivados((v) => !v)}>
+                                aria-pressed={verArchivados} onClick={() => setVerArchivados((v) => !v)}
+                                title={verArchivados ? 'Ocultar las archivadas' : 'Ver las archivadas'}>
                                 <Archive aria-hidden="true" />
-                                {verArchivados ? 'Ocultar archivadas' : `Ver archivadas (${archivados})`}
+                                {verArchivados ? 'Sin archivadas' : `Archivadas (${archivados})`}
                             </button>
                         )}
+                        <span className="mk-filtros-hueco" />
+                        <SelectorModo modo={modo} setModo={setModo} />
+                        <HerramientasTabla vista={vista} exportar={exportar} />
                     </div>
+                    {refs && <LeyendaTonos />}
                 </div>
 
                 {modo === 'tarjetas' ? (
                     visibles.length ? (
                         <TarjetasAnuncios filas={visibles} piezas={piezas} moneda={moneda} idDe={idDe} elegidas={delNivel}
+                            refs={refs} totales={totales} nivel={nivel}
                             onTocar={nivel === 'anuncios' ? alternar : abrir}
                             subtitulo={(f) => (nivel === 'anuncios'
                                 ? (f.campana ? `${f.campana} › ${f.conjunto ?? 'Sin conjunto'}` : sub(f, textoMeta(f.meta)))
@@ -301,7 +311,7 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
                                                 <ChevronRight className="mk-abrir-flecha" size={15} aria-hidden="true" />
                                             </button>
                                         </td>
-                                        {piezas.map((p) => <Celda key={p.key} fila={g} pieza={p} moneda={moneda} />)}
+                                        {piezas.map((p) => <Celda key={p.key} fila={g} pieza={p} moneda={moneda} refs={refs} />)}
                                         <td className="mk-col-acc" />
                                     </tr>
                                 );
@@ -336,7 +346,7 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
                                                 {f.archivado && <span className="chip mk-chip" style={{ '--c': 'var(--idle)' }}>Archivada</span>}
                                             </div>
                                         </td>
-                                        {piezas.map((p) => <Celda key={p.key} fila={f} pieza={p} moneda={moneda} />)}
+                                        {piezas.map((p) => <Celda key={p.key} fila={f} pieza={p} moneda={moneda} refs={refs} />)}
                                         <td className="mk-col-acc">
                                             {f.clave !== null && (
                                                 <button type="button" className="ibtn ibtn--sm"

@@ -84,7 +84,17 @@
 .dc-shell .mk-panel-tabla > .panel-cab,
 .dc-shell .mk-panel-tabla > .mk-pie,
 .dc-shell .mk-panel-tabla > .mk-vacio{padding-inline:var(--s5)}
-.dc-shell .mk-tabla-barra{align-items:center}
+/* El título arriba y todos los filtros debajo, en UNA línea (17/10/2026). Debajo de 1100px pasa a
+   dos: los filtros de la tabla a la izquierda y las herramientas a la derecha. */
+.dc-shell .mk-tabla-barra{display:grid;gap:var(--s3);padding:0 var(--s5) var(--s4)}
+.dc-shell .mk-filtros{display:flex;align-items:center;gap:var(--s2);flex-wrap:nowrap;min-width:0}
+.dc-shell .mk-filtros > *{flex-shrink:0}
+.dc-shell .mk-filtros .mk-busca{flex:0 1 220px;min-width:140px}
+.dc-shell .mk-filtros-hueco{flex:1 1 0;min-width:0}
+.dc-shell .mk-filtros .mk-herr{flex-wrap:nowrap}
+@media (max-width:1100px){
+  .dc-shell .mk-filtros{flex-wrap:wrap}
+}
 .dc-shell .mk-busca{height:36px;min-width:min(240px,100%)}
 /* Fondo opaco en toda la tabla: la columna fija lo necesita (pasa por encima de las otras al
    desplazar) y, si solo ella lo tuviera, se vería como una franja más oscura. */
@@ -307,8 +317,50 @@
 .dc-shell .mk-menu-restablecer:disabled{opacity:.5;cursor:default}
 .dc-shell .mk-herr .config-panel{left:auto;right:0}
 
-/* Vista de tarjetas (17/10/2026): la `VistaTarjetas` de Revisar, con el aire del panel. */
+/* Colores contra el promedio (`tonos.js`): el número en verde o rojo sobre un fondo apenas teñido. */
+.dc-shell .mk-tono{border-radius:6px;padding:1px 6px;margin-right:-6px}
+.dc-shell .mk-tono--bien{color:var(--success);background:color-mix(in srgb,var(--success) 14%,transparent)}
+.dc-shell .mk-tono--mal{color:var(--error);background:color-mix(in srgb,var(--error) 20%,transparent)}
+.dc-shell .mk-valor.mk-tono{display:inline-block}
+.dc-shell .mk-grupo dd.mk-tono,.dc-shell .mk-tarjeta-datos dd.mk-tono{margin-right:-6px}
+.dc-shell .mk-leyenda-tonos{display:flex;flex-wrap:wrap;align-items:center;gap:4px var(--s4);margin:0;color:var(--text-muted)}
+.dc-shell .mk-leyenda-tonos span{display:inline-flex;align-items:center;gap:6px}
+.dc-shell .mk-tono-punto{width:10px;height:10px;border-radius:3px;display:inline-block}
+.dc-shell .mk-tono-punto--bien{background:var(--success)}
+.dc-shell .mk-tono-punto--mal{background:var(--error)}
+
+/* Vista de tarjetas (17/10/2026): embudo y métricas, con el aire del panel. */
 .dc-shell .mk-tarjetas{padding:var(--s4) var(--s5) 0;border-top:1px solid var(--border-subtle)}
+.dc-shell .mk-tarjeta{display:grid;gap:var(--s3);align-content:start;padding:var(--s4);min-width:0;
+  background:var(--bg-element);border:1px solid var(--border-subtle);border-radius:var(--radius-main);
+  transition:border-color .16s ease,transform .16s var(--spring)}
+.dc-shell .mk-tarjeta:hover{border-color:var(--border-control);transform:translateY(-2px)}
+.dc-shell .mk-tarjeta.is-on{border-color:color-mix(in srgb,var(--brand-secondary) 60%,transparent);
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--brand-secondary) 35%,transparent)}
+.dc-shell .mk-tarjeta.is-archivada{opacity:.7}
+.dc-shell .mk-tarjeta-cab{display:flex;align-items:flex-start;gap:var(--s2);width:100%;padding:0;border:0;background:none;
+  color:inherit;font:inherit;text-align:left;cursor:pointer;border-radius:8px}
+.dc-shell .mk-tarjeta-cab:focus-visible{outline:2px solid var(--brand-secondary);outline-offset:4px}
+.dc-shell .mk-tarjeta-nom{display:grid;gap:2px;min-width:0;flex:1}
+.dc-shell .mk-tarjeta-nom b{font-size:14px;font-weight:800;color:var(--text-on-surface);overflow-wrap:anywhere}
+.dc-shell .mk-tarjeta-chips{display:flex;flex-wrap:wrap;gap:4px;flex-shrink:0}
+.dc-shell .mk-embudo-mini{list-style:none;margin:0;padding:var(--s3) 0;display:grid;gap:7px;
+  border-block:1px solid var(--border-subtle)}
+.dc-shell .mk-embudo-mini li{display:grid;grid-template-columns:76px minmax(0,1fr) 46px 52px;align-items:center;gap:var(--s2)}
+.dc-shell .mk-embudo-mini small{font-size:9.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)}
+.dc-shell .mk-embudo-pista{height:8px;border-radius:var(--radius-pill);background:var(--mat-1, color-mix(in srgb,var(--text-on-surface) 6%,transparent));overflow:hidden}
+.dc-shell .mk-embudo-pista i{display:block;height:100%;border-radius:inherit;
+  background:color-mix(in srgb,var(--brand-secondary) calc(100% - var(--i) * 18%),var(--info))}
+.dc-shell .mk-embudo-mini b{font-size:13px;font-weight:800;text-align:right;color:var(--text-on-surface)}
+.dc-shell .mk-embudo-conv{font-size:11.5px;font-weight:700;text-align:right;color:var(--text-muted)}
+.dc-shell .mk-embudo-conv.mk-tono{margin-right:0;justify-self:end}
+.dc-shell .mk-tarjeta-datos{display:grid;gap:5px;margin:0}
+.dc-shell .mk-tarjeta-datos > div{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s2);min-width:0}
+.dc-shell .mk-tarjeta-datos dt{font-size:9.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dc-shell .mk-tarjeta-datos dd{margin:0;font-weight:800;font-size:13px;color:var(--text-on-surface);white-space:nowrap;font-variant-numeric:tabular-nums}
+.dc-shell .mk-tarjeta-datos dd small{margin-left:6px;font-size:11px;font-weight:600;color:var(--text-muted-40)}
+@media (prefers-reduced-motion:reduce){ .dc-shell .mk-tarjeta:hover{transform:none} }
 
 .dc-shell .mk-cobrado{padding:var(--s5);margin-bottom:var(--s5)}
 .dc-shell .mk-cobrado-tit{margin:6px 0 var(--s4)}

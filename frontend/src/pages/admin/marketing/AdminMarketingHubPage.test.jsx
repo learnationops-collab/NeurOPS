@@ -128,9 +128,15 @@ describe('Marketing › Anuncios', () => {
         await screen.findByText('Obtener Guia');
         await user.click(screen.getByRole('button', { name: 'Ver como tarjetas' }));
         expect(screen.queryByRole('table')).not.toBeInTheDocument();
-        const tarjeta = screen.getByRole('button', { name: 'Abrir APLICAR' });
+        const cabecera = screen.getByRole('button', { name: 'APLICAR: Elegir para el gráfico' });
+        const tarjeta = cabecera.closest('article');
         expect(within(tarjeta).getByText('Costo por lead')).toBeInTheDocument();
-        await user.click(tarjeta);
+        // El embudo: entrantes → calificados → agendas → ventas, con la conversión de cada paso.
+        const embudo = within(tarjeta).getByRole('list', { name: 'Embudo de APLICAR' });
+        expect(within(embudo).getAllByRole('listitem')).toHaveLength(4);
+        expect(within(embudo).getByText('64.8%')).toBeInTheDocument(); // 147 de 227
+        await user.click(cabecera);
+        expect(cabecera).toHaveAttribute('aria-pressed', 'true');
         expect(within(tarjeta).getByText('Elegida')).toBeInTheDocument();
         expect(window.localStorage.getItem('mk_rendimiento_modo')).toBe('tarjetas');
         window.localStorage.clear();
@@ -156,7 +162,7 @@ describe('Marketing › Anuncios', () => {
         await user.click(await screen.findByRole('button', { name: 'Archivar APLICAR' }));
         expect(api.post).toHaveBeenCalledWith('/marketing/anuncios/archivar', { clave: 'APLICAR', archivado: true });
         await waitFor(() => expect(screen.queryByText('7 anuncios en Meta · 1 activo')).not.toBeInTheDocument());
-        expect(screen.getByRole('button', { name: /Ver archivadas \(2\)/ })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Archivadas \(2\)/ })).toBeInTheDocument();
     });
 
     it('de Campañas se baja a Conjuntos y a Anuncios con lo elegido, como en Meta', async () => {

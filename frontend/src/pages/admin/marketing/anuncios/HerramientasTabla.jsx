@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Columns, Download, Layers, RotateCcw } from 'lucide-react';
+import { Check, Columns, Download, Layers, Palette, RotateCcw } from 'lucide-react';
 import { Switch } from '../../../../components/standard';
 import { useEnPantalla } from '../../../../components/ui/useEnPantalla';
 import PanelExportar from '../../../comercial/components/PanelExportar';
@@ -84,6 +84,12 @@ const HerramientasTabla = ({ vista, exportar }) => {
                 title="Juntar las columnas semejantes: leads, costos y resultados">
                 <Layers aria-hidden="true" />
                 {vista.juntados.length ? 'Agrupadas' : 'Agrupar'}
+            </button>
+            <button type="button" className={`pastilla pastilla--sm${vista.colores ? ' pastilla--on' : ''}`}
+                aria-pressed={vista.colores} onClick={vista.alternarColores}
+                title="Verde o rojo: mejor o peor que el promedio de la tabla">
+                <Palette aria-hidden="true" />
+                Colores
             </button>
             <button type="button" className={`pastilla pastilla--sm${abierto === 'exportar' ? ' pastilla--on' : ''}`}
                 aria-expanded={abierto === 'exportar'} onClick={() => alternar('exportar')}

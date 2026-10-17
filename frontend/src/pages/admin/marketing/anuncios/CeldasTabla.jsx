@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { Tip } from '../../../comercial/components/Shared';
-import { formatear } from './metricas';
+import { COLUMNAS, formatear } from './metricas';
+import { REFERENCIA, explicacion, tonoDe } from './tonos';
 import { CORTO } from './columnasTabla';
 
 /**
@@ -72,12 +73,28 @@ export const Encabezado = ({ pieza, orden, ordenarPor, ariaOrden, vista }) => {
     );
 };
 
-export const Celda = ({ fila, pieza, moneda }) => {
+/** La referencia escrita como la métrica: un porcentaje, un monto o un número (para el `title`). */
+const textoReferencia = (moneda) => (valor, key) => {
+    const col = COLUMNAS.find((c) => c.key === key);
+    if (REFERENCIA[key]?.campo) return formatear(Math.round(valor * 10) / 10, 'pct');
+    if (col.formato === 'num') return formatear(Math.round(valor * 10) / 10, 'num');
+    return formatear(valor, col.formato, moneda);
+};
+
+/** Lo que lleva un valor con color: la clase del tono y su explicación. Sin `refs` (los totales,
+ *  o con los colores apagados), nada. */
+export const tonoDeValor = (fila, key, refs, moneda) => {
+    const tono = refs ? tonoDe(fila, key, refs) : null;
+    return tono ? { className: `mk-tono mk-tono--${tono}`, title: explicacion(fila, key, refs, textoReferencia(moneda)) } : {};
+};
+
+export const Celda = ({ fila, pieza, moneda, refs }) => {
     if (pieza.tipo === 'col') {
         const col = pieza.col;
+        const { className, title } = tonoDeValor(fila, col.key, refs, moneda);
         return (
-            <td className="mk-num num">
-                <span className="mk-valor">{valorDe(fila, col, moneda)}</span>
+            <td className="mk-num num" title={title}>
+                <span className={`mk-valor${className ? ` ${className}` : ''}`}>{valorDe(fila, col, moneda)}</span>
                 {col.pct && <span className="mk-pct">{formatear(fila[col.pct], 'pct')}</span>}
             </td>
         );
@@ -85,15 +102,18 @@ export const Celda = ({ fila, pieza, moneda }) => {
     return (
         <td className="mk-col-grupo num">
             <dl className="mk-grupo">
-                {pieza.cols.map((col) => (
-                    <div key={col.key}>
-                        <dt>{CORTO[col.key]}</dt>
-                        <dd>
-                            {valorDe(fila, col, moneda)}
-                            {col.pct && fila[col.pct] != null && <small>{formatear(fila[col.pct], 'pct')}</small>}
-                        </dd>
-                    </div>
-                ))}
+                {pieza.cols.map((col) => {
+                    const { className, title } = tonoDeValor(fila, col.key, refs, moneda);
+                    return (
+                        <div key={col.key} title={title}>
+                            <dt>{CORTO[col.key]}</dt>
+                            <dd className={className}>
+                                {valorDe(fila, col, moneda)}
+                                {col.pct && fila[col.pct] != null && <small>{formatear(fila[col.pct], 'pct')}</small>}
+                            </dd>
+                        </div>
+                    );
+                })}
             </dl>
         </td>
     );

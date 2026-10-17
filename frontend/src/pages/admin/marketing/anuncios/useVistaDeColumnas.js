@@ -24,7 +24,7 @@ export const useVistaDeColumnas = () => {
     const [estado, setEstado] = useState(() => {
         const g = leer();
         const anchos = g.anchos && typeof g.anchos === 'object' ? g.anchos : {};
-        return { ocultas: lista(g.ocultas), juntados: lista(g.juntados), anchos };
+        return { ocultas: lista(g.ocultas), juntados: lista(g.juntados), anchos, colores: g.colores !== false };
     });
     const guardar = useCallback((cambio) => setEstado((prev) => {
         const nuevo = { ...prev, ...cambio(prev) };
@@ -48,6 +48,8 @@ export const useVistaDeColumnas = () => {
     })), [guardar]);
     const juntarTodos = useCallback((si) => guardar(() => ({ juntados: si ? GRUPOS.map((g) => g.key) : [] })), [guardar]);
     const restablecer = useCallback(() => guardar(() => ({ ocultas: [], juntados: [], anchos: {} })), [guardar]);
+    // Los colores contra el promedio (`tonos.js`): prendidos de entrada.
+    const alternarColores = useCallback(() => guardar(({ colores }) => ({ colores: !colores })), [guardar]);
 
     const ponerAncho = useCallback((key, px) => guardar(({ anchos }) => {
         const resto = { ...anchos };
@@ -75,6 +77,7 @@ export const useVistaDeColumnas = () => {
 
     return {
         piezas, ocultas: estado.ocultas, juntados: estado.juntados, ancho, ponerAncho, personalizada,
+        colores: estado.colores, alternarColores,
         alternarColumna, alternarGrupo, juntarTodos, restablecer,
         arrastre: { empezar: empezarArrastre, mover: moverArrastre, soltar: soltarArrastre },
     };
