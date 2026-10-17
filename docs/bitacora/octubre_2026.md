@@ -138,3 +138,8 @@
   - El registro de agendas sigue con una sola fila, con la fecha nueva (no suma otra agenda en el workshop ni en Confirmación).
   - Stats de Thalamus: la agenda original cuenta una vez, con el horario y la vigencia de su última reagenda; vale también para las reagendas del mazo.
   - Verificación: 614 tests de pytest (Thalamus, ficha, mazo, cartera y comercial).
+
+- **17 de Octubre de 2026 (6)** *(El selector de categoría de Conversaciones funciona. [frontend/src/components/standard/standard.css](../../frontend/src/components/standard/standard.css) [MODIFY], [frontend/src/pages/admin/marketing/conversaciones/](../../frontend/src/pages/admin/marketing/conversaciones/) [MODIFY])*:
+  - El menú de cualquier `Select` dentro de un `Modal` estándar salía corrido abajo a la derecha y cortado. Pasaba porque la animación de entrada del modal quedaba en efecto (`both`) y el modal pasaba a ser la referencia de lo `position: fixed`. Ahora la animación va con `backwards`.
+  - En «Nuevo mensaje» la categoría ocupa su propia fila y se lee entera (antes, «Cualific…»).
+  - Verificación: 31 tests de vitest (componentes estándar y Conversaciones). Prueba en el navegador con el usuario de marketing: el menú abre justo debajo del botón, dentro de la pantalla, y elegir «Seguimiento» cambia el valor.
