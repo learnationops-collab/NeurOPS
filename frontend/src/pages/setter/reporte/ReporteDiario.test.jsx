@@ -290,27 +290,33 @@ describe('ReporteDiario · enviar', () => {
 });
 
 describe('ReporteDiario · de dónde salen los números', () => {
-    it('sin reporte del día, arranca con la precarga del sistema por canal', async () => {
+    it('sin reporte del día, precarga solo las agendas: los mensajes los cuenta el setter', async () => {
+        // Kerwin, 17/10/2026: ManyChat cuenta solo a quien escribió ese día por primera vez, y el
+        // setter también califica a gente de otros días: con 25 precargados no podía enviar 23 + 10.
         red.prefill = { anuncios: { entrantes: 14, no_lead: 2, inabribles: 3, agendas: 2 },
             inbound: { entrantes: 1, no_lead: 0, inabribles: 0, agendas: 1 } };
         await montar();
 
-        expect(celda('Anuncios, nuevos mensajes')).toHaveValue('14');
-        expect(celda('Anuncios, in-abribles')).toHaveValue('3');
-        expect(celda('Inbound, nuevos mensajes')).toHaveValue('1');
+        expect(celda('Anuncios, nuevos mensajes')).toHaveValue('');
+        expect(celda('Anuncios, no leads')).toHaveValue('');
+        expect(celda('Anuncios, in-abribles')).toHaveValue('');
         expect(red.gets.find(([u]) => u === '/public/setter-report/prefill')[1]).toEqual({ setter_id: 7, date: HOY });
+        siguiente(); siguiente();
+        expect(celda('Agendas de anuncios')).toHaveValue('2');
+        expect(celda('Agendas de inbound')).toHaveValue('1');
     });
 
     it('la precarga no pisa lo que el setter dejó escrito en su borrador', async () => {
         window.localStorage.setItem(`neurops:reporte-setter:v2:7:${HOY}`, JSON.stringify({
-            estado: { anuncios: { entrantes: 20 } }, tocados: ['anuncios.entrantes'], guardado: 1,
+            estado: { anuncios: { entrantes: 20, agendas: 5 } }, tocados: ['anuncios.entrantes', 'anuncios.agendas'], guardado: 1,
         }));
         red.prefill = { anuncios: { entrantes: 14, no_lead: 2, inabribles: 3, agendas: 2 } };
         await montar();
 
         expect(celda('Anuncios, nuevos mensajes')).toHaveValue('20');
-        expect(celda('Anuncios, no leads')).toHaveValue('2');
         expect(screen.getByText('Borrador')).toBeInTheDocument();
+        siguiente(); siguiente();
+        expect(celda('Agendas de anuncios')).toHaveValue('5');
     });
 
     it('lo que escribe queda en un borrador de este navegador hasta enviarlo', async () => {
@@ -365,9 +371,10 @@ describe('ReporteDiario · de dónde salen los números', () => {
         await montar();
 
         expect(screen.getByText('Formulario anterior')).toBeInTheDocument();
-        expect(celda('Anuncios, nuevos mensajes')).toHaveValue('18');
+        expect(celda('Anuncios, nuevos mensajes')).toHaveValue('');
         siguiente(); siguiente();
         expect(celda('Dolor')).toHaveValue('8');
+        expect(celda('Agendas de anuncios')).toHaveValue('2');
     });
 
     it('cambiar el día lo escribe en la URL', async () => {

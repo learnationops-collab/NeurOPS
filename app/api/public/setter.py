@@ -341,7 +341,9 @@ def prefill_public_setter_report():
 
     **Por canal, para el reporte v2 (10/10/2026).** `anuncios` e `inbound` traen lo mismo partido
     por canal (ver `_precarga_por_canal`): entrantes, no leads, in-abribles y agendas. Las claves
-    del v1 siguen para quien las use.
+    del v1 siguen para quien las use. Desde el 17/10/2026 el formulario v2 toma de acá SOLO las
+    agendas (`CAMPOS_PRECARGADOS` en el front): los mensajes, no leads e in-abribles los cuenta el
+    setter, porque ManyChat cuenta solo a quien escribió ese día por primera vez.
     """
     from flask_login import current_user
 

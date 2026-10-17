@@ -248,19 +248,20 @@ describe('la precarga del sistema', () => {
         inbound: { entrantes: 1, no_lead: 0, inabribles: 0, agendas: 1 },
     };
 
-    it('llena lo que el sistema sabe por canal', () => {
+    it('solo llena las agendas: los mensajes, no leads e in-abribles los cuenta el setter', () => {
+        // Kerwin, 17/10/2026: ManyChat cuenta solo a quien escribió ese día por primera vez.
         const s = aplicarPrecarga(vacio(), precarga, new Set());
 
-        expect(s.anuncios).toMatchObject({ entrantes: 14, no_lead: 2, inabribles: 3, agendas: 2 });
+        expect(s.anuncios).toMatchObject({ entrantes: 0, no_lead: 0, inabribles: 0, agendas: 2 });
         expect(s.inbound.agendas).toBe(1);
         expect(s.anuncios.ap_dolor).toBe(0);
     });
 
     it('no pisa lo que el setter ya escribió', () => {
-        const escrito = conRuta(vacio(), 'anuncios.entrantes', 20);
-        const s = aplicarPrecarga(escrito, precarga, new Set(['anuncios.entrantes']));
+        const escrito = conRuta(vacio(), 'anuncios.agendas', 5);
+        const s = aplicarPrecarga(escrito, precarga, new Set(['anuncios.agendas']));
 
-        expect(s.anuncios.entrantes).toBe(20);
-        expect(s.anuncios.no_lead).toBe(2);
+        expect(s.anuncios.agendas).toBe(5);
+        expect(s.inbound.agendas).toBe(1);
     });
 });

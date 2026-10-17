@@ -315,16 +315,25 @@ export const aPayload = (s, fecha, setterId) => ({
 });
 
 /**
+ * Lo que el formulario toma de la precarga del sistema: solo las agendas de cada canal. Los nuevos
+ * mensajes, los no leads y los in-abribles los cuenta el setter (Kerwin, 17/10/2026: «los entrantes
+ * no deberían ser los de ManyChat, sino lo que pongan los setters»): ManyChat cuenta solo a quien
+ * escribió por primera vez ese día, y el setter también trabaja con los que escribieron otros días,
+ * así que sus cualificados superaban esos mensajes y el reporte no se podía enviar.
+ */
+export const CAMPOS_PRECARGADOS = ['agendas'];
+
+/**
  * La precarga del sistema, sin pisar lo que el setter ya escribió: `tocados` son las rutas que
- * cambió a mano (en esta sesión o en su borrador). El prefill trae solo lo que el sistema sabe
- * (por canal: entrantes, no leads, in-abribles y agendas); el resto queda como está.
+ * cambió a mano (en esta sesión o en su borrador). Del prefill se toma `CAMPOS_PRECARGADOS`; el
+ * resto queda como está.
  */
 export function aplicarPrecarga(s, precarga, tocados) {
     let out = s;
     for (const c of CANALES) {
         const p = precarga?.[c.k];
         if (!p) continue;
-        for (const campo of ['entrantes', 'no_lead', 'inabribles', 'agendas']) {
+        for (const campo of CAMPOS_PRECARGADOS) {
             const ruta = `${c.k}.${campo}`;
             if (p[campo] === undefined || p[campo] === null || tocados.has(ruta)) continue;
             out = conRuta(out, ruta, entero(p[campo]));
