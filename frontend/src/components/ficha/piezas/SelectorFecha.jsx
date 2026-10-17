@@ -70,7 +70,7 @@ const SelectorFecha = ({
     etiqueta = 'Fecha',
     deshabilitado = false,
 }) => {
-    const { abierto, alternar, cerrar, caja } = usePopover();
+    const { abierto, alternar, cerrar, caja, pop } = usePopover();
     const mov = useMovimiento();
     const hoy = useMemo(() => aDia(new Date()), []);
     const piso = minimo === null ? null : (aDia(minimo) || hoy);
@@ -102,7 +102,7 @@ const SelectorFecha = ({
             </button>
 
             {abierto && (
-                <motion.div className="fi-pop fi-pop--fecha" role="dialog" aria-label={etiqueta}
+                <motion.div ref={pop} className="fi-pop fi-pop--fecha" role="dialog" aria-label={etiqueta}
                     {...mov.popover}>
                     <div style={{ display: 'grid', gap: 2, alignContent: 'start' }}>
                         <small className="t-rotulo" style={{ padding: '0 var(--s3) var(--s2)' }}>Rápido</small>

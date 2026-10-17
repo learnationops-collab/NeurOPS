@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEnPantalla } from '../../ui/useEnPantalla';
 
 /**
  * Abrir/cerrar un panel flotante anclado a su disparador.
@@ -9,10 +10,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  *
  * Escape se escucha en fase de captura y detiene la propagación: el modal también
  * escucha Escape para cerrarse, y cerrar un desplegable no tiene que cerrar la ficha.
+ *
+ * `pop` va en el panel: lo sube a la capa superior y lo deja entero en la pantalla (`useEnPantalla`).
  */
 const usePopover = () => {
     const [abierto, setAbierto] = useState(false);
     const caja = useRef(null);
+    const pop = useEnPantalla();
 
     const cerrar = useCallback(() => setAbierto(false), []);
     const alternar = useCallback(() => setAbierto(a => !a), []);
@@ -41,7 +45,7 @@ const usePopover = () => {
         };
     }, [abierto]);
 
-    return { abierto, setAbierto, alternar, cerrar, caja };
+    return { abierto, setAbierto, alternar, cerrar, caja, pop };
 };
 
 export default usePopover;

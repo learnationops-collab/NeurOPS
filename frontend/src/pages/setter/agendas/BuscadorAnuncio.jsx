@@ -1,5 +1,6 @@
 import React, { forwardRef, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Plus, Search, X } from 'lucide-react';
+import { useEnPantalla } from '../../../components/ui/useEnPantalla';
 
 /**
  * El buscador de la palabra clave del anuncio: un combobox (patrón ARIA "combobox" con "listbox").
@@ -85,6 +86,7 @@ const BuscadorAnuncio = forwardRef(({ anuncios, elegido, onElegir, onConfirmar, 
     const [activa, setActiva] = useState(0);
     const cajaRef = useRef(null);
     const listaRef = useRef(null);
+    const listaEnPantalla = useEnPantalla(listaRef);
     const campoRef = useRef(null);
     // Quien lo usa solo necesita darle el foco (la tarjeta siguiente, después de asignar).
     useImperativeHandle(ref, () => ({ focus: () => campoRef.current?.focus() }), []);
@@ -189,7 +191,7 @@ const BuscadorAnuncio = forwardRef(({ anuncios, elegido, onElegir, onConfirmar, 
                     </button>
                 )}
                 {mostrar && (
-                    <ul className="ma-lista-op" id={idLista} role="listbox" aria-label="Anuncios" ref={listaRef}>
+                    <ul className="ma-lista-op" id={idLista} role="listbox" aria-label="Anuncios" ref={listaEnPantalla}>
                         {opciones.length === 0 && (
                             <li className="ma-op ma-op--vacia" role="presentation">Ningún anuncio con «{texto}»</li>
                         )}

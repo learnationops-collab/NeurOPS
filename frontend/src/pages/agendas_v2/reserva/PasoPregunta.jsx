@@ -5,6 +5,7 @@ import { PAIS_OTRO, PAISES, ZONAS, paisDe, tipo, zonaInfo } from '../core/catalo
 import { gmtTxt } from '../core/tiempo';
 import { letra, mayus } from '../core/util';
 import { AreaAuto, Bandera, Icono } from '../ui/base';
+import { useEnPantalla } from '../../../components/ui/useEnPantalla';
 
 // Opciones de una lista que coinciden con lo que el lead escribió en el buscador.
 export function opcionesVisibles(q, busca) {
@@ -25,6 +26,7 @@ function Opcion({ o, j, val, rol, oculta, onElegir }) {
 
 function Telefono({ s, ids, tzFija, acc }) {
     const p = paisDe(s.pais), z = zonaInfo(s.tz);
+    const paisesEnPantalla = useEnPantalla();
     const otro = p.c === PAIS_OTRO.c;
     // «Otro país» no tiene zonas propias: se elige entre todas.
     const zonas = otro ? ZONAS.map(x => [x.tz, null, x.n]) : p.z;
@@ -37,7 +39,7 @@ function Telefono({ s, ids, tzFija, acc }) {
                         {otro ? <><Icono n="globo" s={16} /><span>+</span></> : <><Bandera c={p.c} /><b>{p.c}</b><span>{p.d}</span></>}<Icono n="chevron-down" s={16} />
                     </button>
                     {s.paisAbierto && (
-                        <div className="rv-paises" role="listbox" aria-label="País">
+                        <div ref={paisesEnPantalla} className="rv-paises" role="listbox" aria-label="País">
                             {PAISES.map(x => (
                                 <button key={x.c} type="button" className="rv-pais-op" role="option" aria-selected={x.c === p.c} onClick={() => acc.elegirPais(x.c)}>
                                     <Bandera c={x.c} /><span>{x.n}</span><span>{x.d}</span>

@@ -33,7 +33,7 @@ const DesplegableAgrupado = ({
     alinear = 'izq',
     etiqueta = null,
 }) => {
-    const { abierto, alternar, cerrar, caja } = usePopover();
+    const { abierto, alternar, cerrar, caja, pop } = usePopover();
     const mov = useMovimiento();
     // Las opciones creadas acá se muestran de inmediato; persistirlas es de quien nos pasó `onAgregar`.
     const [nuevas, setNuevas] = useState({});
@@ -134,7 +134,7 @@ const DesplegableAgrupado = ({
             </button>
 
             {abierto && (
-                <motion.div className={`fi-pop fi-pop--ancho${alinear === 'der' ? ' fi-pop--der' : ''}`}
+                <motion.div ref={pop} className={`fi-pop fi-pop--ancho${alinear === 'der' ? ' fi-pop--der' : ''}`}
                     role="listbox" aria-multiselectable={multiple}
                     aria-label={etiqueta || rotulo || placeholder}
                     {...mov.popover}>

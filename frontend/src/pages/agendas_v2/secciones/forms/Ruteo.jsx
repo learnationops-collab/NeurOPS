@@ -14,6 +14,7 @@ import { useOrdenable } from '../../ui/useOrdenable';
 import { colorNivel, mutarForm, opcionesPrioridad, setFormUi, useEnfocar } from './comun';
 import RuteoFlujo from './RuteoFlujo';
 import { FieldError, Grid, IconButton, Input, Segmented } from '../../../../components/standard';
+import { useEnPantalla } from '../../../../components/ui/useEnPantalla';
 
 const AYUDA_RUTEO = 'Se revisan de arriba a abajo: la primera regla que se cumple elige la estrategia. En cada condición alcanza cualquiera de las respuestas marcadas.';
 
@@ -74,6 +75,7 @@ function DestinoRegla({ d, r, onGrupo, onUrl }) {
 // Selector de varias respuestas de una pregunta (alcanza cualquiera de las marcadas).
 function Msel({ id, q, ops, abierto, onAbrir, onCerrar, onToggle }) {
     const caja = useRef(null);
+    const enPantalla = useEnPantalla();
     const elegidas = opsTxt(q, ops);
     useEffect(() => {
         if (!abierto) return;
@@ -98,7 +100,7 @@ function Msel({ id, q, ops, abierto, onAbrir, onCerrar, onToggle }) {
                 <Icono n="chevron-down" s={14} />
             </button>
             {abierto && q && (
-                <div className="msel-pop" role="listbox" aria-multiselectable="true">
+                <div ref={enPantalla} className="msel-pop" role="listbox" aria-multiselectable="true">
                     {q.opciones.filter(o => o.texto.trim()).map(o => (
                         <button key={o.id} type="button" className="msel-op" role="option" aria-selected={ops.includes(o.id)} onClick={() => onToggle(o.id)}>
                             <i aria-hidden="true"><Icono n="check" s={12} /></i><span>{o.texto}</span>

@@ -7,6 +7,7 @@ import { ZONAS, zonaInfo } from '../core/catalogos';
 import { claveDia, fechaClave, fechaTs, gmtTxt, horaTxt, mesTitulo } from '../core/tiempo';
 import { mayus, pad } from '../core/util';
 import { Bandera, Icono, MeetLogo } from '../ui/base';
+import { useEnPantalla } from '../../../components/ui/useEnPantalla';
 
 const SEMANA = ['lu', 'ma', 'mi', 'ju', 'vi', 'sá', 'do'];
 
@@ -33,6 +34,7 @@ function claveHoy(tz) { return claveDia(Date.now(), tz); }
  */
 export default function PasoCalendario({ s, asig, nombre, ids, dur, tzFija, aviso, envio, acc, buscando = false, errorHorarios = '' }) {
     const tz = s.tz, z = zonaInfo(tz);
+    const zonasEnPantalla = useEnPantalla();
     // Al elegir la hora, que se vea el «Confirmar»: en el celular queda debajo de la lista de horas.
     useEffect(() => {
         if (s.hora == null) return;
@@ -126,7 +128,7 @@ export default function PasoCalendario({ s, asig, nombre, ids, dur, tzFija, avis
                 <span>{z.c && <Bandera c={z.c} />}<b>{mayus(z.largo)}</b> · {gmtTxt(tz)}</span>
                 {!tzFija && <button type="button" className="rv-link" aria-expanded={s.zonaAbierta} onClick={acc.alternarZona}>Cambiar</button>}
                 {s.zonaAbierta && (
-                    <div className="rv-zpop" role="listbox" aria-label="Zona horaria">
+                    <div ref={zonasEnPantalla} className="rv-zpop" role="listbox" aria-label="Zona horaria">
                         {ZONAS.map(zz => (
                             <button key={zz.tz} type="button" className="rv-pais-op" role="option" aria-selected={zz.tz === tz} onClick={() => acc.elegirTz(zz.tz)}>
                                 <Bandera c={zz.c} /><span>{zz.n}</span><span>{gmtTxt(zz.tz)}</span>

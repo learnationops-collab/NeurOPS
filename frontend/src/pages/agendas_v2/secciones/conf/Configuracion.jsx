@@ -13,6 +13,7 @@ import { DatosCuenta, TarjetaCalendar, TarjetaDisponibilidad, TarjetaWhatsapp } 
 import TabEquipo from './TabEquipo';
 import TabApariencia from '../../../../temas/TabApariencia';
 import { IconButton, ModalHeader, Segmented } from '../../../../components/standard';
+import { useEnPantalla } from '../../../../components/ui/useEnPantalla';
 
 export const TABS = [
     ['datos', 'Datos', 'user'], ['disponibilidad', 'Disponibilidad', 'clock'], ['integraciones', 'Integraciones', 'enchufe'],
@@ -23,6 +24,7 @@ const VISTAS = [['completa', 'Pantalla completa'], ['flotante', 'Ventana flotant
 function MenuVisualizacion({ abierto, setAbierto }) {
     const { confVis } = useUi();
     const caja = useRef(null), btn = useRef(null);
+    const enPantalla = useEnPantalla();
     useEffect(() => {
         if (!abierto) return undefined;
         const fuera = (e) => { if (document.contains(e.target) && !caja.current?.contains(e.target)) setAbierto(false); };
@@ -38,7 +40,7 @@ function MenuVisualizacion({ abierto, setAbierto }) {
                 <i />
             </button>
             {abierto && (
-                <div className="vis-pop" role="menu" aria-label="Visualización">
+                <div ref={enPantalla} className="vis-pop" role="menu" aria-label="Visualización">
                     <div className="vis-cab">
                         <span className="t-rotulo">Visualización</span>
                         <IconButton label="Cerrar" icon={<Icono n="x" />} size="xs" onClick={cerrar} />

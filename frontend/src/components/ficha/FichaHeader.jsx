@@ -45,7 +45,7 @@ const ErrorDeCampo = ({ id, texto }) => (
 );
 
 const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
-    const { abierto, alternar, cerrar, caja } = usePopover();
+    const { abierto, alternar, cerrar, caja, pop } = usePopover();
     const mov = useMovimiento();
     const id = ficha?.identidad || {};
     const closerActual = id.closer?.nombre || null;
@@ -330,7 +330,7 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
                                     </span>
                                 </button>
                                 {abierto && (
-                                    <motion.div className="fi-pop" role="listbox"
+                                    <motion.div ref={pop} className="fi-pop" role="listbox"
                                         aria-label="Pasar el lead a"
                                         {...mov.popover}
                                         style={{ ...(mov.popover.style || {}), minWidth: 240,

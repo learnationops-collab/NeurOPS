@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { aFecha, aIso, hoyIso, textoFecha } from './modelo';
 import { reanimar } from './movimiento';
+import { useEnPantalla } from '../../../components/ui/useEnPantalla';
 
 /**
  * La fecha del reporte con el calendario del diseño: un mes por vez, con la marca de cada día.
@@ -28,6 +29,7 @@ const Calendario = ({ fecha, onElegir, estadoDe, alCambiarMes }) => {
     const cajaRef = useRef(null);
     const botonRef = useRef(null);
     const grillaRef = useRef(null);
+    const enPantalla = useEnPantalla();
     const dir = useRef(0);
     const hoy = hoyIso();
 
@@ -107,7 +109,7 @@ const Calendario = ({ fecha, onElegir, estadoDe, alCambiarMes }) => {
                 <span>{textoFecha(fecha, hoy)}</span>
             </button>
             {abierto && (
-                <div className="rd-cal" role="dialog" aria-label="Elegir fecha del reporte">
+                <div ref={enPantalla} className="rd-cal" role="dialog" aria-label="Elegir fecha del reporte">
                     <div className="rd-cal-cab">
                         <button type="button" className="rd-ibtn rd-ibtn--sm" aria-label="Mes anterior" onClick={() => moverMes(-1)}>
                             <ChevronLeft strokeWidth={1.75} aria-hidden="true" />
