@@ -175,6 +175,7 @@ def create_app(config_class=Config):
     app.register_blueprint(comments_bp, url_prefix='/api/comments')
 
     from app.api.manychat import bp as manychat_bp
+    from app.api import manychat_calificacion  # noqa: F401  (rutas sobre el mismo blueprint)
     app.register_blueprint(manychat_bp, url_prefix='/api')
     csrf.exempt(manychat_bp) # Exento para webhooks de ManyChat
 

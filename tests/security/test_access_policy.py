@@ -128,6 +128,8 @@ MATRIZ = {
     ('POST', '/api/public/triage-report'): {'admin', 'triage'},
     ('DELETE', '/api/conversational/records/clear'): {'admin', 'director_comercial'},
     ('POST', '/api/conversational/messages'): {'admin', 'director_comercial', 'setter'},
+    ('PUT', '/api/manychat-webhook/lead/1/calificacion'): {'admin', 'director_comercial', 'director_marketing'},
+    ('POST', '/api/manychat-webhook/calificaciones'): {'admin', 'director_marketing'},
     ('GET', '/api/triage/tracker'): {'admin', 'director_comercial'},
     ('GET', '/api/workshop/stats/summary'): {'admin', 'operator', 'director_marketing'},
     ('POST', '/api/public/lead-roadmap/update-client'):
