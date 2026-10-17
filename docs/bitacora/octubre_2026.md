@@ -110,3 +110,9 @@
 - **17 de Octubre de 2026** *(Marketing › Entrantes sin «Cargar calificaciones» ni «Herramientas». [frontend/src/pages/admin/marketing/entrantes/EntrantesVista.jsx](../../frontend/src/pages/admin/marketing/entrantes/EntrantesVista.jsx) [MODIFY], [frontend/src/pages/admin/marketing/AdminMarketingHubPage.jsx](../../frontend/src/pages/admin/marketing/AdminMarketingHubPage.jsx) [MODIFY])*:
   - Se quitaron los dos botones de la cabecera de «Leads entrantes», junto con el modal de carga en lote y el monitor viejo de webhooks que abrían (`CargarCalificaciones`, `WebhookMonitorTab`). La calificación se sigue corrigiendo de a uno desde la ficha; el endpoint de carga en lote del backend queda.
   - Verificación: 33 tests de vitest de Marketing y build de producción.
+
+- **17 de Octubre de 2026 (2)** *(Marketing › Entrantes: sin «Pendientes por paso» y con el historial en palabras. [frontend/src/pages/admin/marketing/entrantes/EntrantesVista.jsx](../../frontend/src/pages/admin/marketing/entrantes/EntrantesVista.jsx) [MODIFY])*:
+  - Se quitó la tarjeta «Pendientes por paso».
+  - Historial de la persona: el webhook sin mensajes dice «Inicio de la automatización» y la respuesta sola, «Respondió X» (sin «Webhook ·»). Cuando enviado y respondido traen el mismo número se muestra solo el envío: en prod ese par llega a los 30 s del inicio, igual que el envío solo, así que no es una respuesta.
+  - Los nombres de los pasos salen del catálogo de Marketing › Conversaciones. Los mensajes 11 y 12 de ManyChat (desde el 17/10) todavía no están cargados, por eso se ven como «Mensaje 11» y «Mensaje 12».
+  - Verificación: 34 tests de vitest de Marketing, lint y build de producción.
