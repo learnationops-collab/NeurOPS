@@ -131,3 +131,10 @@
   - El historial ahora dice «Se le mandó X y respondió». Con números distintos dice «Se le mandó X · respondió Y».
   - Conversaciones no cambia: ya contaba ese par como respuesta, así que «Respondidos» y «% respuesta» estaban bien.
   - Verificación: 4 tests de vitest de Entrantes, lint y build de producción.
+
+- **17 de Octubre de 2026 (4)** *(La reagenda del lead desde el link de Thalamus cuenta como reagenda. [app/agendas_v2/reagenda.py](../../app/agendas_v2/reagenda.py) [NEW], [app/agendas_v2/operacion.py](../../app/agendas_v2/operacion.py) [MODIFY], [app/agendas_v2/servicio.py](../../app/agendas_v2/servicio.py) [MODIFY])*:
+  - Antes el link movía la misma fila y para el embudo del closer, la cartera y la cola «reagendar» la reagenda no existía.
+  - Ahora es como «Reagendado» del mazo: la agenda vieja queda cerrada como Reagendado, la nueva nace reprogramada y queda un comentario en el roadmap del lead.
+  - El registro de agendas sigue con una sola fila, con la fecha nueva (no suma otra agenda en el workshop ni en Confirmación).
+  - Stats de Thalamus: la agenda original cuenta una vez, con el horario y la vigencia de su última reagenda; vale también para las reagendas del mazo.
+  - Verificación: 614 tests de pytest (Thalamus, ficha, mazo, cartera y comercial).
