@@ -56,7 +56,8 @@
 
 /* ---- Salud del embudo + lado ----------------------------------------------- */
 .dc-shell .wr-diag { display: grid; gap: var(--s4); grid-template-columns: minmax(0, 1fr); }
-@container (min-width: 1180px) { .dc-shell .wr-diag { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; } }
+/* Lado a lado, la columna de la derecha estira sus dos paneles al alto de la salud: sin hueco abajo. */
+@container (min-width: 1180px) { .dc-shell .wr-diag { grid-template-columns: minmax(0, 1fr) 320px; align-items: stretch; } }
 
 .dc-shell .wr-lado { display: grid; gap: var(--s4); grid-template-columns: minmax(0, 1fr); }
 @container (min-width: 620px) and (max-width: 1179px) { .dc-shell .wr-lado { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -69,7 +70,7 @@
     display: grid; align-items: center; column-gap: var(--s3);
     grid-template-columns: minmax(140px, 190px) minmax(110px, 1fr) 62px 86px 58px 52px 104px;
     grid-template-areas: "nombre pista n delta antes meta estado";
-    padding: 9px 0; border-top: 1px solid var(--border-subtle);
+    padding: 6px 0; border-top: 1px solid var(--border-subtle);
 }
 .dc-shell .wr-etapas--sin-vs .wr-etapa {
     grid-template-columns: minmax(140px, 200px) minmax(110px, 1fr) 62px 52px 104px;
@@ -105,7 +106,8 @@
 .dc-shell .wr-etapa-riel--antes { height: 4px; background: transparent; }
 .dc-shell .wr-etapa-riel--antes > i { background: var(--text-muted-40); }
 
-.dc-shell .wr-leyenda { margin-top: var(--s4); }
+/* En la cabecera del panel, a la izquierda de «Editar metas» (ver WorkshopDiagnostico). */
+.dc-shell .wr-salud .wr-leyenda { margin-top: 0; }
 .dc-shell .wr-leyenda .wr-leyenda-antes { height: 4px; background: var(--text-muted-40); }
 .dc-shell .wr-leyenda .wr-leyenda-meta { width: 2px; height: 12px; border-radius: 1px; background: var(--text-on-surface); }
 

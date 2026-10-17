@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, RefreshCw } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
-import { Button, EmptyState, SkeletonBlock } from '../../../components/standard';
-import { Isotipo, Segmented } from '../../comercial/components/Shared';
+import { Button, EmptyState } from '../../../components/standard';
+import CabeceraWorkshop from './components/CabeceraWorkshop';
 import useDatosWorkshop from './useDatosWorkshop';
 import '../../comercial/comercial.css';
 import './workshop-intel.css';
@@ -12,7 +12,6 @@ import './workshop-shell.css';
 import WorkshopFormModal from './components/WorkshopFormModal';
 import WorkshopTraficoView from './components/WorkshopTraficoView';
 import WorkshopGoalsModal from './components/WorkshopGoalsModal';
-import TallerEnVivo from './components/TallerEnVivo';
 import ResumenTab from './tabs/ResumenTab';
 import HistorialTab from './tabs/HistorialTab';
 import PlanificarTab from './tabs/PlanificarTab';
@@ -27,8 +26,9 @@ import { aCamposLocales, aInicioUtc, esProximo, zonaNavegador } from './agendaTa
  *  - Planificar: próximos talleres, simulador y acciones para los que vienen.
  *  - Tráfico landings: visitas y clics de las landings (el único lugar donde está).
  *
- * La cabecera y las pestañas son las del dashboard comercial y Marketing (`.dc-shell`: `tope` +
- * `Segmented`). El contenido de cada pestaña vive en `tabs/`; lo que todavía usa el estilo viejo se
+ * La cabecera (`components/CabeceraWorkshop.jsx`) pone pestañas, filtros de la pestaña y acciones en
+ * una sola línea; cada pestaña manda sus filtros ahí con <EnCabecera>. El contenido de cada pestaña
+ * vive en `tabs/`; lo que todavía usa el estilo viejo se
  * envuelve solo en `.ws-shell` (`tabs/Legado.jsx`). La pestaña va en la URL (`?tab=`), así un link lleva a lo mismo.
  *
  * La página guarda solo lo que comparten las pestañas: los talleres (con su polling), metas,
@@ -315,131 +315,108 @@ const WorkshopDashboardPage = () => {
 
     return (
         <div className="ws-espacio">
-            <div className="dc-shell dc-shell--embebido ws-cabeza">
-                <header className="tope">
-                    <div className="tope-id">
-                        <Isotipo idGrad="lnGradWorkshop" />
-                        <div>
-                            <p className="t-eyebrow">Workshop</p>
-                            <h1 className="t-h1 ws-h1">{PESTANAS.find((p) => p.key === activeTab).label}</h1>
-                        </div>
-                        {events ? <TallerEnVivo eventos={events} onIrAProximos={() => irA('planificar', { vista: 'proximos' })} />
-                            : <SkeletonBlock width={176} height={26} radius={999} />}
-                    </div>
-                    <div className="tope-meta ws-tope-meta">
-                        {/* Tráfico tiene su propio recargar junto al período: este recarga talleres, metas y acciones
-                            sin vaciar la pantalla (lo que se ve queda hasta que llega lo nuevo). */}
-                        {activeTab !== 'trafico' && (
-                            <button type="button" className="ibtn" onClick={recargar} disabled={recargando}
-                                title="Volver a cargar" aria-label="Volver a cargar">
-                                <RefreshCw className={recargando ? 'ws-gira' : ''} aria-hidden="true" />
-                            </button>
-                        )}
-                        <button type="button" className="btn btn--cta btn--sm" onClick={handleOpenCreateModal}>
-                            <Plus size={15} aria-hidden="true" /> Registrar taller
-                        </button>
-                    </div>
-                </header>
-                <div className="barra">
-                    <Segmented opciones={PESTANAS} valor={activeTab} ariaLabel="Secciones de Workshop"
-                        onChange={(key) => irA(key)} />
-                </div>
-            </div>
+            {/* Tráfico tiene su propio recargar junto al período: el de acá recarga talleres, metas y
+                acciones sin vaciar la pantalla (lo que se ve queda hasta que llega lo nuevo). */}
+            <CabeceraWorkshop pestanas={PESTANAS} activa={activeTab} onPestana={(key) => irA(key)}
+                eventos={events} onIrAProximos={() => irA('planificar', { vista: 'proximos' })}
+                recargando={recargando} onRecargar={activeTab === 'trafico' ? null : recargar}
+                onRegistrar={handleOpenCreateModal}>
 
-            <div className="ws-contenido">
-                    {/* Tráfico no depende de los talleres cargados: va fuera de los guards de abajo. */}
-                    {activeTab === 'trafico' ? (
-                        <WorkshopTraficoView />
-                    ) : fallas.events && !events ? (
-                        <div className="dc-shell dc-shell--embebido">
-                            <EmptyState title="No se pudieron cargar los talleres"
-                                action={<Button onClick={() => fetchEvents()}>Reintentar</Button>}>
-                                Revisá la conexión y volvé a intentar.
-                            </EmptyState>
-                        </div>
-                    ) : activeTab === 'planificar' ? (
-                        <PlanificarTab
-                            events={events}
-                            realizados={realizados}
+                <div className="ws-contenido">
+                        {/* Tráfico no depende de los talleres cargados: va fuera de los guards de abajo. */}
+                        {activeTab === 'trafico' ? (
+                            <WorkshopTraficoView />
+                        ) : fallas.events && !events ? (
+                            <div className="dc-shell dc-shell--embebido">
+                                <EmptyState title="No se pudieron cargar los talleres"
+                                    action={<Button onClick={() => fetchEvents()}>Reintentar</Button>}>
+                                    Revisá la conexión y volvé a intentar.
+                                </EmptyState>
+                            </div>
+                        ) : activeTab === 'planificar' ? (
+                            <PlanificarTab
+                                events={events}
+                                realizados={realizados}
+                                goals={goals}
+                                onGoalsUpdated={setGoals}
+                                actions={actions}
+                                onActionsChanged={fetchActions}
+                                enfoque={enfoquePlan}
+                                onEdit={handleOpenEditModal}
+                                onDelete={handleDeleteEvent}
+                                onProgramado={() => fetchEvents(true)}
+                                formatCurrency={formatCurrency}
+                            />
+                        ) : activeTab === 'talleres' ? (
+                            <HistorialTab
+                                events={events}
+                                realizados={realizados}
+                                onEdit={handleOpenEditModal}
+                                onDelete={handleDeleteEvent}
+                                onRefresh={fetchEvents}
+                                formatDate={formatDate}
+                                formatCurrency={formatCurrency}
+                            />
+                        ) : realizados?.length === 0 ? (
+                            <Legado>
+                                <section className="empty-state">
+                                    <p className="eyebrow">Empezá por acá</p>
+                                    <h2>No hay workshops registrados</h2>
+                                    <p>Registrá el primero para empezar a medir el embudo.</p>
+                                    <button type="button" className="primary-action" onClick={handleOpenCreateModal}>
+                                        <Plus size={16} /> Registrar taller
+                                    </button>
+                                </section>
+                            </Legado>
+                        ) : (
+                            <ResumenTab
+                                realizados={realizados}
+                                goals={goals}
+                                actions={actions}
+                                onEditGoals={() => setGoalsModalOpen(true)}
+                                onGoToSimulador={(etapa) => irA('planificar', { vista: 'simulador', etapa })}
+                            />
+                        )}
+
+                </div>
+
+                {/* Los modales todavía son del estilo viejo. */}
+                <Legado>
+                    {goalsModalOpen && goals && (
+                        <WorkshopGoalsModal
                             goals={goals}
-                            onGoalsUpdated={setGoals}
-                            actions={actions}
-                            onActionsChanged={fetchActions}
-                            enfoque={enfoquePlan}
-                            onEdit={handleOpenEditModal}
-                            onDelete={handleDeleteEvent}
-                            onProgramado={() => fetchEvents(true)}
-                            formatCurrency={formatCurrency}
-                        />
-                    ) : activeTab === 'talleres' ? (
-                        <HistorialTab
-                            events={events}
-                            realizados={realizados}
-                            onEdit={handleOpenEditModal}
-                            onDelete={handleDeleteEvent}
-                            onRefresh={fetchEvents}
-                            formatDate={formatDate}
-                            formatCurrency={formatCurrency}
-                        />
-                    ) : realizados?.length === 0 ? (
-                        <Legado>
-                            <section className="empty-state">
-                                <p className="eyebrow">Empezá por acá</p>
-                                <h2>No hay workshops registrados</h2>
-                                <p>Registrá el primero para empezar a medir el embudo.</p>
-                                <button type="button" className="primary-action" onClick={handleOpenCreateModal}>
-                                    <Plus size={16} /> Registrar taller
-                                </button>
-                            </section>
-                        </Legado>
-                    ) : (
-                        <ResumenTab
-                            realizados={realizados}
-                            goals={goals}
-                            actions={actions}
-                            onEditGoals={() => setGoalsModalOpen(true)}
-                            onGoToSimulador={(etapa) => irA('planificar', { vista: 'simulador', etapa })}
+                            onClose={() => setGoalsModalOpen(false)}
+                            onSaved={(updated) => { setGoals(updated); setGoalsModalOpen(false); }}
                         />
                     )}
 
-            </div>
-
-            {/* Los modales todavía son del estilo viejo. */}
-            <Legado>
-                {goalsModalOpen && goals && (
-                    <WorkshopGoalsModal
-                        goals={goals}
-                        onClose={() => setGoalsModalOpen(false)}
-                        onSaved={(updated) => { setGoals(updated); setGoalsModalOpen(false); }}
-                    />
-                )}
-
-                {/* Modal Wizard de Creación / Edición */}
-                {modalOpen && (
-                    <WorkshopFormModal
-                        isEditMode={isEditMode}
-                        currentStep={currentStep}
-                        setCurrentStep={setCurrentStep}
-                        formData={formData}
-                        setFormData={setFormData}
-                        agendaBreakdown={agendaBreakdown}
-                        desglose={desglose}
-                        ventana={ventana}
-                        loadingPrefill={loadingPrefill}
-                        prefilledDate={prefilledDate}
-                        onPrefill={handlePrefill}
-                        onClose={() => setModalOpen(false)}
-                        onSubmit={handleSubmit}
-                        onGuardar={() => guardarTaller({ cerrar: false })}
-                        guardando={guardando}
-                        formatCurrency={formatCurrency}
-                        deMeta={isEditMode && selectedEvent
-                            ? { inversion: selectedEvent.inversion_de_meta, clics: selectedEvent.clics_de_meta,
-                                leads: selectedEvent.leads_de_meta }
-                            : null}
-                    />
-                )}
-            </Legado>
+                    {/* Modal Wizard de Creación / Edición */}
+                    {modalOpen && (
+                        <WorkshopFormModal
+                            isEditMode={isEditMode}
+                            currentStep={currentStep}
+                            setCurrentStep={setCurrentStep}
+                            formData={formData}
+                            setFormData={setFormData}
+                            agendaBreakdown={agendaBreakdown}
+                            desglose={desglose}
+                            ventana={ventana}
+                            loadingPrefill={loadingPrefill}
+                            prefilledDate={prefilledDate}
+                            onPrefill={handlePrefill}
+                            onClose={() => setModalOpen(false)}
+                            onSubmit={handleSubmit}
+                            onGuardar={() => guardarTaller({ cerrar: false })}
+                            guardando={guardando}
+                            formatCurrency={formatCurrency}
+                            deMeta={isEditMode && selectedEvent
+                                ? { inversion: selectedEvent.inversion_de_meta, clics: selectedEvent.clics_de_meta,
+                                    leads: selectedEvent.leads_de_meta }
+                                : null}
+                        />
+                    )}
+                </Legado>
+            </CabeceraWorkshop>
         </div>
     );
 };

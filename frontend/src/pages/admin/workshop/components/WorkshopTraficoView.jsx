@@ -8,6 +8,7 @@ import { EsqueletoTablero, PanelCab, PillMenu, Segmented, Tip } from '../../../c
 import RangoFechas, { esFecha, textoRango } from '../../../comercial/components/RangoFechas';
 import ListaConfigurable from '../../../../components/listas/ListaConfigurable';
 import SerieVisitas from '../trafico/SerieVisitas';
+import { EnCabecera } from './CabeceraWorkshop';
 import DetalleVisitas from '../trafico/DetalleVisitas';
 import { AGRUPACIONES, FACETAS_RANKING, buscarRanking, claveRanking, columnasRanking, filasRanking } from '../trafico/columnas';
 import { PERIODOS, PERIODO_POR_DEFECTO, fechaHora, num, pct, rangoDePeriodo } from '../trafico/trafico';
@@ -131,24 +132,27 @@ const WorkshopTraficoView = () => {
 
     return (
         <div className="dc-shell dc-shell--embebido wf-trafico">
-            <div className="fila wf-barra">
-                <PillMenu icono={<CalendarDays />} texto={textoPeriodo} rotulo="Período"
-                    detalle={periodo === 'personalizado' ? null : textoRango(rango)}
-                    opciones={PERIODOS} valor={periodo} ancho={230}
-                    onChange={(key) => cambiar(key === 'personalizado'
-                        ? { periodo: key, desde: rango.desde, hasta: rango.hasta }
-                        : { periodo: key === PERIODO_POR_DEFECTO ? null : key, desde: null, hasta: null })}
-                    pie={periodo === 'personalizado' && (
-                        <RangoFechas desde={rango.desde} hasta={rango.hasta} rotulo="Período"
-                            onCambiar={({ desde, hasta }) => {
-                                if (esFecha(desde) && esFecha(hasta)) cambiar({ periodo: 'personalizado', desde, hasta });
-                            }} />
-                    )} />
-                <button type="button" className="ibtn" onClick={recargar} disabled={cargando}
-                    title="Volver a cargar el tráfico" aria-label="Volver a cargar el tráfico">
-                    <RefreshCw className={cargando ? 'wf-gira' : ''} aria-hidden="true" />
-                </button>
-            </div>
+            {/* El período y su recargar van a la línea de la cabecera de Workshop. */}
+            <EnCabecera>
+                <div className="fila wf-barra">
+                    <PillMenu icono={<CalendarDays />} texto={textoPeriodo} rotulo="Período"
+                        detalle={periodo === 'personalizado' ? null : textoRango(rango)}
+                        opciones={PERIODOS} valor={periodo} ancho={230}
+                        onChange={(key) => cambiar(key === 'personalizado'
+                            ? { periodo: key, desde: rango.desde, hasta: rango.hasta }
+                            : { periodo: key === PERIODO_POR_DEFECTO ? null : key, desde: null, hasta: null })}
+                        pie={periodo === 'personalizado' && (
+                            <RangoFechas desde={rango.desde} hasta={rango.hasta} rotulo="Período"
+                                onCambiar={({ desde, hasta }) => {
+                                    if (esFecha(desde) && esFecha(hasta)) cambiar({ periodo: 'personalizado', desde, hasta });
+                                }} />
+                        )} />
+                    <button type="button" className="ibtn" onClick={recargar} disabled={cargando}
+                        title="Volver a cargar el tráfico" aria-label="Volver a cargar el tráfico">
+                        <RefreshCw className={cargando ? 'wf-gira' : ''} aria-hidden="true" />
+                    </button>
+                </div>
+            </EnCabecera>
 
             {error && !datos ? (
                 <section className="panel"><p className="t-body">{error}</p></section>

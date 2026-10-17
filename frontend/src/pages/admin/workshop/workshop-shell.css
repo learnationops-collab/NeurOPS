@@ -1,6 +1,6 @@
 /* ============================================================================
    Workshop — la cáscara (16/10/2026): fondo, cabecera y pestañas del estilo del dashboard comercial
-   y de Marketing (`.dc-shell`: `tope` + `Segmented`). El contenido que todavía usa el estilo viejo va
+   y de Marketing (`.dc-shell`; desde el 17/10 la cabecera en una línea, ver abajo). El contenido viejo va
    en `.ws-shell.ws-contenido` (ver workshop-intel.css); cada pestaña nueva arma su propio
    `.dc-shell dc-shell--embebido` adentro.
    ============================================================================ */
@@ -18,7 +18,63 @@
 .ws-espacio > .ws-cabeza {
     max-width: 1440px;
     margin: 0 auto;
-    padding: 24px clamp(16px, 3vw, 24px) 0;
+    padding: 16px clamp(16px, 3vw, 24px) 0;
+    container: ws-cab / inline-size;
+}
+
+/* --- La cabecera (CabeceraWorkshop.jsx) ------------------------------------------------------
+   Arriba el título compacto; abajo, en UNA línea, pestañas · filtros de la pestaña · acciones. Se
+   mide el ancho de la cabecera (no la ventana). Cada salto es un renglón entero, nunca un elemento
+   suelto abajo:
+     - angosto: título y acciones / pestañas / filtros
+     - desde 920 px: título y acciones / pestañas y filtros
+     - desde 1150 px: título / pestañas, filtros y acciones (a 1330 de ventana entra con aire)
+   Sin filtros (Talleres, Planificar) la línea es pestañas y acciones desde 640 px. */
+.dc-shell .ws-cab {
+    display: grid;
+    align-items: center;
+    gap: 10px var(--s3);
+    margin-bottom: var(--s4);
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "id acc" "tabs tabs" "filtros filtros";
+}
+.dc-shell .ws-cab-id { grid-area: id; display: flex; align-items: center; flex-wrap: wrap; gap: 6px var(--s3); min-width: 0; }
+.dc-shell .ws-cab-id > svg { width: 28px; height: 28px; flex-shrink: 0; }
+.dc-shell .ws-cab-titulo {
+    margin: 0; font-size: 14px; font-weight: 900; letter-spacing: .24em; text-transform: uppercase; line-height: 28px;
+}
+.dc-shell .ws-cab-tabs { grid-area: tabs; min-width: 0; display: flex; }
+.dc-shell .ws-cab-filtros { grid-area: filtros; min-width: 0; }
+.dc-shell .ws-cab-filtros:empty { display: none; }
+.dc-shell .ws-cab-filtros .wf-barra { justify-content: flex-start; }
+.dc-shell .ws-cab-acc { grid-area: acc; display: flex; align-items: center; gap: var(--s2); justify-self: end; }
+
+@container ws-cab (min-width: 640px) {
+    .dc-shell .ws-cab:not(:has(.ws-cab-filtros > *)) {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas: "id id id" "tabs . acc";
+    }
+}
+@container ws-cab (min-width: 920px) {
+    .dc-shell .ws-cab {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas: "id id acc" "tabs filtros filtros";
+    }
+}
+@container ws-cab (min-width: 1150px) {
+    .dc-shell .ws-cab { grid-template-areas: "id id id" "tabs filtros acc"; }
+}
+/* Teléfono: «Registrar taller» queda en su ícono (el nombre sigue en aria-label y en el tip) y las
+   pastillas de filtro ocupan el renglón entero, de a una o de a dos, sin cortes a medio texto. */
+@container ws-cab (max-width: 559px) {
+    .dc-shell .ws-cab-tabs .tabs { width: 100%; justify-content: space-between; gap: 0; padding: 4px; }
+    .dc-shell .ws-cab-tabs .tab { height: 32px; padding: 0 9px; font-size: 12px; }
+    .dc-shell .ws-cab-registrar { width: 40px; height: 40px; padding: 0; }
+    .dc-shell .ws-cab-registrar > span { display: none; }
+    .dc-shell .ws-cab-filtros .wr-filtros > *,
+    .dc-shell .ws-cab-filtros .wf-barra > div { flex: 1 1 200px; min-width: 0; }
+    .dc-shell .ws-cab-filtros .pastilla { width: 100%; }
+    .dc-shell .ws-cab-filtros .pastilla > .trunc { flex: 1; text-align: left; }
 }
 
 /* El contenido de estilo viejo (`tabs/Legado.jsx`): sin el alto ni el fondo propios de `.ws-shell`,
@@ -31,9 +87,6 @@
     padding: 0 clamp(16px, 3vw, 24px) 48px;
     min-height: 0;
 }
-
-.dc-shell .ws-h1 { font-size: clamp(28px, 3.4vw, 40px); }
-.dc-shell .ws-tope-meta { display: flex; align-items: center; gap: var(--s2); }
 
 @keyframes ws-gira { to { transform: rotate(360deg); } }
 .dc-shell .ws-gira { animation: ws-gira 1s linear infinite; }
@@ -61,6 +114,3 @@
     border-color: var(--border-subtle); background: transparent; color: var(--text-muted); cursor: pointer;
 }
 .dc-shell .live-badge--sin:hover { color: var(--text-on-surface); }
-
-/* En el teléfono la cuenta regresiva baja de renglón en vez de salirse por la derecha. */
-.dc-shell.ws-cabeza .tope-id { flex-wrap: wrap; row-gap: var(--s2); }

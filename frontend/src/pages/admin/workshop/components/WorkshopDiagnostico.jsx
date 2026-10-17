@@ -97,6 +97,12 @@ const WorkshopDiagnostico = ({ events, comparados, goals, actions, onEditGoals, 
             <motion.section className="panel wr-salud" {...entrada(0)}>
                 <PanelCab titulo="Salud del embudo"
                     tip="Cada etapa contra su meta. La barra fina es la comparación.">
+                    {/* La leyenda va en la cabecera del panel: un renglón menos y el Resumen entra sin scroll. */}
+                    <div className="leyenda wr-leyenda" aria-hidden="true">
+                        <span><i style={{ background: 'var(--success)' }} />Actual</span>
+                        {ratesAntes && <span><i className="wr-leyenda-antes" />Comparación</span>}
+                        <span><i className="wr-leyenda-meta" />Meta</span>
+                    </div>
                     <button type="button" className="btn btn--linea btn--sm" onClick={onEditGoals} disabled={!goals}>
                         <Settings2 aria-hidden="true" /> Editar metas
                     </button>
@@ -107,11 +113,6 @@ const WorkshopDiagnostico = ({ events, comparados, goals, actions, onEditGoals, 
                         {filas.map((f, i) => <Fila key={f.key} f={f} antes={antesDe(f.key)} i={i} />)}
                     </div>
                 ) : <EsqueletoEtapas cabecera={<CabEtapas conVs={false} />} />}
-                <div className="leyenda wr-leyenda" aria-hidden="true">
-                    <span><i style={{ background: 'var(--success)' }} />Actual</span>
-                    {ratesAntes && <span><i className="wr-leyenda-antes" />Comparación</span>}
-                    <span><i className="wr-leyenda-meta" />Meta</span>
-                </div>
             </motion.section>
 
             <div className="wr-lado">

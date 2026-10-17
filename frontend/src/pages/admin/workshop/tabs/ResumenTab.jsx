@@ -8,6 +8,7 @@ import {
     talleresComparados, totalesResumen, variaciones,
 } from '../filtroTalleres';
 import { EsqueletoFiltros } from '../resumen/EsqueletosResumen';
+import { EnCabecera } from '../components/CabeceraWorkshop';
 import '../resumen/resumen.css';
 
 const SIN_TALLERES = [];
@@ -55,16 +56,19 @@ const ResumenTab = ({ realizados, goals, actions, onEditGoals, onGoToSimulador }
     return (
         <div className="dc-shell dc-shell--embebido">
             <div className="vista wr-resumen">
-                {cargando ? <EsqueletoFiltros /> : (
-                    <WorkshopFiltroResumen
-                        talleres={lista}
-                        filtro={filtro}
-                        comparacion={comparacion}
-                        comparado={comparado}
-                        onFiltro={cambiarFiltro}
-                        onComparacion={cambiarComparacion}
-                    />
-                )}
+                {/* Las pastillas van a la línea de la cabecera (solo en esta pestaña). */}
+                <EnCabecera>
+                    {cargando ? <EsqueletoFiltros /> : (
+                        <WorkshopFiltroResumen
+                            talleres={lista}
+                            filtro={filtro}
+                            comparacion={comparacion}
+                            comparado={comparado}
+                            onFiltro={cambiarFiltro}
+                            onComparacion={cambiarComparacion}
+                        />
+                    )}
+                </EnCabecera>
                 {!cargando && analizados.length === 0 ? (
                     <section className="panel wr-vacio" role="status">
                         <p className="t-h3">Ningún taller en esta selección</p>
