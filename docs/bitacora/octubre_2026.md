@@ -143,3 +143,9 @@
   - El menú de cualquier `Select` dentro de un `Modal` estándar salía corrido abajo a la derecha y cortado. Pasaba porque la animación de entrada del modal quedaba en efecto (`both`) y el modal pasaba a ser la referencia de lo `position: fixed`. Ahora la animación va con `backwards`.
   - En «Nuevo mensaje» la categoría ocupa su propia fila y se lee entera (antes, «Cualific…»).
   - Verificación: 31 tests de vitest (componentes estándar y Conversaciones). Prueba en el navegador con el usuario de marketing: el menú abre justo debajo del botón, dentro de la pantalla, y elegir «Seguimiento» cambia el valor.
+
+- **17 de Octubre de 2026 (6)** *(Inbox: métricas por paso y gráficos estándar. [frontend/src/pages/inbox/](../../frontend/src/pages/inbox/) [MODIFY], [app/automatizaciones/](../../app/automatizaciones/) [MODIFY], [frontend/src/components/standard/Charts.jsx](../../frontend/src/components/standard/Charts.jsx) [NEW])*:
+  - Flujos: tarjetas con métricas, plantillas para crear un flujo y el lienzo con las métricas de cada paso.
+  - Conversaciones: examen, calificación, flujo y paso en cada fila; el detalle muestra el recorrido y la mediana de respuesta.
+  - Componente estándar nuevo `Bars`, que ya usa el embudo de los talleres de Workshop (catálogo `/ui` y skill).
+  - Las campañas del Inbox (con su migración) quedan para otro commit.
