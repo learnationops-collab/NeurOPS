@@ -123,8 +123,6 @@ MATRIZ = {
     ('GET', '/api/public/financial-sales'): {'admin', 'director_comercial', 'operator'},
     # La lista de anuncios la lee tambien la bandeja «Sin anuncio» de closers y setters.
     ('GET', '/api/public/ads'): {'admin', 'director_marketing', 'closer', 'setter'},
-    ('POST', '/api/manychat-webhook/cleanup-duplicates'): {'admin', 'director_marketing'},
-    ('POST', '/api/manychat-webhook/migrate'): {'admin', 'director_marketing'},
     ('POST', '/api/public/closer-report'): {'admin', 'closer'},
     ('POST', '/api/public/setter-report'): {'admin', 'setter'},
     ('POST', '/api/public/triage-report'): {'admin', 'triage'},
