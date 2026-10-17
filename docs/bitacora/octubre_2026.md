@@ -92,3 +92,4 @@
   - Marketing › Entrantes (antes Webhooks): una fila por persona con estado (calificado, descalificado, en conversación, sin respuesta) y paso del flujo. Se retiraron «Migrar data antigua» y «Limpieza inteligente».
   - Calificación: del 28/07 al 16/10 ManyChat mandaba «yes» fijo en el webhook de la respuesta a la apertura (corregido en ManyChat). El webhook lee también `cualificado` y registra el valor crudo; se puede corregir la calificación de a uno o en lote.
   - Verificación: suites de pytest y vitest de Workshop, Marketing y ManyChat; revisión visual con un servidor local.
+  - Marketing › Conversaciones: el catálogo de mensajes del flujo de ManyChat (número, título, categoría, activo) con enviados, respondidos, % de respuesta, calificados y descalificados del período; marketing ya puede administrarlo. Los 651 leads que fueron por la rama «no calificado» entre el 28/07 y el 16/10 quedaron descalificados (cargados con «Cargar calificaciones»).
