@@ -11,6 +11,8 @@ import TarjetaTaller from './TarjetaTaller';
 import TablaTalleres from './TablaTalleres';
 import DetalleTaller from './DetalleTaller';
 import Hoja from './Hoja';
+import { EsqueletoTabla, EsqueletoTarjetas } from './EsqueletoTalleres';
+import { SkeletonBlock } from '../../../../components/standard';
 import useAhora from './useAhora';
 import './talleres.css';
 
@@ -30,8 +32,13 @@ import './talleres.css';
  */
 
 const MAX_COMPARAR = 4;
+const SIN_TALLERES = [];
 
-const TalleresVista = ({ events, realizados, onEdit, onRefresh, formatDate }) => {
+const TalleresVista = ({ events: eventos, realizados: llegados, onEdit, onRefresh, formatDate }) => {
+    // null mientras los talleres no llegaron: la barra se ve y las tarjetas son esqueletos.
+    const cargando = llegados == null;
+    const realizados = llegados || SIN_TALLERES;
+    const events = eventos || SIN_TALLERES;
     const { modo, setModo } = useModoVista('workshop_talleres_modo', 'tarjetas');
     const [abierto, setAbierto] = useState(null); // { id, vista }
     const [landingAbierta, setLandingAbierta] = useState(false);
@@ -101,7 +108,15 @@ const TalleresVista = ({ events, realizados, onEdit, onRefresh, formatDate }) =>
 
     return (
         <div className="vista wt-talleres">
-            {realizados.length === 0 ? (
+            {cargando ? (
+                <>
+                    <div className="fila barra-tabla wt-barra">
+                        {controles}
+                        <span className="barra-cuenta"><SkeletonBlock height={10} width={70} /></span>
+                    </div>
+                    {modo === 'lista' ? <EsqueletoTabla /> : <EsqueletoTarjetas />}
+                </>
+            ) : realizados.length === 0 ? (
                 <section className="panel wt-vacio">
                     <span className="vacio-icono" aria-hidden="true"><CalendarDays /></span>
                     <h2 className="t-h3">Todavía no hay talleres realizados</h2>

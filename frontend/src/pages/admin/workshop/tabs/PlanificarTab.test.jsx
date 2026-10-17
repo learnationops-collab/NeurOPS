@@ -98,4 +98,19 @@ describe('Workshop › Planificar', () => {
         expect(palanca).toHaveAttribute('data-enfocada', '1');
         expect(document.getElementById('wp-simulador').scrollIntoView).toHaveBeenCalled();
     });
+
+    it('cada panel espera solo su dato: sin metas, el simulador y el plan son esqueletos', () => {
+        montar({ goals: null });
+        expect(screen.getByRole('region', { name: 'Próximos talleres' })).toBeInTheDocument();
+        expect(screen.getByRole('status', { name: 'Cargando el plan de acciones…' })).toHaveTextContent('Plan de acciones');
+        expect(screen.getByRole('status', { name: 'Cargando el simulador…' })).toBeInTheDocument();
+        expect(screen.queryByRole('slider')).toBeNull();
+    });
+
+    it('sin talleres todavía, los tres paneles muestran su esqueleto', () => {
+        montar({ events: null, realizados: null, goals: null, actions: null });
+        expect(screen.getAllByRole('status').map((s) => s.getAttribute('aria-label'))).toEqual([
+            'Cargando los próximos talleres…', 'Cargando el plan de acciones…', 'Cargando el simulador…',
+        ]);
+    });
 });

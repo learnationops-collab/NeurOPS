@@ -7,6 +7,7 @@ import WorkshopSimuladorView from '../components/WorkshopSimuladorView';
 import WorkshopAccionesView from '../components/WorkshopAccionesView';
 import ModalAccion from '../planificar/ModalAccion';
 import { agruparAcciones, cuerpoAccion, siguienteTaller, talleresPorDelante } from '../planificar/plan';
+import { EsqueletoAcciones, EsqueletoProximos, EsqueletoSimulador } from '../planificar/EsqueletosPlan';
 import '../planificar/planificar.css';
 
 /**
@@ -38,7 +39,8 @@ const PlanificarTab = ({
     }
     const [borrador, setBorrador] = useState(null);
 
-    const talleres = useMemo(() => talleresPorDelante(events), [events]);
+    // Talleres, metas o acciones en null: todavía no llegaron. Cada panel espera solo lo suyo.
+    const talleres = useMemo(() => talleresPorDelante(events || []), [events]);
     const lista = useMemo(
         () => (actions || []).map((a) => (a.id in tildadas ? { ...a, status: tildadas[a.id] } : a)),
         [actions, tildadas],
@@ -95,31 +97,37 @@ const PlanificarTab = ({
         }
     };
 
-    const siguiente = siguienteTaller(events);
+    const siguiente = siguienteTaller(events || []);
     // Sin taller elegido, va al siguiente que todavía no empezó (se cambia en el modal).
     const nueva = (extra = {}) => setBorrador({ ...extra, event_id: extra.event_id ?? siguiente?.id ?? null });
 
     return (
         <div className="dc-shell dc-shell--embebido wp-plan">
             <div className="wp-arriba">
-                <WorkshopProximosView
-                    events={events} onEdit={onEdit} onDelete={onDelete} onProgramado={onProgramado}
-                    acciones={grupos.porTaller}
-                    onNuevaAccion={(taller) => nueva({ event_id: taller.id })}
-                    onTildar={tildar} onEditarAccion={setBorrador} onBorrarAccion={borrar}
-                />
-                <WorkshopAccionesView
-                    events={realizados} goals={goals} actions={lista}
-                    sinTaller={grupos.sinTaller} pasadas={grupos.pasadas} talleres={talleres}
-                    formatCurrency={formatCurrency}
-                    onNueva={() => nueva()} onTildar={tildar} onEditar={setBorrador} onBorrar={borrar} onAsignar={asignar}
-                />
+                {events && actions ? (
+                    <WorkshopProximosView
+                        events={events} onEdit={onEdit} onDelete={onDelete} onProgramado={onProgramado}
+                        acciones={grupos.porTaller}
+                        onNuevaAccion={(taller) => nueva({ event_id: taller.id })}
+                        onTildar={tildar} onEditarAccion={setBorrador} onBorrarAccion={borrar}
+                    />
+                ) : <EsqueletoProximos />}
+                {events && goals && actions ? (
+                    <WorkshopAccionesView
+                        events={realizados} goals={goals} actions={lista}
+                        sinTaller={grupos.sinTaller} pasadas={grupos.pasadas} talleres={talleres}
+                        formatCurrency={formatCurrency}
+                        onNueva={() => nueva()} onTildar={tildar} onEditar={setBorrador} onBorrar={borrar} onAsignar={asignar}
+                    />
+                ) : <EsqueletoAcciones />}
             </div>
-            <WorkshopSimuladorView
-                events={realizados} goals={goals} onGoalsUpdated={onGoalsUpdated} formatCurrency={formatCurrency}
-                etapaEnfocada={enfoque?.vista === 'simulador' ? enfoque.etapa || null : null}
-                onCrearAccion={(b) => b && nueva(b)}
-            />
+            {events && goals ? (
+                <WorkshopSimuladorView
+                    events={realizados} goals={goals} onGoalsUpdated={onGoalsUpdated} formatCurrency={formatCurrency}
+                    etapaEnfocada={enfoque?.vista === 'simulador' ? enfoque.etapa || null : null}
+                    onCrearAccion={(b) => b && nueva(b)}
+                />
+            ) : <EsqueletoSimulador />}
 
             {borrador && (
                 <ModalAccion borrador={borrador} talleres={talleres} onGuardar={guardar} onCerrar={() => setBorrador(null)} />

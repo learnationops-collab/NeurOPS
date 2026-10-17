@@ -7,7 +7,10 @@ import {
     comparacionDeParams, filtrarTalleres, filtroDeParams, paramsDeComparacion, paramsDeFiltro,
     talleresComparados, totalesResumen, variaciones,
 } from '../filtroTalleres';
+import { EsqueletoFiltros } from '../resumen/EsqueletosResumen';
 import '../resumen/resumen.css';
+
+const SIN_TALLERES = [];
 
 /**
  * Resumen: qué talleres se analizan y contra qué, los KPIs y la salud del embudo contra las metas.
@@ -31,8 +34,14 @@ const ResumenTab = ({ realizados, goals, actions, onEditGoals, onGoToSimulador }
     const cambiarFiltro = (nuevo) => escribir({ ...paramsDeFiltro(nuevo), ...paramsDeComparacion(comparacion, nuevo) });
     const cambiarComparacion = (nueva) => escribir(paramsDeComparacion(nueva, filtro));
 
-    const analizados = useMemo(() => filtrarTalleres(realizados, filtro), [realizados, filtro]);
-    const comparado = useMemo(() => talleresComparados(realizados, filtro, comparacion), [realizados, filtro, comparacion]);
+    // `realizados` es null mientras los talleres no llegaron: cada bloque muestra su esqueleto.
+    const cargando = realizados == null;
+    const lista = realizados || SIN_TALLERES;
+    const analizados = useMemo(() => filtrarTalleres(lista, filtro), [lista, filtro]);
+    const comparado = useMemo(
+        () => (cargando ? null : talleresComparados(lista, filtro, comparacion)),
+        [cargando, lista, filtro, comparacion]
+    );
     const totales = useMemo(() => totalesResumen(analizados), [analizados]);
     const anterior = useMemo(
         () => (comparado ? { totales: totalesResumen(comparado.talleres), cantidad: comparado.talleres.length } : null),
@@ -46,25 +55,27 @@ const ResumenTab = ({ realizados, goals, actions, onEditGoals, onGoToSimulador }
     return (
         <div className="dc-shell dc-shell--embebido">
             <div className="vista wr-resumen">
-                <WorkshopFiltroResumen
-                    talleres={realizados}
-                    filtro={filtro}
-                    comparacion={comparacion}
-                    comparado={comparado}
-                    onFiltro={cambiarFiltro}
-                    onComparacion={cambiarComparacion}
-                />
-                {analizados.length === 0 ? (
+                {cargando ? <EsqueletoFiltros /> : (
+                    <WorkshopFiltroResumen
+                        talleres={lista}
+                        filtro={filtro}
+                        comparacion={comparacion}
+                        comparado={comparado}
+                        onFiltro={cambiarFiltro}
+                        onComparacion={cambiarComparacion}
+                    />
+                )}
+                {!cargando && analizados.length === 0 ? (
                     <section className="panel wr-vacio" role="status">
                         <p className="t-h3">Ningún taller en esta selección</p>
                         <p className="t-sm mut">Elegí al menos uno o ampliá el período.</p>
                     </section>
                 ) : (
                     <>
-                        <WorkshopKpiCards totalStats={totales} eventsCount={analizados.length}
+                        <WorkshopKpiCards totalStats={cargando ? null : totales} eventsCount={analizados.length}
                             cambios={cambios} anterior={anterior} />
                         <WorkshopDiagnostico
-                            events={analizados}
+                            events={cargando ? null : analizados}
                             comparados={comparado?.talleres || null}
                             goals={goals}
                             actions={actions}

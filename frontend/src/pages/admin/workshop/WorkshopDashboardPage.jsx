@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, RefreshCw } from 'lucide-react';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
+import { Button, EmptyState, SkeletonBlock } from '../../../components/standard';
 import { Isotipo, Segmented } from '../../comercial/components/Shared';
+import useDatosWorkshop from './useDatosWorkshop';
 import '../../comercial/comercial.css';
 import './workshop-intel.css';
 import './workshop-shell.css';
@@ -91,15 +93,15 @@ const WorkshopDashboardPage = () => {
         if (tab === 'planificar') setEnfoquePlan(enfoque ? { ...enfoque } : null);
     }, [params, setParams]);
 
-    const [events, setEvents] = useState([]);
-    const [loading, setLoading] = useState(true);
+    // Talleres, metas y acciones: null hasta que llega cada uno (ver useDatosWorkshop).
+    const {
+        events, goals, actions, fallas, recargando, recargar, fetchEvents, fetchActions, setGoals,
+    } = useDatosWorkshop();
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [isEditMode, setIsEditMode] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
 
-    const [goals, setGoals] = useState(null);
-    const [actions, setActions] = useState([]);
     const [goalsModalOpen, setGoalsModalOpen] = useState(false);
 
     // Formulario & Prefill
@@ -111,57 +113,6 @@ const WorkshopDashboardPage = () => {
     // Desglose vivo / grabación del taller abierto en el formulario
     const [desglose, setDesglose] = useState(null);
     const [ventana, setVentana] = useState(null);
-
-    useEffect(() => {
-        fetchEvents();
-        fetchGoals();
-        fetchActions();
-    }, []);
-
-    const fetchGoals = async () => {
-        try {
-            const res = await api.get('workshop/goals');
-            setGoals(res.data);
-        } catch (err) {
-            console.error('Error cargando metas del workshop:', err);
-        }
-    };
-
-    const fetchActions = async () => {
-        try {
-            const res = await api.get('workshop/actions');
-            setActions(res.data);
-        } catch (err) {
-            console.error('Error cargando el plan de acciones:', err);
-        }
-    };
-
-    // `silent=true` es el modo que usa el polling en vivo: no prende el
-    // spinner de carga ni molesta con un toast si falla un tick (el proximo
-    // intento en 20s ya lo resuelve solo).
-    const fetchEvents = async (silent = false) => {
-        if (!silent) setLoading(true);
-        try {
-            const res = await api.get('workshop/events');
-            if (Array.isArray(res.data)) {
-                setEvents(res.data);
-            }
-        } catch (err) {
-            console.error("Error fetching events:", err);
-            if (!silent) toast.error("Error al cargar los eventos");
-        } finally {
-            if (!silent) setLoading(false);
-        }
-    };
-
-    // Sincronizacion en vivo: las agendas, ventas y formularios ya se reflejan
-    // solos en el snapshot del backend (workshop_live_sync.py) apenas llegan --
-    // este polling silencioso es solo para que el panel ya abierto los recoja
-    // sin que el usuario tenga que recargar la pagina o tocar nada.
-    useEffect(() => {
-        const interval = setInterval(() => fetchEvents(true), 20000);
-        return () => clearInterval(interval);
-    }, []);
 
     const handlePrefill = async (selectedDate) => {
         if (!selectedDate) return;
@@ -348,7 +299,7 @@ const WorkshopDashboardPage = () => {
 
     // Los talleres programados que todavía no empezaron tienen todo en cero: fuera de los totales,
     // el diagnóstico y el historial. Se ven y se editan en Planificar › Próximos.
-    const realizados = useMemo(() => events.filter(e => !esProximo(e)), [events]);
+    const realizados = useMemo(() => (events ? events.filter(e => !esProximo(e)) : null), [events]);
 
     const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
     const formatDate = (dateStr) => {
@@ -372,14 +323,16 @@ const WorkshopDashboardPage = () => {
                             <p className="t-eyebrow">Workshop</p>
                             <h1 className="t-h1 ws-h1">{PESTANAS.find((p) => p.key === activeTab).label}</h1>
                         </div>
-                        <TallerEnVivo eventos={events} onIrAProximos={() => irA('planificar', { vista: 'proximos' })} />
+                        {events ? <TallerEnVivo eventos={events} onIrAProximos={() => irA('planificar', { vista: 'proximos' })} />
+                            : <SkeletonBlock width={176} height={26} radius={999} />}
                     </div>
                     <div className="tope-meta ws-tope-meta">
-                        {/* Tráfico tiene su propio recargar junto al período: este recarga los talleres. */}
+                        {/* Tráfico tiene su propio recargar junto al período: este recarga talleres, metas y acciones
+                            sin vaciar la pantalla (lo que se ve queda hasta que llega lo nuevo). */}
                         {activeTab !== 'trafico' && (
-                            <button type="button" className="ibtn" onClick={() => fetchEvents()} disabled={loading}
+                            <button type="button" className="ibtn" onClick={recargar} disabled={recargando}
                                 title="Volver a cargar" aria-label="Volver a cargar">
-                                <RefreshCw className={loading ? 'ws-gira' : ''} aria-hidden="true" />
+                                <RefreshCw className={recargando ? 'ws-gira' : ''} aria-hidden="true" />
                             </button>
                         )}
                         <button type="button" className="btn btn--cta btn--sm" onClick={handleOpenCreateModal}>
@@ -397,14 +350,13 @@ const WorkshopDashboardPage = () => {
                     {/* Tráfico no depende de los talleres cargados: va fuera de los guards de abajo. */}
                     {activeTab === 'trafico' ? (
                         <WorkshopTraficoView />
-                    ) : loading ? (
-                        <Legado>
-                            <section className="empty-state loading-state" role="status">
-                                <div><span /></div>
-                                <p className="eyebrow">Sincronizando</p>
-                                <h2>Cargando inteligencia de workshops…</h2>
-                            </section>
-                        </Legado>
+                    ) : fallas.events && !events ? (
+                        <div className="dc-shell dc-shell--embebido">
+                            <EmptyState title="No se pudieron cargar los talleres"
+                                action={<Button onClick={() => fetchEvents()}>Reintentar</Button>}>
+                                Revisá la conexión y volvé a intentar.
+                            </EmptyState>
+                        </div>
                     ) : activeTab === 'planificar' ? (
                         <PlanificarTab
                             events={events}
@@ -429,7 +381,7 @@ const WorkshopDashboardPage = () => {
                             formatDate={formatDate}
                             formatCurrency={formatCurrency}
                         />
-                    ) : realizados.length === 0 ? (
+                    ) : realizados?.length === 0 ? (
                         <Legado>
                             <section className="empty-state">
                                 <p className="eyebrow">Empezá por acá</p>

@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, Settings2 } from 'lucide-react';
 import { Delta, Humo, PanelCab, Tip, useMontado } from '../../../comercial/components/Shared';
 import Cifra from '../../../comercial/components/Cifra';
+import { EsqueletoClarity, EsqueletoEtapas, EsqueletoPrioridad } from '../resumen/EsqueletosResumen';
 import { STAGE_ORDER, aggregateTotals, computeClarityScore, computeFuga, stageRates } from '../funnelMath';
 
 /**
@@ -22,7 +23,10 @@ const ESTADO = { ok: 'Sobre meta', al_limite: 'Al límite', fuga: 'Bajo meta' };
 const tope = (v) => Math.min(100, Math.max(0, v || 0));
 const pct = (v) => `${Number(v).toFixed(1)}%`;
 
-const Fila = ({ f, antes, montado, i }) => {
+// Cada fila mide su propio montaje: si llega después que el panel (las metas tardaron), su barra
+// igual crece desde cero.
+const Fila = ({ f, antes, i }) => {
+    const montado = useMontado();
     const color = `var(--${TONO[f.estado]})`;
     const demora = `${120 + i * 70}ms`;
     const cambio = antes == null ? null : Math.round((f.real - antes) * 10) / 10;
@@ -60,20 +64,24 @@ const Anillo = ({ score }) => (
     </span>
 );
 
+/**
+ * Los tres paneles se dibujan desde el primer momento con su título; lo de adentro espera SU dato:
+ * la salud y la prioridad, los talleres y las metas; el Clarity score, además, el plan de acciones.
+ * Mientras tanto, huesos del tamaño real (resumen/EsqueletosResumen.jsx).
+ */
 const WorkshopDiagnostico = ({ events, comparados, goals, actions, onEditGoals, onGoToSimulador }) => {
-    const montado = useMontado();
     const reducir = useReducedMotion();
-    if (!goals) return null;
 
-    const totals = aggregateTotals(events);
-    const fugas = computeFuga(totals, stageRates(totals), goals);
+    const conMetas = Boolean(events && goals);
+    const totals = conMetas ? aggregateTotals(events) : null;
+    const fugas = conMetas ? computeFuga(totals, stageRates(totals), goals) : [];
     const porEtapa = Object.fromEntries(fugas.map((f) => [f.key, f]));
     const filas = STAGE_ORDER.map((s) => porEtapa[s.key]).filter(Boolean);
 
-    const ratesAntes = comparados ? stageRates(aggregateTotals(comparados)) : null;
+    const ratesAntes = conMetas && comparados ? stageRates(aggregateTotals(comparados)) : null;
     const antesDe = (key) => (ratesAntes ? Math.round(ratesAntes[key] * 1000) / 10 : null);
 
-    const clarity = computeClarityScore(goals, actions, fugas);
+    const clarity = conMetas && actions ? computeClarityScore(goals, actions, fugas) : null;
     const principal = fugas.find((f) => f.estado === 'fuga') || fugas.find((f) => f.estado === 'al_limite');
     // computeFuga proyecta sobre los leads de TODOS los talleres de la selección: por taller es ÷ N.
     const ventasPorTaller = principal && events.length ? principal.impactoVentas / events.length : 0;
@@ -89,24 +97,16 @@ const WorkshopDiagnostico = ({ events, comparados, goals, actions, onEditGoals, 
             <motion.section className="panel wr-salud" {...entrada(0)}>
                 <PanelCab titulo="Salud del embudo"
                     tip="Cada etapa contra su meta. La barra fina es la comparación.">
-                    <button type="button" className="btn btn--linea btn--sm" onClick={onEditGoals}>
+                    <button type="button" className="btn btn--linea btn--sm" onClick={onEditGoals} disabled={!goals}>
                         <Settings2 aria-hidden="true" /> Editar metas
                     </button>
                 </PanelCab>
-                <div className={`wr-etapas${ratesAntes ? '' : ' wr-etapas--sin-vs'}`} role="table" aria-label="Salud del embudo">
-                    <div className="wr-etapa wr-etapa--cab" role="row">
-                        <span role="columnheader" className="wr-etapa-nombre"><small>Etapa</small></span>
-                        <span aria-hidden="true" />
-                        <span role="columnheader" className="wr-etapa-n"><small>Actual</small></span>
-                        <span role="columnheader" className="wr-etapa-delta"><small>{ratesAntes ? 'Cambio' : ''}</small></span>
-                        <span role="columnheader" className="wr-etapa-antes"><small>{ratesAntes ? 'VS' : ''}</small></span>
-                        <span role="columnheader" className="wr-etapa-meta"><small>Meta</small></span>
-                        <span role="columnheader" className="wr-etapa-estado"><small>Estado</small></span>
+                {conMetas ? (
+                    <div className={`wr-etapas ui-reveal${ratesAntes ? '' : ' wr-etapas--sin-vs'}`} role="table" aria-label="Salud del embudo">
+                        <CabEtapas conVs={Boolean(ratesAntes)} />
+                        {filas.map((f, i) => <Fila key={f.key} f={f} antes={antesDe(f.key)} i={i} />)}
                     </div>
-                    {filas.map((f, i) => (
-                        <Fila key={f.key} f={f} antes={antesDe(f.key)} montado={montado} i={i} />
-                    ))}
-                </div>
+                ) : <EsqueletoEtapas cabecera={<CabEtapas conVs={false} />} />}
                 <div className="leyenda wr-leyenda" aria-hidden="true">
                     <span><i style={{ background: 'var(--success)' }} />Actual</span>
                     {ratesAntes && <span><i className="wr-leyenda-antes" />Comparación</span>}
@@ -122,8 +122,8 @@ const WorkshopDiagnostico = ({ events, comparados, goals, actions, onEditGoals, 
                         <Tip titulo="Prioridad"
                             texto="La etapa más lejos de su meta y lo que sumaría llegar." />
                     </div>
-                    {principal ? (
-                        <>
+                    {!conMetas ? <EsqueletoPrioridad /> : principal ? (
+                        <div className="ui-reveal">
                             <h3 className="t-h3 wr-prioridad-etapa">{principal.label}</h3>
                             <p className="wr-prioridad-cifras num">
                                 <b style={{ color: `var(--${TONO[principal.estado]})` }}>{pct(principal.real)}</b>
@@ -135,9 +135,9 @@ const WorkshopDiagnostico = ({ events, comparados, goals, actions, onEditGoals, 
                                 onClick={() => onGoToSimulador?.(principal.key)}>
                                 Simular mejora <ArrowRight aria-hidden="true" />
                             </button>
-                        </>
+                        </div>
                     ) : (
-                        <h3 className="t-h3 wr-prioridad-etapa">Todo en meta</h3>
+                        <h3 className="t-h3 wr-prioridad-etapa ui-reveal">Todo en meta</h3>
                     )}
                 </motion.section>
 
@@ -147,21 +147,41 @@ const WorkshopDiagnostico = ({ events, comparados, goals, actions, onEditGoals, 
                         <Tip titulo="Clarity score"
                             texto="Promedio de metas cargadas, plan y acciones hechas." />
                     </div>
-                    <div className="wr-clarity-cuerpo">
-                        <Anillo score={clarity.score} />
-                        <div className="wr-clarity-partes">
-                            {[['Diagnóstico', clarity.diagnostico], ['Plan', clarity.plan], ['Ejecución', clarity.ejecucion]].map(([rotulo, v], i) => (
-                                <div key={rotulo} className="wr-clarity-parte">
-                                    <span className="t-cap mut">{rotulo}</span>
-                                    <span className="t-cap num">{v}%</span>
-                                    <span className="riel riel--fino">
-                                        <i style={{ width: montado ? `${tope(v)}%` : 0, background: 'var(--brand-secondary)', transitionDelay: `${200 + i * 90}ms` }} />
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                    {clarity ? <Clarity clarity={clarity} /> : <EsqueletoClarity />}
                 </motion.section>
+            </div>
+        </div>
+    );
+};
+
+const CabEtapas = ({ conVs }) => (
+    <div className="wr-etapa wr-etapa--cab" role="row">
+        <span role="columnheader" className="wr-etapa-nombre"><small>Etapa</small></span>
+        <span aria-hidden="true" />
+        <span role="columnheader" className="wr-etapa-n"><small>Actual</small></span>
+        <span role="columnheader" className="wr-etapa-delta"><small>{conVs ? 'Cambio' : ''}</small></span>
+        <span role="columnheader" className="wr-etapa-antes"><small>{conVs ? 'VS' : ''}</small></span>
+        <span role="columnheader" className="wr-etapa-meta"><small>Meta</small></span>
+        <span role="columnheader" className="wr-etapa-estado"><small>Estado</small></span>
+    </div>
+);
+
+// Su propio montaje: si el plan de acciones llega después, las barras igual crecen desde cero.
+const Clarity = ({ clarity }) => {
+    const montado = useMontado();
+    return (
+        <div className="wr-clarity-cuerpo ui-reveal">
+            <Anillo score={clarity.score} />
+            <div className="wr-clarity-partes">
+                {[['Diagnóstico', clarity.diagnostico], ['Plan', clarity.plan], ['Ejecución', clarity.ejecucion]].map(([rotulo, v], i) => (
+                    <div key={rotulo} className="wr-clarity-parte">
+                        <span className="t-cap mut">{rotulo}</span>
+                        <span className="t-cap num">{v}%</span>
+                        <span className="riel riel--fino">
+                            <i style={{ width: montado ? `${tope(v)}%` : 0, background: 'var(--brand-secondary)', transitionDelay: `${200 + i * 90}ms` }} />
+                        </span>
+                    </div>
+                ))}
             </div>
         </div>
     );

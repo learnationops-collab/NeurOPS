@@ -202,3 +202,8 @@
 .dc-shell .wp-pal-btn { width: 28px; height: 28px; }
 .dc-shell .wp-pal-btn svg { width: 13px; height: 13px; }
 .dc-shell .wp-pal-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+/* Cada panel entra al llegar su dato, en el lugar que ocupaba su esqueleto (`EsqueletosPlan.jsx`):
+   la entrada `ui-reveal` de los esqueletos estándar. `backwards`: no deja un transform en efecto. */
+.dc-shell.wp-plan .wp-panel:not([aria-busy]) { animation: ui-reveal .34s cubic-bezier(.22, 1, .36, 1) backwards; }
+@media (prefers-reduced-motion: reduce) { .dc-shell.wp-plan .wp-panel { animation: none; } }

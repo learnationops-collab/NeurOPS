@@ -36,9 +36,9 @@ const responder = (url) => {
     return Promise.resolve({ data: {} });
 };
 
-const armar = () => render(
+const armar = (lista = TALLERES) => render(
     <div className="dc-shell">
-        <TalleresVista events={TALLERES} realizados={TALLERES} onEdit={vi.fn()} onRefresh={vi.fn()}
+        <TalleresVista events={lista} realizados={lista} onEdit={vi.fn()} onRefresh={vi.fn()}
             formatDate={(d) => d} />
     </div>,
 );
@@ -127,5 +127,12 @@ describe('Workshop › Talleres', () => {
 
         const hoja = await screen.findByRole('dialog', { name: 'Comparar talleres' });
         await waitFor(() => expect(within(hoja).getAllByRole('columnheader')).toHaveLength(3));
+    });
+
+    it('mientras no llegan los talleres, la barra ya funciona y las tarjetas son esqueletos', () => {
+        armar(null);
+        expect(screen.getByRole('status', { name: 'Cargando los talleres…' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Ver como tabla' })).toBeEnabled();
+        expect(screen.queryByText('Todavía no hay talleres realizados')).toBeNull();
     });
 });

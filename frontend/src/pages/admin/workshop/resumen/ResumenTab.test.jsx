@@ -64,6 +64,37 @@ describe('Workshop › Resumen', () => {
         expect(onGoToSimulador).toHaveBeenCalledWith('conversion_form');
     });
 
+    it('sin talleres todavía, cada bloque ya está en su lugar con su esqueleto', () => {
+        montar('/admin/workshops', { realizados: null, goals: null, actions: null });
+        expect(screen.getByRole('status', { name: 'Cargando los talleres…' })).toBeInTheDocument();
+        const kpis = screen.getByRole('region', { name: 'Indicadores principales' });
+        expect(kpis.getAttribute('aria-busy')).toBe('true');
+        // Los rótulos y los nombres de las etapas no dependen de los datos: se ven ya.
+        expect(within(kpis).getByText('Cash collected')).toBeInTheDocument();
+        expect(screen.getByRole('status', { name: 'Cargando la salud del embudo…' })).toHaveTextContent('Close rate');
+        expect(screen.getByRole('status', { name: 'Cargando la prioridad…' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Editar metas/ })).toBeDisabled();
+        expect(screen.queryByText('Ningún taller en esta selección')).toBeNull();
+    });
+
+    it('cada bloque aparece con SU dato: los KPIs con los talleres, el embudo con las metas', () => {
+        montar('/admin/workshops', { goals: null, actions: null });
+        const kpis = screen.getByRole('region', { name: 'Indicadores principales' });
+        expect(kpis.hasAttribute('aria-busy')).toBe(false);
+        expect(within(kpis).getByText('$600')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Todos los talleres/ })).toBeInTheDocument();
+        expect(screen.getByRole('status', { name: 'Cargando la salud del embudo…' })).toBeInTheDocument();
+        expect(screen.getByRole('status', { name: 'Cargando el Clarity score…' })).toBeInTheDocument();
+    });
+
+    it('con las metas pero sin el plan, solo el Clarity score espera', () => {
+        montar('/admin/workshops', { actions: null });
+        expect(screen.getByRole('table', { name: 'Salud del embudo' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Simular mejora/ })).toBeInTheDocument();
+        expect(screen.getByRole('status', { name: 'Cargando el Clarity score…' })).toBeInTheDocument();
+        expect(screen.queryByRole('status', { name: 'Cargando la prioridad…' })).toBeNull();
+    });
+
     it('una selección vacía lo dice en vez de mostrar ceros', () => {
         montar('/admin/workshops?rf=elegidos');
         expect(screen.getByRole('status')).toHaveTextContent('Ningún taller en esta selección');

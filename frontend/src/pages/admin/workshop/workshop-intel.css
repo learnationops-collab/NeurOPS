@@ -473,8 +473,6 @@
 .ws-shell .empty-state h2 { margin: 0; font-size: 22px; }
 .ws-shell .empty-state > p:not(.eyebrow) { max-width: 480px; margin: 12px auto 20px; color: var(--text-muted); font-size: 12px; line-height: 1.6; }
 .ws-shell .empty-state .primary-action { position: static; justify-self: center; }
-.ws-shell .loading-state > div > span { width: 22px; height: 22px; display: block; border: 3px solid color-mix(in srgb, var(--ln-text-out, #ffffff) 18%, transparent); border-top-color: var(--pink); border-radius: 50%; animation: ws-loading-spin .8s linear infinite; }
-@keyframes ws-loading-spin { to { transform: rotate(360deg); } }
 
 /* Toggle segmentado (día-rango / filtros de la Landing) */
 .ws-shell .pill-toggle { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--ln-inset-bg, rgba(0, 0, 0, .2)); flex-wrap: wrap; }
