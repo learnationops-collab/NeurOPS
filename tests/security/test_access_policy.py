@@ -127,7 +127,9 @@ MATRIZ = {
     ('POST', '/api/public/setter-report'): {'admin', 'setter'},
     ('POST', '/api/public/triage-report'): {'admin', 'triage'},
     ('DELETE', '/api/conversational/records/clear'): {'admin', 'director_comercial'},
-    ('POST', '/api/conversational/messages'): {'admin', 'director_comercial', 'setter'},
+    # Marketing › Conversaciones administra el catálogo de mensajes del flujo de ManyChat (16/10/2026).
+    ('POST', '/api/conversational/messages'): {'admin', 'director_comercial', 'director_marketing', 'setter'},
+    ('GET', '/api/conversational/stats/conversational'): {'admin', 'director_comercial', 'director_marketing', 'setter'},
     ('PUT', '/api/manychat-webhook/lead/1/calificacion'): {'admin', 'director_comercial', 'director_marketing'},
     ('POST', '/api/manychat-webhook/calificaciones'): {'admin', 'director_marketing'},
     ('GET', '/api/triage/tracker'): {'admin', 'director_comercial'},

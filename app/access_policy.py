@@ -51,14 +51,14 @@ COMERCIAL, MARKETING, CLOSER, SETTER, TRIAGE, OPERATOR = (
 
 POLITICA = {
     # --- Mensajes y estadisticas conversacionales (panel del setter y de la direccion comercial) -------
-    ('GET', '/api/conversational/messages'): _p(COMERCIAL, SETTER),
-    ('POST', '/api/conversational/messages'): _p(COMERCIAL, SETTER),
-    ('DELETE', '/api/conversational/messages/<int:msg_id>'): _p(COMERCIAL, SETTER),
-    ('PUT', '/api/conversational/messages/<int:msg_id>'): _p(COMERCIAL, SETTER),
+    ('GET', '/api/conversational/messages'): _p(COMERCIAL, MARKETING, SETTER),
+    ('POST', '/api/conversational/messages'): _p(COMERCIAL, MARKETING, SETTER),
+    ('DELETE', '/api/conversational/messages/<int:msg_id>'): _p(COMERCIAL, MARKETING, SETTER),
+    ('PUT', '/api/conversational/messages/<int:msg_id>'): _p(COMERCIAL, MARKETING, SETTER),
     # Borra TODOS los registros de interaccion de todo el panel: mantenimiento global. El boton esta en el
     # gestor de mensajes del setter, pero un setter no debe poder poner las estadisticas en cero.
     ('DELETE', '/api/conversational/records/clear'): _p(COMERCIAL),
-    ('GET', '/api/conversational/stats/conversational'): _p(COMERCIAL, SETTER),
+    ('GET', '/api/conversational/stats/conversational'): _p(COMERCIAL, MARKETING, SETTER),
 
     # --- ManyChat: monitor de leads entrantes, limpieza y reasignacion (marketing) ----------------------
     ('PUT', '/api/manychat-webhook/answer/<int:answer_id>'): _p(COMERCIAL, MARKETING, SETTER),
