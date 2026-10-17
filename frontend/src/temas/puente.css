@@ -12,6 +12,7 @@ html:root[data-tema][data-tema-modo] {
     --color-bg: var(--ln-page-base);
 
     --bg-card: var(--ln-window-bg);
+    --popover: var(--ln-popover-bg);
     --bg-sidebar: var(--ln-window-bg);
     --color-surface: var(--ln-window-bg);
     --glass-bg: var(--ln-window-bg);

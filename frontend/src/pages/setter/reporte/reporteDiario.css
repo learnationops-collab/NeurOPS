@@ -88,7 +88,7 @@
 .rd .rd-fecha-btn:hover svg,.rd .rd-fecha-btn[aria-expanded="true"] svg{color:var(--brand-secondary)}
 .rd .rd-fecha-btn:focus-visible{box-shadow:none}
 .rd .rd-cal{position:absolute;top:calc(100% + 10px);right:0;z-index:90;width:min(312px,calc(100vw - 32px));padding:var(--s4);
-  border-radius:24px;background:var(--bg-surface);backdrop-filter:saturate(180%) blur(28px);-webkit-backdrop-filter:saturate(180%) blur(28px);
+  border-radius:24px;background:var(--bg-flotante);
   border:1px solid var(--border-main);border-top-color:var(--sheen);box-shadow:var(--shadow-main),0 0 0 1px rgba(0,0,0,.25);
   transform-origin:top right;animation:rdCalIn .34s var(--spring)}
 .rd .rd-cal-cab{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);margin-bottom:var(--s3)}

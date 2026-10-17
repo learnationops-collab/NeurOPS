@@ -155,6 +155,9 @@ strong:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):
     --foreground: var(--color-text-base);
     --card: var(--color-surface);
     --card-foreground: var(--text-on-card, var(--color-text-base));
+    /* Menús y listas desplegables (`bg-popover`): siempre OPACOS, aunque la tarjeta sea de vidrio
+       (las de glass van de .4 a .85 y lo de abajo se leía a través del menú). Cada paleta que
+       cambia `--bg-card` pone su versión sólida. */
     --popover: var(--color-surface);
     --popover-foreground: var(--text-on-card, var(--color-text-base));
     --primary-foreground: var(--btn-text);
@@ -188,6 +191,7 @@ strong:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):
     /* Softer blur */
     --bg-card: rgba(255, 255, 255, 0.4);
     /* More transparent than usual */
+    --popover: #ffffff;
     --bg-sidebar: rgba(255, 255, 255, 0.4);
     --border-color: rgba(255, 255, 255, 0.3);
 
@@ -209,6 +213,7 @@ strong:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):
     /* Solid overrides will be applied by [data-theme-style="solid"] */
     /* But we define base colors here */
     --bg-card: #ffffff;
+    --popover: #ffffff;
     --bg-sidebar: #ffffff;
     --border-color: #e5e7eb;
 
@@ -229,6 +234,7 @@ strong:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):
 
     /* Dark Theme Defaults */
     --bg-card: rgba(15, 23, 42, 0.6);
+    --popover: #0f172a;
     --bg-sidebar: rgba(15, 23, 42, 0.8);
     --border-color: rgba(255, 255, 255, 0.1);
 
@@ -255,6 +261,7 @@ strong:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):
     /* --bg-app removed */
     --bg-sidebar: var(--brand-navy);
     --bg-card: var(--brand-navy);
+    --popover: var(--brand-navy);
     --bg-item: rgba(255, 255, 255, 0.1);
     --bg-item-hover: rgba(255, 255, 255, 0.15);
     --bg-input: rgba(255, 255, 255, 0.1);
@@ -276,6 +283,7 @@ strong:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):
     /* --bg-app removed */
     --bg-sidebar: #cbd5e1;
     --bg-card: #e2e8f0;
+    --popover: #e2e8f0;
     --bg-item: #ffffff;
     --bg-item-hover: #f1f5f9;
     --bg-input: #ffffff;
@@ -306,6 +314,7 @@ strong:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):
     /* --bg-app removed */
     --bg-sidebar: rgba(10, 14, 61, 0.85);
     --bg-card: rgba(10, 14, 61, 0.85);
+    --popover: #0a0e3d;
     --bg-item: rgba(255, 255, 255, 0.1);
     --bg-item-hover: rgba(255, 255, 255, 0.2);
     --bg-input: rgba(255, 255, 255, 0.1);
@@ -330,6 +339,7 @@ strong:not(.bg-v6):not(.bg-v6 *):not(.ws-shell):not(.ws-shell *):not(.ce-shell):
     /* --bg-app removed */
     --bg-sidebar: rgba(2, 6, 23, 0.8);
     --bg-card: rgba(2, 6, 23, 0.7);
+    --popover: #020617;
     --bg-item: rgba(255, 255, 255, 0.1);
     --bg-item-hover: rgba(255, 255, 255, 0.2);
     --bg-input: rgba(0, 0, 0, 0.3);
@@ -630,6 +640,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
      los colores del tema claro/glass activo por encima del cash-v6 de abajo). */
   --bg-app: var(--ln-page-base, #020617);
   --bg-card: color-mix(in srgb, var(--ln-page-base, #020617) 90%, transparent);
+  --popover: var(--ln-popover-bg, #0B1030);
   --bg-sidebar: color-mix(in srgb, var(--ln-page-base, #020617) 90%, transparent);
   --bg-item: color-mix(in srgb, var(--ln-text-out, #ffffff) 6%, transparent);
   --bg-item-hover: color-mix(in srgb, var(--ln-text-out, #ffffff) 10%, transparent);
