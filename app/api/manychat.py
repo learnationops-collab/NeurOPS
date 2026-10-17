@@ -10,6 +10,9 @@ logger = logging.getLogger(__name__)
 
 bp = Blueprint('manychat', __name__)
 
+# Los nombres con los que ManyChat puede mandar la calificación (ver `receive_manychat_ad_lead`).
+CAMPOS_DE_CALIFICACION = ('cualificacion', 'cualificado', 'calificacion', 'calificado', 'cualificada', 'calificada')
+
 
 @bp.route('/manychat-webhook', methods=['GET'], strict_slashes=False)
 def verificar_manychat_webhook():
@@ -86,7 +89,16 @@ def receive_manychat_ad_lead():
     fecha = clean_cuf(data.get('fecha', ''))
     opening = clean_cuf(data.get('opening', ''))
     variante = clean_cuf(data.get('variante', ''))
-    qualification_raw = data.get('cualificacion')
+    # La calificación de ManyChat: «yes» por la rama de calificado, «no» por la de no calificado (Kerwin,
+    # 16/10/2026). El campo se llamó `cualificacion` y en el flujo se lo nombra «cualificado»: se acepta
+    # cualquiera de las escrituras, la primera que traiga un valor de verdad.
+    qualification_raw = next((data.get(k) for k in CAMPOS_DE_CALIFICACION if is_valid_value(data.get(k))),
+                             data.get('cualificacion'))
+    # Qué manda ManyChat, sin datos personales: los nombres de los campos y los valores que deciden la
+    # calificación y el paso del flujo. Desde el 28/07/2026 casi nadie llega «no» y hay que ver por qué.
+    logger.warning('[WEBHOOK CALIFICACION] campos=%s calificacion=%s opcion_enviada=%s opcion_respondida=%s',
+                   sorted(data.keys()), {k: data.get(k) for k in CAMPOS_DE_CALIFICACION if k in data},
+                   data.get('id_option_send'), data.get('id_option'))
     id_option = clean_cuf(data.get('id_option'))
     id_option_send = clean_cuf(data.get('id_option_send'))
     id_question = clean_cuf(data.get('id_question'))
