@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Filter, ChevronDown, Check, X } from 'lucide-react';
+import { useEnPantalla } from '../ui/useEnPantalla';
 
 const MultiSelectFilter = ({ options = [], value = [], onChange, label }) => {
     // options format: [{ value: 'scheduled', label: 'Programada' }, ...]
     // value format: ['scheduled', 'completed']
     const [isOpen, setIsOpen] = useState(false);
+    const enPantalla = useEnPantalla();
 
     const toggleOption = (optVal) => {
         const newValue = value.includes(optVal)
@@ -29,7 +31,7 @@ const MultiSelectFilter = ({ options = [], value = [], onChange, label }) => {
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)}></div>
-                    <div className="absolute top-full mt-2 left-0 min-w-[200px] bg-surface border border-base rounded-2xl shadow-2xl z-20 overflow-hidden animate-in fade-in zoom-in duration-200">
+                    <div ref={enPantalla} className="absolute top-full mt-2 left-0 min-w-[200px] bg-popover border border-base rounded-2xl shadow-2xl z-20 overflow-hidden animate-in fade-in zoom-in duration-200">
                         {value.length > 0 && (
                             <div className="p-2 border-b border-base flex justify-between items-center bg-surface-hover/50">
                                 <span className="text-[10px] font-bold text-muted">{value.length} seleccionados</span>

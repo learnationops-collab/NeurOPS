@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { X, User, DollarSign, Wallet, CheckCircle2, Save, Loader2, AlertCircle, Box } from 'lucide-react';
 import Button from '../ui/Button';
+import { useEnPantalla } from '../ui/useEnPantalla';
 import { motion } from 'framer-motion';
 
 const QuickSaleModal = ({ isOpen, onClose, onSuccess, preselectedLead }) => {
@@ -12,6 +13,7 @@ const QuickSaleModal = ({ isOpen, onClose, onSuccess, preselectedLead }) => {
     const [metadata, setMetadata] = useState({ programs: [], payment_methods: [], leads: [] });
     const [searchTerm, setSearchTerm] = useState('');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const listaEnPantalla = useEnPantalla();
 
     const [form, setForm] = useState({
         lead_id: '',
@@ -158,7 +160,7 @@ const QuickSaleModal = ({ isOpen, onClose, onSuccess, preselectedLead }) => {
                                         onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
                                     />
                                     {isDropdownOpen && searchTerm.length > 1 && (
-                                        <div className="absolute top-full left-0 w-full mt-2 bg-surface border border-base rounded-xl shadow-xl max-h-60 overflow-y-auto z-50 custom-scrollbar">
+                                        <div ref={listaEnPantalla} className="absolute top-full left-0 w-full mt-2 bg-popover border border-base rounded-xl shadow-xl max-h-60 overflow-y-auto z-50 custom-scrollbar">
                                             {filteredLeads.length > 0 ? filteredLeads.map(l => (
                                                 <button
                                                     key={l.id}

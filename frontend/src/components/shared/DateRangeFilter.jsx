@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Calendar, ChevronDown, Check } from 'lucide-react';
+import { useEnPantalla } from '../ui/useEnPantalla';
 
 const DateRangeFilter = ({ value, onChange, label = "Rango de Fecha" }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const enPantalla = useEnPantalla();
 
     /**
      * Structure of 'value': { type: 'today' | 'month' | 'custom', start: 'YYYY-MM-DD', end: 'YYYY-MM-DD' }
@@ -56,7 +58,7 @@ const DateRangeFilter = ({ value, onChange, label = "Rango de Fecha" }) => {
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)}></div>
-                    <div className="absolute top-full mt-2 left-0 w-64 bg-surface border border-base rounded-2xl shadow-2xl z-20 overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
+                    <div ref={enPantalla} className="absolute top-full mt-2 left-0 w-64 bg-popover border border-base rounded-2xl shadow-2xl z-20 overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
                         <div className="p-2 space-y-1">
                             {presets.map(preset => (
                                 <button

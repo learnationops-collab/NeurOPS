@@ -197,7 +197,7 @@ const QuickAppointmentModal = ({ isOpen, onClose, onSuccess }) => {
                                                         initial={{ opacity: 0, y: 10 }}
                                                         animate={{ opacity: 1, y: 0 }}
                                                         exit={{ opacity: 0, y: 10 }}
-                                                        className="absolute top-full left-0 w-full mt-4 bg-surface border border-base rounded-2xl shadow-2xl max-h-60 overflow-y-auto z-50 custom-scrollbar"
+                                                        className="absolute top-full left-0 w-full mt-4 bg-popover border border-base rounded-2xl shadow-2xl max-h-60 overflow-y-auto z-50 custom-scrollbar"
                                                     >
                                                         {filteredLeads.length > 0 ? filteredLeads.map(l => (
                                                             <button

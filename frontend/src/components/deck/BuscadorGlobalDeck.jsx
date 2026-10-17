@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, Loader2, ClipboardList } from 'lucide-react';
 import api from '../../services/api';
 import { parseUtcIso } from '../../utils/datetime';
+import { useEnPantalla } from '../ui/useEnPantalla';
 
 const BuscadorGlobalDeck = ({ onSelectLead, onSelectClient, role = 'setter' }) => {
     const [query, setQuery] = useState('');
@@ -10,6 +11,8 @@ const BuscadorGlobalDeck = ({ onSelectLead, onSelectClient, role = 'setter' }) =
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const containerRef = useRef(null);
+    const resultadosEnPantalla = useEnPantalla();
+    const vacioEnPantalla = useEnPantalla();
 
     // Cierre al hacer clic afuera
     useEffect(() => {
@@ -94,7 +97,7 @@ const BuscadorGlobalDeck = ({ onSelectLead, onSelectClient, role = 'setter' }) =
 
             {/* Panel de Autocompletado */}
             {open && hasResults && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900/95 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-md max-h-72 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
+                <div ref={resultadosEnPantalla} className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden max-h-72 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="divide-y divide-slate-800/50">
 
                         {/* Resultados del mazo (Appointments) */}
@@ -156,7 +159,7 @@ const BuscadorGlobalDeck = ({ onSelectLead, onSelectClient, role = 'setter' }) =
             )}
 
             {open && query.trim().length >= 2 && !hasResults && !loading && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center text-[10px] font-bold text-slate-500 uppercase tracking-widest shadow-2xl">
+                <div ref={vacioEnPantalla} className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center text-[10px] font-bold text-slate-500 uppercase tracking-widest shadow-2xl">
                     No se encontraron coincidencias
                 </div>
             )}

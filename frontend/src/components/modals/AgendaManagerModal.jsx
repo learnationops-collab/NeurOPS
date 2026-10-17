@@ -333,7 +333,7 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess, mode = 'c
                                                             initial={{ opacity: 0, y: -10 }}
                                                             animate={{ opacity: 1, y: 0 }}
                                                             exit={{ opacity: 0, y: -10 }}
-                                                            className="absolute top-full left-0 w-full mt-2 bg-main border border-base rounded-2xl shadow-2xl z-20 overflow-hidden divide-y divide-base"
+                                                            className="absolute top-full left-0 w-full mt-2 bg-popover border border-base rounded-2xl shadow-2xl z-20 overflow-hidden divide-y divide-base"
                                                         >
                                                             {statuses.map(s => (
                                                                 <button
