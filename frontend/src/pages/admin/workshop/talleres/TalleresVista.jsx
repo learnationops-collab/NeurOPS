@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { CalendarDays, LayoutGrid, List, PlayCircle } from 'lucide-react';
+import { CalendarDays, HardDrive, LayoutGrid, List, PlayCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../../services/api';
 import { Tip } from '../../../comercial/components/Shared';
@@ -10,6 +10,7 @@ import WorkshopLandingView from '../components/WorkshopLandingView';
 import TarjetaTaller from './TarjetaTaller';
 import TablaTalleres from './TablaTalleres';
 import DetalleTaller from './DetalleTaller';
+import CargarGrabaciones from './CargarGrabaciones';
 import Hoja from './Hoja';
 import useAhora from './useAhora';
 import './talleres.css';
@@ -35,6 +36,7 @@ const TalleresVista = ({ events, realizados, onEdit, onRefresh, formatDate }) =>
     const { modo, setModo } = useModoVista('workshop_talleres_modo', 'tarjetas');
     const [abierto, setAbierto] = useState(null); // { id, vista }
     const [landingAbierta, setLandingAbierta] = useState(false);
+    const [cargando, setCargando] = useState(false);
     const [comparar, setComparar] = useState([]);
     const [comparando, setComparando] = useState(false);
     const ahora = useAhora(30000);
@@ -95,6 +97,9 @@ const TalleresVista = ({ events, realizados, onEdit, onRefresh, formatDate }) =>
             </div>
             <button type="button" className="pastilla pastilla--sm" onClick={() => setLandingAbierta(true)}>
                 <PlayCircle aria-hidden="true" /> Landing de la grabación
+            </button>
+            <button type="button" className="pastilla pastilla--sm" onClick={() => setCargando(true)}>
+                <HardDrive aria-hidden="true" /> Cargar grabaciones
             </button>
         </>
     );
@@ -159,6 +164,8 @@ const TalleresVista = ({ events, realizados, onEdit, onRefresh, formatDate }) =>
                     <WorkshopLandingView />
                 </Hoja>
             )}
+
+            {cargando && <CargarGrabaciones onCerrar={() => setCargando(false)} onGuardado={refrescar} />}
 
             {comparando && elegidos.length >= 2 && (
                 <WorkshopCompareModal events={elegidos} onClose={() => setComparando(false)} formatDate={formatDate} />

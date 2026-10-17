@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ExternalLink, PlayCircle } from 'lucide-react';
+import { ExternalLink, HardDrive, PlayCircle } from 'lucide-react';
 import { Bars } from '../../../../components/standard';
 import { EsqueletoFilas, Tip } from '../../../comercial/components/Shared';
 import { urlLoom } from '../../../../utils/loom';
@@ -147,6 +147,15 @@ export const ResumenGrabacion = ({ evento, ahora, onGuardado }) => {
                     <Tip titulo="Landing de la grabación"
                         texto="Prendida: publicada 48 h. La landing muestra el último." />
                 </div>
+            </div>
+            <div className="wt-mini-fila">
+                {evento.grabacion_url ? (
+                    <a className="btn btn--linea btn--sm" href={evento.grabacion_url} target="_blank" rel="noopener noreferrer">
+                        <HardDrive aria-hidden="true" /> Meet en Drive <ExternalLink aria-hidden="true" />
+                    </a>
+                ) : (
+                    <span className="t-cap mut40">Sin la grabación de Drive</span>
+                )}
             </div>
             <MiniLanding evento={evento} />
         </div>

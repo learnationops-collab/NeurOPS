@@ -285,3 +285,16 @@
     .dc-shell .wt-tarjeta-pie svg,
     .dc-shell .wt-anuncios-flecha { transition: none; }
 }
+
+/* --- Cargar grabaciones de Drive (17/10/2026) -------------------------------------------------- */
+.dc-shell .wt-carga.ui-modal { width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 48px); display: flex; flex-direction: column; }
+.dc-shell .wt-carga .wt-carga-cuerpo { display: grid; gap: var(--s3); padding: 0 20px; overflow-y: auto; min-height: 0; }
+.dc-shell .wt-carga .ui-textarea { min-height: 120px; max-height: 220px; overflow-y: auto; font-family: ui-monospace, monospace; font-size: 12px; }
+.dc-shell .wt-carga-lista { display: grid; gap: 2px; list-style: none; margin: 0; padding: 0; }
+.dc-shell .wt-carga-fila {
+    display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: var(--s2) var(--s3); align-items: center;
+    padding: 6px 0; border-bottom: 1px solid var(--border-subtle);
+}
+.dc-shell .wt-carga-nombre { display: grid; min-width: 0; font-size: 13px; font-weight: 700; }
+.dc-shell .wt-carga-switch { display: flex; align-items: center; gap: 10px; }
+.dc-shell .wt-carga-pie { display: flex; justify-content: flex-end; gap: 8px; padding: 16px 20px 20px; }
