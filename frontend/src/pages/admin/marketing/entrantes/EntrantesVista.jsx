@@ -57,19 +57,17 @@ const idDe = (valor) => {
 /**
  * Un webhook en palabras. ManyChat manda el mensaje que envió (`id_option_send`) y el que contestó la
  * persona (`id_option`); sin ninguno, es el inicio de la automatización. Con el mismo número en los dos
- * es el envío, no una respuesta: llega a los 30 s del inicio, igual que el envío solo.
+ * es un envío que la persona contestó: el webhook pega la respuesta en la fila del envío si llega dentro
+ * de los 30 min (`manychat.py`), así que la hora es la del envío.
  */
 const PasoDeHistoria = ({ h, nombreDe }) => {
     const enviado = nombreDe(idDe(h.id_option_send));
-    const respondido = idDe(h.id_option) !== idDe(h.id_option_send) ? nombreDe(idDe(h.id_option)) : null;
+    const respondido = nombreDe(idDe(h.id_option));
     if (!enviado && !respondido) return 'Inicio de la automatización';
-    return (
-        <>
-            {respondido && <>Respondió <b>{respondido}</b></>}
-            {respondido && enviado && ' · '}
-            {enviado && <>{respondido ? 'se' : 'Se'} le mandó <b>{enviado}</b></>}
-        </>
-    );
+    if (!enviado) return <>Respondió <b>{respondido}</b></>;
+    if (!respondido) return <>Se le mandó <b>{enviado}</b></>;
+    if (idDe(h.id_option) === idDe(h.id_option_send)) return <>Se le mandó <b>{enviado}</b> y respondió</>;
+    return <>Se le mandó <b>{enviado}</b> · respondió <b>{respondido}</b></>;
 };
 
 const Ficha = ({ fila, mensajes, onCerrar, onCorregir }) => {

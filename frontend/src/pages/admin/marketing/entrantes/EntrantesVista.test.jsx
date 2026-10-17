@@ -56,11 +56,11 @@ describe('Marketing › Entrantes', () => {
             params: { lead_id: 2, limit: 200 } }));
     });
 
-    it('el historial dice qué pasó: inicio, envío y respuesta, sin «Webhook»', async () => {
+    it('el historial dice qué pasó: inicio, envío y respuesta (también la pegada al envío), sin «Webhook»', async () => {
         const fila = (id, envio, opcion, calif = 'null') => ({ id, created_at: '2026-10-05T12:00:00Z',
             id_option_send: envio, id_option: opcion, qualification: calif });
         api.get.mockImplementation((url) => Promise.resolve({ data: url === '/manychat-webhook/entrantes' ? DATOS : [
-            fila(5, '11', '11'), fila(4, '4', '0'), fila(3, '0', '1', 'true'), fila(2, '1', '0'), fila(1, null, null),
+            fila(6, '4', '1'), fila(5, '11', '11'), fila(4, '4', '0'), fila(3, '0', '1', 'true'), fila(2, '1', '0'), fila(1, null, null),
         ] }));
         render(<div className="dc-shell"><EntrantesVista desde="2026-10-01" hasta="2026-10-16" /></div>);
         fireEvent.click(await screen.findByText('Caro'));
@@ -68,7 +68,8 @@ describe('Marketing › Entrantes', () => {
         await within(ficha).findByText('Inicio de la automatización');
         const pasos = [...ficha.querySelectorAll('.en-historia-paso')].map((n) => n.textContent);
         expect(pasos).toEqual([
-            'Se le mandó Mensaje 11', 'Se le mandó Mensaje 4', 'Respondió Opening', 'Se le mandó Opening',
+            'Se le mandó Mensaje 4 · respondió Opening', 'Se le mandó Mensaje 11 y respondió', 'Se le mandó Mensaje 4',
+            'Respondió Opening', 'Se le mandó Opening',
             'Inicio de la automatización',
         ]);
         expect(within(ficha).queryByText(/Webhook/)).not.toBeInTheDocument();
