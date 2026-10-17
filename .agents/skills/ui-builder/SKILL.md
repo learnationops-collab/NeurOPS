@@ -71,7 +71,7 @@ Import: `import { Button, … } from '<ruta>/components/standard';`
 | `EmptyState` | Vacío, cargando o sin permiso | `icon`, `title`, `aura`, `action`, `children` (el texto) |
 | `ConfirmDelete` | «¿Eliminar X?» con Cancelar / Eliminar | `name`, `article` («a »), `detail`, `onCancel`, `onConfirm`, `confirmLabel`, `icon`, `extraActions`, `children` |
 | `Segmented` | Pestañas, períodos, vistas, colas (opciones excluyentes) | `value`, `options` `[{value, label, icon, count, props}]` (`count`: la cuenta al lado del rótulo, «Activos 4») (`props` va a ese botón: `title`, `aria-label` si es solo ícono, `style`), `onChange`, `size`: `md` · `sm`, `orientation`: `horizontal` · `vertical` (lista de colas a la izquierda de una bandeja), `label`, `itemProps` (va a todos), `prefix` (antes de las opciones), `radio` (se anuncia como grupo de radio) |
-| `Select` | Desplegable propio (teclado completo, búsqueda tipeando) | `value`, `options` `[{value, label, icon, iconColor}]` (`value: ''` = opción vacía), `onChange`, `size`, `label`; los atributos extra van al botón y `data-nav` también a las opciones |
+| `Select` | Desplegable propio (teclado completo, búsqueda tipeando). Su lista va en la capa superior (`subirACapa`): encima de todo, también dentro de un Modal | `value`, `options` `[{value, label, icon, iconColor}]` (`value: ''` = opción vacía), `onChange`, `size`, `label`; los atributos extra van al botón y `data-nav` también a las opciones |
 | `Input` | Campo suelto | `variant`: `number` (corto y centrado) · `date`, `invalid`, `as="textarea"`; el resto va al `<input>` (y `ref`) |
 | `InputGroup` | Campo con ícono o texto fijo adelante y, a veces, botón pegado | `prefix`, `invalid`, `as="form"`; el `<input>` va como hijo, sin clase |
 | `FieldError` | Mensaje de error de un campo | `role` (`alert` por defecto; `note` para una aclaración), `icon` (`false` lo saca), `as` |
@@ -87,6 +87,18 @@ Import: `import { Button, … } from '<ruta>/components/standard';`
 | `Status` | Estado con punto de color («● ACTIVO»), más liviano que un Chip: en la tarjeta o en la barra de la cabecera | `color` |
 
 Todo lo que no es prop (`onClick`, `disabled`, `ref`, `data-nav`, `autoFocus`, `title`, `data-tip`…) pasa directo al elemento HTML.
+
+### Menús, listas y popovers (cualquier flotante)
+
+Regla del usuario: un desplegable se ve **encima de todo, siempre**, opaco y entero en la pantalla, con cualquier tema.
+
+- **Encima de todo:** el flotante va en la capa superior del navegador (`popover="manual"`), no con `z-index`. Un `z-index` compite solo dentro del contexto de apilamiento de su padre, y un ancestro con `transform`, `opacity`, `filter` o una entrada animada lo atrapa (el menú de la pastilla del Resumen de Workshop quedaba debajo de las tarjetas KPI).
+  - Si es `position:absolute` bajo su botón (`.menu`, `.config-panel`, `.fi-pop`, la lista de un buscador): `ref={useEnPantalla()}` (`components/ui/useEnPantalla.js`). Lo sube a la capa, lo deja donde lo pone su CSS (mide el ancla antes), lo sigue al scrollear y lo corre lo justo para que no se salga. En la Ficha, `usePopover()` ya trae ese `pop`.
+  - Si ya se ubica solo con `position:fixed` (calcula `top`/`left` contra el botón): `subirACapa(nodo)` (`components/standard/capa.js`) al abrirlo.
+  - El nodo sigue en su lugar del DOM: el clic afuera con `contains`, el tab y los estilos por contexto (`.dc-shell .menu`) no cambian.
+- **Opaco:** el fondo es un token de menú (`--bg-flotante`, `--ui-popover-bg`, `--ln-popover-bg`; en Tailwind, `bg-popover`), nunca el de una ventana o tarjeta de vidrio (`--bg-surface`, `bg-surface`, `bg-main`, `bg-slate-900/95`, `backdrop-filter`).
+- **Las entradas de contenedores** (`.vista > *`, modales) van con `animation … backwards`, no `both`: `both` deja el `transform` en efecto y atrapa lo `fixed` y los `z-index` de adentro.
+- `flotantes.test.js` lo controla: falla si un archivo dibuja un menú sin la capa, si un fondo de menú deja de ser opaco en algún tema o si una entrada vuelve a `both`.
 
 En Thalamus, `data-nav` marca lo que sigue habilitado en solo lectura (el setter): navegar, copiar, probar. Lo que cambia la configuración no lo lleva.
 

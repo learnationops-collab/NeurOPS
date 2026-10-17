@@ -5,6 +5,7 @@
 import { forwardRef, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { IconButton } from './Button';
+import { subirACapa } from './capa';
 import './standard.css';
 
 // Íconos propios (Lucide, trazo 1.75): un componente estándar no depende del set de una pantalla.
@@ -53,9 +54,11 @@ export function Select({ value, options, onChange, size = 'md', label, id, style
     const cerrar = useCallback((foco) => { setAbierto(false); if (foco && btn.current) btn.current.focus(); }, []);
     const elegir = (i) => { cerrar(true); const o = options[i]; if (o && o.value !== value) onChange(o.value); };
 
+    // La lista va en la capa superior (capa.js): encima de todo, también dentro de un Modal.
     useLayoutEffect(() => {
         if (!abierto || !pop.current || !btn.current) return;
         const r = btn.current.getBoundingClientRect(), el = pop.current;
+        subirACapa(el);
         el.style.minWidth = Math.max(180, r.width) + 'px';
         const h = el.offsetHeight;
         el.style.top = ((window.innerHeight - r.bottom < h + 12 && r.top > h + 12) ? r.top - h - 6 : r.bottom + 6) + 'px';

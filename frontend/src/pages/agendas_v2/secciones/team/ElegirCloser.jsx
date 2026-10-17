@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom';
 import { almacen } from '../../data/hooks';
 import { Icono } from '../../ui/base';
 import { toast } from '../../ui/toast';
+import { subirACapa } from '../../../../components/standard/capa';
 
 // Closers activos de la app (/agendas-v2/usuarios): {id, nombre, email, calendar, whatsapp, tz}.
 // null mientras carga; [] en modo local (sin backend). Sin `activo` (solo lectura: sumar y lo que le
@@ -46,6 +47,7 @@ export default function ElegirCloser({ opciones, onElegir, texto = '+ Sumar clos
     const pop = useRef(null);
     useLayoutEffect(() => {
         if (!abierto) return;
+        subirACapa(pop.current);
         const ubicar = () => {
             const r = caja.current.getBoundingClientRect();
             const ancho = Math.min(420, window.innerWidth - 32);

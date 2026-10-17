@@ -385,3 +385,9 @@ button.ui-bars__row.ui-bars__row:focus-visible{outline:2px solid var(--ui-accent
 @keyframes ui-bars-crece{from{transform:scaleY(0)}}
 @keyframes ui-bars-crece-x{from{transform:scaleX(0)}}
 @media (prefers-reduced-motion:reduce){.ui-bars__col > i,.ui-bars__track > i{animation:none}}
+
+/* --- Capa de los flotantes (capa.js) ----------------------------------------------------------- */
+/* Un menú subido a la capa superior (`popover="manual"`) trae estilos de fábrica: centrado en la
+   pantalla (inset:0 + margin:auto), borde, relleno y el color del sistema. Se apagan con peso 0
+   (`:where`): cualquier regla del flotante (su fondo, su borde, su `top`) le sigue ganando. */
+:where([data-ui-capa]){inset:auto;margin:0;padding:0;border:0;color:inherit;background:none;overflow:visible}

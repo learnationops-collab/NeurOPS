@@ -9,3 +9,4 @@ export { Panel, Grid, Kpi } from './Layout';
 export { Bars } from './Charts';
 export { Calendar, CalendarEvent, calendarY } from './Calendar';
 export { toast, closeToast, Toaster, Tooltip } from './Notify';
+export { subirACapa } from './capa';

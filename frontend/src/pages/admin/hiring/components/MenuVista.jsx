@@ -7,6 +7,7 @@ import {
     COLS, ESENCIALES, ORDENES, AGRUPAR, PAISES, PIDE_TOPE, colsVisibles, esVistaDefault, filtrosActivos, vistaDefault,
 } from '../lib/vista';
 import { Bandera } from './Piezas';
+import { subirACapa } from '../../../../components/standard/capa';
 
 // El menú «Vista» del botón del embudo: filtrar, columnas, ordenar y agrupar la
 // tabla. Vive en un portal fijo (la cabecera lo recortaría) y se ubica debajo de
@@ -54,6 +55,7 @@ const MenuVista = ({ ancla, cfg, onCambiar, onCerrar, onCriterios }) => {
     const [pos, setPos] = useState({ top: 0, left: 0 });
 
     useLayoutEffect(() => {
+        subirACapa(menu.current);
         const ubicar = () => {
             const b = ancla.current?.getBoundingClientRect();
             const w = menu.current?.offsetWidth || 340;

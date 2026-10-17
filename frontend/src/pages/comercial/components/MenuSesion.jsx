@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronRight, Pencil } from 'lucide-react';
 import { fmt } from './Shared';
 import useOpcionesDeReporte from '../../../components/feedback/useOpcionesDeReporte';
 import Mascota from '../../../components/mascota/Mascota';
+import { subirACapa } from '../../../components/standard/capa';
 import { MASCOTAS, mascotaDe, nombreDeMascota } from '../../../components/mascota/mascotas';
 import { useAuth } from '../../../contexts/AuthContext';
 import api from '../../../services/api';
@@ -133,6 +134,7 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
             const b = boton.current?.getBoundingClientRect();
             const m = menu.current;
             if (!b || !m) return;
+            subirACapa(m);
             const margen = 16;
             const ancho = m.offsetWidth;
             const left = Math.min(Math.max(b.right - ancho, margen), window.innerWidth - ancho - margen);
