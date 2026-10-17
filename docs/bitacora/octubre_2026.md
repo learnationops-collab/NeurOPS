@@ -116,3 +116,12 @@
   - Historial de la persona: el webhook sin mensajes dice «Inicio de la automatización» y la respuesta sola, «Respondió X» (sin «Webhook ·»). Cuando enviado y respondido traen el mismo número se muestra solo el envío: en prod ese par llega a los 30 s del inicio, igual que el envío solo, así que no es una respuesta.
   - Los nombres de los pasos salen del catálogo de Marketing › Conversaciones. Los mensajes 11 y 12 de ManyChat (desde el 17/10) todavía no están cargados, por eso se ven como «Mensaje 11» y «Mensaje 12».
   - Verificación: 34 tests de vitest de Marketing, lint y build de producción.
+
+- **17 de Octubre de 2026 (3)** *(Las agendas que crea el equipo siguen el camino de Thalamus. [app/agendas_v2/manual.py](../../app/agendas_v2/manual.py) [NEW], [app/api/closer.py](../../app/api/closer.py) [MODIFY], [app/services/closer_service.py](../../app/services/closer_service.py) [MODIFY], [app/services/ficha_acciones_service.py](../../app/services/ficha_acciones_service.py) [MODIFY], [frontend/src/pages/closer/components/YaTieneAgenda.jsx](../../frontend/src/pages/closer/components/YaTieneAgenda.jsx) [NEW])*:
+  - Calendly ya no recibe agendas: la última por n8n entró el 14/10 a las 20:51 UTC y desde el 15/10 todo entra por Thalamus.
+  - La Nueva agenda del closer, la de la ficha, reprogramar y la 2da llamada crean el evento con Meet e invitación al lead (antes salía sin Meet), guardan el payload de Thalamus y avisan por Discord y WhatsApp.
+  - La hora es libre: solo frena un choque con otra agenda del closer (aunque no empiece a la misma hora) o con su Google Calendar. El chequeo va antes de tocar nada: si choca, no se cierra la agenda vieja.
+  - Si el lead ya tiene una agenda abierta, el closer elige reprogramarla (sigue con su closer) o crear una adicional.
+  - El tracking de NeurOPS no cambia: reprogramar y 2da llamada siguen siendo dos filas (Reagendado / 2da call + reprogramada / 2TH Call), de las que salen el embudo, la cartera y el roadmap.
+  - Lo que carga el equipo no cuenta como conversión en las Stats de Thalamus.
+  - Verificación: 678 tests de pytest relacionados (Thalamus, ficha, mazo, comercial), vitest de las pantallas del closer y build de producción.
