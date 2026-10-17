@@ -3,7 +3,7 @@ from flask_login import current_user
 from app import db
 from app.models import WorkshopTemplate, WorkshopButton, WorkshopTemplateSent, WorkshopInteraction, WorkshopEvent, WorkshopGoals, WorkshopAction
 from app.decorators import workshop_required
-from app.services import workshop_agenda_service, workshop_meta_service
+from app.services import workshop_agenda_service, workshop_grabaciones_service, workshop_meta_service
 from datetime import datetime
 import pytz
 import logging
@@ -416,6 +416,11 @@ def update_workshop_event(event_id):
         event.ventas_cobradas = _int_o_none(data['ventas_cobradas'])
     if 'replay_loom_id' in data:
         event.replay_loom_id = data['replay_loom_id'] or None
+    if 'grabacion_url' in data:
+        try:
+            event.grabacion_url = workshop_grabaciones_service.normalizar_url(data['grabacion_url'])
+        except workshop_grabaciones_service.UrlInvalida as e:
+            return jsonify({"error": str(e)}), 400
     if 'replay_activo_desde' in data:
         event.replay_activo_desde = _parse_replay_datetime(data['replay_activo_desde'])
     if 'replay_vence_hasta' in data:
