@@ -83,3 +83,12 @@
   - Thalamus los usa en todas sus secciones: 106 botones, la cabecera (reemplaza a `ui/EnTope`), 12 estados vacíos y 4 confirmaciones de borrado que estaban copiadas. `Humo` pasa a ser el `Aura` estándar.
   - Reglas de agentes: `.agent/` y `.agents/` quedan unificadas en `.agents/`. Se corrigió `arquitectura.md` (Python 3.11, temas propios y componentes estándar). Regla nueva `ui.md` y skill `ui-builder`, con el catálogo de componentes. `CLAUDE.md` importa las reglas para Claude Code.
   - Verificación: 178 tests de Thalamus, 11 de los componentes y 15 de la Configuración de sesión (que usa piezas de Thalamus); build de producción.
+
+- **16 de Octubre de 2026** *(Workshop y Marketing con el estilo estándar, leads y calificación de ManyChat. [frontend/src/pages/admin/workshop/](../../frontend/src/pages/admin/workshop/) [MODIFY], [frontend/src/pages/admin/marketing/](../../frontend/src/pages/admin/marketing/) [MODIFY], [app/api/manychat.py](../../app/api/manychat.py) [MODIFY], [app/api/manychat_calificacion.py](../../app/api/manychat_calificacion.py) [NEW])*:
+  - Workshop pasa de 9 pestañas a 4 (Resumen, Talleres, Planificar, Tráfico landings) con la cabecera del dashboard comercial; Resumen con comparación, Talleres en tarjetas o tabla, Planificar con acciones por taller (migración `d4a8e2c6f1b7`).
+  - Lista estándar `components/listas/ListaConfigurable` (columnas elegibles, filtro completo, agrupar, orden) y `useEnPantalla`: ningún menú se sale de la pantalla.
+  - Tráfico landings solo en Workshop (en Marketing daba error), con campañas y anuncios de Meta por nombre.
+  - Meta Ads: árbol campaña › conjunto › anuncio, enlaces al Administrador y sincronización de estado. Los leads de cada taller salen de la columna Leads de Meta (migración `e7b3c9a1d5f2`). Las guías por DM toman su palabra clave.
+  - Marketing › Entrantes (antes Webhooks): una fila por persona con estado (calificado, descalificado, en conversación, sin respuesta) y paso del flujo. Se retiraron «Migrar data antigua» y «Limpieza inteligente».
+  - Calificación: del 28/07 al 16/10 ManyChat mandaba «yes» fijo en el webhook de la respuesta a la apertura (corregido en ManyChat). El webhook lee también `cualificado` y registra el valor crudo; se puede corregir la calificación de a uno o en lote.
+  - Verificación: suites de pytest y vitest de Workshop, Marketing y ManyChat; revisión visual con un servidor local.
