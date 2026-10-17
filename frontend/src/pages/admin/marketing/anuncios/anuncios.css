@@ -266,3 +266,57 @@
 @media (max-width:720px){
   .dc-shell .mk-tabla--arbol .mk-col-nombre{min-width:220px;max-width:240px}
 }
+
+/* --- Columnas a medida (17/10/2026): ancho arrastrable, columnas juntadas y Exportar --- */
+.dc-shell .mk-tabla.mk-tabla--anchos{table-layout:fixed;min-width:0}
+.dc-shell .mk-tabla--anchos th,.dc-shell .mk-tabla--anchos td{overflow:hidden;text-overflow:ellipsis}
+.dc-shell .mk-tabla--anchos th{position:relative}
+.dc-shell .mk-tabla--anchos .mk-col-acc,.dc-shell .mk-tabla--anchos .mk-col-sel{text-overflow:clip;padding-inline:6px}
+.dc-shell .mk-tabla--anchos th.mk-col-sel,.dc-shell .mk-tabla--anchos th.mk-col-nombre{position:sticky}
+.dc-shell .mk-tabla--anchos th.mk-num,.dc-shell .mk-tabla--anchos .mk-col-nombre{min-width:0;max-width:none}
+.dc-shell .mk-tabla--anchos .mk-cab{max-width:100%}
+.dc-shell .mk-redim{position:absolute;top:0;right:0;bottom:0;width:9px;cursor:col-resize;touch-action:none;z-index:3}
+.dc-shell .mk-redim::after{content:"";position:absolute;top:22%;bottom:22%;right:3px;width:2px;border-radius:2px;
+  background:var(--border-main);opacity:0;transition:opacity .15s}
+.dc-shell .mk-tabla th:hover .mk-redim::after{opacity:1}
+.dc-shell .mk-redim:hover::after,.dc-shell .mk-redim:focus-visible::after,.dc-shell .mk-redim:active::after{opacity:1;background:var(--brand-secondary)}
+.dc-shell .mk-redim:focus-visible{outline:none}
+
+.dc-shell .mk-tabla .mk-col-grupo{text-align:left;vertical-align:top;box-shadow:inset 1px 0 0 var(--border-subtle)}
+.dc-shell .mk-tabla th.mk-col-grupo{vertical-align:bottom;white-space:normal}
+.dc-shell .mk-grupo-tit{display:block;color:var(--text-on-surface);margin-bottom:6px}
+.dc-shell .mk-grupo-orden{display:flex;flex-wrap:wrap;gap:4px}
+.dc-shell .mk-grupo-por{display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:var(--radius-pill);
+  border:1px solid var(--border-subtle);font:inherit;font-size:9.5px;letter-spacing:.04em;color:var(--text-muted);background:none;cursor:pointer}
+.dc-shell .mk-grupo-por:hover,.dc-shell .mk-grupo-por.is-on{color:var(--text-on-surface);border-color:var(--text-muted)}
+.dc-shell .mk-grupo{display:grid;gap:3px;margin:0}
+.dc-shell .mk-grupo > div{display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0}
+.dc-shell .mk-grupo dt{font-size:11px;color:var(--text-muted-40);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dc-shell .mk-grupo dd{margin:0;font-weight:700;color:var(--text-on-surface);white-space:nowrap}
+.dc-shell .mk-grupo dd small{margin-left:6px;font-size:10.5px;font-weight:600;color:var(--text-muted-40)}
+
+.dc-shell .mk-herr{position:relative;display:flex;flex-wrap:wrap;gap:var(--s2)}
+.dc-shell .mk-herr .cuenta{font-size:11px;color:var(--text-muted-40);font-variant-numeric:tabular-nums}
+.dc-shell .mk-herr .mk-menu-columnas{left:0;right:auto;min-width:280px;max-height:min(480px,70vh);overflow-y:auto}
+.dc-shell .mk-menu-grupo + .mk-menu-grupo{border-top:1px solid var(--border-subtle);margin-top:4px;padding-top:4px}
+.dc-shell .mk-menu-grupo-cab{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);padding:6px 10px 4px}
+.dc-shell .mk-menu-grupo-cab small{font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)}
+.dc-shell .mk-menu-juntar{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-muted)}
+.dc-shell .mk-menu-columnas .menu-item{align-items:center}
+.dc-shell .mk-menu-restablecer{border-top:1px solid var(--border-subtle);margin-top:4px}
+.dc-shell .mk-menu-restablecer:disabled{opacity:.5;cursor:default}
+.dc-shell .mk-herr .config-panel{left:auto;right:0}
+
+/* Vista de tarjetas (17/10/2026): la `VistaTarjetas` de Revisar, con el aire del panel. */
+.dc-shell .mk-tarjetas{padding:var(--s4) var(--s5) 0;border-top:1px solid var(--border-subtle)}
+
+.dc-shell .mk-cobrado{padding:var(--s5);margin-bottom:var(--s5)}
+.dc-shell .mk-cobrado-tit{margin:6px 0 var(--s4)}
+/* Rótulos largos («Setting sin palabra clave») y un detalle por setter: más aire que la tarjeta de Workshop. */
+.dc-shell .mk-cobrado .ui-bars__row.ui-bars__row{grid-template-columns:minmax(150px,210px) minmax(0,1fr) 72px minmax(120px,240px);gap:var(--s3)}
+.dc-shell .mk-cobrado .ui-bars__row.ui-bars__row > span:last-child{text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:720px){
+  .dc-shell .mk-cobrado .ui-bars__row.ui-bars__row{grid-template-columns:110px minmax(0,1fr) 64px;row-gap:2px}
+  .dc-shell .mk-cobrado .ui-bars__row.ui-bars__row > span:last-child{grid-column:1/-1}
+}
+.dc-shell .mk-cobrado-tit b{font-size:28px;font-weight:900;letter-spacing:-.02em;color:var(--text-on-surface)}

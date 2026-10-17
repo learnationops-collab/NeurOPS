@@ -1,12 +1,19 @@
 import { useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Archive, ArchiveRestore, ArrowDown, ArrowUp, ChevronRight, Link2, Pencil, Search } from 'lucide-react';
+import { Archive, ArchiveRestore, ChevronRight, Link2, Pencil, Search } from 'lucide-react';
 import Cifra from '../../../comercial/components/Cifra';
 import { Segmented, Tip } from '../../../comercial/components/Shared';
 import SerieDiaria from './SerieDiaria';
 import EditorAgrupacion from './EditorAgrupacion';
+import CobradoDelPeriodo from './CobradoDelPeriodo';
+import HerramientasTabla from './HerramientasTabla';
+import { Borde, Celda, Encabezado, Flecha } from './CeldasTabla';
+import { columnasDelCsv } from './columnasTabla';
+import { useVistaDeColumnas } from './useVistaDeColumnas';
+import TarjetasAnuncios, { SelectorModo } from './TarjetasAnuncios';
+import { useModoVista } from '../../../../components/listas/useModoVista';
 import {
-    COLUMNAS, NIVELES, SIN_CAMPANA, agruparFilas, claveDeAnuncio, claveDeCampana, claveDeConjunto, formatear,
+    NIVELES, SIN_CAMPANA, agruparFilas, claveDeAnuncio, claveDeCampana, claveDeConjunto, formatear,
     ordenar, serieDe, textoMeta, totalesDe,
 } from './metricas';
 
@@ -38,27 +45,11 @@ export const Kpi = ({ titulo, valor, sub, tip, i }) => {
     );
 };
 
-const Flecha = ({ orden, clave }) => {
-    if (orden.clave !== clave) return null;
-    return orden.dir === 'desc' ? <ArrowDown size={12} aria-hidden="true" /> : <ArrowUp size={12} aria-hidden="true" />;
-};
-
 const Punto = ({ meta }) => {
     const estado = !meta?.anuncios ? 'sin' : meta.activos ? 'activo' : 'pausado';
     const titulo = { sin: 'Sin anuncio en Meta', activo: 'Con anuncios activos en Meta', pausado: 'Sus anuncios de Meta no están activos' }[estado];
     return <i className={`mk-punto mk-punto--${estado}`} title={titulo} aria-label={titulo} role="img" />;
 };
-
-// Un gasto en cero de una palabra clave sin anuncio en Meta no es un dato medido: «—», no «$0.00».
-const sinMedir = (fila, col) => col.key === 'gasto' && !fila.gasto
-    && (fila.meta ? !fila.meta.anuncios : fila.medido === false);
-
-const Celda = ({ fila, col, moneda }) => (
-    <td className="mk-num num">
-        <span className="mk-valor">{sinMedir(fila, col) ? '—' : formatear(fila[col.key], col.formato, moneda)}</span>
-        {col.pct && <span className="mk-pct">{formatear(fila[col.pct], 'pct')}</span>}
-    </td>
-);
 
 const NOMBRE_DEL_NIVEL = { campanas: 'Campaña', conjuntos: 'Conjunto', anuncios: 'Palabra clave' };
 const UNIDAD = {
@@ -78,6 +69,9 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
     const [editando, setEditando] = useState(null);
     const [guardando, setGuardando] = useState(false);
     const moneda = datos.moneda;
+    const vista = useVistaDeColumnas();
+    const { modo, setModo } = useModoVista('mk_rendimiento_modo');
+    const { piezas } = vista;
 
     const archivados = datos.filas.filter((f) => f.archivado).length;
     // Las palabras clave que entran: sin las archivadas y con la búsqueda (que mira también su campaña y su
@@ -161,6 +155,20 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
     const sub = (f, meta) => (f.clave === null ? 'Webhooks que llegaron sin palabra clave'
         : meta || (datos.meta?.conectado ? 'Sin anuncio en Meta (orgánico o sin asociar)' : null));
 
+    const anchoTotal = ['sel', 'nombre', ...piezas.map((p) => p.key), 'acc'].reduce((s, k) => s + vista.ancho(k), 0);
+    // El CSV: las filas elegidas (o las que se ven) y, como alternativa, todas las del nivel sin filtros.
+    const todasDelNivel = nivel === 'anuncios' ? datos.filas : agruparFilas(datos.filas, nivel);
+    const exportar = {
+        def: { cols: columnasDelCsv(nivel, NOMBRE_DEL_NIVEL[nivel]) },
+        tabla: `rendimiento_${nivel}`,
+        colsVistas: [{ key: 'nombre' }, { key: 'campana' }, { key: 'conjunto' },
+            ...piezas.flatMap((p) => (p.tipo === 'col' ? [p.col] : p.cols))],
+        filasVista: elegidasVisibles.length ? elegidasVisibles : visibles,
+        filasTodas: ordenar(todasDelNivel, orden.clave, orden.dir),
+        fechas: { start: datos.desde, end: datos.hasta },
+        rotulos: { vista: elegidasVisibles.length ? 'Las filas elegidas' : 'Lo que estás viendo', todas: 'Toda la tabla, sin filtros' },
+    };
+
     const conGasto = totales.gasto > 0;
     const kpis = [
         { titulo: 'Leads entrantes', valor: formatear(totales.entrantes, 'num'),
@@ -197,6 +205,9 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
                 {kpis.map((k, i) => <Kpi key={k.titulo} {...k} i={i} />)}
             </div>
 
+            <CobradoDelPeriodo enTabla={datos.totales?.cobrado || 0} total={datos.cobrado_periodo}
+                fuera={datos.cobrado_fuera || []} moneda={moneda} />
+
             <SerieDiaria serie={serie} moneda={moneda} alcance={alcance} metaConectado={datos.meta?.conectado} />
 
             <section className="panel mk-panel-tabla">
@@ -215,6 +226,8 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
                             <input type="search" placeholder="Buscar" value={busqueda}
                                 onChange={(e) => setBusqueda(e.target.value)} aria-label="Buscar palabra clave, campaña o conjunto" />
                         </label>
+                        <SelectorModo modo={modo} setModo={setModo} />
+                        <HerramientasTabla vista={vista} exportar={exportar} />
                         {archivados > 0 && (
                             <button type="button" className={`pastilla pastilla--sm${verArchivados ? ' pastilla--on' : ''}`}
                                 aria-pressed={verArchivados} onClick={() => setVerArchivados((v) => !v)}>
@@ -225,8 +238,26 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
                     </div>
                 </div>
 
+                {modo === 'tarjetas' ? (
+                    visibles.length ? (
+                        <TarjetasAnuncios filas={visibles} piezas={piezas} moneda={moneda} idDe={idDe} elegidas={delNivel}
+                            onTocar={nivel === 'anuncios' ? alternar : abrir}
+                            subtitulo={(f) => (nivel === 'anuncios'
+                                ? (f.campana ? `${f.campana} › ${f.conjunto ?? 'Sin conjunto'}` : sub(f, textoMeta(f.meta)))
+                                : nivel === 'conjuntos' ? (f.campana ?? SIN_CAMPANA) : `${f.conjuntos} conjuntos · ${f.palabras} palabras clave`)} />
+                    ) : (
+                        <p className="t-cap mk-vacio">Nada coincide con la búsqueda o con lo elegido.</p>
+                    )
+                ) : (
                 <div className="mk-tabla-caja">
-                    <table className="mk-tabla">
+                    {/* Anchos fijos (`table-layout: fixed`): los que se eligen arrastrando el borde de cada
+                        encabezado, o los de siempre. */}
+                    <table className="mk-tabla mk-tabla--anchos" style={{ width: anchoTotal }}>
+                        <colgroup>
+                            {['sel', 'nombre', ...piezas.map((p) => p.key), 'acc'].map((k) => (
+                                <col key={k} style={{ width: vista.ancho(k) }} />
+                            ))}
+                        </colgroup>
                         <thead>
                             <tr>
                                 <th className="mk-col-sel" scope="col">
@@ -237,16 +268,11 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
                                     <button type="button" className="mk-cab" onClick={() => ordenarPor('nombre')}>
                                         {NOMBRE_DEL_NIVEL[nivel]} <Flecha orden={orden} clave="nombre" />
                                     </button>
+                                    <Borde id="nombre" etiqueta={NOMBRE_DEL_NIVEL[nivel]} vista={vista} />
                                 </th>
-                                {COLUMNAS.map((c) => (
-                                    <th key={c.key} scope="col" className="mk-num" aria-sort={ariaOrden(c.key)}>
-                                        <span className="mk-cab-celda">
-                                            <Tip texto={c.ayuda} titulo={c.label} />
-                                            <button type="button" className="mk-cab" onClick={() => ordenarPor(c.key, c.menor)}>
-                                                {c.label} <Flecha orden={orden} clave={c.key} />
-                                            </button>
-                                        </span>
-                                    </th>
+                                {piezas.map((p) => (
+                                    <Encabezado key={p.key} pieza={p} orden={orden} ordenarPor={ordenarPor}
+                                        ariaOrden={ariaOrden} vista={vista} />
                                 ))}
                                 <th className="mk-col-acc" scope="col"><span className="sr-only">Acciones</span></th>
                             </tr>
@@ -275,7 +301,7 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
                                                 <ChevronRight className="mk-abrir-flecha" size={15} aria-hidden="true" />
                                             </button>
                                         </td>
-                                        {COLUMNAS.map((c) => <Celda key={c.key} fila={g} col={c} moneda={moneda} />)}
+                                        {piezas.map((p) => <Celda key={p.key} fila={g} pieza={p} moneda={moneda} />)}
                                         <td className="mk-col-acc" />
                                     </tr>
                                 );
@@ -310,7 +336,7 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
                                                 {f.archivado && <span className="chip mk-chip" style={{ '--c': 'var(--idle)' }}>Archivada</span>}
                                             </div>
                                         </td>
-                                        {COLUMNAS.map((c) => <Celda key={c.key} fila={f} col={c} moneda={moneda} />)}
+                                        {piezas.map((p) => <Celda key={p.key} fila={f} pieza={p} moneda={moneda} />)}
                                         <td className="mk-col-acc">
                                             {f.clave !== null && (
                                                 <button type="button" className="ibtn ibtn--sm"
@@ -326,7 +352,7 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
                             })}
                             {!visibles.length && (
                                 <tr>
-                                    <td colSpan={COLUMNAS.length + 3} className="mk-vacio">
+                                    <td colSpan={piezas.length + 3} className="mk-vacio">
                                         {datos.filas.length
                                             ? 'Nada coincide con la búsqueda o con lo elegido.'
                                             : 'No llegó ningún lead por ManyChat en este período.'}
@@ -341,13 +367,14 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
                                     <td className="mk-col-nombre">
                                         <span className="mk-total-rot">Resultados de {visibles.length} {visibles.length === 1 ? uno : varios}</span>
                                     </td>
-                                    {COLUMNAS.map((c) => <Celda key={c.key} fila={totales} col={c} moneda={moneda} />)}
+                                    {piezas.map((p) => <Celda key={p.key} fila={totales} pieza={p} moneda={moneda} />)}
                                     <td className="mk-col-acc" />
                                 </tr>
                             </tfoot>
                         )}
                     </table>
                 </div>
+                )}
 
                 {(datos.sin_atribuir?.gasto_meta > 0 || datos.sin_atribuir?.agendas > 0) && (
                     <p className="t-cap mut40 mk-pie">

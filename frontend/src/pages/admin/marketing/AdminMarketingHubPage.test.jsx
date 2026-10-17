@@ -92,6 +92,63 @@ describe('Marketing › Anuncios', () => {
         expect(nombres()[0]).toMatch(/APLICAR/); // el costo menor primero; el vacío al final
     });
 
+    it('las columnas se ocultan, se juntan, cambian de ancho y se exportan (17/10/2026)', async () => {
+        window.localStorage.clear();
+        const user = userEvent.setup();
+        abrir();
+        await screen.findByText('Obtener Guia');
+
+        await user.click(screen.getByRole('button', { name: /^Columnas/ }));
+        await user.click(screen.getByRole('menuitemcheckbox', { name: 'ROAS' }));
+        expect(screen.queryByRole('button', { name: /^ROAS/ })).not.toBeInTheDocument();
+        await user.click(screen.getByRole('switch', { name: 'Juntar Leads en una columna' }));
+        expect(screen.getByRole('columnheader', { name: /^Leads/ })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^Leads entrantes/ })).not.toBeInTheDocument();
+
+        // El ancho: con el teclado sobre el borde del encabezado (el arrastre usa el mismo estado).
+        const borde = screen.getByRole('separator', { name: 'Ancho de Importe gastado' });
+        const antes = Number(borde.getAttribute('aria-valuenow'));
+        borde.focus();
+        await user.keyboard('{ArrowRight}');
+        expect(Number(borde.getAttribute('aria-valuenow'))).toBe(antes + 16);
+        expect(JSON.parse(window.localStorage.getItem('mk_rendimiento_columnas')).anchos.gasto).toBe(antes + 16);
+
+        await user.click(screen.getByRole('button', { name: /^Exportar/ }));
+        const panel = screen.getByRole('dialog', { name: 'Exportar' });
+        expect(within(panel).getByText('Lo que estás viendo')).toBeInTheDocument();
+        expect(within(panel).getByRole('checkbox', { name: /Palabra clave/ })).toHaveAttribute('aria-checked', 'true');
+        expect(within(panel).getByRole('checkbox', { name: 'ROAS' })).toHaveAttribute('aria-checked', 'false');
+        window.localStorage.clear();
+    });
+
+    it('se puede ver en tarjetas, y tocar una la elige para el gráfico', async () => {
+        window.localStorage.clear();
+        const user = userEvent.setup();
+        abrir();
+        await screen.findByText('Obtener Guia');
+        await user.click(screen.getByRole('button', { name: 'Ver como tarjetas' }));
+        expect(screen.queryByRole('table')).not.toBeInTheDocument();
+        const tarjeta = screen.getByRole('button', { name: 'Abrir APLICAR' });
+        expect(within(tarjeta).getByText('Costo por lead')).toBeInTheDocument();
+        await user.click(tarjeta);
+        expect(within(tarjeta).getByText('Elegida')).toBeInTheDocument();
+        expect(window.localStorage.getItem('mk_rendimiento_modo')).toBe('tarjetas');
+        window.localStorage.clear();
+    });
+
+    it('muestra de dónde vino lo cobrado que no está en la tabla', async () => {
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/anuncios' ? {
+            ...TABLERO, totales: { cobrado: 5138 }, cobrado_periodo: 17059,
+            cobrado_fuera: [{ key: 'workshop', label: 'Workshop', monto: 6350, cantidad: 11,
+                detalle: [{ label: 'En vivo', monto: 5850 }, { label: 'Grabación', monto: 500 }] }],
+        } : { anuncios: [], claves: [], conectado: false } }));
+        abrir();
+        const panel = (await screen.findByText('De dónde vino lo cobrado')).closest('section');
+        expect(within(panel).getByText('$17,059')).toBeInTheDocument();
+        expect(within(panel).getByText('Workshop')).toBeInTheDocument();
+        expect(within(panel).getByText('En vivo $5,850 · Grabación $500')).toBeInTheDocument();
+    });
+
     it('archivar avisa al backend y saca la fila', async () => {
         const user = userEvent.setup();
         api.post.mockResolvedValue({ data: { clave: 'APLICAR', archivado: true } });
