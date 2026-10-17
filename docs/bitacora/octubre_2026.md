@@ -166,3 +166,10 @@
   - Elias no podía enviar el reporte («31 cualificados + 11 no leads + 0 in-abribles = 42, más que los 37 mensajes de los que salen»). Los setters califican también a gente que escribió otros días, y el reporte tiene que medir lo que ellos dicen.
   - Cualificados + no leads + in-abribles por encima de los mensajes ya no es error ni aviso: el formulario lo envía y la lectura del reporte y Discord ya no lo marcan. «Sin respuesta» queda en 0 en ese caso. Las demás advertencias siguen igual y ninguna bloquea.
   - Verificación: 66 tests de pytest del reporte del setter y 619 de vitest del setter y del comercial.
+
+- **17 de Octubre de 2026 (10)** *(Rendimiento de anuncios: de dónde vino lo cobrado y una tabla a medida. [app/services/cruce_conversaciones.py](../../app/services/cruce_conversaciones.py) [NEW], [app/services/anuncios_service.py](../../app/services/anuncios_service.py) [MODIFY], [frontend/src/pages/admin/marketing/anuncios/](../../frontend/src/pages/admin/marketing/anuncios/) [MODIFY])*:
+  - El Cobrado de la tabla era bajo ($5.138 de $17.059 en prod, últimos 30 días) porque solo cuenta a quien llegó por una palabra clave de ManyChat. El resto era workshop, setting sin conversación, VSL y renovaciones.
+  - La conversación de cada venta y agenda también se busca por Instagram parecido («luis.rinnegan» = «luis_rinnegan») y por nombre contenido en una sola conversación («Greta Castro» → «Greta Castro Gallo»). «Mis agendas» usa la misma regla. En staging (14/09–13/10): $5.088 → $5.488 y 117 → 125 agendas.
+  - Panel nuevo «De dónde vino lo cobrado»: el total del período y cuánto entró por palabra clave, workshop, setting sin palabra clave, VSL y renovaciones (la procedencia de Finanzas).
+  - La tabla: ancho de cada columna arrastrable, elegir qué columnas ver, juntar las semejantes (leads, costos, resultados) en una sola, exportar a CSV las filas elegidas con las columnas que se quieran, y vista de tarjetas. Todo se recuerda en el navegador.
+  - Verificación: 95 tests de pytest de anuncios y setter, 472 de vitest de marketing y comercial, y prueba en el navegador con datos de staging en solo lectura.
