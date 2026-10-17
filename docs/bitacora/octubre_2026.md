@@ -144,7 +144,7 @@
   - En «Nuevo mensaje» la categoría ocupa su propia fila y se lee entera (antes, «Cualific…»).
   - Verificación: 31 tests de vitest (componentes estándar y Conversaciones). Prueba en el navegador con el usuario de marketing: el menú abre justo debajo del botón, dentro de la pantalla, y elegir «Seguimiento» cambia el valor.
 
-- **17 de Octubre de 2026 (6)** *(Inbox: métricas por paso y gráficos estándar. [frontend/src/pages/inbox/](../../frontend/src/pages/inbox/) [MODIFY], [app/automatizaciones/](../../app/automatizaciones/) [MODIFY], [frontend/src/components/standard/Charts.jsx](../../frontend/src/components/standard/Charts.jsx) [NEW])*:
+- **17 de Octubre de 2026 (7)** *(Inbox: métricas por paso y gráficos estándar. [frontend/src/pages/inbox/](../../frontend/src/pages/inbox/) [MODIFY], [app/automatizaciones/](../../app/automatizaciones/) [MODIFY], [frontend/src/components/standard/Charts.jsx](../../frontend/src/components/standard/Charts.jsx) [NEW])*:
   - Flujos: tarjetas con métricas, plantillas para crear un flujo y el lienzo con las métricas de cada paso.
   - Conversaciones: examen, calificación, flujo y paso en cada fila; el detalle muestra el recorrido y la mediana de respuesta.
   - Componente estándar nuevo `Bars`, que ya usa el embudo de los talleres de Workshop (catálogo `/ui` y skill).
