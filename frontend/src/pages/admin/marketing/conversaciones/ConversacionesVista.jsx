@@ -110,7 +110,7 @@ const EditarMensaje = ({ inicial, nuevo, onCerrar, onGuardado }) => {
                     <Input value={form.title} onChange={(e) => cambiar('title')(e.target.value)} placeholder="Cualificación 3"
                         aria-label="Título" />
                 </label>
-                <div className="cv-campo">
+                <div className="cv-campo cv-campo--ancho">
                     <span className="t-rotulo">Categoría</span>
                     <Select value={form.category} options={CATEGORIAS} onChange={cambiar('category')} label="Categoría" />
                 </div>

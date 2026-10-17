@@ -9,5 +9,7 @@
 .cv-modal .cv-campo--ancho, .cv-modal .cv-activo, .cv-modal .ui-field-error { grid-column: 1 / -1; }
 .cv-modal .cv-activo { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; }
 .cv-modal .ui-textarea { min-height: 96px; }
+/* La categoría va en su propia fila: en la columna del número no entraba «Cualificación». */
+.cv-modal .cv-campo .ui-select { justify-self: start; width: min(240px, 100%); }
 .cv-modal .cv-pie { display: flex; justify-content: flex-end; gap: 8px; padding: 16px 20px 20px; }
 @media (max-width: 520px) { .cv-modal .cv-form { grid-template-columns: minmax(0, 1fr); } }
