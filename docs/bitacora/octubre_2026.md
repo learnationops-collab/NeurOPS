@@ -173,3 +173,10 @@
   - Panel nuevo «De dónde vino lo cobrado»: el total del período y cuánto entró por palabra clave, workshop, setting sin palabra clave, VSL y renovaciones (la procedencia de Finanzas).
   - La tabla: ancho de cada columna arrastrable, elegir qué columnas ver, juntar las semejantes (leads, costos, resultados) en una sola, exportar a CSV las filas elegidas con las columnas que se quieran, y vista de tarjetas. Todo se recuerda en el navegador.
   - Verificación: 95 tests de pytest de anuncios y setter, 472 de vitest de marketing y comercial, y prueba en el navegador con datos de staging en solo lectura.
+
+- **17 de Octubre de 2026 (11)** *(Rendimiento de anuncios: colores contra el promedio, embudo en las tarjetas y filtros en una línea. [frontend/src/pages/admin/marketing/anuncios/tonos.js](../../frontend/src/pages/admin/marketing/anuncios/tonos.js) [NEW], [frontend/src/pages/admin/marketing/anuncios/TarjetasAnuncios.jsx](../../frontend/src/pages/admin/marketing/anuncios/TarjetasAnuncios.jsx) [MODIFY], [frontend/src/pages/admin/marketing/anuncios/TablaAnuncios.jsx](../../frontend/src/pages/admin/marketing/anuncios/TablaAnuncios.jsx) [MODIFY])*:
+  - Cada métrica se pinta de verde o rojo si está más de un 15% mejor o peor que la tabla visible (la fila de resultados). Las cantidades se comparan con el promedio por fila; el gasto no lleva color. Los porcentajes y el costo por lead se pintan solo desde 10 leads, y un 0 no es rojo si la fila típica no llega a 1.
+  - Los colores van en la tabla, en la vista agrupada y en las tarjetas, con una leyenda y el botón «Colores» para apagarlos.
+  - Cada tarjeta muestra el embudo entrantes → calificados → agendas → ventas, con la conversión de cada paso pintada contra la de toda la tabla.
+  - Los filtros (nivel, búsqueda, archivadas, tabla/tarjetas, columnas, agrupar, colores, exportar) van en una sola línea debajo del título.
+  - Verificación: 52 tests de vitest de marketing y prueba en el navegador a 1366px con datos de staging en solo lectura.
