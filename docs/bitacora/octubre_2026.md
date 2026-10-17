@@ -156,3 +156,8 @@
   - Solo se aceptan links de Drive; los de archivo quedan como `/file/d/<id>/view`.
   - La pestaña Grabación de cada tarjeta abre el «Meet en Drive». El estado sin Loom ahora dice «Sin Loom».
   - Verificación: 21 tests de pytest, 78 de vitest de Workshop, migración arriba y abajo, y prueba en el navegador con talleres de prueba.
+
+- **17 de Octubre de 2026 (9)** *(La grabación de Drive en el detalle del taller; se va «Cargar grabaciones». [frontend/src/pages/admin/workshop/components/WorkshopReplayConfigPanel.jsx](../../frontend/src/pages/admin/workshop/components/WorkshopReplayConfigPanel.jsx) [MODIFY], [frontend/src/pages/admin/workshop/talleres/TalleresVista.jsx](../../frontend/src/pages/admin/workshop/talleres/TalleresVista.jsx) [MODIFY])*:
+  - En el detalle de cada taller, la pestaña Grabación tiene «Ver grabación en Drive». Si el taller no la tiene, dice «Sin la grabación de Drive.».
+  - Ya se cargaron las grabaciones, así que se sacó el botón «Cargar grabaciones» de Talleres junto con su modal. El endpoint `POST /api/workshop/events/grabaciones` sigue, por si hay que volver a cargar en masa.
+  - Verificación: 76 tests de vitest de Workshop.
