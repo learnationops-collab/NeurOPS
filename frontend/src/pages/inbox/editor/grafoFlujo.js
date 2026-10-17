@@ -95,3 +95,36 @@ export function conectar(aristas, conexion) {
     if (conexion.source === conexion.target) return aristas;
     return [...otras, { id: nuevoId('c'), ...conexion }];
 }
+
+// Número de paso de cada nodo: a lo ancho desde `inicio`, salida por salida. Los «fin» y los nodos
+// sueltos no llevan número. Mismo orden que el servidor (app/automatizaciones/nucleo/pasos.py).
+export function ordenPasos(grafo) {
+    const porId = new Map((grafo?.nodos || []).map((n) => [n.id, n]));
+    const destino = (desde, salida) => (grafo.conexiones || []).find((c) => c.desde === desde && c.salida === salida)?.hacia;
+    const numeros = {};
+    const vistos = new Set();
+    const cola = [grafo?.inicio];
+    let n = 0;
+    while (cola.length) {
+        const id = cola.shift();
+        if (vistos.has(id) || !porId.has(id)) continue;
+        vistos.add(id);
+        const nodo = porId.get(id);
+        if (nodo.tipo !== 'fin') numeros[id] = ++n;
+        salidas(nodo).forEach((s) => cola.push(destino(id, s)));
+    }
+    return numeros;
+}
+
+// Los errores del servidor vienen como «Nodo n1: …»: se reparten por nodo para marcarlos en el lienzo.
+// Los que no son de un nodo (disparadores, el flujo entero) quedan en `general`.
+export function avisosPorNodo(errores) {
+    const porNodo = {};
+    const general = [];
+    (errores || []).forEach((e) => {
+        const m = /^Nodo ([^:]+): (.+)$/.exec(e);
+        if (m) (porNodo[m[1]] ||= []).push(m[2]);
+        else general.push(e);
+    });
+    return { porNodo, general };
+}

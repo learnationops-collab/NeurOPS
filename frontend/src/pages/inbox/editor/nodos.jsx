@@ -1,39 +1,12 @@
-// Las cajas del lienzo. Cada salida del nodo es un punto de conexión (Handle) a la derecha, con su
-// rótulo: un botón, «Responde», «Sin respuesta», «Sí»/«No» o «Siguiente».
+// Las cajas del lienzo, legibles sin zoom: tipo y número de paso, el nombre, el copy real y cada salida
+// con el % de gente que la tomó. El paso que más gente pierde se marca, y los avisos del servidor
+// quedan pegados a su caja. Cada salida es un punto de conexión (Handle) a la derecha.
 import { Handle, Position } from '@xyflow/react';
-import { Clock, Flag, GitBranch, MessageSquare, Play, Zap } from 'lucide-react';
+import { AlertTriangle, Clock, Flag, GitBranch, MessageSquare, Play, Zap } from 'lucide-react';
 import { rotuloSalida, salidas, TIPOS } from './grafoFlujo';
+import { porciento } from '../estadoFlujo';
 
 const ICONO = { mensaje: MessageSquare, esperar: Clock, condicion: GitBranch, accion: Zap, fin: Flag };
-
-function Salidas({ nodo }) {
-    const lista = salidas(nodo);
-    if (!lista.length) return null;
-    return (
-        <div className="nf-salidas">
-            {lista.map((s) => (
-                <div key={s} className={`nf-salida nf-salida--${s === 'sin_respuesta' ? 'sin' : s === 'no' ? 'no' : 'si'}`}>
-                    <span>{rotuloSalida(nodo, s)}</span>
-                    <Handle type="source" position={Position.Right} id={s} className="nf-punto" />
-                </div>
-            ))}
-        </div>
-    );
-}
-
-function resumen(nodo) {
-    switch (nodo.tipo) {
-        case 'mensaje': return (nodo.contenido || []).map((c, i) => (
-            <p key={i} className="nf-linea">{c.tipo === 'texto' ? (c.texto || <em>Texto vacío</em>) : `📎 ${c.tipo}`}</p>
-        ));
-        case 'esperar': return <p className="nf-linea">{duracion(nodo.minutos)}</p>;
-        case 'condicion': return (nodo.reglas || []).map((r, i) => (
-            <p key={i} className="nf-linea">{r.campo || '…'} {OPERADOR[r.operador] || r.operador} {r.valor}</p>
-        ));
-        case 'accion': return (nodo.acciones || []).map((a, i) => <p key={i} className="nf-linea">{textoAccion(a)}</p>);
-        default: return <p className="nf-linea mut">Termina el flujo</p>;
-    }
-}
 
 export const OPERADOR = { igual: '=', distinto: '≠', contiene: 'contiene', no_contiene: 'no contiene', existe: 'existe', no_existe: 'no existe' };
 
@@ -52,17 +25,75 @@ function textoAccion(a) {
     return a.tipo;
 }
 
-function Caja({ id, data, selected }) {
-    const nodo = data.nodo;
-    const Icono = ICONO[nodo.tipo] || MessageSquare;
+function resumen(nodo) {
+    switch (nodo.tipo) {
+        case 'mensaje': return (nodo.contenido || []).map((c, i) => (
+            <p key={i} className="nf-linea nf-linea--copy">{c.tipo === 'texto' ? (c.texto ? `“${c.texto}”` : <em>Texto vacío</em>) : `📎 ${c.tipo}`}</p>
+        ));
+        case 'esperar': return <p className="nf-linea">Espera {duracion(nodo.minutos)} y sigue</p>;
+        case 'condicion': return (nodo.reglas || []).map((r, i) => (
+            <p key={i} className="nf-linea">{r.campo || '…'} {OPERADOR[r.operador] || r.operador} {r.valor}</p>
+        ));
+        case 'accion': return (nodo.acciones || []).map((a, i) => <p key={i} className="nf-linea">{textoAccion(a)}</p>);
+        default: return <p className="nf-linea mut">Termina el flujo</p>;
+    }
+}
+
+function Salidas({ nodo, metrica }) {
+    const lista = salidas(nodo);
+    if (!lista.length) return null;
     return (
-        <div className={`nf nf--${nodo.tipo}${selected ? ' nf--sel' : ''}${data.error ? ' nf--error' : ''}`}>
+        <div className="nf-salidas">
+            {lista.map((s) => (
+                <div key={s} className={`nf-salida nf-salida--${s === 'sin_respuesta' ? 'sin' : s === 'no' ? 'no' : 'si'}`}>
+                    <span>{rotuloSalida(nodo, s)}</span>
+                    {metrica?.salidas?.[s] != null && <b>{porciento(metrica.salidas[s])}</b>}
+                    <Handle type="source" position={Position.Right} id={s} className="nf-punto" />
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function Pie({ nodo, metrica, mayor, avisos }) {
+    const espera = nodo.botones?.length || nodo.espera;
+    return (
+        <>
+            {metrica?.caida > 0 && (
+                <p className={`nf-caida${mayor ? ' nf-caida--mayor' : ''}`}>
+                    {porciento(metrica.caida)} {espera ? 'no responde este paso' : 'no llega al paso siguiente'}
+                </p>
+            )}
+            {avisos?.length > 0 && (
+                <p className="nf-avisos"><AlertTriangle size={12} aria-hidden="true" />{avisos.length === 1 ? '1 aviso' : `${avisos.length} avisos`}</p>
+            )}
+        </>
+    );
+}
+
+function Caja({ data, selected }) {
+    const { nodo, numero, metrica, mayor, avisos } = data;
+    const Icono = ICONO[nodo.tipo] || MessageSquare;
+    const clases = ['nf', `nf--${nodo.tipo}`, selected && 'nf--sel', avisos?.length && 'nf--error', mayor && 'nf--mayor'].filter(Boolean).join(' ');
+    return (
+        <div className={clases}>
             <Handle type="target" position={Position.Left} className="nf-punto nf-punto--entrada" />
-            <div className="nf-cab"><Icono size={14} /><span>{TIPOS[nodo.tipo]?.label}</span><code>{id.slice(-4)}</code></div>
+            <div className="nf-cab">
+                <Icono size={13} /><span>{TIPOS[nodo.tipo]?.label}</span>
+                {mayor && <span className="nf-marca">mayor caída</span>}
+                <span className="nf-num">{numero ? `paso ${numero}` : nodo.tipo === 'fin' ? '' : 'sin conectar'}</span>
+            </div>
+            {nodo.nombre && <p className="nf-titulo">{nodo.nombre}</p>}
             <div className="nf-cuerpo">{resumen(nodo)}</div>
-            {nodo.tipo === 'mensaje' && nodo.espera && <p className="nf-espera">Guarda en «{nodo.espera.guardar_en}»</p>}
-            {nodo.sin_respuesta && <p className="nf-espera">Si no responde en {duracion(nodo.sin_respuesta.minutos)}</p>}
-            <Salidas nodo={nodo} />
+            {nodo.tipo === 'mensaje' && (nodo.espera || nodo.sin_respuesta) && (
+                <p className="nf-meta">
+                    {nodo.espera && <>Guarda en <b>{nodo.espera.guardar_en || '…'}</b></>}
+                    {nodo.espera && nodo.sin_respuesta && ' · '}
+                    {nodo.sin_respuesta && `si no responde en ${duracion(nodo.sin_respuesta.minutos)}, sigue`}
+                </p>
+            )}
+            <Salidas nodo={nodo} metrica={metrica} />
+            <Pie nodo={nodo} metrica={metrica} mayor={mayor} avisos={avisos} />
         </div>
     );
 }
@@ -70,8 +101,9 @@ function Caja({ id, data, selected }) {
 function Inicio({ data, selected }) {
     const disparadores = data.disparadores || [];
     return (
-        <div className={`nf nf--inicio${selected ? ' nf--sel' : ''}`}>
-            <div className="nf-cab"><Play size={14} /><span>Cuando…</span></div>
+        <div className={`nf nf--inicio${selected ? ' nf--sel' : ''}${data.avisos?.length ? ' nf--error' : ''}`}>
+            <div className="nf-cab"><Play size={13} /><span>Disparador</span></div>
+            <p className="nf-titulo">{disparadores.some((d) => d.canal === 'comentario') ? 'Comentario o mensaje' : 'Palabra clave'}</p>
             <div className="nf-cuerpo">
                 {disparadores.length === 0 && <p className="nf-linea mut">Sin disparadores</p>}
                 {disparadores.map((d) => (
@@ -81,6 +113,7 @@ function Inicio({ data, selected }) {
                     </p>
                 ))}
             </div>
+            <Pie nodo={{}} avisos={data.avisos} />
             <div className="nf-salidas">
                 <div className="nf-salida nf-salida--si"><span>Empieza</span>
                     <Handle type="source" position={Position.Right} id="inicio" className="nf-punto" />

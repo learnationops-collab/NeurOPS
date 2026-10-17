@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ExternalLink, PlayCircle } from 'lucide-react';
+import { Bars } from '../../../../components/standard';
 import { EsqueletoFilas, Tip } from '../../../comercial/components/Shared';
 import { urlLoom } from '../../../../utils/loom';
 import Interruptor from './Interruptor';
@@ -39,23 +40,12 @@ const colorPaso = (i, total) => {
 
 export const ResumenEmbudo = ({ evento }) => {
     const pasos = pasosEmbudo(evento, { corto: true });
-    const base = pasos[0].n;
+    // La barra en raíz: de 600 leads a 3 ventas, las últimas serían una raya.
     return (
-        <div className="wt-mini-embudo" role="list" aria-label="Embudo del taller">
-            {pasos.map((p, i) => {
-                const tasa = i > 0 ? tasaPaso(p.n, pasos[i - 1].n) : null;
-                // La barra en raíz: de 600 leads a 3 ventas, las últimas serían una raya.
-                const pct = base > 0 && p.n > 0 ? Math.sqrt(p.n / base) * 100 : 0;
-                return (
-                    <div key={p.key} className="wt-mini-paso" role="listitem">
-                        <small>{p.label}</small>
-                        <BarraCrece pct={pct} color={colorPaso(i, pasos.length)} i={i} />
-                        <b className="num">{numero(p.n)}</b>
-                        <span className="num mut40">{i === 0 ? '' : porcentaje(tasa)}</span>
-                    </div>
-                );
-            })}
-        </div>
+        <Bars variant="rows" scale="sqrt" label="Embudo del taller" items={pasos.map((p, i) => ({
+            key: p.key, label: p.label, value: p.n, display: numero(p.n), color: colorPaso(i, pasos.length),
+            detail: i === 0 ? '' : porcentaje(tasaPaso(p.n, pasos[i - 1].n)),
+        }))} />
     );
 };
 

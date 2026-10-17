@@ -115,18 +115,6 @@
 .dc-shell .wt-riel { position: relative; display: block; height: 8px; min-width: 0; border-radius: 99px; background: var(--hueco); overflow: hidden; }
 .dc-shell .wt-riel > i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; }
 
-.dc-shell .wt-mini-embudo { display: grid; gap: 7px; }
-.dc-shell .wt-mini-paso {
-    display: grid; grid-template-columns: 74px minmax(0, 1fr) 46px 44px; align-items: center; gap: var(--s2);
-    min-height: 20px;
-}
-.dc-shell .wt-mini-paso > small {
-    font-size: 9.5px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.dc-shell .wt-mini-paso > b { font-size: 13px; font-weight: 800; text-align: right; }
-.dc-shell .wt-mini-paso > span { font-size: 11px; font-weight: 700; text-align: right; }
-
 .dc-shell .wt-mini-vacio { display: flex; align-items: center; gap: var(--s2); padding: var(--s4) 0; }
 
 .dc-shell .wt-mini-anuncios { display: grid; gap: var(--s3); }

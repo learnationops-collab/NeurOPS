@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aGrafo, aLienzo, conectar, INICIO, salidas } from './grafoFlujo';
+import { aGrafo, aLienzo, avisosPorNodo, conectar, INICIO, ordenPasos, salidas } from './grafoFlujo';
 
 const GRAFO = {
     disparadores: [{ id: 'd1', canal: 'dm', palabras: ['OBTENER GUIA'], coincidencia: 'exacta' }],
@@ -51,5 +51,29 @@ describe('grafo ↔ lienzo', () => {
         expect(aristas).toHaveLength(1);
         expect(aristas[0].target).toBe('c');
         expect(conectar(aristas, { source: 'a', sourceHandle: 'no', target: 'a' })).toBe(aristas);
+    });
+});
+
+describe('ordenPasos y avisosPorNodo', () => {
+    const grafo = {
+        inicio: 'a',
+        nodos: [
+            { id: 'a', tipo: 'mensaje', botones: [{ id: 'b1', titulo: 'Uno' }, { id: 'b2', titulo: 'Dos' }] },
+            { id: 'b', tipo: 'mensaje' }, { id: 'c', tipo: 'condicion' }, { id: 'd', tipo: 'fin' }, { id: 'suelto', tipo: 'mensaje' },
+        ],
+        conexiones: [
+            { desde: 'a', salida: 'b1', hacia: 'c' }, { desde: 'a', salida: 'b2', hacia: 'b' },
+            { desde: 'c', salida: 'si', hacia: 'd' }, { desde: 'b', salida: 'siguiente', hacia: 'a' },
+        ],
+    };
+
+    it('numera a lo ancho, sin el fin ni los sueltos', () => {
+        expect(ordenPasos(grafo)).toEqual({ a: 1, c: 2, b: 3 });
+        expect(ordenPasos({ ...grafo, inicio: null })).toEqual({});
+    });
+
+    it('reparte los errores del servidor por nodo', () => {
+        expect(avisosPorNodo(['Nodo a: hay un texto vacío', 'Nodo a: hay un botón sin título', 'El flujo no tiene disparadores: nadie podría entrar']))
+            .toEqual({ porNodo: { a: ['hay un texto vacío', 'hay un botón sin título'] }, general: ['El flujo no tiene disparadores: nadie podría entrar'] });
     });
 });

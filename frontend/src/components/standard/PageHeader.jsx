@@ -8,9 +8,11 @@ import './standard.css';
 
 const DESTINO = 'ui-header-actions';
 
-export function PageHeader({ title, logo, badges, actions }) {
+// size: md (título grande, para las pantallas de Thalamus) · sm (barra baja, para las herramientas
+// de trabajo donde cada fila de pantalla cuenta: el Inbox).
+export function PageHeader({ title, logo, badges, actions, size = 'md' }) {
     return (
-        <header className="ui-header">
+        <header className={size === 'sm' ? 'ui-header ui-header--sm' : 'ui-header'}>
             <div className="ui-header__id">
                 {logo}
                 <h1 className="ui-header__title">{title}</h1>

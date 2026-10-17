@@ -9,7 +9,7 @@ import '../agendas_v2/thalamus.css';
 import '../comercial/comercial.css';
 import './catalogo.css';
 import {
-    Avatar, BRAND_AURA, Button, Calendar, CalendarEvent, calendarY, Card, Chip, Status, ModalHeader, TextArea, toast, Toaster, Tooltip, ConfirmDelete, EmptyState, FieldError, Grid, IconButton, Input, InputGroup, Kpi, LinkButton, Modal, PageHeader, Panel, Segmented, Select,
+    Avatar, Bars, BRAND_AURA, Button, Calendar, CalendarEvent, calendarY, Card, Chip, Status, ModalHeader, TextArea, toast, Toaster, Tooltip, ConfirmDelete, EmptyState, FieldError, Grid, IconButton, Input, InputGroup, Kpi, LinkButton, Modal, PageHeader, Panel, Segmented, Select,
     Stepper, Switch,
 } from '../../components/standard';
 
@@ -53,6 +53,12 @@ function DemoControles() {
     const [n, setN] = useState(3);
     return (
         <>
+            <Demo titulo="Segmented con cuenta y vertical (colas de una bandeja)">
+                <Segmented size="sm" label="Estado" value={vista === 'semana' ? 'a' : 'b'} onChange={v => setVista(v === 'a' ? 'semana' : 'equipo')}
+                    options={[{ value: 'a', label: 'Activos', count: 4 }, { value: 'b', label: 'Pausados', count: 1 }]} />
+                <Segmented orientation="vertical" label="Colas" value={vista === 'semana' ? 'a' : 'b'} onChange={v => setVista(v === 'a' ? 'semana' : 'equipo')}
+                    style={{ width: 220 }} options={[{ value: 'a', label: 'Esperan respuesta', count: 13 }, { value: 'b', label: 'Todas', count: 100 }]} />
+            </Demo>
             <Demo titulo="Segmented (md y sm)">
                 <Segmented label="Vista" value={vista} onChange={setVista}
                     options={[{ value: 'semana', label: 'Semana', icon: <CalendarDays /> }, { value: 'equipo', label: 'Equipo', icon: <Users /> }]} />
@@ -227,6 +233,21 @@ const SECCIONES = [
         demo: () => <Kpi label="Leads" value="1.240" aura={BRAND_AURA}><small>últimos 30 días</small></Kpi>,
     },
     {
+        nombre: 'Bars',
+        para: 'Barras sin ejes: el embudo por paso de una tarjeta (columnas) o un embudo con rótulos (filas). La pantalla elige el color de cada barra.',
+        props: 'items[{key,value,label,display,detail,color,tip}] · variant: columns · rows · scale: linear · sqrt · label · onSelect',
+        demo: () => (
+            <Grid variant="cards">
+                <Card soft><Bars label="Embudo por paso" style={{ '--ui-bars-h': '48px' }} onSelect={nada} items={[742, 624, 527, 327, 181, 134, 98].map((v, i) => ({
+                    key: String(i), value: v, label: `Paso ${i + 1}`, color: i === 3 ? 'var(--ln-brand, #FF3FA4)' : i < 3 ? 'var(--ln-success, #2FBF8F)' : 'var(--ln-info, #4E8BD8)',
+                }))} /></Card>
+                <Card soft><Bars variant="rows" scale="sqrt" label="Embudo del taller" items={[['Leads', 600], ['Asistieron', 180], ['Agendaron', 24], ['Ventas', 3]].map(([l, v], i, a) => ({
+                    key: l, label: l, value: v, display: String(v), detail: i ? `${Math.round((v / a[i - 1][1]) * 100)} %` : '',
+                }))} /></Card>
+            </Grid>
+        ),
+    },
+    {
         nombre: 'EmptyState',
         para: 'Vacío, cargando o sin permiso.',
         props: 'icon · title · aura · action — children: el texto',
@@ -249,7 +270,7 @@ const SECCIONES = [
     {
         nombre: 'Segmented · Select · Switch · Stepper',
         para: 'Controles de formulario y filtros. Las opciones las arma la pantalla; el control solo las muestra.',
-        props: 'Segmented: value · options[{value,label,icon,props}] · onChange · size · itemProps · prefix · radio — Select: value · options[{value,label,icon,iconColor}] · size — Switch: checked · onChange · label — Stepper: value · min · max · display',
+        props: 'Segmented: value · options[{value,label,icon,count,props}] · onChange · size · orientation: horizontal · vertical · itemProps · prefix · radio — Select: value · options[{value,label,icon,iconColor}] · size — Switch: checked · onChange · label — Stepper: value · min · max · display',
         demo: () => <DemoControles />,
     },
     {
@@ -316,10 +337,14 @@ const SECCIONES = [
     {
         nombre: 'PageHeader',
         para: 'Cabecera de la página. Las secciones mandan sus acciones con <HeaderActions>.',
-        props: 'title · logo · badges · actions',
+        props: 'title · logo · badges · actions · size: md · sm (barra baja, para herramientas de trabajo como el Inbox)',
         demo: () => (
-            <PageHeader title="Eventos" badges={<Chip color="var(--ln-info, #4E8BD8)">Solo lectura</Chip>}
-                actions={<div className="cat-fila"><Button icon={<Play />}>Probar</Button><Button variant="primary" icon={<Plus />}>Nuevo evento</Button></div>} />
+            <>
+                <PageHeader title="Eventos" badges={<Chip color="var(--ln-info, #4E8BD8)">Solo lectura</Chip>}
+                    actions={<div className="cat-fila"><Button icon={<Play />}>Probar</Button><Button variant="primary" icon={<Plus />}>Nuevo evento</Button></div>} />
+                <PageHeader size="sm" title="Conversaciones" badges={<Status color="var(--ln-success, #2FBF8F)">Motor encendido</Status>}
+                    actions={<div className="cat-fila"><Button variant="primary" icon={<Plus />}>Crear flujo</Button></div>} />
+            </>
         ),
     },
 ];

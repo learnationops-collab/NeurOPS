@@ -58,18 +58,19 @@ Import: `import { Button, … } from '<ruta>/components/standard';`
 | `Button` | Toda acción con texto | `variant`: `secondary` (por defecto) · `primary` (una por zona) · `ghost` · `danger` (abre una confirmación) · `dangerSolid` (confirma un borrado). `size`: `sm` (por defecto) · `md`. `icon`: un nodo. |
 | `IconButton` | Acción de solo ícono | `icon`, `label` (obligatorio, lo lee el lector de pantalla), `size`: `md` · `sm` · `xs`, `danger`, `pressed` |
 | `LinkButton` | Acción con aspecto de link («+ Opción») | `icon`, `subtle` |
-| `PageHeader` | Cabecera de la página | `title`, `logo`, `badges`, `actions` |
+| `PageHeader` | Cabecera de la página | `title`, `logo`, `badges`, `actions`, `size`: `md` (título grande, Thalamus) · `sm` (barra baja de 52px, para herramientas de trabajo: el Inbox) |
 | `HeaderActions` | Desde una sección, mandar botones y filtros a la cabecera | `replaceTitle` (la barra trae su propio «volver») |
 | `Panel` | Bloque de una pantalla (sección de configuración, columna) | `as`, `size`: `md` · `sm`, `aura`, `soft` |
 | `Grid` | Cómo se acomodan varios elementos | `variant`: `list` · `cards` (desde 330px) · `charts` (desde 380px) · `kpis` (4 → 2 → 1) · `column`; `as`, `ref` |
 | `Kpi` | Número grande con rótulo y detalle | `label`, `value`, `aura`; `children` es el detalle (`<small>` para lo secundario) |
+| `Bars` | Barras sin ejes: el embudo por paso de una tarjeta o un embudo con rótulos | `items` `[{key, value, label, display, detail, color, tip}]`, `variant`: `columns` (por defecto, alto con `--ui-bars-h`) · `rows` (rótulo, barra, número y detalle), `scale`: `linear` · `sqrt`, `label`, `onSelect(key)` (cada columna pasa a ser botón). El color de cada barra lo elige la pantalla |
 | `Calendar` | Calendario de horas (semana o día) | `days` `[{key, weekday, number, today, caption, extra}]`, `startHour`, `endHour`, `hourHeight`, `zoneLabel`, `minWidth`, `nowMinutes`, `renderColumn(day, i)` (lo que va en cada columna), `columnProps(day, i)` (eventos de la columna, como arrastrar); `calendarY(minutos, startHour, hourHeight)` da la posición vertical |
 | `CalendarEvent` | Tarjeta de un evento en el calendario | `top`, `height`, `title`, `line`, `time`, `sub`, `icon`, `marker`, `tooltip`; `className` (el tono) y `style` (la posición horizontal si se pisa con otras) |
 | `Card` | Tarjeta | `as`, `aura` (hasta 4 colores de fondo), `soft` |
 | `Aura` | Nubes de color difusas de fondo | `colors`, `size`: `card` · `hero`, `soft` |
 | `EmptyState` | Vacío, cargando o sin permiso | `icon`, `title`, `aura`, `action`, `children` (el texto) |
 | `ConfirmDelete` | «¿Eliminar X?» con Cancelar / Eliminar | `name`, `article` («a »), `detail`, `onCancel`, `onConfirm`, `confirmLabel`, `icon`, `extraActions`, `children` |
-| `Segmented` | Pestañas, períodos, vistas (opciones excluyentes) | `value`, `options` `[{value, label, icon, props}]` (`props` va a ese botón: `title`, `aria-label` si es solo ícono, `style`), `onChange`, `size`: `md` · `sm`, `label`, `itemProps` (va a todos), `prefix` (antes de las opciones), `radio` (se anuncia como grupo de radio) |
+| `Segmented` | Pestañas, períodos, vistas, colas (opciones excluyentes) | `value`, `options` `[{value, label, icon, count, props}]` (`count`: la cuenta al lado del rótulo, «Activos 4») (`props` va a ese botón: `title`, `aria-label` si es solo ícono, `style`), `onChange`, `size`: `md` · `sm`, `orientation`: `horizontal` · `vertical` (lista de colas a la izquierda de una bandeja), `label`, `itemProps` (va a todos), `prefix` (antes de las opciones), `radio` (se anuncia como grupo de radio) |
 | `Select` | Desplegable propio (teclado completo, búsqueda tipeando) | `value`, `options` `[{value, label, icon, iconColor}]` (`value: ''` = opción vacía), `onChange`, `size`, `label`; los atributos extra van al botón y `data-nav` también a las opciones |
 | `Input` | Campo suelto | `variant`: `number` (corto y centrado) · `date`, `invalid`, `as="textarea"`; el resto va al `<input>` (y `ref`) |
 | `InputGroup` | Campo con ícono o texto fijo adelante y, a veces, botón pegado | `prefix`, `invalid`, `as="form"`; el `<input>` va como hijo, sin clase |
@@ -123,4 +124,5 @@ Si una pantalla necesita ajustar el componente según el contexto (por ejemplo, 
 - Hay tres cabeceras de modal con diseño propio (Horario `hor-cab`, Configuración `conf-cab` con pestañas, Funnel `fm-cab`): candidatas a unificar con `ModalHeader` (cambia lo que se ve).
 - Calendar: los tonos de las tarjetas (llamada, libre, margen, ocupado, cancelada, hueco) viven en thalamus.css. Cuando otra pantalla use el calendario, pasarlos a variantes genéricas de CalendarEvent (`tone`: solid · soft · muted · success · dashed · hatched).
 - Calendar vista de mes: falta. La usan la página pública del lead (PasoCalendario) y la ficha del closer (SelectorFecha); son pantallas activas, migrar con cuidado.
-- Inbox (17/10): ya usa los componentes estándar. Quedan las mejoras de diseño propias (bandeja de conversaciones, errores marcados en los nodos, vista previa del mensaje).
+- Inbox (17/10): bandeja de triage, flujos con mini-embudo y lienzo con inspector fijo. Queda la vista previa del mensaje como lo ve el lead.
+- Barras: `Bars` reemplazó el mini-embudo de Workshop (`wt-mini-embudo`) y se borraron las barras sin uso de Thalamus (`.barra-f`, `.emb-f`, `.pista`). Quedan con dibujo propio: la lista de campañas de Workshop (`BarraCrece`, nombre y monto sobre la barra) y los embudos de Marketing (`mk-embudo-barra`, una tarjeta por embudo). Candidatos a `Bars variant="rows"` si se suma una variante con el rótulo arriba.

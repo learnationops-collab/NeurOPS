@@ -54,6 +54,16 @@ describe('Segmented, Switch y Stepper', () => {
         expect(onChange).toHaveBeenCalledWith('b');
     });
 
+    it('Segmented muestra la cuenta de cada opción y se apila en vertical', () => {
+        render(<Segmented value="a" onChange={vi.fn()} label="Colas" orientation="vertical"
+            options={[{ value: 'a', label: 'Esperan', count: 13 }, { value: 'b', label: 'Todas', count: 0 }]} />);
+        const grupo = screen.getByRole('group', { name: 'Colas' });
+        expect(grupo.classList.contains('ui-seg--vertical')).toBe(true);
+        expect(grupo.getAttribute('aria-orientation')).toBe('vertical');
+        expect(screen.getByRole('button', { name: 'Esperan 13' })).toBeTruthy();
+        expect(screen.getByRole('button', { name: 'Todas 0' })).toBeTruthy();
+    });
+
     it('Switch alterna', async () => {
         const onChange = vi.fn();
         render(<Switch checked={false} onChange={onChange} label="Obligatoria" />);

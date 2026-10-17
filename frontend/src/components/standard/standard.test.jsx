@@ -2,7 +2,7 @@ import { createRef } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { Button, Card, Chip, ConfirmDelete, EmptyState, HeaderActions, IconButton, LinkButton, PageHeader, Status } from './index';
+import { Bars, Button, Card, Chip, ConfirmDelete, EmptyState, HeaderActions, IconButton, LinkButton, PageHeader, Status } from './index';
 
 describe('Button', () => {
     it('chico y secundario por defecto, type="button"', () => {
@@ -59,6 +59,11 @@ describe('PageHeader y HeaderActions', () => {
         expect(screen.getByRole('banner').contains(screen.getByRole('button', { name: 'Nuevo' }))).toBe(true);
     });
 
+    it('size="sm" es la barra baja', () => {
+        render(<PageHeader title="Inbox" size="sm" />);
+        expect(screen.getByRole('banner').className).toBe('ui-header ui-header--sm');
+    });
+
     it('sin cabecera se dibujan en su lugar', () => {
         render(<HeaderActions><Button>Nuevo</Button></HeaderActions>);
         expect(screen.getByRole('button', { name: 'Nuevo' })).toBeTruthy();
@@ -104,5 +109,30 @@ describe('EmptyState, Card y Chip', () => {
         expect(st.className).toBe('ui-status');
         expect(st.style.getPropertyValue('--c')).toBe('var(--success)');
         expect(st.querySelector('i').getAttribute('aria-hidden')).toBe('true');
+    });
+});
+
+describe('Bars', () => {
+    it('cada columna mide relativo al mayor y cero no dibuja barra', () => {
+        render(<Bars label="Embudo" items={[{ key: 'a', value: 200, label: 'Paso 1' }, { key: 'b', value: 50, label: 'Paso 2' }, { key: 'c', value: 0, label: 'Paso 3' }]} />);
+        const [a, b, c] = screen.getAllByRole('listitem');
+        expect(a.style.getPropertyValue('--ui-bar')).toBe('100%');
+        expect(b.style.getPropertyValue('--ui-bar')).toBe('25%');
+        expect(c.querySelector('i')).toBeNull();
+        expect(a.getAttribute('aria-label')).toBe('Paso 1: 200');
+    });
+
+    it('en raíz y en filas, con rótulo, número y detalle', () => {
+        render(<Bars variant="rows" scale="sqrt" items={[{ key: 'a', value: 100, label: 'Leads' }, { key: 'b', value: 25, label: 'Ventas', display: '25', detail: '25 %' }]} />);
+        const filas = screen.getAllByRole('listitem');
+        expect(filas[1].querySelector('i').style.getPropertyValue('--ui-bar')).toBe('50%');
+        expect(filas[1].textContent).toBe('Ventas2525 %');
+    });
+
+    it('con onSelect cada columna es un botón', async () => {
+        const onSelect = vi.fn();
+        render(<Bars onSelect={onSelect} items={[{ key: 'n1', value: 3, label: 'Paso 1' }]} />);
+        await userEvent.click(screen.getByRole('listitem', { name: 'Paso 1: 3' }));
+        expect(onSelect).toHaveBeenCalledWith('n1');
     });
 });

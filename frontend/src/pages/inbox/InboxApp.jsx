@@ -77,7 +77,7 @@ export default function InboxApp() {
         <>
             <div className="thalamus thalamus-app inbox" data-theme={dataThemeDe(apariencia, undefined)}>
                 <div className="wrap">
-                    <PageHeader title={actual.label} logo={<LogoInbox />}
+                    <PageHeader size="sm" title={actual.label} logo={<LogoInbox />}
                         badges={(
                             <>
                                 {lectura && (

@@ -1,124 +1,91 @@
-// Sección Conversaciones: cada persona que le escribió a la cuenta y su historial (lo que guardó el motor).
-// El buscador y el filtro van en la cabecera; el filtro es local, sobre lo que trae la búsqueda.
-// Por ahora solo se mira: contestar desde acá llega cuando el Inbox reemplace a Kommo.
-import { useEffect, useRef, useState } from 'react';
-import { Bot, MessageSquare, PauseCircle, Search, User, Workflow } from 'lucide-react';
-import { Avatar, Chip, EmptyState, HeaderActions, InputGroup, Panel, Segmented } from '../../components/standard';
+// Sección Conversaciones, como bandeja de triage: a la izquierda las colas (por defecto, las que
+// esperan respuesta, de la que más espera a la que menos) y el filtro por examen; después la lista, el
+// chat y la ficha del lead. El buscador va en la cabecera; las colas filtran lo que trae la búsqueda.
+import { useEffect, useState } from 'react';
+import { MessageSquare, Search } from 'lucide-react';
+import { Chip, EmptyState, HeaderActions, InputGroup, Panel, Segmented } from '../../components/standard';
 import { inboxApi } from './api';
+import { COLAS, examenes, filtrar } from './conversaciones/colas';
+import Detalle from './conversaciones/Detalle';
+import Fila from './conversaciones/Fila';
 
-const ORIGEN = { lead: 'Lead', motor: 'Bot', otro: 'Equipo' };
-const FILTROS = [
-    { value: 'todas', label: 'Todas', cumple: () => true },
-    { value: 'sin_responder', label: 'Sin responder', cumple: (c) => c.ultimo_de === 'lead' },
-    { value: 'bot_pausado', label: 'Bot pausado', cumple: (c) => c.bot_pausado },
-];
-
-function hora(iso) {
-    if (!iso) return '';
-    const d = new Date(iso);
-    const hoy = new Date().toDateString() === d.toDateString();
-    return d.toLocaleString('es', hoy ? { hour: '2-digit', minute: '2-digit' } : { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-}
-
-function quien(c) {
-    return c.username ? `@${c.username}` : c.nombre || `Contacto ${c.igsid.slice(-6)}`;
-}
-
-function Chat({ id }) {
-    const [datos, setDatos] = useState(null);
-    const [error, setError] = useState(null);
-    const lista = useRef(null);
-    // Cada conversación monta un Chat nuevo (key={id}): arranca vacío, sin limpiar el estado acá.
+// La espera se recalcula sola cada minuto.
+function useAhora() {
+    const [ahora, setAhora] = useState(() => new Date());
     useEffect(() => {
-        inboxApi.conversacion(id).then(setDatos).catch(() => setError('No se pudo cargar la conversación'));
-    }, [id]);
-    // Abre en el último mensaje, como cualquier chat.
-    useEffect(() => { if (lista.current) lista.current.scrollTop = lista.current.scrollHeight; }, [datos]);
-    if (error) return <EmptyState icon={<MessageSquare size={22} />}>{error}</EmptyState>;
-    if (!datos) return <EmptyState>Cargando…</EmptyState>;
-    const { contacto, ejecucion, mensajes } = datos;
-    const variables = Object.entries(contacto.variables || {}).filter(([k]) => !k.startsWith('_'));
-    const pausado = contacto.bot_pausado_hasta && new Date(contacto.bot_pausado_hasta) > new Date();
-    return (
-        <div className="cv-chat">
-            <div className="cv-chat-cab">
-                <Avatar name={contacto.username || contacto.nombre || '?'} />
-                <h3 className="t-h3">{quien(contacto)}</h3>
-                {ejecucion && <Chip color="var(--brand-secondary)" subtle icon={<Workflow />}>{ejecucion.flujo} · {ejecucion.estado.replace('_', ' ')}</Chip>}
-                {pausado && <Chip color="var(--warning)" subtle icon={<PauseCircle />} data-tip={`Bot pausado|Hasta ${hora(contacto.bot_pausado_hasta)}`}>Bot pausado</Chip>}
-                {variables.length > 0 && (
-                    <div className="cv-variables" aria-label="Variables">
-                        {variables.map(([k, v]) => <Chip key={k} subtle>{k}: {String(v)}</Chip>)}
-                    </div>
-                )}
-            </div>
-            <ol className="cv-mensajes" ref={lista}>
-                {mensajes.map((m) => (
-                    <li key={m.id} className={`cv-burbuja cv-burbuja--${m.direccion} cv-burbuja--${m.origen}`}>
-                        {m.texto && <p>{m.texto}</p>}
-                        {m.adjuntos.map((a, i) => <p key={i} className="mut">📎 {a}</p>)}
-                        {m.botones.length > 0 && <div className="cv-botones">{m.botones.map((b) => <span key={b}>{b}</span>)}</div>}
-                        <span className="cv-meta">{m.direccion === 'saliente' ? `${ORIGEN[m.origen]} · ` : ''}{hora(m.en)}</span>
-                    </li>
-                ))}
-            </ol>
-        </div>
-    );
+        const t = setInterval(() => setAhora(new Date()), 60000);
+        return () => clearInterval(t);
+    }, []);
+    return ahora;
 }
 
-function Item({ c, elegida, onElegir }) {
+function Colas({ lista, cola, onCola, examen, onExamen, ahora, mediana }) {
+    const porExamen = examenes(lista);
     return (
-        <li>
-            <button type="button" className="cv-item" aria-pressed={elegida} onClick={() => onElegir(c.id)}>
-                <Avatar name={c.username || c.nombre || '?'} size="sm" />
-                <span className="cv-item-cuerpo">
-                    <span className="cv-item-cab">
-                        <strong>{quien(c)}</strong>
-                        <span className="mut">{hora(c.ultimo_en)}</span>
-                    </span>
-                    <span className="cv-item-texto mut">
-                        {c.ultimo_de === 'motor' ? <Bot size={12} /> : c.ultimo_de === 'otro' ? <User size={12} /> : null}
-                        <span>{c.ultimo_texto || '…'}</span>
-                        {c.ultimo_de === 'lead' && <i className="cv-nuevo" title="Sin responder" />}
-                    </span>
-                </span>
-            </button>
-        </li>
+        <Panel as="nav" size="sm" className="cv-colas" aria-label="Colas">
+            <span className="t-rotulo">Colas</span>
+            <Segmented orientation="vertical" label="Colas" value={cola} onChange={onCola}
+                options={COLAS.map((c) => ({ value: c.value, label: c.label, count: lista.filter((x) => c.cumple(x, ahora)).length }))} />
+            {porExamen.length > 0 && (
+                <>
+                    <span className="t-rotulo">Examen</span>
+                    <div className="cv-examenes">
+                        {porExamen.map(([e, n]) => (
+                            <Chip key={e} as="button" type="button" aria-pressed={examen === e} onClick={() => onExamen(examen === e ? null : e)}>
+                                {e} <span className="cv-cuenta">{n}</span>
+                            </Chip>
+                        ))}
+                    </div>
+                </>
+            )}
+            <div className="cv-mediana" data-tip="Respuesta del equipo|Mediana de lo que tarda una persona del equipo en contestarle a un lead, en las últimas 24 h. El bot no cuenta.">
+                <span className="t-cap mut">Mediana de respuesta · 24 h</span>
+                <b className={mediana == null ? 'mut40' : undefined}>{mediana == null ? 'Sin respuestas' : `${mediana} min`}</b>
+            </div>
+        </Panel>
     );
 }
 
 export default function Conversaciones() {
-    const [lista, setLista] = useState(null);
+    const [datos, setDatos] = useState(null);
     const [buscar, setBuscar] = useState('');
-    const [filtro, setFiltro] = useState('todas');
+    const [cola, setCola] = useState('esperan');
+    const [examen, setExamen] = useState(null);
     const [elegida, setElegida] = useState(null);
     const [error, setError] = useState(null);
+    const ahora = useAhora();
 
     useEffect(() => {
         const t = setTimeout(() => {
-            inboxApi.conversaciones(buscar.trim()).then(setLista).catch(() => setError('No se pudieron cargar las conversaciones'));
+            inboxApi.conversaciones(buscar.trim()).then(setDatos).catch(() => setError('No se pudieron cargar las conversaciones'));
         }, 250);
         return () => clearTimeout(t);
     }, [buscar]);
 
-    const cuenta = (f) => (lista || []).filter(f.cumple).length;
-    const visibles = (lista || []).filter(FILTROS.find((f) => f.value === filtro).cumple);
+    const lista = datos?.conversaciones || [];
+    const visibles = filtrar(lista, { cola, examen, ahora });
+    const nombreCola = COLAS.find((c) => c.value === cola).label;
 
     let listado;
     if (error) listado = <EmptyState>{error}</EmptyState>;
-    else if (lista === null) listado = <EmptyState>Cargando…</EmptyState>;
+    else if (!datos) listado = <EmptyState>Cargando…</EmptyState>;
     else if (!lista.length) {
         listado = (
             <EmptyState icon={<MessageSquare size={22} />}>
                 {buscar.trim() ? 'Nadie coincide con la búsqueda.' : 'Todavía no hay conversaciones. Aparecen cuando el motor empieza a procesar los mensajes de Instagram.'}
             </EmptyState>
         );
-    } else if (!visibles.length) listado = <EmptyState>No hay conversaciones en «{FILTROS.find((f) => f.value === filtro).label}».</EmptyState>;
-    else {
+    } else if (!visibles.length) {
+        listado = <EmptyState>{cola === 'esperan' && !examen ? 'Nadie espera respuesta. 🎉' : `No hay conversaciones en «${nombreCola}»${examen ? ` de ${examen}` : ''}.`}</EmptyState>;
+    } else {
         listado = (
-            <ul>
-                {visibles.map((c) => <Item key={c.id} c={c} elegida={elegida === c.id} onElegir={setElegida} />)}
-            </ul>
+            <>
+                <p className="cv-lista-cab t-cap mut">
+                    {visibles.length === 1 ? '1 conversación' : `${visibles.length} conversaciones`}
+                    {COLAS.find((c) => c.value === cola).porEspera ? ' · por espera' : ' · por último mensaje'}
+                </p>
+                <ul>{visibles.map((c) => <Fila key={c.id} c={c} ahora={ahora} elegida={elegida === c.id} onElegir={setElegida} />)}</ul>
+            </>
         );
     }
 
@@ -126,19 +93,18 @@ export default function Conversaciones() {
         <>
             <HeaderActions>
                 <div className="barra">
-                    <Segmented size="sm" label="Filtrar conversaciones" value={filtro} onChange={setFiltro}
-                        options={FILTROS.map((f) => ({ value: f.value, label: <>{f.label}<span className="fl-cuenta">{cuenta(f)}</span></> }))} />
                     <InputGroup className="cv-buscar" prefix={<Search size={16} />}>
                         <label className="sr" htmlFor="cv-buscar">Buscar por usuario</label>
-                        <input id="cv-buscar" value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Buscar por usuario" autoComplete="off" />
+                        <input id="cv-buscar" value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Buscar por usuario o nombre" autoComplete="off" />
                     </InputGroup>
                 </div>
             </HeaderActions>
-            <div className="cv">
-                <Panel as="aside" size="sm" className="cv-lista" aria-label="Conversaciones">{listado}</Panel>
-                <Panel as="section" size="sm" className="cv-detalle">
-                    {elegida ? <Chat key={elegida} id={elegida} /> : <EmptyState icon={<MessageSquare size={22} />}>Elegí una conversación.</EmptyState>}
-                </Panel>
+            <div className={`cv${elegida ? ' cv--abierta' : ''}`}>
+                <Colas lista={lista} cola={cola} onCola={setCola} examen={examen} onExamen={setExamen} ahora={ahora} mediana={datos?.mediana_respuesta} />
+                <Panel as="section" size="sm" className="cv-lista" aria-label="Conversaciones">{listado}</Panel>
+                {elegida
+                    ? <Detalle key={elegida} id={elegida} />
+                    : <Panel size="sm" className="cv-detalle cv-detalle--vacio"><EmptyState icon={<MessageSquare size={22} />}>Elegí una conversación.</EmptyState></Panel>}
             </div>
         </>
     );

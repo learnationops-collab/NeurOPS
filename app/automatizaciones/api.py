@@ -9,7 +9,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 
 from app import db
-from app.automatizaciones import servicio
+from app.automatizaciones import bandeja, metricas, servicio
 from app.automatizaciones.modelos import AutEjecucion, AutFlujo, IgContacto, IgMensaje
 from app.automatizaciones.nucleo import grafo as g
 from app.models.instagram import InstagramWebhookEvento
@@ -58,7 +58,7 @@ def _flujo_o_404(flujo_id):
     return flujo, None
 
 
-def _resumen_flujo(flujo):
+def _resumen_flujo(flujo, detalle=False):
     publicada = flujo.version_publicada
     palabras = [p for d in (flujo.grafo or {}).get('disparadores') or [] for p in d.get('palabras') or []]
     return {
@@ -73,7 +73,13 @@ def _resumen_flujo(flujo):
         'ejecuciones_abiertas': AutEjecucion.query.join(AutEjecucion.version).filter(
             AutEjecucion.estado.in_(AutEjecucion.ABIERTOS), AutEjecucion.version.has(flujo_id=flujo.id)).count(),
         'actualizado_en': _iso(flujo.actualizado_en),
+        'metricas': metricas.de_flujo(flujo, servicio.ahora(), detalle=detalle),
     }
+
+
+def _flujo_completo(flujo):
+    """Lo que abre el lienzo: el resumen, el borrador, sus errores y las métricas de cada paso."""
+    return {**_resumen_flujo(flujo, detalle=True), 'grafo': flujo.grafo, 'errores': g.validar(flujo.grafo)}
 
 
 def _error_de_grafo(grafo):
@@ -120,7 +126,7 @@ def crear_flujo():
     flujo = AutFlujo(nombre=nombre, grafo=grafo)
     db.session.add(flujo)
     db.session.commit()
-    return jsonify({**_resumen_flujo(flujo), 'grafo': flujo.grafo, 'errores': g.validar(flujo.grafo)}), 201
+    return jsonify(_flujo_completo(flujo)), 201
 
 
 @bp.route('/flujos/<int:flujo_id>', methods=['GET'])
@@ -128,7 +134,7 @@ def ver_flujo(flujo_id):
     flujo, error = _flujo_o_404(flujo_id)
     if error:
         return error
-    return jsonify({**_resumen_flujo(flujo), 'grafo': flujo.grafo, 'errores': g.validar(flujo.grafo)})
+    return jsonify(_flujo_completo(flujo))
 
 
 @bp.route('/flujos/<int:flujo_id>', methods=['PUT'])
@@ -149,7 +155,7 @@ def guardar_flujo(flujo_id):
             return jsonify({'message': problema}), 400
         flujo.grafo = datos['grafo']
     db.session.commit()
-    return jsonify({**_resumen_flujo(flujo), 'grafo': flujo.grafo, 'errores': g.validar(flujo.grafo)})
+    return jsonify(_flujo_completo(flujo))
 
 
 @bp.route('/flujos/<int:flujo_id>/publicar', methods=['POST'])
@@ -215,8 +221,13 @@ def listar_conversaciones():
                                           db.func.lower(IgContacto.nombre).like(patron),
                                           IgContacto.igsid.like(patron)))
     filas = consulta.order_by(ultimo.c.ultimo.desc()).limit(limite).all()
+    ahora = servicio.ahora()
+    ejecuciones = bandeja.ultimas_ejecuciones([c.id for c, _, _ in filas])
     salida = []
     for contacto, momento, cantidad in filas:
+        variables = contacto.variables or {}
+        ejecucion = ejecuciones.get(contacto.id)
+        abierta = ejecucion if ejecucion and ejecucion.estado in AutEjecucion.ABIERTOS else None
         mensaje = (IgMensaje.query.filter_by(contacto_id=contacto.id)
                    .order_by(IgMensaje.enviado_en.desc(), IgMensaje.id.desc()).first())
         salida.append({
@@ -228,9 +239,13 @@ def listar_conversaciones():
             'ultimo_en': _iso(momento),
             'ultimo_texto': (mensaje.texto or '')[:140] if mensaje else '',
             'ultimo_de': mensaje.origen if mensaje else None,
-            'bot_pausado': bool(contacto.bot_pausado_hasta and contacto.bot_pausado_hasta > servicio.ahora()),
+            'bot_pausado': bool(contacto.bot_pausado_hasta and contacto.bot_pausado_hasta > ahora),
+            'examen': variables.get('examen'),
+            'califica': variables.get('_califica'),
+            'flujo': ejecucion.version.flujo.nombre if ejecucion else None,
+            'paso': bandeja.paso(abierta),
         })
-    return jsonify({'conversaciones': salida})
+    return jsonify({'conversaciones': salida, 'mediana_respuesta': bandeja.mediana_respuesta(ahora)})
 
 
 @bp.route('/conversaciones/<int:contacto_id>', methods=['GET'])
@@ -240,17 +255,15 @@ def ver_conversacion(contacto_id):
         return jsonify({'message': 'Not found'}), 404
     mensajes = (IgMensaje.query.filter_by(contacto_id=contacto.id)
                 .order_by(IgMensaje.enviado_en.desc(), IgMensaje.id.desc()).limit(MENSAJES_POR_CONVERSACION).all())
-    ejecucion = (AutEjecucion.query.filter_by(contacto_id=contacto.id).order_by(AutEjecucion.id.desc()).first())
+    recorrido = bandeja.recorrido(contacto.id)
     return jsonify({
         'contacto': {
             'id': contacto.id, 'igsid': contacto.igsid, 'username': contacto.username, 'nombre': contacto.nombre,
             'variables': contacto.variables or {}, 'ultimo_entrante_en': _iso(contacto.ultimo_entrante_en),
             'bot_pausado_hasta': _iso(contacto.bot_pausado_hasta),
         },
-        'ejecucion': {
-            'flujo': ejecucion.version.flujo.nombre, 'estado': ejecucion.estado, 'nodo': ejecucion.nodo_actual,
-            'detalle': ejecucion.detalle,
-        } if ejecucion else None,
+        'ejecucion': recorrido[0] if recorrido else None,
+        'recorrido': recorrido,
         'mensajes': [{
             'id': m.id, 'direccion': m.direccion, 'origen': m.origen, 'texto': m.texto,
             'adjuntos': [a.get('type') for a in (m.contenido or {}).get('adjuntos') or []]

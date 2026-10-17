@@ -148,13 +148,15 @@ def test_las_conversaciones_muestran_el_historial(client, como, db):
     lista = client.get(f'{URL}/conversaciones', headers=como('setter')).get_json()['conversaciones']
     assert len(lista) == 1
     assert (lista[0]['username'], lista[0]['mensajes'], lista[0]['ultimo_de']) == ('ana.med', 2, IgMensaje.MOTOR)
+    assert (lista[0]['flujo'], lista[0]['paso']['numero'], lista[0]['paso']['id']) == ('Guía', 1, 'perfil')
     assert client.get(f'{URL}/conversaciones', query_string={'buscar': 'otra'}, headers=como('setter')).get_json() \
-        == {'conversaciones': []}
+        == {'conversaciones': [], 'mediana_respuesta': None}
 
     detalle = client.get(f'{URL}/conversaciones/{lista[0]["id"]}', headers=como('setter')).get_json()
     assert [m['texto'] for m in detalle['mensajes']] == ['OBTENER GUIA', '¿Cuál es tu perfil?']
     assert detalle['mensajes'][1]['botones'] == ['Médico graduado', 'Estudiante']
     assert detalle['ejecucion']['flujo'] == 'Guía' and detalle['ejecucion']['estado'] == 'esperando_respuesta'
+    assert [e['flujo'] for e in detalle['recorrido']] == ['Guía']
 
 
 def test_una_conversacion_que_no_existe_es_404(client, como):
