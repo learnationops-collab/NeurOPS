@@ -838,7 +838,7 @@
 .thalamus .scrim{position:fixed;inset:0;z-index:90;background:var(--bg-scrim);backdrop-filter:blur(6px);display:flex;align-items:flex-end;justify-content:center;padding:var(--s4)}
 @media (min-width:720px){.thalamus .scrim{align-items:center}}
 .thalamus .modal{position:relative;isolation:isolate;width:min(620px,100%);max-height:min(88vh,920px);overflow:auto;overscroll-behavior:contain;background:var(--bg-surface);
-  border:1px solid var(--border-main);border-top-color:var(--sheen);border-radius:var(--radius-main);box-shadow:var(--shadow-main);padding:var(--s6);animation:lnModalIn .3s var(--spring) both}
+  border:1px solid var(--border-main);border-top-color:var(--sheen);border-radius:var(--radius-main);box-shadow:var(--shadow-main);padding:var(--s6);animation:lnModalIn .3s var(--spring) backwards}
 .thalamus .modal-cab{display:flex;align-items:center;gap:var(--s4);margin-bottom:var(--s4);flex-wrap:wrap}
 .thalamus .modal-tit{display:grid;gap:6px;min-width:0;flex:1}
 .thalamus :is(.modal,.ui-modal).modal--conf{width:min(900px,100%);padding:0}

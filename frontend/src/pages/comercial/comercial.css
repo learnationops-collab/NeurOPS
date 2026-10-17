@@ -1252,7 +1252,7 @@
   max-height:min(86vh,860px);overflow:auto;overscroll-behavior:contain;
   background:var(--bg-surface);border:1px solid var(--border-main);border-top-color:var(--sheen);
   border-radius:var(--radius-main);box-shadow:var(--shadow-main);
-  padding:var(--s6);animation:dcModalIn .3s var(--spring) both}
+  padding:var(--s6);animation:dcModalIn .3s var(--spring) backwards}
 .dc-shell .modal-cab{display:flex;align-items:flex-start;gap:var(--s4);margin-bottom:var(--s6)}
 .dc-shell .modal-avatar{width:54px;height:54px;flex-shrink:0;border-radius:18px;
   display:inline-flex;align-items:center;justify-content:center;
@@ -1769,9 +1769,12 @@
    18 · VARIABILIDAD — la serie por dia, separada del dato del periodo
    ============================================================ */
 
-/* La vista entra desde su estado visible, nunca parada en opacity:0 */
+/* La vista entra desde su estado visible, nunca parada en opacity:0. `backwards`, no `both`: con
+   `both` el `transform` final quedaba en efecto y cada bloque era un contexto de apilamiento propio,
+   así que el menú de una pastilla (filtros del Resumen de Workshop) quedaba DEBAJO del bloque que
+   seguía (las tarjetas KPI se pintaban sobre sus opciones). */
 @keyframes dcVista{from{opacity:.4;transform:translateY(8px)}to{opacity:1;transform:none}}
-.dc-shell .vista > *{animation:dcVista .34s var(--spring) both}
+.dc-shell .vista > *{animation:dcVista .34s var(--spring) backwards}
 @media (prefers-reduced-motion:reduce){.dc-shell .vista > *{animation:none}}
 
 /* ============================================================
