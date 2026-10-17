@@ -15,4 +15,10 @@ describe('standard.css', () => {
         expect(bases.length).toBeGreaterThan(10);
         expect(bases.filter(b => !conVariables.has(b))).toEqual([]);
     });
+
+    it('la entrada del modal no queda en efecto, así los menús fixed de adentro van contra la pantalla', () => {
+        const modal = css.match(/\.ui-modal\.ui-modal\{[^}]*\}/)[0];
+        expect(modal).toMatch(/animation:ui-modal-in [^;}]*backwards/);
+        expect(modal).not.toMatch(/animation:[^;}]*\b(both|forwards)\b/);
+    });
 });

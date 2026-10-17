@@ -76,7 +76,7 @@ Import: `import { Button, … } from '<ruta>/components/standard';`
 | `FieldError` | Mensaje de error de un campo | `role` (`alert` por defecto; `note` para una aclaración), `icon` (`false` lo saca), `as` |
 | `Switch` | Interruptor sí/no | `checked`, `onChange`, `label` |
 | `Stepper` | Contador con − y + | `value`, `min`, `max`, `onChange`, `display` (texto en lugar del número), `label` |
-| `Modal` | Ventana sobre la página (Escape, clic afuera, foco, bloquea el scroll) | `onClose`, `className` (ancho propio), `labelledBy`, `id` |
+| `Modal` | Ventana sobre la página (Escape, clic afuera, foco, bloquea el scroll). Su entrada no deja un `transform` en efecto, así un `Select` de adentro abre contra la pantalla; no le pongas `transform`/`filter` propios | `onClose`, `className` (ancho propio), `labelledBy`, `id` |
 | `ModalHeader` | Cabecera de un modal: ícono, título, subtítulo y cerrar | `title`, `subtitle`, `icon`, `titleId` (para `labelledBy` del Modal), `size`: `md` · `lg`, `onClose`, `closeProps` |
 | `TextArea` | Texto largo que crece solo | `value`, `invalid`, `bare` (sin el estilo de campo, para pantallas con estilo propio) |
 | `toast()` + `Toaster` | Aviso corto abajo de la pantalla | `toast(texto, tone: success · error, action: {label, onClick})`; `<Toaster />` una vez en la app; `--ui-toast-bottom` si no hay dock |

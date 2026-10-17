@@ -209,11 +209,13 @@
 .ui-stepper__value{min-width:44px;text-align:center;font-size:12.5px;font-weight:900;font-variant-numeric:tabular-nums}
 
 /* --- Modal ------------------------------------------------------------------------------------- */
+/* La entrada va con `backwards`, no `both`: una animación de transform que sigue en efecto vuelve al modal
+   la referencia de todo lo `position:fixed` de adentro, y el menú de un Select salía corrido y cortado. */
 .ui-scrim.ui-scrim{position:fixed;inset:0;z-index:90;background:var(--ui-scrim);backdrop-filter:blur(6px);display:flex;align-items:flex-end;justify-content:center;padding:var(--ui-s4)}
 @media (min-width:720px){.ui-scrim.ui-scrim{align-items:center}}
 .ui-modal.ui-modal{position:relative;isolation:isolate;width:min(620px,100%);max-height:min(88vh,920px);overflow:auto;overscroll-behavior:contain;background:var(--ui-surface);
   border:1px solid var(--ui-border-main);border-top-color:var(--ui-sheen);border-radius:var(--ui-radius-panel);box-shadow:var(--ui-shadow);padding:var(--ui-s6);
-  animation:ui-modal-in .3s var(--ui-spring) both}
+  animation:ui-modal-in .3s var(--ui-spring) backwards}
 @keyframes ui-modal-in{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
 @media (max-width:640px){
   .ui-scrim.ui-scrim{padding:0}
