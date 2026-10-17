@@ -161,7 +161,6 @@ def test_avisos_como_los_del_formulario():
     avisos = rv2.avisos(rv2.leer(rv2.escribir(_fila(), datos)))
 
     assert [(a['paso'], a['nivel'], a['msg']) for a in avisos] == [
-        ('entrantes', 'err', 'Anuncios: no leads e in-abribles superan los 5 mensajes'),
         ('aperturas', 'warn', 'Anuncios: más aperturas que entrantes (5)'),
         ('entrantes', 'warn', 'Bienvenidas: más respondidas que hechas'),
         ('aperturas', 'warn', 'Bienvenidas: más aperturas que respuestas (3)'),
@@ -275,7 +274,8 @@ def test_avisos_de_leads_y_de_respuestas_a_las_aperturas():
     datos['bienvenidas'].update(aperturas_resp=5)
     msgs = [(a['paso'], a['nivel'], a['msg']) for a in rv2.avisos(rv2.leer(rv2.escribir(_fila(), datos)))]
 
-    assert ('entrantes', 'err', 'Anuncios: leads cualificados, no leads e in-abribles superan los 10 mensajes') in msgs
+    # Kerwin, 17/10/2026: cualificados + no leads + in-abribles por encima de los mensajes ya no avisa.
+    assert not [m for m in msgs if m[1] == 'err']
     assert ('aperturas', 'warn', 'Anuncios: más respuestas que aperturas en dolor (5)') in msgs
     assert ('aperturas', 'warn', 'Bienvenidas: más respuestas que aperturas (4)') in msgs
 

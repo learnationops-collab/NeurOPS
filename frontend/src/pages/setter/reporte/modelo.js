@@ -105,11 +105,12 @@ export const noContestaronDe = (d) => Math.max(0,
 /**
  * Las cuentas del reporte: cada número que se muestra, los avisos y la marca de cada celda.
  *
- * Un solo aviso es un ERROR: leads + no leads + in-abribles por encima de los mensajes del canal
- * (los que no contestaron darían negativos). Ese bloquea el envío, y dice la suma: los tres son
- * partes de los mensajes, no se restan después (Elias, 16/10/2026). El resto son advertencias: se
- * ven, pintan la celda y el paso, pero el setter puede tener una razón (abrió en dolor a alguien
- * que entró ayer) y el reporte sale igual.
+ * Son advertencias: se ven, pintan la celda y el paso, pero el setter puede tener una razón (abrió
+ * en dolor a alguien que entró ayer) y el reporte sale igual. Ninguna bloquea el envío: hasta el
+ * 17/10/2026 cualificados + no leads + in-abribles por encima de los mensajes era un ERROR que no
+ * dejaba enviar, y Kerwin lo sacó («dejá que los setters escriban lo que ellos consideren, hay que
+ * medir lo que ellos dicen»): califican también a gente que escribió otros días. Los que no
+ * contestaron quedan en 0 en ese caso (`noContestaronDe`).
  */
 export function calcular(s) {
     const num = {};
@@ -121,16 +122,9 @@ export function calcular(s) {
 
     for (const c of CANALES) {
         const d = s[c.k];
-        const repartidos = d.leads + d.no_lead + d.inabribles;
         const net = netoDe(d);
         const ap = d.ap_entrantes + d.ap_dolor;
         const resp = d.ap_entrantes_resp + d.ap_dolor_resp;
-        if (repartidos > d.entrantes) {
-            aviso('entrantes', 'err', `${c.n}: ${d.leads} cualificados + ${d.no_lead} no leads + ${d.inabribles} in-abribles = ${repartidos}, más que los ${d.entrantes} mensajes de los que salen`);
-            marca(`${c.k}.leads`, 'err');
-            marca(`${c.k}.no_lead`, 'err');
-            marca(`${c.k}.inabribles`, 'err');
-        }
         if (ap > d.entrantes) {
             aviso('aperturas', 'warn', `${c.n}: más aperturas que entrantes (${d.entrantes})`);
             marca(`${c.k}.ap_entrantes`, 'warn');

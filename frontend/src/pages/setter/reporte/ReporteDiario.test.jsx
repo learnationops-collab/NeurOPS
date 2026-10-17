@@ -170,20 +170,21 @@ describe('ReporteDiario · los pasos', () => {
 });
 
 describe('ReporteDiario · los avisos', () => {
-    it('leads + no leads + in-abribles por encima de los mensajes bloquea el envío y lleva al paso', async () => {
+    it('cualificados + no leads por encima de los mensajes no avisa ni bloquea: se manda lo que escribió', async () => {
+        // Kerwin, 17/10/2026: «este error no puede salir» (Elias: 31 + 11 sobre 37 mensajes).
         await montar();
-        escribir('Inbound, nuevos mensajes', 2);
-        escribir('Inbound, no leads', 3);
+        escribir('Anuncios, nuevos mensajes', 37);
+        escribir('Anuncios, entrantes cualificados', 31);
+        escribir('Anuncios, no leads', 11);
 
-        expect(screen.getByText('Inbound: 0 cualificados + 3 no leads + 0 in-abribles = 3, más que los 2 mensajes de los que salen')).toBeInTheDocument();
-        expect(celda('Inbound, no leads')).toHaveAttribute('aria-invalid', 'true');
+        expect(screen.queryByText(/más que los 37 mensajes/)).not.toBeInTheDocument();
+        expect(celda('Anuncios, no leads')).not.toHaveAttribute('aria-invalid', 'true');
 
         fireEvent.click(screen.getByRole('button', { name: /Resumen/ }));
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Enviar reporte' })); });
 
-        expect(red.post).toBeNull();
-        expect(toast.error).toHaveBeenCalledWith('Inbound: 0 cualificados + 3 no leads + 0 in-abribles = 3, más que los 2 mensajes de los que salen');
-        expect(pasoActual()).toContain('Entrantes');
+        expect(toast.error).not.toHaveBeenCalled();
+        expect(red.post[1]).toMatchObject({ anuncios: { entrantes: 37, leads: 31, no_lead: 11 } });
     });
 
     it('una advertencia se ve en su paso pero no bloquea', async () => {

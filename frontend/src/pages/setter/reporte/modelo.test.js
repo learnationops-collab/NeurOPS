@@ -94,17 +94,15 @@ describe('calcular', () => {
         expect(calcular(diaDelDiseno()).avisos).toEqual([]);
     });
 
-    it('leads + no leads + in-abribles por encima de los mensajes es ERROR, marca las tres celdas y bloquea', () => {
+    it('leads + no leads + in-abribles por encima de los mensajes se acepta: es lo que dice el setter', () => {
+        // Kerwin, 17/10/2026: califican también a gente que escribió otros días.
         const s = conRuta(diaDelDiseno(), 'inbound.no_lead', 2);    // 5 + 2 + 1 > 6 mensajes
-        const { avisos, marcas } = calcular(s);
+        const { avisos, marcas, num } = calcular(s);
 
-        expect(avisos.filter(a => a.nivel === 'err'))
-            .toEqual([{ paso: 'entrantes', nivel: 'err', msg: 'Inbound: 5 cualificados + 2 no leads + 1 in-abribles = 8, más que los 6 mensajes de los que salen' }]);
-        expect(marcas.get('inbound.leads')).toBe('err');
-        expect(marcas.get('inbound.no_lead')).toBe('err');
-        expect(marcas.get('inbound.inabribles')).toBe('err');
-        expect(primerError(avisos)?.paso).toBe('entrantes');
-        expect(estadoDelPaso(avisos, 'entrantes')).toBe('err');
+        expect(avisos).toEqual([]);
+        expect(marcas.get('inbound.no_lead')).toBeUndefined();
+        expect(primerError(avisos)).toBeFalsy();
+        expect(num['inbound.noCont']).toBe(0);
     });
 
     it('el resto son advertencias: se ven pero no bloquean', () => {

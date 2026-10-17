@@ -279,9 +279,13 @@ def avisos(lectura):
     """Los avisos de un reporte v2, los mismos que muestra el formulario (`calcular` en
     `frontend/src/pages/setter/reporte/modelo.js`): `[{paso, nivel, msg}]`.
 
-    `err` es lo único que el formulario no deja enviar (no leads + in-abribles por encima de los
-    mensajes del canal); `warn` se manda igual y queda a la vista de quien lea el reporte. Un v1 no
-    tiene avisos: sus números no se cargaban por canal.
+    Todos son `warn`: se mandan igual y quedan a la vista de quien lea el reporte. Un v1 no tiene
+    avisos: sus números no se cargaban por canal.
+
+    Cualificados + no leads + in-abribles por encima de los mensajes del canal ya no es aviso
+    (Kerwin, 17/10/2026: «este error no puede salir. Dejá que los setters escriban lo que ellos
+    consideren, hay que medir lo que ellos dicen»): el setter califica también a gente que escribió
+    otros días.
     """
     if not lectura or lectura.get('version') != 2:
         return []
@@ -290,10 +294,6 @@ def avisos(lectura):
     dolor_en_aperturas = 0
     for canal, _ in CANALES:
         d = lectura['canales'][canal]
-        if d['no_lead'] + d['inabribles'] + (d.get('leads') or 0) > d['entrantes']:
-            quienes = 'leads cualificados, no leads e in-abribles' if d.get('leads') is not None else 'no leads e in-abribles'
-            salida.append({'paso': 'entrantes', 'nivel': 'err',
-                           'msg': f"{nombres[canal]}: {quienes} superan los {d['entrantes']} mensajes"})
         if d['ap_entrantes'] + d['ap_dolor'] > d['entrantes']:
             salida.append({'paso': 'aperturas', 'nivel': 'warn',
                            'msg': f"{nombres[canal]}: más aperturas que entrantes ({d['entrantes']})"})
