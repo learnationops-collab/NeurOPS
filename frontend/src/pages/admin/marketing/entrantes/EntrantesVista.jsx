@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Upload, Wrench, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../../services/api';
-import { Button, Segmented } from '../../../../components/standard';
-import CargarCalificaciones from './CargarCalificaciones';
+import { Segmented } from '../../../../components/standard';
 import ListaConfigurable from '../../../../components/listas/ListaConfigurable';
 import Cifra from '../../../comercial/components/Cifra';
 import { EsqueletoFilas, EsqueletoTablero, PanelCab, Tip } from '../../../comercial/components/Shared';
@@ -18,9 +17,6 @@ import './entrantes.css';
  * por persona, con su estado (calificado, en conversación, sin respuesta, descalificado) y en qué paso del
  * flujo de Instagram va. Se filtra, se agrupa y se eligen columnas como en las demás listas. Clic en una
  * fila: su historial de webhooks.
- *
- * Las herramientas viejas del monitor (limpiar CUF, migrar, limpieza, reasignación masiva) siguen, detrás
- * de «Herramientas» (`onHerramientas`): la página las dibuja fuera del `.dc-shell`.
  */
 
 // Como el resto del tablero: separador de miles y punto decimal en inglés («2,206», «66.1%»).
@@ -144,12 +140,10 @@ const Ficha = ({ fila, mensajes, onCerrar, onCorregir }) => {
     );
 };
 
-const EntrantesVista = ({ desde, hasta, version = 0, onHerramientas, herramientasAbiertas = false }) => {
+const EntrantesVista = ({ desde, hasta, version = 0 }) => {
     const [datos, setDatos] = useState(null);
     const [error, setError] = useState(null);
     const [elegida, setElegida] = useState(null);
-    const [cargando, setCargando] = useState(false);
-    const [recarga, setRecarga] = useState(0);
 
     useEffect(() => {
         const control = new AbortController();
@@ -157,7 +151,7 @@ const EntrantesVista = ({ desde, hasta, version = 0, onHerramientas, herramienta
             .then((r) => { setDatos(r.data); setError(null); })
             .catch((e) => { if (e?.name !== 'CanceledError') setError('No se pudieron cargar los entrantes.'); });
         return () => control.abort();
-    }, [desde, hasta, version, recarga]);
+    }, [desde, hasta, version]);
 
     const filas = useMemo(() => datos?.filas || [], [datos]);
     const cuenta = useMemo(() => Object.fromEntries(ORDEN_ESTADOS.map((e) => [e, filas.filter((f) => f.estado === e).length])), [filas]);
@@ -199,17 +193,7 @@ const EntrantesVista = ({ desde, hasta, version = 0, onHerramientas, herramienta
             <PorPaso filas={filas} />
 
             <section className="panel en-lista" aria-label="Entrantes">
-                <PanelCab titulo="Leads entrantes" tip="Una fila por persona. Clic: su historial.">
-                    <Button icon={<Upload size={15} aria-hidden="true" />} onClick={() => setCargando(true)}>
-                        Cargar calificaciones
-                    </Button>
-                    {onHerramientas && (
-                        <button type="button" className={`pastilla${herramientasAbiertas ? ' pastilla--on' : ''}`}
-                            onClick={onHerramientas} aria-pressed={herramientasAbiertas}>
-                            <Wrench size={15} aria-hidden="true" /> Herramientas
-                        </button>
-                    )}
-                </PanelCab>
+                <PanelCab titulo="Leads entrantes" tip="Una fila por persona. Clic: su historial." />
                 {elegida && (
                     <Ficha key={elegida.lead_id} fila={elegida} mensajes={datos.mensajes || {}} onCerrar={() => setElegida(null)}
                         onCorregir={(valor) => corregir(elegida, valor)} />
@@ -220,7 +204,6 @@ const EntrantesVista = ({ desde, hasta, version = 0, onHerramientas, herramienta
                     claveGuardado="mk_entrantes_cols" vacio="No entró nadie en el período."
                     ordenInicial={{ key: 'ultima', dir: 'desc' }} />
             </section>
-            {cargando && <CargarCalificaciones onCerrar={() => setCargando(false)} onAplicado={() => setRecarga((n) => n + 1)} />}
         </div>
     );
 };

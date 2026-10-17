@@ -6,7 +6,6 @@ import { CalendarDays, RefreshCw } from 'lucide-react';
 import { EsqueletoTablero, Isotipo, PillMenu, Segmented } from '../../comercial/components/Shared';
 import RangoFechas, { esFecha, textoRango } from '../../comercial/components/RangoFechas';
 import UTMGenerator from '../../../components/operations/UTMGenerator';
-import WebhookMonitorTab from '../../public/WebhookMonitorTab';
 import EntrantesVista from './entrantes/EntrantesVista';
 import ConversacionesVista from './conversaciones/ConversacionesVista';
 import TablaAnuncios from './anuncios/TablaAnuncios';
@@ -65,8 +64,6 @@ const AdminMarketingHubPage = () => {
     const reducir = useReducedMotion();
     const pedida = PESTANA_VIEJA[params.get('tab')] || params.get('tab');
     const pestana = PESTANAS.some((p) => p.key === pedida) ? pedida : 'anuncios';
-    // Las herramientas del monitor viejo (limpiar CUF, migrar, reasignar), abiertas desde Entrantes.
-    const herramientas = pestana === 'entrantes' && params.get('herr') === '1';
     const periodo = PERIODOS.some((p) => p.key === params.get('periodo')) ? params.get('periodo') : PERIODO_POR_DEFECTO;
     const embudo = EMBUDOS_DE_RENDIMIENTO.some((e) => e.key === params.get('embudo')) ? params.get('embudo') : 'todo';
     const rango = useMemo(() => {
@@ -170,7 +167,7 @@ const AdminMarketingHubPage = () => {
 
                     <div className="barra">
                         <Segmented opciones={PESTANAS} valor={pestana} ariaLabel="Secciones de Marketing"
-                            onChange={(key) => cambiar({ tab: key === 'anuncios' ? null : key, herr: null })} />
+                            onChange={(key) => cambiar({ tab: key === 'anuncios' ? null : key })} />
                     </div>
 
                     <motion.div key={pestana}
@@ -203,9 +200,7 @@ const AdminMarketingHubPage = () => {
                                     )
                         )}
                         {pestana === 'entrantes' && (
-                            <EntrantesVista desde={rango.desde} hasta={rango.hasta} version={version}
-                                herramientasAbiertas={herramientas}
-                                onHerramientas={() => cambiar({ herr: herramientas ? null : '1' })} />
+                            <EntrantesVista desde={rango.desde} hasta={rango.hasta} version={version} />
                         )}
                         {pestana === 'conversaciones' && (
                             <ConversacionesVista desde={rango.desde} hasta={rango.hasta} version={version} />
@@ -219,13 +214,12 @@ const AdminMarketingHubPage = () => {
                 </div>
             </div>
 
-            {/* Lo de siempre que es Tailwind va FUERA del `.dc-shell` (su reset de botones les borraría los
-                estilos), sobre su propia superficie oscura: el generador de UTM y las herramientas del monitor. */}
-            {(!CON_PERIODO.includes(pestana) || herramientas) && (
+            {/* El generador de UTM es Tailwind y va FUERA del `.dc-shell` (su reset de botones le borraría los
+                estilos), sobre su propia superficie oscura. */}
+            {pestana === 'utms' && (
                 <div className="mk-wrap mk-wrap--legado">
                     <div className="mk-legado">
-                        {herramientas && <WebhookMonitorTab />}
-                        {pestana === 'utms' && <UTMGenerator />}
+                        <UTMGenerator />
                     </div>
                 </div>
             )}

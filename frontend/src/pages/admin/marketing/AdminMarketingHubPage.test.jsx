@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
-import { fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -8,7 +7,6 @@ vi.mock('../../../services/api', () => ({ default: { get: vi.fn(), post: vi.fn()
 vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 // Las herramientas de siempre no son lo que se prueba acá.
 vi.mock('../../../components/operations/UTMGenerator', () => ({ default: () => <p>Generador UTM viejo</p> }));
-vi.mock('../../public/WebhookMonitorTab', () => ({ default: () => <p>Monitor de webhooks</p> }));
 
 import api from '../../../services/api';
 import AdminMarketingHubPage from './AdminMarketingHubPage';
@@ -303,13 +301,13 @@ describe('Marketing › Anuncios', () => {
         expect(screen.getByRole('button', { name: /Sincronizar/ })).toBeDisabled();
     });
 
-    it('«Webhooks» ahora es Entrantes, y el monitor viejo queda detrás de Herramientas', async () => {
+    it('«Webhooks» ahora es Entrantes, sin Herramientas ni Cargar calificaciones', async () => {
         api.get.mockImplementation((url) => Promise.resolve({ data: url === '/manychat-webhook/entrantes'
             ? { desde: '2026-10-01', hasta: '2026-10-16', mensajes: {}, filas: [] } : TABLERO }));
         abrir('/admin/marketing?tab=webhooks');
         expect(await screen.findByRole('heading', { name: 'Entrantes' })).toBeInTheDocument();
-        expect(screen.queryByText('Monitor de webhooks')).not.toBeInTheDocument();
-        fireEvent.click(await screen.findByRole('button', { name: /Herramientas/ }));
-        expect(await screen.findByText('Monitor de webhooks')).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: 'Leads entrantes' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Herramientas/ })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Cargar calificaciones/ })).not.toBeInTheDocument();
     });
 });
