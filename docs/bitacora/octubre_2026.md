@@ -149,3 +149,10 @@
   - Conversaciones: examen, calificación, flujo y paso en cada fila; el detalle muestra el recorrido y la mediana de respuesta.
   - Componente estándar nuevo `Bars`, que ya usa el embudo de los talleres de Workshop (catálogo `/ui` y skill).
   - Las campañas del Inbox (con su migración) quedan para otro commit.
+
+- **17 de Octubre de 2026 (8)** *(La grabación de Drive de cada taller, con carga masiva por CSV. [app/services/workshop_grabaciones_service.py](../../app/services/workshop_grabaciones_service.py) [NEW], [app/api/workshop_grabaciones.py](../../app/api/workshop_grabaciones.py) [NEW], [migrations/versions/a3f9c1e7b2d4_grabacion_drive_workshop.py](../../migrations/versions/a3f9c1e7b2d4_grabacion_drive_workshop.py) [NEW], [frontend/src/pages/admin/workshop/talleres/CargarGrabaciones.jsx](../../frontend/src/pages/admin/workshop/talleres/CargarGrabaciones.jsx) [NEW])*:
+  - Cada taller tiene un campo para el link del Meet grabado en Google Drive (`grabacion_url`). Va aparte del Loom, que es lo que muestra la landing.
+  - Workshop › Talleres › «Cargar grabaciones»: se pega el CSV que arma Claude in Chrome recorriendo Drive (`event_id,fecha,nombre,link_drive,notas`). «Revisar» muestra qué se carga, qué ya estaba y qué falla, y recién después se guarda. Si un taller ya tenía otra grabación, no se pisa salvo con el switch «Reemplazar».
+  - Solo se aceptan links de Drive; los de archivo quedan como `/file/d/<id>/view`.
+  - La pestaña Grabación de cada tarjeta abre el «Meet en Drive». El estado sin Loom ahora dice «Sin Loom».
+  - Verificación: 21 tests de pytest, 78 de vitest de Workshop, migración arriba y abajo, y prueba en el navegador con talleres de prueba.
