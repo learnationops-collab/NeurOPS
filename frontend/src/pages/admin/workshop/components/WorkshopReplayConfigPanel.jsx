@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ExternalLink, PlayCircle, Save, StopCircle } from 'lucide-react';
+import { ExternalLink, HardDrive, PlayCircle, Save, StopCircle } from 'lucide-react';
 import { PanelCab, Tip } from '../../../comercial/components/Shared';
 import { extractLoomId, urlLoom } from '../../../../utils/loom';
 import { usePublicacion } from '../talleres/datosTaller';
@@ -97,6 +97,15 @@ const WorkshopReplayConfigPanel = ({ evento, onSaved }) => {
                         ? 'Guardada en este taller. No se publica hasta que lo decidas abajo.'
                         : 'Este taller todavía no tiene la grabación guardada.'}
                 </p>
+                <div className="wt-botones">
+                    {evento.grabacion_url ? (
+                        <a className="btn btn--linea btn--sm" href={evento.grabacion_url} target="_blank" rel="noopener noreferrer">
+                            <HardDrive aria-hidden="true" /> Ver grabación en Drive <ExternalLink aria-hidden="true" />
+                        </a>
+                    ) : (
+                        <span className="t-cap mut40">Sin la grabación de Drive.</span>
+                    )}
+                </div>
             </section>
 
             <section className="panel wt-panel" aria-label="Landing de la grabación">

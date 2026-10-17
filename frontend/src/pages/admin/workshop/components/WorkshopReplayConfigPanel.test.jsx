@@ -50,4 +50,13 @@ describe('Workshop › Talleres › Grabación: guardar y publicar son dos cosas
         await userEvent.click(screen.getByRole('button', { name: 'Dejar de publicar' }));
         expect(Object.keys(api.put.mock.calls[0][1])).toEqual(['replay_vence_hasta']);
     });
+
+    it('muestra la grabación de Drive aparte del Loom, o avisa que no está', () => {
+        const { rerender } = render(<WorkshopReplayConfigPanel evento={TALLER} />);
+        expect(screen.getByText('Sin la grabación de Drive.')).toBeInTheDocument();
+
+        rerender(<WorkshopReplayConfigPanel evento={{ ...TALLER, grabacion_url: 'https://drive.google.com/file/d/1Abc/view' }} />);
+        expect(screen.getByRole('link', { name: /Ver grabación en Drive/ }))
+            .toHaveAttribute('href', 'https://drive.google.com/file/d/1Abc/view');
+    });
 });
