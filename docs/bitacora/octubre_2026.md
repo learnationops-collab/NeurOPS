@@ -98,3 +98,11 @@
   - Paula no podía enviar el reporte («23 cualificados + 10 no leads + 0 in-abribles = 33, más que los 25 mensajes de los que salen»): los 25 venían precargados de ManyChat, que cuenta solo a quien escribió por primera vez ese día, y el setter también califica a gente que escribió otros días.
   - Ahora el formulario precarga solo las agendas de cada canal. Nuevos mensajes, no leads e in-abribles arrancan vacíos y los carga el setter, porque el reporte mide su rendimiento. La regla de que cualificados + no leads + in-abribles no superen los mensajes sigue igual.
   - Verificación: 127 tests de vitest del espacio del setter.
+
+- **17 de Octubre de 2026** *(El Inbox pasa a los componentes estándar. [frontend/src/pages/inbox/](../../frontend/src/pages/inbox/) [MODIFY], [frontend/src/components/standard/Feedback.jsx](../../frontend/src/components/standard/Feedback.jsx) [MODIFY])*:
+  - Cabecera con `PageHeader`: logo del Inbox, «Solo lectura» y el modo del motor como insignias con ayuda al pasar el mouse.
+  - Flujos: filtro por estado con contadores y «Nuevo flujo» en línea, los dos en la fila del título. Tarjetas como las de Forms (estado, palabras clave, pasos, en curso, versión). Borrar confirma con `ConfirmDelete`.
+  - Lienzo: la barra del flujo sube a la fila del título y el lienzo ocupa todo el ancho. Los pasos se agregan desde una paleta de íconos flotante, y el editor del nodo flota encima, como el inspector de Thalamus. Los avisos salen como toast. Salir con cambios abre un modal con «Guardar y salir».
+  - Conversaciones: buscador y filtro (Todas · Sin responder · Bot pausado) en la cabecera; avatares, marca de «sin responder», variables del contacto como chips y el chat abre en el último mensaje.
+  - Componente estándar nuevo `Status` (estado con punto de color), que también usa Thalamus en lugar de `EstadoEv`. Está en el catálogo `/ui` y en la skill.
+  - Verificación: 43 tests (Inbox, componentes estándar y Eventos de Thalamus), lint y build de producción.

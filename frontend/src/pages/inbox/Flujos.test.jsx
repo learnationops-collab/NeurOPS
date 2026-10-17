@@ -4,7 +4,7 @@ import Flujos from './Flujos';
 import { inboxApi } from './api';
 
 vi.mock('./api', () => ({
-    inboxApi: { flujos: vi.fn(), flujo: vi.fn(), crearFlujo: vi.fn(), guardarFlujo: vi.fn(), publicarFlujo: vi.fn() },
+    inboxApi: { flujos: vi.fn(), flujo: vi.fn(), crearFlujo: vi.fn(), guardarFlujo: vi.fn(), publicarFlujo: vi.fn(), borrarFlujo: vi.fn() },
 }));
 
 const GRAFO = {
@@ -33,7 +33,8 @@ describe('Inbox › Flujos', () => {
         render(<Flujos puedeEditar />);
 
         expect(await screen.findByText('Guía')).toBeTruthy();
-        expect(screen.getByText(/OBTENER GUIA · 1 paso · 3 en curso/)).toBeTruthy();
+        expect(screen.getByText('OBTENER GUIA')).toBeTruthy();
+        expect(screen.getByText('En curso').previousSibling.textContent).toBe('3');
         expect(screen.getByText('Activo · v2')).toBeTruthy();
 
         fireEvent.click(screen.getByText('Guía'));
@@ -47,9 +48,30 @@ describe('Inbox › Flujos', () => {
         render(<Flujos puedeEditar={false} />);
 
         expect(await screen.findByText('Guía')).toBeTruthy();
-        expect(screen.queryByRole('button', { name: /Nuevo flujo/ })).toBeNull();
+        expect(screen.queryByRole('textbox', { name: 'Nuevo flujo' })).toBeNull();
+        expect(screen.getByRole('button', { name: /Ver/ })).toBeTruthy();
         fireEvent.click(screen.getByText('Guía'));
         expect(await screen.findByText('¿Cuál es tu perfil?')).toBeTruthy();
         expect(screen.queryByRole('button', { name: /Publicar/ })).toBeNull();
+    });
+
+    it('filtra por estado', async () => {
+        render(<Flujos puedeEditar />);
+
+        expect(await screen.findByText('Guía')).toBeTruthy();
+        fireEvent.click(screen.getByRole('button', { name: /Pausados/ }));
+        expect(screen.queryByText('Guía')).toBeNull();
+        expect(screen.getByText(/No hay flujos en «Pausados»/)).toBeTruthy();
+    });
+
+    it('un borrador se elimina después de confirmar', async () => {
+        inboxApi.flujos.mockResolvedValue([{ ...RESUMEN, estado: 'borrador', version: null }]);
+        inboxApi.borrarFlujo.mockResolvedValue({});
+        render(<Flujos puedeEditar />);
+
+        fireEvent.click(await screen.findByRole('button', { name: 'Eliminar Guía' }));
+        expect(inboxApi.borrarFlujo).not.toHaveBeenCalled();
+        fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }));
+        expect(inboxApi.borrarFlujo).toHaveBeenCalledWith(1);
     });
 });

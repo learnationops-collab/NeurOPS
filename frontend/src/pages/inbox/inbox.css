@@ -1,53 +1,41 @@
-/* Área Inbox. Hereda tokens y piezas de Thalamus (.thalamus …); acá solo lo propio: lista de flujos,
-   el lienzo (React Flow) y el chat de conversaciones. */
+/* Área Inbox. Hereda tokens y piezas de Thalamus (.thalamus …) y dibuja con los componentes estándar
+   (ui-*); acá solo lo propio: tarjetas de flujo, el lienzo (React Flow) y el chat de conversaciones.
+   Los ajustes a un ui-* pesan 3 clases o más (la base pesa 2). */
 
-.thalamus.inbox .wrap--ancho{max-width:none}
-.thalamus.inbox .tope{justify-content:space-between}
-.thalamus.inbox .inbox-modo--apagado{color:var(--text-muted)}
-.thalamus.inbox .inbox-modo--simulado{color:var(--warning)}
-.thalamus.inbox .inbox-modo--real{color:var(--success)}
+/* Más ancho que Thalamus: el lienzo y la bandeja aprovechan la pantalla. */
+.thalamus.inbox .wrap{max-width:1680px}
+.thalamus.inbox .inbox-modo{cursor:default}
 
-/* --- Lista de flujos --- */
-.thalamus.inbox .fl{display:grid;gap:var(--s4)}
-.thalamus.inbox .fl-cab{display:flex;align-items:center;justify-content:space-between;gap:var(--s4);flex-wrap:wrap}
-.thalamus.inbox .fl-cab > p{max-width:62ch}
-.thalamus.inbox .fl-nuevo{display:flex;gap:var(--s2);flex-wrap:wrap;align-items:center}
-.thalamus.inbox .fl-nuevo .input{min-width:min(320px,100%)}
-.thalamus.inbox .fl-lista{display:grid;gap:var(--s3);list-style:none;margin:0;padding:0}
-.thalamus.inbox .fl-item{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap}
-.thalamus.inbox .fl-abrir{flex:1 1 280px;display:grid;gap:4px;text-align:left;background:none;border:0;padding:0;color:inherit;cursor:pointer;min-width:0}
-.thalamus.inbox .fl-abrir:hover .fl-nombre{color:var(--brand-secondary)}
-.thalamus.inbox .fl-meta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.thalamus.inbox .fl-fecha{white-space:nowrap}
-.thalamus.inbox .ef-estado--activo{color:var(--success)}
-.thalamus.inbox .ef-estado--pausado{color:var(--warning)}
-.thalamus.inbox .ef-estado--borrador{color:var(--text-muted)}
-.thalamus.inbox .ef-sucio{color:var(--warning)}
+/* Contador dentro de un filtro (Segmented) y punto del estado. */
+.thalamus.inbox .fl-cuenta{margin-left:6px;font-variant-numeric:tabular-nums;opacity:.55}
+.thalamus.inbox .fl-punto{width:7px;height:7px;border-radius:50%;background:var(--c);flex-shrink:0}
+
+/* --- Tarjetas de flujo (base: .fcard de Forms) --- */
+.thalamus.inbox .fl-card{gap:var(--s3)}
+.thalamus.inbox .fl-estado,.thalamus.inbox .fl-palabras{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;min-width:0}
 
 /* --- Editor --- */
-.thalamus.inbox .ef{display:grid;gap:var(--s3)}
-.thalamus.inbox .ef-barra{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
-.thalamus.inbox .ef-nombre{flex:0 1 280px;min-width:160px;height:34px;font-weight:800}
-.thalamus.inbox .ef-acciones{display:flex;gap:var(--s2);flex-wrap:wrap;margin-left:auto}
-.thalamus.inbox .ef-agregar{display:flex;gap:6px;flex-wrap:wrap;padding-right:var(--s2);border-right:1px solid var(--border-subtle)}
-.thalamus.inbox .ef-aviso{margin:0;font-size:13px;font-weight:700}
-.thalamus.inbox .ef-aviso--ok{color:var(--success)}
-.thalamus.inbox .ef-aviso--error{color:var(--error)}
-.thalamus.inbox .ef-errores{border:1px solid var(--warning-border);background:var(--warning-surface);border-radius:14px;padding:10px 14px;font-size:13px}
+.thalamus.inbox .ef-nombre.ui-input{flex:0 1 280px;min-width:160px;height:36px;font-weight:800}
+.thalamus.inbox .ef-lienzo{position:relative;height:calc(100dvh - 236px);min-height:480px;border:1px solid var(--border-subtle);border-radius:24px;
+  overflow:hidden;background:var(--lienzo, var(--mat-0))}
+.thalamus.inbox .ef-paleta{display:flex;align-items:center;gap:4px;padding:4px;border-radius:999px;background:var(--bg-flotante);
+  border:1px solid var(--border-subtle);box-shadow:var(--shadow-main)}
+.thalamus.inbox .ef-ayuda{padding:0 10px 0 6px;font-size:11.5px;font-weight:600;color:var(--text-muted)}
+.thalamus.inbox .ef-errores{max-width:min(520px,60vw);border:1px solid var(--warning-border);background:var(--bg-flotante);border-radius:14px;
+  padding:8px 14px;font-size:13px;box-shadow:var(--shadow-main)}
 .thalamus.inbox .ef-errores summary{display:flex;align-items:center;gap:8px;font-weight:800;color:var(--warning);cursor:pointer}
-.thalamus.inbox .ef-errores ul{margin:8px 0 0;padding-left:20px;display:grid;gap:4px}
-.thalamus.inbox .ef-cuerpo{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:var(--s3);height:calc(100dvh - 250px);min-height:480px}
-.thalamus.inbox .ef-lienzo{border:1px solid var(--border-subtle);border-radius:var(--radius-main);overflow:hidden;background:var(--mat-0);min-height:0}
+.thalamus.inbox .ef-errores ul{margin:8px 0 2px;padding-left:20px;display:grid;gap:4px;max-height:40vh;overflow:auto}
+.thalamus.inbox .ef-salir{width:min(520px,100%)}
 @media (max-width: 900px){
-  .thalamus.inbox .ef-cuerpo{grid-template-columns:1fr;height:auto}
-  .thalamus.inbox .ef-lienzo{height:60dvh}
-  .thalamus.inbox .ef-agregar{border-right:0;padding-right:0}
+  .thalamus.inbox .ef-lienzo{height:70dvh}
+  .thalamus.inbox .ef-ayuda{display:none}
 }
 
 /* React Flow con los colores del tema */
 .thalamus.inbox .react-flow{--xy-background-color:transparent;--xy-edge-stroke:var(--text-muted);--xy-edge-stroke-selected:var(--brand-secondary);
   --xy-connectionline-stroke:var(--brand-secondary);--xy-controls-button-background-color:var(--bg-flotante);--xy-controls-button-color:var(--text-on-surface);
-  --xy-controls-button-border-color:var(--border-subtle);--xy-minimap-background-color:var(--bg-flotante);--xy-background-pattern-color:var(--border-main)}
+  --xy-controls-button-border-color:var(--border-subtle);--xy-minimap-background-color:var(--bg-flotante);--xy-background-pattern-color:var(--lienzo-punto, var(--border-main))}
+.thalamus.inbox .react-flow__controls{border-radius:12px;overflow:hidden;box-shadow:var(--shadow-main)}
 .thalamus.inbox .react-flow__controls button svg{fill:currentColor}
 .thalamus.inbox .ef-mapa{border-radius:12px;overflow:hidden}
 
@@ -74,39 +62,41 @@
 .thalamus.inbox .nf-salida .nf-punto{right:-19px}
 .thalamus.inbox .nf-punto--entrada{background:var(--text-muted)}
 
-/* Panel del nodo */
-.thalamus.inbox .pf{border:1px solid var(--border-subtle);border-radius:var(--radius-main);background:var(--mat-1);padding:var(--s4);overflow:auto;
-  display:flex;flex-direction:column;gap:var(--s3);min-height:0}
-.thalamus.inbox .pf--vacio{justify-content:center}
-.thalamus.inbox .pf-cab{display:flex;align-items:center;justify-content:space-between}
+/* Inspector (base: .inspector de Thalamus, flota sobre el lienzo) */
+.thalamus.inbox .pf{width:min(340px,calc(100% - 24px))}
 .thalamus.inbox .pf-campo{display:grid;gap:6px}
 .thalamus.inbox .pf-ayuda{font-size:11.5px;color:var(--text-muted)}
 .thalamus.inbox .pf-bloque{display:grid;gap:8px;padding:10px;border:1px solid var(--border-subtle);border-radius:14px;background:var(--hundido)}
 .thalamus.inbox .pf-fila{display:flex;gap:8px;align-items:center}
-.thalamus.inbox .pf-fila .input{flex:1;min-width:0}
-.thalamus.inbox .pf .input{height:38px;font-size:13px}
-.thalamus.inbox .pf textarea.input{height:auto;padding:10px 14px;resize:vertical;line-height:1.45}
-.thalamus.inbox .pf-check{display:flex;gap:8px;align-items:center;font-size:13px;font-weight:700}
-.thalamus.inbox .pf-pie{display:flex;gap:var(--s2);justify-content:space-between;margin-top:auto;padding-top:var(--s3);border-top:1px solid var(--border-subtle)}
+.thalamus.inbox .pf-fila > :is(.ui-select,.ui-input){flex:1;min-width:0}
+.thalamus.inbox .pf-check{display:flex;gap:var(--s3);align-items:center;justify-content:space-between;font-size:13px;font-weight:700}
+.thalamus.inbox .pf-pie{display:flex;gap:var(--s2);justify-content:space-between;margin-top:var(--s2);padding-top:var(--s3);border-top:1px solid var(--border-subtle)}
+.thalamus.inbox .pf-pie > :only-child{margin-left:auto}
 
 /* --- Conversaciones --- */
-.thalamus.inbox .cv{display:grid;grid-template-columns:320px minmax(0,1fr);gap:var(--s3);height:calc(100dvh - 220px);min-height:480px}
-.thalamus.inbox .cv-lista{display:flex;flex-direction:column;gap:var(--s2);overflow:hidden;min-height:0}
-.thalamus.inbox .cv-lista ul{list-style:none;margin:0;padding:0;overflow:auto;display:grid;gap:4px;align-content:start}
-.thalamus.inbox .cv-buscar{display:flex;align-items:center;gap:8px;color:var(--text-muted)}
-.thalamus.inbox .cv-buscar .input{flex:1;height:38px}
-.thalamus.inbox .cv-item{width:100%;display:grid;gap:3px;text-align:left;padding:10px 12px;border-radius:12px;border:1px solid transparent;background:none;color:inherit;cursor:pointer}
+.thalamus.inbox .cv-buscar.ui-entry{flex:0 1 280px;height:38px}
+.thalamus.inbox .cv{display:grid;grid-template-columns:340px minmax(0,1fr);gap:var(--s3);height:calc(100dvh - 236px);min-height:480px}
+.thalamus.inbox .cv-lista{display:flex;flex-direction:column;overflow:hidden;min-height:0;padding:var(--s2)}
+.thalamus.inbox .cv-lista ul{list-style:none;margin:0;padding:0;overflow:auto;display:grid;gap:2px;align-content:start}
+.thalamus.inbox .cv-lista > .ui-empty,.thalamus.inbox .cv-detalle > .ui-empty{margin:auto}
+.thalamus.inbox .cv-item{width:100%;display:flex;gap:10px;align-items:center;text-align:left;padding:8px 10px;border-radius:14px;border:1px solid transparent;
+  background:none;color:inherit;cursor:pointer}
 .thalamus.inbox .cv-item:hover{background:var(--bg-element)}
-.thalamus.inbox .cv-item--sel{border-color:var(--brand-secondary);background:var(--bg-element)}
-.thalamus.inbox .cv-item-cab{display:flex;justify-content:space-between;gap:8px;font-size:13px}
+.thalamus.inbox .cv-item[aria-pressed="true"]{border-color:var(--brand-secondary);background:var(--bg-element)}
+.thalamus.inbox .cv-item-cuerpo{flex:1;min-width:0;display:grid;gap:2px}
+.thalamus.inbox .cv-item-cab{display:flex;justify-content:space-between;gap:8px;font-size:13px;min-width:0}
+.thalamus.inbox .cv-item-cab strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .thalamus.inbox .cv-item-cab .mut{font-size:11px;white-space:nowrap}
-.thalamus.inbox .cv-item-texto{display:flex;gap:5px;align-items:center;font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.thalamus.inbox .cv-item-texto{display:flex;gap:5px;align-items:center;font-size:12px;min-width:0}
+.thalamus.inbox .cv-item-texto svg{flex-shrink:0}
+.thalamus.inbox .cv-item-texto > span{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.thalamus.inbox .cv-nuevo{width:8px;height:8px;border-radius:50%;background:var(--brand-secondary);flex-shrink:0}
 .thalamus.inbox .cv-detalle{overflow:hidden;min-height:0;display:flex}
-.thalamus.inbox .cv-vacio{margin:auto;text-align:center;display:grid;justify-items:center;gap:8px}
 .thalamus.inbox .cv-chat{display:flex;flex-direction:column;gap:var(--s3);width:100%;min-height:0}
-.thalamus.inbox .cv-chat-cab{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;padding-bottom:var(--s2);border-bottom:1px solid var(--border-subtle)}
-.thalamus.inbox .cv-variables{flex-basis:100%;margin:0}
-.thalamus.inbox .cv-mensajes{list-style:none;margin:0;padding:0 4px 0 0;overflow:auto;display:flex;flex-direction:column;gap:8px}
+.thalamus.inbox .cv-chat-cab{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;padding-bottom:var(--s3);border-bottom:1px solid var(--border-subtle)}
+.thalamus.inbox .cv-chat-cab h3{margin-right:var(--s2)}
+.thalamus.inbox .cv-variables{flex-basis:100%;display:flex;gap:6px;flex-wrap:wrap}
+.thalamus.inbox .cv-mensajes{flex:1;list-style:none;margin:0;padding:0 4px 0 0;overflow:auto;display:flex;flex-direction:column;gap:8px}
 .thalamus.inbox .cv-burbuja{max-width:min(520px,80%);padding:9px 13px;border-radius:16px;font-size:13.5px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
 .thalamus.inbox .cv-burbuja p{margin:0}
 .thalamus.inbox .cv-burbuja--entrante{align-self:flex-start;background:var(--bg-element);border-bottom-left-radius:6px}
@@ -119,4 +109,5 @@
   .thalamus.inbox .cv{grid-template-columns:1fr;height:auto}
   .thalamus.inbox .cv-lista{max-height:40dvh}
   .thalamus.inbox .cv-detalle{min-height:60dvh}
+  .thalamus.inbox .cv-buscar.ui-entry{flex:1 1 100%}
 }

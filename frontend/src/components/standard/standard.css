@@ -16,7 +16,7 @@
    pantalla (`.thalamus .ev-acc .ui-btn--secondary`, 0,3,0) le sigue ganando a la base.
    ============================================================================ */
 
-:where(.ui-btn,.ui-ibtn,.ui-link,.ui-chip,.ui-card,.ui-aura,.ui-empty,.ui-confirm,.ui-header,
+:where(.ui-btn,.ui-ibtn,.ui-link,.ui-chip,.ui-status,.ui-card,.ui-aura,.ui-empty,.ui-confirm,.ui-header,
   .ui-seg,.ui-select,.ui-select__pop,.ui-switch,.ui-stepper,.ui-scrim,.ui-modal,.ui-avatar,.ui-input,.ui-entry,.ui-field-error,.ui-panel,.ui-kpi,.ui-grid,.ui-cal,.ui-cal-event,.ui-toast,.ui-tip,.ui-textarea,.ui-modal-head){
   --ui-brand:var(--ln-brand, var(--brand-secondary, #FF3FA4));
   --ui-brand-accent:var(--ln-brand-accent, var(--brand-secondary-light, #FF6AD5));
@@ -105,6 +105,10 @@
 .ui-chip.ui-chip--subtle{text-transform:none;letter-spacing:0;font-weight:700;font-size:12px}
 .ui-chip.ui-chip--square{width:26px;padding:0;justify-content:center}
 .ui-chip.ui-chip:is(button){font-family:inherit;line-height:inherit;cursor:pointer}
+
+/* --- Status ------------------------------------------------------------------------------------ */
+.ui-status.ui-status{--c:var(--ui-muted);display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--c)}
+.ui-status.ui-status > i{width:7px;height:7px;border-radius:50%;background:var(--c);flex-shrink:0}
 
 /* --- Card y Aura ------------------------------------------------------------------------------- */
 .ui-card.ui-card{position:relative;isolation:isolate;overflow:hidden;min-width:0;background:var(--ui-card-bg);border:1px solid var(--ui-border-subtle);

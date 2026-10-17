@@ -1,37 +1,84 @@
-// Sección Flujos: la lista de automatizaciones y la entrada al lienzo de cada una.
+// Sección Flujos: las automatizaciones como tarjetas (como las de Forms en Thalamus), el filtro por
+// estado y la caja para crear uno, las dos en la cabecera. Abrir una tarjeta lleva al lienzo.
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, Trash2, Workflow } from 'lucide-react';
+import { Eye, Hash, Pencil, Plus, Trash2, Workflow } from 'lucide-react';
+import {
+    BRAND_AURA, Button, Card, Chip, ConfirmDelete, EmptyState, FieldError, Grid, HeaderActions, IconButton, InputGroup, Segmented, Status, toast,
+} from '../../components/standard';
 import EditorFlujo from './editor/EditorFlujo';
+import { ESTADOS, estadoDe } from './estadoFlujo';
 import { inboxApi } from './api';
 
-const ESTADO = { borrador: 'Borrador', activo: 'Activo', pausado: 'Pausado' };
+const FILTROS = [['todos', 'Todos'], ['activo', 'Activos'], ['pausado', 'Pausados'], ['borrador', 'Borradores']];
 
 function fecha(iso) {
     if (!iso) return '';
     return new Date(iso).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
-function Nuevo({ onCreado }) {
-    const [abierto, setAbierto] = useState(false);
+// La caja de crear va en la barra de la cabecera; el error, debajo (lo dibuja Flujos).
+function Nuevo({ onCreado, error, onError }) {
     const [nombre, setNombre] = useState('');
-    const [error, setError] = useState(null);
     const crear = async (e) => {
         e.preventDefault();
-        if (!nombre.trim()) return;
+        if (!nombre.trim()) { onError('Escribí un nombre.'); return; }
         try {
             onCreado(await inboxApi.crearFlujo(nombre.trim()));
         } catch (err) {
-            setError(err.response?.data?.message || 'No se pudo crear');
+            onError(err.response?.data?.message || 'No se pudo crear');
         }
     };
-    if (!abierto) return <button type="button" className="btn btn--cta" onClick={() => setAbierto(true)}><Plus />Nuevo flujo</button>;
     return (
-        <form className="fl-nuevo" onSubmit={crear}>
-            <input className="input" autoFocus value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre del flujo (ej. Obtener guía)" maxLength={150} />
-            <button type="submit" className="btn btn--cta" disabled={!nombre.trim()}>Crear</button>
-            <button type="button" className="btn btn--linea" onClick={() => { setAbierto(false); setNombre(''); }}>Cancelar</button>
-            {error && <p className="campo-err" role="alert">{error}</p>}
-        </form>
+        <InputGroup as="form" className="ev-nuevo" prefix={<Plus size={16} />} invalid={!!error} noValidate onSubmit={crear}>
+            <label className="sr" htmlFor="fl-nuevo">Nuevo flujo</label>
+            <input id="fl-nuevo" value={nombre} maxLength={150} autoComplete="off" placeholder="Nuevo flujo, ej. Obtener guía"
+                aria-invalid={!!error} aria-describedby={error ? 'fl-nuevo-err' : undefined}
+                onChange={(e) => { setNombre(e.target.value); if (error) onError(null); }} />
+            <Button variant="primary" type="submit">Crear</Button>
+        </InputGroup>
+    );
+}
+
+function Tarjeta({ f, puedeEditar, borrando, onBorrando, onAbrir, onBorrar }) {
+    const est = estadoDe(f);
+    const palabras = f.palabras_clave.filter(Boolean);
+    return (
+        <Card as="article" className="fcard fl-card" aura={BRAND_AURA} soft>
+            <div className="fcard-cab">
+                <span className="icono-m"><Workflow /></span>
+                <button type="button" className="fcard-nom" onClick={() => onAbrir(f.id)}>{f.nombre}</button>
+            </div>
+            <div className="fl-estado">
+                <Status color={est.color}>{est.texto}</Status>
+                {f.version && f.cambios_sin_publicar && (
+                    <Status color="var(--warning)" data-tip="Cambios sin publicar|Lo que corre es la última versión publicada.">Sin publicar</Status>
+                )}
+            </div>
+            <div className="fl-palabras" aria-label="Palabras clave">
+                {palabras.length
+                    ? palabras.map((p) => <Chip key={p} subtle icon={<Hash />}>{p}</Chip>)
+                    : <Chip color="var(--warning)" subtle>Sin palabras clave</Chip>}
+            </div>
+            <div className="datos">
+                <div className="dato"><b>{f.nodos}</b><span>{f.nodos === 1 ? 'Paso' : 'Pasos'}</span></div>
+                <div className="dato"><b>{f.ejecuciones_abiertas}</b><span>En curso</span></div>
+                <div className="dato"><b>{f.version ? `v${f.version}` : '–'}</b><span>Publicada</span></div>
+            </div>
+            {borrando ? (
+                <ConfirmDelete name={f.nombre} detail="No se puede deshacer." icon={<Trash2 />} onCancel={() => onBorrando(null)} onConfirm={() => onBorrar(f)} />
+            ) : (
+                <div className="fcard-pie">
+                    <span className="t-cap mut40">{fecha(f.actualizado_en)}</span>
+                    <div className="der">
+                        {/* Uno publicado ya corrió con leads: se pausa, no se borra. */}
+                        {puedeEditar && !f.version && (
+                            <IconButton label={`Eliminar ${f.nombre}`} icon={<Trash2 />} size="sm" danger data-tip="Eliminar" onClick={() => onBorrando(f.id)} />
+                        )}
+                        <Button icon={puedeEditar ? <Pencil /> : <Eye />} onClick={() => onAbrir(f.id)}>{puedeEditar ? 'Editar' : 'Ver'}</Button>
+                    </div>
+                </div>
+            )}
+        </Card>
     );
 }
 
@@ -39,6 +86,9 @@ export default function Flujos({ puedeEditar }) {
     const [flujos, setFlujos] = useState(null);
     const [error, setError] = useState(null);
     const [abierto, setAbierto] = useState(null);
+    const [filtro, setFiltro] = useState('todos');
+    const [borrando, setBorrando] = useState(null);
+    const [errNuevo, setErrNuevo] = useState(null);
 
     const cargar = useCallback(() => {
         inboxApi.flujos().then(setFlujos).catch(() => setError('No se pudieron cargar los flujos'));
@@ -49,16 +99,17 @@ export default function Flujos({ puedeEditar }) {
         try {
             setAbierto(await inboxApi.flujo(id));
         } catch {
-            setError('No se pudo abrir el flujo');
+            toast('No se pudo abrir el flujo', 'error');
         }
     };
     const borrar = async (flujo) => {
-        if (!window.confirm(`¿Borrar «${flujo.nombre}»? No se puede deshacer.`)) return;
         try {
             await inboxApi.borrarFlujo(flujo.id);
+            setBorrando(null);
+            toast(`${flujo.nombre} eliminado`);
             cargar();
         } catch (e) {
-            setError(e.response?.data?.message || 'No se pudo borrar');
+            toast(e.response?.data?.message || 'No se pudo eliminar', 'error');
         }
     };
 
@@ -66,42 +117,49 @@ export default function Flujos({ puedeEditar }) {
         return <EditorFlujo flujoInicial={abierto} lectura={!puedeEditar} onVolver={() => { setAbierto(null); cargar(); }} />;
     }
 
+    const cuenta = (id) => (flujos || []).filter((f) => id === 'todos' || f.estado === id).length;
+    const visibles = (flujos || []).filter((f) => filtro === 'todos' || f.estado === filtro);
+
+    let cuerpo;
+    if (error) cuerpo = <EmptyState icon={<Workflow size={22} />}>{error}</EmptyState>;
+    else if (flujos === null) cuerpo = <EmptyState>Cargando…</EmptyState>;
+    else if (!flujos.length) {
+        cuerpo = (
+            <EmptyState icon={<Workflow size={22} />} title="Todavía no hay flujos" aura={BRAND_AURA}>
+                Cada flujo arranca con una palabra clave y responde con mensajes, botones y esperas. Lo que corre es la última versión publicada.
+                {puedeEditar ? ' Creá el primero desde arriba.' : ''}
+            </EmptyState>
+        );
+    } else if (!visibles.length) {
+        cuerpo = <EmptyState>No hay flujos en «{FILTROS.find((x) => x[0] === filtro)[1]}».</EmptyState>;
+    } else {
+        cuerpo = (
+            <Grid variant="cards">
+                {visibles.map((f) => (
+                    <Tarjeta key={f.id} f={f} puedeEditar={puedeEditar} borrando={borrando === f.id}
+                        onBorrando={setBorrando} onAbrir={abrir} onBorrar={borrar} />
+                ))}
+            </Grid>
+        );
+    }
+
     return (
-        <div className="fl">
-            <div className="fl-cab">
-                <p className="t-sm mut">Cada flujo arranca con una palabra clave y responde con mensajes, botones y esperas. Lo que corre es la última versión publicada.</p>
-                {puedeEditar && <Nuevo onCreado={(f) => setAbierto(f)} />}
-            </div>
-            {error && <p className="campo-err" role="alert">{error}</p>}
-            {flujos === null && !error && <div className="panel vacio"><p className="t-sm mut">Cargando…</p></div>}
-            {flujos?.length === 0 && (
-                <div className="panel vacio">
-                    <Workflow size={22} />
-                    <p className="t-sm mut">Todavía no hay flujos.{puedeEditar ? ' Creá el primero con «Nuevo flujo».' : ''}</p>
+        <>
+            <HeaderActions>
+                <div className="barra">
+                    {flujos?.length > 0 && (
+                        <Segmented size="sm" label="Filtrar por estado" value={filtro} onChange={setFiltro}
+                            options={FILTROS.map(([value, label]) => ({
+                                value,
+                                label: <>{label}<span className="fl-cuenta">{cuenta(value)}</span></>,
+                                icon: value === 'todos' ? null : <i className="fl-punto" style={{ '--c': ESTADOS[value].color }} />,
+                            }))} />
+                    )}
+                    {puedeEditar && <Nuevo onCreado={(f) => setAbierto(f)} error={errNuevo} onError={setErrNuevo} />}
                 </div>
-            )}
-            {flujos?.length > 0 && (
-                <ul className="fl-lista">
-                    {flujos.map((f) => (
-                        <li key={f.id} className="panel panel--sm fl-item">
-                            <button type="button" className="fl-abrir" onClick={() => abrir(f.id)}>
-                                <span className="fl-nombre t-h3">{f.nombre}</span>
-                                <span className="fl-meta t-sm mut">
-                                    {f.palabras_clave.filter(Boolean).length ? f.palabras_clave.filter(Boolean).join(' · ') : 'Sin palabras clave'}
-                                    {' · '}{f.nodos} {f.nodos === 1 ? 'paso' : 'pasos'}
-                                    {f.ejecuciones_abiertas > 0 && ` · ${f.ejecuciones_abiertas} en curso`}
-                                </span>
-                            </button>
-                            <span className={`chip ef-estado ef-estado--${f.estado}`}>{ESTADO[f.estado] || f.estado}{f.version ? ` · v${f.version}` : ''}</span>
-                            {f.version && f.cambios_sin_publicar && <span className="chip chip--n ef-sucio">Cambios sin publicar</span>}
-                            <span className="t-sm mut fl-fecha">{fecha(f.actualizado_en)}</span>
-                            {puedeEditar && !f.version && (
-                                <button type="button" className="ibtn ibtn--peligro" aria-label={`Borrar ${f.nombre}`} onClick={() => borrar(f)}><Trash2 size={15} /></button>
-                            )}
-                        </li>
-                    ))}
-                </ul>
-            )}
-        </div>
+            </HeaderActions>
+            {errNuevo && <FieldError id="fl-nuevo-err">{errNuevo}</FieldError>}
+            {cuerpo}
+        </>
     );
 }

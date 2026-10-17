@@ -1,4 +1,5 @@
-// Estados de una pantalla y avisos: vacío/cargando, confirmación de borrado y la etiqueta (chip).
+// Estados de una pantalla y avisos: vacío/cargando, confirmación de borrado, la etiqueta (chip) y el
+// estado con punto (status).
 
 import clsx from 'clsx';
 import { Button } from './Button';
@@ -42,5 +43,15 @@ export function Chip({ as: Tag = 'span', color, icon, subtle = false, square = f
             style={color ? { '--c': color, ...style } : style} {...(Tag === 'button' ? { type: 'button' } : null)} {...rest}>
             {icon}{children}
         </Tag>
+    );
+}
+
+// Estado con un punto de color adelante («● ACTIVO»). Más liviano que un Chip: para el estado de algo
+// en su tarjeta o en la barra de la cabecera.
+export function Status({ color, className, style, children, ...rest }) {
+    return (
+        <span className={clsx('ui-status', className)} style={color ? { '--c': color, ...style } : style} {...rest}>
+            <i aria-hidden="true" />{children}
+        </span>
     );
 }

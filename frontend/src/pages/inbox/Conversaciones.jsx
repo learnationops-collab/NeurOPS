@@ -1,10 +1,17 @@
 // Sección Conversaciones: cada persona que le escribió a la cuenta y su historial (lo que guardó el motor).
+// El buscador y el filtro van en la cabecera; el filtro es local, sobre lo que trae la búsqueda.
 // Por ahora solo se mira: contestar desde acá llega cuando el Inbox reemplace a Kommo.
-import { useEffect, useState } from 'react';
-import { Bot, MessageSquare, Search, User } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Bot, MessageSquare, PauseCircle, Search, User, Workflow } from 'lucide-react';
+import { Avatar, Chip, EmptyState, HeaderActions, InputGroup, Panel, Segmented } from '../../components/standard';
 import { inboxApi } from './api';
 
 const ORIGEN = { lead: 'Lead', motor: 'Bot', otro: 'Equipo' };
+const FILTROS = [
+    { value: 'todas', label: 'Todas', cumple: () => true },
+    { value: 'sin_responder', label: 'Sin responder', cumple: (c) => c.ultimo_de === 'lead' },
+    { value: 'bot_pausado', label: 'Bot pausado', cumple: (c) => c.bot_pausado },
+];
 
 function hora(iso) {
     if (!iso) return '';
@@ -20,25 +27,32 @@ function quien(c) {
 function Chat({ id }) {
     const [datos, setDatos] = useState(null);
     const [error, setError] = useState(null);
+    const lista = useRef(null);
+    // Cada conversación monta un Chat nuevo (key={id}): arranca vacío, sin limpiar el estado acá.
     useEffect(() => {
-        setDatos(null);
         inboxApi.conversacion(id).then(setDatos).catch(() => setError('No se pudo cargar la conversación'));
     }, [id]);
-    if (error) return <p className="campo-err" role="alert">{error}</p>;
-    if (!datos) return <p className="t-sm mut cv-vacio">Cargando…</p>;
+    // Abre en el último mensaje, como cualquier chat.
+    useEffect(() => { if (lista.current) lista.current.scrollTop = lista.current.scrollHeight; }, [datos]);
+    if (error) return <EmptyState icon={<MessageSquare size={22} />}>{error}</EmptyState>;
+    if (!datos) return <EmptyState>Cargando…</EmptyState>;
     const { contacto, ejecucion, mensajes } = datos;
     const variables = Object.entries(contacto.variables || {}).filter(([k]) => !k.startsWith('_'));
+    const pausado = contacto.bot_pausado_hasta && new Date(contacto.bot_pausado_hasta) > new Date();
     return (
         <div className="cv-chat">
             <div className="cv-chat-cab">
+                <Avatar name={contacto.username || contacto.nombre || '?'} />
                 <h3 className="t-h3">{quien(contacto)}</h3>
-                {ejecucion && <span className="chip chip--n">{ejecucion.flujo} · {ejecucion.estado.replace('_', ' ')}</span>}
-                {contacto.bot_pausado_hasta && new Date(contacto.bot_pausado_hasta) > new Date() && <span className="chip chip--n">Bot pausado</span>}
+                {ejecucion && <Chip color="var(--brand-secondary)" subtle icon={<Workflow />}>{ejecucion.flujo} · {ejecucion.estado.replace('_', ' ')}</Chip>}
+                {pausado && <Chip color="var(--warning)" subtle icon={<PauseCircle />} data-tip={`Bot pausado|Hasta ${hora(contacto.bot_pausado_hasta)}`}>Bot pausado</Chip>}
                 {variables.length > 0 && (
-                    <p className="t-sm mut cv-variables">{variables.map(([k, v]) => `${k}: ${v}`).join(' · ')}</p>
+                    <div className="cv-variables" aria-label="Variables">
+                        {variables.map(([k, v]) => <Chip key={k} subtle>{k}: {String(v)}</Chip>)}
+                    </div>
                 )}
             </div>
-            <ol className="cv-mensajes">
+            <ol className="cv-mensajes" ref={lista}>
                 {mensajes.map((m) => (
                     <li key={m.id} className={`cv-burbuja cv-burbuja--${m.direccion} cv-burbuja--${m.origen}`}>
                         {m.texto && <p>{m.texto}</p>}
@@ -52,9 +66,31 @@ function Chat({ id }) {
     );
 }
 
+function Item({ c, elegida, onElegir }) {
+    return (
+        <li>
+            <button type="button" className="cv-item" aria-pressed={elegida} onClick={() => onElegir(c.id)}>
+                <Avatar name={c.username || c.nombre || '?'} size="sm" />
+                <span className="cv-item-cuerpo">
+                    <span className="cv-item-cab">
+                        <strong>{quien(c)}</strong>
+                        <span className="mut">{hora(c.ultimo_en)}</span>
+                    </span>
+                    <span className="cv-item-texto mut">
+                        {c.ultimo_de === 'motor' ? <Bot size={12} /> : c.ultimo_de === 'otro' ? <User size={12} /> : null}
+                        <span>{c.ultimo_texto || '…'}</span>
+                        {c.ultimo_de === 'lead' && <i className="cv-nuevo" title="Sin responder" />}
+                    </span>
+                </span>
+            </button>
+        </li>
+    );
+}
+
 export default function Conversaciones() {
     const [lista, setLista] = useState(null);
     const [buscar, setBuscar] = useState('');
+    const [filtro, setFiltro] = useState('todas');
     const [elegida, setElegida] = useState(null);
     const [error, setError] = useState(null);
 
@@ -65,38 +101,45 @@ export default function Conversaciones() {
         return () => clearTimeout(t);
     }, [buscar]);
 
+    const cuenta = (f) => (lista || []).filter(f.cumple).length;
+    const visibles = (lista || []).filter(FILTROS.find((f) => f.value === filtro).cumple);
+
+    let listado;
+    if (error) listado = <EmptyState>{error}</EmptyState>;
+    else if (lista === null) listado = <EmptyState>Cargando…</EmptyState>;
+    else if (!lista.length) {
+        listado = (
+            <EmptyState icon={<MessageSquare size={22} />}>
+                {buscar.trim() ? 'Nadie coincide con la búsqueda.' : 'Todavía no hay conversaciones. Aparecen cuando el motor empieza a procesar los mensajes de Instagram.'}
+            </EmptyState>
+        );
+    } else if (!visibles.length) listado = <EmptyState>No hay conversaciones en «{FILTROS.find((f) => f.value === filtro).label}».</EmptyState>;
+    else {
+        listado = (
+            <ul>
+                {visibles.map((c) => <Item key={c.id} c={c} elegida={elegida === c.id} onElegir={setElegida} />)}
+            </ul>
+        );
+    }
+
     return (
-        <div className="cv">
-            <aside className="cv-lista panel panel--sm">
-                <label className="cv-buscar">
-                    <Search size={15} />
-                    <input className="input" value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Buscar por usuario" />
-                </label>
-                {error && <p className="campo-err" role="alert">{error}</p>}
-                {lista?.length === 0 && (
-                    <p className="t-sm mut cv-vacio">
-                        Todavía no hay conversaciones. Aparecen cuando el motor empieza a procesar los mensajes de Instagram.
-                    </p>
-                )}
-                <ul>
-                    {lista?.map((c) => (
-                        <li key={c.id}>
-                            <button type="button" className={`cv-item${elegida === c.id ? ' cv-item--sel' : ''}`} onClick={() => setElegida(c.id)}>
-                                <span className="cv-item-cab"><strong>{quien(c)}</strong><span className="mut">{hora(c.ultimo_en)}</span></span>
-                                <span className="cv-item-texto mut">
-                                    {c.ultimo_de === 'motor' ? <Bot size={12} /> : c.ultimo_de === 'otro' ? <User size={12} /> : null}
-                                    {c.ultimo_texto || '…'}
-                                </span>
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            </aside>
-            <section className="cv-detalle panel panel--sm">
-                {elegida ? <Chat id={elegida} /> : (
-                    <div className="vacio cv-vacio"><MessageSquare size={22} /><p className="t-sm mut">Elegí una conversación.</p></div>
-                )}
-            </section>
-        </div>
+        <>
+            <HeaderActions>
+                <div className="barra">
+                    <Segmented size="sm" label="Filtrar conversaciones" value={filtro} onChange={setFiltro}
+                        options={FILTROS.map((f) => ({ value: f.value, label: <>{f.label}<span className="fl-cuenta">{cuenta(f)}</span></> }))} />
+                    <InputGroup className="cv-buscar" prefix={<Search size={16} />}>
+                        <label className="sr" htmlFor="cv-buscar">Buscar por usuario</label>
+                        <input id="cv-buscar" value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Buscar por usuario" autoComplete="off" />
+                    </InputGroup>
+                </div>
+            </HeaderActions>
+            <div className="cv">
+                <Panel as="aside" size="sm" className="cv-lista" aria-label="Conversaciones">{listado}</Panel>
+                <Panel as="section" size="sm" className="cv-detalle">
+                    {elegida ? <Chat key={elegida} id={elegida} /> : <EmptyState icon={<MessageSquare size={22} />}>Elegí una conversación.</EmptyState>}
+                </Panel>
+            </div>
+        </>
     );
 }

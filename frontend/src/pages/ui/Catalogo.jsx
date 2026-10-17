@@ -9,7 +9,7 @@ import '../agendas_v2/thalamus.css';
 import '../comercial/comercial.css';
 import './catalogo.css';
 import {
-    Avatar, BRAND_AURA, Button, Calendar, CalendarEvent, calendarY, Card, Chip, ModalHeader, TextArea, toast, Toaster, Tooltip, ConfirmDelete, EmptyState, FieldError, Grid, IconButton, Input, InputGroup, Kpi, LinkButton, Modal, PageHeader, Panel, Segmented, Select,
+    Avatar, BRAND_AURA, Button, Calendar, CalendarEvent, calendarY, Card, Chip, Status, ModalHeader, TextArea, toast, Toaster, Tooltip, ConfirmDelete, EmptyState, FieldError, Grid, IconButton, Input, InputGroup, Kpi, LinkButton, Modal, PageHeader, Panel, Segmented, Select,
     Stepper, Switch,
 } from '../../components/standard';
 
@@ -161,6 +161,18 @@ const SECCIONES = [
                 <Chip subtle>30 min</Chip>
                 <Chip color="var(--ln-danger, #E85C4A)" square icon={<X />} title="Filtra" />
                 <Chip as="button" subtle color="var(--ui-brand)" aria-pressed="true" icon={<Plus />}>Filtro</Chip>
+            </Demo>
+        ),
+    },
+    {
+        nombre: 'Status',
+        para: 'Estado con un punto de color, más liviano que un Chip: el estado de algo en su tarjeta o en la barra de la cabecera.',
+        props: 'color',
+        demo: () => (
+            <Demo titulo="Estados">
+                <Status color="var(--ln-success, #2FBF8F)">Activo</Status>
+                <Status color="var(--ln-warning, #D9A441)">Sin publicar</Status>
+                <Status>Borrador</Status>
             </Demo>
         ),
     },

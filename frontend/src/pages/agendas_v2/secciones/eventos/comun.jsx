@@ -8,7 +8,7 @@ import { almacen, usePermisos } from '../../data/hooks';
 import { Icono } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
 import { copiarTexto } from '../../ui/toast';
-import { Input } from '../../../../components/standard';
+import { Input, Status } from '../../../../components/standard';
 
 // Slug de un origen en el link (?o=...): el nombre del setter o del origen.
 export function slugOrigen(d, o) { return slugify(nombreOrigen(d, o)) || o.id; }
@@ -142,7 +142,7 @@ export function textoEstrategia(d, g) {
 }
 
 export function EstadoEv({ est }) {
-    return <span className="estado-ev" style={{ '--c': est.c }}><i />{est.n}</span>;
+    return <Status color={est.c}>{est.n}</Status>;
 }
 
 /**

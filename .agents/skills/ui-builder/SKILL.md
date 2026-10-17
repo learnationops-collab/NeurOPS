@@ -83,6 +83,7 @@ Import: `import { Button, … } from '<ruta>/components/standard';`
 | `Tooltip` | Ayuda al pasar el mouse | `<Tooltip />` una vez en la app; cualquier elemento con `data-tip="Título|detalle"` |
 | `Avatar` | Foto o iniciales sobre un color | `name`, `photo`, `color`, `size`: `md` · `lg` · `sm` · `xs` |
 | `Chip` | Etiqueta de estado o categoría | `color`, `icon`, `subtle`, `square` (solo ícono), `as="button"` (filtro con `aria-pressed`) |
+| `Status` | Estado con punto de color («● ACTIVO»), más liviano que un Chip: en la tarjeta o en la barra de la cabecera | `color` |
 
 Todo lo que no es prop (`onClick`, `disabled`, `ref`, `data-nav`, `autoFocus`, `title`, `data-tip`…) pasa directo al elemento HTML.
 
@@ -122,4 +123,4 @@ Si una pantalla necesita ajustar el componente según el contexto (por ejemplo, 
 - Hay tres cabeceras de modal con diseño propio (Horario `hor-cab`, Configuración `conf-cab` con pestañas, Funnel `fm-cab`): candidatas a unificar con `ModalHeader` (cambia lo que se ve).
 - Calendar: los tonos de las tarjetas (llamada, libre, margen, ocupado, cancelada, hueco) viven en thalamus.css. Cuando otra pantalla use el calendario, pasarlos a variantes genéricas de CalendarEvent (`tone`: solid · soft · muted · success · dashed · hatched).
 - Calendar vista de mes: falta. La usan la página pública del lead (PasoCalendario) y la ficha del closer (SelectorFecha); son pantallas activas, migrar con cuidado.
-- Inbox: pasar su UI a los componentes (ya comparte el CSS de Thalamus; arma su cabecera a mano).
+- Inbox (17/10): ya usa los componentes estándar. Quedan las mejoras de diseño propias (bandeja de conversaciones, errores marcados en los nodos, vista previa del mensaje).

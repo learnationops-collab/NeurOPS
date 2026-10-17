@@ -1,15 +1,19 @@
-// El lienzo de un flujo: cajas y flechas (React Flow) + el panel del nodo elegido.
+// El lienzo de un flujo: cajas y flechas (React Flow) que ocupan todo el ancho, con la paleta de pasos y
+// el inspector del nodo elegido flotando encima (como el Flujo de un evento en Thalamus). La barra
+// (volver, nombre, estado, Guardar y Publicar) va en la fila del título de la página (HeaderActions).
 // Lo que se edita es el BORRADOR: «Guardar» lo deja en el servidor; «Publicar» lo pone a correr
 // (el servidor lo valida y devuelve los errores en castellano).
 import { useCallback, useEffect, useState } from 'react';
 import {
-    addEdge, applyEdgeChanges, applyNodeChanges, Background, Controls, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow,
+    addEdge, applyEdgeChanges, applyNodeChanges, Background, Controls, MiniMap, Panel as RFPanel, ReactFlow, ReactFlowProvider, useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { AlertTriangle, ArrowLeft, Clock, Flag, GitBranch, MessageSquare, Pause, Play, Save, Send, Zap } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Clock, Flag, GitBranch, LogOut, MessageSquare, Pause, Play, Save, Send, Zap } from 'lucide-react';
+import { Button, HeaderActions, IconButton, Input, Modal, ModalHeader, Status, toast } from '../../../components/standard';
 import { aGrafo, aLienzo, conectar, INICIO, nodoNuevo } from './grafoFlujo';
 import { TIPOS_DE_NODO } from './nodos';
 import Panel from './Panel';
+import { estadoDe } from '../estadoFlujo';
 import { inboxApi } from '../api';
 
 const AGREGAR = [
@@ -20,8 +24,6 @@ const AGREGAR = [
     { tipo: 'fin', label: 'Fin', Icono: Flag },
 ];
 
-const ESTADO = { borrador: 'Borrador', activo: 'Activo', pausado: 'Pausado' };
-
 function Lienzo({ flujoInicial, lectura, onVolver, onCambio }) {
     const [nodos, setNodos] = useState(() => aLienzo(flujoInicial.grafo).nodos);
     const [aristas, setAristas] = useState(() => aLienzo(flujoInicial.grafo).aristas);
@@ -29,7 +31,7 @@ function Lienzo({ flujoInicial, lectura, onVolver, onCambio }) {
     const [errores, setErrores] = useState(flujoInicial.errores || []);
     const [sucio, setSucio] = useState(false);
     const [ocupado, setOcupado] = useState(false);
-    const [aviso, setAviso] = useState(null);
+    const [salir, setSalir] = useState(false);
     const [nombre, setNombre] = useState(flujoInicial.nombre);
     const { screenToFlowPosition } = useReactFlow();
 
@@ -90,7 +92,6 @@ function Lienzo({ flujoInicial, lectura, onVolver, onCambio }) {
 
     const guardar = async () => {
         setOcupado(true);
-        setAviso(null);
         try {
             const datos = await inboxApi.guardarFlujo(flujo.id, { nombre: nombre.trim() || flujo.nombre, grafo: aGrafo(nodos, aristas) });
             setFlujo(datos);
@@ -99,7 +100,7 @@ function Lienzo({ flujoInicial, lectura, onVolver, onCambio }) {
             onCambio?.(datos);
             return datos;
         } catch (e) {
-            setAviso({ tipo: 'error', texto: e.response?.data?.message || 'No se pudo guardar' });
+            toast(e.response?.data?.message || 'No se pudo guardar', 'error');
             return null;
         } finally {
             setOcupado(false);
@@ -113,11 +114,11 @@ function Lienzo({ flujoInicial, lectura, onVolver, onCambio }) {
             const datos = await inboxApi.publicarFlujo(flujo.id);
             setFlujo((f) => ({ ...f, ...datos }));
             setErrores([]);
-            setAviso({ tipo: 'ok', texto: `Publicado: versión ${datos.version}` });
+            toast(`Publicado: versión ${datos.version}`);
             onCambio?.(datos);
         } catch (e) {
             setErrores(e.response?.data?.errores || []);
-            setAviso({ tipo: 'error', texto: e.response?.data?.message || 'No se pudo publicar' });
+            toast(e.response?.data?.message || 'No se pudo publicar', 'error');
         } finally {
             setOcupado(false);
         }
@@ -129,74 +130,92 @@ function Lienzo({ flujoInicial, lectura, onVolver, onCambio }) {
             setFlujo((f) => ({ ...f, ...datos }));
             onCambio?.(datos);
         } catch (e) {
-            setAviso({ tipo: 'error', texto: e.response?.data?.message || 'No se pudo cambiar el estado' });
+            toast(e.response?.data?.message || 'No se pudo cambiar el estado', 'error');
         } finally {
             setOcupado(false);
         }
     };
-    const volver = () => {
-        if (sucio && !window.confirm('Hay cambios sin guardar. ¿Salir igual?')) return;
-        onVolver();
-    };
+    const volver = () => { if (sucio) setSalir(true); else onVolver(); };
+    const guardarYSalir = async () => { if (await guardar()) onVolver(); };
 
     const deInicio = aristas.find((a) => a.source === INICIO)?.target;
 
+    const est = estadoDe(flujo);
+    const nErrores = errores.length;
+
     return (
-        <div className="ef">
-            <div className="ef-barra">
-                <button type="button" className="btn btn--linea btn--sm" onClick={volver}><ArrowLeft />Flujos</button>
-                <input className="input ef-nombre" value={nombre} disabled={lectura} aria-label="Nombre del flujo"
-                    onChange={(e) => { setNombre(e.target.value); marcar(); }} />
-                <span className={`chip ef-estado ef-estado--${flujo.estado}`}>
-                    {ESTADO[flujo.estado] || flujo.estado}{flujo.version ? ` · v${flujo.version}` : ''}
-                </span>
-                {sucio && <span className="chip chip--n ef-sucio">Sin guardar</span>}
-                {!sucio && flujo.cambios_sin_publicar && flujo.version && <span className="chip chip--n ef-sucio">Cambios sin publicar</span>}
-                <div className="ef-acciones">
+        <>
+            <HeaderActions replaceTitle>
+                <div className="barra">
+                    <Button icon={<ArrowLeft />} onClick={volver}>Flujos</Button>
+                    <Input className="ef-nombre" value={nombre} disabled={lectura} aria-label="Nombre del flujo" maxLength={150}
+                        onChange={(e) => { setNombre(e.target.value); marcar(); }} />
+                    <Status color={est.color}>{est.texto}</Status>
+                    {sucio && <Status color="var(--warning)">Sin guardar</Status>}
+                    {!sucio && flujo.cambios_sin_publicar && flujo.version && (
+                        <Status color="var(--warning)" data-tip="Cambios sin publicar|Lo que corre es la última versión publicada.">Sin publicar</Status>
+                    )}
                     {!lectura && (
-                        <>
-                            <div className="ef-agregar" role="group" aria-label="Agregar caja">
-                                {AGREGAR.map(({ tipo, label, Icono }) => (
-                                    <button key={tipo} type="button" className="btn btn--linea btn--sm" onClick={() => agregar(tipo)}><Icono />{label}</button>
-                                ))}
-                            </div>
-                            <button type="button" className="btn btn--linea btn--sm" onClick={guardar} disabled={ocupado || !sucio}><Save />Guardar</button>
+                        <div className="barra-der">
+                            <Button icon={<Save />} onClick={guardar} disabled={ocupado || !sucio}>Guardar</Button>
                             {flujo.version && (
-                                <button type="button" className="btn btn--linea btn--sm" onClick={pausarOActivar} disabled={ocupado}>
-                                    {flujo.estado === 'activo' ? <><Pause />Pausar</> : <><Play />Activar</>}
-                                </button>
+                                <Button icon={flujo.estado === 'activo' ? <Pause /> : <Play />} onClick={pausarOActivar} disabled={ocupado}>
+                                    {flujo.estado === 'activo' ? 'Pausar' : 'Activar'}
+                                </Button>
                             )}
-                            <button type="button" className="btn btn--cta btn--sm" onClick={publicar} disabled={ocupado}><Send />Publicar</button>
-                        </>
+                            <Button variant="primary" icon={<Send />} onClick={publicar} disabled={ocupado}>Publicar</Button>
+                        </div>
                     )}
                 </div>
+            </HeaderActions>
+            <div className="ef-lienzo">
+                <ReactFlow nodes={nodos} edges={aristas} nodeTypes={TIPOS_DE_NODO}
+                    onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect}
+                    nodesDraggable={!lectura} nodesConnectable={!lectura} elementsSelectable
+                    deleteKeyCode={lectura ? null : ['Backspace', 'Delete']}
+                    fitView fitViewOptions={{ padding: 0.2 }} minZoom={0.2} proOptions={{ hideAttribution: true }}
+                    defaultEdgeOptions={{ type: 'smoothstep' }}>
+                    <Background gap={22} size={1.2} />
+                    <Controls showInteractive={false} />
+                    {/* Con un nodo elegido, el inspector ocupa la derecha: el minimapa se esconde. */}
+                    {!seleccion && <MiniMap pannable zoomable className="ef-mapa" />}
+                    {!lectura && (
+                        <RFPanel position="top-left" className="ef-paleta" role="group" aria-label="Agregar paso">
+                            {AGREGAR.map(({ tipo, label, Icono }) => (
+                                <IconButton key={tipo} label={`Agregar ${label}`} icon={<Icono />} size="sm" data-tip={label} onClick={() => agregar(tipo)} />
+                            ))}
+                            {!seleccion && <span className="ef-ayuda">Arrastrá desde una salida hasta otra caja para conectarlas.</span>}
+                        </RFPanel>
+                    )}
+                    {nErrores > 0 && (
+                        <RFPanel position="top-center">
+                            <details className="ef-errores">
+                                <summary><AlertTriangle size={14} />{nErrores === 1 ? '1 cosa para resolver antes de publicar' : `${nErrores} cosas para resolver antes de publicar`}</summary>
+                                <ul>{errores.map((e) => <li key={e}>{e}</li>)}</ul>
+                            </details>
+                        </RFPanel>
+                    )}
+                </ReactFlow>
+                {seleccion && (
+                    <Panel seleccion={seleccion} lectura={lectura}
+                        onCambiarNodo={cambiarNodo} onCambiarDisparadores={cambiarDisparadores}
+                        onBorrar={borrarSeleccion} onCerrar={() => setNodos((ns) => ns.map((n) => ({ ...n, selected: false })))}
+                        esInicioDelFlujo={seleccion.id === deInicio} onHacerInicio={hacerInicio} />
+                )}
             </div>
-            {aviso && <p className={`ef-aviso ef-aviso--${aviso.tipo}`} role="status">{aviso.texto}</p>}
-            {errores.length > 0 && (
-                <details className="ef-errores" open={aviso?.tipo === 'error'}>
-                    <summary><AlertTriangle size={14} />{errores.length === 1 ? '1 cosa para resolver antes de publicar' : `${errores.length} cosas para resolver antes de publicar`}</summary>
-                    <ul>{errores.map((e) => <li key={e}>{e}</li>)}</ul>
-                </details>
+            {salir && (
+                <Modal onClose={() => setSalir(false)} className="ef-salir" labelledBy="ef-salir-t">
+                    <ModalHeader titleId="ef-salir-t" title="Hay cambios sin guardar" subtitle="Si salís ahora, se pierden." onClose={() => setSalir(false)} />
+                    <div className="barra">
+                        <Button onClick={() => setSalir(false)}>Seguir editando</Button>
+                        <div className="barra-der">
+                            <Button variant="dangerSolid" icon={<LogOut />} onClick={onVolver}>Salir sin guardar</Button>
+                            <Button variant="primary" icon={<Save />} onClick={guardarYSalir} disabled={ocupado}>Guardar y salir</Button>
+                        </div>
+                    </div>
+                </Modal>
             )}
-            <div className="ef-cuerpo">
-                <div className="ef-lienzo">
-                    <ReactFlow nodes={nodos} edges={aristas} nodeTypes={TIPOS_DE_NODO}
-                        onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect}
-                        nodesDraggable={!lectura} nodesConnectable={!lectura} elementsSelectable
-                        deleteKeyCode={lectura ? null : ['Backspace', 'Delete']}
-                        fitView fitViewOptions={{ padding: 0.2 }} minZoom={0.2} proOptions={{ hideAttribution: true }}
-                        defaultEdgeOptions={{ type: 'smoothstep' }}>
-                        <Background gap={24} size={1} />
-                        <Controls showInteractive={false} />
-                        <MiniMap pannable zoomable className="ef-mapa" />
-                    </ReactFlow>
-                </div>
-                <Panel seleccion={seleccion} lectura={lectura}
-                    onCambiarNodo={cambiarNodo} onCambiarDisparadores={cambiarDisparadores}
-                    onBorrar={borrarSeleccion} onCerrar={() => setNodos((ns) => ns.map((n) => ({ ...n, selected: false })))}
-                    esInicioDelFlujo={seleccion?.id === deInicio} onHacerInicio={hacerInicio} />
-            </div>
-        </div>
+        </>
     );
 }
 

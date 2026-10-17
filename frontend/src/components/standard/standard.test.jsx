@@ -2,7 +2,7 @@ import { createRef } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { Button, Card, Chip, ConfirmDelete, EmptyState, HeaderActions, IconButton, LinkButton, PageHeader } from './index';
+import { Button, Card, Chip, ConfirmDelete, EmptyState, HeaderActions, IconButton, LinkButton, PageHeader, Status } from './index';
 
 describe('Button', () => {
     it('chico y secundario por defecto, type="button"', () => {
@@ -96,5 +96,13 @@ describe('EmptyState, Card y Chip', () => {
         const c = screen.getByText('Info');
         expect(c.className).toBe('ui-chip ui-chip--subtle');
         expect(c.style.getPropertyValue('--c')).toBe('var(--info)');
+    });
+
+    it('Status con su punto de color', () => {
+        render(<Status color="var(--success)">Activo</Status>);
+        const st = screen.getByText('Activo');
+        expect(st.className).toBe('ui-status');
+        expect(st.style.getPropertyValue('--c')).toBe('var(--success)');
+        expect(st.querySelector('i').getAttribute('aria-hidden')).toBe('true');
     });
 });
