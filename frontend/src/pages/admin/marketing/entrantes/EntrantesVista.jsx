@@ -8,7 +8,7 @@ import ListaConfigurable from '../../../../components/listas/ListaConfigurable';
 import Cifra from '../../../comercial/components/Cifra';
 import { EsqueletoFilas, EsqueletoTablero, PanelCab, Tip } from '../../../comercial/components/Shared';
 import {
-    AGRUPABLES, COLUMNAS, ESTADOS, FACETAS, ORDEN_ESTADOS, Estado, buscarEnEntrante, categoriaDe, fechaHora,
+    AGRUPABLES, COLUMNAS, FACETAS, ORDEN_ESTADOS, Estado, buscarEnEntrante, fechaHora,
 } from './columnas';
 import './entrantes.css';
 
@@ -41,48 +41,6 @@ const Kpi = ({ titulo, valor, sub, tip, i }) => {
     );
 };
 
-/** Los pendientes (en conversación + sin respuesta) por el último mensaje que les mandó ManyChat. */
-const PorPaso = ({ filas }) => {
-    const pasos = useMemo(() => {
-        const pendientes = filas.filter((f) => f.estado === 'en_conversacion' || f.estado === 'sin_respuesta');
-        const mapa = new Map();
-        pendientes.forEach((f) => {
-            const k = f.ultimo_enviado?.titulo || 'Sin mensaje';
-            const p = mapa.get(k) || { paso: k, categoria: categoriaDe(f.ultimo_enviado), en_conversacion: 0, sin_respuesta: 0 };
-            p[f.estado] += 1;
-            mapa.set(k, p);
-        });
-        const lista = [...mapa.values()].map((p) => ({ ...p, total: p.en_conversacion + p.sin_respuesta }));
-        return { lista: lista.sort((a, b) => b.total - a.total), total: pendientes.length };
-    }, [filas]);
-    if (!pasos.total) return null;
-    const max = Math.max(...pasos.lista.map((p) => p.total));
-    return (
-        <section className="panel en-pasos" aria-label="Pendientes por paso">
-            <PanelCab titulo="Pendientes por paso" tip="Dónde quedaron los que todavía no calificaron." />
-            <div className="en-pasos-lista">
-                {pasos.lista.map((p) => (
-                    <div key={p.paso} className="en-paso">
-                        <span className="en-paso-nombre">
-                            <span className="trunc">{p.paso}</span>
-                            {p.categoria && <small className="mut40">{p.categoria}</small>}
-                        </span>
-                        <span className="en-paso-barra" aria-hidden="true">
-                            <i style={{ width: `${(p.en_conversacion / max) * 100}%`, background: ESTADOS.en_conversacion.c }} />
-                            <i style={{ width: `${(p.sin_respuesta / max) * 100}%`, background: ESTADOS.sin_respuesta.c }} />
-                        </span>
-                        <span className="num en-paso-n">{num(p.total)}</span>
-                    </div>
-                ))}
-            </div>
-            <div className="mk-leyenda en-leyenda">
-                <span><i style={{ background: ESTADOS.en_conversacion.c }} />En conversación</span>
-                <span><i style={{ background: ESTADOS.sin_respuesta.c }} />Sin respuesta</span>
-            </div>
-        </section>
-    );
-};
-
 /** El historial de webhooks de una persona, de más nuevo a más viejo. */
 const CORREGIR = [
     { value: 'calificado', label: 'Calificado' },
@@ -90,6 +48,29 @@ const CORREGIR = [
     { value: 'sin_dato', label: 'Sin dato' },
 ];
 const calificacionDe = (estado) => (estado === 'calificado' || estado === 'descalificado' ? estado : 'sin_dato');
+
+const idDe = (valor) => {
+    const id = String(valor ?? '').trim();
+    return id === '0' || id === '0.0' ? '' : id;
+};
+
+/**
+ * Un webhook en palabras. ManyChat manda el mensaje que envió (`id_option_send`) y el que contestó la
+ * persona (`id_option`); sin ninguno, es el inicio de la automatización. Con el mismo número en los dos
+ * es el envío, no una respuesta: llega a los 30 s del inicio, igual que el envío solo.
+ */
+const PasoDeHistoria = ({ h, nombreDe }) => {
+    const enviado = nombreDe(idDe(h.id_option_send));
+    const respondido = idDe(h.id_option) !== idDe(h.id_option_send) ? nombreDe(idDe(h.id_option)) : null;
+    if (!enviado && !respondido) return 'Inicio de la automatización';
+    return (
+        <>
+            {respondido && <>Respondió <b>{respondido}</b></>}
+            {respondido && enviado && ' · '}
+            {enviado && <>{respondido ? 'se' : 'Se'} le mandó <b>{enviado}</b></>}
+        </>
+    );
+};
 
 const Ficha = ({ fila, mensajes, onCerrar, onCorregir }) => {
     const reducir = useReducedMotion();
@@ -101,7 +82,7 @@ const Ficha = ({ fila, mensajes, onCerrar, onCorregir }) => {
             .catch((e) => { if (e?.name !== 'CanceledError') setHistoria([]); });
         return () => control.abort();
     }, [fila.lead_id]);
-    const nombreDe = (id) => (id && id !== '0' ? (mensajes[id]?.titulo || `Mensaje ${id}`) : null);
+    const nombreDe = (id) => (id ? (mensajes[id]?.titulo || `Mensaje ${id}`) : null);
     return (
         <motion.div className="hundido en-ficha" aria-label={`Historial de ${fila.nombre || fila.ig}`}
             initial={reducir ? false : { opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
@@ -126,10 +107,7 @@ const Ficha = ({ fila, mensajes, onCerrar, onCorregir }) => {
                     {historia.map((h) => (
                         <li key={h.id}>
                             <span className="num mut40">{fechaHora(h.created_at)}</span>
-                            <span className="en-historia-paso">
-                                {nombreDe(h.id_option_send) ? <>Se le mandó <b>{nombreDe(h.id_option_send)}</b></> : 'Webhook'}
-                                {nombreDe(h.id_option) && <> · respondió <b>{nombreDe(h.id_option)}</b></>}
-                            </span>
+                            <span className="en-historia-paso"><PasoDeHistoria h={h} nombreDe={nombreDe} /></span>
                             {h.qualification === 'true' && <Estado estado="calificado" />}
                             {h.qualification === 'false' && <Estado estado="descalificado" />}
                         </li>
@@ -189,8 +167,6 @@ const EntrantesVista = ({ desde, hasta, version = 0 }) => {
                     tip="Todavía sin calificar."
                     sub={`${num(cuenta.en_conversacion)} en conversación · ${num(cuenta.sin_respuesta)} sin respuesta`} />
             </div>
-
-            <PorPaso filas={filas} />
 
             <section className="panel en-lista" aria-label="Entrantes">
                 <PanelCab titulo="Leads entrantes" tip="Una fila por persona. Clic: su historial." />

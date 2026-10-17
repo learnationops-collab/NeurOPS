@@ -8,21 +8,6 @@
 .dc-shell .en-celda { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
 .dc-shell .en-celda small { font-size: 11px; }
 
-/* Pendientes por paso: nombre · barra apilada · cantidad, en columnas fijas para que nada se monte. */
-.dc-shell .en-pasos-lista { display: grid; gap: var(--s2); margin-top: var(--s3); }
-.dc-shell .en-paso {
-    display: grid; grid-template-columns: minmax(120px, 220px) minmax(0, 1fr) 56px;
-    align-items: center; gap: var(--s3); min-height: 32px;
-}
-.dc-shell .en-paso-nombre { display: flex; flex-direction: column; min-width: 0; font-size: 13px; font-weight: 700; }
-.dc-shell .en-paso-nombre small { font-size: 11px; font-weight: 600; }
-.dc-shell .en-paso-barra {
-    display: flex; height: 10px; border-radius: 99px; overflow: hidden; background: var(--hundido);
-}
-.dc-shell .en-paso-barra i { display: block; height: 100%; transition: width .5s cubic-bezier(.22, .7, .2, 1); }
-.dc-shell .en-paso-n { text-align: right; font-weight: 800; }
-.dc-shell .en-leyenda { margin-top: var(--s3); display: flex; flex-wrap: wrap; gap: var(--s3); }
-
 /* El historial de una persona, arriba de la lista. */
 .dc-shell .en-ficha { padding: var(--s4); border-radius: var(--radius-control); margin-bottom: var(--s4); }
 .dc-shell .en-ficha-cab { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; }
@@ -38,12 +23,9 @@
 .dc-shell .en-historia-paso { min-width: 0; overflow-wrap: anywhere; }
 
 @media (max-width: 640px) {
-    .dc-shell .en-paso { grid-template-columns: minmax(0, 1fr) 48px; }
-    .dc-shell .en-paso-barra { grid-column: 1 / -1; grid-row: 2; }
     .dc-shell .en-historia li { grid-template-columns: minmax(0, 1fr) auto; }
     .dc-shell .en-historia li > .num { grid-column: 1 / -1; }
 }
-@media (prefers-reduced-motion: reduce) { .dc-shell .en-paso-barra i { transition: none; } }
 
 /* Corregir la calificación desde la ficha. */
 .dc-shell .en-corregir { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; margin-top: var(--s3); }

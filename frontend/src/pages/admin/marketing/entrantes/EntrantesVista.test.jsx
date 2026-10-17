@@ -30,12 +30,11 @@ describe('Marketing › Entrantes', () => {
             ? DATOS : [{ id: 9, created_at: '2026-10-05T12:00:00Z', id_option_send: '1', id_option: '0', qualification: 'null' }] }));
     });
 
-    it('cuenta por estado y muestra dónde quedaron los pendientes', async () => {
+    it('cuenta por estado, sin la tarjeta de pendientes por paso', async () => {
         render(<div className="dc-shell"><EntrantesVista desde="2026-10-01" hasta="2026-10-16" /></div>);
-        const pasos = within(await screen.findByRole('region', { name: 'Pendientes por paso' }));
-        expect(pasos.getByText('Opening')).toBeInTheDocument();
-        expect(pasos.getByText('2')).toBeInTheDocument();
-        expect(screen.getByText('1 ya seguían la cuenta')).toBeInTheDocument();
+        expect(await screen.findByText('1 ya seguían la cuenta')).toBeInTheDocument();
+        expect(screen.getByText('2 sin respuesta', { exact: false })).toBeInTheDocument();
+        expect(screen.queryByRole('region', { name: 'Pendientes por paso' })).not.toBeInTheDocument();
         expect(screen.getByText('mostrando 4 de 4')).toBeInTheDocument();
     });
 
@@ -55,5 +54,23 @@ describe('Marketing › Entrantes', () => {
         expect(await ficha.findByText('Opening')).toBeInTheDocument();
         expect(api.get).toHaveBeenCalledWith('/manychat-webhook/log', expect.objectContaining({
             params: { lead_id: 2, limit: 200 } }));
+    });
+
+    it('el historial dice qué pasó: inicio, envío y respuesta, sin «Webhook»', async () => {
+        const fila = (id, envio, opcion, calif = 'null') => ({ id, created_at: '2026-10-05T12:00:00Z',
+            id_option_send: envio, id_option: opcion, qualification: calif });
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/manychat-webhook/entrantes' ? DATOS : [
+            fila(5, '11', '11'), fila(4, '4', '0'), fila(3, '0', '1', 'true'), fila(2, '1', '0'), fila(1, null, null),
+        ] }));
+        render(<div className="dc-shell"><EntrantesVista desde="2026-10-01" hasta="2026-10-16" /></div>);
+        fireEvent.click(await screen.findByText('Caro'));
+        const ficha = await screen.findByLabelText('Historial de Caro');
+        await within(ficha).findByText('Inicio de la automatización');
+        const pasos = [...ficha.querySelectorAll('.en-historia-paso')].map((n) => n.textContent);
+        expect(pasos).toEqual([
+            'Se le mandó Mensaje 11', 'Se le mandó Mensaje 4', 'Respondió Opening', 'Se le mandó Opening',
+            'Inicio de la automatización',
+        ]);
+        expect(within(ficha).queryByText(/Webhook/)).not.toBeInTheDocument();
     });
 });
