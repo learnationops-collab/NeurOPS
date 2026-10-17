@@ -44,3 +44,11 @@
     .dc-shell .en-historia li > .num { grid-column: 1 / -1; }
 }
 @media (prefers-reduced-motion: reduce) { .dc-shell .en-paso-barra i { transition: none; } }
+
+/* Corregir la calificación desde la ficha, y el lote. */
+.dc-shell .en-corregir { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; margin-top: var(--s3); }
+.en-cargar.ui-modal { width: min(560px, calc(100vw - 32px)); }
+.en-cargar .en-cargar-cuerpo { display: grid; gap: var(--s2, 8px); padding: 0 20px; }
+.en-cargar .ui-textarea { min-height: 160px; max-height: 50vh; overflow-y: auto; font-family: ui-monospace, monospace; }
+.en-cargar .en-cargar-previa { display: grid; gap: 4px; font-size: 13px; }
+.en-cargar .en-cargar-pie { display: flex; justify-content: flex-end; gap: 8px; padding: 16px 20px 20px; }

@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Wrench, X } from 'lucide-react';
+import { Upload, Wrench, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 import api from '../../../../services/api';
+import { Button, Segmented } from '../../../../components/standard';
+import CargarCalificaciones from './CargarCalificaciones';
 import ListaConfigurable from '../../../../components/listas/ListaConfigurable';
 import Cifra from '../../../comercial/components/Cifra';
 import { EsqueletoFilas, EsqueletoTablero, PanelCab, Tip } from '../../../comercial/components/Shared';
@@ -85,7 +88,14 @@ const PorPaso = ({ filas }) => {
 };
 
 /** El historial de webhooks de una persona, de más nuevo a más viejo. */
-const Ficha = ({ fila, mensajes, onCerrar }) => {
+const CORREGIR = [
+    { value: 'calificado', label: 'Calificado' },
+    { value: 'descalificado', label: 'Descalificado' },
+    { value: 'sin_dato', label: 'Sin dato' },
+];
+const calificacionDe = (estado) => (estado === 'calificado' || estado === 'descalificado' ? estado : 'sin_dato');
+
+const Ficha = ({ fila, mensajes, onCerrar, onCorregir }) => {
     const reducir = useReducedMotion();
     const [historia, setHistoria] = useState(null);
     useEffect(() => {
@@ -110,6 +120,11 @@ const Ficha = ({ fila, mensajes, onCerrar }) => {
                     <X aria-hidden="true" />
                 </button>
             </div>
+            <div className="en-corregir">
+                <span className="t-rotulo">Calificación</span>
+                <Segmented size="sm" label="Corregir la calificación" options={CORREGIR}
+                    value={calificacionDe(fila.estado)} onChange={onCorregir} />
+            </div>
             {!historia ? <EsqueletoFilas rotulo="Cargando el historial…" lineas={3} alto={22} /> : (
                 <ol className="en-historia">
                     {historia.map((h) => (
@@ -133,6 +148,8 @@ const EntrantesVista = ({ desde, hasta, version = 0, onHerramientas, herramienta
     const [datos, setDatos] = useState(null);
     const [error, setError] = useState(null);
     const [elegida, setElegida] = useState(null);
+    const [cargando, setCargando] = useState(false);
+    const [recarga, setRecarga] = useState(0);
 
     useEffect(() => {
         const control = new AbortController();
@@ -140,12 +157,26 @@ const EntrantesVista = ({ desde, hasta, version = 0, onHerramientas, herramienta
             .then((r) => { setDatos(r.data); setError(null); })
             .catch((e) => { if (e?.name !== 'CanceledError') setError('No se pudieron cargar los entrantes.'); });
         return () => control.abort();
-    }, [desde, hasta, version]);
+    }, [desde, hasta, version, recarga]);
 
     const filas = useMemo(() => datos?.filas || [], [datos]);
     const cuenta = useMemo(() => Object.fromEntries(ORDEN_ESTADOS.map((e) => [e, filas.filter((f) => f.estado === e).length])), [filas]);
     const seguidores = filas.filter((f) => f.follower).length;
     const abrir = useCallback((f) => setElegida((actual) => (actual?.lead_id === f.lead_id ? null : f)), []);
+
+    // Corregir a mano: la fila toma el estado nuevo sin recargar la lista. «Sin dato» vuelve a en
+    // conversación o sin respuesta según si contestó algún mensaje.
+    const corregir = async (fila, valor) => {
+        try {
+            await api.put(`/manychat-webhook/lead/${fila.lead_id}/calificacion`, { estado: valor });
+            const estado = valor !== 'sin_dato' ? valor : (fila.ultimo_respondido?.id ? 'en_conversacion' : 'sin_respuesta');
+            const nueva = { ...fila, estado };
+            setDatos((d) => ({ ...d, filas: d.filas.map((f) => (f.lead_id === fila.lead_id ? nueva : f)) }));
+            setElegida(nueva);
+        } catch (e) {
+            toast.error(e.response?.data?.error || 'No se pudo corregir la calificación.');
+        }
+    };
 
     if (error) return <section className="panel"><p className="t-body">{error}</p></section>;
     if (!datos) return <EsqueletoTablero rotulo="Cargando los entrantes…" />;
@@ -169,6 +200,9 @@ const EntrantesVista = ({ desde, hasta, version = 0, onHerramientas, herramienta
 
             <section className="panel en-lista" aria-label="Entrantes">
                 <PanelCab titulo="Leads entrantes" tip="Una fila por persona. Clic: su historial.">
+                    <Button icon={<Upload size={15} aria-hidden="true" />} onClick={() => setCargando(true)}>
+                        Cargar calificaciones
+                    </Button>
                     {onHerramientas && (
                         <button type="button" className={`pastilla${herramientasAbiertas ? ' pastilla--on' : ''}`}
                             onClick={onHerramientas} aria-pressed={herramientasAbiertas}>
@@ -177,7 +211,8 @@ const EntrantesVista = ({ desde, hasta, version = 0, onHerramientas, herramienta
                     )}
                 </PanelCab>
                 {elegida && (
-                    <Ficha key={elegida.lead_id} fila={elegida} mensajes={datos.mensajes || {}} onCerrar={() => setElegida(null)} />
+                    <Ficha key={elegida.lead_id} fila={elegida} mensajes={datos.mensajes || {}} onCerrar={() => setElegida(null)}
+                        onCorregir={(valor) => corregir(elegida, valor)} />
                 )}
                 <ListaConfigurable columnas={COLUMNAS} facetas={FACETAS} agrupables={AGRUPABLES} filas={filas}
                     clave={(f) => f.lead_id} onAbrirFila={abrir} marcada={elegida?.lead_id ?? null}
@@ -185,6 +220,7 @@ const EntrantesVista = ({ desde, hasta, version = 0, onHerramientas, herramienta
                     claveGuardado="mk_entrantes_cols" vacio="No entró nadie en el período."
                     ordenInicial={{ key: 'ultima', dir: 'desc' }} />
             </section>
+            {cargando && <CargarCalificaciones onCerrar={() => setCargando(false)} onAplicado={() => setRecarga((n) => n + 1)} />}
         </div>
     );
 };
