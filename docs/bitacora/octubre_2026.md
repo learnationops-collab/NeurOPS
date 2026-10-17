@@ -93,3 +93,8 @@
   - Calificación: del 28/07 al 16/10 ManyChat mandaba «yes» fijo en el webhook de la respuesta a la apertura (corregido en ManyChat). El webhook lee también `cualificado` y registra el valor crudo; se puede corregir la calificación de a uno o en lote.
   - Verificación: suites de pytest y vitest de Workshop, Marketing y ManyChat; revisión visual con un servidor local.
   - Marketing › Conversaciones: el catálogo de mensajes del flujo de ManyChat (número, título, categoría, activo) con enviados, respondidos, % de respuesta, calificados y descalificados del período; marketing ya puede administrarlo. Los 651 leads que fueron por la rama «no calificado» entre el 28/07 y el 16/10 quedaron descalificados (cargados con «Cargar calificaciones»).
+
+- **17 de Octubre de 2026** *(El reporte del setter ya no precarga los mensajes de ManyChat. [frontend/src/pages/setter/reporte/modelo.js](../../frontend/src/pages/setter/reporte/modelo.js) [MODIFY], [app/api/public/setter.py](../../app/api/public/setter.py) [MODIFY])*:
+  - Paula no podía enviar el reporte («23 cualificados + 10 no leads + 0 in-abribles = 33, más que los 25 mensajes de los que salen»): los 25 venían precargados de ManyChat, que cuenta solo a quien escribió por primera vez ese día, y el setter también califica a gente que escribió otros días.
+  - Ahora el formulario precarga solo las agendas de cada canal. Nuevos mensajes, no leads e in-abribles arrancan vacíos y los carga el setter, porque el reporte mide su rendimiento. La regla de que cualificados + no leads + in-abribles no superen los mensajes sigue igual.
+  - Verificación: 127 tests de vitest del espacio del setter.
