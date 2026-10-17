@@ -85,6 +85,11 @@ Import: `import { Button, … } from '<ruta>/components/standard';`
 | `Avatar` | Foto o iniciales sobre un color | `name`, `photo`, `color`, `size`: `md` · `lg` · `sm` · `xs` |
 | `Chip` | Etiqueta de estado o categoría | `color`, `icon`, `subtle`, `square` (solo ícono), `as="button"` (filtro con `aria-pressed`) |
 | `Status` | Estado con punto de color («● ACTIVO»), más liviano que un Chip: en la tarjeta o en la barra de la cabecera | `color` |
+| `Skeleton` | Envoltorio de un esqueleto de carga: `role="status"`, `aria-busy` y el texto para el lector | `label`, `as` |
+| `SkeletonBlock` · `SkeletonText` · `SkeletonCircle` | Las piezas: rectángulo, renglones de texto, avatar. Brillo que barre con los tokens del tema; quietas con reduced-motion | Block: `width`, `height`, `radius`, `step` (lugar en la ola). Text: `lines`, `width`, `lastWidth`, `height` (el hueso), `lineHeight` (el renglón real). Circle: `size` |
+| `SkeletonKpi` · `SkeletonRow` · `SkeletonPanel` · `SkeletonChart` | Composiciones: tarjeta KPI, fila de lista o tabla, panel con filas, panel con gráfico | Kpi: `className` (la de la tarjeta real), `valueHeight`, `lineHeight`, `detail`. Row: `cells` (anchos), `columns` (grilla real), `avatar`, `height`. Panel: `className`, `title`, `titleWidth`, `rows`, `rowHeight`, `children`. Chart: `variant`: `bars` · `area`, `height`, `bars`. Todas: `step` |
+| `Reveal` | Muestra el esqueleto hasta que llega el dato y lo hace entrar (sube 6 px y aparece) | `ready`, `skeleton`, `as`, `delay` (ms, para escalonar), `className` |
+| `skeletonDelay(i)` · `useEntryWindow()` | Retraso topeado del elemento `i` de una tanda; ventana en la que las filas reales entran escalonadas al reemplazar al esqueleto (`[entering, open]`) | — |
 
 Todo lo que no es prop (`onClick`, `disabled`, `ref`, `data-nav`, `autoFocus`, `title`, `data-tip`…) pasa directo al elemento HTML.
 
@@ -101,6 +106,27 @@ Regla del usuario: un desplegable se ve **encima de todo, siempre**, opaco y ent
 - `flotantes.test.js` lo controla: falla si un archivo dibuja un menú sin la capa, si un fondo de menú deja de ser opaco en algún tema o si una entrada vuelve a `both`.
 
 En Thalamus, `data-nav` marca lo que sigue habilitado en solo lectura (el setter): navegar, copiar, probar. Lo que cambia la configuración no lo lleva.
+
+### Cargas: esqueletos (receta)
+
+Nada de spinners ni tarjetas «Cargando…» que tapan la pantalla. **Cada bloque muestra su esqueleto hasta que llega SU dato.**
+
+1. Lo que no depende de datos (cabecera, pestañas, filtros, botones) se dibuja al instante.
+2. Cada bloque depende solo del pedido que lo llena: un estado por pedido (`null` = cargando), pedidos en paralelo, nunca un `loading` global que espere al más lento.
+3. Mientras su dato es `null`, el bloque dibuja su esqueleto con la **misma caja** que el real: pasale a `SkeletonKpi`/`SkeletonPanel`/`SkeletonChart` la `className` de la tarjeta real y medí cifra, renglones y filas (`lineHeight` = alto del renglón real). Si al llegar el dato algo de abajo salta, el esqueleto está mal medido.
+4. Un `Skeleton` (con `label` que diga qué carga) por bloque o por grupo; las piezas de adentro son decorativas.
+5. Al llegar: `<Reveal ready={dato != null} skeleton={…} delay={…}>`. Si el bloque ya anima su propia entrada, alcanza con cambiar esqueleto por contenido.
+6. `step` escalona la ola del brillo y la entrada dentro de un esqueleto (0, 1, 2…).
+7. Recargar no vuelve a vaciar la pantalla: se deja el dato viejo a la vista (atenuado si hace falta) hasta que llegue el nuevo. El esqueleto es solo para la primera carga.
+8. Listas largas con las filas reales entrando escalonadas: `useEntryWindow()` + `skeletonDelay(i)`.
+
+```jsx
+<Reveal ready={goals != null} skeleton={<Skeleton label="Cargando las metas…"><SkeletonPanel className="panel" rows={8} rowHeight={44} /></Skeleton>}>
+    <Metas goals={goals} />
+</Reveal>
+```
+
+`components/huesos/Huesos.jsx` (`Hueso`, `Esqueleto`, `Renglon`, `escalonDe`) es un adaptador sobre estos para las pantallas que ya lo usaban; código nuevo usa los estándar.
 
 Íconos: los componentes reciben un nodo. En Thalamus, `<Icono n="plus" />` (`pages/agendas_v2/ui/base.jsx`); en el resto, lucide-react.
 

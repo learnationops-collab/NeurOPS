@@ -10,7 +10,7 @@ import '../comercial/comercial.css';
 import './catalogo.css';
 import {
     Avatar, Bars, BRAND_AURA, Button, Calendar, CalendarEvent, calendarY, Card, Chip, Status, ModalHeader, TextArea, toast, Toaster, Tooltip, ConfirmDelete, EmptyState, FieldError, Grid, IconButton, Input, InputGroup, Kpi, LinkButton, Modal, PageHeader, Panel, Segmented, Select,
-    Stepper, Switch,
+    Stepper, Switch, Reveal, Skeleton, SkeletonBlock, SkeletonChart, SkeletonCircle, SkeletonKpi, SkeletonPanel, SkeletonRow, SkeletonText,
 } from '../../components/standard';
 
 const TEMAS = [
@@ -96,6 +96,44 @@ function DemoModal() {
                 </Modal>
             )}
         </Demo>
+    );
+}
+
+// «Recargar» vuelve a mostrar el esqueleto un momento: cada bloque entra cuando llega su dato.
+function DemoEsqueleto() {
+    const [listos, setListos] = useState(2);
+    const recargar = () => {
+        setListos(0);
+        [1, 2].forEach((n) => setTimeout(() => setListos(n), n * 900));
+    };
+    return (
+        <>
+            <Demo titulo="Piezas">
+                <SkeletonCircle />
+                <SkeletonText lines={3} width={220} lastWidth={140} lineHeight={20} style={{ width: 220 }} />
+                <SkeletonBlock width={120} height={34} />
+            </Demo>
+            <Demo titulo="KPIs, filas y gráfico">
+                <Skeleton label="Cargando el ejemplo…" style={{ display: 'grid', gap: 16, width: '100%' }}>
+                    <Grid variant="kpis">{[0, 1, 2, 3].map((i) => <SkeletonKpi key={i} step={i} />)}</Grid>
+                    <Grid variant="charts">
+                        <SkeletonPanel rows={4} step={4} />
+                        <SkeletonChart height={140} step={6} />
+                    </Grid>
+                    <SkeletonRow avatar cells={['50%', '80%', '40%', '30%']} step={8} />
+                </Skeleton>
+            </Demo>
+            <Demo titulo="Reveal: cada bloque con su dato">
+                <Button onClick={recargar}>Recargar</Button>
+                <Grid variant="kpis" style={{ width: '100%' }}>
+                    {['Leads', 'Agendas'].map((label, i) => (
+                        <Reveal key={label} ready={listos > i} skeleton={<Skeleton label={`Cargando ${label}…`}><SkeletonKpi /></Skeleton>}>
+                            <Kpi label={label} value={i ? '96' : '1.240'}><small>últimos 30 días</small></Kpi>
+                        </Reveal>
+                    ))}
+                </Grid>
+            </Demo>
+        </>
     );
 }
 
@@ -258,6 +296,12 @@ const SECCIONES = [
                 <EmptyState title="Sin eventos todavía" action={<Button>Ir a Eventos</Button>}>Creá un evento para ver estadísticas.</EmptyState>
             </div>
         ),
+    },
+    {
+        nombre: 'Skeleton · Reveal',
+        para: 'Mientras carga, cada bloque muestra la forma de SU dato con un brillo que la recorre; Reveal lo cambia por el dato al llegar.',
+        props: 'Skeleton: label · as — SkeletonBlock: width · height · radius · step — SkeletonText: lines · width · lastWidth · height · lineHeight — SkeletonCircle: size — SkeletonKpi: className · valueHeight · detail — SkeletonRow: cells · columns · avatar · height — SkeletonPanel: className · title · rows · rowHeight — SkeletonChart: variant (bars · area) · height · bars — Reveal: ready · skeleton · as · delay',
+        demo: () => <DemoEsqueleto />,
     },
     {
         nombre: 'ConfirmDelete',

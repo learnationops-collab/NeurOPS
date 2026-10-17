@@ -17,7 +17,7 @@
    ============================================================================ */
 
 :where(.ui-btn,.ui-ibtn,.ui-link,.ui-chip,.ui-status,.ui-card,.ui-aura,.ui-empty,.ui-confirm,.ui-header,
-  .ui-seg,.ui-select,.ui-select__pop,.ui-switch,.ui-stepper,.ui-scrim,.ui-modal,.ui-avatar,.ui-input,.ui-entry,.ui-field-error,.ui-panel,.ui-kpi,.ui-grid,.ui-cal,.ui-cal-event,.ui-toast,.ui-tip,.ui-textarea,.ui-modal-head,.ui-bars){
+  .ui-seg,.ui-select,.ui-select__pop,.ui-switch,.ui-stepper,.ui-scrim,.ui-modal,.ui-avatar,.ui-input,.ui-entry,.ui-field-error,.ui-panel,.ui-kpi,.ui-grid,.ui-cal,.ui-cal-event,.ui-toast,.ui-tip,.ui-textarea,.ui-modal-head,.ui-bars,.ui-skel-bone){
   --ui-brand:var(--ln-brand, var(--brand-secondary, #FF3FA4));
   --ui-brand-accent:var(--ln-brand-accent, var(--brand-secondary-light, #FF6AD5));
   --ui-brand-2:var(--ln-brand-2, var(--brand-primary, #1323C6));
@@ -58,6 +58,9 @@
   --ui-radius-pill:999px; --ui-radius-control:16px; --ui-radius-card:24px; --ui-radius-panel:32px;
   --ui-s2:8px; --ui-s3:12px; --ui-s4:16px; --ui-s6:24px; --ui-s8:32px;
   --ui-spring:cubic-bezier(.32,.72,0,1);
+  --ui-skel-bg:var(--ln-skel-bg, var(--mat-1, color-mix(in srgb, var(--ln-text-muted, #94a3b8) 14%, transparent)));
+  --ui-skel-sheen:var(--ln-skel-sheen, var(--hueso-brillo, color-mix(in srgb, var(--ln-text-out, #ffffff) 11%, transparent)));
+  --ui-skel-radius:var(--radius-control, 10px);
 }
 
 /* --- Button ------------------------------------------------------------------------------------ */
@@ -391,3 +394,35 @@ button.ui-bars__row.ui-bars__row:focus-visible{outline:2px solid var(--ui-accent
    pantalla (inset:0 + margin:auto), borde, relleno y el color del sistema. Se apagan con peso 0
    (`:where`): cualquier regla del flotante (su fondo, su borde, su `top`) le sigue ganando. */
 :where([data-ui-capa]){inset:auto;margin:0;padding:0;border:0;color:inherit;background:none;overflow:visible}
+
+/* --- Skeleton ---------------------------------------------------------------------------------- */
+/* El hueso aparece una vez (con su retraso) y su `::after` barre para siempre: una sola animación no
+   puede hacer las dos cosas. El barrido arranca con el MISMO retraso que la entrada, así el brillo
+   baja por la lista como una ola. Sin movimiento queda quieto y visible: sigue diciendo dónde cae
+   cada dato. Antes vivía en components/huesos (`.hueso`), que ahora dibuja con esto. */
+.ui-skel__sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.ui-skel-bone.ui-skel-bone{position:relative;display:block;flex-shrink:0;max-width:100%;border-radius:var(--ui-skel-radius);opacity:0;
+  animation:ui-skel-in .26s ease-out var(--ui-skel-delay,0ms) forwards}
+.ui-skel-bone.ui-skel-bone::after{content:'';position:absolute;inset:0;border-radius:inherit;
+  background:linear-gradient(100deg,transparent 30%,var(--ui-skel-sheen) 50%,transparent 70%) 150% 0/250% 100% no-repeat,var(--ui-skel-bg);
+  animation:ui-skel-sweep 1.5s ease-in-out var(--ui-skel-delay,0ms) infinite}
+.ui-skel-text{display:grid;min-width:0}
+.ui-skel-line{display:flex;flex-direction:column;justify-content:center;min-width:0}
+.ui-skel-title{margin-bottom:12px}
+.ui-skel-stack{display:grid;gap:10px}
+.ui-skel-row{display:grid;align-items:center;gap:12px}
+.ui-skel-bars{display:flex;align-items:flex-end;gap:8px}
+.ui-skel-bars>.ui-skel-bone.ui-skel-bone{flex:1 1 0;width:auto}
+@keyframes ui-skel-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@keyframes ui-skel-sweep{from{background-position:150% 0,0 0}to{background-position:-50% 0,0 0}}
+
+/* Reveal: el dato entra corto (sube 6 px y aparece). `backwards`: al terminar no queda ningún
+   `transform` en efecto, así un menú fixed de adentro sigue yendo contra la pantalla. */
+.ui-reveal{animation:ui-reveal .34s cubic-bezier(.22,1,.36,1) var(--ui-reveal-delay,0ms) backwards}
+@keyframes ui-reveal{from{opacity:0;transform:translateY(6px)}}
+
+@media (prefers-reduced-motion:reduce){
+  .ui-skel-bone.ui-skel-bone{opacity:1;animation:none}
+  .ui-skel-bone.ui-skel-bone::after{animation:none}
+  .ui-reveal{animation:none}
+}

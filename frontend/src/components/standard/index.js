@@ -10,3 +10,7 @@ export { Bars } from './Charts';
 export { Calendar, CalendarEvent, calendarY } from './Calendar';
 export { toast, closeToast, Toaster, Tooltip } from './Notify';
 export { subirACapa } from './capa';
+export {
+    Skeleton, SkeletonBlock, SkeletonCircle, SkeletonText, SkeletonKpi, SkeletonRow, SkeletonPanel, SkeletonChart, Reveal,
+    skeletonDelay, useEntryWindow,
+} from './Skeleton';

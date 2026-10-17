@@ -66,7 +66,7 @@ describe('EsqueletoKanban', () => {
         const columnas = [...tablero(LLAMADAS).querySelectorAll('.kcol-v6')];
         // El retraso de cada tarjeta, leído del primer hueso (el de la cuenta regresiva).
         const retrasos = columnas.map(col => [...col.querySelectorAll('.kcard-v6')]
-            .map(t => t.querySelector('.hueso').style.getPropertyValue('--d')));
+            .map(t => t.querySelector('.hueso').style.getPropertyValue('--ui-skel-delay')));
         expect(retrasos).toEqual([
             [`${escalonDe(0)}ms`, `${escalonDe(3)}ms`],
             [`${escalonDe(1)}ms`, `${escalonDe(4)}ms`],
