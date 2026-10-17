@@ -30,7 +30,7 @@ describe('Marketing › Conversaciones', () => {
     it('lista el catálogo con lo enviado y respondido, y da de alta uno sin configurar', async () => {
         render(<div className="dc-shell"><ConversacionesVista desde="2026-10-01" hasta="2026-10-16" /></div>);
         expect(await screen.findByText('Opening')).toBeInTheDocument();
-        expect(screen.getByText('Llegó 1 número sin configurar: tocalo para darlo de alta.')).toBeInTheDocument();
+        expect(await screen.findByText('Llegó 1 número sin configurar: tocalo para darlo de alta.')).toBeInTheDocument();
         fireEvent.click(screen.getAllByText('Sin configurar')[0]);
         const modal = within(await screen.findByRole('dialog'));
         expect(modal.getByLabelText('Número del mensaje')).toHaveValue('11');
@@ -57,5 +57,19 @@ describe('Marketing › Conversaciones', () => {
 
         await waitFor(() => expect(api.put).toHaveBeenCalledWith('/conversational/messages/2',
             expect.objectContaining({ rama: 'calificados' })));
+    });
+    it('los nombres se ven apenas llega el catálogo; las cifras esperan su cálculo', async () => {
+        let soltar;
+        api.get.mockImplementation((url) => (url === '/conversational/messages'
+            ? Promise.resolve({ data: MENSAJES })
+            : new Promise((r) => { soltar = () => r({ data: STATS }); })));
+        render(<div className="dc-shell"><ConversacionesVista desde="2026-10-01" hasta="2026-10-16" /></div>);
+        expect(screen.getByRole('status', { name: 'Cargando los mensajes…' })).toBeInTheDocument();
+        expect(await screen.findByText('Opening')).toBeInTheDocument();
+        expect(screen.getByRole('status')).toHaveTextContent('Calculando las cifras del período…');
+        expect(screen.queryByText('100')).not.toBeInTheDocument();
+        soltar();
+        expect(await screen.findByText('100')).toBeInTheDocument();
+        expect(screen.queryByRole('status')).not.toBeInTheDocument();
     });
 });

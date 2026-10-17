@@ -3,12 +3,13 @@ import { Navigate, useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { CalendarDays, RefreshCw } from 'lucide-react';
-import { EsqueletoTablero, Isotipo, PillMenu, Segmented } from '../../comercial/components/Shared';
+import { Isotipo, PillMenu, Segmented } from '../../comercial/components/Shared';
 import RangoFechas, { esFecha, textoRango } from '../../comercial/components/RangoFechas';
 import UTMGenerator from '../../../components/operations/UTMGenerator';
 import EntrantesVista from './entrantes/EntrantesVista';
 import ConversacionesVista from './conversaciones/ConversacionesVista';
-import TablaAnuncios from './anuncios/TablaAnuncios';
+import TablaAnuncios, { EsqueletoTablaAnuncios } from './anuncios/TablaAnuncios';
+import { ErrorDeCarga } from './esqueletos';
 import ConexionMeta from './anuncios/ConexionMeta';
 import EmbudosResumen from './anuncios/EmbudosResumen';
 import RendimientoWorkshop from './anuncios/RendimientoWorkshop';
@@ -36,6 +37,10 @@ import './anuncios/anuncios.css';
  * Meta Ads (16/10/2026) desglosa campaña › conjunto › anuncio y cada fila abre el Administrador de
  * anuncios de Meta (otra pestaña: el token es de solo lectura). Lo que se cambie allá se trae solo al
  * volver (`useEstadoDeMeta`), en cualquier pestaña, y recarga lo que se esté mirando.
+ *
+ * Carga (17/10/2026): la cabecera, las pestañas y el selector de embudo se ven al instante; cada bloque
+ * muestra su esqueleto hasta que llega SU dato (el tablero, o el pedido propio de Workshop, Entrantes,
+ * Conversaciones y Meta Ads, que salen en paralelo). Recargar deja lo que se ve, atenuado.
  *
  * La pestaña, el embudo y el período viven en la URL (`tab`, `embudo`, `periodo`, `desde`, `hasta`), así
  * un link lleva a lo mismo que se estaba mirando.
@@ -90,7 +95,10 @@ const AdminMarketingHubPage = () => {
         pedirTablero(rango.desde, rango.hasta, { signal: control.signal })
             .then((d) => { setDatos(d); setError(null); })
             .catch((e) => {
-                if (e?.name !== 'CanceledError') setError(mensajeDeError(e, 'No se pudo cargar la tabla de anuncios.'));
+                if (e?.name === 'CanceledError') return;
+                const mensaje = mensajeDeError(e, 'No se pudo cargar la tabla de anuncios.');
+                setError(mensaje);
+                toast.error(mensaje);
             })
             .finally(() => { if (!control.signal.aborted) setCargando(false); });
         return () => control.abort();
@@ -175,29 +183,31 @@ const AdminMarketingHubPage = () => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.28, ease: [0.22, 0.7, 0.2, 1] }}>
                         {pestana === 'anuncios' && (
-                            error ? <section className="panel"><p className="t-body">{error}</p></section>
-                                : !datos ? <EsqueletoTablero rotulo="Cargando los anuncios…" />
-                                    : (
-                                        <div className={cargando ? 'mk-recargando' : undefined} aria-busy={cargando}>
-                                            <div className="mk-embudo-selector">
-                                                <Segmented chico ariaLabel="Embudo" opciones={EMBUDOS_DE_RENDIMIENTO} valor={embudo}
-                                                    onChange={(key) => cambiar({ embudo: key === 'todo' ? null : key })} />
-                                            </div>
-                                            {embudo === 'todo' && (
-                                                <EmbudosResumen embudos={datos.embudos} desde={rango.desde} hasta={rango.hasta}
-                                                    moneda={datos.moneda} onElegir={(key) => cambiar({ embudo: key })}
-                                                    cuentas={cuentas} irAMeta={() => cambiar({ tab: 'meta' })} />
-                                            )}
-                                            {embudo === 'workshop' ? (
-                                                <RendimientoWorkshop desde={rango.desde} hasta={rango.hasta} moneda={datos.moneda}
-                                                    embudos={datos.embudos} cuentas={cuentas} version={version}
-                                                    irAMeta={() => cambiar({ tab: 'meta' })} />
-                                            ) : (
-                                                <TablaAnuncios datos={datos} onArchivar={archivar} onAgrupar={agrupar}
-                                                    irAMeta={() => cambiar({ tab: 'meta' })} />
-                                            )}
-                                        </div>
-                                    )
+                            <div className={cargando && datos ? 'mk-recargando' : undefined} aria-busy={cargando}>
+                                <div className="mk-embudo-selector">
+                                    <Segmented chico ariaLabel="Embudo" opciones={EMBUDOS_DE_RENDIMIENTO} valor={embudo}
+                                        onChange={(key) => cambiar({ embudo: key === 'todo' ? null : key })} />
+                                </div>
+                                {error && !datos && embudo !== 'workshop' ? (
+                                    <ErrorDeCarga titulo={error} onReintentar={recargar} />
+                                ) : (
+                                    <>
+                                        {embudo === 'todo' && (
+                                            <EmbudosResumen embudos={datos ? datos.embudos || [] : null} desde={rango.desde} hasta={rango.hasta}
+                                                moneda={datos?.moneda} onElegir={(key) => cambiar({ embudo: key })}
+                                                cuentas={cuentas} irAMeta={() => cambiar({ tab: 'meta' })} />
+                                        )}
+                                        {embudo === 'workshop' ? (
+                                            <RendimientoWorkshop desde={rango.desde} hasta={rango.hasta} moneda={datos?.moneda}
+                                                embudos={datos ? datos.embudos || [] : (error ? [] : null)} cuentas={cuentas} version={version}
+                                                irAMeta={() => cambiar({ tab: 'meta' })} />
+                                        ) : !datos ? <EsqueletoTablaAnuncios /> : (
+                                            <TablaAnuncios datos={datos} onArchivar={archivar} onAgrupar={agrupar}
+                                                irAMeta={() => cambiar({ tab: 'meta' })} />
+                                        )}
+                                    </>
+                                )}
+                            </div>
                         )}
                         {pestana === 'entrantes' && (
                             <EntrantesVista desde={rango.desde} hasta={rango.hasta} version={version} />

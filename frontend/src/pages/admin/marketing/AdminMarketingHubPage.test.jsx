@@ -403,4 +403,33 @@ describe('Marketing › Anuncios', () => {
         expect(screen.queryByRole('button', { name: /Herramientas/ })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /Cargar calificaciones/ })).not.toBeInTheDocument();
     });
+    it('mientras llega el tablero se ven el selector de embudo, los rótulos y esqueletos, no un spinner', async () => {
+        let soltar;
+        api.get.mockImplementation((url) => (url === '/marketing/anuncios'
+            ? new Promise((r) => { soltar = () => r({ data: TABLERO }); })
+            : Promise.resolve({ data: {} })));
+        abrir();
+        expect(screen.getByRole('tablist', { name: 'Embudo' })).toBeInTheDocument();
+        expect(screen.getByRole('status', { name: 'Cargando el gasto por embudo…' })).toBeInTheDocument();
+        expect(screen.getByRole('status', { name: 'Cargando la tabla de anuncios…' })).toBeInTheDocument();
+        expect(screen.getByText('Leads entrantes')).toBeInTheDocument();
+        expect(screen.getByText('Leads entrantes por día')).toBeInTheDocument();
+        soltar();
+        expect(await screen.findByText('Obtener Guia')).toBeInTheDocument();
+        expect(screen.queryByRole('status', { name: /Cargando/ })).not.toBeInTheDocument();
+    });
+
+    it('si la primera carga falla ofrece reintentar, y reintentar la vuelve a pedir', async () => {
+        const user = userEvent.setup();
+        let falla = true;
+        api.get.mockImplementation((url) => (url === '/marketing/anuncios' && falla
+            ? Promise.reject(new Error('caído'))
+            : Promise.resolve({ data: url === '/marketing/anuncios' ? TABLERO : {} })));
+        abrir();
+        const boton = await screen.findByRole('button', { name: 'Reintentar' });
+        expect(screen.queryByRole('status', { name: /Cargando la tabla/ })).not.toBeInTheDocument();
+        falla = false;
+        await user.click(boton);
+        expect(await screen.findByText('Obtener Guia')).toBeInTheDocument();
+    });
 });

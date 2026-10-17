@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { CheckCircle2, CircleDashed, History, RefreshCw } from 'lucide-react';
-import { EsqueletoFilas, Tip } from '../../../comercial/components/Shared';
+import { Skeleton, SkeletonBlock, SkeletonText } from '../../../../components/standard';
+import { Tip } from '../../../comercial/components/Shared';
+import { ErrorDeCarga, EsqueletoPanelTabla } from '../esqueletos';
 import ArbolMeta, { AUTO, NINGUNA } from './ArbolMeta';
 import EnlaceMeta from './EnlaceMeta';
 import { enlaceAdministrador } from './enlacesMeta';
@@ -25,6 +27,37 @@ import { asignarClaveDeMeta, asignarEmbudoDeMeta, mensajeDeError, pedirAnunciosD
  */
 
 const TRAMO = 30;
+const COBERTURA = ['Gastado', 'Activos', 'Sin clave', 'Sin anuncio'];
+const TITULO_TABLA = 'Campañas, conjuntos y anuncios';
+
+/** Mientras no llegan los anuncios de Meta: la conexión y la cobertura con sus rótulos, y la tabla. */
+const EsqueletoConexion = () => (
+    <div className="vista mk-vista">
+        <Skeleton as="section" label="Cargando la conexión con Meta…" className="panel mk-conexion">
+            <div className="mk-conexion-fila" aria-hidden="true">
+                <div className="mk-conexion-id">
+                    <SkeletonBlock width={110} height={26} radius={999} />
+                    <SkeletonBlock width={150} height={10} step={1} />
+                </div>
+                <div className="mk-conexion-acc">
+                    <SkeletonBlock width={118} height={34} radius={999} />
+                    <SkeletonBlock width={200} height={34} radius={999} step={1} />
+                    <SkeletonBlock width={120} height={34} radius={999} step={2} />
+                </div>
+            </div>
+            <div className="pareja mk-cobertura" style={{ '--min': '170px', '--g': 'var(--s3)' }} aria-hidden="true">
+                {COBERTURA.map((t, i) => (
+                    <div key={t} className="tarjeta">
+                        <p className="t-eyebrow">{t}</p>
+                        <SkeletonText width="46%" height={18} lineHeight={24.2} step={i + 1} style={{ margin: '6px 0 2px' }} />
+                        <SkeletonText lines={2} width="86%" lastWidth="40%" height={9} lineHeight={17.4} step={i + 2} />
+                    </div>
+                ))}
+            </div>
+        </Skeleton>
+        <EsqueletoPanelTabla titulo={TITULO_TABLA} barra={[]} label="Cargando los anuncios de Meta…" />
+    </div>
+);
 
 const diaAnterior = (iso) => {
     const [a, m, d] = iso.split('-').map(Number);
@@ -55,6 +88,7 @@ const ConexionMeta = ({ desde, hasta, filasTablero, moneda, cuentas, estadoMeta,
     const [dias, setDias] = useState(30);
     const [sincronizando, setSincronizando] = useState(false);
     const [guardando, setGuardando] = useState(null);
+    const [intento, setIntento] = useState(0);
 
     const cargar = useCallback(async (signal) => {
         try {
@@ -69,7 +103,7 @@ const ConexionMeta = ({ desde, hasta, filasTablero, moneda, cuentas, estadoMeta,
         const control = new AbortController();
         cargar(control.signal);
         return () => control.abort();
-    }, [cargar, version]);
+    }, [cargar, version, intento]);
 
     const sincronizar = async () => {
         const tramos = Math.ceil(dias / TRAMO);
@@ -147,8 +181,8 @@ const ConexionMeta = ({ desde, hasta, filasTablero, moneda, cuentas, estadoMeta,
         };
     }, [datos, filasTablero]);
 
-    if (error) return <section className="panel"><p className="t-body">{error}</p></section>;
-    if (!datos) return <section className="panel"><EsqueletoFilas rotulo="Cargando los anuncios de Meta…" lineas={6} /></section>;
+    if (error && !datos) return <ErrorDeCarga titulo={error} onReintentar={() => { setError(null); setIntento((n) => n + 1); }} />;
+    if (!datos) return <EsqueletoConexion />;
 
     const listaCuentas = cuentas?.length ? cuentas : (datos.cuentas || []);
     const activo = estadoMeta?.activo;
@@ -206,12 +240,12 @@ const ConexionMeta = ({ desde, hasta, filasTablero, moneda, cuentas, estadoMeta,
                 )}
                 <div className="pareja mk-cobertura" style={{ '--min': '170px', '--g': 'var(--s3)' }}>
                     <div className="tarjeta">
-                        <p className="t-eyebrow">Gastado</p>
+                        <p className="t-eyebrow">{COBERTURA[0]}</p>
                         <p className="mk-cob-n num">{formatear(cobertura.gasto, 'money', moneda)}</p>
                         <p className="t-cap mut40">{cobertura.anuncios} anuncios en el período</p>
                     </div>
                     <div className="tarjeta">
-                        <p className="t-eyebrow">Activos</p>
+                        <p className="t-eyebrow">{COBERTURA[1]}</p>
                         <p className="mk-cob-n num">{cobertura.activos}</p>
                         <p className="t-cap mut40">{cobertura.activosConClave} con palabra clave</p>
                     </div>
@@ -240,7 +274,7 @@ const ConexionMeta = ({ desde, hasta, filasTablero, moneda, cuentas, estadoMeta,
             <section className="panel mk-panel-tabla">
                 <div className="panel-cab mk-tabla-barra">
                     <div className="mk-cab-txt">
-                        <h2 className="t-h3">Campañas, conjuntos y anuncios</h2>
+                        <h2 className="t-h3">{TITULO_TABLA}</h2>
                     </div>
                 </div>
                 {!datos.anuncios.length ? (

@@ -5,8 +5,10 @@ import toast from 'react-hot-toast';
 import api from '../../../../services/api';
 import { Segmented } from '../../../../components/standard';
 import ListaConfigurable from '../../../../components/listas/ListaConfigurable';
+import EsqueletoLista from '../../../../components/listas/EsqueletoLista';
 import Cifra from '../../../comercial/components/Cifra';
-import { EsqueletoFilas, EsqueletoTablero, PanelCab, Tip } from '../../../comercial/components/Shared';
+import { EsqueletoFilas, PanelCab, Tip } from '../../../comercial/components/Shared';
+import { ErrorDeCarga, EsqueletoKpis } from '../esqueletos';
 import {
     AGRUPABLES, COLUMNAS, FACETAS, ORDEN_ESTADOS, Estado, buscarEnEntrante, fechaHora,
 } from './columnas';
@@ -17,6 +19,9 @@ import './entrantes.css';
  * por persona, con su estado (calificado, en conversación, sin respuesta, descalificado) y en qué paso del
  * flujo de Instagram va. Se filtra, se agrupa y se eligen columnas como en las demás listas. Clic en una
  * fila: su historial de webhooks.
+ *
+ * Mientras llegan: los rótulos de los KPIs, el título de la lista y las columnas ya se ven; las cifras y
+ * las filas son esqueletos de su medida.
  */
 
 // Como el resto del tablero: separador de miles y punto decimal en inglés («2,206», «66.1%»).
@@ -116,18 +121,26 @@ const Ficha = ({ fila, mensajes, onCerrar, onCorregir }) => {
     );
 };
 
+const KPIS = ['Entrantes', 'Calificados', 'Descalificados', 'Pendientes'];
+const LISTA = 'Leads entrantes';
+
 const EntrantesVista = ({ desde, hasta, version = 0 }) => {
     const [datos, setDatos] = useState(null);
     const [error, setError] = useState(null);
     const [elegida, setElegida] = useState(null);
+    const [intento, setIntento] = useState(0);
 
     useEffect(() => {
         const control = new AbortController();
         api.get('/manychat-webhook/entrantes', { params: { desde, hasta }, signal: control.signal })
             .then((r) => { setDatos(r.data); setError(null); })
-            .catch((e) => { if (e?.name !== 'CanceledError') setError('No se pudieron cargar los entrantes.'); });
+            .catch((e) => {
+                if (e?.name === 'CanceledError') return;
+                setError('No se pudieron cargar los entrantes.');
+                toast.error('No se pudieron cargar los entrantes.');
+            });
         return () => control.abort();
-    }, [desde, hasta, version]);
+    }, [desde, hasta, version, intento]);
 
     const filas = useMemo(() => datos?.filas || [], [datos]);
     const cuenta = useMemo(() => Object.fromEntries(ORDEN_ESTADOS.map((e) => [e, filas.filter((f) => f.estado === e).length])), [filas]);
@@ -148,26 +161,37 @@ const EntrantesVista = ({ desde, hasta, version = 0 }) => {
         }
     };
 
-    if (error) return <section className="panel"><p className="t-body">{error}</p></section>;
-    if (!datos) return <EsqueletoTablero rotulo="Cargando los entrantes…" />;
+    if (error && !datos) return <ErrorDeCarga titulo={error} onReintentar={() => { setError(null); setIntento((n) => n + 1); }} />;
+    if (!datos) {
+        return (
+            <div className="en-vista">
+                <EsqueletoKpis titulos={KPIS} kpi="kpi en-kpi" className="pareja en-kpis" label="Cargando los indicadores de entrantes…" />
+                <section className="panel en-lista" aria-label="Entrantes">
+                    <PanelCab titulo={LISTA} tip="Una fila por persona. Clic: su historial." />
+                    <EsqueletoLista columnas={COLUMNAS} claveGuardado="mk_entrantes_cols" facetas={FACETAS} agrupables={AGRUPABLES}
+                        label="Cargando los entrantes…" />
+                </section>
+            </div>
+        );
+    }
 
     const total = filas.length;
     return (
         <div className="en-vista">
             <div className="pareja en-kpis" style={{ '--min': '220px', '--g': 'var(--s4)' }}>
-                <Kpi i={0} titulo="Entrantes" valor={num(total)} tip="Personas con algún webhook en el período."
+                <Kpi i={0} titulo={KPIS[0]} valor={num(total)} tip="Personas con algún webhook en el período."
                     sub={`${num(seguidores)} ya seguían la cuenta`} />
-                <Kpi i={1} titulo="Calificados" valor={num(cuenta.calificado)} tip="ManyChat los marcó calificados."
+                <Kpi i={1} titulo={KPIS[1]} valor={num(cuenta.calificado)} tip="ManyChat los marcó calificados."
                     sub={`${pct(cuenta.calificado, total)} de los entrantes`} />
-                <Kpi i={2} titulo="Descalificados" valor={num(cuenta.descalificado)} tip="ManyChat los marcó no calificados."
+                <Kpi i={2} titulo={KPIS[2]} valor={num(cuenta.descalificado)} tip="ManyChat los marcó no calificados."
                     sub={`${pct(cuenta.descalificado, total)} de los entrantes`} />
-                <Kpi i={3} titulo="Pendientes" valor={num(cuenta.en_conversacion + cuenta.sin_respuesta)}
+                <Kpi i={3} titulo={KPIS[3]} valor={num(cuenta.en_conversacion + cuenta.sin_respuesta)}
                     tip="Todavía sin calificar."
                     sub={`${num(cuenta.en_conversacion)} en conversación · ${num(cuenta.sin_respuesta)} sin respuesta`} />
             </div>
 
             <section className="panel en-lista" aria-label="Entrantes">
-                <PanelCab titulo="Leads entrantes" tip="Una fila por persona. Clic: su historial." />
+                <PanelCab titulo={LISTA} tip="Una fila por persona. Clic: su historial." />
                 {elegida && (
                     <Ficha key={elegida.lead_id} fila={elegida} mensajes={datos.mensajes || {}} onCerrar={() => setElegida(null)}
                         onCorregir={(valor) => corregir(elegida, valor)} />

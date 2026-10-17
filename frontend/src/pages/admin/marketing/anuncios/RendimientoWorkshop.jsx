@@ -1,8 +1,8 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, Tags } from 'lucide-react';
-import { EsqueletoFilas } from '../../../comercial/components/Shared';
 import { Columnas } from './SerieDiaria';
 import { Kpi } from './TablaAnuncios';
+import { ErrorDeCarga, EsqueletoKpis, EsqueletoPanelTabla, HuesosSerie } from '../esqueletos';
 import EnlaceMeta from './EnlaceMeta';
 import { enlaceAdministrador } from './enlacesMeta';
 import { dinero, formatear, serieDeEmbudos } from './metricas';
@@ -16,6 +16,9 @@ import { mensajeDeError, pedirWorkshopDelPeriodo } from './marketingApi';
  *
  * «Ver en Meta» abre el Administrador de anuncios con estas campañas elegidas (y cada fila, la suya);
  * «Corregir embudos» lleva a la pestaña Meta Ads de acá, donde se cambia el embudo de un anuncio.
+ *
+ * Su pedido sale apenas se abre, sin esperar al tablero: KPIs y tabla aparecen con lo suyo, y el gráfico
+ * por día (que sale de los `embudos` del tablero) espera solo a ese dato.
  */
 const pct = (v) => (v == null ? '—' : `${Number(v).toFixed(2)}%`);
 
@@ -33,10 +36,14 @@ const Celdas = ({ fila, moneda, landings }) => (
     </>
 );
 
+const KPIS = ['Importe gastado', 'Clics', 'Visitas a la landing', 'Clics al grupo'];
+const TITULO = 'Campañas, conjuntos y anuncios de Workshop';
+
 const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, cuentas, version = 0, irAMeta }) => {
     const [datos, setDatos] = useState(null);
     const [error, setError] = useState(null);
     const [abiertas, setAbiertas] = useState({});
+    const [intento, setIntento] = useState(0);
 
     useEffect(() => {
         const control = new AbortController();
@@ -48,26 +55,51 @@ const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, cuentas, version =
             })
             .catch((e) => { if (e?.name !== 'CanceledError') setError(mensajeDeError(e, 'No se pudieron traer los anuncios de Workshop.')); });
         return () => control.abort();
-    }, [desde, hasta, version]);
+    }, [desde, hasta, version, intento]);
 
-    const dias = useMemo(() => serieDeEmbudos((embudos || []).filter((e) => e.embudo === 'workshop'), desde, hasta),
+    const dias = useMemo(() => (embudos ? serieDeEmbudos(embudos.filter((e) => e.embudo === 'workshop'), desde, hasta) : null),
         [embudos, desde, hasta]);
 
-    if (error) return <section className="panel"><p className="t-body">{error}</p></section>;
-    if (!datos) return <section className="panel"><EsqueletoFilas rotulo="Cargando los anuncios de Workshop…" lineas={6} /></section>;
+    const serie = (
+        <section className="panel mk-panel-serie">
+            <div className="panel-cab">
+                <div className="mk-cab-txt">
+                    <p className="t-eyebrow">Importe gastado por día · Workshop</p>
+                </div>
+            </div>
+            {!dias ? <HuesosSerie /> : (
+                <Columnas dias={dias} capas={[{ key: 'workshop', label: 'Gastado', color: 'var(--info)' }]}
+                    formato={(v) => dinero(v, moneda)} etiqueta="Gasto de Workshop por día"
+                    vacio="Los anuncios de Workshop no gastaron en estos días." />
+            )}
+        </section>
+    );
+
+    if (error && !datos) {
+        return <ErrorDeCarga titulo={error} onReintentar={() => { setError(null); setIntento((n) => n + 1); }} />;
+    }
+    if (!datos) {
+        return (
+            <div className="vista mk-vista">
+                <EsqueletoKpis titulos={KPIS} lineas={2} label="Cargando los anuncios de Workshop…" />
+                {serie}
+                <EsqueletoPanelTabla titulo={TITULO} sub="Los que llevan a la clase en vivo." filas={4} />
+            </div>
+        );
+    }
 
     const t = datos.totales;
     const kpis = [
-        { titulo: 'Importe gastado', valor: formatear(t.gasto, 'money', moneda),
+        { titulo: KPIS[0], valor: formatear(t.gasto, 'money', moneda),
           sub: `CPM ${formatear(t.cpm, 'money', moneda)} · ${formatear(t.impresiones, 'num')} impresiones`,
           tip: 'Gasto de los anuncios de Workshop.' },
-        { titulo: 'Clics', valor: formatear(t.clics, 'num'),
+        { titulo: KPIS[1], valor: formatear(t.clics, 'num'),
           sub: `CTR ${pct(t.ctr)} · ${formatear(t.cpc, 'money', moneda)} por clic en el enlace`,
           tip: 'Todos los clics. El CPC es por clic en el enlace.' },
-        { titulo: 'Visitas a la landing', valor: formatear(t.visitas, 'num'),
+        { titulo: KPIS[2], valor: formatear(t.visitas, 'num'),
           sub: 'de los anuncios de Workshop (utm_campaign)',
           tip: 'Visitas a la landing desde estas campañas.' },
-        { titulo: 'Clics al grupo', valor: formatear(t.clics_whatsapp, 'num'),
+        { titulo: KPIS[3], valor: formatear(t.clics_whatsapp, 'num'),
           sub: `${formatear(t.costo_whatsapp, 'money', moneda)} por clic al grupo`,
           tip: 'Clics al grupo de WhatsApp desde esas visitas.' },
     ];
@@ -82,21 +114,12 @@ const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, cuentas, version =
                 {kpis.map((k, i) => <Kpi key={k.titulo} {...k} i={i} />)}
             </div>
 
-            <section className="panel mk-panel-serie">
-                <div className="panel-cab">
-                    <div className="mk-cab-txt">
-                        <p className="t-eyebrow">Importe gastado por día · Workshop</p>
-                    </div>
-                </div>
-                <Columnas dias={dias} capas={[{ key: 'workshop', label: 'Gastado', color: 'var(--info)' }]}
-                    formato={(v) => dinero(v, moneda)} etiqueta="Gasto de Workshop por día"
-                    vacio="Los anuncios de Workshop no gastaron en estos días." />
-            </section>
+            {serie}
 
             <section className="panel mk-panel-tabla">
                 <div className="panel-cab mk-tabla-barra">
                     <div className="mk-cab-txt">
-                        <h2 className="t-h3">Campañas, conjuntos y anuncios de Workshop</h2>
+                        <h2 className="t-h3">{TITULO}</h2>
                         <p className="t-cap mut40">
                             Los que llevan a la clase en vivo.
                         </p>

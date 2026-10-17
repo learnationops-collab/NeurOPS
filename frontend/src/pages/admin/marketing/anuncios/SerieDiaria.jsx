@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMontado } from '../../../comercial/components/Shared';
 import { dinero } from './metricas';
+import { HuesosSerie } from '../esqueletos';
 
 /**
  * Columnas por día, apiladas (de abajo hacia arriba en el orden de `capas`). Sin ejes dobles: el
@@ -71,7 +72,8 @@ const ENTRANTES = [
     { key: 'sin_respuesta', label: 'Sin respuesta', color: 'var(--mk-resto)' },
 ];
 
-/** Los dos gráficos del período: leads por día (por estado) y gasto por día. */
+/** Los dos gráficos del período: leads por día (por estado) y gasto por día. Sin `serie` todavía, los
+ *  títulos y la leyenda ya se ven y el gráfico es un esqueleto del mismo alto. */
 const SerieDiaria = ({ serie, moneda, alcance, metaConectado }) => {
     const dias = serie;
     const entero = (v) => Number(v).toLocaleString('en-US');
@@ -89,8 +91,10 @@ const SerieDiaria = ({ serie, moneda, alcance, metaConectado }) => {
                         ))}
                     </div>
                 </div>
-                <Columnas dias={dias} capas={ENTRANTES} formato={entero}
-                    etiqueta={`Leads entrantes por día, ${alcance}`} vacio="No entraron leads en el período." />
+                {!dias ? <HuesosSerie /> : (
+                    <Columnas dias={dias} capas={ENTRANTES} formato={entero}
+                        etiqueta={`Leads entrantes por día, ${alcance}`} vacio="No entraron leads en el período." />
+                )}
             </section>
             <section className="panel mk-panel-serie">
                 <div className="panel-cab">
@@ -99,11 +103,13 @@ const SerieDiaria = ({ serie, moneda, alcance, metaConectado }) => {
                         <p className="t-cap mut40">{alcance}</p>
                     </div>
                 </div>
-                <Columnas dias={dias} capas={[{ key: 'gasto', label: 'Gastado', color: 'var(--brand-secondary)' }]}
-                    formato={(v) => dinero(v, moneda)} etiqueta={`Importe gastado por día, ${alcance}`}
-                    vacio={metaConectado
-                        ? 'Meta no registró gasto en estos días para estas palabras clave.'
-                        : 'Sin gasto: cuando Meta Ads esté conectado, el gasto de cada día llega solo.'} />
+                {!dias ? <HuesosSerie step={2} /> : (
+                    <Columnas dias={dias} capas={[{ key: 'gasto', label: 'Gastado', color: 'var(--brand-secondary)' }]}
+                        formato={(v) => dinero(v, moneda)} etiqueta={`Importe gastado por día, ${alcance}`}
+                        vacio={metaConectado
+                            ? 'Meta no registró gasto en estos días para estas palabras clave.'
+                            : 'Sin gasto: cuando Meta Ads esté conectado, el gasto de cada día llega solo.'} />
+                )}
             </section>
         </div>
     );

@@ -16,6 +16,7 @@ import TarjetasAnuncios, { SelectorModo } from './TarjetasAnuncios';
 import { useModoVista } from '../../../../components/listas/useModoVista';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { hayListaComercial, useDrillDown } from '../../../closer/dashboard/useDrillDown';
+import { EsqueletoKpis, EsqueletoPanelTabla } from '../esqueletos';
 import {
     NIVELES, SIN_CAMPANA, agruparFilas, claveDeAnuncio, claveDeCampana, claveDeConjunto, formatear,
     ordenar, serieDe, textoMeta, totalesDe,
@@ -63,6 +64,20 @@ const UNIDAD = {
 const ORIGEN = { meta: 'Meta', manual: 'a mano', anterior: 'carga vieja' };
 
 const vacio = () => ({ campanas: new Set(), conjuntos: new Set(), anuncios: new Set() });
+
+const KPIS = ['Leads entrantes', 'Importe gastado', 'Agendas', 'Ventas'];
+const TITULO = 'Campañas, conjuntos y anuncios';
+const BAJADA = 'Cada palabra clave que llega de ManyChat es un anuncio. Elegí filas para filtrar el nivel siguiente y el gráfico.';
+const ALCANCE_INICIAL = `Todas las ${UNIDAD.anuncios[1]} de la tabla`;
+
+/** La tabla mientras no llegó el tablero: KPIs, los dos gráficos y la tabla con sus títulos reales. */
+export const EsqueletoTablaAnuncios = () => (
+    <div className="vista mk-vista">
+        <EsqueletoKpis titulos={KPIS} lineas={2} label="Cargando los indicadores de los anuncios…" />
+        <SerieDiaria serie={null} alcance={ALCANCE_INICIAL} />
+        <EsqueletoPanelTabla titulo={TITULO} sub={BAJADA} label="Cargando la tabla de anuncios…" />
+    </div>
+);
 
 const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
     const [busqueda, setBusqueda] = useState('');
@@ -130,7 +145,7 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
     const [uno, varios, elegidasTxt] = UNIDAD[nivel];
     const alcance = elegidasVisibles.length
         ? (elegidasVisibles.length === 1 ? elegidasVisibles[0].nombre : `${elegidasVisibles.length} ${varios} ${elegidasTxt}`)
-        : `Todas las ${UNIDAD.anuncios[1]} de la tabla`;
+        : ALCANCE_INICIAL;
 
     const alternar = (fila) => setElegidas((prev) => {
         const nuevo = new Set(prev[nivel]);
@@ -188,16 +203,16 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
 
     const conGasto = totales.gasto > 0;
     const kpis = [
-        { titulo: 'Leads entrantes', valor: formatear(totales.entrantes, 'num'),
+        { titulo: KPIS[0], valor: formatear(totales.entrantes, 'num'),
           sub: `${formatear(totales.pct_calificados, 'pct')} calificados · ${formatear(totales.pct_descalificados, 'pct')} descalificados · ${formatear(totales.pct_pendientes, 'pct')} pendientes`,
           tip: 'Personas que entraron, por estado en ManyChat.' },
-        { titulo: 'Importe gastado', valor: formatear(totales.gasto, 'money', moneda),
+        { titulo: KPIS[1], valor: formatear(totales.gasto, 'money', moneda),
           sub: conGasto ? `${formatear(totales.cpl, 'money', moneda)} por lead · ${formatear(totales.cpl_calificado, 'money', moneda)} por calificado` : 'Sin gasto cargado en el período',
           tip: 'Gasto en Meta de estas palabras clave.' },
-        { titulo: 'Agendas', valor: formatear(totales.agendas, 'num'),
+        { titulo: KPIS[2], valor: formatear(totales.agendas, 'num'),
           sub: conGasto ? `${formatear(totales.costo_agenda, 'money', moneda)} por agenda` : 'Costo por agenda: —',
           tip: 'Agendas de estas personas en el período.' },
-        { titulo: 'Ventas', valor: formatear(totales.ventas, 'num'),
+        { titulo: KPIS[3], valor: formatear(totales.ventas, 'num'),
           sub: conGasto ? `${formatear(totales.costo_venta, 'money', moneda)} por venta · ROAS ${formatear(totales.roas, 'veces')}` : `${formatear(totales.cobrado, 'money', moneda)} cobrado`,
           tip: 'Pago completo o split. ROAS = cobrado ÷ gastado.' },
     ];
@@ -230,10 +245,8 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
             <section className="panel mk-panel-tabla" ref={panelTabla}>
                 <div className="mk-tabla-barra">
                     <div className="mk-cab-txt">
-                        <h2 className="t-h3">Campañas, conjuntos y anuncios</h2>
-                        <p className="t-cap mut40">
-                            Cada palabra clave que llega de ManyChat es un anuncio. Elegí filas para filtrar el nivel siguiente y el gráfico.
-                        </p>
+                        <h2 className="t-h3">{TITULO}</h2>
+                        <p className="t-cap mut40">{BAJADA}</p>
                     </div>
                     {/* Todos los filtros en una sola línea (Kerwin, 17/10/2026: «se ve todo desordenado»). */}
                     <div className="mk-filtros">
