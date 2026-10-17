@@ -113,7 +113,7 @@
 
 - **17 de Octubre de 2026 (2)** *(Marketing › Entrantes: sin «Pendientes por paso» y con el historial en palabras. [frontend/src/pages/admin/marketing/entrantes/EntrantesVista.jsx](../../frontend/src/pages/admin/marketing/entrantes/EntrantesVista.jsx) [MODIFY])*:
   - Se quitó la tarjeta «Pendientes por paso».
-  - Historial de la persona: el webhook sin mensajes dice «Inicio de la automatización» y la respuesta sola, «Respondió X» (sin «Webhook ·»). Cuando enviado y respondido traen el mismo número se muestra solo el envío: en prod ese par llega a los 30 s del inicio, igual que el envío solo, así que no es una respuesta.
+  - Historial de la persona: el webhook sin mensajes dice «Inicio de la automatización» y la respuesta sola, «Respondió X» (sin «Webhook ·»). Cuando enviado y respondido traen el mismo número se muestra solo el envío: en prod ese par llega a los 30 s del inicio, igual que el envío solo, así que no es una respuesta. **Mal: corregido en la entrada (4), ese par sí es una respuesta.**
   - Los nombres de los pasos salen del catálogo de Marketing › Conversaciones. Los mensajes 11 y 12 de ManyChat (desde el 17/10) todavía no están cargados, por eso se ven como «Mensaje 11» y «Mensaje 12».
   - Verificación: 34 tests de vitest de Marketing, lint y build de producción.
 
@@ -125,3 +125,9 @@
   - El tracking de NeurOPS no cambia: reprogramar y 2da llamada siguen siendo dos filas (Reagendado / 2da call + reprogramada / 2TH Call), de las que salen el embudo, la cartera y el roadmap.
   - Lo que carga el equipo no cuenta como conversión en las Stats de Thalamus.
   - Verificación: 678 tests de pytest relacionados (Thalamus, ficha, mazo, comercial), vitest de las pantallas del closer y build de producción.
+
+- **17 de Octubre de 2026 (4)** *(Entrantes: el historial vuelve a mostrar la respuesta pegada al envío. [frontend/src/pages/admin/marketing/entrantes/EntrantesVista.jsx](../../frontend/src/pages/admin/marketing/entrantes/EntrantesVista.jsx) [MODIFY])*:
+  - La entrada (2) se equivocó: cuando enviado y respondido traen el mismo número, la persona sí contestó. El webhook pega la respuesta en la fila del envío si llega dentro de los 30 min (`manychat.py`). Por eso la fila conserva la hora del envío, 30 s después del inicio. En prod, 2174 de 2176 de esas filas se actualizaron entre 1 s y 30 min después de crearse.
+  - El historial ahora dice «Se le mandó X y respondió». Con números distintos dice «Se le mandó X · respondió Y».
+  - Conversaciones no cambia: ya contaba ese par como respuesta, así que «Respondidos» y «% respuesta» estaban bien.
+  - Verificación: 4 tests de vitest de Entrantes, lint y build de producción.
