@@ -13,7 +13,7 @@ from freezegun import freeze_time
 
 from app.agendas_v2 import operacion, api_publico, servicio
 from app.agendas_v2.nucleo.eventos import config_de
-from app.models import Appointment, Client, GoogleCalendarToken, Notification
+from app.models import Appointment, Client, ClientComment, GoogleCalendarToken, Notification
 from app.models.financial import FinancialAgenda
 from app.services.google_service import GoogleService
 
@@ -335,15 +335,24 @@ def test_si_elige_cambiar_la_fecha_se_reprograma(client, armado, cuentas, google
     assert _reservar(client).status_code == 201
     r = _reservar(client, inicio='2026-10-05T13:45:00.000Z', si_ya_tiene='reprogramar')
     assert r.status_code == 201
-    appt = Appointment.query.one()
+    # Como «Reagendado» del mazo: la vieja queda cerrada y la nueva nace reprogramada (el embudo del
+    # closer, la cartera y el roadmap cuentan la reagenda).
+    vieja, appt = Appointment.query.order_by(Appointment.id).all()
     assert str(appt.id) == r.get_json()['reserva']['id']
+    assert (vieja.closer_result, vieja.closer_processed) == ('Reagendado', True)
     assert appt.start_time == datetime(2026, 10, 5, 13, 45) and appt.is_rescheduled
     assert appt.agenda_payload['reprogramada_desde'] == '2026-10-05T13:00:00Z'
+    assert appt.agenda_payload['reagenda_de'] == vieja.id
+    assert ClientComment.query.filter(ClientComment.text.like('Reagendado por el lead%')).count() == 1
+    # El registro de agendas sigue con UNA fila, con la fecha nueva.
     fa = FinancialAgenda.query.one()
     assert fa.date == datetime(2026, 10, 5, 13, 45)
     # El evento viejo se borra del Calendar y se crea uno nuevo.
     assert google['borrar'] == [(cuentas['ana'].id, 'evt1')] and len(google['crear']) == 2
     assert appt.google_event_id == 'evt2'
+    # En Stats sigue siendo una sola agenda, vigente y con el horario nuevo.
+    (lead,) = servicio.estadisticas()
+    assert lead['inicio'] == servicio.dt_a_ms(datetime(2026, 10, 5, 13, 45)) and not lead['cancelada']
 
 
 def test_si_elige_una_sesion_adicional_quedan_las_dos_y_se_avisa_al_closer(client, armado, cuentas, google):
@@ -382,7 +391,8 @@ def test_una_agenda_de_n8n_futura_tambien_se_reprograma(client, armado, cuentas,
     db.session.commit()
     assert _reservar(client).status_code == 409
     assert _reservar(client, si_ya_tiene='reprogramar').status_code == 201
-    appt = Appointment.query.one()
+    vieja, appt = Appointment.query.order_by(Appointment.id).all()
+    assert vieja.closer_result == 'Reagendado' and vieja.closer_id == cuentas['beto'].id
     assert appt.start_time == datetime(2026, 10, 5, 13) and appt.closer_id == cuentas['ana'].id
 
 

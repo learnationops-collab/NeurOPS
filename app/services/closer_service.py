@@ -1075,7 +1075,7 @@ class CloserService:
                 payload_nueva = manual.armar_payload(appt.client, appt.closer, user, '2da_call', anterior=appt)
             else:
                 payload_nueva = {**manual.payload_reprogramada(appt, appt.closer, user),
-                                 'reprogramada_desde': appt.start_time.isoformat() + 'Z'}
+                                 'reprogramada_desde': appt.start_time.isoformat() + 'Z', 'reagenda_de': appt.id}
             manual.verificar_horario(appt.closer_id, datetime.fromisoformat(reschedule_date.replace('Z', '')),
                                      payload_nueva, propia=appt)
 

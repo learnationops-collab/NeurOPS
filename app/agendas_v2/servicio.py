@@ -1339,19 +1339,25 @@ def _leads_de_agendas(desde):
 
     filas = Appointment.query.filter(Appointment.agenda_payload.isnot(None), Appointment.created_at >= desde).all()
     setters = _nombres_de_usuarios((a.agenda_payload or {}).get('setter_user_id') for a in filas)
+    # Una reagenda (del lead por el link o del equipo) es otra fila del MISMO lead: cuenta la original,
+    # con el horario y la vigencia de su última reagenda (reagenda.py, closer_service.process_agenda).
+    sucesora = {(a.agenda_payload or {}).get('reagenda_de'): a for a in filas if (a.agenda_payload or {}).get('reagenda_de')}
     leads = []
     for a in filas:
         p = a.agenda_payload or {}
-        # Lo que carga el equipo desde NeurOPS (manual.py) no es una conversión del link: una llamada
-        # nueva no entró por ningún funnel, y una reagenda es otra fila del MISMO lead (la original
-        # ya cuenta).
-        if p.get('manual'):
+        # Lo que carga el equipo desde NeurOPS (manual.py) tampoco es una conversión del link.
+        if p.get('manual') or p.get('reagenda_de'):
             continue
+        ultima, vistas = a, {a.id}
+        while ultima.id in sucesora and sucesora[ultima.id].id not in vistas:
+            ultima = sucesora[ultima.id]
+            vistas.add(ultima.id)
         leads.append({
             't': dt_a_ms(a.created_at), 'ev': p.get('evento_id') or '', 'llego': 999, 'desc': False, 'agenda': True,
-            'score': p.get('nota'), 'closer': p.get('closer_id'), 'setter': setters.get(p.get('setter_user_id')),
-            'origen': p.get('origen') or '', 'grupo': p.get('prioridad_id'), 'inicio': dt_a_ms(a.start_time),
-            'cancelada': not _vigente(a),
+            'score': p.get('nota'), 'closer': (ultima.agenda_payload or {}).get('closer_id') or p.get('closer_id'),
+            'setter': setters.get(p.get('setter_user_id')),
+            'origen': p.get('origen') or '', 'grupo': p.get('prioridad_id'), 'inicio': dt_a_ms(ultima.start_time),
+            'cancelada': not _vigente(ultima),
         })
     return leads
 

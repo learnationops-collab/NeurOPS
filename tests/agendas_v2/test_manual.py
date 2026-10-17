@@ -245,4 +245,5 @@ def test_una_reagenda_desde_neurops_no_cuenta_dos_veces_en_stats(client, db, ana
 
     CloserService.process_agenda(ana.id, appt.id, {'status': 'Reagendado', 'reschedule_date': '2026-10-22T15:00:00'})
 
-    assert len(servicio.estadisticas(ahora=MS(datetime(2026, 10, 19, 12, 0)))) == 1
+    (lead,) = servicio.estadisticas(ahora=MS(datetime(2026, 10, 19, 12, 0)))
+    assert lead['inicio'] == MS(datetime(2026, 10, 22, 15, 0)) and not lead['cancelada']

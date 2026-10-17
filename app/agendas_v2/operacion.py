@@ -188,7 +188,7 @@ def proxima_de(cliente_id, ahora):
 def registrar_agenda(payload, closer, setter, inicio, ahora=None, decision=None, ignorar_ids=(), asegurar=None,
                      cliente=None, fuente=None, setter_id=None):
     """Crea (o reprograma) la agenda en la operacion. `inicio`: datetime UTC sin zona.
-    `decision`: lo que eligió el lead que ya tenía una agenda próxima: 'reprogramar' la mueve;
+    `decision`: lo que eligió el lead que ya tenía una agenda próxima: 'reprogramar' la reagenda (reagenda.py);
     cualquier otra cosa ('adicional') crea otra y le avisa al closer, que decide si cancela la
     anterior. Nunca se borra ni se mueve una agenda sin que el lead lo haya pedido.
     `ignorar_ids`: agendas del closer a esa hora que ya no están en su Google Calendar (no la frenan).
@@ -213,38 +213,9 @@ def registrar_agenda(payload, closer, setter, inicio, ahora=None, decision=None,
             return None, None
 
     if previa and decision == 'reprogramar':
-        anterior = previa.start_time
-        espejo = _espejo_de(previa, anterior)
-        evento_viejo = (previa.closer_id, previa.google_event_id) if previa.google_event_id else None
-        previa.start_time = inicio
-        previa.closer_id = closer.id
-        previa.setter_id = setter.id if setter else (setter_id or previa.setter_id)
-        previa.is_rescheduled = True
-        previa.google_event_id = None
-        previa.agenda_payload = {**payload, 'reprogramada_desde': anterior.isoformat() + 'Z' if anterior else None}
-        if espejo:
-            espejo.date = inicio
-            espejo.fecha_meet = inicio.isoformat()
-            espejo.closer = closer.username
-            _payload_en_espejo(espejo, previa.agenda_payload)
-        db.session.add(
-            Notification(
-                subject='Agenda reprogramada',
-                content=(
-                    f'{cliente.full_name or "Un lead"} reprogramó su agenda desde el link de agendas: '
-                    f'pasa al {inicio.strftime("%d/%m/%Y %H:%M")} UTC.'
-                ),
-                target_users=['role:admin', int(closer.id)],
-                associated_id=previa.id,
-                associated_type='appointment',
-            )
-        )
-        db.session.commit()
-        if not espejo:
-            _payload_en_espejo(BookingService.sync_appointment_to_financial_agenda(previa), previa.agenda_payload)
-            db.session.commit()
-        current_app.logger.info(f'[AGENDAS 2.0] Agenda #{previa.id} reprogramada de {anterior} a {inicio}')
-        return previa, evento_viejo
+        from app.agendas_v2.reagenda import reagendar
+
+        return reagendar(previa, cliente, payload, closer, setter, setter_id, inicio, ignorar_ids)
 
     if previa:
         payload = {**payload, 'sesion_adicional_de': {'agenda_id': previa.id, 'inicio': previa.start_time.isoformat() + 'Z'}}
