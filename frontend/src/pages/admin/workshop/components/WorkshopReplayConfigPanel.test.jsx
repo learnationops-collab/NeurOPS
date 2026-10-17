@@ -22,7 +22,7 @@ describe('Workshop › Talleres › Grabación: guardar y publicar son dos cosas
     it('guardar la grabación no la publica, y sin guardarla no se puede publicar', async () => {
         render(<WorkshopReplayConfigPanel evento={TALLER} />);
 
-        expect(screen.getByText('Sin grabación')).toBeInTheDocument();
+        expect(screen.getByText('Sin Loom')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Publicar ahora/ })).toBeDisabled();
 
         await userEvent.click(screen.getByLabelText(/Link o ID del video de Loom/));

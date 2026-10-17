@@ -70,7 +70,7 @@ export const tasaPaso = (n, anterior) => (anterior > 0 ? (n / anterior) * 100 : 
 
 export const ESTADOS_GRABACION = {
     // `corto`: la opción del filtro de la tabla.
-    sin_grabacion: { texto: 'Sin grabación', corto: 'Sin Loom', tono: 'idle' },
+    sin_grabacion: { texto: 'Sin Loom', corto: 'Sin Loom', tono: 'idle' },
     sin_publicar: { texto: 'Sin publicar', corto: 'Sin publicar', tono: 'idle' },
     programada: { texto: 'Programada', corto: 'Programada', tono: 'warning' },
     activa: { texto: 'Publicada', corto: 'Publicada', tono: 'success' },
