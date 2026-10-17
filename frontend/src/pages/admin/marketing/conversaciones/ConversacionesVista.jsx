@@ -1,0 +1,189 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Plus } from 'lucide-react';
+import toast from 'react-hot-toast';
+import api from '../../../../services/api';
+import ListaConfigurable from '../../../../components/listas/ListaConfigurable';
+import { Button, Chip, FieldError, Input, Modal, ModalHeader, Select, Switch, TextArea } from '../../../../components/standard';
+import { EsqueletoTablero, PanelCab } from '../../../comercial/components/Shared';
+import './conversaciones.css';
+
+/**
+ * Marketing › Conversaciones (16/10/2026): el catálogo de mensajes del flujo de ManyChat. Cada mensaje tiene
+ * el número que el flujo manda en `id_option_send` (al enviarlo) e `id_option` (al responderlo); con el
+ * catálogo, Entrantes y las estadísticas lo muestran con nombre. Antes vivía en el panel del setter.
+ *
+ * La lista suma los números que llegaron en el período sin estar en el catálogo («Sin configurar»), para
+ * darlos de alta desde ahí.
+ */
+
+export const CATEGORIAS = [
+    { value: 'opening', label: 'Apertura' },
+    { value: 'cualificacion', label: 'Cualificación' },
+    { value: 'dolor', label: 'Dolor' },
+    { value: 'seguimiento', label: 'Seguimiento' },
+];
+const rotuloCategoria = (c) => CATEGORIAS.find((x) => x.value === c)?.label || null;
+const num = (n) => (n ?? 0).toLocaleString('en-US');
+const pct = (n) => (n == null ? '—' : `${Number(n).toLocaleString('en-US', { maximumFractionDigits: 1 })}%`);
+
+/** Une el catálogo con lo que llegó en el período: una fila por número de mensaje. */
+export const unir = (mensajes, estadisticas) => {
+    const porId = new Map(estadisticas.map((e) => [String(e.message_id), e]));
+    const filas = mensajes.map((m) => ({ ...m, configurado: true, stats: porId.get(String(m.message_id)) || null }));
+    estadisticas.filter((e) => !mensajes.some((m) => String(m.message_id) === String(e.message_id)))
+        .forEach((e) => filas.push({ message_id: String(e.message_id), title: null, body: null, category: null,
+            is_active: true, configurado: false, stats: e }));
+    return filas.sort((a, b) => (Number(a.message_id) || 0) - (Number(b.message_id) || 0));
+};
+
+const COLUMNAS = [
+    { key: 'id', header: 'N.º', fija: true, width: 'minmax(56px,.4fr)', alinear: 'der', valor: (f) => Number(f.message_id) || f.message_id },
+    { key: 'mensaje', header: 'Mensaje', fija: true, width: 'minmax(180px,2fr)', valor: (f) => f.title || '',
+        render: (f) => (f.configurado
+            ? <span className="cv-msj"><span className="celda">{f.title}</span><small className="celda mut40">{rotuloCategoria(f.category)}</small></span>
+            : <span className="cv-msj"><span className="celda mut40">Sin configurar</span><small className="celda mut40">Llegó en el período</small></span>) },
+    { key: 'enviados', header: 'Enviados', alinear: 'der', width: 'minmax(84px,.7fr)', valor: (f) => f.stats?.total_sends ?? 0,
+        render: (f) => num(f.stats?.total_sends) },
+    { key: 'respondidos', header: 'Respondidos', alinear: 'der', width: 'minmax(96px,.8fr)', valor: (f) => f.stats?.total_responses ?? 0,
+        render: (f) => num(f.stats?.total_responses) },
+    { key: 'tasa', header: '% respuesta', alinear: 'der', width: 'minmax(96px,.8fr)', valor: (f) => f.stats?.response_rate ?? null,
+        ayuda: 'Respondidos ÷ enviados.', render: (f) => (f.stats ? pct(f.stats.response_rate) : '—') },
+    { key: 'calificados', header: 'Calificados', alinear: 'der', width: 'minmax(92px,.7fr)', valor: (f) => f.stats?.leads_generated ?? 0,
+        ayuda: 'Respondieron este mensaje y quedaron calificados.', render: (f) => num(f.stats?.leads_generated) },
+    { key: 'descalificados', header: 'Descalificados', alinear: 'der', width: 'minmax(104px,.8fr)', valor: (f) => f.stats?.disqualified_leads ?? 0,
+        render: (f) => num(f.stats?.disqualified_leads) },
+    { key: 'agendas', header: 'Agendas', alinear: 'der', width: 'minmax(76px,.6fr)', valor: (f) => f.stats?.agendas ?? 0, oculta: true,
+        render: (f) => num(f.stats?.agendas) },
+    { key: 'activo', header: 'Estado', width: 'minmax(96px,.7fr)', valor: (f) => (f.is_active ? 1 : 0),
+        render: (f) => (!f.configurado ? <Chip color="var(--warning)" subtle>Sin configurar</Chip>
+            : f.is_active ? <Chip color="var(--success)" subtle>Activo</Chip> : <Chip subtle>Inactivo</Chip>) },
+];
+
+const FACETAS = [
+    { key: 'categoria', label: 'Categoría', de: (f) => rotuloCategoria(f.category) || 'Sin configurar' },
+    { key: 'estado', label: 'Estado', de: (f) => (!f.configurado ? 'Sin configurar' : f.is_active ? 'Activo' : 'Inactivo') },
+];
+
+const VACIO = { message_id: '', title: '', body: '', category: 'cualificacion', is_active: true };
+
+/** Alta o edición de un mensaje. `nuevo`: el número todavía no existe en el catálogo. */
+const EditarMensaje = ({ inicial, nuevo, onCerrar, onGuardado }) => {
+    const [form, setForm] = useState({ ...VACIO, ...inicial });
+    const [error, setError] = useState(null);
+    const [guardando, setGuardando] = useState(false);
+    const cambiar = (k) => (v) => setForm((f) => ({ ...f, [k]: v }));
+
+    const guardar = async () => {
+        if (!String(form.message_id).trim() || !form.title.trim()) {
+            setError('Poné el número y el título.');
+            return;
+        }
+        setGuardando(true);
+        setError(null);
+        try {
+            const cuerpo = { message_id: String(form.message_id).trim(), title: form.title.trim(), body: form.body,
+                category: form.category, is_active: form.is_active };
+            if (nuevo) await api.post('/conversational/messages', cuerpo);
+            else await api.put(`/conversational/messages/${form.id}`, cuerpo);
+            toast.success(nuevo ? 'Mensaje agregado' : 'Mensaje guardado');
+            onGuardado();
+            onCerrar();
+        } catch (e) {
+            setError(e.response?.data?.message || 'No se pudo guardar.');
+        } finally {
+            setGuardando(false);
+        }
+    };
+
+    return (
+        <Modal onClose={onCerrar} labelledBy="cv-editar-titulo" className="cv-modal">
+            <ModalHeader titleId="cv-editar-titulo" title={nuevo ? 'Nuevo mensaje' : `Mensaje ${form.message_id}`}
+                subtitle="El número es el que manda el flujo en id_option_send e id_option." onClose={onCerrar} />
+            <div className="cv-form">
+                <label className="cv-campo">
+                    <span className="t-rotulo">Número</span>
+                    <Input variant="number" value={form.message_id} disabled={!nuevo} inputMode="numeric"
+                        onChange={(e) => cambiar('message_id')(e.target.value)} aria-label="Número del mensaje" />
+                </label>
+                <label className="cv-campo">
+                    <span className="t-rotulo">Título</span>
+                    <Input value={form.title} onChange={(e) => cambiar('title')(e.target.value)} placeholder="Cualificación 3"
+                        aria-label="Título" />
+                </label>
+                <div className="cv-campo">
+                    <span className="t-rotulo">Categoría</span>
+                    <Select value={form.category} options={CATEGORIAS} onChange={cambiar('category')} label="Categoría" />
+                </div>
+                <label className="cv-campo cv-campo--ancho">
+                    <span className="t-rotulo">Texto del mensaje</span>
+                    <TextArea value={form.body || ''} onChange={(e) => cambiar('body')(e.target.value)}
+                        placeholder="Lo que dice el mensaje en ManyChat" aria-label="Texto del mensaje" />
+                </label>
+                <div className="cv-activo">
+                    <Switch checked={form.is_active} onChange={cambiar('is_active')} label="Activo" />
+                    <span>{form.is_active ? 'Activo' : 'Inactivo'}</span>
+                </div>
+                {error && <FieldError>{error}</FieldError>}
+            </div>
+            <div className="cv-pie">
+                <Button onClick={onCerrar}>Cancelar</Button>
+                <Button variant="primary" disabled={guardando} onClick={guardar}>Guardar</Button>
+            </div>
+        </Modal>
+    );
+};
+
+const ConversacionesVista = ({ desde, hasta, version = 0 }) => {
+    const [mensajes, setMensajes] = useState(null);
+    const [estadisticas, setEstadisticas] = useState([]);
+    const [error, setError] = useState(null);
+    const [editando, setEditando] = useState(null); // { inicial, nuevo }
+    const [recarga, setRecarga] = useState(0);
+
+    useEffect(() => {
+        const control = new AbortController();
+        Promise.all([
+            api.get('/conversational/messages', { signal: control.signal }),
+            api.get('/conversational/stats/conversational', { params: { start_date: desde, end_date: hasta }, signal: control.signal }),
+        ]).then(([m, s]) => {
+            setMensajes(m.data || []);
+            setEstadisticas(s.data?.table || []);
+            setError(null);
+        }).catch((e) => { if (e?.name !== 'CanceledError') setError('No se pudieron cargar los mensajes.'); });
+        return () => control.abort();
+    }, [desde, hasta, version, recarga]);
+
+    const filas = useMemo(() => (mensajes ? unir(mensajes, estadisticas) : []), [mensajes, estadisticas]);
+    const abrir = useCallback((f) => setEditando(f.configurado
+        ? { inicial: f, nuevo: false }
+        : { inicial: { ...VACIO, message_id: f.message_id }, nuevo: true }), []);
+    const sinConfigurar = filas.filter((f) => !f.configurado).length;
+
+    if (error) return <section className="panel"><p className="t-body">{error}</p></section>;
+    if (!mensajes) return <EsqueletoTablero rotulo="Cargando los mensajes…" />;
+
+    return (
+        <section className="panel cv-lista" aria-label="Mensajes del flujo">
+            <PanelCab titulo="Mensajes del flujo" tip="El número que manda ManyChat en cada paso. Clic: editar.">
+                <Button variant="primary" icon={<Plus size={15} aria-hidden="true" />}
+                    onClick={() => setEditando({ inicial: VACIO, nuevo: true })}>
+                    Nuevo mensaje
+                </Button>
+            </PanelCab>
+            {sinConfigurar > 0 && (
+                <p className="t-cap cv-aviso">
+                    {sinConfigurar === 1 ? 'Llegó 1 número sin configurar' : `Llegaron ${sinConfigurar} números sin configurar`}: tocalo para darlo de alta.
+                </p>
+            )}
+            <ListaConfigurable columnas={COLUMNAS} facetas={FACETAS} filas={filas} clave={(f) => f.message_id}
+                onAbrirFila={abrir} claveGuardado="mk_conversaciones_cols" vacio="No hay mensajes cargados."
+                buscar={(f) => [f.message_id, f.title, f.body].filter(Boolean).join(' ')} buscarPlaceholder="Número o título…" />
+            {editando && (
+                <EditarMensaje inicial={editando.inicial} nuevo={editando.nuevo} onCerrar={() => setEditando(null)}
+                    onGuardado={() => setRecarga((n) => n + 1)} />
+            )}
+        </section>
+    );
+};
+
+export default ConversacionesVista;

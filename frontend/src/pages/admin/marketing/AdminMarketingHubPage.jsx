@@ -8,6 +8,7 @@ import RangoFechas, { esFecha, textoRango } from '../../comercial/components/Ran
 import UTMGenerator from '../../../components/operations/UTMGenerator';
 import WebhookMonitorTab from '../../public/WebhookMonitorTab';
 import EntrantesVista from './entrantes/EntrantesVista';
+import ConversacionesVista from './conversaciones/ConversacionesVista';
 import TablaAnuncios from './anuncios/TablaAnuncios';
 import ConexionMeta from './anuncios/ConexionMeta';
 import EmbudosResumen from './anuncios/EmbudosResumen';
@@ -44,12 +45,13 @@ import './anuncios/anuncios.css';
 const PESTANAS = [
     { key: 'anuncios', label: 'Rendimiento' },
     { key: 'entrantes', label: 'Entrantes' },
+    { key: 'conversaciones', label: 'Conversaciones' },
     { key: 'meta', label: 'Meta Ads' },
     { key: 'utms', label: 'Generador UTM' },
 ];
 // «Webhooks» pasó a ser «Entrantes» (16/10/2026): un link viejo abre la nueva.
 const PESTANA_VIEJA = { webhooks: 'entrantes' };
-const CON_PERIODO = ['anuncios', 'entrantes', 'meta'];
+const CON_PERIODO = ['anuncios', 'entrantes', 'conversaciones', 'meta'];
 // Rendimiento por embudo (15/10/2026): «Todo» suma el resumen por embudo arriba de la tabla de
 // palabras clave; «Setting» es esa tabla sola y «Workshop», los anuncios que llevan a la clase.
 const EMBUDOS_DE_RENDIMIENTO = [
@@ -204,6 +206,9 @@ const AdminMarketingHubPage = () => {
                             <EntrantesVista desde={rango.desde} hasta={rango.hasta} version={version}
                                 herramientasAbiertas={herramientas}
                                 onHerramientas={() => cambiar({ herr: herramientas ? null : '1' })} />
+                        )}
+                        {pestana === 'conversaciones' && (
+                            <ConversacionesVista desde={rango.desde} hasta={rango.hasta} version={version} />
                         )}
                         {pestana === 'meta' && (
                             <ConexionMeta desde={rango.desde} hasta={rango.hasta} filasTablero={datos?.filas}
