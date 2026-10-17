@@ -106,18 +106,13 @@ def _anuncio_de_cada_una(filas):
     En tres consultas para toda la bandeja (conversaciones, respuestas con anuncio) en vez de dos
     por agenda: la lista de un setter son cientos de filas.
     """
-    from app.services.anuncios_service import clave_de_nombre, leads_por_nombre
+    from app.services.cruce_conversaciones import Cruce
 
-    igs = {normalizar_ig(f['ig']) for f in filas} - {None}
-    leads_por_ig = defaultdict(list)
-    if igs:
-        ig_columna = func.lower(func.replace(ManychatLead.ig, '@', ''))
-        for lead_id, ig in db.session.query(ManychatLead.id, ig_columna).filter(ig_columna.in_(igs)):
-            leads_por_ig[(ig or '').strip()].append(lead_id)
-    # Si el Instagram no lleva a ninguna, el nombre completo exacto, como Marketing
-    # (`anuncios_service._Atribuidor`): el setter lo escribe mal o pone el nombre en su lugar.
-    por_nombre = leads_por_nombre({clave_de_nombre(f['cliente']) for f in filas})
-    lead_ids = {lid for ids in leads_por_ig.values() for lid in ids} | set(por_nombre.values())
+    # La conversación se busca como en Marketing (`cruce_conversaciones`): Instagram exacto, parecido
+    # y nombre; el setter escribe mal el Instagram o pone el nombre en su lugar. Va el Instagram tal
+    # como se escribió: «greta castro gallo» no es un usuario, pero su forma compacta sí lo encuentra.
+    cruce = Cruce({f['ig'] for f in filas}, {f['cliente'] for f in filas})
+    lead_ids = cruce.lead_ids()
     respuestas = defaultdict(list)
     if lead_ids:
         for lead_id, ad_id, creada in db.session.query(
@@ -134,9 +129,8 @@ def _anuncio_de_cada_una(filas):
     anuncio = {}
     for f in filas:
         reunion = _instante(f['fecha'])
-        por_ig = ultima(leads_por_ig.get(normalizar_ig(f['ig']) or '', []), reunion)
-        lead = por_nombre.get(clave_de_nombre(f['cliente']))
-        elegido = por_ig or (ultima([lead], reunion) if lead else None)
+        elegido = next((a for ids in cruce.candidatos(f['ig'], f['cliente'])
+                        if (a := ultima(ids, reunion))), None)
         if elegido:
             anuncio[f['id']] = elegido
     return anuncio
