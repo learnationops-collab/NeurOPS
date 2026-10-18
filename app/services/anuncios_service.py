@@ -252,17 +252,15 @@ def _agendas(desde_dt, hasta_dt, clave_de_anuncio):
     return por_clave, sin_atribuir
 
 
-def _ventas(desde_dt, hasta_dt, clave_de_anuncio):
-    """({clave: {'ventas', 'cobrado'}}, sin_atribuir, cobros, sin_clave): ventas nuevas (completo o
-    split) y todo lo cobrado (también cuotas y señas) de las personas que llegaron por esa palabra
-    clave; además todos los cobros del período y los que no llegaron a ninguna (para `cobrado_fuera`).
+def claves_de_cobros(cobros, clave_de_anuncio=None, cliente_de=None):
+    """{id de cada cobro: su palabra clave o None}: la de la última interacción de ManyChat de esa
+    persona hasta el pago. La usan el tablero y la bandeja de ventas del setter (17/10/2026), así que
+    una venta que el setter ve pendiente es una que Marketing no cuenta para ningún anuncio.
 
     Se prueba el Instagram escrito en la venta y, si no lleva a nada, el de su cliente: el de la
     venta lo tipea el closer y a veces no es el mismo."""
-    cobros = [v for v in FinancialSale.query.filter(FinancialSale.date >= desde_dt,
-                                                    FinancialSale.date <= hasta_dt).all()
-              if venta_completada(v)]
-    cliente_de = clientes_de_ventas(cobros)
+    clave_de_anuncio = _clave_de_cada_anuncio() if clave_de_anuncio is None else clave_de_anuncio
+    cliente_de = clientes_de_ventas(cobros) if cliente_de is None else cliente_de
     ig_de_cliente, nombre_de_cliente = {}, {}
     ids = {cid for cid in cliente_de.values() if cid}
     for tanda in _en_tandas(ids):
@@ -279,12 +277,24 @@ def _ventas(desde_dt, hasta_dt, clave_de_anuncio):
 
     atribuidor = _Atribuidor({ig for c in cobros for ig in igs_de(c)}, clave_de_anuncio,
                              {nombre_de(c) for c in cobros})
+    return {cobro.id: next((c for ig in igs_de(cobro) or [None]
+                            if (c := atribuidor.clave(ig, cobro.date, nombre_de(cobro)))), None)
+            for cobro in cobros}
+
+
+def _ventas(desde_dt, hasta_dt, clave_de_anuncio):
+    """({clave: {'ventas', 'cobrado'}}, sin_atribuir, cobros, sin_clave): ventas nuevas (completo o
+    split) y todo lo cobrado (también cuotas y señas) de las personas que llegaron por esa palabra
+    clave; además todos los cobros del período y los que no llegaron a ninguna (para `cobrado_fuera`)."""
+    cobros = [v for v in FinancialSale.query.filter(FinancialSale.date >= desde_dt,
+                                                    FinancialSale.date <= hasta_dt).all()
+              if venta_completada(v)]
+    claves = claves_de_cobros(cobros, clave_de_anuncio)
     por_clave = defaultdict(lambda: {'ventas': 0, 'cobrado': 0.0})
     sin_atribuir, sin_clave = 0, []
     for cobro in cobros:
         es_venta = ComercialService.clasificar_venta(cobro)[2]
-        clave = next((c for ig in igs_de(cobro) or [None]
-                      if (c := atribuidor.clave(ig, cobro.date, nombre_de(cobro)))), None)
+        clave = claves[cobro.id]
         if not clave:
             sin_atribuir += 1 if es_venta else 0
             sin_clave.append(cobro)

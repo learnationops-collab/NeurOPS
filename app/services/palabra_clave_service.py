@@ -517,7 +517,8 @@ def asignar(setter, appointment_id, ad_id, instagram=None, palabra=None):
     if del_cliente and del_cliente != ig:
         igs.append(del_cliente)
     for usuario in igs:
-        _responder_con_anuncio(usuario, cita, cliente, anuncio, tope, antes_de_todo)
+        responder_con_anuncio(usuario, f'manual_agenda_{cita.id}', cliente.full_name if cliente else None,
+                              anuncio, tope, antes_de_todo)
 
     for a in suyas:
         a.keyword = anuncio.keyword or anuncio.name
@@ -534,14 +535,15 @@ def asignar(setter, appointment_id, ad_id, instagram=None, palabra=None):
             'anuncio': {'id': anuncio.id, 'keyword': anuncio.keyword or anuncio.name}}
 
 
-def _responder_con_anuncio(ig, cita, cliente, anuncio, tope, antes_de_todo):
-    """La conversación de ese Instagram (la crea si no está) con una respuesta con el anuncio de
-    antes de la reunión: la que ya había sin anuncio o una nueva antes de la primera agenda."""
+def responder_con_anuncio(ig, marca, nombre, anuncio, tope, antes_de_todo):
+    """La conversación de ese Instagram (la crea si no está, con `marca` en su manychat_id) con una
+    respuesta con el anuncio de antes de `tope` (la reunión o el primer pago): la que ya había sin
+    anuncio o una nueva en `antes_de_todo`. La usan las agendas y las ventas del setter."""
     conversacion = ManychatLead.query.filter(
         func.lower(func.replace(ManychatLead.ig, '@', '')) == ig).first()
     if not conversacion:
-        conversacion = ManychatLead(manychat_id=f'manual_agenda_{cita.id}_{uuid.uuid4().hex[:6]}',
-                                    name=(cliente.full_name if cliente else None) or 'Sin nombre',
+        conversacion = ManychatLead(manychat_id=f'{marca}_{uuid.uuid4().hex[:6]}',
+                                    name=nombre or 'Sin nombre',
                                     ig=f'@{ig}', follower=False)
         db.session.add(conversacion)
         db.session.flush()

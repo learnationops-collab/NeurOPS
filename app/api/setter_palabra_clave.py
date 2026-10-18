@@ -14,6 +14,7 @@ from app.api.setter import bp
 from app.decorators import role_required
 from app.models import ROLE_SETTER
 from app.services import palabra_clave_service as servicio
+from app.services import ventas_palabra_clave_service as ventas_servicio
 
 
 @bp.route('/palabras-clave', methods=['GET'])
@@ -59,3 +60,37 @@ def asignar_palabra_clave():
     except servicio.ErrorDePalabraClave as error:
         return jsonify({'error': str(error)}), error.estado
     return jsonify({**hecho, 'resumen': servicio.resumen(current_user)}), 200
+
+
+@bp.route('/palabras-clave/ventas', methods=['GET'])
+@role_required(ROLE_SETTER)
+def ventas_sin_palabra_clave():
+    """Las ventas de la fuente del setter, por cliente: pendientes (algún pago sin palabra clave) y
+    completadas. Ver `ventas_palabra_clave_service` (17/10/2026)."""
+    return jsonify(ventas_servicio.ventas(current_user)), 200
+
+
+@bp.route('/palabras-clave/ventas', methods=['POST'])
+@role_required(ROLE_SETTER)
+def asignar_palabra_clave_a_ventas():
+    """Body: {"grupo": "c<client_id>" | "v<venta_id>", "ad_id": int | "palabra_clave": str,
+    "instagram": "usuario" (opcional)}. Pone el anuncio en todos los pagos de ese cliente."""
+    datos = request.get_json(silent=True) or {}
+    grupo, palabra, instagram = datos.get('grupo'), datos.get('palabra_clave'), datos.get('instagram')
+    if not isinstance(grupo, str) or grupo[:1] not in ('c', 'v') or not grupo[1:].isdigit():
+        return jsonify({'error': 'Falta el cliente.'}), 400
+    if palabra is not None and not isinstance(palabra, str):
+        return jsonify({'error': 'La palabra clave tiene que ser texto.'}), 400
+    if instagram is not None and not isinstance(instagram, str):
+        return jsonify({'error': 'El Instagram tiene que ser texto.'}), 400
+    try:
+        ad_id = int(datos['ad_id']) if datos.get('ad_id') is not None else None
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Ese anuncio no existe: elegilo de la lista.'}), 400
+    if ad_id is None and not (palabra or '').strip():
+        return jsonify({'error': 'Elegí el anuncio de la lista o escribí la palabra clave.'}), 400
+    try:
+        hecho = ventas_servicio.asignar(current_user, grupo, ad_id, palabra, instagram)
+    except servicio.ErrorDePalabraClave as error:
+        return jsonify({'error': str(error)}), error.estado
+    return jsonify(hecho), 200
