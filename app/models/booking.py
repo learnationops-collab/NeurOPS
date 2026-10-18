@@ -38,6 +38,9 @@ class Appointment(db.Model):
     closer_notes = db.Column(db.Text, nullable=True)
     ig_chat_link = db.Column(db.String(500), nullable=True)
     keyword = db.Column(db.String(100), nullable=True)
+    # El anuncio que el setter eligió para esta agenda en «Mis agendas» (18/10/2026): manda sobre
+    # ManyChat para Marketing y la bandeja, así una palabra clave equivocada se puede cambiar.
+    anuncio_id = db.Column(db.Integer, db.ForeignKey('ads.id'), nullable=True)
     examen = db.Column(db.String(255), nullable=True)
     fecha_seguimiento = db.Column(db.String(255), nullable=True)
     fecha_seguimiento_cobro = db.Column(db.String(255), nullable=True)

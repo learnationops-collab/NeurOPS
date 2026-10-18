@@ -56,7 +56,9 @@ def asignar_palabra_clave():
     if instagram is not None and not isinstance(instagram, str):
         return jsonify({'error': 'El Instagram tiene que ser texto.'}), 400
     try:
-        hecho = servicio.asignar(current_user, appointment_id, ad_id, instagram, palabra=palabra)
+        # `cambiar`: una completada con la palabra clave equivocada (18/10/2026).
+        hecho = servicio.asignar(current_user, appointment_id, ad_id, instagram, palabra=palabra,
+                                 cambiar=datos.get('cambiar') is True)
     except servicio.ErrorDePalabraClave as error:
         return jsonify({'error': str(error)}), error.estado
     return jsonify({**hecho, 'resumen': servicio.resumen(current_user)}), 200

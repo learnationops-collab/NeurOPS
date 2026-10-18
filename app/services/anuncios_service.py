@@ -228,9 +228,13 @@ def _entrantes(desde_dt, hasta_dt, clave_de_anuncio):
 
 
 def _agendas(desde_dt, hasta_dt, clave_de_anuncio):
-    """({clave: {'agendas', 'dias'}}, sin_atribuir): una agenda por persona y palabra clave."""
+    """({clave: {'agendas', 'dias'}}, sin_atribuir): una agenda por persona y palabra clave.
+
+    El anuncio que eligió el setter en «Mis agendas» (`Appointment.anuncio_id`, 18/10/2026) manda sobre
+    ManyChat: así se corrige una palabra clave equivocada."""
     filas = db.session.query(Appointment.id, Appointment.client_id, Appointment.start_time,
-                             Appointment.created_at, Client.instagram, Client.full_name) \
+                             Appointment.created_at, Client.instagram, Client.full_name,
+                             Appointment.anuncio_id) \
         .outerjoin(Client, Client.id == Appointment.client_id) \
         .filter(Appointment.created_at >= desde_dt, Appointment.created_at <= hasta_dt, no_es_marcador()).all()
     atribuidor = _Atribuidor({normalize_ig(f.instagram) for f in filas}, clave_de_anuncio,
@@ -239,7 +243,8 @@ def _agendas(desde_dt, hasta_dt, clave_de_anuncio):
     por_clave = defaultdict(lambda: {'agendas': 0, 'dias': Counter()})
     vistas, sin_atribuir = set(), 0
     for f in sorted(filas, key=lambda f: (f.created_at, f.id)):
-        clave = atribuidor.clave(normalize_ig(f.instagram), f.start_time, f.full_name)
+        clave = clave_de_anuncio.get(f.anuncio_id) if f.anuncio_id else None
+        clave = clave or atribuidor.clave(normalize_ig(f.instagram), f.start_time, f.full_name)
         if not clave:
             sin_atribuir += 1
             continue

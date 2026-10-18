@@ -126,11 +126,26 @@ def _anuncio_de_cada_una(filas):
         # La más cercana a la reunión, como Marketing: es el anuncio por el que llegó esa vez.
         return max(candidatas)[1] if candidatas else None
 
+    # El anuncio que eligió el setter (`Appointment.anuncio_id`, 18/10/2026) manda sobre ManyChat, como
+    # en Marketing: el de esa agenda o, si la fila es otra agenda de la misma persona, el de ella.
+    agenda_ids = [f['id'] for f in filas]
+    clientes = [f['client_id'] for f in filas if f.get('client_id')]
+    por_agenda, por_cliente = {}, {}
+    if agenda_ids:
+        condicion = Appointment.id.in_(agenda_ids)
+        if clientes:
+            condicion = condicion | Appointment.client_id.in_(clientes)
+        for appt_id, client_id, ad_id in db.session.query(Appointment.id, Appointment.client_id, Appointment.anuncio_id) \
+                .filter(Appointment.anuncio_id.isnot(None), condicion).order_by(Appointment.created_at):
+            por_agenda[appt_id] = ad_id
+            if client_id:
+                por_cliente[client_id] = ad_id
+
     anuncio = {}
     for f in filas:
         reunion = _instante(f['fecha'])
-        elegido = next((a for ids in cruce.candidatos(f['ig'], f['cliente'])
-                        if (a := ultima(ids, reunion))), None)
+        elegido = por_agenda.get(f['id']) or por_cliente.get(f.get('client_id')) or next(
+            (a for ids in cruce.candidatos(f['ig'], f['cliente']) if (a := ultima(ids, reunion))), None)
         if elegido:
             anuncio[f['id']] = elegido
     return anuncio
@@ -448,7 +463,7 @@ def bandeja(setter):
 
 # --- Escritura ----------------------------------------------------------------------------------
 
-def asignar(setter, appointment_id, ad_id, instagram=None, palabra=None):
+def asignar(setter, appointment_id, ad_id, instagram=None, palabra=None, cambiar=False):
     """Le pone a la agenda el anuncio por el que llegó el lead, de forma que Marketing la cuente.
 
     Deja lo mismo que la atribución manual de siempre (`/public/marketing/manual-attribution-agenda`),
@@ -471,6 +486,11 @@ def asignar(setter, appointment_id, ad_id, instagram=None, palabra=None):
     atribuye con el del Tablero y la bandeja mira el del cliente (las filas de «Agendas generadas»):
     con solo el del Tablero, la agenda quedaba atribuida para Marketing y volvía a la bandeja en la
     próxima carga, que así no se podía vaciar.
+
+    **Elegido y cambiable (18/10/2026).** El anuncio queda además en cada agenda de la persona con
+    este setter (`Appointment.anuncio_id`), que manda sobre ManyChat en Marketing y en la bandeja. Con
+    `cambiar` (una completada con la palabra clave equivocada) solo se corrige eso: ni Instagram ni
+    respuesta en ManyChat, que no alcanzaría para pisar la que ya está.
     """
     from app.services.ficha_agendas_service import espejo_en_el_tablero
 
@@ -489,6 +509,18 @@ def asignar(setter, appointment_id, ad_id, instagram=None, palabra=None):
         raise ErrorDePalabraClave('Elegí el anuncio de la lista o escribí la palabra clave.')
 
     cliente = cita.client
+    # Todas las agendas de esta persona con este setter: la respuesta va antes de la primera.
+    suyas = Appointment.query.filter(es_agenda_del_setter(setter.id),
+                                     Appointment.client_id == cita.client_id).all() if cita.client_id else [cita]
+    if cambiar:
+        _elegir(suyas, anuncio)
+        db.session.add(LeadEventLog(appointment_id=cita.id, user_id=setter.id, action_type=ACCION,
+                                    description=f'{_texto_del_registro(anuncio, setter)} (cambiada)',
+                                    created_at=datetime.utcnow()))
+        _guardar()
+        return {'appointment_id': cita.id, 'instagram': normalizar_ig(cliente.instagram) if cliente else None,
+                'anuncio': {'id': anuncio.id, 'keyword': anuncio.keyword or anuncio.name}}
+
     espejo = espejo_en_el_tablero(cita)
     nuevo = normalizar_ig(instagram) if instagram is not None else None
     if instagram is not None and (instagram or '').strip() and not nuevo:
@@ -505,9 +537,6 @@ def asignar(setter, appointment_id, ad_id, instagram=None, palabra=None):
     if espejo and (nuevo or not normalizar_ig(espejo.instagram)) and normalizar_ig(espejo.instagram) != ig:
         espejo.instagram = f'@{ig}'
 
-    # Todas las agendas de esta persona con este setter: la respuesta va antes de la primera.
-    suyas = Appointment.query.filter(es_agenda_del_setter(setter.id),
-                                     Appointment.client_id == cita.client_id).all() if cita.client_id else [cita]
     momentos = [m for a in suyas for m in (a.start_time, a.created_at) if m]
     antes_de_todo = min(momentos) - timedelta(minutes=1) if momentos else datetime.utcnow()
     tope = min((a.start_time for a in suyas if a.start_time), default=None)
@@ -520,19 +549,27 @@ def asignar(setter, appointment_id, ad_id, instagram=None, palabra=None):
         responder_con_anuncio(usuario, f'manual_agenda_{cita.id}', cliente.full_name if cliente else None,
                               anuncio, tope, antes_de_todo)
 
-    for a in suyas:
-        a.keyword = anuncio.keyword or anuncio.name
-
+    _elegir(suyas, anuncio)
     db.session.add(LeadEventLog(appointment_id=cita.id, user_id=setter.id, action_type=ACCION,
                                 description=_texto_del_registro(anuncio, setter),
                                 created_at=datetime.utcnow()))
+    _guardar()
+    return {'appointment_id': cita.id, 'instagram': ig,
+            'anuncio': {'id': anuncio.id, 'keyword': anuncio.keyword or anuncio.name}}
+
+
+def _elegir(agendas, anuncio):
+    for a in agendas:
+        a.keyword = anuncio.keyword or anuncio.name
+        a.anuncio_id = anuncio.id
+
+
+def _guardar():
     try:
         db.session.commit()
     except Exception:
         db.session.rollback()
         raise ErrorDePalabraClave('No se pudo guardar: probá de nuevo.', 500) from None
-    return {'appointment_id': cita.id, 'instagram': ig,
-            'anuncio': {'id': anuncio.id, 'keyword': anuncio.keyword or anuncio.name}}
 
 
 def responder_con_anuncio(ig, marca, nombre, anuncio, tope, antes_de_todo):
