@@ -195,3 +195,8 @@
   - El campo de Instagram de las tarjetas pasó a su propio componente (`CampoInstagram`), compartido por agendas y ventas.
   - Staging: Elias tiene 27 clientes pendientes ($12.290) y Paula 5 ($1.600).
   - Verificación: 4 tests nuevos de pytest, 129 de vitest del setter y prueba en el navegador como Elias con staging en solo lectura. Falla `test_la_mayoria_de_las_rutas_de_la_politica_tienen_una_pantalla_que_las_usa` (51 de 71 rutas), que no depende de este cambio.
+- **18 de Octubre de 2026** *(La rama de cada mensaje del flujo califica cuando ManyChat no manda el dato. [app/services/rama_mensajes.py](../../app/services/rama_mensajes.py) [NEW], [app/api/conversational.py](../../app/api/conversational.py) [MODIFY], [app/api/manychat.py](../../app/api/manychat.py) [MODIFY], [frontend/src/pages/admin/marketing/conversaciones/](../../frontend/src/pages/admin/marketing/conversaciones/) [MODIFY])*:
+  - Quien recibía «¿Qué quiere mejorar?» quedaba «Sin dato» en Entrantes (16 personas en 7 días), porque ManyChat no manda la calificación en ese webhook aunque en ManyChat ya figuran como «no». Los de «¿Qué examen prepara?» sí llegan calificados.
+  - El catálogo de Conversaciones tiene la rama de cada mensaje (calificados, descalificados o ninguna), con selector, la rama en la lista y filtro. Recibir un mensaje con rama deja a la persona con esa calificación si ManyChat no mandó ningún sí o no. Lo que mande ManyChat después, o la corrección a mano, manda; cambiar la rama lo recalcula para atrás.
+  - La migración `b8e2d4f6a1c9` marca «¿Qué quiere mejorar?» como de los descalificados y completa a quienes ya lo recibieron sin dato.
+  - Verificación: 104 tests de pytest de calificación, webhook y Marketing, y 54 de vitest de Marketing.
