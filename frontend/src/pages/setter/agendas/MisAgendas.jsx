@@ -220,6 +220,28 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
         }
     };
 
+    // Cambiar la palabra clave de una completada (18/10/2026): queda como elegida por el setter.
+    const cambiar = async (agenda, anuncio) => {
+        try {
+            const res = await api.post('/setter/palabras-clave', {
+                appointment_id: agenda.id, cambiar: true,
+                ...(anuncio.id ? { ad_id: anuncio.id } : { palabra_clave: anuncio.keyword }),
+            });
+            const creado = !anuncio.id ? res.data?.anuncio : null;
+            const palabra = res.data?.anuncio?.keyword || anuncio.keyword;
+            setDatos(d => ({
+                ...d,
+                completadas: (d.completadas || []).map(a => (a.id === agenda.id
+                    ? { ...a, palabra_clave: palabra, por: 'setter', asignada: new Date().toISOString() } : a)),
+                anuncios: creado ? agregarAnuncio(d.anuncios || [], creado) : d.anuncios,
+            }));
+            setAviso(`Ahora la agenda de ${agenda.cliente} va a ${palabra}.`);
+            return { ok: true };
+        } catch (err) {
+            return { error: err?.response?.data?.error || 'No se pudo cambiar: probá de nuevo.' };
+        }
+    };
+
     // Al reclamar una agenda sin dueño pasa a ser suya: puede que entre a la bandeja.
     const alResolverSinDueno = (agendaId, resultado) => {
         setSinDueno(prev => prev.filter(a => a.id !== agendaId));
@@ -355,7 +377,7 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
             {datos && pestana === 'completadas' && (
                 <div className="ma-panel" role="tabpanel" id="ma-panel-completadas" aria-labelledby="ma-tab-completadas"
                     tabIndex={0}>
-                    <ListaCompletadas agendas={hechasDelMes} mes={mes} />
+                    <ListaCompletadas agendas={hechasDelMes} mes={mes} anuncios={datos.anuncios} onCambiar={cambiar} />
                 </div>
             )}
 

@@ -92,6 +92,9 @@
   border:1px solid var(--border-subtle)}
 .mis-agendas .ma-hecha-ig{overflow:hidden;text-overflow:ellipsis}
 .mis-agendas .ma-hecha-clave{display:grid;justify-items:end;gap:6px;min-width:0;max-width:260px}
+/* Cambiar la palabra clave de una completada (18/10/2026): el buscador a lo ancho, debajo. */
+.mis-agendas .ma-cambiar{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:end;gap:var(--s3)}
+.mis-agendas .ma-cambiar .ma-error{grid-column:1/-1}
 .mis-agendas .ma-clave{--c:var(--brand-secondary)}
 .mis-agendas .ma-clave svg{flex-shrink:0}
 .mis-agendas .ma-clave-t{min-width:0;overflow:hidden;text-overflow:ellipsis}
@@ -297,6 +300,7 @@
   .mis-agendas .ma-pestanas{display:flex;width:100%}
   .mis-agendas .ma-pestana{flex:1 1 0;padding:0 10px}
   .mis-agendas .ma-hecha{grid-template-columns:minmax(0,1fr);padding:var(--s4)}
+  .mis-agendas .ma-cambiar{grid-template-columns:minmax(0,1fr) auto}
   .mis-agendas .ma-hecha-clave{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;
     gap:6px var(--s3);max-width:none}
 }
