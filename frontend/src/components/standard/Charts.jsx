@@ -12,7 +12,8 @@ function largo(valor, mayor, scale) {
     return Math.max(4, (scale === 'sqrt' ? Math.sqrt(r) : r) * 100);
 }
 
-// items: [{key, value, label, display (el número como se lee), detail, color, tip}]
+// items: [{key, value, label, display (el número como se lee), detail, color, tip, disabled, title}]
+// onSelect(key): cada columna, o cada fila en `rows`, pasa a ser un botón (`disabled` lo saca a esa fila).
 export function Bars({ items, variant = 'columns', scale = 'linear', label, onSelect, className, ...rest }) {
     const mayor = Math.max(0, ...items.map((x) => Number(x.value) || 0));
     return (
@@ -22,13 +23,17 @@ export function Bars({ items, variant = 'columns', scale = 'linear', label, onSe
                 const estilo = { '--ui-bar': `${pct}%`, '--ui-bar-c': x.color, '--ui-bar-i': i };
                 const texto = x.display ?? x.value;
                 if (variant === 'rows') {
+                    // Con onSelect la fila es un botón (salvo `disabled`): lleva a la lista que compone el número.
+                    const fila = onSelect && !x.disabled;
+                    const Fila = fila ? 'button' : 'div';
                     return (
-                        <div key={x.key} className="ui-bars__row" role="listitem" data-tip={x.tip}>
+                        <Fila key={x.key} className="ui-bars__row" role="listitem" data-tip={x.tip}
+                            {...(fila ? { type: 'button', onClick: () => onSelect(x.key), title: x.title } : null)}>
                             <small>{x.label}</small>
                             <span className="ui-bars__track" aria-hidden="true">{pct > 0 && <i style={estilo} />}</span>
                             <b>{texto}</b>
                             <span>{x.detail}</span>
-                        </div>
+                        </Fila>
                     );
                 }
                 const Tag = onSelect ? 'button' : 'span';

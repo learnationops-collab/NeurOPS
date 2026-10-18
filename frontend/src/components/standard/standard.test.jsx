@@ -129,6 +129,19 @@ describe('Bars', () => {
         expect(filas[1].textContent).toBe('Ventas2525 %');
     });
 
+    it('en filas, con onSelect cada fila es un botón salvo las disabled', async () => {
+        const onSelect = vi.fn();
+        render(<Bars variant="rows" onSelect={onSelect} items={[
+            { key: 'a', value: 10, label: 'Workshop', title: 'Ver las ventas' },
+            { key: 'b', value: 5, label: 'Otra', disabled: true },
+        ]} />);
+        const [a, b] = screen.getAllByRole('listitem');
+        expect(a.tagName).toBe('BUTTON');
+        expect(b.tagName).toBe('DIV');
+        await userEvent.click(a);
+        expect(onSelect).toHaveBeenCalledWith('a');
+    });
+
     it('con onSelect cada columna es un botón', async () => {
         const onSelect = vi.fn();
         render(<Bars onSelect={onSelect} items={[{ key: 'n1', value: 3, label: 'Paso 1' }]} />);

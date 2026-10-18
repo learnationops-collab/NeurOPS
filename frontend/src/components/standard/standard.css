@@ -371,6 +371,11 @@ button.ui-bars__col.ui-bars__col:hover > i{filter:brightness(1.15)}
 .ui-bars__row.ui-bars__row > small{font-size:9.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--ui-muted);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ui-bars__row.ui-bars__row > b{font-size:13px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
+button.ui-bars__row.ui-bars__row{width:100%;padding:3px 6px;margin:-3px -6px;box-sizing:content-box;border:0;border-radius:8px;
+  background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:background-color .15s}
+button.ui-bars__row.ui-bars__row:hover{background:color-mix(in srgb,currentColor 6%,transparent)}
+button.ui-bars__row.ui-bars__row:hover > i,button.ui-bars__row.ui-bars__row:hover .ui-bars__track > i{filter:brightness(1.15)}
+button.ui-bars__row.ui-bars__row:focus-visible{outline:2px solid var(--ui-accent, currentColor);outline-offset:1px}
 .ui-bars__row.ui-bars__row > span:last-child{font-size:11px;font-weight:700;text-align:right;color:var(--ui-faint);font-variant-numeric:tabular-nums}
 .ui-bars__track.ui-bars__track{position:relative;display:block;height:8px;min-width:0;border-radius:99px;background:var(--ui-track);overflow:hidden}
 .ui-bars__track > i{position:absolute;inset:0 auto 0 0;width:var(--ui-bar);border-radius:inherit;background:var(--ui-bar-c, var(--ui-bar-default));
