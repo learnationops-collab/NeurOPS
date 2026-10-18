@@ -43,6 +43,10 @@ class Client(db.Model):
     baja_at = db.Column(db.DateTime, nullable=True, index=True)
     baja_motivo = db.Column(db.String(255), nullable=True)
     baja_por_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    # El anuncio por el que llegó este cliente, elegido a mano por el setter para sus VENTAS
+    # (18/10/2026): manda sobre lo que diga ManyChat para todos sus pagos, así una palabra clave
+    # equivocada se puede cambiar (`ventas_palabra_clave_service`, `anuncios_service.claves_de_cobros`).
+    anuncio_ventas_id = db.Column(db.Integer, db.ForeignKey('ads.id'), nullable=True)
 
     # Relationships
     enrollments = db.relationship('Enrollment', backref='client', lazy='dynamic', cascade="all, delete-orphan")

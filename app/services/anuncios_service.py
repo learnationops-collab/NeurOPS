@@ -258,16 +258,21 @@ def claves_de_cobros(cobros, clave_de_anuncio=None, cliente_de=None):
     una venta que el setter ve pendiente es una que Marketing no cuenta para ningún anuncio.
 
     Se prueba el Instagram escrito en la venta y, si no lleva a nada, el de su cliente: el de la
-    venta lo tipea el closer y a veces no es el mismo."""
+    venta lo tipea el closer y a veces no es el mismo.
+
+    Si el setter eligió el anuncio de las ventas de ese cliente (`Client.anuncio_ventas_id`, 18/10/2026),
+    ése manda sobre ManyChat para todos sus pagos: es como se corrige una palabra clave equivocada."""
     clave_de_anuncio = _clave_de_cada_anuncio() if clave_de_anuncio is None else clave_de_anuncio
     cliente_de = clientes_de_ventas(cobros) if cliente_de is None else cliente_de
-    ig_de_cliente, nombre_de_cliente = {}, {}
+    ig_de_cliente, nombre_de_cliente, elegida = {}, {}, {}
     ids = {cid for cid in cliente_de.values() if cid}
     for tanda in _en_tandas(ids):
-        for cid, ig, nombre in db.session.query(Client.id, Client.instagram, Client.full_name).filter(
-                Client.id.in_(tanda)):
+        for cid, ig, nombre, ad_id in db.session.query(
+                Client.id, Client.instagram, Client.full_name, Client.anuncio_ventas_id).filter(Client.id.in_(tanda)):
             ig_de_cliente[cid] = normalize_ig(ig)
             nombre_de_cliente[cid] = nombre
+            if ad_id and clave_de_anuncio.get(ad_id):
+                elegida[cid] = clave_de_anuncio[ad_id]
 
     def igs_de(cobro):
         return [ig for ig in (normalize_ig(cobro.instagram), ig_de_cliente.get(cliente_de.get(cobro.id))) if ig]
@@ -275,10 +280,11 @@ def claves_de_cobros(cobros, clave_de_anuncio=None, cliente_de=None):
     def nombre_de(cobro):
         return nombre_de_cliente.get(cliente_de.get(cobro.id))
 
-    atribuidor = _Atribuidor({ig for c in cobros for ig in igs_de(c)}, clave_de_anuncio,
-                             {nombre_de(c) for c in cobros})
-    return {cobro.id: next((c for ig in igs_de(cobro) or [None]
-                            if (c := atribuidor.clave(ig, cobro.date, nombre_de(cobro)))), None)
+    sueltos = [c for c in cobros if cliente_de.get(c.id) not in elegida]
+    atribuidor = _Atribuidor({ig for c in sueltos for ig in igs_de(c)}, clave_de_anuncio,
+                             {nombre_de(c) for c in sueltos})
+    return {cobro.id: elegida.get(cliente_de.get(cobro.id)) or next(
+                (c for ig in igs_de(cobro) or [None] if (c := atribuidor.clave(ig, cobro.date, nombre_de(cobro)))), None)
             for cobro in cobros}
 
 

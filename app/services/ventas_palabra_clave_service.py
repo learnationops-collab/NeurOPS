@@ -16,9 +16,11 @@ tarjeta «Ingresos por fuente» y de la nómina (`ComercialService.de_la_fuente_
 que no se cruza con ninguno es un grupo solo. Un grupo es «pendiente» si alguno de sus cobros no tiene
 palabra clave.
 
-**Asignar.** Igual que una agenda (`palabra_clave_service.asignar`): la conversación de ManyChat del
-Instagram del cliente (y de los que se escribieron en sus ventas) recibe una respuesta con el anuncio
-antes del primer pago y de su primera agenda, así Marketing atribuye TODOS sus pagos a ese anuncio.
+**Asignar y cambiar (18/10/2026).** La elección queda en el cliente (`Client.anuncio_ventas_id`) y
+manda sobre ManyChat para TODOS sus pagos (`anuncios_service.claves_de_cobros`): por eso una palabra
+clave equivocada se cambia eligiendo otra, también en un cliente que ya aparecía como completado
+(Kerwin: «debería haber forma de cambiar la palabra clave si es incorrecta»). Un cobro sin cliente
+recibe, como una agenda, la respuesta con el anuncio en su conversación de ManyChat.
 """
 from collections import defaultdict
 from datetime import datetime, time, timedelta
@@ -90,6 +92,10 @@ def ventas(setter):
             'ultima': filas[-1]['fecha'],
             'pagos': filas,
             'palabras': sorted({f['palabra_clave'] for f in filas if f['palabra_clave']}),
+            # La eligió el setter (manda sobre ManyChat). Solo un cliente guarda la elección: un cobro
+            # suelto con palabra clave ya no se cambia desde acá.
+            'elegida': bool(cliente and cliente.anuncio_ventas_id),
+            'cambiable': cliente is not None,
         }
         (completadas if all(f['palabra_clave'] for f in filas) else pendientes).append(fila)
 
@@ -124,19 +130,23 @@ def asignar(setter, grupo, ad_id=None, palabra=None, instagram=None):
     for ig in [nuevo, normalizar_ig(cliente.instagram) if cliente else None, *(normalizar_ig(p.instagram) for p in pagos)]:
         if ig and ig not in igs:
             igs.append(ig)
-    if not igs:
-        raise ErrorDePalabraClave('Falta el Instagram del cliente: es con lo que Marketing encuentra su conversación.')
     if cliente and nuevo and not normalizar_ig(cliente.instagram):
         cliente.instagram = nuevo
-
-    # La respuesta va antes del primer pago y de su primera agenda: así cuenta para todo lo suyo.
-    primero = min(p.date for p in pagos if p.date)
     agendas = Appointment.query.filter(Appointment.client_id == cid).all() if cid else []
-    momentos = [primero] + [m for a in agendas for m in (a.start_time, a.created_at) if m]
-    antes_de_todo = min(momentos) - timedelta(minutes=1)
-    nombre = (cliente.full_name if cliente else None) or pagos[0].nombre_cliente
-    for ig in igs:
-        responder_con_anuncio(ig, f'manual_venta_{grupo}', nombre, anuncio, primero, antes_de_todo)
+
+    if cliente:
+        # Con cliente, la elección queda en él y manda sobre ManyChat para todos sus pagos: así también
+        # se corrige una palabra clave equivocada (18/10/2026). No hace falta su Instagram.
+        cliente.anuncio_ventas_id = anuncio.id
+    else:
+        # Un cobro que no se cruza con ningún cliente: la respuesta con el anuncio en su conversación,
+        # antes del pago, como una agenda. Ahí sí hace falta el Instagram.
+        if not igs:
+            raise ErrorDePalabraClave('Falta el Instagram del cliente: es con lo que Marketing encuentra su conversación.')
+        primero = min(p.date for p in pagos if p.date)
+        for ig in igs:
+            responder_con_anuncio(ig, f'manual_venta_{grupo}', pagos[0].nombre_cliente, anuncio, primero,
+                                  primero - timedelta(minutes=1))
 
     palabra_final = anuncio.keyword or anuncio.name
     suyas = Appointment.query.filter(Appointment.client_id == cid, es_agenda_del_setter(setter.id)).all() if cid else []
@@ -153,5 +163,5 @@ def asignar(setter, grupo, ad_id=None, palabra=None, instagram=None):
     except Exception:
         db.session.rollback()
         raise ErrorDePalabraClave('No se pudo guardar: probá de nuevo.', 500) from None
-    return {'grupo': grupo, 'instagram': igs[0], 'pagos': len(pagos),
+    return {'grupo': grupo, 'instagram': igs[0] if igs else None, 'pagos': len(pagos),
             'anuncio': {'id': anuncio.id, 'keyword': palabra_final}}
