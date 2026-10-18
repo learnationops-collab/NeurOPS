@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Archive, ArchiveRestore, ChevronRight, Link2, Pencil, Search } from 'lucide-react';
 import Cifra from '../../../comercial/components/Cifra';
@@ -14,6 +14,8 @@ import { referenciasDe } from './tonos';
 import LeyendaTonos from './LeyendaTonos';
 import TarjetasAnuncios, { SelectorModo } from './TarjetasAnuncios';
 import { useModoVista } from '../../../../components/listas/useModoVista';
+import { useAuth } from '../../../../contexts/AuthContext';
+import { hayListaComercial, useDrillDown } from '../../../closer/dashboard/useDrillDown';
 import {
     NIVELES, SIN_CAMPANA, agruparFilas, claveDeAnuncio, claveDeCampana, claveDeConjunto, formatear,
     ordenar, serieDe, textoMeta, totalesDe,
@@ -73,6 +75,16 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
     const moneda = datos.moneda;
     const vista = useVistaDeColumnas();
     const { modo, setModo } = useModoVista('mk_rendimiento_modo');
+    // De «De dónde vino lo cobrado» a la lista de esas ventas: Revisar › Ventas con las fechas de acá,
+    // solo para quien puede abrir el dashboard comercial (admin o dirección comercial).
+    const { user } = useAuth();
+    const irAComercial = useDrillDown({ period: 'custom', closerId: null, fechas: { start: datos.desde, end: datos.hasta } });
+    const irAVentas = hayListaComercial(user?.role) && user?.role !== 'closer' ? irAComercial : null;
+    const panelTabla = useRef(null);
+    const irATabla = () => {
+        setOrden({ clave: 'cobrado', dir: 'desc' });
+        panelTabla.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
     const { piezas } = vista;
 
     const archivados = datos.filas.filter((f) => f.archivado).length;
@@ -211,11 +223,11 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
             </div>
 
             <CobradoDelPeriodo enTabla={datos.totales?.cobrado || 0} total={datos.cobrado_periodo}
-                fuera={datos.cobrado_fuera || []} moneda={moneda} />
+                fuera={datos.cobrado_fuera || []} moneda={moneda} irAVentas={irAVentas} irATabla={irATabla} />
 
             <SerieDiaria serie={serie} moneda={moneda} alcance={alcance} metaConectado={datos.meta?.conectado} />
 
-            <section className="panel mk-panel-tabla">
+            <section className="panel mk-panel-tabla" ref={panelTabla}>
                 <div className="mk-tabla-barra">
                     <div className="mk-cab-txt">
                         <h2 className="t-h3">Campañas, conjuntos y anuncios</h2>

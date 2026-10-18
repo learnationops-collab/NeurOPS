@@ -298,12 +298,19 @@ def _ventas(desde_dt, hasta_dt, clave_de_anuncio):
 def _cobrado_fuera(cobros, sin_clave):
     """Lo cobrado del período que no llegó a ninguna palabra clave, por procedencia (la de Finanzas y
     de «Ingresos por fuente», en bruto como el Cobrado de la tabla): [{key, label, monto, cantidad}],
-    solo las que tienen algo. La atribución se calcula sobre TODOS los cobros del período, como allá."""
+    solo las que tienen algo. La atribución se calcula sobre TODOS los cobros del período, como allá.
+
+    `monto_total` es lo de esa procedencia contando también lo que sí llegó por palabra clave: es lo que
+    muestra Revisar › Ventas con esa Fuente, adonde lleva la fila (17/10/2026), y la pantalla dice la
+    diferencia en vez de dejar que no cierre."""
     if not sin_clave:
         return []
-    from app.services.procedencia_ingresos_service import procedencia_de_ventas
-    reparto = procedencia_de_ventas(sin_clave, contexto=cobros, base='bruto')
+    from app.services.procedencia_ingresos_service import agendas_para_atribuir, procedencia_de_ventas
+    agendas = agendas_para_atribuir()
+    reparto = procedencia_de_ventas(sin_clave, contexto=cobros, base='bruto', agendas=agendas)
+    total = {p['key']: p['monto'] for p in procedencia_de_ventas(cobros, base='bruto', agendas=agendas)['procedencias']}
     return [{'key': p['key'], 'label': p['label'], 'monto': p['monto'], 'cantidad': p['cantidad'],
+             'monto_total': total.get(p['key'], p['monto']),
              'detalle': [{'label': d['label'], 'monto': d['monto']} for d in p['detalle']]}
             for p in reparto['procedencias'] if p['cantidad']]
 

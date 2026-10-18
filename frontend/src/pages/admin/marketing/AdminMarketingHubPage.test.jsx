@@ -7,6 +7,11 @@ vi.mock('../../../services/api', () => ({ default: { get: vi.fn(), post: vi.fn()
 vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 // Las herramientas de siempre no son lo que se prueba acá.
 vi.mock('../../../components/operations/UTMGenerator', () => ({ default: () => <p>Generador UTM viejo</p> }));
+// El rol decide si «De dónde vino lo cobrado» lleva a Revisar (solo admin y dirección comercial).
+const sesion = vi.hoisted(() => ({ user: { role: 'admin' } }));
+vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => sesion }));
+const navegar = vi.hoisted(() => vi.fn());
+vi.mock('react-router-dom', async (original) => ({ ...(await original()), useNavigate: () => navegar }));
 
 import api from '../../../services/api';
 import AdminMarketingHubPage from './AdminMarketingHubPage';
@@ -145,7 +150,7 @@ describe('Marketing › Anuncios', () => {
     it('muestra de dónde vino lo cobrado que no está en la tabla', async () => {
         api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/anuncios' ? {
             ...TABLERO, totales: { cobrado: 5138 }, cobrado_periodo: 17059,
-            cobrado_fuera: [{ key: 'workshop', label: 'Workshop', monto: 6350, cantidad: 11,
+            cobrado_fuera: [{ key: 'workshop', label: 'Workshop', monto: 6350, cantidad: 11, monto_total: 6792,
                 detalle: [{ label: 'En vivo', monto: 5850 }, { label: 'Grabación', monto: 500 }] }],
         } : { anuncios: [], claves: [], conectado: false } }));
         abrir();
@@ -153,6 +158,30 @@ describe('Marketing › Anuncios', () => {
         expect(within(panel).getByText('$17,059')).toBeInTheDocument();
         expect(within(panel).getByText('Workshop')).toBeInTheDocument();
         expect(within(panel).getByText('En vivo $5,850 · Grabación $500')).toBeInTheDocument();
+
+        // Tocar Workshop abre Revisar › Ventas con esa fuente y las fechas de la tabla.
+        await userEvent.click(within(panel).getByText('Workshop').closest('button'));
+        const destino = new URL(navegar.mock.calls.at(-1)[0], 'http://x');
+        expect(destino.pathname).toBe('/admin/comercial');
+        expect(Object.fromEntries(destino.searchParams)).toMatchObject({
+            s: 'revisar', t: 'ventas', p: 'custom', d: '2026-09-15', h: '2026-10-14' });
+        const filtro = JSON.parse(destino.searchParams.get('f'));
+        expect(filtro.fuente).toBe('Workshop');
+        // Revisar muestra también lo de Workshop que llegó por palabra clave: se dice cuánto.
+        expect(filtro.__de).toBe('Ingresos por fuente: Workshop · incluye $442 de palabra clave');
+    });
+
+    it('sin acceso al dashboard comercial, solo «Por palabra clave» se puede tocar', async () => {
+        sesion.user = { role: 'director_marketing' };
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/anuncios' ? {
+            ...TABLERO, totales: { cobrado: 5138 }, cobrado_periodo: 17059,
+            cobrado_fuera: [{ key: 'vsl', label: 'VSL', monto: 400, cantidad: 2, detalle: [] }],
+        } : { anuncios: [], claves: [], conectado: false } }));
+        abrir();
+        const panel = (await screen.findByText('De dónde vino lo cobrado')).closest('section');
+        expect(within(panel).getByText('VSL').closest('button')).toBeNull();
+        expect(within(panel).getByText('Por palabra clave (la tabla)').closest('button')).not.toBeNull();
+        sesion.user = { role: 'admin' };
     });
 
     it('archivar avisa al backend y saca la fila', async () => {

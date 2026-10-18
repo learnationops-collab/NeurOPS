@@ -91,3 +91,5 @@ def test_lo_cobrado_sin_palabra_clave_se_reparte_por_procedencia(db):
     assert resultado['cobrado_periodo'] == 1400.0
     assert sum(p['monto'] for p in resultado['cobrado_fuera']) == 400.0
     assert all(p['cantidad'] > 0 for p in resultado['cobrado_fuera'])
+    # Lo que muestra Revisar con esa Fuente: también lo de palabra clave de la misma procedencia.
+    assert sum(p['monto_total'] for p in resultado['cobrado_fuera']) == 1400.0
