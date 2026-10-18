@@ -4,7 +4,7 @@
 «Mis agendas». Manda sobre ManyChat para todos sus pagos, y por eso se puede cambiar si estaba mal.
 
 Revision ID: c4e8a2f6d1b3
-Revises: a3f9c1e7b2d4
+Revises: b8e2d4f6a1c9
 Create Date: 2026-10-18 12:00:00.000000
 
 """
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = 'c4e8a2f6d1b3'
-down_revision = 'a3f9c1e7b2d4'
+down_revision = 'b8e2d4f6a1c9'
 branch_labels = None
 depends_on = None
 
