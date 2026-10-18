@@ -8,6 +8,7 @@ import { agregarAnuncio } from './BuscadorAnuncio';
 import Premio from './Premio';
 import ListaCompletadas from './ListaCompletadas';
 import SetterUnclaimedAgendas from './SetterUnclaimedAgendas';
+import VentasSinPalabra from './VentasSinPalabra';
 import { mesCorto, mesSiguiente, mesesConCuenta, nombreDeMes, tituloDeMes } from './meses';
 import './misAgendas.css';
 
@@ -394,6 +395,9 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
                     )}
                 </div>
             )}
+
+            {/* Las ventas de sus leads sin palabra clave, por cliente (17/10/2026). */}
+            {datos && <VentasSinPalabra anuncios={datos.anuncios} />}
 
             <SetterUnclaimedAgendas agendas={sinDueno} onResuelta={alResolverSinDueno} />
         </div>

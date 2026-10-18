@@ -247,6 +247,31 @@
 .mis-agendas .ma-sin-dueno-dato .ma-meta{margin-top:0;font-size:12px}
 .mis-agendas .ma-sin-dueno-acciones{display:flex;gap:var(--s2);flex-shrink:0}
 
+/* --- Ventas sin palabra clave (17/10/2026) ------------------------------------------------- */
+.mis-agendas .mv-ventas{display:grid;gap:var(--s3);margin-top:var(--s6)}
+.mis-agendas .mv-cab{display:flex;align-items:center;flex-wrap:wrap;gap:var(--s2) var(--s3)}
+.mis-agendas .mv-monto{margin-left:auto;font-size:13px;font-weight:800;color:var(--warning)}
+.mis-agendas .mv-pagos{list-style:none;margin:0;padding:0 0 0 54px;display:grid;gap:4px}
+.mis-agendas .mv-pagos li{display:grid;grid-template-columns:70px minmax(0,1fr) 70px minmax(0,150px);align-items:baseline;
+  gap:var(--s2);font-size:12.5px;color:var(--text-muted)}
+.mis-agendas .mv-pagos b{text-align:right;color:var(--text-on-surface);font-weight:800}
+.mis-agendas .mv-pagos small{justify-self:end;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:11px;font-weight:700}
+.mis-agendas .mv-sin{color:var(--warning)}
+.mis-agendas .mv-con{color:var(--success)}
+.mis-agendas .mv-vacio{display:flex;align-items:center;gap:var(--s2);margin:0;padding:var(--s4);border-radius:18px;
+  background:var(--hundido);color:var(--success);font-weight:700}
+.mis-agendas .mv-hechas{display:grid;gap:var(--s2)}
+.mis-agendas .mv-hechas-btn{justify-self:start;display:inline-flex;align-items:center;gap:6px;padding:4px 0;border:0;background:none;
+  color:var(--text-muted);font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.mis-agendas .mv-hechas-btn:hover{color:var(--text-on-surface)}
+.mis-agendas .mv-hechas-btn svg{transition:transform .2s}
+.mis-agendas .mv-girada{transform:rotate(180deg)}
+.mis-agendas .mv-hechas-lista{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.mis-agendas .mv-hechas-lista li{display:grid;grid-template-columns:minmax(0,1fr) 80px minmax(0,220px);gap:var(--s3);align-items:baseline;
+  padding:var(--s2) var(--s4);border-radius:12px;background:var(--hundido);font-size:13px}
+.mis-agendas .mv-hechas-lista .num{text-align:right;font-weight:800}
+
 /* --- Adaptación ------------------------------------------------------------------------------ */
 @media (max-width:900px){
   .mis-agendas .ma-card{grid-template-columns:minmax(0,1fr);padding:var(--s4)}
@@ -257,6 +282,11 @@
   .mis-agendas .ma-meses-chips{width:100%}
   .mis-agendas .ma-quedan-n b{font-size:38px}
   .mis-agendas .ma-ig{padding-left:0}
+  .mis-agendas .mv-pagos{padding-left:0}
+  .mis-agendas .mv-pagos li{grid-template-columns:62px minmax(0,1fr) 64px}
+  .mis-agendas .mv-pagos small{grid-column:1/-1;justify-self:start}
+  .mis-agendas .mv-hechas-lista li{grid-template-columns:minmax(0,1fr) 72px}
+  .mis-agendas .mv-hechas-lista small{grid-column:1/-1}
   .mis-agendas .ma-premio{padding:var(--s6) var(--s4)}
   .mis-agendas .ma-sin-dueno{padding:var(--s4)}
   /* Las pestañas a lo ancho, mitad y mitad; la completada en una columna, con la palabra clave
