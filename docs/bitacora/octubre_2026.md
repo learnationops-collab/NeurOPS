@@ -187,3 +187,11 @@
   - Revisar muestra también lo de esa fuente que llegó por palabra clave (en staging, Workshop $6.125 en el panel y $6.792 en Revisar). El backend manda ese total (`monto_total`) y el filtro y el tooltip dicen la diferencia.
   - Componente estándar `Bars`: en `variant="rows"` cada fila puede ser un botón con `onSelect` (catálogo de la skill al día).
   - Verificación: 57 tests de pytest y 88 de vitest, y prueba en el navegador con staging en solo lectura (el link de Workshop abre Revisar con los mismos 14 cobros).
+
+- **18 de Octubre de 2026** *(Las ventas sin palabra clave le aparecen al setter en «Mis agendas», por cliente. [app/services/ventas_palabra_clave_service.py](../../app/services/ventas_palabra_clave_service.py) [NEW], [app/api/setter_palabra_clave.py](../../app/api/setter_palabra_clave.py) [MODIFY], [frontend/src/pages/setter/agendas/VentasSinPalabra.jsx](../../frontend/src/pages/setter/agendas/VentasSinPalabra.jsx) [NEW], [frontend/src/pages/setter/agendas/TarjetaVenta.jsx](../../frontend/src/pages/setter/agendas/TarjetaVenta.jsx) [NEW])*:
+  - Debajo de las agendas, «Ventas sin palabra clave»: los cobros desde julio cuya fuente es ese setter (la misma regla de «Ingresos por fuente» y la nómina) que Marketing no atribuye a ningún anuncio. Van agrupados por cliente, con cada pago y su palabra clave.
+  - La palabra clave que elige el setter va a TODOS los pagos del cliente: queda una respuesta con el anuncio antes de su primer pago y de su primera agenda, en la conversación de cada Instagram del cliente. Si falta el Instagram, se pide. Las que ya tienen palabra clave quedan plegadas abajo.
+  - `GET` y `POST /api/setter/palabras-clave/ventas`. La palabra clave de cada cobro sale de `anuncios_service.claves_de_cobros`, la misma regla del tablero de Rendimiento, así que lo que el setter completa sale de «Setting sin palabra clave».
+  - El campo de Instagram de las tarjetas pasó a su propio componente (`CampoInstagram`), compartido por agendas y ventas.
+  - Staging: Elias tiene 27 clientes pendientes ($12.290) y Paula 5 ($1.600).
+  - Verificación: 4 tests nuevos de pytest, 129 de vitest del setter y prueba en el navegador como Elias con staging en solo lectura. Falla `test_la_mayoria_de_las_rutas_de_la_politica_tienen_una_pantalla_que_las_usa` (51 de 71 rutas), que no depende de este cambio.
