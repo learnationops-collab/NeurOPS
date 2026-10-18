@@ -268,9 +268,11 @@
 .mis-agendas .mv-hechas-btn svg{transition:transform .2s}
 .mis-agendas .mv-girada{transform:rotate(180deg)}
 .mis-agendas .mv-hechas-lista{list-style:none;margin:0;padding:0;display:grid;gap:4px}
-.mis-agendas .mv-hechas-lista li{display:grid;grid-template-columns:minmax(0,1fr) 80px minmax(0,220px);gap:var(--s3);align-items:baseline;
-  padding:var(--s2) var(--s4);border-radius:12px;background:var(--hundido);font-size:13px}
-.mis-agendas .mv-hechas-lista .num{text-align:right;font-weight:800}
+.mis-agendas .mv-hechas-lista .mv-hecha{display:grid;grid-template-columns:minmax(0,1fr) 80px minmax(0,220px) 64px;gap:var(--s3);
+  align-items:baseline;padding:var(--s2) var(--s4);border-radius:12px;background:var(--hundido);font-size:13px}
+.mis-agendas .mv-hecha > .num{text-align:right;font-weight:800}
+.mis-agendas .mv-hecha .ma-ig-cambiar{justify-self:end}
+.mis-agendas .mv-cancelar{grid-column:1/-1;justify-self:start}
 
 /* --- Adaptación ------------------------------------------------------------------------------ */
 @media (max-width:900px){
@@ -285,8 +287,9 @@
   .mis-agendas .mv-pagos{padding-left:0}
   .mis-agendas .mv-pagos li{grid-template-columns:62px minmax(0,1fr) 64px}
   .mis-agendas .mv-pagos small{grid-column:1/-1;justify-self:start}
-  .mis-agendas .mv-hechas-lista li{grid-template-columns:minmax(0,1fr) 72px}
-  .mis-agendas .mv-hechas-lista small{grid-column:1/-1}
+  .mis-agendas .mv-hechas-lista .mv-hecha{grid-template-columns:minmax(0,1fr) 72px}
+  .mis-agendas .mv-hecha small{grid-column:1}
+  .mis-agendas .mv-hecha .ma-ig-cambiar{grid-column:2}
   .mis-agendas .ma-premio{padding:var(--s6) var(--s4)}
   .mis-agendas .ma-sin-dueno{padding:var(--s4)}
   /* Las pestañas a lo ancho, mitad y mitad; la completada en una columna, con la palabra clave

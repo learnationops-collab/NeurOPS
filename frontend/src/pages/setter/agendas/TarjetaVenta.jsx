@@ -16,7 +16,8 @@ export const dinero = (v) => DINERO.format(v || 0);
 /** El día del pago tal como está guardado (es una fecha, no un instante): «02/10/26». */
 export const diaDelPago = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(2, 4)}` : '—');
 
-const TarjetaVenta = forwardRef(({ grupo, anuncios, onAsignar, orden = 0 }, ref) => {
+// `onCancelar`: la tarjeta abierta para CAMBIAR la palabra clave de un cliente que ya tenía (18/10/2026).
+const TarjetaVenta = forwardRef(({ grupo, anuncios, onAsignar, onCancelar, orden = 0 }, ref) => {
     const reducir = useReducedMotion();
     const [elegido, setElegido] = useState(null);
     const [editandoIg, setEditandoIg] = useState(!grupo.instagram);
@@ -84,12 +85,18 @@ const TarjetaVenta = forwardRef(({ grupo, anuncios, onAsignar, orden = 0 }, ref)
             <div className="ma-asignar">
                 <BuscadorAnuncio ref={buscadorRef} anuncios={anuncios} elegido={elegido} deshabilitado={enviando}
                     onElegir={(a) => { setElegido(a); setError(null); }} onConfirmar={confirmar}
-                    etiqueta={n > 1 ? `Palabra clave de sus ${n} pagos` : 'Palabra clave del anuncio'} />
+                    etiqueta={onCancelar ? `Nueva palabra clave${n > 1 ? ` de sus ${n} pagos` : ''}`
+                        : n > 1 ? `Palabra clave de sus ${n} pagos` : 'Palabra clave del anuncio'} />
                 <motion.button type="button" className="btn btn--cta btn--sm ma-btn" disabled={!elegido || enviando}
                     whileTap={reducir ? undefined : { scale: 0.94 }} onClick={() => confirmar()}>
                     {enviando ? <Loader2 size={15} className="ma-gira" aria-hidden="true" /> : <Check size={15} aria-hidden="true" />}
-                    {enviando ? 'Asignando' : 'Asignar'}
+                    {enviando ? 'Guardando' : onCancelar ? 'Cambiar' : 'Asignar'}
                 </motion.button>
+                {onCancelar && (
+                    <button type="button" className="ma-ig-cambiar mv-cancelar" disabled={enviando} onClick={onCancelar}>
+                        Cancelar
+                    </button>
+                )}
                 {error && <p className="ma-error" role="alert">{error}</p>}
             </div>
         </motion.li>

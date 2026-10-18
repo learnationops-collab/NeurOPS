@@ -19,6 +19,12 @@ const VentasSinPalabra = ({ anuncios: anunciosIniciales }) => {
     const [creados, setCreados] = useState([]);
     const anuncios = useMemo(() => creados.reduce(agregarAnuncio, anunciosIniciales || []), [creados, anunciosIniciales]);
     const [verHechas, setVerHechas] = useState(false);
+    // El cliente con palabra clave que se está cambiando (18/10/2026: «debería haber forma de cambiarla
+    // si es incorrecta»): se abre su tarjeta en la lista de abajo.
+    const [cambiando, setCambiando] = useState(null);
+    const cambioRef = useRef(null);
+    // Al abrir el cambio, el foco va a su buscador: se escribe la palabra clave nueva y Enter.
+    useEffect(() => { if (cambiando) cambioRef.current?.focus(); }, [cambiando]);
     const [aviso, setAviso] = useState('');
     const tarjetas = useRef(new Map());
 
@@ -44,13 +50,20 @@ const VentasSinPalabra = ({ anuncios: anunciosIniciales }) => {
             });
             const palabra = res.data?.anuncio?.keyword || anuncio.keyword;
             if (!anuncio.id && res.data?.anuncio) setCreados((c) => [...c, res.data.anuncio]);
-            const lista = datos.pendientes;
-            const i = lista.findIndex((g) => g.grupo === grupo.grupo);
-            const siguiente = lista[i + 1] || lista[i - 1] || null;
             const hecho = {
-                ...grupo, instagram: res.data?.instagram || grupo.instagram, palabras: [palabra],
+                ...grupo, instagram: res.data?.instagram || grupo.instagram, palabras: [palabra], elegida: true,
                 pagos: grupo.pagos.map((p) => ({ ...p, palabra_clave: palabra })),
             };
+            const lista = datos.pendientes;
+            const i = lista.findIndex((g) => g.grupo === grupo.grupo);
+            if (i < 0) {
+                // Un cambio: el cliente queda donde estaba, con la palabra clave nueva.
+                setDatos((d) => ({ ...d, completadas: d.completadas.map((g) => (g.grupo === grupo.grupo ? hecho : g)) }));
+                setCambiando(null);
+                setAviso(`Ahora las ventas de ${grupo.cliente} van a ${palabra}.`);
+                return { ok: true };
+            }
+            const siguiente = lista[i + 1] || lista[i - 1] || null;
             const sinPalabra = grupo.pagos.filter((p) => !p.palabra_clave).reduce((s, p) => s + p.monto, 0);
             setDatos((d) => ({
                 ...d,
@@ -105,13 +118,24 @@ const VentasSinPalabra = ({ anuncios: anunciosIniciales }) => {
                     </button>
                     {verHechas && (
                         <ul className="mv-hechas-lista">
-                            {completadas.map((g) => (
-                                <li key={g.grupo}>
+                            {completadas.map((g) => (cambiando === g.grupo ? (
+                                <TarjetaVenta key={g.grupo} grupo={g} anuncios={anuncios} onAsignar={asignar}
+                                    onCancelar={() => setCambiando(null)} ref={cambioRef} />
+                            ) : (
+                                <li key={g.grupo} className="mv-hecha">
                                     <span className="trunc">{g.cliente}</span>
                                     <span className="num">{dinero(g.total)}</span>
-                                    <small className="mv-con trunc">{g.palabras.join(' · ')}</small>
+                                    <small className="mv-con trunc" title={g.elegida ? 'La elegiste vos' : 'La encontró ManyChat'}>
+                                        {g.palabras.join(' · ')}
+                                    </small>
+                                    {g.cambiable && (
+                                        <button type="button" className="ma-ig-cambiar" onClick={() => setCambiando(g.grupo)}
+                                            aria-label={`Cambiar la palabra clave de ${g.cliente}`}>
+                                            Cambiar
+                                        </button>
+                                    )}
                                 </li>
-                            ))}
+                            )))}
                         </ul>
                     )}
                 </div>

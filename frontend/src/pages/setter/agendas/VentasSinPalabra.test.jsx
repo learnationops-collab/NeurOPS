@@ -44,6 +44,25 @@ describe('Mis agendas › Ventas sin palabra clave', () => {
         expect(screen.getByText('GUIA PERU')).toBeInTheDocument();
     });
 
+    it('una palabra clave equivocada se cambia desde la lista de las que ya tienen', async () => {
+        const user = userEvent.setup();
+        api.get.mockResolvedValue({ data: { ...DATOS, completadas: [{ ...DATOS.completadas[0], cambiable: true }] } });
+        api.post.mockResolvedValue({ data: { grupo: 'c3', instagram: 'caro', pagos: 1, anuncio: { id: 7, keyword: 'GUIA PERU' } } });
+        render(<VentasSinPalabra anuncios={ANUNCIOS} />);
+        await user.click(await screen.findByRole('button', { name: '1 cliente con palabra clave' }));
+        await user.click(screen.getByRole('button', { name: 'Cambiar la palabra clave de Caro Paz' }));
+
+        const tarjeta = screen.getByRole('listitem', { name: 'Ventas de Caro Paz' });
+        await waitFor(() => expect(within(tarjeta).getByRole('combobox')).toHaveFocus());
+        await user.keyboard('guia{Enter}');
+
+        expect(api.post).toHaveBeenCalledWith('/setter/palabras-clave/ventas', { grupo: 'c3', ad_id: 7 });
+        await waitFor(() => expect(screen.queryByRole('listitem', { name: 'Ventas de Caro Paz' })).not.toBeInTheDocument());
+        expect(screen.getByText('GUIA PERU')).toBeInTheDocument();
+        // Sigue en las que tienen palabra clave, y no se suma a las pendientes.
+        expect(screen.getByRole('button', { name: '1 cliente con palabra clave' })).toBeInTheDocument();
+    });
+
     it('sin ventas de sus leads no muestra nada', async () => {
         api.get.mockResolvedValue({ data: { pendientes: [], completadas: [], resumen: { clientes: 0, monto: 0 } } });
         const { container } = render(<VentasSinPalabra anuncios={ANUNCIOS} />);
