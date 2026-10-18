@@ -1,8 +1,9 @@
 import React, { forwardRef, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { CalendarClock, Check, ExternalLink, Instagram, Loader2, Radio, User } from 'lucide-react';
+import { CalendarClock, Check, Loader2, Radio, User } from 'lucide-react';
 import { parseUtcIso } from '../../../utils/datetime';
 import BuscadorAnuncio from './BuscadorAnuncio';
+import CampoInstagram from './CampoInstagram';
 
 /**
  * Una agenda de la bandeja: quién es, cuándo es la reunión, con quién y en qué estado, y el
@@ -98,38 +99,11 @@ const TarjetaAgenda = forwardRef(({ agenda, anuncios, sugerido, onAsignar, orden
                     )}
                 </div>
 
-                <div className="ma-ig">
-                    {editandoIg ? (
-                        <>
-                            <label className="sr" htmlFor={idIg}>Instagram de {agenda.cliente}</label>
-                            <span className={`ma-ig-campo${!ig.trim() ? ' ma-ig-campo--falta' : ''}`}>
-                                <Instagram size={14} aria-hidden="true" />
-                                <input id={idIg} ref={igRef} type="text" value={ig} placeholder="usuario de Instagram"
-                                    autoComplete="off" spellCheck={false} disabled={enviando}
-                                    onChange={(e) => { setIg(e.target.value); setError(null); }}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') { e.preventDefault(); if (elegido) confirmar(); else buscadorRef.current?.focus(); }
-                                    }} />
-                            </span>
-                            {!agenda.instagram && (
-                                <span className="ma-ig-nota" title="Sin Instagram, Marketing no encuentra su conversación.">
-                                    Falta el Instagram
-                                </span>
-                            )}
-                        </>
-                    ) : (
-                        <>
-                            <a className="ma-ig-link" href={`https://instagram.com/${agenda.instagram}`} target="_blank" rel="noopener noreferrer"
-                                title="Abrir su perfil">
-                                <Instagram size={14} aria-hidden="true" />@{agenda.instagram}<ExternalLink size={12} aria-hidden="true" />
-                            </a>
-                            <button type="button" className="ma-ig-cambiar" disabled={enviando}
-                                onClick={() => { setEditandoIg(true); requestAnimationFrame(() => igRef.current?.focus()); }}>
-                                Cambiar
-                            </button>
-                        </>
-                    )}
-                </div>
+                <CampoInstagram id={idIg} nombre={agenda.cliente} guardado={agenda.instagram} editando={editandoIg}
+                    valor={ig} deshabilitado={enviando} inputRef={igRef}
+                    onCambiar={(v) => { setIg(v); setError(null); }}
+                    onEditar={() => { setEditandoIg(true); requestAnimationFrame(() => igRef.current?.focus()); }}
+                    onEnter={() => { if (elegido) confirmar(); else buscadorRef.current?.focus(); }} />
             </div>
 
             <div className="ma-asignar">
