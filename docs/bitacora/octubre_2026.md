@@ -180,3 +180,10 @@
   - Cada tarjeta muestra el embudo entrantes → calificados → agendas → ventas, con la conversión de cada paso pintada contra la de toda la tabla.
   - Los filtros (nivel, búsqueda, archivadas, tabla/tarjetas, columnas, agrupar, colores, exportar) van en una sola línea debajo del título.
   - Verificación: 52 tests de vitest de marketing y prueba en el navegador a 1366px con datos de staging en solo lectura.
+
+- **17 de Octubre de 2026 (12)** *(«De dónde vino lo cobrado» lleva a las ventas de cada fuente. [frontend/src/pages/admin/marketing/anuncios/CobradoDelPeriodo.jsx](../../frontend/src/pages/admin/marketing/anuncios/CobradoDelPeriodo.jsx) [MODIFY], [frontend/src/components/standard/Charts.jsx](../../frontend/src/components/standard/Charts.jsx) [MODIFY], [app/services/anuncios_service.py](../../app/services/anuncios_service.py) [MODIFY])*:
+  - Tocar Workshop, Setting sin palabra clave, VSL, Renovaciones o Sin procedencia abre Revisar › Ventas del dashboard comercial filtrado por esa fuente y con las mismas fechas. Solo quien tiene activo el rol de administrador o dirección comercial; para el resto esas filas no se tocan.
+  - «Por palabra clave (la tabla)» baja a la tabla de Rendimiento ordenada por Cobrado.
+  - Revisar muestra también lo de esa fuente que llegó por palabra clave (en staging, Workshop $6.125 en el panel y $6.792 en Revisar). El backend manda ese total (`monto_total`) y el filtro y el tooltip dicen la diferencia.
+  - Componente estándar `Bars`: en `variant="rows"` cada fila puede ser un botón con `onSelect` (catálogo de la skill al día).
+  - Verificación: 57 tests de pytest y 88 de vitest, y prueba en el navegador con staging en solo lectura (el link de Workshop abre Revisar con los mismos 14 cobros).
