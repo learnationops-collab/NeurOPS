@@ -206,6 +206,9 @@ class LeadAnswer(db.Model):
     opening = db.Column(db.String(100))
     variante = db.Column(db.String(100))
     qualification = db.Column(db.String(10), default='null')  # 'true', 'false', 'null'
+    # True si `qualification` no la mandó ManyChat sino la rama del mensaje enviado
+    # (`ConversationalMessage.rama`, ver `rama_mensajes`): se recalcula si cambia la rama.
+    calificacion_por_rama = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     id_option = db.Column(db.String(100))
     id_option_send = db.Column(db.String(100))
     id_question = db.Column(db.String(100))
@@ -237,6 +240,9 @@ class ConversationalMessage(db.Model):
     body = db.Column(db.Text)
     # 'cualificacion' | 'dolor' | 'seguimiento'
     category = db.Column(db.String(30), nullable=False, default='cualificacion')
+    # A qué rama del flujo pertenece: 'calificados' | 'descalificados' | None. Recibirlo deja a la
+    # persona con esa calificación si ManyChat no mandó ninguna (18/10/2026, `rama_mensajes`).
+    rama = db.Column(db.String(20), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

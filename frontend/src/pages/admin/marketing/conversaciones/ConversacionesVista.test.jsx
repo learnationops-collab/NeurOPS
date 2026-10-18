@@ -37,6 +37,25 @@ describe('Marketing › Conversaciones', () => {
         fireEvent.change(modal.getByLabelText('Título'), { target: { value: 'Recurso (no calificado)' } });
         fireEvent.click(modal.getByRole('button', { name: 'Guardar' }));
         await waitFor(() => expect(api.post).toHaveBeenCalledWith('/conversational/messages',
-            expect.objectContaining({ message_id: '11', title: 'Recurso (no calificado)' })));
+            expect.objectContaining({ message_id: '11', title: 'Recurso (no calificado)', rama: null })));
+    });
+
+    it('cada mensaje dice a qué rama pertenece y se elige al editarlo', async () => {
+        // Kerwin, 18/10/2026: recibir «¿Qué quiere mejorar?» deja descalificado si ManyChat no manda el dato.
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/conversational/messages'
+            ? [...MENSAJES, { id: 3, message_id: '11', title: '¿Qué quiere mejorar?', body: '', category: 'dolor', rama: 'descalificados', is_active: true }]
+            : STATS }));
+        render(<div className="dc-shell"><ConversacionesVista desde="2026-10-01" hasta="2026-10-16" /></div>);
+
+        expect(await screen.findByText('Dolor · rama de descalificados')).toBeInTheDocument();
+        fireEvent.click(screen.getByText('Cualificacion 3'));
+        const modal = within(await screen.findByRole('dialog'));
+        fireEvent.click(modal.getByRole('button', { name: /Rama/ }));
+        fireEvent.click(await screen.findByRole('option', { name: 'Calificados' }));
+        expect(modal.getByText('Quien lo reciba queda calificado si ManyChat no mandó la calificación.')).toBeInTheDocument();
+        fireEvent.click(modal.getByRole('button', { name: 'Guardar' }));
+
+        await waitFor(() => expect(api.put).toHaveBeenCalledWith('/conversational/messages/2',
+            expect.objectContaining({ rama: 'calificados' })));
     });
 });

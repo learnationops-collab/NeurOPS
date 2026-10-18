@@ -23,6 +23,16 @@ export const CATEGORIAS = [
     { value: 'seguimiento', label: 'Seguimiento' },
 ];
 const rotuloCategoria = (c) => CATEGORIAS.find((x) => x.value === c)?.label || null;
+
+/** A qué rama del flujo pertenece (18/10/2026): recibirlo deja a la persona con esa calificación si
+ * ManyChat no mandó ninguna (ver `app/services/rama_mensajes.py`). */
+const SIN_RAMA = 'ninguna';
+export const RAMAS = [
+    { value: SIN_RAMA, label: 'Ninguna' },
+    { value: 'calificados', label: 'Calificados' },
+    { value: 'descalificados', label: 'Descalificados' },
+];
+const rotuloRama = (r) => (r ? RAMAS.find((x) => x.value === r)?.label : null);
 const num = (n) => (n ?? 0).toLocaleString('en-US');
 const pct = (n) => (n == null ? '—' : `${Number(n).toLocaleString('en-US', { maximumFractionDigits: 1 })}%`);
 
@@ -40,7 +50,9 @@ const COLUMNAS = [
     { key: 'id', header: 'N.º', fija: true, width: 'minmax(56px,.4fr)', alinear: 'der', valor: (f) => Number(f.message_id) || f.message_id },
     { key: 'mensaje', header: 'Mensaje', fija: true, width: 'minmax(180px,2fr)', valor: (f) => f.title || '',
         render: (f) => (f.configurado
-            ? <span className="cv-msj"><span className="celda">{f.title}</span><small className="celda mut40">{rotuloCategoria(f.category)}</small></span>
+            ? <span className="cv-msj"><span className="celda">{f.title}</span><small className="celda mut40">
+                {[rotuloCategoria(f.category), f.rama && `rama de ${rotuloRama(f.rama).toLowerCase()}`].filter(Boolean).join(' · ')}
+            </small></span>
             : <span className="cv-msj"><span className="celda mut40">Sin configurar</span><small className="celda mut40">Llegó en el período</small></span>) },
     { key: 'enviados', header: 'Enviados', alinear: 'der', width: 'minmax(84px,.7fr)', valor: (f) => f.stats?.total_sends ?? 0,
         render: (f) => num(f.stats?.total_sends) },
@@ -61,14 +73,15 @@ const COLUMNAS = [
 
 const FACETAS = [
     { key: 'categoria', label: 'Categoría', de: (f) => rotuloCategoria(f.category) || 'Sin configurar' },
+    { key: 'rama', label: 'Rama', de: (f) => rotuloRama(f.rama) || 'Ninguna' },
     { key: 'estado', label: 'Estado', de: (f) => (!f.configurado ? 'Sin configurar' : f.is_active ? 'Activo' : 'Inactivo') },
 ];
 
-const VACIO = { message_id: '', title: '', body: '', category: 'cualificacion', is_active: true };
+const VACIO = { message_id: '', title: '', body: '', category: 'cualificacion', rama: SIN_RAMA, is_active: true };
 
 /** Alta o edición de un mensaje. `nuevo`: el número todavía no existe en el catálogo. */
 const EditarMensaje = ({ inicial, nuevo, onCerrar, onGuardado }) => {
-    const [form, setForm] = useState({ ...VACIO, ...inicial });
+    const [form, setForm] = useState({ ...VACIO, ...inicial, rama: inicial?.rama || SIN_RAMA });
     const [error, setError] = useState(null);
     const [guardando, setGuardando] = useState(false);
     const cambiar = (k) => (v) => setForm((f) => ({ ...f, [k]: v }));
@@ -82,7 +95,7 @@ const EditarMensaje = ({ inicial, nuevo, onCerrar, onGuardado }) => {
         setError(null);
         try {
             const cuerpo = { message_id: String(form.message_id).trim(), title: form.title.trim(), body: form.body,
-                category: form.category, is_active: form.is_active };
+                category: form.category, rama: form.rama === SIN_RAMA ? null : form.rama, is_active: form.is_active };
             if (nuevo) await api.post('/conversational/messages', cuerpo);
             else await api.put(`/conversational/messages/${form.id}`, cuerpo);
             toast.success(nuevo ? 'Mensaje agregado' : 'Mensaje guardado');
@@ -114,6 +127,15 @@ const EditarMensaje = ({ inicial, nuevo, onCerrar, onGuardado }) => {
                     <span className="t-rotulo">Categoría</span>
                     <Select value={form.category} options={CATEGORIAS} onChange={cambiar('category')} label="Categoría" />
                 </div>
+                <div className="cv-campo cv-campo--ancho">
+                    <span className="t-rotulo">Rama</span>
+                    <Select value={form.rama} options={RAMAS} onChange={cambiar('rama')} label="Rama" />
+                </div>
+                {form.rama !== SIN_RAMA && (
+                    <p className="cv-campo--ancho t-cap mut40 cv-nota">
+                        Quien lo reciba queda {form.rama === 'calificados' ? 'calificado' : 'descalificado'} si ManyChat no mandó la calificación.
+                    </p>
+                )}
                 <label className="cv-campo cv-campo--ancho">
                     <span className="t-rotulo">Texto del mensaje</span>
                     <TextArea value={form.body || ''} onChange={(e) => cambiar('body')(e.target.value)}

@@ -31,10 +31,11 @@ def calificar(lead_id, valor):
     if valor == 'null':
         cambio = any(r.qualification in ('true', 'false') for r in respuestas)
         for r in respuestas:
-            r.qualification = 'null'
+            r.qualification, r.calificacion_por_rama = 'null', False
         return cambio
     actual = next((r.qualification for r in respuestas if r.qualification in ('true', 'false')), None)
-    respuestas[0].qualification = valor
+    # Lo elegido a mano ya no es deducido de la rama del mensaje (`rama_mensajes`).
+    respuestas[0].qualification, respuestas[0].calificacion_por_rama = valor, False
     return actual != valor
 
 

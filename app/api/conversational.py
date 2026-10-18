@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app import db
 from app.models import ConversationalMessage, LeadAnswer, ManychatLead, Ad, FinancialAgenda, FinancialSale
+from app.services import rama_mensajes
 from app.services.identity_service import normalize_ig
 from sqlalchemy import func, not_
 from datetime import datetime, timedelta
@@ -39,6 +40,8 @@ def create_message():
         return jsonify({'status': 'error', 'message': 'title es obligatorio'}), 400
     if category not in ('cualificacion', 'dolor', 'seguimiento', 'opening'):
         return jsonify({'status': 'error', 'message': 'category inválida'}), 400
+    if data.get('rama') not in (None, '', *rama_mensajes.RAMAS):
+        return jsonify({'status': 'error', 'message': 'rama inválida'}), 400
 
     if ConversationalMessage.query.filter_by(message_id=message_id).first():
         return jsonify({'status': 'error', 'message': 'message_id ya existe'}), 409
@@ -48,9 +51,13 @@ def create_message():
         title=title,
         body=data.get('body', ''),
         category=category,
+        rama=data.get('rama') or None,
         is_active=data.get('is_active', True)
     )
     db.session.add(msg)
+    if msg.rama:
+        db.session.flush()
+        rama_mensajes.reaplicar(message_id)
     try:
         db.session.commit()
         return jsonify({'status': 'success', 'message': _msg_to_dict(msg)}), 201
@@ -76,12 +83,24 @@ def update_message(msg_id):
         msg.category = data['category']
     if 'is_active' in data:
         msg.is_active = bool(data['is_active'])
+    mid_anterior, rama_anterior = msg.message_id, msg.rama
+    if 'rama' in data:
+        if data['rama'] not in (None, '', *rama_mensajes.RAMAS):
+            return jsonify({'status': 'error', 'message': 'rama inválida'}), 400
+        msg.rama = data['rama'] or None
     if 'message_id' in data:
         new_mid = data['message_id'].strip()
         existing = ConversationalMessage.query.filter_by(message_id=new_mid).first()
         if existing and existing.id != msg_id:
             return jsonify({'status': 'error', 'message': 'message_id ya existe'}), 409
         msg.message_id = new_mid
+
+    # Cambió la rama (o el id): lo deducido de este mensaje se recalcula para atrás.
+    if msg.rama != rama_anterior or msg.message_id != mid_anterior:
+        db.session.flush()
+        if msg.message_id != mid_anterior:
+            rama_mensajes.reaplicar(mid_anterior)
+        rama_mensajes.reaplicar(msg.message_id)
 
     try:
         db.session.commit()
@@ -130,6 +149,7 @@ def _msg_to_dict(m):
         'title': m.title,
         'body': m.body,
         'category': m.category,
+        'rama': m.rama,
         'is_active': m.is_active,
         'created_at': m.created_at.isoformat()
     }

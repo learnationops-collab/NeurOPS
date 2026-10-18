@@ -320,6 +320,12 @@ def receive_manychat_ad_lead():
                 db.session.add(answer)
                 action = 'created'
 
+        # Sin calificación de ManyChat, la que deja la rama del mensaje enviado («¿Qué quiere mejorar?»
+        # es de los descalificados, 18/10/2026).
+        if answer is not None:
+            from app.services import rama_mensajes
+            rama_mensajes.aplicar_a(answer)
+
         db.session.commit()
 
         # Log de mensajes sin ConversationalMessage configurado (ignorando '0' y '0.0' que indican envío/respuesta estándar)
