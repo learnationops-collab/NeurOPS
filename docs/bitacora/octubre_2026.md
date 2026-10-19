@@ -254,3 +254,11 @@
   - Avatar grande a 48px; el error de «Nuevo evento» usa `FieldError`; `Switch` sin `onChange` es solo indicador (modal de importar preguntas); se borra el CSS muerto `link-btn--sutil`.
   - Marketing › Gasto por embudo: las tarjetas pasan a `Bars` en filas, como «De dónde vino lo cobrado».
   - Verificación: 125 tests de vitest (componentes estándar, secciones de Thalamus y Marketing), eslint y build.
+
+- **19 de Octubre de 2026 (esqueletos de carga)** *(Se integran a main los esqueletos hechos el 17/10 que habían quedado sin subir. [frontend/src/components/standard/Skeleton.jsx](../../frontend/src/components/standard/Skeleton.jsx) [NEW], [frontend/src/pages/admin/workshop/WorkshopDashboardPage.jsx](../../frontend/src/pages/admin/workshop/WorkshopDashboardPage.jsx) [MODIFY], [frontend/src/pages/admin/marketing/esqueletos.jsx](../../frontend/src/pages/admin/marketing/esqueletos.jsx) [NEW], [frontend/src/components/listas/EsqueletoLista.jsx](../../frontend/src/components/listas/EsqueletoLista.jsx) [NEW])*:
+  - `Skeleton` estándar (huesos, KPI, fila, panel, gráfico y `Reveal`) en el catálogo.
+  - Workshop ya no muestra «Cargando inteligencia de workshops…»: cabecera y pestañas al instante y cada bloque con su esqueleto (Resumen, Talleres, Planificar y Tráfico landings). Pestañas, filtros y acciones en una sola línea.
+  - Marketing (Rendimiento, Entrantes, Conversaciones, Meta Ads), la lista configurable y Comercial (Analizar, Revisar) cargan con esqueletos de la forma real; si la primera carga falla se ofrece reintentar.
+  - Menús y popovers en la capa superior del navegador, con fondo opaco en cada tema.
+  - El esqueleto del gasto por embudo se adaptó a las filas de `Bars`.
+  - Verificación: 1827 tests de vitest (5 con timeout en la corrida completa pasan solos) y build.
