@@ -132,8 +132,8 @@ def mensaje():
     if error:
         return jsonify({'error': error}), 400
     if gasto_del_mes(current_user.id) >= TOPE_MENSUAL_USD:
-        return jsonify({'error': f'Llegaste al tope de uso de este mes (US${TOPE_MENSUAL_USD:.0f}). '
-                                 'Se renueva el 1°.', 'uso': _uso(current_user)}), 429
+        return jsonify({'error': 'Llegaste al tope de uso de este mes. Se renueva el 1°.',
+                        'uso': _uso(current_user)}), 429
 
     historial = [{'role': m['role'], 'content': m['content'].strip()} for m in mensajes]
     try:

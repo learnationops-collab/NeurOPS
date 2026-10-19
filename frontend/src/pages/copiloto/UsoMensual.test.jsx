@@ -8,13 +8,19 @@ const uso = ({ hoy = 0.05, pHoy = 19.2, mes = 0.4, pMes = 5 } = {}) => ({
 });
 
 describe('UsoMensual', () => {
-    it('la barra es la de hoy contra la referencia diaria, y el mes va en texto', () => {
-        render(<UsoMensual uso={uso()} />);
+    it('la barra es la de hoy contra la referencia diaria, y el mes va en texto, sin plata', () => {
+        const { container } = render(<UsoMensual uso={uso()} />);
 
         const barra = screen.getByRole('meter', { name: 'Uso de hoy de Learnito' });
         expect(barra.getAttribute('aria-valuenow')).toBe('19.2');
-        expect(screen.getByText('US$0,05 de ~US$0,26 por día')).toBeTruthy();
-        expect(screen.getByText('Mes: US$0,40 de US$8,00')).toBeTruthy();
+        expect(screen.getByText('19% de lo diario')).toBeTruthy();
+        expect(screen.getByText('Mes: 5% usado')).toBeTruthy();
+        expect(container.textContent).not.toContain('US$');
+    });
+
+    it('un uso mínimo no aparece como 0%', () => {
+        render(<UsoMensual uso={uso({ pHoy: 0.4 })} />);
+        expect(screen.getByText('menos del 1% de lo diario')).toBeTruthy();
     });
 
     it('pasar lo del día la pone ámbar pero la barra no se sale', () => {
@@ -26,10 +32,10 @@ describe('UsoMensual', () => {
 
     it('desde el 80% del mes dice cuándo se renueva; en el tope, que se agotó', () => {
         const { rerender } = render(<UsoMensual uso={uso({ mes: 6.6, pMes: 82.5 })} />);
-        expect(screen.getByText('Mes: US$6,60 de US$8,00 · se renueva el 1/11')).toBeTruthy();
+        expect(screen.getByText('Mes: 83% usado · se renueva el 1/11')).toBeTruthy();
 
         rerender(<UsoMensual uso={uso({ mes: 8, pMes: 100 })} />);
-        expect(screen.getByText('Llegaste al tope del mes (US$8,00). Se renueva el 1/11.')).toBeTruthy();
+        expect(screen.getByText('Llegaste al tope del mes. Se renueva el 1/11.')).toBeTruthy();
     });
 
     it('sin datos todavía no ocupa lugar', () => {
