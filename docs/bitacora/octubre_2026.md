@@ -270,3 +270,8 @@
   - Avance en la foto de la Academia (migración nueva: etapa, sesiones hechas de cuántas, próxima sesión, atraso, días sin lecciones, fuera de los 30 días), leído del masivo `GET /api/v1/students/progress`. Corre cada hora en el scheduler de fondo (una o dos peticiones), en el cron de la foto y en «Actualizar datos de la Academia». Revisar y «Mi cartera» muestran Etapa y Atraso, ordenables y exportables.
   - La migración `e9a4c2f7b5d1_ai_usage` (de otra sesión, sin commitear) queda encadenada detrás de esta para no dejar dos heads.
   - Verificación: suite de pytest y vitest de bajas, columnas y exportación.
+
+- **19 de Octubre de 2026 (avance cada hora en producción)** *(El avance de la Academia corre aunque los avisos en proceso estén apagados. [app/services/reminder_scheduler.py](../../app/services/reminder_scheduler.py) [MODIFY])*:
+  - Producción tiene `DISABLE_REMINDER_SCHEDULER=true` (los avisos los manda el cron externo), y eso también apagaba el job del avance. Ahora esa variable apaga solo los avisos; el avance tiene su propio interruptor, `DISABLE_ACADEMY_PROGRESS_SYNC=true`.
+  - El scheduler no arranca con `TESTING`.
+  - Verificación: tests de aislamiento, de `actualizar_db` y del avance.

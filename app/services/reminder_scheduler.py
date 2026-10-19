@@ -20,14 +20,18 @@ def _should_start():
     migrate`, `flask shell`, `create-admin`, etc. — no son el servidor web) y, con el reloader de
     debug de Werkzeug (`python run.py` en local), el proceso "watcher" que se descarta antes de
     lanzar el proceso real (evita que corra duplicado)."""
-    if os.environ.get('DISABLE_REMINDER_SCHEDULER', '').lower() == 'true':
-        return False
     if len(sys.argv) > 1 and sys.argv[1] in ('db', 'shell', 'create-admin', 'routes'):
         return False
     from flask import current_app
+    if current_app.config.get('TESTING'):
+        return False
     if current_app.debug and os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
         return False
     return True
+
+
+def _apagado(variable):
+    return os.environ.get(variable, '').lower() == 'true'
 
 
 def start_scheduler(app):
@@ -50,9 +54,11 @@ def start_scheduler(app):
         # Freno de emergencia global (`FOLLOWUP_REMINDERS_ENABLED=false`): sin envíos no tiene
         # sentido tickear los avisos. El corte de verdad vive en el servicio, así que el endpoint
         # de cron externo queda cubierto igual.
+        # `DISABLE_REMINDER_SCHEDULER=true` apaga solo los avisos en proceso (en producción los
+        # manda el cron externo); el avance tiene su propio interruptor.
         from app.services.closer_followup_service import reminders_enabled
-        con_avisos = reminders_enabled()
-        con_avance = bool(os.environ.get('ACADEMY_API_TOKEN'))
+        con_avisos = reminders_enabled() and not _apagado('DISABLE_REMINDER_SCHEDULER')
+        con_avance = bool(os.environ.get('ACADEMY_API_TOKEN')) and not _apagado('DISABLE_ACADEMY_PROGRESS_SYNC')
         if not (con_avisos or con_avance):
             logger.info("[ReminderScheduler] No se arranca: sin recordatorios ni Academia configurada.")
             return
