@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { CheckCircle2, CircleDashed, History, RefreshCw } from 'lucide-react';
 import { Skeleton, SkeletonBlock, SkeletonText } from '../../../../components/standard';
@@ -8,6 +8,7 @@ import ArbolMeta, { AUTO, NINGUNA } from './ArbolMeta';
 import EnlaceMeta from './EnlaceMeta';
 import { enlaceAdministrador } from './enlacesMeta';
 import { diaLocal, formatear } from './metricas';
+import { useDatosCacheados } from '../../../../services/cacheDeVistas';
 import { asignarClaveDeMeta, asignarEmbudoDeMeta, mensajeDeError, pedirAnunciosDeMeta, sincronizarMeta } from './marketingApi';
 
 /**
@@ -83,27 +84,15 @@ const hace = (iso) => {
 };
 
 const ConexionMeta = ({ desde, hasta, filasTablero, moneda, cuentas, estadoMeta, version = 0, onCambio }) => {
-    const [datos, setDatos] = useState(null);
-    const [error, setError] = useState(null);
     const [dias, setDias] = useState(30);
     const [sincronizando, setSincronizando] = useState(false);
     const [guardando, setGuardando] = useState(null);
     const [intento, setIntento] = useState(0);
 
-    const cargar = useCallback(async (signal) => {
-        try {
-            setDatos(await pedirAnunciosDeMeta(desde, hasta, { signal }));
-            setError(null);
-        } catch (e) {
-            if (e?.name !== 'CanceledError') setError(mensajeDeError(e, 'No se pudieron traer los anuncios de Meta.'));
-        }
-    }, [desde, hasta]);
-
-    useEffect(() => {
-        const control = new AbortController();
-        cargar(control.signal);
-        return () => control.abort();
-    }, [cargar, version, intento]);
+    // Recordado por período (cacheDeVistas); `intento` lo vuelve a pedir (reintentar o tras sincronizar).
+    const { datos, error: fallo, setDatos } = useDatosCacheados(`mk:meta:${desde}:${hasta}`,
+        (signal) => pedirAnunciosDeMeta(desde, hasta, { signal }), { version: version + intento });
+    const error = fallo ? mensajeDeError(fallo, 'No se pudieron traer los anuncios de Meta.') : null;
 
     const sincronizar = async () => {
         const tramos = Math.ceil(dias / TRAMO);
@@ -127,7 +116,7 @@ const ConexionMeta = ({ desde, hasta, filasTablero, moneda, cuentas, estadoMeta,
         } finally {
             setSincronizando(false);
             if (primero) {
-                await cargar();
+                setIntento((n) => n + 1);
                 onCambio?.();
             }
         }
@@ -181,7 +170,7 @@ const ConexionMeta = ({ desde, hasta, filasTablero, moneda, cuentas, estadoMeta,
         };
     }, [datos, filasTablero]);
 
-    if (error && !datos) return <ErrorDeCarga titulo={error} onReintentar={() => { setError(null); setIntento((n) => n + 1); }} />;
+    if (error && !datos) return <ErrorDeCarga titulo={error} onReintentar={() => setIntento((n) => n + 1)} />;
     if (!datos) return <EsqueletoConexion />;
 
     const listaCuentas = cuentas?.length ? cuentas : (datos.cuentas || []);

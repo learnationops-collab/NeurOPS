@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, Tags } from 'lucide-react';
 import { Columnas } from './SerieDiaria';
 import { Kpi } from './TablaAnuncios';
@@ -7,6 +7,7 @@ import EnlaceMeta from './EnlaceMeta';
 import { enlaceAdministrador } from './enlacesMeta';
 import { dinero, formatear, serieDeEmbudos } from './metricas';
 import { mensajeDeError, pedirWorkshopDelPeriodo } from './marketingApi';
+import { useDatosCacheados } from '../../../../services/cacheDeVistas';
 
 /**
  * Rendimiento › Workshop: los anuncios de Meta que llevan a la clase en vivo (embudo «workshop») en el
@@ -40,22 +41,17 @@ const KPIS = ['Importe gastado', 'Clics', 'Visitas a la landing', 'Clics al grup
 const TITULO = 'Campañas, conjuntos y anuncios de Workshop';
 
 const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, cuentas, version = 0, irAMeta }) => {
-    const [datos, setDatos] = useState(null);
-    const [error, setError] = useState(null);
-    const [abiertas, setAbiertas] = useState({});
+    const [abiertasDe, setAbiertasDe] = useState({ de: null, mapa: {} });
     const [intento, setIntento] = useState(0);
 
-    useEffect(() => {
-        const control = new AbortController();
-        pedirWorkshopDelPeriodo(desde, hasta, { signal: control.signal })
-            .then((d) => {
-                setDatos(d);
-                setError(null);
-                setAbiertas(d.campanas.length ? { [d.campanas[0].campana_id]: true } : {});
-            })
-            .catch((e) => { if (e?.name !== 'CanceledError') setError(mensajeDeError(e, 'No se pudieron traer los anuncios de Workshop.')); });
-        return () => control.abort();
-    }, [desde, hasta, version, intento]);
+    // Recordado por período (cacheDeVistas): volver a Workshop no lo vuelve a pedir.
+    const { datos, error: fallo } = useDatosCacheados(`mk:workshop:${desde}:${hasta}`,
+        (signal) => pedirWorkshopDelPeriodo(desde, hasta, { signal }), { version: version + intento });
+    const error = fallo ? mensajeDeError(fallo, 'No se pudieron traer los anuncios de Workshop.') : null;
+
+    // Con cada dato nuevo, la campaña que más gastó abierta.
+    const abiertas = abiertasDe.de === datos ? abiertasDe.mapa
+        : (datos?.campanas.length ? { [datos.campanas[0].campana_id]: true } : {});
 
     const dias = useMemo(() => (embudos ? serieDeEmbudos(embudos.filter((e) => e.embudo === 'workshop'), desde, hasta) : null),
         [embudos, desde, hasta]);
@@ -76,7 +72,7 @@ const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, cuentas, version =
     );
 
     if (error && !datos) {
-        return <ErrorDeCarga titulo={error} onReintentar={() => { setError(null); setIntento((n) => n + 1); }} />;
+        return <ErrorDeCarga titulo={error} onReintentar={() => setIntento((n) => n + 1)} />;
     }
     if (!datos) {
         return (
@@ -103,7 +99,7 @@ const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, cuentas, version =
           sub: `${formatear(t.costo_whatsapp, 'money', moneda)} por clic al grupo`,
           tip: 'Clics al grupo de WhatsApp desde esas visitas.' },
     ];
-    const alternar = (id) => setAbiertas((a) => ({ ...a, [id]: !a[id] }));
+    const alternar = (id) => setAbiertasDe({ de: datos, mapa: { ...abiertas, [id]: !abiertas[id] } });
     const cuenta = cuentas?.[0];
     const deCampana = (c) => enlaceAdministrador(cuenta, 'campana', { campanas: [c.campana_id] });
     const deAnuncio = (c, a) => enlaceAdministrador(cuenta, 'anuncio', { campanas: [c.campana_id], anuncios: [a.meta_ad_id] });

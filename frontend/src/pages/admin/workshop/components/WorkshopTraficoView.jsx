@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { CalendarDays, MessageCircle, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../../services/api';
+import { useDatosCacheados } from '../../../../services/cacheDeVistas';
 import Cifra from '../../../comercial/components/Cifra';
 import { PanelCab, PillMenu, Segmented, Tip } from '../../../comercial/components/Shared';
 import RangoFechas, { esFecha, textoRango } from '../../../comercial/components/RangoFechas';
@@ -103,9 +104,6 @@ const WorkshopTraficoView = () => {
         return rangoDePeriodo(periodo === 'personalizado' ? PERIODO_POR_DEFECTO : periodo);
     }, [periodo, pDesde, pHasta]);
 
-    const [datos, setDatos] = useState(null);
-    const [error, setError] = useState(null);
-    const [cargando, setCargando] = useState(false);
     const [version, setVersion] = useState(0);
 
     const cambiar = useCallback((cambios) => {
@@ -114,19 +112,11 @@ const WorkshopTraficoView = () => {
         setParams(siguiente, { replace: true });
     }, [params, setParams]);
 
-    useEffect(() => {
-        const control = new AbortController();
-        setCargando(true);
-        api.get('/workshop/landing/trafico', { params: { desde: rango.desde, hasta: rango.hasta }, signal: control.signal })
-            .then((r) => { setDatos(r.data); setError(null); })
-            .catch((e) => {
-                if (e?.name === 'CanceledError') return;
-                setError('No se pudo cargar el tráfico de las landings.');
-                toast.error('No se pudo cargar el tráfico de las landings.');
-            })
-            .finally(() => { if (!control.signal.aborted) setCargando(false); });
-        return () => control.abort();
-    }, [rango.desde, rango.hasta, version]);
+    // Recordado por período (cacheDeVistas): volver a la pestaña no lo vuelve a pedir.
+    const { datos, error: fallo, cargando } = useDatosCacheados(`ws:trafico:${rango.desde}:${rango.hasta}`,
+        (signal) => api.get('/workshop/landing/trafico', { params: { desde: rango.desde, hasta: rango.hasta }, signal }).then((r) => r.data),
+        { version, onError: () => toast.error('No se pudo cargar el tráfico de las landings.') });
+    const error = fallo ? 'No se pudo cargar el tráfico de las landings.' : null;
 
     const recargar = useCallback(() => setVersion((v) => v + 1), []);
 

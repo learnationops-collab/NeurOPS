@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../../services/api';
+import { useDatosCacheados } from '../../../../services/cacheDeVistas';
 import ListaConfigurable from '../../../../components/listas/ListaConfigurable';
 import EsqueletoLista from '../../../../components/listas/EsqueletoLista';
 import {
@@ -173,32 +174,22 @@ const EditarMensaje = ({ inicial, nuevo, onCerrar, onGuardado }) => {
 };
 
 const ConversacionesVista = ({ desde, hasta, version = 0 }) => {
-    const [mensajes, setMensajes] = useState(null);
-    const [estadisticas, setEstadisticas] = useState(null);
-    const [error, setError] = useState(null);
     const [editando, setEditando] = useState(null); // { inicial, nuevo }
     const [recarga, setRecarga] = useState(0);
 
     // El catálogo y las cifras del período salen juntos y cada uno llena lo suyo apenas llega: los
     // nombres se ven enseguida y las cifras después (el cálculo del período tarda varios segundos).
-    useEffect(() => {
-        const control = new AbortController();
-        api.get('/conversational/messages', { signal: control.signal })
-            .then((m) => { setMensajes(m.data || []); setError(null); })
-            .catch((e) => {
-                if (e?.name === 'CanceledError') return;
-                setError('No se pudieron cargar los mensajes.');
-                toast.error('No se pudieron cargar los mensajes.');
-            });
-        api.get('/conversational/stats/conversational', { params: { start_date: desde, end_date: hasta }, signal: control.signal })
-            .then((s) => setEstadisticas(s.data?.table || []))
-            .catch((e) => {
-                if (e?.name === 'CanceledError') return;
-                setEstadisticas((actual) => actual || []);
-                toast.error('No se pudieron calcular las cifras del período.');
-            });
-        return () => control.abort();
-    }, [desde, hasta, version, recarga]);
+    // Los dos quedan recordados: volver a la pestaña no los vuelve a pedir (cacheDeVistas).
+    const catalogo = useDatosCacheados('mk:conversaciones:catalogo',
+        (signal) => api.get('/conversational/messages', { signal }).then((m) => m.data || []),
+        { version: version + recarga, onError: () => toast.error('No se pudieron cargar los mensajes.') });
+    const cifras = useDatosCacheados(`mk:conversaciones:cifras:${desde}:${hasta}`,
+        (signal) => api.get('/conversational/stats/conversational', { params: { start_date: desde, end_date: hasta }, signal })
+            .then((s) => s.data?.table || []),
+        { version: version + recarga, onError: () => toast.error('No se pudieron calcular las cifras del período.') });
+    const mensajes = catalogo.datos;
+    const estadisticas = useMemo(() => cifras.datos ?? (cifras.error ? [] : null), [cifras.datos, cifras.error]);
+    const error = catalogo.error ? 'No se pudieron cargar los mensajes.' : null;
 
     const filas = useMemo(() => (mensajes ? unir(mensajes, estadisticas) : []), [mensajes, estadisticas]);
     const abrir = useCallback((f) => setEditando(f.configurado
@@ -206,7 +197,7 @@ const ConversacionesVista = ({ desde, hasta, version = 0 }) => {
         : { inicial: { ...VACIO, message_id: f.message_id }, nuevo: true }), []);
     const sinConfigurar = filas.filter((f) => !f.configurado).length;
 
-    if (error && !mensajes) return <ErrorDeCarga titulo={error} onReintentar={() => { setError(null); setRecarga((n) => n + 1); }} />;
+    if (error && !mensajes) return <ErrorDeCarga titulo={error} onReintentar={() => setRecarga((n) => n + 1)} />;
 
     return (
         <section className="panel cv-lista" aria-label="Mensajes del flujo">
