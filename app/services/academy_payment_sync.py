@@ -92,6 +92,14 @@ def notify_academy_of_payments(sales):
         return
     if not payloads:
         return
+    # Y después de cada pago, el estado de pago de su cliente (academy_payment_status): se arma acá,
+    # dentro de la request, y viaja en el mismo hilo DESPUÉS de los pagos.
+    from app.services import academy_payment_status
+    try:
+        estados = academy_payment_status._estados({p['work_client_id'] for p in payloads if p.get('work_client_id')})
+    except Exception as e:
+        current_app.logger.error(f'[ACADEMY PAYMENTS] No se pudo armar el estado de pago: {e}')
+        estados = []
     app = current_app._get_current_object()
 
     def _correr():
@@ -104,5 +112,10 @@ def notify_academy_of_payments(sales):
                     app.logger.warning(f"[ACADEMY PAYMENTS] Venta {payload['sale_id']}: {e} ({e.status_code})")
                 except Exception as e:
                     app.logger.error(f"[ACADEMY PAYMENTS] Venta {payload['sale_id']}: {e}")
+            for estado in estados:
+                try:
+                    academy_payment_status._enviar(estado, app.logger)
+                except Exception:
+                    pass  # ya quedó en el log
 
     threading.Thread(target=_correr, daemon=True, name='academy-payments').start()

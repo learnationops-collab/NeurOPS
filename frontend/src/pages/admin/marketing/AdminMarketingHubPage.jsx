@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -16,6 +16,7 @@ import RendimientoWorkshop from './anuncios/RendimientoWorkshop';
 import { useEstadoDeMeta } from './anuncios/useEstadoDeMeta';
 import { PERIODOS, PERIODO_POR_DEFECTO, rangoDePeriodo } from './anuncios/metricas';
 import { agruparPalabraClave, archivarPalabraClave, mensajeDeError, pedirTablero } from './anuncios/marketingApi';
+import { useDatosCacheados } from '../../../services/cacheDeVistas';
 import '../../comercial/comercial.css';
 import '../../../components/dashboard/pareja.css';
 import './anuncios/anuncios.css';
@@ -78,9 +79,6 @@ const AdminMarketingHubPage = () => {
         return rangoDePeriodo(periodo === 'personalizado' ? PERIODO_POR_DEFECTO : periodo);
     }, [periodo, params]);
 
-    const [datos, setDatos] = useState(null);
-    const [error, setError] = useState(null);
-    const [cargando, setCargando] = useState(false);
     const [version, setVersion] = useState(0);
 
     const cambiar = useCallback((cambios) => {
@@ -89,20 +87,11 @@ const AdminMarketingHubPage = () => {
         setParams(siguiente, { replace: true });
     }, [params, setParams]);
 
-    useEffect(() => {
-        const control = new AbortController();
-        setCargando(true);
-        pedirTablero(rango.desde, rango.hasta, { signal: control.signal })
-            .then((d) => { setDatos(d); setError(null); })
-            .catch((e) => {
-                if (e?.name === 'CanceledError') return;
-                const mensaje = mensajeDeError(e, 'No se pudo cargar la tabla de anuncios.');
-                setError(mensaje);
-                toast.error(mensaje);
-            })
-            .finally(() => { if (!control.signal.aborted) setCargando(false); });
-        return () => control.abort();
-    }, [rango.desde, rango.hasta, version]);
+    // El tablero queda recordado por período: ir y volver entre pestañas o vistas no lo vuelve a pedir.
+    const { datos, error: fallo, cargando, setDatos } = useDatosCacheados(`mk:tablero:${rango.desde}:${rango.hasta}`,
+        (signal) => pedirTablero(rango.desde, rango.hasta, { signal }),
+        { version, onError: (e) => toast.error(mensajeDeError(e, 'No se pudo cargar la tabla de anuncios.')) });
+    const error = fallo ? mensajeDeError(fallo, 'No se pudo cargar la tabla de anuncios.') : null;
 
     const recargar = useCallback(() => setVersion((v) => v + 1), []);
     const estadoMeta = useEstadoDeMeta({ meta: datos?.meta, onActualizado: recargar });
@@ -136,6 +125,13 @@ const AdminMarketingHubPage = () => {
     const textoPeriodo = periodo === 'personalizado'
         ? textoRango(rango)
         : PERIODOS.find((p) => p.key === periodo)?.label;
+
+    // Va debajo de los KPIs del tablero (Kerwin, 19/10/2026: los KPIs arriba).
+    const resumenEmbudos = embudo === 'todo' ? (
+        <EmbudosResumen embudos={datos ? datos.embudos || [] : null} desde={rango.desde} hasta={rango.hasta}
+            moneda={datos?.moneda} onElegir={(key) => cambiar({ embudo: key })}
+            cuentas={cuentas} irAMeta={() => cambiar({ tab: 'meta' })} />
+    ) : null;
 
     if (params.get('tab') === 'trafico') return <Navigate to="/admin/workshops?tab=trafico" replace />;
 
@@ -192,18 +188,13 @@ const AdminMarketingHubPage = () => {
                                     <ErrorDeCarga titulo={error} onReintentar={recargar} />
                                 ) : (
                                     <>
-                                        {embudo === 'todo' && (
-                                            <EmbudosResumen embudos={datos ? datos.embudos || [] : null} desde={rango.desde} hasta={rango.hasta}
-                                                moneda={datos?.moneda} onElegir={(key) => cambiar({ embudo: key })}
-                                                cuentas={cuentas} irAMeta={() => cambiar({ tab: 'meta' })} />
-                                        )}
                                         {embudo === 'workshop' ? (
                                             <RendimientoWorkshop desde={rango.desde} hasta={rango.hasta} moneda={datos?.moneda}
                                                 embudos={datos ? datos.embudos || [] : (error ? [] : null)} cuentas={cuentas} version={version}
                                                 irAMeta={() => cambiar({ tab: 'meta' })} />
-                                        ) : !datos ? <EsqueletoTablaAnuncios /> : (
+                                        ) : !datos ? <EsqueletoTablaAnuncios bajoKpis={resumenEmbudos} /> : (
                                             <TablaAnuncios datos={datos} onArchivar={archivar} onAgrupar={agrupar}
-                                                irAMeta={() => cambiar({ tab: 'meta' })} />
+                                                irAMeta={() => cambiar({ tab: 'meta' })} bajoKpis={resumenEmbudos} />
                                         )}
                                     </>
                                 )}

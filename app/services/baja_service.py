@@ -147,21 +147,22 @@ def dar_de_baja(client, motivo, usuario, cuando=None):
     if nueva:
         client.baja_at = cuando or datetime.utcnow()
         client.baja_por_id = getattr(usuario, 'id', None)
-        # La baja también le corta el acceso a la Academia (pedido del 30/09/2026), pero eso es
-        # una llamada a otro sistema y va DESPUÉS del commit, cuando la baja ya quedó guardada:
-        # queda anotado acá y lo hace quien terminó la acción (`ficha_academia.quitar_accesos_de_bajas`).
+        # La Academia se entera (cierra el proceso del alumno; desde el 19/10/2026 ya no le corta el
+        # acceso), pero eso es una llamada a otro sistema y va DESPUÉS del commit, cuando la baja ya
+        # quedó guardada: queda anotado acá y lo hace quien terminó la acción
+        # (`academy_payment_status.avisar_bajas`).
         db.session.info.setdefault(_PENDIENTES_ACADEMIA, []).append(client.id)
     client.baja_motivo = ((motivo or '').strip()[:255]) or client.baja_motivo
     return nueva
 
 
-# Clave de `db.session.info` con los clientes que se dieron de baja en este pedido y a los que
-# todavía no se les quitó el acceso a la Academia. La sesión vive lo que dura el pedido.
-_PENDIENTES_ACADEMIA = 'bajas_sin_quitar_academia'
+# Clave de `db.session.info` con los clientes que se dieron de baja (o se les revirtió) en este
+# pedido y a los que todavía no se le avisó a la Academia. La sesión vive lo que dura el pedido.
+_PENDIENTES_ACADEMIA = 'bajas_sin_avisar_academia'
 
 
-def bajas_sin_quitar_academia():
-    """Los ids de los clientes dados de baja en este pedido, y los saca de la lista."""
+def bajas_sin_avisar_academia():
+    """Los ids de los clientes dados de baja (o revertidos) en este pedido, y los saca de la lista."""
     return db.session.info.pop(_PENDIENTES_ACADEMIA, [])
 
 
@@ -177,4 +178,6 @@ def revertir(client):
     client.baja_at = None
     client.baja_motivo = None
     client.baja_por_id = None
+    # La Academia reabre el proceso del alumno (`academy_payment_status.avisar_bajas`).
+    db.session.info.setdefault(_PENDIENTES_ACADEMIA, []).append(client.id)
     return anterior

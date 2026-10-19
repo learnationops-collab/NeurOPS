@@ -200,7 +200,16 @@
 /* Rendimiento por embudo (15/10/2026): selector, resumen de gasto por embudo y la vista de Workshop. */
 .dc-shell .mk-embudo-selector{display:flex;justify-content:flex-start;margin-bottom:var(--s4)}
 .dc-shell .mk-embudos{padding:var(--s5);margin-bottom:var(--s5)}
-.dc-shell .mk-embudos .mk-embudos-filas{margin-top:var(--s4)}
+.dc-shell .mk-embudos-tarjetas{margin-top:var(--s4)}
+.dc-shell .mk-embudo{display:flex;flex-direction:column;gap:6px;text-align:left;min-width:0}
+.dc-shell .mk-embudo--abre{cursor:pointer;transition:border-color .2s,transform .2s}
+.dc-shell .mk-embudo--abre:hover{border-color:color-mix(in srgb,var(--brand-secondary) 55%,transparent);transform:translateY(-1px)}
+.dc-shell .mk-embudo--abre:focus-visible{outline:2px solid var(--brand-secondary);outline-offset:2px}
+.dc-shell .mk-embudo-cab{display:flex;align-items:center;gap:8px}
+.dc-shell .mk-embudo-cab > i{width:10px;height:10px;border-radius:3px;flex:none}
+.dc-shell .mk-embudo-n{font-size:22px;font-weight:700;line-height:1.1}
+.dc-shell .mk-embudo-barra{display:block;height:4px;border-radius:99px;background:var(--mk-resto);overflow:hidden}
+.dc-shell .mk-embudo-barra i{display:block;height:100%;border-radius:inherit}
 .dc-shell .mk-embudos-serie{margin-top:var(--s5);display:flex;flex-direction:column;gap:var(--s3)}
 .dc-shell .mk-embudos-serie .mk-leyenda{display:flex;flex-wrap:wrap;justify-content:flex-end}
 .dc-shell .mk-tabla--ws .mk-ws-abrir{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;font-weight:700;cursor:pointer;text-align:left}

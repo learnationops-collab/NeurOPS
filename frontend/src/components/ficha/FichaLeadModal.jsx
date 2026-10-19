@@ -57,19 +57,19 @@ const ERRORES_EN_LINEA = new Set(['editar_agenda', 'corregir_seguimiento', 'agen
     'acceso_academia', 'quitar_acceso_academia', 'guardar_fathom', 'guardar_objecion']);
 
 /**
- * El aviso de una acción que dio de baja a un cliente, con lo que pasó con su acceso a la Academia
- * (`acceso_academia`, ver `_con_accesos_de_bajas` en el backend). Si no se pudo cortar vuelve en
- * amarillo y con el motivo: la baja quedó hecha, el acceso hay que quitarlo a mano.
+ * El aviso de una acción que dio de baja a un cliente (o se la revirtió), con lo que pasó en la
+ * Academia (`acceso_academia`, ver `_con_accesos_de_bajas` en el backend). Desde el 19/10/2026 la
+ * baja no corta el acceso: la Academia cierra (o reabre) el proceso del alumno. Si no se le pudo
+ * avisar vuelve en amarillo y con el motivo: la baja quedó hecha igual.
  */
 export const conAccesoDeLaBaja = (base, r) => {
     const acceso = r?.acceso_academia;
     if (!acceso) return base;
-    if (acceso.estado === 'quitado') return `${base} También se le quitó el acceso a la Academia: vence hoy.`;
+    if (acceso.estado === 'avisado') return `${base} La Academia quedó avisada; el acceso sigue hasta su vencimiento.`;
     if (acceso.estado === 'sin_cuenta') return `${base} No tenía cuenta en la Academia.`;
     return {
         tono: 'warning',
-        texto: `${base} No se le pudo quitar el acceso a la Academia${acceso.motivo ? ` (${acceso.motivo.replace(/\.$/, '')})` : ''}: `
-            + 'quitáselo desde Fulfillment.',
+        texto: `${base} No se le pudo avisar a la Academia${acceso.motivo ? ` (${acceso.motivo.replace(/\.$/, '')})` : ''}.`,
     };
 };
 
@@ -80,7 +80,7 @@ const MENSAJES = {
     nota_llamada: 'Nota guardada.',
     recordatorio_previo: 'Recordatorio guardado.',
     cerrar_confirmacion: 'Confirmación cerrada: el lead está 100% confirmado.',
-    // «No va a pagar» da de baja, y la baja corta el acceso a la Academia: se dice qué pasó.
+    // «No va a pagar» da de baja, y la baja se le avisa a la Academia: se dice qué pasó.
     reportar_resultado: (r) => conAccesoDeLaBaja('Resultado reportado.', r),
     // La venta del árbol de «Resultado» también da el acceso a la Academia si se pidió: se dice
     // qué pasó con él, porque «se creó la cuenta» significa que al cliente le llegó un email.
@@ -150,10 +150,9 @@ const MENSAJES = {
     dar_de_baja: (r) => conAccesoDeLaBaja(
         'Baja registrada: ya no debe nada y sale de las listas de cobro. Lo que pagó queda.', r),
     // El monto viene del backend, ya recalculado: es la deuda que vuelve.
-    revertir_baja: (r) => (Number(r?.deuda) > 0.009
+    revertir_baja: (r) => conAccesoDeLaBaja(Number(r?.deuda) > 0.009
         ? `Baja revertida: vuelve a deber $${Number(r.deuda).toLocaleString('es-AR', { maximumFractionDigits: 2 })} y vuelve a las listas de cobro.`
-        : 'Baja revertida: vuelve a las listas de cobro.')
-        + ' El acceso a la Academia no vuelve solo: renovalo desde Fulfillment si lo necesita.',
+        : 'Baja revertida: vuelve a las listas de cobro.', r),
     enviar_nota: 'Nota enviada.',
 };
 

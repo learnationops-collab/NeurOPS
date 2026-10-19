@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../../../services/api';
+import { esFresco, guardarCache, leerCache } from '../../../services/cacheDeVistas';
 
 /**
  * Los tres pedidos que comparten las pestañas de Workshop: talleres, metas y plan de acciones.
@@ -13,6 +14,9 @@ import api from '../../../services/api';
  * (`recargando` es para el ícono del botón). Si la PRIMERA carga de algo falla, `fallas[clave]`
  * queda en true para que su bloque ofrezca reintentar en vez de un esqueleto eterno.
  *
+ * Lo que llega queda recordado (cacheDeVistas): volver a Workshop desde otra vista muestra lo último
+ * al instante y solo pide lo que tiene más de 5 minutos.
+ *
  * El polling silencioso cada 20 s trae los talleres que el backend ya sincronizó solo
  * (workshop_live_sync.py) sin que haya que recargar.
  */
@@ -24,9 +28,11 @@ const MENSAJE = {
     actions: 'No se pudo cargar el plan de acciones',
 };
 const POLLING_MS = 20000;
+const claveDe = (clave) => `ws:${clave}`;
+const recordado = () => Object.fromEntries(Object.keys(RUTAS).map((k) => [k, leerCache(claveDe(k))?.datos ?? null]));
 
 export default function useDatosWorkshop() {
-    const [datos, setDatos] = useState({ events: null, goals: null, actions: null });
+    const [datos, setDatos] = useState(recordado);
     const [fallas, setFallas] = useState({});
     const [recargando, setRecargando] = useState(false);
     const vivo = useRef(true);
@@ -41,6 +47,7 @@ export default function useDatosWorkshop() {
             const { data } = await api.get(RUTAS[clave]);
             if (!vivo.current) return;
             if (clave === 'events' && !Array.isArray(data)) return;
+            guardarCache(claveDe(clave), data);
             setDatos((d) => ({ ...d, [clave]: data }));
             setFallas((f) => (f[clave] ? { ...f, [clave]: false } : f));
         } catch (err) {
@@ -62,12 +69,15 @@ export default function useDatosWorkshop() {
     }, [pedir]);
 
     useEffect(() => {
-        Object.keys(RUTAS).forEach((clave) => pedir(clave, false));
+        Object.keys(RUTAS).forEach((clave) => { if (!esFresco(leerCache(claveDe(clave)))) pedir(clave, false); });
         const intervalo = setInterval(() => pedir('events', true), POLLING_MS);
         return () => clearInterval(intervalo);
     }, [pedir]);
 
-    const setGoals = useCallback((goals) => setDatos((d) => ({ ...d, goals })), []);
+    const setGoals = useCallback((goals) => {
+        guardarCache(claveDe('goals'), goals);
+        setDatos((d) => ({ ...d, goals }));
+    }, []);
 
     return { ...datos, fallas, recargando, recargar, fetchEvents, fetchGoals, fetchActions, setGoals };
 }

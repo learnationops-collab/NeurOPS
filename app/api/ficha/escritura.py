@@ -41,15 +41,16 @@ def _error_de_accion(e):
 
 
 def _con_accesos_de_bajas(resultado):
-    """Si la acción dio de baja a un cliente, le corta el acceso a la Academia y lo dice.
+    """Si la acción dio de baja a un cliente (o se la revirtió), se lo avisa a la Academia y lo dice.
 
     Va acá, una vez, y no en cada acción: la baja puede venir de «Dar de baja» o de «No va a pagar»
     en el reporte, y lo que tiene que pasar después es lo mismo. Corre cuando la acción ya comiteó:
     si la Academia falla, la baja queda igual y la respuesta trae el motivo en `acceso_academia`.
+    Desde el 19/10/2026 la baja ya no corta el acceso: la Academia cierra el proceso del alumno.
     """
-    from app.services import ficha_academia
+    from app.services import academy_payment_status
 
-    acceso = ficha_academia.quitar_accesos_de_bajas(current_user)
+    acceso = academy_payment_status.avisar_bajas()
     if acceso and isinstance(resultado, dict):
         return {**resultado, 'acceso_academia': acceso}
     return resultado

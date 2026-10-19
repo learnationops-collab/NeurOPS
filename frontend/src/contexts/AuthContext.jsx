@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
 import { browserTimezone } from '../utils/datetime';
 import { loadSession, saveSession, clearSession } from '../utils/sessionStore';
+import { limpiarCache } from '../services/cacheDeVistas';
 
 const AuthContext = createContext();
 
@@ -41,6 +42,9 @@ export const AuthProvider = ({ children }) => {
             window.removeEventListener('auth-unauthorized', handleUnauthorized);
         };
     }, []);
+
+    // Lo recordado de las vistas es de quien lo pidió: otro usuario o rol empieza de cero.
+    useEffect(() => { limpiarCache(); }, [user?.id, user?.role, user?.is_impersonating]);
 
     const guardar = ({ user: userData, token }) => {
         setUser(userData);

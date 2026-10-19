@@ -2088,10 +2088,10 @@ def process_closer_card(appt_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": f"Error al guardar: {str(e)}"}), 500
-    # «No va a pagar» da de baja, y la baja corta el acceso a la Academia: después del commit,
-    # igual que en la ficha (`_con_accesos_de_bajas`).
-    from app.services import ficha_academia, momentum_academia
-    acceso = ficha_academia.quitar_accesos_de_bajas(current_user)
+    # «No va a pagar» da de baja, y la baja se le avisa a la Academia (cierra el proceso, no corta
+    # el acceso): después del commit, igual que en la ficha (`_con_accesos_de_bajas`).
+    from app.services import academy_payment_status, momentum_academia
+    acceso = academy_payment_status.avisar_bajas()
     # Una Momentum de la Academia: su resultado vuelve allá, igual que desde la ficha.
     momentum_academia.avisar(appt, 'mazo', data, current_user)
     respuesta = {"message": "Carta procesada con éxito", "id": appt.id}

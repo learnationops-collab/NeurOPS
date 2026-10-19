@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../../services/api';
+import { useDatosCacheados } from '../../../../services/cacheDeVistas';
 import { Segmented } from '../../../../components/standard';
 import ListaConfigurable from '../../../../components/listas/ListaConfigurable';
 import EsqueletoLista from '../../../../components/listas/EsqueletoLista';
@@ -125,22 +126,13 @@ const KPIS = ['Entrantes', 'Calificados', 'Descalificados', 'Pendientes'];
 const LISTA = 'Leads entrantes';
 
 const EntrantesVista = ({ desde, hasta, version = 0 }) => {
-    const [datos, setDatos] = useState(null);
-    const [error, setError] = useState(null);
     const [elegida, setElegida] = useState(null);
     const [intento, setIntento] = useState(0);
-
-    useEffect(() => {
-        const control = new AbortController();
-        api.get('/manychat-webhook/entrantes', { params: { desde, hasta }, signal: control.signal })
-            .then((r) => { setDatos(r.data); setError(null); })
-            .catch((e) => {
-                if (e?.name === 'CanceledError') return;
-                setError('No se pudieron cargar los entrantes.');
-                toast.error('No se pudieron cargar los entrantes.');
-            });
-        return () => control.abort();
-    }, [desde, hasta, version, intento]);
+    // Recordado por período: volver a la pestaña no vuelve a pedirlo (cacheDeVistas).
+    const { datos, error: fallo, setDatos } = useDatosCacheados(`mk:entrantes:${desde}:${hasta}`,
+        (signal) => api.get('/manychat-webhook/entrantes', { params: { desde, hasta }, signal }).then((r) => r.data),
+        { version: version + intento, onError: () => toast.error('No se pudieron cargar los entrantes.') });
+    const error = fallo ? 'No se pudieron cargar los entrantes.' : null;
 
     const filas = useMemo(() => datos?.filas || [], [datos]);
     const cuenta = useMemo(() => Object.fromEntries(ORDEN_ESTADOS.map((e) => [e, filas.filter((f) => f.estado === e).length])), [filas]);
@@ -161,7 +153,7 @@ const EntrantesVista = ({ desde, hasta, version = 0 }) => {
         }
     };
 
-    if (error && !datos) return <ErrorDeCarga titulo={error} onReintentar={() => { setError(null); setIntento((n) => n + 1); }} />;
+    if (error && !datos) return <ErrorDeCarga titulo={error} onReintentar={() => setIntento((n) => n + 1)} />;
     if (!datos) {
         return (
             <div className="en-vista">

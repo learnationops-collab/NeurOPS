@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { X } from 'lucide-react';
 import api from '../../../../services/api';
+import { useDatosCacheados } from '../../../../services/cacheDeVistas';
 import ListaConfigurable from '../../../../components/listas/ListaConfigurable';
 import EsqueletoLista from '../../../../components/listas/EsqueletoLista';
 import InlineConfirm from '../../../../components/ui/InlineConfirm';
@@ -63,23 +64,15 @@ const FichaVisita = ({ visita, puedeBorrar, onBorrar, onCerrar }) => {
 };
 
 const DetalleVisitas = ({ desde, hasta, version, onBorrada }) => {
-    const [datos, setDatos] = useState(null);
-    const [error, setError] = useState(null);
     const [elegida, setElegida] = useState(null);
     const [intento, setIntento] = useState(0);
 
-    useEffect(() => {
-        const control = new AbortController();
-        setError(null);
-        api.get('/workshop/landing/trafico/visitas', {
-            params: { desde, hasta, limite: LIMITE_DETALLE }, signal: control.signal,
-        })
-            .then((r) => setDatos(r.data))
-            .catch((e) => {
-                if (e?.name !== 'CanceledError') setError('No se pudo cargar el detalle de visitas.');
-            });
-        return () => control.abort();
-    }, [desde, hasta, version, intento]);
+    // Recordado por período (cacheDeVistas): volver a la pestaña no lo vuelve a pedir.
+    const { datos, error: fallo, setDatos } = useDatosCacheados(`ws:visitas:${desde}:${hasta}`,
+        (signal) => api.get('/workshop/landing/trafico/visitas', { params: { desde, hasta, limite: LIMITE_DETALLE }, signal })
+            .then((r) => r.data),
+        { version: (version || 0) + intento });
+    const error = fallo ? 'No se pudo cargar el detalle de visitas.' : null;
 
     // Otro período: la visita elegida ya no es de esta lista.
     useEffect(() => { setElegida(null); }, [desde, hasta]);

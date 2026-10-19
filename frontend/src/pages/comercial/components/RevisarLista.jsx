@@ -225,6 +225,31 @@ const Celda = ({ fila, col }) => {
             return <span className="celda celda--num">{formatoAcademia.ejecuciones(fila.academia?.ejecuciones)}</span>;
         case 'ac_racha':
             return <span className="celda celda--num">{formatoAcademia.racha(fila.academia?.racha)}</span>;
+        // El avance en el proceso de sesiones (`academia.avance`): dónde está y si va al día.
+        case 'ac_etapa': {
+            const av = fila.academia?.avance;
+            if (!av) return <span className="celda mut40">—</span>;
+            const sub = av.tipo === 'session' && av.proxima_estado
+                ? `${av.proxima_estado} · ${formatoAcademia.sesiones(av) || ''}` : formatoAcademia.sesiones(av);
+            return (
+                <>
+                    <span className="celda" title={av.etapa}>{av.tipo === 'done' ? 'Completó' : av.etapa}</span>
+                    {sub && <span className="celda-sub">{sub}</span>}
+                </>
+            );
+        }
+        case 'ac_atraso': {
+            const av = fila.academia?.avance;
+            if (!av) return <span className="celda mut40">—</span>;
+            return (
+                <>
+                    <span className="celda celda--num" style={av.atraso > 0 ? { color: 'var(--error)', fontWeight: 700 } : undefined}>
+                        {formatoAcademia.atraso(av.atraso)}
+                    </span>
+                    <span className="celda-sub">{formatoAcademia.sinLecciones(av.dias_sin_lecciones)}</span>
+                </>
+            );
+        }
         case 'ver':
             return <span className="celda-ver"><ArrowRight size={14} /></span>;
         default:

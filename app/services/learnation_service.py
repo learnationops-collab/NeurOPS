@@ -88,10 +88,22 @@ class LearnationService:
         return LearnationService._request('GET', f'/users/{learnation_user_id}/summary')
 
     @staticmethod
+    def get_students_progress(page=1, limit=500):
+        """El avance de todos los alumnos en proceso, paginado (ver academy_snapshot_service.
+        sincronizar_avance): una o dos peticiones en vez de una por alumno."""
+        return LearnationService._request('GET', '/students/progress', params={'page': page, 'limit': limit})
+
+    @staticmethod
     def report_payment(payload):
         """Avisa un pago a la Academia (ver app/services/academy_payment_sync.py). Idempotente
         del lado de la Academia por `sale_id`."""
         return LearnationService._request('POST', '/payments', json=payload)
+
+    @staticmethod
+    def report_payment_status(payload):
+        """Avisa el estado de pago de un cliente a la Academia cuando cambia (ver
+        app/services/academy_payment_status.py). La Academia guarda el último."""
+        return LearnationService._request('POST', '/payment-status', json=payload)
 
     @staticmethod
     def report_closer_deactivated(payload):

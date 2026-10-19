@@ -312,7 +312,8 @@ def sincronizar_academia():
     if not _solo_direccion():
         return jsonify({'message': 'Forbidden'}), 403
     from app.services import academy_snapshot_service
-    return jsonify(academy_snapshot_service.sincronizar_lote()), 200
+    avance = academy_snapshot_service.sincronizar_avance()
+    return jsonify({'avance': avance, **academy_snapshot_service.sincronizar_lote()}), 200
 
 
 @bp.route('/agendas/<int:agenda_id>', methods=['DELETE'])

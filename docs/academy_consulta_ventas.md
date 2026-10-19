@@ -14,6 +14,7 @@
 6. [Ficha consolidada por email](#6-ficha-consolidada-por-email-atajo) (atajo, ya existía)
 7. [Códigos de error](#7-códigos-de-error)
 8. [Qué NO devuelve esta API](#8-qué-no-devuelve-esta-api-a-propósito)
+9. [Estado de pago y baja](#9-estado-de-pago-y-baja-payment-status-clientsbaja) — masivo del estado de pago y la baja que sale de la Academia
 
 ## 1. Autenticación
 
@@ -183,3 +184,30 @@ No hay rate limit implementado del lado de NeurOPS por ahora — igual les pedim
 ## 8. Qué NO devuelve esta API (a propósito)
 
 Solo se exponen los campos documentados arriba. Columnas internas de operación de NeurOPS (comisiones, notas de triage/calificación, objeciones, quién vendió, exclusiones de nómina, etc.) no están en la respuesta y no lo van a estar — es una lista blanca explícita pensada para no filtrar de más. El `PATCH` tampoco toca esas columnas: solo identidad/contacto (nombre, email, teléfono, instagram).
+
+## 9. Estado de pago y baja (`/payment-status`, `/clients/baja`)
+
+Pedido del 19/10/2026. El día a día del estado de pago lo **empuja NeurOPS** a la Academia cuando cambia (ver `integracion_learnation_api.md` §10); estos dos endpoints son la carga inicial y la baja que sale de la Academia.
+
+### 9.1 `GET /payment-status` — Masivo
+
+Paginado como los demás (`page`, `limit` hasta 500). Un cliente por fila, de los que tienen alguna venta completada, un plan de cuotas o una baja:
+
+```json
+{ "work_client_id": 8665, "email": "ana@x.com", "learnation_user_id": 87, "tipo": "cuotas",
+  "closer_email": "vendedor@neuro.com",
+  "cuotas": { "total": 3, "pagadas": 1,
+              "pendientes": [{ "numero": 2, "programa": "RR", "monto": 200.0, "vence": "2026-10-01" }],
+              "proxima": { "numero": 3, "monto": 200.0, "vence": "2026-11-01" },
+              "vencidas": 1, "vencido_monto": 200.0, "vencida_desde": "2026-10-01" },
+  "total": 1000.0, "pagado": 400.0, "saldo": 600.0,
+  "ultimo_pago": { "fecha": "2026-08-01", "monto": 400.0, "tipo_pago": "RR - Parcial" },
+  "baja": null, "actualizado_at": "2026-10-19T12:00:00Z" }
+```
+
+`baja`, cuando hay: `{ "fecha", "fecha_legible", "motivo", "por" }`. Lleva montos: la Academia decide quién los ve.
+
+### 9.2 `POST /clients/baja` — La Academia da de baja (o revierte)
+
+Cuerpo: `work_client_id` o `email`, `motivo` y `revertir` (`true` para deshacerla). Marca la baja del cliente con el motivo "Academia: …" (su deuda deja de contar) o la borra. No corta ningún acceso y no le devuelve el aviso a la Academia. Respuesta: `{ "success": true, "changed": true, "baja": {...} | null }`; `404` si no hay cliente con ese id ni ese email.
+

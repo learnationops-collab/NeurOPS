@@ -4,9 +4,9 @@ from datetime import timedelta
 import pytest
 
 from app.automatizaciones import campanas, servicio
-from app.automatizaciones.modelos import AutCampana, AutEjecucion, AutFlujo
+from app.automatizaciones.modelos import AutCampana, AutEjecucion, AutFlujo, IgContacto
 from tests.automatizaciones import flujos as f
-from tests.automatizaciones.test_motor import T0, Escenario
+from tests.automatizaciones.test_motor import T0, Escenario, ms
 
 URL = '/api/inbox/campanas'
 
@@ -132,6 +132,32 @@ def test_la_palabra_tiene_que_ser_todo_el_mensaje(flujo, campana, lead):
     lead.escribe('hola quiero la guia')
 
     assert lead.textos() == []
+
+
+def test_la_palabra_de_una_campana_pasa_aunque_el_bot_este_pausado(flujo, campana, lead, monkeypatch):
+    monkeypatch.setenv('IG_MOTOR_MODO', 'real')
+    campana(['GUIA PERU'], flujo('Te mando la guía'))
+    lead.escribe('hola')
+    lead.llega(f.eco('mensaje de ManyChat o de un setter', 'otro-1', ms(lead.ahora)))
+    contacto = IgContacto.query.one()
+    assert contacto.bot_pausado_hasta > lead.ahora
+
+    lead.escribe('Guía Perú', minutos=1)
+
+    assert lead.textos() == ['Te mando la guía']
+    assert lead.ejecucion().campana_id is not None
+    assert contacto.bot_pausado_hasta is None  # el flujo puede seguir con los botones
+
+
+def test_con_el_bot_pausado_lo_que_no_es_palabra_de_campana_sigue_ignorado(flujo, campana, lead, monkeypatch):
+    monkeypatch.setenv('IG_MOTOR_MODO', 'real')
+    campana(['GUIA PERU'], flujo('Te mando la guía'))
+    lead.llega(f.eco('hola, soy Elias', 'otro-1', ms(lead.ahora)))
+
+    lead.escribe('quiero la guia peru', minutos=1)
+
+    assert lead.textos() == []
+    assert IgContacto.query.one().bot_pausado_hasta > lead.ahora
 
 
 # --- Reglas de la campaña -------------------------------------------------------------------------

@@ -13,7 +13,8 @@ endpoint masivo y el limite de 60 peticiones por minuto se comparte con producci
      (`GET /api/academia/cron/sincronizar`, con `CRON_SECRET`) y el boton "Actualizar datos de la
      Academia" de Revisar, que es solo de la direccion.
 
-Nada de esto corre solo: ni al crear la app ni en los tests.
+Nada de esto corre solo: ni al crear la app ni en los tests. Lo unico automatico es el avance
+(`sincronizar_avance`, una o dos peticiones), cada hora en el scheduler de `reminder_scheduler`.
 
 ## Cuanto cuesta un cliente
 
@@ -209,7 +210,111 @@ def bloque_de(foto, ahora=None):
         'sincronizado': _iso(foto.synced_at) if con_datos else None,
         'intentado': _iso(foto.intentado_at) if foto else None,
         'error': foto.error if foto is not None and foto.resultado == AcademySnapshot.ERROR else None,
+        'avance': avance_de(foto),
     }
+
+
+def avance_de(foto):
+    """El avance en el proceso de sesiones (`sincronizar_avance`), o None si no está en proceso."""
+    if foto is None or foto.avance_at is None or foto.avance_tipo is None:
+        return None
+    return {
+        'etapa': foto.avance_etapa,
+        'tipo': foto.avance_tipo,
+        'dias_en_etapa': foto.avance_dias_en_etapa,
+        'sesiones_hechas': foto.sesiones_hechas,
+        'sesiones_total': foto.sesiones_total,
+        'proxima': foto.proxima_sesion,
+        'proxima_estado': foto.proxima_estado,
+        'atraso': foto.atraso_dias,
+        'dias_sin_lecciones': foto.dias_sin_lecciones,
+        'fuera_de_plazo': foto.fuera_de_plazo,
+        'leido': _iso(foto.avance_at),
+    }
+
+
+# --- El avance: un masivo para todos ------------------------------------------------------------
+
+# Páginas de 500 alumnos: hoy entra todo en una. El tope evita un bucle si la Academia se equivoca.
+_PAGINAS_DE_AVANCE = 20
+
+_CAMPOS_DE_AVANCE = ('avance_etapa', 'avance_tipo', 'avance_dias_en_etapa', 'sesiones_hechas', 'sesiones_total',
+                     'proxima_sesion', 'proxima_estado', 'atraso_dias', 'dias_sin_lecciones', 'fuera_de_plazo')
+
+
+def sincronizar_avance(ahora=None):
+    """Lee de la Academia el avance de TODOS los alumnos en proceso (pedido del 19/10/2026) y lo
+    deja en la foto de cada cliente. Una o dos peticiones: no gasta del límite como el lote.
+
+    Cruce: el `work_id` que la Academia tiene del alumno; si no, `Client.learnation_user_id`; si no,
+    el id de la foto; si no, el correo del cliente. A quien ya no está en proceso (en pausa, de baja,
+    vencido) se le borra el avance que tenía: un "Scale · atrasado" viejo engañaría al closer.
+    """
+    from sqlalchemy import func
+
+    ahora = ahora or datetime.utcnow()
+    resumen = {'leidos': 0, 'cruzados': 0, 'sin_cliente': 0, 'limpiados': 0, 'error': None}
+    if not os.environ.get('ACADEMY_API_TOKEN'):
+        resumen['error'] = 'sin_token'
+        return resumen
+
+    filas = []
+    try:
+        for pagina in range(1, _PAGINAS_DE_AVANCE + 1):
+            r = LearnationService.get_students_progress(page=pagina, limit=500) or {}
+            filas.extend(r.get('data') or [])
+            if not r.get('has_more'):
+                break
+    except LearnationAPIError as e:
+        resumen['error'] = f'{e} ({e.status_code})'
+        return resumen
+    resumen['leidos'] = len(filas)
+
+    por_id = {c.id: c for c in Client.query.filter(Client.id.in_(
+        [f['work_id'] for f in filas if f.get('work_id')])).all()} if filas else {}
+    alumnos = [f['user_id'] for f in filas if f.get('user_id')]
+    por_alumno = {c.learnation_user_id: c for c in Client.query.filter(Client.learnation_user_id.in_(alumnos)).all()} if alumnos else {}
+    por_foto = {f.learnation_user_id: f.client_id for f in AcademySnapshot.query.filter(
+        AcademySnapshot.learnation_user_id.in_(alumnos)).all()} if alumnos else {}
+    correos = [(f.get('email') or '').strip().lower() for f in filas if f.get('email')]
+    por_correo = {(c.email or '').strip().lower(): c for c in Client.query.filter(
+        func.lower(Client.email).in_(correos)).all()} if correos else {}
+
+    vistos = set()
+    for f in filas:
+        cliente = (por_id.get(f.get('work_id')) or por_alumno.get(f.get('user_id'))
+                   or (db.session.get(Client, por_foto[f['user_id']]) if f.get('user_id') in por_foto else None)
+                   or por_correo.get((f.get('email') or '').strip().lower()))
+        if cliente is None:
+            resumen['sin_cliente'] += 1
+            continue
+        foto = _foto_de(cliente.id)
+        if foto.learnation_user_id is None:
+            foto.learnation_user_id = f.get('user_id')
+        foto.avance_etapa = (f.get('stage') or '')[:150] or None
+        foto.avance_tipo = f.get('stage_kind')
+        foto.avance_dias_en_etapa = f.get('stage_days')
+        foto.sesiones_hechas = f.get('sessions_done')
+        foto.sesiones_total = f.get('sessions_total')
+        foto.proxima_sesion = (f.get('next_session') or '')[:150] or None
+        foto.proxima_estado = (f.get('next_state_label') or '')[:40] or None
+        foto.atraso_dias = f.get('late_days')
+        foto.dias_sin_lecciones = f.get('days_without_lessons')
+        foto.fuera_de_plazo = bool(f.get('over_process_days'))
+        foto.avance_at = ahora
+        vistos.add(cliente.id)
+        resumen['cruzados'] += 1
+
+    for foto in AcademySnapshot.query.filter(AcademySnapshot.avance_at.isnot(None)).all():
+        if foto.client_id not in vistos:
+            for campo in _CAMPOS_DE_AVANCE:
+                setattr(foto, campo, None)
+            foto.avance_at = ahora
+            resumen['limpiados'] += 1
+
+    db.session.commit()
+    logger.info('[ACADEMIA] Avance: %s', resumen)
+    return resumen
 
 
 def bloques_por_cliente(client_ids, ahora=None):

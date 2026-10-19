@@ -5,3 +5,8 @@ import "@testing-library/jest-dom/vitest";
 if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {};
 }
+
+// La caché de vistas vive en el módulo: cada test arranca sin lo que pidió el anterior.
+import { beforeEach } from "vitest";
+import { limpiarCache } from "../services/cacheDeVistas";
+beforeEach(() => limpiarCache());
