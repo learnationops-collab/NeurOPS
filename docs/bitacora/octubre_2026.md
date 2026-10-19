@@ -289,3 +289,4 @@
   - Formularios: nombre corto en cada pregunta y en cada opción («Inversión», «Sí»), guardado en la agenda al reservar. Vacío, se usa el texto recortado.
   - La migración `e9a4c2f7b5d1_ai_usage` (sin commitear) queda ahora detrás de `a3d7f1c9e2b4`.
   - Verificación: 118 tests de pytest (Agendas 2.0, workshop, agendas manuales, Equipo), vitest del núcleo y del formulario, build, y avisos reales de prueba en el canal.
+  - Si a alguien que hay que etiquetar le falta el ID de Discord (o no hay a quién etiquetar), el aviso va con `@everyone`, como antes. En producción quedaron cargados los IDs de Elias, Paula, Jean Carlo y Facundo y los nombres cortos del formulario «Sesión de Aceleración».

@@ -102,6 +102,11 @@ def _antes(iso, lead):
     return _hora(dt if dt.tzinfo else dt.replace(tzinfo=ZoneInfo('UTC')), zona_del_lead(lead)[0])[1]
 
 
+def _id_discord(usuario):
+    """Su ID de Discord; '' si la persona existe pero no lo tiene cargado; None si no hay persona."""
+    return None if usuario is None else (usuario.discord_id or '')
+
+
 def _base(tipo, payload, setter, evento_nombre):
     lead = payload.get('lead') or {}
     nota = payload.get('nota')
@@ -116,7 +121,7 @@ def _base(tipo, payload, setter, evento_nombre):
             'instagram': ('@' + lead['instagram']) if lead.get('instagram') else '',
         },
         'setter': (setter.username if setter else payload.get('origen')) or '-',
-        'setter_discord': (setter.discord_id if setter else None) or None,
+        'setter_discord': _id_discord(setter),
         'funnel': FUNNELS.get(payload.get('funnel_tipo'), str(payload.get('funnel_tipo') or '').capitalize()),
         'nota': None if nota is None else f'{nota:g}',
         'filas': _filas(payload),
@@ -133,7 +138,7 @@ def datos_de_agenda(appt):
     return {
         **_base('reprogramada' if reprogramada else 'nueva', payload, setter, payload.get('evento_nombre')),
         'closer': closer.username if closer else '-',
-        'closer_discord': (closer.discord_id if closer else None) or None,
+        'closer_discord': _id_discord(closer),
         'prioridad': payload.get('prioridad_nombre') or '-',
         'horario': _horario(appt.start_time, lead),
         'antes': _antes(payload.get('reprogramada_desde'), lead) if reprogramada else None,
@@ -153,14 +158,15 @@ def datos_de_no_califica(payload, setter, evento_nombre, motivo):
 
 
 def mensaje(d):
-    """El texto del mensaje: etiqueta a los que les toca (ETIQUETA, si tienen su ID de Discord), el nombre
-    y el WhatsApp."""
+    """El texto del mensaje: etiqueta a los que les toca (ETIQUETA), el nombre y el WhatsApp. Si a alguno
+    le falta el ID de Discord, o no hay a quién etiquetar, va @everyone para que nadie se lo pierda."""
     partes = [f"{d['emoji']} **{d['titulo']}**", d['lead']['nombre'], d['lead']['telefono']]
     texto = ' · '.join(p for p in partes if p)
-    ids = list(dict.fromkeys(i for i in (d.get(q + '_discord') for q in ETIQUETA[d['tipo']]) if i))
-    if ids:
-        return {'content': ' '.join(f'<@{i}>' for i in ids) + ' ' + texto, 'allowed_mentions': {'users': ids}}
-    return {'content': texto, 'allowed_mentions': {'parse': []}}
+    presentes = [i for i in (d.get(q + '_discord') for q in ETIQUETA[d['tipo']]) if i is not None]
+    if not presentes or '' in presentes:
+        return {'content': '@everyone ' + texto, 'allowed_mentions': {'parse': ['everyone']}}
+    ids = list(dict.fromkeys(presentes))
+    return {'content': ' '.join(f'<@{i}>' for i in ids) + ' ' + texto, 'allowed_mentions': {'users': ids}}
 
 
 def embed_de_texto(d):

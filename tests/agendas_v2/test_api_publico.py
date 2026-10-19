@@ -652,9 +652,9 @@ def test_cada_agenda_avisa_a_discord(client, armado, discord):
     assert _reservar(client).status_code == 201
     (msg,) = discord
     assert msg['url'] == 'https://discord.test/webhook'
-    # El texto: solo lo que se busca (nombre y WhatsApp). Sin @everyone.
-    assert msg['json']['content'] == '📅 **Nueva agenda** · Lucía Fernández · +59171234567'
-    assert msg['json']['allowed_mentions'] == {'parse': []}
+    # El texto: solo lo que se busca (nombre y WhatsApp). Nadie tiene su ID de Discord: @everyone.
+    assert msg['json']['content'] == '@everyone 📅 **Nueva agenda** · Lucía Fernández · +59171234567'
+    assert msg['json']['allowed_mentions'] == {'parse': ['everyone']}
     embed = msg['json']['embeds'][0]
     assert embed['title'] == 'Nueva agenda: Llamada'
     campos = _campos(msg)
@@ -677,6 +677,14 @@ def test_el_aviso_etiqueta_por_su_id_de_discord_a_los_que_les_toca(client, armad
     assert nueva['allowed_mentions'] == {'users': ['864309028740792350', '454493146160824331']}
     assert reprogramada['content'].startswith('<@864309028740792350> 🔁 **Agenda reprogramada**')
     assert reprogramada['allowed_mentions'] == {'users': ['864309028740792350']}
+
+
+def test_si_al_que_le_toca_le_falta_el_id_va_everyone(client, armado, cuentas, db, discord):
+    cuentas['ana'].discord_id = '864309028740792350'  # el closer sí; el setter (juan) no
+    db.session.commit()
+    _reservar(client)
+    assert discord[0]['json']['content'].startswith('@everyone 📅 **Nueva agenda**')
+    assert discord[0]['json']['allowed_mentions'] == {'parse': ['everyone']}
 
 
 def test_con_imagen_el_detalle_va_en_la_imagen(client, armado, discord, monkeypatch):
