@@ -7,7 +7,7 @@ Reglas que garantiza:
     conversación en curso (`_sigue_la_conversacion`): así sirven palabras comunes como «examen».
   · Lo que entra por una campaña queda también en las tablas de ManyChat (`registro.py`).
   · Si la cuenta manda algo que no salió de este motor (una persona del equipo), el bot se pausa
-    para ese contacto y se cancela lo que tenía abierto.
+    para ese contacto y se cancela lo que tenía abierto. La palabra clave de una campaña pasa igual.
   · Nunca escribe fuera de la ventana de 24 h, salvo la respuesta privada a un comentario.
   · Un flujo solo atrapa mensajes posteriores a su activación.
   · Un `mid` se procesa una sola vez, así reprocesar un evento no duplica nada.
@@ -44,7 +44,7 @@ class Motor:
         if not self._registrar_entrante(contacto, evento):
             return 'repetido'
         if contacto.bot_pausado_hasta and contacto.bot_pausado_hasta > self.ahora:
-            return 'bot_pausado'
+            return self._pausado(contacto, evento)
 
         if evento.payload:
             datos = mensajes.leer_payload(evento.payload)
@@ -73,6 +73,20 @@ class Motor:
         if abierta and abierta.estado == AutEjecucion.ESPERANDO_RESPUESTA:
             return self._respuesta(abierta, evento)
         return 'sin_disparador'
+
+    def _pausado(self, contacto, evento):
+        """Con el bot pausado solo pasa una palabra clave de una campaña vigente: es un pedido explícito
+        (tocó el anuncio) y ManyChat la atendía aunque hubiera escrito alguien. Los ecos no dicen qué app
+        los mandó, así que la pausa de un mensaje de ManyChat y la de un setter son iguales. Al arrancar,
+        la pausa se levanta para que el flujo pueda seguir."""
+        if evento.tipo == ev.COMENTARIO or (evento.payload and mensajes.leer_payload(evento.payload)):
+            return 'bot_pausado'
+        version, campana, clave = self._version_de_campana(evento.texto, evento.momento)
+        if version is None:
+            return 'bot_pausado'
+        contacto.bot_pausado_hasta = None
+        self._iniciar(contacto, version, campana=campana, clave=clave, meta_ad_id=evento.anuncio_id)
+        return 'flujo_iniciado'
 
     def despertar_vencidas(self):
         """Las esperas que ya vencieron: un nodo «esperar» o el «sin respuesta» de un mensaje."""
