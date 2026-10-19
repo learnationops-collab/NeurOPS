@@ -126,6 +126,10 @@ def create_app(config_class=Config):
     from app.api.academia import bp as academia_api_bp
     app.register_blueprint(academia_api_bp, url_prefix='/api/academia')
 
+    # Registro de uso de la IA: quien la usa y cuanto gasta (ver app/services/claude_service.py).
+    from app.api.ai_usage import bp as ai_usage_api_bp
+    app.register_blueprint(ai_usage_api_bp, url_prefix='/api/ai-usage')
+
     from app.api.public import bp as public_api_bp
     app.register_blueprint(public_api_bp, url_prefix='/api')
     csrf.exempt(public_api_bp) # Exento para llamadas publicas / webhooks de n8n

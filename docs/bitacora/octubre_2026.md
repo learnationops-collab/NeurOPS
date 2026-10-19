@@ -262,3 +262,10 @@
   - Menús y popovers en la capa superior del navegador, con fondo opaco en cada tema.
   - El esqueleto del gasto por embudo se adaptó a las filas de `Bars`.
   - Verificación: 1827 tests de vitest (5 con timeout en la corrida completa pasan solos) y build.
+
+- **19 de Octubre de 2026 (registro de uso de la IA)** *(Base para el copiloto de closers: toda llamada a Claude pasa por un servicio que la registra. [app/services/claude_service.py](../../app/services/claude_service.py) [NEW], [app/models/ai_usage.py](../../app/models/ai_usage.py) [NEW], [app/api/ai_usage.py](../../app/api/ai_usage.py) [NEW], [migrations/versions/e9a4c2f7b5d1_ai_usage.py](../../migrations/versions/e9a4c2f7b5d1_ai_usage.py) [NEW], [requirements.txt](../../requirements.txt) [MODIFY])*:
+  - `ClaudeService.create_message(feature, user_id, ...)`: modelo por defecto Haiku 5.5 (el más barato); Sonnet y Opus 5.5 se pueden pedir. Un modelo sin precio cargado se rechaza antes de llamar.
+  - Tabla `ai_usage`: una fila por llamada, también las que fallan, con usuario, función, modelo, tokens (entrada, salida y caché), costo en USD, request-id y duración. No guarda el texto de la conversación.
+  - `GET /api/ai-usage/resumen` (por usuario, función y modelo; mes en curso por defecto) y `GET /api/ai-usage/llamadas`, solo admin y operator.
+  - Clave por `ANTHROPIC_API_KEY` (falta cargarla en Railway); sin ella responde 503. Todavía sin tope de gasto ni pantalla.
+  - Verificación: 12 tests de pytest (servicio y endpoints), contratos y ruff.
