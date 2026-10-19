@@ -45,10 +45,13 @@ def _messaging(item, ms):
     return {'object': 'instagram', 'entry': [{'id': CUENTA, 'time': ms, 'messaging': [{'timestamp': ms, **item}]}]}
 
 
-def dm(texto, mid, ms, lead=LEAD, quick_reply=None):
+def dm(texto, mid, ms, lead=LEAD, quick_reply=None, anuncio=None):
     mensaje = {'mid': mid, 'text': texto}
     if quick_reply:
         mensaje['quick_reply'] = {'payload': quick_reply}
+    if anuncio:  # tocó la pregunta de un anuncio de Conversaciones
+        mensaje['referral'] = {'source': 'ADS', 'type': 'OPEN_THREAD', 'ad_id': anuncio,
+                               'ads_context_data': {'ad_title': 'Anuncio'}}
     return _messaging({'sender': {'id': lead}, 'recipient': {'id': CUENTA}, 'message': mensaje}, ms)
 
 

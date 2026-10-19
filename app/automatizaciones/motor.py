@@ -57,14 +57,14 @@ class Motor:
             if version:
                 abierta = self._abierta(contacto)
                 if not self._sigue_la_conversacion(abierta, campana):
-                    self._iniciar(contacto, version, campana=campana, clave=clave)
+                    self._iniciar(contacto, version, campana=campana, clave=clave, meta_ad_id=evento.anuncio_id)
                     return 'flujo_iniciado'
                 if abierta.estado == AutEjecucion.ESPERANDO_RESPUESTA:
                     return self._respuesta(abierta, evento)
                 return 'palabra_repetida'
         version = self._version_disparada(evento.texto, canal, evento.publicacion_id, evento.momento)
         if version:
-            self._iniciar(contacto, version, comentario_id=evento.comentario_id)
+            self._iniciar(contacto, version, comentario_id=evento.comentario_id, meta_ad_id=evento.anuncio_id)
             return 'flujo_iniciado'
 
         if evento.tipo == ev.COMENTARIO:
@@ -109,6 +109,8 @@ class Motor:
         contenido = {'adjuntos': evento.adjuntos} if evento.adjuntos else None
         if evento.payload:
             contenido = {**(contenido or {}), 'payload': evento.payload}
+        if evento.anuncio_id:
+            contenido = {**(contenido or {}), 'anuncio_id': evento.anuncio_id}
         if evento.tipo == ev.COMENTARIO:
             contenido = {'comentario_id': evento.comentario_id, 'publicacion_id': evento.publicacion_id}
         db.session.add(IgMensaje(contacto_id=contacto.id, mid=mid, direccion=IgMensaje.ENTRANTE, origen=IgMensaje.LEAD,
@@ -175,13 +177,14 @@ class Motor:
         nodo = g.nodos_por_id(abierta.version.grafo).get(abierta.nodo_actual) or {}
         return abierta.estado == AutEjecucion.ESPERANDO_RESPUESTA and bool(nodo.get('espera'))
 
-    def _iniciar(self, contacto, version, comentario_id=None, nodo=None, campana=None, clave=None):
+    def _iniciar(self, contacto, version, comentario_id=None, nodo=None, campana=None, clave=None, meta_ad_id=None):
         abierta = self._abierta(contacto)
         if abierta:
             self._cerrar(abierta, AutEjecucion.CANCELADA, 'Entró a otro flujo', liberar=False)
         ejecucion = AutEjecucion(contacto=contacto, version=version, estado=AutEjecucion.EN_CURSO,
                                  nodo_actual=nodo or version.grafo.get('inicio'), comentario_id=comentario_id,
-                                 iniciada_en=self.ahora, campana_id=campana.id if campana else None, clave=clave)
+                                 iniciada_en=self.ahora, campana_id=campana.id if campana else None, clave=clave,
+                                 meta_ad_id=meta_ad_id)
         db.session.add(ejecucion)
         db.session.flush()
         if campana:

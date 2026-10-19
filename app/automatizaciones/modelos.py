@@ -101,6 +101,8 @@ class AutEjecucion(db.Model):
     califica = db.Column(db.Boolean, nullable=True)
     # El setter que le tocó por el reparto de la campaña (`reparto.py`).
     setter_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True)
+    # El anuncio de Meta (`MetaAnuncio.meta_ad_id`) del que vino el DM que la empezó, si vino de uno.
+    meta_ad_id = db.Column(db.String(40), nullable=True, index=True)
 
     contacto = db.relationship('IgContacto')
     version = db.relationship('AutFlujoVersion')

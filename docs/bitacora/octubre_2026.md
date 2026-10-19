@@ -240,3 +240,9 @@
   - Se eligen quiénes participan; sin elegir, todos los setters activos. El asignado queda en `ManychatLead.setter`, donde lo dejaba ManyChat, así la bandeja y los números del setter funcionan igual.
   - «Solo entre conectados» se guarda pero todavía no filtra: no hay presencia hasta que los setters trabajen en la bandeja del Inbox. La pantalla lo avisa.
   - Verificación: 199 tests de pytest (automatizaciones, webhook, rama y anuncios), 35 de vitest del Inbox, eslint y build.
+
+- **19 de Octubre de 2026 (anuncio de Meta)** *(El Inbox guarda de qué anuncio de Meta vino cada entrada. [app/automatizaciones/nucleo/eventos.py](../../app/automatizaciones/nucleo/eventos.py) [MODIFY], [app/automatizaciones/motor.py](../../app/automatizaciones/motor.py) [MODIFY], [app/automatizaciones/modelos.py](../../app/automatizaciones/modelos.py) [MODIFY], [migrations/versions/c6f2a8d4e1b9_anuncio_de_meta_de_la_ejecucion.py](../../migrations/versions/c6f2a8d4e1b9_anuncio_de_meta_de_la_ejecucion.py) [NEW])*:
+  - El DM que llega al tocar la pregunta de un anuncio de Conversaciones trae `referral.ad_id` (visto en prod con los anuncios de «OBTENER GUÍA»). Antes se descartaba.
+  - Ahora queda en la ejecución (`aut_ejecuciones.meta_ad_id`, el mismo id de `meta_anuncios`) y en el mensaje entrante. Solo se toma si `source` es `ADS`.
+  - No cambia ninguna pantalla ni los tableros: la atribución de Marketing sigue por palabra clave.
+  - Verificación: 138 tests de pytest de automatizaciones.

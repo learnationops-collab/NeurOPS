@@ -56,6 +56,16 @@ def test_varias_palabras_de_una_campana_llevan_al_mismo_flujo(flujo, campana, le
     assert lead.textos() == ['Te mando la guía']
     ejecucion = lead.ejecucion()
     assert (ejecucion.campana_id, ejecucion.clave) == (nueva.id, 'GUIA MIR')
+    assert ejecucion.meta_ad_id is None
+
+
+def test_el_dm_de_un_anuncio_guarda_de_que_anuncio_vino(flujo, campana, lead):
+    campana(['GUÍA PERÚ'], flujo('Te mando la guía'))
+
+    lead.escribe('GUÍA PERÚ', anuncio='120248557350530532')
+
+    assert lead.textos() == ['Te mando la guía']
+    assert lead.ejecucion().meta_ad_id == '120248557350530532'
 
 
 def test_dos_campanas_comparten_un_flujo(flujo, campana, lead):

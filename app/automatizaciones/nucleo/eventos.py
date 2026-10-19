@@ -24,6 +24,7 @@ class Evento:
     publicacion_id: str = None
     username: str = None
     adjuntos: list = field(default_factory=list)
+    anuncio_id: str = None         # el anuncio de Meta del que vino el DM (`referral` con source ADS)
 
 
 def _momento(marca):
@@ -54,9 +55,11 @@ def leer(payload):
             elif 'message' in m:
                 if mensaje.get('is_deleted') or not emisor or emisor == cuenta:
                     continue
+                referral = mensaje.get('referral') or {}
+                anuncio_id = str(referral['ad_id'])[:40] if referral.get('source') == 'ADS' and referral.get('ad_id') else None
                 eventos.append(Evento(MENSAJE, emisor, momento, mid=mensaje.get('mid'), texto=mensaje.get('text'),
                                       payload=(mensaje.get('quick_reply') or {}).get('payload'),
-                                      adjuntos=mensaje.get('attachments') or []))
+                                      adjuntos=mensaje.get('attachments') or [], anuncio_id=anuncio_id))
             elif 'postback' in m and emisor and emisor != cuenta:
                 pb = m['postback']
                 eventos.append(Evento(BOTON, emisor, momento, mid=pb.get('mid'), texto=pb.get('title'),

@@ -155,6 +155,16 @@ def test_lee_dm_boton_respuesta_rapida_eco_y_comentario():
     assert com.momento.year == 2026
 
 
+def test_lee_el_anuncio_del_que_vino_el_dm():
+    [del_anuncio] = ev.leer(dm('OBTENER GUÍA', 'm1', 1792027514802, anuncio='120248557257240532'))
+    assert (del_anuncio.texto, del_anuncio.anuncio_id) == ('OBTENER GUÍA', '120248557257240532')
+
+    otro_origen = dm('GUIA', 'm2', 1792027514802)
+    otro_origen['entry'][0]['messaging'][0]['message']['referral'] = {'source': 'SHORTLINK', 'ref': 'x'}
+    assert ev.leer(otro_origen)[0].anuncio_id is None
+    assert ev.leer(dm('GUIA', 'm3', 1792027514802))[0].anuncio_id is None
+
+
 def test_descarta_lecturas_borrados_y_lo_que_hace_la_propia_cuenta():
     borrado = dm('x', 'm9', 1792027514802)
     borrado['entry'][0]['messaging'][0]['message']['is_deleted'] = True
