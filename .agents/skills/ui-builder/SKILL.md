@@ -168,7 +168,7 @@ El catálogo de piezas chicas (botón, chip, campo) ya está completo. **De acá
 - **Avatar `lg`:** mide 48px, como decía la regla original.
 - **Errores de campo:** siempre `FieldError`.
 - **Switch decorativo:** un `Switch` sin `onChange` se dibuja como indicador (un `span` sin foco ni rol de botón), para filas que ya son botón como la del modal de importar preguntas. No es una variante nueva: es el mismo componente sin acción.
-- **Barras:** los embudos de Marketing pasan a `Bars variant="rows"`. La lista de campañas de Workshop (`BarraCrece`) es única de esa pantalla y queda ahí.
+- **Barras:** el gasto por embudo de Marketing se queda con sus tarjetas (Kerwin, 19/10: las filas de `Bars` se veían grandes y amontonadas). La lista de campañas de Workshop (`BarraCrece`) es única de esa pantalla y queda ahí.
 
 ## Pendientes conocidos
 

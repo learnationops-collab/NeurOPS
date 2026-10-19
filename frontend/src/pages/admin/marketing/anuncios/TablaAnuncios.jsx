@@ -71,15 +71,17 @@ const BAJADA = 'Cada palabra clave que llega de ManyChat es un anuncio. Elegí f
 const ALCANCE_INICIAL = `Todas las ${UNIDAD.anuncios[1]} de la tabla`;
 
 /** La tabla mientras no llegó el tablero: KPIs, los dos gráficos y la tabla con sus títulos reales. */
-export const EsqueletoTablaAnuncios = () => (
+export const EsqueletoTablaAnuncios = ({ bajoKpis = null }) => (
     <div className="vista mk-vista">
         <EsqueletoKpis titulos={KPIS} lineas={2} label="Cargando los indicadores de los anuncios…" />
+        {bajoKpis}
         <SerieDiaria serie={null} alcance={ALCANCE_INICIAL} />
         <EsqueletoPanelTabla titulo={TITULO} sub={BAJADA} label="Cargando la tabla de anuncios…" />
     </div>
 );
 
-const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
+// `bajoKpis`: lo que va entre los KPIs y el resto (el gasto por embudo, en «Todo»).
+const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, bajoKpis = null }) => {
     const [busqueda, setBusqueda] = useState('');
     const [verArchivados, setVerArchivados] = useState(false);
     const [orden, setOrden] = useState({ clave: 'entrantes', dir: 'desc' });
@@ -236,6 +238,8 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta }) => {
             <div className="pareja mk-kpis" style={{ '--min': '220px', '--g': 'var(--s4)' }}>
                 {kpis.map((k, i) => <Kpi key={k.titulo} {...k} i={i} />)}
             </div>
+
+            {bajoKpis}
 
             <CobradoDelPeriodo enTabla={datos.totales?.cobrado || 0} total={datos.cobrado_periodo}
                 fuera={datos.cobrado_fuera || []} moneda={moneda} irAVentas={irAVentas} irATabla={irATabla} />

@@ -137,6 +137,13 @@ const AdminMarketingHubPage = () => {
         ? textoRango(rango)
         : PERIODOS.find((p) => p.key === periodo)?.label;
 
+    // Va debajo de los KPIs del tablero (Kerwin, 19/10/2026: los KPIs arriba).
+    const resumenEmbudos = embudo === 'todo' ? (
+        <EmbudosResumen embudos={datos ? datos.embudos || [] : null} desde={rango.desde} hasta={rango.hasta}
+            moneda={datos?.moneda} onElegir={(key) => cambiar({ embudo: key })}
+            cuentas={cuentas} irAMeta={() => cambiar({ tab: 'meta' })} />
+    ) : null;
+
     if (params.get('tab') === 'trafico') return <Navigate to="/admin/workshops?tab=trafico" replace />;
 
     return (
@@ -192,18 +199,13 @@ const AdminMarketingHubPage = () => {
                                     <ErrorDeCarga titulo={error} onReintentar={recargar} />
                                 ) : (
                                     <>
-                                        {embudo === 'todo' && (
-                                            <EmbudosResumen embudos={datos ? datos.embudos || [] : null} desde={rango.desde} hasta={rango.hasta}
-                                                moneda={datos?.moneda} onElegir={(key) => cambiar({ embudo: key })}
-                                                cuentas={cuentas} irAMeta={() => cambiar({ tab: 'meta' })} />
-                                        )}
                                         {embudo === 'workshop' ? (
                                             <RendimientoWorkshop desde={rango.desde} hasta={rango.hasta} moneda={datos?.moneda}
                                                 embudos={datos ? datos.embudos || [] : (error ? [] : null)} cuentas={cuentas} version={version}
                                                 irAMeta={() => cambiar({ tab: 'meta' })} />
-                                        ) : !datos ? <EsqueletoTablaAnuncios /> : (
+                                        ) : !datos ? <EsqueletoTablaAnuncios bajoKpis={resumenEmbudos} /> : (
                                             <TablaAnuncios datos={datos} onArchivar={archivar} onAgrupar={agrupar}
-                                                irAMeta={() => cambiar({ tab: 'meta' })} />
+                                                irAMeta={() => cambiar({ tab: 'meta' })} bajoKpis={resumenEmbudos} />
                                         )}
                                     </>
                                 )}
