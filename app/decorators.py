@@ -13,7 +13,13 @@ from functools import wraps
 from flask import current_app, flash, jsonify, redirect, request
 from flask_login import current_user
 
-from app.models.user import ROLE_DIRECTOR_MARKETING, ROLE_HIRING, ROLE_OPERATOR
+from app.models.user import (
+    ROLE_CLOSER,
+    ROLE_DIRECTOR_COMERCIAL,
+    ROLE_DIRECTOR_MARKETING,
+    ROLE_HIRING,
+    ROLE_OPERATOR,
+)
 
 ROLE_ADMIN = 'admin'
 
@@ -63,6 +69,10 @@ workshop_required = _requiere_roles(
 # postulaciones a Asistente Administrativa y Personal, pero no debe heredar el resto de
 # `admin_required` — finanzas, equipo, base de datos — que no se le pidio).
 hiring_required = _requiere_roles((ROLE_ADMIN, ROLE_HIRING), "Hiring access required")
+
+# Copiloto de IA (`/copiloto` y `/api/copiloto`): los closers y quienes los supervisan.
+copiloto_required = _requiere_roles(
+    (ROLE_ADMIN, ROLE_OPERATOR, ROLE_DIRECTOR_COMERCIAL, ROLE_CLOSER), "Copiloto access required")
 
 
 def _iguales_en_tiempo_constante(provisto, esperado):

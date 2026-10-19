@@ -37,6 +37,7 @@ import PrivacyPolicyPage from './pages/public/PrivacyPolicyPage';
 import TermsOfServicePage from './pages/public/TermsOfServicePage';
 import AgendasV2Routes from './pages/agendas_v2/AgendasV2Routes';
 import InboxRoutes from './pages/inbox/InboxRoutes';
+import CopilotoRoutes from './pages/copiloto/CopilotoRoutes';
 import CatalogoUi from './pages/ui/Catalogo';
 import AgendasV2Publica from './pages/agendas_v2/AgendasV2Publica';
 import UnattributedLeadsPage from './pages/admin/marketing/UnattributedLeadsPage';
@@ -147,6 +148,16 @@ function App() {
               element={
                 <ProtectedRoute roles={['admin', 'director_comercial', 'setter']}>
                   <InboxRoutes />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Copiloto de closers: chat con Claude y dictado por voz (app/api/copiloto.py). */}
+            <Route
+              path="/copiloto"
+              element={
+                <ProtectedRoute roles={['closer', 'admin', 'operator', 'director_comercial']}>
+                  <CopilotoRoutes />
                 </ProtectedRoute>
               }
             />

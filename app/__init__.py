@@ -129,6 +129,8 @@ def create_app(config_class=Config):
     # Registro de uso de la IA: quien la usa y cuanto gasta (ver app/services/claude_service.py).
     from app.api.ai_usage import bp as ai_usage_api_bp
     app.register_blueprint(ai_usage_api_bp, url_prefix='/api/ai-usage')
+    from app.api.copiloto import bp as copiloto_api_bp
+    app.register_blueprint(copiloto_api_bp, url_prefix='/api/copiloto')
 
     from app.api.public import bp as public_api_bp
     app.register_blueprint(public_api_bp, url_prefix='/api')

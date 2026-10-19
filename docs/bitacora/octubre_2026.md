@@ -269,3 +269,9 @@
   - `GET /api/ai-usage/resumen` (por usuario, función y modelo; mes en curso por defecto) y `GET /api/ai-usage/llamadas`, solo admin y operator.
   - Clave por `ANTHROPIC_API_KEY` (falta cargarla en Railway); sin ella responde 503. Todavía sin tope de gasto ni pantalla.
   - Verificación: 12 tests de pytest (servicio y endpoints), contratos y ruff.
+
+- **19 de Octubre de 2026 (copiloto con dictado por voz)** *(Primera pantalla del copiloto de closers, para probar la voz. [app/api/copiloto.py](../../app/api/copiloto.py) [NEW], [app/decorators.py](../../app/decorators.py) [MODIFY], [frontend/src/pages/copiloto/CopilotoApp.jsx](../../frontend/src/pages/copiloto/CopilotoApp.jsx) [NEW], [frontend/src/pages/copiloto/useDictado.js](../../frontend/src/pages/copiloto/useDictado.js) [NEW], [frontend/src/App.jsx](../../frontend/src/App.jsx) [MODIFY])*:
+  - `/copiloto` (closer, admin, operator y dirección comercial): chat con Claude Haiku 5.5 por `POST /api/copiloto/mensaje`, que pasa por el registro de uso.
+  - Dictado con la Web Speech API del navegador (es-AR, gratis, sin pasar por el servidor): lo dictado cae en el campo de texto y se puede corregir antes de enviar. Funciona en Chrome y Edge; en otros navegadores el micrófono queda deshabilitado con aviso.
+  - Todavía sin herramientas: no ve deudas, cuotas ni el avance de los alumnos, y el prompt le prohíbe inventarlos. Sin la `ANTHROPIC_API_KEY` responde 503.
+  - Verificación: 11 tests de pytest, 6 de vitest, eslint y build.
