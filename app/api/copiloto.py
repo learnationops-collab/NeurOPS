@@ -8,7 +8,8 @@ Para gastar poco:
 - La pantalla guarda el historial y lo manda entero en cada turno (la API no guarda estado), pero
   SOLO el texto: los resultados de herramientas de turnos anteriores no se reenvían.
 - Hasta `MAX_MENSAJES` mensajes por conversación y `MAX_TOKENS` de salida por llamada.
-- Tope de `TOPE_MENSUAL_USD` por persona y por mes, sumando todo su uso de la IA (`ai_usage`).
+- Tope de `TOPE_MENSUAL_USD` por persona y por mes, sumando todo su uso de la IA (`ai_usage`). La
+  pantalla muestra además una referencia diaria (el tope repartido en los días del mes).
 """
 from datetime import date, timedelta
 from decimal import Decimal
@@ -19,7 +20,7 @@ from flask_login import current_user
 from app.decorators import copiloto_required
 from app.services.claude_service import ClaudeService, ClaudeServiceError, gasto_del_mes, inicio_del_mes
 from app.services.copiloto_herramientas import HERRAMIENTAS, ejecutar
-from app.services.user_time_service import hoy_del_usuario
+from app.services.user_time_service import hoy_del_usuario, limites_dia_utc
 
 bp = Blueprint('copiloto_api', __name__)
 
@@ -66,15 +67,25 @@ def _validar(mensajes):
     return None
 
 
-def _uso(user_id):
-    gastado = gasto_del_mes(user_id)
+def _uso(user):
+    """Lo gastado en el mes contra el tope, y lo de hoy contra lo que tocaría por día.
+
+    El diario es una REFERENCIA (el tope del mes repartido en sus días), no un segundo tope: un día
+    de mucho uso se compensa con otros. «Hoy» es el día calendario del usuario."""
+    gastado = gasto_del_mes(user.id)
     inicio = inicio_del_mes().date()
     renueva = (inicio + timedelta(days=32)).replace(day=1)
+    tope_diario = TOPE_MENSUAL_USD / (renueva - inicio).days
+    inicio_hoy, _ = limites_dia_utc(user, hoy_del_usuario(user))
+    hoy = gasto_del_mes(user.id, desde=inicio_hoy)
     return {
         'gastado_usd': float(round(gastado, 4)),
         'tope_usd': float(TOPE_MENSUAL_USD),
         'porcentaje': min(100, round(float(gastado / TOPE_MENSUAL_USD) * 100, 1)),
         'renueva': renueva.isoformat(),
+        'hoy_usd': float(round(hoy, 4)),
+        'tope_diario_usd': float(round(tope_diario, 2)),
+        'porcentaje_hoy': round(float(hoy / tope_diario) * 100, 1),
     }
 
 
@@ -110,7 +121,7 @@ def _conversar(historial, con_herramientas):
 @bp.route('/uso', methods=['GET'])
 @copiloto_required
 def uso():
-    return jsonify(_uso(current_user.id)), 200
+    return jsonify(_uso(current_user)), 200
 
 
 @bp.route('/mensaje', methods=['POST'])
@@ -122,18 +133,18 @@ def mensaje():
         return jsonify({'error': error}), 400
     if gasto_del_mes(current_user.id) >= TOPE_MENSUAL_USD:
         return jsonify({'error': f'Llegaste al tope de uso de este mes (US${TOPE_MENSUAL_USD:.0f}). '
-                                 'Se renueva el 1°.', 'uso': _uso(current_user.id)}), 429
+                                 'Se renueva el 1°.', 'uso': _uso(current_user)}), 429
 
     historial = [{'role': m['role'], 'content': m['content'].strip()} for m in mensajes]
     try:
         respuesta = _conversar(historial, con_herramientas=current_user.role == 'closer')
     except ClaudeServiceError as e:
-        return jsonify({'error': str(e), 'uso': _uso(current_user.id)}), e.status_code
+        return jsonify({'error': str(e), 'uso': _uso(current_user)}), e.status_code
 
     texto = ''
     if respuesta is not None:
         texto = ''.join(b.text for b in respuesta.content if b.type == 'text').strip()
     if respuesta is None or respuesta.stop_reason == 'refusal' or not texto:
         return jsonify({'error': 'Learnito no pudo responder eso. Probá reformularlo.',
-                        'uso': _uso(current_user.id)}), 502
-    return jsonify({'texto': texto, 'uso': _uso(current_user.id)}), 200
+                        'uso': _uso(current_user)}), 502
+    return jsonify({'texto': texto, 'uso': _uso(current_user)}), 200

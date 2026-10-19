@@ -20,14 +20,16 @@
 .thalamus .learnito .cp-redactor .ui-textarea{max-height:30dvh;overflow-y:auto}
 .thalamus .learnito .cp-botones{display:flex;justify-content:flex-end;align-items:center;gap:8px}
 
-/* Uso del mes contra el tope de cada persona. */
+/* Uso: la barra de hoy contra la referencia diaria y, abajo, el mes contra el tope. */
 .thalamus .learnito .cp-uso{--c:var(--brand-secondary);display:grid;gap:4px}
 .thalamus .learnito .cp-uso--alto{--c:var(--warning)}
 .thalamus .learnito .cp-uso--agotado{--c:var(--error)}
 .thalamus .learnito .cp-uso__txt{display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--text-muted)}
 .thalamus .learnito .cp-uso__barra{height:4px;border-radius:999px;background:var(--bg-element);overflow:hidden}
 .thalamus .learnito .cp-uso__barra span{display:block;height:100%;border-radius:inherit;background:var(--c);transition:width .4s ease}
-.thalamus .learnito .cp-uso__nota{margin:0;font-size:11px;font-weight:700;color:var(--c)}
+.thalamus .learnito .cp-uso__mes{margin:0;font-size:11px;font-weight:600;color:var(--text-muted)}
+.thalamus .learnito .cp-uso__mes--alto{color:var(--warning);font-weight:700}
+.thalamus .learnito .cp-uso__mes--agotado{color:var(--error);font-weight:700}
 
 /* Página: ancho de lectura y el redactor pegado abajo. */
 .thalamus.copiloto .wrap{max-width:820px}

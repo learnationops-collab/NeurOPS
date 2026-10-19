@@ -129,6 +129,10 @@ def test_uso_del_mes(client, db, auth_headers, make_user):
 
     assert (datos['gastado_usd'], datos['tope_usd'], datos['porcentaje']) == (2, 8, 25)
     assert datos['renueva'].endswith('-01')
+    # La referencia diaria: el tope del mes repartido en sus días (28 a 31), y lo de hoy contra eso.
+    assert 0.25 <= datos['tope_diario_usd'] <= 0.29
+    assert datos['hoy_usd'] == 2
+    assert datos['porcentaje_hoy'] > 100
 
 
 @pytest.mark.parametrize('mensajes', [

@@ -48,10 +48,11 @@ def inicio_del_mes(ahora=None):
     return ahora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
 
-def gasto_del_mes(user_id, feature=None):
-    """Lo que gastó un usuario en el mes en curso, en USD (todas las funciones, o una)."""
+def gasto_del_mes(user_id, feature=None, desde=None):
+    """Lo que gastó un usuario en el mes en curso, en USD (todas las funciones, o una). `desde`
+    (UTC naive) acota a partir de otro instante: el inicio del día, para el uso de hoy."""
     query = db.session.query(func.coalesce(func.sum(AiUsage.cost_usd), 0)).filter(
-        AiUsage.user_id == user_id, AiUsage.created_at >= inicio_del_mes())
+        AiUsage.user_id == user_id, AiUsage.created_at >= (desde or inicio_del_mes()))
     if feature:
         query = query.filter(AiUsage.feature == feature)
     return Decimal(str(query.scalar() or 0))

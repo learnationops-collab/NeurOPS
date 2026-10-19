@@ -309,3 +309,4 @@
   - Tope de US$8 por persona y por mes (suma de `ai_usage`); al llegar responde 429 y no llama. Barra «Uso del mes» en el chat, ámbar desde el 80% y roja en el tope. `GET /api/copiloto/uso`.
   - Contraste: el título y el ícono del modal se leen sobre el fondo oscuro; el globo del closer, con texto blanco.
   - Verificación: 35 tests de pytest, 31 de vitest, ruff, eslint y build; prueba real de dos preguntas contra Haiku 5.5.
+  - Barra diaria aproximada: la barra muestra lo gastado hoy (día del usuario) contra el tope del mes repartido en sus días (~US$0,26); es una referencia, no corta. Debajo, el mes contra el tope de US$8. `GET /api/copiloto/uso` suma `hoy_usd`, `tope_diario_usd` y `porcentaje_hoy`. Verificación: 18 tests de pytest, 12 de vitest, ruff y eslint.
