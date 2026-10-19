@@ -1,6 +1,6 @@
 // Lo que se edita de cada tipo de nodo en el inspector: disparadores, mensaje, condición y acción.
 import { Plus, X } from 'lucide-react';
-import { Chip, IconButton, Input, LinkButton, Select, Switch, TextArea } from '../../../components/standard';
+import { Chip, IconButton, Input, LinkButton, Select, Stepper, Switch, TextArea } from '../../../components/standard';
 import { LIMITE_BOTONES, nuevoId } from './grafoFlujo';
 import { OPERADOR } from './nodos';
 import { porciento } from '../estadoFlujo';
@@ -18,6 +18,7 @@ const CALIFICA = opciones({ si: 'Califica', no: 'No califica' });
 // Límites de Instagram (los mismos que valida el servidor).
 const LARGO_TEXTO = 1000;
 const LARGO_CON_BOTONES = 640;
+const MAX_ESCRIBIENDO = 10;
 
 // Rótulo arriba, el control y una ayuda opcional abajo. Los controles llevan su propio aria-label: un
 // Select es un botón y no se puede envolver en <label>.
@@ -105,6 +106,11 @@ export function PanelMensaje({ nodo, cambiar, lectura, variables, destinos, metr
                         <div className="pf-fila">
                             <Select label="Tipo de contenido" value={c.tipo} disabled={lectura} options={TIPOS_CONTENIDO}
                                 onChange={(v) => cambiar({ contenido: reemplazar(contenido, i, v === 'texto' ? { tipo: 'texto', texto: c.texto || '', url: undefined } : { tipo: v, url: c.url || '', texto: undefined }) })} />
+                            <span data-tip="Escribiendo…|Antes de mandarlo se ve «escribiendo…» estos segundos, como una persona que tipea.">
+                                <Stepper label="Segundos escribiendo" value={c.escribiendo || 0} min={0} max={MAX_ESCRIBIENDO} disabled={lectura}
+                                    display={c.escribiendo ? `${c.escribiendo} s` : 'Sin pausa'}
+                                    onChange={(v) => cambiar({ contenido: reemplazar(contenido, i, { escribiendo: v || undefined }) })} />
+                            </span>
                             {!lectura && contenido.length > 1 && (
                                 <Quitar titulo="Quitar contenido" onClick={() => cambiar({ contenido: contenido.filter((_, j) => j !== i) })} />
                             )}

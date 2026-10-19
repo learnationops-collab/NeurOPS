@@ -65,17 +65,17 @@ describe('El Portal', () => {
         abrir();
         expect(screen.getByText('¿A dónde vamos?')).toBeTruthy();
         // Sin «Administrador» (10/10/2026): lo suyo que ningún otro rol ofrece va con Operador.
-        expect(tarjetas()).toEqual(['Operaciones', 'Marketing', 'Talent', 'Ventas', 'Agendamiento', 'Inbox', 'Finances', 'Cortex', 'Simular a alguien']);
+        expect(tarjetas()).toEqual(['Operaciones', 'Marketing', 'Talent', 'Ventas', 'Agendamiento', 'Inbox', 'Finances', 'Cortex', 'Leadership', 'Simular a alguien']);
         const sobre = screen.getAllByRole('button').filter((b) => b.className.includes('el-tarjeta'))
             .map((b) => b.querySelector('small').textContent);
-        expect(sobre).toEqual(['Operador', 'Operador', 'Operador', 'Dirección comercial', 'Dirección comercial', 'Dirección comercial', 'Dirección comercial', 'Para todos', 'Equipo']);
+        expect(sobre).toEqual(['Operador', 'Operador', 'Operador', 'Dirección comercial', 'Dirección comercial', 'Dirección comercial', 'Dirección comercial', 'Para todos', 'Otra app', 'Equipo']);
     });
 
-    it('con un solo rol: sus áreas y Cortex', () => {
+    it('con un solo rol: sus áreas, Cortex y Leadership', () => {
         sesion.user = CLOSER;
         montar('/closer/deck');
         abrir();
-        expect(tarjetas()).toEqual(['Cierres', 'Cortex']);
+        expect(tarjetas()).toEqual(['Cierres', 'Cortex', 'Leadership']);
     });
 
     it('un área del rol de ahora navega y cierra el Portal; la de otro rol cambia de rol', () => {
@@ -118,7 +118,7 @@ describe('El Portal', () => {
         abrir();
         fireEvent.click(screen.getByRole('button', { name: /Simular a alguien/ }));
         fireEvent.keyDown(window, { key: 'Escape' });
-        expect(tarjetas()).toEqual(['Ventas', 'Agendamiento', 'Inbox', 'Cortex', 'Simular a alguien']);
+        expect(tarjetas()).toEqual(['Ventas', 'Agendamiento', 'Inbox', 'Cortex', 'Leadership', 'Simular a alguien']);
         fireEvent.keyDown(window, { key: 'Escape' });
         expect(portalAbierto()).toBeNull();
     });

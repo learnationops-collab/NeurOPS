@@ -7,7 +7,7 @@ def health_check():
     return jsonify({"status": "healthy", "service": "Learnation API"}), 200
 
 # Import sub-routes
-from app.api import auth, admin
+from app.api import auth, admin, leadership
 
 @bp.after_request
 def add_header(response):

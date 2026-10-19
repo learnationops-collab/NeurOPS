@@ -46,7 +46,8 @@ export function armarReserva({ lead, evento, funnel, form, asig, slot, origen, s
     const respuestas = preguntas.filter(q => !q.id.startsWith('c-')).map(q => {
         const o = conOpciones(q.tipo) ? q.opciones.find(x => x.id === resp[q.id]) : null;
         return {
-            pregunta_id: q.id, pregunta: q.titulo, tipo: q.tipo, respuesta: textoRespuesta(q, resp[q.id], pais),
+            pregunta_id: q.id, pregunta: q.titulo, pregunta_corta: q.corto || '', tipo: q.tipo, respuesta: textoRespuesta(q, resp[q.id], pais),
+            respuesta_corta: o ? (o.corto || '') : '',
             opcion_id: o ? o.id : null, puntos: o ? o.puntos : null, peso: q.peso, descalifica: !!(o && o.descalifica),
         };
     });

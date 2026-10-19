@@ -1,5 +1,7 @@
 import os
 import io
+import base64
+import functools
 import uuid
 import tempfile
 from flask import render_template_string
@@ -98,6 +100,36 @@ class ReportImageService:
             (800, 600),
             'agenda'
         )
+
+    @staticmethod
+    def _recortar_abajo(buf, margen=30):
+        """Saca el fondo que sobra abajo: la captura es de alto fijo y el contenido no."""
+        from PIL import Image, ImageChops
+
+        img = Image.open(buf).convert('RGB')
+        fondo = Image.new('RGB', img.size, img.getpixel((0, img.height - 1)))
+        caja = ImageChops.difference(img, fondo).getbbox()
+        if caja:
+            img = img.crop((0, 0, img.width, min(img.height, caja[3] + margen)))
+        out = io.BytesIO()
+        img.save(out, format='PNG')
+        out.seek(0)
+        return out
+
+    @staticmethod
+    @functools.lru_cache(maxsize=1)
+    def _montserrat_b64():
+        with open(os.path.join('app', 'static', 'fonts', 'Montserrat.ttf'), 'rb') as f:
+            return base64.b64encode(f.read()).decode('ascii')
+
+    @staticmethod
+    def generate_agenda_v2_card(data):
+        # Alto de sobra según las tarjetas de respuestas (tres por fila); después se recorta el fondo que sobra.
+        filas = -(-len(data.get('filas') or []) // 3)
+        alto = min(4000, 640 + 250 * filas)
+        datos = {**data, 'fuente_b64': ReportImageService._montserrat_b64()}
+        buf = ReportImageService._render_and_capture('templates/reports/agenda_v2.html', datos, (900, alto), 'agenda_v2')
+        return ReportImageService._recortar_abajo(buf)
 
     @staticmethod
     def generate_setter_report_card(data):

@@ -6,6 +6,8 @@ Fecha fija: lunes 5 de octubre de 2026, 08:00 en La Paz (12:00 UTC).
 """
 
 import calendar
+import io
+import json as jsonlib
 from datetime import datetime, timedelta
 
 import pytest
@@ -621,31 +623,91 @@ def test_si_ninguno_tiene_calendar_no_hay_horarios(client, armado, db):
 
 @pytest.fixture()
 def discord(monkeypatch):
+    """Lo que sale a Discord. Sin Chromium en los tests la imagen falla y sale el embed de texto;
+    `con_imagen` la simula."""
     enviados = []
 
     class Respuesta:
         status_code = 204
 
-    def post(url, json=None, timeout=None):
-        enviados.append({'url': url, 'json': json})
+    def post(url, json=None, timeout=None, files=None, data=None):
+        cuerpo = json if json is not None else jsonlib.loads(data['payload_json'])
+        enviados.append({'url': url, 'json': cuerpo, 'imagen': bool(files)})
         return Respuesta()
 
+    def sin_chromium(d):
+        raise RuntimeError('sin chromium')
+
     monkeypatch.setenv('DISCORD_AGENDAS_WEBHOOK', 'https://discord.test/webhook')
-    monkeypatch.setattr('app.agendas_v2.operacion.requests.post', post)
+    monkeypatch.setattr('app.agendas_v2.avisos_discord.requests.post', post)
+    monkeypatch.setattr('app.services.report_image_service.ReportImageService.generate_agenda_v2_card', sin_chromium)
     return enviados
+
+
+def _campos(msg):
+    return {c['name']: c['value'] for c in msg['json']['embeds'][0]['fields']}
 
 
 def test_cada_agenda_avisa_a_discord(client, armado, discord):
     assert _reservar(client).status_code == 201
     (msg,) = discord
     assert msg['url'] == 'https://discord.test/webhook'
+    # El texto: solo lo que se busca (nombre y WhatsApp). Nadie tiene su ID de Discord: @everyone.
+    assert msg['json']['content'] == '@everyone 📅 **Nueva agenda** · Lucía Fernández · +59171234567'
+    assert msg['json']['allowed_mentions'] == {'parse': ['everyone']}
     embed = msg['json']['embeds'][0]
-    assert embed['title'] == '📅 Nueva agenda: Llamada'
-    campos = {c['name']: c['value'] for c in embed['fields']}
-    assert campos['Lead'] == 'Lucía Fernández' and campos['Closer'] == 'ana'
-    assert campos['Horario del lead'] == '05/10/2026 09:00 🇧🇴 Bolivia' and campos['Setter / origen'] == 'juan'
-    assert campos['Prioridad'] == 'Ultra' and '¿Cuánto?**: Mucho' in campos['Formulario']
+    assert embed['title'] == 'Nueva agenda: Llamada'
+    campos = _campos(msg)
+    assert campos['Closer'] == 'ana' and campos['Setter / origen'] == 'juan'
+    assert campos['Horario del lead'] == 'lunes 05/10 09:00 🇧🇴 Bolivia'
+    assert campos['Prioridad'] == 'Ultra' and '**¿Cuánto?**: Mucho' in campos['Formulario']
     assert campos['Meet'] == 'https://meet.google.com/abc-defg-hij'
+
+
+def test_el_aviso_etiqueta_por_su_id_de_discord_a_los_que_les_toca(client, armado, cuentas, db, discord):
+    cuentas['juan'].discord_id, cuentas['ana'].discord_id = '454493146160824331', '864309028740792350'
+    db.session.commit()
+    _reservar(client, inicio=None, q1='x', **{'c-email': 'otra@correo.com'})
+    _reservar(client)
+    _reservar(client, inicio='2026-10-05T13:45:00.000Z', si_ya_tiene='reprogramar')
+    no_califica, nueva, reprogramada = (m['json'] for m in discord)
+    # El que no califica, al setter; la nueva, al closer y al setter; la reprogramada, solo al closer.
+    assert no_califica['content'].startswith('<@454493146160824331> 🚫 **No calificó**')
+    assert nueva['content'].startswith('<@864309028740792350> <@454493146160824331> 📅 **Nueva agenda**')
+    assert nueva['allowed_mentions'] == {'users': ['864309028740792350', '454493146160824331']}
+    assert reprogramada['content'].startswith('<@864309028740792350> 🔁 **Agenda reprogramada**')
+    assert reprogramada['allowed_mentions'] == {'users': ['864309028740792350']}
+
+
+def test_si_al_que_le_toca_le_falta_el_id_va_everyone(client, armado, cuentas, db, discord):
+    cuentas['ana'].discord_id = '864309028740792350'  # el closer sí; el setter (juan) no
+    db.session.commit()
+    _reservar(client)
+    assert discord[0]['json']['content'].startswith('@everyone 📅 **Nueva agenda**')
+    assert discord[0]['json']['allowed_mentions'] == {'parse': ['everyone']}
+
+
+def test_con_imagen_el_detalle_va_en_la_imagen(client, armado, discord, monkeypatch):
+    vistos = []
+    monkeypatch.setattr('app.services.report_image_service.ReportImageService.generate_agenda_v2_card',
+                        lambda d: vistos.append(d) or io.BytesIO(b'png'))
+    assert _reservar(client).status_code == 201
+    (msg,) = discord
+    assert msg['imagen'] and msg['json']['embeds'] == [{'color': 0x2ECC71, 'image': {'url': 'attachment://agenda.png'}}]
+    (d,) = vistos
+    assert d['filas'] == [{'pregunta': '¿Cuánto?', 'respuesta': 'Mucho', 'detalle': '', 'puntos': 10,
+                           'descalifica': False, 'estado': 'bien'}]
+    assert d['nota'] == '10' and d['horario']['dia'] == 'Lun 05/10' and d['horario']['equipo'] is None
+
+
+def test_los_nombres_cortos_del_formulario_van_en_el_aviso(client, armado, discord):
+    servicio.guardar_doc('formularios', 'fo', {'preguntas': [{
+        'id': 'q1', 'tipo': 'opciones', 'titulo': '¿Cuánto?', 'corto': 'Inversión', 'peso': 1,
+        'opciones': [{'id': 'a', 'texto': 'Mucho', 'corto': 'Sí', 'puntos': 10}, {'id': 'x', 'texto': 'Nada', 'descalifica': True}],
+    }]}, parcial=True)
+    _publicar('ev')
+    assert _reservar(client).status_code == 201
+    assert '**Inversión**: Sí' in _campos(discord[0])['Formulario']
 
 
 def test_la_hora_del_aviso_va_en_la_zona_del_pais_del_whatsapp(client, armado, discord, whatsapp):
@@ -653,18 +715,26 @@ def test_la_hora_del_aviso_va_en_la_zona_del_pais_del_whatsapp(client, armado, d
     cuerpo = {'evento_id': 'ev', 'resp': _resp(**{'c-telefono': '11 2345 6789'}), 'pais': 'AR',
               'tz': 'America/La_Paz', 'inicio': LUNES_9, 'origen': 'juan-setter'}
     assert client.post(URL + '/reservas', json=cuerpo).status_code == 201
-    campos = {c['name']: c['value'] for c in discord[0]['json']['embeds'][0]['fields']}
-    assert campos['Horario del lead'] == '05/10/2026 10:00 🇦🇷 Argentina'
+    assert _campos(discord[0])['Horario del lead'] == 'lunes 05/10 10:00 🇦🇷 Argentina (09:00 Bolivia)'
     assert whatsapp[0]['hora'] == '10:00 am 🇦🇷'
 
 
-def test_la_reprogramacion_avisa_distinto_y_el_descalificado_no_avisa(client, armado, discord):
+def test_la_reprogramacion_avisa_distinto_y_el_descalificado_tambien_avisa(client, armado, discord):
     _reservar(client, inicio=None, q1='x', **{'c-email': 'otra@correo.com'})
-    assert discord == []
     _reservar(client)
     _reservar(client, inicio='2026-10-05T13:45:00.000Z', si_ya_tiene='reprogramar')
     titulos = [m['json']['embeds'][0]['title'] for m in discord]
-    assert titulos == ['📅 Nueva agenda: Llamada', '🔁 Agenda reprogramada: Llamada']
+    assert titulos == ['No calificó: Llamada', 'Nueva agenda: Llamada', 'Agenda reprogramada: Llamada']
+    no_califica = _campos(discord[0])
+    assert no_califica['Motivo'] == 'Eligió una respuesta que descalifica'
+    assert '🚫 **¿Cuánto?**: Nada' in no_califica['Formulario']
+    assert _campos(discord[2])['Antes'] == 'lunes 05/10 09:00'
+
+
+def test_los_que_no_califican_van_a_su_propio_canal_si_hay(client, armado, discord, monkeypatch):
+    monkeypatch.setenv('DISCORD_NO_CALIFICA_WEBHOOK', 'https://discord.test/no-califica')
+    _reservar(client, inicio=None, q1='x')
+    assert [m['url'] for m in discord] == ['https://discord.test/no-califica']
 
 
 def test_si_discord_falla_la_agenda_queda(client, armado, monkeypatch):
@@ -672,7 +742,7 @@ def test_si_discord_falla_la_agenda_queda(client, armado, monkeypatch):
         raise ConnectionError('discord caido')
 
     monkeypatch.setenv('DISCORD_AGENDAS_WEBHOOK', 'https://discord.test/webhook')
-    monkeypatch.setattr('app.agendas_v2.operacion.requests.post', roto)
+    monkeypatch.setattr('app.agendas_v2.avisos_discord.requests.post', roto)
     assert _reservar(client).status_code == 201
     assert Appointment.query.count() == 1
 

@@ -359,10 +359,17 @@ def _roles_pedidos(data, actual=None):
     return (principal, [r for r in roles if r != principal]), None
 
 
+def _discord_id(v):
+    """El ID de Discord pegado tal cual (`<@123…>` o solo los números). None si no es un ID."""
+    dig = ''.join(c for c in str(v or '') if c.isdigit())
+    return dig if 15 <= len(dig) <= 22 else None
+
+
 def _usuario_de_equipo(u, con_calendar):
     return {
         "id": u.id, "username": u.username, "email": u.email, "role": u._role, "roles": u.roles,
         "timezone": u.timezone, "two_chat_number": u.two_chat_number,
+        "discord_id": u.discord_id or '',
         "is_active": u.is_active if u.is_active is not None else True,
         "can_view_finance": getattr(u, 'can_view_finance', False), "persona_id": u.persona_id,
         "calendar": u.id in con_calendar,
@@ -393,6 +400,7 @@ def manage_users():
         user.set_password(password)
         if 'timezone' in data: user.timezone = data['timezone']
         if 'two_chat_number' in data: user.two_chat_number = data['two_chat_number']
+        if 'discord_id' in data: user.discord_id = _discord_id(data['discord_id'])
         if 'can_view_finance' in data: user.can_view_finance = bool(data['can_view_finance'])
         
         db.session.add(user)
@@ -474,6 +482,7 @@ def user_operations(id):
         if 'two_chat_number' in data and (data['two_chat_number'] or None) != (user.two_chat_number or None):
             user.two_chat_number = data['two_chat_number']
             user.whatsapp_confirmado_en = None  # número nuevo: el closer lo vuelve a confirmar
+        if 'discord_id' in data: user.discord_id = _discord_id(data['discord_id'])
         if 'timezone' in data: user.timezone = data['timezone']
         se_desactiva = False
         if 'is_active' in data:

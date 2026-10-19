@@ -36,6 +36,22 @@ def test_limites_de_botones_de_instagram():
     assert any('supera los 20' in e for e in g.validar(grafo))
 
 
+@pytest.mark.parametrize('segundos, valido', [(0, True), (2.5, True), (10, True), (11, False), (-1, False),
+                                               ('3', False), (True, False)])
+def test_escribiendo_va_de_0_a_10_segundos(segundos, valido):
+    grafo = guia()
+    _nodo(grafo, 'perfil')['contenido'][0]['escribiendo'] = segundos
+
+    assert (not any('escribiendo' in e for e in g.validar(grafo))) is valido
+
+
+def test_las_pausas_van_una_por_contenido():
+    nodo = {'id': 'n', 'contenido': [{'tipo': 'texto', 'texto': 'a'}, {'tipo': 'texto', 'texto': 'b', 'escribiendo': 3}]}
+
+    assert len(mensajes.construir(nodo, {}, 1)) == len(mensajes.pausas(nodo))
+    assert mensajes.pausas(nodo) == [0, 3]
+
+
 def test_los_botones_van_debajo_de_un_texto():
     grafo = guia()
     _nodo(grafo, 'perfil')['contenido'].append({'tipo': 'imagen', 'url': 'https://x.com/a.png'})

@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, VenetianMask, X } from 'lucide-react';
-import { TARJETA_CORTEX, entrarPorTarjeta, fijarTarjetaPorDefecto, gruposDelPortal, hayPortal, tarjetaPorDefecto } from '../../utils/portal';
+import { TARJETA_CORTEX, TARJETA_LEADERSHIP, entrarPorTarjeta, fijarTarjetaPorDefecto, gruposDelPortal, hayPortal, tarjetaPorDefecto } from '../../utils/portal';
 import { puedeSimular } from '../../sesion/simulacion';
 import Eleccion from './Eleccion';
 import SimularEnPortal from './SimularEnPortal';
@@ -76,6 +76,9 @@ export default function Portal({ user, pasoInicial = null, onCerrar }) {
             opciones={[
                 ...areasDelPortal(user).map((t) => ({ ...t, onElegir: () => entrar(t) })),
                 { ...TARJETA_CORTEX, sobre: 'Para todos', onElegir: () => entrar(TARJETA_CORTEX) },
+                ...(!user.is_impersonating ? [{
+                    ...TARJETA_LEADERSHIP, sobre: 'Otra app', onElegir: () => entrar(TARJETA_LEADERSHIP),
+                }] : []),
                 ...(simula ? [{
                     clave: 'simular', titulo: 'Simular a alguien', sobre: 'Equipo', Icono: VenetianMask, onElegir: () => setSimulando(true),
                 }] : []),

@@ -13,6 +13,7 @@ Tipos de nodo y sus salidas:
       - `botones` [{id, titulo}] → una salida por botón (estilo "botones" hasta 3, "respuestas_rapidas" hasta 13), o
       - `espera` {guardar_en} → salida "respuesta" (el texto libre que conteste se guarda en esa variable).
     Si espera algo puede tener `sin_respuesta` {minutos} → salida "sin_respuesta". Si no espera nada → "siguiente".
+    Cada contenido puede tener `escribiendo` (segundos, hasta 10): antes de mandarlo se ve «escribiendo…».
     `registro` {mensaje_id, etapa, califica} es lo que hoy manda ManyChat por webhook (tableros): el motor
     lo escribe en las mismas tablas (`registro.py`). `mensaje_id` es el id del catálogo de Conversaciones.
   · esperar: `minutos` → "siguiente".
@@ -34,6 +35,8 @@ LARGO_TEXTO = 1000
 LARGO_TITULO_BOTON = 20
 LARGO_TEXTO_CON_BOTONES = 640
 MAX_MINUTOS_ESPERA = 24 * 60
+# El motor manda de a un contacto por vez: una pausa larga demora a los que vienen detrás.
+MAX_SEGUNDOS_ESCRIBIENDO = 10
 
 
 def normalizar_texto(texto):
@@ -106,6 +109,10 @@ def _errores_nodo(nodo, ids):
         if not contenido:
             errores.append(f'Nodo {nid}: el mensaje no tiene contenido')
         for item in contenido:
+            escribiendo = item.get('escribiendo')
+            if escribiendo is not None and (isinstance(escribiendo, bool) or not isinstance(escribiendo, (int, float))
+                                            or not 0 <= escribiendo <= MAX_SEGUNDOS_ESCRIBIENDO):
+                errores.append(f'Nodo {nid}: «escribiendo» va de 0 a {MAX_SEGUNDOS_ESCRIBIENDO} segundos')
             if item.get('tipo') not in TIPOS_CONTENIDO:
                 errores.append(f'Nodo {nid}: contenido de tipo desconocido «{item.get("tipo")}»')
             elif item['tipo'] == 'texto':

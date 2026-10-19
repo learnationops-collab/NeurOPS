@@ -14,7 +14,7 @@ import time
 from datetime import datetime, timedelta, timezone
 
 from app import db
-from app.agendas_v2 import operacion, trazabilidad
+from app.agendas_v2 import avisos_discord, operacion, trazabilidad
 from app.agendas_v2.modelos import MODELOS, SchedConfig, SchedIntento, SchedPerfil
 from app.agendas_v2.nucleo.asignacion import asignacion
 from app.agendas_v2.nucleo.catalogos import (
@@ -1405,7 +1405,9 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
 
     if descalifica:
         _cerrar_intento(evento, form, funnel, limpias, origen, setter, True)
-        operacion.registrar_descalificado(armar_reserva(**base, asig=None, slot=None))
+        payload = armar_reserva(**base, asig=None, slot=None)
+        operacion.registrar_descalificado(payload)
+        avisos_discord.avisar_no_califica(payload, setter, evento['nombre'], 'respuesta')
         return {'descalificada': True}, True
     if errores:
         raise ReservaRechazadaError('invalido', errores)
@@ -1414,13 +1416,16 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     if ruteo['no']:
         # La segmentación lo manda a «No califica».
         _cerrar_intento(evento, form, funnel, limpias, origen, setter, True)
-        operacion.registrar_descalificado({**armar_reserva(**base, asig=None, slot=None), 'descalificada': True})
+        payload = {**armar_reserva(**base, asig=None, slot=None), 'descalificada': True}
+        operacion.registrar_descalificado(payload)
+        avisos_discord.avisar_no_califica(payload, setter, evento['nombre'], 'segmentacion')
         return {'descalificada': True}, True
     url = ruteo['url']
     if url:
         _cerrar_intento(evento, form, funnel, limpias, origen, setter, True)
         payload = armar_reserva(**base, asig=None, slot=None)
         operacion.registrar_descalificado({**payload, 'descalificada': True, 'redirigir': url})
+        avisos_discord.avisar_no_califica(payload, setter, evento['nombre'], 'redirigido')
         return {'descalificada': True, 'redirigir': url}, True
 
     try:
@@ -1493,7 +1498,7 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     db.session.commit()
     # Con correo, el evento de Calendar le manda la invitación al lead: la página se lo dice solo si salió.
     con_evento = operacion.crear_evento(appt, evento['nombre'], evento_a_borrar=evento_viejo)
-    operacion.avisar_discord(appt)
+    avisos_discord.avisar_agenda(appt)
     operacion.avisar_whatsapp(appt)
     invitacion = limpias.get('c-email') if con_evento else None
     return {**_respuesta(appt), 'consultor': _consultor(d, closer), 'invitacion': invitacion}, True

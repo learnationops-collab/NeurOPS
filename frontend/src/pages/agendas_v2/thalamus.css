@@ -404,7 +404,7 @@
 .thalamus .token-btn svg{width:14px;height:14px}
 .thalamus .token{display:inline-flex;align-items:center;height:19px;padding:0 6px;border-radius:6px;background:var(--brand-secondary-surface);border:1px solid var(--brand-secondary-border);color:var(--brand-secondary);font-size:.86em;font-weight:900;vertical-align:1px}
 .thalamus .ops{display:grid;gap:6px}
-.thalamus .ops-cab{display:grid;grid-template-columns:minmax(0,1fr) 104px 30px 30px;gap:6px;padding:0 6px 0 64px;font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted-40);text-align:center}
+.thalamus .ops-cab{display:grid;grid-template-columns:minmax(0,1fr) 96px 104px 30px 30px;gap:6px;padding:0 6px 0 64px;font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted-40);text-align:center}
 .thalamus .ops-cab span:first-child{text-align:left}
 .thalamus .ops-cab svg{width:13px;height:13px;margin:auto}
 .thalamus .pts{display:inline-flex;align-items:center;justify-content:space-between;height:36px;padding:3px;border-radius:999px;border:1px solid var(--border-main);background:var(--bg-input)}
@@ -414,7 +414,7 @@
 .thalamus .pts button:disabled{opacity:.25;cursor:default}
 .thalamus .pts button svg{width:13px;height:13px}
 .thalamus .pts b{min-width:30px;text-align:center;font-size:15px;font-weight:900;color:var(--c)}
-.thalamus .op-fila{display:grid;grid-template-columns:26px 28px minmax(0,1fr) 104px 30px 30px;gap:6px;align-items:center;padding:4px 6px 4px 2px;border-radius:14px;
+.thalamus .op-fila{display:grid;grid-template-columns:26px 28px minmax(0,1fr) 96px 104px 30px 30px;gap:6px;align-items:center;padding:4px 6px 4px 2px;border-radius:14px;
   border:1px solid var(--border-main);background:var(--bg-input);box-shadow:inset 0 1px 2px rgba(0,0,0,.18);transition:border-color .16s,box-shadow .16s}
 .thalamus .op-fila:hover{border-color:var(--border-control)}
 .thalamus .op-fila:focus-within{border-color:var(--focus-blue);box-shadow:0 0 0 3px rgba(91,124,255,.18)}
@@ -422,6 +422,7 @@
 .thalamus .op-letra{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;font-size:11px;font-weight:900;color:var(--text-muted);background:var(--mat-1);border:1px solid var(--border-subtle)}
 .thalamus .op-fila .op-in{height:36px;border:0;background:none;box-shadow:none;padding:0 6px;font-size:14px}
 .thalamus .op-fila .op-in:focus{box-shadow:none}
+.thalamus .op-fila .op-corto{border-left:1px solid var(--border-subtle);border-radius:0;font-size:13px}
 .thalamus .op-fila .pts{border-color:var(--border-subtle);background:var(--mat-1)}
 .thalamus .ops-cab{padding-left:66px!important}
 .thalamus .op-pts{text-align:center;padding:0 4px!important;font-weight:900!important;font-variant-numeric:tabular-nums}
