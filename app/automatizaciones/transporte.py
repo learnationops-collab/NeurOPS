@@ -80,11 +80,12 @@ class TransporteMeta:
         time.sleep(segundos)
 
     def perfil(self, igsid):
-        """{'username', 'name'} del contacto (los DMs no los traen); {} si Instagram no los da."""
+        """{'username', 'name', 'is_user_follow_business'} del contacto (los DMs no los traen); {} si
+        Instagram no los da."""
         if not self.token:
             return {}
         try:
-            respuesta = self.sesion.get(f'{API}/{igsid}', params={'fields': 'name,username'},
+            respuesta = self.sesion.get(f'{API}/{igsid}', params={'fields': 'name,username,is_user_follow_business'},
                                         headers={'Authorization': f'Bearer {self.token}'}, timeout=15)
             datos = respuesta.json() if respuesta.content else {}
         except (requests.RequestException, ValueError) as error:

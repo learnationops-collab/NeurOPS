@@ -22,6 +22,8 @@ from app import db
 from app.models import LeadAnswer, ManychatLead, User
 
 PREFIJO = 'ig:'
+# En las variables del contacto: si sigue a la cuenta, según Instagram (el `follower` de ManyChat).
+SIGUE = '_sigue'
 
 
 def _activo(ejecucion):
@@ -38,6 +40,8 @@ def _lead(contacto):
         lead.name = contacto.nombre[:150]
     if contacto.username:
         lead.ig = contacto.username[:100]
+    if SIGUE in (contacto.variables or {}):
+        lead.follower = bool(contacto.variables[SIGUE])
     db.session.flush()
     return lead
 

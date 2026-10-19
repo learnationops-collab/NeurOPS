@@ -25,6 +25,7 @@ from app.automatizaciones.transporte import ErrorDeEnvio
 VENTANA = timedelta(hours=24)
 # En las variables del contacto: el motor tomó el control de la conversación y tiene que devolverlo.
 CONTROL_TOMADO = '_control_tomado'
+SIGUE = registro.SIGUE
 HORAS_DE_PAUSA = 24
 MAX_PASOS = 50  # corta un grafo con un ciclo sin esperas
 
@@ -201,7 +202,7 @@ class Motor:
                                  meta_ad_id=meta_ad_id)
         db.session.add(ejecucion)
         db.session.flush()
-        if not contacto.username:
+        if campana or not contacto.username:
             self._completar_perfil(contacto)
         if campana:
             setter = reparto.elegir(campana, contacto.id, self.ahora)
@@ -211,13 +212,16 @@ class Motor:
         return ejecucion
 
     def _completar_perfil(self, contacto):
-        """El usuario y el nombre de Instagram (un DM no los trae): con el usuario los tableros cruzan
-        a la persona con sus agendas y ventas, como hacía el `lead_ig` de ManyChat."""
+        """El usuario, el nombre y si sigue a la cuenta (un DM no los trae), como el `lead_ig` y el
+        `follower` de ManyChat: con el usuario los tableros cruzan a la persona con sus agendas y ventas;
+        «Seguidor» se ve en Entrantes. En cada entrada por campaña, porque seguir a la cuenta cambia."""
         perfil = self.transporte.perfil(contacto.igsid)
         if perfil.get('username'):
             contacto.username = perfil['username'][:100]
         if perfil.get('name') and not contacto.nombre:
             contacto.nombre = perfil['name'][:150]
+        if 'is_user_follow_business' in perfil:
+            self._guardar(contacto, {SIGUE: bool(perfil['is_user_follow_business'])})
 
     def _boton(self, contacto, version_id, nodo_id, boton_id):
         version = db.session.get(AutFlujoVersion, version_id)

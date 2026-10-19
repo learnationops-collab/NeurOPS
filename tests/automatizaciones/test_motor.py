@@ -618,7 +618,7 @@ def test_el_perfil_se_pide_a_instagram():
     perfil = TransporteMeta(token='tok', cuenta_id=f.CUENTA, sesion=sesion).perfil(f.LEAD)
 
     assert (perfil['username'], perfil['name']) == ('tavo_lev', 'Gustavo')
-    assert sesion.llamadas[0][:2] == (f'https://graph.instagram.com/v24.0/{f.LEAD}', {'fields': 'name,username'})
+    assert sesion.llamadas[0][:2] == (f'https://graph.instagram.com/v24.0/{f.LEAD}', {'fields': 'name,username,is_user_follow_business'})
 
 
 def test_si_instagram_no_da_el_perfil_no_rompe_nada():
