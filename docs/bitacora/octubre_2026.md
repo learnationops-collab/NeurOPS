@@ -220,3 +220,9 @@
   - El motor prioriza la palabra de una campaña vigente sobre el disparador propio de un flujo, y cada ejecución guarda la campaña y la palabra por la que entró.
   - Por ahora se maneja solo por la API (`/api/inbox/campanas`): no hay pantalla y Marketing no cambia.
   - Verificación: 113 tests de pytest de automatizaciones.
+
+- **19 de Octubre de 2026 (2)** *(Inbox: lo que entra por una campaña llega a los tableros de Marketing y la palabra no reinicia la conversación. [app/automatizaciones/registro.py](../../app/automatizaciones/registro.py) [NEW], [app/automatizaciones/motor.py](../../app/automatizaciones/motor.py) [MODIFY], [app/automatizaciones/nucleo/grafo.py](../../app/automatizaciones/nucleo/grafo.py) [MODIFY])*:
+  - El motor escribe las mismas filas que el webhook de ManyChat (`ManychatLead` como `ig:<IGSID>` y `LeadAnswer`) sin tocar el webhook: la entrada con la palabra clave y su anuncio, el envío de cada mensaje con `registro.mensaje_id` del catálogo de Conversaciones, su respuesta, la calificación (del nodo, de la acción «califica» o de la rama del mensaje) y la etapa.
+  - Solo registra lo que entra por una campaña: el flujo de prueba con disparador propio no cuenta dos veces mientras conviva ManyChat.
+  - La palabra de una campaña ya no reinicia la conversación en curso: si el flujo espera texto libre es la respuesta, y repetir la de la misma campaña se ignora. La de otra campaña es una entrada nueva. Así sirven palabras comunes como «examen».
+  - Verificación: 277 tests de pytest (automatizaciones, webhooks de ManyChat e Instagram, rama de mensajes y Marketing), incluido que Rendimiento cuenta como entrante calificado a quien entra por el motor.

@@ -13,7 +13,8 @@ Tipos de nodo y sus salidas:
       - `botones` [{id, titulo}] → una salida por botón (estilo "botones" hasta 3, "respuestas_rapidas" hasta 13), o
       - `espera` {guardar_en} → salida "respuesta" (el texto libre que conteste se guarda en esa variable).
     Si espera algo puede tener `sin_respuesta` {minutos} → salida "sin_respuesta". Si no espera nada → "siguiente".
-    `registro` {mensaje_id, etapa, califica} es lo que hoy manda ManyChat por webhook (tableros).
+    `registro` {mensaje_id, etapa, califica} es lo que hoy manda ManyChat por webhook (tableros): el motor
+    lo escribe en las mismas tablas (`registro.py`). `mensaje_id` es el id del catálogo de Conversaciones.
   · esperar: `minutos` → "siguiente".
   · condicion: `reglas` [{campo, operador, valor}] (todas deben cumplirse) → "si" / "no".
   · accion: `acciones` [{tipo: variable|etapa|califica|pausar_bot, ...}] → "siguiente".
@@ -140,6 +141,14 @@ def _errores_nodo(nodo, ids):
                     errores.append(f'Nodo {nid}: el botón «{titulo}» supera los {LARGO_TITULO_BOTON} caracteres')
         if nodo.get('espera') is not None and not (nodo['espera'].get('guardar_en') or '').strip():
             errores.append(f'Nodo {nid}: falta la variable donde guardar la respuesta')
+        registro = nodo.get('registro')
+        if registro is not None:
+            if not isinstance(registro, dict) or not str(registro.get('mensaje_id') or '').strip():
+                errores.append(f'Nodo {nid}: el registro necesita el id del mensaje del catálogo')
+            elif registro.get('califica') is not None and not isinstance(registro['califica'], bool):
+                errores.append(f'Nodo {nid}: «califica» del registro es sí o no')
+            elif registro.get('etapa') is not None and not str(registro['etapa']).isdigit():
+                errores.append(f'Nodo {nid}: la etapa del registro es un número')
         sin_respuesta = nodo.get('sin_respuesta')
         if sin_respuesta:
             if not (botones or nodo.get('espera')):

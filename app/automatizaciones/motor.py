@@ -3,7 +3,9 @@
 Reglas que garantiza:
   · Un contacto tiene a lo sumo UNA ejecución abierta. Una palabra clave nueva cancela la anterior.
   · Prioridad ante un mensaje: botón propio > palabra clave de una campaña vigente > disparador propio
-    del flujo > respuesta a lo que se estaba esperando.
+    del flujo > respuesta a lo que se estaba esperando. La palabra de una campaña NO reinicia la
+    conversación en curso (`_sigue_la_conversacion`): así sirven palabras comunes como «examen».
+  · Lo que entra por una campaña queda también en las tablas de ManyChat (`registro.py`).
   · Si la cuenta manda algo que no salió de este motor (una persona del equipo), el bot se pausa
     para ese contacto y se cancela lo que tenía abierto.
   · Nunca escribe fuera de la ventana de 24 h, salvo la respuesta privada a un comentario.
@@ -13,7 +15,7 @@ Reglas que garantiza:
 from datetime import timedelta
 
 from app import db
-from app.automatizaciones import campanas
+from app.automatizaciones import campanas, registro
 from app.automatizaciones.modelos import AutEjecucion, AutFlujo, AutFlujoVersion, IgContacto, IgMensaje
 from app.automatizaciones.nucleo import eventos as ev
 from app.automatizaciones.nucleo import grafo as g
@@ -53,8 +55,13 @@ class Motor:
         if canal == 'dm':
             version, campana, clave = self._version_de_campana(evento.texto, evento.momento)
             if version:
-                self._iniciar(contacto, version, campana=campana, clave=clave)
-                return 'flujo_iniciado'
+                abierta = self._abierta(contacto)
+                if not self._sigue_la_conversacion(abierta, campana):
+                    self._iniciar(contacto, version, campana=campana, clave=clave)
+                    return 'flujo_iniciado'
+                if abierta.estado == AutEjecucion.ESPERANDO_RESPUESTA:
+                    return self._respuesta(abierta, evento)
+                return 'palabra_repetida'
         version = self._version_disparada(evento.texto, canal, evento.publicacion_id, evento.momento)
         if version:
             self._iniciar(contacto, version, comentario_id=evento.comentario_id)
@@ -157,6 +164,17 @@ class Motor:
             return None, None, None
         return flujo.version_publicada, campana, clave
 
+    def _sigue_la_conversacion(self, abierta, campana):
+        """¿La palabra clave de una campaña es parte de la conversación en curso y no una entrada nueva?
+        Sí si el flujo espera texto libre (es la respuesta, aunque coincida con una palabra) o si es de
+        la misma campaña (repetirla no reinicia). La de otra campaña es una entrada nueva."""
+        if abierta is None:
+            return False
+        if abierta.campana_id == campana.id:
+            return True
+        nodo = g.nodos_por_id(abierta.version.grafo).get(abierta.nodo_actual) or {}
+        return abierta.estado == AutEjecucion.ESPERANDO_RESPUESTA and bool(nodo.get('espera'))
+
     def _iniciar(self, contacto, version, comentario_id=None, nodo=None, campana=None, clave=None):
         abierta = self._abierta(contacto)
         if abierta:
@@ -166,6 +184,7 @@ class Motor:
                                  iniciada_en=self.ahora, campana_id=campana.id if campana else None, clave=clave)
         db.session.add(ejecucion)
         db.session.flush()
+        registro.entrada(ejecucion, self.ahora)
         self._correr(ejecucion)
         return ejecucion
 
@@ -208,6 +227,9 @@ class Motor:
         return 'ignorado'
 
     def _avanzar(self, ejecucion, salida):
+        if salida != 'sin_respuesta':  # respondió: tocó un botón o escribió lo que se esperaba
+            nodo = g.nodos_por_id(ejecucion.version.grafo).get(ejecucion.nodo_actual)
+            registro.respuesta(ejecucion, nodo, self.ahora)
         hacia = g.destino(ejecucion.version.grafo, ejecucion.nodo_actual, salida)
         if hacia is None:
             self._cerrar(ejecucion, AutEjecucion.TERMINADA)
@@ -264,7 +286,7 @@ class Motor:
             elif tipo == 'condicion':
                 salida = 'si' if self._cumple(ejecucion.contacto, nodo.get('reglas') or []) else 'no'
             else:  # accion
-                self._aplicar(ejecucion.contacto, nodo.get('acciones') or [])
+                self._aplicar(ejecucion, nodo.get('acciones') or [])
                 salida = 'siguiente'
             hacia = g.destino(grafo, nodo['id'], salida)
             if hacia is None:
@@ -299,6 +321,7 @@ class Motor:
                                      origen=IgMensaje.MOTOR, texto=mensajes.texto_visible(cuerpo), contenido=cuerpo,
                                      ejecucion_id=ejecucion.id, nodo_id=nodo['id'], enviado_en=self.ahora))
             db.session.flush()
+        registro.envio(ejecucion, nodo, self.ahora)
         return True
 
     def _enviar_con_control(self, contacto, destinatario, cuerpo):
@@ -339,14 +362,17 @@ class Motor:
                 return False
         return True
 
-    def _aplicar(self, contacto, acciones):
+    def _aplicar(self, ejecucion, acciones):
+        contacto = ejecucion.contacto
         for accion in acciones:
             tipo = accion['tipo']
             if tipo == 'variable':
                 self._guardar(contacto, {accion['nombre']: accion.get('valor')})
             elif tipo == 'etapa':
                 self._guardar(contacto, {'_etapa': accion.get('valor')})
+                registro.etapa(ejecucion, accion.get('valor'))
             elif tipo == 'califica':
                 self._guardar(contacto, {'_califica': bool(accion.get('valor'))})
+                registro.calificar(ejecucion, bool(accion.get('valor')), self.ahora)
             elif tipo == 'pausar_bot':
                 contacto.bot_pausado_hasta = self.ahora + timedelta(hours=accion.get('horas') or HORAS_DE_PAUSA)
