@@ -21,8 +21,8 @@ export const KpiEsqueleto = ({ titulo, className = 'kpi mk-kpi', lineas = 1, i =
 );
 
 /** La fila de KPIs (`.pareja`, como la real) mientras no llegan las cifras. */
-export const EsqueletoKpis = ({ titulos, label = 'Cargando los indicadores…', className = 'pareja mk-kpis', kpi, lineas }) => (
-    <Skeleton label={label} className={className} style={{ '--min': '220px', '--g': 'var(--s4)' }}>
+export const EsqueletoKpis = ({ titulos, label = 'Cargando los indicadores…', className = 'pareja mk-kpis', kpi, lineas, min = '220px' }) => (
+    <Skeleton label={label} className={className} style={{ '--min': min, '--g': 'var(--s4)' }}>
         {titulos.map((t, i) => <KpiEsqueleto key={t} titulo={t} className={kpi} lineas={lineas} i={i} />)}
     </Skeleton>
 );
@@ -30,18 +30,21 @@ export const EsqueletoKpis = ({ titulos, label = 'Cargando los indicadores…', 
 // Alturas fijas (no al azar) de las columnas del gráfico por día.
 const COLUMNAS = [38, 52, 30, 64, 46, 72, 40, 58, 34, 80, 50, 62, 44, 70, 36, 56];
 
-/** El gráfico de columnas por día (`Columnas`): tope, lienzo de 150 px y eje, del alto real. */
-export const HuesosSerie = ({ barras = 30, step = 0 }) => (
-    <div className="mk-serie" aria-hidden="true">
-        <div className="mk-serie-tope"><SkeletonText width={48} height={8} lineHeight={16.5} step={step} /></div>
-        <div className="mk-serie-lienzo">
+/**
+ * El gráfico de columnas por día: tope, lienzo y eje con las clases del real (`mk-serie-*` de Marketing o
+ * `wf-serie-*` del Tráfico de Workshop, por `prefijo`), así mide lo mismo.
+ */
+export const HuesosSerie = ({ barras = 30, step = 0, prefijo = 'mk' }) => (
+    <div className={`${prefijo}-serie`} aria-hidden="true">
+        <div className={`${prefijo}-serie-tope`}><SkeletonText width={48} height={8} lineHeight={16.5} step={step} /></div>
+        <div className={`${prefijo}-serie-lienzo`}>
             {Array.from({ length: barras }, (_, i) => (
-                <span key={i} className="mk-serie-col">
+                <span key={i} className={`${prefijo}-serie-col`}>
                     <SkeletonBlock height={`${COLUMNAS[i % COLUMNAS.length]}%`} radius={3} step={step + 1 + (i % 12)} />
                 </span>
             ))}
         </div>
-        <div className="mk-serie-eje"><SkeletonText height={7} lineHeight={15.75} step={step + 2} /></div>
+        <div className={`${prefijo}-serie-eje`}><SkeletonText height={7} lineHeight={15.75} step={step + 2} /></div>
     </div>
 );
 

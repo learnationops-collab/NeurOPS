@@ -56,6 +56,9 @@ const abrir = (ruta = '/admin/workshops?tab=trafico') => render(
 );
 
 const listaDeVisitas = () => within(screen.getByRole('region', { name: 'Detalle de visitas' }));
+// El ranking ya con sus filas (antes de eso es un esqueleto con las mismas columnas).
+const rankingListo = async () => within(await screen.findByRole('region', { name: 'Qué trae el tráfico' }))
+    .findByText('/bienvenido/');
 
 describe('Workshop › Tráfico landings', () => {
     beforeEach(() => { window.localStorage.clear(); api.get.mockReset(); api.delete.mockReset(); });
@@ -64,7 +67,8 @@ describe('Workshop › Tráfico landings', () => {
     it('pide el tráfico y el detalle de los últimos 30 días, con el tope del detalle', async () => {
         responder();
         abrir();
-        expect(await screen.findByText('Landings')).toBeInTheDocument();
+        expect(await rankingListo()).toBeInTheDocument();
+        expect(screen.getByText('Landings')).toBeInTheDocument();
         const esperado = rangoDePeriodo('ultimos_30');
         await waitFor(() => expect(api.get).toHaveBeenCalledWith('/workshop/landing/trafico/visitas', expect.anything()));
         const pedidos = Object.fromEntries(api.get.mock.calls.map(([url, config]) => [url, config.params]));
@@ -75,15 +79,16 @@ describe('Workshop › Tráfico landings', () => {
     it('un período personalizado de la URL es el que se pide', async () => {
         responder();
         abrir('/admin/workshops?tab=trafico&periodo=personalizado&desde=2026-10-01&hasta=2026-10-03');
-        await screen.findByText('Landings');
-        expect(api.get.mock.calls[0][1].params).toEqual({ desde: '2026-10-01', hasta: '2026-10-03' });
+        await rankingListo();
+        const [, config] = api.get.mock.calls.find(([url]) => url === '/workshop/landing/trafico');
+        expect(config.params).toEqual({ desde: '2026-10-01', hasta: '2026-10-03' });
     });
 
     it('el ranking cambia de landing a campaña y anuncio, con los nombres de Meta', async () => {
         responder();
         abrir();
         const ranking = within(await screen.findByRole('region', { name: 'Qué trae el tráfico' }));
-        expect(ranking.getByText('/bienvenido/')).toBeInTheDocument();
+        expect(await ranking.findByText('/bienvenido/')).toBeInTheDocument();
         fireEvent.click(ranking.getByRole('tab', { name: 'Por campaña' }));
         // El ID de Meta se muestra con su nombre; el que no está sincronizado, tal cual.
         expect(ranking.getByText('WORKSHOP FUNNEL | TESTING ADS')).toBeInTheDocument();
@@ -124,6 +129,33 @@ describe('Workshop › Tráfico landings', () => {
         expect(api.delete).not.toHaveBeenCalled();
         await act(async () => { vi.advanceTimersByTime(5100); });
         expect(api.delete).toHaveBeenCalledWith('/v1/metrics/track-visit/1');
+    });
+
+    it('mientras llega el resumen se ven los rótulos y esqueletos, y el detalle ya se pidió', async () => {
+        let soltar;
+        api.get.mockImplementation((url) => (url === '/workshop/landing/trafico'
+            ? new Promise((r) => { soltar = () => r({ data: TRAFICO }); })
+            : Promise.resolve({ data: detalle() })));
+        abrir();
+        expect(screen.getByRole('status', { name: 'Cargando el tráfico de las landings…' })).toBeInTheDocument();
+        expect(screen.getByText('Visita → grupo')).toBeInTheDocument();
+        expect(screen.getByRole('status', { name: 'Cargando qué trae el tráfico…' })).toBeInTheDocument();
+        await waitFor(() => expect(listaDeVisitas().getByText('mostrando 2 de 2')).toBeInTheDocument());
+        await act(async () => { soltar(); });
+        expect(await rankingListo()).toBeInTheDocument();
+        expect(screen.queryByRole('status', { name: /Cargando/ })).not.toBeInTheDocument();
+    });
+
+    it('si el resumen no carga ofrece reintentar', async () => {
+        let falla = true;
+        api.get.mockImplementation((url) => (url === '/workshop/landing/trafico' && falla
+            ? Promise.reject(new Error('caído'))
+            : Promise.resolve({ data: url === '/workshop/landing/trafico' ? TRAFICO : detalle() })));
+        abrir();
+        const boton = await screen.findByRole('button', { name: 'Reintentar' });
+        falla = false;
+        fireEvent.click(boton);
+        expect(await rankingListo()).toBeInTheDocument();
     });
 
     it('avisa cuando el detalle quedó recortado por el tope', async () => {

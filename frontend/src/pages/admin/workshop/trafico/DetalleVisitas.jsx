@@ -4,8 +4,10 @@ import toast from 'react-hot-toast';
 import { X } from 'lucide-react';
 import api from '../../../../services/api';
 import ListaConfigurable from '../../../../components/listas/ListaConfigurable';
+import EsqueletoLista from '../../../../components/listas/EsqueletoLista';
 import InlineConfirm from '../../../../components/ui/InlineConfirm';
-import { EsqueletoFilas, PanelCab } from '../../../comercial/components/Shared';
+import { Button } from '../../../../components/standard';
+import { PanelCab } from '../../../comercial/components/Shared';
 import { COLUMNAS_DETALLE, FACETAS_DETALLE, buscarEnVisita } from './columnas';
 import { EVENTO, LIMITE_DETALLE, fechaHora, num } from './trafico';
 
@@ -64,6 +66,7 @@ const DetalleVisitas = ({ desde, hasta, version, onBorrada }) => {
     const [datos, setDatos] = useState(null);
     const [error, setError] = useState(null);
     const [elegida, setElegida] = useState(null);
+    const [intento, setIntento] = useState(0);
 
     useEffect(() => {
         const control = new AbortController();
@@ -76,7 +79,7 @@ const DetalleVisitas = ({ desde, hasta, version, onBorrada }) => {
                 if (e?.name !== 'CanceledError') setError('No se pudo cargar el detalle de visitas.');
             });
         return () => control.abort();
-    }, [desde, hasta, version]);
+    }, [desde, hasta, version, intento]);
 
     // Otro período: la visita elegida ya no es de esta lista.
     useEffect(() => { setElegida(null); }, [desde, hasta]);
@@ -101,8 +104,15 @@ const DetalleVisitas = ({ desde, hasta, version, onBorrada }) => {
                     <span className="t-cap mut40 num">las {num(datos.limite)} más recientes · acotá el período para ver el resto</span>
                 )}
             </PanelCab>
-            {error ? <p className="t-body mut40">{error}</p>
-                : !datos ? <EsqueletoFilas rotulo="Cargando las visitas…" lineas={6} />
+            {error && !datos ? (
+                <p className="t-body mut40">
+                    {error} <Button size="sm" onClick={() => setIntento((n) => n + 1)}>Reintentar</Button>
+                </p>
+            )
+                : !datos ? (
+                    <EsqueletoLista columnas={COLUMNAS_DETALLE} facetas={FACETAS_DETALLE}
+                        claveGuardado="ws_trafico_visitas_cols" label="Cargando las visitas…" />
+                )
                     : (
                         <>
                             {elegida && (

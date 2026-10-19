@@ -2,11 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { CalendarDays, MessageCircle, RefreshCw } from 'lucide-react';
+import toast from 'react-hot-toast';
 import api from '../../../../services/api';
 import Cifra from '../../../comercial/components/Cifra';
-import { EsqueletoTablero, PanelCab, PillMenu, Segmented, Tip } from '../../../comercial/components/Shared';
+import { PanelCab, PillMenu, Segmented, Tip } from '../../../comercial/components/Shared';
 import RangoFechas, { esFecha, textoRango } from '../../../comercial/components/RangoFechas';
 import ListaConfigurable from '../../../../components/listas/ListaConfigurable';
+import EsqueletoLista from '../../../../components/listas/EsqueletoLista';
+import { ErrorDeCarga, EsqueletoKpis, HuesosSerie } from '../../marketing/esqueletos';
 import SerieVisitas from '../trafico/SerieVisitas';
 import { EnCabecera } from './CabeceraWorkshop';
 import DetalleVisitas from '../trafico/DetalleVisitas';
@@ -27,6 +30,10 @@ import '../trafico/trafico.css';
  * Estilo del dashboard comercial y Marketing (`.dc-shell`): período con `PillMenu` + `RangoFechas` (en la
  * URL: `periodo`, `desde`, `hasta`), KPIs con `Cifra`, la serie por día y dos `ListaConfigurable`: el
  * ranking (por landing, fuente o campaña) y el detalle de cada visita.
+ *
+ * Carga: el período, los rótulos y los títulos se ven al instante; los KPIs, la serie y el ranking
+ * esperan el resumen, y el detalle de visitas sale en paralelo con su propio pedido (antes esperaba al
+ * resumen para empezar). Cada uno con su esqueleto; recargar deja lo que se ve, atenuado.
  */
 
 const AYUDA = {
@@ -56,11 +63,13 @@ const Kpi = ({ titulo, valor, sub, tip, i }) => {
     );
 };
 
+const KPIS = ['Visitas', 'Landings', 'Clics al grupo', 'Visita → grupo'];
+
 const Ranking = ({ datos, medido }) => {
     const [agrupacion, setAgrupacion] = useState('landing');
     const total = datos?.totales?.visitas || 0;
     const columnas = useMemo(() => columnasRanking(agrupacion, total, medido), [agrupacion, total, medido]);
-    const filas = filasRanking(datos, agrupacion);
+    const filas = datos ? filasRanking(datos, agrupacion) : [];
     const clave = useMemo(() => claveRanking(agrupacion), [agrupacion]);
     const buscador = useMemo(() => buscarRanking(agrupacion), [agrupacion]);
     return (
@@ -70,10 +79,15 @@ const Ranking = ({ datos, medido }) => {
                     ariaLabel="Agrupar el tráfico" />
             </PanelCab>
             {/* `key`: cada agrupación tiene sus columnas (y su elección guardada): se monta de nuevo. */}
-            <ListaConfigurable key={agrupacion} columnas={columnas} facetas={FACETAS_RANKING[agrupacion]}
-                filas={filas} clave={clave} buscar={buscador}
-                buscarPlaceholder="Buscar…" claveGuardado={`ws_trafico_${agrupacion}_cols`}
-                ordenInicial={{ key: 'visitas', dir: 'desc' }} vacio="Sin visitas en este período." />
+            {!datos ? (
+                <EsqueletoLista key={agrupacion} columnas={columnas} facetas={FACETAS_RANKING[agrupacion]}
+                    claveGuardado={`ws_trafico_${agrupacion}_cols`} filas={8} label="Cargando qué trae el tráfico…" />
+            ) : (
+                <ListaConfigurable key={agrupacion} columnas={columnas} facetas={FACETAS_RANKING[agrupacion]}
+                    filas={filas} clave={clave} buscar={buscador}
+                    buscarPlaceholder="Buscar…" claveGuardado={`ws_trafico_${agrupacion}_cols`}
+                    ordenInicial={{ key: 'visitas', dir: 'desc' }} vacio="Sin visitas en este período." />
+            )}
         </section>
     );
 };
@@ -106,7 +120,9 @@ const WorkshopTraficoView = () => {
         api.get('/workshop/landing/trafico', { params: { desde: rango.desde, hasta: rango.hasta }, signal: control.signal })
             .then((r) => { setDatos(r.data); setError(null); })
             .catch((e) => {
-                if (e?.name !== 'CanceledError') setError('No se pudo cargar el tráfico de las landings.');
+                if (e?.name === 'CanceledError') return;
+                setError('No se pudo cargar el tráfico de las landings.');
+                toast.error('No se pudo cargar el tráfico de las landings.');
             })
             .finally(() => { if (!control.signal.aborted) setCargando(false); });
         return () => control.abort();
@@ -115,16 +131,17 @@ const WorkshopTraficoView = () => {
     const recargar = useCallback(() => setVersion((v) => v + 1), []);
 
     const t = datos?.totales || {};
-    const medido = Boolean(datos?.whatsapp_medido_desde);
+    // Sin resumen todavía se da por medido: así no aparece y desaparece el aviso de abajo.
+    const medido = !datos || Boolean(datos.whatsapp_medido_desde);
     const diasDelRango = datos?.por_dia?.length || 0;
-    const kpis = [
-        { titulo: 'Visitas', valor: num(t.visitas ?? 0), tip: AYUDA.visitas,
+    const kpis = !datos ? [] : [
+        { titulo: KPIS[0], valor: num(t.visitas ?? 0), tip: AYUDA.visitas,
             sub: diasDelRango ? `${num(Math.round((t.visitas || 0) / diasDelRango))} por día` : '—' },
-        { titulo: 'Landings', valor: num(t.landings ?? 0), tip: AYUDA.landings,
+        { titulo: KPIS[1], valor: num(t.landings ?? 0), tip: AYUDA.landings,
             sub: `${num(t.visitas_landings_whatsapp ?? 0)} con botón al grupo` },
-        { titulo: 'Clics al grupo', valor: medido ? num(t.clics_whatsapp ?? 0) : '—', tip: AYUDA.clics,
+        { titulo: KPIS[2], valor: medido ? num(t.clics_whatsapp ?? 0) : '—', tip: AYUDA.clics,
             sub: medido ? `medidos desde el ${fechaHora(datos.whatsapp_medido_desde)}` : 'sin medir todavía' },
-        { titulo: 'Visita → grupo', valor: pct(t.tasa_whatsapp), tip: AYUDA.tasa,
+        { titulo: KPIS[3], valor: pct(t.tasa_whatsapp), tip: AYUDA.tasa,
             sub: 'de las visitas con botón al grupo' },
     ];
 
@@ -155,11 +172,9 @@ const WorkshopTraficoView = () => {
             </EnCabecera>
 
             {error && !datos ? (
-                <section className="panel"><p className="t-body">{error}</p></section>
-            ) : !datos ? (
-                <EsqueletoTablero rotulo="Cargando el tráfico de las landings…" />
+                <ErrorDeCarga titulo={error} onReintentar={recargar} />
             ) : (
-                <motion.div className={`wf-vista${cargando ? ' wf-recargando' : ''}`} aria-busy={cargando}
+                <motion.div className={`wf-vista${cargando && datos ? ' wf-recargando' : ''}`} aria-busy={cargando}
                     initial={reducir ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.28, ease: [0.22, 0.7, 0.2, 1] }}>
                     {!medido && (
@@ -169,13 +184,18 @@ const WorkshopTraficoView = () => {
                         </p>
                     )}
 
-                    <div className="pareja wf-kpis" style={{ '--min': '230px', '--g': 'var(--s4)' }}>
-                        {kpis.map((k, i) => <Kpi key={k.titulo} {...k} i={i} />)}
-                    </div>
+                    {!datos ? (
+                        <EsqueletoKpis titulos={KPIS} className="pareja wf-kpis" kpi="kpi wf-kpi" min="230px"
+                            label="Cargando el tráfico de las landings…" />
+                    ) : (
+                        <div className="pareja wf-kpis" style={{ '--min': '230px', '--g': 'var(--s4)' }}>
+                            {kpis.map((k, i) => <Kpi key={k.titulo} {...k} i={i} />)}
+                        </div>
+                    )}
 
                     <section className="panel wf-panel" aria-label="Visitas por día">
                         <PanelCab titulo="Visitas por día" tip={AYUDA.serie} />
-                        <SerieVisitas dias={datos.por_dia || []} />
+                        {!datos ? <HuesosSerie prefijo="wf" /> : <SerieVisitas dias={datos.por_dia || []} />}
                     </section>
 
                     <Ranking datos={datos} medido={medido} />
