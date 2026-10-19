@@ -118,7 +118,9 @@ export function Select({ value, options, onChange, size = 'md', label, id, style
     );
 }
 
+// Sin `onChange` es solo un indicador (dentro de una fila que ya es botón): no toma foco ni se anuncia.
 export const Switch = forwardRef(function Switch({ checked, onChange, label, className, ...rest }, ref) {
+    if (!onChange) return <span ref={ref} className={clsx('ui-switch ui-switch--static', className)} aria-hidden="true" aria-checked={!!checked} {...rest} />;
     return (
         <button ref={ref} type="button" className={clsx('ui-switch', className)} role="switch" aria-checked={!!checked} aria-label={label}
             {...rest} onClick={() => onChange(!checked)} />
@@ -163,15 +165,19 @@ export function Modal({ onClose, className, style, labelledBy, id, children }) {
 
 // Cabecera de un modal: ícono (opcional), título y subtítulo, y el botón de cerrar. size: md · lg.
 // `titleId` va en el título, para el aria-labelledby del Modal. `closeProps` va al botón de cerrar.
-export function ModalHeader({ icon, title, subtitle, titleId, size = 'md', onClose, closeProps, className, style }) {
+// `actions` va antes de cerrar (vistas, menús); `children` es una fila debajo, a todo el ancho (pestañas).
+// `flush`: para modales sin padding (de borde a borde), la cabecera trae su margen y una línea abajo.
+export function ModalHeader({ icon, title, subtitle, titleId, size = 'md', actions, onClose, closeProps, flush = false, className, style, children }) {
     return (
-        <div className={clsx('ui-modal-head', size === 'lg' && 'ui-modal-head--lg', className)} style={style}>
+        <div className={clsx('ui-modal-head', size === 'lg' && 'ui-modal-head--lg', flush && 'ui-modal-head--flush', className)} style={style}>
             {icon}
             <div className="ui-modal-head__text">
                 <h2 className="ui-modal-head__title" id={titleId}>{title}</h2>
                 {subtitle && <p className="ui-modal-head__sub">{subtitle}</p>}
             </div>
+            {actions}
             {onClose && <IconButton label="Cerrar" icon={<Svg d="M18 6 6 18M6 6l12 12" />} size={size === 'lg' ? 'md' : 'sm'} onClick={onClose} {...closeProps} />}
+            {children && <div className="ui-modal-head__row">{children}</div>}
         </div>
     );
 }

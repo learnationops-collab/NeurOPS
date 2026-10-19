@@ -7,7 +7,7 @@ import { buscar } from '../../core/datos';
 import { nuevaPregunta, resumenForm } from '../../core/formulario';
 import { Humo, HUMO_MARCA, Icono } from '../../ui/base';
 import { ui } from '../../ui/estadoUi';
-import { Button, EmptyState, Grid, HeaderActions, IconButton, Segmented } from '../../../../components/standard';
+import { Button, ConfirmDelete, EmptyState, Grid, HeaderActions, IconButton, Segmented } from '../../../../components/standard';
 import { useOrdenable } from '../../ui/useOrdenable';
 import { mutarForm, setFormUi, useBorrador, useEnfocar } from './comun';
 import { borrarForm } from './ListaForms';
@@ -25,8 +25,7 @@ function Barra({ f, vista, prevModo, onFin, finRef, onImportar }) {
     const { lectura } = usePermisos();
     const [borrar, setBorrar] = useState(false);
     const r = resumenForm(f);
-    const papelera = useRef(null), cancelar = useRef(null);
-    useEffect(() => { if (borrar) cancelar.current?.focus(); }, [borrar]);
+    const papelera = useRef(null);
     const cerrarPop = () => { setBorrar(false); papelera.current?.focus(); };
     return (
         <div className="barra">
@@ -53,13 +52,8 @@ function Barra({ f, vista, prevModo, onFin, finRef, onImportar }) {
                             <IconButton label="Eliminar formulario" icon={<Icono n="basura" s={15} />} size="sm" danger ref={papelera} title="Eliminar formulario" aria-expanded={borrar}
                                 onClick={() => setBorrar(b => !b)} />
                             {borrar && (
-                                <div className="pop-borrar" role="dialog" aria-label="Confirmar">
-                                    <p className="t-sm">¿Eliminar <b>{f.nombre}</b>? No se puede recuperar.</p>
-                                    <div className="der">
-                                        <Button ref={cancelar} onClick={cerrarPop}>Cancelar</Button>
-                                        <Button variant="dangerSolid" icon={<Icono n="basura" />} onClick={() => { ui.set({ form: null }); borrarForm(f); }}>Eliminar</Button>
-                                    </div>
-                                </div>
+                                <ConfirmDelete className="pop-borrar" name={f.nombre} detail="No se puede recuperar." icon={<Icono n="basura" />}
+                                    onCancel={cerrarPop} onConfirm={() => { ui.set({ form: null }); borrarForm(f); }} />
                             )}
                         </div>
                     </>

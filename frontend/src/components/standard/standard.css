@@ -211,6 +211,7 @@
   box-shadow:0 1px 4px rgba(0,0,0,.35);transition:transform .28s var(--ui-spring)}
 .ui-switch.ui-switch[aria-checked="true"]{background:var(--ui-brand);border-color:var(--ui-brand)}
 .ui-switch.ui-switch[aria-checked="true"]::after{transform:translateX(16px)}
+.ui-switch.ui-switch--static{display:inline-block;cursor:inherit;pointer-events:none}
 
 /* --- Stepper ----------------------------------------------------------------------------------- */
 .ui-stepper.ui-stepper{display:inline-flex;align-items:center;gap:2px;padding:2px;border-radius:999px;border:1px solid var(--ui-border-strong);background:var(--ui-input-bg)}
@@ -235,11 +236,9 @@
 }
 
 /* --- Avatar ------------------------------------------------------------------------------------ */
-/* lg solo suma la sombra: en Thalamus .avatar--l quedaba antes que .avatar y la base le pisaba el
-   tamaño. Se respeta tal cual (ver pendientes de la skill ui-builder). */
 .ui-avatar.ui-avatar{width:38px;height:38px;flex-shrink:0;border-radius:13px;display:grid;place-items:center;font-size:13px;font-weight:900;
   color:var(--ui-on-color);background:var(--c)}
-.ui-avatar.ui-avatar--lg{box-shadow:0 8px 20px -10px var(--c)}
+.ui-avatar.ui-avatar--lg{width:48px;height:48px;border-radius:16px;font-size:15px;box-shadow:0 8px 20px -10px var(--c)}
 .ui-avatar.ui-avatar--sm{width:28px;height:28px;border-radius:9px;font-size:11px}
 .ui-avatar.ui-avatar--xs{width:22px;height:22px;border-radius:50%;font-size:9px}
 .ui-avatar.ui-avatar--photo{position:relative;overflow:hidden}
@@ -356,6 +355,9 @@
 .ui-modal-head__title{margin:0;font-size:19px;font-weight:900;letter-spacing:-.025em;line-height:1.2;text-wrap:balance}
 .ui-modal-head--lg .ui-modal-head__title{font-size:clamp(24px,2.6vw,30px);line-height:1.1}
 .ui-modal-head__sub{margin:0;font-size:14px;line-height:1.5;color:var(--ui-muted)}
+.ui-modal-head__row{flex-basis:100%;min-width:0;max-width:100%}
+.ui-modal-head.ui-modal-head--flush{margin:0;padding:var(--ui-s6) var(--ui-s6) var(--ui-s4);border-bottom:1px solid var(--ui-border-subtle)}
+@media (max-width:640px){.ui-modal-head.ui-modal-head--flush{padding:var(--ui-s4)}}
 
 /* --- Bars ------------------------------------------------------------------------------------- */
 .ui-bars.ui-bars{--ui-bar-default:var(--ui-brand);min-width:0}

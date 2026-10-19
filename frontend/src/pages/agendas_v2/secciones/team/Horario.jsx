@@ -17,7 +17,7 @@ import Available from './Available';
 import { MAX_FRANJAS, horarioLaV } from './cobertura';
 import { HUMO_PERSONA, SemanaMini, setTeam } from './comun';
 import { EditorSesiones } from './Sesiones';
-import { Button, IconButton } from '../../../../components/standard';
+import { Button, IconButton, ModalHeader } from '../../../../components/standard';
 
 const OPS_DESDE = HORAS.slice(0, -1).map(h => ({ v: h, n: h }));
 const OPS_HASTA = HORAS.slice(1).map(h => ({ v: h, n: h }));
@@ -216,16 +216,11 @@ export function ModalHorario() {
             <Modal onCerrar={cerrar} clase="modal--hor" labelledBy="hor-tit" style={{ '--c': colorVar(p.color) }}>
                 <Humo clase="humo--tarjeta humo--suave" cols={HUMO_PERSONA} />
                 <div onKeyDown={atrapar}>
-                    <div className="hor-cab">
-                        <Avatar p={p} clase="avatar--l" />
-                        <div className="hor-tit">
-                            <h2 className="t-h3" id="hor-tit">{p.nombre}</h2>
-                            <span className="pc-sub" style={{ padding: 0 }}><SemanaMini p={p} /><span className="num">{hs ? fmt(hs, 1) + ' h/sem' : 'Sin horario'}</span></span>
-                        </div>
-                        <Seg sm nav label="Vista" valor={tab} onChange={v => setTeam({ horTab: v })}
-                            opciones={[{ v: 'config', n: 'Horario', icono: 'ajustes' }, { v: 'sesiones', n: 'Sesiones', icono: 'clock' }, { v: 'semana', n: 'Semana', icono: 'calendar' }]} />
-                        <IconButton label="Cerrar" icon={<Icono n="x" />} data-nav="" onClick={cerrar} />
-                    </div>
+                    <ModalHeader flush className="hor-cab" icon={<Avatar p={p} clase="avatar--l" />} title={p.nombre} titleId="hor-tit"
+                        subtitle={<span className="pc-sub" style={{ padding: 0 }}><SemanaMini p={p} /><span className="num">{hs ? fmt(hs, 1) + ' h/sem' : 'Sin horario'}</span></span>}
+                        actions={<Seg sm nav label="Vista" valor={tab} onChange={v => setTeam({ horTab: v })}
+                            opciones={[{ v: 'config', n: 'Horario', icono: 'ajustes' }, { v: 'sesiones', n: 'Sesiones', icono: 'clock' }, { v: 'semana', n: 'Semana', icono: 'calendar' }]} />}
+                        onClose={cerrar} closeProps={{ 'data-nav': '' }} />
                     {tab === 'semana'
                         ? <div className="hor-semana"><Available solo={p} /></div>
                         : tab === 'sesiones' ? (

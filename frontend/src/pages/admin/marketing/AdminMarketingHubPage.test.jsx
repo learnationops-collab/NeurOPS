@@ -288,7 +288,8 @@ describe('Marketing › Anuncios', () => {
             : url === '/marketing/anuncios/embudos/workshop' ? workshop : { anuncios: [], claves: [] } }));
         abrir();
 
-        const tarjetaWorkshop = await screen.findByRole('button', { name: 'Ver Workshop: $100' });
+        const tarjetaWorkshop = await screen.findByTitle('Ver Workshop');
+        expect(tarjetaWorkshop).toHaveTextContent('$100');
         expect(screen.getByText('75% del gasto · 12 anuncios')).toBeInTheDocument();
         await userEvent.click(tarjetaWorkshop);
 

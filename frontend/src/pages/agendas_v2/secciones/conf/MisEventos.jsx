@@ -8,7 +8,7 @@ import api from '../../../../services/api';
 import { uid } from '../../core/util';
 import { Icono, Switch, Sx } from '../../ui/base';
 import { CampoMinutos } from '../team/Sesiones';
-import { Button, FieldError, Grid, IconButton, Input, InputGroup, Panel } from '../../../../components/standard';
+import { Button, ConfirmDelete, FieldError, Grid, IconButton, Input, InputGroup, Panel } from '../../../../components/standard';
 
 const urlDe = (link) => window.location.origin + '/agendas-v2' + link;
 const SIN_FORM = '';
@@ -45,16 +45,10 @@ function Evento({ e, formularios, onCambio, onBorrar }) {
                 <span className="ev-link me-link"><Icono n="link" /><span className="trunc">{urlDe(e.link)}</span></span>
                 <div className="barra-der">
                     <Button icon={<Icono n={copiado ? 'check' : 'copiar'} />} onClick={copiar}>{copiado ? 'Copiado' : 'Copiar link'}</Button>
-                    {borrar ? (
-                        <>
-                            <Button onClick={() => setBorrar(false)}>Cancelar</Button>
-                            <Button variant="dangerSolid" icon={<Icono n="basura" />} onClick={onBorrar}>Eliminar</Button>
-                        </>
-                    ) : (
-                        <IconButton label={'Eliminar ' + e.nombre} icon={<Icono n="basura" s={15} />} size="sm" danger title="Eliminar" onClick={() => setBorrar(true)} />
-                    )}
+                    {!borrar && <IconButton label={'Eliminar ' + e.nombre} icon={<Icono n="basura" s={15} />} size="sm" danger title="Eliminar" onClick={() => setBorrar(true)} />}
                 </div>
             </div>
+            {borrar && <ConfirmDelete name={e.nombre} detail="El link deja de funcionar." icon={<Icono n="basura" />} onCancel={() => setBorrar(false)} onConfirm={onBorrar} />}
         </Panel>
     );
 }

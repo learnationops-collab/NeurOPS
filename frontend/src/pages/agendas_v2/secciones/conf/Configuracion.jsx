@@ -12,7 +12,7 @@ import { almacen, useUi } from '../../data/hooks';
 import { DatosCuenta, TarjetaCalendar, TarjetaDisponibilidad, TarjetaWhatsapp } from './cuenta';
 import TabEquipo from './TabEquipo';
 import TabApariencia from '../../../../temas/TabApariencia';
-import { IconButton } from '../../../../components/standard';
+import { IconButton, ModalHeader, Segmented } from '../../../../components/standard';
 
 export const TABS = [
     ['datos', 'Datos', 'user'], ['disponibilidad', 'Disponibilidad', 'clock'], ['integraciones', 'Integraciones', 'enchufe'],
@@ -68,7 +68,7 @@ export default function Configuracion() {
     };
     // Escape: primero cierra el menú de visualización; después, Configuración.
     const alEscape = () => { if (visAbierto) setVisAbierto(false); else cerrar(); };
-    useEffect(() => { document.querySelector('#conf .tab[aria-selected="true"]')?.focus({ preventScroll: true }); }, []);
+    useEffect(() => { document.querySelector('#conf .ui-seg__item[aria-pressed="true"]')?.focus({ preventScroll: true }); }, []);
 
     let cuerpo;
     if (tab === 'disponibilidad') cuerpo = <TarjetaDisponibilidad />;
@@ -79,21 +79,13 @@ export default function Configuracion() {
 
     return (
         <Modal onCerrar={alEscape} id="conf" labelledBy="conf-tit" clase={'modal--conf' + (confVis === 'completa' ? ' modal--full' : '')}>
-            <div className="conf-cab">
-                <Dial tile className="tl-logo sg-48" label="Configuración" />
-                <h2 className="t-h2" id="conf-tit">Configuración</h2>
-                <div className="tabs" role="tablist" aria-label="Configuración">
-                    {TABS.map(([t, n, ico]) => (
-                        <button key={t} type="button" className="tab" role="tab" data-nav="" aria-selected={tab === t} aria-controls="conf-cuerpo"
-                            onClick={() => { almacen.flush(); ui.set({ conf: { tab: t } }); }}>
-                            <Icono n={ico} />{n}
-                        </button>
-                    ))}
-                </div>
-                <MenuVisualizacion abierto={visAbierto} setAbierto={setVisAbierto} />
-                <IconButton label="Cerrar" icon={<Icono n="x" />} data-nav="" onClick={cerrar} />
-            </div>
-            <div className="conf-cuerpo" id="conf-cuerpo" role="tabpanel" aria-labelledby="conf-tit">{cuerpo}</div>
+            <ModalHeader flush size="lg" className="conf-cab" icon={<Dial tile className="tl-logo sg-48" label="Configuración" />} title="Configuración" titleId="conf-tit"
+                actions={<MenuVisualizacion abierto={visAbierto} setAbierto={setVisAbierto} />} onClose={cerrar} closeProps={{ 'data-nav': '' }}>
+                <Segmented label="Configuración" value={tab} itemProps={{ 'data-nav': '', 'aria-controls': 'conf-cuerpo' }}
+                    onChange={t => { almacen.flush(); ui.set({ conf: { tab: t } }); }}
+                    options={TABS.map(([t, n, ico]) => ({ value: t, label: n, icon: <Icono n={ico} /> }))} />
+            </ModalHeader>
+            <div className="conf-cuerpo" id="conf-cuerpo" aria-labelledby="conf-tit">{cuerpo}</div>
         </Modal>
     );
 }

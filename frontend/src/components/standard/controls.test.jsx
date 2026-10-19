@@ -71,6 +71,13 @@ describe('Segmented, Switch y Stepper', () => {
         expect(onChange).toHaveBeenCalledWith(true);
     });
 
+    it('Switch sin onChange es solo un indicador', () => {
+        const { container } = render(<Switch checked />);
+        expect(screen.queryByRole('switch')).toBeNull();
+        expect(container.firstChild.tagName).toBe('SPAN');
+        expect(container.firstChild.getAttribute('aria-checked')).toBe('true');
+    });
+
     it('Stepper respeta los límites y muestra el texto propio', () => {
         render(<Stepper value={5} min={1} max={5} onChange={() => {}} display="30 min" label="Duración" />);
         expect(screen.getByRole('button', { name: 'Más' }).disabled).toBe(true);

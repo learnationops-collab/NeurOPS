@@ -75,6 +75,7 @@ function DemoControles() {
             </Demo>
             <Demo titulo="Switch y Stepper">
                 <Switch checked={on} onChange={setOn} label="Obligatoria" />
+                <Switch checked={on} />
                 <Stepper value={n} min={1} max={6} onChange={setN} display={n * 15 + ' min'} label="Duración" />
             </Demo>
         </>
@@ -301,7 +302,7 @@ const SECCIONES = [
     {
         nombre: 'Modal · ModalHeader',
         para: 'Ventana sobre la página. Cierra con Escape o clic en el fondo, bloquea el scroll y enfoca el primer campo.',
-        props: 'Modal: onClose · className · labelledBy · id — ModalHeader: title · subtitle · icon · titleId · size: md · lg · onClose · closeProps',
+        props: 'Modal: onClose · className · labelledBy · id — ModalHeader: title · subtitle · icon · titleId · size: md · lg · actions · children (fila de abajo) · flush · onClose · closeProps',
         demo: () => <DemoModal />,
     },
     {

@@ -246,3 +246,11 @@
   - Ahora queda en la ejecución (`aut_ejecuciones.meta_ad_id`, el mismo id de `meta_anuncios`) y en el mensaje entrante. Solo se toma si `source` es `ADS`.
   - No cambia ninguna pantalla ni los tableros: la atribución de Marketing sigue por palabra clave.
   - Verificación: 138 tests de pytest de automatizaciones.
+
+- **19 de Octubre de 2026 (UI: decisiones visuales)** *(Se aplican las decisiones pendientes de la estandarización. [.agents/skills/ui-builder/SKILL.md](../../.agents/skills/ui-builder/SKILL.md) [MODIFY], [frontend/src/components/standard/Controls.jsx](../../frontend/src/components/standard/Controls.jsx) [MODIFY], [frontend/src/components/standard/standard.css](../../frontend/src/components/standard/standard.css) [MODIFY], [frontend/src/pages/agendas_v2/thalamus.css](../../frontend/src/pages/agendas_v2/thalamus.css) [MODIFY], [frontend/src/pages/admin/marketing/anuncios/EmbudosResumen.jsx](../../frontend/src/pages/admin/marketing/anuncios/EmbudosResumen.jsx) [MODIFY])*:
+  - Granularidad: de acá en adelante se estandarizan bloques (botonera, cabecera de modal, fila), no piezas sueltas. Queda escrito en la skill ui-builder.
+  - Borrar: una sola confirmación, la caja `ConfirmDelete`, abierta siempre por un botón rojo. Pasan a ella Funnel, Mis eventos y el editor de formularios (ahí flota bajo la papelera).
+  - Cabeceras de modal: Horario, Configuración y Funnel usan `ModalHeader` (nuevos `actions`, fila de abajo y `flush`). Las pestañas de Configuración pasan a `Segmented`.
+  - Avatar grande a 48px; el error de «Nuevo evento» usa `FieldError`; `Switch` sin `onChange` es solo indicador (modal de importar preguntas); se borra el CSS muerto `link-btn--sutil`.
+  - Marketing › Gasto por embudo: las tarjetas pasan a `Bars` en filas, como «De dónde vino lo cobrado».
+  - Verificación: 125 tests de vitest (componentes estándar, secciones de Thalamus y Marketing), eslint y build.

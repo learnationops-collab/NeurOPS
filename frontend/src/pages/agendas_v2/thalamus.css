@@ -350,8 +350,6 @@
 .thalamus :is(.entrada,.ui-entry).ev-nuevo{flex:1 1 320px;height:44px;padding:0 5px 0 12px}
 .thalamus .ev-nuevo :is(.prefijo,.ui-entry__prefix){color:var(--brand-secondary)}
 .thalamus .ev-nuevo :is(.btn,.ui-btn){height:34px}
-.thalamus .err-nuevo{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--error)}
-.thalamus .err-nuevo[hidden]{display:none}
 .thalamus .fe-mas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s3)}
 .thalamus .fe-mas-b{position:relative;isolation:isolate;overflow:hidden;display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:22px;text-align:left;background:var(--mat-1);border:1px solid var(--brand-secondary-border);transition:transform .2s var(--spring),border-color .2s}
 .thalamus .fe-mas-b--imp{border-color:var(--info-border)}
@@ -368,8 +366,7 @@
 .thalamus .fe-btn svg{color:var(--error)}
 .thalamus .fe-btn b{min-width:18px;height:18px;padding:0 5px;border-radius:999px;display:grid;place-items:center;font-size:10.5px;background:var(--error);color:#fff}
 .thalamus .fe-borrar-caja{position:relative}
-.thalamus .pop-borrar{position:absolute;right:0;top:calc(100% + 8px);z-index:40;width:290px;display:grid;gap:10px;padding:14px;border-radius:18px;background:var(--bg-flotante);border:1px solid var(--error-border);box-shadow:var(--shadow-main)}
-.thalamus .pop-borrar .der{display:flex;justify-content:flex-end;gap:8px}
+.thalamus .fe-borrar-caja .pop-borrar{position:absolute;right:0;top:calc(100% + 8px);z-index:40;width:320px;background:var(--bg-flotante);box-shadow:var(--shadow-main)}
 .thalamus :is(.modal,.ui-modal).modal--fin{width:min(760px,100%)!important}
 .thalamus .fin-ico{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;color:var(--error);background:var(--error-surface);border:1px solid var(--error-border)}
 .thalamus .fin-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--s4);align-items:stretch}
@@ -380,8 +377,6 @@
 .thalamus .fin-prev b{font-size:20px;font-weight:900;line-height:1.2}
 .thalamus .fin-prev span:last-child{font-size:13.5px;line-height:1.5;color:var(--rv-mut)}
 @media (max-width:640px){.thalamus .fe-mas,.thalamus .fin-grid{grid-template-columns:minmax(0,1fr)}.thalamus .fe-btn span{display:none}}
-.thalamus .link-btn--sutil{color:var(--text-muted-40);font-size:11px}
-.thalamus .link-btn--sutil:hover{color:var(--text-on-surface)}
 .thalamus .ct-fila{display:flex;align-items:center;gap:var(--s3);padding:8px 6px 8px 10px;border-radius:14px}
 .thalamus .ct-fila:hover{background:var(--mat-1)}
 .thalamus .ct-fila > svg{color:var(--text-muted-40);width:17px;height:17px}
@@ -467,19 +462,19 @@
 .thalamus .semana{display:inline-flex;gap:3px}
 .thalamus .semana i{width:16px;height:16px;border-radius:5px;display:grid;place-items:center;font-style:normal;font-size:8.5px;font-weight:900;background:var(--hueco);color:var(--text-muted-40)}
 .thalamus .semana i.on{background:color-mix(in srgb,var(--c) 34%,transparent);color:var(--text-on-surface)}
-.thalamus .avatar--l{width:48px;height:48px;border-radius:16px;font-size:15px;box-shadow:0 8px 20px -10px var(--c)}
 @container (max-width:760px){
   .thalamus .persona-cab{grid-template-columns:26px 48px minmax(0,1fr) 34px;row-gap:10px}
   .thalamus .pc-ctrl{grid-column:2 / -1;grid-row:2;grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 @container (max-width:460px){
   .thalamus .persona-cab{grid-template-columns:20px 40px minmax(0,1fr) 34px;column-gap:10px;padding:12px 12px 12px 6px}
-  .thalamus .persona-cab :is(.avatar--l,.ui-avatar--lg){width:40px;height:40px;border-radius:13px}
+  .thalamus .persona-cab :is(.avatar.avatar--l,.ui-avatar--lg){width:40px;height:40px;border-radius:13px}
   .thalamus .pc-ctrl{grid-column:1 / -1;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
   .thalamus .pc-ctrl > :is(.sx,.ui-select):first-of-type{grid-column:1 / -1}
 }
 .thalamus .avatar{width:38px;height:38px;flex-shrink:0;border-radius:13px;display:grid;place-items:center;font-size:13px;font-weight:900;color:var(--on-fc);background:var(--c)}
 .thalamus .avatar--sm{width:28px;height:28px;border-radius:9px;font-size:11px}
+.thalamus .avatar.avatar--l{width:48px;height:48px;border-radius:16px;font-size:15px;box-shadow:0 8px 20px -10px var(--c)}
 .thalamus .persona-nom{width:100%;min-width:0;height:32px;padding:0 10px;border-radius:10px;border:1px solid transparent;background:none;outline:none;font-size:16px;font-weight:800;letter-spacing:-.01em}
 .thalamus .persona-nom:hover{border-color:var(--border-subtle)}
 .thalamus .persona-nom:focus{border-color:var(--focus-blue);background:var(--bg-input);box-shadow:none}
@@ -492,15 +487,13 @@
 .thalamus .horas-btn[aria-expanded="true"]{border-color:var(--brand-secondary-border);background:var(--brand-secondary-surface);color:var(--text-on-surface)}
 .thalamus .horario{display:grid;gap:var(--s3);padding:var(--s4);border-top:1px solid var(--border-subtle)}
 .thalamus :is(.modal,.ui-modal).modal--hor{width:min(1040px,100%)!important;padding:0}
-.thalamus .hor-cab{display:flex;align-items:center;gap:var(--s3);padding:var(--s6) var(--s6) var(--s4)}
 .thalamus .hor-cab :is(.avatar--l,.ui-avatar--lg){border-radius:50%}
-.thalamus .hor-tit{flex:1;min-width:0;display:grid;gap:4px}
 .thalamus .hor-semana{display:grid;gap:var(--s3);padding:0 var(--s6) var(--s6)}
 .thalamus .hor-semana .av{max-height:62vh;overflow:auto}
 .thalamus .hor-ro{display:flex;align-items:center;gap:8px;margin:0 var(--s6);padding:10px 14px;border-radius:14px;background:var(--warning-surface);border:1px solid var(--warning-border);color:var(--warning);font-size:12.5px;font-weight:600}
 .thalamus .pc-vos{height:18px;padding:0 8px;border-radius:999px;display:inline-grid;place-items:center;font-size:9.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;background:var(--brand-secondary);color:var(--on-brand)}
 .thalamus .modal--hor .horario{padding:var(--s4) var(--s6) var(--s6)}
-@media (max-width:640px){.thalamus .hor-cab{padding:var(--s4)}.thalamus .modal--hor .horario{padding:var(--s3) var(--s4) var(--s4)}}
+@media (max-width:640px){.thalamus .modal--hor .horario{padding:var(--s3) var(--s4) var(--s4)}}
 .thalamus .horario-barra{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
 .thalamus .dia{display:grid;grid-template-columns:34px minmax(0,1fr);gap:var(--s3);align-items:start;padding:8px 0;border-top:1px solid var(--border-subtle);position:relative}
 .thalamus .dia:first-of-type{border-top:0}
@@ -849,12 +842,7 @@
 .thalamus .modal-cab{display:flex;align-items:center;gap:var(--s4);margin-bottom:var(--s4);flex-wrap:wrap}
 .thalamus .modal-tit{display:grid;gap:6px;min-width:0;flex:1}
 .thalamus :is(.modal,.ui-modal).modal--conf{width:min(900px,100%);padding:0}
-.thalamus .conf-cab{display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap;padding:var(--s6) var(--s6) var(--s4);border-bottom:1px solid var(--border-subtle)}
-.thalamus .conf-cab{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;row-gap:var(--s4)}
-.thalamus .conf-cab .tabs{grid-column:1 / -1;grid-row:2;justify-self:start}
-.thalamus .conf-cab > :is(.ibtn,.ui-ibtn){grid-column:4;grid-row:1}
 .thalamus .conf-cuerpo{padding:var(--s6);display:grid;gap:var(--s6)}
-.thalamus .fm-cab{display:flex;align-items:center;justify-content:space-between;gap:var(--s4);padding:var(--s6) var(--s6) var(--s4);border-bottom:1px solid var(--border-subtle)}
 .thalamus .fm-bloque{display:grid;gap:var(--s3);justify-items:start}
 .thalamus .fm-bloque > :is(.input,.ui-input),.thalamus .fm-bloque .ia{width:100%}
 .thalamus .fm-nuevo{display:grid;gap:var(--s3);width:100%;justify-items:start}
@@ -1257,9 +1245,7 @@
   .thalamus .barra{gap:8px}
   .thalamus .scrim{padding:0}
   .thalamus .modal{width:100%!important;max-height:94dvh;border-radius:26px 26px 0 0}
-  .thalamus .conf-cab{padding:var(--s4);gap:var(--s3)}
   .thalamus .conf-cab > svg{width:40px;height:40px}
-  .thalamus .conf-cab .t-h2{font-size:24px}
   .thalamus .conf-cuerpo{padding:var(--s4)}
   .thalamus .rte-texto{min-height:120px}
   .thalamus .input--fecha{width:140px}

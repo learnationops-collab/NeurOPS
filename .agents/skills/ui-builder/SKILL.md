@@ -75,10 +75,10 @@ Import: `import { Button, … } from '<ruta>/components/standard';`
 | `Input` | Campo suelto | `variant`: `number` (corto y centrado) · `date`, `invalid`, `as="textarea"`; el resto va al `<input>` (y `ref`) |
 | `InputGroup` | Campo con ícono o texto fijo adelante y, a veces, botón pegado | `prefix`, `invalid`, `as="form"`; el `<input>` va como hijo, sin clase |
 | `FieldError` | Mensaje de error de un campo | `role` (`alert` por defecto; `note` para una aclaración), `icon` (`false` lo saca), `as` |
-| `Switch` | Interruptor sí/no | `checked`, `onChange`, `label` |
+| `Switch` | Interruptor sí/no | `checked`, `onChange`, `label`; sin `onChange` es solo un indicador (dentro de una fila que ya es botón) |
 | `Stepper` | Contador con − y + | `value`, `min`, `max`, `onChange`, `display` (texto en lugar del número), `label` |
 | `Modal` | Ventana sobre la página (Escape, clic afuera, foco, bloquea el scroll). Su entrada no deja un `transform` en efecto, así un `Select` de adentro abre contra la pantalla; no le pongas `transform`/`filter` propios | `onClose`, `className` (ancho propio), `labelledBy`, `id` |
-| `ModalHeader` | Cabecera de un modal: ícono, título, subtítulo y cerrar | `title`, `subtitle`, `icon`, `titleId` (para `labelledBy` del Modal), `size`: `md` · `lg`, `onClose`, `closeProps` |
+| `ModalHeader` | Cabecera de un modal: ícono, título, subtítulo y cerrar | `title`, `subtitle`, `icon`, `titleId` (para `labelledBy` del Modal), `size`: `md` · `lg`, `actions` (antes de cerrar: vistas, menús), `children` (fila de abajo a todo el ancho: pestañas), `flush` (modal sin padding: la cabecera trae su margen y una línea abajo), `onClose`, `closeProps` |
 | `TextArea` | Texto largo que crece solo | `value`, `invalid`, `bare` (sin el estilo de campo, para pantallas con estilo propio) |
 | `toast()` + `Toaster` | Aviso corto abajo de la pantalla | `toast(texto, tone: success · error, action: {label, onClick})`; `<Toaster />` una vez en la app; `--ui-toast-bottom` si no hay dock |
 | `Tooltip` | Ayuda al pasar el mouse | `<Tooltip />` una vez en la app; cualquier elemento con `data-tip="Título|detalle"` |
@@ -123,11 +123,11 @@ El catálogo de piezas chicas (botón, chip, campo) ya está completo. **De acá
 
 ## Decisiones tomadas (19/10)
 
-- **Confirmar un borrado:** una sola forma, la caja `ConfirmDelete`. El popover del editor de formularios y la confirmación en línea de Mis eventos y Funnel pasan a la caja cuando se toque cada pantalla. El botón que la abre es siempre `danger` (Funnel hoy usa `secondary`: cambia).
-- **Cabeceras de modal:** todas con `ModalHeader`. Horario (`hor-cab`), Configuración (`conf-cab`) y Funnel (`fm-cab`) se migran; las pestañas de Configuración van debajo de la cabecera, con `Segmented`.
-- **`link-btn--sutil`:** se descarta. Esos dos usos siempre se vieron como links normales y así quedan; no se usa `subtle` ahí.
+- **Confirmar un borrado:** una sola forma, la caja `ConfirmDelete` (en el editor de formularios, la misma caja flota debajo de la papelera). El botón que la abre es siempre `danger`.
+- **Cabeceras de modal:** todas con `ModalHeader` (Horario, Configuración y Funnel usan `flush`); las pestañas de Configuración van debajo, con `Segmented`.
+- **`link-btn--sutil`:** se descarta. Esos dos usos siempre se vieron como links normales y así quedan.
 - **Avatar `lg`:** mide 48px, como decía la regla original.
-- **Errores de campo:** siempre `FieldError`. `.err-nuevo` se borra.
+- **Errores de campo:** siempre `FieldError`.
 - **Switch decorativo:** un `Switch` sin `onChange` se dibuja como indicador (un `span` sin foco ni rol de botón), para filas que ya son botón como la del modal de importar preguntas. No es una variante nueva: es el mismo componente sin acción.
 - **Barras:** los embudos de Marketing pasan a `Bars variant="rows"`. La lista de campañas de Workshop (`BarraCrece`) es única de esa pantalla y queda ahí.
 

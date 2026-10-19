@@ -19,14 +19,6 @@ import { copiarTexto } from '../../ui/toast';
 const AGRUPAR = [['funnel', 'Funnels', 'funnel'], ['formulario', 'Forms', 'form'], ['nada', 'All', 'lista']];
 const TIPO = { workshop: 'Workshop', vsl: 'VSL', setting: 'Setting', otro: 'Otro' };
 
-function ErrNuevo({ err, clase }) {
-    return (
-        <p className={clase} id="nuevo-err" role="alert" hidden={!err}>
-            {err && <><Icono n="alerta" s={14} /><span>{err}</span></>}
-        </p>
-    );
-}
-
 // Caja grande para crear el primer evento.
 function Compo({ cm, onCrear, err }) {
     const inp = useRef(null);
@@ -154,7 +146,7 @@ export default function ListaEventos() {
                     </InputGroup>
                 </div>
             </HeaderActions>
-            <ErrNuevo err={err} clase="err-nuevo" />
+            <FieldError id="nuevo-err" hidden={!err}>{err && <span>{err}</span>}</FieldError>
             {[...grupos.entries()].map(([k, lista]) => {
                 const ref = agrupar === 'nada' ? null : buscar(d, agrupar === 'funnel' ? 'funnels' : 'formularios', k);
                 return (

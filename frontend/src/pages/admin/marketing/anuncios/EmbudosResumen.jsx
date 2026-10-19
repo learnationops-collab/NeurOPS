@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Tags } from 'lucide-react';
-import { Tip } from '../../../comercial/components/Shared';
+import { Bars } from '../../../../components/standard';
 import EnlaceMeta from './EnlaceMeta';
 import { enlaceAdministrador } from './enlacesMeta';
 import { Columnas } from './SerieDiaria';
@@ -8,7 +8,7 @@ import { EMBUDOS, dinero, formatear, serieDeEmbudos } from './metricas';
 
 /**
  * Rendimiento › Todo: cuánto se gastó en Meta en cada embudo del período (Kerwin, 15/10/2026: «así
- * puedo ver cómo se va gastando en workshop, cómo se va gastando en setting»). Una tarjeta por embudo
+ * puedo ver cómo se va gastando en workshop, cómo se va gastando en setting»). Una fila por embudo
  * (Setting y Workshop abren su vista) y el gasto de cada día apilado por embudo. El embudo de cada
  * anuncio lo pone la sincronización y se corrige en la pestaña Meta Ads («Clasificar anuncios»,
  * `meta_ads_service.detectar_embudo`); «Abrir Meta» va al Administrador de anuncios de verdad.
@@ -40,33 +40,15 @@ const EmbudosResumen = ({ embudos, desde, hasta, moneda, cuentas, onElegir, irAM
                     <EnlaceMeta href={enlaceAdministrador(cuentas?.[0])}>Abrir Meta</EnlaceMeta>
                 </div>
             </div>
-            <div className="pareja mk-embudos-tarjetas" style={{ '--min': '170px', '--g': 'var(--s3)' }}>
-                {tarjetas.map((e) => {
-                    const fila = porClave[e.key] || { gasto: 0, anuncios: 0 };
-                    const pct = total ? Math.round((fila.gasto / total) * 100) : 0;
-                    const abre = e.key === 'setting' || e.key === 'workshop';
-                    const Contenido = (
-                        <>
-                            <span className="mk-embudo-cab">
-                                <i style={{ background: e.color }} aria-hidden="true" />
-                                <span className="t-eyebrow">{e.label}</span>
-                                <Tip texto={e.ayuda} titulo={e.label} />
-                            </span>
-                            <span className="mk-embudo-n num">{formatear(fila.gasto, 'money', moneda)}</span>
-                            <span className="t-cap mut40">{pct}% del gasto · {fila.anuncios} anuncios</span>
-                            <span className="mk-embudo-barra" aria-hidden="true"><i style={{ width: `${pct}%`, background: e.color }} /></span>
-                        </>
-                    );
-                    return abre ? (
-                        <button key={e.key} type="button" className="tarjeta mk-embudo mk-embudo--abre" onClick={() => onElegir(e.key)}
-                            aria-label={`Ver ${e.label}: ${formatear(fila.gasto, 'money', moneda)}`}>
-                            {Contenido}
-                        </button>
-                    ) : (
-                        <div key={e.key} className="tarjeta mk-embudo">{Contenido}</div>
-                    );
-                })}
-            </div>
+            <Bars variant="rows" className="mk-embudos-filas" label="Gasto por embudo" onSelect={onElegir} items={tarjetas.map((e) => {
+                const fila = porClave[e.key] || { gasto: 0, anuncios: 0 };
+                const abre = e.key === 'setting' || e.key === 'workshop';
+                return {
+                    key: e.key, label: e.label, color: e.color, value: fila.gasto, display: formatear(fila.gasto, 'money', moneda),
+                    detail: `${total ? Math.round((fila.gasto / total) * 100) : 0}% del gasto · ${fila.anuncios} anuncios`,
+                    tip: e.ayuda ? `${e.label}|${e.ayuda}` : undefined, disabled: !abre, title: abre ? `Ver ${e.label}` : undefined,
+                };
+            })} />
             <div className="mk-embudos-serie">
                 <div className="panel-cab-der mk-leyenda" aria-label="Leyenda">
                     {capas.map((c) => <span key={c.key}><i style={{ background: c.color }} />{c.label}</span>)}

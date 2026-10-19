@@ -19,7 +19,7 @@ import { buscar, colorLibre, maxOrden, nombreOrigen, ord } from '../../core/dato
 import { linkEvento } from '../../core/eventos';
 import { slugify, uid } from '../../core/util';
 import { LinksSetters, abrirEvento, crearEvento, useSetters } from './comun';
-import { Button, Chip, FieldError, IconButton, Input, InputGroup, LinkButton } from '../../../../components/standard';
+import { Button, Chip, ConfirmDelete, FieldError, Input, InputGroup, LinkButton, ModalHeader } from '../../../../components/standard';
 
 const TIPOS = [
     { v: 'workshop', n: 'Workshop', ico: 'monitor', ayuda: 'Clase en vivo. Un link «Grabación» cuenta como la grabación.' },
@@ -383,15 +383,9 @@ function EditarFunnel({ d, f, cerrar }) {
             </PlegableIA>
             <div className="fm-acc">
                 {borrar ? (
-                    <>
-                        <span className="t-sm">¿Eliminar <b>{f.nombre}</b>? Sus links dejan de funcionar.</span>
-                        <Button onClick={() => setBorrar(false)}>Cancelar</Button>
-                        <Button variant="dangerSolid" icon={<Icono n="basura" />} autoFocus
-                            onClick={() => { almacen.borrar('funnels', f.id); toast(f.nombre + ' eliminado'); cerrar(); }}>
-                            Eliminar
-                        </Button>
-                    </>
-                ) : <Button icon={<Icono n="basura" />} onClick={() => setBorrar(true)}>Eliminar funnel</Button>}
+                    <ConfirmDelete name={f.nombre} detail="Sus links dejan de funcionar." icon={<Icono n="basura" />} style={{ flex: '1 1 100%' }}
+                        onCancel={() => setBorrar(false)} onConfirm={() => { almacen.borrar('funnels', f.id); toast(f.nombre + ' eliminado'); cerrar(); }} />
+                ) : <Button variant="danger" icon={<Icono n="basura" />} onClick={() => setBorrar(true)}>Eliminar funnel</Button>}
             </div>
         </>
     );
@@ -403,10 +397,7 @@ export default function ModalFunnel({ estado }) {
     const cerrar = () => { almacen.flush(); ui.set({ funnel: null }); };
     return (
         <Modal onCerrar={cerrar} id="funnel" labelledBy="fm-tit" clase="modal--conf">
-            <div className="fm-cab">
-                <h2 className="t-h2" id="fm-tit">{f ? f.nombre : 'Nuevo funnel'}</h2>
-                <IconButton label="Cerrar" icon={<Icono n="x" />} onClick={cerrar} />
-            </div>
+            <ModalHeader flush size="lg" title={f ? f.nombre : 'Nuevo funnel'} titleId="fm-tit" onClose={cerrar} />
             <div className="conf-cuerpo">
                 {f ? <EditarFunnel d={d} f={f} cerrar={cerrar} /> : <NuevoFunnel d={d} cerrar={cerrar} />}
             </div>
