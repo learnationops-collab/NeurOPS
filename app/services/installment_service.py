@@ -12,6 +12,13 @@ def _add_months(d, months):
     return date(year, month, day)
 
 
+def _avisar_a_la_academia(client_id):
+    """El plan cambió: la Academia muestra el estado de pago del alumno (ver
+    `academy_payment_status`). En un hilo y sin levantar: el plan ya está guardado."""
+    from app.services import academy_payment_status
+    academy_payment_status.avisar([client_id])
+
+
 class InstallmentService:
     @staticmethod
     def create_plan(client_id, appointment_id, total, cobrado_hoy, num_cuotas, start_date=None, fechas=None, montos=None, programa_code=None):
@@ -51,6 +58,7 @@ class InstallmentService:
 
         if rest <= 0 or n <= 0:
             db.session.commit()
+            _avisar_a_la_academia(client_id)
             return []
 
         each = round(rest / n, 2)
@@ -94,6 +102,7 @@ class InstallmentService:
             plans.append(plan)
 
         db.session.commit()
+        _avisar_a_la_academia(client_id)
         return plans
 
     @staticmethod
@@ -154,6 +163,7 @@ class InstallmentService:
             cuota.numero_cuota = i
 
         db.session.commit()
+        _avisar_a_la_academia(client_id)
         return resultado
 
     @staticmethod
@@ -229,6 +239,7 @@ class InstallmentService:
             cuota.estado = estado
             cuota.fecha_pago = datetime.utcnow() if estado == 'pagado' else None
         db.session.commit()
+        _avisar_a_la_academia(cuota.client_id)
         return cuota, ajustada
 
     @staticmethod
@@ -252,9 +263,12 @@ class InstallmentService:
         )
         db.session.add(plan)
         db.session.commit()
+        _avisar_a_la_academia(client_id)
         return plan
 
     @staticmethod
     def delete_cuota(cuota):
+        client_id = cuota.client_id
         db.session.delete(cuota)
         db.session.commit()
+        _avisar_a_la_academia(client_id)

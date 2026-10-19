@@ -378,3 +378,45 @@ def find_forms(identifier):
         "client": _client_dict(client),
         "survey_answers": _survey_answers_list(client),
     }), 200
+
+
+# --- Estado de pago y baja (pedido del 19/10/2026, docs/academy_consulta_ventas.md §9) ----------
+
+@bp.route('/payment-status', methods=['GET'])
+@require_academy_token
+def list_payment_status():
+    """El estado de pago de todos los clientes con venta, plan o baja, paginado. Es la carga inicial
+    y el arreglo: el día a día lo empuja Work cuando algo cambia (`academy_payment_status`)."""
+    from app.services import academy_payment_status
+
+    page, limit = _parse_pagination()
+    return jsonify(_paginated(academy_payment_status.clientes_con_estado(),
+                              academy_payment_status.estado, page, limit)), 200
+
+
+@bp.route('/clients/baja', methods=['POST'])
+@require_academy_token
+def academy_baja():
+    """La Academia dio de baja del proceso a un alumno (o lo volvió a sumar): queda igual acá, con
+    el mismo motivo, para que su deuda salga de lo que queda por cobrar.
+
+    Cuerpo: `work_client_id` o `email`, `motivo` y `revertir` (true para deshacerla). No se le
+    devuelve el aviso a la Academia: el cambio salió de allá.
+    """
+    from app.services import academy_payment_status, baja_service
+
+    data = request.get_json(silent=True) or {}
+    cliente = academy_payment_status.buscar_cliente(data.get('work_client_id'), data.get('email'))
+    if not cliente:
+        return jsonify({"success": False, "error": "No existe ningún cliente con ese id o email"}), 404
+
+    if data.get('revertir'):
+        cambio = baja_service.revertir(cliente) is not None
+    else:
+        motivo = str(data.get('motivo') or '').strip()
+        cambio = baja_service.dar_de_baja(cliente, f'Academia: {motivo}' if motivo else 'Academia', None)
+    # Lo anotado para avisarle a la Academia no corre: la baja salió de allá.
+    baja_service.bajas_sin_avisar_academia()
+    db.session.commit()
+    return jsonify({"success": True, "changed": bool(cambio),
+                    "baja": baja_service.descriptor(cliente)}), 200

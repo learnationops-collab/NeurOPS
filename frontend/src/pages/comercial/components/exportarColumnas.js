@@ -138,6 +138,16 @@ export const PARTES_POR_COLUMNA = {
     ],
     ac_ejecuciones: [{ valor: porOrden }],
     ac_racha: [{ header: 'Racha (días)', valor: porOrden }],
+    ac_etapa: [
+        { valor: (f) => f.academia?.avance?.etapa ?? null },
+        { sub: 'hechas', header: 'Sesiones hechas', valor: (f) => aNumero(f.academia?.avance?.sesiones_hechas) },
+        { sub: 'total', header: 'Sesiones del proceso', valor: (f) => aNumero(f.academia?.avance?.sesiones_total) },
+        { sub: 'proxima', header: 'Próxima sesión', valor: (f) => f.academia?.avance?.proxima ?? null },
+    ],
+    ac_atraso: [
+        { header: 'Atraso (días)', valor: porOrden },
+        { sub: 'sin_lecciones', header: 'Días sin abrir lecciones', valor: (f) => aNumero(f.academia?.avance?.dias_sin_lecciones) },
+    ],
     ver: [],
 };
 

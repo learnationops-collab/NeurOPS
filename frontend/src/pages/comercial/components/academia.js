@@ -86,6 +86,10 @@ export const AYUDA_ACADEMIA = {
     lecciones: 'Lecciones completadas sobre el total de su programa.',
     ejecuciones: 'Ejecuciones (los ejercicios prácticos) que entregó en la Academia, acumuladas.',
     racha: 'Días seguidos que viene estudiando, según la Academia.',
+    etapa: 'Dónde está en el proceso de sesiones de la Academia: el módulo que estudia o la sesión '
+        + 'que espera, con las sesiones hechas de cuántas. La meta es completar todas en 30 días.',
+    atraso: 'Días de atraso con su próxima sesión: el proceso pide no más de 5 días entre una y otra. '
+        + 'Debajo, hace cuánto abrió una lección.',
     frescura: 'Cuándo se leyeron estos datos de la Academia. Se renuevan cada vez que alguien abre la '
         + 'pestaña Fulfillment de la ficha y con la sincronización automática, que va de a poco '
         + 'porque la Academia admite 60 consultas por minuto para todo el equipo.',
@@ -112,6 +116,10 @@ export const COLS_ACADEMIA = [
         ayuda: AYUDA_ACADEMIA.ejecuciones, orden: (f) => f.academia?.ejecuciones, ordenLabel: 'Ejecuciones entregadas' },
     { key: 'ac_racha', header: 'Racha', width: '0.65fr', min: 68, academia: true, ayuda: AYUDA_ACADEMIA.racha,
         orden: (f) => f.academia?.racha, ordenLabel: 'Racha de estudio' },
+    { key: 'ac_etapa', header: 'Etapa', width: '1.3fr', min: 120, academia: true, ayuda: AYUDA_ACADEMIA.etapa,
+        orden: (f) => f.academia?.avance?.sesiones_hechas, ordenLabel: 'Sesiones hechas' },
+    { key: 'ac_atraso', header: 'Atraso', width: '0.8fr', min: 84, academia: true, ayuda: AYUDA_ACADEMIA.atraso,
+        orden: (f) => f.academia?.avance?.atraso, ordenLabel: 'Atraso en sesiones' },
 ];
 
 export const FACETAS_ACADEMIA = [
@@ -136,6 +144,9 @@ export const formatoAcademia = {
     },
     ejecuciones: (v) => (v === null || v === undefined ? '—' : num(v)),
     racha: (v) => (v === null || v === undefined ? '—' : `${num(v)} ${v === 1 ? 'día' : 'días'}`),
+    sesiones: (a) => (a && a.sesiones_total ? `${num(a.sesiones_hechas ?? 0)}/${num(a.sesiones_total)} sesiones` : null),
+    atraso: (v) => (v === null || v === undefined ? '—' : (v > 0 ? `+${num(v)} ${v === 1 ? 'día' : 'días'}` : 'Al día')),
+    sinLecciones: (v) => (v === null || v === undefined ? 'nunca abrió una lección' : (v === 0 ? 'abrió una lección hoy' : `${num(v)} d sin lecciones`)),
 };
 
 /**

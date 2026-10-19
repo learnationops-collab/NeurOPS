@@ -77,6 +77,22 @@ class AcademySnapshot(db.Model):
     tickets_abiertos = db.Column(db.Integer, nullable=True)
     producto_activo = db.Column(db.String(150), nullable=True)
 
+    # El avance en el proceso de sesiones (pedido del 19/10/2026): sale del masivo de la Academia
+    # (`/students/progress`, una o dos peticiones para todos) y no del `/summary` de a uno. Es lo que
+    # le dice al closer cómo avanza el alumno para poder cobrar. Va en None si el alumno no está en
+    # proceso (en pausa, de baja o vencido) en la última lectura.
+    avance_etapa = db.Column(db.String(150), nullable=True)        # el módulo o la sesión donde está
+    avance_tipo = db.Column(db.String(10), nullable=True)          # module | session | done
+    avance_dias_en_etapa = db.Column(db.Integer, nullable=True)
+    sesiones_hechas = db.Column(db.Integer, nullable=True)
+    sesiones_total = db.Column(db.Integer, nullable=True)
+    proxima_sesion = db.Column(db.String(150), nullable=True)
+    proxima_estado = db.Column(db.String(40), nullable=True)       # Sin agenda, Agendada, Sin reportar…
+    atraso_dias = db.Column(db.Integer, nullable=True)             # más de 5 días sin su próxima sesión
+    dias_sin_lecciones = db.Column(db.Integer, nullable=True)      # None: nunca abrió una
+    fuera_de_plazo = db.Column(db.Boolean, nullable=True)          # inscripto hace más de 30 días
+    avance_at = db.Column(db.DateTime, nullable=True)              # cuándo se leyó el avance
+
     # Diferido: la tabla lee cientos de fotos por pedido y nunca mira el crudo.
     datos = deferred(db.Column(db.JSON, nullable=True))
 

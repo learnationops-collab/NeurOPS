@@ -22,8 +22,12 @@ def cron_sincronizar():
     `?presupuesto=N` lo ajusta (se acota a `PRESUPUESTO_MAXIMO`). Llamarlo de mas es seguro: cada
     corrida sigue desde el mas desactualizado y respeta el presupuesto, y un 429 de la Academia la
     corta sin perder lo que ya guardo.
+
+    Antes del lote, el avance de TODOS en un masivo (`sincronizar_avance`, una o dos peticiones):
+    con el cron cada hora, la cartera del closer sabe cómo avanza cada alumno.
     """
     from app.services import academy_snapshot_service
 
+    avance = academy_snapshot_service.sincronizar_avance()
     resultado = academy_snapshot_service.sincronizar_lote(presupuesto=request.args.get('presupuesto'))
-    return jsonify({'status': 'success', **resultado}), 200
+    return jsonify({'status': 'success', 'avance': avance, **resultado}), 200

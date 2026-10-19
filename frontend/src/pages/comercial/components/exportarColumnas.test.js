@@ -21,6 +21,9 @@ const ACADEMIA = {
     estado: chip('activo', 'Activo'), horas: 12.5, progreso: 33.3, lecciones: 7, lecciones_total: 40,
     ejecuciones: 3, racha: 4, ultima_actividad: '2026-10-08T14:00:00Z', sincronizado: '2026-10-09T09:15:00Z',
     intentado: '2026-10-09T09:15:00Z', error: null,
+    avance: { etapa: 'Scale Session', tipo: 'session', dias_en_etapa: 9, sesiones_hechas: 1, sesiones_total: 5,
+        proxima: 'Scale Session', proxima_estado: 'Sin agenda', atraso: 4, dias_sin_lecciones: 12,
+        fuera_de_plazo: true, leido: '2026-10-09T09:15:00Z' },
 };
 
 const AGENDA = {
