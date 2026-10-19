@@ -213,3 +213,10 @@
   - La elección queda en las agendas de esa persona con ese setter (`appointments.anuncio_id`, migración nueva) y manda sobre ManyChat en Marketing y en la bandeja. Antes no se podía corregir: Marketing toma la última respuesta de ManyChat antes de la reunión, y una respuesta nueva al principio no la pisaba.
   - Cambiar no pide el Instagram ni escribe en ManyChat. Asignar una pendiente, además de lo de siempre, también guarda la elección.
   - Verificación: 178 tests de pytest (Mis agendas, ventas del setter, anuncios y comercial), 133 de vitest del setter y la migración arriba y abajo en SQLite. No se probó en el navegador antes de subir porque staging no tenía la columna.
+
+- **19 de Octubre de 2026** *(Inbox: campañas propias que llevan sus palabras clave a un flujo, activas y sin pantalla. [app/automatizaciones/campanas.py](../../app/automatizaciones/campanas.py) [NEW], [app/automatizaciones/api_campanas.py](../../app/automatizaciones/api_campanas.py) [NEW], [app/automatizaciones/motor.py](../../app/automatizaciones/motor.py) [MODIFY], [app/automatizaciones/modelos.py](../../app/automatizaciones/modelos.py) [MODIFY], [migrations/versions/f2a6c8d4b1e3_campanas_del_inbox.py](../../migrations/versions/f2a6c8d4b1e3_campanas_del_inbox.py) [NEW])*:
+  - Una campaña (embudo, pago u orgánica, vigencia desde/hasta) junta palabras clave y las manda a un flujo; varias campañas pueden compartir flujo.
+  - Una palabra se puede reusar con otro significado en otra campaña, pero no en dos con vigencias que se pisan (se rechaza al guardar).
+  - El motor prioriza la palabra de una campaña vigente sobre el disparador propio de un flujo, y cada ejecución guarda la campaña y la palabra por la que entró.
+  - Por ahora se maneja solo por la API (`/api/inbox/campanas`): no hay pantalla y Marketing no cambia.
+  - Verificación: 113 tests de pytest de automatizaciones.

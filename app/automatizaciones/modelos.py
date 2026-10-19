@@ -6,6 +6,8 @@
     para esta cuenta). Guarda la ventana de 24 h y la pausa del bot cuando escribe un humano.
   · AutEjecucion: un contacto recorriendo una versión de un flujo (en qué nodo está, qué espera).
   · IgMensaje: cada mensaje de la conversación, entrante o saliente, una sola vez por `mid`.
+  · AutCampana: la campaña de marketing (funnel, pago u orgánica, vigencia) que manda sus palabras
+    clave a un flujo. Ver `campanas.py`.
 """
 from datetime import datetime, timezone
 
@@ -92,6 +94,10 @@ class AutEjecucion(db.Model):
     iniciada_en = db.Column(db.DateTime, nullable=False, default=ahora)
     actualizada_en = db.Column(db.DateTime, nullable=False, default=ahora, onupdate=ahora)
 
+    # Por qué entró: la campaña y la palabra clave (normalizada) que lo trajeron, fijas desde el inicio.
+    campana_id = db.Column(db.Integer, db.ForeignKey('aut_campanas.id', ondelete='SET NULL'), nullable=True, index=True)
+    clave = db.Column(db.String(100), nullable=True)
+
     contacto = db.relationship('IgContacto')
     version = db.relationship('AutFlujoVersion')
 
@@ -117,3 +123,50 @@ class IgMensaje(db.Model):
     ejecucion_id = db.Column(db.Integer, db.ForeignKey('aut_ejecuciones.id', ondelete='SET NULL'), nullable=True)
     nodo_id = db.Column(db.String(64), nullable=True)
     enviado_en = db.Column(db.DateTime, nullable=False, default=ahora, index=True)
+
+
+class AutCampana(db.Model):
+    """La campaña de marketing: arriba de las campañas de Meta (puede juntar varias, o ninguna si es
+    orgánica). Sus palabras clave llevan al flujo mientras esté vigente: [desde, hasta)."""
+    __tablename__ = 'aut_campanas'
+
+    EMBUDOS = ('setting', 'workshop', 'vsl', 'otro')
+    TIPOS = ('pago', 'organico')
+
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(150), nullable=False)
+    embudo = db.Column(db.String(20), nullable=False, default='setting')
+    tipo = db.Column(db.String(20), nullable=False, default='pago')
+    flujo_id = db.Column(db.Integer, db.ForeignKey('aut_flujos.id', ondelete='SET NULL'), nullable=True, index=True)
+    desde = db.Column(db.DateTime, nullable=False)
+    hasta = db.Column(db.DateTime, nullable=True)  # None: sin fin
+    creada_en = db.Column(db.DateTime, nullable=False, default=ahora)
+    actualizada_en = db.Column(db.DateTime, nullable=False, default=ahora, onupdate=ahora)
+
+    flujo = db.relationship('AutFlujo')
+    palabras = db.relationship('AutCampanaPalabra', cascade='all, delete-orphan', order_by='AutCampanaPalabra.id')
+    campanas_meta = db.relationship('AutCampanaMeta', cascade='all, delete-orphan', order_by='AutCampanaMeta.id')
+
+
+class AutCampanaPalabra(db.Model):
+    """Una palabra clave de la campaña. `clave` es la normalizada (`clave_de_palabra`, la misma de
+    Marketing); `texto`, como se escribió."""
+    __tablename__ = 'aut_campana_palabras'
+
+    id = db.Column(db.Integer, primary_key=True)
+    campana_id = db.Column(db.Integer, db.ForeignKey('aut_campanas.id', ondelete='CASCADE'), nullable=False, index=True)
+    clave = db.Column(db.String(100), nullable=False, index=True)
+    texto = db.Column(db.String(100), nullable=False)
+
+    __table_args__ = (db.UniqueConstraint('campana_id', 'clave', name='uq_aut_campana_palabras_clave'),)
+
+
+class AutCampanaMeta(db.Model):
+    """Una campaña de Meta que forma parte de la campaña de marketing (`MetaAnuncio.campana_id`)."""
+    __tablename__ = 'aut_campanas_meta'
+
+    id = db.Column(db.Integer, primary_key=True)
+    campana_id = db.Column(db.Integer, db.ForeignKey('aut_campanas.id', ondelete='CASCADE'), nullable=False, index=True)
+    meta_campana_id = db.Column(db.String(40), nullable=False, index=True)
+
+    __table_args__ = (db.UniqueConstraint('campana_id', 'meta_campana_id', name='uq_aut_campanas_meta'),)

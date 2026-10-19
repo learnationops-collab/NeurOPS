@@ -2,7 +2,8 @@
 
 Reglas que garantiza:
   · Un contacto tiene a lo sumo UNA ejecución abierta. Una palabra clave nueva cancela la anterior.
-  · Prioridad ante un mensaje: botón propio > palabra clave > respuesta a lo que se estaba esperando.
+  · Prioridad ante un mensaje: botón propio > palabra clave de una campaña vigente > disparador propio
+    del flujo > respuesta a lo que se estaba esperando.
   · Si la cuenta manda algo que no salió de este motor (una persona del equipo), el bot se pausa
     para ese contacto y se cancela lo que tenía abierto.
   · Nunca escribe fuera de la ventana de 24 h, salvo la respuesta privada a un comentario.
@@ -12,6 +13,7 @@ Reglas que garantiza:
 from datetime import timedelta
 
 from app import db
+from app.automatizaciones import campanas
 from app.automatizaciones.modelos import AutEjecucion, AutFlujo, AutFlujoVersion, IgContacto, IgMensaje
 from app.automatizaciones.nucleo import eventos as ev
 from app.automatizaciones.nucleo import grafo as g
@@ -48,6 +50,11 @@ class Motor:
                 return self._boton(contacto, *datos)
 
         canal = 'comentario' if evento.tipo == ev.COMENTARIO else 'dm'
+        if canal == 'dm':
+            version, campana, clave = self._version_de_campana(evento.texto, evento.momento)
+            if version:
+                self._iniciar(contacto, version, campana=campana, clave=clave)
+                return 'flujo_iniciado'
         version = self._version_disparada(evento.texto, canal, evento.publicacion_id, evento.momento)
         if version:
             self._iniciar(contacto, version, comentario_id=evento.comentario_id)
@@ -139,13 +146,24 @@ class Motor:
                     return version
         return None
 
-    def _iniciar(self, contacto, version, comentario_id=None, nodo=None):
+    def _version_de_campana(self, texto, momento):
+        """(versión, campaña, clave) si el mensaje es una palabra clave de una campaña vigente cuyo
+        flujo está activo desde antes del mensaje; si no, (None, None, None)."""
+        campana, clave = campanas.campana_de(texto, momento)
+        flujo = campana.flujo if campana else None
+        if flujo is None or flujo.estado != AutFlujo.ACTIVO or flujo.version_publicada is None:
+            return None, None, None
+        if flujo.activo_desde and momento < flujo.activo_desde:
+            return None, None, None
+        return flujo.version_publicada, campana, clave
+
+    def _iniciar(self, contacto, version, comentario_id=None, nodo=None, campana=None, clave=None):
         abierta = self._abierta(contacto)
         if abierta:
             self._cerrar(abierta, AutEjecucion.CANCELADA, 'Entró a otro flujo', liberar=False)
         ejecucion = AutEjecucion(contacto=contacto, version=version, estado=AutEjecucion.EN_CURSO,
                                  nodo_actual=nodo or version.grafo.get('inicio'), comentario_id=comentario_id,
-                                 iniciada_en=self.ahora)
+                                 iniciada_en=self.ahora, campana_id=campana.id if campana else None, clave=clave)
         db.session.add(ejecucion)
         db.session.flush()
         self._correr(ejecucion)

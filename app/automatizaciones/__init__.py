@@ -14,5 +14,6 @@ def registrar(app):
     """Las tablas y la API del área Inbox (/api/inbox, con sesión y CSRF como el resto)."""
     from app.automatizaciones import modelos  # noqa: F401  (que alembic y create_all vean las tablas)
     from app.automatizaciones.api import bp
+    from app.automatizaciones import api_campanas  # noqa: F401  (sus rutas se cuelgan de `bp`)
 
     app.register_blueprint(bp, url_prefix='/api/inbox')
