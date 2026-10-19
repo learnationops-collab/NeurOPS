@@ -113,16 +113,26 @@ Si una pantalla necesita ajustar el componente según el contexto (por ejemplo, 
 - Fuera de `.thalamus`, `.dc-shell` y los demás shells, `index.css` fuerza la tipografía con `!important`. Ahí los pesos 800 y 900 se ven como 400 y 600. Usar los componentes en pantallas viejas requiere sumar esa pantalla a las exclusiones de `index.css`, o migrarla a un shell.
 - No uses `components/ui/Button.jsx`, `Card.jsx` ni `Badge.jsx` en código nuevo: son el estilo viejo.
 
+## Granularidad: bloques, no piezas sueltas
+
+El catálogo de piezas chicas (botón, chip, campo) ya está completo. **De acá en adelante, lo que se estandariza son bloques**: la botonera de un pie de modal, la cabecera de un modal, la fila de una lista, la tarjeta de un listado, una sección de formulario. Un bloque estándar arma las piezas por dentro y la pantalla solo le pasa datos.
+
+- No se crea un componente estándar para una pieza que aparece en una sola pantalla, ni una prop para un detalle de un solo uso. Eso queda en la pantalla.
+- Un componente nuevo se justifica cuando el **bloque entero** se repite (o se va a repetir) en dos pantallas o más.
+- Antes de agregar una variante a una pieza chica, preguntá si el problema no es que falta el bloque que la contiene.
+
+## Decisiones tomadas (19/10)
+
+- **Confirmar un borrado:** una sola forma, la caja `ConfirmDelete`. El popover del editor de formularios y la confirmación en línea de Mis eventos y Funnel pasan a la caja cuando se toque cada pantalla. El botón que la abre es siempre `danger` (Funnel hoy usa `secondary`: cambia).
+- **Cabeceras de modal:** todas con `ModalHeader`. Horario (`hor-cab`), Configuración (`conf-cab`) y Funnel (`fm-cab`) se migran; las pestañas de Configuración van debajo de la cabecera, con `Segmented`.
+- **`link-btn--sutil`:** se descarta. Esos dos usos siempre se vieron como links normales y así quedan; no se usa `subtle` ahí.
+- **Avatar `lg`:** mide 48px, como decía la regla original.
+- **Errores de campo:** siempre `FieldError`. `.err-nuevo` se borra.
+- **Switch decorativo:** un `Switch` sin `onChange` se dibuja como indicador (un `span` sin foco ni rol de botón), para filas que ya son botón como la del modal de importar preguntas. No es una variante nueva: es el mismo componente sin acción.
+- **Barras:** los embudos de Marketing pasan a `Bars variant="rows"`. La lista de campañas de Workshop (`BarraCrece`) es única de esa pantalla y queda ahí.
+
 ## Pendientes conocidos
 
-- Hay tres formas de confirmar un borrado: caja (`ConfirmDelete`), popover (editor de formularios) y en línea (Mis eventos, Funnel). Falta elegir una.
-- El botón que abre la confirmación es `danger` en Evento y `secondary` en Funnel.
-- En el CSS viejo, `link-btn--sutil` nunca tuvo efecto: la regla base, escrita después, le pisaba el color. Los dos usos (Configurar evento › funnel, Sesiones › «Usar la propuesta») se ven como links normales y se migraron así. ¿Deberían ser `subtle`?
-- Avatar `lg` hoy solo suma una sombra: en el CSS viejo `.avatar--l` quedaba antes que `.avatar` y la base le pisaba el tamaño. ¿Debería medir 48px, como decía la regla?
-- El switch del modal de importar preguntas es solo un indicador dentro de una fila que ya es botón (un `Switch` ahí sería un botón dentro de otro): falta una variante decorativa.
-- El error de «Nuevo evento» de la lista de Eventos usa `.err-nuevo` (12px, peso normal) y el de arriba `FieldError` (12,5px, negrita): unificar.
-- Hay tres cabeceras de modal con diseño propio (Horario `hor-cab`, Configuración `conf-cab` con pestañas, Funnel `fm-cab`): candidatas a unificar con `ModalHeader` (cambia lo que se ve).
 - Calendar: los tonos de las tarjetas (llamada, libre, margen, ocupado, cancelada, hueco) viven en thalamus.css. Cuando otra pantalla use el calendario, pasarlos a variantes genéricas de CalendarEvent (`tone`: solid · soft · muted · success · dashed · hatched).
 - Calendar vista de mes: falta. La usan la página pública del lead (PasoCalendario) y la ficha del closer (SelectorFecha); son pantallas activas, migrar con cuidado.
 - Inbox (17/10): bandeja de triage, flujos con mini-embudo y lienzo con inspector fijo. Queda la vista previa del mensaje como lo ve el lead.
-- Barras: `Bars` reemplazó el mini-embudo de Workshop (`wt-mini-embudo`) y se borraron las barras sin uso de Thalamus (`.barra-f`, `.emb-f`, `.pista`). Quedan con dibujo propio: la lista de campañas de Workshop (`BarraCrece`, nombre y monto sobre la barra) y los embudos de Marketing (`mk-embudo-barra`, una tarjeta por embudo). Candidatos a `Bars variant="rows"` si se suma una variante con el rótulo arriba.
