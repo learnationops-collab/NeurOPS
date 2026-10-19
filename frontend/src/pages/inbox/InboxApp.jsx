@@ -4,7 +4,7 @@
 // los componentes estándar y el dock de las áreas de la dirección comercial. Cada sección manda sus
 // filtros y botones a la cabecera con <HeaderActions>.
 import { useEffect, useState } from 'react';
-import { Lock, MessagesSquare, Workflow } from 'lucide-react';
+import { Lock, Megaphone, MessagesSquare, Workflow } from 'lucide-react';
 import '../agendas_v2/thalamus.css';
 import '../comercial/comercial.css';
 import './inbox.css';
@@ -18,10 +18,12 @@ import DockSecciones from '../comercial/components/DockSecciones';
 import MenuSesion from '../comercial/components/MenuSesion';
 import Flujos from './Flujos';
 import Conversaciones from './Conversaciones';
+import Campanas from './Campanas';
 import { inboxApi } from './api';
 
 export const SECCIONES = [
     { id: 'flujos', label: 'Flujos', Icono: Workflow },
+    { id: 'campanas', label: 'Campañas', Icono: Megaphone },
     { id: 'conversaciones', label: 'Conversaciones', Icono: MessagesSquare },
 ];
 const CLAVE_SECCION = 'inbox-seccion';
@@ -91,6 +93,7 @@ export default function InboxApp() {
                     <main className="vista">
                         {!estado && <EmptyState>Cargando…</EmptyState>}
                         {estado && seccion === 'flujos' && <Flujos puedeEditar={!lectura} />}
+                        {estado && seccion === 'campanas' && <Campanas puedeEditar={!lectura} />}
                         {estado && seccion === 'conversaciones' && <Conversaciones />}
                     </main>
                 </div>

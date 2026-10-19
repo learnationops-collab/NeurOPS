@@ -4,6 +4,7 @@ import { AlertTriangle, CheckCircle2, Trash2 } from 'lucide-react';
 import { Button, Input } from '../../../components/standard';
 import { INICIO, TIPOS } from './grafoFlujo';
 import { Campo, PanelAccion, PanelCondicion, PanelInicio, PanelMensaje } from './paneles';
+import RegistroMensaje from './RegistroMensaje';
 import { porciento, rotuloPaso } from '../estadoFlujo';
 
 function Avisos({ lista }) {
@@ -108,6 +109,7 @@ export default function Panel({
             )}
             <Avisos lista={avisos.porNodo[nodo.id]} />
             {nodo.tipo === 'mensaje' && <PanelMensaje nodo={nodo} cambiar={cambiar} lectura={lectura} variables={variables} destinos={destinos} metrica={metrica} />}
+            {nodo.tipo === 'mensaje' && <RegistroMensaje nodo={nodo} cambiar={cambiar} lectura={lectura} />}
             {nodo.tipo === 'esperar' && (
                 <Campo label="Esperar (minutos)" ayuda="De 1 a 1440. Si pasan 24 h desde su último mensaje, no se le puede escribir.">
                     <Input variant="number" type="number" min={1} max={1440} value={nodo.minutos} disabled={lectura} aria-label="Minutos de espera"

@@ -36,6 +36,17 @@
 .thalamus.inbox .fl-nuevo{width:min(480px,100%)}
 .thalamus.inbox .fl-nuevo-form{display:grid;gap:var(--s3)}
 
+/* --- Campañas: tarjetas (base: la de flujo) y el editor --- */
+.thalamus.inbox .cp-chips{display:flex;flex-wrap:wrap;gap:6px}
+.thalamus.inbox .cp-chips:empty{display:none}
+.thalamus.inbox .cp-chip.ui-chip{gap:4px;padding-right:4px}
+.thalamus.inbox .cp-flujo{margin:0;display:flex;gap:6px;align-items:center;font-weight:700}
+.thalamus.inbox .cp-card .datos{grid-template-columns:repeat(4,minmax(0,1fr))}
+.thalamus.inbox .cp-editor{width:min(560px,100%)}
+.thalamus.inbox .cp-form{display:grid;gap:var(--s3);max-height:calc(100dvh - 180px);overflow:auto}
+.thalamus.inbox .cp-fila{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s3)}
+@media (max-width:520px){.thalamus.inbox .cp-fila{grid-template-columns:1fr}}
+
 /* --- Editor: riel · lienzo · inspector --- */
 .thalamus.inbox .ef-sep{color:var(--text-muted-40);font-weight:700}
 .thalamus.inbox .ef-nombre.ui-input{flex:0 1 260px;min-width:140px;height:36px;font-weight:800}

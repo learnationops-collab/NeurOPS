@@ -97,6 +97,8 @@ def envio(ejecucion, nodo, momento):
     db.session.flush()
     if fila.qualification not in rama_mensajes.CON_DATO:
         rama_mensajes.aplicar_a(fila)
+    if fila.qualification in rama_mensajes.CON_DATO:
+        ejecucion.califica = fila.qualification == 'true'
 
 
 def respuesta(ejecucion, nodo, momento):
@@ -114,6 +116,7 @@ def calificar(ejecucion, califica, momento):
     """La acción «califica» del flujo: manda sobre la rama, como el sí o no de ManyChat."""
     if not _activo(ejecucion):
         return
+    ejecucion.califica = bool(califica)
     fila = _filas(ejecucion, _lead(ejecucion.contacto)).first()
     if fila is not None:
         fila.qualification = 'true' if califica else 'false'

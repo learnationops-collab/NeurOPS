@@ -1,13 +1,16 @@
 """API de campañas del Inbox (/api/inbox/campanas): se cuelga del blueprint de `api.py`, con su guardia."""
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from flask import jsonify, request
 
 from app import db
-from app.automatizaciones import campanas, servicio
+from app.automatizaciones import campanas, metricas_campanas, servicio
 from app.automatizaciones.api import bp
 from app.automatizaciones.modelos import AutCampana, AutEjecucion
-from app.models import MetaAnuncio
+from app.models import ConversationalMessage, MetaAnuncio
+
+DIAS_POR_DEFECTO = 30
+PERIODO_MAXIMO = 400
 
 
 def _fecha(valor):
@@ -40,11 +43,39 @@ def _guardar(campana):
     return None
 
 
+def _periodo():
+    """(desde, hasta) de `?desde=&hasta=` (fechas); por defecto los últimos DIAS_POR_DEFECTO días."""
+    hoy = servicio.ahora().date()
+    try:
+        hasta = date.fromisoformat(request.args['hasta']) if request.args.get('hasta') else hoy
+        desde = date.fromisoformat(request.args['desde']) if request.args.get('desde') \
+            else hasta - timedelta(days=DIAS_POR_DEFECTO - 1)
+    except ValueError:
+        return None
+    return (desde, hasta) if desde <= hasta and (hasta - desde).days <= PERIODO_MAXIMO else None
+
+
 @bp.route('/campanas', methods=['GET'])
 def listar_campanas():
+    """Las campañas con sus métricas del período (`metricas_campanas`)."""
+    periodo = _periodo()
+    if periodo is None:
+        return jsonify({'message': 'Período inválido'}), 400
     ahora = servicio.ahora()
     todas = AutCampana.query.order_by(AutCampana.desde.desc(), AutCampana.id.desc()).all()
-    return jsonify({'campanas': [campanas.resumen(c, ahora) for c in todas]})
+    metricas = metricas_campanas.de_campanas(*periodo, ahora)
+    return jsonify({
+        'desde': periodo[0].isoformat(), 'hasta': periodo[1].isoformat(),
+        'campanas': [{**campanas.resumen(c, ahora), 'metricas': metricas.get(c.id)} for c in todas],
+    })
+
+
+@bp.route('/catalogo', methods=['GET'])
+def catalogo_de_mensajes():
+    """Los mensajes del catálogo de Conversaciones: lo que un paso del flujo registra para Marketing."""
+    mensajes = ConversationalMessage.query.order_by(ConversationalMessage.message_id).all()
+    return jsonify({'mensajes': [{'id': m.message_id, 'titulo': m.title, 'categoria': m.category, 'rama': m.rama,
+                                  'activo': bool(m.is_active)} for m in mensajes]})
 
 
 @bp.route('/campanas', methods=['POST'])

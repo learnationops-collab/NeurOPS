@@ -97,6 +97,8 @@ class AutEjecucion(db.Model):
     # Por qué entró: la campaña y la palabra clave (normalizada) que lo trajeron, fijas desde el inicio.
     campana_id = db.Column(db.Integer, db.ForeignKey('aut_campanas.id', ondelete='SET NULL'), nullable=True, index=True)
     clave = db.Column(db.String(100), nullable=True)
+    # Cómo terminó calificado en esta entrada (None: todavía no se sabe). Lo escribe `registro.py`.
+    califica = db.Column(db.Boolean, nullable=True)
 
     contacto = db.relationship('IgContacto')
     version = db.relationship('AutFlujoVersion')

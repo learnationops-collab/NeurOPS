@@ -16,4 +16,11 @@ export const inboxApi = {
     // { conversaciones, mediana_respuesta }
     conversaciones: (buscar) => api.get('/inbox/conversaciones', { params: buscar ? { buscar } : {} }).then(datos),
     conversacion: (id) => api.get(`/inbox/conversaciones/${id}`).then(datos),
+    // { desde, hasta, campanas: [{ ..., metricas }] } (app/automatizaciones/api_campanas.py)
+    campanas: (desde, hasta) => api.get('/inbox/campanas', { params: { desde, hasta } }).then(datos),
+    crearCampana: (campana) => api.post('/inbox/campanas', campana).then(datos),
+    guardarCampana: (id, campana) => api.put(`/inbox/campanas/${id}`, campana).then(datos),
+    borrarCampana: (id) => api.delete(`/inbox/campanas/${id}`),
+    campanasMeta: () => api.get('/inbox/campanas/meta').then((r) => r.data.campanas),
+    catalogo: () => api.get('/inbox/catalogo').then((r) => r.data.mensajes),
 };

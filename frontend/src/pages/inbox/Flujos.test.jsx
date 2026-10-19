@@ -6,7 +6,7 @@ import { inboxApi } from './api';
 vi.mock('./api', () => ({
     inboxApi: {
         flujos: vi.fn(), flujo: vi.fn(), crearFlujo: vi.fn(), guardarFlujo: vi.fn(), publicarFlujo: vi.fn(), borrarFlujo: vi.fn(),
-        pausarFlujo: vi.fn(), activarFlujo: vi.fn(),
+        pausarFlujo: vi.fn(), activarFlujo: vi.fn(), catalogo: vi.fn(() => Promise.resolve([])),
     },
 }));
 
