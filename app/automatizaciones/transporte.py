@@ -10,6 +10,7 @@ conversación que atrapa un flujo (requiere «Toma el control de las conversacio
 en Mensajería avanzada de la página) y lo libera al terminar, así vuelve a la app predeterminada.
 """
 import itertools
+import logging
 import os
 import time
 import uuid
@@ -17,6 +18,7 @@ import uuid
 import requests
 
 API = 'https://graph.instagram.com/v24.0'
+logger = logging.getLogger(__name__)
 
 
 class ErrorDeEnvio(Exception):
@@ -33,6 +35,7 @@ class TransporteSimulado:
     def __init__(self):
         self.enviados = []
         self.pausas = []
+        self.perfiles = {}  # igsid → {'username', 'name'} que devolvería Instagram
         self._contador = itertools.count(1)
 
     def enviar(self, destinatario, cuerpo):
@@ -43,6 +46,9 @@ class TransporteSimulado:
     def escribiendo(self, igsid, segundos):
         # Sin esperar: en la simulación y en los tests solo queda anotado, antes del mensaje que sigue.
         self.pausas.append({'igsid': igsid, 'segundos': segundos, 'antes_de': len(self.enviados)})
+
+    def perfil(self, igsid):
+        return self.perfiles.get(igsid, {})
 
     def tomar_control(self, igsid):
         return True
@@ -72,6 +78,22 @@ class TransporteMeta:
         except ErrorDeEnvio:
             pass
         time.sleep(segundos)
+
+    def perfil(self, igsid):
+        """{'username', 'name'} del contacto (los DMs no los traen); {} si Instagram no los da."""
+        if not self.token:
+            return {}
+        try:
+            respuesta = self.sesion.get(f'{API}/{igsid}', params={'fields': 'name,username'},
+                                        headers={'Authorization': f'Bearer {self.token}'}, timeout=15)
+            datos = respuesta.json() if respuesta.content else {}
+        except (requests.RequestException, ValueError) as error:
+            logger.error(f'[MOTOR IG] Perfil de {igsid}: {error}')
+            return {}
+        if respuesta.status_code >= 400 or 'error' in datos:
+            logger.error(f'[MOTOR IG] Perfil de {igsid}: {(datos.get("error") or {}).get("message")}')
+            return {}
+        return datos
 
     def tomar_control(self, igsid):
         """True si la conversación quedó bajo el control de esta app."""

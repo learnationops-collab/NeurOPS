@@ -149,6 +149,19 @@ def test_la_palabra_de_una_campana_pasa_aunque_el_bot_este_pausado(flujo, campan
     assert contacto.bot_pausado_hasta is None  # el flujo puede seguir con los botones
 
 
+def test_al_entrar_trae_el_usuario_de_instagram_para_los_tableros(flujo, campana, lead):
+    from app.models import ManychatLead
+    lead.transporte.perfiles[f.LEAD] = {'username': 'tavo_lev', 'name': 'Gustavo Levano'}
+    campana(['GUIA PERU'], flujo('Te mando la guía'))
+
+    lead.escribe('GUÍA PERÚ')
+
+    contacto = IgContacto.query.one()
+    assert (contacto.username, contacto.nombre) == ('tavo_lev', 'Gustavo Levano')
+    fila = ManychatLead.query.filter_by(manychat_id=f'ig:{f.LEAD}').one()
+    assert (fila.ig, fila.name) == ('tavo_lev', 'Gustavo Levano')
+
+
 def test_con_el_bot_pausado_lo_que_no_es_palabra_de_campana_sigue_ignorado(flujo, campana, lead, monkeypatch):
     monkeypatch.setenv('IG_MOTOR_MODO', 'real')
     campana(['GUIA PERU'], flujo('Te mando la guía'))

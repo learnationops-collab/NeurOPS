@@ -169,15 +169,41 @@ def test_una_palabra_clave_nueva_reinicia_el_flujo(flujo, lead):
     assert lead.textos()[-1] == '¿Cuál es tu perfil?'
 
 
-def test_un_boton_viejo_retoma_desde_su_destino(flujo, lead):
+def test_un_boton_ya_respondido_en_el_recorrido_no_hace_nada(flujo, lead):
     guia = flujo()
     lead.escribe('OBTENER GUIA')
     lead.toca(payload(guia, 'perfil', 'estudiante'))
     assert lead.ejecucion().estado == AutEjecucion.TERMINADA
+    enviados = len(lead.transporte.enviados)
 
     lead.toca(payload(guia, 'perfil', 'medico'), minutos=5)
+    lead.toca(payload(guia, 'perfil', 'estudiante'), minutos=1)
+
+    assert len(lead.transporte.enviados) == enviados
+    assert InstagramWebhookEvento.query.order_by(InstagramWebhookEvento.id.desc()).first().resultado == 'boton_usado'
+
+
+def test_al_reiniciar_el_flujo_los_botones_vuelven_a_valer(flujo, lead):
+    guia = flujo()
+    lead.escribe('OBTENER GUIA')
+    lead.toca(payload(guia, 'perfil', 'estudiante'))
+
+    lead.escribe('OBTENER GUIA', minutos=5)
+    lead.toca(payload(guia, 'perfil', 'medico'), minutos=1)  # el botón de la tarjeta vieja también
 
     assert lead.textos()[-2:] == ['Genial ya te lo mando 🙌', 'Antes, para qué examen te estás preparando?']
+
+
+def test_un_boton_de_un_mensaje_al_que_el_recorrido_no_llego_retoma_desde_ahi(flujo, lead):
+    guia = flujo()
+    lead.escribe('OBTENER GUIA')
+    lead.toca(payload(guia, 'perfil', 'medico'))
+    lead.escribe('MIR', minutos=1)
+    lead.escribe('OBTENER GUIA', minutos=5)  # recorrido nuevo: espera en «perfil», no pasó por «examen»
+
+    lead.llega(f.postback('x', payload(guia, 'perfil', 'estudiante'), lead.mid(), ms(lead.ahora)))
+
+    assert lead.textos()[-2:] == ['Recursos generales', 'image']
 
 
 def test_los_botones_de_manychat_no_hacen_nada(flujo, lead):
@@ -578,6 +604,27 @@ def test_tomar_y_liberar_el_control_llaman_a_meta():
     assert [(u.rsplit('/', 1)[1], c) for u, c, _ in sesion.llamadas] == [
         ('take_thread_control', {'recipient': {'id': f.LEAD}}),
         ('release_thread_control', {'recipient': {'id': f.LEAD}})]
+
+
+class SesionGet(SesionFalsa):
+    def get(self, url, params, headers, timeout):
+        self.llamadas.append((url, params, headers))
+        return self.post(url, None, headers, timeout)
+
+
+def test_el_perfil_se_pide_a_instagram():
+    sesion = SesionGet(200, {'id': f.LEAD, 'username': 'tavo_lev', 'name': 'Gustavo'})
+
+    perfil = TransporteMeta(token='tok', cuenta_id=f.CUENTA, sesion=sesion).perfil(f.LEAD)
+
+    assert (perfil['username'], perfil['name']) == ('tavo_lev', 'Gustavo')
+    assert sesion.llamadas[0][:2] == (f'https://graph.instagram.com/v24.0/{f.LEAD}', {'fields': 'name,username'})
+
+
+def test_si_instagram_no_da_el_perfil_no_rompe_nada():
+    sesion = SesionGet(400, {'error': {'message': 'no', 'code': 100}})
+
+    assert TransporteMeta(token='tok', cuenta_id=f.CUENTA, sesion=sesion).perfil(f.LEAD) == {}
 
 
 def test_escribiendo_muestra_el_indicador_y_espera(monkeypatch):

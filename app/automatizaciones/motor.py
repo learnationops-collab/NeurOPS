@@ -201,12 +201,23 @@ class Motor:
                                  meta_ad_id=meta_ad_id)
         db.session.add(ejecucion)
         db.session.flush()
+        if not contacto.username:
+            self._completar_perfil(contacto)
         if campana:
             setter = reparto.elegir(campana, contacto.id, self.ahora)
             ejecucion.setter_id = setter.id if setter else None
         registro.entrada(ejecucion, self.ahora)
         self._correr(ejecucion)
         return ejecucion
+
+    def _completar_perfil(self, contacto):
+        """El usuario y el nombre de Instagram (un DM no los trae): con el usuario los tableros cruzan
+        a la persona con sus agendas y ventas, como hacía el `lead_ig` de ManyChat."""
+        perfil = self.transporte.perfil(contacto.igsid)
+        if perfil.get('username'):
+            contacto.username = perfil['username'][:100]
+        if perfil.get('name') and not contacto.nombre:
+            contacto.nombre = perfil['name'][:150]
 
     def _boton(self, contacto, version_id, nodo_id, boton_id):
         version = db.session.get(AutFlujoVersion, version_id)
@@ -222,12 +233,24 @@ class Motor:
                 and abierta.estado == AutEjecucion.ESPERANDO_RESPUESTA:
             self._avanzar(abierta, boton_id)
             return 'boton'
+        if self._ya_respondido(contacto, version, nodo_id):
+            return 'boton_usado'
         # Un botón de un mensaje viejo: retoma el flujo desde donde lleva ese botón.
         hacia = g.destino(version.grafo, nodo_id, boton_id)
         if hacia is None:
             return 'boton_sin_destino'
         self._iniciar(contacto, version, nodo=hacia)
         return 'boton_reanuda'
+
+    def _ya_respondido(self, contacto, version, nodo_id):
+        """¿El último recorrido de este flujo ya pasó por ese mensaje? Como en ManyChat, los botones de
+        un mensaje valen una vez por recorrido; si el flujo se reinicia, vuelven a valer."""
+        ultima = (AutEjecucion.query.join(AutFlujoVersion, AutFlujoVersion.id == AutEjecucion.version_id)
+                  .filter(AutEjecucion.contacto_id == contacto.id, AutFlujoVersion.flujo_id == version.flujo_id)
+                  .order_by(AutEjecucion.id.desc()).first())
+        if ultima is None:
+            return False
+        return IgMensaje.query.filter_by(ejecucion_id=ultima.id, nodo_id=nodo_id).first() is not None
 
     def _respuesta(self, ejecucion, evento):
         nodo = g.nodos_por_id(ejecucion.version.grafo).get(ejecucion.nodo_actual) or {}
