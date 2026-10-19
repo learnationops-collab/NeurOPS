@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { LearnitoProvider } from '../../sesion/LearnitoContext';
 import LearnitoModal from './LearnitoModal';
 
-vi.mock('../../services/api', () => ({ default: { post: vi.fn() } }));
+vi.mock('../../services/api', () => ({ default: { post: vi.fn(), get: vi.fn(() => new Promise(() => {})) } }));
 const apariencia = vi.hoisted(() => ({ valor: { tema: 'classic', modo: 'claro', modoGuardado: 'claro' } }));
 vi.mock('../../context/AparienciaContext', () => ({ useApariencia: () => apariencia.valor }));
 

@@ -1,32 +1,49 @@
-"""Copiloto de closers: el chat con Claude (ver app/services/claude_service.py).
+"""Learnito, el copiloto de closers: el chat con Claude (ver app/services/claude_service.py).
 
-Primera versión, para probar el dictado por voz: conversa pero todavía no tiene herramientas, así
-que no ve deudas, cuotas ni el avance de los alumnos. El historial lo guarda la pantalla y lo manda
-entero en cada turno (la API de Claude no guarda estado); acá se valida y se acota.
+Al closer le da herramientas de solo lectura (app/services/copiloto_herramientas.py): sus agendas,
+la deuda de un cliente y quiénes más le deben. Con herramientas, una pregunta son varias llamadas a
+Claude: él pide una herramienta, Work la ejecuta con la sesión del closer y se la devuelve.
+
+Para gastar poco:
+- La pantalla guarda el historial y lo manda entero en cada turno (la API no guarda estado), pero
+  SOLO el texto: los resultados de herramientas de turnos anteriores no se reenvían.
+- Hasta `MAX_MENSAJES` mensajes por conversación y `MAX_TOKENS` de salida por llamada.
+- Tope de `TOPE_MENSUAL_USD` por persona y por mes, sumando todo su uso de la IA (`ai_usage`).
 """
+from datetime import date, timedelta
+from decimal import Decimal
+
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
 from app.decorators import copiloto_required
-from app.services.claude_service import ClaudeService, ClaudeServiceError
+from app.services.claude_service import ClaudeService, ClaudeServiceError, gasto_del_mes, inicio_del_mes
+from app.services.copiloto_herramientas import HERRAMIENTAS, ejecutar
+from app.services.user_time_service import hoy_del_usuario
 
 bp = Blueprint('copiloto_api', __name__)
 
 FEATURE = 'copiloto'
-MAX_MENSAJES = 20
+MAX_MENSAJES = 10
 MAX_CARACTERES = 4000
+MAX_TOKENS = 1024
+# Vueltas de herramienta por pregunta: alcanza para pedir dos o tres datos y contestar.
+MAX_VUELTAS = 4
+TOPE_MENSUAL_USD = Decimal('8')
 
 SISTEMA = '\n\n'.join([
-    'Sos el copiloto de los closers de Learnation, una academia que prepara médicos para el examen de '
-    'residencia.',
-    'Ayudás a un closer con su trabajo de ventas y cobranza: redactar mensajes de seguimiento a alumnos, '
-    'ordenar lo que tiene que hacer y pensar cómo encarar una conversación.',
-    'Todavía no tenés acceso a los datos del sistema: no ves deudas, cuotas, pagos ni el avance de los '
-    'alumnos en la Academia. Si te piden uno de esos datos, decí que todavía no está conectado y no lo '
-    'inventes. Si el closer te da el dato, usalo.',
-    'Hablás en español rioplatense, con "vos". Respuestas cortas y directas. Los mensajes para alumnos, '
-    'listos para copiar.',
+    'Sos Learnito, el copiloto de los closers de Learnation, una academia que prepara médicos para el '
+    'examen de residencia.',
+    'Ayudás al closer con ventas y cobranza: sus agendas, quién le debe, mensajes de seguimiento y cómo '
+    'encarar una conversación.',
+    'Los datos salen solo de tus herramientas. Si no tenés una herramienta para algo (por ejemplo, el '
+    'avance de un alumno en la Academia), decí que todavía no está conectado. Nunca inventes datos.',
+    'Español rioplatense, con "vos". Respuestas cortas. Los mensajes para alumnos, listos para copiar.',
+    'Texto plano: la pantalla no muestra markdown, así que nada de asteriscos, # ni >. Para listas, una '
+    'línea por ítem.',
 ])
+SIN_HERRAMIENTAS = ('Todavía no ves datos del sistema (agendas, deudas, avance): si te piden uno, decí que '
+                    'por ahora solo se conectan para los closers.')
 
 
 def _validar(mensajes):
@@ -49,6 +66,53 @@ def _validar(mensajes):
     return None
 
 
+def _uso(user_id):
+    gastado = gasto_del_mes(user_id)
+    inicio = inicio_del_mes().date()
+    renueva = (inicio + timedelta(days=32)).replace(day=1)
+    return {
+        'gastado_usd': float(round(gastado, 4)),
+        'tope_usd': float(TOPE_MENSUAL_USD),
+        'porcentaje': min(100, round(float(gastado / TOPE_MENSUAL_USD) * 100, 1)),
+        'renueva': renueva.isoformat(),
+    }
+
+
+def _conversar(historial, con_herramientas):
+    """Llama a Claude hasta que conteste con texto, ejecutando las herramientas que pida."""
+    hoy = hoy_del_usuario(current_user) if con_herramientas else date.today()
+    partes = [SISTEMA] if con_herramientas else [SISTEMA, SIN_HERRAMIENTAS]
+    params = {
+        'system': '\n\n'.join([*partes, f'Hoy es {hoy.isoformat()}.']),
+        'max_tokens': MAX_TOKENS,
+        'output_config': {'effort': 'low'},
+    }
+    if con_herramientas:
+        params['tools'] = HERRAMIENTAS
+    for _ in range(MAX_VUELTAS):
+        respuesta = ClaudeService.create_message(FEATURE, current_user.id, messages=historial, **params)
+        if respuesta.stop_reason != 'tool_use':
+            return respuesta
+        historial.append({'role': 'assistant', 'content': respuesta.content})
+        resultados = []
+        for bloque in respuesta.content:
+            if bloque.type != 'tool_use':
+                continue
+            texto, es_error = ejecutar(bloque.name, bloque.input, current_user)
+            resultado = {'type': 'tool_result', 'tool_use_id': bloque.id, 'content': texto}
+            if es_error:
+                resultado['is_error'] = True
+            resultados.append(resultado)
+        historial.append({'role': 'user', 'content': resultados})
+    return None
+
+
+@bp.route('/uso', methods=['GET'])
+@copiloto_required
+def uso():
+    return jsonify(_uso(current_user.id)), 200
+
+
 @bp.route('/mensaje', methods=['POST'])
 @copiloto_required
 def mensaje():
@@ -56,19 +120,20 @@ def mensaje():
     error = _validar(mensajes)
     if error:
         return jsonify({'error': error}), 400
+    if gasto_del_mes(current_user.id) >= TOPE_MENSUAL_USD:
+        return jsonify({'error': f'Llegaste al tope de uso de este mes (US${TOPE_MENSUAL_USD:.0f}). '
+                                 'Se renueva el 1°.', 'uso': _uso(current_user.id)}), 429
 
+    historial = [{'role': m['role'], 'content': m['content'].strip()} for m in mensajes]
     try:
-        respuesta = ClaudeService.create_message(
-            FEATURE, current_user.id,
-            system=SISTEMA,
-            messages=[{'role': m['role'], 'content': m['content'].strip()} for m in mensajes],
-            max_tokens=2048,
-            output_config={'effort': 'low'},
-        )
+        respuesta = _conversar(historial, con_herramientas=current_user.role == 'closer')
     except ClaudeServiceError as e:
-        return jsonify({'error': str(e)}), e.status_code
+        return jsonify({'error': str(e), 'uso': _uso(current_user.id)}), e.status_code
 
-    texto = ''.join(b.text for b in respuesta.content if b.type == 'text').strip()
-    if respuesta.stop_reason == 'refusal' or not texto:
-        return jsonify({'error': 'El copiloto no pudo responder eso. Probá reformularlo.'}), 502
-    return jsonify({'texto': texto}), 200
+    texto = ''
+    if respuesta is not None:
+        texto = ''.join(b.text for b in respuesta.content if b.type == 'text').strip()
+    if respuesta is None or respuesta.stop_reason == 'refusal' or not texto:
+        return jsonify({'error': 'Learnito no pudo responder eso. Probá reformularlo.',
+                        'uso': _uso(current_user.id)}), 502
+    return jsonify({'texto': texto, 'uso': _uso(current_user.id)}), 200

@@ -13,9 +13,11 @@ aplica en un solo lugar.
 import logging
 import os
 import time
+from datetime import datetime
 from decimal import Decimal
 
 import anthropic
+from sqlalchemy import func
 
 from app import db
 from app.models import AiUsage
@@ -38,6 +40,21 @@ HAIKU_TRAMO_LARGO_DESDE = 100_000
 HAIKU_TRAMO_LARGO = {'input': '0.50', 'output': '2.50', 'cache_write': '0.625', 'cache_read': '0.05'}
 
 _MILLON = Decimal(1_000_000)
+
+
+def inicio_del_mes(ahora=None):
+    """El primer instante del mes en curso (UTC, como `AiUsage.created_at`)."""
+    ahora = ahora or datetime.utcnow()
+    return ahora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+
+def gasto_del_mes(user_id, feature=None):
+    """Lo que gastó un usuario en el mes en curso, en USD (todas las funciones, o una)."""
+    query = db.session.query(func.coalesce(func.sum(AiUsage.cost_usd), 0)).filter(
+        AiUsage.user_id == user_id, AiUsage.created_at >= inicio_del_mes())
+    if feature:
+        query = query.filter(AiUsage.feature == feature)
+    return Decimal(str(query.scalar() or 0))
 
 
 class ClaudeServiceError(Exception):

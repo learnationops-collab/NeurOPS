@@ -6,11 +6,13 @@ import { Button, EmptyState, FieldError, IconButton, TextArea } from '../../comp
 import { useLearnito } from '../../sesion/LearnitoContext';
 import { juntar } from './dictado';
 import { useDictado } from './useDictado';
+import UsoMensual from './UsoMensual';
 import './copiloto.css';
 
 const SUGERENCIAS = [
+    'Decime mis agendas de hoy',
+    '¿Quién me debe más?',
     'Redactame un seguimiento para un alumno que no responde hace una semana',
-    'Ayudame a ordenar mis cobros de hoy',
 ];
 
 function Mensaje({ role, content }) {
@@ -31,16 +33,19 @@ function Mensaje({ role, content }) {
 }
 
 export default function LearnitoChat() {
-    const { mensajes, enviando, enviar, lleno, borrador: texto, setBorrador: setTexto } = useLearnito();
+    const {
+        mensajes, enviando, enviar, lleno, agotado, uso, cargarUso, borrador: texto, setBorrador: setTexto,
+    } = useLearnito();
     const [error, setError] = useState(null);
     const dictado = useDictado((frase) => setTexto((t) => juntar(t, frase)));
     const finRef = useRef(null);
 
+    useEffect(() => { cargarUso(); }, [cargarUso]);
     useEffect(() => { finRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [mensajes, enviando]);
 
     const mandar = async () => {
         const limpio = texto.trim();
-        if (!limpio || enviando || lleno) return;
+        if (!limpio || enviando || lleno || agotado) return;
         dictado.detener();
         setTexto('');
         setError(null);
@@ -69,8 +74,8 @@ export default function LearnitoChat() {
                             {SUGERENCIAS.map((s) => <Button key={s} onClick={() => setTexto(s)}>{s}</Button>)}
                         </div>
                     )}>
-                    Escribí o tocá el micrófono y hablá. Todavía no veo deudas ni el avance de los alumnos:
-                    si los necesitás, contámelos.
+                    Escribí o tocá el micrófono y hablá. Veo tus agendas y quién te debe; el avance de los
+                    alumnos todavía no.
                 </EmptyState>
             ) : (
                 <ul className="cp-lista" aria-live="polite">
@@ -93,12 +98,13 @@ export default function LearnitoChat() {
                         disabled={!dictado.soportado || enviando}
                         onClick={dictado.escuchando ? dictado.detener : dictado.empezar} />
                     <Button variant="primary" icon={<Send size={14} />} onClick={mandar}
-                        disabled={!texto.trim() || enviando || dictado.escuchando || lleno}>
+                        disabled={!texto.trim() || enviando || dictado.escuchando || lleno || agotado}>
                         Enviar
                     </Button>
                 </div>
                 {(dictado.error || error) && <FieldError>{dictado.error || error}</FieldError>}
                 {lleno && <FieldError role="note">La conversación llegó al límite. Empezá una nueva.</FieldError>}
+                <UsoMensual uso={uso} />
             </div>
         </div>
     );
