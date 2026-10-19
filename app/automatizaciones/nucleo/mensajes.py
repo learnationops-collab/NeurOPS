@@ -56,6 +56,11 @@ def construir(nodo, variables, version_id):
     return cuerpos
 
 
+def pausas(nodo):
+    """Segundos de «escribiendo…» antes de cada cuerpo de `construir` (uno por contenido, en el mismo orden)."""
+    return [item.get('escribiendo') or 0 for item in nodo.get('contenido') or []]
+
+
 def texto_visible(cuerpo):
     """Lo que ve el contacto, para guardarlo en el historial."""
     if 'text' in cuerpo:

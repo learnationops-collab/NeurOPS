@@ -580,6 +580,44 @@ def test_tomar_y_liberar_el_control_llaman_a_meta():
         ('release_thread_control', {'recipient': {'id': f.LEAD}})]
 
 
+def test_escribiendo_muestra_el_indicador_y_espera(monkeypatch):
+    dormido = []
+    monkeypatch.setattr('app.automatizaciones.transporte.time.sleep', dormido.append)
+    sesion = SesionFalsa(200, {'recipient_id': f.LEAD})
+
+    TransporteMeta(token='tok', cuenta_id=f.CUENTA, sesion=sesion).escribiendo(f.LEAD, 3)
+
+    assert sesion.llamadas[0][1] == {'recipient': {'id': f.LEAD}, 'sender_action': 'typing_on'}
+    assert dormido == [3]
+
+
+def test_si_meta_no_muestra_el_indicador_la_pausa_se_hace_igual(monkeypatch):
+    dormido = []
+    monkeypatch.setattr('app.automatizaciones.transporte.time.sleep', dormido.append)
+    sesion = SesionFalsa(400, {'error': {'message': "not the thread owner", 'code': 100}})
+
+    TransporteMeta(token='tok', cuenta_id=f.CUENTA, sesion=sesion).escribiendo(f.LEAD, 2)
+
+    assert dormido == [2]
+
+
+def test_el_motor_hace_la_pausa_antes_del_contenido_que_la_tiene(flujo, lead):
+    grafo = f.guia()
+    perfil = g_nodo(grafo, 'perfil')
+    perfil['contenido'] = [{'tipo': 'texto', 'texto': 'Buenas!'},
+                           {**perfil['contenido'][-1], 'escribiendo': 4}]
+    flujo(grafo)
+
+    lead.escribe('OBTENER GUIA')
+
+    assert lead.textos() == ['Buenas!', '¿Cuál es tu perfil?']
+    assert lead.transporte.pausas == [{'igsid': f.LEAD, 'segundos': 4, 'antes_de': 1}]
+
+
+def g_nodo(grafo, nid):
+    return next(n for n in grafo['nodos'] if n['id'] == nid)
+
+
 def test_sin_token_no_intenta_mandar():
     with pytest.raises(ErrorDeEnvio):
         TransporteMeta(token=None, cuenta_id=None, sesion=SesionFalsa(200, {})).enviar({'id': f.LEAD}, {'text': 'x'})

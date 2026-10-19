@@ -11,6 +11,7 @@ en Mensajería avanzada de la página) y lo libera al terminar, así vuelve a la
 """
 import itertools
 import os
+import time
 import uuid
 
 import requests
@@ -31,12 +32,17 @@ class ErrorDeEnvio(Exception):
 class TransporteSimulado:
     def __init__(self):
         self.enviados = []
+        self.pausas = []
         self._contador = itertools.count(1)
 
     def enviar(self, destinatario, cuerpo):
         mid = f'sim-{next(self._contador)}-{uuid.uuid4().hex[:8]}'
         self.enviados.append({'destinatario': destinatario, 'cuerpo': cuerpo, 'mid': mid})
         return mid
+
+    def escribiendo(self, igsid, segundos):
+        # Sin esperar: en la simulación y en los tests solo queda anotado, antes del mensaje que sigue.
+        self.pausas.append({'igsid': igsid, 'segundos': segundos, 'antes_de': len(self.enviados)})
 
     def tomar_control(self, igsid):
         return True
@@ -57,6 +63,15 @@ class TransporteMeta:
     def enviar(self, destinatario, cuerpo):
         datos = self._post('messages', {'recipient': destinatario, 'message': cuerpo})
         return datos.get('message_id')
+
+    def escribiendo(self, igsid, segundos):
+        """Muestra «escribiendo…» y espera, como una persona que tipea. Si Meta no muestra el indicador
+        (p. ej. la conversación todavía es de otra app), la pausa se hace igual."""
+        try:
+            self._post('messages', {'recipient': {'id': igsid}, 'sender_action': 'typing_on'})
+        except ErrorDeEnvio:
+            pass
+        time.sleep(segundos)
 
     def tomar_control(self, igsid):
         """True si la conversación quedó bajo el control de esta app."""

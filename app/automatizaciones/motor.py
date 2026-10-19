@@ -324,7 +324,9 @@ class Motor:
             self._cerrar(ejecucion, AutEjecucion.VENTANA_VENCIDA, 'Pasaron más de 24 h desde el último mensaje del contacto')
             return False
         variables = {**(contacto.variables or {}), 'nombre': contacto.nombre or '', 'usuario': contacto.username or ''}
-        for cuerpo in mensajes.construir(nodo, variables, ejecucion.version_id):
+        for cuerpo, pausa in zip(mensajes.construir(nodo, variables, ejecucion.version_id), mensajes.pausas(nodo)):
+            if pausa and not ejecucion.comentario_id:
+                self.transporte.escribiendo(contacto.igsid, pausa)
             if ejecucion.comentario_id:
                 # Respuesta privada al comentario: Instagram permite UNA; después hace falta que conteste.
                 destinatario = {'comment_id': ejecucion.comentario_id}
