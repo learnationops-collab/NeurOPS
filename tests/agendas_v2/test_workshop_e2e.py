@@ -86,9 +86,13 @@ def discord(monkeypatch):
     class Respuesta:
         status_code = 204
 
+    def sin_chromium(d):
+        raise RuntimeError('sin chromium')
+
     monkeypatch.setenv('DISCORD_AGENDAS_WEBHOOK', 'https://discord.test/webhook')
-    monkeypatch.setattr('app.agendas_v2.operacion.requests.post',
+    monkeypatch.setattr('app.agendas_v2.avisos_discord.requests.post',
                         lambda url, json=None, timeout=None: enviados.append(json) or Respuesta())
+    monkeypatch.setattr('app.services.report_image_service.ReportImageService.generate_agenda_v2_card', sin_chromium)
     return enviados
 
 
@@ -295,9 +299,10 @@ def test_un_workshop_completo(client, workshop, closers, google, whatsapp, disco
     for evt in google['crear']:
         assert evt['invitado'].startswith('lead') and (evt['fin'] - evt['inicio']).seconds == 45 * 60
     assert sorted(e['user_id'] for e in google['crear']) == sorted([ids['ana'], ids['beto'], ids['ana'], ids['caro'], ids['caro']])
-    # Cada closer recibe su aviso por WhatsApp y el equipo por Discord; los descalificados no avisan.
+    # Cada closer recibe su aviso por WhatsApp y el equipo por Discord; los descalificados avisan solo a Discord.
     assert sorted(whatsapp) == sorted(['59170000000', '59170000001', '59170000000', '59170000002', '59170000002'])
-    assert len(discord) == 5
+    titulos = [m['embeds'][0]['title'] for m in discord]
+    assert len([t for t in titulos if not t.startswith('No calificó')]) == 5
     # Los descalificados quedan como clientes con su formulario, sin agenda.
     for email in ('lead6@correo.com', 'lead7@correo.com', 'lead8@correo.com'):
         c = Client.query.filter_by(email=email).one()

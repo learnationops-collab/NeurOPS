@@ -14,7 +14,7 @@ import { Chip, IconButton, Input, LinkButton, Switch } from '../../../../compone
 
 const OPC_TIPO = TIPOS.map(t => ({ v: t.k, n: t.n, icono: t.ico }));
 function ptsColor(v) { return v == null ? 'var(--text-muted-40)' : v >= 8 ? 'var(--success)' : v >= 5 ? 'var(--warning)' : 'var(--error)'; }
-const opVacia = () => ({ id: uid('o'), texto: '', puntos: null, descalifica: false });
+const opVacia = () => ({ id: uid('o'), texto: '', corto: '', puntos: null, descalifica: false });
 
 // Columnas fijas: tipo, peso y estado ocupan siempre el mismo ancho, haya dato o no.
 function Fichas({ q }) {
@@ -70,7 +70,7 @@ function Opciones({ q, cambiar, enfocar }) {
 
     return (
         <div className="ops">
-            <div className="ops-cab"><span>Opciones</span><span>Pts</span><span title="Descalifica"><Icono n="prohibido" /></span><span /></div>
+            <div className="ops-cab"><span>Opciones</span><span title="Lo que se lee en el aviso de Discord">Corto</span><span>Pts</span><span title="Descalifica"><Icono n="prohibido" /></span><span /></div>
             <div className="ops" ref={contenedor}>
                 {lista.map((id, k) => {
                     // j: índice real (para editar); k: posición en pantalla (la letra sigue al arrastre).
@@ -82,6 +82,8 @@ function Opciones({ q, cambiar, enfocar }) {
                             <span className="op-letra">{letra(k)}</span>
                             <Input className="op-in" id={'op-' + o.id} maxLength={200} value={o.texto} placeholder={'Opción ' + (k + 1)} aria-label={'Opción ' + letra(k)}
                                 onChange={e => { const v = e.target.value; cambiar(x => { x.opciones[j].texto = v; }); }} onPaste={e => pegar(e, j)} />
+                            <Input className="op-in op-corto" maxLength={40} value={o.corto || ''} placeholder="Sí, No…" aria-label={'Versión corta de la opción ' + letra(k)}
+                                title="Lo que se lee en el aviso de Discord" onChange={e => { const v = e.target.value; cambiar(x => { x.opciones[j].corto = v; }); }} />
                             <span className="pts" role="group" aria-label={'Puntos de la opción ' + letra(k)}>
                                 <button type="button" data-pts="-1" aria-label="Menos puntos" disabled={!q.peso || o.puntos == null} onClick={() => pts(j, -1)}><Icono n="minus" /></button>
                                 <b className="num" style={{ '--c': ptsColor(o.puntos) }}>{o.puntos == null ? '–' : o.puntos}</b>
@@ -144,6 +146,9 @@ function Cuerpo({ q, cambiar, enfocar }) {
                     <Icono n="user" />
                 </button>
             </div>
+            <label className="sr" htmlFor={'pc-' + q.id}>Nombre corto</label>
+            <Input id={'pc-' + q.id} maxLength={40} value={q.corto || ''} placeholder="Nombre corto para el aviso de Discord (ej.: Inversión)"
+                onChange={e => { const v = e.target.value; cambiar(x => { x.corto = v; }); }} />
             <label className="sr" htmlFor={'pa-' + q.id}>Texto de ayuda</label>
             <Input id={'pa-' + q.id} maxLength={300} value={q.ayuda} placeholder="Texto de ayuda (opcional)"
                 onChange={e => { const v = e.target.value; cambiar(x => { x.ayuda = v; }); }} />

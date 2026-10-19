@@ -60,3 +60,16 @@ def test_la_lista_trae_roles_y_calendar(client, admin_h, make_user, db):
     db.session.commit()
     fila = next(u for u in client.get('/api/admin/users', headers=h).get_json() if u['id'] == beto.id)
     assert fila['role'] == 'closer' and fila['roles'] == ['closer', 'setter'] and fila['calendar'] is True
+
+
+@pytest.mark.parametrize('pegado, guardado', [
+    ('<@454493146160824331>', '454493146160824331'),
+    ('454493146160824331', '454493146160824331'),
+    ('@elias', None),
+    ('', None),
+])
+def test_el_id_de_discord_se_guarda_tal_como_lo_da_discord(client, admin_h, make_user, pegado, guardado):
+    _, h = admin_h
+    beto = make_user(role='setter', username='beto')
+    assert client.put(f'/api/admin/users/{beto.id}', headers=h, json={'discord_id': pegado}).status_code == 200
+    assert User.query.get(beto.id).discord_id == guardado

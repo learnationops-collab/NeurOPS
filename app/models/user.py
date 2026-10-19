@@ -150,6 +150,8 @@ class User(UserMixin, db.Model):
     # Sin confirmar no recibe agendas de Agendas 2.0: el aviso de cada agenda nueva va a ese número.
     # Cambiar el número lo vuelve a NULL.
     whatsapp_confirmado_en = db.Column(db.DateTime, nullable=True)
+    # ID numérico de Discord: los avisos de agenda lo etiquetan con <@id> (el texto @nombre no notifica).
+    discord_id = db.Column(db.String(24), nullable=True)
     can_view_finance = db.Column(db.Boolean, default=False, server_default="0")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     # Las cuentas con el mismo `persona_id` son la misma persona con varios roles (ver

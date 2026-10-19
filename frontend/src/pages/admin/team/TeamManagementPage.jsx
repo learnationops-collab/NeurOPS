@@ -40,7 +40,7 @@ const iniciales = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0
 
 const VACIO = {
     username: '', email: '', password: '', roles: ['closer'], role: 'closer',
-    timezone: 'America/La_Paz', two_chat_number: '', is_active: true, can_view_finance: false,
+    timezone: 'America/La_Paz', two_chat_number: '', discord_id: '', is_active: true, can_view_finance: false,
 };
 
 function Interruptor({ id, label, hint, valor, onChange }) {
@@ -149,6 +149,7 @@ const TeamManagementPage = ({ embebido = false }) => {
             role: user.role,
             timezone: user.timezone || 'America/La_Paz',
             two_chat_number: user.two_chat_number || '',
+            discord_id: user.discord_id || '',
             is_active: user.is_active,
             can_view_finance: user.can_view_finance || false,
         } : VACIO);
@@ -415,6 +416,9 @@ const TeamManagementPage = ({ embebido = false }) => {
                             </Campo>
                             <Campo label="WhatsApp (avisos de seguimiento)" hint="Código de país y número, sin +. Opcional.">
                                 <input type="text" placeholder="525620873819" value={formData.two_chat_number} onChange={(e) => set({ two_chat_number: e.target.value })} />
+                            </Campo>
+                            <Campo label="Discord (para etiquetarlo en los avisos)" hint="Escribí @nombre, elegilo de la lista, poné \ adelante y enviá: pegá el <@…> que sale. Opcional.">
+                                <input type="text" placeholder="<@123456789012345678>" value={formData.discord_id} onChange={(e) => set({ discord_id: e.target.value })} />
                             </Campo>
                         </div>
 

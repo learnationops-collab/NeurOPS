@@ -23,7 +23,7 @@ y los avisos. El link de Thalamus, en cambio, mueve la misma fila cuando el lead
 from datetime import datetime, timedelta
 
 from app import db
-from app.agendas_v2 import operacion, servicio
+from app.agendas_v2 import avisos_discord, operacion, servicio
 
 DURACION_MIN = servicio.DURACION_AGENDA_OPERACION_MIN
 # Lo que una llamada nueva hereda de la agenda de la que sale (otra llamada, 2da llamada).
@@ -205,6 +205,6 @@ def terminar(appt, evento_a_borrar=None):
     servicio._google_cache.pop(appt.closer_id, None)
     con_evento = operacion.crear_evento(
         appt, (appt.agenda_payload or {}).get('evento_nombre') or 'Llamada', evento_a_borrar=evento_a_borrar)
-    operacion.avisar_discord(appt)
+    avisos_discord.avisar_agenda(appt)
     operacion.avisar_whatsapp(appt)
     return con_evento

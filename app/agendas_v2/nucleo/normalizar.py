@@ -118,6 +118,8 @@ def normal_pregunta(q):
             {
                 'id': cortar(txt(o.get('id')) or uid('o'), 40),
                 'texto': cortar(txt(o.get('texto')), 200),
+                # Versión corta para el aviso de Discord («Sí», «No»): vacía, se usa el texto.
+                'corto': cortar(txt(o.get('corto')), 40),
                 'puntos': entero(o.get('puntos'), 0, 10, None),
                 'descalifica': o.get('descalifica') is True,
             }
@@ -126,6 +128,7 @@ def normal_pregunta(q):
         'id': cortar(txt(q.get('id')) or uid('q'), 40),
         'tipo': t,
         'titulo': cortar(txt(q.get('titulo')), 300),
+        'corto': cortar(txt(q.get('corto')), 40),
         'ayuda': cortar(txt(q.get('ayuda')), 300),
         'placeholder': cortar(txt(q.get('placeholder')), 80),
         'obligatoria': q.get('obligatoria') is not False,

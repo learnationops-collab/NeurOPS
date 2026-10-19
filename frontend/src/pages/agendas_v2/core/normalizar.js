@@ -50,12 +50,12 @@ export function normalPregunta(q) {
     q = q || {};
     const t = String(q.tipo || 'texto');
     return {
-        id: String(q.id || uid('q')).slice(0, 40), tipo: t, titulo: String(q.titulo || '').slice(0, 300), ayuda: String(q.ayuda || '').slice(0, 300),
+        id: String(q.id || uid('q')).slice(0, 40), tipo: t, titulo: String(q.titulo || '').slice(0, 300), corto: String(q.corto || '').slice(0, 40), ayuda: String(q.ayuda || '').slice(0, 300),
         placeholder: String(q.placeholder || '').slice(0, 80), obligatoria: q.obligatoria !== false, esNombre: q.esNombre === true,
         peso: entero(q.peso, 0, 5, conOpciones(t) ? 1 : 0),
         opciones: (Array.isArray(q.opciones) ? q.opciones : []).slice(0, 60).map(o => {
             o = typeof o === 'string' ? { texto: o } : (o || {});
-            return { id: String(o.id || uid('o')).slice(0, 40), texto: String(o.texto || '').slice(0, 200), puntos: entero(o.puntos, 0, 10, null), descalifica: o.descalifica === true };
+            return { id: String(o.id || uid('o')).slice(0, 40), texto: String(o.texto || '').slice(0, 200), corto: String(o.corto || '').slice(0, 40), puntos: entero(o.puntos, 0, 10, null), descalifica: o.descalifica === true };
         }),
     };
 }
