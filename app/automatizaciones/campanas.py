@@ -9,7 +9,8 @@ Vive en paralelo a Marketing: no crea `Ad` ni toca el mapeo de Meta ni el webhoo
 misma normalización que Marketing (`clave_de_palabra`) para poder cruzarse con ella el día del cambio.
 """
 from app import db
-from app.automatizaciones.modelos import AutCampana, AutCampanaMeta, AutCampanaPalabra, AutFlujo
+from app.automatizaciones.modelos import AutCampana, AutCampanaMeta, AutCampanaPalabra, AutCampanaSetter, AutFlujo
+from app.automatizaciones.reparto import setters_activos
 from app.models.marketing import clave_de_palabra
 
 LARGO_PALABRA = 100
@@ -96,9 +97,22 @@ def guardar(campana, datos):
     meta = datos.get('campanas_meta')
     if meta is not None and (not isinstance(meta, list) or not all(isinstance(m, str) and m.strip() for m in meta)):
         raise ErrorDeCampana('Las campañas de Meta tienen que ser una lista de ids')
+    reparto = datos.get('reparto', campana.reparto or 'distribuido')
+    if reparto not in AutCampana.REPARTOS:
+        raise ErrorDeCampana('El reparto tiene que ser distribuido o sin_reparto')
+    setters = datos.get('setters')
+    if setters is not None:
+        validos = {u.id for u in setters_activos()}
+        if not isinstance(setters, list) or not all(isinstance(s, int) and s in validos for s in setters):
+            raise ErrorDeCampana('Los setters del reparto tienen que ser setters activos')
 
     campana.nombre, campana.embudo, campana.tipo = nombre, embudo, tipo
     campana.desde, campana.hasta, campana.flujo_id = desde, hasta, flujo_id
+    campana.reparto = reparto
+    campana.solo_conectados = bool(datos.get('solo_conectados', campana.solo_conectados or False))
+    if setters is not None:
+        actuales = {s.user_id: s for s in campana.setters}
+        campana.setters = [actuales.get(i) or AutCampanaSetter(user_id=i) for i in dict.fromkeys(setters)]
     if 'palabras' in datos:
         actuales = {p.clave: p for p in campana.palabras}
         campana.palabras = [actuales.get(clave) or AutCampanaPalabra(clave=clave, texto=texto)
@@ -123,4 +137,7 @@ def resumen(campana, momento):
         'vigente': vigente(campana, momento),
         'palabras': [p.texto for p in campana.palabras],
         'campanas_meta': [m.meta_campana_id for m in campana.campanas_meta],
+        'reparto': campana.reparto,
+        'solo_conectados': bool(campana.solo_conectados),
+        'setters': [s.user_id for s in campana.setters],
     }

@@ -99,6 +99,8 @@ class AutEjecucion(db.Model):
     clave = db.Column(db.String(100), nullable=True)
     # Cómo terminó calificado en esta entrada (None: todavía no se sabe). Lo escribe `registro.py`.
     califica = db.Column(db.Boolean, nullable=True)
+    # El setter que le tocó por el reparto de la campaña (`reparto.py`).
+    setter_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True)
 
     contacto = db.relationship('IgContacto')
     version = db.relationship('AutFlujoVersion')
@@ -134,6 +136,7 @@ class AutCampana(db.Model):
 
     EMBUDOS = ('setting', 'workshop', 'vsl', 'otro')
     TIPOS = ('pago', 'organico')
+    REPARTOS = ('distribuido', 'sin_reparto')
 
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(150), nullable=False)
@@ -142,12 +145,17 @@ class AutCampana(db.Model):
     flujo_id = db.Column(db.Integer, db.ForeignKey('aut_flujos.id', ondelete='SET NULL'), nullable=True, index=True)
     desde = db.Column(db.DateTime, nullable=False)
     hasta = db.Column(db.DateTime, nullable=True)  # None: sin fin
+    # Cómo se reparten sus leads entre los setters (`reparto.py`). `solo_conectados` queda guardado
+    # pero no filtra hasta que haya presencia (la bandeja de mensajes propia).
+    reparto = db.Column(db.String(20), nullable=False, default='distribuido', server_default='distribuido')
+    solo_conectados = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     creada_en = db.Column(db.DateTime, nullable=False, default=ahora)
     actualizada_en = db.Column(db.DateTime, nullable=False, default=ahora, onupdate=ahora)
 
     flujo = db.relationship('AutFlujo')
     palabras = db.relationship('AutCampanaPalabra', cascade='all, delete-orphan', order_by='AutCampanaPalabra.id')
     campanas_meta = db.relationship('AutCampanaMeta', cascade='all, delete-orphan', order_by='AutCampanaMeta.id')
+    setters = db.relationship('AutCampanaSetter', cascade='all, delete-orphan', order_by='AutCampanaSetter.id')
 
 
 class AutCampanaPalabra(db.Model):
@@ -172,3 +180,14 @@ class AutCampanaMeta(db.Model):
     meta_campana_id = db.Column(db.String(40), nullable=False, index=True)
 
     __table_args__ = (db.UniqueConstraint('campana_id', 'meta_campana_id', name='uq_aut_campanas_meta'),)
+
+
+class AutCampanaSetter(db.Model):
+    """Un setter que participa del reparto de la campaña. Sin ninguno, participan todos los activos."""
+    __tablename__ = 'aut_campana_setters'
+
+    id = db.Column(db.Integer, primary_key=True)
+    campana_id = db.Column(db.Integer, db.ForeignKey('aut_campanas.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+
+    __table_args__ = (db.UniqueConstraint('campana_id', 'user_id', name='uq_aut_campana_setters'),)

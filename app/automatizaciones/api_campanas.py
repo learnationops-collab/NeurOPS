@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta, timezone
 from flask import jsonify, request
 
 from app import db
-from app.automatizaciones import campanas, metricas_campanas, servicio
+from app.automatizaciones import campanas, metricas_campanas, reparto, servicio
 from app.automatizaciones.api import bp
 from app.automatizaciones.modelos import AutCampana, AutEjecucion
 from app.models import ConversationalMessage, MetaAnuncio
@@ -124,3 +124,9 @@ def campanas_de_meta():
     salida = [{**c, 'embudos': sorted(e for e in c['embudos'] if e)} for c in por_id.values()]
     salida.sort(key=lambda c: (not c['activa'], (c['nombre'] or '').lower()))
     return jsonify({'campanas': salida})
+
+
+@bp.route('/setters', methods=['GET'])
+def setters_del_reparto():
+    """Los setters activos, para elegir quiénes participan del reparto de una campaña."""
+    return jsonify({'setters': [{'id': u.id, 'nombre': u.username} for u in reparto.setters_activos()]})

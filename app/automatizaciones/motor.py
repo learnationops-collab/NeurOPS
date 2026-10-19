@@ -15,7 +15,7 @@ Reglas que garantiza:
 from datetime import timedelta
 
 from app import db
-from app.automatizaciones import campanas, registro
+from app.automatizaciones import campanas, registro, reparto
 from app.automatizaciones.modelos import AutEjecucion, AutFlujo, AutFlujoVersion, IgContacto, IgMensaje
 from app.automatizaciones.nucleo import eventos as ev
 from app.automatizaciones.nucleo import grafo as g
@@ -184,6 +184,9 @@ class Motor:
                                  iniciada_en=self.ahora, campana_id=campana.id if campana else None, clave=clave)
         db.session.add(ejecucion)
         db.session.flush()
+        if campana:
+            setter = reparto.elegir(campana, contacto.id, self.ahora)
+            ejecucion.setter_id = setter.id if setter else None
         registro.entrada(ejecucion, self.ahora)
         self._correr(ejecucion)
         return ejecucion

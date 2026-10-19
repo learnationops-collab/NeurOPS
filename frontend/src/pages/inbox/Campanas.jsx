@@ -28,6 +28,7 @@ export default function Campanas({ puedeEditar }) {
     const [editando, setEditando] = useState(null); // null cerrado · 'nueva' · la campaña
     const [flujos, setFlujos] = useState([]);
     const [campanasMeta, setCampanasMeta] = useState([]);
+    const [setters, setSetters] = useState([]);
 
     const cargar = useCallback(() => {
         inboxApi.campanas(...periodo(dias)).then((r) => setCampanas(r.campanas)).catch(() => setError('No se pudieron cargar las campañas'));
@@ -36,6 +37,7 @@ export default function Campanas({ puedeEditar }) {
     useEffect(() => {
         inboxApi.flujos().then(setFlujos).catch(() => setFlujos([]));
         inboxApi.campanasMeta().then(setCampanasMeta).catch(() => setCampanasMeta([]));
+        inboxApi.setters().then(setSetters).catch(() => setSetters([]));
     }, []);
 
     const cerrarCon = (mensaje) => { setEditando(null); toast(mensaje); cargar(); };
@@ -58,7 +60,7 @@ export default function Campanas({ puedeEditar }) {
     } else {
         cuerpo = (
             <Grid variant="cards">
-                {visibles.map((c) => <TarjetaCampana key={c.id} c={c} puedeEditar={puedeEditar} onAbrir={setEditando} />)}
+                {visibles.map((c) => <TarjetaCampana key={c.id} c={c} setters={setters} puedeEditar={puedeEditar} onAbrir={setEditando} />)}
             </Grid>
         );
     }
@@ -86,7 +88,7 @@ export default function Campanas({ puedeEditar }) {
             </HeaderActions>
             {cuerpo}
             {editando && (
-                <EditorCampana campana={editando === 'nueva' ? null : editando} flujos={flujos} campanasMeta={campanasMeta}
+                <EditorCampana campana={editando === 'nueva' ? null : editando} flujos={flujos} campanasMeta={campanasMeta} setters={setters}
                     lectura={!puedeEditar} onCerrar={() => setEditando(null)}
                     onGuardada={(c) => cerrarCon(`${c.nombre} guardada`)} onBorrada={(c) => cerrarCon(`${c.nombre} eliminada`)} />
             )}

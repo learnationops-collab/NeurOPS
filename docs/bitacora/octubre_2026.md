@@ -233,3 +233,10 @@
   - En el lienzo, cada mensaje tiene «Para Marketing»: el mensaje del catálogo de Conversaciones que registra, si califica (o según su rama) y la etapa. `GET /api/inbox/catalogo` trae el catálogo.
   - No cambia nada fuera del Inbox: Marketing, ManyChat y el flujo de prueba siguen igual.
   - Verificación: 219 tests de pytest (automatizaciones, webhooks, rama y anuncios), 34 de vitest del Inbox, eslint y build.
+
+- **19 de Octubre de 2026 (4)** *(Inbox: cada campaña reparte sus leads entre los setters. [app/automatizaciones/reparto.py](../../app/automatizaciones/reparto.py) [NEW], [app/automatizaciones/campanas.py](../../app/automatizaciones/campanas.py) [MODIFY], [app/automatizaciones/registro.py](../../app/automatizaciones/registro.py) [MODIFY], [frontend/src/pages/inbox/campanas/EditorCampana.jsx](../../frontend/src/pages/inbox/campanas/EditorCampana.jsx) [MODIFY], [migrations/versions/b5e1c7f3a8d2_reparto_de_campanas.py](../../migrations/versions/b5e1c7f3a8d2_reparto_de_campanas.py) [NEW])*:
+  - Reparto por campaña: «Distribuido» le da cada entrada al setter con menos leads de la campaña en las últimas 24 h (desempata el que hace más que no recibe); «Sin reparto» no asigna a nadie y el lead lo ve todo el equipo.
+  - Continuidad: quien ya tuvo setter (en cualquier campaña) lo conserva mientras ese setter siga activo, para no cortar la conversación que lleva en Kommo.
+  - Se eligen quiénes participan; sin elegir, todos los setters activos. El asignado queda en `ManychatLead.setter`, donde lo dejaba ManyChat, así la bandeja y los números del setter funcionan igual.
+  - «Solo entre conectados» se guarda pero todavía no filtra: no hay presencia hasta que los setters trabajen en la bandeja del Inbox. La pantalla lo avisa.
+  - Verificación: 199 tests de pytest (automatizaciones, webhook, rama y anuncios), 35 de vitest del Inbox, eslint y build.

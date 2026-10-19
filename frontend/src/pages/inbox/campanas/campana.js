@@ -9,6 +9,7 @@ export const EMBUDOS = [
     { value: 'otro', label: 'Otro' },
 ];
 export const TIPOS = [{ value: 'pago', label: 'Pago' }, { value: 'organico', label: 'Orgánica' }];
+export const REPARTOS = [{ value: 'distribuido', label: 'Distribuido' }, { value: 'sin_reparto', label: 'Sin reparto' }];
 export const ESTADOS = {
     vigente: { texto: 'Vigente', color: 'var(--success)' },
     proxima: { texto: 'Próxima', color: 'var(--info)' },
@@ -53,6 +54,9 @@ export function formulario(c) {
         hasta: c?.hasta ? diaLocal(c.hasta, true) : '',
         palabras: c?.palabras || [],
         campanas_meta: c?.campanas_meta || [],
+        reparto: c?.reparto || 'distribuido',
+        solo_conectados: !!c?.solo_conectados,
+        setters: c?.setters || [],
     };
 }
 
@@ -75,7 +79,17 @@ export function cuerpo(f) {
         hasta: f.hasta ? medianoche(f.hasta, 1) : null,
         palabras: f.palabras,
         campanas_meta: f.campanas_meta,
+        reparto: f.reparto,
+        solo_conectados: f.solo_conectados,
+        setters: f.reparto === 'distribuido' ? f.setters : [],
     };
+}
+
+// «Distribuido entre todos», «entre Paula y Elias» o «Sin reparto», para la tarjeta.
+export function repartoLegible(c, setters) {
+    if (c.reparto !== 'distribuido') return 'Sin reparto: lo ve todo el equipo';
+    const nombres = (c.setters || []).map((id) => setters.find((s) => s.id === id)?.nombre).filter(Boolean);
+    return nombres.length ? `Reparte entre ${nombres.join(', ')}` : 'Reparte entre todos los setters';
 }
 
 // Una palabra nueva para la lista: sin espacios de más y sin repetir (sin tildes ni mayúsculas).

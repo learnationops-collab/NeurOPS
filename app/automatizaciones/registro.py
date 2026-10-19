@@ -4,8 +4,8 @@ Rendimiento, Entrantes, Conversaciones, «Mis agendas» y los números del sette
 `LeadAnswer` (ver `app/api/manychat.py`). Para que apagar ManyChat no los deje sin datos, el motor las
 escribe con el mismo significado, sin pasar por el webhook ni tocarlo:
 
-  · La persona: un `ManychatLead` con `manychat_id = 'ig:<IGSID>'`, su nombre y su usuario de Instagram
-    (por el usuario la encuentra «Mis agendas»).
+  · La persona: un `ManychatLead` con `manychat_id = 'ig:<IGSID>'`, su nombre, su usuario de Instagram
+    (por el usuario la encuentra «Mis agendas») y el setter del reparto de la campaña (`reparto.py`).
   · La entrada: al empezar el flujo, una `LeadAnswer` con la palabra clave y su anuncio
     (`anuncio_de_keyword`, como el webhook: si la palabra es nueva crea el anuncio).
   · Cada mensaje del flujo con `registro.mensaje_id` (el id del catálogo de Conversaciones): su envío
@@ -19,7 +19,7 @@ Solo registra lo que entró por una campaña: mientras conviva ManyChat, un fluj
 (las pruebas) no cuenta dos veces a la misma persona.
 """
 from app import db
-from app.models import LeadAnswer, ManychatLead
+from app.models import LeadAnswer, ManychatLead, User
 
 PREFIJO = 'ig:'
 
@@ -67,6 +67,8 @@ def entrada(ejecucion, momento):
     from app.services.anuncios_service import anuncio_de_keyword
 
     lead = _lead(ejecucion.contacto)
+    if ejecucion.setter_id:  # el reparto de la campaña, donde ManyChat dejaba el suyo
+        lead.setter = db.session.get(User, ejecucion.setter_id).username
     anuncio = anuncio_de_keyword(ejecucion.clave)
     db.session.add(LeadAnswer(lead_id=lead.id, ad_id=anuncio.id if anuncio else None, keyword=ejecucion.clave,
                               qualification='null', created_at=momento, updated_at=momento))

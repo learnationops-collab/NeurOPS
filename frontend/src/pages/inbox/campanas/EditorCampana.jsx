@@ -4,11 +4,11 @@
 import { useState } from 'react';
 import { Megaphone, Plus, Trash2, X } from 'lucide-react';
 import {
-    Button, Chip, ConfirmDelete, FieldError, IconButton, Input, InputGroup, Modal, ModalHeader, Segmented, Select,
+    Button, Chip, ConfirmDelete, FieldError, IconButton, Input, InputGroup, Modal, ModalHeader, Segmented, Select, Switch,
 } from '../../../components/standard';
 import { inboxApi } from '../api';
 import { Campo } from '../editor/paneles';
-import { EMBUDOS, TIPOS, cuerpo, errorDe, formulario, sumarPalabra } from './campana';
+import { EMBUDOS, REPARTOS, TIPOS, cuerpo, errorDe, formulario, sumarPalabra } from './campana';
 
 function Quitable({ children, label, onQuitar, lectura }) {
     return (
@@ -19,7 +19,7 @@ function Quitable({ children, label, onQuitar, lectura }) {
     );
 }
 
-export default function EditorCampana({ campana, flujos, campanasMeta, lectura, onGuardada, onBorrada, onCerrar }) {
+export default function EditorCampana({ campana, flujos, campanasMeta, setters = [], lectura, onGuardada, onBorrada, onCerrar }) {
     const [f, setF] = useState(() => formulario(campana));
     const [palabra, setPalabra] = useState('');
     const [error, setError] = useState(null);
@@ -121,6 +121,37 @@ export default function EditorCampana({ campana, flujos, campanasMeta, lectura, 
                         ))}
                     </div>
                 </Campo>
+                <Campo label="Reparto entre setters" ayuda={f.reparto === 'distribuido'
+                    ? 'A cada entrada le toca el que menos leads recibió de esta campaña en las últimas 24 h. Quien ya tuvo setter lo conserva.'
+                    : 'Nadie queda asignado: el lead lo ve todo el equipo.'}>
+                    <Segmented size="sm" label="Reparto" value={f.reparto} options={REPARTOS} itemProps={{ disabled: lectura }}
+                        onChange={(v) => cambiar({ reparto: v })} />
+                </Campo>
+                {f.reparto === 'distribuido' && (
+                    <>
+                        <Campo label="Quiénes participan" ayuda={f.setters.length ? null : 'Ninguno elegido: participan todos los setters activos.'}>
+                            <div className="cp-chips cp-chips--setters">
+                                {setters.map((s) => {
+                                    const elegido = f.setters.includes(s.id);
+                                    return (
+                                        <Chip key={s.id} as="button" type="button" subtle={!elegido} aria-pressed={elegido} disabled={lectura}
+                                            onClick={() => cambiar({ setters: elegido ? f.setters.filter((x) => x !== s.id) : [...f.setters, s.id] })}>
+                                            {s.nombre}
+                                        </Chip>
+                                    );
+                                })}
+                            </div>
+                        </Campo>
+                        <div className="pf-check">
+                            <span>
+                                Solo entre conectados
+                                <span className="pf-ayuda">Todavía no filtra: se activa cuando los setters trabajen en la bandeja del Inbox y se sepa quién está conectado.</span>
+                            </span>
+                            <Switch checked={f.solo_conectados} disabled={lectura} label="Solo entre conectados"
+                                onChange={(v) => cambiar({ solo_conectados: v })} />
+                        </div>
+                    </>
+                )}
                 {error && <FieldError>{error}</FieldError>}
                 {borrando ? (
                     <ConfirmDelete name={campana.nombre} article="la campaña " detail="Solo se puede si nadie entró por ella."

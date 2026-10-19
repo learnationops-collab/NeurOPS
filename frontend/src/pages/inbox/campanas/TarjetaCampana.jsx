@@ -1,14 +1,14 @@
 // Tarjeta de una campaña: estado por su vigencia, embudo y tipo, sus palabras clave, a qué flujo lleva y
 // cómo le fue en el período (entradas, calificados, agendas y costo por agenda si tiene gasto de Meta).
-import { Eye, Megaphone, Pencil, Workflow } from 'lucide-react';
+import { Eye, Megaphone, Pencil, Users, Workflow } from 'lucide-react';
 import { Button, Card, Chip, Status } from '../../../components/standard';
-import { EMBUDOS, ESTADOS, TIPOS, estadoDe, fechasLegibles } from './campana';
+import { EMBUDOS, ESTADOS, TIPOS, estadoDe, fechasLegibles, repartoLegible } from './campana';
 
 const rotulo = (lista, valor) => lista.find((x) => x.value === valor)?.label || valor;
 const dinero = (n) => (n == null ? '–' : n.toLocaleString('es', { style: 'currency', currency: 'USD', maximumFractionDigits: n >= 100 ? 0 : 2 }));
 const porciento = (a, b) => (b ? `${Math.round((a / b) * 100)}%` : null);
 
-export default function TarjetaCampana({ c, puedeEditar, onAbrir }) {
+export default function TarjetaCampana({ c, setters = [], puedeEditar, onAbrir }) {
     const est = ESTADOS[estadoDe(c)];
     const m = c.metricas || {};
     const pctCalificados = porciento(m.calificados || 0, m.entradas || 0);
@@ -28,6 +28,7 @@ export default function TarjetaCampana({ c, puedeEditar, onAbrir }) {
             <p className={`cp-flujo t-cap ${c.flujo ? 'mut' : 'fl-sin-palabra'}`}>
                 <Workflow size={13} aria-hidden="true" /> {c.flujo || 'Sin flujo: sus palabras no disparan nada'}
             </p>
+            <p className="cp-flujo t-cap mut"><Users size={13} aria-hidden="true" /> {repartoLegible(c, setters)}</p>
             <div className="datos">
                 <div className="dato"><b>{m.entradas ?? '–'}</b><span>Entradas</span></div>
                 <div className="dato" data-tip={`Calificados|${m.descalificados || 0} no calificaron`}>

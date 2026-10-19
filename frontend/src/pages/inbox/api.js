@@ -23,4 +23,5 @@ export const inboxApi = {
     borrarCampana: (id) => api.delete(`/inbox/campanas/${id}`),
     campanasMeta: () => api.get('/inbox/campanas/meta').then((r) => r.data.campanas),
     catalogo: () => api.get('/inbox/catalogo').then((r) => r.data.mensajes),
+    setters: () => api.get('/inbox/setters').then((r) => r.data.setters),
 };
