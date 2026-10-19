@@ -1,4 +1,4 @@
-import { LayoutGrid, User, Users } from 'lucide-react';
+import { Compass, LayoutGrid, User, Users } from 'lucide-react';
 import api from '../services/api';
 import { saveSession, isIsolatedTab } from './sessionStore';
 import { AREAS, areasDe } from './areas';
@@ -121,6 +121,17 @@ export function entrarAlIniciar(user, navegar) {
 export const TARJETA_CORTEX = { clave: 'cortex', titulo: CORTEX.label, Icono: CORTEX.Icono, ruta: CORTEX.ruta, comun: true };
 
 /**
+ * Leadership en el Portal: otra app, para todas las cuentas. El backend firma un pase de un solo uso
+ * (api/leadership.py) y se entra con él; no se ofrece simulando, porque el pase sería del simulado.
+ */
+export const TARJETA_LEADERSHIP = { clave: 'leadership', titulo: 'Leadership', Icono: Compass, comun: true, externa: true };
+
+const entrarALeadership = async () => {
+    const res = await api.get('/leadership/entrar');
+    window.location.href = res.data.url;
+};
+
+/**
  * Pasa a otra cuenta de la persona en ESTA pestaña (en una aislada no toca la cookie) y entra a `destino`
  * o a donde entra esa cuenta.
  */
@@ -141,6 +152,7 @@ export const cambiarDeRolEnLaCuenta = async (rol, destino = null) => {
 
 /** Entra por una tarjeta: con el rol que ya tiene solo navega; si no, cambia de rol o de cuenta. */
 export function entrarPorTarjeta(user, tarjeta, navegar) {
+    if (tarjeta.externa) return entrarALeadership();
     if (tarjeta.comun) return navegar(tarjeta.ruta);
     if (tarjeta.cuenta) return cambiarDeCuenta(tarjeta.cuenta, tarjeta.ruta);
     if (tarjeta.rol === user.role) return navegar(tarjeta.ruta);
