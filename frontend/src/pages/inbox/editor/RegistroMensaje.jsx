@@ -44,8 +44,12 @@ export default function RegistroMensaje({ nodo, cambiar, lectura }) {
                 <div className="pf-fila">
                     <Select label="Calificación" value={califica} options={CALIFICA} disabled={lectura}
                         onChange={(v) => poner({ califica: v === '' ? undefined : v === 'si' })} />
-                    <Input variant="number" type="number" min={0} value={registro.etapa ?? ''} disabled={lectura} aria-label="Etapa" placeholder="Etapa"
+                    <Input variant="number" type="number" min={0} value={registro.etapa ?? ''} disabled={lectura} aria-label="Etapa al enviarlo" placeholder="Al enviar"
+                        data-tip="Etapa al enviarlo|La etapa en que queda la persona cuando le llega este mensaje."
                         onChange={(e) => poner({ etapa: e.target.value === '' ? undefined : Number(e.target.value) })} />
+                    <Input variant="number" type="number" min={0} value={registro.etapa_respuesta ?? ''} disabled={lectura} aria-label="Etapa al responderlo" placeholder="Al responder"
+                        data-tip="Etapa al responderlo|La etapa en que queda cuando lo responde (botón o texto), como en ManyChat."
+                        onChange={(e) => poner({ etapa_respuesta: e.target.value === '' ? undefined : Number(e.target.value) })} />
                 </div>
             )}
             {registro?.mensaje_id && califica === '' && elegido?.rama && (

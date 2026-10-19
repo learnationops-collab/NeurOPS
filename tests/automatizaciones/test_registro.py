@@ -87,6 +87,25 @@ def test_la_entrada_y_el_opening_son_una_fila_con_la_palabra_y_su_anuncio(guia, 
     assert fila.created_at == T0
 
 
+def test_la_etapa_sube_cuando_responde_como_en_manychat(db, campana, lead):
+    grafo = f.guia(**{**GRAFO, 'nodos': [
+        {**GRAFO['nodos'][0], 'registro': {'mensaje_id': '1', 'etapa': 0, 'etapa_respuesta': 1}},
+        {**GRAFO['nodos'][1], 'registro': {'mensaje_id': '4', 'etapa_respuesta': 2}},
+        *GRAFO['nodos'][2:]]})
+    flujo = AutFlujo(nombre='Etapas', grafo=grafo)
+    db.session.add(flujo)
+    db.session.commit()
+    assert servicio.publicar(flujo, momento=T0 - timedelta(days=60)) == []
+    campana(['GUIA PERU'], flujo)
+
+    lead.escribe('GUIA PERU')
+    assert ManychatLead.query.one().last_stage == 0  # recibió la tarjeta
+    lead.toca(boton(flujo, 'opening', 'medico'), minutos=1)
+    assert ManychatLead.query.one().last_stage == 1  # eligió perfil
+    lead.escribe('ENARM', minutos=1)
+    assert ManychatLead.query.one().last_stage == 2  # respondió el examen
+
+
 def test_responder_marca_el_mensaje_y_el_siguiente_registra_su_envio_y_su_calificacion(guia, campana, lead):
     campana(['GUIA'], guia)
     lead.escribe('GUIA')

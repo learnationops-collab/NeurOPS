@@ -14,8 +14,9 @@ Tipos de nodo y sus salidas:
       - `espera` {guardar_en} → salida "respuesta" (el texto libre que conteste se guarda en esa variable).
     Si espera algo puede tener `sin_respuesta` {minutos} → salida "sin_respuesta". Si no espera nada → "siguiente".
     Cada contenido puede tener `escribiendo` (segundos, hasta 10): antes de mandarlo se ve «escribiendo…».
-    `registro` {mensaje_id, etapa, califica} es lo que hoy manda ManyChat por webhook (tableros): el motor
-    lo escribe en las mismas tablas (`registro.py`). `mensaje_id` es el id del catálogo de Conversaciones.
+    `registro` {mensaje_id, etapa, etapa_respuesta, califica} es lo que hoy manda ManyChat por webhook
+    (tableros): el motor lo escribe en las mismas tablas (`registro.py`). `mensaje_id` es el id del catálogo
+    de Conversaciones; `etapa` se marca al mandarlo y `etapa_respuesta` cuando la persona lo responde.
   · esperar: `minutos` → "siguiente".
   · condicion: `reglas` [{campo, operador, valor}] (todas deben cumplirse) → "si" / "no".
   · accion: `acciones` [{tipo: variable|etapa|califica|pausar_bot, ...}] → "siguiente".
@@ -154,7 +155,7 @@ def _errores_nodo(nodo, ids):
                 errores.append(f'Nodo {nid}: el registro necesita el id del mensaje del catálogo')
             elif registro.get('califica') is not None and not isinstance(registro['califica'], bool):
                 errores.append(f'Nodo {nid}: «califica» del registro es sí o no')
-            elif registro.get('etapa') is not None and not str(registro['etapa']).isdigit():
+            elif any(registro.get(k) is not None and not str(registro[k]).isdigit() for k in ('etapa', 'etapa_respuesta')):
                 errores.append(f'Nodo {nid}: la etapa del registro es un número')
         sin_respuesta = nodo.get('sin_respuesta')
         if sin_respuesta:

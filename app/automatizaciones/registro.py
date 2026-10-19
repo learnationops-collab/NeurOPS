@@ -12,8 +12,8 @@ escribe con el mismo significado, sin pasar por el webhook ni tocarlo:
     (`id_option = '0'`, `id_option_send = id`). El primero completa la fila de la entrada, como el
     Opening de ManyChat trae la palabra clave. Si el lead lo responde (botón o texto), `id_option = id`.
   · La calificación: `registro.califica` del nodo, la acción «califica», o si no la rama del mensaje
-    (`rama_mensajes`, la misma regla que el webhook). La etapa (`registro.etapa` o la acción) va a
-    `ManychatLead.last_stage`.
+    (`rama_mensajes`, la misma regla que el webhook). La etapa (`registro.etapa` al mandar el mensaje,
+    `registro.etapa_respuesta` cuando lo responde, o la acción) va a `ManychatLead.last_stage`.
 
 Solo registra lo que entró por una campaña: mientras conviva ManyChat, un flujo con disparador propio
 (las pruebas) no cuenta dos veces a la misma persona.
@@ -116,6 +116,9 @@ def respuesta(ejecucion, nodo, momento):
     fila = _filas(ejecucion, lead).filter(LeadAnswer.id_option_send == mensaje_id).first()
     if fila is not None:
         fila.id_option, fila.updated_at = mensaje_id, momento
+    etapa_respuesta = (nodo.get('registro') or {}).get('etapa_respuesta')
+    if etapa_respuesta is not None:  # en ManyChat la etapa sube con cada respuesta
+        _etapa(lead, etapa_respuesta)
 
 
 def calificar(ejecucion, califica, momento):
