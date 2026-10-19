@@ -282,3 +282,4 @@
   - Learnito (el copiloto) es una acción más del menú para closer, admin, operator y dirección comercial; a los closers les viene fijado. Abre un modal encima de cualquier pantalla y la conversación sigue al cerrarlo (hasta recargar). `/copiloto` muestra la misma conversación.
   - La tarjeta «Learnito · Buscador con IA» de Cortex no se tocó: sigue «Pronto».
   - Verificación: 68 tests de vitest (dock, menú de sesión, fijadas, copiloto y los menús de la dirección), eslint y build.
+  - El modal de Learnito se ve siempre con Learnation Modern, en el modo claro u oscuro de cada uno ([frontend/src/pages/copiloto/LearnitoModal.jsx](../../frontend/src/pages/copiloto/LearnitoModal.jsx) [MODIFY]). Verificación: 8 tests de vitest y eslint.

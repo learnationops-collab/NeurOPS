@@ -1,18 +1,21 @@
 // Learnito en un modal, encima de cualquier pantalla (se abre desde el dock o el menú de sesión).
-// Va envuelto en `.thalamus` para tener los tokens del tema fuera de las pantallas que ya lo traen.
+// Va envuelto en `.thalamus` para tener sus tokens fuera de las pantallas que ya lo traen, y siempre
+// con el tema Learnation Modern (pedido del 19/10/2026), en el modo claro u oscuro de cada uno.
 import { RotateCcw, Sparkles } from 'lucide-react';
 import '../agendas_v2/thalamus.css';
-import { dataThemeDe, useApariencia } from '../../context/AparienciaContext';
+import { useApariencia } from '../../context/AparienciaContext';
 import { IconButton, Modal, ModalHeader } from '../../components/standard';
 import { useLearnito } from '../../sesion/LearnitoContext';
 import LearnitoChat from './LearnitoChat';
 
 export default function LearnitoModal({ onClose }) {
-    const apariencia = useApariencia();
+    const { modo, modoGuardado } = useApariencia();
     const { mensajes, enviando, reiniciar } = useLearnito();
+    const modoModal = modo || modoGuardado || 'oscuro';
 
     return (
-        <div className="thalamus learnito-capa" data-theme={dataThemeDe(apariencia, undefined)}>
+        <div className="thalamus learnito-capa" data-tema="modern" data-tema-modo={modoModal}
+            data-theme={modoModal === 'claro' ? 'light' : 'dark'}>
             <Modal onClose={onClose} className="learnito-modal" labelledBy="learnito-titulo">
                 <ModalHeader icon={<Sparkles size={20} className="cp-logo" aria-hidden="true" />}
                     title="Learnito" subtitle="Tu copiloto" titleId="learnito-titulo" onClose={onClose}
