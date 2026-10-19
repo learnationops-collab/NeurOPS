@@ -313,7 +313,7 @@ describe('DashboardComercial · ir y volver entre Comercial y Finances', () => {
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: /^Tu sesión: Mario/ })); });
     };
     const opciones = () => screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent);
-    const MENU = ['Configuración', 'Portal', 'Mis reportes', 'Reportar un problema', 'Cerrar sesión'];
+    const MENU = ['Learnito', 'Configuración', 'Portal', 'Mis reportes', 'Reportar un problema', 'Cerrar sesión'];
 
     const direccion = (verFinanzas) => ({
         id: 1, role: 'director_comercial', roles: ['director_comercial'], can_view_finance: verFinanzas, is_impersonating: false,

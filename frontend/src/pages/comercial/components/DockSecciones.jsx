@@ -1,5 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Humo } from './Shared';
+import { DockContexto } from './dockContexto';
+import DockFijadas from './DockFijadas';
 
 const HUMO_DOCK = ['var(--brand-secondary)', 'var(--brand-primary)',
     'var(--brand-secondary-light)', 'var(--brand-navy)'];
@@ -31,6 +33,11 @@ const HUMO_DOCK = ['var(--brand-secondary)', 'var(--brand-primary)',
  * con Finanzas y Payroll son siete y solo se leía la activa). En vez de esconder los nombres
  * cuando no entran, el dock se aprieta (`dock--apretado`: menos aire y letra un punto más chica) y,
  * si ni así entra, scrollea de costado como en el teléfono.
+ *
+ * Tres zonas (19/10/2026): a la izquierda las acciones fijadas (`DockFijadas`), en el medio la
+ * navegación y a la derecha la sesión. Las fijadas salen del `MenuSesion` que va en `despues`: se las
+ * pasa por `DockContexto` con `publicar`, y el dock las guarda solo si cambiaron (se compara una firma,
+ * no la lista, que es nueva en cada render). Tocar una corre la acción más reciente de esa opción.
  */
 const marcasDe = (s) => s.marcas || (s.marca ? [s.marca] : []);
 
@@ -56,6 +63,16 @@ const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null, d
     // Lo que se hace cuando no entra: esconder los nombres de las inactivas, o apretar el dock.
     const claseSinLugar = siempreNombres ? 'dock--apretado' : 'dock--compacto';
     const ids = secciones.map(s => s.id).join('|');
+
+    const accionesRef = useRef([]);
+    const [fijables, setFijables] = useState({ firma: '', usuario: null, opciones: [] });
+    const publicar = useCallback((usuario, opciones) => {
+        accionesRef.current = opciones;
+        const firma = `${usuario?.id ?? ''}#${opciones.map(o => `${o.id}:${o.label}:${o.cuenta ?? ''}:${o.titulo ?? ''}`).join('|')}`;
+        setFijables(prev => (prev.firma === firma ? prev : { firma, usuario, opciones }));
+    }, []);
+    const correr = useCallback((id) => accionesRef.current.find(o => o.id === id)?.onClick(), []);
+    const contexto = useMemo(() => ({ publicar }), [publicar]);
     useEffect(() => {
         const medir = () => {
             const nav = navRef.current;
@@ -117,8 +134,10 @@ const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null, d
     const clases = ['dock', cosas >= 6 && 'dock--denso', siempreNombres && 'dock--nombres',
         compacto && claseSinLugar, desborda && 'dock--desborda', 'caja'];
     return (
+        <DockContexto.Provider value={contexto}>
         <nav className={clases.filter(Boolean).join(' ')} aria-label={ariaLabel}>
             <Humo colores={HUMO_DOCK} />
+            <DockFijadas usuario={fijables.usuario} opciones={fijables.opciones} onElegir={correr} />
             {antes}
             {antes && <span className="dock-sep" />}
             <div className="dock-nav" ref={navRef}>
@@ -150,6 +169,7 @@ const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null, d
                 </div>
             )}
         </nav>
+        </DockContexto.Provider>
     );
 };
 

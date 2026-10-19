@@ -2,7 +2,7 @@
 // los mismos grupos, en el mismo orden y con los mismos nombres en todas las pantallas. Cada pantalla
 // aporta solo sus acciones de trabajo.
 //
-//   [Acciones de esta pantalla]  Nueva agenda, Referido, Mis links... (opcional)
+//   [Acciones de esta pantalla]  Nueva agenda, Referido, Mis links... (opcional) y Learnito (si puede)
 //   [Mi cuenta]                  Configuración · Portal
 //   [Ayuda]                      Mis reportes [+] (lo agrega MenuSesion solo; el «+» reporta uno nuevo)
 //   [Salida]                     Volver a mi sesión · Cerrar sesión
@@ -10,7 +10,8 @@
 // El Portal (utils/portal.js) junta lo que antes eran opciones sueltas: cambiar de rol, de área o de
 // cuenta, Finances, Simular a alguien y Cortex (Learnito y el Playbook, 10/10/2026).
 import toast from 'react-hot-toast';
-import { Ghost, LogOut, Settings } from 'lucide-react';
+import { Ghost, LogOut, Settings, Sparkles } from 'lucide-react';
+import { abrirLearnito, puedeUsarLearnito } from './learnito';
 import { rotuloDeRol } from '../utils/cuentasVinculadas';
 import { revertImpersonation } from '../utils/impersonation';
 import { opcionPortal } from '../utils/portal';
@@ -42,8 +43,12 @@ export function armarMenuSesion({
     acciones = [], configuracion, playbook = null, ir = [],
 }) {
     const avisos = configuracion?.avisos?.filter(Boolean) || [];
+    // Learnito, el copiloto: en todas las pantallas de quien lo puede usar, al final de las acciones.
+    const learnito = puedeUsarLearnito(user)
+        ? [{ id: 'learnito', label: 'Learnito', Icono: Sparkles, onClick: abrirLearnito }]
+        : [];
     return [
-        acciones,
+        [...acciones, ...learnito],
         [
             { id: 'configuracion', label: 'Configuración', Icono: Settings, onClick: configuracion?.onClick,
                 cuenta: avisos.length ? '!' : null, titulo: avisos.length ? avisos.join(' · ') : null },

@@ -16,8 +16,13 @@ describe('menú de sesión', () => {
 
     it('nada de cambiar de rol, de área, simular ni Playbook sueltos: todo eso está en el Portal', () => {
         for (const role of ['admin', 'director_comercial', 'operator', 'closer']) {
-            expect(ids(base({ role, roles: [role, 'closer'] })).flat()).toEqual(['configuracion', 'portal', 'salir']);
+            expect(ids(base({ role, roles: [role, 'closer'] })).flat()).toEqual(['learnito', 'configuracion', 'portal', 'salir']);
         }
+    });
+
+    it('Learnito va al final de las acciones solo para quien puede usar el copiloto', () => {
+        expect(ids(base({ role: 'closer' }, { acciones: [{ id: 'agenda' }] }))[0]).toEqual(['agenda', 'learnito']);
+        expect(ids(base({ role: 'setter' }, { acciones: [{ id: 'links' }] }))[0]).toEqual(['links']);
     });
 
     it('lo pendiente del Playbook (ahora en Cortex) se ve en «Portal»', () => {

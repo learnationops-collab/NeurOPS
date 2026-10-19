@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
-import { ArrowLeft, ChevronRight, Pencil } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Pencil, Pin, PinOff } from 'lucide-react';
 import { fmt } from './Shared';
+import { DockContexto } from './dockContexto';
+import { esFijable, useFijadas } from '../../../sesion/fijadas';
 import useOpcionesDeReporte from '../../../components/feedback/useOpcionesDeReporte';
 import Mascota from '../../../components/mascota/Mascota';
 import { subirACapa } from '../../../components/standard/capa';
@@ -26,6 +28,11 @@ import { saveSession } from '../../../utils/sessionStore';
  *
  * Una opción con `accion: { id, label, Icono, onClick, marcada? }` lleva al lado un botón chico con esa
  * acción (el «+» de «Mis reportes»); con el teclado es una opción más.
+ *
+ * Cada opción (menos salir y las que abren una lista) lleva un 📌 para fijarla en el dock: queda como
+ * acceso de un toque en la sección de la izquierda (`DockFijadas`, 19/10/2026). Se guarda en este
+ * navegador por cuenta (`sesion/fijadas.js`). El 📌 se alcanza con Tab; las flechas siguen yendo de
+ * opción en opción.
  *
  * El menú se dibuja en un portal colgado de `<body>`, como la burbuja de `Tip`: el dock tiene
  * `overflow` y `backdrop-filter`, y adentro un menú quedaría recortado (el `backdrop-filter` además
@@ -183,7 +190,8 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
             const adelante = e.key === 'ArrowDown' || (eligiendo && e.key === 'ArrowRight');
             const atras = e.key === 'ArrowUp' || (eligiendo && e.key === 'ArrowLeft');
             if (!adelante && !atras) return;
-            const items = [...(menu.current?.querySelectorAll('[role^="menuitem"]') || [])];
+            // Las flechas van de opción en opción; el 📌 de cada una se alcanza con Tab.
+            const items = [...(menu.current?.querySelectorAll('[role^="menuitem"]:not([data-fijar])') || [])];
             if (!items.length) return;
             e.preventDefault();
             const i = items.indexOf(document.activeElement);
@@ -216,6 +224,13 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
     const cuenta = enCuenta > 0 ? enCuenta : aviso?.texto;
     const titulos = [aviso?.titulo, reportes.sinLeer ? `${reportes.sinLeer} ${reportes.sinLeer === 1 ? 'respuesta sin leer' : 'respuestas sin leer'} a tus reportes` : null];
     const etiqueta = [`Tu sesión: ${nombre}`, ...titulos].filter(Boolean).join(', ');
+
+    // Lo que se puede fijar en el dock: el dock que contiene a este menú lo recibe para dibujar las
+    // fijadas a la izquierda (ver DockFijadas). Sin usuario (o fuera de un dock) no se fija nada.
+    const { fijadas, alternar } = useFijadas(usuario);
+    const dock = useContext(DockContexto);
+    const fijables = todosLosGrupos.flat().filter(esFijable);
+    useEffect(() => { dock?.publicar(usuario, fijables); });
 
     return (
         <>
@@ -319,16 +334,29 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
                                                 {op.panel && <ChevronRight size={15} aria-hidden="true" className="menu-flecha" />}
                                             </button>
                                             );
-                                            if (!op.accion) return boton;
+                                            const fijable = !!usuario && esFijable(op);
+                                            if (!op.accion && !fijable) return boton;
+                                            const fijada = fijable && fijadas.includes(op.id);
+                                            const rotuloFijar = fijada ? `Quitar ${op.label} del dock` : `Fijar ${op.label} en el dock`;
                                             return (
                                                 <div key={op.id} className="menu-fila">
                                                     {boton}
-                                                    <button type="button" role="menuitem" data-id={op.accion.id}
-                                                        className={`menu-accion${op.accion.marcada ? ' menu-accion--marcada' : ''}`}
-                                                        aria-label={op.accion.label} title={op.accion.label}
-                                                        onClick={() => elegir(op.accion)}>
-                                                        <op.accion.Icono size={16} aria-hidden="true" />
-                                                    </button>
+                                                    {op.accion && (
+                                                        <button type="button" role="menuitem" data-id={op.accion.id}
+                                                            className={`menu-accion${op.accion.marcada ? ' menu-accion--marcada' : ''}`}
+                                                            aria-label={op.accion.label} title={op.accion.label}
+                                                            onClick={() => elegir(op.accion)}>
+                                                            <op.accion.Icono size={16} aria-hidden="true" />
+                                                        </button>
+                                                    )}
+                                                    {fijable && (
+                                                        <button type="button" role="menuitemcheckbox" data-fijar=""
+                                                            aria-checked={fijada} aria-label={rotuloFijar} title={rotuloFijar}
+                                                            className={`menu-accion menu-fijar${fijada ? ' menu-fijar--puesta' : ''}`}
+                                                            onClick={() => alternar(op.id)}>
+                                                            {fijada ? <PinOff size={15} aria-hidden="true" /> : <Pin size={15} aria-hidden="true" />}
+                                                        </button>
+                                                    )}
                                                 </div>
                                             );
                                         })}

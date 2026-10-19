@@ -1,24 +1,32 @@
-/* Copiloto. Hereda tokens y piezas de Thalamus (.thalamus …) y dibuja con los componentes estándar
-   (ui-*); acá solo lo propio: los globos del chat y el redactor fijo abajo.
-   Los ajustes a un ui-* pesan 3 clases o más (la base pesa 2). */
+/* Learnito: el chat (.learnito), en la página /copiloto o en el modal (.learnito-modal). Hereda tokens
+   de Thalamus (.thalamus …) y dibuja con los componentes estándar (ui-*); acá solo lo propio: los globos
+   y el redactor. Los ajustes a un ui-* pesan 3 clases o más (la base pesa 2). */
 
+.thalamus .cp-logo{color:var(--brand-primary)}
+.thalamus .learnito{display:flex;flex-direction:column;gap:12px;min-height:0}
+
+.thalamus .learnito .cp-sugerencias{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:14px}
+
+.thalamus .learnito .cp-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;flex:1;overflow-y:auto}
+.thalamus .learnito .cp-msg{display:flex;align-items:flex-start;gap:6px;max-width:85%;padding:10px 14px;border-radius:var(--radius-main, 14px);font-size:13.5px;line-height:1.5}
+.thalamus .learnito .cp-msg--closer{align-self:flex-end;background:var(--brand-primary);color:var(--on-brand)}
+.thalamus .learnito .cp-msg--copiloto{align-self:flex-start;background:var(--bg-element);color:var(--text-on-surface);border:1px solid var(--border-main)}
+.thalamus .learnito .cp-texto{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;flex:1}
+.thalamus .learnito .cp-pensando{opacity:.7;font-style:italic}
+
+.thalamus .learnito .cp-redactor{display:grid;gap:8px}
+.thalamus .learnito .cp-redactor .ui-textarea{max-height:30dvh;overflow-y:auto}
+.thalamus .learnito .cp-botones{display:flex;justify-content:flex-end;align-items:center;gap:8px}
+
+/* Página: ancho de lectura y el redactor pegado abajo. */
 .thalamus.copiloto .wrap{max-width:820px}
-.thalamus.copiloto .cp-logo{color:var(--brand-primary)}
-.thalamus.copiloto .cp-vista{display:flex;flex-direction:column;gap:var(--s3, 12px);min-height:calc(100dvh - 120px)}
+.thalamus.copiloto .learnito{min-height:calc(100dvh - 120px)}
+.thalamus.copiloto .learnito .cp-redactor{position:sticky;bottom:12px;background:var(--bg-surface);padding:12px;border:1px solid var(--border-main);border-radius:var(--radius-main, 14px)}
 
-.thalamus.copiloto .cp-sugerencias{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:14px}
-
-.thalamus.copiloto .cp-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;flex:1}
-.thalamus.copiloto .cp-msg{display:flex;align-items:flex-start;gap:6px;max-width:85%;padding:10px 14px;border-radius:var(--radius-main, 14px);font-size:13.5px;line-height:1.5}
-.thalamus.copiloto .cp-msg--closer{align-self:flex-end;background:var(--brand-primary);color:var(--on-brand)}
-.thalamus.copiloto .cp-msg--copiloto{align-self:flex-start;background:var(--bg-element);color:var(--text-on-surface);border:1px solid var(--border-main)}
-.thalamus.copiloto .cp-texto{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;flex:1}
-.thalamus.copiloto .cp-pensando{opacity:.7;font-style:italic}
-
-.thalamus.copiloto .cp-redactor{position:sticky;bottom:12px;display:grid;gap:8px}
-.thalamus.copiloto .cp-redactor .ui-textarea{max-height:40dvh;overflow-y:auto}
-.thalamus.copiloto .cp-botones{display:flex;justify-content:flex-end;align-items:center;gap:8px}
+/* Modal: alto fijo para que la lista scrollee adentro y el redactor no se vaya. */
+.thalamus .ui-modal.learnito-modal{width:min(640px, 100%);height:min(720px, calc(100dvh - 48px));display:flex;flex-direction:column;gap:12px}
+.thalamus .learnito-modal .learnito{flex:1}
 
 @media (max-width:600px){
-    .thalamus.copiloto .cp-msg{max-width:100%}
+    .thalamus .learnito .cp-msg{max-width:100%}
 }

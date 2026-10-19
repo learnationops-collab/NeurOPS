@@ -1,6 +1,6 @@
 // La conversación con el copiloto. La API de Claude no guarda estado: se manda el historial entero
 // en cada turno, y el servidor lo acota (app/api/copiloto.py).
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import api from '../../services/api';
 
 export const MAX_MENSAJES = 20;
@@ -10,8 +10,9 @@ export function useCopiloto() {
     const [enviando, setEnviando] = useState(false);
 
     // Devuelve null si salió bien, o el mensaje de error para mostrar.
-    const enviar = async (texto) => {
-        const conversacion = [...mensajes, { role: 'user', content: texto }];
+    const enviar = useCallback(async (texto) => {
+        const anteriores = mensajes;
+        const conversacion = [...anteriores, { role: 'user', content: texto }];
         setMensajes(conversacion);
         setEnviando(true);
         try {
@@ -19,18 +20,16 @@ export function useCopiloto() {
             setMensajes([...conversacion, { role: 'assistant', content: data.texto }]);
             return null;
         } catch (err) {
-            setMensajes(mensajes);
+            setMensajes(anteriores);
             return err.response?.data?.error || 'No se pudo hablar con el copiloto.';
         } finally {
             setEnviando(false);
         }
-    };
+    }, [mensajes]);
 
-    return {
-        mensajes,
-        enviando,
-        enviar,
-        reiniciar: () => setMensajes([]),
-        lleno: mensajes.length >= MAX_MENSAJES - 1,
-    };
+    const reiniciar = useCallback(() => setMensajes([]), []);
+
+    return useMemo(() => ({
+        mensajes, enviando, enviar, reiniciar, lleno: mensajes.length >= MAX_MENSAJES - 1,
+    }), [mensajes, enviando, enviar, reiniciar]);
 }

@@ -637,6 +637,18 @@
   border:1px solid var(--border-subtle);color:var(--text-muted);transition:background-color .15s ease,color .15s ease,border-color .15s ease}
 .dc-shell .menu-accion:hover,.dc-shell .menu-accion:focus-visible{background:var(--brand-secondary);border-color:var(--brand-secondary);color:var(--on-brand);outline:none}
 .dc-shell .menu-accion--marcada{border-color:var(--brand-secondary);color:var(--brand-secondary)}
+/* El 📌 para fijar la opción en el dock: discreto hasta pasar por la fila; fijada, con el color de marca. */
+.dc-shell .menu-fijar{border-color:transparent;color:var(--text-muted-40);opacity:.45}
+.dc-shell .menu-fila:hover .menu-fijar,.dc-shell .menu-fijar:focus-visible{opacity:1}
+.dc-shell .menu-fijar--puesta{opacity:1;color:var(--brand-secondary)}
+/* Las fijadas, a la izquierda del dock: un botón por acción, del tamaño del avatar. */
+.dc-shell .dock-fijadas{display:flex;align-items:center;gap:2px;flex-shrink:0}
+.dc-shell .dock-fijada{position:relative;z-index:1;flex-shrink:0;display:grid;place-items:center;
+  width:48px;height:56px;border-radius:17px;color:var(--text-muted);
+  transition:background-color .18s ease,color .18s ease,transform .26s var(--spring)}
+.dc-shell .dock-fijada:hover{background:var(--mat-3);color:var(--text-on-surface)}
+.dc-shell .dock-fijada:active{transform:scale(.95)}
+.dc-shell .dock-fijada:focus-visible{outline:2px solid var(--brand-secondary);outline-offset:-2px}
 .dc-shell .menu-item--peligro:hover,
 .dc-shell .menu-item--peligro:focus-visible{background:var(--error-surface);color:var(--error)}
 /* Una opcion que abre una lista en el mismo menu ("Simular a un closer"): la flecha la anuncia,

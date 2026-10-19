@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AparienciaProvider } from './context/AparienciaContext';
 import { ConfiguracionProvider } from './sesion/ConfiguracionContext';
 import { PortalProvider, PortalRuta } from './sesion/PortalContext';
+import { LearnitoProvider } from './sesion/LearnitoContext';
 import { roleLandingPath } from './utils/roleLanding';
 import MainLayout from './components/MainLayout';
 import AdminDashboard from './pages/admin/dashboard/AdminDashboard';
@@ -93,6 +94,7 @@ function App() {
         <Router>
         <ConfiguracionProvider>
         <PortalProvider>
+        <LearnitoProvider>
           <PixelTracker />
           <Toaster position="top-right" />
           <SoloInterno>
@@ -434,6 +436,7 @@ function App() {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/login" />} />
           </Routes>
+        </LearnitoProvider>
         </PortalProvider>
         </ConfiguracionProvider>
         </Router>

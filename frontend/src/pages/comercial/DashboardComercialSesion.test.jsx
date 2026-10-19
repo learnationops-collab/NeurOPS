@@ -63,7 +63,7 @@ describe('DashboardComercial · la sesión en el dock', () => {
         await abrirSesion('Dirección');
         expect(screen.getByText('Dirección comercial')).toBeTruthy();
         expect(screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent))
-            .toEqual(['Configuración', 'Portal', 'Mis reportes', 'Reportar un problema', 'Cerrar sesión']);
+            .toEqual(['Learnito', 'Configuración', 'Portal', 'Mis reportes', 'Reportar un problema', 'Cerrar sesión']);
     });
 
     it('un closer en "Mis datos" tiene el mismo menú, y sigue teniendo la vuelta al mazo', async () => {
@@ -74,7 +74,7 @@ describe('DashboardComercial · la sesión en el dock', () => {
 
         expect(screen.getByRole('link', { name: 'Volver al mazo' })).toBeTruthy();
         await abrirSesion('Marlon Closer');
-        expect(screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent)).toEqual(['Configuración', 'Portal', 'Mis reportes', 'Reportar un problema', 'Cerrar sesión']);
+        expect(screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent)).toEqual(['Learnito', 'Configuración', 'Portal', 'Mis reportes', 'Reportar un problema', 'Cerrar sesión']);
         expect(api.get).not.toHaveBeenCalled();
     });
 
@@ -87,7 +87,7 @@ describe('DashboardComercial · la sesión en el dock', () => {
         await abrirSesion('Marlon Closer');
         expect(screen.getByText('Closer · simulación')).toBeTruthy();
         expect(screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent))
-            .toEqual(['Configuración', 'Portal', 'Mis reportes', 'Reportar un problema', 'Volver a mi sesión', 'Cerrar sesión']);
+            .toEqual(['Learnito', 'Configuración', 'Portal', 'Mis reportes', 'Reportar un problema', 'Volver a mi sesión', 'Cerrar sesión']);
         fireEvent.click(screen.getByRole('menuitem', { name: 'Volver a mi sesión' }));
         expect(impersonation.revertImpersonation).toHaveBeenCalledTimes(1);
     });
