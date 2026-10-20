@@ -55,6 +55,12 @@ def normalizar(kind, value):
     return v or None
 
 
+def telefono_crudo(phone):
+    """El teléfono como se escribió, para mostrar en `Person.phone` (40 caracteres), o None si no tiene
+    un número válido."""
+    return str(phone).strip()[:40] if phone and normalizar('phone', phone) else None
+
+
 def claves(email=None, instagram=None, phone=None, manychat_id=None, learnation_user_id=None):
     """[(kind, valor normalizado)] en orden de confianza, sin los vacíos ni los placeholders."""
     datos = {'email': email, 'instagram': instagram, 'phone': phone, 'manychat_id': manychat_id,
@@ -183,13 +189,13 @@ def _resolver(nombre, email, instagram, phone, manychat_id, learnation_user_id, 
         if not crear:
             return None
         person = Person(uuid=str(uuid4()), full_name=nombre or None,
-                        phone=str(phone).strip() if phone and normalizar('phone', phone) else None)
+                        phone=telefono_crudo(phone))
         db.session.add(person)
     else:
         if nombre and not person.full_name:
             person.full_name = nombre
-        if not person.phone and phone and normalizar('phone', phone):
-            person.phone = str(phone).strip()  # el primero que llega, como se escribió
+        if not person.phone and telefono_crudo(phone):
+            person.phone = telefono_crudo(phone)  # el primero que llega, como se escribió
     anotar(person, pares, fuente)
     return person
 
@@ -232,7 +238,7 @@ def _evento(person, kind, field, desde, hasta, reason, usuario):
 def _mostrable(kind, crudo, value):
     """Lo que va en la columna de la persona: el teléfono como se escribió (con su código de país); el
     resto, normalizado."""
-    return str(crudo).strip() if kind == 'phone' and crudo else value
+    return (telefono_crudo(crudo) or value) if kind == 'phone' else value
 
 
 def hacer_principal(person, kind, value, usuario=None, uso=None, reason=None, corrige=False):
@@ -373,7 +379,7 @@ def _persona_del_cliente(session, client, nuevo):
             client.uuid = client.uuid or str(uuid4())
             uso_uuid = client.uuid if db.session.get(Person, client.uuid) is None else str(uuid4())
             person = Person(uuid=uso_uuid, full_name=client.full_name,
-                            phone=client.phone if normalizar('phone', client.phone) else None)
+                            phone=telefono_crudo(client.phone))
             session.add(person)
         client.person = person
     elif client.full_name and not person.full_name:

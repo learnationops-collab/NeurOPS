@@ -72,8 +72,28 @@ def ejecutar(apply=False):
         db.session.rollback()
         print('\n[PRUEBA] No se escribió nada. Corré con --apply para guardar.')
         return totales
-    for i in range(0, len(nuevas), LOTE):
-        db.session.bulk_insert_mappings(PersonIdentity, nuevas[i:i + LOTE])
+    # Primero se guardan los person_uuid: el seguimiento automático (frente B) le anota a la persona el
+    # manychat_id del lead que se vincula. Lo que ya quedó así no se repite, ni se pisa su principal.
+    db.session.flush()
+    uuids = list({n['person_uuid'] for n in nuevas})
+    ya, principales = set(), set()
+    for i in range(0, len(uuids), LOTE):
+        for r in PersonIdentity.query.filter(PersonIdentity.person_uuid.in_(uuids[i:i + LOTE])).with_entities(
+                PersonIdentity.person_uuid, PersonIdentity.kind, PersonIdentity.value, PersonIdentity.is_primary,
+                PersonIdentity.retired_at):
+            ya.add((r.person_uuid, r.kind, r.value))
+            if r.is_primary and r.retired_at is None:
+                principales.add((r.person_uuid, r.kind))
+    faltan = []
+    for n in nuevas:
+        if (n['person_uuid'], n['kind'], n['value']) in ya:
+            continue
+        clave = (n['person_uuid'], n['kind'])
+        n['is_primary'] = clave not in principales
+        principales.add(clave)
+        faltan.append(n)
+    for i in range(0, len(faltan), LOTE):
+        db.session.bulk_insert_mappings(PersonIdentity, faltan[i:i + LOTE])
     # Los principales nuevos se muestran en la persona si no tenía ese dato.
     for kind in ('email', 'instagram', 'phone'):
         db.session.execute(db.text(f"""
