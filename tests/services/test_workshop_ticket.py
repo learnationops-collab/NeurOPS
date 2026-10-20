@@ -4,7 +4,8 @@ Era `cash_collected / sales`. El cash del taller incluye las señas —a proposi
 taller trajo y el ROAS la usa— y `sales` cuenta PERSONAS, incluso a quien la hoja marca como cerrada
 sin la venta cargada, asi que el ticket salia inflado. Regla del 02/10/2026, la misma del dashboard
 comercial y del de closers: suma del monto de las ventas nuevas (pago completo y split pay) / cuantas
-filas son. Cuotas, señas, renovaciones y upsells nunca entran.
+filas son. Señas, renovaciones y upsells nunca entran; desde el 19/10/2026 la primera cuota a menos
+de un mes de la venta sí (`ticket_service`).
 """
 from datetime import date, datetime
 
@@ -38,7 +39,7 @@ def pago(db, ig, tipo, monto):
     db.session.commit()
 
 
-def test_el_ticket_es_la_venta_nueva_sin_la_sena_ni_la_cuota(db):
+def test_el_ticket_es_la_venta_nueva_sin_la_sena_con_la_primera_cuota_del_mes(db):
     talleres(db)
     agenda(db, 'ana')
     pago(db, 'ana', 'RR - Parcial', 250.0)
@@ -47,7 +48,8 @@ def test_el_ticket_es_la_venta_nueva_sin_la_sena_ni_la_cuota(db):
 
     data = calcular_prefill(DIA)
 
-    assert data['cash_ventas'] == 250.0
+    # La primera cuota, a menos de un mes de la venta, suma al ticket (19/10/2026)
+    assert data['cash_ventas'] == 500.0
     assert data['ventas_cobradas'] == 1
     # El cash del taller sigue trayendo la seña (y la cuota sigue sin entrar)
     assert data['cash_collected'] == 350.0

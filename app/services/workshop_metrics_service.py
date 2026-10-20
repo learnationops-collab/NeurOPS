@@ -27,6 +27,7 @@ from sqlalchemy import or_, func
 
 from app.models import Client, FinancialAgenda, FinancialSale, Appointment, WorkshopEvent
 from app.services.fuente_service import es_workshop_landing, es_workshop_vivo, es_sin_dueno
+from app.services.ticket_service import SENA, VENTA, claves_de_venta, ticket_de
 
 # Handles que la gente escribe cuando no tiene Instagram: no identifican a nadie
 HANDLES_INVALIDOS = {'n/a', 'na', 'no tengo', 'notengo', 'ninguno', 'none', '', 'sin instagram', 'no'}
@@ -398,15 +399,18 @@ def _resumen(personas, agendas, compradores, ventas):
     tambien a quien la hoja da por cerrado sin la venta cargada), salia inflado.
     """
     show_up, desglose = _desglose_estados(personas)
-    cierres = [s for s in ventas if _es_cierre(s)]
+    # Los pagos de la misma persona en el mismo mes son UNA venta, con su primera cuota si llega
+    # antes del mes (`ticket_service`, 19/10/2026)
+    cash_ventas, ventas_cobradas, _ = ticket_de(
+        [(claves_de_venta(s), s.date, s.monto, VENTA if _es_cierre(s) else SENA) for s in ventas])
     return {
         "agendas": len(personas),
         "llamadas": len(agendas),
         "show_up": show_up,
         "sales": len(compradores),
         "cash_collected": sum(s.monto or 0.0 for s in ventas),
-        "cash_ventas": sum(s.monto or 0.0 for s in cierres),
-        "ventas_cobradas": len(cierres),
+        "cash_ventas": cash_ventas,
+        "ventas_cobradas": ventas_cobradas,
         "breakdown": desglose,
     }
 
