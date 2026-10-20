@@ -1,9 +1,13 @@
+from uuid import uuid4
 from datetime import datetime
 from app import db
 
 class Client(db.Model):
     __tablename__ = 'clients'
     id = db.Column(db.Integer, primary_key=True)
+    # El id público de la persona (20/10/2026): el que comparten la Academia, ManyChat, n8n y las APIs.
+    # `id` queda como clave interna de la base. Sus mails, instagrams y teléfonos: `ClientIdentity`.
+    uuid = db.Column(db.String(36), unique=True, nullable=False, default=lambda: str(uuid4()))
     full_name = db.Column(db.String(120))
     email = db.Column(db.String(120), index=True, unique=True)
     phone = db.Column(db.String(20))

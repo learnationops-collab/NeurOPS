@@ -24,6 +24,7 @@ from .sale import Sale, SALE_KINDS, SALE_STATUSES
 from .subscription import Subscription, SubscriptionEvent, SUBSCRIPTION_STATUSES, SUBSCRIPTION_EVENT_KINDS
 from .ficha_opcion import FichaOpcion
 from .client_merge_log import ClientMergeLog
+from .client_identity import ClientIdentity, IDENTITY_KINDS
 from .academy_snapshot import AcademySnapshot
 from .bug_report import BugReport, BugReportMessage, URGENCY_LEVELS, STATUS_VALUES, REPORT_TYPES
 from .job_application import JobApplication, JobApplicationVote, ClarityWeight, CLARITY_CRITERIA, VOTE_VALUES
@@ -56,7 +57,7 @@ __all__ = [
     'WorkshopLead', 'LandingSession',
     'AlertRule', 'Alert',
     'InstallmentPlan', 'Sale', 'SALE_KINDS', 'SALE_STATUSES',
-    'Subscription', 'SubscriptionEvent', 'SUBSCRIPTION_STATUSES', 'SUBSCRIPTION_EVENT_KINDS','ClientMergeLog', 'FichaOpcion', 'AcademySnapshot',
+    'Subscription', 'SubscriptionEvent', 'SUBSCRIPTION_STATUSES', 'SUBSCRIPTION_EVENT_KINDS','ClientMergeLog', 'ClientIdentity', 'IDENTITY_KINDS', 'FichaOpcion', 'AcademySnapshot',
     'BugReport', 'BugReportMessage', 'URGENCY_LEVELS', 'STATUS_VALUES', 'REPORT_TYPES',
     'JobApplication', 'JobApplicationVote', 'ClarityWeight', 'CLARITY_CRITERIA', 'VOTE_VALUES',
     'AssistantApplication', 'AssistantClarityWeight', 'HiringForm', 'HiringConfig',
