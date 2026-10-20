@@ -1,5 +1,6 @@
 from app.models import User, Client, Enrollment, Appointment, Payment, PaymentMethod, CloserDailyStats, DailyReportQuestion, DailyReportAnswer, Event, db, Integration
 from app.services.dashboard_service import DashboardService
+from app.services.ticket_service import CUOTA, pago_de_venta, primeras_cuotas, ticket_promedio
 from sqlalchemy import or_
 from datetime import datetime, time, timedelta, date
 import pytz
@@ -2284,45 +2285,40 @@ class CloserService:
 
         # Calculo de ticket promedio general y por programa (solo PIF y Split Pays), sobre
         # `all_sales` (leído arriba, junto con las señas).
+        # El ticket junta los pagos del mismo cliente en el mismo mes en UNA venta, con su primera
+        # cuota si llega antes del mes, la haya cargado quien sea (`ticket_service`); `count`
+        # sigue contando las filas de venta real del programa.
         program_data = {}
-        total_pif_split_cash = 0.0
-        total_pif_split_count = 0.0
+        pagos = []
 
         for sale in all_sales:
             program_code, tipo_simple = SheetsService.parse_tipo_pago(sale.tipo_pago)
-
-            # Solo cuentan las ventas reales (PIF y Split Pay). Antes el filtro era por descarte
-            # ("todo lo que no sea seña ni cuota"), así que cuotas mal etiquetadas, upsells,
-            # renovaciones y filas sin tipo reconocible entraban al ticket promedio y lo bajaban.
-            if tipo_simple not in REAL_SALE_TIPOS:
+            pago = pago_de_venta(sale, tipo_simple)
+            if pago[3] == CUOTA:
                 continue
+            pagos.append(pago)
 
-            monto_val = float(sale.monto or 0.0)
             # El programa sale del prefijo del propio tipo_pago ("RR - Parcial"). El respaldo por
             # `examen` solo aplica si no vino prefijo: antes se buscaba "AL" dentro del string
             # crudo del tipo, y "PARCIAL" contiene "AL", así que toda venta sin prefijo terminaba
             # atribuida a Ace Learners.
             prog_name = PROGRAM_LABELS.get(program_code) or _program_from_examen(sale.examen) or "Sin Programa"
+            p_info = program_data.setdefault(prog_name, {"pagos": [], "count": 0})
+            p_info["pagos"].append(pago)
+            # Solo cuentan las ventas reales (PIF y Split Pay). Antes el filtro era por descarte
+            # ("todo lo que no sea seña ni cuota"), así que cuotas mal etiquetadas, upsells,
+            # renovaciones y filas sin tipo reconocible entraban al ticket promedio y lo bajaban.
+            if tipo_simple in REAL_SALE_TIPOS:
+                p_info["count"] += 1
 
-            if prog_name not in program_data:
-                program_data[prog_name] = {"cash": 0.0, "count": 0}
+        cuotas = primeras_cuotas(pagos)
+        general_average_ticket = ticket_promedio(pagos + cuotas)[2] or 0.0
 
-            program_data[prog_name]["cash"] += monto_val
-            program_data[prog_name]["count"] += 1
-
-            total_pif_split_cash += monto_val
-            total_pif_split_count += 1
-
-        general_average_ticket = round(total_pif_split_cash / total_pif_split_count, 2) if total_pif_split_count > 0 else 0.0
-
-        program_tickets = []
-        for prog_name, p_info in program_data.items():
-            avg = round(p_info["cash"] / p_info["count"], 2) if p_info["count"] > 0 else 0.0
-            program_tickets.append({
-                "program": prog_name,
-                "average_ticket": avg,
-                "count": p_info["count"]
-            })
+        program_tickets = [
+            {"program": prog_name, "average_ticket": ticket_promedio(p_info["pagos"] + cuotas)[2] or 0.0,
+             "count": p_info["count"]}
+            for prog_name, p_info in program_data.items() if p_info["count"] > 0
+        ]
 
         program_tickets.sort(key=lambda x: x["count"], reverse=True)
 
