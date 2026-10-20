@@ -3,7 +3,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { localToday } from '../../../utils/datetime';
 import { mensajeDeError } from '../fichaApi';
 import { esTransferencia } from '../transferencia';
-import CamposPago, { faltaParaGuardar } from './CamposPago';
+import CamposPago, { faltaParaGuardar, ventasDelPrograma } from './CamposPago';
 import MotivoDelFallo from './MotivoDelFallo';
 
 /**
@@ -26,7 +26,7 @@ import MotivoDelFallo from './MotivoDelFallo';
  */
 const AgregarPago = ({
     pagos = [], programaDelCliente = null, medios = [], programas = [], tipos = [], transferencias = [],
-    onAgregar,
+    ventas = [], onAgregar,
 }) => {
     const reducido = useReducedMotion();
     const ids = useId();
@@ -55,6 +55,7 @@ const AgregarPago = ({
             programa: programaDelCliente || ultimo?.programa_code || '',
             tipo: tipos.some(t => t.clave === 'cuota') ? 'cuota' : (tipos[0]?.clave || ''),
             transferido_a: null,
+            venta: '',
         });
         setError(null);
         setAbierto(true);
@@ -75,6 +76,9 @@ const AgregarPago = ({
             await onAgregar?.({
                 fecha: valores.fecha, monto: Number(valores.monto), metodo_pago: valores.medio,
                 programa_code: valores.programa, tipo: valores.tipo,
+                // Sin venta elegida la ubica el sistema por el tipo y la fecha (`sale_service`).
+                ...(ventasDelPrograma(ventas, valores.programa).some(v => String(v.id) === valores.venta)
+                    ? { sale_id: Number(valores.venta) } : {}),
                 // Solo si el medio que quedó es transferencia: elegido y después cambiado a otro
                 // medio, no viaja.
                 ...(esTransferencia(valores.medio) ? { transferido_a: valores.transferido_a } : {}),
@@ -120,7 +124,8 @@ const AgregarPago = ({
                     setError(null);
                     setValores(v => ({ ...v, ...parche }));
                 }}
-                medios={medios} programas={programas} tipos={tipos} transferencias={transferencias} />
+                medios={medios} programas={programas} tipos={tipos} transferencias={transferencias}
+                ventas={ventas} />
 
             <small className="t-cap mut">
                 Carga un pago que quedó sin registrar, y la deuda lo cuenta. No le avisa al cliente, no

@@ -156,6 +156,14 @@ class SheetsService:
                 db.session.commit()
                 logger.info("[SHEETS POST] Venta registrada exitosamente en base de datos local.")
 
+                # La venta de este pago la ubica `sale_service` al guardar; si la abrió este pago,
+                # se le anota la cita y el total que declaró el closer.
+                if sale.sale is not None and sale.sale.appointment_id is None and sale.sale.payments.count() == 1:
+                    sale.sale.appointment_id = appointment_id
+                    sale.sale.agreed_total = SheetsService._parse_float(payload.get('precio_total')) or None
+                    sale.sale.source = 'ficha'
+                    db.session.commit()
+
                 # Cada pago le extiende el acceso en la Academia y avisa al gestor del alumno (en un hilo).
                 from app.services.academy_payment_sync import notify_academy_of_payments
                 notify_academy_of_payments([sale])

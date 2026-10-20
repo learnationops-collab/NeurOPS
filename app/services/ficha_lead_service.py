@@ -292,7 +292,7 @@ def _resultado(appt, ventas, estado_libro, confirmada, deuda, tipos_vendidos, co
 # --- Cobro ------------------------------------------------------------------------------------
 
 def _cobro(client, ventas, deuda, programa_code, programa_nombre, enrollment_dt, baja=None):
-    from app.models import InstallmentPlan
+    from app.models import InstallmentPlan, Sale
     from app.services.sales_consistency_service import SalesConsistencyService
     from app.services.sheets_service import SheetsService
     from app.services.transferencias_service import es_transferencia
@@ -315,7 +315,11 @@ def _cobro(client, ventas, deuda, programa_code, programa_nombre, enrollment_dt,
                       'monto': float(v.monto or 0.0), 'tipo': tipo,
                       'tipo_pago': v.tipo_pago or None, 'programa_code': programa,
                       'es_transferencia': es_transferencia(v.metodo_pago),
-                      'transferido_a': v.transferido_a})
+                      'transferido_a': v.transferido_a, 'sale_id': v.sale_id})
+    # Las ventas del cliente (20/10/2026): a cuál pertenece cada pago, y entre cuáles se elige al
+    # cargar o mover uno.
+    ventas_del_cliente = ([s.to_dict() for s in Sale.query.filter_by(client_id=client_id)
+                           .order_by(Sale.sold_at.asc(), Sale.id.asc()).all()] if client_id else [])
     pagado = round(sum(p['monto'] for p in pagos), 2)
     fechas = [p['fecha'] for p in pagos if p['fecha']]
 
@@ -340,6 +344,7 @@ def _cobro(client, ventas, deuda, programa_code, programa_nombre, enrollment_dt,
         # si la baja se revierte. Lo que dice que no se cobra es la etapa y la marca de la baja.
         'cuotas': cuotas,
         'pagos': pagos,
+        'ventas': ventas_del_cliente,
         'estado_pagos': (SalesConsistencyService.get_client_payment_state(client_id, programa_code)
                          if client_id else None),
     }

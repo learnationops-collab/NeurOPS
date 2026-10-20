@@ -73,6 +73,14 @@ def test_lo_dudoso_se_agrupa_igual_y_queda_anotado():
     assert ids(sueltos) == [[1], [2]] and sueltos[0].review_note == NOTA_SIN_CLIENTE
 
 
+def _como_historicos(db):
+    """Los pagos de antes de las ventas: sin venta. Ahora nacen con una (`sale_service`), así que se
+    les saca con un UPDATE directo, que no pasa por el `before_flush`."""
+    FinancialSale.query.update({FinancialSale.sale_id: None})
+    Sale.query.delete()
+    db.session.commit()
+
+
 def _cobro(db, client, tipo, fecha, estado='Completada'):
     v = FinancialSale(client_id=client.id, mail_cliente=client.email, nombre_cliente=client.full_name,
                       tipo_pago=tipo, monto=500.0, date=fecha, estado=estado,
@@ -87,6 +95,7 @@ def test_el_script_en_prueba_no_escribe(db):
     db.session.add(client)
     db.session.commit()
     _cobro(db, client, 'AL - Parcial', datetime(2026, 3, 1))
+    _como_historicos(db)
 
     numeros = script.ejecutar(apply=False)
     assert numeros['ventas'] == 1
@@ -105,6 +114,9 @@ def test_el_script_crea_las_ventas_cuelga_el_plan_y_no_duplica(db):
     plan = InstallmentPlan(appointment_id=0, client_id=client.id, programa_code='AL', numero_cuota=2,
                            monto=500.0, fecha_vencimiento=date(2026, 5, 1), created_at=datetime(2026, 3, 1, 12))
     db.session.add(plan)
+    db.session.commit()
+    _como_historicos(db)
+    InstallmentPlan.query.update({InstallmentPlan.sale_id: None})
     db.session.commit()
 
     numeros = script.ejecutar(apply=True)

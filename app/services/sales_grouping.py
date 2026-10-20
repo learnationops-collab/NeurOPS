@@ -61,6 +61,11 @@ class Venta:
         return bool(self.pagos) and all(t == 'seña' for t in self.tipos)
 
     @property
+    def ultimo_de_venta(self):
+        """El día del último completo o parcial: hasta ahí llega «a pocos días» del resto."""
+        return next((p.dia for p in reversed(self.pagos) if p.tipo in ('completo', 'parcial')), None)
+
+    @property
     def client_id(self):
         ids = Counter(p.client_id for p in self.pagos if p.client_id)
         return ids.most_common(1)[0][0] if ids else None
@@ -84,7 +89,7 @@ def pago_de_fila(fila):
                 vendedor=fila.email_vendedor, setter=fila.setter)
 
 
-def _abre_venta(abierta, pago, ultimo_de_venta):
+def _abre_venta(abierta, pago):
     """¿Este pago empieza una venta nueva, o se suma a la `abierta`?"""
     if pago.tipo in KIND_DE_TIPO or abierta is None:
         return True
@@ -93,36 +98,39 @@ def _abre_venta(abierta, pago, ultimo_de_venta):
     if abierta.solo_sena:
         return False  # saldo de la seña, o una segunda seña
     if pago.tipo in ('completo', 'parcial') and abierta.kind == 'new':
-        return not _misma_venta(ultimo_de_venta, pago.dia)
+        return not _misma_venta(abierta.ultimo_de_venta, pago.dia)
     return True
+
+
+def decidir(abierta, pago):
+    """(¿abre una venta nueva?, notas para revisar) de `pago` frente a la venta `abierta` del mismo
+    cliente y programa (None si no tiene). La usan el agrupado retroactivo y cada pago nuevo
+    (`sale_service`): una sola regla."""
+    if not pago.tipo:
+        return abierta is None, [NOTA_SIN_TIPO]
+    if _abre_venta(abierta, pago):
+        return True, [NOTA_CUOTA_SIN_VENTA] if pago.tipo == 'cuota' else []
+    notas = []
+    if pago.tipo == 'cuota':
+        primero = abierta.pagos[0].dia
+        if abierta.solo_sena and pago.dia and primero and not es_primera_cuota(primero, pago.dia):
+            notas.append(NOTA_CUOTA_TARDE)
+        if abierta.tipos[0] == 'completo' and 'parcial' not in abierta.tipos:
+            notas.append(NOTA_CUOTA_DE_COMPLETO)
+    return False, notas
 
 
 def _ventas_de(pagos):
     """Las ventas de los pagos de un cliente en un programa, ya ordenados por fecha."""
-    ventas, abierta, ultimo_de_venta = [], None, None
+    ventas, abierta = [], None
     for pago in pagos:
-        if not pago.tipo:
-            venta = abierta or Venta(pago.programa, 'new')
-            if venta is not abierta:
-                ventas.append(venta)
-                abierta = venta
-            venta.anotar(NOTA_SIN_TIPO)
-            venta.pagos.append(pago)
-            continue
-        if _abre_venta(abierta, pago, ultimo_de_venta):
+        abre, notas = decidir(abierta, pago)
+        if abre:
             abierta = Venta(pago.programa, KIND_DE_TIPO.get(pago.tipo, 'new'))
             ventas.append(abierta)
-            if pago.tipo == 'cuota':
-                abierta.anotar(NOTA_CUOTA_SIN_VENTA)
-        elif pago.tipo == 'cuota':
-            if abierta.solo_sena and pago.dia and abierta.pagos[0].dia \
-                    and not es_primera_cuota(abierta.pagos[0].dia, pago.dia):
-                abierta.anotar(NOTA_CUOTA_TARDE)
-            if abierta.tipos and abierta.tipos[0] == 'completo' and 'parcial' not in abierta.tipos:
-                abierta.anotar(NOTA_CUOTA_DE_COMPLETO)
+        for nota in notas:
+            abierta.anotar(nota)
         abierta.pagos.append(pago)
-        if pago.tipo in ('completo', 'parcial'):
-            ultimo_de_venta = pago.dia
     return ventas
 
 

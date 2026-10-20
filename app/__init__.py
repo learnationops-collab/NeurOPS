@@ -286,4 +286,7 @@ def create_app(config_class=Config):
     from app.services.workshop_live_sync import register_workshop_live_sync
     register_workshop_live_sync(app)
 
+    from app.services.sale_service import register_sale_tracking
+    register_sale_tracking(app)
+
     return app
