@@ -65,6 +65,7 @@ export function ModalNoCalifica({ f, onCerrar }) {
     const guardar = (k) => (v) => mutarForm(f.id, 'fin', fin => { fin[k] = v; });
     const titulo = useBorrador(f.fin.titulo, guardar('titulo'));
     const texto = useBorrador(f.fin.texto, guardar('texto'));
+    const url = useBorrador(f.fin.url || '', guardar('url'));
     return (
         <Modal onCerrar={onCerrar} clase="modal--fin" labelledBy="fin-tit">
             <Humo clase="humo--tarjeta humo--suave" cols={['var(--error)', 'var(--brand-primary)', 'var(--brand-secondary)', 'var(--brand-navy)']} />
@@ -77,6 +78,9 @@ export function ModalNoCalifica({ f, onCerrar }) {
                     <label className="t-rotulo" htmlFor="fin-texto">Texto</label>
                     <Input as="textarea" className="fin-area" id="fin-texto" maxLength={300} rows={3} {...texto} />
                     <p className="t-cap mut40">Usá {'{nombre}'} para el nombre del lead.</p>
+                    <label className="t-rotulo" htmlFor="fin-url">Llevarlo a una página (opcional)</label>
+                    <Input id="fin-url" type="url" maxLength={500} placeholder="https://…" {...url} />
+                    <p className="t-cap mut40">Con un link https, el que no califica va a esa página en vez de ver este mensaje.</p>
                 </div>
                 <div className="fin-prev" aria-label="Vista previa">
                     <span className="rv-listo-ico rv-listo-ico--no"><Icono n="prohibido" s={24} /></span>

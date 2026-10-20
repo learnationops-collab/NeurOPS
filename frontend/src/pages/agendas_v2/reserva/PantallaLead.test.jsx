@@ -91,6 +91,15 @@ describe('PantallaLead', () => {
         expect(container.querySelector('.rv-dia')).toBeNull();
     });
 
+    it('el que no califica va a la página de cierre del formulario, si tiene', async () => {
+        const conPagina = normalForm('f4', { ...form, fin: { ...form.fin, url: 'https://work.thelearnation.com/agendas-v2/agenda/descalificados' } });
+        const { container } = render(<PantallaLead fuente={{ form: conPagina }} proveedor={local()} modo="prueba" />);
+        await responderContacto(container);
+        elegir('Nada por ahora');
+        expect(screen.getByRole('heading', { name: 'Gracias, Ana.' })).toBeInTheDocument();
+        expect(screen.getByText(/agendas-v2\/agenda\/descalificados/)).toBeInTheDocument();
+    });
+
     it('avanza con los datos de contacto y una opción hasta el calendario', async () => {
         const { container } = render(<PantallaLead fuente={{ form }} proveedor={local()} modo="prueba" />);
         await responderContacto(container);

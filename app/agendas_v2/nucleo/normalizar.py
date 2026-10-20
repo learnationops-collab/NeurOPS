@@ -181,7 +181,9 @@ def normal_form(id, d):
         'preguntas': ps,
         'reglas': normal_reglas(d.get('reglas')),
         'resto': txt(d.get('resto')),
-        'fin': {'titulo': cortar(txt(fin.get('titulo'), FIN_DEF['titulo']), 120), 'texto': cortar(texto_fin, 300)},
+        # url: la página a la que va el que no califica (la landing de descalificados); vacía, ve el título y el texto.
+        'fin': {'titulo': cortar(txt(fin.get('titulo'), FIN_DEF['titulo']), 120), 'texto': cortar(texto_fin, 300),
+                'url': url_ok(fin.get('url'))},
         'orden': _orden(d.get('orden')),
     }
 

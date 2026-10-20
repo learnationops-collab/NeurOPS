@@ -7,7 +7,9 @@ import { Route, Routes } from 'react-router-dom';
 //   /agendas-v2/agenda/:funnel/:evento   (?o=origen)
 //   /agendas-v2/agenda/:evento
 //   /agendas-v2/agenda/gracias/:id(/plan)   página de gracias del evento, después de agendar (reserva/gracias)
+//   /agendas-v2/agenda/descalificados       landing de los que no califican (reserva/descalificados)
 const PaginaPublica = lazy(() => import('./reserva/PaginaPublica'));
+const Descalificados = lazy(() => import('./reserva/descalificados/PaginaDescalificados'));
 const Gracias = lazy(() => import('./reserva/gracias/PaginaGracias').then(m => ({ default: m.Gracias })));
 const Plan = lazy(() => import('./reserva/gracias/PaginaGracias').then(m => ({ default: m.Plan })));
 
@@ -17,6 +19,7 @@ export default function AgendasV2Publica() {
             <Routes>
                 <Route path="gracias/:id" element={<Gracias />} />
                 <Route path="gracias/:id/plan" element={<Plan />} />
+                <Route path="descalificados" element={<Descalificados />} />
                 <Route path=":funnel/:evento" element={<PaginaPublica />} />
                 <Route path=":evento" element={<PaginaPublica />} />
                 <Route path="*" element={<PaginaPublica />} />

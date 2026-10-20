@@ -256,7 +256,8 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
         if (modo !== 'publico' || !s.fin || descRef.current || !ctx.evento) return;
         descRef.current = true;
         // Si una regla lo manda a otra página, se lo lleva ahí después de registrarlo (o a los 3 s, si tarda).
-        const url = s.finUrl;
+        // Sin regla, a la página del que no califica del formulario (fin.url), si tiene.
+        const url = s.finUrl || (ctx.fin && ctx.fin.url) || '';
         let ido = false;
         const ir = () => { if (url && !ido && vivoRef.current) { ido = true; window.location.assign(url); } };
         if (url) setTimeout(ir, 3000);
@@ -456,7 +457,7 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
     let paso, clave;
     if (s.fin) {
         clave = 'fin';
-        paso = <PasoFin ids={ids} fin={ctx.fin} nombre={nombre} prueba={prueba} respuestas={respuestas} acc={acc} url={s.finUrl} />;
+        paso = <PasoFin ids={ids} fin={ctx.fin} nombre={nombre} prueba={prueba} respuestas={respuestas} acc={acc} url={s.finUrl || (ctx.fin && ctx.fin.url) || ''} />;
     } else if (s.listo) {
         clave = 'listo';
         paso = <PasoListo ids={ids} nombre={nombre} slot={s.slot} s={s} dur={s.durReal || ctx.dur} redir={ctx.redir} preguntas={preguntas} prueba={prueba} respuestas={respuestas} acc={acc}

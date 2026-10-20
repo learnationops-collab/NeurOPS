@@ -9,20 +9,9 @@ import './gracias.css';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { cargarGracias, embedDe, reproductor, rutaPlan } from './contenido';
+import Isotipo from '../Isotipo';
 
-const LOGO_SVG = (
-    <svg viewBox="0 0 100 100" aria-hidden="true">
-        <defs>
-            <linearGradient id="grLogo" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#FF3FA4" /><stop offset="100%" stopColor="#FF6AD5" />
-            </linearGradient>
-        </defs>
-        <rect width="100" height="100" rx="26" fill="url(#grLogo)" />
-        <g fill="#FFFFFF" stroke="#FFFFFF" strokeWidth="5" strokeLinejoin="round">
-            <path d="M49 18 L23 44 L23 83 L77 83 L77 61 L49 61 Z" /><path d="M23 18 L42 18 L23 37 Z" />
-        </g>
-    </svg>
-);
+const LOGO_SVG = <Isotipo />;
 
 const Check = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>;
 const Play = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" /></svg>;
