@@ -1,13 +1,14 @@
 from datetime import datetime
 
 from app import db
+from app.models.person import ConPersona
 
 # Qué se vendió: una inscripción nueva, una renovación o un upsell. Cada una es una venta propia.
 SALE_KINDS = ('new', 'renewal', 'upsell')
 SALE_STATUSES = ('active', 'cancelled', 'refunded')
 
 
-class Sale(db.Model):
+class Sale(ConPersona, db.Model):
     """La venta: el compromiso del cliente con un programa (20/10/2026).
 
     Los pagos son las filas de `FinancialSale` que apuntan acá (`FinancialSale.sale_id`): esa tabla

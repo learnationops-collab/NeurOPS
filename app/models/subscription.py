@@ -1,6 +1,7 @@
 from datetime import date, datetime
 
 from app import db
+from app.models.person import ConPersona
 
 SUBSCRIPTION_STATUSES = ('active', 'expired', 'cancelled')
 # Qué cambió la suscripción: la abrió una venta, la extendió una renovación o un pago, la seña pasó
@@ -8,7 +9,7 @@ SUBSCRIPTION_STATUSES = ('active', 'expired', 'cancelled')
 SUBSCRIPTION_EVENT_KINDS = ('alta', 'renovacion', 'conversion', 'extension', 'prorroga', 'correccion', 'quitado')
 
 
-class Subscription(db.Model):
+class Subscription(ConPersona, db.Model):
     """La suscripción: el producto de la Academia que el cliente ganó, hasta una fecha (20/10/2026).
 
     Work es la fuente de verdad: la abre la venta (7 días si es seña, la duración de la venta si

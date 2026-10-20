@@ -1,12 +1,13 @@
 from uuid import uuid4
 from datetime import datetime
 from app import db
+from app.models.person import ConPersona
 
-class Client(db.Model):
+class Client(ConPersona, db.Model):
     __tablename__ = 'clients'
     id = db.Column(db.Integer, primary_key=True)
-    # El id público de la persona (20/10/2026): el que comparten la Academia, ManyChat, n8n y las APIs.
-    # `id` queda como clave interna de la base. Sus mails, instagrams y teléfonos: `ClientIdentity`.
+    # Igual al uuid de su persona (`person_uuid`, ver app/models/person.py) en los clientes que ya
+    # existían: es el id que se compartió afuera. La persona es la fuente de verdad de quién es.
     uuid = db.Column(db.String(36), unique=True, nullable=False, default=lambda: str(uuid4()))
     full_name = db.Column(db.String(120))
     email = db.Column(db.String(120), index=True, unique=True)
@@ -60,7 +61,7 @@ class Client(db.Model):
     def __repr__(self):
         return f'<Client {self.full_name or self.email}>'
 
-class Lead(db.Model):
+class Lead(ConPersona, db.Model):
     __tablename__ = 'leads'
     id = db.Column(db.Integer, primary_key=True)
     manychat_id = db.Column(db.String(50), unique=True, nullable=False)

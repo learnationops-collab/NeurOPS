@@ -1,8 +1,9 @@
 from datetime import datetime
 from app import db
+from app.models.person import ConPersona
 
 
-class InstallmentPlan(db.Model):
+class InstallmentPlan(ConPersona, db.Model):
     """Plan de cuotas (próximos pagos) declarado por el closer al registrar una venta
     parcial/con seña. Vive atado a la cita (Appointment), no a Enrollment (sistema
     legado sin datos recientes) ni a FinancialSale (registro plano sincronizado con

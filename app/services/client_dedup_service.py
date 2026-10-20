@@ -2,7 +2,7 @@ import logging
 import unicodedata
 from app import db
 from app.models import (Client, Appointment, Enrollment, SurveyAnswer, ClientComment, CommentNotification, FinancialSale,
-                        ClientMergeLog, InstallmentPlan, ClientIdentity, Sale, Subscription, SubscriptionEvent)
+                        ClientMergeLog, InstallmentPlan, Sale, Subscription, SubscriptionEvent)
 from app.services.attribution_service import UnionFind
 
 logger = logging.getLogger(__name__)
@@ -167,7 +167,7 @@ class ClientDedupService:
         # plan huérfano (client_id apuntando a una fila borrada) después de la fusión, invisible
         # para el flujo de "Reportar pago" de una cuota.
         for model in (Appointment, Enrollment, SurveyAnswer, ClientComment, CommentNotification, FinancialSale, InstallmentPlan,
-                      Sale, ClientIdentity):
+                      Sale):
             model.query.filter(model.client_id.in_(duplicate_ids)).update(
                 {model.client_id: survivor_id}, synchronize_session=False
             )

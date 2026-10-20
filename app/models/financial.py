@@ -1,7 +1,8 @@
 from datetime import datetime
 from app import db
+from app.models.person import ConPersona
 
-class FinancialSale(db.Model):
+class FinancialSale(ConPersona, db.Model):
     __tablename__ = 'financial_sales'
     id = db.Column(db.Integer, primary_key=True)
     client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=True, index=True)
@@ -70,7 +71,7 @@ def map_closer_result_to_display(closer_result):
     }
     return equivalencias.get(closer_result, closer_result)
 
-class FinancialAgenda(db.Model):
+class FinancialAgenda(ConPersona, db.Model):
     __tablename__ = 'financial_agendas'
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(255), nullable=True)

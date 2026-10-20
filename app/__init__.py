@@ -292,7 +292,7 @@ def create_app(config_class=Config):
     from app.services.subscription_sync import register_subscription_sync
     register_subscription_sync(app)
 
-    from app.services.client_identity_service import register_identity_tracking
-    register_identity_tracking(app)
+    from app.services.person_service import register_person_tracking
+    register_person_tracking(app)
 
     return app
