@@ -410,10 +410,12 @@ def cita_de(agenda):
         for sep in (' ', '-', '(', ')', '+', '.'):
             columna = db.func.replace(columna, sep, '')
         condiciones.append(columna.like('%' + tel))
-    if not condiciones:
+    from app.services.booking_service import BookingService
+    client = BookingService.cliente_de_agenda(agenda)
+    if client is None and not condiciones:
         return None
 
-    client = Client.query.filter(db.or_(*condiciones)).first()
+    client = client or Client.query.filter(db.or_(*condiciones)).first()
     if not client:
         return None
     return Appointment.query.filter(
@@ -441,10 +443,12 @@ def citas_de(agendas):
             condiciones.append(db.func.lower(Client.email) == mail)
         if ig:
             condiciones.append(db.func.lower(db.func.replace(Client.instagram, '@', '')) == ig)
-    if not condiciones:
+    from app.services.booking_service import BookingService
+    por_persona = BookingService.clientes_por_persona(agendas)
+    if not condiciones and not por_persona:
         return {}
 
-    clientes = Client.query.filter(db.or_(*condiciones)).all()
+    clientes = Client.query.filter(db.or_(Client.id.in_(list(por_persona.values())), *condiciones)).all()
     por_mail = {(c.email or '').strip().lower(): c.id for c in clientes if c.email}
     por_ig = {(c.instagram or '').strip().replace('@', '').lower(): c.id for c in clientes if c.instagram}
 
@@ -465,7 +469,8 @@ def citas_de(agendas):
         if not a.date:
             continue
         mail, ig = por_agenda[a.id]
-        client_id = (por_mail.get(mail) if mail else None) or (por_ig.get(ig) if ig else None)
+        client_id = (por_persona.get(a.person_uuid) or (por_mail.get(mail) if mail else None)
+                     or (por_ig.get(ig) if ig else None))
         for cita in por_cliente.get(client_id, []):
             if abs((cita.start_time - a.date).total_seconds()) <= 12 * 3600:
                 salida[a.id] = cita

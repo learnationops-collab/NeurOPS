@@ -51,15 +51,17 @@ def _sincronizar_fuente_con_cita(agenda):
     mail = agenda.mail.strip().lower() \
         if agenda.mail and agenda.mail.lower() not in ('n/a', '') else None
 
+    from app.services.booking_service import BookingService
+    client = BookingService.cliente_de_agenda(agenda)
     condiciones = []
     if ig:
         condiciones.append(func.lower(func.replace(Client.instagram, '@', '')) == ig)
     if mail:
         condiciones.append(func.lower(Client.email) == mail)
-    if not condiciones:
+    if not client and not condiciones:
         return False
 
-    client = Client.query.filter(or_(*condiciones)).first()
+    client = client or Client.query.filter(or_(*condiciones)).first()
     if not client or not agenda.date:
         return False
 

@@ -77,7 +77,13 @@ def get_lead_roadmap():
         clean_email = email.strip().lower() if email and not is_generic_val(email) else None
         clean_phone = phone.strip() if phone and not is_generic_val(phone) else None
         clean_name = name.strip() if name and name.strip() else None
-        
+
+        if not client:
+            # La persona primero (docs/plan_personas.md): cualquiera de sus mails, instagrams o teléfonos.
+            from app.services import person_service
+            client = person_service.cliente_de(person_service.buscar(
+                clean_name, email=clean_email, instagram=ig_norm, phone=clean_phone), crear=False)
+
         if not client:
             if ig_norm:
                 candidate = Client.query.filter(func.lower(Client.instagram) == ig_norm).first()
@@ -663,6 +669,10 @@ def update_client_roadmap():
     # Solo se busca por Instagram si hay un usuario real: `== None` se traduce a IS NULL y
     # empataria con el primer cliente sin Instagram (que luego se sobrescribe).
     ig_norm = normalize_ig(instagram)
+    if not client and (ig_norm or email):
+        from app.services import person_service
+        client = person_service.cliente_de(person_service.buscar(
+            full_name, email=email, instagram=ig_norm, phone=phone), crear=False)
     if not client and ig_norm:
         client = Client.query.filter(func.lower(Client.instagram) == ig_norm).first()
 

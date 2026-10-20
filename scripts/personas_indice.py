@@ -1,12 +1,11 @@
 """Índice en memoria de las personas y sus identidades, para los scripts que recorren miles de filas
 (vincular_personas, fusionar_personas). Aplica las mismas reglas que `person_service.buscar` sin una
-consulta por fila: un id externo o el email alcanzan solos; instagram y teléfono piden nombre compatible;
+consulta por fila: un id externo o el email alcanzan solos; instagram y teléfono piden nombre compatible o parecido;
 con varios candidatos gana la persona más antigua."""
 from collections import defaultdict
 
 from app.models import Person, PersonIdentity
-from app.services.client_dedup_service import _names_compatible
-from app.services.person_service import FUERTES, claves
+from app.services.person_service import FUERTES, claves, mismo_nombre
 
 
 class IndicePersonas:
@@ -34,7 +33,7 @@ class IndicePersonas:
         for kind, value in claves(**datos):
             candidatos = sorted(self.duenos.get((kind, value), ()), key=self._orden)
             if kind not in FUERTES:
-                candidatos = [u for u in candidatos if _names_compatible(nombre, self.personas[u].full_name)]
+                candidatos = [u for u in candidatos if mismo_nombre(nombre, self.personas[u].full_name)]
             if candidatos:
                 return candidatos[0], kind
         return None, None

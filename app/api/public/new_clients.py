@@ -313,15 +313,17 @@ def update_client_follow_up():
     if not ig_norm and not email_norm:
         return jsonify({"error": "Se requiere instagram o email para identificar al cliente"}), 400
 
-    # Buscar si ya existe
-    client = None
+    # Buscar si ya existe: por su persona primero (docs/plan_personas.md), por las columnas de respaldo.
+    from app.services import person_service
+    client = person_service.cliente_de(person_service.buscar(
+        nombre_cliente, email=email_norm, instagram=ig_norm), crear=False)
     filters_client = []
     if ig_norm:
         filters_client.append(func.lower(func.replace(Client.instagram, '@', '')) == ig_norm)
     if email_norm:
         filters_client.append(func.lower(Client.email) == email_norm)
-    
-    if filters_client:
+
+    if not client and filters_client:
         client = Client.query.filter(or_(*filters_client)).first()
 
     try:

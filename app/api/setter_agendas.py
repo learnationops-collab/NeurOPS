@@ -110,6 +110,8 @@ def agendas_por_cita(user, desde=None, hasta=None):
     agendas = agendas_del_setter(user, desde, hasta)
     if not agendas:
         return {}
+    from app.services.booking_service import BookingService
+    por_persona = BookingService.clientes_por_persona(agendas)
 
     condiciones = []
     for a in agendas:
@@ -119,10 +121,10 @@ def agendas_por_cita(user, desde=None, hasta=None):
         mail = (a.mail or '').strip().lower()
         if mail and '@' in mail:
             condiciones.append(func.lower(Client.email) == mail)
-    if not condiciones:
+    if not condiciones and not por_persona:
         return {}
 
-    clientes = Client.query.filter(or_(*condiciones)).all()
+    clientes = Client.query.filter(or_(Client.id.in_(list(por_persona.values())), *condiciones)).all()
     if not clientes:
         return {}
 
@@ -149,7 +151,7 @@ def agendas_por_cita(user, desde=None, hasta=None):
             continue
         ig = (a.instagram or '').strip().lstrip('@').lower()
         mail = (a.mail or '').strip().lower()
-        client_id = por_llave.get(f'ig:{ig}') or por_llave.get(f'mail:{mail}')
+        client_id = por_persona.get(a.person_uuid) or por_llave.get(f'ig:{ig}') or por_llave.get(f'mail:{mail}')
         if not client_id:
             continue
         for ap in por_cliente.get(client_id, []):
@@ -163,7 +165,11 @@ def ids_de_citas_del_setter(user, desde=None, hasta=None):
 
 
 def _cliente_de(agenda):
-    """Client que corresponde a una agenda, por instagram o mail."""
+    """Client que corresponde a una agenda: por su persona y, si no la tiene, por instagram o mail."""
+    from app.services.booking_service import BookingService
+    por_persona = BookingService.cliente_de_agenda(agenda)
+    if por_persona is not None:
+        return por_persona
     condiciones = []
     ig = (agenda.instagram or '').strip().lstrip('@').lower()
     if ig and ig not in ('n/a', ''):
@@ -370,6 +376,15 @@ def _cliente_desde_agenda(agenda):
     def _limpio(valor):
         v = (valor or '').strip()
         return v if v and v.lower() not in ('n/a', 'none', 'null') else None
+
+    # La agenda ya tiene su persona (docs/plan_personas.md): su cliente sale de ella.
+    if agenda.person_uuid:
+        from app.services import person_service
+        client = person_service.cliente_de(person_service.por_uuid(agenda.person_uuid))
+        if client is not None:
+            db.session.commit()
+            logger.info(f"[SETTER AGENDAS] Cliente {client.id} de la persona de la agenda {agenda.id}")
+            return client
 
     client = Client(
         full_name=_limpio(agenda.lead) or 'Sin nombre',

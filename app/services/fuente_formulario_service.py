@@ -187,10 +187,12 @@ def _propagar_a_cita(agenda, setter=None):
     mail = _limpiar(agenda.mail)
     if mail and '@' in mail:
         condiciones.append(func.lower(Client.email) == mail.lower())
-    if not condiciones or not agenda.date:
+    from app.services.booking_service import BookingService
+    client = BookingService.cliente_de_agenda(agenda)
+    if (client is None and not condiciones) or not agenda.date:
         return False
 
-    client = Client.query.filter(or_(*condiciones)).first()
+    client = client or Client.query.filter(or_(*condiciones)).first()
     if not client:
         return False
 

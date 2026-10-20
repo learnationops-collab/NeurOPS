@@ -1112,10 +1112,14 @@ def receive_financial_agendas_form():
     if mail and isinstance(mail, str) and '@' in mail and mail.lower() not in ('n/a', ''):
         clean_mail = mail.strip().lower()
 
-    client = None
+    # La persona primero (docs/plan_personas.md): la encuentra por cualquiera de sus mails, instagrams o
+    # teléfonos. Lo de abajo queda de respaldo para quien todavía no tiene persona.
+    from app.services import person_service
+    client = person_service.cliente_de(
+        person_service.buscar(nombre, email=clean_mail, instagram=ig_norm, phone=clean_phone), crear=False)
 
     # 0. Buscar por mail, que es el identificador mas estable de los tres
-    if clean_mail:
+    if not client and clean_mail:
         client = Client.query.filter(func.lower(Client.email) == clean_mail).first()
 
     # 1. Intentar buscar cliente por instagram normalizado
@@ -1186,7 +1190,9 @@ def receive_financial_agendas_form():
             if ig_norm and (not client.instagram or client.instagram.lower() in ('sin instagram', '', 'n/a')):
                 client.instagram = ig_norm
             # Los clientes creados por el sync llevan un mail placeholder @neurops.com
-            if clean_mail and (not client.email or '@neurops.com' in client.email.lower()):
+            from app.services.booking_service import BookingService
+            if clean_mail and (not client.email or '@neurops.com' in client.email.lower()) and \
+                    not BookingService._email_de_otro(clean_mail, client.id):
                 client.email = clean_mail
             # Actualizar form_data de manera incremental
             from sqlalchemy.orm.attributes import flag_modified

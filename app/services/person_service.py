@@ -62,6 +62,14 @@ def claves(email=None, instagram=None, phone=None, manychat_id=None, learnation_
     return [(k, v) for k, v in ((k, normalizar(k, datos[k])) for k in ORDEN) if v]
 
 
+def mismo_nombre(a, b):
+    """¿Pueden ser la misma persona? Para BUSCAR por instagram o teléfono: el mismo nombre, uno vacío o
+    genérico, o nombres parecidos ("Juan Perez" / "Juan Pérez García", `_names_corroborate`). Para
+    FUSIONAR se sigue pidiendo `_names_compatible` (el mismo nombre)."""
+    from app.services.sales_consistency_service import SalesConsistencyService
+    return _names_compatible(a, b) or SalesConsistencyService._names_corroborate(a, b)
+
+
 def _activas():
     return PersonIdentity.query.filter(PersonIdentity.retired_at.is_(None), PersonIdentity.review_note.is_(None))
 
@@ -94,7 +102,7 @@ def buscar(nombre=None, **datos):
             continue
         candidatos = Person.query.filter(Person.uuid.in_(uuids)).order_by(Person.created_at, Person.uuid).all()
         if kind not in FUERTES:
-            candidatos = [p for p in candidatos if _names_compatible(nombre, p.full_name)]
+            candidatos = [p for p in candidatos if mismo_nombre(nombre, p.full_name)]
         if len(candidatos) > 1:
             logger.warning(f'[PERSONA] {kind}={value} lo tienen {[p.uuid for p in candidatos]}: uso {candidatos[0].uuid}')
         if candidatos:
@@ -145,14 +153,14 @@ def anotar(person, pares, fuente, uso=None):
             if kind == 'email':
                 otros = duenos(kind, value) - {person.uuid}
                 ajenos = [p for p in Person.query.filter(Person.uuid.in_(otros))
-                          if not _names_compatible(person.full_name, p.full_name)] if otros else []
+                          if not mismo_nombre(person.full_name, p.full_name)] if otros else []
                 if ajenos:
                     nota = f'También es de {ajenos[0].uuid}'
             principal = nota is None and not _tiene_principal(session, person, kind)
             usa = uso if uso and nota is None and _identidad(person, kind, uso=uso) is None else None
             session.add(PersonIdentity(person=person, kind=kind, value=value, is_primary=principal, uso=usa,
                                        source=fuente, review_note=nota))
-            if principal and kind in COLUMNAS and not getattr(person, kind):
+            if principal and kind in COLUMNAS and kind != 'phone' and not getattr(person, kind):
                 setattr(person, kind, value)
 
 
@@ -160,6 +168,14 @@ def resolver(nombre=None, email=None, instagram=None, phone=None, *, manychat_id
              crear=True, fuente='cliente'):
     """Busca a la persona y, si no está y `crear`, la crea. Le anota todos los datos que trajo (los que
     ya tenía no se repiten; los nuevos quedan secundarios). Hace flush, no commit."""
+    person = _resolver(nombre, email, instagram, phone, manychat_id, learnation_user_id, crear, fuente)
+    if person is not None:
+        db.session.flush()
+    return person
+
+
+def _resolver(nombre, email, instagram, phone, manychat_id, learnation_user_id, crear, fuente):
+    """`resolver` sin flush: lo usa el seguimiento automático, que corre en medio de uno."""
     pares = claves(email, instagram, phone, manychat_id, learnation_user_id)
     person = buscar(nombre, email=email, instagram=instagram, phone=phone, manychat_id=manychat_id,
                     learnation_user_id=learnation_user_id)
@@ -169,10 +185,12 @@ def resolver(nombre=None, email=None, instagram=None, phone=None, *, manychat_id
         person = Person(uuid=str(uuid4()), full_name=nombre or None,
                         phone=str(phone).strip() if phone and normalizar('phone', phone) else None)
         db.session.add(person)
-    elif nombre and not person.full_name:
-        person.full_name = nombre
+    else:
+        if nombre and not person.full_name:
+            person.full_name = nombre
+        if not person.phone and phone and normalizar('phone', phone):
+            person.phone = str(phone).strip()  # el primero que llega, como se escribió
     anotar(person, pares, fuente)
-    db.session.flush()
     return person
 
 
@@ -211,9 +229,17 @@ def _evento(person, kind, field, desde, hasta, reason, usuario):
                                reason=reason, actor_id=getattr(usuario, 'id', None)))
 
 
-def hacer_principal(person, kind, value, usuario=None, uso=None, reason=None):
+def _mostrable(kind, crudo, value):
+    """Lo que va en la columna de la persona: el teléfono como se escribió (con su código de país); el
+    resto, normalizado."""
+    return str(crudo).strip() if kind == 'phone' and crudo else value
+
+
+def hacer_principal(person, kind, value, usuario=None, uso=None, reason=None, corrige=False):
     """Alguien del equipo elige el dato principal de un tipo (o el de un uso, como el mail de la
-    Academia). Si el dato no estaba, se agrega. Queda el evento con quién y desde qué valor. No hace commit."""
+    Academia). Si el dato no estaba, se agrega. `corrige`: el anterior estaba mal y se da de baja; sin
+    él, el anterior queda como otro dato válido. Queda el evento con quién y desde qué valor. No hace commit."""
+    crudo = value
     value = normalizar(kind, value)
     if not value:
         raise ValueError(f'El {kind} no es válido.')
@@ -227,17 +253,20 @@ def hacer_principal(person, kind, value, usuario=None, uso=None, reason=None):
             anterior.uso = None
         else:
             anterior.is_primary = False
+        if corrige:
+            anterior.retired_at = datetime.utcnow()
         db.session.flush()  # el índice de un principal por tipo no admite dos a la vez
     if uso:
         ident.uso = uso
     else:
         ident.is_primary = True
         if kind in COLUMNAS:
-            setattr(person, kind, value)
+            setattr(person, kind, _mostrable(kind, crudo, value))
     ident.review_note = None
     ident.confirmed_by_id, ident.confirmed_at = getattr(usuario, 'id', None), datetime.utcnow()
     _evento(person, 'uso' if uso else 'principal', f'{kind}:{uso}' if uso else kind,
-            anterior.value if anterior is not None else None, value, reason, usuario)
+            anterior.value if anterior is not None else None, value,
+            reason or ('Corrección: el anterior se dio de baja' if corrige and anterior is not None else None), usuario)
     db.session.flush()
     return ident
 
@@ -367,6 +396,27 @@ def _persona_por_cliente(obj, nuevo):
             obj.person_uuid = puuid
 
 
+# Columnas de la agenda: nombre del lead, mail, instagram, whatsapp.
+COLUMNAS_AGENDA = ('lead', 'mail', 'instagram', 'whatsapp')
+
+
+def _persona_de_agenda(agenda, nuevo):
+    """La agenda es el primer contacto con la persona: si no la tiene, se busca por sus datos o se crea.
+    Si ya la tiene y le llega un dato nuevo (el mail que faltaba), se le anota."""
+    if not nuevo and not any(_cambio(inspect(agenda), c) for c in COLUMNAS_AGENDA):
+        return
+    datos_agenda = dict(email=agenda.mail, instagram=agenda.instagram, phone=agenda.whatsapp)
+    if agenda.person_uuid or agenda.person is not None:
+        person = agenda.person or db.session.get(Person, agenda.person_uuid)
+        if person is not None:
+            anotar(person, claves(**datos_agenda), 'agenda')
+        return
+    if not claves(**datos_agenda):
+        return  # sin ningún dato no se sabe quién es
+    agenda.person = _resolver(agenda.lead, datos_agenda['email'], datos_agenda['instagram'], datos_agenda['phone'],
+                              None, None, True, 'agenda')
+
+
 def mantener(session):
     with session.no_autoflush:
         cambiados = [(o, o in session.new) for o in list(session.new) + list(session.dirty)]
@@ -376,6 +426,8 @@ def mantener(session):
         for obj, nuevo in cambiados:
             if isinstance(obj, CON_CLIENTE):
                 _persona_por_cliente(obj, nuevo)
+            elif isinstance(obj, FinancialAgenda):
+                _persona_de_agenda(obj, nuevo)
 
 
 def register_person_tracking(app):

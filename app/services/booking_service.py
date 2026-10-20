@@ -80,6 +80,30 @@ class BookingService:
                  unique_slots[ts_key]['closer_id'] = closer.id
 
     @staticmethod
+    def cliente_de_agenda(agenda):
+        """El cliente de la agenda por su persona (docs/plan_personas.md), o None si todavía no la
+        tiene. Quien llama sigue con su búsqueda por mail/instagram de respaldo."""
+        if agenda is None or not getattr(agenda, 'person_uuid', None):
+            return None
+        return Client.query.filter_by(person_uuid=agenda.person_uuid).order_by(Client.id).first()
+
+    @staticmethod
+    def clientes_por_persona(agendas):
+        """{person_uuid: client_id} de esas agendas, en una consulta (el más antiguo si hay varios)."""
+        uuids = {a.person_uuid for a in agendas if getattr(a, 'person_uuid', None)}
+        if not uuids:
+            return {}
+        salida = {}
+        for c in Client.query.filter(Client.person_uuid.in_(uuids)).order_by(Client.id).with_entities(Client.id, Client.person_uuid):
+            salida.setdefault(c.person_uuid, c.id)
+        return salida
+
+    @staticmethod
+    def _email_de_otro(email, client_id):
+        """¿Ese email ya es de otro cliente? (`clients.email` es único: pisarlo rompería el guardado)."""
+        return Client.query.filter(db.func.lower(Client.email) == email, Client.id != client_id).first() is not None
+
+    @staticmethod
     def create_or_update_client(data, client_id=None):
         email = data.get('email')
         name = data.get('name')
@@ -95,54 +119,17 @@ class BookingService:
             client = Client.query.get(client_id)
 
         if not client:
-            # Buscamos por las 3 vías SIN cortar en el primer match (a diferencia de antes) para
-            # poder detectar si email/instagram/teléfono apuntan a clientes YA duplicados entre
-            # sí en la base — y fusionarlos acá mismo, evitando crear un cuarto registro más.
-            found = {}  # client_id -> (fuente, Client)
-            if email_clean:
-                m = Client.query.filter(db.func.lower(Client.email) == email_clean).first()
-                if m and m.id not in found:
-                    found[m.id] = ('email', m)
-            if ig_clean:
-                m = Client.query.filter(db.func.lower(db.func.replace(Client.instagram, '@', '')) == ig_clean).first()
-                if m and m.id not in found:
-                    found[m.id] = ('instagram', m)
-            if phone_clean and len(phone_clean) >= 8:
-                m = Client.query.filter(Client.phone.like(f"%{phone_clean[-8:]}%")).first()
-                if m and m.id not in found:
-                    found[m.id] = ('phone', m)
-
-            if len(found) == 1:
-                client = next(iter(found.values()))[1]
-            elif len(found) > 1:
-                from app.services.client_dedup_service import ClientDedupService, _names_compatible
-                # El email es la señal más fuerte: si hubo match por email, es el sobreviviente.
-                by_email = [m for source, m in found.values() if source == 'email']
-                survivor = by_email[0] if by_email else next(iter(found.values()))[1]
-                to_merge = []
-                for source, m in found.values():
-                    if m.id == survivor.id:
-                        continue
-                    # Instagram/teléfono son señales más débiles (recicladas entre cuentas
-                    # distintas) — solo se fusionan acá si además el nombre es compatible.
-                    if source == 'email' or _names_compatible(survivor.full_name, m.full_name):
-                        to_merge.append(m.id)
-                if to_merge:
-                    ClientDedupService.merge_clients(survivor.id, to_merge, matched_on='auto-on-write')
-                client = Client.query.get(survivor.id)
-
-        if not client:
-            import uuid
-            client = Client(
-                full_name=name or (email_clean.split('@')[0] if email_clean else "Cliente Nuevo"),
-                email=email_clean or f"no-email-{uuid.uuid4().hex[:12]}@neurops.com",
-                phone=phone_clean,
-                instagram=ig_clean
-            )
-            db.session.add(client)
-        else:
+            # Quién es lo decide su persona (docs/plan_personas.md): la busca por todos sus mails,
+            # instagrams y teléfonos, y le crea el cliente comercial si todavía no tiene. Los duplicados
+            # ya no se fusionan acá: los junta scripts/fusionar_personas.py.
+            from app.services import person_service
+            person = person_service.resolver(name, email_clean, ig_clean, phone_clean, fuente='agenda')
+            client = person_service.cliente_de(person)
+        if client:
             if name: client.full_name = name
-            if email_clean and (not client.email or 'no-email-' in client.email): client.email = email_clean
+            if email_clean and (not client.email or 'no-email-' in client.email) and \
+                    not BookingService._email_de_otro(email_clean, client.id):
+                client.email = email_clean
             if phone_clean: client.phone = phone_clean
             if ig_clean: client.instagram = ig_clean
         
@@ -572,40 +559,14 @@ class BookingService:
         ig_clean = str(instagram).strip().replace('@', '').lower() if instagram and str(instagram).lower() not in ('n/a', 'none', '') else None
         phone_clean = str(phone).strip() if phone and str(phone).lower() not in ('n/a', 'none', '') else None
 
-        client = None
-
-        # 1. Buscar por email (señal fuerte: confiable por sí sola)
-        if email_clean:
-            client = Client.query.filter_by(email=email_clean).first()
-
-        # 2. Buscar por teléfono (señal fuerte: confiable por sí sola). Va antes que Instagram
-        # a propósito -- ver docstring.
-        if not client and phone_clean and len(phone_clean) >= 8:
-            client = Client.query.filter(Client.phone.like(f"%{phone_clean[-8:]}%")).first()
-
-        # 3. Buscar por instagram normalizado (señal débil: exige corroboración de nombre)
-        if not client and ig_clean:
-            candidate = Client.query.filter(db.func.lower(db.func.replace(Client.instagram, '@', '')) == ig_clean).first()
-            if candidate:
-                from app.services.sales_consistency_service import SalesConsistencyService
-                if SalesConsistencyService._names_corroborate(nombre, candidate.full_name):
-                    client = candidate
-
         grupo_clean = str(grupo).strip() if grupo and str(grupo).strip() else None
 
-        # 4. Crear si no existe
-        if not client:
-            import uuid
-            client = Client(
-                full_name=nombre or (email_clean.split('@')[0] if email_clean else "Cliente Nuevo"),
-                email=email_clean or f"no-email-{uuid.uuid4().hex[:12]}@neurops.com",
-                phone=phone_clean,
-                instagram=ig_clean,
-                grupo=grupo_clean
-            )
-            db.session.add(client)
-            db.session.flush()
-        else:
+        # La persona decide quién es (docs/plan_personas.md): mismas reglas de arriba, pero sobre todos
+        # sus mails, instagrams y teléfonos (person_service.buscar). Si no tiene cliente comercial, se crea.
+        from app.services import person_service
+        person = person_service.resolver(nombre, email_clean, ig_clean, phone_clean, fuente='agenda')
+        client = person_service.cliente_de(person)
+        if client:
             # Actualizar datos vacíos
             if nombre and not client.full_name:
                 client.full_name = nombre
@@ -614,7 +575,8 @@ class BookingService:
             # creado sin email real (o matcheado por instagram/teléfono antes de que llegara su
             # agendamiento de Calendly) se queda con el placeholder para siempre: el email real
             # que sí llega después nunca lo pisa porque "ya tiene un email" (aunque sea falso).
-            if email_clean and (not client.email or 'no-email-' in client.email):
+            if email_clean and (not client.email or 'no-email-' in client.email) and \
+                    not BookingService._email_de_otro(email_clean, client.id):
                 client.email = email_clean
             if phone_clean and not client.phone:
                 client.phone = phone_clean
@@ -996,6 +958,7 @@ class BookingService:
             registro_local = pytz.UTC.localize(alta_utc).astimezone(
                 pytz.timezone('America/La_Paz')).replace(tzinfo=None).isoformat()
             agenda = FinancialAgenda(
+                person_uuid=client.person_uuid,
                 nombre=fuente,
                 lead=client.full_name or 'Desconocido',
                 closer=closer_name,
