@@ -7,7 +7,8 @@ Reglas que garantiza:
     conversación en curso (`_sigue_la_conversacion`): así sirven palabras comunes como «examen».
   · Lo que entra por una campaña queda también en las tablas de ManyChat (`registro.py`).
   · Si la cuenta manda algo que no salió de este motor (una persona del equipo), el bot se pausa
-    para ese contacto y se cancela lo que tenía abierto. La palabra clave de una campaña pasa igual.
+    para ese contacto y se cancela lo que tenía abierto. La palabra clave de una campaña pasa igual,
+    y también un botón del mensaje donde quedó cortado: retoma ese recorrido, como ManyChat.
   · Nunca escribe fuera de la ventana de 24 h, salvo la respuesta privada a un comentario.
   · Un flujo solo atrapa mensajes posteriores a su activación.
   · Un `mid` se procesa una sola vez, así reprocesar un evento no duplica nada.
@@ -28,6 +29,8 @@ CONTROL_TOMADO = '_control_tomado'
 SIGUE = registro.SIGUE
 HORAS_DE_PAUSA = 24
 MAX_PASOS = 50  # corta un grafo con un ciclo sin esperas
+CORTADA_POR_ECO = 'Escribió una persona del equipo'
+CORTADA_POR_PAUSA = 'Bot pausado: escribió una persona'
 
 
 class Motor:
@@ -79,9 +82,13 @@ class Motor:
         """Con el bot pausado solo pasa una palabra clave de una campaña vigente: es un pedido explícito
         (tocó el anuncio) y ManyChat la atendía aunque hubiera escrito alguien. Los ecos no dicen qué app
         los mandó, así que la pausa de un mensaje de ManyChat y la de un setter son iguales. Al arrancar,
-        la pausa se levanta para que el flujo pueda seguir."""
-        if evento.tipo == ev.COMENTARIO or (evento.payload and mensajes.leer_payload(evento.payload)):
+        la pausa se levanta para que el flujo pueda seguir. Un botón solo pasa si retoma el recorrido
+        que cortó la persona del equipo (ManyChat seguía respondiendo los botones)."""
+        if evento.tipo == ev.COMENTARIO:
             return 'bot_pausado'
+        datos = mensajes.leer_payload(evento.payload) if evento.payload else None
+        if datos:
+            return self._boton(contacto, *datos, pausado=True)
         version, campana, clave = self._version_de_campana(evento.texto, evento.momento)
         if version is None:
             return 'bot_pausado'
@@ -98,7 +105,7 @@ class Motor:
         for ejecucion in vencidas:
             contacto = ejecucion.contacto
             if contacto.bot_pausado_hasta and contacto.bot_pausado_hasta > self.ahora:
-                self._cerrar(ejecucion, AutEjecucion.CANCELADA, 'Bot pausado: escribió una persona')
+                self._cerrar(ejecucion, AutEjecucion.CANCELADA, CORTADA_POR_PAUSA)
                 continue
             salida = 'siguiente' if ejecucion.estado == AutEjecucion.ESPERANDO_TIEMPO else 'sin_respuesta'
             self._avanzar(ejecucion, salida)
@@ -147,7 +154,7 @@ class Motor:
             contacto.bot_pausado_hasta = self.ahora + timedelta(hours=HORAS_DE_PAUSA)
             abierta = self._abierta(contacto)
             if abierta:
-                self._cerrar(abierta, AutEjecucion.CANCELADA, 'Escribió una persona del equipo')
+                self._cerrar(abierta, AutEjecucion.CANCELADA, CORTADA_POR_ECO)
         db.session.flush()
         return 'eco_ajeno'
 
@@ -223,7 +230,7 @@ class Motor:
         if 'is_user_follow_business' in perfil:
             self._guardar(contacto, {SIGUE: bool(perfil['is_user_follow_business'])})
 
-    def _boton(self, contacto, version_id, nodo_id, boton_id):
+    def _boton(self, contacto, version_id, nodo_id, boton_id, pausado=False):
         version = db.session.get(AutFlujoVersion, version_id)
         if version is None:
             return 'boton_desconocido'
@@ -231,12 +238,21 @@ class Motor:
         boton = next((b for b in (nodo or {}).get('botones') or [] if b.get('id') == boton_id), None)
         if boton is None:
             return 'boton_desconocido'
-        self._guardar(contacto, {'ultimo_boton': boton.get('titulo')})
         abierta = self._abierta(contacto)
+        cortada = None if abierta else self._cortada_por_el_equipo(contacto, version, nodo_id)
+        if pausado and cortada is None:
+            return 'bot_pausado'
+        self._guardar(contacto, {'ultimo_boton': boton.get('titulo')})
         if abierta and abierta.version_id == version_id and abierta.nodo_actual == nodo_id \
                 and abierta.estado == AutEjecucion.ESPERANDO_RESPUESTA:
             self._avanzar(abierta, boton_id)
             return 'boton'
+        if cortada:
+            # Sigue el mismo recorrido: conserva campaña, setter y registro para los tableros.
+            contacto.bot_pausado_hasta = None
+            cortada.detalle = None
+            self._avanzar(cortada, boton_id)
+            return 'boton_retoma'
         if self._ya_respondido(contacto, version, nodo_id):
             return 'boton_usado'
         # Un botón de un mensaje viejo: retoma el flujo desde donde lleva ese botón.
@@ -245,6 +261,16 @@ class Motor:
             return 'boton_sin_destino'
         self._iniciar(contacto, version, nodo=hacia)
         return 'boton_reanuda'
+
+    def _cortada_por_el_equipo(self, contacto, version, nodo_id):
+        """El último recorrido de este flujo, si quedó cortado esperando en ese mensaje porque escribió
+        una persona del equipo; si no, None."""
+        ultima = (AutEjecucion.query.filter(AutEjecucion.contacto_id == contacto.id, AutEjecucion.version_id == version.id)
+                  .order_by(AutEjecucion.id.desc()).first())
+        if ultima and ultima.estado == AutEjecucion.CANCELADA and ultima.nodo_actual == nodo_id \
+                and ultima.detalle in (CORTADA_POR_ECO, CORTADA_POR_PAUSA):
+            return ultima
+        return None
 
     def _ya_respondido(self, contacto, version, nodo_id):
         """¿El último recorrido de este flujo ya pasó por ese mensaje? Como en ManyChat, los botones de
