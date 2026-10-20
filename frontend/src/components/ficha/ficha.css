@@ -540,6 +540,8 @@
    «Resultado». Texto a la izquierda y botón a la derecha; en un teléfono el botón baja. */
 .dc-shell .fi-venta-directa{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
   gap:var(--space-4);margin-top:var(--space-6)}
+/* «¿No tomaste esta llamada?»: la misma franja, con el formulario de recuperación abajo. */
+.dc-shell .fi-recuperacion{margin-top:var(--space-4)}
 
 /* ---------- Link de Fathom (Resultado) ----------
    Una franja baja y no un bloque: la pregunta de la llamada, debajo, es lo que se viene a hacer.

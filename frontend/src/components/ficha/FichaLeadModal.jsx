@@ -54,7 +54,8 @@ const TabAcciones = lazyDe('TabAcciones');
 const ERRORES_EN_LINEA = new Set(['editar_agenda', 'corregir_seguimiento', 'agendar_seguimiento',
     'corregir_pago', 'borrar_pago', 'agregar_pago', 'eliminar_agenda', 'borrar_seguimiento',
     'borrar_plan', 'borrar_evento', 'crear_evento', 'reportar_resultado', 'registrar_venta',
-    'acceso_academia', 'quitar_acceso_academia', 'guardar_fathom', 'guardar_objecion']);
+    'acceso_academia', 'quitar_acceso_academia', 'guardar_fathom', 'guardar_objecion',
+    'pasar_a_recuperacion']);
 
 /**
  * El aviso de una acción que dio de baja a un cliente (o se la revirtió), con lo que pasó en la
@@ -108,6 +109,7 @@ const MENSAJES = {
     reprogramar: 'Llamada reprogramada.',
     cancelar: 'Cancelación registrada.',
     descartar: 'Lead descartado.',
+    pasar_a_recuperacion: 'Llamada pasada a seguimiento de recuperación: está en tu pestaña Seguimientos.',
     eliminar: 'Lead eliminado.',
     eliminar_agenda: 'Agenda eliminada.',
     borrar_seguimiento: 'Seguimiento eliminado.',

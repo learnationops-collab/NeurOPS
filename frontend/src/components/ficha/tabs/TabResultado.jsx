@@ -26,6 +26,7 @@ import CronogramaCuotas from '../acciones/CronogramaCuotas';
 import { moneda } from '../acciones/planCuotas';
 import { Hueso } from '../../huesos/Huesos';
 import GrabacionFathom from './GrabacionFathom';
+import PasarARecuperacion from './PasarARecuperacion';
 import {
   estadoInicial, responder, actualizar, volverA, preguntaActual, faltantes,
   puedeAvanzar, completo, arrancado, hitos, resumen, esVenta, quedaDeuda, construirPayload,
@@ -322,6 +323,7 @@ export default function TabResultado({
                 <DollarSign /> Registrar una venta
               </motion.button>
             </div>
+            <PasarARecuperacion llamadaIso={ficha?.identidad?.llamada?.iso} onAccion={onAccion} />
           </motion.section>
         ) : listo ? (
           <motion.section key="revision" {...animar} aria-label="Revisión del resultado">

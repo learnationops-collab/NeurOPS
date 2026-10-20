@@ -48,6 +48,9 @@ const RUTAS = {
     // Cancelar no es descartar: la cita no se hace pero el lead sigue en el embudo.
     cancelar: (appt, p) => api.post(`/ficha/${appt}/cancelar`, p),
     descartar: (appt, p) => api.post(`/ficha/${appt}/descartar`, p),
+    // La llamada sin resultado que el closer no tomó (era de otro): queda archivada y con un
+    // seguimiento de recuperación para volver a agendar al lead (`{fecha, nota}`).
+    pasar_a_recuperacion: (appt, p) => api.post(`/ficha/${appt}/recuperacion`, p),
     eliminar: (appt) => api.delete(`/ficha/${appt}`),
     // La misma puerta que `eliminar`, apuntada a una agenda del historial y no al lead entero:
     // la ficha sigue abierta en la agenda que le quede al cliente (ver FichaLeadModal).
