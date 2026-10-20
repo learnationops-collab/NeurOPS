@@ -8,6 +8,7 @@ Para cada tarea o requerimiento en este proyecto, el agente DEBE seguir estricta
 2. **Implementación y Asistencia**
    Ejecuta los cambios que el usuario solicita y ayúdale a solucionar los problemas que surjan en el proceso. Modifica los archivos necesarios respetando los estándares del proyecto.
    **Desarrollo rápido, sin tests.** El agente no escribe ni corre tests. Recién cuando no queda ningún pendiente, puede proponerlos (como propuesta, sin escribirlos); se hacen solo si el usuario dice que sí.
+   **Todo se ejecuta en el servidor, nunca en la PC del usuario.** Pruebas, scripts, backfills y migraciones corren en el servidor donde está desplegado el código (`railway ssh --service <servicio> -- ...`), no en local: no se levanta la app, ni Python, ni bases SQLite en la PC del usuario. Si el cambio es crítico, se recomienda probarlo antes en el servidor de prueba (proyecto `successful-curiosity`, servicio "Servidor de prueba", rama `develop`), pero es una recomendación, no un paso obligatorio.
 
 3. **Validación con el Usuario**
    Al terminar de inyectar el código funcional, detente. Infórmale al usuario qué se modificó y pregúntale de forma clara y explícita si la solución funciona bien en sus pruebas locales.
