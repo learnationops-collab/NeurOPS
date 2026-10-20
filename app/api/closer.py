@@ -140,6 +140,22 @@ def get_assigned_leads():
         "kpis": kpis
     }), 200
 
+def _cliente_por_persona(datos):
+    """El cliente para estos datos ({name, email, instagram, phone}) con la regla de la venta
+    (`sheets_service.post_to_sheets`): primero la persona y su cliente; sin ningún dato que la
+    identifique, el cruce de siempre de `BookingService`."""
+    from app.services import person_service
+    from app.services.booking_service import BookingService
+
+    existente = None
+    if person_service.claves(email=datos.get('email'), instagram=datos.get('instagram'), phone=datos.get('phone')):
+        person = person_service.resolver(datos.get('name') or None, datos.get('email'), datos.get('instagram'),
+                                         datos.get('phone'), fuente='ficha')
+        existente = person_service.cliente_de(person)
+        db.session.commit()
+    return BookingService.create_or_update_client(datos, client_id=existente.id if existente else None)
+
+
 @bp.route('/leads/search', methods=['GET'])
 @login_required
 def search_closer_leads():
@@ -151,20 +167,30 @@ def search_closer_leads():
     if len(query_str) < 2: return jsonify([]), 200
     
     term = f"%{query_str}%"
-    # Buscar clientes por nombre completo, email, instagram o teléfono
+    # Buscar clientes por nombre completo, email, instagram o teléfono, y por cualquier dato de su
+    # persona (un mail o instagram secundario también la encuentra, docs/plan_personas.md)
+    from app.models import PersonIdentity
+    por_persona = db.session.query(PersonIdentity.person_uuid).filter(
+        PersonIdentity.value.ilike(term), PersonIdentity.retired_at.is_(None))
     leads = Client.query.filter(or_(
-        Client.full_name.ilike(term), 
+        Client.full_name.ilike(term),
         Client.email.ilike(term),
         Client.instagram.ilike(term),
-        Client.phone.ilike(term)
+        Client.phone.ilike(term),
+        Client.person_uuid.in_(por_persona)
     )).limit(20).all()
-    
+
     results = []
     seen_emails = set()
     seen_instagrams = set()
     seen_phones = set()
+    seen_personas = set()
 
     for l in leads:
+        if l.person_uuid and l.person_uuid in seen_personas:
+            continue
+        if l.person_uuid:
+            seen_personas.add(l.person_uuid)
         # Deduplicar contra otras filas Client duplicadas para la misma persona real (la
         # deduplicación automática de clientes no atrapa el 100% de los casos — ver
         # ClientDedupService) — de lo contrario el mismo cliente aparece varias veces en la
@@ -201,7 +227,7 @@ def search_closer_leads():
             from app.models.financial import FinancialAgenda
             ig_clean = l.instagram.strip().replace('@', '').lower() if l.instagram else None
             
-            fin_filters = []
+            fin_filters = [FinancialAgenda.person_uuid == l.person_uuid] if l.person_uuid else []
             if ig_clean:
                 fin_filters.append(db.func.lower(db.func.replace(FinancialAgenda.instagram, '@', '')) == ig_clean)
             if l.email:
@@ -218,6 +244,7 @@ def search_closer_leads():
                     
         results.append({
             "id": l.id,
+            "person_uuid": l.person_uuid,
             "username": l.full_name or l.email,
             "email": l.email,
             "phone": l.phone,
@@ -236,6 +263,8 @@ def search_closer_leads():
     )).order_by(FinancialAgenda.date.desc()).limit(20).all()
     
     for fa in fin_leads:
+        if fa.person_uuid and fa.person_uuid in seen_personas:
+            continue
         fa_email = fa.mail.strip().lower() if fa.mail else None
         fa_ig = fa.instagram.strip().replace('@', '').lower() if fa.instagram else None
         
@@ -290,8 +319,10 @@ def get_appointment_by_instagram():
     if not instagram:
         return jsonify({"error": "Instagram es requerido"}), 400
         
-    # 1. Buscar en la base de datos de clientes (Client) local
-    client = Client.query.filter(db.func.lower(Client.instagram) == instagram.lower()).first()
+    # 1. El cliente de la persona con ese instagram (aunque sea uno secundario) y, si no, el del texto
+    from app.services import person_service
+    client = (person_service.cliente_de(person_service.buscar(instagram=instagram), crear=False)
+              or Client.query.filter(db.func.lower(Client.instagram) == instagram.lower()).first())
     
     appointment_data = None
     if client:
@@ -629,7 +660,7 @@ def register_sale():
         
         # 1. Handle Client Creation/Update
         if not lead_id and client_data:
-            client = BookingService.create_or_update_client(client_data)
+            client = _cliente_por_persona(client_data)
             lead_id = client.id
             
         # 2. Handle Retrospective Appointment (if creating new client/sale directly)
@@ -781,9 +812,9 @@ def create_appointment():
         from app.services.booking_service import BookingService
         
         if not lead_id and client_data:
-            client = BookingService.create_or_update_client(client_data)
+            client = _cliente_por_persona(client_data)
             lead_id = client.id
-            
+
         start_time = None
         try:
             start_time = datetime.fromisoformat(start_time_str.replace('Z', ''))
@@ -1342,7 +1373,8 @@ def _recover_form_data_by_contact(client):
     from app.models import Client
     from sqlalchemy import func, or_
 
-    filters = []
+    # Otro cliente de la misma persona (un duplicado sin fusionar) también tiene su formulario.
+    filters = [Client.person_uuid == client.person_uuid] if client.person_uuid else []
     if email:
         filters.append(func.lower(Client.email) == email)
     if ig:
@@ -1418,12 +1450,12 @@ def _format_appointment_for_deck(a, recover_form=False):
         ig_clean = client.instagram.strip().replace('@', '').lower() if client.instagram and client.instagram.lower() not in ('n/a', '') else None
         mail_clean = client.email.strip().lower() if client.email and client.email.lower() not in ('n/a', '') else None
         
-        filters = []
+        filters = [FinancialAgenda.person_uuid == client.person_uuid] if client.person_uuid else []
         if mail_clean:
             filters.append(func.lower(FinancialAgenda.mail) == mail_clean)
         if ig_clean:
             filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_clean)
-            
+
         agenda = None
         if filters:
             agenda = FinancialAgenda.query.filter(
@@ -2210,12 +2242,16 @@ def search_closer_deck_leads():
     # Solo buscar leads activos (pendientes de atención)
     query = query.filter(Appointment.result.in_(['Entrante', 'Agendado']))
         
+    from app.models import PersonIdentity
+    por_persona = db.session.query(PersonIdentity.person_uuid).filter(
+        PersonIdentity.value.ilike(term), PersonIdentity.retired_at.is_(None))
     appointments = query.filter(
         or_(
             Client.full_name.ilike(term),
             Client.email.ilike(term),
             Client.instagram.ilike(term),
-            Client.phone.ilike(term)
+            Client.phone.ilike(term),
+            Client.person_uuid.in_(por_persona)
         )
     ).order_by(Appointment.start_time.desc()).limit(20).all()
     
@@ -2251,7 +2287,7 @@ def get_sales_client_state():
         instagram = request.args.get('instagram')
         phone = request.args.get('phone')
         if email or instagram or phone:
-            client = BookingService.create_or_update_client({
+            client = _cliente_por_persona({
                 'name': request.args.get('name'), 'email': email, 'instagram': instagram, 'phone': phone
             })
             client_id = client.id if client else None

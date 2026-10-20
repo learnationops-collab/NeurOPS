@@ -122,7 +122,7 @@ la Etapa 1: las APIs siguen devolviendo lo mismo y suman `person_uuid`.
 | C | `personas/C` | hecha, en develop. Cada pago nuevo (ficha, webhook de la hoja, resincronización) y cada cobro de un CSV de conciliación se guarda con `person_uuid`; la venta de la ficha resuelve primero la persona y usa su cliente. El contacto de una venta (`FinancialSale.contacto()`) se lee de la persona: sus principales y, como mail, su mail de pago si tiene uno distinto. Si el closer declara la venta con un mail que no es el principal, ése queda como `uso='pago'`. Corregir el instagram de una venta corrige el principal de la persona y da de baja el anterior; con `modo: 'agregar'` se suma como otro válido (el frontend todavía no lo ofrece). Pendiente: los cobros de conciliación viejos sin `person_uuid` se cruzan por el cliente de su correo (no hay script) |
 | D | sesión principal (work-24), rama `personas/D` | hecho, en develop. Los dos buscadores de `booking_service` pasan por `person_service` (ya no fusionan clientes al escribir); Agendas 2.0, API externa, formulario, roadmap y follow up buscan primero por persona; `BookingService.cliente_de_agenda` / `clientes_por_persona` para el cliente de una agenda. Toda `FinancialAgenda` nueva queda con su persona sola (`before_flush`, también las de `closer_service` y `sheets_service`). Correr `scripts/personas_de_agendas.py --apply` después de los scripts del frente A. Pendiente: los listados y ediciones de `api/public/financial_agendas.py` (cruces por mail en las líneas ~765-961 y ~1324) siguen por la copia |
 | E | otra sesión, rama `personas/E` (worktree `../work-personas-e`) | hecho, en develop. «Mismo cliente» es la persona: `ticket_service.claves_de_cliente` (ticket, agrupado de ventas, workshop, closer), la atribución (comisiones, nómina, procedencia, fuente de Revisar), la seña convertida, la conversión de Fulfillment, la venta vigente de cada pago (`sale_service`), la suscripción (`subscription_service`, también la de un cliente duplicado), y en Revisar el cruce agenda→venta, una agenda por persona y «agendó» de los leads. El mail/instagram copiados solo cuentan en filas sin persona: **necesita los scripts del frente A corridos** en cada base, o los pagos viejos sin persona no se juntan con los nuevos. Las filas suman `person_uuid`. Queda como estaba lo que se muestra (nombre, mail): sigue saliendo de la copia hasta que la ficha cambie los principales (F) |
-| F | — | listo para arrancar |
+| F | `personas/F` | hecha, en develop. Corregir un dato en la ficha (`ficha_acciones_service.editar_datos`, `CloserService.update_client` y el instagram de `register_sale`) es `hacer_principal(..., corrige=True)`: nuevo principal y el anterior dado de baja; borrarlo lo da de baja. Con `agregar: ['email', ...]` el dato se suma como otro válido y el principal no cambia (el frontend todavía no lo ofrece). Un correo que ya es de otra persona choca como el de otro cliente. La ficha muestra los datos de la persona y devuelve `person_uuid` e `identidades`. Vender a alguien nuevo desde la ficha o el mazo crea la persona y su cliente (mismo uuid). Las ventas de un cliente, sus agendas, su formulario, sus señas, «tiene venta», el buscador y los correos que se prueban en la Academia suman lo de su persona. Pendiente: el cruce por texto sigue al lado del de persona (no se sacó para no perder pagos de personas duplicadas sin fusionar); en la Etapa 2 queda solo la persona |
 | G | — | listo para arrancar |
 
 ## Pedidos entre frentes
@@ -134,11 +134,9 @@ la Etapa 1: las APIs siguen devolviendo lo mismo y suman `person_uuid`.
   `Cruce(igs, nombres)`; pasarle también los `person_uuid` (`Cruce(igs, nombres, personas)` y
   `candidatos(ig, nombre, persona)`) para que Marketing encuentre la conversación por persona primero,
   como ya lo hace «Mis agendas» (`palabra_clave_service`).
-- **E → F:** `closer_agendas_service._tipos_por_contacto` / `_ventas_por_contacto` y
-  `closer_followup_service._resolve_sales_and_clients` cruzan por mail/instagram. Revisar ya usa la
-  persona para las agendas que la tienen (`comercial_service._tipos_por_persona`); el libro de agendas
-  del closer, Mi cartera y la tabla Clientes de Revisar (que usa `_resolve_sales_and_clients`) siguen
-  por la copia.
+- ~~**E → F:** `_tipos_por_contacto` / `_ventas_por_contacto` y `_resolve_sales_and_clients` por
+  persona.~~ Hecho en F: los pagos de la persona vuelven con el `client_id` de su cliente, sin cambiar
+  la forma de lo que devuelven.
 - **D → todos (cambios en la base, `person_service`):** `buscar` acepta nombres parecidos para instagram y
   teléfono (`mismo_nombre`: el mismo, uno vacío, o `_names_corroborate`); fusionar sigue pidiendo el mismo.
   `hacer_principal(..., corrige=True)` da de baja el anterior (corregir); sin `corrige` el anterior queda
@@ -149,14 +147,10 @@ la Etapa 1: las APIs siguen devolviendo lo mismo y suman `person_uuid`.
   tiene que pasarle `data.get('work_uuid')`. `sincronizar_avance` ya cruza por `work_uuid` si la
   Academia lo manda en cada fila. El mail que viaja es el de uso `academia` si el equipo fijó uno
   distinto y, si no, el principal (`academy_payment_status.email_academia`).
-- **C → F:** el "corregir contacto" de la ficha debería seguir la misma regla que la edición de
-  ventas (`financial_sales._corregir_contacto`): corregir = nuevo principal y baja del anterior;
-  agregar = otro dato válido, sin cambiar el principal.
-- **C → D:** `sheets_service` le pasa a `BookingService.create_or_update_client` el `client_id` del
-  cliente de la persona; sin persona (pago sin mail, ig ni teléfono) sigue su búsqueda de siempre.
-- **C → F:** `CloserService.check_and_notify_down_payment_conversion` todavía recibe el contacto
-  como texto; puede usar `sale.person_uuid`. `ficha_fulfillment_service.emails_candidatos` podría
-  sumar los mails de la persona (`PersonIdentity`).
+- ~~**C → F:** corregir contacto, conversión de seña y `emails_candidatos` por persona.~~ Hecho en F.
+- **C/F → D:** `sheets_service`, `api/closer.py._cliente_por_persona` y
+  `ficha_acciones_service.cliente_para_vender` resuelven la persona y le pasan el `client_id` de su
+  cliente a `BookingService.create_or_update_client` (con id se comporta como antes, confirmado por D).
 - **C → E:** `AttributionService` y `comercial_service.clientes_de_ventas` pueden cruzar venta y
   agenda por `person_uuid` antes que por texto.
 - **C → Etapa 2:** `sheets_service`, `financial_sales.py`, `conciliacion_service` y

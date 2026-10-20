@@ -132,21 +132,25 @@ class CloserPendingService:
         if not clients:
             return set()
 
-        mails, igs, atados = set(), set(), set()
-        for mail, ig, client_id in db.session.query(
-                FinancialSale.mail_cliente, FinancialSale.instagram, FinancialSale.client_id).all():
+        mails, igs, atados, personas = set(), set(), set(), set()
+        for mail, ig, client_id, puuid in db.session.query(
+                FinancialSale.mail_cliente, FinancialSale.instagram, FinancialSale.client_id,
+                FinancialSale.person_uuid).all():
             if mail:
                 mails.add(mail.strip().lower())
             if ig:
                 igs.add(ig.strip().lstrip('@').lower())
             if client_id:
                 atados.add(client_id)
+            if puuid:
+                personas.add(puuid)
 
         con_venta = set()
         for c in clients:
             if not c:
                 continue
-            if c.id in atados:
+            # Atada por id o con un pago de su persona (docs/plan_personas.md); después, por texto.
+            if c.id in atados or (c.person_uuid and c.person_uuid in personas):
                 con_venta.add(c.id)
             elif c.email and c.email.strip().lower() in mails:
                 con_venta.add(c.id)

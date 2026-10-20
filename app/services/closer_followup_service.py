@@ -112,6 +112,13 @@ def _ventas_atadas(client_id):
     return [FinancialSale.client_id == client_id] if client_id else []
 
 
+def _ventas_de_su_persona(client):
+    """El filtro de los pagos de la persona del cliente (docs/plan_personas.md): son suyos por sí
+    solos, como los atados por id. Se suma al cruce por texto, no lo reemplaza, hasta la Etapa 2."""
+    puuid = getattr(client, 'person_uuid', None)
+    return [FinancialSale.person_uuid == puuid] if puuid else []
+
+
 class CloserFollowUpService:
     @staticmethod
     def next_cadence_date(intento, base_date=None):
@@ -125,7 +132,7 @@ class CloserFollowUpService:
         email/instagram que _client_program_code, mas las ventas atadas a el por id)."""
         if not client:
             return False
-        filters = _ventas_atadas(client.id)
+        filters = _ventas_atadas(client.id) + _ventas_de_su_persona(client)
         if client.email:
             filters.append(func.lower(FinancialSale.mail_cliente) == client.email.strip().lower())
         if client.instagram:
@@ -181,7 +188,7 @@ class CloserFollowUpService:
         # encontrar la de un cliente sin correo ni instagram (5 en la base local).
         email = (client.email or '').strip().lower()
         instagram = (client.instagram or '').strip().lstrip('@').lower()
-        filtros = [FinancialSale.client_id == client.id]
+        filtros = [FinancialSale.client_id == client.id] + _ventas_de_su_persona(client)
         if email:
             filtros.append(func.lower(FinancialSale.mail_cliente) == email)
         if instagram:
@@ -374,8 +381,8 @@ class CloserFollowUpService:
     @staticmethod
     def _ultima_venta_de(client):
         """La venta más reciente del cliente en FinancialSale (de cualquier estado), atada a él por
-        id o cruzada por email o instagram. None si no hay ninguna."""
-        filters = _ventas_atadas(client.id)
+        id o por su persona, o cruzada por email o instagram. None si no hay ninguna."""
+        filters = _ventas_atadas(client.id) + _ventas_de_su_persona(client)
         if client.email:
             filters.append(func.lower(FinancialSale.mail_cliente) == client.email.strip().lower())
         if client.instagram:
@@ -679,11 +686,13 @@ class CloserFollowUpService:
             or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
         ).all()
 
-        existentes, por_email, por_ig, telefonos = set(), {}, {}, []
-        for cid, email_l, ig_l, telefono in db.session.query(
+        existentes, por_email, por_ig, telefonos, por_persona = set(), {}, {}, [], {}
+        for cid, email_l, ig_l, telefono, puuid in db.session.query(
                 Client.id, func.lower(Client.email),
-                func.lower(func.replace(Client.instagram, '@', '')), Client.phone):
+                func.lower(func.replace(Client.instagram, '@', '')), Client.phone, Client.person_uuid):
             existentes.add(cid)
+            if puuid is not None and (puuid not in por_persona or cid < por_persona[puuid]):
+                por_persona[puuid] = cid
             if email_l is not None:
                 por_email.setdefault(email_l, cid)
             if ig_l is not None:
@@ -709,6 +718,9 @@ class CloserFollowUpService:
         def resolve_client(sale):
             if sale.client_id:
                 return sale.client_id if sale.client_id in existentes else None
+            # Después del id, su persona (docs/plan_personas.md): el cliente de esa persona.
+            if sale.person_uuid and sale.person_uuid in por_persona:
+                return por_persona[sale.person_uuid]
             email_clean = sale.mail_cliente.strip().lower() if sale.mail_cliente and '@' in sale.mail_cliente else None
             ig_clean = sale.instagram.strip().replace('@', '').lower() if sale.instagram and sale.instagram.lower() not in ('n/a', '') else None
             phone_clean = sale.telefono.strip() if sale.telefono and sale.telefono.lower() not in ('n/a', '') else None
@@ -1425,15 +1437,18 @@ class CarteraEnLote:
         El índice por id es el mismo `_ventas_atadas` de la lectura cliente por cliente: sin él,
         a un cliente al que se le corrigió el correo desde la ficha (sus ventas quedan atadas por
         id antes del cambio) la tabla Clientes le mostraba "Sin programa" y la ficha no."""
-        por_id, por_email, por_ig = {}, {}, {}
+        por_id, por_email, por_ig, por_persona = {}, {}, {}, {}
         filas = (db.session.query(FinancialSale.date, FinancialSale.tipo_pago,
                                   FinancialSale.client_id,
                                   func.lower(FinancialSale.mail_cliente),
-                                  func.lower(func.replace(FinancialSale.instagram, '@', '')))
+                                  func.lower(func.replace(FinancialSale.instagram, '@', '')),
+                                  FinancialSale.person_uuid)
                  .order_by(FinancialSale.date.desc(), FinancialSale.id.asc()))
-        for pos, (fecha, tipo_pago, client_id, mail, ig) in enumerate(filas):
+        for pos, (fecha, tipo_pago, client_id, mail, ig, puuid) in enumerate(filas):
             if client_id is not None:
                 por_id.setdefault(client_id, []).append((pos, fecha, tipo_pago))
+            if puuid is not None:
+                por_persona.setdefault(puuid, []).append((pos, fecha, tipo_pago))
             if mail is not None:
                 por_email.setdefault(mail, []).append((pos, fecha, tipo_pago))
             if ig is not None:
@@ -1443,6 +1458,8 @@ class CarteraEnLote:
             # Las mismas claves que arma `_ultima_venta_de`, incluido el caso raro de un email
             # o instagram que queda vacío después del strip (cruza con las ventas vacías).
             candidatas = {pos: (fecha, tipo_pago) for pos, fecha, tipo_pago in por_id.get(cid, ())}
+            for pos, fecha, tipo_pago in por_persona.get(getattr(cliente, 'person_uuid', None), ()):
+                candidatas[pos] = (fecha, tipo_pago)
             if cliente.email:
                 for pos, fecha, tipo_pago in por_email.get(cliente.email.strip().lower(), ()):
                     candidatas[pos] = (fecha, tipo_pago)

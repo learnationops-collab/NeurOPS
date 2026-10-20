@@ -178,7 +178,8 @@ def receive_financial_sales():
                     'email': s.mail_cliente or (s.raw_data.get('email') if s.raw_data else None),
                     'phone': s.telefono or (s.raw_data.get('phone') if s.raw_data else None),
                     'instagram': s.instagram,
-                    'name': s.nombre_cliente
+                    'name': s.nombre_cliente,
+                    'person_uuid': s.person_uuid
                 }
                 sale_data = {
                     'payment_type': s.tipo_pago,

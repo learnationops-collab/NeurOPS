@@ -334,6 +334,13 @@ class CloserAgendasService:
                 func.lower(func.replace(FinancialSale.instagram, '@', '')).in_(lote)).all()
         for lote in _chunks(ids):
             rows += db.session.query(*columnas).filter(FinancialSale.client_id.in_(lote)).all()
+        # Los pagos de la persona de cada cliente cuentan como atados a ese cliente
+        # (docs/plan_personas.md): se devuelven con su client_id, así los que llaman no cambian.
+        cliente_de_persona = {a.client.person_uuid: a.client_id for a in appts if a.client and a.client.person_uuid}
+        for lote in _chunks(cliente_de_persona):
+            rows += [(fila[0], fila[1], cliente_de_persona[fila[-1]], *fila[3:-1])
+                     for fila in db.session.query(*columnas, FinancialSale.person_uuid)
+                     .filter(FinancialSale.person_uuid.in_(lote)).all()]
         return emails, igs, ids, rows
 
     @staticmethod

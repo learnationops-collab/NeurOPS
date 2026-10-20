@@ -91,11 +91,22 @@ def es_placeholder(email):
 def emails_candidatos(client, ventas=None):
     """Los correos con los que vale la pena preguntarle a la Academia, sin repetidos.
 
-    Primero el del cliente y despues los de sus ventas, que es el orden de confianza: el de la
-    venta lo tipeo un humano para cobrarle, el del cliente puede venir de una agenda automatica.
+    Primero el de su persona para la Academia (el de ese uso o, si no hay, su principal: el uso es
+    la excepción, docs/plan_personas.md), despues el del cliente y los de sus ventas, y al final
+    los demás correos de la persona. El de la venta lo tipeo un humano para cobrarle, el del
+    cliente puede venir de una agenda automatica.
     """
-    crudos = [getattr(client, 'email', None)]
+    from app.models import PersonIdentity
+    from app.services import person_service
+
+    person = getattr(client, 'person', None)
+    crudos = [person_service.dato(person, 'email', uso='academia') if person else None]
+    crudos += [getattr(client, 'email', None)]
     crudos += [v.mail_cliente for v in (ventas or [])]
+    if person is not None:
+        crudos += [i.value for i in person.identities.filter(
+            PersonIdentity.kind == 'email', PersonIdentity.retired_at.is_(None),
+            PersonIdentity.review_note.is_(None)).order_by(PersonIdentity.id)]
 
     vistos, salida = set(), []
     for crudo in crudos:

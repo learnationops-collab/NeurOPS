@@ -223,7 +223,8 @@ class SheetsService:
                         'email': payload.get('mail_cliente'),
                         'phone': payload.get('telefono'),
                         'instagram': payload.get('instagram'),
-                        'name': payload.get('nombre_cliente')
+                        'name': payload.get('nombre_cliente'),
+                        'person_uuid': sale.person_uuid
                     }
                     sale_data = {
                         'payment_type': tipo_pago_val,

@@ -91,15 +91,22 @@ def _ventas_del_cliente(client):
     if not client:
         return []
     filtros = [FinancialSale.client_id == client.id]
+    # Los pagos de su persona son suyos por sí solos (docs/plan_personas.md). El cruce por texto
+    # sigue para todos mientras haya personas duplicadas sin fusionar (frente A): sacarlo dejaría
+    # de ver pagos que hoy se ven. En la Etapa 2 queda solo la persona.
+    if client.person_uuid:
+        filtros.append(FinancialSale.person_uuid == client.person_uuid)
+    por_texto = []
     email = (client.email or '').strip().lower()
     if email and '@' in email:
-        filtros.append(func.lower(FinancialSale.mail_cliente) == email)
+        por_texto.append(func.lower(FinancialSale.mail_cliente) == email)
     ig = (client.instagram or '').strip().lstrip('@').lower()
     if ig and ig != 'n/a':
-        filtros.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig)
+        por_texto.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig)
     telefono = (client.phone or '').strip()
     if len(telefono) >= 8:
-        filtros.append(FinancialSale.telefono.like(f'%{telefono[-8:]}%'))
+        por_texto.append(FinancialSale.telefono.like(f'%{telefono[-8:]}%'))
+    filtros += por_texto
 
     ventas = FinancialSale.query.filter(
         or_(*filtros),
@@ -109,14 +116,37 @@ def _ventas_del_cliente(client):
     return ventas
 
 
+def _datos_de_persona(client):
+    """Nombre, mail, teléfono e instagram de la persona del cliente (sus principales), con las
+    columnas del cliente de respaldo; y todos sus datos activos, con el uso de cada uno."""
+    from app.models import PersonIdentity
+
+    person = client.person if client else None
+    propios = {'nombre': client.full_name, 'email': client.email, 'telefono': client.phone,
+               'instagram': client.instagram} if client else {}
+    if person is None:
+        return propios, []
+    datos = {'nombre': person.full_name or propios['nombre'], 'email': person.email or propios['email'],
+             'telefono': person.phone or propios['telefono'], 'instagram': person.instagram or propios['instagram']}
+    identidades = [{'tipo': i.kind, 'valor': i.value, 'principal': bool(i.is_primary), 'uso': i.uso}
+                   for i in person.identities.filter(PersonIdentity.retired_at.is_(None),
+                                                     PersonIdentity.review_note.is_(None))
+                   .order_by(PersonIdentity.kind, PersonIdentity.is_primary.desc(), PersonIdentity.id)]
+    return datos, identidades
+
+
 def _identidad(appt, client, programa_nombre, ingreso, baja=None):
+    contacto, identidades = _datos_de_persona(client)
     return {
         'client_id': client.id if client else None,
+        # La persona (docs/plan_personas.md): su uuid y todos sus datos, el principal y los demás.
+        'person_uuid': client.person_uuid if client else None,
+        'identidades': identidades,
         'appointment_id': appt.id if appt else None,
-        'nombre': (client.full_name or client.email or 'Sin nombre') if client else 'Sin cliente',
-        'email': (client.email or None) if client else None,
-        'telefono': (client.phone or None) if client else None,
-        'instagram': (client.instagram or None) if client else None,
+        'nombre': (contacto['nombre'] or contacto['email'] or 'Sin nombre') if client else 'Sin cliente',
+        'email': (contacto['email'] or None) if client else None,
+        'telefono': (contacto['telefono'] or None) if client else None,
+        'instagram': (contacto['instagram'] or None) if client else None,
         'examen': (appt.examen or None) if appt else None,
         'programa': programa_nombre,
         'grupo': (client.grupo or None) if client else None,

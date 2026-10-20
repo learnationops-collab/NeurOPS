@@ -361,9 +361,14 @@ def crear(appt, datos, usuario):
     previas = _ventas_del_cliente(cliente)
     huerfanas = _sin_espejo(previas, _emparejar(previas, _pagos_del_cliente(cliente.id)))
     vendedor = appt.closer.email if appt.closer else usuario.email
+    # El pago es de la persona del cliente; su mail es el de pago si tiene uno distinto, si no el
+    # principal (docs/plan_personas.md).
+    from app.services import person_service
+    persona = cliente.person
+    mail = (person_service.dato(persona, 'email', uso='pago') if persona else None) or cliente.email
     venta = FinancialSale(
-        client_id=cliente.id, email_vendedor=vendedor, nombre_cliente=cliente.full_name,
-        mail_cliente=cliente.email, telefono=(cliente.phone or '').lstrip('+') or None,
+        client_id=cliente.id, person=persona, email_vendedor=vendedor, nombre_cliente=cliente.full_name,
+        mail_cliente=mail, telefono=(cliente.phone or '').lstrip('+') or None,
         instagram=(cliente.instagram or '').lstrip('@') or None, examen=appt.examen or None,
         tipo_pago=tipo_pago, monto=monto, metodo_pago=medio, transferido_a=transferido_a,
         estado='Completada', sold_in_call=False, date=datetime.combine(dia, time()), sale_id=sale_id)

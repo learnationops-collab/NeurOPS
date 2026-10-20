@@ -1070,6 +1070,63 @@ def _atar_ventas_que_se_perderian(cliente, nuevos):
     return atadas
 
 
+# Campo de la ficha -> tipo de dato de la persona (`PersonIdentity.kind`).
+_KIND_DE_CAMPO = {'email': 'email', 'instagram': 'instagram', 'telefono': 'phone'}
+
+
+def _otra_persona_con(cliente, campo, valor):
+    """El cliente de OTRA persona que ya tiene ese correo, o None. Solo el correo: alcanza solo para
+    reconocer a alguien (`person_service.buscar`); un instagram o teléfono secundario de otra persona
+    puede ser un dato viejo o compartido y no frena una corrección."""
+    from app.models import Client
+    from app.services import person_service
+
+    if campo != 'email' or not valor:
+        return None
+    otras = person_service.duenos('email', person_service.normalizar('email', valor)) - {cliente.person_uuid}
+    if not otras:
+        return None
+    return Client.query.filter(Client.person_uuid.in_(otras), Client.id != cliente.id).order_by(Client.id).first()
+
+
+def _corregir_en_la_persona(cliente, cambios, usuario):
+    """Corregir un dato de contacto es corregir el principal de la persona (docs/plan_personas.md):
+    el nuevo pasa a principal y el anterior se da de baja, porque estaba mal. Borrarlo lo da de baja.
+    Los usos (el mail de pago, el de la Academia) no se tocan: son la excepción y siguen siendo suyos.
+    Queda un `PersonEvent` con quién y desde qué valor. No hace commit."""
+    from app.services import person_service
+
+    db.session.flush()  # un cliente sin persona la recibe al guardar (`person_service.mantener`)
+    person = cliente.person
+    if person is None:
+        return
+    for campo, (antes, nuevo) in cambios.items():
+        kind = _KIND_DE_CAMPO.get(campo)
+        if campo == 'nombre':
+            person.full_name = nuevo
+        if not kind:
+            continue
+        if nuevo and person_service.normalizar(kind, nuevo):
+            person_service.hacer_principal(person, kind, nuevo, usuario, reason='corregido en la ficha',
+                                           corrige=True)
+        elif antes:
+            # Borrado: el dato que tenía estaba mal y se da de baja.
+            person_service.retirar(person, kind, antes, usuario, reason='borrado en la ficha')
+
+
+def _agregar_a_la_persona(cliente, agregados):
+    """Un dato más que también es válido: se suma a la persona como secundario y el principal no
+    cambia (ni la columna del cliente). No hace commit."""
+    from app.services import person_service
+
+    db.session.flush()
+    if cliente.person is None:
+        return
+    pares = [(k, v) for k, v in ((_KIND_DE_CAMPO[c], person_service.normalizar(_KIND_DE_CAMPO[c], valor))
+                                 for c, valor in agregados.items()) if v]
+    person_service.anotar(cliente.person, pares, 'ficha')
+
+
 def _para_la_bitacora(valor):
     return repr(valor) if valor else 'vacío'
 
@@ -1095,9 +1152,12 @@ def editar_datos(appt, datos, usuario):
     pedidos = [c for c in (*CAMPOS_DEL_CLIENTE, 'examen', 'fuente') if c in datos]
     if not pedidos:
         raise ErrorDeAccion('No hay nada que guardar.')
+    # `agregar: ['email', ...]`: esos datos no corrigen el principal, se suman como otro válido.
+    agregar = set(datos.get('agregar') or []) & set(_KIND_DE_CAMPO) if isinstance(datos.get('agregar'), list) else set()
 
     cliente = appt.client
     cambios = {}
+    agregados = {}
     for campo in pedidos:
         if campo == 'fuente':
             # De la agenda, como el examen: no necesita cliente.
@@ -1113,17 +1173,21 @@ def editar_datos(appt, datos, usuario):
                                 'de contacto.', campo)
         else:
             antes = getattr(cliente, CAMPOS_DEL_CLIENTE[campo][0])
+        if campo in agregar:
+            if nuevo:
+                agregados[campo] = nuevo
+            continue
         if (antes or None) != nuevo:
             cambios[campo] = (antes, nuevo)
 
-    if not cambios:
+    if not cambios and not agregados:
         return {'id': appt.id, 'cambios': {}, 'ventas_atadas': 0}
 
     # En el orden del cruce de `create_or_update_client`: si chocan dos, se nombra el que ese cruce
     # usaria primero para fusionar.
     for campo in ('email', 'instagram', 'telefono'):
-        nuevo = cambios.get(campo, (None, None))[1]
-        otro = _otro_cliente_con(cliente, campo, nuevo) if nuevo else None
+        nuevo = cambios.get(campo, (None, None))[1] or agregados.get(campo)
+        otro = (_otro_cliente_con(cliente, campo, nuevo) or _otra_persona_con(cliente, campo, nuevo)) if nuevo else None
         if otro:
             nombre = otro.full_name or otro.email or f'cliente #{otro.id}'
             raise ChoqueDeContacto(
@@ -1145,6 +1209,10 @@ def editar_datos(appt, datos, usuario):
             agendas.poner_fuente(appt, nuevo, espejo)
         else:
             setattr(cliente, CAMPOS_DEL_CLIENTE[campo][0], nuevo)
+    if cliente is not None:
+        _corregir_en_la_persona(cliente, {c: v for c, v in cambios.items() if c in CAMPOS_DEL_CLIENTE}, usuario)
+        if agregados:
+            _agregar_a_la_persona(cliente, agregados)
     try:
         db.session.commit()
     except IntegrityError:
@@ -1156,15 +1224,16 @@ def editar_datos(appt, datos, usuario):
 
     rotulos = {**{c: v[1] for c, v in CAMPOS_DEL_CLIENTE.items()}, 'examen': EXAMEN[0],
                'fuente': 'fuente'}
-    detalle = '; '.join(f'{rotulos[c]}: {_para_la_bitacora(a)} → {_para_la_bitacora(n)}'
-                        for c, (a, n) in cambios.items())
+    detalle = '; '.join([f'{rotulos[c]}: {_para_la_bitacora(a)} → {_para_la_bitacora(n)}'
+                         for c, (a, n) in cambios.items()]
+                        + [f'{rotulos[c]} agregado: {_para_la_bitacora(v)}' for c, v in agregados.items()])
     extra = (f' {atadas} venta(s) quedaron atadas al cliente por id, para no perderlas con el '
              'cambio de contacto.' if atadas else '')
     BookingService.log_lead_event(appt.id, usuario.id, 'datos_editados',
                                   f'{usuario.username} corrigió los datos del lead: {detalle}.{extra}')
 
     return {'id': appt.id, 'cambios': {c: n for c, (_, n) in cambios.items()},
-            'ventas_atadas': atadas}
+            'agregados': agregados, 'ventas_atadas': atadas}
 
 
 # --- Registro de eventos ----------------------------------------------------------------------
@@ -1443,11 +1512,20 @@ def cliente_para_vender(datos, usuario):
     instagram = (datos.get('instagram') or '').strip().lstrip('@') or None
     telefono = (datos.get('telefono') or '').strip() or None
 
-    cliente = _cliente_con_ese_contacto(email, instagram, telefono)
+    from app.services import person_service
+
+    # Primero la persona (docs/plan_personas.md): si ya existe, su cliente; si no, el cruce de antes.
+    person = person_service.buscar(nombre, email=email, instagram=instagram, phone=telefono)
+    cliente = (person_service.cliente_de(person, crear=False) if person else None) \
+        or _cliente_con_ese_contacto(email, instagram, telefono)
     nuevo = cliente is None
     if nuevo:
+        # La misma regla que la venta (`sheets_service.post_to_sheets`): la persona y su cliente.
+        person = person_service.resolver(nombre, email, instagram, telefono, fuente='ficha')
+        cliente = person_service.cliente_de(person)
+        db.session.commit()
         cliente = BookingService.create_or_update_client(
-            {'name': nombre, 'email': email, 'instagram': instagram, 'phone': telefono})
+            {'name': nombre, 'email': email, 'instagram': instagram, 'phone': telefono}, client_id=cliente.id)
     appt, _ = agenda_para_vender(cliente.id, usuario)
     return appt, cliente, nuevo
 
