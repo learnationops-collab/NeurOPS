@@ -117,9 +117,9 @@ la Etapa 1: las APIs siguen devolviendo lo mismo y suman `person_uuid`.
 | Frente | Sesión / rama | Estado |
 |---|---|---|
 | Etapa 0 | sesión principal | hecha: en develop. Falta correr `scripts/backfill_person_identities.py --apply` en cada base después del deploy |
-| A | — | listo para arrancar |
+| A | sesión principal | código hecho, en develop. Correr en cada base, en este orden: `backfill_person_identities.py --apply` → `vincular_personas.py --apply` → `fusionar_personas.py --apply` → `vincular_personas.py --apply` (otra vez, para lo que se pudo vincular después de fusionar). Los grupos por teléfono (`--telefono`) se revisan a mano antes |
 | B | — | listo para arrancar |
-| C | — | listo para arrancar |
+| C | otra sesión, rama `personas/C` (worktree `../work-personas-c`) | en curso |
 | D | — | listo para arrancar |
 | E | — | listo para arrancar |
 | F | — | listo para arrancar |

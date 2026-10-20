@@ -268,8 +268,10 @@ def fusionar(sobreviviente_uuid, uuids, motivo, usuario=None):
     if sobr is None or not otros:
         return sobr
     ids = [p.uuid for p in otros]
+    db.session.flush()
     for model in TABLAS:
         model.query.filter(model.person_uuid.in_(ids)).update({model.person_uuid: sobr.uuid}, synchronize_session=False)
+    db.session.expire_all()  # los objetos ya cargados tienen el person_uuid viejo
     propias = {(i.kind, i.value) for i in sobr.identities}
     principales = {i.kind for i in sobr.identities if i.is_primary and i.retired_at is None}
     usos = {(i.kind, i.uso) for i in sobr.identities if i.uso and i.retired_at is None}

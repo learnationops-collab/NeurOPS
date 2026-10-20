@@ -161,6 +161,7 @@ class ClientDedupService:
             (d.email for d in duplicates if d.email and not _es_email_placeholder(d.email) and necesita_email), None)
         fallback_phone = next((d.phone for d in duplicates if d.phone and not survivor.phone), None)
         fallback_ig = next((d.instagram for d in duplicates if d.instagram and not survivor.instagram), None)
+        personas = {d.person_uuid for d in duplicates if d.person_uuid and d.person_uuid != survivor.person_uuid}
 
         # BUG real encontrado (31/ago/2026, antes de fusionar en producción): faltaba
         # InstallmentPlan acá — un cliente duplicado con un plan de cuotas activo quedaba con el
@@ -190,8 +191,14 @@ class ClientDedupService:
         if fallback_ig:
             survivor.instagram = fallback_ig
 
+        if personas and not survivor.person_uuid:
+            survivor.person_uuid = personas.pop()
         db.session.commit()
         logger.info(f"[ClientDedup] Fusionados {duplicate_ids} -> {survivor_id} (matched_on={matched_on})")
+        if personas:
+            # Dos clientes de la misma persona eran dos personas: se juntan también (docs/plan_personas.md).
+            from app.services import person_service
+            person_service.fusionar(survivor.person_uuid, list(personas), f'Fusión de clientes ({matched_on})')
 
     @staticmethod
     def _unir_suscripciones(survivor_id, duplicate_ids):
