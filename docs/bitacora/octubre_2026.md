@@ -338,3 +338,9 @@
   - Formularios: «Si no califica» tiene un campo nuevo, «Llevarlo a una página» (`fin.url`). Con un link, el que no califica va ahí en vez de ver el mensaje; una regla con su propia URL sigue mandando.
   - El isotipo de Learnation pasa a un componente compartido (`Isotipo.jsx`) que usa también la página de gracias.
   - Verificación: 275 tests de pytest de Agendas 2.0, vitest de núcleo, reserva y formularios, build, y capturas en escritorio (1440px) y mobile (390px).
+
+- **19 de Octubre de 2026 (señas completadas con una cuota)** *(La tarjeta Señas cuenta como convertida la seña cuyo resto se cargó como cuota. [app/services/senas_conversion.py](../../app/services/senas_conversion.py) [NEW], [app/services/comercial_analitica.py](../../app/services/comercial_analitica.py) [MODIFY], [app/services/ticket_service.py](../../app/services/ticket_service.py) [MODIFY])*:
+  - Reporte de Mario: Jean Carlo tenía 2 señas en octubre, una ya convertida, y la tarjeta seguía en Convirtió 0%. La seña de Erika Moreira ($50, «paga completo mañana») se completó con $1.950 cargados como «RR - Cuota», y la tarjeta solo aceptaba completo o parcial. No era caché ni período.
+  - Ahora también convierte la cuota a menos de un mes de la seña (la ventana de la primera cuota del ticket, `es_primera_cuota`). Es «Pago completo» si seña + cuota llegan al precio del programa (`Client.total_amount` o el de lista) y si no «Pago parcial». Desbloqueado suma esa cuota.
+  - Prod, solo lectura, señas desde julio: cambian 4 (Erika → completo; Gabriela Las, Claudia Montaño y Sergio Carrillo → parcial). Jean Carlo en octubre: Convirtió 50%, Pago completo 1, Desbloqueado $1.950. Las cuotas a más de un mes de la seña siguen sin convertirla.
+  - Verificación: 5 tests nuevos de pytest; suite completa con 3 fallas ajenas (`test_ai_usage` ×2 y el contrato de rutas del frontend).
