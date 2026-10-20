@@ -587,9 +587,11 @@ def _dar_acceso_a_la_academia(client_id, bloque, usuario):
     programa = (bloque.get('programa_code') or '').strip().upper()
     if not programa:
         raise ErrorDeAccion('falta el programa')
+    # `expires_at`: la fecha que eligió el closer; sin ella, la de su suscripción (`grant_access`).
     resultado = AcademyAccessService.grant_access(cliente, programa,
                                                   bloque.get('tipo_venta') or 'completo',
-                                                  None, bloque.get('email') or None, usuario=usuario) or {}
+                                                  bloque.get('expires_at') or None, bloque.get('email') or None,
+                                                  usuario=usuario) or {}
     return {'creada': bool(resultado.get('was_created'))}
 
 

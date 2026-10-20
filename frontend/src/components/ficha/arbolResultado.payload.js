@@ -281,7 +281,10 @@ function payloadVenta(r, contexto) {
       ? { monto: saldo, tipo_pago: `${r.programa} - Cuota`, comentario: 'Liquidación de saldo previo a Renovación/Upsell' }
       : null,
     acceso_academia: r.dar_acceso_academia === true
-      ? { programa_code: r.programa, tipo_venta: (r.tipo_pago_simple || '').toLowerCase(), email: r.mail_cliente }
+      ? {
+        programa_code: r.programa, tipo_venta: (r.tipo_pago_simple || '').toLowerCase(), email: r.mail_cliente,
+        ...(r.acceso_hasta ? { expires_at: r.acceso_hasta } : {}),
+      }
       : null,
     seguimiento_cobro: r.fecha_cobro && quedaSaldo(r, contexto) ? {
       fecha_seguimiento_cobro: r.fecha_cobro,

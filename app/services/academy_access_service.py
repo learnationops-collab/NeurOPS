@@ -157,7 +157,11 @@ class AcademyAccessService:
             expires_at = expires_at_override if isinstance(expires_at_override, date) else \
                 datetime.strptime(expires_at_override, '%Y-%m-%d').date()
         else:
-            expires_at = AcademyAccessService.compute_default_expiration(tipo_venta)
+            # Work es la fuente de verdad (20/10/2026): la fecha de su suscripción, ya calculada por
+            # el pago; sin suscripción, la regla de siempre.
+            from app.services.subscription_service import vencimiento_de
+            expires_at = (vencimiento_de(client.id, programa_code)
+                          or AcademyAccessService.compute_default_expiration(tipo_venta))
 
         try:
             upsert_result = LearnationService.upsert_user(client.email, client.full_name or client.email, client.phone)
@@ -179,6 +183,11 @@ class AcademyAccessService:
         client.learnation_user_id = learnation_user_id
         client.academy_product_slug = product_slug
         client.academy_expires_at = datetime.combine(expires_at, datetime.min.time())
+        if expires_at_override:
+            # La fecha que eligió el closer queda en la suscripción, con su nombre.
+            from app.services import subscription_service
+            subscription_service.cambiar(client, programa_code, expires_at,
+                                         'Fecha elegida por el closer al dar el acceso', usuario)
         db.session.commit()
 
         return {
