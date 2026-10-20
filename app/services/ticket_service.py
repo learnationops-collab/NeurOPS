@@ -41,6 +41,11 @@ def _misma_venta(anterior, actual):
     return 0 <= (actual - anterior).days <= VENTANA_DIAS
 
 
+def es_primera_cuota(desde, dia):
+    """¿La cuota del `dia` llega a tiempo de sumar al pago del día `desde`? A menos de un mes."""
+    return desde <= dia < desde + relativedelta(months=1)
+
+
 def _entra(clase):
     return clase == VENTA or (clase == SENA and SUMAR_SENAS) or (clase == CUOTA and SUMAR_PRIMERA_CUOTA)
 
@@ -86,7 +91,7 @@ def _sumar_primera_cuota(grupos, lista):
         if grupo[1] in (None, date.min):
             continue
         siguiente = next((i for i, c in enumerate(cuotas) if i not in usadas and c[0] >= grupo[1]), None)
-        if siguiente is not None and cuotas[siguiente][0] < grupo[1] + relativedelta(months=1):
+        if siguiente is not None and es_primera_cuota(grupo[1], cuotas[siguiente][0]):
             usadas.add(siguiente)
             grupo[0] += cuotas[siguiente][1]
 
