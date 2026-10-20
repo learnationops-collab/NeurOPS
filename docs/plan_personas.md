@@ -118,7 +118,7 @@ la Etapa 1: las APIs siguen devolviendo lo mismo y suman `person_uuid`.
 |---|---|---|
 | Etapa 0 | sesión principal | hecha: en develop. Falta correr `scripts/backfill_person_identities.py --apply` en cada base después del deploy |
 | A | sesión principal | código hecho, en develop. Correr en cada base, en este orden: `backfill_person_identities.py --apply` → `vincular_personas.py --apply` → `fusionar_personas.py --apply` → `vincular_personas.py --apply` (otra vez, para lo que se pudo vincular después de fusionar). Los grupos por teléfono (`--telefono`) se revisan a mano antes |
-| B | — | listo para arrancar |
+| B | otra sesión, rama `personas/B` (worktree `../work-personas-b`) | escritura hecha, en develop: todo `ManychatLead`/`LeadAnswer`/`Lead` que se guarde deja su persona y su `Conversation` (`conversaciones_service`, en `before_flush`). Correr `scripts/migrar_conversaciones.py --apply` después de los scripts del frente A. Pendiente: las búsquedas por Instagram/nombre de `api/public/marketing.py`, `conversational.py`, `setter_mazo.py` y el mazo de `setter.py` (las que no parten de un cliente); `cruce_conversaciones` y la confirmación del setter ya buscan primero por persona |
 | C | otra sesión, rama `personas/C` (worktree `../work-personas-c`) | en curso |
 | D | — | listo para arrancar |
 | E | — | listo para arrancar |
@@ -127,4 +127,10 @@ la Etapa 1: las APIs siguen devolviendo lo mismo y suman `person_uuid`.
 
 ## Pedidos entre frentes
 
-(vacío)
+- **B → Etapa 2 / `app/__init__.py`:** la sincronización de conversaciones se engancha al importar
+  `app/api/manychat.py` (`conversaciones_service.registrar()`). Moverla a `create_app`, junto a
+  `register_person_tracking`.
+- **B → quien tenga `anuncios_service`** (no está en ninguna lista): `_Atribuidor` arma
+  `Cruce(igs, nombres)`; pasarle también los `person_uuid` (`Cruce(igs, nombres, personas)` y
+  `candidatos(ig, nombre, persona)`) para que Marketing encuentre la conversación por persona primero,
+  como ya lo hace «Mis agendas» (`palabra_clave_service`).

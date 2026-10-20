@@ -41,7 +41,7 @@ import pytz
 from sqlalchemy import func
 
 from app import db
-from app.models import Ad, Appointment, LeadEventLog, ManychatLead, LeadAnswer
+from app.models import Ad, Appointment, Client, LeadEventLog, ManychatLead, LeadAnswer
 from app.models.marketing import clave_de_palabra
 from app.services.comercial_service import ComercialService, es_agenda_del_setter
 from app.services.user_time_service import hoy_del_usuario, limites_dia_utc, zona_del_usuario
@@ -111,7 +111,10 @@ def _anuncio_de_cada_una(filas):
     # La conversación se busca como en Marketing (`cruce_conversaciones`): Instagram exacto, parecido
     # y nombre; el setter escribe mal el Instagram o pone el nombre en su lugar. Va el Instagram tal
     # como se escribió: «greta castro gallo» no es un usuario, pero su forma compacta sí lo encuentra.
-    cruce = Cruce({f['ig'] for f in filas}, {f['cliente'] for f in filas})
+    clientes = [f['client_id'] for f in filas if f.get('client_id')]
+    persona_de = dict(db.session.query(Client.id, Client.person_uuid).filter(
+        Client.id.in_(clientes), Client.person_uuid.isnot(None))) if clientes else {}
+    cruce = Cruce({f['ig'] for f in filas}, {f['cliente'] for f in filas}, set(persona_de.values()))
     lead_ids = cruce.lead_ids()
     respuestas = defaultdict(list)
     if lead_ids:
@@ -129,7 +132,6 @@ def _anuncio_de_cada_una(filas):
     # El anuncio que eligió el setter (`Appointment.anuncio_id`, 18/10/2026) manda sobre ManyChat, como
     # en Marketing: el de esa agenda o, si la fila es otra agenda de la misma persona, el de ella.
     agenda_ids = [f['id'] for f in filas]
-    clientes = [f['client_id'] for f in filas if f.get('client_id')]
     por_agenda, por_cliente = {}, {}
     if agenda_ids:
         condicion = Appointment.id.in_(agenda_ids)
@@ -145,7 +147,7 @@ def _anuncio_de_cada_una(filas):
     for f in filas:
         reunion = _instante(f['fecha'])
         elegido = por_agenda.get(f['id']) or por_cliente.get(f.get('client_id')) or next(
-            (a for ids in cruce.candidatos(f['ig'], f['cliente']) if (a := ultima(ids, reunion))), None)
+            (a for ids in cruce.candidatos(f['ig'], f['cliente'], persona_de.get(f.get('client_id'))) if (a := ultima(ids, reunion))), None)
         if elegido:
             anuncio[f['id']] = elegido
     return anuncio

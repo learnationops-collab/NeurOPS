@@ -4,6 +4,8 @@ Lo usan Marketing (`anuncios_service._Atribuidor`, la palabra clave de cada agen
 bandeja «Mis agendas» del setter (`palabra_clave_service`), con la misma regla para que no se
 contradigan. En orden, cada paso solo si el anterior no encontró nada:
 
+  0. La misma persona (`person_uuid`, 20/10/2026, docs/plan_personas.md): la conversación ya está
+     vinculada a ella y no hace falta adivinar por Instagram ni por nombre.
   1. El Instagram exacto (sin «@», en minúsculas).
   2. El Instagram «compacto», solo letras y números (17/10/2026): «luis.rinnegan» es «luis_rinnegan»,
      y el setter que escribe el nombre en el campo del Instagram («greta castro gallo») encuentra
@@ -56,6 +58,16 @@ def clave_de_nombre(texto):
         return None
     palabras = re.sub(r'[^a-z]+', ' ', _sin_tildes(texto)).split()
     return ' '.join(palabras) if len(palabras) >= 2 else None
+
+
+def leads_por_persona(person_uuids):
+    """{person_uuid: [lead_id, ...]} de las conversaciones ya vinculadas a cada persona."""
+    por_persona = defaultdict(list)
+    for tanda in _en_tandas({u for u in person_uuids if u}):
+        for lead_id, puuid in db.session.query(ManychatLead.id, ManychatLead.person_uuid).filter(
+                ManychatLead.person_uuid.in_(tanda)):
+            por_persona[puuid].append(lead_id)
+    return por_persona
 
 
 def leads_por_ig(igs):
@@ -114,21 +126,24 @@ def leads_por_nombre(nombres):
 
 
 class Cruce:
-    """Las conversaciones de un grupo de personas, leídas una vez: `candidatos(ig, nombre)` da los
-    lead_ids de cada paso, en orden, para que quien llama se quede con el primero que le sirva."""
+    """Las conversaciones de un grupo de personas, leídas una vez: `candidatos(ig, nombre, persona)` da
+    los lead_ids de cada paso, en orden, para que quien llama se quede con el primero que le sirva."""
 
-    def __init__(self, igs, nombres=()):
+    def __init__(self, igs, nombres=(), personas=()):
+        self.por_persona = leads_por_persona(personas)
         igs = {normalize_ig(ig) for ig in igs} - {None}
         self.por_ig = leads_por_ig(igs)
         self.por_ig_parecido = leads_por_ig_parecido(igs - set(self.por_ig))
         self.por_nombre = leads_por_nombre({clave_de_nombre(n) for n in nombres})
 
     def lead_ids(self):
-        return ({lid for ids in self.por_ig.values() for lid in ids}
+        return ({lid for ids in self.por_persona.values() for lid in ids}
+                | {lid for ids in self.por_ig.values() for lid in ids}
                 | {lid for ids in self.por_ig_parecido.values() for lid in ids}
                 | set(self.por_nombre.values()))
 
-    def candidatos(self, ig, nombre=None):
+    def candidatos(self, ig, nombre=None, persona=None):
+        yield self.por_persona.get(persona, ())
         ig = normalize_ig(ig)
         yield self.por_ig.get(ig, ())
         yield self.por_ig_parecido.get(ig, ())

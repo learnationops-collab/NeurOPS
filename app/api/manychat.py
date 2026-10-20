@@ -2,11 +2,15 @@ from flask import Blueprint, request, jsonify
 from flask_login import current_user
 from app import db
 from app.decorators import require_manychat_token
+from app.services import conversaciones_service
 from app.services.setter_assignment_service import condicion_leads_visibles
 import logging
 import traceback
 
 logger = logging.getLogger(__name__)
+
+# Cada lead que se guarde, por el camino que sea, deja su persona y su conversación (plan_personas, frente B).
+conversaciones_service.registrar()
 
 bp = Blueprint('manychat', __name__)
 
@@ -395,6 +399,7 @@ def get_webhook_log():
         'id': ans.id,  # ID de la respuesta, usado para editar
         'lead_id': ans.lead.id,
         'manychat_id': ans.lead.manychat_id,
+        'person_uuid': ans.lead.person_uuid,
         'lead_name': ans.lead.name,
         'lead_ig': ans.lead.ig,
         'follower': ans.lead.follower,
@@ -487,6 +492,7 @@ def get_entrantes():
         filas.append({
             'lead_id': lead.id,
             'manychat_id': lead.manychat_id,
+            'person_uuid': lead.person_uuid,
             'nombre': lead.name,
             'ig': lead.ig,
             'follower': bool(lead.follower),

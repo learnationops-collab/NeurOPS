@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.models import DailyReportQuestion, DailyReportAnswer, SetterDailyStats, ROLE_SETTER, User, Client, Appointment, Event, EventGroup, CommentNotification, ManychatLead, LeadAnswer
 from app.decorators import role_required
+from app.services import conversaciones_service, person_service
 from app.services.closer_agendas_service import contar_no_show_y_canceladas
 from app.services.setter_assignment_service import condicion_leads_visibles
 from app.services.user_time_service import hoy_del_usuario, limites_dia_utc, limites_rango_utc
@@ -773,8 +774,9 @@ def get_setter_deck():
 
             edad_str = "N/A"
             
-            client = None
-            if ig_clean:
+            # El cliente de su persona, si ya la tiene; si no, por el Instagram como antes.
+            client = person_service.cliente_de(lead.person, crear=False) if lead.person_uuid else None
+            if ig_clean and not client:
                 if ig_clean.startswith("no_ig_"):
                     try:
                         c_id = int(ig_clean.split("_")[-1])
@@ -1434,20 +1436,9 @@ def confirm_qualified_lead(answer_id):
     if not lead:
         return jsonify({"message": "Lead no encontrado"}), 404
         
-    ig_clean = lead.ig.strip().replace('@', '').lower() if lead.ig else None
-    client = None
-    if ig_clean:
-        from sqlalchemy import func
-        client = Client.query.filter(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean).first()
-        
-    if not client:
-        client = Client(
-            full_name=lead.name or "Sin Nombre",
-            instagram=lead.ig,
-            created_at=datetime.utcnow()
-        )
-        db.session.add(client)
-        db.session.commit()
+    # El cliente de su persona; sin persona, el de su Instagram (plan_personas, frente B).
+    client = conversaciones_service.cliente_del_lead(lead)
+    db.session.commit()
         
     closer_id = None
     ad = Ad.query.get(la.ad_id) if la.ad_id else None
@@ -1521,20 +1512,9 @@ def bulk_update_cualificacion():
             processed_count += 1
         elif action == 'confirm':
             lead = la.lead
-            ig_clean = lead.ig.strip().replace('@', '').lower() if lead.ig else None
-            client = None
-            if ig_clean:
-                from sqlalchemy import func
-                client = Client.query.filter(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean).first()
-                
-            if not client:
-                client = Client(
-                    full_name=lead.name or "Sin Nombre",
-                    instagram=lead.ig,
-                    created_at=datetime.utcnow()
-                )
-                db.session.add(client)
-                db.session.commit()
+            # El cliente de su persona; sin persona, el de su Instagram (plan_personas, frente B).
+            client = conversaciones_service.cliente_del_lead(lead)
+            db.session.commit()
                 
             closer_id = None
             ad = Ad.query.get(la.ad_id) if la.ad_id else None
@@ -1582,20 +1562,9 @@ def update_qualified_lead(answer_id):
     data = request.get_json() or {}
     
     # 1. Buscar o crear cliente
-    ig_clean = lead.ig.strip().replace('@', '').lower() if lead.ig else None
-    client = None
-    if ig_clean:
-        from sqlalchemy import func
-        client = Client.query.filter(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean).first()
-        
-    if not client:
-        client = Client(
-            full_name=lead.name or "Sin Nombre",
-            instagram=lead.ig,
-            created_at=datetime.utcnow()
-        )
-        db.session.add(client)
-        db.session.commit()
+    # El cliente de su persona; sin persona, el de su Instagram (plan_personas, frente B).
+    client = conversaciones_service.cliente_del_lead(lead)
+    db.session.commit()
         
     # 2. Guardar observación del setter y publicarla como nota visible
     setter_note = data.get('setter_note', '').strip()
