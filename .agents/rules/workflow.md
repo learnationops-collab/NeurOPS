@@ -7,6 +7,7 @@ Para cada tarea o requerimiento en este proyecto, el agente DEBE seguir estricta
 
 2. **Implementación y Asistencia**
    Ejecuta los cambios que el usuario solicita y ayúdale a solucionar los problemas que surjan en el proceso. Modifica los archivos necesarios respetando los estándares del proyecto.
+   **Los tests nunca interrumpen la implementación:** no se corren tests mientras se implementa. Se escriben, y se corren una sola vez al final, después de subir los cambios, solo los relacionados con lo tocado.
 
 3. **Validación con el Usuario**
    Al terminar de inyectar el código funcional, detente. Infórmale al usuario qué se modificó y pregúntale de forma clara y explícita si la solución funciona bien en sus pruebas locales.
