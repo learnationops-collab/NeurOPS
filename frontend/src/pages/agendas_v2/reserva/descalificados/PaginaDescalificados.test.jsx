@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import api from '../../../../services/api';
@@ -30,25 +30,31 @@ describe('linkDeLaClase', () => {
 describe('PaginaDescalificados', () => {
     afterEach(() => { vi.useRealTimers(); vi.clearAllMocks(); });
 
-    async function montar() {
+    async function montar(ruta = '/agendas-v2/agenda/gracias-por-postularte') {
         render(
-            <MemoryRouter initialEntries={['/agendas-v2/agenda/descalificados']}>
+            <MemoryRouter initialEntries={[ruta]}>
                 <Routes><Route path="/agendas-v2/agenda/*" element={<AgendasV2Publica />} /></Routes>
             </MemoryRouter>,
         );
-        return screen.findByRole('heading', { level: 1 });
+        // La página es lazy: la primera carga del chunk puede pasar el segundo por defecto.
+        return screen.findByRole('heading', { level: 1 }, { timeout: 5000 });
     }
 
     it('dice el «no», trae los tres pasos y el CTA lleva al grupo del próximo taller', async () => {
         api.get.mockResolvedValue({ data: { eventos: [{ inicio: '2099-01-01T00:00:00Z', whatsapp: 'https://chat.whatsapp.com/abc' }] } });
         const h1 = await montar();
         expect(h1.textContent).toBe('Por ahora noes el momentode trabajarjuntos');
-        expect(api.get).toHaveBeenCalledWith('/public/workshops/proximos', expect.anything());
+        await waitFor(() => expect(api.get).toHaveBeenCalledWith('/public/workshops/proximos', expect.anything()));
         expect(screen.getByTitle('EARN System — video').getAttribute('src')).toContain('loom.com/embed/4c04b56c7e11427c9cc3bcc9395b3773');
         expect(screen.getByRole('link', { name: 'Abrir la guía' }).getAttribute('href')).toContain('drive.google.com');
         const cta = await screen.findByRole('link', { name: 'Quiero sumarme a la clase' });
         expect(cta.getAttribute('href')).toBe('https://chat.whatsapp.com/abc');
         expect(cta.getAttribute('aria-disabled')).toBe('false');
+    });
+
+    it('la ruta vieja (/descalificados) lleva a la misma página', async () => {
+        api.get.mockResolvedValue({ data: { eventos: [] } });
+        expect((await montar('/agendas-v2/agenda/descalificados')).textContent).toContain('Por ahora no');
     });
 
     it('sin link del taller, el CTA queda deshabilitado', async () => {
