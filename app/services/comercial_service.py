@@ -47,6 +47,7 @@ from app.services.closer_dashboard_service import CloserDashboardService
 from app.services.closer_name_service import resolver_nombre_closer
 from app.services.commission_service import cash_neto_de
 from app.services.setter_assignment_service import _variantes_guardadas, normalizar_nombre
+from app.services.ticket_service import pago_de_fila, ticket_de
 
 ROL_CLOSERS = 'closers'
 ROL_SETTERS = 'setters'
@@ -1269,14 +1270,15 @@ class ComercialService:
         # El ticket es lo que entró POR CADA VENTA NUEVA (pago completo o split pay), igual que
         # en el dashboard del closer (`general_average_ticket`). Antes dividía TODO el cash del
         # período —cuotas y señas incluidas— por las ventas: un mes con una venta de $250 y
-        # cuotas viejas cobradas mostraba un ticket de $1.200.
-        cash_ventas = sum(f['monto'] for f in ventas)
+        # cuotas viejas cobradas mostraba un ticket de $1.200. Los pagos del mismo cliente en el
+        # mismo mes cuentan como una sola venta, con su primera cuota si llega antes del mes
+        # (`ticket_service`).
         return {
             'filas': len(filas),
             'ventas': len(ventas),
             'cash': round(cash, 2),
             'cash_neto': round(sum(f['monto_neto'] for f in filas), 2),
-            'ticket': round(cash_ventas / len(ventas), 2) if ventas else None,
+            'ticket': ticket_de([pago_de_fila(f) for f in filas])[2],
         }
 
     @staticmethod

@@ -23,6 +23,7 @@ from app.services.comercial_service import (
 from app.services import setter_analitica
 from app.services.commission_service import CLOSER_RATE
 from app.services.procedencia_ingresos_service import agendas_para_atribuir, procedencia_de_ventas
+from app.services.ticket_service import pago_de_fila, primeras_cuotas, sin_cuotas, ticket_promedio
 
 # Qué métricas llevan badge de delta y cómo se lee la diferencia: 'pts' para las tasas (la
 # diferencia entre dos porcentajes son puntos, no un porcentaje) y 'pct' para montos y conteos.
@@ -349,16 +350,19 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
         bucket['ventas'] += 1
         bucket['cash'] += f['monto']
 
-        p = programas.setdefault(f['programa'], {'filas': 0, 'cash': 0.0, 'ventas': 0, 'cash_ventas': 0.0,
+        p = programas.setdefault(f['programa'], {'filas': 0, 'cash': 0.0, 'ventas': 0, 'pagos': [],
                                                  'por_tipo': {}})
         p['filas'] += 1
         p['cash'] += f['monto']
+        p['pagos'].append(pago_de_fila(f))
         if f['es_venta']:
             p['ventas'] += 1
-            p['cash_ventas'] += f['monto']
         t = p['por_tipo'].setdefault(f['tipo_pago']['key'], {'ventas': 0, 'cash': 0.0})
         t['ventas'] += 1
         t['cash'] += f['monto']
+
+    # La primera cuota de cada venta, una sola consulta para todos los programas (`ticket_service`)
+    cuotas = primeras_cuotas(sin_cuotas([pago_de_fila(f) for f in ventas]))
 
     dias, mejor_dia = _cash_por_dia(ventas, start, end)
 
@@ -421,7 +425,7 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
              'cash': round(datos['cash'], 2),
              # Sobre lo cobrado en las ventas nuevas, no sobre todo el cash del programa (ver
              # `totales_ventas`).
-             'ticket': round(datos['cash_ventas'] / datos['ventas'], 2) if datos['ventas'] else None,
+             'ticket': ticket_promedio(sin_cuotas(datos['pagos']) + cuotas)[2],
              'por_tipo': [{**chip('tipo_pago', k), 'ventas': v['ventas'], 'cash': round(v['cash'], 2)}
                           for k, v in datos['por_tipo'].items()]}
             for nombre, datos in programas.items()
