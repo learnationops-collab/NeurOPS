@@ -100,6 +100,12 @@ class LearnationService:
         return LearnationService._request('POST', '/payments', json=payload)
 
     @staticmethod
+    def report_subscription(payload):
+        """Le manda a la Academia la suscripción tal como quedó en Work, que es la fuente de verdad
+        (ver app/services/subscription_sync.py). La Academia la aplica tal cual, también si acorta."""
+        return LearnationService._request('POST', '/subscriptions', json=payload)
+
+    @staticmethod
     def report_payment_status(payload):
         """Avisa el estado de pago de un cliente a la Academia cuando cambia (ver
         app/services/academy_payment_status.py). La Academia guarda el último."""

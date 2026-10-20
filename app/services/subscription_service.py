@@ -11,14 +11,15 @@ Reglas (Santiago, 20/10):
 Estar al día con las cuotas no mueve esta fecha: eso lo dice la venta.
 
 Lo automático corre dentro del `before_flush` de `sale_service`, sobre el pago recién ubicado.
-Todavía no se le empuja a la Academia: eso es la fase 4 (hoy la Academia sigue recibiendo el
-vencimiento de cada pago de `academy_payment_sync`).
+Cada cambio se le empuja a la Academia al guardar (`subscription_sync`, fase 4), y el aviso de cada
+pago (`academy_payment_sync`) lleva el vencimiento de la suscripción (`vencimiento_de`).
 """
 from datetime import date, datetime, timedelta
 
 from app import db
 from app.models import Subscription, SubscriptionEvent
 from app.services.academy_access_service import AcademyAccessService, _add_months
+from app.services import subscription_sync
 
 DURACION_MESES = 4
 DIAS_SENA = 7
@@ -74,6 +75,7 @@ def otorgar(session, client_id, slug, hasta, kind, *, programa=None, desde=None,
     session.add(SubscriptionEvent(subscription=sub, kind=kind, from_date=antes, to_date=sub.expires_at,
                                   reason=(reason or '')[:255] or None, source=source, actor_id=actor_id,
                                   actor_email=actor_email, sale=sale, payment=payment))
+    subscription_sync.anotar(session, sub)
     return sub
 
 
@@ -135,3 +137,12 @@ def del_cliente(client_id):
         return []
     subs = Subscription.query.filter_by(client_id=client_id).order_by(Subscription.expires_at.desc()).all()
     return [s.to_dict(with_events=True) for s in subs]
+
+
+def vencimiento_de(client_id, programa):
+    """Hasta cuándo tiene acceso al producto de `programa`, según su suscripción; None si no tiene."""
+    slug = slug_de(programa)
+    if not client_id or not slug:
+        return None
+    sub = Subscription.query.filter_by(client_id=client_id, product_slug=slug).first()
+    return sub.expires_at if sub else None

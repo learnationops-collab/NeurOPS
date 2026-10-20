@@ -289,4 +289,7 @@ def create_app(config_class=Config):
     from app.services.sale_service import register_sale_tracking
     register_sale_tracking(app)
 
+    from app.services.subscription_sync import register_subscription_sync
+    register_subscription_sync(app)
+
     return app

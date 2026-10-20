@@ -68,7 +68,11 @@ def build_payment_payload(sale):
 
     programa, tipo = SheetsService.parse_tipo_pago(tipo_pago)
     fecha = sale.date or datetime.utcnow()
-    expires_at = compute_payment_expiration(client.id if client else None, programa, tipo, fecha)
+    # La suscripción de Work manda (20/10/2026): un pago ya no compra días por su cuenta. Sin
+    # suscripción (programa sin producto vinculado, datos viejos) queda la regla de antes.
+    from app.services.subscription_service import vencimiento_de
+    expires_at = (vencimiento_de(client.id if client else None, programa)
+                  or compute_payment_expiration(client.id if client else None, programa, tipo, fecha))
 
     return {
         'sale_id': sale.id,
