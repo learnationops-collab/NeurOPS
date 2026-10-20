@@ -116,6 +116,10 @@ class SalesConsistencyService:
         sale_filters = []
         if client_id:
             sale_filters.append(FinancialSale.client_id == client_id)
+        # Los pagos de su persona (docs/plan_personas.md) son suyos por sí solos, como el client_id.
+        person_uuid = client.person_uuid if client else None
+        if person_uuid:
+            sale_filters.append(FinancialSale.person_uuid == person_uuid)
         if client:
             if client.email and '@' in client.email:
                 sale_filters.append(func.lower(FinancialSale.mail_cliente) == client.email.strip().lower())
@@ -146,7 +150,7 @@ class SalesConsistencyService:
             ).order_by(FinancialSale.date.asc()).all()
 
             for s in candidates:
-                if client_id and s.client_id == client_id:
+                if (client_id and s.client_id == client_id) or (person_uuid and s.person_uuid == person_uuid):
                     all_sales.append(s)
                     continue
                 if client and SalesConsistencyService._contact_match_suffices(client, s):

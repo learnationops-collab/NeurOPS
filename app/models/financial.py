@@ -34,20 +34,57 @@ class FinancialSale(ConPersona, db.Model):
 
     client = db.relationship('Client', backref=db.backref('financial_sales', lazy='dynamic'))
 
-    def to_dict(self):
+    CONTACTO = ('nombre_cliente', 'mail_cliente', 'telefono', 'instagram')
+
+    def contacto(self, mails_de_pago=None):
+        """Nombre, mail, teléfono e instagram del pago, leídos de su persona (docs/plan_personas.md):
+        sus principales, y como mail su mail de pago si tiene uno distinto. Lo copiado en el pago es
+        el respaldo, solo sin persona o para un dato que la persona no tiene.
+
+        `mails_de_pago` ({person_uuid: mail}, ver `mails_de_pago`) evita una consulta por fila en
+        los listados; sin él se consulta acá."""
+        p = self.person if self.person_uuid else None
+        if p is None:
+            return {k: getattr(self, k) for k in self.CONTACTO}
+        if mails_de_pago is not None:
+            mail = mails_de_pago.get(p.uuid) or p.email
+        else:
+            from app.services import person_service
+            mail = person_service.dato(p, 'email', uso='pago')
+        de_persona = {'nombre_cliente': p.full_name, 'mail_cliente': mail, 'telefono': p.phone,
+                      'instagram': p.instagram}
+        return {k: de_persona[k] or getattr(self, k) for k in self.CONTACTO}
+
+    @staticmethod
+    def mails_de_pago(sales):
+        """{person_uuid: mail de pago} de las personas de estos pagos que tienen uno distinto del
+        principal (la excepción). Una consulta por tanda."""
+        from app.models import PersonIdentity
+        uuids = sorted({s.person_uuid for s in sales if s.person_uuid})
+        mails = {}
+        for i in range(0, len(uuids), 500):
+            for puuid, valor in db.session.query(PersonIdentity.person_uuid, PersonIdentity.value).filter(
+                    PersonIdentity.person_uuid.in_(uuids[i:i + 500]), PersonIdentity.kind == 'email',
+                    PersonIdentity.uso == 'pago', PersonIdentity.retired_at.is_(None)):
+                mails[puuid] = valor
+        return mails
+
+    def to_dict(self, mails_de_pago=None):
+        contacto = self.contacto(mails_de_pago)
         return {
             "id": self.id,
             "client_id": self.client_id,
+            "person_uuid": self.person_uuid,
             "email_vendedor": self.email_vendedor,
-            "nombre_cliente": self.nombre_cliente,
-            "telefono": self.telefono,
-            "mail_cliente": self.mail_cliente,
+            "nombre_cliente": contacto['nombre_cliente'],
+            "telefono": contacto['telefono'],
+            "mail_cliente": contacto['mail_cliente'],
             "tipo_pago": self.tipo_pago,
             "monto": self.monto,
             "segundo_pago": self.segundo_pago,
             "metodo_pago": self.metodo_pago,
             "examen": self.examen,
-            "instagram": self.instagram,
+            "instagram": contacto['instagram'],
             "setter": self.setter,
             "marca_temporal": self.marca_temporal,
             "estado": self.estado or "Completada",
@@ -123,12 +160,14 @@ class FinancialAgenda(ConPersona, db.Model):
             mail_clean = self.mail.strip().lower() if self.mail and self.mail.lower() not in ('n/a', '') else None
             
             filters = []
+            if self.person_uuid:
+                filters.append(FinancialSale.person_uuid == self.person_uuid)
             if ig_clean:
                 # Usar ilike para evitar full table scans en SQLite/PostgreSQL
                 filters.append(FinancialSale.instagram.ilike(f"%{ig_clean}%"))
             if mail_clean:
                 filters.append(FinancialSale.mail_cliente.ilike(mail_clean))
-                
+
             if filters:
                 from sqlalchemy import or_
                 sales_count = FinancialSale.query.filter(or_(*filters)).count()
@@ -147,7 +186,10 @@ class FinancialAgenda(ConPersona, db.Model):
             client_filters.append(func.lower(Client.email) == mail_clean)
             
         client = None
-        if client_filters:
+        # Por su persona primero; la búsqueda por texto queda para las agendas todavía sin vincular.
+        if self.person_uuid:
+            client = Client.query.filter_by(person_uuid=self.person_uuid).order_by(Client.id).first()
+        if not client and client_filters:
             client = Client.query.filter(or_(*client_filters)).first()
         if not client and ig_clean and ig_clean.startswith("no_ig_"):
             try:
@@ -201,6 +243,7 @@ class FinancialAgenda(ConPersona, db.Model):
 
         return {
             "id": self.id,
+            "person_uuid": self.person_uuid,
             "nombre": self.nombre,
             # De donde salio la Fuente: 'formulario_calendly' cuando la puso el
             # formulario del setter (es la que vale) o None si viene del webhook /

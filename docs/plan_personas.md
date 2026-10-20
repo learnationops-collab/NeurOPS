@@ -119,7 +119,7 @@ la Etapa 1: las APIs siguen devolviendo lo mismo y suman `person_uuid`.
 | Etapa 0 | sesión principal | hecha: en develop. Falta correr `scripts/backfill_person_identities.py --apply` en cada base después del deploy |
 | A | sesión principal | código hecho, en develop. Correr en cada base, en este orden: `backfill_person_identities.py --apply` → `vincular_personas.py --apply` → `fusionar_personas.py --apply` → `vincular_personas.py --apply` (otra vez, para lo que se pudo vincular después de fusionar). Los grupos por teléfono (`--telefono`) se revisan a mano antes |
 | B | otra sesión, rama `personas/B` (worktree `../work-personas-b`) | escritura hecha, en develop: todo `ManychatLead`/`LeadAnswer`/`Lead` que se guarde deja su persona y su `Conversation` (`conversaciones_service`, en `before_flush`). Correr `scripts/migrar_conversaciones.py --apply` después de los scripts del frente A. Pendiente: las búsquedas por Instagram/nombre de `api/public/marketing.py`, `conversational.py`, `setter_mazo.py` y el mazo de `setter.py` (las que no parten de un cliente); `cruce_conversaciones` y la confirmación del setter ya buscan primero por persona |
-| C | otra sesión, rama `personas/C` (worktree `../work-personas-c`) | en curso |
+| C | `personas/C` | hecha, en develop. Cada pago nuevo (ficha, webhook de la hoja, resincronización) y cada cobro de un CSV de conciliación se guarda con `person_uuid`; la venta de la ficha resuelve primero la persona y usa su cliente. El contacto de una venta (`FinancialSale.contacto()`) se lee de la persona: sus principales y, como mail, su mail de pago si tiene uno distinto. Si el closer declara la venta con un mail que no es el principal, ése queda como `uso='pago'`. Corregir el instagram de una venta corrige el principal de la persona y da de baja el anterior; con `modo: 'agregar'` se suma como otro válido (el frontend todavía no lo ofrece). Pendiente: los cobros de conciliación viejos sin `person_uuid` se cruzan por el cliente de su correo (no hay script) |
 | D | sesión principal (work-24), rama `personas/D` | hecho, en develop. Los dos buscadores de `booking_service` pasan por `person_service` (ya no fusionan clientes al escribir); Agendas 2.0, API externa, formulario, roadmap y follow up buscan primero por persona; `BookingService.cliente_de_agenda` / `clientes_por_persona` para el cliente de una agenda. Toda `FinancialAgenda` nueva queda con su persona sola (`before_flush`, también las de `closer_service` y `sheets_service`). Correr `scripts/personas_de_agendas.py --apply` después de los scripts del frente A. Pendiente: los listados y ediciones de `api/public/financial_agendas.py` (cruces por mail en las líneas ~765-961 y ~1324) siguen por la copia |
 | E | otra sesión, rama `personas/E` (worktree `../work-personas-e`) | hecho, en develop. «Mismo cliente» es la persona: `ticket_service.claves_de_cliente` (ticket, agrupado de ventas, workshop, closer), la atribución (comisiones, nómina, procedencia, fuente de Revisar), la seña convertida, la conversión de Fulfillment, la venta vigente de cada pago (`sale_service`), la suscripción (`subscription_service`, también la de un cliente duplicado), y en Revisar el cruce agenda→venta, una agenda por persona y «agendó» de los leads. El mail/instagram copiados solo cuentan en filas sin persona: **necesita los scripts del frente A corridos** en cada base, o los pagos viejos sin persona no se juntan con los nuevos. Las filas suman `person_uuid`. Queda como estaba lo que se muestra (nombre, mail): sigue saliendo de la copia hasta que la ficha cambie los principales (F) |
 | F | — | listo para arrancar |
@@ -144,3 +144,20 @@ la Etapa 1: las APIs siguen devolviendo lo mismo y suman `person_uuid`.
   `hacer_principal(..., corrige=True)` da de baja el anterior (corregir); sin `corrige` el anterior queda
   como otro dato válido. Agregar un dato sin cambiar el principal: `resolver`/`anotar`. `Person.phone`
   guarda el teléfono como se escribió (la identidad, normalizada).
+- **C → G:** el aviso de pago y el estado de pago a la Academia llevan `work_uuid` (el uuid de la
+  persona). `academy_payment_status.buscar_cliente` acepta `work_uuid=`: `api/external/academy.py`
+  tiene que pasarle `data.get('work_uuid')`. `sincronizar_avance` ya cruza por `work_uuid` si la
+  Academia lo manda en cada fila. El mail que viaja es el de uso `academia` si el equipo fijó uno
+  distinto y, si no, el principal (`academy_payment_status.email_academia`).
+- **C → F:** el "corregir contacto" de la ficha debería seguir la misma regla que la edición de
+  ventas (`financial_sales._corregir_contacto`): corregir = nuevo principal y baja del anterior;
+  agregar = otro dato válido, sin cambiar el principal.
+- **C → D:** `sheets_service` le pasa a `BookingService.create_or_update_client` el `client_id` del
+  cliente de la persona; sin persona (pago sin mail, ig ni teléfono) sigue su búsqueda de siempre.
+- **C → F:** `CloserService.check_and_notify_down_payment_conversion` todavía recibe el contacto
+  como texto; puede usar `sale.person_uuid`. `ficha_fulfillment_service.emails_candidatos` podría
+  sumar los mails de la persona (`PersonIdentity`).
+- **C → E:** `AttributionService` y `comercial_service.clientes_de_ventas` pueden cruzar venta y
+  agenda por `person_uuid` antes que por texto.
+- **C → Etapa 2:** `sheets_service`, `financial_sales.py`, `conciliacion_service` y
+  `academy_snapshot_service` ya pasaban las 500 líneas antes del frente; no se partieron acá.

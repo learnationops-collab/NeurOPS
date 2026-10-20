@@ -144,13 +144,18 @@ def receive_financial_sales():
             sale_date = parse_date_robustly(fecha_str)
 
         try:
+            from app.services.sheets_service import persona_del_pago
+            nombre = item.get('nombre_cliente') or item.get('cliente')
+            instagram = item.get('instagram') or item.get('ig')
             sale = FinancialSale(
+                person=persona_del_pago(nombre, item.get('mail_cliente') or item.get('email'), instagram,
+                                        item.get('telefono') or item.get('phone')),
                 setter=str(setter),
                 monto=float(monto),
                 date=sale_date,
-                nombre_cliente=item.get('nombre_cliente') or item.get('cliente') or 'Desconocido',
+                nombre_cliente=nombre or 'Desconocido',
                 email_vendedor=item.get('email_vendedor') or item.get('vendedor_mail'),
-                instagram=item.get('instagram') or item.get('ig') or 'N/A',
+                instagram=instagram or 'N/A',
                 estado="Completada" if (item.get('estado') or item.get('status') or 'Completada').strip().lower() in ('completada', 'confirmada') else (item.get('estado') or item.get('status') or 'Completada'),
                 raw_data=item
             )
@@ -219,6 +224,40 @@ def opciones_de_transferencia():
 # SalesAttributionPage). Sin `force` respondía 500 «disabled»; con `?force=true` BORRABA las ventas
 # y las reconstruía desde la hoja. El cron de la hoja sigue en GET /api/sheets/cron-sync.
 
+def _corregir_contacto(person, data, modo=None):
+    """Corregir el contacto de una venta es corregir a su persona (docs/plan_personas.md): el
+    instagram nuevo pasa a ser el principal y el anterior se da de baja (estaba mal). Con
+    `modo: 'agregar'` el anterior sigue siendo válido: el nuevo se suma como uno más y el principal
+    no cambia. El nombre es uno solo y se reemplaza. Se escribe también en su cliente mientras dure
+    la doble escritura. No hace commit."""
+    from flask_login import current_user
+    from app.services import person_service
+
+    usuario = current_user if getattr(current_user, 'is_authenticated', False) else None
+    cliente = person_service.cliente_de(person, crear=False)
+    nombre = (data.get('nombre_cliente') or '').strip()
+    if nombre and nombre.lower() != 'desconocido':
+        person.full_name = nombre
+        if cliente:
+            cliente.full_name = nombre
+    if 'instagram' not in data:
+        return
+    nuevo = person_service.normalizar('instagram', data.get('instagram'))
+    if not nuevo:
+        raise ValueError('El instagram no es válido.')
+    if modo == 'agregar':
+        person_service.anotar(person, [('instagram', nuevo)], 'ficha')
+        return
+    anterior = person_service.dato(person, 'instagram')
+    if anterior == nuevo:
+        return
+    person_service.hacer_principal(person, 'instagram', nuevo, usuario, reason='corregido en la venta')
+    if anterior:
+        person_service.retirar(person, 'instagram', anterior, usuario, reason='corregido en la venta')
+    if cliente:
+        cliente.instagram = nuevo
+
+
 @bp.route('/public/financial-sales/<int:sale_id>', methods=['PUT', 'OPTIONS'])
 def update_financial_sale(sale_id):
     # Endpoint para la resolución manual de errores de ventas
@@ -262,6 +301,12 @@ def update_financial_sale(sale_id):
             sale.instagram = data['instagram']
         if 'nombre_cliente' in data:
             sale.nombre_cliente = data['nombre_cliente']
+        if sale.person_uuid and ('instagram' in data or 'nombre_cliente' in data):
+            try:
+                _corregir_contacto(sale.person, data, data.get('modo'))
+            except ValueError as e:
+                db.session.rollback()
+                return jsonify({"error": str(e), "campo": "instagram"}), 400
         if 'email_vendedor' in data:
             sale.email_vendedor = data['email_vendedor']
         if 'estado' in data:
@@ -269,6 +314,11 @@ def update_financial_sale(sale_id):
             sale.estado = "Completada" if not raw_est or str(raw_est).strip().lower() in ('completada', 'confirmada') else str(raw_est)
         if 'date' in data and data['date']:
             sale.date = parse_date_robustly(data['date'])
+        if sale.person_uuid is None and ('instagram' in data or 'nombre_cliente' in data):
+            # Corregido el contacto, se intenta vincular el pago a su persona (sin crear a nadie).
+            from app.services.sheets_service import persona_del_pago
+            sale.person = persona_del_pago(sale.nombre_cliente, sale.mail_cliente, sale.instagram,
+                                           sale.telefono, crear=False)
         db.session.commit()
 
         # Propagar actualización en caliente a Google Sheets
@@ -303,27 +353,31 @@ def update_financial_sale(sale_id):
             
         s_dict["closer_name"] = resolve_closer_name(sale.email_vendedor)
         
-        # Cruzar con agenda por Instagram
+        # Cruzar con agenda por la persona y, si no, por Instagram
         ig_norm = normalize_ig(sale.instagram)
         resolved_setter = None
         has_agenda_match = False
-        if ig_norm:
+        agenda = None
+        if sale.person_uuid:
+            agenda = FinancialAgenda.query.filter_by(person_uuid=sale.person_uuid) \
+                .order_by(FinancialAgenda.date.desc()).first()
+        if agenda is None and ig_norm:
             agenda = FinancialAgenda.query.filter(
                 func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_norm
             ).order_by(FinancialAgenda.date.desc()).first()
-            if agenda:
-                has_agenda_match = True
-                is_valid_lead_source = (
-                    agenda.nombre and 
-                    agenda.nombre.strip() and 
-                    agenda.nombre.lower() not in ('s/f', 'n/a', '') and 
-                    'entrevista' not in agenda.nombre.lower() and 
-                    'diagnostica' not in agenda.nombre.lower() and
-                    'diagnóstica' not in agenda.nombre.lower()
-                )
-                if is_valid_lead_source:
-                    resolved_setter = agenda.nombre
-                    
+        if agenda:
+            has_agenda_match = True
+            is_valid_lead_source = (
+                agenda.nombre and
+                agenda.nombre.strip() and
+                agenda.nombre.lower() not in ('s/f', 'n/a', '') and
+                'entrevista' not in agenda.nombre.lower() and
+                'diagnostica' not in agenda.nombre.lower() and
+                'diagnóstica' not in agenda.nombre.lower()
+            )
+            if is_valid_lead_source:
+                resolved_setter = agenda.nombre
+
         s_dict["has_agenda"] = has_agenda_match
         s_dict["setter"] = resolved_setter or sale.setter or "Sin Setter"
 
@@ -384,8 +438,13 @@ def get_financial_sales():
     else:
         # Filtros normales
         if search:
+            from app.models import Person
             search_pattern = f"%{search}%"
+            personas = db.session.query(Person.uuid).filter(or_(
+                Person.full_name.ilike(search_pattern), Person.email.ilike(search_pattern),
+                Person.instagram.ilike(search_pattern)))
             query = query.filter(or_(
+                FinancialSale.person_uuid.in_(personas),
                 FinancialSale.nombre_cliente.ilike(search_pattern),
                 FinancialSale.instagram.ilike(search_pattern),
                 FinancialSale.email_vendedor.ilike(search_pattern),
@@ -437,9 +496,18 @@ def get_financial_sales():
     all_payment_methods_set = set()
     
     processed_sales = []
-    
+
+    # El contacto de cada pago sale de su persona: se cargan todas juntas, con sus mails de pago.
+    from app.models import Person
+    uuids = sorted({s.person_uuid for s in subquery_sales if s.person_uuid})
+    # Se guardan en una lista: el identity map de la sesión no las retiene solo.
+    personas = []
+    for i in range(0, len(uuids), 500):
+        personas.extend(Person.query.filter(Person.uuid.in_(uuids[i:i + 500])).all())
+    mails_de_pago = FinancialSale.mails_de_pago(subquery_sales)
+
     for s in subquery_sales:
-        s_dict = s.to_dict()
+        s_dict = s.to_dict(mails_de_pago)
         resolved_setter = None
         has_agenda_match = False
         
