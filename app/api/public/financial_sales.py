@@ -248,12 +248,10 @@ def _corregir_contacto(person, data, modo=None):
     if modo == 'agregar':
         person_service.anotar(person, [('instagram', nuevo)], 'ficha')
         return
-    anterior = person_service.dato(person, 'instagram')
-    if anterior == nuevo:
+    if person_service.dato(person, 'instagram') == nuevo:
         return
-    person_service.hacer_principal(person, 'instagram', nuevo, usuario, reason='corregido en la venta')
-    if anterior:
-        person_service.retirar(person, 'instagram', anterior, usuario, reason='corregido en la venta')
+    person_service.hacer_principal(person, 'instagram', nuevo, usuario, reason='corregido en la venta',
+                                   corrige=True)
     if cliente:
         cliente.instagram = nuevo
 
