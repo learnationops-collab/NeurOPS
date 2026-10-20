@@ -35,6 +35,8 @@ from app.services.palabra_clave_service import (
 
 
 def _grupo(cobro, cliente_de):
+    if cobro.person_uuid:  # la persona junta los pagos de sus clientes duplicados (plan_personas)
+        return f'p{cobro.person_uuid}'
     cid = cliente_de.get(cobro.id)
     return f'c{cid}' if cid else f'v{cobro.id}'
 

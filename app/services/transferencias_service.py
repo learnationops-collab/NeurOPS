@@ -118,7 +118,7 @@ def recibidas_por_persona(desde=None, hasta=None):
         monto = _monto(venta)
         recibidas[clave]['pagos'].append({
             'id': venta.id, 'date': venta.date.isoformat() if venta.date else None,
-            'nombre_cliente': venta.nombre_cliente, 'tipo_pago': venta.tipo_pago,
+            'person_uuid': venta.person_uuid, 'nombre_cliente': venta.nombre_cliente, 'tipo_pago': venta.tipo_pago,
             'metodo_pago': venta.metodo_pago, 'monto': monto,
         })
         recibidas[clave]['total'] += monto

@@ -14,7 +14,7 @@ tenga, con la misma regla del agrupado retroactivo (`sales_grouping.decidir`):
 import logging
 from datetime import datetime
 
-from sqlalchemy import event, inspect
+from sqlalchemy import and_, event, inspect, or_
 
 from app import db
 from app.models import FinancialSale, InstallmentPlan, Sale
@@ -42,13 +42,22 @@ def _pagos_de(session, sale, excepto):
 def _vigente(session, fila, pago):
     """La venta vigente del cliente en el programa del pago: la última vendida hasta su fecha
     (un pago viejo cargado hoy va a la venta de su época), o si no hay, la más reciente."""
-    if not fila.client_id:
+    persona = fila.person_uuid
+    if not (persona or fila.client_id):
         return None
-    q = session.query(Sale).filter(Sale.client_id == fila.client_id, Sale.status == 'active',
+    # De la persona (plan_personas): sus ventas aunque estén en otro cliente duplicado. Las ventas
+    # sin persona todavía se reconocen por el cliente.
+    if persona and fila.client_id:
+        suya = or_(Sale.person_uuid == persona, and_(Sale.person_uuid.is_(None), Sale.client_id == fila.client_id))
+    elif persona:
+        suya = Sale.person_uuid == persona
+    else:
+        suya = Sale.client_id == fila.client_id
+    q = session.query(Sale).filter(suya, Sale.status == 'active',
                                    Sale.program_code.is_(None) if pago.programa is None
                                    else Sale.program_code == pago.programa)
-    pendientes = [s for s in session.new if isinstance(s, Sale) and s.client_id == fila.client_id
-                  and s.program_code == pago.programa]
+    pendientes = [s for s in session.new if isinstance(s, Sale) and s.program_code == pago.programa
+                  and ((persona and s.person_uuid == persona) or (fila.client_id and s.client_id == fila.client_id))]
     # La venta de la que sale este mismo pago (al corregirlo) no cuenta si se queda sin nada.
     candidatas = [s for s in q.all() + pendientes if _pagos_de(session, s, fila)]
     if not candidatas:
@@ -74,7 +83,7 @@ def ubicar(session, fila, nuevo=False):
         abierta = Venta(sale.program_code, sale.kind, [pago_de_fila(f) for f in _pagos_de(session, sale, fila)])
     abre, notas = decidir(abierta, pago)
     if abre:
-        sale = Sale(client_id=fila.client_id, program_code=pago.programa, kind=KIND_DE_TIPO.get(pago.tipo, 'new'),
+        sale = Sale(client_id=fila.client_id, person_uuid=fila.person_uuid, program_code=pago.programa, kind=KIND_DE_TIPO.get(pago.tipo, 'new'),
                     sold_at=fila.date or datetime.utcnow(), closer_email=fila.email_vendedor, setter=fila.setter,
                     source='auto')
         session.add(sale)

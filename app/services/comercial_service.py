@@ -265,6 +265,22 @@ def _ultimos8(valor):
     return digitos[-8:] if len(digitos) >= 8 else None
 
 
+def _tipos_por_persona(personas):
+    """{person_uuid: set de tipos canónicos} de sus pagos vigentes: el `_tipos_por_contacto` de las
+    agendas que ya tienen persona (plan_personas, 20/10/2026)."""
+    from app.services.sheets_service import SheetsService
+
+    tipos = {}
+    if not personas:
+        return tipos
+    for puuid, tipo_pago, estado in db.session.query(
+            FinancialSale.person_uuid, FinancialSale.tipo_pago, FinancialSale.estado).filter(
+            FinancialSale.person_uuid.in_(personas)):
+        if (estado or '').strip().lower() in ('', 'completada', 'confirmada'):
+            tipos.setdefault(puuid, set()).add(SheetsService.parse_tipo_pago(tipo_pago)[1] or 'otro')
+    return tipos
+
+
 def clientes_de_ventas(ventas):
     """{id de venta -> client_id}, cruzando por contacto las ventas que no lo tienen guardado.
 
@@ -293,6 +309,17 @@ def clientes_de_ventas(ventas):
     """
     mapa = {v.id: v.client_id for v in ventas if v.client_id}
     pendientes = [v for v in ventas if not v.client_id]
+    # Primero el cliente de su persona (plan_personas, 20/10/2026): el más viejo, como `cliente_de`.
+    personas = {v.person_uuid for v in pendientes if v.person_uuid}
+    if personas:
+        cliente_de_persona = {}
+        for cid, puuid in (db.session.query(Client.id, Client.person_uuid)
+                           .filter(Client.person_uuid.in_(personas)).order_by(Client.id)):
+            cliente_de_persona.setdefault(puuid, cid)
+        for v in pendientes:
+            if cliente_de_persona.get(v.person_uuid):
+                mapa[v.id] = cliente_de_persona[v.person_uuid]
+        pendientes = [v for v in pendientes if v.id not in mapa]
     if not pendientes:
         return mapa
 
@@ -490,6 +517,7 @@ class ComercialService:
         # tabla, en los totales y en el close rate.
         from app.services.closer_service import REAL_SALE_TIPOS
         tipos_email, tipos_ig, tipos_id = CloserAgendasService._tipos_por_contacto(appts)
+        tipos_persona = _tipos_por_persona({a.person_uuid for a in appts if a.person_uuid})
 
         hoy = date.today()
         ahora = datetime.utcnow()
@@ -498,7 +526,11 @@ class ComercialService:
             cliente = a.client
             mail = _limpiar_email(cliente.email) if cliente else None
             ig = _limpiar_ig(cliente.instagram) if cliente else None
-            tipos = tipos_email.get(mail, set()) | tipos_ig.get(ig, set()) | tipos_id.get(a.client_id, set())
+            # Con persona, sus pagos; el mail y el instagram del cliente solo sin ella (plan_personas).
+            if a.person_uuid:
+                tipos = tipos_persona.get(a.person_uuid, set()) | tipos_id.get(a.client_id, set())
+            else:
+                tipos = tipos_email.get(mail, set()) | tipos_ig.get(ig, set()) | tipos_id.get(a.client_id, set())
             con_venta = any(t in REAL_SALE_TIPOS for t in tipos)
             # Qué venta es, para el desglose pago completo / split pay del panel Cierre. Una agenda
             # cuenta UNA venta aunque el lead tenga las dos (dos programas): manda el pago
@@ -530,6 +562,7 @@ class ComercialService:
                 'email': (cliente.email or '') if cliente else '',
                 'telefono': (cliente.phone or '') if cliente else '',
                 'client_id': a.client_id,
+                'person_uuid': a.person_uuid,
                 'fuente': a.origin or 'Sin fuente',
                 # La palabra clave del anuncio que trajo al lead, la que el setter le asigna en el
                 # mazo. Vacía si todavía no tiene: es lo que su Revisar cuenta como «sin palabra
@@ -604,7 +637,9 @@ class ComercialService:
         distintos les cuenta a los dos, y así el total del equipo es la suma de sus setters.
         """
         def persona(fila):
-            return (fila['setter_id'], fila['client_id'])
+            # La persona (plan_personas): dos clientes duplicados de la misma cuentan una vez.
+            quien = ('p', fila['person_uuid']) if fila.get('person_uuid') else ('c', fila['client_id'])
+            return (fila['setter_id'], quien)
 
         cierre = {'venta': 2, 'sena': 1}
 
@@ -704,6 +739,7 @@ class ComercialService:
             # `None` cuando la venta no se pudo cruzar con ningún cliente: esa fila sigue
             # abriendo el modal viejo, porque no hay ficha que abrir.
             'client_id': client_id,
+            'person_uuid': v.person_uuid,
             'fecha': v.date.isoformat() if v.date else None,
             'creada': v.created_at.isoformat() if v.created_at else None,
             'cliente': v.nombre_cliente or 'Sin nombre',
@@ -980,16 +1016,24 @@ class ComercialService:
                 con_cita.add(ig)
                 if generada_por in propios:
                     agendados.add(ig)
+        # El lead con persona agendó si ella tiene la cita (plan_personas): sin adivinar por Instagram.
+        personas = {l.person_uuid for l in leads if l.person_uuid}
+        if personas:
+            for puuid, generada_por in db.session.query(Appointment.person_uuid, Appointment.setter_id).filter(
+                    Appointment.person_uuid.in_(personas), no_es_marcador()).distinct():
+                con_cita.add(('p', puuid))
+                if generada_por in propios:
+                    agendados.add(('p', puuid))
 
         salida = []
         vacio = {'total': 0, 'respondio': False, 'cualificado': False, 'descartado': False}
         for l in leads:
-            ig = _limpiar_ig(l.ig)
+            quien = ('p', l.person_uuid) if l.person_uuid else _limpiar_ig(l.ig)
             datos = respuestas.get(l.id, vacio)
-            agendo = ig in agendados
+            agendo = quien in agendados
             if agendo:
                 estado = 'agendo'
-            elif ig in con_cita:
+            elif quien in con_cita:
                 estado = 'agendo_otra_via'
             elif datos['descartado']:
                 estado = 'descartado'
@@ -1000,6 +1044,7 @@ class ComercialService:
             salida.append({
                 'id': l.id,
                 'tipo': 'lead',
+                'person_uuid': l.person_uuid,
                 'fecha': l.created_at.isoformat() if l.created_at else None,
                 'creada': l.created_at.isoformat() if l.created_at else None,
                 'cliente': l.name or 'Sin nombre',

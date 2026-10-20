@@ -121,7 +121,7 @@ la Etapa 1: las APIs siguen devolviendo lo mismo y suman `person_uuid`.
 | B | otra sesión, rama `personas/B` (worktree `../work-personas-b`) | escritura hecha, en develop: todo `ManychatLead`/`LeadAnswer`/`Lead` que se guarde deja su persona y su `Conversation` (`conversaciones_service`, en `before_flush`). Correr `scripts/migrar_conversaciones.py --apply` después de los scripts del frente A. Pendiente: las búsquedas por Instagram/nombre de `api/public/marketing.py`, `conversational.py`, `setter_mazo.py` y el mazo de `setter.py` (las que no parten de un cliente); `cruce_conversaciones` y la confirmación del setter ya buscan primero por persona |
 | C | otra sesión, rama `personas/C` (worktree `../work-personas-c`) | en curso |
 | D | — | listo para arrancar |
-| E | — | listo para arrancar |
+| E | otra sesión, rama `personas/E` (worktree `../work-personas-e`) | hecho, en develop. «Mismo cliente» es la persona: `ticket_service.claves_de_cliente` (ticket, agrupado de ventas, workshop, closer), la atribución (comisiones, nómina, procedencia, fuente de Revisar), la seña convertida, la conversión de Fulfillment, la venta vigente de cada pago (`sale_service`), la suscripción (`subscription_service`, también la de un cliente duplicado), y en Revisar el cruce agenda→venta, una agenda por persona y «agendó» de los leads. El mail/instagram copiados solo cuentan en filas sin persona: **necesita los scripts del frente A corridos** en cada base, o los pagos viejos sin persona no se juntan con los nuevos. Las filas suman `person_uuid`. Queda como estaba lo que se muestra (nombre, mail): sigue saliendo de la copia hasta que la ficha cambie los principales (F) |
 | F | — | listo para arrancar |
 | G | — | listo para arrancar |
 
@@ -134,3 +134,8 @@ la Etapa 1: las APIs siguen devolviendo lo mismo y suman `person_uuid`.
   `Cruce(igs, nombres)`; pasarle también los `person_uuid` (`Cruce(igs, nombres, personas)` y
   `candidatos(ig, nombre, persona)`) para que Marketing encuentre la conversación por persona primero,
   como ya lo hace «Mis agendas» (`palabra_clave_service`).
+- **E → F:** `closer_agendas_service._tipos_por_contacto` / `_ventas_por_contacto` y
+  `closer_followup_service._resolve_sales_and_clients` cruzan por mail/instagram. Revisar ya usa la
+  persona para las agendas que la tienen (`comercial_service._tipos_por_persona`); el libro de agendas
+  del closer, Mi cartera y la tabla Clientes de Revisar (que usa `_resolve_sales_and_clients`) siguen
+  por la copia.

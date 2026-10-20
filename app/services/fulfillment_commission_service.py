@@ -44,9 +44,14 @@ def clave_de_miembro(nombre):
     return None
 
 
-def _claves_cliente(venta):
-    """Las formas de reconocer al cliente de una venta: Instagram, correo y teléfono."""
-    claves = set()
+def _claves_cliente(venta, todas=False):
+    """Las formas de reconocer al cliente de una venta: su persona (plan_personas, 20/10/2026) o, si
+    no la tiene, Instagram, correo y teléfono. `todas` da las dos cosas: con eso se indexan las señas,
+    así las encuentra tanto una venta con persona como una sin ella."""
+    persona = {('p', venta.person_uuid)} if getattr(venta, 'person_uuid', None) else set()
+    if persona and not todas:
+        return persona
+    claves = set(persona)
     ig = (venta.instagram or '').strip().lstrip('@').lower()
     if len(ig) > 2 and ig != 'n/a':
         claves.add(('ig', ig))
@@ -72,7 +77,7 @@ def _primera_sena_por_cliente():
     for s in senas:
         if SheetsService.parse_tipo_pago(s.tipo_pago)[1] != 'seña' or not s.date:
             continue
-        for clave in _claves_cliente(s):
+        for clave in _claves_cliente(s, todas=True):
             if clave not in primera or s.date < primera[clave]:
                 primera[clave] = s.date
     return primera

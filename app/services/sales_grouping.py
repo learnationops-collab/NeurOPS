@@ -83,7 +83,8 @@ def pago_de_fila(fila):
     raw = fila.raw_data if isinstance(getattr(fila, 'raw_data', None), dict) else {}
     codigo, tipo = SheetsService.parse_tipo_pago(fila.tipo_pago or raw.get('tipo_pago'))
     codigo = codigo or CODIGO_DE_LABEL.get(_program_from_examen(fila.examen))
-    claves = claves_de_cliente(fila.client_id, fila.mail_cliente, fila.instagram, fila.nombre_cliente)
+    claves = claves_de_cliente(fila.client_id, fila.mail_cliente, fila.instagram, fila.nombre_cliente,
+                               getattr(fila, 'person_uuid', None))
     return Pago(id=fila.id, claves=claves,
                 programa=codigo, tipo=tipo, dia=_dia(fila.date), client_id=fila.client_id,
                 vendedor=fila.email_vendedor, setter=fila.setter)

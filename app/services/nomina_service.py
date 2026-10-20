@@ -130,6 +130,7 @@ def comisiones_del_rango(desde=None, hasta=None):
         sale_data = {
             "id": s.id,
             "date": s.date.isoformat() if s.date else None,
+            "person_uuid": s.person_uuid,
             "nombre_cliente": s.nombre_cliente,
             "instagram": s.instagram,
             "monto_neto": round(monto_ajustado, 2),

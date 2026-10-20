@@ -170,10 +170,14 @@ def _limpio(valor):
     return valor if valor and valor not in ('n/a', 'na', 'no', '-', 'sin nombre', 'no tengo') else None
 
 
-def claves_de_cliente(client_id=None, email=None, instagram=None, nombre=None):
-    """Con qué se reconoce al mismo cliente entre dos pagos: su ficha, su mail y su instagram.
-    El nombre solo cuando no hay ninguna de las otras (dos personas pueden llamarse igual)."""
+def claves_de_cliente(client_id=None, email=None, instagram=None, nombre=None, person_uuid=None):
+    """Con qué se reconoce al mismo cliente entre dos pagos: su persona (20/10/2026,
+    docs/plan_personas.md) y su ficha. El mail y el instagram copiados en el pago solo cuentan si
+    el pago todavía no tiene persona; el nombre, solo cuando no hay ninguna de las otras (dos
+    personas pueden llamarse igual)."""
     claves = [f'id:{client_id}'] if client_id else []
+    if person_uuid:
+        return (f'p:{person_uuid}', *claves)
     for prefijo, valor in (('mail', email), ('ig', instagram)):
         if _limpio(valor):
             claves.append(f'{prefijo}:{_limpio(valor)}')
@@ -184,7 +188,8 @@ def claves_de_cliente(client_id=None, email=None, instagram=None, nombre=None):
 
 def claves_de_venta(venta):
     """Las claves de una fila de `FinancialSale`."""
-    return claves_de_cliente(venta.client_id, venta.mail_cliente, venta.instagram, venta.nombre_cliente)
+    return claves_de_cliente(venta.client_id, venta.mail_cliente, venta.instagram, venta.nombre_cliente,
+                             getattr(venta, 'person_uuid', None))
 
 
 def clase_de_tipo(tipo):
@@ -206,5 +211,6 @@ def pago_de_venta(venta, tipo):
 
 def pago_de_fila(fila):
     """El pago de una fila de la tabla Ventas (`ComercialService._fila_venta`)."""
-    return (claves_de_cliente(fila.get('client_id'), fila.get('email'), fila.get('ig'), fila.get('cliente')),
+    return (claves_de_cliente(fila.get('client_id'), fila.get('email'), fila.get('ig'), fila.get('cliente'),
+                              fila.get('person_uuid')),
             fila.get('fecha'), fila.get('monto'), clase_de_tipo((fila.get('tipo_pago') or {}).get('key')))

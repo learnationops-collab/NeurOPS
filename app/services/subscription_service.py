@@ -17,7 +17,7 @@ pago (`academy_payment_sync`) lleva el vencimiento de la suscripción (`vencimie
 from datetime import date, datetime, timedelta
 
 from app import db
-from app.models import Subscription, SubscriptionEvent
+from app.models import Client, Subscription, SubscriptionEvent
 from app.services.academy_access_service import AcademyAccessService, _add_months
 from app.services import subscription_sync
 
@@ -37,10 +37,26 @@ def _dia(valor):
     return valor or date.today()
 
 
+def _persona_de(session, client_id):
+    return session.query(Client.person_uuid).filter(Client.id == client_id).scalar() if client_id else None
+
+
+def _suyas(session, client_id):
+    """Las suscripciones del cliente y, si tiene persona, también las de sus otros clientes duplicados
+    (plan_personas): la suscripción es de la persona."""
+    persona = _persona_de(session, client_id)
+    filtro = Subscription.client_id == client_id
+    if persona:
+        filtro = db.or_(filtro, Subscription.person_uuid == persona)
+    return session.query(Subscription).filter(filtro)
+
+
 def _de(session, client_id, slug):
-    pendiente = next((s for s in session.new if isinstance(s, Subscription)
-                      and s.client_id == client_id and s.product_slug == slug), None)
-    return pendiente or session.query(Subscription).filter_by(client_id=client_id, product_slug=slug).first()
+    persona = _persona_de(session, client_id)
+    pendiente = next((s for s in session.new if isinstance(s, Subscription) and s.product_slug == slug
+                      and (s.client_id == client_id or (persona and s.person_uuid == persona))), None)
+    return pendiente or _suyas(session, client_id).filter(Subscription.product_slug == slug) \
+        .order_by(Subscription.client_id != client_id, Subscription.id).first()
 
 
 def otorgar(session, client_id, slug, hasta, kind, *, programa=None, desde=None, is_deposit=None,
@@ -117,7 +133,7 @@ def cambiar(client, programa, hasta, reason, usuario=None, kind=None):
 def prorrogar(client, *, slug=None, dias=None, hasta=None, reason=None, actor_email=None):
     """Una prórroga gratuita que pide la Academia: solo extiende. Sin `slug`, la suscripción que
     vence más tarde. Levanta LookupError (no tiene) o ValueError (la fecha no extiende)."""
-    q = Subscription.query.filter_by(client_id=client.id)
+    q = _suyas(db.session, client.id)
     sub = (q.filter_by(product_slug=slug) if slug else q.order_by(Subscription.expires_at.desc())).first()
     if sub is None:
         raise LookupError('Ese cliente no tiene una suscripción en Work.')
@@ -135,7 +151,7 @@ def del_cliente(client_id):
     """Las suscripciones del cliente con su historial, la que vence más tarde primero."""
     if not client_id:
         return []
-    subs = Subscription.query.filter_by(client_id=client_id).order_by(Subscription.expires_at.desc()).all()
+    subs = _suyas(db.session, client_id).order_by(Subscription.expires_at.desc()).all()
     return [s.to_dict(with_events=True) for s in subs]
 
 
@@ -144,5 +160,5 @@ def vencimiento_de(client_id, programa):
     slug = slug_de(programa)
     if not client_id or not slug:
         return None
-    sub = Subscription.query.filter_by(client_id=client_id, product_slug=slug).first()
+    sub = _de(db.session, client_id, slug)
     return sub.expires_at if sub else None
