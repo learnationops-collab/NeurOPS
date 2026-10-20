@@ -8,7 +8,8 @@ tenga, con la misma regla del agrupado retroactivo (`sales_grouping.decidir`):
   · un pago nuevo se suma a la venta vigente de su cliente y programa, o abre una nueva;
   · si a un pago le cambian el tipo, el programa o el cliente, se lo vuelve a ubicar;
   · si quien lo guarda ya eligió la venta (`sale_id`), se respeta;
-  · una venta que se queda sin pagos ni plan de cuotas se borra.
+  · una venta que se queda sin pagos ni plan de cuotas se borra;
+  · un pago nuevo le abre, extiende o completa la suscripción (`subscription_service`).
 """
 import logging
 from datetime import datetime
@@ -17,6 +18,7 @@ from sqlalchemy import event, inspect
 
 from app import db
 from app.models import FinancialSale, InstallmentPlan, Sale
+from app.services import subscription_service
 from app.services.comercial_service import venta_completada
 from app.services.sales_grouping import KIND_DE_TIPO, Venta, decidir, pago_de_fila
 
@@ -62,8 +64,9 @@ def _anotar(sale, notas):
         sale.review_note = '; '.join(dict.fromkeys(partes + notas))[:255]
 
 
-def ubicar(session, fila):
-    """Le da su venta a `fila` (sin guardar): la vigente o una nueva."""
+def ubicar(session, fila, nuevo=False):
+    """Le da su venta a `fila` (sin guardar): la vigente o una nueva. A un pago `nuevo` además le
+    toca la suscripción (`subscription_service.al_ubicar_pago`); a uno corregido, no."""
     pago = pago_de_fila(fila)
     sale = _vigente(session, fila, pago)
     abierta = None
@@ -77,6 +80,8 @@ def ubicar(session, fila):
         session.add(sale)
     _anotar(sale, notas)
     fila.sale = sale
+    if nuevo:
+        subscription_service.al_ubicar_pago(session, sale, fila, pago, abre, abierta)
     return sale
 
 
@@ -122,7 +127,7 @@ def mantener(session):
     with session.no_autoflush:
         for fila in [f for f in session.new if isinstance(f, FinancialSale)]:
             if fila.sale_id is None and fila.sale is None and venta_completada(fila):
-                ubicar(session, fila)
+                ubicar(session, fila, nuevo=True)
         for fila in [f for f in session.dirty if isinstance(f, FinancialSale)]:
             if _cambio(fila, 'sale_id'):
                 # Alguien lo movió a mano: se respeta, y la venta de la que salió se borra si quedó vacía.

@@ -143,6 +143,10 @@ def acceso(appt, datos, usuario):
         creada = bool(alta.get('was_created'))
 
     verbo = 'dio' if accion == 'dado' else 'renovó'
+    # Work es la fuente de verdad de la suscripción: el cambio queda también en su historial.
+    from app.services import subscription_service
+    subscription_service.cambiar(client, codigo, dia, f'{usuario.username} {verbo} el acceso desde Fulfillment',
+                                 usuario)
     _constancia(appt, usuario, f'{usuario.username} {verbo} el acceso a la Academia ({nombre}) '
                                f'hasta el {_fecha_legible(dia)}.')
     db.session.commit()
@@ -164,6 +168,9 @@ def quitar(appt, datos, usuario):
     client.academy_expires_at = datetime.combine(hoy, time.min)
 
     motivo = _texto(datos, 'motivo')
+    from app.services import subscription_service
+    subscription_service.cambiar(client, _codigo, hoy, motivo or 'Acceso quitado desde Fulfillment', usuario,
+                                 kind='quitado')
     _constancia(appt, usuario, f'{usuario.username} le quitó el acceso a la Academia ({nombre}): '
                                f'vence hoy, {_fecha_legible(hoy)}.' + (f' Motivo: {motivo}.' if motivo else ''))
     db.session.commit()

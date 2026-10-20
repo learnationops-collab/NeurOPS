@@ -420,3 +420,37 @@ def academy_baja():
     db.session.commit()
     return jsonify({"success": True, "changed": bool(cambio),
                     "baja": baja_service.descriptor(cliente)}), 200
+
+
+@bp.route('/subscriptions/prorroga', methods=['POST'])
+@require_academy_token
+def academy_prorroga():
+    """La Academia le da a un alumno una prórroga gratuita de su suscripción (20/10/2026): queda en
+    el historial de la suscripción en Work, con el motivo y quién la dio. Solo extiende.
+
+    Cuerpo: `work_client_id` o `email`; `dias` (más de cero) o `expires_at` (YYYY-MM-DD);
+    `motivo`; `actor_email` (quién la dio en la Academia); `product_slug` opcional (sin él, la
+    suscripción que vence más tarde).
+    """
+    from datetime import date
+
+    from app.services import academy_payment_status, subscription_service
+
+    data = request.get_json(silent=True) or {}
+    cliente = academy_payment_status.buscar_cliente(data.get('work_client_id'), data.get('email'))
+    if not cliente:
+        return jsonify({"success": False, "error": "No existe ningún cliente con ese id o email"}), 404
+    motivo = str(data.get('motivo') or '').strip()
+    if not motivo:
+        return jsonify({"success": False, "error": "Falta el motivo de la prórroga"}), 422
+    try:
+        hasta = date.fromisoformat(str(data['expires_at'])[:10]) if data.get('expires_at') else None
+        sub = subscription_service.prorrogar(
+            cliente, slug=data.get('product_slug') or None, dias=data.get('dias'), hasta=hasta,
+            reason=f'Prórroga: {motivo}', actor_email=(data.get('actor_email') or '').strip().lower() or None)
+    except LookupError as e:
+        return jsonify({"success": False, "error": str(e)}), 404
+    except (TypeError, ValueError) as e:
+        return jsonify({"success": False, "error": str(e)}), 422
+    db.session.commit()
+    return jsonify({"success": True, "subscription": sub.to_dict(with_events=True)}), 200
