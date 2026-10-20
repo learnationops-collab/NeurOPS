@@ -187,6 +187,15 @@ def agendar_seguimiento(appt_id):
     return _ejecutar(appt_id, 'reportar', seguimientos.agendar)
 
 
+@bp.route('/<int:appt_id>/recuperacion', methods=['POST'])
+def pasar_a_recuperacion(appt_id):
+    """La llamada sin resultado que el closer no tomó, a seguimiento de recuperación (ver
+    `ficha_recuperacion_service`). Mismo permiso que reportarla."""
+    from app.services.ficha_recuperacion_service import pasar_a_recuperacion as pasar
+
+    return _ejecutar(appt_id, 'reportar', pasar)
+
+
 @bp.route('/<int:appt_id>/seguimiento', methods=['PATCH'])
 def corregir_seguimiento(appt_id):
     """El estado (pendiente/realizado), el día, el tipo y la nota del seguimiento de ESTA agenda,
