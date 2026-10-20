@@ -38,7 +38,9 @@ def venta(db, *, mail, tipo, monto=200.0, fecha=datetime(2026, 9, 1), nombre='Lu
 
 
 def estados(filas):
-    return {f['cliente']: f['sena_estado'] for f in filas}
+    """Cliente -> estado de su seña; las otras filas solo cuando el cliente no dejó seña."""
+    orden = sorted(filas, key=lambda f: f['sena_estado'] is not None)
+    return {f['cliente']: f['sena_estado'] for f in orden}
 
 
 # --- `sena_estado` en cada fila de la tabla Ventas --------------------------------------------
@@ -136,6 +138,75 @@ def test_el_panel_y_la_tabla_cuentan_lo_mismo(client, db, vendedor):
     assert (panel['total'], panel['completo'], panel['caida'], panel['espera']) == (3, 1, 1, 1)
     # El cash que la seña destrabó: el argumento para seguir pidiéndolas.
     assert panel['desbloqueado'] == 800.0
+
+
+# --- La seña completada con una cuota (19/10/2026) ----------------------------------------------
+
+@freeze_time('2026-10-19 18:00:00')
+def test_una_sena_completada_como_cuota_cuenta_como_pago_completo(client, db, vendedor):
+    """Caso real de Erika Moreira: seña de $50 «paga completo mañana» y el resto, $1.950, cargado
+    como «RR - Cuota». Llegan al precio del programa: la seña se convirtió en un pago completo."""
+    venta(db, mail='erika@x.com', tipo='RR - Seña', monto=50.0, fecha=datetime(2026, 10, 15),
+          nombre='Erika')
+    venta(db, mail='erika@x.com', tipo='RR - Cuota', monto=1950.0, fecha=datetime(2026, 10, 19),
+          nombre='Erika')
+    venta(db, mail='mauricio@x.com', tipo='AL - Seña', monto=75.0, fecha=datetime(2026, 10, 13),
+          nombre='Mauricio')
+
+    filas = ComercialService.ventas(date(2026, 10, 1), date(2026, 10, 31))
+    panel = senas_de(filas)
+
+    assert estados(filas)['Erika'] == 'pago_completo'
+    assert (panel['total'], panel['completo'], panel['parcial'], panel['espera']) == (2, 1, 0, 1)
+    assert panel['conversion'] == 50.0
+    assert panel['desbloqueado'] == 1950.0
+
+
+@freeze_time(HOY)
+def test_una_cuota_que_no_llega_al_precio_es_pago_parcial(client, db, vendedor):
+    venta(db, mail='gabi@x.com', tipo='AL - Seña', monto=25.0, fecha=datetime(2026, 9, 1),
+          nombre='Gabi')
+    venta(db, mail='gabi@x.com', tipo='AL - Cuota', monto=125.0, fecha=datetime(2026, 9, 14),
+          nombre='Gabi')
+
+    filas = ComercialService.ventas(DESDE, HASTA)
+
+    assert estados(filas)['Gabi'] == 'pago_parcial'
+
+
+@freeze_time(HOY)
+def test_el_precio_propio_del_cliente_manda_sobre_el_de_lista(client, db, vendedor):
+    db.session.add(Client(full_name='Caro', email='caro@x.com', total_amount=500.0))
+    db.session.commit()
+    venta(db, mail='caro@x.com', tipo='AL - Seña', monto=100.0, fecha=datetime(2026, 9, 1),
+          nombre='Caro')
+    venta(db, mail='caro@x.com', tipo='AL - Cuota', monto=400.0, fecha=datetime(2026, 9, 10),
+          nombre='Caro')
+
+    filas = ComercialService.ventas(DESDE, HASTA)
+
+    assert estados(filas)['Caro'] == 'pago_completo'
+
+
+@freeze_time(HOY)
+def test_una_cuota_a_mas_de_un_mes_no_convierte_la_sena(client, db, vendedor):
+    """Misma ventana que la primera cuota del ticket promedio: pasado un mes es otra venta."""
+    venta(db, mail='tarde@x.com', tipo='AL - Seña', fecha=datetime(2026, 7, 10), nombre='Tarde')
+    venta(db, mail='tarde@x.com', tipo='AL - Cuota', fecha=datetime(2026, 8, 10), nombre='Tarde')
+
+    filas = ComercialService.ventas(DESDE, HASTA)
+
+    assert estados(filas)['Tarde'] == 'caida'
+
+
+@freeze_time(HOY)
+def test_una_cuota_anterior_a_la_sena_no_la_convierte(client, db, vendedor):
+    venta(db, mail='antes@x.com', tipo='AL - Cuota', fecha=datetime(2026, 9, 5), nombre='Antes')
+    venta(db, mail='antes@x.com', tipo='AL - Seña', fecha=datetime(2026, 9, 10), nombre='Antes')
+
+    filas = ComercialService.ventas(DESDE, HASTA)
+
+    assert estados(filas)['Antes'] == 'en_espera'
 
 
 def test_sin_senas_no_hay_nada_que_clasificar(client, db, vendedor):

@@ -10,19 +10,17 @@ segunda fórmula por métrica: si una definición cambia, cambia para los dos la
 """
 from datetime import date, timedelta
 
-from sqlalchemy import func
-
-from app import db
-from app.models import FinancialSale, User
+from app.models import User
 from app.services.closer_dashboard_service import CloserDashboardService
 from app.services.closer_service import matriz_de_cierres
 from app.services.comercial_service import (
     DIAS_SENA_CAIDA, POST_CALL, ROL_CLOSERS, ROL_SETTERS, TIPOS_PAGO_COBROS, ComercialService,
-    _limpiar_email, _limpiar_ig, chip, pct,
+    chip, pct,
 )
 from app.services import setter_analitica
 from app.services.commission_service import CLOSER_RATE
 from app.services.procedencia_ingresos_service import agendas_para_atribuir, procedencia_de_ventas
+from app.services.senas_conversion import claves_de_fila, conversion_de, pagos_posteriores
 from app.services.ticket_service import pago_de_fila, primeras_cuotas, sin_cuotas, ticket_promedio
 
 # Qué métricas llevan badge de delta y cómo se lee la diferencia: 'pts' para las tasas (la
@@ -134,8 +132,8 @@ def clasificar_senas(filas_ventas):
     """`{id de fila: {'estado', 'venta'}}` para cada seña de `filas_ventas`.
 
     Una seña es una reserva, no una venta: lo que importa es si después se completó. No hay ninguna
-    columna que lo diga, así que se resuelve buscando, para el mismo contacto, una venta posterior
-    de tipo completo o parcial. Las que no aparecen quedan "en espera" mientras sean recientes y
+    columna que lo diga, así que se resuelve buscando, para el mismo contacto, un pago posterior:
+    completo, parcial o la cuota que la completó (`senas_conversion.conversion_de`). Las que no aparecen quedan "en espera" mientras sean recientes y
     "caída" pasados `DIAS_SENA_CAIDA` días — es la única señal real de que el lead no va a volver.
 
     La antigüedad se mide contra HOY, no contra el fin del período: una seña de agosto mirada en
@@ -149,49 +147,18 @@ def clasificar_senas(filas_ventas):
     if not senas:
         return {}
 
-    contactos = {}
-    for f in senas:
-        for clave in (_limpiar_email(f['email']), _limpiar_ig(f['ig'])):
-            if clave:
-                contactos.setdefault(clave, []).append(f)
-    if not contactos:
+    claves = sorted({c for f in senas for c in claves_de_fila(f)})
+    if not claves:
         # Sin email ni instagram no hay forma de saber si se convirtió: quedan en espera en vez de
         # darlas por caídas.
         return {f['id']: {'estado': SENA_EN_ESPERA, 'venta': None} for f in senas}
-
-    claves = sorted(contactos)
-    posteriores = FinancialSale.query.filter(
-        db.or_(func.lower(FinancialSale.mail_cliente).in_(claves),
-               func.lower(func.replace(FinancialSale.instagram, '@', '')).in_(claves))
-    ).all()
-
-    # Primera venta real de cada contacto, para no contar dos veces al mismo lead.
-    conversion = {}
-    for v in posteriores:
-        if (v.estado or '').strip().lower() not in ('', 'completada', 'confirmada'):
-            continue
-        _, tipo, es_venta = ComercialService.clasificar_venta(v)
-        if not es_venta or not v.date:
-            continue
-        for clave in (_limpiar_email(v.mail_cliente), _limpiar_ig(v.instagram)):
-            if clave in contactos:
-                previa = conversion.get(clave)
-                if not previa or v.date < previa.date:
-                    conversion[clave] = v
+    pagos = pagos_posteriores(claves)
 
     hoy = date.today()
     salida = {}
     for f in senas:
-        venta = None
-        for clave in (_limpiar_email(f['email']), _limpiar_ig(f['ig'])):
-            candidata = conversion.get(clave)
-            # La venta tiene que ser POSTERIOR a la seña: una venta vieja del mismo lead no la
-            # convirtió.
-            if candidata and (not f['fecha'] or candidata.date.date() >= date.fromisoformat(f['fecha'][:10])):
-                venta = candidata
-                break
+        venta, tipo = conversion_de(f, pagos)
         if venta:
-            _, tipo, _ = ComercialService.clasificar_venta(venta)
             estado = SENA_PAGO_COMPLETO if tipo == 'completo' else SENA_PAGO_PARCIAL
         else:
             dias = (hoy - date.fromisoformat(f['fecha'][:10])).days if f['fecha'] else 0
