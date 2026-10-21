@@ -13,7 +13,8 @@ class Sale(ConPersona, db.Model):
 
     Los pagos son las filas de `FinancialSale` que apuntan acá (`FinancialSale.sale_id`): esa tabla
     sigue siendo la plata cobrada, que es lo que leen comisiones, nómina y conciliación. El plan de
-    cuotas también cuelga de la venta (`InstallmentPlan.sale_id`)."""
+    cuotas también cuelga de la venta (`InstallmentPlan.sale_id`). La venta guarda el producto, el
+    precio acordado, el plan y la suscripción que activó; `FinancialSale` es el registro de sus pagos."""
     __tablename__ = 'sales'
     id = db.Column(db.Integer, primary_key=True)
     client_id = db.Column(db.Integer, db.ForeignKey('clients.id', ondelete='SET NULL'), nullable=True, index=True)
@@ -26,6 +27,10 @@ class Sale(ConPersona, db.Model):
     appointment_id = db.Column(db.Integer, db.ForeignKey('appointments.id', ondelete='SET NULL'),
                                nullable=True, index=True)
     agreed_total = db.Column(db.Float, nullable=True)
+    # La suscripción que esta venta activó o extendió (`subscription_service.otorgar`).
+    subscription_id = db.Column(db.Integer, db.ForeignKey('subscriptions.id', ondelete='SET NULL', use_alter=True,
+                                                          name='fk_sales_subscription_id'),
+                                nullable=True, index=True)
     # De dónde salió: 'backfill' (agrupada desde los pagos históricos), 'ficha' o 'manual'.
     source = db.Column(db.String(20), nullable=True)
     # Por qué el agrupado retroactivo no está seguro de esta venta; vacío = encajó sin dudas.
@@ -34,6 +39,7 @@ class Sale(ConPersona, db.Model):
 
     client = db.relationship('Client', backref=db.backref('sales', lazy='dynamic'))
     payments = db.relationship('FinancialSale', backref='sale', lazy='dynamic')
+    subscription = db.relationship('Subscription', foreign_keys=[subscription_id], post_update=True)
 
     def to_dict(self):
         return {
@@ -47,6 +53,7 @@ class Sale(ConPersona, db.Model):
             'setter': self.setter,
             'appointment_id': self.appointment_id,
             'agreed_total': self.agreed_total,
+            'subscription_id': self.subscription_id,
             'source': self.source,
             'review_note': self.review_note,
         }

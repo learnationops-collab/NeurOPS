@@ -88,6 +88,7 @@ def otorgar(session, client_id, slug, hasta, kind, *, programa=None, desde=None,
         sub.program_code = sub.program_code or programa
     if sale is not None:
         sub.sale = sale
+        sale.subscription = sub
     session.add(SubscriptionEvent(subscription=sub, kind=kind, from_date=antes, to_date=sub.expires_at,
                                   reason=(reason or '')[:255] or None, source=source, actor_id=actor_id,
                                   actor_email=actor_email, sale=sale, payment=payment))

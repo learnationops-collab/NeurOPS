@@ -31,7 +31,7 @@ class Subscription(ConPersona, db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     client = db.relationship('Client', backref=db.backref('subscriptions', lazy='dynamic', passive_deletes=True))
-    sale = db.relationship('Sale')
+    sale = db.relationship('Sale', foreign_keys=[sale_id])
     events = db.relationship('SubscriptionEvent', backref='subscription', lazy='dynamic',
                              cascade='all, delete-orphan', order_by='SubscriptionEvent.id')
 
