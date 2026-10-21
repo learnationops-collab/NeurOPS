@@ -441,3 +441,8 @@
   - Cada venta tiene un único primer pago: completo, parcial o seña del mismo programa se suman a la venta abierta (si ya tenía su completo, queda para revisar). Solo renovación y upsell abren otra. En el servidor de prueba: 688 ventas, ninguna persona con dos ventas nuevas del mismo programa.
   - `sales.subscription_id`: la venta guarda la suscripción que activó o extendió. La venta tiene producto, precio, plan y suscripción; `financial_sales` es el registro de sus pagos.
   - Verificación: sin tests (regla del proyecto); medido en el servidor de prueba.
+
+- **20 de Octubre de 2026 (deuda por venta)** *([app/services/deuda_service.py](../../app/services/deuda_service.py) [NEW], [app/services/closer_followup_service.py](../../app/services/closer_followup_service.py) [MODIFY])*:
+  - La deuda de un cliente es la suma de sus ventas activas: lo acordado (`Sale.agreed_total`) menos lo cobrado. Una venta nueva sin total usa el precio de lista de su época (RR 1000 → 1200 desde 07/2025 → 1500 desde 2026; AL 150 → 250 → 750 → 1000; SI 1500 → 2000). Renovación o upsell sin total no deben; `cancelled` no debe.
+  - Entra por `_client_debt` y `CarteraEnLote.deuda`, así la ficha, Mi cartera, la cola de cobro, el estado de pago de la Academia y Clientes dicen lo mismo. Si la persona todavía no tiene ventas, sigue la cuenta por inscripciones.
+  - Verificación: sin tests (regla del proyecto); se mide en el servidor de prueba después de la carga de ventas.
