@@ -218,9 +218,12 @@ class FinancialAgenda(ConPersona, db.Model):
         from app.models import Client, Appointment, SurveyAnswer, SurveyQuestion
         from sqlalchemy import or_, func
         
-        ig_clean = self.instagram.strip().replace('@', '').lower() if self.instagram and self.instagram.lower() not in ('n/a', '') else None
-        mail_clean = self.mail.strip().lower() if self.mail and self.mail.lower() not in ('n/a', '') else None
-        
+        # La copia de la agenda (y el truco `no_ig_<id>`) solo cuenta sin persona (Etapa 2c).
+        copia = {} if self.person_uuid else self.contacto()
+        ig, mail = copia.get('instagram'), copia.get('mail')
+        ig_clean = ig.strip().replace('@', '').lower() if ig and ig.lower() not in ('n/a', '') else None
+        mail_clean = mail.strip().lower() if mail and mail.lower() not in ('n/a', '') else None
+
         client_filters = []
         if ig_clean:
             client_filters.append(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean)

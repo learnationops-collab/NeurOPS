@@ -1,6 +1,7 @@
 """Ingreso de agendas financieras (webhook) y verificacion de hora."""
 from flask import request, jsonify
 from app.models import db, FinancialAgenda
+from app.services import agenda_contacto_service
 from datetime import datetime, timedelta
 from sqlalchemy import or_, func
 from app.services.agenda_time_service import zona_origen, limites_dia_origen, resolver_hora_agenda, como_se_ve
@@ -128,9 +129,9 @@ def receive_financial_agendas():
         
         copia = []
         if ig_norm and ig_norm != 'n/a':
-            copia.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_norm)
+            copia.append(agenda_contacto_service.IG_NORMALIZADO == ig_norm)
         if mail_val and mail_val != 'n/a' and '@' in mail_val:
-            copia.append(func.lower(FinancialAgenda.mail) == mail_val)
+            copia.append(agenda_contacto_service.MAIL_NORMALIZADO == mail_val)
         cola_telefono = _cola_telefono(phone_val)
         if cola_telefono:
             # Se comparan solo los digitos y solo los ultimos: el mismo numero llega
@@ -139,7 +140,7 @@ def receive_financial_agendas():
             # fuera la misma persona el mismo dia (26/09/2026).
             copia.append(_whatsapp_solo_digitos().like(f"%{cola_telefono}"))
         # Las agendas de su persona; la copia solo cuenta en las que no tienen (Etapa 2b).
-        from app.services import agenda_contacto_service, person_service
+        from app.services import person_service
         persona = person_service.buscar(email=mail_val, instagram=ig_norm, phone=phone_val) if copia else None
         client_filters = [c for c in (FinancialAgenda.person_uuid == persona.uuid if persona else None,
                                       agenda_contacto_service.sin_persona(*copia)) if c is not None]
@@ -251,6 +252,10 @@ def receive_financial_agendas():
             if ig_norm and ig_norm != 'n/a':
                 existing.instagram = item.get('instagram') or item.get('ig')
             existing.raw_data = {**item, '_hora_diagnostico': diag_hora}
+            # La persona, con lo que mandó n8n (Etapa 2c): no se lee la copia de la agenda.
+            agenda_contacto_service.dar_persona(existing, lead_val, item.get('mail') or item.get('email'),
+                                                item.get('instagram') or item.get('ig'),
+                                                item.get('whatsapp') or item.get('phone') or item.get('telefono'))
             agendas_created.append(existing)
         else:
             if not (item.get('mail') or item.get('email')):
@@ -278,6 +283,9 @@ def receive_financial_agendas():
                 encargado_triage=encargado_triage_val,
                 raw_data={**item, '_hora_diagnostico': diag_hora}
             )
+            agenda_contacto_service.dar_persona(agenda, lead_val, item.get('mail') or item.get('email'),
+                                                item.get('instagram') or item.get('ig'),
+                                                item.get('whatsapp') or item.get('phone') or item.get('telefono'))
             db.session.add(agenda)
             agendas_created.append(agenda)
             saved += 1

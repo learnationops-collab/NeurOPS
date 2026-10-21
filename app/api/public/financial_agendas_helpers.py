@@ -36,10 +36,8 @@ _SEPARADORES_TELEFONO = (' ', '-', '(', ')', '+', '.')
 
 def _whatsapp_solo_digitos():
     """Expresion SQL con el whatsapp sin separadores, para comparar numeros y no textos."""
-    columna = FinancialAgenda.whatsapp
-    for sep in _SEPARADORES_TELEFONO:
-        columna = func.replace(columna, sep, '')
-    return columna
+    from app.services.agenda_contacto_service import whatsapp_solo_digitos
+    return whatsapp_solo_digitos(_SEPARADORES_TELEFONO)
 
 
 def _cola_telefono(valor, largo=9):

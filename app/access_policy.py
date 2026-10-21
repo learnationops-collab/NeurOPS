@@ -116,7 +116,6 @@ POLITICA = {
     ('POST', '/api/public/financial-agendas-form'): _p(OPERATOR, ingesta=True),
     ('PUT', '/api/public/financial-agendas/<int:agenda_id>'): _p(COMERCIAL, OPERATOR, TRIAGE),
     ('DELETE', '/api/public/financial-agendas/<int:agenda_id>'): _p(COMERCIAL, OPERATOR, TRIAGE),
-    ('POST', '/api/public/financial-agendas/repair-db'): _p(),  # correccion historica: solo admin
     ('POST', '/api/public/financial-agendas/sync'): _p(OPERATOR),  # deshabilitada en favor de n8n
     ('POST', '/api/public/financial-agendas/sync-appointments'): _p(OPERATOR),
     ('POST', '/api/public/financial-agendas/verificar-hora'): _p(OPERATOR, ingesta=True),  # prueba en seco desde n8n

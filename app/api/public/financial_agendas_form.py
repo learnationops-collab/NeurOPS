@@ -78,7 +78,7 @@ def receive_financial_agendas_form():
         from app.services.booking_service import BookingService
         agenda_match = FinancialAgenda.query.filter(or_(
             FinancialAgenda.person_uuid.in_(db.session.query(Person.uuid).filter(func.lower(Person.full_name).like(f"%{nombre_norm}%"))),
-            agenda_contacto_service.sin_persona(func.lower(FinancialAgenda.lead).like(f"%{nombre_norm}%")))
+            agenda_contacto_service.sin_persona(func.lower(agenda_contacto_service.LEAD).like(f"%{nombre_norm}%")))
         ).order_by(FinancialAgenda.date.desc()).first()
         if agenda_match:
             # El cliente de la persona de la agenda; si no, por su instagram, mail o teléfono
