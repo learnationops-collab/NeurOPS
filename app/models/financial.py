@@ -8,6 +8,9 @@ class FinancialSale(ConPersona, db.Model):
     client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=True, index=True)
     # Cada fila es un pago; la venta a la que pertenece (ver `Sale`). NULL = todavía sin agrupar.
     sale_id = db.Column(db.Integer, db.ForeignKey('sales.id', ondelete='SET NULL'), nullable=True, index=True)
+    # Quién pagó, solo si no es quien compró (`person_uuid`): un familiar, otra cuenta (docs/plan_personas.md).
+    payer_person_uuid = db.Column(db.String(36), db.ForeignKey('people.uuid', ondelete='SET NULL'), nullable=True, index=True)
+    payer = db.relationship('Person', foreign_keys=[payer_person_uuid])
     email_vendedor = db.Column(db.String(255), nullable=True)
     nombre_cliente = db.Column(db.String(255), nullable=True)
     telefono = db.Column(db.String(255), nullable=True)

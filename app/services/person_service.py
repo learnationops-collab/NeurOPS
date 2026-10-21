@@ -306,6 +306,11 @@ def fusionar(sobreviviente_uuid, uuids, motivo, usuario=None):
     db.session.flush()
     for model in TABLAS:
         model.query.filter(model.person_uuid.in_(ids)).update({model.person_uuid: sobr.uuid}, synchronize_session=False)
+    # El pagador también; si quedó igual a quien compró, ya no es otra persona.
+    FinancialSale.query.filter(FinancialSale.payer_person_uuid.in_(ids)).update(
+        {FinancialSale.payer_person_uuid: sobr.uuid}, synchronize_session=False)
+    FinancialSale.query.filter(FinancialSale.payer_person_uuid == FinancialSale.person_uuid).update(
+        {FinancialSale.payer_person_uuid: None}, synchronize_session=False)
     db.session.expire_all()  # los objetos ya cargados tienen el person_uuid viejo
     propias = {(i.kind, i.value) for i in sobr.identities}
     principales = {i.kind for i in sobr.identities if i.is_primary and i.retired_at is None}
