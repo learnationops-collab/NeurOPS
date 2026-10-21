@@ -2,15 +2,11 @@ from flask import Blueprint, request, jsonify
 from flask_login import current_user
 from app import db
 from app.decorators import require_manychat_token
-from app.services import conversaciones_service
 from app.services.setter_assignment_service import condicion_leads_visibles
 import logging
 import traceback
 
 logger = logging.getLogger(__name__)
-
-# Cada lead que se guarde, por el camino que sea, deja su persona y su conversación (plan_personas, frente B).
-conversaciones_service.registrar()
 
 bp = Blueprint('manychat', __name__)
 

@@ -376,3 +376,9 @@
   - Dar el acceso usa el mail de la Academia de la persona (el de uso `academia` o el principal); el que confirma el closer queda como su uso `academia`.
   - Del lado de la Academia (rama `develop`, sin deploy): columna `users.work_uuid`, se pide al dar de alta un alumno y es lo primero con que se busca lo que manda Work (ADR-154).
   - Verificación: sin tests (desarrollo rápido); se prueba en el servidor develop.
+
+- **20 de Octubre de 2026 (personas, frente B2: la conversación se busca por persona)** *(Marketing, Conversaciones y el setter encuentran la conversación de ManyChat de alguien por su persona. [app/services/conversaciones_service.py](../../app/services/conversaciones_service.py), [app/services/anuncios_service.py](../../app/services/anuncios_service.py), [app/api/public/marketing.py](../../app/api/public/marketing.py), [app/api/conversational.py](../../app/api/conversational.py), [app/api/setter_mazo.py](../../app/api/setter_mazo.py), [app/api/setter.py](../../app/api/setter.py), [app/api/manychat.py](../../app/api/manychat.py), [app/__init__.py](../../app/__init__.py), [scripts/migrar_conversaciones.py](../../scripts/migrar_conversaciones.py) [MODIFY])*:
+  - Todo lead de ManyChat tiene su conversación, aunque no haya respondido nada: en el servidor de prueba miles quedaban con persona y sin conversación. El script de migración muestra de dónde sale cada persona nueva.
+  - La palabra clave de cada agenda y cada venta (Marketing), las desatribuidas, los mensajes de Conversaciones, el mazo y «Mis agendas» buscan primero la conversación de la persona; el Instagram y el nombre quedan de respaldo.
+  - La sincronización de conversaciones se engancha en `create_app`.
+  - Verificación: sin tests (desarrollo rápido); se prueba en el servidor develop.

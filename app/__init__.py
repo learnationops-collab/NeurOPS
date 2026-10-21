@@ -295,4 +295,8 @@ def create_app(config_class=Config):
     from app.services.person_service import register_person_tracking
     register_person_tracking(app)
 
+    # Cada lead de ManyChat deja su persona y su conversación (docs/plan_personas.md, frente B).
+    from app.services.conversaciones_service import registrar as register_conversation_tracking
+    register_conversation_tracking()
+
     return app

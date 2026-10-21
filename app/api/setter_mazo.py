@@ -74,8 +74,14 @@ def _normalizar_ig(valor):
     return valor.strip().lstrip('@').lower()
 
 
-def _lead_de_manychat(ig_norm, nombre_norm):
-    """El ManychatLead de esta persona, por instagram o por nombre exacto."""
+def _lead_de_manychat(ig_norm, nombre_norm, person_uuid=None):
+    """El ManychatLead de esta persona: el de su `person_uuid` (plan_personas) y, si no, por instagram
+    o por nombre exacto."""
+    from app.services.conversaciones_service import lead_de_persona
+
+    lead = lead_de_persona(person_uuid)
+    if lead:
+        return lead
     if ig_norm:
         lead = ManychatLead.query.filter(
             db.func.lower(db.func.replace(ManychatLead.ig, '@', '')) == ig_norm
@@ -123,13 +129,13 @@ def get_agendas_del_mazo():
 
         # Una misma persona puede tener varias filas de agenda (reagendas); en la
         # lista de trabajo se muestra una sola. Misma clave que el Historial.
-        llave = clave_de_persona(agenda.instagram, agenda.lead)
+        llave = ('p', agenda.person_uuid) if agenda.person_uuid else clave_de_persona(agenda.instagram, agenda.lead)
         if llave and llave in vistas:
             continue
         if llave:
             vistas.add(llave)
 
-        lead_mc = _lead_de_manychat(ig_norm, nombre_norm)
+        lead_mc = _lead_de_manychat(ig_norm, nombre_norm, agenda.person_uuid)
         anuncio = _anuncio_de(lead_mc)
         client = _cliente_de(agenda)
         cita = _cita_de(agenda, client)

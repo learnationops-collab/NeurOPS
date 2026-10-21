@@ -1,6 +1,7 @@
 # pyrefly: ignore [missing-import]
 from flask import request, jsonify
 from app.models import db, User
+from app.services import conversaciones_service
 from app.services.commission_service import cash_neto_de
 from app.services.identity_service import normalize_ig
 from . import bp
@@ -162,10 +163,10 @@ def force_manual_attribution():
     ig_normalizado = instagram_input.strip().lstrip('@').lower()
     sale.instagram = f"@{ig_normalizado}"
     
-    # 2. Buscar o crear ManychatLead
+    # 2. Buscar o crear ManychatLead: el del IG que se escribió y, si no hay, el de la persona de la venta
     matched_lead = ManychatLead.query.filter(
         db.func.lower(db.func.replace(ManychatLead.ig, '@', '')) == ig_normalizado
-    ).first()
+    ).first() or conversaciones_service.lead_de_persona(sale.person_uuid)
 
     if not matched_lead:
         # Generar un ID único basado en la venta para evitar colisiones
@@ -260,7 +261,9 @@ def get_unattributed_leads():
             monto_ajustado = cash_neto_de(monto_original, sale.metodo_pago)
 
             lead_key = None
-            if ig_norm:
+            if sale.person_uuid:
+                lead_key = f"p:{sale.person_uuid}"
+            elif ig_norm:
                 lead_key = f"ig:{ig_norm}"
             elif nombre_norm:
                 lead_key = f"nombre:{nombre_norm}"
@@ -276,8 +279,9 @@ def get_unattributed_leads():
                     unattributed_sales_map[lead_key]["date"] = sale_date_str
                 continue
 
-            matched_lead = None
-            if ig_norm:
+            # La conversación de su persona (plan_personas); el IG y el nombre, de respaldo.
+            matched_lead = conversaciones_service.lead_de_persona(sale.person_uuid)
+            if not matched_lead and ig_norm:
                 matched_lead = ManychatLead.query.filter(
                     db.func.lower(db.func.replace(ManychatLead.ig, '@', '')) == ig_norm
                 ).first()
@@ -349,7 +353,9 @@ def get_unattributed_leads():
             nombre_norm = (agenda.lead or '').strip().lower()
 
             lead_key = None
-            if ig_norm:
+            if agenda.person_uuid:
+                lead_key = f"p:{agenda.person_uuid}"
+            elif ig_norm:
                 lead_key = f"ig:{ig_norm}"
             elif nombre_norm:
                 lead_key = f"nombre:{nombre_norm}"
@@ -357,8 +363,9 @@ def get_unattributed_leads():
             if lead_key and lead_key in seen_agenda_leads:
                 continue
 
-            matched_lead = None
-            if ig_norm:
+            # La conversación de su persona (plan_personas); el IG y el nombre, de respaldo.
+            matched_lead = conversaciones_service.lead_de_persona(agenda.person_uuid)
+            if not matched_lead and ig_norm:
                 matched_lead = ManychatLead.query.filter(
                     db.func.lower(db.func.replace(ManychatLead.ig, '@', '')) == ig_norm
                 ).first()
@@ -462,10 +469,10 @@ def force_manual_attribution_agenda():
     ig_normalizado = instagram_input.strip().lstrip('@').lower()
     agenda.instagram = f"@{ig_normalizado}"
     
-    # Buscar/crear lead de Manychat
+    # Buscar/crear lead de Manychat: el del IG que se escribió y, si no hay, el de la persona de la agenda
     matched_lead = ManychatLead.query.filter(
         db.func.lower(db.func.replace(ManychatLead.ig, '@', '')) == ig_normalizado
-    ).first()
+    ).first() or conversaciones_service.lead_de_persona(agenda.person_uuid)
 
     if not matched_lead:
         cliente_nombre = agenda.nombre or 'Desconocido'

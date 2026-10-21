@@ -709,7 +709,9 @@ def get_setter_deck():
                 if not uc_ig_clean:
                     uc_ig_clean = f"no_ig_{uc.id}"
                 if uc_ig_clean not in present_igs:
-                    m_lead = ManychatLead.query.filter(func.lower(func.replace(ManychatLead.ig, '@', '')) == uc_ig_clean).first()
+                    # La conversación de su persona (plan_personas) antes que la de su Instagram.
+                    m_lead = conversaciones_service.lead_de_persona(uc.person_uuid) or ManychatLead.query.filter(
+                        func.lower(func.replace(ManychatLead.ig, '@', '')) == uc_ig_clean).first()
                     if not m_lead:
                         try:
                             m_lead = ManychatLead(
@@ -893,6 +895,8 @@ def get_setter_deck():
 
     res_list = []
     for a in appointments:
+        # La conversación de su persona (plan_personas); el Instagram y el nombre, de respaldo.
+        lead_persona = conversaciones_service.lead_de_persona(a.person_uuid)
         client_ig = a.client.instagram if (a.client and a.client.instagram) else ""
         if not client_ig and a.ig_chat_link:
             clean_chat = a.ig_chat_link.strip()
@@ -903,6 +907,8 @@ def get_setter_deck():
             elif clean_chat.startswith("@"):
                 client_ig = clean_chat
 
+        if not client_ig and lead_persona and lead_persona.ig:
+            client_ig = lead_persona.ig
         if not client_ig and a.client:
             if a.client.full_name:
                 m_lead = ManychatLead.query.filter(func.lower(ManychatLead.name) == a.client.full_name.lower().strip()).first()
@@ -918,9 +924,9 @@ def get_setter_deck():
         if a.keyword:
             ad_obj = Ad.query.filter_by(keyword=a.keyword).first()
 
-        if not ad_obj and client_ig:
+        if not ad_obj and (lead_persona or client_ig):
             ig_clean_normal = client_ig.strip().lstrip('@').lower()
-            m_lead = ManychatLead.query.filter(
+            m_lead = lead_persona or ManychatLead.query.filter(
                 func.lower(func.replace(ManychatLead.ig, '@', '')) == ig_clean_normal
             ).first()
             if m_lead:

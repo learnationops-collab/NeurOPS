@@ -168,6 +168,15 @@ def sincronizar_lead_viejo(lead):
                                        'notes': lead.notes})
 
 
+def lead_de_persona(person_uuid):
+    """El `ManychatLead` de la persona (el más reciente, si tiene varios), o None. Es lo primero con
+    que se busca la conversación de alguien del sistema; el Instagram y el nombre quedan de respaldo."""
+    if not person_uuid:
+        return None
+    return ManychatLead.query.filter(ManychatLead.person_uuid == person_uuid) \
+        .order_by(ManychatLead.created_at.desc(), ManychatLead.id.desc()).first()
+
+
 def cliente_del_lead(lead):
     """El cliente del lead: el de su persona y, si no tiene, el de su Instagram. Si no hay ninguno lo
     crea (con su persona, si ya la tiene). No hace commit."""
