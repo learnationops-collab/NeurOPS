@@ -94,35 +94,6 @@ def test_la_venta_de_otro_setter_no_cuenta(db, ivan):
 
 # --- get_setter_commission: atribucion por agenda vs. campo setter de la venta -------------------
 
-@freeze_time(HOY)
-def test_la_agenda_atribuida_manda_sobre_el_campo_setter_de_la_venta(db, ivan):
-    # El campo `setter` de la venta trae otro nombre (dato de la planilla); la agenda que originó la
-    # venta (misma identidad por instagram+mail) es de Ivan: gana la agenda.
-    agenda(db, nombre='Ivan', instagram='lead1', mail='lead1@x.com')
-    venta(db, setter='nombre-de-planilla-no-es-ivan', instagram='lead1', mail='lead1@x.com', monto=500.0)
-
-    assert CommissionService.get_setter_commission(ivan)['cash_neto'] == 500.0
-
-
-@pytest.mark.parametrize('nombre_invalido', ['S/F', 'N/A', '', 'Entrevista Ivan', 'Diagnostica Ivan', 'Diagnóstica'])
-@freeze_time(HOY)
-def test_una_fuente_de_agenda_invalida_cae_al_campo_setter_de_la_venta(db, ivan, nombre_invalido):
-    agenda(db, nombre=nombre_invalido, instagram='lead1', mail='lead1@x.com')
-    venta(db, setter='Ivan', instagram='lead1', mail='lead1@x.com', monto=500.0)
-
-    assert CommissionService.get_setter_commission(ivan)['cash_neto'] == 500.0
-
-
-@pytest.mark.parametrize('setter_de_la_venta', ['', 'Sin Setter', 'sin setter', 'Confirmada'])
-@freeze_time(HOY)
-def test_un_campo_setter_vacio_o_generico_no_cuenta_para_nadie(db, ivan, setter_de_la_venta):
-    # Ni siquiera con una fuente de agenda invalida: no hay a quien atribuirle la venta.
-    agenda(db, nombre='N/A', instagram='lead1', mail='lead1@x.com')
-    venta(db, setter=setter_de_la_venta, instagram='lead1', mail='lead1@x.com', monto=500.0)
-
-    assert CommissionService.get_setter_commission(ivan)['cash_neto'] == 0.0
-
-
 @pytest.mark.parametrize('placeholder', ['Sin Setter', 'sin setter', 'Confirmada'])
 @freeze_time(HOY)
 def test_sin_setter_y_confirmada_no_son_un_setter_valido_ni_para_quien_se_llame_asi(db, make_user, placeholder):

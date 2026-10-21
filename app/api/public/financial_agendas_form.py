@@ -2,7 +2,7 @@
 from flask import request, jsonify
 from app.models import db, FinancialAgenda, Client
 from datetime import datetime
-from sqlalchemy import or_, func
+from sqlalchemy import func
 from app.services.agenda_contacto_service import ig_limpio, mail_limpio
 from . import bp
 
@@ -64,7 +64,7 @@ def receive_financial_agendas_form():
     if not client and clean_phone and len(clean_phone) > 4:
         client = Client.query.filter(Client.phone.like(f"%{clean_phone}%")).first()
 
-    # 3. Buscar por nombre en FinancialAgenda.lead → obtener el Client vinculado.
+    # 3. Buscar por el nombre de la persona de las agendas → obtener el Client vinculado.
     # OJO: no incluir FinancialAgenda.nombre acá — pese al nombre de la columna, ese campo
     # guarda la FUENTE/atribución de la agenda (username de un setter tipo 'Elias'/'Ivan', o
     # un embudo como 'workshop'), no el nombre del lead. Como hay setters reales llamados
@@ -74,11 +74,9 @@ def receive_financial_agendas_form():
     if not client and nombre:
         nombre_norm = nombre.strip().lower()
         from app.models import Person
-        from app.services import agenda_contacto_service
         from app.services.booking_service import BookingService
-        agenda_match = FinancialAgenda.query.filter(or_(
-            FinancialAgenda.person_uuid.in_(db.session.query(Person.uuid).filter(func.lower(Person.full_name).like(f"%{nombre_norm}%"))),
-            agenda_contacto_service.sin_persona(func.lower(agenda_contacto_service.LEAD).like(f"%{nombre_norm}%")))
+        agenda_match = FinancialAgenda.query.filter(
+            FinancialAgenda.person_uuid.in_(db.session.query(Person.uuid).filter(func.lower(Person.full_name).like(f"%{nombre_norm}%")))
         ).order_by(FinancialAgenda.date.desc()).first()
         if agenda_match:
             # El cliente de la persona de la agenda; si no, por su instagram, mail o teléfono

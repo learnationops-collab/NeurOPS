@@ -55,7 +55,8 @@ class AttributionService:
             return [c for c in (normalize_ig(ig), normalize_email(mail)) if c]
 
         def de_agenda(a):
-            return claves(a, None, None) if getattr(a, 'person_uuid', None) else claves(a, a.instagram, a.mail)
+            # La agenda es su persona (Etapa 2c): ya no guarda instagram ni mail.
+            return claves(a, None, None)
 
         def de_pago(s):
             c = copia(s)

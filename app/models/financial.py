@@ -130,12 +130,10 @@ class FinancialAgenda(ConPersona, db.Model):
     nombre = db.Column(db.String(255), nullable=True)
     registro = db.Column(db.String(255), nullable=True) 
     fecha_meet = db.Column(db.String(255), nullable=True) 
-    whatsapp = db.Column(db.String(255), nullable=True)
     zona_geografica = db.Column(db.String(255), nullable=True)
     closer = db.Column(db.String(255), nullable=True)
-    lead = db.Column(db.String(255), nullable=True) 
-    mail = db.Column(db.String(255), nullable=True)
-    instagram = db.Column(db.String(255), nullable=True)
+    # El contacto (lead, mail, whatsapp, instagram) es de la persona (Etapa 2c, 21/10/2026): toda agenda
+    # tiene una (`agenda_contacto_service.dar_persona`) y se lee de ella (`contacto()`).
     estado = db.Column(db.String(255), nullable=True, default="Pendiente", server_default="Pendiente")
     grupo = db.Column(db.String(50), nullable=True)  # "grupo 1"/"grupo 2"/"grupo 3" tal como llega de Calendly vía n8n
     encargado_triage = db.Column(db.String(255), nullable=True)
@@ -168,80 +166,33 @@ class FinancialAgenda(ConPersona, db.Model):
     def es_duplicada(self):
         return self.duplicada_de_id is not None
 
-    # Hasta octubre de 2025 la hoja guardaba el nombre de la persona en `nombre` y el evento en `lead`
-    # («Entrevista Diagnóstica Gratuita»); desde noviembre, la fuente en `nombre` y la persona en `lead`.
-    PALABRAS_DE_EVENTO = ('entrevista', 'sesión', 'sesion', 'consultoría', 'consultoria', 'diagnóstica',
-                          'reagenda', 'domingo', 'desconocido', 'prueba')
-
     @property
     def nombre_persona(self):
-        """El nombre de quien agendó, en cualquiera de los dos formatos de la hoja."""
-        lead = (self.lead or '').strip()
-        if lead and not any(p in lead.lower() for p in self.PALABRAS_DE_EVENTO):
-            return lead
-        return self.nombre
+        """El nombre de quien agendó: el de su persona (Etapa 2c) y, si no tiene, `nombre`."""
+        p = self.person if self.person_uuid else None
+        return (p.full_name if p is not None else None) or self.nombre
 
     CONTACTO = ('lead', 'mail', 'whatsapp', 'instagram')
     _DE_PERSONA = {'lead': 'full_name', 'mail': 'email', 'whatsapp': 'phone', 'instagram': 'instagram'}
 
     def contacto(self):
-        """Nombre, mail, whatsapp e instagram de la agenda, leídos de su persona (Etapa 2b de
-        docs/plan_personas.md). Lo copiado en la agenda se lee solo si no tiene persona."""
+        """Nombre, mail, whatsapp e instagram de la agenda: los de su persona (Etapa 2c). Sin persona
+        (no debería haber ninguna), solo el nombre de `nombre`."""
         p = self.person if self.person_uuid else None
         if p is None:
-            return {**{k: getattr(self, k) for k in self.CONTACTO}, 'lead': self.nombre_persona}
+            return {**{k: None for k in self.CONTACTO}, 'lead': self.nombre}
         return {k: getattr(p, self._DE_PERSONA[k]) for k in self.CONTACTO}
 
     def to_dict(self, sales_count=None):
         if sales_count is None:
-            # Los pagos de su persona; la copia del pago (mail, IG) solo en pagos sin persona
-            # (`filtro_de_pagos`, docs/plan_personas.md, Etapa 2b).
-            from sqlalchemy import func, or_
-            from app.services import pagos_copia
+            # Los pagos de su persona (`filtro_de_pagos`, docs/plan_personas.md).
             from app.services.sales_consistency_service import filtro_de_pagos
-            sales_count = 0
-            if self.person_uuid:
-                sales_count = FinancialSale.query.filter(filtro_de_pagos(person_uuid=self.person_uuid)).count()
-            else:
-                ig_clean = self.instagram.strip().replace('@', '').lower() if self.instagram and self.instagram.lower() not in ('n/a', '') else None
-                mail_clean = self.mail.strip().lower() if self.mail and self.mail.lower() not in ('n/a', '') else None
-                por_copia = []
-                if ig_clean:
-                    por_copia.append(pagos_copia.IG_NORMALIZADO == ig_clean)
-                if mail_clean:
-                    por_copia.append(pagos_copia.MAIL_NORMALIZADO == mail_clean)
-                if por_copia:
-                    sales_count = FinancialSale.query.filter(
-                        FinancialSale.person_uuid.is_(None), or_(*por_copia)).count()
+            sales_count = FinancialSale.query.filter(filtro_de_pagos(person_uuid=self.person_uuid)).count()                 if self.person_uuid else 0
 
-        # Resolver cliente de forma global
         from app.models import Client, Appointment, SurveyAnswer, SurveyQuestion
-        from sqlalchemy import or_, func
-        
-        # La copia de la agenda (y el truco `no_ig_<id>`) solo cuenta sin persona (Etapa 2c).
-        copia = {} if self.person_uuid else self.contacto()
-        ig, mail = copia.get('instagram'), copia.get('mail')
-        ig_clean = ig.strip().replace('@', '').lower() if ig and ig.lower() not in ('n/a', '') else None
-        mail_clean = mail.strip().lower() if mail and mail.lower() not in ('n/a', '') else None
 
-        client_filters = []
-        if ig_clean:
-            client_filters.append(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean)
-        if mail_clean:
-            client_filters.append(func.lower(Client.email) == mail_clean)
-            
-        client = None
-        # Por su persona primero; la búsqueda por texto queda para las agendas todavía sin vincular.
-        if self.person_uuid:
-            client = Client.query.filter_by(person_uuid=self.person_uuid).order_by(Client.id).first()
-        if not client and client_filters and not self.person_uuid:
-            client = Client.query.filter(or_(*client_filters)).first()
-        if not client and ig_clean and ig_clean.startswith("no_ig_"):
-            try:
-                c_id = int(ig_clean.split("_")[-1])
-                client = Client.query.get(c_id)
-            except Exception:
-                pass
+        # El cliente de su persona (Etapa 2c: la agenda ya no guarda instagram ni mail para buscarlo).
+        client = Client.query.filter_by(person_uuid=self.person_uuid).order_by(Client.id).first()             if self.person_uuid else None
 
         survey_answers = []
         client_id = None

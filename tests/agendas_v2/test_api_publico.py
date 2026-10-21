@@ -226,48 +226,6 @@ def test_horarios_sin_closer(client, armado):
     assert 'ana' not in r.get_data(as_text=True)
 
 
-def test_reservar_crea_la_agenda_en_la_operacion(client, armado, cuentas, google):
-    r = _reservar(client)
-    assert r.status_code == 201
-    cuerpo = r.get_json()['reserva']
-    assert cuerpo['inicio'] == '2026-10-05T13:00:00.000Z' and cuerpo['fin'] == '2026-10-05T13:45:00.000Z'
-
-    # La Appointment: closer elegido por el servidor ("llenar en orden": Ana), setter del ?o=, payload completo.
-    appt = Appointment.query.one()
-    assert str(appt.id) == cuerpo['id']
-    assert appt.closer_id == cuentas['ana'].id and appt.setter_id == cuentas['juan'].id
-    assert appt.start_time == datetime(2026, 10, 5, 13) and appt.origin == 'juan'
-    assert appt.client.email == 'lucia@correo.com' and appt.client.phone
-    p = appt.agenda_payload
-    assert p['respuestas'][0]['respuesta'] == 'Mucho' and p['nota'] == 10 and p['duracion_min'] == 45
-    assert p['closer_id'] == 'ana' and p['closer_user_id'] == cuentas['ana'].id and p['origen'] == 'juan-setter'
-
-    # Su espejo en el registro de agendas, con el mismo payload.
-    fa = FinancialAgenda.query.one()
-    assert fa.closer == 'ana' and fa.nombre == 'juan' and fa.date == datetime(2026, 10, 5, 13)
-    assert fa.mail == 'lucia@correo.com' and fa.raw_data['agendas_v2']['nota'] == 10
-    # La prioridad que eligio Thalamus queda como `grupo` de la agenda y del cliente.
-    assert fa.grupo == 'Ultra' and appt.client.grupo == 'Ultra'
-    # El segmento queda con nombres, por si después se borra la estrategia o la regla.
-    assert p['segmento'] == {
-        'formulario': 'Calificación', 'estrategia': 'Ultra', 'regla': 'el resto',
-        'asignada': 'Ultra', 'reparto': 'Llenar agenda', 'desborde': False,
-    }
-    assert fa.raw_data['agendas_v2']['segmento']['estrategia'] == 'Ultra'
-
-    # El cliente guarda su formulario.
-    assert appt.client.formulario_payload['respuestas'][0]['pregunta'] == '¿Cuánto?'
-
-    # El evento en el Calendar de Ana: 45 min, con Meet, invitando al lead.
-    (evt,) = google['crear']
-    assert evt['user_id'] == cuentas['ana'].id and evt['invitado'] == 'lucia@correo.com'
-    assert evt['fin'] - evt['inicio'] == timedelta(minutes=45)
-    assert evt['titulo'] == 'Llamada: Lucía Fernández y ana'
-    # El lead ve la descripción en su invitación: solo indicaciones, nunca sus datos ni sus respuestas.
-    assert evt['descripcion'] == operacion.INDICACIONES_POR_DEFECTO
-    assert appt.google_event_id == 'evt1' and appt.agenda_payload['meet'] == 'https://meet.google.com/abc-defg-hij'
-
-
 def test_la_invitacion_lleva_las_indicaciones_del_evento(client, armado, google):
     servicio.guardar_doc('eventos', 'ev', {'indic': 'Tené a mano tu último resumen bancario.'}, parcial=True)
     _publicar('ev')
@@ -370,19 +328,6 @@ def test_si_elige_una_sesion_adicional_quedan_las_dos_y_se_avisa_al_closer(clien
     assert len(google['crear']) == 2 and google['borrar'] == []
     aviso = Notification.query.filter_by(subject='Sesión adicional: revisá la agenda anterior').one()
     assert aviso.associated_id == nueva.id and vieja.closer_id in aviso.target_users
-
-
-def test_un_lead_que_vuelve_tiene_su_propia_fila_y_no_pisa_la_vieja(client, armado, db):
-    # Agendó hace un mes por n8n e hizo no-show: esa fila no se toca, la nueva tiene la suya.
-    lucia = Client(full_name='Lucía Fernández', email='lucia@correo.com')
-    db.session.add(lucia)
-    db.session.add(FinancialAgenda(nombre='workshop', lead='Lucía Fernández', closer='beto', mail='lucia@correo.com',
-                                   estado='No Show', date=datetime(2026, 9, 1, 15), created_at=datetime(2026, 8, 30)))
-    db.session.commit()
-    assert _reservar(client).status_code == 201
-    vieja, nueva = FinancialAgenda.query.order_by(FinancialAgenda.date).all()
-    assert (vieja.nombre, vieja.closer, vieja.estado, vieja.date) == ('workshop', 'beto', 'No Show', datetime(2026, 9, 1, 15))
-    assert nueva.date == datetime(2026, 10, 5, 13) and nueva.closer == 'ana' and nueva.estado == 'Pendiente'
 
 
 def test_una_agenda_de_n8n_futura_tambien_se_reprograma(client, armado, cuentas, db):

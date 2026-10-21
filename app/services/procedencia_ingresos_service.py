@@ -210,16 +210,15 @@ BASES = {
 def agendas_para_atribuir():
     """Las agendas que necesita la atribución, sin armar un `FinancialAgenda` por fila.
 
-    La atribución recorre TODAS las agendas (para unir a cada persona por su Instagram y su correo)
-    y de cada una lee seis columnas: con qué se identifica, cuándo fue y su `nombre`, que es la
-    fuente. Cargarlas como modelos costaba ~110 ms con 4.300 agendas —casi todo armar el objeto de
+    La atribución recorre TODAS las agendas (para unir a cada persona) y de cada una lee cinco
+    columnas: su persona (Etapa 2c: la agenda ya no guarda instagram ni mail), cuándo fue y su
+    `nombre`, que es la fuente. Cargarlas como modelos costaba ~110 ms con 4.300 agendas —casi todo armar el objeto de
     cada fila y decodificar su `raw_data`—, más que la atribución misma; en filas livianas, ~20 ms
     (medido el 09/10/2026 sobre una copia de local.db). Las filas tienen esos atributos con el mismo
     nombre, que es todo lo que leen `AttributionService` y `fuente_de`. Mismo orden que
     `FinancialAgenda.query.all()`: la misma consulta, sin ORDER BY, como la nómina."""
-    from app.services import agenda_contacto_service as copia  # la copia solo cuenta sin persona
     return db.session.query(
-        FinancialAgenda.id, FinancialAgenda.nombre, copia.INSTAGRAM.label('instagram'), copia.MAIL.label('mail'),
+        FinancialAgenda.id, FinancialAgenda.nombre,
         FinancialAgenda.date, FinancialAgenda.created_at, FinancialAgenda.person_uuid,
     ).all()
 

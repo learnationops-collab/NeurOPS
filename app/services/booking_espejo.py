@@ -201,9 +201,8 @@ class BookingEspejoMixin:
     @staticmethod
     def filtros_de_agenda_del_cliente(client):
         """Las señales con las que una fila del Tablero de Agendas (`FinancialAgenda`) se reconoce
-        como de este cliente, para un `or_`: su persona y, por mail, instagram y telefono, solo las
-        agendas sin persona (Etapa 2b de docs/plan_personas.md). Lista vacia si no tiene ninguna
-        que sirva.
+        como de este cliente, para un `or_`: su persona (Etapa 2c: la agenda no guarda el contacto).
+        Lista vacia si no tiene persona.
 
         Vivia adentro de `sync_appointment_to_financial_agenda`; sale a su propia funcion para que
         quien necesite la fila de UNA cita (la correccion de una agenda desde la ficha) la busque
@@ -211,33 +210,9 @@ class BookingEspejoMixin:
         """
         from app.models.financial import FinancialAgenda
 
-        if not client:
+        if not client or not client.person_uuid:
             return []
-        # Normalizando email e instagram para evitar problemas de matching exacto.
-        ig_clean = client.instagram.strip().replace('@', '').lower() if client.instagram and client.instagram.lower() not in ('n/a', '') else None
-        mail_clean = client.email.strip().lower() if client.email and client.email.lower() not in ('n/a', '') else None
-        # El mail sintetico que `find_or_create_client` le pone al Client que llego sin
-        # correo ('no-email-<hex>@neurops.com') no identifica a nadie: la agenda de ese
-        # mismo lead tiene mail='N/A', asi que comparar uno contra otro no matchea NUNCA y
-        # el espejo terminaba creando una segunda fila para la misma reunion. El resto del
-        # archivo ya lo trata como ausente (lineas 145, 210, 223); aca faltaba.
-        if mail_clean and 'no-email-' in mail_clean:
-            mail_clean = None
-
-        copia = filters = []
-        if mail_clean:
-            filters.append(agenda_contacto_service.MAIL_NORMALIZADO == mail_clean)
-        if ig_clean:
-            filters.append(agenda_contacto_service.IG_NORMALIZADO == ig_clean)
-        # El telefono como tercera señal, comparando solo digitos: el mail llega 'N/A' muy
-        # seguido y el instagram a veces trae el nombre escrito en vez del handle, asi que
-        # sin esto el espejo no reconocia la agenda que ya existia y creaba una segunda
-        # fila para la MISMA reunion (28/09/2026: 67 pares asi desde julio).
-        tel_cliente = ''.join(c for c in str(client.phone or '') if c.isdigit())
-        if len(tel_cliente) >= 9:
-            filters.append(agenda_contacto_service.whatsapp_solo_digitos().like('%' + tel_cliente[-9:]))
-        return [c for c in (FinancialAgenda.person_uuid == client.person_uuid if client.person_uuid else None,
-                            agenda_contacto_service.sin_persona(*copia)) if c is not None]
+        return [FinancialAgenda.person_uuid == client.person_uuid]
 
     @staticmethod
     def sync_appointment_to_financial_agenda(appt, cita_nueva=False):
@@ -383,20 +358,16 @@ class BookingEspejoMixin:
             agenda = FinancialAgenda(
                 person_uuid=client.person_uuid,
                 nombre=fuente,
-                lead=client.full_name or 'Desconocido',
                 closer=closer_name,
                 fecha_meet=appt.start_time.isoformat(),
                 date=appt.start_time,
                 created_at=alta_utc,
                 registro=registro_local,
-                instagram=client.instagram or 'N/A',
-                whatsapp=client.phone or 'N/A',
-                mail=client.email or 'N/A',
                 estado=mapped_state,
                 raw_data={"created_by_sync": True, "fuente": fuente}
             )
             if not agenda.person_uuid:
-                # Cliente sin persona (Etapa 2c): se resuelve con sus datos, no con la copia de la agenda.
+                # Cliente sin persona (Etapa 2c): se resuelve con sus datos; la agenda no guarda el contacto.
                 agenda_contacto_service.dar_persona(agenda, client.full_name, client.email, client.instagram, client.phone)
             db.session.add(agenda)
             recien_creada = True

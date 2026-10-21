@@ -169,12 +169,14 @@ def relate_event_roadmap():
             agenda = FinancialAgenda.query.get(event_id)
             if not agenda:
                 return jsonify({"error": "Agenda no encontrada"}), 404
-            agenda.instagram = ig_norm
-            # Relacionarla es decir de quién es: queda con la persona de ese instagram.
-            from app.services import person_service
+            # Relacionarla es decir de quién es: queda con la persona de ese instagram. Si nadie lo tiene,
+            # se le anota a la persona de la agenda (Etapa 2c: la agenda no guarda el contacto).
+            from app.services import agenda_contacto_service, person_service
             persona = person_service.buscar(instagram=ig_norm)
             if persona is not None:
                 agenda.person = persona
+            else:
+                agenda_contacto_service.dar_persona(agenda, instagram=ig_norm)
         else:
             return jsonify({"error": "Tipo de evento inválido"}), 400
 

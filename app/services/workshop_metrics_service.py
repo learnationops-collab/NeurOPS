@@ -268,11 +268,12 @@ def _clave_identidad(agenda):
     handles que no identifican a nadie ('n/a', 'no tengo') se descartan, porque si no
     todos los que escribieron eso se fusionarian en una sola persona.
     """
-    if agenda.person_uuid:  # la persona es la clave; la copia solo en agendas sin persona
+    if agenda.person_uuid:  # la persona es la clave (Etapa 2c: la agenda no guarda el contacto)
         return f'p:{agenda.person_uuid}'
-    ig = (agenda.instagram or '').strip().replace('@', '').lower()
-    mail = (agenda.mail or '').strip().lower()
-    lead = (agenda.lead or '').strip().lower()
+    contacto = agenda.contacto()
+    ig = (contacto['instagram'] or '').strip().replace('@', '').lower()
+    mail = (contacto['mail'] or '').strip().lower()
+    lead = (contacto['lead'] or '').strip().lower()
 
     ig = ig if ig and ig not in HANDLES_INVALIDOS else None
     mail = mail if mail and mail not in HANDLES_INVALIDOS else None

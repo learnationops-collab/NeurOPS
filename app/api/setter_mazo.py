@@ -122,7 +122,7 @@ def get_agendas_del_mazo():
 
         # Una misma persona puede tener varias filas de agenda (reagendas); en la
         # lista de trabajo se muestra una sola. Misma clave que el Historial.
-        llave = ('p', agenda.person_uuid) if agenda.person_uuid else clave_de_persona(agenda.instagram, agenda.lead)
+        llave = ('p', agenda.person_uuid) if agenda.person_uuid else clave_de_persona(contacto['instagram'], contacto['lead'])
         if llave and llave in vistas:
             continue
         if llave:
