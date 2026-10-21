@@ -119,6 +119,32 @@ la Etapa 1: las APIs siguen devolviendo lo mismo y suman `person_uuid`.
   pagador y del comprador. El frontend suma en la venta de la ficha «pagó otra persona» (el backend ya
   acepta `pagador: {nombre, email, telefono, instagram}`) y un «mover este pago a otra persona».
 
+## Etapa 2a: frontend (dos sesiones en paralelo, desde el 20/10/2026)
+
+El frontend identifica a la persona por `person_uuid`: en las claves de listas, la comparación de "mismo
+lead", los links y lo que se manda al backend para decir de quién se habla. Se muestran sus datos desde la
+persona (`person_service.datos`), no desde la copia de cada fila. `client_id` sigue andando mientras el
+backend lo pida: se manda junto con `person_uuid`, no se saca todavía.
+
+| Frente | Sesión / rama | Archivos (es dueño) |
+|---|---|---|
+| **H. Ficha, closer y finanzas** | work-a1, `personas/front-ficha` | `components/ficha/*` (FichaLeadModal, fichaApi, tabs, fixtures), `pages/closer/*` (deck, workflow, audit, LeadEditModal, SeguimientosPane, dashboard), `components/cobro/*`, `components/deck/*`, `pages/comercial/*` (DashboardComercial, finanzas/Diferencias, tablasDef, academia.js) |
+| **I. Setter, triage, leads y agendas** | work-1a, `personas/front-leads` | `pages/setter/*`, `components/setter/*`, `pages/triage/*`, `components/leads/*`, `components/modals/*` (AgendaManagerModal, LeadRoadmapModal), `components/shared/CommentsSection.jsx`, `pages/shared/*` (Leads y Forms Management), `pages/public/*` (BookingPage), `pages/agendas_v2/*`, `pages/admin/*`, `pages/legacy/*` |
+
+Reglas de la Etapa 2a (además de las de arriba):
+- Antes de tocar una pantalla, leer `.agents/rules/ui.md` y `.agents/skills/ui-builder/SKILL.md`. **Sin cambios
+  visuales**: lo visual lo decide el usuario. La única pantalla nueva es la de H (ver abajo), y va con los
+  componentes estándar.
+- `frontend/src/App.jsx`, `MainLayout.jsx` y `components/standard/*` no son de nadie: si hace falta tocarlos, va a
+  "Pedidos".
+- Si una API no devuelve `person_uuid`, el dueño del frente agrega el campo en la respuesta del endpoint (solo
+  sumar, sin cambiar lo demás). Si es de un archivo del otro frente, va a "Pedidos".
+- **No se compila ni se corre nada en la PC del usuario**, tampoco `npm run build`: se valida con el build del
+  deploy del servidor de prueba (los logs de Railway).
+- H además: en la ficha, mostrar las identidades de la persona (`identidades`, que la ficha ya devuelve: todos
+  sus datos con su uso, principal y dados de baja) y la acción **agregar dato** (el backend ya acepta `agregar`
+  en `editar_datos`), separada de **corregir** (`corrige=True`).
+
 ## Estado
 
 | Frente | Sesión / rama | Estado |
