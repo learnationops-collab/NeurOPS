@@ -96,13 +96,14 @@ def emails_candidatos(client, ventas=None):
     los demás correos de la persona. El de la venta lo tipeo un humano para cobrarle, el del
     cliente puede venir de una agenda automatica.
     """
-    from app.models import PersonIdentity
+    from app.models import FinancialSale, PersonIdentity
     from app.services import person_service
 
     person = getattr(client, 'person', None)
     crudos = [person_service.dato(person, 'email', uso='academia') if person else None]
     crudos += [getattr(client, 'email', None)]
-    crudos += [v.mail_cliente for v in (ventas or [])]
+    # El de cada venta, de su persona (`FinancialSale.contacto`): su mail de pago o su principal.
+    crudos += [c['mail_cliente'] for c in FinancialSale.contactos(ventas or []).values()]
     if person is not None:
         crudos += [i.value for i in person.identities.filter(
             PersonIdentity.kind == 'email', PersonIdentity.retired_at.is_(None),

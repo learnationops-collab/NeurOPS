@@ -17,7 +17,7 @@ telefono) en una sola consulta acotada a este cliente.
 """
 from datetime import datetime
 
-from sqlalchemy import func, or_
+from sqlalchemy import or_
 
 from app import db
 from app.models import Appointment, Client, FinancialSale
@@ -83,37 +83,17 @@ def resolver_lead(appointment_id=None, client_id=None):
 
 
 def _ventas_del_cliente(client):
-    """Las ventas de este cliente, con el mismo cruce por contacto que usa el resto del sistema.
+    """Las ventas de este cliente: las de su persona y las atadas a él por id; la copia del pago
+    cuenta solo en las que no tienen persona (`filtro_de_pagos`). Una sola consulta."""
+    from app.services.sales_consistency_service import filtro_de_pagos
 
-    Una sola consulta: `_resolve_sales_and_clients()` da lo mismo pero cargando todas las ventas de
-    la base y resolviendo el cliente de cada una con varias consultas por fila.
-    """
     if not client:
         return []
-    filtros = [FinancialSale.client_id == client.id]
-    # Los pagos de su persona son suyos por sí solos (docs/plan_personas.md). El cruce por texto
-    # sigue para todos mientras haya personas duplicadas sin fusionar (frente A): sacarlo dejaría
-    # de ver pagos que hoy se ven. En la Etapa 2 queda solo la persona.
-    if client.person_uuid:
-        filtros.append(FinancialSale.person_uuid == client.person_uuid)
-    por_texto = []
-    email = (client.email or '').strip().lower()
-    if email and '@' in email:
-        por_texto.append(func.lower(FinancialSale.mail_cliente) == email)
-    ig = (client.instagram or '').strip().lstrip('@').lower()
-    if ig and ig != 'n/a':
-        por_texto.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig)
-    telefono = (client.phone or '').strip()
-    if len(telefono) >= 8:
-        por_texto.append(FinancialSale.telefono.like(f'%{telefono[-8:]}%'))
-    filtros += por_texto
-
-    ventas = FinancialSale.query.filter(
-        or_(*filtros),
+    return FinancialSale.query.filter(
+        filtro_de_pagos(client),
         or_(FinancialSale.estado.in_(('Completada', 'Confirmada')),
             FinancialSale.estado.is_(None), FinancialSale.estado == ''),
     ).order_by(FinancialSale.date.asc(), FinancialSale.id.asc()).all()
-    return ventas
 
 
 def _datos_de_persona(client):

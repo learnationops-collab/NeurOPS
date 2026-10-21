@@ -902,12 +902,8 @@ def total_a_pagar(appt, datos, usuario):
 #     ese cliente. `BookingService.create_or_update_client` cruza por esos tres datos (correo ->
 #     instagram -> ultimos 8 digitos del telefono) y FUSIONA lo que encuentra: guardarlo callado
 #     dejaria a los dos clientes pegados en la proxima agenda que entre, sin que nadie lo decidiera;
-#   · las ventas que hoy son del cliente solo porque coinciden por contacto (el 79% no tiene
-#     `client_id`) y que el cambio le haria perder se atan por id ANTES del cambio: si no,
-#     corregirle el correo a quien ya compro le haria perder sus ventas, su programa y su deuda en
-#     la ficha y en la cola de cobro. Solo las que son suyas con el criterio estricto de los pagos
-#     (ver `_atar_ventas_que_se_perderian`): la de otra persona que coincidia por el dato mal
-#     cargado se suelta, que es lo que se buscaba al corregirlo;
+#   · las ventas no se mueven: son del cliente por su persona y por id, no por el contacto
+#     (`sales_consistency_service.filtro_de_pagos`), asi que corregirlo no le hace perder ninguna;
 #   · una linea en la bitacora del lead con lo que cambio, antes -> despues.
 #
 # Lo que NO se toca, y queda con el dato viejo: las ventas en Google Sheets, el `Lead` del pipeline
@@ -1010,67 +1006,6 @@ def _otro_cliente_con(cliente, campo, valor):
     # otros espacios. Son unas miles de filas de tres columnas, una vez por edicion.
     return next((c for c in otros.filter(Client.phone.isnot(None)).all()
                  if _ultimos8(c.phone) == ultimos), None)
-
-
-def _contacto(cliente, **cambios):
-    """El cliente como lo miran las señales de `SalesConsistencyService`, con `cambios` (columna ->
-    valor nuevo) aplicados encima. No toca la fila: es para preguntar "¿y despues del cambio?".
-
-    Sin el instagram si es un relleno que ya estaba guardado: un '.' en el cliente y otro en la
-    venta no son una señal de que la venta sea suya.
-    """
-    from types import SimpleNamespace
-
-    datos = {'full_name': cliente.full_name, 'email': cliente.email,
-             'instagram': cliente.instagram, 'phone': cliente.phone}
-    datos.update(cambios)
-    if _es_ig_de_relleno(datos['instagram']):
-        datos['instagram'] = None
-    return SimpleNamespace(**datos)
-
-
-def _atar_ventas_que_se_perderian(cliente, nuevos):
-    """Ata por id las ventas sueltas de este cliente que el cambio de contacto le haria perder.
-
-    Atar es para siempre: una venta con `client_id` cuenta como del cliente por si sola en todas
-    partes (`get_client_payment_state` no le vuelve a mirar el contacto) y `clientes_de_ventas` ya
-    no se la da a nadie mas. Por eso se ata SOLO la que cumple las tres:
-
-      · es de este cliente y no de otro, con `clientes_de_ventas`: una que coincide con este por
-        telefono pero con otro por correo es del otro, y atarla aca se la robaria;
-      · es suya con el criterio estricto de `SalesConsistencyService._contact_match_suffices` (2
-        señales, o 1 corroborada por el nombre). Con una sola señal y otro nombre NO se ata: es
-        justo el caso de corregir un telefono mal cargado —la venta de otra persona que coincidia
-        por ese telefono tiene que dejar de ser de este cliente, no quedarle pegada—. En la base
-        local son la mayoria de las coincidencias por correo solo (479 de 681 sueltas resueltas:
-        la venta a nombre de una persona y el cliente a nombre de otra) y dos por telefono o
-        instagram; el caso Kervin Calderon fue un correo compartido;
-      · el cambio le quita una señal con la que hoy coincide. La que sigue coincidiendo igual
-        despues (se corrigio el telefono y cruzaba por correo e instagram) no necesita atarse.
-
-    `nuevos` es {columna del cliente -> valor nuevo} de los contactos que cambian.
-    """
-    from app.services.comercial_service import clientes_de_ventas
-    from app.services.ficha_lead_service import _ventas_del_cliente
-    from app.services.sales_consistency_service import SalesConsistencyService
-
-    sueltas = [v for v in _ventas_del_cliente(cliente) if not v.client_id]
-    if not sueltas:
-        return 0
-    duenos = clientes_de_ventas(sueltas)
-    antes, despues = _contacto(cliente), _contacto(cliente, **nuevos)
-    atadas = 0
-    for venta in sueltas:
-        if duenos.get(venta.id) != cliente.id:
-            continue
-        if not SalesConsistencyService._contact_match_suffices(antes, venta):
-            continue
-        pierde = (SalesConsistencyService._matching_signals(antes, venta)
-                  - SalesConsistencyService._matching_signals(despues, venta))
-        if pierde:
-            venta.client_id = cliente.id
-            atadas += 1
-    return atadas
 
 
 # Campo de la ficha -> tipo de dato de la persona (`PersonIdentity.kind`).
@@ -1184,7 +1119,7 @@ def editar_datos(appt, datos, usuario):
             cambios[campo] = (antes, nuevo)
 
     if not cambios and not agregados:
-        return {'id': appt.id, 'cambios': {}, 'ventas_atadas': 0}
+        return {'id': appt.id, 'cambios': {}}
 
     # En el orden del cruce de `create_or_update_client`: si chocan dos, se nombra el que ese cruce
     # usaria primero para fusionar.
@@ -1199,9 +1134,6 @@ def editar_datos(appt, datos, usuario):
                 'No se fusionan solos: si son la misma persona hay que unir los dos clientes; si '
                 'no, revisá el dato.', campo, {'id': otro.id, 'nombre': nombre})
 
-    contactos = {CAMPOS_DEL_CLIENTE[c][0]: nuevo for c, (_, nuevo) in cambios.items()
-                 if c in ('email', 'instagram', 'telefono')}
-    atadas = _atar_ventas_que_se_perderian(cliente, contactos) if contactos else 0
     # Antes de tocar el contacto: la fila del Tablero se encuentra por el que el cliente TIENE.
     espejo = agendas.espejo_en_el_tablero(appt) if 'fuente' in cambios else None
 
@@ -1230,13 +1162,11 @@ def editar_datos(appt, datos, usuario):
     detalle = '; '.join([f'{rotulos[c]}: {_para_la_bitacora(a)} → {_para_la_bitacora(n)}'
                          for c, (a, n) in cambios.items()]
                         + [f'{rotulos[c]} agregado: {_para_la_bitacora(v)}' for c, v in agregados.items()])
-    extra = (f' {atadas} venta(s) quedaron atadas al cliente por id, para no perderlas con el '
-             'cambio de contacto.' if atadas else '')
     BookingService.log_lead_event(appt.id, usuario.id, 'datos_editados',
-                                  f'{usuario.username} corrigió los datos del lead: {detalle}.{extra}')
+                                  f'{usuario.username} corrigió los datos del lead: {detalle}.')
 
     return {'id': appt.id, 'cambios': {c: n for c, (_, n) in cambios.items()},
-            'agregados': agregados, 'ventas_atadas': atadas}
+            'agregados': agregados}
 
 
 # --- Registro de eventos ----------------------------------------------------------------------

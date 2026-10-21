@@ -490,7 +490,8 @@ def get_financial_agendas():
 
     sales_by_email = {}
     sales_by_ig = {}
-    # Los pagos de la persona de cada agenda (docs/plan_personas.md), además del cruce por texto.
+    # Los pagos de la persona de cada agenda (docs/plan_personas.md); por texto, solo los pagos sin
+    # persona (Etapa 2b, `filtro_de_pagos`).
     sales_by_person = {}
     personas = sorted({a.person_uuid for a in all_agendas if a.person_uuid})
     for i in range(0, len(personas), 500):
@@ -503,7 +504,7 @@ def get_financial_agendas():
         if emails:
             sales_filters.append(func.lower(FinancialSale.mail_cliente).in_(list(emails)))
         
-        sales = FinancialSale.query.filter(or_(*sales_filters)).all()
+        sales = FinancialSale.query.filter(FinancialSale.person_uuid.is_(None), or_(*sales_filters)).all()
         for s in sales:
             if s.mail_cliente:
                 m = s.mail_cliente.strip().lower()
@@ -1404,7 +1405,10 @@ def get_potential_leads():
         from app.models import FinancialSale
 
         # Obtener datos de ventas para filtrar compradores
-        sales = FinancialSale.query.all()
+        # Compró = tiene un pago de su persona; la copia del pago cuenta solo en pagos sin persona.
+        sold_persons = {u for (u,) in db.session.query(FinancialSale.person_uuid)
+                        .filter(FinancialSale.person_uuid.isnot(None)).distinct()}
+        sales = FinancialSale.query.filter(FinancialSale.person_uuid.is_(None)).all()
         sold_emails = {s.mail_cliente.strip().lower() for s in sales if s.mail_cliente}
         sold_instagrams = {s.instagram.strip().replace('@', '').lower() for s in sales if s.instagram}
 
@@ -1433,6 +1437,8 @@ def get_potential_leads():
             phone_clean = contacto['whatsapp'].strip() if contacto['whatsapp'] else None
 
             # Ignorar compradores
+            if a.person_uuid and a.person_uuid in sold_persons:
+                continue
             if mail_clean and mail_clean in sold_emails:
                 continue
             if ig_clean and ig_clean in sold_instagrams:
@@ -1459,6 +1465,7 @@ def get_potential_leads():
 
             potential_leads.append({
                 "id": a.id,
+                "person_uuid": a.person_uuid,
                 "date": a.date.isoformat() if a.date else (a.fecha_meet or ""),
                 "registro": a.registro or (a.created_at.isoformat() if a.created_at else ""),
                 "lead": contacto['lead'] or a.nombre or "Sin Nombre",

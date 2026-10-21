@@ -271,8 +271,11 @@ def search_closer_leads():
         if fa_ig:
             seen_instagrams.add(fa_ig)
             
+        if fa.person_uuid:
+            seen_personas.add(fa.person_uuid)
         results.append({
             "id": None,
+            "person_uuid": fa.person_uuid,
             "username": contacto['lead'],
             "email": contacto['mail'],
             "phone": contacto['whatsapp'],
@@ -1028,6 +1031,9 @@ def get_lead_comments(id):
 
         # Ordenar cronológicamente descendente
         combined.sort(key=lambda x: str(x["created_at"]), reverse=True)
+        puuid = client.person_uuid if client else None
+        for item in combined:
+            item["person_uuid"] = puuid
         return jsonify(combined), 200
 
     except Exception as err:
@@ -1317,6 +1323,7 @@ def get_client_details(client_id):
 
     return jsonify({
         "id": client.id,
+        "person_uuid": client.person_uuid,
         "full_name": client.full_name,
         "email": client.email,
         "phone": client.phone,
@@ -2588,7 +2595,9 @@ def get_closer_deck_comments(appt_id):
         return jsonify({"message": "Forbidden"}), 403
     from app.models import Comment
     comments = Comment.query.filter_by(associated_id=appt_id, comment_type='appointment').order_by(Comment.created_at.asc()).all()
-    return jsonify([c.to_dict() for c in comments]), 200
+    appt = db.session.get(Appointment, appt_id)
+    puuid = appt.client.person_uuid if appt and appt.client else None
+    return jsonify([{**c.to_dict(), 'person_uuid': puuid} for c in comments]), 200
 
 
 @bp.route('/deck/comments/<int:appt_id>', methods=['POST'])
@@ -2638,7 +2647,7 @@ def post_closer_deck_comment(appt_id):
         
     try:
         db.session.commit()
-        return jsonify(comment.to_dict()), 201
+        return jsonify({**comment.to_dict(), 'person_uuid': appt.client.person_uuid if appt.client else None}), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": f"Error al guardar comentario: {str(e)}"}), 500

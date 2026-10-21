@@ -93,6 +93,8 @@ def get_new_clients_dashboard():
 
     clients_list = []
     
+    # Lo que se muestra de cada cliente sale de su persona (`FinancialSale.contacto`).
+    mails_de_pago = FinancialSale.mails_de_pago(sales)
     # Procesar cada cliente consolidado
     for key, group_sales in leads.items():
         # Las ventas ya vienen ordenadas por date.asc() del query, pero nos aseguramos
@@ -137,9 +139,10 @@ def get_new_clients_dashboard():
                 continue
 
         # Si califica, computar metricas
-        client_name = last_sale.nombre_cliente or first_sale.nombre_cliente or 'Desconocido'
-        client_instagram = normalize_ig(last_sale.instagram) or normalize_ig(first_sale.instagram) or ''
-        client_email = normalize_email(last_sale.mail_cliente) or normalize_email(first_sale.mail_cliente) or ''
+        ultimo, primero = last_sale.contacto(mails_de_pago), first_sale.contacto(mails_de_pago)
+        client_name = ultimo['nombre_cliente'] or primero['nombre_cliente'] or 'Desconocido'
+        client_instagram = normalize_ig(ultimo['instagram']) or normalize_ig(primero['instagram']) or ''
+        client_email = normalize_email(ultimo['mail_cliente']) or normalize_email(primero['mail_cliente']) or ''
 
         # Buscar el estado de Follow Up en la base de datos local: el cliente de su persona primero
         person_uuid = next((s.person_uuid for s in reversed(sorted_sales) if s.person_uuid), None)
@@ -150,7 +153,8 @@ def get_new_clients_dashboard():
         if client_email:
             filters_client.append(func.lower(Client.email) == client_email)
         
-        if not db_client and filters_client:
+        # Por el texto, solo un grupo sin persona.
+        if not db_client and not person_uuid and filters_client:
             db_client = Client.query.filter(or_(*filters_client)).first()
             
         follow_up_status = db_client.follow_up_status if db_client and db_client.follow_up_status else 'Por contactar'
@@ -252,8 +256,8 @@ def get_new_clients_dashboard():
         client_row = {
             "fecha": first_date_str,
             "nombre": client_name,
-            "instagram": last_sale.instagram or first_sale.instagram or '',
-            "email": last_sale.mail_cliente or first_sale.mail_cliente or '',
+            "instagram": ultimo['instagram'] or primero['instagram'] or '',
+            "email": ultimo['mail_cliente'] or primero['mail_cliente'] or '',
             "programa": prog_name,
             "pagos": {
                 "sena": round(sena_amount, 2),
@@ -286,8 +290,8 @@ def get_new_clients_dashboard():
         # Filtrar por busqueda
         if search:
             match_name = search in client_name.lower()
-            match_ig = search in (last_sale.instagram or '').lower() or search in (first_sale.instagram or '').lower()
-            match_email = search in (last_sale.mail_cliente or '').lower() or search in (first_sale.mail_cliente or '').lower()
+            match_ig = search in (ultimo['instagram'] or '').lower() or search in (primero['instagram'] or '').lower()
+            match_email = search in (ultimo['mail_cliente'] or '').lower() or search in (primero['mail_cliente'] or '').lower()
             if not (match_name or match_ig or match_email):
                 continue
 

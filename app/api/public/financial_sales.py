@@ -7,7 +7,7 @@ from app.services.identity_service import normalize_ig
 from datetime import datetime
 from . import bp
 from .finance import finance_admin_required
-from sqlalchemy import or_, func, case
+from sqlalchemy import and_, or_, func, case
 
 def resolve_closer_name(email_or_name):
     """Nombre canonico del closer. La logica vive en `closer_name_service`,
@@ -173,12 +173,14 @@ def receive_financial_sales():
         # Verificar conversión de seña a venta real para cada venta exitosa
         try:
             from app.services.closer_service import CloserService
+            contactos = FinancialSale.contactos(successful_sales)
             for s in successful_sales:
+                c = contactos[s.id]
                 client_data = {
-                    'email': s.mail_cliente or (s.raw_data.get('email') if s.raw_data else None),
-                    'phone': s.telefono or (s.raw_data.get('phone') if s.raw_data else None),
-                    'instagram': s.instagram,
-                    'name': s.nombre_cliente,
+                    'email': c['mail_cliente'] or (s.raw_data.get('email') if s.raw_data else None),
+                    'phone': c['telefono'] or (s.raw_data.get('phone') if s.raw_data else None),
+                    'instagram': c['instagram'],
+                    'name': c['nombre_cliente'],
                     'person_uuid': s.person_uuid
                 }
                 sale_data = {
@@ -323,17 +325,18 @@ def update_financial_sale(sale_id):
         # Propagar actualización en caliente a Google Sheets
         if sale.marca_temporal:
             from app.services.sheets_service import SheetsService
+            contacto = sale.contacto()
             update_payload = {
                 "email_vendedor": sale.email_vendedor,
-                "nombre_cliente": sale.nombre_cliente,
-                "telefono": sale.telefono,
-                "mail_cliente": sale.mail_cliente,
+                "nombre_cliente": contacto['nombre_cliente'],
+                "telefono": contacto['telefono'],
+                "mail_cliente": contacto['mail_cliente'],
                 "tipo_pago": sale.tipo_pago,
                 "monto": sale.monto,
                 "segundo_pago": sale.segundo_pago,
                 "metodo_pago": sale.metodo_pago,
                 "examen": sale.examen,
-                "instagram": sale.instagram,
+                "instagram": contacto['instagram'],
                 "setter": sale.setter,
                 "estado": sale.estado
             }
@@ -352,8 +355,8 @@ def update_financial_sale(sale_id):
             
         s_dict["closer_name"] = resolve_closer_name(sale.email_vendedor)
         
-        # Cruzar con agenda por la persona y, si no, por Instagram
-        ig_norm = normalize_ig(sale.instagram)
+        # Cruzar con agenda por la persona y, solo si el pago no tiene, por el Instagram copiado
+        ig_norm = None if sale.person_uuid else normalize_ig(sale.instagram)
         resolved_setter = None
         has_agenda_match = False
         agenda = None
@@ -438,15 +441,20 @@ def get_financial_sales():
     else:
         # Filtros normales
         if search:
-            from app.models import Person
+            from app.models import Person, PersonIdentity
             search_pattern = f"%{search}%"
+            # Con persona se busca en sus datos (también los secundarios); la copia, solo sin persona.
             personas = db.session.query(Person.uuid).filter(or_(
                 Person.full_name.ilike(search_pattern), Person.email.ilike(search_pattern),
                 Person.instagram.ilike(search_pattern)))
+            por_identidad = db.session.query(PersonIdentity.person_uuid).filter(
+                PersonIdentity.value.ilike(search_pattern), PersonIdentity.retired_at.is_(None))
             query = query.filter(or_(
                 FinancialSale.person_uuid.in_(personas),
-                FinancialSale.nombre_cliente.ilike(search_pattern),
-                FinancialSale.instagram.ilike(search_pattern),
+                FinancialSale.person_uuid.in_(por_identidad),
+                and_(FinancialSale.person_uuid.is_(None), or_(
+                    FinancialSale.nombre_cliente.ilike(search_pattern),
+                    FinancialSale.instagram.ilike(search_pattern))),
                 FinancialSale.email_vendedor.ilike(search_pattern),
                 FinancialSale.setter.ilike(search_pattern)
             ))
@@ -900,6 +908,7 @@ def bulk_update_financial_sales():
     else:
         attribution_map = {}
         
+    contactos = FinancialSale.contactos(sales)
     try:
         for sale in sales:
             curr_prog, curr_tp = split_tipo_pago(sale.tipo_pago)
@@ -933,17 +942,18 @@ def bulk_update_financial_sales():
             # segundo plano: hacerlo acá adentro era lo que hacía que la request
             # superara el timeout del cliente.
             if sale.marca_temporal and len(filas_para_sheets) < LIMITE_SHEETS_LOTE:
+                contacto = contactos[sale.id]
                 filas_para_sheets.append((sale.marca_temporal, {
                     "email_vendedor": sale.email_vendedor,
-                    "nombre_cliente": sale.nombre_cliente,
-                    "telefono": sale.telefono,
-                    "mail_cliente": sale.mail_cliente,
+                    "nombre_cliente": contacto['nombre_cliente'],
+                    "telefono": contacto['telefono'],
+                    "mail_cliente": contacto['mail_cliente'],
                     "tipo_pago": sale.tipo_pago,
                     "monto": sale.monto,
                     "segundo_pago": sale.segundo_pago,
                     "metodo_pago": sale.metodo_pago,
                     "examen": sale.examen,
-                    "instagram": sale.instagram,
+                    "instagram": contacto['instagram'],
                     "setter": sale.setter,
                     "estado": sale.estado
                 }))

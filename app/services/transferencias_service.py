@@ -110,15 +110,19 @@ def recibidas_por_persona(desde=None, hasta=None):
     nómina (`is_excluded_from_payroll`) no le paga comisión a nadie, pero la plata la tiene igual:
     se descuenta.
     """
+    from app.models import FinancialSale
+
     recibidas = {clave: {'total': 0.0, 'pagos': []} for clave in NOMINA.values()}
-    for venta in _transferencias_del_rango(desde, hasta):
+    ventas = _transferencias_del_rango(desde, hasta)
+    contactos = FinancialSale.contactos(ventas)
+    for venta in ventas:
         clave = NOMINA.get(venta.transferido_a)
         if not clave:
             continue
         monto = _monto(venta)
         recibidas[clave]['pagos'].append({
             'id': venta.id, 'date': venta.date.isoformat() if venta.date else None,
-            'person_uuid': venta.person_uuid, 'nombre_cliente': venta.nombre_cliente, 'tipo_pago': venta.tipo_pago,
+            'person_uuid': venta.person_uuid, 'nombre_cliente': contactos[venta.id]['nombre_cliente'], 'tipo_pago': venta.tipo_pago,
             'metodo_pago': venta.metodo_pago, 'monto': monto,
         })
         recibidas[clave]['total'] += monto

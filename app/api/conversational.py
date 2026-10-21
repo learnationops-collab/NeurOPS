@@ -324,8 +324,12 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
                 agendas_per_msg[key] = agendas_per_msg.get(key, 0) + 1
 
     for sale in sales_all:
-        ig_val = sale.instagram or (sale.raw_data or {}).get('instagram')
-        lead = resolve_lead_by_ig_or_name(ig_val, sale.nombre_cliente, sale.person_uuid)
+        # Con persona, su conversación; la copia del pago (IG, nombre) solo cuenta sin persona.
+        if sale.person_uuid:
+            lead = resolve_lead_by_ig_or_name(None, None, sale.person_uuid)
+        else:
+            ig_val = sale.instagram or (sale.raw_data or {}).get('instagram')
+            lead = resolve_lead_by_ig_or_name(ig_val, sale.nombre_cliente, None)
         if lead:
             key = get_lead_msg_key(lead.id)
             if key:

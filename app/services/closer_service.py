@@ -1,7 +1,8 @@
 from app.models import User, Client, Enrollment, Appointment, Payment, PaymentMethod, CloserDailyStats, DailyReportQuestion, DailyReportAnswer, Event, db, Integration
 from app.services.dashboard_service import DashboardService
+from app.services.sales_consistency_service import filtro_de_pagos
 from app.services.ticket_service import CUOTA, pago_de_venta, primeras_cuotas, ticket_promedio
-from sqlalchemy import or_
+from sqlalchemy import and_, func, or_
 from datetime import datetime, time, timedelta, date
 import pytz
 
@@ -22,6 +23,20 @@ SALE_TIPO_TO_BUCKET = {
     'renovacion': 'renovacion',
 }
 REAL_SALE_TIPOS = ('completo', 'parcial')
+
+
+def _por_copia_sin_persona(email, instagram):
+    """[filtro] de los pagos sin persona con este mail o instagram copiados ([] sin ninguno): cómo
+    se reconoce a alguien que todavía no tiene persona (docs/plan_personas.md, Etapa 2b)."""
+    from app.models import FinancialSale
+    email = (email or '').strip().lower()
+    ig = (instagram or '').strip().lstrip('@').lower()
+    por_copia = []
+    if email and email != 'n/a' and len(email) > 2:
+        por_copia.append(func.lower(FinancialSale.mail_cliente) == email)
+    if ig and ig != 'n/a' and len(ig) > 2:
+        por_copia.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig)
+    return [and_(FinancialSale.person_uuid.is_(None), or_(*por_copia))] if por_copia else []
 
 
 def matriz_de_cierres(*, completo, split, senas, asistieron, presentaciones, no_cerradas):
@@ -903,17 +918,14 @@ class CloserService:
             # 3. Buscar señas anteriores
             has_previous_seña = False
             
-            # La persona del pago (docs/plan_personas.md): sus señas son suyas aunque las haya
-            # pagado con otro contacto.
+            # Las señas de su persona (`filtro_de_pagos`); sin persona, las que tampoco tienen y
+            # coinciden por mail o instagram copiados. El teléfono no cruza pagos.
             person_uuid = client_data.get('person_uuid')
-            client_filters = [FinancialSale.person_uuid == person_uuid] if person_uuid else []
-            if email and email != 'n/a' and len(email) > 2:
-                client_filters.append(func.lower(FinancialSale.mail_cliente) == email)
-            if instagram and instagram != 'n/a' and len(instagram) > 2:
-                client_filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == instagram)
-            if phone and phone != 'n/a' and len(phone) > 4:
-                client_filters.append(FinancialSale.telefono == phone)
-                
+            if person_uuid:
+                client_filters = [filtro_de_pagos(person_uuid=person_uuid)]
+            else:
+                client_filters = _por_copia_sin_persona(email, instagram)
+
             # A) Buscar seña en FinancialSale
             if client_filters:
                 exclude_id = sale_data.get('financial_sale_id')
@@ -2191,10 +2203,9 @@ class CloserService:
         final_otros_cash = scale(sale_buckets['otros']['cash'])
         final_otros_cash_neto = scale(sale_buckets['otros']['cash_neto'])
 
-        # Seguimiento de las señas del período: en qué terminó cada reserva. Se mira si el MISMO
-        # cliente (cruzado por instagram/mail/teléfono, que es todo lo que trae FinancialSale)
-        # tiene después un pago completo (PIF) o un primer pago de split, y se cuenta cada destino
-        # por separado — no es lo mismo que la seña termine pagando el programa entero que que
+        # Seguimiento de las señas del período: en qué terminó cada reserva. Se mira si la MISMA
+        # persona (`filtro_de_pagos`; una seña sin persona, por su mail o instagram) tiene después
+        # un pago completo (PIF) o un primer pago de split, y se cuenta cada destino por separado — no es lo mismo que la seña termine pagando el programa entero que que
         # termine abriendo un plan de cuotas.
         #
         # El corte por fecha (`date >= seña.date`) es nuevo y arregla un falso positivo real: sin
@@ -2227,17 +2238,10 @@ class CloserService:
         señas_ya_en_ventas = 0
 
         for seña in señas_rows_periodo:
-            ig_norm = seña.instagram.strip().lstrip('@').lower() if seña.instagram else None
-            email_norm = seña.mail_cliente.strip().lower() if seña.mail_cliente else None
-            tel_norm = seña.telefono.strip() if seña.telefono else None
-
-            sub_filters = [FinancialSale.person_uuid == seña.person_uuid] if seña.person_uuid else []
-            if ig_norm and ig_norm != 'n/a' and len(ig_norm) > 2:
-                sub_filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig_norm)
-            if email_norm and email_norm != 'n/a' and len(email_norm) > 2:
-                sub_filters.append(func.lower(FinancialSale.mail_cliente) == email_norm)
-            if tel_norm and tel_norm != 'n/a' and len(tel_norm) > 4:
-                sub_filters.append(FinancialSale.telefono == tel_norm)
+            if seña.person_uuid:
+                sub_filters = [filtro_de_pagos(person_uuid=seña.person_uuid)]
+            else:
+                sub_filters = _por_copia_sin_persona(seña.mail_cliente, seña.instagram)
 
             if not sub_filters:
                 continue

@@ -72,12 +72,12 @@ def borrar_csv(carga_id):
 
 
 def _fila_de_hoja(venta):
-    """Lo que la hoja de ventas guarda de una venta (como la edición de Operaciones y la atribución)."""
+    """Lo que la hoja de ventas guarda de una venta (como la edición de Operaciones y la atribución); el
+    contacto, de su persona (`FinancialSale.contacto`)."""
     return {
-        'email_vendedor': venta.email_vendedor, 'nombre_cliente': venta.nombre_cliente,
-        'telefono': venta.telefono, 'mail_cliente': venta.mail_cliente, 'tipo_pago': venta.tipo_pago,
+        'email_vendedor': venta.email_vendedor, **venta.contacto(), 'tipo_pago': venta.tipo_pago,
         'monto': venta.monto, 'segundo_pago': venta.segundo_pago, 'metodo_pago': venta.metodo_pago,
-        'examen': venta.examen, 'instagram': venta.instagram, 'setter': venta.setter, 'estado': venta.estado,
+        'examen': venta.examen, 'setter': venta.setter, 'estado': venta.estado,
     }
 
 

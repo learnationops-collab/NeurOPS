@@ -143,17 +143,19 @@ def get_lead_roadmap():
             financial_agendas = FinancialAgenda.query.filter(agenda_filtro).order_by(FinancialAgenda.date.desc()).all()
         contacto_agenda = financial_agendas[0].contacto() if financial_agendas else {}
 
-        # 5. Buscar FinancialSales
-        sale_filters = [FinancialSale.person_uuid == puuid] if puuid else []
-        if resolved_ig:
-            sale_filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == resolved_ig)
-        if resolved_email:
-            sale_filters.append(func.lower(FinancialSale.mail_cliente) == resolved_email)
-        if resolved_phone:
-            sale_filters.append(FinancialSale.telefono.like(f"%{resolved_phone}%"))
-            
-        if sale_filters:
-            financial_sales = FinancialSale.query.filter(or_(*sale_filters)).order_by(FinancialSale.date.desc()).all()
+        # 5. Buscar FinancialSales: los de su persona y su ficha; la copia del pago (mail, instagram)
+        # cuenta solo en pagos sin persona (docs/plan_personas.md, Etapa 2b).
+        if puuid or client:
+            from app.services.sales_consistency_service import filtro_de_pagos
+            financial_sales = FinancialSale.query.filter(filtro_de_pagos(client, person_uuid=puuid))                 .order_by(FinancialSale.date.desc()).all()
+        else:
+            sale_filters = []
+            if resolved_ig:
+                sale_filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == resolved_ig)
+            if resolved_email:
+                sale_filters.append(func.lower(FinancialSale.mail_cliente) == resolved_email)
+            if sale_filters:
+                financial_sales = FinancialSale.query.filter(FinancialSale.person_uuid.is_(None), or_(*sale_filters))                     .order_by(FinancialSale.date.desc()).all()
 
         # 6. Buscar Appointments locales y respuestas de encuestas
         if client:
@@ -187,6 +189,7 @@ def get_lead_roadmap():
             created_at_val = datetime.utcnow().isoformat()
 
         # Consolidar datos de perfil del lead
+        contacto_venta = financial_sales[0].contacto() if financial_sales else {}
         lead_profile = {
             "id": client.id if client else None,
             "person_uuid": puuid,
@@ -194,10 +197,10 @@ def get_lead_roadmap():
             # financial_agendas[0].lead: cuando el mismo telefono/mail tiene varias agendas y la
             # mas reciente es una de las historicas sin `lead` cargado (ver Bug agendas viejas),
             # ese [0] queda vacio y no debe pisar el nombre que sabiamos que era el correcto.
-            "full_name": client.full_name if client else (clean_name or (manychat_lead.name if manychat_lead else (financial_sales[0].nombre_cliente if financial_sales else (contacto_agenda.get('lead') if financial_agendas else "Desconocido")))),
-            "email": client.email if client else (manychat_lead.ig if manychat_lead and '@' in manychat_lead.ig else (financial_sales[0].mail_cliente if financial_sales else (contacto_agenda.get('mail') if financial_agendas else "Sin Email"))),
-            "phone": client.phone if client else (financial_sales[0].telefono if financial_sales else (contacto_agenda.get('whatsapp') if financial_agendas else "Sin Teléfono")),
-            "instagram": client.instagram if client else (manychat_lead.ig if manychat_lead else (financial_sales[0].instagram if financial_sales else (contacto_agenda.get('instagram') if financial_agendas else "Sin Instagram"))),
+            "full_name": client.full_name if client else (clean_name or (manychat_lead.name if manychat_lead else (contacto_venta['nombre_cliente'] if financial_sales else (contacto_agenda.get('lead') if financial_agendas else "Desconocido")))),
+            "email": client.email if client else (manychat_lead.ig if manychat_lead and '@' in manychat_lead.ig else (contacto_venta['mail_cliente'] if financial_sales else (contacto_agenda.get('mail') if financial_agendas else "Sin Email"))),
+            "phone": client.phone if client else (contacto_venta['telefono'] if financial_sales else (contacto_agenda.get('whatsapp') if financial_agendas else "Sin Teléfono")),
+            "instagram": client.instagram if client else (manychat_lead.ig if manychat_lead else (contacto_venta['instagram'] if financial_sales else (contacto_agenda.get('instagram') if financial_agendas else "Sin Instagram"))),
             "status": "Entrante",
             "created_at": created_at_val,
             "objeciones": client.objeciones if client else "",

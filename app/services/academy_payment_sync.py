@@ -59,8 +59,11 @@ def build_payment_payload(sale):
     # El webhook de la hoja guarda la venta con lo minimo y deja el resto en raw_data.
     raw = sale.raw_data or {}
     tipo_pago = sale.tipo_pago or raw.get('tipo_pago')
-    email = (sale.mail_cliente or raw.get('mail_cliente') or raw.get('email') or '').strip().lower() or None
-    person = sale.person or (person_service.buscar(sale.nombre_cliente, email=email) if email else None)
+    # Lo copiado en el pago (o en raw_data) se lee solo si el pago no tiene persona (Etapa 2b).
+    person, email = sale.person, None
+    if person is None:
+        email = (sale.mail_cliente or raw.get('mail_cliente') or raw.get('email') or '').strip().lower() or None
+        person = person_service.buscar(sale.nombre_cliente, email=email) if email else None
     client = Client.query.get(sale.client_id) if sale.client_id else None
     if not client and person:
         client = person_service.cliente_de(person, crear=False)

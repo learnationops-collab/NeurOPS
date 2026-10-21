@@ -258,18 +258,25 @@ def _ventas(inicio, fin):
         cliente = clientes.get(clientes_por_venta.get(v.id))
         personas[v.id] = v.person_uuid or (cliente.person_uuid if cliente else None)
     correos_de = _correos_de_personas(set(personas.values()) | {v.payer_person_uuid for v in ventas})
+    contactos = FinancialSale.contactos(ventas)
     datos = []
     for v in ventas:
         cliente = clientes.get(clientes_por_venta.get(v.id))
+        contacto = contactos[v.id]
         # Todos los correos de su persona (paga con uno y entra a la Academia con otro) y, si pagó
-        # otra persona, los de quien pagó: el cobro de la pasarela viene a nombre del pagador.
-        emails = {e for e in (_correo_util(v.mail_cliente), _correo_util(cliente.email) if cliente else None) if e}
-        emails |= correos_de.get(personas[v.id], set()) | correos_de.get(v.payer_person_uuid, set())
-        palabras = _palabras(v.nombre_cliente) or (_palabras(cliente.full_name) if cliente else [])
+        # otra persona, los de quien pagó: el cobro de la pasarela viene a nombre del pagador. Lo
+        # copiado en la venta y en su cliente cuenta solo si no hay persona (Etapa 2b).
+        if personas[v.id]:
+            emails = set(correos_de.get(personas[v.id], set()))
+        else:
+            emails = {e for e in (_correo_util(v.mail_cliente), _correo_util(cliente.email) if cliente else None) if e}
+        emails |= correos_de.get(v.payer_person_uuid, set())
+        palabras = _palabras(contacto['nombre_cliente']) or (_palabras(cliente.full_name) if cliente else [])
         datos.append({'obj': v, 'id': v.id, 'pasarela': pasarela_de(v.metodo_pago), 'fecha': v.date,
                       'monto': round(float(v.monto or 0.0), 2), 'emails': emails,
                       'cliente_id': cliente.id if cliente else None, 'persona': personas[v.id],
-                      'pagador': v.payer_person_uuid, 'palabras': palabras})
+                      'pagador': v.payer_person_uuid, 'palabras': palabras,
+                      'nombre': contacto['nombre_cliente'], 'email': contacto['mail_cliente']})
     return datos
 
 
@@ -436,8 +443,8 @@ def _iso(cuando):
 
 def _venta_a_dict(v, inicio, fin):
     obj = v['obj']
-    return {'id': obj.id, 'fecha': _iso(obj.date), 'monto': v['monto'], 'nombre': obj.nombre_cliente,
-            'email': obj.mail_cliente, 'tipo_pago': obj.tipo_pago, 'metodo_pago': obj.metodo_pago,
+    return {'id': obj.id, 'fecha': _iso(obj.date), 'monto': v['monto'], 'nombre': v['nombre'],
+            'email': v['email'], 'tipo_pago': obj.tipo_pago, 'metodo_pago': obj.metodo_pago,
             'cliente_id': v['cliente_id'], 'person_uuid': v['persona'], 'en_periodo': inicio <= obj.date <= fin}
 
 
@@ -497,8 +504,8 @@ def _candidatos(venta, movs, todas_ventas, todos_movs, emparejados):
             'tipo': tipo, 'id': x['id'], 'pasarela': pasarela, 'motivo': motivo, 'identidad': identidad,
             'fecha': _iso(obj.date if tipo == 'venta' else obj.fecha),
             'monto': x['monto'] if tipo == 'venta' else x['bruto'],
-            'nombre': obj.nombre_cliente if tipo == 'venta' else obj.nombre,
-            'email': obj.mail_cliente if tipo == 'venta' else obj.email,
+            'nombre': x['nombre'] if tipo == 'venta' else obj.nombre,
+            'email': x['email'] if tipo == 'venta' else obj.email,
             'ocupado': (('v' if tipo == 'venta' else 'm'), x['id']) in emparejados,
         })
     return salida[:MAX_CANDIDATOS]

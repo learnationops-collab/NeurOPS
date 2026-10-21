@@ -47,6 +47,7 @@ def _fila(agenda, cita):
     contacto = agenda.contacto()
     return {
         'id': agenda.id,
+        'person_uuid': agenda.person_uuid,
         'lead': contacto['lead'],
         'fuente': agenda.nombre,
         'closer': agenda.closer,

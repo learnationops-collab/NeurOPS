@@ -253,10 +253,14 @@ def get_unattributed_leads():
             or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
         ).order_by(FinancialSale.date.desc()).all()
 
+        # Lo que se muestra sale de la persona del pago; la copia, solo en pagos sin persona.
+        contactos = FinancialSale.contactos(sales)
         for sale in sales:
-            ig_val = sale.instagram or (sale.raw_data or {}).get('instagram') or (sale.raw_data or {}).get('ig')
+            contacto = contactos[sale.id]
+            ig_val = contacto['instagram'] or (None if sale.person_uuid else (
+                (sale.raw_data or {}).get('instagram') or (sale.raw_data or {}).get('ig')))
             ig_norm = normalize_ig(ig_val)
-            nombre_norm = (sale.nombre_cliente or '').strip().lower()
+            nombre_norm = (contacto['nombre_cliente'] or '').strip().lower()
 
             # El neto, sin la comisión estimada de la pasarela (`COMISION_PASARELA`).
             monto_original = float(sale.monto or 0.0)
@@ -281,14 +285,14 @@ def get_unattributed_leads():
                     unattributed_sales_map[lead_key]["date"] = sale_date_str
                 continue
 
-            # La conversación de su persona (plan_personas); el IG y el nombre, de respaldo.
+            # La conversación de su persona (plan_personas); el IG y el nombre, solo sin persona.
             matched_lead = conversaciones_service.lead_de_persona(sale.person_uuid)
-            if not matched_lead and ig_norm:
+            if not matched_lead and not sale.person_uuid and ig_norm:
                 matched_lead = ManychatLead.query.filter(
                     db.func.lower(db.func.replace(ManychatLead.ig, '@', '')) == ig_norm
                 ).first()
 
-            if not matched_lead:
+            if not matched_lead and not sale.person_uuid:
                 if nombre_norm:
                     matched_lead = ManychatLead.query.filter(
                         db.func.lower(ManychatLead.name) == nombre_norm
@@ -312,9 +316,9 @@ def get_unattributed_leads():
                 unattributed_sales_map[lead_key] = {
                     "id": sale.id,
                     "date": sale.date.isoformat() if sale.date else sale.created_at.isoformat(),
-                    "cliente": sale.nombre_cliente or 'Desconocido',
+                    "cliente": contacto['nombre_cliente'] or 'Desconocido',
                     "person_uuid": sale.person_uuid,
-                    "instagram": sale.instagram or 'N/A',
+                    "instagram": contacto['instagram'] or 'N/A',
                     "setter": setter,
                     "closer": closer,
                     "monto": monto_ajustado

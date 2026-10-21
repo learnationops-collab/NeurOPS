@@ -282,30 +282,13 @@ def _tipos_por_persona(personas):
 
 
 def clientes_de_ventas(ventas):
-    """{id de venta -> client_id}, cruzando por contacto las ventas que no lo tienen guardado.
+    """{id de venta -> client_id}: el suyo y, si no lo tiene guardado, el de su persona (el más
+    viejo, como `person_service.cliente_de`). El mail o el instagram copiados cuentan solo en las
+    que no tienen persona (docs/plan_personas.md, Etapa 2b); el teléfono, nunca. Sin cliente, la
+    fila se queda con el modal viejo: no hay a quién abrirle la ficha.
 
-    `FinancialSale.client_id` existe desde que `SheetsService.post_to_sheets` resuelve el Client
-    antes de guardar la venta, pero las anteriores quedaron sin él: en la base local son 711 de
-    897 (79%). Sin cruzarlas, la fila de la tabla Ventas no sabe a quién abrirle la ficha y cae
-    al modal viejo — o sea que el modal nuevo no se vería casi nunca desde Ventas.
-
-    El cruce es el MISMO que usa `BookingService.create_or_update_client` para decidir a qué
-    cliente pertenece un contacto, y en el mismo orden de precedencia: email, después instagram,
-    después los últimos 8 dígitos del teléfono. Inventar acá otro criterio haría que la ficha
-    abriera un cliente distinto del que el resto del sistema considera dueño de esa venta.
-
-    **Un índice, no una consulta por fila.** `ventas()` devuelve cientos de filas por período y
-    esto corre en cada pedido de la tabla: buscar el cliente de cada venta por separado sería el
-    N+1 que ya hace lento a `_resolve_sales_and_clients`. Se leen las tres columnas de contacto
-    de todos los clientes UNA vez (5.638 filas en la base local) y se arma el índice en memoria.
-
-    `order_by(Client.id)` + `setdefault` reproduce el `.first()` de `create_or_update_client`
-    cuando dos clientes comparten un contacto: gana el más viejo, que es el que esa función
-    encuentra primero.
-
-    Las que no se cruzan por ninguna de las tres vías no entran en el mapa (30 de 897 en la base
-    local): esa fila se queda con el modal viejo, que es lo único honesto — no hay cliente al que
-    abrirle la ficha.
+    **Un índice, no una consulta por fila:** `ventas()` devuelve cientos de filas por período y esto
+    corre en cada pedido de la tabla. Ante dos clientes con el mismo contacto gana el más viejo.
     """
     mapa = {v.id: v.client_id for v in ventas if v.client_id}
     pendientes = [v for v in ventas if not v.client_id]
@@ -319,14 +302,13 @@ def clientes_de_ventas(ventas):
         for v in pendientes:
             if cliente_de_persona.get(v.person_uuid):
                 mapa[v.id] = cliente_de_persona[v.person_uuid]
-        pendientes = [v for v in pendientes if v.id not in mapa]
+    pendientes = [v for v in pendientes if not v.person_uuid]
     if not pendientes:
         return mapa
 
-    por_email, por_ig, por_tel = {}, {}, {}
-    for cid, email, ig, telefono in (db.session.query(
-            Client.id, Client.email, Client.instagram, Client.phone)
-            .order_by(Client.id).all()):
+    por_email, por_ig = {}, {}
+    for cid, email, ig in (db.session.query(Client.id, Client.email, Client.instagram)
+                           .order_by(Client.id).all()):
         # El correo sintético que inventa `BookingService` cuando el lead llegó sin ninguno no
         # identifica a nadie: dos clientes distintos jamás comparten uno, pero tampoco sirve
         # para reconocer a este.
@@ -336,15 +318,10 @@ def clientes_de_ventas(ventas):
         ig_limpio = _limpiar_ig(ig)
         if ig_limpio:
             por_ig.setdefault(ig_limpio, cid)
-        tel = _ultimos8(telefono)
-        if tel:
-            por_tel.setdefault(tel, cid)
 
     for v in pendientes:
-        tel = _ultimos8(v.telefono)
         encontrado = (por_email.get(_limpiar_email(v.mail_cliente) or '')
-                      or por_ig.get(_limpiar_ig(v.instagram) or '')
-                      or (por_tel.get(tel) if tel else None))
+                      or por_ig.get(_limpiar_ig(v.instagram) or ''))
         if encontrado:
             mapa[v.id] = encontrado
     return mapa
@@ -510,8 +487,8 @@ class ComercialService:
             return []
 
         # Cruce agenda -> venta en una sola pasada (mismo criterio que el libro de agendas del
-        # closer: email o instagram del cliente contra FinancialSale, más las ventas atadas al
-        # cliente por id), pero sabiendo el TIPO de cada pago: "Venta" es solo un pago completo o
+        # closer: los pagos de su persona y los atados por id; por email o instagram, solo los que
+        # no tienen persona), pero sabiendo el TIPO de cada pago: "Venta" es solo un pago completo o
         # un split pay. Antes cualquier fila cruzada la marcaba como venta, así que un lead que
         # solo había dejado una seña (o una cuota, o una renovación) contaba como cierre en la
         # tabla, en los totales y en el close rate.
@@ -728,10 +705,12 @@ class ComercialService:
                 if balde == 'setting' and detalle == objetivo}
 
     @staticmethod
-    def _fila_venta(v, nombre, client_id):
-        """La fila de Ventas de un cobro: `nombre` es su closer ya resuelto y `client_id` el cliente
-        con el que se cruzó (`clientes_de_ventas`), o None."""
+    def _fila_venta(v, nombre, client_id, contacto=None):
+        """La fila de Ventas de un cobro: `nombre` es su closer ya resuelto, `client_id` el cliente
+        con el que se cruzó (`clientes_de_ventas`), o None, y `contacto` el de `FinancialSale.contactos`
+        (los datos de su persona; sin él se lee acá)."""
         programa, tipo, es_venta = ComercialService.clasificar_venta(v)
+        contacto = contacto or v.contacto()
         monto = float(v.monto or 0.0)
         return {
             'id': v.id,
@@ -742,10 +721,10 @@ class ComercialService:
             'person_uuid': v.person_uuid,
             'fecha': v.date.isoformat() if v.date else None,
             'creada': v.created_at.isoformat() if v.created_at else None,
-            'cliente': v.nombre_cliente or 'Sin nombre',
-            'ig': v.instagram or '',
-            'email': v.mail_cliente or '',
-            'telefono': v.telefono or '',
+            'cliente': contacto['nombre_cliente'] or 'Sin nombre',
+            'ig': contacto['instagram'] or '',
+            'email': contacto['mail_cliente'] or '',
+            'telefono': contacto['telefono'] or '',
             'programa': programa,
             'tipo_pago': chip('tipo_pago', tipo),
             'tipo_pago_raw': (v.tipo_pago or '').strip() or 'Sin tipo',
@@ -789,9 +768,10 @@ class ComercialService:
         else:
             del_periodo = ComercialService.ventas_del_periodo(start, end)
             no_completadas = []
-        # Una venta se cruza con su cliente por su propio contacto, así que sumar las no completadas
-        # no le cambia el cliente a ninguna completada.
+        # Una venta se cruza con su cliente por su persona o su propio contacto, así que sumar las no
+        # completadas no le cambia el cliente a ninguna completada.
         clientes = clientes_de_ventas(del_periodo + no_completadas)
+        contactos = FinancialSale.contactos(del_periodo)
 
         # Con un setter la fuente decide qué filas entran, así que se calcula antes del bucle (una
         # sola vez: `_con_fuente` reusa este mismo mapa).
@@ -811,7 +791,7 @@ class ComercialService:
             if not ComercialService.vendio(nombre, closer_nombre):
                 continue
             propias.append(v)
-            filas.append(ComercialService._fila_venta(v, nombre, clientes.get(v.id)))
+            filas.append(ComercialService._fila_venta(v, nombre, clientes.get(v.id), contactos.get(v.id)))
 
         # En qué terminó cada seña, con la MISMA función que cuenta el panel Señas. Sin esto la
         # tabla Ventas no sabía cortar por eso: el panel decía "3 caídas" y no había forma de ver
@@ -852,12 +832,13 @@ class ComercialService:
         from app.services.procedencia_ingresos_service import agendas_para_atribuir
 
         extra, propias_extra = [], []
+        contactos = FinancialSale.contactos(no_completadas)
         for v in no_completadas:
             nombre = resolver_nombre_closer(v.email_vendedor)
             if not ComercialService.vendio(nombre, closer_nombre):
                 continue
             propias_extra.append(v)
-            extra.append(ComercialService._fila_venta(v, nombre, clientes.get(v.id)))
+            extra.append(ComercialService._fila_venta(v, nombre, clientes.get(v.id), contactos.get(v.id)))
         ComercialService._con_academia(extra)
 
         todos = del_periodo + no_completadas

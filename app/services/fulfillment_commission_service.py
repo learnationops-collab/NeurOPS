@@ -44,23 +44,19 @@ def clave_de_miembro(nombre):
     return None
 
 
-def _claves_cliente(venta, todas=False):
-    """Las formas de reconocer al cliente de una venta: su persona (plan_personas, 20/10/2026) o, si
-    no la tiene, Instagram, correo y teléfono. `todas` da las dos cosas: con eso se indexan las señas,
-    así las encuentra tanto una venta con persona como una sin ella."""
-    persona = {('p', venta.person_uuid)} if getattr(venta, 'person_uuid', None) else set()
-    if persona and not todas:
-        return persona
-    claves = set(persona)
+def _claves_cliente(venta):
+    """Las formas de reconocer al cliente de una venta, con el criterio de todo el sistema
+    (`ticket_service.claves_de_cliente`): su persona o, si no la tiene, Instagram y correo copiados.
+    El teléfono no: se recicla y se comparte."""
+    if getattr(venta, 'person_uuid', None):
+        return {('p', venta.person_uuid)}
+    claves = set()
     ig = (venta.instagram or '').strip().lstrip('@').lower()
     if len(ig) > 2 and ig != 'n/a':
         claves.add(('ig', ig))
     mail = (venta.mail_cliente or '').strip().lower()
     if len(mail) > 2 and mail != 'n/a':
         claves.add(('mail', mail))
-    tel = (venta.telefono or '').strip()
-    if len(tel) > 4 and tel != 'n/a':
-        claves.add(('tel', tel))
     return claves
 
 
@@ -77,7 +73,7 @@ def _primera_sena_por_cliente():
     for s in senas:
         if SheetsService.parse_tipo_pago(s.tipo_pago)[1] != 'seña' or not s.date:
             continue
-        for clave in _claves_cliente(s, todas=True):
+        for clave in _claves_cliente(s):
             if clave not in primera or s.date < primera[clave]:
                 primera[clave] = s.date
     return primera

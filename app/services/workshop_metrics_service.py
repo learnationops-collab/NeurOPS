@@ -23,10 +23,11 @@ caia despues no se le atribuia a ningun taller.
 from datetime import datetime, time, timedelta
 
 import pytz
-from sqlalchemy import or_, func
+from sqlalchemy import and_, or_, func
 
 from app.models import Client, FinancialAgenda, FinancialSale, Appointment, WorkshopEvent
 from app.services.fuente_service import es_workshop_landing, es_workshop_vivo, es_sin_dueno
+from app.services.sales_consistency_service import filtro_de_pagos
 from app.services.ticket_service import SENA, VENTA, claves_de_venta, ticket_de
 
 # Handles que la gente escribe cuando no tiene Instagram: no identifican a nadie
@@ -360,22 +361,26 @@ def _ventas_de(agendas, compradores_ya_contados):
         contacto = a.contacto()  # de su persona; la copia si no tiene
         ig = (contacto['instagram'] or '').strip().replace('@', '').lower()
         mail = (contacto['mail'] or '').strip().lower()
-        lead = (contacto['lead'] or '').strip().lower()
         ig = ig if ig and ig not in HANDLES_INVALIDOS else None
         mail = mail if mail and mail not in HANDLES_INVALIDOS else None
-        lead = lead if lead and len(lead) > 2 else None
 
-        condiciones = []
-        if ig:
-            condiciones.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig)
-        if mail:
-            condiciones.append(func.lower(FinancialSale.mail_cliente) == mail)
-        if lead:
-            condiciones.append(func.lower(FinancialSale.nombre_cliente) == lead)
+        # Los pagos de su persona; la copia del pago (mail, instagram, nunca el nombre) cuenta solo
+        # en pagos sin persona (docs/plan_personas.md, Etapa 2b).
+        if a.person_uuid:
+            filtro = filtro_de_pagos(person_uuid=a.person_uuid)
+        else:
+            condiciones = []
+            if ig:
+                condiciones.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig)
+            if mail:
+                condiciones.append(func.lower(FinancialSale.mail_cliente) == mail)
+            if not condiciones:
+                continue
+            filtro = and_(FinancialSale.person_uuid.is_(None), or_(*condiciones))
 
         piso_venta = a.created_at - timedelta(days=1) if a.created_at else None
         validas = [
-            s for s in FinancialSale.query.filter(or_(*condiciones)).all()
+            s for s in FinancialSale.query.filter(filtro).all()
             if _es_venta_valida(s) and (not piso_venta or not s.date or s.date >= piso_venta)
         ]
         ventas.update(validas)

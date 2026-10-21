@@ -1,8 +1,8 @@
 from flask import jsonify, request
-from sqlalchemy import func
+from sqlalchemy import and_, func, or_
 
 from app import db
-from app.models import Client, FinancialSale, SurveyAnswer
+from app.models import Client, FinancialSale, Person, SurveyAnswer
 from app.decorators import require_academy_token
 from app.api.external import bp
 
@@ -31,10 +31,12 @@ def _client_dict(client):
     }
 
 
-def _sale_dict(sale):
-    """Misma lista blanca que _payments_list, mas los campos de contacto crudos del
-    comprador (nombre_cliente/mail_cliente/telefono/instagram) - son los que la Academia
-    necesita para cruzar por su cuenta en el endpoint masivo, ver docs/academy_consulta_ventas.md."""
+def _sale_dict(sale, contacto=None):
+    """Misma lista blanca que _payments_list, mas los campos de contacto del comprador
+    (nombre_cliente/mail_cliente/telefono/instagram) - son los que la Academia necesita para
+    cruzar por su cuenta en el endpoint masivo, ver docs/academy_consulta_ventas.md. Salen de su
+    persona (`FinancialSale.contacto`); `contacto` ya resuelto evita la consulta en los listados."""
+    contacto = contacto or sale.contacto()
     return {
         "id": sale.id,
         "client_id": sale.client_id,
@@ -44,11 +46,13 @@ def _sale_dict(sale):
         "tipo_pago": sale.tipo_pago,
         "metodo_pago": sale.metodo_pago,
         "estado": sale.estado,
-        "nombre_cliente": sale.nombre_cliente,
-        "mail_cliente": sale.mail_cliente,
-        "telefono": sale.telefono,
-        "instagram": sale.instagram,
+        **contacto,
     }
+
+
+def _sales_dicts(sales):
+    contactos = FinancialSale.contactos(sales)
+    return [_sale_dict(s, contactos[s.id]) for s in sales]
 
 
 def _form_answer_dict(answer):
@@ -68,13 +72,14 @@ def _parse_pagination():
     return page, limit
 
 
-def _paginated(query, serializer, page, limit):
+def _paginated(query, serializer, page, limit, en_lote=None):
+    """`en_lote` serializa la página entera de una vez (en vez de `serializer` fila por fila)."""
     total = query.count()
     items = query.offset((page - 1) * limit).limit(limit).all()
     pages = (total + limit - 1) // limit if total else 0
     return {
         "success": True,
-        "data": [serializer(item) for item in items],
+        "data": en_lote(items) if en_lote else [serializer(item) for item in items],
         "total": total,
         "page": page,
         "pages": pages,
@@ -82,13 +87,13 @@ def _paginated(query, serializer, page, limit):
     }
 
 
-def _payments_list(email_norm):
+def _payments_list(client):
     """Lista blanca explícita de campos - nunca reusar to_dict() de FinancialSale, que trae
     columnas internas (comisiones, email_vendedor, raw_data, etc.) que no le competen a la
-    Academia. Ver docs/academy_consulta_ventas.md."""
-    sales = FinancialSale.query.filter(
-        func.lower(FinancialSale.mail_cliente) == email_norm
-    ).order_by(FinancialSale.date.asc()).all()
+    Academia. Ver docs/academy_consulta_ventas.md. Los pagos del cliente con el criterio de todo
+    el sistema: los de su persona, los atados a él y, sin persona, los de su correo copiado."""
+    from app.services.sales_consistency_service import filtro_de_pagos
+    sales = FinancialSale.query.filter(filtro_de_pagos(client)).order_by(FinancialSale.date.asc()).all()
 
     return [{
         "fecha": s.date.isoformat() if s.date else None,
@@ -119,7 +124,7 @@ def get_student_summary(email):
     return jsonify({
         "success": True,
         "client": _client_dict(client),
-        "payments": _payments_list(email_norm),
+        "payments": _payments_list(client),
         "survey_answers": _survey_answers_list(client),
     }), 200
 
@@ -135,7 +140,7 @@ def get_student_payments(email):
     return jsonify({
         "success": True,
         "client": _client_dict(client),
-        "payments": _payments_list(email_norm),
+        "payments": _payments_list(client),
     }), 200
 
 
@@ -246,7 +251,7 @@ def patch_client(client_id):
 def list_sales():
     page, limit = _parse_pagination()
     query = FinancialSale.query.order_by(FinancialSale.id.asc())
-    return jsonify(_paginated(query, _sale_dict, page, limit)), 200
+    return jsonify(_paginated(query, _sale_dict, page, limit, en_lote=_sales_dicts)), 200
 
 
 @bp.route('/sales/<string:identifier>', methods=['GET'])
@@ -263,18 +268,27 @@ def find_sales(identifier):
         return jsonify({"success": True, "match_type": "id", "sales": [_sale_dict(sale)]}), 200
 
     if '@' in ident:
+        # Los pagos de la persona de ese correo; lo copiado en el pago, solo en pagos sin persona.
+        from app.services import person_service
         email_norm = _normalize_email(ident)
-        matches = FinancialSale.query.filter(func.lower(FinancialSale.mail_cliente) == email_norm) \
+        person = person_service.buscar(email=email_norm)
+        por_copia = and_(FinancialSale.person_uuid.is_(None), func.lower(FinancialSale.mail_cliente) == email_norm)
+        matches = FinancialSale.query.filter(
+            or_(FinancialSale.person_uuid == person.uuid, por_copia) if person else por_copia) \
             .order_by(FinancialSale.date.asc()).all()
-        return jsonify({"success": True, "match_type": "email", "sales": [_sale_dict(s) for s in matches]}), 200
+        return jsonify({"success": True, "match_type": "email", "sales": _sales_dicts(matches)}), 200
 
     if len(ident) < 2:
         return jsonify({"success": False, "error": "La búsqueda por nombre requiere al menos 2 caracteres"}), 400
 
     term = f"%{ident.lower()}%"
-    matches = FinancialSale.query.filter(func.lower(FinancialSale.nombre_cliente).like(term)) \
+    personas = db.session.query(Person.uuid).filter(func.lower(Person.full_name).like(term),
+                                                    Person.merged_into_uuid.is_(None))
+    matches = FinancialSale.query.filter(or_(
+        FinancialSale.person_uuid.in_(personas),
+        and_(FinancialSale.person_uuid.is_(None), func.lower(FinancialSale.nombre_cliente).like(term)))) \
         .order_by(FinancialSale.date.desc()).limit(MAX_SEARCH_MATCHES).all()
-    return jsonify({"success": True, "match_type": "name", "sales": [_sale_dict(s) for s in matches]}), 200
+    return jsonify({"success": True, "match_type": "name", "sales": _sales_dicts(matches)}), 200
 
 
 @bp.route('/sales/<int:sale_id>', methods=['PATCH'])

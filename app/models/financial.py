@@ -41,11 +41,11 @@ class FinancialSale(ConPersona, db.Model):
 
     def contacto(self, mails_de_pago=None):
         """Nombre, mail, teléfono e instagram del pago, leídos de su persona (docs/plan_personas.md):
-        sus principales, y como mail su mail de pago si tiene uno distinto. Lo copiado en el pago es
-        el respaldo, solo sin persona o para un dato que la persona no tiene.
+        sus principales, y como mail su mail de pago si tiene uno distinto. Lo copiado en el pago se
+        lee solo si el pago no tiene persona (Etapa 2b).
 
         `mails_de_pago` ({person_uuid: mail}, ver `mails_de_pago`) evita una consulta por fila en
-        los listados; sin él se consulta acá."""
+        los listados; sin él se consulta acá. Para muchos pagos, `contactos`."""
         p = self.person if self.person_uuid else None
         if p is None:
             return {k: getattr(self, k) for k in self.CONTACTO}
@@ -54,9 +54,20 @@ class FinancialSale(ConPersona, db.Model):
         else:
             from app.services import person_service
             mail = person_service.dato(p, 'email', uso='pago')
-        de_persona = {'nombre_cliente': p.full_name, 'mail_cliente': mail, 'telefono': p.phone,
-                      'instagram': p.instagram}
-        return {k: de_persona[k] or getattr(self, k) for k in self.CONTACTO}
+        return {'nombre_cliente': p.full_name, 'mail_cliente': mail, 'telefono': p.phone,
+                'instagram': p.instagram}
+
+    @staticmethod
+    def contactos(sales):
+        """{id del pago: contacto()} de una tanda, con sus personas y mails de pago en dos consultas."""
+        from app.models import Person
+        uuids = sorted({s.person_uuid for s in sales if s.person_uuid})
+        # Retenidas en la lista: el identity map de la sesión no las guarda solo.
+        personas = []
+        for i in range(0, len(uuids), 500):
+            personas += Person.query.filter(Person.uuid.in_(uuids[i:i + 500])).all()
+        mails = FinancialSale.mails_de_pago(sales)
+        return {s.id: s.contacto(mails) for s in sales}
 
     @staticmethod
     def mails_de_pago(sales):
@@ -170,23 +181,24 @@ class FinancialAgenda(ConPersona, db.Model):
 
     def to_dict(self, sales_count=None):
         if sales_count is None:
-            # Fallback optimizado sin funciones de base de datos sobre las columnas para permitir uso de indices
+            # Los pagos de su persona; la copia del pago (mail, IG) solo en pagos sin persona
+            # (`filtro_de_pagos`, docs/plan_personas.md, Etapa 2b).
+            from sqlalchemy import func, or_
+            from app.services.sales_consistency_service import filtro_de_pagos
             sales_count = 0
-            ig_clean = self.instagram.strip().replace('@', '').lower() if self.instagram and self.instagram.lower() not in ('n/a', '') else None
-            mail_clean = self.mail.strip().lower() if self.mail and self.mail.lower() not in ('n/a', '') else None
-            
-            filters = []
             if self.person_uuid:
-                filters.append(FinancialSale.person_uuid == self.person_uuid)
-            elif ig_clean:  # la copia solo cuenta en agendas sin persona
-                # Usar ilike para evitar full table scans en SQLite/PostgreSQL
-                filters.append(FinancialSale.instagram.ilike(f"%{ig_clean}%"))
-            if mail_clean and not self.person_uuid:
-                filters.append(FinancialSale.mail_cliente.ilike(mail_clean))
-
-            if filters:
-                from sqlalchemy import or_
-                sales_count = FinancialSale.query.filter(or_(*filters)).count()
+                sales_count = FinancialSale.query.filter(filtro_de_pagos(person_uuid=self.person_uuid)).count()
+            else:
+                ig_clean = self.instagram.strip().replace('@', '').lower() if self.instagram and self.instagram.lower() not in ('n/a', '') else None
+                mail_clean = self.mail.strip().lower() if self.mail and self.mail.lower() not in ('n/a', '') else None
+                por_copia = []
+                if ig_clean:
+                    por_copia.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig_clean)
+                if mail_clean:
+                    por_copia.append(func.lower(FinancialSale.mail_cliente) == mail_clean)
+                if por_copia:
+                    sales_count = FinancialSale.query.filter(
+                        FinancialSale.person_uuid.is_(None), or_(*por_copia)).count()
 
         # Resolver cliente de forma global
         from app.models import Client, Appointment, SurveyAnswer, SurveyQuestion

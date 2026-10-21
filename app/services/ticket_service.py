@@ -174,7 +174,8 @@ def claves_de_cliente(client_id=None, email=None, instagram=None, nombre=None, p
     """Con qué se reconoce al mismo cliente entre dos pagos: su persona (20/10/2026,
     docs/plan_personas.md) y su ficha. El mail y el instagram copiados en el pago solo cuentan si
     el pago todavía no tiene persona; el nombre, solo cuando no hay ninguna de las otras (dos
-    personas pueden llamarse igual)."""
+    personas pueden llamarse igual). La versión SQL del mismo criterio, para traer los pagos de
+    alguien, es `sales_consistency_service.filtro_de_pagos`."""
     claves = [f'id:{client_id}'] if client_id else []
     if person_uuid:
         return (f'p:{person_uuid}', *claves)

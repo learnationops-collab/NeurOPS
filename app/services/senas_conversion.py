@@ -36,10 +36,10 @@ def claves_de_fila(fila):
 
 
 def _claves_de_pago(v):
-    claves = {_limpiar_email(v.mail_cliente), _limpiar_ig(v.instagram)}
+    """Las mismas que `claves_de_fila`: la persona del pago o, sin persona, su copia."""
     if v.person_uuid:
-        claves.add(f'{PERSONA}{v.person_uuid}')
-    return claves - {None}
+        return {f'{PERSONA}{v.person_uuid}'}
+    return {_limpiar_email(v.mail_cliente), _limpiar_ig(v.instagram)} - {None}
 
 
 def _dia_de(fila):
@@ -53,8 +53,9 @@ def pagos_posteriores(claves):
     personas = [c[len(PERSONA):] for c in claves if c.startswith(PERSONA)]
     contactos = [c for c in claves if not c.startswith(PERSONA)]
     filas = FinancialSale.query.filter(
-        db.or_(func.lower(FinancialSale.mail_cliente).in_(contactos),
-               func.lower(func.replace(FinancialSale.instagram, '@', '')).in_(contactos),
+        db.or_(db.and_(FinancialSale.person_uuid.is_(None),
+                       db.or_(func.lower(FinancialSale.mail_cliente).in_(contactos),
+                              func.lower(func.replace(FinancialSale.instagram, '@', '')).in_(contactos))),
                FinancialSale.person_uuid.in_(personas))
     ).all()
     salida = {}

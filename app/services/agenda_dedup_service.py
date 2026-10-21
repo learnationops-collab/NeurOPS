@@ -174,8 +174,14 @@ def identidades_con_venta():
     """
     from app.models import FinancialSale
 
+    # Las personas con algún pago (`p:<uuid>`) y, de los pagos sin persona, su mail e instagram
+    # copiados (docs/plan_personas.md, Etapa 2b).
     conocidas = set()
-    for mail, ig in db.session.query(FinancialSale.mail_cliente, FinancialSale.instagram).all():
+    for puuid, mail, ig in db.session.query(
+            FinancialSale.person_uuid, FinancialSale.mail_cliente, FinancialSale.instagram).all():
+        if puuid:
+            conocidas.add(f'p:{puuid}')
+            continue
         for valor in (_normalize_email(mail), _normalize_instagram(ig)):
             if valor:
                 conocidas.add(valor)
@@ -195,13 +201,20 @@ def sugerir_conservada(grupo, ventas_conocidas=None):
     from app.models import FinancialSale
 
     def tiene_venta(a):
+        if a.person_uuid:
+            if ventas_conocidas is not None:
+                if f'p:{a.person_uuid}' in ventas_conocidas:
+                    return True
+            elif FinancialSale.query.filter(FinancialSale.person_uuid == a.person_uuid).count() > 0:
+                return True
         ig = _normalize_instagram(a.contacto()['instagram'])
         mail = _normalize_email(a.contacto()['mail'])
         if not ig and not mail:
             return False
         if ventas_conocidas is not None:
             return bool((mail and mail in ventas_conocidas) or (ig and ig in ventas_conocidas))
-        consulta = FinancialSale.query
+        # Por la copia, solo los pagos sin persona.
+        consulta = FinancialSale.query.filter(FinancialSale.person_uuid.is_(None))
         if mail:
             return consulta.filter(db.func.lower(FinancialSale.mail_cliente) == mail).count() > 0
         return consulta.filter(
