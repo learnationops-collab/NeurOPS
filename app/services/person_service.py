@@ -68,6 +68,12 @@ def claves(email=None, instagram=None, phone=None, manychat_id=None, learnation_
     return [(k, v) for k, v in ((k, normalizar(k, datos[k])) for k in ORDEN) if v]
 
 
+def nombre_limpio(nombre):
+    """El nombre, o None si viene vacío o es una plantilla sin completar ('{{full_name}}' de ManyChat)."""
+    n = ' '.join(str(nombre or '').split())
+    return None if not n or (n.startswith('{{') and n.endswith('}}')) else n
+
+
 def mismo_nombre(a, b):
     """¿Pueden ser la misma persona? Para BUSCAR por instagram o teléfono: el mismo nombre, uno vacío o
     genérico, o nombres parecidos ("Juan Perez" / "Juan Pérez García", `_names_corroborate`). Para
@@ -102,6 +108,7 @@ def duenos(kind, value):
 def buscar(nombre=None, **datos):
     """La persona de estos datos, o None. Nunca crea. Si un dato lo tienen varias (duplicados sin
     fusionar) gana la más antigua y queda en el log."""
+    nombre = nombre_limpio(nombre)
     for kind, value in claves(**datos):
         uuids = duenos(kind, value)
         if not uuids:
@@ -182,6 +189,7 @@ def resolver(nombre=None, email=None, instagram=None, phone=None, *, manychat_id
 
 def _resolver(nombre, email, instagram, phone, manychat_id, learnation_user_id, crear, fuente):
     """`resolver` sin flush: lo usa el seguimiento automático, que corre en medio de uno."""
+    nombre = nombre_limpio(nombre)
     pares = claves(email, instagram, phone, manychat_id, learnation_user_id)
     person = buscar(nombre, email=email, instagram=instagram, phone=phone, manychat_id=manychat_id,
                     learnation_user_id=learnation_user_id)
