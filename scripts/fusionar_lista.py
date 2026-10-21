@@ -8,12 +8,19 @@ si la línea empieza con `?`, queda el que tenga más pagos y, a igualdad, el qu
 Antes de fusionar se valida todo el archivo: cada uuid existe, no está ya fusionado, no se repite en
 dos grupos y cada grupo tiene al menos dos personas. Con un error no se fusiona ningún grupo.
 
+Con `--mails-raros-secundarios`, el mail principal de una persona absorbida que no se parece al nombre de
+la que queda pasa antes a secundario: entra a la que queda, pero no como su principal (suele ser el mail de
+quien agendó por ella).
+
 Uso:
-  python scripts/fusionar_lista.py grupos.txt            # prueba: datos de cada persona y qué se movería
-  python scripts/fusionar_lista.py grupos.txt --apply    # fusiona
+  python scripts/fusionar_lista.py grupos.txt                                     # prueba
+  python scripts/fusionar_lista.py grupos.txt --mails-raros-secundarios            # prueba, con la opción
+  python scripts/fusionar_lista.py grupos.txt --mails-raros-secundarios --apply    # fusiona
 """
 import os
+import re
 import sys
+import unicodedata
 
 current_dir = os.path.abspath(os.path.dirname(__file__))
 if os.path.basename(current_dir) == 'scripts':
@@ -29,6 +36,24 @@ MOTIVO = 'fusión manual aprobada'
 # Lo que se informa que se mueve; `person_service.TABLAS` mueve todas.
 MOSTRAR = ('financial_sales', 'financial_agendas', 'appointments', 'sales', 'subscriptions', 'clients',
            'conversations', 'leads', 'manychat_leads')
+
+
+def mail_se_parece(mail, nombre):
+    """El usuario del mail contiene el comienzo (4 letras, o la palabra si tiene 3) de alguna palabra del
+    nombre. Tiene falsos negativos (iniciales: «ncrl8620» de Nadia Carolina Rodriguez Lopez): en la duda el
+    mail queda como secundario, que no pierde nada."""
+    plano = lambda s: unicodedata.normalize('NFKD', s or '').encode('ascii', 'ignore').decode().lower()  # noqa: E731
+    usuario = re.sub(r'[^a-z]', '', plano(mail.split('@')[0]))
+    palabras = [p for p in re.findall(r'[a-z]+', plano(nombre)) if len(p) >= 3]
+    return any(p[:4] in usuario for p in palabras) if usuario else False
+
+
+def mails_raros(otros, queda):
+    """[identidad] de los mails principales de `otros` que no se parecen al nombre de `queda`."""
+    nombre = db.session.get(Person, queda).full_name
+    return [i for i in PersonIdentity.query.filter(PersonIdentity.person_uuid.in_(otros), PersonIdentity.kind == 'email',
+                                                   PersonIdentity.is_primary.is_(True))
+            if not mail_se_parece(i.value, nombre)]
 
 
 def leer(ruta):
@@ -86,7 +111,7 @@ def datos(uuid):
     return por_tipo
 
 
-def main(ruta, apply=False):
+def main(ruta, apply=False, raros_secundarios=False):
     grupos = leer(ruta)
     errores = validar(grupos)
     if errores:
@@ -100,7 +125,8 @@ def main(ruta, apply=False):
         filas = {u: filas_de(u) for u in uuids}
         queda = elegir_sobreviviente(uuids, filas) if elegir else uuids[0]
         otros = [u for u in uuids if u != queda]
-        plan.append((queda, otros))
+        raros = mails_raros(otros, queda) if raros_secundarios else []
+        plan.append((queda, otros, raros))
         print(f'\n== línea {n}: queda {queda} ({"elegido por pagos y ficha" if elegir else "el primero"})')
         for u in [queda] + otros:
             p = db.session.get(Person, u)
@@ -115,15 +141,23 @@ def main(ruta, apply=False):
         se_ven = {t: movidas[t] for t in MOSTRAR if movidas.get(t)}
         resto = {t: k for t, k in movidas.items() if t not in MOSTRAR}
         print(f'  se mueve a la que queda: {se_ven or "nada"}' + (f' y además {resto}' if resto else ''))
+        if raros:
+            print(f'  entran como secundarios: {[i.value for i in raros]}')
         clientes = filas[queda].get('clients', 0) + movidas.get('clients', 0)
         if clientes > 1:
             print(f'  quedarían {clientes} clientes de la misma persona: se fusionan (ClientDedupService)')
 
-    print(f'\n{len(plan)} grupos, {sum(len(o) for _, o in plan)} personas de más.')
+    print(f'\n{len(plan)} grupos, {sum(len(o) for _, o, _ in plan)} personas de más'
+          + (f', {sum(1 for *_, r in plan if r)} con mails raros como secundarios.' if raros_secundarios else '.'))
     if not apply:
         print('[PRUEBA] No se fusionó nada. Corré con --apply para fusionar.')
         return
-    for queda, otros in plan:
+    for queda, otros, raros in plan:
+        for ident in raros:
+            ident.is_primary = False
+            if ident.person.email == ident.value:
+                ident.person.email = None
+        db.session.flush()
         person_service.fusionar(queda, otros, motivo=MOTIVO)
     print(f'Aplicado: {len(plan)} grupos fusionados.')
 
@@ -133,4 +167,4 @@ if __name__ == '__main__':
     if not argumentos:
         sys.exit('Falta el archivo con los grupos (ver el docstring).')
     with create_app().app_context():
-        main(argumentos[0], apply='--apply' in sys.argv)
+        main(argumentos[0], apply='--apply' in sys.argv, raros_secundarios='--mails-raros-secundarios' in sys.argv)

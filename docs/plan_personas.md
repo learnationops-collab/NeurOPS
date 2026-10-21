@@ -161,6 +161,59 @@ donde se borran las columnas.
 Como en la Etapa 1, cada uno toca solo los archivos de su lista. Un archivo que está en dos listas (por ejemplo
 `closer_service`, que lee pagos y agendas) es del frente que llega primero, y se avisa al otro por SendMessage.
 
+## Pase a producción
+
+La secuencia exacta, en este orden. **El orden importa:** cada script parte de lo que dejó el anterior. Si
+`corregir_comprador_pagador` corre después de `backfill_sales`, los pagos que cambian de persona se vuelven
+a ubicar uno por uno (`sale_service`) y aparecen ventas automáticas (`source='auto'`) en vez de las del
+agrupado.
+
+Reglas para todos los pasos:
+- Antes de empezar, un backup de la base de producción (Railway › Postgres › Backups). Las fusiones y
+  los `--apply` no se deshacen.
+- Cada script se corre primero **sin `--apply`** (modo prueba). Se comparan sus números con los de
+  referencia y recién después se corre con `--apply`. Los de referencia son del servidor de prueba, una copia
+  de producción del 20/10/2026: producción tiene que dar parecido y algo más, por lo que entró desde esa
+  copia.
+- Todos se corren en el servidor: `railway ssh --service <servicio de producción> -- python scripts/...`.
+  Nunca desde la PC.
+- Cada `--apply` guarda al final, en un solo commit. Si un script falla en el medio, no queda nada a medias:
+  se lee el error, se corrige y se vuelve a correr. Todos se pueden correr dos veces: solo toman lo que
+  falta.
+- Si un número da muy distinto a la referencia (el doble, o la mitad), parar y revisar antes del `--apply`.
+- `ACADEMY_SUBSCRIPTIONS_PUSH` **sigue apagado** (sin la variable, o distinta de `true`): las suscripciones
+  se crean en Work pero no se le avisan a la Academia hasta que ella esté lista.
+
+| # | Paso | Modo prueba / `--apply` | Referencia (servidor de prueba) | Si falla o no da |
+|---|---|---|---|---|
+| 1 | Merge `develop` → `main` | El deploy corre `flask db upgrade` solo (`railway.toml`, `releaseCommand`) | En los logs del deploy, las migraciones hasta `f6a2c8e4b1d3` (`sales.subscription_id`); `SELECT version_num FROM alembic_version` = `f6a2c8e4b1d3` | Si la migración falla, el deploy no sube: se lee el log, se corrige en `develop` y se vuelve a mergear. Nada de lo de abajo corre hasta que esté en `f6a2c8e4b1d3` |
+| 2 | `backfill_person_identities.py` | prueba / `--apply` | Al final: ~45.900 identidades (`person_identities`) | Los datos compartidos que lista son normales (familias, placeholders); no frenan |
+| 3 | `vincular_personas.py` | prueba / `--apply` | Desglose por tabla y por dato; no crea personas | Si vincula casi nada, revisar que el paso 2 haya hecho el `--apply` |
+| 4 | `fusionar_personas.py` | prueba / `--apply`, **sin `--telefono`** | Pocos grupos por mail o instagram. Con `--telefono` arma 1 solo grupo (Edgar Heredia Escamilla): no hace falta | Revisar los ejemplos que muestra; un grupo raro se saca después con `fusionar_lista` |
+| 5 | `vincular_personas.py`, otra vez | prueba / `--apply` | Lo que se pudo vincular después de fusionar; pocas filas | — |
+| 6 | `personas_de_agendas.py` | prueba / `--apply` | Quedan 2 agendas sin persona (sin ningún dato) de ~4.390 | — |
+| 7 | `migrar_conversaciones.py` | prueba / `--apply` | ~19.600 conversaciones; 8 `manychat_leads` sin persona de ~16.600 | Corta si hay un deploy en el medio: volver a correrlo, retoma |
+| 8 | `fusionar_lista.py grupoA.txt --mails-raros-secundarios` | prueba / `--apply` | 31 grupos, 32 personas de más; 25 con mails raros como secundarios | Ver abajo cómo se arma el archivo. Si valida con error (uuid inexistente o ya fusionado), no fusiona nada: corregir el archivo |
+| 9 | `corregir_comprador_pagador.py --hasta 2026-01-01` | prueba / `--apply` | 356 pagos, $156.807, 258 pares de personas. Sin tocar: 15 pagos de enero al 20/05/2026 ($8.328) y 9 desde el 20/05 ($1.805); dudosos 16 + 2 | Si «están en una venta de otra persona» da más de 0, es que `backfill_sales` ya corrió: parar (ver el orden) |
+| 10 | `backfill_sales.py --apply --rehacer` | prueba / `--apply --rehacer` | 687 ventas (656 'new'), 0 automáticas, 0 pagos completados sin venta | `--rehacer` borra las ventas que armó `sale_service` en vivo y las vuelve a armar: es lo que se quiere |
+| 11 | `backfill_agreed_total.py` | prueba / `--apply` | 74 ventas con `agreed_total`; el resto en la lista para revisar (totales distintos entre clientes duplicados, varias ventas o ninguna) | La lista no se aplica: se revisa con Santiago |
+| 12 | `backfill_subscriptions.py` | prueba; `--apply` **solo con el ok de Santiago** | 113 suscripciones | Consulta la API de la Academia una vez por alumno: tarda varios minutos y lo corta un deploy |
+
+Controles al final (solo lectura): `financial_sales` con 28 sin persona y 356 con `payer_person_uuid`; ningún
+pago completado sin `sale_id`; `sales` sin `source='auto'`.
+
+**El archivo del paso 8 se regenera sobre producción**, no se copia del servidor de prueba: los uuid de las
+personas los crean los pasos 2 a 7 y son otros. Hay dos formas:
+1. Cruzar por los mails de los pares aprobados.
+2. Correr `corregir_comprador_pagador.py --hasta 2026-01-01` en modo prueba después del paso 7, tomar su
+   sección «Candidatos a fusión manual» y quedarse con los mismos pares que aprobó Santiago (el grupo A).
+
+Quedan afuera:
+- el grupo B entero, incluidos Javier/Juan Moreno;
+- Sebastian Paraban y Fernando Antonio Alcántara Morote (los datos de «Reynoso», que agenda por otros).
+
+Cada línea empieza con `?`, así queda la persona con pagos.
+
 ## Estado
 
 | Frente | Sesión / rama | Estado |
