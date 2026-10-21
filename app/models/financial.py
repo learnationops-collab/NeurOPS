@@ -157,6 +157,17 @@ class FinancialAgenda(ConPersona, db.Model):
     def es_duplicada(self):
         return self.duplicada_de_id is not None
 
+    CONTACTO = ('lead', 'mail', 'whatsapp', 'instagram')
+    _DE_PERSONA = {'lead': 'full_name', 'mail': 'email', 'whatsapp': 'phone', 'instagram': 'instagram'}
+
+    def contacto(self):
+        """Nombre, mail, whatsapp e instagram de la agenda, leídos de su persona (Etapa 2b de
+        docs/plan_personas.md). Lo copiado en la agenda se lee solo si no tiene persona."""
+        p = self.person if self.person_uuid else None
+        if p is None:
+            return {k: getattr(self, k) for k in self.CONTACTO}
+        return {k: getattr(p, self._DE_PERSONA[k]) for k in self.CONTACTO}
+
     def to_dict(self, sales_count=None):
         if sales_count is None:
             # Fallback optimizado sin funciones de base de datos sobre las columnas para permitir uso de indices
@@ -167,10 +178,10 @@ class FinancialAgenda(ConPersona, db.Model):
             filters = []
             if self.person_uuid:
                 filters.append(FinancialSale.person_uuid == self.person_uuid)
-            if ig_clean:
+            elif ig_clean:  # la copia solo cuenta en agendas sin persona
                 # Usar ilike para evitar full table scans en SQLite/PostgreSQL
                 filters.append(FinancialSale.instagram.ilike(f"%{ig_clean}%"))
-            if mail_clean:
+            if mail_clean and not self.person_uuid:
                 filters.append(FinancialSale.mail_cliente.ilike(mail_clean))
 
             if filters:
@@ -194,7 +205,7 @@ class FinancialAgenda(ConPersona, db.Model):
         # Por su persona primero; la búsqueda por texto queda para las agendas todavía sin vincular.
         if self.person_uuid:
             client = Client.query.filter_by(person_uuid=self.person_uuid).order_by(Client.id).first()
-        if not client and client_filters:
+        if not client and client_filters and not self.person_uuid:
             client = Client.query.filter(or_(*client_filters)).first()
         if not client and ig_clean and ig_clean.startswith("no_ig_"):
             try:
@@ -246,6 +257,7 @@ class FinancialAgenda(ConPersona, db.Model):
                 if mapped_res:
                     display_estado = mapped_res
 
+        contacto = self.contacto()
         return {
             "id": self.id,
             "person_uuid": self.person_uuid,
@@ -258,12 +270,12 @@ class FinancialAgenda(ConPersona, db.Model):
             "fuente_form": (self.raw_data or {}).get('fuente_form'),
             "registro": self.registro or (self.created_at.isoformat() if self.created_at else None),
             "fecha_meet": self.fecha_meet,
-            "whatsapp": self.whatsapp,
+            "whatsapp": contacto['whatsapp'],
             "zona_geografica": self.zona_geografica,
             "closer": self.closer,
-            "lead": self.lead,
-            "mail": self.mail,
-            "instagram": self.instagram,
+            "lead": contacto['lead'],
+            "mail": contacto['mail'],
+            "instagram": contacto['instagram'],
             "estado": self.estado or "Pendiente",
             "closer_result": display_estado,
             "encargado_triage": self.encargado_triage,

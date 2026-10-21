@@ -1,6 +1,8 @@
 # pyrefly: ignore [missing-import]
 from flask import request, jsonify
 from app.models import db, User
+from flask_login import current_user
+from app.services import agenda_contacto_service
 from app.services import conversaciones_service
 from app.services.commission_service import cash_neto_de
 from app.services.identity_service import normalize_ig
@@ -340,6 +342,7 @@ def get_unattributed_leads():
             FinancialAgenda.date >= start_dt,
             FinancialAgenda.date <= end_dt
         ).order_by(FinancialAgenda.date.desc()).all()
+        agenda_contacto_service.precargar(agendas)
 
         for agenda in agendas:
             # Las agendas desatribuidas deben ser las que tengan como fuente "Elias"
@@ -349,9 +352,10 @@ def get_unattributed_leads():
             if 'elias' not in nombre_val and 'elias' not in fuente_raw:
                 continue
 
-            ig_val = agenda.instagram or raw.get('instagram') or raw.get('ig')
+            contacto = agenda.contacto()  # de su persona; la copia si no tiene
+            ig_val = contacto['instagram'] or raw.get('instagram') or raw.get('ig')
             ig_norm = normalize_ig(ig_val)
-            nombre_norm = (agenda.lead or '').strip().lower()
+            nombre_norm = (contacto['lead'] or '').strip().lower()
 
             lead_key = None
             if agenda.person_uuid:
@@ -398,12 +402,12 @@ def get_unattributed_leads():
                 agenda_data = {
                     "id": agenda.id,
                     "date": agenda.date.isoformat() if agenda.date else agenda.created_at.isoformat(),
-                    "cliente": agenda.lead or 'Desconocido',
+                    "cliente": contacto['lead'] or 'Desconocido',
                     "person_uuid": agenda.person_uuid,
-                    "instagram": agenda.instagram or 'N/A',
+                    "instagram": contacto['instagram'] or 'N/A',
                     "setter": setter,
                     "closer": closer,
-                    "whatsapp": agenda.whatsapp or 'N/A',
+                    "whatsapp": contacto['whatsapp'] or 'N/A',
                     "fecha_meet": agenda.fecha_meet or 'N/A'
                 }
                 
@@ -470,7 +474,15 @@ def force_manual_attribution_agenda():
     # Normalizar IG y guardar
     ig_normalizado = instagram_input.strip().lstrip('@').lower()
     agenda.instagram = f"@{ig_normalizado}"
-    
+    # Lo que se muestra sale de la persona: si no tenía instagram, queda éste como principal.
+    if agenda.person is not None and not agenda.person.instagram:
+        from app.services import person_service
+        try:
+            person_service.hacer_principal(agenda.person, 'instagram', ig_normalizado, current_user,
+                                           reason='atribución de agenda')
+        except ValueError as e:
+            logger.error(f"[ATRIBUCION] instagram inválido para la persona de la agenda #{agenda.id}: {e}")
+
     # Buscar/crear lead de Manychat: el del IG que se escribió y, si no hay, el de la persona de la agenda
     matched_lead = ManychatLead.query.filter(
         db.func.lower(db.func.replace(ManychatLead.ig, '@', '')) == ig_normalizado
@@ -512,9 +524,10 @@ def force_manual_attribution_agenda():
         db.func.lower(db.func.replace(Client.instagram, '@', '')) == ig_normalizado
     ).first()
     
-    if not client_match and agenda.lead:
+    lead_nombre = agenda.contacto()['lead']
+    if not client_match and lead_nombre:
         client_match = Client.query.filter(
-            db.func.lower(Client.full_name) == agenda.lead.strip().lower()
+            db.func.lower(Client.full_name) == lead_nombre.strip().lower()
         ).first()
         
     if client_match:

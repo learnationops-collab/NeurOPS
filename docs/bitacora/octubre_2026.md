@@ -403,3 +403,10 @@
   - El mazo y los leads del setter, sus agendas y palabras clave, los formularios de triage, las desatribuidas de Marketing y el buscador de clientes devuelven `person_uuid` (solo se suma el campo).
   - Arreglo: asignar la palabra clave al grupo de ventas de una persona en «Mis agendas» daba «Falta el cliente».
   - Sin cambios visuales. Verificación: sin tests ni build local (regla del proyecto); se valida con el build del deploy del servidor de prueba.
+
+- **20 de Octubre de 2026 (personas, frente K: las agendas se leen de su persona)** *(El backend deja de leer el nombre, mail, whatsapp e instagram copiados en las agendas que tienen persona. [app/services/agenda_contacto_service.py](../../app/services/agenda_contacto_service.py) [NEW], [app/models/financial.py](../../app/models/financial.py), [app/api/public/financial_agendas.py](../../app/api/public/financial_agendas.py), [app/api/closer.py](../../app/api/closer.py), [app/api/setter_agendas.py](../../app/api/setter_agendas.py), [app/api/setter_mazo.py](../../app/api/setter_mazo.py), [app/services/agenda_dedup_service.py](../../app/services/agenda_dedup_service.py) y otros 9 [MODIFY])*:
+  - Las agendas muestran el nombre, mail, whatsapp e instagram de su persona en los mismos campos de siempre (el frontend no cambia); la copia de la fila queda solo para las agendas sin persona.
+  - «Las agendas de alguien» (roadmap, closer, estado post call, mensaje de triaje sin agenda, formulario, workshop, setter) son las de su persona y, por mail/instagram/teléfono, solo las que no tienen persona. El buscador del Tablero y del closer busca también en los datos de la persona.
+  - Editar el lead, mail, whatsapp o instagram de una agenda en el Tablero, o el instagram desde el mazo del setter, corrige a su persona (nuevo principal, el anterior dado de baja), salvo que el dato ya sea de otra persona.
+  - El deduplicador de agendas reconoce a la misma persona por su uuid antes que por mail, instagram o teléfono.
+  - Verificación: sin tests (desarrollo rápido); se prueba en el servidor develop.

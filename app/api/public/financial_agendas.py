@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from . import bp
 from sqlalchemy import or_, and_, func
 
+from app.services.agenda_contacto_service import ig_limpio, mail_limpio
 from app.services.agenda_time_service import (
     parse_a_utc, zona_origen, limites_dia_origen, resolver_hora_agenda, como_se_ve)
 
@@ -123,12 +124,11 @@ def _build_agenda_queries():
 
     if search:
         search_pattern = f"%{search}%"
+        from app.services import agenda_contacto_service
         query = query.filter(or_(
-            FinancialAgenda.lead.ilike(search_pattern),
+            agenda_contacto_service.busqueda(search_pattern),  # el lead: su persona, o la copia si no tiene
             FinancialAgenda.nombre.ilike(search_pattern),
-            FinancialAgenda.closer.ilike(search_pattern),
-            FinancialAgenda.mail.ilike(search_pattern),
-            FinancialAgenda.whatsapp.ilike(search_pattern)
+            FinancialAgenda.closer.ilike(search_pattern)
         ))
 
     if estados:
@@ -262,18 +262,23 @@ def receive_financial_agendas():
         mail_val = (item.get('mail') or item.get('email') or '').strip().lower()
         phone_val = (item.get('whatsapp') or item.get('phone') or item.get('telefono') or '').strip()
         
-        client_filters = []
+        copia = []
         if ig_norm and ig_norm != 'n/a':
-            client_filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_norm)
+            copia.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_norm)
         if mail_val and mail_val != 'n/a' and '@' in mail_val:
-            client_filters.append(func.lower(FinancialAgenda.mail) == mail_val)
+            copia.append(func.lower(FinancialAgenda.mail) == mail_val)
         cola_telefono = _cola_telefono(phone_val)
         if cola_telefono:
             # Se comparan solo los digitos y solo los ultimos: el mismo numero llega
             # escrito '+51 996 526 031' una vez y '+51996526031' la otra, y con el LIKE
             # sobre el texto crudo esas dos no matcheaban -- el lead se duplicaba aunque
             # fuera la misma persona el mismo dia (26/09/2026).
-            client_filters.append(_whatsapp_solo_digitos().like(f"%{cola_telefono}"))
+            copia.append(_whatsapp_solo_digitos().like(f"%{cola_telefono}"))
+        # Las agendas de su persona; la copia solo cuenta en las que no tienen (Etapa 2b).
+        from app.services import agenda_contacto_service, person_service
+        persona = person_service.buscar(email=mail_val, instagram=ig_norm, phone=phone_val) if copia else None
+        client_filters = [c for c in (FinancialAgenda.person_uuid == persona.uuid if persona else None,
+                                      agenda_contacto_service.sin_persona(*copia)) if c is not None]
 
         if client_filters and agenda_date:
             # Una agenda ya marcada como repetida no puede recibir datos nuevos: la agenda
@@ -425,7 +430,7 @@ def receive_financial_agendas():
             agenda_dedup_service.reconciliar(agenda)
         except Exception:
             current_app.logger.exception(
-                "[AGENDA UNICA] fallo la reconciliacion de la agenda de '%s'", agenda.lead)
+                "[AGENDA UNICA] fallo la reconciliacion de la agenda #%s", agenda.id)
 
     db.session.commit()
 
@@ -477,9 +482,12 @@ def get_financial_agendas():
 
     # Precalcular ventas asociadas para evitar N+1
     from app.models import FinancialSale
-    emails = {a.mail.strip().lower() for a in all_agendas if a.mail and a.mail.lower() not in ('n/a', '')}
-    instagrams = {a.instagram.strip().replace('@', '').lower() for a in all_agendas if a.instagram and a.instagram.lower() not in ('n/a', '')}
-    
+    from app.services import agenda_contacto_service
+    agenda_contacto_service.precargar(all_agendas)
+    sin_persona = [a for a in all_agendas if not a.person_uuid]  # la copia solo cuenta en éstas
+    emails = {a.mail.strip().lower() for a in sin_persona if a.mail and a.mail.lower() not in ('n/a', '')}
+    instagrams = {a.instagram.strip().replace('@', '').lower() for a in sin_persona if a.instagram and a.instagram.lower() not in ('n/a', '')}
+
     sales_by_email = {}
     sales_by_ig = {}
     # Los pagos de la persona de cada agenda (docs/plan_personas.md), además del cruce por texto.
@@ -507,9 +515,11 @@ def get_financial_agendas():
                 sales_by_ig[ig].append(s)
                 
     def get_agenda_sales_info(agenda):
-        ig_clean = agenda.instagram.strip().replace('@', '').lower() if agenda.instagram and agenda.instagram.lower() not in ('n/a', '') else None
-        mail_clean = agenda.mail.strip().lower() if agenda.mail and agenda.mail.lower() not in ('n/a', '') else None
-        
+        ig_clean = mail_clean = None
+        if not agenda.person_uuid:
+            ig_clean = ig_limpio(agenda.instagram)
+            mail_clean = mail_limpio(agenda.mail)
+
         sales_dict = {s.id: s for s in sales_by_person.get(agenda.person_uuid, ())}
         if ig_clean and ig_clean in sales_by_ig:
             for s in sales_by_ig[ig_clean]:
@@ -749,19 +759,21 @@ def update_financial_agenda(agenda_id):
     try:
         if 'nombre' in data:
             agenda.nombre = data['nombre']
+        # El lead, su instagram, whatsapp y mail corrigen a su persona (lo que se muestra sale de ella).
+        from app.services import agenda_contacto_service
         if 'lead' in data:
-            agenda.lead = data['lead']
+            agenda_contacto_service.corregir(agenda, 'lead', data['lead'], current_user)
         if 'closer' in data:
             from app.services.booking_service import BookingService
             agenda.closer = BookingService.normalize_closer_name(data['closer'])
         if 'fecha_meet' in data:
             agenda.fecha_meet = data['fecha_meet']
         if 'instagram' in data:
-            agenda.instagram = data['instagram']
+            agenda_contacto_service.corregir(agenda, 'instagram', data['instagram'], current_user)
         if 'whatsapp' in data:
-            agenda.whatsapp = data['whatsapp']
+            agenda_contacto_service.corregir(agenda, 'whatsapp', data['whatsapp'], current_user)
         if 'mail' in data:
-            agenda.mail = data['mail']
+            agenda_contacto_service.corregir(agenda, 'mail', data['mail'], current_user)
             # Propagar la corrección al Cliente ya existente cuando el mail real llega DESPUÉS
             # de que el Cliente ya se hubiera creado con un placeholder (p.ej. agendó por
             # Calendly antes de que n8n mandara su mail real, o el mail vino vacío la primera
@@ -773,8 +785,9 @@ def update_financial_agenda(agenda_id):
             # que llega de n8n en el Registro de Agendas pero el Cliente seguía "Sin email real").
             nuevo_mail = (data['mail'] or '').strip().lower()
             if nuevo_mail and '@' in nuevo_mail:
-                ig_clean = agenda.instagram.strip().replace('@', '').lower() if agenda.instagram and agenda.instagram.lower() not in ('n/a', '') else None
-                whatsapp_clean = (agenda.whatsapp or '').strip()
+                contacto = agenda.contacto()
+                ig_clean = ig_limpio(contacto['instagram'])
+                whatsapp_clean = (contacto['whatsapp'] or '').strip()
                 client_filters = []
                 if ig_clean:
                     client_filters.append(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean)
@@ -825,9 +838,10 @@ def update_financial_agenda(agenda_id):
             
         if status_changed:
             from app.models import Notification
+            contacto = agenda.contacto()
             notif = Notification(
-                subject=f"Estado de Agenda Actualizado: {agenda.lead or agenda.nombre or 'Desconocido'}",
-                content=f"La agenda con @{agenda.instagram or 'sin_ig'} ha cambiado de estado a '{agenda.estado}'.",
+                subject=f"Estado de Agenda Actualizado: {contacto['lead'] or agenda.nombre or 'Desconocido'}",
+                content=f"La agenda con @{contacto['instagram'] or 'sin_ig'} ha cambiado de estado a '{agenda.estado}'.",
                 target_users=["all"],
                 associated_id=agenda.id,
                 associated_type="agenda"
@@ -840,9 +854,10 @@ def update_financial_agenda(agenda_id):
                 from app.services.closer_service import CloserService
                 from flask_login import current_user
                 
-                ig_clean = agenda.instagram.strip().replace('@', '').lower() if agenda.instagram and agenda.instagram.lower() not in ('n/a', '') else None
-                mail_clean = agenda.mail.strip().lower() if agenda.mail and agenda.mail.lower() not in ('n/a', '') else None
-                
+                contacto = agenda.contacto()
+                ig_clean = ig_limpio(contacto['instagram'])
+                mail_clean = mail_limpio(contacto['mail'])
+
                 client_filters = []
                 if ig_clean:
                     client_filters.append(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean)
@@ -882,9 +897,10 @@ def update_financial_agenda(agenda_id):
             from app.services.closer_service import CloserService
             from flask_login import current_user
             
-            ig_clean = agenda.instagram.strip().replace('@', '').lower() if agenda.instagram and agenda.instagram.lower() not in ('n/a', '') else None
-            mail_clean = agenda.mail.strip().lower() if agenda.mail and agenda.mail.lower() not in ('n/a', '') else None
-            
+            contacto = agenda.contacto()
+            ig_clean = ig_limpio(contacto['instagram'])
+            mail_clean = mail_limpio(contacto['mail'])
+
             client_filters = []
             if ig_clean:
                 client_filters.append(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean)
@@ -962,8 +978,9 @@ def delete_financial_agenda(agenda_id):
         try:
             from app.models import Appointment, Client
             # Buscar el cliente asociado
-            ig_norm = agenda.instagram.strip().lstrip('@').lower() if agenda.instagram else None
-            email_norm = agenda.mail.strip().lower() if agenda.mail else None
+            contacto = agenda.contacto()
+            ig_norm = contacto['instagram'].strip().lstrip('@').lower() if contacto['instagram'] else None
+            email_norm = contacto['mail'].strip().lower() if contacto['mail'] else None
             from app.services.booking_service import BookingService
             client = BookingService.cliente_de_agenda(agenda)
             if client is None and (ig_norm or email_norm):
@@ -1150,15 +1167,21 @@ def receive_financial_agendas_form():
     # "Ivan" al Client de otro lead sin ninguna relación entre ambos (10/sep/2026).
     if not client and nombre:
         nombre_norm = nombre.strip().lower()
-        agenda_match = FinancialAgenda.query.filter(
-            func.lower(FinancialAgenda.lead).like(f"%{nombre_norm}%")
+        from app.models import Person
+        from app.services import agenda_contacto_service
+        from app.services.booking_service import BookingService
+        agenda_match = FinancialAgenda.query.filter(or_(
+            FinancialAgenda.person_uuid.in_(db.session.query(Person.uuid).filter(func.lower(Person.full_name).like(f"%{nombre_norm}%"))),
+            agenda_contacto_service.sin_persona(func.lower(FinancialAgenda.lead).like(f"%{nombre_norm}%")))
         ).order_by(FinancialAgenda.date.desc()).first()
         if agenda_match:
-            # Buscar el Client asociado por instagram o mail de la agenda
-            ag_ig = agenda_match.instagram.strip().lstrip('@').lower() if agenda_match.instagram and agenda_match.instagram.lower() not in ('n/a', '') else None
-            ag_mail = agenda_match.mail.strip().lower() if agenda_match.mail and agenda_match.mail.lower() not in ('n/a', '') else None
-            ag_phone = agenda_match.whatsapp.strip() if agenda_match.whatsapp and agenda_match.whatsapp.lower() not in ('n/a', '') else None
-            if ag_ig:
+            # El cliente de la persona de la agenda; si no, por su instagram, mail o teléfono
+            client = BookingService.cliente_de_agenda(agenda_match)
+            contacto = agenda_match.contacto()
+            ag_ig = ig_limpio(contacto['instagram'])
+            ag_mail = mail_limpio(contacto['mail'])
+            ag_phone = contacto['whatsapp'].strip() if contacto['whatsapp'] and contacto['whatsapp'].lower() not in ('n/a', '') else None
+            if not client and ag_ig:
                 client = Client.query.filter(func.lower(Client.instagram) == ag_ig).first()
             if not client and ag_mail:
                 client = Client.query.filter(func.lower(Client.email) == ag_mail).first()
@@ -1287,15 +1310,9 @@ def get_unread_no_agenda_triage():
         ig_clean = c.instagram.strip().replace('@', '').lower() if c.instagram and c.instagram.lower() not in ('n/a', '') else None
         mail_clean = c.email.strip().lower() if c.email and c.email.lower() not in ('n/a', '') else None
         
-        agenda_exists = bool(c.person_uuid) and FinancialAgenda.query.filter_by(person_uuid=c.person_uuid).first() is not None
-        client_filters = []
-        if ig_clean:
-            client_filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_clean)
-        if mail_clean:
-            client_filters.append(func.lower(FinancialAgenda.mail) == mail_clean)
-            
-        if client_filters and not agenda_exists:
-            agenda_exists = FinancialAgenda.query.filter(or_(*client_filters)).first() is not None
+        from app.services import agenda_contacto_service
+        filtro = agenda_contacto_service.filtro(c.person_uuid, instagram=ig_clean, mail=mail_clean)
+        agenda_exists = filtro is not None and FinancialAgenda.query.filter(filtro).first() is not None
             
         if not agenda_exists:
             results.append({
@@ -1324,11 +1341,14 @@ def _resolve_closer_results(agendas):
     if not agendas:
         return resultados
 
+    from app.services import agenda_contacto_service
+    agenda_contacto_service.precargar(agendas)
     agendas_por_ig = {}
     agendas_por_mail = {}
     for a in agendas:
-        ig_clean = a.instagram.strip().replace('@', '').lower() if a.instagram and a.instagram.lower() not in ('n/a', '') else None
-        mail_clean = a.mail.strip().lower() if a.mail and a.mail.lower() not in ('n/a', '') else None
+        contacto = a.contacto()
+        ig_clean = ig_limpio(contacto['instagram'])
+        mail_clean = mail_limpio(contacto['mail'])
         if ig_clean:
             agendas_por_ig.setdefault(ig_clean, []).append(a)
         if mail_clean:
@@ -1407,9 +1427,10 @@ def get_potential_leads():
             if len(potential_leads) >= limit:
                 break
 
-            mail_clean = a.mail.strip().lower() if a.mail and a.mail.lower() not in ('n/a', '') else None
-            ig_clean = a.instagram.strip().replace('@', '').lower() if a.instagram and a.instagram.lower() not in ('n/a', '') else None
-            phone_clean = a.whatsapp.strip() if a.whatsapp else None
+            contacto = a.contacto()
+            mail_clean = mail_limpio(contacto['mail'])
+            ig_clean = ig_limpio(contacto['instagram'])
+            phone_clean = contacto['whatsapp'].strip() if contacto['whatsapp'] else None
 
             # Ignorar compradores
             if mail_clean and mail_clean in sold_emails:
@@ -1440,10 +1461,10 @@ def get_potential_leads():
                 "id": a.id,
                 "date": a.date.isoformat() if a.date else (a.fecha_meet or ""),
                 "registro": a.registro or (a.created_at.isoformat() if a.created_at else ""),
-                "lead": a.lead or a.nombre or "Sin Nombre",
-                "whatsapp": a.whatsapp or "",
-                "mail": a.mail or "",
-                "instagram": a.instagram or "",
+                "lead": contacto['lead'] or a.nombre or "Sin Nombre",
+                "whatsapp": contacto['whatsapp'] or "",
+                "mail": contacto['mail'] or "",
+                "instagram": contacto['instagram'] or "",
                 "nombre": a.nombre or "",
                 "closer": a.closer or "",
                 "encargado_triage": a.encargado_triage or "",

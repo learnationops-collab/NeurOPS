@@ -66,11 +66,13 @@ MINUTOS_MISMA_HORA = 5
 
 
 def _senales(agenda):
-    """Las tres señales normalizadas con las que se reconoce a la misma persona."""
-    senales = []
-    mail = _normalize_email(agenda.mail)
-    ig = _normalize_instagram(agenda.instagram)
-    tel = _normalize_phone(agenda.whatsapp)
+    """Las señales normalizadas con las que se reconoce a la misma persona: su persona (la más
+    fuerte) y su mail, instagram y teléfono, leídos de ella o, sin persona, de la copia."""
+    c = agenda.contacto()
+    senales = [('p', agenda.person_uuid)] if agenda.person_uuid else []
+    mail = _normalize_email(c['mail'])
+    ig = _normalize_instagram(c['instagram'])
+    tel = _normalize_phone(c['whatsapp'])
     if mail:
         senales.append(('mail', mail))
     if ig:
@@ -88,9 +90,11 @@ def encontrar_grupos(agendas):
     producción el 31/08/2026, ver `client_dedup_service._names_compatible`). Sin ese
     resguardo, dos leads distintos se encadenan por transitividad.
     """
-    vigentes = [a for a in agendas if a.duplicada_de_id is None]
+    from app.services.agenda_contacto_service import precargar
+    vigentes = precargar([a for a in agendas if a.duplicada_de_id is None])
     por_id = {a.id: a for a in vigentes}
 
+    leads = {a.id: a.contacto()['lead'] for a in vigentes}
     por_senal = {}
     for a in vigentes:
         for senal in _senales(a):
@@ -103,14 +107,14 @@ def encontrar_grupos(agendas):
     for senal, ids in por_senal.items():
         if len(ids) < 2:
             continue
-        nombres = {(por_id[i].lead or '').strip().lower() for i in ids}
+        nombres = {(leads[i] or '').strip().lower() for i in ids}
         if len(nombres) > MAX_NOMBRES_POR_SENAL:
             logger.info("[DEDUP AGENDAS] senal %s descartada: la comparten %d nombres distintos",
                         senal, len(nombres))
             continue
         base = ids[0]
         for otro in ids[1:]:
-            if _names_compatible(por_id[base].lead, por_id[otro].lead):
+            if _names_compatible(leads[base], leads[otro]):
                 uf.union(base, otro)
 
     grupos = {}
@@ -191,8 +195,8 @@ def sugerir_conservada(grupo, ventas_conocidas=None):
     from app.models import FinancialSale
 
     def tiene_venta(a):
-        ig = _normalize_instagram(a.instagram)
-        mail = _normalize_email(a.mail)
+        ig = _normalize_instagram(a.contacto()['instagram'])
+        mail = _normalize_email(a.contacto()['mail'])
         if not ig and not mail:
             return False
         if ventas_conocidas is not None:
@@ -225,13 +229,8 @@ def _nombre_utilizable(nombre):
 
 
 def _comparte_senal(a, b):
-    """True si dos agendas comparten mail, instagram o teléfono normalizados."""
-    for norm, campo in ((_normalize_email, 'mail'), (_normalize_instagram, 'instagram'),
-                        (_normalize_phone, 'whatsapp')):
-        va, vb = norm(getattr(a, campo)), norm(getattr(b, campo))
-        if va and va == vb:
-            return True
-    return False
+    """True si dos agendas son de la misma persona o comparten mail, instagram o teléfono normalizados."""
+    return bool(set(_senales(a)) & set(_senales(b)))
 
 
 def _hermanas_del_mismo_dia(agenda, universo=None):
@@ -275,9 +274,10 @@ def _hermanas_del_mismo_dia(agenda, universo=None):
     # teléfono. Para una fusión AUTOMÁTICA eso es demasiado: en producción hay 1069 agendas
     # sin `lead` (todas anteriores a julio, ninguna en el período que esto toca hoy). Sin
     # nombre no se decide solo — el par igual aparece en el panel para que lo mire alguien.
+    lead = agenda.contacto()['lead']
     hermanas = [c for c in candidatas
-                if _nombre_utilizable(agenda.lead) and _nombre_utilizable(c.lead)
-                and _names_compatible(agenda.lead, c.lead)]
+                if _nombre_utilizable(lead) and _nombre_utilizable(c.contacto()['lead'])
+                and _names_compatible(lead, c.contacto()['lead'])]
     # Orden explícito: `decidir_reconciliacion` corta el recorrido en cuanto la que sobra
     # es la propia agenda, así que el orden decide qué par se evalúa. Sin esto la consulta
     # devolvía las filas en el orden que quisiera Postgres y el resultado no era
@@ -313,7 +313,7 @@ def reconciliar(agenda, actor_id=None, simular=False, universo=None, ventas_cono
             descartar(conservada, sobrante, actor_id, motivo=motivo)
             marcadas.append(sobrante)
             logger.info('[AGENDA UNICA] %s -> se conserva #%s y se marca #%s (%s)',
-                        agenda.lead, conservada.id, sobrante.id, motivo)
+                        agenda.contacto()['lead'], conservada.id, sobrante.id, motivo)
         except ValueError as e:
             logger.info('[AGENDA UNICA] no se pudo reconciliar #%s con #%s: %s',
                         agenda.id, sobrante.id, e)
@@ -394,9 +394,10 @@ def cita_de(agenda):
     """
     if not agenda.date:
         return None
-    ig = _normalize_instagram(agenda.instagram)
-    mail = _normalize_email(agenda.mail)
-    tel = _normalize_phone(agenda.whatsapp)
+    c = agenda.contacto()
+    ig = _normalize_instagram(c['instagram'])
+    mail = _normalize_email(c['mail'])
+    tel = _normalize_phone(c['whatsapp'])
     condiciones = []
     if mail:
         condiciones.append(db.func.lower(Client.email) == mail)
@@ -433,11 +434,13 @@ def citas_de(agendas):
     """
     if not agendas:
         return {}
+    from app.services.agenda_contacto_service import precargar
+    precargar(agendas)
 
     condiciones, por_agenda = [], {}
     for a in agendas:
-        mail = _normalize_email(a.mail)
-        ig = _normalize_instagram(a.instagram)
+        mail = _normalize_email(a.contacto()['mail'])
+        ig = _normalize_instagram(a.contacto()['instagram'])
         por_agenda[a.id] = (mail, ig)
         if mail:
             condiciones.append(db.func.lower(Client.email) == mail)

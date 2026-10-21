@@ -1212,17 +1212,12 @@ class CloserService:
                     financial_agenda = None
                     # Normalizar email e instagram para evitar problemas de matching exacto
                     from sqlalchemy import func
-                    ig_clean = client.instagram.strip().replace('@', '').lower() if client.instagram and client.instagram.lower() not in ('n/a', '') else None
-                    mail_clean = client.email.strip().lower() if client.email and client.email.lower() not in ('n/a', '') else None
-
-                    filters = [FinancialAgenda.person_uuid == client.person_uuid] if client.person_uuid else []
-                    if mail_clean:
-                        filters.append(func.lower(FinancialAgenda.mail) == mail_clean)
-                    if ig_clean:
-                        filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_clean)
-                    if filters:
+                    # Las de su persona; por la copia, solo agendas sin persona (Etapa 2b).
+                    from app.services import agenda_contacto_service
+                    filtro = agenda_contacto_service.filtro(client.person_uuid, instagram=client.instagram, mail=client.email)
+                    if filtro is not None:
                         financial_agenda = FinancialAgenda.query.filter(
-                            or_(*filters),
+                            filtro,
                             FinancialAgenda.date >= start_of_day,
                             FinancialAgenda.date <= end_of_day
                         ).first()

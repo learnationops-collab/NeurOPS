@@ -46,10 +46,9 @@ def _sincronizar_fuente_con_cita(agenda):
     sync completo aca reescribiria estados de la llamada, que no es lo que pidio
     quien edito la fuente.
     """
-    ig = agenda.instagram.strip().replace('@', '').lower() \
-        if agenda.instagram and agenda.instagram.lower() not in ('n/a', '') else None
-    mail = agenda.mail.strip().lower() \
-        if agenda.mail and agenda.mail.lower() not in ('n/a', '') else None
+    from app.services.agenda_contacto_service import ig_limpio, mail_limpio
+    contacto = agenda.contacto()
+    ig, mail = ig_limpio(contacto['instagram']), mail_limpio(contacto['mail'])
 
     from app.services.booking_service import BookingService
     client = BookingService.cliente_de_agenda(agenda)

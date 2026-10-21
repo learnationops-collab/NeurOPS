@@ -82,11 +82,14 @@ def es_lead_del_setter(setter, appt=None, client=None):
     # 3: una fila del Tablero con su nombre y el contacto de la persona o de alguno de sus pagos.
     igs = {i for i in [_ig(client.instagram)] + [_ig(v.instagram) for v in ventas] if i}
     mails = {m for m in [_mail(client.email)] + [_mail(v.mail_cliente) for v in ventas] if m}
-    condiciones = []
-    if igs:
-        condiciones.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')).in_(sorted(igs)))
-    if mails:
-        condiciones.append(func.lower(FinancialAgenda.mail).in_(sorted(mails)))
+    # Las agendas de su persona (y de las de sus pagos); por la copia, solo las agendas sin persona.
+    from app.services.agenda_contacto_service import sin_persona
+    personas = {p for p in [client.person_uuid] + [v.person_uuid for v in ventas] if p}
+    copia = sin_persona(
+        func.lower(func.replace(FinancialAgenda.instagram, '@', '')).in_(sorted(igs)) if igs else None,
+        func.lower(FinancialAgenda.mail).in_(sorted(mails)) if mails else None)
+    condiciones = [c for c in (FinancialAgenda.person_uuid.in_(sorted(personas)) if personas else None, copia)
+                   if c is not None]
     if not condiciones:
         return False
     return any(normalizar(nombre) == objetivo

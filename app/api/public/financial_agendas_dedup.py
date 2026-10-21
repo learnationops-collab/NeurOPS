@@ -44,14 +44,15 @@ MOTIVOS = {
 def _fila(agenda, cita):
     """Lo justo para decidir cual se conserva, sin el `to_dict` completo (que hace
     varias consultas por fila y aca se pintan grupos enteros)."""
+    contacto = agenda.contacto()
     return {
         'id': agenda.id,
-        'lead': agenda.lead,
+        'lead': contacto['lead'],
         'fuente': agenda.nombre,
         'closer': agenda.closer,
-        'mail': agenda.mail,
-        'instagram': agenda.instagram,
-        'whatsapp': agenda.whatsapp,
+        'mail': contacto['mail'],
+        'instagram': contacto['instagram'],
+        'whatsapp': contacto['whatsapp'],
         'estado': agenda.estado or 'Pendiente',
         'registro': agenda.registro or (agenda.created_at.isoformat() if agenda.created_at else None),
         'created_at': agenda.created_at.isoformat() if agenda.created_at else None,

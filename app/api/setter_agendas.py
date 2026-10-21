@@ -27,6 +27,7 @@ from app import db
 from app.models import ROLE_SETTER, Client, Appointment
 from app.models.financial import FinancialAgenda
 from app.decorators import role_required
+from app.services import agenda_contacto_service
 from app.services.fuente_service import normalizar, es_sin_dueno
 from app.api.setter import bp
 
@@ -112,13 +113,15 @@ def agendas_por_cita(user, desde=None, hasta=None):
         return {}
     from app.services.booking_service import BookingService
     por_persona = BookingService.clientes_por_persona(agendas)
+    agenda_contacto_service.precargar(agendas)
+    contactos = {a.id: a.contacto() for a in agendas}  # de su persona; la copia si no tiene
 
     condiciones = []
     for a in agendas:
-        ig = (a.instagram or '').strip().lstrip('@').lower()
+        ig = (contactos[a.id]['instagram'] or '').strip().lstrip('@').lower()
         if ig and ig not in ('n/a', ''):
             condiciones.append(func.lower(func.replace(Client.instagram, '@', '')) == ig)
-        mail = (a.mail or '').strip().lower()
+        mail = (contactos[a.id]['mail'] or '').strip().lower()
         if mail and '@' in mail:
             condiciones.append(func.lower(Client.email) == mail)
     if not condiciones and not por_persona:
@@ -149,9 +152,9 @@ def agendas_por_cita(user, desde=None, hasta=None):
     for a in agendas:
         if not a.date:
             continue
-        ig = (a.instagram or '').strip().lstrip('@').lower()
-        mail = (a.mail or '').strip().lower()
-        client_id = por_persona.get(a.person_uuid) or por_llave.get(f'ig:{ig}') or por_llave.get(f'mail:{mail}')
+        ig = (contactos[a.id]['instagram'] or '').strip().lstrip('@').lower()
+        mail = (contactos[a.id]['mail'] or '').strip().lower()
+        client_id = por_persona.get(a.person_uuid)or por_llave.get(f'ig:{ig}') or por_llave.get(f'mail:{mail}')
         if not client_id:
             continue
         for ap in por_cliente.get(client_id, []):
@@ -171,10 +174,11 @@ def _cliente_de(agenda):
     if por_persona is not None:
         return por_persona
     condiciones = []
-    ig = (agenda.instagram or '').strip().lstrip('@').lower()
+    contacto = agenda.contacto()
+    ig = (contacto['instagram'] or '').strip().lstrip('@').lower()
     if ig and ig not in ('n/a', ''):
         condiciones.append(func.lower(func.replace(Client.instagram, '@', '')) == ig)
-    mail = (agenda.mail or '').strip().lower()
+    mail = (contacto['mail'] or '').strip().lower()
     if mail and '@' in mail:
         condiciones.append(func.lower(Client.email) == mail)
     if not condiciones:
@@ -198,19 +202,20 @@ def _serializar(agenda, con_cita=True):
     client = _cliente_de(agenda)
     appt = _cita_de(agenda, client) if con_cita else None
     raw = agenda.raw_data or {}
+    contacto = agenda.contacto()
     return {
         "id": agenda.id,
         # El modal de detalle trabaja sobre la cita; sin ella solo se puede leer.
         "appointment_id": appt.id if appt else None,
         "client_id": client.id if client else None,
         "person_uuid": agenda.person_uuid or (client.person_uuid if client else None),
-        "lead_name": agenda.lead or (client.full_name if client else "Sin nombre"),
+        "lead_name": contacto['lead'] or (client.full_name if client else "Sin nombre"),
         "closer_name": agenda.closer or "Sin asignar",
         "start_time": agenda.date.isoformat() if agenda.date else None,
         "created_at": agenda.created_at.isoformat() if agenda.created_at else None,
-        "phone": agenda.whatsapp if agenda.whatsapp not in (None, 'N/A') else "",
-        "instagram": agenda.instagram if agenda.instagram not in (None, 'N/A') else "",
-        "mail": agenda.mail if agenda.mail not in (None, 'N/A') else "",
+        "phone": contacto['whatsapp'] if contacto['whatsapp'] not in (None, 'N/A') else "",
+        "instagram": contacto['instagram'] if contacto['instagram'] not in (None, 'N/A') else "",
+        "mail": contacto['mail'] if contacto['mail'] not in (None, 'N/A') else "",
         "origin": agenda.nombre,
         "fuente": agenda.nombre,
         "fuente_origen": raw.get('fuente_origen'),
@@ -234,7 +239,7 @@ def get_setter_agendas():
     """
     estado_filtro = request.args.get('status', 'all')
 
-    agendas = _filtrar_por_estado(agendas_del_setter(current_user), estado_filtro)
+    agendas = agenda_contacto_service.precargar(_filtrar_por_estado(agendas_del_setter(current_user), estado_filtro))
 
     return jsonify([_serializar(a) for a in agendas]), 200
 
@@ -256,9 +261,11 @@ def get_total_de_agendas():
     filas = db.session.query(FinancialAgenda).filter(
         FinancialAgenda.nombre.in_(variantes)).options(
         load_only(FinancialAgenda.id, FinancialAgenda.instagram, FinancialAgenda.lead,
-                  FinancialAgenda.estado)).all() if variantes else []
+                  FinancialAgenda.estado, FinancialAgenda.person_uuid)).all() if variantes else []
     filas = _filtrar_por_estado(filas, estado_filtro)
-    personas = {clave_de_persona(a.instagram, a.lead) or f'agenda:{a.id}' for a in filas}
+    # Una persona es su uuid; la copia (instagram, nombre) solo en las agendas sin persona.
+    personas = {(f'p:{a.person_uuid}' if a.person_uuid else clave_de_persona(a.instagram, a.lead)) or f'agenda:{a.id}'
+                for a in filas}
     return jsonify({'personas': len(personas), 'agendas': len(filas)}), 200
 
 
@@ -424,6 +431,7 @@ def detalle_agenda(agenda_id):
 
     client = _cliente_de(agenda) or _cliente_desde_agenda(agenda)
     appt = _cita_de(agenda, client)
+    contacto = agenda.contacto()
 
     return jsonify({
         # El modal usa `id` para procesar la cita; sin cita queda en None y la
@@ -433,7 +441,7 @@ def detalle_agenda(agenda_id):
         "sin_cita": appt is None,
         "client_id": client.id,
         "person_uuid": agenda.person_uuid or client.person_uuid,
-        "lead_name": agenda.lead or client.full_name or "Sin nombre",
+        "lead_name": contacto['lead'] or client.full_name or "Sin nombre",
         "start_time": (appt.start_time if appt else agenda.date).isoformat()
                       if (appt and appt.start_time) or agenda.date else None,
         "last_stage": appt.last_stage if appt else None,
@@ -441,7 +449,7 @@ def detalle_agenda(agenda_id):
         "closer_result": appt.closer_result if appt else None,
         "with_decision_maker": appt.with_decision_maker if appt else None,
         "is_rescheduled": appt.is_rescheduled if appt else False,
-        "phone": (agenda.whatsapp if agenda.whatsapp not in (None, 'N/A') else '') or (client.phone or ''),
+        "phone": (contacto['whatsapp'] if contacto['whatsapp'] not in (None, 'N/A') else '') or (client.phone or ''),
         "type": agenda.nombre or (appt.origin if appt else '') or 'Manual',
         "closer_name": agenda.closer or "Sin asignar",
     }), 200

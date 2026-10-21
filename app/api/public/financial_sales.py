@@ -360,8 +360,9 @@ def update_financial_sale(sale_id):
         if sale.person_uuid:
             agenda = FinancialAgenda.query.filter_by(person_uuid=sale.person_uuid) \
                 .order_by(FinancialAgenda.date.desc()).first()
-        if agenda is None and ig_norm:
+        if agenda is None and ig_norm:  # la copia de la agenda solo cuenta en las que no tienen persona
             agenda = FinancialAgenda.query.filter(
+                FinancialAgenda.person_uuid.is_(None),
                 func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_norm
             ).order_by(FinancialAgenda.date.desc()).first()
         if agenda:

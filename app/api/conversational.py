@@ -263,6 +263,8 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
         FinancialAgenda.date >= start_dt,
         FinancialAgenda.date <= end_dt
     ).all()
+    from app.services.agenda_contacto_service import precargar
+    precargar(agendas_all)
 
     # Ventas del período: solo cierres de verdad (pago completo o split pay) y vigentes. Antes era
     # cada fila de FinancialSale —señas, cuotas, renovaciones, anuladas—, así que la "tasa de
@@ -309,12 +311,13 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
         return lead
 
     for ag in agendas_all:
-        ig_val = ag.instagram or (ag.raw_data or {}).get('instagram')
+        contacto = ag.contacto()  # de su persona; la copia si no tiene
+        ig_val = contacto['instagram'] or (ag.raw_data or {}).get('instagram')
         # El nombre de la persona es `lead`. `nombre` es la FUENTE de la agenda (el setter,
         # 'workshop', 'vsl'): con él, una agenda cuyo instagram no cruzaba se atribuía al lead de
         # ManyChat que se llama como el setter — en producción la conversación de prueba del
         # propio Elias o de Paula —, 44 agendas en septiembre de 2026.
-        lead = resolve_lead_by_ig_or_name(ig_val, ag.lead, ag.person_uuid)
+        lead = resolve_lead_by_ig_or_name(ig_val, contacto['lead'], ag.person_uuid)
         if lead:
             key = get_lead_msg_key(lead.id)
             if key:

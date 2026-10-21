@@ -117,12 +117,18 @@ def condiciones_de_identidad(campos):
 
 
 def _condiciones_agenda(nombre=None, telefono=None, instagram=None, mail=None):
-    return condiciones_de_identidad({
+    """Las agendas de la persona de estos datos y, por la copia, solo las que no tienen persona."""
+    from app.services import agenda_contacto_service, person_service
+    copia = condiciones_de_identidad({
         'instagram': instagram, 'col_instagram': FinancialAgenda.instagram,
         'mail': mail, 'col_mail': FinancialAgenda.mail,
         'telefono': telefono, 'col_telefono': FinancialAgenda.whatsapp,
         'nombre': nombre, 'col_nombre': FinancialAgenda.lead,
     })
+    persona = person_service.buscar(_limpiar(nombre), email=_limpiar(mail), instagram=_limpiar(instagram),
+                                    phone=_limpiar(telefono))
+    return [c for c in (FinancialAgenda.person_uuid == persona.uuid if persona else None,
+                        agenda_contacto_service.sin_persona(*copia)) if c is not None]
 
 
 def _condiciones_cliente(nombre=None, telefono=None, instagram=None, mail=None):
@@ -181,10 +187,11 @@ def _propagar_a_cita(agenda, setter=None):
     espacio de trabajo, y `origin` es de donde el sync inverso recupera la fuente.
     """
     condiciones = []
-    ig = _limpiar(agenda.instagram)
+    contacto = agenda.contacto()  # de su persona; la copia si no tiene
+    ig = _limpiar(contacto['instagram'])
     if ig:
         condiciones.append(func.lower(func.replace(Client.instagram, '@', '')) == ig.lstrip('@').lower())
-    mail = _limpiar(agenda.mail)
+    mail = _limpiar(contacto['mail'])
     if mail and '@' in mail:
         condiciones.append(func.lower(Client.email) == mail.lower())
     from app.services.booking_service import BookingService

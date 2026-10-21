@@ -226,16 +226,11 @@ def search_closer_leads():
         else:
             # Buscar en agendas de Google Sheets (FinancialAgenda) por instagram o email
             from app.models.financial import FinancialAgenda
-            ig_clean = l.instagram.strip().replace('@', '').lower() if l.instagram else None
-            
-            fin_filters = [FinancialAgenda.person_uuid == l.person_uuid] if l.person_uuid else []
-            if ig_clean:
-                fin_filters.append(db.func.lower(db.func.replace(FinancialAgenda.instagram, '@', '')) == ig_clean)
-            if l.email:
-                fin_filters.append(db.func.lower(FinancialAgenda.mail) == l.email.strip().lower())
-                
-            if fin_filters:
-                fin_agenda = FinancialAgenda.query.filter(or_(*fin_filters)).order_by(FinancialAgenda.date.desc()).first()
+            from app.services import agenda_contacto_service
+
+            fin_filtro = agenda_contacto_service.filtro(l.person_uuid, instagram=l.instagram, mail=l.email)
+            if fin_filtro is not None:
+                fin_agenda = FinancialAgenda.query.filter(fin_filtro).order_by(FinancialAgenda.date.desc()).first()
                 if fin_agenda:
                     appt_data = {
                         "start_time": fin_agenda.date.isoformat() if fin_agenda.date else None,
@@ -256,18 +251,16 @@ def search_closer_leads():
         
     # Buscar en agendas de Google Sheets (FinancialAgenda) por coincidencia de nombre, email, instagram o teléfono
     from app.models.financial import FinancialAgenda
-    fin_leads = FinancialAgenda.query.filter(or_(
-        FinancialAgenda.lead.ilike(term),
-        FinancialAgenda.mail.ilike(term),
-        FinancialAgenda.instagram.ilike(term),
-        FinancialAgenda.whatsapp.ilike(term)
-    )).order_by(FinancialAgenda.date.desc()).limit(20).all()
-    
+    from app.services import agenda_contacto_service
+    fin_leads = agenda_contacto_service.precargar(FinancialAgenda.query.filter(
+        agenda_contacto_service.busqueda(term)).order_by(FinancialAgenda.date.desc()).limit(20).all())
+
     for fa in fin_leads:
         if fa.person_uuid and fa.person_uuid in seen_personas:
             continue
-        fa_email = fa.mail.strip().lower() if fa.mail else None
-        fa_ig = fa.instagram.strip().replace('@', '').lower() if fa.instagram else None
+        contacto = fa.contacto()
+        fa_email = contacto['mail'].strip().lower() if contacto['mail'] else None
+        fa_ig = contacto['instagram'].strip().replace('@', '').lower() if contacto['instagram'] else None
         
         # Omitir duplicados ya listados como Client
         if (fa_email and fa_email in seen_emails) or (fa_ig and fa_ig in seen_instagrams):
@@ -280,10 +273,10 @@ def search_closer_leads():
             
         results.append({
             "id": None,
-            "username": fa.lead,
-            "email": fa.mail,
-            "phone": fa.whatsapp,
-            "instagram": fa.instagram,
+            "username": contacto['lead'],
+            "email": contacto['mail'],
+            "phone": contacto['whatsapp'],
+            "instagram": contacto['instagram'],
             "appointment": {
                 "start_time": fa.date.isoformat() if fa.date else None,
                 "setter_name": fa.nombre or "",
@@ -352,11 +345,13 @@ def get_appointment_by_instagram():
     # 2. Si no se encontró en las citas locales, buscar en la base de datos de agendas de Google Sheets (FinancialAgenda)
     if not appointment_data:
         from app.models.financial import FinancialAgenda
-        fin_agenda = FinancialAgenda.query.filter(
-            db.func.lower(db.func.replace(FinancialAgenda.instagram, '@', '')) == instagram.lower()
-        ).order_by(FinancialAgenda.date.desc()).first()
-        
+        from app.services import agenda_contacto_service
+        persona = person_service.buscar(instagram=instagram)
+        fin_agenda = FinancialAgenda.query.filter(agenda_contacto_service.filtro(
+            persona.uuid if persona else None, instagram=instagram)).order_by(FinancialAgenda.date.desc()).first()
+
         if fin_agenda:
+            contacto = fin_agenda.contacto()
             # nombre es el setter, lead es el cliente
             appointment_data = {
                 "id": f"financial-{fin_agenda.id}",
@@ -364,10 +359,10 @@ def get_appointment_by_instagram():
                 "setter_name": fin_agenda.nombre or "",
                 "client": {
                     "id": None, # No tiene ID de Client local aún
-                    "username": fin_agenda.lead or "",
-                    "email": fin_agenda.mail or "",
-                    "phone": fin_agenda.whatsapp or "",
-                    "instagram": fin_agenda.instagram
+                    "username": contacto['lead'] or "",
+                    "email": contacto['mail'] or "",
+                    "phone": contacto['whatsapp'] or "",
+                    "instagram": contacto['instagram']
                 }
             }
             
@@ -1452,20 +1447,13 @@ def _format_appointment_for_deck(a, recover_form=False):
         start_search = a.start_time - timedelta(hours=12)
         end_search = a.start_time + timedelta(hours=12)
         
-        from sqlalchemy import func
-        ig_clean = client.instagram.strip().replace('@', '').lower() if client.instagram and client.instagram.lower() not in ('n/a', '') else None
-        mail_clean = client.email.strip().lower() if client.email and client.email.lower() not in ('n/a', '') else None
-        
-        filters = [FinancialAgenda.person_uuid == client.person_uuid] if client.person_uuid else []
-        if mail_clean:
-            filters.append(func.lower(FinancialAgenda.mail) == mail_clean)
-        if ig_clean:
-            filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_clean)
+        from app.services import agenda_contacto_service
+        filtro = agenda_contacto_service.filtro(client.person_uuid, instagram=client.instagram, mail=client.email)
 
         agenda = None
-        if filters:
+        if filtro is not None:
             agenda = FinancialAgenda.query.filter(
-                or_(*filters),
+                filtro,
                 FinancialAgenda.date >= start_search,
                 FinancialAgenda.date <= end_search
             ).first()

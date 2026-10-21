@@ -184,20 +184,21 @@ def _estado_post_call(agenda):
     if not tiene_closer:
         return estado
 
-    ig = agenda.instagram.strip().replace('@', '').lower() \
-        if agenda.instagram and agenda.instagram.lower() not in ('n/a', '') else None
-    mail = agenda.mail.strip().lower() \
-        if agenda.mail and agenda.mail.lower() not in ('n/a', '') else None
+    from app.services.agenda_contacto_service import ig_limpio, mail_limpio
+    from app.services.booking_service import BookingService
+    contacto = agenda.contacto()  # de su persona; la copia si no tiene
+    ig, mail = ig_limpio(contacto['instagram']), mail_limpio(contacto['mail'])
 
     condiciones = []
     if ig:
         condiciones.append(func.lower(func.replace(Client.instagram, '@', '')) == ig)
     if mail:
         condiciones.append(func.lower(Client.email) == mail)
-    if not condiciones or not agenda.date:
+    client = BookingService.cliente_de_agenda(agenda)
+    if (client is None and not condiciones) or not agenda.date:
         return estado
 
-    client = Client.query.filter(or_(*condiciones)).first()
+    client = client or Client.query.filter(or_(*condiciones)).first()
     if not client:
         return estado
 
@@ -265,6 +266,8 @@ def _clave_identidad(agenda):
     handles que no identifican a nadie ('n/a', 'no tengo') se descartan, porque si no
     todos los que escribieron eso se fusionarian en una sola persona.
     """
+    if agenda.person_uuid:  # la persona es la clave; la copia solo en agendas sin persona
+        return f'p:{agenda.person_uuid}'
     ig = (agenda.instagram or '').strip().replace('@', '').lower()
     mail = (agenda.mail or '').strip().lower()
     lead = (agenda.lead or '').strip().lower()
@@ -354,9 +357,10 @@ def _ventas_de(agendas, compradores_ya_contados):
         if clave in compradores_ya_contados:
             continue
 
-        ig = (a.instagram or '').strip().replace('@', '').lower()
-        mail = (a.mail or '').strip().lower()
-        lead = (a.lead or '').strip().lower()
+        contacto = a.contacto()  # de su persona; la copia si no tiene
+        ig = (contacto['instagram'] or '').strip().replace('@', '').lower()
+        mail = (contacto['mail'] or '').strip().lower()
+        lead = (contacto['lead'] or '').strip().lower()
         ig = ig if ig and ig not in HANDLES_INVALIDOS else None
         mail = mail if mail and mail not in HANDLES_INVALIDOS else None
         lead = lead if lead and len(lead) > 2 else None

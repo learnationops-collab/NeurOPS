@@ -135,16 +135,13 @@ def get_lead_roadmap():
             manychat_lead = ManychatLead.query.filter(func.lower(ManychatLead.ig) == resolved_email).first() # Fallback a veces guardado como email
 
         # 4. Buscar FinancialAgendas
-        agenda_filters = [FinancialAgenda.person_uuid == puuid] if puuid else []
-        if resolved_ig:
-            agenda_filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == resolved_ig)
-        if resolved_email:
-            agenda_filters.append(func.lower(FinancialAgenda.mail) == resolved_email)
-        if resolved_phone:
-            agenda_filters.append(FinancialAgenda.whatsapp.like(f"%{resolved_phone}%"))
-        
-        if agenda_filters:
-            financial_agendas = FinancialAgenda.query.filter(or_(*agenda_filters)).order_by(FinancialAgenda.date.desc()).all()
+        # Las de su persona; por la copia, solo las agendas sin persona (Etapa 2b).
+        from app.services import agenda_contacto_service
+        agenda_filtro = agenda_contacto_service.filtro(puuid, instagram=resolved_ig, mail=resolved_email,
+                                                       telefono=resolved_phone)
+        if agenda_filtro is not None:
+            financial_agendas = FinancialAgenda.query.filter(agenda_filtro).order_by(FinancialAgenda.date.desc()).all()
+        contacto_agenda = financial_agendas[0].contacto() if financial_agendas else {}
 
         # 5. Buscar FinancialSales
         sale_filters = [FinancialSale.person_uuid == puuid] if puuid else []
@@ -197,10 +194,10 @@ def get_lead_roadmap():
             # financial_agendas[0].lead: cuando el mismo telefono/mail tiene varias agendas y la
             # mas reciente es una de las historicas sin `lead` cargado (ver Bug agendas viejas),
             # ese [0] queda vacio y no debe pisar el nombre que sabiamos que era el correcto.
-            "full_name": client.full_name if client else (clean_name or (manychat_lead.name if manychat_lead else (financial_sales[0].nombre_cliente if financial_sales else (financial_agendas[0].lead if financial_agendas else "Desconocido")))),
-            "email": client.email if client else (manychat_lead.ig if manychat_lead and '@' in manychat_lead.ig else (financial_sales[0].mail_cliente if financial_sales else (financial_agendas[0].mail if financial_agendas else "Sin Email"))),
-            "phone": client.phone if client else (financial_sales[0].telefono if financial_sales else (financial_agendas[0].whatsapp if financial_agendas else "Sin Teléfono")),
-            "instagram": client.instagram if client else (manychat_lead.ig if manychat_lead else (financial_sales[0].instagram if financial_sales else (financial_agendas[0].instagram if financial_agendas else "Sin Instagram"))),
+            "full_name": client.full_name if client else (clean_name or (manychat_lead.name if manychat_lead else (financial_sales[0].nombre_cliente if financial_sales else (contacto_agenda.get('lead') if financial_agendas else "Desconocido")))),
+            "email": client.email if client else (manychat_lead.ig if manychat_lead and '@' in manychat_lead.ig else (financial_sales[0].mail_cliente if financial_sales else (contacto_agenda.get('mail') if financial_agendas else "Sin Email"))),
+            "phone": client.phone if client else (financial_sales[0].telefono if financial_sales else (contacto_agenda.get('whatsapp') if financial_agendas else "Sin Teléfono")),
+            "instagram": client.instagram if client else (manychat_lead.ig if manychat_lead else (financial_sales[0].instagram if financial_sales else (contacto_agenda.get('instagram') if financial_agendas else "Sin Instagram"))),
             "status": "Entrante",
             "created_at": created_at_val,
             "objeciones": client.objeciones if client else "",
@@ -802,6 +799,11 @@ def relate_event_roadmap():
             if not agenda:
                 return jsonify({"error": "Agenda no encontrada"}), 404
             agenda.instagram = ig_norm
+            # Relacionarla es decir de quién es: queda con la persona de ese instagram.
+            from app.services import person_service
+            persona = person_service.buscar(instagram=ig_norm)
+            if persona is not None:
+                agenda.person = persona
         else:
             return jsonify({"error": "Tipo de evento inválido"}), 400
 

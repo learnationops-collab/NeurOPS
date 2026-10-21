@@ -24,6 +24,7 @@ from app import db
 from app.models import ROLE_SETTER, Client, Appointment, ManychatLead, LeadAnswer, Ad, Comment, CommentNotification
 from app.decorators import role_required
 from app.services.user_time_service import hoy_del_usuario, limites_dia_utc, limites_rango_utc
+from app.services import agenda_contacto_service
 from app.api.setter import bp
 from app.api.setter_agendas import agendas_del_setter, clave_de_persona, _cliente_de, _cita_de
 
@@ -121,11 +122,13 @@ def get_agendas_del_mazo():
     sin_leer = {n.client_id for n in CommentNotification.query.filter_by(
         user_id=current_user.id, is_read=False).all()}
 
+    agenda_contacto_service.precargar(agendas)
     filas = []
     vistas = set()
     for agenda in agendas:
-        ig_norm = _normalizar_ig(agenda.instagram)
-        nombre_norm = (agenda.lead or '').strip().lower()
+        contacto = agenda.contacto()  # de su persona; la copia si no tiene
+        ig_norm = _normalizar_ig(contacto['instagram'])
+        nombre_norm = (contacto['lead'] or '').strip().lower()
 
         # Una misma persona puede tener varias filas de agenda (reagendas); en la
         # lista de trabajo se muestra una sola. Misma clave que el Historial.
@@ -144,8 +147,8 @@ def get_agendas_del_mazo():
         # si lo pisara el de ManyChat la correccion pareceria no haber hecho nada.
         # Recien si la agenda no tiene, se completa con el handle real de la
         # conversacion, que es mejor que nada para encontrar a la persona.
-        ig_mostrado = agenda.instagram \
-            if _normalizar_ig(agenda.instagram) else (
+        ig_mostrado = contacto['instagram'] \
+            if ig_norm else (
                 (lead_mc.ig if lead_mc and lead_mc.ig else None)
                 or (client.instagram if client and client.instagram else None))
         if not _normalizar_ig(ig_mostrado):
@@ -155,10 +158,10 @@ def get_agendas_del_mazo():
             "id": agenda.id,
             "agenda_id": agenda.id,
             "appointment_id": cita.id if cita else None,
-            "cliente": agenda.lead or 'Desconocido',
-            "lead_name": agenda.lead or 'Desconocido',
+            "cliente": contacto['lead'] or 'Desconocido',
+            "lead_name": contacto['lead'] or 'Desconocido',
             "instagram": ig_mostrado,
-            "whatsapp": agenda.whatsapp or (client.phone if client else ''),
+            "whatsapp": contacto['whatsapp'] or (client.phone if client else ''),
             "closer": agenda.closer or 'Sin asignar',
             "fuente": agenda.nombre or '',
             "date": agenda.date.isoformat() if agenda.date
@@ -199,7 +202,8 @@ def actualizar_instagram_de_agenda(agenda_id):
         return jsonify({"error": "Esta agenda no es de tu fuente"}), 403
 
     client = _cliente_de(agenda)
-    agenda.instagram = nuevo
+    # Corrige también a su persona, que es de donde sale lo que se muestra.
+    agenda_contacto_service.corregir(agenda, 'instagram', nuevo, current_user)
     db.session.add(agenda)
     if client:
         client.instagram = nuevo
