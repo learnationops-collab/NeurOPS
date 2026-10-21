@@ -1,7 +1,7 @@
 """Del payload crudo del webhook de Instagram a eventos simples que entiende el motor.
 
-Un payload trae una o varias `entry`, cada una con `messaging` (DMs, botones, ecos, lecturas) o
-`changes` (comentarios). Lo que no le importa al motor (lecturas, reacciones) se descarta acá.
+Un payload trae una o varias `entry`, cada una con `messaging` (DMs, botones, ecos, lecturas),
+`standby` (lo mismo, en conversaciones que controla otra app) o `changes` (comentarios). Lo que no le importa al motor (lecturas, reacciones) se descarta acá.
 """
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -42,7 +42,8 @@ def leer(payload):
     eventos = []
     for entry in (payload or {}).get('entry') or []:
         cuenta = str(entry.get('id') or '')
-        for m in entry.get('messaging') or []:
+        # `standby`: lo que pasa en una conversación que Meta le dio a otra app (ManyChat). Mismo formato.
+        for m in (entry.get('messaging') or []) + (entry.get('standby') or []):
             emisor = str((m.get('sender') or {}).get('id') or '')
             receptor = str((m.get('recipient') or {}).get('id') or '')
             momento = _momento(m.get('timestamp'))
