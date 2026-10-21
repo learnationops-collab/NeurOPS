@@ -9,6 +9,23 @@ from app.services.commission_service import cash_neto_de
 from app.services.identity_service import normalize_ig
 from . import bp
 
+import logging
+
+
+def _sumar_instagram(person, ig, donde):
+    """El IG que el setter escribió para atribuir queda en la persona (de donde se lee, Etapa 2b): como
+    principal si no tenía, si no como otro dato válido. Uno que ya es de otra persona no se le suma."""
+    from app.services import person_service
+
+    valor = person_service.normalizar('instagram', ig)
+    if person is None or not valor:
+        return
+    if set(person_service.duenos('instagram', valor)) - {person.uuid}:
+        logging.getLogger(__name__).warning(f"[ATRIBUCION] @{valor} de la {donde} ya es de otra persona: no se le suma")
+        return
+    person_service.anotar(person, [('instagram', valor)], 'atribucion')
+
+
 # ============================================================
 # ATRIBUCIÓN MANUAL (Sin Anuncio: UnattributedLeadsPage)
 # ============================================================
@@ -54,9 +71,10 @@ def force_manual_attribution():
         logger.error(f"Atribucion fallida: No se encontro el anuncio con ID={ad_id}")
         return jsonify({"error": f"El anuncio con ID {ad_id} no existe en la base de datos"}), 404
 
-    # 1. Normalizar IG y guardarlo en la venta si es diferente/nuevo
+    # 1. Normalizar IG y guardarlo en la venta si es diferente/nuevo, y en su persona (de donde se lee)
     ig_normalizado = instagram_input.strip().lstrip('@').lower()
     sale.instagram = f"@{ig_normalizado}"
+    _sumar_instagram(sale.person if sale.person_uuid else None, ig_normalizado, f'venta #{sale.id}')
     
     # 2. Buscar o crear ManychatLead: el del IG que se escribió y, si no hay, el de la persona de la venta
     matched_lead = ManychatLead.query.filter(
@@ -371,14 +389,7 @@ def force_manual_attribution_agenda():
     # Normalizar IG y guardar
     ig_normalizado = instagram_input.strip().lstrip('@').lower()
     agenda.instagram = f"@{ig_normalizado}"
-    # Lo que se muestra sale de la persona: si no tenía instagram, queda éste como principal.
-    if agenda.person is not None and not agenda.person.instagram:
-        from app.services import person_service
-        try:
-            person_service.hacer_principal(agenda.person, 'instagram', ig_normalizado, current_user,
-                                           reason='atribución de agenda')
-        except ValueError as e:
-            logger.error(f"[ATRIBUCION] instagram inválido para la persona de la agenda #{agenda.id}: {e}")
+    _sumar_instagram(agenda.person if agenda.person_uuid else None, ig_normalizado, f'agenda #{agenda.id}')
 
     # Buscar/crear lead de Manychat: el del IG que se escribió y, si no hay, el de la persona de la agenda
     matched_lead = ManychatLead.query.filter(
@@ -386,7 +397,7 @@ def force_manual_attribution_agenda():
     ).first() or conversaciones_service.lead_de_persona(agenda.person_uuid)
 
     if not matched_lead:
-        cliente_nombre = agenda.nombre or 'Desconocido'
+        cliente_nombre = agenda.contacto()['lead'] or 'Desconocido'  # `nombre` es la fuente, no el lead
         matched_lead = ManychatLead(
             manychat_id=f"manual_agenda_{agenda.id}_{uuid.uuid4().hex[:6]}",
             name=cliente_nombre,

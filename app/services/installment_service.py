@@ -3,6 +3,21 @@ from app import db
 from app.models import InstallmentPlan
 
 
+def _venta_de(client_id, programa_code, existentes=()):
+    """La venta de la que cuelga el plan (`InstallmentPlan.sale_id`, Inventario 2c): la de las cuotas
+    que ya tiene y, si no, la venta 'new' vigente de su persona (o, sin persona, del cliente) en ese
+    programa. None si todavía no hay venta agrupada."""
+    for p in existentes:
+        if p.sale_id:
+            return p.sale_id
+    from app.models import Client
+    from app.services.sale_service import venta_new_vigente
+
+    client = db.session.get(Client, client_id) if client_id else None
+    venta = venta_new_vigente(client.person_uuid if client else None, client_id, programa_code or None)
+    return venta.id if venta else None
+
+
 def _add_months(d, months):
     month = d.month - 1 + months
     year = d.year + month // 12
@@ -51,6 +66,7 @@ class InstallmentService:
             return None
 
         InstallmentPlan.query.filter_by(client_id=client_id, programa_code=programa_code).delete()
+        sale_id = _venta_de(client_id, programa_code)
 
         rest = max(0.0, float(total) - float(cobrado_hoy))
         n = max(1, int(num_cuotas))
@@ -93,6 +109,7 @@ class InstallmentService:
                 client_id=client_id,
                 appointment_id=appointment_id,
                 programa_code=programa_code,
+                sale_id=sale_id,
                 numero_cuota=i + 1,
                 monto=monto,
                 fecha_vencimiento=fecha_vencimiento,
@@ -135,13 +152,14 @@ class InstallmentService:
             client_id=client_id, programa_code=programa_code).all()}
 
         resultado, conservados = [], set()
+        sale_id = _venta_de(client_id, programa_code, existentes.values())
         for fila in (cuotas or []):
             if not isinstance(fila, dict):
                 continue
             cuota = existentes.get(fila.get('id'))
             if cuota is None:
                 cuota = InstallmentPlan(client_id=client_id, appointment_id=appointment_id,
-                                        programa_code=programa_code, numero_cuota=0, monto=0.0,
+                                        programa_code=programa_code, sale_id=sale_id, numero_cuota=0, monto=0.0,
                                         fecha_vencimiento=date.today())
                 db.session.add(cuota)
             else:
@@ -256,6 +274,7 @@ class InstallmentService:
             client_id=client_id,
             appointment_id=appointment_id,
             programa_code=programa_code,
+            sale_id=_venta_de(client_id, programa_code, existing),
             numero_cuota=siguiente_numero,
             monto=float(monto),
             fecha_vencimiento=fecha,

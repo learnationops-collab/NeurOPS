@@ -169,8 +169,8 @@ class AcademyAccessService:
             # Work es la fuente de verdad (20/10/2026): la fecha de su suscripción, ya calculada por
             # el pago; sin suscripción, la regla de siempre.
             from app.services.subscription_service import vencimiento_de
-            expires_at = (vencimiento_de(client.id, programa_code)
-                          or AcademyAccessService.compute_default_expiration(tipo_venta))
+            de_la_suscripcion = vencimiento_de(client.id, programa_code)
+            expires_at = de_la_suscripcion or AcademyAccessService.compute_default_expiration(tipo_venta)
 
         try:
             upsert_result = LearnationService.upsert_user(email_academia, client.full_name or email_academia, client.phone,
@@ -198,6 +198,13 @@ class AcademyAccessService:
             from app.services import subscription_service
             subscription_service.cambiar(client, programa_code, expires_at,
                                          'Fecha elegida por el closer al dar el acceso', usuario)
+        elif de_la_suscripcion is None:
+            # Sin suscripción, el acceso con la regla por defecto también queda registrado en Work
+            # (Inventario 2c): si no, solo existiría en `academy_*` del cliente.
+            from app.services import subscription_service
+            subscription_service.otorgar(db.session, client.id, product_slug, expires_at, 'alta', programa=programa_code,
+                                         reason='Acceso dado con la regla por defecto (sin pago que lo calcule)',
+                                         actor_id=getattr(usuario, 'id', None))
         db.session.commit()
 
         return {

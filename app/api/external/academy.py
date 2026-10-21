@@ -336,17 +336,18 @@ def patch_sale(sale_id):
     if sale.marca_temporal:
         try:
             from app.services.sheets_service import SheetsService
+            contacto = sale.contacto()  # el que se lee: el de la persona
             SheetsService.update_in_sheets("Ventas_DB", sale.marca_temporal, {
                 "email_vendedor": sale.email_vendedor,
-                "nombre_cliente": sale.nombre_cliente,
-                "telefono": sale.telefono,
-                "mail_cliente": sale.mail_cliente,
+                "nombre_cliente": contacto['nombre_cliente'],
+                "telefono": contacto['telefono'],
+                "mail_cliente": contacto['mail_cliente'],
                 "tipo_pago": sale.tipo_pago,
                 "monto": sale.monto,
                 "segundo_pago": sale.segundo_pago,
                 "metodo_pago": sale.metodo_pago,
                 "examen": sale.examen,
-                "instagram": sale.instagram,
+                "instagram": contacto['instagram'],
                 "setter": sale.setter,
                 "estado": sale.estado,
             })

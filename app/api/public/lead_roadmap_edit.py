@@ -134,21 +134,30 @@ def relate_event_roadmap():
             if not sale:
                 return jsonify({"error": "Venta no encontrada"}), 404
             sale.instagram = ig_norm
-            
-            # Sincronizar en Sheets si aplica
+            # Relacionarla es decir de quién es: queda con la persona de ese instagram (comprador).
+            from app.services import person_service
+            persona = person_service.buscar(instagram=ig_norm)
+            if persona is not None:
+                sale.person = persona
+                cliente = person_service.cliente_de(persona, crear=False)
+                if cliente is not None:
+                    sale.client_id = cliente.id
+
+            # Sincronizar en Sheets si aplica, con el contacto que se lee (el de la persona)
             if sale.marca_temporal:
                 from app.services.sheets_service import SheetsService
+                contacto = sale.contacto()
                 update_payload = {
                     "email_vendedor": sale.email_vendedor,
-                    "nombre_cliente": sale.nombre_cliente,
-                    "telefono": sale.telefono,
-                    "mail_cliente": sale.mail_cliente,
+                    "nombre_cliente": contacto['nombre_cliente'],
+                    "telefono": contacto['telefono'],
+                    "mail_cliente": contacto['mail_cliente'],
                     "tipo_pago": sale.tipo_pago,
                     "monto": sale.monto,
                     "segundo_pago": sale.segundo_pago,
                     "metodo_pago": sale.metodo_pago,
                     "examen": sale.examen,
-                    "instagram": sale.instagram,
+                    "instagram": contacto['instagram'],
                     "setter": sale.setter,
                     "estado": sale.estado
                 }
