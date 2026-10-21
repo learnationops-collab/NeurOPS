@@ -7,9 +7,14 @@ Uso:
 
 Solo toma los pagos completados que todavía no tienen venta (`sale_id` NULL), así que correrlo dos
 veces no duplica nada. Los pagos no completados (pendientes, reembolsos) quedan sin venta y se cuentan.
+
+Las ventas que quedaron solo en seña hasta 2025 se cargan `cancelled`: no van a seguir, así que no
+son deuda (decisión de Santiago, 20/10/2026). Las de después, a más de 30 días, quedan para revisar
+(`sale_service.marcar_senas_sin_seguir`), sin cancelarse.
 """
 import os
 import sys
+from collections import Counter
 from datetime import datetime, timedelta
 
 current_dir = os.path.abspath(os.path.dirname(__file__))
@@ -20,17 +25,28 @@ else:
 
 from app import create_app, db
 from app.models import FinancialSale, InstallmentPlan, Sale
+from app.services import sale_service
 from app.services.comercial_service import venta_completada
 from app.services.sales_grouping import agrupar, pago_de_fila, resumen
 
 EJEMPLOS = 15
+ULTIMO_ANIO_SENA_CANCELADA = 2025
+
+
+def _cancelada(venta):
+    """Una seña vieja que nunca siguió."""
+    dia = venta.pagos[0].dia
+    return venta.solo_sena and dia is not None and dia.year <= ULTIMO_ANIO_SENA_CANCELADA
 
 
 def _crear_ventas(ventas, filas):
     """Guarda cada `Venta` como `Sale` y apunta sus pagos."""
     for venta in ventas:
         primera = filas[venta.pagos[0].id]
-        sale = Sale(client_id=venta.client_id, program_code=venta.programa, kind=venta.kind,
+        personas = Counter(filas[p.id].person_uuid for p in venta.pagos if filas[p.id].person_uuid)
+        sale = Sale(client_id=venta.client_id,
+                    person_uuid=personas.most_common(1)[0][0] if personas else None, program_code=venta.programa, kind=venta.kind,
+                    status='cancelled' if _cancelada(venta) else 'active',
                     sold_at=primera.date or datetime.utcnow(), closer_email=primera.email_vendedor,
                     setter=primera.setter, source='backfill', review_note=venta.review_note)
         db.session.add(sale)
@@ -73,7 +89,8 @@ def _colgar_planes():
 def _mostrar(numeros, ventas, filas):
     print(f"Pagos agrupados: {numeros['pagos']} (fuera por no estar completados: {numeros['pagos_fuera']})")
     print(f"Ventas: {numeros['ventas']} {numeros['por_tipo']}")
-    print(f"Ventas que quedan solo en seña: {numeros['solo_sena']}")
+    print(f"Ventas que quedan solo en seña: {numeros['solo_sena']} "
+          f"(se cargan cancelled, hasta {ULTIMO_ANIO_SENA_CANCELADA}: {sum(1 for v in ventas if _cancelada(v))})")
     print(f"Para revisar: {numeros['para_revisar']} {numeros['motivos']}")
     dudosas = [v for v in ventas if v.notas][:EJEMPLOS]
     if dudosas:

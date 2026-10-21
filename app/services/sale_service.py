@@ -10,9 +10,12 @@ tenga, con la misma regla del agrupado retroactivo (`sales_grouping.decidir`):
   · si quien lo guarda ya eligió la venta (`sale_id`), se respeta;
   · una venta que se queda sin pagos ni plan de cuotas se borra;
   · un pago nuevo le abre, extiende o completa la suscripción (`subscription_service`).
+La venta que sigue solo en seña a más de 30 días queda para revisar (`marcar_senas_sin_seguir`, una
+vez por hora desde el scheduler); no se cancela sola: lo decide el staff. Con el pago siguiente se
+le quita la marca.
 """
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import and_, event, inspect, or_
 
@@ -26,6 +29,9 @@ logger = logging.getLogger(__name__)
 
 # Lo que, al cambiar, puede llevar un pago a otra venta.
 CAMPOS_QUE_MUEVEN = ('tipo_pago', 'client_id', 'estado')
+
+NOTA_SENA_SIN_SEGUIR = 'requires_review: seña sin otro pago a más de 30 días'
+DIAS_SENA_SIN_SEGUIR = 30
 
 
 def _orden(fila):
@@ -73,6 +79,11 @@ def _anotar(sale, notas):
         sale.review_note = '; '.join(dict.fromkeys(partes + notas))[:255]
 
 
+def _quitar(sale, nota):
+    partes = [p for p in (sale.review_note or '').split('; ') if p and p != nota]
+    sale.review_note = '; '.join(partes) or None
+
+
 def ubicar(session, fila, nuevo=False):
     """Le da su venta a `fila` (sin guardar): la vigente o una nueva. A un pago `nuevo` además le
     toca la suscripción (`subscription_service.al_ubicar_pago`); a uno corregido, no."""
@@ -87,6 +98,8 @@ def ubicar(session, fila, nuevo=False):
                     sold_at=fila.date or datetime.utcnow(), closer_email=fila.email_vendedor, setter=fila.setter,
                     source='auto')
         session.add(sale)
+    if not abre and pago.tipo != 'seña':
+        _quitar(sale, NOTA_SENA_SIN_SEGUIR)
     _anotar(sale, notas)
     fila.sale = sale
     if nuevo:
@@ -129,6 +142,23 @@ def venta_elegida(valor, client_id, programa):
         raise ValueError(f'Esa venta es de {sale.program_code} y el pago es de {programa}: elegí una venta '
                          'del mismo programa, o «Automática».')
     return sale.id
+
+
+def marcar_senas_sin_seguir():
+    """Marca para revisar las ventas activas que siguen solo en seña a más de 30 días. Devuelve
+    cuántas marcó."""
+    tope = datetime.utcnow() - timedelta(days=DIAS_SENA_SIN_SEGUIR)
+    candidatas = Sale.query.filter(Sale.status == 'active', Sale.sold_at < tope,
+                                   or_(Sale.review_note.is_(None), ~Sale.review_note.contains(NOTA_SENA_SIN_SEGUIR))).all()
+    pagos = {}
+    for fila in FinancialSale.query.filter(FinancialSale.sale_id.in_([s.id for s in candidatas])).all():
+        if venta_completada(fila):
+            pagos.setdefault(fila.sale_id, []).append(pago_de_fila(fila).tipo)
+    marcadas = [s for s in candidatas if pagos.get(s.id) and all(t == 'seña' for t in pagos[s.id])]
+    for sale in marcadas:
+        _anotar(sale, [NOTA_SENA_SIN_SEGUIR])
+    db.session.commit()
+    return len(marcadas)
 
 
 def mantener(session):

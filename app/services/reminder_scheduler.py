@@ -83,8 +83,20 @@ def start_scheduler(app):
             except Exception as e:
                 logger.error(f"[ReminderScheduler] Error trayendo el avance de la Academia: {e}")
 
+    def _senas():
+        with app.app_context():
+            from app.services import sale_service
+            try:
+                marcadas = sale_service.marcar_senas_sin_seguir()
+                if marcadas:
+                    logger.info(f"[ReminderScheduler] Señas sin seguir marcadas para revisar: {marcadas}")
+            except Exception as e:
+                logger.error(f"[ReminderScheduler] Error marcando señas sin seguir: {e}")
+
     from datetime import datetime, timedelta
     _scheduler = BackgroundScheduler(daemon=True)
+    _scheduler.add_job(_senas, 'interval', minutes=AVANCE_INTERVAL_MINUTES,
+                       id='senas_sin_seguir', next_run_time=datetime.now() + timedelta(minutes=3))
     if con_avisos:
         # next_run_time=ahora: corre una vez apenas arranca el proceso (inofensivo —
         # send_due_reminders solo manda lo que ya llegó a su hora y no repite en el día) para no

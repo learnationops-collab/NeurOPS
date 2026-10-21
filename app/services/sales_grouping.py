@@ -15,6 +15,12 @@ cliente y programa en orden de fecha, con las mismas reglas que ya usa el sistem
 Lo que no encaja se agrupa igual y la venta lleva `review_note` con el motivo: ningún pago se
 queda sin venta por una duda.
 
+Pagos viejos sin programa en el tipo de pago (formato viejo de la hoja, 2025): el programa sale del
+nombre del producto en el texto («Ace Learner»), si no de los otros pagos de la misma persona (si
+compró uno solo), y si no del monto, cuando ese tipo y monto son casi siempre de un programa. La
+seña no se deduce por monto (sus valores no se parecen a los del programa). Lo que no se deduce
+queda «programa a definir».
+
 Función pura sobre tuplas, sin base: el script `scripts/backfill_sales.py` lee y escribe.
 """
 from collections import Counter
@@ -31,10 +37,14 @@ NOTA_CUOTA_SIN_VENTA = 'cuota sin una venta anterior registrada'
 NOTA_CUOTA_TARDE = 'cuota a más de un mes de la seña'
 NOTA_CUOTA_DE_COMPLETO = 'cuota después de un pago completo'
 NOTA_SIN_TIPO = 'tipo de pago no reconocido'
-NOTA_SIN_PROGRAMA = 'sin programa'
+NOTA_SIN_PROGRAMA = 'programa a definir'
 NOTA_SIN_CLIENTE = 'no se sabe de qué cliente es'
 NOTA_RESTO_TARDE = 'el resto llegó a más de 4 meses de la venta'
 DIAS_RESTO_TARDE = 120
+# Por monto: un (tipo, monto) visto al menos MIN_MUESTRAS veces y de un programa en al menos MIN_PARTE.
+MIN_MUESTRAS = 3
+MIN_PARTE = 0.8
+PALABRAS_DE_PROGRAMA = {'learner': 'AL', 'roadmap': 'RR', 'iniciative': 'SI', 'initiative': 'SI', 'specialist': 'SI'}
 
 
 @dataclass
@@ -47,6 +57,7 @@ class Pago:
     client_id: int | None = None
     vendedor: str | None = None
     setter: str | None = None
+    monto: float | None = None
 
 
 @dataclass
@@ -86,12 +97,52 @@ def pago_de_fila(fila):
     """El `Pago` de una fila de `FinancialSale` (o de cualquier objeto con sus columnas)."""
     raw = fila.raw_data if isinstance(getattr(fila, 'raw_data', None), dict) else {}
     codigo, tipo = SheetsService.parse_tipo_pago(fila.tipo_pago or raw.get('tipo_pago'))
-    codigo = codigo or CODIGO_DE_LABEL.get(_program_from_examen(fila.examen))
+    codigo = codigo or CODIGO_DE_LABEL.get(_program_from_examen(fila.examen)) or _programa_del_texto(fila.tipo_pago)
     claves = claves_de_cliente(fila.client_id, fila.mail_cliente, fila.instagram, fila.nombre_cliente,
                                getattr(fila, 'person_uuid', None))
     return Pago(id=fila.id, claves=claves,
                 programa=codigo, tipo=tipo, dia=_dia(fila.date), client_id=fila.client_id,
-                vendedor=fila.email_vendedor, setter=fila.setter)
+                vendedor=fila.email_vendedor, setter=fila.setter,
+                monto=float(fila.monto) if fila.monto is not None else None)
+
+
+def _programa_del_texto(texto):
+    """El programa nombrado en el texto del tipo de pago (p. ej. «Ace Learner»), o None."""
+    texto = str(texto or '').lower()
+    return next((codigo for palabra, codigo in PALABRAS_DE_PROGRAMA.items() if palabra in texto), None)
+
+
+def _programa_por_monto(pagos):
+    """{(tipo, monto): programa} cuando ese tipo y monto son casi siempre de un mismo programa."""
+    vistos = {}
+    for p in pagos:
+        if p.programa and p.tipo and p.tipo != 'seña' and p.monto:
+            vistos.setdefault((p.tipo, round(p.monto)), Counter())[p.programa] += 1
+    tabla = {}
+    for clave, cuenta in vistos.items():
+        programa, n = cuenta.most_common(1)[0]
+        total = sum(cuenta.values())
+        if total >= MIN_MUESTRAS and n / total >= MIN_PARTE:
+            tabla[clave] = programa
+    return tabla
+
+
+def completar_programas(pagos, clientes):
+    """Les pone programa a los pagos que no lo traen: el único que compró esa persona, o el que
+    dice su monto. `clientes` es el representante de cada pago (`_unir_clientes`)."""
+    comprados = {}
+    for cliente, p in zip(clientes, pagos):
+        if cliente is not None and p.programa:
+            comprados.setdefault(cliente, set()).add(p.programa)
+    por_monto = _programa_por_monto(pagos)
+    for cliente, p in zip(clientes, pagos):
+        if p.programa:
+            continue
+        unico = comprados.get(cliente, set())
+        if len(unico) == 1:
+            p.programa = next(iter(unico))
+        elif p.tipo and p.tipo != 'seña' and p.monto:
+            p.programa = por_monto.get((p.tipo, round(p.monto)))
 
 
 def _abre_venta(abierta, pago):
@@ -146,8 +197,10 @@ def _ventas_de(pagos):
 
 def agrupar(pagos):
     """[Venta] de una lista de `Pago` de cualquier cliente. Un pago sin claves de cliente es una
-    venta suelta para revisar; uno sin programa se agrupa con los otros sin programa del cliente."""
+    venta suelta para revisar; uno sin programa (`completar_programas`) se agrupa con los otros
+    sin programa del cliente."""
     clientes = _unir_clientes([p.claves for p in pagos])
+    completar_programas(pagos, clientes)
     grupos, sueltas = {}, []
     for cliente, pago in zip(clientes, pagos):
         if cliente is None:
