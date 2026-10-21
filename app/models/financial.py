@@ -197,6 +197,7 @@ class FinancialAgenda(ConPersona, db.Model):
             # Los pagos de su persona; la copia del pago (mail, IG) solo en pagos sin persona
             # (`filtro_de_pagos`, docs/plan_personas.md, Etapa 2b).
             from sqlalchemy import func, or_
+            from app.services import pagos_copia
             from app.services.sales_consistency_service import filtro_de_pagos
             sales_count = 0
             if self.person_uuid:
@@ -206,9 +207,9 @@ class FinancialAgenda(ConPersona, db.Model):
                 mail_clean = self.mail.strip().lower() if self.mail and self.mail.lower() not in ('n/a', '') else None
                 por_copia = []
                 if ig_clean:
-                    por_copia.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig_clean)
+                    por_copia.append(pagos_copia.IG_NORMALIZADO == ig_clean)
                 if mail_clean:
-                    por_copia.append(func.lower(FinancialSale.mail_cliente) == mail_clean)
+                    por_copia.append(pagos_copia.MAIL_NORMALIZADO == mail_clean)
                 if por_copia:
                     sales_count = FinancialSale.query.filter(
                         FinancialSale.person_uuid.is_(None), or_(*por_copia)).count()
