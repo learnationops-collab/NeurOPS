@@ -40,6 +40,7 @@ def aviso(sub):
     ultimo = eventos[-1] if eventos else None
     return {
         'work_client_id': sub.client_id,
+        'work_uuid': sub.person_uuid or client.person_uuid,
         'email': (client.email or '').strip().lower() or None,
         'learnation_user_id': client.learnation_user_id,
         'product_slug': sub.product_slug,

@@ -125,19 +125,28 @@ class AcademyAccessService:
         el último punto de control antes de mandarlo. Si viene y es distinto al que ya tiene el
         cliente, se guarda en `client.email` (reemplaza sin condición: es una corrección
         explícita del closer, no un merge automático de datos)."""
+        from app.services import person_service
+
+        person = client.person
         if email_override:
             email_clean = str(email_override).strip().lower()
             if '@' not in email_clean:
                 raise AcademyAccessError('El email ingresado no es válido.', status_code=422)
             if email_clean != (client.email or '').strip().lower():
                 client.email = email_clean
-                # Se guarda ya (no se espera al commit final): si la llamada a la Academia
-                # falla despues, el closer no debería tener que volver a tipear la corrección.
-                db.session.commit()
+            # El mail con que entra a la Academia (plan_personas): si no es el que ya vale para la
+            # Academia (el de uso 'academia' o, sin él, el principal), queda como su uso 'academia'.
+            if person is not None and email_clean != person_service.dato(person, 'email', uso='academia'):
+                person_service.hacer_principal(person, 'email', email_clean, usuario, uso='academia',
+                                               reason='El closer lo confirmó al dar el acceso a la Academia')
+            # Se guarda ya (no se espera al commit final): si la llamada a la Academia
+            # falla despues, el closer no debería tener que volver a tipear la corrección.
+            db.session.commit()
 
-        if not client.email:
+        email_academia = (person_service.dato(person, 'email', uso='academia') if person else None) or client.email
+        if not email_academia:
             raise AcademyAccessError('El cliente no tiene email registrado — no se puede vincular con la Academia.')
-        if 'no-email-' in client.email or 'no_email_' in client.email:
+        if 'no-email-' in email_academia or 'no_email_' in email_academia:
             raise AcademyAccessError(
                 'El cliente todavía tiene un email temporal generado por el sistema (no uno real) — '
                 'confirmá el email real del cliente antes de darle acceso a la Academia.',
@@ -164,7 +173,8 @@ class AcademyAccessService:
                           or AcademyAccessService.compute_default_expiration(tipo_venta))
 
         try:
-            upsert_result = LearnationService.upsert_user(client.email, client.full_name or client.email, client.phone)
+            upsert_result = LearnationService.upsert_user(email_academia, client.full_name or email_academia, client.phone,
+                                                          work_uuid=person.uuid if person else None)
         except LearnationAPIError as e:
             raise AcademyAccessError(f'No se pudo crear/actualizar el usuario en la Academia: {e}', status_code=e.status_code or 502)
 
@@ -196,5 +206,6 @@ class AcademyAccessService:
             'product_slug': product_slug,
             'expires_at': expires_at.isoformat(),
             'assignment': assign_result.get('assignment'),
-            'email': client.email
+            'email': email_academia,
+            'work_uuid': person.uuid if person else None,
         }

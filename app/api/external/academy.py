@@ -22,6 +22,7 @@ def _find_client(email_norm):
 def _client_dict(client):
     return {
         "id": client.id,
+        "work_uuid": client.person_uuid,
         "full_name": client.full_name,
         "email": client.email,
         "phone": client.phone,
@@ -37,6 +38,7 @@ def _sale_dict(sale):
     return {
         "id": sale.id,
         "client_id": sale.client_id,
+        "work_uuid": sale.person_uuid,
         "fecha": sale.date.isoformat() if sale.date else None,
         "monto": round(float(sale.monto), 2) if sale.monto is not None else None,
         "tipo_pago": sale.tipo_pago,
@@ -400,15 +402,15 @@ def academy_baja():
     """La Academia dio de baja del proceso a un alumno (o lo volvió a sumar): queda igual acá, con
     el mismo motivo, para que su deuda salga de lo que queda por cobrar.
 
-    Cuerpo: `work_client_id` o `email`, `motivo` y `revertir` (true para deshacerla). No se le
+    Cuerpo: `work_uuid`, `work_client_id` o `email`, `motivo` y `revertir` (true para deshacerla). No se le
     devuelve el aviso a la Academia: el cambio salió de allá.
     """
-    from app.services import academy_payment_status, baja_service
+    from app.services import baja_service
 
     data = request.get_json(silent=True) or {}
-    cliente = academy_payment_status.buscar_cliente(data.get('work_client_id'), data.get('email'))
+    cliente = cliente_del_alumno(data)
     if not cliente:
-        return jsonify({"success": False, "error": "No existe ningún cliente con ese id o email"}), 404
+        return jsonify({"success": False, "error": "No existe ningún cliente con ese uuid, id o email"}), 404
 
     if data.get('revertir'):
         cambio = baja_service.revertir(cliente) is not None
@@ -428,18 +430,18 @@ def academy_prorroga():
     """La Academia le da a un alumno una prórroga gratuita de su suscripción (20/10/2026): queda en
     el historial de la suscripción en Work, con el motivo y quién la dio. Solo extiende.
 
-    Cuerpo: `work_client_id` o `email`; `dias` (más de cero) o `expires_at` (YYYY-MM-DD);
+    Cuerpo: `work_uuid`, `work_client_id` o `email`; `dias` (más de cero) o `expires_at` (YYYY-MM-DD);
     `motivo`; `actor_email` (quién la dio en la Academia); `product_slug` opcional (sin él, la
     suscripción que vence más tarde).
     """
     from datetime import date
 
-    from app.services import academy_payment_status, subscription_service
+    from app.services import subscription_service
 
     data = request.get_json(silent=True) or {}
-    cliente = academy_payment_status.buscar_cliente(data.get('work_client_id'), data.get('email'))
+    cliente = cliente_del_alumno(data)
     if not cliente:
-        return jsonify({"success": False, "error": "No existe ningún cliente con ese id o email"}), 404
+        return jsonify({"success": False, "error": "No existe ningún cliente con ese uuid, id o email"}), 404
     motivo = str(data.get('motivo') or '').strip()
     if not motivo:
         return jsonify({"success": False, "error": "Falta el motivo de la prórroga"}), 422
@@ -454,3 +456,7 @@ def academy_prorroga():
         return jsonify({"success": False, "error": str(e)}), 422
     db.session.commit()
     return jsonify({"success": True, "subscription": sub.to_dict(with_events=True)}), 200
+
+
+# Las rutas por `work_uuid` (plan_personas, frente G), sobre el mismo blueprint.
+from app.api.external.academy_personas import cliente_del_alumno  # noqa: E402

@@ -369,3 +369,10 @@
   - La ficha muestra los datos de la persona y devuelve `person_uuid` y todas sus identidades con su uso. Vender a alguien nuevo desde la ficha o el mazo crea la persona y su cliente.
   - Ventas del cliente, agendas, formulario recuperado, señas, «tiene venta», el libro de agendas, Mi cartera, el buscador (también por mails o instagrams secundarios) y los correos que se prueban en la Academia suman lo de su persona. El cruce por texto sigue al lado hasta la Etapa 2, para no perder pagos de personas duplicadas sin fusionar.
   - Verificación: sin tests (desarrollo rápido); un script descartable contra una base en memoria y se prueba en el servidor develop.
+
+- **20 de Octubre de 2026 (personas, frente G: la Academia por uuid)** *(La Academia y Work se identifican por el uuid de la persona. [app/api/external/academy_personas.py](../../app/api/external/academy_personas.py) [NEW], [app/api/external/academy.py](../../app/api/external/academy.py), [app/services/academy_access_service.py](../../app/services/academy_access_service.py), [app/services/learnation_service.py](../../app/services/learnation_service.py), [app/services/subscription_sync.py](../../app/services/subscription_sync.py), [app/services/momentum_academia.py](../../app/services/momentum_academia.py) [MODIFY])*:
+  - `POST /api/external/academy/people/resolve`: la Academia registra un alumno y recibe su `work_uuid`; si Work no lo conoce, crea la persona con su mail y su id de la Academia. `GET /people/<uuid>` da la persona y sus pagos.
+  - La baja y la prórroga que pide la Academia aceptan `work_uuid`; las fichas de clientes y ventas lo devuelven. Work lo manda al dar el acceso (`upsert_user`), en cada suscripción y en el resultado de Momentum.
+  - Dar el acceso usa el mail de la Academia de la persona (el de uso `academia` o el principal); el que confirma el closer queda como su uso `academia`.
+  - Del lado de la Academia (rama `develop`, sin deploy): columna `users.work_uuid`, se pide al dar de alta un alumno y es lo primero con que se busca lo que manda Work (ADR-154).
+  - Verificación: sin tests (desarrollo rápido); se prueba en el servidor develop.
