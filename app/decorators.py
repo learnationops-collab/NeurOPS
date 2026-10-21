@@ -74,6 +74,10 @@ hiring_required = _requiere_roles((ROLE_ADMIN, ROLE_HIRING), "Hiring access requ
 copiloto_required = _requiere_roles(
     (ROLE_ADMIN, ROLE_OPERATOR, ROLE_DIRECTOR_COMERCIAL, ROLE_CLOSER), "Copiloto access required")
 
+# Motor de tablas (`/api/tablas`): la direccion. El closer entra cuando el motor filtre su cartera.
+tablas_required = _requiere_roles(
+    (ROLE_ADMIN, ROLE_OPERATOR, ROLE_DIRECTOR_COMERCIAL), "Tablas access required")
+
 
 def _iguales_en_tiempo_constante(provisto, esperado):
     """Igualdad sin filtrar por tiempo cuantos caracteres coinciden. Se compara sobre bytes: con str,

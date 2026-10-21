@@ -132,6 +132,10 @@ def create_app(config_class=Config):
     from app.api.copiloto import bp as copiloto_api_bp
     app.register_blueprint(copiloto_api_bp, url_prefix='/api/copiloto')
 
+    # Motor genérico de tablas (ver app/services/tablas/ y docs/plan_tablas_motor_generico.md).
+    from app.api.tablas import bp as tablas_api_bp
+    app.register_blueprint(tablas_api_bp, url_prefix='/api/tablas')
+
     from app.api.public import bp as public_api_bp
     app.register_blueprint(public_api_bp, url_prefix='/api')
     csrf.exempt(public_api_bp) # Exento para llamadas publicas / webhooks de n8n
