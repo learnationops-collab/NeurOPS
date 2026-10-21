@@ -451,3 +451,11 @@
   - Hasta octubre de 2025 la hoja de agendas guardaba la persona en `nombre` y el evento en `lead`; desde noviembre, la fuente en `nombre` y la persona en `lead`. `FinancialAgenda.nombre_persona` elige la columna; lo usan el alta de personas desde la agenda y los scripts de vinculación. Evita personas llamadas «Entrevista Diagnóstica Gratuita» y agendas atadas a otra gente.
   - `backfill_sales --rehacer` borra las ventas armadas en vivo y las vuelve a agrupar; al terminar marca las señas sin seguir.
   - Verificación: sin tests (regla del proyecto); ensayo general sobre una copia de producción en el servidor de prueba.
+
+- **21 de Octubre de 2026 (personas: bugs del Inventario 2c e inventario de la Etapa 2c)** *([app/api/public/marketing_attribution.py](../../app/api/public/marketing_attribution.py), [app/api/public/lead_roadmap_edit.py](../../app/api/public/lead_roadmap_edit.py), [app/api/external/academy.py](../../app/api/external/academy.py), [app/services/academy_access_service.py](../../app/services/academy_access_service.py), [app/services/installment_service.py](../../app/services/installment_service.py), [docs/plan_personas.md](../plan_personas.md) [MODIFY])*:
+  - Atribución manual: el instagram que escribe el setter queda en la persona de la venta o de la agenda (si no es de otra persona). El nombre del lead que se crea sale de la persona; sin persona, de `nombre_persona`, que entiende los dos formatos de la hoja.
+  - Relacionar una venta desde el roadmap la deja con la persona de ese instagram, y lo que se manda a la hoja se lee de la persona (`contacto()`).
+  - Dar el acceso a la Academia con la regla por defecto, sin suscripción, ahora crea la suscripción en Work.
+  - Las cuotas nuevas quedan atadas a su venta (`sale_id`): la de las cuotas que ya tenía, si no la venta 'new' vigente del programa.
+  - `plan_personas.md`: sección «Inventario 2c», qué lee todavía las copias y las tablas viejas, los bugs encontrados y el orden para borrarlas.
+  - Verificación: sin tests ni ejecución local (regla del proyecto); compilado, se valida en el ensayo general del servidor de prueba.
