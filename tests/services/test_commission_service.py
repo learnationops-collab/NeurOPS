@@ -13,7 +13,7 @@ from unittest.mock import patch
 import pytest
 from freezegun import freeze_time
 
-from app.models import FinancialAgenda, FinancialSale
+from app.models import FinancialSale
 from app.services.commission_service import CLOSER_RATE, SETTER_RATE, CommissionService
 
 HOY = '2026-09-22 15:00:00'  # 11:00 en America/La_Paz (UTC-4): sin ambiguedad de dia calendario
@@ -31,13 +31,6 @@ def venta(db, setter=None, instagram=None, mail=None, monto=100.0, metodo='zelle
     db.session.add(v)
     db.session.commit()
     return v
-
-
-def agenda(db, nombre, instagram, mail, fecha=None):
-    a = FinancialAgenda(nombre=nombre, instagram=instagram, mail=mail, date=fecha or datetime(2026, 9, 1))
-    db.session.add(a)
-    db.session.commit()
-    return a
 
 
 # --- _rango_mes_actual ---------------------------------------------------------------------------

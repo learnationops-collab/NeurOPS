@@ -1,64 +1,16 @@
 """Procedencia de los ingresos en Finanzas › Resumen (08/10/2026): el ingreso del período abierto por
 workshop, setting, VSL, Fulfillment y sin procedencia, con la misma atribución que la columna Fuente
 del listado de ventas y la nómina. Lo que no se negocia: los baldes suman el ingreso del Resumen."""
-from datetime import datetime
 from types import SimpleNamespace
 
 import pytest
 
-from app.models import FinancialAgenda, FinancialSale
 from app.services.procedencia_ingresos_service import clasificar_pago
 
 
 @pytest.fixture()
 def finanzas(make_user, auth_headers):
     return auth_headers(make_user(role='admin', can_view_finance=True))
-
-
-@pytest.fixture()
-def septiembre(db, make_user):
-    """Un pago por cada camino de la clasificación, más lo que no suma (otro estado, otro mes)."""
-    # Un setter que no está en la lista fija de `fuente_service`: entra por su rol.
-    make_user(role='setter', username='Ramiro')
-
-    def agenda(nombre, ig):
-        db.session.add(FinancialAgenda(nombre=nombre, instagram=ig, date=datetime(2026, 8, 20),
-                                       created_at=datetime(2026, 8, 18)))
-
-    def venta(ig, tipo, monto, dia=10, metodo='zelle', setter=None, estado='Completada', mes=9):
-        db.session.add(FinancialSale(instagram=ig, tipo_pago=tipo, monto=monto, metodo_pago=metodo,
-                                     setter=setter, estado=estado, date=datetime(2026, mes, dia, 15)))
-
-    agenda('workshop', 'ana')
-    venta('ana', 'RR - Parcial', 1000.0, dia=5)
-    venta('ana', 'RR - Cuota', 500.0, dia=20, metodo='Stripe')        # sigue a la agenda: workshop
-    venta('ana', 'RR - Parcial', 999.0, estado='Reembolsada')          # no suma al ingreso
-    agenda('workshop_landing', 'beto')
-    venta('beto', 'AL - Seña', 200.0, metodo='Hotmart')
-    agenda('Elias', 'caro')
-    venta('caro', 'RR - Completo', 2000.0, dia=3)
-    venta('caro', 'AL - Upsell', 700.0, dia=25)                        # Fulfillment, no Elias
-    venta('caro', 'RR - Completo', 5000.0, dia=1, mes=10)              # otro mes
-    agenda('Paula', 'dani')
-    venta('dani', 'RR - Parcial', 800.0, dia=4)
-    venta('dani', 'RR - Renovación', 300.0, dia=28)                   # Fulfillment, no Paula
-    agenda('setting', 'eli')
-    venta('eli', 'SI - Completo', 600.0)
-    agenda('vsl', 'fede')
-    venta('fede', 'RR - Completo', 1500.0, metodo='stripe')
-    agenda('Entrevista diagnóstica', 'gabi')                           # no es fuente: manda la venta
-    venta('gabi', 'RR - Seña', 100.0, setter='Ivan')
-    venta('nadie', 'RR - Completo', 250.0, setter='Sin Setter')        # sin agenda
-    venta('otra', 'RR - Seña', 50.0, setter='Paula')                   # sin agenda, setter en la venta
-    agenda('Venta histórica sin agenda', 'hugo')
-    venta('hugo', 'RR - Completo', 400.0)
-    agenda('Sin asignar', 'ines')
-    venta('ines', 'RR - Seña', 120.0)
-    agenda('Fulfilment', 'juan')
-    venta('juan', 'RR - Cuota', 90.0)
-    agenda('Ramiro', 'kari')
-    venta('kari', 'RR - Seña', 75.0)
-    db.session.commit()
 
 
 def _por_balde(datos):

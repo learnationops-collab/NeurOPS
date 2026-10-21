@@ -11,8 +11,7 @@ from datetime import date, datetime
 
 import pytest
 
-from app.models import FinancialAgenda, FinancialSale, WorkshopEvent
-from app.services.workshop_metrics_service import calcular_prefill
+from app.models import FinancialSale, WorkshopEvent
 
 DIA = date(2026, 9, 19)
 SIGUIENTE = date(2026, 9, 26)          # cierra la ventana del taller del 19: del 19 al 25
@@ -25,12 +24,6 @@ def talleres(db):
         db.session.add(WorkshopEvent(date=dia, name=f'WEBINAR {dia}'))
     db.session.commit()
     return WorkshopEvent.query.filter_by(date=DIA).one().id
-
-
-def agenda(db, ig, *, nombre='Workshop', estado='Show Up'):
-    db.session.add(FinancialAgenda(nombre=nombre, lead=f'Persona {ig}', instagram=ig, mail=f'{ig}@test.local',
-                                   estado=estado, closer='Marlon', created_at=AGENDADA, date=AGENDADA))
-    db.session.commit()
 
 
 def pago(db, ig, tipo, monto):

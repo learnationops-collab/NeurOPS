@@ -307,17 +307,6 @@ def test_la_fuente_de_la_cita_ancla_se_conserva_si_no_se_toca_y_se_cambia_por_un
     assert lead.origin == 'vsl'
 
 
-def _fila_del_tablero(db, lead, **contacto):
-    from app.models import FinancialAgenda
-
-    fila = FinancialAgenda(nombre=lead.origin, lead='Jesus Capuchino', closer='vendedor',
-                           estado='Pendiente', date=lead.start_time,
-                           fecha_meet=lead.start_time.isoformat(), **contacto)
-    db.session.add(fila)
-    db.session.commit()
-    return fila
-
-
 # --- Sin cliente ------------------------------------------------------------------------------
 
 def test_una_agenda_sin_cliente_lo_dice_y_el_examen_se_corrige_igual(client, db, lead, equipo,
