@@ -3,9 +3,11 @@
 Hasta hoy cada pago era una «venta». Para darle a cada pago su venta se recorren los pagos de cada
 cliente y programa en orden de fecha, con las mismas reglas que ya usa el sistema:
   · renovación y upsell abren siempre una venta nueva (decisión de Santiago, 20/10);
-  · completo o parcial abren una venta nueva, salvo que la venta abierta sea solo seña (es el saldo
-    de esa seña) o que sea el resto de una venta nueva a pocos días (`ticket_service._misma_venta`,
-    el criterio de Kerwin para el ticket);
+  · completo o parcial se suman a la venta abierta mientras esa venta no tenga su pago completo: es
+    el resto de lo acordado (la venta declara su plan y los pagos se comparan contra él, 20/10/2026).
+    Recién después de un completo abren una venta nueva, salvo que sea a pocos días
+    (`ticket_service._misma_venta`, el criterio de Kerwin para el ticket). Si el resto llega a más de
+    4 meses se suma igual, pero la venta queda para revisar;
   · la seña abre una venta nueva, salvo que la abierta sea solo seña (una segunda seña);
   · la cuota se suma a la venta abierta. Si es la primera cuota después de una seña sola, cuenta
     solo a menos de un mes (`senas_conversion`, `ticket_service.es_primera_cuota`): más tarde se
@@ -31,6 +33,8 @@ NOTA_CUOTA_DE_COMPLETO = 'cuota después de un pago completo'
 NOTA_SIN_TIPO = 'tipo de pago no reconocido'
 NOTA_SIN_PROGRAMA = 'sin programa'
 NOTA_SIN_CLIENTE = 'no se sabe de qué cliente es'
+NOTA_RESTO_TARDE = 'el resto llegó a más de 4 meses de la venta'
+DIAS_RESTO_TARDE = 120
 
 
 @dataclass
@@ -98,8 +102,10 @@ def _abre_venta(abierta, pago):
         return False
     if abierta.solo_sena:
         return False  # saldo de la seña, o una segunda seña
-    if pago.tipo in ('completo', 'parcial') and abierta.kind == 'new':
-        return not _misma_venta(abierta.ultimo_de_venta, pago.dia)
+    if pago.tipo in ('completo', 'parcial'):
+        if 'completo' not in abierta.tipos:
+            return False  # el resto de lo acordado: la venta sigue con saldo
+        return abierta.kind != 'new' or not _misma_venta(abierta.ultimo_de_venta, pago.dia)
     return True
 
 
@@ -112,6 +118,9 @@ def decidir(abierta, pago):
     if _abre_venta(abierta, pago):
         return True, [NOTA_CUOTA_SIN_VENTA] if pago.tipo == 'cuota' else []
     notas = []
+    primero = abierta.pagos[0].dia
+    if pago.tipo in ('completo', 'parcial') and primero and pago.dia and (pago.dia - primero).days > DIAS_RESTO_TARDE:
+        notas.append(NOTA_RESTO_TARDE)
     if pago.tipo == 'cuota':
         primero = abierta.pagos[0].dia
         if abierta.solo_sena and pago.dia and primero and not es_primera_cuota(primero, pago.dia):
