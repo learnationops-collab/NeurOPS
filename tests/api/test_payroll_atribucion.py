@@ -4,7 +4,7 @@ from datetime import datetime
 
 import pytest
 
-from app.models import FinancialAgenda, FinancialSale
+from app.models import FinancialSale
 
 OCTUBRE = 'start_date=2026-10-01&end_date=2026-10-31'
 
@@ -28,13 +28,6 @@ def venta(db, monto=1000.0, setter='Elias', closer='jeancarlo@thelearnation.com'
           tipo='Bootcamp - Pago completo', fecha=datetime(2026, 10, 3), **campos):
     nueva = FinancialSale(monto=monto, metodo_pago='zelle', tipo_pago=tipo, estado='Completada', setter=setter,
                           email_vendedor=closer, instagram=instagram, date=fecha, **campos)
-    db.session.add(nueva)
-    db.session.commit()
-    return nueva
-
-
-def agenda(db, nombre, instagram, fecha):
-    nueva = FinancialAgenda(nombre=nombre, instagram=instagram, date=fecha, created_at=fecha)
     db.session.add(nueva)
     db.session.commit()
     return nueva
