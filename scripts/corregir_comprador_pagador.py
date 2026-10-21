@@ -17,12 +17,17 @@ se le da de baja.
 Aparte, solo para revisar: los pares de personas con el mismo nombre y teléfonos distintos (candidatos a
 fusión manual), y los pagos dudosos (sin teléfono, solo coincide el nombre), que no se tocan.
 
+Con `--hasta AAAA-MM-DD` solo se corrigen los pagos anteriores a esa fecha; los demás se listan aparte, en
+dos tramos: hasta el 20/05/2026 (se revisan) y después (no se tocan; decisión de Santiago del 20/10/2026).
+
 Uso:
-  python scripts/corregir_comprador_pagador.py            # prueba: cuántos, cuánta plata, ejemplos
-  python scripts/corregir_comprador_pagador.py --apply    # corrige
+  python scripts/corregir_comprador_pagador.py                               # prueba: cuántos, plata, ejemplos
+  python scripts/corregir_comprador_pagador.py --hasta 2026-01-01            # prueba, solo los anteriores
+  python scripts/corregir_comprador_pagador.py --hasta 2026-01-01 --apply    # corrige los anteriores
 """
 import os
 import sys
+from datetime import datetime
 from collections import Counter, defaultdict
 
 current_dir = os.path.abspath(os.path.dirname(__file__))
@@ -38,6 +43,7 @@ from app.services.client_dedup_service import _normalize_name
 from app.services.person_service import mismo_nombre, normalizar
 
 EJEMPLOS = 10
+RECIENTES = datetime(2026, 5, 20)  # desde acá no se tocan (se corrigen si aparecen inconsistencias)
 MOTIVO = 'Pagó con el mail de otra persona (scripts/corregir_comprador_pagador.py)'
 
 
@@ -125,9 +131,10 @@ def fusion_manual(ind):
     return pares
 
 
-def main(apply=False):
+def main(apply=False, hasta=None):
     ind = Indice()
     casos, clases, plata = [], Counter(), Counter()
+    tramos = defaultdict(lambda: [0, 0.0, set()])   # pagos de `hasta` en adelante, que no se tocan
     for v in FinancialSale.query.filter(FinancialSale.person_uuid.isnot(None)).yield_per(1000):
         r = clasificar(v, ind)
         if not r:
@@ -135,14 +142,24 @@ def main(apply=False):
         clase, comprador, pagador, cliente = r
         clases[clase] += 1
         plata[clase] += float(v.monto or 0)
-        if clase == 'telefono':
-            casos.append((v, comprador, pagador, cliente))
+        if clase != 'telefono':
+            continue
+        if hasta and v.date and v.date >= hasta:
+            tramo = f'{hasta:%Y-%m-%d} a {RECIENTES:%Y-%m-%d} (revisar)' if v.date < RECIENTES else                 f'desde {RECIENTES:%Y-%m-%d} (no se toca)'
+            tramos[tramo][0] += 1
+            tramos[tramo][1] += float(v.monto or 0)
+            tramos[tramo][2].add((v.person_uuid, comprador))
+            continue
+        casos.append((v, comprador, pagador, cliente))
 
     print('Pagos con la persona de quien pagó y no de quien compró:')
     for clase in sorted(clases):
         print(f'  {clase:28} {clases[clase]:5} pagos  ${plata[clase]:,.2f}')
     pares = {(v.person_uuid, c) for v, c, _, _ in casos}
-    print(f'  a corregir: {len(casos)} pagos, {len(pares)} pares de personas (pagadora, compradora)')
+    print(f'  a corregir{f" (anteriores al {hasta:%Y-%m-%d})" if hasta else ""}: {len(casos)} pagos, '
+          f'${sum(float(v.monto or 0) for v, _, _, _ in casos):,.2f}, {len(pares)} pares de personas (pagadora, compradora)')
+    for tramo, (n, monto, pares_tramo) in sorted(tramos.items()):
+        print(f'  sin tocar, {tramo}: {n} pagos, ${monto:,.2f}, {len(pares_tramo)} pares de personas')
 
     ventas_ajenas = {v.sale_id for v, comprador, _, _ in casos
                      if v.sale_id and (db.session.get(Sale, v.sale_id).person_uuid or None) != comprador}
@@ -185,4 +202,5 @@ def main(apply=False):
 
 if __name__ == '__main__':
     with create_app().app_context():
-        main(apply='--apply' in sys.argv)
+        hasta = sys.argv[sys.argv.index('--hasta') + 1] if '--hasta' in sys.argv else None
+        main(apply='--apply' in sys.argv, hasta=datetime.strptime(hasta, '%Y-%m-%d') if hasta else None)
