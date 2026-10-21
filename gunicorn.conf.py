@@ -11,7 +11,7 @@ import os
 
 # Pocos workers y muchos hilos: cada worker es una copia entera de Work en memoria, un hilo casi no pesa,
 # y lo lento de Work es esperar (Claude, Google, Meta, la base), que los hilos resuelven igual.
-workers = int(os.environ.get('WEB_CONCURRENCY', 2))
+workers = int(os.environ.get('WEB_CONCURRENCY', 1))
 threads = int(os.environ.get('GUNICORN_THREADS', 8))
 timeout = 120
 # Sin `preload_app`: los hilos del scheduler y de Instagram no sobreviven al fork del proceso maestro.

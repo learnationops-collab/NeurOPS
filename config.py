@@ -26,7 +26,7 @@ class Config:
         }
     else:
         # Por worker de gunicorn (gunicorn.conf.py): alcanza para sus hilos más el scheduler y el motor
-        # de Instagram. 2 workers x 15 = 30, lejos del max_connections de 500 de producción.
+        # de Instagram. 15 por worker, lejos del max_connections de 500 de producción.
         SQLALCHEMY_ENGINE_OPTIONS = {"pool_size": 5, "max_overflow": 10, "pool_pre_ping": True}
     
     # Webhooks
