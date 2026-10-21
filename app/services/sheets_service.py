@@ -3,6 +3,7 @@ from datetime import datetime
 from dateutil import parser
 from app import db
 from app.models.financial import FinancialAgenda, FinancialSale
+from app.services import agenda_contacto_service
 import logging
 
 logger = logging.getLogger(__name__)
@@ -417,15 +418,17 @@ class SheetsService:
                         nombre=SheetsService._to_str(item.get('nombre')),
                         registro=SheetsService._to_str(item.get('registro')),
                         fecha_meet=SheetsService._to_str(item.get('fecha_meet')),
-                        whatsapp=SheetsService._to_str(item.get('whatsapp')),
                         zona_geografica=SheetsService._to_str(item.get('zona_geografica')),
                         closer=SheetsService._to_str(item.get('closer')),
-                        lead=SheetsService._to_str(item.get('lead')),
-                        mail=SheetsService._to_str(item.get('mail')),
-                        instagram=SheetsService._to_str(item.get('instagram')),
                         date=SheetsService._parse_date(item.get('fecha_meet') or item.get('registro')),
                         raw_data=item
                     )
+                    # El contacto va a la persona, no a una copia en la agenda (Etapa 2c).
+                    agenda_contacto_service.dar_persona(
+                        agenda, nombre=SheetsService._to_str(item.get('lead')),
+                        mail=SheetsService._to_str(item.get('mail')),
+                        instagram=SheetsService._to_str(item.get('instagram')),
+                        telefono=SheetsService._to_str(item.get('whatsapp')))
                     objects.append(agenda)
                 except Exception as row_err:
                     logger.warning(f"[SHEETS SYNC] Fila agenda {idx} omitida: {row_err}")
