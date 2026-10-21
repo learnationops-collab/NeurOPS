@@ -446,3 +446,8 @@
   - La deuda de un cliente es la suma de sus ventas activas: lo acordado (`Sale.agreed_total`) menos lo cobrado. Una venta nueva sin total usa el precio de lista de su época (RR 1000 → 1200 desde 07/2025 → 1500 desde 2026; AL 150 → 250 → 750 → 1000; SI 1500 → 2000). Renovación o upsell sin total no deben; `cancelled` no debe.
   - Entra por `_client_debt` y `CarteraEnLote.deuda`, así la ficha, Mi cartera, la cola de cobro, el estado de pago de la Academia y Clientes dicen lo mismo. Si la persona todavía no tiene ventas, sigue la cuenta por inscripciones.
   - Verificación: sin tests (regla del proyecto); se mide en el servidor de prueba después de la carga de ventas.
+
+- **21 de Octubre de 2026 (personas: nombre de la agenda en los dos formatos de la hoja)** *([app/models/financial.py](../../app/models/financial.py), [app/services/person_service.py](../../app/services/person_service.py), [scripts/vincular_personas.py](../../scripts/vincular_personas.py), [scripts/personas_de_agendas.py](../../scripts/personas_de_agendas.py), [scripts/backfill_sales.py](../../scripts/backfill_sales.py) [MODIFY])*:
+  - Hasta octubre de 2025 la hoja de agendas guardaba la persona en `nombre` y el evento en `lead`; desde noviembre, la fuente en `nombre` y la persona en `lead`. `FinancialAgenda.nombre_persona` elige la columna; lo usan el alta de personas desde la agenda y los scripts de vinculación. Evita personas llamadas «Entrevista Diagnóstica Gratuita» y agendas atadas a otra gente.
+  - `backfill_sales --rehacer` borra las ventas armadas en vivo y las vuelve a agrupar; al terminar marca las señas sin seguir.
+  - Verificación: sin tests (regla del proyecto); ensayo general sobre una copia de producción en el servidor de prueba.
