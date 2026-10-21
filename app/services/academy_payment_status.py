@@ -4,9 +4,14 @@ Pedido del 19/10/2026: al equipo de la Academia le importa saber si el alumno pa
 avanza (eso va al revés, en la foto de `academy_snapshot_service`). La Academia muestra el estado
 al lado del nombre del alumno y lo cruza con su avance en Avance.
 
-Se EMPUJA cuando cambia, no se pide cada hora: solo cambia por acciones concretas —un pago, el plan
-de cuotas (crearlo, editarlo, marcar, agregar o borrar una cuota) o una baja y su reversión—. Que una
-cuota venza no es un cambio: viajan las fechas de las pendientes y la Academia lo deriva sola.
+Se EMPUJA cuando cambia: un pago, el plan de cuotas (crearlo, editarlo, marcar, agregar o borrar una
+cuota) o una baja y su reversión.
+
+El ESTADO (`estado`: pagado, seña, al día, por vencer, vencida, baja) es una regla de Work desde el
+21/10/2026: la cuota es parte del plan de pago del alumno (`regla_estado`). La Academia lo muestra tal
+cual. Como una cuota que vence cambia el estado sin que nadie toque nada, una vez por día se reenvía a
+los clientes con una cuota cerca de su vencimiento (`avisar_cambios_por_fecha`); la Academia descarta lo
+que no cambió.
 
 Para la carga inicial y para reparar, el masivo `GET /api/external/academy/payment-status` arma lo
 mismo para todos (`estado`), y la Academia lo lee solo desde un botón de su admin.
@@ -18,7 +23,7 @@ pedido del 30/09): es un indicador para el equipo y saca la deuda de lo que qued
 import logging
 import os
 import threading
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from flask import current_app
 from sqlalchemy import func
@@ -31,6 +36,14 @@ logger = logging.getLogger(__name__)
 # Clave de `db.session.info` con los clientes cuyo estado cambió en este pedido y a los que todavía
 # no se le avisó a la Academia. La sesión vive lo que dura el pedido.
 _PENDIENTES = 'estado_de_pago_sin_avisar'
+
+# Una cuota que vence en estos días o menos está "por vencer" (hoy cuenta como 0).
+POR_VENCER_DIAS = 7
+
+PAGADO, SENA, AL_DIA, POR_VENCER, VENCIDA, BAJA = 'pagado', 'sena', 'al_dia', 'por_vencer', 'vencida', 'baja'
+
+# Último día en que se reenviaron los estados que cambian por la fecha (una vez por día y por proceso).
+_ultimo_aviso_por_fecha = None
 
 
 def _iso(valor):
@@ -49,6 +62,23 @@ def _tipo(tipos):
     if 'seña' in tipos:
         return 'seña'
     return None
+
+
+def regla_estado(tipo, pendientes, baja, hoy):
+    """El estado de pago del cliente con la fecha de hoy. En este orden:
+
+    baja (tiene una baja) · vencida (una cuota pendiente con la fecha ya pasada) · por_vencer (la
+    próxima vence en POR_VENCER_DIAS días o menos) · al_dia (la próxima vence más adelante) · sena (solo
+    dejó la seña, sin cuotas pendientes) · pagado (no le queda nada pendiente).
+    """
+    if baja:
+        return BAJA
+    fechas = sorted(c.fecha_vencimiento for c in pendientes if c.fecha_vencimiento)
+    if any(f < hoy for f in fechas):
+        return VENCIDA
+    if fechas:
+        return POR_VENCER if (fechas[0] - hoy).days <= POR_VENCER_DIAS else AL_DIA
+    return SENA if tipo == 'seña' else PAGADO
 
 
 def estado(client, hoy=None):
@@ -76,12 +106,15 @@ def estado(client, hoy=None):
     pendientes = [c for c in cuotas if c.estado != 'pagado']
     vencidas = [c for c in pendientes if c.fecha_vencimiento and c.fecha_vencimiento < hoy]
     proxima = next((c for c in pendientes if c.fecha_vencimiento and c.fecha_vencimiento >= hoy), None)
+    tipo = _tipo(tipos)
+    baja = baja_service.descriptor(client)
 
     return {
         'work_client_id': client.id,
         'email': (client.email or '').strip().lower() or None,
         'learnation_user_id': client.learnation_user_id,
-        'tipo': _tipo(tipos),
+        'tipo': tipo,
+        'estado': regla_estado(tipo, pendientes, baja, hoy),
         'closer_email': AcademyAccessService.closer_de(client),
         'cuotas': {
             'total': len(cuotas),
@@ -104,7 +137,7 @@ def estado(client, hoy=None):
         'ultimo_pago': {'fecha': _iso(ultima.date.date() if ultima.date else None),
                         'monto': round(float(ultima.monto or 0), 2),
                         'tipo_pago': ultima.tipo_pago} if ultima else None,
-        'baja': baja_service.descriptor(client),
+        'baja': baja,
         'actualizado_at': datetime.utcnow().replace(microsecond=0).isoformat() + 'Z',
     }
 
@@ -163,6 +196,36 @@ def _enviar(payload, log):
     except Exception as e:
         log.error(f"[ACADEMY PAYMENT STATUS] Cliente {payload['work_client_id']}: {e}")
         raise
+
+
+def clientes_por_fecha(hoy):
+    """Los clientes cuyo estado pudo cambiar solo por la fecha: con una cuota pendiente que vence entre
+    hace POR_VENCER_DIAS días y dentro de POR_VENCER_DIAS + 1 (entra en "por vencer" o en "vencida").
+    La ventana cubre también los días en que no corrió."""
+    desde, hasta = hoy - timedelta(days=POR_VENCER_DIAS), hoy + timedelta(days=POR_VENCER_DIAS + 1)
+    filas = db.session.query(InstallmentPlan.client_id).filter(
+        InstallmentPlan.client_id.isnot(None), InstallmentPlan.estado != 'pagado',
+        InstallmentPlan.fecha_vencimiento.between(desde, hasta),
+    ).distinct().all()
+    return [f[0] for f in filas]
+
+
+def avisar_cambios_por_fecha(hoy=None):
+    """Una vez por día: reenvía el estado de los clientes con una cuota cerca de su vencimiento, para
+    que la Academia vea el "por vencer" y el "vencida" el día que pasan. Lo llama el job horario del
+    avance (y su cron); las demás veces del día no hace nada. Nunca levanta. Devuelve a cuántos avisó."""
+    global _ultimo_aviso_por_fecha
+    hoy = hoy or date.today()
+    if _ultimo_aviso_por_fecha == hoy or not _hay_academia():
+        return 0
+    try:
+        ids = clientes_por_fecha(hoy)
+        avisar(ids)
+    except Exception as e:
+        current_app.logger.error(f'[ACADEMY PAYMENT STATUS] No se pudieron reenviar los estados del día: {e}')
+        return 0
+    _ultimo_aviso_por_fecha = hoy
+    return len(ids)
 
 
 def avisar_pendientes():

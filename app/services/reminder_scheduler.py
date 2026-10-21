@@ -77,11 +77,13 @@ def start_scheduler(app):
 
     def _avance():
         with app.app_context():
-            from app.services import academy_snapshot_service
+            from app.services import academy_payment_status, academy_snapshot_service
             try:
                 academy_snapshot_service.sincronizar_avance()
             except Exception as e:
                 logger.error(f"[ReminderScheduler] Error trayendo el avance de la Academia: {e}")
+            # Una vez por día: el estado de pago de quienes tienen una cuota que entra en "por vencer" o "vencida".
+            academy_payment_status.avisar_cambios_por_fecha()
 
     from datetime import datetime, timedelta
     _scheduler = BackgroundScheduler(daemon=True)

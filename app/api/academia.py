@@ -26,8 +26,10 @@ def cron_sincronizar():
     Antes del lote, el avance de TODOS en un masivo (`sincronizar_avance`, una o dos peticiones):
     con el cron cada hora, la cartera del closer sabe cómo avanza cada alumno.
     """
-    from app.services import academy_snapshot_service
+    from app.services import academy_payment_status, academy_snapshot_service
 
     avance = academy_snapshot_service.sincronizar_avance()
+    # Una vez por día: el estado de pago de quienes tienen una cuota que entra en "por vencer" o "vencida".
+    academy_payment_status.avisar_cambios_por_fecha()
     resultado = academy_snapshot_service.sincronizar_lote(presupuesto=request.args.get('presupuesto'))
     return jsonify({'status': 'success', 'avance': avance, **resultado}), 200
