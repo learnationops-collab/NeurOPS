@@ -5,7 +5,6 @@ from datetime import date, datetime, time, timedelta
 from app import db
 from app.models import Appointment, Enrollment, Program, Payment, FinancialSale, User
 from app.services import baja_service, deuda_service
-from app.services import pagos_copia
 from app.services.lead_cobro_service import resolver_etapa
 from sqlalchemy import or_, and_, func
 
@@ -655,10 +654,8 @@ class CloserFollowUpService:
                 return sale.client_id if sale.client_id in existentes else None
             if sale.person_uuid:
                 return por_persona.get(sale.person_uuid)
-            c = pagos_copia.copia(sale)
-            mail, ig = c['mail'], c['instagram']
-            email_clean = mail.strip().lower() if mail and '@' in mail else None
-            ig_clean = ig.strip().replace('@', '').lower() if ig and ig.lower() not in ('n/a', '') else None
+            email_clean = sale.mail_cliente.strip().lower() if sale.mail_cliente and '@' in sale.mail_cliente else None
+            ig_clean = sale.instagram.strip().replace('@', '').lower() if sale.instagram and sale.instagram.lower() not in ('n/a', '') else None
             return (por_email.get(email_clean) if email_clean else None) or (por_ig.get(ig_clean) if ig_clean else None)
 
         sales_by_client = {}
@@ -1361,7 +1358,8 @@ class CarteraEnLote:
         por_id, por_email, por_ig, por_persona = {}, {}, {}, {}
         filas = (db.session.query(FinancialSale.date, FinancialSale.tipo_pago,
                                   FinancialSale.client_id,
-                                  pagos_copia.MAIL_NORMALIZADO, pagos_copia.IG_NORMALIZADO,
+                                  func.lower(FinancialSale.mail_cliente),
+                                  func.lower(func.replace(FinancialSale.instagram, '@', '')),
                                   FinancialSale.person_uuid)
                  .order_by(FinancialSale.date.desc(), FinancialSale.id.asc()))
         for pos, (fecha, tipo_pago, client_id, mail, ig, puuid) in enumerate(filas):
