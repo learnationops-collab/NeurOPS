@@ -24,6 +24,10 @@ class Config:
         SQLALCHEMY_ENGINE_OPTIONS = {
             "connect_args": {"timeout": 30}
         }
+    else:
+        # Por worker de gunicorn (gunicorn.conf.py): alcanza para sus hilos más el scheduler y el motor
+        # de Instagram. 4 workers x 10 = 40, lejos del max_connections de 500 de producción.
+        SQLALCHEMY_ENGINE_OPTIONS = {"pool_size": 5, "max_overflow": 5, "pool_pre_ping": True}
     
     # Webhooks
     VENTAS_WEBHOOK = os.environ.get('VENTAS_WEBHOOK')
