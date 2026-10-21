@@ -2457,11 +2457,11 @@ def update_closer_payment(payment_id):
 @bp.route('/clients/<int:client_id>/total-amount', methods=['PATCH'])
 @login_required
 def update_client_total_amount(client_id):
-    """Corrige el "total a pagar del programa" de un cliente (Client.total_amount), desde el
+    """Corrige el "total a pagar del programa" de un cliente (el `agreed_total` de su venta vigente), desde el
     historial del cliente en el mazo del closer. Antes este número no se veía ni se podía tocar
     desde ahí: la tarjeta de "Inscripciones y pagos" mostraba el precio genérico del programa
-    (Program.price, igual para todos), no lo que ESTE cliente negoció — y SalesConsistencyService
-    ya usa Client.total_amount (si existe) para calcular saldo/deuda real, así que dejarlo mal
+    (Program.price, igual para todos), no lo que ESTE cliente negoció — y la deuda (`deuda_service`)
+    y `SalesConsistencyService` usan ese total para calcular el saldo real, así que dejarlo mal
     cargado hacía que el saldo mostrado no coincidiera con lo que el closer sabía que el cliente
     debía en realidad."""
     if current_user.role not in ['closer', 'admin']:
@@ -2480,10 +2480,12 @@ def update_client_total_amount(client_id):
     if nuevo_total < 0:
         return jsonify({"error": "'total_amount' no puede ser negativo"}), 400
 
-    anterior = client.total_amount
-    client.total_amount = nuevo_total
+    # El total vive en la venta 'new' vigente de su persona (`Sale.agreed_total`).
+    from app.services.deuda_service import total_acordado
     from app.services.sale_service import fijar_total
-    fijar_total(client, nuevo_total)  # y en su venta 'new' vigente (frente L)
+    anterior = total_acordado(client, declarado=True)
+    if fijar_total(client, nuevo_total) is None:
+        return jsonify({"error": "Este cliente todavía no tiene una venta: el total se carga al declararla."}), 409
 
     try:
         db.session.commit()
@@ -2506,7 +2508,7 @@ def update_client_total_amount(client_id):
     from app.services.closer_followup_service import CloserFollowUpService
     return jsonify({
         "message": "Total del programa actualizado",
-        "total_amount": client.total_amount,
+        "total_amount": total_acordado(client, declarado=True),
         "deuda": CloserFollowUpService._client_debt(client.id)
     }), 200
 

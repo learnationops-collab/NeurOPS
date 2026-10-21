@@ -156,17 +156,21 @@ class ClientCleanupService:
         # (ver CloserFollowUpService._cerrada_pool_items, mismo hallazgo).
         programa_code = CloserFollowUpService._client_program_code(client_id)
         deuda = CloserFollowUpService._client_debt(client_id)
+        from app.services import subscription_service
+        from app.services.deuda_service import total_acordado
+        # El acceso a la Academia es la suscripción que vence más tarde (antes, `clients.academy_*`).
+        suscripcion = next(iter(subscription_service.del_cliente(client_id)), None)
 
         return {
             'client': {
                 'id': client.id, 'full_name': client.full_name, 'email': client.email,
                 'instagram': client.instagram, 'phone': client.phone, 'programa_code': programa_code,
-                'total_amount': client.total_amount, 'deuda': deuda,
+                'total_amount': total_acordado(client, declarado=True), 'deuda': deuda,
                 # Estado de la vinculación con la Academia (Learnation) — ver
                 # docs/integracion_learnation_api.md §5. None si nunca se sincronizó.
                 'learnation_user_id': client.learnation_user_id,
-                'academy_product_slug': client.academy_product_slug,
-                'academy_expires_at': client.academy_expires_at.isoformat() if client.academy_expires_at else None
+                'academy_product_slug': suscripcion['product_slug'] if suscripcion else None,
+                'academy_expires_at': suscripcion['expires_at'] if suscripcion else None
             },
             'appointments': [{
                 'id': a.id, 'start_time': a.start_time.isoformat() if a.start_time else None,

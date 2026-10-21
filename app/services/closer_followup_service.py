@@ -70,18 +70,17 @@ def _en_tandas(ids, tam=TANDA_IN):
         yield ids[i:i + tam]
 
 
-def _deuda_de(total_amount, inscripciones, pagado):
-    """La cuenta de `_client_debt`, aparte de cómo se leyeron los datos: la usan la lectura
-    cliente por cliente y la lectura en lote (`CarteraEnLote`), y así no pueden dar distinto.
+def _deuda_de(inscripciones, pagado):
+    """La cuenta de `_client_debt` para quien todavía no tiene ventas, aparte de cómo se leyeron los
+    datos: la usan la lectura cliente por cliente y la lectura en lote (`CarteraEnLote`), y así no
+    pueden dar distinto. El total negociado vive en la venta (`deuda_service`); acá queda el precio de
+    lista de cada inscripción.
 
     `inscripciones` son las del cliente en el orden de la consulta original (id ascendente) y
     `pagado` es {enrollment_id: suma de pagos completados}, en el orden del GROUP BY. El orden
     importa aunque parezca que no: las sumas son de floats."""
     if not inscripciones:
         return 0.0
-    if total_amount is not None:
-        total_paid = sum(pagado.values())
-        return round(max(0.0, float(total_amount) - total_paid), 2)
     total_debt = 0.0
     for e in inscripciones:
         if not e.program:
@@ -296,20 +295,11 @@ class CloserFollowUpService:
 
     @staticmethod
     def _client_debt(client_id, lote=None):
-        """Deuda real pendiente del cliente: precio negociado menos total pagado, sobre sus
-        inscripciones.
+        """Deuda real pendiente del cliente: por venta (`deuda_service`: lo acordado en cada venta
+        menos lo cobrado) cuando su persona tiene ventas; si no, por inscripciones a precio de lista.
 
         Con `lote` (una `CarteraEnLote` que ya incluye a este cliente) lee de ahí en vez de
         consultar; la cuenta es la misma (`_deuda_de`).
-
-        `Client.total_amount` manda sobre `Program.price` cuando el closer lo cargó — mismo
-        criterio que ya usa `SalesConsistencyService.validate_next_payment_type` para "lo que
-        ESTE cliente negoció" (Program.price es el precio de lista, igual para todos, y no
-        refleja descuentos o planes a medida). Antes esta función ignoraba `total_amount` por
-        completo, así que un cliente con un precio negociado más alto que el de lista (caso
-        real: Susett Anahí Cochachín Luna, `total_amount=1000` pero `Program.price=500`)
-        aparecía debiendo mucho menos de lo real tanto en "Mi cartera" como en "Ver mis datos"
-        (reportado por el usuario, 10/sep/2026: "dice que debe 400, pero en total debe 900").
 
         Un cliente dado de baja (`baja_service`) no debe nada: lo que pagó sigue contando como
         cobrado, pero el saldo deja de existir. Se decide ACÁ para que todo lo que ya pregunta la
@@ -335,7 +325,7 @@ class CloserFollowUpService:
             .filter(Payment.enrollment_id.in_(e_ids), Payment.status == 'completed') \
             .group_by(Payment.enrollment_id).all()
         paid_map = {eid: float(total or 0) for eid, total in paid_rows}
-        return _deuda_de(client.total_amount if client else None, enrollments, paid_map)
+        return _deuda_de(enrollments, paid_map)
 
     @staticmethod
     def _client_enrollment_date(client_id, lote=None):
@@ -1405,8 +1395,7 @@ class CarteraEnLote:
             self._por_venta = deuda_service.deudas(self.clientes.values())
         if client_id in self._por_venta:
             return self._por_venta[client_id]
-        return _deuda_de(cliente.total_amount if cliente else None,
-                         self._inscripciones.get(client_id, []), self._pagado.get(client_id, {}))
+        return _deuda_de(self._inscripciones.get(client_id, []), self._pagado.get(client_id, {}))
 
     def closer_de(self, cita):
         """El User de la cita, ya leído. Una cita que no salió del lote (la ancla que crea

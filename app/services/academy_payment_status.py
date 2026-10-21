@@ -49,6 +49,20 @@ def email_academia(person, por_defecto=None):
     return person_service.dato(person, 'email', uso='academia') or por_defecto
 
 
+def _total(client):
+    """El total que la persona tiene que pagar: la suma de lo acordado en sus ventas activas
+    (`deuda_service.total_de`; el de lista de su época si no se cargó). Va con `saldo`, que sale de las
+    mismas ventas. None si no tiene ventas."""
+    from app.models import Sale
+    from app.services.deuda_service import total_de
+    if client.person_uuid:
+        ventas = Sale.query.filter(Sale.person_uuid == client.person_uuid, Sale.status == 'active').all()
+    else:
+        ventas = Sale.query.filter(Sale.client_id == client.id, Sale.status == 'active').all()
+    totales = [t for t in (total_de(v) for v in ventas) if t is not None]
+    return round(sum(totales), 2) if totales else None
+
+
 def _tipo(tipos):
     """Cómo compró: completo si pagó todo de una vez; cuotas si tiene cuotas o parciales; seña si
     solo dejó la seña. None si no hay ventas."""
@@ -113,7 +127,7 @@ def estado(client, hoy=None):
             'vencido_monto': round(sum(float(c.monto or 0) for c in vencidas), 2),
             'vencida_desde': _iso(vencidas[0].fecha_vencimiento) if vencidas else None,
         },
-        'total': round(float(client.total_amount), 2) if client.total_amount is not None else None,
+        'total': _total(client),
         'pagado': round(sum(float(v.monto or 0) for v in ventas), 2),
         'saldo': round(float(CloserFollowUpService._client_debt(client.id)), 2),
         'ultimo_pago': {'fecha': _iso(ultima.date.date() if ultima.date else None),

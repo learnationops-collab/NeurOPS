@@ -93,3 +93,19 @@ def deuda_de_cliente(client):
     """La deuda por venta de `client`, o None si su persona todavía no tiene ventas."""
     return deudas([client]).get(client.id) if client else None
 
+
+
+def total_acordado(client, programa=None, declarado=False):
+    """Lo que `client` acordó pagar: el total de la venta 'new' vigente de su persona (del programa, si se
+    sabe), acordado o, si no, el de lista de su época. Con `declarado`, solo el que alguien cargó
+    (`agreed_total`, sin el de lista). None si no tiene venta. Reemplaza a `Client.total_amount` (Etapa 2c
+    de docs/plan_personas.md)."""
+    if client is None:
+        return None
+    from app.services.sale_service import venta_new_vigente
+    venta = venta_new_vigente(client.person_uuid, client.id, programa)
+    if venta is None:
+        return None
+    if declarado:
+        return float(venta.agreed_total) if venta.agreed_total is not None else None
+    return total_de(venta)

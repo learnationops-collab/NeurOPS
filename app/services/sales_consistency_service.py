@@ -62,10 +62,8 @@ class SalesConsistencyService:
 
     TIPOS_VALIDOS = {'completo', 'parcial', 'seña', 'cuota', 'renovacion', 'upsell'}
 
-    # Total por defecto que se autoasigna a un cliente según el programa de su primer pago,
-    # cuando todavía no tiene un Client.total_amount propio guardado. Una vez que el closer
-    # declara un pago con un "Precio Total" distinto, ese valor pasa a ser el total del
-    # cliente (Client.total_amount) y reemplaza este default en todas las consultas futuras.
+    # Total por defecto de cada programa, para quien todavía no tiene una venta con su total
+    # (`Sale.agreed_total`). Cuando el closer declara un "Precio Total", ése queda en la venta.
     PROGRAM_DEFAULT_TOTALS = {'AL': 1000.0, 'RR': 1500.0, 'SI': 2000.0}
 
     @staticmethod
@@ -105,9 +103,11 @@ class SalesConsistencyService:
         program_code = (program_code or '').strip().upper()
 
         client = Client.query.get(client_id) if client_id else None
-        if client and client.total_amount is not None:
-            program_price = float(client.total_amount)
-        else:
+        # El total de su venta 'new' vigente de este programa (`deuda_service.total_acordado`: el acordado
+        # o el de lista de su época); sin venta, el de lista de hoy.
+        from app.services.deuda_service import total_acordado
+        program_price = total_acordado(client, program_code)
+        if program_price is None:
             program_price = SalesConsistencyService.PROGRAM_DEFAULT_TOTALS.get(program_code, 0.0)
 
         # Los pagos del cliente son los de su persona y los atados por id; la copia del pago cuenta

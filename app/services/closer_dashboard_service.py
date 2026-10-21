@@ -136,20 +136,15 @@ class CloserDashboardService:
         empty = {'total': 0.0, 'vencido': 0.0, 'por_vencer': 0.0, 'sin_plan': 0.0,
                  'count': 0, 'count_vencido': 0, 'count_sin_plan': 0}
 
-        # 1. Deuda por cliente: precio negociado − pagos completados, sobre sus inscripciones.
-        # `Client.total_amount` manda sobre `Program.price` cuando el closer lo cargó — mismo
-        # criterio que ya usa `SalesConsistencyService.validate_next_payment_type` para "lo que
-        # ESTE cliente negoció" (Program.price es el precio de lista, igual para todos). Antes
-        # esta función lo ignoraba y usaba siempre el precio de lista, así que un cliente con un
-        # precio negociado más alto (caso real: Susett Anahí Cochachín Luna, `total_amount=1000`
-        # pero `Program.price=500`) aparecía debiendo mucho menos de lo real — reportado por el
-        # usuario, 10/sep/2026: "dice que debe 400, pero en total debe 900".
+        # 1. Deuda por cliente, la misma que la ficha y la cola de cobro: por venta (`deuda_service`:
+        # lo acordado en cada venta menos lo cobrado) cuando su persona tiene ventas; si no, por sus
+        # inscripciones a precio de lista. Una persona con varios clientes cuenta una vez (su cliente
+        # más viejo, como `person_service.cliente_de`).
+        from app.models import Sale
+        from app.services import deuda_service
         pagado_por_enrollment = dict(
             db.session.query(Payment.enrollment_id, func.sum(Payment.amount))
             .filter(Payment.status == 'completed').group_by(Payment.enrollment_id).all()
-        )
-        total_amount_por_cliente = dict(
-            db.session.query(Client.id, Client.total_amount).filter(Client.total_amount.isnot(None)).all()
         )
         # Un cliente dado de baja no debe nada (ver `baja_service`): lo que pagó sigue en el cash,
         # pero su saldo no es plata por cobrar. Mismo criterio que `_client_debt`, de donde sale
@@ -163,21 +158,40 @@ class CloserDashboardService:
                 continue
             enrollments_por_cliente.setdefault(e.client_id, []).append(e)
 
+        from app.services.closer_followup_service import PROGRAM_CODE_NAMES
+        ventas = Sale.query.filter(Sale.status == 'active').all()
+        personas = {v.person_uuid for v in ventas if v.person_uuid}
+        sueltos = {v.client_id for v in ventas if not v.person_uuid and v.client_id}
+        cliente_de_persona = {}
+        for cid, puuid in db.session.query(Client.id, Client.person_uuid).filter(
+                Client.person_uuid.in_(personas)).order_by(Client.id) if personas else ():
+            cliente_de_persona.setdefault(puuid, cid)
+        con_ventas = (set(cliente_de_persona.values()) | sueltos) - de_baja
+        por_venta = deuda_service.deudas(Client.query.filter(Client.id.in_(con_ventas)).all()) if con_ventas else {}
+        programas_de_venta = {}
+        for v in ventas:
+            cid = cliente_de_persona.get(v.person_uuid) if v.person_uuid else v.client_id
+            if cid:
+                programas_de_venta.setdefault(cid, []).append(PROGRAM_CODE_NAMES.get(v.program_code, v.program_code or ''))
+        # Los clientes de una persona con ventas que no son su cliente principal no deben aparte.
+        de_personas_con_venta = {cid for (cid,) in db.session.query(Client.id).filter(Client.person_uuid.in_(personas))}             if personas else set()
+
         deuda_por_cliente, programas_por_cliente = {}, {}
+        for client_id, deuda in por_venta.items():
+            if deuda > 0.01:
+                deuda_por_cliente[client_id] = deuda
+                programas_por_cliente[client_id] = [p for p in programas_de_venta.get(client_id, []) if p]
         for client_id, enrollments in enrollments_por_cliente.items():
-            programas_por_cliente[client_id] = [e.program.name for e in enrollments]
-            total_amount = total_amount_por_cliente.get(client_id)
-            if total_amount is not None:
-                pagado_total = sum(float(pagado_por_enrollment.get(e.id) or 0) for e in enrollments)
-                saldo = float(total_amount) - pagado_total
-            else:
-                saldo = sum(
-                    (e.program.price or 0) - float(pagado_por_enrollment.get(e.id) or 0)
-                    for e in enrollments
-                )
+            if client_id in por_venta or client_id in de_personas_con_venta:
+                continue
+            saldo = sum(
+                (e.program.price or 0) - float(pagado_por_enrollment.get(e.id) or 0)
+                for e in enrollments
+            )
             if saldo <= 0.01:
                 continue
             deuda_por_cliente[client_id] = saldo
+            programas_por_cliente[client_id] = [e.program.name for e in enrollments]
 
         if not deuda_por_cliente:
             return [], empty

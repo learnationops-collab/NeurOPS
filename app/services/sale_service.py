@@ -177,9 +177,9 @@ def venta_new_vigente(person_uuid, client_id, programa=None):
 
 
 def fijar_total(client, total, programa=None, solo_si_falta=False):
-    """Doble escritura de `Client.total_amount` (frente L, docs/plan_personas.md): el mismo total va al
-    `agreed_total` de la venta 'new' vigente de su persona. Sin venta queda solo en el cliente, como
-    antes. `solo_si_falta` no pisa un total ya acordado (el precio de lista que se autoasigna). No hace
+    """El total acordado (frente L, docs/plan_personas.md; antes `Client.total_amount`): va al
+    `agreed_total` de la venta 'new' vigente de su persona. Sin venta no se guarda en ningún lado
+    (devuelve None y quien llama avisa). `solo_si_falta` no pisa un total ya acordado (el precio de lista que se autoasigna). No hace
     commit; devuelve la venta tocada o None."""
     if client is None or total is None:
         return None
