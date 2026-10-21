@@ -5,7 +5,7 @@ import { asignacion, VENTANA_LLENAR_DIAS } from './asignacion';
 import { agendaOpt, diasDelHorizonte, slotsPersona } from './disponibilidad';
 import { configDe, camposPublicados, linkEvento, revision, sinPublicar, versionPublicada } from './eventos';
 import { NO_CALIFICA, calificar, duplicarForm, grupoPorReglas, gruposDeForm, personalizar, reglasRotas, revisarSegmentacion, validarRespuesta } from './formulario';
-import { normalEvento, normalForm, normalGrupo, normalPersona, normalRol, preguntasFlujo } from './normalizar';
+import { normalEvento, normalForm, normalFunnel, normalGrupo, normalPersona, normalRol, preguntasFlujo } from './normalizar';
 import { armarReserva, telefonoE164, textoRespuesta } from './reserva';
 import { opcionesDeOcupacion } from '../data/almacen';
 
@@ -320,5 +320,21 @@ describe('sesiones: duración y margen de cada closer', () => {
         expect([r.duracion_min, r.margen_min]).toEqual([30, 20]);
         r = armarReserva({ lead, evento: e, slot: { t: LUNES, p: 'ana' } });
         expect([r.duracion_min, r.margen_min]).toEqual([60, 10]);
+    });
+});
+
+describe('Momentum: funnel propio y horario del evento', () => {
+    it('el funnel acepta el tipo momentum y no es de setting', () => {
+        const f = normalFunnel('fu', { nombre: 'Momentum', tipo: 'momentum' });
+        expect([f.tipo, f.setting]).toEqual(['momentum', false]);
+    });
+    it('el evento sin horario propio lo deja en null y lo publicado no cambia', () => {
+        const e = normalEvento('e', { nombre: 'Llamada', horario: { 1: [] } });
+        expect(e.horario).toBe(null);
+        expect('horario' in JSON.parse(configDe(e, null)).ev).toBe(false);
+    });
+    it('con horario propio se publica igual que en el backend', () => {
+        const e = normalEvento('e', { nombre: 'Momentum', horario: { '1': [['14:00', '16:00']] } });
+        expect(configDe(e, null).endsWith('"indic":"","horario":{"0":[],"1":[["14:00","16:00"]],"2":[],"3":[],"4":[],"5":[],"6":[]}},"form":null}')).toBe(true);
     });
 });

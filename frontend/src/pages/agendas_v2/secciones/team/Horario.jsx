@@ -53,9 +53,10 @@ function CopiarA({ desde, onAplicar, onCerrar }) {
 /**
  * Editor del horario. `bloqueado`: solo lectura (todo deshabilitado).
  * onGuardar({horario?, tz?}): fuera de Thalamus (la Configuración del closer) guarda ahí en vez de en
- * la persona de Team, y no ofrece copiar de otro closer.
+ * la persona de Team, y no ofrece copiar de otro closer. `sinZona`: no muestra la zona (el horario de un
+ * evento Momentum va en la zona de su persona).
  */
-export function HorarioEditor({ p, bloqueado = false, onGuardar = null }) {
+export function HorarioEditor({ p, bloqueado = false, onGuardar = null, sinZona = false }) {
     const { d } = useDatos();
     const [copiar, setCopiar] = useState(null);   // día con el popover abierto
     const raiz = useRef(null);
@@ -90,7 +91,7 @@ export function HorarioEditor({ p, bloqueado = false, onGuardar = null }) {
     return (
         <div className="horario" ref={raiz}>
             <div className="horario-barra">
-                <Sx sm label="Zona horaria" valor={p.tz} opciones={OPS_ZONA} disabled={dis} onChange={v => editarPersona({ tz: v })} />
+                {!sinZona && <Sx sm label="Zona horaria" valor={p.tz} opciones={OPS_ZONA} disabled={dis} onChange={v => editarPersona({ tz: v })} />}
                 <div className="barra-der">
                     <button type="button" className="sug" disabled={dis} onClick={() => guardar(horarioLaV())}><Icono n="rayo" />L a V 9–18</button>
                     {otros.length > 0 && (

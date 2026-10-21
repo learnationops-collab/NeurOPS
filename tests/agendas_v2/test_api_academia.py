@@ -457,7 +457,7 @@ def test_el_reporte_de_la_ficha_se_traduce_para_la_academia(app):
     with app.app_context():
         assert traducir('venta', {}) == {'asistencia': 'asistio', 'resultado': 'pago'}
         no_cerro = {'resultado': 'asistio', 'deck': {'offer_presented': True}, 'objecion': 'Precio'}
-        assert traducir('resultado', no_cerro) == {'asistencia': 'asistio', 'resultado': 'pensando'}
+        assert traducir('resultado', no_cerro) == {'asistencia': 'asistio', 'resultado': 'pensando', 'motivo': 'Precio'}
         assert traducir('resultado', {'resultado': 'asistio', 'deck': {}}) == {'asistencia': 'asistio', 'resultado': None}
         assert traducir('resultado', {'resultado': 'no_asistio', 'deck': {}}) == {'asistencia': 'no_asistio'}
         assert traducir('resultado', {'contacto_result': 'no_paga', 'deck': {}}) == {'resultado': 'no_sigue'}

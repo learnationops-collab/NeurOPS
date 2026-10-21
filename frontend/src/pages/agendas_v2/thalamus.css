@@ -1641,6 +1641,8 @@
 .thalamus :is(.input,.ui-input).me-nom{flex:1 1 220px;font-weight:800}
 .thalamus .me-activo{display:inline-flex;align-items:center;gap:8px}
 .thalamus .me-link{flex:1 1 240px;min-width:0}
+.thalamus .me-momentum{display:inline-flex;align-items:center;gap:6px}
+.thalamus .me-horario{display:grid;gap:8px;padding-top:10px;border-top:1px solid var(--border-subtle)}
 /* Sesiones: duración y margen de cada closer por evento (secciones/team/Sesiones.jsx) */
 .thalamus .ses-lista{display:grid;gap:8px}
 .thalamus .ses-fila{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:10px 14px;border-radius:16px;background:var(--mat-1);border:1px solid var(--border-subtle)}

@@ -26,6 +26,7 @@ const TIPOS = [
     { v: 'vsl', n: 'VSL', ico: 'play', ayuda: 'Las agendas quedan con fuente VSL.' },
     { v: 'setting', n: 'Setting', ico: 'users', ayuda: 'Cada setter tiene su link y la agenda queda a su nombre.' },
     { v: 'otro', n: 'Otro', ico: 'link', ayuda: 'La fuente de la agenda es el nombre del link.' },
+    { v: 'momentum', n: 'Momentum', ico: 'rayo', ayuda: 'Las agenda la Academia con el closer de cada alumno. Sin página pública.' },
 ];
 
 // El tipo del funnel en tarjetas: qué es cada uno se lee sin abrir nada.

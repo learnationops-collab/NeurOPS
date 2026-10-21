@@ -13,7 +13,9 @@ sus alumnos. La cuenta es la del closer (rol closer) y se usa su configuración 
 horario (su persona de Team), su calendario de ventas y lo ocupado en Google. Cada reserva es una
 `Appointment` con origen «Momentum» que el closer ve en el mazo y reporta en la ficha; el resultado vuelve
 a la Academia (app/services/momentum_academia.py). Es por pedido y no por cuenta: un closer que además
-da sesiones comunes de la Academia (rol fulfillment) las sigue dando como fulfillment.
+da sesiones comunes de la Academia (rol fulfillment) las sigue dando como fulfillment. Si el closer tiene
+su evento Momentum (app/agendas_v2/momentum.py), la sesión, el margen, los días, la antelación, el paso y el
+horario salen de ese evento y no del pedido.
 """
 
 import re
@@ -25,10 +27,11 @@ from itsdangerous import BadSignature, URLSafeTimedSerializer
 from sqlalchemy import func
 
 from app import db
-from app.agendas_v2 import servicio
+from app.agendas_v2 import momentum, servicio
 from app.agendas_v2.modelos import SchedPerfil
 from app.agendas_v2.nucleo.disponibilidad import agenda_opt, ahora_ms, se_solapa, slots_persona
 from app.api.external import bp
+from app.api.external.agenda_avisos import avisar
 from app.decorators import require_academy_token
 from app.models import GoogleCalendarToken, User
 from app.models.user import ROLE_CLOSER, ROLE_FULFILLMENT
@@ -513,48 +516,47 @@ def agenda_horarios():
     if not estado['lista']:
         return jsonify({'error': 'no_lista', **estado}), 409
     tz, horario = datos.get('tz') or u.timezone, _horario(datos.get('horario'))
+    dur, margen = _entero(datos.get('duracion'), 5, 240), _entero(datos.get('margen', 0), 0, 120)
+    antel, dias = _entero(datos.get('antel_min', 0), 0, 30 * 24 * 60), _entero(datos.get('dias', 21), 1, 60)
+    reglas = {'reservas': {'tipo': 'corridos'}, 'antel': {'n': antel, 'u': 'min'}, 'paso': {'n': 30, 'u': 'min'}}
+    cfg = None
     if ventas:
-        # Un closer: su horario de ventas, en su zona. El que manda la Academia no aplica.
+        # Un closer: su horario de ventas, en su zona. El que manda la Academia no aplica. Con su evento
+        # Momentum (app/agendas_v2/momentum.py), la sesión, el margen, los días, la antelación, el paso y el
+        # horario son los del evento.
         disp = servicio.disponibilidad_de(u)
         tz, horario = disp['tz'], disp['horario']
+        cfg = momentum.config_de_usuario(u, dias)
+        if cfg:
+            dur, margen, dias, horario = cfg['duracion'], cfg['margen'], cfg['dias'], cfg['horario'] or horario
+            reglas = {'reservas': {'tipo': cfg['tipo_dias']}, 'antel': cfg['antel'], 'paso': cfg['paso']}
     try:
         ZoneInfo(tz)
     except Exception:  # noqa: BLE001
         return _error('Zona horaria inválida', 400)
-    dur, margen = _entero(datos.get('duracion'), 5, 240), _entero(datos.get('margen', 0), 0, 120)
-    antel, dias = _entero(datos.get('antel_min', 0), 0, 30 * 24 * 60), _entero(datos.get('dias', 21), 1, 60)
-    if horario is None or None in (dur, margen, antel, dias):
+    if horario is None or None in (dur, margen, dias) or (not cfg and antel is None):
         return _error('Datos inválidos (horario, duracion, margen, antel_min o dias)', 400)
 
     ahora = ahora_ms()
-    desde, hasta = ahora - 3600000, ahora + (dias + 2) * DIA_MS
+    # En días hábiles el horizonte se estira (el fin de semana no cuenta): Google se lee hasta ahí.
+    horizonte = dias * 2 + 6 if reglas['reservas']['tipo'] == 'habiles' else dias
+    desde, hasta = ahora - 3600000, ahora + (horizonte + 2) * DIA_MS
     if datos.get('fresco'):
         franjas = GoogleService.franjas_ocupadas(u.id, servicio.ms_a_dt(desde), servicio.ms_a_dt(hasta))
     else:
         franjas = servicio._franjas_google(u.id, desde, hasta)
     ocupado = _franjas_ocupadas(datos.get('ocupado')) + [{'inicio': a, 'fin': b} for a, b in franjas or []]
     o = agenda_opt({
-        'reservas': {'modo': 'dias', 'n': dias, 'tipo': 'corridos', 'desde': '', 'hasta': ''},
-        'antel': {'n': antel, 'u': 'min'},
-        'paso': {'n': 30, 'u': 'min'},
+        'reservas': {'modo': 'dias', 'n': dias, 'tipo': reglas['reservas']['tipo'], 'desde': '', 'hasta': ''},
+        'antel': reglas['antel'],
+        'paso': reglas['paso'],
     }, dur)
     slots = slots_persona({'id': f'f-{u.id}', 'tz': tz, 'horario': horario}, dur, o, ahora,
                           lambda pid, t, d: se_solapa(ocupado, t, d), margen)
-    return jsonify({'slots': slots, 'google': franjas is not None}), 200
-
-
-def _aviso(u, inicio, tz, sesion, alumno):
-    """WhatsApp a quien da la sesión, con la plantilla del aviso de agenda. Nunca frena la reserva."""
-    from app.agendas_v2.operacion import DIAS
-    from app.services.whatchimp_service import AvisoDeAgenda
-
-    try:
-        local = servicio.ms_a_dt(inicio).replace(tzinfo=ZoneInfo('UTC')).astimezone(ZoneInfo(tz))
-        hora = local.strftime('%I:%M').lstrip('0') + (' am' if local.hour < 12 else ' pm')
-        AvisoDeAgenda.enviar(u.two_chat_number, closer=u.username, lead=alumno or 'Alumno', telefono='-', instagram='-',
-                             dia=f'{DIAS[local.weekday()]} {local.day}', hora=hora, grupo='Academia', fuente=sesion or '-')
-    except Exception as e:  # noqa: BLE001
-        current_app.logger.warning(f'[AGENDA ACADEMIA] No se pudo avisar por WhatsApp a #{u.id}: {e}')
+    respuesta = {'slots': slots, 'google': franjas is not None}
+    if ventas:
+        respuesta['evento_momentum'] = momentum.resumen(cfg)
+    return jsonify(respuesta), 200
 
 
 @bp.route('/agenda/reservas', methods=['POST'])
@@ -574,13 +576,17 @@ def agenda_reservar():
     if not estado['calendario_elegido']:
         return _error('no_lista', 409)
     inicio, dur = datos.get('inicio'), _entero(datos.get('duracion'), 5, 240)
+    # Con evento Momentum, la sesión es la del evento (la que la Academia mostró en /horarios).
+    cfg = momentum.config_de_usuario(u) if ventas else None
+    if cfg:
+        dur = cfg['duracion']
     if not isinstance(inicio, int) or dur is None:
         return _error('Datos inválidos (inicio o duracion)', 400)
     invitado = datos.get('invitado') or {}
     aviso = datos.get('aviso') or {}
     inicio_dt = servicio.ms_a_dt(inicio)
     if ventas:
-        return _reservar_momentum(u, datos, inicio, inicio_dt, dur)
+        return _reservar_momentum(u, datos, inicio, inicio_dt, dur, cfg)
     calendar_id = GoogleService._calendario(u.id)
     # Su calendario personal (su email), si lo pidió y no es la misma cuenta que la conectada.
     personal = [u.email] if estado['invitar_personal'] and u.email != _preferencias(u).get('cuenta') else []
@@ -593,15 +599,17 @@ def agenda_reservar():
         current_app.logger.warning(f'[AGENDA ACADEMIA] No se pudo crear el evento de #{u.id}: {e}')
         return _error('google', 502)
     servicio._google_cache.pop(u.id, None)  # lo recién reservado ya cuenta en la próxima consulta
-    _aviso(u, inicio, datos.get('tz') or u.timezone, aviso.get('sesion'), aviso.get('alumno') or invitado.get('nombre'))
+    avisar(u, inicio, datos.get('tz') or u.timezone, aviso.get('sesion'), aviso.get('alumno') or invitado.get('nombre'))
     return jsonify({'event_id': event_id, 'calendar_id': calendar_id, 'meet': meet}), 200
 
 
-def _reservar_momentum(u, datos, inicio, inicio_dt, dur):
+def _reservar_momentum(u, datos, inicio, inicio_dt, dur, cfg=None):
     """La reserva de una Momentum con un closer: una `Appointment` (origen «Momentum») para el cliente
     del alumno (por email; se crea si no está), con el evento con Meet en su calendario de ventas y el
     WhatsApp. No pasa por create_appointment: no es un lead nuevo y no tiene que tocar su pipeline.
-    `academia` (reserva, sesión, tipo, alumno) queda en agenda_payload: con eso vuelve el resultado."""
+    `academia` (reserva, sesión, tipo, alumno) queda en agenda_payload: con eso vuelve el resultado.
+    `margen_min` (el del evento Momentum o el que manda la Academia) también: el agendamiento de setting
+    lo respeta como bloqueado después de la sesión (servicio._bloque_min)."""
     from app.agendas_v2.operacion import cliente_por_email
     from app.models import Appointment, Notification
     from app.services.booking_service import BookingService
@@ -620,10 +628,13 @@ def _reservar_momentum(u, datos, inicio, inicio_dt, dur):
     if choca:
         return _error('ocupado', 409)
     titulo = str(datos.get('titulo') or 'Momentum')[:200]
+    margen = cfg['margen'] if cfg else (_entero(datos.get('margen', 0), 0, 120) or 0)
     appt = Appointment(closer_id=u.id, client_id=cliente.id, start_time=inicio_dt, origin=ORIGEN_MOMENTUM,
                        last_stage='Nueva', closer_result='Pendiente',
                        agenda_payload={'academia': dict(datos.get('academia') or {}), 'duracion_min': dur,
-                                       'titulo': titulo, 'lead': {'nombre': invitado.get('nombre'), 'email': email}})
+                                       'margen_min': margen, 'titulo': titulo,
+                                       'lead': {'nombre': invitado.get('nombre'), 'email': email},
+                                       **({'evento_momentum': cfg['evento']['id']} if cfg else {})})
     db.session.add(appt)
     db.session.flush()
     try:
@@ -643,9 +654,10 @@ def _reservar_momentum(u, datos, inicio, inicio_dt, dur):
         target_users=[int(u.id)], associated_id=appt.id, associated_type='appointment'))
     db.session.commit()
     servicio._google_cache.pop(u.id, None)
-    _aviso(u, inicio, servicio.zona_de_usuario(u), aviso.get('sesion'), aviso.get('alumno') or invitado.get('nombre'))
+    avisar(u, inicio, servicio.zona_de_usuario(u), aviso.get('sesion'), aviso.get('alumno') or invitado.get('nombre'))
     return jsonify({'event_id': event_id, 'calendar_id': GoogleService._calendario(u.id), 'meet': meet,
-                    'appointment_id': appt.id}), 200
+                    'appointment_id': appt.id, 'duracion': dur, 'margen': margen,
+                    'evento_momentum': momentum.resumen(cfg)}), 200
 
 
 def _momentum_de(u, event_id):
@@ -658,8 +670,9 @@ def _momentum_de(u, event_id):
 @bp.route('/agenda/reservas/<event_id>', methods=['PATCH'])
 @require_academy_token
 def agenda_mover(event_id):
-    """{email, calendar_id, inicio (ms), duracion, ventas}: mueve el evento; Google avisa al alumno. En modo
-    ventas también mueve la llamada del closer."""
+    """{email, calendar_id, inicio (ms), duracion, ventas, aviso?: {sesion, alumno}}: mueve el evento; Google
+    avisa al alumno. En modo ventas también mueve la llamada del closer (con la sesión de su evento Momentum,
+    si tiene) y le avisa por WhatsApp que se movió (→ `aviso`: si salió)."""
     from app.services.google_service import GoogleService
 
     datos = _cuerpo()
@@ -668,6 +681,9 @@ def agenda_mover(event_id):
     if not u:
         return _error('No existe esa persona del equipo', 404)
     inicio, dur = datos.get('inicio'), _entero(datos.get('duracion'), 5, 240)
+    cfg = momentum.config_de_usuario(u) if ventas else None
+    if cfg:
+        dur = cfg['duracion']
     if not isinstance(inicio, int) or dur is None:
         return _error('Datos inválidos (inicio o duracion)', 400)
     inicio_dt = servicio.ms_a_dt(inicio)
@@ -680,9 +696,18 @@ def agenda_mover(event_id):
     appt = _momentum_de(u, event_id) if ventas else None
     if appt:
         appt.start_time, appt.is_rescheduled = inicio_dt, True
+        if cfg:
+            appt.agenda_payload = {**(appt.agenda_payload or {}), 'duracion_min': dur, 'margen_min': cfg['margen']}
         db.session.commit()
     servicio._google_cache.pop(u.id, None)
-    return jsonify({'ok': True}), 200
+    if not ventas:
+        return jsonify({'ok': True}), 200
+    aviso, previo = datos.get('aviso') or {}, (appt.agenda_payload or {}) if appt else {}
+    alumno = aviso.get('alumno') or (previo.get('lead') or {}).get('nombre') or (
+        appt.client.full_name if appt and appt.client else None)
+    sesion = aviso.get('sesion') or (previo.get('academia') or {}).get('sesion')
+    enviado, _ = avisar(u, inicio, servicio.zona_de_usuario(u), sesion, alumno, 'movida')
+    return jsonify({'ok': True, 'aviso': enviado}), 200
 
 
 @bp.route('/agenda/reservas/<event_id>', methods=['DELETE'])

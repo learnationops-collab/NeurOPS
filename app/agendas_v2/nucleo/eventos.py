@@ -27,6 +27,7 @@ CAMPOS_EV = [
     'desc',
     'redir',
     'indic',
+    'horario',
 ]
 CAMPOS_FORM = ['id', 'nombre', 'contacto', 'preguntas', 'reglas', 'resto', 'fin']
 
@@ -43,6 +44,9 @@ def config_de(e, form):
     # Sin margen no se escribe: así lo publicado antes de que existiera el margen sigue igual.
     if not ev.get('margen'):
         ev.pop('margen', None)
+    # Sin horario propio tampoco: lo publicado antes de que existiera sigue igual.
+    if not ev.get('horario'):
+        ev.pop('horario', None)
     return js_json({'ev': ev, 'form': _tomar(form, CAMPOS_FORM) if form else None})
 
 

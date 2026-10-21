@@ -27,6 +27,7 @@ import { moneda } from '../acciones/planCuotas';
 import { Hueso } from '../../huesos/Huesos';
 import GrabacionFathom from './GrabacionFathom';
 import PasarARecuperacion from './PasarARecuperacion';
+import ResultadoMomentum from './ResultadoMomentum';
 import {
   estadoInicial, responder, actualizar, volverA, preguntaActual, faltantes,
   puedeAvanzar, completo, arrancado, hitos, resumen, esVenta, quedaDeuda, construirPayload,
@@ -149,6 +150,8 @@ export default function TabResultado({
   // Lo que quedó guardado. Mientras existe, la pestaña muestra la confirmación y no la revisión:
   // con la revisión a la vista, un segundo clic en «Registrar la venta» la declaraba dos veces.
   const [hecho, setHecho] = useState(null);
+  // Una Momentum de la Academia se reporta con su árbol corto; «Reporte completo» vuelve a este.
+  const [generico, setGenerico] = useState(false);
 
   const programa = esVenta(respuestas) ? respuestas.programa : null;
   const venta = useEstadoVenta(ficha, programa, onConsultar);
@@ -263,6 +266,16 @@ export default function TabResultado({
         <p className="ln-t-body-sm ln-muted" style={{ marginTop: 'var(--space-4)' }}>
           Tu rol puede ver el resultado de esta llamada pero no reportarlo.
         </p>
+      </div>
+    );
+  }
+
+  if (ficha?.resultado?.momentum && contexto.modo === 'llamada' && !arrancarEnVenta && !generico) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+        <GrabacionFathom ficha={ficha} onAccion={onAccion} />
+        <ResultadoMomentum momentum={ficha.resultado.momentum} onAccion={onAccion} irA={irA}
+          onGenerico={() => setGenerico(true)} />
       </div>
     );
   }

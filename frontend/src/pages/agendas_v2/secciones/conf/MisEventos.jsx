@@ -2,24 +2,53 @@
 // El formulario es opcional: sin formulario, el lead deja solo su nombre, WhatsApp y correo. Cada
 // cambio se publica al guardar. La dirección comercial los ve en Agendamiento como cualquier evento;
 // el closer ve solo los suyos (app/agendas_v2/servicio.py, eventos_de_closer).
+// Un evento asociado a un funnel Momentum es el de sus Momentum (app/agendas_v2/momentum.py): lo agenda
+// la Academia, no tiene link público y puede tener un horario propio.
 
 import { useEffect, useState } from 'react';
 import api from '../../../../services/api';
+import { normalHorario } from '../../core/normalizar';
 import { uid } from '../../core/util';
 import { Icono, Switch, Sx } from '../../ui/base';
+import { HorarioEditor } from '../team/Horario';
 import { CampoMinutos } from '../team/Sesiones';
 import { Button, ConfirmDelete, FieldError, Grid, IconButton, Input, InputGroup, Panel } from '../../../../components/standard';
 
 const urlDe = (link) => window.location.origin + '/agendas-v2' + link;
 const SIN_FORM = '';
+const SIN_FUNNEL = '';
+const conFranjas = (h) => !!h && Object.values(h).some(x => Array.isArray(x) && x.length);
 
-function Evento({ e, formularios, onCambio, onBorrar }) {
+// El horario de las Momentum: el propio del evento o, sin él, su disponibilidad (en la zona de su persona).
+function HorarioMomentum({ e, horarioPersona, onGuardar }) {
+    const propio = conFranjas(e.horario);
+    const [horario, setHorario] = useState(() => normalHorario(propio ? e.horario : horarioPersona));
+    const [cambios, setCambios] = useState(false);
+    return (
+        <div className="me-horario">
+            <p className="t-sm mut">{propio
+                ? 'Las Momentum se ofrecen en este horario propio.'
+                : 'Las Momentum usan tu disponibilidad. Cambiala acá si querés darlas en otro horario.'}</p>
+            <div className="horario--horizontal">
+                <HorarioEditor sinZona p={{ id: 'ev-' + e.id, horario, tz: '' }}
+                    onGuardar={(c) => { if (c.horario) { setHorario(c.horario); setCambios(true); } }} />
+            </div>
+            <div className="barra-der">
+                {propio && <Button onClick={() => { setCambios(false); setHorario(normalHorario(horarioPersona)); onGuardar({}); }}>Usar mi disponibilidad</Button>}
+                <Button variant="primary" disabled={!cambios} onClick={() => { setCambios(false); onGuardar(horario); }}>Guardar horario</Button>
+            </div>
+        </div>
+    );
+}
+
+function Evento({ e, formularios, funnelsMomentum = [], horarioPersona = null, onCambio, onBorrar }) {
     const [nombre, setNombre] = useState(e.nombre);
     const [copiado, setCopiado] = useState(false);
     const [borrar, setBorrar] = useState(false);
     const copiar = async () => {
         try { await navigator.clipboard.writeText(urlDe(e.link)); setCopiado(true); setTimeout(() => setCopiado(false), 1600); } catch { /* sin portapapeles */ }
     };
+    const momentum = funnelsMomentum.some(f => f.id === e.funnel);
     return (
         <Panel as="article" className="me-ev" data-id={e.id}>
             <div className="me-fila">
@@ -40,11 +69,18 @@ function Evento({ e, formularios, onCambio, onBorrar }) {
                 </div>
                 <Sx sm label="Formulario" valor={formularios.some(f => f.id === e.formulario) ? e.formulario : SIN_FORM} onChange={v => onCambio({ formulario: v })}
                     opciones={[{ v: SIN_FORM, n: 'Sin formulario (solo contacto)', icono: 'user' }].concat(formularios.map(f => ({ v: f.id, n: f.nombre, icono: 'form' })))} />
+                {funnelsMomentum.length > 0 && (
+                    <Sx sm label="Funnel" valor={momentum ? e.funnel : SIN_FUNNEL} onChange={v => onCambio({ funnel: v })}
+                        opciones={[{ v: SIN_FUNNEL, n: 'Sin funnel (link directo)', icono: 'link' }].concat(funnelsMomentum.map(f => ({ v: f.id, n: f.nombre, icono: 'rayo' })))} />
+                )}
             </div>
+            {momentum && <HorarioMomentum key={JSON.stringify(e.horario)} e={e} horarioPersona={horarioPersona} onGuardar={h => onCambio({ horario: h })} />}
             <div className="me-fila">
-                <span className="ev-link me-link"><Icono n="link" /><span className="trunc">{urlDe(e.link)}</span></span>
+                {momentum
+                    ? <span className="t-sm mut me-link me-momentum"><Icono n="rayo" /> Momentum: la agenda la Academia, sin link público.</span>
+                    : <span className="ev-link me-link"><Icono n="link" /><span className="trunc">{urlDe(e.link)}</span></span>}
                 <div className="barra-der">
-                    <Button icon={<Icono n={copiado ? 'check' : 'copiar'} />} onClick={copiar}>{copiado ? 'Copiado' : 'Copiar link'}</Button>
+                    {!momentum && <Button icon={<Icono n={copiado ? 'check' : 'copiar'} />} onClick={copiar}>{copiado ? 'Copiado' : 'Copiar link'}</Button>}
                     {!borrar && <IconButton label={'Eliminar ' + e.nombre} icon={<Icono n="basura" s={15} />} size="sm" danger title="Eliminar" onClick={() => setBorrar(true)} />}
                 </div>
             </div>
@@ -54,7 +90,7 @@ function Evento({ e, formularios, onCambio, onBorrar }) {
 }
 
 export default function MisEventos() {
-    const [datos, setDatos] = useState(null); // {eventos, formularios}
+    const [datos, setDatos] = useState(null); // {eventos, formularios, funnels_momentum, horario_persona}
     const [nuevo, setNuevo] = useState('');
     const [error, setError] = useState(null);
     const [ocupado, setOcupado] = useState(false);
@@ -93,7 +129,8 @@ export default function MisEventos() {
                     {datos.eventos.length ? (
                         <Grid variant="list">
                             {datos.eventos.map(e => (
-                                <Evento key={e.id} e={e} formularios={datos.formularios} onCambio={c => guardar(e.id, c)} onBorrar={() => borrar(e.id)} />
+                                <Evento key={e.id} e={e} formularios={datos.formularios} funnelsMomentum={datos.funnels_momentum || []}
+                                    horarioPersona={datos.horario_persona} onCambio={c => guardar(e.id, c)} onBorrar={() => borrar(e.id)} />
                             ))}
                         </Grid>
                     ) : <p className="t-sm mut">Todavía no creaste eventos propios.</p>}

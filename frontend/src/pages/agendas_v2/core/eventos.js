@@ -6,7 +6,7 @@ import { normalEvento, normalForm } from './normalizar';
 import { fechaCorta } from './tiempo';
 import { fmt } from './util';
 
-const CAMPOS_EV = ['nombre', 'slug', 'funnel', 'formulario', 'duracion', 'margen', 'activo', 'persona', 'reservas', 'antel', 'paso', 'zona', 'desc', 'redir', 'indic'];
+const CAMPOS_EV = ['nombre', 'slug', 'funnel', 'formulario', 'duracion', 'margen', 'activo', 'persona', 'reservas', 'antel', 'paso', 'zona', 'desc', 'redir', 'indic', 'horario'];
 const CAMPOS_FORM = ['id', 'nombre', 'contacto', 'preguntas', 'reglas', 'resto', 'fin'];
 const tomar = (o, ks) => ks.reduce((a, k) => { a[k] = o[k]; return a; }, {});
 
@@ -16,6 +16,8 @@ export function configDe(e, form) {
     const ev = tomar(e, CAMPOS_EV);
     // Sin margen no se escribe: así lo publicado antes de que existiera el margen sigue igual.
     if (!ev.margen) delete ev.margen;
+    // Sin horario propio tampoco: lo publicado antes de que existiera sigue igual.
+    if (!ev.horario) delete ev.horario;
     return JSON.stringify({ ev, form: form ? tomar(form, CAMPOS_FORM) : null });
 }
 // `publicado` con la copia del formulario al día y el resto como se publicó, o null si no cambia nada.

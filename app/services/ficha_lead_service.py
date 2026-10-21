@@ -301,7 +301,21 @@ def _resultado(appt, ventas, estado_libro, confirmada, deuda, tipos_vendidos, co
         'seguimiento_activo': con_seguimiento,
         'seguimiento_intento': appt.seguimiento_intento or 1,
         'seguimiento_tipo': appt.seguimiento_tipo or None,
+        # Una Momentum de la Academia se reporta con su árbol corto (ficha_momentum_service).
+        'momentum': _momentum(appt),
     }
+
+
+def _momentum(appt):
+    """{tipo: sena|cierre, sesion, reporte} de una Momentum, o None si la agenda no es una."""
+    from app.services.ficha_momentum_service import tipo_de
+    from app.services.momentum_academia import ORIGEN_MOMENTUM
+
+    if appt.origin != ORIGEN_MOMENTUM:
+        return None
+    payload = appt.agenda_payload or {}
+    return {'tipo': tipo_de(appt), 'sesion': (payload.get('academia') or {}).get('sesion') or None,
+            'reporte': payload.get('momentum_reporte') or None}
 
 
 # --- Cobro ------------------------------------------------------------------------------------

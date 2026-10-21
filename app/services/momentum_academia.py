@@ -8,7 +8,11 @@ ese reporte a lo que la Academia entiende y se le avisa:
 
 - `asistencia`: asistio | no_asistio | cancelo | reagenda (con `inicio`, ISO UTC);
 - `resultado`: pago (declaró la venta) | pensando (no cerró: sigue en seguimiento) | no_sigue
-  («No va a pagar» o descartado).
+  («No va a pagar» o descartado);
+- `motivo`: por qué no asistió, canceló, lo está pensando o no sigue (texto libre), si se dijo.
+
+Desde el 20/10/2026 la ficha reporta una Momentum con su árbol corto (bloque `momentum`, ver
+app/services/ficha_momentum_service.py): asistencia, si continúa y el motivo ya vienen resueltos.
 
 El mazo viejo (POST /api/closer/deck/<id>) también avisa (`traducir('mazo', ...)`).
 En la Academia, «no sigue» da de baja el proceso del alumno.
@@ -34,7 +38,32 @@ def traducir(accion, datos):
     if accion == 'venta':
         return {'asistencia': 'asistio', 'resultado': 'pago'}
     if accion == 'mazo':
-        return _traducir_mazo(datos)
+        return _con_motivo(_traducir_mazo(datos), datos.get('motivo') or datos.get('seguimiento_sub'))
+    if isinstance(datos.get('momentum'), dict):
+        return _traducir_momentum(datos['momentum'])
+    proceso = datos.get('process') if isinstance(datos.get('process'), dict) else {}
+    motivo = datos.get('motivo') or datos.get('motivo_descarte') or proceso.get('note') or datos.get('objecion')
+    return _con_motivo(_traducir_arbol(datos), motivo)
+
+
+def _con_motivo(cambio, motivo):
+    """Le suma el motivo al cambio (si hay cambio y motivo)."""
+    motivo = str(motivo or '').strip()[:1000]
+    return {**cambio, 'motivo': motivo} if cambio and motivo else cambio
+
+
+def _traducir_momentum(m):
+    """El árbol corto de la Momentum (ya validado al guardarse)."""
+    cambio = {'asistencia': m.get('asistencia')}
+    if m.get('asistencia') == 'asistio':
+        cambio['resultado'] = m.get('resultado')
+    if m.get('asistencia') == 'reagenda':
+        cambio['inicio'] = m.get('inicio')
+    return _con_motivo(cambio, m.get('motivo'))
+
+
+def _traducir_arbol(datos):
+    """El árbol de siempre de la ficha (las Momentum que se reportaron antes del árbol corto)."""
     from app.services.ficha_acciones_service import _no_cerro
 
     clave = datos.get('resultado')

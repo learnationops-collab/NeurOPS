@@ -29,6 +29,7 @@ from app.agendas_v2.nucleo.normalizar import (
     limpiar_html,
     normal_evento,
     normal_form,
+    normal_funnel,
     normal_grupo,
     normal_persona,
     normal_rol,
@@ -623,3 +624,20 @@ def test_la_reserva_guarda_la_sesion_del_closer_que_toco():
     assert (r['duracion_min'], r['margen_min']) == (30, 20)
     r = armar_reserva(lead=lead, evento=e, slot={'t': LUNES, 'p': 'ana'})
     assert (r['duracion_min'], r['margen_min']) == (60, 10)
+
+
+def test_el_funnel_acepta_el_tipo_momentum_y_no_es_de_setting():
+    f = normal_funnel('fu', {'nombre': 'Momentum', 'tipo': 'momentum'})
+    assert (f['tipo'], f['setting']) == ('momentum', False)
+
+
+def test_el_evento_sin_horario_propio_lo_deja_en_none_y_lo_publicado_no_cambia():
+    e = normal_evento('e', {'nombre': 'Llamada', 'horario': {1: []}})
+    assert e['horario'] is None
+    assert 'horario' not in json.loads(config_de(e, None))['ev']
+
+
+def test_con_horario_propio_se_publica_igual_que_en_el_frontend():
+    e = normal_evento('e', {'nombre': 'Momentum', 'horario': {'1': [['14:00', '16:00']]}})
+    horario = '{"0":[],"1":[["14:00","16:00"]],"2":[],"3":[],"4":[],"5":[],"6":[]}'
+    assert config_de(e, None).endswith('"indic":"","horario":' + horario + '},"form":null}')

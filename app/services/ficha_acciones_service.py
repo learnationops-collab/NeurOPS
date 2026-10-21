@@ -168,8 +168,10 @@ RESULTADOS = {'asistio': 'Show up', 'no_show': 'No Show', 'cancelo': 'Cancelado'
 def resultado(appt, datos, usuario):
     """Cierra el arbol de reporte de la llamada.
 
-    Admite dos formas del pedido:
+    Admite tres formas del pedido:
 
+      · con un bloque `momentum`: el reporte corto de una Momentum de la Academia (ver
+        `ficha_momentum_service`);
       · con un bloque `deck`: el arbol de «Resultado» de la ficha, que manda cada rama ya resuelta
         (ver `_resultado_del_arbol`);
       · plana (`resultado` + campos sueltos): el resultado va por `process_agenda` (que ademas
@@ -177,6 +179,10 @@ def resultado(appt, datos, usuario):
         perdido) y los campos que no son un estado —decisor, oferta, notas, seguimiento— por el
         write del mazo.
     """
+    if 'momentum' in datos:
+        from app.services.ficha_momentum_service import resultado_momentum
+
+        return resultado_momentum(appt, datos, usuario)
     if isinstance(datos.get('deck'), dict):
         return _resultado_del_arbol(appt, datos, usuario)
 

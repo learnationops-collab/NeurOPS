@@ -212,10 +212,11 @@ def guardar_foto(user, foto):
     return f
 
 
-# Lo que el closer puede tocar de sus eventos. La persona (él) y el funnel (ninguno) los pone el servidor.
+# Lo que el closer puede tocar de sus eventos. La persona (él) la pone el servidor; el funnel, ninguno
+# salvo uno de tipo Momentum (y solo entonces el horario propio, ver momentum.py).
 CAMPOS_EVENTO_CLOSER = (
     'nombre', 'duracion', 'margen', 'formulario', 'activo', 'desc', 'redir', 'indic',
-    'reservas', 'antel', 'paso', 'zona',
+    'reservas', 'antel', 'paso', 'zona', 'horario',
 )
 
 
@@ -264,19 +265,29 @@ def guardar_sesiones(user, sesiones):
 
 
 def eventos_de_closer(user):
-    """Los eventos propios del closer (persona fija = él) y los formularios que puede usar."""
+    """Los eventos propios del closer (persona fija = él), los formularios que puede usar y los funnels
+    Momentum a los que puede asociar uno."""
+    from app.agendas_v2 import momentum
+
     d = colecciones()
     p = persona_de_usuario(d, user)
     evs = [_evento_de_closer(d, e) for e in ordenados(d, 'eventos') if p and e.get('persona') == p['id']]
     return {
         'eventos': evs,
         'formularios': [{'id': f['id'], 'nombre': f['nombre']} for f in ordenados(d, 'formularios')],
+        'funnels_momentum': [{'id': f['id'], 'nombre': f['nombre'], 'activo': f['activo']}
+                             for f in ordenados(d, 'funnels') if momentum.es_funnel_momentum(f)],
+        'horario_persona': p['horario'] if p else None,
     }
 
 
 def guardar_evento_de_closer(user, evento_id, cuerpo):
     """Crea o edita un evento propio del closer y lo publica (no tiene borrador). Lanza PermissionError
-    si el evento es de otro y ValueError si el formulario no existe. Sin formulario, pide solo el contacto."""
+    si el evento es de otro y ValueError si el formulario no existe. Sin formulario, pide solo el contacto.
+    El funnel queda vacío salvo que sea uno de tipo Momentum: entonces es su evento Momentum y puede tener
+    horario propio (en los demás el horario es siempre el de su persona)."""
+    from app.agendas_v2 import momentum
+
     d = colecciones()
     p = persona_de_usuario(d, user) or _persona_nueva(d, user)
     d = colecciones()
@@ -286,7 +297,11 @@ def guardar_evento_de_closer(user, evento_id, cuerpo):
     datos = {k: cuerpo[k] for k in CAMPOS_EVENTO_CLOSER if k in cuerpo}
     if datos.get('formulario') and not buscar(d, 'formularios', datos['formulario']):
         raise ValueError('Ese formulario no existe.')
-    base = {**(previo or {}), **datos, 'persona': p['id'], 'funnel': ''}
+    funnel = cuerpo.get('funnel') if 'funnel' in cuerpo else (previo or {}).get('funnel')
+    funnel = funnel if momentum.es_funnel_momentum(buscar(d, 'funnels', funnel)) else ''
+    base = {**(previo or {}), **datos, 'persona': p['id'], 'funnel': funnel}
+    if not funnel:
+        base['horario'] = None
     if not previo:
         base['orden'] = max([x.get('orden') or 0 for x in d['eventos']] or [0]) + 1
         nombre = str(base.get('nombre') or 'llamada')
@@ -843,7 +858,8 @@ def _disponible(d, e):
     if not form:
         return None
     funnel = buscar(d, 'funnels', pub['evento'].get('funnel'))
-    if funnel and not funnel.get('activo'):
+    # Las Momentum las agenda solo la Academia (app/agendas_v2/momentum.py): no tienen página pública.
+    if funnel and (not funnel.get('activo') or funnel.get('tipo') == 'momentum'):
         return None
     # La página de gracias no se publica: va la del evento en vivo, si todavía existe.
     gracias = e.get('gracias') if buscar(d, 'gracias', e.get('gracias')) else ''

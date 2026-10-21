@@ -224,7 +224,9 @@ def normal_funnel(id, d):
 # Para qué cuenta cada funnel en las estadísticas (la «Fuente» de la agenda, ver operacion._fuente):
 # setting → el setter del link; vsl → 'vsl'; workshop → 'workshop' (o 'workshop_landing' si el origen es
 # la grabación); otro → el origen o el funnel. Los funnels viejos traían solo `setting: true`.
-TIPOS_FUNNEL = ('setting', 'vsl', 'workshop', 'otro')
+# momentum: las Momentum que la Academia agenda con el closer de cada alumno (app/agendas_v2/momentum.py);
+# no tienen página pública.
+TIPOS_FUNNEL = ('setting', 'vsl', 'workshop', 'otro', 'momentum')
 
 
 def tipo_funnel(d):
@@ -309,6 +311,7 @@ def normal_evento(id, d):
     d = obj(d)
     rs, an, pa, zn = obj(d.get('reservas')), obj(d.get('antel')), obj(d.get('paso')), obj(d.get('zona'))
     dur = entero(d.get('duracion'), DURACION_MIN, DURACION_MAX, 45)
+    hz = normal_horario(d.get('horario'))
     slug = slugify(d.get('slug')) or slugify(d.get('nombre')) or id
     anteriores = []
     for x in lista(d.get('slugs_anteriores'))[:20]:
@@ -347,6 +350,8 @@ def normal_evento(id, d):
             'modo': 'fija' if zn.get('modo') == 'fija' else 'auto',
             'tz': zn.get('tz') if zona_valida(zn.get('tz')) else TZ_DEF,
         },
+        # Horario propio del evento (el de una Momentum del closer). None: vale el de su persona.
+        'horario': hz if any(hz[x] for x in hz) else None,
         'desc': limpiar_html(d.get('desc')),
         'redir': url_ok(d.get('redir')),
         # Indicaciones para el lead: van en la invitación de Google Calendar (texto plano).

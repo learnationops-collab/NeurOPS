@@ -120,8 +120,9 @@ export function normalFunnel(id, d) {
 }
 
 // Para qué cuenta cada funnel en las estadísticas (app/agendas_v2/operacion.py, _fuente). Los funnels
-// viejos traían solo `setting: true`.
-export const TIPOS_FUNNEL = ['setting', 'vsl', 'workshop', 'otro'];
+// viejos traían solo `setting: true`. momentum: las Momentum que la Academia agenda con el closer de
+// cada alumno (app/agendas_v2/momentum.py); no tienen página pública.
+export const TIPOS_FUNNEL = ['setting', 'vsl', 'workshop', 'otro', 'momentum'];
 export function tipoFunnel(d) {
     return TIPOS_FUNNEL.includes(d.tipo) ? d.tipo : (d.setting === true ? 'setting' : 'otro');
 }
@@ -176,6 +177,7 @@ export function normalEvento(id, d) {
     d = d || {};
     const rs = d.reservas || {}, an = d.antel || {}, pa = d.paso || {}, zn = d.zona || {};
     const dur = entero(d.duracion, DURACION_MIN, DURACION_MAX, 45);
+    const hz = normalHorario(d.horario);
     return {
         id, nombre: String(d.nombre || 'Sin nombre').slice(0, 80), slug: slugify(d.slug) || slugify(d.nombre) || id, funnel: String(d.funnel || ''),
         // margen: después de cada sesión; bloquea la agenda del closer pero el lead no lo ve.
@@ -188,6 +190,8 @@ export function normalEvento(id, d) {
         antel: { n: entero(an.n, 0, 999, 4), u: MS_U[an.u] ? an.u : 'h' },
         paso: { n: entero(pa.n, 1, 720, dur <= 30 ? 30 : 60), u: pa.u === 'h' ? 'h' : 'min', pers: pa.pers === true },
         zona: { modo: zn.modo === 'fija' ? 'fija' : 'auto', tz: zonaValida(zn.tz) ? zn.tz : TZ_DEF },
+        // Horario propio del evento (el de una Momentum del closer). null: vale el de su persona.
+        horario: Object.values(hz).some(x => x.length) ? hz : null,
         desc: limpiarHTML(d.desc), redir: urlOk(d.redir),
         // Indicaciones para el lead: van en la invitación de Google Calendar (texto plano).
         indic: typeof d.indic === 'string' ? d.indic.slice(0, 2000) : '',
