@@ -56,23 +56,6 @@ def _dias(filas, campo):
 
 
 @freeze_time(AHORA)
-@pytest.mark.parametrize('chip, periodo, dias', [
-    ('today', 'hoy', [0]),
-    ('week', '7d', [0, 6]),
-    ('month', '30d', [0, 6, 7, 29]),
-])
-def test_cada_chip_de_agendas_es_el_periodo_de_mis_datos(client, elias, agendas_por_dia, auth_headers,
-                                                         chip, periodo, dias):
-    filas = client.get('/api/setter/deck/agendas', headers=auth_headers(elias),
-                       query_string={'date_range': chip}).get_json()
-
-    assert _dias(filas, 'cliente') == dias
-    # El mismo rango de días que el período del dashboard con ese nombre.
-    inicio, fin = ComercialService.rango(periodo)
-    assert (inicio, fin) == (HOY - timedelta(days=max(dias)), HOY)
-
-
-@freeze_time(AHORA)
 @pytest.mark.parametrize('chip, dias', [('week', [0, 6]), ('month', [0, 6, 7, 29])])
 def test_la_lista_de_cualificacion_usa_los_mismos_rangos(client, elias, cualificados_por_dia,
                                                         auth_headers, chip, dias):

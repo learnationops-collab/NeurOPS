@@ -29,21 +29,9 @@ ManyChat sin cliente no pasan por acá: su fila no tiene ficha.
 Se compara el nombre normalizado (`fuente_service.normalizar`): la fuente la escriben n8n, el
 formulario y ediciones a mano, y conviven 'Ivan' e 'Iván'.
 """
-from sqlalchemy import func, or_
-
 from app import db
-from app.models import Appointment, Client, FinancialAgenda, FinancialSale
+from app.models import Appointment, Client, FinancialAgenda
 from app.services.fuente_service import normalizar
-
-
-def _ig(valor):
-    v = (valor or '').strip().lstrip('@').lower()
-    return v if v and v != 'n/a' else None
-
-
-def _mail(valor):
-    v = (valor or '').strip().lower()
-    return v if v and '@' in v and v != 'n/a' else None
 
 
 def _ventas_de(client):
@@ -79,23 +67,14 @@ def es_lead_del_setter(setter, appt=None, client=None):
     if any(normalizar(v.setter) == objetivo for v in ventas):
         return True
 
-    # 3: una fila del Tablero con su nombre y el contacto de la persona o de alguno de sus pagos
-    # (el de la persona del pago, `FinancialSale.contacto`; la copia solo sin persona).
-    contactos = list(FinancialSale.contactos(ventas).values())
-    igs = {i for i in [_ig(client.instagram)] + [_ig(c['instagram']) for c in contactos] if i}
-    mails = {m for m in [_mail(client.email)] + [_mail(c['mail_cliente']) for c in contactos] if m}
-    # Las agendas de su persona (y de las de sus pagos); por la copia, solo las agendas sin persona.
-    from app.services.agenda_contacto_service import sin_persona
+    # 3: una fila del Tablero con su nombre, de su persona o de la de alguno de sus pagos (Etapa 2c: la
+    # agenda no guarda el contacto).
     personas = {p for p in [client.person_uuid] + [v.person_uuid for v in ventas] if p}
-    copia = sin_persona(
-        func.lower(func.replace(FinancialAgenda.instagram, '@', '')).in_(sorted(igs)) if igs else None,
-        func.lower(FinancialAgenda.mail).in_(sorted(mails)) if mails else None)
-    condiciones = [c for c in (FinancialAgenda.person_uuid.in_(sorted(personas)) if personas else None, copia)
-                   if c is not None]
-    if not condiciones:
+    if not personas:
         return False
     return any(normalizar(nombre) == objetivo
-               for (nombre,) in db.session.query(FinancialAgenda.nombre).filter(or_(*condiciones)).distinct())
+               for (nombre,) in db.session.query(FinancialAgenda.nombre).filter(
+                   FinancialAgenda.person_uuid.in_(sorted(personas))).distinct())
 
 
 def puede_abrir(usuario, appointment_id=None, client_id=None):

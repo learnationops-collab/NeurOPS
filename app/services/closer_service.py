@@ -1240,10 +1240,6 @@ class CloserService:
                         new_fa = FinancialAgenda(
                             person_uuid=client.person_uuid,
                             nombre=appt.origin or '2TH Call',
-                            lead=client.full_name,
-                            mail=client.email,
-                            instagram=client.instagram,
-                            whatsapp=client.phone,
                             closer=appt.closer.username if appt.closer else None,
                             estado='2TH Call',
                             date=new_dt,

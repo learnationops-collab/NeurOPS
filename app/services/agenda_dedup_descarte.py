@@ -16,9 +16,8 @@ logger = logging.getLogger(__name__)
 # Confirmer (10/10/2026): lo sigue escribiendo la pantalla del rol triage y lo cuenta su
 # reporte diario, asi que la fila que sobrevive no debe perderlo.
 _VACIOS ={'', 'n/a', 'na', 'none', 'no tengo', 'notengo', 'ninguno', 'sin asignar', 'desconocido'}
-CAMPOS_HEREDABLES = ('mail', 'instagram', 'whatsapp', 'closer', 'encargado_triage', 'zona_geografica')
-# El contacto (Etapa 2c) es de la persona: la copia se hereda solo entre agendas sin persona.
-CONTACTO = ('mail', 'instagram', 'whatsapp')
+# El contacto (mail, instagram, whatsapp) es de la persona (Etapa 2c): la agenda no lo guarda.
+CAMPOS_HEREDABLES = ('closer', 'encargado_triage', 'zona_geografica')
 
 
 def _esta_vacio(valor):
@@ -183,10 +182,7 @@ def descartar(conservada, duplicada, usuario_id, motivo=None, cancelar_cita=True
     # `restaurar` deje todo como estaba.
     heredado = {}
     _heredar_persona(conservada, duplicada, snapshot)
-    con_persona = bool(conservada.person_uuid or duplicada.person_uuid)
     for campo in CAMPOS_HEREDABLES:
-        if con_persona and campo in CONTACTO:
-            continue
         nuevo = getattr(duplicada, campo, None)
         if _esta_vacio(getattr(conservada, campo, None)) and not _esta_vacio(nuevo):
             heredado[campo] = getattr(conservada, campo, None)

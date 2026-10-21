@@ -117,18 +117,11 @@ def condiciones_de_identidad(campos):
 
 
 def _condiciones_agenda(nombre=None, telefono=None, instagram=None, mail=None):
-    """Las agendas de la persona de estos datos y, por la copia, solo las que no tienen persona."""
-    from app.services import agenda_contacto_service, person_service
-    copia = condiciones_de_identidad({
-        'instagram': instagram, 'col_instagram': FinancialAgenda.instagram,
-        'mail': mail, 'col_mail': FinancialAgenda.mail,
-        'telefono': telefono, 'col_telefono': FinancialAgenda.whatsapp,
-        'nombre': nombre, 'col_nombre': FinancialAgenda.lead,
-    })
+    """Las agendas de la persona de estos datos (Etapa 2c: la agenda no guarda el contacto)."""
+    from app.services import person_service
     persona = person_service.buscar(_limpiar(nombre), email=_limpiar(mail), instagram=_limpiar(instagram),
                                     phone=_limpiar(telefono))
-    return [c for c in (FinancialAgenda.person_uuid == persona.uuid if persona else None,
-                        agenda_contacto_service.sin_persona(*copia)) if c is not None]
+    return [FinancialAgenda.person_uuid == persona.uuid] if persona else []
 
 
 def _condiciones_cliente(nombre=None, telefono=None, instagram=None, mail=None):

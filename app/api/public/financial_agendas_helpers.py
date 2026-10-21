@@ -31,26 +31,6 @@ ESTADOS_AGENDA_ABIERTA = {
     'reagendada', 'reagendado', 'reprogramada', 'reprogramado',
 }
 
-_SEPARADORES_TELEFONO = (' ', '-', '(', ')', '+', '.')
-
-
-def _whatsapp_solo_digitos():
-    """Expresion SQL con el whatsapp sin separadores, para comparar numeros y no textos."""
-    from app.services.agenda_contacto_service import whatsapp_solo_digitos
-    return whatsapp_solo_digitos(_SEPARADORES_TELEFONO)
-
-
-def _cola_telefono(valor, largo=9):
-    """Ultimos `largo` digitos de un telefono, o None si no llega a tener esos digitos.
-
-    Se compara la cola y no el numero entero porque el prefijo de pais aparece de forma
-    intermitente segun como lo escriba el lead ('+51 996 526 031', '996526031'), y con
-    el numero completo esas dos formas del MISMO telefono no se reconocen.
-    """
-    digitos = ''.join(c for c in str(valor or '') if c.isdigit())
-    return digitos[-largo:] if len(digitos) >= largo else None
-
-
 def _split_multi(raw_value):
     # Los filtros del tablero envian una o varias opciones separadas por coma
     if not raw_value:
