@@ -145,6 +145,22 @@ Reglas de la Etapa 2a (además de las de arriba):
   sus datos con su uso, principal y dados de baja) y la acción **agregar dato** (el backend ya acepta `agregar`
   en `editar_datos`), separada de **corregir** (`corrige=True`).
 
+## Etapa 2b: el backend deja de leer las copias (desde el 20/10/2026)
+
+En develop ya corrieron todos los scripts: todo pago, agenda y lead tiene persona salvo unos pocos sin
+ningún dato. El criterio estricto de E pasa a ser el de todos: **la copia (nombre, mail, teléfono,
+instagram de la fila) se lee solo en filas sin `person_uuid`**. Se sigue escribiendo hasta la Etapa 2c,
+donde se borran las columnas.
+
+| Frente | Sesión | Qué |
+|---|---|---|
+| **J. Copias de los pagos** | work-a1, `personas/J` | Los ~30 archivos que leen `nombre_cliente`, `mail_cliente`, `telefono` o `instagram` de `FinancialSale`: pasan a `FinancialSale.contacto()` o a la persona. Incluye el pendiente (a), alinear C y F al criterio estricto, y sacar el cruce por texto entre clientes (el caso Kervin). Lista: `grep -rlE "\.(nombre_cliente\|mail_cliente)\|FinancialSale\.(instagram\|telefono\|nombre_cliente\|mail_cliente)" app` |
+| **K. Copias de las agendas** | work-1a, cuando cierre I | Los ~18 archivos que leen `lead`, `mail`, `whatsapp` o `instagram` de `FinancialAgenda`: pasan a `agenda.person` / `person_service.datos`. |
+| **L. Campos comerciales de `clients`** | work-24 | `total_amount` a la venta (`Sale.agreed_total`), `academy_product_slug`/`academy_expires_at` a `Subscription`; los backfills de ventas y suscripciones por `person_uuid`. |
+
+Como en la Etapa 1, cada uno toca solo los archivos de su lista. Un archivo que está en dos listas (por ejemplo
+`closer_service`, que lee pagos y agendas) es del frente que llega primero, y se avisa al otro por SendMessage.
+
 ## Estado
 
 | Frente | Sesión / rama | Estado |
