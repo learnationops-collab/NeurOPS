@@ -385,6 +385,41 @@ es opcional (~4 archivos, ~20 líneas).
     (tabla de interacciones), y `Conversation` queda como cabecera.
   - Va con Agendas 2.0 y el retiro de ManyChat, después del pase.
 
+### Retiro de ManyChat: lo que hace falta (relevado el 21/10/2026, sobre develop 77a0c4c0)
+
+Hoy el motor propio de Instagram (`automatizaciones/registro.py._lead`) **también escribe `manychat_leads`**: crea
+`ManychatLead('ig:<IGSID>')` con name e ig, y una `LeadAnswer` por entrada, mensaje y calificación, para que los tableros
+sigan andando. La persona del lead del motor sale de `lead.ig` (`conversaciones_service.sincronizar_lead`).
+
+**La forma final:** `Conversation` es la cabecera (persona, canal, setter, etapa). Las interacciones pasan a una
+tabla colgada de ella: `LeadAnswer` con `conversation_id`, o una nueva, con
+`(conversation_id, created_at, keyword, ad_id, qualification, id_option)`. El motor escribe Persona + Conversation +
+interacciones directo. Cuando nadie lee `manychat_leads` ni `LeadAnswer.lead_id`, la tabla se borra entera.
+
+**Por qué `Conversation` sola no alcanza:**
+- Es una fila por (canal, id externo, anuncio o palabra clave), y `created_at` es la **primera** interacción con esa clave.
+  La atribución de hoy usa la **última** antes del tope (A en enero, B en febrero, A en marzo, agenda en marzo: gana A).
+- La interacción sin palabra clave hereda la de la anterior: hace falta la secuencia.
+- La corrección del setter (`palabra_clave_asignacion.responder_con_anuncio` le pone `ad_id` a una `LeadAnswer`) no
+  llega a `Conversation`, donde `ad_id` solo se escribe si está vacío.
+- «Respondió» (`id_option ≠ 0`, de "En conversación" y "Sin respuesta") no existe en `Conversation`.
+- `Conversation.qualification` es el último valor sincronizado. Cuando `rama_mensajes` recalcula la calificación en
+  `LeadAnswer`, no se resincroniza.
+
+**Quién lee hoy `manychat_leads.ig`/`name`:**
+- **Cruce y atribución:** cruce_conversaciones, marketing_attribution (6 lugares), palabra_clave_asignacion_service,
+  conversational.py.
+- **Setter:** setter_deck (16), setter_mazo, public/setter.py, setter_links.
+- **Comercial y roadmap:** comercial_leads, lead_roadmap.
+- **Canal y monitor:** manychat_monitor, manychat.py (escribe y devuelve), manychat_mantenimiento (los edita a mano),
+  manychat_calificacion.
+- **Persona y cliente:** conversaciones_service (sincronizar_lead y cliente_del_lead), booking_service.
+- En `personas/2c-manychat-lectores`, los lectores de work-1a ya van por la persona (`lead_contacto_service`).
+
+**La atribución, de punta a punta:** venta → agenda → conversación → keyword (ver las decisiones del 21/10). La
+inferencia por la última interacción queda solo como respaldo, sobre la tabla de interacciones. Va con Agendas 2.0:
+el link de agenda que manda la plataforma lleva la referencia de la conversación.
+
 ## Traspaso (21/10/2026): lo que queda, para la sesión que siga
 
 El código de la 2c está completo pero **nada corrió ni se subió**. Lo frenó la caída de Railway (sin SSH ni builds).
