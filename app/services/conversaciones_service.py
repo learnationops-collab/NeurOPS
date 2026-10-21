@@ -47,6 +47,7 @@ def manychat_id_real(manychat_id):
 
 def persona_de(nombre, *, crear, fuente='manychat', actual_uuid=None, **datos):
     """La persona de un lead, sin flush (sirve dentro de `before_flush`). Le anota los datos que traiga."""
+    nombre = person_service.nombre_limpio(nombre)  # '{{full_name}}' de ManyChat no es un nombre
     pares = person_service.claves(**datos)
     person = person_service.por_uuid(actual_uuid) if actual_uuid else None
     if person is None:
