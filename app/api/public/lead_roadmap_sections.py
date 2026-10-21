@@ -116,7 +116,10 @@ def build_activity(lead_profile, arrived_stage, manychat_lead, financial_agendas
 def _ventas_por_programa(client):
     """[(programa, fecha de ingreso, cobrado)] de las ventas vigentes de la persona del cliente (o del
     cliente, sin persona), una por programa (Etapa 2c: reemplaza las inscripciones `Enrollment`).
-    El ingreso es la venta nueva más vieja del programa; lo cobrado, los pagos completados de sus ventas."""
+    El ingreso es la venta nueva más vieja del programa; lo cobrado, los pagos completados de sus ventas.
+
+    Distinto a propósito de `sale_service.fecha_de_ingreso` (la venta nueva activa más reciente, que es
+    la fecha de la cartera): acá se mide desde cuándo está en el programa."""
     from app.models import FinancialSale, Sale
     from app.services.comercial_vocabulario import venta_completada
 
