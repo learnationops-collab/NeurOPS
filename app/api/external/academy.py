@@ -294,8 +294,10 @@ def find_sales(identifier):
 @bp.route('/sales/<int:sale_id>', methods=['PATCH'])
 @require_academy_token
 def patch_sale(sale_id):
-    """Corrige los datos de contacto del comprador guardados EN ESA VENTA puntual (no toca
-    el Client maestro - usar PATCH /clients/<id> para eso). Se propaga a Google Sheets
+    """Corrige los datos de contacto del comprador de ESA VENTA (no toca el Client maestro - usar
+    PATCH /clients/<id> para eso). Si la venta tiene persona, se corrige la persona, que es de
+    donde se leen; un dato que ya es de otra persona devuelve 409. `modo: 'pago'` suma el mail como
+    su mail de pago sin cambiar el principal. Se propaga a Google Sheets
     (mismo patrón que el PUT interno de administración, ver update_financial_sale en
     app/api/public/financial_sales.py) para que el próximo sync no revierta la corrección."""
     sale = FinancialSale.query.get(sale_id)
@@ -321,6 +323,13 @@ def patch_sale(sale_id):
         sale.telefono = str(changes['telefono']).strip() or None
     if 'instagram' in changes:
         sale.instagram = str(changes['instagram']).strip().lstrip('@') or None
+    # Con persona, lo que se lee es la persona: la corrección va ahí (`modo: 'pago'` suma el mail
+    # como su mail de pago sin cambiar el principal).
+    try:
+        corregir_persona_de_venta(sale, changes, modo='pago' if data.get('modo') == 'pago' else 'corregir')
+    except DatoDeOtraPersona as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 409
 
     db.session.commit()
 
@@ -473,4 +482,5 @@ def academy_prorroga():
 
 
 # Las rutas por `work_uuid` (plan_personas, frente G), sobre el mismo blueprint.
-from app.api.external.academy_personas import cliente_del_alumno  # noqa: E402
+from app.api.external.academy_personas import (  # noqa: E402
+    cliente_del_alumno, corregir_persona_de_venta, DatoDeOtraPersona)
