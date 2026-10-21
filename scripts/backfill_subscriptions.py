@@ -79,17 +79,29 @@ class _Academia:
             r = requests.get(f'{base}/students', params={'product': slug}, headers=LearnationService._headers(), timeout=60)
             r.raise_for_status()
             for a in r.json().get('data') or []:
-                email, asignaciones = alumnos.setdefault(a['id'], ((a.get('email') or '').strip().lower() or None, {}))
+                email, _, asignaciones = alumnos.setdefault(a['id'], (
+                    (a.get('email') or '').strip().lower() or None, (a.get('work_uuid'), a.get('work_id')), {}))
                 for p in a.get('active_products') or []:
                     vence = _fecha(p.get('expires_at'))
                     if p.get('slug') in self.slugs and vence and vence > asignaciones.get(p['slug'], (date.min,))[0]:
                         asignaciones[p['slug']] = (vence, False)
-        return {uid: (email, [(s, v, d) for s, (v, d) in asig.items()]) for uid, (email, asig) in alumnos.items()}
+        return {uid: (email, de_work, [(s, v, d) for s, (v, d) in asig.items()])
+                for uid, (email, de_work, asig) in alumnos.items()}
 
 
-def _persona_del_alumno(user_id, email):
-    """Por su id de la Academia y, si no, por su mail. Nunca crea."""
-    return person_service.buscar(learnation_user_id=user_id) or (person_service.buscar(email=email) if email else None)
+def _persona_del_alumno(user_id, email, de_work=(None, None)):
+    """Por su id de la Academia, por lo que la Academia guarda de Work (`work_uuid` o el id del
+    cliente, `work_id`) y, si no, por su mail. Nunca crea."""
+    work_uuid, work_id = de_work
+    person = person_service.buscar(learnation_user_id=user_id)
+    if person is None and work_uuid:
+        person = person_service.por_uuid(work_uuid)
+    if person is None and str(work_id or '').isdigit():
+        cliente = db.session.get(Client, int(work_id))
+        person = person_service.por_uuid(cliente.person_uuid) if cliente is not None and cliente.person_uuid else None
+    if person is None and email:
+        person = person_service.buscar(email=email)
+    return person
 
 
 def _ultima_venta(person_uuid, client_ids, programa):
@@ -112,12 +124,12 @@ def _juntar(academia, numeros, sin_persona):
 
     alumnos = academia.alumnos()
     numeros['alumnos_academia'] = len(alumnos)
-    for user_id, (email, asignaciones) in alumnos.items():
+    for user_id, (email, de_work, asignaciones) in alumnos.items():
         academia.cache.setdefault(user_id, asignaciones)
         if not asignaciones:
             continue
         numeros['asignaciones_academia'] += len(asignaciones)
-        person = _persona_del_alumno(user_id, email)
+        person = _persona_del_alumno(user_id, email, de_work)
         if person is None:
             numeros['alumnos_sin_persona'] += 1
             sin_persona.append(f'alumno {user_id} <{email}>: {", ".join(s for s, _, _ in asignaciones)}')
@@ -197,6 +209,8 @@ def ejecutar(apply=False):
                                sale=venta, starts_at=min(desde, vence), expires_at=vence, status='active',
                                is_deposit=bool(sena))
             db.session.add(sub)
+            if venta is not None:
+                venta.subscription = sub  # la venta guarda la suscripción que activó (como `otorgar`)
             db.session.add(SubscriptionEvent(subscription=sub, kind='alta', to_date=vence, reason=MOTIVO,
                                              source='academia' if academia else 'work', sale=venta))
 
