@@ -214,6 +214,160 @@ Quedan afuera:
 
 Cada línea empieza con `?`, así queda la persona con pagos.
 
+## Inventario 2c (relevado el 20/10/2026, sobre develop 745c1303)
+
+Qué queda leyendo las columnas copiadas y las tablas viejas antes de borrarlas. Solo código (no se corrió
+nada). Las líneas cambian con cada commit: sirven para ubicar, no son contrato.
+
+- **LEE:** lee la copia siempre (filtros SQL, cruces, serialización, búsquedas). Es lo que hay que migrar.
+- **RESP:** la lee solo en filas sin persona (`contacto()`, `sin_persona`, guard `person_uuid is None`). Se va
+  sola cuando no queden filas sin persona, **salvo** las que meten la columna en el SELECT o la evalúan sin
+  condición y la descartan después: esas rompen al borrar la columna aunque no quede ninguna fila sin persona.
+- **ESCRIBE:** constructores, asignaciones, payloads a la hoja. Se sacan en el mismo paso que la columna.
+
+### Resumen
+
+| Qué | LEE | RESP | ESCRIBE | Tamaño para sacarlo |
+|---|---|---|---|---|
+| `financial_sales` (nombre, mail, teléfono, IG) | 20 (2 en app, 18 en scripts) | 59 | 34 | Chico en app; los scripts de diagnóstico se borran |
+| `financial_agendas` (lead, mail, whatsapp, IG) | 22 | 41 | 29 + 5 vía `corregir` | Mediano: la ingesta a la persona lee la copia |
+| `leads` (name, email, instagram_username) | 18 | 1 | 11 | Chico: la tabla se puede borrar entera |
+| `manychat_leads` (name, ig) | 50 | 4 | 18 | Grande: es el cruce por Instagram; no se borra todavía |
+| `manychat_ad_leads.lead_name` | 1 (script) | 1 | 0 | Trivial (la tabla la sigue contando Marketing) |
+| `workshop_leads` (nombre, apellido) | 5 | 0 | 2 | No borrar: es el único dato del gate y el alta no crea persona |
+| `conciliacion_movimientos` (nombre, email) | 7 | 1 | 1 | **No borrar:** no es copia, es el dato crudo de la pasarela |
+| `clients.academy_product_slug` / `academy_expires_at` | 6 (2 en app) | – | 5 | Chico, con un agujero (ver abajo) |
+| `clients.total_amount` | 9 (+4 auxiliares) | – | 4 | Mediano: es plata |
+| `Enrollment` / `Payment` | ~43 en 14 archivos | – | ~31 en 15 archivos | **Grande:** comisiones, dashboards, fecha de ingreso |
+| `InstallmentPlan` | ~15 (por `client_id`) | – | varios | No es tabla vieja; falta que cuelgue de la venta |
+| `appointments` | – | – | – | No tiene columnas copiadas (solo `agenda_payload['lead']`, JSON) |
+
+### Antes de empezar: bugs que encontró el relevamiento
+
+1. **El closer corrige el contacto de una venta y no se ve** (`app/api/closer.py:2337-2340`, PUT de la venta):
+   escribe la copia aunque el pago tenga persona y no corrige la persona; como `to_dict()` lee la persona, la
+   corrección se pierde. Pasarlo a `hacer_principal(corrige=True)` como `PATCH /external/sales` (G2). (work-a1)
+2. **Escrituras de la copia sin corregir la persona:** `lead_roadmap_edit.py:136` y `marketing_attribution.py:59`
+   (IG de una venta), `lead_roadmap_edit.py:161` y `marketing_attribution.py:373` (IG de una agenda),
+   `financial_sales.py:302/304`. Mismo arreglo. (work-1a los de roadmap y marketing)
+3. **Payloads a la hoja con la copia cruda:** `academy.py:341-349` y `lead_roadmap_edit.py:143-151` mandan a
+   Ventas_DB la copia aunque haya persona; tienen que usar `contacto()` como `financial_sales.py:328`.
+4. **`scripts/vincular_personas.py:33` busca personas por la fuente de la agenda:** usa `'nombre'` como nombre
+   de `FinancialAgenda`, pero `nombre` es la fuente (setter, workshop); el nombre del lead es `lead`. Mismo error
+   en `marketing_attribution.py:391` (crea el `ManychatLead` manual con `name=agenda.nombre`). Revisar si ya
+   vinculó agendas a la persona equivocada. (work-24 el script)
+5. **Accesos de la Academia que solo quedan en `clients`:** `academy_access_service.py:160-168`, sin suscripción
+   ni fecha elegida, el vencimiento sale de `compute_default_expiration` y se guarda solo en `academy_*` del
+   cliente (`subscription_service.cambiar` se llama solo con fecha elegida, 196-200). Agregar `otorgar` en esa rama
+   antes de borrar las columnas.
+6. **Los planes de cuotas nuevos no cuelgan de su venta:** `installment_service` (`create_plan` 49-92, `sync_plan`
+   134-143, `add_cuota` 251-255) no completa `sale_id`; solo lo puso `backfill_sales.py`.
+7. Menores: `booking_service.py:150` hace `Lead.query.get(client_id)` (mezcla ids de clientes y leads);
+   `booking_avisos.py:82` lee `client.instagram_username`, que no existe (siempre 'N/A').
+
+### `financial_sales`
+
+- **LEE en app (2):** `closer.py:2337` (el "antes" del log; se arregla con el bug 1) y
+  `anuncios_service.py:181` (`cobro.instagram`: prioriza a propósito el IG que tipeó el closer para atribuir el
+  anuncio; pasarlo a la persona puede cambiar qué anuncio se lleva cada venta: decidirlo con el usuario).
+- **LEE en scripts (18):** `corregir_comprador_pagador.py` (10: la copia es la evidencia de quién compró y quién
+  pagó), `medir_pagos_estrictos.py` (3), `revisar_personas_contaminadas.py:46`,
+  `backfill_financial_sale_client_id.py:39-42` (viejo, reemplazado por `vincular_personas`). Se corren antes de 2c
+  y después se borran.
+- **RESP que rompen igual:** `attribution_service.py:57`, `new_clients.py:70-79`,
+  `closer_followup_service.py:1361-1362`, `closer_agendas_service.py:329`, `closer_pending_service.py:133`,
+  `agenda_dedup_service.py:133`, `sales_grouping.py:100`, `ticket_service.py:192`. Sensibles: `academy.py:275/289`
+  (búsqueda de la Academia) y `conciliacion_service.py:272`.
+- **ESCRIBE:** `sheets_service.py:213-222` (alta) y `534-542` (`_rebuild_sales`: recrea desde la hoja con
+  `crear=False`; sin columnas, un pago sin persona encontrable queda anónimo), `ficha_pagos_service.py:370-372`,
+  `financial_sales.py:156-158`, `academy.py:317-325`, `registrar_pago_historico.py:120-135` (crea pagos sin
+  persona: pasarle `person=client.person`).
+
+### `financial_agendas`
+
+- **La ingesta lee la copia:** la agenda llega a la persona por el hook de `person_service` (`_persona_de_agenda`,
+  425-435), que lee las columnas. Antes de borrarlas, cada lugar que crea agendas tiene que resolver la persona
+  directo: webhook n8n (`financial_agendas.py:226-275`), `booking_espejo.py:390-398`, `closer_service.py:1254-1257`
+  (2TH Call).
+- **LEE:** `financial_agendas_edit.py:299-319` (endpoint legado `repair-db`: borrarlo),
+  `setter_agendas.py:263` (`load_only`) y `398-401` (crea un Client desde la copia si la persona no tiene cliente:
+  crearlo desde la persona), `agenda_dedup_descarte.py:170-173/222` (la duplicada hereda datos a la conservada:
+  con persona eso es fusionar personas), `models/financial.py:207` (truco `no_ig_<id>`), scripts
+  (`auditar_horarios_agendas.py:84/87/196`, `reconciliar_agendas_repetidas.py:107/113`,
+  `revisar_personas_contaminadas.py:52`).
+- **`corregir` (`agenda_contacto_service.py:83`)** escribe la copia siempre: en 2c, solo la persona.
+- `attribution_service.py:56` y `procedencia_ingresos_service.py:221` (filas livianas) cambian juntas.
+
+### `leads`, `manychat_*`, `workshop_leads`, conciliación
+
+- **`leads`:** se puede borrar entera. La usan el webhook viejo `/api/webhooks/manychat` (`webhooks.py`),
+  `admin.py` (`migrate-leads` 904-910, `quick-create` 1457-1464), `GET /setter/leads` (`setter_links.py:28-30`,
+  SetterKanban.jsx), `setter_deck.py:285-287`, el bloque "sincronizar Lead" de `booking_service`
+  (150-155, 205-233), `conversaciones_service.sincronizar_lead_viejo` (162-163), `database_service.py:36`,
+  `person_service.TABLAS` y los scripts. También `PipelineStage.backref='leads'`.
+- **`manychat_leads`:** no se puede borrar todavía. `ig` y `name` son el cruce por Instagram de todo el sistema
+  (`cruce_conversaciones` 75/96/110, que barre la tabla; `marketing_attribution`, `setter_deck` (16 lecturas),
+  `setter_mazo`, `conversational`, `lead_roadmap` 99-169, `comercial_leads`, `public/setter.py:452`,
+  `manychat_calificacion`, `palabra_clave_asignacion`). El "persona primero, IG y nombre de respaldo" busca
+  sobre filas de ManychatLead con o sin persona, así que no son respaldo. Además `lead_answers.lead_id` apunta a
+  esta tabla y se leen `setter`, `follower` y `last_stage`. Requisito: el cruce pasa a buscar la persona por su
+  identidad de Instagram y después su `Conversation`, y `LeadAnswer` → `Conversation`.
+- **`manychat_ad_leads`:** `lead_name` solo en scripts; la tabla la cuenta `api/public/marketing.py:80-83`
+  (leads y calificados por anuncio): pasar ese conteo a `conversations` (ya tiene `ad_id` y `qualification`).
+- **`workshop_leads`:** `nombre`/`apellido` son el único dato del gate y el alta (`workshop_lead.py:65-66`) no
+  crea persona. Dejar las columnas o crear la persona en el alta. Verificar en la base que no quede la columna
+  `phone` del índice `ix_workshop_leads_phone` (migración `a1c7d3e9f204`).
+- **`conciliacion_movimientos`:** `nombre`/`email` son el export de la pasarela y la clave de emparejamiento
+  (`conciliacion_service.py:300/318/320/321`); muchos cobros quedan sin persona (`crear=False`). No se borran.
+
+### `clients.academy_*` y `total_amount`
+
+- **`academy_*`:** LEE `client_cleanup_service.py:168-169` (full-history; reemplazo:
+  `subscription_service.del_cliente`, ya existe) y `backfill_subscriptions.py` (carga única). ESCRIBE
+  `academy_access_service.py:194-195`, `ficha_academia.py:128-129/168`. Requisito: el bug 5.
+- **`total_amount`:** LEE `closer_dashboard_service.py:151-172` (deuda de `_pending_collections`: no usa
+  `deuda_service.deudas` y puede dar distinto que la ficha), `closer_followup_service.py:338/1408` (respaldo para
+  personas sin `Sale`), `ficha_lead_service.py:346` (Total de Cobro), `sales_consistency_service.py:108`
+  (`program_price`: bloquea renovaciones), `senas_conversion.py:76-77` (COMPLETO vs PARCIAL),
+  `academy_payment_status.py:116` (el total que va a la **Academia**: no hay función de total por persona),
+  `client_cleanup_service.py:164`, `closer.py:2494`. Reemplazo: `agreed_total` de la venta vigente /
+  `deuda_service.total_de`; hoy ya se escribe en los dos lados (`sale_service.fijar_total`).
+
+### `Enrollment` / `Payment`
+
+La deuda ya sale de las ventas, pero el espejo se sigue escribiendo (`sheets_service._sync_enrollment_payment`
+402-450, `ficha_pagos_service`, `closer_service.register_sale` 401-441, `import_service`, `admin.py`).
+Las comisiones de verdad (`commission_service`, `fulfillment_commission_service`, nómina) **no** lo usan.
+
+- **Con equivalente nuevo:** deuda (`closer_dashboard_service._pending_collections` 133-176,
+  `closer_followup_service._client_debt` 330-338 y 1408, los `price - total_paid` de `closer_service`,
+  `user_service` y `dashboard_service`) → `deuda_service`; cash (`financial_service`, `dashboard_service`,
+  `closer_service.get_dashboard_data`) → `FinancialSale`; `has_sale` (`closer.py:97/482/1216`) →
+  `CloserFollowUpService._client_has_sale`; tipos de pago permitidos (`closer_service.get_lead_payment_status`
+  1338-1378) → `SalesConsistencyService.validate_next_payment_type`; historiales (`client_cleanup_service`,
+  `lead_roadmap_sections.build_programs` 122-138).
+- **Sin equivalente (hay que construirlo):** la **fecha de ingreso** (`closer.py:1335-1340`,
+  `closer_followup_service.py:348/1308-1330`, decide la etapa de cobro: sería `min(Sale.sold_at)` de la venta
+  `new`); la **comisión del 10%** de `closer_service` (241-264, 311-317) y sus KPIs; «Mis ventas» y el detalle de
+  inscripción (`closer.py:525-637`, SaleDetailModal); `dashboard_service` (números de admin, 117-617).
+- Frontend afectado: SaleDetailModal, NewSaleModal, QuickSaleModal, SalesHistory, DatabasePage, CloserLeadsAudit.
+
+### Orden propuesto
+
+| Paso | Qué | Tamaño | Riesgo |
+|---|---|---|---|
+| 0 | Bugs 1-6 de arriba (correcciones que no se ven, payloads a la hoja, `vincular_personas` por `lead`, acceso sin suscripción, cuotas sin venta) | ~10 archivos, ~80 líneas | Medio: el 4 puede haber vinculado mal; medir antes |
+| 1 | `financial_sales`: los 2 LEE de app, las RESP que rompen igual, las escrituras con persona; borrar los scripts de diagnóstico ya corridos; migración que borra las 4 columnas | ~15 archivos, ~60 líneas | Bajo, salvo `anuncios_service:181` (decidir) y `_rebuild_sales` |
+| 2 | `financial_agendas`: ingesta directa a la persona en los 3 lugares que crean agendas, `corregir` solo a la persona, `repair-db` afuera, dedup por fusión de personas; migración | ~12 archivos, ~120 líneas | Medio: la ingesta |
+| 3 | `clients.academy_*` (después del bug 5) y `total_amount` (deuda del dashboard a `deuda_service`, total por persona para la Academia, `program_price` y señas por `agreed_total`); migración | ~10 archivos, ~40 líneas | Medio: plata y Academia |
+| 4 | `leads` entera: apagar el webhook viejo, sacar el bloque de `booking_service`, los endpoints de admin, `/setter/leads` y el Kanban | ~8 archivos + 1 pantalla, ~150 líneas borradas | Bajo |
+| 5 | Cortar el espejo `Enrollment`/`Payment` (que no se cree más) | ~5 archivos | Bajo |
+| 6 | Migrar las lecturas de `Enrollment`/`Payment`: fecha de ingreso desde `Sale`, comisión del 10% (decidir si se mantiene), dashboards de admin a `FinancialSale`, endpoints y pantallas del closer | ~22 archivos + 6 pantallas, 400-600 líneas | **Alto:** comisiones y números de admin |
+| 7 | `manychat_*`: cruce por la identidad de Instagram de la persona y su `Conversation`; `LeadAnswer` → `Conversation`; conteo de Marketing desde `conversations` | ~25 archivos, el más grande | **Alto:** atribución de anuncios |
+
+`workshop_leads` y `conciliacion_movimientos` se quedan con sus columnas (no son copia). `appointments.agenda_payload['lead']`
+es opcional (~4 archivos, ~20 líneas).
+
 ## Estado
 
 | Frente | Sesión / rama | Estado |
