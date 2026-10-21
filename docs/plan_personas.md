@@ -368,6 +368,23 @@ Las comisiones de verdad (`commission_service`, `fulfillment_commission_service`
 `workshop_leads` y `conciliacion_movimientos` se quedan con sus columnas (no son copia). `appointments.agenda_payload['lead']`
 es opcional (~4 archivos, ~20 líneas).
 
+### Decisiones del 21/10/2026
+
+- **Comisión del 10%:** se recalcula desde los pagos reales, con la tasa propia del closer (`commission_service`).
+- **Tests:** se borran los que se rompen por las tablas que se van, sin adaptarlos ("tenemos demasiados").
+- **El paso 7 sale de la 2c.** `manychat_leads` se borra entera con el retiro de ManyChat, no columna por columna:
+  primero el motor propio escribe Persona + `Conversation` + interacciones directo (hoy escribe `ManychatLead('ig:…')`).
+- **Atribución de anuncios: camino explícito, no inferido.**
+  - El link de agenda que manda la plataforma desde una conversación lleva su referencia. La agenda queda con
+    `appointments.conversation_id` (columna nueva) y copia la keyword y el anuncio de ese momento.
+  - Las agendas de funnel (VSL, workshop, landing) quedan con su funnel y campaña (`origin`).
+  - La venta toma la keyword de su agenda (`sales.appointment_id`). Las renovaciones y los upsells **heredan** el
+    origen de la venta original.
+  - La inferencia de hoy (última interacción con palabra clave antes del tope) queda solo como respaldo para datos
+    viejos y agendas sin link. Para que siga andando sin ManyChat, `LeadAnswer` pasa a colgar de `Conversation`
+    (tabla de interacciones), y `Conversation` queda como cabecera.
+  - Va con Agendas 2.0 y el retiro de ManyChat, después del pase.
+
 ## Estado
 
 | Frente | Sesión / rama | Estado |
