@@ -32,130 +32,28 @@ La de un anuncio viejo sin palabra clave toma la del anuncio (`Ad.keyword`).
 from collections import Counter, defaultdict
 from datetime import datetime, time, timedelta
 
-from sqlalchemy import func
-
 from app import db
-from app.models import Ad, AdPeriodSpend, AdSet, Appointment, Campaign, Client, FinancialSale, LeadAnswer
+from app.models import Ad, AdPeriodSpend, AdSet, Appointment, Client, FinancialSale, LeadAnswer
 from app.models import MetaAnuncio, MetaGastoDiario
-from app.models.marketing import clave_de_palabra as clave_de
+from app.models.marketing import clave_de_palabra as clave_de  # noqa: F401  (lo importa meta_ads_service)
 from app.services.comercial_service import ComercialService, clientes_de_ventas, no_es_marcador, venta_completada
 from app.services.cruce_conversaciones import Cruce
 from app.services.identity_service import normalize_ig
-
-# Lo que llega en `keyword` y no es una palabra clave: la marca de la atribución manual (la deja la
-# bandeja del setter, ver `palabra_clave_service.KEYWORD_MANUAL`) y los vacíos de ManyChat.
-CLAVES_QUE_NO_SON = frozenset({'MANUAL ATTRIBUTION', 'NULL', 'NONE', 'UNDEFINED', 'INDETERMINADO', 'N A'})
-LARGO_MAXIMO = 100
-# Para no armar consultas IN con miles de parámetros (SQLite corta en 999 en versiones viejas).
-TANDA = 500
-
-
-def es_keyword_valida(valor):
-    """¿Es una palabra clave de verdad? Descarta variables sin reemplazar de ManyChat (`{{keyword}}`,
-    `cuf_…`), los vacíos y la marca de la atribución manual."""
-    if not isinstance(valor, str):
-        return False
-    texto = valor.strip()
-    if not texto or len(texto) > LARGO_MAXIMO or '{{' in texto or '}}' in texto or 'cuf_' in texto.lower():
-        return False
-    clave = clave_de(texto)
-    return bool(clave) and clave not in CLAVES_QUE_NO_SON
-
-
-def _vigente(anuncios):
-    """De varios anuncios con la misma clave, el que manda: el más nuevo sin archivar (o el más nuevo)."""
-    if not anuncios:
-        return None
-    return max(anuncios, key=lambda a: ((a.status or '').lower() != 'archived', a.id))
-
-
-def anuncio_de_clave(clave):
-    if not clave:
-        return None
-    return _vigente(Ad.query.filter(Ad.clave == clave).all())
-
-
-def anuncio_de_keyword(keyword, crear=True):
-    """El anuncio de esa palabra clave; si no existe y `crear`, lo crea (sin campaña ni conjunto).
-
-    No hace commit: lo hace quien lo llama (el webhook guarda el anuncio con la interacción). Un anuncio
-    nuevo le avisa a la asociación con Meta, por si ya había un anuncio de Meta que la nombraba.
-    """
-    if not es_keyword_valida(keyword):
-        return None
-    clave = clave_de(keyword)
-    anuncio = anuncio_de_clave(clave)
-    if anuncio or not crear:
-        return anuncio
-    texto = keyword.strip()[:LARGO_MAXIMO]
-    anuncio = Ad(name=texto, keyword=texto, clave=clave, status='active')
-    db.session.add(anuncio)
-    db.session.flush()
-    from app.services import meta_ads_service
-    meta_ads_service.mapear_automatico()
-    return anuncio
+# Partido en módulos (regla de las 500 líneas): se re-exporta todo para que `anuncios_service.X` siga igual.
+from app.services.anuncios_claves_service import (  # noqa: F401
+    CLAVES_QUE_NO_SON, LARGO_MAXIMO, TANDA, _clave_de_cada_anuncio, _en_tandas, _interacciones, _respondio,
+    _vigente, anuncio_de_clave, anuncio_de_keyword, claves_conocidas, es_keyword_valida,
+)
+from app.services.anuncios_agrupacion_service import (  # noqa: F401
+    SIN_CONJUNTO, _agrupacion, _anuncios_de, _como_se_escribe, _conjuntos, _grupos_de_meta,
+    _opciones_de_agrupacion, agrupar, archivar,
+)
 
 
 def _meta_ads():
     from app.services import meta_ads_service  # se importan entre los dos
     return meta_ads_service
 
-
-def claves_conocidas():
-    """Todas las palabras clave que el sistema conoce: las de los anuncios y las que llegaron en algún
-    webhook (las anteriores a este cambio no tienen anuncio)."""
-    claves = {a.clave for a in Ad.query.filter(Ad.clave.isnot(None)).all()}
-    for (keyword,) in db.session.query(LeadAnswer.keyword).filter(LeadAnswer.keyword.isnot(None)).distinct():
-        if es_keyword_valida(keyword):
-            claves.add(clave_de(keyword))
-    return claves - {None}
-
-
-# --- Lectura: de cada interacción, su palabra clave ---------------------------------------------
-
-def _clave_de_cada_anuncio():
-    return {a.id: (a.clave or clave_de(a.keyword) or clave_de(a.name)) for a in Ad.query.all()}
-
-
-def _en_tandas(valores):
-    valores = list(valores)
-    for i in range(0, len(valores), TANDA):
-        yield valores[i:i + TANDA]
-
-
-def _respondio(opcion):
-    """`id_option` es el mensaje del flujo que la persona contestó; 0 (o vacío) es que no contestó."""
-    return (opcion or '').strip() not in ('', '0', '0.0')
-
-
-def _interacciones(lead_ids, clave_de_anuncio):
-    """{lead_id: [(instante, clave, calificacion, respondio), ...]} ordenadas, con la palabra clave ya resuelta
-    (ver el docstring del módulo: la interacción sin palabra clave toma la de la conversación)."""
-    crudas = defaultdict(list)
-    for tanda in _en_tandas(lead_ids):
-        for lead_id, ad_id, keyword, calificacion, opcion, creada in db.session.query(
-                LeadAnswer.lead_id, LeadAnswer.ad_id, LeadAnswer.keyword, LeadAnswer.qualification,
-                LeadAnswer.id_option, LeadAnswer.created_at).filter(LeadAnswer.lead_id.in_(tanda)):
-            if creada is None:
-                continue
-            clave = clave_de(keyword) if es_keyword_valida(keyword) else None
-            # El anuncio manda sobre el texto: la bandeja del setter le pone el anuncio a una
-            # interacción que ya existía, y ése es el anuncio que eligió.
-            if ad_id and clave_de_anuncio.get(ad_id):
-                clave = clave_de_anuncio[ad_id]
-            crudas[lead_id].append((creada, clave, calificacion, _respondio(opcion)))
-
-    resultado = {}
-    for lead_id, filas in crudas.items():
-        filas.sort(key=lambda f: f[0])
-        primera = next((fila[1] for fila in filas if fila[1]), None)
-        actual, resueltas = primera, []
-        for creada, clave, calificacion, respondio in filas:
-            if clave:
-                actual = clave
-            resueltas.append((creada, actual, calificacion, respondio))
-        resultado[lead_id] = resueltas
-    return resultado
 
 
 def _limites(desde, hasta):
@@ -510,148 +408,3 @@ def tablero(desde, hasta):
         # El gasto de Meta por embudo (setting, workshop…): el selector de Rendimiento (15/10/2026).
         'embudos': _meta_ads().gasto_por_embudo(desde, hasta),
     }
-
-
-# --- Campañas y conjuntos ----------------------------------------------------------------------
-#
-# Pedido de Kerwin (15/10/2026): ver la tabla por campañas y conjuntos como en Meta, «más fácil» que la carga
-# vieja. Cada palabra clave tiene UNA campaña y UN conjunto, que salen, en este orden, de:
-#   1. lo elegido a mano en la tabla (`Ad.agrupado_a_mano`, el conjunto en `Ad.ad_set_id`);
-#   2. sus anuncios de Meta: el par campaña/conjunto donde más gastó en el período (sin gasto, el de un
-#      anuncio activo o el último sincronizado);
-#   3. el conjunto de la carga vieja de anuncios (hasta julio de 2026).
-# Los leads, agendas y ventas de la palabra clave van enteros a esa campaña (no se pueden partir: no se sabe
-# qué anuncio de Meta vio cada persona). El gasto, en cambio, se reparte exacto entre las campañas de sus
-# anuncios de Meta (`gasto_por_grupo`), salvo que la agrupación sea a mano: ahí va entero a la elegida.
-
-SIN_CONJUNTO = 'Sin conjunto'
-
-
-def _conjuntos():
-    """{id del conjunto: (campaña, conjunto)} de la estructura guardada (la vieja y la elegida a mano)."""
-    campanas = dict(db.session.query(Campaign.id, Campaign.name).all())
-    return {conjunto_id: (campanas.get(campana_id), nombre)
-            for conjunto_id, nombre, campana_id in db.session.query(AdSet.id, AdSet.name, AdSet.campaign_id)}
-
-
-def _grupos_de_meta(desde, hasta, meta_por_clave):
-    """{clave: ({(campaña, conjunto): gasto del período}, (campaña, conjunto) de respaldo)}."""
-    gasto_por_anuncio = dict(db.session.query(MetaGastoDiario.meta_ad_id, func.sum(MetaGastoDiario.gasto))
-                             .filter(MetaGastoDiario.fecha >= desde, MetaGastoDiario.fecha <= hasta)
-                             .group_by(MetaGastoDiario.meta_ad_id).all())
-    salida = {}
-    for clave, de_meta in meta_por_clave.items():
-        gastos = defaultdict(float)
-        for m in de_meta:
-            gastos[(m.campana or None, m.conjunto or None)] += float(gasto_por_anuncio.get(m.meta_ad_id) or 0)
-        respaldo = max(de_meta, key=lambda m: (m.estado == 'ACTIVE', m.actualizado_at or datetime.min, m.id))
-        salida[clave] = (gastos, (respaldo.campana or None, respaldo.conjunto or None))
-    return salida
-
-
-def _agrupacion(vigente, de_meta, conjuntos, gasto_total):
-    """(campaña, conjunto, origen, reparto del gasto) de una fila; origen: 'manual' | 'meta' | 'anterior' | None."""
-    manual = conjuntos.get(vigente.ad_set_id) if vigente and vigente.agrupado_a_mano else None
-    if manual:
-        return manual[0], manual[1], 'manual', [[manual[0], manual[1], round(gasto_total, 2)]]
-    if de_meta:
-        gastos, respaldo = de_meta
-        principal = max(gastos.items(), key=lambda par: par[1])[0] if any(gastos.values()) else respaldo
-        reparto = {par: monto for par, monto in gastos.items() if monto}
-        # Lo cargado a mano en el sistema viejo (días sin Meta) va a la campaña principal.
-        resto = gasto_total - sum(reparto.values())
-        if resto > 0.005:
-            reparto[principal] = reparto.get(principal, 0) + resto
-        return principal[0], principal[1], 'meta', [[c, j, round(m, 2)] for (c, j), m in reparto.items()]
-    anterior = conjuntos.get(vigente.ad_set_id) if vigente else None
-    if anterior:
-        return anterior[0], anterior[1], 'anterior', [[anterior[0], anterior[1], round(gasto_total, 2)]]
-    return None, None, None, ([[None, None, round(gasto_total, 2)]] if gasto_total else [])
-
-
-def _opciones_de_agrupacion(filas, conjuntos):
-    """[{campana, conjuntos: [...]}] para elegir a mano: las campañas que usa la tabla y las guardadas."""
-    por_campana = defaultdict(set)
-    for campana, conjunto in conjuntos.values():
-        if campana:
-            por_campana[campana].add(conjunto)
-    for fila in filas:
-        if fila['campana']:
-            por_campana[fila['campana']].add(fila['conjunto'])
-    for campana, conjunto in db.session.query(MetaAnuncio.campana, MetaAnuncio.conjunto).distinct():
-        if campana:
-            por_campana[campana].add(conjunto)
-    return [{'campana': c, 'conjuntos': sorted({j for j in js if j})}
-            for c, js in sorted(por_campana.items(), key=lambda par: par[0].lower())]
-
-
-def _como_se_escribe(claves):
-    """{clave: la escritura más usada en los webhooks}: el nombre de una palabra clave que llegó antes
-    de que existiera el anuncio (no tiene uno de donde sacarlo)."""
-    if not claves:
-        return {}
-    conteo = defaultdict(Counter)
-    for keyword, n in db.session.query(LeadAnswer.keyword, func.count(LeadAnswer.id)) \
-            .filter(LeadAnswer.keyword.isnot(None)).group_by(LeadAnswer.keyword):
-        clave = clave_de(keyword) if es_keyword_valida(keyword) else None
-        if clave in claves:
-            conteo[clave][keyword.strip()] += n
-    return {clave: c.most_common(1)[0][0] for clave, c in conteo.items()}
-
-
-# --- Escritura -----------------------------------------------------------------------------------
-
-def _anuncios_de(clave):
-    """Los anuncios de una palabra clave; si llegó antes de que existiera el suyo, se lo crea (para poder
-    guardarle una marca)."""
-    if not clave:
-        raise ValueError('Falta la palabra clave.')
-    anuncios = Ad.query.filter(Ad.clave == clave).all()
-    if not anuncios:
-        escritura = _como_se_escribe({clave}).get(clave, clave)
-        anuncio = anuncio_de_keyword(escritura)
-        if not anuncio:
-            raise ValueError('Esa palabra clave no existe.')
-        anuncios = [anuncio]
-    return anuncios
-
-
-def archivar(clave, archivado):
-    """Esconde (o vuelve a mostrar) una palabra clave en el tablero. Hace commit."""
-    for anuncio in _anuncios_de(clave):
-        anuncio.status = 'archived' if archivado else 'active'
-    db.session.commit()
-    return {'clave': clave, 'archivado': bool(archivado)}
-
-
-def agrupar(clave, campana, conjunto):
-    """Elige a mano la campaña y el conjunto de una palabra clave (los crea si no existen, sin distinguir
-    mayúsculas). Sin campaña, vuelve a la automática (la de Meta). Hace commit."""
-    anuncios = _anuncios_de(clave)
-    campana = (campana or '').strip()[:100]
-    conjunto = (conjunto or '').strip()[:100] or SIN_CONJUNTO
-    if not campana:
-        for anuncio in anuncios:
-            if anuncio.agrupado_a_mano:
-                anuncio.ad_set_id = None
-            anuncio.agrupado_a_mano = False
-        db.session.commit()
-        return {'clave': clave, 'campana': None, 'conjunto': None}
-    # Sin tildes ni mayúsculas, como las palabras clave: el `lower()` de SQLite no baja «Í».
-    registro = next((c for c in Campaign.query.order_by(Campaign.id).all()
-                     if clave_de(c.name) == clave_de(campana)), None)
-    if not registro:
-        registro = Campaign(name=campana, status='active')
-        db.session.add(registro)
-        db.session.flush()
-    grupo = next((g for g in AdSet.query.filter(AdSet.campaign_id == registro.id).order_by(AdSet.id).all()
-                  if clave_de(g.name) == clave_de(conjunto)), None)
-    if not grupo:
-        grupo = AdSet(campaign_id=registro.id, name=conjunto, status='active')
-        db.session.add(grupo)
-        db.session.flush()
-    for anuncio in anuncios:
-        anuncio.ad_set_id = grupo.id
-        anuncio.agrupado_a_mano = True
-    db.session.commit()
-    return {'clave': clave, 'campana': registro.name, 'conjunto': grupo.name}
