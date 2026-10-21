@@ -118,7 +118,8 @@ def _ventas_del_cliente(client):
 
 def _datos_de_persona(client):
     """Nombre, mail, teléfono e instagram de la persona del cliente (sus principales), con las
-    columnas del cliente de respaldo; y todos sus datos activos, con el uso de cada uno."""
+    columnas del cliente de respaldo; y todos sus datos, con el uso de cada uno: los vigentes
+    primero y después los dados de baja (`baja`) y los que son de otra persona (`revisar`)."""
     from app.models import PersonIdentity
 
     person = client.person if client else None
@@ -128,10 +129,14 @@ def _datos_de_persona(client):
         return propios, []
     datos = {'nombre': person.full_name or propios['nombre'], 'email': person.email or propios['email'],
              'telefono': person.phone or propios['telefono'], 'instagram': person.instagram or propios['instagram']}
-    identidades = [{'tipo': i.kind, 'valor': i.value, 'principal': bool(i.is_primary), 'uso': i.uso}
-                   for i in person.identities.filter(PersonIdentity.retired_at.is_(None),
-                                                     PersonIdentity.review_note.is_(None))
-                   .order_by(PersonIdentity.kind, PersonIdentity.is_primary.desc(), PersonIdentity.id)]
+    todas = person.identities.order_by(PersonIdentity.kind, PersonIdentity.is_primary.desc(), PersonIdentity.id).all()
+    identidades = [{
+        'id': i.id, 'tipo': i.kind,
+        # El teléfono se guarda normalizado (sus últimos 8 dígitos): el principal se muestra entero.
+        'valor': person.phone if (i.kind == 'phone' and i.is_primary and person.phone) else i.value,
+        'principal': bool(i.is_primary), 'uso': i.uso,
+        'baja': _iso(i.retired_at), 'revisar': i.review_note, 'fuente': i.source,
+    } for i in sorted(todas, key=lambda i: (i.retired_at is not None or i.review_note is not None))]
     return datos, identidades
 
 

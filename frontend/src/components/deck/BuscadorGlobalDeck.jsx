@@ -139,7 +139,7 @@ const BuscadorGlobalDeck = ({ onSelectLead, onSelectClient, role = 'setter' }) =
                                 </div>
                                 {clientResults.map((c) => (
                                     <button
-                                        key={`client-${c.client_id}`}
+                                        key={`client-${c.person_uuid || c.client_id}`}
                                         onClick={() => handleSelectClient(c)}
                                         className="w-full text-left px-4 py-3 hover:bg-slate-800/40 transition-colors flex items-center justify-between"
                                     >

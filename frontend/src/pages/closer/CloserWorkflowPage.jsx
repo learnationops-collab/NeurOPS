@@ -581,6 +581,7 @@ const CloserWorkflowPage = () => {
                 handleSelectLead({
                     id: stage.appointment_id,
                     client_id: stage.client_id,
+                    person_uuid: stage.person_uuid || null,
                     lead_name: stage.lead_name,
                     instagram: stage.instagram,
                     phone: stage.phone,
@@ -606,7 +607,7 @@ const CloserWorkflowPage = () => {
                 // modal; en la ficha la venta es «Registrar una venta» de Resultado y el cobro,
                 // «Registrar pago» de Acciones. El id negativo hace que la ficha se pida por
                 // cliente: el backend elige su agenda más reciente.
-                handleSelectLead({ id: -lead.id, client_id: lead.id, fase: 'hist' });
+                handleSelectLead({ id: -lead.id, client_id: lead.id, person_uuid: lead.person_uuid || null, fase: 'hist' });
             }
         } catch (err) {
             console.error("Error al resolver la etapa del lead:", err);
@@ -2372,6 +2373,7 @@ const CloserWorkflowPage = () => {
                 <FichaLeadModal
                     appointmentId={selectedLead.id > 0 ? selectedLead.id : null}
                     clientId={selectedLead.id > 0 ? null : (selectedLead.client_id || null)}
+                    personUuid={selectedLead.id > 0 ? null : (selectedLead.person_uuid || null)}
                     pestanaInicial={pestanaDeLaFicha}
                     abrirEnVenta={modalStep === 'venta'}
                     seguimiento={seguimientoDeLaFicha}

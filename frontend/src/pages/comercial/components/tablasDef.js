@@ -186,14 +186,17 @@ const toquesDe = (fila) => (fila.mensajes > 0 ? rotuloToques(fila.mensajes) : nu
  */
 const VENTANA_DUPLICADO_MS = 6 * 60 * 60 * 1000;
 
+// «El mismo lead» es la misma persona (docs/plan_personas.md); el cliente, para las filas sin ella.
+const quienEs = (f) => (f.person_uuid ? `p:${f.person_uuid}` : (f.client_id ? `c:${f.client_id}` : null));
+
 export const duplicadasDe = (filas) => {
     const mapa = {};
     (filas || []).forEach(a => {
-        if (a.tipo !== 'agenda' || !a.client_id || a.post_call?.key !== 'pendiente' || !a.fecha) return;
+        if (a.tipo !== 'agenda' || !quienEs(a) || a.post_call?.key !== 'pendiente' || !a.fecha) return;
         const tA = new Date(a.fecha).getTime();
         if (!tA) return;
         const hermana = filas.find(b => (
-            b.id !== a.id && b.client_id === a.client_id && b.fecha
+            b.id !== a.id && quienEs(b) === quienEs(a) && b.fecha
             && Math.abs(new Date(b.fecha).getTime() - tA) <= VENTANA_DUPLICADO_MS
         ));
         if (hermana) mapa[a.id] = hermana;

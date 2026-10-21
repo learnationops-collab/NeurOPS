@@ -13,11 +13,16 @@ import api from '../../services/api';
  * exactamente lo que tiene que pasar.
  */
 
-/** Lectura. Al menos uno de los dos ids; `client_id` sin agenda la resuelve el servidor. */
-export const obtenerFicha = ({ appointmentId = null, clientId = null, signal } = {}) => {
+/**
+ * Lectura. Al menos uno de los ids; `client_id` sin agenda la resuelve el servidor, y
+ * `person_uuid` (la persona, docs/plan_personas.md) abre la ficha de su cliente. Viajan juntos
+ * mientras el backend siga pidiendo `client_id`.
+ */
+export const obtenerFicha = ({ appointmentId = null, clientId = null, personUuid = null, signal } = {}) => {
     const params = {};
     if (appointmentId != null) params.appointment_id = appointmentId;
     if (clientId != null) params.client_id = clientId;
+    if (personUuid) params.person_uuid = personUuid;
     return api.get('/ficha/lead', { params, signal }).then(r => r.data);
 };
 

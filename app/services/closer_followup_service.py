@@ -426,6 +426,7 @@ class CloserFollowUpService:
         data = {
             'id': a.id,
             'client_id': a.client_id,
+            'person_uuid': a.client.person_uuid if a.client else None,
             'lead_name': a.client.full_name or a.client.email if a.client else 'Sin Nombre',
             'instagram': a.client.instagram if a.client else '',
             'phone': a.client.phone if a.client else '',
@@ -799,6 +800,7 @@ class CloserFollowUpService:
         return {
             'id': appt.id,
             'client_id': cid,
+            'person_uuid': client.person_uuid,
             'lead_name': client.full_name or client.email or 'Sin Nombre',
             'instagram': client.instagram or '',
             'phone': client.phone or '',

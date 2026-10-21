@@ -590,6 +590,9 @@ def conciliar(desde, hasta):
                             - (venta['monto'] if venta and inicio <= venta['fecha'] <= fin else 0.0), 2),
             'cliente_id': ((venta and venta['cliente_id'])
                            or next((m['cliente_id'] for m in ms if m['cliente_id']), None)),
+            # La persona de la fila (docs/plan_personas.md): la de la venta o, si no, la del cobro.
+            'person_uuid': ((venta and venta['persona'])
+                            or next((m['persona'] for m in ms if m['persona']), None)),
             'revisada': ({'por': revision.revisada_por.username if revision.revisada_por else None,
                           'at': _iso(revision.revisada_at), 'nota': revision.nota} if revision else None),
             'candidatos': candidatos,

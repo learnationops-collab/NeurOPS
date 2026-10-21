@@ -246,7 +246,7 @@ const CloserLeadsAudit = ({ embedded = false }) => {
                 <p className="text-muted text-sm">No tenés leads con agendas en este mes.</p>
             ) : (
                 <div className="space-y-3">
-                    {leads.map(lead => <LeadCard key={lead.client_id} lead={lead} onSaved={fetchData} />)}
+                    {leads.map(lead => <LeadCard key={lead.person_uuid || lead.client_id} lead={lead} onSaved={fetchData} />)}
                 </div>
             )}
         </div>

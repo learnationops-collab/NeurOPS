@@ -106,7 +106,7 @@ const PerformanceMoney = ({ cuotas, programas, irA }) => {
                         manda `client_id` en la fila, asi que se puede buscar por el nombre exacto
                         sin cruzar texto a mano. */}
                     {cuotas.rows.length > 0 ? cuotas.rows.map((c, i) => (
-                        <div key={c.client_id || i} className="flex items-center justify-between py-2 border-b border-base/60 last:border-0">
+                        <div key={c.person_uuid || c.client_id || i} className="flex items-center justify-between py-2 border-b border-base/60 last:border-0">
                             <div className="min-w-0">
                                 <b className="text-[12px] block truncate">{c.client_name}</b>
                                 <span className="text-[10px] text-muted">{c.program}</span>

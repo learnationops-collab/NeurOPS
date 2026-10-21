@@ -93,6 +93,7 @@ def get_dashboard():
             "last_stage": appt.last_stage,
             "seq_num": seq,
             "client_id": appt.client_id,
+            "person_uuid": appt.client.person_uuid if appt.client else None,
             "sales_count": appt.client.enrollments.count() if appt.client else 0,
             "has_sale": (appt.client.enrollments.count() > 0) if appt.client else False,
             "result": appt.result if (appt.result and appt.result.strip().lower() not in ('show up', 'no show', 'cerrada', 'cerrado', '2th call', '2da call', 'follow up', 'show_up', 'no_show', 'cerrado/a')) else "Pendiente",
@@ -306,6 +307,8 @@ def get_lead_stage(client_id):
     result = CloserFollowUpService.get_client_lead_stage(client_id)
     if result is None:
         return jsonify({"message": "Cliente no encontrado"}), 404
+    # La persona del cliente (docs/plan_personas.md, Etapa 2a), para que el frontend la identifique.
+    result['person_uuid'] = db.session.query(Client.person_uuid).filter(Client.id == client_id).scalar()
     return jsonify(result), 200
 
 
@@ -477,6 +480,7 @@ def get_all_agendas():
             "linked_call": a.linked_call,
             "created_at": a.created_at.isoformat() if a.created_at else None,
             "client_id": a.client_id,
+            "person_uuid": a.client.person_uuid if a.client else None,
             "sales_count": a.client.enrollments.count() if a.client else 0,
             "has_sale": (a.client.enrollments.count() > 0) if a.client else False
         } for a in pagination.items],
@@ -782,6 +786,7 @@ def get_appointment(id):
         "id": appt.id,
         "lead_name": appt.client.full_name if appt.client else 'Sin Nombre',
         "client_id": appt.client_id,
+        "person_uuid": appt.client.person_uuid if appt.client else None,
         "start_time": appt.start_time.isoformat(),
         "last_stage": appt.last_stage,
         "result": appt.result,
@@ -1206,6 +1211,7 @@ def get_kanban_data():
             "result": a.result,
             "linked_call": a.linked_call,
             "client_id": a.client_id,
+            "person_uuid": a.client.person_uuid if a.client else None,
             "sales_count": a.client.enrollments.count() if a.client else 0,
             "has_sale": (a.client.enrollments.count() > 0) if a.client else False
         })
@@ -1491,6 +1497,7 @@ def _format_appointment_for_deck(a, recover_form=False):
     return {
         "id": a.id,
         "client_id": a.client_id,
+        "person_uuid": a.client.person_uuid if a.client else None,
         "lead_name": a.client.full_name or "Sin Nombre" if a.client else "Sin Cliente",
         "email": a.client.email if a.client else "",
         "phone": a.client.phone if a.client else "",
@@ -2881,6 +2888,7 @@ def get_unread_no_agenda_closer():
             results.append({
                 "id": -(c.id + 5000000), # ID negativo especial
                 "client_id": c.id,
+                "person_uuid": c.person_uuid,
                 "lead_name": c.full_name or "Sin Nombre",
                 "email": c.email or "",
                 "instagram": c.instagram or "",
@@ -2957,6 +2965,7 @@ def get_leads_audit():
 
         leads.append({
             "client_id": client.id,
+            "person_uuid": client.person_uuid,
             "full_name": client.full_name or "Sin Nombre",
             "email": client.email,
             "phone": client.phone,

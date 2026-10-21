@@ -423,6 +423,7 @@ class CloserAgendasService:
         return {
             'id': appt.id,
             'client_id': appt.client_id,
+            'person_uuid': appt.client.person_uuid if appt.client else None,
             'lead_name': (client.full_name or client.email or 'Sin Nombre') if client else 'Sin Cliente',
             'instagram': (client.instagram or '') if client else '',
             'phone': (client.phone or '') if client else '',
