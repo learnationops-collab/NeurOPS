@@ -217,8 +217,9 @@ def agendas_para_atribuir():
     (medido el 09/10/2026 sobre una copia de local.db). Las filas tienen esos atributos con el mismo
     nombre, que es todo lo que leen `AttributionService` y `fuente_de`. Mismo orden que
     `FinancialAgenda.query.all()`: la misma consulta, sin ORDER BY, como la nómina."""
+    from app.services import agenda_contacto_service as copia  # la copia solo cuenta sin persona
     return db.session.query(
-        FinancialAgenda.id, FinancialAgenda.nombre, FinancialAgenda.instagram, FinancialAgenda.mail,
+        FinancialAgenda.id, FinancialAgenda.nombre, copia.INSTAGRAM.label('instagram'), copia.MAIL.label('mail'),
         FinancialAgenda.date, FinancialAgenda.created_at, FinancialAgenda.person_uuid,
     ).all()
 
