@@ -1320,6 +1320,7 @@ const FinancialAgendasPage = () => {
                                                         <span
                                                             className="text-sm font-bold text-white hover:text-indigo-400 hover:underline cursor-pointer"
                                                             onClick={() => setSelectedRoadmapLead({
+                                                                person_uuid: agenda.person_uuid,
                                                                 instagram: agenda.instagram,
                                                                 email: agenda.mail,
                                                                 phone: agenda.whatsapp,
@@ -1921,6 +1922,7 @@ const FinancialAgendasPage = () => {
 
             <LeadRoadmapModal
                 isOpen={!!selectedRoadmapLead}
+                personUuid={selectedRoadmapLead?.person_uuid}
                 instagram={selectedRoadmapLead?.instagram}
                 email={selectedRoadmapLead?.email}
                 phone={selectedRoadmapLead?.phone}

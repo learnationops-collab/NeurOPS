@@ -203,6 +203,7 @@ def _serializar(agenda, con_cita=True):
         # El modal de detalle trabaja sobre la cita; sin ella solo se puede leer.
         "appointment_id": appt.id if appt else None,
         "client_id": client.id if client else None,
+        "person_uuid": agenda.person_uuid or (client.person_uuid if client else None),
         "lead_name": agenda.lead or (client.full_name if client else "Sin nombre"),
         "closer_name": agenda.closer or "Sin asignar",
         "start_time": agenda.date.isoformat() if agenda.date else None,
@@ -431,6 +432,7 @@ def detalle_agenda(agenda_id):
         "agenda_id": agenda.id,
         "sin_cita": appt is None,
         "client_id": client.id,
+        "person_uuid": agenda.person_uuid or client.person_uuid,
         "lead_name": agenda.lead or client.full_name or "Sin nombre",
         "start_time": (appt.start_time if appt else agenda.date).isoformat()
                       if (appt and appt.start_time) or agenda.date else None,

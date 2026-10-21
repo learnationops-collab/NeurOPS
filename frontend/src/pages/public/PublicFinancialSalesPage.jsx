@@ -498,10 +498,11 @@ const PublicFinancialSalesPage = () => {
             }
 
             const uf = new UnionFindJS();
+            // La persona agrupa sus ventas (plan de personas); el ig y el mail solo en las ventas sin persona.
             allSales.forEach(s => {
                 const ig = normalizeIg(s.instagram);
                 const email = normalizeEmail(s.mail_cliente);
-                if (ig && email) {
+                if (!s.person_uuid && ig && email) {
                     uf.union(ig, email);
                 }
             });
@@ -511,7 +512,9 @@ const PublicFinancialSalesPage = () => {
                 const ig = normalizeIg(s.instagram);
                 const email = normalizeEmail(s.mail_cliente);
                 let key = null;
-                if (ig) {
+                if (s.person_uuid) {
+                    key = `persona_${s.person_uuid}`;
+                } else if (ig) {
                     key = uf.find(ig);
                 } else if (email) {
                     key = uf.find(email);
@@ -652,6 +655,7 @@ const PublicFinancialSalesPage = () => {
             }
 
             const normalizeKey = (s) => {
+                if (s.person_uuid) return `persona_${s.person_uuid}`;
                 const ig = s.instagram ? s.instagram.trim().replace(/^@/, '').toLowerCase() : null;
                 const email = s.mail_cliente ? s.mail_cliente.trim().toLowerCase() : null;
                 return ig || email || `solo_${s.id}`;
@@ -822,10 +826,11 @@ const PublicFinancialSalesPage = () => {
             }
 
             const uf = new UnionFindJS();
+            // La persona agrupa sus ventas (plan de personas); el ig y el mail solo en las ventas sin persona.
             allSales.forEach(s => {
                 const ig = normalizeIg(s.instagram);
                 const email = normalizeEmail(s.mail_cliente);
-                if (ig && email) {
+                if (!s.person_uuid && ig && email) {
                     uf.union(ig, email);
                 }
             });
@@ -835,7 +840,9 @@ const PublicFinancialSalesPage = () => {
                 const ig = normalizeIg(s.instagram);
                 const email = normalizeEmail(s.mail_cliente);
                 let key = null;
-                if (ig) {
+                if (s.person_uuid) {
+                    key = `persona_${s.person_uuid}`;
+                } else if (ig) {
                     key = uf.find(ig);
                 } else if (email) {
                     key = uf.find(email);
@@ -1868,6 +1875,7 @@ const PublicFinancialSalesPage = () => {
                                                         <span 
                                                             className="font-medium text-white hover:text-indigo-400 hover:underline cursor-pointer"
                                                             onClick={() => setSelectedRoadmapLead({ 
+                                                                person_uuid: sale.person_uuid,
                                                                 instagram: sale.instagram, 
                                                                 email: sale.mail_cliente, 
                                                                 phone: sale.telefono,
@@ -2234,6 +2242,7 @@ const PublicFinancialSalesPage = () => {
 
             <LeadRoadmapModal 
                 isOpen={!!selectedRoadmapLead}
+                personUuid={selectedRoadmapLead?.person_uuid}
                 instagram={selectedRoadmapLead?.instagram}
                 email={selectedRoadmapLead?.email}
                 phone={selectedRoadmapLead?.phone}

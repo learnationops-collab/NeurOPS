@@ -52,6 +52,7 @@ def format_date_es(dt):
 def get_lead_roadmap():
     try:
         client_id = request.args.get('client_id', type=int)
+        person_uuid = request.args.get('person_uuid', type=str)
         instagram = request.args.get('instagram', type=str)
         email = request.args.get('email', type=str)
         phone = request.args.get('phone', type=str)
@@ -65,9 +66,14 @@ def get_lead_roadmap():
         comments = []
         survey_answers = []
 
-        # 1. Resolver el cliente por ID
+        from app.services import person_service
+
+        # 1. Resolver el cliente por ID, o por la persona (docs/plan_personas.md, Etapa 2a)
+        person = person_service.por_uuid(person_uuid) if person_uuid else None
         if client_id:
             client = Client.query.get(client_id)
+        if not client and person:
+            client = person_service.cliente_de(person, crear=False)
 
         # 2. Resolver por otros campos si no se encontró
         ig_norm = normalize_ig(instagram)
@@ -78,11 +84,10 @@ def get_lead_roadmap():
         clean_phone = phone.strip() if phone and not is_generic_val(phone) else None
         clean_name = name.strip() if name and name.strip() else None
 
-        if not client:
+        if not client and not person:
             # La persona primero (docs/plan_personas.md): cualquiera de sus mails, instagrams o teléfonos.
-            from app.services import person_service
-            client = person_service.cliente_de(person_service.buscar(
-                clean_name, email=clean_email, instagram=ig_norm, phone=clean_phone), crear=False)
+            person = person_service.buscar(clean_name, email=clean_email, instagram=ig_norm, phone=clean_phone)
+            client = person_service.cliente_de(person, crear=False)
 
         if not client:
             if ig_norm:
@@ -109,6 +114,10 @@ def get_lead_roadmap():
                     func.lower(Client.full_name).like(f"%{clean_name.lower()}%")
                 ).first()
 
+        if person is None and client is not None and client.person_uuid:
+            person = person_service.por_uuid(client.person_uuid)
+        puuid = person.uuid if person else None
+
         # Si se encontró un Client, normalizamos sus búsquedas para jalar todo lo relacionado
         resolved_ig = normalize_ig(client.instagram) if client else ig_norm
         if is_generic_val(resolved_ig):
@@ -117,14 +126,16 @@ def get_lead_roadmap():
         resolved_email = client.email.strip().lower() if client and client.email and not is_generic_val(client.email) else clean_email
         resolved_phone = client.phone.strip() if client and client.phone and not is_generic_val(client.phone) else clean_phone
 
-        # 3. Buscar ManychatLead
-        if resolved_ig:
+        # 3. Buscar ManychatLead: el de la persona y, si no, por instagram
+        from app.services.conversaciones_service import lead_de_persona
+        manychat_lead = lead_de_persona(puuid)
+        if not manychat_lead and resolved_ig:
             manychat_lead = ManychatLead.query.filter(func.lower(ManychatLead.ig) == resolved_ig).first()
         if not manychat_lead and resolved_email:
             manychat_lead = ManychatLead.query.filter(func.lower(ManychatLead.ig) == resolved_email).first() # Fallback a veces guardado como email
 
         # 4. Buscar FinancialAgendas
-        agenda_filters = []
+        agenda_filters = [FinancialAgenda.person_uuid == puuid] if puuid else []
         if resolved_ig:
             agenda_filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == resolved_ig)
         if resolved_email:
@@ -136,7 +147,7 @@ def get_lead_roadmap():
             financial_agendas = FinancialAgenda.query.filter(or_(*agenda_filters)).order_by(FinancialAgenda.date.desc()).all()
 
         # 5. Buscar FinancialSales
-        sale_filters = []
+        sale_filters = [FinancialSale.person_uuid == puuid] if puuid else []
         if resolved_ig:
             sale_filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == resolved_ig)
         if resolved_email:
@@ -181,6 +192,7 @@ def get_lead_roadmap():
         # Consolidar datos de perfil del lead
         lead_profile = {
             "id": client.id if client else None,
+            "person_uuid": puuid,
             # `clean_name` (el nombre de la fila sobre la que se hizo click) va antes que
             # financial_agendas[0].lead: cuando el mismo telefono/mail tiene varias agendas y la
             # mas reciente es una de las historicas sin `lead` cargado (ver Bug agendas viejas),

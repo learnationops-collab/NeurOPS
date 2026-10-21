@@ -230,6 +230,7 @@ def _serializar(filas):
         salida.append({
             'id': f['id'],
             'client_id': f['client_id'],
+            'person_uuid': f.get('person_uuid'),
             'cliente': f['cliente'],
             'instagram': normalizar_ig(f['ig']),
             'telefono': f['telefono'] or '',

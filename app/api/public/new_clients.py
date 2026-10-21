@@ -2,6 +2,7 @@ from flask import request, jsonify
 from app import db
 from app.models import FinancialSale, Client
 from app.api.public import bp
+from app.services import person_service
 from app.services.identity_service import normalize_email, normalize_ig
 from datetime import datetime
 from sqlalchemy import func, or_
@@ -63,11 +64,12 @@ def get_new_clients_dashboard():
     sales = FinancialSale.query.order_by(FinancialSale.date.asc()).all()
     
     # Agrupacion Union-Find
+    # La persona agrupa sus ventas (docs/plan_personas.md); el ig y el mail, solo en las que no la tienen.
     uf = UnionFind()
     for s in sales:
         ig = normalize_ig(s.instagram)
         email = normalize_email(s.mail_cliente)
-        if ig and email:
+        if not s.person_uuid and ig and email:
             uf.union(ig, email)
 
     # Organizar ventas por cliente consolidado
@@ -76,7 +78,9 @@ def get_new_clients_dashboard():
         ig = normalize_ig(s.instagram)
         email = normalize_email(s.mail_cliente)
         
-        if ig:
+        if s.person_uuid:
+            key = f"persona_{s.person_uuid}"
+        elif ig:
             key = uf.find(ig)
         elif email:
             key = uf.find(email)
@@ -137,15 +141,16 @@ def get_new_clients_dashboard():
         client_instagram = normalize_ig(last_sale.instagram) or normalize_ig(first_sale.instagram) or ''
         client_email = normalize_email(last_sale.mail_cliente) or normalize_email(first_sale.mail_cliente) or ''
 
-        # Buscar el estado de Follow Up en la base de datos local
-        db_client = None
+        # Buscar el estado de Follow Up en la base de datos local: el cliente de su persona primero
+        person_uuid = next((s.person_uuid for s in reversed(sorted_sales) if s.person_uuid), None)
+        db_client = person_service.cliente_de(person_service.por_uuid(person_uuid), crear=False) if person_uuid else None
         filters_client = []
         if client_instagram:
             filters_client.append(func.lower(func.replace(Client.instagram, '@', '')) == client_instagram)
         if client_email:
             filters_client.append(func.lower(Client.email) == client_email)
         
-        if filters_client:
+        if not db_client and filters_client:
             db_client = Client.query.filter(or_(*filters_client)).first()
             
         follow_up_status = db_client.follow_up_status if db_client and db_client.follow_up_status else 'Por contactar'
@@ -266,6 +271,7 @@ def get_new_clients_dashboard():
             "dado_de_baja": dado_de_baja,
             "follow_up_status": follow_up_status,
             "client_id": client_id,
+            "person_uuid": person_uuid,
             "detalle_pagos": {
                 "sena": sena_detalle,
                 "completo": completo_detalle,
@@ -298,6 +304,7 @@ def update_client_follow_up():
     email = data.get('email', '').strip()
     nombre_cliente = data.get('nombre_cliente', '').strip()
     status = data.get('follow_up_status', '').strip()
+    person_uuid = (data.get('person_uuid') or '').strip() or None
 
     if not status:
         return jsonify({"error": "El estado de follow up es requerido"}), 400
@@ -310,12 +317,12 @@ def update_client_follow_up():
     ig_norm = normalize_ig(instagram)
     email_norm = normalize_email(email)
 
-    if not ig_norm and not email_norm:
+    if not person_uuid and not ig_norm and not email_norm:
         return jsonify({"error": "Se requiere instagram o email para identificar al cliente"}), 400
 
     # Buscar si ya existe: por su persona primero (docs/plan_personas.md), por las columnas de respaldo.
-    from app.services import person_service
-    client = person_service.cliente_de(person_service.buscar(
+    person = person_service.por_uuid(person_uuid) if person_uuid else None
+    client = person_service.cliente_de(person or person_service.buscar(
         nombre_cliente, email=email_norm, instagram=ig_norm), crear=False)
     filters_client = []
     if ig_norm:

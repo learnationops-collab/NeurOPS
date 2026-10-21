@@ -87,6 +87,7 @@ def ventas(setter):
         fila = {
             'grupo': grupo,
             'client_id': cliente.id if cliente else None,
+            'person_uuid': next((p.person_uuid for p in pagos if p.person_uuid), None),
             'cliente': (cliente.full_name if cliente else None) or pagos[0].nombre_cliente or 'Sin nombre',
             'instagram': instagram,
             'total': round(sum(f['monto'] for f in filas), 2),

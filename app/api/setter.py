@@ -452,6 +452,7 @@ def get_stats_summary():
             "start_time": a.start_time.isoformat(),
             "origin": a.origin,
             "client_id": a.client_id,
+            "person_uuid": a.person_uuid,
             "phone": a.client.phone if a.client else "",
             "last_stage": a.last_stage,
             "type": a.origin or 'Manual'
@@ -560,6 +561,7 @@ def get_leads():
         "name": l.name,
         "email": l.email,
         "instagram_username": l.instagram_username,
+        "person_uuid": l.person_uuid,
         "stage_id": l.stage_id,
         "ad_source": l.ad_source,
         "tags": l.tags,
@@ -846,6 +848,7 @@ def get_setter_deck():
                 "dolores": client.dolores if client else "",
                 "observaciones": client.observaciones if client else "",
                 "client_id": client.id if client else None,
+                "person_uuid": lead.person_uuid or (client.person_uuid if client else None),
                 "comments_count": db.session.query(Comment).filter(Comment.comment_type == 'client', Comment.associated_id == client.id).count() if client else 0,
                 "unread_comment": client.id in unread_client_ids if client else False
             })
@@ -964,6 +967,7 @@ def get_setter_deck():
             "ad_name": ad_obj.name if ad_obj else (a.keyword or "Desatribuido"),
             "setter_notes": a.setter_notes or "",
             "client_id": a.client_id,
+            "person_uuid": a.person_uuid,
             # Con que agenda se corresponde esta cita: es lo que le permite al
             # mazo abrir el detalle del lead, que se pide por agenda y no por cita.
             "agenda_id": agenda_de_cita.get(a.id),

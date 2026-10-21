@@ -76,10 +76,12 @@ const NewClientsTab = () => {
 
     // Manejar cambio de follow up
     const handleFollowUpChange = async (client, newStatus) => {
-        const clientKey = client.instagram || client.email || client.nombre;
+        // La persona identifica al cliente (plan de personas); ig, mail o nombre si todavía no la tiene.
+        const clientKey = client.person_uuid || client.instagram || client.email || client.nombre;
         setUpdatingStatus(clientKey);
         try {
             await api.post('/public/clients/follow-up', {
+                person_uuid: client.person_uuid,
                 instagram: client.instagram,
                 email: client.email,
                 nombre_cliente: client.nombre,
@@ -88,7 +90,7 @@ const NewClientsTab = () => {
             toast.success(`Estado de ${client.nombre} actualizado a: ${newStatus}`);
             // Actualizar localmente el estado
             setClients(prev => prev.map(c => {
-                const cKey = c.instagram || c.email || c.nombre;
+                const cKey = c.person_uuid || c.instagram || c.email || c.nombre;
                 if (cKey === clientKey) {
                     return { ...c, follow_up_status: newStatus };
                 }
@@ -499,7 +501,7 @@ const NewClientsTab = () => {
                             <tbody className="text-xs text-slate-300 divide-y divide-slate-800/50">
                                 <AnimatePresence>
                                     {clients.map((c, idx) => {
-                                        const cKey = c.instagram || c.email || c.nombre;
+                                        const cKey = c.person_uuid || c.instagram || c.email || c.nombre;
                                         return (
                                             <motion.tr
                                                 key={cKey}

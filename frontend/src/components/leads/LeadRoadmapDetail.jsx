@@ -12,6 +12,7 @@ import LeadRoadmapFormInfo from './components/LeadRoadmapFormInfo';
 const LeadRoadmapDetail = ({
     instagram,
     clientId,
+    personUuid,
     email,
     phone,
     name,
@@ -32,12 +33,14 @@ const LeadRoadmapDetail = ({
 
     useEffect(() => {
         fetchRoadmap();
-    }, [instagram, clientId, email, phone, name]);
+    }, [instagram, clientId, personUuid, email, phone, name]);
 
     const fetchRoadmap = async () => {
         setLoading(true);
         try {
             const params = {};
+            // La persona manda (plan de personas): con ella no hace falta adivinar por instagram o mail.
+            if (personUuid) params.person_uuid = personUuid;
             if (clientId) params.client_id = clientId;
             if (instagram) params.instagram = instagram;
             if (email) params.email = email;
@@ -66,7 +69,7 @@ const LeadRoadmapDetail = ({
     const handleSaveClient = async (e) => {
         e.preventDefault();
         try {
-            const payload = { ...editForm, client_id: data?.lead?.id || null };
+            const payload = { ...editForm, client_id: data?.lead?.id || null, person_uuid: data?.lead?.person_uuid || null };
             const res = await api.post('/public/lead-roadmap/update-client', payload);
             toast.success(res.data.message || "Cliente guardado con éxito");
             setShowEditModal(false);

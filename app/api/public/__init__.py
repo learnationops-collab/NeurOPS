@@ -378,6 +378,7 @@ def search_clients_public():
 
     return jsonify([{
         "client_id": c.id,
+        "person_uuid": c.person_uuid,
         "full_name": c.full_name,
         "fuente": (c.form_data or {}).get('fuente_form', 'Formulario'),
         "created_at": c.created_at.isoformat() if c.created_at else None,

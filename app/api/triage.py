@@ -445,6 +445,7 @@ def get_qualified_forms():
             
         result.append({
             "id": c.id,
+            "person_uuid": c.person_uuid,
             "full_name": c.full_name,
             "email": c.email,
             "phone": c.phone,
