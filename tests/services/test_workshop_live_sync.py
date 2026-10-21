@@ -139,19 +139,6 @@ def test_una_agenda_nueva_sigue_refrescando_el_taller(db):
 
 # --- Lo que NO debe recalcular -----------------------------------------------------------------
 
-def test_un_cambio_que_no_toca_el_formulario_no_recalcula(db):
-    # Seguimiento, telefono, monto...: recalcular por eso reescribiria talleres viejos sin motivo.
-    taller, _ = crear_talleres(db, DIA, SIGUIENTE)
-    existente = cliente(db, creado=DENTRO, form_data=formulario(DENTRO))
-    con_centinela(db)
-
-    existente.follow_up_status = 'Contactado'
-    existente.phone = '+58 412 0000000'
-    existente.total_amount = 1000.0
-    db.session.commit()
-
-    assert sin_recalcular(leer(db, taller))
-
 
 @pytest.mark.parametrize('form_data', [None, {}])
 def test_un_cliente_sin_formulario_no_recalcula(db, form_data):

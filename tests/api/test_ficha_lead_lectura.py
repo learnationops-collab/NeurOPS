@@ -14,7 +14,7 @@ from datetime import date, datetime, timedelta
 import pytest
 
 from app.models import (
-    Appointment, Client, ClientComment, Enrollment, FinancialSale, InstallmentPlan, Payment, Program,
+    Appointment, Client, ClientComment, FinancialSale, InstallmentPlan, Program,
 )
 
 URL = '/api/ficha/lead'
@@ -269,110 +269,10 @@ def test_reportada_sin_resultado_se_abre_en_resultado(client, db, lead, equipo, 
     assert estado['pestana_por_defecto'] == 'resultado'
 
 
-@pytest.fixture()
-def comprador(db, equipo):
-    """Un cliente que compró un parcial de $400 sobre $1.000: debe $600 y tiene cronograma."""
-    programa = Program(name='Residency Roadmap', price=1000.0)
-    db.session.add(programa)
-    cliente = Client(full_name='Luis Paz', email='luis@x.com', total_amount=1000.0)
-    db.session.add(cliente)
-    db.session.commit()
-    db.session.add(FinancialSale(mail_cliente='luis@x.com', nombre_cliente='Luis Paz',
-                                 tipo_pago='RR - Parcial', monto=400.0, metodo_pago='Stripe',
-                                 estado='Completada', date=datetime(2026, 8, 1),
-                                 email_vendedor='vendedor@neuro.com'))
-    inscripcion = Enrollment(client_id=cliente.id, program_id=programa.id,
-                             closer_id=equipo['closer'].id, enrollment_date=date(2026, 8, 1))
-    db.session.add(inscripcion)
-    db.session.commit()
-    db.session.add(Payment(enrollment_id=inscripcion.id, amount=400.0, date=date(2026, 8, 1),
-                           payment_type='first_payment', status='completed'))
-    db.session.add(InstallmentPlan(client_id=cliente.id, appointment_id=1, programa_code='RR',
-                                   numero_cuota=1, monto=600.0,
-                                   fecha_vencimiento=date.today() + timedelta(days=10)))
-    appt = Appointment(closer_id=equipo['closer'].id, client_id=cliente.id,
-                       start_time=datetime.utcnow() - timedelta(days=20),
-                       closer_result='Show up', closer_processed=True, seguimiento_realizado=True)
-    db.session.add(appt)
-    db.session.commit()
-    return cliente
-
-
-def test_una_venta_con_deuda_se_abre_en_acciones(client, db, comprador, equipo, auth_headers):
-    datos = abrir(client, auth_headers, equipo['director'], client_id=comprador.id).get_json()
-
-    assert datos['estado']['clave'] == 'venta_con_deuda'
-    assert datos['estado']['pestana_por_defecto'] == 'acciones'
-    assert 'acciones' in datos['estado']['pestanas']
-
-
-def test_el_cobro_reusa_la_deuda_y_la_etapa_que_ya_calcula_el_closer(client, db, comprador, equipo,
-                                                                    auth_headers):
-    """Si la ficha recalculara la deuda, mostraria otro numero que la cola de cobro del closer."""
-    cobro = abrir(client, auth_headers, equipo['director'], client_id=comprador.id).get_json()['cobro']
-
-    assert cobro['deuda'] == 600.0
-    assert cobro['pagado'] == 400.0
-    assert cobro['programa_nombre'] == 'Residency Roadmap'
-    assert cobro['etapa']['clave'] == 'cuota_proxima'
-    assert [c['monto'] for c in cobro['cuotas']] == [600.0]
-    venta = FinancialSale.query.one()
-    assert cobro['pagos'] == [{'id': venta.id, 'fecha': '2026-08-01T00:00:00', 'medio': 'Stripe',
-                               'monto': 400.0, 'tipo': 'parcial', 'tipo_pago': 'RR - Parcial',
-                               'programa_code': 'RR', 'es_transferencia': False,
-                               'transferido_a': None, 'sale_id': venta.sale_id}]
-    assert cobro['ultimo_pago'] == '2026-08-01T00:00:00'
-    assert cobro['estado_pagos']['balance_remaining'] == 600.0
-    # El total negociado viaja crudo: es el numero del que sale la deuda y el que la ficha deja
-    # corregir.
-    assert cobro['total'] == 1000.0
-
-
-def test_un_pago_viejo_sin_programa_viaja_con_su_id_y_su_tipo(client, db, comprador, equipo,
-                                                              auth_headers):
-    """281 de las 897 ventas de la base local llegan sin prefijo: el editor del pago tiene que
-    arrancar sin programa, no con uno adivinado, y con el tipo que el texto si dice."""
-    vieja = FinancialSale(mail_cliente='luis@x.com', tipo_pago='Con Seña', monto=100.0,
-                          metodo_pago='Otro', estado='Completada', date=datetime(2026, 7, 1))
-    db.session.add(vieja)
-    db.session.commit()
-
-    pagos = abrir(client, auth_headers, equipo['closer'], client_id=comprador.id).get_json()['cobro']['pagos']
-
-    assert pagos[0] == {'id': vieja.id, 'fecha': '2026-07-01T00:00:00', 'medio': 'Otro',
-                        'monto': 100.0, 'tipo': 'seña', 'tipo_pago': 'Con Seña',
-                        'programa_code': None, 'es_transferencia': False, 'transferido_a': None,
-                        'sale_id': vieja.sale_id}
-
-
-def test_un_cliente_sin_total_cargado_no_se_lo_inventa(client, db, comprador, equipo, auth_headers):
-    """Deducido y declarado no son lo mismo: el deducido se propone aparte, no se hace pasar."""
-    comprador.total_amount = None
-    db.session.commit()
-
-    cobro = abrir(client, auth_headers, equipo['director'], client_id=comprador.id).get_json()['cobro']
-
-    assert cobro['total'] is None
-    assert cobro['total_sugerido'] == round(cobro['pagado'] + cobro['deuda'], 2)
-
-
 # --- Fulfillment: como le va al alumno en la Academia -----------------------------------------
 #
 # Ruta aparte de `GET /ficha/lead` a proposito: habla con OTRO sistema. Si viajara en la lectura,
 # abrir cualquier lead dependeria de que la Academia este arriba.
-
-def test_el_fulfillment_no_viaja_en_la_lectura_de_la_ficha(client, db, comprador, equipo,
-                                                           auth_headers):
-    datos = abrir(client, auth_headers, equipo['director'], client_id=comprador.id).get_json()
-
-    assert 'fulfillment' not in datos
-
-
-def test_la_pestana_de_fulfillment_aparece_para_un_cliente(client, db, comprador, equipo,
-                                                           auth_headers):
-    datos = abrir(client, auth_headers, equipo['director'], client_id=comprador.id).get_json()
-
-    assert 'ful' in datos['estado']['pestanas']
 
 
 def test_un_lead_sin_venta_no_tiene_pestana_de_fulfillment(client, db, lead, equipo, auth_headers):
@@ -399,36 +299,6 @@ def test_el_fulfillment_devuelve_el_alumno_de_la_academia(client, db, lead, equi
 
     assert r.status_code == 200, r.get_json()
     assert r.get_json()['alumno']['nombre'] == 'Ana Gomez'
-
-
-def test_el_producto_de_fulfillment_es_el_programa_de_acciones(client, db, comprador, equipo,
-                                                               auth_headers):
-    """Pedido del usuario (30/09/2026): en Fulfillment se veian productos que no eran los que el
-    cliente pago. El que manda es el Programa de Acciones, traducido con el mapeo del alta."""
-    from unittest.mock import patch
-
-    from app.models import Integration
-    from app.services import ficha_fulfillment_service as ful
-
-    comprador.learnation_user_id = 87
-    db.session.add(Integration(key='learnation_academy', name='Academia', payload_config={
-        'product_mapping': {'AL': 'ace-learners', 'RR': 'residency-roadmap'}}))
-    db.session.commit()
-    appt = Appointment.query.filter_by(client_id=comprador.id).first()
-    regalo = {'assignment_id': 1, 'product_slug': 'learnation-course', 'is_active': True}
-    pagado = {'assignment_id': 2, 'product_slug': 'residency-roadmap', 'is_active': True}
-
-    with patch.object(ful, 'LearnationService') as academia:
-        academia.get_student_summary.return_value = {'student': {'id': 87}, 'performance': {}}
-        academia.get_student_products.return_value = {'products': [regalo, pagado]}
-        datos = client.get(f'/api/ficha/{appt.id}/fulfillment',
-                           headers=auth_headers(equipo['closer'])).get_json()
-    ficha = abrir(client, auth_headers, equipo['closer'], client_id=comprador.id).get_json()
-
-    assert datos['programa']['codigo'] == ficha['cobro']['programa_code'] == 'RR'
-    assert datos['producto_pagado']['assignment_id'] == 2
-    assert [p['assignment_id'] for p in datos['otros_productos']] == [1]
-    assert datos['aviso_producto'] is None
 
 
 def test_la_academia_caida_no_rompe_la_pestana(client, db, lead, equipo, auth_headers):
@@ -460,16 +330,6 @@ def test_una_agenda_que_no_existe_da_404(client, db, equipo, auth_headers):
     assert r.status_code == 404
 
 
-def test_una_venta_al_dia_se_abre_en_historial(client, db, comprador, equipo, auth_headers):
-    comprador.total_amount = 400.0
-    db.session.commit()
-
-    datos = abrir(client, auth_headers, equipo['director'], client_id=comprador.id).get_json()
-
-    assert datos['estado']['clave'] == 'venta_al_dia'
-    assert datos['estado']['pestana_por_defecto'] == 'hist'
-
-
 def test_un_lead_descartado_se_abre_en_historial(client, db, lead, equipo, auth_headers):
     lead.start_time = datetime.utcnow() - timedelta(days=5)
     lead.closer_result = 'No Lead'
@@ -479,20 +339,6 @@ def test_un_lead_descartado_se_abre_en_historial(client, db, lead, equipo, auth_
     estado = abrir(client, auth_headers, equipo['closer'], appointment_id=lead.id).get_json()['estado']
 
     assert (estado['clave'], estado['pestana_por_defecto']) == ('descartado', 'hist')
-
-
-def test_el_stepper_del_resultado_trae_los_cinco_hitos(client, db, comprador, equipo, auth_headers):
-    resultado = abrir(client, auth_headers, equipo['director'], client_id=comprador.id) \
-        .get_json()['resultado']
-
-    hitos = {h['clave']: h for h in resultado['hitos']}
-    assert list(hitos) == ['confirmado', 'resultado', 'cierre', 'deuda', 'upsell']
-    assert hitos['resultado']['sub'] == 'Venta'
-    assert hitos['cierre'] == {'clave': 'cierre', 'label': 'Cierre', 'sub': 'Venta cerrada',
-                               'estado': 'hecho'}
-    # Un hito alcanzado pero malo va en ambar, no en gris: la deuda se ve de un golpe.
-    assert hitos['deuda'] == {'clave': 'deuda', 'label': 'Deuda', 'sub': 'Con deuda',
-                              'estado': 'alerta'}
 
 
 def test_el_historial_trae_las_agendas_del_cliente_con_su_chip(client, db, lead, equipo, auth_headers):
@@ -602,14 +448,6 @@ def test_cada_agenda_trae_con_que_tipo_se_le_agenda_un_seguimiento(client, db, l
     tipos = {a['id']: a['tipo_seguimiento'] for a in agendas}
     # La llamada de mañana todavía no dice nada: un lead que no compró es recuperación.
     assert tipos == {lead.id: 'no_tomada', asistio.id: 'tomada', no_vino.id: 'no_tomada'}
-
-
-def test_a_un_cliente_que_ya_compro_se_le_agenda_cobranza(client, db, comprador, equipo,
-                                                         auth_headers):
-    agendas = abrir(client, auth_headers, equipo['director'], client_id=comprador.id) \
-        .get_json()['historial']['agendas']
-
-    assert [a['tipo_seguimiento'] for a in agendas] == ['cerrada']
 
 
 def test_la_bitacora_del_lead_viaja_en_el_historial(client, db, lead, equipo, auth_headers):

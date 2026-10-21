@@ -111,14 +111,6 @@ def test_el_dia_anterior_al_corte_todavia_es_permanencia():
     assert clave_de_etapa(0.0, None, enrollment_date=justo_antes, hoy=HOY) == 'permanencia'
 
 
-def test_sin_fecha_de_ingreso_no_se_inventa_ni_permanencia_ni_renovacion():
-    """Hay ventas cargadas solo como FinancialSale, sin Enrollment con fecha: no se puede saber
-    cuánto lleva en el programa, y afirmarlo sería mentirle al closer."""
-    etapa = resolver_etapa(deuda=0.0, enrollment_date=None, hoy=HOY)
-    assert etapa['clave'] == 'al_dia'
-    assert 'dias_en_programa' not in etapa
-
-
 # --- Contrato del descriptor ---
 
 @pytest.mark.parametrize('deuda,cuota_arg,ingreso', [

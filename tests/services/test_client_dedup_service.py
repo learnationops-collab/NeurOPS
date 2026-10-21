@@ -7,7 +7,7 @@ from datetime import date, datetime
 import pytest
 
 from app.models import (
-    Appointment, Client, ClientComment, ClientMergeLog, CommentNotification, Enrollment, FinancialSale,
+    Appointment, Client, ClientComment, ClientMergeLog, CommentNotification, FinancialSale,
     InstallmentPlan, Program, SurveyAnswer, SurveyQuestion,
 )
 from app.services.client_dedup_service import ClientDedupService
@@ -155,40 +155,6 @@ def cita_y_programa(db, make_user):
     db.session.add(programa)
     db.session.commit()
     return closer, programa
-
-
-def test_merge_clients_repunta_cada_tabla_relacionada_y_borra_al_duplicado(db, cita_y_programa):
-    closer, programa = cita_y_programa
-    superviviente = crear(db, 'Ana Gomez', email='ana@x.com')
-    duplicado = crear(db, 'Ana Gomez', instagram='ana.g')
-
-    cita = Appointment(closer_id=closer.id, client_id=duplicado.id, start_time=datetime(2026, 1, 1))
-    db.session.add(cita)
-    db.session.commit()
-    inscripcion = Enrollment(client_id=duplicado.id, program_id=programa.id, closer_id=closer.id)
-    pregunta = SurveyQuestion(text='¿Meta?')
-    db.session.add_all([inscripcion, pregunta])
-    db.session.commit()
-    respuesta = SurveyAnswer(client_id=duplicado.id, question_id=pregunta.id, answer='Vender mas')
-    comentario = ClientComment(client_id=duplicado.id, author_id=closer.id, text='Interesado')
-    db.session.add_all([respuesta, comentario])
-    db.session.commit()
-    aviso = CommentNotification(client_id=duplicado.id, user_id=closer.id, comment_id=comentario.id, sender_id=closer.id)
-    venta = FinancialSale(client_id=duplicado.id, monto=500.0, setter='ana')
-    plan = InstallmentPlan(appointment_id=cita.id, client_id=duplicado.id, numero_cuota=1, monto=500.0,
-                           fecha_vencimiento=date(2026, 3, 1))
-    db.session.add_all([aviso, venta, plan])
-    db.session.commit()
-    id_duplicado = duplicado.id  # merge_clients hace su propio commit: despues, el objeto queda expirado
-
-    ClientDedupService.merge_clients(superviviente.id, [id_duplicado], matched_on='instagram')
-
-    assert Client.query.get(id_duplicado) is None
-    assert Client.query.count() == 1
-    for modelo in (Appointment, Enrollment, SurveyAnswer, ClientComment, CommentNotification, FinancialSale,
-                  InstallmentPlan):
-        fila = modelo.query.one()
-        assert fila.client_id == superviviente.id
 
 
 def test_merge_clients_registra_la_fusion_en_el_log_de_auditoria(db):

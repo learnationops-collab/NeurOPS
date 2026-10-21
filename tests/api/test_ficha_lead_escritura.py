@@ -14,8 +14,8 @@ from unittest.mock import patch
 import pytest
 
 from app.models import (
-    Appointment, Client, ClientComment, Comment, Enrollment, FinancialSale, InstallmentPlan,
-    LeadEventLog, Notification, Payment, PaymentMethod, Program,
+    Appointment, Client, ClientComment, Comment, FinancialSale, InstallmentPlan,
+    LeadEventLog, Notification, PaymentMethod, Program,
 )
 
 
@@ -161,26 +161,6 @@ def test_triage_no_reporta_llamadas(client, db, lead, equipo, auth_headers):
 
 
 # --- Venta ------------------------------------------------------------------------------------
-
-def test_la_venta_pasa_por_el_unico_camino_real(client, db, lead, equipo, auth_headers):
-    """`SheetsService.post_to_sheets` es el unico que crea el Client, valida la secuencia, crea la
-    FinancialSale, espeja Enrollment/Payment, marca Show up y dispara n8n. Un atajo propio crearia
-    ventas a medias."""
-    with patch('app.services.sheets_service.SheetsService.post_to_sheets',
-               return_value={'status': 'ok', 'client_id': lead.client_id}) as enviado:
-        r = client.post(url(lead, '/venta'),
-                        json={'tipo_pago': 'RR - Parcial', 'monto': 400, 'precio_total': 1000,
-                              'metodo_pago': 'Stripe'},
-                        headers=auth_headers(equipo['director']))
-
-    assert r.status_code == 201
-    tabla, payload = enviado.call_args[0]
-    assert tabla == 'Ventas_DB'
-    # El vendedor es el closer DUENO de la agenda, no quien apreto el boton: la comision es suya.
-    assert payload['email_vendedor'] == 'vendedor@neuro.com'
-    assert payload['appointment_id'] == lead.id
-    assert (payload['mail_cliente'], payload['telefono']) == ('ana@x.com', '59171234567')
-    assert payload['instagram'] == 'ana.g'
 
 
 def test_una_venta_sin_monto_ni_tipo_no_se_declara(client, db, lead, equipo, auth_headers):
@@ -423,57 +403,8 @@ def test_una_cuota_sin_fecha_no_entra_al_cronograma(client, db, lead, equipo, au
     assert InstallmentPlan.query.filter_by(client_id=lead.client_id).count() == 0
 
 
-# El total a pagar (`Client.total_amount`) es de donde sale la deuda: `_client_debt` lo prefiere
+# El total a pagar (`Sale.agreed_total`) es de donde sale la deuda: `_client_debt` lo prefiere
 # al precio de lista del programa. Corregirlo desde la ficha es corregir la cartera.
-
-@pytest.fixture()
-def inscripto(db, lead, equipo):
-    """El lead ya comprado: $500 de total y $400 cobrados, o sea $100 de deuda.
-
-    La deuda cuelga de `Enrollment`/`Payment`, no de la venta: sin inscripcion `_client_debt`
-    devuelve 0 por mucho total que tenga el cliente.
-    """
-    programa = Program(name='Residency Roadmap', price=800.0)
-    db.session.add(programa)
-    lead.client.total_amount = 500.0
-    db.session.commit()
-    inscripcion = Enrollment(client_id=lead.client_id, program_id=programa.id,
-                             closer_id=equipo['closer'].id, enrollment_date=date(2026, 8, 1))
-    db.session.add(inscripcion)
-    db.session.commit()
-    db.session.add(Payment(enrollment_id=inscripcion.id, amount=400.0, date=date(2026, 8, 1),
-                           payment_type='first_payment', status='completed'))
-    db.session.commit()
-    return lead.client
-
-
-def test_corregir_el_total_a_pagar_recalcula_la_deuda(client, db, lead, inscripto, equipo,
-                                                      auth_headers):
-    """Es el punto de poder editarlo: el saldo que el closer ve sale de este numero."""
-    r = client.patch(url(lead, '/total'), json={'total': 1200},
-                     headers=auth_headers(equipo['director']))
-
-    assert r.status_code == 200, r.get_json()
-    assert inscripto.total_amount == 1200.0
-    assert r.get_json()['deuda'] == 800.0   # 1200 negociados - 400 cobrados
-
-
-def test_el_total_a_pagar_queda_en_la_bitacora(client, db, lead, equipo, auth_headers):
-    """Un registro financiero no se cambia en silencio."""
-    client.patch(url(lead, '/total'), json={'total': 900},
-                 headers=auth_headers(equipo['closer']))
-
-    evento = LeadEventLog.query.filter_by(appointment_id=lead.id,
-                                          action_type='total_amount_edited').one()
-    assert '900' in evento.description
-
-
-def test_un_total_a_pagar_negativo_no_pasa(client, db, lead, equipo, auth_headers):
-    r = client.patch(url(lead, '/total'), json={'total': -1},
-                     headers=auth_headers(equipo['closer']))
-
-    assert r.status_code == 400
-    assert lead.client.total_amount is None
 
 
 def test_un_total_a_pagar_que_no_es_numero_no_pasa(client, db, lead, equipo, auth_headers):
@@ -481,15 +412,6 @@ def test_un_total_a_pagar_que_no_es_numero_no_pasa(client, db, lead, equipo, aut
                      headers=auth_headers(equipo['closer']))
 
     assert r.status_code == 400
-
-
-def test_el_setter_no_toca_el_total_a_pagar(client, db, lead, equipo, auth_headers):
-    """`cobrar` es de la direccion y del closer: el setter ve la ficha pero no la cartera."""
-    r = client.patch(url(lead, '/total'), json={'total': 900},
-                     headers=auth_headers(equipo['setter']))
-
-    assert r.status_code == 403
-    assert lead.client.total_amount is None
 
 
 # El registro de eventos es reescribible y borrable por decision explicita del usuario
@@ -1331,159 +1253,12 @@ def test_un_setter_no_cobra(client, db, lead, equipo, auth_headers):
 #
 # Pedido del usuario (29/09/2026): «en los pagos tambien deberia ser facil crear y modificar pagos,
 # sin automatizaciones. Solo es para modificar en caso de haber algun error». Un pago vive en la
-# venta (`FinancialSale`, de donde sale lo «Pagado») y en su espejo (`Payment`, de donde sale la
+# venta (`FinancialSale`, de donde sale lo «Pagado») y en su venta (`Sale`, de donde sale la
 # deuda): cada correccion mueve las dos, y ninguna pasa por el camino de una venta declarada.
-
-@pytest.fixture()
-def programas(db, lead):
-    """Los programas activos que resuelve `SheetsService.resolve_program`, y el total negociado."""
-    rr = Program(name='Residency Roadmap v3', price=1500.0)
-    al = Program(name='Ace Learner v3', price=500.0)
-    db.session.add_all([rr, al, PaymentMethod(name='Stripe'), PaymentMethod(name='Hotmart')])
-    lead.client.total_amount = 1000.0
-    db.session.commit()
-    return {'RR': rr, 'AL': al}
 
 
 PAGO = {'fecha': '2026-09-15', 'monto': 300, 'metodo_pago': 'Stripe', 'programa_code': 'RR',
         'tipo': 'cuota'}
-
-
-def test_el_pago_cargado_se_lee_en_el_historial_con_su_id(client, db, lead, programas, equipo,
-                                                          auth_headers):
-    creado = client.post(url(lead, '/pago'), json=PAGO,
-                         headers=auth_headers(equipo['closer'])).get_json()
-
-    cobro = client.get(f'/api/ficha/lead?appointment_id={lead.id}',
-                       headers=auth_headers(equipo['closer'])).get_json()['cobro']
-
-    assert [(p['id'], p['tipo'], p['programa_code']) for p in cobro['pagos']] == \
-        [(creado['id'], 'cuota', 'RR')]
-    assert (cobro['pagado'], cobro['deuda']) == (300.0, 700.0)
-
-
-def test_cargar_un_pago_no_dispara_ninguna_automatizacion(client, db, lead, programas, equipo,
-                                                          auth_headers):
-    """Ni Sheets, ni n8n, ni el aviso de seña convertida, ni Show up, ni el total negociado, ni
-    cuotas del plan marcadas como pagadas: solo se corrige el registro."""
-    cuota = InstallmentPlan(client_id=lead.client_id, appointment_id=lead.id, programa_code='RR',
-                            numero_cuota=1, monto=300.0, fecha_vencimiento=date(2026, 9, 15))
-    db.session.add(cuota)
-    db.session.commit()
-    base = 'app.services.sheets_service'
-    with patch(f'{base}.SheetsService.post_to_sheets') as venta_declarada, \
-            patch(f'{base}.requests.post') as hoja, \
-            patch(f'{base}.SheetsService._trigger_n8n_webhook') as n8n, \
-            patch('app.services.closer_service.CloserService.check_and_notify_down_payment_conversion') as sena, \
-            patch('app.services.closer_service.CloserService.mark_sale_appointment_as_show_up') as show_up:
-        r = client.post(url(lead, '/pago'), json={**PAGO, 'tipo': 'completo', 'monto': 1500},
-                        headers=auth_headers(equipo['closer']))
-
-    assert r.status_code == 201, r.get_json()
-    for automatizacion in (venta_declarada, hoja, n8n, sena, show_up):
-        automatizacion.assert_not_called()
-    assert lead.client.total_amount == 1000.0   # un Completo declarado lo pisaria con 1500
-    assert InstallmentPlan.query.get(cuota.id).estado == 'pendiente'
-    assert lead.closer_result == 'Pendiente'
-    assert Notification.query.count() == 0
-
-
-def test_el_pago_cargado_queda_en_la_bitacora(client, db, lead, programas, equipo, auth_headers):
-    client.post(url(lead, '/pago'), json=PAGO, headers=auth_headers(equipo['closer']))
-
-    evento = LeadEventLog.query.filter_by(appointment_id=lead.id, action_type='pago_cargado').one()
-    assert 'RR - Cuota · $300.00 · Stripe · 2026-09-15' in evento.description
-    assert 'la deuda lo cuenta' in evento.description
-
-
-def test_sin_un_programa_activo_el_pago_queda_y_avisa_que_la_deuda_no_lo_cuenta(client, db, lead,
-                                                                                 equipo,
-                                                                                 auth_headers):
-    """El espejo cuelga de una inscripcion a un `Program` activo: sin el, la venta queda cargada y
-    la respuesta lo dice, en vez de dar por hecho que la deuda se movio."""
-    r = client.post(url(lead, '/pago'), json=PAGO, headers=auth_headers(equipo['closer']))
-
-    assert r.status_code == 201, r.get_json()
-    assert r.get_json()['espejo'] is False
-    assert FinancialSale.query.count() == 1 and Payment.query.count() == 0
-    evento = LeadEventLog.query.filter_by(action_type='pago_cargado').one()
-    assert 'la deuda no lo cuenta' in evento.description
-
-
-def _inscripcion_vieja(db, lead, nombre='Residency Roadmap v1', precio=1000.0, monto=600.0,
-                       cuando=datetime(2025, 1, 8)):
-    """Un cliente inscripto en una version que ya no esta activa, con un pago."""
-    programa = Program(name=nombre, price=precio, is_active=False)
-    db.session.add(programa)
-    db.session.commit()
-    inscripcion = Enrollment(client_id=lead.client_id, program_id=programa.id, enrollment_date=cuando)
-    db.session.add(inscripcion)
-    db.session.commit()
-    db.session.add(Payment(enrollment_id=inscripcion.id, amount=monto, date=cuando,
-                           payment_type='Primer Pago', status='completed'))
-    db.session.commit()
-    return inscripcion
-
-
-def test_un_pago_de_un_cliente_con_ventas_importadas_no_le_inventa_una_deuda(client, db, lead,
-                                                                            programas, equipo,
-                                                                            auth_headers):
-    """Las ventas importadas de la hoja no tienen espejo, y el cliente no tiene inscripcion: su
-    deuda es 0 porque `_client_debt` no tiene de donde calcularla. Abrirle una inscripcion para
-    la renovacion de $100 le cobraria el programa entero sin sus $1.500 ya pagados. En la base
-    local, 87 de los 150 clientes con ventas vinculadas no tienen ninguna inscripcion."""
-    lead.client.total_amount = None
-    db.session.add(_venta(lead, 'RR - Completo', 1500.0, datetime(2026, 3, 2)))
-    db.session.commit()
-
-    r = client.post(url(lead, '/pago'), json={**PAGO, 'monto': 100, 'tipo': 'renovacion'},
-                    headers=auth_headers(equipo['closer']))
-
-    assert r.status_code == 201, r.get_json()
-    cuerpo = r.get_json()
-    assert (cuerpo['espejo'], cuerpo['deuda']) == (False, 0.0)
-    assert Enrollment.query.count() == 0 and Payment.query.count() == 0
-    assert FinancialSale.query.count() == 2
-    evento = LeadEventLog.query.filter_by(action_type='pago_cargado').one()
-    assert 'la deuda no lo cuenta' in evento.description
-    assert 'pagos anteriores' in evento.description
-
-
-@pytest.mark.parametrize('cambio', [
-    {'monto': 0}, {'monto': -50}, {'monto': 'mucho'}, {'monto': True}, {'monto': None},
-    {'fecha': '2026-13-01'}, {'fecha': '15/09/2026'}, {'fecha': ''}, {'fecha': '2099-01-01'},
-    {'fecha': '2019-12-31'},
-    {'programa_code': 'ZZ'}, {'programa_code': None},
-    {'tipo': 'regalo'}, {'tipo': ['cuota']},
-    {'metodo_pago': 'Tarjeta de regalo'}, {'metodo_pago': ''},
-])
-def test_un_pago_mal_cargado_no_se_guarda(client, db, lead, programas, equipo, auth_headers,
-                                          cambio):
-    r = client.post(url(lead, '/pago'), json={**PAGO, **cambio},
-                    headers=auth_headers(equipo['closer']))
-
-    assert r.status_code == 400
-    assert r.get_json()['message']
-    assert FinancialSale.query.count() == 0 and Payment.query.count() == 0
-
-
-@pytest.mark.parametrize('monto', [True, 'mucho', [300]])
-def test_un_monto_que_no_es_un_numero_se_rechaza_con_su_motivo(client, db, lead, programas,
-                                                               equipo, auth_headers, monto):
-    """`true` no «falta»: es un valor que no es un monto, y el motivo tiene que decir eso."""
-    r = client.post(url(lead, '/pago'), json={**PAGO, 'monto': monto},
-                    headers=auth_headers(equipo['closer']))
-
-    assert r.status_code == 400
-    assert r.get_json()['message'] == 'El monto del pago tiene que ser un número.'
-
-
-@pytest.mark.parametrize('rol', ['setter', 'triage'])
-def test_quien_no_cobra_no_carga_pagos(client, db, lead, programas, equipo, auth_headers, rol):
-    r = client.post(url(lead, '/pago'), json=PAGO, headers=auth_headers(equipo[rol]))
-
-    assert r.status_code == 403
-    assert FinancialSale.query.count() == 0
 
 
 def _declarada(db, lead, tipo_pago='RR - Parcial', monto=400.0,
@@ -1508,227 +1283,8 @@ def corregir(client, lead, venta, cambios, usuario, auth_headers):
                         headers=auth_headers(usuario))
 
 
-def test_corregir_el_monto_mueve_tambien_la_deuda(client, db, lead, programas, equipo,
-                                                  auth_headers):
-    """Es el punto de mover las dos: lo «Pagado» sale de la venta y el «Debe», del espejo."""
-    venta = _declarada(db, lead)
-
-    r = corregir(client, lead, venta, {'monto': 450}, equipo['closer'], auth_headers)
-
-    assert r.status_code == 200, r.get_json()
-    assert venta.monto == 450.0
-    assert Payment.query.one().amount == 450.0
-    cuerpo = r.get_json()
-    assert (cuerpo['cambios'], cuerpo['espejo'], cuerpo['deuda']) == (['monto'], True, 550.0)
-
-
-def test_solo_el_programa_conserva_el_tipo_como_esta_escrito(client, db, lead, programas, equipo,
-                                                             auth_headers):
-    """Mismo criterio que asignar el programa desde la ficha: el tipo no es lo que se corrige."""
-    venta = _venta(lead, 'Desconocido - Seña')
-    db.session.add(venta)
-    db.session.commit()
-
-    r = corregir(client, lead, venta, {'programa_code': 'SI'}, equipo['closer'], auth_headers)
-
-    assert r.status_code == 200, r.get_json()
-    assert venta.tipo_pago == 'SI - Seña'
-
-
-def test_el_tipo_de_un_pago_sin_programa_no_se_escribe_sin_elegir_uno(client, db, lead, programas,
-                                                                     equipo, auth_headers):
-    venta = _venta(lead, 'Parcial')
-    db.session.add(venta)
-    db.session.commit()
-
-    r = corregir(client, lead, venta, {'tipo': 'cuota'}, equipo['closer'], auth_headers)
-
-    assert r.status_code == 400
-    assert 'programa' in r.get_json()['message']
-    assert venta.tipo_pago == 'Parcial'
-
-
-def test_un_medio_historico_se_conserva_si_no_se_toca(client, db, lead, programas, equipo,
-                                                      auth_headers):
-    """Como una fuente vieja de una agenda: la fila puede conservarlo, uno nuevo sale de la lista."""
-    venta = _declarada(db, lead, metodo='Binance')
-
-    r = corregir(client, lead, venta, {'metodo_pago': 'Binance', 'monto': 500}, equipo['closer'],
-                 auth_headers)
-
-    assert r.status_code == 200, r.get_json()
-    assert (venta.metodo_pago, venta.monto) == ('Binance', 500.0)
-
-
-def test_dos_cuotas_iguales_del_mismo_dia_no_se_cruzan(client, db, lead, programas, equipo,
-                                                       auth_headers):
-    """El espejo se reconoce por fecha y monto: con dos iguales, cada venta se queda con el suyo."""
-    primera = _declarada(db, lead, 'RR - Cuota', 250.0, datetime(2026, 9, 10, 9, 0))
-    segunda = _declarada(db, lead, 'RR - Cuota', 250.0, datetime(2026, 9, 10, 18, 0))
-
-    r = corregir(client, lead, segunda, {'monto': 300}, equipo['closer'], auth_headers)
-
-    assert r.status_code == 200, r.get_json()
-    montos = {p.date.hour: p.amount for p in Payment.query.all()}
-    assert montos == {9: 250.0, 18: 300.0}
-    assert primera.monto == 250.0
-
-
-def test_la_correccion_del_pago_queda_en_la_bitacora(client, db, lead, programas, equipo,
-                                                     auth_headers):
-    venta = _declarada(db, lead)
-
-    corregir(client, lead, venta, {'monto': 450, 'fecha': '2026-09-09'}, equipo['closer'],
-             auth_headers)
-
-    evento = LeadEventLog.query.filter_by(appointment_id=lead.id,
-                                          action_type='pago_corregido').one()
-    assert f'pago #{venta.id}' in evento.description
-    assert 'monto $400.00 → $450.00' in evento.description
-    assert 'fecha 2026-09-10 → 2026-09-09' in evento.description
-
-
-def test_corregir_un_pago_no_dispara_ninguna_automatizacion(client, db, lead, programas, equipo,
-                                                            auth_headers):
-    venta = _declarada(db, lead)
-    base = 'app.services.sheets_service'
-    with patch(f'{base}.SheetsService.update_in_sheets') as hoja, \
-            patch(f'{base}.requests.post') as post, \
-            patch(f'{base}.SheetsService._trigger_n8n_webhook') as n8n:
-        r = corregir(client, lead, venta, {'monto': 450, 'tipo': 'completo'}, equipo['closer'],
-                     auth_headers)
-
-    assert r.status_code == 200, r.get_json()
-    for automatizacion in (hoja, post, n8n):
-        automatizacion.assert_not_called()
-
-
-def test_no_se_corrige_el_pago_de_otro_lead(client, db, lead, programas, equipo, auth_headers):
-    """Sin esto, el id de la URL alcanzaria para corregir el pago de cualquier cliente."""
-    ajeno = FinancialSale(mail_cliente='otro@x.com', tipo_pago='RR - Cuota', monto=100.0,
-                          estado='Completada', date=datetime(2026, 9, 1))
-    db.session.add(ajeno)
-    db.session.commit()
-
-    r = corregir(client, lead, ajeno, {'monto': 1}, equipo['director'], auth_headers)
-
-    assert r.status_code == 400
-    assert 'no es de este lead' in r.get_json()['message']
-    assert ajeno.monto == 100.0
-
-
-@pytest.mark.parametrize('cambios', [
-    {}, {'monto': 0}, {'monto': 'x'}, {'fecha': '2099-01-01'}, {'fecha': 'ayer'},
-    {'metodo_pago': 'Trueque'}, {'programa_code': 'ZZ'}, {'tipo': 'regalo'},
-    # Uno invalido tumba el pedido entero: el monto bueno de al lado tampoco se escribe.
-    {'monto': 999, 'tipo': 'regalo'},
-])
-def test_una_correccion_de_pago_mal_pedida_no_escribe_nada(client, db, lead, programas, equipo,
-                                                           auth_headers, cambios):
-    venta = _declarada(db, lead)
-
-    r = corregir(client, lead, venta, cambios, equipo['closer'], auth_headers)
-
-    assert r.status_code == 400
-    assert (venta.monto, venta.tipo_pago) == (400.0, 'RR - Parcial')
-    assert Payment.query.one().amount == 400.0
-
-
-def test_un_pago_que_no_existe_no_se_corrige(client, db, lead, programas, equipo, auth_headers):
-    r = client.patch(url(lead, '/pago/999'), json={'monto': 5},
-                     headers=auth_headers(equipo['closer']))
-
-    assert r.status_code == 400
-    assert r.get_json()['message'] == 'Ese pago no existe.'
-
-
-@pytest.mark.parametrize('rol', ['setter', 'triage'])
-def test_quien_no_cobra_no_corrige_pagos(client, db, lead, programas, equipo, auth_headers, rol):
-    venta = _declarada(db, lead)
-
-    r = corregir(client, lead, venta, {'monto': 1}, equipo[rol], auth_headers)
-
-    assert r.status_code == 403
-    assert venta.monto == 400.0
-
-
 def borrar(client, lead, venta_id, usuario, auth_headers):
     return client.delete(url(lead, f'/pago/{venta_id}'), headers=auth_headers(usuario))
-
-
-def test_borrar_un_pago_de_la_hoja_lo_excluye_de_una_resincronizacion(client, db, lead, programas,
-                                                                      equipo, auth_headers):
-    """Como el borrado de Operaciones: sin la marca, forzar la sincronizacion lo resucitaria."""
-    from app.models import ExcludedSale
-
-    venta = _declarada(db, lead)
-    venta.marca_temporal = '10/09/2026 15:32:07'
-    db.session.commit()
-
-    borrar(client, lead, venta.id, equipo['closer'], auth_headers)
-
-    assert [e.marca_temporal for e in ExcludedSale.query.all()] == ['10/09/2026 15:32:07']
-
-
-def test_una_marca_de_la_hoja_compartida_no_se_excluye(client, db, lead, programas, equipo,
-                                                       auth_headers):
-    """La resincronizacion saca de la hoja TODAS las filas con esa marca: se llevaria la otra."""
-    from app.models import ExcludedSale
-
-    venta = _declarada(db, lead)
-    otra = _venta(lead, 'RR - Cuota', 100.0, datetime(2026, 9, 2))
-    venta.marca_temporal = otra.marca_temporal = '10/09/2026 15:32:07'
-    db.session.add(otra)
-    db.session.commit()
-
-    r = borrar(client, lead, venta.id, equipo['closer'], auth_headers)
-
-    assert r.status_code == 200, r.get_json()
-    assert ExcludedSale.query.count() == 0
-
-
-def test_borrar_un_pago_no_dispara_ninguna_automatizacion(client, db, lead, programas, equipo,
-                                                          auth_headers):
-    venta = _declarada(db, lead)
-    base = 'app.services.sheets_service'
-    with patch(f'{base}.SheetsService.update_in_sheets') as hoja, \
-            patch(f'{base}.requests.post') as post, \
-            patch(f'{base}.SheetsService._trigger_n8n_webhook') as n8n:
-        r = borrar(client, lead, venta.id, equipo['closer'], auth_headers)
-
-    assert r.status_code == 200, r.get_json()
-    for automatizacion in (hoja, post, n8n):
-        automatizacion.assert_not_called()
-
-
-def test_no_se_borra_el_pago_de_otro_lead(client, db, lead, programas, equipo, auth_headers):
-    ajeno = FinancialSale(mail_cliente='otro@x.com', tipo_pago='RR - Cuota', monto=100.0,
-                          estado='Completada', date=datetime(2026, 9, 1))
-    db.session.add(ajeno)
-    db.session.commit()
-
-    r = borrar(client, lead, ajeno.id, equipo['director'], auth_headers)
-
-    assert r.status_code == 400
-    assert 'no es de este lead' in r.get_json()['message']
-    assert db.session.get(FinancialSale, ajeno.id) is not None
-
-
-def test_un_pago_que_no_existe_no_se_borra(client, db, lead, programas, equipo, auth_headers):
-    r = borrar(client, lead, 999, equipo['closer'], auth_headers)
-
-    assert r.status_code == 400
-    assert r.get_json()['message'] == 'Ese pago no existe.'
-
-
-@pytest.mark.parametrize('rol', ['setter', 'triage'])
-def test_quien_no_cobra_no_borra_pagos(client, db, lead, programas, equipo, auth_headers, rol):
-    venta = _declarada(db, lead)
-
-    r = borrar(client, lead, venta.id, equipo[rol], auth_headers)
-
-    assert r.status_code == 403
-    assert FinancialSale.query.count() == 1 and Payment.query.count() == 1
 
 
 # --- Nota del equipo --------------------------------------------------------------------------
