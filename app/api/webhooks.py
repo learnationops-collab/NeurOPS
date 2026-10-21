@@ -1,144 +1,53 @@
+import logging
+
 from flask import Blueprint, request, jsonify
 from app import db
 from app.decorators import require_manychat_token
-from app.models import Lead
+from app.models import ManychatLead
+
+logger = logging.getLogger(__name__)
 
 bp = Blueprint('webhooks', __name__)
+
 
 @bp.route('/manychat', methods=['POST'])
 @require_manychat_token
 def receive_manychat_lead():
     """
-    Recibe leads desde ManyChat (Instagram).
+    Webhook viejo de ManyChat (Instagram). La tabla `leads` ya no existe (Etapa 2c de docs/plan_personas.md):
+    el lead se guarda como `ManychatLead`, y `conversaciones_service` le da su persona y su conversación.
     Exige el header 'X-ManyChat-Token' con el valor de la variable de entorno MANYCHAT_WEBHOOK_TOKEN
     (sin ella configurada responde 503).
     """
-    # 1. Validación de JSON
     if not request.is_json:
         return jsonify({"status": "error", "message": "Request must be JSON"}), 400
 
     data = request.get_json()
-    
-    # 2. Validación de campos requeridos
     manychat_id = data.get('manychat_id')
     name = data.get('name')
-    keyword = data.get('keyword')
-    
     if not manychat_id or not name:
         return jsonify({"status": "error", "message": "Missing required fields: manychat_id, name"}), 400
 
-    # 3. Upsert (Crear o Actualizar)
     try:
-        lead = Lead.query.filter_by(manychat_id=manychat_id).first()
-        
-        if lead:
-            # Actualizar existente
-            lead.name = name
-            lead.email = data.get('email', lead.email) # Solo actualiza si viene en el payload
-            lead.instagram_username = data.get('instagram_username', lead.instagram_username)
-            
-            # Actualizar ad_source
-            if 'ad_source' in data:
-                lead.ad_source = data.get('ad_source')
-            elif keyword and not lead.ad_source:
-                lead.ad_source = keyword
-
-            # Actualizar tags
-            if 'tags' in data:
-                lead.tags = data.get('tags')
-            
-            # Asegurar tag de keyword si existe
-            if keyword:
-                kw_tag = f"kw:{keyword}"
-                current_tags = list(lead.tags) if lead.tags else []
-                if kw_tag not in current_tags:
-                    current_tags.append(kw_tag)
-                    lead.tags = current_tags
-
-            if 'coment' in data:
-                lead.notes = data.get('coment')
-            elif 'notes' in data:
-                lead.notes = data.get('notes')
-
-            # Actualizar funnel_step y last_stage si vienen en el payload
-            if 'funnel_step' in data:
-                lead.funnel_step = data.get('funnel_step')
-            if 'last_stage' in data:
-                lead.last_stage = int(data['last_stage'])
-
-            status_code = 200
-            action = "updated"
-        else:
-            # Crear nuevo
-            # Buscar o Crear etapa 'Entrante'
-            from app.models import PipelineStage, Pipeline
-            
-            stage_name = 'Entrante'
-            entrante_stage = PipelineStage.query.filter_by(name=stage_name).first()
-            
-            if not entrante_stage:
-                # Si no existe, verificar si existe el Pipeline
-                pipeline = Pipeline.query.filter_by(name='General').first()
-                if not pipeline:
-                    pipeline = Pipeline(name='General', is_active=True)
-                    db.session.add(pipeline)
-                    db.session.flush() # Para obtener ID
-                
-                # Crear la etapa
-                entrante_stage = PipelineStage(
-                    name=stage_name, 
-                    pipeline_id=pipeline.id, 
-                    order=0, 
-                    is_active=True
-                )
-                db.session.add(entrante_stage)
-                db.session.flush()
-                
-            stage_id = entrante_stage.id
-
-            # Preparar datos iniciales
-            initial_ad_source = data.get('ad_source')
-            if not initial_ad_source and keyword:
-                initial_ad_source = keyword
-            
-            initial_tags = data.get('tags', [])
-            if keyword:
-                kw_tag = f"kw:{keyword}"
-                if kw_tag not in initial_tags:
-                    initial_tags.append(kw_tag)
-
-            # Obtener last_stage como int si viene en el payload
-            raw_last_stage = data.get('last_stage')
-            parsed_last_stage = int(raw_last_stage) if raw_last_stage is not None else None
-
-            lead = Lead(
-                manychat_id=manychat_id,
-                name=name,
-                email=data.get('email'),
-                instagram_username=data.get('instagram_username'),
-                stage_id=stage_id,
-                ad_source=initial_ad_source,
-                tags=initial_tags,
-                notes=data.get('coment') or data.get('notes'), # Mapeamos 'coment' a notes
-                funnel_step=data.get('funnel_step'),
-                last_stage=parsed_last_stage
-            )
+        lead = ManychatLead.query.filter_by(manychat_id=str(manychat_id)).first()
+        creado = lead is None
+        if creado:
+            lead = ManychatLead(manychat_id=str(manychat_id), follower=False)
             db.session.add(lead)
-            status_code = 201
-            action = "created"
-
+        lead.name = name
+        lead.ig = data.get('instagram_username') or lead.ig
+        if data.get('last_stage') is not None:
+            lead.last_stage = int(data['last_stage'])
+        db.session.flush()  # acá conversaciones_service le pone la persona
+        if data.get('email') and lead.person is not None:
+            from app.services import person_service
+            person_service.anotar(lead.person, person_service.claves(email=data['email']), 'manychat')
         db.session.commit()
-        
-        return jsonify({
-            "status": "success",
-            "action": action,
-            "lead": {
-                "id": lead.id,
-                "manychat_id": lead.manychat_id,
-                "name": lead.name
-            }
-        }), status_code
-
+        if data.get('keyword'):
+            logger.info(f"[WEBHOOK VIEJO] {manychat_id} llegó con la palabra clave {data['keyword']!r}")
+        return jsonify({"status": "success", "action": "created" if creado else "updated",
+                        "lead": {"id": lead.id, "manychat_id": lead.manychat_id, "name": lead.name}}), 201 if creado else 200
     except Exception as e:
         db.session.rollback()
+        logger.error(f"[WEBHOOK VIEJO] {e}")
         return jsonify({"status": "error", "message": f"Database error: {str(e)}"}), 500

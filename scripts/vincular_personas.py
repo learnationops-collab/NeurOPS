@@ -21,7 +21,7 @@ else:
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 from app import create_app, db
-from app.models import (ConciliacionMovimiento, FinancialAgenda, FinancialSale, Lead, ManychatAdLead, ManychatLead,
+from app.models import (ConciliacionMovimiento, FinancialAgenda, FinancialSale, ManychatAdLead, ManychatLead,
                         PersonIdentity, PublicRegistration)
 from app.services.person_service import claves
 from personas_indice import IndicePersonas
@@ -31,7 +31,6 @@ from personas_indice import IndicePersonas
 TABLAS = (
     (FinancialSale, 'pago', ('nombre_cliente', 'mail_cliente', 'instagram', 'telefono', None)),
     (FinancialAgenda, 'agenda', ('nombre_persona', 'mail', 'instagram', 'whatsapp', None)),  # los dos formatos de la hoja
-    (Lead, 'manychat', ('name', 'email', 'instagram_username', None, 'manychat_id')),
     (ManychatLead, 'manychat', ('name', None, 'ig', None, 'manychat_id')),
     (ManychatAdLead, 'manychat', ('lead_name', None, None, None, 'manychat_id')),
     (ConciliacionMovimiento, 'conciliacion', ('nombre', 'email', None, None, None)),

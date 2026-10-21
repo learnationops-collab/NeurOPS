@@ -18,7 +18,7 @@ from sqlalchemy import event, func, inspect
 
 from app import db
 from app.models import (Appointment, Client, ConciliacionMovimiento, Conversation, Enrollment, FinancialAgenda,
-                        FinancialSale, InstallmentPlan, Lead, ManychatAdLead, ManychatLead, Person, PersonEvent,
+                        FinancialSale, InstallmentPlan, ManychatAdLead, ManychatLead, Person, PersonEvent,
                         PersonIdentity, PublicRegistration, Sale, Subscription, WorkshopLead)
 from app.services.client_dedup_service import (_es_email_placeholder, _names_compatible, _normalize_email,
                                                _normalize_instagram, _normalize_phone)
@@ -34,7 +34,7 @@ COLUMNAS = ('email', 'instagram', 'phone')
 COLUMNAS_CLIENTE = ('email', 'instagram', 'phone', 'learnation_user_id')
 # Todas las tablas con `person_uuid` (las mueve `fusionar`).
 TABLAS = (Client, Conversation, FinancialSale, FinancialAgenda, Appointment, InstallmentPlan, Enrollment, Sale,
-          Subscription, Lead, ManychatLead, ManychatAdLead, WorkshopLead, ConciliacionMovimiento, PublicRegistration)
+          Subscription, ManychatLead, ManychatAdLead, WorkshopLead, ConciliacionMovimiento, PublicRegistration)
 # Las que tienen `client_id`: mientras se migra, su persona sale de su cliente.
 CON_CLIENTE = (FinancialSale, Appointment, InstallmentPlan, Enrollment, Sale, Subscription)
 

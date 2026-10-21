@@ -33,7 +33,6 @@ class DatabaseService:
         'campaigns': models.Campaign,
         'ad_sets': models.AdSet,
         'ads': models.Ad,
-        'leads': models.Lead,
         'marketing_budgets': models.MarketingBudget,
         'client_comments': models.ClientComment
     }

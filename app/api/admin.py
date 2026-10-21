@@ -12,7 +12,7 @@ import pandas as pd
 import io
 import json
 import math
-from app.models import db, User, Client, Lead, Expense, RecurringExpense, Payment, Enrollment, PaymentMethod, Event, Appointment, Integration, Pipeline, PipelineStage, Notification, FeatureToggle
+from app.models import db, User, Client, Expense, RecurringExpense, Payment, Enrollment, PaymentMethod, Event, Appointment, Integration, Pipeline, PipelineStage, Notification, FeatureToggle
 from datetime import datetime, date, timedelta
 from sqlalchemy import or_
 import calendar
@@ -884,50 +884,6 @@ def client_dedup():
         **result
     }), 200
 
-@bp.route('/admin/tools/migrate-leads', methods=['POST'])
-@login_required
-@admin_required
-def migrate_leads():
-    try:
-        from app.models import User, Lead, PipelineStage
-        from sqlalchemy import or_
-        lead_users = User.query.filter(or_(User.role == 'lead', User.role == 'student')).all()
-        migrated_count = 0
-        
-        # Get default stage if exists
-        default_stage = PipelineStage.query.order_by(PipelineStage.order).first()
-        
-        for user in lead_users:
-            # Check if lead already exists by email
-            existing_lead = None
-            if user.email:
-                existing_lead = Lead.query.filter_by(email=user.email).first()
-            
-            if not existing_lead:
-                # Create a new lead
-                new_lead = Lead(
-                    name=user.username,
-                    email=user.email,
-                    manychat_id=f"migrated_{user.id}_{int(datetime.utcnow().timestamp())}",
-                    stage_id=default_stage.id if default_stage else None,
-                    notes=f"Migrado desde usuario (ID: {user.id})"
-                )
-                db.session.add(new_lead)
-                migrated_count += 1
-            
-            # Delete the user record
-            db.session.delete(user)
-        
-        db.session.commit()
-        return jsonify({
-            "success": True, 
-            "message": f"Se han migrado y eliminado {migrated_count} usuarios tipo lead.",
-            "total_deleted": len(lead_users)
-        }), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"success": False, "message": f"Error en la migración: {str(e)}"}), 500
-
 @bp.route('/admin/integrations', methods=['GET', 'POST', 'DELETE'])
 @login_required
 @admin_required
@@ -1421,81 +1377,6 @@ def execute_import():
 
 
 # --- Quick Actions (Sales & Support) ---
-
-@bp.route('/admin/sales/quick-create', methods=['POST'])
-@login_required
-@admin_required
-def quick_create_sale():
-    from app.models import Program
-    data = request.get_json() or {}
-    try:
-        # 1. Validate inputs
-        required = ['lead_id', 'program_id', 'payment_method_id', 'payment_amount', 'payment_type']
-        for field in required:
-            if not data.get(field):
-                return jsonify({"error": f"Falta el campo {field}"}), 400
-
-        # float() acepta 'nan' e 'inf' y falla con un 500 (texto crudo de la excepcion) si no es un numero
-        try:
-            amount = float(data['payment_amount'])
-        except (TypeError, ValueError):
-            amount = math.nan
-        if not math.isfinite(amount):
-            return jsonify({"error": "payment_amount debe ser un numero"}), 400
-
-        # 2. Get entities
-        lead = Lead.query.get(data['lead_id'])
-        program = Program.query.get(data['program_id'])
-        method = PaymentMethod.query.get(data['payment_method_id'])
-
-        if not lead or not program or not method:
-            return jsonify({"error": "Entidades no encontradas (Lead, Programa o Método)"}), 404
-
-        # 3. Create or Find Client (from Lead)
-        # Sin email no hay con quien cruzar: filter_by(email=None) es `email IS NULL` y le colgaba la venta
-        # al primer cliente sin email (otra persona). Un email vacio se guarda como NULL (la columna es unica).
-        email = (lead.email or '').strip() or None
-        client = Client.query.filter_by(email=email).first() if email else None
-        if not client:
-            client = Client(
-                full_name=lead.name,
-                email=email,
-                phone=lead.phone if hasattr(lead, 'phone') else None,
-                instagram=lead.instagram_username
-            )
-            db.session.add(client)
-            db.session.flush() # Get ID
-
-        # 4. Create Enrollment
-        enrollment = Enrollment(
-            client_id=client.id,
-            program_id=program.id,
-            closer_id=current_user.id, # Admin as closer
-            enrollment_date=datetime.utcnow()
-        )
-        db.session.add(enrollment)
-        db.session.flush()
-
-        # 5. Create Payment
-        payment = Payment(
-            enrollment_id=enrollment.id,
-            payment_method_id=method.id,
-            amount=amount,
-            payment_type=data['payment_type'],
-            status=data.get('status', 'completed'),
-            date=datetime.utcnow()
-        )
-        db.session.add(payment)
-
-        # 6. Update Lead status to Won (Optional logic for admin)
-        # For now, we just record the sale.
-
-        db.session.commit()
-        return jsonify({"message": "Venta registrada exitosamente", "enrollment_id": enrollment.id}), 201
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
 
 @bp.route('/admin/closer-aliases/options', methods=['GET'])
 @login_required

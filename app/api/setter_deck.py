@@ -280,11 +280,6 @@ def get_setter_deck():
                 m_lead = ManychatLead.query.filter(func.lower(ManychatLead.name) == a.client.full_name.lower().strip()).first()
                 if m_lead and m_lead.ig:
                     client_ig = m_lead.ig
-            if not client_ig and a.client.email:
-                from app.models import Lead
-                l_obj = Lead.query.filter(func.lower(Lead.email) == a.client.email.lower().strip()).first()
-                if l_obj and l_obj.instagram_username:
-                    client_ig = l_obj.instagram_username
 
         ad_obj = None
         if a.keyword:

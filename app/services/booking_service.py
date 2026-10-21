@@ -145,17 +145,6 @@ class BookingService(BookingAvisosMixin, BookingIdentidadMixin, BookingEspejoMix
     def create_appointment(client_id, closer_id, start_time_utc, origin='direct', setter_id=None, ignorar_ids=()):
         # Validar existencia de cliente
         client = Client.query.get(client_id)
-        if not client:
-            from app.models import Lead
-            lead_obj = Lead.query.get(client_id)
-            if lead_obj:
-                client = BookingService.find_or_create_client(
-                    nombre=lead_obj.name,
-                    email=lead_obj.email,
-                    instagram=lead_obj.instagram_username,
-                    phone=None
-                )
-                client_id = client.id
 
         if not client:
             print(f"[BookingService Error] Cliente con ID {client_id} no encontrado.")
@@ -198,43 +187,6 @@ class BookingService(BookingAvisosMixin, BookingIdentidadMixin, BookingEspejoMix
             )
             db.session.add(noti)
             
-            # Sincronizar Lead
-            try:
-                from app.models import Lead, PipelineStage
-                import uuid
-                
-                lead = None
-                if client.email and 'no-email-' not in client.email:
-                    lead = Lead.query.filter(db.func.lower(Lead.email) == client.email.lower()).first()
-                if not lead and client.instagram:
-                    ig_clean = client.instagram.replace('@', '').strip().lower()
-                    lead = Lead.query.filter(db.func.lower(db.func.replace(Lead.instagram_username, '@', '')) == ig_clean).first()
-                
-                if not lead:
-                    stage = PipelineStage.query.filter_by(name='Nueva').first()
-                    dummy_mc_id = f"gen_{int(datetime.utcnow().timestamp())}_{str(uuid.uuid4())[:8]}"
-                    
-                    lead = Lead(
-                        manychat_id=dummy_mc_id,
-                        name=client.full_name or client.email or "Sin Nombre",
-                        email=client.email if client.email and 'no-email-' not in client.email else None,
-                        instagram_username=client.instagram,
-                        stage_id=stage.id if stage else None,
-                        ad_source=origin or 'Booking',
-                        notes=f"Creado automáticamente desde Agenda ID {appt.id}"
-                    )
-                    db.session.add(lead)
-                    db.session.flush()
-                
-                new_note = f"\n[Auto] Agenda creada: {start_time_utc.strftime('%Y-%m-%d %H:%M')} (ID: {appt.id})"
-                lead.notes = (lead.notes or "") + new_note
-                
-                agendada_stage = PipelineStage.query.filter(PipelineStage.name.ilike('%Agend%')).first()
-                if agendada_stage:
-                    lead.stage_id = agendada_stage.id
-                
-            except Exception as lead_err:
-                print(f"[BookingService] Error sincronizando Lead: {lead_err}")
             
         except Exception as e:
             print(f"Error creando notificación de cita: {e}")
