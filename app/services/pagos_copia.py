@@ -28,3 +28,16 @@ MAIL = FinancialSale.mail_cliente
 INSTAGRAM = FinancialSale.instagram
 MAIL_NORMALIZADO = func.lower(FinancialSale.mail_cliente)
 IG_NORMALIZADO = func.lower(func.replace(FinancialSale.instagram, '@', ''))
+NOMBRE_NORMALIZADO = func.lower(FinancialSale.nombre_cliente)
+
+_COLUMNA = {'mail': 'mail_cliente', 'instagram': 'instagram', 'nombre': 'nombre_cliente', 'telefono': 'telefono'}
+
+
+def escribir(sale, **campos):
+    """Guarda en la copia del pago los `campos` (mail, instagram, nombre, telefono) solo si el pago no
+    tiene persona: con persona, lo que vale es la persona (`person_service`). Devuelve si escribió."""
+    if sale.person_uuid:
+        return False
+    for campo, valor in campos.items():
+        setattr(sale, _COLUMNA[campo], valor)
+    return True

@@ -27,6 +27,7 @@ from sqlalchemy import and_, or_, func
 
 from app.models import Client, FinancialAgenda, FinancialSale, Appointment, WorkshopEvent
 from app.services.fuente_service import es_workshop_landing, es_workshop_vivo, es_sin_dueno
+from app.services import pagos_copia
 from app.services.sales_consistency_service import filtro_de_pagos
 from app.services.ticket_service import SENA, VENTA, claves_de_venta, ticket_de
 
@@ -371,9 +372,9 @@ def _ventas_de(agendas, compradores_ya_contados):
         else:
             condiciones = []
             if ig:
-                condiciones.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig)
+                condiciones.append(pagos_copia.IG_NORMALIZADO == ig)
             if mail:
-                condiciones.append(func.lower(FinancialSale.mail_cliente) == mail)
+                condiciones.append(pagos_copia.MAIL_NORMALIZADO == mail)
             if not condiciones:
                 continue
             filtro = and_(FinancialSale.person_uuid.is_(None), or_(*condiciones))

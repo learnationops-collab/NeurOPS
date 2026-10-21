@@ -328,8 +328,10 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
         if sale.person_uuid:
             lead = resolve_lead_by_ig_or_name(None, None, sale.person_uuid)
         else:
-            ig_val = sale.instagram or (sale.raw_data or {}).get('instagram')
-            lead = resolve_lead_by_ig_or_name(ig_val, sale.nombre_cliente, None)
+            from app.services.pagos_copia import copia
+            c = copia(sale)
+            ig_val = c['instagram'] or (sale.raw_data or {}).get('instagram')
+            lead = resolve_lead_by_ig_or_name(ig_val, c['nombre'], None)
         if lead:
             key = get_lead_msg_key(lead.id)
             if key:

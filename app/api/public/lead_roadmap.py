@@ -4,6 +4,7 @@ from app.models import Client, Appointment, SurveyAnswer, SurveyQuestion, Client
 from app.models.financial import FinancialSale, FinancialAgenda
 from app.models.marketing import ManychatLead, LeadAnswer
 from app.services.identity_service import normalize_ig
+from app.services import pagos_copia
 from datetime import datetime, timedelta
 from . import bp
 from sqlalchemy import or_, func
@@ -117,9 +118,9 @@ def get_lead_roadmap():
         else:
             sale_filters = []
             if resolved_ig:
-                sale_filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == resolved_ig)
+                sale_filters.append(pagos_copia.IG_NORMALIZADO == resolved_ig)
             if resolved_email:
-                sale_filters.append(func.lower(FinancialSale.mail_cliente) == resolved_email)
+                sale_filters.append(pagos_copia.MAIL_NORMALIZADO == resolved_email)
             if sale_filters:
                 financial_sales = FinancialSale.query.filter(FinancialSale.person_uuid.is_(None), or_(*sale_filters))                     .order_by(FinancialSale.date.desc()).all()
 
