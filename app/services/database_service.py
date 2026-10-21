@@ -18,8 +18,6 @@ class DatabaseService:
         'daily_report_questions': models.DailyReportQuestion,
         'survey_questions': models.SurveyQuestion,
         'appointments': models.Appointment,
-        'enrollments': models.Enrollment,
-        'payments': models.Payment,
         'availability': models.Availability,
         'weekly_availability': models.WeeklyAvailability,
         'survey_answers': models.SurveyAnswer,

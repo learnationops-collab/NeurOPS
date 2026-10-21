@@ -1,4 +1,4 @@
-from app.models import User, Client, Enrollment, Appointment, Payment, PaymentMethod, CloserDailyStats, DailyReportQuestion, DailyReportAnswer, Event, db, Integration
+from app.models import User, Client, Appointment, PaymentMethod, CloserDailyStats, DailyReportQuestion, DailyReportAnswer, Event, db, Integration
 from app.services.dashboard_service import DashboardService
 from app.services.sales_consistency_service import filtro_de_pagos
 from app.services.ticket_service import CUOTA, pago_de_venta, primeras_cuotas, ticket_promedio
@@ -158,6 +158,16 @@ def _vendido_por(closer_id):
     return Client.sales.any(func.lower(func.trim(Sale.closer_email)).in_(identificadores or {''}))
 
 
+def _tasa_de_comision(closer_id, mes):
+    """La tasa de comisión del closer en `mes` ('AAAA-MM'): la suya de la nómina, o `CLOSER_RATE` (10 %)
+    si no tiene. Es el criterio de `commission_service.get_closer_commission`."""
+    from app.services.closer_name_service import resolver_nombre_closer
+    from app.services.commission_service import CLOSER_RATE, _tasa_propia, clave_de_closer
+    usuario = User.query.get(closer_id)
+    clave = clave_de_closer(resolver_nombre_closer(usuario.username)) if usuario else None
+    return _tasa_propia('closers', clave, mes, CLOSER_RATE)
+
+
 def _codigo_de_program_id(program_id):
     """AL/RR/SI del `Program` de ese id, por su nombre (`closer_ventas_service.NOMBRES`), o None."""
     from app.models import Program
@@ -251,21 +261,21 @@ class CloserService:
         kpi_query = apply_lead_filters(kpi_query)
         total_clients = kpi_query.count()
 
-        fin_query = db.session.query(db.func.sum(Payment.amount)).select_from(Client).join(Enrollment).join(Payment).filter(
-            Payment.status == 'completed',
-            Enrollment.closer_id == closer_id
-        )
-        fin_query = apply_lead_filters(fin_query)
-        total_revenue_gross = fin_query.scalar() or 0.0
-
-        comm_query = db.session.query(
-            db.func.sum((Payment.amount * (PaymentMethod.commission_percent / 100.0)) + PaymentMethod.commission_fixed)
-        ).select_from(Client).join(Enrollment).join(Payment).join(PaymentMethod).filter(
-            Payment.status == 'completed', Enrollment.closer_id == closer_id
-        )
-        comm_query = apply_lead_filters(comm_query)
-        platform_fees = comm_query.scalar() or 0.0
-        cash_collect_net = total_revenue_gross - platform_fees
+        # El cash neto de sus pagos (`FinancialSale` completados que vendió, menos la fee de la pasarela,
+        # `commission_service.cash_neto_de`), de los clientes que pasan los filtros; la comisión, con su
+        # tasa de la nómina (`_tasa_de_comision`), como `commission_service.get_closer_commission`.
+        from app.models import FinancialSale
+        from app.services.commission_service import cash_neto_de
+        from app.services.comercial_vocabulario import venta_completada
+        identificadores = {e.lower() for e in CloserService._resolve_sale_identifiers(User.query.get(closer_id)) if e} or {''}
+        pagos = FinancialSale.query.filter(func.lower(func.trim(FinancialSale.email_vendedor)).in_(identificadores))
+        if start_date_str or end_date_str or search:
+            filtrados = apply_lead_filters(Client.query.with_entities(Client.id, Client.person_uuid)).all()
+            ids = {cid for cid, _ in filtrados}
+            personas = {pu for _, pu in filtrados if pu}
+            pagos = pagos.filter(or_(FinancialSale.client_id.in_(ids or {0}), FinancialSale.person_uuid.in_(personas or {''})))
+        cash_collect_net = sum(cash_neto_de(p.monto, p.metodo_pago) for p in pagos.all() if venta_completada(p))
+        tasa = _tasa_de_comision(closer_id, datetime.utcnow().strftime('%Y-%m'))
 
         # La deuda de sus clientes, por venta (`deuda_service`); sin los dados de baja: su saldo ya no es
         # deuda (lo cobrado sigue en `cash_collected`).
@@ -276,7 +286,7 @@ class CloserService:
         return {
             'total': total_clients,
             'cash_collected': cash_collect_net,
-            'my_commission': cash_collect_net * 0.10,
+            'my_commission': cash_collect_net * tasa,
             'debt': total_debt
         }
 
@@ -323,13 +333,13 @@ class CloserService:
         month_start_utc = user_tz.localize(datetime(today_local.year, today_local.month, 1)).astimezone(pytz.UTC).replace(tzinfo=None)
         
         def calculate_commission(s_dt, e_dt):
-            gross = db.session.query(db.func.sum(Payment.amount)).select_from(Enrollment).join(Payment).filter(
-                Enrollment.closer_id == closer_id, Payment.status == 'completed', Payment.date >= s_dt, Payment.date <= e_dt
-            ).scalar() or 0.0
-            fees = db.session.query(db.func.sum((Payment.amount * (PaymentMethod.commission_percent / 100.0)) + PaymentMethod.commission_fixed)).select_from(Enrollment).join(Payment).join(PaymentMethod).filter(
-                 Enrollment.closer_id == closer_id, Payment.status == 'completed', Payment.date >= s_dt, Payment.date <= e_dt
-            ).scalar() or 0.0
-            return (gross - fees) * 0.10
+            """El cash neto de sus pagos completados del rango por su tasa de la nómina (`CLOSER_RATE` si
+            no tiene), como `commission_service.get_closer_commission`."""
+            from app.services.commission_service import cash_neto_de
+            pagos = FinancialSale.query.filter(func.lower(func.trim(FinancialSale.email_vendedor)).in_(identificadores),
+                                               FinancialSale.date >= s_dt, FinancialSale.date <= e_dt).all()
+            cash_neto = sum(cash_neto_de(p.monto, p.metodo_pago) for p in pagos if venta_completada(p))
+            return cash_neto * _tasa_de_comision(closer_id, today_local.strftime('%Y-%m'))
 
         upcoming = Appointment.query.filter(
             Appointment.closer_id == closer_id,
@@ -547,7 +557,7 @@ class CloserService:
         Handles Discord Wins, Onboarding and WhatsApp confirmations for new sales.
         """
         try:
-            from app.models import Enrollment, Integration, User, PaymentMethod
+            from app.models import Integration, User, PaymentMethod
             from app.services.image_service import ImageService
             from app.services.two_chat_service import TwoChatService
             import requests
@@ -878,7 +888,7 @@ class CloserService:
         enviando notificaciones en Discord.
         """
         try:
-            from app.models import FinancialSale, Payment, Client, Enrollment, Integration
+            from app.models import FinancialSale, Client, Integration
             from sqlalchemy import func, or_
             from datetime import datetime
             import requests

@@ -17,8 +17,6 @@ const DatabaseTools = () => {
         { key: 'setter_daily_stats', name: 'Reportes de Setters' },
         { key: 'daily_report_answers', name: 'Respuestas de Reportes (Legacy)' },
         { key: 'appointments', name: 'Agendas/Citas' },
-        { key: 'enrollments', name: 'Inscripciones' },
-        { key: 'payments', name: 'Pagos/Ventas' },
         { key: 'leads', name: 'Leads (Marketing)' },
         { key: 'clients', name: 'Clientes' },
         { key: 'expenses', name: 'Gastos' },

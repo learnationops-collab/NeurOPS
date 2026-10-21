@@ -1,5 +1,5 @@
 from app import db
-from app.models import User, Client, Appointment, Enrollment, Payment, SurveyAnswer, Program, PaymentMethod, FinancialSale
+from app.models import User, Client, Appointment, SurveyAnswer, Program, PaymentMethod, FinancialSale
 from datetime import datetime, timedelta
 import random
 
@@ -8,8 +8,6 @@ class AdminOperationService:
     def clear_business_data():
         try:
             db.session.query(SurveyAnswer).delete()
-            db.session.query(Payment).delete()
-            db.session.query(Enrollment).delete()
             db.session.query(Appointment).delete()
             db.session.query(Client).delete()
             db.session.commit()

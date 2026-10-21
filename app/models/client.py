@@ -47,7 +47,6 @@ class Client(ConPersona, db.Model):
     anuncio_ventas_id = db.Column(db.Integer, db.ForeignKey('ads.id'), nullable=True)
 
     # Relationships
-    enrollments = db.relationship('Enrollment', backref='client', lazy='dynamic', cascade="all, delete-orphan")
     appointments = db.relationship('Appointment', backref='client', lazy='dynamic', cascade="all, delete-orphan")
     survey_answers = db.relationship('SurveyAnswer', backref='client', lazy='dynamic', cascade="all, delete-orphan")
 
