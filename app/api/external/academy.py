@@ -3,6 +3,7 @@ from sqlalchemy import and_, func, or_
 
 from app import db
 from app.models import Client, FinancialSale, Person, SurveyAnswer
+from app.services import pagos_copia
 from app.decorators import require_academy_token
 from app.api.external import bp
 
@@ -272,7 +273,7 @@ def find_sales(identifier):
         from app.services import person_service
         email_norm = _normalize_email(ident)
         person = person_service.buscar(email=email_norm)
-        por_copia = and_(FinancialSale.person_uuid.is_(None), func.lower(FinancialSale.mail_cliente) == email_norm)
+        por_copia = and_(FinancialSale.person_uuid.is_(None), pagos_copia.MAIL_NORMALIZADO == email_norm)
         matches = FinancialSale.query.filter(
             or_(FinancialSale.person_uuid == person.uuid, por_copia) if person else por_copia) \
             .order_by(FinancialSale.date.asc()).all()
@@ -286,7 +287,7 @@ def find_sales(identifier):
                                                     Person.merged_into_uuid.is_(None))
     matches = FinancialSale.query.filter(or_(
         FinancialSale.person_uuid.in_(personas),
-        and_(FinancialSale.person_uuid.is_(None), func.lower(FinancialSale.nombre_cliente).like(term)))) \
+        and_(FinancialSale.person_uuid.is_(None), pagos_copia.NOMBRE_NORMALIZADO.like(term)))) \
         .order_by(FinancialSale.date.desc()).limit(MAX_SEARCH_MATCHES).all()
     return jsonify({"success": True, "match_type": "name", "sales": _sales_dicts(matches)}), 200
 
@@ -313,16 +314,17 @@ def patch_sale(sale_id):
             "error": "Nada para actualizar - campos válidos: nombre_cliente, mail_cliente, telefono, instagram"
         }), 400
 
+    # Sin persona, la corrección queda en la copia del pago; con persona, en la persona (abajo).
+    copia = {}
     if 'nombre_cliente' in changes and str(changes['nombre_cliente']).strip():
-        sale.nombre_cliente = str(changes['nombre_cliente']).strip()
-    if 'mail_cliente' in changes:
-        new_email = _normalize_email(changes['mail_cliente'])
-        if new_email:
-            sale.mail_cliente = new_email
+        copia['nombre'] = str(changes['nombre_cliente']).strip()
+    if 'mail_cliente' in changes and _normalize_email(changes['mail_cliente']):
+        copia['mail'] = _normalize_email(changes['mail_cliente'])
     if 'telefono' in changes:
-        sale.telefono = str(changes['telefono']).strip() or None
+        copia['telefono'] = str(changes['telefono']).strip() or None
     if 'instagram' in changes:
-        sale.instagram = str(changes['instagram']).strip().lstrip('@') or None
+        copia['instagram'] = str(changes['instagram']).strip().lstrip('@') or None
+    pagos_copia.escribir(sale, **copia)
     # Con persona, lo que se lee es la persona: la corrección va ahí (`modo: 'pago'` suma el mail
     # como su mail de pago sin cambiar el principal).
     try:

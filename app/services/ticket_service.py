@@ -189,8 +189,9 @@ def claves_de_cliente(client_id=None, email=None, instagram=None, nombre=None, p
 
 def claves_de_venta(venta):
     """Las claves de una fila de `FinancialSale`."""
-    return claves_de_cliente(venta.client_id, venta.mail_cliente, venta.instagram, venta.nombre_cliente,
-                             getattr(venta, 'person_uuid', None))
+    from app.services.pagos_copia import copia
+    c = copia(venta)
+    return claves_de_cliente(venta.client_id, c['mail'], c['instagram'], c['nombre'], getattr(venta, 'person_uuid', None))
 
 
 def clase_de_tipo(tipo):

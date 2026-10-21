@@ -19,6 +19,7 @@ from sqlalchemy.orm import joinedload
 
 from app import db
 from app.models import Appointment, FinancialSale, User
+from app.services import pagos_copia
 from app.services.closer_followup_service import CloserFollowUpService
 from app.services.user_time_service import hoy_del_usuario, limites_rango_utc, zona_del_usuario
 
@@ -326,15 +327,15 @@ class CloserAgendasService:
             for i in range(0, len(values), _IN_CHUNK):
                 yield values[i:i + _IN_CHUNK]
 
-        columnas = (FinancialSale.mail_cliente, FinancialSale.instagram, FinancialSale.client_id) + extra
+        columnas = (pagos_copia.MAIL, pagos_copia.INSTAGRAM, FinancialSale.client_id) + extra
         rows = []
         for lote in _chunks(emails):
             rows += db.session.query(*columnas).filter(
-                FinancialSale.person_uuid.is_(None), func.lower(FinancialSale.mail_cliente).in_(lote)).all()
+                FinancialSale.person_uuid.is_(None), pagos_copia.MAIL_NORMALIZADO.in_(lote)).all()
         for lote in _chunks(igs):
             rows += db.session.query(*columnas).filter(
                 FinancialSale.person_uuid.is_(None),
-                func.lower(func.replace(FinancialSale.instagram, '@', '')).in_(lote)).all()
+                pagos_copia.IG_NORMALIZADO.in_(lote)).all()
         # En las que tienen persona la copia no cuenta: viajan sin mail ni instagram, así no cruzan
         # con el contacto de otro cliente de la lista.
         for lote in _chunks(ids):

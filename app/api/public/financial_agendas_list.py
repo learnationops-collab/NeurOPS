@@ -4,6 +4,7 @@ from app.models import db, FinancialAgenda, User
 from datetime import datetime
 from sqlalchemy import or_, func
 from app.services.agenda_contacto_service import ig_limpio, mail_limpio
+from app.services import pagos_copia
 from . import bp
 from .financial_agendas_helpers import (
     _build_agenda_queries)
@@ -60,18 +61,19 @@ def get_financial_agendas():
     if emails or instagrams:
         sales_filters = []
         if instagrams:
-            sales_filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')).in_(list(instagrams)))
+            sales_filters.append(pagos_copia.IG_NORMALIZADO.in_(list(instagrams)))
         if emails:
-            sales_filters.append(func.lower(FinancialSale.mail_cliente).in_(list(emails)))
+            sales_filters.append(pagos_copia.MAIL_NORMALIZADO.in_(list(emails)))
         
         sales = FinancialSale.query.filter(FinancialSale.person_uuid.is_(None), or_(*sales_filters)).all()
         for s in sales:
-            if s.mail_cliente:
-                m = s.mail_cliente.strip().lower()
+            c = pagos_copia.copia(s)
+            if c['mail']:
+                m = c['mail'].strip().lower()
                 if m not in sales_by_email: sales_by_email[m] = []
                 sales_by_email[m].append(s)
-            if s.instagram:
-                ig = s.instagram.strip().replace('@', '').lower()
+            if c['instagram']:
+                ig = c['instagram'].strip().replace('@', '').lower()
                 if ig not in sales_by_ig: sales_by_ig[ig] = []
                 sales_by_ig[ig].append(s)
                 

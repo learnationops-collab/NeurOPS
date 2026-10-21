@@ -133,15 +133,17 @@ def relate_event_roadmap():
             sale = FinancialSale.query.get(event_id)
             if not sale:
                 return jsonify({"error": "Venta no encontrada"}), 404
-            sale.instagram = ig_norm
             # Relacionarla es decir de quién es: queda con la persona de ese instagram (comprador).
-            from app.services import person_service
+            # Sin persona de ese instagram, queda en la copia del pago (solo si el pago no tiene persona).
+            from app.services import person_service, pagos_copia
             persona = person_service.buscar(instagram=ig_norm)
             if persona is not None:
                 sale.person = persona
                 cliente = person_service.cliente_de(persona, crear=False)
                 if cliente is not None:
                     sale.client_id = cliente.id
+            else:
+                pagos_copia.escribir(sale, instagram=ig_norm)
 
             # Sincronizar en Sheets si aplica, con el contacto que se lee (el de la persona)
             if sale.marca_temporal:

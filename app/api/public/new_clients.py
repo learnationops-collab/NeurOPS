@@ -4,6 +4,7 @@ from app.models import FinancialSale, Client
 from app.api.public import bp
 from app.services import person_service
 from app.services.identity_service import normalize_email, normalize_ig
+from app.services.pagos_copia import copia
 from datetime import datetime
 from sqlalchemy import func, or_
 
@@ -67,17 +68,17 @@ def get_new_clients_dashboard():
     # La persona agrupa sus ventas (docs/plan_personas.md); el ig y el mail, solo en las que no la tienen.
     uf = UnionFind()
     for s in sales:
-        ig = normalize_ig(s.instagram)
-        email = normalize_email(s.mail_cliente)
-        if not s.person_uuid and ig and email:
+        c = copia(s)
+        ig, email = normalize_ig(c['instagram']), normalize_email(c['mail'])
+        if ig and email:
             uf.union(ig, email)
 
     # Organizar ventas por cliente consolidado
     leads = {}
     for s in sales:
-        ig = normalize_ig(s.instagram)
-        email = normalize_email(s.mail_cliente)
-        
+        c = copia(s)
+        ig, email = normalize_ig(c['instagram']), normalize_email(c['mail'])
+
         if s.person_uuid:
             key = f"persona_{s.person_uuid}"
         elif ig:
