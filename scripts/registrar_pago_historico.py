@@ -60,7 +60,7 @@ def registrar_pago_historico(client_id, program_code, tipo_pago_simple, monto, f
                               apply=False, force=False):
     app = create_app()
     with app.app_context():
-        from app.models import Client, FinancialSale, User
+        from app.models import Client, FinancialSale
         from app.services.sales_consistency_service import SalesConsistencyService
         from app.services.sheets_service import SheetsService
 
