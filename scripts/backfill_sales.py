@@ -133,8 +133,10 @@ def ejecutar(apply=False, rehacer=False):
     _crear_ventas(ventas, filas)
     colgados, sin_venta = _colgar_planes()
     db.session.commit()
-    print(f'\nAplicado: {len(ventas)} ventas creadas; cuotas del plan colgadas: {colgados}, sin venta: {sin_venta}.')
-    return {**numeros, 'planes_colgados': colgados, 'planes_sin_venta': sin_venta}
+    marcadas = sale_service.marcar_senas_sin_seguir()
+    print(f'\nAplicado: {len(ventas)} ventas creadas; cuotas del plan colgadas: {colgados}, sin venta: {sin_venta}; '
+          f'señas sin seguir para revisar: {marcadas}.')
+    return {**numeros, 'planes_colgados': colgados, 'planes_sin_venta': sin_venta, 'senas_para_revisar': marcadas}
 
 
 if __name__ == '__main__':
