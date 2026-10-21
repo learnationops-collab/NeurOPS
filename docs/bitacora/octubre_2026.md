@@ -436,3 +436,8 @@
   - `backfill_agreed_total.py` (modo prueba y `--apply`) completa el total en las ventas que ya existen cuando la persona tiene una sola venta 'new' activa; el resto queda en una lista para revisar.
   - Scripts de revisión del frente J: `corregir_comprador_pagador.py` (los pagos que quedaron con la persona de quien pagó; `--apply` lo decide Santiago) y `revisar_personas_contaminadas.py` (personas con un nombre que no es el suyo; solo lista).
   - Verificación: sin tests ni ejecución local (regla del proyecto); se valida con el deploy del servidor de prueba.
+
+- **20 de Octubre de 2026 (ventas: un único primer pago y la suscripción en la venta)** *([app/services/sales_grouping.py](../../app/services/sales_grouping.py), [app/models/sale.py](../../app/models/sale.py), [app/services/subscription_service.py](../../app/services/subscription_service.py), [migrations/versions/f6a2c8e4b1d3_sales_subscription_id.py](../../migrations/versions/f6a2c8e4b1d3_sales_subscription_id.py) [NEW/MODIFY])*:
+  - Cada venta tiene un único primer pago: completo, parcial o seña del mismo programa se suman a la venta abierta (si ya tenía su completo, queda para revisar). Solo renovación y upsell abren otra. En el servidor de prueba: 688 ventas, ninguna persona con dos ventas nuevas del mismo programa.
+  - `sales.subscription_id`: la venta guarda la suscripción que activó o extendió. La venta tiene producto, precio, plan y suscripción; `financial_sales` es el registro de sus pagos.
+  - Verificación: sin tests (regla del proyecto); medido en el servidor de prueba.
