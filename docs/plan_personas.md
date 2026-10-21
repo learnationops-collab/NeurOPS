@@ -385,6 +385,47 @@ es opcional (~4 archivos, ~20 líneas).
     (tabla de interacciones), y `Conversation` queda como cabecera.
   - Va con Agendas 2.0 y el retiro de ManyChat, después del pase.
 
+## Traspaso (21/10/2026): lo que queda, para la sesión que siga
+
+El código de la 2c está completo pero **nada corrió ni se subió**. Lo frenó la caída de Railway (sin SSH ni builds).
+Las decisiones del usuario están arriba, en "Decisiones del 21/10/2026".
+
+**Las ramas (todas locales):**
+- `personas/runbook-e2` (3e793a83): el runbook final del pase y sus scripts. Va **antes** que todo.
+- `personas/2c-integrada`: la 2c entera ya mergeada sobre develop 77a0c4c0. Incluye 2c-leads, 2c-parte3, 2c-pagos,
+  2c-agendas, 2c-manychat-lectores, 2c-espejo y los commits f6dc7e7f/aabe1424 de 2c-agendas-columnas.
+  - El merge con `runbook-e2` entra sin conflictos (probado).
+  - Revisión estática (AST): 0 imports rotos y ninguna referencia a lo borrado. **No se corrió ni la app ni los tests.**
+- Migraciones de la 2c, una sola head: `a7d3e9c1f4b2` (clients.total_amount y academy_*) → `b8e4f0d2a5c3`
+  (leads) → `c3f5a8d1e6b4` (enrollments y payments) → `d4a9e2c7b1f5` (copia de contacto de financial_agendas).
+
+**Ojo: el deploy corre `flask db upgrade` solo** (`releaseCommand`). Mergear la 2c a una rama que despliega es
+correr sus migraciones, y ninguna tiene vuelta atrás de datos.
+
+**El orden:**
+1. Push de `personas/runbook-e2` a `develop`. El usuario prueba las ventas de la ficha en el servidor de prueba
+   (`successful-curiosity`, "Servidor de prueba").
+2. El pase a producción con la tabla "Pase a producción" de arriba (pasos 1-12 con el 9b). Cada `--apply` lleva el
+   ok del usuario; el paso 12, el de Santiago. Los scripts del pase (vincular_personas, personas_de_agendas,
+   backfill_agreed_total, backfill_subscriptions y otros) **se borran en la 2c**: corren antes de mergearla. Lo mismo
+   `separar_personas_mezcladas`, que lee la copia de las agendas.
+3. Con producción estable: `personas/2c-integrada` → `develop`. El servidor de prueba borra las tablas viejas de su
+   base. Se prueba ahí (ficha, cobros, comisiones, agendas que entran por n8n, Datos › Ventas).
+4. `develop` → `main` **solo con el ok explícito del usuario** y un backup de producción antes
+   (`pg_dump -Fc`). Así se corrieron los ensayos; el dump del ensayo 2 está en el volumen del Postgres de prueba,
+   `/var/lib/postgresql/data/snap_antes_20261021_0224.dump`.
+
+**Después del pase:**
+- Lo de 2026 para revisar: 24 pagos con comprador y pagador distintos, 14 alumnos de la Academia sin persona,
+  Reynoso y el grupo B de fusiones.
+- `separar_personas_mezcladas`: solo los casos claros de 2026, revisados con el usuario.
+- La atribución por agenda y conversación, con Agendas 2.0 y el retiro de ManyChat (ver las decisiones).
+- La rama de la Academia y `ACADEMY_SUBSCRIPTIONS_PUSH`: sigue apagado.
+
+**Cómo se corre:** por `railway ssh --service "Servidor de prueba"` desde una carpeta vinculada con `railway link`.
+Mientras Railway estuvo caído, el usuario aprobó correr local contra la URL pública de la base de prueba. Eso fue
+una excepción de ese día, no la regla.
+
 ## Estado
 
 | Frente | Sesión / rama | Estado |
