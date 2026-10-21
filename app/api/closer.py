@@ -2467,6 +2467,8 @@ def update_client_total_amount(client_id):
 
     anterior = client.total_amount
     client.total_amount = nuevo_total
+    from app.services.sale_service import fijar_total
+    fijar_total(client, nuevo_total)  # y en su venta 'new' vigente (frente L)
 
     try:
         db.session.commit()

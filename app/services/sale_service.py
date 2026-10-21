@@ -161,6 +161,35 @@ def marcar_senas_sin_seguir():
     return len(marcadas)
 
 
+def venta_new_vigente(person_uuid, client_id, programa=None):
+    """La venta 'new' activa más reciente de esa persona (o, sin persona, de ese cliente), del programa
+    si se sabe; None si no tiene."""
+    if person_uuid:
+        suya = Sale.person_uuid == person_uuid
+    elif client_id:
+        suya = Sale.client_id == client_id
+    else:
+        return None
+    q = Sale.query.filter(suya, Sale.kind == 'new', Sale.status == 'active')
+    if programa:
+        q = q.filter(Sale.program_code == programa)
+    return q.order_by(Sale.sold_at.desc(), Sale.id.desc()).first()
+
+
+def fijar_total(client, total, programa=None, solo_si_falta=False):
+    """Doble escritura de `Client.total_amount` (frente L, docs/plan_personas.md): el mismo total va al
+    `agreed_total` de la venta 'new' vigente de su persona. Sin venta queda solo en el cliente, como
+    antes. `solo_si_falta` no pisa un total ya acordado (el precio de lista que se autoasigna). No hace
+    commit; devuelve la venta tocada o None."""
+    if client is None or total is None:
+        return None
+    venta = venta_new_vigente(client.person_uuid, client.id, programa)
+    if venta is None or (solo_si_falta and venta.agreed_total is not None):
+        return None
+    venta.agreed_total = float(total)
+    return venta
+
+
 def mantener(session):
     """El cuerpo del `before_flush`: nuevos, corregidos y borrados."""
     with session.no_autoflush:

@@ -190,16 +190,20 @@ class SheetsService:
                 # Se actualiza en cada pago donde venga un valor válido — es editable a
                 # propósito, no solo se fija en el primer pago. Si el cliente todavía no tiene
                 # ninguno guardado, se autoasigna el default del programa.
+                # El mismo total va también a la venta 'new' vigente (`sale_service.fijar_total`),
+                # después de guardar el pago, cuando ya tiene su venta.
+                total_declarado, total_por_defecto = None, False
                 if client and program_code:
                     precio_total_raw = payload.get('precio_total')
                     if precio_total_raw in (None, ''):
                         precio_total_raw = payload.get('monto') if tipo_simple == 'completo' else None
                     precio_total_val = SheetsService._parse_float(precio_total_raw)
                     if precio_total_val and precio_total_val > 0:
-                        client.total_amount = precio_total_val
+                        client.total_amount = total_declarado = precio_total_val
                     elif client.total_amount is None:
                         from app.services.sales_consistency_service import SalesConsistencyService
-                        client.total_amount = SalesConsistencyService.PROGRAM_DEFAULT_TOTALS.get(program_code, 0.0)
+                        client.total_amount = total_declarado = SalesConsistencyService.PROGRAM_DEFAULT_TOTALS.get(program_code, 0.0)
+                        total_por_defecto = True
 
                 sale = FinancialSale(
                     client_id=client.id if client else None,
@@ -233,6 +237,11 @@ class SheetsService:
                     sale.sale.agreed_total = SheetsService._parse_float(payload.get('precio_total')) or None
                     sale.sale.source = 'ficha'
                     db.session.commit()
+                # Una renovación o un upsell no cambian lo acordado en la venta original.
+                if total_declarado is not None and tipo_simple not in ('renovacion', 'upsell'):
+                    from app.services.sale_service import fijar_total
+                    if fijar_total(client, total_declarado, program_code, solo_si_falta=total_por_defecto):
+                        db.session.commit()
 
                 # Cada pago le extiende el acceso en la Academia y avisa al gestor del alumno (en un hilo).
                 from app.services.academy_payment_sync import notify_academy_of_payments

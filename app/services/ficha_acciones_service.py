@@ -873,6 +873,8 @@ def total_a_pagar(appt, datos, usuario):
 
     anterior = appt.client.total_amount
     appt.client.total_amount = nuevo
+    from app.services.sale_service import fijar_total
+    fijar_total(appt.client, nuevo)  # y en su venta 'new' vigente (frente L)
     db.session.commit()
 
     # Un registro financiero no se cambia en silencio: queda quien lo toco y desde que valor.
