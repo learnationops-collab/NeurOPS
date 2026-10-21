@@ -193,13 +193,14 @@ Reglas para todos los pasos:
 | 5 | `vincular_personas.py`, otra vez | prueba / `--apply` | Ensayo 2: 3 filas más | — |
 | 6 | `personas_de_agendas.py` | prueba / `--apply` | Ensayo 2: 79 personas nuevas, 1 agenda que ya tenía, 2 sin datos | — |
 | 7 | `migrar_conversaciones.py` | prueba / `--apply` | Ensayo 2: 15.397 personas nuevas, 16.506 conversaciones, 8 sin persona | Corta si hay un deploy en el medio: volver a correrlo, retoma |
-| 8 | `fusionar_lista.py grupoA.txt --mails-raros-secundarios` | prueba / `--apply` | Ensayo: los 31 grupos aprobados aparecen todos entre los candidatos (44 pares, 40 grupos; los 9 que sobran son los excluidos); 31 grupos, 32 personas de más, 26 con mails raros como secundarios | Ver abajo cómo se arma el archivo. Si valida con error (uuid inexistente o ya fusionado), no fusiona nada: corregir el archivo |
-| 9 | `corregir_comprador_pagador.py --hasta 2026-01-01` | prueba / `--apply` | Ensayo: 356 pagos, $156.807, 258 pares de personas. Sin tocar: 15 pagos de enero al 20/05/2026 ($8.328) y 9 desde el 20/05 ($1.805); dudosos 16 + 2; 0 en ventas de otra persona | Si «están en una venta de otra persona» da más de 0, es que `backfill_sales` ya corrió: parar (ver el orden) |
+| 8 | `fusionar_lista.py grupoA.txt --mails-raros-secundarios` | prueba / `--apply` | Ensayo 2: de los 31 grupos aprobados, 24 se saltean solos («Absorbe agendas ajenas»: la persona que se absorbería es otra gente con el nombre del comprador) y se fusionan 7 (7 personas de más, 2 mails raros como secundarios) | Si valida con error (uuid inexistente o ya fusionado), no fusiona nada: corregir el archivo. Los salteados no se tocan |
+| 8b | `fusionar_por_pago.py --salida porpago.txt --excluir excluidos.txt` y después `fusionar_lista.py porpago.txt --mails-raros-secundarios` | prueba / `--apply` (solo el segundo) | Ensayo 2: 7 grupos, 1 excluido (Javier Duarte Moreno / Juan Moreno), 0 con agendas ajenas; se fusionan 6 | `excluidos.txt` con los uuid de Javier/Juan de esa base. Se corre después del paso 8 |
+| 9 | `corregir_comprador_pagador.py --hasta 2026-01-01` | prueba / `--apply` | Ensayo 2: 356 pagos, $156.807, 258 pares de personas. Sin tocar: 15 pagos de enero al 20/05/2026 ($8.328) y 9 desde el 20/05 ($1.805); dudosos 16 + 2; 0 en ventas de otra persona. Deja ~270 ventas automáticas (al cambiar el `client_id`, `sale_service` reubica cada pago): el paso 10 con `--rehacer` las rehace | Si «están en una venta de otra persona» da más de 0, es que `backfill_sales` ya corrió: parar (ver el orden) |
 | 10 | `backfill_sales.py --apply --rehacer` | prueba / `--apply --rehacer` | Ensayo: 691 ventas (595 activas, 96 canceladas), 0 automáticas; 58 señas para revisar | `--rehacer` borra las ventas que armó `sale_service` en vivo y las vuelve a armar: es lo que se quiere |
 | 11 | `backfill_agreed_total.py` | prueba / `--apply` | Ensayo: 76 ventas con `agreed_total`; el resto en la lista para revisar | La lista no se aplica: se revisa con Santiago |
 | 12 | `backfill_subscriptions.py` | prueba; `--apply` **solo con el ok de Santiago** | 113 suscripciones | Consulta la API de la Academia una vez por alumno: tarda varios minutos y lo corta un deploy |
 
-Controles al final (solo lectura; ensayo: 944 pagos, 22.054 personas activas): `financial_sales` con 28 sin persona y 356 con `payer_person_uuid`; ningún
+Controles al final (solo lectura; ensayo 2: 944 pagos, 22.084 personas activas después del paso 9): `financial_sales` con 28 sin persona y 356 con `payer_person_uuid`; ningún
 pago completado sin `sale_id`; `sales` sin `source='auto'`.
 
 **El archivo del paso 8 se regenera sobre producción**, no se copia del servidor de prueba: los uuid de las
@@ -213,6 +214,12 @@ Quedan afuera:
 - Sebastian Paraban y Fernando Antonio Alcántara Morote (los datos de «Reynoso», que agenda por otros).
 
 Cada línea empieza con `?`, así queda la persona con pagos.
+
+**Personas mezcladas (pendiente, ensayo 2):** en producción hay clientes con el nombre y el teléfono de quien
+compró y el mail de quien agendó (el `booking_service` viejo pisaba el contacto al cruzar por mail), y la persona
+salió de ese cliente: tiene los pagos de uno y la agenda y el mail del otro. Son los 24 grupos del paso 8 que
+se saltean y ~350 de los compradores del paso 9 (ej. la persona «Eli Vest» con la agenda y el mail de Melbrum
+Agudelo). No se fusionan ni se renombran a mano; separarlas es un paso aparte, por definir.
 
 ## Inventario 2c (relevado el 20/10/2026, sobre develop 745c1303)
 

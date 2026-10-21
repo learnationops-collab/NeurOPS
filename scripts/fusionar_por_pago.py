@@ -30,6 +30,9 @@ from app.models import Client, FinancialSale, Person, PersonIdentity
 from app.services.client_dedup_service import _normalize_name
 from app.services.person_service import mismo_nombre, normalizar
 
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+import fusionar_lista as fl  # noqa: E402
+
 RECIENTES = datetime(2026, 5, 20)
 
 
@@ -111,7 +114,7 @@ def main(salida, excluir):
     if excluir:
         excluidos = {u.strip().lower() for linea in open(excluir, encoding='utf-8') for u in linea.split()
                      if not linea.startswith('#')}
-    lineas, afuera = [], []
+    lineas, afuera, con_ajenas = [], [], []
     for g in sorted(grupos.values(), key=lambda g: sorted(g)):
         suyos = list({v.id: v for par, vs in pagos.items() if par <= g for v in vs}.values())
         motivos = sorted({m for par, ms in regla.items() if par <= g for m in ms})
@@ -124,8 +127,18 @@ def main(salida, excluir):
         if g & excluidos:
             afuera.append(g)
             continue
+        # La misma protección que fusionar_lista: una persona que se absorbería con agendas de otra gente.
+        filas = {u: fl.filas_de(u) for u in g}
+        queda = fl.elegir_sobreviviente(sorted(g), filas)
+        ajenas = fl.agendas_ajenas([u for u in g if u != queda], queda)
+        if ajenas:
+            con_ajenas.append(g)
+            print('    absorbe agendas ajenas, no se fusiona: '
+                  + '; '.join(f'la agenda {a.id} de {n!r}' for a, n in ajenas))
+            continue
         lineas.append('? ' + ' '.join(sorted(g)))
-    print(f'\n{len(grupos)} grupos ({len(afuera)} excluidos), {sum(len(g) - 1 for g in grupos.values())} personas de más')
+    print(f'\n{len(grupos)} grupos ({len(afuera)} excluidos, {len(con_ajenas)} con agendas ajenas), '
+          f'{sum(len(g) - 1 for g in grupos.values())} personas de más')
     if salida:
         with open(salida, 'w', encoding='utf-8') as f:
             f.write('# fusionar_por_pago: personas duplicadas que un pago delata\n' + '\n'.join(lineas) + '\n')

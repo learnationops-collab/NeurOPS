@@ -5,6 +5,10 @@ El archivo tiene una línea por grupo, con los uuid separados por espacio. El pr
 si la línea empieza con `?`, queda el que tenga más pagos y, a igualdad, el que tenga ficha de cliente
 (después, más filas en total y el más antiguo). Las líneas vacías y las que empiezan con `#` se ignoran.
 
+Un grupo en el que alguna persona que se absorbería tiene agendas de otra persona (su `nombre_persona` no
+es compatible con el nombre de la que queda) se saltea y se lista como «absorbe agendas ajenas»: es una
+persona que quedó con el nombre del comprador pero es otra gente (ensayo general del 21/10/2026).
+
 Antes de fusionar se valida todo el archivo: cada uuid existe, no está ya fusionado, no se repite en
 dos grupos y cada grupo tiene al menos dos personas. Con un error no se fusiona ningún grupo.
 
@@ -29,8 +33,9 @@ else:
     sys.path.append(current_dir)
 
 from app import create_app, db
-from app.models import Person, PersonIdentity
+from app.models import FinancialAgenda, Person, PersonIdentity
 from app.services import person_service
+from app.services.person_service import mismo_nombre
 
 MOTIVO = 'fusión manual aprobada'
 # Lo que se informa que se mueve; `person_service.TABLAS` mueve todas.
@@ -54,6 +59,13 @@ def mails_raros(otros, queda):
     return [i for i in PersonIdentity.query.filter(PersonIdentity.person_uuid.in_(otros), PersonIdentity.kind == 'email',
                                                    PersonIdentity.is_primary.is_(True))
             if not mail_se_parece(i.value, nombre)]
+
+
+def agendas_ajenas(otros, queda):
+    """[(agenda, nombre)] de las agendas de `otros` que son de alguien con otro nombre que `queda`."""
+    nombre = db.session.get(Person, queda).full_name
+    return [(a, a.nombre_persona) for a in FinancialAgenda.query.filter(FinancialAgenda.person_uuid.in_(otros))
+            if a.nombre_persona and not mismo_nombre(a.nombre_persona, nombre)]
 
 
 def leer(ruta):
@@ -119,12 +131,16 @@ def main(ruta, apply=False, raros_secundarios=False):
         for e in errores:
             print(f'  {e}')
         return
-    plan = []
+    plan, salteados = [], []
     for n, elegir, uuids in grupos:
         uuids = list(dict.fromkeys(uuids))
         filas = {u: filas_de(u) for u in uuids}
         queda = elegir_sobreviviente(uuids, filas) if elegir else uuids[0]
         otros = [u for u in uuids if u != queda]
+        ajenas = agendas_ajenas(otros, queda)
+        if ajenas:
+            salteados.append((n, queda, ajenas))
+            continue
         raros = mails_raros(otros, queda) if raros_secundarios else []
         plan.append((queda, otros, raros))
         print(f'\n== línea {n}: queda {queda} ({"elegido por pagos y ficha" if elegir else "el primero"})')
@@ -147,6 +163,11 @@ def main(ruta, apply=False, raros_secundarios=False):
         if clientes > 1:
             print(f'  quedarían {clientes} clientes de la misma persona: se fusionan (ClientDedupService)')
 
+    if salteados:
+        print(f'\n== Absorbe agendas ajenas: {len(salteados)} grupos, no se fusionan')
+        for n, queda, ajenas in salteados:
+            print(f'  línea {n}: {db.session.get(Person, queda).full_name!r} absorbería '
+                  + '; '.join(f'la agenda {a.id} de {nombre!r} ({a.mail})' for a, nombre in ajenas))
     print(f'\n{len(plan)} grupos, {sum(len(o) for _, o, _ in plan)} personas de más'
           + (f', {sum(1 for *_, r in plan if r)} con mails raros como secundarios.' if raros_secundarios else '.'))
     if not apply:
