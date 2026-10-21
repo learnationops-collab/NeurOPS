@@ -260,12 +260,15 @@ def get_total_de_agendas():
     variantes = _mis_variantes()
     filas = db.session.query(FinancialAgenda).filter(
         FinancialAgenda.nombre.in_(variantes)).options(
-        load_only(FinancialAgenda.id, FinancialAgenda.instagram, FinancialAgenda.lead,
-                  FinancialAgenda.estado, FinancialAgenda.person_uuid)).all() if variantes else []
+        load_only(FinancialAgenda.id, FinancialAgenda.estado, FinancialAgenda.person_uuid)).all() if variantes else []
     filas = _filtrar_por_estado(filas, estado_filtro)
-    # Una persona es su uuid; la copia (instagram, nombre) solo en las agendas sin persona.
-    personas = {(f'p:{a.person_uuid}' if a.person_uuid else clave_de_persona(a.instagram, a.lead)) or f'agenda:{a.id}'
-                for a in filas}
+    # Una persona es su uuid; la copia (instagram, nombre) solo en las agendas sin persona, que la
+    # cargan aparte (son muy pocas).
+    personas = set()
+    for a in filas:
+        c = None if a.person_uuid else a.contacto()
+        personas.add((f'p:{a.person_uuid}' if a.person_uuid else clave_de_persona(c['instagram'], c['lead']))
+                     or f'agenda:{a.id}')
     return jsonify({'personas': len(personas), 'agendas': len(filas)}), 200
 
 
@@ -394,11 +397,12 @@ def _cliente_desde_agenda(agenda):
             logger.info(f"[SETTER AGENDAS] Cliente {client.id} de la persona de la agenda {agenda.id}")
             return client
 
+    c = agenda.contacto()  # sin persona: la copia de la agenda
     client = Client(
-        full_name=_limpio(agenda.lead) or 'Sin nombre',
-        email=_limpio(agenda.mail),
-        instagram=(_limpio(agenda.instagram) or '').lstrip('@') or None,
-        phone=_limpio(agenda.whatsapp),
+        full_name=_limpio(c['lead']) or 'Sin nombre',
+        email=_limpio(c['mail']),
+        instagram=(_limpio(c['instagram']) or '').lstrip('@') or None,
+        phone=_limpio(c['whatsapp']),
     )
     db.session.add(client)
     db.session.commit()

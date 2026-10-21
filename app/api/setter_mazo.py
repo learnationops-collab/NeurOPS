@@ -203,7 +203,11 @@ def actualizar_instagram_de_agenda(agenda_id):
 
     client = _cliente_de(agenda)
     # Corrige también a su persona, que es de donde sale lo que se muestra.
-    agenda_contacto_service.corregir(agenda, 'instagram', nuevo, current_user)
+    try:
+        agenda_contacto_service.corregir(agenda, 'instagram', nuevo, current_user)
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 409
     db.session.add(agenda)
     if client:
         client.instagram = nuevo

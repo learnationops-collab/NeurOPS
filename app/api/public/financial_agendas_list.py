@@ -78,8 +78,9 @@ def get_financial_agendas():
     def get_agenda_sales_info(agenda):
         ig_clean = mail_clean = None
         if not agenda.person_uuid:
-            ig_clean = ig_limpio(agenda.instagram)
-            mail_clean = mail_limpio(agenda.mail)
+            c = agenda.contacto()  # sin persona: la copia
+            ig_clean = ig_limpio(c['instagram'])
+            mail_clean = mail_limpio(c['mail'])
 
         sales_dict = {s.id: s for s in sales_by_person.get(agenda.person_uuid, ())}
         if ig_clean and ig_clean in sales_by_ig:

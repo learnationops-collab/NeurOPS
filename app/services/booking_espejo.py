@@ -1,6 +1,7 @@
 """Espejo entre la cita (`Appointment`) y la fila del Tablero de Agendas (`FinancialAgenda`).
 Mixin de `BookingService` (app/services/booking_service.py)."""
 from app.models import Appointment, User, Notification, db
+from app.services import agenda_contacto_service
 from datetime import datetime, timedelta
 import pytz
 
@@ -209,7 +210,6 @@ class BookingEspejoMixin:
         con el mismo cruce, sin pasar por el respaldo de «la agenda mas reciente del lead».
         """
         from app.models.financial import FinancialAgenda
-        from sqlalchemy import func
 
         if not client:
             return []
@@ -226,22 +226,18 @@ class BookingEspejoMixin:
 
         copia = filters = []
         if mail_clean:
-            filters.append(func.lower(FinancialAgenda.mail) == mail_clean)
+            filters.append(agenda_contacto_service.MAIL_NORMALIZADO == mail_clean)
         if ig_clean:
-            filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_clean)
+            filters.append(agenda_contacto_service.IG_NORMALIZADO == ig_clean)
         # El telefono como tercera señal, comparando solo digitos: el mail llega 'N/A' muy
         # seguido y el instagram a veces trae el nombre escrito en vez del handle, asi que
         # sin esto el espejo no reconocia la agenda que ya existia y creaba una segunda
         # fila para la MISMA reunion (28/09/2026: 67 pares asi desde julio).
         tel_cliente = ''.join(c for c in str(client.phone or '') if c.isdigit())
         if len(tel_cliente) >= 9:
-            columna_tel = FinancialAgenda.whatsapp
-            for sep in (' ', '-', '(', ')', '+', '.'):
-                columna_tel = func.replace(columna_tel, sep, '')
-            filters.append(columna_tel.like('%' + tel_cliente[-9:]))
-        from app.services.agenda_contacto_service import sin_persona
+            filters.append(agenda_contacto_service.whatsapp_solo_digitos().like('%' + tel_cliente[-9:]))
         return [c for c in (FinancialAgenda.person_uuid == client.person_uuid if client.person_uuid else None,
-                            sin_persona(*copia)) if c is not None]
+                            agenda_contacto_service.sin_persona(*copia)) if c is not None]
 
     @staticmethod
     def sync_appointment_to_financial_agenda(appt, cita_nueva=False):
@@ -399,6 +395,9 @@ class BookingEspejoMixin:
                 estado=mapped_state,
                 raw_data={"created_by_sync": True, "fuente": fuente}
             )
+            if not agenda.person_uuid:
+                # Cliente sin persona (Etapa 2c): se resuelve con sus datos, no con la copia de la agenda.
+                agenda_contacto_service.dar_persona(agenda, client.full_name, client.email, client.instagram, client.phone)
             db.session.add(agenda)
             recien_creada = True
         else:

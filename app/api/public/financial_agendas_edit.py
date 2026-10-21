@@ -226,6 +226,11 @@ def update_financial_agenda(agenda_id):
                 f"[SYNC ERROR] Agenda {agenda.id} editada pero no sincronizada a Appointment: {sync_err}")
 
         return jsonify({"message": "Agenda actualizada correctamente", "agenda": agenda.to_dict()}), 200
+    except ValueError as e:
+        # El dato corregido es inválido (422) o ya es de otra persona (409): no se guarda nada.
+        from app.services.persona_de_venta import DatoDeOtraPersona
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 409 if isinstance(e, DatoDeOtraPersona) else 422
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
@@ -268,64 +273,6 @@ def delete_financial_agenda(agenda_id):
         db.session.delete(agenda)
         db.session.commit()
         return jsonify({"message": "Agenda eliminada correctamente"}), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
-
-@bp.route('/public/financial-agendas/repair-db', methods=['POST'])
-def repair_financial_agendas_db():
-    # Corrige de forma selectiva registros históricos de agendas
-    setters_known = {
-        'elias', 'workshop', 'vsl', 'marketing', 'organico', 'orgánico',
-        'sin asignar', 'sin_asignar', 'facebook', 'instagram', 'youtube',
-        'tiktok', 'manychat', 'workshop manychat'
-    }
-    
-    try:
-        agendas = FinancialAgenda.query.all()
-        corrected_n8n = 0
-        restored_sheets = 0
-        
-        for agenda in agendas:
-            if agenda.raw_data and isinstance(agenda.raw_data, dict):
-                raw = agenda.raw_data
-                raw_lead = raw.get('lead')
-                raw_nombre = raw.get('nombre')
-                
-                lead_str = str(raw_lead).strip() if raw_lead else ""
-                nombre_str = str(raw_nombre).strip() if raw_nombre else ""
-                
-                orig_nombre = agenda.nombre
-                orig_lead = agenda.lead
-                
-                if lead_str.lower() in setters_known:
-                    agenda.nombre = lead_str
-                    agenda.lead = nombre_str
-                    if agenda.nombre != orig_nombre or agenda.lead != orig_lead:
-                        corrected_n8n += 1
-                elif nombre_str.lower() in setters_known:
-                    agenda.nombre = nombre_str
-                    agenda.lead = lead_str
-                    if agenda.nombre != orig_nombre or agenda.lead != orig_lead:
-                        restored_sheets += 1
-                elif 'entrevista' in lead_str.lower() or 'consultor' in lead_str.lower() or 'sesi' in lead_str.lower() or 'reagenda' in lead_str.lower() or 'referido' in lead_str.lower():
-                    agenda.nombre = nombre_str
-                    agenda.lead = lead_str
-                    if agenda.nombre != orig_nombre or agenda.lead != orig_lead:
-                        restored_sheets += 1
-                else:
-                    agenda.nombre = nombre_str if raw_nombre else None
-                    agenda.lead = lead_str if raw_lead else None
-                    if agenda.nombre != orig_nombre or agenda.lead != orig_lead:
-                        restored_sheets += 1
-
-        db.session.commit()
-        return jsonify({
-            "status": "success",
-            "message": "Reparación completada",
-            "corrected_n8n": corrected_n8n,
-            "restored_sheets": restored_sheets
-        }), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500

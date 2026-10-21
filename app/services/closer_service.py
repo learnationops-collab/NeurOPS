@@ -1250,6 +1250,7 @@ class CloserService:
                     try:
                         from app.models.financial import FinancialAgenda
                         new_fa = FinancialAgenda(
+                            person_uuid=client.person_uuid,
                             nombre=appt.origin or '2TH Call',
                             lead=client.full_name,
                             mail=client.email,
@@ -1260,6 +1261,10 @@ class CloserService:
                             date=new_dt,
                             fecha_meet=new_dt.isoformat()
                         )
+                        if not new_fa.person_uuid:
+                            from app.services import agenda_contacto_service
+                            agenda_contacto_service.dar_persona(new_fa, client.full_name, client.email,
+                                                                client.instagram, client.phone)
                         db.session.add(new_fa)
                         # Una segunda llamada es una agenda legitima: cae otro dia y la
                         # reconciliacion la deja en paz. Pero si el closer la agenda a la
