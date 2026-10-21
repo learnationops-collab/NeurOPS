@@ -5,7 +5,7 @@ from app import db
 class ClientCleanupService:
     """Arma la 'cola de limpieza diaria' del closer: un puñado de clientes cuyo registro de
     agendas/pagos tiene algo que revisar (secuencia de pago rota, llamada con oferta sin
-    seguimiento, fusión reciente, descuadre entre FinancialSale y Enrollment/Payment). No es
+    seguimiento, fusión reciente, pagos que no quedaron en ninguna venta). No es
     una alerta de que el closer hizo algo mal — la mayoría de estos huecos vienen de datos
     históricos previos a las validaciones agregadas en esta misma sesión."""
 
@@ -62,15 +62,22 @@ class ClientCleanupService:
 
     @staticmethod
     def _payment_mismatch(client_id):
-        from app.models import Enrollment, Payment, FinancialSale
+        """Pagos completados del cliente que no quedaron en ninguna venta (`FinancialSale.sale_id` vacío):
+        no cuentan para la deuda (`deuda_service`). Reemplaza al descuadre contra Enrollment/Payment
+        (Etapa 2c: el espejo ya no se escribe)."""
+        from app.models import Client, FinancialSale
+        from app.services.comercial_vocabulario import venta_completada
+        from app.services.sales_consistency_service import filtro_de_pagos
 
-        enrollments = Enrollment.query.filter_by(client_id=client_id).all()
-        for e in enrollments:
-            enrollment_total = sum(p.amount for p in Payment.query.filter_by(enrollment_id=e.id, status='completed').all())
-            sale_total = sum(s.monto or 0.0 for s in FinancialSale.query.filter_by(client_id=client_id).all())
-            if abs(enrollment_total - sale_total) > 1.0 and sale_total > 0:
-                return f"Descuadre: Enrollment/Payment registra ${enrollment_total:.2f} pero FinancialSale suma ${sale_total:.2f}"
-        return None
+        client = db.session.get(Client, client_id)
+        if client is None:
+            return None
+        sueltos = [v for v in FinancialSale.query.filter(filtro_de_pagos(client), FinancialSale.sale_id.is_(None))
+                   if venta_completada(v)]
+        if not sueltos:
+            return None
+        return (f"{len(sueltos)} pago(s) por ${sum(float(v.monto or 0) for v in sueltos):.2f} no quedaron en "
+                f"ninguna venta: no cuentan para la deuda")
 
     @staticmethod
     def get_cleanup_queue(closer_id, limit=10):
@@ -112,11 +119,11 @@ class ClientCleanupService:
                 'severity': 1
             })
 
-        # 4. Descuadre Enrollment/Payment vs FinancialSale
+        # 4. Pagos que no quedaron en ninguna venta
         for cid in client_ids:
             issue = ClientCleanupService._payment_mismatch(cid)
             if issue:
-                items.append({'client_id': cid, 'reason': 'Descuadre entre ventas y pagos registrados', 'detail': issue, 'severity': 2})
+                items.append({'client_id': cid, 'reason': 'Pagos sin venta', 'detail': issue, 'severity': 2})
 
         # Un cliente puede aparecer por más de un motivo: nos quedamos con el de mayor severidad
         by_client = {}
@@ -136,7 +143,7 @@ class ClientCleanupService:
 
     @staticmethod
     def get_client_full_history(client_id):
-        from app.models import Client, Appointment, FinancialSale, Enrollment, Payment
+        from app.models import Client, Appointment, FinancialSale, Sale
         from app.services.installment_service import InstallmentService
         from app.services.closer_followup_service import CloserFollowUpService
 
@@ -146,7 +153,14 @@ class ClientCleanupService:
 
         appointments = Appointment.query.filter_by(client_id=client_id).order_by(Appointment.start_time.desc()).all()
         sales = FinancialSale.query.filter_by(client_id=client_id).order_by(FinancialSale.date.desc()).all()
-        enrollments = Enrollment.query.filter_by(client_id=client_id).all()
+        # Las ventas de su persona (o, sin persona, del cliente), con sus pagos (Etapa 2c: antes las
+        # inscripciones de Enrollment/Payment).
+        ventas = (Sale.query.filter(Sale.person_uuid == client.person_uuid) if client.person_uuid
+                  else Sale.query.filter(Sale.client_id == client.id)).order_by(Sale.sold_at.asc()).all()
+        pagos_de = {}
+        for p in FinancialSale.query.filter(FinancialSale.sale_id.in_([v.id for v in ventas])).order_by(
+                FinancialSale.date.asc()) if ventas else ():
+            pagos_de.setdefault(p.sale_id, []).append(p)
         cuotas = InstallmentService.get_plan_by_client(client_id)
         # Código de programa (AL/RR/SI) resuelto desde la última venta real del cliente — lo
         # necesita el frontend para armar el "tipo_pago" ("RR - Cuota") al reportar el pago de
@@ -157,7 +171,9 @@ class ClientCleanupService:
         programa_code = CloserFollowUpService._client_program_code(client_id)
         deuda = CloserFollowUpService._client_debt(client_id)
         from app.services import subscription_service
-        from app.services.deuda_service import total_acordado
+        from app.services.closer_followup_service import PROGRAM_CODE_NAMES
+        from app.services.comercial_vocabulario import venta_completada
+        from app.services.deuda_service import total_acordado, total_de
         # El acceso a la Academia es la suscripción que vence más tarde (antes, `clients.academy_*`).
         suscripcion = next(iter(subscription_service.del_cliente(client_id)), None)
 
@@ -186,13 +202,17 @@ class ClientCleanupService:
                 'last_contact_outcome': getattr(a, 'last_contact_outcome', None)
             } for a in appointments],
             'financial_sales': [s.to_dict() for s in sales],
+            # Una por venta, con las mismas claves que tenían las inscripciones: `id` es el de la venta,
+            # `program_price` lo que acordó (`deuda_service.total_de`) y `payments` sus pagos.
             'enrollments': [{
-                'id': e.id, 'program': e.program.name if e.program else None,
-                'total_paid': e.total_paid, 'program_price': e.program.price if e.program else None,
-                'payments': [{'id': p.id, 'amount': p.amount, 'payment_type': p.payment_type, 'status': p.status, 'date': p.date.isoformat() if p.date else None}
-                             for p in Payment.query.filter_by(enrollment_id=e.id).all()]
-            } for e in enrollments],
-            # Plan de cuotas (InstallmentPlan) — distinto de Enrollment/Payment (sistema legado):
+                'id': v.id, 'program': PROGRAM_CODE_NAMES.get(v.program_code, v.program_code),
+                'total_paid': round(sum(float(p.monto or 0) for p in pagos_de.get(v.id, []) if venta_completada(p)), 2),
+                'program_price': total_de(v), 'kind': v.kind, 'status': v.status,
+                'payments': [{'id': p.id, 'amount': p.monto, 'payment_type': p.tipo_pago, 'status': p.estado,
+                              'date': p.date.isoformat() if p.date else None}
+                             for p in pagos_de.get(v.id, [])]
+            } for v in ventas],
+            # Plan de cuotas (InstallmentPlan) — distinto de las ventas:
             # es el cronograma real que arma el closer al declarar un Parcial. Las fechas de
             # vencimiento son editables desde el frontend vía PATCH /closer/installments/cuota/<id>.
             'installments': [c.to_dict() for c in cuotas]

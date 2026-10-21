@@ -1,9 +1,8 @@
 import logging
 import os
-from collections import namedtuple
 from datetime import date, datetime, time, timedelta
 from app import db
-from app.models import Appointment, Enrollment, Program, Payment, FinancialSale, User
+from app.models import Appointment, FinancialSale, User
 from app.services import baja_service, deuda_service
 from app.services.lead_cobro_service import resolver_etapa
 from sqlalchemy import or_, and_, func
@@ -59,35 +58,10 @@ def parse_reminder_time(valor):
 # sigue siendo una sola tanda.
 TANDA_IN = 900
 
-# La forma mínima de un Enrollment que necesita `_deuda_de` (`.id` y `.program`), para calcular
-# la deuda en lote sin cargar la entidad entera de cada inscripción.
-_Inscripcion = namedtuple('_Inscripcion', 'id program')
-
-
 def _en_tandas(ids, tam=TANDA_IN):
     ids = list(ids)
     for i in range(0, len(ids), tam):
         yield ids[i:i + tam]
-
-
-def _deuda_de(inscripciones, pagado):
-    """La cuenta de `_client_debt` para quien todavía no tiene ventas, aparte de cómo se leyeron los
-    datos: la usan la lectura cliente por cliente y la lectura en lote (`CarteraEnLote`), y así no
-    pueden dar distinto. El total negociado vive en la venta (`deuda_service`); acá queda el precio de
-    lista de cada inscripción.
-
-    `inscripciones` son las del cliente en el orden de la consulta original (id ascendente) y
-    `pagado` es {enrollment_id: suma de pagos completados}, en el orden del GROUP BY. El orden
-    importa aunque parezca que no: las sumas son de floats."""
-    if not inscripciones:
-        return 0.0
-    total_debt = 0.0
-    for e in inscripciones:
-        if not e.program:
-            continue
-        paid = pagado.get(e.id, 0.0)
-        total_debt += max(0.0, (e.program.price or 0.0) - paid)
-    return round(total_debt, 2)
 
 
 def _codigo_de_programa(tipo_pago):
@@ -296,10 +270,10 @@ class CloserFollowUpService:
     @staticmethod
     def _client_debt(client_id, lote=None):
         """Deuda real pendiente del cliente: por venta (`deuda_service`: lo acordado en cada venta
-        menos lo cobrado) cuando su persona tiene ventas; si no, por inscripciones a precio de lista.
+        menos lo cobrado). Sin ventas no debe nada (Etapa 2c: ya no hay respaldo por inscripciones).
 
         Con `lote` (una `CarteraEnLote` que ya incluye a este cliente) lee de ahí en vez de
-        consultar; la cuenta es la misma (`_deuda_de`).
+        consultar; la cuenta es la misma.
 
         Un cliente dado de baja (`baja_service`) no debe nada: lo que pagó sigue contando como
         cobrado, pero el saldo deja de existir. Se decide ACÁ para que todo lo que ya pregunta la
@@ -313,30 +287,20 @@ class CloserFollowUpService:
         client = Client.query.get(client_id)
         if baja_service.esta_de_baja(client):
             return 0.0
-        # Por venta (`deuda_service`) cuando la persona ya tiene ventas; si no, por inscripciones.
         por_venta = deuda_service.deuda_de_cliente(client)
-        if por_venta is not None:
-            return por_venta
-        enrollments = Enrollment.query.filter_by(client_id=client_id).all()
-        if not enrollments:
-            return 0.0
-        e_ids = [e.id for e in enrollments]
-        paid_rows = db.session.query(Payment.enrollment_id, func.sum(Payment.amount)) \
-            .filter(Payment.enrollment_id.in_(e_ids), Payment.status == 'completed') \
-            .group_by(Payment.enrollment_id).all()
-        paid_map = {eid: float(total or 0) for eid, total in paid_rows}
-        return _deuda_de(enrollments, paid_map)
+        return por_venta if por_venta is not None else 0.0
 
     @staticmethod
     def _client_enrollment_date(client_id, lote=None):
-        """Fecha de ingreso real del cliente al programa (Enrollment más reciente) — distinta
-        de la fecha de la cita/agenda. None si el cliente nunca se inscribió formalmente."""
+        """Fecha de ingreso real del cliente al programa: su primera venta 'new'
+        (`sale_service.fecha_de_ingreso`), distinta de la fecha de la cita/agenda. None si nunca compró."""
         if not client_id:
             return None
         if lote is not None:
             return lote.fecha_inscripcion.get(client_id)
-        enrollment = Enrollment.query.filter_by(client_id=client_id).order_by(Enrollment.enrollment_date.desc()).first()
-        return enrollment.enrollment_date if enrollment else None
+        from app.models import Client
+        from app.services.sale_service import fecha_de_ingreso
+        return fecha_de_ingreso(Client.query.get(client_id))
 
     @staticmethod
     def _ultima_venta_de(client):
@@ -1207,14 +1171,14 @@ class CarteraEnLote:
     Por qué existe
     --------------
     La tabla Clientes de Revisar arma un item por cliente comprado, y cada item consultaba de a
-    uno: el cliente, su última cita, sus inscripciones, la suma de sus pagos, su próxima cuota,
+    uno: el cliente, su última cita, su fecha de ingreso, su deuda, su próxima cuota,
     dos veces su última venta y el closer de la cita. Con 520 clientes eran 5.682 consultas y
     8,3 s en la base local; en Railway, con Postgres del otro lado de la red, bastante más. Es lo
     que reportó el usuario (29/sep/2026): "en clientes se tarda un rato, se queda pegado".
 
     Acá cada tabla se lee una vez (en tandas de `TANDA_IN` ids), y las piezas de
     `CloserFollowUpService` leen de este objeto cuando se lo pasan. Las cuentas NO se reescriben:
-    la deuda es la misma `_deuda_de`, la cuota el mismo armado del dict, el programa el mismo
+    la deuda es la misma `deuda_service`, la cuota el mismo armado del dict, el programa el mismo
     `_codigo_de_programa`. Lo único que cambia es de dónde salen los datos.
 
     Qué registro se elige donde el original hacía `.first()`
@@ -1247,8 +1211,6 @@ class CarteraEnLote:
         self.fecha_inscripcion = {}
         self.cuota_pendiente = {}
         self.programa = {}
-        self._inscripciones = {}
-        self._pagado = {}
         self._closers = {}
         self._por_venta = None
         if not ids:
@@ -1258,7 +1220,7 @@ class CarteraEnLote:
             for cliente in Client.query.filter(Client.id.in_(tanda)):
                 self.clientes[cliente.id] = cliente
         self._leer_citas(ids, cita_exacta)
-        self._leer_inscripciones(ids)
+        self._leer_ingresos()
         self._leer_cuotas(ids)
         self._leer_programas()
 
@@ -1292,35 +1254,10 @@ class CarteraEnLote:
             for usuario in User.query.filter(User.id.in_(tanda)):
                 self._closers[usuario.id] = usuario
 
-    def _leer_inscripciones(self, ids):
-        por_cliente = {}
-        for tanda in _en_tandas(ids):
-            filas = (db.session.query(Enrollment.client_id, Enrollment.id, Enrollment.program_id,
-                                      Enrollment.enrollment_date)
-                     .filter(Enrollment.client_id.in_(tanda))
-                     .order_by(Enrollment.client_id, Enrollment.enrollment_date.desc()))
-            for cid, eid, program_id, fecha in filas:
-                if cid not in por_cliente:
-                    # La primera por fecha descendente es la de `_client_enrollment_date`. Solo
-                    # importa la fecha, así que un empate da igual.
-                    self.fecha_inscripcion[cid] = fecha
-                por_cliente.setdefault(cid, []).append((eid, program_id))
-        if not por_cliente:
-            return
-
-        programas = {p.id: p for p in Program.query.all()}
-        pagado = {}
-        for tanda in _en_tandas(sorted(eid for lista in por_cliente.values() for eid, _ in lista)):
-            for eid, total in (db.session.query(Payment.enrollment_id, func.sum(Payment.amount))
-                               .filter(Payment.enrollment_id.in_(tanda), Payment.status == 'completed')
-                               .group_by(Payment.enrollment_id)):
-                pagado[eid] = float(total or 0)
-        for cid, lista in por_cliente.items():
-            # Por id: el orden en que `_client_debt` las lee (por el índice de client_id) y el
-            # del GROUP BY de sus pagos. Son sumas de floats, el orden no es decorativo.
-            lista.sort()
-            self._inscripciones[cid] = [_Inscripcion(eid, programas.get(pid)) for eid, pid in lista]
-            self._pagado[cid] = {eid: pagado[eid] for eid, _ in lista if eid in pagado}
+    def _leer_ingresos(self):
+        # La fecha de ingreso de cada cliente, de sus ventas 'new' (la de `_client_enrollment_date`).
+        from app.services.sale_service import fechas_de_ingreso
+        self.fecha_inscripcion = fechas_de_ingreso(self.clientes.values())
 
     def _leer_cuotas(self, ids):
         from app.models import InstallmentPlan
@@ -1393,9 +1330,7 @@ class CarteraEnLote:
             return 0.0
         if self._por_venta is None:
             self._por_venta = deuda_service.deudas(self.clientes.values())
-        if client_id in self._por_venta:
-            return self._por_venta[client_id]
-        return _deuda_de(self._inscripciones.get(client_id, []), self._pagado.get(client_id, {}))
+        return self._por_venta.get(client_id, 0.0)
 
     def closer_de(self, cita):
         """El User de la cita, ya leído. Una cita que no salió del lote (la ancla que crea

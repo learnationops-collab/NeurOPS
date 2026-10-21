@@ -108,10 +108,10 @@ class CloserDashboardService:
 
     @staticmethod
     def _pending_collections(closer_id, limit=15):
-        """Deuda por cobrar, **por cliente**: lo que cada cliente todavía debe de su(s)
-        inscripción(es) — precio del programa menos lo efectivamente pagado, la misma definición
-        que usa `CloserFollowUpService._client_debt` en el pool de "Llamadas cerradas" desde donde
-        el closer efectivamente cobra.
+        """Deuda por cobrar, **por cliente**: lo que cada cliente todavía debe de sus ventas
+        (`deuda_service`: lo acordado menos lo cobrado), la misma definición que usa
+        `CloserFollowUpService._client_debt` en el pool de "Llamadas cerradas" desde donde el closer
+        efectivamente cobra.
 
         Antes esto leía **solo** `InstallmentPlan` (el cronograma de cuotas), y en todo el sistema
         existen 22 planes: 196 de los 204 clientes con saldo nunca tuvieron uno armado, así que
@@ -130,68 +130,38 @@ class CloserDashboardService:
 
         Atribución: al **dueño actual de la agenda** del cliente (decisión del usuario), no a quien
         firmó la venta."""
-        from app.models import Enrollment, Payment
+        from app.models import Sale
+        from app.services import deuda_service
+        from app.services.baja_service import ids_de_baja
+        from app.services.closer_followup_service import PROGRAM_CODE_NAMES
 
         hoy = date.today()
         empty = {'total': 0.0, 'vencido': 0.0, 'por_vencer': 0.0, 'sin_plan': 0.0,
                  'count': 0, 'count_vencido': 0, 'count_sin_plan': 0}
 
         # 1. Deuda por cliente, la misma que la ficha y la cola de cobro: por venta (`deuda_service`:
-        # lo acordado en cada venta menos lo cobrado) cuando su persona tiene ventas; si no, por sus
-        # inscripciones a precio de lista. Una persona con varios clientes cuenta una vez (su cliente
-        # más viejo, como `person_service.cliente_de`).
-        from app.models import Sale
-        from app.services import deuda_service
-        pagado_por_enrollment = dict(
-            db.session.query(Payment.enrollment_id, func.sum(Payment.amount))
-            .filter(Payment.status == 'completed').group_by(Payment.enrollment_id).all()
-        )
-        # Un cliente dado de baja no debe nada (ver `baja_service`): lo que pagó sigue en el cash,
-        # pero su saldo no es plata por cobrar. Mismo criterio que `_client_debt`, de donde sale
-        # la cola de cobro: si acá se lo contara, el dashboard pediría cobrar a alguien que la
-        # cola ya no le muestra al closer.
-        from app.services.baja_service import ids_de_baja
+        # lo acordado en cada venta menos lo cobrado). Una persona con varios clientes cuenta una vez
+        # (su cliente más viejo, como `person_service.cliente_de`). Un cliente dado de baja no debe
+        # nada (`baja_service`), igual que en `_client_debt`.
         de_baja = ids_de_baja()
-        enrollments_por_cliente = {}
-        for e in Enrollment.query.all():
-            if not e.program or not e.client_id or e.client_id in de_baja:
-                continue
-            enrollments_por_cliente.setdefault(e.client_id, []).append(e)
-
-        from app.services.closer_followup_service import PROGRAM_CODE_NAMES
         ventas = Sale.query.filter(Sale.status == 'active').all()
         personas = {v.person_uuid for v in ventas if v.person_uuid}
         sueltos = {v.client_id for v in ventas if not v.person_uuid and v.client_id}
         cliente_de_persona = {}
-        for cid, puuid in db.session.query(Client.id, Client.person_uuid).filter(
-                Client.person_uuid.in_(personas)).order_by(Client.id) if personas else ():
-            cliente_de_persona.setdefault(puuid, cid)
+        if personas:
+            for cid, puuid in (db.session.query(Client.id, Client.person_uuid)
+                               .filter(Client.person_uuid.in_(personas)).order_by(Client.id)):
+                cliente_de_persona.setdefault(puuid, cid)
         con_ventas = (set(cliente_de_persona.values()) | sueltos) - de_baja
         por_venta = deuda_service.deudas(Client.query.filter(Client.id.in_(con_ventas)).all()) if con_ventas else {}
         programas_de_venta = {}
         for v in ventas:
             cid = cliente_de_persona.get(v.person_uuid) if v.person_uuid else v.client_id
-            if cid:
-                programas_de_venta.setdefault(cid, []).append(PROGRAM_CODE_NAMES.get(v.program_code, v.program_code or ''))
-        # Los clientes de una persona con ventas que no son su cliente principal no deben aparte.
-        de_personas_con_venta = {cid for (cid,) in db.session.query(Client.id).filter(Client.person_uuid.in_(personas))}             if personas else set()
+            if cid and v.program_code:
+                programas_de_venta.setdefault(cid, []).append(PROGRAM_CODE_NAMES.get(v.program_code, v.program_code))
 
-        deuda_por_cliente, programas_por_cliente = {}, {}
-        for client_id, deuda in por_venta.items():
-            if deuda > 0.01:
-                deuda_por_cliente[client_id] = deuda
-                programas_por_cliente[client_id] = [p for p in programas_de_venta.get(client_id, []) if p]
-        for client_id, enrollments in enrollments_por_cliente.items():
-            if client_id in por_venta or client_id in de_personas_con_venta:
-                continue
-            saldo = sum(
-                (e.program.price or 0) - float(pagado_por_enrollment.get(e.id) or 0)
-                for e in enrollments
-            )
-            if saldo <= 0.01:
-                continue
-            deuda_por_cliente[client_id] = saldo
-            programas_por_cliente[client_id] = [e.program.name for e in enrollments]
+        deuda_por_cliente = {cid: d for cid, d in por_venta.items() if d > 0.01}
+        programas_por_cliente = {cid: programas_de_venta.get(cid, []) for cid in deuda_por_cliente}
 
         if not deuda_por_cliente:
             return [], empty

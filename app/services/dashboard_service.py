@@ -1,15 +1,8 @@
 from app import db
-from app.models import CloserDailyStats, Payment, User, Expense, Enrollment, Program, PaymentMethod, Client, Appointment, Availability
+from app.models import Expense, Client, Appointment, Availability
 from app.services.base import BaseService
 from datetime import datetime, date, time, timedelta
-from sqlalchemy import or_, func, case
-from sqlalchemy.orm import joinedload
-
-# `Payment.payment_type` de una venta real: pago completo o primer pago de un split pay, en las dos
-# grafías que conviven en la tabla (las claves de `SheetsService.PAYMENT_TYPE_MAP` y las etiquetas
-# en castellano de las cargas manuales). La seña ('down_payment', 'Seña'), la cuota y la
-# renovación no abren una venta.
-PAYMENT_TYPES_DE_VENTA = ('full', 'first_payment', 'completo', 'pago completo', 'primer pago', 'parcial')
+from sqlalchemy import func
 
 
 class DashboardService(BaseService):
@@ -110,36 +103,20 @@ class DashboardService(BaseService):
             # Todo se agrupa en 'Agendas' ya que no usamos tipo
             update_bucket(stats['first_agendas'], status)
 
-        # Conteo de Ventas: inscripciones con un pago completo o un primer pago de split pay
-        # cobrado. Antes alcanzaba con CUALQUIER pago completado, y una inscripción que solo tenía
-        # la seña (`down_payment`) contaba como venta en el closing rate (30/09/2026: "el close
-        # rate no debe tomar señas").
-        sale_q = Enrollment.query.join(Payment).filter(
-            Enrollment.enrollment_date >= start_date,
-            Enrollment.enrollment_date <= end_date,
-            Payment.status == 'completed',
-            func.lower(func.trim(Payment.payment_type)).in_(PAYMENT_TYPES_DE_VENTA)
-        )
-        if closer_id:
-            sale_q = sale_q.filter(Enrollment.closer_id == closer_id)
-        
-        sales_count = sale_q.distinct().count()
-        
+        # Ventas y cash del período desde los cobros (`admin_cobros`, Etapa 2c; antes, las inscripciones):
+        # una venta es un cobro completo o parcial, las señas no (30/09/2026: "el close rate no debe
+        # tomar señas"); el cash, todos los cobros completados.
+        from app.services import admin_cobros
+        cobros = admin_cobros.cobros(start_date, end_date, [closer_id] if closer_id else None)
+        sales_count = sum(1 for v in cobros if admin_cobros.programa_de_cobro(v)[2])
+
         def safe_div(n, d): return (n / d * 100) if d > 0 else 0
         
         m = stats['total_agendas']
         total_shows = m['completed'] + m['no_show'] # Asistencias reales + faltas
         
         # Financials
-        cash_q = db.session.query(func.sum(Payment.amount)).join(Enrollment).filter(
-            Payment.date >= start_date, 
-            Payment.date <= end_date,
-            Payment.status == 'completed'
-        )
-        if closer_id:
-            cash_q = cash_q.filter(Enrollment.closer_id == closer_id)
-            
-        cash_collected = cash_q.scalar() or 0.0
+        cash_collected = sum(float(v.monto or 0) for v in cobros)
         average_ticket = (cash_collected / sales_count) if sales_count > 0 else 0.0
 
         kpis = {
@@ -273,9 +250,10 @@ class DashboardService(BaseService):
             end_date = today
         elif period == 'all_time':
             # Dynamic lookup for min/max
-            min_p = db.session.query(func.min(Payment.date)).scalar()
+            from app.services import admin_cobros
+            min_p = admin_cobros.primer_cobro()
             min_c = db.session.query(func.min(Client.created_at)).scalar()
-            max_p = db.session.query(func.max(Payment.date)).scalar()
+            max_p = admin_cobros.ultimo_cobro()
             
             # Start from earliest record found
             mins = [d.date() if isinstance(d, datetime) else d for d in [min_p, min_c] if d]
@@ -307,53 +285,26 @@ class DashboardService(BaseService):
         start_dt = datetime.combine(start_date, time.min)
         end_dt = datetime.combine(end_date, time.max)
         
-        # Base filters
-        payment_filters = [Payment.date >= start_dt, Payment.date <= end_dt, Payment.status == 'completed']
-        expense_filters = [Expense.date >= start_dt, Expense.date <= end_dt] # Expense usually doesn't have closer/program? Maybe Closer specific expenses?
-        client_filters = [Client.created_at >= start_dt, Client.created_at <= end_dt] # Filtering cohort by closer/program is tricky.
-        
-        # If filtering by closer/program, we need joins.
-        
-        # 1. Financials: Join Enrollment for IDs
+        # 1. Cobros y ventas del período (`admin_cobros`, Etapa 2c; antes Payment/Enrollment). Los gastos
+        # no tienen closer ni programa: con filtros no se cuentan, como antes.
+        from app.services import admin_cobros
+        from app.services.deuda_service import total_de
+        payments = admin_cobros.cobros(start_dt, end_dt, closer_ids, program_ids)
         if closer_ids or program_ids:
-            payment_q = Payment.query.join(Enrollment).filter(Payment.date >= start_dt, Payment.date <= end_dt, Payment.status == 'completed')
-            if closer_ids: payment_q = payment_q.filter(Enrollment.closer_id.in_(closer_ids))
-            if program_ids: payment_q = payment_q.filter(Enrollment.program_id.in_(program_ids))
-            payments = payment_q.all()
-            
-            # Gross Revenue & Enrollments count
-            enrollment_q = Enrollment.query.filter(Enrollment.enrollment_date >= start_dt, Enrollment.enrollment_date <= end_dt)
-            if closer_ids: enrollment_q = enrollment_q.filter(Enrollment.closer_id.in_(closer_ids))
-            if program_ids: enrollment_q = enrollment_q.filter(Enrollment.program_id.in_(program_ids))
-            enrollments = enrollment_q.all()
-
-            total_expenses = 0 
+            total_expenses = 0
         else:
-            payments = Payment.query.filter(*payment_filters).all()
             total_expenses = db.session.query(func.sum(Expense.amount)).filter(Expense.date >= start_dt, Expense.date <= end_dt).scalar() or 0
-            enrollments = Enrollment.query.filter(Enrollment.enrollment_date >= start_dt, Enrollment.enrollment_date <= end_dt).all()
+        ventas_del_periodo = admin_cobros.ventas_nuevas(start_dt, end_dt, closer_ids, program_ids)
 
-        income = sum(p.amount for p in payments)
-        total_comm = 0
-        closer_commission_total = 0
-        
-        # Calculate fees and commissions
-        for p in payments:
-            if p.method:
-                total_comm += (p.amount * (p.method.commission_percent / 100) + p.method.commission_fixed)
-            
-            # Closer Commissions (10% of net after payment fee)
-            if p.enrollment and p.enrollment.closer_id:
-                p_amount = p.amount
-                if p.method:
-                    p_fee = (p.amount * (p.method.commission_percent / 100)) + p.method.commission_fixed
-                    p_amount -= p_fee
-                closer_commission_total += (p_amount * 0.10)
+        income = sum(float(v.monto or 0) for v in payments)
+        # La fee de la pasarela y la comisión estimada de closers (10% del neto de los cobros con closer).
+        total_comm = sum(admin_cobros.fee(v) for v in payments)
+        closer_commission_total = admin_cobros.comision_estimada_closers(payments)
 
-        # Revenue Calculation (Potential)
-        gross_revenue_value = sum(e.program.price for e in enrollments if e.program)
-        enrollments_count = len(enrollments)
-        
+        # Revenue potencial: lo acordado en las ventas 'new' del período (o el de lista de su época).
+        gross_revenue_value = sum(t for t in (total_de(v) for v in ventas_del_periodo) if t is not None)
+        enrollments_count = len(ventas_del_periodo)
+
         # Total Expenses = Plain Expenses + Closer Commissions
         total_expenses_with_commissions = total_expenses + closer_commission_total
         net_profit = (income - total_comm) - total_expenses_with_commissions
@@ -366,56 +317,18 @@ class DashboardService(BaseService):
         # 3. Cohort & Debt Calculation
         active_leads_count = Client.query.filter(Client.created_at >= start_dt, Client.created_at <= end_dt).count()
         
-        # Debt Query with Filters
-        # Sin los clientes dados de baja: lo que pagaron sigue en el ingreso, su saldo ya no es
-        # plata pendiente (ver `app/services/baja_service.py`).
-        query_debt_bs = db.session.query(
-            func.sum(Program.price),
-            Enrollment.id
-        ).select_from(Client)\
-         .join(Enrollment, Client.enrollments)\
-         .join(Program, Enrollment.program)\
-         .filter(Client.created_at >= start_dt, Client.created_at <= end_dt,
-                 Client.baja_at.is_(None))
-         
-        if closer_ids: query_debt_bs = query_debt_bs.filter(Enrollment.closer_id.in_(closer_ids))
-        if program_ids: query_debt_bs = query_debt_bs.filter(Enrollment.program_id.in_(program_ids))
-            
-        relevant_enrollments = query_debt_bs.group_by(Enrollment.id).all() 
-        
-        period_debt = 0.0
-        if relevant_enrollments:
-            e_ids = [r[1] for r in relevant_enrollments]
-            prices = {r[1]: r[0] for r in relevant_enrollments}
-            paid_q = db.session.query(Payment.enrollment_id, func.sum(Payment.amount))\
-                .filter(Payment.enrollment_id.in_(e_ids), Payment.status == 'completed')\
-                .group_by(Payment.enrollment_id).all()
-            paid_map = {r[0]: r[1] for r in paid_q}
-            for eid, price in prices.items():
-                paid = paid_map.get(eid, 0)
-                period_debt += max(0, price - paid)
+        # La deuda de la cohorte: lo que todavía deben las ventas de los clientes creados en el período
+        # (de esos closers y programas). Sin los dados de baja: lo que pagaron sigue en el ingreso, su
+        # saldo ya no es plata pendiente (ver `app/services/baja_service.py`).
+        cohorte = Client.query.filter(Client.created_at >= start_dt, Client.created_at <= end_dt,
+                                      Client.baja_at.is_(None)).all()
+        ventas_cohorte = admin_cobros.filtrar_ventas(admin_cobros.ventas_de_clientes(cohorte), closer_ids, program_ids)
+        period_debt = sum(admin_cobros.saldos(ventas_cohorte).values())
 
-        # 4. Average Ticket (Ticket Promedio)
-        # Promedio de inscripciones: Tipos de pago "Completo" y "Primer pago"
-        # Calculation: Average amount of initial payments made in this period
-        # We need to filter payments by type
-        
-        initial_payments_q = Payment.query.filter(
-            Payment.date >= start_dt, 
-            Payment.date <= end_dt, 
-            Payment.status == 'completed',
-            Payment.payment_type.in_(['Completo', 'Pago Completo', 'Primer pago', 'Primer Pago'])
-        )
-        if closer_ids:
-            initial_payments_q = initial_payments_q.join(Enrollment).filter(Enrollment.closer_id.in_(closer_ids))
-        if program_ids:
-            # If not joined yet
-            if not closer_ids: initial_payments_q = initial_payments_q.join(Enrollment)
-            initial_payments_q = initial_payments_q.filter(Enrollment.program_id.in_(program_ids))
-            
-        initial_payments = initial_payments_q.all()
-        
-        total_initial_amount = sum(p.amount for p in initial_payments)
+        # 4. Ticket promedio: el monto medio de las ventas del período (pago completo o primer pago de un
+        # split pay), como antes con los pagos 'Completo' / 'Primer pago'.
+        initial_payments = [v for v in payments if admin_cobros.programa_de_cobro(v)[2]]
+        total_initial_amount = sum(float(v.monto or 0) for v in initial_payments)
         count_initial = len(initial_payments)
         average_ticket = (total_initial_amount / count_initial) if count_initial > 0 else 0.0
 
@@ -447,26 +360,15 @@ class DashboardService(BaseService):
         start_dt = datetime.combine(start_date, time.min)
         end_dt = datetime.combine(end_date, time.max)
         
-        # 1. Revenue, Agendas & Sales
-        # Revenue
-        rev_q = db.session.query(func.date(Payment.date), func.sum(Payment.amount)).join(Enrollment).filter(
-            Payment.date >= start_dt, Payment.date <= end_dt, Payment.status == 'completed'
-        )
-        if closer_ids: rev_q = rev_q.filter(Enrollment.closer_id.in_(closer_ids))
-        if program_ids: rev_q = rev_q.filter(Enrollment.program_id.in_(program_ids))
-        
-        daily_rev_q = rev_q.group_by(func.date(Payment.date)).all()
-        rev_dict = {str(r[0]): float(r[1]) for r in daily_rev_q}
-
-        # Sales
-        sales_q = db.session.query(func.date(Enrollment.enrollment_date), func.count(Enrollment.id)).join(Payment, Enrollment.payments).filter(
-            Enrollment.enrollment_date >= start_dt, Enrollment.enrollment_date <= end_dt, Payment.status == 'completed'
-        )
-        if closer_ids: sales_q = sales_q.filter(Enrollment.closer_id.in_(closer_ids))
-        if program_ids: sales_q = sales_q.filter(Enrollment.program_id.in_(program_ids))
-        
-        daily_sales_q = sales_q.group_by(func.date(Enrollment.enrollment_date)).all()
-        sales_dict = {str(r[0]): int(r[1]) for r in daily_sales_q}
+        # 1. Revenue, Agendas & Sales, desde los cobros (`admin_cobros`, Etapa 2c): el revenue de cada día son
+        # sus cobros completados y las ventas, los cobros completos o parciales.
+        from app.services import admin_cobros
+        rev_dict, sales_dict = {}, {}
+        for v in admin_cobros.cobros(start_dt, end_dt, closer_ids, program_ids):
+            dia = str(v.date.date())
+            rev_dict[dia] = rev_dict.get(dia, 0.0) + float(v.monto or 0)
+            if admin_cobros.programa_de_cobro(v)[2]:
+                sales_dict[dia] = sales_dict.get(dia, 0) + 1
 
         # Agendas
         appt_q = db.session.query(func.date(Appointment.start_time), func.count(Appointment.id)).filter(
@@ -511,14 +413,12 @@ class DashboardService(BaseService):
             
         stats_status = (mapped_labels, mapped_values)
         
-        # 3. Programs Breakdown
-        prog_q = db.session.query(Program.name, func.count(Enrollment.id)).join(Program).filter(
-            Enrollment.enrollment_date >= start_dt, Enrollment.enrollment_date <= end_dt
-        )
-        if closer_ids: prog_q = prog_q.filter(Enrollment.closer_id.in_(closer_ids))
-        if program_ids: prog_q = prog_q.filter(Enrollment.program_id.in_(program_ids))
-        
-        res_prog = prog_q.group_by(Program.name).all()
+        # 3. Programs Breakdown: las ventas 'new' del período por programa (antes, las inscripciones).
+        por_programa = {}
+        for venta in admin_cobros.ventas_nuevas(start_dt, end_dt, closer_ids, program_ids):
+            etiqueta = admin_cobros.etiqueta_de(venta.program_code)
+            por_programa[etiqueta] = por_programa.get(etiqueta, 0) + 1
+        res_prog = sorted(por_programa.items())
 
         return {
             'dates_labels': chart_dates, 
@@ -543,30 +443,20 @@ class DashboardService(BaseService):
         # Standard dashboard behavior: "Recent activity" usually means "Just now".
         # But "Top Debtors" DEFINITELY depends on the selected cohort period (as per original logic).
         
-        # 1. Top Debtors (Optimized)
-        # We need to find clients created in period with largest debts.
-        # Same subquery logic
-        sq_paid = db.session.query(
-            Payment.enrollment_id, 
-            func.sum(Payment.amount).label('total_paid')
-        ).filter(Payment.status == 'completed').group_by(Payment.enrollment_id).subquery()
-        
-        # Query: Client, Total Debt
-        # We group by Client
-        debt_col = func.sum(Program.price - func.coalesce(sq_paid.c.total_paid, 0)).label('total_debt')
-        
-        debtors_q = db.session.query(Client, debt_col)\
-            .join(Enrollment, Client.enrollments)\
-            .join(Program, Enrollment.program)\
-            .outerjoin(sq_paid, Enrollment.id == sq_paid.c.enrollment_id)\
-            .filter(Client.created_at >= start_dt, Client.created_at <= end_dt,
-                    Client.baja_at.is_(None))\
-            .group_by(Client.id)\
-            .having(debt_col > 0)\
-            .order_by(debt_col.desc())\
-            .limit(5)\
-            .all()
-            
+        # 1. Los que más deben entre los clientes creados en el período (sin los dados de baja): la deuda de
+        # sus ventas (`admin_cobros.saldos`, Etapa 2c; antes, precio del programa menos pagos del espejo).
+        from app.services import admin_cobros
+        cohorte = Client.query.filter(Client.created_at >= start_dt, Client.created_at <= end_dt,
+                                      Client.baja_at.is_(None)).all()
+        de_quien = admin_cobros.ventas_de_clientes(cohorte)
+        saldo_de = admin_cobros.saldos(de_quien.keys())
+        deuda_por_cliente = {}
+        for venta, cid in de_quien.items():
+            deuda_por_cliente[cid] = deuda_por_cliente.get(cid, 0.0) + saldo_de.get(venta.id, 0.0)
+        clientes = {c.id: c for c in cohorte}
+        debtors_q = [(clientes[cid], deuda) for cid, deuda in
+                     sorted(deuda_por_cliente.items(), key=lambda x: -x[1]) if deuda > 0][:5]
+
         top_debtors = [{
             'student': {"id": c.id, "full_name": c.full_name, "email": c.email}, 
             'debt': float(debt)
@@ -578,10 +468,14 @@ class DashboardService(BaseService):
         for c in rec_clients:
             activity.append({'type': 'lead', 'time': c.created_at.isoformat(), 'message': 'Nuevo Lead', 'sub': c.full_name or c.email})
         
-        rec_payments = Payment.query.join(Enrollment).join(Client).filter(Payment.status == 'completed').order_by(Payment.date.desc()).limit(5).all()
-        for p in rec_payments:
-            activity.append({'type': 'payment', 'time': p.date.isoformat(), 'message': f'Pago: ${p.amount:,.0f}', 'sub': p.enrollment.client.full_name or p.enrollment.client.email})
-            
+        from app.models import FinancialSale
+        from app.services.comercial_vocabulario import venta_completada
+        rec_payments = [v for v in FinancialSale.query.filter(FinancialSale.date.isnot(None))
+                        .order_by(FinancialSale.date.desc(), FinancialSale.id.desc()).limit(25) if venta_completada(v)][:5]
+        for v in rec_payments:
+            activity.append({'type': 'payment', 'time': v.date.isoformat(), 'message': f'Pago: ${float(v.monto or 0):,.0f}',
+                             'sub': admin_cobros.nombre_de_cobro(v)})
+
         activity.sort(key=lambda x: x['time'], reverse=True)
 
         # Sin este return la ruta de actividad respondía `null` y `/admin/dashboard` daba 500 al
@@ -594,31 +488,15 @@ class DashboardService(BaseService):
         start_dt = datetime.combine(start_date, time.min)
         end_dt = datetime.combine(end_date, time.max)
         
-        # Query Basic Data
-        # We need to join everything possibly needed: Enrollment -> Closer(User), Payment -> PaymentMethod
-        query = db.session.query(
-            Payment.amount,
-            Payment.date,
-            Program.name,
-            Payment.payment_type,
-            User.username, # Closer
-            PaymentMethod.name # Method
-        ).select_from(Payment).join(Enrollment).join(Program).outerjoin(User, Enrollment.closer_id == User.id)\
-         .outerjoin(PaymentMethod, Payment.payment_method_id == PaymentMethod.id)\
-         .filter(
-            Payment.date >= start_dt,
-            Payment.date <= end_dt,
-            Payment.status == 'completed'
-        )
-        
-        if closer_ids:
-            query = query.filter(Enrollment.closer_id.in_(closer_ids))
-        if program_ids:
-            query = query.filter(Enrollment.program_id.in_(program_ids))
-            
-        results = query.all()
-        print(f"DEBUG CHART: period={period} start={start_dt} end={end_dt} count={len(results)}")
-        
+        # Los cobros completados del período (`admin_cobros`, Etapa 2c; antes Payment/Enrollment): monto,
+        # fecha, programa, tipo de pago canónico (completo/parcial/seña/cuota...), closer y método.
+        from app.services import admin_cobros
+        results = []
+        for v in admin_cobros.cobros(start_dt, end_dt, closer_ids, program_ids):
+            codigo, tipo, _ = admin_cobros.programa_de_cobro(v)
+            results.append((float(v.monto or 0), v.date, admin_cobros.etiqueta_de(codigo), tipo,
+                            admin_cobros.closer_de(v.email_vendedor), v.metodo_pago))
+
         # Structure: Map[TimeLabel][StackKey] = Amount/Count
         data_map = {}
         stack_keys = set()

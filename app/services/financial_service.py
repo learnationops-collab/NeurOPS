@@ -1,5 +1,5 @@
 from app import db
-from app.models import Expense, RecurringExpense, Payment, PaymentMethod, Enrollment, User
+from app.models import Expense, RecurringExpense, User
 from app.services.base import BaseService
 from datetime import datetime, time, timedelta, date
 
@@ -38,39 +38,19 @@ class FinancialService(BaseService):
         # 2. Query Recurring Expenses (Configuration)
         recurring_expenses = RecurringExpense.query.all()
 
-        # 3. Financial Logic
-        period_payments = Payment.query.options(db.joinedload(Payment.enrollment)).filter(
-            Payment.date >= start_dt,
-            Payment.date <= end_dt,
-            Payment.status == 'completed'
-        ).all()
-        
-        # New Definitions
-        total_payments = 0
-        total_commission = 0
-        closer_commission_total = 0
-        
-        for p in period_payments:
-            total_payments += p.amount
-            if p.method:
-                comm = (p.amount * (p.method.commission_percent / 100)) + p.method.commission_fixed
-                total_commission += comm
-            
-            # Closer Commissions Calculation
-            if p.enrollment and p.enrollment.closer_id:
-                p_amount = p.amount
-                if p.method:
-                    p_fee = (p.amount * (p.method.commission_percent / 100)) + p.method.commission_fixed
-                    p_amount -= p_fee
-                closer_commission_total += (p_amount * 0.10)
+        # 3. Cobros y ventas del período (`admin_cobros`, Etapa 2c): el cash son los cobros completados
+        # (`FinancialSale`), la fee la de su pasarela y la comisión de closers una estimación del 10% del
+        # neto; el «revenue potencial», lo acordado en las ventas 'new' del período (`Sale`).
+        from app.services import admin_cobros
+        from app.services.deuda_service import total_de
+        period_payments = admin_cobros.cobros(start_dt, end_dt)
+        total_payments = sum(float(v.monto or 0) for v in period_payments)
+        total_commission = sum(admin_cobros.fee(v) for v in period_payments)
+        closer_commission_total = admin_cobros.comision_estimada_closers(period_payments)
 
-        # Potential Revenue (Enrollments in period)
-        period_enrollments = Enrollment.query.filter(
-            Enrollment.enrollment_date >= start_dt,
-            Enrollment.enrollment_date <= end_dt
-        ).all()
-        gross_revenue = sum(e.program.price for e in period_enrollments if e.program)
-        enrollments_count = len(period_enrollments)
+        period_sales = admin_cobros.ventas_nuevas(start_dt, end_dt)
+        gross_revenue = sum(t for t in (total_de(s) for s in period_sales) if t is not None)
+        enrollments_count = len(period_sales)
 
         cash_collected = total_payments - total_commission
         

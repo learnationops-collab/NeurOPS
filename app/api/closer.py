@@ -3,11 +3,11 @@ import json
 import pytz
 from flask_login import login_required, current_user
 from app.services.closer_service import CloserService
-from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, Enrollment, WeeklyAvailability, Event, Client, Payment, ClientComment, SurveyAnswer, SurveyQuestion, CommentNotification, FeatureToggle, Comment, Notification
+from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, WeeklyAvailability, Event, Client, ClientComment, SurveyAnswer, SurveyQuestion, CommentNotification, FeatureToggle, Comment, Notification
 from app.decorators import role_required
 from app.services.closer_agendas_service import contar_no_show_y_canceladas
 from datetime import date, timedelta, datetime
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 
 bp = Blueprint('closer_api', __name__)
 
@@ -84,6 +84,7 @@ def get_dashboard():
         "sales_today": []
     }
     
+    ventas = _ventas_de([appt.client for appt, _ in data.get('upcoming_agendas', [])])
     for appt, seq in data.get('upcoming_agendas', []):
         serialized['agendas_today'].append({
             "id": appt.id,
@@ -94,8 +95,8 @@ def get_dashboard():
             "seq_num": seq,
             "client_id": appt.client_id,
             "person_uuid": appt.client.person_uuid if appt.client else None,
-            "sales_count": appt.client.enrollments.count() if appt.client else 0,
-            "has_sale": (appt.client.enrollments.count() > 0) if appt.client else False,
+            "sales_count": ventas.get(appt.client_id, 0),
+            "has_sale": ventas.get(appt.client_id, 0) > 0,
             "result": appt.result if (appt.result and appt.result.strip().lower() not in ('show up', 'no show', 'cerrada', 'cerrado', '2th call', '2da call', 'follow up', 'show_up', 'no_show', 'cerrado/a')) else "Pendiente",
             "closer_result": appt.closer_result or "Pendiente",
             "is_rescheduled": appt.is_rescheduled
@@ -465,7 +466,8 @@ def get_all_agendas():
         query = query.filter(Appointment.start_time < end_dt)
 
     pagination = query.order_by(Appointment.start_time.desc()).paginate(page=page, per_page=50)
-    
+    ventas = _ventas_de([a.client for a in pagination.items])
+
     return jsonify({
         "data": [{
             "id": a.id, 
@@ -479,8 +481,8 @@ def get_all_agendas():
             "created_at": a.created_at.isoformat() if a.created_at else None,
             "client_id": a.client_id,
             "person_uuid": a.client.person_uuid if a.client else None,
-            "sales_count": a.client.enrollments.count() if a.client else 0,
-            "has_sale": (a.client.enrollments.count() > 0) if a.client else False
+            "sales_count": ventas.get(a.client_id, 0),
+            "has_sale": ventas.get(a.client_id, 0) > 0
         } for a in pagination.items],
         "total": pagination.total, "pages": pagination.pages
     }), 200
@@ -522,62 +524,12 @@ def get_all_sales():
     program_filter = request.args.get('program')
     payment_filter = request.args.get('payment_method')
 
-    query = Enrollment.query.filter_by(closer_id=current_user.id)
-
-    # Joins for filtering
-    from app.models import Program, Payment, PaymentMethod
-    query = query.join(Client).join(Program).outerjoin(Payment).outerjoin(PaymentMethod, Payment.payment_method_id == PaymentMethod.id)
-
-    # Search
-    if search:
-        query = query.filter(
-            (Client.full_name.ilike(f'%{search}%')) | 
-            (Client.email.ilike(f'%{search}%'))
-        )
-    
-    # Date Range (Enrollment Date)
-    if start_date:
-        query = query.filter(Enrollment.enrollment_date >= datetime.strptime(start_date, '%Y-%m-%d'))
-    if end_date:
-        end_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)
-        query = query.filter(Enrollment.enrollment_date < end_dt)
-
-    # Program Filter
-    if program_filter:
-        programs = program_filter.split(',')
-        if programs:
-            query = query.filter(Program.name.in_(programs))
-
-    # Payment Method Filter
-    if payment_filter:
-        methods = payment_filter.split(',')
-        if methods:
-            query = query.filter(PaymentMethod.name.in_(methods))
-
-    pagination = query.order_by(Enrollment.enrollment_date.desc()).paginate(page=page, per_page=50)
-    
-    data = []
-    for s in pagination.items:
-        # Get payment info (assuming single payment for simplicity or aggregate)
-        # s.payments is dynamic, so use order_by
-        last_payment = s.payments.order_by(Payment.id.desc()).first()
-        method_name = last_payment.payment_method.name if last_payment and last_payment.payment_method else "N/A"
-        amount = last_payment.amount if last_payment else (s.program.price if s.program else 0.0)
-
-        data.append({
-            "id": s.id, 
-            "student_name": s.client.full_name or s.client.email if s.client else "Unknown", 
-            "program_name": s.program.name if s.program else "Unknown", 
-            "amount": amount,
-            "payment_method": method_name,
-            "status": last_payment.status if last_payment else ("completed" if s.total_paid >= (s.program.price if s.program else 0) else "pending"),
-            "date": s.enrollment_date.isoformat()
-        })
-
-    return jsonify({
-        "data": data,
-        "total": pagination.total, "pages": pagination.pages
-    }), 200
+    # Las ventas del closer desde `Sale` (Etapa 2c): la forma de la respuesta es la de siempre.
+    from app.services import closer_ventas_service
+    return jsonify(closer_ventas_service.listar(
+        current_user, page=page, search=search, start_date=start_date, end_date=end_date,
+        programas=program_filter.split(',') if program_filter else None,
+        metodos=payment_filter.split(',') if payment_filter else None)), 200
 
 @bp.route('/weekly-availability', methods=['GET', 'POST'])
 @login_required
@@ -610,32 +562,18 @@ def get_lead_payment_status(id):
         return jsonify({"message": "Forbidden"}), 403
     return jsonify(CloserService.get_lead_payment_status(id)), 200
 
-@bp.route('/enrollments/<int:id>', methods=['GET', 'DELETE'])
+@bp.route('/ventas/<int:id>', methods=['GET'])
 @login_required
-def get_or_delete_enrollment(id):
+def get_venta(id):
+    """El detalle de una venta (`Sale`) para SaleDetailModal: cliente, programa, pagos, agendas, formulario,
+    deuda y suscripción (`closer_ventas_service.detalle`)."""
     if current_user.role not in ['closer', 'admin', 'setter']:
         return jsonify({"message": "Forbidden"}), 403
-    if request.method == 'DELETE':
-        CloserService.delete_enrollment(id)
-        return jsonify({"message": "Venta eliminada"}), 200
-    return jsonify(CloserService.get_enrollment_details(id)), 200
-
-@bp.route('/enrollments/<int:id>/payments', methods=['POST'])
-@login_required
-def add_payment(id):
-    if current_user.role not in ['closer', 'admin', 'setter']:
-        return jsonify({"message": "Forbidden"}), 403
-    data = request.get_json() or {}
-    CloserService.add_payment(id, data)
-    return jsonify({"message": "Pago añadido"}), 201
-
-@bp.route('/payments/<int:id>', methods=['DELETE'])
-@login_required
-def delete_payment(id):
-    if current_user.role not in ['closer', 'admin', 'setter']:
-        return jsonify({"message": "Forbidden"}), 403
-    CloserService.delete_payment(id)
-    return jsonify({"message": "Pago eliminado"}), 200
+    from app.services import closer_ventas_service
+    detalle = closer_ventas_service.detalle(id)
+    if detalle is None:
+        return jsonify({"message": "Venta no encontrada"}), 404
+    return jsonify(detalle), 200
 
 @bp.route('/sale-metadata', methods=['GET'])
 @login_required
@@ -1128,35 +1066,8 @@ def add_lead_comment(id):
         "created_at": comment.created_at.isoformat()
     }}), 201
 
-# Payment Management for Closers
-@bp.route('/enrollments/<int:enrollment_id>/payments', methods=['POST'])
-@login_required
-def add_enrollment_payment(enrollment_id):
-    if current_user.role not in ['closer', 'admin', 'operator']:
-        return jsonify({"message": "Forbidden"}), 403
-    
-    data = request.get_json()
-    try:
-        from app.services.closer_service import CloserService
-        payment = CloserService.add_payment(enrollment_id, data)
-        return jsonify({"message": "Pago registrado", "id": payment.id}), 201
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@bp.route('/payments/<int:payment_id>', methods=['PUT'])
-@login_required
-def update_payment(payment_id):
-    if current_user.role not in ['admin', 'closer', 'operator']:
-        return jsonify({"error": "Unauthorized"}), 403
-    
-    data = request.get_json()
-    try:
-        from app.services.closer_service import CloserService
-        CloserService.update_payment(payment_id, data)
-        return jsonify({"message": "Pago actualizado"}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+# Los pagos del sistema viejo de inscripciones (Enrollment/Payment) ya no se cargan ni se corrigen desde
+# acá (Etapa 2c): un pago se carga o se corrige en la ficha, sobre la venta.
 def _get_closer_pipeline_stages():
     from app.models import Pipeline, PipelineStage
     pipeline = Pipeline.query.filter_by(name='Closer Kanban').first()
@@ -1196,6 +1107,7 @@ def get_kanban_data():
     appointments = query.all()
     print(f"DEBUG: Found {len(appointments)} appointments for Kanban")
     
+    ventas = _ventas_de([a.client for a in appointments])
     # Group appointments by stage
     board = {stage: [] for stage in stages}
     # Fallback stage is the first one
@@ -1213,8 +1125,8 @@ def get_kanban_data():
             "linked_call": a.linked_call,
             "client_id": a.client_id,
             "person_uuid": a.client.person_uuid if a.client else None,
-            "sales_count": a.client.enrollments.count() if a.client else 0,
-            "has_sale": (a.client.enrollments.count() > 0) if a.client else False
+            "sales_count": ventas.get(a.client_id, 0),
+            "has_sale": ventas.get(a.client_id, 0) > 0
         })
     
     return jsonify({
@@ -1333,11 +1245,20 @@ def get_client_details(client_id):
 
 
 def _latest_enrollment_date(client_id):
-    """Fecha de ingreso real al programa (Enrollment más reciente) de un cliente, o None."""
+    """Fecha de ingreso al programa de un cliente: su venta 'new' más vieja (`sale_service.fecha_de_ingreso`),
+    o None."""
     if not client_id:
         return None
-    enrollment = Enrollment.query.filter_by(client_id=client_id).order_by(Enrollment.enrollment_date.desc()).first()
-    return enrollment.enrollment_date.isoformat() if enrollment and enrollment.enrollment_date else None
+    from app.services.sale_service import fecha_de_ingreso
+    fecha = fecha_de_ingreso(db.session.get(Client, client_id))
+    return fecha.isoformat() if fecha else None
+
+
+def _ventas_de(clientes):
+    """{client_id: cuántas ventas tiene su persona} para el «✓ N cierres» de las listas de agendas
+    (`closer_ventas_service.cantidades`; antes, sus inscripciones)."""
+    from app.services.closer_ventas_service import cantidades
+    return cantidades(clientes)
 
 
 def _normalize_phone_digits(phone):
@@ -1525,8 +1446,8 @@ def _format_appointment_for_deck(a, recover_form=False):
         "followup_reminder_enabled": bool(getattr(a, 'followup_reminder_enabled', False)),
         "followup_reminder_time": getattr(a, 'followup_reminder_time', None),
         "examen": a.examen or "",
-        # Fecha de ingreso real al programa (Enrollment más reciente) — distinta de start_time
-        # (que es la fecha de la cita/agenda). Solo existe si el cliente ya se inscribió.
+        # Fecha de ingreso al programa (su primera venta 'new') — distinta de start_time
+        # (que es la fecha de la cita/agenda). Solo existe si el cliente ya compró.
         "enrollment_date": _latest_enrollment_date(a.client_id),
         # Closer dueño actual del lead, para el selector de "Reasignar a otro closer" en el modal.
         "closer_id": a.closer_id,
@@ -2406,54 +2327,6 @@ def update_closer_sale(sale_id):
     }), 200
 
 
-@bp.route('/payments/<int:payment_id>', methods=['PATCH'])
-@login_required
-def update_closer_payment(payment_id):
-    """Corrección de un pago ya cargado (Payment, el sistema de inscripciones) desde el historial
-    del cliente. Igual que con las ventas: se edita, no se borra. Al cambiar el monto se
-    recalcula el total pagado de la inscripción, que es lo que alimenta la deuda del cliente."""
-    if current_user.role not in ['closer', 'admin']:
-        return jsonify({"message": "Forbidden"}), 403
-
-    from app.models import Payment, Enrollment
-    payment = Payment.query.get_or_404(payment_id)
-    data = request.get_json() or {}
-
-    if 'amount' in data:
-        try:
-            payment.amount = float(data['amount'] or 0)
-        except (TypeError, ValueError):
-            return jsonify({"error": "'amount' tiene que ser un número"}), 400
-    if 'payment_type' in data:
-        payment.payment_type = (data['payment_type'] or '').strip()
-    if 'status' in data:
-        payment.status = (data['status'] or '').strip() or 'completed'
-    if 'date' in data and data['date']:
-        try:
-            payment.date = datetime.fromisoformat(str(data['date']).replace('Z', ''))
-        except ValueError:
-            return jsonify({"error": "Fecha inválida"}), 400
-
-    # `Enrollment.total_paid` es una propiedad calculada sobre los pagos, no una columna: no se
-    # asigna, se recalcula sola al leerla después del commit.
-    enrollment = Enrollment.query.get(payment.enrollment_id) if payment.enrollment_id else None
-
-    try:
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": f"Error al guardar el pago: {str(e)}"}), 500
-
-    return jsonify({
-        "message": "Pago actualizado",
-        "payment": {
-            'id': payment.id, 'amount': payment.amount, 'payment_type': payment.payment_type,
-            'status': payment.status, 'date': payment.date.isoformat() if payment.date else None
-        },
-        "enrollment_total_paid": enrollment.total_paid if enrollment else None
-    }), 200
-
-
 @bp.route('/clients/<int:client_id>/total-amount', methods=['PATCH'])
 @login_required
 def update_client_total_amount(client_id):
@@ -2957,6 +2830,10 @@ def get_leads_audit():
         Appointment.start_time < end
     ).all()
     client_ids = sorted({a.client_id for a in appts_in_month})
+    from app.models import FinancialSale, User
+    from app.services.comercial_vocabulario import venta_completada
+    from app.services.sales_consistency_service import filtro_de_pagos
+    identificadores = {e.lower() for e in CloserService._resolve_sale_identifiers(User.query.get(closer_id)) if e}
 
     leads = []
     for client_id in client_ids:
@@ -2966,18 +2843,18 @@ def get_leads_audit():
 
         appts = Appointment.query.filter_by(closer_id=closer_id, client_id=client_id).order_by(Appointment.start_time.asc()).all()
 
-        enrollments = Enrollment.query.filter_by(closer_id=closer_id, client_id=client_id).all()
-        payments = []
-        for e in enrollments:
-            for p in e.payments.order_by(Payment.date.asc()).all():
-                payments.append({
-                    "id": p.id,
-                    "enrollment_id": e.id,
-                    "amount": p.amount,
-                    "date": p.date.isoformat() if p.date else None,
-                    "payment_type": p.payment_type,
-                    "status": p.status
-                })
+        # Sus pagos (`FinancialSale`, los de su persona) que vendió este closer; antes, los `Payment` de
+        # sus inscripciones. Se editan con PUT /closer/sales/<id>.
+        payments = [{
+            "id": p.id,
+            "enrollment_id": p.sale_id,
+            "amount": float(p.monto or 0),
+            "date": p.date.isoformat() if p.date else None,
+            "payment_type": p.tipo_pago,
+            "status": 'completed' if venta_completada(p) else ((p.estado or '').strip().lower() or 'pending'),
+        } for p in FinancialSale.query.filter(filtro_de_pagos(client),
+                                               func.lower(func.trim(FinancialSale.email_vendedor)).in_(identificadores or {''}))
+            .order_by(FinancialSale.date.asc()).all()]
 
         leads.append({
             "client_id": client.id,

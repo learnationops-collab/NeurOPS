@@ -85,7 +85,8 @@ const AppointmentRow = ({ appt, onSaved }) => {
     );
 };
 
-// Fila de un pago: monto/fecha/estado editables reutilizando PUT /closer/payments/<id>.
+// Fila de un pago (`FinancialSale`): monto/fecha/estado editables con PUT /closer/sales/<id>.
+const ESTADO_DE = { completed: 'Completada', pending: 'Pendiente', failed: 'Fallida' };
 const PaymentRow = ({ payment, onSaved }) => {
     const [editing, setEditing] = useState(false);
     const [amount, setAmount] = useState(payment.amount ?? 0);
@@ -96,9 +97,9 @@ const PaymentRow = ({ payment, onSaved }) => {
     const handleSave = async () => {
         setSaving(true);
         try {
-            await api.put(`/closer/payments/${payment.id}`, {
-                amount: Number(amount),
-                status,
+            await api.put(`/closer/sales/${payment.id}`, {
+                monto: Number(amount),
+                estado: ESTADO_DE[status] || status,
                 date: dateStr ? new Date(dateStr).toISOString() : undefined
             });
             toast.success('Pago actualizado');
