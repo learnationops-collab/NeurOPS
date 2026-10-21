@@ -10,7 +10,7 @@ else:
     sys.path.append(current_dir)
 
 from app import create_app, db
-from app.models import User, CloserAlias, FinancialAgenda, Appointment, Enrollment
+from app.models import User, CloserAlias, FinancialAgenda, Appointment
 
 def normalizar_closers():
     app = create_app()
@@ -139,12 +139,8 @@ def normalizar_closers():
                     {Appointment.closer_id: marlon_closer.id},
                     synchronize_session=False
                 )
-                enr_reassigned = Enrollment.query.filter(Enrollment.closer_id.in_(legacy_ids)).update(
-                    {Enrollment.closer_id: marlon_closer.id},
-                    synchronize_session=False
-                )
                 db.session.commit()
-                print(f"Reasignación legacy para Marlon Closer: {appts_reassigned} citas y {enr_reassigned} inscripciones consolidadas.")
+                print(f"Reasignación legacy para Marlon Closer: {appts_reassigned} citas consolidadas.")
 
         print("--- Normalización finalizada con éxito ---")
 

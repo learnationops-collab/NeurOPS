@@ -546,7 +546,6 @@ def get_lead_profile(id):
             "phone": client.phone,
             "instagram": client.instagram
         },
-        "enrollments": [{"id": e.id, "program": e.program.name, "date": e.enrollment_date.isoformat(), "closer": e.closer_rel.username if e.closer_rel else None} for e in client.enrollments],
         "appointments": [{"id": a.id, "start_time": a.start_time.isoformat(), "status": a.result or "Agendada", "closer": a.closer.username if a.closer else None, "origin": a.origin} for a in client.appointments]
     }
     return jsonify(profile_data), 200
