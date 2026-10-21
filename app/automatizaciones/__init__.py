@@ -17,6 +17,3 @@ def registrar(app):
     from app.automatizaciones import api_campanas  # noqa: F401  (sus rutas se cuelgan de `bp`)
 
     app.register_blueprint(bp, url_prefix='/api/inbox')
-    # TEMPORAL (21/10/2026): diagnóstico sin sesión mientras Railway tiene el SSH caído. Solo GET.
-    from app.automatizaciones.diagnostico import bp as diagnostico_bp
-    app.register_blueprint(diagnostico_bp, url_prefix='/api/diagnostico-inbox')
