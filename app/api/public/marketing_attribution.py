@@ -26,6 +26,11 @@ def _sumar_instagram(person, ig, donde):
     person_service.anotar(person, [('instagram', valor)], 'atribucion')
 
 
+def _nombre_del_lead(agenda):
+    """El de su persona; sin persona, el de la copia según el formato de la hoja (`nombre_persona`)."""
+    return agenda.contacto()['lead'] if agenda.person_uuid else agenda.nombre_persona
+
+
 # ============================================================
 # ATRIBUCIÓN MANUAL (Sin Anuncio: UnattributedLeadsPage)
 # ============================================================
@@ -397,7 +402,7 @@ def force_manual_attribution_agenda():
     ).first() or conversaciones_service.lead_de_persona(agenda.person_uuid)
 
     if not matched_lead:
-        cliente_nombre = agenda.contacto()['lead'] or 'Desconocido'  # `nombre` es la fuente, no el lead
+        cliente_nombre = _nombre_del_lead(agenda) or 'Desconocido'
         matched_lead = ManychatLead(
             manychat_id=f"manual_agenda_{agenda.id}_{uuid.uuid4().hex[:6]}",
             name=cliente_nombre,
@@ -432,7 +437,7 @@ def force_manual_attribution_agenda():
         db.func.lower(db.func.replace(Client.instagram, '@', '')) == ig_normalizado
     ).first()
     
-    lead_nombre = agenda.contacto()['lead']
+    lead_nombre = _nombre_del_lead(agenda)
     if not client_match and lead_nombre:
         client_match = Client.query.filter(
             db.func.lower(Client.full_name) == lead_nombre.strip().lower()
