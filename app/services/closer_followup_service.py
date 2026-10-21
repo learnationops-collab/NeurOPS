@@ -4,7 +4,7 @@ from collections import namedtuple
 from datetime import date, datetime, time, timedelta
 from app import db
 from app.models import Appointment, Enrollment, Program, Payment, FinancialSale, User
-from app.services import baja_service
+from app.services import baja_service, deuda_service
 from app.services.lead_cobro_service import resolver_etapa
 from sqlalchemy import or_, and_, func
 
@@ -323,6 +323,10 @@ class CloserFollowUpService:
         client = Client.query.get(client_id)
         if baja_service.esta_de_baja(client):
             return 0.0
+        # Por venta (`deuda_service`) cuando la persona ya tiene ventas; si no, por inscripciones.
+        por_venta = deuda_service.deuda_de_cliente(client)
+        if por_venta is not None:
+            return por_venta
         enrollments = Enrollment.query.filter_by(client_id=client_id).all()
         if not enrollments:
             return 0.0
@@ -1256,6 +1260,7 @@ class CarteraEnLote:
         self._inscripciones = {}
         self._pagado = {}
         self._closers = {}
+        self._por_venta = None
         if not ids:
             return
 
@@ -1396,6 +1401,10 @@ class CarteraEnLote:
         # Misma regla que `_client_debt` sin lote: de baja, no debe nada.
         if baja_service.esta_de_baja(cliente):
             return 0.0
+        if self._por_venta is None:
+            self._por_venta = deuda_service.deudas(self.clientes.values())
+        if client_id in self._por_venta:
+            return self._por_venta[client_id]
         return _deuda_de(cliente.total_amount if cliente else None,
                          self._inscripciones.get(client_id, []), self._pagado.get(client_id, {}))
 
