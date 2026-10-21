@@ -176,6 +176,34 @@ def venta_new_vigente(person_uuid, client_id, programa=None):
     return q.order_by(Sale.sold_at.desc(), Sale.id.desc()).first()
 
 
+def fechas_de_ingreso(clientes):
+    """{client_id: fecha} de ingreso al programa de cada cliente: la venta 'new' más vieja de su persona
+    (o, sin persona, del cliente), `min(Sale.sold_at)` (Etapa 2c; antes la inscripción, `Enrollment`).
+    Los que no tienen ninguna venta 'new' no aparecen."""
+    clientes = [c for c in clientes if c is not None]
+    personas = {c.person_uuid for c in clientes if c.person_uuid}
+    sueltos = {c.id for c in clientes if not c.person_uuid}
+    por_persona, por_cliente = {}, {}
+    for i, grupo in enumerate((sorted(personas), sorted(sueltos))):
+        columna = Sale.person_uuid if i == 0 else Sale.client_id
+        destino = por_persona if i == 0 else por_cliente
+        for k in range(0, len(grupo), 500):
+            for clave, fecha in (db.session.query(columna, db.func.min(Sale.sold_at))
+                                 .filter(columna.in_(grupo[k:k + 500]), Sale.kind == 'new').group_by(columna)):
+                destino[clave] = fecha
+    salida = {}
+    for c in clientes:
+        fecha = por_persona.get(c.person_uuid) if c.person_uuid else por_cliente.get(c.id)
+        if fecha is not None:
+            salida[c.id] = fecha
+    return salida
+
+
+def fecha_de_ingreso(client):
+    """La fecha de ingreso de un cliente (`fechas_de_ingreso`), o None."""
+    return fechas_de_ingreso([client]).get(client.id) if client else None
+
+
 def fijar_total(client, total, programa=None, solo_si_falta=False):
     """El total acordado (frente L, docs/plan_personas.md; antes `Client.total_amount`): va al
     `agreed_total` de la venta 'new' vigente de su persona. Sin venta no se guarda en ningún lado
