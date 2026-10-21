@@ -1,6 +1,6 @@
 from flask import request, jsonify
 from app import db
-from app.models import Client, Appointment, SurveyAnswer, SurveyQuestion, ClientComment, User, Enrollment, Program
+from app.models import Client, Appointment, SurveyAnswer, SurveyQuestion, ClientComment, User
 from app.models.financial import FinancialSale, FinancialAgenda
 from app.models.marketing import ManychatLead, LeadAnswer
 from app.services.identity_service import normalize_ig
