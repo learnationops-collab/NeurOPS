@@ -482,6 +482,12 @@ def get_financial_agendas():
     
     sales_by_email = {}
     sales_by_ig = {}
+    # Los pagos de la persona de cada agenda (docs/plan_personas.md), además del cruce por texto.
+    sales_by_person = {}
+    personas = sorted({a.person_uuid for a in all_agendas if a.person_uuid})
+    for i in range(0, len(personas), 500):
+        for s in FinancialSale.query.filter(FinancialSale.person_uuid.in_(personas[i:i + 500])).all():
+            sales_by_person.setdefault(s.person_uuid, []).append(s)
     if emails or instagrams:
         sales_filters = []
         if instagrams:
@@ -504,7 +510,7 @@ def get_financial_agendas():
         ig_clean = agenda.instagram.strip().replace('@', '').lower() if agenda.instagram and agenda.instagram.lower() not in ('n/a', '') else None
         mail_clean = agenda.mail.strip().lower() if agenda.mail and agenda.mail.lower() not in ('n/a', '') else None
         
-        sales_dict = {}
+        sales_dict = {s.id: s for s in sales_by_person.get(agenda.person_uuid, ())}
         if ig_clean and ig_clean in sales_by_ig:
             for s in sales_by_ig[ig_clean]:
                 sales_dict[s.id] = s
@@ -774,7 +780,10 @@ def update_financial_agenda(agenda_id):
                     client_filters.append(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean)
                 if whatsapp_clean and len(whatsapp_clean) >= 8:
                     client_filters.append(Client.phone.like(f"%{whatsapp_clean[-8:]}%"))
-                client = Client.query.filter(or_(*client_filters)).first() if client_filters else None
+                from app.services.booking_service import BookingService
+                # El cliente de la persona de la agenda; el cruce por texto, de respaldo.
+                client = (BookingService.cliente_de_agenda(agenda)
+                          or (Client.query.filter(or_(*client_filters)).first() if client_filters else None))
                 if client:
                     email_actual = (client.email or '').lower()
                     es_placeholder = (not email_actual or 'no-email-' in email_actual or 'no_email_' in email_actual
@@ -840,14 +849,15 @@ def update_financial_agenda(agenda_id):
                 if mail_clean:
                     client_filters.append(func.lower(Client.email) == mail_clean)
                     
-                client = None
-                if client_filters:
+                from app.services.booking_service import BookingService
+                client = BookingService.cliente_de_agenda(agenda)
+                if client is None and client_filters:
                     client = Client.query.filter(or_(*client_filters)).first()
-                    
+
                 if client and agenda.date:
                     start_of_day = datetime.combine(agenda.date.date(), datetime.min.time())
                     end_of_day = datetime.combine(agenda.date.date(), datetime.max.time())
-                    
+
                     appt = Appointment.query.filter(
                         Appointment.client_id == client.id,
                         Appointment.start_time >= start_of_day,
@@ -881,10 +891,10 @@ def update_financial_agenda(agenda_id):
             if mail_clean:
                 client_filters.append(func.lower(Client.email) == mail_clean)
                 
-            client = None
-            if client_filters:
+            client = BookingService.cliente_de_agenda(agenda)
+            if client is None and client_filters:
                 client = Client.query.filter(or_(*client_filters)).first()
-                
+
             if client and agenda.date:
                 start_of_day = datetime.combine(agenda.date.date(), datetime.min.time())
                 end_of_day = datetime.combine(agenda.date.date(), datetime.max.time())
@@ -954,8 +964,9 @@ def delete_financial_agenda(agenda_id):
             # Buscar el cliente asociado
             ig_norm = agenda.instagram.strip().lstrip('@').lower() if agenda.instagram else None
             email_norm = agenda.mail.strip().lower() if agenda.mail else None
-            client = None
-            if ig_norm or email_norm:
+            from app.services.booking_service import BookingService
+            client = BookingService.cliente_de_agenda(agenda)
+            if client is None and (ig_norm or email_norm):
                 client_filters = []
                 if ig_norm: client_filters.append(db.func.lower(db.func.replace(Client.instagram, '@', '')) == ig_norm)
                 if email_norm: client_filters.append(db.func.lower(Client.email) == email_norm)
@@ -1276,14 +1287,14 @@ def get_unread_no_agenda_triage():
         ig_clean = c.instagram.strip().replace('@', '').lower() if c.instagram and c.instagram.lower() not in ('n/a', '') else None
         mail_clean = c.email.strip().lower() if c.email and c.email.lower() not in ('n/a', '') else None
         
-        agenda_exists = False
+        agenda_exists = bool(c.person_uuid) and FinancialAgenda.query.filter_by(person_uuid=c.person_uuid).first() is not None
         client_filters = []
         if ig_clean:
             client_filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_clean)
         if mail_clean:
             client_filters.append(func.lower(FinancialAgenda.mail) == mail_clean)
             
-        if client_filters:
+        if client_filters and not agenda_exists:
             agenda_exists = FinancialAgenda.query.filter(or_(*client_filters)).first() is not None
             
         if not agenda_exists:
@@ -1323,16 +1334,19 @@ def _resolve_closer_results(agendas):
         if mail_clean:
             agendas_por_mail.setdefault(mail_clean, []).append(a)
 
+    # Primero el cliente de la persona de cada agenda (docs/plan_personas.md); el texto, de respaldo
+    # para las agendas sin persona o cuya persona todavía no tiene cliente.
+    from app.services.booking_service import BookingService
+    por_persona = BookingService.clientes_por_persona(agendas)
+    cliente_por_agenda = {a.id: por_persona[a.person_uuid] for a in agendas if a.person_uuid in por_persona}
+
     client_filters = []
     if agendas_por_ig:
         client_filters.append(func.lower(func.replace(Client.instagram, '@', '')).in_(list(agendas_por_ig.keys())))
     if agendas_por_mail:
         client_filters.append(func.lower(Client.email).in_(list(agendas_por_mail.keys())))
-    if not client_filters:
-        return resultados
 
-    cliente_por_agenda = {}
-    for c in Client.query.filter(or_(*client_filters)).all():
+    for c in (Client.query.filter(or_(*client_filters)).all() if client_filters else []):
         c_ig = c.instagram.strip().replace('@', '').lower() if c.instagram else None
         c_mail = c.email.strip().lower() if c.email else None
         for a in agendas_por_ig.get(c_ig, []) + agendas_por_mail.get(c_mail, []):

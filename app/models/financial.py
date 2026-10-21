@@ -78,6 +78,8 @@ class FinancialSale(ConPersona, db.Model):
             "id": self.id,
             "client_id": self.client_id,
             "person_uuid": self.person_uuid,
+            # Quien pagó, solo si no es quien compró (NULL = pagó el mismo).
+            "payer_person_uuid": self.payer_person_uuid,
             "email_vendedor": self.email_vendedor,
             "nombre_cliente": contacto['nombre_cliente'],
             "telefono": contacto['telefono'],

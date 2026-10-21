@@ -206,8 +206,9 @@ def _identidad(venta, mov):
     registrado a otro cliente del sistema) o None. Ver `RANGO`."""
     if mov['email'] and mov['email'] in venta['emails']:
         return 'correo'
-    # La misma persona (docs/plan_personas.md) vale lo que el mismo cliente.
-    if mov['persona'] and mov['persona'] == venta['persona']:
+    # La misma persona (docs/plan_personas.md) vale lo que el mismo cliente: la que compró o, si
+    # pagó otra, la que pagó.
+    if mov['persona'] and mov['persona'] in (venta['persona'], venta.get('pagador')):
         return 'cliente'
     if mov['cliente_id'] and mov['cliente_id'] == venta['cliente_id']:
         return 'cliente'
@@ -256,18 +257,19 @@ def _ventas(inicio, fin):
     for v in ventas:
         cliente = clientes.get(clientes_por_venta.get(v.id))
         personas[v.id] = v.person_uuid or (cliente.person_uuid if cliente else None)
-    correos_de = _correos_de_personas(set(personas.values()))
+    correos_de = _correos_de_personas(set(personas.values()) | {v.payer_person_uuid for v in ventas})
     datos = []
     for v in ventas:
         cliente = clientes.get(clientes_por_venta.get(v.id))
-        # Todos los correos de su persona: paga con uno y entra a la Academia con otro.
+        # Todos los correos de su persona (paga con uno y entra a la Academia con otro) y, si pagó
+        # otra persona, los de quien pagó: el cobro de la pasarela viene a nombre del pagador.
         emails = {e for e in (_correo_util(v.mail_cliente), _correo_util(cliente.email) if cliente else None) if e}
-        emails |= correos_de.get(personas[v.id], set())
+        emails |= correos_de.get(personas[v.id], set()) | correos_de.get(v.payer_person_uuid, set())
         palabras = _palabras(v.nombre_cliente) or (_palabras(cliente.full_name) if cliente else [])
         datos.append({'obj': v, 'id': v.id, 'pasarela': pasarela_de(v.metodo_pago), 'fecha': v.date,
                       'monto': round(float(v.monto or 0.0), 2), 'emails': emails,
                       'cliente_id': cliente.id if cliente else None, 'persona': personas[v.id],
-                      'palabras': palabras})
+                      'pagador': v.payer_person_uuid, 'palabras': palabras})
     return datos
 
 

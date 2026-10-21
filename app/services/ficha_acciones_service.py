@@ -401,6 +401,9 @@ def _payload_de_venta(appt, usuario, datos):
         'instagram': (cliente.instagram or '').lstrip('@') if cliente else None,
         'examen': appt.examen or None,
         'appointment_id': appt.id,
+        # Quien compra es la persona de la ficha (docs/plan_personas.md); si pagó otra persona,
+        # el closer la manda en `pagador` ({nombre, email, telefono, instagram}).
+        'person_uuid': cliente.person_uuid if cliente else None,
         'estado': 'Completada',
         **{k: v for k, v in datos.items() if k not in CLAVES_NO_DE_VENTA},
     }

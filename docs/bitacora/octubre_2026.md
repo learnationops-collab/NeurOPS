@@ -382,3 +382,11 @@
   - La palabra clave de cada agenda y cada venta (Marketing), las desatribuidas, los mensajes de Conversaciones, el mazo y «Mis agendas» buscan primero la conversación de la persona; el Instagram y el nombre quedan de respaldo.
   - La sincronización de conversaciones se engancha en `create_app`.
   - Verificación: sin tests (desarrollo rápido); se prueba en el servidor develop.
+
+- **20 de Octubre de 2026 (personas, CF2: quién pagó y agendas por persona)** *(La venta apunta a quien compró y, si pagó otro, a quien pagó; las agendas encuentran a su cliente por la persona. [app/services/sheets_service.py](../../app/services/sheets_service.py), [app/services/ficha_acciones_service.py](../../app/services/ficha_acciones_service.py), [app/services/conciliacion_service.py](../../app/services/conciliacion_service.py), [app/models/financial.py](../../app/models/financial.py), [app/api/public/financial_agendas.py](../../app/api/public/financial_agendas.py), [app/api/closer.py](../../app/api/closer.py), [docs/plan_personas.md](../plan_personas.md) [MODIFY])*:
+  - Quien compra es la persona de la ficha desde la que se vende: la ficha manda su `person_uuid` y la venta ya no la adivina por los datos tipeados. Si pagó otra persona, la venta acepta `pagador` ({nombre, email, telefono, instagram}), crea o encuentra a esa persona y la guarda en `payer_person_uuid`; si es la misma, queda vacío. El frontend todavía no lo ofrece.
+  - Conciliación: el cobro de la pasarela empareja con la venta por los mails del comprador y, si lo hay, del pagador.
+  - `GET /closer/sales/client-state` busca a la persona sin crearla: una consulta no crea personas.
+  - Tablero de agendas: el listado (ventas de cada agenda), la edición (mail, cancelada/reagendada, estado post call), el borrado, el estado post call en lote y «mensaje de triaje sin agenda» encuentran al cliente primero por la persona de la agenda; el mail/instagram quedan de respaldo.
+  - Decisión: en la Etapa 2 las tablas de pagos quedan solo con uuid (sin nombre, mail, teléfono ni instagram).
+  - Verificación: sin tests (desarrollo rápido); revisión del diff. Se prueba en el servidor develop.

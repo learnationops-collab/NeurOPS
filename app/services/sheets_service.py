@@ -18,6 +18,18 @@ def persona_del_pago(nombre=None, email=None, instagram=None, phone=None, crear=
     return person_service.resolver(nombre or None, email, instagram, phone, crear=crear, fuente='pago')
 
 
+def _pagador(datos, comprador):
+    """La persona que pagó, solo si el closer dijo que fue otra (`pagador` en la venta) y es otra
+    de verdad: si sus datos son los del comprador, None (pagó el mismo). No hace commit."""
+    if not datos:
+        return None
+    payer = persona_del_pago(datos.get('nombre'), datos.get('email'), datos.get('instagram'),
+                             datos.get('telefono'))
+    if payer is None or (comprador is not None and payer.uuid == comprador.uuid):
+        return None
+    return payer
+
+
 def marcar_mail_de_pago(person, email):
     """El closer declaró la venta con un mail que no es el principal: ése es su mail de pago (el
     `uso` es la excepción: con el mismo mail que el principal no se anota nada). Solo desde la
@@ -100,6 +112,10 @@ class SheetsService:
                                                                 payload.get('metodo_pago'))
         except ValueError:
             transferido_a = None
+        # Quién compra y quién pagó (docs/plan_personas.md): también de NeurOPS, no viajan.
+        comprador_uuid = payload.pop('person_uuid', None)
+        pagador = payload.pop('pagador', None)
+        pagador = pagador if isinstance(pagador, dict) else None
 
         # Si es Ventas_DB, guardamos en la base de datos local de forma inmediata
         inconsistency_warning = None
@@ -131,9 +147,15 @@ class SheetsService:
                     'instagram': payload.get('instagram'),
                     'phone': payload.get('telefono'),
                 }
-                person = persona_del_pago(datos_cliente['name'], datos_cliente['email'],
-                                          datos_cliente['instagram'], datos_cliente['phone'])
-                marcar_mail_de_pago(person, datos_cliente['email'])
+                # El comprador: la persona de la ficha si vino; si no, la de los datos de la venta.
+                person = person_service.por_uuid(comprador_uuid) if comprador_uuid else None
+                if person is None:
+                    person = persona_del_pago(datos_cliente['name'], datos_cliente['email'],
+                                              datos_cliente['instagram'], datos_cliente['phone'])
+                payer = _pagador(pagador, person)
+                if payer is None:
+                    # Pagó el mismo que compra: un mail distinto es su mail de pago.
+                    marcar_mail_de_pago(person, datos_cliente['email'])
                 existente = person_service.cliente_de(person, crear=False) if person else None
                 if person is not None and existente is None:
                     existente = person_service.cliente_de(person)
@@ -182,6 +204,7 @@ class SheetsService:
                 sale = FinancialSale(
                     client_id=client.id if client else None,
                     person=person,
+                    payer=payer,
                     email_vendedor=SheetsService._to_str(payload.get('email_vendedor')),
                     nombre_cliente=SheetsService._to_str(payload.get('nombre_cliente')),
                     telefono=SheetsService._to_str(payload.get('telefono')),
