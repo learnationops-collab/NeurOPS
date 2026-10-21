@@ -177,25 +177,26 @@ def venta_new_vigente(person_uuid, client_id, programa=None):
 
 
 def fechas_de_ingreso(clientes):
-    """{client_id: fecha} de ingreso al programa de cada cliente: la venta 'new' más vieja de su persona
-    (o, sin persona, del cliente), `min(Sale.sold_at)` (Etapa 2c; antes la inscripción, `Enrollment`).
-    Los que no tienen ninguna venta 'new' no aparecen."""
+    """{client_id: fecha} de ingreso al programa de cada cliente: la de su venta 'new' activa más reciente
+    (la de su persona o, sin persona, la del cliente); si no tiene ninguna activa, la más reciente de
+    cualquier estado (Etapa 2c; antes, la inscripción más reciente de `Enrollment`). Los que no tienen
+    ninguna venta 'new' no aparecen."""
     clientes = [c for c in clientes if c is not None]
-    personas = {c.person_uuid for c in clientes if c.person_uuid}
-    sueltos = {c.id for c in clientes if not c.person_uuid}
-    por_persona, por_cliente = {}, {}
-    for i, grupo in enumerate((sorted(personas), sorted(sueltos))):
-        columna = Sale.person_uuid if i == 0 else Sale.client_id
-        destino = por_persona if i == 0 else por_cliente
+    personas = sorted({c.person_uuid for c in clientes if c.person_uuid})
+    sueltos = sorted({c.id for c in clientes if not c.person_uuid})
+    mejor = {}   # ('p', uuid) / ('c', id) -> (activa, sold_at)
+    for prefijo, columna, grupo in (('p', Sale.person_uuid, personas), ('c', Sale.client_id, sueltos)):
         for k in range(0, len(grupo), 500):
-            for clave, fecha in (db.session.query(columna, db.func.min(Sale.sold_at))
-                                 .filter(columna.in_(grupo[k:k + 500]), Sale.kind == 'new').group_by(columna)):
-                destino[clave] = fecha
+            for clave, estado, fecha in (db.session.query(columna, Sale.status, Sale.sold_at)
+                                         .filter(columna.in_(grupo[k:k + 500]), Sale.kind == 'new')):
+                candidato = (estado == 'active', fecha)
+                if fecha is not None and candidato > mejor.get((prefijo, clave), (False, datetime.min)):
+                    mejor[(prefijo, clave)] = candidato
     salida = {}
     for c in clientes:
-        fecha = por_persona.get(c.person_uuid) if c.person_uuid else por_cliente.get(c.id)
+        fecha = mejor.get(('p', c.person_uuid) if c.person_uuid else ('c', c.id))
         if fecha is not None:
-            salida[c.id] = fecha
+            salida[c.id] = fecha[1]
     return salida
 
 
