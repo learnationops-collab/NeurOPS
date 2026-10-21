@@ -1,7 +1,7 @@
 """Registra un pago histórico (de un lead viejo) directamente en la base de datos local,
 SIN disparar ninguna automatización — no dispara el webhook de n8n hacia Discord, no hace
 POST a Google Sheets, no dispara la notificación de "seña convertida a venta". Es solo para
-que los datos de FinancialSale/Enrollment/Payment de un lead viejo queden consistentes con lo
+que los datos de FinancialSale (y su venta) de un lead viejo queden consistentes con lo
 que realmente pasó (ej. un pago que se cerró por fuera del sistema hace meses y nunca se
 registró en el CRM), de forma que el resto del sistema (SalesConsistencyService — el que
 decide qué tipos de pago están permitidos a continuación, como Renovación/Upsell/Cuota) lo
@@ -60,7 +60,7 @@ def registrar_pago_historico(client_id, program_code, tipo_pago_simple, monto, f
                               apply=False, force=False):
     app = create_app()
     with app.app_context():
-        from app.models import Client, FinancialSale, PaymentMethod, User
+        from app.models import Client, FinancialSale, User
         from app.services.sales_consistency_service import SalesConsistencyService
         from app.services.sheets_service import SheetsService
 
@@ -110,7 +110,7 @@ def registrar_pago_historico(client_id, program_code, tipo_pago_simple, monto, f
         print(f"  fecha:         {fecha_dt.date().isoformat()}")
         print(f"  metodo_pago:   {metodo_pago or '(sin especificar)'}")
         print(f"  email_vendedor:{closer_email or '(sin especificar)'}")
-        print("  -> Se crea FinancialSale + su espejo en Enrollment/Payment.")
+        print("  -> Se crea el pago (FinancialSale) de la persona del cliente; sale_service lo ubica en su venta.")
         print("  -> NO se dispara el webhook de n8n/Discord ni se escribe en Google Sheets.")
 
         if not apply:
@@ -119,6 +119,7 @@ def registrar_pago_historico(client_id, program_code, tipo_pago_simple, monto, f
 
         sale = FinancialSale(
             client_id=client.id,
+            person=client.person,
             email_vendedor=closer_email or '',
             nombre_cliente=nombre_cliente or client.full_name or '',
             telefono=telefono or client.phone or '',
@@ -137,58 +138,7 @@ def registrar_pago_historico(client_id, program_code, tipo_pago_simple, monto, f
         db.session.commit()
         print(f"\n[OK] FinancialSale #{sale.id} creada.")
 
-        # Espejo a Enrollment/Payment — mismo criterio que SheetsService._sync_enrollment_payment,
-        # para que el historial del cliente y el sistema de cuotas también queden consistentes
-        # (sin esto, la venta existiría en FinancialSale pero el cliente seguiría sin aparecer
-        # inscrito en el programa en el resto de la app).
-        program = SheetsService.resolve_program(program_code)
-        if not program:
-            print(f"[AVISO] No se encontró un Program activo para {program_code} — no se creó Enrollment/Payment, solo FinancialSale.")
-            return sale
-
-        from app.models import Enrollment, Payment
-
-        PAYMENT_TYPE_MAP = {
-            'completo': 'full', 'parcial': 'first_payment', 'seña': 'down_payment', 'sena': 'down_payment',
-            'cuota': 'installment', 'renovacion': 'renewal', 'renovación': 'renewal', 'upsell': 'upsell',
-        }
-        payment_type = PAYMENT_TYPE_MAP.get(tipo_key, 'full')
-
-        closer = None
-        if closer_email:
-            closer = User.query.filter(db.func.lower(User.email) == closer_email.strip().lower()).first()
-
-        enrollment = Enrollment.query.filter_by(client_id=client.id, program_id=program.id).first()
-        if not enrollment:
-            enrollment = Enrollment(client_id=client.id, program_id=program.id, closer_id=closer.id if closer else None)
-            db.session.add(enrollment)
-            db.session.flush()
-            print(f"[OK] Enrollment #{enrollment.id} creado ({program.name}).")
-        elif closer and not enrollment.closer_id:
-            enrollment.closer_id = closer.id
-            print(f"[OK] Enrollment #{enrollment.id} existente actualizado con closer.")
-        else:
-            print(f"[OK] Enrollment #{enrollment.id} ya existía, se reutiliza.")
-
-        payment_method = None
-        if metodo_pago:
-            payment_method = PaymentMethod.query.filter(db.func.lower(PaymentMethod.name) == metodo_pago.strip().lower()).first()
-
-        payment = Payment(
-            enrollment_id=enrollment.id,
-            payment_method_id=payment_method.id if payment_method else None,
-            amount=float(monto),
-            payment_type=payment_type,
-            status='completed',
-            date=fecha_dt
-        )
-        db.session.add(payment)
-
-        if payment_type in ('full', 'first_payment') and (not enrollment.enrollment_date or fecha_dt < enrollment.enrollment_date):
-            enrollment.enrollment_date = fecha_dt
-
-        db.session.commit()
-        print(f"[OK] Payment #{payment.id} creado (enrollment #{enrollment.id}).")
+        # La venta la ubica `sale_service`; el espejo Enrollment/Payment ya no se crea (Etapa 2c).
         print("\nListo — ningún webhook ni Discord ni Google Sheets fueron tocados, solo la base de datos local.")
         return sale
 

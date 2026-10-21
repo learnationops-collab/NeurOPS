@@ -1,5 +1,5 @@
 from app import db
-from app.models import User, Client, Appointment, Enrollment, Payment, SurveyAnswer, Program, PaymentMethod
+from app.models import User, Client, Appointment, Enrollment, Payment, SurveyAnswer, Program, PaymentMethod, FinancialSale
 from datetime import datetime, timedelta
 import random
 
@@ -86,24 +86,17 @@ class AdminOperationService:
                 client = appt.client
                 program = random.choice(programs)
                 
-                enrollment = Enrollment(
-                    client_id=client.id,
-                    program_id=program.id,
-                    closer_id=appt.closer_id,
-                    enrollment_date=appt.start_time + timedelta(hours=1)
-                )
-                db.session.add(enrollment)
-                db.session.flush()
-
-                payment = Payment(
-                    enrollment_id=enrollment.id,
-                    payment_method_id=random.choice(methods).id,
-                    amount=program.price / 2,
-                    date=enrollment.enrollment_date,
-                    payment_type=random.choice(['Primer Pago', 'Renovación', 'Pago Completo', 'Cuota', 'Seña']),
-                    status='completed'
-                )
-                db.session.add(payment)
+                # Un pago de ejemplo (Etapa 2c): FinancialSale de la persona del cliente; `sale_service` lo
+                # ubica en su venta. Ya no se crea el espejo Enrollment/Payment.
+                codigo = next((c for c, clave in (('RR', 'roadmap'), ('AL', 'learner'), ('SI', 'iniciative'))
+                               if clave in (program.name or '').lower()), 'RR')
+                closer = db.session.get(User, appt.closer_id) if appt.closer_id else None
+                db.session.add(FinancialSale(
+                    client_id=client.id, person=client.person, email_vendedor=closer.email if closer else None,
+                    nombre_cliente=client.full_name, mail_cliente=client.email,
+                    tipo_pago=f"{codigo} - {random.choice(['Completo', 'Parcial', 'Seña', 'Cuota', 'Renovación'])}",
+                    monto=(program.price or 0) / 2, metodo_pago=random.choice(methods).name,
+                    estado='Completada', date=appt.start_time + timedelta(hours=1)))
 
             db.session.commit()
             return True, f"Se generaron {client_count} leads, {appt_count} agendas y {sales_generated} ventas."
