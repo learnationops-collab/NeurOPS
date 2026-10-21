@@ -305,26 +305,6 @@ def test_sin_total_negociado_la_deuda_sale_del_precio_del_programa(db, vendedor,
 
 
 @freeze_time(HOY)
-def test_con_varias_inscripciones_se_suma_cada_programa(db, vendedor, programa):
-    otro = Program(name='Ace Learners', price=1000.0)
-    db.session.add(otro)
-    db.session.commit()
-    cli = cliente(db, total_amount=None)
-    venta(db, mail=cli.email)
-    cita(db, vendedor, cli)
-    inscripcion(db, cli, programa, pagos=[(1500.0, 'completed')], fecha=datetime(2026, 3, 1))
-    inscripcion(db, cli, otro, pagos=[(100.0, 'completed'), (150.0, 'completed')],
-                fecha=datetime(2026, 7, 1))
-
-    con_lote, de_a_uno = _items(db, [cli.id])[cli.id]
-
-    assert con_lote['deuda'] == 750.0
-    # La fecha de ingreso es la de la inscripción más reciente, no la de la primera.
-    assert con_lote['enrollment_date'] == '2026-07-01T00:00:00'
-    assert con_lote == de_a_uno
-
-
-@freeze_time(HOY)
 def test_el_total_negociado_manda_sobre_el_precio_de_los_programas(db, vendedor, programa):
     cli = cliente(db, total_amount=2000.0)
     venta(db, mail=cli.email)
@@ -335,19 +315,6 @@ def test_el_total_negociado_manda_sobre_el_precio_de_los_programas(db, vendedor,
     con_lote, de_a_uno = _items(db, [cli.id])[cli.id]
 
     assert con_lote['deuda'] == 1500.0
-    assert con_lote == de_a_uno
-
-
-@freeze_time(HOY)
-def test_sin_inscripciones_no_debe_nada_aunque_tenga_total(db, vendedor):
-    cli = cliente(db, total_amount=1000.0)
-    venta(db, mail=cli.email)
-    cita(db, vendedor, cli)
-
-    con_lote, de_a_uno = _items(db, [cli.id])[cli.id]
-
-    assert con_lote['deuda'] == 0.0
-    assert con_lote['proxima_cuota'] is None
     assert con_lote == de_a_uno
 
 

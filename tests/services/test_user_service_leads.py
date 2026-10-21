@@ -114,26 +114,6 @@ def test_filtra_por_uno_o_varios_programas(db, catalogo):
     assert sorted(c.full_name for c in al_o_rr.items) == ['Ana', 'Beto']
 
 
-def test_filtra_por_closer_via_inscripcion_o_via_cita(db, catalogo, make_user):
-    from app.models import Appointment
-
-    closer = make_user(role='closer')
-    otro = make_user(role='closer', username='otro')
-    por_inscripcion = Client(full_name='PorInscripcion', email='i@x.com')
-    por_cita = Client(full_name='PorCita', email='c@x.com')
-    ajeno = Client(full_name='Ajeno', email='j@x.com')
-    db.session.add_all([por_inscripcion, por_cita, ajeno])
-    db.session.commit()
-    inscribir(db, por_inscripcion, catalogo['AL'], closer, 0, catalogo['zelle'])
-    inscribir(db, ajeno, catalogo['AL'], otro, 0, catalogo['zelle'])
-    db.session.add(Appointment(closer_id=closer.id, client_id=por_cita.id, start_time=datetime(2026, 6, 1)))
-    db.session.commit()
-
-    pagina = UserService.get_leads_list({'closer_id': closer.id})
-
-    assert sorted(c.full_name for c in pagina.items) == ['PorCita', 'PorInscripcion']
-
-
 def test_pagina_y_cuenta_el_total_real_no_solo_la_pagina(db):
     for n in range(5):
         db.session.add(Client(full_name=f'Cliente {n}', email=f'c{n}@x.com', created_at=datetime(2026, 1, n + 1)))

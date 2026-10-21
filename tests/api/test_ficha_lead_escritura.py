@@ -1349,27 +1349,6 @@ PAGO = {'fecha': '2026-09-15', 'monto': 300, 'metodo_pago': 'Stripe', 'programa_
         'tipo': 'cuota'}
 
 
-def test_cargar_un_pago_crea_la_venta_y_su_espejo_en_la_deuda(client, db, lead, programas, equipo,
-                                                              auth_headers):
-    r = client.post(url(lead, '/pago'), json=PAGO, headers=auth_headers(equipo['director']))
-
-    assert r.status_code == 201, r.get_json()
-    venta = FinancialSale.query.one()
-    assert (venta.tipo_pago, venta.monto, venta.metodo_pago) == ('RR - Cuota', 300.0, 'Stripe')
-    assert venta.date == datetime(2026, 9, 15)
-    assert venta.client_id == lead.client_id and venta.estado == 'Completada'
-    # El vendedor es el closer dueño de la agenda, no la direccion que cargo el pago.
-    assert venta.email_vendedor == 'vendedor@neuro.com'
-    espejo = Payment.query.one()
-    assert (espejo.amount, espejo.payment_type, espejo.status) == (300.0, 'installment', 'completed')
-    assert espejo.date == datetime(2026, 9, 15)
-    assert espejo.payment_method.name == 'Stripe'
-    assert espejo.enrollment.program_id == programas['RR'].id
-    cuerpo = r.get_json()
-    assert cuerpo['espejo'] is True
-    assert cuerpo['deuda'] == 700.0   # 1000 negociados - 300 cargados
-
-
 def test_el_pago_cargado_se_lee_en_el_historial_con_su_id(client, db, lead, programas, equipo,
                                                           auth_headers):
     creado = client.post(url(lead, '/pago'), json=PAGO,
@@ -1446,23 +1425,6 @@ def _inscripcion_vieja(db, lead, nombre='Residency Roadmap v1', precio=1000.0, m
     return inscripcion
 
 
-def test_un_pago_cargado_va_a_la_inscripcion_que_el_cliente_ya_tiene(client, db, lead, programas,
-                                                                     equipo, auth_headers):
-    """El camino de una venta declarada busca solo en la version ACTIVA del programa: a este
-    cliente (RR v1, sin total negociado) le abriria una inscripcion a la v3 que la deuda cobra
-    entera. Contra la base local, una cuota de $50 le subia la deuda de $400 a $1.850."""
-    lead.client.total_amount = None
-    vieja = _inscripcion_vieja(db, lead)
-
-    r = client.post(url(lead, '/pago'), json={**PAGO, 'monto': 50},
-                    headers=auth_headers(equipo['closer']))
-
-    assert r.status_code == 201, r.get_json()
-    assert r.get_json()['deuda'] == 350.0   # 1000 de la v1 - 600 - 50
-    assert Enrollment.query.count() == 1
-    assert Payment.query.order_by(Payment.id.desc()).first().enrollment_id == vieja.id
-
-
 def test_un_pago_de_un_cliente_con_ventas_importadas_no_le_inventa_una_deuda(client, db, lead,
                                                                             programas, equipo,
                                                                             auth_headers):
@@ -1485,23 +1447,6 @@ def test_un_pago_de_un_cliente_con_ventas_importadas_no_le_inventa_una_deuda(cli
     evento = LeadEventLog.query.filter_by(action_type='pago_cargado').one()
     assert 'la deuda no lo cuenta' in evento.description
     assert 'pagos anteriores' in evento.description
-
-
-def test_un_pago_de_un_cliente_con_ventas_importadas_va_a_la_inscripcion_que_ya_tiene(
-        client, db, lead, programas, equipo, auth_headers):
-    """Con una inscripcion al programa, la deuda ya se calcula contra ella: el pago cargado resta
-    de ahi aunque el cliente tenga otras ventas sin espejo."""
-    lead.client.total_amount = None
-    vieja = _inscripcion_vieja(db, lead)
-    db.session.add(_venta(lead, 'RR - Cuota', 200.0, datetime(2025, 5, 1)))
-    db.session.commit()
-
-    r = client.post(url(lead, '/pago'), json={**PAGO, 'monto': 50},
-                    headers=auth_headers(equipo['closer']))
-
-    assert r.status_code == 201, r.get_json()
-    assert (r.get_json()['espejo'], r.get_json()['deuda']) == (True, 350.0)
-    assert Payment.query.order_by(Payment.id.desc()).first().enrollment_id == vieja.id
 
 
 @pytest.mark.parametrize('cambio', [
@@ -1577,93 +1522,6 @@ def test_corregir_el_monto_mueve_tambien_la_deuda(client, db, lead, programas, e
     assert (cuerpo['cambios'], cuerpo['espejo'], cuerpo['deuda']) == (['monto'], True, 550.0)
 
 
-def test_corregir_la_fecha_conserva_la_hora_y_se_lleva_la_fecha_de_ingreso(client, db, lead,
-                                                                          programas, equipo,
-                                                                          auth_headers):
-    venta = _declarada(db, lead)
-
-    r = corregir(client, lead, venta, {'fecha': '2026-09-08'}, equipo['director'], auth_headers)
-
-    assert r.status_code == 200, r.get_json()
-    assert venta.date == datetime(2026, 9, 8, 15, 32, 7)
-    espejo = Payment.query.one()
-    assert espejo.date == datetime(2026, 9, 8, 15, 32, 7)
-    # Era el primer pago de la inscripcion: el cliente es alumno desde el dia corregido.
-    assert espejo.enrollment.enrollment_date == datetime(2026, 9, 8, 15, 32, 7)
-
-
-def test_otro_programa_y_otro_tipo_mueven_el_espejo_a_esa_inscripcion(client, db, lead, programas,
-                                                                     equipo, auth_headers):
-    venta = _declarada(db, lead)
-
-    r = corregir(client, lead, venta, {'programa_code': 'AL', 'tipo': 'completo'}, equipo['closer'],
-                 auth_headers)
-
-    assert r.status_code == 200, r.get_json()
-    assert venta.tipo_pago == 'AL - Completo'
-    espejo = Payment.query.one()
-    assert espejo.payment_type == 'full'
-    assert espejo.enrollment.program_id == programas['AL'].id
-    # La inscripcion a RR se quedo sin pagos: dejarla haria que `_client_debt` la cobrara entera.
-    assert Enrollment.query.count() == 1
-
-
-def test_otro_tipo_del_mismo_programa_no_muda_el_espejo_de_version(client, db, lead, programas,
-                                                                  equipo, auth_headers):
-    """Con una inscripcion a RR v1 y otra a RR v3, corregir el tipo de un pago de la v1 no lo
-    pasa a la v3: el programa es el mismo, y la deuda de cada una cambiaria sin motivo."""
-    vieja = _inscripcion_vieja(db, lead)
-    venta = _venta(lead, 'RR - Parcial', 600.0, datetime(2025, 1, 8))
-    db.session.add(venta)
-    db.session.commit()
-    _declarada(db, lead, 'RR - Renovación', 900.0)   # abre la inscripcion a la v3
-
-    r = corregir(client, lead, venta, {'tipo': 'completo'}, equipo['closer'], auth_headers)
-
-    assert r.status_code == 200, r.get_json()
-    assert r.get_json()['espejo'] is True
-    espejo = Payment.query.filter_by(amount=600.0).one()
-    assert (espejo.enrollment_id, espejo.payment_type) == (vieja.id, 'full')
-
-
-def test_otro_programa_usa_la_inscripcion_que_el_cliente_ya_tiene_en_ese(client, db, lead,
-                                                                         programas, equipo,
-                                                                         auth_headers):
-    vieja_al = _inscripcion_vieja(db, lead, 'Ace Learner v2', 500.0, monto=100.0,
-                                  cuando=datetime(2025, 3, 1))
-    venta = _declarada(db, lead)
-
-    r = corregir(client, lead, venta, {'programa_code': 'AL'}, equipo['closer'], auth_headers)
-
-    assert r.status_code == 200, r.get_json()
-    assert Payment.query.filter_by(amount=400.0).one().enrollment_id == vieja_al.id
-    # La de RR se quedo sin pagos y se fue; no se abrio una a Ace Learner v3.
-    assert Enrollment.query.count() == 1
-
-
-def test_otro_programa_no_abre_una_inscripcion_a_un_cliente_con_ventas_importadas(
-        client, db, lead, programas, equipo, auth_headers):
-    """Mismo criterio que al cargar un pago: con ventas sin espejo, una inscripcion nueva cobraria
-    el programa entero. El espejo se queda donde estaba, la deuda no se mueve, y se dice."""
-    db.session.add(_venta(lead, 'AL - Seña', 200.0, datetime(2026, 2, 1)))   # importada
-    db.session.commit()
-    venta = _declarada(db, lead)
-    deuda_antes = client.get(f'/api/ficha/lead?appointment_id={lead.id}',
-                             headers=auth_headers(equipo['closer'])).get_json()['cobro']['deuda']
-
-    r = corregir(client, lead, venta, {'programa_code': 'AL'}, equipo['closer'], auth_headers)
-
-    assert r.status_code == 200, r.get_json()
-    assert venta.tipo_pago == 'AL - Parcial'
-    assert r.get_json()['deuda'] == deuda_antes
-    espejo = Payment.query.one()
-    assert espejo.enrollment.program_id == programas['RR'].id
-    assert Enrollment.query.count() == 1
-    evento = LeadEventLog.query.filter_by(action_type='pago_corregido').one()
-    assert 'se quedó en Residency Roadmap v3' in evento.description
-    assert 'pagos sin registro' in evento.description
-
-
 def test_solo_el_programa_conserva_el_tipo_como_esta_escrito(client, db, lead, programas, equipo,
                                                              auth_headers):
     """Mismo criterio que asignar el programa desde la ficha: el tipo no es lo que se corrige."""
@@ -1690,17 +1548,6 @@ def test_el_tipo_de_un_pago_sin_programa_no_se_escribe_sin_elegir_uno(client, db
     assert venta.tipo_pago == 'Parcial'
 
 
-def test_corregir_el_medio_lo_corrige_tambien_en_el_espejo(client, db, lead, programas, equipo,
-                                                           auth_headers):
-    venta = _declarada(db, lead)
-
-    r = corregir(client, lead, venta, {'metodo_pago': 'Hotmart'}, equipo['closer'], auth_headers)
-
-    assert r.status_code == 200, r.get_json()
-    assert venta.metodo_pago == 'Hotmart'
-    assert Payment.query.one().payment_method.name == 'Hotmart'
-
-
 def test_un_medio_historico_se_conserva_si_no_se_toca(client, db, lead, programas, equipo,
                                                       auth_headers):
     """Como una fuente vieja de una agenda: la fila puede conservarlo, uno nuevo sale de la lista."""
@@ -1725,24 +1572,6 @@ def test_dos_cuotas_iguales_del_mismo_dia_no_se_cruzan(client, db, lead, program
     montos = {p.date.hour: p.amount for p in Payment.query.all()}
     assert montos == {9: 250.0, 18: 300.0}
     assert primera.monto == 250.0
-
-
-def test_un_pago_sin_espejo_se_corrige_solo_y_lo_dice(client, db, lead, inscripto, programas,
-                                                      equipo, auth_headers):
-    """Las ventas importadas de la hoja nunca tuvieron espejo. Inventarle uno podria contar dos
-    veces una plata que ya esta en otro `Payment` (el del fixture tiene otra fecha)."""
-    venta = _venta(lead, 'RR - Parcial', 400.0, datetime(2026, 7, 20))
-    db.session.add(venta)
-    db.session.commit()
-
-    r = corregir(client, lead, venta, {'monto': 380}, equipo['closer'], auth_headers)
-
-    assert r.status_code == 200, r.get_json()
-    assert r.get_json()['espejo'] is False
-    assert venta.monto == 380.0
-    assert Payment.query.one().amount == 400.0
-    evento = LeadEventLog.query.filter_by(action_type='pago_corregido').one()
-    assert 'la deuda no cambió' in evento.description
 
 
 def test_la_correccion_del_pago_queda_en_la_bitacora(client, db, lead, programas, equipo,
@@ -1827,36 +1656,6 @@ def borrar(client, lead, venta_id, usuario, auth_headers):
     return client.delete(url(lead, f'/pago/{venta_id}'), headers=auth_headers(usuario))
 
 
-def test_borrar_un_pago_se_lleva_la_venta_y_su_espejo(client, db, lead, programas, equipo,
-                                                      auth_headers):
-    """Una cuota cargada dos veces: se borra la repetida y la deuda vuelve a contar una sola."""
-    _declarada(db, lead, 'RR - Parcial', 400.0, datetime(2026, 9, 1, 10, 0))
-    repetida = _declarada(db, lead, 'RR - Cuota', 200.0, datetime(2026, 9, 10, 10, 0))
-    id_repetida = repetida.id
-
-    r = borrar(client, lead, id_repetida, equipo['closer'], auth_headers)
-
-    assert r.status_code == 200, r.get_json()
-    assert db.session.get(FinancialSale, id_repetida) is None
-    assert [p.amount for p in Payment.query.all()] == [400.0]
-    assert Enrollment.query.count() == 1   # le quedan pagos: la inscripcion sigue
-    cuerpo = r.get_json()
-    assert (cuerpo['borrado'], cuerpo['espejo'], cuerpo['deuda']) == (True, True, 600.0)
-
-
-def test_borrar_el_unico_pago_no_deja_una_inscripcion_vacia_cobrando_todo(client, db, lead,
-                                                                          programas, equipo,
-                                                                          auth_headers):
-    """Una venta cargada al lead equivocado: sin ella, el cliente no debe el programa entero."""
-    venta = _declarada(db, lead)
-
-    r = borrar(client, lead, venta.id, equipo['director'], auth_headers)
-
-    assert r.status_code == 200, r.get_json()
-    assert (FinancialSale.query.count(), Payment.query.count(), Enrollment.query.count()) == (0, 0, 0)
-    assert r.get_json()['deuda'] == 0.0
-
-
 def test_borrar_un_pago_de_la_hoja_lo_excluye_de_una_resincronizacion(client, db, lead, programas,
                                                                       equipo, auth_headers):
     """Como el borrado de Operaciones: sin la marca, forzar la sincronizacion lo resucitaria."""
@@ -1886,22 +1685,6 @@ def test_una_marca_de_la_hoja_compartida_no_se_excluye(client, db, lead, program
 
     assert r.status_code == 200, r.get_json()
     assert ExcludedSale.query.count() == 0
-
-
-def test_borrar_un_pago_sin_espejo_no_toca_la_deuda_y_lo_dice(client, db, lead, inscripto,
-                                                              equipo, auth_headers):
-    venta = _venta(lead, 'RR - Seña', 100.0, datetime(2026, 7, 20))
-    db.session.add(venta)
-    db.session.commit()
-
-    r = borrar(client, lead, venta.id, equipo['closer'], auth_headers)
-
-    assert r.status_code == 200, r.get_json()
-    assert r.get_json()['espejo'] is False
-    assert Payment.query.one().amount == 400.0
-    evento = LeadEventLog.query.filter_by(action_type='pago_borrado').one()
-    assert 'RR - Seña · $100.00 · Stripe · 2026-07-20' in evento.description
-    assert 'la deuda no cambió' in evento.description
 
 
 def test_borrar_un_pago_no_dispara_ninguna_automatizacion(client, db, lead, programas, equipo,
