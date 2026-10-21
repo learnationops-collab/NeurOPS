@@ -11,6 +11,8 @@ from app.api.external import bp
 from app.decorators import require_academy_token
 from app.models import FinancialSale
 from app.services import person_service
+# La corrección de una venta la comparten la Academia, el closer y Operaciones.
+from app.services.persona_de_venta import DatoDeOtraPersona, corregir_persona_de_venta  # noqa: F401
 
 
 def cliente_del_alumno(data):
@@ -66,37 +68,3 @@ def academy_persona(work_uuid):
         "metodo_pago": s.metodo_pago,
         "estado": s.estado,
     } for s in pagos]}), 200
-
-
-class DatoDeOtraPersona(ValueError):
-    """El dato corregido ya es de otra persona: no se le cambia a ésta."""
-
-
-_KIND = {'mail_cliente': 'email', 'telefono': 'phone', 'instagram': 'instagram'}
-
-
-def corregir_persona_de_venta(sale, changes, modo='corregir'):
-    """Lo que la Academia corrige de una venta se corrige en su persona, que es de donde se lee
-    (Etapa 2b de docs/plan_personas.md). Corregir es nuevo principal y el anterior dado de baja;
-    el mail que se mostraba era el de pago, se corrige ése. Con `modo='pago'`, el mail se suma como
-    su mail de pago y el principal no cambia. Sin persona no hace nada (queda la copia). No hace commit."""
-    person = sale.person if sale.person_uuid else None
-    if person is None:
-        return
-    nombre = person_service.nombre_limpio(changes.get('nombre_cliente'))
-    if nombre:
-        person.full_name = nombre
-    for campo, kind in _KIND.items():
-        if campo not in changes:
-            continue
-        valor = person_service.normalizar(kind, changes[campo])
-        if not valor:
-            continue
-        if set(person_service.duenos(kind, valor)) - {person.uuid}:
-            raise DatoDeOtraPersona(f'El {campo} {changes[campo]} ya es de otra persona.')
-        de_pago = kind == 'email' and (modo == 'pago' or person_service.dato(person, 'email', uso='pago')
-                                        not in (None, person.email))
-        if valor == person_service.dato(person, kind, uso='pago' if de_pago else None):
-            continue
-        person_service.hacer_principal(person, kind, changes[campo], uso='pago' if de_pago else None,
-                                       reason='corrección desde la Academia', corrige=modo != 'pago')

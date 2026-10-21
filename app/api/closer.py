@@ -2348,6 +2348,21 @@ def update_closer_sale(sale_id):
 
     if not cambios:
         return jsonify({"message": "No hubo cambios que guardar", "sale": sale.to_dict()}), 200
+    contacto = {k: cambios[k]['despues'] for k in ('nombre_cliente', 'mail_cliente', 'telefono', 'instagram')
+                if k in cambios}
+    if contacto:
+        # Lo que se muestra de la venta sale de su persona: corregir es corregirla a ella (`persona_de_venta`,
+        # el mismo criterio que la ficha). La copia se sigue escribiendo hasta la Etapa 2c.
+        from app.services.persona_de_venta import DatoDeOtraPersona, corregir_persona_de_venta
+        try:
+            corregir_persona_de_venta(sale, contacto, modo='pago' if data.get('modo') == 'pago' else 'corregir',
+                                      usuario=current_user)
+        except DatoDeOtraPersona as e:
+            db.session.rollback()
+            return jsonify({"error": str(e)}), 409
+        except ValueError as e:
+            db.session.rollback()
+            return jsonify({"error": str(e)}), 400
     if 'metodo_pago' in cambios:
         # Una venta que deja de ser transferencia pierde a quién se le hizo (`transferencias_service`).
         from app.services.transferencias_service import para_guardar

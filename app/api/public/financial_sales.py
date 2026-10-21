@@ -227,38 +227,6 @@ def opciones_de_transferencia():
 # SalesAttributionPage). Sin `force` respondía 500 «disabled»; con `?force=true` BORRABA las ventas
 # y las reconstruía desde la hoja. El cron de la hoja sigue en GET /api/sheets/cron-sync.
 
-def _corregir_contacto(person, data, modo=None):
-    """Corregir el contacto de una venta es corregir a su persona (docs/plan_personas.md): el
-    instagram nuevo pasa a ser el principal y el anterior se da de baja (estaba mal). Con
-    `modo: 'agregar'` el anterior sigue siendo válido: el nuevo se suma como uno más y el principal
-    no cambia. El nombre es uno solo y se reemplaza. Se escribe también en su cliente mientras dure
-    la doble escritura. No hace commit."""
-    from flask_login import current_user
-    from app.services import person_service
-
-    usuario = current_user if getattr(current_user, 'is_authenticated', False) else None
-    cliente = person_service.cliente_de(person, crear=False)
-    nombre = (data.get('nombre_cliente') or '').strip()
-    if nombre and nombre.lower() != 'desconocido':
-        person.full_name = nombre
-        if cliente:
-            cliente.full_name = nombre
-    if 'instagram' not in data:
-        return
-    nuevo = person_service.normalizar('instagram', data.get('instagram'))
-    if not nuevo:
-        raise ValueError('El instagram no es válido.')
-    if modo == 'agregar':
-        person_service.anotar(person, [('instagram', nuevo)], 'ficha')
-        return
-    if person_service.dato(person, 'instagram') == nuevo:
-        return
-    person_service.hacer_principal(person, 'instagram', nuevo, usuario, reason='corregido en la venta',
-                                   corrige=True)
-    if cliente:
-        cliente.instagram = nuevo
-
-
 @bp.route('/public/financial-sales/<int:sale_id>', methods=['PUT', 'OPTIONS'])
 def update_financial_sale(sale_id):
     # Endpoint para la resolución manual de errores de ventas
@@ -303,8 +271,18 @@ def update_financial_sale(sale_id):
         if 'nombre_cliente' in data:
             sale.nombre_cliente = data['nombre_cliente']
         if sale.person_uuid and ('instagram' in data or 'nombre_cliente' in data):
+            # Lo que se muestra sale de la persona: la corrección va ahí (`persona_de_venta`); con
+            # `modo: 'agregar'` el instagram se suma como otro válido.
+            from flask_login import current_user
+            from app.services.persona_de_venta import DatoDeOtraPersona, corregir_persona_de_venta
             try:
-                _corregir_contacto(sale.person, data, data.get('modo'))
+                corregir_persona_de_venta(
+                    sale, {k: data[k] for k in ('instagram', 'nombre_cliente') if k in data},
+                    modo='agregar' if data.get('modo') == 'agregar' else 'corregir',
+                    usuario=current_user if getattr(current_user, 'is_authenticated', False) else None)
+            except DatoDeOtraPersona as e:
+                db.session.rollback()
+                return jsonify({"error": str(e), "campo": "instagram"}), 409
             except ValueError as e:
                 db.session.rollback()
                 return jsonify({"error": str(e), "campo": "instagram"}), 400

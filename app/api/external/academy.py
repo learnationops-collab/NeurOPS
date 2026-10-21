@@ -326,10 +326,14 @@ def patch_sale(sale_id):
     # Con persona, lo que se lee es la persona: la corrección va ahí (`modo: 'pago'` suma el mail
     # como su mail de pago sin cambiar el principal).
     try:
-        corregir_persona_de_venta(sale, changes, modo='pago' if data.get('modo') == 'pago' else 'corregir')
+        corregir_persona_de_venta(sale, changes, modo='pago' if data.get('modo') == 'pago' else 'corregir',
+                                  motivo='corrección desde la Academia')
     except DatoDeOtraPersona as e:
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)}), 409
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 422
 
     db.session.commit()
 
