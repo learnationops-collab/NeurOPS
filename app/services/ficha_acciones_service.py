@@ -848,7 +848,7 @@ def plan_cuotas(appt, datos, usuario):
 # --- Total a pagar ----------------------------------------------------------------------------
 
 def total_a_pagar(appt, datos, usuario):
-    """Corrige el total que este cliente negocio (`Client.total_amount`).
+    """Corrige el total que este cliente negocio (el `agreed_total` de su venta 'new' vigente).
 
     Es el numero del que sale la deuda: `CloserFollowUpService._client_debt` lo prefiere al precio
     de lista del programa porque el de lista es igual para todos. Tenerlo mal cargado hacia que la
@@ -871,10 +871,12 @@ def total_a_pagar(appt, datos, usuario):
     if nuevo < 0:
         raise ErrorDeAccion('El total a pagar no puede ser negativo.')
 
-    anterior = appt.client.total_amount
-    appt.client.total_amount = nuevo
+    # El total vive en la venta 'new' vigente de su persona (`Sale.agreed_total`).
+    from app.services.deuda_service import total_acordado
     from app.services.sale_service import fijar_total
-    fijar_total(appt.client, nuevo)  # y en su venta 'new' vigente (frente L)
+    anterior = total_acordado(appt.client, declarado=True)
+    if fijar_total(appt.client, nuevo) is None:
+        raise ErrorDeAccion('Este cliente todavía no tiene una venta: el total se carga al declararla.')
     db.session.commit()
 
     # Un registro financiero no se cambia en silencio: queda quien lo toco y desde que valor.

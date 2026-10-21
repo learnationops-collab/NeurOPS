@@ -22,10 +22,6 @@ class Client(ConPersona, db.Model):
     # si califico). Lo tienen tambien los que no calificaron y por eso no tienen agenda.
     formulario_payload = db.Column(db.JSON(none_as_null=True), nullable=True)
     follow_up_status = db.Column(db.String(50), nullable=True, default='Por contactar')
-    # Total a pagar por el cliente (ya no por programa/Enrollment: un solo total por cliente).
-    # Se autoasigna por programa al registrar el primer pago (AL 1000 / RR 1500 / SI 2000) y
-    # queda editable en cada pago siguiente — ver SalesConsistencyService.PROGRAM_DEFAULT_TOTALS.
-    total_amount = db.Column(db.Float, nullable=True)
     # Grupo de Calendly ("grupo 1"/"grupo 2"/"grupo 3", tal como llega en el JSON de n8n al
     # agendar). Clientes previos a este campo (o sin grupo en el payload) quedan en None —
     # se muestra como "Grupo sin asignar" en vez de fabricar un valor.
@@ -34,16 +30,13 @@ class Client(ConPersona, db.Model):
     # Vinculación con la Academia (Learnation, academy.thelearnation.com) — ver
     # docs/integracion_learnation_api.md. El cruce con la Academia es por email, pero se
     # cachea el id que devuelve para no tener que resolverlo de nuevo en cada consulta/
-    # asignación. `academy_product_slug`/`academy_expires_at` reflejan la última sincronización
-    # exitosa (AcademyAccessService.grant_access), no se leen en vivo de la Academia en cada uso.
+    # asignación. El acceso (producto y vencimiento) vive en `Subscription`.
     learnation_user_id = db.Column(db.Integer, nullable=True)
-    academy_product_slug = db.Column(db.String(100), nullable=True)
-    academy_expires_at = db.Column(db.DateTime, nullable=True)
 
     # La baja del cliente (ver `app/services/baja_service.py`): se fue del programa. Lo que pagó
     # sigue contando como cobrado, pero ya no debe nada ni entra en ninguna lista de cobro. Vive
     # en el cliente y no en sus inscripciones ni en sus cuotas porque la deuda y el cobro son por
-    # persona (`Client.total_amount` es UN total por cliente), y porque así revertirla es borrar
+    # persona, y porque así revertirla es borrar
     # la marca: nada de lo que había se tocó.
     baja_at = db.Column(db.DateTime, nullable=True, index=True)
     baja_motivo = db.Column(db.String(255), nullable=True)
@@ -54,7 +47,6 @@ class Client(ConPersona, db.Model):
     anuncio_ventas_id = db.Column(db.Integer, db.ForeignKey('ads.id'), nullable=True)
 
     # Relationships
-    enrollments = db.relationship('Enrollment', backref='client', lazy='dynamic', cascade="all, delete-orphan")
     appointments = db.relationship('Appointment', backref='client', lazy='dynamic', cascade="all, delete-orphan")
     survey_answers = db.relationship('SurveyAnswer', backref='client', lazy='dynamic', cascade="all, delete-orphan")
 

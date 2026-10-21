@@ -117,15 +117,3 @@ def test_la_prorroga_pide_motivo_cliente_y_suscripcion(client, db, ana):
                        json={'email': 'ana@x.com', 'dias': 5, 'motivo': 'x'}).status_code in (401, 403)
 
 
-def test_el_backfill_carga_el_ultimo_acceso_dado_desde_work(db, ana):
-    from scripts import backfill_subscriptions as script
-
-    ana.academy_product_slug = 'residency-roadmap'
-    ana.academy_expires_at = datetime(2026, 12, 31)
-    db.session.commit()
-
-    assert script.ejecutar(apply=False)['creadas'] == 1 and Subscription.query.count() == 0
-    script.ejecutar(apply=True)
-    sub = suscripcion(ana, 'residency-roadmap')
-    assert (sub.expires_at, sub.program_code, sub.events.one().kind) == (date(2026, 12, 31), 'RR', 'alta')
-    assert script.ejecutar(apply=True)['ya_tenian'] == 1

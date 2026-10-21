@@ -1,4 +1,4 @@
-from app.models import User, Client, Enrollment, Appointment, Payment, PaymentMethod, CloserDailyStats, DailyReportQuestion, DailyReportAnswer, Event, db, Integration
+from app.models import User, Client, Appointment, PaymentMethod, CloserDailyStats, DailyReportQuestion, DailyReportAnswer, Event, db, Integration
 from app.services.dashboard_service import DashboardService
 from app.services.sales_consistency_service import filtro_de_pagos
 from app.services.ticket_service import CUOTA, pago_de_venta, primeras_cuotas, ticket_promedio
@@ -151,6 +151,31 @@ def normalizar_instagram(valor):
     return None if limpio.lower() in SIN_DATO else limpio
 
 
+def _vendido_por(closer_id):
+    """Condición SQL: el cliente tiene una venta (`Sale`) de este closer (antes, una inscripción suya)."""
+    from app.models import Sale
+    identificadores = {e.lower() for e in CloserService._resolve_sale_identifiers(User.query.get(closer_id)) if e}
+    return Client.sales.any(func.lower(func.trim(Sale.closer_email)).in_(identificadores or {''}))
+
+
+def _tasa_de_comision(closer_id, mes):
+    """La tasa de comisión del closer en `mes` ('AAAA-MM'): la suya de la nómina, o `CLOSER_RATE` (10 %)
+    si no tiene. Es el criterio de `commission_service.get_closer_commission`."""
+    from app.services.closer_name_service import resolver_nombre_closer
+    from app.services.commission_service import CLOSER_RATE, _tasa_propia, clave_de_closer
+    usuario = User.query.get(closer_id)
+    clave = clave_de_closer(resolver_nombre_closer(usuario.username)) if usuario else None
+    return _tasa_propia('closers', clave, mes, CLOSER_RATE)
+
+
+def _codigo_de_program_id(program_id):
+    """AL/RR/SI del `Program` de ese id, por su nombre (`closer_ventas_service.NOMBRES`), o None."""
+    from app.models import Program
+    from app.services.closer_ventas_service import CODIGOS
+    programa = db.session.get(Program, int(program_id)) if str(program_id).isdigit() else None
+    return CODIGOS.get((programa.name or '').strip().lower()) if programa else None
+
+
 class CloserService:
     @staticmethod
     def get_leads_pagination(closer_id, page=1, per_page=50, filters=None):
@@ -167,13 +192,14 @@ class CloserService:
         if current_user.role != 'admin':
             query = query.filter(
                 or_(
-                    Client.enrollments.any(Enrollment.closer_id == closer_id),
+                    _vendido_por(closer_id),
                     Client.appointments.any(or_(Appointment.closer_id == closer_id, Appointment.setter_id == closer_id))
                 )
             )
-        
+
         if program_filter:
-            query = query.join(Enrollment).filter(Enrollment.program_id == program_filter)
+            from app.models import Sale
+            query = query.filter(Client.sales.any(Sale.program_code == _codigo_de_program_id(program_filter)))
 
         if start_date_str:
             try:
@@ -229,39 +255,38 @@ class CloserService:
         kpi_query = Client.query
         if current_user.role != 'admin':
             kpi_query = kpi_query.filter(or_(
-                Client.enrollments.any(Enrollment.closer_id == closer_id), 
+                _vendido_por(closer_id),
                 Client.appointments.any(or_(Appointment.closer_id == closer_id, Appointment.setter_id == closer_id))
             ))
         kpi_query = apply_lead_filters(kpi_query)
         total_clients = kpi_query.count()
 
-        fin_query = db.session.query(db.func.sum(Payment.amount)).select_from(Client).join(Enrollment).join(Payment).filter(
-            Payment.status == 'completed',
-            Enrollment.closer_id == closer_id
-        )
-        fin_query = apply_lead_filters(fin_query)
-        total_revenue_gross = fin_query.scalar() or 0.0
+        # El cash neto de sus pagos (`FinancialSale` completados que vendió, menos la fee de la pasarela,
+        # `commission_service.cash_neto_de`), de los clientes que pasan los filtros; la comisión, con su
+        # tasa de la nómina (`_tasa_de_comision`), como `commission_service.get_closer_commission`.
+        from app.models import FinancialSale
+        from app.services.commission_service import cash_neto_de
+        from app.services.comercial_vocabulario import venta_completada
+        identificadores = {e.lower() for e in CloserService._resolve_sale_identifiers(User.query.get(closer_id)) if e} or {''}
+        pagos = FinancialSale.query.filter(func.lower(func.trim(FinancialSale.email_vendedor)).in_(identificadores))
+        if start_date_str or end_date_str or search:
+            filtrados = apply_lead_filters(Client.query.with_entities(Client.id, Client.person_uuid)).all()
+            ids = {cid for cid, _ in filtrados}
+            personas = {pu for _, pu in filtrados if pu}
+            pagos = pagos.filter(or_(FinancialSale.client_id.in_(ids or {0}), FinancialSale.person_uuid.in_(personas or {''})))
+        cash_collect_net = sum(cash_neto_de(p.monto, p.metodo_pago) for p in pagos.all() if venta_completada(p))
+        tasa = _tasa_de_comision(closer_id, datetime.utcnow().strftime('%Y-%m'))
 
-        comm_query = db.session.query(
-            db.func.sum((Payment.amount * (PaymentMethod.commission_percent / 100.0)) + PaymentMethod.commission_fixed)
-        ).select_from(Client).join(Enrollment).join(Payment).join(PaymentMethod).filter(
-            Payment.status == 'completed', Enrollment.closer_id == closer_id
-        )
-        comm_query = apply_lead_filters(comm_query)
-        platform_fees = comm_query.scalar() or 0.0
-        cash_collect_net = total_revenue_gross - platform_fees
-
-        enr_query = Enrollment.query.filter(Enrollment.closer_id == closer_id)
-        # Sin los dados de baja: su saldo ya no es deuda (lo cobrado sigue en `cash_collected`).
-        enr_query = enr_query.join(Client).filter(Client.baja_at.is_(None))
-        enr_query = apply_lead_filters(enr_query)
-        enrs = enr_query.all()
-        total_debt = sum(max(0, (e.program.price if e.program else 0.0) - e.total_paid) for e in enrs)
+        # La deuda de sus clientes, por venta (`deuda_service`); sin los dados de baja: su saldo ya no es
+        # deuda (lo cobrado sigue en `cash_collected`).
+        from app.services import deuda_service
+        deudores = apply_lead_filters(Client.query.filter(_vendido_por(closer_id), Client.baja_at.is_(None))).all()
+        total_debt = sum(deuda_service.deudas(deudores).values())
 
         return {
             'total': total_clients,
             'cash_collected': cash_collect_net,
-            'my_commission': cash_collect_net * 0.10,
+            'my_commission': cash_collect_net * tasa,
             'debt': total_debt
         }
 
@@ -284,38 +309,37 @@ class CloserService:
         agendas = detailed_metrics['agendas']
         first, second = agendas['first_agendas'], agendas['second_agendas']
         
-        new_enrollments = Enrollment.query.filter(
-            Enrollment.closer_id == closer_id,
-            Enrollment.enrollment_date >= start_utc,
-            Enrollment.enrollment_date <= end_utc
-        ).all()
-        
+        # Las ventas (`Sale`) del closer vendidas hoy con al menos un pago completado, por lo acordado
+        # (`deuda_service.total_de`); el cash, sus pagos (`FinancialSale`) completados de hoy.
+        from app.models import FinancialSale, Sale
+        from app.services import deuda_service
+        from app.services.closer_ventas_service import nombre_de_programa
+        from app.services.comercial_vocabulario import venta_completada
+        identificadores = {e.lower() for e in CloserService._resolve_sale_identifiers(User.query.get(closer_id)) if e} or {''}
+        ventas_de_hoy = Sale.query.filter(func.lower(func.trim(Sale.closer_email)).in_(identificadores),
+                                          Sale.sold_at >= start_utc, Sale.sold_at <= end_utc).all()
         kpi_sales_count = 0
         kpi_sales_amount = 0.0
-
-        for e in new_enrollments:
-            # Check if has at least one completed payment
-            has_completed_payment = e.payments.filter_by(status='completed').first()
-            if has_completed_payment:
+        for v in ventas_de_hoy:
+            if any(venta_completada(p) for p in v.payments):
                 kpi_sales_count += 1
-                kpi_sales_amount += e.program.price if e.program else 0.0
-        
-        payments_today = Payment.query.join(Enrollment).filter(
-            Enrollment.closer_id == closer_id,
-            Payment.date >= start_utc, Payment.date <= end_utc, Payment.status == 'completed'
-        ).all()
-        kpi_cash_collected = sum(p.amount for p in payments_today)
+                kpi_sales_amount += deuda_service.total_de(v) or 0.0
+
+        payments_today = [p for p in FinancialSale.query.filter(
+            func.lower(func.trim(FinancialSale.email_vendedor)).in_(identificadores),
+            FinancialSale.date >= start_utc, FinancialSale.date <= end_utc).all() if venta_completada(p)]
+        kpi_cash_collected = sum(float(p.monto or 0) for p in payments_today)
         
         month_start_utc = user_tz.localize(datetime(today_local.year, today_local.month, 1)).astimezone(pytz.UTC).replace(tzinfo=None)
         
         def calculate_commission(s_dt, e_dt):
-            gross = db.session.query(db.func.sum(Payment.amount)).select_from(Enrollment).join(Payment).filter(
-                Enrollment.closer_id == closer_id, Payment.status == 'completed', Payment.date >= s_dt, Payment.date <= e_dt
-            ).scalar() or 0.0
-            fees = db.session.query(db.func.sum((Payment.amount * (PaymentMethod.commission_percent / 100.0)) + PaymentMethod.commission_fixed)).select_from(Enrollment).join(Payment).join(PaymentMethod).filter(
-                 Enrollment.closer_id == closer_id, Payment.status == 'completed', Payment.date >= s_dt, Payment.date <= e_dt
-            ).scalar() or 0.0
-            return (gross - fees) * 0.10
+            """El cash neto de sus pagos completados del rango por su tasa de la nómina (`CLOSER_RATE` si
+            no tiene), como `commission_service.get_closer_commission`."""
+            from app.services.commission_service import cash_neto_de
+            pagos = FinancialSale.query.filter(func.lower(func.trim(FinancialSale.email_vendedor)).in_(identificadores),
+                                               FinancialSale.date >= s_dt, FinancialSale.date <= e_dt).all()
+            cash_neto = sum(cash_neto_de(p.monto, p.metodo_pago) for p in pagos if venta_completada(p))
+            return cash_neto * _tasa_de_comision(closer_id, today_local.strftime('%Y-%m'))
 
         upcoming = Appointment.query.filter(
             Appointment.closer_id == closer_id,
@@ -325,7 +349,7 @@ class CloserService:
         recent_query = Client.query
         if not is_admin:
             recent_query = recent_query.filter(or_(
-                Client.enrollments.any(Enrollment.closer_id == closer_id),
+                _vendido_por(closer_id),
                 Client.appointments.any(or_(Appointment.closer_id == closer_id, Appointment.setter_id == closer_id))
             ))
         recent_clients = recent_query.order_by(Client.created_at.desc()).limit(10).all()
@@ -342,20 +366,22 @@ class CloserService:
 
         # Map sales for frontend
         sales_today_list = []
+        contactos = FinancialSale.contactos(payments_today)
         for p in payments_today:
             debt = 0
             # Un pago de un cliente dado de baja se cuenta, pero su saldo ya no es deuda.
-            de_baja = bool(p.enrollment and p.enrollment.client and p.enrollment.client.baja_at)
-            if p.enrollment and p.enrollment.program and not de_baja:
-                debt = max(0, p.enrollment.program.price - p.enrollment.total_paid)
-            
+            de_baja = bool(p.client and p.client.baja_at)
+            if p.sale is not None and not de_baja:
+                cobrado = sum(float(x.monto or 0) for x in p.sale.payments if venta_completada(x))
+                debt = deuda_service.saldo(p.sale, cobrado)
+
             sales_today_list.append({
-                'id': p.enrollment_id,
-                'student_name': p.enrollment.client.full_name if p.enrollment and p.enrollment.client else 'N/A',
-                'program_name': p.enrollment.program.name if p.enrollment and p.enrollment.program else 'N/A',
-                'amount': p.amount,
+                'id': p.sale_id,
+                'student_name': contactos[p.id]['nombre_cliente'] or 'N/A',
+                'program_name': nombre_de_programa(p.sale.program_code) if p.sale is not None else 'N/A',
+                'amount': float(p.monto or 0),
                 'debt': debt,
-                'time': p.date.isoformat()
+                'time': p.date.isoformat() if p.date else None
             })
 
         # Calculate progress: Handled agendas / Total agendas
@@ -396,10 +422,7 @@ class CloserService:
     def register_sale(closer_id, client_id, data):
         program_id = data.get('program_id')
         instagram = data.get('instagram')
-        
-        # Look for existing active enrollment for this client and program
-        enrollment = Enrollment.query.filter_by(client_id=client_id, program_id=program_id).first()
-        
+
         client = Client.query.get(client_id)
         if client and instagram:
             # El instagram que confirma el closer al vender corrige el principal de su persona.
@@ -411,36 +434,24 @@ class CloserService:
                 _corregir_en_la_persona(client, {'instagram': (antes, client.instagram)}, usuario)
         
         
-        if not enrollment:
-            enrollment = Enrollment(
-                client_id=client_id,
-                program_id=program_id,
-                closer_id=closer_id
-            )
-            db.session.add(enrollment)
-            db.session.flush()
-        
         payment_date = datetime.now()
         if data.get('payment_date'):
             try:
                 payment_date = datetime.fromisoformat(data['payment_date'].replace('Z', ''))
             except: pass
 
-        payment = Payment(
-            enrollment_id=enrollment.id,
-            payment_method_id=data.get('payment_method_id'),
-            amount=data.get('payment_amount'),
-            payment_type=data.get('payment_type', 'full'),
-            status=data.get('status', 'completed'),
-            date=payment_date
-        )
-        db.session.add(payment)
-        
-        # Sync enrollment date with the first/initial payment date
-        enrollment.enrollment_date = payment_date
-        
+        # El pago real lo crea `SheetsService.post_to_sheets` (FinancialSale y su venta); el espejo
+        # Enrollment/Payment ya no se escribe (Etapa 2c). La automatización (Discord, WhatsApp) recibe
+        # los mismos datos sueltos que antes le daban la inscripción y el Payment.
+        from types import SimpleNamespace
+        from app.models import Program
         db.session.commit()
-        
+        enrollment = SimpleNamespace(client=client, closer_rel=User.query.get(closer_id),
+                                     program=Program.query.get(program_id) if program_id else None)
+        payment = SimpleNamespace(id=None, method=None, payment_method_id=data.get('payment_method_id'),
+                                  amount=data.get('payment_amount'), payment_type=data.get('payment_type', 'full'),
+                                  status=data.get('status', 'completed'), date=payment_date)
+
         # New Sale Automation (Discord + WhatsApp)
         CloserService.trigger_sale_automation(enrollment, payment)
 
@@ -528,8 +539,6 @@ class CloserService:
             logger = logging.getLogger(__name__)
             logger.error(f"[QUICK SALE SYNC ERROR] Error al propagar venta rapida a sheets: {e}")
 
-        return enrollment
-
     @staticmethod
     def _get_sales_integration():
         from app.models import Integration
@@ -548,7 +557,7 @@ class CloserService:
         Handles Discord Wins, Onboarding and WhatsApp confirmations for new sales.
         """
         try:
-            from app.models import Enrollment, Integration, User, PaymentMethod
+            from app.models import Integration, User, PaymentMethod
             from app.services.image_service import ImageService
             from app.services.two_chat_service import TwoChatService
             import requests
@@ -610,7 +619,8 @@ class CloserService:
                     if url:
                         # Todays sales count
                         today_start = datetime.combine(datetime.utcnow().date(), time.min)
-                        todays_count = Enrollment.query.filter(Enrollment.enrollment_date >= today_start).count()
+                        from app.models import Sale
+                        todays_count = Sale.query.filter(Sale.sold_at >= today_start, Sale.kind == 'new').count()
 
                         img_data = {
                             "client_name": client.full_name or "Sin Nombre",
@@ -878,7 +888,7 @@ class CloserService:
         enviando notificaciones en Discord.
         """
         try:
-            from app.models import FinancialSale, Payment, Client, Enrollment, Integration
+            from app.models import FinancialSale, Client, Integration
             from sqlalchemy import func, or_
             from datetime import datetime
             import requests
@@ -942,30 +952,8 @@ class CloserService:
                 if query.first():
                     has_previous_seña = True
                     
-            # B) Buscar seña en la base de datos interna de pagos si no se ha encontrado en FinancialSale
-            if not has_previous_seña:
-                client_db_filters = [Client.person_uuid == person_uuid] if person_uuid else []
-                if email and email != 'n/a' and len(email) > 2:
-                    client_db_filters.append(func.lower(Client.email) == email)
-                if instagram and instagram != 'n/a' and len(instagram) > 2:
-                    client_db_filters.append(func.lower(func.replace(Client.instagram, '@', '')) == instagram)
-                if phone and phone != 'n/a' and len(phone) > 4:
-                    client_db_filters.append(Client.phone.like(f"%{phone}%"))
-                    
-                if client_db_filters:
-                    matching_clients = Client.query.filter(or_(*client_db_filters)).all()
-                    if matching_clients:
-                        client_ids = [c.id for c in matching_clients]
-                        exclude_payment_id = sale_data.get('payment_id')
-                        payment_query = Payment.query.join(Enrollment).filter(
-                            Enrollment.client_id.in_(client_ids),
-                            Payment.payment_type == 'down_payment',
-                            Payment.status == 'completed'
-                        )
-                        if exclude_payment_id:
-                            payment_query = payment_query.filter(Payment.id != exclude_payment_id)
-                        if payment_query.first():
-                            has_previous_seña = True
+            # (Antes había un paso B que buscaba la seña en `Payment`, el espejo de las inscripciones: todo
+            # pago del espejo es copia de un `FinancialSale`, así que el paso A ya lo cubre. Etapa 2c.)
 
             # 4. Enviar notificaciones si se detecta conversión
             if has_previous_seña:
@@ -1333,194 +1321,32 @@ class CloserService:
 
     @staticmethod
     def get_lead_payment_status(client_id):
+        """Qué tipos de pago puede declarar el cliente ahora, con el vocabulario viejo de NewSaleModal
+        (down_payment, first_payment, full, installment, renewal). Sale de
+        `SalesConsistencyService.get_allowed_types` para el programa de su venta 'new' vigente (antes, de su
+        última inscripción)."""
+        from app.models import Program
+        from app.services.closer_ventas_service import NOMBRES
+        from app.services.sale_service import venta_new_vigente
+        from app.services.sales_consistency_service import SalesConsistencyService
         client = Client.query.get_or_404(client_id)
-        
-        enrollment = Enrollment.query.filter_by(client_id=client_id).order_by(Enrollment.enrollment_date.desc()).first()
-        
-        if not enrollment:
-            return {
-                "allowed_types": ["down_payment", "first_payment", "full"],
-                "has_debt": False,
-                "total_paid": 0,
-                "program_id": None
-            }
-        
-        payments = enrollment.payments.filter_by(status='completed').all()
-        payment_types = [p.payment_type for p in payments]
-        
-        program_price = enrollment.program.price if enrollment.program else 0.0
-        total_paid = sum(p.amount for p in payments)
-        has_debt = total_paid < program_price
-        
-        payload = {
-            "has_debt": has_debt,
-            "total_paid": total_paid,
-            "program_id": enrollment.program_id,
-            "program_price": program_price
-        }
-        
-        if not payments:
-            payload["allowed_types"] = ["down_payment", "first_payment", "full"]
-            return payload
-            
-        if not has_debt or 'full' in payment_types:
-            payload["allowed_types"] = ["renewal"]
-            return payload
- 
-        if 'first_payment' in payment_types:
-            payload["allowed_types"] = ["installment"]
-            return payload
- 
-        if 'down_payment' in payment_types:
-            payload["allowed_types"] = ["first_payment", "full"]
-            return payload
-            
-        payload["allowed_types"] = ["installment", "renewal"]
-        return payload
- 
-    @staticmethod
-    def get_enrollment_details(enrollment_id):
-        from app.models import SurveyQuestion
-        import json
-        
-        enrollment = Enrollment.query.get_or_404(enrollment_id)
-        client = enrollment.client
-        
-        # 1. Payments
-        payments = []
-        for p in enrollment.payments:
-            payments.append({
-                "id": p.id,
-                "amount": p.amount,
-                "date": p.date.isoformat(),
-                "type": p.payment_type,
-                "method": p.method.name if p.method else "N/A",
-                "status": p.status,
-                "method_id": p.payment_method_id
-            })
-            
-        # 2. Appointments
-        appointments = []
-        for a in client.appointments.order_by(Appointment.start_time.desc()):
-            appointments.append({
-                "id": a.id,
-                "start_time": a.start_time.isoformat(),
-                "last_stage": a.last_stage,
-                "origin": a.origin
-            })
-            
-        # 3. Survey Answers + Scores
-        survey_data = []
-        for sa in client.survey_answers:
-            points = 0
-            q = sa.question
-            if q and q.options:
-                try:
-                    opts = json.loads(q.options)
-                    if isinstance(opts, list):
-                        for opt in opts:
-                            if str(opt.get('text')) == str(sa.answer):
-                                points = int(opt.get('points', 0))
-                                break
-                except: pass
-                
-            survey_data.append({
-                "question": q.text if q else "Pregunta eliminada",
-                "answer": sa.answer,
-                "points": points
-            })
-            
+        venta = venta_new_vigente(client.person_uuid, client.id)
+        if venta is None or not venta.program_code:
+            return {"allowed_types": ["down_payment", "first_payment", "full"], "has_debt": False,
+                    "total_paid": 0, "program_id": None}
+        codigo = venta.program_code
+        estado = SalesConsistencyService.get_client_payment_state(client_id, codigo)
+        permitidos = SalesConsistencyService.get_allowed_types(client_id, codigo)
+        viejo = {'seña': 'down_payment', 'parcial': 'first_payment', 'completo': 'full', 'cuota': 'installment',
+                 'renovacion': 'renewal'}
+        programa = Program.query.filter(func.lower(Program.name) == NOMBRES.get(codigo, codigo).lower()).first()
         return {
-            "id": enrollment.id,
-            "client": {
-                "id": client.id,
-                "name": client.full_name,
-                "email": client.email,
-                "phone": client.phone,
-                "instagram": client.instagram
-            },
-            "program": {
-                "id": enrollment.program_id,
-                "name": enrollment.program.name if enrollment.program else "N/A",
-                "price": enrollment.program.price if enrollment.program else 0.0
-            },
-            "payments": payments,
-            "appointments": appointments,
-            "survey": survey_data,
-            "total_paid": enrollment.total_paid
+            "allowed_types": [viejo[t] for t, r in permitidos.items() if r['ok'] and t in viejo],
+            "has_debt": estado['balance_remaining'] > 0.01,
+            "total_paid": estado['total_paid'],
+            "program_id": programa.id if programa else None,
+            "program_price": estado['program_price'],
         }
- 
-    @staticmethod
-    def add_payment(enrollment_id, data):
-        enrollment = Enrollment.query.get_or_404(enrollment_id)
-        payment_date = datetime.now()
-        if data.get('date'):
-            try:
-                payment_date = datetime.fromisoformat(data['date'].replace('Z', ''))
-            except: pass
-
-        payment = Payment(
-            enrollment_id=enrollment.id,
-            payment_method_id=data.get('payment_method_id'),
-            amount=data.get('amount'),
-            payment_type=data.get('payment_type'),
-            status=data.get('status', 'completed'),
-            date=payment_date
-        )
-        db.session.add(payment)
-        db.session.commit()
-        return payment
-
-    @staticmethod
-    def update_payment(payment_id, data):
-        payment = Payment.query.get_or_404(payment_id)
-        
-        if 'status' in data:
-            payment.status = data['status']
-            
-        if 'amount' in data:
-            payment.amount = data['amount']
-            
-        if 'payment_type' in data:
-            payment.payment_type = data['payment_type']
-            
-        if 'payment_method_id' in data:
-            payment.payment_method_id = data['payment_method_id']
-            
-        if 'date' in data:
-            try:
-                new_date = datetime.fromisoformat(data['date'].replace('Z', ''))
-                payment.date = new_date
-                
-                # If this is the earliest completed payment, sync with enrollment
-                if payment.enrollment:
-                    first_comp = payment.enrollment.payments.filter_by(status='completed').order_by(Payment.date.asc()).first()
-                    if first_comp and first_comp.id == payment.id:
-                        payment.enrollment.enrollment_date = new_date
-            except: pass
-            
-        # Update enrollment stats? (Handled by implicit relationships or stats calc)
-        # However, total_paid is a property or calced field? 
-        # Enrollment model doesn't store total_paid, it's calculated on fly usually?
-        # Checked SaleDetailModal: data.total_paid comes from backend response.
-        # Let's check get_enrollment_details to see how total_paid is sent.
-        
-        db.session.commit()
-        return payment
- 
-    @staticmethod
-    def delete_payment(payment_id):
-        payment = Payment.query.get_or_404(payment_id)
-        db.session.delete(payment)
-        db.session.commit()
-        return True
- 
-    @staticmethod
-    def delete_enrollment(enrollment_id):
-        enrollment = Enrollment.query.get_or_404(enrollment_id)
-        db.session.delete(enrollment)
-        db.session.commit()
-        return True
 
     @staticmethod
     def update_client(client_id, data):

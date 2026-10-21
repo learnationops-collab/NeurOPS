@@ -1,8 +1,29 @@
 from app import db
-from app.models import User, Client, Enrollment, Program, Payment, PaymentMethod, Appointment
+from app.models import User, Client, Appointment, Sale
 from app.services.base import BaseService
 from datetime import datetime, timedelta
 from sqlalchemy import or_
+
+def _clientes_con_ventas(programs=None, closer_id=None):
+    """Condición sobre `Client`: los que tienen una venta (`Sale`) de esos programas (nombres de
+    `Program`) y/o de ese closer, por su persona o, sin persona, por el cliente (Etapa 2c: antes, sus
+    inscripciones)."""
+    from app.services import admin_cobros
+    q = Sale.query
+    if programs:
+        cods = {c for c in (admin_cobros.codigo_de_programa(p) for p in programs) if c}
+        q = q.filter(Sale.program_code.in_(sorted(cods) or ['']))
+    nombres = admin_cobros.nombres_de_closers([closer_id]) if closer_id else None
+    personas, clientes = set(), set()
+    for s in q.with_entities(Sale.person_uuid, Sale.client_id, Sale.closer_email):
+        if not admin_cobros.es_del_closer(s.closer_email, nombres):
+            continue
+        if s.person_uuid:
+            personas.add(s.person_uuid)
+        elif s.client_id:
+            clientes.add(s.client_id)
+    return or_(Client.person_uuid.in_(sorted(personas) or ['']), Client.id.in_(sorted(clientes) or [0]))
+
 
 class UserService(BaseService):
     @staticmethod
@@ -119,16 +140,16 @@ class UserService(BaseService):
         sort_by = filters.get('sort_by', 'newest')
         closer_id = filters.get('closer_id')
 
-        # Join if filtering by program
+        # Por programa: los que tienen una venta de ese programa.
         if program_filter:
             programs = program_filter.split(',')
             if programs:
-                query = query.join(Enrollment).join(Program).filter(Program.name.in_(programs))
+                query = query.filter(_clientes_con_ventas(programs=programs))
         
         if closer_id:
             query = query.filter(or_(
                 Client.appointments.any(Appointment.closer_id == closer_id),
-                Client.enrollments.any(Enrollment.closer_id == closer_id)
+                _clientes_con_ventas(closer_id=closer_id)
             ))
         
         if start_date: query = query.filter(Client.created_at >= datetime.strptime(start_date, '%Y-%m-%d'))
@@ -146,99 +167,61 @@ class UserService(BaseService):
 
     @staticmethod
     def get_leads_kpis(filters):
-        # Separate logic for complex joins
+        """Los totales de la lista de leads (admin), desde los cobros y las ventas de esos clientes
+        (`admin_cobros`, Etapa 2c): antes, sus inscripciones y pagos del espejo."""
+        from app.services import admin_cobros
         base_q = Client.query
-        
-        # Apply standard filters to base_q
+
         search = filters.get('search')
         program_filter = filters.get('program')
         closer_id = filters.get('closer_id')
         start_date = filters.get('start_date')
         end_date = filters.get('end_date')
+        programs = program_filter.split(',') if program_filter else None
 
-        if program_filter:
-            programs = program_filter.split(',')
-            if programs:
-                base_q = base_q.join(Enrollment).join(Program).filter(Program.name.in_(programs))
-        
+        if programs:
+            base_q = base_q.filter(_clientes_con_ventas(programs=programs))
         if closer_id:
             base_q = base_q.filter(or_(
                 Client.appointments.any(Appointment.closer_id == closer_id),
-                Client.enrollments.any(Enrollment.closer_id == closer_id)
+                _clientes_con_ventas(closer_id=closer_id)
             ))
         if start_date: base_q = base_q.filter(Client.created_at >= datetime.strptime(start_date, '%Y-%m-%d'))
         if end_date: base_q = base_q.filter(Client.created_at < datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1))
         if search: base_q = base_q.filter(or_(Client.full_name.ilike(f"%{search}%"), Client.email.ilike(f"%{search}%")))
-        
-        total_clients = base_q.count()
 
-        # Revenue Query
-        pay_q = db.session.query(
-            db.func.sum(Payment.amount),
-            db.func.sum((Payment.amount * (PaymentMethod.commission_percent / 100.0)) + PaymentMethod.commission_fixed)
-        ).select_from(Client).join(Enrollment).join(Payment).join(PaymentMethod).filter(Payment.status == 'completed')
-        
-        # Apply same filters to pay_q
-        if program_filter:
-            programs = program_filter.split(',')
-            # We already join Enrollment/Program in base query logic, but pay_q is fresh
-            # Should reuse logic.
-            pay_q = pay_q.join(Program).filter(Program.name.in_(programs)) # Program is joined via Enrollment usually
-        
-        if closer_id:
-             pay_q = pay_q.filter(or_(
-                Client.appointments.any(Appointment.closer_id == closer_id),
-                Client.enrollments.any(Enrollment.closer_id == closer_id)
-            ))
-        if start_date: pay_q = pay_q.filter(Client.created_at >= datetime.strptime(start_date, '%Y-%m-%d'))
-        if end_date: pay_q = pay_q.filter(Client.created_at < datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1))
-        if search: pay_q = pay_q.filter(or_(Client.full_name.ilike(f"%{search}%"), Client.email.ilike(f"%{search}%")))
-
-        result = pay_q.first()
-        gross_collected = result[0] or 0.0
-        cash_collected = gross_collected - (result[1] or 0.0)
-        
-        # Debt Query? Simple approach: fetch clients and iterate
-        # Optimization: Don't iterate all if too many.
-        # But for debt calculation we need all.
-        # Let's use base_q.all() if feasible or aggregate in sql
         clients = base_q.all()
-        total_debt = 0.0
-        programas_filtrados = set(program_filter.split(',')) if program_filter else None
-        for c in clients:
-            # Un cliente dado de baja no debe nada: lo que pagó sigue en el ingreso de arriba.
-            if c.baja_at:
-                continue
-            for enr in c.enrollments:
-                # base_q ya filtro los CLIENTES por programa (basta con que tengan UNA inscripcion en
-                # el programa pedido), pero antes esto sumaba la deuda de TODAS sus inscripciones,
-                # incluidas las de otros programas: filtrando por "AL" la deuda mostraba tambien la de
-                # "RR". El ingreso (pay_q, mas abajo) si respeta el programa; la deuda debe hacer lo mismo.
-                if programas_filtrados is not None and (not enr.program or enr.program.name not in programas_filtrados):
+        total_clients = len(clients)
+        cods = {c for c in (admin_cobros.codigo_de_programa(p) for p in programs) if c} if programs else None
+
+        # Ingreso: los cobros completados de esos clientes (del programa pedido, si se filtra).
+        gross_collected = fees = 0.0
+        for lista in admin_cobros.clientes_con_cobros_de(clients).values():
+            for v in lista:
+                if cods is not None and admin_cobros.programa_de_cobro(v)[0] not in cods:
                     continue
-                debt = (enr.program.price if enr.program else 0.0) - enr.total_paid
-                if debt > 0: total_debt += debt
-        
-        # Program Counts
-        program_counts_q = db.session.query(Program.name, db.func.count(Enrollment.id)).select_from(Client).join(Enrollment).join(Program)
-        # Apply filters
-        if program_filter:
-            programs = program_filter.split(',')
-            program_counts_q = program_counts_q.filter(Program.name.in_(programs))
-        if closer_id:
-            program_counts_q = program_counts_q.filter(or_(
-                Client.appointments.any(Appointment.closer_id == closer_id),
-                Client.enrollments.any(Enrollment.closer_id == closer_id)
-            ))
-        if start_date: program_counts_q = program_counts_q.filter(Client.created_at >= datetime.strptime(start_date, '%Y-%m-%d'))
-        if end_date: program_counts_q = program_counts_q.filter(Client.created_at < datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1))
-        if search: program_counts_q = program_counts_q.filter(or_(Client.full_name.ilike(f"%{search}%"), Client.email.ilike(f"%{search}%")))
-        
-        program_counts = program_counts_q.group_by(Program.name).all()
+                gross_collected += float(v.monto or 0)
+                fees += admin_cobros.fee(v)
+        cash_collected = gross_collected - fees
+
+        # Deuda: lo que todavía deben sus ventas (del programa pedido). Un cliente dado de baja no debe
+        # nada: lo que pagó sigue en el ingreso de arriba.
+        activos = [c for c in clients if not c.baja_at]
+        ventas = [s for s in admin_cobros.ventas_de_clientes(activos)
+                  if cods is None or s.program_code in cods]
+        total_debt = sum(admin_cobros.saldos(ventas).values())
+
+        # Ventas 'new' por programa (antes, inscripciones por programa).
+        program_counts = {}
+        for s in admin_cobros.ventas_de_clientes(clients):
+            if s.kind != 'new' or (cods is not None and s.program_code not in cods):
+                continue
+            etiqueta = admin_cobros.etiqueta_de(s.program_code)
+            program_counts[etiqueta] = program_counts.get(etiqueta, 0) + 1
 
         return {
             'total': total_clients,
-            'programs': dict(program_counts),
+            'programs': program_counts,
             'revenue': gross_collected,
             'debt': total_debt,
             'cash_collected': cash_collected,

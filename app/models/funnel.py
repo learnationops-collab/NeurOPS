@@ -46,7 +46,5 @@ class Program(db.Model):
     price = db.Column(db.Float, nullable=False)
     is_active = db.Column(db.Boolean, default=True)
 
-    enrollments = db.relationship('Enrollment', backref='program', lazy='dynamic')
-
     def __repr__(self):
         return f'<Program {self.name}>'

@@ -38,25 +38,6 @@ def leer(client, auth_headers, usuario, appt, programa):
                       headers=auth_headers(usuario))
 
 
-def test_dice_cuanto_pago_y_que_tipos_siguen_la_secuencia(client, db, lead, equipo, auth_headers):
-    db.session.add(FinancialSale(client_id=lead.client_id, nombre_cliente='Ana Gomez',
-                                 mail_cliente='ana@x.com', tipo_pago='RR - Parcial', monto=500,
-                                 estado='Completada', date=datetime(2026, 9, 1)))
-    lead.client.total_amount = 1500
-    db.session.commit()
-
-    r = leer(client, auth_headers, equipo['closer'], lead, 'rr')
-
-    assert r.status_code == 200
-    estado = r.get_json()
-    assert (estado['total_paid'], estado['balance_remaining'], estado['sales_count']) == (500, 1000, 1)
-    assert estado['client_id'] == lead.client_id
-    # Avisa, no bloquea: el tipo que rompe la secuencia viene con su motivo.
-    assert estado['allowed_types']['cuota']['ok'] is True
-    assert estado['allowed_types']['parcial']['ok'] is False
-    assert 'Cuota' in estado['allowed_types']['parcial']['reason']
-
-
 def test_un_cliente_sin_ventas_arranca_de_cero_con_el_precio_del_programa(client, db, lead, equipo,
                                                                           auth_headers):
     r = leer(client, auth_headers, equipo['closer'], lead, 'SI')

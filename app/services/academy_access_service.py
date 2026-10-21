@@ -191,8 +191,6 @@ class AcademyAccessService:
             raise AcademyAccessError(f'No se pudo asignar el producto en la Academia: {e}', status_code=e.status_code or 502)
 
         client.learnation_user_id = learnation_user_id
-        client.academy_product_slug = product_slug
-        client.academy_expires_at = datetime.combine(expires_at, datetime.min.time())
         if expires_at_override:
             # La fecha que eligió el closer queda en la suscripción, con su nombre.
             from app.services import subscription_service

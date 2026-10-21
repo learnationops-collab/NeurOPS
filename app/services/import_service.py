@@ -1,5 +1,5 @@
 import pandas as pd
-from app.models import db, User, Client, Program, PaymentMethod, Enrollment, Payment, Appointment
+from app.models import db, User, Client, Program, PaymentMethod, Appointment, FinancialSale
 from datetime import datetime
 
 class ImportService:
@@ -298,19 +298,8 @@ class ImportService:
             db.session.add(client)
             db.session.flush()
 
-        # 5. Create Enrollment
-        enrollment = Enrollment.query.filter_by(client_id=client.id, program_id=program.id).first()
-        if not enrollment:
-            enrollment = Enrollment(
-                client_id=client.id,
-                program_id=program.id,
-                closer_id=closer.id,
-                enrollment_date=sale_date
-            )
-            db.session.add(enrollment)
-            db.session.flush()
-
-        # 6. Create Payment
+        # 5. El pago (Etapa 2c): una fila de FinancialSale de la persona del cliente; `sale_service` la ubica
+        # en su venta. Ya no se crea el espejo Enrollment/Payment.
         amount_val = data.get('payment_amount', '0')
         if isinstance(amount_val, str):
             amount_str = amount_val.replace('$', '').replace(',', '')
@@ -319,15 +308,18 @@ class ImportService:
         else:
             amount = float(amount_val or 0)
 
-        payment = Payment(
-            enrollment_id=enrollment.id,
-            payment_method_id=method.id,
-            amount=amount,
-            payment_type=data.get('payment_type', 'full'),
-            status='completed',
-            date=sale_date
-        )
-        db.session.add(payment)
+        from app.services.sheets_service import SheetsService
+        nombre_programa = (program.name or '').lower()
+        codigo = next((c for c, clave in SheetsService.PROGRAM_KEYWORDS.items() if clave in nombre_programa), None)
+        # El tipo del importador viene en el vocabulario viejo de Payment ('full', 'installment'...).
+        tipo = {v: k for k, v in SheetsService.PAYMENT_TYPE_MAP.items()}.get(data.get('payment_type', 'full'), 'completo')
+        etiqueta = {'completo': 'Completo', 'parcial': 'Parcial', 'seña': 'Seña', 'cuota': 'Cuota',
+                    'renovacion': 'Renovación', 'upsell': 'Upsell'}[tipo]
+        db.session.add(FinancialSale(
+            client_id=client.id, person=client.person, email_vendedor=closer.email,
+            nombre_cliente=client.full_name, mail_cliente=client.email,
+            tipo_pago=f'{codigo} - {etiqueta}' if codigo else etiqueta, monto=amount,
+            metodo_pago=method.name, estado='Completada', date=sale_date))
 
     @staticmethod
     def _process_agenda(data, resolutions, dry_run):

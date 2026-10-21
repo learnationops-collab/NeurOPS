@@ -30,7 +30,7 @@ Es otro sistema, con un límite de peticiones compartido con producción: un ped
 rechaza acá. Quitar además pide `confirmo: true`, para que ningún cuerpo vacío corte un acceso.
 """
 import logging
-from datetime import datetime, time, timedelta
+from datetime import datetime, timedelta
 
 from app import db
 from app.models import ClientComment
@@ -125,8 +125,6 @@ def acceso(appt, datos, usuario):
     creada = False
     if alumno_id:
         _asignar(alumno_id, slug, dia, AcademyAccessService.closer_de(client, usuario))
-        client.academy_product_slug = slug
-        client.academy_expires_at = datetime.combine(dia, time.min)
         accion = 'renovado'
     else:
         email = _texto(datos, 'email')
@@ -165,7 +163,6 @@ def quitar(appt, datos, usuario):
 
     hoy = hoy_del_usuario(usuario)
     _asignar(alumno_id, slug, hoy)
-    client.academy_expires_at = datetime.combine(hoy, time.min)
 
     motivo = _texto(datos, 'motivo')
     from app.services import subscription_service
