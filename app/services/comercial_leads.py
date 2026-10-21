@@ -90,7 +90,8 @@ class ComercialLeadsMixin:
         else:
             propios = {uid for (uid,) in db.session.query(User.id).filter(User.role == 'setter')}
 
-        igs = sorted({ig for ig in (_limpiar_ig(l.ig) for l in leads) if ig})
+        # Por Instagram, solo los leads sin persona: los demás se miran por su persona (abajo).
+        igs = sorted({ig for ig in (_limpiar_ig(l.ig) for l in leads if not l.person_uuid) if ig})
         con_cita, agendados = set(), set()
         if igs:
             ig_cliente = func.lower(func.replace(Client.instagram, '@', ''))
@@ -109,6 +110,8 @@ class ComercialLeadsMixin:
                 if generada_por in propios:
                     agendados.add(('p', puuid))
 
+        from app.services.lead_contacto_service import contactos
+        contacto = contactos(leads)  # lo que se muestra, de la persona; la fila de respaldo
         salida = []
         vacio = {'total': 0, 'respondio': False, 'cualificado': False, 'descartado': False}
         for l in leads:
@@ -131,8 +134,8 @@ class ComercialLeadsMixin:
                 'person_uuid': l.person_uuid,
                 'fecha': l.created_at.isoformat() if l.created_at else None,
                 'creada': l.created_at.isoformat() if l.created_at else None,
-                'cliente': l.name or 'Sin nombre',
-                'ig': l.ig or '',
+                'cliente': contacto[l.id]['nombre'] or 'Sin nombre',
+                'ig': contacto[l.id]['ig'] or '',
                 'email': '',
                 'telefono': '',
                 'fuente': 'ManyChat',

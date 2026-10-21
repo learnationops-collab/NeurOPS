@@ -8,6 +8,7 @@ from app import db
 from app.models import ROLE_SETTER
 from app.decorators import role_required
 from app.services import conversaciones_service, person_service
+from app.services.lead_contacto_service import contactos as lead_contactos, lead_por_ig
 from app.services.setter_assignment_service import condicion_leads_visibles
 from app.api.setter import bp
 
@@ -59,11 +60,17 @@ def get_setter_deck():
             .filter(Client.instagram != None, Client.instagram != '')\
             .distinct().all()
         booked_igs = {ig[0] for ig in booked_instagrams_q if ig[0]}
+        # Agendó = su persona tiene una cita (Etapa 2c); el Instagram del cliente, de respaldo.
+        booked_persons = {u for (u,) in db.session.query(Appointment.person_uuid)
+                          .filter(Appointment.person_uuid.isnot(None)).distinct()}
         
 
         
-        present_igs = set()
+        # Quién ya está en el mazo: su persona y, de respaldo, el Instagram de la fila.
+        present_igs, present_persons = set(), set()
         for la in lead_answers:
+            if la.lead and la.lead.person_uuid:
+                present_persons.add(la.lead.person_uuid)
             if la.lead and la.lead.ig:
                 present_igs.add(la.lead.ig.strip().replace('@', '').lower())
                 
@@ -73,10 +80,10 @@ def get_setter_deck():
                 uc_ig_clean = uc.instagram.strip().replace('@', '').lower() if uc.instagram else None
                 if not uc_ig_clean:
                     uc_ig_clean = f"no_ig_{uc.id}"
-                if uc_ig_clean not in present_igs:
-                    # La conversación de su persona (plan_personas) antes que la de su Instagram.
-                    m_lead = conversaciones_service.lead_de_persona(uc.person_uuid) or ManychatLead.query.filter(
-                        func.lower(func.replace(ManychatLead.ig, '@', '')) == uc_ig_clean).first()
+                if uc_ig_clean not in present_igs and uc.person_uuid not in present_persons:
+                    # La conversación de su persona (plan_personas), después la de la persona de su
+                    # Instagram y, de respaldo, la de la fila con ese Instagram.
+                    m_lead = conversaciones_service.lead_de_persona(uc.person_uuid) or lead_por_ig(uc_ig_clean)
                     if not m_lead:
                         try:
                             m_lead = ManychatLead(
@@ -123,16 +130,22 @@ def get_setter_deck():
                     if la_obj:
                         lead_answers.insert(0, la_obj)
                         present_igs.add(uc_ig_clean)
-                    
+                        if uc.person_uuid:
+                            present_persons.add(uc.person_uuid)
+
+        # Lo que se muestra de cada lead sale de su persona; la fila, de respaldo (lead_contacto_service).
+        contactos = lead_contactos([la.lead for la in lead_answers if la.lead and la.lead.id and la.lead.id > 0])
         response_data = []
         seen_igs = set()
         for la in lead_answers:
             lead = la.lead
             if not lead:
                 continue
-                
+            contacto = contactos.get(lead.id) or {'nombre': lead.name, 'ig': lead.ig}
+
             ig_clean = lead.ig.strip().replace('@', '').lower() if lead.ig else None
-            lead_identifier = ig_clean or f"lead_id_{lead.id}"
+            # Una persona aparece una sola vez en el mazo; sin persona, su Instagram.
+            lead_identifier = (f"p:{lead.person_uuid}" if lead.person_uuid else None) or ig_clean or f"lead_id_{lead.id}"
             
             # Garantizar que cada Instagram / prospecto sea ÚNICO en el mazo
             if lead_identifier in seen_igs:
@@ -167,7 +180,7 @@ def get_setter_deck():
                         logging.error(f"Error registrando cliente implícito en deck setter: {ex}")
             
             has_unread = client.id in unread_client_ids if client else False
-            if ig_clean and ig_clean in booked_igs and not has_unread:
+            if ((ig_clean and ig_clean in booked_igs) or (lead.person_uuid and lead.person_uuid in booked_persons))                     and not has_unread:
                 continue
 
             if client and client.form_data:
@@ -194,15 +207,15 @@ def get_setter_deck():
                     
             response_data.append({
                 "id": la.id,
-                "lead_name": lead.name or "Sin Nombre",
+                "lead_name": contacto['nombre'] or "Sin Nombre",
                 "email": client.email if client else "",
                 "phone": client.phone if client else "",
-                "instagram": lead.ig or "",
+                "instagram": contacto['ig'] or "",
                 "start_time": la.created_at.isoformat() if la.created_at else None,
                 "created_at": lead.created_at.isoformat() if lead.created_at else None,
                 "origin": "ManyChat / Instagram",
                 "result": la.qualification,
-                "ig_chat_link": f"https://instagram.com/{lead.ig.replace('@', '')}" if lead.ig else "",
+                "ig_chat_link": f"https://instagram.com/{contacto['ig'].replace('@', '')}" if contacto['ig'] else "",
                 "keyword": la.keyword or "",
                 "ad_name": ad.name if ad else (la.keyword or "Desatribuido"),
                 "setter_notes": "",
@@ -273,8 +286,8 @@ def get_setter_deck():
             elif clean_chat.startswith("@"):
                 client_ig = clean_chat
 
-        if not client_ig and lead_persona and lead_persona.ig:
-            client_ig = lead_persona.ig
+        if not client_ig and lead_persona:
+            client_ig = lead_contactos([lead_persona])[lead_persona.id]['ig'] or ""
         if not client_ig and a.client:
             if a.client.full_name:
                 m_lead = ManychatLead.query.filter(func.lower(ManychatLead.name) == a.client.full_name.lower().strip()).first()

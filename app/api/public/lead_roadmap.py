@@ -93,11 +93,13 @@ def get_lead_roadmap():
         resolved_email = client.email.strip().lower() if client and client.email and not is_generic_val(client.email) else clean_email
         resolved_phone = client.phone.strip() if client and client.phone and not is_generic_val(client.phone) else clean_phone
 
-        # 3. Buscar ManychatLead: el de la persona y, si no, por instagram
+        # 3. Buscar ManychatLead: el de la persona, el de la persona de su instagram y, de respaldo, el
+        # de la fila con ese instagram (`lead_por_ig`).
         from app.services.conversaciones_service import lead_de_persona
+        from app.services import lead_contacto_service
         manychat_lead = lead_de_persona(puuid)
         if not manychat_lead and resolved_ig:
-            manychat_lead = ManychatLead.query.filter(func.lower(ManychatLead.ig) == resolved_ig).first()
+            manychat_lead = lead_contacto_service.lead_por_ig(resolved_ig)
         if not manychat_lead and resolved_email:
             manychat_lead = ManychatLead.query.filter(func.lower(ManychatLead.ig) == resolved_email).first() # Fallback a veces guardado como email
 
@@ -109,6 +111,7 @@ def get_lead_roadmap():
         if agenda_filtro is not None:
             financial_agendas = FinancialAgenda.query.filter(agenda_filtro).order_by(FinancialAgenda.date.desc()).all()
         contacto_agenda = financial_agendas[0].contacto() if financial_agendas else {}
+        contacto_lead = lead_contacto_service.contacto(manychat_lead) if manychat_lead else {}
 
         # 5. Buscar FinancialSales: los de su persona y su ficha; la copia del pago (mail, instagram)
         # cuenta solo en pagos sin persona (docs/plan_personas.md, Etapa 2b).
@@ -164,10 +167,10 @@ def get_lead_roadmap():
             # financial_agendas[0].lead: cuando el mismo telefono/mail tiene varias agendas y la
             # mas reciente es una de las historicas sin `lead` cargado (ver Bug agendas viejas),
             # ese [0] queda vacio y no debe pisar el nombre que sabiamos que era el correcto.
-            "full_name": client.full_name if client else (clean_name or (manychat_lead.name if manychat_lead else (contacto_venta['nombre_cliente'] if financial_sales else (contacto_agenda.get('lead') if financial_agendas else "Desconocido")))),
-            "email": client.email if client else (manychat_lead.ig if manychat_lead and '@' in manychat_lead.ig else (contacto_venta['mail_cliente'] if financial_sales else (contacto_agenda.get('mail') if financial_agendas else "Sin Email"))),
+            "full_name": client.full_name if client else (clean_name or (contacto_lead['nombre'] if manychat_lead else (contacto_venta['nombre_cliente'] if financial_sales else (contacto_agenda.get('lead') if financial_agendas else "Desconocido")))),
+            "email": client.email if client else (contacto_lead['ig'] if manychat_lead and '@' in (contacto_lead['ig'] or '') else (contacto_venta['mail_cliente'] if financial_sales else (contacto_agenda.get('mail') if financial_agendas else "Sin Email"))),
             "phone": client.phone if client else (contacto_venta['telefono'] if financial_sales else (contacto_agenda.get('whatsapp') if financial_agendas else "Sin Teléfono")),
-            "instagram": client.instagram if client else (manychat_lead.ig if manychat_lead else (contacto_venta['instagram'] if financial_sales else (contacto_agenda.get('instagram') if financial_agendas else "Sin Instagram"))),
+            "instagram": client.instagram if client else (contacto_lead['ig'] if manychat_lead else (contacto_venta['instagram'] if financial_sales else (contacto_agenda.get('instagram') if financial_agendas else "Sin Instagram"))),
             "status": "Entrante",
             "created_at": created_at_val,
             "objeciones": client.objeciones if client else "",
