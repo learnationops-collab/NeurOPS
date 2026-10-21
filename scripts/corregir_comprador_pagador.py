@@ -5,6 +5,9 @@ con la de quien compró, y su corrección.
 otro (un familiar, una cuenta ajena), el pago quedó con esa persona aunque el nombre y el teléfono de la
 fila son de quien compró. Con el criterio estricto de J ese cliente dejó de ver el pago.
 
+Variante por mail (cuando el cliente no tiene teléfono): el pago quedó en una persona con otro nombre y el
+mail de la copia es también de una persona con nombre compatible y con cliente; pasa a ésa, sin pagador.
+
 Un pago se corrige si:
   · el nombre copiado es compatible con el de un cliente (`person_service.mismo_nombre`), y
   · el teléfono copiado es el de ese cliente, o es un teléfono de la persona del cliente, y
@@ -51,11 +54,16 @@ class Indice:
     def __init__(self):
         self.nombre = dict(db.session.query(Person.uuid, Person.full_name).filter(Person.merged_into_uuid.is_(None)))
         self.duenos = defaultdict(set)      # (kind, valor) -> {persona}
+        self.mails_todos = defaultdict(set)  # mail -> {persona}, también los marcados para revisar
         self.telefonos = defaultdict(set)   # persona -> {teléfono normalizado}
-        for pu, kind, valor in db.session.query(PersonIdentity.person_uuid, PersonIdentity.kind, PersonIdentity.value).filter(
-                PersonIdentity.retired_at.is_(None), PersonIdentity.review_note.is_(None),
-                PersonIdentity.kind.in_(('email', 'phone'))):
-            if pu in self.nombre:
+        for pu, kind, valor, nota in db.session.query(PersonIdentity.person_uuid, PersonIdentity.kind,
+                                                      PersonIdentity.value, PersonIdentity.review_note).filter(
+                PersonIdentity.retired_at.is_(None), PersonIdentity.kind.in_(('email', 'phone'))):
+            if pu not in self.nombre:
+                continue
+            if kind == 'email':
+                self.mails_todos[valor].add(pu)
+            if nota is None:
                 self.duenos[(kind, valor)].add(pu)
                 if kind == 'phone':
                     self.telefonos[pu].add(valor)
@@ -68,7 +76,7 @@ class Indice:
                 self.por_tel[normalizar('phone', tel)].add(cid)
             if _normalize_name(nombre):
                 self.por_nombre[_normalize_name(nombre)].add(cid)
-        clientes_de = defaultdict(set)
+        self.clientes_de = clientes_de = defaultdict(set)
         for cid, (_, pu) in self.clientes.items():
             if pu:
                 clientes_de[pu].add(cid)
@@ -78,6 +86,23 @@ class Indice:
                 self.por_tel[t] |= clientes_de.get(pu, set())
 
 
+def por_mail(v, mail, ind):
+    """La variante por mail (parte del paso 9), para cuando el teléfono no encuentra al comprador (su cliente no
+    tiene teléfono): el pago quedó en una persona con otro nombre, y el mail de la copia es también de una
+    persona con nombre compatible y con cliente. Esa otra persona no es quien pagó: está contaminada (tiene el
+    mail del comprador). El pago pasa al comprador y no lleva pagador."""
+    if mismo_nombre(ind.nombre.get(v.person_uuid), v.nombre_cliente):
+        return None
+    compradores = {p for p in ind.mails_todos.get(mail, ()) if p != v.person_uuid and ind.clientes_de.get(p)
+                   and mismo_nombre(ind.nombre.get(p), v.nombre_cliente)}
+    if not compradores:
+        return None
+    if len(compradores) > 1:
+        return 'dudoso_varios_compradores', None, None, None
+    comprador = compradores.pop()
+    return 'mail', comprador, None, min(ind.clientes_de[comprador])
+
+
 def clasificar(v, ind):
     """(clase, comprador, pagador, cliente) de un pago, o None si no es un caso para mirar."""
     mail = normalizar('email', v.mail_cliente)
@@ -85,7 +110,7 @@ def clasificar(v, ind):
         return None
     ajenas = {p for p in ind.duenos.get(('email', mail), ()) if not mismo_nombre(ind.nombre.get(p), v.nombre_cliente)}
     if not ajenas:
-        return None
+        return por_mail(v, mail, ind)
     tel = normalizar('phone', v.telefono)
     if tel:
         candidatos = {cid for cid in ind.por_tel.get(tel, ()) if mismo_nombre(v.nombre_cliente, ind.clientes[cid][0])}
@@ -96,9 +121,13 @@ def clasificar(v, ind):
     compradores = {ind.clientes[cid][1] for cid in candidatos} - {None}
     compradores -= ajenas
     if not compradores:
-        return None
+        return por_mail(v, mail, ind)
     if len(compradores) > 1:
-        return 'dudoso_varios_compradores', None, None, None
+        # Un teléfono compartido entre varios clientes: desempata el mail de la copia, si es de uno solo.
+        con_el_mail = compradores & ind.mails_todos.get(mail, set())
+        if len(con_el_mail) != 1:
+            return por_mail(v, mail, ind) or ('dudoso_varios_compradores', None, None, None)
+        compradores = con_el_mail
     comprador = compradores.pop()
     if comprador == v.person_uuid:
         return None
@@ -142,7 +171,7 @@ def main(apply=False, hasta=None):
         clase, comprador, pagador, cliente = r
         clases[clase] += 1
         plata[clase] += float(v.monto or 0)
-        if clase != 'telefono':
+        if clase not in ('telefono', 'mail'):
             continue
         if hasta and v.date and v.date >= hasta:
             tramo = f'{hasta:%Y-%m-%d} a {RECIENTES:%Y-%m-%d} (revisar)' if v.date < RECIENTES else                 f'desde {RECIENTES:%Y-%m-%d} (no se toca)'
