@@ -138,6 +138,14 @@ def ventas_nuevas(desde, hasta, closer_ids=None, program_ids=None):
     return [s for s in q.order_by(Sale.sold_at.asc()) if es_del_closer(s.closer_email, nombres)]
 
 
+def revenue_potencial(ventas):
+    """Lo acordado en `ventas` (o el de lista de su época). Las canceladas o reembolsadas no cuentan: el
+    revenue es lo acordado hasta que se declara imposible (decisión de Santiago, 21/10/2026)."""
+    from app.services.deuda_service import total_de
+    return sum(t for t in (total_de(v) for v in ventas if v.status not in ('cancelled', 'refunded'))
+               if t is not None)
+
+
 def ventas_de_clientes(clientes):
     """{sale: client_id} de las ventas de esos clientes: las de su persona (al cliente más viejo de la
     persona entre los dados) o, sin persona, las del cliente."""

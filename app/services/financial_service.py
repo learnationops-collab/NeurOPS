@@ -42,14 +42,13 @@ class FinancialService(BaseService):
         # (`FinancialSale`), la fee la de su pasarela y la comisión de closers una estimación del 10% del
         # neto; el «revenue potencial», lo acordado en las ventas 'new' del período (`Sale`).
         from app.services import admin_cobros
-        from app.services.deuda_service import total_de
         period_payments = admin_cobros.cobros(start_dt, end_dt)
         total_payments = sum(float(v.monto or 0) for v in period_payments)
         total_commission = sum(admin_cobros.fee(v) for v in period_payments)
         closer_commission_total = admin_cobros.comision_estimada_closers(period_payments)
 
         period_sales = admin_cobros.ventas_nuevas(start_dt, end_dt)
-        gross_revenue = sum(t for t in (total_de(s) for s in period_sales) if t is not None)
+        gross_revenue = admin_cobros.revenue_potencial(period_sales)
         enrollments_count = len(period_sales)
 
         cash_collected = total_payments - total_commission
