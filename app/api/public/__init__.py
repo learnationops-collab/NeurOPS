@@ -346,13 +346,19 @@ def book_appointment():
 
 from . import triage
 from . import marketing
+from . import marketing_attribution
 from . import setter
 from . import closer
 from . import financial_sales
 from . import financial_agendas
+from . import financial_agendas_list
+from . import financial_agendas_edit
+from . import financial_agendas_form
+from . import financial_agendas_triage
 from . import financial_agendas_bulk
 from . import financial_agendas_dedup
 from . import lead_roadmap
+from . import lead_roadmap_edit
 from . import finance
 from . import conciliacion
 from . import new_clients

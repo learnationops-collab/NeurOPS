@@ -418,3 +418,9 @@
   - `closer.py` (buscador, comentarios, cliente) y las agendas potenciales y duplicadas devuelven `person_uuid`.
   - Medición en el servidor de prueba: 491 cruces de pago↔cliente solo por teléfono, con nombre compatible ($210k), son personas duplicadas sin fusionar; hay que revisar los grupos por teléfono de `fusionar_personas`.
   - Verificación: sin tests ni ejecución local (regla del proyecto); se valida con el deploy del servidor de prueba.
+
+- **20 de Octubre de 2026 (personas, K2: cierre de K, G2 y archivos de más de 500 líneas)** *(Sin cambio visual. [app/services/booking_espejo.py](../../app/services/booking_espejo.py), [app/api/external/academy_personas.py](../../app/api/external/academy_personas.py) y los módulos nuevos de abajo [NEW/MODIFY])*:
+  - El espejo agenda→cita usa el cliente de la persona de la agenda y sus datos; «las agendas de un cliente» (`filtros_de_agenda_del_cliente`) van por su persona y la copia solo en agendas sin persona.
+  - La Academia corrige una venta (`PATCH /external/sales/<id>`) en su persona: corregir es nuevo principal y el anterior dado de baja; `modo: 'pago'` suma el mail como mail de pago; un dato de otra persona da 409. Falta que la Academia lo use.
+  - Partidos en módulos de menos de 500 líneas, sin cambiar comportamiento (los originales re-exportan lo que otros importan; las rutas son las mismas): `setter.py`, `booking_service`, `manychat.py`, `anuncios_service`, `palabra_clave_service`, `financial_agendas.py`, `comercial_service`, `lead_roadmap.py`, `marketing.py` y `agenda_dedup_service`.
+  - Verificación: sin tests (desarrollo rápido); `py_compile`, pyflakes sin nombres indefinidos y comparación por AST de que cada función movida quedó igual. Se prueba en el servidor develop.
