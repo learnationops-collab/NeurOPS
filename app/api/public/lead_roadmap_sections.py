@@ -113,17 +113,44 @@ def build_activity(lead_profile, arrived_stage, manychat_lead, financial_agendas
     return activity
 
 
+def _ventas_por_programa(client):
+    """[(programa, fecha de ingreso, cobrado)] de las ventas vigentes de la persona del cliente (o del
+    cliente, sin persona), una por programa (Etapa 2c: reemplaza las inscripciones `Enrollment`).
+    El ingreso es la venta nueva más vieja del programa; lo cobrado, los pagos completados de sus ventas."""
+    from app.models import FinancialSale, Sale
+    from app.services.comercial_vocabulario import venta_completada
+
+    suyas = Sale.person_uuid == client.person_uuid if client.person_uuid else Sale.client_id == client.id
+    ventas = Sale.query.filter(suyas, Sale.status == 'active').order_by(Sale.sold_at).all()
+    por_programa = {}
+    for v in ventas:  # en orden de venta: la primera nueva es el ingreso; sin nueva, la primera
+        fila = por_programa.setdefault(v.program_code, {'ingreso': None, 'nueva': False, 'ids': []})
+        fila['ids'].append(v.id)
+        if fila['ingreso'] is None or (v.kind == 'new' and not fila['nueva']):
+            fila['ingreso'], fila['nueva'] = v.sold_at, v.kind == 'new'
+    cobrado = {}
+    ids = [i for f in por_programa.values() for i in f['ids']]
+    if ids:
+        de_venta = {i: p for p, f in por_programa.items() for i in f['ids']}
+        for pago in FinancialSale.query.filter(FinancialSale.sale_id.in_(ids)).all():
+            if venta_completada(pago):
+                programa = de_venta[pago.sale_id]
+                cobrado[programa] = cobrado.get(programa, 0.0) + float(pago.monto or 0)
+    return [(p, f['ingreso'], round(cobrado.get(p, 0.0), 2)) for p, f in por_programa.items()]
+
+
 def build_programs(client, financial_sales):
-    # 7. Permanencia en Programas
+    # 7. Permanencia en Programas: las ventas de la persona (antes, las inscripciones del espejo)
+    from app.services.closer_service import PROGRAM_LABELS
+
     programs_list = []
     seen_program_names = set()
-    
+
     if client:
-        for enroll in client.enrollments.all():
-            program_name = enroll.program.name if enroll.program else "Programa Desconocido"
+        for programa, ingreso, total_paid in _ventas_por_programa(client):
+            program_name = PROGRAM_LABELS.get(programa) or programa or "Programa a definir"
             seen_program_names.add(program_name.lower().strip())
-            total_paid = enroll.total_paid
-            days_enrolled = (datetime.utcnow() - enroll.enrollment_date).days if enroll.enrollment_date else 0
+            days_enrolled = (datetime.utcnow() - ingreso).days if ingreso else 0
             permanence_str = f"{days_enrolled} días"
             if days_enrolled >= 30:
                 months = days_enrolled // 30
@@ -134,10 +161,10 @@ def build_programs(client, financial_sales):
                 
             programs_list.append({
                 "program_name": program_name,
-                "enrollment_date": enroll.enrollment_date.isoformat() if enroll.enrollment_date else None,
+                "enrollment_date": ingreso.isoformat() if ingreso else None,
                 "total_paid": total_paid,
                 "permanence": permanence_str,
-                "source": "Matrícula"
+                "source": "Venta"
             })
 
     # Integrar también desde FinancialSales
