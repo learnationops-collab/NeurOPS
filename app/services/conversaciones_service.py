@@ -69,17 +69,21 @@ def _pendientes(canal, externo):
 
 
 def conversacion_de(canal, externo, ad_id=None, keyword=None):
-    """La conversación de ese id y anuncio (o palabra clave); None si todavía no hay."""
+    """La conversación de ese id y anuncio (o palabra clave); None si todavía no hay. Sin una propia,
+    la que el lead tiene desde que llegó sin anuncio ni palabra clave (`sincronizar_lead`): esa se
+    completa con la primera."""
     clave = clave_de_palabra(keyword)
     candidatas = _pendientes(canal, externo) + Conversation.query.filter_by(channel=canal, external_id=externo) \
         .order_by(Conversation.created_at.desc(), Conversation.id.desc()).all()
+    vacia = next((c for c in candidatas if not c.ad_id and not c.keyword), None)
     if ad_id:
         por_anuncio = next((c for c in candidatas if c.ad_id == ad_id), None)
         if por_anuncio:
             return por_anuncio
     if clave:
-        return next((c for c in candidatas if not c.ad_id and clave_de_palabra(c.keyword) == clave), None)
-    return None if ad_id else (candidatas[0] if candidatas else None)
+        por_clave = next((c for c in candidatas if not c.ad_id and clave_de_palabra(c.keyword) == clave), None)
+        return por_clave or vacia
+    return vacia if ad_id else (candidatas[0] if candidatas else None)
 
 
 def _guardar_conversacion(canal, externo, person, ad_id=None, keyword=None, creada=None, **campos):
@@ -119,6 +123,10 @@ def sincronizar_lead(lead):
     comunes = {'setter': lead.setter, 'stage': str(lead.last_stage) if lead.last_stage is not None else None,
                'data': {'manychat_lead_id': lead.id, 'follower': lead.follower}}
     convs = _pendientes(canal, externo) + Conversation.query.filter_by(channel=canal, external_id=externo).all()
+    if not convs and lead.id:
+        # Todo lead tiene al menos una conversación, aunque no haya interactuado con ningún anuncio:
+        # `conversations` reemplaza a los leads. La primera respuesta la completa (`conversacion_de`).
+        convs = [_guardar_conversacion(canal, externo, person, creada=lead.created_at)]
     for conv in convs:
         if person is not None:
             conv.person = person

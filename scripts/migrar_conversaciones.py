@@ -54,14 +54,36 @@ def _anuncio_viejo(fila, cuenta):
     cuenta['manychat_ad_leads'] += 1
 
 
+def _origen(manychat_id):
+    canal, _ = cs.canal_de(manychat_id)
+    if canal == 'instagram':
+        return 'motor_ig'
+    if cs.manychat_id_real(manychat_id):
+        return 'manychat'
+    return (str(manychat_id).split('_')[0] or 'otro')[:20]  # synth, manual, la marca de palabra_clave...
+
+
+def _contar(lead, cuenta, tabla):
+    """Por origen del manychat_id: personas nuevas, vinculadas a una que ya estaba, y sin persona."""
+    origen = f'{tabla}:{_origen(lead.manychat_id)}'
+    if lead.person is None:
+        cuenta['sin_persona'][origen] += 1
+    elif lead.person in db.session.new:
+        cuenta['nuevas'][origen] += 1
+    else:
+        cuenta['vinculadas'][origen] += 1
+
+
 def ejecutar(apply=False):
     cuenta = Counter()
+    por_origen = {'nuevas': Counter(), 'vinculadas': Counter(), 'sin_persona': Counter()}
     personas_antes = Person.query.count()
     convs_antes = Conversation.query.count()
     with cs.pausado():
         for tanda in _por_tandas(ManychatLead):
             for lead in tanda:
                 cs.sincronizar_lead(lead)
+                _contar(lead, por_origen, 'mc')
                 # La respuesta mÃ¡s vieja primero: asÃ­ la calificaciÃ³n que queda es la Ãºltima.
                 for answer in lead.answers.order_by(LeadAnswer.created_at, LeadAnswer.id):
                     cs.sincronizar_respuesta(answer, lead)
@@ -76,13 +98,18 @@ def ejecutar(apply=False):
         for tanda in _por_tandas(Lead):
             for lead in tanda:
                 cs.sincronizar_lead_viejo(lead)
+                _contar(lead, por_origen, 'leads')
                 db.session.flush()
                 cuenta['leads'] += 1
     personas = Person.query.count() - personas_antes
     convs = Conversation.query.count() - convs_antes
     sin_persona = Conversation.query.filter(Conversation.person_uuid.is_(None)).count()
+    vacias = Conversation.query.filter(Conversation.ad_id.is_(None), Conversation.keyword.is_(None)).count()
     print(f'leidos: {dict(cuenta)}')
-    print(f'personas nuevas: {personas} | conversaciones nuevas: {convs} | conversaciones sin persona: {sin_persona}')
+    print(f'personas nuevas: {personas} | conversaciones nuevas: {convs} | conversaciones sin persona: {sin_persona}'
+          f' | sin anuncio ni palabra clave: {vacias}')
+    for tipo, contador in por_origen.items():
+        print(f'  {tipo} por origen: {dict(contador.most_common())}')
     if not apply:
         db.session.rollback()
         print('\n[PRUEBA] No se escribiÃ³ nada. CorrÃ© con --apply para guardar.')
