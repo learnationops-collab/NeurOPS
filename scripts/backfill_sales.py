@@ -4,6 +4,11 @@ Las reglas están en `app/services/sales_grouping.py`.
 Uso:
   python scripts/backfill_sales.py            # prueba: cuenta y muestra los dudosos, no escribe nada
   python scripts/backfill_sales.py --apply    # crea las ventas y llena sale_id en pagos y cuotas
+  python scripts/backfill_sales.py --apply --rehacer   # borra todas las ventas y las vuelve a armar
+
+`--rehacer` es para cuando ya hay ventas armadas de a un pago por el camino en vivo (`sale_service`),
+por ejemplo después de corregir_comprador_pagador, que les cambia el cliente a pagos viejos. Se
+corre antes de la carga de suscripciones: suelta también la venta de suscripciones y eventos.
 
 Solo toma los pagos completados que todavía no tienen venta (`sale_id` NULL), así que correrlo dos
 veces no duplica nada. Los pagos no completados (pendientes, reembolsos) quedan sin venta y se cuentan.
@@ -100,8 +105,20 @@ def _mostrar(numeros, ventas, filas):
         print(f"  [{v.programa or '?'}] cliente {v.client_id or '?'}: {pagos} -> {v.review_note}")
 
 
-def ejecutar(apply=False):
+def _deshacer():
+    """Suelta y borra todas las ventas, sin pasar por el before_flush de `sale_service`."""
+    for sql in ('UPDATE sales SET subscription_id = NULL', 'UPDATE subscriptions SET sale_id = NULL',
+                'UPDATE subscription_events SET sale_id = NULL', 'UPDATE installment_plans SET sale_id = NULL',
+                'UPDATE financial_sales SET sale_id = NULL', 'DELETE FROM sales'):
+        db.session.execute(db.text(sql))
+    db.session.flush()
+
+
+def ejecutar(apply=False, rehacer=False):
     """El agrupado dentro de un app context. Devuelve los números del resumen."""
+    if rehacer:
+        print(f'Rehacer: se borran {Sale.query.count()} ventas y se arman de nuevo.')
+        _deshacer()
     todas = FinancialSale.query.filter(FinancialSale.sale_id.is_(None)).all()
     completadas = [f for f in todas if venta_completada(f)]
     filas = {f.id: f for f in completadas}
@@ -122,4 +139,4 @@ def ejecutar(apply=False):
 
 if __name__ == '__main__':
     with create_app().app_context():
-        ejecutar(apply='--apply' in sys.argv)
+        ejecutar(apply='--apply' in sys.argv, rehacer='--rehacer' in sys.argv)
