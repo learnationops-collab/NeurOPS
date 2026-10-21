@@ -3,7 +3,6 @@ from flask_login import login_required
 from app.models import db, FinancialSale, ExcludedSale, FinancialAgenda
 from app.decorators import admin_required
 from app.services.commission_service import cash_neto_de
-from app.services.identity_service import normalize_ig
 from datetime import datetime
 from . import bp
 from .finance import finance_admin_required
@@ -333,19 +332,13 @@ def update_financial_sale(sale_id):
             
         s_dict["closer_name"] = resolve_closer_name(sale.email_vendedor)
         
-        # Cruzar con agenda por la persona y, solo si el pago no tiene, por el Instagram copiado
-        ig_norm = None if sale.person_uuid else normalize_ig(sale.instagram)
+        # Cruzar con agenda por la persona
         resolved_setter = None
         has_agenda_match = False
         agenda = None
         if sale.person_uuid:
             agenda = FinancialAgenda.query.filter_by(person_uuid=sale.person_uuid) \
                 .order_by(FinancialAgenda.date.desc()).first()
-        if agenda is None and ig_norm:  # la copia de la agenda solo cuenta en las que no tienen persona
-            agenda = FinancialAgenda.query.filter(
-                FinancialAgenda.person_uuid.is_(None),
-                func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_norm
-            ).order_by(FinancialAgenda.date.desc()).first()
         if agenda:
             has_agenda_match = True
             is_valid_lead_source = (
