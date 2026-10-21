@@ -25,6 +25,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 
 from app.services.closer_service import PROGRAM_LABELS, _program_from_examen
+from app.services.pagos_copia import copia
 from app.services.sheets_service import SheetsService
 from app.services.ticket_service import _dia, _misma_venta, _unir_clientes, claves_de_cliente, es_primera_cuota
 
@@ -97,8 +98,8 @@ def pago_de_fila(fila):
     raw = fila.raw_data if isinstance(getattr(fila, 'raw_data', None), dict) else {}
     codigo, tipo = SheetsService.parse_tipo_pago(fila.tipo_pago or raw.get('tipo_pago'))
     codigo = codigo or CODIGO_DE_LABEL.get(_program_from_examen(fila.examen)) or _programa_del_texto(fila.tipo_pago)
-    claves = claves_de_cliente(fila.client_id, fila.mail_cliente, fila.instagram, fila.nombre_cliente,
-                               getattr(fila, 'person_uuid', None))
+    c = copia(fila)
+    claves = claves_de_cliente(fila.client_id, c['mail'], c['instagram'], c['nombre'], getattr(fila, 'person_uuid', None))
     return Pago(id=fila.id, claves=claves,
                 programa=codigo, tipo=tipo, dia=_dia(fila.date), client_id=fila.client_id,
                 vendedor=fila.email_vendedor, setter=fila.setter,
