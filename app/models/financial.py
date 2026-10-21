@@ -168,6 +168,19 @@ class FinancialAgenda(ConPersona, db.Model):
     def es_duplicada(self):
         return self.duplicada_de_id is not None
 
+    # Hasta octubre de 2025 la hoja guardaba el nombre de la persona en `nombre` y el evento en `lead`
+    # («Entrevista Diagnóstica Gratuita»); desde noviembre, la fuente en `nombre` y la persona en `lead`.
+    PALABRAS_DE_EVENTO = ('entrevista', 'sesión', 'sesion', 'consultoría', 'consultoria', 'diagnóstica',
+                          'reagenda', 'domingo', 'desconocido', 'prueba')
+
+    @property
+    def nombre_persona(self):
+        """El nombre de quien agendó, en cualquiera de los dos formatos de la hoja."""
+        lead = (self.lead or '').strip()
+        if lead and not any(p in lead.lower() for p in self.PALABRAS_DE_EVENTO):
+            return lead
+        return self.nombre
+
     CONTACTO = ('lead', 'mail', 'whatsapp', 'instagram')
     _DE_PERSONA = {'lead': 'full_name', 'mail': 'email', 'whatsapp': 'phone', 'instagram': 'instagram'}
 
@@ -176,7 +189,7 @@ class FinancialAgenda(ConPersona, db.Model):
         docs/plan_personas.md). Lo copiado en la agenda se lee solo si no tiene persona."""
         p = self.person if self.person_uuid else None
         if p is None:
-            return {k: getattr(self, k) for k in self.CONTACTO}
+            return {**{k: getattr(self, k) for k in self.CONTACTO}, 'lead': self.nombre_persona}
         return {k: getattr(p, self._DE_PERSONA[k]) for k in self.CONTACTO}
 
     def to_dict(self, sales_count=None):

@@ -30,7 +30,7 @@ from personas_indice import IndicePersonas
 # dato de contacto (solo nombre): se vincula por promoted_client_id, que ya hizo la migración.
 TABLAS = (
     (FinancialSale, 'pago', ('nombre_cliente', 'mail_cliente', 'instagram', 'telefono', None)),
-    (FinancialAgenda, 'agenda', ('lead', 'mail', 'instagram', 'whatsapp', None)),  # 'nombre' es la fuente, no el lead
+    (FinancialAgenda, 'agenda', ('nombre_persona', 'mail', 'instagram', 'whatsapp', None)),  # los dos formatos de la hoja
     (Lead, 'manychat', ('name', 'email', 'instagram_username', None, 'manychat_id')),
     (ManychatLead, 'manychat', ('name', None, 'ig', None, 'manychat_id')),
     (ManychatAdLead, 'manychat', ('lead_name', None, None, None, 'manychat_id')),

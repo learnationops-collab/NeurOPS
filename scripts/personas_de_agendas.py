@@ -34,10 +34,10 @@ def ejecutar(apply=False):
         if not person_service.claves(**datos):
             cuenta['sin datos'] += 1
             continue
-        encontrada = person_service.buscar(agenda.lead, **datos)
+        encontrada = person_service.buscar(agenda.nombre_persona, **datos)
         cuenta['ya tenía persona' if encontrada else 'persona nueva'] += 1
         if apply:
-            agenda.person = encontrada or person_service.resolver(agenda.lead, fuente='agenda', **datos)
+            agenda.person = encontrada or person_service.resolver(agenda.nombre_persona, fuente='agenda', **datos)
             if i % LOTE == 0:
                 db.session.commit()
     print(f'agendas sin persona: {len(agendas)} -> {dict(cuenta)}')

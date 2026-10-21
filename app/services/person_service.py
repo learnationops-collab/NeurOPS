@@ -415,8 +415,8 @@ def _persona_por_cliente(obj, nuevo):
             obj.person_uuid = puuid
 
 
-# Columnas de la agenda: nombre del lead, mail, instagram, whatsapp.
-COLUMNAS_AGENDA = ('lead', 'mail', 'instagram', 'whatsapp')
+# Columnas de la agenda: nombre (según el formato de la hoja, `nombre_persona`), mail, instagram, whatsapp.
+COLUMNAS_AGENDA = ('lead', 'nombre', 'mail', 'instagram', 'whatsapp')
 
 
 def _persona_de_agenda(agenda, nuevo):
@@ -432,7 +432,7 @@ def _persona_de_agenda(agenda, nuevo):
         return
     if not claves(**datos_agenda):
         return  # sin ningún dato no se sabe quién es
-    agenda.person = _resolver(agenda.lead, datos_agenda['email'], datos_agenda['instagram'], datos_agenda['phone'],
+    agenda.person = _resolver(agenda.nombre_persona, datos_agenda['email'], datos_agenda['instagram'], datos_agenda['phone'],
                               None, None, True, 'agenda')
 
 
