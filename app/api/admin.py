@@ -12,7 +12,7 @@ import pandas as pd
 import io
 import json
 import math
-from app.models import db, User, Client, Expense, RecurringExpense, Payment, Enrollment, PaymentMethod, Event, Appointment, Integration, Pipeline, PipelineStage, Notification, FeatureToggle
+from app.models import db, User, Client, Expense, RecurringExpense, PaymentMethod, Event, Appointment, Integration, Pipeline, PipelineStage, Notification, FeatureToggle
 from datetime import datetime, date, timedelta
 from sqlalchemy import or_
 import calendar
@@ -136,37 +136,6 @@ def update_feature_toggle(key):
     toggle.updated_by_id = current_user.id
     db.session.commit()
     return jsonify(toggle.to_dict()), 200
-
-@bp.route('/admin/finance/sales', methods=['GET'])
-@login_required
-@admin_required
-def get_finance_sales():
-    from app.models import Program
-    page = request.args.get('page', 1, type=int)
-    per_page = 10
-    
-    # Query for completed payments
-    query = Payment.query.join(Enrollment).join(Client).join(Program).filter(
-        Payment.status == 'completed'
-    ).order_by(Payment.date.desc())
-    
-    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-    
-    sales = []
-    for p in pagination.items:
-        sales.append({
-            "student": [p.enrollment.client.full_name[0] if p.enrollment.client.full_name else "?", p.enrollment.client.full_name or p.enrollment.client.email],
-            "program": p.enrollment.program.name,
-            "amount": float(p.amount),
-            "date": p.date.isoformat()
-        })
-        
-    return jsonify({
-        "sales": sales,
-        "pages": pagination.pages,
-        "current_page": page,
-        "total": pagination.total
-    }), 200
 
 @bp.route('/admin/dashboard/kpis', methods=['GET'])
 @login_required
@@ -717,51 +686,54 @@ def manage_db_agendas():
 @login_required
 @admin_required
 def manage_db_sales():
+    """Los pagos (`FinancialSale`) para la pestaña Datos › Ventas (Pagos). Antes leía el espejo
+    Enrollment/Payment (Etapa 2c de docs/plan_personas.md)."""
+    from app.models import FinancialSale, Person
+    from app.services.closer_service import PROGRAM_LABELS
+    from app.services.sheets_service import SheetsService
     if request.method == 'POST':
         data = request.get_json() or {}
-        id = data.get('id')
-        if id:
-            p = Payment.query.get_or_404(id)
-            if 'amount' in data: p.amount = float(data['amount'])
-            if 'payment_type' in data: p.payment_type = data['payment_type']
-            if 'date' in data: p.date = datetime.fromisoformat(data['date'].replace('Z', ''))
+        p = FinancialSale.query.get_or_404(data.get('id'))
+        if 'amount' in data: p.monto = float(data['amount'])
+        if 'date' in data: p.date = datetime.fromisoformat(data['date'].replace('Z', ''))
         db.session.commit()
         return jsonify({"message": "Registro de venta actualizado"}), 200
-        
+
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
-    payment_type_filter = request.args.get('payment_type')
-    payment_method_filter = request.args.get('payment_method')
+    # Los valores del filtro de la pantalla, en el tipo canónico de `parse_tipo_pago`.
+    tipos_pedidos = {TIPO_DE_FILTRO.get(t.strip().lower()) for t in (request.args.get('payment_type') or '').split(',') if t.strip()}
+    metodos = [m.strip() for m in (request.args.get('payment_method') or '').split(',') if m.strip()]
 
-    # Join PaymentMethod via Payment.payment_method (assuming it's set up)
-    # Payment model: payment_method_id is FK. 
-    # Use outerjoin to be safe
-    query = Payment.query.join(Enrollment).join(Client).outerjoin(PaymentMethod, Payment.payment_method_id == PaymentMethod.id)
-    
+    query = FinancialSale.query.outerjoin(Person, FinancialSale.person_uuid == Person.uuid).filter(
+        or_(FinancialSale.estado.is_(None), FinancialSale.estado.ilike('completada'), FinancialSale.estado.ilike('confirmada')))
     if search:
         term = f"%{search}%"
-        query = query.filter(or_(Client.full_name.ilike(term), Client.email.ilike(term)))
-    
-    if start_date: query = query.filter(Payment.date >= datetime.strptime(start_date, '%Y-%m-%d'))
-    if end_date: query = query.filter(Payment.date < datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1))
-    
-    if payment_type_filter:
-        types = payment_type_filter.split(',')
-        if types: query = query.filter(Payment.payment_type.in_(types))
-    
-    if payment_method_filter:
-        methods = payment_method_filter.split(',')
-        if methods: query = query.filter(PaymentMethod.name.in_(methods))
+        query = query.filter(or_(Person.full_name.ilike(term), Person.email.ilike(term)))
+    if start_date: query = query.filter(FinancialSale.date >= datetime.strptime(start_date, '%Y-%m-%d'))
+    if end_date: query = query.filter(FinancialSale.date < datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1))
+    if metodos:
+        query = query.filter(or_(*[FinancialSale.metodo_pago.ilike(f'%{m}%') for m in metodos]))
+    filas = query.order_by(FinancialSale.date.desc()).all()
+    datos = []
+    for p in filas:
+        programa, tipo = SheetsService.parse_tipo_pago(p.tipo_pago)
+        if tipos_pedidos and tipo not in tipos_pedidos:
+            continue
+        contacto = p.contacto()
+        datos.append({"id": p.id, "date": p.date.isoformat() if p.date else None,
+                      "student": contacto.get('nombre_cliente') or contacto.get('mail_cliente'),
+                      "program": PROGRAM_LABELS.get(programa, programa or '—'),
+                      "amount": float(p.monto or 0), "payment_type": tipo or p.tipo_pago, "method": p.metodo_pago or "N/A"})
+    por_pagina = 50
+    pagina = datos[(page - 1) * por_pagina:page * por_pagina]
+    return jsonify({"total": len(datos), "pages": max(1, -(-len(datos) // por_pagina)), "data": pagina}), 200
 
-    pagination = query.order_by(Payment.date.desc()).paginate(page=page, per_page=50, error_out=False)
-    return jsonify({"total": pagination.total, "pages": pagination.pages, "data": [{
-        "id": p.id, "date": p.date.isoformat(), 
-        "student": p.enrollment.client.full_name or p.enrollment.client.email,
-        "program": p.enrollment.program.name,
-        "amount": float(p.amount), "payment_type": p.payment_type, "method": p.payment_method.name if p.payment_method else "N/A"
-    } for p in pagination.items]}), 200
+
+# El filtro de tipo de la pestaña Ventas (Pagos) -> tipo canónico de `SheetsService.parse_tipo_pago`.
+TIPO_DE_FILTRO = {'full': 'completo', 'installment': 'cuota', 'down payment': 'seña'}
 
 @bp.route('/admin/db/questions', methods=['GET', 'POST'])
 @bp.route('/admin/db/questions/<int:id>', methods=['DELETE'])
