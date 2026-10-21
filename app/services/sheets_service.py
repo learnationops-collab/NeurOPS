@@ -134,8 +134,7 @@ class SheetsService:
                 if marca_temp:
                     sale_date = SheetsService._parse_date(marca_temp)
 
-                # Resolver/crear el Client ANTES de guardar la venta (y no solo dentro del
-                # espejo a Enrollment/Payment) para que FinancialSale quede agrupada por
+                # Resolver/crear el Client ANTES de guardar la venta para que FinancialSale quede agrupada por
                 # identidad real de cliente desde el momento en que se crea, en vez de
                 # depender únicamente de coincidencias de texto libre en cada consulta.
                 # La persona manda (20/10/2026): primero se la resuelve y el cliente es el suyo;
@@ -185,7 +184,7 @@ class SheetsService:
                         logger.warning(f"[SHEETS POST] Venta con secuencia de pago inconsistente, se registra igual (client_id={client.id}, tipo={tipo_simple}): {reason}")
                         inconsistency_warning = reason
 
-                # Total del cliente (no por programa/Enrollment): el closer lo declara en el
+                # Total de la venta: el closer lo declara en el
                 # "Precio Total" del formulario de venta (o el monto mismo si es pago Completo).
                 # Se actualiza en cada pago donde venga un valor válido — es editable a
                 # propósito, no solo se fija en el primer pago. Va a la venta 'new' vigente
@@ -266,15 +265,6 @@ class SheetsService:
                 except Exception as conv_err:
                     logger.error(f"[Down Payment Conversion Sheets Hook Error] {conv_err}")
 
-                # Reflejar la venta también en Enrollment/Payment (sistema de cuotas/inscripciones),
-                # que "Declarar Venta" no tocaba pese a ser lo que alimenta el dashboard personal
-                # del closer dentro de su propio mazo. FinancialSale sigue siendo la fuente de las
-                # métricas de admin (no se toca esa ruta); esto es un espejo, no un reemplazo.
-                try:
-                    SheetsService._sync_enrollment_payment(payload, sale, client)
-                except Exception as sync_err:
-                    logger.error(f"[Enrollment/Payment Sync Error] {sync_err}")
-
                 # Una venta registrada prueba que el lead asistió a la llamada: se marca esa
                 # agenda como 'Show up' si había quedado sin reportar o como No Show (ver
                 # CloserService.mark_sale_appointment_as_show_up, que solo toca la agenda de la
@@ -328,10 +318,8 @@ class SheetsService:
 
     PROGRAM_KEYWORDS = {'RR': 'roadmap', 'AL': 'learner', 'SI': 'iniciative'}
 
-    # Tipo de pago canonico de la venta (`parse_tipo_pago`) -> `Payment.payment_type` de su espejo
-    # en Enrollment/Payment. Queda a la vista y no adentro de `_sync_enrollment_payment` porque la
-    # correccion a mano de un pago desde el historial de la ficha mueve el mismo espejo, y tiene que
-    # escribir exactamente el mismo valor.
+    # Tipo de pago canonico de la venta (`parse_tipo_pago`) -> `Payment.payment_type` del sistema
+    # viejo de inscripciones. Ya no se escribe (Etapa 2c): queda para leer los `Payment` históricos.
     PAYMENT_TYPE_MAP = {
         'completo': 'full',
         'parcial': 'first_payment',
@@ -387,63 +375,6 @@ class SheetsService:
         if not keyword:
             return None
         return Program.query.filter(Program.is_active == True, Program.name.ilike(f'%{keyword}%')).first()
-
-    @staticmethod
-    def _sync_enrollment_payment(payload, sale, client):
-        """Refleja una venta de 'Ventas_DB' (ya guardada como FinancialSale) también en
-        Enrollment/Payment, para que el dashboard personal del closer (que lee de ahí, no de
-        FinancialSale) y el sistema de cuotas queden consistentes con lo que el closer declaró.
-        No falla la venta si algo acá no encaja (programa/closer no resuelto): FinancialSale ya
-        quedó guardado, que es lo que de verdad importa para las métricas de admin."""
-        from app.models import Enrollment, Payment, PaymentMethod, User
-
-        if not client:
-            return
-
-        program_code, tipo_simple_lower = SheetsService.parse_tipo_pago(payload.get('tipo_pago'))
-        if not program_code:
-            return
-
-        program = SheetsService.resolve_program(program_code)
-        if not program:
-            logger.warning(f"[Enrollment Sync] No se pudo resolver el programa activo para código '{program_code}', se omite el espejo a Enrollment/Payment.")
-            return
-
-        payment_type = SheetsService.PAYMENT_TYPE_MAP.get(tipo_simple_lower, 'full')
-
-        closer = None
-        email_vendedor = payload.get('email_vendedor')
-        if email_vendedor:
-            closer = User.query.filter(db.func.lower(User.email) == email_vendedor.strip().lower()).first()
-
-        enrollment = Enrollment.query.filter_by(client_id=client.id, program_id=program.id).first()
-        if not enrollment:
-            enrollment = Enrollment(client_id=client.id, program_id=program.id, closer_id=closer.id if closer else None)
-            db.session.add(enrollment)
-            db.session.flush()
-        elif closer and not enrollment.closer_id:
-            enrollment.closer_id = closer.id
-
-        payment_method = None
-        metodo_pago = payload.get('metodo_pago')
-        if metodo_pago:
-            payment_method = PaymentMethod.query.filter(db.func.lower(PaymentMethod.name) == metodo_pago.strip().lower()).first()
-
-        payment = Payment(
-            enrollment_id=enrollment.id,
-            payment_method_id=payment_method.id if payment_method else None,
-            amount=float(payload.get('monto') or 0.0),
-            payment_type=payment_type,
-            status='completed',
-            date=sale.date
-        )
-        db.session.add(payment)
-
-        if payment_type in ('full', 'first_payment') and (not enrollment.enrollment_date or payment.date < enrollment.enrollment_date):
-            enrollment.enrollment_date = payment.date
-
-        db.session.commit()
-        logger.info(f"[Enrollment Sync] Payment creado (enrollment_id={enrollment.id}, tipo={payment_type}, monto={payment.amount}) reflejando FinancialSale id={sale.id}.")
 
     @staticmethod
     def update_in_sheets(tabla, marca_temporal, payload):
