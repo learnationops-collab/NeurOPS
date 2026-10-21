@@ -172,9 +172,9 @@ Reglas para todos los pasos:
 - Antes de empezar, un backup de la base de producción (Railway › Postgres › Backups). Las fusiones y
   los `--apply` no se deshacen.
 - Cada script se corre primero **sin `--apply`** (modo prueba). Se comparan sus números con los de
-  referencia y recién después se corre con `--apply`. Los de referencia son del servidor de prueba, una copia
-  de producción del 20/10/2026: producción tiene que dar parecido y algo más, por lo que entró desde esa
-  copia.
+  referencia y recién después se corre con `--apply`. Los de referencia son del ensayo general, en el servidor de prueba sobre una copia
+  de producción restaurada el 20/10/2026: producción tiene que dar parecido y algo más, por lo que entró
+  desde esa copia.
 - Todos se corren en el servidor: `railway ssh --service <servicio de producción> -- python scripts/...`.
   Nunca desde la PC.
 - Cada `--apply` guarda al final, en un solo commit. Si un script falla en el medio, no queda nada a medias:
@@ -187,19 +187,19 @@ Reglas para todos los pasos:
 | # | Paso | Modo prueba / `--apply` | Referencia (servidor de prueba) | Si falla o no da |
 |---|---|---|---|---|
 | 1 | Merge `develop` → `main` | El deploy corre `flask db upgrade` solo (`railway.toml`, `releaseCommand`) | En los logs del deploy, las migraciones hasta `f6a2c8e4b1d3` (`sales.subscription_id`); `SELECT version_num FROM alembic_version` = `f6a2c8e4b1d3` | Si la migración falla, el deploy no sube: se lee el log, se corrige en `develop` y se vuelve a mergear. Nada de lo de abajo corre hasta que esté en `f6a2c8e4b1d3` |
-| 2 | `backfill_person_identities.py` | prueba / `--apply` | Al final: ~45.900 identidades (`person_identities`) | Los datos compartidos que lista son normales (familias, placeholders); no frenan |
-| 3 | `vincular_personas.py` | prueba / `--apply` | Desglose por tabla y por dato; no crea personas | Si vincula casi nada, revisar que el paso 2 haya hecho el `--apply` |
-| 4 | `fusionar_personas.py` | prueba / `--apply`, **sin `--telefono`** | Pocos grupos por mail o instagram. Con `--telefono` arma 1 solo grupo (Edgar Heredia Escamilla): no hace falta | Revisar los ejemplos que muestra; un grupo raro se saca después con `fusionar_lista` |
-| 5 | `vincular_personas.py`, otra vez | prueba / `--apply` | Lo que se pudo vincular después de fusionar; pocas filas | — |
-| 6 | `personas_de_agendas.py` | prueba / `--apply` | Quedan 2 agendas sin persona (sin ningún dato) de ~4.390 | — |
-| 7 | `migrar_conversaciones.py` | prueba / `--apply` | ~19.600 conversaciones; 8 `manychat_leads` sin persona de ~16.600 | Corta si hay un deploy en el medio: volver a correrlo, retoma |
-| 8 | `fusionar_lista.py grupoA.txt --mails-raros-secundarios` | prueba / `--apply` | 31 grupos, 32 personas de más; 25 con mails raros como secundarios | Ver abajo cómo se arma el archivo. Si valida con error (uuid inexistente o ya fusionado), no fusiona nada: corregir el archivo |
-| 9 | `corregir_comprador_pagador.py --hasta 2026-01-01` | prueba / `--apply` | 356 pagos, $156.807, 258 pares de personas. Sin tocar: 15 pagos de enero al 20/05/2026 ($8.328) y 9 desde el 20/05 ($1.805); dudosos 16 + 2 | Si «están en una venta de otra persona» da más de 0, es que `backfill_sales` ya corrió: parar (ver el orden) |
-| 10 | `backfill_sales.py --apply --rehacer` | prueba / `--apply --rehacer` | 687 ventas (656 'new'), 0 automáticas, 0 pagos completados sin venta | `--rehacer` borra las ventas que armó `sale_service` en vivo y las vuelve a armar: es lo que se quiere |
-| 11 | `backfill_agreed_total.py` | prueba / `--apply` | 74 ventas con `agreed_total`; el resto en la lista para revisar (totales distintos entre clientes duplicados, varias ventas o ninguna) | La lista no se aplica: se revisa con Santiago |
+| 2 | `backfill_person_identities.py` | prueba / `--apply` | Ensayo general (copia de producción del 20/10): 10.927 identidades nuevas | Los datos compartidos que lista son normales (familias, placeholders); no frenan |
+| 3 | `vincular_personas.py` | prueba / `--apply` | Ensayo: pagos 680 de 711, agendas 3.711 de 4.411, ManyChat 3.571 de 16.979; no crea personas | Si vincula casi nada, revisar que el paso 2 haya hecho el `--apply` |
+| 4 | `fusionar_personas.py` | prueba / `--apply`, **sin `--telefono`** | Ensayo: 4 grupos (por mail o instagram) | Revisar los ejemplos que muestra; un grupo raro se saca después con `fusionar_lista` |
+| 5 | `vincular_personas.py`, otra vez | prueba / `--apply` | Ensayo: 3 filas más | — |
+| 6 | `personas_de_agendas.py` | prueba / `--apply` | Ensayo: 60 personas nuevas, 638 agendas que ya tenían, 2 sin datos | — |
+| 7 | `migrar_conversaciones.py` | prueba / `--apply` | Ensayo: 15.405 personas nuevas, 16.514 conversaciones, 8 sin persona | Corta si hay un deploy en el medio: volver a correrlo, retoma |
+| 8 | `fusionar_lista.py grupoA.txt --mails-raros-secundarios` | prueba / `--apply` | Ensayo: los 31 grupos aprobados aparecen todos entre los candidatos (44 pares, 40 grupos; los 9 que sobran son los excluidos); 31 grupos, 32 personas de más, 26 con mails raros como secundarios | Ver abajo cómo se arma el archivo. Si valida con error (uuid inexistente o ya fusionado), no fusiona nada: corregir el archivo |
+| 9 | `corregir_comprador_pagador.py --hasta 2026-01-01` | prueba / `--apply` | Ensayo: 356 pagos, $156.807, 258 pares de personas. Sin tocar: 15 pagos de enero al 20/05/2026 ($8.328) y 9 desde el 20/05 ($1.805); dudosos 16 + 2; 0 en ventas de otra persona | Si «están en una venta de otra persona» da más de 0, es que `backfill_sales` ya corrió: parar (ver el orden) |
+| 10 | `backfill_sales.py --apply --rehacer` | prueba / `--apply --rehacer` | Ensayo: 691 ventas (595 activas, 96 canceladas), 0 automáticas; 58 señas para revisar | `--rehacer` borra las ventas que armó `sale_service` en vivo y las vuelve a armar: es lo que se quiere |
+| 11 | `backfill_agreed_total.py` | prueba / `--apply` | Ensayo: 76 ventas con `agreed_total`; el resto en la lista para revisar | La lista no se aplica: se revisa con Santiago |
 | 12 | `backfill_subscriptions.py` | prueba; `--apply` **solo con el ok de Santiago** | 113 suscripciones | Consulta la API de la Academia una vez por alumno: tarda varios minutos y lo corta un deploy |
 
-Controles al final (solo lectura): `financial_sales` con 28 sin persona y 356 con `payer_person_uuid`; ningún
+Controles al final (solo lectura; ensayo: 944 pagos, 22.054 personas activas): `financial_sales` con 28 sin persona y 356 con `payer_person_uuid`; ningún
 pago completado sin `sale_id`; `sales` sin `source='auto'`.
 
 **El archivo del paso 8 se regenera sobre producción**, no se copia del servidor de prueba: los uuid de las
