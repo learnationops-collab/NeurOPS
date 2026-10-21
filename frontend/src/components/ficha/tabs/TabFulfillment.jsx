@@ -30,6 +30,7 @@ import {
 } from '../fulfillment';
 import AccesoAcademia from './AccesoAcademia';
 import SuscripcionWork from './SuscripcionWork';
+import VentasWork from './VentasWork';
 import '../../dashboard/pareja.css';
 import './fulfillment.css';
 
@@ -354,6 +355,10 @@ export default function TabFulfillment({ ficha, onConsultar, onAccion, irA }) {
           <SuscripcionWork suscripciones={datos.suscripciones} programas={ficha?.vocabulario?.programas || []} />
         </motion.div>
       )}
+      {/* Las ventas de la persona, al lado de la suscripción que abren: piden lo suyo aparte. */}
+      <motion.div {...entrar()}>
+        <VentasWork onConsultar={onConsultar} onAccion={onAccion} programas={ficha?.vocabulario?.programas || []} />
+      </motion.div>
     </div>
   );
 }
