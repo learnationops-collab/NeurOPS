@@ -219,7 +219,12 @@ Cada línea empieza con `?`, así queda la persona con pagos.
 compró y el mail de quien agendó (el `booking_service` viejo pisaba el contacto al cruzar por mail), y la persona
 salió de ese cliente: tiene los pagos de uno y la agenda y el mail del otro. Son los 24 grupos del paso 8 que
 se saltean y ~350 de los compradores del paso 9 (ej. la persona «Eli Vest» con la agenda y el mail de Melbrum
-Agudelo). No se fusionan ni se renombran a mano; separarlas es un paso aparte, por definir.
+Agudelo). No se fusionan ni se renombran a mano. **Después del pase, no en él** (decisión del 21/10/2026: el
+pase no lo empeora y es un problema que viene del booking viejo): `scripts/separar_personas_mezcladas.py`
+(modo prueba; en el ensayo 2, 2.368 agendas ajenas en 2.192 personas: 2.101 antes de 2026, 95 de enero al
+20/05/2026 y 13 después; en 2.150 de las de antes de 2026 el mail no se parece a ninguno de los dos). Se
+aplica solo el subconjunto claro de 2026 (el mail se parece al tercero y no a la persona), revisado con
+Santiago. Lo de antes de 2026 queda como está.
 
 ## Inventario 2c (relevado el 20/10/2026, sobre develop 745c1303)
 
