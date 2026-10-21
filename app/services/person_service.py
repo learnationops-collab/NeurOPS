@@ -415,27 +415,6 @@ def _persona_por_cliente(obj, nuevo):
             obj.person_uuid = puuid
 
 
-# Columnas de la agenda: nombre (según el formato de la hoja, `nombre_persona`), mail, instagram, whatsapp.
-COLUMNAS_AGENDA = ('lead', 'nombre', 'mail', 'instagram', 'whatsapp')
-
-
-def _persona_de_agenda(agenda, nuevo):
-    """La agenda es el primer contacto con la persona: si no la tiene, se busca por sus datos o se crea.
-    Si ya la tiene y le llega un dato nuevo (el mail que faltaba), se le anota."""
-    if not nuevo and not any(_cambio(inspect(agenda), c) for c in COLUMNAS_AGENDA):
-        return
-    datos_agenda = dict(email=agenda.mail, instagram=agenda.instagram, phone=agenda.whatsapp)
-    if agenda.person_uuid or agenda.person is not None:
-        person = agenda.person or db.session.get(Person, agenda.person_uuid)
-        if person is not None:
-            anotar(person, claves(**datos_agenda), 'agenda')
-        return
-    if not claves(**datos_agenda):
-        return  # sin ningún dato no se sabe quién es
-    agenda.person = _resolver(agenda.nombre_persona, datos_agenda['email'], datos_agenda['instagram'], datos_agenda['phone'],
-                              None, None, True, 'agenda')
-
-
 def mantener(session):
     with session.no_autoflush:
         cambiados = [(o, o in session.new) for o in list(session.new) + list(session.dirty)]
@@ -445,8 +424,6 @@ def mantener(session):
         for obj, nuevo in cambiados:
             if isinstance(obj, CON_CLIENTE):
                 _persona_por_cliente(obj, nuevo)
-            elif isinstance(obj, FinancialAgenda):
-                _persona_de_agenda(obj, nuevo)
 
 
 def register_person_tracking(app):
