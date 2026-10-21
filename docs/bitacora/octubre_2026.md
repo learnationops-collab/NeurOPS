@@ -396,3 +396,10 @@
   - La ficha se puede abrir por la persona (`person_uuid`) y el mazo, Revisar y Finanzas › Diferencias la mandan junto con el cliente. Las agendas duplicadas de Revisar y los alumnos del resumen de la Academia se cuentan por persona.
   - Las APIs del mazo, la auditoría, el estado del lead, los seguimientos, el dashboard del closer y la conciliación suman `person_uuid`; lo demás no cambia.
   - Verificación: sin tests ni build local (regla del proyecto); se valida con el build del deploy del servidor de prueba.
+
+- **20 de Octubre de 2026 (personas, frente I: setter, triage, leads y agendas por persona)** *(El roadmap del lead, Nuevos clientes y el export de ventas reconocen a la persona por su uuid. [app/api/public/lead_roadmap.py](../../app/api/public/lead_roadmap.py), [app/api/public/new_clients.py](../../app/api/public/new_clients.py), [app/api/setter_palabra_clave.py](../../app/api/setter_palabra_clave.py), [app/api/setter.py](../../app/api/setter.py), [LeadRoadmapDetail.jsx](../../frontend/src/components/leads/LeadRoadmapDetail.jsx), [LeadRoadmapModal.jsx](../../frontend/src/components/modals/LeadRoadmapModal.jsx), [NewClientsTab.jsx](../../frontend/src/pages/public/NewClientsTab.jsx), [PublicFinancialSalesPage.jsx](../../frontend/src/pages/public/PublicFinancialSalesPage.jsx) [MODIFY])*:
+  - El roadmap del lead se abre por la persona desde ventas, agendas, leads entrantes, Leads Management y el mazo: junta sus agendas, sus ventas y su conversación.
+  - El export de ventas y Nuevos clientes agrupan por persona; el Instagram y el mail solo cuentan en las ventas sin persona. El seguimiento de Nuevos clientes se guarda por persona.
+  - El mazo y los leads del setter, sus agendas y palabras clave, los formularios de triage, las desatribuidas de Marketing y el buscador de clientes devuelven `person_uuid` (solo se suma el campo).
+  - Arreglo: asignar la palabra clave al grupo de ventas de una persona en «Mis agendas» daba «Falta el cliente».
+  - Sin cambios visuales. Verificación: sin tests ni build local (regla del proyecto); se valida con el build del deploy del servidor de prueba.
