@@ -600,12 +600,14 @@ class BookingService:
             # llamada duplicada a la bandeja -- o peor, se la vuelve a crear.
             return None
 
-        # 1. Obtener o crear Cliente
-        client = BookingService.find_or_create_client(
-            nombre=agenda.lead,
-            email=agenda.mail,
-            instagram=agenda.instagram,
-            phone=agenda.whatsapp,
+        # 1. El cliente de la persona de la agenda; si no tiene, se busca o crea con sus datos
+        # (los de la persona o, sin persona, la copia de la fila).
+        contacto = agenda.contacto()
+        client = BookingService.cliente_de_agenda(agenda) or BookingService.find_or_create_client(
+            nombre=contacto['lead'],
+            email=contacto['mail'],
+            instagram=contacto['instagram'],
+            phone=contacto['whatsapp'],
             grupo=getattr(agenda, 'grupo', None)
         )
         
@@ -626,7 +628,7 @@ class BookingService:
                     db.session.add(Notification(
                         subject="Agenda con closer sin resolver",
                         content=(
-                            f"La agenda de '{agenda.lead or agenda.nombre or 'Desconocido'}' tiene "
+                            f"La agenda de '{contacto['lead'] or agenda.nombre or 'Desconocido'}' tiene "
                             f"closer='{agenda.closer}', que no coincide con ningun usuario activo "
                             f"(¿se renombro y falta un alias con el nombre viejo?). Se asigno "
                             f"temporalmente a {closer_user.username} - revisar y reasignar."
@@ -778,8 +780,9 @@ class BookingService:
     @staticmethod
     def filtros_de_agenda_del_cliente(client):
         """Las señales con las que una fila del Tablero de Agendas (`FinancialAgenda`) se reconoce
-        como de este cliente: mail, instagram y telefono, para un `or_`. Lista vacia si no tiene
-        ninguna que sirva.
+        como de este cliente, para un `or_`: su persona y, por mail, instagram y telefono, solo las
+        agendas sin persona (Etapa 2b de docs/plan_personas.md). Lista vacia si no tiene ninguna
+        que sirva.
 
         Vivia adentro de `sync_appointment_to_financial_agenda`; sale a su propia funcion para que
         quien necesite la fila de UNA cita (la correccion de una agenda desde la ficha) la busque
@@ -801,7 +804,7 @@ class BookingService:
         if mail_clean and 'no-email-' in mail_clean:
             mail_clean = None
 
-        filters = []
+        copia = filters = []
         if mail_clean:
             filters.append(func.lower(FinancialAgenda.mail) == mail_clean)
         if ig_clean:
@@ -816,7 +819,9 @@ class BookingService:
             for sep in (' ', '-', '(', ')', '+', '.'):
                 columna_tel = func.replace(columna_tel, sep, '')
             filters.append(columna_tel.like('%' + tel_cliente[-9:]))
-        return filters
+        from app.services.agenda_contacto_service import sin_persona
+        return [c for c in (FinancialAgenda.person_uuid == client.person_uuid if client.person_uuid else None,
+                            sin_persona(*copia)) if c is not None]
 
     @staticmethod
     def sync_appointment_to_financial_agenda(appt, cita_nueva=False):
@@ -880,10 +885,11 @@ class BookingService:
                     FinancialAgenda.duplicada_de_id.is_(None),
                     FinancialAgenda.date >= appt.start_time - margen,
                     FinancialAgenda.date <= appt.start_time + margen).all():
-                if _names_compatible(client.full_name, fila.lead):
+                lead_fila = fila.contacto()['lead']
+                if _names_compatible(client.full_name, lead_fila):
                     agenda, misma_cita = fila, True
                     print(f"[SYNC] La cita {appt.id} ya tenia agenda #{fila.id} a la misma "
-                          f"hora ({fila.lead}); se reusa en vez de crear otra.")
+                          f"hora ({lead_fila}); se reusa en vez de crear otra.")
                     break
 
         # Mapear estado: prioritario el resultado del closer si ya fue procesado por él
