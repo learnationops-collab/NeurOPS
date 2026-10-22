@@ -131,17 +131,19 @@ def al_ubicar_pago(session, sale, fila, pago, abre, abierta):
 
 def venta_que_extiende(client, slug, hasta):
     """La venta que justifica llevar el acceso hasta `hasta`: None si no lo alarga (o es un acceso
-    dado con demora sobre una venta reciente), la venta nueva sin suscripción si la hay, o ValueError:
-    sin pago solo se extiende con una prórroga."""
+    dado con demora sobre una venta reciente), la venta de los últimos 30 días sin suscripción si la
+    hay, o ValueError: sin pago solo se extiende con una prórroga."""
     actual = _de(db.session, client.id, slug)
     if actual is not None and hasta <= actual.expires_at:
         return None
+    hoy = date.today()
     filtro = Sale.person_uuid == client.person_uuid if client.person_uuid else Sale.client_id == client.id
-    venta = Sale.query.filter(filtro, Sale.status == 'active', Sale.subscription_id.is_(None)) \
+    # Una venta vieja que nunca tuvo suscripción no justifica alargar hoy.
+    venta = Sale.query.filter(filtro, Sale.status == 'active', Sale.subscription_id.is_(None),
+                              Sale.sold_at >= hoy - timedelta(days=DEMORA_DIAS)) \
         .order_by(Sale.sold_at.desc()).first()
     if venta is not None:
         return venta
-    hoy = date.today()
     reciente = actual is not None and not actual.is_deposit and actual.sale is not None \
         and (hoy - actual.sale.sold_at.date()).days <= DEMORA_DIAS
     if reciente and hasta <= _add_months(hoy, DURACION_MESES):
