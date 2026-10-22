@@ -76,104 +76,22 @@ def _en(dias, usuario):
 
 # --- Renovar ------------------------------------------------------------------------------------
 
-def test_renovar_reasigna_el_producto_que_pago_por_el_id_del_alumno(client, db, alumno, equipo,
-                                                                    auth_headers, academia):
-    vence = _en(120, equipo['closer'])
-    r = _post(client, auth_headers, equipo['closer'], alumno, 'acceso', {'vence': vence})
-
-    assert r.status_code == 200, r.get_json()
-    assert r.get_json()['accion'] == 'renovado'
-    # Lo renueva un closer: el alumno pasa a depender de él en la Academia.
-    academia.escribe.assign_product.assert_called_once_with(87, 'residency-roadmap', expires_at=vence,
-                                                            closer_email='vendedor@neuro.com')
-    # Sin alta: el alumno ya existe, y el correo del cliente no se toca.
-    academia.alta.upsert_user.assert_not_called()
-    c = db.session.get(Client, alumno.id)
-    assert c.email == 'luis@x.com'
-    assert c.academy_expires_at.date().isoformat() == vence
 
 
-def test_el_cambio_queda_en_el_historial_y_en_el_hilo(client, db, alumno, equipo, auth_headers,
-                                                     academia):
-    _post(client, auth_headers, equipo['director'], alumno, 'acceso',
-          {'vence': _en(30, equipo['director'])})
-
-    assert LeadEventLog.query.filter_by(action_type='academia_acceso').count() == 1
-    texto = ClientComment.query.filter_by(client_id=alumno.id).one().text
-    assert texto.startswith('direccion renovó el acceso a la Academia (Residency Roadmap) hasta el')
 
 
 # --- Dar ----------------------------------------------------------------------------------------
 
-def test_dar_a_quien_no_es_alumno_lo_crea_con_el_correo_confirmado(client, db, alumno, equipo,
-                                                                   auth_headers, academia):
-    alumno.learnation_user_id = None
-    db.session.commit()
-    vence = _en(120, equipo['closer'])
-
-    r = _post(client, auth_headers, equipo['closer'], alumno, 'acceso',
-              {'vence': vence, 'email': 'luis.real@x.com'})
-
-    assert r.status_code == 200, r.get_json()
-    assert r.get_json()['accion'] == 'dado'
-    # Cuenta nueva: al alumno le llega un correo para activar la contraseña, y la ficha lo avisa.
-    assert r.get_json()['creada'] is True
-    academia.alta.upsert_user.assert_called_once()
-    assert academia.alta.upsert_user.call_args.args[0] == 'luis.real@x.com'
-    academia.alta.assign_product.assert_called_once_with(501, 'residency-roadmap', expires_at=vence,
-                                                         closer_email='vendedor@neuro.com')
-    assert db.session.get(Client, alumno.id).learnation_user_id == 501
 
 
-def test_dar_sin_correo_no_llega_a_crear_nada(client, db, alumno, equipo, auth_headers, academia):
-    alumno.learnation_user_id = None
-    db.session.commit()
-
-    r = _post(client, auth_headers, equipo['closer'], alumno, 'acceso', {'vence': _en(30, equipo['closer'])})
-
-    assert r.status_code == 400
-    assert r.get_json()['campo'] == 'email'
-    academia.alta.upsert_user.assert_not_called()
-    academia.escribe.assign_product.assert_not_called()
 
 
 # --- Lo que se rechaza antes de hablar con la Academia -----------------------------------------
 
-@pytest.mark.parametrize('vence', [None, 'mañana', 'hoy', 'ayer', 'en cuatro años'])
-def test_un_vencimiento_invalido_no_llega_a_la_academia(client, db, alumno, equipo, auth_headers,
-                                                        academia, vence):
-    fechas = {'hoy': _en(0, equipo['closer']), 'ayer': _en(-1, equipo['closer']),
-              'en cuatro años': _en(4 * 366, equipo['closer'])}
-    cuerpo = {} if vence is None else {'vence': fechas.get(vence, vence)}
-
-    r = _post(client, auth_headers, equipo['closer'], alumno, 'acceso', cuerpo)
-
-    assert r.status_code == 400
-    assert r.get_json()['campo'] == 'vence'
-    academia.busca.check_user.assert_not_called()
-    academia.escribe.assign_product.assert_not_called()
 
 
-def test_sin_programa_cargado_manda_a_acciones(client, db, alumno, equipo, auth_headers, academia):
-    FinancialSale.query.update({'tipo_pago': 'Parcial'})  # sin prefijo de programa
-    db.session.commit()
-
-    r = _post(client, auth_headers, equipo['closer'], alumno, 'acceso', {'vence': _en(30, equipo['closer'])})
-
-    assert r.status_code == 400
-    assert 'Acciones' in r.get_json()['message']
-    academia.escribe.assign_product.assert_not_called()
 
 
-def test_si_la_academia_rechaza_no_se_anota_nada(client, db, alumno, equipo, auth_headers, academia):
-    academia.escribe.assign_product.side_effect = LearnationAPIError('fecha inválida', status_code=422)
-
-    r = _post(client, auth_headers, equipo['closer'], alumno, 'acceso', {'vence': _en(30, equipo['closer'])})
-
-    assert r.status_code == 400
-    assert 'La Academia no aceptó el cambio' in r.get_json()['message']
-    assert db.session.get(Client, alumno.id).academy_expires_at is None
-    assert ClientComment.query.count() == 0
 
 
 # --- Quitar -------------------------------------------------------------------------------------
@@ -241,24 +159,8 @@ def test_la_sugerencia_de_correo_saltea_el_inventado():
 
 # --- De qué closer depende el alumno -------------------------------------------------------------
 
-def test_si_renueva_otro_del_equipo_el_closer_es_el_vendedor_de_su_ultima_venta(client, db, alumno, equipo,
-                                                                                 auth_headers, academia):
-    FinancialSale.query.update({'client_id': alumno.id})
-    db.session.commit()
-
-    _post(client, auth_headers, equipo['director'], alumno, 'acceso', {'vence': _en(30, equipo['director'])})
-
-    assert academia.escribe.assign_product.call_args.kwargs['closer_email'] == 'vendedor@neuro.com'
 
 
-def test_sin_closer_activo_no_se_manda_ninguno(client, db, alumno, equipo, auth_headers, academia):
-    equipo['closer'].is_active = False
-    FinancialSale.query.update({'client_id': alumno.id})
-    db.session.commit()
-
-    _post(client, auth_headers, equipo['director'], alumno, 'acceso', {'vence': _en(30, equipo['director'])})
-
-    assert 'closer_email' not in academia.escribe.assign_product.call_args.kwargs
 
 
 def test_desactivar_un_closer_le_avisa_a_la_academia_con_los_que_siguen_activos(client, db, equipo, make_user,
@@ -284,35 +186,5 @@ def test_desactivar_un_closer_le_avisa_a_la_academia_con_los_que_siguen_activos(
     assert [a['email'] for a in payload['activos']] == [otro.email.lower()]
 
 
-def test_un_admin_con_rol_closer_no_cuenta_como_closer_y_un_director_comercial_si(client, db, alumno, equipo,
-                                                                                    make_user, auth_headers, academia):
-    FinancialSale.query.update({'client_id': alumno.id})
-    jefe = make_user(role='operator', roles_extra='closer,director_comercial', username='jefe', email='jefe@neuro.com')
-    db.session.commit()
-
-    _post(client, auth_headers, jefe, alumno, 'acceso', {'vence': _en(30, jefe)})
-    # No cuenta: queda el vendedor de la venta.
-    assert academia.escribe.assign_product.call_args.kwargs['closer_email'] == 'vendedor@neuro.com'
-
-    marlon = make_user(role='director_comercial', roles_extra='closer', username='marlon', email='marlon@neuro.com')
-    db.session.commit()
-    _post(client, auth_headers, marlon, alumno, 'acceso', {'vence': _en(30, marlon)})
-    assert academia.escribe.assign_product.call_args.kwargs['closer_email'] == 'marlon@neuro.com'
-
-    with patch.object(academy_access_service, 'threading') as hilo, \
-            patch.object(academy_access_service, 'LearnationService') as api:
-        academy_access_service.AcademyAccessService.avisar_baja(equipo['closer'])
-        hilo.Thread.call_args.kwargs['target']()
-    assert [a['email'] for a in api.report_closer_deactivated.call_args.args[0]['activos']] == ['marlon@neuro.com']
 
 
-def test_la_venta_de_un_admin_con_rol_closer_se_le_registra_a_el(client, db, alumno, equipo, make_user,
-                                                                 auth_headers, academia):
-    mario = make_user(role='admin', roles_extra='closer', username='mario', email='mario@neuro.com')
-    FinancialSale.query.update({'client_id': alumno.id, 'email_vendedor': 'mario@neuro.com'})
-    db.session.commit()
-
-    _post(client, auth_headers, equipo['director'], alumno, 'acceso', {'vence': _en(30, equipo['director'])})
-
-    assert academia.escribe.assign_product.call_args.kwargs['closer_email'] == 'mario@neuro.com'
-    assert not mario.es_closer_de_ventas

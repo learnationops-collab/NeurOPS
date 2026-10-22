@@ -368,12 +368,11 @@ def revertir_baja(appt_id):
     return _ejecutar(appt_id, 'cobrar', acciones.revertir_baja)
 
 
-@bp.route('/<int:appt_id>/academia/acceso', methods=['POST'])
-def acceso_academia(appt_id):
-    """Da o renueva el acceso a la Academia hasta `vence` (ver `ficha_academia`). Es cobrar: es lo
-    que hasta ahora solo pasaba al registrar un pago."""
+@bp.route('/<int:appt_id>/academia/mail', methods=['POST'])
+def mail_academia(appt_id):
+    """Corrige el correo con que entra a la Academia (`email`). El acceso sale de su venta, no de acá."""
     from app.services import ficha_academia
-    return _ejecutar(appt_id, 'cobrar', ficha_academia.acceso)
+    return _ejecutar(appt_id, 'cobrar', ficha_academia.corregir_mail)
 
 
 @bp.route('/<int:appt_id>/academia/prorroga', methods=['POST'])

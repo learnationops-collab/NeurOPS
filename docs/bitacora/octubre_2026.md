@@ -488,3 +488,9 @@
   - Se vincularon con su venta las suscripciones 1 a 3 de producción (César, Sergio e Yvonne).
   - Se borró el test de la prórroga por días (ya no existe).
   - Verificación: sin tests (regla del proyecto); compilado.
+
+- **22 de Octubre de 2026 (Fulfillment: solo prórroga, mail y quitar)** *([app/services/ficha_academia.py](../../app/services/ficha_academia.py), [app/api/ficha/escritura.py](../../app/api/ficha/escritura.py), [frontend/src/components/ficha/tabs/AccesoAcademia.jsx](../../frontend/src/components/ficha/tabs/AccesoAcademia.jsx), [frontend/src/components/ficha/tabs/MailAcademia.jsx](../../frontend/src/components/ficha/tabs/MailAcademia.jsx) [NEW], [frontend/src/components/ficha/fichaApi.js](../../frontend/src/components/ficha/fichaApi.js), [frontend/src/components/ficha/FichaLeadModal.jsx](../../frontend/src/components/ficha/FichaLeadModal.jsx), [frontend/src/components/ficha/fulfillment.js](../../frontend/src/components/ficha/fulfillment.js) [MODIFY])*:
+  - Se sacó «Dar / Renovar acceso» con fecha elegida (`POST /ficha/<id>/academia/acceso`): el acceso sale de la venta. Fulfillment queda con Prórroga (tipo fijo y motivo), Corregir mail y Quitar acceso.
+  - Corregir mail (`POST /ficha/<id>/academia/mail`): el correo queda como el de la Academia de la persona (`uso='academia'`). Si tiene una suscripción vigente que sale de una venta, el acceso pasa a la cuenta de ese correo (se crea si no existe) con la fecha de Work, y la cuenta anterior queda vencida hoy. Sin venta vigente solo se guarda el mail: no se crea una cuenta ni un acceso vacío. Un correo que es de otra persona se rechaza.
+  - Se borraron los tests de dar y renovar (la acción ya no existe) y el de `AccesoAcademia`.
+  - Verificación: sin tests (regla del proyecto); compilado.

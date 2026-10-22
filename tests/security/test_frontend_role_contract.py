@@ -323,9 +323,9 @@ ESCRITURAS = [
     # recibe el 400 de «no esta dado de baja».
     ('POST', '/revertir-baja', {'admin': 400, 'director_comercial': 400, 'closer': 400,
                                 'triage': 403, 'setter': 403}),
-    # Dar, renovar y quitar el acceso a la Academia es cobrar. Con el cuerpo vacio quien puede
-    # recibe el 400 de «falta hasta cuándo» / «falta confirmar», sin llegar a llamar a la Academia.
-    ('POST', '/academia/acceso', {'admin': 400, 'director_comercial': 400, 'closer': 400,
+    # Corregir el mail y quitar el acceso a la Academia es cobrar. Con el cuerpo vacio quien puede
+    # recibe el 400 de «correo no válido» / «falta confirmar», sin llegar a llamar a la Academia.
+    ('POST', '/academia/mail', {'admin': 400, 'director_comercial': 400, 'closer': 400,
                                   'triage': 403, 'setter': 403}),
     ('POST', '/academia/quitar', {'admin': 400, 'director_comercial': 400, 'closer': 400,
                                   'triage': 403, 'setter': 403}),
