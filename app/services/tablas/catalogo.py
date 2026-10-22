@@ -129,7 +129,8 @@ def _visible(user, column, kind):
 
 def alumno_expr(person):
     """El id del alumno en la Academia (`alumno_id` de sus filas): la identidad learnation_user_id de la persona."""
-    ids = db.metadata.tables['person_identities']
+    # Con alias propio: si la fuente es person_identities, sin alias la subconsulta se correlaciona con la de afuera.
+    ids = db.metadata.tables['person_identities'].alias('alumno_ids')
     return (select(ids.c.value)
             .where(ids.c.person_uuid == person, ids.c.kind == 'learnation_user_id', ids.c.retired_at.is_(None))
             .order_by(ids.c.is_primary.desc(), ids.c.id.desc()).limit(1).scalar_subquery())
