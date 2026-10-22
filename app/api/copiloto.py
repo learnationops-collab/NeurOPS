@@ -18,8 +18,9 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
 from app.decorators import copiloto_required
+from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, ROLE_OPERATOR
+from app.services import copiloto_datos, copiloto_herramientas
 from app.services.claude_service import ClaudeService, ClaudeServiceError, gasto_del_mes, inicio_del_mes
-from app.services.copiloto_herramientas import HERRAMIENTAS, ejecutar
 from app.services.user_time_service import hoy_del_usuario, limites_dia_utc
 
 bp = Blueprint('copiloto_api', __name__)
@@ -28,8 +29,10 @@ FEATURE = 'copiloto'
 MAX_MENSAJES = 10
 MAX_CARACTERES = 4000
 MAX_TOKENS = 1024
-# Vueltas de herramienta por pregunta: alcanza para pedir dos o tres datos y contestar.
+# Vueltas de herramienta por pregunta: alcanza para pedir dos o tres datos y contestar. Con el motor de tablas
+# son más (las fuentes, sus claves, uno o dos cálculos).
 MAX_VUELTAS = 4
+MAX_VUELTAS_DATOS = 6
 TOPE_MENSUAL_USD = Decimal('8')
 
 SISTEMA = '\n\n'.join([
@@ -45,6 +48,19 @@ SISTEMA = '\n\n'.join([
 ])
 SIN_HERRAMIENTAS = ('Todavía no ves datos del sistema (agendas, deudas, avance): si te piden uno, decí que '
                     'por ahora solo se conectan para los closers.')
+# La dirección ve los datos de Work y de la Academia con el motor de tablas (copiloto_datos).
+DIRECCION = 'Hablás con alguien de la dirección: ves los datos de Work y de la Academia con el motor de tablas.'
+ROLES_DATOS = {ROLE_ADMIN, ROLE_OPERATOR, ROLE_DIRECTOR_COMERCIAL}
+
+
+def _kit(user):
+    """(herramientas, ejecutor, textos extra del sistema, vueltas) según el rol, o None si no tiene herramientas."""
+    if user.role == ROLE_CLOSER:
+        return copiloto_herramientas.HERRAMIENTAS, copiloto_herramientas.ejecutar, [], MAX_VUELTAS
+    if user.role in ROLES_DATOS:
+        return (copiloto_datos.HERRAMIENTAS, copiloto_datos.ejecutar, [DIRECCION, copiloto_datos.INSTRUCCIONES],
+                MAX_VUELTAS_DATOS)
+    return None
 
 
 def _validar(mensajes):
@@ -89,18 +105,19 @@ def _uso(user):
     }
 
 
-def _conversar(historial, con_herramientas):
+def _conversar(historial, kit):
     """Llama a Claude hasta que conteste con texto, ejecutando las herramientas que pida."""
-    hoy = hoy_del_usuario(current_user) if con_herramientas else date.today()
-    partes = [SISTEMA] if con_herramientas else [SISTEMA, SIN_HERRAMIENTAS]
+    hoy = hoy_del_usuario(current_user) if kit else date.today()
+    partes = [SISTEMA, *kit[2]] if kit else [SISTEMA, SIN_HERRAMIENTAS]
     params = {
         'system': '\n\n'.join([*partes, f'Hoy es {hoy.isoformat()}.']),
         'max_tokens': MAX_TOKENS,
         'output_config': {'effort': 'low'},
     }
-    if con_herramientas:
-        params['tools'] = HERRAMIENTAS
-    for _ in range(MAX_VUELTAS):
+    ejecutar = kit[1] if kit else None
+    if kit:
+        params['tools'] = kit[0]
+    for _ in range(kit[3] if kit else MAX_VUELTAS):
         respuesta = ClaudeService.create_message(FEATURE, current_user.id, messages=historial, **params)
         if respuesta.stop_reason != 'tool_use':
             return respuesta
@@ -137,7 +154,7 @@ def mensaje():
 
     historial = [{'role': m['role'], 'content': m['content'].strip()} for m in mensajes]
     try:
-        respuesta = _conversar(historial, con_herramientas=current_user.role == 'closer')
+        respuesta = _conversar(historial, _kit(current_user))
     except ClaudeServiceError as e:
         return jsonify({'error': str(e), 'uso': _uso(current_user)}), e.status_code
 
