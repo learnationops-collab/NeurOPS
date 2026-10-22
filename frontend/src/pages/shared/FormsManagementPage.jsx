@@ -529,9 +529,9 @@ export default function FormsManagementPage() {
                                             </div>
                                         ) : destinationSearch.trim().length >= 2 && destinationResults.length === 0 ? (
                                             <p className="text-center py-6 text-xs text-slate-500 uppercase tracking-widest font-bold">No se encontraron leads coincidentes</p>
-                                        ) : destinationResults.map(item => (
+                                        ) : destinationResults.map((item, i) => (
                                             <div 
-                                                key={item.id}
+                                                key={item.id ?? item.person_uuid ?? `sin-id-${i}`}
                                                 onClick={() => setSelectedDest(item)}
                                                 className="p-3 hover:bg-slate-900 cursor-pointer transition-all flex items-center justify-between text-xs group"
                                             >

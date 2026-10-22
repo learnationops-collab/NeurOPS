@@ -20,8 +20,12 @@ from .workshop_lead import WorkshopLead
 from .landing_session import LandingSession
 from .alert import AlertRule, Alert  # Alertas se retiró el 10/10/2026; las tablas se conservan (ver alert.py)
 from .installment import InstallmentPlan
+from .sale import Sale, SALE_KINDS, SALE_STATUSES
+from .subscription import Subscription, SubscriptionEvent, SUBSCRIPTION_STATUSES, SUBSCRIPTION_EVENT_KINDS
 from .ficha_opcion import FichaOpcion
 from .client_merge_log import ClientMergeLog
+from .system_log import SystemLog
+from .person import Person, PersonIdentity, PersonEvent, Conversation, IDENTITY_KINDS, IDENTITY_USOS, PERSON_EVENT_KINDS
 from .academy_snapshot import AcademySnapshot
 from .bug_report import BugReport, BugReportMessage, URGENCY_LEVELS, STATUS_VALUES, REPORT_TYPES
 from .job_application import JobApplication, JobApplicationVote, ClarityWeight, CLARITY_CRITERIA, VOTE_VALUES
@@ -53,7 +57,8 @@ __all__ = [
     'WorkshopGoals', 'WorkshopAction',
     'WorkshopLead', 'LandingSession',
     'AlertRule', 'Alert',
-    'InstallmentPlan', 'ClientMergeLog', 'FichaOpcion', 'AcademySnapshot',
+    'InstallmentPlan', 'Sale', 'SALE_KINDS', 'SALE_STATUSES',
+    'Subscription', 'SubscriptionEvent', 'SUBSCRIPTION_STATUSES', 'SUBSCRIPTION_EVENT_KINDS','ClientMergeLog', 'SystemLog', 'Person', 'PersonIdentity', 'PersonEvent', 'Conversation', 'IDENTITY_KINDS', 'IDENTITY_USOS', 'PERSON_EVENT_KINDS', 'FichaOpcion', 'AcademySnapshot',
     'BugReport', 'BugReportMessage', 'URGENCY_LEVELS', 'STATUS_VALUES', 'REPORT_TYPES',
     'JobApplication', 'JobApplicationVote', 'ClarityWeight', 'CLARITY_CRITERIA', 'VOTE_VALUES',
     'AssistantApplication', 'AssistantClarityWeight', 'HiringForm', 'HiringConfig',

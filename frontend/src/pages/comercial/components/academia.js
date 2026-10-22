@@ -157,10 +157,13 @@ export const formatoAcademia = {
  * una): es lo que dice cuánto se puede confiar en la tabla entera.
  */
 export const resumenAcademia = (filas) => {
+    // Cada PERSONA una vez (docs/plan_personas.md): dos clientes duplicados de la misma son un alumno.
     const porCliente = new Map();
     (filas || []).forEach(f => {
-        if (f.academia && f.client_id !== null && f.client_id !== undefined && !porCliente.has(f.client_id)) {
-            porCliente.set(f.client_id, f.academia);
+        const clave = f.person_uuid ? `p:${f.person_uuid}`
+            : (f.client_id !== null && f.client_id !== undefined ? `c:${f.client_id}` : null);
+        if (f.academia && clave && !porCliente.has(clave)) {
+            porCliente.set(clave, f.academia);
         }
     });
     let activos = 0;

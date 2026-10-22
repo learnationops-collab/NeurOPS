@@ -39,6 +39,16 @@ def _iso(valor):
     return valor.isoformat() if isinstance(valor, (date, datetime)) else str(valor)
 
 
+def email_academia(person, por_defecto=None):
+    """El mail con que el alumno entra a la Academia: el de ese uso si el equipo fijó uno distinto,
+    y si no, el principal (el uso es la excepción). `por_defecto` solo sin persona o sin ningún mail."""
+    from app.services import person_service
+
+    if person is None:
+        return por_defecto
+    return person_service.dato(person, 'email', uso='academia') or por_defecto
+
+
 def _tipo(tipos):
     """Cómo compró: completo si pagó todo de una vez; cuotas si tiene cuotas o parciales; seña si
     solo dejó la seña. None si no hay ventas."""
@@ -63,9 +73,13 @@ def estado(client, hoy=None):
     from app.services.sheets_service import SheetsService
 
     hoy = hoy or date.today()
-    ventas = FinancialSale.query.filter(
-        FinancialSale.client_id == client.id, FinancialSale.estado == 'Completada',
-    ).order_by(FinancialSale.date.asc(), FinancialSale.id.asc()).all()
+    # Los pagos del cliente y los de su persona que todavía no tienen cliente (docs/plan_personas.md).
+    suyos = FinancialSale.client_id == client.id
+    if client.person_uuid:
+        suyos = suyos | ((FinancialSale.person_uuid == client.person_uuid) & FinancialSale.client_id.is_(None))
+    ventas = FinancialSale.query.filter(suyos, FinancialSale.estado == 'Completada') \
+        .order_by(FinancialSale.date.asc(), FinancialSale.id.asc()).all()
+    email = email_academia(client.person, client.email)
     tipos = {SheetsService.parse_tipo_pago(v.tipo_pago)[1] for v in ventas}
     ultima = ventas[-1] if ventas else None
 
@@ -79,7 +93,8 @@ def estado(client, hoy=None):
 
     return {
         'work_client_id': client.id,
-        'email': (client.email or '').strip().lower() or None,
+        'work_uuid': client.person_uuid,
+        'email': (email or '').strip().lower() or None,
         'learnation_user_id': client.learnation_user_id,
         'tipo': _tipo(tipos),
         'closer_email': AcademyAccessService.closer_de(client),
@@ -207,8 +222,12 @@ def clientes_con_estado():
     con_venta = db.session.query(FinancialSale.client_id).filter(
         FinancialSale.client_id.isnot(None), FinancialSale.estado == 'Completada')
     con_plan = db.session.query(InstallmentPlan.client_id).filter(InstallmentPlan.client_id.isnot(None))
+    # Pagos que solo tienen persona (sin cliente): cuentan para el cliente de esa persona.
+    con_persona = db.session.query(FinancialSale.person_uuid).filter(
+        FinancialSale.person_uuid.isnot(None), FinancialSale.client_id.is_(None), FinancialSale.estado == 'Completada')
     return Client.query.filter(
-        Client.id.in_(con_venta) | Client.id.in_(con_plan) | Client.baja_at.isnot(None)
+        Client.id.in_(con_venta) | Client.id.in_(con_plan) | Client.person_uuid.in_(con_persona)
+        | Client.baja_at.isnot(None)
     ).order_by(Client.id.asc())
 
 
@@ -216,13 +235,21 @@ def normalizar_email(email):
     return (email or '').strip().lower()
 
 
-def buscar_cliente(work_client_id=None, email=None):
-    """El cliente de un aviso de la Academia: por id de Work y, si no, por email."""
+def buscar_cliente(work_client_id=None, email=None, work_uuid=None):
+    """El cliente de un aviso de la Academia: por el uuid de la persona, por id de Work y, si no, por
+    email (cualquiera de los de su persona)."""
+    from app.services import person_service
+
+    if work_uuid:
+        cliente = person_service.cliente_de(person_service.por_uuid(work_uuid), crear=False)
+        if cliente:
+            return cliente
     if work_client_id:
         cliente = db.session.get(Client, int(work_client_id))
         if cliente:
             return cliente
     email = normalizar_email(email)
     if email:
-        return Client.query.filter(func.lower(Client.email) == email).first()
+        cliente = person_service.cliente_de(person_service.buscar(email=email), crear=False)
+        return cliente or Client.query.filter(func.lower(Client.email) == email).first()
     return None

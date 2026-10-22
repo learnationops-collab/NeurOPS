@@ -58,7 +58,7 @@ En n8n: en el nodo *HTTP Request* → *Send Headers* → nombre `X-Api-Token`, v
 Un solo secreto para todo ManyChat: `MANYCHAT_WEBHOOK_TOKEN`. Pasos, en este orden:
 
 1. Genera el valor (comando del §2) y cárgalo en Railway como `MANYCHAT_WEBHOOK_TOKEN`: producción (proyecto
-   `selfless-adventure`, servicio «learnation work») y, si quieres probar antes, staging («Servidor de prueba»).
+   «Learnation Work» (antes `selfless-adventure`), servicio «learnation work») y, si quieres probar antes, staging («Servidor de prueba»).
    Deja `INTEGRATIONS_AUTH_MODE=log_only` mientras tanto: lo que llegue sin el header sigue entrando.
 2. En ManyChat, en **cada flujo** con una acción **«Solicitud externa»** (External Request) que llame a
    `https://work.thelearnation.com/api/manychat-webhook` (suele haber más de una por flujo, y una que falte se

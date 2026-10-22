@@ -32,7 +32,7 @@ formulario y ediciones a mano, y conviven 'Ivan' e 'Iván'.
 from sqlalchemy import func, or_
 
 from app import db
-from app.models import Appointment, Client, FinancialAgenda
+from app.models import Appointment, Client, FinancialAgenda, FinancialSale
 from app.services.fuente_service import normalizar
 
 
@@ -47,7 +47,7 @@ def _mail(valor):
 
 
 def _ventas_de(client):
-    """Los pagos de esta persona, por el mismo cruce de contacto que usa la ficha."""
+    """Los pagos de esta persona, con el mismo criterio que la ficha (`filtro_de_pagos`)."""
     from app.services.ficha_lead_service import _ventas_del_cliente
     return _ventas_del_cliente(client)
 
@@ -79,14 +79,19 @@ def es_lead_del_setter(setter, appt=None, client=None):
     if any(normalizar(v.setter) == objetivo for v in ventas):
         return True
 
-    # 3: una fila del Tablero con su nombre y el contacto de la persona o de alguno de sus pagos.
-    igs = {i for i in [_ig(client.instagram)] + [_ig(v.instagram) for v in ventas] if i}
-    mails = {m for m in [_mail(client.email)] + [_mail(v.mail_cliente) for v in ventas] if m}
-    condiciones = []
-    if igs:
-        condiciones.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')).in_(sorted(igs)))
-    if mails:
-        condiciones.append(func.lower(FinancialAgenda.mail).in_(sorted(mails)))
+    # 3: una fila del Tablero con su nombre y el contacto de la persona o de alguno de sus pagos
+    # (el de la persona del pago, `FinancialSale.contacto`; la copia solo sin persona).
+    contactos = list(FinancialSale.contactos(ventas).values())
+    igs = {i for i in [_ig(client.instagram)] + [_ig(c['instagram']) for c in contactos] if i}
+    mails = {m for m in [_mail(client.email)] + [_mail(c['mail_cliente']) for c in contactos] if m}
+    # Las agendas de su persona (y de las de sus pagos); por la copia, solo las agendas sin persona.
+    from app.services.agenda_contacto_service import sin_persona
+    personas = {p for p in [client.person_uuid] + [v.person_uuid for v in ventas] if p}
+    copia = sin_persona(
+        func.lower(func.replace(FinancialAgenda.instagram, '@', '')).in_(sorted(igs)) if igs else None,
+        func.lower(FinancialAgenda.mail).in_(sorted(mails)) if mails else None)
+    condiciones = [c for c in (FinancialAgenda.person_uuid.in_(sorted(personas)) if personas else None, copia)
+                   if c is not None]
     if not condiciones:
         return False
     return any(normalizar(nombre) == objetivo

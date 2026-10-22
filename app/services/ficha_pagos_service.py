@@ -64,6 +64,16 @@ CENTAVO = 0.005
 
 # --- Validacion -------------------------------------------------------------------------------
 
+def _venta_elegida(valor, client_id, codigo):
+    """La venta que se eligio a mano para el pago (`sale_service.venta_elegida`); None = automatica."""
+    from app.services.sale_service import venta_elegida
+
+    try:
+        return venta_elegida(valor, client_id, codigo)
+    except ValueError as e:
+        raise ErrorDeAccion(str(e), 'sale_id')
+
+
 def _dia(valor):
     """'AAAA-MM-DD' -> date, o `ErrorDeAccion`.
 
@@ -344,18 +354,24 @@ def crear(appt, datos, usuario):
     codigo = _programa(datos.get('programa_code'))
     tipo = _tipo(datos.get('tipo'))
     tipo_pago = f'{codigo} - {TIPOS[tipo]}'
+    sale_id = _venta_elegida(datos.get('sale_id'), appt.client.id, codigo)
 
     cliente = appt.client
     # Antes de agregar la venta nueva: todavia no tiene espejo y se contaria a si misma.
     previas = _ventas_del_cliente(cliente)
     huerfanas = _sin_espejo(previas, _emparejar(previas, _pagos_del_cliente(cliente.id)))
     vendedor = appt.closer.email if appt.closer else usuario.email
+    # El pago es de la persona del cliente; su mail es el de pago si tiene uno distinto, si no el
+    # principal (docs/plan_personas.md).
+    from app.services import person_service
+    persona = cliente.person
+    mail = (person_service.dato(persona, 'email', uso='pago') if persona else None) or cliente.email
     venta = FinancialSale(
-        client_id=cliente.id, email_vendedor=vendedor, nombre_cliente=cliente.full_name,
-        mail_cliente=cliente.email, telefono=(cliente.phone or '').lstrip('+') or None,
+        client_id=cliente.id, person=persona, email_vendedor=vendedor, nombre_cliente=cliente.full_name,
+        mail_cliente=mail, telefono=(cliente.phone or '').lstrip('+') or None,
         instagram=(cliente.instagram or '').lstrip('@') or None, examen=appt.examen or None,
         tipo_pago=tipo_pago, monto=monto, metodo_pago=medio, transferido_a=transferido_a,
-        estado='Completada', sold_in_call=False, date=datetime.combine(dia, time()))
+        estado='Completada', sold_in_call=False, date=datetime.combine(dia, time()), sale_id=sale_id)
     db.session.add(venta)
 
     espejo = None
@@ -395,10 +411,10 @@ def crear(appt, datos, usuario):
 # Lo que se corrige de un pago, con los MISMOS nombres con los que lo lee y lo carga la ficha
 # (`fecha`, `monto`, `metodo_pago`, `programa_code`, `tipo`, `transferido_a`): si el GET dijera una
 # cosa y el PATCH pidiera otra, cada lado pasaria sus tests y en pantalla guardar no haria nada.
-CAMPOS = ('fecha', 'monto', 'metodo_pago', 'programa_code', 'tipo', 'transferido_a')
+CAMPOS = ('fecha', 'monto', 'metodo_pago', 'programa_code', 'tipo', 'transferido_a', 'sale_id')
 
 # Lo que no es la plata ni su registro: cambiarlo no toca el espejo en la deuda.
-SOLO_DE_LA_VENTA = {'transferido_a'}
+SOLO_DE_LA_VENTA = {'transferido_a', 'sale_id'}
 
 
 # El pago pedido no está entre las ventas del lead (`_venta_y_espejo`).
@@ -570,6 +586,11 @@ def _aplicar(venta, datos):
                             and not transferencias.es_transferencia(venta.metodo_pago))
     transferido_a = _transferido_a(datos.get('transferido_a', venta.transferido_a), medio_final,
                                    obligatorio=pasa_a_transferencia)
+    # Mover el pago a otra venta (20/10/2026). Vacío no la cambia: si cambia el tipo o el programa,
+    # el sistema lo vuelve a ubicar solo (`sale_service`).
+    sale_id = (_venta_elegida(datos.get('sale_id'), venta.client_id,
+                              SheetsService.parse_tipo_pago(tipo_pago or venta.tipo_pago)[0])
+               if datos.get('sale_id') not in (None, '') else None)
 
     cambios, bitacora = set(), []
     antes = _instante(venta.date)
@@ -594,6 +615,10 @@ def _aplicar(venta, datos):
         bitacora.append(f'transferido a {_a_quien(venta.transferido_a)} → {_a_quien(transferido_a)}')
         venta.transferido_a = transferido_a
         cambios.add('transferido_a')
+    if sale_id and sale_id != venta.sale_id:
+        bitacora.append(f'venta #{venta.sale_id or "sin venta"} → #{sale_id}')
+        venta.sale_id = sale_id
+        cambios.add('sale_id')
     return cambios, bitacora
 
 

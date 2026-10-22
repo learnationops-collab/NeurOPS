@@ -309,7 +309,8 @@ class CloserAgendasService:
     @staticmethod
     def _contactos_y_ventas(appts, *extra):
         """(emails, igs, ids, filas): los contactos de los clientes de `appts` y las filas de
-        `FinancialSale` que cruzan con alguno, leídas en lotes (email, instagram y client_id).
+        `FinancialSale` que son suyas, leídas en lotes: las de su persona y las atadas por id; por
+        email o instagram, solo las que no tienen persona (`filtro_de_pagos`).
 
         Cada fila trae `mail_cliente, instagram, client_id` seguidas de las columnas de `extra`.
         Es la mitad de consulta de `_ventas_por_contacto` y de `_tipos_por_contacto`: las dos
@@ -328,12 +329,25 @@ class CloserAgendasService:
         columnas = (FinancialSale.mail_cliente, FinancialSale.instagram, FinancialSale.client_id) + extra
         rows = []
         for lote in _chunks(emails):
-            rows += db.session.query(*columnas).filter(func.lower(FinancialSale.mail_cliente).in_(lote)).all()
+            rows += db.session.query(*columnas).filter(
+                FinancialSale.person_uuid.is_(None), func.lower(FinancialSale.mail_cliente).in_(lote)).all()
         for lote in _chunks(igs):
             rows += db.session.query(*columnas).filter(
+                FinancialSale.person_uuid.is_(None),
                 func.lower(func.replace(FinancialSale.instagram, '@', '')).in_(lote)).all()
+        # En las que tienen persona la copia no cuenta: viajan sin mail ni instagram, así no cruzan
+        # con el contacto de otro cliente de la lista.
         for lote in _chunks(ids):
-            rows += db.session.query(*columnas).filter(FinancialSale.client_id.in_(lote)).all()
+            rows += [(None, None, *fila[2:-1]) if fila[-1] else tuple(fila[:-1])
+                     for fila in db.session.query(*columnas, FinancialSale.person_uuid)
+                     .filter(FinancialSale.client_id.in_(lote)).all()]
+        # Los pagos de la persona de cada cliente cuentan como atados a ese cliente: se devuelven
+        # con su client_id, así los que llaman no cambian.
+        cliente_de_persona = {a.client.person_uuid: a.client_id for a in appts if a.client and a.client.person_uuid}
+        for lote in _chunks(cliente_de_persona):
+            rows += [(None, None, cliente_de_persona[fila[-1]], *fila[3:-1])
+                     for fila in db.session.query(*columnas, FinancialSale.person_uuid)
+                     .filter(FinancialSale.person_uuid.in_(lote)).all()]
         return emails, igs, ids, rows
 
     @staticmethod
@@ -367,16 +381,10 @@ class CloserAgendasService:
     @staticmethod
     def _ventas_por_contacto(appts, identifiers):
         """Cruce en lote cita→venta con el mismo criterio que `CloserFollowUpService.
-        _client_has_sale` (email o instagram del cliente contra FinancialSale, más las ventas
-        atadas al cliente por id), pero en una sola pasada para toda la lista en vez de una
-        consulta por fila. Devuelve tres diccionarios {email → es_propia}, {instagram → es_propia}
+        _client_has_sale` (`_contactos_y_ventas`), pero en una sola pasada para toda la lista en vez
+        de una consulta por fila. Devuelve tres diccionarios {email → es_propia}, {instagram → es_propia}
         y {client_id → es_propia}; "propia" = `email_vendedor` es de este closer (mismo mapeo que
-        usan Mi cartera y las estadísticas).
-
-        El de client_id existe porque la ficha del lead, al corregirle el correo o el instagram a
-        quien ya compró, le ata las ventas por id antes del cambio: sin él, la fila de Revisar y la
-        del libro de agendas pasaban de "Venta" a "Presentó, no cerró" mientras la ficha y
-        `_client_has_sale` seguían diciendo que compró."""
+        usan Mi cartera y las estadísticas)."""
         emails, igs, ids, rows = CloserAgendasService._contactos_y_ventas(
             appts, FinancialSale.email_vendedor)
         por_email, por_ig, por_id = {}, {}, {}
@@ -416,6 +424,7 @@ class CloserAgendasService:
         return {
             'id': appt.id,
             'client_id': appt.client_id,
+            'person_uuid': appt.client.person_uuid if appt.client else None,
             'lead_name': (client.full_name or client.email or 'Sin Nombre') if client else 'Sin Cliente',
             'instagram': (client.instagram or '') if client else '',
             'phone': (client.phone or '') if client else '',

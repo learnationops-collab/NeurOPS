@@ -4,7 +4,7 @@ from collections import namedtuple
 from datetime import date, datetime, time, timedelta
 from app import db
 from app.models import Appointment, Enrollment, Program, Payment, FinancialSale, User
-from app.services import baja_service
+from app.services import baja_service, deuda_service
 from app.services.lead_cobro_service import resolver_etapa
 from sqlalchemy import or_, and_, func
 
@@ -99,17 +99,11 @@ def _codigo_de_programa(tipo_pago):
     return code if code in PROGRAM_CODE_NAMES else None
 
 
-def _ventas_atadas(client_id):
-    """El filtro de las ventas que ya estan atadas a este cliente por id, en una lista para sumarle
-    los del cruce por contacto.
-
-    Sin esto, una venta atada por id deja de ser del cliente en cuanto se le corrige el correo o el
-    instagram: la ficha ata las ventas que el cliente tenia por contacto antes de cambiarselo
-    (`ficha_acciones_service.editar_datos`), y el programa y el "ya compro" se leen de aca.
-
-    Vacio sin id: `client_id == None` es `IS NULL` en SQL y juntaria todas las ventas sueltas.
-    """
-    return [FinancialSale.client_id == client_id] if client_id else []
+def _sus_ventas(client):
+    """El filtro de los pagos del cliente: los de su persona y los atados por id; la copia del pago
+    cuenta solo en los que no tienen persona (`sales_consistency_service.filtro_de_pagos`)."""
+    from app.services.sales_consistency_service import filtro_de_pagos
+    return filtro_de_pagos(client)
 
 
 class CloserFollowUpService:
@@ -121,19 +115,10 @@ class CloserFollowUpService:
 
     @staticmethod
     def _client_has_sale(client):
-        """True si el cliente ya tiene una venta registrada en FinancialSale (mismo cruce
-        email/instagram que _client_program_code, mas las ventas atadas a el por id)."""
+        """True si el cliente ya tiene una venta registrada en FinancialSale (`_sus_ventas`)."""
         if not client:
             return False
-        filters = _ventas_atadas(client.id)
-        if client.email:
-            filters.append(func.lower(FinancialSale.mail_cliente) == client.email.strip().lower())
-        if client.instagram:
-            ig = client.instagram.strip().lstrip('@').lower()
-            filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig)
-        if not filters:
-            return False
-        return FinancialSale.query.filter(or_(*filters)).first() is not None
+        return FinancialSale.query.filter(_sus_ventas(client)).first() is not None
 
     @staticmethod
     def _resolve_closer_for_email_vendedor(email_vendedor):
@@ -173,20 +158,8 @@ class CloserFollowUpService:
         if appt:
             return appt
 
-        # El correo y el instagram entran solo si al cliente no le quedan vacíos. Antes iban los
-        # dos siempre, y a un cliente sin instagram le quedaba `instagram == ''`: encontraba la
-        # venta más vieja de CUALQUIERA sin instagram (15 en la base local, la primera de
-        # 2025-12-05) y el ancla salía con la fecha y el closer de esa, que en la cola de cobro
-        # deciden el dueño. La venta enlazada por `client_id` entra siempre: es la única forma de
-        # encontrar la de un cliente sin correo ni instagram (5 en la base local).
-        email = (client.email or '').strip().lower()
-        instagram = (client.instagram or '').strip().lstrip('@').lower()
-        filtros = [FinancialSale.client_id == client.id]
-        if email:
-            filtros.append(func.lower(FinancialSale.mail_cliente) == email)
-        if instagram:
-            filtros.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == instagram)
-        sale = FinancialSale.query.filter(or_(*filtros)).order_by(FinancialSale.date.asc()).first()
+        # Sus pagos (`_sus_ventas`): el ancla sale con la fecha y el closer del primero.
+        sale = FinancialSale.query.filter(_sus_ventas(client)).order_by(FinancialSale.date.asc()).first()
 
         closer = CloserFollowUpService._resolve_closer_for_email_vendedor(sale.email_vendedor) if sale else None
         if not closer:
@@ -350,6 +323,10 @@ class CloserFollowUpService:
         client = Client.query.get(client_id)
         if baja_service.esta_de_baja(client):
             return 0.0
+        # Por venta (`deuda_service`) cuando la persona ya tiene ventas; si no, por inscripciones.
+        por_venta = deuda_service.deuda_de_cliente(client)
+        if por_venta is not None:
+            return por_venta
         enrollments = Enrollment.query.filter_by(client_id=client_id).all()
         if not enrollments:
             return 0.0
@@ -373,17 +350,9 @@ class CloserFollowUpService:
 
     @staticmethod
     def _ultima_venta_de(client):
-        """La venta más reciente del cliente en FinancialSale (de cualquier estado), atada a él por
-        id o cruzada por email o instagram. None si no hay ninguna."""
-        filters = _ventas_atadas(client.id)
-        if client.email:
-            filters.append(func.lower(FinancialSale.mail_cliente) == client.email.strip().lower())
-        if client.instagram:
-            ig = client.instagram.strip().lstrip('@').lower()
-            filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig)
-        if not filters:
-            return None
-        return FinancialSale.query.filter(or_(*filters)).order_by(FinancialSale.date.desc()).first()
+        """La venta más reciente del cliente en FinancialSale (de cualquier estado, `_sus_ventas`).
+        None si no hay ninguna."""
+        return FinancialSale.query.filter(_sus_ventas(client)).order_by(FinancialSale.date.desc()).first()
 
     @staticmethod
     def _client_program_code(client_id, lote=None):
@@ -419,6 +388,7 @@ class CloserFollowUpService:
         data = {
             'id': a.id,
             'client_id': a.client_id,
+            'person_uuid': a.client.person_uuid if a.client else None,
             'lead_name': a.client.full_name or a.client.email if a.client else 'Sin Nombre',
             'instagram': a.client.instagram if a.client else '',
             'phone': a.client.phone if a.client else '',
@@ -654,77 +624,39 @@ class CloserFollowUpService:
         `_cartera_items` (Mi Cartera, scopeada por quién hizo la venta) — el cruce cliente↔venta
         es el mismo en los dos casos, solo cambia después con qué criterio se filtra por closer.
 
-        FinancialSale.client_id debería estar poblado (backfill de una pasada anterior) pero en
-        muchas copias de la base la gran mayoría quedó en NULL — en vez de depender ciegamente de
-        esa columna, se resuelve el cliente con el mismo cruce email/instagram/teléfono que usa el
-        resto del sistema (BookingService.find_or_create_client), sin crear nada nuevo (solo lectura).
+        El cliente de un pago es el de su id y, si no tiene, el de su persona (docs/plan_personas.md,
+        Etapa 2b). El mail o el instagram copiados en el pago cuentan solo si no tiene persona; el
+        teléfono, nunca. Solo lectura.
 
-        **Un índice en memoria, no hasta tres consultas por venta.** Antes cada venta buscaba su
-        cliente por separado (por id, después email, instagram y teléfono): ~940 consultas en la
-        base local, y esto corre en cada pedido de la tabla Clientes, de "Mi cartera" y de la
-        cola de cobro. Ahora se lee `clients` UNA vez y el cruce es el mismo, en el mismo orden
-        de precedencia (client_id → email → instagram → teléfono) y con las mismas expresiones:
-        `lower()` y `replace()` los calcula la base, igual que en el WHERE de antes, así que dos
-        textos que antes coincidían siguen coincidiendo y viceversa.
-
-        Cuando dos clientes comparten el dato (13 correos y 12 instagrams repetidos en la base
-        local), el `.first()` de antes devolvía el primero que encontraba al RECORRER la tabla:
-        ninguna de las tres búsquedas tiene índice que usar (`lower(...)`, `replace(...)`,
-        `LIKE '%...%'`), así que la base la lee entera en su orden físico. Por eso la lectura de
-        acá va SIN `ORDER BY` a propósito y se queda con la primera coincidencia: es el mismo
-        recorrido, y elige el mismo cliente. En SQLite ese orden es el del id."""
+        **Un índice en memoria, no una consulta por venta:** se lee `clients` UNA vez. Ante dos
+        clientes con el mismo dato gana el primero que devuelve la base, como el `.first()` de antes.
+        """
         from app.models import Client, FinancialSale
 
         sales = FinancialSale.query.filter(
             or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
         ).all()
 
-        existentes, por_email, por_ig, telefonos = set(), {}, {}, []
-        for cid, email_l, ig_l, telefono in db.session.query(
+        existentes, por_email, por_ig, por_persona = set(), {}, {}, {}
+        for cid, email_l, ig_l, puuid in db.session.query(
                 Client.id, func.lower(Client.email),
-                func.lower(func.replace(Client.instagram, '@', '')), Client.phone):
+                func.lower(func.replace(Client.instagram, '@', '')), Client.person_uuid):
             existentes.add(cid)
+            if puuid is not None and (puuid not in por_persona or cid < por_persona[puuid]):
+                por_persona[puuid] = cid
             if email_l is not None:
                 por_email.setdefault(email_l, cid)
             if ig_l is not None:
                 por_ig.setdefault(ig_l, cid)
-            if telefono is not None:
-                telefonos.append((cid, telefono))
-
-        por_sufijo = {}
-
-        def por_telefono(sufijo):
-            if sufijo not in por_sufijo:
-                if any(c in '%_\\' or (c.isascii() and c.isalpha()) for c in sufijo):
-                    # Con un comodín de LIKE (`%`, `_`; en Postgres también `\`) o con letras (que
-                    # SQLite compara sin distinguir mayúsculas y Postgres distinguiéndolas) el
-                    # LIKE ya no es un "contiene": se le pregunta a la base lo mismo que antes. En
-                    # la base local ningún teléfono de venta cae acá.
-                    c = Client.query.filter(Client.phone.like(f"%{sufijo}%")).first()
-                    por_sufijo[sufijo] = c.id if c else None
-                else:
-                    por_sufijo[sufijo] = next((cid for cid, tel in telefonos if sufijo in tel), None)
-            return por_sufijo[sufijo]
 
         def resolve_client(sale):
             if sale.client_id:
                 return sale.client_id if sale.client_id in existentes else None
+            if sale.person_uuid:
+                return por_persona.get(sale.person_uuid)
             email_clean = sale.mail_cliente.strip().lower() if sale.mail_cliente and '@' in sale.mail_cliente else None
             ig_clean = sale.instagram.strip().replace('@', '').lower() if sale.instagram and sale.instagram.lower() not in ('n/a', '') else None
-            phone_clean = sale.telefono.strip() if sale.telefono and sale.telefono.lower() not in ('n/a', '') else None
-            if email_clean:
-                c = por_email.get(email_clean)
-                if c:
-                    return c
-            if ig_clean:
-                c = por_ig.get(ig_clean)
-                if c:
-                    return c
-            if phone_clean and len(phone_clean) >= 8:
-                c = por_telefono(phone_clean[-8:])
-                if c:
-                    return c
-            return None
+            return (por_email.get(email_clean) if email_clean else None) or (por_ig.get(ig_clean) if ig_clean else None)
 
         sales_by_client = {}
         for s in sales:
@@ -787,6 +719,7 @@ class CloserFollowUpService:
         return {
             'id': appt.id,
             'client_id': cid,
+            'person_uuid': client.person_uuid,
             'lead_name': client.full_name or client.email or 'Sin Nombre',
             'instagram': client.instagram or '',
             'phone': client.phone or '',
@@ -1327,6 +1260,7 @@ class CarteraEnLote:
         self._inscripciones = {}
         self._pagado = {}
         self._closers = {}
+        self._por_venta = None
         if not ids:
             return
 
@@ -1417,32 +1351,33 @@ class CarteraEnLote:
             self.cuota_pendiente[cid] = CloserFollowUpService._cuota_pendiente_de(cid)
 
     def _leer_programas(self):
-        """El programa de cada cliente, de su última venta atada a él por id o cruzada por email
-        o instagram (de cualquier estado, como `_client_program_code`). Se leen todas las ventas
-        una vez, ordenadas como la consulta original, y a cada cliente le toca la primera que
-        cruza.
-
-        El índice por id es el mismo `_ventas_atadas` de la lectura cliente por cliente: sin él,
-        a un cliente al que se le corrigió el correo desde la ficha (sus ventas quedan atadas por
-        id antes del cambio) la tabla Clientes le mostraba "Sin programa" y la ficha no."""
-        por_id, por_email, por_ig = {}, {}, {}
+        """El programa de cada cliente, de su última venta (de cualquier estado, como
+        `_client_program_code`): las de su persona y las atadas por id; por email o instagram, solo
+        las que no tienen persona (`_sus_ventas`). Se leen todas las ventas una vez, ordenadas como
+        la consulta original, y a cada cliente le toca la primera que cruza."""
+        por_id, por_email, por_ig, por_persona = {}, {}, {}, {}
         filas = (db.session.query(FinancialSale.date, FinancialSale.tipo_pago,
                                   FinancialSale.client_id,
                                   func.lower(FinancialSale.mail_cliente),
-                                  func.lower(func.replace(FinancialSale.instagram, '@', '')))
+                                  func.lower(func.replace(FinancialSale.instagram, '@', '')),
+                                  FinancialSale.person_uuid)
                  .order_by(FinancialSale.date.desc(), FinancialSale.id.asc()))
-        for pos, (fecha, tipo_pago, client_id, mail, ig) in enumerate(filas):
+        for pos, (fecha, tipo_pago, client_id, mail, ig, puuid) in enumerate(filas):
             if client_id is not None:
                 por_id.setdefault(client_id, []).append((pos, fecha, tipo_pago))
-            if mail is not None:
-                por_email.setdefault(mail, []).append((pos, fecha, tipo_pago))
-            if ig is not None:
-                por_ig.setdefault(ig, []).append((pos, fecha, tipo_pago))
+            if puuid is not None:
+                por_persona.setdefault(puuid, []).append((pos, fecha, tipo_pago))
+            elif mail is not None or ig is not None:
+                if mail is not None:
+                    por_email.setdefault(mail.strip(), []).append((pos, fecha, tipo_pago))
+                if ig is not None:
+                    por_ig.setdefault(ig.strip(), []).append((pos, fecha, tipo_pago))
 
         for cid, cliente in self.clientes.items():
-            # Las mismas claves que arma `_ultima_venta_de`, incluido el caso raro de un email
-            # o instagram que queda vacío después del strip (cruza con las ventas vacías).
+            # Las mismas claves que `_ultima_venta_de` (`filtro_de_pagos`).
             candidatas = {pos: (fecha, tipo_pago) for pos, fecha, tipo_pago in por_id.get(cid, ())}
+            for pos, fecha, tipo_pago in por_persona.get(getattr(cliente, 'person_uuid', None), ()):
+                candidatas[pos] = (fecha, tipo_pago)
             if cliente.email:
                 for pos, fecha, tipo_pago in por_email.get(cliente.email.strip().lower(), ()):
                     candidatas[pos] = (fecha, tipo_pago)
@@ -1466,6 +1401,10 @@ class CarteraEnLote:
         # Misma regla que `_client_debt` sin lote: de baja, no debe nada.
         if baja_service.esta_de_baja(cliente):
             return 0.0
+        if self._por_venta is None:
+            self._por_venta = deuda_service.deudas(self.clientes.values())
+        if client_id in self._por_venta:
+            return self._por_venta[client_id]
         return _deuda_de(cliente.total_amount if cliente else None,
                          self._inscripciones.get(client_id, []), self._pagado.get(client_id, {}))
 

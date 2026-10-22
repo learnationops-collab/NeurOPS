@@ -45,7 +45,8 @@ from itertools import combinations
 from sqlalchemy import func
 
 from app import db
-from app.models import Client, ConciliacionCarga, ConciliacionMovimiento, ConciliacionRevision, FinancialSale
+from app.models import (Client, ConciliacionCarga, ConciliacionMovimiento, ConciliacionRevision, FinancialSale,
+                        PersonIdentity)
 from app.services import conciliacion_csv as lector
 from app.services.commission_service import COMISION_PASARELA
 
@@ -76,6 +77,16 @@ def _trozos(lista, n=500):
         yield lista[i:i + n]
 
 
+def _persona_del_cobro(fila):
+    """La persona del cobro por su correo (y su nombre). No crea a nadie: un cobro sin venta no es
+    todavía alguien del sistema, y es justo lo que la conciliación tiene que mostrar."""
+    from app.services import person_service
+    if not _correo_util(fila.get('email')):
+        return None
+    return person_service.resolver(fila.get('nombre') or None, email=fila['email'], crear=False,
+                                   fuente='conciliacion')
+
+
 def guardar_carga(leido, archivo, usuario):
     """Guarda lo leído de un CSV (`conciliacion_csv.leer`) sin duplicar: una fila cuya clave natural
     ya está (de otra carga o repetida en el mismo archivo) se cuenta como repetida y no se guarda.
@@ -102,6 +113,7 @@ def guardar_carga(leido, archivo, usuario):
             continue
         vistas.add(clave)
         db.session.add(ConciliacionMovimiento(
+            person=_persona_del_cobro(fila),
             carga_id=carga.id, pasarela=leido['pasarela'], fecha=fila['fecha'],
             nombre=(fila['nombre'] or '')[:255] or None, email=(fila['email'] or '')[:255] or None,
             bruto=fila['bruto'], comision=fila['comision'], neto=fila['neto'],
@@ -194,9 +206,15 @@ def _identidad(venta, mov):
     registrado a otro cliente del sistema) o None. Ver `RANGO`."""
     if mov['email'] and mov['email'] in venta['emails']:
         return 'correo'
+    # La misma persona (docs/plan_personas.md) vale lo que el mismo cliente: la que compró o, si
+    # pagó otra, la que pagó.
+    if mov['persona'] and mov['persona'] in (venta['persona'], venta.get('pagador')):
+        return 'cliente'
     if mov['cliente_id'] and mov['cliente_id'] == venta['cliente_id']:
         return 'cliente'
     otro_cliente = bool(mov['cliente_id'] and venta['cliente_id'] and mov['cliente_id'] != venta['cliente_id'])
+    if mov['persona'] and venta['persona'] and mov['persona'] != venta['persona']:
+        otro_cliente = True
     if not otro_cliente and mov['email'] and any(_correo_cortado(e, mov['email']) for e in venta['emails']):
         return 'correo_parcial'
     if _mismo_nombre(venta['palabras'], mov['palabras']):
@@ -235,15 +253,44 @@ def _ventas(inicio, fin):
     clientes_por_venta = clientes_de_ventas(ventas)
     ids = set(clientes_por_venta.values())
     clientes = {c.id: c for c in Client.query.filter(Client.id.in_(ids)).all()} if ids else {}
+    personas = {}
+    for v in ventas:
+        cliente = clientes.get(clientes_por_venta.get(v.id))
+        personas[v.id] = v.person_uuid or (cliente.person_uuid if cliente else None)
+    correos_de = _correos_de_personas(set(personas.values()) | {v.payer_person_uuid for v in ventas})
+    contactos = FinancialSale.contactos(ventas)
     datos = []
     for v in ventas:
         cliente = clientes.get(clientes_por_venta.get(v.id))
-        emails = {e for e in (_correo_util(v.mail_cliente), _correo_util(cliente.email) if cliente else None) if e}
-        palabras = _palabras(v.nombre_cliente) or (_palabras(cliente.full_name) if cliente else [])
+        contacto = contactos[v.id]
+        # Todos los correos de su persona (paga con uno y entra a la Academia con otro) y, si pagó
+        # otra persona, los de quien pagó: el cobro de la pasarela viene a nombre del pagador. Lo
+        # copiado en la venta y en su cliente cuenta solo si no hay persona (Etapa 2b).
+        if personas[v.id]:
+            emails = set(correos_de.get(personas[v.id], set()))
+        else:
+            emails = {e for e in (_correo_util(v.mail_cliente), _correo_util(cliente.email) if cliente else None) if e}
+        emails |= correos_de.get(v.payer_person_uuid, set())
+        palabras = _palabras(contacto['nombre_cliente']) or (_palabras(cliente.full_name) if cliente else [])
         datos.append({'obj': v, 'id': v.id, 'pasarela': pasarela_de(v.metodo_pago), 'fecha': v.date,
                       'monto': round(float(v.monto or 0.0), 2), 'emails': emails,
-                      'cliente_id': cliente.id if cliente else None, 'palabras': palabras})
+                      'cliente_id': cliente.id if cliente else None, 'persona': personas[v.id],
+                      'pagador': v.payer_person_uuid, 'palabras': palabras,
+                      'nombre': contacto['nombre_cliente'], 'email': contacto['mail_cliente']})
     return datos
+
+
+def _correos_de_personas(uuids):
+    """{person_uuid -> {correos}}: los activos y sin conflicto (`person_service`)."""
+    correos = {}
+    for trozo in _trozos(sorted(u for u in uuids if u)):
+        for puuid, valor in (db.session.query(PersonIdentity.person_uuid, PersonIdentity.value)
+                             .filter(PersonIdentity.person_uuid.in_(trozo), PersonIdentity.kind == 'email',
+                                     PersonIdentity.retired_at.is_(None), PersonIdentity.review_note.is_(None))):
+            limpio = _correo_util(valor)
+            if limpio:
+                correos.setdefault(puuid, set()).add(limpio)
+    return correos
 
 
 def _movimientos(inicio, fin):
@@ -254,15 +301,24 @@ def _movimientos(inicio, fin):
     clientes = {}
     for trozo in _trozos(correos):
         # El cliente más viejo con ese correo, como `clientes_de_ventas`.
-        for cid, email, nombre in (db.session.query(Client.id, func.lower(Client.email), Client.full_name)
-                                   .filter(func.lower(Client.email).in_(trozo)).order_by(Client.id)):
-            clientes.setdefault(email, (cid, nombre))
+        for cid, email, nombre, puuid in (db.session.query(Client.id, func.lower(Client.email), Client.full_name,
+                                                           Client.person_uuid)
+                                          .filter(func.lower(Client.email).in_(trozo)).order_by(Client.id)):
+            clientes.setdefault(email, (cid, nombre, puuid))
+    # El cliente de su persona manda sobre el del correo (el cobro pudo venir con otro de sus correos).
+    puuids = sorted({m.person_uuid for m in movs if m.person_uuid})
+    por_persona = {}
+    for trozo in _trozos(puuids):
+        for cid, nombre, puuid in (db.session.query(Client.id, Client.full_name, Client.person_uuid)
+                                   .filter(Client.person_uuid.in_(trozo)).order_by(Client.id)):
+            por_persona.setdefault(puuid, (cid, nombre, puuid))
     datos = []
     for m in movs:
-        cid, nombre = clientes.get(m.email, (None, None)) if m.email else (None, None)
+        cid, nombre, puuid = (por_persona.get(m.person_uuid)
+                              or (clientes.get(m.email) if m.email else None) or (None, None, m.person_uuid))
         datos.append({'obj': m, 'id': m.id, 'pasarela': m.pasarela, 'fecha': m.fecha, 'bruto': m.bruto,
                       'email': _correo_util(m.email), 'cliente_id': cid, 'cliente_nombre': nombre,
-                      'palabras': _palabras(m.nombre)})
+                      'persona': m.person_uuid or puuid, 'palabras': _palabras(m.nombre)})
     return datos
 
 
@@ -387,9 +443,9 @@ def _iso(cuando):
 
 def _venta_a_dict(v, inicio, fin):
     obj = v['obj']
-    return {'id': obj.id, 'fecha': _iso(obj.date), 'monto': v['monto'], 'nombre': obj.nombre_cliente,
-            'email': obj.mail_cliente, 'tipo_pago': obj.tipo_pago, 'metodo_pago': obj.metodo_pago,
-            'cliente_id': v['cliente_id'], 'en_periodo': inicio <= obj.date <= fin}
+    return {'id': obj.id, 'fecha': _iso(obj.date), 'monto': v['monto'], 'nombre': v['nombre'],
+            'email': v['email'], 'tipo_pago': obj.tipo_pago, 'metodo_pago': obj.metodo_pago,
+            'cliente_id': v['cliente_id'], 'person_uuid': v['persona'], 'en_periodo': inicio <= obj.date <= fin}
 
 
 def _mov_a_dict(m, inicio, fin):
@@ -397,7 +453,8 @@ def _mov_a_dict(m, inicio, fin):
     return {'id': obj.id, 'fecha': _iso(obj.fecha), 'bruto': obj.bruto, 'neto': obj.neto,
             'comision': obj.comision, 'nombre': obj.nombre, 'email': obj.email, 'nota': obj.nota,
             'bruto_desconocido': bool(obj.bruto_desconocido), 'carga_id': obj.carga_id,
-            'cliente_id': m['cliente_id'], 'cliente_nombre': m['cliente_nombre'], 'pasarela': obj.pasarela,
+            'cliente_id': m['cliente_id'], 'cliente_nombre': m['cliente_nombre'], 'person_uuid': m['persona'],
+            'pasarela': obj.pasarela,
             'en_periodo': inicio <= obj.fecha <= fin}
 
 
@@ -447,8 +504,8 @@ def _candidatos(venta, movs, todas_ventas, todos_movs, emparejados):
             'tipo': tipo, 'id': x['id'], 'pasarela': pasarela, 'motivo': motivo, 'identidad': identidad,
             'fecha': _iso(obj.date if tipo == 'venta' else obj.fecha),
             'monto': x['monto'] if tipo == 'venta' else x['bruto'],
-            'nombre': obj.nombre_cliente if tipo == 'venta' else obj.nombre,
-            'email': obj.mail_cliente if tipo == 'venta' else obj.email,
+            'nombre': x['nombre'] if tipo == 'venta' else obj.nombre,
+            'email': x['email'] if tipo == 'venta' else obj.email,
             'ocupado': (('v' if tipo == 'venta' else 'm'), x['id']) in emparejados,
         })
     return salida[:MAX_CANDIDATOS]
@@ -540,6 +597,9 @@ def conciliar(desde, hasta):
                             - (venta['monto'] if venta and inicio <= venta['fecha'] <= fin else 0.0), 2),
             'cliente_id': ((venta and venta['cliente_id'])
                            or next((m['cliente_id'] for m in ms if m['cliente_id']), None)),
+            # La persona de la fila (docs/plan_personas.md): la de la venta o, si no, la del cobro.
+            'person_uuid': ((venta and venta['persona'])
+                            or next((m['persona'] for m in ms if m['persona']), None)),
             'revisada': ({'por': revision.revisada_por.username if revision.revisada_por else None,
                           'at': _iso(revision.revisada_at), 'nota': revision.nota} if revision else None),
             'candidatos': candidatos,

@@ -1,8 +1,9 @@
 from datetime import datetime
 from app import db
+from app.models.person import ConPersona
 
 
-class WorkshopLead(db.Model):
+class WorkshopLead(ConPersona, db.Model):
     """Lead capturado por el gate de las landings públicas de institute.thelearnation.com
     (por ahora /replay/, la clase grabada).
 

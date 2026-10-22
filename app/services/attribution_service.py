@@ -45,53 +45,25 @@ class AttributionService:
 
         uf = UnionFind()
 
-        # 1. Unificar identidades de leads usando Union-Find
-        # Primero procesamos agendas
-        for a in agendas:
-            ig = normalize_ig(a.instagram)
-            mail = normalize_email(a.mail)
-            if ig and mail:
-                uf.union(ig, mail)
+        # 1. Unificar identidades de leads usando Union-Find. Con persona (plan_personas, 20/10/2026)
+        # la clave es ella; el Instagram y el correo copiados solo cuentan en las filas sin persona.
+        def claves(fila, mail):
+            persona = getattr(fila, 'person_uuid', None)  # las agendas livianas pueden no traerla
+            if persona:
+                return [f'p:{persona}']
+            return [c for c in (normalize_ig(fila.instagram), normalize_email(mail)) if c]
 
-        # Luego procesamos ventas
-        for s in sales:
-            ig = normalize_ig(s.instagram)
-            mail = normalize_email(s.mail_cliente)
-            if ig and mail:
-                uf.union(ig, mail)
+        filas = [(a, claves(a, a.mail), 'agendas') for a in agendas] + \
+                [(s, claves(s, s.mail_cliente), 'sales') for s in sales]
+        for _fila, cs, _lado in filas:
+            for otra in cs[1:]:
+                uf.union(cs[0], otra)
 
         # 2. Agrupar agendas y ventas por la raíz del lead en Union-Find
         leads = {}  # root -> {"agendas": [], "sales": []}
-
-        for a in agendas:
-            ig = normalize_ig(a.instagram)
-            mail = normalize_email(a.mail)
-            
-            key = None
-            if ig:
-                key = uf.find(ig)
-            elif mail:
-                key = uf.find(mail)
-                
-            if key:
-                if key not in leads:
-                    leads[key] = {"agendas": [], "sales": []}
-                leads[key]["agendas"].append(a)
-
-        for s in sales:
-            ig = normalize_ig(s.instagram)
-            mail = normalize_email(s.mail_cliente)
-            
-            key = None
-            if ig:
-                key = uf.find(ig)
-            elif mail:
-                key = uf.find(mail)
-                
-            if key:
-                if key not in leads:
-                    leads[key] = {"agendas": [], "sales": []}
-                leads[key]["sales"].append(s)
+        for fila, cs, lado in filas:
+            if cs:
+                leads.setdefault(uf.find(cs[0]), {"agendas": [], "sales": []})[lado].append(fila)
 
         attribution_map = {}
 

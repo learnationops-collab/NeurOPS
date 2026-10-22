@@ -1,8 +1,9 @@
 from datetime import datetime
 from app import db
+from app.models.person import ConPersona
 
 
-class InstallmentPlan(db.Model):
+class InstallmentPlan(ConPersona, db.Model):
     """Plan de cuotas (próximos pagos) declarado por el closer al registrar una venta
     parcial/con seña. Vive atado a la cita (Appointment), no a Enrollment (sistema
     legado sin datos recientes) ni a FinancialSale (registro plano sincronizado con
@@ -22,6 +23,8 @@ class InstallmentPlan(db.Model):
     # a qué programa pertenecían con certeza) — se tratan como "sin programa" en las consultas
     # que sí filtran por programa, sin bloquear la creación de un plan nuevo para otro programa.
     programa_code = db.Column(db.String(10), nullable=True, index=True)
+    # La venta de la que es este plan (ver `Sale`). NULL en los planes todavía sin agrupar.
+    sale_id = db.Column(db.Integer, db.ForeignKey('sales.id', ondelete='SET NULL'), nullable=True, index=True)
     numero_cuota = db.Column(db.Integer, nullable=False)
     monto = db.Column(db.Float, nullable=False)
     fecha_vencimiento = db.Column(db.Date, nullable=False)

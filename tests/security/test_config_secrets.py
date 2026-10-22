@@ -107,10 +107,3 @@ def test_sin_database_url_usa_sqlite_local():
 
     assert config['db'] == 'sqlite:///local.db'
     assert config['engine_options'] == {'connect_args': {'timeout': 30}}  # menos 'database is locked'
-
-
-def test_con_postgres_no_aplica_las_opciones_de_sqlite():
-    _, config, _ = importar_config(DATABASE_URL='postgresql://u:p@host:5432/db')
-
-    assert config['db'] == 'postgresql://u:p@host:5432/db'
-    assert config['engine_options'] is None

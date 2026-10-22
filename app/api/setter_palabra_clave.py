@@ -75,11 +75,14 @@ def ventas_sin_palabra_clave():
 @bp.route('/palabras-clave/ventas', methods=['POST'])
 @role_required(ROLE_SETTER)
 def asignar_palabra_clave_a_ventas():
-    """Body: {"grupo": "c<client_id>" | "v<venta_id>", "ad_id": int | "palabra_clave": str,
+    """Body: {"grupo": "p<person_uuid>" | "c<client_id>" | "v<venta_id>", "ad_id": int | "palabra_clave": str,
     "instagram": "usuario" (opcional)}. Pone el anuncio en todos los pagos de ese cliente."""
     datos = request.get_json(silent=True) or {}
     grupo, palabra, instagram = datos.get('grupo'), datos.get('palabra_clave'), datos.get('instagram')
-    if not isinstance(grupo, str) or grupo[:1] not in ('c', 'v') or not grupo[1:].isdigit():
+    # La persona agrupa sus pagos desde el 20/10/2026 (`ventas_palabra_clave_service._grupo`).
+    valido = isinstance(grupo, str) and (
+        (grupo[:1] in ('c', 'v') and grupo[1:].isdigit()) or (grupo[:1] == 'p' and len(grupo) == 37))
+    if not valido:
         return jsonify({'error': 'Falta el cliente.'}), 400
     if palabra is not None and not isinstance(palabra, str):
         return jsonify({'error': 'La palabra clave tiene que ser texto.'}), 400

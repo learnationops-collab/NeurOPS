@@ -118,35 +118,36 @@ class CloserPendingService:
     def _client_ids_con_venta(clients):
         """Cuáles de estos clientes ya tienen una venta en FinancialSale, en UNA sola consulta.
 
-        Es el equivalente en lote de `CloserFollowUpService._client_has_sale` (mismo cruce por
-        email y por instagram sin '@', todo en minúsculas, más las ventas atadas al cliente por
-        id). Se hace así porque el original corre una consulta por cita: clasificar la lista de
+        Es el equivalente en lote de `CloserFollowUpService._client_has_sale` (`filtro_de_pagos`:
+        los pagos de su persona y los atados por id; por email o instagram, solo los que no tienen
+        persona). Se hace así porque el original corre una consulta por cita: clasificar la lista de
         seguimientos de todo el equipo disparaba cientos de consultas contra FinancialSale, una por
-        cada llamada asistida sin seguimiento etiquetado.
-
-        Las atadas por id cuentan porque la ficha del lead se las ata al cliente antes de
-        corregirle el correo o el instagram: sin ellas, el conteo de seguimientos volvía a tratar
-        como "no compró" a quien la lista y la ficha ya muestran como cliente."""
+        cada llamada asistida sin seguimiento etiquetado."""
         from app.models import FinancialSale
 
         if not clients:
             return set()
 
-        mails, igs, atados = set(), set(), set()
-        for mail, ig, client_id in db.session.query(
-                FinancialSale.mail_cliente, FinancialSale.instagram, FinancialSale.client_id).all():
+        mails, igs, atados, personas = set(), set(), set(), set()
+        for mail, ig, client_id, puuid in db.session.query(
+                FinancialSale.mail_cliente, FinancialSale.instagram, FinancialSale.client_id,
+                FinancialSale.person_uuid).all():
+            if client_id:
+                atados.add(client_id)
+            if puuid:
+                personas.add(puuid)
+                continue
             if mail:
                 mails.add(mail.strip().lower())
             if ig:
                 igs.add(ig.strip().lstrip('@').lower())
-            if client_id:
-                atados.add(client_id)
 
         con_venta = set()
         for c in clients:
             if not c:
                 continue
-            if c.id in atados:
+            # Atada por id o con un pago de su persona; después, los pagos sin persona por su copia.
+            if c.id in atados or (c.person_uuid and c.person_uuid in personas):
                 con_venta.add(c.id)
             elif c.email and c.email.strip().lower() in mails:
                 con_venta.add(c.id)

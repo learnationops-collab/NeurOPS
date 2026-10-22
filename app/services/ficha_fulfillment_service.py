@@ -53,10 +53,13 @@ Ese codigo se traduce al `product_slug` de la Academia con el mapeo que un admin
 producto pagado del resto (`resolver_producto`, pura). Lo que no se puede resolver —sin programa en
 NeurOPS, programa sin vincular, o la Academia sin ese producto— viaja en `aviso_producto`.
 """
+import logging
 from datetime import date, datetime, timezone
 
 from app.services.closer_followup_service import PROGRAM_CODE_NAMES, CloserFollowUpService
 from app.services.learnation_service import LearnationAPIError, LearnationService
+
+logger = logging.getLogger(__name__)
 
 # `BookingService` inventa un correo cuando el lead llego sin ninguno. No identifica a nadie en la
 # Academia, asi que no se pregunta por el. Las dos formas existen en la base.
@@ -88,11 +91,23 @@ def es_placeholder(email):
 def emails_candidatos(client, ventas=None):
     """Los correos con los que vale la pena preguntarle a la Academia, sin repetidos.
 
-    Primero el del cliente y despues los de sus ventas, que es el orden de confianza: el de la
-    venta lo tipeo un humano para cobrarle, el del cliente puede venir de una agenda automatica.
+    Primero el de su persona para la Academia (el de ese uso o, si no hay, su principal: el uso es
+    la excepción, docs/plan_personas.md), despues el del cliente y los de sus ventas, y al final
+    los demás correos de la persona. El de la venta lo tipeo un humano para cobrarle, el del
+    cliente puede venir de una agenda automatica.
     """
-    crudos = [getattr(client, 'email', None)]
-    crudos += [v.mail_cliente for v in (ventas or [])]
+    from app.models import FinancialSale, PersonIdentity
+    from app.services import person_service
+
+    person = getattr(client, 'person', None)
+    crudos = [person_service.dato(person, 'email', uso='academia') if person else None]
+    crudos += [getattr(client, 'email', None)]
+    # El de cada venta, de su persona (`FinancialSale.contacto`): su mail de pago o su principal.
+    crudos += [c['mail_cliente'] for c in FinancialSale.contactos(ventas or []).values()]
+    if person is not None:
+        crudos += [i.value for i in person.identities.filter(
+            PersonIdentity.kind == 'email', PersonIdentity.retired_at.is_(None),
+            PersonIdentity.review_note.is_(None)).order_by(PersonIdentity.id)]
 
     vistos, salida = set(), []
     for crudo in crudos:
@@ -252,6 +267,17 @@ def sugerencias_de_acceso(client, ventas=None, pagado=None, hoy=None):
     return {'vence_sugerido': dia.isoformat(), 'email_sugerido': candidatos[0] if candidatos else None}
 
 
+def _suscripciones(client):
+    """Las suscripciones del cliente con su historial; vacío si algo falla (`fulfillment` no levanta)."""
+    from app.services import subscription_service
+
+    try:
+        return subscription_service.del_cliente(getattr(client, 'id', None))
+    except Exception as e:
+        logger.error(f'[FULFILLMENT] Suscripciones de #{getattr(client, "id", None)}: {e}')
+        return []
+
+
 def fulfillment(client, ventas=None):
     """El bloque completo de la pestana Fulfillment. Nunca levanta: los errores viajan dentro.
 
@@ -265,12 +291,14 @@ def fulfillment(client, ventas=None):
     vacio = {'vinculado': False, 'alumno': None, 'desempeno': None, 'productos': [],
              'email_usado': None, 'emails_probados': [], 'telefono_coincide': None, 'error': None,
              'programa': None, 'producto_pagado': None, 'otros_productos': [],
-             'aviso_producto': None, 'consultado_en': _ahora_iso()}
+             'aviso_producto': None, 'suscripciones': [], 'consultado_en': _ahora_iso()}
 
     if not client:
         return {**vacio, 'error': {'codigo': None,
                                   'motivo': 'Este lead todavía no es un cliente: no hay alumno que buscar.'}}
 
+    # La suscripción como la registra Work (20/10/2026): no depende de que la Academia responda.
+    vacio['suscripciones'] = _suscripciones(client)
     programa_code, mapeo = _programa_y_mapeo(client)
     # Sin alumno no hay productos que separar, pero el programa pagado se muestra igual: es lo que
     # habria que darle de alta.
@@ -308,5 +336,6 @@ def fulfillment(client, ventas=None):
         'email_usado': email,
         'emails_probados': probados,
         'telefono_coincide': _telefonos_coinciden(getattr(client, 'phone', None), alumno.get('phone')),
+        'suscripciones': vacio['suscripciones'],
         'error': None,
     }

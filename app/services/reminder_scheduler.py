@@ -14,6 +14,9 @@ CHECK_INTERVAL_MINUTES = 5
 # dos peticiones). La cartera del closer muestra la etapa y el atraso con, a lo sumo, este retraso.
 AVANCE_INTERVAL_MINUTES = 60
 
+# pg_advisory_lock: con varios workers de gunicorn, solo el que lo tiene corre los jobs (candado_pg).
+CLAVE_DEL_SCHEDULER = 7_412_032
+
 
 def _should_start():
     """Evita arrancar el scheduler donde no corresponde: comandos de Flask CLI (`flask db
@@ -65,10 +68,14 @@ def start_scheduler(app):
 
     from apscheduler.schedulers.background import BackgroundScheduler
 
+    from app.services.candado_pg import soy_lider
+
     def _tick():
         with app.app_context():
             from app.services.closer_followup_service import CloserFollowUpService
             try:
+                if not soy_lider(CLAVE_DEL_SCHEDULER):
+                    return
                 result = CloserFollowUpService.send_due_reminders()
                 if result.get('sent'):
                     logger.info(f"[ReminderScheduler] Recordatorios enviados: {result}")
@@ -79,12 +86,26 @@ def start_scheduler(app):
         with app.app_context():
             from app.services import academy_snapshot_service
             try:
+                if not soy_lider(CLAVE_DEL_SCHEDULER):
+                    return
                 academy_snapshot_service.sincronizar_avance()
             except Exception as e:
                 logger.error(f"[ReminderScheduler] Error trayendo el avance de la Academia: {e}")
 
+    def _senas():
+        with app.app_context():
+            from app.services import sale_service
+            try:
+                marcadas = sale_service.marcar_senas_sin_seguir()
+                if marcadas:
+                    logger.info(f"[ReminderScheduler] Señas sin seguir marcadas para revisar: {marcadas}")
+            except Exception as e:
+                logger.error(f"[ReminderScheduler] Error marcando señas sin seguir: {e}")
+
     from datetime import datetime, timedelta
     _scheduler = BackgroundScheduler(daemon=True)
+    _scheduler.add_job(_senas, 'interval', minutes=AVANCE_INTERVAL_MINUTES,
+                       id='senas_sin_seguir', next_run_time=datetime.now() + timedelta(minutes=3))
     if con_avisos:
         # next_run_time=ahora: corre una vez apenas arranca el proceso (inofensivo —
         # send_due_reminders solo manda lo que ya llegó a su hora y no repite en el día) para no

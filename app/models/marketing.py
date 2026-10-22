@@ -2,6 +2,7 @@ import re
 import unicodedata
 from datetime import datetime
 from app import db
+from app.models.person import ConPersona
 
 
 def clave_de_palabra(texto):
@@ -163,7 +164,7 @@ class MetaGastoDiario(db.Model):
     actualizado_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
-class ManychatAdLead(db.Model):
+class ManychatAdLead(ConPersona, db.Model):
     """Old lead table. Preserved for data migration."""
     __tablename__ = 'manychat_ad_leads'
     id = db.Column(db.Integer, primary_key=True)
@@ -176,7 +177,7 @@ class ManychatAdLead(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
-class ManychatLead(db.Model):
+class ManychatLead(ConPersona, db.Model):
     """Información persistente y única del prospecto que ingresó vía ManyChat"""
     __tablename__ = 'manychat_leads'
     id = db.Column(db.Integer, primary_key=True)

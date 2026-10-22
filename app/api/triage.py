@@ -190,7 +190,7 @@ def submit_triage_tracker():
             files = {
                 "file": ("triage_tracker.png", img_buf, "image/png")
             }
-            res = requests.post(webhook_url, data=payload, files=files)
+            res = requests.post(webhook_url, data=payload, files=files, timeout=20)
             print(f"[Discord Triage Tracker] Status: {res.status_code}")
         except Exception as e:
             print(f"[Discord Triage Tracker Error] {e}")
@@ -445,6 +445,7 @@ def get_qualified_forms():
             
         result.append({
             "id": c.id,
+            "person_uuid": c.person_uuid,
             "full_name": c.full_name,
             "email": c.email,
             "phone": c.phone,

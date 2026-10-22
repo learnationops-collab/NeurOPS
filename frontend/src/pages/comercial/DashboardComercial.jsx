@@ -868,6 +868,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     <FichaLeadModal
                         appointmentId={filaAbierta.tipo === 'agenda' ? filaAbierta.id : null}
                         clientId={filaAbierta.tipo === 'agenda' ? null : filaAbierta.client_id}
+                        personUuid={filaAbierta.tipo === 'agenda' ? null : (filaAbierta.person_uuid || null)}
                         soloLectura={contexto.yo.rol === 'setter'}
                         onCerrar={cerrarFila}
                         onCambio={() => { cargarTabla(); cargarAnalizar(); }} />

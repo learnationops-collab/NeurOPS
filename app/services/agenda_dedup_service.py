@@ -28,56 +28,18 @@ import logging
 from datetime import datetime, timedelta
 
 from app import db
-from app.models import Appointment, Client, FinancialAgenda
+from app.models import FinancialAgenda
 from app.services.attribution_service import UnionFind
-from app.services.client_dedup_service import (
-    _names_compatible, _normalize_email, _normalize_instagram, _normalize_phone)
+from app.services.client_dedup_service import _names_compatible, _normalize_email, _normalize_instagram
+
+# Re-export: las reglas y el descarte viven en modulos aparte (regla de las 500 lineas).
+from app.services.agenda_dedup_reglas import (  # noqa: F401
+    MAX_NOMBRES_POR_SENAL, ESTADOS_SIN_RESOLVER, HORAS_MISMA_REUNION, HORAS_GRACIA_REUNION, MINUTOS_MISMA_HORA,
+    _senales, _sin_resolver, _asistio)
+from app.services.agenda_dedup_descarte import (  # noqa: F401
+    _VACIOS, CAMPOS_HEREDABLES, _esta_vacio, cita_de, citas_de, descartar, restaurar)
 
 logger = logging.getLogger(__name__)
-
-# Si una misma señal (mail/instagram/teléfono) aparece en agendas de más de esta cantidad
-# de nombres distintos e incompatibles entre sí, deja de ser "el mismo lead dos veces" y
-# pasa a ser un dato compartido o de relleno. Se cuenta por NOMBRES y no por agendas a
-# propósito: que una persona tenga cinco agendas con el mismo mail es lo normal acá.
-MAX_NOMBRES_POR_SENAL = 2
-
-# Estados en los que la llamada todavía no ocurrió. Una agenda ya resuelta representa una
-# llamada que pasó de verdad, y eso cambia la lectura del grupo: no es una reprogramación,
-# es alguien que volvió a agendar.
-ESTADOS_SIN_RESOLVER = {
-    '', 'pendiente', 'confirmado', 'confirmada', 'por_confirmar', 'por confirmar',
-    'agendado', 'agendada', 'contactado', 'contactada', 'sin respuesta',
-    'reagendada', 'reagendado', 'reprogramada', 'reprogramado',
-}
-
-# Dos reuniones separadas por menos que esto son la MISMA reunión cargada dos veces, no
-# dos llamadas: nadie agenda dos calls con el mismo lead con una hora de diferencia.
-HORAS_MISMA_REUNION = 2
-
-# Cuánto después de la hora de la reunión se sigue considerando que "todavía no pasó".
-# Cubre al lead que reagenda apenas el closer no aparece o apenas cuelga sin avanzar.
-HORAS_GRACIA_REUNION = 1
-
-# Qué tan cerca tienen que estar dos reuniones para ser "la misma hora" y no una
-# reprogramación. Con tolerancia amplia se confundirían las dos cosas; en los datos reales
-# los duplicados exactos caen al mismo minuto, así que alcanza con un margen chico para
-# absorber el redondeo de Calendly.
-MINUTOS_MISMA_HORA = 5
-
-
-def _senales(agenda):
-    """Las tres señales normalizadas con las que se reconoce a la misma persona."""
-    senales = []
-    mail = _normalize_email(agenda.mail)
-    ig = _normalize_instagram(agenda.instagram)
-    tel = _normalize_phone(agenda.whatsapp)
-    if mail:
-        senales.append(('mail', mail))
-    if ig:
-        senales.append(('ig', ig))
-    if tel:
-        senales.append(('tel', tel))
-    return senales
 
 
 def encontrar_grupos(agendas):
@@ -88,9 +50,11 @@ def encontrar_grupos(agendas):
     producción el 31/08/2026, ver `client_dedup_service._names_compatible`). Sin ese
     resguardo, dos leads distintos se encadenan por transitividad.
     """
-    vigentes = [a for a in agendas if a.duplicada_de_id is None]
+    from app.services.agenda_contacto_service import precargar
+    vigentes = precargar([a for a in agendas if a.duplicada_de_id is None])
     por_id = {a.id: a for a in vigentes}
 
+    leads = {a.id: a.contacto()['lead'] for a in vigentes}
     por_senal = {}
     for a in vigentes:
         for senal in _senales(a):
@@ -103,14 +67,14 @@ def encontrar_grupos(agendas):
     for senal, ids in por_senal.items():
         if len(ids) < 2:
             continue
-        nombres = {(por_id[i].lead or '').strip().lower() for i in ids}
+        nombres = {(leads[i] or '').strip().lower() for i in ids}
         if len(nombres) > MAX_NOMBRES_POR_SENAL:
             logger.info("[DEDUP AGENDAS] senal %s descartada: la comparten %d nombres distintos",
                         senal, len(nombres))
             continue
         base = ids[0]
         for otro in ids[1:]:
-            if _names_compatible(por_id[base].lead, por_id[otro].lead):
+            if _names_compatible(leads[base], leads[otro]):
                 uf.union(base, otro)
 
     grupos = {}
@@ -119,14 +83,6 @@ def encontrar_grupos(agendas):
 
     return [sorted(g, key=lambda x: (x.created_at is not None, x.created_at))
             for g in grupos.values() if len(g) > 1]
-
-
-def _sin_resolver(agenda):
-    return (agenda.estado or '').strip().lower() in ESTADOS_SIN_RESOLVER
-
-
-def _asistio(agenda):
-    return (agenda.estado or '').strip().lower() in ('show up', 'show_up', 'asistió', 'asistio')
 
 
 def motivo_probable(grupo):
@@ -170,8 +126,14 @@ def identidades_con_venta():
     """
     from app.models import FinancialSale
 
+    # Las personas con algún pago (`p:<uuid>`) y, de los pagos sin persona, su mail e instagram
+    # copiados (docs/plan_personas.md, Etapa 2b).
     conocidas = set()
-    for mail, ig in db.session.query(FinancialSale.mail_cliente, FinancialSale.instagram).all():
+    for puuid, mail, ig in db.session.query(
+            FinancialSale.person_uuid, FinancialSale.mail_cliente, FinancialSale.instagram).all():
+        if puuid:
+            conocidas.add(f'p:{puuid}')
+            continue
         for valor in (_normalize_email(mail), _normalize_instagram(ig)):
             if valor:
                 conocidas.add(valor)
@@ -191,13 +153,20 @@ def sugerir_conservada(grupo, ventas_conocidas=None):
     from app.models import FinancialSale
 
     def tiene_venta(a):
-        ig = _normalize_instagram(a.instagram)
-        mail = _normalize_email(a.mail)
+        if a.person_uuid:
+            if ventas_conocidas is not None:
+                if f'p:{a.person_uuid}' in ventas_conocidas:
+                    return True
+            elif FinancialSale.query.filter(FinancialSale.person_uuid == a.person_uuid).count() > 0:
+                return True
+        ig = _normalize_instagram(a.contacto()['instagram'])
+        mail = _normalize_email(a.contacto()['mail'])
         if not ig and not mail:
             return False
         if ventas_conocidas is not None:
             return bool((mail and mail in ventas_conocidas) or (ig and ig in ventas_conocidas))
-        consulta = FinancialSale.query
+        # Por la copia, solo los pagos sin persona.
+        consulta = FinancialSale.query.filter(FinancialSale.person_uuid.is_(None))
         if mail:
             return consulta.filter(db.func.lower(FinancialSale.mail_cliente) == mail).count() > 0
         return consulta.filter(
@@ -225,13 +194,8 @@ def _nombre_utilizable(nombre):
 
 
 def _comparte_senal(a, b):
-    """True si dos agendas comparten mail, instagram o teléfono normalizados."""
-    for norm, campo in ((_normalize_email, 'mail'), (_normalize_instagram, 'instagram'),
-                        (_normalize_phone, 'whatsapp')):
-        va, vb = norm(getattr(a, campo)), norm(getattr(b, campo))
-        if va and va == vb:
-            return True
-    return False
+    """True si dos agendas son de la misma persona o comparten mail, instagram o teléfono normalizados."""
+    return bool(set(_senales(a)) & set(_senales(b)))
 
 
 def _hermanas_del_mismo_dia(agenda, universo=None):
@@ -275,9 +239,10 @@ def _hermanas_del_mismo_dia(agenda, universo=None):
     # teléfono. Para una fusión AUTOMÁTICA eso es demasiado: en producción hay 1069 agendas
     # sin `lead` (todas anteriores a julio, ninguna en el período que esto toca hoy). Sin
     # nombre no se decide solo — el par igual aparece en el panel para que lo mire alguien.
+    lead = agenda.contacto()['lead']
     hermanas = [c for c in candidatas
-                if _nombre_utilizable(agenda.lead) and _nombre_utilizable(c.lead)
-                and _names_compatible(agenda.lead, c.lead)]
+                if _nombre_utilizable(lead) and _nombre_utilizable(c.contacto()['lead'])
+                and _names_compatible(lead, c.contacto()['lead'])]
     # Orden explícito: `decidir_reconciliacion` corta el recorrido en cuanto la que sobra
     # es la propia agenda, así que el orden decide qué par se evalúa. Sin esto la consulta
     # devolvía las filas en el orden que quisiera Postgres y el resultado no era
@@ -313,7 +278,7 @@ def reconciliar(agenda, actor_id=None, simular=False, universo=None, ventas_cono
             descartar(conservada, sobrante, actor_id, motivo=motivo)
             marcadas.append(sobrante)
             logger.info('[AGENDA UNICA] %s -> se conserva #%s y se marca #%s (%s)',
-                        agenda.lead, conservada.id, sobrante.id, motivo)
+                        agenda.contacto()['lead'], conservada.id, sobrante.id, motivo)
         except ValueError as e:
             logger.info('[AGENDA UNICA] no se pudo reconciliar #%s con #%s: %s',
                         agenda.id, sobrante.id, e)
@@ -359,19 +324,6 @@ def decidir_reconciliacion(agenda, universo=None, ventas_conocidas=None):
     return decisiones
 
 
-# Campos que la fila que se conserva HEREDA de la repetida cuando ella no los tiene.
-# Sin esto, conservar la original significaría perder el resultado que el closer cargó
-# sobre la copia. `encargado_triage` se queda aunque el tablero ya no muestre el Call
-# Confirmer (10/10/2026): lo sigue escribiendo la pantalla del rol triage y lo cuenta su
-# reporte diario, asi que la fila que sobrevive no debe perderlo.
-_VACIOS ={'', 'n/a', 'na', 'none', 'no tengo', 'notengo', 'ninguno', 'sin asignar', 'desconocido'}
-CAMPOS_HEREDABLES = ('mail', 'instagram', 'whatsapp', 'closer', 'encargado_triage', 'zona_geografica')
-
-
-def _esta_vacio(valor):
-    return (valor or '').strip().lower() in _VACIOS
-
-
 def _conservar_misma_reunion(a, b):
     """De dos filas que son la MISMA reunión, cuál sobrevive: la ORIGINAL.
 
@@ -384,205 +336,6 @@ def _conservar_misma_reunion(a, b):
     El resultado del closer no se pierde: `descartar` se lo pasa a la que sobrevive.
     """
     return min([a, b], key=lambda x: (x.created_at or datetime.max, x.id or 0))
-
-
-def cita_de(agenda):
-    """El Appointment de esta agenda, o None. No crea nada.
-
-    Usa el mismo criterio que `BookingService.sync_financial_agenda_to_appointment`: el
-    cliente por identidad y la cita dentro de las +/-12h de la reunión.
-    """
-    if not agenda.date:
-        return None
-    ig = _normalize_instagram(agenda.instagram)
-    mail = _normalize_email(agenda.mail)
-    tel = _normalize_phone(agenda.whatsapp)
-    condiciones = []
-    if mail:
-        condiciones.append(db.func.lower(Client.email) == mail)
-    if ig:
-        condiciones.append(db.func.lower(db.func.replace(Client.instagram, '@', '')) == ig)
-    if tel:
-        # El teléfono como tercera señal: una agenda que llegó con mail 'N/A' e instagram
-        # 'N/A' no tiene con qué encontrar su cita, y sin cita el descarte no puede saber
-        # que la que iba a cancelar es la misma de la fila que se conserva.
-        columna = Client.phone
-        for sep in (' ', '-', '(', ')', '+', '.'):
-            columna = db.func.replace(columna, sep, '')
-        condiciones.append(columna.like('%' + tel))
-    if not condiciones:
-        return None
-
-    client = Client.query.filter(db.or_(*condiciones)).first()
-    if not client:
-        return None
-    return Appointment.query.filter(
-        Appointment.client_id == client.id,
-        Appointment.start_time >= agenda.date - timedelta(hours=12),
-        Appointment.start_time <= agenda.date + timedelta(hours=12)
-    ).first()
-
-
-def citas_de(agendas):
-    """{agenda_id: Appointment} para una lista entera, en dos consultas.
-
-    `cita_de` hace dos consultas por agenda, y el panel pinta cientos de filas de una
-    vez: resolverlas una por una convertía la pantalla en cientos de viajes a la base.
-    """
-    if not agendas:
-        return {}
-
-    condiciones, por_agenda = [], {}
-    for a in agendas:
-        mail = _normalize_email(a.mail)
-        ig = _normalize_instagram(a.instagram)
-        por_agenda[a.id] = (mail, ig)
-        if mail:
-            condiciones.append(db.func.lower(Client.email) == mail)
-        if ig:
-            condiciones.append(db.func.lower(db.func.replace(Client.instagram, '@', '')) == ig)
-    if not condiciones:
-        return {}
-
-    clientes = Client.query.filter(db.or_(*condiciones)).all()
-    por_mail = {(c.email or '').strip().lower(): c.id for c in clientes if c.email}
-    por_ig = {(c.instagram or '').strip().replace('@', '').lower(): c.id for c in clientes if c.instagram}
-
-    fechas = [a.date for a in agendas if a.date]
-    if not fechas or not clientes:
-        return {}
-    citas = Appointment.query.filter(
-        Appointment.client_id.in_([c.id for c in clientes]),
-        Appointment.start_time >= min(fechas) - timedelta(hours=12),
-        Appointment.start_time <= max(fechas) + timedelta(hours=12)
-    ).all()
-    por_cliente = {}
-    for cita in citas:
-        por_cliente.setdefault(cita.client_id, []).append(cita)
-
-    salida = {}
-    for a in agendas:
-        if not a.date:
-            continue
-        mail, ig = por_agenda[a.id]
-        client_id = (por_mail.get(mail) if mail else None) or (por_ig.get(ig) if ig else None)
-        for cita in por_cliente.get(client_id, []):
-            if abs((cita.start_time - a.date).total_seconds()) <= 12 * 3600:
-                salida[a.id] = cita
-                break
-    return salida
-
-
-def descartar(conservada, duplicada, usuario_id, motivo=None, cancelar_cita=True):
-    """Marca `duplicada` como repetida de `conservada`. Reversible con `restaurar`.
-
-    Si la repetida tiene su propia cita (distinta de la que se conserva), se la cancela
-    para que el closer no siga viendo dos llamadas con la misma persona. El estado previo
-    de esa cita se guarda en `raw_data['_dedup']`, que es lo que lee `restaurar`: por eso
-    no hace falta una tabla de bitácora aparte.
-    """
-    from datetime import datetime
-
-    if conservada.id == duplicada.id:
-        raise ValueError('No se puede descartar la misma fila que se conserva')
-    if duplicada.duplicada_de_id is not None:
-        raise ValueError(f'La agenda #{duplicada.id} ya está descartada')
-
-    snapshot = {'conservada_id': conservada.id}
-
-    if cancelar_cita:
-        cita = cita_de(duplicada)
-        cita_conservada = cita_de(conservada)
-        ya_cancelada = bool(cita and (cita.result or '').strip().lower().startswith('cancel'))
-        # Guarda dura: si la cita cae a la misma hora que la reunión de la fila que se
-        # CONSERVA, es su cita, y cancelarla apagaría la llamada que queríamos dejar viva.
-        # No alcanza con comparar contra `cita_de(conservada)`: cuando la conservada tiene
-        # la identidad rota (mail 'N/A', instagram 'N/A') esa búsqueda devuelve None y el
-        # resguardo de abajo no se entera de que las dos filas son la misma reunión.
-        es_la_cita_de_la_conservada = bool(
-            cita and conservada.date
-            and abs((cita.start_time - conservada.date).total_seconds()) <= MINUTOS_MISMA_HORA * 60)
-        if es_la_cita_de_la_conservada:
-            cita = None
-        # Solo se guarda el estado previo de la cita que este descarte cancela DE VERDAD.
-        # Dos agendas repetidas pueden apuntar a la misma cita: si la segunda volviera a
-        # anotar el snapshot, guardaría 'Cancelado' —lo que dejó la primera— y al deshacer
-        # en ese orden la cita se quedaría cancelada para siempre.
-        if cita and not ya_cancelada and (not cita_conservada or cita.id != cita_conservada.id):
-            snapshot['appointment_id'] = cita.id
-            snapshot['result_previo'] = cita.result
-            snapshot['closer_result_previo'] = cita.closer_result
-            cita.result = 'Cancelado'
-            logger.info('[DEDUP AGENDAS] cita #%s cancelada por descartar la agenda #%s',
-                        cita.id, duplicada.id)
-
-    # La que sobrevive se queda con lo mejor de las dos. Si no, descartar la copia tira el
-    # dato que solo ella tenía: el resultado que el closer cargó ahí, el mail que en la
-    # original llegó 'N/A', el closer asignado. Se anota el valor previo para que
-    # `restaurar` deje todo como estaba.
-    heredado = {}
-    for campo in CAMPOS_HEREDABLES:
-        nuevo = getattr(duplicada, campo, None)
-        if _esta_vacio(getattr(conservada, campo, None)) and not _esta_vacio(nuevo):
-            heredado[campo] = getattr(conservada, campo, None)
-            setattr(conservada, campo, nuevo)
-    # El estado solo se hereda si el de la copia es un resultado REAL de la llamada y el de
-    # la conservada todavía no lo es: un 'Pendiente' nunca debe pisar un 'Show Up'.
-    if _sin_resolver(conservada) and not _sin_resolver(duplicada):
-        heredado['estado'] = conservada.estado
-        conservada.estado = duplicada.estado
-    if heredado:
-        snapshot['heredado'] = heredado
-        logger.info('[AGENDA UNICA] #%s hereda de #%s: %s',
-                    conservada.id, duplicada.id, ', '.join(heredado))
-
-    duplicada.duplicada_de_id = conservada.id
-    duplicada.descartada_at = datetime.utcnow()
-    duplicada.descartada_por_id = usuario_id
-    duplicada.descartada_motivo = (motivo or '').strip()[:255] or None
-    # `raw_data` es JSON: reasignar el dict entero para que SQLAlchemy vea el cambio.
-    duplicada.raw_data = {**(duplicada.raw_data or {}), '_dedup': snapshot}
-    return duplicada
-
-
-def restaurar(agenda):
-    """Deshace un descarte: la fila vuelve al libro y su cita al estado que tenía.
-
-    De la cita se deshace solo lo que el descarte cambió, y solo si sigue como lo dejó: el
-    `result` vuelve al de antes mientras diga 'Cancelado'. Antes se reescribían `result` y
-    `closer_result` a ciegas, así que deshacer después de que el closer reportó la llamada
-    le borraba el reporte (el descarte nunca toca `closer_result`: devolverlo solo podía
-    pisar algo nuevo), y a una cita a la que alguien le había cambiado el pre call después
-    del descarte se le volvía a poner el de antes. Desde el 10/10/2026 esto se usa desde
-    Revisar, donde la cita cancelada sigue a la vista (en «Descartadas») y se puede trabajar
-    mientras la agenda está descartada.
-    """
-    if agenda.duplicada_de_id is None:
-        raise ValueError(f'La agenda #{agenda.id} no está descartada')
-
-    snapshot = (agenda.raw_data or {}).get('_dedup') or {}
-    appointment_id = snapshot.get('appointment_id')
-    if appointment_id:
-        cita = Appointment.query.get(appointment_id)
-        if cita and (cita.result or '') == 'Cancelado':
-            cita.result = snapshot.get('result_previo')
-
-    # Devolver lo que la conservada heredó de esta fila: si no, deshacer dejaría las dos
-    # con el mismo dato y ya no se sabría cuál era de quién.
-    heredado = snapshot.get('heredado') or {}
-    if heredado:
-        conservada = FinancialAgenda.query.get(snapshot.get('conservada_id'))
-        if conservada:
-            for campo, previo in heredado.items():
-                setattr(conservada, campo, previo)
-
-    agenda.duplicada_de_id = None
-    agenda.descartada_at = None
-    agenda.descartada_por_id = None
-    agenda.descartada_motivo = None
-    resto = {k: v for k, v in (agenda.raw_data or {}).items() if k != '_dedup'}
-    agenda.raw_data = resto
-    return agenda
 
 
 def grupos_de(query, limite=60):

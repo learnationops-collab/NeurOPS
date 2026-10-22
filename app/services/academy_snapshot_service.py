@@ -242,6 +242,20 @@ _CAMPOS_DE_AVANCE = ('avance_etapa', 'avance_tipo', 'avance_dias_en_etapa', 'ses
                      'proxima_sesion', 'proxima_estado', 'atraso_dias', 'dias_sin_lecciones', 'fuera_de_plazo')
 
 
+def _cliente_por_persona(work_uuid, learnation_user_id=None, email=None):
+    """El cliente de un alumno por su persona (docs/plan_personas.md): por el uuid que la Academia
+    guarda de Work o, si no, por su id de alumno o cualquiera de sus correos. Nunca crea."""
+    from app.services import person_service
+
+    if work_uuid:
+        person = person_service.por_uuid(work_uuid)
+    elif learnation_user_id or email:
+        person = person_service.buscar(email=email, learnation_user_id=learnation_user_id)
+    else:
+        return None
+    return person_service.cliente_de(person, crear=False)
+
+
 def sincronizar_avance(ahora=None):
     """Lee de la Academia el avance de TODOS los alumnos en proceso (pedido del 19/10/2026) y lo
     deja en la foto de cada cliente. Una o dos peticiones: no gasta del límite como el lote.
@@ -282,9 +296,11 @@ def sincronizar_avance(ahora=None):
 
     vistos = set()
     for f in filas:
-        cliente = (por_id.get(f.get('work_id')) or por_alumno.get(f.get('user_id'))
+        cliente = (_cliente_por_persona(f.get('work_uuid')) or por_id.get(f.get('work_id'))
+                   or por_alumno.get(f.get('user_id'))
                    or (db.session.get(Client, por_foto[f['user_id']]) if f.get('user_id') in por_foto else None)
-                   or por_correo.get((f.get('email') or '').strip().lower()))
+                   or por_correo.get((f.get('email') or '').strip().lower())
+                   or _cliente_por_persona(None, learnation_user_id=f.get('user_id'), email=f.get('email')))
         if cliente is None:
             resumen['sin_cliente'] += 1
             continue
@@ -338,8 +354,14 @@ def _numero(columna, crudo):
 
 def _vinculo_confiable(cliente, email, telefono_academia):
     """¿Se puede escribir este alumno en `Client.learnation_user_id`? Ver el docstring del modulo."""
+    from app.services.academy_payment_status import email_academia
+
     propio = (getattr(cliente, 'email', None) or '').strip().lower()
     if email and propio and not es_placeholder(propio) and email.strip().lower() == propio:
+        return True
+    # O el mail de la Academia que el equipo le fijó a su persona.
+    academia = (email_academia(getattr(cliente, 'person', None)) or '').strip().lower()
+    if email and academia and not es_placeholder(academia) and email.strip().lower() == academia:
         return True
     return _telefonos_coinciden(getattr(cliente, 'phone', None), telefono_academia) is True
 

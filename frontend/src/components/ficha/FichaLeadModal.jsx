@@ -118,9 +118,12 @@ const MENSAJES = {
     reasignar_closer: 'Lead pasado al closer elegido.',
     // El backend devuelve `cambios` vacío cuando lo escrito, ya normalizado, es lo que había
     // (un 'no tengo' sobre un instagram vacío, un 'n/a' sobre un correo vacío): no se guardó nada.
-    editar_datos: (r) => (r?.cambios && !Object.keys(r.cambios).length
-        ? 'No había nada que corregir: los datos ya estaban así.'
-        : 'Datos del lead corregidos.'),
+    // `agregados`: un dato más que también es válido (no corrige el principal).
+    editar_datos: (r) => (r?.agregados && Object.keys(r.agregados).length
+        ? 'Dato agregado: el principal sigue siendo el mismo.'
+        : r?.cambios && !Object.keys(r.cambios).length
+            ? 'No había nada que corregir: los datos ya estaban así.'
+            : 'Datos del lead corregidos.'),
     guardar_plan: 'Plan de cuotas guardado.',
     guardar_total: 'Total a pagar actualizado: la deuda se recalculó.',
     guardar_programa: 'Programa asignado en las ventas de este cliente.',
@@ -184,6 +187,7 @@ const Faltante = ({ label }) => (
 const FichaLeadModal = ({
     appointmentId = null,
     clientId = null,
+    personUuid = null,   // la persona (docs/plan_personas.md): abre la ficha de su cliente
     onCerrar,
     onCambio = null,     // se llama después de cada escritura, para que la tabla de atrás se refresque
     pestanaInicial = null,  // el mazo sabe desde qué columna se abrió; gana sobre la del backend
@@ -220,7 +224,7 @@ const FichaLeadModal = ({
         setError(null);
         try {
             const datos = await obtenerFicha({
-                appointmentId: ancla.current ?? appointmentId, clientId, signal,
+                appointmentId: ancla.current ?? appointmentId, clientId, personUuid, signal,
             });
             // Una recarga que llega después de otra más nueva traería datos viejos.
             if (!vigente()) return null;
@@ -233,7 +237,7 @@ const FichaLeadModal = ({
         } finally {
             if (vigente()) setCargando(false);
         }
-    }, [appointmentId, clientId, soloLectura]);
+    }, [appointmentId, clientId, personUuid, soloLectura]);
 
     useEffect(() => {
         const ac = new AbortController();

@@ -230,6 +230,7 @@ class CloserDashboardService:
                 # cobrarle sin dar forma de llegar a su cobro: lo único que viajaba era el nombre,
                 # y cruzar por nombre es exactamente lo que el resto del código evita.
                 'client_id': client_id,
+                'person_uuid': cliente.person_uuid if cliente else None,
                 'client_name': (cliente.full_name or cliente.email) if cliente else 'Sin nombre',
                 'program': ' · '.join(dict.fromkeys(programas)) or 'Sin programa',
                 'pending_amount': round(deuda, 2),

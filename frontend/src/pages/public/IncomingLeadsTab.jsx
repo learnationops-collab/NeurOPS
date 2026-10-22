@@ -317,6 +317,7 @@ const IncomingLeadsTab = () => {
                                                 <span 
                                                     className="text-xs font-black text-white uppercase tracking-wide leading-none hover:text-indigo-400 hover:underline cursor-pointer"
                                                     onClick={() => setSelectedRoadmapLead({
+                                                        person_uuid: log.person_uuid,
                                                         instagram: log.lead_ig,
                                                         email: null,
                                                         phone: null,
@@ -433,6 +434,7 @@ const IncomingLeadsTab = () => {
             {selectedRoadmapLead && (
                 <LeadRoadmapModal
                     isOpen={!!selectedRoadmapLead}
+                    personUuid={selectedRoadmapLead.person_uuid}
                     instagram={selectedRoadmapLead.instagram}
                     email={selectedRoadmapLead.email}
                     phone={selectedRoadmapLead.phone}

@@ -804,6 +804,7 @@ const LeadsManagementPage = () => {
                             {selectedClientRoadmap ? (
                                 <LeadRoadmapDetail
                                     clientId={selectedClientRoadmap.client_id}
+                                    personUuid={selectedClientRoadmap.person_uuid}
                                     availableKeywords={availableKeywords}
                                     userRole={user?.role}
                                     appointmentId={activeFilteredCard?.id}
@@ -811,6 +812,7 @@ const LeadsManagementPage = () => {
                                 />
                             ) : activeFilteredCard ? (
                                 <LeadRoadmapDetail 
+                                    personUuid={activeFilteredCard.person_uuid}
                                     instagram={instagram || activeFilteredCard.instagram}
                                     email={activeFilteredCard.email}
                                     phone={activeFilteredCard.phone}

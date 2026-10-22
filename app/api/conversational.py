@@ -263,6 +263,8 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
         FinancialAgenda.date >= start_dt,
         FinancialAgenda.date <= end_dt
     ).all()
+    from app.services.agenda_contacto_service import precargar
+    precargar(agendas_all)
 
     # Ventas del período: solo cierres de verdad (pago completo o split pay) y vigentes. Antes era
     # cada fila de FinancialSale —señas, cuotas, renovaciones, anuladas—, así que la "tasa de
@@ -292,10 +294,13 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
         ).order_by(LeadAnswer.created_at.desc()).first()
         return ans.id_option_send if ans else None
 
-    def resolve_lead_by_ig_or_name(ig_val, nombre_val):
+    def resolve_lead_by_ig_or_name(ig_val, nombre_val, person_uuid=None):
+        # La conversación de su persona primero (plan_personas); el IG y el nombre, de respaldo.
+        from app.services.conversaciones_service import lead_de_persona
+
         ig_n = normalize_ig(ig_val)
-        lead = None
-        if ig_n:
+        lead = lead_de_persona(person_uuid)
+        if not lead and ig_n:
             lead = ManychatLead.query.filter(
                 func.lower(func.replace(ManychatLead.ig, '@', '')) == ig_n
             ).first()
@@ -306,20 +311,25 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
         return lead
 
     for ag in agendas_all:
-        ig_val = ag.instagram or (ag.raw_data or {}).get('instagram')
+        contacto = ag.contacto()  # de su persona; la copia si no tiene
+        ig_val = contacto['instagram'] or (ag.raw_data or {}).get('instagram')
         # El nombre de la persona es `lead`. `nombre` es la FUENTE de la agenda (el setter,
         # 'workshop', 'vsl'): con él, una agenda cuyo instagram no cruzaba se atribuía al lead de
         # ManyChat que se llama como el setter — en producción la conversación de prueba del
         # propio Elias o de Paula —, 44 agendas en septiembre de 2026.
-        lead = resolve_lead_by_ig_or_name(ig_val, ag.lead)
+        lead = resolve_lead_by_ig_or_name(ig_val, contacto['lead'], ag.person_uuid)
         if lead:
             key = get_lead_msg_key(lead.id)
             if key:
                 agendas_per_msg[key] = agendas_per_msg.get(key, 0) + 1
 
     for sale in sales_all:
-        ig_val = sale.instagram or (sale.raw_data or {}).get('instagram')
-        lead = resolve_lead_by_ig_or_name(ig_val, sale.nombre_cliente)
+        # Con persona, su conversación; la copia del pago (IG, nombre) solo cuenta sin persona.
+        if sale.person_uuid:
+            lead = resolve_lead_by_ig_or_name(None, None, sale.person_uuid)
+        else:
+            ig_val = sale.instagram or (sale.raw_data or {}).get('instagram')
+            lead = resolve_lead_by_ig_or_name(ig_val, sale.nombre_cliente, None)
         if lead:
             key = get_lead_msg_key(lead.id)
             if key:

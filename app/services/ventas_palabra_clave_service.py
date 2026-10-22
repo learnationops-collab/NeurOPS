@@ -35,6 +35,8 @@ from app.services.palabra_clave_service import (
 
 
 def _grupo(cobro, cliente_de):
+    if cobro.person_uuid:  # la persona junta los pagos de sus clientes duplicados (plan_personas)
+        return f'p{cobro.person_uuid}'
     cid = cliente_de.get(cobro.id)
     return f'c{cid}' if cid else f'v{cobro.id}'
 
@@ -68,12 +70,13 @@ def ventas(setter):
     ids = {cliente_de[c.id] for c in suyos if cliente_de.get(c.id)}
     clientes = {c.id: c for c in Client.query.filter(Client.id.in_(ids)).all()} if ids else {}
 
+    contactos = FinancialSale.contactos(suyos)
     nombres, pendientes, completadas = {}, [], []
     for grupo, pagos in grupos.items():
         pagos.sort(key=lambda p: (p.date or datetime.min, p.id))
         cliente = clientes.get(cliente_de.get(pagos[0].id))
         instagram = (normalizar_ig(cliente.instagram) if cliente else None) or next(
-            (ig for ig in (normalizar_ig(p.instagram) for p in pagos) if ig), None)
+            (ig for ig in (normalizar_ig(contactos[p.id]['instagram']) for p in pagos) if ig), None)
         filas = [{
             'id': p.id,
             'fecha': p.date.isoformat() if p.date else None,
@@ -85,7 +88,8 @@ def ventas(setter):
         fila = {
             'grupo': grupo,
             'client_id': cliente.id if cliente else None,
-            'cliente': (cliente.full_name if cliente else None) or pagos[0].nombre_cliente or 'Sin nombre',
+            'person_uuid': next((p.person_uuid for p in pagos if p.person_uuid), None),
+            'cliente': (cliente.full_name if cliente else None) or contactos[pagos[0].id]['nombre_cliente'] or 'Sin nombre',
             'instagram': instagram,
             'total': round(sum(f['monto'] for f in filas), 2),
             'primera': filas[0]['fecha'],
@@ -126,8 +130,10 @@ def asignar(setter, grupo, ad_id=None, palabra=None, instagram=None):
     nuevo = normalizar_ig(instagram) if instagram is not None else None
     if instagram is not None and (instagram or '').strip() and not nuevo:
         raise ErrorDePalabraClave('Ese Instagram no parece un usuario: escribilo sin espacios ni links.')
+    contactos = FinancialSale.contactos(pagos)
     igs = []
-    for ig in [nuevo, normalizar_ig(cliente.instagram) if cliente else None, *(normalizar_ig(p.instagram) for p in pagos)]:
+    for ig in [nuevo, normalizar_ig(cliente.instagram) if cliente else None,
+               *(normalizar_ig(contactos[p.id]['instagram']) for p in pagos)]:
         if ig and ig not in igs:
             igs.append(ig)
     if cliente and nuevo and not normalizar_ig(cliente.instagram):
@@ -145,7 +151,7 @@ def asignar(setter, grupo, ad_id=None, palabra=None, instagram=None):
             raise ErrorDePalabraClave('Falta el Instagram del cliente: es con lo que Marketing encuentra su conversación.')
         primero = min(p.date for p in pagos if p.date)
         for ig in igs:
-            responder_con_anuncio(ig, f'manual_venta_{grupo}', pagos[0].nombre_cliente, anuncio, primero,
+            responder_con_anuncio(ig, f'manual_venta_{grupo}', contactos[pagos[0].id]['nombre_cliente'], anuncio, primero,
                                   primero - timedelta(minutes=1))
 
     palabra_final = anuncio.keyword or anuncio.name

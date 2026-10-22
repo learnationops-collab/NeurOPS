@@ -45,7 +45,11 @@ def clave_de_miembro(nombre):
 
 
 def _claves_cliente(venta):
-    """Las formas de reconocer al cliente de una venta: Instagram, correo y teléfono."""
+    """Las formas de reconocer al cliente de una venta, con el criterio de todo el sistema
+    (`ticket_service.claves_de_cliente`): su persona o, si no la tiene, Instagram y correo copiados.
+    El teléfono no: se recicla y se comparte."""
+    if getattr(venta, 'person_uuid', None):
+        return {('p', venta.person_uuid)}
     claves = set()
     ig = (venta.instagram or '').strip().lstrip('@').lower()
     if len(ig) > 2 and ig != 'n/a':
@@ -53,9 +57,6 @@ def _claves_cliente(venta):
     mail = (venta.mail_cliente or '').strip().lower()
     if len(mail) > 2 and mail != 'n/a':
         claves.add(('mail', mail))
-    tel = (venta.telefono or '').strip()
-    if len(tel) > 4 and tel != 'n/a':
-        claves.add(('tel', tel))
     return claves
 
 

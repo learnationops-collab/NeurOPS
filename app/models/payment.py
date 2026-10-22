@@ -1,7 +1,8 @@
 from datetime import datetime
 from app import db
+from app.models.person import ConPersona
 
-class Enrollment(db.Model):
+class Enrollment(ConPersona, db.Model):
     __tablename__ = 'enrollments'
     id = db.Column(db.Integer, primary_key=True)
     client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=False, index=True)

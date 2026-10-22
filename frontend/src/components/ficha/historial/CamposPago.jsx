@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { localToday } from '../../../utils/datetime';
 import ElegirTransferencia from '../piezas/ElegirTransferencia';
+import { diaLegible } from '../piezas/fecha';
 import {
     FALTA_TRANSFERENCIA, PREGUNTA_TRANSFERENCIA, efectoDeTransferido, esTransferencia,
 } from '../transferencia';
@@ -9,7 +10,8 @@ import Desplegable from './Desplegable';
 
 /**
  * Los cinco campos de un pago: fecha, monto, medio, programa y tipo. Y, si el medio es una
- * transferencia, un sexto: a quién del equipo se le hizo (pedido de Kerwin, 09/10/2026).
+ * transferencia, un sexto: a quién del equipo se le hizo (pedido de Kerwin, 09/10/2026). Si el
+ * cliente tiene ventas, a cuál pertenece el pago, o «Automática» (20/10/2026).
  *
  * Los comparten el editor de una fila de la sección «Pagos» (`FilaPago`) y el formulario para
  * agregar uno (`AgregarPago`): un pago corregido y uno agregado tienen que pedir lo mismo, con las
@@ -27,6 +29,20 @@ export const etiquetaDeTipo = (tipos, clave) => tipos.find(t => t.clave === clav
 /** El nombre de un programa por su código ('RR' -> 'Residency Roadmap'). */
 export const nombreDePrograma = (programas, codigo) => programas.find(p => p.clave === codigo)?.label
     || codigo;
+
+const TIPO_DE_VENTA = { new: 'Alta', renewal: 'Renovación', upsell: 'Upsell' };
+
+/**
+ * Cómo se nombra una venta (20/10/2026): «Ace Learners · Alta · 1 jul 2026». Sin el programa, para
+ * la fila de un pago que ya dice de qué programa es: «Alta · 1 jul 2026».
+ */
+export const etiquetaDeVenta = (programas, venta, { conPrograma = true } = {}) => [
+    conPrograma ? (venta.program_code ? nombreDePrograma(programas, venta.program_code) : 'Sin programa') : null,
+    TIPO_DE_VENTA[venta.kind] || venta.kind, diaLegible(venta.sold_at),
+].filter(Boolean).join(' · ');
+
+/** Las ventas entre las que se puede elegir para un pago de `programa`: las de ese programa. */
+export const ventasDelPrograma = (ventas, programa) => ventas.filter(v => !v.program_code || v.program_code === programa);
 
 /** Un monto exacto, con los centavos si los tiene: `$1.500`, `$450,5`. */
 export const montoExacto = (n) => `$${(Number(n) || 0).toLocaleString('es-AR', { maximumFractionDigits: 2 })}`;
@@ -93,10 +109,13 @@ const CampoTransferencia = ({ ids, valor, opciones, sinMarcar, disabled, onCambi
 
 const CamposPago = ({
     ids, valores, onCambiar, disabled = false, medios = [], programas = [], tipos = [],
-    transferencias = [], actual = {}, autoFocus = false,
+    transferencias = [], ventas = [], actual = {}, autoFocus = false,
 }) => {
     const { fecha, monto, medio, programa, tipo } = valores;
     const medioFuera = actual.medio && !medios.some(m => m.clave === actual.medio);
+    // Si se cambia el programa, la venta elegida de otro programa deja de valer: vuelve a «Automática».
+    const elegibles = ventasDelPrograma(ventas, programa);
+    const venta = elegibles.some(v => String(v.id) === valores.venta) ? valores.venta : '';
     return (
         <div className="fi-agenda-campos">
             <div className="fi-campo">
@@ -147,6 +166,19 @@ const CamposPago = ({
                     {tipos.map(t => <option key={t.clave} value={t.clave}>{t.label}</option>)}
                 </Desplegable>
             </div>
+
+            {ventas.length > 0 && (
+                <div className="fi-campo">
+                    <label className="t-rotulo" htmlFor={`${ids}-venta`}>Venta</label>
+                    <Desplegable id={`${ids}-venta`} etiqueta="Venta del pago" valor={venta}
+                        disabled={disabled} onCambiar={(v) => onCambiar({ venta: v })}>
+                        <option value="">Automática · por el tipo y la fecha</option>
+                        {elegibles.map(v => (
+                            <option key={v.id} value={String(v.id)}>{etiquetaDeVenta(programas, v)}</option>
+                        ))}
+                    </Desplegable>
+                </div>
+            )}
 
             {esTransferencia(medio) && (
                 // «Sin marcar» solo para devolver a ese estado una transferencia que ya estaba

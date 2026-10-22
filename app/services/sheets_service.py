@@ -7,6 +7,50 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
+def persona_del_pago(nombre=None, email=None, instagram=None, phone=None, crear=True):
+    """La persona de un pago (docs/plan_personas.md, frente C), vía `person_service.resolver`. Sin
+    ningún dato que la identifique (solo un nombre) no se crea nadie: sería una persona suelta que
+    nadie más encuentra. No hace commit."""
+    from app.services import person_service
+    if not person_service.claves(email=email, instagram=instagram, phone=phone):
+        return None
+    return person_service.resolver(nombre or None, email, instagram, phone, crear=crear, fuente='pago')
+
+
+def _pagador(datos, comprador):
+    """La persona que pagó, solo si el closer dijo que fue otra (`pagador` en la venta) y es otra
+    de verdad: si sus datos son los del comprador, None (pagó el mismo). No hace commit."""
+    if not datos:
+        return None
+    payer = persona_del_pago(datos.get('nombre'), datos.get('email'), datos.get('instagram'),
+                             datos.get('telefono'))
+    if payer is None or (comprador is not None and payer.uuid == comprador.uuid):
+        return None
+    return payer
+
+
+def marcar_mail_de_pago(person, email):
+    """El closer declaró la venta con un mail que no es el principal: ése es su mail de pago (el
+    `uso` es la excepción: con el mismo mail que el principal no se anota nada). Solo desde la
+    ficha, que es el equipo; lo que llega de afuera queda como secundario. Un mail que es de otra
+    persona (`review_note`) no se marca. No hace commit."""
+    from flask_login import current_user
+    from app.models import PersonIdentity
+    from app.services import person_service
+
+    valor = person_service.normalizar('email', email)
+    if person is None or not valor or valor == person_service.dato(person, 'email'):
+        return
+    if person_service.dato(person, 'email', uso='pago') == valor:
+        return
+    ident = PersonIdentity.query.filter_by(person_uuid=person.uuid, kind='email', value=valor).first()
+    if ident is not None and (ident.review_note or ident.retired_at):
+        return
+    usuario = current_user if getattr(current_user, 'is_authenticated', False) else None
+    person_service.hacer_principal(person, 'email', valor, usuario, uso='pago', reason='venta declarada')
+
+
 class SheetsService:
     BASE_URL = "https://script.google.com/macros/s/AKfycbx5Dedw8MTavNQbzgpdWLmRyFPIVeDiuaKIB-j6NsaIS1wbegR4xpHq8BXs-QR2_Fr_/exec"
 
@@ -68,6 +112,10 @@ class SheetsService:
                                                                 payload.get('metodo_pago'))
         except ValueError:
             transferido_a = None
+        # Quién compra y quién pagó (docs/plan_personas.md): también de NeurOPS, no viajan.
+        comprador_uuid = payload.pop('person_uuid', None)
+        pagador = payload.pop('pagador', None)
+        pagador = pagador if isinstance(pagador, dict) else None
 
         # Si es Ventas_DB, guardamos en la base de datos local de forma inmediata
         inconsistency_warning = None
@@ -90,12 +138,32 @@ class SheetsService:
                 # espejo a Enrollment/Payment) para que FinancialSale quede agrupada por
                 # identidad real de cliente desde el momento en que se crea, en vez de
                 # depender únicamente de coincidencias de texto libre en cada consulta.
-                client = BookingService.create_or_update_client({
+                # La persona manda (20/10/2026): primero se la resuelve y el cliente es el suyo;
+                # sin cliente todavía, se lo crea a partir de ella (mismo uuid).
+                from app.services import person_service
+                datos_cliente = {
                     'name': payload.get('nombre_cliente'),
                     'email': payload.get('mail_cliente'),
                     'instagram': payload.get('instagram'),
                     'phone': payload.get('telefono'),
-                })
+                }
+                # El comprador: la persona de la ficha si vino; si no, la de los datos de la venta.
+                person = person_service.por_uuid(comprador_uuid) if comprador_uuid else None
+                if person is None:
+                    person = persona_del_pago(datos_cliente['name'], datos_cliente['email'],
+                                              datos_cliente['instagram'], datos_cliente['phone'])
+                payer = _pagador(pagador, person)
+                if payer is None:
+                    # Pagó el mismo que compra: un mail distinto es su mail de pago.
+                    marcar_mail_de_pago(person, datos_cliente['email'])
+                existente = person_service.cliente_de(person, crear=False) if person else None
+                if person is not None and existente is None:
+                    existente = person_service.cliente_de(person)
+                    db.session.commit()
+                client = BookingService.create_or_update_client(
+                    datos_cliente, client_id=existente.id if existente else None)
+                if person is None and client is not None:
+                    person = client.person
                 result_client_id = client.id if client else None
 
                 # Validar secuencia de pago (Seña->Parcial/Completo->Cuota->Renovación/Upsell):
@@ -122,19 +190,25 @@ class SheetsService:
                 # Se actualiza en cada pago donde venga un valor válido — es editable a
                 # propósito, no solo se fija en el primer pago. Si el cliente todavía no tiene
                 # ninguno guardado, se autoasigna el default del programa.
+                # El mismo total va también a la venta 'new' vigente (`sale_service.fijar_total`),
+                # después de guardar el pago, cuando ya tiene su venta.
+                total_declarado, total_por_defecto = None, False
                 if client and program_code:
                     precio_total_raw = payload.get('precio_total')
                     if precio_total_raw in (None, ''):
                         precio_total_raw = payload.get('monto') if tipo_simple == 'completo' else None
                     precio_total_val = SheetsService._parse_float(precio_total_raw)
                     if precio_total_val and precio_total_val > 0:
-                        client.total_amount = precio_total_val
+                        client.total_amount = total_declarado = precio_total_val
                     elif client.total_amount is None:
                         from app.services.sales_consistency_service import SalesConsistencyService
-                        client.total_amount = SalesConsistencyService.PROGRAM_DEFAULT_TOTALS.get(program_code, 0.0)
+                        client.total_amount = total_declarado = SalesConsistencyService.PROGRAM_DEFAULT_TOTALS.get(program_code, 0.0)
+                        total_por_defecto = True
 
                 sale = FinancialSale(
                     client_id=client.id if client else None,
+                    person=person,
+                    payer=payer,
                     email_vendedor=SheetsService._to_str(payload.get('email_vendedor')),
                     nombre_cliente=SheetsService._to_str(payload.get('nombre_cliente')),
                     telefono=SheetsService._to_str(payload.get('telefono')),
@@ -156,6 +230,19 @@ class SheetsService:
                 db.session.commit()
                 logger.info("[SHEETS POST] Venta registrada exitosamente en base de datos local.")
 
+                # La venta de este pago la ubica `sale_service` al guardar; si la abrió este pago,
+                # se le anota la cita y el total que declaró el closer.
+                if sale.sale is not None and sale.sale.appointment_id is None and sale.sale.payments.count() == 1:
+                    sale.sale.appointment_id = appointment_id
+                    sale.sale.agreed_total = SheetsService._parse_float(payload.get('precio_total')) or None
+                    sale.sale.source = 'ficha'
+                    db.session.commit()
+                # Una renovación o un upsell no cambian lo acordado en la venta original.
+                if total_declarado is not None and tipo_simple not in ('renovacion', 'upsell'):
+                    from app.services.sale_service import fijar_total
+                    if fijar_total(client, total_declarado, program_code, solo_si_falta=total_por_defecto):
+                        db.session.commit()
+
                 # Cada pago le extiende el acceso en la Academia y avisa al gestor del alumno (en un hilo).
                 from app.services.academy_payment_sync import notify_academy_of_payments
                 notify_academy_of_payments([sale])
@@ -168,7 +255,8 @@ class SheetsService:
                         'email': payload.get('mail_cliente'),
                         'phone': payload.get('telefono'),
                         'instagram': payload.get('instagram'),
-                        'name': payload.get('nombre_cliente')
+                        'name': payload.get('nombre_cliente'),
+                        'person_uuid': sale.person_uuid
                     }
                     sale_data = {
                         'payment_type': tipo_pago_val,
@@ -220,7 +308,7 @@ class SheetsService:
                 # Enviar webhook a n8n en segundo plano si está activo
                 enviar_webhook = payload.get('enviar_webhook', True)
                 if enviar_webhook in (True, 'true', 'True', 1, '1', 'on'):
-                    SheetsService._trigger_n8n_webhook(payload)
+                    SheetsService._trigger_n8n_webhook(payload, person_uuid=sale.person_uuid)
                 else:
                     logger.info("[N8N WEBHOOK] Envío omitido por petición del usuario/payload.")
             except Exception as db_err:
@@ -437,7 +525,11 @@ class SheetsService:
                         logger.info(f"[SHEETS SYNC] Venta con marca_temporal {marca_temp} omitida por exclusión manual.")
                         continue
 
+                    # La resincronización recrea pagos que ya existían: busca a su persona, no crea.
+                    persona = persona_del_pago(item.get('nombre_cliente'), item.get('mail_cliente'),
+                                               item.get('instagram'), item.get('telefono'), crear=False)
                     sale = FinancialSale(
+                        person=persona,
                         email_vendedor=SheetsService._to_str(item.get('email_vendedor')),
                         nombre_cliente=SheetsService._to_str(item.get('nombre_cliente')),
                         telefono=SheetsService._to_str(item.get('telefono')),
@@ -464,34 +556,17 @@ class SheetsService:
             # Sincronizar el examen de las ventas a los Appointment locales correspondientes
             try:
                 from app.models.booking import Appointment
-                from app.models.client import Client
-                from sqlalchemy import or_
-                
+
                 for sale in objects:
                     if sale.examen:
                         # Limpiar el examen (extraer la parte antes del pipe si está combinado con notas)
                         examen_clean = sale.examen.split('|')[0].strip() if '|' in sale.examen else sale.examen.strip()
-                        if not examen_clean:
+                        if not examen_clean or not sale.person_uuid:
                             continue
-                            
-                        # Buscar el cliente por instagram o email
-                        ig_norm = sale.instagram.strip().lstrip('@').lower() if sale.instagram else None
-                        email_norm = sale.mail_cliente.strip().lower() if sale.mail_cliente else None
-                        
-                        client = None
-                        if ig_norm or email_norm:
-                            client_filters = []
-                            if ig_norm:
-                                client_filters.append(db.func.lower(db.func.replace(Client.instagram, '@', '')) == ig_norm)
-                            if email_norm:
-                                client_filters.append(db.func.lower(Client.email) == email_norm)
-                            client = Client.query.filter(or_(*client_filters)).first()
-                            
-                        if client:
-                            # Buscar su cita más reciente
-                            appt = Appointment.query.filter_by(client_id=client.id).order_by(Appointment.start_time.desc()).first()
-                            if appt:
-                                appt.examen = examen_clean
+                        # Su cita más reciente, por la persona del pago
+                        appt = Appointment.query.filter_by(person_uuid=sale.person_uuid).order_by(Appointment.start_time.desc()).first()
+                        if appt:
+                            appt.examen = examen_clean
                 db.session.commit()
             except Exception as sync_err:
                 logger.warning(f"[SHEETS SYNC] Error al propagar exámenes a las agendas: {sync_err}")
@@ -584,18 +659,20 @@ class SheetsService:
         documento_identidad = ''
         if sale.raw_data and isinstance(sale.raw_data, dict):
             documento_identidad = sale.raw_data.get('documento_identidad') or sale.raw_data.get('Documento de identidad') or ''
+        contacto = sale.contacto()
 
         return {
             "email_vendedor": sale.email_vendedor or '',
-            "nombre_cliente": sale.nombre_cliente or '',
-            "telefono": sale.telefono or '',
-            "mail_cliente": sale.mail_cliente or '',
+            "nombre_cliente": contacto['nombre_cliente'] or '',
+            "telefono": contacto['telefono'] or '',
+            "mail_cliente": contacto['mail_cliente'] or '',
             "tipo_pago": sale.tipo_pago or '',
             "monto": float(sale.monto or 0.0),
             "segundo_pago": sale.segundo_pago or '',
             "metodo_pago": sale.metodo_pago or '',
             "examen": sale.examen or '',
-            "instagram": sale.instagram or '',
+            "instagram": contacto['instagram'] or '',
+            "person_uuid": sale.person_uuid or '',
             "setter": sale.setter or '',
             "estado": sale.estado or 'Completada',
             "documento_identidad": documento_identidad,
@@ -605,7 +682,7 @@ class SheetsService:
         }
 
     @staticmethod
-    def _trigger_n8n_webhook(payload):
+    def _trigger_n8n_webhook(payload, person_uuid=None):
         # Envia los datos de la venta a n8n de forma asincrona
         import os
         import threading
@@ -647,7 +724,9 @@ class SheetsService:
             "setter": payload.get('setter'),
             "estado": payload.get('estado'),
             "documento_identidad": payload.get('documento_identidad'),
-            "enviar_mensaje": payload.get('enviar_mensaje', True)
+            "enviar_mensaje": payload.get('enviar_mensaje', True),
+            # El id de la persona en todos los servicios (docs/plan_personas.md).
+            "person_uuid": person_uuid or payload.get('person_uuid') or None
         }
 
         def send_request():

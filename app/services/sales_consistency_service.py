@@ -2,7 +2,50 @@ import re
 import unicodedata
 from difflib import SequenceMatcher
 
-from sqlalchemy import or_, func
+from sqlalchemy import and_, false, func, or_
+
+
+def contactos_de_persona(person_uuid):
+    """(mails, instagrams) vigentes de la persona, normalizados como `person_service.normalizar`: con
+    qué se reconocen sus pagos que todavía no tienen persona."""
+    from app import db
+    from app.models import PersonIdentity
+    mails, igs = set(), set()
+    if not person_uuid:
+        return mails, igs
+    for kind, value in db.session.query(PersonIdentity.kind, PersonIdentity.value).filter(
+            PersonIdentity.person_uuid == person_uuid, PersonIdentity.kind.in_(('email', 'instagram')),
+            PersonIdentity.retired_at.is_(None), PersonIdentity.review_note.is_(None)):
+        (mails if kind == 'email' else igs).add(value)
+    return mails, igs
+
+
+def filtro_de_pagos(client=None, person_uuid=None, client_id=None):
+    """La condición SQL de los pagos (`FinancialSale`) de alguien, con el criterio de todo el sistema
+    (docs/plan_personas.md, Etapa 2b; el mismo de `ticket_service.claves_de_cliente`): los de su
+    persona y los atados a su ficha por id. El mail y el instagram copiados en el pago cuentan solo
+    en pagos sin persona; el teléfono y el nombre, nunca (se reciclan y se comparten: el caso Kervin
+    Calderón, un correo compartido entre tres personas)."""
+    from app.models import FinancialSale
+    from app.services import person_service
+
+    client_id = client_id or (client.id if client else None)
+    person_uuid = person_uuid or (client.person_uuid if client else None)
+    condiciones = [FinancialSale.client_id == client_id] if client_id else []
+    if person_uuid:
+        condiciones.append(FinancialSale.person_uuid == person_uuid)
+        mails, igs = contactos_de_persona(person_uuid)
+    else:
+        mails = {m for m in [person_service.normalizar('email', client.email if client else None)] if m}
+        igs = {i for i in [person_service.normalizar('instagram', client.instagram if client else None)] if i}
+    por_copia = []
+    if mails:
+        por_copia.append(func.lower(func.trim(FinancialSale.mail_cliente)).in_(sorted(mails)))
+    if igs:
+        por_copia.append(func.lower(func.replace(func.trim(FinancialSale.instagram), '@', '')).in_(sorted(igs)))
+    if por_copia:
+        condiciones.append(and_(FinancialSale.person_uuid.is_(None), or_(*por_copia)))
+    return or_(*condiciones) if condiciones else false()
 
 
 class SalesConsistencyService:
@@ -55,45 +98,6 @@ class SalesConsistencyService:
         return SequenceMatcher(None, a, b).ratio() >= 0.72
 
     @staticmethod
-    def _matching_signals(client, sale):
-        """Cuáles de las 3 señales ('email', 'instagram', 'telefono') coinciden entre el Client y
-        una FinancialSale, normalizadas igual que el filtro SQL que las trajo.
-
-        El conjunto y no solo la cuenta: la ficha del lead, al corregir un contacto, necesita saber
-        qué señal pierde cada venta con el cambio."""
-        signals = set()
-        if client.email and '@' in client.email and sale.mail_cliente:
-            if sale.mail_cliente.strip().lower() == client.email.strip().lower():
-                signals.add('email')
-        if client.instagram and client.instagram.lower() not in ('n/a', '') and sale.instagram:
-            ig_clean = client.instagram.strip().replace('@', '').lower()
-            sale_ig = sale.instagram.strip().replace('@', '').lower()
-            if sale_ig == ig_clean:
-                signals.add('instagram')
-        if client.phone and len(client.phone.strip()) >= 8 and sale.telefono:
-            if client.phone.strip()[-8:] in sale.telefono:
-                signals.add('telefono')
-        return signals
-
-    @staticmethod
-    def _signal_match_count(client, sale):
-        """Cuenta cuántas de las 3 señales coinciden (ver `_matching_signals`)."""
-        return len(SalesConsistencyService._matching_signals(client, sale))
-
-    @staticmethod
-    def _contact_match_suffices(client, sale):
-        """True si una venta SIN client_id es de este cliente por contacto: 2 de las 3 señales, o
-        una sola corroborada por el nombre (el criterio de `get_client_payment_state`, ver ahí el
-        caso Kervin Calderón).
-
-        Suelto para que quien ate una venta al cliente por id use exactamente este criterio: una
-        venta atada pasa a ser suya "por sí sola" y ya no se vuelve a mirar su contacto."""
-        matches = SalesConsistencyService._signal_match_count(client, sale)
-        if matches >= 2:
-            return True
-        return matches == 1 and SalesConsistencyService._names_corroborate(client.full_name, sale.nombre_cliente)
-
-    @staticmethod
     def get_client_payment_state(client_id, program_code):
         from app.models import FinancialSale, Client
         from app.services.sheets_service import SheetsService
@@ -106,51 +110,12 @@ class SalesConsistencyService:
         else:
             program_price = SalesConsistencyService.PROGRAM_DEFAULT_TOTALS.get(program_code, 0.0)
 
-        # Cruzar por client_id Y por email/instagram/teléfono normalizados, no solo por
-        # client_id: se detectó (reportado por un closer real que no podía declarar una Cuota
-        # porque el sistema no encontraba su Parcial anterior) que FinancialSale.client_id está
-        # NULL en prácticamente todas las filas de esta base local pese al backfill documentado
-        # en una pasada anterior — depender solo de esa columna deja invisible casi todo el
-        # historial real de pagos de un cliente. Mismo criterio de cruce que el resto del sistema
-        # (BookingService.find_or_create_client).
-        sale_filters = []
-        if client_id:
-            sale_filters.append(FinancialSale.client_id == client_id)
-        if client:
-            if client.email and '@' in client.email:
-                sale_filters.append(func.lower(FinancialSale.mail_cliente) == client.email.strip().lower())
-            if client.instagram and client.instagram.lower() not in ('n/a', ''):
-                ig_clean = client.instagram.strip().replace('@', '').lower()
-                sale_filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig_clean)
-            if client.phone and len(client.phone.strip()) >= 8:
-                sale_filters.append(FinancialSale.telefono.like(f"%{client.phone.strip()[-8:]}%"))
-
-        # El filtro SQL de arriba es deliberadamente amplio (basta UNA señal para traer la fila
-        # como candidata); la decisión de si de verdad pertenece a este cliente se hace acá en
-        # Python con un criterio más estricto — requerir al menos 2 de las 3 señales (email/
-        # instagram/teléfono), o si solo coincide una, corroborarla contra el nombre. Se detectó
-        # en producción (Kervin Calderón, client_id=8523, 2 de Septiembre de 2026) que un solo
-        # email compartido por una venta huérfana de OTRO cliente (Emilia Collantes, cuyos
-        # propios campos denormalizados eran de un tercero, Juan Camilo Sanchez Ramirez) bastaba
-        # para que el sistema creyera que Kervin ya había pagado el programa completo y le
-        # bloqueara un Parcial real. Un match directo por client_id sigue siendo suficiente por
-        # sí solo (es la señal más confiable, viene de un FK, no de texto libre importado) —
-        # esto no debilita la detección de duplicados reales sin client_id que motivó el cruce
-        # original (casos documentados: Jonathan Aparicio, Marcos Melo), que en general comparten
-        # más de una señal o un nombre reconocible entre sí.
-        all_sales = []
-        if sale_filters:
-            candidates = FinancialSale.query.filter(
-                or_(*sale_filters),
-                or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
-            ).order_by(FinancialSale.date.asc()).all()
-
-            for s in candidates:
-                if client_id and s.client_id == client_id:
-                    all_sales.append(s)
-                    continue
-                if client and SalesConsistencyService._contact_match_suffices(client, s):
-                    all_sales.append(s)
+        # Los pagos del cliente son los de su persona y los atados por id; la copia del pago cuenta
+        # solo en pagos sin persona (`filtro_de_pagos`).
+        all_sales = FinancialSale.query.filter(
+            filtro_de_pagos(client, client_id=client_id),
+            or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
+        ).order_by(FinancialSale.date.asc()).all()
 
         # Datos históricos tienen formatos inconsistentes (acentos, "Con Seña", sin prefijo de
         # programa). parse_tipo_pago normaliza eso; una venta sin prefijo de programa (legado)

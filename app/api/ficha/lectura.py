@@ -17,14 +17,22 @@ def _entero(nombre):
 
 @bp.route('/lead', methods=['GET'])
 def lead():
-    """`GET /api/ficha/lead?appointment_id=<id>` o `?client_id=<id>`.
+    """`GET /api/ficha/lead?appointment_id=<id>`, `?client_id=<id>` o `?person_uuid=<uuid>`.
 
-    Al menos uno de los dos. El estado operativo cuelga de `Appointment` y el cobro de `Client`, y
-    segun de donde se abra la ficha se tiene una clave o la otra.
+    Al menos uno. El estado operativo cuelga de `Appointment` y el cobro de `Client`, y segun de
+    donde se abra la ficha se tiene una clave o la otra. `person_uuid` (docs/plan_personas.md,
+    Etapa 2a) es la persona: se abre la ficha de su cliente.
     """
     appointment_id, client_id = _entero('appointment_id'), _entero('client_id')
+    person_uuid = (request.args.get('person_uuid') or '').strip()
+    if not appointment_id and not client_id and person_uuid:
+        from app.services import person_service
+        cliente = person_service.cliente_de(person_service.por_uuid(person_uuid), crear=False)
+        client_id = cliente.id if cliente else None
+        if not client_id:
+            return jsonify({'message': 'Lead no encontrado'}), 404
     if not appointment_id and not client_id:
-        return jsonify({'message': 'Falta appointment_id o client_id'}), 400
+        return jsonify({'message': 'Falta appointment_id, client_id o person_uuid'}), 400
 
     # Un setter abre solo sus leads (los de su Revisar, ver `leads_del_setter`); el resto de los
     # roles, cualquiera. Se mira antes de armar la ficha, que puede anclarle una agenda al cliente.

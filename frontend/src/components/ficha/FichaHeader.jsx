@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, ChevronDown, ChevronRight, ClipboardCopy, MessageCircle, Pencil, Video, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, ClipboardCopy, Contact, MessageCircle, Pencil, Video, X } from 'lucide-react';
+import { IconButton } from '../standard';
+import IdentidadesPersona from './piezas/IdentidadesPersona';
 import useMovimiento from './piezas/useMovimiento';
 import usePopover from './piezas/usePopover';
 import FranjaBaja from './piezas/FranjaBaja';
@@ -84,6 +86,9 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
     })();
 
     const [copiado, setCopiado] = useState(false);
+    // Todos los datos de la persona (mails, teléfonos, instagrams, con su uso y los dados de baja).
+    const [verIdentidades, setVerIdentidades] = useState(false);
+    const identidades = id.identidades || [];
 
     // --- Edición en el lugar ---------------------------------------------------------
     const [editando, setEditando] = useState(false);
@@ -253,10 +258,17 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
                                 title={copiado ? 'Copiado' : 'Copiar los datos del lead'}>
                                 {copiado ? <Check size={16} style={{ color: 'var(--success)' }} /> : <ClipboardCopy size={16} />}
                             </button>
+                            {id.person_uuid && (
+                                <IconButton icon={<Contact size={16} />} pressed={verIdentidades}
+                                    label={verIdentidades ? 'Ocultar todos los datos de la persona' : 'Ver todos los datos de la persona'}
+                                    title="Todos sus correos, teléfonos e instagrams, y agregar otro"
+                                    aria-expanded={verIdentidades}
+                                    onClick={() => setVerIdentidades(v => !v)} />
+                            )}
                             {puedeCorregir && (
                                 <button type="button" className="ibtn" ref={lapiz}
                                     aria-label="Editar los datos del lead"
-                                    title="Corregir nombre, teléfono, correo, instagram, examen y fuente"
+                                    title="Corregir nombre, teléfono, correo, instagram, examen y fuente (el dato anterior queda dado de baja)"
                                     onClick={abrirEdicion}>
                                     <Pencil size={16} />
                                 </button>
@@ -374,6 +386,10 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
 
                     <Dato rotulo="Fuente" valor={fuente} />
                 </div>
+            )}
+
+            {!editando && verIdentidades && (
+                <IdentidadesPersona identidades={identidades} puedeAgregar={puedeCorregir} onAccion={onAccion} />
             )}
 
             {/* Se fue del programa: se ve desde cualquier pestaña, no solo desde el cobro. */}

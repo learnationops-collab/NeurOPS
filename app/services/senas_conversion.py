@@ -24,8 +24,22 @@ from app.services.ticket_service import es_primera_cuota
 COMPLETO, PARCIAL = 'completo', 'parcial'
 
 
+PERSONA = 'p:'
+
+
 def claves_de_fila(fila):
+    """Con qué se buscan los pagos de la seña: su persona (plan_personas, 20/10/2026) o, si la fila
+    todavía no tiene, el mail y el instagram copiados."""
+    if fila.get('person_uuid'):
+        return [f"{PERSONA}{fila['person_uuid']}"]
     return [c for c in (_limpiar_email(fila['email']), _limpiar_ig(fila['ig'])) if c]
+
+
+def _claves_de_pago(v):
+    """Las mismas que `claves_de_fila`: la persona del pago o, sin persona, su copia."""
+    if v.person_uuid:
+        return {f'{PERSONA}{v.person_uuid}'}
+    return {_limpiar_email(v.mail_cliente), _limpiar_ig(v.instagram)} - {None}
 
 
 def _dia_de(fila):
@@ -36,9 +50,13 @@ def pagos_posteriores(claves):
     """{clave: [(venta, tipo)]} con los completos, parciales y cuotas cobrados de esos contactos."""
     if not claves:
         return {}
+    personas = [c[len(PERSONA):] for c in claves if c.startswith(PERSONA)]
+    contactos = [c for c in claves if not c.startswith(PERSONA)]
     filas = FinancialSale.query.filter(
-        db.or_(func.lower(FinancialSale.mail_cliente).in_(claves),
-               func.lower(func.replace(FinancialSale.instagram, '@', '')).in_(claves))
+        db.or_(db.and_(FinancialSale.person_uuid.is_(None),
+                       db.or_(func.lower(FinancialSale.mail_cliente).in_(contactos),
+                              func.lower(func.replace(FinancialSale.instagram, '@', '')).in_(contactos))),
+               FinancialSale.person_uuid.in_(personas))
     ).all()
     salida = {}
     for v in filas:
@@ -47,7 +65,7 @@ def pagos_posteriores(claves):
         _, tipo, es_venta = ComercialService.clasificar_venta(v)
         if not es_venta and tipo != 'cuota':
             continue
-        for clave in {_limpiar_email(v.mail_cliente), _limpiar_ig(v.instagram)}:
+        for clave in _claves_de_pago(v):
             if clave in claves:
                 salida.setdefault(clave, []).append((v, tipo))
     return salida

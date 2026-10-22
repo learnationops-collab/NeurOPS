@@ -27,7 +27,7 @@ dotenv.load_dotenv = lambda *args, **kwargs: False
 # Variables que el codigo lee (os.environ / os.getenv). Se vacian para que el resultado de un test
 # no dependa del shell de quien lo corre, ni pueda hablar con un servicio real.
 VARIABLES_A_LIMPIAR = (
-    'ACADEMY_API_TOKEN', 'ACADEMY_INBOUND_API_TOKEN', 'DEV_PLATFORM_INBOUND_API_TOKEN',
+    'ACADEMY_API_TOKEN', 'ACADEMY_INBOUND_API_TOKEN', 'ACADEMY_SUBSCRIPTIONS_PUSH', 'DEV_PLATFORM_INBOUND_API_TOKEN',
     'BACKUP_SECRET_KEY', 'MANYCHAT_WEBHOOK_TOKEN', 'INGEST_API_TOKEN', 'INTEGRATIONS_AUTH_MODE',
     'AGENDAS_SOURCE_TZ', 'CRON_SECRET', 'CLIENT_ID', 'CLIENT_SECRET',
     'REDIRECT_URI_PROD', 'REDIRECT_URI_DEV', 'FRONTEND_URL',

@@ -461,7 +461,7 @@ const FilaDiferencia = ({ fila, abierta, onAbrir, onCorregir, onRevisar, onFicha
     } else if (pendiente && fila.estado === 'sin_reportar') {
         principal = fila.cliente_id ? (
             <button type="button" className="btn btn--linea btn--sm fz-dif-accion"
-                onClick={() => onFicha(fila.cliente_id, 'pagos')}>
+                onClick={() => onFicha(fila.cliente_id, 'pagos', fila.person_uuid)}>
                 <User /> Agregar pago
             </button>
         ) : (
@@ -520,7 +520,7 @@ const FilaDiferencia = ({ fila, abierta, onAbrir, onCorregir, onRevisar, onFicha
                 {principal}
                 {fila.cliente_id && !(pendiente && fila.estado === 'sin_reportar' && !sugerencia) && (
                     <button type="button" className="ibtn ibtn--sm" title="Abrir la ficha del cliente"
-                        aria-label={`Abrir la ficha de ${nombre}`} onClick={() => onFicha(fila.cliente_id, null)}>
+                        aria-label={`Abrir la ficha de ${nombre}`} onClick={() => onFicha(fila.cliente_id, null, fila.person_uuid)}>
                         <User />
                     </button>
                 )}
@@ -743,7 +743,7 @@ const Diferencias = ({ periodo }) => {
                                         <FilaDiferencia fila={fila} abierta={abierta === fila.clave}
                                             onAbrir={() => setAbierta(a => (a === fila.clave ? null : fila.clave))}
                                             onCorregir={corregir} onRevisar={revisar}
-                                            onFicha={(clientId, seccion) => setFicha({ clientId, seccion })} />
+                                            onFicha={(clientId, seccion, personUuid) => setFicha({ clientId, seccion, personUuid })} />
                                         {abierta === fila.clave && (
                                             <Detalle fila={fila} opciones={datos.opciones}
                                                 onCorregir={corregir} onRevisar={revisar} />
@@ -763,7 +763,7 @@ const Diferencias = ({ periodo }) => {
             {/* En un portal: la `.vista` anima a sus hijos con `transform`, y un `fixed` adentro de
                 uno de ellos queda atado a esa caja en vez de a la ventana. */}
             {ficha && createPortal(
-                <FichaLeadModal clientId={ficha.clientId} pestanaInicial="hist" seccionInicial={ficha.seccion}
+                <FichaLeadModal clientId={ficha.clientId} personUuid={ficha.personUuid || null} pestanaInicial="hist" seccionInicial={ficha.seccion}
                     onCerrar={() => setFicha(null)} onCambio={cargar} />,
                 document.body,
             )}

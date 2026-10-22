@@ -1,10 +1,16 @@
 from datetime import datetime
 from app import db
+from app.models.person import ConPersona
 
-class FinancialSale(db.Model):
+class FinancialSale(ConPersona, db.Model):
     __tablename__ = 'financial_sales'
     id = db.Column(db.Integer, primary_key=True)
     client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=True, index=True)
+    # Cada fila es un pago; la venta a la que pertenece (ver `Sale`). NULL = todavía sin agrupar.
+    sale_id = db.Column(db.Integer, db.ForeignKey('sales.id', ondelete='SET NULL'), nullable=True, index=True)
+    # Quién pagó, solo si no es quien compró (`person_uuid`): un familiar, otra cuenta (docs/plan_personas.md).
+    payer_person_uuid = db.Column(db.String(36), db.ForeignKey('people.uuid', ondelete='SET NULL'), nullable=True, index=True)
+    payer = db.relationship('Person', foreign_keys=[payer_person_uuid])
     email_vendedor = db.Column(db.String(255), nullable=True)
     nombre_cliente = db.Column(db.String(255), nullable=True)
     telefono = db.Column(db.String(255), nullable=True)
@@ -26,30 +32,99 @@ class FinancialSale(db.Model):
     # 'jean_carlo' u 'otro' (la lista vive en `transferencias_service`), o NULL = «sin marcar».
     # Esa plata está en manos de esa persona y se le descuenta de lo que se le paga.
     transferido_a = db.Column(db.String(20), nullable=True)
+    # Verificación contra el banco o la pasarela (22/10/2026): que el closer declare el pago no lo hace
+    # cierto. Cuándo impactó la operación (no cuándo se declaró), su número, dónde (cuenta o pasarela),
+    # cuánto entró de verdad, los archivos del volumen que lo respaldan y el estado de la verificación.
+    transaction_date = db.Column(db.DateTime, nullable=True)
+    transaction_id = db.Column(db.String(120), nullable=True, index=True)
+    transaction_source = db.Column(db.String(60), nullable=True)
+    transaction_amount = db.Column(db.Float, nullable=True)
+    # Rutas en el volumen (extracto de un período, comprobante individual...); un archivo puede respaldar varios pagos.
+    transaction_evidence = db.Column(db.JSON, nullable=True)
+    transaction_status = db.Column(db.String(20), nullable=False, default='pending', server_default='pending')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     date = db.Column(db.DateTime, default=datetime.utcnow) # Fecha de venta oficial (basada en marca_temporal)
 
     client = db.relationship('Client', backref=db.backref('financial_sales', lazy='dynamic'))
 
-    def to_dict(self):
+    CONTACTO = ('nombre_cliente', 'mail_cliente', 'telefono', 'instagram')
+    # verified: respaldado por el banco o la pasarela; pending: sin comparar todavía;
+    # unverified: se comparó y no aparece.
+    TRANSACTION_STATUSES = ('verified', 'pending', 'unverified')
+
+    def contacto(self, mails_de_pago=None):
+        """Nombre, mail, teléfono e instagram del pago, leídos de su persona (docs/plan_personas.md):
+        sus principales, y como mail su mail de pago si tiene uno distinto. Lo copiado en el pago se
+        lee solo si el pago no tiene persona (Etapa 2b).
+
+        `mails_de_pago` ({person_uuid: mail}, ver `mails_de_pago`) evita una consulta por fila en
+        los listados; sin él se consulta acá. Para muchos pagos, `contactos`."""
+        p = self.person if self.person_uuid else None
+        if p is None:
+            return {k: getattr(self, k) for k in self.CONTACTO}
+        if mails_de_pago is not None:
+            mail = mails_de_pago.get(p.uuid) or p.email
+        else:
+            from app.services import person_service
+            mail = person_service.dato(p, 'email', uso='pago')
+        return {'nombre_cliente': p.full_name, 'mail_cliente': mail, 'telefono': p.phone,
+                'instagram': p.instagram}
+
+    @staticmethod
+    def contactos(sales):
+        """{id del pago: contacto()} de una tanda, con sus personas y mails de pago en dos consultas."""
+        from app.models import Person
+        uuids = sorted({s.person_uuid for s in sales if s.person_uuid})
+        # Retenidas en la lista: el identity map de la sesión no las guarda solo.
+        personas = []
+        for i in range(0, len(uuids), 500):
+            personas += Person.query.filter(Person.uuid.in_(uuids[i:i + 500])).all()
+        mails = FinancialSale.mails_de_pago(sales)
+        return {s.id: s.contacto(mails) for s in sales}
+
+    @staticmethod
+    def mails_de_pago(sales):
+        """{person_uuid: mail de pago} de las personas de estos pagos que tienen uno distinto del
+        principal (la excepción). Una consulta por tanda."""
+        from app.models import PersonIdentity
+        uuids = sorted({s.person_uuid for s in sales if s.person_uuid})
+        mails = {}
+        for i in range(0, len(uuids), 500):
+            for puuid, valor in db.session.query(PersonIdentity.person_uuid, PersonIdentity.value).filter(
+                    PersonIdentity.person_uuid.in_(uuids[i:i + 500]), PersonIdentity.kind == 'email',
+                    PersonIdentity.uso == 'pago', PersonIdentity.retired_at.is_(None)):
+                mails[puuid] = valor
+        return mails
+
+    def to_dict(self, mails_de_pago=None):
+        contacto = self.contacto(mails_de_pago)
         return {
             "id": self.id,
             "client_id": self.client_id,
+            "person_uuid": self.person_uuid,
+            # Quien pagó, solo si no es quien compró (NULL = pagó el mismo).
+            "payer_person_uuid": self.payer_person_uuid,
             "email_vendedor": self.email_vendedor,
-            "nombre_cliente": self.nombre_cliente,
-            "telefono": self.telefono,
-            "mail_cliente": self.mail_cliente,
+            "nombre_cliente": contacto['nombre_cliente'],
+            "telefono": contacto['telefono'],
+            "mail_cliente": contacto['mail_cliente'],
             "tipo_pago": self.tipo_pago,
             "monto": self.monto,
             "segundo_pago": self.segundo_pago,
             "metodo_pago": self.metodo_pago,
             "examen": self.examen,
-            "instagram": self.instagram,
+            "instagram": contacto['instagram'],
             "setter": self.setter,
             "marca_temporal": self.marca_temporal,
             "estado": self.estado or "Completada",
             "is_excluded_from_payroll": self.is_excluded_from_payroll or False,
             "transferido_a": self.transferido_a,
+            "transaction_date": self.transaction_date.isoformat() if self.transaction_date else None,
+            "transaction_id": self.transaction_id,
+            "transaction_source": self.transaction_source,
+            "transaction_amount": self.transaction_amount,
+            "transaction_evidence": self.transaction_evidence or [],
+            "transaction_status": self.transaction_status,
             "sold_in_call": self.sold_in_call,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "date": self.date.isoformat() if self.date else None
@@ -68,7 +143,7 @@ def map_closer_result_to_display(closer_result):
     }
     return equivalencias.get(closer_result, closer_result)
 
-class FinancialAgenda(db.Model):
+class FinancialAgenda(ConPersona, db.Model):
     __tablename__ = 'financial_agendas'
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(255), nullable=True)
@@ -112,23 +187,50 @@ class FinancialAgenda(db.Model):
     def es_duplicada(self):
         return self.duplicada_de_id is not None
 
+    # Hasta octubre de 2025 la hoja guardaba el nombre de la persona en `nombre` y el evento en `lead`
+    # («Entrevista Diagnóstica Gratuita»); desde noviembre, la fuente en `nombre` y la persona en `lead`.
+    PALABRAS_DE_EVENTO = ('entrevista', 'sesión', 'sesion', 'consultoría', 'consultoria', 'diagnóstica',
+                          'reagenda', 'domingo', 'desconocido', 'prueba')
+
+    @property
+    def nombre_persona(self):
+        """El nombre de quien agendó, en cualquiera de los dos formatos de la hoja."""
+        lead = (self.lead or '').strip()
+        if lead and not any(p in lead.lower() for p in self.PALABRAS_DE_EVENTO):
+            return lead
+        return self.nombre
+
+    CONTACTO = ('lead', 'mail', 'whatsapp', 'instagram')
+    _DE_PERSONA = {'lead': 'full_name', 'mail': 'email', 'whatsapp': 'phone', 'instagram': 'instagram'}
+
+    def contacto(self):
+        """Nombre, mail, whatsapp e instagram de la agenda, leídos de su persona (Etapa 2b de
+        docs/plan_personas.md). Lo copiado en la agenda se lee solo si no tiene persona."""
+        p = self.person if self.person_uuid else None
+        if p is None:
+            return {**{k: getattr(self, k) for k in self.CONTACTO}, 'lead': self.nombre_persona}
+        return {k: getattr(p, self._DE_PERSONA[k]) for k in self.CONTACTO}
+
     def to_dict(self, sales_count=None):
         if sales_count is None:
-            # Fallback optimizado sin funciones de base de datos sobre las columnas para permitir uso de indices
+            # Los pagos de su persona; la copia del pago (mail, IG) solo en pagos sin persona
+            # (`filtro_de_pagos`, docs/plan_personas.md, Etapa 2b).
+            from sqlalchemy import func, or_
+            from app.services.sales_consistency_service import filtro_de_pagos
             sales_count = 0
-            ig_clean = self.instagram.strip().replace('@', '').lower() if self.instagram and self.instagram.lower() not in ('n/a', '') else None
-            mail_clean = self.mail.strip().lower() if self.mail and self.mail.lower() not in ('n/a', '') else None
-            
-            filters = []
-            if ig_clean:
-                # Usar ilike para evitar full table scans en SQLite/PostgreSQL
-                filters.append(FinancialSale.instagram.ilike(f"%{ig_clean}%"))
-            if mail_clean:
-                filters.append(FinancialSale.mail_cliente.ilike(mail_clean))
-                
-            if filters:
-                from sqlalchemy import or_
-                sales_count = FinancialSale.query.filter(or_(*filters)).count()
+            if self.person_uuid:
+                sales_count = FinancialSale.query.filter(filtro_de_pagos(person_uuid=self.person_uuid)).count()
+            else:
+                ig_clean = self.instagram.strip().replace('@', '').lower() if self.instagram and self.instagram.lower() not in ('n/a', '') else None
+                mail_clean = self.mail.strip().lower() if self.mail and self.mail.lower() not in ('n/a', '') else None
+                por_copia = []
+                if ig_clean:
+                    por_copia.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig_clean)
+                if mail_clean:
+                    por_copia.append(func.lower(FinancialSale.mail_cliente) == mail_clean)
+                if por_copia:
+                    sales_count = FinancialSale.query.filter(
+                        FinancialSale.person_uuid.is_(None), or_(*por_copia)).count()
 
         # Resolver cliente de forma global
         from app.models import Client, Appointment, SurveyAnswer, SurveyQuestion
@@ -144,7 +246,10 @@ class FinancialAgenda(db.Model):
             client_filters.append(func.lower(Client.email) == mail_clean)
             
         client = None
-        if client_filters:
+        # Por su persona primero; la búsqueda por texto queda para las agendas todavía sin vincular.
+        if self.person_uuid:
+            client = Client.query.filter_by(person_uuid=self.person_uuid).order_by(Client.id).first()
+        if not client and client_filters and not self.person_uuid:
             client = Client.query.filter(or_(*client_filters)).first()
         if not client and ig_clean and ig_clean.startswith("no_ig_"):
             try:
@@ -196,8 +301,10 @@ class FinancialAgenda(db.Model):
                 if mapped_res:
                     display_estado = mapped_res
 
+        contacto = self.contacto()
         return {
             "id": self.id,
+            "person_uuid": self.person_uuid,
             "nombre": self.nombre,
             # De donde salio la Fuente: 'formulario_calendly' cuando la puso el
             # formulario del setter (es la que vale) o None si viene del webhook /
@@ -207,12 +314,12 @@ class FinancialAgenda(db.Model):
             "fuente_form": (self.raw_data or {}).get('fuente_form'),
             "registro": self.registro or (self.created_at.isoformat() if self.created_at else None),
             "fecha_meet": self.fecha_meet,
-            "whatsapp": self.whatsapp,
+            "whatsapp": contacto['whatsapp'],
             "zona_geografica": self.zona_geografica,
             "closer": self.closer,
-            "lead": self.lead,
-            "mail": self.mail,
-            "instagram": self.instagram,
+            "lead": contacto['lead'],
+            "mail": contacto['mail'],
+            "instagram": contacto['instagram'],
             "estado": self.estado or "Pendiente",
             "closer_result": display_estado,
             "encargado_triage": self.encargado_triage,

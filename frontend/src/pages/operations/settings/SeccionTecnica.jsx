@@ -9,6 +9,7 @@ import BugReportsPanel from '../../../components/operations/BugReportsPanel';
 import PlaybookAdminPanel from '../../../components/operations/PlaybookAdminPanel';
 import BackupPage from '../../admin/backup/BackupPage';
 import RestorePage from '../../admin/backup/RestorePage';
+import VentasParaRevisar from './VentasParaRevisar';
 
 /**
  * Las secciones del panel técnico de Operaciones, por id. Es la ÚNICA lista de lo que hay: el espacio de
@@ -29,6 +30,8 @@ export const ETIQUETAS_TECNICAS = {
     // de «Administración» y solo se abría por URL hasta el 10/10/2026.
     respaldo: 'Respaldo',
     restaurar: 'Restaurar',
+    // Las ventas activas con un motivo de revisión (21/10/2026): se abren en la ficha.
+    ventas_revisar: 'Ventas para revisar',
 };
 
 const SeccionTecnica = ({ id, embebido = false }) => {
@@ -47,6 +50,7 @@ const SeccionTecnica = ({ id, embebido = false }) => {
         case 'operations': return <OperationsPage />;
         case 'respaldo': return <BackupPage embebido />;
         case 'restaurar': return <RestorePage embebido />;
+        case 'ventas_revisar': return <VentasParaRevisar />;
         default: return null;
     }
 };

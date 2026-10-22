@@ -582,4 +582,13 @@ export const PREGUNTAS = [
     ],
     cuando: esVenta,
   },
+  { // La suscripción la decide el closer (20/10/2026): Work es la fuente de verdad del acceso.
+    clave: 'venta_acceso_hasta', hito: 'upsell', tipo: 'formulario', enunciado: '¿Hasta cuándo tiene acceso?',
+    ayuda: 'Opcional. Vacío: 7 días si es una seña, 4 meses si no (o lo que ya tenga, si es más).',
+    campos: [{
+      campo: 'acceso_hasta', label: 'Acceso hasta (opcional)', tipo: 'fecha',
+      presets: [{ label: '4 meses', meses: 4 }, { label: '6 meses', meses: 6 }, { label: '1 año', meses: 12 }],
+    }],
+    cuando: (r, c) => esVenta(r, c) && r.dar_acceso_academia === true,
+  },
 ];

@@ -131,7 +131,7 @@ describe('TabFulfillment', () => {
 
     await usuario.click(screen.getByRole('button', { name: 'Actualizar' }));
 
-    expect(onConsultar).toHaveBeenCalledTimes(2);
+    expect(onConsultar.mock.calls.filter(([nombre]) => nombre === 'fulfillment')).toHaveLength(2);
   });
 
   it('avisa cuando la Academia no tiene el producto pagado y ofrece darlo ahí mismo', async () => {

@@ -60,10 +60,14 @@ class LearnationService:
         return LearnationService._request('GET', '/users/check', params={'email': email})
 
     @staticmethod
-    def upsert_user(email, name, phone=None):
+    def upsert_user(email, name, phone=None, work_uuid=None):
+        """`work_uuid`: el uuid de la persona en Work (plan_personas): la Academia lo guarda y con
+        él se identifican los dos de ahí en adelante."""
         body = {'email': email, 'name': name}
         if phone:
             body['phone'] = phone
+        if work_uuid:
+            body['work_uuid'] = work_uuid
         return LearnationService._request('POST', '/users/upsert', json=body)
 
     @staticmethod
@@ -98,6 +102,12 @@ class LearnationService:
         """Avisa un pago a la Academia (ver app/services/academy_payment_sync.py). Idempotente
         del lado de la Academia por `sale_id`."""
         return LearnationService._request('POST', '/payments', json=payload)
+
+    @staticmethod
+    def report_subscription(payload):
+        """Le manda a la Academia la suscripción tal como quedó en Work, que es la fuente de verdad
+        (ver app/services/subscription_sync.py). La Academia la aplica tal cual, también si acorta."""
+        return LearnationService._request('POST', '/subscriptions', json=payload)
 
     @staticmethod
     def report_payment_status(payload):

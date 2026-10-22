@@ -448,7 +448,8 @@ def agenda_closers():
         cid = a.get('work_client_id') if isinstance(a.get('work_client_id'), int) else None
         cliente = db.session.get(Client, cid) if cid else None
         if not cliente and email:
-            cliente = Client.query.filter(func.lower(Client.email) == email).first()
+            from app.agendas_v2.operacion import cliente_por_email
+            cliente = cliente_por_email(email)
         venta = FinancialSale.query.filter(
             FinancialSale.client_id == cliente.id, FinancialSale.email_vendedor.isnot(None),
             FinancialSale.email_vendedor != '').order_by(FinancialSale.date.desc(), FinancialSale.id.desc()).first() \

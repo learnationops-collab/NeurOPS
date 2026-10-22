@@ -17,7 +17,7 @@ telefono) en una sola consulta acotada a este cliente.
 """
 from datetime import datetime
 
-from sqlalchemy import func, or_
+from sqlalchemy import or_
 
 from app import db
 from app.models import Appointment, Client, FinancialSale
@@ -83,40 +83,55 @@ def resolver_lead(appointment_id=None, client_id=None):
 
 
 def _ventas_del_cliente(client):
-    """Las ventas de este cliente, con el mismo cruce por contacto que usa el resto del sistema.
+    """Las ventas de este cliente: las de su persona y las atadas a él por id; la copia del pago
+    cuenta solo en las que no tienen persona (`filtro_de_pagos`). Una sola consulta."""
+    from app.services.sales_consistency_service import filtro_de_pagos
 
-    Una sola consulta: `_resolve_sales_and_clients()` da lo mismo pero cargando todas las ventas de
-    la base y resolviendo el cliente de cada una con varias consultas por fila.
-    """
     if not client:
         return []
-    filtros = [FinancialSale.client_id == client.id]
-    email = (client.email or '').strip().lower()
-    if email and '@' in email:
-        filtros.append(func.lower(FinancialSale.mail_cliente) == email)
-    ig = (client.instagram or '').strip().lstrip('@').lower()
-    if ig and ig != 'n/a':
-        filtros.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig)
-    telefono = (client.phone or '').strip()
-    if len(telefono) >= 8:
-        filtros.append(FinancialSale.telefono.like(f'%{telefono[-8:]}%'))
-
-    ventas = FinancialSale.query.filter(
-        or_(*filtros),
+    return FinancialSale.query.filter(
+        filtro_de_pagos(client),
         or_(FinancialSale.estado.in_(('Completada', 'Confirmada')),
             FinancialSale.estado.is_(None), FinancialSale.estado == ''),
     ).order_by(FinancialSale.date.asc(), FinancialSale.id.asc()).all()
-    return ventas
+
+
+def _datos_de_persona(client):
+    """Nombre, mail, teléfono e instagram de la persona del cliente (sus principales), con las
+    columnas del cliente de respaldo; y todos sus datos, con el uso de cada uno: los vigentes
+    primero y después los dados de baja (`baja`) y los que son de otra persona (`revisar`)."""
+    from app.models import PersonIdentity
+
+    person = client.person if client else None
+    propios = {'nombre': client.full_name, 'email': client.email, 'telefono': client.phone,
+               'instagram': client.instagram} if client else {}
+    if person is None:
+        return propios, []
+    datos = {'nombre': person.full_name or propios['nombre'], 'email': person.email or propios['email'],
+             'telefono': person.phone or propios['telefono'], 'instagram': person.instagram or propios['instagram']}
+    todas = person.identities.order_by(PersonIdentity.kind, PersonIdentity.is_primary.desc(), PersonIdentity.id).all()
+    identidades = [{
+        'id': i.id, 'tipo': i.kind,
+        # El teléfono se guarda normalizado (sus últimos 8 dígitos): el principal se muestra entero.
+        'valor': person.phone if (i.kind == 'phone' and i.is_primary and person.phone) else i.value,
+        'principal': bool(i.is_primary), 'uso': i.uso,
+        'baja': _iso(i.retired_at), 'revisar': i.review_note, 'fuente': i.source,
+    } for i in sorted(todas, key=lambda i: (i.retired_at is not None or i.review_note is not None))]
+    return datos, identidades
 
 
 def _identidad(appt, client, programa_nombre, ingreso, baja=None):
+    contacto, identidades = _datos_de_persona(client)
     return {
         'client_id': client.id if client else None,
+        # La persona (docs/plan_personas.md): su uuid y todos sus datos, el principal y los demás.
+        'person_uuid': client.person_uuid if client else None,
+        'identidades': identidades,
         'appointment_id': appt.id if appt else None,
-        'nombre': (client.full_name or client.email or 'Sin nombre') if client else 'Sin cliente',
-        'email': (client.email or None) if client else None,
-        'telefono': (client.phone or None) if client else None,
-        'instagram': (client.instagram or None) if client else None,
+        'nombre': (contacto['nombre'] or contacto['email'] or 'Sin nombre') if client else 'Sin cliente',
+        'email': (contacto['email'] or None) if client else None,
+        'telefono': (contacto['telefono'] or None) if client else None,
+        'instagram': (contacto['instagram'] or None) if client else None,
         'examen': (appt.examen or None) if appt else None,
         'programa': programa_nombre,
         'grupo': (client.grupo or None) if client else None,
@@ -292,7 +307,7 @@ def _resultado(appt, ventas, estado_libro, confirmada, deuda, tipos_vendidos, co
 # --- Cobro ------------------------------------------------------------------------------------
 
 def _cobro(client, ventas, deuda, programa_code, programa_nombre, enrollment_dt, baja=None):
-    from app.models import InstallmentPlan
+    from app.models import InstallmentPlan, Sale
     from app.services.sales_consistency_service import SalesConsistencyService
     from app.services.sheets_service import SheetsService
     from app.services.transferencias_service import es_transferencia
@@ -315,7 +330,11 @@ def _cobro(client, ventas, deuda, programa_code, programa_nombre, enrollment_dt,
                       'monto': float(v.monto or 0.0), 'tipo': tipo,
                       'tipo_pago': v.tipo_pago or None, 'programa_code': programa,
                       'es_transferencia': es_transferencia(v.metodo_pago),
-                      'transferido_a': v.transferido_a})
+                      'transferido_a': v.transferido_a, 'sale_id': v.sale_id})
+    # Las ventas del cliente (20/10/2026): a cuál pertenece cada pago, y entre cuáles se elige al
+    # cargar o mover uno.
+    ventas_del_cliente = ([s.to_dict() for s in Sale.query.filter_by(client_id=client_id)
+                           .order_by(Sale.sold_at.asc(), Sale.id.asc()).all()] if client_id else [])
     pagado = round(sum(p['monto'] for p in pagos), 2)
     fechas = [p['fecha'] for p in pagos if p['fecha']]
 
@@ -340,6 +359,7 @@ def _cobro(client, ventas, deuda, programa_code, programa_nombre, enrollment_dt,
         # si la baja se revierte. Lo que dice que no se cobra es la etapa y la marca de la baja.
         'cuotas': cuotas,
         'pagos': pagos,
+        'ventas': ventas_del_cliente,
         'estado_pagos': (SalesConsistencyService.get_client_payment_state(client_id, programa_code)
                          if client_id else None),
     }

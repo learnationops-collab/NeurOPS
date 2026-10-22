@@ -70,4 +70,4 @@ ENV PORT=8080
 EXPOSE 8080
 
 # Run the application
-CMD gunicorn --timeout 120 --bind 0.0.0.0:$PORT run:app
+CMD gunicorn -c gunicorn.conf.py --bind 0.0.0.0:$PORT run:app

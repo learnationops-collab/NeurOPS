@@ -93,6 +93,7 @@ def get_dashboard():
             "last_stage": appt.last_stage,
             "seq_num": seq,
             "client_id": appt.client_id,
+            "person_uuid": appt.client.person_uuid if appt.client else None,
             "sales_count": appt.client.enrollments.count() if appt.client else 0,
             "has_sale": (appt.client.enrollments.count() > 0) if appt.client else False,
             "result": appt.result if (appt.result and appt.result.strip().lower() not in ('show up', 'no show', 'cerrada', 'cerrado', '2th call', '2da call', 'follow up', 'show_up', 'no_show', 'cerrado/a')) else "Pendiente",
@@ -140,6 +141,22 @@ def get_assigned_leads():
         "kpis": kpis
     }), 200
 
+def _cliente_por_persona(datos):
+    """El cliente para estos datos ({name, email, instagram, phone}) con la regla de la venta
+    (`sheets_service.post_to_sheets`): primero la persona y su cliente; sin ningún dato que la
+    identifique, el cruce de siempre de `BookingService`."""
+    from app.services import person_service
+    from app.services.booking_service import BookingService
+
+    existente = None
+    if person_service.claves(email=datos.get('email'), instagram=datos.get('instagram'), phone=datos.get('phone')):
+        person = person_service.resolver(datos.get('name') or None, datos.get('email'), datos.get('instagram'),
+                                         datos.get('phone'), fuente='ficha')
+        existente = person_service.cliente_de(person)
+        db.session.commit()
+    return BookingService.create_or_update_client(datos, client_id=existente.id if existente else None)
+
+
 @bp.route('/leads/search', methods=['GET'])
 @login_required
 def search_closer_leads():
@@ -151,20 +168,30 @@ def search_closer_leads():
     if len(query_str) < 2: return jsonify([]), 200
     
     term = f"%{query_str}%"
-    # Buscar clientes por nombre completo, email, instagram o teléfono
+    # Buscar clientes por nombre completo, email, instagram o teléfono, y por cualquier dato de su
+    # persona (un mail o instagram secundario también la encuentra, docs/plan_personas.md)
+    from app.models import PersonIdentity
+    por_persona = db.session.query(PersonIdentity.person_uuid).filter(
+        PersonIdentity.value.ilike(term), PersonIdentity.retired_at.is_(None))
     leads = Client.query.filter(or_(
-        Client.full_name.ilike(term), 
+        Client.full_name.ilike(term),
         Client.email.ilike(term),
         Client.instagram.ilike(term),
-        Client.phone.ilike(term)
+        Client.phone.ilike(term),
+        Client.person_uuid.in_(por_persona)
     )).limit(20).all()
-    
+
     results = []
     seen_emails = set()
     seen_instagrams = set()
     seen_phones = set()
+    seen_personas = set()
 
     for l in leads:
+        if l.person_uuid and l.person_uuid in seen_personas:
+            continue
+        if l.person_uuid:
+            seen_personas.add(l.person_uuid)
         # Deduplicar contra otras filas Client duplicadas para la misma persona real (la
         # deduplicación automática de clientes no atrapa el 100% de los casos — ver
         # ClientDedupService) — de lo contrario el mismo cliente aparece varias veces en la
@@ -199,16 +226,11 @@ def search_closer_leads():
         else:
             # Buscar en agendas de Google Sheets (FinancialAgenda) por instagram o email
             from app.models.financial import FinancialAgenda
-            ig_clean = l.instagram.strip().replace('@', '').lower() if l.instagram else None
-            
-            fin_filters = []
-            if ig_clean:
-                fin_filters.append(db.func.lower(db.func.replace(FinancialAgenda.instagram, '@', '')) == ig_clean)
-            if l.email:
-                fin_filters.append(db.func.lower(FinancialAgenda.mail) == l.email.strip().lower())
-                
-            if fin_filters:
-                fin_agenda = FinancialAgenda.query.filter(or_(*fin_filters)).order_by(FinancialAgenda.date.desc()).first()
+            from app.services import agenda_contacto_service
+
+            fin_filtro = agenda_contacto_service.filtro(l.person_uuid, instagram=l.instagram, mail=l.email)
+            if fin_filtro is not None:
+                fin_agenda = FinancialAgenda.query.filter(fin_filtro).order_by(FinancialAgenda.date.desc()).first()
                 if fin_agenda:
                     appt_data = {
                         "start_time": fin_agenda.date.isoformat() if fin_agenda.date else None,
@@ -218,6 +240,7 @@ def search_closer_leads():
                     
         results.append({
             "id": l.id,
+            "person_uuid": l.person_uuid,
             "username": l.full_name or l.email,
             "email": l.email,
             "phone": l.phone,
@@ -228,16 +251,16 @@ def search_closer_leads():
         
     # Buscar en agendas de Google Sheets (FinancialAgenda) por coincidencia de nombre, email, instagram o teléfono
     from app.models.financial import FinancialAgenda
-    fin_leads = FinancialAgenda.query.filter(or_(
-        FinancialAgenda.lead.ilike(term),
-        FinancialAgenda.mail.ilike(term),
-        FinancialAgenda.instagram.ilike(term),
-        FinancialAgenda.whatsapp.ilike(term)
-    )).order_by(FinancialAgenda.date.desc()).limit(20).all()
-    
+    from app.services import agenda_contacto_service
+    fin_leads = agenda_contacto_service.precargar(FinancialAgenda.query.filter(
+        agenda_contacto_service.busqueda(term)).order_by(FinancialAgenda.date.desc()).limit(20).all())
+
     for fa in fin_leads:
-        fa_email = fa.mail.strip().lower() if fa.mail else None
-        fa_ig = fa.instagram.strip().replace('@', '').lower() if fa.instagram else None
+        if fa.person_uuid and fa.person_uuid in seen_personas:
+            continue
+        contacto = fa.contacto()
+        fa_email = contacto['mail'].strip().lower() if contacto['mail'] else None
+        fa_ig = contacto['instagram'].strip().replace('@', '').lower() if contacto['instagram'] else None
         
         # Omitir duplicados ya listados como Client
         if (fa_email and fa_email in seen_emails) or (fa_ig and fa_ig in seen_instagrams):
@@ -248,12 +271,15 @@ def search_closer_leads():
         if fa_ig:
             seen_instagrams.add(fa_ig)
             
+        if fa.person_uuid:
+            seen_personas.add(fa.person_uuid)
         results.append({
             "id": None,
-            "username": fa.lead,
-            "email": fa.mail,
-            "phone": fa.whatsapp,
-            "instagram": fa.instagram,
+            "person_uuid": fa.person_uuid,
+            "username": contacto['lead'],
+            "email": contacto['mail'],
+            "phone": contacto['whatsapp'],
+            "instagram": contacto['instagram'],
             "appointment": {
                 "start_time": fa.date.isoformat() if fa.date else None,
                 "setter_name": fa.nombre or "",
@@ -277,6 +303,8 @@ def get_lead_stage(client_id):
     result = CloserFollowUpService.get_client_lead_stage(client_id)
     if result is None:
         return jsonify({"message": "Cliente no encontrado"}), 404
+    # La persona del cliente (docs/plan_personas.md, Etapa 2a), para que el frontend la identifique.
+    result['person_uuid'] = db.session.query(Client.person_uuid).filter(Client.id == client_id).scalar()
     return jsonify(result), 200
 
 
@@ -290,8 +318,10 @@ def get_appointment_by_instagram():
     if not instagram:
         return jsonify({"error": "Instagram es requerido"}), 400
         
-    # 1. Buscar en la base de datos de clientes (Client) local
-    client = Client.query.filter(db.func.lower(Client.instagram) == instagram.lower()).first()
+    # 1. El cliente de la persona con ese instagram (aunque sea uno secundario) y, si no, el del texto
+    from app.services import person_service
+    client = (person_service.cliente_de(person_service.buscar(instagram=instagram), crear=False)
+              or Client.query.filter(db.func.lower(Client.instagram) == instagram.lower()).first())
     
     appointment_data = None
     if client:
@@ -318,11 +348,13 @@ def get_appointment_by_instagram():
     # 2. Si no se encontró en las citas locales, buscar en la base de datos de agendas de Google Sheets (FinancialAgenda)
     if not appointment_data:
         from app.models.financial import FinancialAgenda
-        fin_agenda = FinancialAgenda.query.filter(
-            db.func.lower(db.func.replace(FinancialAgenda.instagram, '@', '')) == instagram.lower()
-        ).order_by(FinancialAgenda.date.desc()).first()
-        
+        from app.services import agenda_contacto_service
+        persona = person_service.buscar(instagram=instagram)
+        fin_agenda = FinancialAgenda.query.filter(agenda_contacto_service.filtro(
+            persona.uuid if persona else None, instagram=instagram)).order_by(FinancialAgenda.date.desc()).first()
+
         if fin_agenda:
+            contacto = fin_agenda.contacto()
             # nombre es el setter, lead es el cliente
             appointment_data = {
                 "id": f"financial-{fin_agenda.id}",
@@ -330,10 +362,10 @@ def get_appointment_by_instagram():
                 "setter_name": fin_agenda.nombre or "",
                 "client": {
                     "id": None, # No tiene ID de Client local aún
-                    "username": fin_agenda.lead or "",
-                    "email": fin_agenda.mail or "",
-                    "phone": fin_agenda.whatsapp or "",
-                    "instagram": fin_agenda.instagram
+                    "username": contacto['lead'] or "",
+                    "email": contacto['mail'] or "",
+                    "phone": contacto['whatsapp'] or "",
+                    "instagram": contacto['instagram']
                 }
             }
             
@@ -446,6 +478,7 @@ def get_all_agendas():
             "linked_call": a.linked_call,
             "created_at": a.created_at.isoformat() if a.created_at else None,
             "client_id": a.client_id,
+            "person_uuid": a.client.person_uuid if a.client else None,
             "sales_count": a.client.enrollments.count() if a.client else 0,
             "has_sale": (a.client.enrollments.count() > 0) if a.client else False
         } for a in pagination.items],
@@ -629,7 +662,7 @@ def register_sale():
         
         # 1. Handle Client Creation/Update
         if not lead_id and client_data:
-            client = BookingService.create_or_update_client(client_data)
+            client = _cliente_por_persona(client_data)
             lead_id = client.id
             
         # 2. Handle Retrospective Appointment (if creating new client/sale directly)
@@ -751,6 +784,7 @@ def get_appointment(id):
         "id": appt.id,
         "lead_name": appt.client.full_name if appt.client else 'Sin Nombre',
         "client_id": appt.client_id,
+        "person_uuid": appt.client.person_uuid if appt.client else None,
         "start_time": appt.start_time.isoformat(),
         "last_stage": appt.last_stage,
         "result": appt.result,
@@ -781,9 +815,9 @@ def create_appointment():
         from app.services.booking_service import BookingService
         
         if not lead_id and client_data:
-            client = BookingService.create_or_update_client(client_data)
+            client = _cliente_por_persona(client_data)
             lead_id = client.id
-            
+
         start_time = None
         try:
             start_time = datetime.fromisoformat(start_time_str.replace('Z', ''))
@@ -997,6 +1031,9 @@ def get_lead_comments(id):
 
         # Ordenar cronológicamente descendente
         combined.sort(key=lambda x: str(x["created_at"]), reverse=True)
+        puuid = client.person_uuid if client else None
+        for item in combined:
+            item["person_uuid"] = puuid
         return jsonify(combined), 200
 
     except Exception as err:
@@ -1175,6 +1212,7 @@ def get_kanban_data():
             "result": a.result,
             "linked_call": a.linked_call,
             "client_id": a.client_id,
+            "person_uuid": a.client.person_uuid if a.client else None,
             "sales_count": a.client.enrollments.count() if a.client else 0,
             "has_sale": (a.client.enrollments.count() > 0) if a.client else False
         })
@@ -1285,6 +1323,7 @@ def get_client_details(client_id):
 
     return jsonify({
         "id": client.id,
+        "person_uuid": client.person_uuid,
         "full_name": client.full_name,
         "email": client.email,
         "phone": client.phone,
@@ -1342,7 +1381,8 @@ def _recover_form_data_by_contact(client):
     from app.models import Client
     from sqlalchemy import func, or_
 
-    filters = []
+    # Otro cliente de la misma persona (un duplicado sin fusionar) también tiene su formulario.
+    filters = [Client.person_uuid == client.person_uuid] if client.person_uuid else []
     if email:
         filters.append(func.lower(Client.email) == email)
     if ig:
@@ -1414,20 +1454,13 @@ def _format_appointment_for_deck(a, recover_form=False):
         start_search = a.start_time - timedelta(hours=12)
         end_search = a.start_time + timedelta(hours=12)
         
-        from sqlalchemy import func
-        ig_clean = client.instagram.strip().replace('@', '').lower() if client.instagram and client.instagram.lower() not in ('n/a', '') else None
-        mail_clean = client.email.strip().lower() if client.email and client.email.lower() not in ('n/a', '') else None
-        
-        filters = []
-        if mail_clean:
-            filters.append(func.lower(FinancialAgenda.mail) == mail_clean)
-        if ig_clean:
-            filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_clean)
-            
+        from app.services import agenda_contacto_service
+        filtro = agenda_contacto_service.filtro(client.person_uuid, instagram=client.instagram, mail=client.email)
+
         agenda = None
-        if filters:
+        if filtro is not None:
             agenda = FinancialAgenda.query.filter(
-                or_(*filters),
+                filtro,
                 FinancialAgenda.date >= start_search,
                 FinancialAgenda.date <= end_search
             ).first()
@@ -1459,6 +1492,7 @@ def _format_appointment_for_deck(a, recover_form=False):
     return {
         "id": a.id,
         "client_id": a.client_id,
+        "person_uuid": a.client.person_uuid if a.client else None,
         "lead_name": a.client.full_name or "Sin Nombre" if a.client else "Sin Cliente",
         "email": a.client.email if a.client else "",
         "phone": a.client.phone if a.client else "",
@@ -2210,12 +2244,16 @@ def search_closer_deck_leads():
     # Solo buscar leads activos (pendientes de atención)
     query = query.filter(Appointment.result.in_(['Entrante', 'Agendado']))
         
+    from app.models import PersonIdentity
+    por_persona = db.session.query(PersonIdentity.person_uuid).filter(
+        PersonIdentity.value.ilike(term), PersonIdentity.retired_at.is_(None))
     appointments = query.filter(
         or_(
             Client.full_name.ilike(term),
             Client.email.ilike(term),
             Client.instagram.ilike(term),
-            Client.phone.ilike(term)
+            Client.phone.ilike(term),
+            Client.person_uuid.in_(por_persona)
         )
     ).order_by(Appointment.start_time.desc()).limit(20).all()
     
@@ -2238,23 +2276,20 @@ def get_sales_client_state():
     if current_user.role not in ['closer', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
 
+    from app.services import person_service
     from app.services.sales_consistency_service import SalesConsistencyService
-    from app.services.booking_service import BookingService
 
     programa = (request.args.get('programa') or 'RR').strip().upper()
     client_id = request.args.get('client_id', type=int)
 
     if not client_id:
-        # Resolver por email/instagram/teléfono si todavía no hay un client_id conocido
-        # (ej. lead sintético de búsqueda global sin cita local aún).
-        email = request.args.get('email')
-        instagram = request.args.get('instagram')
-        phone = request.args.get('phone')
-        if email or instagram or phone:
-            client = BookingService.create_or_update_client({
-                'name': request.args.get('name'), 'email': email, 'instagram': instagram, 'phone': phone
-            })
-            client_id = client.id if client else None
+        # Sin client_id se busca a la persona por email/instagram/teléfono, SIN crear: una lectura
+        # no crea personas (docs/plan_personas.md). Si no existe, el estado sale vacío y
+        # `client_id` en null; la persona nace cuando se guarda la venta.
+        person = person_service.buscar(request.args.get('name') or None, email=request.args.get('email'),
+                                       instagram=request.args.get('instagram'), phone=request.args.get('phone'))
+        client = person_service.cliente_de(person, crear=False) if person else None
+        client_id = client.id if client else None
 
     state = SalesConsistencyService.get_client_payment_state(client_id, programa)
     state['allowed_types'] = SalesConsistencyService.get_allowed_types(client_id, programa)
@@ -2313,6 +2348,21 @@ def update_closer_sale(sale_id):
 
     if not cambios:
         return jsonify({"message": "No hubo cambios que guardar", "sale": sale.to_dict()}), 200
+    contacto = {k: cambios[k]['despues'] for k in ('nombre_cliente', 'mail_cliente', 'telefono', 'instagram')
+                if k in cambios}
+    if contacto:
+        # Lo que se muestra de la venta sale de su persona: corregir es corregirla a ella (`persona_de_venta`,
+        # el mismo criterio que la ficha). La copia se sigue escribiendo hasta la Etapa 2c.
+        from app.services.persona_de_venta import DatoDeOtraPersona, corregir_persona_de_venta
+        try:
+            corregir_persona_de_venta(sale, contacto, modo='pago' if data.get('modo') == 'pago' else 'corregir',
+                                      usuario=current_user)
+        except DatoDeOtraPersona as e:
+            db.session.rollback()
+            return jsonify({"error": str(e)}), 409
+        except ValueError as e:
+            db.session.rollback()
+            return jsonify({"error": str(e)}), 400
     if 'metodo_pago' in cambios:
         # Una venta que deja de ser transferencia pierde a quién se le hizo (`transferencias_service`).
         from app.services.transferencias_service import para_guardar
@@ -2432,6 +2482,8 @@ def update_client_total_amount(client_id):
 
     anterior = client.total_amount
     client.total_amount = nuevo_total
+    from app.services.sale_service import fijar_total
+    fijar_total(client, nuevo_total)  # y en su venta 'new' vigente (frente L)
 
     try:
         db.session.commit()
@@ -2560,7 +2612,9 @@ def get_closer_deck_comments(appt_id):
         return jsonify({"message": "Forbidden"}), 403
     from app.models import Comment
     comments = Comment.query.filter_by(associated_id=appt_id, comment_type='appointment').order_by(Comment.created_at.asc()).all()
-    return jsonify([c.to_dict() for c in comments]), 200
+    appt = db.session.get(Appointment, appt_id)
+    puuid = appt.client.person_uuid if appt and appt.client else None
+    return jsonify([{**c.to_dict(), 'person_uuid': puuid} for c in comments]), 200
 
 
 @bp.route('/deck/comments/<int:appt_id>', methods=['POST'])
@@ -2610,7 +2664,7 @@ def post_closer_deck_comment(appt_id):
         
     try:
         db.session.commit()
-        return jsonify(comment.to_dict()), 201
+        return jsonify({**comment.to_dict(), 'person_uuid': appt.client.person_uuid if appt.client else None}), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": f"Error al guardar comentario: {str(e)}"}), 500
@@ -2848,6 +2902,7 @@ def get_unread_no_agenda_closer():
             results.append({
                 "id": -(c.id + 5000000), # ID negativo especial
                 "client_id": c.id,
+                "person_uuid": c.person_uuid,
                 "lead_name": c.full_name or "Sin Nombre",
                 "email": c.email or "",
                 "instagram": c.instagram or "",
@@ -2924,6 +2979,7 @@ def get_leads_audit():
 
         leads.append({
             "client_id": client.id,
+            "person_uuid": client.person_uuid,
             "full_name": client.full_name or "Sin Nombre",
             "email": client.email,
             "phone": client.phone,

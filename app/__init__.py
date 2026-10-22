@@ -132,6 +132,10 @@ def create_app(config_class=Config):
     from app.api.copiloto import bp as copiloto_api_bp
     app.register_blueprint(copiloto_api_bp, url_prefix='/api/copiloto')
 
+    # Motor genérico de tablas (ver app/services/tablas/ y docs/plan_tablas_motor_generico.md).
+    from app.api.tablas import bp as tablas_api_bp
+    app.register_blueprint(tablas_api_bp, url_prefix='/api/tablas')
+
     from app.api.public import bp as public_api_bp
     app.register_blueprint(public_api_bp, url_prefix='/api')
     csrf.exempt(public_api_bp) # Exento para llamadas publicas / webhooks de n8n
@@ -285,5 +289,18 @@ def create_app(config_class=Config):
 
     from app.services.workshop_live_sync import register_workshop_live_sync
     register_workshop_live_sync(app)
+
+    from app.services.sale_service import register_sale_tracking
+    register_sale_tracking(app)
+
+    from app.services.subscription_sync import register_subscription_sync
+    register_subscription_sync(app)
+
+    from app.services.person_service import register_person_tracking
+    register_person_tracking(app)
+
+    # Cada lead de ManyChat deja su persona y su conversación (docs/plan_personas.md, frente B).
+    from app.services.conversaciones_service import registrar as register_conversation_tracking
+    register_conversation_tracking()
 
     return app

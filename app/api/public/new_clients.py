@@ -2,6 +2,7 @@ from flask import request, jsonify
 from app import db
 from app.models import FinancialSale, Client
 from app.api.public import bp
+from app.services import person_service
 from app.services.identity_service import normalize_email, normalize_ig
 from datetime import datetime
 from sqlalchemy import func, or_
@@ -63,11 +64,12 @@ def get_new_clients_dashboard():
     sales = FinancialSale.query.order_by(FinancialSale.date.asc()).all()
     
     # Agrupacion Union-Find
+    # La persona agrupa sus ventas (docs/plan_personas.md); el ig y el mail, solo en las que no la tienen.
     uf = UnionFind()
     for s in sales:
         ig = normalize_ig(s.instagram)
         email = normalize_email(s.mail_cliente)
-        if ig and email:
+        if not s.person_uuid and ig and email:
             uf.union(ig, email)
 
     # Organizar ventas por cliente consolidado
@@ -76,7 +78,9 @@ def get_new_clients_dashboard():
         ig = normalize_ig(s.instagram)
         email = normalize_email(s.mail_cliente)
         
-        if ig:
+        if s.person_uuid:
+            key = f"persona_{s.person_uuid}"
+        elif ig:
             key = uf.find(ig)
         elif email:
             key = uf.find(email)
@@ -89,6 +93,8 @@ def get_new_clients_dashboard():
 
     clients_list = []
     
+    # Lo que se muestra de cada cliente sale de su persona (`FinancialSale.contacto`).
+    mails_de_pago = FinancialSale.mails_de_pago(sales)
     # Procesar cada cliente consolidado
     for key, group_sales in leads.items():
         # Las ventas ya vienen ordenadas por date.asc() del query, pero nos aseguramos
@@ -133,19 +139,22 @@ def get_new_clients_dashboard():
                 continue
 
         # Si califica, computar metricas
-        client_name = last_sale.nombre_cliente or first_sale.nombre_cliente or 'Desconocido'
-        client_instagram = normalize_ig(last_sale.instagram) or normalize_ig(first_sale.instagram) or ''
-        client_email = normalize_email(last_sale.mail_cliente) or normalize_email(first_sale.mail_cliente) or ''
+        ultimo, primero = last_sale.contacto(mails_de_pago), first_sale.contacto(mails_de_pago)
+        client_name = ultimo['nombre_cliente'] or primero['nombre_cliente'] or 'Desconocido'
+        client_instagram = normalize_ig(ultimo['instagram']) or normalize_ig(primero['instagram']) or ''
+        client_email = normalize_email(ultimo['mail_cliente']) or normalize_email(primero['mail_cliente']) or ''
 
-        # Buscar el estado de Follow Up en la base de datos local
-        db_client = None
+        # Buscar el estado de Follow Up en la base de datos local: el cliente de su persona primero
+        person_uuid = next((s.person_uuid for s in reversed(sorted_sales) if s.person_uuid), None)
+        db_client = person_service.cliente_de(person_service.por_uuid(person_uuid), crear=False) if person_uuid else None
         filters_client = []
         if client_instagram:
             filters_client.append(func.lower(func.replace(Client.instagram, '@', '')) == client_instagram)
         if client_email:
             filters_client.append(func.lower(Client.email) == client_email)
         
-        if filters_client:
+        # Por el texto, solo un grupo sin persona.
+        if not db_client and not person_uuid and filters_client:
             db_client = Client.query.filter(or_(*filters_client)).first()
             
         follow_up_status = db_client.follow_up_status if db_client and db_client.follow_up_status else 'Por contactar'
@@ -247,8 +256,8 @@ def get_new_clients_dashboard():
         client_row = {
             "fecha": first_date_str,
             "nombre": client_name,
-            "instagram": last_sale.instagram or first_sale.instagram or '',
-            "email": last_sale.mail_cliente or first_sale.mail_cliente or '',
+            "instagram": ultimo['instagram'] or primero['instagram'] or '',
+            "email": ultimo['mail_cliente'] or primero['mail_cliente'] or '',
             "programa": prog_name,
             "pagos": {
                 "sena": round(sena_amount, 2),
@@ -266,6 +275,7 @@ def get_new_clients_dashboard():
             "dado_de_baja": dado_de_baja,
             "follow_up_status": follow_up_status,
             "client_id": client_id,
+            "person_uuid": person_uuid,
             "detalle_pagos": {
                 "sena": sena_detalle,
                 "completo": completo_detalle,
@@ -280,8 +290,8 @@ def get_new_clients_dashboard():
         # Filtrar por busqueda
         if search:
             match_name = search in client_name.lower()
-            match_ig = search in (last_sale.instagram or '').lower() or search in (first_sale.instagram or '').lower()
-            match_email = search in (last_sale.mail_cliente or '').lower() or search in (first_sale.mail_cliente or '').lower()
+            match_ig = search in (ultimo['instagram'] or '').lower() or search in (primero['instagram'] or '').lower()
+            match_email = search in (ultimo['mail_cliente'] or '').lower() or search in (primero['mail_cliente'] or '').lower()
             if not (match_name or match_ig or match_email):
                 continue
 
@@ -298,6 +308,7 @@ def update_client_follow_up():
     email = data.get('email', '').strip()
     nombre_cliente = data.get('nombre_cliente', '').strip()
     status = data.get('follow_up_status', '').strip()
+    person_uuid = (data.get('person_uuid') or '').strip() or None
 
     if not status:
         return jsonify({"error": "El estado de follow up es requerido"}), 400
@@ -310,18 +321,20 @@ def update_client_follow_up():
     ig_norm = normalize_ig(instagram)
     email_norm = normalize_email(email)
 
-    if not ig_norm and not email_norm:
+    if not person_uuid and not ig_norm and not email_norm:
         return jsonify({"error": "Se requiere instagram o email para identificar al cliente"}), 400
 
-    # Buscar si ya existe
-    client = None
+    # Buscar si ya existe: por su persona primero (docs/plan_personas.md), por las columnas de respaldo.
+    person = person_service.por_uuid(person_uuid) if person_uuid else None
+    client = person_service.cliente_de(person or person_service.buscar(
+        nombre_cliente, email=email_norm, instagram=ig_norm), crear=False)
     filters_client = []
     if ig_norm:
         filters_client.append(func.lower(func.replace(Client.instagram, '@', '')) == ig_norm)
     if email_norm:
         filters_client.append(func.lower(Client.email) == email_norm)
-    
-    if filters_client:
+
+    if not client and filters_client:
         client = Client.query.filter(or_(*filters_client)).first()
 
     try:

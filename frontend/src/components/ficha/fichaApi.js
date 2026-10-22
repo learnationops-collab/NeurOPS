@@ -13,11 +13,16 @@ import api from '../../services/api';
  * exactamente lo que tiene que pasar.
  */
 
-/** Lectura. Al menos uno de los dos ids; `client_id` sin agenda la resuelve el servidor. */
-export const obtenerFicha = ({ appointmentId = null, clientId = null, signal } = {}) => {
+/**
+ * Lectura. Al menos uno de los ids; `client_id` sin agenda la resuelve el servidor, y
+ * `person_uuid` (la persona, docs/plan_personas.md) abre la ficha de su cliente. Viajan juntos
+ * mientras el backend siga pidiendo `client_id`.
+ */
+export const obtenerFicha = ({ appointmentId = null, clientId = null, personUuid = null, signal } = {}) => {
     const params = {};
     if (appointmentId != null) params.appointment_id = appointmentId;
     if (clientId != null) params.client_id = clientId;
+    if (personUuid) params.person_uuid = personUuid;
     return api.get('/ficha/lead', { params, signal }).then(r => r.data);
 };
 
@@ -103,6 +108,10 @@ const RUTAS = {
     // todavía no es alumno), y quitar (vence hoy; pide `confirmo: true`). Ver `ficha_academia.py`.
     acceso_academia: (appt, p) => api.post(`/ficha/${appt}/academia/acceso`, p),
     quitar_acceso_academia: (appt, p) => api.post(`/ficha/${appt}/academia/quitar`, p),
+    // Las ventas (`Sale`) del bloque Ventas de Fulfillment: el id de la venta va en la URL. Cancelar
+    // pide `{motivo}`; ninguna de las dos toca los pagos ni la suscripción.
+    cancelar_venta: (appt, p) => api.post(`/ficha/ventas/${p.sale_id}/cancelar`, { motivo: p.motivo }),
+    reactivar_venta: (appt, p) => api.post(`/ficha/ventas/${p.sale_id}/reactivar`, {}),
 
     // Comunicación.
     enviar_nota: (appt, p) => api.post(`/ficha/${appt}/nota`, p),
@@ -119,6 +128,8 @@ const CONSULTAS = {
     // Cómo le va al alumno en la Academia. No viaja en `GET /ficha/lead` porque es una llamada a
     // otro sistema: si fallara, se caería la ficha entera en vez de una pestaña.
     fulfillment: (appt) => api.get(`/ficha/${appt}/fulfillment`),
+    // Las ventas de la persona con su total, lo cobrado, el saldo y sus pagos (`ventas_service`).
+    ventas: (appt) => api.get(`/ficha/${appt}/ventas`),
     // Cómo viene pagando el cliente el programa que se le está vendiendo (`{params: {programa}}`):
     // lo que ya pagó, lo que debe y qué tipos de pago siguen la secuencia. Depende del programa
     // que se elige en medio de la venta, por eso no viaja en la ficha.

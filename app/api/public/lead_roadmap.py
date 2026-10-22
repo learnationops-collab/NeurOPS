@@ -7,51 +7,18 @@ from app.services.identity_service import normalize_ig
 from datetime import datetime, timedelta
 from . import bp
 from sqlalchemy import or_, func
-import unicodedata
 
-def _strip_accents(s):
-    return ''.join(c for c in unicodedata.normalize('NFKD', s) if not unicodedata.combining(c))
-
-def names_plausibly_match(name_a, name_b):
-    # En agendas historicas, el mail/telefono de una fila a veces quedo mal cargado y
-    # coincide con el de OTRO cliente ya existente (ver caso Yrein Cordova / Rolando
-    # Sanchez Perez, sep/2026): sin este chequeo, resolver por mail/telefono terminaba
-    # mostrando la ficha completa (ventas, chat, historial) de una persona distinta a
-    # la que se hizo click. Si no hay nombre de un lado o del otro no podemos comparar,
-    # asi que no bloqueamos (evita falsos negativos cuando el lead nunca tuvo nombre).
-    if not name_a or not name_b:
-        return True
-    a_tokens = {t for t in _strip_accents(name_a).lower().split() if len(t) > 2}
-    b_tokens = {t for t in _strip_accents(name_b).lower().split() if len(t) > 2}
-    if not a_tokens or not b_tokens:
-        return True
-    return bool(a_tokens & b_tokens)
-
-def is_generic_val(val):
-    # Valida si un valor es generico o no valido
-    if not val:
-        return True
-    val_clean = str(val).strip().lower()
-    return val_clean in ('n/a', 'none', 'null', 'sin email', 'sin telefono', 'sin teléfono', 'desconocido', '')
-
-def format_datetime_es(dt):
-    # Formatea un objeto datetime a string legible en español
-    if not dt:
-        return ""
-    months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
-    return f"{dt.day:02d} {months[dt.month - 1]} {dt.year}, {dt.hour:02d}:{dt.minute:02d} hs"
-
-def format_date_es(dt):
-    # Formatea un objeto datetime a solo fecha en español
-    if not dt:
-        return ""
-    months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
-    return f"{dt.day:02d} {months[dt.month - 1]} {dt.year}"
+# Re-export: lo que vivia aca y se partio en modulos (regla de las 500 lineas).
+from .lead_roadmap_helpers import (  # noqa: F401
+    _strip_accents, names_plausibly_match, is_generic_val, format_datetime_es, format_date_es)
+from .lead_roadmap_sections import build_activity, build_programs, frequent_objections_and_dolores
+from .lead_roadmap_edit import update_client_roadmap, relate_event_roadmap  # noqa: F401
 
 @bp.route('/public/lead-roadmap', methods=['GET'])
 def get_lead_roadmap():
     try:
         client_id = request.args.get('client_id', type=int)
+        person_uuid = request.args.get('person_uuid', type=str)
         instagram = request.args.get('instagram', type=str)
         email = request.args.get('email', type=str)
         phone = request.args.get('phone', type=str)
@@ -65,9 +32,14 @@ def get_lead_roadmap():
         comments = []
         survey_answers = []
 
-        # 1. Resolver el cliente por ID
+        from app.services import person_service
+
+        # 1. Resolver el cliente por ID, o por la persona (docs/plan_personas.md, Etapa 2a)
+        person = person_service.por_uuid(person_uuid) if person_uuid else None
         if client_id:
             client = Client.query.get(client_id)
+        if not client and person:
+            client = person_service.cliente_de(person, crear=False)
 
         # 2. Resolver por otros campos si no se encontró
         ig_norm = normalize_ig(instagram)
@@ -77,7 +49,12 @@ def get_lead_roadmap():
         clean_email = email.strip().lower() if email and not is_generic_val(email) else None
         clean_phone = phone.strip() if phone and not is_generic_val(phone) else None
         clean_name = name.strip() if name and name.strip() else None
-        
+
+        if not client and not person:
+            # La persona primero (docs/plan_personas.md): cualquiera de sus mails, instagrams o teléfonos.
+            person = person_service.buscar(clean_name, email=clean_email, instagram=ig_norm, phone=clean_phone)
+            client = person_service.cliente_de(person, crear=False)
+
         if not client:
             if ig_norm:
                 candidate = Client.query.filter(func.lower(Client.instagram) == ig_norm).first()
@@ -103,6 +80,10 @@ def get_lead_roadmap():
                     func.lower(Client.full_name).like(f"%{clean_name.lower()}%")
                 ).first()
 
+        if person is None and client is not None and client.person_uuid:
+            person = person_service.por_uuid(client.person_uuid)
+        puuid = person.uuid if person else None
+
         # Si se encontró un Client, normalizamos sus búsquedas para jalar todo lo relacionado
         resolved_ig = normalize_ig(client.instagram) if client else ig_norm
         if is_generic_val(resolved_ig):
@@ -111,35 +92,36 @@ def get_lead_roadmap():
         resolved_email = client.email.strip().lower() if client and client.email and not is_generic_val(client.email) else clean_email
         resolved_phone = client.phone.strip() if client and client.phone and not is_generic_val(client.phone) else clean_phone
 
-        # 3. Buscar ManychatLead
-        if resolved_ig:
+        # 3. Buscar ManychatLead: el de la persona y, si no, por instagram
+        from app.services.conversaciones_service import lead_de_persona
+        manychat_lead = lead_de_persona(puuid)
+        if not manychat_lead and resolved_ig:
             manychat_lead = ManychatLead.query.filter(func.lower(ManychatLead.ig) == resolved_ig).first()
         if not manychat_lead and resolved_email:
             manychat_lead = ManychatLead.query.filter(func.lower(ManychatLead.ig) == resolved_email).first() # Fallback a veces guardado como email
 
         # 4. Buscar FinancialAgendas
-        agenda_filters = []
-        if resolved_ig:
-            agenda_filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == resolved_ig)
-        if resolved_email:
-            agenda_filters.append(func.lower(FinancialAgenda.mail) == resolved_email)
-        if resolved_phone:
-            agenda_filters.append(FinancialAgenda.whatsapp.like(f"%{resolved_phone}%"))
-        
-        if agenda_filters:
-            financial_agendas = FinancialAgenda.query.filter(or_(*agenda_filters)).order_by(FinancialAgenda.date.desc()).all()
+        # Las de su persona; por la copia, solo las agendas sin persona (Etapa 2b).
+        from app.services import agenda_contacto_service
+        agenda_filtro = agenda_contacto_service.filtro(puuid, instagram=resolved_ig, mail=resolved_email,
+                                                       telefono=resolved_phone)
+        if agenda_filtro is not None:
+            financial_agendas = FinancialAgenda.query.filter(agenda_filtro).order_by(FinancialAgenda.date.desc()).all()
+        contacto_agenda = financial_agendas[0].contacto() if financial_agendas else {}
 
-        # 5. Buscar FinancialSales
-        sale_filters = []
-        if resolved_ig:
-            sale_filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == resolved_ig)
-        if resolved_email:
-            sale_filters.append(func.lower(FinancialSale.mail_cliente) == resolved_email)
-        if resolved_phone:
-            sale_filters.append(FinancialSale.telefono.like(f"%{resolved_phone}%"))
-            
-        if sale_filters:
-            financial_sales = FinancialSale.query.filter(or_(*sale_filters)).order_by(FinancialSale.date.desc()).all()
+        # 5. Buscar FinancialSales: los de su persona y su ficha; la copia del pago (mail, instagram)
+        # cuenta solo en pagos sin persona (docs/plan_personas.md, Etapa 2b).
+        if puuid or client:
+            from app.services.sales_consistency_service import filtro_de_pagos
+            financial_sales = FinancialSale.query.filter(filtro_de_pagos(client, person_uuid=puuid))                 .order_by(FinancialSale.date.desc()).all()
+        else:
+            sale_filters = []
+            if resolved_ig:
+                sale_filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == resolved_ig)
+            if resolved_email:
+                sale_filters.append(func.lower(FinancialSale.mail_cliente) == resolved_email)
+            if sale_filters:
+                financial_sales = FinancialSale.query.filter(FinancialSale.person_uuid.is_(None), or_(*sale_filters))                     .order_by(FinancialSale.date.desc()).all()
 
         # 6. Buscar Appointments locales y respuestas de encuestas
         if client:
@@ -173,16 +155,18 @@ def get_lead_roadmap():
             created_at_val = datetime.utcnow().isoformat()
 
         # Consolidar datos de perfil del lead
+        contacto_venta = financial_sales[0].contacto() if financial_sales else {}
         lead_profile = {
             "id": client.id if client else None,
+            "person_uuid": puuid,
             # `clean_name` (el nombre de la fila sobre la que se hizo click) va antes que
             # financial_agendas[0].lead: cuando el mismo telefono/mail tiene varias agendas y la
             # mas reciente es una de las historicas sin `lead` cargado (ver Bug agendas viejas),
             # ese [0] queda vacio y no debe pisar el nombre que sabiamos que era el correcto.
-            "full_name": client.full_name if client else (clean_name or (manychat_lead.name if manychat_lead else (financial_sales[0].nombre_cliente if financial_sales else (financial_agendas[0].lead if financial_agendas else "Desconocido")))),
-            "email": client.email if client else (manychat_lead.ig if manychat_lead and '@' in manychat_lead.ig else (financial_sales[0].mail_cliente if financial_sales else (financial_agendas[0].mail if financial_agendas else "Sin Email"))),
-            "phone": client.phone if client else (financial_sales[0].telefono if financial_sales else (financial_agendas[0].whatsapp if financial_agendas else "Sin Teléfono")),
-            "instagram": client.instagram if client else (manychat_lead.ig if manychat_lead else (financial_sales[0].instagram if financial_sales else (financial_agendas[0].instagram if financial_agendas else "Sin Instagram"))),
+            "full_name": client.full_name if client else (clean_name or (manychat_lead.name if manychat_lead else (contacto_venta['nombre_cliente'] if financial_sales else (contacto_agenda.get('lead') if financial_agendas else "Desconocido")))),
+            "email": client.email if client else (manychat_lead.ig if manychat_lead and '@' in manychat_lead.ig else (contacto_venta['mail_cliente'] if financial_sales else (contacto_agenda.get('mail') if financial_agendas else "Sin Email"))),
+            "phone": client.phone if client else (contacto_venta['telefono'] if financial_sales else (contacto_agenda.get('whatsapp') if financial_agendas else "Sin Teléfono")),
+            "instagram": client.instagram if client else (manychat_lead.ig if manychat_lead else (contacto_venta['instagram'] if financial_sales else (contacto_agenda.get('instagram') if financial_agendas else "Sin Instagram"))),
             "status": "Entrante",
             "created_at": created_at_val,
             "objeciones": client.objeciones if client else "",
@@ -393,107 +377,8 @@ def get_lead_roadmap():
             }
         })
 
-        # Construir Historial de Actividad Cronológica
-        activity = []
-
-        # 1. Llegada
-        activity.append({
-            "date": lead_profile["created_at"],
-            "event": "Llegó al embudo",
-            "detail": f"Prospecto ingresó al sistema. Origen resuelto: {arrived_stage['details']['origen']}",
-            "origin": "ManyChat" if manychat_lead else "Sistema"
-        })
-
-        # 2. Respuestas de bot
-        if manychat_lead:
-            answers = LeadAnswer.query.filter_by(lead_id=manychat_lead.id).all()
-            for la in answers:
-                activity.append({
-                    "date": la.created_at.isoformat() if la.created_at else lead_profile["created_at"],
-                    "event": "Interacción Bot",
-                    "detail": f"Keyword: {la.keyword} | Opción: {la.id_option_send or 'Seleccionada'} (Calificación: {la.qualification})",
-                    "origin": "ManyChat"
-                })
-
-        # 3. Agendas
-        seen_agenda_dates = set()
-        for fa in financial_agendas:
-            fecha_formateada = ""
-            if fa.date:
-                fecha_formateada = format_date_es(fa.date)
-            elif fa.fecha_meet:
-                fecha_formateada = fa.fecha_meet.split('T')[0]
-            else:
-                fecha_formateada = "N/A"
-
-            if fecha_formateada in seen_agenda_dates and fecha_formateada != "N/A":
-                continue
-            seen_agenda_dates.add(fecha_formateada)
-
-            activity.append({
-                "id": fa.id,
-                "event_type": "agenda",
-                "date": fa.registro if fa.registro else (fa.date.isoformat() if fa.date else (fa.created_at.isoformat() if fa.created_at else lead_profile["created_at"])),
-                "event": "Agenda Creada",
-                "detail": f"Cita programada para {fecha_formateada} con closer: {fa.closer or 'Sin asignar'} (Fuente: {fa.nombre})",
-                "origin": "Calendly / Webhook"
-            })
-
-        # 4. Appointments locales
-        for appt in appointments:
-            if appt.result or appt.start_time < datetime.utcnow():
-                activity.append({
-                    "date": appt.start_time.isoformat(),
-                    "event": "Llamada Realizada",
-                    "detail": f"Resultado: {appt.result or 'Terminada'}. Notas: {appt.closer_notes or 'Sin notas'}",
-                    "origin": "Closer"
-                })
-
-        # 5. Ventas financieras
-        seen_sale_dates = set()
-        for fs in financial_sales:
-            fecha_venta_str = fs.date.strftime('%Y-%m-%d') if fs.date else "N/A"
-            if fecha_venta_str in seen_sale_dates and fecha_venta_str != "N/A":
-                continue
-            seen_sale_dates.add(fecha_venta_str)
-
-            activity.append({
-                "id": fs.id,
-                "event_type": "sale",
-                "date": fs.date.isoformat() if fs.date else lead_profile["created_at"],
-                "event": "Venta Registrada",
-                "detail": f"Declarada venta de {fs.tipo_pago} por ${fs.monto} via {fs.metodo_pago} (Estado: {fs.estado or 'Completada'})",
-                "origin": "Closer"
-            })
-
-        # 6. Comentarios / Notas Internas
-        for c in comments:
-            activity.append({
-                "date": c.created_at.isoformat(),
-                "event": f"Nota de {c.author_rel.username if c.author_rel else 'Desconocido'}",
-                "detail": c.text,
-                "origin": "Notas Internas"
-            })
-
-        # 6b. Calificación manual
-        if client and (client.dolores or client.objeciones or client.observaciones):
-            detail_parts = []
-            if client.dolores:
-                detail_parts.append(f"Dolores: {client.dolores}")
-            if client.objeciones:
-                detail_parts.append(f"Objeciones: {client.objeciones}")
-            if client.observaciones:
-                detail_parts.append(f"Obs. Call Confirmer: {client.observaciones}")
-                
-            activity.append({
-                "date": client.created_at.isoformat() if client.created_at else lead_profile["created_at"],
-                "event": "Calificación Registrada",
-                "detail": " | ".join(detail_parts),
-                "origin": "Call Confirmer"
-            })
-
-        # Ordenar por fecha descendentemente
-        activity.sort(key=lambda x: x["date"] or "", reverse=True)
+        activity = build_activity(lead_profile, arrived_stage, manychat_lead, financial_agendas, appointments,
+                                  financial_sales, comments, client)
 
         # Ventas resumen
         sales_summary = None
@@ -539,79 +424,9 @@ def get_lead_roadmap():
             } for c in comments
         ]
 
-        # 7. Permanencia en Programas
-        programs_list = []
-        seen_program_names = set()
-        
-        if client:
-            for enroll in client.enrollments.all():
-                program_name = enroll.program.name if enroll.program else "Programa Desconocido"
-                seen_program_names.add(program_name.lower().strip())
-                total_paid = enroll.total_paid
-                days_enrolled = (datetime.utcnow() - enroll.enrollment_date).days if enroll.enrollment_date else 0
-                permanence_str = f"{days_enrolled} días"
-                if days_enrolled >= 30:
-                    months = days_enrolled // 30
-                    rem_days = days_enrolled % 30
-                    permanence_str = f"{months} mes(es)"
-                    if rem_days > 0:
-                        permanence_str += f" y {rem_days} día(s)"
-                    
-                programs_list.append({
-                    "program_name": program_name,
-                    "enrollment_date": enroll.enrollment_date.isoformat() if enroll.enrollment_date else None,
-                    "total_paid": total_paid,
-                    "permanence": permanence_str,
-                    "source": "Matrícula"
-                })
+        programs_list = build_programs(client, financial_sales)
 
-        # Integrar también desde FinancialSales
-        for fs in financial_sales:
-            if not fs.tipo_pago:
-                continue
-            p_name = fs.tipo_pago.strip()
-            if p_name.lower().strip() in seen_program_names:
-                continue
-                
-            seen_program_names.add(p_name.lower().strip())
-            
-            days_enrolled = (datetime.utcnow() - fs.date).days if fs.date else 0
-            permanence_str = f"{days_enrolled} días"
-            if days_enrolled >= 30:
-                months = days_enrolled // 30
-                rem_days = days_enrolled % 30
-                permanence_str = f"{months} mes(es)"
-                if rem_days > 0:
-                    permanence_str += f" y {rem_days} día(s)"
-                    
-            total_paid_product = sum(sale.monto or 0.0 for sale in financial_sales if sale.tipo_pago and sale.tipo_pago.strip().lower() == p_name.lower())
-            
-            programs_list.append({
-                "program_name": p_name,
-                "enrollment_date": fs.date.isoformat() if fs.date else None,
-                "total_paid": total_paid_product,
-                "permanence": permanence_str,
-                "source": "Venta Declarada"
-            })
-
-        # Objeciones y dolores mas frecuentes
-        all_clients = Client.query.with_entities(Client.objeciones, Client.dolores).all()
-        objection_counts = {}
-        dolores_counts = {}
-        for c_obj, c_dol in all_clients:
-            if c_obj:
-                for obj in c_obj.split(','):
-                    obj_clean = obj.strip()
-                    if obj_clean:
-                        objection_counts[obj_clean] = objection_counts.get(obj_clean, 0) + 1
-            if c_dol:
-                for dol in c_dol.split(','):
-                    dol_clean = dol.strip()
-                    if dol_clean:
-                        dolores_counts[dol_clean] = dolores_counts.get(dol_clean, 0) + 1
-
-        frequent_objections = sorted(objection_counts.keys(), key=lambda k: objection_counts[k], reverse=True)[:10]
-        frequent_dolores = sorted(dolores_counts.keys(), key=lambda k: dolores_counts[k], reverse=True)[:10]
+        frequent_objections, frequent_dolores = frequent_objections_and_dolores()
 
         # Keyword seguro
         appt_keyword = appointments[0].keyword if appointments else (getattr(financial_agendas[0], 'keyword', None) if financial_agendas else None)
@@ -633,158 +448,3 @@ def get_lead_roadmap():
         import logging
         logging.error(f"Error en get_lead_roadmap: {e}", exc_info=True)
         return jsonify({"error": f"Error al procesar los datos del lead: {str(e)}"}), 500
-
-@bp.route('/public/lead-roadmap/update-client', methods=['POST'])
-def update_client_roadmap():
-    data = request.get_json() or {}
-    client_id = data.get('client_id')
-    email = data.get('email')
-    if email:
-        email = email.strip().lower()
-        if is_generic_val(email) or '@' not in email:
-            email = None
-
-    phone = data.get('phone')
-    if phone:
-        phone = phone.strip()
-        if is_generic_val(phone):
-            phone = None
-
-    instagram = data.get('instagram')
-    full_name = data.get('full_name')
-    objeciones = data.get('objeciones')
-    observaciones = data.get('observaciones')
-    dolores = data.get('dolores')
-
-    client = None
-    if client_id:
-        client = Client.query.get(client_id)
-        
-    # Solo se busca por Instagram si hay un usuario real: `== None` se traduce a IS NULL y
-    # empataria con el primer cliente sin Instagram (que luego se sobrescribe).
-    ig_norm = normalize_ig(instagram)
-    if not client and ig_norm:
-        client = Client.query.filter(func.lower(Client.instagram) == ig_norm).first()
-
-    if not client and email:
-        client = Client.query.filter(func.lower(Client.email) == email.strip().lower()).first()
-
-    # Si no existe, crear uno nuevo
-    if not client:
-        # Se requiere al menos un nombre para crear
-        if not full_name:
-            return jsonify({"error": "Para crear un nuevo cliente se requiere el Nombre Completo"}), 400
-        client = Client(
-            full_name=full_name,
-            email=email.strip().lower() if email else None,
-            phone=phone.strip() if phone else None,
-            instagram=normalize_ig(instagram),
-            objeciones=objeciones,
-            observaciones=observaciones,
-            dolores=dolores
-        )
-        db.session.add(client)
-        db.session.flush()
-    else:
-        # Actualizar campos existentes
-        if full_name:
-            client.full_name = full_name
-        if email:
-            client.email = email.strip().lower()
-        if phone:
-            client.phone = phone.strip()
-        if instagram:
-            client.instagram = normalize_ig(instagram)
-        if objeciones is not None:
-            client.objeciones = objeciones
-        if observaciones is not None:
-            client.observaciones = observaciones
-        if dolores is not None:
-            client.dolores = dolores
-
-    if objeciones is not None or observaciones is not None or dolores is not None:
-        from app.models import Notification
-        notif = Notification(
-            subject=f"Calificación de Lead Actualizada: {client.full_name or client.instagram or 'Desconocido'}",
-            content=f"Se actualizaron los datos de calificación del lead.\nDolores: {client.dolores or 'N/A'}\nObjeciones: {client.objeciones or 'N/A'}\nObservaciones: {client.observaciones or 'N/A'}",
-            target_users=["all"],
-            associated_id=client.id,
-            associated_type="lead"
-        )
-        db.session.add(notif)
-
-    try:
-        db.session.commit()
-        return jsonify({
-            "message": "Ficha de cliente guardada con éxito",
-            "client": {
-                "id": client.id,
-                "full_name": client.full_name,
-                "email": client.email,
-                "phone": client.phone,
-                "instagram": client.instagram,
-                "objeciones": client.objeciones or "",
-                "observaciones": client.observaciones or "",
-                "dolores": client.dolores or "",
-                "form_data": client.form_data
-            }
-        }), 200
-    except Exception as e:
-        db.session.rollback()
-        import logging
-        logging.getLogger(__name__).error(f"Error al guardar calificación del lead: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@bp.route('/public/lead-roadmap/relate-event', methods=['POST'])
-def relate_event_roadmap():
-    data = request.get_json() or {}
-    event_type = data.get('event_type') # 'sale' o 'agenda'
-    event_id = data.get('event_id')
-    instagram = data.get('instagram')
-
-    if not event_type or not event_id or not instagram:
-        return jsonify({"error": "Faltan datos requeridos (event_type, event_id, instagram)"}), 400
-
-    ig_norm = normalize_ig(instagram)
-    if not ig_norm:
-        return jsonify({"error": "Instagram inválido o vacío"}), 400
-
-    try:
-        if event_type == 'sale':
-            sale = FinancialSale.query.get(event_id)
-            if not sale:
-                return jsonify({"error": "Venta no encontrada"}), 404
-            sale.instagram = ig_norm
-            
-            # Sincronizar en Sheets si aplica
-            if sale.marca_temporal:
-                from app.services.sheets_service import SheetsService
-                update_payload = {
-                    "email_vendedor": sale.email_vendedor,
-                    "nombre_cliente": sale.nombre_cliente,
-                    "telefono": sale.telefono,
-                    "mail_cliente": sale.mail_cliente,
-                    "tipo_pago": sale.tipo_pago,
-                    "monto": sale.monto,
-                    "segundo_pago": sale.segundo_pago,
-                    "metodo_pago": sale.metodo_pago,
-                    "examen": sale.examen,
-                    "instagram": sale.instagram,
-                    "setter": sale.setter,
-                    "estado": sale.estado
-                }
-                SheetsService.update_in_sheets("Ventas_DB", sale.marca_temporal, update_payload)
-
-        elif event_type == 'agenda':
-            agenda = FinancialAgenda.query.get(event_id)
-            if not agenda:
-                return jsonify({"error": "Agenda no encontrada"}), 404
-            agenda.instagram = ig_norm
-        else:
-            return jsonify({"error": "Tipo de evento inválido"}), 400
-
-        db.session.commit()
-        return jsonify({"message": f"Evento {event_type} relacionado con éxito a @{ig_norm}"}), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500

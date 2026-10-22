@@ -51,6 +51,7 @@ def compute_payment_expiration(client_id, programa_code, tipo_simple, fecha_pago
 def build_payment_payload(sale):
     """El aviso de un pago, armado dentro de la request (lee la base). None si no se avisa."""
     from app.models import Client
+    from app.services import person_service
     from app.services.sheets_service import SheetsService
 
     if (sale.estado or 'Completada') != 'Completada':
@@ -58,22 +59,37 @@ def build_payment_payload(sale):
     # El webhook de la hoja guarda la venta con lo minimo y deja el resto en raw_data.
     raw = sale.raw_data or {}
     tipo_pago = sale.tipo_pago or raw.get('tipo_pago')
-    email = (sale.mail_cliente or raw.get('mail_cliente') or raw.get('email') or '').strip().lower() or None
+    # Lo copiado en el pago (o en raw_data) se lee solo si el pago no tiene persona (Etapa 2b).
+    person, email = sale.person, None
+    if person is None:
+        email = (sale.mail_cliente or raw.get('mail_cliente') or raw.get('email') or '').strip().lower() or None
+        person = person_service.buscar(sale.nombre_cliente, email=email) if email else None
     client = Client.query.get(sale.client_id) if sale.client_id else None
+    if not client and person:
+        client = person_service.cliente_de(person, crear=False)
     if not client and email:
         client = Client.query.filter(func.lower(Client.email) == email).first()
-    email = email or ((client.email or '').strip().lower() if client else None)
+    # A la Academia, el mail con que entra el alumno: el de ese uso o el principal. El del pago
+    # solo si el pago no tiene persona.
+    from app.services.academy_payment_status import email_academia
+    email = email_academia(person, email) or ((client.email or '').strip().lower() if client else None)
     if not email and not client:
         return None
 
     programa, tipo = SheetsService.parse_tipo_pago(tipo_pago)
     fecha = sale.date or datetime.utcnow()
-    expires_at = compute_payment_expiration(client.id if client else None, programa, tipo, fecha)
+    # La suscripción de Work manda (20/10/2026): un pago ya no compra días por su cuenta. Sin
+    # suscripción (programa sin producto vinculado, datos viejos) queda la regla de antes.
+    from app.services.subscription_service import vencimiento_de
+    expires_at = (vencimiento_de(client.id if client else None, programa)
+                  or compute_payment_expiration(client.id if client else None, programa, tipo, fecha))
 
     return {
         'sale_id': sale.id,
         'email': email,
         'work_client_id': client.id if client else None,
+        # El id de la persona en todos los servicios (docs/plan_personas.md, frente G).
+        'work_uuid': person.uuid if person else (client.person_uuid if client else None),
         'fecha': fecha.date().isoformat() if isinstance(fecha, datetime) else str(fecha),
         'monto': sale.monto,
         'tipo_pago': tipo_pago,

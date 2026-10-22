@@ -219,7 +219,7 @@ def agendas_para_atribuir():
     `FinancialAgenda.query.all()`: la misma consulta, sin ORDER BY, como la nómina."""
     return db.session.query(
         FinancialAgenda.id, FinancialAgenda.nombre, FinancialAgenda.instagram, FinancialAgenda.mail,
-        FinancialAgenda.date, FinancialAgenda.created_at,
+        FinancialAgenda.date, FinancialAgenda.created_at, FinancialAgenda.person_uuid,
     ).all()
 
 

@@ -238,6 +238,7 @@ const HuesoFila = ({ paso }) => (
 const buildLeadPayload = (item, tipo) => ({
     id: item.id,
     client_id: item.client_id,
+    person_uuid: item.person_uuid || null,
     lead_name: item.lead_name,
     instagram: item.instagram,
     phone: item.phone,

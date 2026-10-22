@@ -59,14 +59,17 @@ def _cliente(payload):
         phone=_o_none(lead.get('telefono')),
     )
     # El formulario más reciente manda: un cliente que vuelve a agendar actualiza su nombre y su
-    # contacto con lo que acaba de escribir (pedido del 06/10/2026). Se lo encontró por email o
-    # teléfono, así que un email distinto acá no lo tiene ningún otro cliente.
+    # contacto con lo que acaba de escribir (pedido del 06/10/2026). Ahora se lo encuentra por cualquier
+    # dato de su persona (también un instagram o un mail secundario), así que el email nuevo puede ser de
+    # otro cliente: ese no se pisa (`clients.email` es único). El principal de la persona no cambia acá.
     nuevo = {
         'full_name': _o_none(lead.get('nombre')),
         'email': (_o_none(lead.get('email')) or '').strip().lower() or None,
         'phone': _o_none(lead.get('telefono')),
         'instagram': (_o_none(lead.get('instagram')) or '').strip().lstrip('@').lower() or None,
     }
+    if nuevo['email'] and BookingService._email_de_otro(nuevo['email'], cliente.id):
+        nuevo['email'] = None
     for campo, valor in nuevo.items():
         if valor and getattr(cliente, campo) != valor:
             setattr(cliente, campo, valor)
@@ -94,11 +97,17 @@ def agenda_de(cliente_id, inicio):
     ).first()
 
 
+def _de_su_persona(**datos):
+    """El cliente de la persona con esos datos (cualquiera de sus mails o teléfonos), o None."""
+    from app.services import person_service
+    return person_service.cliente_de(person_service.buscar(**datos), crear=False)
+
+
 def cliente_por_email(email):
     email = (email or '').strip().lower()
     if not email:
         return None
-    return Client.query.filter(func.lower(Client.email) == email).first()
+    return _de_su_persona(email=email) or Client.query.filter(func.lower(Client.email) == email).first()
 
 
 def cliente_por_telefono(telefono):
@@ -107,6 +116,9 @@ def cliente_por_telefono(telefono):
     dig = re.sub('[^0-9]', '', telefono or '')
     if len(dig) < 8:
         return None
+    de_persona = _de_su_persona(phone=dig)
+    if de_persona is not None:
+        return de_persona
     candidatos = Client.query.filter(Client.phone.like(f'%{dig[-8:]}%')).order_by(Client.id).limit(20).all()
     exacto = next((c for c in candidatos if re.sub('[^0-9]', '', c.phone or '') == dig), None)
     return exacto or (candidatos[0] if candidatos else None)

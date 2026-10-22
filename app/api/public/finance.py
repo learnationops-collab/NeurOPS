@@ -863,10 +863,9 @@ def cambiar_atribucion_de_venta(sale_id):
     # La hoja de ventas queda al día, como con la edición de Operaciones, pero fuera de la request.
     if venta.marca_temporal:
         _propagar_lote_a_sheets(current_app._get_current_object(), [(venta.marca_temporal, {
-            "email_vendedor": venta.email_vendedor, "nombre_cliente": venta.nombre_cliente,
-            "telefono": venta.telefono, "mail_cliente": venta.mail_cliente, "tipo_pago": venta.tipo_pago,
+            "email_vendedor": venta.email_vendedor, **venta.contacto(), "tipo_pago": venta.tipo_pago,
             "monto": venta.monto, "segundo_pago": venta.segundo_pago, "metodo_pago": venta.metodo_pago,
-            "examen": venta.examen, "instagram": venta.instagram, "setter": venta.setter,
+            "examen": venta.examen, "setter": venta.setter,
             "estado": venta.estado,
         })])
     return jsonify(resultado), 200

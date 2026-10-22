@@ -166,6 +166,7 @@ export default function TabResultado({
       seguimientoTipo: res.seguimiento_tipo || null,
       appointmentId: ficha?.identidad?.appointment_id ?? null,
       clientId: ficha?.identidad?.client_id ?? null,
+      personUuid: ficha?.identidad?.person_uuid ?? null,
       estadoVenta: venta.estado,
       cargandoVenta: venta.cargando,
       closers: ficha?.vocabulario?.closers || [],

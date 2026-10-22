@@ -85,6 +85,7 @@ def avisar(appt, accion, datos, usuario):
         payload = {
             'reserva_id': academia.get('reserva_id'),
             'appointment_id': appt.id,
+            'work_uuid': appt.person_uuid,
             'closer_email': (usuario.email or '').lower() if usuario else None,
             'nota': (datos or {}).get('objecion') or ((datos or {}).get('deck') or {}).get('closer_notes')
                     or (datos or {}).get('closer_notes') or None,

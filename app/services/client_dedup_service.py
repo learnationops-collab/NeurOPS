@@ -1,7 +1,8 @@
 import logging
 import unicodedata
 from app import db
-from app.models import Client, Appointment, Enrollment, SurveyAnswer, ClientComment, CommentNotification, FinancialSale, ClientMergeLog, InstallmentPlan
+from app.models import (Client, Appointment, Enrollment, SurveyAnswer, ClientComment, CommentNotification, FinancialSale,
+                        ClientMergeLog, InstallmentPlan, Sale, Subscription, SubscriptionEvent)
 from app.services.attribution_service import UnionFind
 
 logger = logging.getLogger(__name__)
@@ -160,15 +161,18 @@ class ClientDedupService:
             (d.email for d in duplicates if d.email and not _es_email_placeholder(d.email) and necesita_email), None)
         fallback_phone = next((d.phone for d in duplicates if d.phone and not survivor.phone), None)
         fallback_ig = next((d.instagram for d in duplicates if d.instagram and not survivor.instagram), None)
+        personas = {d.person_uuid for d in duplicates if d.person_uuid and d.person_uuid != survivor.person_uuid}
 
         # BUG real encontrado (31/ago/2026, antes de fusionar en producción): faltaba
         # InstallmentPlan acá — un cliente duplicado con un plan de cuotas activo quedaba con el
         # plan huérfano (client_id apuntando a una fila borrada) después de la fusión, invisible
         # para el flujo de "Reportar pago" de una cuota.
-        for model in (Appointment, Enrollment, SurveyAnswer, ClientComment, CommentNotification, FinancialSale, InstallmentPlan):
+        for model in (Appointment, Enrollment, SurveyAnswer, ClientComment, CommentNotification, FinancialSale, InstallmentPlan,
+                      Sale):
             model.query.filter(model.client_id.in_(duplicate_ids)).update(
                 {model.client_id: survivor_id}, synchronize_session=False
             )
+        ClientDedupService._unir_suscripciones(survivor_id, duplicate_ids)
 
         for dup_id in duplicate_ids:
             db.session.add(ClientMergeLog(survivor_client_id=survivor_id, merged_client_id=dup_id, matched_on=matched_on))
@@ -187,8 +191,33 @@ class ClientDedupService:
         if fallback_ig:
             survivor.instagram = fallback_ig
 
+        if personas and not survivor.person_uuid:
+            survivor.person_uuid = personas.pop()
         db.session.commit()
         logger.info(f"[ClientDedup] Fusionados {duplicate_ids} -> {survivor_id} (matched_on={matched_on})")
+        if personas:
+            # Dos clientes de la misma persona eran dos personas: se juntan también (docs/plan_personas.md).
+            from app.services import person_service
+            person_service.fusionar(survivor.person_uuid, list(personas), f'Fusión de clientes ({matched_on})')
+
+    @staticmethod
+    def _unir_suscripciones(survivor_id, duplicate_ids):
+        """Una suscripción por cliente y producto: si los dos tenían el mismo producto queda la que vence
+        más tarde, con el historial de ambas."""
+        propias = {s.product_slug: s for s in Subscription.query.filter_by(client_id=survivor_id)}
+        for sub in Subscription.query.filter(Subscription.client_id.in_(duplicate_ids)).order_by(Subscription.id).all():
+            otra = propias.get(sub.product_slug)
+            if otra is None:
+                sub.client_id = survivor_id
+                propias[sub.product_slug] = sub
+                continue
+            if sub.expires_at > otra.expires_at:
+                otra.expires_at, otra.status, otra.is_deposit, otra.sale_id = sub.expires_at, sub.status, sub.is_deposit, sub.sale_id
+            otra.starts_at = min(otra.starts_at, sub.starts_at)
+            SubscriptionEvent.query.filter_by(subscription_id=sub.id).update(
+                {SubscriptionEvent.subscription_id: otra.id}, synchronize_session=False)
+            db.session.delete(sub)
+        db.session.flush()
 
     @staticmethod
     def run_full_dedup(dry_run=True):

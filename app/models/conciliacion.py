@@ -10,6 +10,7 @@ diferencias alguien ya miró y aceptó (`ConciliacionRevision`).
 from datetime import datetime
 
 from app import db
+from app.models.person import ConPersona
 
 
 class ConciliacionCarga(db.Model):
@@ -35,7 +36,7 @@ class ConciliacionCarga(db.Model):
                                   cascade='all, delete-orphan')
 
 
-class ConciliacionMovimiento(db.Model):
+class ConciliacionMovimiento(ConPersona, db.Model):
     """Un cobro de una pasarela, tal como lo dice su export.
 
     `fecha` es la hora de la pasarela en UTC−3 sin zona (ver `conciliacion_service.ZONA`). `bruto` es

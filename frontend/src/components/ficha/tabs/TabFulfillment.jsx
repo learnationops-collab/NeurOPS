@@ -29,6 +29,8 @@ import {
   AYUDA_ACCESO, SECCIONES, diasRestantes, estadoAcceso, nombreProducto,
 } from '../fulfillment';
 import AccesoAcademia from './AccesoAcademia';
+import SuscripcionWork from './SuscripcionWork';
+import VentasWork from './VentasWork';
 import '../../dashboard/pareja.css';
 import './fulfillment.css';
 
@@ -346,6 +348,17 @@ export default function TabFulfillment({ ficha, onConsultar, onAccion, irA }) {
           <motion.div {...entrar()}><OtrosAccesos datos={datos} /></motion.div>
         </>
       )}
+
+      {/* Lo que registra Work: se ve aunque la Academia no conteste o todavía no sea alumno. */}
+      {datos?.suscripciones?.length > 0 && (
+        <motion.div {...entrar()}>
+          <SuscripcionWork suscripciones={datos.suscripciones} programas={ficha?.vocabulario?.programas || []} />
+        </motion.div>
+      )}
+      {/* Las ventas de la persona, al lado de la suscripción que abren: piden lo suyo aparte. */}
+      <motion.div {...entrar()}>
+        <VentasWork onConsultar={onConsultar} onAccion={onAccion} programas={ficha?.vocabulario?.programas || []} />
+      </motion.div>
     </div>
   );
 }

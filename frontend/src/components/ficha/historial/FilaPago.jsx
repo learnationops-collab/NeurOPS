@@ -6,7 +6,7 @@ import { diaLegible } from '../piezas/fecha';
 import ElegirTransferencia from '../piezas/ElegirTransferencia';
 import { PREGUNTA_TRANSFERENCIA, esTransferencia, leyendaTransferencia } from '../transferencia';
 import CamposPago, {
-    etiquetaDeTipo, faltaParaGuardar, montoExacto, nombreDePrograma,
+    etiquetaDeTipo, etiquetaDeVenta, faltaParaGuardar, montoExacto, nombreDePrograma, ventasDelPrograma,
 } from './CamposPago';
 import BorrarConConfirmacion from './BorrarConConfirmacion';
 import MotivoDelFallo from './MotivoDelFallo';
@@ -36,8 +36,8 @@ import MotivoDelFallo from './MotivoDelFallo';
 const diaDe = (fecha) => (fecha ? String(fecha).slice(0, 10) : '');
 
 const FilaPago = ({
-    pago: p, medios = [], programas = [], tipos = [], transferencias = [], puedeEditar = false, onCorregir,
-    onBorrar,
+    pago: p, medios = [], programas = [], tipos = [], transferencias = [], ventas = [], puedeEditar = false,
+    onCorregir, onBorrar,
 }) => {
     const reducido = useReducedMotion();
     const ids = useId();
@@ -50,13 +50,18 @@ const FilaPago = ({
     const inicial = {
         fecha: diaDe(p.fecha), monto: p.monto != null ? String(p.monto) : '', medio: p.medio || '',
         programa: p.programa_code || '', tipo: p.tipo || '', transferido_a: p.transferido_a || null,
+        venta: p.sale_id != null ? String(p.sale_id) : '',
     };
+    const suVenta = ventas.find(v => v.id === p.sale_id);
     // El backend dice si es transferencia (`es_transferencia`); sin el dato, la misma regla acá.
     const esDeTransferencia = p.es_transferencia ?? esTransferencia(p.medio);
     const dia = diaLegible(p.fecha) || 'Sin fecha';
     const tipo = p.tipo ? etiquetaDeTipo(tipos, p.tipo) : (p.tipo_pago || 'Sin tipo');
     const detalle = [p.programa_code ? nombreDePrograma(programas, p.programa_code) : 'Sin programa',
-        p.medio || 'Sin medio'].join(' · ');
+        p.medio || 'Sin medio',
+        // Con más de una venta, de cuál es este pago: «venta Renovación · 1 jul 2026».
+        ventas.length > 1 && suVenta ? `venta ${etiquetaDeVenta(programas, suVenta, { conPrograma: false })}` : null,
+    ].filter(Boolean).join(' · ');
     // Cómo lo nombran los lectores de pantalla: «de $300 del 15 sep 2026».
     const cual = `de ${montoExacto(p.monto)} del ${dia}`;
 
@@ -86,6 +91,12 @@ const FilaPago = ({
             cambios.programa_code = valores.programa;
         }
         if (valores.tipo && valores.tipo !== inicial.tipo) cambios.tipo = valores.tipo;
+        // Moverlo a otra venta del mismo programa. «Automática» no viaja: si cambió el tipo o el
+        // programa, el sistema lo vuelve a ubicar solo.
+        if (valores.venta && valores.venta !== inicial.venta
+            && ventasDelPrograma(ventas, valores.programa).some(v => String(v.id) === valores.venta)) {
+            cambios.sale_id = Number(valores.venta);
+        }
         // A quién se le hizo la transferencia viaja solo si el medio que queda es transferencia:
         // si pasa a otro medio, el backend limpia la marca solo.
         if (esTransferencia(valores.medio) && (valores.transferido_a ?? null) !== inicial.transferido_a) {
@@ -210,7 +221,7 @@ const FilaPago = ({
                             setValores(v => ({ ...v, ...parche }));
                         }}
                         medios={medios} programas={programas} tipos={tipos} transferencias={transferencias}
-                        actual={{ medio: p.medio, programa: p.programa_code, tipo: p.tipo,
+                        ventas={ventas} actual={{ medio: p.medio, programa: p.programa_code, tipo: p.tipo,
                             tipoCrudo: p.tipo_pago, transferido_a: p.transferido_a }} />
 
                     <small className="t-cap mut">

@@ -1,7 +1,8 @@
 from datetime import datetime
 from app import db
+from app.models.person import ConPersona
 
-class PublicRegistration(db.Model):
+class PublicRegistration(ConPersona, db.Model):
     __tablename__ = 'public_registrations'
     
     id = db.Column(db.Integer, primary_key=True)

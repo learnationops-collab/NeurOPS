@@ -23,10 +23,11 @@ caia despues no se le atribuia a ningun taller.
 from datetime import datetime, time, timedelta
 
 import pytz
-from sqlalchemy import or_, func
+from sqlalchemy import and_, or_, func
 
 from app.models import Client, FinancialAgenda, FinancialSale, Appointment, WorkshopEvent
 from app.services.fuente_service import es_workshop_landing, es_workshop_vivo, es_sin_dueno
+from app.services.sales_consistency_service import filtro_de_pagos
 from app.services.ticket_service import SENA, VENTA, claves_de_venta, ticket_de
 
 # Handles que la gente escribe cuando no tiene Instagram: no identifican a nadie
@@ -184,20 +185,21 @@ def _estado_post_call(agenda):
     if not tiene_closer:
         return estado
 
-    ig = agenda.instagram.strip().replace('@', '').lower() \
-        if agenda.instagram and agenda.instagram.lower() not in ('n/a', '') else None
-    mail = agenda.mail.strip().lower() \
-        if agenda.mail and agenda.mail.lower() not in ('n/a', '') else None
+    from app.services.agenda_contacto_service import ig_limpio, mail_limpio
+    from app.services.booking_service import BookingService
+    contacto = agenda.contacto()  # de su persona; la copia si no tiene
+    ig, mail = ig_limpio(contacto['instagram']), mail_limpio(contacto['mail'])
 
     condiciones = []
     if ig:
         condiciones.append(func.lower(func.replace(Client.instagram, '@', '')) == ig)
     if mail:
         condiciones.append(func.lower(Client.email) == mail)
-    if not condiciones or not agenda.date:
+    client = BookingService.cliente_de_agenda(agenda)
+    if (client is None and not condiciones) or not agenda.date:
         return estado
 
-    client = Client.query.filter(or_(*condiciones)).first()
+    client = client or Client.query.filter(or_(*condiciones)).first()
     if not client:
         return estado
 
@@ -265,6 +267,8 @@ def _clave_identidad(agenda):
     handles que no identifican a nadie ('n/a', 'no tengo') se descartan, porque si no
     todos los que escribieron eso se fusionarian en una sola persona.
     """
+    if agenda.person_uuid:  # la persona es la clave; la copia solo en agendas sin persona
+        return f'p:{agenda.person_uuid}'
     ig = (agenda.instagram or '').strip().replace('@', '').lower()
     mail = (agenda.mail or '').strip().lower()
     lead = (agenda.lead or '').strip().lower()
@@ -354,24 +358,29 @@ def _ventas_de(agendas, compradores_ya_contados):
         if clave in compradores_ya_contados:
             continue
 
-        ig = (a.instagram or '').strip().replace('@', '').lower()
-        mail = (a.mail or '').strip().lower()
-        lead = (a.lead or '').strip().lower()
+        contacto = a.contacto()  # de su persona; la copia si no tiene
+        ig = (contacto['instagram'] or '').strip().replace('@', '').lower()
+        mail = (contacto['mail'] or '').strip().lower()
         ig = ig if ig and ig not in HANDLES_INVALIDOS else None
         mail = mail if mail and mail not in HANDLES_INVALIDOS else None
-        lead = lead if lead and len(lead) > 2 else None
 
-        condiciones = []
-        if ig:
-            condiciones.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig)
-        if mail:
-            condiciones.append(func.lower(FinancialSale.mail_cliente) == mail)
-        if lead:
-            condiciones.append(func.lower(FinancialSale.nombre_cliente) == lead)
+        # Los pagos de su persona; la copia del pago (mail, instagram, nunca el nombre) cuenta solo
+        # en pagos sin persona (docs/plan_personas.md, Etapa 2b).
+        if a.person_uuid:
+            filtro = filtro_de_pagos(person_uuid=a.person_uuid)
+        else:
+            condiciones = []
+            if ig:
+                condiciones.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig)
+            if mail:
+                condiciones.append(func.lower(FinancialSale.mail_cliente) == mail)
+            if not condiciones:
+                continue
+            filtro = and_(FinancialSale.person_uuid.is_(None), or_(*condiciones))
 
         piso_venta = a.created_at - timedelta(days=1) if a.created_at else None
         validas = [
-            s for s in FinancialSale.query.filter(or_(*condiciones)).all()
+            s for s in FinancialSale.query.filter(filtro).all()
             if _es_venta_valida(s) and (not piso_venta or not s.date or s.date >= piso_venta)
         ]
         ventas.update(validas)

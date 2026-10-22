@@ -92,7 +92,7 @@ def comisiones_del_rango(desde=None, hasta=None):
 
     Marlon suma sus dos partidas: cada venta de su lista dice de cuál es (`concepto`: 'propia' o
     'director') y `desglose` trae cada partida con su %, su neto, su comisión y sus ventas."""
-    from app.models import FinancialAgenda
+    from app.models import FinancialAgenda, FinancialSale
     from app.services.attribution_service import AttributionService
     from app.services.closer_name_service import resolver_nombre_closer
     from app.services.comision_tasas_service import por_mes
@@ -119,6 +119,8 @@ def comisiones_del_rango(desde=None, hasta=None):
     cash = {"neto": 0.0, "bruto": 0.0, "ventas": 0}
     mes_de_cierre = (hasta or datetime.utcnow()).strftime('%Y-%m')
 
+    # El cliente de cada venta, de su persona (`FinancialSale.contacto`).
+    contactos = FinancialSale.contactos(sales)
     for s in sales:
         if not venta_completada(s):
             continue
@@ -130,8 +132,9 @@ def comisiones_del_rango(desde=None, hasta=None):
         sale_data = {
             "id": s.id,
             "date": s.date.isoformat() if s.date else None,
-            "nombre_cliente": s.nombre_cliente,
-            "instagram": s.instagram,
+            "person_uuid": s.person_uuid,
+            "nombre_cliente": contactos[s.id]['nombre_cliente'],
+            "instagram": contactos[s.id]['instagram'],
             "monto_neto": round(monto_ajustado, 2),
             "monto_bruto": round(monto_original, 2),
             "metodo_pago": s.metodo_pago,
