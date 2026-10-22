@@ -23,6 +23,21 @@ COLUMN_LABELS = {
     'username': 'Usuario', 'role': 'Rol', 'title': 'Título',
 }
 
+# Fuentes con nombre propio (categoría "Del sistema"), en este orden: tabla -> (nombre, descripción).
+NAMED = {
+    'people': ('Personas', 'Cada persona: lead, cliente o alumno. Su uuid es su id en todos los sistemas'),
+    'clients': ('Clientes', 'El cliente comercial de cada persona: total a pagar, baja, objeciones'),
+    'sales': ('Ventas', 'Cada venta (nueva, renovación o upsell), con su programa, closer y estado'),
+    'financial_sales': ('Pagos', 'Cada pago registrado, con su venta y su persona'),
+    'installment_plans': ('Planes de cuotas', 'El plan de cuotas de cada venta en cuotas'),
+    'subscriptions': ('Suscripciones', 'Cada suscripción a un programa, con su vencimiento'),
+    'appointments': ('Agendas', 'Cada llamada agendada con un closer'),
+    'financial_agendas': ('Agendas (registro financiero)', 'Las agendas como las registra la planilla'),
+    'conversations': ('Conversaciones', 'Cada conversación de un setter con un lead'),
+    'enrollments': ('Inscripciones', 'Cada inscripción a un programa'),
+    'workshop_leads': ('Leads del workshop', 'Cada inscripto a un workshop'),
+}
+
 
 @dataclass
 class Campo:
@@ -31,6 +46,7 @@ class Campo:
     group: str
     kind: str  # text | number | date | instant | bool
     expr: object = field(repr=False)
+    detail: str = ''
 
 
 @dataclass
@@ -40,7 +56,11 @@ class Fuente:
     table: object = field(repr=False)
     pk: object = field(repr=False)
     label_expr: object = field(repr=False)
+    # La persona de la fila (people.uuid), la clave para cruzar con la Academia. None si la tabla no apunta a una.
+    person_expr: object = field(default=None, repr=False)
     fields: dict = field(default_factory=dict)
+    category: str = 'Todas las tablas'
+    description: str = ''
 
 
 def kind_of(column):
@@ -107,14 +127,32 @@ def _visible(user, column, kind):
     return not exclusion.is_amount(column.name, kind) or exclusion.sees_amounts(user)
 
 
-def build(user, table, tables):
+def alumno_expr(person):
+    """El id del alumno en la Academia (`alumno_id` de sus filas): la identidad learnation_user_id de la persona."""
+    # Con alias propio: si la fuente es person_identities, sin alias la subconsulta se correlaciona con la de afuera.
+    ids = db.metadata.tables['person_identities'].alias('alumno_ids')
+    return (select(ids.c.value)
+            .where(ids.c.person_uuid == person, ids.c.kind == 'learnation_user_id', ids.c.retired_at.is_(None))
+            .order_by(ids.c.is_primary.desc(), ids.c.id.desc()).limit(1).scalar_subquery())
+
+
+def build(user, table, tables, with_fields=True):
     pk = _pk(table)
-    fuente = Fuente(key=table.name, label=column_label(table.name), table=table, pk=pk, label_expr=_label_expr(table))
+    person = pk if table.name == 'people' else table.c.get('person_uuid')
+    named = NAMED.get(table.name)
+    fuente = Fuente(key=table.name, label=named[0] if named else column_label(table.name), table=table, pk=pk,
+                    label_expr=_label_expr(table), person_expr=person,
+                    category='Del sistema' if named else 'Todas las tablas',
+                    description=named[1] if named else f'Cada fila de la tabla {table.name}')
+    if not with_fields:
+        return fuente
 
     for col in table.columns:
         kind = kind_of(col)
         if _visible(user, col, kind):
-            fuente.fields[f'f.{col.name}'] = Campo(f'f.{col.name}', column_label(col.name), 'Datos', kind, col)
+            detail = ('Solo admin y director comercial. ' if exclusion.is_amount(col.name, kind) else '') + \
+                f'Columna {col.name} de {table.name}'
+            fuente.fields[f'f.{col.name}'] = Campo(f'f.{col.name}', column_label(col.name), 'Datos', kind, col, detail)
 
     for col in table.columns:
         parent = _parent_of(col, tables)
@@ -131,7 +169,8 @@ def build(user, table, tables):
             expr = select(alias.c[pcol.name]).where(ppk == col).scalar_subquery()
             key = f'p.{col.name}.{pcol.name}'
             label = f'{column_label(col.name)}: {column_label(pcol.name).lower()}'
-            fuente.fields[key] = Campo(key, label, group, kind, expr)
+            detail = f'{pcol.name} de la fila de {parent.name} en {col.name}'
+            fuente.fields[key] = Campo(key, label, group, kind, expr, detail)
 
     if pk is not None:
         children = _children(table, tables)
@@ -144,19 +183,24 @@ def build(user, table, tables):
             name = column_label(child.name) + (f' ({fk.name})' if child.name in repeated else '')
             key = f'n.{child.name}.{fk.name}'
             expr = select(func.count()).select_from(alias).where(alias.c[fk.name] == pk).scalar_subquery()
-            fuente.fields[key] = Campo(key, f'Cantidad: {name}', 'Relacionados', 'number', expr)
+            fuente.fields[key] = Campo(key, f'Cantidad: {name}', 'Relacionados', 'number', expr,
+                                       f'Filas de {child.name} que apuntan a esta por {fk.name}')
             if 'created_at' in alias.c:
                 key = f'l.{child.name}.{fk.name}'
                 expr = select(func.max(alias.c.created_at)).where(alias.c[fk.name] == pk).scalar_subquery()
-                fuente.fields[key] = Campo(key, f'Última: {name}', 'Relacionados', 'instant', expr)
+                fuente.fields[key] = Campo(key, f'Última: {name}', 'Relacionados', 'instant', expr,
+                                           f'Cuándo se creó la última fila de {child.name} que apunta a esta')
     return fuente
 
 
 def sources(user):
-    """{clave: Fuente} de lo que este usuario puede consultar. `users` no es fuente."""
+    """{clave: Fuente} de lo que este usuario puede consultar, sin sus campos (para listarlas). Primero las de
+    nombre propio, en el orden de NAMED; después el resto por nombre. `users` no es fuente."""
     tables = _tables()
-    return {name: build(user, t, tables) for name, t in sorted(tables.items())
-            if name != 'users' and _pk(t) is not None and exclusion.sees_table(user, name)}
+    order = list(NAMED)
+    listables = (n for n, t in tables.items() if n != 'users' and _pk(t) is not None and exclusion.sees_table(user, n))
+    keys = sorted(listables, key=lambda n: (n not in NAMED, order.index(n) if n in NAMED else 0, n))
+    return {n: build(user, tables[n], tables, with_fields=False) for n in keys}
 
 
 def source(user, key):

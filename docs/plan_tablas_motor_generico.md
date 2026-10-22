@@ -121,16 +121,22 @@ Sin migraciones: las definiciones guardadas (si hay pantalla) son la única tabl
 2. Fuentes Cuota, Venta y Agenda.
 3. **Validación:** reproducir los números que hoy dan Mi cartera, `comercial_analitica` y el resumen financiero.
 
-### Fase 3: agrupar, medir y avisos
+### Fase 3: agrupar, medir y avisos (hecha el 22/10)
 
-Conteo, suma, promedio, porcentaje con su n, y los avisos de §3.
+- **Formato:** el plan es el de `TablePlan` de la Academia (`app/services/tablas/plan.py`); la respuesta, la de su
+  `agent/ask`. Cada fila lleva `persona` (people.uuid) si la tabla apunta a una.
+- **Medición** (`medir.py`): count, sum, avg, min, max y pct, con los avisos y textos de su Board.
+  - Las fechas se agrupan **por mes** (la Academia elige día, semana o mes según el rango).
+  - Los 12 grupos más grandes; el resto va en `others`.
+- Probada en el servidor de prueba el 22/10.
 
-### Fase 4: el punto de entrada para los agentes
+### Fase 4: el punto de entrada para los agentes (hecha en parte el 22/10)
 
-1. `POST /api/agent/ask` (contrato de la visión §4.4): recibe una definición del motor (o una consulta conocida), quién
-   pregunta y el formato; devuelve el paquete (filas por clave), el método y la magnitud.
-2. Mismo token de integración que ya usa la Academia.
-3. El copiloto de Work usa el mismo motor como herramienta (reemplaza de a poco a `deuda_de` y `los_que_mas_deben`).
+1. **Hecho:** `POST /api/external/academy/agent/ask` con `ACADEMY_INBOUND_API_TOKEN`. Solo planes: una `pregunta` con IA
+   devuelve 422. La Academia ve lo de alguien sin rol de Work: sin montos ni tablas de admin, hasta decidir §8.7.
+2. **Hecho:** `LearnationService.agent_ask` para preguntarle a la Academia. Probado: el Pulso de sus 250 alumnos.
+3. **Falta:** el copiloto de Work con herramientas del motor (`fuentes_de_datos`, `calcular_tabla`, `consultar_academia`)
+   para admin y director comercial. Necesita que la Academia exponga su catálogo de claves sin IA.
 
 ### Fase 5: cierre
 

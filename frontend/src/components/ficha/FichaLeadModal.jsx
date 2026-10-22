@@ -54,7 +54,7 @@ const TabAcciones = lazyDe('TabAcciones');
 const ERRORES_EN_LINEA = new Set(['editar_agenda', 'corregir_seguimiento', 'agendar_seguimiento',
     'corregir_pago', 'borrar_pago', 'agregar_pago', 'eliminar_agenda', 'borrar_seguimiento',
     'borrar_plan', 'borrar_evento', 'crear_evento', 'reportar_resultado', 'registrar_venta',
-    'acceso_academia', 'quitar_acceso_academia', 'guardar_fathom', 'guardar_objecion',
+    'mail_academia', 'quitar_acceso_academia', 'prorrogar_acceso_academia', 'guardar_fathom', 'guardar_objecion',
     'pasar_a_recuperacion']);
 
 /**
@@ -91,12 +91,10 @@ const MENSAJES = {
         return 'Venta registrada.';
     },
     // Fulfillment. Una cuenta nueva le manda al alumno un correo para activar su contraseña.
-    acceso_academia: (r) => {
-        const hasta = r?.vence ? ` hasta el ${diaLegible(r.vence)}` : '';
-        if (r?.accion === 'renovado') return `Acceso a la Academia renovado${hasta}.`;
-        return r?.creada
-            ? `Acceso a la Academia dado${hasta}. Se le creó la cuenta y le llegó un correo para activar su contraseña.`
-            : `Acceso a la Academia dado${hasta}.`;
+    mail_academia: (r) => {
+        if (!r?.vence) return { tono: 'warning', texto: `Mail guardado (${r?.email}). No tiene una venta con acceso vigente: no se le dio acceso.` };
+        const base = `Mail corregido: entra con ${r.email} y tiene acceso hasta el ${diaLegible(r.vence)}.`;
+        return r.creada ? `${base} Se le creó la cuenta y le llegó un correo para activar su contraseña.` : base;
     },
     // El backend dice si el link es de Fathom (`es_fathom`): uno de otra herramienta se guarda
     // igual, pero el aviso lo dice.
@@ -105,6 +103,7 @@ const MENSAJES = {
         if (r.es_fathom === false) return { tono: 'warning', texto: 'Link guardado, pero no es de Fathom: revisalo.' };
         return 'Link de Fathom guardado: se abre desde la cabecera.';
     },
+    prorrogar_acceso_academia: (r) => `Prórroga dada: acceso a la Academia hasta el ${diaLegible(r?.vence)}.`,
     quitar_acceso_academia: 'Acceso a la Academia quitado: vence hoy. Se puede renovar cuando haga falta.',
     reprogramar: 'Llamada reprogramada.',
     cancelar: 'Cancelación registrada.',

@@ -455,33 +455,28 @@ def academy_baja():
 @bp.route('/subscriptions/prorroga', methods=['POST'])
 @require_academy_token
 def academy_prorroga():
-    """La Academia le da a un alumno una prórroga gratuita de su suscripción (20/10/2026): queda en
-    el historial de la suscripción en Work, con el motivo y quién la dio. Solo extiende.
+    """La Academia le pide a Work una prórroga gratuita de la suscripción de un alumno: de un tipo fijo
+    (`subscription_service.PRORROGAS`: seña 7 días, cortesía 1 mes) y con motivo. Work calcula la fecha
+    (22/10/2026: nadie la elige a mano) y la anota en el historial con quién la dio.
 
-    Cuerpo: `work_uuid`, `work_client_id` o `email`; `dias` (más de cero) o `expires_at` (YYYY-MM-DD);
-    `motivo`; `actor_email` (quién la dio en la Academia); `product_slug` opcional (sin él, la
-    suscripción que vence más tarde).
+    Cuerpo: `work_uuid`, `work_client_id` o `email`; `tipo`; `motivo`; `actor_email` (quién la dio en la
+    Academia); `product_slug` opcional (sin él, la suscripción que vence más tarde).
     """
-    from datetime import date
-
     from app.services import subscription_service
 
     data = request.get_json(silent=True) or {}
     cliente = cliente_del_alumno(data)
     if not cliente:
         return jsonify({"success": False, "error": "No existe ningún cliente con ese uuid, id o email"}), 404
-    motivo = str(data.get('motivo') or '').strip()
-    if not motivo:
-        return jsonify({"success": False, "error": "Falta el motivo de la prórroga"}), 422
     try:
-        hasta = date.fromisoformat(str(data['expires_at'])[:10]) if data.get('expires_at') else None
         sub = subscription_service.prorrogar(
-            cliente, slug=data.get('product_slug') or None, dias=data.get('dias'), hasta=hasta,
-            reason=f'Prórroga: {motivo}', actor_email=(data.get('actor_email') or '').strip().lower() or None)
+            cliente, data.get('tipo'), str(data.get('motivo') or ''), slug=data.get('product_slug') or None,
+            actor_email=(data.get('actor_email') or '').strip().lower() or None, source='academia')
     except LookupError as e:
         return jsonify({"success": False, "error": str(e)}), 404
-    except (TypeError, ValueError) as e:
-        return jsonify({"success": False, "error": str(e)}), 422
+    except ValueError as e:
+        return jsonify({"success": False, "error": str(e),
+                        "tipos": subscription_service.tipos_de_prorroga()}), 422
     db.session.commit()
     return jsonify({"success": True, "subscription": sub.to_dict(with_events=True)}), 200
 

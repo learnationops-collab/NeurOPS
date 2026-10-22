@@ -1,50 +1,32 @@
-"""Dar, renovar y quitar el acceso a la Academia desde la pestaña Fulfillment de la ficha.
+"""El acceso a la Academia desde la pestaña Fulfillment de la ficha: prórroga, mail y quitar.
 
-Pedido del 30/09/2026. Hasta ahora el acceso solo se daba al registrar un pago en Resultado
-(«¿Le das acceso a la Academia?»): para extenderle el plazo a un alumno, o cortárselo, había que
-inventar un pago o ir a la otra plataforma.
+Desde el 22/10/2026 Fulfillment no da ni renueva accesos con una fecha elegida: el acceso sale de
+la venta (Resultado → suscripción en Work). Acá solo se puede:
 
-## La Academia tiene UNA escritura sobre accesos
+  · prorrogar — días sin pago, de un tipo fijo (seña 7 días, cortesía 1 mes) y con motivo; la
+                fecha la calcula Work (`subscription_service.PRORROGAS`).
+  · corregir el mail — el alumno entra con otro correo que el de la venta. El mail queda como el de
+                la Academia de su persona y, si tiene una suscripción vigente que sale de una venta,
+                el acceso pasa a la cuenta de ese correo (se crea si no existe) con la fecha de Work.
+                Sin venta vigente solo se guarda el mail: no se crea un acceso vacío.
+  · quitar    — se le reasigna con vencimiento HOY y la Academia lo da por vencido (no permite
+                borrar un acceso: `docs/integracion_learnation_api.md` §6).
 
-`POST /users/{id}/products`: asigna un producto con su vencimiento y archiva la asignación
-anterior sin perder el historial. No hay forma de borrar un acceso (su doc pública, revisada el
-30/09/2026, tiene seis endpoints y ninguno revoca). Así que las tres acciones son la misma llamada
-con otra fecha:
-
-  · dar     — el alumno no existe: se lo crea por correo con el mismo camino que la venta
-              (`AcademyAccessService.grant_access`), que pide el correo real y lo deja en el cliente.
-  · renovar — ya existe: se le reasigna el producto con el vencimiento nuevo, por su id. No se
-              pasa por el alta ni se toca el correo del cliente: el alumno puede haberse registrado
-              con otro correo (el de la venta) y pisar el del cliente perdería el cruce con sus
-              ventas.
-  · quitar  — se le reasigna con vencimiento HOY y la Academia lo da por vencido. Queda en su
-              historial y se puede renovar. Pedirle a la Academia un endpoint para revocar de
-              verdad está en `docs/integracion_learnation_api.md` §6.
-
-El producto es siempre el del programa que pagó (el de Acciones, el mismo que la pestaña muestra
-como «Lo que pagó»): nunca el curso de bienvenida ni un acceso dado a mano.
-
-## Se valida todo antes de llamar a la Academia
-
-Es otro sistema, con un límite de peticiones compartido con producción: un pedido incompleto se
-rechaza acá. Quitar además pide `confirmo: true`, para que ningún cuerpo vacío corte un acceso.
+El producto es siempre el del programa que pagó (el de Acciones): nunca el curso de bienvenida.
+Todo se valida antes de llamar a la Academia (otro sistema, con límite de peticiones).
 """
 import logging
-from datetime import datetime, time, timedelta
+from datetime import datetime, time
 
 from app import db
 from app.models import ClientComment
-from app.services.academy_access_service import AcademyAccessError, AcademyAccessService
+from app.services.academy_access_service import AcademyAccessService
 from app.services.closer_followup_service import PROGRAM_CODE_NAMES, CloserFollowUpService
 from app.services.ficha_acciones_service import ErrorDeAccion, _texto
 from app.services.learnation_service import LearnationAPIError, LearnationService
 from app.services.user_time_service import hoy_del_usuario
 
 logger = logging.getLogger(__name__)
-
-# Más lejos que esto es casi seguro un error de tipeo (2207 en vez de 2027).
-MAX_DIAS = 3 * 366
-
 
 def _fecha_legible(dia):
     return dia.strftime('%d/%m/%Y')
@@ -68,23 +50,6 @@ def _producto(client):
         raise ErrorDeAccion(f'El programa {nombre} no está vinculado a ningún producto de la '
                             'Academia. Un admin lo vincula en Configuración de Ventas → Integraciones.')
     return codigo, nombre, slug
-
-
-def _vencimiento(datos, usuario):
-    texto = (datos.get('vence') or '').strip()
-    if not texto:
-        raise ErrorDeAccion('Falta hasta cuándo tiene el acceso.', 'vence')
-    try:
-        dia = datetime.strptime(texto, '%Y-%m-%d').date()
-    except ValueError:
-        raise ErrorDeAccion('La fecha de vencimiento no es válida.', 'vence')
-    hoy = hoy_del_usuario(usuario)
-    if dia <= hoy:
-        raise ErrorDeAccion('El vencimiento tiene que ser después de hoy. Para cortarle el acceso '
-                            'usá «Quitar acceso».', 'vence')
-    if dia > hoy + timedelta(days=MAX_DIAS):
-        raise ErrorDeAccion('Más de tres años de acceso: revisá el año de la fecha.', 'vence')
-    return dia
 
 
 def _alumno(client):
@@ -115,44 +80,6 @@ def _constancia(appt, usuario, texto):
     db.session.add(ClientComment(client_id=appt.client_id, author_id=usuario.id, text=texto))
 
 
-def acceso(appt, datos, usuario):
-    """Da el acceso (si todavía no es alumno) o lo renueva hasta `vence` (YYYY-MM-DD)."""
-    dia = _vencimiento(datos, usuario)
-    client = _cliente(appt)
-    codigo, nombre, slug = _producto(client)
-    alumno_id = _alumno(client)
-
-    creada = False
-    if alumno_id:
-        _asignar(alumno_id, slug, dia, AcademyAccessService.closer_de(client, usuario))
-        client.academy_product_slug = slug
-        client.academy_expires_at = datetime.combine(dia, time.min)
-        accion = 'renovado'
-    else:
-        email = _texto(datos, 'email')
-        if not email:
-            raise ErrorDeAccion('Todavía no tiene cuenta en la Academia: falta el correo con el que '
-                                'va a entrar.', 'email')
-        try:
-            alta = AcademyAccessService.grant_access(client, codigo, None, expires_at_override=dia,
-                                                     email_override=email, usuario=usuario) or {}
-        except AcademyAccessError as e:
-            raise ErrorDeAccion(str(e), 'email' if e.status_code == 422 else None)
-        accion = 'dado'
-        # Una cuenta nueva le manda al alumno un correo para activar su contraseña: se avisa.
-        creada = bool(alta.get('was_created'))
-
-    verbo = 'dio' if accion == 'dado' else 'renovó'
-    # Work es la fuente de verdad de la suscripción: el cambio queda también en su historial.
-    from app.services import subscription_service
-    subscription_service.cambiar(client, codigo, dia, f'{usuario.username} {verbo} el acceso desde Fulfillment',
-                                 usuario)
-    _constancia(appt, usuario, f'{usuario.username} {verbo} el acceso a la Academia ({nombre}) '
-                               f'hasta el {_fecha_legible(dia)}.')
-    db.session.commit()
-    return {'accion': accion, 'vence': dia.isoformat(), 'programa': nombre, 'creada': creada}
-
-
 def quitar(appt, datos, usuario):
     """Corta el acceso: el producto que pagó pasa a vencer hoy (la Academia no permite borrarlo)."""
     if datos.get('confirmo') is not True:
@@ -175,3 +102,94 @@ def quitar(appt, datos, usuario):
                                f'vence hoy, {_fecha_legible(hoy)}.' + (f' Motivo: {motivo}.' if motivo else ''))
     db.session.commit()
     return {'accion': 'quitado', 'vence': hoy.isoformat(), 'programa': nombre}
+
+
+def prorrogar(appt, datos, usuario):
+    """Una prórroga sin pago: de un tipo fijo (`subscription_service.PRORROGAS`) y con motivo. La fecha
+    la calcula Work, no el closer (22/10/2026)."""
+    from app.services import subscription_service
+
+    client = _cliente(appt)
+    _codigo, nombre, slug = _producto(client)
+    alumno_id = _alumno(client)
+    if not alumno_id:
+        raise ErrorDeAccion('No tiene cuenta en la Academia: no hay acceso que prorrogar.')
+    motivo = _texto(datos, 'motivo')
+    if not motivo:
+        raise ErrorDeAccion('Falta el motivo de la prórroga.', 'motivo')
+    tipo = datos.get('tipo')
+    try:
+        dia = subscription_service.fin_de_prorroga(subscription_service.a_prorrogar(client, slug), tipo)
+    except (LookupError, ValueError) as e:
+        raise ErrorDeAccion(str(e), 'tipo')
+
+    _asignar(alumno_id, slug, dia, AcademyAccessService.closer_de(client, usuario))
+    client.academy_product_slug = slug
+    client.academy_expires_at = datetime.combine(dia, time.min)
+    subscription_service.prorrogar(client, tipo, motivo, slug=slug, usuario=usuario)
+    etiqueta = subscription_service.PRORROGAS[tipo]['label'].lower()
+    _constancia(appt, usuario, f'{usuario.username} le dio una {etiqueta} en la Academia ({nombre}) '
+                               f'hasta el {_fecha_legible(dia)}. Motivo: {motivo}.')
+    db.session.commit()
+    return {'accion': 'prorrogado', 'vence': dia.isoformat(), 'programa': nombre}
+
+
+def corregir_mail(appt, datos, usuario):
+    """El correo con que entra a la Academia. El acceso lo da la venta, no este pedido: con una
+    suscripción vigente que sale de una venta, pasa a la cuenta de ese correo con la fecha de Work;
+    sin ella solo queda el mail."""
+    from app.services import person_service, subscription_service
+    from app.services.ficha_fulfillment_service import es_placeholder
+
+    client = _cliente(appt)
+    _codigo, nombre, slug = _producto(client)
+    person = client.person
+    if person is None:
+        raise ErrorDeAccion('Este cliente todavía no tiene su persona en NeurOPS: no hay venta de la que '
+                            'salga el acceso.')
+    email = person_service.normalizar('email', _texto(datos, 'email'))
+    if not email or '@' not in email or es_placeholder(email):
+        raise ErrorDeAccion('El correo no es válido.', 'email')
+    if any(u != person.uuid for u in person_service.duenos('email', email)):
+        raise ErrorDeAccion('Ese correo es de otra persona en NeurOPS: revisalo antes de usarlo.', 'email')
+
+    hoy = hoy_del_usuario(usuario)
+    try:
+        sub = subscription_service.a_prorrogar(client, slug)
+    except LookupError:
+        sub = None
+    vigente = sub is not None and sub.sale_id is not None and sub.expires_at >= hoy
+    anterior = _alumno(client)
+    try:
+        respuesta = LearnationService.check_user(email) or {}
+        nuevo = (respuesta.get('user') or {}).get('id') if respuesta.get('exists') else None
+        creada = False
+        if vigente and not nuevo:
+            alta = LearnationService.upsert_user(email, client.full_name or email, client.phone,
+                                                 work_uuid=person.uuid) or {}
+            nuevo = (alta.get('user') or {}).get('id')
+            creada = alta.get('action') == 'created'
+    except LearnationAPIError as e:
+        raise ErrorDeAccion(f'La Academia no respondió: {e}')
+
+    if vigente and nuevo:
+        _asignar(nuevo, slug, sub.expires_at, AcademyAccessService.closer_de(client, usuario))
+        if anterior and anterior != nuevo:
+            _asignar(anterior, slug, hoy)  # el acceso se mueve: la cuenta vieja deja de tenerlo
+        client.academy_product_slug = slug
+        client.academy_expires_at = datetime.combine(sub.expires_at, time.min)
+    if nuevo:
+        client.learnation_user_id = nuevo
+        person_service.anotar(person, [('learnation_user_id', str(nuevo))], 'fulfillment')
+    try:
+        person_service.hacer_principal(person, 'email', email, usuario, uso='academia',
+                                       reason='Mail de la Academia corregido desde Fulfillment')
+    except ValueError as e:
+        raise ErrorDeAccion(str(e), 'email')
+
+    detalle = (f'tiene acceso a {nombre} hasta el {_fecha_legible(sub.expires_at)}' if vigente and nuevo
+               else 'no tiene una venta con acceso vigente: no se le dio acceso')
+    _constancia(appt, usuario, f'{usuario.username} corrigió el mail de la Academia: {email}; {detalle}.')
+    db.session.commit()
+    return {'accion': 'mail', 'email': email, 'vence': sub.expires_at.isoformat() if vigente and nuevo else None,
+            'programa': nombre, 'creada': creada}

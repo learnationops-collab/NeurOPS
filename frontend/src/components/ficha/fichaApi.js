@@ -104,10 +104,12 @@ const RUTAS = {
     dar_de_baja: (appt, p) => api.post(`/ficha/${appt}/baja`, p),
     // Deshace la baja: el cliente vuelve a deber y a las listas de cobro. No lleva cuerpo.
     revertir_baja: (appt) => api.post(`/ficha/${appt}/revertir-baja`, {}),
-    // El acceso a la Academia, desde Fulfillment: dar o renovar hasta `vence` (+ `email` si
-    // todavía no es alumno), y quitar (vence hoy; pide `confirmo: true`). Ver `ficha_academia.py`.
-    acceso_academia: (appt, p) => api.post(`/ficha/${appt}/academia/acceso`, p),
+    // El acceso a la Academia, desde Fulfillment: corregir el mail con que entra (el acceso sale de
+    // su venta), y quitar (vence hoy; pide `confirmo: true`). Ver `ficha_academia.py`.
+    mail_academia: (appt, p) => api.post(`/ficha/${appt}/academia/mail`, p),
     quitar_acceso_academia: (appt, p) => api.post(`/ficha/${appt}/academia/quitar`, p),
+    // Prórroga sin pago: `tipo` (sena, cortesia) y `motivo`; la fecha la calcula Work.
+    prorrogar_acceso_academia: (appt, p) => api.post(`/ficha/${appt}/academia/prorroga`, p),
     // Las ventas (`Sale`) del bloque Ventas de Fulfillment: el id de la venta va en la URL. Cancelar
     // pide `{motivo}`; ninguna de las dos toca los pagos ni la suscripción.
     cancelar_venta: (appt, p) => api.post(`/ficha/ventas/${p.sale_id}/cancelar`, { motivo: p.motivo }),

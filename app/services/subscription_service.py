@@ -5,8 +5,10 @@ Reglas (Santiago, 20/10):
     defecto (4 meses) desde el pago;
   · una renovación la extiende 4 meses desde donde vencía (o desde el pago, si ya había vencido);
   · el pago que completa una seña (completo, parcial o la cuota) la pasa a acceso completo;
-  · el closer la puede dejar más larga o más corta a voluntad (Fulfillment, `cambiar`), y la
-    Academia puede dar prórrogas gratuitas (`prorrogar`), que solo extienden;
+  · el closer la puede acortar a voluntad (Fulfillment, `cambiar`), pero alargarla pide una venta
+    nueva sin suscripción (`venta_que_extiende`, 22/10/2026);
+  · sin pago solo se extiende con una prórroga de un tipo fijo y con motivo (`PRORROGAS`), desde
+    Work o pedida por la Academia: nadie elige la fecha a mano;
   · nada se pisa en silencio: cada cambio queda en `SubscriptionEvent`.
 Estar al día con las cuotas no mueve esta fecha: eso lo dice la venta.
 
@@ -17,7 +19,7 @@ pago (`academy_payment_sync`) lleva el vencimiento de la suscripción (`vencimie
 from datetime import date, datetime, timedelta
 
 from app import db
-from app.models import Client, Subscription, SubscriptionEvent
+from app.models import Client, Sale, Subscription, SubscriptionEvent
 from app.services.academy_access_service import AcademyAccessService, _add_months
 from app.services import subscription_sync
 
@@ -25,6 +27,13 @@ DURACION_MESES = 4
 DIAS_SENA = 7
 # Lo que, sumado a una venta que era solo seña, la pasa a acceso completo.
 COMPLETAN_SENA = ('completo', 'parcial', 'cuota')
+# Lo único que extiende sin pago (Santiago, 22/10/2026): una duración fija, con motivo.
+PRORROGAS = {
+    'sena': {'label': 'Prórroga de seña', 'dias': DIAS_SENA},
+    'cortesia': {'label': 'Cortesía', 'meses': 1},
+}
+# Un acceso dado con demora puede contar sus meses desde que se da, si la venta es de hace poco.
+DEMORA_DIAS = 30
 
 
 def slug_de(programa):
@@ -120,32 +129,83 @@ def al_ubicar_pago(session, sale, fila, pago, abre, abierta):
     return None
 
 
+def venta_que_extiende(client, slug, hasta):
+    """La venta que justifica llevar el acceso hasta `hasta`: None si no lo alarga (o es un acceso
+    dado con demora sobre una venta reciente), la venta de los últimos 30 días sin suscripción si la
+    hay, o ValueError: sin pago solo se extiende con una prórroga."""
+    actual = _de(db.session, client.id, slug)
+    if actual is not None and hasta <= actual.expires_at:
+        return None
+    hoy = date.today()
+    filtro = Sale.person_uuid == client.person_uuid if client.person_uuid else Sale.client_id == client.id
+    # Una venta vieja que nunca tuvo suscripción no justifica alargar hoy.
+    venta = Sale.query.filter(filtro, Sale.status == 'active', Sale.subscription_id.is_(None),
+                              Sale.sold_at >= hoy - timedelta(days=DEMORA_DIAS)) \
+        .order_by(Sale.sold_at.desc()).first()
+    if venta is not None:
+        return venta
+    reciente = actual is not None and not actual.is_deposit and actual.sale is not None \
+        and (hoy - actual.sale.sold_at.date()).days <= DEMORA_DIAS
+    if reciente and hasta <= _add_months(hoy, DURACION_MESES):
+        return None
+    raise ValueError('Sin una venta nueva no se alarga el acceso. Para darle días sin pago, usá una '
+                     'prórroga (seña o cortesía, con motivo).')
+
+
 def cambiar(client, programa, hasta, reason, usuario=None, kind=None):
-    """Un cambio a mano desde Work (Fulfillment): puede alargarla o acortarla. Sin `kind`: «alta» si
-    no tenía, «extension» si la alarga, «correccion» si la acorta."""
+    """Un cambio a mano desde Work (Fulfillment). Acortar, siempre; alargar, con una venta nueva
+    (`venta_que_extiende`, levanta ValueError). Sin `kind`: «alta» si no tenía, «renovacion» o
+    «extension» si la alarga, «correccion» si la acorta."""
     slug = slug_de(programa)
+    venta = None
     if kind is None:
         actual = _de(db.session, client.id, slug) if slug else None
-        kind = 'alta' if actual is None else ('extension' if hasta > actual.expires_at else 'correccion')
-    return otorgar(db.session, client.id, slug, hasta, kind, programa=programa, reason=reason,
+        venta = venta_que_extiende(client, slug, hasta) if slug else None
+        if actual is None:
+            kind = 'alta'
+        elif hasta <= actual.expires_at:
+            kind = 'correccion'
+        else:
+            kind = 'renovacion' if venta is not None and venta.kind == 'renewal' else 'extension'
+    return otorgar(db.session, client.id, slug, hasta, kind, programa=programa, reason=reason, sale=venta,
                    actor_id=usuario.id if usuario else None, puede_acortar=True)
 
 
-def prorrogar(client, *, slug=None, dias=None, hasta=None, reason=None, actor_email=None):
-    """Una prórroga gratuita que pide la Academia: solo extiende. Sin `slug`, la suscripción que
-    vence más tarde. Levanta LookupError (no tiene) o ValueError (la fecha no extiende)."""
+def tipos_de_prorroga():
+    return [{'value': k, **v} for k, v in PRORROGAS.items()]
+
+
+def a_prorrogar(client, slug=None):
+    """La suscripción que se prorroga: la de `slug` o, sin él, la que vence más tarde. LookupError si no tiene."""
     q = _suyas(db.session, client.id)
     sub = (q.filter_by(product_slug=slug) if slug else q.order_by(Subscription.expires_at.desc())).first()
     if sub is None:
         raise LookupError('Ese cliente no tiene una suscripción en Work.')
-    if hasta is None:
-        if not dias or int(dias) <= 0:
-            raise ValueError('Falta cuántos días (más de cero) o hasta cuándo.')
-        hasta = max(sub.expires_at, date.today()) + timedelta(days=int(dias))
-    if hasta <= sub.expires_at:
-        raise ValueError(f'Una prórroga solo extiende: hoy vence el {sub.expires_at.isoformat()}.')
-    return otorgar(db.session, client.id, sub.product_slug, hasta, 'prorroga', reason=reason or 'Prórroga',
-                   actor_email=actor_email, source='academia')
+    return sub
+
+
+def fin_de_prorroga(sub, tipo):
+    """Hasta cuándo la lleva una prórroga de `tipo`, desde su vencimiento (o desde hoy, si ya venció)."""
+    regla = PRORROGAS.get(tipo or '')
+    if regla is None:
+        raise ValueError(f'Tipo de prórroga desconocido: «{tipo}». Hay: {", ".join(PRORROGAS)}.')
+    if tipo == 'sena' and not sub.is_deposit:
+        raise ValueError('La prórroga de seña es solo para un acceso de seña.')
+    base = max(sub.expires_at, date.today())
+    return _add_months(base, regla['meses']) if regla.get('meses') else base + timedelta(days=regla['dias'])
+
+
+def prorrogar(client, tipo, motivo, *, slug=None, usuario=None, actor_email=None, source='work'):
+    """Una prórroga sin pago, de un tipo fijo y con motivo. Levanta LookupError (no tiene suscripción)
+    o ValueError (tipo desconocido, sin motivo)."""
+    motivo = (motivo or '').strip()
+    if not motivo:
+        raise ValueError('Falta el motivo de la prórroga.')
+    sub = a_prorrogar(client, slug)
+    hasta = fin_de_prorroga(sub, tipo)
+    return otorgar(db.session, client.id, sub.product_slug, hasta, 'prorroga',
+                   reason=f"{PRORROGAS[tipo]['label']}: {motivo}", actor_id=getattr(usuario, 'id', None),
+                   actor_email=actor_email, source=source)
 
 
 def del_cliente(client_id):

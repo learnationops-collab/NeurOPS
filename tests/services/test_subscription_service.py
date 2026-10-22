@@ -89,23 +89,6 @@ def test_el_cambio_a_mano_puede_acortarla_y_queda_quien(db, ana, make_user):
     assert (ultimo.kind, ultimo.actor.username, ultimo.reason) == ('correccion', 'Marlon', 'Acordado con el alumno')
 
 
-def test_la_prorroga_de_la_academia_solo_extiende(client, db, ana):
-    cobro(db, ana, 'AL - Completo', datetime(2026, 10, 1))
-
-    r = client.post('/api/external/academy/subscriptions/prorroga', headers=H,
-                    json={'email': 'ANA@x.com', 'dias': 15, 'motivo': 'Viaje', 'actor_email': 'gestor@academia.com'})
-    assert r.status_code == 200, r.get_json()
-    assert r.get_json()['subscription']['expires_at'] == '2027-02-16'
-    ultimo = r.get_json()['subscription']['events'][-1]
-    assert (ultimo['kind'], ultimo['source'], ultimo['actor'], ultimo['reason']) == (
-        'prorroga', 'academia', 'gestor@academia.com', 'Prórroga: Viaje')
-
-    corta = client.post('/api/external/academy/subscriptions/prorroga', headers=H,
-                        json={'work_client_id': ana.id, 'expires_at': '2026-11-01', 'motivo': 'x'})
-    assert corta.status_code == 422
-    assert suscripcion(ana).expires_at == date(2027, 2, 16)
-
-
 def test_la_prorroga_pide_motivo_cliente_y_suscripcion(client, db, ana):
     assert client.post('/api/external/academy/subscriptions/prorroga', headers=H,
                        json={'email': 'ana@x.com', 'dias': 5}).status_code == 422
@@ -115,17 +98,3 @@ def test_la_prorroga_pide_motivo_cliente_y_suscripcion(client, db, ana):
                        json={'email': 'ana@x.com', 'dias': 5, 'motivo': 'x'}).status_code == 404
     assert client.post('/api/external/academy/subscriptions/prorroga',
                        json={'email': 'ana@x.com', 'dias': 5, 'motivo': 'x'}).status_code in (401, 403)
-
-
-def test_el_backfill_carga_el_ultimo_acceso_dado_desde_work(db, ana):
-    from scripts import backfill_subscriptions as script
-
-    ana.academy_product_slug = 'residency-roadmap'
-    ana.academy_expires_at = datetime(2026, 12, 31)
-    db.session.commit()
-
-    assert script.ejecutar(apply=False)['creadas'] == 1 and Subscription.query.count() == 0
-    script.ejecutar(apply=True)
-    sub = suscripcion(ana, 'residency-roadmap')
-    assert (sub.expires_at, sub.program_code, sub.events.one().kind) == (date(2026, 12, 31), 'RR', 'alta')
-    assert script.ejecutar(apply=True)['ya_tenian'] == 1

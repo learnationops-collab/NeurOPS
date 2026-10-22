@@ -41,7 +41,7 @@ def _when(value, kind):
     return parsed.date() if kind == 'date' else parsed.replace(tzinfo=None)
 
 
-def _coerce(value, kind):
+def coerce(value, kind):
     """El valor en el tipo del campo, o None si no se puede comparar así."""
     if kind == 'number':
         return _number(value)
@@ -57,7 +57,7 @@ def _coerce(value, kind):
 
 def _compare(expr, kind, op, value):
     # Según el tipo del campo: número, fecha o texto. Un valor que no encaja se compara como texto.
-    target = _coerce(value, kind) if kind != 'bool' else None
+    target = coerce(value, kind) if kind != 'bool' else None
     if target is None:
         target, expr = str(value), cast(expr, String)
     return {'gt': expr > target, 'gte': expr >= target, 'lt': expr < target, 'lte': expr <= target}[op]
@@ -94,11 +94,11 @@ def _item(campo, op, value):
         return cast(expr, String).icontains(str(value or ''), autoescape=True)
     if op == 'in':
         values = value if isinstance(value, list) else [v.strip() for v in str(value or '').split(',') if v.strip()]
-        coerced = [c for c in (_coerce(v, kind) for v in values) if c is not None]
+        coerced = [c for c in (coerce(v, kind) for v in values) if c is not None]
         return expr.in_(coerced) if coerced else false()
     if op in ('gt', 'gte', 'lt', 'lte'):
         return _compare(expr, kind, op, value)
-    target = _coerce(value, kind)
+    target = coerce(value, kind)
     if target is None:
         return false() if op == 'eq' else true()
     return expr == target if op == 'eq' else or_(expr != target, expr.is_(None))

@@ -1,46 +1,47 @@
-"""Corre una definición del motor y devuelve el paquete del contrato entre sistemas.
+"""Corre un plan por claves (plan.py) y devuelve el paquete de agentes pares, con el mismo formato que la
+Academia en /api/v1/agent/ask (su API.md §2.14):
 
-Definición:
-  {"source": "appointments", "conditions": {...}, "fields": ["f.status", "p.closer_id.username"],
-   "sort": "f.start_time", "dir": "desc", "limit": 100, "cursor": null}
+  {"success", "metodo", "magnitud": small|large|heavy, "total", "pagina", "siguiente",
+   "columnas": [{"clave", "nombre", "tipo"}], "filas": [{"clave", "fila", "persona", <clave>: valor}],
+   "medicion"?, "nota"?, "as_of"}
 
-Respuesta:
-  {"rows": [{"key", "label", <campo>: valor}], "columns": [{"key", "label", "kind"}], "method",
-   "size": "small|large|heavy", "total", "next", "as_of"}
-
-Todo es una sola consulta de SQLAlchemy Core: nombres de tabla y columna salen de los modelos y los
-valores van como parámetros. Corre en una transacción de solo lectura con tiempo máximo; si existe
-DATABASE_READONLY_URL (un rol con solo SELECT), usa esa conexión.
+Todo sale de SQLAlchemy Core: nombres de tabla y columna de los modelos, valores como parámetros. Las
+consultas de un pedido corren juntas en una transacción de solo lectura con tiempo máximo; si existe
+DATABASE_READONLY_URL (un rol con solo SELECT), usan esa conexión.
 """
+import json
 import logging
 import os
+import unicodedata
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import create_engine, func, select, text
+from sqlalchemy import create_engine, func, literal, select, text
 from sqlalchemy.exc import OperationalError
 
 from app import db
-from app.services.tablas import catalogo
+from app.services.tablas import catalogo, medir
 from app.services.tablas.condiciones import CondicionError, compile_tree
+from app.services.tablas.plan import normalize
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_LIMIT = 100
-MAX_LIMIT = 500
-MAX_FIELDS = 40
-DEFAULT_FIELDS = 6
-# Magnitud del resultado, como en la Academia: hasta 500 va entero, hasta 20.000 por páginas.
-SMALL_ROWS = 500
-LARGE_ROWS = 20000
+# Magnitud del resultado, como la Academia: hasta 500 filas van enteras, hasta 20.000 por páginas de 500.
+PAGE = 500
+LARGE = 20000
+SAMPLE = 50
 TIMEOUT_MS = int(os.environ.get('TABLAS_TIMEOUT_MS', 5000))
 
 _readonly_engine = None
 
 
 class MotorError(CondicionError):
-    """Una definición que no se puede correr: vuelve como 400 con este texto."""
+    """Un plan que no se puede correr. `errores` va en la respuesta (422), como en la Academia."""
+
+    def __init__(self, errores):
+        self.errores = errores if isinstance(errores, list) else [errores]
+        super().__init__(' '.join(self.errores))
 
 
 def _engine():
@@ -63,14 +64,6 @@ def _value(v):
     return v
 
 
-def _int(value, default, low, high):
-    try:
-        n = int(value)
-    except (TypeError, ValueError):
-        return default
-    return max(low, min(high, n))
-
-
 def _execute(statements):
     """Corre las consultas en una transacción de solo lectura y con tiempo máximo. Devuelve sus filas."""
     engine = _engine()
@@ -83,71 +76,112 @@ def _execute(statements):
         except OperationalError as e:
             if 'statement timeout' in str(e) or 'canceling statement' in str(e):
                 raise MotorError(f'La consulta tardó más de {TIMEOUT_MS // 1000} s. '
-                                 'Agregá condiciones o pedí menos campos.') from e
+                                 'Filtrá con condiciones o pedí menos columnas.') from e
             raise
         finally:
             conn.rollback()
 
 
-def _size(total):
-    return 'small' if total <= SMALL_ROWS else 'large' if total <= LARGE_ROWS else 'heavy'
+COMPARACIONES = {
+    'eq': 'es igual a', 'neq': 'no es igual a', 'contains': 'contiene', 'in': 'es uno de (lista o separados por coma)',
+    'gt': 'mayor que', 'gte': 'mayor o igual que', 'lt': 'menor que', 'lte': 'menor o igual que',
+    'empty': 'está vacío', 'notempty': 'tiene un valor', 'within_days': 'en los últimos N días',
+    'older_days': 'hace más de N días', 'next_days': 'en los próximos N días',
+}
 
 
-def describe(user, key=None):
-    """Sin clave: las fuentes. Con clave: los campos de esa fuente."""
-    if key is None:
-        return [{'key': f.key, 'label': f.label} for f in catalogo.sources(user).values()]
-    fuente = catalogo.source(user, key)
+def _plano(texto):
+    return ''.join(c for c in unicodedata.normalize('NFKD', texto or '') if not unicodedata.combining(c)).casefold()
+
+
+def catalog(user, fuente=True, buscar=None):
+    """El catálogo, con el formato del de la Academia (agent/ask con `catalogo`):
+      - `fuente=True`: [{clave, nombre, categoria, descripcion}];
+      - `fuente="sales"`: {fuente, datos: [{clave, nombre, grupo, tipo, detalle}], comparaciones}; `buscar` acota.
+    Los tipos son date | instant | number | text: un sí/no va como texto (true/false)."""
+    if fuente is True:
+        return [{'clave': f.key, 'nombre': f.label, 'categoria': f.category, 'descripcion': f.description}
+                for f in catalogo.sources(user).values()]
+    src = catalogo.source(user, fuente)
+    if src is None:
+        raise MotorError(f'La fuente «{fuente}» no existe. Pedí la lista de fuentes.')
+    datos = [{'clave': c.key, 'nombre': c.label, 'grupo': c.group, 'tipo': 'text' if c.kind == 'bool' else c.kind,
+              'detalle': c.detail + (' (true o false)' if c.kind == 'bool' else '')} for c in src.fields.values()]
+    if buscar:
+        q = _plano(str(buscar))
+        datos = [d for d in datos if q in _plano(f"{d['clave']} {d['nombre']} {d['grupo']} {d['detalle']}")]
+    head = {'clave': src.key, 'nombre': src.label, 'categoria': src.category, 'descripcion': src.description}
+    return {'fuente': head, 'datos': datos, 'comparaciones': COMPARACIONES}
+
+
+def prepare(user, raw):
+    """(fuente, plan normalizado). Un plan con errores levanta MotorError con la lista."""
+    if not isinstance(raw, dict):
+        raise MotorError('El plan tiene que ser un objeto.')
+    fuente = catalogo.source(user, raw.get('fuente'))
     if fuente is None:
-        raise MotorError(f'No existe la fuente «{key}» o no tenés acceso.')
-    fields = [{'key': c.key, 'label': c.label, 'group': c.group, 'kind': c.kind} for c in fuente.fields.values()]
-    return {'key': fuente.key, 'label': fuente.label, 'fields': fields}
+        raise MotorError(f'La fuente «{raw.get("fuente")}» no existe. Pedí la lista de fuentes.')
+    plan, errores = normalize(fuente, raw)
+    if errores:
+        raise MotorError(errores)
+    return fuente, plan
 
 
-def run(user, definition):
-    if not isinstance(definition, dict):
-        raise MotorError('La definición tiene que ser un objeto.')
-    fuente = catalogo.source(user, definition.get('source'))
-    if fuente is None:
-        raise MotorError(f'No existe la fuente «{definition.get("source")}» o no tenés acceso.')
-
-    keys = definition.get('fields') or [k for k in fuente.fields if k.startswith('f.')][:DEFAULT_FIELDS]
-    if not isinstance(keys, list) or len(keys) > MAX_FIELDS:
-        raise MotorError(f'fields tiene que ser una lista de hasta {MAX_FIELDS} campos.')
-    unknown = [k for k in keys if k not in fuente.fields]
-    if unknown:
-        raise MotorError(f'Campos que no existen o que no podés ver: {", ".join(map(str, unknown))}.')
-    campos = [fuente.fields[k] for k in keys]
-
-    where = compile_tree(definition.get('conditions'), fuente.fields)
-    limit = _int(definition.get('limit'), DEFAULT_LIMIT, 1, MAX_LIMIT)
-    offset = _int(definition.get('cursor'), 0, 0, LARGE_ROWS)
-
-    stmt = (select(fuente.pk.label('__key'), fuente.label_expr.label('__label'),
-                   *[c.expr.label(f'c{i}') for i, c in enumerate(campos)])
+def _rows_statement(fuente, plan, where, limit, offset):
+    campos = [fuente.fields[k] for k in plan['columnas']]
+    has_person = fuente.person_expr is not None
+    person = fuente.person_expr if has_person else literal(None)
+    alumno = catalogo.alumno_expr(fuente.person_expr) if has_person else literal(None)
+    stmt = (select(fuente.pk.label('__key'), fuente.label_expr.label('__label'), person.label('__person'),
+                   alumno.label('__alumno'), *[c.expr.label(f'c{i}') for i, c in enumerate(campos)])
             .select_from(fuente.table).where(where))
-    sort = definition.get('sort')
-    if sort:
-        if sort not in fuente.fields:
-            raise MotorError(f'No se puede ordenar por «{sort}»: no existe o no podés verlo.')
-        expr = fuente.fields[sort].expr
-        stmt = stmt.order_by((expr.desc() if definition.get('dir') == 'desc' else expr.asc()).nulls_last())
-    stmt = stmt.order_by(fuente.pk).limit(limit).offset(offset)
-    count = select(func.count()).select_from(fuente.table).where(where)
+    if plan['orden']:
+        expr = fuente.fields[plan['orden']['dato']].expr
+        stmt = stmt.order_by((expr.desc() if plan['orden']['dir'] == 'desc' else expr.asc()).nulls_last())
+    return stmt.order_by(fuente.pk).limit(limit).offset(offset), campos
 
-    filas, (total_row,) = _execute([stmt, count])
-    total = total_row[0]
-    rows = [{'key': _value(f[0]), 'label': _value(f[1]), **{c.key: _value(f[i + 2]) for i, c in enumerate(campos)}}
-            for f in filas]
-    nxt = offset + limit
-    n_cond = len((definition.get('conditions') or {}).get('items') or [])
-    return {
-        'rows': rows,
-        'columns': [{'key': c.key, 'label': c.label, 'kind': c.kind} for c in campos],
-        'method': (f'Filas de {fuente.key} que cumplen {n_cond} condición(es) de primer nivel'
-                   f'{f", ordenadas por {sort}" if sort else ""}; total con COUNT exacto.'),
-        'size': _size(total),
+
+def _alumno_id(v):
+    # La identidad se guarda como texto; la Academia manda su alumno_id como número.
+    return int(v) if isinstance(v, str) and v.isdigit() else v
+
+
+def _row(r, campos):
+    """`persona` es el people.uuid; `alumno_id`, su id en la Academia (el mismo `alumno_id` de las filas de allá)."""
+    return {'clave': _value(r[0]), 'fila': _value(r[1]), 'persona': _value(r[2]), 'alumno_id': _alumno_id(r[3]),
+            **{c.key: _value(r[i + 4]) for i, c in enumerate(campos)}}
+
+
+def columns(fuente, plan):
+    return [{'clave': k, 'nombre': fuente.fields[k].label,
+             'tipo': 'text' if fuente.fields[k].kind == 'bool' else fuente.fields[k].kind} for k in plan['columnas']]
+
+
+def run(user, raw, pagina=1, por_pagina=PAGE, con_medicion=True):
+    """El paquete completo de un plan: una página de filas, el total y, si agrupa o mide, la medición."""
+    fuente, plan = prepare(user, raw)
+    where = compile_tree(plan['condiciones'], fuente.fields)
+    pagina = max(1, int(pagina or 1))
+    rows_stmt, campos = _rows_statement(fuente, plan, where, por_pagina, (pagina - 1) * por_pagina)
+    count = select(func.count()).select_from(fuente.table).where(where)
+    measured = con_medicion and bool(plan['agrupar_por'] or plan['medir'])
+    measure_stmts = medir.statements(fuente, where, plan, _engine().dialect.name) if measured else []
+
+    results = _execute([count, rows_stmt, *measure_stmts])
+    total = int(results[0][0][0])
+    size = 'small' if total <= PAGE else 'large' if total <= LARGE else 'heavy'
+    out = {
+        'success': True,
+        'metodo': 'Motor de tablas de Work, sin IA. Plan: ' + json.dumps(plan, ensure_ascii=False, default=str),
+        'magnitud': size,
         'total': total,
-        'next': str(nxt) if nxt < min(total, LARGE_ROWS) else None,
+        'pagina': None if size == 'heavy' else pagina,
+        'siguiente': pagina + 1 if size == 'large' and pagina * por_pagina < total else None,
+        'columnas': columns(fuente, plan),
+        'filas': [] if size == 'heavy' else [_row(r, campos) for r in results[1]],
+        'medicion': medir.result(fuente, plan, results[2:]) if measured else None,
+        'nota': (f'Más de {LARGE} filas: no se listan. Agrupá (agrupar_por) o filtrá con condiciones.'
+                 if size == 'heavy' else None),
         'as_of': datetime.utcnow().isoformat(timespec='seconds') + 'Z',
     }
+    return {k: v for k, v in out.items() if v is not None}

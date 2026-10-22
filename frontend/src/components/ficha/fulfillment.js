@@ -126,14 +126,14 @@ export const METRICAS = SECCIONES.flatMap((s) => s.metricas);
 export const AYUDA_ACCESO = {
   programa: 'El programa que pagó según NeurOPS: el mismo que ves en Acciones → Programa. Sale del prefijo (AL, RR o SI) del tipo de pago de su última venta.',
   producto: 'El producto de la Academia vinculado a ese programa. El vínculo lo configura un admin en Configuración de Ventas → Integraciones.',
-  vence: 'Día en que la Academia le corta el acceso a este producto. NeurOPS lo fija al darle el acceso: 7 días para una seña, 4 meses para un pago completo o parcial, o la fecha que ponga el closer.',
+  vence: 'Día en que la Academia le corta el acceso a este producto. NeurOPS lo fija al darle el acceso: 7 días para una seña, 4 meses para un pago completo o parcial; después solo la mueven una venta nueva o una prórroga.',
   dias: 'Días de acceso que le quedan, contados por la Academia. Con 15 o menos se marca «Por vencer»: es la ventana para renovar, no cuando ya venció.',
   asignado: 'Cuándo se le asignó este producto en la Academia, desde NeurOPS o a mano allá.',
   sena: 'La Academia tiene este acceso marcado como reserva (seña): un acceso de cortesía corto hasta que complete el pago.',
   correo: 'El correo con el que entra a la Academia. Es la única forma de cruzarlo con NeurOPS: la Academia no busca por teléfono.',
   telefono: 'El teléfono que tiene cargado la Academia. No sirve para encontrarlo, pero conviene que coincida con el de acá: es por donde se le escribe.',
   consultado: 'Estos datos se le piden a la Academia en vivo cada vez que abrís esta pestaña (o tocás Actualizar). NeurOPS guarda una copia para poder filtrar y ordenar la tabla Clientes por la actividad en la Academia.',
-  gestionar: 'Dar o renovar le asigna en la Academia el producto que pagó, con el vencimiento que elijas; la asignación anterior queda en su historial. Quitar lo hace vencer hoy: la Academia no permite borrar un acceso, y así deja de entrar. Se puede renovar después.',
+  gestionar: 'El acceso lo da la venta: acá no se elige una fecha. Prórroga le da días sin pago (seña o cortesía, con motivo; la fecha la calcula NeurOPS). Corregir mail cambia el correo con que entra: si tiene una venta con acceso vigente, el acceso pasa a esa cuenta. Quitar lo hace vencer hoy: la Academia no permite borrar un acceso, y así deja de entrar. Se puede renovar después.',
   dar: 'Todavía no tiene cuenta en la Academia: se le crea con este correo y le llega un mail para activar su contraseña. Es el correo con el que va a entrar, así que tiene que ser el real.',
 };
 
