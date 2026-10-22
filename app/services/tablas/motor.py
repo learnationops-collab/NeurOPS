@@ -12,6 +12,7 @@ DATABASE_READONLY_URL (un rol con solo SELECT), usan esa conexión.
 import json
 import logging
 import os
+import unicodedata
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
@@ -81,16 +82,36 @@ def _execute(statements):
             conn.rollback()
 
 
-def describe(user, key=None):
-    """Sin clave: las fuentes. Con clave: los datos de esa fuente, por clave."""
-    if key is None:
-        return [{'clave': f.key, 'nombre': f.label, 'persona': f.person_expr is not None}
+COMPARACIONES = {
+    'eq': 'es igual a', 'neq': 'no es igual a', 'contains': 'contiene', 'in': 'es uno de (lista o separados por coma)',
+    'gt': 'mayor que', 'gte': 'mayor o igual que', 'lt': 'menor que', 'lte': 'menor o igual que',
+    'empty': 'está vacío', 'notempty': 'tiene un valor', 'within_days': 'en los últimos N días',
+    'older_days': 'hace más de N días', 'next_days': 'en los próximos N días',
+}
+
+
+def _plano(texto):
+    return ''.join(c for c in unicodedata.normalize('NFKD', texto or '') if not unicodedata.combining(c)).casefold()
+
+
+def catalog(user, fuente=True, buscar=None):
+    """El catálogo, con el formato del de la Academia (agent/ask con `catalogo`):
+      - `fuente=True`: [{clave, nombre, categoria, descripcion}];
+      - `fuente="sales"`: {fuente, datos: [{clave, nombre, grupo, tipo, detalle}], comparaciones}; `buscar` acota.
+    Los tipos son date | instant | number | text: un sí/no va como texto (true/false)."""
+    if fuente is True:
+        return [{'clave': f.key, 'nombre': f.label, 'categoria': f.category, 'descripcion': f.description}
                 for f in catalogo.sources(user).values()]
-    fuente = catalogo.source(user, key)
-    if fuente is None:
-        raise MotorError(f'La fuente «{key}» no existe. Pedí la lista de fuentes.')
-    datos = [{'clave': c.key, 'nombre': c.label, 'grupo': c.group, 'tipo': c.kind} for c in fuente.fields.values()]
-    return {'clave': fuente.key, 'nombre': fuente.label, 'datos': datos}
+    src = catalogo.source(user, fuente)
+    if src is None:
+        raise MotorError(f'La fuente «{fuente}» no existe. Pedí la lista de fuentes.')
+    datos = [{'clave': c.key, 'nombre': c.label, 'grupo': c.group, 'tipo': 'text' if c.kind == 'bool' else c.kind,
+              'detalle': c.detail + (' (true o false)' if c.kind == 'bool' else '')} for c in src.fields.values()]
+    if buscar:
+        q = _plano(str(buscar))
+        datos = [d for d in datos if q in _plano(f"{d['clave']} {d['nombre']} {d['grupo']} {d['detalle']}")]
+    head = {'clave': src.key, 'nombre': src.label, 'categoria': src.category, 'descripcion': src.description}
+    return {'fuente': head, 'datos': datos, 'comparaciones': COMPARACIONES}
 
 
 def prepare(user, raw):
@@ -108,9 +129,11 @@ def prepare(user, raw):
 
 def _rows_statement(fuente, plan, where, limit, offset):
     campos = [fuente.fields[k] for k in plan['columnas']]
-    person = fuente.person_expr if fuente.person_expr is not None else literal(None)
+    has_person = fuente.person_expr is not None
+    person = fuente.person_expr if has_person else literal(None)
+    alumno = catalogo.alumno_expr(fuente.person_expr) if has_person else literal(None)
     stmt = (select(fuente.pk.label('__key'), fuente.label_expr.label('__label'), person.label('__person'),
-                   *[c.expr.label(f'c{i}') for i, c in enumerate(campos)])
+                   alumno.label('__alumno'), *[c.expr.label(f'c{i}') for i, c in enumerate(campos)])
             .select_from(fuente.table).where(where))
     if plan['orden']:
         expr = fuente.fields[plan['orden']['dato']].expr
@@ -118,13 +141,20 @@ def _rows_statement(fuente, plan, where, limit, offset):
     return stmt.order_by(fuente.pk).limit(limit).offset(offset), campos
 
 
+def _alumno_id(v):
+    # La identidad se guarda como texto; la Academia manda su alumno_id como número.
+    return int(v) if isinstance(v, str) and v.isdigit() else v
+
+
 def _row(r, campos):
-    return {'clave': _value(r[0]), 'fila': _value(r[1]), 'persona': _value(r[2]),
-            **{c.key: _value(r[i + 3]) for i, c in enumerate(campos)}}
+    """`persona` es el people.uuid; `alumno_id`, su id en la Academia (el mismo `alumno_id` de las filas de allá)."""
+    return {'clave': _value(r[0]), 'fila': _value(r[1]), 'persona': _value(r[2]), 'alumno_id': _alumno_id(r[3]),
+            **{c.key: _value(r[i + 4]) for i, c in enumerate(campos)}}
 
 
 def columns(fuente, plan):
-    return [{'clave': k, 'nombre': fuente.fields[k].label, 'tipo': fuente.fields[k].kind} for k in plan['columnas']]
+    return [{'clave': k, 'nombre': fuente.fields[k].label,
+             'tipo': 'text' if fuente.fields[k].kind == 'bool' else fuente.fields[k].kind} for k in plan['columnas']]
 
 
 def run(user, raw, pagina=1, por_pagina=PAGE, con_medicion=True):

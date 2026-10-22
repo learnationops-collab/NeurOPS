@@ -24,14 +24,14 @@ bp = Blueprint('tablas', __name__)
 @bp.route('/fuentes', methods=['GET'])
 @tablas_required
 def fuentes():
-    return jsonify(motor.describe(current_user))
+    return jsonify(motor.catalog(current_user))
 
 
 @bp.route('/fuentes/<key>', methods=['GET'])
 @tablas_required
 def fuente(key):
     try:
-        return jsonify(motor.describe(current_user, key))
+        return jsonify(motor.catalog(current_user, key, request.args.get("buscar")))
     except motor.MotorError as e:
         return jsonify({'success': False, 'errores': e.errores}), 404
 
@@ -65,7 +65,7 @@ def _imprimir(datos):
 @click.option('--usuario', default=None, help='Con los permisos de quién (por defecto, el primer admin).')
 def cli_fuentes(clave, usuario):
     try:
-        _imprimir(motor.describe(_usuario(usuario), clave))
+        _imprimir(motor.catalog(_usuario(usuario), clave or True))
     except motor.MotorError as e:
         click.echo(f'Error: {e}', err=True)
 

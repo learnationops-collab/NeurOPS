@@ -2,6 +2,7 @@
 
 POST /api/external/academy/agent/ask, con el token de la Academia (ACADEMY_INBOUND_API_TOKEN). Mismo contrato
 que el /api/v1/agent/ask de la Academia:
+  - con `catalogo`: true da las fuentes; una clave de fuente da sus datos (acotables con `buscar`);
   - con `plan` (por claves de dato, app/services/tablas/plan.py): lo resuelve el motor de tablas, sin IA;
   - solo con `pregunta`: todavía no (Work no tiene un Learnito que responda texto libre a otro sistema).
 
@@ -31,6 +32,12 @@ class _SistemaExterno:
 def agent_ask():
     cuerpo = request.get_json(silent=True) or {}
     logger.info(f"[agent/ask] quien={cuerpo.get('quien')} plan={cuerpo.get('plan')} pregunta={cuerpo.get('pregunta')}")
+    if cuerpo.get('catalogo'):
+        try:
+            datos = motor.catalog(_SistemaExterno(), cuerpo['catalogo'], cuerpo.get('buscar'))
+        except motor.MotorError as e:
+            return jsonify({'success': False, 'errores': e.errores}), 422
+        return jsonify({'success': True, 'metodo': 'Catálogo del motor de tablas de Work, sin IA', 'catalogo': datos})
     if not cuerpo.get('plan'):
         errores = ['Work responde solo planes por ahora (sin `pregunta` con IA).']
         return jsonify({'success': False, 'errores': errores}), 422

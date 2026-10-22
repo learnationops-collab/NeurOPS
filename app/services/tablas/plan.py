@@ -7,12 +7,16 @@ y el que viaja entre sistemas por `agent/ask`.
     "columnas": [clave, ...],
     "orden": {"dato": clave, "dir": "asc"|"desc"},
     "agrupar_por": clave,                                                    (opcional)
+    "periodo": day|week|month|quarter|year,       (opcional: cómo se agrupan las fechas; por defecto, month)
     "medir": {"metrica": count|avg|sum|min|max|pct, "dato": clave, "valor": texto}  (opcional)
   }
 """
 from app.services.tablas.condiciones import OPS
 
 METRICS = ('count', 'avg', 'sum', 'min', 'max', 'pct')
+# Cómo se agrupan las fechas. La Academia, sin `periodo`, elige según el rango; Work agrupa por mes.
+PERIODS = ('day', 'week', 'month', 'quarter', 'year')
+DEFAULT_PERIOD = 'month'
 NUMERIC_METRICS = ('avg', 'sum', 'min', 'max')
 DEFAULT_COLUMNS = 6
 MAX_COLUMNS = 40
@@ -57,6 +61,7 @@ def normalize(fuente, plan):
 
     group = plan.get('agrupar_por') or None
     check(group, 'agrupar')
+    period = plan.get('periodo') if plan.get('periodo') in PERIODS else DEFAULT_PERIOD
 
     measure = None
     if plan.get('medir'):
@@ -81,5 +86,6 @@ def normalize(fuente, plan):
         'columnas': columns,
         'orden': order,
         'agrupar_por': group,
+        'periodo': period,
         'medir': measure,
     }, errors

@@ -8,7 +8,7 @@ exacto, los 12 grupos más grandes. Los avisos y sus textos son los de la Academ
 """
 import math
 
-from sqlalchemy import String, case, cast, func, select
+from sqlalchemy import Integer, String, case, cast, func, select
 
 from app.services.tablas.condiciones import coerce
 
@@ -57,10 +57,19 @@ def warnings(rows, size_key, pct):
     return out
 
 
-def _month(expr, dialect):
+# El período de una fecha como texto que ordena bien: 2026-10-22, 2026-10-19 (el lunes), 2026-10, 2026-Q4, 2026.
+PG_FORMATS = {'day': 'YYYY-MM-DD', 'week': 'YYYY-MM-DD', 'month': 'YYYY-MM', 'quarter': 'YYYY-"Q"Q', 'year': 'YYYY'}
+
+
+def _period(expr, period, dialect):
     if dialect == 'postgresql':
-        return func.to_char(func.date_trunc('month', expr), 'YYYY-MM')
-    return func.strftime('%Y-%m', expr)
+        return func.to_char(func.date_trunc(period, expr), PG_FORMATS[period])
+    # SQLite (los tests)
+    if period == 'week':
+        return func.date(expr, 'weekday 0', '-6 days')
+    if period == 'quarter':
+        return func.strftime('%Y', expr) + '-Q' + cast((cast(func.strftime('%m', expr), Integer) + 2) / 3, String)
+    return func.strftime({'day': '%Y-%m-%d', 'month': '%Y-%m', 'year': '%Y'}[period], expr)
 
 
 def _metric(campo, medir):
@@ -95,7 +104,7 @@ def statements(fuente, where, plan, dialect):
 
     campo = fuente.fields[plan['agrupar_por']]
     is_date = campo.kind in ('date', 'instant')
-    k = (_month(campo.expr, dialect) if is_date else campo.expr).label('k')
+    k = (_period(campo.expr, plan['periodo'], dialect) if is_date else campo.expr).label('k')
     n = _metric(dato, medir).label('n')
     m = func.count().label('m')
     grouped = select(k, n, m).select_from(fuente.table).where(where).group_by(k)
@@ -128,8 +137,10 @@ def result(fuente, plan, results):
     counting = not medir or medir['metrica'] == 'count'
     rows = [{'k': None if r.k is None else str(r.k), 'n': int(r.n) if counting else _num(r.n), 'm': int(r.m)}
             for r in results[1]]
+    out = {'total': total, 'rows': rows, 'others': total - sum(r['m'] for r in rows), 'group': {'kind': 'value'},
+           'warnings': warnings(rows, 'm', pct)}
     if is_date:
-        rows.sort(key=lambda r: (r['k'] is None, r['k'] or ''))  # los últimos 12 meses, en orden
-    return {'total': total, 'rows': rows, 'others': total - sum(r['m'] for r in rows),
-            'group': {'kind': 'date', 'bucket': 'month'} if is_date else {'kind': 'value'},
-            'warnings': warnings(rows, 'm', pct)}
+        rows.sort(key=lambda r: (r['k'] is None, r['k'] or ''))  # los últimos 12 períodos, en orden
+        out['group'] = {'kind': 'date', 'bucket': plan['periodo']}
+        out['bucket'] = plan['periodo']
+    return out
