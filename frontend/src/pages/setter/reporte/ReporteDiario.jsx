@@ -105,7 +105,7 @@ const Leyenda = ({ items }) => (
  * in-abribles (corrección del 15/10/2026). Sin mensajes no se muestra. */
 const ChipNoContestaron = ({ n, entrantes }) => (entrantes > 0 ? (
     <span className="rd-chip" style={{ '--c': n ? 'var(--warning)' : 'var(--success)' }}
-        title="Mensajes que no son entrantes cualificados, ni no leads, ni in-abribles">
+        title="Mensajes que no son entrantes cualificados ni in-abribles">
         <Numero valor={n} /><span>sin respuesta</span>
     </span>
 ) : null);

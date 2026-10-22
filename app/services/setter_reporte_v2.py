@@ -82,19 +82,20 @@ def _opcional(valor):
 
 
 def cualificados(entrantes, no_lead, inabribles, leads=None):
-    """Los leads que cargó el setter; sin ellos (un reporte de antes del 15/10), la cuenta de antes:
-    entrantes − no leads − in-abribles."""
+    """Los leads cualificados finales: los «entrantes cualificados» que cargó el setter menos los no leads
+    (que respondieron pero no eran leads; Elias, 20/10/2026: 55 − 23 = 32). Sin ellos (un reporte de antes
+    del 15/10), la cuenta de antes: entrantes − no leads − in-abribles."""
     if leads is not None:
-        return _entero(leads)
+        return max(0, _entero(leads) - _entero(no_lead))
     return max(0, _entero(entrantes) - _entero(no_lead) - _entero(inabribles))
 
 
 def no_contestaron(entrantes, no_lead, inabribles, leads=None):
-    """Los entrantes que no son leads cualificados, ni no leads, ni in-abribles: no contestaron. 0 sin leads
-    cargados: en ese reporte estaban adentro de los cualificados."""
+    """Los entrantes que no son cualificados (los no leads ya están adentro de ellos) ni in-abribles: no
+    contestaron. 0 sin leads cargados: en ese reporte estaban adentro de los cualificados."""
     if leads is None:
         return 0
-    return max(0, _entero(entrantes) - _entero(no_lead) - _entero(inabribles) - _entero(leads))
+    return max(0, _entero(entrantes) - _entero(inabribles) - _entero(leads))
 
 
 def _suma_opcional(valores):

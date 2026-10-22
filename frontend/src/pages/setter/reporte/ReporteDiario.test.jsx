@@ -101,7 +101,7 @@ describe('ReporteDiario · los pasos', () => {
 
         const paso = screen.getByRole('region', { name: 'Entrantes' });
         // El número grande de cada columna: cualificación de anuncios e inbound, respuesta a bienvenidas.
-        expect([...paso.querySelectorAll('.rd-rbig > b')].map(b => b.textContent)).toEqual(['90%', '83,3%', '41,7%']);
+        expect([...paso.querySelectorAll('.rd-rbig > b')].map(b => b.textContent)).toEqual(['80%', '83,3%', '41,7%']);
         // Y la píldora de su embudo, redondeada.
         expect(within(paso).getByText('83%')).toBeInTheDocument();
     });
@@ -112,9 +112,9 @@ describe('ReporteDiario · los pasos', () => {
         escribir('Anuncios, entrantes cualificados', 6);
 
         const paso = screen.getByRole('region', { name: 'Entrantes' });
-        expect(paso.querySelector('.rd-rbig > b').textContent).toBe('60%');
-        // Anuncios: 10 − 6 leads − 1 no lead − 0 in-abribles; inbound: todos contestaron.
-        expect(within(paso).getAllByText('sin respuesta').map(t => t.previousSibling.textContent)).toEqual(['3', '0']);
+        expect(paso.querySelector('.rd-rbig > b').textContent).toBe('50%');
+        // Anuncios: 10 − 6 entrantes cualificados (1 es no lead) − 0 in-abribles; inbound: todos contestaron.
+        expect(within(paso).getAllByText('sin respuesta').map(t => t.previousSibling.textContent)).toEqual(['4', '0']);
     });
 
     it('con el teclado: flechas ±1 (±10 con Shift), Enter al número siguiente y del último al paso siguiente', async () => {

@@ -26,19 +26,19 @@ const diaDelDiseno = () => {
 };
 
 describe('calcular', () => {
-    it('los cualificados de cada canal son sus leads, con sus tasas', () => {
+    it('los cualificados de cada canal son sus leads menos los no leads, con sus tasas', () => {
         const { num } = calcular(diaDelDiseno());
 
-        expect(num['anuncios.net']).toBe(9);
+        expect(num['anuncios.net']).toBe(8);
         expect(num['inbound.net']).toBe(5);
-        expect(num['anuncios.cualRate']).toBe(90);
+        expect(num['anuncios.cualRate']).toBe(80);
         expect(num['inbound.cualRate']).toBeCloseTo(83.333, 2);
         expect(num['tot.entr']).toBe(16);
-        expect(num['tot.net']).toBe(14);
-        expect(num['tot.cualRate']).toBe(87.5);
+        expect(num['tot.net']).toBe(13);
+        expect(num['tot.cualRate']).toBe(81.25);
         expect(num['tot.apRate']).toBe(75);
         expect(num['tot.agendas']).toBe(3);
-        expect(num['tot.convRate']).toBeCloseTo(21.43, 1);
+        expect(num['tot.convRate']).toBeCloseTo(23.08, 1);
         expect(num['tot.fuTot']).toBe(20);
         expect(num['tot.fuResp']).toBe(8);
         expect(num['tot.fuRate']).toBe(40);
@@ -50,8 +50,8 @@ describe('calcular', () => {
         const s = conRuta(diaDelDiseno(), 'anuncios.leads', 6);
         const { num } = calcular(s);
 
-        expect(num['anuncios.noCont']).toBe(3);
-        expect(num['anuncios.cualRate']).toBe(60);
+        expect(num['anuncios.noCont']).toBe(4);
+        expect(num['anuncios.cualRate']).toBe(50);
         expect(num['inbound.noCont']).toBe(0);
         expect(num['anuncios.respRate']).toBe(50);
         expect(num['tot.apResp']).toBe(6);
@@ -85,7 +85,7 @@ describe('calcular', () => {
     it('el embudo total va de los cualificados de los dos canales a las agendas', () => {
         const { G, convG } = calcular(diaDelDiseno());
 
-        expect(G).toEqual([14, 10, 7, 5, 3]);
+        expect(G).toEqual([13, 10, 7, 5, 3]);
         expect(convG[0]).toBeNull();
         expect(convG[4]).toBe(60);
     });
@@ -151,7 +151,7 @@ describe('el relleno de cada celda', () => {
         const s = diaDelDiseno();
 
         expect(referenciaDe(s, 'anuncios.no_lead')).toBe(10);
-        expect(referenciaDe(s, 'embudo.dolor')).toBe(14);
+        expect(referenciaDe(s, 'embudo.dolor')).toBe(13);
         expect(referenciaDe(s, 'anuncios.agendas')).toBe(5);
         expect(referenciaDe(s, 'bienvenidas.aperturas')).toBe(5);
         expect(proporcion(s, 'anuncios.ap_dolor')).toBe(0.5);
@@ -199,12 +199,12 @@ describe('ida y vuelta con el backend', () => {
         const lectura = {
             version: 2, no_laborable: false,
             canales: {
-                anuncios: { entrantes: 10, no_lead: 1, inabribles: 0, ap_entrantes: 3, ap_dolor: 5, agendas: 2, cualificados: 9, aperturas: 8 },
+                anuncios: { entrantes: 10, no_lead: 1, inabribles: 0, ap_entrantes: 3, ap_dolor: 5, agendas: 2, cualificados: 8, aperturas: 8 },
                 inbound: { entrantes: 6, no_lead: 0, inabribles: 1, ap_entrantes: 1, ap_dolor: 3, agendas: 1, cualificados: 5, aperturas: 4 },
             },
             bienvenidas: { hechas: 12, respondidas: 5, aperturas: 4 },
             totales: { entrantes: 16 },
-            embudo: { cualificados: 14, dolor: 10, oferta: 7, link: 5, agendas: 3 },
+            embudo: { cualificados: 13, dolor: 10, oferta: 7, link: 5, agendas: 3 },
             followups: { entrantes: 9, dolor: 5, oferta: 3, link: 3 },
             followups_respondidos: { entrantes: 4, dolor: 2, oferta: 1, link: 1 },
             reflexion: { flujo_trabajo: 'Abrí 40', win_del_dia: 'Una fría' },
@@ -218,7 +218,7 @@ describe('ida y vuelta con el backend', () => {
         expect(s.anuncios).toEqual({ ...diaDelDiseno().anuncios, ap_entrantes_resp: 0, ap_dolor_resp: 0 });
         expect(s.embudo).toEqual({ dolor: 10, oferta: 7, link: 5 });
         expect(s.reflexion.win_del_dia).toBe('Una fría');
-        expect(calcular(s).num['tot.net']).toBe(14);
+        expect(calcular(s).num['tot.net']).toBe(13);
     });
 
     it('un v1 vuelve sin canales: no se inventa en qué canal entró cada uno', () => {

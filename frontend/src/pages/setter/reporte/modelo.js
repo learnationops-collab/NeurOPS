@@ -95,12 +95,12 @@ export const tasa = (a, b) => (b > 0 ? (a / b) * 100 : null);
 export const fmtInt = (v) => (v === null || v === undefined ? '—' : Math.round(v).toLocaleString('es'));
 export const fmtPct = (v) => (v === null || v === undefined ? '—' : `${(Math.round(v * 10) / 10).toLocaleString('es')}%`);
 
-/** Los cualificados de un canal: los leads cualificados que cargó el setter. */
-export const netoDe = (d) => d?.leads || 0;
+/** Los cualificados de un canal: los entrantes cualificados que cargó el setter menos los no leads. */
+export const netoDe = (d) => Math.max(0, (d?.leads || 0) - (d?.no_lead || 0));
 
-/** Los mensajes que no son leads cualificados, ni no leads, ni in-abribles: no contestaron. */
+/** Los mensajes que no son entrantes cualificados (los no leads van adentro) ni in-abribles: no contestaron. */
 export const noContestaronDe = (d) => Math.max(0,
-    (d?.entrantes || 0) - (d?.leads || 0) - (d?.no_lead || 0) - (d?.inabribles || 0));
+    (d?.entrantes || 0) - (d?.leads || 0) - (d?.inabribles || 0));
 
 /**
  * Las cuentas del reporte: cada número que se muestra, los avisos y la marca de cada celda.
@@ -278,10 +278,10 @@ export function topeDeArrastre(s, ruta) {
  */
 export const desdeLectura = (l) => {
     if (!l) return vacio();
-    // Un reporte de antes del 15/10 no trae leads (null): sus cualificados eran la cuenta vieja, y
-    // con eso se rellena el campo para que editarlo no los baje a cero. Las respuestas a las
-    // aperturas que no cargó vuelven en cero: hay que completarlas.
-    const canal = (d) => ({ ...d, leads: d.leads ?? d.cualificados });
+    // Un reporte de antes del 15/10 no trae leads (null): sus cualificados eran la cuenta vieja (ya sin
+    // los no leads), y se rellena el campo con ellos más los no leads para que editarlo no los cambie.
+    // Las respuestas a las aperturas que no cargó vuelven en cero: hay que completarlas.
+    const canal = (d) => ({ ...d, leads: d.leads ?? (d.cualificados + (d.no_lead || 0)) });
     return fusionar(vacio(), {
         ...(l.canales ? { anuncios: canal(l.canales.anuncios), inbound: canal(l.canales.inbound) } : {}),
         ...(l.bienvenidas ? { bienvenidas: l.bienvenidas } : {}),
