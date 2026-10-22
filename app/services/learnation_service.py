@@ -31,10 +31,10 @@ class LearnationService:
         }
 
     @staticmethod
-    def _request(method, path, **kwargs):
+    def _request(method, path, timeout=15, **kwargs):
         url = f'{LearnationService.BASE_URL}{path}'
         try:
-            resp = requests.request(method, url, headers=LearnationService._headers(), timeout=15, **kwargs)
+            resp = requests.request(method, url, headers=LearnationService._headers(), timeout=timeout, **kwargs)
         except requests.RequestException as e:
             raise LearnationAPIError(f'Error de red al conectar con la Academia: {e}')
 
@@ -130,3 +130,12 @@ class LearnationService:
         """Los casos de éxito publicados para landings (el Muro de Honor): los muestra la página de
         gracias de Agendas 2.0."""
         return LearnationService._request('GET', '/success-cases')
+
+    @staticmethod
+    def agent_ask(plan=None, pregunta=None, quien=None, pagina=1):
+        """Agentes pares (API de la Academia §2.14): un plan por claves lo resuelve su motor de Tablas, sin IA;
+        una pregunta suelta la responde su Learnito con IA (con costo). Devuelve el paquete tal cual."""
+        cuerpo = {k: v for k, v in {'plan': plan, 'pregunta': pregunta, 'quien': quien, 'pagina': pagina}.items()
+                  if v is not None}
+        # Su Learnito puede tardar en responder una pregunta; un plan, menos.
+        return LearnationService._request('POST', '/agent/ask', json=cuerpo, timeout=90 if pregunta else 40)

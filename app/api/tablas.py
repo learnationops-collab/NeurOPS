@@ -1,7 +1,10 @@
 """El motor genérico de tablas por HTTP (app/services/tablas/) y por consola, para probarlo en el servidor:
 
-  flask tablas fuentes [clave]                     las fuentes, o los campos de una
-  flask tablas consultar '<definición JSON>' [--usuario nombre]
+  flask tablas fuentes [clave]                         las fuentes, o los datos de una
+  flask tablas consultar '<plan JSON>' [--pagina N] [--usuario nombre]
+
+El plan es el de la Academia (app/services/tablas/plan.py). `agent/ask`, para la Academia, vive en
+app/api/external/agent.py.
 """
 import json
 import logging
@@ -12,7 +15,6 @@ from flask_login import current_user
 
 from app.decorators import tablas_required
 from app.services.tablas import motor
-from app.services.tablas.condiciones import CondicionError
 
 logger = logging.getLogger(__name__)
 
@@ -30,17 +32,19 @@ def fuentes():
 def fuente(key):
     try:
         return jsonify(motor.describe(current_user, key))
-    except CondicionError as e:
-        return jsonify({'error': str(e)}), 404
+    except motor.MotorError as e:
+        return jsonify({'success': False, 'errores': e.errores}), 404
 
 
 @bp.route('/consultar', methods=['POST'])
 @tablas_required
 def consultar():
+    cuerpo = request.get_json(silent=True) or {}
     try:
-        return jsonify(motor.run(current_user, request.get_json(silent=True)))
-    except CondicionError as e:
-        return jsonify({'error': str(e)}), 400
+        return jsonify(motor.run(current_user, cuerpo.get('plan'), pagina=cuerpo.get('pagina'),
+                                 por_pagina=motor.SAMPLE))
+    except motor.MotorError as e:
+        return jsonify({'success': False, 'errores': e.errores}), 422
 
 
 def _usuario(nombre):
@@ -52,18 +56,26 @@ def _usuario(nombre):
     return User.query.filter_by(_role=ROLE_ADMIN).order_by(User.id).first()
 
 
+def _imprimir(datos):
+    click.echo(json.dumps(datos, ensure_ascii=False, indent=1, default=str))
+
+
 @bp.cli.command('fuentes')
 @click.argument('clave', required=False)
 @click.option('--usuario', default=None, help='Con los permisos de quién (por defecto, el primer admin).')
 def cli_fuentes(clave, usuario):
-    click.echo(json.dumps(motor.describe(_usuario(usuario), clave), ensure_ascii=False, indent=1))
+    try:
+        _imprimir(motor.describe(_usuario(usuario), clave))
+    except motor.MotorError as e:
+        click.echo(f'Error: {e}', err=True)
 
 
 @bp.cli.command('consultar')
-@click.argument('definicion')
+@click.argument('plan')
+@click.option('--pagina', default=1, type=int)
 @click.option('--usuario', default=None, help='Con los permisos de quién (por defecto, el primer admin).')
-def cli_consultar(definicion, usuario):
+def cli_consultar(plan, pagina, usuario):
     try:
-        click.echo(json.dumps(motor.run(_usuario(usuario), json.loads(definicion)), ensure_ascii=False, indent=1))
-    except (CondicionError, json.JSONDecodeError) as e:
+        _imprimir(motor.run(_usuario(usuario), json.loads(plan), pagina=pagina, por_pagina=motor.SAMPLE))
+    except (motor.MotorError, json.JSONDecodeError) as e:
         click.echo(f'Error: {e}', err=True)

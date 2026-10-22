@@ -40,6 +40,8 @@ class Fuente:
     table: object = field(repr=False)
     pk: object = field(repr=False)
     label_expr: object = field(repr=False)
+    # La persona de la fila (people.uuid), la clave para cruzar con la Academia. None si la tabla no apunta a una.
+    person_expr: object = field(default=None, repr=False)
     fields: dict = field(default_factory=dict)
 
 
@@ -109,7 +111,9 @@ def _visible(user, column, kind):
 
 def build(user, table, tables):
     pk = _pk(table)
-    fuente = Fuente(key=table.name, label=column_label(table.name), table=table, pk=pk, label_expr=_label_expr(table))
+    person = pk if table.name == 'people' else table.c.get('person_uuid')
+    fuente = Fuente(key=table.name, label=column_label(table.name), table=table, pk=pk, label_expr=_label_expr(table),
+                    person_expr=person)
 
     for col in table.columns:
         kind = kind_of(col)
