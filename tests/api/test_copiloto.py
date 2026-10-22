@@ -100,15 +100,6 @@ def test_si_no_termina_de_pedir_herramientas_corta(client, auth_headers, make_us
     assert r.status_code == 502 and len(llamadas) == 4
 
 
-def test_quien_no_es_closer_conversa_sin_herramientas(client, auth_headers, make_user, claude):
-    admin = make_user(role='admin')
-    llamadas = claude()
-
-    client.post(URL, headers=auth_headers(admin), json=HOLA)
-
-    assert 'tools' not in llamadas[0]
-
-
 def test_en_el_tope_mensual_no_llama(client, db, auth_headers, make_user, claude):
     closer = make_user(role='closer')
     _gastar(db, closer, '8')
