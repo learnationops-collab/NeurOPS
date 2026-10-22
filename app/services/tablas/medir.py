@@ -125,7 +125,9 @@ def result(fuente, plan, results):
         return out
 
     is_date = fuente.fields[plan['agrupar_por']].kind in ('date', 'instant')
-    rows = [{'k': None if r.k is None else str(r.k), 'n': _num(r.n), 'm': int(r.m)} for r in results[1]]
+    counting = not medir or medir['metrica'] == 'count'
+    rows = [{'k': None if r.k is None else str(r.k), 'n': int(r.n) if counting else _num(r.n), 'm': int(r.m)}
+            for r in results[1]]
     if is_date:
         rows.sort(key=lambda r: (r['k'] is None, r['k'] or ''))  # los últimos 12 meses, en orden
     return {'total': total, 'rows': rows, 'others': total - sum(r['m'] for r in rows),
