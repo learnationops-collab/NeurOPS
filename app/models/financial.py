@@ -32,12 +32,25 @@ class FinancialSale(ConPersona, db.Model):
     # 'jean_carlo' u 'otro' (la lista vive en `transferencias_service`), o NULL = «sin marcar».
     # Esa plata está en manos de esa persona y se le descuenta de lo que se le paga.
     transferido_a = db.Column(db.String(20), nullable=True)
+    # Verificación contra el banco o la pasarela (22/10/2026): que el closer declare el pago no lo hace
+    # cierto. Cuándo impactó la operación (no cuándo se declaró), su número, dónde (cuenta o pasarela),
+    # cuánto entró de verdad, los archivos del volumen que lo respaldan y el estado de la verificación.
+    transaction_date = db.Column(db.DateTime, nullable=True)
+    transaction_id = db.Column(db.String(120), nullable=True, index=True)
+    transaction_source = db.Column(db.String(60), nullable=True)
+    transaction_amount = db.Column(db.Float, nullable=True)
+    # Rutas en el volumen (extracto de un período, comprobante individual...); un archivo puede respaldar varios pagos.
+    transaction_evidence = db.Column(db.JSON, nullable=True)
+    transaction_status = db.Column(db.String(20), nullable=False, default='pending', server_default='pending')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     date = db.Column(db.DateTime, default=datetime.utcnow) # Fecha de venta oficial (basada en marca_temporal)
 
     client = db.relationship('Client', backref=db.backref('financial_sales', lazy='dynamic'))
 
     CONTACTO = ('nombre_cliente', 'mail_cliente', 'telefono', 'instagram')
+    # verified: respaldado por el banco o la pasarela; pending: sin comparar todavía;
+    # unverified: se comparó y no aparece.
+    TRANSACTION_STATUSES = ('verified', 'pending', 'unverified')
 
     def contacto(self, mails_de_pago=None):
         """Nombre, mail, teléfono e instagram del pago, leídos de su persona (docs/plan_personas.md):
@@ -106,6 +119,12 @@ class FinancialSale(ConPersona, db.Model):
             "estado": self.estado or "Completada",
             "is_excluded_from_payroll": self.is_excluded_from_payroll or False,
             "transferido_a": self.transferido_a,
+            "transaction_date": self.transaction_date.isoformat() if self.transaction_date else None,
+            "transaction_id": self.transaction_id,
+            "transaction_source": self.transaction_source,
+            "transaction_amount": self.transaction_amount,
+            "transaction_evidence": self.transaction_evidence or [],
+            "transaction_status": self.transaction_status,
             "sold_in_call": self.sold_in_call,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "date": self.date.isoformat() if self.date else None

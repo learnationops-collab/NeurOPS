@@ -2,8 +2,8 @@
 
 Cada venta (`Sale`) con lo que debe (`deuda_service`), lo cobrado, su suscripción y sus pagos.
 Cancelar no toca los pagos ni acorta la suscripción: la venta deja de deber. Quién, cuándo y por
-qué queda en `review_note` (sin migración), como una parte más con prefijo propio: así se ve en la
-fila, y la lista «Ventas para revisar» no la toma por un motivo de revisión.
+qué queda en `system_logs` (22/10/2026), con toda la historia. Antes se guardaba en `review_note` con
+prefijo propio y cada evento pisaba al anterior: esos registros viejos se siguen mostrando.
 """
 import logging
 from datetime import datetime
@@ -12,7 +12,7 @@ from sqlalchemy import and_, or_
 
 from app import db
 from app.models import Appointment, FinancialSale, Sale
-from app.services import deuda_service
+from app.services import deuda_service, system_log_service
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,7 @@ def a_dict(sale, usuario=None):
         'cobrado': cobrado,
         'saldo': round(deuda_service.saldo(sale, cobrado), 2),
         'motivos': motivos(sale),
-        'registro': [p for p in _partes(sale.review_note) if p.startswith(_REGISTROS)],
+        'registro': _registro(sale),
         'suscripcion': _suscripcion(sale),
         'pagos': pagos,
         'puede_gestionar': puede_gestionar(usuario, sale),
@@ -115,9 +115,15 @@ def _firma(usuario):
            f"{datetime.utcnow().strftime('%d/%m/%Y %H:%M')} UTC"
 
 
-def _registrar(sale, parte):
-    otras = [p for p in _partes(sale.review_note) if not p.startswith(_REGISTROS)]
-    sale.review_note = '; '.join([parte] + otras)[:255]
+def _registro(sale):
+    viejos = [p for p in _partes(sale.review_note) if p.startswith(_REGISTROS)]
+    logs = system_log_service.de('sale', sale.id) if sale.id else []
+    return viejos + [f"{l.title}: {l.description}" for l in logs]
+
+
+def _registrar(sale, title, usuario, detalle=None):
+    descripcion = f'{detalle} ({_firma(usuario)})' if detalle else _firma(usuario)
+    system_log_service.registrar(title, descripcion, usuario=usuario, entity_type='sale', entity_id=sale.id)
 
 
 def cancelar(sale, motivo, usuario):
@@ -128,7 +134,7 @@ def cancelar(sale, motivo, usuario):
     if sale.status != 'active':
         raise ValueError('La venta ya no está activa.')
     sale.status = 'cancelled'
-    _registrar(sale, f'{PREFIJO_CANCELADA} {motivo} ({_firma(usuario)})')
+    _registrar(sale, 'Venta cancelada', usuario, motivo)
     logger.info(f'[VENTAS] Venta #{sale.id} cancelada por #{getattr(usuario, "id", None)}: {motivo}')
 
 
@@ -137,7 +143,7 @@ def reactivar(sale, usuario):
     if sale.status != 'cancelled':
         raise ValueError('Solo se reactiva una venta cancelada.')
     sale.status = 'active'
-    _registrar(sale, f'{PREFIJO_REACTIVADA} {_firma(usuario)}')
+    _registrar(sale, 'Venta reactivada', usuario)
     logger.info(f'[VENTAS] Venta #{sale.id} reactivada por #{getattr(usuario, "id", None)}')
 
 
