@@ -506,3 +506,8 @@
   - Corregir mail (`POST /ficha/<id>/academia/mail`): el correo queda como el de la Academia de la persona (`uso='academia'`). Si tiene una suscripción vigente que sale de una venta, el acceso pasa a la cuenta de ese correo (se crea si no existe) con la fecha de Work, y la cuenta anterior queda vencida hoy. Sin venta vigente solo se guarda el mail: no se crea una cuenta ni un acceso vacío. Un correo que es de otra persona se rechaza.
   - Se borraron los tests de dar y renovar (la acción ya no existe) y el de `AccesoAcademia`.
   - Verificación: sin tests (regla del proyecto); compilado.
+
+- **22 de Octubre de 2026 (reporte del setter: los no leads se restan de los entrantes cualificados)** *([app/services/setter_reporte_v2.py](../../app/services/setter_reporte_v2.py), [frontend/src/pages/setter/reporte/modelo.js](../../frontend/src/pages/setter/reporte/modelo.js), [frontend/src/pages/setter/reporte/ReporteDiario.jsx](../../frontend/src/pages/setter/reporte/ReporteDiario.jsx) [MODIFY])*:
+  - Lo que el setter carga como «Entrantes cualificados» incluye a los no leads: los leads cualificados finales son cualificados − no leads (Elias: 55 − 23 = 32). Misma cuenta en el formulario y en el backend (`cualificados`).
+  - Los «sin respuesta» pasan a ser nuevos mensajes − entrantes cualificados − in-abribles (79 − 55 = 24). Los reportes de antes del 15/10 (sin leads cargados) conservan su cuenta; los v2 ya guardados se recalculan al leerlos.
+  - Verificación: tests del reporte (backend y frontend) actualizados y en verde.
