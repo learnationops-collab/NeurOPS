@@ -264,7 +264,10 @@ def sugerencias_de_acceso(client, ventas=None, pagado=None, hoy=None):
     solo_sena = 'seña' in tipos and not any(t in REAL_SALE_TIPOS for t in tipos)
     dia = AcademyAccessService.compute_default_expiration('seña' if solo_sena else 'completo', base)
     candidatos = emails_candidatos(client, ventas)
-    return {'vence_sugerido': dia.isoformat(), 'email_sugerido': candidatos[0] if candidatos else None}
+    from app.services.subscription_service import tipos_de_prorroga
+    # Las prórrogas sin pago que se pueden dar (tipo fijo, con motivo): las define Work.
+    return {'vence_sugerido': dia.isoformat(), 'email_sugerido': candidatos[0] if candidatos else None,
+            'prorrogas': tipos_de_prorroga()}
 
 
 def _suscripciones(client):

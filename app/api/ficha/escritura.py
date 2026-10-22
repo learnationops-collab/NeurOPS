@@ -376,6 +376,13 @@ def acceso_academia(appt_id):
     return _ejecutar(appt_id, 'cobrar', ficha_academia.acceso)
 
 
+@bp.route('/<int:appt_id>/academia/prorroga', methods=['POST'])
+def prorroga_academia(appt_id):
+    """Una prórroga sin pago: `tipo` (seña o cortesía) y `motivo`. La fecha la calcula Work."""
+    from app.services import ficha_academia
+    return _ejecutar(appt_id, 'cobrar', ficha_academia.prorrogar)
+
+
 @bp.route('/<int:appt_id>/academia/quitar', methods=['POST'])
 def quitar_acceso_academia(appt_id):
     """Corta el acceso: el producto que pagó vence hoy. Pide `confirmo: true`."""

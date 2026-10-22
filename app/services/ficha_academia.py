@@ -17,6 +17,8 @@ con otra fecha:
               pasa por el alta ni se toca el correo del cliente: el alumno puede haberse registrado
               con otro correo (el de la venta) y pisar el del cliente perdería el cruce con sus
               ventas.
+  · prorrogar — días sin pago: de un tipo fijo (seña 7 días, cortesía 1 mes) y con motivo; la
+              fecha la calcula Work (22/10/2026). Renovar con una fecha más lejana pide una venta nueva.
   · quitar  — se le reasigna con vencimiento HOY y la Academia lo da por vencido. Queda en su
               historial y se puede renovar. Pedirle a la Academia un endpoint para revocar de
               verdad está en `docs/integracion_learnation_api.md` §6.
@@ -107,6 +109,15 @@ def _asignar(alumno_id, slug, dia, closer_email=None):
         raise ErrorDeAccion(f'La Academia no aceptó el cambio: {e}')
 
 
+def _puede_alargar(client, slug, dia):
+    """Alargar pide una venta nueva (22/10/2026): se valida antes de tocar la Academia."""
+    from app.services import subscription_service
+    try:
+        subscription_service.venta_que_extiende(client, slug, dia)
+    except ValueError as e:
+        raise ErrorDeAccion(str(e), 'vence')
+
+
 def _constancia(appt, usuario, texto):
     """El cambio queda en el historial del lead y en el hilo del cliente: quién, qué y hasta cuándo."""
     from app.services.booking_service import BookingService
@@ -121,6 +132,7 @@ def acceso(appt, datos, usuario):
     client = _cliente(appt)
     codigo, nombre, slug = _producto(client)
     alumno_id = _alumno(client)
+    _puede_alargar(client, slug, dia)
 
     creada = False
     if alumno_id:
@@ -175,3 +187,33 @@ def quitar(appt, datos, usuario):
                                f'vence hoy, {_fecha_legible(hoy)}.' + (f' Motivo: {motivo}.' if motivo else ''))
     db.session.commit()
     return {'accion': 'quitado', 'vence': hoy.isoformat(), 'programa': nombre}
+
+
+def prorrogar(appt, datos, usuario):
+    """Una prórroga sin pago: de un tipo fijo (`subscription_service.PRORROGAS`) y con motivo. La fecha
+    la calcula Work, no el closer (22/10/2026)."""
+    from app.services import subscription_service
+
+    client = _cliente(appt)
+    _codigo, nombre, slug = _producto(client)
+    alumno_id = _alumno(client)
+    if not alumno_id:
+        raise ErrorDeAccion('No tiene cuenta en la Academia: no hay acceso que prorrogar.')
+    motivo = _texto(datos, 'motivo')
+    if not motivo:
+        raise ErrorDeAccion('Falta el motivo de la prórroga.', 'motivo')
+    tipo = datos.get('tipo')
+    try:
+        dia = subscription_service.fin_de_prorroga(subscription_service.a_prorrogar(client, slug), tipo)
+    except (LookupError, ValueError) as e:
+        raise ErrorDeAccion(str(e), 'tipo')
+
+    _asignar(alumno_id, slug, dia, AcademyAccessService.closer_de(client, usuario))
+    client.academy_product_slug = slug
+    client.academy_expires_at = datetime.combine(dia, time.min)
+    subscription_service.prorrogar(client, tipo, motivo, slug=slug, usuario=usuario)
+    etiqueta = subscription_service.PRORROGAS[tipo]['label'].lower()
+    _constancia(appt, usuario, f'{usuario.username} le dio una {etiqueta} en la Academia ({nombre}) '
+                               f'hasta el {_fecha_legible(dia)}. Motivo: {motivo}.')
+    db.session.commit()
+    return {'accion': 'prorrogado', 'vence': dia.isoformat(), 'programa': nombre}

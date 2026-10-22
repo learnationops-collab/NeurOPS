@@ -165,6 +165,12 @@ class AcademyAccessService:
         if expires_at_override:
             expires_at = expires_at_override if isinstance(expires_at_override, date) else \
                 datetime.strptime(expires_at_override, '%Y-%m-%d').date()
+            # Alargar pide una venta nueva (22/10/2026): se valida antes de tocar la Academia.
+            from app.services.subscription_service import venta_que_extiende
+            try:
+                venta_que_extiende(client, product_slug, expires_at)
+            except ValueError as e:
+                raise AcademyAccessError(str(e), status_code=422)
         else:
             # Work es la fuente de verdad (20/10/2026): la fecha de su suscripción, ya calculada por
             # el pago; sin suscripción, la regla de siempre.

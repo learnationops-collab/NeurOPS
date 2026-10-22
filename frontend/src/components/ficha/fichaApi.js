@@ -108,6 +108,8 @@ const RUTAS = {
     // todavía no es alumno), y quitar (vence hoy; pide `confirmo: true`). Ver `ficha_academia.py`.
     acceso_academia: (appt, p) => api.post(`/ficha/${appt}/academia/acceso`, p),
     quitar_acceso_academia: (appt, p) => api.post(`/ficha/${appt}/academia/quitar`, p),
+    // Prórroga sin pago: `tipo` (sena, cortesia) y `motivo`; la fecha la calcula Work.
+    prorrogar_acceso_academia: (appt, p) => api.post(`/ficha/${appt}/academia/prorroga`, p),
     // Las ventas (`Sale`) del bloque Ventas de Fulfillment: el id de la venta va en la URL. Cancelar
     // pide `{motivo}`; ninguna de las dos toca los pagos ni la suscripción.
     cancelar_venta: (appt, p) => api.post(`/ficha/ventas/${p.sale_id}/cancelar`, { motivo: p.motivo }),

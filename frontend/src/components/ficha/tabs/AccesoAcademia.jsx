@@ -14,7 +14,7 @@
 
 import { useId, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { CalendarPlus, KeyRound } from 'lucide-react';
+import { CalendarClock, CalendarPlus, KeyRound } from 'lucide-react';
 import InlineConfirm from '../../ui/InlineConfirm';
 import Tip from '../../../pages/comercial/components/Tip';
 import { diaLegible } from '../piezas/fecha';
@@ -22,6 +22,7 @@ import { localDateFromNow, localToday } from '../../../utils/datetime';
 import { mensajeDeError } from '../fichaApi';
 import MotivoDelFallo from '../historial/MotivoDelFallo';
 import { AYUDA_ACCESO, baseDeRenovacion, sumarMeses } from '../fulfillment';
+import ProrrogaAcademia from './ProrrogaAcademia';
 
 // Los atajos de plazo: 4 meses es la regla del alta para un pago completo o parcial.
 const PLAZOS = [
@@ -41,6 +42,7 @@ export default function AccesoAcademia({ datos, ficha, onAccion, onHecho }) {
   const ids = useId();
   const reducido = useReducedMotion();
   const [abierto, setAbierto] = useState(false);
+  const [prorroga, setProrroga] = useState(false);
   const [vence, setVence] = useState('');
   const [email, setEmail] = useState('');
   const [guardando, setGuardando] = useState(false);
@@ -95,6 +97,13 @@ export default function AccesoAcademia({ datos, ficha, onAccion, onHecho }) {
     }
   };
 
+  if (prorroga) {
+    return (
+      <ProrrogaAcademia tipos={datos.prorrogas} base={base} sena={!!pagado?.is_deposit}
+        onAccion={onAccion} onHecho={onHecho} onCerrar={() => setProrroga(false)} />
+    );
+  }
+
   if (!abierto) {
     return (
       <div className="ful-gestion">
@@ -104,6 +113,13 @@ export default function AccesoAcademia({ datos, ficha, onAccion, onHecho }) {
             {renovar ? <CalendarPlus /> : <KeyRound />}
             {`${verbo} acceso`}
           </button>
+          {renovar && !!datos.prorrogas?.length && (
+            // Días sin pago: tipo fijo y motivo; la fecha la calcula Work (22/10/2026).
+            <button type="button" className="btn btn--linea btn--sm" onClick={() => setProrroga(true)}>
+              <CalendarClock />
+              Prórroga
+            </button>
+          )}
           {renovar && (
             // `alto` 34: el mismo que el `.btn--sm` de al lado.
             <InlineConfirm tema="oscuro" compacto={false} alto={34} tamIcono={13}

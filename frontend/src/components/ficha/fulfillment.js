@@ -133,7 +133,7 @@ export const AYUDA_ACCESO = {
   correo: 'El correo con el que entra a la Academia. Es la única forma de cruzarlo con NeurOPS: la Academia no busca por teléfono.',
   telefono: 'El teléfono que tiene cargado la Academia. No sirve para encontrarlo, pero conviene que coincida con el de acá: es por donde se le escribe.',
   consultado: 'Estos datos se le piden a la Academia en vivo cada vez que abrís esta pestaña (o tocás Actualizar). NeurOPS guarda una copia para poder filtrar y ordenar la tabla Clientes por la actividad en la Academia.',
-  gestionar: 'Dar o renovar le asigna en la Academia el producto que pagó, con el vencimiento que elijas; la asignación anterior queda en su historial. Quitar lo hace vencer hoy: la Academia no permite borrar un acceso, y así deja de entrar. Se puede renovar después.',
+  gestionar: 'Dar o renovar le asigna en la Academia el producto que pagó; alargarlo pide una venta nueva. Para darle días sin pago está Prórroga: seña o cortesía, con motivo, y la fecha la calcula NeurOPS. La asignación anterior queda en su historial. Quitar lo hace vencer hoy: la Academia no permite borrar un acceso, y así deja de entrar. Se puede renovar después.',
   dar: 'Todavía no tiene cuenta en la Academia: se le crea con este correo y le llega un mail para activar su contraseña. Es el correo con el que va a entrar, así que tiene que ser el real.',
 };
 

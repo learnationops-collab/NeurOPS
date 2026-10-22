@@ -54,7 +54,7 @@ const TabAcciones = lazyDe('TabAcciones');
 const ERRORES_EN_LINEA = new Set(['editar_agenda', 'corregir_seguimiento', 'agendar_seguimiento',
     'corregir_pago', 'borrar_pago', 'agregar_pago', 'eliminar_agenda', 'borrar_seguimiento',
     'borrar_plan', 'borrar_evento', 'crear_evento', 'reportar_resultado', 'registrar_venta',
-    'acceso_academia', 'quitar_acceso_academia', 'guardar_fathom', 'guardar_objecion',
+    'acceso_academia', 'quitar_acceso_academia', 'prorrogar_acceso_academia', 'guardar_fathom', 'guardar_objecion',
     'pasar_a_recuperacion']);
 
 /**
@@ -105,6 +105,7 @@ const MENSAJES = {
         if (r.es_fathom === false) return { tono: 'warning', texto: 'Link guardado, pero no es de Fathom: revisalo.' };
         return 'Link de Fathom guardado: se abre desde la cabecera.';
     },
+    prorrogar_acceso_academia: (r) => `Prórroga dada: acceso a la Academia hasta el ${diaLegible(r?.vence)}.`,
     quitar_acceso_academia: 'Acceso a la Academia quitado: vence hoy. Se puede renovar cuando haga falta.',
     reprogramar: 'Llamada reprogramada.',
     cancelar: 'Cancelación registrada.',
