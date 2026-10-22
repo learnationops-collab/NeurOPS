@@ -506,3 +506,18 @@
   - Corregir mail (`POST /ficha/<id>/academia/mail`): el correo queda como el de la Academia de la persona (`uso='academia'`). Si tiene una suscripción vigente que sale de una venta, el acceso pasa a la cuenta de ese correo (se crea si no existe) con la fecha de Work, y la cuenta anterior queda vencida hoy. Sin venta vigente solo se guarda el mail: no se crea una cuenta ni un acceso vacío. Un correo que es de otra persona se rechaza.
   - Se borraron los tests de dar y renovar (la acción ya no existe) y el de `AccesoAcademia`.
   - Verificación: sin tests (regla del proyecto); compilado.
+
+- **22 de Octubre de 2026 (gunicorn con hilos)** *([gunicorn.conf.py](../../gunicorn.conf.py) [NEW], [app/services/candado_pg.py](../../app/services/candado_pg.py) [NEW], [app/services/reminder_scheduler.py](../../app/services/reminder_scheduler.py), [config.py](../../config.py), [railway.toml](../../railway.toml), [Dockerfile](../../Dockerfile), [Procfile](../../Procfile), [app/api/triage.py](../../app/api/triage.py) [MODIFY])*:
+  - Work corría con 1 proceso de 1 hilo: un pedido lento (Claude, Google, Meta) frenaba a todos. Ahora 1 worker con 8 hilos (misma memoria); `WEB_CONCURRENCY` y `GUNICORN_THREADS` lo ajustan desde Railway.
+  - El scheduler toma un candado de Postgres antes de cada vuelta (`candado_pg.soy_lider`), listo para cuando haya más de un worker. Pool de Postgres: 5 + 10 por worker (producción acepta 500).
+  - El aviso de triage a Discord tenía la única llamada externa sin tiempo máximo: ahora 20 s.
+  - Las reservas de agendas ya bloquean al closer en la base (`_bloquear_y_verificar`): con hilos no hay reservas dobles.
+  - Se borró el test que exigía que Postgres no tuviera opciones de conexión.
+  - Verificación: sin tests (regla del proyecto); en producción arranca `Using worker: gthread`.
+
+- **22 de Octubre de 2026 (motor genérico de tablas y agentes pares con la Academia)** *([app/services/tablas/](../../app/services/tablas/) [NEW], [app/api/tablas.py](../../app/api/tablas.py) [NEW], [app/api/external/agent.py](../../app/api/external/agent.py) [NEW], [app/services/learnation_service.py](../../app/services/learnation_service.py), [app/decorators.py](../../app/decorators.py), [app/__init__.py](../../app/__init__.py) [MODIFY], [docs/plan_tablas_motor_generico.md](../plan_tablas_motor_generico.md) [NEW])*:
+  - Filtrar, cruzar, agrupar y medir sobre cualquier tabla de Work, con el mismo plan por claves (`TablePlan`) y el mismo paquete que la Academia. Catálogo desde los modelos y sus `ForeignKey` (campos `f.`, `p.`, `n.`, `l.`); medición count, sum, avg, min, max y pct con los avisos de muestra chica y de diferencia que puede ser azar.
+  - Solo lectura (`READ ONLY` y 5 s por consulta). Sin credenciales, chats ni postulantes; nómina y gastos solo admin; montos para admin y director comercial.
+  - `POST /api/external/academy/agent/ask` para la Academia (catálogo y planes; sin montos) y `LearnationService.agent_ask` para preguntarle a ella. Cada fila lleva `persona` (people.uuid) y `alumno_id` para cruzar.
+  - `/api/tablas` y `flask tablas fuentes|consultar` para admin, operaciones y director comercial.
+  - Verificación: sin tests (regla del proyecto); probado en producción y en el servidor de prueba de solo lectura (catálogo, agrupar por programa y por período, avisos, errores, permisos, y el Pulso de la Academia pedido desde Work).
