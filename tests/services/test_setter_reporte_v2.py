@@ -218,26 +218,26 @@ def test_la_fila_v2_se_guarda_en_la_base(db, make_user):
 
 def _payload_con_leads():
     datos = _payload()
-    # Anuncios: 10 mensajes = 1 no lead + 0 in-abribles + 6 leads + 3 que no contestaron.
+    # Anuncios: 10 mensajes = 6 entrantes cualificados (1 es no lead) + 0 in-abribles + 4 que no contestaron.
     datos['anuncios'].update(leads=6, ap_entrantes_resp=1, ap_dolor_resp=4)
-    # Inbound: 6 mensajes = 0 + 1 + 5 leads: todos contestaron.
+    # Inbound: 6 mensajes = 5 entrantes cualificados (0 no leads) + 1 in-abribles: todos contestaron.
     datos['inbound'].update(leads=5, ap_entrantes_resp=0, ap_dolor_resp=2)
     datos['bienvenidas'].update(aperturas_resp=3)
     return datos
 
 
-def test_los_leads_cargados_son_los_cualificados_y_lo_que_sobra_no_contesto():
+def test_los_no_leads_se_restan_de_los_entrantes_cualificados():
     stat = rv2.escribir(_fila(), _payload_con_leads())
     lectura = rv2.leer(stat)
 
     assert (stat.ads_leads, stat.inb_leads) == (6, 5)
-    assert lectura['canales']['anuncios']['cualificados'] == 6
-    assert lectura['canales']['anuncios']['no_contestaron'] == 3
+    assert lectura['canales']['anuncios']['cualificados'] == 5
+    assert lectura['canales']['anuncios']['no_contestaron'] == 4
     assert lectura['canales']['inbound']['no_contestaron'] == 0
-    assert (lectura['totales']['cualificados'], lectura['totales']['no_contestaron']) == (11, 3)
-    assert lectura['embudo']['cualificados'] == 11
+    assert (lectura['totales']['cualificados'], lectura['totales']['no_contestaron']) == (10, 4)
+    assert lectura['embudo']['cualificados'] == 10
     # Los totales del v1 con su significado: leads netos y «Cualificación» = los que respondieron.
-    assert (stat.inbox_leads, stat.funnel_qualification) == (11, 12)
+    assert (stat.inbox_leads, stat.funnel_qualification) == (10, 11)
 
 
 def test_sin_leads_cargados_queda_la_cuenta_de_antes():

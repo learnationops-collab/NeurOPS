@@ -233,6 +233,38 @@ def test_en_modo_real_un_eco_ajeno_pausa_el_bot(flujo, lead, monkeypatch):
     assert lead.textos()[-1] == '¿Cuál es tu perfil?'  # pasada la pausa, vuelve
 
 
+def test_un_boton_tocado_despues_de_que_escribio_el_equipo_retoma_el_recorrido(flujo, lead, monkeypatch):
+    monkeypatch.setenv('IG_MOTOR_MODO', 'real')
+    guia = flujo()
+    lead.escribe('OBTENER GUIA')
+    primera = lead.ejecucion()
+    lead.llega(f.eco('Ey, no te olvides de decirme tu perfil', 'humano-1', ms(lead.ahora)))
+    assert primera.estado == AutEjecucion.CANCELADA
+
+    lead.toca(payload(guia, 'perfil', 'medico'), 'Médico graduado', minutos=90)
+
+    assert lead.textos()[-2:] == ['Genial ya te lo mando 🙌', 'Antes, para qué examen te estás preparando?']
+    assert AutEjecucion.query.count() == 1  # el mismo recorrido, no uno nuevo
+    assert (primera.estado, primera.nodo_actual) == (AutEjecucion.ESPERANDO_RESPUESTA, 'examen')
+    lead.escribe('ENARM', minutos=1)  # la pausa se levantó: la respuesta libre también pasa
+    assert lead.textos()[-1] == 'Recursos para ENARM'
+
+
+def test_con_el_bot_pausado_un_boton_ya_respondido_o_un_texto_no_hacen_nada(flujo, lead, monkeypatch):
+    monkeypatch.setenv('IG_MOTOR_MODO', 'real')
+    guia = flujo()
+    lead.escribe('OBTENER GUIA')
+    lead.toca(payload(guia, 'perfil', 'medico'))
+    lead.llega(f.eco('Hola! soy Elias', 'humano-1', ms(lead.ahora)))
+    enviados = len(lead.transporte.enviados)
+
+    lead.escribe('ENARM', minutos=1)
+    lead.toca(payload(guia, 'perfil', 'estudiante'), minutos=1)
+
+    assert len(lead.transporte.enviados) == enviados
+    assert InstagramWebhookEvento.query.order_by(InstagramWebhookEvento.id.desc()).first().resultado == 'bot_pausado'
+
+
 def test_el_eco_de_un_mensaje_propio_no_pausa(flujo, lead, monkeypatch):
     monkeypatch.setenv('IG_MOTOR_MODO', 'real')
     flujo()

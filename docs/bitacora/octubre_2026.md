@@ -474,6 +474,18 @@
   - `financial_sales` suma la verificación del pago contra el banco: `transaction_date` (cuándo impactó), `transaction_id`, `transaction_source` (cuenta o pasarela), `transaction_amount` (lo que entró de verdad), `transaction_evidence` (rutas del volumen que lo respaldan) y `transaction_status` (`verified`, `pending`, `unverified`; todos empiezan en `pending`). Todavía no se usa: la llenará la conciliación con los datos bancarios. Nadie cambia de criterio por ahora (las comisiones siguen sobre todos los pagos).
   - Verificación: sin tests ni ejecución local (regla del proyecto); el script se ensayó en el servidor de prueba; la migración se valida con el deploy de develop.
 
+- **21 de Octubre de 2026 (Inbox: Guía gratis, Curso gratuito y Aprobación pasan al motor)** *(Sin cambios de código: datos en producción)*:
+  - La campaña «Guía Perú» pasa a ser «Winners Reels MX + PE» (la campaña de Meta entera) con GUÍA PERÚ, GUÍA GRATIS, CURSO GRATUITO y APROBACIÓN, todas al flujo «GUÍA PERÚ» (la misma tarjeta que mandaba ManyChat). Una sola campaña para no contar 4 veces el gasto de la misma campaña de Meta.
+  - Los anuncios «W | Aprobación» y «W | Quiero Aplicar» no tenían palabra clave (su gasto no se cargaba a nadie en Marketing): quedan en APROBACION y APLICAR a mano.
+  - 22/10: GUÍA PERÚ vuelve a ManyChat (algo de ManyChat atado al anuncio le seguía mandando la tarjeta ~30 s después del motor y cortaba el recorrido).
+
+- **22 de Octubre de 2026 (Inbox: DMs que Meta no le manda al motor)** *([app/automatizaciones/nucleo/eventos.py](../../app/automatizaciones/nucleo/eventos.py) [MODIFY], [app/api/instagram_webhook.py](../../app/api/instagram_webhook.py) [MODIFY], [app/automatizaciones/recuperacion.py](../../app/automatizaciones/recuperacion.py) [NEW], [app/automatizaciones/transporte.py](../../app/automatizaciones/transporte.py) [MODIFY], [app/automatizaciones/servicio.py](../../app/automatizaciones/servicio.py) [MODIFY])*:
+  - Con ManyChat y Kommo en la misma cuenta, a veces Meta no le avisa a esta app de un DM: leads de Winners que tocaron el anuncio y nunca recibieron la tarjeta.
+  - El motor lee también `standby` (lo que pasa en conversaciones que Meta le dio a otra app); el campo se suscribió en el panel de la app de Meta, junto con `messaging_handover`.
+  - Recuperación: cada minuto, en modo real, el motor pide las 25 conversaciones más recientes y guarda como evento pendiente (`tipos='recuperado'`) cada DM de texto de un lead de los últimos 15 min que no tenga (por `mid`, o por contacto, texto y hora). Probado contra la API en producción: el `mid` coincide con el del webhook y trae el «CURSO GRATUITO» de un lead que el webhook nunca mandó. No trae el anuncio de Meta.
+  - Un endpoint de diagnóstico temporal sin sesión (mientras Railway tuvo el SSH caído) se subió y se sacó sin llegar a desplegarse.
+  - Verificación: sin tests (regla del proyecto); la consulta a la API se corrió en el servidor contra la base de producción, de solo lectura.
+
 - **22 de Octubre de 2026 (pase a producción de personas y suscripciones desde la Academia)** *([scripts/backfill_subscriptions.py](../../scripts/backfill_subscriptions.py) [MODIFY], [scripts/academia_alumnos.py](../../scripts/academia_alumnos.py), [scripts/vincular_alumnos_academia.py](../../scripts/vincular_alumnos_academia.py), [scripts/academia_export.php](../../scripts/academia_export.php) [NEW], [docs/plan_personas.md](../plan_personas.md), [tests/services/test_subscription_service.py](../../tests/services/test_subscription_service.py) [MODIFY])*:
   - Producción con los pasos 1 a 11b del pase (personas, conversaciones, comprador/pagador, ventas, pagos en observación); números en el plan.
   - Las suscripciones se arman desde el historial de la Academia: una por persona y producto, cada asignación es un período (alta, conversión, renovación o prórroga) atado a su venta por fecha. Producción: 215 suscripciones (114 vigentes), 218 ventas atadas.
@@ -494,3 +506,23 @@
   - Corregir mail (`POST /ficha/<id>/academia/mail`): el correo queda como el de la Academia de la persona (`uso='academia'`). Si tiene una suscripción vigente que sale de una venta, el acceso pasa a la cuenta de ese correo (se crea si no existe) con la fecha de Work, y la cuenta anterior queda vencida hoy. Sin venta vigente solo se guarda el mail: no se crea una cuenta ni un acceso vacío. Un correo que es de otra persona se rechaza.
   - Se borraron los tests de dar y renovar (la acción ya no existe) y el de `AccesoAcademia`.
   - Verificación: sin tests (regla del proyecto); compilado.
+
+- **22 de Octubre de 2026 (reporte del setter: los no leads se restan de los entrantes cualificados)** *([app/services/setter_reporte_v2.py](../../app/services/setter_reporte_v2.py), [frontend/src/pages/setter/reporte/modelo.js](../../frontend/src/pages/setter/reporte/modelo.js), [frontend/src/pages/setter/reporte/ReporteDiario.jsx](../../frontend/src/pages/setter/reporte/ReporteDiario.jsx) [MODIFY])*:
+  - Lo que el setter carga como «Entrantes cualificados» incluye a los no leads: los leads cualificados finales son cualificados − no leads (Elias: 55 − 23 = 32). Misma cuenta en el formulario y en el backend (`cualificados`).
+  - Los «sin respuesta» pasan a ser nuevos mensajes − entrantes cualificados − in-abribles (79 − 55 = 24). Los reportes de antes del 15/10 (sin leads cargados) conservan su cuenta; los v2 ya guardados se recalculan al leerlos.
+  - Verificación: tests del reporte (backend y frontend) actualizados y en verde.
+
+- **22 de Octubre de 2026 (gunicorn con hilos)** *([gunicorn.conf.py](../../gunicorn.conf.py) [NEW], [app/services/candado_pg.py](../../app/services/candado_pg.py) [NEW], [app/services/reminder_scheduler.py](../../app/services/reminder_scheduler.py), [config.py](../../config.py), [railway.toml](../../railway.toml), [Dockerfile](../../Dockerfile), [Procfile](../../Procfile), [app/api/triage.py](../../app/api/triage.py) [MODIFY])*:
+  - Work corría con 1 proceso de 1 hilo: un pedido lento (Claude, Google, Meta) frenaba a todos. Ahora 1 worker con 8 hilos (misma memoria); `WEB_CONCURRENCY` y `GUNICORN_THREADS` lo ajustan desde Railway.
+  - El scheduler toma un candado de Postgres antes de cada vuelta (`candado_pg.soy_lider`), listo para cuando haya más de un worker. Pool de Postgres: 5 + 10 por worker (producción acepta 500).
+  - El aviso de triage a Discord tenía la única llamada externa sin tiempo máximo: ahora 20 s.
+  - Las reservas de agendas ya bloquean al closer en la base (`_bloquear_y_verificar`): con hilos no hay reservas dobles.
+  - Se borró el test que exigía que Postgres no tuviera opciones de conexión.
+  - Verificación: sin tests (regla del proyecto); en producción arranca `Using worker: gthread`.
+
+- **22 de Octubre de 2026 (motor genérico de tablas y agentes pares con la Academia)** *([app/services/tablas/](../../app/services/tablas/) [NEW], [app/api/tablas.py](../../app/api/tablas.py) [NEW], [app/api/external/agent.py](../../app/api/external/agent.py) [NEW], [app/services/learnation_service.py](../../app/services/learnation_service.py), [app/decorators.py](../../app/decorators.py), [app/__init__.py](../../app/__init__.py) [MODIFY], [docs/plan_tablas_motor_generico.md](../plan_tablas_motor_generico.md) [NEW])*:
+  - Filtrar, cruzar, agrupar y medir sobre cualquier tabla de Work, con el mismo plan por claves (`TablePlan`) y el mismo paquete que la Academia. Catálogo desde los modelos y sus `ForeignKey` (campos `f.`, `p.`, `n.`, `l.`); medición count, sum, avg, min, max y pct con los avisos de muestra chica y de diferencia que puede ser azar.
+  - Solo lectura (`READ ONLY` y 5 s por consulta). Sin credenciales, chats ni postulantes; nómina y gastos solo admin; montos para admin y director comercial.
+  - `POST /api/external/academy/agent/ask` para la Academia (catálogo y planes; sin montos) y `LearnationService.agent_ask` para preguntarle a ella. Cada fila lleva `persona` (people.uuid) y `alumno_id` para cruzar.
+  - `/api/tablas` y `flask tablas fuentes|consultar` para admin, operaciones y director comercial.
+  - Verificación: sin tests (regla del proyecto); probado en producción y en el servidor de prueba de solo lectura (catálogo, agrupar por programa y por período, avisos, errores, permisos, y el Pulso de la Academia pedido desde Work).

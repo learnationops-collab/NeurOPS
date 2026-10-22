@@ -56,6 +56,12 @@ class TransporteSimulado:
     def liberar_control(self, igsid):
         return True
 
+    def cuenta_id_ig(self):
+        return None  # sin cuenta no hay nada que recuperar
+
+    def mensajes_recientes(self):
+        return []
+
 
 class TransporteMeta:
     # Códigos de la Send API que significan «a esta persona ya no se le puede escribir».
@@ -65,6 +71,7 @@ class TransporteMeta:
         self.token = token or os.environ.get('IG_ACCESS_TOKEN')
         self.cuenta_id = cuenta_id or (os.environ.get('IG_USER_ID') or '').strip() or 'me'
         self.sesion = sesion or requests
+        self._cuenta_ig = None
 
     def enviar(self, destinatario, cuerpo):
         datos = self._post('messages', {'recipient': destinatario, 'message': cuerpo})
@@ -82,19 +89,7 @@ class TransporteMeta:
     def perfil(self, igsid):
         """{'username', 'name', 'is_user_follow_business'} del contacto (los DMs no los traen); {} si
         Instagram no los da."""
-        if not self.token:
-            return {}
-        try:
-            respuesta = self.sesion.get(f'{API}/{igsid}', params={'fields': 'name,username,is_user_follow_business'},
-                                        headers={'Authorization': f'Bearer {self.token}'}, timeout=15)
-            datos = respuesta.json() if respuesta.content else {}
-        except (requests.RequestException, ValueError) as error:
-            logger.error(f'[MOTOR IG] Perfil de {igsid}: {error}')
-            return {}
-        if respuesta.status_code >= 400 or 'error' in datos:
-            logger.error(f'[MOTOR IG] Perfil de {igsid}: {(datos.get("error") or {}).get("message")}')
-            return {}
-        return datos
+        return self._get(igsid, {'fields': 'name,username,is_user_follow_business'})
 
     def tomar_control(self, igsid):
         """True si la conversación quedó bajo el control de esta app."""
@@ -102,6 +97,35 @@ class TransporteMeta:
 
     def liberar_control(self, igsid):
         return bool(self._post('release_thread_control', {'recipient': {'id': igsid}}).get('success'))
+
+    def cuenta_id_ig(self):
+        """El id de la cuenta como aparece en los mensajes (`entry.id` del webhook). Se pide una vez."""
+        if self._cuenta_ig is None:
+            self._cuenta_ig = str(self._get('me', {'fields': 'user_id'}).get('user_id') or '')
+        return self._cuenta_ig or None
+
+    def mensajes_recientes(self, conversaciones=25, por_conversacion=5):
+        """Los últimos mensajes de las conversaciones más recientes ({id, created_time, from, message}).
+        Para recuperar los DMs que el webhook no trajo (`recuperacion.py`). [] si la API falla."""
+        campos = f'updated_time,messages.limit({por_conversacion}){{id,created_time,from,message}}'
+        datos = self._get(f'{self.cuenta_id}/conversations',
+                          {'platform': 'instagram', 'fields': campos, 'limit': conversaciones})
+        return [m for c in datos.get('data') or [] for m in (c.get('messages') or {}).get('data') or []]
+
+    def _get(self, ruta, params):
+        if not self.token:
+            return {}
+        try:
+            respuesta = self.sesion.get(f'{API}/{ruta}', params=params,
+                                        headers={'Authorization': f'Bearer {self.token}'}, timeout=15)
+            datos = respuesta.json() if respuesta.content else {}
+        except (requests.RequestException, ValueError) as error:
+            logger.error(f'[MOTOR IG] GET {ruta}: {error}')
+            return {}
+        if respuesta.status_code >= 400 or 'error' in datos:
+            logger.error(f'[MOTOR IG] GET {ruta}: {(datos.get("error") or {}).get("message")}')
+            return {}
+        return datos
 
     def _post(self, ruta, cuerpo):
         if not self.token or not self.cuenta_id:

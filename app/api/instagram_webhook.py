@@ -63,6 +63,8 @@ def _tipos(payload):
                 tipos.append('reaction')
             else:
                 tipos.append('messaging')
+        if entry.get('standby'):
+            tipos.append('standby')
         for cambio in entry.get('changes') or []:
             tipos.append(cambio.get('field') or 'changes')
     return ','.join(dict.fromkeys(tipos))[:200]
