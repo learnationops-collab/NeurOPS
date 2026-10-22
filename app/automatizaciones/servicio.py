@@ -21,6 +21,7 @@ from datetime import timedelta
 from sqlalchemy import text
 
 from app import db
+from app.automatizaciones import recuperacion
 from app.automatizaciones.modelos import AutFlujo, AutFlujoVersion, ahora
 from app.automatizaciones.motor import Motor
 from app.automatizaciones.nucleo import eventos as ev
@@ -95,9 +96,19 @@ def despertar(momento=None, transporte=None):
 
 
 def tick(momento=None, transporte=None):
-    """Lo que corre el cron: primero lo nuevo, después las esperas vencidas."""
+    """Lo que corre el cron: primero lo nuevo, después los DMs que el webhook no trajo (solo en real) y
+    las esperas vencidas."""
     momento = momento or ahora()
     resumen = procesar_pendientes(momento, transporte)
+    if modo() == REAL and transporte is None:
+        try:
+            resumen['recuperados'] = recuperacion.recuperar(TransporteMeta(), momento)
+        except Exception:  # sin recuperación el motor sigue con lo del webhook; no puede frenar las esperas
+            db.session.rollback()
+            logger.exception('[MOTOR IG] Falló la recuperación de DMs por la API')
+            resumen['recuperados'] = 0
+        if resumen['recuperados']:
+            resumen['procesados'] += procesar_pendientes(momento)['procesados']
     resumen['despertadas'] = despertar(momento, transporte)
     return resumen
 
