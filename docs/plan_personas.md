@@ -198,7 +198,7 @@ Reglas para todos los pasos:
 | 10 | `backfill_sales.py --apply --rehacer` | prueba / `--apply --rehacer` | Ensayo: 691 ventas (595 activas, 96 canceladas), 0 automáticas; 58 señas para revisar | `--rehacer` borra las ventas que armó `sale_service` en vivo y las vuelve a armar: es lo que se quiere |
 | 11 | `backfill_agreed_total.py` | prueba / `--apply` | Ensayo: 76 ventas con `agreed_total`; el resto en la lista para revisar | La lista no se aplica: se revisa con Santiago |
 | 11b | `pagos_en_observacion.py` | prueba / `--apply` | Ensayo: 102 pagos ($42.757), 70 anteriores a 2026 y 32 desde 2026; 29 ventas con «pago en observación» | Después del paso 10, que rearma las ventas y se llevaría el motivo |
-| 12 | `backfill_subscriptions.py` | prueba; `--apply` **solo con el ok de Santiago** | 113 suscripciones | Consulta la API de la Academia una vez por alumno: tarda varios minutos y lo corta un deploy |
+| 12 | `academia_export.php` (en la Academia) → `vincular_alumnos_academia.py vinculos.json` → `backfill_subscriptions.py academia.json` | prueba / `--apply` (ok de Santiago, 22/10) | Producción: 215 suscripciones (114 vigentes, 91 vencidas, 10 quitadas antes de tiempo), 218 ventas atadas | Ver «Suscripciones desde la Academia» abajo |
 
 Controles al final (solo lectura; ensayo: 944 pagos, 22.054 personas activas): `financial_sales` con 28 sin persona y 356 con `payer_person_uuid`; ningún
 pago completado sin `sale_id`; `sales` sin `source='auto'`.
@@ -245,6 +245,34 @@ Hecha en este orden: 1, 2, 3, 4, 5, 6, 7, 9, 8, 10, 11, 11b. Backup antes (Railw
 
 Controles: 945 pagos, 28 sin persona, 355 con pagador, 0 completados sin venta, 0 ventas auto, 22.210 personas
 activas. Para correr algo largo sin que lo corte el SSH: `setsid nohup sh -c "python ...; echo FIN-\$?" > /tmp/x.log 2>&1 < /dev/null &`.
+
+### Suscripciones desde la Academia (22/10/2026)
+
+Objetivo (Santiago): cada alumno que compró tiene su suscripción, con sus renovaciones y prórrogas. La suscripción
+se arma desde el historial de la Academia (`product_user`), no desde lo que hoy está activo:
+
+- Una por persona y producto; cada asignación paga es un período (alta, conversión de seña, renovación si coincide
+  con otra venta, prórroga si no hay pago cerca). Fechas y producto, los de la Academia: se respetan las de hoy.
+- La venta de cada período, por fecha: un pago entre 3 días antes y 10 después de que la asignación se creó o se
+  modificó. Un alta sin venta cerca (acceso dado con demora; la Academia abrió el 31/01/2026) toma la venta libre
+  más cercana de la persona. Las ventas que no movieron la Academia (renovaciones pagadas que nadie aplicó, una
+  compra de otro programa) quedan en la suscripción más parecida, sin cambiar la fecha.
+- Programas: SI > RR > AL; SI da RR en la Academia; se puede renovar a uno inferior. Las renovaciones son mes a mes
+  (montos menores); cuánto cubre cada una lo define ventas. **Pendiente:** `subscription_service.al_ubicar_pago`
+  todavía extiende 4 meses una renovación que entra en vivo.
+- Alumnos que el cruce automático ubicaba mal (su mail estaba en la ficha de otra persona): `vincular_alumnos_academia.py`
+  mueve el id de alumno y el mail a la persona correcta. En producción: Juan Camilo Sánchez, Juanita Páez, Yrein
+  Córdova, Nadia Rodríguez, Delia Alvarado (Zubenelguebunubi), Geraldine Pachas, Miguel Ángel Contreras, Fabián La
+  Rotta, Belén Palacios y Javier Duarte Moreno. Fusionadas por decisión de Santiago: Belén con Belencita Palacios y
+  Javier Duarte Moreno con Juan Moreno (error del closer).
+- Accesos devueltos en la Academia (pagaron y no lo tenían): César Rodríguez, Sergio Carrillo, Yvonne Ortega y
+  Fiorella Carpio (upsell, en RR). Las renovaciones no aplicadas (Andrea Alejandra Pérez, Kiandra Vega, Anita
+  Sanhueza, Jonathan Aparicio, Laura Daniela Angarita) quedan con la fecha de hoy hasta que ventas defina el precio
+  mensual. Paula Carrasco: usuario creado en la Academia (704), sin producto.
+
+Quedan para revisar (lista del modo prueba): 25 alumnos con producto pago sin persona en Work (12 de Ace Learners
+sin ningún rastro), 30 accesos sin compra en Work y 12 ventas de 2026 con pago real sin acceso (ninguna de los
+últimos 4 meses salvo Paula Carrasco); 20 ventas de 2026 sin persona (febrero a abril), sin tocar.
 
 ## Inventario 2c (relevado el 20/10/2026, sobre develop 745c1303)
 

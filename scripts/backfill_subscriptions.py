@@ -1,242 +1,222 @@
-"""Carga inicial de las suscripciones (`Subscription`), una por persona y producto (frente L de
-docs/plan_personas.md, 20/10/2026).
+"""Carga de las suscripciones desde el historial de la Academia (docs/plan_personas.md, 22/10/2026).
 
-  · Quiénes: las asignaciones activas pagas que la Academia tiene HOY (`GET /api/students?product=`
-    de cada producto de los programas de Work: los alumnos con su asignación `active` y su vencimiento), más los accesos que dio Work (`Client.academy_product_slug`)
-    que no estén allá. Cada alumno se cruza con su persona: primero por su id de la Academia
-    (`learnation_user_id`), después por su mail (`person_service.buscar`, sin crear). Un alumno sin
-    persona se cuenta y se lista, no se crea.
-  · Vencimiento: la carga nunca acorta: el más lejano entre la Academia y `academy_expires_at` (y
-    entre los clientes duplicados de la persona). No se recalcula «pago inicial + 4 meses».
-  · Venta: la última de ese programa de la persona (`Sale.person_uuid`). Si está cancelada, queda sin venta.
+Objetivo: cada alumno que compró tiene su suscripción, con sus renovaciones y prórrogas.
 
-No manda nada a la Academia (solo lee) y no pisa: una persona que ya tiene suscripción a ese
-producto se saltea.
+  · Una por persona y producto. Cada asignación paga que tuvo en la Academia (`product_user`, del export
+    de `scripts/academia_export.php`) es un período de su historia, en orden: la primera es el alta, la que
+    pasa de seña a acceso completo es la conversión, la que coincide con otra venta es una renovación y la
+    que no tiene pago cerca es una prórroga (la dio el equipo).
+  · Fechas y producto: los de la Academia. El vencimiento actual es el de su última asignación (se respetan
+    las fechas de hoy, también los cortes); el producto es el que de verdad se dio, aunque la venta diga
+    otro programa (decisión de Santiago: SI > RR > AL; se puede renovar a uno inferior).
+  · La venta de cada período: la de la persona con un pago entre 3 días antes y 10 después de que la
+    asignación se creó o se modificó. Un alta sin venta cerca (acceso dado con demora, o los cargados al
+    abrir la Academia el 31/01/2026) toma la venta libre más cercana de la persona. Las ventas que quedan
+    (una renovación pagada que no movió la Academia, una compra de otro programa) se atan a la suscripción
+    más parecida con un evento que no cambia la fecha.
+  · El alumno se cruza con su persona como dice `scripts/academia_alumnos.py`
+    (`scripts/vincular_alumnos_academia.py` corrige los que se cruzan mal, antes de esta carga).
+
+No escribe en la Academia y no pisa: si la persona ya tiene suscripción a ese producto, solo se le atan
+las ventas. Listas aparte: alumnos sin persona, vinculados por nombre y fecha (para revisar), accesos sin
+compra y ventas de 2026 con pago real sin acceso.
 
 Uso:
-  python scripts/backfill_subscriptions.py            # prueba: cuenta y muestra ejemplos, no escribe
-  python scripts/backfill_subscriptions.py --apply    # crea las suscripciones con su evento «alta»
+  python scripts/backfill_subscriptions.py academia.json            # prueba
+  python scripts/backfill_subscriptions.py academia.json --apply    # crea suscripciones y eventos
 """
 import os
 import sys
-from datetime import date
+from collections import Counter, defaultdict
+from datetime import date, datetime
 
 current_dir = os.path.abspath(os.path.dirname(__file__))
 if os.path.basename(current_dir) == 'scripts':
     sys.path.append(os.path.abspath(os.path.join(current_dir, '..')))
 else:
     sys.path.append(current_dir)
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 from app import create_app, db
-from app.models import Client, Sale, Subscription, SubscriptionEvent
+from app.models import Sale, Subscription, SubscriptionEvent
 from app.services import person_service
-from app.services.academy_access_service import AcademyAccessService, _add_months
-from app.services.learnation_service import LearnationAPIError, LearnationService
-from app.services.sheets_service import SheetsService
-from app.services.subscription_service import DURACION_MESES
+from app.services.academy_access_service import AcademyAccessService
+import academia_alumnos as aa
 
-MOTIVO = 'Carga inicial: el vencimiento que la Academia tiene hoy'
-EJEMPLOS = 10
-
-
-def _fecha(valor):
-    return date.fromisoformat(str(valor)[:10]) if valor else None
+DESDE_2026 = datetime(2026, 1, 1)
+RANGO = {'ace-learners': 1, 'residency-roadmap': 2, 'residency-roadmap-for-steps': 3}
+MOTIVOS = {'alta': 'Venta', 'conversion': 'La seña pasó a acceso completo', 'renovacion': 'Renovación',
+           'prorroga': 'Prórroga del equipo, sin pago cerca'}
 
 
-class _Academia:
-    """Lo que la Academia tiene hoy, leído una vez por alumno."""
-
-    def __init__(self, slugs, numeros):
-        self.slugs, self.numeros, self.cache = slugs, numeros, {}
-
-    def asignaciones(self, user_id):
-        """[(slug, vence, es_seña)] activas pagas de ese alumno: una por producto, la más lejana."""
-        if user_id not in self.cache:
-            try:
-                productos = LearnationService.get_student_products(user_id).get('products') or []
-            except LearnationAPIError as e:
-                self.numeros['errores_api'] += 1
-                print(f'  [API] alumno {user_id}: {e}')
-                productos = []
-            mejores = {}
-            for p in productos:
-                vence = _fecha(p.get('expires_at'))
-                if p.get('status') == 'active' and vence and p.get('product_slug') in self.slugs:
-                    actual = mejores.get(p['product_slug'])
-                    if actual is None or vence > actual[0]:
-                        mejores[p['product_slug']] = (vence, bool(p.get('is_deposit')))
-            self.cache[user_id] = [(slug, v, s) for slug, (v, s) in mejores.items()]
-        return self.cache[user_id]
-
-    def alumnos(self):
-        """{user_id: (email, [(slug, vence, es_seña)])}: los alumnos con una asignación activa de cada
-        producto (`GET /api/students?product=<slug>`, con sus productos activos y el vencimiento)."""
-        import requests
-
-        base = LearnationService.BASE_URL.rsplit('/v1', 1)[0]
-        alumnos = {}
-        for slug in sorted(self.slugs):
-            r = requests.get(f'{base}/students', params={'product': slug}, headers=LearnationService._headers(), timeout=60)
-            r.raise_for_status()
-            for a in r.json().get('data') or []:
-                email, _, asignaciones = alumnos.setdefault(a['id'], (
-                    (a.get('email') or '').strip().lower() or None, (a.get('work_uuid'), a.get('work_id')), {}))
-                for p in a.get('active_products') or []:
-                    vence = _fecha(p.get('expires_at'))
-                    if p.get('slug') in self.slugs and vence and vence > asignaciones.get(p['slug'], (date.min,))[0]:
-                        asignaciones[p['slug']] = (vence, False)
-        return {uid: (email, de_work, [(s, v, d) for s, (v, d) in asig.items()])
-                for uid, (email, de_work, asig) in alumnos.items()}
-
-
-def _persona_del_alumno(user_id, email, de_work=(None, None)):
-    """Por su id de la Academia, por lo que la Academia guarda de Work (`work_uuid` o el id del
-    cliente, `work_id`) y, si no, por su mail. Nunca crea."""
-    work_uuid, work_id = de_work
-    person = person_service.buscar(learnation_user_id=user_id)
-    if person is None and work_uuid:
-        person = person_service.por_uuid(work_uuid)
-    if person is None and str(work_id or '').isdigit():
-        cliente = db.session.get(Client, int(work_id))
-        person = person_service.por_uuid(cliente.person_uuid) if cliente is not None and cliente.person_uuid else None
-    if person is None and email:
-        person = person_service.buscar(email=email)
-    return person
-
-
-def _ultima_venta(person_uuid, client_ids, programa):
-    q = Sale.query.filter(Sale.person_uuid == person_uuid) if person_uuid else Sale.query.filter(Sale.client_id.in_(client_ids))
-    if programa:
-        q = q.filter_by(program_code=programa)
-    return q.order_by(Sale.sold_at.desc(), Sale.id.desc()).first()
-
-
-def _juntar(academia, numeros, sin_persona):
-    """{(persona o cliente, slug): {'academia': (vence, seña) | None, 'work': fecha | None, 'clientes': [...]}}"""
-    grupos = {}
-
-    def grupo(clave, slug):
-        return grupos.setdefault((clave, slug), {'academia': None, 'work': None, 'clientes': []})
-
-    def sumar_academia(g, vence, sena):
-        if g['academia'] is None or vence > g['academia'][0]:
-            g['academia'] = (vence, sena)
-
-    alumnos = academia.alumnos()
-    numeros['alumnos_academia'] = len(alumnos)
-    for user_id, (email, de_work, asignaciones) in alumnos.items():
-        academia.cache.setdefault(user_id, asignaciones)
-        if not asignaciones:
-            continue
-        numeros['asignaciones_academia'] += len(asignaciones)
-        person = _persona_del_alumno(user_id, email, de_work)
-        if person is None:
-            numeros['alumnos_sin_persona'] += 1
-            sin_persona.append(f'alumno {user_id} <{email}>: {", ".join(s for s, _, _ in asignaciones)}')
-            continue
-        for slug, vence, sena in asignaciones:
-            sumar_academia(grupo(('p', person.uuid), slug), vence, sena)
-
-    clientes = Client.query.filter(Client.academy_product_slug.isnot(None), Client.academy_expires_at.isnot(None)) \
-        .order_by(Client.id).all()
-    numeros['clientes_work'] = len(clientes)
-    for c in clientes:
-        g = grupo(('p', c.person_uuid) if c.person_uuid else ('c', c.id), c.academy_product_slug)
-        g['clientes'].append(c)
-        g['work'] = max(filter(None, [g['work'], c.academy_expires_at.date()]))
-        if g['academia'] is None and c.learnation_user_id:  # no está en proceso: se le pregunta igual
-            for slug, vence, sena in academia.asignaciones(c.learnation_user_id):
-                if slug == c.academy_product_slug:
-                    sumar_academia(g, vence, sena)
-    return grupos
-
-
-def ejecutar(apply=False):
-    """La carga dentro de un app context. Devuelve los números."""
-    programa_de = {slug: codigo for codigo, slug in (AcademyAccessService.get_product_mapping() or {}).items()}
-    numeros = {k: 0 for k in (
-        'alumnos_academia', 'asignaciones_academia', 'alumnos_sin_persona', 'clientes_work', 'personas_producto',
-        'creadas', 'ya_tenian', 'sin_cliente', 'vigentes', 'sin_venta', 'venta_cancelada', 'sena', 'solo_academia',
-        'solo_work', 'en_las_dos', 'difieren', 'academia_mas_lejos', 'work_mas_lejos', 'errores_api')}
-    sin_persona, sin_cliente, ejemplos, hoy = [], [], [], date.today()
-    grupos = _juntar(_Academia(set(programa_de), numeros), numeros, sin_persona)
-    numeros['personas_producto'] = len(grupos)
-
-    for (clave, slug), g in grupos.items():
-        person_uuid = clave[1] if clave[0] == 'p' else None
-        person = person_service.por_uuid(person_uuid) if person_uuid else None
-        client = (person_service.cliente_de(person, crear=False) if person else None) or (g['clientes'] or [None])[0]
-        if client is None:
-            numeros['sin_cliente'] += 1
-            sin_cliente.append(f'persona {person_uuid}: {slug}')
-            continue
-        ids = [c.id for c in g['clientes']] or [client.id]
-        ya = Subscription.query.filter(Subscription.product_slug == slug, (
-            Subscription.person_uuid == person_uuid) if person_uuid else Subscription.client_id.in_(ids)).first()
-        if ya:
-            numeros['ya_tenian'] += 1
-            continue
-        programa = programa_de.get(slug)
-        venta = _ultima_venta(person_uuid, ids, programa)
-        if venta is not None and venta.status == 'cancelled':
-            numeros['venta_cancelada'] += 1
-            venta = None
-
-        academia, work = g['academia'], g['work']
-        fechas = [f for f in (academia[0] if academia else None, work) if f]
-        vence = max(fechas)
-        if academia and work:
-            numeros['en_las_dos'] += 1
-            if academia[0] != work:
-                numeros['difieren'] += 1
-                numeros['academia_mas_lejos' if academia[0] > work else 'work_mas_lejos'] += 1
+def _periodos(filas, person_uuid, ventas, usadas):
+    """[(kind, fila, venta)]: la historia de una suscripción, una entrada por asignación."""
+    # Primero cada asignación con la venta de su fecha; recién después, un alta sin venta toma la libre
+    # más cercana (si no, le robaría la venta a la conversión o renovación que sí coincide).
+    por_fecha = []
+    for fila in filas:
+        venta = ventas.cerca(person_uuid, aa.momentos(fila), usadas)
+        if venta is not None:
+            usadas.add(venta.id)
+        por_fecha.append(venta)
+    if filas and por_fecha[0] is None:
+        por_fecha[0] = ventas.libre_antes(person_uuid, filas[0]['creada'], usadas)
+    salida = []
+    for fila, venta in zip(filas, por_fecha):
+        if not salida:
+            kind = 'alta'
+        elif salida[-1][1]['is_deposit'] and not fila['is_deposit']:
+            kind = 'conversion'
+        elif venta is not None and venta is not salida[-1][2]:
+            kind = 'renovacion'
         else:
-            numeros['solo_academia' if academia else 'solo_work'] += 1
-        # La lista de la Academia no dice si la asignación es de una seña: sale de la venta.
-        sena = (academia and academia[1]) or (
-            bool(venta) and all(SheetsService.parse_tipo_pago(p.tipo_pago)[1] == 'seña' for p in venta.payments))
-        desde = venta.sold_at.date() if venta and venta.sold_at else _add_months(vence, -DURACION_MESES)
-        numeros['creadas'] += 1
-        numeros['vigentes'] += vence >= hoy
-        numeros['sin_venta'] += venta is None
-        numeros['sena'] += bool(sena)
-        if len(ejemplos) < EJEMPLOS and (len(g['clientes']) > 1 or not (academia and work) or academia[0] != work):
-            ejemplos.append(f'persona={person_uuid} cliente={client.id} producto={slug} '
-                            f'academia={academia[0] if academia else None} work={work} -> vence={vence} '
-                            f'venta={venta.id if venta else None} seña={bool(sena)}')
-        if apply:
-            sub = Subscription(client_id=client.id, person_uuid=person_uuid, product_slug=slug, program_code=programa,
-                               sale=venta, starts_at=min(desde, vence), expires_at=vence, status='active',
-                               is_deposit=bool(sena))
-            db.session.add(sub)
-            if venta is not None:
-                venta.subscription = sub  # la venta guarda la suscripción que activó (como `otorgar`)
-            db.session.add(SubscriptionEvent(subscription=sub, kind='alta', to_date=vence, reason=MOTIVO,
-                                             source='academia' if academia else 'work', sale=venta))
+            kind = 'prorroga'
+        if venta is not None:
+            usadas.add(venta.id)
+        salida.append((kind, fila, venta))
+    return salida
 
-    n = numeros
-    print(f"Academia: {n['alumnos_academia']} alumnos con producto pago,{n['asignaciones_academia']} asignaciones activas pagas; "
-          f"{n['alumnos_sin_persona']} alumnos sin persona en Work (no se crean)")
-    print(f"Work: {n['clientes_work']} clientes con acceso dado desde Work")
-    print(f"Personas y producto: {n['personas_producto']} -> a crear: {n['creadas']} (vigentes hoy: {n['vigentes']}, "
-          f"seña: {n['sena']}); ya tenían: {n['ya_tenian']}; persona sin cliente: {n['sin_cliente']}")
-    print(f"Origen: solo Academia {n['solo_academia']}, solo Work {n['solo_work']}, en las dos {n['en_las_dos']} "
-          f"(difieren {n['difieren']}: Academia más lejos {n['academia_mas_lejos']}, Work más lejos {n['work_mas_lejos']})")
-    print(f"Sin venta: {n['sin_venta']} (con la última venta cancelada: {n['venta_cancelada']}); errores de la API: {n['errores_api']}")
-    for titulo, lista in (('Alumnos sin persona', sin_persona), ('Personas sin cliente', sin_cliente), ('Ejemplos', ejemplos)):
-        if lista:
-            print(f'\n{titulo}:')
-            for linea in lista:
-                print(f'  {linea}')
+
+def _estado(ultima, hoy):
+    vence = ultima['vence'].date() if ultima['vence'] else hoy
+    if ultima['status'] == 'active':
+        return 'active' if vence >= hoy else 'expired'
+    return 'cancelled' if vence >= hoy else 'expired'  # la sacaron antes de tiempo (baja a mano)
+
+
+def _la_mas_parecida(slug_venta, slugs):
+    """El producto de la persona más cercano al de la venta (el mismo, o el de rango más parecido)."""
+    rango = RANGO.get(slug_venta, 2)
+    return min(slugs, key=lambda s: (abs(RANGO.get(s, 2) - rango), -RANGO.get(s, 2)))
+
+
+def _guardar(person, slug, programa, suyas, historia, estado):
+    cliente = person_service.cliente_de(person, crear=True)
+    db.session.flush()
+    ultima = suyas[-1]
+    con_venta = [v for _, _, v in historia if v is not None]
+    sub = Subscription(client_id=cliente.id, person_uuid=person.uuid, product_slug=slug, program_code=programa,
+                       starts_at=suyas[0]['creada'].date(), expires_at=(ultima['vence'] or ultima['creada']).date(),
+                       status=estado, is_deposit=bool(ultima['is_deposit']), sale=con_venta[-1] if con_venta else None)
+    db.session.add(sub)
+    anterior = None
+    for kind, fila, venta in historia:
+        hasta = (fila['vence'] or fila['creada']).date()
+        motivo = 'Seña' if kind == 'alta' and fila['is_deposit'] else MOTIVOS[kind]
+        if fila['asignado_por']:
+            motivo += f" (dada por {fila['asignado_por']})"
+        db.session.add(SubscriptionEvent(subscription=sub, kind=kind, from_date=anterior, to_date=hasta,
+                                         reason=f'Carga desde la Academia: {motivo}'[:255],
+                                         source='work' if venta else 'academia', sale=venta, created_at=fila['creada']))
+        if venta is not None:
+            venta.subscription = sub
+        anterior = hasta
+    return sub
+
+
+def _atar_resto(sub, ventas_sueltas):
+    """Ventas de la persona que no movieron la Academia: quedan en la suscripción, sin cambiar la fecha."""
+    for venta in ventas_sueltas:
+        kind = 'renovacion' if venta.kind == 'renewal' else 'extension'
+        db.session.add(SubscriptionEvent(subscription=sub, kind=kind, from_date=sub.expires_at, to_date=sub.expires_at,
+                                         reason='Carga: venta sin cambio de acceso en la Academia (se respeta la fecha)',
+                                         source='work', sale=venta, created_at=venta.sold_at))
+        venta.subscription = sub
+
+
+def ejecutar(archivo, apply=False):
+    mapping = AcademyAccessService.get_product_mapping() or {}
+    programa_de = {slug: codigo for codigo, slug in mapping.items()}
+    hoy = date.today()
+    filas, alumnos = aa.leer(archivo, set(programa_de))
+    ventas = aa.Ventas()
+
+    por_persona, sin_persona, por_nombre, n = defaultdict(lambda: defaultdict(list)), [], [], Counter()
+    for uid, suyas in filas.items():
+        u = alumnos[uid]
+        if aa.es_prueba(u):
+            n['pruebas'] += 1
+            continue
+        person, como = aa.persona_del_alumno(u, suyas, ventas)
+        if person is None:
+            sin_persona.append(f"alumno {uid} {u['name']!r} <{u['email']}>: {sorted({a['slug'] for a in suyas})}")
+            continue
+        if como == 'nombre y fecha':
+            por_nombre.append(f"alumno {uid} {u['name']!r} <{u['email']}> -> {person.full_name!r} ({person.uuid[:8]})")
+            if apply:
+                person_service.anotar(person, [('learnation_user_id', str(uid))], 'academia')
+        for a in suyas:
+            por_persona[person.uuid][a['slug']].append(a)
+
+    eventos, sin_venta, atadas = Counter(), [], set()
+    for person_uuid, productos in sorted(por_persona.items()):
+        person = person_service.por_uuid(person_uuid)
+        usadas, subs = set(), {}
+        for slug, suyas in sorted(productos.items(), key=lambda x: RANGO.get(x[0], 2)):
+            suyas.sort(key=lambda a: (a['creada'], a['id']))
+            historia = _periodos(suyas, person_uuid, ventas, usadas)
+            ya = Subscription.query.filter(Subscription.person_uuid == person_uuid, Subscription.product_slug == slug).first()
+            if ya is not None:
+                n['ya_tenian'] += 1
+                if apply:
+                    for _, _, venta in historia:
+                        if venta is not None:
+                            venta.subscription = ya
+                subs[slug] = ya
+                continue
+            estado = _estado(suyas[-1], hoy)
+            n['suscripciones'] += 1
+            n[estado] += 1
+            n['sena'] += bool(suyas[-1]['is_deposit'])
+            eventos.update(kind for kind, _, _ in historia)
+            if not any(v for _, _, v in historia):
+                sin_venta.append(f"{person.full_name!r} {slug} hasta {str(suyas[-1]['vence'])[:10]} ({estado})")
+            subs[slug] = _guardar(person, slug, programa_de.get(slug), suyas, historia, estado) if apply else slug
+        # Las ventas de la persona que no se ataron a ningún período van a su suscripción más parecida.
+        sueltas = defaultdict(list)
+        for venta, _ in ventas.de(person_uuid):
+            if venta.id not in usadas and venta.status == 'active' and not ventas.solo_sena(venta):
+                sueltas[_la_mas_parecida(mapping.get((venta.program_code or '').upper()), list(subs))].append(venta)
+                usadas.add(venta.id)
+                eventos['venta sin cambio en la Academia'] += 1
+        if apply:
+            for slug, lista in sueltas.items():
+                _atar_resto(subs[slug], lista)
+        atadas |= usadas
+
+    sin_acceso = []
+    for venta in Sale.query.filter(Sale.sold_at >= DESDE_2026, Sale.status == 'active', Sale.person_uuid.isnot(None)) \
+            .order_by(Sale.sold_at).all():
+        if venta.id in atadas or venta.subscription_id:
+            continue
+        if ventas.solo_sena(venta):
+            n['solo_sena_sin_acceso'] += 1
+            continue
+        persona = person_service.por_uuid(venta.person_uuid)
+        cobrado = sum(float(p.monto or 0) for p in ventas.pagos.get(venta.id, []))
+        sin_acceso.append(f'venta {venta.id} {venta.kind} {venta.program_code} {venta.sold_at:%Y-%m-%d} '
+                          f'{persona.full_name if persona else None!r} ${cobrado:,.0f}')
+
+    print(f"Suscripciones: {n['suscripciones']} ({n['active']} vigentes, {n['expired']} vencidas, "
+          f"{n['cancelled']} quitadas antes de tiempo; {n['sena']} en seña); ya tenían: {n['ya_tenian']}; "
+          f"cuentas de prueba salteadas: {n['pruebas']}")
+    print(f'Eventos: {dict(eventos)}; ventas atadas: {len(atadas)}')
+    for titulo, lista in (('Alumnos vinculados por nombre y fecha (revisar)', por_nombre),
+                          ('Alumnos con producto pago sin persona en Work', sin_persona),
+                          ('Suscripciones sin ninguna venta (acceso sin compra en Work)', sin_venta),
+                          (f"Ventas de 2026 con pago real y sin acceso (las de solo seña no se listan: "
+                           f"{n['solo_sena_sin_acceso']})", sin_acceso)):
+        print(f'{titulo}: {len(lista)}')
+        for s in lista:
+            print(f'  {s}')
     if apply:
         db.session.commit()
         print('\nAplicado.')
     else:
-        db.session.rollback()
         print('\n[PRUEBA] No se escribió nada. Corré con --apply para guardar.')
-    return numeros
 
 
 if __name__ == '__main__':
-    with create_app().app_context():
-        ejecutar(apply='--apply' in sys.argv)
+    app = create_app()
+    with app.app_context():
+        ejecutar(sys.argv[1], apply='--apply' in sys.argv)
