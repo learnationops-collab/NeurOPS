@@ -92,6 +92,7 @@ def asignar(setter, appointment_id, ad_id, instagram=None, palabra=None, cambiar
     `cambiar` (una completada con la palabra clave equivocada) solo se corrige eso: ni Instagram ni
     respuesta en ManyChat, que no alcanzaría para pisar la que ya está.
     """
+    from app.services import agenda_contacto_service
     from app.services.ficha_agendas_service import espejo_en_el_tablero
 
     cita = Appointment.query.filter(Appointment.id == appointment_id, es_agenda_del_setter(setter.id)).first()
@@ -126,16 +127,21 @@ def asignar(setter, appointment_id, ad_id, instagram=None, palabra=None, cambiar
     if instagram is not None and (instagram or '').strip() and not nuevo:
         raise ErrorDePalabraClave('Ese Instagram no parece un usuario: escribilo sin espacios ni links.')
     # Marketing lee el de la fila del Tablero: ése manda sobre el del cliente.
-    ig = nuevo or normalizar_ig(espejo.instagram if espejo else None) \
-        or normalizar_ig(cliente.instagram if cliente else None)
+    # Desde la Etapa 2c el Instagram de la fila del Tablero es el de su persona (`contacto()`).
+    ig_espejo = normalizar_ig(espejo.contacto()['instagram']) if espejo else None
+    ig = nuevo or ig_espejo or normalizar_ig(cliente.instagram if cliente else None)
     if not ig:
         raise ErrorDePalabraClave('Falta el Instagram del lead: es con lo que Marketing encuentra su conversación.')
     # El que se usó queda donde falte (o donde se corrigió): una fila del Tablero sin Instagram es
     # una agenda que Marketing no puede atribuir aunque la conversación tenga el anuncio.
     if cliente and (nuevo or not normalizar_ig(cliente.instagram)) and normalizar_ig(cliente.instagram) != ig:
         cliente.instagram = ig
-    if espejo and (nuevo or not normalizar_ig(espejo.instagram)) and normalizar_ig(espejo.instagram) != ig:
-        espejo.instagram = f'@{ig}'
+    if espejo and (nuevo or not ig_espejo) and ig_espejo != ig:
+        try:
+            agenda_contacto_service.corregir(espejo, 'instagram', f'@{ig}', setter)
+        except ValueError as error:  # incluye `DatoDeOtraPersona`
+            db.session.rollback()
+            raise ErrorDePalabraClave(str(error), 409) from None
 
     momentos = [m for a in suyas for m in (a.start_time, a.created_at) if m]
     antes_de_todo = min(momentos) - timedelta(minutes=1) if momentos else datetime.utcnow()
