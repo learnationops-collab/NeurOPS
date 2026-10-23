@@ -667,3 +667,8 @@
   - La franja de arriba pasa a ser una tarjeta con borde suave y más aire entre datos; cada rótulo lleva su ícono (examen, llamada, closer, teléfono, fuente) y los datos entran de a uno.
   - Llamada: «Hoy 17:35» con la pastilla de cuánto falta al lado de la hora (no del rótulo).
   - Closer con avatar de iniciales; teléfono partido como se dicta (`+52 771 396 6588`), punto verde, link a WhatsApp y botón de copiar.
+
+- **23 de Octubre de 2026 (Closer · Confirmar en tres columnas que se arrastran)** *([frontend/src/pages/closer/CloserWorkflowPage.jsx](../../frontend/src/pages/closer/CloserWorkflowPage.jsx), [frontend/src/pages/closer/clarity-v6.css](../../frontend/src/pages/closer/clarity-v6.css) [MODIFY])*:
+  - El tablero pasa de 2 a 3 columnas, las etapas de la ficha: Por contactar · Contactado · Confirmado. Se agrupa igual que la pestaña Confirmación (Confirmado = `result`; si no, `confirmation_stage`, vacía = Por contactar, las viejas = Contactado).
+  - Arrastrar una tarjeta a otra columna guarda la etapa con `PATCH /ficha/<id>/confirmacion`: a Confirmado es «Listo · 100% confirmado»; sacarla de Confirmado es «Deshacer» (y baja a Por contactar si va ahí). Se mueve al instante y vuelve si falla. Solo con mouse; en pantallas angostas las columnas se apilan.
+  - Tarjetas con Clarity: avatar de iniciales, lo que puede invertir, riel de cuánto falta para la cita; Reportar también toma el estilo Clarity.
