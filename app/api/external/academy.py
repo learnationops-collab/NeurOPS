@@ -454,6 +454,24 @@ def academy_baja():
                     "baja": baja_service.descriptor(cliente)}), 200
 
 
+@bp.route('/subscriptions', methods=['GET'])
+@require_academy_token
+def academy_subscriptions():
+    """Las suscripciones de un alumno como las ve Work, con su historial, y los tipos de prórroga que
+    se le pueden pedir: lo lee la herramienta Prórroga de la Academia antes de pedirla.
+
+    Query: `work_uuid`, `work_client_id` o `email`. 404 si Work no tiene cliente para el alumno.
+    """
+    from app.services import subscription_service
+
+    cliente = cliente_del_alumno(request.args.to_dict())
+    if not cliente:
+        return jsonify({"success": False, "error": "No existe ningún cliente con ese uuid, id o email"}), 404
+    return jsonify({"success": True, "client": {"id": cliente.id, "full_name": cliente.full_name},
+                    "subscriptions": subscription_service.del_cliente(cliente.id),
+                    "tipos": subscription_service.tipos_de_prorroga()}), 200
+
+
 @bp.route('/subscriptions/prorroga', methods=['POST'])
 @require_academy_token
 def academy_prorroga():

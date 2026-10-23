@@ -648,3 +648,6 @@
 - **23 de Octubre de 2026 (Closer: Confirmar con el look de Clarity)** *([frontend/src/pages/closer/clarity-v6.css](../../frontend/src/pages/closer/clarity-v6.css) [NEW], [frontend/src/pages/closer/CloserWorkflowPage.jsx](../../frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])*:
   - Prueba de estilo: mientras el closer está en Confirmar, la página lleva `.clarity-v6` con los tokens de Learnation Clarity (Leadership): fondo navy en diagonal, «Tu siguiente paso» como la tarjeta foco de Momentum (velo azul/magenta y aura animada), CTA y botones de tarjeta en magenta, cifras en blanco con barra magenta, columnas y tarjetas con los materiales de Clarity y etiquetas como chips teñidos (`ktag-v6`, `klisto-v6`).
   - Las demás secciones siguen con el v6.
+
+- **23 de Octubre de 2026 (La Academia lee la suscripción del alumno)** *([app/api/external/academy.py](../../app/api/external/academy.py), [docs/academy_consulta_ventas.md](../academy_consulta_ventas.md) [MODIFY])*:
+  - `GET /api/external/academy/subscriptions?work_uuid=|work_client_id=|email=`: las suscripciones del alumno con su historial y los tipos de prórroga. Lo usa la herramienta Prórroga de la Academia, que reemplaza a la asignación manual de producto.

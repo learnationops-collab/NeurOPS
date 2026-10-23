@@ -211,3 +211,6 @@ Paginado como los demás (`page`, `limit` hasta 500). Un cliente por fila, de lo
 
 Cuerpo: `work_client_id` o `email`, `motivo` y `revertir` (`true` para deshacerla). Marca la baja del cliente con el motivo "Academia: …" (su deuda deja de contar) o la borra. No corta ningún acceso y no le devuelve el aviso a la Academia. Respuesta: `{ "success": true, "changed": true, "baja": {...} | null }`; `404` si no hay cliente con ese id ni ese email.
 
+### 9.3 `GET /subscriptions` — Suscripciones del alumno
+
+Pedido del 23/10/2026: lo lee la herramienta Prórroga de la Academia antes de pedir una. Query: `work_uuid`, `work_client_id` o `email`. Respuesta: `{ "success": true, "client": { "id", "full_name" }, "subscriptions": [...], "tipos": [{ "value": "sena", "label", "dias" }, { "value": "cortesia", "label", "meses" }] }`, con cada suscripción como en el envío a la Academia (`product_slug`, `expires_at`, `is_deposit`, `vigente`, `events`), la que vence más tarde primero. `404` si Work no tiene cliente para el alumno. La prórroga se pide con `POST /subscriptions/prorroga`.
