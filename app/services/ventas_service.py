@@ -84,8 +84,10 @@ def _suscripcion(sale):
 
 
 def a_dict(sale, usuario=None):
-    pagos = [_pago(f) for f in sorted(sale.payments.all(), key=lambda f: (f.date or datetime.max, f.id))]
+    filas = sorted(sale.payments.all(), key=lambda f: (f.date or datetime.max, f.id))
+    pagos = [_pago(f) for f in filas]
     cobrado = round(sum(p['monto'] for p in pagos if p['completado']), 2)
+    completo = any(p['completado'] and deuda_service.es_pago_completo(f) for f, p in zip(filas, pagos))
     total = deuda_service.total_de(sale)
     return {
         **sale.to_dict(),
@@ -93,7 +95,7 @@ def a_dict(sale, usuario=None):
         # El total salió del precio de lista de su época (no se acordó uno).
         'total_de_lista': sale.agreed_total is None and total is not None,
         'cobrado': cobrado,
-        'saldo': round(deuda_service.saldo(sale, cobrado), 2),
+        'saldo': round(deuda_service.saldo(sale, cobrado, completo=completo), 2),
         'motivos': motivos(sale),
         'registro': _registro(sale),
         'suscripcion': _suscripcion(sale),
@@ -165,19 +167,22 @@ def para_revisar(motivo=None):
     if personas:
         from app.models import Person
         nombres = {p.uuid: p.full_name for p in Person.query.filter(Person.uuid.in_(personas)).all()}
-    cobrado = {}
+    cobrado, completas = {}, set()
     ids = [v.id for v, _ in con_motivo]
     if ids:
         from app.services.comercial_vocabulario import venta_completada
         for f in FinancialSale.query.filter(FinancialSale.sale_id.in_(ids)).all():
             if venta_completada(f):
                 cobrado[f.sale_id] = cobrado.get(f.sale_id, 0.0) + float(f.monto or 0)
+                if deuda_service.es_pago_completo(f):
+                    completas.add(f.sale_id)
     filas = [{
         'id': v.id, 'client_id': v.client_id, 'person_uuid': v.person_uuid,
         'nombre': nombres.get(v.person_uuid) or (v.client.full_name if v.client else None),
         'program_code': v.program_code, 'kind': v.kind,
         'sold_at': v.sold_at.isoformat() if v.sold_at else None,
         'total': deuda_service.total_de(v), 'cobrado': round(cobrado.get(v.id, 0.0), 2),
-        'saldo': round(deuda_service.saldo(v, cobrado.get(v.id, 0.0)), 2), 'motivos': m,
+        'saldo': round(deuda_service.saldo(v, cobrado.get(v.id, 0.0), completo=v.id in completas), 2),
+        'motivos': m,
     } for v, m in con_motivo]
     return {'ventas': filas, 'motivos': sorted(cuentas.items(), key=lambda kv: -kv[1])}

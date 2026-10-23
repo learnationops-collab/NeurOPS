@@ -193,9 +193,29 @@ def avisar(client_ids):
     def _correr():
         with app.app_context():
             for payload in payloads:
-                _enviar(payload, app.logger)
+                guardar_alumno(payload, _enviar(payload, app.logger))
 
     threading.Thread(target=_correr, daemon=True, name='academy-payment-status').start()
+
+
+def guardar_alumno(payload, respuesta):
+    """El vínculo en los dos sentidos: con el aviso la Academia guarda el work_uuid del alumno y responde su
+    `user_id`, que queda en la persona como su id de alumno (person_service.vincular_alumno). Nunca levanta."""
+    uid = (respuesta or {}).get('user_id') if isinstance(respuesta, dict) else None
+    if not uid:
+        return None
+    from app.services import person_service
+    try:
+        client = db.session.get(Client, payload.get('work_client_id'))
+        resultado = person_service.vincular_alumno(client.person if client else None, uid)
+        if resultado == 'guardado':
+            db.session.commit()
+        return resultado
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[ACADEMY PAYMENT STATUS] No se pudo guardar el alumno {uid} del cliente "
+                     f"{payload.get('work_client_id')}: {e}")
+        return None
 
 
 def _enviar(payload, log):

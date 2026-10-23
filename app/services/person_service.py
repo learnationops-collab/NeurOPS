@@ -353,6 +353,26 @@ def fusionar(sobreviviente_uuid, uuids, motivo, usuario=None):
     return sobr
 
 
+def vincular_alumno(person, learnation_user_id, fuente='academia'):
+    """Guarda en la persona su id de alumno de la Academia (y en su cliente, si no lo tiene), con lo que la
+    Academia devolvió al cruzarla. 'ya' | 'guardado' | 'de_otra' (otra persona tiene ese id: no se toca y
+    queda en el log, para fusionar o corregir a mano). No hace commit."""
+    valor = normalizar('learnation_user_id', learnation_user_id)
+    if person is None or not valor:
+        return None
+    if duenos('learnation_user_id', valor) - {person.uuid}:
+        logger.warning(f'[PERSONA] El alumno {valor} de la Academia ya es de otra persona; '
+                       f'no se vincula a {person.uuid}')
+        return 'de_otra'
+    if _ya_tiene(db.session, person, 'learnation_user_id', valor):
+        return 'ya'
+    anotar(person, [('learnation_user_id', valor)], fuente)
+    client = cliente_de(person, crear=False)
+    if client is not None and not client.learnation_user_id and valor.isdigit():
+        client.learnation_user_id = int(valor)
+    return 'guardado'
+
+
 def cliente_de(person, crear=True):
     """El cliente comercial de la persona (total, baja, objeciones). Mientras se migra, muchos flujos
     todavía lo necesitan. No hace commit."""

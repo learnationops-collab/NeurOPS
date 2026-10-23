@@ -43,8 +43,16 @@ def total_de(sale):
     return None
 
 
-def saldo(sale, cobrado):
-    if sale.status != 'active':
+def es_pago_completo(fila):
+    """¿El closer declaró este cobro como pago completo? Entonces es el monto negociado y la venta no debe
+    nada, aunque no tenga total acordado y el precio de lista de su época sea mayor (Santiago, 23/10/2026)."""
+    from app.services.sheets_service import SheetsService
+    return SheetsService.parse_tipo_pago(fila.tipo_pago)[1] == 'completo'
+
+
+def saldo(sale, cobrado, completo=False):
+    """`completo`: la venta tiene un cobro completado declarado como pago completo (es_pago_completo)."""
+    if sale.status != 'active' or completo:
         return 0.0
     total = total_de(sale)
     if total is None:
@@ -69,13 +77,15 @@ def deudas(clientes):
     if not ventas:
         return {}
     from app.services.comercial_vocabulario import venta_completada  # importa closer_followup_service
-    cobrado = {}
+    cobrado, completas = {}, set()
     for fila in FinancialSale.query.filter(FinancialSale.sale_id.in_([v.id for v in ventas])).all():
         if venta_completada(fila):
             cobrado[fila.sale_id] = cobrado.get(fila.sale_id, 0.0) + float(fila.monto or 0)
+            if es_pago_completo(fila):
+                completas.add(fila.sale_id)
     por_persona, por_cliente = {}, {}
     for v in ventas:
-        deuda = saldo(v, cobrado.get(v.id, 0.0))
+        deuda = saldo(v, cobrado.get(v.id, 0.0), completo=v.id in completas)
         if v.person_uuid in personas:
             por_persona[v.person_uuid] = por_persona.get(v.person_uuid, 0.0) + deuda
         elif v.client_id in sueltos:
