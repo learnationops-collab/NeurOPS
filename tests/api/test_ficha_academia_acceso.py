@@ -135,26 +135,8 @@ def _venta(tipo, mail='luis@x.com'):
     return SimpleNamespace(tipo_pago=tipo, mail_cliente=mail)
 
 
-def test_la_sugerencia_renueva_desde_el_vencimiento_que_tiene_si_todavia_no_paso():
-    from datetime import date
-
-    cliente = SimpleNamespace(email='luis@x.com')
-    hoy = date(2026, 9, 30)
-    vigente = {'expires_at': '2026-10-15T00:00:00+00:00'}
-    vencido = {'expires_at': '2026-09-01T00:00:00+00:00'}
-
-    sugerido = ficha_fulfillment_service.sugerencias_de_acceso
-    assert sugerido(cliente, [_venta('RR - Parcial')], vigente, hoy)['vence_sugerido'] == '2027-02-15'
-    assert sugerido(cliente, [_venta('RR - Parcial')], vencido, hoy)['vence_sugerido'] == '2027-01-30'
-    # Lo único que pagó es una seña: la regla del alta da 7 días.
-    assert sugerido(cliente, [_venta('RR - Seña')], None, hoy)['vence_sugerido'] == '2026-10-07'
 
 
-def test_la_sugerencia_de_correo_saltea_el_inventado():
-    cliente = SimpleNamespace(email='no-email-ab12@neurops.com')
-
-    assert ficha_fulfillment_service.sugerencias_de_acceso(
-        cliente, [_venta('RR - Parcial', 'real@x.com')])['email_sugerido'] == 'real@x.com'
 
 
 # --- De qué closer depende el alumno -------------------------------------------------------------

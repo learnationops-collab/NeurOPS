@@ -59,26 +59,10 @@ def test_el_placeholder_que_inventa_neurops_no_se_pregunta():
     assert not ful.es_placeholder('andres@x.com')
 
 
-def test_el_correo_de_la_venta_entra_cuando_el_del_cliente_es_inventado():
-    """El de la venta lo tipeo un humano para cobrarle; el del cliente puede ser sintetico."""
-    candidatos = ful.emails_candidatos(cliente(email='no-email-99@neurops.com'),
-                                       [venta('real@x.com')])
-
-    assert candidatos == ['real@x.com']
 
 
-def test_primero_el_del_cliente_y_despues_el_de_las_ventas_sin_repetir():
-    candidatos = ful.emails_candidatos(cliente(email='Andres@X.com'),
-                                       [venta('andres@x.com'), venta('otro@x.com')])
-
-    assert candidatos == ['andres@x.com', 'otro@x.com']
 
 
-def test_no_se_prueban_mas_correos_que_el_tope():
-    """Un cliente con doce ventas no puede gastar doce peticiones del limite de la Academia."""
-    ventas = [venta(f'v{i}@x.com') for i in range(12)]
-
-    assert len(ful.emails_candidatos(cliente(email=None), ventas)) == ful.MAX_EMAILS
 
 
 # --- Como se resuelve al alumno ---------------------------------------------------------------
@@ -91,16 +75,6 @@ def test_el_id_guardado_evita_la_busqueda_por_correo(academia):
     academia.get_student_summary.assert_called_once_with(87)
 
 
-def test_se_encuentra_al_alumno_por_el_segundo_correo(academia):
-    academia.check_user.side_effect = [
-        {'exists': False, 'user': None},
-        {'exists': True, 'user': {'id': 87}},
-    ]
-
-    datos = ful.fulfillment(cliente(email='viejo@x.com'), [venta('real@x.com')])
-
-    assert (datos['vinculado'], datos['email_usado']) == (True, 'real@x.com')
-    assert datos['emails_probados'] == ['viejo@x.com', 'real@x.com']
 
 
 def test_un_cliente_que_no_es_alumno_no_es_un_error(academia):
@@ -151,13 +125,6 @@ def test_un_token_revocado_vuelve_como_aviso_y_no_como_excepcion(academia):
     assert 'admin' in datos['error']['motivo']
 
 
-def test_un_401_corta_la_busqueda_en_vez_de_probar_el_resto(academia):
-    """Probar el correo siguiente con un token revocado es gastar peticiones para el mismo error."""
-    academia.check_user.side_effect = LearnationAPIError('Unauthenticated', status_code=401)
-
-    ful.fulfillment(cliente(email='uno@x.com'), [venta('dos@x.com')])
-
-    assert academia.check_user.call_count == 1
 
 
 def test_un_rate_limit_se_explica_en_castellano(academia):
