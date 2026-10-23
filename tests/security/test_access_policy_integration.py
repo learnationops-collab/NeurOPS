@@ -103,11 +103,6 @@ def test_un_anonimo_no_puede_inyectar_ventas(client, db, ingesta):
     assert ventas() == 0
 
 
-def test_un_anonimo_no_puede_inyectar_agendas(client, db, ingesta):
-    respuesta = client.post('/api/public/financial-agendas', json=AGENDA_NUEVA)
-
-    assert respuesta.status_code == 401
-    assert FinancialAgenda.query.count() == 0
 
 
 @pytest.mark.parametrize('cabeceras', [{'X-Api-Token': TOKEN}, {'Authorization': f'Bearer {TOKEN}'}])
@@ -119,11 +114,6 @@ def test_apps_script_con_el_secreto_crea_ventas(client, db, ingesta, cabeceras):
     assert FinancialSale.query.one().nombre_cliente == 'Cliente Uno'
 
 
-def test_n8n_con_el_secreto_crea_agendas(client, db, ingesta):
-    respuesta = client.post('/api/public/financial-agendas', json=AGENDA_NUEVA, headers={'X-Api-Token': TOKEN})
-
-    assert respuesta.status_code in (200, 201)
-    assert FinancialAgenda.query.count() == 1
 
 
 def test_un_secreto_equivocado_no_crea_nada(client, db, ingesta):

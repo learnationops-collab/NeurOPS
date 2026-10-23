@@ -110,6 +110,7 @@ POLITICA = {
     # --- Agendas (registro de llamadas). Las que reciben datos de n8n admiten su secreto ----------------
     ('GET', '/api/public/financial-agendas'): _p(COMERCIAL, OPERATOR, TRIAGE),
     ('PUT', '/api/public/financial-agendas/<int:agenda_id>'): _p(COMERCIAL, OPERATOR, TRIAGE),
+    ('POST', '/api/public/financial-agendas/atribucion'): _p(COMERCIAL, OPERATOR),
     ('DELETE', '/api/public/financial-agendas/<int:agenda_id>'): _p(COMERCIAL, OPERATOR, TRIAGE),
     ('POST', '/api/public/financial-agendas/sync-appointments'): _p(OPERATOR),
 

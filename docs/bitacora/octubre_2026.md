@@ -579,3 +579,5 @@
   - El origen de las agendas «ManyChat» y «ManyChat / Instagram» pasa a «Instagram» (datos y código). Se corrige que las comparaciones buscaban «ManyChat» y las agendas nuevas decían «ManyChat / Instagram».
   - Calendly: se sacan el ingreso de agendas de n8n (POST `/public/financial-agendas`, su verificación de hora y el sync), el formulario de n8n (`/public/financial-agendas-form`) y `fuente_formulario_service`. Desde el 15/10 todas las agendas entran por Agendas 2.0. Las etiquetas «Calendly» del workshop pasan a «agendar».
   - Se borran los tests que dependían de lo que se fue.
+  - El modal Atribuir de Ventas creaba su agenda con el webhook de n8n: ahora usa `POST /public/financial-agendas/atribucion` (fuente, closer, fecha y el lead como persona; no agenda nada).
+  - Tests: las listas de seguridad (rutas de ingesta, superficie anónima, blueprints exentos de CSRF, blueprints registrados, excepciones de roles) se actualizan a las rutas que se fueron; se borran los tests que llamaban a endpoints borrados o esperaban el origen «ManyChat».

@@ -76,15 +76,6 @@ def test_el_comentario_del_closer_avisa_al_setter_asignado(client, equipo, auth_
     assert (aviso.associated_id, aviso.associated_type) == (cita.id, 'deck_comment')
 
 
-@pytest.mark.parametrize('origen,setter_asignado', [('ManyChat', True), ('vsl', False)])
-def test_sin_setter_concreto_el_aviso_va_a_todo_el_rol_setter(client, db, equipo, auth_headers, cita, origen, setter_asignado):
-    cita.origin = origen
-    cita.setter_id = equipo['setter'].id if setter_asignado else None
-    db.session.commit()
-
-    comentar(client, 'closer', equipo['closer'], auth_headers, cita, text='hola')
-
-    assert Notification.query.one().target_users == 'role:setter'
 
 
 def test_el_closer_puede_responder_a_un_comentario(client, equipo, auth_headers, cita):
@@ -124,13 +115,6 @@ def test_el_setter_comenta_y_avisa_al_closer_asignado(client, equipo, auth_heade
     assert 'Setter sofia' in LeadEventLog.query.one().description
 
 
-def test_el_comentario_del_setter_de_un_lead_de_manychat_avisa_a_todo_el_rol_closer(client, db, equipo, auth_headers, cita):
-    cita.origin = 'ManyChat'
-    db.session.commit()
-
-    comentar(client, 'setter', equipo['setter'], auth_headers, cita, text='hola')
-
-    assert Notification.query.one().target_users == 'role:closer'
 
 
 # --- GET --------------------------------------------------------------------------------------

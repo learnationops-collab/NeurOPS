@@ -15,7 +15,7 @@ import pytest
 # de un evento y recibe reservas, nunca actua con la sesion de quien la abre.
 EXENTOS = {
     'public_api', 'external_academy_api', 'external_dev_platform_api', 'google_calendar_bp',
-    'webhooks', 'backup', 'manychat', 'sheets', 'metrics', 'agendas_v2_publico', 'instagram_webhook',
+    'backup', 'manychat', 'sheets', 'metrics', 'agendas_v2_publico', 'instagram_webhook',
 }
 ORIGENES_PERMITIDOS = [
     'http://localhost:5173', 'http://localhost:3000', 'https://work.thelearnation.com',
@@ -83,7 +83,7 @@ def test_un_bearer_tampoco_evita_el_csrf_en_rutas_no_exentas(client, make_user, 
     assert con_token.status_code == 200
 
 
-@pytest.mark.parametrize('ruta', ['/api/public/lead-roadmap/update-client', '/api/webhooks/manychat',
+@pytest.mark.parametrize('ruta', ['/api/public/lead-roadmap/update-client',
                                   '/api/manychat-webhook', '/api/v1/metrics/track-visit'])
 def test_las_rutas_exentas_no_piden_csrf(client, csrf_enabled, ruta):
     respuesta = client.post(ruta, json={})
