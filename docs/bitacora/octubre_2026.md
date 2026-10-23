@@ -712,3 +712,7 @@
   - Al lado, si el formulario tiene una pregunta de decisión/acompañamiento: «Decide solo» o «Con acompañamiento».
   - En vez del @ de Instagram, el teléfono con formato (`telefonoLegible` de la ficha) y un botón para copiarlo.
   - «Confirmado» sin caja: check chico, la palabra y una línea fina que se llena hasta la cita.
+
+- **23 de Octubre de 2026 (Ficha · Resultado: lo que falta, sin repetir)** *([frontend/src/components/ficha/tabs/TabResultado.jsx](../../frontend/src/components/ficha/tabs/TabResultado.jsx), [frontend/src/components/ficha/acciones/CampoArbol.jsx](../../frontend/src/components/ficha/acciones/CampoArbol.jsx), [frontend/src/components/ficha/tabs/resultado.css](../../frontend/src/components/ficha/tabs/resultado.css) [MODIFY])*:
+  - El mínimo de un texto se muestra una sola vez: una barrita bajo el campo que se llena con el aura, «2/10» y ✓ al llegar.
+  - «Falta para poder seguir» pasa de bloque a una línea: punto que late, «Falta» y cada faltante como chip; lo que ya cuenta la barrita no se repite.
