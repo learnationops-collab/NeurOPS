@@ -679,3 +679,8 @@
   - El link de Fathom se pide al final (revisión, después de guardar o abajo de las tarjetas).
   - Calendario y hora con el diseño de Clarity: atajos + mes con el día en magenta; «Hora · 24 h» con flechas, rueda, teclado y horarios rápidos (reemplaza al `input type=time`).
   - Los campos ya no muestran dos recuadros azules al escribir.
+
+- **23 de Octubre de 2026 (Ficha · Resultado: venta y seguimiento compactos)** *([frontend/src/components/ficha/tabs/PasarARecuperacion.jsx](../../frontend/src/components/ficha/tabs/PasarARecuperacion.jsx), [frontend/src/components/ficha/tabs/TabResultado.jsx](../../frontend/src/components/ficha/tabs/TabResultado.jsx), [frontend/src/components/ficha/tabs/seguimiento.css](../../frontend/src/components/ficha/tabs/seguimiento.css), [app/services/ficha_recuperacion_service.py](../../app/services/ficha_recuperacion_service.py) [MODIFY])*:
+  - «Registrar una venta» y «Pasar a seguimiento» son dos botones compactos con aura, sin los bloques de texto.
+  - «Pasar a seguimiento» pregunta por qué (incluye «La llamada corresponde a otro closer») y cuándo; el motivo queda en el seguimiento, las notas de la llamada y la bitácora del lead.
+  - El link de Fathom queda al final de la pestaña y el progreso a la derecha.
