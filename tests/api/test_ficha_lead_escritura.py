@@ -238,6 +238,79 @@ def test_descartar_sin_motivo_no_pasa(client, db, lead, equipo, auth_headers):
     assert lead.closer_result == 'Pendiente'
 
 
+# --- Descalificar -----------------------------------------------------------------------------
+
+def test_el_closer_descalifica_el_lead_al_confirmar(client, db, lead, equipo, auth_headers):
+    r = client.post(url(lead, '/descalificar'), json={'motivo': 'no es médico'},
+                    headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200, r.get_json()
+    assert r.get_json()['status'] == 'Descalificado'
+    assert lead.closer_result == 'Descalificado'
+    # Sale del mazo y de los seguimientos: quien no califica no se vuelve a trabajar.
+    assert lead.closer_processed is True and lead.seguimiento_realizado is True
+    comentario = ClientComment.query.filter_by(client_id=lead.client_id).one()
+    assert comentario.text == 'Descalificado por vendedor: no es médico'
+
+
+def test_el_motivo_del_desplegable_se_guarda_con_su_etiqueta(client, db, lead, equipo, auth_headers):
+    """El selector manda la clave: el comentario del lead lo lee una persona."""
+    r = client.post(url(lead, '/descalificar'), json={'motivo': 'no_rinde_examen'},
+                    headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200
+    assert r.get_json()['motivo'] == 'No rinde examen de residencia'
+    comentario = ClientComment.query.filter_by(client_id=lead.client_id).one()
+    assert comentario.text == 'Descalificado por vendedor: No rinde examen de residencia'
+
+
+def test_descalificar_libera_el_horario_del_closer(client, db, lead, equipo, auth_headers):
+    """Como una cancelacion: el evento de Google Calendar se borra."""
+    lead.google_event_id = 'evento-123'
+    db.session.commit()
+
+    with patch('app.services.google_service.GoogleService.delete_event') as borrar:
+        r = client.post(url(lead, '/descalificar'), json={'motivo': 'datos falsos'},
+                        headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 200
+    borrar.assert_called_once_with(lead.closer_id, 'evento-123')
+
+
+def test_la_direccion_comercial_tambien_descalifica(client, db, lead, equipo, auth_headers):
+    r = client.post(url(lead, '/descalificar'), json={'motivo': 'sin interés real'},
+                    headers=auth_headers(equipo['director']))
+
+    assert r.status_code == 200
+    assert lead.closer_result == 'Descalificado'
+
+
+def test_descalificar_sin_motivo_no_pasa(client, db, lead, equipo, auth_headers):
+    r = client.post(url(lead, '/descalificar'), json={}, headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 400
+    assert lead.closer_result == 'Pendiente' and lead.closer_processed is False
+
+
+@pytest.mark.parametrize('rol', ['setter', 'triage'])
+def test_quien_no_reporta_no_descalifica(client, db, lead, equipo, auth_headers, rol):
+    r = client.post(url(lead, '/descalificar'), json={'motivo': 'no es médico'},
+                    headers=auth_headers(equipo[rol]))
+
+    assert r.status_code == 403
+    assert lead.closer_result == 'Pendiente'
+
+
+def test_la_descalificada_queda_en_el_espejo_del_tablero_con_su_nombre(client, db, lead, equipo, auth_headers):
+    from app.models.financial import FinancialAgenda
+
+    client.post(url(lead, '/descalificar'), json={'motivo': 'no es médico'},
+                headers=auth_headers(equipo['closer']))
+
+    espejo = FinancialAgenda.query.one()
+    assert espejo.estado == 'Descalificado'
+
+
 # --- Reasignar --------------------------------------------------------------------------------
 
 def test_pasar_el_lead_a_otro_closer(client, db, lead, equipo, auth_headers):

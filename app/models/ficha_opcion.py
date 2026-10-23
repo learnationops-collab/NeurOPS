@@ -19,7 +19,8 @@ class FichaOpcion(db.Model):
     __tablename__ = 'ficha_opciones'
 
     id = db.Column(db.Integer, primary_key=True)
-    # 'como_viene' | 'dolores' | 'motivos_descarte' | 'motivos_baja'
+    # 'como_viene' | 'dolores' | 'motivos_descarte' | 'motivos_cancelacion' | 'motivos_descalificacion'
+    # | 'motivos_baja'
     grupo = db.Column(db.String(40), nullable=False, index=True)
     clave = db.Column(db.String(80), nullable=False)
     label = db.Column(db.String(120), nullable=False)

@@ -118,7 +118,8 @@ def test_el_vocabulario_trae_todas_las_claves_del_contrato(db):
     bloque = voc.vocabulario()
 
     assert set(bloque) == {'etapas_confirmacion', 'como_viene', 'dolores', 'motivos_descarte',
-                           'motivos_cancelacion', 'motivos_baja', 'pre_call', 'post_call',
+                           'motivos_cancelacion', 'motivos_descalificacion', 'motivos_baja',
+                           'pre_call', 'post_call',
                            'tipos_pago', 'medios_pago', 'medios_pago_venta', 'tipos_pago_venta',
                            'transferido_a', 'programas', 'canales_seguimiento',
                            'tipos_seguimiento', 'fuentes', 'closers'}

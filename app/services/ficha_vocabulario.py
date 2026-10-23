@@ -20,7 +20,7 @@ from app.models import FichaOpcion
 
 # Grupos que aceptan opciones nuevas creadas desde la ficha.
 GRUPOS_ABIERTOS = ('como_viene', 'dolores', 'motivos_descarte', 'motivos_cancelacion',
-                   'motivos_baja')
+                   'motivos_descalificacion', 'motivos_baja')
 
 # `Appointment.confirmation_contact_status` es String(20): una clave mas larga se truncaria en la
 # base y la opcion dejaria de coincidir con su propia lista al volver a leerla.
@@ -114,6 +114,28 @@ MOTIVOS_CANCELACION = [
     ]},
 ]
 
+# Por qué el closer descalifica un lead al confirmar (botón «Descalificado», 23/10/2026). Son motivos
+# de que el lead NO CALIFICABA, no de que se perdió: «No puede pagar» acá es no tener con qué, no
+# «le pareció caro» después de ver el precio (eso es `MOTIVOS_DESCARTE`, ya con la llamada hecha).
+MOTIVOS_DESCALIFICACION = [
+    {'titulo': 'No es el perfil', 'tono': 'warning', 'opciones': [
+        {'clave': 'no_es_medico', 'label': 'No es médico'},
+        {'clave': 'no_rinde_examen', 'label': 'No rinde examen de residencia'},
+        {'clave': 'ya_en_residencia', 'label': 'Ya está en residencia'},
+    ]},
+    {'titulo': 'Económicos', 'tono': 'error', 'opciones': [
+        {'clave': 'no_puede_pagar', 'label': 'No puede pagar'},
+    ]},
+    {'titulo': 'Interés', 'tono': 'info', 'opciones': [
+        {'clave': 'sin_interes_real', 'label': 'Sin interés real'},
+        {'clave': 'no_era_lo_que_buscaba', 'label': 'No era lo que buscaba'},
+    ]},
+    {'titulo': 'Contacto', 'tono': 'idle', 'opciones': [
+        {'clave': 'datos_falsos', 'label': 'Datos falsos o de prueba'},
+        {'clave': 'no_responde', 'label': 'No responde'},
+    ]},
+]
+
 MOTIVOS_BAJA = [
     {'titulo': 'Económicos', 'tono': 'error', 'opciones': [
         {'clave': 'no_puede_pagar', 'label': 'No puede pagar'},
@@ -188,6 +210,7 @@ _DE_FABRICA = {
     'dolores': DOLORES,
     'motivos_descarte': MOTIVOS_DESCARTE,
     'motivos_cancelacion': MOTIVOS_CANCELACION,
+    'motivos_descalificacion': MOTIVOS_DESCALIFICACION,
     'motivos_baja': MOTIVOS_BAJA,
 }
 
@@ -373,6 +396,7 @@ def vocabulario(closers=None):
         'dolores': grupos_de('dolores', extras),
         'motivos_descarte': grupos_de('motivos_descarte', extras),
         'motivos_cancelacion': grupos_de('motivos_cancelacion', extras),
+        'motivos_descalificacion': grupos_de('motivos_descalificacion', extras),
         'motivos_baja': grupos_de('motivos_baja', extras),
         'pre_call': list(PRE_CALL),
         'post_call': list(POST_CALL),

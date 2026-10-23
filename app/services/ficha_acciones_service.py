@@ -721,6 +721,30 @@ def descartar(appt, datos, usuario):
     return {'id': appt.id, 'status': status, 'motivo': motivo}
 
 
+# --- Descalificar -----------------------------------------------------------------------------
+
+def descalificar(appt, datos, usuario):
+    """El closer vio al confirmar que el lead no calificaba (23/10/2026).
+
+    Es una cancelacion por decision del closer —la llamada no se hace y se libera su agenda— con su
+    propio estado, `Descalificado`, para poder medir cuantas agendas descalifican los closers: la
+    direccion comercial las ve en Analizar, aparte de las que el formulario de Agendas 2.0 corta solo.
+
+    Reemplaza al «Descartar lead» de la confirmacion, que marcaba `No Lead`: era lo mismo, y la
+    direccion cuenta `No Lead` y `Descalificado` juntos (`derivar_estado`). Tampoco es `cancelar`:
+    ahi el lead sigue vivo y se agenda un seguimiento. El motivo es obligatorio, y no hay seguimiento:
+    quien no califica sale del embudo.
+    """
+    from app.services.ficha_vocabulario import etiqueta_de
+
+    # El desplegable manda la clave del motivo; el comentario del lead lo lee una persona, así que
+    # se guarda la etiqueta ('No es médico', no 'no_es_medico'). Un texto libre pasa tal cual.
+    motivo = etiqueta_de('motivos_descalificacion', _texto(datos, 'motivo', obligatorio=True))
+    _process_agenda(appt, usuario, {'status': 'Descalificado', 'note': motivo})
+    db.session.commit()
+    return {'id': appt.id, 'status': 'Descalificado', 'motivo': motivo}
+
+
 # --- Cancelacion ------------------------------------------------------------------------------
 
 def cancelar(appt, datos, usuario):

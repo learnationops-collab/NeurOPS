@@ -1166,6 +1166,24 @@ class CloserService:
                     except Exception as e:
                         print(f"Error deleting GCal event: {e}")
 
+            elif new_status in ('Descalificado', 'Descalificada'):
+                # El closer vio al confirmar que el lead no calificaba (botón «Descalificado» de la
+                # ficha). Como una cancelación —la llamada no se hace y se libera el horario— pero con
+                # su propio estado, y el lead sale de los seguimientos como un No Lead.
+                from app.services.closer_agendas_service import DESCALIFICADA
+                appt.closer_result = DESCALIFICADA
+                appt.closer_processed = True
+                appt.seguimiento_realizado = True
+                if note and closer_id:
+                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Descalificado por {user_display}: {note}")
+                    db.session.add(comment)
+                if appt.google_event_id:
+                    try:
+                        from app.services.google_service import GoogleService
+                        GoogleService.delete_event(appt.closer_id, appt.google_event_id)
+                    except Exception as e:
+                        print(f"Error deleting GCal event: {e}")
+
             elif new_status == 'Reagendado':
                 appt.closer_processed = True
                 if not reschedule_date:
