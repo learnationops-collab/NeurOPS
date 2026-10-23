@@ -699,3 +699,9 @@
   - «Cómo viene» sale de la pestaña: la etapa ya lo dice. La columna sigue en la base con lo cargado.
   - Un lead 100% confirmado se sigue pudiendo editar (nota para la llamada y acciones).
   - Tocar una etapa anterior en el stepper de un lead confirmado lo vuelve a esa etapa (Por contactar → por confirmar, Contactado → conversando).
+
+- **23 de Octubre de 2026 (Ficha · Resultado: motivo en texto y opciones con color)** *([frontend/src/components/ficha/tabs/TabResultado.jsx](../../frontend/src/components/ficha/tabs/TabResultado.jsx), [frontend/src/components/ficha/tabs/resultado.css](../../frontend/src/components/ficha/tabs/resultado.css), [frontend/src/components/ficha/arbolResultado.preguntas.js](../../frontend/src/components/ficha/arbolResultado.preguntas.js), [frontend/src/components/ficha/arbolResultado.payload.js](../../frontend/src/components/ficha/arbolResultado.payload.js), [app/services/motivos_no_cierre.py](../../app/services/motivos_no_cierre.py), [frontend/src/pages/comercial/components/ModalNoCerradas.jsx](../../frontend/src/pages/comercial/components/ModalNoCerradas.jsx) [MODIFY])*:
+  - El motivo de no cierre pasa a texto libre (mínimo 10 caracteres), sin categorías hasta tener datos: sin oferta es su propia pregunta; con oferta es la objeción. Se guarda «Con oferta · …» / «Sin oferta · …» en `motivo_no_cierre` y «No cerradas» lo muestra como la cita.
+  - Las opciones de cada pregunta llevan ícono (decisor, oferta, sí/no) y el color de Learnation de su tono, con aura y movimiento al pasar el mouse.
+  - «Anterior» y «Empezar de nuevo» van juntos a la izquierda de la botonera.
+  - El progreso se reparte en todo el alto de la columna.
