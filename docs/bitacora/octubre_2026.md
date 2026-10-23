@@ -601,3 +601,8 @@
   - Lo de la Academia sale del expediente (`agent/ask` con `expediente`, ADR-168, sin IA): su bitácora, victorias (con prueba y captura) y observaciones. Si la Academia no responde, se muestra lo de Work con un aviso.
   - Probado en producción: alumno con 3 meses (0,4 s con la Academia) y lead con conversación y agenda sin venta.
   - Se borran los dos tests que fijaban la lista exacta de pestañas de `estado_lead`.
+
+- **23 de Octubre de 2026 (Agendas 2.0: persona fija con suplentes)** *([app/agendas_v2/nucleo/asignacion.py](../../app/agendas_v2/nucleo/asignacion.py), [app/agendas_v2/nucleo/normalizar.py](../../app/agendas_v2/nucleo/normalizar.py), [app/agendas_v2/servicio.py](../../app/agendas_v2/servicio.py), [frontend/src/pages/agendas_v2/core/asignacion.js](../../frontend/src/pages/agendas_v2/core/asignacion.js), [frontend/src/pages/agendas_v2/core/normalizar.js](../../frontend/src/pages/agendas_v2/core/normalizar.js), [frontend/src/pages/agendas_v2/reserva/PantallaLead.jsx](../../frontend/src/pages/agendas_v2/reserva/PantallaLead.jsx), [frontend/src/pages/agendas_v2/secciones/eventos/ConfigEvento.jsx](../../frontend/src/pages/agendas_v2/secciones/eventos/ConfigEvento.jsx) [MODIFY])*:
+  - Un evento con persona fija puede tener **suplentes en orden** (campo `suplentes` del evento; en Thalamus, «Si se llena» debajo de la persona). El lead ve los horarios de la persona hasta que se llena y después los del primer suplente con lugar (estrategia «llenar»).
+  - Pensado para Momentum Session New: Andy → Santi → Mario. Un suplente sin usuario activo, Google Calendar o WhatsApp confirmado se saltea solo.
+  - Los eventos de venta (Sesión de Aceleración de Workshop y Setting, Consultoría) ya ofrecían 3 días.
