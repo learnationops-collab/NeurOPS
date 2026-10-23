@@ -684,3 +684,6 @@
   - «Registrar una venta» y «Pasar a seguimiento» son dos botones compactos con aura, sin los bloques de texto.
   - «Pasar a seguimiento» pregunta por qué (incluye «La llamada corresponde a otro closer») y cuándo; el motivo queda en el seguimiento, las notas de la llamada y la bitácora del lead.
   - El link de Fathom queda al final de la pestaña y el progreso a la derecha.
+
+- **23 de Octubre de 2026 (Ficha · Resultado: el reporte con todo el ancho)** *([frontend/src/components/ficha/tabs/resultado.css](../../frontend/src/components/ficha/tabs/resultado.css) [MODIFY])*:
+  - El progreso (Confirmado · Resultado · Cierre…) pasa a una columna de 132px a la izquierda, sin tarjeta, chico y apagado; el reporte usa el resto del ancho (antes quedaba apretado en 196px).
