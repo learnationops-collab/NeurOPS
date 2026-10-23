@@ -627,3 +627,8 @@
   - Se elige al de menor (entradas + 1) / peso en las últimas 24 h, con fracciones exactas; con 70 y 30 salen 7 y 3 de cada 10. Quien ya tuvo setter lo conserva y sigue contando para la proporción.
   - La API de campañas acepta y devuelve `pesos` ({user_id: entero de 1 a 100}). En el editor, con dos o más setters elegidos aparece un campo de peso por cada uno con el porcentaje que resulta; la tarjeta dice «Reparte: Elias 70 % · Paula 30 %».
   - **Pendiente:** el 70/30 hay que cargarlo en cada campaña vigente (Inbox › Campañas › editar: elegir Elias y Paula y poner 70 y 30). Una campaña sin setters elegidos sigue repartiendo parejo entre todos los activos.
+
+- **23 de Octubre de 2026 (Deploy: las migraciones corren con `preDeployCommand`)** *([railway.toml](../../railway.toml) [MODIFY])*:
+  - `railway.toml` usaba `releaseCommand = "flask db upgrade"` desde el 18/03, pero esa clave no existe en Railway (el esquema oficial solo define `preDeployCommand`), así que la migración probablemente no corría sola en el deploy. Ahora es `preDeployCommand = "flask db upgrade"`: corre entre el build y el arranque y, si falla, el deploy no sube.
+  - Ojo: `healthCheckPath`, `healthCheckTimeout` y `restartPolicyType` del mismo archivo tampoco coinciden con los nombres del esquema (`healthcheckPath`, `healthcheckTimeout`, `ON_FAILURE`). Sin tocar; revisar aparte, porque activar el healthcheck cambia cuándo un deploy se da por bueno.
+  - `docs/plan_personas.md` y la bitácora de septiembre todavía nombran `releaseCommand`.
