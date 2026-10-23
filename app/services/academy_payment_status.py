@@ -61,6 +61,28 @@ def _tipo(tipos):
     return None
 
 
+# Días antes del vencimiento en que una cuota pasa a "por vencer" (DUE_SOON_DAYS de la Academia).
+DIAS_POR_VENCER = 7
+ESTADOS = ('baja', 'vencida', 'por_vencer', 'al_dia', 'sena', 'pagado')
+
+
+def regla_estado(baja, vencidas, proxima_vence, tipo, hoy=None):
+    """El estado de pago de un cliente, en este orden: baja, vencida (alguna pendiente ya venció), por_vencer
+    (la próxima vence en 7 días o menos; hoy = 0), al_dia, sena (solo dejó la seña) o pagado.
+
+    Es la misma regla que `WorkPaymentStatus::summarize` de la Academia, que la deriva sola cuando el estado
+    no trae `estado`. Por eso `estado()` todavía no la manda: un estado resuelto envejece con los días (una
+    cuota vence sin que nada cambie en Work) y Work solo avisa cuando algo cambia. La usa el motor de tablas."""
+    hoy = hoy or date.today()
+    if baja:
+        return 'baja'
+    if vencidas:
+        return 'vencida'
+    if proxima_vence is not None:
+        return 'por_vencer' if (proxima_vence - hoy).days <= DIAS_POR_VENCER else 'al_dia'
+    return 'sena' if tipo == 'seña' else 'pagado'
+
+
 def estado(client, hoy=None):
     """Todo lo que la Academia necesita saber del pago de un cliente. Una foto de AHORA.
 

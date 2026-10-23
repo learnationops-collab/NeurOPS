@@ -6,13 +6,14 @@ nombres. Campos de cada fila (mismas claves que la Academia):
   p.{fk}.{col}     una columna de la fila a la que apunta {fk} (un nivel)
   n.{tabla}.{fk}   cuántas filas de {tabla} apuntan a esta
   l.{tabla}.{fk}   cuándo se creó la última de ellas (si {tabla} tiene created_at)
+  s.{dato}         un dato con regla de negocio (sistema.py): estado de pago, deuda, estado de la agenda…
 """
 from dataclasses import dataclass, field
 
 from sqlalchemy import cast, func, literal, select, types
 
 from app import db
-from app.services.tablas import exclusion
+from app.services.tablas import exclusion, sistema
 
 LABEL_COLUMNS = ('full_name', 'name', 'nombre', 'title', 'titulo', 'username', 'email', 'slug')
 
@@ -39,14 +40,19 @@ NAMED = {
 }
 
 
-@dataclass
 class Campo:
-    key: str
-    label: str
-    group: str
-    kind: str  # text | number | date | instant | bool
-    expr: object = field(repr=False)
-    detail: str = ''
+    """Un dato de la fila. `kind`: text | number | date | instant | bool. Un dato del sistema (`s.`) trae `lazy`:
+    su expresión se arma recién cuando un plan lo usa, porque calcularla cuesta (sistema.py)."""
+
+    def __init__(self, key, label, group, kind, expr, detail='', lazy=None):
+        self.key, self.label, self.group, self.kind, self.detail = key, label, group, kind, detail
+        self._expr, self._lazy = expr, lazy
+
+    @property
+    def expr(self):
+        if self._expr is None and self._lazy is not None:
+            self._expr = self._lazy()
+        return self._expr
 
 
 @dataclass
@@ -190,6 +196,7 @@ def build(user, table, tables, with_fields=True):
                 expr = select(func.max(alias.c.created_at)).where(alias.c[fk.name] == pk).scalar_subquery()
                 fuente.fields[key] = Campo(key, f'Última: {name}', 'Relacionados', 'instant', expr,
                                            f'Cuándo se creó la última fila de {child.name} que apunta a esta')
+    fuente.fields.update(sistema.campos(user, table, Campo))
     return fuente
 
 
