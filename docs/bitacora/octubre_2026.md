@@ -716,3 +716,8 @@
 - **23 de Octubre de 2026 (Ficha · Resultado: lo que falta, sin repetir)** *([frontend/src/components/ficha/tabs/TabResultado.jsx](../../frontend/src/components/ficha/tabs/TabResultado.jsx), [frontend/src/components/ficha/acciones/CampoArbol.jsx](../../frontend/src/components/ficha/acciones/CampoArbol.jsx), [frontend/src/components/ficha/tabs/resultado.css](../../frontend/src/components/ficha/tabs/resultado.css) [MODIFY])*:
   - El mínimo de un texto se muestra una sola vez: una barrita bajo el campo que se llena con el aura, «2/10» y ✓ al llegar.
   - «Falta para poder seguir» pasa de bloque a una línea: punto que late, «Falta» y cada faltante como chip; lo que ya cuenta la barrita no se repite.
+
+- **23 de Octubre de 2026 (Setter · fix: no dejaba asignar la palabra clave)** *([app/services/palabra_clave_asignacion_service.py](../../app/services/palabra_clave_asignacion_service.py), [tests/api/test_setter_asignar_palabra_clave.py](../../tests/api/test_setter_asignar_palabra_clave.py) [MODIFY])*:
+  - «Mis agendas» mostraba «No se pudo asignar: probá de nuevo.» con cualquier palabra clave: desde la Etapa 2c la fila del Tablero ya no tiene columna `instagram` (es de su persona) y `asignar` la leía y escribía, así que daba un 500.
+  - Ahora lee `contacto()` de la fila y la corrige con `agenda_contacto_service.corregir`; si ese Instagram es de otra persona, responde 409 con un mensaje claro.
+  - 4 tests nuevos (palabra nueva, anuncio de la lista, fila sin Instagram, Instagram corregido).
