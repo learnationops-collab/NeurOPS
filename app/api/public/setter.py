@@ -403,7 +403,7 @@ def _leads_de_inbound(lead_ids):
         return set()
     anuncios_inbound = {i for (i,) in db.session.query(Ad.id).filter(func.lower(Ad.keyword) == 'inbound')}
     inbound = set()
-    for lead_id, keyword, ad_id in db.session.query(LeadAnswer.lead_id, LeadAnswer.keyword, LeadAnswer.ad_id)             .filter(LeadAnswer.lead_id.in_(list(lead_ids))):
+    for lead_id, keyword, ad_id in db.session.query(LeadAnswer.conversation_id, LeadAnswer.keyword, LeadAnswer.ad_id)             .filter(LeadAnswer.conversation_id.in_(list(lead_ids))):
         if (keyword or '').strip().lower() == 'inbound' or (ad_id is not None and ad_id in anuncios_inbound):
             inbound.add(lead_id)
     return inbound
@@ -429,7 +429,7 @@ def _precarga_por_canal(filas_leads, generadas):
     manda), así que en la práctica todo lo de ManyChat cae en anuncios: es lo que dice el dato, y
     el setter lo corrige si no.
     """
-    from app.models import ManychatLead
+    from app.models import Conversation
     from app.services.comercial_service import _limpiar_ig
 
     def vacio():
@@ -450,13 +450,13 @@ def _precarga_por_canal(filas_leads, generadas):
     personas = {a['person_uuid'] for a in generadas if a.get('person_uuid')}
     leads_por_persona = {}
     if personas:
-        for lead_id, puuid in db.session.query(ManychatLead.id, ManychatLead.person_uuid).filter(
-                ManychatLead.person_uuid.in_(sorted(personas))):
+        for lead_id, puuid in db.session.query(Conversation.id, Conversation.person_uuid).filter(
+                Conversation.person_uuid.in_(sorted(personas))):
             leads_por_persona.setdefault(puuid, set()).add(lead_id)
     igs = {ig for ig in (_limpiar_ig(a.get('ig')) for a in generadas) if ig}
     leads_por_ig = {}
     if igs:
-        for lead_id, ig in db.session.query(ManychatLead.id, IG_NORMALIZADO).filter(IG_NORMALIZADO.in_(sorted(igs))):
+        for lead_id, ig in db.session.query(Conversation.id, IG_NORMALIZADO).filter(IG_NORMALIZADO.in_(sorted(igs))):
             leads_por_ig.setdefault(_limpiar_ig(ig), set()).add(lead_id)
     inbound_por_ig = _leads_de_inbound({i for ids in [*leads_por_ig.values(), *leads_por_persona.values()] for i in ids})
     for agenda in generadas:

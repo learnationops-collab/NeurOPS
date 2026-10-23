@@ -16,7 +16,7 @@ from app.api.setter import bp
 @bp.route('/deck/stats/kpis', methods=['GET'])
 @role_required(ROLE_SETTER)
 def get_deck_stats_kpis():
-    from app.models import Appointment, ManychatLead, SetterDailyStats, CloserDailyStats
+    from app.models import Appointment, Conversation, SetterDailyStats, CloserDailyStats
     from sqlalchemy import func, or_
     from datetime import timedelta
 
@@ -209,14 +209,14 @@ def get_unassigned_leads_today():
         "id": a.id,
         "lead_name": a.client.full_name or "Sin Nombre" if a.client else "Sin Cliente",
         "created_at": a.created_at.isoformat(),
-        "origin": a.origin or "ManyChat"
+        "origin": a.origin or "Instagram"
     } for a in appointments]), 200
 
 
 @bp.route('/deck/stats/cualificacion', methods=['GET'])
 @role_required(ROLE_SETTER)
 def get_cualificacion_stats():
-    from app.models import LeadAnswer, ManychatLead
+    from app.models import LeadAnswer, Conversation
 
     # Mismo "hoy" que el mazo, para que el contador coincida con la lista.
     start_dt, end_dt = limites_dia_utc(current_user, hoy_del_usuario(current_user))
@@ -235,19 +235,19 @@ def get_cualificacion_stats():
     # Así los dos chips se reparten la lista de "Hoy": lo suyo + lo sin asignar.
     condicion_setter = condicion_leads_propios(current_user)
     if condicion_setter is not None:
-        query_qual = query_qual.join(ManychatLead, ManychatLead.id == LeadAnswer.lead_id)\
+        query_qual = query_qual.join(Conversation, Conversation.id == LeadAnswer.conversation_id)\
                                .filter(condicion_setter)
-    qualified_today = query_qual.with_entities(func.count(func.distinct(LeadAnswer.lead_id))).scalar() or 0
+    qualified_today = query_qual.with_entities(func.count(func.distinct(LeadAnswer.conversation_id))).scalar() or 0
 
     # 2. Sin asignación: cualificados de hoy que ManyChat todavía no repartió
     # (los 2 primeros JSON de una conversación llegan sin setter).
     query_unassigned = LeadAnswer.query.filter(
         LeadAnswer.qualification.in_(['yes', 'true']),
         LeadAnswer.created_at.between(start_dt, end_dt)
-    ).join(ManychatLead, ManychatLead.id == LeadAnswer.lead_id).filter(
-        or_(ManychatLead.setter == None, ManychatLead.setter == '')
+    ).join(Conversation, Conversation.id == LeadAnswer.conversation_id).filter(
+        or_(Conversation.setter == None, Conversation.setter == '')
     )
-    unassigned_today = query_unassigned.with_entities(func.count(func.distinct(LeadAnswer.lead_id))).scalar() or 0
+    unassigned_today = query_unassigned.with_entities(func.count(func.distinct(LeadAnswer.conversation_id))).scalar() or 0
 
     # 3. Sin responder hoy (qualification == 'null' o vacía, únicos por prospecto)
     query_no_resp = LeadAnswer.query.filter(
@@ -255,9 +255,9 @@ def get_cualificacion_stats():
         LeadAnswer.created_at.between(start_dt, end_dt)
     )
     if condicion_setter is not None:
-        query_no_resp = query_no_resp.join(ManychatLead, ManychatLead.id == LeadAnswer.lead_id)\
+        query_no_resp = query_no_resp.join(Conversation, Conversation.id == LeadAnswer.conversation_id)\
                                      .filter(condicion_setter)
-    no_response_today = query_no_resp.with_entities(func.count(func.distinct(LeadAnswer.lead_id))).scalar() or 0
+    no_response_today = query_no_resp.with_entities(func.count(func.distinct(LeadAnswer.conversation_id))).scalar() or 0
     
     return jsonify({
         "qualified_today": qualified_today,

@@ -68,7 +68,7 @@ def ensure_inbound_ad_exists():
 def get_public_ads():
     """Lista todos los anuncios con spend acumulado y leads, y sus relaciones de campaña."""
     ensure_inbound_ad_exists()
-    from app.models import Ad, AdPeriodSpend, ManychatAdLead, AdSet, Campaign
+    from app.models import Ad, AdPeriodSpend, AdSet, Campaign, LeadAnswer
     # pyrefly: ignore [missing-import]
     from sqlalchemy import func
 
@@ -77,10 +77,10 @@ def get_public_ads():
 
     # Pre-cargar stats de leads por ad_id
     lead_stats = db.session.query(
-        ManychatAdLead.ad_id,
-        func.count(ManychatAdLead.id).label('total_leads'),
-        func.sum(db.case((ManychatAdLead.qualification == 'true', 1), else_=0)).label('qualified_leads')
-    ).group_by(ManychatAdLead.ad_id).all()
+        LeadAnswer.ad_id,
+        func.count(func.distinct(LeadAnswer.conversation_id)).label('total_leads'),
+        func.count(func.distinct(db.case((LeadAnswer.qualification == 'true', LeadAnswer.conversation_id)))).label('qualified_leads')
+    ).filter(LeadAnswer.ad_id.isnot(None)).group_by(LeadAnswer.ad_id).all()
     lead_map = {s.ad_id: {'total': s.total_leads, 'qualified': int(s.qualified_leads or 0)} for s in lead_stats}
 
     result = []

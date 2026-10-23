@@ -13,17 +13,17 @@ from app.api.setter import bp
 @bp.route('/deck/confirm-qualified/<int:answer_id>', methods=['POST'])
 @role_required(ROLE_SETTER)
 def confirm_qualified_lead(answer_id):
-    from app.models import LeadAnswer, ManychatLead, Client, Appointment, Ad, Event, User, db
+    from app.models import LeadAnswer, Conversation, Client, Appointment, Ad, Event, User, db
     from app.services.booking_service import BookingService
     from datetime import datetime
     
     la = LeadAnswer.query.get_or_404(answer_id)
-    lead = la.lead
+    lead = la.conversation
     if not lead:
         return jsonify({"message": "Lead no encontrado"}), 404
         
     # El cliente de su persona; sin persona, el de su Instagram (plan_personas, frente B).
-    client = conversaciones_service.cliente_del_lead(lead)
+    client = conversaciones_service.cliente_de(lead)
     db.session.commit()
         
     closer_id = None
@@ -48,7 +48,7 @@ def confirm_qualified_lead(answer_id):
         setter_id=current_user.id,
         client_id=client.id,
         start_time=datetime.utcnow(),
-        origin='ManyChat / Instagram',
+        origin='Instagram',
         result='Cualificado',
         setter_processed=False
     )
@@ -76,7 +76,7 @@ def disqualify_lead(answer_id):
 @bp.route('/deck/bulk-update-cualificacion', methods=['POST'])
 @role_required(ROLE_SETTER)
 def bulk_update_cualificacion():
-    from app.models import LeadAnswer, ManychatLead, Client, Appointment, Ad, Event, User, db
+    from app.models import LeadAnswer, Conversation, Client, Appointment, Ad, Event, User, db
     from datetime import datetime
     
     data = request.get_json() or {}
@@ -90,16 +90,16 @@ def bulk_update_cualificacion():
     
     for ans_id in answer_ids:
         la = LeadAnswer.query.get(ans_id)
-        if not la or not la.lead:
+        if not la or not la.conversation:
             continue
             
         if action == 'disqualify':
             la.qualification = 'false'
             processed_count += 1
         elif action == 'confirm':
-            lead = la.lead
+            lead = la.conversation
             # El cliente de su persona; sin persona, el de su Instagram (plan_personas, frente B).
-            client = conversaciones_service.cliente_del_lead(lead)
+            client = conversaciones_service.cliente_de(lead)
             db.session.commit()
                 
             closer_id = None
@@ -122,7 +122,7 @@ def bulk_update_cualificacion():
                     setter_id=current_user.id,
                     client_id=client.id,
                     start_time=datetime.utcnow(),
-                    origin='ManyChat / Instagram',
+                    origin='Instagram',
                     result='Cualificado',
                     setter_processed=False
                 )
@@ -136,12 +136,12 @@ def bulk_update_cualificacion():
 @bp.route('/deck/update-qualified/<int:answer_id>', methods=['POST'])
 @role_required(ROLE_SETTER)
 def update_qualified_lead(answer_id):
-    from app.models import LeadAnswer, ManychatLead, Client, Appointment, Ad, Event, User, db
+    from app.models import LeadAnswer, Conversation, Client, Appointment, Ad, Event, User, db
     from app.services.booking_service import BookingService
     from datetime import datetime
     
     la = LeadAnswer.query.get_or_404(answer_id)
-    lead = la.lead
+    lead = la.conversation
     if not lead:
         return jsonify({"message": "Lead no encontrado"}), 404
         
@@ -149,7 +149,7 @@ def update_qualified_lead(answer_id):
     
     # 1. Buscar o crear cliente
     # El cliente de su persona; sin persona, el de su Instagram (plan_personas, frente B).
-    client = conversaciones_service.cliente_del_lead(lead)
+    client = conversaciones_service.cliente_de(lead)
     db.session.commit()
         
     # 2. Guardar observación del setter y publicarla como nota visible
@@ -203,7 +203,7 @@ def update_qualified_lead(answer_id):
                 setter_id=current_user.id,
                 client_id=client.id,
                 start_time=datetime.utcnow(),
-                origin='ManyChat / Instagram',
+                origin='Instagram',
                 result='Cualificado',
                 setter_processed=False
             )

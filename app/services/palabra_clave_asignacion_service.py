@@ -8,7 +8,7 @@ import uuid
 from sqlalchemy import func
 
 from app import db
-from app.models import Ad, Appointment, LeadEventLog, ManychatLead, LeadAnswer
+from app.models import Ad, Appointment, LeadEventLog, Conversation, LeadAnswer
 from app.services.comercial_service import es_agenda_del_setter
 
 # El `action_type` del registro que deja cada asignación en el historial del lead. Es también con lo
@@ -173,26 +173,26 @@ def _guardar():
 
 
 def responder_con_anuncio(ig, marca, nombre, anuncio, tope, antes_de_todo):
-    """La conversación de ese Instagram (la crea si no está, con `marca` en su manychat_id) con una
+    """La conversación de ese Instagram (la crea si no está, con `marca` en su external_idat_id) con una
     respuesta con el anuncio de antes de `tope` (la reunión o el primer pago): la que ya había sin
     anuncio o una nueva en `antes_de_todo`. La usan las agendas y las ventas del setter."""
-    conversacion = ManychatLead.query.filter(
-        func.lower(func.replace(ManychatLead.ig, '@', '')) == ig).first()
+    conversacion = Conversation.query.filter(
+        func.lower(func.replace(Conversation.ig, '@', '')) == ig).first()
     if not conversacion:
-        conversacion = ManychatLead(manychat_id=f'{marca}_{uuid.uuid4().hex[:6]}',
+        conversacion = Conversation(external_id=f'{marca}_{uuid.uuid4().hex[:6]}',
                                     name=nombre or 'Sin nombre',
                                     ig=f'@{ig}', follower=False)
         db.session.add(conversacion)
         db.session.flush()
 
-    sin_anuncio = LeadAnswer.query.filter(LeadAnswer.lead_id == conversacion.id, LeadAnswer.ad_id.is_(None))
+    sin_anuncio = LeadAnswer.query.filter(LeadAnswer.conversation_id == conversacion.id, LeadAnswer.ad_id.is_(None))
     if tope:
         sin_anuncio = sin_anuncio.filter(LeadAnswer.created_at <= tope)
     respuesta = sin_anuncio.order_by(LeadAnswer.created_at.desc()).first()
     if respuesta:
         respuesta.ad_id = anuncio.id
     else:
-        db.session.add(LeadAnswer(lead_id=conversacion.id, ad_id=anuncio.id, keyword=KEYWORD_MANUAL,
+        db.session.add(LeadAnswer(conversation_id=conversacion.id, ad_id=anuncio.id, keyword=KEYWORD_MANUAL,
                                   qualification='true', created_at=antes_de_todo, updated_at=antes_de_todo))
 
 

@@ -1,7 +1,7 @@
 """A que setter le toca cada lead entrante de ManyChat.
 
 ManyChat reparte los leads entre los setters y manda el nombre del asignado en
-la variable `setter` del webhook, que se guarda en `ManychatLead.setter`. Antes
+la variable `setter` del webhook, que se guarda en `Conversation.setter`. Antes
 la bandeja se acotaba por el anuncio (`Event.setter_id`), que era un proxy: si
 el anuncio no tenia evento o setter dueño, todos veian todo.
 
@@ -33,13 +33,13 @@ def normalizar_nombre(nombre):
 
 def _variantes_guardadas(nombre):
     """Valores tal cual estan en la tabla que corresponden a este setter."""
-    from app.models import ManychatLead
+    from app.models import Conversation
 
     buscado = normalizar_nombre(nombre)
     if not buscado:
         return []
 
-    guardados = db.session.query(ManychatLead.setter).distinct().all()
+    guardados = db.session.query(Conversation.setter).distinct().all()
     return [fila[0] for fila in guardados
             if fila[0] and normalizar_nombre(fila[0]) == buscado]
 
@@ -53,7 +53,7 @@ def debe_filtrar_por_setter(user):
 
 
 def condicion_leads_visibles(user):
-    """Condicion SQLAlchemy sobre ManychatLead para la bandeja de este usuario.
+    """Condicion SQLAlchemy sobre Conversation para la bandeja de este usuario.
 
     Devuelve None cuando no hay que acotar nada (admin, operador, o cualquiera
     que no sea setter). Para un setter: sus leads mas los que todavia no tienen
@@ -61,17 +61,17 @@ def condicion_leads_visibles(user):
     """
     from sqlalchemy import or_
 
-    from app.models import ManychatLead
+    from app.models import Conversation
 
     if not debe_filtrar_por_setter(user):
         return None
 
-    sin_asignar = or_(ManychatLead.setter == None, ManychatLead.setter == '')  # noqa: E711
+    sin_asignar = or_(Conversation.setter == None, Conversation.setter == '')  # noqa: E711
     variantes = _variantes_guardadas(user.username)
     if not variantes:
         return sin_asignar
 
-    return or_(ManychatLead.setter.in_(variantes), sin_asignar)
+    return or_(Conversation.setter.in_(variantes), sin_asignar)
 
 
 def condicion_leads_propios(user):
@@ -84,10 +84,10 @@ def condicion_leads_propios(user):
     """
     from sqlalchemy import false
 
-    from app.models import ManychatLead
+    from app.models import Conversation
 
     if not debe_filtrar_por_setter(user):
         return None
 
     variantes = _variantes_guardadas(user.username)
-    return ManychatLead.setter.in_(variantes) if variantes else false()
+    return Conversation.setter.in_(variantes) if variantes else false()

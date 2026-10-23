@@ -106,21 +106,23 @@ class ConPersona:
 
 
 class Conversation(ConPersona, db.Model):
-    """Una conversación con la persona (reemplaza a los leads): por qué canal llegó, con qué palabra
-    clave y anuncio, qué setter la tiene y en qué etapa está."""
+    """La conversación con una persona por un canal (en la práctica, Instagram): quién es, qué setter la
+    tiene y en qué etapa está. Sus interacciones con el bot (entrada por palabra clave, mensajes enviados y
+    respondidos, calificación) son `LeadAnswer` (`answers`). Era `manychat_leads` hasta el 23/10/2026: la
+    escribía ManyChat y ahora el motor propio de Instagram (`automatizaciones/registro.py`)."""
     __tablename__ = 'conversations'
     id = db.Column(db.Integer, primary_key=True)
-    # 'instagram', 'whatsapp', 'manychat', 'landing', 'workshop'.
-    channel = db.Column(db.String(20), nullable=False)
-    # El id de la conversación en ese canal (el manychat_id, el id de Instagram).
-    external_id = db.Column(db.String(100), nullable=True)
-    keyword = db.Column(db.String(100), nullable=True)
-    ad_id = db.Column(db.Integer, nullable=True)  # sin FK, como en los leads de ManyChat
-    setter = db.Column(db.String(100), nullable=True)
-    stage = db.Column(db.String(100), nullable=True)
-    qualification = db.Column(db.String(10), nullable=True)
-    data = db.Column(db.JSON, nullable=True)
+    channel = db.Column(db.String(20), nullable=False, default='instagram', server_default='instagram')
+    # El id de la conversación en el canal: 'ig:<IGSID>' del motor propio, el id de suscriptor de ManyChat
+    # (solo dígitos, las viejas) o una marca de las armadas a mano ('synth_', 'manual_').
+    external_id = db.Column(db.String(100), unique=True, nullable=False)
+    # El perfil que el canal informa (nombre y usuario de Instagram) y si sigue a la cuenta.
+    name = db.Column(db.String(150))
+    ig = db.Column(db.String(100))
+    follower = db.Column(db.Boolean, default=False)
+    last_stage = db.Column(db.Integer, nullable=True)  # última etapa numérica del flujo
+    setter = db.Column(db.String(100), nullable=True)  # el setter del reparto
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    __table_args__ = (db.Index('ix_conversations_channel_external_id', 'channel', 'external_id'),)
+    answers = db.relationship('LeadAnswer', backref='conversation', lazy='dynamic', cascade='all, delete-orphan')

@@ -164,46 +164,15 @@ class MetaGastoDiario(db.Model):
     actualizado_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
-class ManychatAdLead(ConPersona, db.Model):
-    """Old lead table. Preserved for data migration."""
-    __tablename__ = 'manychat_ad_leads'
-    id = db.Column(db.Integer, primary_key=True)
-    manychat_id = db.Column(db.String(100), nullable=False)
-    lead_name = db.Column(db.String(150))
-    ad_id = db.Column(db.Integer, nullable=True)  # Sin FK, acepta cualquier valor
-    keyword = db.Column(db.String(100))
-    qualification = db.Column(db.String(10), default='null')  # 'true', 'false', 'null'
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-
-class ManychatLead(ConPersona, db.Model):
-    """Información persistente y única del prospecto que ingresó vía ManyChat"""
-    __tablename__ = 'manychat_leads'
-    id = db.Column(db.Integer, primary_key=True)
-    manychat_id = db.Column(db.String(100), unique=True, nullable=False)
-    name = db.Column(db.String(150))
-    ig = db.Column(db.String(100))
-    follower = db.Column(db.Boolean, default=False)
-    last_stage = db.Column(db.Integer, nullable=True)  # Última etapa numérica del funnel (ManyChat)
-    # Setter al que ManyChat repartió este lead. Llega vacío en los 2 primeros
-    # JSON de la conversación y desde ahí en adelante trae el nombre asignado.
-    setter = db.Column(db.String(100), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Un Lead puede interactuar con múltiples anuncios/webhooks
-    answers = db.relationship('LeadAnswer', backref='lead', lazy='dynamic', cascade="all, delete-orphan")
-
-
 class LeadAnswer(db.Model):
-    """Respuesta/Interacción específica de un Lead a un Anuncio"""
+    """Una interacción de la conversación con el bot: la entrada por una palabra clave (con su anuncio), un
+    mensaje enviado (`id_option_send`) o respondido (`id_option`), y la calificación."""
     __tablename__ = 'lead_answers'
     id = db.Column(db.Integer, primary_key=True)
-    lead_id = db.Column(db.Integer, db.ForeignKey('manychat_leads.id'), nullable=False)
+    conversation_id = db.Column(db.Integer, db.ForeignKey('conversations.id'), nullable=False, index=True)
     ad_id = db.Column(db.Integer, nullable=True)  # Sin FK rígida para admitir ads no registrados todavía
     keyword = db.Column(db.String(100))
-    fecha_recibida = db.Column(db.String(50)) # Fecha string que pasa manychat
+    fecha_recibida = db.Column(db.String(50))  # la fecha como texto, como la mandaba ManyChat
     opening = db.Column(db.String(100))
     variante = db.Column(db.String(100))
     qualification = db.Column(db.String(10), default='null')  # 'true', 'false', 'null'
@@ -232,17 +201,17 @@ class UTMLog(db.Model):
     user = db.relationship('User', backref=db.backref('utm_logs', lazy='dynamic'))
 
 class ConversationalMessage(db.Model):
-    """Mensaje configurable del flujo ManyChat. Se vincula a LeadAnswer por message_id."""
+    """Un mensaje del flujo del bot (el catálogo de Conversaciones). Se vincula a LeadAnswer por message_id."""
     __tablename__ = 'conversational_messages'
     id = db.Column(db.Integer, primary_key=True)
-    # ID que se configura en ManyChat (id_option_send / id_option)
+    # El id del mensaje en el flujo (id_option_send / id_option de LeadAnswer)
     message_id = db.Column(db.String(100), unique=True, nullable=False)
     title = db.Column(db.String(150), nullable=False)
     body = db.Column(db.Text)
     # 'cualificacion' | 'dolor' | 'seguimiento'
     category = db.Column(db.String(30), nullable=False, default='cualificacion')
     # A qué rama del flujo pertenece: 'calificados' | 'descalificados' | None. Recibirlo deja a la
-    # persona con esa calificación si ManyChat no mandó ninguna (18/10/2026, `rama_mensajes`).
+    # persona con esa calificación si el flujo no mandó ninguna (18/10/2026, `rama_mensajes`).
     rama = db.Column(db.String(20), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

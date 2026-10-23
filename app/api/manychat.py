@@ -23,12 +23,12 @@ def verificar_manychat_webhook():
 def receive_manychat_ad_lead():
     """
     Recibe un lead de ManyChat y lo vincula a un anuncio.
-    Maneja el Lead (ManychatLead) y su respuesta/interacción (LeadAnswer)
+    Maneja el Lead (Conversation) y su respuesta/interacción (LeadAnswer)
     Exige el header 'X-ManyChat-Token' con el valor de MANYCHAT_WEBHOOK_TOKEN (el mismo secreto que
     /api/webhooks/manychat): desde el 14/10/2026 una palabra clave nueva crea un anuncio. Sin la variable
     responde 503; con INTEGRATIONS_AUTH_MODE=log_only pasa igual y lo registra.
     """
-    from app.models import ManychatLead, LeadAnswer
+    from app.models import Conversation, LeadAnswer
 
     data = request.get_json(silent=True) or {}
     logger.info(f"[WEBHOOK NUEVO FORMATO] Recibido ({request.method}): {data}")
@@ -131,7 +131,7 @@ def receive_manychat_ad_lead():
             return actual if nueva == 'null' and actual in ('true', 'false') else nueva
 
         # 1. UPSERT LEAD
-        lead = ManychatLead.query.filter_by(manychat_id=str(manychat_id)).first()
+        lead = Conversation.query.filter_by(external_id=str(manychat_id)).first()
         if lead:
             # Actualiza solo si los valores entrantes son válidos
             if is_valid_value(lead_name): 
@@ -149,7 +149,7 @@ def receive_manychat_ad_lead():
                     lead.last_stage = int(raw_last_stage)
                 except (ValueError, TypeError):
                     pass
-            logger.info(f"[WEBHOOK] ManychatLead actualizado selectivamente: {manychat_id}")
+            logger.info(f"[WEBHOOK] Conversation actualizado selectivamente: {manychat_id}")
         else:
             # Crea el lead nuevo
             raw_last_stage = data.get('last_stage')
@@ -160,8 +160,8 @@ def receive_manychat_ad_lead():
                 except (ValueError, TypeError):
                     pass
             
-            lead = ManychatLead(
-                manychat_id=str(manychat_id),
+            lead = Conversation(
+                external_id=str(manychat_id),
                 name=lead_name if is_valid_value(lead_name) else None,
                 ig=lead_ig if is_valid_value(lead_ig) else None,
                 follower=follower,
@@ -170,7 +170,7 @@ def receive_manychat_ad_lead():
             )
             db.session.add(lead)
             db.session.flush()
-            logger.info(f"[WEBHOOK] ManychatLead creado: {manychat_id} (ID DB: {lead.id})")
+            logger.info(f"[WEBHOOK] Conversation creado: {manychat_id} (ID DB: {lead.id})")
 
         # 2. DECISIÓN INTELIGENTE DE INSERCIÓN O ACTUALIZACIÓN (Deduplicación y acumulación)
         answer = None
@@ -188,7 +188,7 @@ def receive_manychat_ad_lead():
             # Buscamos un envío reciente (en los últimos 30 minutos) que coincida con este mensaje (id_option_send == opt_str)
             # y que todavía no tenga una respuesta registrada (id_option == '0' o similar)
             latest_send = LeadAnswer.query.filter(
-                LeadAnswer.lead_id == lead.id,
+                LeadAnswer.conversation_id == lead.id,
                 LeadAnswer.id_option_send == opt_str,
                 (LeadAnswer.id_option == '0') | (LeadAnswer.id_option == None) | (LeadAnswer.id_option == '')
             ).order_by(LeadAnswer.created_at.desc()).first()
@@ -231,7 +231,7 @@ def receive_manychat_ad_lead():
                 qual = resolve_qualification(qualification_raw)
 
                 answer = LeadAnswer(
-                    lead_id=lead.id,
+                    conversation_id=lead.id,
                     ad_id=ad_id,
                     keyword=keyword if is_valid_value(keyword) else None,
                     fecha_recibida=fecha if is_valid_value(fecha) else None,
@@ -249,7 +249,7 @@ def receive_manychat_ad_lead():
         elif is_mc_send:
             # Es un envío de mensaje. Registramos el envío con qualification='null' (no califica todavía)
             answer = LeadAnswer(
-                lead_id=lead.id,
+                conversation_id=lead.id,
                 ad_id=ad_id,
                 keyword=keyword if is_valid_value(keyword) else None,
                 fecha_recibida=fecha if is_valid_value(fecha) else None,
@@ -266,7 +266,7 @@ def receive_manychat_ad_lead():
 
         else:
             # Lógica genérica heredada
-            latest_answer = LeadAnswer.query.filter_by(lead_id=lead.id).order_by(LeadAnswer.created_at.desc()).first()
+            latest_answer = LeadAnswer.query.filter_by(conversation_id=lead.id).order_by(LeadAnswer.created_at.desc()).first()
             is_new_interaction = False
 
             if latest_answer:
@@ -304,7 +304,7 @@ def receive_manychat_ad_lead():
                 qual = resolve_qualification(qualification_raw)
                 
                 answer = LeadAnswer(
-                    lead_id=lead.id,
+                    conversation_id=lead.id,
                     ad_id=ad_id,
                     keyword=keyword if is_valid_value(keyword) else None,
                     fecha_recibida=fecha if is_valid_value(fecha) else None,
@@ -344,7 +344,7 @@ def receive_manychat_ad_lead():
             "action": action,
             "lead": {
                 "id": lead.id,
-                "manychat_id": lead.manychat_id,
+                "manychat_id": lead.external_id,
                 "lead_name": lead.name
             },
             "answer": {

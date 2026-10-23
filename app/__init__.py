@@ -158,9 +158,6 @@ def create_app(config_class=Config):
     app.register_blueprint(google_calendar_bp)
     csrf.exempt(google_calendar_bp) # Exento para webhooks de Google Calendar
 
-    from app.api.webhooks import bp as webhooks_bp
-    app.register_blueprint(webhooks_bp, url_prefix='/api/webhooks')
-    csrf.exempt(webhooks_bp) # Exento para webhooks de Calendly/n8n
 
     from app.api.instagram_webhook import bp as instagram_webhook_bp
     app.register_blueprint(instagram_webhook_bp, url_prefix='/api/webhooks/instagram')

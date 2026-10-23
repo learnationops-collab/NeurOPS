@@ -108,7 +108,7 @@ const MiniLanding = ({ evento }) => {
             <div><dt>Visitas</dt><dd className="num">{numero(e.visitas)}</dd></div>
             <div><dt>Registros</dt><dd className="num">{numero(e.completo_gate)}</dd></div>
             <div><dt>Play</dt><dd className="num">{numero(e.dio_play)}</dd></div>
-            <div><dt>Calendly</dt><dd className="num">{numero(e.clic_agenda)}</dd></div>
+            <div><dt>Agendar</dt><dd className="num">{numero(e.clic_agenda)}</dd></div>
         </dl>
     );
 };

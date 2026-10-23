@@ -12,7 +12,7 @@ muestra al equipo de setting para que la reclame.
 
 Ojo con el criterio de "mis agendas": es la FUENTE de la agenda, no
 `Appointment.setter_id`. Cualificar un lead de ManyChat crea un Appointment
-placeholder (`origin='ManyChat / Instagram'`, `result='Cualificado'`, sin agenda
+placeholder (`origin='Instagram'`, `result='Cualificado'`, sin agenda
 real detras) y con el criterio viejo esos aparecian mezclados con las citas de
 verdad en la pestaña del setter.
 """

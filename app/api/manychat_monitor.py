@@ -9,19 +9,19 @@ from app.services.setter_assignment_service import condicion_leads_visibles
 @bp.route('/manychat-webhook/log', methods=['GET'])
 def get_webhook_log():
     """Retorna las últimas N interacciones recibidas."""
-    from app.models import LeadAnswer, ManychatLead, Ad
+    from app.models import LeadAnswer, Conversation, Ad
 
     limit = int(request.args.get('limit', 10))
 
     query = LeadAnswer.query
     # El historial de una persona (la ficha de Entrantes): todos sus webhooks.
     if request.args.get('lead_id', type=int):
-        query = query.filter(LeadAnswer.lead_id == request.args.get('lead_id', type=int))
+        query = query.filter(LeadAnswer.conversation_id == request.args.get('lead_id', type=int))
     # Cada setter solo ve los leads que ManyChat le repartió (más los que
     # todavía no tienen asignación).
     condicion = condicion_leads_visibles(current_user)
     if condicion is not None:
-        query = query.join(ManychatLead, ManychatLead.id == LeadAnswer.lead_id).filter(condicion)
+        query = query.join(Conversation, Conversation.id == LeadAnswer.conversation_id).filter(condicion)
 
     # Traemos las respuestas ordenadas por creación
     answers = query.order_by(LeadAnswer.created_at.desc()).limit(limit).all()
@@ -35,14 +35,14 @@ def get_webhook_log():
 
     return jsonify([{
         'id': ans.id,  # ID de la respuesta, usado para editar
-        'lead_id': ans.lead.id,
-        'manychat_id': ans.lead.manychat_id,
-        'person_uuid': ans.lead.person_uuid,
-        'lead_name': ans.lead.name,
-        'lead_ig': ans.lead.ig,
-        'follower': ans.lead.follower,
-        'last_stage': ans.lead.last_stage,
-        'setter': ans.lead.setter,
+        'lead_id': ans.conversation.id,
+        'manychat_id': ans.conversation.manychat_id,
+        'person_uuid': ans.conversation.person_uuid,
+        'lead_name': ans.conversation.name,
+        'lead_ig': ans.conversation.ig,
+        'follower': ans.conversation.follower,
+        'last_stage': ans.conversation.last_stage,
+        'setter': ans.conversation.setter,
         'ad_id': ans.ad_id,
         'ad_name': ads_map[ans.ad_id].name if ans.ad_id and ans.ad_id in ads_map else '—',
         'keyword': ans.keyword,
@@ -70,7 +70,7 @@ def get_entrantes():
     mensajes. Cada setter ve solo los suyos, como en el monitor.
     """
     from datetime import date, datetime, time, timedelta
-    from app.models import ConversationalMessage, LeadAnswer, ManychatLead, MetaAnuncio
+    from app.models import ConversationalMessage, LeadAnswer, Conversation, MetaAnuncio
     from app.services import anuncios_service as servicio
 
     def dia(valor, defecto):
@@ -83,11 +83,11 @@ def get_entrantes():
     desde = dia(request.args.get('desde'), hasta - timedelta(days=29))
     desde_dt, hasta_dt = datetime.combine(desde, time.min), datetime.combine(hasta, time.max)
 
-    consulta = db.session.query(LeadAnswer.lead_id).filter(
+    consulta = db.session.query(LeadAnswer.conversation_id).filter(
         LeadAnswer.created_at >= desde_dt, LeadAnswer.created_at <= hasta_dt)
     condicion = condicion_leads_visibles(current_user)
     if condicion is not None:
-        consulta = consulta.join(ManychatLead, ManychatLead.id == LeadAnswer.lead_id).filter(condicion)
+        consulta = consulta.join(Conversation, Conversation.id == LeadAnswer.conversation_id).filter(condicion)
     lead_ids = {lid for (lid,) in consulta.distinct()}
 
     clave_de_anuncio = servicio._clave_de_cada_anuncio()
@@ -101,8 +101,8 @@ def get_entrantes():
     pasos = {}
     for tanda in servicio._en_tandas(lead_ids):
         for lead_id, enviado, respondido, creada in db.session.query(
-                LeadAnswer.lead_id, LeadAnswer.id_option_send, LeadAnswer.id_option, LeadAnswer.created_at
-        ).filter(LeadAnswer.lead_id.in_(tanda)).order_by(LeadAnswer.created_at):
+                LeadAnswer.conversation_id, LeadAnswer.id_option_send, LeadAnswer.id_option, LeadAnswer.created_at
+        ).filter(LeadAnswer.conversation_id.in_(tanda)).order_by(LeadAnswer.created_at):
             paso = pasos.setdefault(lead_id, {'enviado': None, 'respondido': None})
             if (enviado or '').strip() not in ('', '0', '0.0'):
                 paso['enviado'] = enviado.strip()
@@ -114,7 +114,7 @@ def get_entrantes():
         return {'id': mid, 'titulo': titulo or (f'Mensaje {mid}' if mid else None), 'categoria': categoria}
 
     leads = {l.id: l for tanda in servicio._en_tandas(lead_ids)
-             for l in ManychatLead.query.filter(ManychatLead.id.in_(tanda))}
+             for l in Conversation.query.filter(Conversation.id.in_(tanda))}
     filas = []
     for lead_id in lead_ids:
         lead, historia = leads.get(lead_id), interacciones.get(lead_id, [])
@@ -129,7 +129,7 @@ def get_entrantes():
         paso = pasos.get(lead_id, {})
         filas.append({
             'lead_id': lead.id,
-            'manychat_id': lead.manychat_id,
+            'manychat_id': lead.external_id,
             'person_uuid': lead.person_uuid,
             'nombre': lead.name,
             'ig': lead.ig,

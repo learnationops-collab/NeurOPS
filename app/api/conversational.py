@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from app import db
-from app.models import ConversationalMessage, LeadAnswer, ManychatLead, Ad, FinancialAgenda, FinancialSale
+from app.models import ConversationalMessage, LeadAnswer, Conversation, Ad, FinancialAgenda, FinancialSale
 from app.services import rama_mensajes
 from app.services.identity_service import normalize_ig
 from sqlalchemy import func, not_
@@ -287,7 +287,7 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
     def get_lead_msg_key(manychat_lead_id):
         """Devuelve el último id_option_send del lead en el período."""
         ans = LeadAnswer.query.filter(
-            LeadAnswer.lead_id == manychat_lead_id,
+            LeadAnswer.conversation_id == manychat_lead_id,
             LeadAnswer.id_option_send != None,
             LeadAnswer.created_at >= start_dt,
             LeadAnswer.created_at <= end_dt
@@ -296,17 +296,17 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
 
     def resolve_lead_by_ig_or_name(ig_val, nombre_val, person_uuid=None):
         # La conversación de su persona primero (plan_personas); el IG y el nombre, de respaldo.
-        from app.services.conversaciones_service import lead_de_persona
+        from app.services.conversaciones_service import de_persona as lead_de_persona
 
         ig_n = normalize_ig(ig_val)
         lead = lead_de_persona(person_uuid)
         if not lead and ig_n:
-            lead = ManychatLead.query.filter(
-                func.lower(func.replace(ManychatLead.ig, '@', '')) == ig_n
+            lead = Conversation.query.filter(
+                func.lower(func.replace(Conversation.ig, '@', '')) == ig_n
             ).first()
         if not lead and nombre_val:
-            lead = ManychatLead.query.filter(
-                func.lower(ManychatLead.name) == nombre_val.strip().lower()
+            lead = Conversation.query.filter(
+                func.lower(Conversation.name) == nombre_val.strip().lower()
             ).first()
         return lead
 

@@ -16,7 +16,7 @@ from app.api.setter import bp
 @bp.route('/deck', methods=['GET'])
 @role_required(ROLE_SETTER)
 def get_setter_deck():
-    from app.models import Appointment, CommentNotification, Comment, ManychatLead, LeadAnswer, Ad, Event, Client
+    from app.models import Appointment, CommentNotification, Comment, Conversation, LeadAnswer, Ad, Event, Client
     from datetime import date, timedelta, datetime
     from sqlalchemy import or_, func
     
@@ -45,12 +45,12 @@ def get_setter_deck():
         if start_dt and end_dt:
             query = query.filter(LeadAnswer.created_at.between(start_dt, end_dt))
             
-        # El dueño del lead lo decide ManyChat (ManychatLead.setter), no el
+        # El dueño del lead lo decide ManyChat (Conversation.setter), no el
         # anuncio: antes se acotaba por Event.setter_id y como la mayoría de
         # anuncios no tiene evento con setter dueño, todos veían todo.
         condicion_setter = condicion_leads_visibles(current_user)
         if condicion_setter is not None:
-            query = query.join(ManychatLead, ManychatLead.id == LeadAnswer.lead_id)\
+            query = query.join(Conversation, Conversation.id == LeadAnswer.conversation_id)\
                          .filter(condicion_setter)
 
         lead_answers = query.order_by(LeadAnswer.created_at.desc()).all()
@@ -69,10 +69,10 @@ def get_setter_deck():
         # Quién ya está en el mazo: su persona y, de respaldo, el Instagram de la fila.
         present_igs, present_persons = set(), set()
         for la in lead_answers:
-            if la.lead and la.lead.person_uuid:
-                present_persons.add(la.lead.person_uuid)
-            if la.lead and la.lead.ig:
-                present_igs.add(la.lead.ig.strip().replace('@', '').lower())
+            if la.conversation and la.conversation.person_uuid:
+                present_persons.add(la.conversation.person_uuid)
+            if la.conversation and la.conversation.ig:
+                present_igs.add(la.conversation.ig.strip().replace('@', '').lower())
                 
         if unread_client_ids:
             unread_clients = Client.query.filter(Client.id.in_(list(unread_client_ids))).all()
@@ -83,11 +83,11 @@ def get_setter_deck():
                 if uc_ig_clean not in present_igs and uc.person_uuid not in present_persons:
                     # La conversación de su persona (plan_personas), después la de la persona de su
                     # Instagram y, de respaldo, la de la fila con ese Instagram.
-                    m_lead = conversaciones_service.lead_de_persona(uc.person_uuid) or lead_por_ig(uc_ig_clean)
+                    m_lead = conversaciones_service.de_persona(uc.person_uuid) or lead_por_ig(uc_ig_clean)
                     if not m_lead:
                         try:
-                            m_lead = ManychatLead(
-                                manychat_id=f"synth_{uc.id}_{int(datetime.utcnow().timestamp())}",
+                            m_lead = Conversation(
+                                external_id=f"synth_{uc.id}_{int(datetime.utcnow().timestamp())}",
                                 name=uc.full_name or "Sin Nombre",
                                 ig=uc.instagram or uc_ig_clean,
                                 created_at=datetime.utcnow()
@@ -97,19 +97,19 @@ def get_setter_deck():
                         except Exception as ex:
                             db.session.rollback()
                             import logging
-                            logging.error(f"Error persistiendo ManychatLead de setter en GET: {ex}")
-                            m_lead = ManychatLead(
+                            logging.error(f"Error persistiendo Conversation de setter en GET: {ex}")
+                            m_lead = Conversation(
                                 id=-(uc.id + 2000000),
                                 name=uc.full_name or "Sin Nombre",
                                 ig=uc.instagram or uc_ig_clean,
                                 created_at=datetime.utcnow()
                             )
                             
-                    la_obj = LeadAnswer.query.filter_by(lead_id=m_lead.id).order_by(LeadAnswer.created_at.desc()).first() if m_lead.id > 0 else None
+                    la_obj = LeadAnswer.query.filter_by(conversation_id=m_lead.id).order_by(LeadAnswer.created_at.desc()).first() if m_lead.id > 0 else None
                     if not la_obj:
                         try:
                             la_obj = LeadAnswer(
-                                lead_id=m_lead.id,
+                                conversation_id=m_lead.id,
                                 qualification='null',
                                 keyword='Mensaje Directo',
                                 created_at=datetime.utcnow()
@@ -122,7 +122,7 @@ def get_setter_deck():
                             logging.error(f"Error persistiendo LeadAnswer de setter en GET: {ex}")
                             la_obj = LeadAnswer(
                                 id=-(uc.id + 3000000),
-                                lead_id=m_lead.id,
+                                conversation_id=m_lead.id,
                                 qualification='null',
                                 keyword='Mensaje Directo',
                                 created_at=datetime.utcnow()
@@ -134,11 +134,11 @@ def get_setter_deck():
                             present_persons.add(uc.person_uuid)
 
         # Lo que se muestra de cada lead sale de su persona; la fila, de respaldo (lead_contacto_service).
-        contactos = lead_contactos([la.lead for la in lead_answers if la.lead and la.lead.id and la.lead.id > 0])
+        contactos = lead_contactos([la.conversation for la in lead_answers if la.conversation and la.conversation.id and la.conversation.id > 0])
         response_data = []
         seen_igs = set()
         for la in lead_answers:
-            lead = la.lead
+            lead = la.conversation
             if not lead:
                 continue
             contacto = contactos.get(lead.id) or {'nombre': lead.name, 'ig': lead.ig}
@@ -213,7 +213,7 @@ def get_setter_deck():
                 "instagram": contacto['ig'] or "",
                 "start_time": la.created_at.isoformat() if la.created_at else None,
                 "created_at": lead.created_at.isoformat() if lead.created_at else None,
-                "origin": "ManyChat / Instagram",
+                "origin": "Instagram",
                 "result": la.qualification,
                 "ig_chat_link": f"https://instagram.com/{contacto['ig'].replace('@', '')}" if contacto['ig'] else "",
                 "keyword": la.keyword or "",
@@ -275,7 +275,7 @@ def get_setter_deck():
     res_list = []
     for a in appointments:
         # La conversación de su persona (plan_personas); el Instagram y el nombre, de respaldo.
-        lead_persona = conversaciones_service.lead_de_persona(a.person_uuid)
+        lead_persona = conversaciones_service.de_persona(a.person_uuid)
         client_ig = a.client.instagram if (a.client and a.client.instagram) else ""
         if not client_ig and a.ig_chat_link:
             clean_chat = a.ig_chat_link.strip()
@@ -290,7 +290,7 @@ def get_setter_deck():
             client_ig = lead_contactos([lead_persona])[lead_persona.id]['ig'] or ""
         if not client_ig and a.client:
             if a.client.full_name:
-                m_lead = ManychatLead.query.filter(func.lower(ManychatLead.name) == a.client.full_name.lower().strip()).first()
+                m_lead = Conversation.query.filter(func.lower(Conversation.name) == a.client.full_name.lower().strip()).first()
                 if m_lead and m_lead.ig:
                     client_ig = m_lead.ig
 
@@ -300,24 +300,24 @@ def get_setter_deck():
 
         if not ad_obj and (lead_persona or client_ig):
             ig_clean_normal = client_ig.strip().lstrip('@').lower()
-            m_lead = lead_persona or ManychatLead.query.filter(
-                func.lower(func.replace(ManychatLead.ig, '@', '')) == ig_clean_normal
+            m_lead = lead_persona or Conversation.query.filter(
+                func.lower(func.replace(Conversation.ig, '@', '')) == ig_clean_normal
             ).first()
             if m_lead:
                 la = LeadAnswer.query.filter(
-                    LeadAnswer.lead_id == m_lead.id,
+                    LeadAnswer.conversation_id == m_lead.id,
                     LeadAnswer.ad_id != None
                 ).order_by(LeadAnswer.created_at.desc()).first()
                 if la:
                     ad_obj = Ad.query.get(la.ad_id)
 
         if not ad_obj and a.client and a.client.full_name:
-            m_lead = ManychatLead.query.filter(
-                func.lower(ManychatLead.name) == a.client.full_name.strip().lower()
+            m_lead = Conversation.query.filter(
+                func.lower(Conversation.name) == a.client.full_name.strip().lower()
             ).first()
             if m_lead:
                 la = LeadAnswer.query.filter(
-                    LeadAnswer.lead_id == m_lead.id,
+                    LeadAnswer.conversation_id == m_lead.id,
                     LeadAnswer.ad_id != None
                 ).order_by(LeadAnswer.created_at.desc()).first()
                 if la:

@@ -2,7 +2,7 @@ from flask import request, jsonify
 from app import db
 from app.models import Client, Appointment, SurveyAnswer, SurveyQuestion, ClientComment, User
 from app.models.financial import FinancialSale, FinancialAgenda
-from app.models.marketing import ManychatLead, LeadAnswer
+from app.models.marketing import Conversation, LeadAnswer
 from app.services.identity_service import normalize_ig
 from app.services import pagos_copia
 from datetime import datetime, timedelta
@@ -93,15 +93,15 @@ def get_lead_roadmap():
         resolved_email = client.email.strip().lower() if client and client.email and not is_generic_val(client.email) else clean_email
         resolved_phone = client.phone.strip() if client and client.phone and not is_generic_val(client.phone) else clean_phone
 
-        # 3. Buscar ManychatLead: el de la persona, el de la persona de su instagram y, de respaldo, el
+        # 3. Buscar Conversation: el de la persona, el de la persona de su instagram y, de respaldo, el
         # de la fila con ese instagram (`lead_por_ig`).
-        from app.services.conversaciones_service import lead_de_persona
+        from app.services.conversaciones_service import de_persona as lead_de_persona
         from app.services import lead_contacto_service
         manychat_lead = lead_de_persona(puuid)
         if not manychat_lead and resolved_ig:
             manychat_lead = lead_contacto_service.lead_por_ig(resolved_ig)
         if not manychat_lead and resolved_email:
-            manychat_lead = ManychatLead.query.filter(func.lower(ManychatLead.ig) == resolved_email).first() # Fallback a veces guardado como email
+            manychat_lead = Conversation.query.filter(func.lower(Conversation.ig) == resolved_email).first() # Fallback a veces guardado como email
 
         # 4. Buscar FinancialAgendas
         # Las de su persona; por la copia, solo las agendas sin persona (Etapa 2b).
@@ -195,7 +195,7 @@ def get_lead_roadmap():
             "completed": True,
             "date": lead_profile["created_at"],
             "details": {
-                "origen": manychat_lead.manychat_id if manychat_lead else "Registro Web/Directo",
+                "origen": manychat_lead.external_id if manychat_lead else "Registro Web/Directo",
                 "canal": "Instagram Ads" if manychat_lead else "Orgánico / Búsqueda",
                 "campaña": "N/A",
                 "inversion": 0.0
@@ -204,7 +204,7 @@ def get_lead_roadmap():
         # Intentar obtener más detalles del primer contacto o ManyChat
         if manychat_lead:
             # Buscar la primera respuesta para ver origen
-            first_la = LeadAnswer.query.filter_by(lead_id=manychat_lead.id).order_by(LeadAnswer.created_at.asc()).first()
+            first_la = LeadAnswer.query.filter_by(conversation_id=manychat_lead.id).order_by(LeadAnswer.created_at.asc()).first()
             if first_la:
                 arrived_stage["details"]["campaña"] = first_la.keyword or "Instagram Bot"
                 if first_la.opening:
@@ -218,7 +218,7 @@ def get_lead_roadmap():
         contact_msg = "Mensaje del bot gatillado"
         if manychat_lead:
             contact_completed = True
-            first_la = LeadAnswer.query.filter_by(lead_id=manychat_lead.id).order_by(LeadAnswer.created_at.asc()).first()
+            first_la = LeadAnswer.query.filter_by(conversation_id=manychat_lead.id).order_by(LeadAnswer.created_at.asc()).first()
             if first_la:
                 contact_date = first_la.created_at.isoformat()
                 contact_msg = f"Keyword: {first_la.keyword} - Opción: {first_la.id_option_send or 'N/A'}"
@@ -269,7 +269,7 @@ def get_lead_roadmap():
         # Si no se encontraron dolores en las encuestas, buscar en ManyChat
         if not pain_completed and manychat_lead:
             # Buscar respuestas con categoría dolor en conversational_messages
-            pain_answers = LeadAnswer.query.filter_by(lead_id=manychat_lead.id).all()
+            pain_answers = LeadAnswer.query.filter_by(conversation_id=manychat_lead.id).all()
             for pa in pain_answers:
                 if pa.keyword and ("dolor" in pa.keyword.lower() or "pain" in pa.keyword.lower()):
                     pain_completed = True

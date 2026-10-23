@@ -42,7 +42,7 @@ def force_manual_attribution():
     """
     Fuerza la atribución de una venta inyectando un usuario y una interacción virtual.
     """
-    from app.models import FinancialSale, ManychatLead, LeadAnswer, Ad
+    from app.models import FinancialSale, Conversation, LeadAnswer, Ad
     from datetime import timedelta
     import uuid
     import logging
@@ -81,16 +81,16 @@ def force_manual_attribution():
     sale.instagram = f"@{ig_normalizado}"
     _sumar_instagram(sale.person if sale.person_uuid else None, ig_normalizado, f'venta #{sale.id}')
     
-    # 2. Buscar o crear ManychatLead: el del IG que se escribió y, si no hay, el de la persona de la venta
-    matched_lead = ManychatLead.query.filter(
-        db.func.lower(db.func.replace(ManychatLead.ig, '@', '')) == ig_normalizado
-    ).first() or conversaciones_service.lead_de_persona(sale.person_uuid)
+    # 2. Buscar o crear Conversation: el del IG que se escribió y, si no hay, el de la persona de la venta
+    matched_lead = Conversation.query.filter(
+        db.func.lower(db.func.replace(Conversation.ig, '@', '')) == ig_normalizado
+    ).first() or conversaciones_service.de_persona(sale.person_uuid)
 
     if not matched_lead:
         # Generar un ID único basado en la venta para evitar colisiones
         cliente_nombre = (sale.raw_data or {}).get('cliente') or (sale.raw_data or {}).get('nombre') or 'Desconocido'
-        matched_lead = ManychatLead(
-            manychat_id=f"manual_{sale.id}_{uuid.uuid4().hex[:6]}",
+        matched_lead = Conversation(
+            external_id=f"manual_{sale.id}_{uuid.uuid4().hex[:6]}",
             name=cliente_nombre,
             ig=f"@{ig_normalizado}",
             follower=False
@@ -102,7 +102,7 @@ def force_manual_attribution():
     fake_time = sale.date - timedelta(minutes=1) if sale.date else db.func.now()
     
     answer = LeadAnswer(
-        lead_id=matched_lead.id,
+        conversation_id=matched_lead.id,
         ad_id=ad_id,
         keyword="manual_attribution",
         qualification="true", # calificado porque compro
@@ -135,7 +135,7 @@ def force_manual_attribution():
 @bp.route('/public/marketing/unattributed-leads', methods=['GET'])
 def get_unattributed_leads():
     """Obtiene ventas y agendas sin anuncio en un rango de fechas."""
-    from app.models import FinancialSale, FinancialAgenda, ManychatLead, LeadAnswer
+    from app.models import FinancialSale, FinancialAgenda, Conversation, LeadAnswer
     from datetime import datetime, timedelta
 
     start_str = request.args.get('start_date')
@@ -202,22 +202,22 @@ def get_unattributed_leads():
                 continue
 
             # La conversación de su persona (plan_personas); el IG y el nombre, solo sin persona.
-            matched_lead = conversaciones_service.lead_de_persona(sale.person_uuid)
+            matched_lead = conversaciones_service.de_persona(sale.person_uuid)
             if not matched_lead and not sale.person_uuid and ig_norm:
-                matched_lead = ManychatLead.query.filter(
-                    db.func.lower(db.func.replace(ManychatLead.ig, '@', '')) == ig_norm
+                matched_lead = Conversation.query.filter(
+                    db.func.lower(db.func.replace(Conversation.ig, '@', '')) == ig_norm
                 ).first()
 
             if not matched_lead and not sale.person_uuid:
                 if nombre_norm:
-                    matched_lead = ManychatLead.query.filter(
-                        db.func.lower(ManychatLead.name) == nombre_norm
+                    matched_lead = Conversation.query.filter(
+                        db.func.lower(Conversation.name) == nombre_norm
                     ).first()
 
             has_attribution = False
             if matched_lead:
                 closest = LeadAnswer.query.filter(
-                    LeadAnswer.lead_id == matched_lead.id,
+                    LeadAnswer.conversation_id == matched_lead.id,
                     LeadAnswer.ad_id != None,
                     LeadAnswer.created_at <= sale.date
                 ).order_by(LeadAnswer.created_at.desc()).first()
@@ -289,22 +289,22 @@ def get_unattributed_leads():
                 continue
 
             # La conversación de su persona (plan_personas); el IG y el nombre, de respaldo.
-            matched_lead = conversaciones_service.lead_de_persona(agenda.person_uuid)
+            matched_lead = conversaciones_service.de_persona(agenda.person_uuid)
             if not matched_lead and ig_norm:
-                matched_lead = ManychatLead.query.filter(
-                    db.func.lower(db.func.replace(ManychatLead.ig, '@', '')) == ig_norm
+                matched_lead = Conversation.query.filter(
+                    db.func.lower(db.func.replace(Conversation.ig, '@', '')) == ig_norm
                 ).first()
 
             if not matched_lead:
                 if nombre_norm:
-                    matched_lead = ManychatLead.query.filter(
-                        db.func.lower(ManychatLead.name) == nombre_norm
+                    matched_lead = Conversation.query.filter(
+                        db.func.lower(Conversation.name) == nombre_norm
                     ).first()
 
             has_attribution = False
             if matched_lead:
                 closest = LeadAnswer.query.filter(
-                    LeadAnswer.lead_id == matched_lead.id,
+                    LeadAnswer.conversation_id == matched_lead.id,
                     LeadAnswer.ad_id != None,
                     LeadAnswer.created_at <= agenda.date
                 ).order_by(LeadAnswer.created_at.desc()).first()
@@ -357,7 +357,7 @@ def get_unattributed_leads():
 @bp.route('/public/marketing/manual-attribution-agenda', methods=['POST'])
 def force_manual_attribution_agenda():
     """Asocia un anuncio a una agenda insertando lead e interaccion virtual."""
-    from app.models import FinancialAgenda, ManychatLead, LeadAnswer, Ad
+    from app.models import FinancialAgenda, Conversation, LeadAnswer, Ad
     from datetime import timedelta
     import uuid
     import logging
@@ -400,14 +400,14 @@ def force_manual_attribution_agenda():
         agenda_contacto_service.dar_persona(agenda, instagram=ig_normalizado)
 
     # Buscar/crear lead de Manychat: el del IG que se escribió y, si no hay, el de la persona de la agenda
-    matched_lead = ManychatLead.query.filter(
-        db.func.lower(db.func.replace(ManychatLead.ig, '@', '')) == ig_normalizado
-    ).first() or conversaciones_service.lead_de_persona(agenda.person_uuid)
+    matched_lead = Conversation.query.filter(
+        db.func.lower(db.func.replace(Conversation.ig, '@', '')) == ig_normalizado
+    ).first() or conversaciones_service.de_persona(agenda.person_uuid)
 
     if not matched_lead:
         cliente_nombre = _nombre_del_lead(agenda) or 'Desconocido'
-        matched_lead = ManychatLead(
-            manychat_id=f"manual_agenda_{agenda.id}_{uuid.uuid4().hex[:6]}",
+        matched_lead = Conversation(
+            external_id=f"manual_agenda_{agenda.id}_{uuid.uuid4().hex[:6]}",
             name=cliente_nombre,
             ig=f"@{ig_normalizado}",
             follower=False
@@ -418,14 +418,14 @@ def force_manual_attribution_agenda():
     # Interaccion virtual un minuto antes (reutilizar si ya existe para evitar duplicados)
     fake_time = agenda.date - timedelta(minutes=1) if agenda.date else db.func.now()
     
-    answer = LeadAnswer.query.filter_by(lead_id=matched_lead.id).first()
+    answer = LeadAnswer.query.filter_by(conversation_id=matched_lead.id).first()
     if answer:
         answer.ad_id = ad_id
         answer.qualification = "true"
         answer.updated_at = fake_time
     else:
         answer = LeadAnswer(
-            lead_id=matched_lead.id,
+            conversation_id=matched_lead.id,
             ad_id=ad_id,
             keyword="manual_attribution",
             qualification="true",

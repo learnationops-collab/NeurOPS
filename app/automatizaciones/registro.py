@@ -1,10 +1,10 @@
 """Lo que el motor deja para los tableros de hoy: las mismas filas que el webhook de ManyChat (19/10/2026).
 
-Rendimiento, Entrantes, Conversaciones, «Mis agendas» y los números del setter leen `ManychatLead` y
+Rendimiento, Entrantes, Conversaciones, «Mis agendas» y los números del setter leen `Conversation` y
 `LeadAnswer` (ver `app/api/manychat.py`). Para que apagar ManyChat no los deje sin datos, el motor las
 escribe con el mismo significado, sin pasar por el webhook ni tocarlo:
 
-  · La persona: un `ManychatLead` con `manychat_id = 'ig:<IGSID>'`, su nombre, su usuario de Instagram
+  · La persona: una `Conversation` con `external_id = 'ig:<IGSID>'`, su nombre, su usuario de Instagram
     (por el usuario la encuentra «Mis agendas») y el setter del reparto de la campaña (`reparto.py`).
   · La entrada: al empezar el flujo, una `LeadAnswer` con la palabra clave y su anuncio
     (`anuncio_de_keyword`, como el webhook: si la palabra es nueva crea el anuncio).
@@ -13,13 +13,13 @@ escribe con el mismo significado, sin pasar por el webhook ni tocarlo:
     Opening de ManyChat trae la palabra clave. Si el lead lo responde (botón o texto), `id_option = id`.
   · La calificación: `registro.califica` del nodo, la acción «califica», o si no la rama del mensaje
     (`rama_mensajes`, la misma regla que el webhook). La etapa (`registro.etapa` al mandar el mensaje,
-    `registro.etapa_respuesta` cuando lo responde, o la acción) va a `ManychatLead.last_stage`.
+    `registro.etapa_respuesta` cuando lo responde, o la acción) va a `Conversation.last_stage`.
 
 Solo registra lo que entró por una campaña: mientras conviva ManyChat, un flujo con disparador propio
 (las pruebas) no cuenta dos veces a la misma persona.
 """
 from app import db
-from app.models import LeadAnswer, ManychatLead, User
+from app.models import LeadAnswer, Conversation, User
 
 PREFIJO = 'ig:'
 # En las variables del contacto: si sigue a la cuenta, según Instagram (el `follower` de ManyChat).
@@ -32,9 +32,9 @@ def _activo(ejecucion):
 
 def _lead(contacto):
     manychat_id = f'{PREFIJO}{contacto.igsid}'
-    lead = ManychatLead.query.filter_by(manychat_id=manychat_id).first()
+    lead = Conversation.query.filter_by(external_id=manychat_id).first()
     if lead is None:
-        lead = ManychatLead(manychat_id=manychat_id, follower=False)
+        lead = Conversation(external_id=manychat_id, follower=False)
         db.session.add(lead)
     if contacto.nombre:
         lead.name = contacto.nombre[:150]
@@ -48,7 +48,7 @@ def _lead(contacto):
 
 def _filas(ejecucion, lead):
     """Las filas de esta ejecución: las de la persona desde que empezó, la más nueva primero."""
-    return (LeadAnswer.query.filter(LeadAnswer.lead_id == lead.id, LeadAnswer.created_at >= ejecucion.iniciada_en)
+    return (LeadAnswer.query.filter(LeadAnswer.conversation_id == lead.id, LeadAnswer.created_at >= ejecucion.iniciada_en)
             .order_by(LeadAnswer.created_at.desc(), LeadAnswer.id.desc()))
 
 
@@ -74,7 +74,7 @@ def entrada(ejecucion, momento):
     if ejecucion.setter_id:  # el reparto de la campaña, donde ManyChat dejaba el suyo
         lead.setter = db.session.get(User, ejecucion.setter_id).username
     anuncio = anuncio_de_keyword(ejecucion.clave)
-    db.session.add(LeadAnswer(lead_id=lead.id, ad_id=anuncio.id if anuncio else None, keyword=ejecucion.clave,
+    db.session.add(LeadAnswer(conversation_id=lead.id, ad_id=anuncio.id if anuncio else None, keyword=ejecucion.clave,
                               qualification='null', created_at=momento, updated_at=momento))
     db.session.flush()
 
@@ -91,7 +91,7 @@ def envio(ejecucion, nodo, momento):
     if ultima is not None and not ultima.id_option_send:
         fila = ultima
     else:
-        fila = LeadAnswer(lead_id=lead.id, ad_id=ultima.ad_id if ultima else None, keyword=ejecucion.clave,
+        fila = LeadAnswer(conversation_id=lead.id, ad_id=ultima.ad_id if ultima else None, keyword=ejecucion.clave,
                           qualification='null', created_at=momento)
         db.session.add(fila)
     fila.id_option, fila.id_option_send, fila.updated_at = '0', mensaje_id, momento

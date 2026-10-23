@@ -95,8 +95,8 @@ def _interacciones(lead_ids, clave_de_anuncio):
     crudas = defaultdict(list)
     for tanda in _en_tandas(lead_ids):
         for lead_id, ad_id, keyword, calificacion, opcion, creada in db.session.query(
-                LeadAnswer.lead_id, LeadAnswer.ad_id, LeadAnswer.keyword, LeadAnswer.qualification,
-                LeadAnswer.id_option, LeadAnswer.created_at).filter(LeadAnswer.lead_id.in_(tanda)):
+                LeadAnswer.conversation_id, LeadAnswer.ad_id, LeadAnswer.keyword, LeadAnswer.qualification,
+                LeadAnswer.id_option, LeadAnswer.created_at).filter(LeadAnswer.conversation_id.in_(tanda)):
             if creada is None:
                 continue
             clave = clave_de(keyword) if es_keyword_valida(keyword) else None

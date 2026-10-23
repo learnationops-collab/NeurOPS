@@ -2465,7 +2465,7 @@ def get_closer_deck_card(appt_id):
     if current_user.role == 'closer' and not is_owner:
         from app.models import User
         owner = User.query.get(appt.closer_id)
-        if appt.origin == 'ManyChat' or not appt.closer_id or (owner and owner.is_active is False):
+        if appt.origin == 'Instagram' or not appt.closer_id or (owner and owner.is_active is False):
             appt.closer_id = current_user.id
             db.session.commit()
 
@@ -2525,7 +2525,7 @@ def post_closer_deck_comment(appt_id):
     content = f"\"{text}\" - de Closer {current_user.username}"
     
     target_users = "role:setter"
-    if appt.origin != 'ManyChat' and appt.setter_id:
+    if appt.origin != 'Instagram' and appt.setter_id:
         target_users = [appt.setter_id]
         
     notif = Notification(
@@ -2551,7 +2551,7 @@ def get_deck_stats_kpis():
     if current_user.role not in ['closer', 'setter', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
         
-    from app.models import Appointment, ManychatLead, SetterDailyStats, CloserDailyStats
+    from app.models import Appointment, Conversation, SetterDailyStats, CloserDailyStats
     from sqlalchemy import func, or_
     from datetime import date, datetime, timedelta
     
@@ -2751,7 +2751,7 @@ def get_unassigned_leads_today():
         "id": a.id,
         "lead_name": a.client.full_name or "Sin Nombre" if a.client else "Sin Cliente",
         "created_at": a.created_at.isoformat(),
-        "origin": a.origin or "ManyChat"
+        "origin": a.origin or "Instagram"
     } for a in appointments]), 200
 
 @bp.route('/unread-no-agenda', methods=['GET'])

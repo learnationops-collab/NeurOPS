@@ -5,7 +5,7 @@
 from sqlalchemy import func
 
 from app import db
-from app.models import Appointment, Client, LeadAnswer, ManychatLead, User
+from app.models import Appointment, Client, LeadAnswer, Conversation, User
 from app.services.setter_assignment_service import _variantes_guardadas, normalizar_nombre
 from app.services.comercial_cruces import no_es_marcador, _limpiar_ig
 from app.services.comercial_vocabulario import SIN_RESPUESTA, chip, pct
@@ -19,7 +19,7 @@ class ComercialLeadsMixin:
     def _setter_id_de(nombre):
         """El id del usuario setter que se llama `nombre`, comparando normalizado.
 
-        Los leads se atribuyen por NOMBRE (`ManychatLead.setter`, lo escribe ManyChat) y las
+        Los leads se atribuyen por NOMBRE (`Conversation.setter`, lo escribe ManyChat) y las
         agendas por id (`Appointment.setter_id`): esto es el puente, para quien pida los leads de
         un setter con el nombre solo.
         """
@@ -47,14 +47,14 @@ class ComercialLeadsMixin:
         """
         from app.services.comercial_service import ComercialService
         desde, hasta = ComercialService._limites(start, end)
-        q = ManychatLead.query.filter(ManychatLead.created_at >= desde, ManychatLead.created_at <= hasta)
+        q = Conversation.query.filter(Conversation.created_at >= desde, Conversation.created_at <= hasta)
         if setter_nombre:
             variantes = _variantes_guardadas(setter_nombre)
             if not variantes:
                 return []
-            q = q.filter(ManychatLead.setter.in_(variantes))
+            q = q.filter(Conversation.setter.in_(variantes))
 
-        leads = q.order_by(ManychatLead.created_at.desc()).all()
+        leads = q.order_by(Conversation.created_at.desc()).all()
         if not leads:
             return []
 
@@ -67,8 +67,8 @@ class ComercialLeadsMixin:
         # nada. Se usa el mismo que la bandeja del setter (`get_cualificacion_stats`): una
         # cualificación vacía —'null', '' o 'undefined'— es justamente un lead que no contestó.
         respuestas = {}
-        for lead_id, qualification in db.session.query(LeadAnswer.lead_id, LeadAnswer.qualification) \
-                .filter(LeadAnswer.lead_id.in_(ids)).all():
+        for lead_id, qualification in db.session.query(LeadAnswer.conversation_id, LeadAnswer.qualification) \
+                .filter(LeadAnswer.conversation_id.in_(ids)).all():
             datos = respuestas.setdefault(
                 lead_id, {'total': 0, 'respondio': False, 'cualificado': False, 'descartado': False})
             datos['total'] += 1
@@ -138,7 +138,7 @@ class ComercialLeadsMixin:
                 'ig': contacto[l.id]['ig'] or '',
                 'email': '',
                 'telefono': '',
-                'fuente': 'ManyChat',
+                'fuente': 'Instagram',
                 'setter': l.setter or 'Sin asignar',
                 'estado': chip('estado', estado),
                 'mensajes': datos['total'],

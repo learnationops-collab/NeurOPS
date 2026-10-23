@@ -17,18 +17,18 @@ def build_activity(lead_profile, arrived_stage, manychat_lead, financial_agendas
         "date": lead_profile["created_at"],
         "event": "Llegó al embudo",
         "detail": f"Prospecto ingresó al sistema. Origen resuelto: {arrived_stage['details']['origen']}",
-        "origin": "ManyChat" if manychat_lead else "Sistema"
+        "origin": "Instagram" if manychat_lead else "Sistema"
     })
 
     # 2. Respuestas de bot
     if manychat_lead:
-        answers = LeadAnswer.query.filter_by(lead_id=manychat_lead.id).all()
+        answers = LeadAnswer.query.filter_by(conversation_id=manychat_lead.id).all()
         for la in answers:
             activity.append({
                 "date": la.created_at.isoformat() if la.created_at else lead_profile["created_at"],
                 "event": "Interacción Bot",
                 "detail": f"Keyword: {la.keyword} | Opción: {la.id_option_send or 'Seleccionada'} (Calificación: {la.qualification})",
-                "origin": "ManyChat"
+                "origin": "Instagram"
             })
 
     # 3. Agendas

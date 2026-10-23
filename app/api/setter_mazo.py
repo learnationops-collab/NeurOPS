@@ -76,9 +76,9 @@ def _normalizar_ig(valor):
 
 
 def _lead_de_manychat(ig_norm, nombre_norm, person_uuid=None):
-    """El ManychatLead de esta persona: el de su `person_uuid` (plan_personas) y, si no, el de la
+    """El Conversation de esta persona: el de su `person_uuid` (plan_personas) y, si no, el de la
     persona de ese instagram, con el respaldo por instagram o nombre de la fila (`lead_por_ig`)."""
-    from app.services.conversaciones_service import lead_de_persona
+    from app.services.conversaciones_service import de_persona as lead_de_persona
     from app.services.lead_contacto_service import lead_por_ig
 
     return lead_de_persona(person_uuid) or lead_por_ig(ig_norm, nombre_norm)
@@ -89,7 +89,7 @@ def _anuncio_de(lead):
     if not lead:
         return None
     respuesta = LeadAnswer.query.filter(
-        LeadAnswer.lead_id == lead.id,
+        LeadAnswer.conversation_id == lead.id,
         LeadAnswer.ad_id != None  # noqa: E711
     ).order_by(LeadAnswer.created_at.desc()).first()
     return Ad.query.get(respuesta.ad_id) if respuesta else None

@@ -10,7 +10,7 @@ números) creadas desde `DESDE`, una por persona como en "Agendas generadas"
 
 **Qué es tener palabra clave.** La regla con la que Marketing reparte las agendas entre los
 anuncios (la tabla de anuncios, `anuncios_service`, y la bandeja «Sin anuncio» de
-`/public/marketing`): el Instagram del lead lleva a su conversación de ManyChat (`ManychatLead`) y
+`/public/marketing`): el Instagram del lead lleva a su conversación de ManyChat (`Conversation`) y
 ésta a una respuesta con anuncio (`LeadAnswer.ad_id`) de antes de la reunión. Así la agenda que
 sale de la bandeja es la que Marketing ya cuenta para ese anuncio, y la bandeja no puede vaciarse
 con agendas que Marketing sigue viendo sin atribuir. `Appointment.keyword` NO alcanza: Marketing no
@@ -84,8 +84,8 @@ def _anuncio_de_cada_una(filas):
     respuestas = defaultdict(list)
     if lead_ids:
         for lead_id, ad_id, creada in db.session.query(
-                LeadAnswer.lead_id, LeadAnswer.ad_id, LeadAnswer.created_at).filter(
-                LeadAnswer.lead_id.in_(lead_ids), LeadAnswer.ad_id.isnot(None)):
+                LeadAnswer.conversation_id, LeadAnswer.ad_id, LeadAnswer.created_at).filter(
+                LeadAnswer.conversation_id.in_(lead_ids), LeadAnswer.ad_id.isnot(None)):
             respuestas[lead_id].append((creada, ad_id))
 
     def ultima(ids, reunion):
@@ -287,8 +287,8 @@ def _canal(cita):
     origen = (cita.origin or '').strip().lower()
     if a_mano or origen.startswith('manual'):
         return 'Cargada a mano'
-    if origen.startswith('manychat'):
-        return 'ManyChat'
+    if origen.startswith('manychat') or origen == 'instagram':
+        return 'Instagram'
     return None
 
 

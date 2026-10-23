@@ -1,7 +1,7 @@
 """Quién es un lead de ManyChat (Etapa 2c, parte 7, docs/plan_personas.md).
 
-«Quién es» sale de la persona (su identidad de Instagram) y su conversación; `ManychatLead` queda
-como el registro del canal (manychat_id, follower, setter, last_stage). Su `ig` y su `name` son el
+«Quién es» sale de la persona (su identidad de Instagram) y su conversación; `Conversation` queda
+como el registro del canal (external_id, follower, setter, last_stage). Su `ig` y su `name` son el
 respaldo: se leen cuando no hay persona (o la persona no tiene ese dato), y desde acá.
 
   · `contacto(lead)` / `contactos(leads)`: el nombre y el instagram del lead, de su persona.
@@ -15,10 +15,10 @@ conserva tal cual, porque la atribución de anuncios depende de él.
 """
 from sqlalchemy import and_, func, or_
 
-from app.models import ManychatLead, Person
+from app.models import Conversation, Person
 
-IG_NORMALIZADO = func.lower(func.replace(ManychatLead.ig, '@', ''))
-NOMBRE_NORMALIZADO = func.lower(ManychatLead.name)
+IG_NORMALIZADO = func.lower(func.replace(Conversation.ig, '@', ''))
+NOMBRE_NORMALIZADO = func.lower(Conversation.name)
 
 
 def ig_limpio(valor):
@@ -31,7 +31,7 @@ def sin_persona(*condiciones):
     condiciones = [c for c in condiciones if c is not None]
     if not condiciones:
         return None
-    return and_(ManychatLead.person_uuid.is_(None), or_(*condiciones))
+    return and_(Conversation.person_uuid.is_(None), or_(*condiciones))
 
 
 def _de(lead, person):
@@ -57,7 +57,7 @@ def contactos(leads):
 
 
 def lead_por_ig(ig, nombre=None):
-    """El `ManychatLead` de quien tiene ese instagram: el de su persona y, si no hay, el primero con
+    """El `Conversation` de quien tiene ese instagram: el de su persona y, si no hay, el primero con
     ese instagram en la fila (el respaldo de siempre) y, si tampoco, el primero con ese nombre exacto.
     None si no hay."""
     from app.services import conversaciones_service, person_service
@@ -65,13 +65,13 @@ def lead_por_ig(ig, nombre=None):
     ig = ig_limpio(ig)
     if ig:
         person = person_service.buscar(instagram=ig)
-        lead = conversaciones_service.lead_de_persona(person.uuid) if person else None
+        lead = conversaciones_service.de_persona(person.uuid) if person else None
         if lead is not None:
             return lead
-        lead = ManychatLead.query.filter(IG_NORMALIZADO == ig).first()
+        lead = Conversation.query.filter(IG_NORMALIZADO == ig).first()
         if lead is not None:
             return lead
     nombre = (nombre or '').strip().lower()
     if nombre:
-        return ManychatLead.query.filter(NOMBRE_NORMALIZADO == nombre).first()
+        return Conversation.query.filter(NOMBRE_NORMALIZADO == nombre).first()
     return None

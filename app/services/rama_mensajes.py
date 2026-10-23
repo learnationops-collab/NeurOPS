@@ -34,7 +34,7 @@ def aplicar_a(respuesta):
     if not valor:
         return False
     tiene_dato = db.session.query(LeadAnswer.id).filter(
-        LeadAnswer.lead_id == respuesta.lead_id, LeadAnswer.qualification.in_(CON_DATO)).first()
+        LeadAnswer.conversation_id == respuesta.conversation_id, LeadAnswer.qualification.in_(CON_DATO)).first()
     if tiene_dato:
         return False
     respuesta.qualification = valor
@@ -55,15 +55,15 @@ def reaplicar(message_id):
     valor = _valor_de_rama(message_id)
     if not valor:
         return 0
-    con_dato = {lid for (lid,) in db.session.query(LeadAnswer.lead_id).filter(
+    con_dato = {lid for (lid,) in db.session.query(LeadAnswer.conversation_id).filter(
         LeadAnswer.qualification.in_(CON_DATO)).distinct()}
     aplicadas, vistas = 0, set()
     for r in LeadAnswer.query.filter(LeadAnswer.id_option_send == message_id,
                                      ~LeadAnswer.qualification.in_(CON_DATO) | LeadAnswer.qualification.is_(None)) \
             .order_by(LeadAnswer.created_at, LeadAnswer.id):
-        if r.lead_id in con_dato or r.lead_id in vistas:
+        if r.conversation_id in con_dato or r.conversation_id in vistas:
             continue
         r.qualification, r.calificacion_por_rama = valor, True
-        vistas.add(r.lead_id)
+        vistas.add(r.conversation_id)
         aplicadas += 1
     return aplicadas
