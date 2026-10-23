@@ -94,7 +94,7 @@ def _entrantes(desde_dt, hasta_dt, clave_de_anuncio):
     """{clave: {'entrantes', 'calificados', 'descalificados', 'en_conversacion',
     'dias': {fecha: [entrantes, calificados, descalificados, en conversación]}}}
     y la cantidad de personas cuya conversación no tiene ninguna palabra clave (clave None)."""
-    lead_ids = {lid for (lid,) in db.session.query(LeadAnswer.lead_id).filter(
+    lead_ids = {lid for (lid,) in db.session.query(LeadAnswer.conversation_id).filter(
         LeadAnswer.created_at >= desde_dt, LeadAnswer.created_at <= hasta_dt).distinct()}
     por_clave = defaultdict(lambda: {'entrantes': 0, 'calificados': 0, 'descalificados': 0,
                                      'en_conversacion': 0, 'dias': defaultdict(lambda: [0, 0, 0, 0])})

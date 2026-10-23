@@ -70,7 +70,7 @@ EXCEPCIONES = {
         (('PUT', '/api/public/financial-sales/<int:sale_id>'), ('closer', 'setter')),
         (('POST', '/api/public/financial-sales/<int:sale_id>/resend-webhook'), ('closer', 'setter')),
         (('GET', '/api/public/financial-agendas'), ('closer', 'setter')),
-        (('POST', '/api/public/financial-agendas'), ('closer', 'setter')),
+        (('POST', '/api/public/financial-agendas/atribucion'), ('closer', 'setter')),
         (('PUT', '/api/public/financial-agendas/<int:agenda_id>'), ('closer', 'setter')),
         # Cada uno ya puede leer la lista de su propio rol: lo que se le niega es la del otro.
         (('GET', '/api/public/active-closers'), ('setter',)),

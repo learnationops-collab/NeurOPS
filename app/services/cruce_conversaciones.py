@@ -26,7 +26,7 @@ from collections import defaultdict
 from sqlalchemy import func
 
 from app import db
-from app.models import ManychatLead
+from app.models import Conversation
 from app.services.identity_service import normalize_ig
 
 TANDA = 500
@@ -64,18 +64,18 @@ def leads_por_persona(person_uuids):
     """{person_uuid: [lead_id, ...]} de las conversaciones ya vinculadas a cada persona."""
     por_persona = defaultdict(list)
     for tanda in _en_tandas({u for u in person_uuids if u}):
-        for lead_id, puuid in db.session.query(ManychatLead.id, ManychatLead.person_uuid).filter(
-                ManychatLead.person_uuid.in_(tanda)):
+        for lead_id, puuid in db.session.query(Conversation.id, Conversation.person_uuid).filter(
+                Conversation.person_uuid.in_(tanda)):
             por_persona[puuid].append(lead_id)
     return por_persona
 
 
 def leads_por_ig(igs):
     """{ig normalizado: [lead_id, ...]} de las conversaciones con ese Instagram exacto."""
-    ig_columna = func.lower(func.replace(ManychatLead.ig, '@', ''))
+    ig_columna = func.lower(func.replace(Conversation.ig, '@', ''))
     por_ig = defaultdict(list)
     for tanda in _en_tandas({ig for ig in igs if ig}):
-        for lead_id, ig in db.session.query(ManychatLead.id, ig_columna).filter(ig_columna.in_(tanda)):
+        for lead_id, ig in db.session.query(Conversation.id, ig_columna).filter(ig_columna.in_(tanda)):
             ig_n = normalize_ig(ig)
             if ig_n:
                 por_ig[ig_n].append(lead_id)
@@ -93,7 +93,7 @@ def leads_por_ig_parecido(igs):
     if not buscados:
         return {}
     por_ig = defaultdict(list)
-    for lead_id, ig in db.session.query(ManychatLead.id, ManychatLead.ig).filter(ManychatLead.ig.isnot(None)):
+    for lead_id, ig in db.session.query(Conversation.id, Conversation.ig).filter(Conversation.ig.isnot(None)):
         for original in buscados.get(compacto(ig), ()):
             por_ig[original].append(lead_id)
     return por_ig
@@ -107,7 +107,7 @@ def leads_por_nombre(nombres):
         return {}
     exactos = defaultdict(set)
     por_primera = defaultdict(list)
-    for lead_id, nombre in db.session.query(ManychatLead.id, ManychatLead.name).filter(ManychatLead.name.isnot(None)):
+    for lead_id, nombre in db.session.query(Conversation.id, Conversation.name).filter(Conversation.name.isnot(None)):
         clave = clave_de_nombre(nombre)
         if not clave:
             continue

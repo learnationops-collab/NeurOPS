@@ -24,7 +24,7 @@ const ETAPAS = {
     completo_gate: { texto: 'Se registró', tono: 'info' },
     dio_play: { texto: 'Dio play', tono: 'info' },
     vio_oferta: { texto: 'Llegó a la oferta', tono: 'success' },
-    clic_agenda: { texto: 'Clic en Calendly', tono: 'success' },
+    clic_agenda: { texto: 'Clic en agendar', tono: 'success' },
 };
 const etapaDe = (s) => ETAPAS[s.etapa] || ETAPAS.entro;
 
@@ -35,7 +35,7 @@ const fechaHora = (iso) => {
 
 const QUE_MIDE = 'Entraron: cargaron /replay/, una fila por visita. Abrieron el registro: tocaron «Ver la clase» y se abrió el '
     + 'formulario de 4 pasos (no es Calendly). Se registraron: completaron esos pasos. Dieron play: se montó el reproductor '
-    + 'de Loom. Llegaron a la oferta: el bloque de la oferta entró de verdad en su pantalla. Clic en Calendly: tocaron agendar. '
+    + 'de Loom. Llegaron a la oferta: el bloque de la oferta entró de verdad en su pantalla. Clic en agendar: tocaron el botón de agendar. '
     + 'Cada visita se mide por separado: quien ya se registró y vuelve entra directo a la clase.';
 
 const COLUMNAS_SESIONES = [
@@ -143,7 +143,7 @@ const WorkshopLandingView = () => {
                     { key: 'registro', label: 'Se registraron', n: e.completo_gate || 0 },
                     { key: 'play', label: 'Dieron play', n: e.dio_play || 0 },
                     { key: 'oferta', label: 'Vieron la oferta', n: e.vio_oferta || 0 },
-                    { key: 'calendly', label: 'Clic Calendly', n: e.clic_agenda || 0 },
+                    { key: 'agendar', label: 'Clic agendar', n: e.clic_agenda || 0 },
                 ]} />
             </section>
 

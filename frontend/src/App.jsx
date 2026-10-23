@@ -28,7 +28,6 @@ import PublicCloserReportPage from './pages/public/PublicCloserReportPage';
 import PublicTriageReportPage from './pages/public/PublicTriageReportPage';
 import FinancialAgendasPage from './pages/admin/reports/FinancialAgendasPage';
 import TriageWorkflowPage from './pages/triage/TriageWorkflowPage';
-import PublicWorkshopStatsPage from './pages/public/PublicWorkshopStatsPage';
 import PixelTracker from './components/common/PixelTracker';
 import BugReportWidget from './components/feedback/BugReportWidget';
 import { PlaybookProvider } from './contexts/PlaybookContext';
@@ -404,17 +403,6 @@ function App() {
                 <ProtectedRoute roles={['triage', 'admin']}>
                   <MainLayout>
                     <PublicTriageReportPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/admin/workshop"
-              element={
-                <ProtectedRoute roles={['admin', 'marketer']}>
-                  <MainLayout>
-                    <PublicWorkshopStatsPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

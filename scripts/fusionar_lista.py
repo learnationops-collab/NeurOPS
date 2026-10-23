@@ -35,7 +35,7 @@ from app.services import person_service
 MOTIVO = 'fusión manual aprobada'
 # Lo que se informa que se mueve; `person_service.TABLAS` mueve todas.
 MOSTRAR = ('financial_sales', 'financial_agendas', 'appointments', 'sales', 'subscriptions', 'clients',
-           'conversations', 'leads', 'manychat_leads')
+           'conversations')
 
 
 def mail_se_parece(mail, nombre):

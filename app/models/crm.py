@@ -103,7 +103,7 @@ class LeadEventLog(db.Model):
             "id": self.id,
             "appointment_id": self.appointment_id,
             "user_id": self.user_id,
-            "username": self.user.username if self.user else "Sistema (ManyChat)",
+            "username": self.user.username if self.user else "Sistema",
             "user_role": self.user.role if self.user else "system",
             "action_type": self.action_type,
             "description": self.description,

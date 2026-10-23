@@ -1252,13 +1252,6 @@ def test_la_nota_avisa_al_setter_del_lead_y_queda_en_la_bitacora(client, db, lea
     assert [e.action_type for e in LeadEventLog.query.all()] == ['comment']
 
 
-def test_un_lead_de_manychat_avisa_al_rol_setter_entero(client, db, lead, equipo, auth_headers):
-    lead.origin = 'ManyChat'
-    db.session.commit()
-
-    client.post(url(lead, '/nota'), json={'texto': 'hola'}, headers=auth_headers(equipo['closer']))
-
-    assert Notification.query.one().target_users == 'role:setter'
 
 
 def test_una_nota_vacia_no_pasa(client, db, lead, equipo, auth_headers):

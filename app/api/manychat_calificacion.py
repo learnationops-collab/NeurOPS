@@ -11,7 +11,7 @@ from flask import jsonify, request
 
 from app import db
 from app.api.manychat import bp
-from app.models import LeadAnswer, ManychatLead
+from app.models import LeadAnswer, Conversation
 
 ESTADOS = {'calificado': 'true', 'descalificado': 'false', 'sin_dato': 'null'}
 # Lo que se acepta en el lote: lo que manda ManyChat (yes/no, 1/0) y los nombres de la pantalla.
@@ -25,7 +25,7 @@ MAXIMO_LOTE = 5000
 
 def calificar(lead_id, valor):
     """Deja a la persona con esa calificación ('true' | 'false' | 'null'). Devuelve si cambió algo."""
-    respuestas = LeadAnswer.query.filter_by(lead_id=lead_id).order_by(LeadAnswer.created_at.desc(), LeadAnswer.id.desc()).all()
+    respuestas = LeadAnswer.query.filter_by(conversation_id=lead_id).order_by(LeadAnswer.created_at.desc(), LeadAnswer.id.desc()).all()
     if not respuestas:
         return False
     if valor == 'null':
@@ -49,7 +49,7 @@ def corregir_calificacion(lead_id):
     estado = (request.get_json(silent=True) or {}).get('estado')
     if estado not in ESTADOS:
         return jsonify({'error': 'estado debe ser calificado, descalificado o sin_dato'}), 400
-    if not ManychatLead.query.get(lead_id):
+    if not Conversation.query.get(lead_id):
         return jsonify({'error': 'No existe ese lead'}), 404
     cambio = calificar(lead_id, ESTADOS[estado])
     db.session.commit()
@@ -80,9 +80,9 @@ def cargar_calificaciones():
     claves = list(pedidos)
     for i in range(0, len(claves), 500):
         tanda = claves[i:i + 500]
-        for lead in ManychatLead.query.filter(db.or_(
-                ManychatLead.manychat_id.in_(tanda), db.func.lower(ManychatLead.ig).in_(tanda))):
-            for clave in (lead.manychat_id, (lead.ig or '').lower()):
+        for lead in Conversation.query.filter(db.or_(
+                Conversation.external_id.in_(tanda), db.func.lower(Conversation.ig).in_(tanda))):
+            for clave in (lead.external_id, (lead.ig or '').lower()):
                 if clave in pedidos:
                     leads.setdefault(clave, lead.id)
     # Lo que no se encontró por la fila puede ser un Instagram de una persona (Etapa 2c): su lead.

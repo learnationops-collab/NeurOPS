@@ -61,8 +61,6 @@ PUBLICAS_POR_DISENO = frozenset({
     # que la landing le muestra a cualquiera.
     ('GET', '/api/public/workshops/proximos'),
     ('POST', '/api/v1/metrics/track-visit'),
-    ('POST', '/api/workshop/interaction'),
-    ('POST', '/api/workshop/plantilla-sent'),
     # Conectar Google Calendar desde la Academia (equipo de fulfillment, sin sesion en NeurOPS): solo con la
     # firma que la Academia pide con su token (15 min, un solo uso). Redirige a Google; el token se guarda
     # en el callback para la cuenta de la firma. Ver app/api/google_calendar.py.

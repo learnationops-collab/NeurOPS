@@ -62,9 +62,6 @@ POLITICA = {
 
     # --- ManyChat: monitor de leads entrantes, limpieza y reasignacion (marketing) ----------------------
     ('PUT', '/api/manychat-webhook/answer/<int:answer_id>'): _p(COMERCIAL, MARKETING, SETTER),
-    ('POST', '/api/manychat-webhook/bulk-reassign'): _p(MARKETING),
-    ('POST', '/api/manychat-webhook/bulk-reassign/preview'): _p(MARKETING),
-    ('POST', '/api/manychat-webhook/cleanup-cuf'): _p(MARKETING),
     ('GET', '/api/manychat-webhook/log'): _p(COMERCIAL, MARKETING, SETTER),
     ('GET', '/api/manychat-webhook/entrantes'): _p(COMERCIAL, MARKETING, SETTER),
     ('PUT', '/api/manychat-webhook/lead/<int:lead_id>/calificacion'): _p(COMERCIAL, MARKETING),
@@ -112,13 +109,10 @@ POLITICA = {
 
     # --- Agendas (registro de llamadas). Las que reciben datos de n8n admiten su secreto ----------------
     ('GET', '/api/public/financial-agendas'): _p(COMERCIAL, OPERATOR, TRIAGE),
-    ('POST', '/api/public/financial-agendas'): _p(COMERCIAL, OPERATOR, ingesta=True),
-    ('POST', '/api/public/financial-agendas-form'): _p(OPERATOR, ingesta=True),
     ('PUT', '/api/public/financial-agendas/<int:agenda_id>'): _p(COMERCIAL, OPERATOR, TRIAGE),
+    ('POST', '/api/public/financial-agendas/atribucion'): _p(COMERCIAL, OPERATOR),
     ('DELETE', '/api/public/financial-agendas/<int:agenda_id>'): _p(COMERCIAL, OPERATOR, TRIAGE),
-    ('POST', '/api/public/financial-agendas/sync'): _p(OPERATOR),  # deshabilitada en favor de n8n
     ('POST', '/api/public/financial-agendas/sync-appointments'): _p(OPERATOR),
-    ('POST', '/api/public/financial-agendas/verificar-hora'): _p(OPERATOR, ingesta=True),  # prueba en seco desde n8n
 
     # --- Ventas (pagos). El webhook de la hoja de calculo (Apps Script) admite su secreto ---------------
     ('GET', '/api/public/financial-sales'): _p(COMERCIAL, OPERATOR),
@@ -140,7 +134,6 @@ POLITICA = {
     ('POST', '/api/public/lead-roadmap/update-client'): _p(CLOSER, COMERCIAL, OPERATOR, SETTER, TRIAGE),
 
     # --- Workshops ------------------------------------------------------------------------------------
-    ('GET', '/api/workshop/stats/summary'): _p(OPERATOR, MARKETING),
 
     # --- Dashboard comercial: fotos de la Academia -------------------------------------------------
     # Gasta peticiones del limite que la Academia comparte con produccion y con la ficha: solo la

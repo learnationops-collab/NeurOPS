@@ -128,7 +128,7 @@ const AttributionModal = ({ sale, onClose, onSuccess }) => {
         }
         setCreatingAgenda(true);
         try {
-            await api.post('/public/financial-agendas', {
+            await api.post('/public/financial-agendas/atribucion', {
                 fuente: newAgenda.fuente,
                 nombre: newAgenda.lead,
                 closer: newAgenda.closer,

@@ -20,9 +20,6 @@ ROLES = ['admin', 'operator', 'closer', 'setter', 'triage', 'director_comercial'
 # Las UNICAS rutas que aceptan el secreto de los sistemas externos (n8n, Apps Script): se fija la lista
 # para que ampliar lo que puede hacer una llamada de maquina sea una decision consciente.
 RUTAS_DE_INGESTA = {
-    ('POST', '/api/public/financial-agendas'),
-    ('POST', '/api/public/financial-agendas-form'),
-    ('POST', '/api/public/financial-agendas/verificar-hora'),
     ('POST', '/api/public/financial-sales'),
     ('GET', '/api/public/clients/search'),
     ('POST', '/api/public/clients/follow-up'),
@@ -132,7 +129,6 @@ MATRIZ = {
     ('PUT', '/api/manychat-webhook/lead/1/calificacion'): {'admin', 'director_comercial', 'director_marketing'},
     ('POST', '/api/manychat-webhook/calificaciones'): {'admin', 'director_marketing'},
     ('GET', '/api/triage/tracker'): {'admin', 'director_comercial'},
-    ('GET', '/api/workshop/stats/summary'): {'admin', 'operator', 'director_marketing'},
     ('POST', '/api/public/lead-roadmap/update-client'):
         {'admin', 'closer', 'director_comercial', 'operator', 'setter', 'triage'},
 }
@@ -189,7 +185,6 @@ def test_options_no_se_bloquea_para_no_romper_los_preflight_de_cors(app, db):
     ('GET', '/api/public/workshop-lead/stats'),
     ('POST', '/api/auth/login'),
     ('GET', '/api/health'),
-    ('POST', '/api/webhooks/manychat'),
 ])
 def test_las_rutas_publicas_por_diseno_no_las_toca_la_guarda(app, db, metodo, ruta):
     assert consultar(app, metodo, ruta) is None

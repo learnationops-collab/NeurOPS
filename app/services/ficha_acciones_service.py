@@ -1664,7 +1664,7 @@ def nota(appt, datos, usuario):
 
     destinatarios = datos.get('notificar')
     if not isinstance(destinatarios, list) or not destinatarios:
-        destinatarios = [appt.setter_id] if (appt.origin != 'ManyChat' and appt.setter_id) \
+        destinatarios = [appt.setter_id] if (appt.origin != 'Instagram' and appt.setter_id) \
             else 'role:setter'
     nombre = appt.client.full_name if appt.client else 'Sin Nombre'
     db.session.add(Notification(subject=f'💬 Lead: {nombre}',

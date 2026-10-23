@@ -172,25 +172,6 @@ def test_lo_que_se_revierte_no_deja_marcas_para_el_proximo_commit(db):
 
 # --- De punta a punta: el endpoint real que llama n8n --------------------------------------------
 
-@pytest.mark.parametrize('ya_existia', [True, False])
-def test_un_formulario_que_llega_por_el_endpoint_refresca_el_taller(client, db, monkeypatch, ya_existia):
-    monkeypatch.setenv('INGEST_API_TOKEN', TOKEN)
-    hoy = datetime.utcnow().date()
-    taller = crear_talleres(db, hoy - timedelta(days=2))[0]
-    if ya_existia:
-        # Esta en la base desde hace semanas, sin formulario: el endpoint la encuentra por su mail.
-        db.session.add(Client(full_name='Ana Gomez', email='ana@x.com', instagram='ana.g', created_at=ANTES))
-        db.session.commit()
-    con_centinela(db)
-
-    respuesta = client.post(URL_FORMULARIO, headers={'X-Api-Token': TOKEN}, json={
-        'nombre': 'Ana Gomez', 'telefono': '+58 412 1234567', 'instagram': 'ana.g', 'mail': 'ana@x.com',
-        'fuente_form': 'Workshop', 'profesion': 'Enfermera'})
-
-    assert respuesta.status_code == 201
-    evento = leer(db, taller)
-    assert evento.aplicaciones_form == 1
-    assert evento.synced_at is not None
 
 
 # --- Agendas 2.0: el formulario vive en `formulario_payload` ----------------------------------

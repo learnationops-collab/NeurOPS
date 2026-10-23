@@ -132,7 +132,7 @@ def search_deck_leads():
 def get_deck_card(appt_id):
     appt = Appointment.query.get_or_404(appt_id)
     if current_user.role != 'admin' and appt.setter_id != current_user.id:
-        if appt.origin == 'ManyChat' or not appt.setter_id:
+        if appt.origin == 'Instagram' or not appt.setter_id:
             appt.setter_id = current_user.id
             db.session.commit()
         else:
@@ -194,7 +194,7 @@ def post_setter_deck_comment(appt_id):
     content = f"\"{text}\" - de Setter {current_user.username}"
     
     target_users = "role:closer"
-    if appt.origin != 'ManyChat' and appt.closer_id:
+    if appt.origin != 'Instagram' and appt.closer_id:
         target_users = [appt.closer_id]
         
     notif = Notification(
