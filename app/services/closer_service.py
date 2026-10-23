@@ -39,7 +39,7 @@ def _por_copia_sin_persona(email, instagram):
     return [and_(FinancialSale.person_uuid.is_(None), or_(*por_copia))] if por_copia else []
 
 
-def matriz_de_cierres(*, completo, split, senas, asistieron, presentaciones, no_cerradas):
+def matriz_de_cierres(*, completo, split, senas, asistieron, presentaciones, no_cerradas, reales=None):
     """El cierre en sus cuatro lecturas: ventas y señas, cada una por llamada y por presentación.
 
     Es la forma ÚNICA del bloque `cierres` que devuelven los dos tableros (el del closer, desde
@@ -73,6 +73,11 @@ def matriz_de_cierres(*, completo, split, senas, asistieron, presentaciones, no_
     tarjeta muestra arriba de la matriz porque explica la distancia entre sus dos columnas.
 
     `pct` es None sin denominador: un "0% de cierre" sobre cero llamadas afirma algo que no pasó.
+
+    `reales` es el close rate real (`cierres_reales.cierres_reales`, 23/10/2026): lo cerrado en el
+    período venga de la llamada que venga, con su origen. Las cuatro lecturas de arriba son por
+    llamada del período; esta es por cobro. Va dentro del bloque para que la tarjeta que lo dibuja
+    sea una sola; es None donde el tablero no lo calcula.
     """
     def celda(num, den):
         return {'num': num, 'den': den,
@@ -92,6 +97,7 @@ def matriz_de_cierres(*, completo, split, senas, asistieron, presentaciones, no_
         'solo_senas': {'por_llamada': celda(senas, asistieron),
                        'por_presentacion': celda(senas, presentaciones)},
         'no_cerradas': celda(no_cerradas, asistieron),
+        'reales': reales,
     }
 
 
@@ -1830,6 +1836,7 @@ class CloserService:
     def get_comprehensive_stats(closer_id=None, start_date=None, end_date=None, agg_type='sum'):
         """Retorna estadísticas agregadas de closers con soporte de suma/promedio."""
         from app.models import CloserDailyReport, Appointment, User
+        from app.services.cierres_reales import cierres_reales_de_closer
         from sqlalchemy import func, or_
         from datetime import datetime, timedelta
 
@@ -2377,7 +2384,10 @@ class CloserService:
             "cierres": matriz_de_cierres(completo=final_pif_count, split=final_split_count,
                                          senas=señas_sin_venta, asistieron=total_attended,
                                          presentaciones=val(stats.offers_made),
-                                         no_cerradas=round(max(0, total_attended - total_sales - señas_sin_venta), 2)),
+                                         no_cerradas=round(max(0, total_attended - total_sales - señas_sin_venta), 2),
+                                         reales=cierres_reales_de_closer(
+                                             closer_id, start_date, end_date,
+                                             float(stats.fc_attended or 0) + float(stats.sc_attended or 0))),
             "follow_ups": {
                 "sent": val(stats.fu_sent), "replied": val(stats.fu_replied),
                 "closed": val(stats.fu_closed),

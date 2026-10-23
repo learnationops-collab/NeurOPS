@@ -12,6 +12,7 @@ from datetime import date, timedelta
 
 from app.models import User
 from app.services.closer_dashboard_service import CloserDashboardService
+from app.services.cierres_reales import cierres_reales
 from app.services.closer_service import matriz_de_cierres
 from app.services.comercial_service import (
     DIAS_SENA_CAIDA, POST_CALL, ROL_CLOSERS, ROL_SETTERS, TIPOS_PAGO_COBROS, ComercialService,
@@ -26,8 +27,8 @@ from app.services.ticket_service import pago_de_fila, primeras_cuotas, sin_cuota
 # Qué métricas llevan badge de delta y cómo se lee la diferencia: 'pts' para las tasas (la
 # diferencia entre dos porcentajes son puntos, no un porcentaje) y 'pct' para montos y conteos.
 DELTAS = {
-    ROL_CLOSERS: {'show_up': 'pts', 'close_rate': 'pts', 'cash': 'pct', 'cash_neto': 'pct', 'ventas': 'pct',
-                  'ticket': 'pct', 'agendas': 'pct', 'comision': 'pct'},
+    ROL_CLOSERS: {'show_up': 'pts', 'close_rate': 'pts', 'close_rate_real': 'pts', 'cash': 'pct',
+                  'cash_neto': 'pct', 'ventas': 'pct', 'ticket': 'pct', 'agendas': 'pct', 'comision': 'pct'},
     ROL_SETTERS: {'entrantes': 'pct', 'cualificacion': 'pts', 'apertura': 'pts', 'respuesta_aperturas': 'pts',
                   'agendas': 'pct',
                   'conversion': 'pts', 'conv_cualificados': 'pts', 'bienvenidas_respuesta': 'pts',
@@ -301,14 +302,19 @@ def _cash_por_dia(filas_ventas, start, end):
     return dias, (mejor if mejor and mejor['cash'] > 0 else None)
 
 
-def bloque_closers(start, end, closer_id=None, closer_nombre=None):
+def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=True):
     """Todos los números de Analizar para closers, de un período. Se llama dos veces (período y
-    período comparado) para sacar los deltas sin duplicar ninguna fórmula."""
+    período comparado) para sacar los deltas sin duplicar ninguna fórmula.
+
+    `con_reales=False` salta el close rate real (`cierres_reales`): el ranking y el mapa del equipo
+    corren este bloque por persona y por período y no lo muestran."""
     agendas = ComercialService.agendas(start, end, closer_id=closer_id)
     ventas = ComercialService.ventas(start, end, closer_nombre=closer_nombre)
     tot_a = ComercialService.totales_agendas(agendas)
     tot_v = ComercialService.totales_ventas(ventas)
     estados = estados_de(agendas)
+    reales = (cierres_reales(start, end, ventas, tot_a['asistieron'], closer_nombre=closer_nombre)
+              if con_reales else None)
 
     # Presentaciones: asistencias en las que se presentó la oferta. Una venta cuenta como
     # presentación aunque nadie haya tildado el campo — sin eso el embudo mostraría más ventas
@@ -370,11 +376,16 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
         'cierres': matriz_de_cierres(completo=tot_a['ventas_completo'], split=tot_a['ventas_split'],
                                      senas=tot_a['senas'], asistieron=tot_a['asistieron'],
                                      presentaciones=presentaciones,
-                                     no_cerradas=sum(1 for f in agendas if f['no_cerrada'])),
+                                     no_cerradas=sum(1 for f in agendas if f['no_cerrada']),
+                                     reales=reales),
+        # El close rate real, por cobro (ver `cierres_reales`): lo que ve el tile de arriba. El de
+        # por llamada (`close_rate`) queda en la matriz de abajo.
+        'close_rate_real': reales['pct'] if reales else None,
         'estados': estados,
         # Cuántos leads se descalifican: las agendas que el closer descalificó (ya están en `estados`)
         # y los que el formulario cortó antes de agendar (ver `descalificados_service`).
         'descalificadas': descalificados_service.resumen(estados, start, end, closer_id),
+
         'cash': tot_v['cash'],
         'cash_neto': tot_v['cash_neto'],
         'ventas': tot_v['ventas'],
@@ -749,6 +760,8 @@ def comparativas(rol, start, end, prev_start=None, prev_end=None):
 
     def kwargs(miembro, periodo='actual'):
         base = _kwargs_de(rol, miembro['id'] if miembro else None, miembro['nombre'] if miembro else None)
+        if not de_setters:
+            base['con_reales'] = False
         if de_setters:
             de_cada_uno = reportes[periodo]
             # El equipo: los reportes de todos los setters, también los de alguien que ya no está
