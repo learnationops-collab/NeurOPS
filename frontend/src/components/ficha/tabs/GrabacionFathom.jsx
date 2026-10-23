@@ -14,7 +14,6 @@ import { useId, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Video } from 'lucide-react';
 import { mensajeDeError } from '../fichaApi';
-import { esDeFathom } from '../fathom';
 import MotivoDelFallo from '../historial/MotivoDelFallo';
 
 export default function GrabacionFathom({ ficha, onAccion }) {
@@ -38,8 +37,7 @@ export default function GrabacionFathom({ ficha, onAccion }) {
 
   const texto = borrador.trim();
   const cambio = texto !== guardado;
-  // Avisa, no bloquea: un link de otra herramienta se guarda igual (ver `ficha_grabacion_service`).
-  const ajeno = !!texto && !esDeFathom(texto);
+  // El link puede ser de Fathom o de cualquier otra grabación (Mario, 23/10/2026): no se avisa nada.
 
   const guardar = async (e) => {
     e?.preventDefault();
@@ -56,7 +54,6 @@ export default function GrabacionFathom({ ficha, onAccion }) {
     }
   };
 
-  const ayuda = `${ids}-ayuda`;
   return (
     <form className="ln-panel ln-panel--sm fi-fathom" onSubmit={guardar} noValidate
       aria-label="Grabación de la llamada"
@@ -70,15 +67,14 @@ export default function GrabacionFathom({ ficha, onAccion }) {
       }}>
       <div className="fi-fathom-cab">
         <Video size={16} aria-hidden="true" />
-        <label className="ln-t-body" htmlFor={`${ids}-link`}><b>Link de Fathom</b></label>
-        <small className="ln-t-caption ln-muted">Grabación y transcripción de la llamada</small>
+        <label className="ln-t-body" htmlFor={`${ids}-link`}><b>Link de la call</b></label>
       </div>
       <div className="fi-fathom-fila">
         <span className={`ln-field${error ? ' ln-field--invalid' : ''}`}>
           <input id={`${ids}-link`} type="url" inputMode="url" autoComplete="off" spellCheck={false}
             value={borrador} disabled={guardando}
-            placeholder="https://fathom.video/share/…"
-            aria-invalid={!!error} aria-describedby={ajeno ? ayuda : undefined}
+            placeholder="https://…"
+            aria-invalid={!!error}
             onChange={(e) => { setBorrador(e.target.value); setError(null); }} />
         </span>
         <motion.button type="submit" className="btn btn--linea btn--sm"
@@ -88,16 +84,6 @@ export default function GrabacionFathom({ ficha, onAccion }) {
           {!texto && guardado ? 'Quitar' : 'Guardar'}
         </motion.button>
       </div>
-      {ajeno && !error && (
-        <motion.small id={ayuda} className="t-cap fi-fathom-aviso"
-          {...(reducido ? {} : {
-            initial: { opacity: 0, y: -4 },
-            animate: { opacity: 1, y: 0 },
-            transition: { duration: 0.18, ease: [0.22, 0.7, 0.2, 1] },
-          })}>
-          No parece un link de Fathom. Se puede guardar igual, pero revisalo.
-        </motion.small>
-      )}
       <MotivoDelFallo motivo={error} />
     </form>
   );

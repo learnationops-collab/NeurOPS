@@ -7,7 +7,7 @@
    pantallas angostas quedan en una fila arriba.
    ============================================================ */
 
-.dc-shell .fi-res{display:grid;grid-template-columns:132px minmax(0,1fr);gap:var(--s6);align-items:start}
+.dc-shell .fi-res{display:grid;grid-template-columns:116px minmax(0,1fr);gap:var(--s6);align-items:start}
 .dc-shell .fi-res-main{display:flex;flex-direction:column;gap:var(--space-6);min-width:0}
 /* Discreto: sin tarjeta, apagado, y se enciende apenas al pasar por encima. */
 .dc-shell .fi-res-hitos{position:sticky;top:0;display:grid;gap:var(--s2);padding:var(--s1) var(--s4) 0 0;
@@ -19,29 +19,72 @@
 .dc-shell .fi-res-main section > .fi-fathom{margin-top:var(--s6)}
 
 /* ---------- Stepper vertical ----------
-   Cada paso es una fila (punto · rótulo y detalle). El riel lo dibuja cada paso hacia el
-   siguiente y se pinta de verde cuando el siguiente también se alcanzó. */
+   Mario (23/10/2026): menos texto, más movimiento. Solo el punto y el rótulo (el detalle va
+   en el globito al pasar el mouse); el riel se llena con el aura al avanzar, cada punto que
+   se alcanza hace un «pop» y el siguiente por dar late con el aura de Learnation. */
 .dc-shell .fi-stepper.fi-stepper--v{display:flex;flex-direction:column;gap:0}
 .dc-shell .fi-stepper--v .fi-stepper-riel{display:none}
-.dc-shell .fi-stepper--v .fi-paso{display:grid;grid-template-columns:16px minmax(0,1fr);
-  column-gap:var(--s2);row-gap:0;align-items:start;text-align:left;padding-bottom:var(--s3)}
+.dc-shell .fi-stepper--v .fi-paso{display:grid;grid-template-columns:14px minmax(0,1fr);
+  column-gap:var(--s2);align-items:center;text-align:left;padding-bottom:18px;cursor:default}
 .dc-shell .fi-stepper--v .fi-paso:last-child{padding-bottom:0}
-.dc-shell .fi-stepper--v .fi-paso:not(:last-child)::after{content:'';position:absolute;left:7px;top:18px;
-  bottom:2px;width:2px;border-radius:2px;background:var(--border-subtle)}
+.dc-shell .fi-stepper--v .fi-paso-sub{display:none}
+.dc-shell .fi-stepper--v .fi-paso:not(:last-child)::after{content:'';position:absolute;left:6px;top:17px;
+  bottom:3px;width:2px;border-radius:2px;
+  background:linear-gradient(180deg,#2EE6C8,#7D8BFF,#FF3FA4) top/2px 0% no-repeat,var(--border-subtle);
+  transition:background-size .6s cubic-bezier(.22,1,.36,1)}
 .dc-shell .fi-stepper--v .fi-paso:is([data-estado="hecho"],[data-estado="alerta"]):has(+ .fi-paso:is([data-estado="hecho"],[data-estado="alerta"]))::after{
-  background:var(--success)}
-.dc-shell .fi-stepper--v .fi-paso-punto{grid-row:span 2;width:16px;height:16px;border-width:1.5px;font-size:9px}
-.dc-shell .fi-stepper--v .fi-paso-punto svg{width:10px;height:10px}
-.dc-shell .fi-stepper--v .fi-paso-lbl{font-size:11.5px;line-height:16px}
-.dc-shell .fi-stepper--v .fi-paso-sub{font-size:10.5px;line-height:1.3;overflow-wrap:anywhere}
+  background-size:2px 100%,auto}
+.dc-shell .fi-stepper--v .fi-paso-punto{width:14px;height:14px;border-width:1.5px;font-size:0;
+  background:var(--ink);border-color:var(--border-control)}
+.dc-shell .fi-stepper--v .fi-paso-punto svg{width:9px;height:9px}
+.dc-shell .fi-stepper--v .fi-paso[data-estado="hecho"] .fi-paso-punto{background:#2EE6C8;border-color:#2EE6C8;
+  animation:fi-hito-pop .45s cubic-bezier(.34,1.56,.64,1)}
+.dc-shell .fi-stepper--v .fi-paso[data-estado="alerta"] .fi-paso-punto{background:#FFB547;border-color:#FFB547;
+  animation:fi-hito-pop .45s cubic-bezier(.34,1.56,.64,1)}
+/* El siguiente por dar: el primero pendiente después de uno alcanzado. */
+.dc-shell .fi-stepper--v .fi-paso:is([data-estado="hecho"],[data-estado="alerta"]) + .fi-paso[data-estado="pendiente"] .fi-paso-punto{
+  border-color:var(--brand-secondary);animation:fi-hito-late 2s ease-in-out infinite}
+.dc-shell .fi-stepper--v .fi-paso:is([data-estado="hecho"],[data-estado="alerta"]) + .fi-paso[data-estado="pendiente"]{
+  color:var(--text-on-surface)}
+.dc-shell .fi-stepper--v .fi-paso-lbl{font-size:11.5px;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@keyframes fi-hito-pop{0%{transform:scale(.4)}100%{transform:scale(1)}}
+@keyframes fi-hito-late{
+  0%,100%{box-shadow:0 0 0 0 rgba(255,63,164,.55),0 0 0 0 rgba(125,139,255,0)}
+  50%{box-shadow:0 0 0 4px rgba(255,63,164,.12),0 0 10px 2px rgba(125,139,255,.45)}
+}
 
 @media (max-width:760px){
   .dc-shell .fi-res{grid-template-columns:minmax(0,1fr);gap:var(--s4)}
   .dc-shell .fi-res-hitos{position:static;padding:0 0 var(--s3);border-right:0;border-bottom:1px solid var(--border-subtle)}
   .dc-shell .fi-stepper.fi-stepper--v{flex-direction:row;flex-wrap:wrap;gap:var(--s2) var(--s4)}
-  .dc-shell .fi-stepper--v .fi-paso{padding-bottom:0;grid-template-columns:16px auto;column-gap:6px}
-  .dc-shell .fi-stepper--v .fi-paso::after,
-  .dc-shell .fi-stepper--v .fi-paso-sub{display:none}
+  .dc-shell .fi-stepper--v .fi-paso{padding-bottom:0;grid-template-columns:14px auto;column-gap:6px}
+  .dc-shell .fi-stepper--v .fi-paso::after{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .dc-shell .fi-stepper--v .fi-paso-punto{animation:none !important}
+}
+
+/* ---------- ¿Qué pasó con esta llamada? ----------
+   Las cuatro tarjetas con la paleta de Learnation (`COLORES` en TabResultado): fondo navy con
+   un aura de su color en la esquina, que se enciende al pasar el mouse. */
+.dc-shell .fi-raices .fi-accion{min-height:112px;border-color:color-mix(in srgb,var(--c) 30%,transparent);
+  background:radial-gradient(120% 140% at 0% 0%,color-mix(in srgb,var(--c) 22%,transparent),transparent 60%),
+    radial-gradient(90% 120% at 100% 100%,rgba(19,35,198,.22),transparent 65%),
+    color-mix(in srgb,var(--bg-element) 60%,transparent);
+  transition:border-color .2s ease,box-shadow .25s ease,transform .2s cubic-bezier(.22,1,.36,1)}
+.dc-shell .fi-raices .fi-accion:hover{filter:none;transform:translateY(-2px);
+  border-color:color-mix(in srgb,var(--c) 60%,transparent);
+  box-shadow:0 10px 28px -14px var(--c)}
+.dc-shell .fi-raices .fi-accion svg{filter:drop-shadow(0 0 8px color-mix(in srgb,var(--c) 60%,transparent))}
+
+/* «Registrar una venta» y «Pasar a seguimiento»: del alto y del ancho de las tarjetas de
+   arriba (dos columnas de la misma grilla), para que los tamaños conversen. */
+.dc-shell .fi-res-main .fi-otras{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s4)}
+.dc-shell .fi-res-main .fi-otra{height:56px;justify-content:center;padding:0 var(--s5);
+  border-radius:var(--radius-control);font-size:14.5px}
+.dc-shell .fi-res-main .fi-otra svg{width:18px;height:18px}
+@media (max-width:520px){
+  .dc-shell .fi-res-main .fi-otras{grid-template-columns:minmax(0,1fr)}
 }
 
 /* ---------- Campos sin el doble recuadro azul ----------

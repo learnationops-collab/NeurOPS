@@ -54,7 +54,8 @@ const StepperFicha = ({ pasos = [], onPaso = null, ayuda = null, rotulo = null, 
                     );
                     if (!onPaso) {
                         return (
-                            <div key={paso.key} className="fi-paso" data-estado={paso.estado}>
+                            <div key={paso.key} className="fi-paso" data-estado={paso.estado}
+                                title={vertical && paso.sub ? `${paso.label}: ${paso.sub}` : undefined}>
                                 {contenido}
                             </div>
                         );

@@ -89,7 +89,7 @@ const lecturaDeLlamada = (d, ahora) => {
         : `${DIAS[d.getDay()]} ${d.getDate()} ${MESES_CORTOS[d.getMonth()]}${d.getFullYear() !== ahora.getFullYear() ? ` ${d.getFullYear()}` : ''}`;
     const min = Math.round((d.getTime() - ahora.getTime()) / 60000);
     const abs = Math.abs(min);
-    const largo = abs < 60 ? `${abs} min` : abs < 1440 ? `${Math.floor(abs / 60)} h${abs % 60 ? ` ${abs % 60} min` : ''}` : `${Math.round(abs / 1440)} d`;
+    const largo = abs < 60 ? `${abs} min` : abs < 1440 ? `${Math.floor(abs / 60)} h${abs % 60 ? ` ${abs % 60} m` : ''}` : `${Math.round(abs / 1440)} d`;
     const tono = abs <= 15 ? 'ahora' : min < 0 ? 'paso' : min < 120 ? 'pronto' : 'luego';
     const falta = abs <= 15 ? (min >= 0 ? `en ${largo}` : 'en curso') : min > 0 ? `en ${largo}` : `hace ${largo}`;
     return { cuando, hora: `${dos(d.getHours())}:${dos(d.getMinutes())}`, falta, tono };

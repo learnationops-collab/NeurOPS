@@ -56,6 +56,10 @@ const CASCADA = {
 const ICONOS = {
   asistio: CheckCircle2, no_asistio: XCircle, cancelo: CalendarX, reagenda: CalendarClock,
 };
+// Los colores del aura de Learnation (el mismo conic de Clarity), no el semáforo verde/rojo/ámbar/azul.
+const COLORES = {
+  asistio: '#2EE6C8', no_asistio: '#FF3FA4', cancelo: '#FFB547', reagenda: '#7D8BFF',
+};
 
 const enDias = (dias) => {
   const d = new Date();
@@ -300,11 +304,12 @@ export default function TabResultado({
         ) : !arrancado(respuestas) && contexto.modo === 'llamada' ? (
           <motion.section key="raices" {...animar} aria-label="¿Qué pasó con esta llamada?">
             <h3 className="ln-t-h3">¿Qué pasó con esta llamada?</h3>
-            <div className="ln-grid ln-grid-4" style={{ marginTop: 'var(--space-4)' }}>
+            <div className="ln-grid ln-grid-4 fi-raices" style={{ marginTop: 'var(--space-4)' }}>
               {RAICES.map((o) => (
                 <TarjetaAccion
                   key={o.valor}
                   tono={o.tono}
+                  color={COLORES[o.valor]}
                   icono={ICONOS[o.valor]}
                   label={o.label}
                   onClick={() => elegir('res', { res: o.valor })}

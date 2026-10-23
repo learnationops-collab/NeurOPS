@@ -5,11 +5,14 @@ import React from 'react';
  *
  * `linea` la achica a una sola fila para la barra de acciones de Confirmación,
  * donde tres tarjetas altas competirían con el CTA del pie.
+ *
+ * `color` (un color CSS) le gana al `tono`: las tarjetas de «¿Qué pasó con esta
+ * llamada?» usan la paleta de Learnation en vez de los semáforos.
  */
-const TarjetaAccion = ({ tono = 'info', icono: Icono = null, label, onClick, linea = false, deshabilitado = false, titulo = null }) => (
+const TarjetaAccion = ({ tono = 'info', color = null, icono: Icono = null, label, onClick, linea = false, deshabilitado = false, titulo = null }) => (
     <button type="button"
         className={`fi-accion caja${linea ? ' fi-accion--linea' : ''}`}
-        style={{ '--c': `var(--${tono})` }}
+        style={{ '--c': color || `var(--${tono})` }}
         disabled={deshabilitado}
         title={titulo || undefined}
         onClick={onClick}>
