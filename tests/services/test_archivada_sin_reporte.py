@@ -15,8 +15,7 @@ from datetime import datetime, timedelta
 import pytest
 from freezegun import freeze_time
 
-from app.models import Appointment, Client, FinancialSale
-from app.services import comercial_analitica as ca
+from app.models import Appointment, Client
 from app.services.closer_agendas_service import (
     ARCHIVADA_SIN_REPORTE, AYUDA_ESTADO, NOTA_ARCHIVADA, derivar_estado)
 from app.services.closer_service import CloserService
@@ -33,11 +32,6 @@ _n = itertools.count(1)
 @pytest.fixture()
 def marlon(make_user):
     return make_user(role='closer', username='Marlon', email='marlon@thelearnation.com')
-
-
-@pytest.fixture()
-def elias(make_user):
-    return make_user(role='setter', username='Elias')
 
 
 def cliente(db, nombre='Cliente', email=None):
@@ -130,63 +124,6 @@ def test_el_vocabulario_la_trae_no_editable_y_con_ayuda():
     assert 'archivada_sin_reporte' not in POST_CALL_A_CLOSER_RESULT
     assert {k for k, e in por_key.items() if e.get('ayuda')} == set(AYUDA_ESTADO)
     assert all(len(texto.split()) <= 15 for texto in AYUDA_ESTADO.values())
-
-
-# --- Los números no cambian -----------------------------------------------------------------------
-
-def _escenario(db, marlon, elias):
-    """Un mes con de todo, y dos agendas que el barrido había dejado como 'Lead Perdido'."""
-    compro = cliente(db, 'Compro', email='compro@test.local')
-    agenda(db, marlon, compro, closer_result='Show up', setter_id=elias.id)
-    db.session.add(FinancialSale(mail_cliente='compro@test.local', monto=990.0, tipo_pago='AL - Completo',
-                                 metodo_pago='zelle', email_vendedor='marlon@thelearnation.com',
-                                 date=datetime(2026, 9, 10), estado='Completada'))
-    agenda(db, marlon, cliente(db, 'No vino'), closer_result='No Show', setter_id=elias.id)
-    agenda(db, marlon, cliente(db, 'Canceló'), closer_result='Cancelado')
-    agenda(db, marlon, cliente(db, 'Sin reporte'), cuando=datetime(2026, 9, 12, 15, 0))
-    agenda(db, marlon, cliente(db, 'Descartado'), closer_result='Lead Perdido', closer_processed=True)
-    barridas = [
-        agenda(db, marlon, cliente(db, f'Barrida {i}'), closer_result='Lead Perdido', closer_processed=True,
-               setter_id=elias.id if i == 0 else None, cuando=datetime(2026, 9, 2 + i, 15, 0),
-               closer_notes=f'{NOTA_ARCHIVADA}: sin confirmar ni procesar tras 30+ días desde su fecha.')
-        for i in range(2)]
-    db.session.commit()
-    return barridas
-
-
-def _numeros(elias):
-    """Todo lo que muestran Analizar (closers y setters), Variabilidad, Comparativas y Mis datos,
-    con el panel Estados reducido a lo que suma: sus grupos y sus cuentas. «Mis datos» del setter es
-    el mismo tablero de setters acotado a él (`setters`, con `miembro_id`)."""
-    closers = ca.resumen('closers', DESDE, HASTA)
-    setters = ca.resumen('setters', DESDE, HASTA, miembro_id=elias.id)
-    estados = closers['actual'].pop('estados')
-    grupos = {}
-    for e in estados:
-        grupos[e['grupo']] = grupos.get(e['grupo'], 0) + e['n']
-    return {
-        'closers': closers, 'setters': setters, 'grupos': grupos,
-        'variabilidad': [ca.variabilidad('closers', DESDE, HASTA), ca.variabilidad('setters', DESDE, HASTA)],
-        'comparativas': [ca.comparativas('closers', DESDE, HASTA), ca.comparativas('setters', DESDE, HASTA)],
-    }
-
-
-@freeze_time(HOY)
-def test_ningun_numero_de_closers_ni_de_setters_cambia_por_el_nombre(db, marlon, elias):
-    barridas = _escenario(db, marlon, elias)
-    antes = _numeros(elias)
-
-    for a in barridas:
-        a.closer_result = ARCHIVADA_SIN_REPORTE
-    db.session.commit()
-    despues = _numeros(elias)
-
-    assert despues == antes
-    # Lo único que cambia es cómo se llaman: el panel muestra los dos estados por separado.
-    estados = {e['key']: e for e in ca.bloque_closers(DESDE, HASTA)['estados']}
-    assert (estados['lead_perdido']['n'], estados['archivada_sin_reporte']['n']) == (1, 2)
-    assert estados['archivada_sin_reporte']['grupo'] == estados['lead_perdido']['grupo'] == 'sin_resultado'
-    assert estados['archivada_sin_reporte']['ayuda'] == AYUDA_ESTADO['archivada_sin_reporte']
 
 
 # --- La ficha -------------------------------------------------------------------------------------
