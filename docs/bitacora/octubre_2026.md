@@ -721,3 +721,7 @@
   - «Mis agendas» mostraba «No se pudo asignar: probá de nuevo.» con cualquier palabra clave: desde la Etapa 2c la fila del Tablero ya no tiene columna `instagram` (es de su persona) y `asignar` la leía y escribía, así que daba un 500.
   - Ahora lee `contacto()` de la fila y la corrige con `agenda_contacto_service.corregir`; si ese Instagram es de otra persona, responde 409 con un mensaje claro.
   - 4 tests nuevos (palabra nueva, anuncio de la lista, fila sin Instagram, Instagram corregido).
+
+- **23 de Octubre de 2026 (El humo de Learnation, guardado y aplicado)** *([docs/diseno_humo_aura.md](../diseno_humo_aura.md) [NEW], [.agents/skills/ui-builder/SKILL.md](../../.agents/skills/ui-builder/SKILL.md), [frontend/src/components/ficha/tabs/resultado.css](../../frontend/src/components/ficha/tabs/resultado.css), [frontend/src/components/ficha/tabs/TabResultado.jsx](../../frontend/src/components/ficha/tabs/TabResultado.jsx) [MODIFY])*:
+  - La guía del efecto humo de Learnation (anatomía, CSS, reglas, calibración, cuándo usarlo) queda en `docs/` y la skill `ui-builder` manda a seguirla.
+  - Las opciones de las preguntas (decisor, oferta…) dejan los colores por tono: quedan neutras, y el humo de marca (3 manchas, calibración de la barra de captura) asoma al pasar el mouse y queda en la elegida.
