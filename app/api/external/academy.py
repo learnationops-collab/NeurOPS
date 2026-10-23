@@ -475,12 +475,12 @@ def academy_subscriptions():
 @bp.route('/subscriptions/prorroga', methods=['POST'])
 @require_academy_token
 def academy_prorroga():
-    """La Academia le pide a Work una prórroga gratuita de la suscripción de un alumno: de un tipo fijo
-    (`subscription_service.PRORROGAS`: seña 7 días, cortesía 1 mes) y con motivo. Work calcula la fecha
-    (22/10/2026: nadie la elige a mano) y la anota en el historial con quién la dio.
+    """La Academia le pide a Work una prórroga gratuita de la suscripción de un alumno, con motivo: de
+    `dias` libres (1 a `PRORROGA_MAX_DIAS`) o de un `tipo` recomendado (`subscription_service.PRORROGAS`).
+    Work calcula la fecha desde el vencimiento y la anota en el historial con quién la dio.
 
-    Cuerpo: `work_uuid`, `work_client_id` o `email`; `tipo`; `motivo`; `actor_email` (quién la dio en la
-    Academia); `product_slug` opcional (sin él, la suscripción que vence más tarde).
+    Cuerpo: `work_uuid`, `work_client_id` o `email`; `dias` o `tipo`; `motivo`; `actor_email` (quién la
+    dio en la Academia); `product_slug` opcional (sin él, la suscripción que vence más tarde).
     """
     from app.services import subscription_service
 
@@ -490,7 +490,8 @@ def academy_prorroga():
         return jsonify({"success": False, "error": "No existe ningún cliente con ese uuid, id o email"}), 404
     try:
         sub = subscription_service.prorrogar(
-            cliente, data.get('tipo'), str(data.get('motivo') or ''), slug=data.get('product_slug') or None,
+            cliente, data.get('tipo'), str(data.get('motivo') or ''), dias=data.get('dias'),
+            slug=data.get('product_slug') or None,
             actor_email=(data.get('actor_email') or '').strip().lower() or None, source='academia')
     except LookupError as e:
         return jsonify({"success": False, "error": str(e)}), 404

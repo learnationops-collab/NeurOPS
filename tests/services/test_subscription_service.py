@@ -90,3 +90,32 @@ def test_la_prorroga_pide_motivo_cliente_y_suscripcion(client, db, ana):
                        json={'email': 'ana@x.com', 'dias': 5, 'motivo': 'x'}).status_code == 404
     assert client.post('/api/external/academy/subscriptions/prorroga',
                        json={'email': 'ana@x.com', 'dias': 5, 'motivo': 'x'}).status_code in (401, 403)
+
+
+def test_la_prorroga_puede_ser_de_cualquier_cantidad_de_dias(client, db, ana):
+    cobro(db, ana, 'AL - Completo', datetime(2026, 10, 1))
+    vence = suscripcion(ana).expires_at
+    r = client.post('/api/external/academy/subscriptions/prorroga', headers=H,
+                    json={'email': 'ana@x.com', 'dias': 10, 'motivo': 'Viaje', 'actor_email': 'belu@academia.com'})
+    assert r.status_code == 200
+    sub = suscripcion(ana)
+    assert (sub.expires_at - vence).days == 10
+    ultimo = sub.events.all()[-1]
+    assert (ultimo.kind, ultimo.reason, ultimo.source) == ('prorroga', 'Prórroga de 10 días: Viaje', 'academia')
+
+
+def test_la_prorroga_libre_va_de_1_a_365_dias(client, db, ana):
+    cobro(db, ana, 'AL - Completo', datetime(2026, 10, 1))
+    for dias in (0, 366, 'diez'):
+        r = client.post('/api/external/academy/subscriptions/prorroga', headers=H,
+                        json={'email': 'ana@x.com', 'dias': dias, 'motivo': 'x'})
+        assert r.status_code == 422
+
+
+def test_la_academia_lee_las_suscripciones_y_las_duraciones_recomendadas(client, db, ana):
+    cobro(db, ana, 'AL - Completo', datetime(2026, 10, 1))
+    r = client.get('/api/external/academy/subscriptions?email=ana@x.com', headers=H)
+    assert r.status_code == 200
+    assert r.json['subscriptions'][0]['product_slug'] == 'ace-learners'
+    assert {'semana', 'cortesia'} <= {t['value'] for t in r.json['tipos']}
+    assert client.get('/api/external/academy/subscriptions?email=nadie@x.com', headers=H).status_code == 404

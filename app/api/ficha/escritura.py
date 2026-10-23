@@ -383,7 +383,7 @@ def mail_academia(appt_id):
 
 @bp.route('/<int:appt_id>/academia/prorroga', methods=['POST'])
 def prorroga_academia(appt_id):
-    """Una prórroga sin pago: `tipo` (seña o cortesía) y `motivo`. La fecha la calcula Work."""
+    """Una prórroga sin pago: `dias` libres o un `tipo` recomendado, y `motivo`. La fecha la calcula Work."""
     from app.services import ficha_academia
     return _ejecutar(appt_id, 'cobrar', ficha_academia.prorrogar)
 

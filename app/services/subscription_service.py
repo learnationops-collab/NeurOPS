@@ -8,8 +8,8 @@ Reglas (Santiago, 20/10):
   · el pago que completa una seña (completo, parcial o la cuota) la pasa a acceso completo;
   · el closer la puede acortar a voluntad (Fulfillment, `cambiar`), pero alargarla pide una venta
     nueva sin suscripción (`venta_que_extiende`, 22/10/2026);
-  · sin pago solo se extiende con una prórroga de un tipo fijo y con motivo (`PRORROGAS`), desde
-    Work o pedida por la Academia: nadie elige la fecha a mano;
+  · sin pago se extiende con una prórroga con motivo, de la cantidad de días que se quiera (`dias`) o
+    de una de las recomendadas (`PRORROGAS`; Santiago, 23/10/2026), desde Work o pedida por la Academia;
   · nada se pisa en silencio: cada cambio queda en `SubscriptionEvent`.
 Estar al día con las cuotas no mueve esta fecha: eso lo dice la venta.
 
@@ -29,11 +29,16 @@ DIAS_SENA = 7
 MESES_RENOVACION = 1  # las renovaciones se pagan mes a mes
 # Lo que, sumado a una venta que era solo seña, la pasa a acceso completo.
 COMPLETAN_SENA = ('completo', 'parcial', 'cuota')
-# Lo único que extiende sin pago (Santiago, 22/10/2026): una duración fija, con motivo.
+# Prórroga sin pago, siempre con motivo: las duraciones recomendadas (la de seña, solo para un acceso de
+# seña) o cualquier cantidad de días hasta PRORROGA_MAX_DIAS (Santiago, 23/10/2026).
 PRORROGAS = {
     'sena': {'label': 'Prórroga de seña', 'dias': DIAS_SENA},
+    'semana': {'label': 'Prórroga', 'dias': 7},
+    'quincena': {'label': 'Prórroga', 'dias': 14},
     'cortesia': {'label': 'Cortesía', 'meses': 1},
+    'dos_meses': {'label': 'Prórroga', 'meses': 2},
 }
+PRORROGA_MAX_DIAS = 365
 # Un acceso dado con demora puede contar sus meses desde que se da, si la venta es de hace poco.
 DEMORA_DIAS = 30
 
@@ -186,8 +191,22 @@ def a_prorrogar(client, slug=None):
     return sub
 
 
-def fin_de_prorroga(sub, tipo):
-    """Hasta cuándo la lleva una prórroga de `tipo`, desde su vencimiento (o desde hoy, si ya venció)."""
+def dias_de_prorroga(dias):
+    """Los días libres de una prórroga como entero válido. ValueError si no lo es."""
+    try:
+        n = int(dias)
+    except (TypeError, ValueError):
+        raise ValueError('Los días de la prórroga tienen que ser un número entero.')
+    if not 1 <= n <= PRORROGA_MAX_DIAS:
+        raise ValueError(f'La prórroga va de 1 a {PRORROGA_MAX_DIAS} días.')
+    return n
+
+
+def fin_de_prorroga(sub, tipo, dias=None):
+    """Hasta cuándo la lleva una prórroga de `dias` libres o de `tipo`, desde su vencimiento (o desde
+    hoy, si ya venció)."""
+    if dias is not None:
+        return max(sub.expires_at, date.today()) + timedelta(days=dias_de_prorroga(dias))
     regla = PRORROGAS.get(tipo or '')
     if regla is None:
         raise ValueError(f'Tipo de prórroga desconocido: «{tipo}». Hay: {", ".join(PRORROGAS)}.')
@@ -197,16 +216,26 @@ def fin_de_prorroga(sub, tipo):
     return _add_months(base, regla['meses']) if regla.get('meses') else base + timedelta(days=regla['dias'])
 
 
-def prorrogar(client, tipo, motivo, *, slug=None, usuario=None, actor_email=None, source='work'):
-    """Una prórroga sin pago, de un tipo fijo y con motivo. Levanta LookupError (no tiene suscripción)
-    o ValueError (tipo desconocido, sin motivo)."""
+def etiqueta_de_prorroga(tipo, dias=None):
+    """Cómo se nombra en el historial: «Prórroga de 10 días», «Cortesía de 1 mes»."""
+    if dias is not None:
+        n = dias_de_prorroga(dias)
+        return f'Prórroga de {n} {"día" if n == 1 else "días"}'
+    regla = PRORROGAS[tipo]
+    cuanto = f"{regla['meses']} {'mes' if regla['meses'] == 1 else 'meses'}" if regla.get('meses')         else f"{regla['dias']} días"
+    return f"{regla['label']} de {cuanto}"
+
+
+def prorrogar(client, tipo, motivo, *, dias=None, slug=None, usuario=None, actor_email=None, source='work'):
+    """Una prórroga sin pago con motivo: de `dias` libres o de un `tipo` recomendado. Levanta
+    LookupError (no tiene suscripción) o ValueError (tipo o días inválidos, sin motivo)."""
     motivo = (motivo or '').strip()
     if not motivo:
         raise ValueError('Falta el motivo de la prórroga.')
     sub = a_prorrogar(client, slug)
-    hasta = fin_de_prorroga(sub, tipo)
+    hasta = fin_de_prorroga(sub, tipo, dias)
     return otorgar(db.session, client.id, sub.product_slug, hasta, 'prorroga',
-                   reason=f"{PRORROGAS[tipo]['label']}: {motivo}", actor_id=getattr(usuario, 'id', None),
+                   reason=f"{etiqueta_de_prorroga(tipo, dias)}: {motivo}", actor_id=getattr(usuario, 'id', None),
                    actor_email=actor_email, source=source)
 
 

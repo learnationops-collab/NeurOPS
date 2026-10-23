@@ -103,8 +103,8 @@ def quitar(appt, datos, usuario):
 
 
 def prorrogar(appt, datos, usuario):
-    """Una prórroga sin pago: de un tipo fijo (`subscription_service.PRORROGAS`) y con motivo. La fecha
-    la calcula Work, no el closer (22/10/2026)."""
+    """Una prórroga sin pago con motivo: de `dias` libres o de un `tipo` recomendado
+    (`subscription_service.PRORROGAS`). La fecha la calcula Work desde el vencimiento."""
     from app.services import subscription_service
 
     client = _cliente(appt)
@@ -115,15 +115,15 @@ def prorrogar(appt, datos, usuario):
     motivo = _texto(datos, 'motivo')
     if not motivo:
         raise ErrorDeAccion('Falta el motivo de la prórroga.', 'motivo')
-    tipo = datos.get('tipo')
+    tipo, dias = datos.get('tipo'), datos.get('dias')
     try:
-        dia = subscription_service.fin_de_prorroga(subscription_service.a_prorrogar(client, slug), tipo)
+        dia = subscription_service.fin_de_prorroga(subscription_service.a_prorrogar(client, slug), tipo, dias)
+        etiqueta = subscription_service.etiqueta_de_prorroga(tipo, dias).lower()
     except (LookupError, ValueError) as e:
-        raise ErrorDeAccion(str(e), 'tipo')
+        raise ErrorDeAccion(str(e), 'dias' if dias is not None else 'tipo')
 
     _asignar(alumno_id, slug, dia, AcademyAccessService.closer_de(client, usuario))
-    subscription_service.prorrogar(client, tipo, motivo, slug=slug, usuario=usuario)
-    etiqueta = subscription_service.PRORROGAS[tipo]['label'].lower()
+    subscription_service.prorrogar(client, tipo, motivo, dias=dias, slug=slug, usuario=usuario)
     _constancia(appt, usuario, f'{usuario.username} le dio una {etiqueta} en la Academia ({nombre}) '
                                f'hasta el {_fecha_legible(dia)}. Motivo: {motivo}.')
     db.session.commit()

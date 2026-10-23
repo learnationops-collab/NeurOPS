@@ -657,3 +657,8 @@
   - Se saca «Dolores que contó» de la pestaña; la columna `confirmation_pain_points` sigue con lo cargado.
   - Cabecera: sin examen en la cita, se muestra el que la persona eligió en el formulario. La llamada se lee «Hoy · 17:35» / «Mañana · 17:35» con una pastilla animada de cuánto falta (verde, ámbar con pulso < 2 h, magenta ±15 min, apagada si ya pasó).
   - Closer · Confirmar: sin nadie por confirmar, la primera tarjeta muestra «N confirmados» en vez de «Te falta N por reportar».
+
+- **23 de Octubre de 2026 (Prórrogas de cualquier duración)** *([app/services/subscription_service.py](../../app/services/subscription_service.py), [app/api/external/academy.py](../../app/api/external/academy.py), [app/services/ficha_academia.py](../../app/services/ficha_academia.py), [frontend/src/components/ficha/tabs/ProrrogaAcademia.jsx](../../frontend/src/components/ficha/tabs/ProrrogaAcademia.jsx) [MODIFY])*:
+  - Una prórroga sin pago puede ser de los días que se quiera (1 a 365, `dias`), además de las recomendadas: 1 semana, 2 semanas, 1 mes (cortesía), 2 meses y la de seña (7 días, solo para un acceso de seña). Siempre con motivo; la fecha la calcula Work.
+  - Fulfillment suma «Otra» con el campo de días. El historial la nombra «Prórroga de 10 días: motivo».
+  - Tests: `test_subscription_service.py` (días libres, límites, lectura de la Academia).
