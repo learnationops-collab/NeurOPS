@@ -27,6 +27,8 @@ VENTANA = timedelta(hours=24)
 # En las variables del contacto: el motor tomó el control de la conversación y tiene que devolverlo.
 CONTROL_TOMADO = '_control_tomado'
 SIGUE = registro.SIGUE
+# El setter que le tocó por el reparto, para que el flujo lo use (p. ej. el saludo de cada setter).
+SETTER = 'setter'
 HORAS_DE_PAUSA = 24
 MAX_PASOS = 50  # corta un grafo con un ciclo sin esperas
 CORTADA_POR_ECO = 'Escribió una persona del equipo'
@@ -214,6 +216,7 @@ class Motor:
         if campana:
             setter = reparto.elegir(campana, contacto.id, self.ahora)
             ejecucion.setter_id = setter.id if setter else None
+            self._guardar(contacto, {SETTER: setter.username if setter else ''})
         registro.entrada(ejecucion, self.ahora)
         self._correr(ejecucion)
         return ejecucion
