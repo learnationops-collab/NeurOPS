@@ -57,7 +57,7 @@ const Dato = ({ rotulo, icono, valor, mono = false, orden = 0, children }) => {
 /** `+52 771 396 6588`: el número partido como se dicta. Sin un formato conocido, tal cual. */
 const CODIGOS = ['591', '593', '595', '598', '502', '503', '504', '505', '506', '507',
     '52', '54', '55', '56', '57', '58', '51', '53', '34', '1'];
-const telefonoLegible = (tel) => {
+export const telefonoLegible = (tel) => {
     const t = String(tel || '').trim();
     const dig = t.replace(/\D/g, '');
     if (!t.startsWith('+') || dig.length < 8) return t;

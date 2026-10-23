@@ -705,3 +705,10 @@
   - Las opciones de cada pregunta llevan ícono (decisor, oferta, sí/no) y el color de Learnation de su tono, con aura y movimiento al pasar el mouse.
   - «Anterior» y «Empezar de nuevo» van juntos a la izquierda de la botonera.
   - El progreso se reparte en todo el alto de la columna.
+
+- **23 de Octubre de 2026 (Closer · tarjetas de Confirmar más limpias)** *([frontend/src/pages/closer/CloserWorkflowPage.jsx](../../frontend/src/pages/closer/CloserWorkflowPage.jsx), [frontend/src/pages/closer/clarity-v6.css](../../frontend/src/pages/closer/clarity-v6.css), [frontend/src/components/ficha/FichaHeader.jsx](../../frontend/src/components/ficha/FichaHeader.jsx) [MODIFY])*:
+  - Las tres columnas miden lo mismo (`minmax(0, 1fr)`): un texto largo ya no ensancha la suya.
+  - Inversión en una ficha chica y corta, sin el rótulo «inversión»: «$200–500 USD», «+$1.000 USD», «Sin inversión» para cualquier «no puedo/no estoy en posición». El texto completo queda al pasar el mouse.
+  - Al lado, si el formulario tiene una pregunta de decisión/acompañamiento: «Decide solo» o «Con acompañamiento».
+  - En vez del @ de Instagram, el teléfono con formato (`telefonoLegible` de la ficha) y un botón para copiarlo.
+  - «Confirmado» sin caja: check chico, la palabra y una línea fina que se llena hasta la cita.

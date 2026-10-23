@@ -36,6 +36,7 @@ import YaTieneAgenda from './components/YaTieneAgenda';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, localToday, localDateFromNow, formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
 import AgendaCountdown from '../../components/shared/AgendaCountdown';
 import FichaLeadModal from '../../components/ficha/FichaLeadModal';
+import { telefonoLegible } from '../../components/ficha/FichaHeader';
 import ClienteNuevoVenta from './components/ClienteNuevoVenta';
 import DiaDelReporte, { etiquetaDia } from './components/DiaDelReporte';
 import { agendaParaVender, ejecutarAccion, mensajeDeError } from '../../components/ficha/fichaApi';
@@ -70,6 +71,37 @@ const ETAPAS_DEL_TABLERO = [
     { clave: 'contactado', titulo: 'Contactado', lista: 'contactado', fase: 'conversando', clase: 'k2-v6', columna: 1, vacio: '✓ Nadie esperando confirmar' },
     { clave: 'confirmado', titulo: 'Confirmado', lista: 'confirmado', fase: 'confirmado', clase: 'k3-v6', columna: 2, vacio: 'Sin leads confirmados.' },
 ];
+// La inversión del formulario en pocas palabras, para la tarjeta: «Entre $200 y $500 USD.» →
+// «$200–500 USD», «Más de 1000 USD» → «+$1.000 USD» y cualquier forma de «no puedo» → «Sin
+// inversión» (pedido del 23/10/2026). El texto completo queda en el `title`.
+const milesAr = (n) => Number(n).toLocaleString('es-AR');
+const inversionCorta = (txt) => {
+    const t = String(txt || '').trim().replace(/\.$/, '');
+    if (/\b(no\s+(puedo|estoy|tengo|cuento|dispongo)|ninguna|nada|sin\s+(inversi|presupuesto|dinero))/i.test(t)) return { texto: 'Sin inversión', sin: true };
+    const nums = (t.match(/\d[\d.,]*/g) || []).map(x => Number(x.replace(/[.,](?=\d{3}\b)/g, '').replace(',', '.'))).filter(n => n > 0);
+    const usd = /usd|d[oó]lar/i.test(t) ? ' USD' : '';
+    if (nums.length >= 2) return { texto: `$${milesAr(nums[0])}–${milesAr(nums[1])}${usd}` };
+    if (nums.length === 1) {
+        const signo = /m[aá]s\s+de|desde|\+/i.test(t) ? '+' : /menos\s+de|hasta/i.test(t) ? '<' : '';
+        return { texto: `${signo}$${milesAr(nums[0])}${usd}` };
+    }
+    return { texto: t.length > 22 ? `${t.slice(0, 21)}…` : t };
+};
+
+// Si decide solo o necesita a alguien más, sacado del formulario: la pregunta que habla de
+// decidir, de acompañamiento o de quién paga. Sin una pregunta así, no se muestra nada.
+const decisionDe = (a) => {
+    const fd = a.form_data && typeof a.form_data === 'object' ? a.form_data : {};
+    const clave = Object.keys(fd).find(k => /decisi|decid|acompa|qui[eé]n\s+(paga|financ|apoya)|apoyo/i.test(k));
+    const v = clave ? String(fd[clave] ?? '').trim() : '';
+    if (!v) return null;
+    if (/pareja|familia|padre|madre|espos|consult|acompa|otra persona|alguien|junto|no\b/i.test(v)) {
+        return { texto: 'Con acompañamiento', solo: false, title: v };
+    }
+    if (/yo\b|solo|sola|m[ií] mism|por mi cuenta|s[ií]\b/i.test(v)) return { texto: 'Decide solo', solo: true, title: v };
+    return { texto: v.length > 20 ? `${v.slice(0, 19)}…` : v, solo: null, title: v };
+};
+
 const ETAPA_DE_FASE = Object.fromEntries(ETAPAS_DEL_TABLERO.map(e => [e.fase, e.clave]));
 
 // En qué etapa está una cita, con la misma regla que la pestaña Confirmación de la ficha
@@ -1337,7 +1369,10 @@ const CloserWorkflowPage = () => {
         const origen = a.origin || 'Meta Ads';
         const tonoAvatar = TONOS_AVATAR[[...origen].reduce((h, ch) => h + ch.charCodeAt(0), 0) % TONOS_AVATAR.length];
         const iniciales = (a.lead_name || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
-        const inversion = inversionDe(a);
+        const inversionTxt = inversionDe(a);
+        const inversion = inversionTxt ? inversionCorta(inversionTxt) : null;
+        const decision = decisionDe(a);
+        const telefono = (a.phone || '').trim();
         // Cuánto falta para la cita, como riel de 48 h que se llena a medida que se acerca.
         const horasFaltan = a.start_time ? ((parseUtcIso(a.start_time)?.getTime() ?? Date.now()) - nowTick) / 3600000 : 0;
         const rielCita = Math.round(Math.min(1, Math.max(0.04, 1 - horasFaltan / 48)) * 100);
@@ -1371,7 +1406,24 @@ const CloserWorkflowPage = () => {
                         </span>
                     )}
                 </b>
-                <div className="m-v6">@{a.instagram ? a.instagram.replace('@', '') : 'usuario'}</div>
+                {telefono && (
+                    <div className="kc-tel">
+                        <span className="kc-tel-n">{telefonoLegible(telefono)}</span>
+                        <button type="button" className="kc-copiar" title="Copiar teléfono" aria-label="Copiar teléfono"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                const btn = e.currentTarget;
+                                navigator.clipboard?.writeText(telefono).then(() => {
+                                    btn.dataset.ok = '1';
+                                    setTimeout(() => { delete btn.dataset.ok; }, 1400);
+                                    toast.success('Teléfono copiado');
+                                }).catch(() => toast.error('No se pudo copiar'));
+                            }}>
+                            <svg viewBox="0 0 24 24" aria-hidden="true" className="kc-copiar-i"><rect x="9" y="9" width="11" height="11" rx="2.5" /><path d="M5 15V6.5A2.5 2.5 0 0 1 7.5 4H15" /></svg>
+                            <svg viewBox="0 0 24 24" aria-hidden="true" className="kc-copiar-ok"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+                        </button>
+                    </div>
+                )}
                 </div>
                 <div
                     className={`when-v6 ${whenCls}`}
@@ -1384,11 +1436,20 @@ const CloserWorkflowPage = () => {
                 </div>
                 </div>
 
-                {inversion && (
-                    <div className="kc-plata" title="Lo que dijo que puede invertir (formulario)">
-                        <span className="kc-plata-ic" aria-hidden="true">$</span>
-                        <span className="kc-plata-n">{inversion.replace(/^\$/, '')}</span>
-                        <span className="kc-plata-l">inversión</span>
+                {(inversion || decision) && (
+                    <div className="kc-datos">
+                        {inversion && (
+                            <span className={`kc-dato kc-plata${inversion.sin ? ' kc-plata--sin' : ''}`} title={`Inversión: ${inversionTxt}`}>
+                                <span className="kc-dato-ic" aria-hidden="true">$</span>
+                                <span className="kc-plata-n">{inversion.texto}</span>
+                            </span>
+                        )}
+                        {decision && (
+                            <span className={`kc-dato kc-decide${decision.solo === false ? ' kc-decide--con' : ''}`} title={`Decisión: ${decision.title}`}>
+                                <span className="kc-dato-pt" aria-hidden="true"></span>
+                                {decision.texto}
+                            </span>
+                        )}
                     </div>
                 )}
 
