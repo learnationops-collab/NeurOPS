@@ -210,9 +210,12 @@ const PanelDespues = ({ b, comision, canal, irA }) => (
                 Un backend anterior no manda `ocurridas`: ahí, las generadas como antes. */}
             <Caja rotulo="Agendas" valor={fmt.num(b.ocurridas ?? b.generadas)} irA={irA} destino={S.generadas}
                 detalle={`agendas generadas, ${b.generadas}`} color={v('brand-secondary')}
+                // Las descalificadas (el closer las resolvió al confirmar, 23/10/2026) también explican
+                // por qué los estados no suman las agendas; solo se dicen si las hay.
                 sub={b.ocurridas === undefined ? null
-                    : `${fmt.num(b.sin_reporte)} sin reporte · ${fmt.num(b.por_venir)} por venir`}
-                ayuda="Las que ya se dieron: la llamada pasó, o se canceló o reagendó." />
+                    : `${fmt.num(b.sin_reporte)} sin reporte · ${fmt.num(b.por_venir)} por venir`
+                        + `${b.descalificadas ? ` · ${fmt.num(b.descalificadas)} ${b.descalificadas === 1 ? 'descalificada' : 'descalificadas'}` : ''}`}
+                ayuda="Las que ya se dieron: la llamada pasó, o se canceló, reagendó o descalificó." />
             <Baja />
             <div className="ds-despues-estados">
                 <Caja rotulo="Canceladas" valor={fmt.num(b.canceladas)} sub={fmt.pct(b.canceladas_pct)}

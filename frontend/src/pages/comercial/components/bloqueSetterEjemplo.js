@@ -10,6 +10,7 @@ const POST = {
     pendiente: chip('pendiente', 'Pendiente'), cancelo: chip('cancelo', 'Canceló'),
     reagendo: chip('reagendo', 'Reagendó', 'info'), no_show: chip('no_show', 'No show', 'error'),
     seguimiento: chip('seguimiento', 'Seguimiento', 'warning'), venta: chip('venta', 'Venta', 'success'),
+    descalificada: chip('descalificada', 'Descalificada', 'error'),
 };
 const ASISTIO = ['seguimiento', 'venta'];
 
@@ -21,7 +22,7 @@ export const generada = (id, post = 'pendiente', extra = {}) => ({
     pre_call: chip('confirmada', 'Confirmada', 'info'), post_call: POST[post],
     asistio: ASISTIO.includes(post), realizada: [...ASISTIO, 'no_show'].includes(post),
     no_cerrada: post === 'seguimiento', presento: post === 'venta', retraso_dias: 0, ya_paso: true,
-    descartada: post === 'cancelo', ...extra,
+    descartada: ['cancelo', 'descalificada'].includes(post), ...extra,
 });
 
 export const GENERADAS = [
@@ -63,9 +64,10 @@ export const bloqueSetterEjemplo = ({ filas = GENERADAS, respondidos = null } = 
         realizadas, no_show: n(f => f.post_call.key === 'no_show'), asistieron, ventas_originadas: ventas,
         senas: 0,
     };
-    // Las que ya se dieron (15/10/2026): la llamada pasó, o se canceló o reagendó.
-    const ocurridas = filas.filter(f => f.ya_paso || ['cancelo', 'reagendo'].includes(f.post_call.key));
+    // Las que ya se dieron (15/10/2026): la llamada pasó, o se canceló, reagendó o descalificó.
+    const ocurridas = filas.filter(f => f.ya_paso || ['cancelo', 'reagendo', 'descalificada'].includes(f.post_call.key));
     Object.assign(despues, {
+        descalificadas: n(f => f.post_call.key === 'descalificada'),
         ocurridas: ocurridas.length, por_venir: generadas - ocurridas.length,
         sin_reporte: ocurridas.filter(f => f.post_call.key === 'pendiente').length,
     });

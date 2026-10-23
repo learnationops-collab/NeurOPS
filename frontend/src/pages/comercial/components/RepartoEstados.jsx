@@ -10,8 +10,9 @@ import './reparto-estados.css';
  * El diseño es el de Kerwin (30/09/2026):
  *
  *   · Gráfico: una dona con un arco por estado y, al lado, los grupos (desde el 23/10/2026: show
- *     up, no show, canceladas, reprogramadas, sin reporte, aún no ocurrió y descartadas) con su
- *     porcentaje y su barra. Al medio, el show up. Detrás, el humo del tablero (`Humo`).
+ *     up, no show, canceladas, reprogramadas, descalificadas, sin reporte, aún no ocurrió y
+ *     descartadas) con su porcentaje y su barra. Al medio, el show up. Detrás, el humo del tablero
+ *     (`Humo`).
  *   · Tabla: una fila por estado, con la barra escalada al estado más grande.
  *
  * Qué estado va en qué grupo lo decide el backend (`GRUPO_DE_ESTADO` en `comercial_analitica.py`):
@@ -31,6 +32,9 @@ export const GRUPOS = [
     { key: 'no_show', label: 'No show', tone: 'error', fijo: true },
     { key: 'canceladas', label: 'Canceladas', tone: 'brand-primary', fijo: true },
     { key: 'reprogramadas', label: 'Reprogramadas', tone: 'info', fijo: true },
+    // Las que el closer descalificó al confirmar (23/10/2026): la dirección las mira siempre, aunque
+    // el período no tenga ninguna. El violeta es el de `TONO_EN_PANEL` en el backend.
+    { key: 'descalificadas', label: 'Descalificadas', tone: 'cat-6', fijo: true },
     { key: 'sin_reporte', label: 'Sin reporte', tone: 'warning' },
     { key: 'por_ocurrir', label: 'Aún no ocurrió', tone: 'idle' },
     { key: 'descartadas', label: 'Descartadas', tone: 'idle' },

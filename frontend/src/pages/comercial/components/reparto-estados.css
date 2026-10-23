@@ -114,7 +114,7 @@
     color: var(--text-muted);
 }
 
-/* Hasta siete grupos al lado de la dona: más juntos y más chicos que cuando eran tres. */
+/* Hasta ocho grupos al lado de la dona: más juntos y más chicos que cuando eran tres. */
 .dc-shell .est-grupos {
     display: grid;
     gap: var(--s2);
@@ -299,6 +299,48 @@
 .dc-shell .est-total b {
     font-weight: 800;
     color: var(--text-on-surface);
+}
+
+/* --- Descalificados (TiraDescalificadas.jsx) ------------------------------------------------- */
+
+/* Debajo del panel: «Descalificados · 4 por el closer · 12 por el formulario». Se parte en renglones si
+   no entra, sin que una cifra quede suelta lejos de su rótulo. */
+.dc-shell .est-desc {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--s2) var(--s6);
+    margin-top: var(--s4);
+    padding-top: var(--s4);
+    border-top: 1px solid var(--border-subtle);
+}
+
+.dc-shell .est-desc-tit {
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.dc-shell .est-desc-celda {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--s2);
+}
+
+.dc-shell .est-desc-n {
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-on-surface);
+}
+
+.dc-shell .est-desc-rot {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-muted);
 }
 
 /* --- Movimiento ----------------------------------------------------------------------------- */

@@ -3,7 +3,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import Analizar from './Analizar';
 import { TABLAS, TABLAS_POR_ROL } from './tablasDef';
-import { GENERADAS, bloqueSetterEjemplo, resumenSetterEjemplo } from './bloqueSetterEjemplo';
+import { GENERADAS, bloqueSetterEjemplo, generada, resumenSetterEjemplo } from './bloqueSetterEjemplo';
 
 /**
  * El tablero de setters (10/10/2026): el MISMO para la dirección y para el «Mis datos» del setter.
@@ -108,6 +108,18 @@ describe('Analizar · los datos de la conversación salen del reporte', () => {
         const caja = within(document.getElementById('p-despues')).getByText('Agendas').closest('.ds-caja');
         expect(caja.querySelector('.ds-caja-n').textContent).toBe('7');
         expect(within(caja).getByText('1 sin reporte · 1 por venir')).toBeInTheDocument();
+    });
+
+    it('las que el closer descalificó se dicen junto a las demás que explican por qué no suman', () => {
+        // El closer la resolvió en la confirmación (23/10/2026): cuenta como ocurrida aunque la llamada
+        // fuera a ser la semana que viene, y no es «por venir» ni «sin reporte».
+        const descalificada = { ...generada(98, 'descalificada'), ya_paso: false };
+        render(<Analizar datos={{ ...resumenSetterEjemplo(),
+            actual: bloqueSetterEjemplo({ filas: [...GENERADAS, descalificada] }) }} rol="setters" irA={null} />);
+
+        const caja = within(document.getElementById('p-despues')).getByText('Agendas').closest('.ds-caja');
+        expect(caja.querySelector('.ds-caja-n').textContent).toBe('8');
+        expect(within(caja).getByText('1 sin reporte · 0 por venir · 1 descalificada')).toBeInTheDocument();
     });
 
     it('cada follow-up dice qué parte respondió, y «—» si el reporte no lo trae', () => {

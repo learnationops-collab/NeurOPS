@@ -10,6 +10,7 @@ import Cifra from './Cifra';
 import MetricaClicable, { abrir } from '../../../components/dashboard/MetricaClicable';
 import MatrizCierres, { LeyendaCierres } from '../../../components/dashboard/MatrizCierres';
 import RepartoEstados from './RepartoEstados';
+import TiraDescalificadas from './TiraDescalificadas';
 import ModalNoCerradas from './ModalNoCerradas';
 import { AYUDA_PROCEDENCIA } from './procedencias';
 import {
@@ -179,6 +180,9 @@ const PanelEstados = ({ bloque, irA }) => {
             {total === 0
                 ? <Vacio texto="Sin agendas en el período." />
                 : <RepartoEstados estados={bloque.estados} vista={vista} irA={irA} />}
+            {/* Los que el formulario corta no son agendas: pueden ser lo único del período. */}
+            {(total > 0 || bloque.descalificadas?.formulario > 0)
+                && <TiraDescalificadas datos={bloque.descalificadas} irA={irA} />}
         </Panel>
     );
 };
