@@ -168,7 +168,9 @@ def _confirmacion(appt):
     dolores = [d.strip() for d in (appt.confirmation_pain_points or '').split(',') if d.strip()]
     return {
         # `None` en la columna significa la primera etapa (ver `Appointment.confirmation_stage`).
-        'etapa': appt.confirmation_stage or 'por_contactar',
+        # Las etapas viejas (Horario, VideoAsk, Testimonio) se leen como Contactado.
+        'etapa': ('contactado' if appt.confirmation_stage in ('horario', 'videoask', 'testimonio')
+                  else appt.confirmation_stage or 'por_contactar'),
         # Solo la accion explicita "Listo · 100% confirmado" escribe 'Confirmado' en `result`.
         'cerrada': (appt.result or '').strip().lower() == 'confirmado',
         'como_viene': {'clave': como, 'label': voc.etiqueta_de('como_viene', como)},

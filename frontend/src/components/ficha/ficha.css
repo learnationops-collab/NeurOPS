@@ -330,6 +330,32 @@
   gap:var(--s3) var(--s6);grid-template-columns:repeat(5,minmax(0,auto))}
 .dc-shell .fi-dato{display:grid;gap:2px;white-space:nowrap;min-width:0}
 
+/* La llamada de un vistazo: «Hoy · 17:35» y, junto al rótulo, cuánto falta (FichaHeader). */
+.dc-shell .fi-llamada{--tono:var(--text-muted, #94a3b8)}
+.dc-shell .fi-llamada[data-tono="ahora"]{--tono:var(--brand-secondary)}
+.dc-shell .fi-llamada[data-tono="pronto"]{--tono:var(--warning)}
+.dc-shell .fi-llamada[data-tono="luego"]{--tono:var(--success)}
+.dc-shell .fi-llamada-cab{display:flex;align-items:center;gap:var(--s2)}
+.dc-shell .fi-llamada-falta{display:inline-flex;align-items:center;gap:5px;overflow:hidden;
+  padding:1px 7px 1px 6px;border-radius:999px;font-size:10px;letter-spacing:.02em;text-transform:none;
+  color:var(--tono);background:color-mix(in srgb, var(--tono) 14%, transparent);
+  border:1px solid color-mix(in srgb, var(--tono) 30%, transparent)}
+.dc-shell .fi-llamada-falta > span{display:inline-block}
+.dc-shell .fi-llamada-falta i{width:6px;height:6px;border-radius:50%;background:var(--tono);flex:none}
+.dc-shell .fi-llamada[data-tono="ahora"] .fi-llamada-falta i,
+.dc-shell .fi-llamada[data-tono="pronto"] .fi-llamada-falta i{animation:fi-llamada-pulso 1.6s ease-out infinite}
+@keyframes fi-llamada-pulso{
+  0%{box-shadow:0 0 0 0 color-mix(in srgb, var(--tono) 60%, transparent)}
+  100%{box-shadow:0 0 0 7px transparent}
+}
+.dc-shell .fi-llamada-val{display:flex;align-items:baseline;gap:6px;min-width:0}
+.dc-shell .fi-llamada-val b{font-size:15px;font-weight:800;letter-spacing:-.01em;display:inline-block}
+.dc-shell .fi-llamada-hora{font-size:15px;font-weight:800;color:var(--tono);display:inline-block}
+.dc-shell .fi-llamada[data-tono="paso"] .fi-llamada-val b{opacity:.6}
+@media (prefers-reduced-motion:reduce){
+  .dc-shell .fi-llamada-falta i{animation:none}
+}
+
 @media (max-width:900px){
   .dc-shell .fi-cab-datos{grid-template-columns:repeat(6,minmax(0,1fr))}
 }

@@ -12,7 +12,7 @@ import SubEliminar from './confirmacion/SubEliminar';
  * Pestaña de confirmación (precall).
  *
  * Es el reemplazo del paso `modalStep === 'confirm'` del mazo del closer: etapa,
- * «cómo viene», dolores y la nota para la llamada.
+ * «cómo viene» y la nota para la llamada.
  *
  * El recordatorio previo se quitó a pedido del equipo (28/09/2026). El campo sigue en
  * la base y en el endpoint: lo que se fue es el control, no el dato.
@@ -29,14 +29,14 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
     // El backend manda `como_viene` y `dolores` como {clave, label} —asi un slug historico
     // que ya no esta en ninguna lista no desaparece— y el desplegable trabaja con la clave.
     const comoViene = conf.como_viene?.clave ?? conf.como_viene ?? null;
-    const dolores = (conf.dolores || []).map(d => d?.clave ?? d);
     const cerrada = !!conf.cerrada;
     const bloqueado = !puedeEditar || ficha?.permisos?.confirmar === false || cerrada;
 
     const etapas = ficha?.vocabulario?.etapas_confirmacion || [];
     const indice = Math.max(0, etapas.findIndex(e => e.clave === conf.etapa));
     const ultima = etapas.length ? etapas[etapas.length - 1] : null;
-    const enLaUltima = etapas.length > 0 && indice === etapas.length - 1;
+    // Se puede confirmar desde Contactado: la última etapa es Confirmado misma.
+    const listaParaCerrar = etapas.length > 0 && indice >= etapas.length - 2;
 
     // La nota se edita en local y se guarda al salir del campo: un PATCH por tecla
     // sería una petición cada 200 ms mientras se escribe.
@@ -48,6 +48,12 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
         label: e.label,
         estado: cerrada || i < indice ? 'hecho' : i === indice ? 'actual' : 'pendiente',
     })), [etapas, indice, cerrada]);
+
+    // Tres etapas (Por contactar · Contactado · Confirmado, 23/10/2026): tocar la última es
+    // «Listo · 100% confirmado», que es lo único que escribe Confirmado en la cita.
+    const tocarEtapa = (clave) => (ultima && clave === ultima.clave
+        ? correr('cerrar_confirmacion', {})
+        : disparar('etapa_confirmacion', { etapa: clave }));
 
     /* Guardado al vuelo (stepper, desplegables, nota): el cascarón ya muestra el error
        en un aviso, pero relanza para que las sub-vistas puedan reaccionar. Acá no hay
@@ -105,9 +111,11 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
                 ayuda={cerrada ? 'Confirmación completa' : 'Tocá la etapa a la que llegó · se guarda solo'}
                 pasos={pasos}
                 deshabilitado={bloqueado || guardando}
-                onPaso={bloqueado ? null : (clave) => disparar('etapa_confirmacion', { etapa: clave })} />
+                onPaso={bloqueado ? null : tocarEtapa} />
 
-            <div className="grid-2">
+            {/* Los dolores se sacaron de la confirmación (23/10/2026): no hacían falta. La columna
+                sigue en la base con lo que ya se cargó. */}
+            <div>
                 <DesplegableAgrupado
                     rotulo="Cómo viene"
                     ayuda="Se pone solo · cambialo si hace falta"
@@ -118,22 +126,6 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
                     deshabilitado={bloqueado}
                     onChange={(v) => disparar('como_viene', { como_viene: v })}
                     onAgregar={({ label }) => disparar('como_viene', { como_viene: label, nueva_opcion: label })} />
-
-                {/* Los dolores venían del mazo del closer como chips sueltos: acá entran
-                    al mismo desplegable agrupado que «Cómo viene» y además aceptan
-                    opciones nuevas, que antes no se podían crear. */}
-                <DesplegableAgrupado
-                    rotulo="Dolores que contó"
-                    ayuda="Elegí todos los que aparezcan"
-                    etiqueta="Dolores que contó"
-                    placeholder="Elegí los dolores"
-                    multiple
-                    alinear="der"
-                    grupos={grupos(ficha, 'dolores')}
-                    valor={dolores}
-                    deshabilitado={bloqueado}
-                    onChange={(v) => disparar('dolores', { dolores: v })}
-                    onAgregar={({ label }) => disparar('dolores', { dolores: [...dolores, label], nueva_opcion: label })} />
             </div>
 
             <div className="fi-campo">
@@ -162,9 +154,6 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
                         onClick={() => setModo('elim')} />
                 </div>
                 <div className="fi-pie-der">
-                    {!cerrada && !enLaUltima && ultima && (
-                        <span className="t-cap mut">Falta marcar hasta {ultima.label}</span>
-                    )}
                     {cerrada ? (
                         <button type="button" className="btn btn--linea" disabled={guardando}
                             onClick={() => correr('etapa_confirmacion', { cerrada: false })}>
@@ -176,7 +165,7 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
                                 Seguir después
                             </button>
                             <button type="button" className="btn btn--cta"
-                                disabled={bloqueado || !enLaUltima || guardando}
+                                disabled={bloqueado || !listaParaCerrar || guardando}
                                 onClick={() => correr('cerrar_confirmacion', {})}>
                                 <CheckCircle2 size={14} />
                                 Listo · 100% confirmado

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Check, ChevronDown, ChevronRight, ClipboardCopy, Contact, MessageCircle, Pencil, Video, X } from 'lucide-react';
 import { IconButton } from '../standard';
 import IdentidadesPersona from './piezas/IdentidadesPersona';
@@ -7,6 +7,7 @@ import useMovimiento from './piezas/useMovimiento';
 import usePopover from './piezas/usePopover';
 import FranjaBaja from './piezas/FranjaBaja';
 import { instanteLegible, soloDia } from './piezas/fecha';
+import { parseUtcIso } from '../../utils/datetime';
 import { opciones } from './estadoFicha';
 import { mensajeDeError } from './fichaApi';
 import { CAMPOS_DATOS, cambiosDe, valoresIniciales } from './datosCliente';
@@ -41,6 +42,67 @@ const Dato = ({ rotulo, valor, mono = false }) => (
     </div>
 );
 
+/**
+ * La llamada leída de un vistazo (pedido del 23/10/2026): «Hoy · 17:35» en vez de
+ * «23 oct 2026 · 17:35», y al lado del rótulo cuánto falta, que se mueve solo.
+ * Tonos: ahora (±15 min) magenta con pulso, pronto (< 2 h) ámbar, ya pasó apagado.
+ */
+const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const dos = (n) => String(n).padStart(2, '0');
+
+const lecturaDeLlamada = (d, ahora) => {
+    const dia = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const delta = Math.round((dia(d) - dia(ahora)) / 86400000);
+    const cuando = delta === 0 ? 'Hoy' : delta === 1 ? 'Mañana' : delta === -1 ? 'Ayer'
+        : `${DIAS[d.getDay()]} ${d.getDate()} ${MESES_CORTOS[d.getMonth()]}${d.getFullYear() !== ahora.getFullYear() ? ` ${d.getFullYear()}` : ''}`;
+    const min = Math.round((d.getTime() - ahora.getTime()) / 60000);
+    const abs = Math.abs(min);
+    const largo = abs < 60 ? `${abs} min` : abs < 1440 ? `${Math.floor(abs / 60)} h${abs % 60 ? ` ${abs % 60} min` : ''}` : `${Math.round(abs / 1440)} d`;
+    const tono = abs <= 15 ? 'ahora' : min < 0 ? 'paso' : min < 120 ? 'pronto' : 'luego';
+    const falta = abs <= 15 ? (min >= 0 ? `en ${largo}` : 'en curso') : min > 0 ? `en ${largo}` : `hace ${largo}`;
+    return { cuando, hora: `${dos(d.getHours())}:${dos(d.getMinutes())}`, falta, tono };
+};
+
+const DatoLlamada = ({ iso, respaldo }) => {
+    const quieto = useReducedMotion();
+    const [ahora, setAhora] = useState(() => new Date());
+    useEffect(() => {
+        const t = setInterval(() => setAhora(new Date()), 30000);
+        return () => clearInterval(t);
+    }, []);
+    const d = iso ? parseUtcIso(String(iso)) : null;
+    if (!d) return <Dato rotulo="Llamada" valor={respaldo} />;
+    const l = lecturaDeLlamada(d, ahora);
+    const entra = (i) => (quieto ? {} : {
+        initial: { opacity: 0, y: 6 }, animate: { opacity: 1, y: 0 },
+        transition: { delay: 0.06 * i, duration: 0.32, ease: [0.22, 1, 0.36, 1] },
+    });
+    return (
+        <div className="fi-dato fi-llamada" data-tono={l.tono} title={instanteLegible(iso)}>
+            <small className="t-rotulo fi-llamada-cab">
+                Llamada
+                <span className="fi-llamada-falta">
+                    <i aria-hidden="true" />
+                    <AnimatePresence mode="popLayout" initial={false}>
+                        <motion.span key={l.falta}
+                            initial={quieto ? false : { opacity: 0, y: -6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={quieto ? undefined : { opacity: 0, y: 6 }}
+                            transition={{ duration: 0.25 }}>
+                            {l.falta}
+                        </motion.span>
+                    </AnimatePresence>
+                </span>
+            </small>
+            <span className="fi-llamada-val">
+                <motion.b {...entra(0)}>{l.cuando}</motion.b>
+                <motion.span className="fi-llamada-hora num" {...entra(1)}>{l.hora}</motion.span>
+            </span>
+        </div>
+    );
+};
+
 /** El error del backend, pegado al campo que lo causó (`campo` en la respuesta). */
 const ErrorDeCampo = ({ id, texto }) => (
     <span id={id} role="alert" className="fi-dato-error">{texto}</span>
@@ -66,6 +128,10 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
         : id.llamada ? [id.llamada.fecha, id.llamada.hora].filter(Boolean).join(' · ') : null;
     // Ya vendido: el programa reemplaza al examen, que pasa a ser un dato de origen.
     const esCliente = !!id.programa;
+    // Sin examen en la cita, el que eligió en el formulario («¿Qué examen buscás pasar?»):
+    // la persona ya lo dijo ahí y la cabecera mostraba un guion (23/10/2026).
+    const examen = id.examen || (ficha?.formulario?.respuestas || [])
+        .find(r => /examen/i.test(`${r.clave} ${r.pregunta}`) && typeof r.respuesta === 'string')?.respuesta || null;
     // La etiqueta la arma el backend con el mismo vocabulario del historial; la clave cruda queda
     // de respaldo para una ficha vieja que todavía no la traiga.
     const fuente = id.fuente_label || id.fuente || null;
@@ -189,7 +255,7 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
             id.instagram ? `Instagram: @${String(id.instagram).replace('@', '')}` : null,
             id.telefono ? `Teléfono: ${id.telefono}` : null,
             id.email ? `Correo: ${id.email}` : null,
-            id.examen ? `Examen: ${id.examen}` : null,
+            examen ? `Examen: ${examen}` : null,
             llamada ? `Agendada: ${llamada}` : null,
             fuente ? `Fuente: ${fuente}` : null,
             id.setter?.nombre ? `Setter: ${id.setter.nombre}` : null,
@@ -323,8 +389,10 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
                 </div>
             ) : (
                 <div className="fi-cab-datos">
-                    <Dato rotulo={esCliente ? 'Programa' : 'Examen'} valor={esCliente ? id.programa : id.examen} />
-                    <Dato rotulo={esCliente ? 'Ingresó' : 'Llamada'} valor={esCliente ? soloDia(id.ingreso) : llamada} />
+                    <Dato rotulo={esCliente ? 'Programa' : 'Examen'} valor={esCliente ? id.programa : examen} />
+                    {esCliente
+                        ? <Dato rotulo="Ingresó" valor={soloDia(id.ingreso)} />
+                        : <DatoLlamada iso={id.llamada?.iso} respaldo={llamada} />}
 
                     <div className="fi-dato" ref={caja} style={{ position: 'relative' }}>
                         <small className="t-rotulo">Closer</small>

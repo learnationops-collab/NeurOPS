@@ -29,12 +29,13 @@ LARGO_CLAVE_POR_DEFECTO = 60
 
 # --- Vocabularios de fabrica ------------------------------------------------------------------
 
+# Tres etapas y no cinco (pedido del 23/10/2026): Horario, VideoAsk y Testimonio no servian. Las
+# citas que ya estaban en una de esas quedan guardadas tal cual y la ficha las lee como Contactado.
+# «Confirmado» es la ultima: tocarla es la accion «Listo · 100% confirmado».
 ETAPAS_CONFIRMACION = [
     {'clave': 'por_contactar', 'label': 'Por contactar'},
     {'clave': 'contactado', 'label': 'Contactado'},
-    {'clave': 'horario', 'label': 'Horario'},
-    {'clave': 'videoask', 'label': 'VideoAsk'},
-    {'clave': 'testimonio', 'label': 'Testimonio'},
+    {'clave': 'confirmado', 'label': 'Confirmado'},
 ]
 
 # «Cómo viene» — `Appointment.confirmation_contact_status`. Las tres primeras son los valores que

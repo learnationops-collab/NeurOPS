@@ -96,7 +96,8 @@ class Appointment(ConPersona, db.Model):
     # llamada de confirmación, se guarda solo) — se agregan como campos nuevos y aditivos en vez
     # de reemplazar `result`, para no romper `confirmationsPipeline`/Kanban/reportes que ya
     # agrupan por esos 3 estados.
-    # 'por_contactar' | 'contactado' | 'horario' | 'videoask' | 'testimonio'. None == 'por_contactar'
+    # 'por_contactar' | 'contactado' | 'confirmado' (desde el 23/10/2026; 'horario', 'videoask' y
+    # 'testimonio' quedan en citas viejas y se leen como 'contactado'). None == 'por_contactar'
     # (mismo criterio que `result` None == "Por confirmar": el valor por defecto no se persiste).
     confirmation_stage = db.Column(db.String(20), nullable=True)
     # "Cómo viene" — 'pendiente' | 'espera_respuesta' | 'no_contesta'. Distinto de

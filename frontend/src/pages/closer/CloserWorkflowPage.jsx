@@ -1781,6 +1781,22 @@ const CloserWorkflowPage = () => {
                                         {seguimientoHero.tipo === 'cerrada' ? 'Ir a cobrar' : 'Ir a seguir'} →
                                     </button>
                                 </div>
+                            ) : activeView === 'inbox' && activeStep === 'confirmations' ? (
+                                // En Confirmar, sin nadie por confirmar, la tarjeta muestra los confirmados
+                                // y nada más: no manda a otra sección (pedido del 23/10/2026, decía
+                                // «Te falta 1 por reportar» estando en Confirmar).
+                                <div className="tsp-v6 tsp-done-v6">
+                                    <div className="tsp-top-v6">
+                                        <span className="tsp-dot-v6 ok"></span>
+                                        <span className="tsp-lbl-v6">Confirmados</span>
+                                    </div>
+                                    <h3 className="tsp-name-v6">
+                                        {(counts.confirmations_done || 0) === 1 ? '1 confirmado' : `${counts.confirmations_done || 0} confirmados`}
+                                    </h3>
+                                    <p className="tsp-sub-v6">
+                                        {(counts.confirmations_done || 0) > 0 ? 'Listos para su llamada · nada por confirmar' : 'Nada por confirmar'}
+                                    </p>
+                                </div>
                             ) : (() => {
                                 // Una sola acción, no una lista de bandejas (pedido del usuario, 28/ago/2026:
                                 // "en ver mis datos, mi cartera y cerrar el día debería ser ese mismo mecanismo

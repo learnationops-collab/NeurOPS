@@ -143,7 +143,11 @@ def confirmacion(appt, datos, usuario):
     if datos.get('cerrada') is True:
         etapas = ficha_vocabulario.ETAPAS_CONFIRMACION
         payload['confirm_status'] = 'Confirmado'
-        payload['confirmation_stage'] = etapas[-1]['clave'] if etapas else 'testimonio'
+        payload['confirmation_stage'] = etapas[-1]['clave'] if etapas else 'confirmado'
+    elif datos.get('cerrada') is False and (appt.result or '').strip().lower() == 'confirmado':
+        # «Deshacer»: vuelve a Contactado. Antes no mandaba nada que guardar y respondia error.
+        payload['confirm_status'] = 'conversando'
+        payload['confirmation_stage'] = 'contactado'
 
     if not payload:
         raise ErrorDeAccion('No hay nada que guardar.')
