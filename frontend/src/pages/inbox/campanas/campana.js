@@ -57,7 +57,25 @@ export function formulario(c) {
         reparto: c?.reparto || 'distribuido',
         solo_conectados: !!c?.solo_conectados,
         setters: c?.setters || [],
+        // Cuánto recibe cada setter respecto de los demás, por id (texto: es lo que se escribe en el campo).
+        pesos: Object.fromEntries(Object.entries(c?.pesos || {}).map(([id, p]) => [id, String(p)])),
     };
+}
+
+export const PESO_MAX = 100;
+const pesoValido = (p) => Number.isInteger(Number(p)) && Number(p) >= 1 && Number(p) <= PESO_MAX && String(p).trim() !== '';
+
+// El peso con el que entra un setter que se suma: el menor de los que ya están (parejo si todos son iguales).
+export function pesoInicial(f) {
+    const actuales = f.setters.map((id) => Number(f.pesos[id])).filter((p) => pesoValido(p));
+    return String(actuales.length ? Math.min(...actuales) : 1);
+}
+
+// Porcentaje que le toca a cada setter elegido: {id: 70, ...}.
+export function porcentajes(ids, pesos) {
+    const peso = (id) => (pesoValido(pesos[id] ?? 1) ? Number(pesos[id] ?? 1) : 0);
+    const total = ids.reduce((suma, id) => suma + peso(id), 0);
+    return Object.fromEntries(ids.map((id) => [id, total ? Math.round((100 * peso(id)) / total) : 0]));
 }
 
 // Problemas que se ven antes de mandar; el servidor valida lo mismo y además los choques de palabras.
@@ -66,6 +84,9 @@ export function errorDe(f) {
     if (!f.desde) return 'Elegí desde qué día corre.';
     if (f.hasta && f.hasta < f.desde) return 'El último día no puede ser anterior al primero.';
     if (!f.palabras.length) return 'Agregá al menos una palabra clave.';
+    if (f.reparto === 'distribuido' && f.setters.some((id) => !pesoValido(f.pesos[id] ?? 1))) {
+        return `El peso de cada setter es un número entero de 1 a ${PESO_MAX}.`;
+    }
     return null;
 }
 
@@ -82,14 +103,20 @@ export function cuerpo(f) {
         reparto: f.reparto,
         solo_conectados: f.solo_conectados,
         setters: f.reparto === 'distribuido' ? f.setters : [],
+        pesos: f.reparto === 'distribuido' ? Object.fromEntries(f.setters.map((id) => [String(id), Number(f.pesos[id] ?? 1)])) : {},
     };
 }
 
-// «Distribuido entre todos», «entre Paula y Elias» o «Sin reparto», para la tarjeta.
+// «Reparte entre Paula, Elias», «Reparte: Elias 70 % · Paula 30 %» (con pesos distintos) o «Sin reparto», para la tarjeta.
 export function repartoLegible(c, setters) {
     if (c.reparto !== 'distribuido') return 'Sin reparto: lo ve todo el equipo';
-    const nombres = (c.setters || []).map((id) => setters.find((s) => s.id === id)?.nombre).filter(Boolean);
-    return nombres.length ? `Reparte entre ${nombres.join(', ')}` : 'Reparte entre todos los setters';
+    const ids = (c.setters || []).filter((id) => setters.some((s) => s.id === id));
+    if (!ids.length) return 'Reparte entre todos los setters';
+    const nombre = (id) => setters.find((s) => s.id === id).nombre;
+    const pesos = Object.fromEntries(ids.map((id) => [id, String(c.pesos?.[id] ?? 1)]));
+    if (new Set(Object.values(pesos)).size === 1) return `Reparte entre ${ids.map(nombre).join(', ')}`;
+    const parte = porcentajes(ids, pesos);
+    return `Reparte: ${ids.map((id) => `${nombre(id)} ${parte[id]} %`).join(' · ')}`;
 }
 
 // Una palabra nueva para la lista: sin espacios de más y sin repetir (sin tildes ni mayúsculas).

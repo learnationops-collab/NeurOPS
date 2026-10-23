@@ -8,7 +8,7 @@ import {
 } from '../../../components/standard';
 import { inboxApi } from '../api';
 import { Campo } from '../editor/paneles';
-import { EMBUDOS, REPARTOS, TIPOS, cuerpo, errorDe, formulario, sumarPalabra } from './campana';
+import { EMBUDOS, PESO_MAX, REPARTOS, TIPOS, cuerpo, errorDe, formulario, pesoInicial, porcentajes, sumarPalabra } from './campana';
 
 function Quitable({ children, label, onQuitar, lectura }) {
     return (
@@ -26,6 +26,9 @@ export default function EditorCampana({ campana, flujos, campanasMeta, setters =
     const [ocupado, setOcupado] = useState(false);
     const [borrando, setBorrando] = useState(false);
     const cambiar = (cambio) => { setF((x) => ({ ...x, ...cambio })); setError(null); };
+    const alternarSetter = (id, elegido) => cambiar(elegido
+        ? { setters: f.setters.filter((x) => x !== id) }
+        : { setters: [...f.setters, id], pesos: { ...f.pesos, [id]: f.pesos[id] ?? pesoInicial(f) } });
 
     const sumar = () => {
         cambiar({ palabras: sumarPalabra(f.palabras, palabra) });
@@ -55,6 +58,7 @@ export default function EditorCampana({ campana, flujos, campanasMeta, setters =
         }
     };
 
+    const parte = porcentajes(f.setters, f.pesos);
     const nombreMeta = (id) => campanasMeta.find((m) => m.id === id)?.nombre || id;
     const metaLibres = campanasMeta.filter((m) => !f.campanas_meta.includes(m.id))
         .map((m) => ({ value: m.id, label: `${m.nombre || m.id}${m.activa ? '' : ' (sin anuncios activos)'}` }));
@@ -122,7 +126,7 @@ export default function EditorCampana({ campana, flujos, campanasMeta, setters =
                     </div>
                 </Campo>
                 <Campo label="Reparto entre setters" ayuda={f.reparto === 'distribuido'
-                    ? 'A cada entrada le toca el que menos leads recibió de esta campaña en las últimas 24 h. Quien ya tuvo setter lo conserva.'
+                    ? 'A cada entrada le toca el que más le falta para su parte de esta campaña en las últimas 24 h. Quien ya tuvo setter lo conserva.'
                     : 'Nadie queda asignado: el lead lo ve todo el equipo.'}>
                     <Segmented size="sm" label="Reparto" value={f.reparto} options={REPARTOS} itemProps={{ disabled: lectura }}
                         onChange={(v) => cambiar({ reparto: v })} />
@@ -135,13 +139,31 @@ export default function EditorCampana({ campana, flujos, campanasMeta, setters =
                                     const elegido = f.setters.includes(s.id);
                                     return (
                                         <Chip key={s.id} as="button" type="button" subtle={!elegido} aria-pressed={elegido} disabled={lectura}
-                                            onClick={() => cambiar({ setters: elegido ? f.setters.filter((x) => x !== s.id) : [...f.setters, s.id] })}>
+                                            onClick={() => alternarSetter(s.id, elegido)}>
                                             {s.nombre}
                                         </Chip>
                                     );
                                 })}
                             </div>
                         </Campo>
+                        {f.setters.length > 1 && (
+                            <Campo label="Cuánto recibe cada uno" ayuda="Es una proporción: 70 y 30 reparten 70 % y 30 %; 1 y 1, parejo.">
+                                <div className="cp-pesos">
+                                    {f.setters.map((id) => {
+                                        const nombre = setters.find((s) => s.id === id)?.nombre || id;
+                                        return (
+                                            <div key={id} className="cp-peso">
+                                                <span>{nombre}</span>
+                                                <Input variant="number" type="number" inputMode="numeric" min={1} max={PESO_MAX} step={1}
+                                                    value={f.pesos[id] ?? '1'} disabled={lectura} aria-label={`Peso de ${nombre}`}
+                                                    onChange={(e) => cambiar({ pesos: { ...f.pesos, [id]: e.target.value } })} />
+                                                <strong>{parte[id]} %</strong>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </Campo>
+                        )}
                         <div className="pf-check">
                             <span>
                                 Solo entre conectados
