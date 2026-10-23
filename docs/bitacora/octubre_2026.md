@@ -526,3 +526,10 @@
   - `POST /api/external/academy/agent/ask` para la Academia (catálogo y planes; sin montos) y `LearnationService.agent_ask` para preguntarle a ella. Cada fila lleva `persona` (people.uuid) y `alumno_id` para cruzar.
   - `/api/tablas` y `flask tablas fuentes|consultar` para admin, operaciones y director comercial.
   - Verificación: sin tests (regla del proyecto); probado en producción y en el servidor de prueba de solo lectura (catálogo, agrupar por programa y por período, avisos, errores, permisos, y el Pulso de la Academia pedido desde Work).
+
+- **22 de Octubre de 2026 (renovaciones mes a mes y alumnos sin persona)** *([app/services/subscription_service.py](../../app/services/subscription_service.py), [app/services/academy_access_service.py](../../app/services/academy_access_service.py), [scripts/backfill_subscriptions.py](../../scripts/backfill_subscriptions.py), [tests/services/test_subscription_service.py](../../tests/services/test_subscription_service.py) [MODIFY])*:
+  - Una venta de renovación extiende la suscripción 1 mes (`MESES_RENOVACION`) desde donde vencía, no 4: las renovaciones se pagan mes a mes. El acceso por defecto de una renovación sin suscripción también es 1 mes.
+  - `backfill_subscriptions.py --crear-personas`: el alumno con producto pago que Work no conocía pasa a tener su persona y su suscripción (sin venta). Se puede correr de nuevo: no vuelve a usar ni a atar ventas que ya tienen suscripción.
+  - Producción: 3 alumnos vinculados a su persona (Claudia Molina, Judith De La Cruz y la segunda cuenta de Laura Hernández), 22 personas creadas desde la Academia y 24 suscripciones nuevas. Total: 243 suscripciones (130 vigentes); ningún alumno con producto pago queda sin persona.
+  - Se borró el test de la renovación de 4 meses.
+  - Verificación: sin tests (regla del proyecto); el backfill se corrió en modo prueba antes de aplicarlo.

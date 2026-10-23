@@ -18,12 +18,15 @@ Objetivo: cada alumno que compró tiene su suscripción, con sus renovaciones y 
     (`scripts/vincular_alumnos_academia.py` corrige los que se cruzan mal, antes de esta carga).
 
 No escribe en la Academia y no pisa: si la persona ya tiene suscripción a ese producto, solo se le atan
-las ventas. Listas aparte: alumnos sin persona, vinculados por nombre y fecha (para revisar), accesos sin
+las ventas que todavía no tienen suscripción (se puede correr de nuevo). Con `--crear-personas`, el alumno
+con producto pago que Work no conoce pasa a tener su persona (con su mail y su id de la Academia) y su
+suscripción sin venta: Work es la fuente de verdad también de los accesos que dio el equipo (22/10/2026). Listas aparte: alumnos sin persona, vinculados por nombre y fecha (para revisar), accesos sin
 compra y ventas de 2026 con pago real sin acceso.
 
 Uso:
   python scripts/backfill_subscriptions.py academia.json            # prueba
   python scripts/backfill_subscriptions.py academia.json --apply    # crea suscripciones y eventos
+  python scripts/backfill_subscriptions.py academia.json --apply --crear-personas
 """
 import os
 import sys
@@ -124,7 +127,7 @@ def _atar_resto(sub, ventas_sueltas):
         venta.subscription = sub
 
 
-def ejecutar(archivo, apply=False):
+def ejecutar(archivo, apply=False, crear_personas=False):
     mapping = AcademyAccessService.get_product_mapping() or {}
     programa_de = {slug: codigo for codigo, slug in mapping.items()}
     hoy = date.today()
@@ -138,6 +141,10 @@ def ejecutar(archivo, apply=False):
             n['pruebas'] += 1
             continue
         person, como = aa.persona_del_alumno(u, suyas, ventas)
+        if person is None and crear_personas:
+            person = person_service.resolver(u['name'], u['email'], phone=u.get('phone'),
+                                             learnation_user_id=str(uid), fuente='academia')
+            n['personas_creadas'] += 1
         if person is None:
             sin_persona.append(f"alumno {uid} {u['name']!r} <{u['email']}>: {sorted({a['slug'] for a in suyas})}")
             continue
@@ -151,7 +158,9 @@ def ejecutar(archivo, apply=False):
     eventos, sin_venta, atadas = Counter(), [], set()
     for person_uuid, productos in sorted(por_persona.items()):
         person = person_service.por_uuid(person_uuid)
-        usadas, subs = set(), {}
+        # Las ventas que ya tienen suscripción (de una corrida anterior) no se vuelven a usar.
+        usadas = {v.id for v, _ in ventas.de(person_uuid) if v.subscription_id}
+        subs = {}
         for slug, suyas in sorted(productos.items(), key=lambda x: RANGO.get(x[0], 2)):
             suyas.sort(key=lambda a: (a['creada'], a['id']))
             historia = _periodos(suyas, person_uuid, ventas, usadas)
@@ -160,7 +169,7 @@ def ejecutar(archivo, apply=False):
                 n['ya_tenian'] += 1
                 if apply:
                     for _, _, venta in historia:
-                        if venta is not None:
+                        if venta is not None and venta.subscription_id is None:
                             venta.subscription = ya
                 subs[slug] = ya
                 continue
@@ -175,7 +184,7 @@ def ejecutar(archivo, apply=False):
         # Las ventas de la persona que no se ataron a ningún período van a su suscripción más parecida.
         sueltas = defaultdict(list)
         for venta, _ in ventas.de(person_uuid):
-            if venta.id not in usadas and venta.status == 'active' and not ventas.solo_sena(venta):
+            if venta.id not in usadas and venta.status == 'active' and venta.subscription_id is None                     and not ventas.solo_sena(venta):
                 sueltas[_la_mas_parecida(mapping.get((venta.program_code or '').upper()), list(subs))].append(venta)
                 usadas.add(venta.id)
                 eventos['venta sin cambio en la Academia'] += 1
@@ -199,7 +208,7 @@ def ejecutar(archivo, apply=False):
 
     print(f"Suscripciones: {n['suscripciones']} ({n['active']} vigentes, {n['expired']} vencidas, "
           f"{n['cancelled']} quitadas antes de tiempo; {n['sena']} en seña); ya tenían: {n['ya_tenian']}; "
-          f"cuentas de prueba salteadas: {n['pruebas']}")
+          f"cuentas de prueba salteadas: {n['pruebas']}; personas creadas: {n['personas_creadas']}")
     print(f'Eventos: {dict(eventos)}; ventas atadas: {len(atadas)}')
     for titulo, lista in (('Alumnos vinculados por nombre y fecha (revisar)', por_nombre),
                           ('Alumnos con producto pago sin persona en Work', sin_persona),
@@ -219,4 +228,4 @@ def ejecutar(archivo, apply=False):
 if __name__ == '__main__':
     app = create_app()
     with app.app_context():
-        ejecutar(sys.argv[1], apply='--apply' in sys.argv)
+        ejecutar(sys.argv[1], apply='--apply' in sys.argv, crear_personas='--crear-personas' in sys.argv)
