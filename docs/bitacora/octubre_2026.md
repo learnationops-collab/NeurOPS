@@ -570,3 +570,9 @@
   - Primero en el servidor de prueba (develop): sus migraciones borran las copias de su base. A producción solo con el ok de Santiago y un `pg_dump` antes.
   - Servidor de prueba: las 4 migraciones corrieron (sin `leads`, `payments`, `enrollments` ni las copias de `clients` y `financial_agendas`; ninguna agenda sin persona). Humo: todos los módulos importan y 244 GET de la API como admin responden sin error. `run.py` importaba `Enrollment` y `Payment`: corregido.
   - Suite completa en el servidor: 3938 pasan, 0 fallan. Se borraron 67 tests rotos: 59 de atribución y 8 más que probaban el cruce viejo por la copia del mail o del Instagram (la 2c cruza solo por persona) y 46 que ya fallaban antes de la 2c (comparado sobre el código previo); `test_setter_cambiar_palabra_agenda` (importaba un test borrado) y `test_cierres_paridad` (sin tests que pasen). `normalize_ig` sale del contrato de `financial_sales`, que ya no guarda Instagram.
+
+- **23 de Octubre de 2026 (Work y la Academia coinciden en los 129 alumnos)** *([docs/casos_pendientes_academia.md](../casos_pendientes_academia.md) [NEW])*:
+  - Reenviado el estado de pago a 324 clientes: 69 vinculados con su alumno, 250 sin cuenta en la Academia.
+  - Corregidos los vínculos de 4 alumnos en la Academia (Yrein Córdova, Juanita Páez, Juan Camilo Sánchez y Nathalia Moreno), y en Work los mails cargados en fichas de otros (error viejo de la selección de Instagram).
+  - El servidor de prueba ya no tiene `ACADEMY_API_TOKEN`: le escribía a la Academia de producción con sus propios uuids.
+  - Los casos que quedan, con lo que hay que decidir en cada uno, están en `docs/casos_pendientes_academia.md`.
