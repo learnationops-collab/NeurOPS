@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { Check, ChevronDown, ChevronRight, ClipboardCopy, Contact, MessageCircle, Pencil, Video, X } from 'lucide-react';
+import { CalendarClock, Check, ChevronDown, ChevronRight, ClipboardCopy, Contact, Copy, GraduationCap, Megaphone, Pencil, Phone, UserRound, Video, X } from 'lucide-react';
 import { IconButton } from '../standard';
 import IdentidadesPersona from './piezas/IdentidadesPersona';
 import useMovimiento from './piezas/useMovimiento';
@@ -33,14 +33,45 @@ import Desplegable from './historial/Desplegable';
  */
 // Sin divisor propio: los datos viven en una rejilla y un separador suelto ocuparia una
 // columna, que es lo que descuadraba las dos filas.
-const Dato = ({ rotulo, valor, mono = false }) => (
-    <div className="fi-dato">
-        <small className="t-rotulo">{rotulo}</small>
-        <span className={`t-sm trunc${mono ? ' num' : ''}`} style={{ fontWeight: 600 }}>
-            {valor || '—'}
-        </span>
-    </div>
+/** El rótulo de un dato, con su ícono (pedido del 23/10/2026: «un poquito más de íconos»). */
+const Rotulo = ({ icono: Icono, children }) => (
+    <small className="t-rotulo fi-rot">
+        {Icono && <Icono size={11} strokeWidth={2.4} aria-hidden="true" />}
+        {children}
+    </small>
 );
+
+/** Cada dato entra de a uno (`orden`), en el orden en que se leen. */
+const Dato = ({ rotulo, icono, valor, mono = false, orden = 0, children }) => {
+    const mov = useMovimiento();
+    return (
+        <motion.div className="fi-dato" {...mov.campo(orden)}>
+            <Rotulo icono={icono}>{rotulo}</Rotulo>
+            {children ?? (
+                <span className={`fi-val trunc${mono ? ' num' : ''}`}>{valor || '—'}</span>
+            )}
+        </motion.div>
+    );
+};
+
+/** `+52 771 396 6588`: el número partido como se dicta. Sin un formato conocido, tal cual. */
+const CODIGOS = ['591', '593', '595', '598', '502', '503', '504', '505', '506', '507',
+    '52', '54', '55', '56', '57', '58', '51', '53', '34', '1'];
+const telefonoLegible = (tel) => {
+    const t = String(tel || '').trim();
+    const dig = t.replace(/\D/g, '');
+    if (!t.startsWith('+') || dig.length < 8) return t;
+    const cod = CODIGOS.find(c => dig.startsWith(c) && dig.length - c.length >= 7);
+    if (!cod) return t;
+    const resto = dig.slice(cod.length);
+    const partes = resto.length === 10 ? [resto.slice(0, 3), resto.slice(3, 6), resto.slice(6)]
+        : resto.length === 11 ? [resto.slice(0, 1), resto.slice(1, 4), resto.slice(4, 7), resto.slice(7)]
+            : [resto.slice(0, resto.length - 4), resto.slice(-4)];
+    return `+${cod} ${partes.join(' ')}`;
+};
+
+const inicialesDe = (nombre) => String(nombre || '').trim().split(/\s+/).slice(0, 2)
+    .map(p => p[0]?.toUpperCase() || '').join('') || '?';
 
 /**
  * La llamada leída de un vistazo (pedido del 23/10/2026): «Hoy · 17:35» en vez de
@@ -72,17 +103,21 @@ const DatoLlamada = ({ iso, respaldo }) => {
         return () => clearInterval(t);
     }, []);
     const d = iso ? parseUtcIso(String(iso)) : null;
-    if (!d) return <Dato rotulo="Llamada" valor={respaldo} />;
+    if (!d) return <Dato rotulo="Llamada" icono={CalendarClock} valor={respaldo} orden={1} />;
     const l = lecturaDeLlamada(d, ahora);
     const entra = (i) => (quieto ? {} : {
         initial: { opacity: 0, y: 6 }, animate: { opacity: 1, y: 0 },
         transition: { delay: 0.06 * i, duration: 0.32, ease: [0.22, 1, 0.36, 1] },
     });
     return (
-        <div className="fi-dato fi-llamada" data-tono={l.tono} title={instanteLegible(iso)}>
-            <small className="t-rotulo fi-llamada-cab">
-                Llamada
-                <span className="fi-llamada-falta">
+        <motion.div className="fi-dato fi-llamada" data-tono={l.tono} title={instanteLegible(iso)}
+            {...(quieto ? {} : { initial: { opacity: 0, y: 6 }, animate: { opacity: 1, y: 0 },
+                transition: { duration: 0.22, delay: 0.04 } })}>
+            <Rotulo icono={CalendarClock}>Llamada</Rotulo>
+            <span className="fi-llamada-val">
+                <motion.b {...entra(1)}>{l.cuando}</motion.b>
+                <motion.b className="num" {...entra(2)}>{l.hora}</motion.b>
+                <motion.span className="fi-llamada-falta" {...entra(3)}>
                     <i aria-hidden="true" />
                     <AnimatePresence mode="popLayout" initial={false}>
                         <motion.span key={l.falta}
@@ -93,13 +128,9 @@ const DatoLlamada = ({ iso, respaldo }) => {
                             {l.falta}
                         </motion.span>
                     </AnimatePresence>
-                </span>
-            </small>
-            <span className="fi-llamada-val">
-                <motion.b {...entra(0)}>{l.cuando}</motion.b>
-                <motion.span className="fi-llamada-hora num" {...entra(1)}>{l.hora}</motion.span>
+                </motion.span>
             </span>
-        </div>
+        </motion.div>
     );
 };
 
@@ -272,6 +303,17 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
         }
     };
 
+    const [telCopiado, setTelCopiado] = useState(false);
+    const copiarTelefono = async () => {
+        try {
+            await navigator.clipboard.writeText(id.telefono || '');
+            setTelCopiado(true);
+            setTimeout(() => setTelCopiado(false), 1600);
+        } catch {
+            // Sin portapapeles el número sigue a la vista.
+        }
+    };
+
     const pasarA = (closer) => {
         cerrar();
         if (closer.nombre === closerActual) return;
@@ -389,18 +431,20 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
                 </div>
             ) : (
                 <div className="fi-cab-datos">
-                    <Dato rotulo={esCliente ? 'Programa' : 'Examen'} valor={esCliente ? id.programa : examen} />
+                    <Dato rotulo={esCliente ? 'Programa' : 'Examen'} icono={GraduationCap} orden={0}
+                        valor={esCliente ? id.programa : examen} />
                     {esCliente
-                        ? <Dato rotulo="Ingresó" valor={soloDia(id.ingreso)} />
+                        ? <Dato rotulo="Ingresó" icono={CalendarClock} valor={soloDia(id.ingreso)} orden={1} />
                         : <DatoLlamada iso={id.llamada?.iso} respaldo={llamada} />}
 
-                    <div className="fi-dato" ref={caja} style={{ position: 'relative' }}>
-                        <small className="t-rotulo">Closer</small>
+                    <motion.div className="fi-dato" ref={caja} style={{ position: 'relative' }} {...mov.campo(2)}>
+                        <Rotulo icono={UserRound}>Closer</Rotulo>
                         {puedeReasignar ? (
                             <>
                                 <button type="button" className="fi-closer-btn"
                                     aria-haspopup="listbox" aria-expanded={abierto}
                                     onClick={alternar}>
+                                    {closerActual && <span className="fi-avatar" aria-hidden="true">{inicialesDe(closerActual)}</span>}
                                     <span>{closerActual || 'Sin asignar'}</span>
                                     <span className="t-cap" style={{ color: 'var(--brand-secondary)', fontWeight: 700 }}>
                                         Pasar
@@ -434,25 +478,40 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
                                 )}
                             </>
                         ) : (
-                            <span className="t-sm trunc" style={{ fontWeight: 600 }}>{closerActual || '—'}</span>
+                            <span className="fi-val trunc fi-closer-fijo">
+                                {closerActual && <span className="fi-avatar" aria-hidden="true">{inicialesDe(closerActual)}</span>}
+                                {closerActual || '—'}
+                            </span>
                         )}
-                    </div>
+                    </motion.div>
 
-                    <div className="fi-dato">
-                        <small className="t-rotulo">Teléfono</small>
+                    <Dato rotulo="Teléfono" icono={Phone} orden={3}>
                         {enlaceWhatsapp ? (
-                            <a className="t-sm trunc num fi-wa" href={enlaceWhatsapp}
-                                target="_blank" rel="noreferrer"
-                                title={`Escribirle por WhatsApp a ${id.nombre || 'el lead'}`}>
-                                <MessageCircle size={13} />
-                                {id.telefono}
-                            </a>
+                            <span className="fi-tel">
+                                <a className="fi-val trunc num fi-wa" href={enlaceWhatsapp}
+                                    target="_blank" rel="noreferrer"
+                                    title={`Escribirle por WhatsApp a ${id.nombre || 'el lead'}`}>
+                                    <i className="fi-tel-punto" aria-hidden="true" />
+                                    {telefonoLegible(id.telefono)}
+                                </a>
+                                <button type="button" className="fi-tel-copiar"
+                                    aria-label="Copiar el teléfono" title={telCopiado ? 'Copiado' : 'Copiar el teléfono'}
+                                    onClick={copiarTelefono}>
+                                    <AnimatePresence mode="wait" initial={false}>
+                                        <motion.span key={telCopiado ? 'ok' : 'copiar'} style={{ display: 'flex' }}
+                                            initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                                            exit={{ scale: 0.4, opacity: 0 }} transition={{ duration: 0.16 }}>
+                                            {telCopiado ? <Check size={13} /> : <Copy size={13} />}
+                                        </motion.span>
+                                    </AnimatePresence>
+                                </button>
+                            </span>
                         ) : (
-                            <span className="t-sm trunc num" style={{ fontWeight: 600 }}>{id.telefono || '—'}</span>
+                            <span className="fi-val trunc num">{id.telefono || '—'}</span>
                         )}
-                    </div>
+                    </Dato>
 
-                    <Dato rotulo="Fuente" valor={fuente} />
+                    <Dato rotulo="Fuente" icono={Megaphone} valor={fuente} orden={4} />
                 </div>
             )}
 

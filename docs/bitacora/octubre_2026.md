@@ -662,3 +662,8 @@
   - Una prórroga sin pago puede ser de los días que se quiera (1 a 365, `dias`), además de las recomendadas: 1 semana, 2 semanas, 1 mes (cortesía), 2 meses y la de seña (7 días, solo para un acceso de seña). Siempre con motivo; la fecha la calcula Work.
   - Fulfillment suma «Otra» con el campo de días. El historial la nombra «Prórroga de 10 días: motivo».
   - Tests: `test_subscription_service.py` (días libres, límites, lectura de la Academia).
+
+- **23 de Octubre de 2026 (Ficha: cabecera rediseñada)** *([frontend/src/components/ficha/FichaHeader.jsx](../../frontend/src/components/ficha/FichaHeader.jsx), [frontend/src/components/ficha/ficha.css](../../frontend/src/components/ficha/ficha.css) [MODIFY])*:
+  - La franja de arriba pasa a ser una tarjeta con borde suave y más aire entre datos; cada rótulo lleva su ícono (examen, llamada, closer, teléfono, fuente) y los datos entran de a uno.
+  - Llamada: «Hoy 17:35» con la pastilla de cuánto falta al lado de la hora (no del rótulo).
+  - Closer con avatar de iniciales; teléfono partido como se dicta (`+52 771 396 6588`), punto verde, link a WhatsApp y botón de copiar.

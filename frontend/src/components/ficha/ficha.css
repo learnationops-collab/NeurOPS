@@ -327,31 +327,57 @@
    en una fila en escritorio y, cuando no entran, 3 arriba y 2 abajo sobre una rejilla de seis
    columnas, las dos filas de lado a lado. Con dos columnas quedaba uno suelto abajo. */
 .dc-shell .fi-cab-datos{display:grid;justify-content:start;align-items:start;
-  gap:var(--s3) var(--s6);grid-template-columns:repeat(5,minmax(0,auto))}
-.dc-shell .fi-dato{display:grid;gap:2px;white-space:nowrap;min-width:0}
+  gap:var(--s4) clamp(28px, 4vw, 56px);grid-template-columns:repeat(5,minmax(0,auto))}
+.dc-shell .fi-dato{display:grid;gap:10px;white-space:nowrap;min-width:0;align-content:start}
+
+/* La franja como tarjeta propia (rediseño del 23/10/2026, sobre el ejemplo de Mario): borde
+   suave, el nombre grande arriba y los cinco datos en una fila con aire, rótulos con ícono. */
+.dc-shell .fi-cab{padding:22px 28px 24px;border-radius:20px;
+  border:1px solid color-mix(in srgb, var(--text-on-surface, #fff) 10%, transparent);
+  background:linear-gradient(180deg, color-mix(in srgb, var(--text-on-surface, #fff) 3%, transparent), transparent 70%);
+  gap:var(--s4)}
+.dc-shell .fi-rot{display:inline-flex;align-items:center;gap:6px;letter-spacing:.16em;
+  font-size:10px;opacity:.75}
+.dc-shell .fi-rot svg{opacity:.8;flex:none}
+.dc-shell .fi-val{font-size:15px;font-weight:600;line-height:28px;color:var(--text-on-surface)}
+.dc-shell .fi-avatar{display:inline-grid;place-items:center;width:22px;height:22px;flex:none;
+  border-radius:50%;font-size:9px;font-weight:800;letter-spacing:.02em;color:#fff;
+  background:linear-gradient(135deg, #1d4ed8, #3b82f6);box-shadow:0 0 0 2px color-mix(in srgb, #3b82f6 25%, transparent)}
+.dc-shell .fi-closer-fijo{display:inline-flex;align-items:center;gap:8px}
+.dc-shell .fi-tel{display:inline-flex;align-items:center;gap:8px;min-width:0}
+.dc-shell .fi-tel-punto{width:7px;height:7px;border-radius:50%;background:var(--success);flex:none;
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--success) 18%, transparent)}
+.dc-shell .fi-tel-copiar{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:7px;
+  border:0;background:transparent;color:var(--text-muted, #94a3b8);cursor:pointer;
+  transition:background .15s, color .15s}
+.dc-shell .fi-tel-copiar:hover{background:color-mix(in srgb, var(--text-on-surface, #fff) 8%, transparent);
+  color:var(--text-on-surface)}
+@media (max-width:520px){
+  .dc-shell .fi-cab{padding:16px}
+}
 
 /* La llamada de un vistazo: «Hoy · 17:35» y, junto al rótulo, cuánto falta (FichaHeader). */
 .dc-shell .fi-llamada{--tono:var(--text-muted, #94a3b8)}
 .dc-shell .fi-llamada[data-tono="ahora"]{--tono:var(--brand-secondary)}
 .dc-shell .fi-llamada[data-tono="pronto"]{--tono:var(--warning)}
 .dc-shell .fi-llamada[data-tono="luego"]{--tono:var(--success)}
-.dc-shell .fi-llamada-cab{display:flex;align-items:center;gap:var(--s2)}
 .dc-shell .fi-llamada-falta{display:inline-flex;align-items:center;gap:5px;overflow:hidden;
-  padding:1px 7px 1px 6px;border-radius:999px;font-size:10px;letter-spacing:.02em;text-transform:none;
+  padding:3px 10px 3px 8px;margin-left:6px;border-radius:999px;font-size:11px;font-weight:600;
+  letter-spacing:.01em;text-transform:none;line-height:16px;align-self:center;
   color:var(--tono);background:color-mix(in srgb, var(--tono) 14%, transparent);
   border:1px solid color-mix(in srgb, var(--tono) 30%, transparent)}
 .dc-shell .fi-llamada-falta > span{display:inline-block}
-.dc-shell .fi-llamada-falta i{width:6px;height:6px;border-radius:50%;background:var(--tono);flex:none}
+.dc-shell .fi-llamada-falta i{width:8px;height:8px;border-radius:50%;flex:none;
+  background:radial-gradient(circle, var(--tono) 0 35%, color-mix(in srgb, var(--tono) 45%, transparent) 40% 100%)}
 .dc-shell .fi-llamada[data-tono="ahora"] .fi-llamada-falta i,
 .dc-shell .fi-llamada[data-tono="pronto"] .fi-llamada-falta i{animation:fi-llamada-pulso 1.6s ease-out infinite}
 @keyframes fi-llamada-pulso{
   0%{box-shadow:0 0 0 0 color-mix(in srgb, var(--tono) 60%, transparent)}
   100%{box-shadow:0 0 0 7px transparent}
 }
-.dc-shell .fi-llamada-val{display:flex;align-items:baseline;gap:6px;min-width:0}
-.dc-shell .fi-llamada-val b{font-size:15px;font-weight:800;letter-spacing:-.01em;display:inline-block}
-.dc-shell .fi-llamada-hora{font-size:15px;font-weight:800;color:var(--tono);display:inline-block}
-.dc-shell .fi-llamada[data-tono="paso"] .fi-llamada-val b{opacity:.6}
+.dc-shell .fi-llamada-val{display:flex;align-items:center;gap:6px;min-width:0;height:28px}
+.dc-shell .fi-llamada-val b{font-size:15px;font-weight:800;letter-spacing:-.01em;display:inline-block;
+  color:var(--text-on-surface)}
 @media (prefers-reduced-motion:reduce){
   .dc-shell .fi-llamada-falta i{animation:none}
 }
@@ -367,12 +393,14 @@
 @media (max-width:520px){
   .dc-shell .fi-cab-datos{grid-template-columns:minmax(0,1fr)}
 }
-.dc-shell .fi-closer-btn{display:flex;align-items:center;gap:var(--s2);
-  padding:2px var(--s2) 2px var(--s3);margin-left:calc(-1 * var(--s3));
+.dc-shell .fi-closer-btn{display:flex;align-items:center;gap:var(--s2);height:30px;
+  padding:0 var(--s2) 0 4px;
   border-radius:var(--radius-pill);border:1px solid var(--border-control);
   background:var(--bg-element);color:var(--text-on-surface);font-size:14px;font-weight:600;
   cursor:pointer;justify-self:start}
-.dc-shell .fi-closer-btn:hover{border-color:var(--brand-secondary)}
+.dc-shell .fi-closer-btn{transition:border-color .15s, transform .15s, box-shadow .15s}
+.dc-shell .fi-closer-btn:hover{border-color:var(--brand-secondary);transform:translateY(-1px);
+  box-shadow:0 6px 18px -8px color-mix(in srgb, var(--brand-secondary) 60%, transparent)}
 
 /* La misma franja en modo edicion: el titulo se vuelve el campo del nombre y los cinco
    datos, cinco campos (la fuente se sumo el 09/10/2026). Columnas FIJAS (no `auto` como al
