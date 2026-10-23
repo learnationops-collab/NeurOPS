@@ -3,7 +3,7 @@ Work en sus pantallas. Se calculan en lote, una vez por pedido y solo si el plan
 como un mapa {clave: valor} (un solo parámetro JSON), como hace la Academia con sus sesiones y su Pulso.
 
   De pago (en clientes, personas y toda tabla con client_id):
-    s.estado_pago      baja | vencida | por_vencer | al_dia | sena | pagado (academy_payment_status.regla_estado)
+    s.estado_pago      baja | vencida | por_vencer | al_dia | sena | debe | pagado (academy_payment_status.regla_estado)
     s.deuda            lo que debe (CarteraEnLote: la deuda por venta, o la de inscripciones si no tiene ventas)
     s.proxima_cuota    vencimiento de la próxima cuota pendiente
     s.dias_para_vencer días hasta esa cuota (hoy = 0)
@@ -25,7 +25,8 @@ from app.services.tablas import exclusion
 # clave -> (nombre, tipo, es monto, detalle)
 PAGO = {
     's.estado_pago': ('Estado de pago', 'text', False,
-                      'baja, vencida, por_vencer (7 días o menos), al_dia, sena (solo la seña) o pagado'),
+                      'baja, vencida, por_vencer (7 días o menos), al_dia, sena (solo la seña), '
+                      'debe (saldo sin plan de cuotas) o pagado'),
     's.deuda': ('Deuda', 'number', True, 'Lo que debe hoy: lo acordado en sus ventas menos lo cobrado'),
     's.proxima_cuota': ('Próxima cuota', 'date', False, 'Vencimiento de la próxima cuota pendiente'),
     's.dias_para_vencer': ('Días para la próxima cuota', 'number', False, 'Hoy = 0'),
@@ -78,9 +79,10 @@ def pagos(hoy=None):
         pend = [(v, m) for est, v, m in suyas if est != 'pagado' and v]
         vencidas = [(v, m) for v, m in pend if v < hoy]
         proxima = min((v for v, _ in pend if v >= hoy), default=None)
+        deuda = lote.deuda(cid)
         out[cid] = {
-            'estado': regla_estado(cid in bajas, len(vencidas), proxima, _tipo(t), hoy),
-            'deuda': lote.deuda(cid),
+            'estado': regla_estado(cid in bajas, len(vencidas), proxima, _tipo(t), hoy, deuda),
+            'deuda': deuda,
             'proxima': proxima.isoformat() if proxima else None,
             'dias': (proxima - hoy).days if proxima else None,
             'vencidas': len(vencidas),

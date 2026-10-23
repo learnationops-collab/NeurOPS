@@ -7,7 +7,7 @@ al lado del nombre del alumno y lo cruza con su avance en Avance.
 Se EMPUJA cuando cambia: un pago, el plan de cuotas (crearlo, editarlo, marcar, agregar o borrar una
 cuota) o una baja y su reversión.
 
-El ESTADO (`estado`: pagado, seña, al día, por vencer, vencida, baja) es una regla de Work desde el
+El ESTADO (`estado`: pagado, seña, debe, al día, por vencer, vencida, baja) es una regla de Work desde el
 21/10/2026: la cuota es parte del plan de pago del alumno (`regla_estado`). La Academia lo muestra tal
 cual. Como una cuota que vence cambia el estado sin que nadie toque nada, una vez por día se reenvía a
 los clientes con una cuota cerca de su vencimiento (`avisar_cambios_por_fecha`); la Academia descarta lo
@@ -41,6 +41,8 @@ _PENDIENTES = 'estado_de_pago_sin_avisar'
 POR_VENCER_DIAS = 7
 
 PAGADO, SENA, AL_DIA, POR_VENCER, VENCIDA, BAJA = 'pagado', 'sena', 'al_dia', 'por_vencer', 'vencida', 'baja'
+# Sin cuotas pendientes pero con saldo: pagó parcial y no tiene plan de cuotas (23/10/2026). Debe igual.
+DEBE = 'debe'
 
 # Último día en que se reenviaron los estados que cambian por la fecha (una vez por día y por proceso).
 _ultimo_aviso_por_fecha = None
@@ -74,10 +76,11 @@ def _tipo(tipos):
     return None
 
 
-def regla_estado(baja, vencidas, proxima_vence, tipo, hoy=None):
+def regla_estado(baja, vencidas, proxima_vence, tipo, hoy=None, saldo=0):
     """El estado de pago de un cliente, en este orden: baja · vencida (alguna cuota pendiente ya venció) ·
     por_vencer (la próxima vence en POR_VENCER_DIAS días o menos; hoy = 0) · al_dia · sena (solo dejó la
-    seña) · pagado. La usan `estado()` (va a la Academia, que la muestra tal cual) y el motor de tablas."""
+    seña) · debe (sin cuotas pendientes y con saldo) · pagado. La usan `estado()` (va a la Academia, que la
+    muestra tal cual) y el motor de tablas."""
     hoy = hoy or date.today()
     if baja:
         return BAJA
@@ -85,7 +88,9 @@ def regla_estado(baja, vencidas, proxima_vence, tipo, hoy=None):
         return VENCIDA
     if proxima_vence is not None:
         return POR_VENCER if (proxima_vence - hoy).days <= POR_VENCER_DIAS else AL_DIA
-    return SENA if tipo == 'seña' else PAGADO
+    if tipo == 'seña':
+        return SENA
+    return DEBE if (saldo or 0) > 0 else PAGADO
 
 
 def estado(client, hoy=None):
@@ -119,6 +124,7 @@ def estado(client, hoy=None):
     proxima = next((c for c in pendientes if c.fecha_vencimiento and c.fecha_vencimiento >= hoy), None)
     tipo = _tipo(tipos)
     baja = baja_service.descriptor(client)
+    saldo = round(float(CloserFollowUpService._client_debt(client.id)), 2)
 
     return {
         'work_client_id': client.id,
@@ -126,7 +132,8 @@ def estado(client, hoy=None):
         'email': (email or '').strip().lower() or None,
         'learnation_user_id': client.learnation_user_id,
         'tipo': tipo,
-        'estado': regla_estado(baja, len(vencidas), proxima.fecha_vencimiento if proxima else None, tipo, hoy),
+        'estado': regla_estado(baja, len(vencidas), proxima.fecha_vencimiento if proxima else None, tipo, hoy,
+                               saldo),
         'closer_email': AcademyAccessService.closer_de(client),
         'cuotas': {
             'total': len(cuotas),
@@ -145,7 +152,7 @@ def estado(client, hoy=None):
         },
         'total': round(float(client.total_amount), 2) if client.total_amount is not None else None,
         'pagado': round(sum(float(v.monto or 0) for v in ventas), 2),
-        'saldo': round(float(CloserFollowUpService._client_debt(client.id)), 2),
+        'saldo': saldo,
         'ultimo_pago': {'fecha': _iso(ultima.date.date() if ultima.date else None),
                         'monto': round(float(ultima.monto or 0), 2),
                         'tipo_pago': ultima.tipo_pago} if ultima else None,
