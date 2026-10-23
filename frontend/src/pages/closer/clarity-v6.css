@@ -1,0 +1,244 @@
+/* ===== Closer Workspace con el look de Learnation Clarity (Leadership) =====
+   Prueba pedida el 23/10/2026: «Confirmar» con los colores, el branding y el aura de Clarity.
+   Va solo sobre `.clarity-v6`, que el Workspace pone en la página mientras está en Confirmar;
+   el resto de las secciones sigue con el v6 de siempre. Los valores son los tokens de
+   `resources/css/clarity.css` de Leadership (fondo navy en diagonal, materiales blancos al 4-8 %,
+   magenta como acento, tarjeta foco con su aura de colores que se mueve).
+   ────────────────────────────────────────────────────── */
+.clarity-v6 {
+  --cl-magenta: #FF3FA4;
+  --cl-magenta-light: #FF6AD5;
+  --cl-primary: #1323C6;
+  --cl-ink: #020617;
+  --cl-lila: #7D8BFF;
+  --cl-success: #2FBF8F;
+  --cl-warning: #D9A441;
+  --cl-info: #4E8BD8;
+  --cl-mat-1: rgba(255, 255, 255, .04);
+  --cl-element: rgba(255, 255, 255, .08);
+  --cl-element-hover: rgba(255, 255, 255, .12);
+  --cl-hundido: rgba(0, 0, 0, .34);
+  --cl-border: rgba(255, 255, 255, .15);
+  --cl-border-subtle: rgba(255, 255, 255, .05);
+  --cl-sheen: rgba(255, 255, 255, .10);
+  --cl-muted: rgba(255, 255, 255, .60);
+  --cl-muted-40: rgba(255, 255, 255, .40);
+  --cl-spring: cubic-bezier(.32, .72, 0, 1);
+  background: linear-gradient(135deg, #020617 0%, #0A0E3D 50%, #05082D 100%);
+  background-attachment: fixed;
+  background-color: #020617;
+}
+
+/* ---------- Las tres tarjetas de arriba ---------- */
+.clarity-v6 .tsp-v6,
+.clarity-v6 .tud-v6 {
+  border-radius: 28px;
+  border: 1px solid var(--cl-border);
+  border-top-color: var(--cl-sheen);
+  background: var(--cl-element);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, .40);
+}
+
+/* «Tu siguiente paso» es la tarjeta foco: el velo azul arriba a la izquierda, magenta abajo a
+   la derecha, y encima el aura (manchas de color difusas que se mueven despacio). */
+.clarity-v6 .tsp-v6,
+.clarity-v6 .tsp-v6.tsp-done-v6 {
+  isolation: isolate;
+  background:
+    radial-gradient(120% 130% at 8% 0%, color-mix(in srgb, var(--cl-primary) 42%, transparent), transparent 62%),
+    radial-gradient(80% 110% at 96% 100%, color-mix(in srgb, var(--cl-magenta) 16%, transparent), transparent 64%),
+    var(--cl-element);
+  border-color: var(--cl-border);
+  border-top-color: var(--cl-sheen);
+}
+.clarity-v6 .tsp-v6::before,
+.clarity-v6 .tsp-v6::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  width: 46%;
+  aspect-ratio: 1;
+  height: auto;
+  border-radius: 50%;
+  filter: blur(42px);
+  mix-blend-mode: screen;
+  opacity: .45;
+  pointer-events: none;
+}
+.clarity-v6 .tsp-v6::before {
+  background: var(--cl-magenta);
+  left: -8%;
+  top: -30%;
+  right: auto;
+  animation: clv6-aura-1 17s ease-in-out infinite;
+}
+.clarity-v6 .tsp-v6::after {
+  background: var(--cl-success);
+  left: 58%;
+  top: 30%;
+  right: auto;
+  animation: clv6-aura-2 21s ease-in-out infinite;
+}
+.clarity-v6 .tsp-v6:hover {
+  border-color: color-mix(in srgb, var(--cl-magenta) 45%, transparent);
+}
+.clarity-v6 .tsp-v6.tsp-done-v6:hover {
+  border-color: var(--cl-border);
+}
+
+.clarity-v6 .tsp-lbl-v6,
+.clarity-v6 .tud-lbl-v6 {
+  font-size: 10px;
+  letter-spacing: .2em;
+  color: var(--cl-muted-40);
+}
+.clarity-v6 .tsp-dot-v6 {
+  background: var(--cl-magenta);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--cl-magenta) 18%, transparent);
+}
+.clarity-v6 .tsp-dot-v6.ok {
+  background: var(--cl-success);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--cl-success) 18%, transparent);
+}
+.clarity-v6 .tsp-name-v6 {
+  font-size: clamp(22px, 2.2vw, 28px);
+  letter-spacing: -.025em;
+  text-wrap: balance;
+}
+.clarity-v6 .tsp-sub-v6 { color: var(--cl-muted); }
+
+/* El botón grande es el CTA magenta de Clarity (el «Flow» de Momentum), no el gradiente azul. */
+.clarity-v6 .tsp-cta-v6 {
+  background: var(--cl-magenta);
+  color: var(--cl-ink);
+  box-shadow: 0 10px 15px -3px color-mix(in srgb, var(--cl-magenta) 35%, transparent);
+  letter-spacing: .16em;
+}
+.clarity-v6 .tsp-cta-v6:hover {
+  background: var(--cl-magenta-light);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--cl-magenta) 16%, transparent), 0 12px 22px -4px color-mix(in srgb, var(--cl-magenta) 45%, transparent);
+}
+
+/* Cifras blancas, como el 128 de Clarity; el color queda en la barra. */
+.clarity-v6 .tud-pct-v6,
+.clarity-v6 .com-monto-v6 {
+  color: #fff;
+  font-size: 38px;
+  letter-spacing: -.035em;
+}
+.clarity-v6 .tud-sub-v6 { color: var(--cl-muted-40); }
+.clarity-v6 .tud-foot-v6 { color: var(--cl-muted); }
+.clarity-v6 .tud-xp-v6 {
+  color: var(--cl-warning);
+  background: color-mix(in srgb, var(--cl-warning) 12%, transparent);
+  border-color: color-mix(in srgb, var(--cl-warning) 30%, transparent);
+}
+.clarity-v6 .com-ic-v6 {
+  background: color-mix(in srgb, var(--cl-success) 14%, transparent);
+  color: var(--cl-success);
+}
+.clarity-v6 .pbarw-v6 {
+  height: 8px;
+  background: var(--cl-hundido);
+  border-color: var(--cl-border-subtle);
+}
+.clarity-v6 .pbarw-v6 i {
+  background: linear-gradient(90deg, var(--cl-magenta), var(--cl-magenta-light));
+  box-shadow: 0 0 14px color-mix(in srgb, var(--cl-magenta) 50%, transparent);
+}
+
+/* ---------- Tablero ---------- */
+.clarity-v6 .kcol-v6 {
+  border-radius: 28px;
+  border: 1px solid var(--cl-border);
+  border-top-color: var(--cl-sheen);
+  background: var(--cl-mat-1);
+  padding: 8px 8px 12px;
+}
+.clarity-v6 .kch-v6 {
+  border-bottom-color: var(--cl-border-subtle);
+  padding: 16px 14px 14px;
+}
+.clarity-v6 .kch-v6 b {
+  font-size: 10px;
+  letter-spacing: .2em;
+  color: var(--cl-muted);
+}
+.clarity-v6 .kch-v6 .n-v6 {
+  background: var(--cl-element);
+  border-color: var(--cl-border-subtle);
+  color: #fff;
+}
+.clarity-v6 .kcol-v6.k1-v6 .dt-v6 { background: var(--cl-warning); box-shadow: 0 0 0 3px color-mix(in srgb, var(--cl-warning) 18%, transparent); }
+.clarity-v6 .kcol-v6.k3-v6 .dt-v6 { background: var(--cl-success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--cl-success) 18%, transparent); }
+.clarity-v6 .ksub-v6 { color: var(--cl-muted-40); }
+.clarity-v6 .ksub-v6:not(:first-child) { border-top-color: var(--cl-border-subtle); }
+
+/* Cada lead es un peldaño de la escalera de Momentum: material suave, borde casi invisible que
+   aparece al pasar el mouse, sin sombra pesada. */
+.clarity-v6 .kcard-v6 {
+  border-radius: 18px;
+  background: var(--cl-mat-1);
+  border: 1px solid var(--cl-border-subtle);
+  box-shadow: none;
+  padding: 16px;
+}
+.clarity-v6 .kcard-v6:hover {
+  background: var(--cl-element);
+  border-color: var(--cl-border);
+  box-shadow: 0 10px 24px -8px color-mix(in srgb, var(--cl-magenta) 28%, transparent);
+}
+.clarity-v6 .kcard-v6 .m-v6 { color: var(--cl-muted-40); }
+.clarity-v6 .kcard-v6 .when-v6 { color: var(--cl-muted-40); }
+.clarity-v6 .kcard-v6 .when-v6 .wd-v6 { background: var(--cl-muted-40); }
+.clarity-v6 .kcard-v6 .when-v6.soon-v6 { color: var(--cl-magenta-light); }
+.clarity-v6 .kcard-v6 .when-v6.soon-v6 .wd-v6 { background: var(--cl-magenta); }
+.clarity-v6 .kcard-v6 .nt-v6 { background: var(--cl-hundido); color: var(--cl-muted); }
+
+/* Etiquetas como los chips de Clarity: pastilla teñida con su color (`--c`). */
+.clarity-v6 .ktag-v6 {
+  --c: var(--cl-lila);
+  border-radius: 99px;
+  padding: 3px 10px;
+  font-size: 9px;
+  letter-spacing: .14em;
+  background: color-mix(in srgb, var(--c) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c) 34%, transparent);
+  color: color-mix(in srgb, var(--c) 70%, #fff);
+}
+.clarity-v6 .klisto-v6 {
+  border-radius: 99px;
+  padding: 7px 10px;
+  background: color-mix(in srgb, var(--cl-success) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cl-success) 30%, transparent);
+  color: var(--cl-success);
+  letter-spacing: .14em;
+}
+
+/* El botón de cada tarjeta, en el mismo magenta que el CTA de arriba. */
+.clarity-v6 .kadv-v6 {
+  border-radius: 99px;
+  background: var(--cl-magenta);
+  color: var(--cl-ink);
+  box-shadow: 0 8px 14px -4px color-mix(in srgb, var(--cl-magenta) 35%, transparent);
+}
+.clarity-v6 .kadv-v6:hover {
+  background: var(--cl-magenta-light);
+  box-shadow: 0 10px 20px -4px color-mix(in srgb, var(--cl-magenta) 45%, transparent);
+}
+.clarity-v6 .kempty-v6.done-v6 { color: var(--cl-success); }
+
+@keyframes clv6-aura-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: .45; }
+  33% { transform: translate(90%, 28%) scale(1.3); opacity: .7; }
+  66% { transform: translate(38%, -24%) scale(.85); opacity: .35; }
+}
+@keyframes clv6-aura-2 {
+  0%, 100% { transform: translate(0, 0) scale(1.1); opacity: .4; }
+  40% { transform: translate(-70%, 24%) scale(.82); opacity: .65; }
+  75% { transform: translate(52%, -18%) scale(1.28); opacity: .5; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .clarity-v6 .tsp-v6::before,
+  .clarity-v6 .tsp-v6::after { animation: none; }
+}

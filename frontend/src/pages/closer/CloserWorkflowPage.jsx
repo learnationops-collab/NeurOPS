@@ -29,6 +29,7 @@ import { armarMenuSesion, rotuloDeSesion } from '../../sesion/menuSesion';
 import { useConfiguracion } from '../../sesion/ConfiguracionContext';
 import '../comercial/comercial.css';
 import '../../components/dashboard/pareja.css';
+import './clarity-v6.css';
 import ComisionMesCard from './components/ComisionMesCard';
 import ProcrastinarModal from './components/ProcrastinarModal';
 import YaTieneAgenda from './components/YaTieneAgenda';
@@ -1288,7 +1289,7 @@ const CloserWorkflowPage = () => {
                 <div className="m-v6">@{a.instagram ? a.instagram.replace('@', '') : 'usuario'}</div>
 
                 <div className="flex gap-1.5 flex-wrap mt-2">
-                    <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
+                    <span className="ktag-v6 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
                         {a.origin || 'Meta Ads'}
                     </span>
                     {isPendingReferral && (
@@ -1297,7 +1298,7 @@ const CloserWorkflowPage = () => {
                         </span>
                     )}
                     {a.examen && (
-                        <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
+                        <span className="ktag-v6 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
                             {a.examen}
                         </span>
                     )}
@@ -1349,14 +1350,14 @@ const CloserWorkflowPage = () => {
                 )}
                 {phase === 'call_done' && (
                     <div className="flex gap-1 mt-2.5">
-                        <span className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 w-full text-center">
+                        <span className="klisto-v6 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 w-full text-center">
                             ✓ Reportado
                         </span>
                     </div>
                 )}
                 {phase === 'confirmado' && (
                     <div className="flex gap-1 mt-2.5">
-                        <span className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 w-full text-center">
+                        <span className="klisto-v6 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 w-full text-center">
                             ✓ Listo · espera su fecha
                         </span>
                     </div>
@@ -1483,7 +1484,7 @@ const CloserWorkflowPage = () => {
     };
 
     return (
-        <div ref={paginaRef} className="h-screen overflow-y-auto bg-v6 text-slate-100 flex flex-col custom-scrollbar"
+        <div ref={paginaRef} className={`h-screen overflow-y-auto bg-v6 text-slate-100 flex flex-col custom-scrollbar${activeView === 'inbox' && activeStep === 'confirmations' ? ' clarity-v6' : ''}`}
             style={{ paddingBottom: 'calc(132px + env(safe-area-inset-bottom, 0px))' }}>
 
             {/* Header del Espacio de Trabajo Premium v6. Solo la marca y el buscador (pedido del
