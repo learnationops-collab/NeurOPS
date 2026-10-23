@@ -33,7 +33,7 @@ const labels = (vocabulario, porDefecto) => (vocabulario?.length
 
 // Cobrar una cuota es declarar una venta de tipo Cuota: `POST /ficha/<id>/venta` pasa por
 // `SheetsService.post_to_sheets`, que es el único camino que hace todo lo que un cobro implica
-// (FinancialSale, espejo a Enrollment/Payment, secuencia de pagos). Y ese camino habla en
+// (FinancialSale, su venta, secuencia de pagos). Y ese camino habla en
 // `tipo_pago` / `metodo_pago` / `marca_temporal`, no en monto/medio/fecha: mandarle las otras
 // claves era pedirle un cobro sin tipo de pago, que rechazaba siempre.
 //

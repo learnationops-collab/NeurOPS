@@ -125,12 +125,13 @@ def identidades_con_venta():
     inviable (tardaba minutos por marca).
     """
     from app.models import FinancialSale
+    from app.services import pagos_copia
 
     # Las personas con algún pago (`p:<uuid>`) y, de los pagos sin persona, su mail e instagram
     # copiados (docs/plan_personas.md, Etapa 2b).
     conocidas = set()
     for puuid, mail, ig in db.session.query(
-            FinancialSale.person_uuid, FinancialSale.mail_cliente, FinancialSale.instagram).all():
+            FinancialSale.person_uuid, pagos_copia.MAIL, pagos_copia.INSTAGRAM).all():
         if puuid:
             conocidas.add(f'p:{puuid}')
             continue
@@ -151,6 +152,7 @@ def sugerir_conservada(grupo, ventas_conocidas=None):
     pasa, saber si hay venta no cuesta una consulta por candidato.
     """
     from app.models import FinancialSale
+    from app.services import pagos_copia
 
     def tiene_venta(a):
         if a.person_uuid:
@@ -168,9 +170,8 @@ def sugerir_conservada(grupo, ventas_conocidas=None):
         # Por la copia, solo los pagos sin persona.
         consulta = FinancialSale.query.filter(FinancialSale.person_uuid.is_(None))
         if mail:
-            return consulta.filter(db.func.lower(FinancialSale.mail_cliente) == mail).count() > 0
-        return consulta.filter(
-            db.func.lower(db.func.replace(FinancialSale.instagram, '@', '')) == ig).count() > 0
+            return consulta.filter(pagos_copia.MAIL_NORMALIZADO == mail).count() > 0
+        return consulta.filter(pagos_copia.IG_NORMALIZADO == ig).count() > 0
 
     # Los dos últimos criterios son el desempate y tienen que ser deterministas: con tres
     # filas idénticas (mismo día, misma hora, mismo estado) `max` devolvía la primera de la

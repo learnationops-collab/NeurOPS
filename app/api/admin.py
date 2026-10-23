@@ -12,7 +12,7 @@ import pandas as pd
 import io
 import json
 import math
-from app.models import db, User, Client, Lead, Expense, RecurringExpense, Payment, Enrollment, PaymentMethod, Event, Appointment, Integration, Pipeline, PipelineStage, Notification, FeatureToggle
+from app.models import db, User, Client, Expense, RecurringExpense, PaymentMethod, Event, Appointment, Integration, Pipeline, PipelineStage, Notification, FeatureToggle
 from datetime import datetime, date, timedelta
 from sqlalchemy import or_
 import calendar
@@ -136,37 +136,6 @@ def update_feature_toggle(key):
     toggle.updated_by_id = current_user.id
     db.session.commit()
     return jsonify(toggle.to_dict()), 200
-
-@bp.route('/admin/finance/sales', methods=['GET'])
-@login_required
-@admin_required
-def get_finance_sales():
-    from app.models import Program
-    page = request.args.get('page', 1, type=int)
-    per_page = 10
-    
-    # Query for completed payments
-    query = Payment.query.join(Enrollment).join(Client).join(Program).filter(
-        Payment.status == 'completed'
-    ).order_by(Payment.date.desc())
-    
-    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-    
-    sales = []
-    for p in pagination.items:
-        sales.append({
-            "student": [p.enrollment.client.full_name[0] if p.enrollment.client.full_name else "?", p.enrollment.client.full_name or p.enrollment.client.email],
-            "program": p.enrollment.program.name,
-            "amount": float(p.amount),
-            "date": p.date.isoformat()
-        })
-        
-    return jsonify({
-        "sales": sales,
-        "pages": pagination.pages,
-        "current_page": page,
-        "total": pagination.total
-    }), 200
 
 @bp.route('/admin/dashboard/kpis', methods=['GET'])
 @login_required
@@ -577,7 +546,6 @@ def get_lead_profile(id):
             "phone": client.phone,
             "instagram": client.instagram
         },
-        "enrollments": [{"id": e.id, "program": e.program.name, "date": e.enrollment_date.isoformat(), "closer": e.closer_rel.username if e.closer_rel else None} for e in client.enrollments],
         "appointments": [{"id": a.id, "start_time": a.start_time.isoformat(), "status": a.result or "Agendada", "closer": a.closer.username if a.closer else None, "origin": a.origin} for a in client.appointments]
     }
     return jsonify(profile_data), 200
@@ -717,51 +685,54 @@ def manage_db_agendas():
 @login_required
 @admin_required
 def manage_db_sales():
+    """Los pagos (`FinancialSale`) para la pestaña Datos › Ventas (Pagos). Antes leía el espejo
+    Enrollment/Payment (Etapa 2c de docs/plan_personas.md)."""
+    from app.models import FinancialSale, Person
+    from app.services.closer_service import PROGRAM_LABELS
+    from app.services.sheets_service import SheetsService
     if request.method == 'POST':
         data = request.get_json() or {}
-        id = data.get('id')
-        if id:
-            p = Payment.query.get_or_404(id)
-            if 'amount' in data: p.amount = float(data['amount'])
-            if 'payment_type' in data: p.payment_type = data['payment_type']
-            if 'date' in data: p.date = datetime.fromisoformat(data['date'].replace('Z', ''))
+        p = FinancialSale.query.get_or_404(data.get('id'))
+        if 'amount' in data: p.monto = float(data['amount'])
+        if 'date' in data: p.date = datetime.fromisoformat(data['date'].replace('Z', ''))
         db.session.commit()
         return jsonify({"message": "Registro de venta actualizado"}), 200
-        
+
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
-    payment_type_filter = request.args.get('payment_type')
-    payment_method_filter = request.args.get('payment_method')
+    # Los valores del filtro de la pantalla, en el tipo canónico de `parse_tipo_pago`.
+    tipos_pedidos = {TIPO_DE_FILTRO.get(t.strip().lower()) for t in (request.args.get('payment_type') or '').split(',') if t.strip()}
+    metodos = [m.strip() for m in (request.args.get('payment_method') or '').split(',') if m.strip()]
 
-    # Join PaymentMethod via Payment.payment_method (assuming it's set up)
-    # Payment model: payment_method_id is FK. 
-    # Use outerjoin to be safe
-    query = Payment.query.join(Enrollment).join(Client).outerjoin(PaymentMethod, Payment.payment_method_id == PaymentMethod.id)
-    
+    query = FinancialSale.query.outerjoin(Person, FinancialSale.person_uuid == Person.uuid).filter(
+        or_(FinancialSale.estado.is_(None), FinancialSale.estado.ilike('completada'), FinancialSale.estado.ilike('confirmada')))
     if search:
         term = f"%{search}%"
-        query = query.filter(or_(Client.full_name.ilike(term), Client.email.ilike(term)))
-    
-    if start_date: query = query.filter(Payment.date >= datetime.strptime(start_date, '%Y-%m-%d'))
-    if end_date: query = query.filter(Payment.date < datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1))
-    
-    if payment_type_filter:
-        types = payment_type_filter.split(',')
-        if types: query = query.filter(Payment.payment_type.in_(types))
-    
-    if payment_method_filter:
-        methods = payment_method_filter.split(',')
-        if methods: query = query.filter(PaymentMethod.name.in_(methods))
+        query = query.filter(or_(Person.full_name.ilike(term), Person.email.ilike(term)))
+    if start_date: query = query.filter(FinancialSale.date >= datetime.strptime(start_date, '%Y-%m-%d'))
+    if end_date: query = query.filter(FinancialSale.date < datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1))
+    if metodos:
+        query = query.filter(or_(*[FinancialSale.metodo_pago.ilike(f'%{m}%') for m in metodos]))
+    filas = query.order_by(FinancialSale.date.desc()).all()
+    datos = []
+    for p in filas:
+        programa, tipo = SheetsService.parse_tipo_pago(p.tipo_pago)
+        if tipos_pedidos and tipo not in tipos_pedidos:
+            continue
+        contacto = p.contacto()
+        datos.append({"id": p.id, "date": p.date.isoformat() if p.date else None,
+                      "student": contacto.get('nombre_cliente') or contacto.get('mail_cliente'),
+                      "program": PROGRAM_LABELS.get(programa, programa or '—'),
+                      "amount": float(p.monto or 0), "payment_type": tipo or p.tipo_pago, "method": p.metodo_pago or "N/A"})
+    por_pagina = 50
+    pagina = datos[(page - 1) * por_pagina:page * por_pagina]
+    return jsonify({"total": len(datos), "pages": max(1, -(-len(datos) // por_pagina)), "data": pagina}), 200
 
-    pagination = query.order_by(Payment.date.desc()).paginate(page=page, per_page=50, error_out=False)
-    return jsonify({"total": pagination.total, "pages": pagination.pages, "data": [{
-        "id": p.id, "date": p.date.isoformat(), 
-        "student": p.enrollment.client.full_name or p.enrollment.client.email,
-        "program": p.enrollment.program.name,
-        "amount": float(p.amount), "payment_type": p.payment_type, "method": p.payment_method.name if p.payment_method else "N/A"
-    } for p in pagination.items]}), 200
+
+# El filtro de tipo de la pestaña Ventas (Pagos) -> tipo canónico de `SheetsService.parse_tipo_pago`.
+TIPO_DE_FILTRO = {'full': 'completo', 'installment': 'cuota', 'down payment': 'seña'}
 
 @bp.route('/admin/db/questions', methods=['GET', 'POST'])
 @bp.route('/admin/db/questions/<int:id>', methods=['DELETE'])
@@ -883,50 +854,6 @@ def client_dedup():
         "message": f"Se fusionaron {result['clients_merged']} clientes duplicados en {result['groups_merged']} grupos.",
         **result
     }), 200
-
-@bp.route('/admin/tools/migrate-leads', methods=['POST'])
-@login_required
-@admin_required
-def migrate_leads():
-    try:
-        from app.models import User, Lead, PipelineStage
-        from sqlalchemy import or_
-        lead_users = User.query.filter(or_(User.role == 'lead', User.role == 'student')).all()
-        migrated_count = 0
-        
-        # Get default stage if exists
-        default_stage = PipelineStage.query.order_by(PipelineStage.order).first()
-        
-        for user in lead_users:
-            # Check if lead already exists by email
-            existing_lead = None
-            if user.email:
-                existing_lead = Lead.query.filter_by(email=user.email).first()
-            
-            if not existing_lead:
-                # Create a new lead
-                new_lead = Lead(
-                    name=user.username,
-                    email=user.email,
-                    manychat_id=f"migrated_{user.id}_{int(datetime.utcnow().timestamp())}",
-                    stage_id=default_stage.id if default_stage else None,
-                    notes=f"Migrado desde usuario (ID: {user.id})"
-                )
-                db.session.add(new_lead)
-                migrated_count += 1
-            
-            # Delete the user record
-            db.session.delete(user)
-        
-        db.session.commit()
-        return jsonify({
-            "success": True, 
-            "message": f"Se han migrado y eliminado {migrated_count} usuarios tipo lead.",
-            "total_deleted": len(lead_users)
-        }), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"success": False, "message": f"Error en la migración: {str(e)}"}), 500
 
 @bp.route('/admin/integrations', methods=['GET', 'POST', 'DELETE'])
 @login_required
@@ -1421,81 +1348,6 @@ def execute_import():
 
 
 # --- Quick Actions (Sales & Support) ---
-
-@bp.route('/admin/sales/quick-create', methods=['POST'])
-@login_required
-@admin_required
-def quick_create_sale():
-    from app.models import Program
-    data = request.get_json() or {}
-    try:
-        # 1. Validate inputs
-        required = ['lead_id', 'program_id', 'payment_method_id', 'payment_amount', 'payment_type']
-        for field in required:
-            if not data.get(field):
-                return jsonify({"error": f"Falta el campo {field}"}), 400
-
-        # float() acepta 'nan' e 'inf' y falla con un 500 (texto crudo de la excepcion) si no es un numero
-        try:
-            amount = float(data['payment_amount'])
-        except (TypeError, ValueError):
-            amount = math.nan
-        if not math.isfinite(amount):
-            return jsonify({"error": "payment_amount debe ser un numero"}), 400
-
-        # 2. Get entities
-        lead = Lead.query.get(data['lead_id'])
-        program = Program.query.get(data['program_id'])
-        method = PaymentMethod.query.get(data['payment_method_id'])
-
-        if not lead or not program or not method:
-            return jsonify({"error": "Entidades no encontradas (Lead, Programa o Método)"}), 404
-
-        # 3. Create or Find Client (from Lead)
-        # Sin email no hay con quien cruzar: filter_by(email=None) es `email IS NULL` y le colgaba la venta
-        # al primer cliente sin email (otra persona). Un email vacio se guarda como NULL (la columna es unica).
-        email = (lead.email or '').strip() or None
-        client = Client.query.filter_by(email=email).first() if email else None
-        if not client:
-            client = Client(
-                full_name=lead.name,
-                email=email,
-                phone=lead.phone if hasattr(lead, 'phone') else None,
-                instagram=lead.instagram_username
-            )
-            db.session.add(client)
-            db.session.flush() # Get ID
-
-        # 4. Create Enrollment
-        enrollment = Enrollment(
-            client_id=client.id,
-            program_id=program.id,
-            closer_id=current_user.id, # Admin as closer
-            enrollment_date=datetime.utcnow()
-        )
-        db.session.add(enrollment)
-        db.session.flush()
-
-        # 5. Create Payment
-        payment = Payment(
-            enrollment_id=enrollment.id,
-            payment_method_id=method.id,
-            amount=amount,
-            payment_type=data['payment_type'],
-            status=data.get('status', 'completed'),
-            date=datetime.utcnow()
-        )
-        db.session.add(payment)
-
-        # 6. Update Lead status to Won (Optional logic for admin)
-        # For now, we just record the sale.
-
-        db.session.commit()
-        return jsonify({"message": "Venta registrada exitosamente", "enrollment_id": enrollment.id}), 201
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
 
 @bp.route('/admin/closer-aliases/options', methods=['GET'])
 @login_required

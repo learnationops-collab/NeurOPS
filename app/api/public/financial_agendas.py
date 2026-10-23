@@ -1,14 +1,14 @@
 """Ingreso de agendas financieras (webhook) y verificacion de hora."""
 from flask import request, jsonify
 from app.models import db, FinancialAgenda
+from app.services import agenda_contacto_service
 from datetime import datetime, timedelta
 from sqlalchemy import or_, func
 from app.services.agenda_time_service import zona_origen, limites_dia_origen, resolver_hora_agenda, como_se_ve
 from . import bp
 # Re-export: otros modulos importan estos helpers desde aca.
 from .financial_agendas_helpers import (  # noqa: F401
-    parse_date_robustly, ESTADOS_AGENDA_ABIERTA, _SEPARADORES_TELEFONO, _whatsapp_solo_digitos,
-    _cola_telefono, _split_multi, _build_agenda_queries, _resolve_closer_results)
+    parse_date_robustly, ESTADOS_AGENDA_ABIERTA, _split_multi, _build_agenda_queries, _resolve_closer_results)
 
 
 @bp.route('/public/financial-agendas/verificar-hora', methods=['POST'])
@@ -126,23 +126,12 @@ def receive_financial_agendas():
         mail_val = (item.get('mail') or item.get('email') or '').strip().lower()
         phone_val = (item.get('whatsapp') or item.get('phone') or item.get('telefono') or '').strip()
         
-        copia = []
-        if ig_norm and ig_norm != 'n/a':
-            copia.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_norm)
-        if mail_val and mail_val != 'n/a' and '@' in mail_val:
-            copia.append(func.lower(FinancialAgenda.mail) == mail_val)
-        cola_telefono = _cola_telefono(phone_val)
-        if cola_telefono:
-            # Se comparan solo los digitos y solo los ultimos: el mismo numero llega
-            # escrito '+51 996 526 031' una vez y '+51996526031' la otra, y con el LIKE
-            # sobre el texto crudo esas dos no matcheaban -- el lead se duplicaba aunque
-            # fuera la misma persona el mismo dia (26/09/2026).
-            copia.append(_whatsapp_solo_digitos().like(f"%{cola_telefono}"))
-        # Las agendas de su persona; la copia solo cuenta en las que no tienen (Etapa 2b).
-        from app.services import agenda_contacto_service, person_service
-        persona = person_service.buscar(email=mail_val, instagram=ig_norm, phone=phone_val) if copia else None
-        client_filters = [c for c in (FinancialAgenda.person_uuid == persona.uuid if persona else None,
-                                      agenda_contacto_service.sin_persona(*copia)) if c is not None]
+        # El mismo lead es la misma persona (Etapa 2c): la de su mail, instagram o teléfono. El teléfono
+        # lo normaliza `person_service`, así '+51 996 526 031' y '+51996526031' son el mismo.
+        from app.services import person_service
+        persona = person_service.buscar(email=mail_val if '@' in mail_val else None, instagram=ig_norm,
+                                        phone=phone_val if phone_val.lower() != 'n/a' else None)
+        client_filters = [FinancialAgenda.person_uuid == persona.uuid] if persona else []
 
         if client_filters and agenda_date:
             # Una agenda ya marcada como repetida no puede recibir datos nuevos: la agenda
@@ -223,7 +212,6 @@ def receive_financial_agendas():
         if existing:
             # Actualizar datos de agenda existente
             existing.nombre = str(setter).strip()
-            existing.lead = str(lead_val).strip()
             if raw_closer:
                 existing.closer = BookingService.normalize_closer_name(raw_closer)
             existing.fecha_meet = dt_str or existing.fecha_meet
@@ -239,18 +227,12 @@ def receive_financial_agendas():
             existing.estado = item.get('estado') or existing.estado
             existing.grupo = grupo_val or existing.grupo
             existing.encargado_triage = encargado_triage_val or existing.encargado_triage
-            # Mail/whatsapp/instagram no se actualizaban acá: si el primer webhook del día
-            # llegaba sin email (o con 'N/A') y uno posterior del mismo lead (ej. Calendly
-            # reprogramado) sí lo traía, la agenda existente se quedaba con el dato viejo para
-            # siempre — y ese es el valor que sync_financial_agenda_to_appointment usa después
-            # para el Client. Solo se pisa cuando el valor nuevo es mejor que 'N/A'/vacío.
-            if mail_val and mail_val != 'n/a' and '@' in mail_val:
-                existing.mail = item.get('mail') or item.get('email')
-            if phone_val and phone_val != 'n/a':
-                existing.whatsapp = item.get('whatsapp') or item.get('phone') or item.get('telefono')
-            if ig_norm and ig_norm != 'n/a':
-                existing.instagram = item.get('instagram') or item.get('ig')
             existing.raw_data = {**item, '_hora_diagnostico': diag_hora}
+            # El mail, whatsapp o instagram que llega en un reenvío (el que faltaba) se le anota a su
+            # persona (Etapa 2c): la agenda ya no guarda el contacto.
+            agenda_contacto_service.dar_persona(existing, lead_val, item.get('mail') or item.get('email'),
+                                                item.get('instagram') or item.get('ig'),
+                                                item.get('whatsapp') or item.get('phone') or item.get('telefono'))
             agendas_created.append(existing)
         else:
             if not (item.get('mail') or item.get('email')):
@@ -262,22 +244,22 @@ def receive_financial_agendas():
                     f"[AGENDA SIN EMAIL] n8n mandó la agenda de '{lead_val}' sin 'mail' ni 'email' en el payload. "
                     f"Keys recibidas: {list(item.keys())}"
                 )
+            # Sin ningún dato de contacto, la persona se crea solo con el nombre (`dar_persona`).
             # Crear nueva agenda si no existe duplicado
             agenda = FinancialAgenda(
                 nombre=str(setter).strip(),
-                lead=str(lead_val).strip(),
                 closer=BookingService.normalize_closer_name(raw_closer or 'Sin asignar'),
                 fecha_meet=dt_str or str(agenda_date),
                 date=agenda_date,
                 registro=registro_val,
-                instagram=item.get('instagram') or item.get('ig') or 'N/A',
-                whatsapp=item.get('whatsapp') or item.get('phone') or item.get('telefono') or 'N/A',
-                mail=item.get('mail') or item.get('email') or 'N/A',
                 estado=item.get('estado') or 'Pendiente',
                 grupo=grupo_val,
                 encargado_triage=encargado_triage_val,
                 raw_data={**item, '_hora_diagnostico': diag_hora}
             )
+            agenda_contacto_service.dar_persona(agenda, lead_val, item.get('mail') or item.get('email'),
+                                                item.get('instagram') or item.get('ig'),
+                                                item.get('whatsapp') or item.get('phone') or item.get('telefono'))
             db.session.add(agenda)
             agendas_created.append(agenda)
             saved += 1

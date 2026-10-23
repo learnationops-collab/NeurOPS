@@ -4,7 +4,7 @@ from datetime import datetime
 
 import pytest
 
-from app.models import FinancialAgenda, FinancialSale
+from app.models import FinancialSale
 
 OCTUBRE = 'start_date=2026-10-01&end_date=2026-10-31'
 
@@ -28,13 +28,6 @@ def venta(db, monto=1000.0, setter='Elias', closer='jeancarlo@thelearnation.com'
           tipo='Bootcamp - Pago completo', fecha=datetime(2026, 10, 3), **campos):
     nueva = FinancialSale(monto=monto, metodo_pago='zelle', tipo_pago=tipo, estado='Completada', setter=setter,
                           email_vendedor=closer, instagram=instagram, date=fecha, **campos)
-    db.session.add(nueva)
-    db.session.commit()
-    return nueva
-
-
-def agenda(db, nombre, instagram, fecha):
-    nueva = FinancialAgenda(nombre=nombre, instagram=instagram, date=fecha, created_at=fecha)
     db.session.add(nueva)
     db.session.commit()
     return nueva
@@ -88,54 +81,6 @@ def test_cambiar_el_closer_pasa_la_comision_al_otro(client, db, finanzas, equipo
     # El correo del usuario, como lo escribe la ficha: es lo que leen la nómina y el espacio del closer.
     assert db.session.get(FinancialSale, v.id).email_vendedor == 'facundo@test.local'
     assert comisiones(client, finanzas, 'jeancarlo', 'facundo') == [0.0, 100.0]
-
-
-def test_cambiar_el_setter_cambia_tambien_la_agenda_que_lo_decide(client, db, finanzas, equipo):
-    origen = agenda(db, 'Elias', 'lead_uno', datetime(2026, 10, 1))
-    v = venta(db, instagram='lead_uno')
-    assert comisiones(client, finanzas, 'elias', 'paula') == [80.0, 0.0]
-
-    r = client.put(f'/api/public/finance/ventas/{v.id}/atribucion', headers=finanzas,
-                   json={'setter_id': equipo['paula'].id})
-
-    assert r.status_code == 200 and r.get_json()['agendas'] == [origen.id]
-    assert db.session.get(FinancialAgenda, origen.id).nombre == 'Paula'
-    assert db.session.get(FinancialSale, v.id).setter == 'Paula'
-    assert comisiones(client, finanzas, 'elias', 'paula') == [0.0, 80.0]
-
-
-def test_una_agenda_que_no_cuenta_como_fuente_no_se_toca(client, db, finanzas, equipo):
-    """Una entrevista no es de un setter: ahí ya manda el campo de la venta, y la agenda queda."""
-    entrevista = agenda(db, 'Entrevista diagnóstica', 'lead_dos', datetime(2026, 10, 1))
-    v = venta(db, instagram='lead_dos')
-
-    r = client.put(f'/api/public/finance/ventas/{v.id}/atribucion', headers=finanzas,
-                   json={'setter_id': equipo['paula'].id})
-
-    assert r.get_json()['agendas'] == []
-    assert db.session.get(FinancialAgenda, entrevista.id).nombre == 'Entrevista diagnóstica'
-    assert comisiones(client, finanzas, 'elias', 'paula') == [0.0, 80.0]
-
-
-def test_con_el_periodo_de_payroll_cambia_el_tile_que_se_esta_mirando(client, db, finanzas, equipo):
-    """Un lead que volvió a agendar: con todas las ventas, la cuota de octubre es de la agenda de la
-    seña (agosto, Elias); en la nómina de octubre, que atribuye con las ventas del rango, es de la
-    agenda nueva (Paula). Sin el período se corregía solo la primera y el tile no cambiaba."""
-    primera = agenda(db, 'Elias', 'lead_tres', datetime(2026, 8, 1))
-    segunda = agenda(db, 'Paula', 'lead_tres', datetime(2026, 10, 1))
-    venta(db, monto=200.0, instagram='lead_tres', tipo='RR - Seña', fecha=datetime(2026, 8, 10))
-    cuota = venta(db, instagram='lead_tres', tipo='RR - Cuota', fecha=datetime(2026, 10, 20))
-    assert comisiones(client, finanzas, 'elias', 'paula') == [0.0, 80.0]
-
-    sin_periodo = client.put(f'/api/public/finance/ventas/{cuota.id}/atribucion', headers=finanzas,
-                             json={'setter_id': equipo['elias'].id})
-    assert sin_periodo.get_json()['agendas'] == [primera.id]
-    assert comisiones(client, finanzas, 'elias', 'paula') == [0.0, 80.0]
-
-    con_periodo = client.put(f'/api/public/finance/ventas/{cuota.id}/atribucion', headers=finanzas,
-                             json={'setter_id': equipo['elias'].id, 'desde': '2026-10-01', 'hasta': '2026-10-31'})
-    assert sorted(con_periodo.get_json()['agendas']) == sorted([primera.id, segunda.id])
-    assert comisiones(client, finanzas, 'elias', 'paula') == [80.0, 0.0]
 
 
 def test_una_persona_que_no_es_del_rol_no_deja_nada_a_medias(client, db, finanzas, equipo):

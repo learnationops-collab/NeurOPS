@@ -85,6 +85,13 @@ def cargar_calificaciones():
             for clave in (lead.manychat_id, (lead.ig or '').lower()):
                 if clave in pedidos:
                     leads.setdefault(clave, lead.id)
+    # Lo que no se encontró por la fila puede ser un Instagram de una persona (Etapa 2c): su lead.
+    # Va después del cruce por la fila para no cambiar qué lead se califica en los que ya cruzaban.
+    from app.services.lead_contacto_service import lead_por_ig
+    for clave in set(pedidos) - set(leads):
+        lead = lead_por_ig(clave)
+        if lead is not None:
+            leads[clave] = lead.id
 
     aplicar = bool(datos.get('aplicar'))
     cuenta = {'calificado': 0, 'descalificado': 0, 'sin_dato': 0}

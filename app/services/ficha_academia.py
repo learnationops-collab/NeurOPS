@@ -16,7 +16,6 @@ El producto es siempre el del programa que pagó (el de Acciones): nunca el curs
 Todo se valida antes de llamar a la Academia (otro sistema, con límite de peticiones).
 """
 import logging
-from datetime import datetime, time
 
 from app import db
 from app.models import ClientComment
@@ -92,7 +91,6 @@ def quitar(appt, datos, usuario):
 
     hoy = hoy_del_usuario(usuario)
     _asignar(alumno_id, slug, hoy)
-    client.academy_expires_at = datetime.combine(hoy, time.min)
 
     motivo = _texto(datos, 'motivo')
     from app.services import subscription_service
@@ -124,8 +122,6 @@ def prorrogar(appt, datos, usuario):
         raise ErrorDeAccion(str(e), 'tipo')
 
     _asignar(alumno_id, slug, dia, AcademyAccessService.closer_de(client, usuario))
-    client.academy_product_slug = slug
-    client.academy_expires_at = datetime.combine(dia, time.min)
     subscription_service.prorrogar(client, tipo, motivo, slug=slug, usuario=usuario)
     etiqueta = subscription_service.PRORROGAS[tipo]['label'].lower()
     _constancia(appt, usuario, f'{usuario.username} le dio una {etiqueta} en la Academia ({nombre}) '
@@ -176,8 +172,6 @@ def corregir_mail(appt, datos, usuario):
         _asignar(nuevo, slug, sub.expires_at, AcademyAccessService.closer_de(client, usuario))
         if anterior and anterior != nuevo:
             _asignar(anterior, slug, hoy)  # el acceso se mueve: la cuenta vieja deja de tenerlo
-        client.academy_product_slug = slug
-        client.academy_expires_at = datetime.combine(sub.expires_at, time.min)
     if nuevo:
         client.learnation_user_id = nuevo
         person_service.anotar(person, [('learnation_user_id', str(nuevo))], 'fulfillment')

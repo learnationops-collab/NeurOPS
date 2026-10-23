@@ -8,7 +8,7 @@ desde julio en prod). La cuota cuenta con la misma ventana que el ticket promedi
 venta.
 
 Convertida con una cuota, la seña es «Pago completo» si entre las dos llegan al precio del
-programa (`Client.total_amount`, o el de lista de `SalesConsistencyService`), y si no «Pago parcial».
+programa (el de su venta, `deuda_service`, o el de lista de `SalesConsistencyService`), y si no «Pago parcial».
 """
 from datetime import date
 
@@ -72,12 +72,16 @@ def pagos_posteriores(claves):
 
 
 def _precio(fila, venta):
-    client = db.session.get(Client, fila['client_id']) if fila.get('client_id') else None
-    if client and client.total_amount is not None:
-        return float(client.total_amount)
+    """El total del programa: el de la venta (`Sale`) del pago que convirtió la seña, o el de su
+    venta 'new' vigente; si no hay, el de lista."""
+    from app.services import deuda_service
     codigo = (SheetsService.parse_tipo_pago(fila.get('tipo_pago_raw'))[0]
               or SheetsService.parse_tipo_pago(venta.tipo_pago)[0])
-    return SalesConsistencyService.PROGRAM_DEFAULT_TOTALS.get(codigo, 0.0)
+    total = deuda_service.total_de(venta.sale) if getattr(venta, 'sale', None) is not None else None
+    if total is None:
+        client = db.session.get(Client, fila['client_id']) if fila.get('client_id') else None
+        total = deuda_service.total_acordado(client, codigo)
+    return total if total is not None else SalesConsistencyService.PROGRAM_DEFAULT_TOTALS.get(codigo, 0.0)
 
 
 def conversion_de(fila, pagos):

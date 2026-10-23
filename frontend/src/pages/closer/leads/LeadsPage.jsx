@@ -540,7 +540,7 @@ const CloserLeadsPage = () => {
             )}
             <SaleDetailModal
                 isOpen={isDetailModalOpen}
-                enrollmentId={selectedEnrollmentId}
+                saleId={selectedEnrollmentId}
                 onClose={() => { setIsDetailModalOpen(false); setSelectedEnrollmentId(null); }}
                 onSuccess={fetchData}
             />

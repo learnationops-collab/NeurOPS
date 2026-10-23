@@ -125,13 +125,6 @@ def test_unos_centavos_de_resto_no_son_una_deuda():
         == ('venta_al_dia', 'hist')
 
 
-def test_una_deuda_sin_venta_registrada_igual_abre_el_cobro():
-    """Ventas históricas cargadas solo como Enrollment: hay plata que cobrar aunque el cruce de
-    `FinancialSale` no la encuentre."""
-    clave, pestana = clave_y_pestana(estado_agenda='show_up', deuda=900.0)
-    assert (clave, pestana) == ('venta_con_deuda', 'acciones')
-
-
 def test_una_llamada_por_ocurrir_gana_al_estado_de_cobro():
     """Un cliente con deuda y una 2ª llamada mañana: el trabajo de hoy es confirmar esa llamada."""
     assert clave_y_pestana(estado_agenda='por_confirmar', tiene_venta=True, deuda=800.0) \

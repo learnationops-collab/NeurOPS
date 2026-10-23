@@ -391,10 +391,13 @@ def force_manual_attribution_agenda():
         logger.error(f"Atribucion fallida: No se encontro el anuncio con ID={ad_id}")
         return jsonify({"error": f"El anuncio con ID {ad_id} no existe en la base de datos"}), 404
 
-    # Normalizar IG y guardar
+    # Normalizar IG y anotarlo en la persona de la agenda (Etapa 2c: la agenda no guarda el contacto)
     ig_normalizado = instagram_input.strip().lstrip('@').lower()
-    agenda.instagram = f"@{ig_normalizado}"
-    _sumar_instagram(agenda.person if agenda.person_uuid else None, ig_normalizado, f'agenda #{agenda.id}')
+    if agenda.person_uuid:
+        _sumar_instagram(agenda.person, ig_normalizado, f'agenda #{agenda.id}')
+    else:
+        from app.services import agenda_contacto_service
+        agenda_contacto_service.dar_persona(agenda, instagram=ig_normalizado)
 
     # Buscar/crear lead de Manychat: el del IG que se escribió y, si no hay, el de la persona de la agenda
     matched_lead = ManychatLead.query.filter(

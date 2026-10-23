@@ -21,7 +21,7 @@ from flask import request, jsonify
 from flask_login import current_user
 
 from app import db
-from app.models import ROLE_SETTER, Client, Appointment, ManychatLead, LeadAnswer, Ad, Comment, CommentNotification
+from app.models import ROLE_SETTER, Client, Appointment, LeadAnswer, Ad, Comment, CommentNotification
 from app.decorators import role_required
 from app.services.user_time_service import hoy_del_usuario, limites_dia_utc, limites_rango_utc
 from app.services import agenda_contacto_service
@@ -76,24 +76,12 @@ def _normalizar_ig(valor):
 
 
 def _lead_de_manychat(ig_norm, nombre_norm, person_uuid=None):
-    """El ManychatLead de esta persona: el de su `person_uuid` (plan_personas) y, si no, por instagram
-    o por nombre exacto."""
+    """El ManychatLead de esta persona: el de su `person_uuid` (plan_personas) y, si no, el de la
+    persona de ese instagram, con el respaldo por instagram o nombre de la fila (`lead_por_ig`)."""
     from app.services.conversaciones_service import lead_de_persona
+    from app.services.lead_contacto_service import lead_por_ig
 
-    lead = lead_de_persona(person_uuid)
-    if lead:
-        return lead
-    if ig_norm:
-        lead = ManychatLead.query.filter(
-            db.func.lower(db.func.replace(ManychatLead.ig, '@', '')) == ig_norm
-        ).first()
-        if lead:
-            return lead
-    if nombre_norm:
-        return ManychatLead.query.filter(
-            db.func.lower(ManychatLead.name) == nombre_norm
-        ).first()
-    return None
+    return lead_de_persona(person_uuid) or lead_por_ig(ig_norm, nombre_norm)
 
 
 def _anuncio_de(lead):
@@ -124,6 +112,8 @@ def get_agendas_del_mazo():
 
     agenda_contacto_service.precargar(agendas)
     filas = []
+    from app.services.lead_contacto_service import contacto as lead_contacto
+
     vistas = set()
     for agenda in agendas:
         contacto = agenda.contacto()  # de su persona; la copia si no tiene
@@ -132,7 +122,7 @@ def get_agendas_del_mazo():
 
         # Una misma persona puede tener varias filas de agenda (reagendas); en la
         # lista de trabajo se muestra una sola. Misma clave que el Historial.
-        llave = ('p', agenda.person_uuid) if agenda.person_uuid else clave_de_persona(agenda.instagram, agenda.lead)
+        llave = ('p', agenda.person_uuid) if agenda.person_uuid else clave_de_persona(contacto['instagram'], contacto['lead'])
         if llave and llave in vistas:
             continue
         if llave:
@@ -149,7 +139,7 @@ def get_agendas_del_mazo():
         # conversacion, que es mejor que nada para encontrar a la persona.
         ig_mostrado = contacto['instagram'] \
             if ig_norm else (
-                (lead_mc.ig if lead_mc and lead_mc.ig else None)
+                (lead_contacto(lead_mc)['ig'] if lead_mc else None)
                 or (client.instagram if client and client.instagram else None))
         if not _normalizar_ig(ig_mostrado):
             ig_mostrado = f"@{nombre_norm.replace(' ', '_')}" if nombre_norm else ''
@@ -203,7 +193,11 @@ def actualizar_instagram_de_agenda(agenda_id):
 
     client = _cliente_de(agenda)
     # Corrige también a su persona, que es de donde sale lo que se muestra.
-    agenda_contacto_service.corregir(agenda, 'instagram', nuevo, current_user)
+    try:
+        agenda_contacto_service.corregir(agenda, 'instagram', nuevo, current_user)
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 409
     db.session.add(agenda)
     if client:
         client.instagram = nuevo

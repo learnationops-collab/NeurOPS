@@ -16,7 +16,8 @@ logger = logging.getLogger(__name__)
 # Confirmer (10/10/2026): lo sigue escribiendo la pantalla del rol triage y lo cuenta su
 # reporte diario, asi que la fila que sobrevive no debe perderlo.
 _VACIOS ={'', 'n/a', 'na', 'none', 'no tengo', 'notengo', 'ninguno', 'sin asignar', 'desconocido'}
-CAMPOS_HEREDABLES = ('mail', 'instagram', 'whatsapp', 'closer', 'encargado_triage', 'zona_geografica')
+# El contacto (mail, instagram, whatsapp) es de la persona (Etapa 2c): la agenda no lo guarda.
+CAMPOS_HEREDABLES = ('closer', 'encargado_triage', 'zona_geografica')
 
 
 def _esta_vacio(valor):
@@ -118,6 +119,20 @@ def citas_de(agendas):
     return salida
 
 
+def _heredar_persona(conservada, duplicada, snapshot):
+    """La persona de las dos agendas (Etapa 2c). Si solo la repetida la tiene, la conservada se queda
+    con ella (se deshace con `restaurar`). Si tienen dos personas distintas, esas personas son la misma
+    y hay que fusionarlas: no se hace acá, porque fusionar no se deshace y descartar sí. Queda anotado
+    en el descarte (`personas_a_fusionar`) y en el log, para `fusionar_lista`."""
+    if duplicada.person_uuid and not conservada.person_uuid:
+        conservada.person_uuid = duplicada.person_uuid
+        snapshot['persona_heredada'] = duplicada.person_uuid
+    elif duplicada.person_uuid and duplicada.person_uuid != conservada.person_uuid:
+        snapshot['personas_a_fusionar'] = [conservada.person_uuid, duplicada.person_uuid]
+        logger.warning('[DEDUP AGENDAS] #%s y #%s son el mismo lead con dos personas (%s, %s): fusionarlas',
+                       conservada.id, duplicada.id, conservada.person_uuid, duplicada.person_uuid)
+
+
 def descartar(conservada, duplicada, usuario_id, motivo=None, cancelar_cita=True):
     """Marca `duplicada` como repetida de `conservada`. Reversible con `restaurar`.
 
@@ -166,6 +181,7 @@ def descartar(conservada, duplicada, usuario_id, motivo=None, cancelar_cita=True
     # original llegó 'N/A', el closer asignado. Se anota el valor previo para que
     # `restaurar` deje todo como estaba.
     heredado = {}
+    _heredar_persona(conservada, duplicada, snapshot)
     for campo in CAMPOS_HEREDABLES:
         nuevo = getattr(duplicada, campo, None)
         if _esta_vacio(getattr(conservada, campo, None)) and not _esta_vacio(nuevo):
@@ -215,11 +231,13 @@ def restaurar(agenda):
     # Devolver lo que la conservada heredó de esta fila: si no, deshacer dejaría las dos
     # con el mismo dato y ya no se sabría cuál era de quién.
     heredado = snapshot.get('heredado') or {}
-    if heredado:
+    if heredado or snapshot.get('persona_heredada'):
         conservada = FinancialAgenda.query.get(snapshot.get('conservada_id'))
         if conservada:
             for campo, previo in heredado.items():
                 setattr(conservada, campo, previo)
+            if snapshot.get('persona_heredada') and conservada.person_uuid == snapshot['persona_heredada']:
+                conservada.person_uuid = None
 
     agenda.duplicada_de_id = None
     agenda.descartada_at = None

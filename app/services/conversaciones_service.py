@@ -1,8 +1,8 @@
 """Las conversaciones (20/10/2026, frente B de docs/plan_personas.md): cada lead de ManyChat queda con su
 persona y su `Conversation`.
 
-Mientras dura la transición los leads se siguen escribiendo como siempre (`ManychatLead` + `LeadAnswer`,
-y el `Lead` viejo de /api/webhooks/manychat): este módulo los sigue en `before_flush`, así cualquiera que
+Mientras dura la transición los leads se siguen escribiendo como siempre (`ManychatLead` + `LeadAnswer`;
+el webhook viejo /api/webhooks/manychat también escribe `ManychatLead`): este módulo los sigue en `before_flush`, así cualquiera que
 los escriba (el webhook, el motor de Instagram, el setter, Marketing) deja también la persona y la
 conversación, sin tocar cada camino.
 
@@ -20,7 +20,7 @@ from uuid import uuid4
 from sqlalchemy import event
 
 from app import db
-from app.models import Conversation, Lead, LeadAnswer, ManychatLead, Person
+from app.models import Conversation, LeadAnswer, ManychatLead, Person
 from app.models.marketing import clave_de_palabra
 from app.services import person_service
 
@@ -153,22 +153,6 @@ def sincronizar_respuesta(answer, lead=None):
         data={'manychat_lead_id': lead.id, 'follower': lead.follower})
 
 
-def sincronizar_lead_viejo(lead):
-    """El `Lead` de /api/webhooks/manychat: su persona y una conversación por su palabra clave."""
-    canal, externo = canal_de(lead.manychat_id)
-    if not externo:
-        return None
-    real = manychat_id_real(lead.manychat_id)
-    person = persona_de(lead.name, crear=bool(real), actual_uuid=lead.person_uuid, email=lead.email,
-                        instagram=lead.instagram_username, manychat_id=real)
-    if person is not None:
-        lead.person = person
-    etapa = lead.stage.name if lead.stage_id and lead.stage else (str(lead.last_stage) if lead.last_stage is not None else None)
-    return _guardar_conversacion(canal, externo, person, keyword=lead.ad_source, creada=lead.created_at, stage=etapa,
-                                 data={'lead_id': lead.id, 'funnel_step': lead.funnel_step, 'tags': lead.tags,
-                                       'notes': lead.notes})
-
-
 def lead_de_persona(person_uuid):
     """El `ManychatLead` de la persona (el más reciente, si tiene varios), o None. Es lo primero con
     que se busca la conversación de alguien del sistema; el Instagram y el nombre quedan de respaldo."""
@@ -208,8 +192,6 @@ def _al_guardar(session, flush_context, instances):
             for obj in cambiados:
                 if isinstance(obj, ManychatLead):
                     sincronizar_lead(obj)
-                elif isinstance(obj, Lead):
-                    sincronizar_lead_viejo(obj)
             for obj in cambiados:
                 if isinstance(obj, LeadAnswer):
                     sincronizar_respuesta(obj)

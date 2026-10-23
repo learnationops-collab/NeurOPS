@@ -1,9 +1,9 @@
 from app import db, login
 from .user import User, GoogleCalendarToken, CloserAlias, ROLE_ADMIN, ROLE_CLOSER, ROLE_SETTER, ROLE_OPERATOR, get_impersonation_state
-from .client import Client, Lead, ClientComment, CommentNotification
+from .client import Client, ClientComment, CommentNotification
 from .funnel import Event, EventGroup, Program, event_closers
 from .booking import Appointment, Availability, WeeklyAvailability, SurveyQuestion, SurveyAnswer
-from .payment import Enrollment, PaymentMethod, Payment
+from .payment import PaymentMethod
 from .marketing import Campaign, AdSet, Ad, MarketingBudget, AdPeriodSpend, ManychatAdLead, ManychatLead, LeadAnswer, UTMLog, LandingTracking, ConversationalMessage, MetaAnuncio, MetaGastoDiario
 from .report import SetterDailyStats, CloserDailyStats, DailyReportQuestion, DailyReportAnswer, Expense, RecurringExpense
 from .closer_report import CloserDailyReport
@@ -42,10 +42,10 @@ from .ai_usage import AiUsage
 __all__ = [
     'User', 'GoogleCalendarToken', 'CloserAlias', 'ROLE_ADMIN', 'ROLE_CLOSER', 'ROLE_SETTER', 'ROLE_OPERATOR', 'ROLE_TRIAGE',
     'get_impersonation_state',
-    'Client', 'Lead', 'ClientComment', 'CommentNotification',
+    'Client', 'ClientComment', 'CommentNotification',
     'Event', 'EventGroup', 'Program', 'event_closers',
     'Appointment', 'Availability', 'WeeklyAvailability', 'SurveyQuestion', 'SurveyAnswer',
-    'Enrollment', 'PaymentMethod', 'Payment',
+    'PaymentMethod',
     'Campaign', 'AdSet', 'Ad', 'MarketingBudget', 'AdPeriodSpend', 'ManychatAdLead', 'ManychatLead', 'LeadAnswer', 'UTMLog', 'LandingTracking', 'ConversationalMessage',
     'MetaAnuncio', 'MetaGastoDiario',
     'SetterDailyStats', 'CloserDailyStats', 'CloserDailyReport', 'ReporteDirector', 'ReporteDirectorPersona', 'DailyReportQuestion', 'DailyReportAnswer', 'Expense', 'RecurringExpense',

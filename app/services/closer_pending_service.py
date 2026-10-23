@@ -124,13 +124,14 @@ class CloserPendingService:
         seguimientos de todo el equipo disparaba cientos de consultas contra FinancialSale, una por
         cada llamada asistida sin seguimiento etiquetado."""
         from app.models import FinancialSale
+        from app.services import pagos_copia
 
         if not clients:
             return set()
 
         mails, igs, atados, personas = set(), set(), set(), set()
         for mail, ig, client_id, puuid in db.session.query(
-                FinancialSale.mail_cliente, FinancialSale.instagram, FinancialSale.client_id,
+                pagos_copia.MAIL, pagos_copia.INSTAGRAM, FinancialSale.client_id,
                 FinancialSale.person_uuid).all():
             if client_id:
                 atados.add(client_id)

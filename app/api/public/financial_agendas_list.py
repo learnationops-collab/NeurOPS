@@ -2,8 +2,6 @@
 from flask import request, jsonify
 from app.models import db, FinancialAgenda, User
 from datetime import datetime
-from sqlalchemy import or_, func
-from app.services.agenda_contacto_service import ig_limpio, mail_limpio
 from . import bp
 from .financial_agendas_helpers import (
     _build_agenda_queries)
@@ -44,50 +42,15 @@ def get_financial_agendas():
     from app.models import FinancialSale
     from app.services import agenda_contacto_service
     agenda_contacto_service.precargar(all_agendas)
-    sin_persona = [a for a in all_agendas if not a.person_uuid]  # la copia solo cuenta en éstas
-    emails = {a.mail.strip().lower() for a in sin_persona if a.mail and a.mail.lower() not in ('n/a', '')}
-    instagrams = {a.instagram.strip().replace('@', '').lower() for a in sin_persona if a.instagram and a.instagram.lower() not in ('n/a', '')}
-
-    sales_by_email = {}
-    sales_by_ig = {}
-    # Los pagos de la persona de cada agenda (docs/plan_personas.md); por texto, solo los pagos sin
-    # persona (Etapa 2b, `filtro_de_pagos`).
+    # Los pagos de la persona de cada agenda (Etapa 2c: la agenda no guarda el contacto).
     sales_by_person = {}
     personas = sorted({a.person_uuid for a in all_agendas if a.person_uuid})
     for i in range(0, len(personas), 500):
         for s in FinancialSale.query.filter(FinancialSale.person_uuid.in_(personas[i:i + 500])).all():
             sales_by_person.setdefault(s.person_uuid, []).append(s)
-    if emails or instagrams:
-        sales_filters = []
-        if instagrams:
-            sales_filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')).in_(list(instagrams)))
-        if emails:
-            sales_filters.append(func.lower(FinancialSale.mail_cliente).in_(list(emails)))
-        
-        sales = FinancialSale.query.filter(FinancialSale.person_uuid.is_(None), or_(*sales_filters)).all()
-        for s in sales:
-            if s.mail_cliente:
-                m = s.mail_cliente.strip().lower()
-                if m not in sales_by_email: sales_by_email[m] = []
-                sales_by_email[m].append(s)
-            if s.instagram:
-                ig = s.instagram.strip().replace('@', '').lower()
-                if ig not in sales_by_ig: sales_by_ig[ig] = []
-                sales_by_ig[ig].append(s)
-                
-    def get_agenda_sales_info(agenda):
-        ig_clean = mail_clean = None
-        if not agenda.person_uuid:
-            ig_clean = ig_limpio(agenda.instagram)
-            mail_clean = mail_limpio(agenda.mail)
 
+    def get_agenda_sales_info(agenda):
         sales_dict = {s.id: s for s in sales_by_person.get(agenda.person_uuid, ())}
-        if ig_clean and ig_clean in sales_by_ig:
-            for s in sales_by_ig[ig_clean]:
-                sales_dict[s.id] = s
-        if mail_clean and mail_clean in sales_by_email:
-            for s in sales_by_email[mail_clean]:
-                sales_dict[s.id] = s
                 
         associated_sales = list(sales_dict.values())
         

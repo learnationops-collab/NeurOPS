@@ -307,48 +307,6 @@ def test_la_fuente_de_la_cita_ancla_se_conserva_si_no_se_toca_y_se_cambia_por_un
     assert lead.origin == 'vsl'
 
 
-def _fila_del_tablero(db, lead, **contacto):
-    from app.models import FinancialAgenda
-
-    fila = FinancialAgenda(nombre=lead.origin, lead='Jesus Capuchino', closer='vendedor',
-                           estado='Pendiente', date=lead.start_time,
-                           fecha_meet=lead.start_time.isoformat(), **contacto)
-    db.session.add(fila)
-    db.session.commit()
-    return fila
-
-
-def test_la_fuente_se_corrige_tambien_en_la_fila_del_tablero(client, db, lead, equipo,
-                                                             auth_headers):
-    """El sync del Tablero hacia las citas le pisa la fuente a la cita con la de su fila: si la
-    fila se quedara con la vieja, la correccion duraria hasta la proxima sincronizacion."""
-    from app.services.booking_service import BookingService
-
-    fila = _fila_del_tablero(db, lead, mail='jesus@x.com', instagram='jesus.c',
-                             whatsapp='+52 55 1234 5678')
-
-    r = editar(client, auth_headers, equipo['closer'], lead, fuente='workshop')
-
-    assert r.status_code == 200, r.get_json()
-    assert fila.nombre == 'workshop'
-    BookingService.sync_financial_agenda_to_appointment(fila)
-    assert Appointment.query.filter_by(client_id=lead.client_id).count() == 1
-    assert lead.origin == 'workshop'
-
-
-def test_la_fila_del_tablero_se_encuentra_aunque_el_mismo_pedido_cambie_el_correo(
-        client, db, lead, equipo, auth_headers):
-    """La fila se busca por el contacto que el cliente TENIA: la que solo coincide por el correo
-    viejo se quedaba con la fuente vieja si se buscaba despues de guardar el nuevo."""
-    fila = _fila_del_tablero(db, lead, mail='jesus@x.com')
-
-    r = editar(client, auth_headers, equipo['closer'], lead, fuente='workshop',
-               email='jesus.nuevo@x.com')
-
-    assert r.status_code == 200, r.get_json()
-    assert (lead.client.email, fila.nombre) == ('jesus.nuevo@x.com', 'workshop')
-
-
 # --- Sin cliente ------------------------------------------------------------------------------
 
 def test_una_agenda_sin_cliente_lo_dice_y_el_examen_se_corrige_igual(client, db, lead, equipo,

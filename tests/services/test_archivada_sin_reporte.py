@@ -242,28 +242,6 @@ def test_una_venta_registrada_sobre_la_archivada_la_da_por_asistida(db, marlon):
 
 # --- El espejo del tablero ------------------------------------------------------------------------
 
-def test_el_estado_va_y_vuelve_por_el_espejo_del_tablero_sin_perderse(db, marlon):
-    """Cuando alguien toca una archivada, su estado se copia a `FinancialAgenda.estado`; y el sync
-    del tablero hacia la cita tiene que leerlo como lo que es, no como un estado desconocido."""
-    from app.models import FinancialAgenda
-    from app.services.booking_service import BookingService
-
-    cli = cliente(db, 'Archivada', email='archivada.espejo@test.local')
-    a = agenda(db, marlon, cli, cuando=datetime(2026, 8, 1, 15, 0), closer_result='Archivada sin reporte',
-               closer_processed=True)
-    db.session.add(FinancialAgenda(nombre='Setter', lead='Archivada', closer='Marlon', mail=cli.email,
-                                   instagram='N/A', whatsapp='N/A', estado='Pendiente',
-                                   date=a.start_time, fecha_meet=a.start_time.isoformat()))
-    db.session.commit()
-
-    espejo = BookingService.sync_appointment_to_financial_agenda(a)
-    db.session.commit()
-    BookingService.sync_financial_agenda_to_appointment(espejo)
-
-    assert espejo.estado == 'Archivada sin reporte'
-    assert (a.closer_result, a.closer_processed) == ('Archivada sin reporte', True)
-
-
 def test_el_prefill_del_reporte_diario_la_cuenta_donde_contaba_lead_perdido():
     from app.api.public.closer import ATENDIDAS_EN_PREFILL
 

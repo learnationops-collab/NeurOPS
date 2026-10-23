@@ -5,7 +5,6 @@ import { Trash2, Database, AlertTriangle, Loader2, Zap, Archive, Search } from '
 import { toast } from 'react-hot-toast';
 
 const DatabaseTools = () => {
-    const [migrating, setMigrating] = useState(false);
     const [cleaning, setCleaning] = useState(false);
     const [selectedTable, setSelectedTable] = useState('');
     const [backlogDays, setBacklogDays] = useState(30);
@@ -17,8 +16,6 @@ const DatabaseTools = () => {
         { key: 'setter_daily_stats', name: 'Reportes de Setters' },
         { key: 'daily_report_answers', name: 'Respuestas de Reportes (Legacy)' },
         { key: 'appointments', name: 'Agendas/Citas' },
-        { key: 'enrollments', name: 'Inscripciones' },
-        { key: 'payments', name: 'Pagos/Ventas' },
         { key: 'leads', name: 'Leads (Marketing)' },
         { key: 'clients', name: 'Clientes' },
         { key: 'expenses', name: 'Gastos' },
@@ -26,29 +23,6 @@ const DatabaseTools = () => {
         { key: 'availability', name: 'Disponibilidad' },
         { key: 'client_comments', name: 'Comentarios de Clientes' }
     ];
-
-    const handleMigrateLeads = async () => {
-        if (!window.confirm("¿Estás seguro de que deseas depurar los usuarios tipo 'lead'? Serán eliminados de la lista de usuarios y migrados como registros a la tabla de Leads. Esta acción es irreversible.")) {
-            return;
-        }
-
-        setMigrating(true);
-        try {
-            // Sin timeout a propósito: migración de toda la tabla de usuarios, puede superar
-            // el límite general de la app (ver frontend/src/services/api.js).
-            const res = await api.post('/admin/tools/migrate-leads', null, { timeout: 0 });
-            if (res.data.success) {
-                toast.success(res.data.message);
-            } else {
-                toast.error(res.data.message);
-            }
-        } catch (error) {
-            console.error("Error migrating leads", error);
-            toast.error("Error al ejecutar la migración");
-        } finally {
-            setMigrating(false);
-        }
-    };
 
     const handleClearTable = async () => {
         if (!selectedTable) {
@@ -63,7 +37,7 @@ const DatabaseTools = () => {
 
         setCleaning(true);
         try {
-            // Sin timeout a propósito: puede borrar una tabla completa (ver migrate-leads arriba).
+            // Sin timeout a propósito: puede borrar una tabla completa (ver frontend/src/services/api.js).
             const res = await api.post('/admin/db/clear-table', { table_key: selectedTable }, { timeout: 0 });
             toast.success(res.data.message);
             setSelectedTable('');
@@ -79,7 +53,7 @@ const DatabaseTools = () => {
         setCheckingBacklog(true);
         try {
             // Sin timeout a propósito: recorre agendas históricas, puede tardar más que el
-            // límite general de la app (ver migrate-leads arriba).
+            // límite general de la app (ver frontend/src/services/api.js).
             const res = await api.get('/admin/tools/backlog-cleanup', { params: { days: backlogDays }, timeout: 0 });
             setBacklogPreview(res.data);
         } catch (error) {
@@ -96,7 +70,7 @@ const DatabaseTools = () => {
 
         setArchivingBacklog(true);
         try {
-            // Sin timeout a propósito: archiva agendas históricas en lote (ver migrate-leads arriba).
+            // Sin timeout a propósito: archiva agendas históricas en lote (ver frontend/src/services/api.js).
             const res = await api.post('/admin/tools/backlog-cleanup', { days: backlogDays }, { timeout: 0 });
             toast.success(res.data.message);
             setBacklogPreview(null);
@@ -127,47 +101,6 @@ const DatabaseTools = () => {
             </header>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                {/* Lead Migration Tool. A lo ancho, como las demás: su pareja era el respaldo en JSON, que se
-                    fue el 10/10/2026 (cubría 30 de las 91 tablas y al importar borraba primero; el respaldo
-                    completo está en la pestaña Respaldo). */}
-                <div className="glass-panel p-8 rounded-[32px] border border-white/5 bg-[#1a1c23]/80 flex flex-col h-full xl:col-span-2">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="p-2 bg-rose-500/20 rounded-xl text-rose-500">
-                            <Trash2 size={24} />
-                        </div>
-                        <h2 className="text-2xl font-bold text-white tracking-tight">Depuración de Usuarios</h2>
-                    </div>
-
-                    <div className="bg-rose-500/10 border border-rose-500/30 p-6 rounded-2xl mb-8">
-                        <div className="flex gap-4">
-                            <div className="text-rose-500 shrink-0">
-                                <AlertTriangle size={24} />
-                            </div>
-                            <div className="space-y-2">
-                                <p className="text-sm font-bold text-rose-200 uppercase tracking-tight">Acción Irreversible</p>
-                                <p className="text-xs text-rose-400/80 leading-relaxed font-medium">
-                                    Esta herramienta busca a todos los usuarios que tengan el rol <span className="text-rose-300 font-black">"lead"</span> o <span className="text-rose-300 font-black">"student"</span>. Los crea como registros en la tabla de leads para su seguimiento posterior y elimina sus cuentas de usuario permanentemente.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="mt-auto">
-                        <Button
-                            onClick={handleMigrateLeads}
-                            disabled={migrating}
-                            className={`w-full h-16 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] transition-all shadow-xl ${migrating ? 'bg-rose-500/30' : 'bg-rose-600 hover:bg-rose-500 shadow-rose-900/20 active:scale-95'
-                                }`}
-                        >
-                            {migrating ? (
-                                <span className="flex items-center gap-2"><Loader2 className="animate-spin" size={16} /> Procesando...</span>
-                            ) : (
-                                <span className="flex items-center gap-2 font-black italic"><Trash2 size={16} /> Limpiar Usuarios Lead</span>
-                            )}
-                        </Button>
-                    </div>
-                </div>
-
                 {/* Backlog de Confirmaciones sin Atender */}
                 <div className="glass-panel p-8 rounded-[32px] border border-white/5 bg-[#1a1c23]/80 flex flex-col h-full xl:col-span-2">
                     <div className="flex items-center gap-3 mb-6">

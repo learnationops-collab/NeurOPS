@@ -429,7 +429,6 @@ def _precarga_por_canal(filas_leads, generadas):
     manda), así que en la práctica todo lo de ManyChat cae en anuncios: es lo que dice el dato, y
     el setter lo corrige si no.
     """
-    from sqlalchemy import func
     from app.models import ManychatLead
     from app.services.comercial_service import _limpiar_ig
 
@@ -446,15 +445,22 @@ def _precarga_por_canal(filas_leads, generadas):
         elif not fila['cualificado']:
             c['no_lead'] += 1
 
+    # Los leads de quien agendó: los de su persona (Etapa 2c) y, si no tiene, los del Instagram de la fila.
+    from app.services.lead_contacto_service import IG_NORMALIZADO
+    personas = {a['person_uuid'] for a in generadas if a.get('person_uuid')}
+    leads_por_persona = {}
+    if personas:
+        for lead_id, puuid in db.session.query(ManychatLead.id, ManychatLead.person_uuid).filter(
+                ManychatLead.person_uuid.in_(sorted(personas))):
+            leads_por_persona.setdefault(puuid, set()).add(lead_id)
     igs = {ig for ig in (_limpiar_ig(a.get('ig')) for a in generadas) if ig}
     leads_por_ig = {}
     if igs:
-        ig_lead = func.lower(func.replace(ManychatLead.ig, '@', ''))
-        for lead_id, ig in db.session.query(ManychatLead.id, ig_lead).filter(ig_lead.in_(sorted(igs))):
+        for lead_id, ig in db.session.query(ManychatLead.id, IG_NORMALIZADO).filter(IG_NORMALIZADO.in_(sorted(igs))):
             leads_por_ig.setdefault(_limpiar_ig(ig), set()).add(lead_id)
-    inbound_por_ig = _leads_de_inbound({i for ids in leads_por_ig.values() for i in ids})
+    inbound_por_ig = _leads_de_inbound({i for ids in [*leads_por_ig.values(), *leads_por_persona.values()] for i in ids})
     for agenda in generadas:
-        ids = leads_por_ig.get(_limpiar_ig(agenda.get('ig')), set())
+        ids = leads_por_persona.get(agenda.get('person_uuid')) or leads_por_ig.get(_limpiar_ig(agenda.get('ig')), set())
         de_un_anuncio = any(i not in inbound_por_ig for i in ids)
         canales['anuncios' if de_un_anuncio else 'inbound']['agendas'] += 1
     return canales
