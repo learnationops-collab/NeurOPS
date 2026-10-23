@@ -100,6 +100,12 @@ function asignar(ctx, d, opts = {}) {
 
     if (ctx.persona) {
         const pp = buscar(d, 'personas', ctx.persona);
+        // Con suplentes: la persona hasta llenarse y después cada suplente en orden.
+        const suplentes = (ctx.suplentes || []).map(id => buscar(d, 'personas', id)).filter(Boolean);
+        if (pp && suplentes.length) {
+            const x = porEstrategia('llenar', [pp, ...suplentes], slotsDe, { ahora, cargaDe });
+            return { ...base, regla: 'Persona fija con suplentes: ' + (x.regla || 'sin lugar'), slots: x.slots };
+        }
         return { ...base, regla: 'Persona fija', slots: pp ? slotsDe(pp).map(t => ({ t, p: pp.id })) : [] };
     }
 

@@ -132,6 +132,10 @@ def _asignacion(ctx, d, opts=None):
 
     if js_truthy(ctx.get('persona')):
         pp = buscar(d, 'personas', ctx['persona'])
+        suplentes = [p for p in (buscar(d, 'personas', i) for i in ctx.get('suplentes') or []) if p]
+        if pp and suplentes:
+            x = _por_estrategia('llenar', [pp] + suplentes, slots_de, ahora, carga_de)
+            return {**base, 'regla': 'Persona fija con suplentes: ' + (x['regla'] or 'sin lugar'), 'slots': x['slots']}
         return {**base, 'regla': 'Persona fija', 'slots': [{'t': t, 'p': pp['id']} for t in slots_de(pp)] if pp else []}
 
     # Ojo: en JS `reglas: []` es verdadero, así que sin reglas igual se va a `resto`.

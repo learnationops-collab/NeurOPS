@@ -330,6 +330,9 @@ def normal_evento(id, d):
         'publicado': d.get('publicado') if isinstance(d.get('publicado'), str) else '',
         'orden': _orden(d.get('orden')),
         'persona': txt(d.get('persona')),
+        # Persona fija con suplentes (23/10/2026): cuando la persona no tiene lugar, el lead ve los
+        # horarios del primer suplente que tenga, en este orden («llenar en orden»).
+        'suplentes': [txt(x) for x in (d.get('suplentes') or []) if txt(x)] if isinstance(d.get('suplentes'), list) else [],
         'reservas': {
             'modo': rs.get('modo') if rs.get('modo') in ('dias', 'rango', 'siempre') else 'dias',
             'n': entero(rs.get('n'), 1, 365, 30),

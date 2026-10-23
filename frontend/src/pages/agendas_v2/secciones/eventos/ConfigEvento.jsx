@@ -18,7 +18,7 @@ import { CampoMinutos, SesionesDelEvento } from '../team/Sesiones';
 import TablaTurnos from '../team/Turnos.jsx';
 import { abrirGracias } from '../forms/ListaGracias';
 import { InputVivo, LinksSetters, slugOrigen, urlPublica, useBorrador } from './comun';
-import { Button, ConfirmDelete, Input, InputGroup, LinkButton, Panel } from '../../../../components/standard';
+import { Button, ConfirmDelete, IconButton, Input, InputGroup, LinkButton, Panel } from '../../../../components/standard';
 
 const DIA = 86400000;
 
@@ -60,7 +60,7 @@ function General({ d, e, f, cm }) {
             if (!c0) { toast('Primero sumá un closer en Team.', 'error'); return; }
             almacen.editar('eventos', e.id, { persona: c0.id }, true);
         }
-        if (v === 'form' && e.persona) almacen.editar('eventos', e.id, { persona: '' }, true);
+        if (v === 'form' && e.persona) almacen.editar('eventos', e.id, { persona: '', suplentes: [] }, true);
     };
     return (
         <>
@@ -124,7 +124,37 @@ function General({ d, e, f, cm }) {
                     )}
                 </Fila>
             )}
+            {!cm && e.persona && <Suplentes d={d} e={e} />}
         </>
+    );
+}
+
+// Suplentes de la persona fija, en orden: el lead ve los horarios de la persona hasta que se llena y
+// después los del primer suplente con lugar (23/10/2026).
+function Suplentes({ d, e }) {
+    const lista = (e.suplentes || []).filter(id => id !== e.persona);
+    const guardar = (suplentes) => almacen.editar('eventos', e.id, { suplentes }, true);
+    const libres = closers(d).filter(x => x.id !== e.persona && !lista.includes(x.id));
+    return (
+        <Fila l="Si se llena">
+            <div style={{ display: 'grid', gap: 6 }}>
+                {lista.map((id, i) => {
+                    const p = buscar(d, 'personas', id);
+                    return (
+                        <div key={id} className="fila" style={{ gap: 8, alignItems: 'center' }}>
+                            <span className="t-sm">{i + 1}. {p ? p.nombre : 'Persona borrada'}</span>
+                            <IconButton label={'Sacar a ' + (p ? p.nombre : 'este suplente')} icon={<Icono n="x" />} size="xs"
+                                onClick={() => guardar(lista.filter(x => x !== id))} />
+                        </div>
+                    );
+                })}
+                {libres.length > 0 && (
+                    <Sx id="ev-suplente" label="Agregar suplente" valor="" onChange={v => v && guardar([...lista, v])}
+                        opciones={[{ v: '', n: lista.length ? 'Agregar otro suplente' : 'Agregar suplente' },
+                            ...libres.map(x => ({ v: x.id, n: x.nombre }))]} />
+                )}
+            </div>
+        </Fila>
     );
 }
 
@@ -240,7 +270,9 @@ export default function ConfigEvento({ e }) {
         if (conFunnel) almacen.borrar('funnels', f.id);
         toast(conFunnel ? e.nombre + ' y ' + f.nombre + ' eliminados' : e.nombre + ' eliminado');
     };
-    const personas = e.persona ? [buscar(d, 'personas', e.persona)].filter(Boolean) : closers(d).filter(p => horasSemana(p) > 0);
+    const personas = e.persona
+        ? [e.persona, ...(e.suplentes || [])].map(id => buscar(d, 'personas', id)).filter(Boolean)
+        : closers(d).filter(p => horasSemana(p) > 0);
     return (
         <div className="ev-conf">
             <div className="ev-grid ev-grid--3">

@@ -978,6 +978,7 @@ def _contexto(evento, form, resp):
         'reglas': form.get('reglas', []),
         'resto': form.get('resto', ''),
         'persona': evento.get('persona') or None,
+        'suplentes': evento.get('suplentes') or [],
     }
 
 

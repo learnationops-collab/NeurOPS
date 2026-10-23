@@ -45,6 +45,7 @@ function armarCtx(form, ev, persona, d) {
         // La duración que ve el lead es la propuesta del evento; al agendar se le confirma la del closer.
         dur: ev ? ev.duracion : per && per.ldur ? per.ldur : 45, margen: ev ? ev.margen || 0 : 0, eventoId: ev ? ev.id : '',
         reglas: fo ? fo.reglas || [] : null, resto: fo ? fo.resto || '' : '', persona: perId,
+        suplentes: ev && !persona ? ev.suplentes || [] : [],
         ag: ev ? { reservas: ev.reservas, antel: ev.antel, paso: ev.paso } : null,
         // Después de confirmar: la página de gracias del evento si tiene una; si no, su link de redirección.
         redir: ev ? (ev.gracias ? window.location.origin + rutaGracias(ev.gracias) : ev.redir) : '', tzFija: ev && ev.zona && ev.zona.modo === 'fija' ? ev.zona.tz : '',
@@ -201,7 +202,7 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
     const nombre = nombreLead(s.resp, s.ejemplo);
     const enCal = idx >= n && !s.listo && !s.fin;
 
-    const ctxAsig = (p) => ({ preguntas, resp: p.resp, dur: ctx.dur, margen: ctx.margen, eventoId: ctx.eventoId, ag: ctx.ag, reglas: ctx.reglas, resto: ctx.resto, persona: ctx.persona });
+    const ctxAsig = (p) => ({ preguntas, resp: p.resp, dur: ctx.dur, margen: ctx.margen, eventoId: ctx.eventoId, ag: ctx.ag, reglas: ctx.reglas, resto: ctx.resto, persona: ctx.persona, suplentes: ctx.suplentes });
     // Proveedor local: la asignación sale al instante (sin parpadeo). Las reservas bloquean horarios;
     // cambiar de zona o un "ocupado" (recalc) vuelve a calcular.
     const asigSinc = useMemo(() => {

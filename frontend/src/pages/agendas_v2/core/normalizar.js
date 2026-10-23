@@ -181,6 +181,8 @@ export function normalEvento(id, d) {
         // margen: después de cada sesión; bloquea la agenda del closer pero el lead no lo ve.
         formulario: String(d.formulario || ''), duracion: dur, margen: entero(d.margen, 0, MARGEN_MAX, 0), activo: d.activo !== false,
         publicado: typeof d.publicado === 'string' ? d.publicado : '', orden: Number(d.orden) || 0, persona: String(d.persona || ''),
+        // Persona fija con suplentes: si la persona no tiene lugar, el primer suplente que tenga (en orden).
+        suplentes: Array.isArray(d.suplentes) ? d.suplentes.map(x => String(x || '')).filter(Boolean) : [],
         reservas: {
             modo: ['dias', 'rango', 'siempre'].includes(rs.modo) ? rs.modo : 'dias', n: entero(rs.n, 1, 365, 30),
             tipo: rs.tipo === 'habiles' ? 'habiles' : 'corridos', desde: fechaOk(rs.desde), hasta: fechaOk(rs.hasta),
