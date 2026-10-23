@@ -540,3 +540,9 @@
   - Producción: 3 alumnos vinculados a su persona (Claudia Molina, Judith De La Cruz y la segunda cuenta de Laura Hernández), 22 personas creadas desde la Academia y 24 suscripciones nuevas. Total: 243 suscripciones (130 vigentes); ningún alumno con producto pago queda sin persona.
   - Se borró el test de la renovación de 4 meses.
   - Verificación: sin tests (regla del proyecto); el backfill se corrió en modo prueba antes de aplicarlo.
+
+- **22 de Octubre de 2026 (operaciones y habilidades de Learnito)** *([app/services/tablas/sistema.py](../../app/services/tablas/sistema.py) [NEW], [app/services/habilidades.py](../../app/services/habilidades.py) [NEW], [app/services/tablas/catalogo.py](../../app/services/tablas/catalogo.py), [app/services/copiloto_datos.py](../../app/services/copiloto_datos.py), [app/services/academy_payment_status.py](../../app/services/academy_payment_status.py) [MODIFY])*:
+  - Operaciones: el motor suma datos con regla de negocio (`s.`), calculados en lote una vez por pedido y solo si el plan los usa: `s.estado_pago` (`regla_estado`, la misma de la Academia), `s.deuda`, `s.proxima_cuota`, `s.dias_para_vencer`, `s.cuotas_vencidas`, `s.monto_vencido` (en clientes, personas y toda tabla con `client_id`) y `s.estado_agenda` (`derivar_estado`).
+  - Habilidades: recetas con nombre sobre esas operaciones, que Learnito usa con `usar_habilidad`. `cobranza_en_riesgo` cruza las cuotas que vencen pronto con el Pulso de la Academia por `alumno_id`; `estado_de_pagos`, `ventas_por_periodo` y `agendas_por_estado`.
+  - `regla_estado` todavía no viaja a la Academia: un estado resuelto envejece con los días y la Academia ya lo deriva con la misma regla.
+  - Verificación: sin tests (regla del proyecto); probado en el servidor de prueba sin llamar a Claude (las cuatro habilidades y un plan con `s.`, en 0,2 s o menos).
