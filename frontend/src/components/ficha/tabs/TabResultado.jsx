@@ -27,6 +27,7 @@ import { moneda } from '../acciones/planCuotas';
 import { Hueso } from '../../huesos/Huesos';
 import GrabacionFathom from './GrabacionFathom';
 import PasarARecuperacion from './PasarARecuperacion';
+import './resultado.css';
 import {
   estadoInicial, responder, actualizar, volverA, preguntaActual, faltantes,
   puedeAvanzar, completo, arrancado, hitos, resumen, esVenta, quedaDeuda, construirPayload,
@@ -267,14 +268,18 @@ export default function TabResultado({
     );
   }
 
+  // El link de la grabación se guarda aparte del reporte (llega cuando Fathom la procesa, muchas
+  // veces con la llamada ya reportada) y se pide al final: en la revisión, después de guardar o
+  // abajo de las tarjetas, nunca arriba de la pregunta que se está contestando.
+  const grabacion = <GrabacionFathom ficha={ficha} onAccion={onAccion} />;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-      <StepperFicha pasos={pasos} onPaso={null} />
-
-      {/* El link de la grabación se guarda aparte del reporte: llega cuando Fathom la procesa,
-          muchas veces con la llamada ya reportada. */}
-      <GrabacionFathom ficha={ficha} onAccion={onAccion} />
-
+    <div className="fi-res">
+    <aside className="fi-res-hitos" aria-label="Progreso del reporte">
+      <small className="fi-res-hitos-tit">Progreso</small>
+      <StepperFicha pasos={pasos} onPaso={null} vertical />
+    </aside>
+    <div className="fi-res-main">
       {error && (
         <div className="ln-alert ln-alert--error" role="alert">
           <span className="ln-alert-ico"><AlertTriangle /></span>
@@ -290,6 +295,7 @@ export default function TabResultado({
         {hecho ? (
           <motion.section key="hecho" {...animar} aria-label="Guardado">
             <Hecho hecho={hecho} irA={irA} onAvisoCerrado={() => setHecho((h) => ({ ...h, avisos: [] }))} />
+            {grabacion}
           </motion.section>
         ) : !arrancado(respuestas) && contexto.modo === 'llamada' ? (
           <motion.section key="raices" {...animar} aria-label="¿Qué pasó con esta llamada?">
@@ -322,6 +328,7 @@ export default function TabResultado({
                 </motion.button>
               )}
             />
+            {grabacion}
           </motion.section>
         ) : listo ? (
           <motion.section key="revision" {...animar} aria-label="Revisión del resultado">
@@ -336,6 +343,7 @@ export default function TabResultado({
               precarga={precarga}
               onVolverA={(clave) => setRespuestas((prev) => volverA(prev, clave))}
               onAnterior={volver}
+              grabacion={grabacion}
             />
           </motion.section>
         ) : (
@@ -370,6 +378,7 @@ export default function TabResultado({
           </button>
         </div>
       )}
+    </div>
     </div>
   );
 }
@@ -793,7 +802,7 @@ function CronogramaVenta({ respuestas, contexto, onCambiar, soloLectura = false 
 
 function Revision({
   respuestas, contexto, guardando, onGuardar, onCambiar, onElegir, precarga, onVolverA, onAnterior,
-  reducido,
+  reducido, grabacion = null,
 }) {
   const venta = esVenta(respuestas);
   // La fila que se está editando acá mismo, sin salir de la revisión. Solo una a la vez.
@@ -933,6 +942,8 @@ function Revision({
           </span>
         </label>
       )}
+
+      {grabacion}
 
       {/* El widget de bugs flota abajo a la derecha: `.fi-botonera` le deja su margen libre. */}
       <div className="fi-botonera fi-rev-pie">

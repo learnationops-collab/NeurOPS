@@ -19,6 +19,13 @@ from app.services.ficha_acciones_service import ErrorDeAccion
 from app.services.ficha_seguimientos_service import _dia, _nota
 
 MOTIVO = 'Sin resultado de la llamada'
+# Por qué se deriva (23/10/2026, Mario): el closer lo elige en el flujo breve de la ficha.
+MOTIVOS = {
+    'otro_closer': 'La llamada corresponde a otro closer',
+    'no_tomada': 'No pude tomar la llamada',
+    'falla': 'Falla técnica: la llamada no se pudo hacer',
+    'otro': 'Otro motivo',
+}
 # Lo que todavía cuenta como «sin resultado»: lo que el closer no reportó.
 SIN_RESULTADO = ('', 'pendiente')
 
@@ -31,12 +38,20 @@ def pasar_a_recuperacion(appt, datos, usuario):
         raise ErrorDeAccion('Esta llamada todavía no ocurrió.')
     fecha = _dia(datos.get('fecha'))
     nota = _nota(datos.get('nota'))
+    clave = datos.get('motivo')
+    if clave is not None and clave not in MOTIVOS:
+        raise ErrorDeAccion('Elegí por qué pasa a seguimiento.')
+    if clave == 'otro' and not nota:
+        raise ErrorDeAccion('Contá el motivo en la nota.')
+    motivo = MOTIVOS.get(clave) if clave != 'otro' else None
+    sub = ' · '.join(filter(None, [motivo, nota]))[:255] or MOTIVO
 
-    CloserFollowUpService.schedule_followup(appt, tipo='no_tomada', sub=nota or MOTIVO,
+    CloserFollowUpService.schedule_followup(appt, tipo='no_tomada', sub=sub,
                                             fecha_seguimiento=fecha, intento=1, reminder_enabled=False)
     appt.closer_result = ARCHIVADA_SIN_REPORTE
     appt.closer_processed = True
-    firma = f'[Sistema] {usuario.username} la pasó a seguimiento de recuperación: la llamada no tuvo resultado.'
+    firma = (f'[Sistema] {usuario.username} la pasó a seguimiento de recuperación: '
+             f'{motivo.lower() if motivo else "la llamada no tuvo resultado"}.')
     appt.closer_notes = f'{appt.closer_notes}\n{firma}'.strip() if appt.closer_notes else firma
     db.session.commit()
 
@@ -45,6 +60,6 @@ def pasar_a_recuperacion(appt, datos, usuario):
     BookingService.log_lead_event(
         appt.id, usuario.id, 'seguimiento_recuperacion',
         f'{usuario.username} pasó la llamada sin resultado a seguimiento de recuperación, el {fecha}'
-        + (f': «{nota}».' if nota else '.'))
+        + (f' ({motivo})' if motivo else '') + (f': «{nota}».' if nota else '.'))
     return {'id': appt.id, 'closer_result': appt.closer_result, 'fecha': appt.fecha_seguimiento,
             'tipo': appt.seguimiento_tipo, 'nota': appt.seguimiento_sub}

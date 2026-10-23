@@ -1,0 +1,80 @@
+/* ============================================================
+   OTRAS SALIDAS DE LA LLAMADA — «Registrar una venta» y «Pasar a seguimiento».
+
+   Mario (23/10/2026): en vez de dos bloques con texto, dos botones compactos
+   con el aura de Learnation (magenta y azul) que despierta al pasar el mouse.
+   «Pasar a seguimiento» abre abajo un flujo breve: por qué y cuándo.
+   ============================================================ */
+
+.dc-shell .fi-otras-wrap{display:grid;gap:var(--s3);margin-top:var(--s5)}
+.dc-shell .fi-otras{display:flex;flex-wrap:wrap;gap:var(--s2)}
+
+/* ---------- Botón compacto con aura ---------- */
+.dc-shell .fi-otra{position:relative;isolation:isolate;overflow:hidden;display:inline-flex;align-items:center;
+  gap:8px;height:36px;padding:0 16px;border-radius:var(--radius-pill);
+  border:1px solid var(--border-control);background:color-mix(in srgb,var(--bg-element) 70%,transparent);
+  color:var(--text-on-surface);font-size:13px;font-weight:700;cursor:pointer;
+  transition:border-color .2s ease,box-shadow .25s ease,color .2s ease}
+.dc-shell .fi-otra svg{width:15px;height:15px;color:var(--brand-secondary);transition:transform .25s ease}
+/* El aura: dos nubes que entran desde los costados y se mueven despacio. */
+.dc-shell .fi-otra::before{content:'';position:absolute;inset:-40%;z-index:-1;opacity:0;
+  background:radial-gradient(35% 55% at 25% 50%,rgba(255,63,164,.55),transparent 70%),
+    radial-gradient(40% 60% at 78% 50%,rgba(19,35,198,.6),transparent 70%);
+  filter:blur(10px);transition:opacity .3s ease}
+.dc-shell .fi-otra:hover,
+.dc-shell .fi-otra[data-activo]{border-color:rgba(255,63,164,.5);
+  box-shadow:0 0 18px -6px rgba(255,63,164,.65)}
+.dc-shell .fi-otra:hover::before,
+.dc-shell .fi-otra[data-activo]::before{opacity:1;animation:fi-otra-aura 6s ease-in-out infinite alternate}
+.dc-shell .fi-otra:hover svg{transform:rotate(-8deg) scale(1.08)}
+.dc-shell .fi-otra:focus-visible{outline:none;border-radius:var(--radius-pill);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--brand-secondary) 30%,transparent)}
+@keyframes fi-otra-aura{from{transform:translateX(-8%)}to{transform:translateX(8%)}}
+
+/* ---------- El flujo: por qué y cuándo ---------- */
+.dc-shell .fi-deriva{position:relative;isolation:isolate;overflow:hidden;display:grid;gap:var(--s4);
+  padding:var(--s4) var(--s5);border-radius:20px;border:1px solid rgba(255,63,164,.28);
+  background:color-mix(in srgb,var(--bg-element) 60%,transparent)}
+.dc-shell .fi-deriva-velo{position:absolute;left:-10%;right:-10%;top:-140px;height:220px;z-index:-1;
+  pointer-events:none;opacity:.2;filter:blur(34px);
+  background:radial-gradient(40% 60% at 22% 50%,rgba(255,63,164,.9),transparent 70%),
+    radial-gradient(45% 60% at 78% 50%,rgba(19,35,198,.9),transparent 70%)}
+.dc-shell .fi-deriva-cab{display:flex;align-items:center;justify-content:space-between;gap:var(--s2)}
+.dc-shell .fi-deriva-cab b{font-size:15px;font-weight:800}
+
+.dc-shell .fi-deriva-paso{display:grid;gap:var(--s2)}
+.dc-shell .fi-deriva-paso .t-rotulo{display:flex;align-items:center;gap:8px}
+.dc-shell .fi-deriva-paso .t-rotulo i{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;
+  font-style:normal;font-size:10px;font-weight:900;color:var(--brand-secondary);
+  background:color-mix(in srgb,var(--brand-secondary) 16%,transparent)}
+
+.dc-shell .fi-deriva-motivos{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:var(--s2)}
+.dc-shell .fi-deriva-motivo{display:flex;align-items:center;gap:10px;min-height:40px;padding:8px 12px;
+  border-radius:12px;border:1px solid var(--border-subtle);background:var(--bg-element);
+  color:var(--text-on-surface);font-size:13px;font-weight:600;text-align:left;cursor:pointer;
+  transition:border-color .15s ease,background-color .15s ease,box-shadow .2s ease}
+.dc-shell .fi-deriva-motivo:hover:not(:disabled){background:var(--bg-element-hover)}
+.dc-shell .fi-deriva-check{display:grid;place-items:center;flex-shrink:0;width:18px;height:18px;border-radius:50%;
+  border:1.5px solid var(--border-control);transition:background-color .15s ease,border-color .15s ease}
+.dc-shell .fi-deriva-check svg{width:11px;height:11px;opacity:0;transform:scale(.5);
+  transition:opacity .15s ease,transform .2s cubic-bezier(.3,1.6,.5,1)}
+.dc-shell .fi-deriva-motivo[aria-checked="true"]{border-color:rgba(255,63,164,.55);
+  background:linear-gradient(100deg,rgba(255,63,164,.2),rgba(19,35,198,.16));
+  box-shadow:0 0 16px -6px rgba(255,63,164,.6)}
+.dc-shell .fi-deriva-motivo[aria-checked="true"] .fi-deriva-check{background:var(--brand-secondary);
+  border-color:var(--brand-secondary);color:var(--on-brand)}
+.dc-shell .fi-deriva-motivo[aria-checked="true"] .fi-deriva-check svg{opacity:1;transform:none}
+
+.dc-shell .fi-deriva-cuando{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:var(--s2);align-items:end}
+.dc-shell .fi-deriva-cuando .ln-field{height:44px;padding:0 var(--s3)}
+.dc-shell .fi-deriva-pie{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s3)}
+
+@media (max-width:640px){
+  .dc-shell .fi-deriva{padding:var(--s4)}
+  .dc-shell .fi-deriva-cuando{grid-template-columns:1fr}
+  .dc-shell .fi-deriva-pie .btn{width:100%;justify-content:center}
+}
+@media (prefers-reduced-motion:reduce){
+  .dc-shell .fi-otra::before{animation:none !important}
+  .dc-shell .fi-otra:hover svg{transform:none}
+}
