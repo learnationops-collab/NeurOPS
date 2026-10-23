@@ -30,10 +30,13 @@
 .dc-shell .flj-etapa--ir:focus-visible .flj-rotulo{fill:var(--brand-secondary)}
 .dc-shell .flj-etapa--ir:hover .flj-valor{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px}
 .dc-shell .flj-etapa--ir:focus-visible .flj-barra rect{stroke:var(--focus-blue);stroke-width:2}
+/* Una etapa que solo explica (burbuja, sin lista): cursor de ayuda y el mismo foco que la que abre lista. */
+.dc-shell .flj-etapa[role="img"]{cursor:help;outline:none}
+.dc-shell .flj-etapa[role="img"]:focus-visible .flj-barra rect{stroke:var(--focus-blue);stroke-width:2}
 
 /* Píldoras: la conversión de la banda. Punteada en el cruce del reporte al
    sistema (no es una conversión), ámbar arriba de 100%. */
-.dc-shell .flj-pildora{opacity:0;transition:opacity .4s ease}
+.dc-shell .flj-pildora{opacity:0;transition:opacity .4s ease;cursor:help}
 .dc-shell .flj-pildora.on{opacity:1}
 .dc-shell .flj-pildora rect{fill:var(--bg-flotante);stroke:color-mix(in srgb,var(--c) 55%,transparent);stroke-width:1}
 .dc-shell .flj-pildora text{fill:var(--text-on-surface);font-size:12px;font-weight:900;font-variant-numeric:tabular-nums}

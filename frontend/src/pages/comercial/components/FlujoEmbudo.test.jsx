@@ -33,8 +33,94 @@ describe('FlujoEmbudo', () => {
         const cruce = container.querySelectorAll('.flj-pildora')[2];
         expect(cruce).toHaveClass('flj-pildora--cruce');
         expect(cruce).toHaveClass('flj-pildora--alta');
-        expect(cruce.querySelector('title').textContent).toBe('Generadas: el sistema registra 25 y se reportaron 20');
+        expect(cruce).toHaveAttribute('aria-label', 'Generadas: el sistema registra 25 y se reportaron 20');
         expect(container.querySelectorAll('.flj-pildora')[0]).not.toHaveClass('flj-pildora--cruce');
+    });
+
+    describe('burbuja de cada número', () => {
+        const CON_AYUDA = [
+            { key: 'entrantes', label: 'Entrantes', n: 200, ayuda: 'Mensajes nuevos del día.' },
+            { key: 'agendas', label: 'Agendas', n: 20, ayuda: 'Agendas que cargó el setter.' },
+            { key: 'generadas', label: 'Generadas', n: 25, cruce: true, ayuda: 'Agendas reservadas en el sistema.' },
+        ];
+
+        it('la etapa explica qué cuenta al pasar el mouse, y se va al sacarlo', () => {
+            const { container } = render(<FlujoEmbudo etapas={CON_AYUDA} />);
+            const etapa = container.querySelectorAll('.flj-etapa')[1];
+
+            expect(screen.queryByText('Agendas que cargó el setter.')).toBeNull();
+            fireEvent.mouseEnter(etapa);
+            expect(screen.getByText('Agendas que cargó el setter.')).toBeInTheDocument();
+            fireEvent.mouseLeave(etapa);
+            expect(screen.queryByText('Agendas que cargó el setter.')).toBeNull();
+        });
+
+        it('ya no usa el <title> nativo del navegador', () => {
+            const { container } = render(<FlujoEmbudo etapas={CON_AYUDA} />);
+
+            expect(container.querySelectorAll('title')).toHaveLength(0);
+        });
+
+        it('la píldora explica su conversión; la del cruce, lo que registra cada fuente', () => {
+            const { container } = render(<FlujoEmbudo etapas={CON_AYUDA} />);
+            const [conv, cruce] = container.querySelectorAll('.flj-pildora');
+
+            fireEvent.mouseEnter(conv);
+            expect(screen.getByText('Agendas: 10% de entrantes (20 de 200)')).toBeInTheDocument();
+            fireEvent.mouseEnter(cruce);
+            expect(screen.getByText('Generadas: el sistema registra 25 y se reportaron 20')).toBeInTheDocument();
+            expect(screen.queryByText('Agendas: 10% de entrantes (20 de 200)')).toBeNull();
+        });
+
+        it('el teclado la abre con el foco y Escape la cierra', () => {
+            const { container } = render(<FlujoEmbudo etapas={CON_AYUDA} />);
+            const etapa = container.querySelectorAll('.flj-etapa')[0];
+
+            expect(etapa).toHaveAttribute('tabindex', '0');
+            fireEvent.focus(etapa);
+            expect(screen.getByText('Mensajes nuevos del día.')).toBeInTheDocument();
+            fireEvent.keyDown(document, { key: 'Escape' });
+            expect(screen.queryByText('Mensajes nuevos del día.')).toBeNull();
+        });
+
+        it('con el dedo el toque la alterna', () => {
+            const { container } = render(<FlujoEmbudo etapas={CON_AYUDA} />);
+            const etapa = container.querySelectorAll('.flj-etapa')[2];
+
+            fireEvent.pointerDown(etapa, { pointerType: 'touch' });
+            expect(screen.getByText('Agendas reservadas en el sistema.')).toBeInTheDocument();
+            fireEvent.pointerDown(etapa, { pointerType: 'touch' });
+            expect(screen.queryByText('Agendas reservadas en el sistema.')).toBeNull();
+        });
+
+        it('una etapa con lista no la abre con el toque: manda su clic', () => {
+            const ir = vi.fn();
+            const { container } = render(<FlujoEmbudo etapas={[CON_AYUDA[0], { ...CON_AYUDA[2], ir }]} />);
+            const etapa = container.querySelectorAll('.flj-etapa')[1];
+
+            fireEvent.pointerDown(etapa, { pointerType: 'touch' });
+            expect(screen.queryByText('Agendas reservadas en el sistema.')).toBeNull();
+            fireEvent.mouseEnter(etapa);
+            expect(screen.getByText('Agendas reservadas en el sistema.')).toBeInTheDocument();
+        });
+
+        it('apilado también explica cada fila y cada píldora', () => {
+            const { container } = render(<FlujoEmbudo apilar etapas={CON_AYUDA} />);
+
+            fireEvent.mouseEnter(screen.getAllByRole('listitem')[1]);
+            expect(screen.getByText('Agendas que cargó el setter.')).toBeInTheDocument();
+            fireEvent.mouseEnter(container.querySelector('.flj-pildora'));
+            expect(screen.getByText('Agendas: 10% de entrantes (20 de 200)')).toBeInTheDocument();
+        });
+
+        it('sin explicación no hay burbuja ni foco', () => {
+            const { container } = render(<FlujoEmbudo etapas={ETAPAS} />);
+            const etapa = container.querySelector('.flj-etapa');
+
+            expect(etapa).not.toHaveAttribute('tabindex');
+            fireEvent.mouseEnter(etapa);
+            expect(document.querySelector('.tip-burbuja')).toBeNull();
+        });
     });
 
     it('sin denominador la conversión es «—», no 0%', () => {

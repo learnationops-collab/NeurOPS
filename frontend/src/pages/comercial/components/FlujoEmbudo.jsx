@@ -1,6 +1,7 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import Cifra from './Cifra';
 import { fmt, useMontado } from './Shared';
+import { useTipFlotante } from './useTipFlotante';
 import './flujo.css';
 
 /**
@@ -20,6 +21,9 @@ import './flujo.css';
  *   sistema de lo que se reportó, y se dibuja punteada. Arriba de 100% va en ámbar, como en el
  *   formulario: casi siempre es un número que no cuadra.
  * - `ir` hace la etapa cliqueable (el drill-down a su lista).
+ * - `ayuda` es la explicación corta de la etapa: sale en la burbuja del tablero (`useTipFlotante`) al
+ *   pasar el mouse, enfocar o tocar la barra, el número o el rótulo; las píldoras explican su propia
+ *   conversión de la misma forma.
  *
  * Mide su ancho y dibuja el SVG a escala 1:1 (1 unidad = 1 px), así los textos nunca se achican.
  * Cuando las etapas no entran con sus rótulos —un teléfono, una columna angosta— se apila: una fila
@@ -91,13 +95,22 @@ const geometria = (ancho, n, rotulos) => {
     return { anchoBarra, hueco, entra };
 };
 
-const accion = (etapa) => (etapa.ir ? {
-    role: 'button', tabIndex: 0, 'aria-label': `Ver la lista: ${etapa.label}, ${fmt.num(etapa.n)}`,
-    onClick: etapa.ir,
-    onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); etapa.ir(); } },
-} : {});
+const accion = (etapa) => {
+    if (etapa.ir) {
+        return {
+            role: 'button', tabIndex: 0, 'aria-label': `Ver la lista: ${etapa.label}, ${fmt.num(etapa.n)}`,
+            'aria-description': etapa.ayuda || undefined,
+            onClick: etapa.ir,
+            onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); etapa.ir(); } },
+        };
+    }
+    // Sin lista, pero con explicación: enfocable para que el teclado también la abra.
+    return etapa.ayuda
+        ? { role: 'img', tabIndex: 0, 'aria-label': `${etapa.label} ${fmt.num(etapa.n)}: ${etapa.ayuda}` }
+        : {};
+};
 
-const Horizontal = ({ etapas, escala, raiz, ancho, rotulos, bandas, color, montado }) => {
+const Horizontal = ({ etapas, escala, raiz, ancho, rotulos, bandas, color, montado, de }) => {
     const n = etapas.length;
     const { anchoBarra: fb, hueco: fg } = geometria(ancho, n, rotulos);
     const alto = ARRIBA + ALTO_MAX + (rotulos ? CON_ROTULOS : 6);
@@ -122,8 +135,8 @@ const Horizontal = ({ etapas, escala, raiz, ancho, rotulos, bandas, color, monta
                 let acum = y0;
                 const tramos = e.partes?.filter(p => p.n > 0) || [];
                 return (
-                    <g key={e.key} className={`flj-etapa${e.ir ? ' flj-etapa--ir' : ''}`} {...accion(e)}>
-                        {e.ayuda && <title>{e.ayuda}</title>}
+                    <g key={e.key} className={`flj-etapa${e.ir ? ' flj-etapa--ir' : ''}`} {...accion(e)}
+                        {...de(e.ayuda, undefined, { tactil: !e.ir, sobre: '.flj-valor' })}>
                         <g className={`flj-barra${montado ? ' on' : ''}`} style={{ transitionDelay: `${i * 60}ms` }}>
                             {tramos.length > 1 ? tramos.map(p => {
                                 const h = (p.n / e.n) * t, y = acum;
@@ -146,10 +159,11 @@ const Horizontal = ({ etapas, escala, raiz, ancho, rotulos, bandas, color, monta
             {bandas && etapas.slice(1).map((e, j) => {
                 const i = j + 1, v = conversion(e.n, etapas[i - 1].n);
                 const cx = x(i) - fg / 2;
+                const titulo = tituloPildora(e, etapas[i - 1], v);
                 return (
                     <g key={`p-${e.key}`} className={`${clasePildora(e, v)}${montado ? ' on' : ''}`}
-                        style={{ '--c': e.color || color, transitionDelay: `${380 + i * 70}ms` }}>
-                        <title>{tituloPildora(e, etapas[i - 1], v)}</title>
+                        style={{ '--c': e.color || color, transitionDelay: `${380 + i * 70}ms` }}
+                        role="img" aria-label={titulo} {...de(titulo)}>
                         <rect x={cx - PILDORA.ancho / 2} y={cy - PILDORA.alto / 2} width={PILDORA.ancho}
                             height={PILDORA.alto} rx={PILDORA.alto / 2} />
                         <text x={cx} y={cy + 4} textAnchor="middle">{textoPildora(v)}</text>
@@ -161,7 +175,7 @@ const Horizontal = ({ etapas, escala, raiz, ancho, rotulos, bandas, color, monta
 };
 
 /** El mismo embudo girado: una fila por etapa, la barra centrada en su pista. */
-const Vertical = ({ etapas, escala, raiz, bandas, color, montado }) => {
+const Vertical = ({ etapas, escala, raiz, bandas, color, montado, de }) => {
     const pct = (v) => (v > 0 ? Math.max(PCT_MIN, proporcion(v, escala, raiz) * 100) : 0);
     return (
         <div className="flj-v" role="list">
@@ -181,14 +195,16 @@ const Vertical = ({ etapas, escala, raiz, bandas, color, montado }) => {
                                             d={`M${50 - a / 2},0 L${50 + a / 2},0 L${50 + b / 2},10 L${50 - b / 2},10 Z`} />
                                     </svg>
                                     <span className={`${clasePildora(e, v)}${montado ? ' on' : ''}`}
-                                        style={{ '--c': e.color || color }} title={tituloPildora(e, anterior, v)}>
+                                        style={{ '--c': e.color || color }} aria-label={tituloPildora(e, anterior, v)}
+                                        {...de(tituloPildora(e, anterior, v))}>
                                         {textoPildora(v)}
                                     </span>
                                 </span>
                                 <span />
                             </div>
                         )}
-                        <div className="flj-v-fila" role="listitem" title={e.ayuda || undefined}>
+                        <div className="flj-v-fila" role="listitem" aria-description={e.ayuda || undefined}
+                            {...de(e.ayuda, undefined, { tactil: !e.ir })}>
                             {e.ir ? (
                                 <button type="button" className="flj-v-rotulo flj-v-rotulo--ir" onClick={e.ir}
                                     aria-label={`Ver la lista: ${e.label}, ${fmt.num(e.n)}`}>{e.label}</button>
@@ -216,12 +232,14 @@ const FlujoEmbudo = ({ etapas, max, raiz = false, color = 'var(--ch-tot)', banda
     const ancho = medido || ANCHO_SUPUESTO;
     const escala = max ?? Math.max(1, ...etapas.map(e => e.n || 0));
     const vertical = apilar ?? !geometria(ancho, etapas.length, rotulos).entra;
+    const { de, capa } = useTipFlotante();
     return (
         <div ref={ref} className={`flj${vertical ? ' flj--v' : ''}`} style={{ '--c': color }}>
             {vertical
-                ? <Vertical etapas={etapas} escala={escala} raiz={raiz} bandas={bandas} color={color} montado={montado} />
+                ? <Vertical etapas={etapas} escala={escala} raiz={raiz} bandas={bandas} color={color} montado={montado} de={de} />
                 : <Horizontal etapas={etapas} escala={escala} raiz={raiz} ancho={ancho} rotulos={rotulos} bandas={bandas}
-                    color={color} montado={montado} />}
+                    color={color} montado={montado} de={de} />}
+            {capa}
         </div>
     );
 };

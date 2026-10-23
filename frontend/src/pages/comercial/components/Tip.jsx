@@ -45,7 +45,7 @@ const MARGEN = 12; // aire mínimo contra el borde de la ventana
 const SALTO = 10;  // separación entre el ancla y la burbuja: es donde entra la flecha
 
 /** Dónde poner la burbuja para que entre entera. Devuelve coordenadas de viewport (`fixed`). */
-const ubicar = (ancla, burbuja) => {
+export const ubicar = (ancla, burbuja) => {
     const a = ancla.getBoundingClientRect();
     const { width: w, height: h } = burbuja.getBoundingClientRect();
     const { innerWidth: vw, innerHeight: vh } = window;
