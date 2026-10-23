@@ -25,6 +25,8 @@ export const PESTANAS = [
     // permiso es el de cobro porque la audiencia es la misma (dirección y closer).
     { id: 'ful', label: 'Fulfillment', permiso: 'cobrar' },
     { id: 'hist', label: 'Historial', permiso: null },
+    // Todo lo del lead por tramos, de la primera palabra clave a sus meses en la Academia (23/10/2026).
+    { id: 'bita', label: 'Bitácora', permiso: null },
     { id: 'form', label: 'Formulario', permiso: null },
     { id: 'com', label: 'Comunicación', permiso: 'comentar' },
 ];

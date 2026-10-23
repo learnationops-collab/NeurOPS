@@ -132,12 +132,13 @@ class LearnationService:
         return LearnationService._request('GET', '/success-cases')
 
     @staticmethod
-    def agent_ask(plan=None, pregunta=None, quien=None, pagina=1, catalogo=None, buscar=None):
+    def agent_ask(plan=None, pregunta=None, quien=None, pagina=1, catalogo=None, buscar=None, expediente=None):
         """Agentes pares (API de la Academia §2.14): un plan por claves lo resuelve su motor de Tablas, sin IA;
-        `catalogo` (True o una fuente) trae sus fuentes o datos; una pregunta suelta la responde su Learnito con
-        IA (con costo). `quien` = {email, rol}, con el rol de Work tal cual. Devuelve el paquete tal cual."""
+        `catalogo` (True o una fuente) trae sus fuentes o datos; `expediente` ({alumno_id | work_uuid | email})
+        trae todo lo de un alumno, sin IA (ADR-168); una pregunta suelta la responde su Learnito con IA (con
+        costo). `quien` = {email, rol}, con el rol de Work tal cual. Devuelve el paquete tal cual."""
         cuerpo = {'plan': plan, 'pregunta': pregunta, 'quien': quien, 'pagina': pagina, 'catalogo': catalogo,
-                  'buscar': buscar}
+                  'buscar': buscar, 'expediente': expediente}
         cuerpo = {k: v for k, v in cuerpo.items() if v is not None}
         # Su Learnito puede tardar en responder una pregunta; un plan, menos.
         return LearnationService._request('POST', '/agent/ask', json=cuerpo, timeout=90 if pregunta else 40)

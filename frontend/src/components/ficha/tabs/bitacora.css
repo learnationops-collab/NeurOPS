@@ -1,0 +1,9 @@
+/* Bitácora de la ficha: la fila del historial con la fecha y hora entera y los chips a la derecha. */
+.dc-shell .fi-bita-fila { grid-template-columns: 150px minmax(0, 1fr) auto; align-items: start; }
+.dc-shell .fi-bita-que { display: grid; gap: 2px; min-width: 0; }
+.dc-shell .fi-bita-chips { display: flex; gap: var(--s2); justify-content: flex-end; flex-wrap: wrap; }
+
+@media (max-width: 640px) {
+    .dc-shell .fi-bita-fila { grid-template-columns: 1fr; }
+    .dc-shell .fi-bita-chips { justify-content: flex-start; }
+}

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ClipboardCheck, FileText, History, MessageSquare, PhoneCall, Wallet } from 'lucide-react';
+import { BookOpen, ClipboardCheck, FileText, History, MessageSquare, PhoneCall, Wallet } from 'lucide-react';
 import useMovimiento from './piezas/useMovimiento';
 
 /**
@@ -22,6 +22,7 @@ const ICONOS = {
     resultado: PhoneCall,
     acciones: Wallet,
     hist: History,
+    bita: BookOpen,
     form: FileText,
     com: MessageSquare,
 };

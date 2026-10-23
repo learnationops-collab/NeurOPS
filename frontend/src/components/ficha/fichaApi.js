@@ -26,6 +26,12 @@ export const obtenerFicha = ({ appointmentId = null, clientId = null, personUuid
     return api.get('/ficha/lead', { params, signal }).then(r => r.data);
 };
 
+/** La bitácora del lead por tramos (`GET /ficha/bitacora`): aparte, porque espera a la Academia. */
+export const obtenerBitacora = ({ appointmentId = null, clientId = null, signal } = {}) => {
+    const params = appointmentId != null ? { appointment_id: appointmentId } : { client_id: clientId };
+    return api.get('/ficha/bitacora', { params, signal, timeout: 60000 }).then(r => r.data);
+};
+
 /**
  * Mapa acción → petición. La clave es el nombre que usan las pestañas; el valor
  * recibe `(appt, payload)`.
@@ -183,6 +189,6 @@ export const clienteNuevoParaVender = (datos) => api
     .post('/ficha/cliente-nuevo/agenda-de-venta', datos).then(r => r.data);
 
 export default {
-    obtenerFicha, ejecutarAccion, ejecutarConsulta, agendaParaVender, clienteNuevoParaVender,
+    obtenerFicha, obtenerBitacora, ejecutarAccion, ejecutarConsulta, agendaParaVender, clienteNuevoParaVender,
     ACCIONES, mensajeDeError,
 };
