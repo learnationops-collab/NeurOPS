@@ -1,17 +1,19 @@
 /* ============================================================
-   PESTAÑA RESULTADO — el reporte a la izquierda y el progreso a la derecha.
+   PESTAÑA RESULTADO — el progreso a la izquierda, discreto, y el reporte al lado.
 
    Pedido de Mario (23/10/2026): los hitos ocupaban una franja entera arriba y
-   empujaban la pregunta. Van en una columna angosta a la derecha, de arriba
-   abajo y más chicos; en pantallas angostas suben y quedan en una fila.
+   empujaban la pregunta. Van en una columna angosta y apagada a la izquierda,
+   de arriba abajo y chicos, y el resto del ancho es para el reporte; en
+   pantallas angostas quedan en una fila arriba.
    ============================================================ */
 
-.dc-shell .fi-res{display:grid;grid-template-columns:minmax(0,1fr) 196px;gap:var(--s6);align-items:start}
+.dc-shell .fi-res{display:grid;grid-template-columns:132px minmax(0,1fr);gap:var(--s6);align-items:start}
 .dc-shell .fi-res-main{display:flex;flex-direction:column;gap:var(--space-6);min-width:0}
-.dc-shell .fi-res-hitos{position:sticky;top:0;display:grid;gap:var(--s3);padding:var(--s4);
-  border-radius:20px;border:1px solid var(--border-subtle);
-  background:color-mix(in srgb,var(--bg-element) 55%,transparent)}
-.dc-shell .fi-res-hitos-tit{font-size:10px;font-weight:900;letter-spacing:.22em;text-transform:uppercase;
+/* Discreto: sin tarjeta, apagado, y se enciende apenas al pasar por encima. */
+.dc-shell .fi-res-hitos{position:sticky;top:0;display:grid;gap:var(--s2);padding:var(--s1) var(--s4) 0 0;
+  border-right:1px solid var(--border-subtle);opacity:.72;transition:opacity .2s ease}
+.dc-shell .fi-res-hitos:hover{opacity:1}
+.dc-shell .fi-res-hitos-tit{font-size:9px;font-weight:900;letter-spacing:.22em;text-transform:uppercase;
   color:var(--text-muted-40)}
 /* El link de Fathom, al final de lo que se está viendo y separado de lo de arriba. */
 .dc-shell .fi-res-main section > .fi-fathom{margin-top:var(--s6)}
@@ -21,23 +23,23 @@
    siguiente y se pinta de verde cuando el siguiente también se alcanzó. */
 .dc-shell .fi-stepper.fi-stepper--v{display:flex;flex-direction:column;gap:0}
 .dc-shell .fi-stepper--v .fi-stepper-riel{display:none}
-.dc-shell .fi-stepper--v .fi-paso{display:grid;grid-template-columns:22px minmax(0,1fr);
-  column-gap:var(--s3);row-gap:1px;align-items:start;text-align:left;padding-bottom:var(--s4)}
+.dc-shell .fi-stepper--v .fi-paso{display:grid;grid-template-columns:16px minmax(0,1fr);
+  column-gap:var(--s2);row-gap:0;align-items:start;text-align:left;padding-bottom:var(--s3)}
 .dc-shell .fi-stepper--v .fi-paso:last-child{padding-bottom:0}
-.dc-shell .fi-stepper--v .fi-paso:not(:last-child)::after{content:'';position:absolute;left:10px;top:24px;
+.dc-shell .fi-stepper--v .fi-paso:not(:last-child)::after{content:'';position:absolute;left:7px;top:18px;
   bottom:2px;width:2px;border-radius:2px;background:var(--border-subtle)}
 .dc-shell .fi-stepper--v .fi-paso:is([data-estado="hecho"],[data-estado="alerta"]):has(+ .fi-paso:is([data-estado="hecho"],[data-estado="alerta"]))::after{
   background:var(--success)}
-.dc-shell .fi-stepper--v .fi-paso-punto{grid-row:span 2;width:22px;height:22px;border-width:1.5px;font-size:11px}
-.dc-shell .fi-stepper--v .fi-paso-punto svg{width:12px;height:12px}
-.dc-shell .fi-stepper--v .fi-paso-lbl{font-size:12.5px;line-height:22px}
-.dc-shell .fi-stepper--v .fi-paso-sub{font-size:11.5px;overflow-wrap:anywhere}
+.dc-shell .fi-stepper--v .fi-paso-punto{grid-row:span 2;width:16px;height:16px;border-width:1.5px;font-size:9px}
+.dc-shell .fi-stepper--v .fi-paso-punto svg{width:10px;height:10px}
+.dc-shell .fi-stepper--v .fi-paso-lbl{font-size:11.5px;line-height:16px}
+.dc-shell .fi-stepper--v .fi-paso-sub{font-size:10.5px;line-height:1.3;overflow-wrap:anywhere}
 
 @media (max-width:760px){
   .dc-shell .fi-res{grid-template-columns:minmax(0,1fr);gap:var(--s4)}
-  .dc-shell .fi-res-hitos{position:static;order:-1;padding:var(--s3) var(--s4)}
+  .dc-shell .fi-res-hitos{position:static;padding:0 0 var(--s3);border-right:0;border-bottom:1px solid var(--border-subtle)}
   .dc-shell .fi-stepper.fi-stepper--v{flex-direction:row;flex-wrap:wrap;gap:var(--s2) var(--s4)}
-  .dc-shell .fi-stepper--v .fi-paso{padding-bottom:0;grid-template-columns:22px auto;column-gap:var(--s2)}
+  .dc-shell .fi-stepper--v .fi-paso{padding-bottom:0;grid-template-columns:16px auto;column-gap:6px}
   .dc-shell .fi-stepper--v .fi-paso::after,
   .dc-shell .fi-stepper--v .fi-paso-sub{display:none}
 }
