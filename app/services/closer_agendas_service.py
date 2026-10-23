@@ -38,7 +38,19 @@ NOTA_ARCHIVADA = '[Sistema] Archivado automáticamente'
 AYUDA_ESTADO = {
     'lead_perdido': 'El closer lo descartó.',
     'archivada_sin_reporte': 'Nadie la reportó en 30 días; el sistema la archivó.',
+    'descalificada': 'El closer vio que el lead no calificaba.',
 }
+
+# El `closer_result` que deja el botón «Descalificado» de la confirmación (ficha › Confirmación,
+# 23/10/2026). Es una cancelación por decisión del closer: la llamada no se hace, pero se marca
+# aparte para medir cuántas agendas descalifican los closers. Las que el formulario de Agendas 2.0
+# corta solas no llegan a ser una agenda (`SchedIntento`): se cuentan en `descalificados_service`.
+#
+# «No Lead» es lo mismo con otro nombre (el closer vio que el lead no calificaba): desde el
+# 23/10/2026 se deriva como `descalificada` (ver `_DESCALIFICADA`) y el botón «Descartar lead» de la
+# confirmación, que lo escribía, se quitó. El valor crudo 'No Lead' no se migra: lo siguen escribiendo
+# el árbol de «Resultado» y la hoja, y se lee igual.
+DESCALIFICADA = 'Descalificado'
 
 # Un solo catálogo para el backend (clasificación y conteos) y el frontend (chips, colores,
 # orden). El orden es el del ciclo de vida de una agenda: antes de la llamada, después, y
@@ -65,10 +77,10 @@ ESTADOS = [
      'desc': 'Cancelada antes de la llamada.'},
     {'key': 'lead_perdido', 'label': 'Lead perdido', 'color': '#F97316',
      'desc': AYUDA_ESTADO['lead_perdido']},
-    {'key': 'no_lead', 'label': 'No lead', 'color': '#78716C',
-     'desc': 'Marcada como no lead (no calificaba).'},
     {'key': 'archivada_sin_reporte', 'label': ARCHIVADA_SIN_REPORTE, 'color': '#A8A29E',
      'desc': AYUDA_ESTADO['archivada_sin_reporte']},
+    {'key': 'descalificada', 'label': 'Descalificada', 'color': '#E11D48',
+     'desc': AYUDA_ESTADO['descalificada']},
 ]
 ESTADO_LABELS = {e['key']: e['label'] for e in ESTADOS}
 
@@ -85,8 +97,9 @@ _SHOW_UP = {'show up', 'show_up', 'showup', 'cerrada', 'cerrado', 'cerrado/a', '
 _NO_SHOW = {'no show', 'no_show', 'noshow'}
 _SEGUNDA = {'2da call', '2th call', '2da llamada', 'follow up'}
 _LEAD_PERDIDO = {'lead perdido', 'perdido'}
-_NO_LEAD = {'no lead'}
 _ARCHIVADA = {ARCHIVADA_SIN_REPORTE.lower()}
+# 'no lead' incluido: es lo mismo que descalificado (ver `DESCALIFICADA`).
+_DESCALIFICADA = {DESCALIFICADA.lower(), 'descalificada', 'no lead'}
 _CANCELADA = {'cancelado', 'cancelada'}
 _REAGENDADA = {'reagendado', 'reagendada', 'reprogramado', 'reprogramada'}
 _PENDIENTE = {'', 'pendiente'}
@@ -181,10 +194,10 @@ def derivar_estado(appt, now_utc):
         return 'segunda_llamada'
     if cr in _LEAD_PERDIDO:
         return 'lead_perdido'
-    if cr in _NO_LEAD:
-        return 'no_lead'
     if cr in _ARCHIVADA:
         return 'archivada_sin_reporte'
+    if cr in _DESCALIFICADA:
+        return 'descalificada'
     if cr in _CANCELADA or res in _CANCELADA:
         return 'cancelada'
     if cr in _REAGENDADA or res in _REAGENDADA:

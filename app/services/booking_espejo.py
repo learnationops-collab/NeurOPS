@@ -127,7 +127,7 @@ class BookingEspejoMixin:
         # Si es un estado del Closer (después de la llamada). 'Archivada sin reporte' no lo escribe
         # nadie en el tablero: vuelve del espejo de una agenda que archivó el barrido de los 30 días
         # (ver `sync_appointment_to_financial_agenda`), y se lee como lo que es.
-        elif estado_clean in ('show up', 'show_up', 'no show', 'no_show', 'cerrada', 'cerrado', '2th call', '2da call', 'lead perdido', 'perdido', 'no lead', 'archivada sin reporte', 'venta', 'cerrado/pif', 'cerrado/split'):
+        elif estado_clean in ('show up', 'show_up', 'no show', 'no_show', 'cerrada', 'cerrado', '2th call', '2da call', 'lead perdido', 'perdido', 'no lead', 'archivada sin reporte', 'descalificado', 'descalificada', 'venta', 'cerrado/pif', 'cerrado/split'):
             if estado_clean in ('no show', 'no_show'):
                 closer_result = 'No Show'
             elif estado_clean in ('show up', 'show_up'):
@@ -143,7 +143,10 @@ class BookingEspejoMixin:
             elif estado_clean == 'archivada sin reporte':
                 from app.services.closer_agendas_service import ARCHIVADA_SIN_REPORTE
                 closer_result = ARCHIVADA_SIN_REPORTE
-            
+            elif estado_clean in ('descalificado', 'descalificada'):
+                from app.services.closer_agendas_service import DESCALIFICADA
+                closer_result = DESCALIFICADA
+
             # Si se procesa con un estado de Closer pero el result del confirmer estaba vacío,
             # lo dejamos como Confirmado por defecto.
             if not result:
@@ -151,7 +154,7 @@ class BookingEspejoMixin:
 
         # Determinar si está procesado por el Closer o Setter
         is_already_closer_processed = appt.closer_processed if appt else False
-        is_closer_state = estado_clean in ('show up', 'show_up', 'no show', 'no_show', 'cerrada', 'cerrado', '2th call', '2da call', 'lead perdido', 'perdido', 'no lead', 'archivada sin reporte', 'cancelado', 'cancelada', 'reagendado', 'reagendada', 'venta', 'cerrado/pif', 'cerrado/split')
+        is_closer_state = estado_clean in ('show up', 'show_up', 'no show', 'no_show', 'cerrada', 'cerrado', '2th call', '2da call', 'lead perdido', 'perdido', 'no lead', 'archivada sin reporte', 'descalificado', 'descalificada', 'cancelado', 'cancelada', 'reagendado', 'reagendada', 'venta', 'cerrado/pif', 'cerrado/split')
         
         if is_already_closer_processed and not is_closer_state:
             # Si ya fue procesado por el closer y el webhook no envía un estado de closer,
@@ -310,6 +313,9 @@ class BookingEspejoMixin:
         elif mapped_state_lower == 'archivada sin reporte':
             from app.services.closer_agendas_service import ARCHIVADA_SIN_REPORTE
             mapped_state = ARCHIVADA_SIN_REPORTE
+        elif mapped_state_lower in ('descalificado', 'descalificada'):
+            from app.services.closer_agendas_service import DESCALIFICADA
+            mapped_state = DESCALIFICADA
                 
         # Buscar nombres de closer y setter
         closer_name = 'Sin asignar'

@@ -17,7 +17,7 @@ from app.services.comercial_service import (
     DIAS_SENA_CAIDA, POST_CALL, ROL_CLOSERS, ROL_SETTERS, TIPOS_PAGO_COBROS, ComercialService,
     chip, pct,
 )
-from app.services import setter_analitica
+from app.services import descalificados_service, setter_analitica
 from app.services.commission_service import CLOSER_RATE
 from app.services.procedencia_ingresos_service import agendas_para_atribuir, procedencia_de_ventas
 from app.services.senas_conversion import claves_de_fila, conversion_de, pagos_posteriores
@@ -220,6 +220,8 @@ TONO_EN_PANEL = {
     'seguimiento': 'info',
     # Con los grupos del 23/10 "Canceladas" tiene su barra: en gris se confundía con "Descartadas".
     'cancelo': 'brand-primary',
+    # Rojo ya es el no show: la descalificada va en violeta para que no sean dos arcos del mismo color.
+    'descalificada': 'cat-6',
 }
 
 # El gráfico del panel Estados junta los estados en grupos. La pertenencia vive SOLO acá —el
@@ -231,6 +233,9 @@ TONO_EN_PANEL = {
 # decía qué pasó. Ahora cada pérdida va por separado y "Show up" junta todo lo que tuvo llamada.
 #   · Show up: asistió, con o sin venta (segunda llamada, seguimiento, venta, seña).
 #   · Descartadas: el closer o el barrido de los 30 días la dieron por terminada sin llamada.
+#   · Descalificadas: el closer vio que el lead no calificaba (23/10/2026), con el botón
+#     «Descalificado» o con el «No Lead» de antes (son lo mismo). Va aparte de «Descartadas» porque es
+#     lo que la dirección quiere ver: cuántas agendas descalifican los closers.
 GRUPO_DE_ESTADO = {
     'asistio': 'show_up',
     'segunda_llamada': 'show_up',
@@ -243,8 +248,8 @@ GRUPO_DE_ESTADO = {
     'sin_reporte': 'sin_reporte',
     'por_ocurrir': 'por_ocurrir',
     'lead_perdido': 'descartadas',
-    'no_lead': 'descartadas',
     'archivada_sin_reporte': 'descartadas',
+    'descalificada': 'descalificadas',
 }
 
 
@@ -303,6 +308,7 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
     ventas = ComercialService.ventas(start, end, closer_nombre=closer_nombre)
     tot_a = ComercialService.totales_agendas(agendas)
     tot_v = ComercialService.totales_ventas(ventas)
+    estados = estados_de(agendas)
 
     # Presentaciones: asistencias en las que se presentó la oferta. Una venta cuenta como
     # presentación aunque nadie haya tildado el campo — sin eso el embudo mostraría más ventas
@@ -365,7 +371,10 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None):
                                      senas=tot_a['senas'], asistieron=tot_a['asistieron'],
                                      presentaciones=presentaciones,
                                      no_cerradas=sum(1 for f in agendas if f['no_cerrada'])),
-        'estados': estados_de(agendas),
+        'estados': estados,
+        # Cuántos leads se descalifican: las agendas que el closer descalificó (ya están en `estados`)
+        # y los que el formulario cortó antes de agendar (ver `descalificados_service`).
+        'descalificadas': descalificados_service.resumen(estados, start, end, closer_id),
         'cash': tot_v['cash'],
         'cash_neto': tot_v['cash_neto'],
         'ventas': tot_v['ventas'],

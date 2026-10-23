@@ -338,7 +338,8 @@ def test_un_lead_descartado_se_abre_en_historial(client, db, lead, equipo, auth_
 
     estado = abrir(client, auth_headers, equipo['closer'], appointment_id=lead.id).get_json()['estado']
 
-    assert (estado['clave'], estado['pestana_por_defecto']) == ('descartado', 'hist')
+    # El «No Lead» crudo se lee como descalificada desde el 23/10/2026: es lo mismo.
+    assert (estado['clave'], estado['pestana_por_defecto']) == ('descalificada', 'hist')
 
 
 def test_el_historial_trae_las_agendas_del_cliente_con_su_chip(client, db, lead, equipo, auth_headers):

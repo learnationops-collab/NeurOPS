@@ -63,7 +63,12 @@ POST_CALL = [
      'ayuda': AYUDA_ESTADO['archivada_sin_reporte']},
     {'key': 'lead_perdido', 'label': 'Lead perdido', 'tone': 'error', 'editable': False,
      'ayuda': AYUDA_ESTADO['lead_perdido']},
-    {'key': 'no_lead', 'label': 'No lead', 'tone': 'idle', 'editable': False},
+    # El closer vio que el lead no calificaba (23/10/2026): con el botón «Descalificado» de la
+    # confirmación, una cancelación por decisión suya, o con el «No Lead» de antes, que es lo mismo y
+    # se lee con este nombre. Tiene su estado para medir cuántas agendas descalifican los closers; no
+    # se fija a mano desde el modal.
+    {'key': 'descalificada', 'label': 'Descalificada', 'tone': 'error', 'editable': False,
+     'ayuda': AYUDA_ESTADO['descalificada']},
 ]
 
 ESTADO_LEAD = [
@@ -141,14 +146,16 @@ _ESTADO_A_POST_CALL = {
     'confirmada': 'pendiente',
     'sin_reportar': 'pendiente',
     'reportada_sin_resultado': 'pendiente',
-    # "Lead perdido" y "No lead" son lo que el closer reportó y se muestran con ese nombre (antes
-    # caían en un "Otro estado" que no decía nada). Como "Canceló", son agendas DESCARTADAS: la
-    # tabla las saca del listado por defecto (ver `DESCARTADAS`). No suman a las realizadas.
+    # "Lead perdido" es lo que el closer reportó y se muestra con ese nombre (antes caía en un "Otro
+    # estado" que no decía nada). Como "Canceló", es una agenda DESCARTADA: la tabla la saca del
+    # listado por defecto (ver `DESCARTADAS`). No suma a las realizadas. «No lead» ya no es un estado
+    # aparte: se deriva como `descalificada` (ver `closer_agendas_service.DESCALIFICADA`).
     'lead_perdido': 'lead_perdido',
-    'no_lead': 'no_lead',
     # La que archivó el barrido de los 30 días (antes también decía "Lead perdido"): otro nombre,
     # mismo trato que las de arriba.
     'archivada_sin_reporte': 'archivada_sin_reporte',
+    # La que el closer descalificó (o marcó «No Lead»): mismo trato, descartada y sin llamada.
+    'descalificada': 'descalificada',
 }
 
 # Valor que se escribe en la base al corregir el estado desde el modal.
@@ -170,11 +177,11 @@ REALIZADAS = ASISTIO + ('no_show',)
 # (seguimiento, segunda llamada, presentó sin cerrar…), que cambian de nombre y se reparten: así
 # ventas + señas + no cerradas suman siempre las que asistieron.
 CERRO = ('venta', 'sena')
-# Agendas que salieron del trabajo del equipo: el lead canceló, el closer lo descartó o el sistema la
-# archivó porque nadie la reportó. Siguen en los números del período, pero las listas las esconden
-# detrás de su propio filtro («Descartadas»): pedido del usuario, 02/10/2026, «que desaparezcan y
-# queden en otro lugar aparte».
-DESCARTADAS = ('cancelo', 'lead_perdido', 'no_lead', 'archivada_sin_reporte')
+# Agendas que salieron del trabajo del equipo: el lead canceló, el closer lo descartó o lo descalificó,
+# o el sistema la archivó porque nadie la reportó. Siguen en los números del período, pero las listas
+# las esconden detrás de su propio filtro («Descartadas»): pedido del usuario, 02/10/2026, «que
+# desaparezcan y queden en otro lugar aparte».
+DESCARTADAS = ('cancelo', 'lead_perdido', 'archivada_sin_reporte', 'descalificada')
 
 
 def pre_call_de(appt):

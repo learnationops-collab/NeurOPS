@@ -24,7 +24,7 @@ PESTANAS = ('conf', 'resultado', 'acciones', 'ful', 'hist', 'bita', 'form', 'com
 _PRE_CALL = ('por_confirmar', 'confirmada')
 # Estados de `derivar_estado` en los que el lead quedó fuera del embudo: por decisión del closer, o
 # porque nadie reportó la llamada en 30 días y el sistema la archivó.
-_DESCARTE = ('lead_perdido', 'no_lead', 'archivada_sin_reporte')
+_DESCARTE = ('lead_perdido', 'archivada_sin_reporte', 'descalificada')
 
 # Etiqueta y tono de cada estado. `tono` es uno de los 5 del design system: el frontend no elige
 # colores, los toma de acá (mismo criterio que el vocabulario del dashboard comercial).
@@ -44,6 +44,9 @@ _ETIQUETAS = {
     # Fuera del embudo como un descartado, pero nadie la descartó: la archivó el barrido de los 30
     # días. Abre donde abre un descartado (Historial); solo cambia cómo se llama.
     'archivada_sin_reporte': ('Archivada sin reporte', 'idle'),
+    # Fuera del embudo porque el closer vio que no calificaba (botón «Descalificado» o el «No Lead»
+    # de antes, que es lo mismo). Abre en Historial.
+    'descalificada': ('Descalificada', 'error'),
     'venta_con_deuda': ('Venta · con deuda', 'warning'),
     'venta_al_dia': ('Cliente al día', 'success'),
     # Dejó una seña y todavía no pagó completo ni hizo un split: es una reserva, no una venta
@@ -75,7 +78,8 @@ def _clave(estado_agenda, etapa_confirmacion, descartado, tiene_venta, deuda, ba
     if not estado_agenda:
         return 'sin_agenda'
     if descartado:
-        return 'archivada_sin_reporte' if estado_agenda == 'archivada_sin_reporte' else 'descartado'
+        # Dos descartes con nombre propio: lo que nadie reportó y lo que el closer descalificó.
+        return estado_agenda if estado_agenda in ('archivada_sin_reporte', 'descalificada') else 'descartado'
     if estado_agenda in _PRE_CALL:
         # La llamada no ocurrió: el trabajo es confirmarla, aunque el lead ya sea cliente (una 2ª
         # llamada o una renovación entran por acá). Por eso el pre call gana al estado de cobro,

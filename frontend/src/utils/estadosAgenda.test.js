@@ -10,6 +10,9 @@ describe('ayudaDeResultado', () => {
         expect(ayudaDeResultado('Lead Perdido')).toBe(AYUDA_ESTADO.lead_perdido);
         expect(ayudaDeResultado(' perdido ')).toBe(AYUDA_ESTADO.lead_perdido);
         expect(ayudaDeResultado('Archivada sin reporte')).toBe(AYUDA_ESTADO.archivada_sin_reporte);
+        expect(ayudaDeResultado('Descalificado')).toBe(AYUDA_ESTADO.descalificada);
+        expect(ayudaDeResultado(' descalificada ')).toBe(AYUDA_ESTADO.descalificada);
+        expect(ayudaDeResultado('No Lead')).toBe(AYUDA_ESTADO.descalificada);
     });
 
     it('los demás no llevan tooltip (y `title` no se dibuja)', () => {

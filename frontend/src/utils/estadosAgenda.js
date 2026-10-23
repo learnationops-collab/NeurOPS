@@ -1,5 +1,5 @@
 /**
- * El tooltip de los dos estados de agenda que hay que explicar, para las pantallas que muestran el
+ * El tooltip de los estados de agenda que hay que explicar, para las pantallas que muestran el
  * `closer_result` CRUDO (el mazo del closer, su auditoría, el tablero de triage).
  *
  * Las demás —Revisar, la ficha, Mis agendas del setter— no usan esto: el chip les llega del backend
@@ -12,6 +12,7 @@
 export const AYUDA_ESTADO = {
     lead_perdido: 'El closer lo descartó.',
     archivada_sin_reporte: 'Nadie la reportó en 30 días; el sistema la archivó.',
+    descalificada: 'El closer vio que el lead no calificaba.',
 };
 
 // Los valores crudos de `closer_result` con los que llegan, en minúscula.
@@ -19,6 +20,10 @@ const POR_RESULTADO = {
     'lead perdido': AYUDA_ESTADO.lead_perdido,
     perdido: AYUDA_ESTADO.lead_perdido,
     'archivada sin reporte': AYUDA_ESTADO.archivada_sin_reporte,
+    descalificado: AYUDA_ESTADO.descalificada,
+    descalificada: AYUDA_ESTADO.descalificada,
+    // «No Lead» es lo mismo que descalificado (23/10/2026): se lee con el nombre nuevo.
+    'no lead': AYUDA_ESTADO.descalificada,
 };
 
 /** El tooltip de un `closer_result` crudo, o `undefined` (así `title` no se dibuja). */

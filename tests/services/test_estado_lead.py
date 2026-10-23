@@ -91,7 +91,8 @@ def test_la_baja_y_la_llamada_por_delante_ganan_a_la_sena():
 
 def test_un_lead_descartado_se_abre_en_historial():
     assert clave_y_pestana(estado_agenda='lead_perdido') == ('descartado', 'hist')
-    assert clave_y_pestana(estado_agenda='no_lead') == ('descartado', 'hist')
+    # «No Lead» ya no es un estado aparte: se lee como descalificada (23/10/2026).
+    assert clave_y_pestana(estado_agenda='descalificada') == ('descalificada', 'hist')
 
 
 def test_una_baja_despues_de_comprar_se_puede_forzar():

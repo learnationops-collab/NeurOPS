@@ -167,13 +167,19 @@ def despues_de(generadas):
     Las canceladas y las reagendadas se miden sobre las ocurridas; el show up y el no show, sobre
     las que ya tienen resultado (`realizadas`), que es el show up de todo el tablero. Las ventas,
     sobre las que asistieron.
+
+    `descalificadas` (23/10/2026) son las que el closer descalificó en la confirmación: están en las
+    ocurridas y no tienen caja propia, así que el panel las dice junto a «sin reporte» y «por venir»
+    para que los estados sigan cerrando contra las agendas.
     """
     tot = ComercialService.totales_agendas(generadas)
     cuenta = {}
     for f in generadas:
         cuenta[f['post_call']['key']] = cuenta.get(f['post_call']['key'], 0) + 1
     n = tot['agendas']
-    ocurridas = [f for f in generadas if f.get('ya_paso') or f['post_call']['key'] in ('cancelo', 'reagendo')]
+    # La descalificada también: el closer ya resolvió la agenda en la confirmación, sea cuando sea la llamada.
+    ocurridas = [f for f in generadas
+                 if f.get('ya_paso') or f['post_call']['key'] in ('cancelo', 'reagendo', 'descalificada')]
     sin_reporte = sum(1 for f in ocurridas if f['post_call']['key'] == 'pendiente')
     base = len(ocurridas)
     return {
@@ -181,6 +187,7 @@ def despues_de(generadas):
         'ocurridas': base,
         'por_venir': n - base,
         'sin_reporte': sin_reporte,
+        'descalificadas': cuenta.get('descalificada', 0),
         'canceladas': cuenta.get('cancelo', 0),
         'canceladas_pct': pct(cuenta.get('cancelo', 0), base),
         'reagendadas': cuenta.get('reagendo', 0),
