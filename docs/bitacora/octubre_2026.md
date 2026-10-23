@@ -606,3 +606,4 @@
   - Un evento con persona fija puede tener **suplentes en orden** (campo `suplentes` del evento; en Thalamus, «Si se llena» debajo de la persona). El lead ve los horarios de la persona hasta que se llena y después los del primer suplente con lugar (estrategia «llenar»).
   - Pensado para Momentum Session New: Andy → Santi → Mario. Un suplente sin usuario activo, Google Calendar o WhatsApp confirmado se saltea solo.
   - Los eventos de venta (Sesión de Aceleración de Workshop y Setting, Consultoría) ya ofrecían 3 días.
+  - **Revertido el mismo día:** Andy y Santi solo toman sesiones de la Academia; la Momentum la toma Jean Carlo. Los suplentes no hacían falta.
