@@ -11,16 +11,17 @@ export const COLOR_FUENTE = { reporte: 'var(--ch-tot)', sistema: 'var(--ch-sis)'
 export const COLOR_CANAL = { anuncios: 'var(--ch-ads)', inbound: 'var(--ch-inb)', sin_canal: 'var(--idle)' };
 export const NOMBRE_CANAL = { anuncios: 'Anuncios', inbound: 'Inbound', sin_canal: 'Sin canal' };
 
+// Una línea por etapa (la burbuja del embudo): qué cuenta y de dónde sale, reporte o sistema.
 export const AYUDA_ETAPA = {
-    entrantes: 'Del reporte: los mensajes nuevos de cada día, de anuncios e inbound.',
-    cualificados: 'Del reporte: entrantes menos no leads e in-abribles.',
-    dolor: 'Del reporte: conversaciones que llegaron a identificar el dolor.',
-    oferta: 'Del reporte: a quiénes se les presentó la oferta.',
-    link: 'Del reporte: a quiénes se les mandó el link de la agenda.',
-    agendas: 'Del reporte: las agendas cargadas cada día, por canal.',
-    generadas: 'Del sistema: agendas reservadas en el período, por fecha de creación y una por persona.',
-    asistieron: 'Del sistema: de esas agendas, las que se presentaron a la llamada.',
-    ventas: 'Del sistema: ventas (pago completo o split pay) salidas de esas agendas.',
+    entrantes: 'Mensajes nuevos del día, de anuncios e inbound.',
+    cualificados: 'Leads cualificados que cargó el setter.',
+    dolor: 'Conversaciones donde se identificó el dolor.',
+    oferta: 'A quiénes se les presentó la oferta.',
+    link: 'A quiénes se les mandó el link de la agenda.',
+    agendas: 'Agendas que el setter cargó en su reporte.',
+    generadas: 'Agendas reservadas en el sistema, una por persona.',
+    asistieron: 'De las generadas, las que se presentaron.',
+    ventas: 'Pago completo o split pay salido de esas agendas.',
 };
 
 /**
