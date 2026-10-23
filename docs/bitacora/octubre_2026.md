@@ -607,3 +607,9 @@
   - Pensado para Momentum Session New: Andy → Santi → Mario. Un suplente sin usuario activo, Google Calendar o WhatsApp confirmado se saltea solo.
   - Los eventos de venta (Sesión de Aceleración de Workshop y Setting, Consultoría) ya ofrecían 3 días.
   - **Revertido el mismo día:** Andy y Santi solo toman sesiones de la Academia; la Momentum la toma Jean Carlo. Los suplentes no hacían falta.
+
+- **23 de Octubre de 2026 (Embudo de punta a punta: burbuja en cada número)** *([frontend/src/pages/comercial/components/useTipFlotante.jsx](../../frontend/src/pages/comercial/components/useTipFlotante.jsx) [NEW], [frontend/src/pages/comercial/components/FlujoEmbudo.jsx](../../frontend/src/pages/comercial/components/FlujoEmbudo.jsx), [frontend/src/pages/comercial/components/embudoSetter.js](../../frontend/src/pages/comercial/components/embudoSetter.js), [frontend/src/pages/comercial/components/Tip.jsx](../../frontend/src/pages/comercial/components/Tip.jsx), [frontend/src/pages/comercial/components/flujo.css](../../frontend/src/pages/comercial/components/flujo.css) [MODIFY])*:
+  - Cada número del embudo y cada píldora de % explica qué cuenta con la burbuja del «i» (mouse, foco o toque), pegada al número. Reemplaza al `<title>` nativo, que tardaba y no abría con el dedo.
+  - Textos de una línea por etapa: Entrantes, Cualificados, Dolor, Oferta y Link salen del reporte del setter; Agendas es lo que el setter cargó; Generadas, Asistieron y Ventas salen del sistema (una por persona). La píldora de Generadas sigue diciendo cuántas registra el sistema contra cuántas se reportaron.
+  - Aplica a todos los usos de `FlujoEmbudo` (tablero de setters, Comparativas, Workshop). Las etapas con lista siguen abriéndola con el clic.
+  - Tests: 8 nuevos en `FlujoEmbudo.test.jsx` (hover, foco, Escape, toque, etapa con lista, apilado).
