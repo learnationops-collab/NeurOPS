@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { CalendarClock, Check, ChevronDown, ChevronRight, ClipboardCopy, Contact, Copy, GraduationCap, Megaphone, Pencil, Phone, UserRound, Video, X } from 'lucide-react';
+import { CalendarClock, Check, ChevronDown, ChevronRight, ClipboardCopy, Contact, Copy, GraduationCap, Megaphone, Pencil, Phone, User, Video, X } from 'lucide-react';
 import { IconButton } from '../standard';
 import IdentidadesPersona from './piezas/IdentidadesPersona';
 import useMovimiento from './piezas/useMovimiento';
@@ -438,7 +438,7 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
                         : <DatoLlamada iso={id.llamada?.iso} respaldo={llamada} />}
 
                     <motion.div className="fi-dato" ref={caja} style={{ position: 'relative' }} {...mov.campo(2)}>
-                        <Rotulo icono={UserRound}>Closer</Rotulo>
+                        <Rotulo icono={User}>Closer</Rotulo>
                         {puedeReasignar ? (
                             <>
                                 <button type="button" className="fi-closer-btn"
