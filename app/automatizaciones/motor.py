@@ -68,6 +68,16 @@ class Motor:
                 if abierta.estado == AutEjecucion.ESPERANDO_RESPUESTA:
                     return self._respuesta(abierta, evento)
                 return 'palabra_repetida'
+        else:
+            # Comentario con la palabra de una campaña: el primer mensaje va como respuesta privada.
+            # Nunca es la respuesta a un paso; solo se ignora si ya está en un recorrido de esa campaña.
+            version, campana, clave = self._version_de_campana(evento.texto, evento.momento)
+            if version:
+                abierta = self._abierta(contacto)
+                if abierta and abierta.campana_id == campana.id:
+                    return 'palabra_repetida'
+                self._iniciar(contacto, version, comentario_id=evento.comentario_id, campana=campana, clave=clave)
+                return 'flujo_iniciado'
         version = self._version_disparada(evento.texto, canal, evento.publicacion_id, evento.momento)
         if version:
             self._iniciar(contacto, version, comentario_id=evento.comentario_id, meta_ad_id=evento.anuncio_id)
@@ -86,16 +96,19 @@ class Motor:
         los mandó, así que la pausa de un mensaje de ManyChat y la de un setter son iguales. Al arrancar,
         la pausa se levanta para que el flujo pueda seguir. Un botón solo pasa si retoma el recorrido
         que cortó la persona del equipo (ManyChat seguía respondiendo los botones)."""
-        if evento.tipo == ev.COMENTARIO:
-            return 'bot_pausado'
         datos = mensajes.leer_payload(evento.payload) if evento.payload else None
         if datos:
             return self._boton(contacto, *datos, pausado=True)
         version, campana, clave = self._version_de_campana(evento.texto, evento.momento)
         if version is None:
             return 'bot_pausado'
+        if evento.tipo == ev.COMENTARIO:
+            abierta = self._abierta(contacto)
+            if abierta and abierta.campana_id == campana.id:
+                return 'bot_pausado'
         contacto.bot_pausado_hasta = None
-        self._iniciar(contacto, version, campana=campana, clave=clave, meta_ad_id=evento.anuncio_id)
+        self._iniciar(contacto, version, comentario_id=evento.comentario_id, campana=campana, clave=clave,
+                      meta_ad_id=evento.anuncio_id)
         return 'flujo_iniciado'
 
     def despertar_vencidas(self):
