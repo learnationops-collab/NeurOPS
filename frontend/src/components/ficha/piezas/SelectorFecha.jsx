@@ -1,16 +1,21 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import useMovimiento from './useMovimiento';
 import usePopover from './usePopover';
+import './fecha-hora.css';
 
 const SEMANA = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
+// Los atajos del calendario de Clarity (Leadership, `clEditores.atajos`). `lunes` y `finDeMes` se
+// resuelven contra hoy en `desdeHoy`.
 const PRESETS = [
+    { label: 'Hoy', dias: 0 },
+    { label: 'Mañana', dias: 1 },
+    { label: 'En 3 días', dias: 3 },
     { label: 'En 1 semana', dias: 7 },
-    { label: 'En 1 mes', meses: 1 },
-    { label: 'En 3 meses', meses: 3 },
-    { label: 'En 6 meses', meses: 6 },
+    { label: 'Próximo lunes', lunes: true },
+    { label: 'Fin de mes', finDeMes: true },
 ];
 
 /** Medianoche local: comparar fechas con hora adentro hace que "hoy" caiga en el pasado. */
@@ -25,7 +30,8 @@ const aIso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '
 const mismoDia = (a, b) => !!a && !!b && a.getTime() === b.getTime();
 
 const fmtLargo = (d) => d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' });
-const fmtCorto = (d) => d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+// «vie 24»: el día del atajo, como en Clarity.
+const fmtAtajo = (d) => d.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric' }).replace('.', '');
 
 /** "en 3 días", "mañana": la distancia se lee antes que la fecha. */
 const relativo = (d, hoy) => {
@@ -71,6 +77,7 @@ const SelectorFecha = ({
     deshabilitado = false,
 }) => {
     const { abierto, alternar, cerrar, caja, pop } = usePopover();
+    const atajos = presets?.length ? presets : PRESETS;
     const mov = useMovimiento();
     const hoy = useMemo(() => aDia(new Date()), []);
     const piso = minimo === null ? null : (aDia(minimo) || hoy);
@@ -86,7 +93,11 @@ const SelectorFecha = ({
         cerrar();
     };
 
-    const desdeHoy = ({ dias = 0, meses = 0 }) => new Date(hoy.getFullYear(), hoy.getMonth() + meses, hoy.getDate() + dias);
+    const desdeHoy = ({ dias = 0, meses = 0, lunes = false, finDeMes = false }) => {
+        if (lunes) return new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + ((8 - hoy.getDay()) % 7 || 7));
+        if (finDeMes) return new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+        return new Date(hoy.getFullYear(), hoy.getMonth() + meses, hoy.getDate() + dias);
+    };
 
     return (
         <div className="fi-campo" ref={caja}>
@@ -101,53 +112,75 @@ const SelectorFecha = ({
                 {sel && <span className="t-cap mut">{relativo(sel, hoy)}</span>}
             </button>
 
+            {/* El calendario de Clarity: arriba la fecha elegida, abajo los atajos a la izquierda y
+                el mes a la derecha. Se guarda al tocar el día. */}
             {abierto && (
                 <motion.div ref={pop} className="fi-pop fi-pop--fecha" role="dialog" aria-label={etiqueta}
                     {...mov.popover}>
-                    <div style={{ display: 'grid', gap: 2, alignContent: 'start' }}>
-                        <small className="t-rotulo" style={{ padding: '0 var(--s3) var(--s2)' }}>Rápido</small>
-                        {presets.map(p => {
-                            const d = desdeHoy(p);
-                            return (
-                                <button key={p.label} type="button" className="fi-opcion"
-                                    aria-selected={mismoDia(d, sel)} role="option"
-                                    onClick={() => elegir(d)}>
-                                    <span>{p.label}</span>
-                                    <span className="t-cap mut">{fmtCorto(d)}</span>
-                                </button>
-                            );
-                        })}
+                    <span className="fi-fe-velo" aria-hidden="true" />
+                    <div className="fi-fe-cab">
+                        <span className={`fi-fe-campo${sel ? '' : ' fi-fe-campo--vacia'}`}>
+                            <small>{etiqueta}</small>
+                            <b>{sel ? fmtLargo(sel) : 'Elegí un día'}</b>
+                        </span>
+                        {sel && <span className="fi-fe-dist">{relativo(sel, hoy)}</span>}
                     </div>
-                    <div className="fi-cal">
-                        <div className="fi-cal-cab">
-                            <button type="button" className="ibtn ibtn--sm" aria-label="Mes anterior"
-                                onClick={() => setMes(new Date(vista.getFullYear(), vista.getMonth() - 1, 1))}>
-                                <ChevronLeft size={15} />
-                            </button>
-                            <span className="fi-cal-mes">
-                                {vista.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}
-                            </span>
-                            <button type="button" className="ibtn ibtn--sm" aria-label="Mes siguiente"
-                                onClick={() => setMes(new Date(vista.getFullYear(), vista.getMonth() + 1, 1))}>
-                                <ChevronRight size={15} />
-                            </button>
+                    <div className="fi-fe-cuerpo">
+                        <div className="fi-fe-rapidos" role="listbox" aria-label="Atajos">
+                            {atajos.map(p => {
+                                const d = desdeHoy(p);
+                                return (
+                                    <button key={p.label} type="button" className="fi-fe-rapido"
+                                        aria-selected={mismoDia(d, sel)} role="option"
+                                        disabled={!!piso && d < piso}
+                                        onClick={() => elegir(d)}>
+                                        <b>{p.label}</b>
+                                        <span>{fmtAtajo(d)}</span>
+                                    </button>
+                                );
+                            })}
                         </div>
-                        <div className="fi-cal-rejilla">
-                            {SEMANA.map((d, i) => (
-                                <span key={`${d}${i}`} className="fi-cal-sem" aria-hidden="true">{d}</span>
-                            ))}
-                            {celdas.map(c => (c.hueco ? (
-                                <span key={c.clave} className="fi-cal-hueco" aria-hidden="true" />
-                            ) : (
-                                <button key={c.clave} type="button" className="fi-cal-dia"
-                                    aria-pressed={c.elegido} data-hoy={c.hoy ? '1' : undefined}
-                                    data-dia={c.clave}
-                                    aria-label={fmtLargo(c.fecha)}
-                                    disabled={c.pasado} onClick={() => elegir(c.fecha)}>
-                                    {c.n}
+                        <div className="fi-cal">
+                            <div className="fi-cal-cab">
+                                <span className="fi-cal-mes">
+                                    {vista.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}
+                                </span>
+                                <button type="button" className="fi-fe-mini"
+                                    onClick={() => setMes(new Date(hoy.getFullYear(), hoy.getMonth(), 1))}>
+                                    Hoy
                                 </button>
-                            )))}
+                                <button type="button" className="fi-fe-nav" aria-label="Mes anterior"
+                                    onClick={() => setMes(new Date(vista.getFullYear(), vista.getMonth() - 1, 1))}>
+                                    <ChevronLeft size={15} />
+                                </button>
+                                <button type="button" className="fi-fe-nav" aria-label="Mes siguiente"
+                                    onClick={() => setMes(new Date(vista.getFullYear(), vista.getMonth() + 1, 1))}>
+                                    <ChevronRight size={15} />
+                                </button>
+                            </div>
+                            <div className="fi-cal-rejilla">
+                                {SEMANA.map((d, i) => (
+                                    <span key={`${d}${i}`} className="fi-cal-sem" aria-hidden="true">{d}</span>
+                                ))}
+                                {celdas.map(c => (c.hueco ? (
+                                    <span key={c.clave} className="fi-cal-hueco" aria-hidden="true" />
+                                ) : (
+                                    <button key={c.clave} type="button" className="fi-cal-dia"
+                                        aria-pressed={c.elegido} data-hoy={c.hoy ? '1' : undefined}
+                                        data-dia={c.clave}
+                                        aria-label={fmtLargo(c.fecha)}
+                                        disabled={c.pasado} onClick={() => elegir(c.fecha)}>
+                                        {c.n}
+                                    </button>
+                                )))}
+                            </div>
                         </div>
+                    </div>
+                    <div className="fi-fe-pie">
+                        <span>Se guarda al tocar el día</span>
+                        <button type="button" className="fi-fe-ok" onClick={cerrar}>
+                            <Check size={14} aria-hidden="true" /> Listo
+                        </button>
                     </div>
                 </motion.div>
             )}

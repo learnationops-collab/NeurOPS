@@ -1,0 +1,145 @@
+/* ============================================================
+   FECHA Y HORA DE LA FICHA — con el diseño de Learnation Clarity.
+
+   El calendario es el de Clarity (Leadership, `.cl-ed-fecha`): arriba la fecha
+   elegida en su casilla con aura, abajo los atajos a la izquierda y el mes a la
+   derecha, el día elegido en magenta y un velo de aura abajo. La hora es la de
+   su prototipo (`.hsel-val` + `.hlista`): un campo para escribirla y una lista
+   cada 15 minutos.
+   ============================================================ */
+
+/* ---------- Calendario ---------- */
+.dc-shell .fi-pop.fi-pop--fecha{width:min(600px,calc(100vw - 32px));padding:0;gap:0;
+  display:flex;flex-direction:column;overflow:hidden;isolation:isolate;border-radius:24px}
+.dc-shell .fi-fe-velo{position:absolute;left:-10%;right:-10%;bottom:-120px;height:220px;
+  z-index:-1;pointer-events:none;opacity:.22;filter:blur(30px);
+  background:radial-gradient(40% 60% at 25% 50%,rgba(255,63,164,.9),transparent 70%),
+    radial-gradient(45% 60% at 75% 50%,rgba(19,35,198,.9),transparent 70%)}
+
+.dc-shell .fi-fe-cab{position:relative;display:flex;align-items:center;gap:var(--s3);
+  padding:var(--s4) var(--s5)}
+/* La línea bajo la cabecera: un hilo de aura. */
+.dc-shell .fi-fe-cab::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,63,164,.55),rgba(19,35,198,.7),transparent)}
+.dc-shell .fi-fe-campo{display:grid;gap:2px;min-width:170px;padding:8px 14px;border-radius:14px;
+  border:1px solid rgba(255,63,164,.3);
+  background:radial-gradient(120% 160% at 0% 0%,rgba(255,63,164,.26),transparent 60%),
+    radial-gradient(120% 160% at 100% 100%,rgba(19,35,198,.4),transparent 65%),var(--bg-input)}
+.dc-shell .fi-fe-campo small{font-size:10px;font-weight:900;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--brand-secondary)}
+.dc-shell .fi-fe-campo b{font-size:16px;font-weight:800;white-space:nowrap}
+.dc-shell .fi-fe-campo--vacia b{color:var(--text-muted);font-weight:500}
+.dc-shell .fi-fe-dist{padding:4px 10px;border-radius:var(--radius-pill);font-size:12px;font-weight:800;
+  color:var(--brand-secondary);background:color-mix(in srgb,var(--brand-secondary) 16%,transparent)}
+
+.dc-shell .fi-fe-cuerpo{display:grid;grid-template-columns:190px minmax(0,1fr)}
+.dc-shell .fi-fe-rapidos{display:flex;flex-direction:column;gap:4px;padding:var(--s4) var(--s3) var(--s4) var(--s4);
+  border-right:1px solid var(--border-subtle)}
+.dc-shell .fi-fe-rapido{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);
+  height:38px;padding:0 12px;border-radius:12px;border:1px solid transparent;text-align:left;
+  transition:background-color .12s ease,border-color .12s ease}
+.dc-shell .fi-fe-rapido b{font-size:13px;font-weight:700}
+.dc-shell .fi-fe-rapido span{font-size:12px;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.dc-shell .fi-fe-rapido:hover:not(:disabled){background:var(--bg-element-hover)}
+.dc-shell .fi-fe-rapido:disabled{opacity:.4;cursor:default}
+.dc-shell .fi-fe-rapido[aria-selected="true"]{border-color:rgba(255,63,164,.55);
+  background:linear-gradient(100deg,rgba(255,63,164,.26),rgba(19,35,198,.2));
+  box-shadow:0 0 18px -4px rgba(255,63,164,.6)}
+.dc-shell .fi-fe-rapido[aria-selected="true"] b{color:var(--brand-secondary)}
+.dc-shell .fi-fe-rapido[aria-selected="true"] span{color:var(--text-on-surface)}
+
+.dc-shell .fi-cal{min-width:0;display:flex;flex-direction:column;padding:var(--s3) var(--s4) var(--s3)}
+.dc-shell .fi-cal-cab{display:flex;align-items:center;gap:4px;padding:0 0 var(--s2) 6px}
+.dc-shell .fi-cal-mes{flex:1;font-size:15px;font-weight:800;text-transform:capitalize}
+.dc-shell .fi-fe-mini{font-size:12px;font-weight:600;color:var(--text-muted);padding:4px 10px;border-radius:8px}
+.dc-shell .fi-fe-mini:hover{color:var(--text-on-surface);background:var(--bg-element-hover)}
+.dc-shell .fi-fe-nav{display:grid;place-items:center;width:30px;height:30px;border-radius:10px;color:var(--text-muted)}
+.dc-shell .fi-fe-nav:hover{background:var(--bg-element-hover);color:var(--text-on-surface)}
+.dc-shell .fi-cal-rejilla{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.dc-shell .fi-cal-sem{text-align:center;padding:4px 0 6px;font-size:10px;font-weight:900;
+  letter-spacing:.12em;color:var(--text-muted-40)}
+.dc-shell .fi-cal-dia{height:36px;border-radius:10px;font-size:13px;font-weight:600;
+  font-variant-numeric:tabular-nums;color:var(--text-on-surface);transition:background-color .12s ease}
+.dc-shell .fi-cal-dia:hover:not(:disabled){background:var(--bg-element-hover)}
+.dc-shell .fi-cal-dia:disabled{color:var(--text-muted-40);cursor:default}
+.dc-shell .fi-cal-dia[data-hoy="1"]{box-shadow:inset 0 0 0 1px var(--brand-secondary);color:var(--brand-secondary)}
+.dc-shell .fi-cal-dia[aria-pressed="true"]{background:var(--brand-secondary);color:var(--ink);
+  font-weight:900;box-shadow:none}
+.dc-shell .fi-cal-hueco{height:36px;visibility:hidden}
+
+.dc-shell .fi-fe-pie{display:flex;align-items:center;gap:var(--s3);padding:10px var(--s4) 10px var(--s5);
+  border-top:1px solid var(--border-subtle)}
+.dc-shell .fi-fe-pie span{flex:1;font-size:12px;color:var(--text-muted)}
+.dc-shell .fi-fe-ok{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 16px;
+  border-radius:var(--radius-pill);background:var(--brand-secondary);color:var(--ink);
+  font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;
+  box-shadow:0 0 22px -4px rgba(255,63,164,.7)}
+
+@media (max-width:640px){
+  .dc-shell .fi-fe-cuerpo{grid-template-columns:1fr}
+  .dc-shell .fi-fe-rapidos{display:grid;grid-template-columns:repeat(3,1fr);border-right:0;
+    border-bottom:1px solid var(--border-subtle);padding:var(--s3)}
+  .dc-shell .fi-fe-rapido{flex-direction:column;align-items:flex-start;justify-content:center;gap:0;height:46px}
+}
+
+/* ---------- Hora ----------
+   La de Clarity (Leadership, `clarity-hora.css`): hora y minutos grandes que se
+   escriben o se suben y bajan, y los horarios rápidos con el aura en el elegido. */
+.dc-shell .fi-hora{max-width:240px}
+.dc-shell .fi-pop.fi-pop--hora{width:268px;padding:10px 12px 12px;gap:6px;display:flex;flex-direction:column;
+  border-radius:22px}
+.dc-shell .fi-hr-top{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);min-height:28px;padding-left:2px}
+.dc-shell .fi-hr-top small{font-size:10px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:var(--text-muted-40)}
+.dc-shell .fi-hr-quitar{height:26px;padding:0 10px;border-radius:var(--radius-pill);font-size:12px;font-weight:700;
+  color:var(--text-muted);border:1px solid var(--border-subtle);transition:color .16s ease,border-color .16s ease,background-color .16s ease}
+.dc-shell .fi-hr-quitar:hover{color:var(--error);border-color:color-mix(in srgb,var(--error) 55%,transparent);
+  background:color-mix(in srgb,var(--error) 8%,transparent)}
+
+.dc-shell .fi-hr-reloj{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;justify-items:center;padding:2px 0 4px}
+.dc-shell .fi-hr-celda{display:flex;flex-direction:column;align-items:center;gap:2px}
+.dc-shell .fi-hr-paso{display:grid;place-items:center;width:72px;height:28px;border-radius:10px;color:var(--text-muted-40);
+  transition:color .16s ease,background-color .16s ease,transform .2s cubic-bezier(.22,1,.36,1)}
+.dc-shell .fi-hr-paso svg{width:20px;height:20px}
+.dc-shell .fi-hr-paso:hover{color:var(--text-on-surface);background:var(--bg-element)}
+.dc-shell .fi-hr-paso:active{transform:scale(.94)}
+.dc-shell .fi-hr-num{width:92px;height:72px;padding:0;border:0;border-radius:18px;outline:none;
+  text-align:center;font-size:52px;font-weight:800;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums;
+  color:var(--text-on-surface);background:transparent;caret-color:var(--brand-secondary);cursor:text;
+  transition:background-color .2s ease,box-shadow .25s ease}
+.dc-shell .fi-hr-num::placeholder{color:var(--text-muted-40)}
+.dc-shell .fi-hr-num::selection{background:color-mix(in srgb,#8B5CF6 30%,transparent)}
+.dc-shell .fi-hr-num:hover{background:var(--bg-element)}
+.dc-shell .fi-hr-num:focus,
+.dc-shell .fi-hr-num:focus-visible{background:var(--bg-element);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.06),0 14px 28px -18px rgba(124,77,255,.75)}
+.dc-shell .fi-hr-sub{position:relative;margin-top:8px;font-size:11px;font-weight:700;letter-spacing:.04em;
+  color:var(--text-muted-40);transition:color .2s ease}
+.dc-shell .fi-hr-sub::after{content:'';position:absolute;left:50%;top:-6px;width:36px;height:2px;border-radius:2px;
+  translate:-50% 0;background:linear-gradient(90deg,#3B5BFF,#8B5CF6,#FF4FB0,#00B7FF);opacity:0;scale:.4 1;
+  transition:opacity .2s ease,scale .3s cubic-bezier(.22,1,.36,1)}
+.dc-shell .fi-hr-celda:focus-within .fi-hr-sub{color:var(--text-on-surface)}
+.dc-shell .fi-hr-celda:focus-within .fi-hr-sub::after{opacity:1;scale:1 1}
+.dc-shell .fi-hr-dos{display:flex;flex-direction:column;gap:12px;margin:0 2px 18px}
+.dc-shell .fi-hr-dos i{width:6px;height:6px;border-radius:50%;background:var(--text-muted-40)}
+.dc-shell .fi-hr-reloj--vacio .fi-hr-dos i{opacity:.5}
+
+.dc-shell .fi-hr-rapidas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;
+  margin-top:6px;padding-top:12px;border-top:1px solid var(--border-subtle)}
+.dc-shell .fi-hr-rapidas button{position:relative;isolation:isolate;height:34px;border-radius:var(--radius-pill);
+  font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text-muted);
+  background:var(--bg-element);border:1px solid var(--border-subtle);
+  transition:color .18s ease,background-color .18s ease,border-color .18s ease,transform .22s cubic-bezier(.22,1,.36,1)}
+.dc-shell .fi-hr-rapidas button:hover{color:var(--text-on-surface);background:var(--bg-element-hover);transform:translateY(-1px)}
+.dc-shell .fi-hr-rapidas button:active{transform:translateY(0) scale(.96)}
+.dc-shell .fi-hr-rapidas button[aria-pressed="true"]{color:#fff;border-color:rgba(255,255,255,.16);
+  background:linear-gradient(135deg,rgba(19,35,198,.42) 0%,rgba(124,77,255,.34) 35%,rgba(255,63,164,.28) 65%,rgba(0,194,255,.26) 100%),var(--bg-element);
+  box-shadow:0 4px 12px -6px rgba(124,77,255,.45),inset 0 1px 0 rgba(255,255,255,.14)}
+.dc-shell .fi-hr-rapidas button[aria-pressed="true"]::before{content:'';position:absolute;inset:-4px;z-index:-1;
+  border-radius:var(--radius-pill);pointer-events:none;filter:blur(8px);opacity:.28;
+  background:conic-gradient(from 0deg,#3B5BFF,#8B5CF6,#FF4FB0,#FFB547,#2EE6C8,#00B7FF,#3B5BFF);
+  animation:fi-hr-aura 9s linear infinite}
+@keyframes fi-hr-aura{to{rotate:360deg}}
+@media (prefers-reduced-motion:reduce){
+  .dc-shell .fi-pop--hora *,.dc-shell .fi-pop--hora *::after{transition:none !important}
+  .dc-shell .fi-hr-rapidas button[aria-pressed="true"]::before{animation:none}
+}

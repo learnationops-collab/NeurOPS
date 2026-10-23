@@ -3,7 +3,7 @@
 
 import { motion, useReducedMotion } from 'framer-motion';
 import { Check, Minus, Plus, X } from 'lucide-react';
-import { SelectorFecha } from './piezas';
+import { SelectorFecha, SelectorHora } from './piezas';
 import { fechaCorta } from '../arbolResultado.venta';
 import { moneda } from './planCuotas';
 
@@ -262,7 +262,7 @@ export default function CampoArbol({
         <SelectorFecha
           valor={valor || ''}
           onChange={set}
-          presets={campo.presets || []}
+          presets={campo.presets}
           etiqueta={campo.label}
           minimo={campo.sinMinimo ? null : undefined}
         />
@@ -270,10 +270,18 @@ export default function CampoArbol({
     );
   }
 
+  if (campo.tipo === 'hora') {
+    return (
+      <div className="ln-field-wrap">
+        <Rotulo id={idRotulo}>{campo.label}</Rotulo>
+        <SelectorHora valor={valor || ''} onChange={set} etiqueta={campo.label} />
+      </div>
+    );
+  }
+
   const tipoHtml = campo.tipo === 'monto' || campo.tipo === 'entero' ? 'number'
-    : campo.tipo === 'hora' ? 'time'
-      : campo.tipo === 'email' ? 'email'
-        : campo.tipo === 'tel' ? 'tel' : 'text';
+    : campo.tipo === 'email' ? 'email'
+      : campo.tipo === 'tel' ? 'tel' : 'text';
 
   return (
     <div className="ln-field-wrap">

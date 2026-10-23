@@ -91,11 +91,7 @@
   box-shadow:var(--shadow-main);display:grid;gap:var(--s4)}
 .dc-shell .fi-pop--der{left:auto;right:0}
 .dc-shell .fi-pop--ancho{width:min(680px,calc(100vw - 96px))}
-.dc-shell .fi-pop--fecha{width:min(520px,calc(100vw - 64px));
-  grid-template-columns:minmax(140px,1fr) minmax(240px,2fr)}
-@media (max-width:640px){
-  .dc-shell .fi-pop--fecha{grid-template-columns:1fr}
-}
+/* El calendario (`.fi-pop--fecha`) y la lista de horas viven en `piezas/fecha-hora.css`. */
 .dc-shell .fi-pop-grupos{display:grid;gap:var(--s4);
   grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr))}
 .dc-shell .fi-grupo{display:grid;gap:2px;align-content:start;min-width:0}
@@ -121,23 +117,6 @@
   align-items:center;justify-content:center;border-radius:12px;
   border:1px solid var(--border-control);background:var(--bg-element);
   color:var(--brand-secondary);cursor:pointer}
-
-/* ---------- Calendario ---------- */
-.dc-shell .fi-cal{display:grid;gap:var(--s2);align-content:start}
-.dc-shell .fi-cal-cab{display:flex;align-items:center;justify-content:space-between;gap:var(--s2)}
-.dc-shell .fi-cal-mes{font-size:16px;font-weight:700;text-transform:capitalize}
-.dc-shell .fi-cal-rejilla{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
-.dc-shell .fi-cal-dia{height:34px;border-radius:10px;border:1px solid transparent;
-  background:transparent;color:var(--text-on-surface);font-size:13px;font-weight:500;
-  cursor:pointer}
-.dc-shell .fi-cal-dia:hover:not(:disabled){background:var(--bg-element-hover)}
-.dc-shell .fi-cal-dia:disabled{color:var(--text-muted-40);cursor:default}
-.dc-shell .fi-cal-dia[data-hoy="1"]{border-color:var(--border-control);font-weight:700}
-.dc-shell .fi-cal-dia[aria-pressed="true"]{background:var(--brand-secondary);
-  color:var(--on-brand);font-weight:700;border-color:var(--brand-secondary)}
-.dc-shell .fi-cal-hueco{height:34px;visibility:hidden}
-.dc-shell .fi-cal-sem{text-align:center;padding:var(--s1) 0;font-size:12px;
-  color:var(--text-muted-40)}
 
 /* ---------- Control segmentado ----------
    La cantidad de cuotas del plan (29/09/2026: «no me gusta como se ven esos botones»). Estaba

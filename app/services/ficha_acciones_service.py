@@ -357,9 +357,13 @@ def _resultado_del_arbol(appt, datos, usuario):
     despues el descarte y al final los referidos, la objecion de un «No cerró» (con su nota en
     Comunicacion, ver `objeciones_service`) y las respuestas crudas a la bitacora.
     """
-    from app.services import objeciones_service
+    from app.services import motivos_no_cierre, objeciones_service
 
     deck, nuevo_inicio, descarte, objecion = _reporte_valido(appt, datos)
+    try:
+        motivo = motivos_no_cierre.motivo_valido(datos.get('motivo_no_cierre'))
+    except motivos_no_cierre.MotivoInvalido as e:
+        raise ErrorDeAccion(str(e), 'motivo_no_cierre') from None
     if descarte and deck:
         # El guardado del mazo deja en la bitacora «Estado: …» con el `result` que recibe: sin él
         # un descarte quedaba anotado como «Pendiente». `process_agenda` lo vuelve a poner igual.
@@ -379,6 +383,8 @@ def _resultado_del_arbol(appt, datos, usuario):
                                  f'Referido durante {momento} de {nombre}.', solo_con_contacto=True)
     if objecion:
         objeciones_service.registrar_objecion(appt, usuario, objecion)
+    if motivo:
+        motivos_no_cierre.registrar_motivo(appt, usuario, motivo)
     _guardar_respuestas_del_arbol(appt, datos.get('respuestas'), usuario)
     db.session.commit()
     return {'id': appt.id, 'closer_result': appt.closer_result, 'referidos': referidos,

@@ -314,6 +314,21 @@ function payloadVenta(r, contexto) {
 }
 
 /**
+ * El motivo clasificado de un «no cerró» (`motivos_no_cierre` en el backend): con la oferta
+ * presentada sale de la objeción; sin oferta, de su propia pregunta. Solo el de la rama que quedó.
+ */
+function motivoNoCierre(r) {
+  if (r.cierre === false && r.motivo_no_cierre) {
+    return { categoria: r.motivo_no_cierre, oferta_presentada: true, detalle: null };
+  }
+  if (r.offer_presented === false && r.motivo_sin_oferta) {
+    const otro = r.motivo_sin_oferta === 'Otro motivo' ? String(r.motivo_sin_oferta_otro || '').trim() : '';
+    return { categoria: r.motivo_sin_oferta, oferta_presentada: false, detalle: otro || null };
+  }
+  return null;
+}
+
+/**
  * El payload final. Devuelve `{accion, datos}`: `accion` es el nombre que la pestaña le pasa a
  * `onAccion` (`registrar_venta` o `reportar_resultado`, las dos de `fichaApi.RUTAS`) y `datos` el
  * cuerpo. Se llamaba `venta`, un nombre que la ficha no conocía: registrar una venta desde esta
@@ -334,6 +349,7 @@ export function construirPayload(respuestas = {}, contexto = {}) {
       cierre: r.cierre ?? null,
       objecion: noCerro ? (String(r.objecion || '').trim() || null) : null,
       motivo: motivoDeRama(r),
+      motivo_no_cierre: motivoNoCierre(r),
       motivo_descarte: r.motivo_descarte || null,
       deck: bloqueDeck(r, contexto),
       process: bloqueProcess(r),

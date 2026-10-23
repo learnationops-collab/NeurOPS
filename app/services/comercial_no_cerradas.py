@@ -14,14 +14,18 @@ La objeción la lee `objeciones_service.objeciones_por_agenda`, que es el dueño
 guarda y cuál es la vigente): una sola consulta para todas las agendas de la lista.
 """
 from app.services.comercial_service import ComercialService
+from app.services.motivos_no_cierre import motivos_por_agenda
 from app.services.objeciones_service import objeciones_por_agenda
 
 
 def no_cerradas(start, end, closer_id=None):
     """Las agendas del período (por la fecha de la reunión, como el panel) que asistieron y no
-    cerraron, cada una con su `objecion` (o None). En el orden de Revisar: la más reciente primero."""
+    cerraron, cada una con su `objecion` y su `motivo` clasificado (o None). En el orden de Revisar: la más reciente primero."""
     filas = [f for f in ComercialService.agendas(start, end, closer_id=closer_id) if f['no_cerrada']]
-    objeciones = objeciones_por_agenda([f['id'] for f in filas])
+    ids = [f['id'] for f in filas]
+    objeciones = objeciones_por_agenda(ids)
+    motivos = motivos_por_agenda(ids)
     for f in filas:
         f['objecion'] = objeciones.get(f['id'])
+        f['motivo'] = motivos.get(f['id'])
     return filas

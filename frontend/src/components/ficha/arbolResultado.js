@@ -7,7 +7,7 @@
 // El inventario de preguntas y de dónde salió cada rama está en `arbolResultado.preguntas.js`.
 
 import { PREGUNTAS } from './arbolResultado.preguntas';
-import { esVenta, esCompleto, quedaSaldo } from './arbolResultado.venta';
+import { esVenta, esCompleto, quedaSaldo, fechaCorta } from './arbolResultado.venta';
 
 export * from './arbolResultado.preguntas';
 export * from './arbolResultado.venta';
@@ -223,9 +223,43 @@ const ETIQUETA_RES = {
   asistio: 'Asistió', no_asistio: 'No asistió', cancelo: 'Canceló', reagenda: 'Reagenda',
 };
 
+// Lo que ya dice que NO hay venta: no asistió, canceló o reagendó, no se presentó la oferta, no
+// cerró, o el contacto de la cadencia terminó en algo que no es un cobro.
+const SIN_VENTA_RES = ['no_asistio', 'cancelo', 'reagenda'];
+const SIN_VENTA_CONTACTO = ['no_resp', 'contesto', 'agendo', 'no_paga'];
+const sinVenta = (r) => SIN_VENTA_RES.includes(r.res) || r.offer_presented === false
+  || r.cierre === false || SIN_VENTA_CONTACTO.includes(r.contacto_result);
+
+// El siguiente paso que se eligió en la rama sin venta, con la fecha si ya se puso. `null` mientras
+// no se eligió ninguno. `malo` = el lead se pierde.
+function siguientePaso(r, contexto) {
+  const conFecha = (texto, fecha) => (fecha ? `${texto} · ${fechaCorta(fecha)}` : texto);
+  const elegido = r.nocierre_next || r.nopres_next || r.noshow_next || r.cancel_next;
+  if (r.nopres_next === 'segunda') return { sub: conFecha('2ª llamada', r.nueva_fecha_agenda) };
+  if (r.cancel_next === 'reagendar' || r.reag_dejo_fecha === true || r.contacto_result === 'agendo') {
+    if (r.reag_dejo_fecha === false) return { sub: conFecha('Seguimiento', r.fecha_seguimiento) };
+    return { sub: conFecha('Nueva llamada', r.nueva_fecha_agenda) };
+  }
+  if (r.reag_dejo_fecha === false || elegido === 'seguimiento' || r.sig_action === 'next') {
+    return { sub: conFecha('Seguimiento', r.fecha_seguimiento) };
+  }
+  if (r.sig_action === 'close') return { sub: 'Seguimiento cerrado', malo: true };
+  if (r.contacto_result === 'no_paga') return { sub: 'Baja del cliente', malo: true };
+  if (contexto.modo === 'cobro' && ['no_resp', 'contesto'].includes(r.contacto_result)) {
+    return { sub: conFecha('Próximo cobro', r.fecha_seguimiento) };
+  }
+  if (elegido === 'no_lead') return { sub: 'No Lead', malo: true };
+  if (['perdido', 'descartar'].includes(elegido)) return { sub: 'Lead descartado', malo: true };
+  return null;
+}
+
 /**
- * Los 5 hitos del mockup con su subtítulo en vivo. `estado` ∈ hecho | alerta | pendiente, el
+ * Los hitos del resultado con su subtítulo en vivo. `estado` ∈ hecho | alerta | pendiente, el
  * contrato de `<StepperFicha>`: alcanzado va en verde, alcanzado-pero-malo en ámbar, el resto gris.
+ *
+ * El recorrido cambia con lo que se responde (pedido de Mario, 23/10/2026): Deuda y Upsell solo
+ * existen si puede haber venta; cuando ya se sabe que no la hay, el último hito es el siguiente
+ * paso (2ª llamada, seguimiento, descarte). Y si el lead no estuvo en la llamada tampoco hay Cierre.
  */
 export function hitos(respuestas = {}, contexto = {}) {
   const r = respuestas;
@@ -264,12 +298,22 @@ export function hitos(respuestas = {}, contexto = {}) {
   const definicion = [
     { clave: 'confirmado', label: 'Confirmado', sub: 'Agenda confirmada', alcanzado: true, malo: false },
     { clave: 'resultado', label: 'Resultado', sub: subResultado(), alcanzado: arrancado(r) || enCadencia, malo: (!!r.res && r.res !== 'asistio') || contexto.seguimientoTipo === 'no_tomada' },
+  ];
+  // Sin el lead en la llamada (o en un contacto de la cadencia que no fue un cobro) no hubo cierre.
+  if (!SIN_VENTA_RES.includes(r.res) && !SIN_VENTA_CONTACTO.includes(r.contacto_result)) {
     // «Sin oferta» cuenta como hito alcanzado-pero-malo: es un desenlace definitivo de la
     // llamada, no un paso que todavía falte dar (el mockup lo dejaba en gris).
-    { clave: 'cierre', label: 'Cierre', sub: subCierre(), alcanzado: cerro !== null || r.offer_presented === false, malo: cerro === false || r.offer_presented === false },
-    { clave: 'deuda', label: 'Deuda', sub: deuda === null ? 'Pendiente' : (deuda ? 'Con deuda' : 'Sin deuda'), alcanzado: deuda !== null, malo: deuda === true },
-    { clave: 'upsell', label: 'Upsell', sub: subUpsell(), alcanzado: !!up && up !== 'none', malo: false },
-  ];
+    definicion.push({ clave: 'cierre', label: 'Cierre', sub: subCierre(), alcanzado: cerro !== null || r.offer_presented === false, malo: cerro === false || r.offer_presented === false });
+  }
+  if (sinVenta(r)) {
+    const paso = siguientePaso(r, contexto);
+    definicion.push({ clave: 'siguiente', label: 'Siguiente paso', sub: paso?.sub || 'Por elegir', alcanzado: !!paso, malo: !!paso?.malo });
+  } else {
+    definicion.push(
+      { clave: 'deuda', label: 'Deuda', sub: deuda === null ? 'Pendiente' : (deuda ? 'Con deuda' : 'Sin deuda'), alcanzado: deuda !== null, malo: deuda === true },
+      { clave: 'upsell', label: 'Upsell', sub: subUpsell(), alcanzado: !!up && up !== 'none', malo: false },
+    );
+  }
 
   return definicion.map((h) => ({
     clave: h.clave,

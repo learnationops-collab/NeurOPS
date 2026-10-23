@@ -13,8 +13,11 @@ import { Check, X } from 'lucide-react';
  *
  * Si `onPaso` es null los pasos no son botones: no se ofrece un control que no
  * hace nada, que es peor que no tenerlo.
+ *
+ * `vertical`: de arriba abajo y más chico, para la columna de la derecha del
+ * resultado (el riel lo dibuja cada paso hacia el siguiente, ver ficha.css).
  */
-const StepperFicha = ({ pasos = [], onPaso = null, ayuda = null, rotulo = null, deshabilitado = false }) => {
+const StepperFicha = ({ pasos = [], onPaso = null, ayuda = null, rotulo = null, deshabilitado = false, vertical = false }) => {
     if (!pasos.length) return null;
 
     // El riel verde llega hasta el último paso alcanzado. El porcentaje se mide sobre el
@@ -39,7 +42,7 @@ const StepperFicha = ({ pasos = [], onPaso = null, ayuda = null, rotulo = null, 
                     {ayuda && <span className="t-cap mut40">{ayuda}</span>}
                 </div>
             )}
-            <div className="fi-stepper" style={{ '--pasos': pasos.length, '--avance': avance }}>
+            <div className={`fi-stepper${vertical ? ' fi-stepper--v' : ''}`} style={{ '--pasos': pasos.length, '--avance': avance }}>
                 <span className="fi-stepper-riel" aria-hidden="true"><i /></span>
                 {pasos.map((paso, i) => {
                     const contenido = (

@@ -7,6 +7,7 @@
 //   <StepperFicha pasos={[{key,label,sub,estado}]} onPaso={fn|null} />
 //   <DesplegableAgrupado grupos={[{titulo,tono,opciones}]} valor multiple onChange onAgregar />
 //   <SelectorFecha valor onChange presets minimo />
+//   <SelectorHora valor onChange etiqueta />
 //   <TarjetaAccion tono icono label onClick />
 //   <SeccionColapsable titulo resumen>…</SeccionColapsable>
 //   <SubVista titulo onVolver acciones>…</SubVista>
@@ -15,6 +16,7 @@
 export { default as StepperFicha } from '../piezas/StepperFicha';
 export { default as DesplegableAgrupado } from '../piezas/DesplegableAgrupado';
 export { default as SelectorFecha } from '../piezas/SelectorFecha';
+export { default as SelectorHora } from '../piezas/SelectorHora';
 export { default as TarjetaAccion } from '../piezas/TarjetaAccion';
 export { default as SeccionColapsable } from '../piezas/SeccionColapsable';
 export { default as SubVista } from '../piezas/SubVista';

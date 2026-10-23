@@ -305,26 +305,23 @@ export default function TabResultado({
                 />
               ))}
             </div>
-            {/* La venta que no sale de reportar ESTA llamada: la renovación o el upsell de un
-                cliente, la cuota de su plan, una venta cerrada por WhatsApp. Antes se declaraba
-                desde el historial del cliente, en un wizard aparte; es la misma rama de venta. */}
-            <div className="ln-panel ln-panel--sm fi-venta-directa">
-              <span style={{ display: 'grid', gap: 'var(--space-1)' }}>
-                <b className="ln-t-body">¿Es una venta que no sale de esta llamada?</b>
-                <small className="ln-t-body-sm ln-muted">
-                  Una renovación, un upsell, la cuota de su plan o una venta cerrada por fuera.
-                </small>
-              </span>
-              <motion.button
-                type="button"
-                className="btn btn--linea"
-                whileTap={reducido ? undefined : { scale: 0.97 }}
-                onClick={() => { setError(null); setRespuestas((prev) => ventaDirecta(prev)); }}
-              >
-                <DollarSign /> Registrar una venta
-              </motion.button>
-            </div>
-            <PasarARecuperacion llamadaIso={ficha?.identidad?.llamada?.iso} onAccion={onAccion} />
+            {/* La venta que no sale de reportar ESTA llamada (renovación, upsell, cuota, venta por
+                fuera) y la llamada que no se tomó: dos botones compactos, sin bloques de texto. */}
+            <PasarARecuperacion
+              llamadaIso={ficha?.identidad?.llamada?.iso}
+              onAccion={onAccion}
+              antes={(
+                <motion.button
+                  type="button"
+                  className="fi-otra"
+                  data-tip="Registrar una venta|Renovación, upsell, la cuota de su plan o una venta cerrada por fuera"
+                  whileTap={reducido ? undefined : { scale: 0.97 }}
+                  onClick={() => { setError(null); setRespuestas((prev) => ventaDirecta(prev)); }}
+                >
+                  <DollarSign aria-hidden="true" /> Registrar una venta
+                </motion.button>
+              )}
+            />
           </motion.section>
         ) : listo ? (
           <motion.section key="revision" {...animar} aria-label="Revisión del resultado">

@@ -72,7 +72,18 @@ const SinObjecion = ({ conFicha }) => (
     </span>
 );
 
-/** Una agenda: el lead, quién la atendió y cuándo, su estado y la objeción. */
+/** El motivo clasificado («Sin oferta · No calificaba»): es la base con la que se analizan las no
+ *  cerradas, así que va arriba de la objeción y con el tono de la rama. */
+const Motivo = ({ motivo }) => (
+    <small className={`shrink-0 rounded-md border px-1.5 py-px text-[10px] font-bold ${motivo.oferta_presentada
+        ? 'border-orange-400/40 bg-orange-500/10 text-orange-200'
+        : 'border-sky-400/40 bg-sky-500/10 text-sky-200'}`}
+        title={motivo.detalle || undefined}>
+        {`${motivo.oferta_presentada ? 'Con oferta' : 'Sin oferta'} · ${motivo.categoria}`}
+    </small>
+);
+
+/** Una agenda: el lead, quién la atendió y cuándo, su estado, el motivo y la objeción. */
 const Fila = ({ fila, onAbrir }) => {
     const contenido = (
         <>
@@ -86,13 +97,17 @@ const Fila = ({ fila, onAbrir }) => {
                             {fila.post_call.label}
                         </small>
                     )}
+                    {fila.motivo && <Motivo motivo={fila.motivo} />}
                     <small className="shrink-0 text-[11px] font-semibold text-slate-500 tabular-nums">
                         {[fila.closer, cuando(fila.fecha, { conHora: true })].filter(Boolean).join(' · ')}
                     </small>
                 </span>
-                <span className="mt-2 block">
-                    {fila.objecion ? <Objecion objecion={fila.objecion} /> : <SinObjecion conFicha={!!onAbrir} />}
-                </span>
+                {/* Sin oferta no hay objeción que pedir: el lead no llegó a decir que no. */}
+                {(fila.objecion || fila.motivo?.oferta_presentada !== false) && (
+                    <span className="mt-2 block">
+                        {fila.objecion ? <Objecion objecion={fila.objecion} /> : <SinObjecion conFicha={!!onAbrir} />}
+                    </span>
+                )}
             </span>
             {onAbrir && <ChevronRight size={16} className="mt-0.5 shrink-0 text-slate-500" aria-hidden="true" />}
         </>
