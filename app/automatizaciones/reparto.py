@@ -2,8 +2,10 @@
 
   · **Continuidad**: si la persona ya tuvo un setter (en cualquier campaña) y sigue siendo un setter
     activo, se queda con ese: no se le corta la conversación que ya lleva en Kommo.
-  · **Distribuido**: si no, al participante con menos entradas de la campaña en las últimas 24 h
-    (desempata el que hace más que no recibe). Así un setter que se suma a mitad del día se pone al día.
+  · **Distribuido**: si no, al participante al que más le falta para su parte de las entradas de la
+    campaña en las últimas 24 h. Cada uno tiene un peso (70 y 30: 70 % y 30 %; todos en 1: parejo) y
+    se elige al de menor (entradas + 1) / peso; desempata el que hace más que no recibe. Así un setter
+    que se suma a mitad del día se pone al día.
   · **Sin reparto**: nadie; el lead lo ve todo el equipo, como los que ManyChat todavía no repartió.
 
 Participan los setters elegidos en la campaña o, si no eligió ninguno, todos los activos.
@@ -13,6 +15,7 @@ bandeja propia del Inbox. `conectados()` es el punto donde se va a enchufar; mie
 opción queda guardada sin efecto (la pantalla lo avisa).
 """
 from datetime import timedelta
+from fractions import Fraction
 
 from app import db
 from app.automatizaciones.modelos import AutEjecucion
@@ -61,6 +64,7 @@ def elegir(campana, contacto_id, ahora):
     candidatos = _participantes(campana)
     if not candidatos:
         return None
+    pesos = {s.user_id: max(s.peso or 1, 1) for s in campana.setters}
     desde = ahora - VENTANA
     filas = (db.session.query(AutEjecucion.setter_id, db.func.count(AutEjecucion.id),
                               db.func.max(AutEjecucion.iniciada_en))
@@ -68,5 +72,11 @@ def elegir(campana, contacto_id, ahora):
                      AutEjecucion.iniciada_en >= desde)
              .group_by(AutEjecucion.setter_id).all())
     carga = {sid: (n, ultima) for sid, n, ultima in filas}
-    # El que menos recibió; a igual carga, el que hace más que no recibe (nunca = el primero).
-    return min(candidatos, key=lambda u: (*carga.get(u.id, (0, desde)), u.id))
+
+    def falta(u):
+        n, ultima = carga.get(u.id, (0, desde))
+        # Fracción exacta: 2/70 contra 3/105 tiene que empatar, no depender de decimales.
+        return Fraction(n + 1, pesos.get(u.id, 1)), ultima, u.id
+
+    # Quien iría más atrás con esta entrada; a igual proporción, el que hace más que no recibe.
+    return min(candidatos, key=falta)

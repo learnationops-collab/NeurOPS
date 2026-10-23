@@ -14,6 +14,7 @@ from app.automatizaciones.reparto import setters_activos
 from app.models.marketing import clave_de_palabra
 
 LARGO_PALABRA = 100
+MAX_PESO = 100
 
 
 class ErrorDeCampana(ValueError):
@@ -52,6 +53,14 @@ def _palabras(valores):
             raise ErrorDeCampana(f'«{valor}» no es una palabra clave válida')
         salida.setdefault(clave, texto)
     return salida
+
+
+def _participante(fila, user_id, pesos):
+    """La fila del setter en la campaña, con el peso que mandó la API (o el que ya tenía, o 1)."""
+    fila = fila or AutCampanaSetter(user_id=user_id, peso=1)
+    if pesos and str(user_id) in pesos:
+        fila.peso = pesos[str(user_id)]
+    return fila
 
 
 def conflictos(claves, desde, hasta, excluir_id=None):
@@ -105,14 +114,19 @@ def guardar(campana, datos):
         validos = {u.id for u in setters_activos()}
         if not isinstance(setters, list) or not all(isinstance(s, int) and s in validos for s in setters):
             raise ErrorDeCampana('Los setters del reparto tienen que ser setters activos')
+    pesos = datos.get('pesos')
+    if pesos is not None and not (isinstance(pesos, dict) and all(
+            isinstance(v, int) and not isinstance(v, bool) and 1 <= v <= MAX_PESO for v in pesos.values())):
+        raise ErrorDeCampana(f'El peso de cada setter tiene que ser un número entero entre 1 y {MAX_PESO}')
 
     campana.nombre, campana.embudo, campana.tipo = nombre, embudo, tipo
     campana.desde, campana.hasta, campana.flujo_id = desde, hasta, flujo_id
     campana.reparto = reparto
     campana.solo_conectados = bool(datos.get('solo_conectados', campana.solo_conectados or False))
-    if setters is not None:
+    if setters is not None or pesos is not None:
         actuales = {s.user_id: s for s in campana.setters}
-        campana.setters = [actuales.get(i) or AutCampanaSetter(user_id=i) for i in dict.fromkeys(setters)]
+        campana.setters = [_participante(actuales.get(i), i, pesos)
+                           for i in dict.fromkeys(setters if setters is not None else actuales)]
     if 'palabras' in datos:
         actuales = {p.clave: p for p in campana.palabras}
         campana.palabras = [actuales.get(clave) or AutCampanaPalabra(clave=clave, texto=texto)
@@ -140,4 +154,5 @@ def resumen(campana, momento):
         'reparto': campana.reparto,
         'solo_conectados': bool(campana.solo_conectados),
         'setters': [s.user_id for s in campana.setters],
+        'pesos': {str(s.user_id): s.peso or 1 for s in campana.setters},
     }

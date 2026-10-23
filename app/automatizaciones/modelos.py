@@ -191,5 +191,7 @@ class AutCampanaSetter(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     campana_id = db.Column(db.Integer, db.ForeignKey('aut_campanas.id', ondelete='CASCADE'), nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    # Cuánto recibe respecto de los demás (70 y 30: 70 % y 30 %). Todos en 1: parejo.
+    peso = db.Column(db.Integer, nullable=False, default=1, server_default='1')
 
     __table_args__ = (db.UniqueConstraint('campana_id', 'user_id', name='uq_aut_campana_setters'),)
