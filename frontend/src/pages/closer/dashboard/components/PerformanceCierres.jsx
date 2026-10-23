@@ -20,7 +20,8 @@ const Ayuda = ({ titulo, texto }) => (
 
 const PerformanceCierres = ({ cierres, irA }) => {
     if (!cierres) return null;
-    const hayLlamadas = cierres.asistieron > 0;
+    // Sin llamadas de este período pero con cierres de llamadas anteriores, la tarjeta se muestra igual.
+    const hayLlamadas = cierres.asistieron > 0 || cierres.reales?.base > 0;
     return (
         <Card variant="surface" padding="p-6">
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-4">

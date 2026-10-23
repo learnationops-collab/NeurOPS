@@ -206,7 +206,8 @@ const PanelEstados = ({ bloque, irA }) => {
 const PanelCierre = ({ bloque, irA, cargarNoCerradas, onAbrirFila }) => {
     const [verNoCerradas, setVerNoCerradas] = useState(false);
     const c = bloque.cierres;
-    const vacio = bloque.asistieron === 0 || !c;
+    // Sin llamadas de este período pero con cierres de llamadas anteriores, el panel se muestra igual.
+    const vacio = !c || (bloque.asistieron === 0 && !c.reales?.base);
     const abrirLead = onAbrirFila ? (fila) => {
         setVerNoCerradas(false);
         onAbrirFila(fila, { alCerrar: () => setVerNoCerradas(true) });
@@ -816,6 +817,14 @@ const pasosDe = (funnel, vocabulario, irA) => funnel.map(p => {
     };
 });
 
+/** "9 de 13 · 5 de llamadas anteriores": los cierres, su base y cuántos venían de antes. */
+const subCierreReal = (r) => {
+    if (!r) return '';
+    const base = `${r.cierres} de ${r.base}`;
+    return r.anteriores ? `${base} · ${fmt.plural(r.anteriores, 'de llamada anterior', 'de llamadas anteriores')}`
+        : `${base} ${r.base === 1 ? 'oportunidad' : 'oportunidades'}`;
+};
+
 const DashboardClosers = ({ bloque, deltas, porCobrar, fuentes, irA, cargarNoCerradas, onAbrirFila }) => (
     <>
         <div className="grid grid--4">
@@ -832,15 +841,16 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, fuentes, irA, cargarNoCer
                 tasa al 100% porque el denominador quedo afuera del filtro— la explica el aviso de
                 procedencia de la lista, que dice exactamente eso. Antes abrian el periodo entero
                 sin filtrar para evitarla, y el precio era que el clic no llevaba a ningun lado. */}
-            <Tile label="Close rate" valor={fmt.pct(bloque.close_rate)} color={v('error')}
-                help={'Ventas (pago completo o split pay) sobre las llamadas a las que el cliente se '
-                    + 'presentó. Las señas no cuentan: se ven aparte en el panel Cierre. Se cuenta '
-                    + 'sobre las llamadas y no sobre las ventas del período: una venta puede no tener '
-                    + 'agenda en estos días, y una llamada de estos días puede cerrar más tarde.'}
-                delta={deltas.close_rate}
+            <Tile label="Close rate real" valor={fmt.pct(bloque.close_rate_real)} color={v('error')}
+                help={'Cierres cobrados en el período sobre las oportunidades que se trabajaron: las '
+                    + 'llamadas con show up más las llamadas de antes que cerraron ahora (una seña, un '
+                    + 'seguimiento, una segunda llamada). Cuenta por cobro, así que una seña del mes '
+                    + 'pasado que se paga hoy suma. El close rate por llamada, que mide solo las '
+                    + 'llamadas de este período, está en el panel Cierre.'}
+                delta={deltas.close_rate_real}
                 humo={[v('error'), v('warning'), v('brand-primary'), v('error')]}
-                sub={`${bloque.cerradas} de ${fmt.plural(bloque.asistieron, 'llamada', 'llamadas')}`}
-                ver={abrir(irA, D.close_rate)} baja="p-cierre" />
+                sub={subCierreReal(bloque.cierres?.reales)}
+                ver={abrir(irA, D.close_rate_real)} baja="p-cierre" />
             <Tile label="Cash collected · neto" valor={fmt.money(bloque.cash_neto)}
                 help={'Dinero que entró en el período, descontadas las fees de la pasarela: pagos '
                     + 'completos, primeras cuotas, cuotas de ventas anteriores y señas. El bruto '

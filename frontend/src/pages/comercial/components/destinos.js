@@ -53,6 +53,12 @@ export const DESTINOS_CLOSER = {
         aviso: AVISO_TASA_NUMERADOR },
     close_rate: { tabla: 'agendas', filtro: { post_call: 'Venta' }, de: 'Close rate',
         aviso: AVISO_TASA_NUMERADOR },
+    // El close rate real cuenta cobros: la lista son las ventas nuevas del período. No trae la seña
+    // completada con una cuota (un cierre que no es una venta nueva) ni distingue de qué llamada
+    // salió cada una: eso está en el modal «Ver cobros» del panel Cierre.
+    close_rate_real: { tabla: 'ventas', filtro: { tipo_pago: VENTAS_NUEVAS }, de: 'Close rate real',
+        aviso: 'La lista son los cobros de venta nueva del período. El origen de cada uno (de qué '
+            + 'llamada salió) está en «Ver cobros», dentro del panel Cierre.' },
     cash: { tabla: 'ventas', filtro: {}, de: 'Cash collected' },
     // El ticket ahora se calcula sobre estas mismas ventas nuevas: la lista cierra con él.
     ticket: { tabla: 'ventas', filtro: { tipo_pago: VENTAS_NUEVAS }, de: 'Ticket promedio' },

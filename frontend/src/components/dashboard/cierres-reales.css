@@ -1,0 +1,224 @@
+/* Close rate real (CierresReales.jsx): la tarjeta ancha que va arriba de la matriz de cierres.
+ *
+ * Vive dentro de `.mc` y toma sus variables (--mc-sin, --mc-superficie, --mc-borde…), así que se ve
+ * igual en el dashboard comercial y en el del closer. Suma una: --mc-ant, el verde de los cierres
+ * que vienen de una llamada anterior (los que la tasa por llamada no veía). Los pesos van en
+ * `<b>` / `<small>`, no en `<span>`: el CSS global fuerza 400 con !important en span/div/button. */
+
+.mcr {
+    --mc-ant: var(--v6-ok, var(--ln-success, #2FBF8F));
+    position: relative;
+    isolation: isolate;
+    /* `clip` y no solo `hidden`: el brillo sobresale de la tarjeta y `hidden` la deja scrolleable.
+       Al enfocar el botón «Ver cobros» el navegador corría el contenido 51px a la izquierda. */
+    overflow: hidden;
+    overflow: clip;
+    container: mcr / inline-size;
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+    padding: 18px 20px;
+    border-radius: 18px;
+    background: var(--mc-superficie);
+    border: 1px solid var(--mc-borde);
+    animation: mc-entra .45s ease both;
+}
+
+/* Un brillo quieto detrás: azul de las llamadas del período a la izquierda, verde de las anteriores
+   a la derecha. Más tenue que el humo de las tarjetas de abajo: esta es la que se lee primero. */
+.mcr-brillo {
+    position: absolute;
+    inset: -40% -10%;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        radial-gradient(28% 40% at 18% 40%, color-mix(in srgb, var(--mc-sin) 26%, transparent), transparent 72%),
+        radial-gradient(30% 42% at 80% 58%, color-mix(in srgb, var(--mc-ant) 20%, transparent), transparent 72%);
+    filter: blur(16px);
+}
+
+.mcr-cab {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+}
+
+.mcr-titulo {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.mcr:hover .mc-ayuda,
+.mcr .mc-ayuda:focus-within {
+    opacity: 1;
+}
+
+.mcr-ver {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: none;
+    padding: 5px 8px 5px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--mc-borde);
+    background: transparent;
+    color: var(--mc-mut-2);
+    cursor: pointer;
+    transition: border-color .16s ease, color .16s ease, background-color .16s ease;
+}
+
+.mcr-ver > small {
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.mcr-ver:hover,
+.mcr-ver:focus-visible {
+    color: var(--ln-text-out, #ffffff);
+    border-color: color-mix(in srgb, var(--mc-ant) 60%, transparent);
+    background: color-mix(in srgb, var(--mc-ant) 10%, transparent);
+}
+
+.mcr-ver > svg {
+    color: var(--mc-ant);
+    transition: transform .16s ease;
+}
+
+.mcr-ver:hover > svg,
+.mcr-ver:focus-visible > svg {
+    transform: translateX(2px);
+}
+
+.mcr-cuerpo {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 14px 28px;
+    min-width: 0;
+}
+
+.mcr-cifra {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 10px;
+    white-space: nowrap;
+}
+
+.mcr-pct {
+    font-size: clamp(34px, 11cqi, 54px);
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -.035em;
+    font-variant-numeric: tabular-nums;
+}
+
+.mcr-barra {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.mcr-riel {
+    height: 14px;
+    border-radius: 999px;
+}
+
+.mc-tramo--periodo { background: var(--mc-sin); }
+.mc-tramo--anterior { background: var(--mc-ant); }
+
+.mcr-base {
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--mc-mut);
+    font-variant-numeric: tabular-nums;
+}
+
+.mcr-base b {
+    font-weight: 800;
+    color: var(--mc-mut-2);
+}
+
+/* Los números que arman la tasa, con el color de su tramo. */
+.mcr-datos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.mcr-dato {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 7px;
+    min-width: 0;
+}
+
+.mcr-dato > b {
+    font-size: 15px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -.01em;
+    font-variant-numeric: tabular-nums;
+}
+
+.mcr-dato-txt {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--mc-mut-2);
+}
+
+.mcr-nota {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--mc-mut);
+}
+
+.mcr-marca {
+    align-self: center;
+    flex: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+}
+
+.mcr-marca--periodo { background: var(--mc-sin); }
+.mcr-marca--anterior { background: var(--mc-ant); }
+
+/* Sin llamada: hueco con borde punteado, porque no es parte de la barra (queda fuera de la tasa). */
+.mcr-marca--sin {
+    border: 1.5px dashed var(--mc-mut);
+}
+
+/* Seña completada con cuota: el verde de las anteriores, rayado, porque suma a ese tramo. */
+.mcr-marca--cuota {
+    background: repeating-linear-gradient(135deg, var(--mc-ant) 0 2px, transparent 2px 4px);
+    border: 1px solid var(--mc-ant);
+}
+
+/* Tarjeta angosta (un teléfono): la cifra arriba y la barra entera abajo. */
+@container mcr (max-width: 480px) {
+    .mcr-cuerpo {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mcr {
+        animation: none;
+    }
+
+    .mcr-ver,
+    .mcr-ver > svg {
+        transition: none;
+    }
+}
