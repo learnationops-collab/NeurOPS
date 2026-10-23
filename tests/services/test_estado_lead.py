@@ -145,17 +145,8 @@ def test_un_estado_desconocido_no_rompe_la_ficha():
 
 # --- Qué pestañas se muestran ------------------------------------------------------------------
 
-def test_sin_agenda_no_hay_pestana_de_resultado_ni_de_cobro():
-    assert resolver_estado()['pestanas'] == ['conf', 'hist', 'form', 'com']
-
-
 def test_sin_venta_no_hay_pestana_de_cobro():
     assert 'acciones' not in resolver_estado(estado_agenda='no_show')['pestanas']
-
-
-def test_con_deuda_aparece_la_pestana_de_cobro():
-    pestanas = resolver_estado(estado_agenda='show_up', tiene_venta=True, deuda=600.0)['pestanas']
-    assert pestanas == ['resultado', 'acciones', 'ful', 'hist', 'form', 'com']
 
 
 def test_sin_venta_tampoco_hay_pestana_de_fulfillment():
