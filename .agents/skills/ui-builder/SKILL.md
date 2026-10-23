@@ -151,6 +151,7 @@ Si una pantalla necesita ajustar el componente según el contexto (por ejemplo, 
 - `standard.css` funciona en cualquier pantalla: usa su propio prefijo, así que no choca con los `.btn` y `.chip` de la Ficha, Hiring o el dashboard, ni con los `ln-*` del DS.
 - Fuera de `.thalamus`, `.dc-shell` y los demás shells, `index.css` fuerza la tipografía con `!important`. Ahí los pesos 800 y 900 se ven como 400 y 600. Usar los componentes en pantallas viejas requiere sumar esa pantalla a las exclusiones de `index.css`, o migrarla a un shell.
 - No uses `components/ui/Button.jsx`, `Card.jsx` ni `Badge.jsx` en código nuevo: son el estilo viejo.
+- **Aura / humo de Learnation:** se hace como dice [`docs/diseno_humo_aura.md`](../../../docs/diseno_humo_aura.md) (manchas `<i>` desenfocadas que se mueven, no un `radial-gradient`), con su tabla de calibración. Solo para estado vivo o jerarquía (lo elegido, lo que corre ahora, el foco): una lista o un formulario quietos no llevan humo, y los colores de marca nunca al 100%.
 
 ## Granularidad: bloques, no piezas sueltas
 

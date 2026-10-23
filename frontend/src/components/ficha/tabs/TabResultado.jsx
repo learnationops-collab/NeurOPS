@@ -609,10 +609,6 @@ function valoresDeOpcion(pregunta, opcion, contexto, respuestas) {
   return base;
 }
 
-// Los tonos de las opciones con la paleta de Learnation (el aura de Clarity), no el semáforo.
-const COLOR_TONO = {
-  success: '#2EE6C8', error: '#FF3FA4', warning: '#FFB547', info: '#7D8BFF', idle: '#94A3B8',
-};
 // Íconos de las preguntas de sí/no más frecuentes; el resto de los sí/no lleva pulgar arriba/abajo.
 const ICONOS_OPCION = {
   'decisor:true': UserCheck, 'decisor:false': UserX,
@@ -621,8 +617,10 @@ const ICONOS_OPCION = {
 const iconoDeOpcion = (clave, valor) => ICONOS_OPCION[`${clave}:${valor}`]
   || (valor === true ? ThumbsUp : valor === false ? ThumbsDown : null);
 
+// Las opciones son quietas y neutras (son un formulario: el humo no decora). El humo de
+// Learnation aparece apenas al pasar el mouse y entero en la elegida, que es lo vivo
+// (`docs/diseno_humo_aura.md`).
 function OpcionGrande({ opcion, activa, onClick, reducido, clave }) {
-  const color = COLOR_TONO[opcion.aviso ? 'warning' : opcion.tono] || COLOR_TONO.info;
   const Icono = iconoDeOpcion(clave, opcion.valor);
   return (
     <motion.button
@@ -634,8 +632,9 @@ function OpcionGrande({ opcion, activa, onClick, reducido, clave }) {
       {...CASCADA.hijo(reducido)}
       whileHover={reducido ? undefined : { y: -2 }}
       whileTap={reducido ? undefined : { scale: 0.98 }}
-      style={{ '--c': color }}
+      data-aviso={opcion.aviso ? '1' : undefined}
     >
+      <span className="fi-humo" aria-hidden="true"><i /><i /><i /></span>
       {Icono && <span className="fi-op-ico"><Icono aria-hidden="true" /></span>}
       <b className="ln-t-body">{opcion.label}</b>
       {opcion.sub && <small className="ln-t-caption ln-muted">{opcion.sub}</small>}
