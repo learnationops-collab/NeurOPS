@@ -644,3 +644,7 @@
   - Tarjeta nueva arriba de la matriz de cierres: barra de dos tramos, las cifras que la arman y el modal «Ver N cobros», agrupado por origen y con la llamada de cada uno.
   - **Cambia el close rate por llamada:** una llamada ya no es «Venta» si el pago es anterior a ella (un día de tolerancia por la hora UTC). Un cliente que ya había comprado y volvía a hablar contaba dos veces.
   - Tests: `test_cierres_reales.py`, `test_ventas_previas.py`, `test_comercial_cierres_reales.py` y `CierresReales.test.jsx`.
+
+- **23 de Octubre de 2026 (Closer: Confirmar con el look de Clarity)** *([frontend/src/pages/closer/clarity-v6.css](../../frontend/src/pages/closer/clarity-v6.css) [NEW], [frontend/src/pages/closer/CloserWorkflowPage.jsx](../../frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])*:
+  - Prueba de estilo: mientras el closer está en Confirmar, la página lleva `.clarity-v6` con los tokens de Learnation Clarity (Leadership): fondo navy en diagonal, «Tu siguiente paso» como la tarjeta foco de Momentum (velo azul/magenta y aura animada), CTA y botones de tarjeta en magenta, cifras en blanco con barra magenta, columnas y tarjetas con los materiales de Clarity y etiquetas como chips teñidos (`ktag-v6`, `klisto-v6`).
+  - Las demás secciones siguen con el v6.
