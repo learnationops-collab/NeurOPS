@@ -1686,9 +1686,29 @@ const CloserWorkflowPage = () => {
                     const doneToday = dailyActivity
                         ? (dailyActivity.confirmados_hoy || 0) + (dailyActivity.show_ups || 0) + (dailyActivity.seguimientos_hechos || 0)
                         : 0;
-                    const pendingToday = counts.confirmations + counts.calls + counts.seguimientos;
+                    // `counts.confirmations` es el pool entero, con las ya confirmadas que siguen
+                    // visibles: lo que falta es eso menos `confirmations_done`. Sin restarlas, con
+                    // las tres confirmadas decía «Te falta 3 por confirmar» (23/10/2026).
+                    const confirmacionesPendientes = Math.max(0, counts.confirmations - (counts.confirmations_done || 0));
+                    const pendingToday = confirmacionesPendientes + counts.calls + counts.seguimientos;
                     const totalToday = doneToday + pendingToday;
                     const pct = totalToday ? Math.round((doneToday / totalToday) * 100) : 0;
+                    // En Confirmar y Reportar la segunda tarjeta mide esa sección, no el día entero
+                    // (pedido del 23/10/2026): Confirmar, el porcentaje de confirmación del pool;
+                    // Reportar, el de asistencia de las llamadas reportadas del día. Asistió todo lo
+                    // reportado menos No Show y Cancelada; una reagendada no cuenta para ningún lado.
+                    let metrica = null;
+                    if (activeView === 'inbox' && activeStep === 'confirmations') {
+                        const total = counts.confirmations || 0;
+                        const hechas = counts.confirmations_done || 0;
+                        metrica = { lbl: 'Confirmación', sub: 'confirmado', hechas, total, pie: `${hechas} de ${total} confirmados`, pendientes: confirmacionesPendientes };
+                    } else if (activeView === 'inbox' && activeStep === 'calls') {
+                        const res = r => (r.closer_result || r.result || '').trim().toLowerCase();
+                        const concluidas = reportedTodayCalls.filter(r => !['reagendado', 'reagendada'].includes(res(r)));
+                        const asistieron = concluidas.filter(r => !['no show', 'cancelado', 'cancelada'].includes(res(r))).length;
+                        metrica = { lbl: 'Asistencia', sub: 'de asistencia', hechas: asistieron, total: concluidas.length, pie: `${asistieron} de ${concluidas.length} asistieron`, pendientes: counts.calls };
+                    }
+                    const metricaPct = metrica && metrica.total ? Math.round((metrica.hechas / metrica.total) * 100) : 0;
                     // Puntos de experiencia: pondera cada acción real de hoy (no un número inventado —
                     // sale de las mismas cuentas de arriba) para darle una lectura más "de juego" al
                     // esfuerzo del día. Los pesos son una primera pasada editorial, no una medida
@@ -1769,7 +1789,7 @@ const CloserWorkflowPage = () => {
                                 // como "estoy en Ver mis datos/Mi cartera/Cerrar el día" — antes esas 3 vistas
                                 // no ofrecían ninguna acción concreta, o hasta 2 sueltas sin prioridad.
                                 const PRIORITY = [
-                                    { key: 'confirmations', label: 'Ir a confirmar', accion: 'confirmar', count: counts.confirmations, step: 'confirmations' },
+                                    { key: 'confirmations', label: 'Ir a confirmar', accion: 'confirmar', count: confirmacionesPendientes, step: 'confirmations' },
                                     { key: 'calls', label: 'Ir a reportar', accion: 'reportar', count: counts.calls, step: 'calls' },
                                     { key: 'seguimientos', label: 'Ir a seguir', accion: 'seguir', count: counts.seguimientos, step: 'seguimientos' }
                                 ];
@@ -1805,6 +1825,25 @@ const CloserWorkflowPage = () => {
                                 );
                             })()}
 
+                            {metrica ? (
+                            <div className="tud-v6">
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="tud-lbl-v6">{metrica.lbl}</div>
+                                    <div className="tud-xp-v6">🔥 Racha {streakDays} d</div>
+                                </div>
+                                <div className="tud-pct-row-v6">
+                                    <span className="tud-pct-v6">{metricaPct}%</span>
+                                    <span className="tud-sub-v6">{metrica.sub}</span>
+                                </div>
+                                <div className="pbarw-v6">
+                                    <i style={{ width: `${metricaPct}%` }}></i>
+                                </div>
+                                <div className="tud-foot-row-v6">
+                                    <span className="tud-foot-v6">{metrica.pie}</span>
+                                    <span className="tud-foot-v6">{metrica.pendientes} {metrica.pendientes === 1 ? 'pendiente' : 'pendientes'}</span>
+                                </div>
+                            </div>
+                            ) : (
                             <div className="tud-v6">
                                 <div className="flex items-start justify-between gap-2">
                                     <div className="tud-lbl-v6">Tu día</div>
@@ -1822,6 +1861,7 @@ const CloserWorkflowPage = () => {
                                     <span className="tud-foot-xp-v6">⚡ {xp} XP</span>
                                 </div>
                             </div>
+                            )}
 
                             <ComisionMesCard />
                         </div>
@@ -2038,7 +2078,7 @@ const CloserWorkflowPage = () => {
                         // `counts` es siempre "lo pendiente de HOY" — solo tiene sentido sumarlo al
                         // total cuando se está reportando el día de hoy; para un día pasado ya cerrado
                         // no hay "pendiente" que sumar, así que el total es lo hecho ese día.
-                        const pendingToday = isToday ? (counts.confirmations + counts.calls + counts.seguimientos) : 0;
+                        const pendingToday = isToday ? (Math.max(0, counts.confirmations - (counts.confirmations_done || 0)) + counts.calls + counts.seguimientos) : 0;
                         const totalToday = doneToday + pendingToday;
                         const firstName = user?.name?.split(' ')[0] || user?.username || 'Closer';
                         const cashToday = reportActivity?.ventas_cash || 0;
@@ -2155,7 +2195,7 @@ const CloserWorkflowPage = () => {
                         <div className="rpt-card-v6">
                             <h3 className="rpt-title-v6" style={{ marginBottom: '4px' }}>LOGROS</h3>
                             {(() => {
-                                const pendienteHoyTotal = counts.confirmations + counts.calls + counts.seguimientos;
+                                const pendienteHoyTotal = Math.max(0, counts.confirmations - (counts.confirmations_done || 0)) + counts.calls + counts.seguimientos;
                                 const cobrosHechos = reportActivity?.ventas_count || 0;
                                 const segFaltan = seguimientosGoal?.faltan;
                                 const achievements = [
@@ -2243,7 +2283,7 @@ const CloserWorkflowPage = () => {
                             <span className="w-2 h-2 rounded-full" style={{ background: 'var(--v6-warn)' }}></span>
                             <span className="text-xs font-bold" style={{ color: 'var(--ln-warning-text, #F3D08A)' }}>
                                 {reportandoHoy
-                                    ? `${counts.confirmations + counts.calls + counts.seguimientos} cosa(s) quedaron sin resolver`
+                                    ? `${Math.max(0, counts.confirmations - (counts.confirmations_done || 0)) + counts.calls + counts.seguimientos} cosa(s) quedaron sin resolver`
                                     : `Se guarda como el reporte del ${etiquetaDia(reportDate, { largo: true })}`}
                             </span>
                         </div>
