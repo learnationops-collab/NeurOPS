@@ -687,3 +687,10 @@
 
 - **23 de Octubre de 2026 (Ficha · Resultado: el reporte con todo el ancho)** *([frontend/src/components/ficha/tabs/resultado.css](../../frontend/src/components/ficha/tabs/resultado.css) [MODIFY])*:
   - El progreso (Confirmado · Resultado · Cierre…) pasa a una columna de 132px a la izquierda, sin tarjeta, chico y apagado; el reporte usa el resto del ancho (antes quedaba apretado en 196px).
+
+- **23 de Octubre de 2026 (Ficha · Resultado: más movimiento y menos texto)** *([frontend/src/components/ficha/tabs/resultado.css](../../frontend/src/components/ficha/tabs/resultado.css), [frontend/src/components/ficha/tabs/TabResultado.jsx](../../frontend/src/components/ficha/tabs/TabResultado.jsx), [frontend/src/components/ficha/tabs/GrabacionFathom.jsx](../../frontend/src/components/ficha/tabs/GrabacionFathom.jsx), [frontend/src/components/ficha/piezas/TarjetaAccion.jsx](../../frontend/src/components/ficha/piezas/TarjetaAccion.jsx), [frontend/src/components/ficha/FichaHeader.jsx](../../frontend/src/components/ficha/FichaHeader.jsx), [frontend/src/components/ficha/ficha.css](../../frontend/src/components/ficha/ficha.css) [MODIFY])*:
+  - Progreso: solo el punto y el rótulo (el detalle al pasar el mouse); el riel se llena con el aura, cada hito alcanzado hace un pop y el siguiente late.
+  - «Registrar una venta» y «Pasar a seguimiento» con el alto de las tarjetas, en dos columnas.
+  - «Link de la call», sin descripción ni aviso de que no es de Fathom.
+  - La pastilla de cuánto falta/pasó en la cabecera ya no se corta, queda centrada y tiene un brillo de aura.
+  - Las cuatro tarjetas de «¿Qué pasó con esta llamada?» con la paleta de Learnation.
