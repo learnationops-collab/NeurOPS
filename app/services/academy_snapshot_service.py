@@ -266,8 +266,10 @@ def sincronizar_avance(ahora=None):
     """
     from sqlalchemy import func
 
+    from app.services import person_service
+
     ahora = ahora or datetime.utcnow()
-    resumen = {'leidos': 0, 'cruzados': 0, 'sin_cliente': 0, 'limpiados': 0, 'error': None}
+    resumen = {'leidos': 0, 'cruzados': 0, 'sin_cliente': 0, 'limpiados': 0, 'vinculados': 0, 'error': None}
     if not os.environ.get('ACADEMY_API_TOKEN'):
         resumen['error'] = 'sin_token'
         return resumen
@@ -307,6 +309,12 @@ def sincronizar_avance(ahora=None):
         foto = _foto_de(cliente.id)
         if foto.learnation_user_id is None:
             foto.learnation_user_id = f.get('user_id')
+        # Si la Academia ya sabe su uuid, el cruce es seguro: la persona guarda su id de alumno (los dos
+        # sentidos). Por email no: el mail puede estar en la ficha de otra persona.
+        suya = person_service.por_uuid(f['work_uuid']) if f.get('work_uuid') else None
+        if suya is not None and cliente.person_uuid == suya.uuid:
+            if person_service.vincular_alumno(suya, f.get('user_id')) == 'guardado':
+                resumen['vinculados'] += 1
         foto.avance_etapa = (f.get('stage') or '')[:150] or None
         foto.avance_tipo = f.get('stage_kind')
         foto.avance_dias_en_etapa = f.get('stage_days')

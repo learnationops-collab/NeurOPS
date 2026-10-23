@@ -11,6 +11,7 @@ sistemas, la Academia ve lo de alguien sin rol propio: sin montos y sin nómina 
 no le pregunta a un tercero para responder.
 """
 import logging
+from datetime import datetime
 
 from flask import jsonify, request
 
@@ -33,11 +34,16 @@ def agent_ask():
     cuerpo = request.get_json(silent=True) or {}
     logger.info(f"[agent/ask] quien={cuerpo.get('quien')} plan={cuerpo.get('plan')} pregunta={cuerpo.get('pregunta')}")
     if cuerpo.get('catalogo'):
+        fuente = cuerpo['catalogo'] if isinstance(cuerpo['catalogo'], str) else None
         try:
-            datos = motor.catalog(_SistemaExterno(), cuerpo['catalogo'], cuerpo.get('buscar'))
+            cat = motor.catalog(_SistemaExterno(), fuente or True, cuerpo.get('buscar'))
         except motor.MotorError as e:
             return jsonify({'success': False, 'errores': e.errores}), 422
-        return jsonify({'success': True, 'metodo': 'Catálogo del motor de tablas de Work, sin IA', 'catalogo': datos})
+        # La misma forma que el catálogo de la Academia: `datos` son las fuentes o, con fuente, sus datos.
+        return jsonify({'success': True, 'metodo': 'Catálogo del motor de tablas de Work, sin IA', 'fuente': fuente,
+                        'datos': cat['datos'] if fuente else cat,
+                        'comparaciones': cat['comparaciones'] if fuente else None,
+                        'as_of': datetime.utcnow().isoformat(timespec='seconds') + 'Z'})
     if not cuerpo.get('plan'):
         errores = ['Work responde solo planes por ahora (sin `pregunta` con IA).']
         return jsonify({'success': False, 'errores': errores}), 422
