@@ -694,3 +694,8 @@
   - «Link de la call», sin descripción ni aviso de que no es de Fathom.
   - La pastilla de cuánto falta/pasó en la cabecera ya no se corta, queda centrada y tiene un brillo de aura.
   - Las cuatro tarjetas de «¿Qué pasó con esta llamada?» con la paleta de Learnation.
+
+- **23 de Octubre de 2026 (Ficha · Confirmación: editable y con vuelta atrás)** *([frontend/src/components/ficha/tabs/TabConfirmacion.jsx](../../frontend/src/components/ficha/tabs/TabConfirmacion.jsx), [app/services/ficha_acciones_service.py](../../app/services/ficha_acciones_service.py) [MODIFY])*:
+  - «Cómo viene» sale de la pestaña: la etapa ya lo dice. La columna sigue en la base con lo cargado.
+  - Un lead 100% confirmado se sigue pudiendo editar (nota para la llamada y acciones).
+  - Tocar una etapa anterior en el stepper de un lead confirmado lo vuelve a esa etapa (Por contactar → por confirmar, Contactado → conversando).
