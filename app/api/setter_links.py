@@ -1,4 +1,4 @@
-"""Leads, etapas, links de agendamiento, comision y links de Agendas 2.0 del setter.
+"""Etapas, links de agendamiento, comision y links de Agendas 2.0 del setter.
 
 Se cuelga del blueprint de `setter.py` (se importa al final de ese archivo).
 """
@@ -8,33 +8,6 @@ from app.models import ROLE_SETTER
 from app.decorators import role_required
 from app.api.setter import bp
 
-
-@bp.route('/leads', methods=['GET'])
-@role_required(ROLE_SETTER)
-def get_leads():
-    from app.models import Lead, PipelineStage
-    
-    stage_id = request.args.get('stage_id')
-    
-    query = Lead.query
-    
-    if stage_id:
-        query = query.filter_by(stage_id=stage_id)
-        
-    leads = query.order_by(Lead.created_at.desc()).all()
-    
-    return jsonify([{
-        "id": l.id,
-        "name": l.name,
-        "email": l.email,
-        "instagram_username": l.instagram_username,
-        "person_uuid": l.person_uuid,
-        "stage_id": l.stage_id,
-        "ad_source": l.ad_source,
-        "tags": l.tags,
-        "notes": l.notes,
-        "created_at": l.created_at.isoformat()
-    } for l in leads]), 200
 
 @bp.route('/stages', methods=['GET'])
 @role_required(ROLE_SETTER)

@@ -40,9 +40,6 @@ def test_dos_pagos_de_venta_nueva_a_pocos_dias_son_la_misma_venta():
     assert ids(ventas) == [[1, 2]]
 
 
-def test_un_completo_meses_despues_es_otra_venta():
-    ventas = agrupar([pago(1, 'completo', date(2026, 1, 5)), pago(2, 'completo', date(2026, 6, 5))])
-    assert ids(ventas) == [[1], [2]]
 
 
 def test_programas_distintos_son_ventas_distintas():

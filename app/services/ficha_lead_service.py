@@ -338,12 +338,13 @@ def _cobro(client, ventas, deuda, programa_code, programa_nombre, enrollment_dt,
     pagado = round(sum(p['monto'] for p in pagos), 2)
     fechas = [p['fecha'] for p in pagos if p['fecha']]
 
-    # El total que ESTE cliente negocio (`Client.total_amount`), que es el que manda sobre el
-    # precio de lista en `_client_debt`: el de lista es igual para todos y no refleja descuentos
+    # El total que ESTE cliente negocio (el `agreed_total` de su venta vigente), que es el que manda
+    # sobre el precio de lista en la deuda: el de lista es igual para todos y no refleja descuentos
     # ni planes a medida. Viaja crudo —`None` cuando nadie lo cargo— y aparte, el numero que
     # daria deducirlo de lo cobrado mas lo que se debe. La ficha propone ese segundo al editarlo,
     # pero no lo hace pasar por un dato declarado: deducido y declarado no son lo mismo.
-    total = float(client.total_amount) if client and client.total_amount is not None else None
+    from app.services.deuda_service import total_acordado
+    total = total_acordado(client, declarado=True)
 
     return {
         'deuda': deuda,

@@ -428,6 +428,99 @@ Las comisiones de verdad (`commission_service`, `fulfillment_commission_service`
 `workshop_leads` y `conciliacion_movimientos` se quedan con sus columnas (no son copia). `appointments.agenda_payload['lead']`
 es opcional (~4 archivos, ~20 líneas).
 
+### Decisiones del 21/10/2026
+
+- **Comisión del 10%:** se recalcula desde los pagos reales, con la tasa propia del closer (`commission_service`).
+- **Tests:** se borran los que se rompen por las tablas que se van, sin adaptarlos ("tenemos demasiados").
+- **El paso 7 sale de la 2c.** `manychat_leads` se borra entera con el retiro de ManyChat, no columna por columna:
+  primero el motor propio escribe Persona + `Conversation` + interacciones directo (hoy escribe `ManychatLead('ig:…')`).
+- **Atribución de anuncios: camino explícito, no inferido.**
+  - El link de agenda que manda la plataforma desde una conversación lleva su referencia. La agenda queda con
+    `appointments.conversation_id` (columna nueva) y copia la keyword y el anuncio de ese momento.
+  - Las agendas de funnel (VSL, workshop, landing) quedan con su funnel y campaña (`origin`).
+  - La venta toma la keyword de su agenda (`sales.appointment_id`). Las renovaciones y los upsells **heredan** el
+    origen de la venta original.
+  - La inferencia de hoy (última interacción con palabra clave antes del tope) queda solo como respaldo para datos
+    viejos y agendas sin link. Para que siga andando sin ManyChat, `LeadAnswer` pasa a colgar de `Conversation`
+    (tabla de interacciones), y `Conversation` queda como cabecera.
+  - Va con Agendas 2.0 y el retiro de ManyChat, después del pase.
+
+### Retiro de ManyChat: lo que hace falta (relevado el 21/10/2026, sobre develop 77a0c4c0)
+
+Hoy el motor propio de Instagram (`automatizaciones/registro.py._lead`) **también escribe `manychat_leads`**: crea
+`ManychatLead('ig:<IGSID>')` con name e ig, y una `LeadAnswer` por entrada, mensaje y calificación, para que los tableros
+sigan andando. La persona del lead del motor sale de `lead.ig` (`conversaciones_service.sincronizar_lead`).
+
+**La forma final:** `Conversation` es la cabecera (persona, canal, setter, etapa). Las interacciones pasan a una
+tabla colgada de ella: `LeadAnswer` con `conversation_id`, o una nueva, con
+`(conversation_id, created_at, keyword, ad_id, qualification, id_option)`. El motor escribe Persona + Conversation +
+interacciones directo. Cuando nadie lee `manychat_leads` ni `LeadAnswer.lead_id`, la tabla se borra entera.
+
+**Por qué `Conversation` sola no alcanza:**
+- Es una fila por (canal, id externo, anuncio o palabra clave), y `created_at` es la **primera** interacción con esa clave.
+  La atribución de hoy usa la **última** antes del tope (A en enero, B en febrero, A en marzo, agenda en marzo: gana A).
+- La interacción sin palabra clave hereda la de la anterior: hace falta la secuencia.
+- La corrección del setter (`palabra_clave_asignacion.responder_con_anuncio` le pone `ad_id` a una `LeadAnswer`) no
+  llega a `Conversation`, donde `ad_id` solo se escribe si está vacío.
+- «Respondió» (`id_option ≠ 0`, de "En conversación" y "Sin respuesta") no existe en `Conversation`.
+- `Conversation.qualification` es el último valor sincronizado. Cuando `rama_mensajes` recalcula la calificación en
+  `LeadAnswer`, no se resincroniza.
+
+**Quién lee hoy `manychat_leads.ig`/`name`:**
+- **Cruce y atribución:** cruce_conversaciones, marketing_attribution (6 lugares), palabra_clave_asignacion_service,
+  conversational.py.
+- **Setter:** setter_deck (16), setter_mazo, public/setter.py, setter_links.
+- **Comercial y roadmap:** comercial_leads, lead_roadmap.
+- **Canal y monitor:** manychat_monitor, manychat.py (escribe y devuelve), manychat_mantenimiento (los edita a mano),
+  manychat_calificacion.
+- **Persona y cliente:** conversaciones_service (sincronizar_lead y cliente_del_lead), booking_service.
+- En `personas/2c-manychat-lectores`, los lectores de work-1a ya van por la persona (`lead_contacto_service`).
+
+**La atribución, de punta a punta:** venta → agenda → conversación → keyword (ver las decisiones del 21/10). La
+inferencia por la última interacción queda solo como respaldo, sobre la tabla de interacciones. Va con Agendas 2.0:
+el link de agenda que manda la plataforma lleva la referencia de la conversación.
+
+## Traspaso (21/10/2026): lo que queda, para la sesión que siga
+
+El código de la 2c está completo pero **nada corrió ni se subió**. Lo frenó la caída de Railway (sin SSH ni builds).
+Las decisiones del usuario están arriba, en "Decisiones del 21/10/2026".
+
+**Las ramas (todas locales):**
+- `personas/runbook-e2` (3e793a83): el runbook final del pase y sus scripts. Va **antes** que todo.
+- `personas/2c-integrada`: la 2c entera ya mergeada sobre develop 77a0c4c0. Incluye 2c-leads, 2c-parte3, 2c-pagos,
+  2c-agendas, 2c-manychat-lectores, 2c-espejo y los commits f6dc7e7f/aabe1424 de 2c-agendas-columnas.
+  - El merge con `runbook-e2` entra sin conflictos (probado).
+  - Revisión estática (AST): 0 imports rotos y ninguna referencia a lo borrado. **No se corrió ni la app ni los tests.**
+- Migraciones de la 2c, una sola head: `a7d3e9c1f4b2` (clients.total_amount y academy_*) → `b8e4f0d2a5c3`
+  (leads) → `c3f5a8d1e6b4` (enrollments y payments) → `d4a9e2c7b1f5` (copia de contacto de financial_agendas).
+
+**Ojo: el deploy corre `flask db upgrade` solo** (`releaseCommand`). Mergear la 2c a una rama que despliega es
+correr sus migraciones, y ninguna tiene vuelta atrás de datos.
+
+**El orden:**
+1. Push de `personas/runbook-e2` a `develop`. El usuario prueba las ventas de la ficha en el servidor de prueba
+   (`successful-curiosity`, "Servidor de prueba").
+2. El pase a producción con la tabla "Pase a producción" de arriba (pasos 1-12 con el 9b). Cada `--apply` lleva el
+   ok del usuario; el paso 12, el de Santiago. Los scripts del pase (vincular_personas, personas_de_agendas,
+   backfill_agreed_total, backfill_subscriptions y otros) **se borran en la 2c**: corren antes de mergearla. Lo mismo
+   `separar_personas_mezcladas`, que lee la copia de las agendas.
+3. Con producción estable: `personas/2c-integrada` → `develop`. El servidor de prueba borra las tablas viejas de su
+   base. Se prueba ahí (ficha, cobros, comisiones, agendas que entran por n8n, Datos › Ventas).
+4. `develop` → `main` **solo con el ok explícito del usuario** y un backup de producción antes
+   (`pg_dump -Fc`). Así se corrieron los ensayos; el dump del ensayo 2 está en el volumen del Postgres de prueba,
+   `/var/lib/postgresql/data/snap_antes_20261021_0224.dump`.
+
+**Después del pase:**
+- Lo de 2026 para revisar: 24 pagos con comprador y pagador distintos, 14 alumnos de la Academia sin persona,
+  Reynoso y el grupo B de fusiones.
+- `separar_personas_mezcladas`: solo los casos claros de 2026, revisados con el usuario.
+- La atribución por agenda y conversación, con Agendas 2.0 y el retiro de ManyChat (ver las decisiones).
+- La rama de la Academia y `ACADEMY_SUBSCRIPTIONS_PUSH`: sigue apagado.
+
+**Cómo se corre:** por `railway ssh --service "Servidor de prueba"` desde una carpeta vinculada con `railway link`.
+Mientras Railway estuvo caído, el usuario aprobó correr local contra la URL pública de la base de prueba. Eso fue
+una excepción de ese día, no la regla.
+
 ## Estado
 
 | Frente | Sesión / rama | Estado |

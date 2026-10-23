@@ -6,7 +6,6 @@ import {
     CreditCard,
     Calendar,
     ClipboardCheck,
-    Plus,
     Loader2,
     DollarSign,
     Phone,
@@ -21,41 +20,31 @@ import Badge from '../ui/Badge';
 import Card from '../ui/Card';
 import { parseUtcIso } from '../../utils/datetime';
 import toast from 'react-hot-toast';
-import InlineConfirm from '../ui/InlineConfirm';
 
-const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
+// El detalle de una venta (`Sale`, Etapa 2c): sus pagos son filas de FinancialSale. Se corrigen la fecha y
+// el estado de cada pago (PUT /closer/sales/<id>); cargar o borrar pagos se hace desde la ficha del cliente.
+const ESTADO_DE = { completed: 'Completada', pending: 'Pendiente' };
+
+const SaleDetailModal = ({ isOpen, saleId, onClose, onSuccess }) => {
     const [activeTab, setActiveTab] = useState('profile');
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState(null);
     const [error, setError] = useState(null);
-    const [submittingPayment, setSubmittingPayment] = useState(false);
-    const [deleting, setDeleting] = useState(false);
-    const [metadata, setMetadata] = useState(null);
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [submittingProfile, setSubmittingProfile] = useState(false);
     const [tempProfile, setTempProfile] = useState({ full_name: '', email: '', phone: '', instagram: '' });
 
-    // New Payment Form
-    const [newPayment, setNewPayment] = useState({
-        amount: '',
-        payment_method_id: '',
-        payment_type: 'installment',
-        status: 'completed',
-        date: new Date().toISOString().slice(0, 10)
-    });
-
     useEffect(() => {
-        if (isOpen && enrollmentId) {
+        if (isOpen && saleId) {
             fetchDetails();
-            fetchMetadata();
         }
-    }, [isOpen, enrollmentId]);
+    }, [isOpen, saleId]);
 
     const fetchDetails = async () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await api.get(`/closer/enrollments/${enrollmentId}`);
+            const res = await api.get(`/closer/ventas/${saleId}`);
             setData(res.data);
         } catch (err) {
             setError("Error al cargar los detalles.");
@@ -64,46 +53,9 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
         }
     };
 
-    const fetchMetadata = async () => {
-        try {
-            const res = await api.get('/closer/sale-metadata');
-            setMetadata(res.data);
-            if (res.data.payment_methods.length > 0) {
-                setNewPayment(prev => ({ ...prev, payment_method_id: res.data.payment_methods[0].id }));
-            }
-        } catch (err) {
-            console.error("Error fetching metadata", err);
-        }
-    };
-
-    const handleAddPayment = async (e) => {
-        e.preventDefault();
-        setSubmittingPayment(true);
-        try {
-            await api.post(`/closer/enrollments/${enrollmentId}/payments`, newPayment);
-            setNewPayment({ ...newPayment, amount: '' });
-            fetchDetails();
-            if (onSuccess) onSuccess();
-        } catch (err) {
-            toast.error("Error al añadir pago");
-        } finally {
-            setSubmittingPayment(false);
-        }
-    };
-
-    const handleDeletePayment = async (paymentId) => {
-        try {
-            await api.delete(`/closer/payments/${paymentId}`);
-            fetchDetails();
-            if (onSuccess) onSuccess();
-        } catch (err) {
-            toast.error("Error al eliminar pago");
-        }
-    };
-
     const handleUpdatePaymentDate = async (paymentId, newDate) => {
         try {
-            await api.put(`/closer/payments/${paymentId}`, { date: newDate });
+            await api.put(`/closer/sales/${paymentId}`, { date: newDate });
             setData(prev => ({
                 ...prev,
                 payments: prev.payments.map(p => p.id === paymentId ? { ...p, date: newDate } : p)
@@ -116,7 +68,7 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
 
     const handleUpdatePaymentStatus = async (paymentId, newStatus) => {
         try {
-            await api.put(`/closer/payments/${paymentId}`, { status: newStatus });
+            await api.put(`/closer/sales/${paymentId}`, { estado: ESTADO_DE[newStatus] || newStatus });
             // Optimistic update or refresh
             setData(prev => ({
                 ...prev,
@@ -143,19 +95,6 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
         }
     };
 
-    const handleDeleteEnrollment = async () => {
-        setDeleting(true);
-        try {
-            await api.delete(`/closer/enrollments/${enrollmentId}`);
-            if (onSuccess) onSuccess();
-            onClose();
-        } catch (err) {
-            toast.error("Error al eliminar la venta");
-        } finally {
-            setDeleting(false);
-        }
-    };
-
     if (!isOpen) return null;
 
     const tabs = [
@@ -177,23 +116,10 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
                             <h2 className="text-3xl font-black text-base italic uppercase tracking-tighter">Detalles de Venta</h2>
                         </div>
                         <p className="text-muted font-bold uppercase text-[10px] tracking-widest flex items-center gap-2">
-                            ID de Inscripción: #{enrollmentId}
+                            ID de Venta: #{saleId}
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        {/* Borra la venta Y todos sus pagos: la ventana de deshacer es más larga
-                            porque es lo más caro que se puede tocar en esta pantalla. */}
-                        <InlineConfirm
-                            tema="tema"
-                            label="Eliminar venta"
-                            question="¿Con sus pagos?"
-                            confirmLabel="Sí"
-                            doneLabel="Eliminada"
-                            undoMs={8000}
-                            disabled={deleting}
-                            title="Eliminar la venta y todos sus pagos"
-                            onConfirm={handleDeleteEnrollment}
-                        />
                         <button onClick={onClose} className="p-3 bg-main border border-base rounded-2xl text-muted hover:text-base transition-all">
                             <X size={24} />
                         </button>
@@ -352,7 +278,7 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
                                                 <div className="pt-4 border-t border-secondary/20">
                                                     <p className="text-[9px] font-black text-muted uppercase tracking-widest mb-1">Deuda Pendiente</p>
                                                     <p className="text-3xl font-black text-rose-500 italic tracking-tighter">
-                                                        ${(data.program.price - data.total_paid).toLocaleString()}
+                                                        ${(data.deuda ?? (data.program.price - data.total_paid)).toLocaleString()}
                                                     </p>
                                                 </div>
                                             </div>
@@ -365,82 +291,10 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
                             {activeTab === 'payments' && (
                                 <div className="space-y-10">
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                        {/* New Payment Form */}
-                                        <div className="md:col-span-1 border-r border-base pr-8 space-y-6">
+                                        {/* Los pagos se cargan desde la ficha (Declarar venta / Agregar pago). */}
+                                        <div className="md:col-span-1 border-r border-base pr-8 space-y-3">
                                             <h4 className="text-[10px] font-black text-base uppercase tracking-widest">Añadir Pago</h4>
-                                            <form onSubmit={handleAddPayment} className="space-y-5">
-                                                <div className="space-y-2">
-                                                    <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Monto ($)</label>
-                                                    <input
-                                                        type="number"
-                                                        required
-                                                        value={newPayment.amount}
-                                                        onChange={(e) => setNewPayment({ ...newPayment, amount: e.target.value })}
-                                                        className="w-full bg-main border border-base rounded-2xl p-4 text-sm font-bold outline-none focus:ring-2 focus:ring-primary/50"
-                                                        placeholder="0.00"
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Método</label>
-                                                    <select
-                                                        className="w-full bg-main border border-base rounded-2xl p-4 text-sm font-bold outline-none cursor-pointer"
-                                                        value={newPayment.payment_method_id}
-                                                        onChange={(e) => setNewPayment({ ...newPayment, payment_method_id: e.target.value })}
-                                                    >
-                                                        {metadata?.payment_methods.map(m => (
-                                                            <option key={m.id} value={m.id}>{m.name}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Tipo</label>
-                                                    <select
-                                                        className="w-full bg-main border border-base rounded-2xl p-4 text-sm font-bold outline-none cursor-pointer"
-                                                        value={newPayment.payment_type}
-                                                        onChange={(e) => setNewPayment({ ...newPayment, payment_type: e.target.value })}
-                                                    >
-                                                        <option value="down_payment">Seña</option>
-                                                        <option value="first_payment">Primer Pago</option>
-                                                        <option value="installment">Cuota</option>
-                                                        <option value="full">Pago Completo</option>
-                                                        <option value="renewal">Renovación</option>
-                                                    </select>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Fecha</label>
-                                                    <input
-                                                        type="date"
-                                                        required
-                                                        value={newPayment.date}
-                                                        onChange={(e) => setNewPayment({ ...newPayment, date: e.target.value })}
-                                                        className="w-full bg-main border border-base rounded-2xl p-4 text-sm font-bold outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer"
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Estado</label>
-                                                    <div className="flex bg-main rounded-xl p-1 border border-base">
-                                                        {['completed', 'pending'].map(st => (
-                                                            <button
-                                                                key={st}
-                                                                type="button"
-                                                                onClick={() => setNewPayment({ ...newPayment, status: st })}
-                                                                className={`flex-1 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${newPayment.status === st ? (st === 'completed' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-amber-500 text-white shadow-lg') : 'text-muted hover:text-base'}`}
-                                                            >
-                                                                {st === 'completed' ? 'Pagado' : 'Pendiente'}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                                <Button
-                                                    type="submit"
-                                                    variant="primary"
-                                                    className="w-full h-14"
-                                                    loading={submittingPayment}
-                                                    icon={Plus}
-                                                >
-                                                    REGISTRAR
-                                                </Button>
-                                            </form>
+                                            <p className="text-xs text-muted">Los pagos se registran desde la ficha del cliente. Acá se corrigen la fecha y el estado de cada uno.</p>
                                         </div>
 
                                         {/* History */}
@@ -484,18 +338,6 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
                                                                     </td>
                                                                     <td className="px-6 py-5 text-sm font-black text-secondary">${p.amount.toLocaleString()}</td>
                                                                     <td className="px-6 py-5 text-right">
-                                                                        {/* Ya no se esconde con `opacity-0` hasta el hover: una acción
-                                                                            que solo aparece si pasás el mouse por encima es una acción
-                                                                            que, para quien la busca, no existe. */}
-                                                                        <InlineConfirm
-                                                                            compacto
-                                                                            tema="tema"
-                                                                            corner={12}
-                                                                            question="¿Borrar?"
-                                                                            doneLabel="Borrado"
-                                                                            title="Eliminar este pago"
-                                                                            onConfirm={() => handleDeletePayment(p.id)}
-                                                                        />
                                                                     </td>
                                                                 </tr>
                                                             ))}

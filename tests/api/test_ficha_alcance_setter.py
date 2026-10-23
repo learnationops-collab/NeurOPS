@@ -71,28 +71,6 @@ def test_abre_una_agenda_con_su_fuente_aunque_no_tenga_setter_id(client, db, equ
     assert abrir(client, auth_headers, equipo['paula'], appointment_id=appt.id).status_code == 404
 
 
-def test_abre_al_cliente_de_una_venta_de_su_fuente(client, db, equipo, auth_headers):
-    """La fila del Tablero con su nombre y el Instagram de quien pagó: es la agenda con la que la
-    atribución le da la venta, aunque el cliente nunca haya tenido una cita a su nombre."""
-    cliente = persona(db, 'Caro', instagram='@caro.ok')
-    db.session.add(FinancialAgenda(nombre='Elias', instagram='caro.ok', date=datetime(2026, 9, 1)))
-    venta(db, instagram='caro.ok', client_id=cliente.id)
-
-    assert abrir(client, auth_headers, equipo['elias'], client_id=cliente.id).status_code == 200
-    assert abrir(client, auth_headers, equipo['paula'], client_id=cliente.id).status_code == 404
-
-
-def test_abre_al_cliente_por_el_correo_de_un_pago_aunque_el_cliente_tenga_otro(client, db, equipo,
-                                                                            auth_headers):
-    """La atribución une agendas y pagos por el contacto DEL PAGO; el cliente puede haber quedado
-    con otro correo. Se mira el de los dos."""
-    cliente = persona(db, 'Dani', email='dani@nuevo.com', phone='+5491155550001')
-    db.session.add(FinancialAgenda(nombre='Elias', mail='dani@viejo.com', date=datetime(2026, 9, 1)))
-    venta(db, mail_cliente='dani@viejo.com', telefono='+5491155550001')
-
-    assert abrir(client, auth_headers, equipo['elias'], client_id=cliente.id).status_code == 200
-
-
 def test_abre_al_cliente_de_una_venta_con_su_nombre_como_setter(client, db, equipo, auth_headers):
     """Sin agenda que la origine, la fuente de la venta es el setter escrito en ella (la nómina
     también le paga así)."""

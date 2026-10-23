@@ -27,7 +27,7 @@ COLUMN_LABELS = {
 # Fuentes con nombre propio (categoría "Del sistema"), en este orden: tabla -> (nombre, descripción).
 NAMED = {
     'people': ('Personas', 'Cada persona: lead, cliente o alumno. Su uuid es su id en todos los sistemas'),
-    'clients': ('Clientes', 'El cliente comercial de cada persona: total a pagar, baja, objeciones'),
+    'clients': ('Clientes', 'El cliente comercial de cada persona: baja, objeciones'),
     'sales': ('Ventas', 'Cada venta (nueva, renovación o upsell), con su programa, closer y estado'),
     'financial_sales': ('Pagos', 'Cada pago registrado, con su venta y su persona'),
     'installment_plans': ('Planes de cuotas', 'El plan de cuotas de cada venta en cuotas'),
@@ -35,7 +35,6 @@ NAMED = {
     'appointments': ('Agendas', 'Cada llamada agendada con un closer'),
     'financial_agendas': ('Agendas (registro financiero)', 'Las agendas como las registra la planilla'),
     'conversations': ('Conversaciones', 'Cada conversación de un setter con un lead'),
-    'enrollments': ('Inscripciones', 'Cada inscripción a un programa'),
     'workshop_leads': ('Leads del workshop', 'Cada inscripto a un workshop'),
 }
 

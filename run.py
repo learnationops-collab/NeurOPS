@@ -1,5 +1,5 @@
 from app import create_app, db
-from app.models import User, Client, Program, Enrollment, Payment, Appointment
+from app.models import User, Client, Program, Appointment
 from dotenv import load_dotenv
 import os
 
@@ -16,8 +16,6 @@ def make_shell_context():
         'User': User, 
         'Client': Client, 
         'Program': Program, 
-        'Enrollment': Enrollment, 
-        'Payment': Payment, 
         'Appointment': Appointment
     }
 

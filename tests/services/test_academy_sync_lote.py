@@ -112,13 +112,6 @@ def test_el_lote_nunca_se_pasa_del_presupuesto(db, academia):
     assert AcademySnapshot.query.count() == 3
 
 
-def test_el_presupuesto_se_reserva_por_lo_alto_con_varios_correos(db, academia):
-    """Un cliente con dos correos puede costar 3: con 2 disponibles no se empieza."""
-    comprador(db, 'propio@x.com', venta_mail='venta@x.com')
-
-    resumen = lote(presupuesto=2)
-
-    assert (academia.peticiones, resumen['procesados'], resumen['corte']) == (0, 0, 'presupuesto')
 
 
 def test_el_presupuesto_pedido_se_acota(db, academia):
@@ -292,40 +285,10 @@ def test_encontrado_por_su_correo_el_id_queda_en_el_cliente_y_la_proxima_vez_cue
     assert academia.doble.check_user.call_count == 1
 
 
-def test_encontrado_por_el_correo_de_la_venta_sin_corroborar_se_reusa_desde_la_foto(db, academia):
-    """No se escribe en el cliente (el cruce es dudoso), pero el lote no vuelve a buscarlo."""
-    cliente = comprador(db, 'no-email-99@neurops.com', venta_mail='real@x.com', phone='+57 311 000 1111')
-    academia.alumnos['real@x.com'] = 55
-    academia.telefonos[55] = '3002558373'
-
-    lote()
-    assert db.session.get(Client, cliente.id).learnation_user_id is None
-    assert (foto(cliente).learnation_user_id, foto(cliente).email_usado) == (55, 'real@x.com')
-
-    lote(ahora=AHORA + timedelta(hours=6))
-    assert academia.doble.check_user.call_count == 1
-    assert academia.resumenes_pedidos() == [55, 55]
 
 
-def test_encontrado_por_el_correo_de_la_venta_con_el_mismo_telefono_se_guarda(db, academia):
-    cliente = comprador(db, 'no-email-98@neurops.com', venta_mail='real2@x.com', phone='+57 300 255 8373')
-    academia.alumnos['real2@x.com'] = 56
-    academia.telefonos[56] = '3002558373'
-
-    lote()
-
-    assert db.session.get(Client, cliente.id).learnation_user_id == 56
 
 
-def test_si_el_id_de_la_foto_ya_no_existe_se_vuelve_a_buscar_por_correo(db, academia):
-    cliente = comprador(db, 'no-email-97@neurops.com', venta_mail='real3@x.com')
-    academia.alumnos['real3@x.com'] = 57
-    lote()
-    academia.fallas[57] = LearnationAPIError('Not Found', status_code=404)
-
-    lote(ahora=AHORA + timedelta(hours=6))
-
-    assert (foto(cliente).resultado, foto(cliente).learnation_user_id) == ('error', None)
 
 
 def test_el_resumen_cuenta_lo_que_falta(db, academia):

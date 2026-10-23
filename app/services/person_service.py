@@ -17,8 +17,8 @@ from uuid import uuid4
 from sqlalchemy import event, func, inspect
 
 from app import db
-from app.models import (Appointment, Client, ConciliacionMovimiento, Conversation, Enrollment, FinancialAgenda,
-                        FinancialSale, InstallmentPlan, Lead, ManychatAdLead, ManychatLead, Person, PersonEvent,
+from app.models import (Appointment, Client, ConciliacionMovimiento, Conversation, FinancialAgenda,
+                        FinancialSale, InstallmentPlan, ManychatAdLead, ManychatLead, Person, PersonEvent,
                         PersonIdentity, PublicRegistration, Sale, Subscription, WorkshopLead)
 from app.services.client_dedup_service import (_es_email_placeholder, _names_compatible, _normalize_email,
                                                _normalize_instagram, _normalize_phone)
@@ -33,10 +33,10 @@ COLUMNAS = ('email', 'instagram', 'phone')
 # Las columnas de `clients` que son identidad: lo que se guarde ahí se le anota a su persona.
 COLUMNAS_CLIENTE = ('email', 'instagram', 'phone', 'learnation_user_id')
 # Todas las tablas con `person_uuid` (las mueve `fusionar`).
-TABLAS = (Client, Conversation, FinancialSale, FinancialAgenda, Appointment, InstallmentPlan, Enrollment, Sale,
-          Subscription, Lead, ManychatLead, ManychatAdLead, WorkshopLead, ConciliacionMovimiento, PublicRegistration)
+TABLAS = (Client, Conversation, FinancialSale, FinancialAgenda, Appointment, InstallmentPlan, Sale,
+          Subscription, ManychatLead, ManychatAdLead, WorkshopLead, ConciliacionMovimiento, PublicRegistration)
 # Las que tienen `client_id`: mientras se migra, su persona sale de su cliente.
-CON_CLIENTE = (FinancialSale, Appointment, InstallmentPlan, Enrollment, Sale, Subscription)
+CON_CLIENTE = (FinancialSale, Appointment, InstallmentPlan, Sale, Subscription)
 
 
 def normalizar(kind, value):
@@ -435,27 +435,6 @@ def _persona_por_cliente(obj, nuevo):
             obj.person_uuid = puuid
 
 
-# Columnas de la agenda: nombre (según el formato de la hoja, `nombre_persona`), mail, instagram, whatsapp.
-COLUMNAS_AGENDA = ('lead', 'nombre', 'mail', 'instagram', 'whatsapp')
-
-
-def _persona_de_agenda(agenda, nuevo):
-    """La agenda es el primer contacto con la persona: si no la tiene, se busca por sus datos o se crea.
-    Si ya la tiene y le llega un dato nuevo (el mail que faltaba), se le anota."""
-    if not nuevo and not any(_cambio(inspect(agenda), c) for c in COLUMNAS_AGENDA):
-        return
-    datos_agenda = dict(email=agenda.mail, instagram=agenda.instagram, phone=agenda.whatsapp)
-    if agenda.person_uuid or agenda.person is not None:
-        person = agenda.person or db.session.get(Person, agenda.person_uuid)
-        if person is not None:
-            anotar(person, claves(**datos_agenda), 'agenda')
-        return
-    if not claves(**datos_agenda):
-        return  # sin ningún dato no se sabe quién es
-    agenda.person = _resolver(agenda.nombre_persona, datos_agenda['email'], datos_agenda['instagram'], datos_agenda['phone'],
-                              None, None, True, 'agenda')
-
-
 def mantener(session):
     with session.no_autoflush:
         cambiados = [(o, o in session.new) for o in list(session.new) + list(session.dirty)]
@@ -465,8 +444,6 @@ def mantener(session):
         for obj, nuevo in cambiados:
             if isinstance(obj, CON_CLIENTE):
                 _persona_por_cliente(obj, nuevo)
-            elif isinstance(obj, FinancialAgenda):
-                _persona_de_agenda(obj, nuevo)
 
 
 def register_person_tracking(app):

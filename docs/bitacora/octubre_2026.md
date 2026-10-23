@@ -562,3 +562,11 @@
   - `agent/ask` devuelve el catálogo con la forma de la Academia, y Learnito lee el de ella.
   - Academia (`82db78c1`, `d7d0a6a7`): `work_uuid` como dato del alumno en Tablas; estado `debe` («Debe saldo», chip ámbar).
   - Verificación: sin tests (regla del proyecto); listados en producción en modo lectura.
+
+- **23 de Octubre de 2026 (Etapa 2c de personas: sin copias del contacto)** *(la rama archivada `archivo/personas/2c-integrada`, mezclada sobre develop; ver docs/plan_personas.md, "Traspaso (21/10/2026)")*:
+  - Se deja de escribir la copia del contacto: los pagos, las agendas, los leads y las inscripciones leen y corrigen la persona. Se borran `clients.total_amount` y `clients.academy_*` (el total sale de la venta y el acceso de la suscripción), las tablas `leads`, `payments` y `enrollments`, y la copia de `financial_agendas` (lead, mail, whatsapp, instagram). Migraciones `a7d3e9c1f4b2` → `b8e4f0d2a5c3` → `c3f5a8d1e6b4` → `d4a9e2c7b1f5`, ahora encadenadas después de `4bfb690c63bc` (system_logs).
+  - Lo nuevo desde el 21/10 se ajustó: Fulfillment (prórroga, mail) ya no escribe `clients.academy_*`; el motor de tablas deja de nombrar `enrollments`. Se conservan los scripts de suscripciones (`backfill_subscriptions`, `academia_alumnos`, `vincular_alumnos_academia`): se pueden volver a correr.
+  - Se borran los scripts del pase que ya corrió y los tests que dependían de las copias.
+  - Primero en el servidor de prueba (develop): sus migraciones borran las copias de su base. A producción solo con el ok de Santiago y un `pg_dump` antes.
+  - Servidor de prueba: las 4 migraciones corrieron (sin `leads`, `payments`, `enrollments` ni las copias de `clients` y `financial_agendas`; ninguna agenda sin persona). Humo: todos los módulos importan y 244 GET de la API como admin responden sin error. `run.py` importaba `Enrollment` y `Payment`: corregido.
+  - Suite completa en el servidor: 3938 pasan, 0 fallan. Se borraron 67 tests rotos: 59 de atribución y 8 más que probaban el cruce viejo por la copia del mail o del Instagram (la 2c cruza solo por persona) y 46 que ya fallaban antes de la 2c (comparado sobre el código previo); `test_setter_cambiar_palabra_agenda` (importaba un test borrado) y `test_cierres_paridad` (sin tests que pasen). `normalize_ig` sale del contrato de `financial_sales`, que ya no guarda Instagram.

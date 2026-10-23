@@ -1,6 +1,7 @@
 from datetime import datetime
 from app.models import db, FinancialSale, FinancialAgenda
 from app.services.identity_service import normalize_email, normalize_ig
+from app.services.pagos_copia import copia
 
 class UnionFind:
     def __init__(self):
@@ -47,14 +48,22 @@ class AttributionService:
 
         # 1. Unificar identidades de leads usando Union-Find. Con persona (plan_personas, 20/10/2026)
         # la clave es ella; el Instagram y el correo copiados solo cuentan en las filas sin persona.
-        def claves(fila, mail):
+        def claves(fila, ig, mail):
             persona = getattr(fila, 'person_uuid', None)  # las agendas livianas pueden no traerla
             if persona:
                 return [f'p:{persona}']
-            return [c for c in (normalize_ig(fila.instagram), normalize_email(mail)) if c]
+            return [c for c in (normalize_ig(ig), normalize_email(mail)) if c]
 
-        filas = [(a, claves(a, a.mail), 'agendas') for a in agendas] + \
-                [(s, claves(s, s.mail_cliente), 'sales') for s in sales]
+        def de_agenda(a):
+            # La agenda es su persona (Etapa 2c): ya no guarda instagram ni mail.
+            return claves(a, None, None)
+
+        def de_pago(s):
+            c = copia(s)
+            return claves(s, c['instagram'], c['mail'])
+
+        filas = [(a, de_agenda(a), 'agendas') for a in agendas] + \
+                [(s, de_pago(s), 'sales') for s in sales]
         for _fila, cs, _lado in filas:
             for otra in cs[1:]:
                 uf.union(cs[0], otra)

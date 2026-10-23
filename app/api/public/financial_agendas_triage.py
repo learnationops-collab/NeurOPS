@@ -66,8 +66,10 @@ def get_potential_leads():
         sold_persons = {u for (u,) in db.session.query(FinancialSale.person_uuid)
                         .filter(FinancialSale.person_uuid.isnot(None)).distinct()}
         sales = FinancialSale.query.filter(FinancialSale.person_uuid.is_(None)).all()
-        sold_emails = {s.mail_cliente.strip().lower() for s in sales if s.mail_cliente}
-        sold_instagrams = {s.instagram.strip().replace('@', '').lower() for s in sales if s.instagram}
+        from app.services.pagos_copia import copia
+        copias = [copia(s) for s in sales]
+        sold_emails = {c['mail'].strip().lower() for c in copias if c['mail']}
+        sold_instagrams = {c['instagram'].strip().replace('@', '').lower() for c in copias if c['instagram']}
 
         if apply_filters:
             _, query, closer_results = _build_agenda_queries()

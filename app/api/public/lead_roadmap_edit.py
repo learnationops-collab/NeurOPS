@@ -133,15 +133,17 @@ def relate_event_roadmap():
             sale = FinancialSale.query.get(event_id)
             if not sale:
                 return jsonify({"error": "Venta no encontrada"}), 404
-            sale.instagram = ig_norm
             # Relacionarla es decir de quién es: queda con la persona de ese instagram (comprador).
-            from app.services import person_service
+            # Sin persona de ese instagram, queda en la copia del pago (solo si el pago no tiene persona).
+            from app.services import person_service, pagos_copia
             persona = person_service.buscar(instagram=ig_norm)
             if persona is not None:
                 sale.person = persona
                 cliente = person_service.cliente_de(persona, crear=False)
                 if cliente is not None:
                     sale.client_id = cliente.id
+            else:
+                pagos_copia.escribir(sale, instagram=ig_norm)
 
             # Sincronizar en Sheets si aplica, con el contacto que se lee (el de la persona)
             if sale.marca_temporal:
@@ -167,12 +169,14 @@ def relate_event_roadmap():
             agenda = FinancialAgenda.query.get(event_id)
             if not agenda:
                 return jsonify({"error": "Agenda no encontrada"}), 404
-            agenda.instagram = ig_norm
-            # Relacionarla es decir de quién es: queda con la persona de ese instagram.
-            from app.services import person_service
+            # Relacionarla es decir de quién es: queda con la persona de ese instagram. Si nadie lo tiene,
+            # se le anota a la persona de la agenda (Etapa 2c: la agenda no guarda el contacto).
+            from app.services import agenda_contacto_service, person_service
             persona = person_service.buscar(instagram=ig_norm)
             if persona is not None:
                 agenda.person = persona
+            else:
+                agenda_contacto_service.dar_persona(agenda, instagram=ig_norm)
         else:
             return jsonify({"error": "Tipo de evento inválido"}), 400
 

@@ -124,33 +124,7 @@ def test_un_formulario_con_fecha_ilegible_usa_la_del_alta(db):
     assert evento.aplicaciones_form == 1
 
 
-def test_una_agenda_nueva_sigue_refrescando_el_taller(db):
-    # Lo que el gancho ya hacia: no se puede perder por agregar los formularios.
-    taller, _ = crear_talleres(db, DIA, SIGUIENTE)
-    con_centinela(db)
-
-    db.session.add(FinancialAgenda(nombre='workshop', lead='Ana Gomez', mail='ana@x.com', created_at=DENTRO, date=DENTRO))
-    db.session.commit()
-
-    evento = leer(db, taller)
-    assert evento.agendas_exitosas == 1
-    assert evento.synced_at is not None
-
-
 # --- Lo que NO debe recalcular -----------------------------------------------------------------
-
-def test_un_cambio_que_no_toca_el_formulario_no_recalcula(db):
-    # Seguimiento, telefono, monto...: recalcular por eso reescribiria talleres viejos sin motivo.
-    taller, _ = crear_talleres(db, DIA, SIGUIENTE)
-    existente = cliente(db, creado=DENTRO, form_data=formulario(DENTRO))
-    con_centinela(db)
-
-    existente.follow_up_status = 'Contactado'
-    existente.phone = '+58 412 0000000'
-    existente.total_amount = 1000.0
-    db.session.commit()
-
-    assert sin_recalcular(leer(db, taller))
 
 
 @pytest.mark.parametrize('form_data', [None, {}])

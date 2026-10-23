@@ -18,8 +18,6 @@ class DatabaseService:
         'daily_report_questions': models.DailyReportQuestion,
         'survey_questions': models.SurveyQuestion,
         'appointments': models.Appointment,
-        'enrollments': models.Enrollment,
-        'payments': models.Payment,
         'availability': models.Availability,
         'weekly_availability': models.WeeklyAvailability,
         'survey_answers': models.SurveyAnswer,
@@ -33,7 +31,6 @@ class DatabaseService:
         'campaigns': models.Campaign,
         'ad_sets': models.AdSet,
         'ads': models.Ad,
-        'leads': models.Lead,
         'marketing_budgets': models.MarketingBudget,
         'client_comments': models.ClientComment
     }

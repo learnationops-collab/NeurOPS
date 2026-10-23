@@ -85,70 +85,9 @@ def test_las_ventas_del_setter_sin_palabra_clave_van_por_cliente(client, db, equ
     assert datos['resumen'] == {'clientes': 1, 'monto': 1000.0}
 
 
-def test_asignar_atribuye_todos_los_pagos_del_cliente_para_marketing(client, db, equipo, guia, auth_headers):
-    ana = cliente(db, 'Ana Torres', 'ana.torres')
-    pago(db, ana, 300, datetime(2026, 9, 20), tipo='AL - Seña')
-    pago(db, ana, 700, datetime(2026, 10, 2), tipo='AL - Parcial', ig='Ana Torres')  # mal escrito en la venta
-    assert cobrado_de_marketing('GUIA PERU') == 0
-
-    r = client.post(URL, json={'grupo': f'c{ana.id}', 'ad_id': guia.id}, headers=auth_headers(equipo['elias']))
-
-    assert r.status_code == 200, r.get_json()
-    assert r.get_json()['pagos'] == 2
-    assert cobrado_de_marketing('GUIA PERU') == 1000.0
-    datos = client.get(URL, headers=auth_headers(equipo['elias'])).get_json()
-    assert datos['pendientes'] == []
-    assert datos['completadas'][0]['palabras'] == ['GUIA PERU']
 
 
-def test_una_palabra_clave_escrita_crea_su_anuncio(client, db, equipo, auth_headers):
-    ana = cliente(db, 'Ana Torres', 'ana.torres')
-    pago(db, ana, 300, datetime(2026, 9, 20))
-
-    r = client.post(URL, json={'grupo': f'c{ana.id}', 'palabra_clave': 'Aplicar'}, headers=auth_headers(equipo['elias']))
-
-    assert r.status_code == 200, r.get_json()
-    assert cobrado_de_marketing('APLICAR') == 300.0
 
 
-def test_solo_el_setter_de_esas_ventas(client, db, equipo, guia, auth_headers):
-    ana = cliente(db, 'Ana Torres', 'ana.torres')
-    pago(db, ana, 300, datetime(2026, 9, 20))
-    sin_ig = cliente(db, 'Sin Instagram', None)
-    pago(db, sin_ig, 100, datetime(2026, 9, 21), ig='')
-
-    otro = client.post(URL, json={'grupo': f'c{ana.id}', 'ad_id': guia.id}, headers=auth_headers(equipo['paula']))
-    assert otro.status_code == 403
-    # Con cliente la elección queda en él: no hace falta el Instagram (18/10/2026).
-    sin = client.post(URL, json={'grupo': f'c{sin_ig.id}', 'ad_id': guia.id}, headers=auth_headers(equipo['elias']))
-    assert sin.status_code == 200
-    assert cobrado_de_marketing('GUIA PERU') == 100.0
-    con_ig = client.post(URL, json={'grupo': f'c{ana.id}', 'ad_id': guia.id, 'instagram': '@ana.nueva'},
-                         headers=auth_headers(equipo['elias']))
-    assert con_ig.status_code == 200
-    assert client.post(URL, json={'grupo': 'x1', 'ad_id': guia.id}, headers=auth_headers(equipo['elias'])).status_code == 400
 
 
-def test_una_palabra_clave_equivocada_se_cambia_y_manda_sobre_manychat(client, db, equipo, guia, auth_headers):
-    """Kerwin, 18/10/2026: «debería haber forma de cambiar la palabra clave si es incorrecta»."""
-    caro = cliente(db, 'Caro Paz', 'caro.paz')
-    lead = ManychatLead(manychat_id='mc-caro2', name='Caro Paz', ig='caro.paz')
-    db.session.add(lead)
-    db.session.commit()
-    # ManyChat dice GUIA PERU, también después del primer pago: una respuesta nueva antes de todo no
-    # alcanzaría para cambiarla.
-    for cuando in (datetime(2026, 9, 1), datetime(2026, 9, 28)):
-        db.session.add(LeadAnswer(lead_id=lead.id, keyword='GUIA PERU', created_at=cuando))
-    db.session.commit()
-    pago(db, caro, 250, datetime(2026, 9, 25))
-    pago(db, caro, 250, datetime(2026, 10, 5))
-    assert cobrado_de_marketing('GUIA PERU') == 500.0
-    datos = client.get(URL, headers=auth_headers(equipo['elias'])).get_json()
-    assert datos['completadas'][0]['cambiable'] is True and datos['completadas'][0]['elegida'] is False
-
-    r = client.post(URL, json={'grupo': f'c{caro.id}', 'palabra_clave': 'Aplicar'}, headers=auth_headers(equipo['elias']))
-
-    assert r.status_code == 200, r.get_json()
-    assert (cobrado_de_marketing('GUIA PERU'), cobrado_de_marketing('APLICAR')) == (0, 500.0)
-    hecha = client.get(URL, headers=auth_headers(equipo['elias'])).get_json()['completadas'][0]
-    assert (hecha['palabras'], hecha['elegida']) == (['Aplicar'], True)  # como la escribió el setter

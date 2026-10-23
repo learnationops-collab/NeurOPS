@@ -27,6 +27,7 @@ from sqlalchemy import and_, or_, func
 
 from app.models import Client, FinancialAgenda, FinancialSale, Appointment, WorkshopEvent
 from app.services.fuente_service import es_workshop_landing, es_workshop_vivo, es_sin_dueno
+from app.services import pagos_copia
 from app.services.sales_consistency_service import filtro_de_pagos
 from app.services.ticket_service import SENA, VENTA, claves_de_venta, ticket_de
 
@@ -267,11 +268,12 @@ def _clave_identidad(agenda):
     handles que no identifican a nadie ('n/a', 'no tengo') se descartan, porque si no
     todos los que escribieron eso se fusionarian en una sola persona.
     """
-    if agenda.person_uuid:  # la persona es la clave; la copia solo en agendas sin persona
+    if agenda.person_uuid:  # la persona es la clave (Etapa 2c: la agenda no guarda el contacto)
         return f'p:{agenda.person_uuid}'
-    ig = (agenda.instagram or '').strip().replace('@', '').lower()
-    mail = (agenda.mail or '').strip().lower()
-    lead = (agenda.lead or '').strip().lower()
+    contacto = agenda.contacto()
+    ig = (contacto['instagram'] or '').strip().replace('@', '').lower()
+    mail = (contacto['mail'] or '').strip().lower()
+    lead = (contacto['lead'] or '').strip().lower()
 
     ig = ig if ig and ig not in HANDLES_INVALIDOS else None
     mail = mail if mail and mail not in HANDLES_INVALIDOS else None
@@ -371,9 +373,9 @@ def _ventas_de(agendas, compradores_ya_contados):
         else:
             condiciones = []
             if ig:
-                condiciones.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig)
+                condiciones.append(pagos_copia.IG_NORMALIZADO == ig)
             if mail:
-                condiciones.append(func.lower(FinancialSale.mail_cliente) == mail)
+                condiciones.append(pagos_copia.MAIL_NORMALIZADO == mail)
             if not condiciones:
                 continue
             filtro = and_(FinancialSale.person_uuid.is_(None), or_(*condiciones))

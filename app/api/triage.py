@@ -465,10 +465,8 @@ def get_qualified_forms():
 def merge_clients():
     """Fusiona el form_data del cliente origen en el destino y reasigna citas."""
     from app.models.client import Client
-    from app.models.booking import Appointment
-    from app.models.financial import FinancialSale
-    from app.models.payment import Enrollment
     from flask_login import current_user
+    from app.services.client_dedup_service import ClientDedupService
     
     if current_user.role not in ROLES_FORMULARIOS:
         return jsonify({"message": "Forbidden"}), 403
@@ -499,23 +497,14 @@ def merge_clients():
         from sqlalchemy.orm.attributes import flag_modified
         flag_modified(target_client, 'form_data')
         
-        # 2. Transferir citas (Appointments) del origen al destino
-        appts = Appointment.query.filter_by(client_id=source_id).all()
-        for appt in appts:
-            appt.client_id = target_id
-            
-        # 3. Transferir inscripciones (Enrollments)
-        enrolls = Enrollment.query.filter_by(client_id=source_id).all()
-        for enr in enrolls:
-            enr.client_id = target_id
-            
-        # 4. Eliminar el cliente origen duplicado
-        db.session.delete(source_client)
-        db.session.commit()
-        
+        nombre_origen = source_client.full_name
+        # 2. El resto como cualquier fusión de clientes (Etapa 2c): citas, ventas y sus pagos, planes,
+        # suscripciones, comentarios y la persona; borra el origen y deja el registro de la fusión.
+        ClientDedupService.merge_clients(target_id, [source_id], matched_on='triage')
+
         return jsonify({
             "status": "success",
-            "message": f"Formulario y citas de '{source_client.full_name}' fusionados exitosamente en '{target_client.full_name}'."
+            "message": f"Formulario, citas y ventas de '{nombre_origen}' fusionados exitosamente en '{target_client.full_name}'."
         }), 200
         
     except Exception as e:

@@ -24,7 +24,7 @@ else:
     sys.path.append(current_dir)
 
 from app import create_app, db
-from app.models import Conversation, Lead, LeadAnswer, ManychatAdLead, ManychatLead, Person
+from app.models import Conversation, LeadAnswer, ManychatAdLead, ManychatLead, Person
 from app.services import conversaciones_service as cs
 
 TANDA = 200
@@ -101,12 +101,6 @@ def ejecutar(apply=False):
             for fila in tanda:
                 _anuncio_viejo(fila, cuenta)
                 db.session.flush()
-        for tanda in _por_tandas(Lead):
-            for lead in tanda:
-                cs.sincronizar_lead_viejo(lead)
-                _contar(lead, por_origen, 'leads', inicio)
-                db.session.flush()
-                cuenta['leads'] += 1
     personas = Person.query.count() - personas_antes
     convs = Conversation.query.count() - convs_antes
     sin_persona = Conversation.query.filter(Conversation.person_uuid.is_(None)).count()

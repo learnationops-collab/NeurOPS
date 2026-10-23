@@ -135,21 +135,13 @@ const MENSAJES = {
     editar_evento: 'Evento reescrito.',
     borrar_evento: 'Evento borrado del registro.',
     registrar_pago: 'Pago registrado.',
-    // Un pago corregido mueve también la deuda... cuando el backend encuentra su registro en
-    // inscripciones (`espejo`). Si no lo encuentra corrige solo la venta, y decir «la deuda se
-    // recalculó» sería mentirle a quien está mirando un «Debe» que no se movió.
-    agregar_pago: (r) => (r?.espejo === false
-        ? 'Pago agregado, pero sin registro en inscripciones: la deuda no lo cuenta.'
-        : 'Pago agregado: la deuda ya lo cuenta.'),
+    // La deuda sale de las ventas: un pago cargado, corregido o borrado la mueve siempre.
+    agregar_pago: 'Pago agregado: la deuda ya lo cuenta.',
     // Marcar a quién se le hizo una transferencia no toca la plata: la deuda no se movió.
     corregir_pago: (r) => (r?.cambios?.length === 1 && r.cambios[0] === 'transferido_a'
         ? 'Listo: quedó anotado a quién se le hizo la transferencia.'
-        : r?.espejo === false
-            ? 'Pago corregido. No se encontró su registro en inscripciones, así que la deuda no cambió.'
-            : 'Pago corregido: la deuda se recalculó.'),
-    borrar_pago: (r) => (r?.espejo === false
-        ? 'Pago borrado. No tenía registro en inscripciones: la deuda no cambió.'
-        : 'Pago borrado: la deuda se recalculó.'),
+        : 'Pago corregido: la deuda se recalculó.'),
+    borrar_pago: 'Pago borrado: la deuda se recalculó.',
     registrar_seguimiento: 'Seguimiento agendado.',
     dar_de_baja: (r) => conAccesoDeLaBaja(
         'Baja registrada: ya no debe nada y sale de las listas de cobro. Lo que pagó queda.', r),

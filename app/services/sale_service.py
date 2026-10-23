@@ -176,10 +176,39 @@ def venta_new_vigente(person_uuid, client_id, programa=None):
     return q.order_by(Sale.sold_at.desc(), Sale.id.desc()).first()
 
 
+def fechas_de_ingreso(clientes):
+    """{client_id: fecha} de ingreso al programa de cada cliente: la de su venta 'new' activa más reciente
+    (la de su persona o, sin persona, la del cliente); si no tiene ninguna activa, la más reciente de
+    cualquier estado (Etapa 2c; antes, la inscripción más reciente de `Enrollment`). Los que no tienen
+    ninguna venta 'new' no aparecen."""
+    clientes = [c for c in clientes if c is not None]
+    personas = sorted({c.person_uuid for c in clientes if c.person_uuid})
+    sueltos = sorted({c.id for c in clientes if not c.person_uuid})
+    mejor = {}   # ('p', uuid) / ('c', id) -> (activa, sold_at)
+    for prefijo, columna, grupo in (('p', Sale.person_uuid, personas), ('c', Sale.client_id, sueltos)):
+        for k in range(0, len(grupo), 500):
+            for clave, estado, fecha in (db.session.query(columna, Sale.status, Sale.sold_at)
+                                         .filter(columna.in_(grupo[k:k + 500]), Sale.kind == 'new')):
+                candidato = (estado == 'active', fecha)
+                if fecha is not None and candidato > mejor.get((prefijo, clave), (False, datetime.min)):
+                    mejor[(prefijo, clave)] = candidato
+    salida = {}
+    for c in clientes:
+        fecha = mejor.get(('p', c.person_uuid) if c.person_uuid else ('c', c.id))
+        if fecha is not None:
+            salida[c.id] = fecha[1]
+    return salida
+
+
+def fecha_de_ingreso(client):
+    """La fecha de ingreso de un cliente (`fechas_de_ingreso`), o None."""
+    return fechas_de_ingreso([client]).get(client.id) if client else None
+
+
 def fijar_total(client, total, programa=None, solo_si_falta=False):
-    """Doble escritura de `Client.total_amount` (frente L, docs/plan_personas.md): el mismo total va al
-    `agreed_total` de la venta 'new' vigente de su persona. Sin venta queda solo en el cliente, como
-    antes. `solo_si_falta` no pisa un total ya acordado (el precio de lista que se autoasigna). No hace
+    """El total acordado (frente L, docs/plan_personas.md; antes `Client.total_amount`): va al
+    `agreed_total` de la venta 'new' vigente de su persona. Sin venta no se guarda en ningún lado
+    (devuelve None y quien llama avisa). `solo_si_falta` no pisa un total ya acordado (el precio de lista que se autoasigna). No hace
     commit; devuelve la venta tocada o None."""
     if client is None or total is None:
         return None

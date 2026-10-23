@@ -1,7 +1,7 @@
 import logging
 import unicodedata
 from app import db
-from app.models import (Client, Appointment, Enrollment, SurveyAnswer, ClientComment, CommentNotification, FinancialSale,
+from app.models import (Client, Appointment, SurveyAnswer, ClientComment, CommentNotification, FinancialSale,
                         ClientMergeLog, InstallmentPlan, Sale, Subscription, SubscriptionEvent)
 from app.services.attribution_service import UnionFind
 
@@ -131,7 +131,6 @@ class ClientDedupService:
         def related_count(client):
             return (
                 Appointment.query.filter_by(client_id=client.id).count()
-                + Enrollment.query.filter_by(client_id=client.id).count()
                 + FinancialSale.query.filter_by(client_id=client.id).count()
             )
         return sorted(group, key=lambda c: (-related_count(c), c.created_at or c.id))[0]
@@ -167,7 +166,7 @@ class ClientDedupService:
         # InstallmentPlan acá — un cliente duplicado con un plan de cuotas activo quedaba con el
         # plan huérfano (client_id apuntando a una fila borrada) después de la fusión, invisible
         # para el flujo de "Reportar pago" de una cuota.
-        for model in (Appointment, Enrollment, SurveyAnswer, ClientComment, CommentNotification, FinancialSale, InstallmentPlan,
+        for model in (Appointment, SurveyAnswer, ClientComment, CommentNotification, FinancialSale, InstallmentPlan,
                       Sale):
             model.query.filter(model.client_id.in_(duplicate_ids)).update(
                 {model.client_id: survivor_id}, synchronize_session=False
