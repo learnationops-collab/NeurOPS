@@ -637,3 +637,10 @@
   - En Confirmar, la tarjeta del medio pasa de «Tu día» a «Confirmación»: confirmados sobre el total del pool (`confirmations_done / confirmations`) y cuántos faltan.
   - En Reportar pasa a «Asistencia»: de las llamadas reportadas del día, las que asistieron (todo menos No Show y Cancelada; una reagendada no cuenta) y cuántas faltan reportar. En las demás secciones sigue «Tu día».
   - «Te falta N por confirmar» contaba también las ya confirmadas (`counts.confirmations` es el pool entero): ahora resta `confirmations_done`. Mismo arreglo en «Tu día» y en Cerrar el día («cosas sin resolver»).
+
+- **23 de Octubre de 2026 (Close rate real: lo cerrado en el período, venga de la llamada que venga)** *([app/services/cierres_reales.py](../../app/services/cierres_reales.py), [app/services/ventas_previas.py](../../app/services/ventas_previas.py), [frontend/src/components/dashboard/CierresReales.jsx](../../frontend/src/components/dashboard/CierresReales.jsx))*
+  - El KPI de arriba del dashboard (director y «Mis datos» del closer) pasa a **Close rate real**: cierres cobrados en el período ÷ (llamadas con show up + cierres de llamadas anteriores). El close rate por llamada queda solo en el panel Cierre, sin repetirse.
+  - Cada cobro de venta nueva se rastrea hasta la última llamada con show up (hasta 90 días antes): del período, anterior (suma al numerador y a la base, nunca pasa de 100 %) o sin llamada (fuera de la tasa, se cuenta aparte). La seña completada con una «Cuota» que llega al precio cuenta como cierre solo en este número.
+  - Tarjeta nueva arriba de la matriz de cierres: barra de dos tramos, las cifras que la arman y el modal «Ver N cobros», agrupado por origen y con la llamada de cada uno.
+  - **Cambia el close rate por llamada:** una llamada ya no es «Venta» si el pago es anterior a ella (un día de tolerancia por la hora UTC). Un cliente que ya había comprado y volvía a hablar contaba dos veces.
+  - Tests: `test_cierres_reales.py`, `test_ventas_previas.py`, `test_comercial_cierres_reales.py` y `CierresReales.test.jsx`.
