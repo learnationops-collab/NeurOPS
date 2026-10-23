@@ -526,3 +526,10 @@
   - `POST /api/external/academy/agent/ask` para la Academia (catálogo y planes; sin montos) y `LearnationService.agent_ask` para preguntarle a ella. Cada fila lleva `persona` (people.uuid) y `alumno_id` para cruzar.
   - `/api/tablas` y `flask tablas fuentes|consultar` para admin, operaciones y director comercial.
   - Verificación: sin tests (regla del proyecto); probado en producción y en el servidor de prueba de solo lectura (catálogo, agrupar por programa y por período, avisos, errores, permisos, y el Pulso de la Academia pedido desde Work).
+
+- **22 de Octubre de 2026 (Learnito de la dirección con el motor de tablas)** *([app/services/copiloto_datos.py](../../app/services/copiloto_datos.py) [NEW], [app/api/copiloto.py](../../app/api/copiloto.py), [tests/api/test_copiloto.py](../../tests/api/test_copiloto.py) [MODIFY])*:
+  - Admin, operaciones y director comercial tienen en Learnito `fuentes_de_datos` y `calcular_tabla`, sobre Work (motor de tablas) o la Academia (`agent/ask`, con el rol de Work tal cual). Claude arma el plan por claves y el sistema dueño del dato calcula; vuelve como texto corto con el total, los grupos y los avisos. Hasta 6 vueltas.
+  - El closer sigue con sus tres herramientas.
+  - Mientras la Academia no publique su catálogo, Learnito avisa y usa las claves que conoce.
+  - Se borró el test que exigía que quien no es closer conversara sin herramientas.
+  - Verificación: sin tests (regla del proyecto); las herramientas probadas en el servidor de prueba sin llamar a Claude (ventas por programa, errores de claves y el Pulso de la Academia).
