@@ -98,17 +98,9 @@ export const RESULTADOS_COBRO = [
 ];
 
 // Pedido de Mario (23/10/2026): el motivo por el que no se cerró es obligatorio y va a una base
-// para analizarlo (`motivos_no_cierre` en el backend). Se elige de una lista, separada según se
-// haya presentado la oferta o no, para poder clasificar las no cerradas.
-export const OTRO_MOTIVO = 'Otro motivo';
-export const MOTIVOS_NO_CIERRE = [
-  'Precio / no le alcanza', 'Lo tiene que consultar', 'Lo quiere pensar', 'No es el momento',
-  'No ve el valor / desconfía', OTRO_MOTIVO,
-];
-export const MOTIVOS_SIN_OFERTA = [
-  'Sin decisor en la llamada', 'No calificaba', 'Faltó tiempo', 'No le interesó',
-  'Problema técnico / conexión', OTRO_MOTIVO,
-];
+// para analizarlo (`motivos_no_cierre` en el backend). Por ahora es texto libre: las categorías se
+// arman cuando haya suficientes respuestas para saber cuáles son.
+export const MOTIVO_MINIMO = 10;
 
 // El mínimo de la objeción de un «No cerró»: el mismo `MINIMO` de `objeciones_service` en el
 // backend, que la rechaza si no llega.
@@ -210,30 +202,20 @@ export const PREGUNTAS = [
     // la exige: sin ella el reporte no se guarda).
     clave: 'objecion', hito: 'cierre', tipo: 'formulario',
     enunciado: '¿Por qué no cerró? ¿Cuál es la objeción?',
-    ayuda: 'El motivo va a la base de no cerradas. La objeción, con sus palabras si podés, queda en Comunicación para quien lo vuelva a llamar.',
-    campos: [
-      {
-        campo: 'motivo_no_cierre', label: 'Motivo', tipo: 'opcion', opciones: MOTIVOS_NO_CIERRE,
-        requerido: true, falta: 'Elegí el motivo por el que no cerró',
-      },
-      { campo: 'objecion', label: 'Objeción', tipo: 'parrafo', requerido: true, minimoTexto: OBJECION_MINIMA },
-    ],
+    ayuda: 'Lo que dijo, con sus palabras si podés. Queda en Comunicación y en la base de no cerradas.',
+    campos: [{
+      campo: 'objecion', label: 'Objeción', tipo: 'parrafo', requerido: true, minimoTexto: OBJECION_MINIMA,
+    }],
     cuando: (r) => r.cierre === false,
   },
   { // Sin oferta presentada también se dice por qué no se cerró: casi siempre falta el decisor, pero
     // se pregunta igual para que la base no lo dé por supuesto.
     clave: 'motivo_sin_oferta', hito: 'cierre', tipo: 'formulario',
     enunciado: '¿Por qué no se cerró?',
-    ayuda: 'No se llegó a presentar la oferta. El motivo va a la base de no cerradas.',
-    campos: (r) => [
-      {
-        campo: 'motivo_sin_oferta', label: 'Motivo', tipo: 'opcion', opciones: MOTIVOS_SIN_OFERTA,
-        requerido: true, falta: 'Elegí el motivo por el que no se cerró',
-      },
-      ...(r.motivo_sin_oferta === OTRO_MOTIVO ? [
-        texto('motivo_sin_oferta_otro', '¿Cuál fue?', { requerido: true, falta: 'Contá cuál fue el motivo' }),
-      ] : []),
-    ],
+    ayuda: 'Contá por qué no se presentó la oferta, por qué no hubo ni una seña, o qué faltó para que terminara mejor.',
+    campos: [{
+      campo: 'motivo_sin_oferta', label: 'Motivo', tipo: 'parrafo', requerido: true, minimoTexto: MOTIVO_MINIMO,
+    }],
     cuando: (r) => r.offer_presented === false,
   },
 

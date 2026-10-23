@@ -18,7 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   Check, CheckCircle2, XCircle, CalendarX, CalendarClock, RotateCcw, AlertTriangle, ArrowLeft, X,
-  ArrowRight, History, DollarSign, Pencil,
+  ArrowRight, History, DollarSign, Pencil, UserCheck, UserX, Eye, EyeOff, ThumbsUp, ThumbsDown,
 } from 'lucide-react';
 import { StepperFicha, TarjetaAccion } from '../acciones/piezas';
 import CampoArbol from '../acciones/CampoArbol';
@@ -348,6 +348,7 @@ export default function TabResultado({
               precarga={precarga}
               onVolverA={(clave) => setRespuestas((prev) => volverA(prev, clave))}
               onAnterior={volver}
+              onReiniciar={empezarDeNuevo}
               grabacion={grabacion}
             />
           </motion.section>
@@ -370,19 +371,12 @@ export default function TabResultado({
               onElegir={elegir}
               onCambiar={cambiar}
               onAnterior={volver}
+              onReiniciar={empezarDeNuevo}
               irA={irA}
             />
           </motion.section>
         )}
 
-      {/* Con contorno y del alto del botón que avanza: es la otra salida del paso, no una etiqueta. */}
-      {arrancado(respuestas) && !hecho && (
-        <div className="ln-btn-row" style={{ justifyContent: 'flex-start' }}>
-          <button type="button" className="btn btn--linea" onClick={empezarDeNuevo}>
-            <RotateCcw /> Empezar de nuevo
-          </button>
-        </div>
-      )}
     </div>
     </div>
   );
@@ -425,7 +419,7 @@ const TIPOS_DE_TEXTO = new Set(['texto', 'email', 'tel', 'monto', 'entero']);
 
 function Pregunta({
   pregunta, respuestas, precarga, contexto, pendientes, puede, onElegir, onCambiar, onAnterior, irA,
-  reducido,
+  reducido, onReiniciar = null,
 }) {
   if (pregunta.tipo !== 'formulario') {
     const columnas = pregunta.opciones.length > 2 ? 3 : 2;
@@ -446,6 +440,7 @@ function Pregunta({
             <OpcionGrande
               key={String(o.valor)}
               opcion={o}
+              clave={pregunta.clave}
               reducido={reducido}
               activa={elegida(respuestas, pregunta.campo) === o.valor}
               onClick={() => onElegir(pregunta.clave, valoresDeOpcion(pregunta, o, contexto, respuestas))}
@@ -470,9 +465,9 @@ function Pregunta({
             )}
           </div>
         )}
-        {onAnterior && (
+        {(onAnterior || onReiniciar) && (
           <div className="fi-botonera" style={{ marginTop: 'var(--space-6)', justifyContent: 'flex-start' }}>
-            <BotonAnterior onClick={onAnterior} reducido={reducido} />
+            <BotonesAtras onAnterior={onAnterior} onReiniciar={onReiniciar} reducido={reducido} />
           </div>
         )}
       </>
@@ -533,7 +528,7 @@ function Pregunta({
       )}
 
       <div className="fi-botonera" style={{ marginTop: 'var(--space-6)' }}>
-        {onAnterior && <BotonAnterior onClick={onAnterior} reducido={reducido} />}
+        <BotonesAtras onAnterior={onAnterior} onReiniciar={onReiniciar} reducido={reducido} />
         <motion.button
           type="button"
           className="btn btn--cta"
@@ -549,19 +544,24 @@ function Pregunta({
 }
 
 // A la izquierda de la botonera, como el «Anterior» del wizard de venta: el avance queda a la
-// derecha, donde el closer ya tiene la mano.
-function BotonAnterior({ onClick, reducido, disabled = false }) {
+// derecha, donde el closer ya tiene la mano. «Empezar de nuevo» va al lado (Mario, 23/10/2026):
+// son las dos salidas hacia atrás y se leen juntas.
+function BotonesAtras({ onAnterior, onReiniciar, reducido, disabled = false }) {
+  if (!onAnterior && !onReiniciar) return null;
+  const tap = reducido || disabled ? undefined : { scale: 0.97 };
   return (
-    <motion.button
-      type="button"
-      className="btn btn--linea"
-      disabled={disabled}
-      whileTap={reducido || disabled ? undefined : { scale: 0.97 }}
-      onClick={onClick}
-      style={{ marginRight: 'auto' }}
-    >
-      <ArrowLeft /> Anterior
-    </motion.button>
+    <span className="fi-atras">
+      {onAnterior && (
+        <motion.button type="button" className="btn btn--linea" disabled={disabled} whileTap={tap} onClick={onAnterior}>
+          <ArrowLeft /> Anterior
+        </motion.button>
+      )}
+      {onReiniciar && (
+        <motion.button type="button" className="btn btn--linea" disabled={disabled} whileTap={tap} onClick={onReiniciar}>
+          <RotateCcw /> Empezar de nuevo
+        </motion.button>
+      )}
+    </span>
   );
 }
 
@@ -589,28 +589,34 @@ function valoresDeOpcion(pregunta, opcion, contexto, respuestas) {
   return base;
 }
 
-const TONOS = { success: 'success', error: 'error', warning: 'warning', info: 'info', idle: 'idle' };
+// Los tonos de las opciones con la paleta de Learnation (el aura de Clarity), no el semáforo.
+const COLOR_TONO = {
+  success: '#2EE6C8', error: '#FF3FA4', warning: '#FFB547', info: '#7D8BFF', idle: '#94A3B8',
+};
+// Íconos de las preguntas de sí/no más frecuentes; el resto de los sí/no lleva pulgar arriba/abajo.
+const ICONOS_OPCION = {
+  'decisor:true': UserCheck, 'decisor:false': UserX,
+  'oferta:true': Eye, 'oferta:false': EyeOff,
+};
+const iconoDeOpcion = (clave, valor) => ICONOS_OPCION[`${clave}:${valor}`]
+  || (valor === true ? ThumbsUp : valor === false ? ThumbsDown : null);
 
-function OpcionGrande({ opcion, activa, onClick, reducido }) {
-  const tono = opcion.aviso ? 'warning' : (TONOS[opcion.tono] || 'info');
+function OpcionGrande({ opcion, activa, onClick, reducido, clave }) {
+  const color = COLOR_TONO[opcion.aviso ? 'warning' : opcion.tono] || COLOR_TONO.info;
+  const Icono = iconoDeOpcion(clave, opcion.valor);
   return (
     <motion.button
       type="button"
+      className="fi-op"
       onClick={onClick}
       aria-pressed={activa}
       title={opcion.aviso || undefined}
       {...CASCADA.hijo(reducido)}
-      whileHover={reducido ? undefined : { scale: 1.015 }}
+      whileHover={reducido ? undefined : { y: -2 }}
       whileTap={reducido ? undefined : { scale: 0.98 }}
-      style={{
-        display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', alignItems: 'flex-start',
-        textAlign: 'left', padding: 'var(--space-4)', cursor: 'pointer',
-        borderRadius: 'var(--radius-control)',
-        background: activa || opcion.aviso ? `var(--${tono}-surface)` : 'var(--bg-element)',
-        border: `1px solid ${activa || opcion.aviso ? `var(--${tono}-border)` : 'var(--border-control)'}`,
-        color: 'var(--text-on-surface)',
-      }}
+      style={{ '--c': color }}
     >
+      {Icono && <span className="fi-op-ico"><Icono aria-hidden="true" /></span>}
       <b className="ln-t-body">{opcion.label}</b>
       {opcion.sub && <small className="ln-t-caption ln-muted">{opcion.sub}</small>}
       {opcion.aviso && (
@@ -807,7 +813,7 @@ function CronogramaVenta({ respuestas, contexto, onCambiar, soloLectura = false 
 
 function Revision({
   respuestas, contexto, guardando, onGuardar, onCambiar, onElegir, precarga, onVolverA, onAnterior,
-  reducido, grabacion = null,
+  reducido, grabacion = null, onReiniciar = null,
 }) {
   const venta = esVenta(respuestas);
   // La fila que se está editando acá mismo, sin salir de la revisión. Solo una a la vez.
@@ -952,7 +958,7 @@ function Revision({
 
       {/* El widget de bugs flota abajo a la derecha: `.fi-botonera` le deja su margen libre. */}
       <div className="fi-botonera fi-rev-pie">
-        {onAnterior && <BotonAnterior onClick={onAnterior} reducido={reducido} disabled={guardando} />}
+        <BotonesAtras onAnterior={onAnterior} onReiniciar={onReiniciar} reducido={reducido} disabled={guardando} />
         <motion.button
           type="button"
           className="btn btn--cta"

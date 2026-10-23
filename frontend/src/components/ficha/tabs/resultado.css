@@ -7,10 +7,12 @@
    pantallas angostas quedan en una fila arriba.
    ============================================================ */
 
-.dc-shell .fi-res{display:grid;grid-template-columns:116px minmax(0,1fr);gap:var(--s6);align-items:start}
+/* `stretch`: la columna del progreso mide lo mismo que el reporte y los hitos se reparten en todo
+   ese alto (Mario, 23/10/2026: «que se vea en toda esa barra vertical»). */
+.dc-shell .fi-res{display:grid;grid-template-columns:124px minmax(0,1fr);gap:var(--s6);align-items:stretch}
 .dc-shell .fi-res-main{display:flex;flex-direction:column;gap:var(--space-6);min-width:0}
 /* Discreto: sin tarjeta, apagado, y se enciende apenas al pasar por encima. */
-.dc-shell .fi-res-hitos{position:sticky;top:0;display:grid;gap:var(--s2);padding:var(--s1) var(--s4) 0 0;
+.dc-shell .fi-res-hitos{display:flex;flex-direction:column;gap:var(--s3);min-height:300px;padding:var(--s1) var(--s4) var(--s2) 0;
   border-right:1px solid var(--border-subtle);opacity:.72;transition:opacity .2s ease}
 .dc-shell .fi-res-hitos:hover{opacity:1}
 .dc-shell .fi-res-hitos-tit{font-size:9px;font-weight:900;letter-spacing:.22em;text-transform:uppercase;
@@ -22,11 +24,13 @@
    Mario (23/10/2026): menos texto, más movimiento. Solo el punto y el rótulo (el detalle va
    en el globito al pasar el mouse); el riel se llena con el aura al avanzar, cada punto que
    se alcanza hace un «pop» y el siguiente por dar late con el aura de Learnation. */
-.dc-shell .fi-stepper.fi-stepper--v{display:flex;flex-direction:column;gap:0}
+.dc-shell .fi-res-hitos > div{flex:1;display:flex;flex-direction:column}
+.dc-shell .fi-stepper.fi-stepper--v{flex:1;display:flex;flex-direction:column;gap:0}
 .dc-shell .fi-stepper--v .fi-stepper-riel{display:none}
-.dc-shell .fi-stepper--v .fi-paso{display:grid;grid-template-columns:14px minmax(0,1fr);
-  column-gap:var(--s2);align-items:center;text-align:left;padding-bottom:18px;cursor:default}
-.dc-shell .fi-stepper--v .fi-paso:last-child{padding-bottom:0}
+/* Cada paso ocupa su parte del alto (el último solo lo suyo): el riel va de punto a punto. */
+.dc-shell .fi-stepper--v .fi-paso{flex:1 1 0;min-height:44px;display:grid;grid-template-columns:14px minmax(0,1fr);
+  column-gap:var(--s2);align-items:start;align-content:start;text-align:left;cursor:default}
+.dc-shell .fi-stepper--v .fi-paso:last-child{flex:0 0 auto;min-height:0}
 .dc-shell .fi-stepper--v .fi-paso-sub{display:none}
 .dc-shell .fi-stepper--v .fi-paso:not(:last-child)::after{content:'';position:absolute;left:6px;top:17px;
   bottom:3px;width:2px;border-radius:2px;
@@ -46,7 +50,7 @@
   border-color:var(--brand-secondary);animation:fi-hito-late 2s ease-in-out infinite}
 .dc-shell .fi-stepper--v .fi-paso:is([data-estado="hecho"],[data-estado="alerta"]) + .fi-paso[data-estado="pendiente"]{
   color:var(--text-on-surface)}
-.dc-shell .fi-stepper--v .fi-paso-lbl{font-size:11.5px;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dc-shell .fi-stepper--v .fi-paso-lbl{font-size:11.5px;line-height:14px}
 @keyframes fi-hito-pop{0%{transform:scale(.4)}100%{transform:scale(1)}}
 @keyframes fi-hito-late{
   0%,100%{box-shadow:0 0 0 0 rgba(255,63,164,.55),0 0 0 0 rgba(125,139,255,0)}
@@ -55,9 +59,10 @@
 
 @media (max-width:760px){
   .dc-shell .fi-res{grid-template-columns:minmax(0,1fr);gap:var(--s4)}
-  .dc-shell .fi-res-hitos{position:static;padding:0 0 var(--s3);border-right:0;border-bottom:1px solid var(--border-subtle)}
+  .dc-shell .fi-res-hitos{min-height:0;padding:0 0 var(--s3);border-right:0;border-bottom:1px solid var(--border-subtle)}
   .dc-shell .fi-stepper.fi-stepper--v{flex-direction:row;flex-wrap:wrap;gap:var(--s2) var(--s4)}
-  .dc-shell .fi-stepper--v .fi-paso{padding-bottom:0;grid-template-columns:14px auto;column-gap:6px}
+  .dc-shell .fi-stepper--v .fi-paso,
+  .dc-shell .fi-stepper--v .fi-paso:last-child{flex:0 0 auto;min-height:0;grid-template-columns:14px auto;column-gap:6px}
   .dc-shell .fi-stepper--v .fi-paso::after{display:none}
 }
 @media (prefers-reduced-motion:reduce){
@@ -95,3 +100,35 @@
 .dc-shell .fi-modal .ln-field:focus-within{border-color:color-mix(in srgb,var(--brand-secondary) 55%,transparent);
   box-shadow:0 0 0 3px color-mix(in srgb,var(--brand-secondary) 14%,transparent)}
 .dc-shell .fi-modal .ln-field textarea{resize:vertical;line-height:1.5}
+
+/* ---------- Opciones de una pregunta (¿Estuvo el decisor?, ¿Se presentó la oferta?…) ----------
+   Con ícono y el color de Learnation de su tono (`COLOR_TONO`): aura en la esquina, se levanta y
+   se enciende al pasar el mouse; la elegida queda encendida. */
+.dc-shell .fi-op{position:relative;isolation:isolate;overflow:hidden;display:grid;grid-template-columns:auto 1fr;
+  column-gap:var(--s3);row-gap:2px;align-items:center;text-align:left;min-height:64px;
+  padding:var(--s4) var(--s5);border-radius:var(--radius-control);cursor:pointer;color:var(--text-on-surface);
+  border:1px solid color-mix(in srgb,var(--c) 26%,var(--border-control));
+  background:radial-gradient(120% 160% at 0% 0%,color-mix(in srgb,var(--c) 16%,transparent),transparent 55%),
+    radial-gradient(90% 120% at 100% 100%,rgba(19,35,198,.18),transparent 65%),
+    color-mix(in srgb,var(--bg-element) 60%,transparent);
+  transition:border-color .2s ease,box-shadow .25s ease}
+.dc-shell .fi-op > :not(.fi-op-ico){grid-column:2}
+.dc-shell .fi-op:not(:has(.fi-op-ico)) > *{grid-column:1 / -1}
+.dc-shell .fi-op-ico{grid-row:span 3;display:grid;place-items:center;width:36px;height:36px;border-radius:12px;
+  color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent);
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1),background-color .2s ease}
+.dc-shell .fi-op-ico svg{width:19px;height:19px;filter:drop-shadow(0 0 6px color-mix(in srgb,var(--c) 60%,transparent))}
+.dc-shell .fi-op:hover{border-color:color-mix(in srgb,var(--c) 60%,transparent);box-shadow:0 10px 26px -14px var(--c)}
+.dc-shell .fi-op:hover .fi-op-ico{transform:scale(1.1) rotate(-6deg)}
+.dc-shell .fi-op[aria-pressed="true"]{border-color:var(--c);
+  box-shadow:0 0 0 1px var(--c),0 10px 26px -12px var(--c);
+  background:radial-gradient(120% 160% at 0% 0%,color-mix(in srgb,var(--c) 30%,transparent),transparent 60%),
+    color-mix(in srgb,var(--bg-element) 70%,transparent)}
+.dc-shell .fi-op[aria-pressed="true"] .fi-op-ico{background:var(--c);color:var(--ink)}
+.dc-shell .fi-op[aria-pressed="true"] .fi-op-ico svg{filter:none}
+
+/* «Anterior» y «Empezar de nuevo», juntos a la izquierda de la botonera. */
+.dc-shell .fi-atras{display:flex;flex-wrap:wrap;gap:var(--s2);margin-right:auto}
+@media (prefers-reduced-motion:reduce){
+  .dc-shell .fi-op-ico{transition:none}
+}

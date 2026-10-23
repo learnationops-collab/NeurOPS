@@ -314,16 +314,14 @@ function payloadVenta(r, contexto) {
 }
 
 /**
- * El motivo clasificado de un «no cerró» (`motivos_no_cierre` en el backend): con la oferta
- * presentada sale de la objeción; sin oferta, de su propia pregunta. Solo el de la rama que quedó.
+ * El motivo de un «no cerró» para la base (`motivos_no_cierre` en el backend), en texto libre: con
+ * la oferta presentada es la objeción; sin oferta, su propia pregunta. Solo el de la rama que quedó.
  */
 function motivoNoCierre(r) {
-  if (r.cierre === false && r.motivo_no_cierre) {
-    return { categoria: r.motivo_no_cierre, oferta_presentada: true, detalle: null };
-  }
-  if (r.offer_presented === false && r.motivo_sin_oferta) {
-    const otro = r.motivo_sin_oferta === 'Otro motivo' ? String(r.motivo_sin_oferta_otro || '').trim() : '';
-    return { categoria: r.motivo_sin_oferta, oferta_presentada: false, detalle: otro || null };
+  const texto = (v) => String(v || '').trim();
+  if (r.cierre === false && texto(r.objecion)) return { texto: texto(r.objecion), oferta_presentada: true };
+  if (r.offer_presented === false && texto(r.motivo_sin_oferta)) {
+    return { texto: texto(r.motivo_sin_oferta), oferta_presentada: false };
   }
   return null;
 }
