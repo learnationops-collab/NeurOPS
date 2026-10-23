@@ -132,3 +132,29 @@
 @media (prefers-reduced-motion:reduce){
   .dc-shell .fi-op-ico{transition:none}
 }
+
+/* ---------- Lo que falta para seguir ----------
+   Una línea y no un bloque: un punto ámbar que late, «Falta» y cada faltante como chip. El
+   mínimo de un texto no aparece acá: lo cuenta su barrita debajo del campo. */
+.dc-shell .fi-faltan{display:flex;flex-wrap:wrap;align-items:center;gap:6px var(--s2);margin-top:var(--s4);
+  font-size:12px;color:var(--text-muted)}
+.dc-shell .fi-faltan > i{width:7px;height:7px;border-radius:50%;background:#FFB547;flex:none;
+  animation:fi-faltan-late 1.8s ease-out infinite}
+.dc-shell .fi-faltan > span{font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:10px}
+.dc-shell .fi-faltan > b{padding:3px 10px;border-radius:var(--radius-pill);font-weight:600;
+  color:var(--text-on-surface);border:1px solid rgba(255,181,71,.3);background:rgba(255,181,71,.1)}
+@keyframes fi-faltan-late{0%{box-shadow:0 0 0 0 rgba(255,181,71,.6)}100%{box-shadow:0 0 0 7px transparent}}
+
+/* ---------- El mínimo de un texto ---------- */
+.dc-shell .fi-minimo{display:flex;align-items:center;gap:var(--s2);margin-top:2px}
+.dc-shell .fi-minimo-riel{flex:1;max-width:160px;height:3px;border-radius:3px;overflow:hidden;
+  background:var(--border-subtle)}
+.dc-shell .fi-minimo-riel i{display:block;height:100%;border-radius:3px;
+  background:linear-gradient(90deg,#FF3FA4,#7D8BFF);transition:width .3s cubic-bezier(.22,1,.36,1)}
+.dc-shell .fi-minimo small{font-size:11px;font-weight:700;color:var(--text-muted-40);
+  display:inline-flex;align-items:center;transition:color .2s ease}
+.dc-shell .fi-minimo--listo .fi-minimo-riel i{background:#2EE6C8}
+.dc-shell .fi-minimo--listo small{color:#2EE6C8;animation:fi-hito-pop .4s cubic-bezier(.34,1.56,.64,1)}
+@media (prefers-reduced-motion:reduce){
+  .dc-shell .fi-faltan > i,.dc-shell .fi-minimo--listo small{animation:none}
+}

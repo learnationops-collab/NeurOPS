@@ -15,7 +15,7 @@
 // padding:0}` y el botón queda como texto suelto en mayúsculas (ver `PlanCuotasForm`).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   Check, CheckCircle2, XCircle, CalendarX, CalendarClock, RotateCcw, AlertTriangle, ArrowLeft, X,
   ArrowRight, History, DollarSign, Pencil, UserCheck, UserX, Eye, EyeOff, ThumbsUp, ThumbsDown,
@@ -33,6 +33,7 @@ import {
   puedeAvanzar, completo, arrancado, hitos, resumen, esVenta, quedaDeuda, construirPayload,
   progresoVenta, saldoVenta, armaPlan, cuotasPendientes, fechasCuotas, montosCuotas, esCompleto,
   ventaDirecta, anterior, elegida, fechaCorta, RAICES, revisionVenta, normalizar, PREGUNTAS, faltantesDe,
+  faltaDelCampo,
 } from '../arbolResultado';
 
 // Cascada de entrada: las respuestas no aparecen todas de golpe, entran de arriba a abajo. El
@@ -475,6 +476,9 @@ function Pregunta({
   }
 
   const avanzar = () => { if (puede) onElegir(pregunta.clave, {}); };
+  // Lo que ya cuenta su propio campo (el mínimo de un texto, con su barrita) no se repite abajo.
+  const enElCampo = new Set(pregunta.campos.filter((c) => c.minimoTexto)
+    .map((c) => faltaDelCampo(c, respuestas)).filter(Boolean));
   const primeroDeTexto = pregunta.campos.find((c) => TIPOS_DE_TEXTO.has(c.tipo || 'texto'));
 
   return (
@@ -513,19 +517,7 @@ function Pregunta({
         <SaldoEnVivo saldo={saldoVenta(respuestas, contexto)} reducido={reducido} />
       )}
 
-      {pendientes.length > 0 && (
-        <div className="ln-alert ln-alert--warning" role="status" style={{ marginTop: 'var(--space-4)' }}>
-          <span className="ln-alert-ico"><AlertTriangle /></span>
-          <span className="ln-alert-body">
-            <span className="ln-alert-title">Falta para poder seguir</span>
-            <span className="ln-alert-desc">
-              <ul style={{ margin: 0, paddingLeft: 'var(--space-4)' }}>
-                {pendientes.map((f) => <li key={f}>{f}</li>)}
-              </ul>
-            </span>
-          </span>
-        </div>
-      )}
+      <Pendientes lista={pendientes.filter((f) => !enElCampo.has(f))} reducido={reducido} />
 
       <div className="fi-botonera" style={{ marginTop: 'var(--space-6)' }}>
         <BotonesAtras onAnterior={onAnterior} onReiniciar={onReiniciar} reducido={reducido} />
@@ -540,6 +532,34 @@ function Pregunta({
         </motion.button>
       </div>
     </>
+  );
+}
+
+// Lo que falta para seguir, en una línea: un punto que late y cada faltante como un chip que entra
+// solo (Mario, 23/10/2026: el bloque grande con título repetía lo que el campo ya decía).
+function Pendientes({ lista, reducido }) {
+  return (
+    <AnimatePresence initial={false}>
+      {lista.length > 0 && (
+        <motion.div
+          className="fi-faltan"
+          role="status"
+          initial={reducido ? false : { opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={reducido ? undefined : { opacity: 0, y: -4 }}
+          transition={{ duration: 0.18 }}
+        >
+          <i aria-hidden="true" />
+          <span>Falta</span>
+          {lista.map((f) => (
+            <motion.b key={f} layout={!reducido} initial={reducido ? false : { opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}>
+              {f.replace(/^(Completá|Elegí|Cargá)\s+/i, '')}
+            </motion.b>
+          ))}
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

@@ -46,6 +46,19 @@ const Origen = ({ origen }) => (ORIGENES[origen] ? (
 
 const ESTADO_CUOTA = { vencido: 'Vencida', pendiente: 'Pendiente' };
 
+// El mínimo de un texto, una sola vez: una barrita que se llena con el aura y «2/10», que pasa a
+// ✓ al llegar. Reemplaza al «Mínimo 10 caracteres · llevás 2» y al aviso de abajo.
+const Minimo = ({ largo, minimo }) => {
+  const listo = largo >= minimo;
+  return (
+    <span className={`fi-minimo${listo ? ' fi-minimo--listo' : ''}`}
+      aria-label={listo ? 'Largo suficiente' : `Faltan ${minimo - largo} caracteres`}>
+      <span className="fi-minimo-riel"><i style={{ width: `${Math.min(100, (largo / minimo) * 100)}%` }} /></span>
+      <small className="num">{listo ? <Check size={12} aria-hidden="true" /> : `${largo}/${minimo}`}</small>
+    </span>
+  );
+};
+
 export default function CampoArbol({
   campo, respuestas, onCambio, cuotas = [], autoFocus = false, onEnter = null, origen = null,
 }) {
@@ -244,11 +257,7 @@ export default function CampoArbol({
             style={{ resize: 'vertical' }}
           />
         </span>
-        {campo.minimoTexto && (
-          <small className="ln-field-hint">
-            {`Mínimo ${campo.minimoTexto} caracteres · llevás ${String(valor || '').trim().length}`}
-          </small>
-        )}
+        {campo.minimoTexto && <Minimo largo={String(valor || '').trim().length} minimo={campo.minimoTexto} />}
       </div>
     );
   }

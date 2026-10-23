@@ -76,7 +76,7 @@ export const completo = (respuestas = {}, contexto = {}) => arrancado(respuestas
 const vacio = (v) => v === undefined || v === null || v === ''
   || (Array.isArray(v) && v.length === 0);
 
-function faltaDelCampo(campo, respuestas) {
+export function faltaDelCampo(campo, respuestas) {
   const valor = respuestas[campo.campo];
   if (campo.minimoTexto) {
     const largo = String(valor || '').trim().length;
