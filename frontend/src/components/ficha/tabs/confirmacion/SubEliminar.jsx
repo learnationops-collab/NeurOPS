@@ -26,7 +26,7 @@ const SubEliminar = ({ ficha, onVolver, onConfirmar }) => {
                 />
             )}>
             <Aviso tono="error" titulo={`Esto borra a ${nombre} y todo su historial. No se puede deshacer.`}>
-                Si no va a comprar, usá Descartar lead: queda guardado y podés retomarlo.
+                Si no califica, usá Descalificado: queda guardado y la dirección lo cuenta.
             </Aviso>
         </SubVista>
     );

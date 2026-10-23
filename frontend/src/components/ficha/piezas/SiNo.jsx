@@ -8,9 +8,10 @@ const OPCIONES = [{ valor: true, label: 'Sí' }, { valor: false, label: 'No' }];
  * historial y el de la cantidad de cuotas).
  *
  * Es una pieza porque la misma pregunta —«¿Agendás un seguimiento a futuro?»— aparece en «Dar de
- * baja» (Acciones) y en «Canceló» y «Descartar lead» (Confirmación), y cada pantalla la dibujaba a
- * su manera: dos `.ln-chip` que dentro de `.dc-shell` perdían el borde y el aire, o dos pastillas
- * con el magenta inline. La misma pregunta tiene que verse igual en las tres.
+ * baja» (Acciones) y en «Canceló» (Confirmación; también estaba en «Descartar lead», que se quitó el
+ * 23/10/2026), y cada pantalla la dibujaba a su manera: dos `.ln-chip` que dentro de `.dc-shell`
+ * perdían el borde y el aire, o dos pastillas con el magenta inline. La misma pregunta tiene que
+ * verse igual en todas.
  *
  * La marca del elegido se corre de una opción a la otra (`layoutId`, con un id propio por si hay
  * dos montadas) y con movimiento reducido salta sin animar.

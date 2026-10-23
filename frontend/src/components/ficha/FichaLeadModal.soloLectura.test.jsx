@@ -16,7 +16,7 @@ import { fichaIncompleta, fichaPrecall } from './__fixtures__/ficha';
 /**
  * La ficha de solo lectura (10/10/2026): el Revisar del setter abre la ficha de cada fila para
  * MIRAR. Aunque su rol confirme sus propias agendas en otra pantalla, acá ninguna acción de la
- * dirección o del closer queda a mano —reprogramar, cancelar, descartar, eliminar, corregir los
+ * dirección o del closer queda a mano —reprogramar, cancelar, descalificar, eliminar, corregir los
  * datos—; dejar una nota al equipo sí, si el servidor lo permite.
  */
 
@@ -46,7 +46,7 @@ describe('ficha de solo lectura', () => {
         await abrir({ soloLectura: true });
 
         expect(screen.getByRole('tab', { selected: true })).toHaveTextContent('Confirmación');
-        ['Reprogramar', 'Canceló', 'Descartar lead', 'Eliminar lead'].forEach(nombre => {
+        ['Reprogramar', 'Canceló', 'Descalificado', 'Eliminar lead'].forEach(nombre => {
             expect(screen.getByRole('button', { name: new RegExp(nombre) })).toBeDisabled();
         });
         // Ni la pestaña Resultado (reportar), ni el lápiz de los datos, ni pasar el lead a otro closer.

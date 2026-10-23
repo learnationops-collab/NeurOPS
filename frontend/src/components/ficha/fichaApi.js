@@ -58,7 +58,8 @@ const RUTAS = {
     reprogramar: (appt, p) => api.post(`/ficha/${appt}/reprogramar`, p),
     // Cancelar no es descartar: la cita no se hace pero el lead sigue en el embudo.
     cancelar: (appt, p) => api.post(`/ficha/${appt}/cancelar`, p),
-    descartar: (appt, p) => api.post(`/ficha/${appt}/descartar`, p),
+    // El closer ve al confirmar que no califica: cancela la llamada y la marca «Descalificada».
+    descalificar: (appt, p) => api.post(`/ficha/${appt}/descalificar`, p),
     // La llamada sin resultado que el closer no tomó (era de otro): queda archivada y con un
     // seguimiento de recuperación para volver a agendar al lead (`{fecha, nota}`).
     pasar_a_recuperacion: (appt, p) => api.post(`/ficha/${appt}/recuperacion`, p),

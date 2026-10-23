@@ -71,6 +71,16 @@ const VOCABULARIO = {
         ] },
         { titulo: 'Otros', tono: 'idle', opciones: [] },
     ],
+    motivos_descalificacion: [
+        { titulo: 'No es el perfil', tono: 'warning', opciones: [
+            { clave: 'no_es_medico', label: 'No es médico' },
+            { clave: 'no_rinde_examen', label: 'No rinde examen de residencia' },
+        ] },
+        { titulo: 'Económicos', tono: 'error', opciones: [
+            { clave: 'no_puede_pagar', label: 'No puede pagar' },
+        ] },
+        { titulo: 'Otros', tono: 'idle', opciones: [] },
+    ],
     motivos_baja: [
         { titulo: 'Económicos', tono: 'error', opciones: [
             { clave: 'no_puede_pagar', label: 'No puede pagar' },

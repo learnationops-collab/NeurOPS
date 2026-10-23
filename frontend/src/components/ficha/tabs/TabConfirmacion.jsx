@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, CalendarX, CheckCircle2, Trash2, XCircle } from 'lucide-react';
+import { Calendar, CalendarX, CheckCircle2, Trash2, UserX } from 'lucide-react';
 import { Aviso, DesplegableAgrupado, StepperFicha, TarjetaAccion, useMovimiento } from '../piezas';
 import { grupos } from '../estadoFicha';
 import SubReprogramar from './confirmacion/SubReprogramar';
 import SubCancelo from './confirmacion/SubCancelo';
-import SubDescartar from './confirmacion/SubDescartar';
+import SubDescalificar from './confirmacion/SubDescalificar';
 import SubEliminar from './confirmacion/SubEliminar';
 
 /**
@@ -80,9 +80,9 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
                     <SubCancelo ficha={ficha} guardando={guardando} onVolver={volver}
                         onConfirmar={(p) => correr('cancelar', p)} />
                 )}
-                {modo === 'desc' && (
-                    <SubDescartar ficha={ficha} guardando={guardando} onVolver={volver}
-                        onConfirmar={(p) => correr('descartar', p)} />
+                {modo === 'descal' && (
+                    <SubDescalificar ficha={ficha} guardando={guardando} onVolver={volver}
+                        onConfirmar={(p) => correr('descalificar', p)} />
                 )}
                 {modo === 'elim' && (
                     <SubEliminar ficha={ficha} onVolver={volver}
@@ -152,8 +152,11 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
                     <TarjetaAccion linea tono="warning" icono={CalendarX} label="Canceló"
                         titulo="La llamada no se hace, pero el lead sigue vivo"
                         deshabilitado={bloqueado} onClick={() => setModo('cancelo')} />
-                    <TarjetaAccion linea tono="warning" icono={XCircle} label="Descartar lead"
-                        deshabilitado={bloqueado} onClick={() => setModo('desc')} />
+                    {/* Reemplaza al «Descartar lead», que marcaba «No Lead»: es lo mismo (23/10/2026). */}
+                    <TarjetaAccion linea tono="warning" icono={UserX} label="Descalificado"
+                        titulo="No califica: se cancela la llamada y queda marcada como descalificada"
+                        deshabilitado={bloqueado || ficha?.permisos?.reportar === false}
+                        onClick={() => setModo('descal')} />
                     <TarjetaAccion linea tono="error" icono={Trash2} label="Eliminar lead"
                         deshabilitado={!puedeEditar || ficha?.permisos?.eliminar === false}
                         onClick={() => setModo('elim')} />
