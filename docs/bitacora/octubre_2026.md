@@ -632,3 +632,8 @@
   - `railway.toml` usaba `releaseCommand = "flask db upgrade"` desde el 18/03, pero esa clave no existe en Railway (el esquema oficial solo define `preDeployCommand`), así que la migración probablemente no corría sola en el deploy. Ahora es `preDeployCommand = "flask db upgrade"`: corre entre el build y el arranque y, si falla, el deploy no sube.
   - Ojo: `healthCheckPath`, `healthCheckTimeout` y `restartPolicyType` del mismo archivo tampoco coinciden con los nombres del esquema (`healthcheckPath`, `healthcheckTimeout`, `ON_FAILURE`). Sin tocar; revisar aparte, porque activar el healthcheck cambia cuándo un deploy se da por bueno.
   - `docs/plan_personas.md` y la bitácora de septiembre todavía nombran `releaseCommand`.
+
+- **23 de Octubre de 2026 (Closer: % de confirmación y de asistencia)** *([frontend/src/pages/closer/CloserWorkflowPage.jsx](../../frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])*:
+  - En Confirmar, la tarjeta del medio pasa de «Tu día» a «Confirmación»: confirmados sobre el total del pool (`confirmations_done / confirmations`) y cuántos faltan.
+  - En Reportar pasa a «Asistencia»: de las llamadas reportadas del día, las que asistieron (todo menos No Show y Cancelada; una reagendada no cuenta) y cuántas faltan reportar. En las demás secciones sigue «Tu día».
+  - «Te falta N por confirmar» contaba también las ya confirmadas (`counts.confirmations` es el pool entero): ahora resta `confirmations_done`. Mismo arreglo en «Tu día» y en Cerrar el día («cosas sin resolver»).
