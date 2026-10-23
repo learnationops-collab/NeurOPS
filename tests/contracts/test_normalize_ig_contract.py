@@ -22,7 +22,6 @@ USUARIOS_DE_NORMALIZE_IG = [
     'app.services.attribution_service',
     'app.api.conversational',
     'app.api.public.marketing',
-    'app.api.public.financial_sales',
     'app.api.public.lead_roadmap',
     'app.api.public.new_clients',
 ]

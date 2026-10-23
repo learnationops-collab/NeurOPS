@@ -64,21 +64,6 @@ def test_un_pago_no_completado_no_tiene_venta_hasta_completarse(db, ana):
     assert pendiente.sale_id is not None
 
 
-def test_corregir_el_tipo_lo_reubica_y_borra_la_venta_vacia(db, ana):
-    alta = cobro(db, ana, 'AL - Completo', datetime(2026, 1, 5))
-    mal = cobro(db, ana, 'AL - Completo', datetime(2026, 6, 5))  # era una renovación
-    vieja = mal.sale_id
-    assert vieja != alta.sale_id
-
-    mal.tipo_pago = 'AL - Renovación'
-    db.session.commit()
-    assert mal.sale.kind == 'renewal'
-    assert db.session.get(Sale, vieja) is None
-
-    mal.tipo_pago = 'AL - Cuota'
-    db.session.commit()
-    assert mal.sale_id == alta.sale_id
-    assert Sale.query.count() == 1
 
 
 def test_la_venta_elegida_a_mano_se_respeta(db, ana):

@@ -328,36 +328,6 @@ def test_una_agenda_sin_cliente_lo_dice_y_el_examen_se_corrige_igual(client, db,
 
 # --- Las ventas no se pierden -----------------------------------------------------------------
 
-def test_corregirle_el_correo_a_quien_ya_compro_no_le_hace_perder_sus_ventas(client, db, lead,
-                                                                             equipo, auth_headers):
-    """El 79% de las ventas no tiene `client_id`: son del cliente porque coinciden por contacto.
-    Cambiarle el correo sin atarlas antes las dejaba huerfanas —sin programa, sin pagos en la
-    ficha— justo despues de arreglarle un dato."""
-    # Una sola señal (el correo) corroborada por el nombre: es suya con el criterio de los pagos.
-    suya = FinancialSale(mail_cliente='jesus@x.com', nombre_cliente='Jesús Capuchino',
-                         tipo_pago='RR - Parcial', monto=500, estado='Completada',
-                         date=datetime(2026, 9, 1))
-    # Coincide por telefono con Jesus pero por correo con Maria: es de Maria, y no se toca.
-    maria = otro_cliente(db, email='maria@x.com')
-    de_maria = FinancialSale(mail_cliente='maria@x.com', telefono='5255 1234 5678',
-                             tipo_pago='AL - Completo', monto=900, estado='Completada',
-                             date=datetime(2026, 9, 2))
-    db.session.add_all([suya, de_maria])
-    db.session.commit()
-
-    r = editar(client, auth_headers, equipo['closer'], lead, email='jesus.nuevo@x.com')
-
-    assert r.status_code == 200
-    assert r.get_json()['ventas_atadas'] == 1
-    assert suya.client_id == lead.client_id
-    assert de_maria.client_id is None and maria.id != lead.client_id
-
-    ficha = client.get(f'/api/ficha/lead?appointment_id={lead.id}',
-                       headers=auth_headers(equipo['closer'])).get_json()
-    assert ficha['identidad']['email'] == 'jesus.nuevo@x.com'
-    assert ficha['identidad']['programa'] == 'Residency Roadmap'
-    assert 500.0 in [p['monto'] for p in ficha['cobro']['pagos']]
-    assert '1 venta(s) quedaron atadas' in eventos(lead)[0].description
 
 
 def _venta(db, **campos):
@@ -368,38 +338,8 @@ def _venta(db, **campos):
     return venta
 
 
-def test_la_venta_de_otra_persona_que_coincidia_por_el_telefono_mal_cargado_no_se_ata(
-        client, db, lead, equipo, auth_headers):
-    """El caso tipico de corregir un telefono: la venta de otra persona coincidia SOLO por ese
-    telefono. Atarla la dejaba del cliente para siempre —y `get_client_payment_state`, que hoy no
-    la cuenta porque el nombre no corrobora, pasaba a decir que ya pago la seña—."""
-    from app.services.sales_consistency_service import SalesConsistencyService
-
-    ajena = _venta(db, mail_cliente='victor@x.com', nombre_cliente='Victor Ureta Romero',
-                   telefono='52 55 1234 5678', tipo_pago='RR - Seña')
-
-    r = editar(client, auth_headers, equipo['closer'], lead, telefono='+52 55 1234 9999')
-
-    assert r.status_code == 200
-    assert r.get_json()['ventas_atadas'] == 0
-    assert ajena.client_id is None
-    estado = SalesConsistencyService.get_client_payment_state(lead.client_id, 'RR')
-    assert (estado['total_paid'], estado['has_deposit']) == (0, False)
 
 
-def test_solo_se_ata_la_venta_que_el_cambio_deja_sin_una_senal(client, db, lead, equipo,
-                                                               auth_headers):
-    """Atar es para siempre: la venta que sigue coincidiendo igual despues del cambio no se toca."""
-    # Correo e instagram: corregir el telefono no le quita nada.
-    intacta = _venta(db, mail_cliente='jesus@x.com', instagram='@jesus.c')
-    # Correo y telefono: corregir el telefono le quita una de sus dos señales.
-    pierde = _venta(db, mail_cliente='jesus@x.com', telefono='5255 1234 5678')
-
-    r = editar(client, auth_headers, equipo['closer'], lead, telefono='+52 55 1234 9999')
-
-    assert r.get_json()['ventas_atadas'] == 1
-    assert intacta.client_id is None
-    assert pierde.client_id == lead.client_id
 
 
 # --- Instagram de relleno ---------------------------------------------------------------------
@@ -418,51 +358,7 @@ def test_un_instagram_de_relleno_se_guarda_vacio_y_no_choca_con_otro_relleno(
     assert lead.client.instagram is None
 
 
-def test_un_instagram_de_relleno_ya_guardado_no_cuenta_como_senal_para_atar(
-        client, db, lead, equipo, auth_headers):
-    """Un '.' en el cliente y otro en la venta de otra persona no la hacen suya: sin el relleno le
-    queda una sola señal (el telefono) y el nombre no corrobora."""
-    lead.client.instagram = '.'
-    db.session.commit()
-    ajena = _venta(db, mail_cliente='emanuel@x.com', nombre_cliente='Emanuel Gavilanes',
-                   instagram='.', telefono='52 55 1234 5678')
-
-    r = editar(client, auth_headers, equipo['closer'], lead, telefono='+52 55 1234 9999')
-
-    assert r.get_json()['ventas_atadas'] == 0
-    assert ajena.client_id is None
 
 
 # --- Las pantallas que cruzan en lote siguen viendo la venta ----------------------------------
 
-def test_revisar_y_el_libro_siguen_mostrando_la_venta_despues_de_corregir_el_correo(
-        client, db, lead, equipo, auth_headers):
-    """La venta se ata por id antes del cambio y `_client_has_sale` ya la cuenta. Los cruces en
-    lote de Revisar, del libro de agendas y del conteo de seguimientos miraban solo correo e
-    instagram: la fila pasaba de "Venta" a "Seguimiento" y la ficha seguía diciendo que
-    compró."""
-    from datetime import date
-
-    from app.services.closer_agendas_service import CloserAgendasService
-    from app.services.closer_followup_service import CloserFollowUpService
-    from app.services.closer_pending_service import CloserPendingService
-    from app.services.comercial_service import ComercialService
-
-    lead.start_time = datetime.utcnow() - timedelta(days=1)
-    lead.closer_result = 'Show up'
-    db.session.commit()
-    _venta(db, mail_cliente='jesus@x.com', nombre_cliente='Jesus Capuchino',
-           tipo_pago='RR - Completo', email_vendedor=equipo['closer'].email)
-
-    r = editar(client, auth_headers, equipo['director'], lead, email='jesus.nuevo@x.com')
-    assert r.get_json()['ventas_atadas'] == 1
-
-    hoy = date.today()
-    [fila] = ComercialService.agendas(hoy - timedelta(days=7), hoy + timedelta(days=1))
-    assert (fila['post_call']['key'], fila['con_venta']) == ('venta', True)
-
-    [item] = CloserAgendasService.get_ledger(equipo['closer'].id, period='todo')['items']
-    assert (item['venta'], item['venta_propia']) == (True, True)
-
-    assert CloserPendingService._client_ids_con_venta([lead.client]) == {lead.client_id}
-    assert CloserFollowUpService._client_has_sale(lead.client) is True

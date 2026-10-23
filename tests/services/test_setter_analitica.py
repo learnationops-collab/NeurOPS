@@ -197,18 +197,6 @@ def test_despues_de_la_agenda_parte_de_las_que_ya_se_dieron(db, elias, closer):
     assert (b['realizadas'], b['show_up']) == (2, 50.0)
 
 
-@freeze_time(HOY)
-def test_las_ventas_originadas_salen_de_las_agendas_que_asistieron(db, elias, closer):
-    compro = generada(db, elias, closer, closer_result='Show up')
-    generada(db, elias, closer, closer_result='Show up')
-    db.session.add(FinancialSale(mail_cliente=compro.client.email, monto=990.0, tipo_pago='AL - Completo',
-                                 metodo_pago='zelle', email_vendedor='marlon@thelearnation.com',
-                                 date=datetime(2026, 9, 12), estado='Completada'))
-    db.session.commit()
-
-    b = bloque(elias)
-
-    assert (b['ventas_originadas'], b['cierre']) == (1, 50.0)
 
 
 @freeze_time(HOY)

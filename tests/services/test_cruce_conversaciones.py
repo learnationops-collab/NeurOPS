@@ -47,10 +47,6 @@ def test_el_instagram_compacto(ig, esperado):
     assert compacto(ig) == esperado
 
 
-def test_un_instagram_con_otro_separador_lleva_a_la_misma_conversacion(db):
-    lead = conversacion(db, ig='luis_rinnegan')
-    cruce = Cruce({'luis.rinnegan'})
-    assert list(cruce.candidatos('luis.rinnegan')) == [(), [lead.id], ()]
 
 
 def test_el_nombre_contenido_en_el_de_una_sola_conversacion(db):

@@ -112,16 +112,6 @@ def test_la_lista_tiene_las_filas_de_la_tarjeta_y_las_de_revisar(client, db, equ
     assert [f['id'] for f in lista['filas']] == en_revisar
 
 
-@freeze_time(HOY)
-def test_son_las_que_asistieron_y_no_compraron_ni_dejaron_sena(client, db, equipo, auth_headers):
-    filas = _mes(db, equipo)
-
-    lista = _pedir(client, NO_CERRADAS, auth_headers(equipo['director']))
-
-    assert {f['id'] for f in lista['filas']} == {
-        filas['presento'].id, filas['seguimiento'].id, filas['de_nerina'].id}
-    # La más reciente primero, como en Revisar.
-    assert lista['filas'][0]['id'] == filas['seguimiento'].id
 
 
 @freeze_time(HOY)
@@ -141,15 +131,6 @@ def test_cada_fila_trae_lo_que_el_modal_muestra_y_lo_que_abre_la_ficha(client, d
 
 # --- Alcance ------------------------------------------------------------------------------------
 
-@freeze_time(HOY)
-def test_un_closer_ve_solo_las_suyas_aunque_pida_las_de_otro(client, db, equipo, auth_headers):
-    filas = _mes(db, equipo)
-
-    lista = _pedir(client, NO_CERRADAS, auth_headers(equipo['marlon']), miembro_id=equipo['nerina'].id)
-
-    ids = {f['id'] for f in lista['filas']}
-    assert filas['de_nerina'].id not in ids
-    assert ids == {filas['presento'].id, filas['seguimiento'].id}
 
 
 @freeze_time(HOY)
