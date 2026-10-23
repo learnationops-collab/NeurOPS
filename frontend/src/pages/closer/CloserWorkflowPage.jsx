@@ -38,7 +38,7 @@ import AgendaCountdown from '../../components/shared/AgendaCountdown';
 import FichaLeadModal from '../../components/ficha/FichaLeadModal';
 import ClienteNuevoVenta from './components/ClienteNuevoVenta';
 import DiaDelReporte, { etiquetaDia } from './components/DiaDelReporte';
-import { agendaParaVender, mensajeDeError } from '../../components/ficha/fichaApi';
+import { agendaParaVender, ejecutarAccion, mensajeDeError } from '../../components/ficha/fichaApi';
 import { ayudaDeResultado } from '../../utils/estadosAgenda';
 
 const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', 'séptimo', 'octavo', 'noveno', 'décimo'];
@@ -61,6 +61,25 @@ const cuentaDelDock = (hechas, total, nadaPendiente, que) => ({
 // siendo "por_confirmar"; cualquier etapa intermedia ya es "conversando"; "Confirmado" solo lo
 // pone la acción explícita "Listo · 100% confirmado", nunca con solo llegar a Testimonio.
 const stageToConfirmStatus = (stageKey) => (stageKey === 'por_contactar' ? 'por_confirmar' : 'conversando');
+
+// Las tres columnas del tablero de Confirmar, en el orden de la ficha. `fase` es la que ya
+// entiende `renderKanbanCard` (color de la tarjeta y su botón); `columna`, su lugar en la fila de
+// entrada.
+const ETAPAS_DEL_TABLERO = [
+    { clave: 'por_contactar', titulo: 'Por contactar', lista: 'porContactar', fase: 'por_confirmar', clase: 'k1-v6', columna: 0, vacio: '✓ Ninguno sin tocar' },
+    { clave: 'contactado', titulo: 'Contactado', lista: 'contactado', fase: 'conversando', clase: 'k2-v6', columna: 1, vacio: '✓ Nadie esperando confirmar' },
+    { clave: 'confirmado', titulo: 'Confirmado', lista: 'confirmado', fase: 'confirmado', clase: 'k3-v6', columna: 2, vacio: 'Sin leads confirmados.' },
+];
+const ETAPA_DE_FASE = Object.fromEntries(ETAPAS_DEL_TABLERO.map(e => [e.fase, e.clave]));
+
+// En qué etapa está una cita, con la misma regla que la pestaña Confirmación de la ficha
+// (`ficha_lead_service._confirmacion`): Confirmado solo si `result` lo dice; si no, la etapa
+// guardada, donde vacía es Por contactar y cualquier otra (las viejas incluidas) es Contactado.
+const etapaDeConfirmacion = (a) => {
+    if ((a.result || '').trim().toLowerCase() === 'confirmado') return 'confirmado';
+    const etapa = a.confirmation_stage || 'por_contactar';
+    return etapa === 'por_contactar' ? 'por_contactar' : 'contactado';
+};
 
 
 // Puntos de experiencia de un día a partir de su actividad (ver `dailyXp` en el componente).
@@ -1140,26 +1159,60 @@ const CloserWorkflowPage = () => {
         );
     }, [agendas, searchQuery]);
 
-    // Pipeline Kanban agrupado para confirmaciones (v6)
+    // Pipeline Kanban de confirmaciones: las tres etapas de la ficha (Por contactar · Contactado ·
+    // Confirmado, 23/10/2026), una por columna. Se agrupa con la misma regla que la pestaña
+    // Confirmación de la ficha (`ficha_lead_service._confirmacion`), para que el tablero y el
+    // detalle digan siempre lo mismo: Confirmado = `result` confirmado; si no, la etapa guardada
+    // (`confirmation_stage`, vacía = Por contactar; las viejas Horario/VideoAsk/Testimonio se leen
+    // como Contactado).
     const confirmationsPipeline = useMemo(() => {
-        const list = filteredAgendas || [];
-        const porConfirmar = [];
-        const conversando = [];
+        const porContactar = [];
+        const contactado = [];
         const confirmado = [];
-
-        list.forEach(a => {
-            const result = a.result ? a.result.toLowerCase() : "";
-            if (result === 'confirmado') {
-                confirmado.push(a);
-            } else if (result === 'conversando' || result === 'contactado') {
-                conversando.push(a);
-            } else {
-                porConfirmar.push(a);
-            }
+        (filteredAgendas || []).forEach(a => {
+            const etapa = etapaDeConfirmacion(a);
+            if (etapa === 'confirmado') confirmado.push(a);
+            else if (etapa === 'contactado') contactado.push(a);
+            else porContactar.push(a);
         });
-
-        return { porConfirmar, conversando, confirmado };
+        return { porContactar, contactado, confirmado };
     }, [filteredAgendas]);
+
+    // Arrastrar un lead a otra columna cambia su etapa de verdad, con las mismas acciones que usa
+    // la ficha (`PATCH /ficha/<id>/confirmacion`). Pasar a Confirmado es «Listo · 100%
+    // confirmado»; sacarlo de Confirmado es «Deshacer» (vuelve a Contactado) y, si va a Por
+    // contactar, además se baja la etapa. La tarjeta se mueve al instante y, si el guardado falla,
+    // vuelve a su columna.
+    const [arrastrando, setArrastrando] = useState(null); // { id, desde }
+    const [columnaDestino, setColumnaDestino] = useState(null);
+    const moverDeEtapa = async (leadId, destino) => {
+        const lead = agendas.find(a => a.id === leadId);
+        if (!lead || leadId <= 0) return;
+        const desde = etapaDeConfirmacion(lead);
+        if (desde === destino) return;
+        const antes = { result: lead.result, confirmation_stage: lead.confirmation_stage };
+        const despues = destino === 'confirmado'
+            ? { result: 'Confirmado', confirmation_stage: 'confirmado' }
+            : { result: destino === 'por_contactar' ? 'por_confirmar' : 'conversando', confirmation_stage: destino };
+        const aplicar = (campos) => setAgendas(prev => prev.map(a => a.id === leadId ? { ...a, ...campos } : a));
+        aplicar(despues);
+        try {
+            if (destino === 'confirmado') {
+                await ejecutarAccion('cerrar_confirmacion', leadId);
+            } else {
+                if (desde === 'confirmado') await ejecutarAccion('etapa_confirmacion', leadId, { cerrada: false });
+                if (destino === 'por_contactar' || desde !== 'confirmado') {
+                    await ejecutarAccion('etapa_confirmacion', leadId, { etapa: destino });
+                }
+            }
+            toast.success(`${lead.lead_name || 'Lead'} · ${ETAPAS_DEL_TABLERO.find(e => e.clave === destino)?.titulo}`);
+        } catch (err) {
+            aplicar(antes);
+            toast.error(mensajeDeError(err) || 'No se pudo cambiar la etapa');
+        } finally {
+            fetchAgendas({ refreshSeguimientos: false, conservarFicha: true });
+        }
+    };
 
     // "Tu siguiente paso": el lead más urgente dentro de la pestaña activa, para no tener que
     // escanear toda la bandeja buscando qué tocar primero. Se arma con los mismos datos que ya
@@ -1170,7 +1223,7 @@ const CloserWorkflowPage = () => {
         if (activeView !== 'inbox') return null;
         let pool;
         if (activeStep === 'confirmations') {
-            pool = [...confirmationsPipeline.porConfirmar, ...confirmationsPipeline.conversando];
+            pool = [...confirmationsPipeline.porContactar, ...confirmationsPipeline.contactado];
         } else if (activeStep === 'calls') {
             pool = filteredAgendas;
         } else {
@@ -1206,6 +1259,22 @@ const CloserWorkflowPage = () => {
         });
         return { atrasadas, hoy, reportadas: reportedTodayCalls };
     }, [filteredAgendas, selectedDate, reportedTodayCalls]);
+
+    // Lo que el lead dijo que puede invertir en el formulario de calificación: la clave `inversion`
+    // del formulario viejo (n8n) o, en uno de Agendas 2.0, la pregunta que habla de invertir. Un
+    // número suelto se muestra como monto; un rango o un texto, tal cual.
+    const inversionDe = (a) => {
+        const fd = a.form_data && typeof a.form_data === 'object' ? a.form_data : {};
+        let v = fd.inversion;
+        if (!v) {
+            const clave = Object.keys(fd).find(k => /invert|inversi|presupuesto/i.test(k));
+            v = clave ? fd[clave] : null;
+        }
+        if (v == null || String(v).trim() === '') return null;
+        const txt = String(v).trim();
+        const n = Number(txt.replace(/[$\s,.]/g, ''));
+        return /^\$?\s*[\d.,]+\s*(usd)?$/i.test(txt) && n > 0 ? `$${n.toLocaleString('es-AR')}` : txt;
+    };
 
     // Renderizar una tarjeta individual del Kanban de confirmación (v6).
     // `orden` es su lugar en la fila de entrada: el renglón del tablero por la cantidad de
@@ -1262,22 +1331,38 @@ const CloserWorkflowPage = () => {
             }
         }
 
+        // Clarity: cada etapa tiñe la tarjeta con su color (`--c`) y el avatar toma el del origen.
+        const TONO_ETAPA = { por_confirmar: 'var(--cl-warning)', conversando: 'var(--cl-info)', confirmado: 'var(--cl-success)', call: 'var(--cl-magenta)', call_done: 'var(--cl-success)' };
+        const TONOS_AVATAR = ['var(--cl-magenta)', 'var(--cl-lila)', 'var(--cl-success)', 'var(--cl-warning)', 'var(--cl-info)'];
+        const origen = a.origin || 'Meta Ads';
+        const tonoAvatar = TONOS_AVATAR[[...origen].reduce((h, ch) => h + ch.charCodeAt(0), 0) % TONOS_AVATAR.length];
+        const iniciales = (a.lead_name || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+        const inversion = inversionDe(a);
+        // Cuánto falta para la cita, como riel de 48 h que se llena a medida que se acerca.
+        const horasFaltan = a.start_time ? ((parseUtcIso(a.start_time)?.getTime() ?? Date.now()) - nowTick) / 3600000 : 0;
+        const rielCita = Math.round(Math.min(1, Math.max(0.04, 1 - horasFaltan / 48)) * 100);
+
         return (
             <div 
                 key={a.id} 
-                className={`kcard-v6 ${isViewed ? 'border-pink-500/50 bg-pink-500/5 shadow-[0_0_15px_rgba(255,63,164,0.1)]' : ''}`}
-                style={{ animationDelay: `${tableroEntrando ? escalonDe(orden) : 0}ms` }}
+                className={`kcard-v6 ${isViewed ? 'kc-visto border-pink-500/50 bg-pink-500/5 shadow-[0_0_15px_rgba(255,63,164,0.1)]' : ''}`}
+                style={{ animationDelay: `${tableroEntrando ? escalonDe(orden) : 0}ms`, '--c': TONO_ETAPA[phase] || 'var(--cl-lila)', '--av': tonoAvatar }}
                 onClick={() => handleSelectLead(a)}
+                {...(ETAPA_DE_FASE[phase] && a.id > 0 ? {
+                    draggable: true,
+                    'data-arrastrando': arrastrando?.id === a.id || undefined,
+                    title: 'Arrastralo a otra columna para cambiar su etapa',
+                    onDragStart: (e) => {
+                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData('text/plain', String(a.id));
+                        setArrastrando({ id: a.id, desde: ETAPA_DE_FASE[phase] });
+                    },
+                    onDragEnd: () => { setArrastrando(null); setColumnaDestino(null); },
+                } : {})}
             >
-                <div
-                    className={`when-v6 ${whenCls}`}
-                    title={isPendingReferral ? undefined : `${formatAgendaDateTime(a.start_time)} (${viewerTimezoneLabel()}, tu zona horaria)`}
-                >
-                    <span className={`wd-v6 ${countdown?.kind === 'now' ? 'animate-pulse' : ''}`}></span>
-                    {isPendingReferral
-                        ? 'Por agendar'
-                        : <AgendaCountdown startTime={a.start_time} fallback={`${dateLabel} · ${apptTime}`} />}
-                </div>
+                <div className="kc-top">
+                <span className="kc-av" aria-hidden="true">{iniciales}</span>
+                <div className="kc-id">
                 <b className="flex items-center gap-1.5 flex-wrap">
                     {a.lead_name || 'Sin Nombre'}
                     {a.unread_comment && (
@@ -1287,6 +1372,25 @@ const CloserWorkflowPage = () => {
                     )}
                 </b>
                 <div className="m-v6">@{a.instagram ? a.instagram.replace('@', '') : 'usuario'}</div>
+                </div>
+                <div
+                    className={`when-v6 ${whenCls}`}
+                    title={isPendingReferral ? undefined : `${formatAgendaDateTime(a.start_time)} (${viewerTimezoneLabel()}, tu zona horaria)`}
+                >
+                    <span className={`wd-v6 ${countdown?.kind === 'now' ? 'animate-pulse' : ''}`}></span>
+                    {isPendingReferral
+                        ? 'Por agendar'
+                        : <AgendaCountdown startTime={a.start_time} fallback={`${dateLabel} · ${apptTime}`} />}
+                </div>
+                </div>
+
+                {inversion && (
+                    <div className="kc-plata" title="Lo que dijo que puede invertir (formulario)">
+                        <span className="kc-plata-ic" aria-hidden="true">$</span>
+                        <span className="kc-plata-n">{inversion.replace(/^\$/, '')}</span>
+                        <span className="kc-plata-l">inversión</span>
+                    </div>
+                )}
 
                 <div className="flex gap-1.5 flex-wrap mt-2">
                     <span className="ktag-v6 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
@@ -1351,14 +1455,16 @@ const CloserWorkflowPage = () => {
                 {phase === 'call_done' && (
                     <div className="flex gap-1 mt-2.5">
                         <span className="klisto-v6 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 w-full text-center">
-                            ✓ Reportado
+                            <svg className="kc-check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M7.5 12.5l3 3 6-6.5" /></svg><span className="kc-ok-tx">Reportado</span>
                         </span>
                     </div>
                 )}
                 {phase === 'confirmado' && (
                     <div className="flex gap-1 mt-2.5">
-                        <span className="klisto-v6 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 w-full text-center">
-                            ✓ Listo · espera su fecha
+                        <span className="klisto-v6 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 w-full text-center"
+                            title="Listo · espera su fecha">
+                            <svg className="kc-check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M7.5 12.5l3 3 6-6.5" /></svg><span className="kc-ok-tx">Confirmado</span>
+                            <span className="kc-riel" aria-hidden="true"><i style={{ '--w': `${rielCita}%` }}></i></span>
                         </span>
                     </div>
                 )}
@@ -1484,7 +1590,7 @@ const CloserWorkflowPage = () => {
     };
 
     return (
-        <div ref={paginaRef} className={`h-screen overflow-y-auto bg-v6 text-slate-100 flex flex-col custom-scrollbar${activeView === 'inbox' && activeStep === 'confirmations' ? ' clarity-v6' : ''}`}
+        <div ref={paginaRef} className={`h-screen overflow-y-auto bg-v6 text-slate-100 flex flex-col custom-scrollbar${activeView === 'inbox' && (activeStep === 'confirmations' || activeStep === 'calls') ? ' clarity-v6' : ''}`}
             style={{ paddingBottom: 'calc(132px + env(safe-area-inset-bottom, 0px))' }}>
 
             {/* Header del Espacio de Trabajo Premium v6. Solo la marca y el buscador (pedido del
@@ -1896,66 +2002,49 @@ const CloserWorkflowPage = () => {
                         /* Renderizado del Kanban de Confirmaciones */
                         loading ? (
                             /* La forma del kanban de abajo, no un spinner (ver EsqueletoKanban).
-                               Las columnas son las mismas dos, con su título: si cambia una de
+                               Las columnas son las mismas tres (`ETAPAS_DEL_TABLERO`): si cambia una de
                                abajo, cambia acá. */
-                            <EsqueletoKanban rotulo="Cargando confirmaciones…" columnas={[
-                                { clase: 'k1-v6', titulo: 'Por confirmar', subgrupo: true },
-                                { clase: 'k3-v6', titulo: 'Confirmado', hecha: true },
-                            ]} />
+                            <EsqueletoKanban rotulo="Cargando confirmaciones…" columnas={ETAPAS_DEL_TABLERO.map(e => ({
+                                clase: e.clase, titulo: e.titulo, hecha: e.clave === 'confirmado',
+                            }))} />
                         ) : filteredAgendas.length === 0 ? (
                             <div className="text-center py-16 text-slate-500 text-xs font-bold uppercase tracking-wide bg-[#111219]/95 border border-slate-900 rounded-[2rem]">
                                 👏 No hay citas pendientes de confirmación.
                             </div>
                         ) : (
-                            <div className="kb-v6 kb2-v6">
-                                {/* Columna Por confirmar (fusiona "sin contactar" + "conversando" en
-                                    dos subgrupos de la MISMA columna — pedido explícito del usuario
-                                    para bajar de 3 a 2 columnas y quitar fricción visual. No se tocó
-                                    `confirmationsPipeline`/`confirm_status` ni el resto de la lógica:
-                                    cada tarjeta sigue recibiendo su `phase` real ('por_confirmar' o
-                                    'conversando'), solo cambia dónde se pinta.) */}
-                                <div className="kcol-v6 k1-v6">
-                                    <div className="kch-v6">
-                                        <span className="dt-v6"></span>
-                                        <b>Por confirmar</b>
-                                        <span className="n-v6">{confirmationsPipeline.porConfirmar.length + confirmationsPipeline.conversando.length}</span>
-                                    </div>
-                                    <div className="kbody-v6">
-                                        {confirmationsPipeline.porConfirmar.length === 0 && confirmationsPipeline.conversando.length === 0 && (
-                                            <div className="kempty-v6 done-v6">✓ Ninguno sin tocar</div>
-                                        )}
-                                        {confirmationsPipeline.porConfirmar.length > 0 && (
-                                            <>
-                                                <div className="ksub-v6"><span className="dt-v6" style={{ background: 'var(--v6-warn)', boxShadow: '0 0 0 3px color-mix(in srgb, var(--ln-warning, #d9a441) 16%, transparent)' }}></span>Sin contactar</div>
-                                                {/* Orden de entrada: renglón × 2 columnas + columna (ver renderKanbanCard). */}
-                                                {confirmationsPipeline.porConfirmar.map((a, i) => renderKanbanCard(a, 'por_confirmar', i * 2))}
-                                            </>
-                                        )}
-                                        {confirmationsPipeline.conversando.length > 0 && (
-                                            <>
-                                                <div className="ksub-v6"><span className="dt-v6" style={{ background: 'var(--v6-info)', boxShadow: '0 0 0 3px color-mix(in srgb, var(--ln-info, #60a5fa) 16%, transparent)' }}></span>Conversando</div>
-                                                {/* Mismo carril que "Sin contactar": sigue contando desde ahí. */}
-                                                {confirmationsPipeline.conversando.map((a, i) => renderKanbanCard(a, 'conversando', (confirmationsPipeline.porConfirmar.length + i) * 2))}
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Columna Confirmado */}
-                                <div className="kcol-v6 k3-v6">
-                                    <div className="kch-v6">
-                                        <span className="dt-v6"></span>
-                                        <b>Confirmado</b>
-                                        <span className="n-v6">{confirmationsPipeline.confirmado.length}</span>
-                                    </div>
-                                    <div className="kbody-v6">
-                                        {confirmationsPipeline.confirmado.length > 0 ? (
-                                            confirmationsPipeline.confirmado.map((a, i) => renderKanbanCard(a, 'confirmado', i * 2 + 1))
-                                        ) : (
-                                            <div className="kempty-v6">Sin leads confirmados.</div>
-                                        )}
-                                    </div>
-                                </div>
+                            <div className={`kb-v6 kb-etapas${arrastrando ? ' kb-arrastre' : ''}`}>
+                                {/* Una columna por etapa de la ficha. Cada una recibe tarjetas
+                                    arrastradas de las otras (ver `moverDeEtapa`). */}
+                                {ETAPAS_DEL_TABLERO.map(etapa => {
+                                    const leads = confirmationsPipeline[etapa.lista];
+                                    const recibe = arrastrando && arrastrando.desde !== etapa.clave;
+                                    return (
+                                        <div key={etapa.clave}
+                                            className={`kcol-v6 ${etapa.clase}${recibe ? ' kcol-recibe' : ''}${recibe && columnaDestino === etapa.clave ? ' kcol-encima' : ''}`}
+                                            onDragOver={recibe ? (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (columnaDestino !== etapa.clave) setColumnaDestino(etapa.clave); } : undefined}
+                                            onDragLeave={recibe ? (e) => { if (!e.currentTarget.contains(e.relatedTarget)) setColumnaDestino(null); } : undefined}
+                                            onDrop={recibe ? (e) => {
+                                                e.preventDefault();
+                                                const id = Number(e.dataTransfer.getData('text/plain')) || arrastrando.id;
+                                                setArrastrando(null);
+                                                setColumnaDestino(null);
+                                                moverDeEtapa(id, etapa.clave);
+                                            } : undefined}
+                                        >
+                                            <div className="kch-v6">
+                                                <span className="dt-v6"></span>
+                                                <b>{etapa.titulo}</b>
+                                                <span className="n-v6">{leads.length}</span>
+                                            </div>
+                                            <div className="kbody-v6">
+                                                {leads.length > 0
+                                                    ? leads.map((a, i) => renderKanbanCard(a, etapa.fase, i * ETAPAS_DEL_TABLERO.length + etapa.columna))
+                                                    : <div className={`kempty-v6${etapa.clave !== 'confirmado' ? ' done-v6' : ''}`}>{etapa.vacio}</div>}
+                                                {recibe && <div className="kdrop-v6" aria-hidden="true">Soltalo acá · pasa a {etapa.titulo}</div>}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         )
                     ) : activeStep === 'seguimientos' ? (
