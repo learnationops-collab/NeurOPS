@@ -3,7 +3,8 @@
 Reglas (Santiago, 20/10):
   · la abre la venta: una seña da 7 días; un completo, un parcial o un upsell, la duración por
     defecto (4 meses) desde el pago;
-  · una renovación la extiende 4 meses desde donde vencía (o desde el pago, si ya había vencido);
+  · una renovación es mes a mes: la extiende 1 mes desde donde vencía (o desde el pago, si ya había
+    vencido; Santiago, 22/10/2026);
   · el pago que completa una seña (completo, parcial o la cuota) la pasa a acceso completo;
   · el closer la puede acortar a voluntad (Fulfillment, `cambiar`), pero alargarla pide una venta
     nueva sin suscripción (`venta_que_extiende`, 22/10/2026);
@@ -25,6 +26,7 @@ from app.services import subscription_sync
 
 DURACION_MESES = 4
 DIAS_SENA = 7
+MESES_RENOVACION = 1  # las renovaciones se pagan mes a mes
 # Lo que, sumado a una venta que era solo seña, la pasa a acceso completo.
 COMPLETAN_SENA = ('completo', 'parcial', 'cuota')
 # Lo único que extiende sin pago (Santiago, 22/10/2026): una duración fija, con motivo.
@@ -115,7 +117,7 @@ def al_ubicar_pago(session, sale, fila, pago, abre, abierta):
     if abre and sale.kind == 'renewal':
         actual = _de(session, fila.client_id, slug)
         base = max(dia, actual.expires_at) if actual else dia
-        return otorgar(session, fila.client_id, slug, _add_months(base, DURACION_MESES), 'renovacion',
+        return otorgar(session, fila.client_id, slug, _add_months(base, MESES_RENOVACION), 'renovacion',
                        is_deposit=False, reason='Renovación', **comun)
     if abre and pago.tipo == 'seña':
         return otorgar(session, fila.client_id, slug, dia + timedelta(days=DIAS_SENA), 'alta',

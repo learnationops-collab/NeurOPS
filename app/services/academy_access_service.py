@@ -54,13 +54,15 @@ class AcademyAccessService:
     @staticmethod
     def compute_default_expiration(tipo_venta, base_date=None):
         """Regla de negocio pedida por Kerwin (2026-09-04, ver docs/integracion_learnation_api.md
-        §5.3): seña -> 7 días; pago completo o parcial -> 4 meses. La reducción automática por
+        §5.3): seña -> 7 días; pago completo o parcial -> 4 meses; renovación -> 1 mes. La reducción automática por
         cuota vencida es una fase posterior (todavía no implementada acá — ver el documento)."""
         base = base_date or date.today()
         tipo = (tipo_venta or '').strip().lower()
         tipo_norm = tipo.replace('ñ', 'n')
         if tipo_norm in ('sena', 'deposito', 'deposit', 'down_payment'):
             return base + timedelta(days=7)
+        if tipo_norm.startswith('renov'):
+            return _add_months(base, 1)  # las renovaciones son mes a mes (22/10/2026)
         return _add_months(base, 4)
 
     @staticmethod

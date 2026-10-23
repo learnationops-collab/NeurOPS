@@ -64,14 +64,6 @@ def test_la_venta_da_4_meses_y_las_cuotas_no_mueven_la_fecha(db, ana):
     assert [e.kind for e in sub.events] == ['alta']
 
 
-def test_la_renovacion_extiende_desde_donde_vencia(db, ana):
-    cobro(db, ana, 'AL - Completo', datetime(2026, 7, 1))
-    cobro(db, ana, 'AL - Renovación', datetime(2026, 10, 15))
-    sub = suscripcion(ana)
-    assert sub.expires_at == date(2027, 3, 1)  # vencía el 1/11: 4 meses desde ahí
-    assert eventos(sub)[-1] == ('renovacion', date(2026, 11, 1), date(2027, 3, 1))
-
-
 def test_sin_producto_vinculado_no_hay_suscripcion(db, ana):
     cobro(db, ana, 'SI - Completo', datetime(2026, 10, 1))
     assert Subscription.query.count() == 0

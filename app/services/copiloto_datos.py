@@ -7,6 +7,7 @@ Los resultados van como TEXTO CORTO (como en copiloto_herramientas.py): son la e
 import json
 import logging
 
+from app.services import habilidades
 from app.services.copiloto_herramientas import HerramientaError
 from app.services.tablas import motor
 
@@ -40,6 +41,18 @@ PLAN = {
 
 HERRAMIENTAS = [
     {
+        'name': 'usar_habilidad',
+        'description': 'Una pregunta frecuente ya resuelta. Si la pregunta encaja, usá esta antes que armar un plan. '
+                       + habilidades.descripcion(),
+        'input_schema': {
+            'type': 'object',
+            'properties': {'nombre': {'type': 'string', 'enum': list(habilidades.HABILIDADES)},
+                           'parametros': {'type': 'object'}},
+            'required': ['nombre'],
+            'additionalProperties': False,
+        },
+    },
+    {
         'name': 'fuentes_de_datos',
         'description': 'Fuentes de un sistema o, con fuente, sus datos (claves) para armar un plan. Usá buscar.',
         'input_schema': {
@@ -63,8 +76,10 @@ HERRAMIENTAS = [
 ]
 
 INSTRUCCIONES = '\n\n'.join([
-    'Para cualquier número, lista o comparación usá calcular_tabla: vos nunca contás ni calculás. Si no sabés las '
-    'claves, pedilas antes con fuentes_de_datos (con buscar para no traer todo).',
+    'Tenés habilidades (preguntas frecuentes ya resueltas, usar_habilidad) y operaciones (calcular_tabla con un plan '
+    'por claves). Si la pregunta encaja en una habilidad, usala; si no, armá el plan. Vos nunca contás ni calculás. '
+    'Si no sabés las claves, pedilas antes con fuentes_de_datos (con buscar para no traer todo). Los datos s. son '
+    'reglas de Work: s.estado_pago, s.deuda, s.proxima_cuota, s.dias_para_vencer, s.estado_agenda.',
     'Citá el total y los avisos del resultado (muestra chica, diferencia que puede ser azar) tal cual.',
     'Para cruzar personas entre sistemas: las filas de Work traen alumno_id, que es el alumno_id de la Academia.',
 ])
@@ -157,7 +172,14 @@ def calcular_tabla(user, sistema, plan):
     return _texto_paquete(paquete)
 
 
-_EJECUTORES = {'fuentes_de_datos': fuentes_de_datos, 'calcular_tabla': calcular_tabla}
+def usar_habilidad(user, nombre, parametros=None):
+    try:
+        return habilidades.usar(user, nombre, parametros)
+    except (habilidades.HabilidadError, motor.MotorError) as e:
+        raise HerramientaError(str(e)) from e
+
+
+_EJECUTORES = {'fuentes_de_datos': fuentes_de_datos, 'calcular_tabla': calcular_tabla, 'usar_habilidad': usar_habilidad}
 
 
 def ejecutar(nombre, entrada, user):
