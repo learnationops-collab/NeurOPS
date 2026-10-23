@@ -114,6 +114,9 @@ def fuentes_de_datos(user, sistema, fuente=None, buscar=None):
             raise HerramientaError(str(e)) from e
     else:
         cat = _academia(user, catalogo=fuente or True, buscar=buscar).get('catalogo')
+        if cat is None:
+            raise HerramientaError('La Academia todavía no expone su catálogo: usá claves que ya conozcas '
+                                   '(fuente "alumno", por ejemplo pulse_band) o preguntá sin datos.')
     return _texto_fuentes(cat) if not fuente else _texto_datos(cat)
 
 
