@@ -533,3 +533,8 @@
   - Producción: 3 alumnos vinculados a su persona (Claudia Molina, Judith De La Cruz y la segunda cuenta de Laura Hernández), 22 personas creadas desde la Academia y 24 suscripciones nuevas. Total: 243 suscripciones (130 vigentes); ningún alumno con producto pago queda sin persona.
   - Se borró el test de la renovación de 4 meses.
   - Verificación: sin tests (regla del proyecto); el backfill se corrió en modo prueba antes de aplicarlo.
+
+- **23 de Octubre de 2026 (Work define el estado de la cuota)** *([app/services/academy_payment_status.py](../../app/services/academy_payment_status.py), [app/services/reminder_scheduler.py](../../app/services/reminder_scheduler.py), [app/api/academia.py](../../app/api/academia.py), [docs/integracion_learnation_api.md](../integracion_learnation_api.md), [tests/services/test_academy_payment_estado.py](../../tests/services/test_academy_payment_estado.py) [MODIFY])*:
+  - El estado de pago que va a la Academia lleva `estado` (baja, vencida, por_vencer a 7 días o menos, al_dia, sena, pagado), calculado con `regla_estado`, la misma que usa el motor de tablas (`s.estado_pago`). La Academia ya lo muestra tal cual.
+  - Una vez por día (job horario del avance y su cron), se reenvía el estado de los clientes con una cuota pendiente entre hace 7 días y dentro de 8: el «por vencer» y el «vencida» llegan el día que pasan.
+  - Retomado del commit archivado `d05d6dc0` (rama cerrada el 22/10), unificado con la `regla_estado` que agregó el motor de tablas.
