@@ -15,6 +15,7 @@ from app.services.comercial_vocabulario import (
     ASISTIO, PRESENTO, REALIZADAS, CERRO, DESCARTADAS, pre_call_de, post_call_de, cerro_sin_venta, chip,
     pct,
 )
+from app.services.ventas_previas import con_venta_posterior
 
 
 class ComercialAgendasMixin:
@@ -66,19 +67,28 @@ class ComercialAgendasMixin:
         tipos_email, tipos_ig, tipos_id = CloserAgendasService._tipos_por_contacto(appts)
         tipos_persona = _tipos_por_persona({a.person_uuid for a in appts if a.person_uuid})
 
+        def tipos_de(a):
+            cliente = a.client
+            # Con persona, sus pagos; el mail y el instagram del cliente solo sin ella (plan_personas).
+            if a.person_uuid:
+                return tipos_persona.get(a.person_uuid, set()) | tipos_id.get(a.client_id, set())
+            mail = _limpiar_email(cliente.email) if cliente else None
+            ig = _limpiar_ig(cliente.instagram) if cliente else None
+            return tipos_email.get(mail, set()) | tipos_ig.get(ig, set()) | tipos_id.get(a.client_id, set())
+
+        # Una llamada solo cierra con un pago del día de la llamada en adelante: el de un cliente que
+        # ya había comprado antes no es de esa llamada (`ventas_previas`). Se mira la fecha solo en
+        # las que ya tienen un pago de venta por tipo, que son pocas.
+        con_pago = [a for a in appts if any(t in REAL_SALE_TIPOS for t in tipos_de(a))]
+        cierran = con_venta_posterior(con_pago)
+
         hoy = date.today()
         ahora = datetime.utcnow()
         filas = []
         for a in appts:
             cliente = a.client
-            mail = _limpiar_email(cliente.email) if cliente else None
-            ig = _limpiar_ig(cliente.instagram) if cliente else None
-            # Con persona, sus pagos; el mail y el instagram del cliente solo sin ella (plan_personas).
-            if a.person_uuid:
-                tipos = tipos_persona.get(a.person_uuid, set()) | tipos_id.get(a.client_id, set())
-            else:
-                tipos = tipos_email.get(mail, set()) | tipos_ig.get(ig, set()) | tipos_id.get(a.client_id, set())
-            con_venta = any(t in REAL_SALE_TIPOS for t in tipos)
+            tipos = tipos_de(a)
+            con_venta = a.id in cierran
             # Qué venta es, para el desglose pago completo / split pay del panel Cierre. Una agenda
             # cuenta UNA venta aunque el lead tenga las dos (dos programas): manda el pago
             # completo, y así completo + split siempre suma las agendas en "Venta".
