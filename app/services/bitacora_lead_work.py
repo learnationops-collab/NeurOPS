@@ -4,7 +4,7 @@ Cada entrada: `{id, fecha (datetime UTC), grupo, que, detalle, tono, por, tramo}
 cuando la entrada es de un momento por naturaleza (la conversación es siempre Pre call); el resto lo
 ubica la fecha.
 """
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from sqlalchemy import or_
 
@@ -13,6 +13,7 @@ from app.models import (Ad, Appointment, Conversation, ConversationalMessage, Fi
 
 PRE_CALL = 'pre_call'
 TOPE_INTERACCIONES = 150
+REPETIDA = timedelta(minutes=10)
 
 _TIPO_VENTA = {'new': 'Venta nueva', 'renewal': 'Renovación', 'upsell': 'Upsell'}
 _EVENTO_SUSCRIPCION = {
@@ -64,8 +65,15 @@ def conversacion(person_uuid):
                ConversationalMessage.query.filter(ConversationalMessage.message_id.in_(ids_msj - {None})).all()}
     anuncios = {a.id: a.name for a in
                 Ad.query.filter(Ad.id.in_({r.ad_id for r in respuestas if r.ad_id})).all()}
+    ultima_palabra = {}
     for r in respuestas:
+        # La misma palabra en la misma conversación a minutos de distancia es un doble registro, no
+        # otro ingreso: se muestra una vez.
+        previa = ultima_palabra.get((r.conversation_id, r.keyword))
+        repetida = bool(r.keyword and previa and r.created_at - previa < REPETIDA)
         if r.keyword:
+            ultima_palabra[(r.conversation_id, r.keyword)] = r.created_at
+        if r.keyword and not repetida:
             campana, _ = campana_de(r.keyword, r.created_at)
             detalle = ' · '.join(p for p in (campana and f'campaña {campana.nombre}',
                                              anuncios.get(r.ad_id) and f'anuncio {anuncios[r.ad_id]}') if p)
