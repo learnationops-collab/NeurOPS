@@ -9,14 +9,13 @@ import './reparto-estados.css';
  *
  * El diseño es el de Kerwin (30/09/2026):
  *
- *   · Gráfico: una dona con un arco por estado y, al lado, los tres grupos que importan —sin
- *     resultado, en curso y cerradas— con su porcentaje y su barra. Al medio, el porcentaje sin
- *     resultado, que es la cifra que se viene a mirar. Detrás, el humo del tablero (`Humo`).
+ *   · Gráfico: una dona con un arco por estado y, al lado, los grupos (desde el 23/10/2026: show
+ *     up, no show, canceladas, reprogramadas, sin reporte, aún no ocurrió y descartadas) con su
+ *     porcentaje y su barra. Al medio, el show up. Detrás, el humo del tablero (`Humo`).
  *   · Tabla: una fila por estado, con la barra escalada al estado más grande.
  *
  * Qué estado va en qué grupo lo decide el backend (`GRUPO_DE_ESTADO` en `comercial_analitica.py`):
- * cada estado llega con su `grupo` y acá solo se suma. Los tres grupos se dibujan siempre, también
- * en cero, para que la lista no cambie de forma de un período a otro.
+ * cada estado llega con su `grupo` y acá solo se suma.
  *
  * Cada estado y cada grupo lleva a Revisar con las agendas que lo componen: un estado filtra por su
  * etiqueta y un grupo por las de todos sus estados (un array en la misma faceta es un OR).
@@ -25,15 +24,24 @@ import './reparto-estados.css';
  * como en `MatrizCierres`: son las etiquetas que el CSS global no fuerza a 400.
  */
 
+// Los grupos del 23/10/2026 (antes: sin resultado, en curso y cerradas). `fijo`: se dibuja también
+// en cero, para que lo que se viene a mirar no cambie de lugar de un período a otro.
 export const GRUPOS = [
-    { key: 'sin_resultado', label: 'Sin resultado', tone: 'error' },
-    { key: 'en_curso', label: 'En curso', tone: 'info' },
-    { key: 'cerradas', label: 'Cerradas', tone: 'success' },
+    { key: 'show_up', label: 'Show up', tone: 'success', fijo: true },
+    { key: 'no_show', label: 'No show', tone: 'error', fijo: true },
+    { key: 'canceladas', label: 'Canceladas', tone: 'brand-primary', fijo: true },
+    { key: 'reprogramadas', label: 'Reprogramadas', tone: 'info', fijo: true },
+    { key: 'sin_reporte', label: 'Sin reporte', tone: 'warning' },
+    { key: 'por_ocurrir', label: 'Aún no ocurrió', tone: 'idle' },
+    { key: 'descartadas', label: 'Descartadas', tone: 'idle' },
 ];
 
-// Un estado que llegue sin grupo (un backend viejo) se cuenta en curso, para que los tres sigan
-// sumando el total: perderlo de la suma rompería el 100% en silencio.
-const GRUPO_POR_DEFECTO = 'en_curso';
+// Un estado que llegue sin grupo (un backend viejo) se cuenta como descartado, para que los grupos
+// sigan sumando el total: perderlo de la suma rompería el 100% en silencio.
+const GRUPO_POR_DEFECTO = 'descartadas';
+
+const ORDEN_DE_GRUPO = Object.fromEntries(GRUPOS.map((g, i) => [g.key, i]));
+const ordenDe = (e) => ORDEN_DE_GRUPO[e.grupo] ?? ORDEN_DE_GRUPO[GRUPO_POR_DEFECTO];
 
 const color = (tone) => `var(--${tone || 'idle'})`;
 
@@ -56,7 +64,7 @@ export const repartir = (ns, decimales = 1) => {
     return pisos.map(p => p / 10 ** decimales);
 };
 
-/** Los tres grupos con su cuenta, su porcentaje y sus estados. */
+/** Los grupos con su cuenta, su porcentaje y sus estados; los que no son `fijo` solo si tienen agendas. */
 export const agrupar = (estados) => {
     const grupos = GRUPOS.map(g => ({ ...g, n: 0, estados: [] }));
     const porKey = Object.fromEntries(grupos.map(g => [g.key, g]));
@@ -66,7 +74,18 @@ export const agrupar = (estados) => {
         g.estados.push(e);
     });
     const pcts = repartir(grupos.map(g => g.n));
-    return grupos.map((g, i) => ({ ...g, pct: pcts[i] }));
+    return grupos.map((g, i) => ({ ...g, pct: pcts[i] })).filter(g => g.fijo || g.n);
+};
+
+/**
+ * El show up del centro, con la misma definición que la tarjeta del tablero (`comercial_service`):
+ * asistieron / (asistieron + no show). Las canceladas, reprogramadas y las que no pasaron no son
+ * llamadas que ocurrieron y no entran en la cuenta.
+ */
+export const showUpDe = (grupos) => {
+    const n = (key) => grupos.find(g => g.key === key)?.n || 0;
+    const realizadas = n('show_up') + n('no_show');
+    return realizadas ? (n('show_up') / realizadas) * 100 : null;
 };
 
 const pct1 = (x) => x.toFixed(1);
@@ -92,7 +111,7 @@ const R = 84 - GRUESO / 2;
 // un estado con una sola agenda sigue viéndose.
 const RENDIJA = 0.7;
 
-const Dona = ({ estados, total, sinResultado, activo, irA }) => {
+const Dona = ({ estados, total, showUp, activo, irA }) => {
     // Dónde arranca cada arco: la suma de los anteriores, en % de la vuelta.
     const arranques = estados.map((_, i) => estados
         .slice(0, i).reduce((a, e) => a + (e.n / total) * 100, 0));
@@ -127,8 +146,10 @@ const Dona = ({ estados, total, sinResultado, activo, irA }) => {
                 })}
             </svg>
             <span className="est-centro">
-                <Pct valor={Math.round(sinResultado)} className="est-centro-pct" />
-                <small className="est-centro-rot">sin resultado</small>
+                {showUp === null
+                    ? <b className="est-centro-pct">—</b>
+                    : <Pct valor={Math.round(showUp)} className="est-centro-pct" />}
+                <small className="est-centro-rot">show up</small>
             </span>
         </div>
     );
@@ -162,11 +183,12 @@ const FilaGrupo = ({ g, i, total, irA, onActivo }) => {
 const Grafico = ({ estados, total, irA }) => {
     const [activo, setActivo] = useState(null);
     const grupos = agrupar(estados);
-    const sin = grupos.find(g => g.key === 'sin_resultado');
+    // Los arcos van en el orden de los grupos, así cada grupo queda en un tramo seguido de la dona.
+    const enOrden = [...estados].sort((a, b) => ordenDe(a) - ordenDe(b));
     return (
         <div className="est-caja caja">
-            <Humo clase="est-aura" colores={[color('error'), color('brand-secondary'), color('brand-primary')]} />
-            <Dona estados={estados} total={total} sinResultado={sin.pct} activo={activo} irA={irA} />
+            <Humo clase="est-aura" colores={[color('success'), color('brand-secondary'), color('brand-primary')]} />
+            <Dona estados={enOrden} total={total} showUp={showUpDe(grupos)} activo={activo} irA={irA} />
             <div className="est-grupos">
                 {grupos.map((g, i) => (
                     <FilaGrupo key={g.key} g={g} i={i} total={total} irA={irA} onActivo={setActivo} />
@@ -178,7 +200,8 @@ const Grafico = ({ estados, total, irA }) => {
 
 /* --- Tabla --------------------------------------------------------------------------------- */
 
-const Tabla = ({ estados, irA }) => {
+const Tabla = ({ estados: crudos, irA }) => {
+    const estados = [...crudos].sort((a, b) => ordenDe(a) - ordenDe(b));
     const max = Math.max(...estados.map(e => e.n), 1);
     const pcts = repartir(estados.map(e => e.n));
     return (

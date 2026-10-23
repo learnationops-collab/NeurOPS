@@ -218,35 +218,33 @@ POR_OCURRIR = {'key': 'por_ocurrir', 'label': 'Aún no ocurrió', 'tone': 'idle'
 TONO_EN_PANEL = {
     'sena': 'brand-secondary',
     'seguimiento': 'info',
+    # Con los grupos del 23/10 "Canceladas" tiene su barra: en gris se confundía con "Descartadas".
+    'cancelo': 'brand-primary',
 }
 
-# El gráfico del panel Estados (diseño de Kerwin, 30/09/2026) junta los estados en tres grupos:
-# cuántas citas no dieron ningún resultado, cuántas siguen abiertas y cuántas cerraron. La
-# pertenencia vive SOLO acá —el frontend suma por `grupo` y no tiene su propia copia—, porque una
-# segunda lista en el cliente se desincroniza en silencio el día que se agregue un estado.
+# El gráfico del panel Estados junta los estados en grupos. La pertenencia vive SOLO acá —el
+# frontend suma por `grupo` y no tiene su propia copia—, porque una segunda lista en el cliente se
+# desincroniza en silencio el día que se agregue un estado.
 #
-#   · Sin resultado: la llamada no se reportó o no ocurrió. Además de "Sin reporte" y "No show",
-#     que nombra el diseño, entran "Canceló" y "Reagendó": son las otras dos pérdidas de agenda
-#     del dashboard del closer, y en las dos la cita no tuvo llamada.
-#   · En curso: la llamada todavía no pasó ("Aún no ocurrió") o pasó y la venta sigue abierta
-#     (seguimiento, segunda llamada, asistió sin más datos).
-#   · Cerradas: hubo venta o seña.
+# Hasta el 23/10/2026 eran tres (sin resultado, en curso, cerradas) y "Sin resultado" mezclaba el
+# no show con las canceladas, las reprogramadas, los descartes y las sin reportar: daba ~57% y no
+# decía qué pasó. Ahora cada pérdida va por separado y "Show up" junta todo lo que tuvo llamada.
+#   · Show up: asistió, con o sin venta (segunda llamada, seguimiento, venta, seña).
+#   · Descartadas: el closer o el barrido de los 30 días la dieron por terminada sin llamada.
 GRUPO_DE_ESTADO = {
-    'sin_reporte': 'sin_resultado',
-    'no_show': 'sin_resultado',
-    'reagendo': 'sin_resultado',
-    'cancelo': 'sin_resultado',
-    'lead_perdido': 'sin_resultado',
-    'no_lead': 'sin_resultado',
-    # La que archivó el barrido de los 30 días: hasta el 10/10/2026 era un "Lead perdido" más, y en
-    # el mismo grupo sigue (cambió el nombre, no los números).
-    'archivada_sin_reporte': 'sin_resultado',
-    'por_ocurrir': 'en_curso',
-    'asistio': 'en_curso',
-    'segunda_llamada': 'en_curso',
-    'seguimiento': 'en_curso',
-    'venta': 'cerradas',
-    'sena': 'cerradas',
+    'asistio': 'show_up',
+    'segunda_llamada': 'show_up',
+    'seguimiento': 'show_up',
+    'venta': 'show_up',
+    'sena': 'show_up',
+    'no_show': 'no_show',
+    'cancelo': 'canceladas',
+    'reagendo': 'reprogramadas',
+    'sin_reporte': 'sin_reporte',
+    'por_ocurrir': 'por_ocurrir',
+    'lead_perdido': 'descartadas',
+    'no_lead': 'descartadas',
+    'archivada_sin_reporte': 'descartadas',
 }
 
 

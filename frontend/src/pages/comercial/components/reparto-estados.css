@@ -114,16 +114,17 @@
     color: var(--text-muted);
 }
 
+/* Hasta siete grupos al lado de la dona: más juntos y más chicos que cuando eran tres. */
 .dc-shell .est-grupos {
     display: grid;
-    gap: var(--s4);
+    gap: var(--s2);
     min-width: 0;
 }
 
 /* El margen negativo deja el texto alineado con el borde y le da aire al fondo del hover. */
 .dc-shell .est-grupo {
     display: grid;
-    gap: var(--s2);
+    gap: 4px;
     min-width: 0;
     width: calc(100% + 16px);
     margin: -6px -8px;
@@ -144,7 +145,7 @@
 }
 
 .dc-shell .est-grupo-nom {
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 600;
     line-height: 1.25;
     color: var(--text-on-surface);
@@ -155,7 +156,7 @@
 }
 
 .dc-shell .est-grupo-pct {
-    font-size: 20px;
+    font-size: 16px;
     font-weight: 900;
     line-height: 1;
     letter-spacing: -.025em;
@@ -166,7 +167,7 @@
 
 .dc-shell .est-riel {
     display: block;
-    height: 8px;
+    height: 6px;
     border-radius: var(--radius-pill);
     background: var(--idle-border);
     overflow: hidden;
