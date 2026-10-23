@@ -651,3 +651,9 @@
 
 - **23 de Octubre de 2026 (La Academia lee la suscripción del alumno)** *([app/api/external/academy.py](../../app/api/external/academy.py), [docs/academy_consulta_ventas.md](../academy_consulta_ventas.md) [MODIFY])*:
   - `GET /api/external/academy/subscriptions?work_uuid=|work_client_id=|email=`: las suscripciones del alumno con su historial y los tipos de prórroga. Lo usa la herramienta Prórroga de la Academia, que reemplaza a la asignación manual de producto.
+
+- **23 de Octubre de 2026 (Ficha: confirmación más corta, examen y llamada legibles)** *([app/services/ficha_vocabulario.py](../../app/services/ficha_vocabulario.py), [app/services/ficha_acciones_service.py](../../app/services/ficha_acciones_service.py), [app/services/ficha_lead_service.py](../../app/services/ficha_lead_service.py), [frontend/src/components/ficha/tabs/TabConfirmacion.jsx](../../frontend/src/components/ficha/tabs/TabConfirmacion.jsx), [frontend/src/components/ficha/FichaHeader.jsx](../../frontend/src/components/ficha/FichaHeader.jsx), [frontend/src/pages/closer/CloserWorkflowPage.jsx](../../frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])*:
+  - Etapas de confirmación: Por contactar · Contactado · Confirmado. Horario, VideoAsk y Testimonio quedan en las citas viejas y la ficha las lee como Contactado. Tocar Confirmado = «Listo · 100% confirmado». «Deshacer» vuelve a Contactado (antes respondía «No hay nada que guardar»).
+  - Se saca «Dolores que contó» de la pestaña; la columna `confirmation_pain_points` sigue con lo cargado.
+  - Cabecera: sin examen en la cita, se muestra el que la persona eligió en el formulario. La llamada se lee «Hoy · 17:35» / «Mañana · 17:35» con una pastilla animada de cuánto falta (verde, ámbar con pulso < 2 h, magenta ±15 min, apagada si ya pasó).
+  - Closer · Confirmar: sin nadie por confirmar, la primera tarjeta muestra «N confirmados» en vez de «Te falta N por reportar».
