@@ -145,9 +145,11 @@ def confirmacion(appt, datos, usuario):
         payload['confirm_status'] = 'Confirmado'
         payload['confirmation_stage'] = etapas[-1]['clave'] if etapas else 'confirmado'
     elif datos.get('cerrada') is False and (appt.result or '').strip().lower() == 'confirmado':
-        # «Deshacer»: vuelve a Contactado. Antes no mandaba nada que guardar y respondia error.
-        payload['confirm_status'] = 'conversando'
-        payload['confirmation_stage'] = 'contactado'
+        # «Deshacer» o tocar una etapa anterior en el stepper: vuelve a esa etapa (sin etapa,
+        # a Contactado). Antes no mandaba nada que guardar y respondia error.
+        etapa = payload.get('confirmation_stage') or 'contactado'
+        payload['confirmation_stage'] = etapa
+        payload['confirm_status'] = 'por_confirmar' if etapa == 'por_contactar' else 'conversando'
 
     if not payload:
         raise ErrorDeAccion('No hay nada que guardar.')

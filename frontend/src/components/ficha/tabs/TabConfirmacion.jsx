@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, CalendarX, CheckCircle2, Trash2, UserX } from 'lucide-react';
-import { Aviso, DesplegableAgrupado, StepperFicha, TarjetaAccion, useMovimiento } from '../piezas';
-import { grupos } from '../estadoFicha';
+import { Aviso, StepperFicha, TarjetaAccion, useMovimiento } from '../piezas';
 import SubReprogramar from './confirmacion/SubReprogramar';
 import SubCancelo from './confirmacion/SubCancelo';
 import SubDescalificar from './confirmacion/SubDescalificar';
@@ -11,8 +10,11 @@ import SubEliminar from './confirmacion/SubEliminar';
 /**
  * Pestaña de confirmación (precall).
  *
- * Es el reemplazo del paso `modalStep === 'confirm'` del mazo del closer: etapa,
- * «cómo viene» y la nota para la llamada.
+ * Es el reemplazo del paso `modalStep === 'confirm'` del mazo del closer: etapa
+ * y la nota para la llamada.
+ *
+ * «Cómo viene» se sacó de acá (23/10/2026): la etapa ya dice cómo viene. La columna
+ * sigue en la base con lo que ya se cargó.
  *
  * El recordatorio previo se quitó a pedido del equipo (28/09/2026). El campo sigue en
  * la base y en el endpoint: lo que se fue es el control, no el dato.
@@ -26,11 +28,10 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
     const mov = useMovimiento();
     const [guardando, setGuardando] = useState(false);
     const conf = ficha?.confirmacion || {};
-    // El backend manda `como_viene` y `dolores` como {clave, label} —asi un slug historico
-    // que ya no esta en ninguna lista no desaparece— y el desplegable trabaja con la clave.
-    const comoViene = conf.como_viene?.clave ?? conf.como_viene ?? null;
     const cerrada = !!conf.cerrada;
-    const bloqueado = !puedeEditar || ficha?.permisos?.confirmar === false || cerrada;
+    // Un lead confirmado se sigue pudiendo editar: la nota, las acciones y volver a una etapa
+    // anterior si se marcó por error o pasó algo después.
+    const bloqueado = !puedeEditar || ficha?.permisos?.confirmar === false;
 
     const etapas = ficha?.vocabulario?.etapas_confirmacion || [];
     const indice = Math.max(0, etapas.findIndex(e => e.clave === conf.etapa));
@@ -50,10 +51,15 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
     })), [etapas, indice, cerrada]);
 
     // Tres etapas (Por contactar · Contactado · Confirmado, 23/10/2026): tocar la última es
-    // «Listo · 100% confirmado», que es lo único que escribe Confirmado en la cita.
-    const tocarEtapa = (clave) => (ultima && clave === ultima.clave
-        ? correr('cerrar_confirmacion', {})
-        : disparar('etapa_confirmacion', { etapa: clave }));
+    // «Listo · 100% confirmado», que es lo único que escribe Confirmado en la cita. Ya
+    // confirmado, tocar una anterior lo vuelve a esa etapa (`cerrada: false`).
+    const tocarEtapa = (clave) => {
+        if (ultima && clave === ultima.clave) {
+            if (!cerrada) correr('cerrar_confirmacion', {});
+            return;
+        }
+        disparar('etapa_confirmacion', cerrada ? { etapa: clave, cerrada: false } : { etapa: clave });
+    };
 
     /* Guardado al vuelo (stepper, desplegables, nota): el cascarón ya muestra el error
        en un aviso, pero relanza para que las sub-vistas puedan reaccionar. Acá no hay
@@ -108,25 +114,10 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
 
             <StepperFicha
                 rotulo="Etapa de confirmación"
-                ayuda={cerrada ? 'Confirmación completa' : 'Tocá la etapa a la que llegó · se guarda solo'}
+                ayuda={cerrada ? 'Confirmación completa · tocá otra etapa para volver' : 'Tocá la etapa a la que llegó · se guarda solo'}
                 pasos={pasos}
                 deshabilitado={bloqueado || guardando}
                 onPaso={bloqueado ? null : tocarEtapa} />
-
-            {/* Los dolores se sacaron de la confirmación (23/10/2026): no hacían falta. La columna
-                sigue en la base con lo que ya se cargó. */}
-            <div>
-                <DesplegableAgrupado
-                    rotulo="Cómo viene"
-                    ayuda="Se pone solo · cambialo si hace falta"
-                    etiqueta="Cómo viene"
-                    placeholder="Elegí cómo viene"
-                    grupos={grupos(ficha, 'como_viene')}
-                    valor={comoViene}
-                    deshabilitado={bloqueado}
-                    onChange={(v) => disparar('como_viene', { como_viene: v })}
-                    onAgregar={({ label }) => disparar('como_viene', { como_viene: label, nueva_opcion: label })} />
-            </div>
 
             <div className="fi-campo">
                 <label className="t-rotulo" htmlFor="fi-nota">Nota para la llamada (opcional)</label>
