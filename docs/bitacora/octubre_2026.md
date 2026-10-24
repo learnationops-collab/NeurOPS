@@ -864,3 +864,7 @@
   - **Colores contra el total** («Comparar con total: sí/no»): verde si el taller es 20 % mejor, rojo si 20 % peor; ROAS desde 1x y ganancia positiva se marcan contra un piso. El close rate con menos de 5 asistencias queda sin color y muestra «n=». Los talleres sin datos de tráfico muestran «—» en vez de $0.
   - **Columna principal «Taller»**: fecha con el punto de ganancia, la casilla de comparar y el nombre debajo; fija a la izquierda y **ensanchable** arrastrando su borde (o con las flechas; doble toque la devuelve). El ancho se recuerda. La clave de columnas guardadas cambió (`_v2`): todos arrancan en «Embudo».
   - En la lista estándar: `vistas`, `totales` y `redimensionable` son opcionales y valen para cualquier lista. Leyenda de lectura bajo la tabla.
+
+- **24 de Octubre de 2026 (Plan para Santi y Kerwin: leads A/B/C/D, perfil Triage y dashboard por segmento)** *([docs/plan_segmentos_triage.md](../plan_segmentos_triage.md) [NEW])*:
+  - Documento de trabajo, sin cambios de código: puntos nuevos de Thalamus y segmento A/B/C/D, reparto por segmento, el rol `triage` extendido para filtrar C y D y pasar a closing, y el dashboard de Dirección Comercial partido por segmento.
+  - Sale del análisis de 3.985 agendas, 979 formularios, 696 ventas y 944 pagos; trae los ids de preguntas y opciones, los valores de referencia y dónde está cada cosa en el código.
