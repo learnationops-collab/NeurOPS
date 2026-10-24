@@ -29,6 +29,7 @@ from app.models import Client, FinancialAgenda, FinancialSale, Appointment, Work
 from app.services.fuente_service import (FUENTE_SETTING, es_workshop_landing, es_workshop_vivo,
                                          es_sin_dueno, normalizar)
 from app.services import pagos_copia
+from app.services.workshop_intentos import contar_intentos
 from app.services.sales_consistency_service import filtro_de_pagos
 from app.services.ticket_service import SENA, VENTA, claves_de_venta, ticket_de
 
@@ -121,6 +122,7 @@ def _contar_aplicaciones(desde, hasta, tz):
     from app.services.formulario_lead import form_data_de
 
     conteo = {'vivo': 0, 'landing': 0}
+    emails = set()
     for c in clientes:
         fd = form_data_de(c)
         fuente_form = fd.get('fuente_form')
@@ -132,6 +134,9 @@ def _contar_aplicaciones(desde, hasta, tz):
             grupo = 'vivo'
         if grupo:
             conteo[grupo] += 1
+            emails.update(str(e).strip().lower() for e in (c.email, fd.get('mail')) if e)
+    # Agendas 2.0 guarda el formulario al agendar: los que lo completaron y no agendaron estan aparte
+    conteo['vivo'] += contar_intentos(inicio, fin, emails)
     return conteo
 
 

@@ -177,3 +177,28 @@ def test_el_prefill_del_taller_suma_a_quien_se_volvio_a_anotar(db):
     assert datos['aplicaciones_form'] == 3
     assert datos['desglose']['vivo']['aplicaciones_form'] == 2
     assert datos['desglose']['landing']['aplicaciones_form'] == 1
+
+
+# --- Intentos de Agendas 2.0 que completaron el formulario y no agendaron -------------------------
+
+def intento(db, *, email, estado='incompleta', paso=9, funnel='workshop', evento='sesion', creado=DENTRO):
+    from app.agendas_v2.modelos import SchedIntento
+    fila = SchedIntento(evento_id=evento, funnel_id=funnel, email=email, estado=estado, paso=paso, creado_en=creado)
+    db.session.add(fila)
+    db.session.commit()
+
+
+def test_suma_a_quien_llego_al_calendario_o_fue_descalificado_y_no_agendo(db):
+    intento(db, email='a@t.local', paso=9)                          # llego al calendario (el paso mas alto)
+    intento(db, email='b@t.local', estado='descalificada', paso=8)  # respondio y el formulario lo corto
+    intento(db, email='c@t.local', paso=3)                          # dejo solo el contacto y una respuesta
+    intento(db, email='d@t.local', paso=9, funnel='setting')        # el link de un setter no es del taller
+
+    assert contar() == {'vivo': 2, 'landing': 0}
+
+
+def test_un_intento_no_se_cuenta_si_su_formulario_ya_cuenta(db):
+    fila = cliente(db, creado=DENTRO, enviado=DENTRO)
+    intento(db, email=fila.email, paso=9)
+
+    assert contar() == {'vivo': 1, 'landing': 0}
