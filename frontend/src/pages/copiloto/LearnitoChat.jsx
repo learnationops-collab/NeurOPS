@@ -1,29 +1,24 @@
 // El chat de Learnito: la lista de mensajes y el redactor con dictado por voz. Lo usan el modal (desde
 // el dock) y la página /copiloto; la conversación es la de LearnitoContext, así que es la misma en los dos.
-// Con el cerebro de la Academia (la dirección), las respuestas vienen en markdown y pueden traer botones u
-// opciones para seguir; la conversación se puede calificar para revisar después las que salieron mal.
+// Las respuestas del cerebro de la Academia vienen en markdown y pueden traer gráficos (ubicados en el texto con
+// su marcador, [[A]]), botones u opciones para seguir y una acción para confirmar. La conversación se puede
+// calificar para revisar después las que salieron mal.
 import { useEffect, useRef, useState } from 'react';
-import { Check, Copy, Frown, Meh, Mic, MicOff, Send, Smile, Sparkles } from 'lucide-react';
+import { Bell, Check, Copy, Frown, Meh, MessageSquare, Mic, MicOff, Send, Smile, Sparkles, X } from 'lucide-react';
 import { Button, EmptyState, FieldError, IconButton, TextArea } from '../../components/standard';
 import { useLearnito } from '../../sesion/LearnitoContext';
 import { juntar } from './dictado';
+import Grafico from './Grafico';
 import Markdown from './Markdown';
 import { useDictado } from './useDictado';
 import UsoMensual from './UsoMensual';
 import './copiloto.css';
 
-const SUGERENCIAS = {
-    local: [
-        'Decime mis agendas de hoy',
-        '¿Quién me debe más?',
-        'Redactame un seguimiento para un alumno que no responde hace una semana',
-    ],
-    cerebro: [
-        'Ventas por mes de este año',
-        '¿Qué cuotas vencen esta semana?',
-        'Show up por closer en los últimos 30 días',
-    ],
-};
+const SUGERENCIAS = [
+    'Mis agendas de hoy',
+    '¿Quién me debe más?',
+    'Show up por closer en los últimos 30 días',
+];
 
 const CALIFICACIONES = [
     { valor: 'insatisfactoria', texto: 'Insatisfactoria', icono: <Frown size={13} /> },
@@ -48,16 +43,81 @@ function Siguientes({ mensaje, indice, tocar, deshabilitado }) {
     );
 }
 
-function Mensaje({ role, content, mensaje }) {
+// El texto con sus gráficos: cada [[A]] se reemplaza por su gráfico; los que el texto no ubicó van al final.
+function Respuesta({ texto, adjuntos }) {
+    const graficos = adjuntos && typeof adjuntos === 'object' ? adjuntos : {};
+    const partes = (texto || '').split(/\[\[([A-Z])\]\]/);
+    const usados = new Set();
+    const bloques = partes.map((p, i) => {
+        if (i % 2 === 0) return p.trim() ? <Markdown key={i} texto={p} /> : null;
+        if (!graficos[p] || usados.has(p)) return null;
+        usados.add(p);
+        return <Grafico key={i} adjunto={graficos[p]} />;
+    });
+    const resto = Object.keys(graficos).filter((id) => !usados.has(id) && graficos[id]?.tipo === 'grafico');
+    return (
+        <>
+            {bloques}
+            {resto.map((id) => <Grafico key={id} adjunto={graficos[id]} />)}
+        </>
+    );
+}
+
+// La acción que propuso la respuesta: se puede editar el texto y se hace recién al confirmar.
+function Accion({ accion, confirmar }) {
+    const [texto, setTexto] = useState(accion.texto || '');
+    const [ocupado, setOcupado] = useState(false);
+    const [error, setError] = useState(null);
+    const hacer = async (opciones) => {
+        setOcupado(true);
+        setError(null);
+        const fallo = await confirmar(opciones);
+        setOcupado(false);
+        if (fallo) setError(fallo);
+    };
+    const Icono = accion.tipo === 'aviso' ? Bell : MessageSquare;
+    return (
+        <div className={`cp-accion cp-accion--${accion.estado}`}>
+            <p className="cp-accion__titulo"><Icono size={14} aria-hidden="true" /> {accion.titulo}</p>
+            {(accion.detalle || []).map((d) => <p key={d} className="cp-accion__detalle">{d}</p>)}
+            {accion.estado === 'propuesta' ? (
+                <>
+                    <TextArea value={texto} onChange={(e) => setTexto(e.target.value)} maxLength={2000}
+                        aria-label="Texto de la acción" rows={3} />
+                    <div className="cp-botones">
+                        <Button variant="ghost" icon={<X size={14} />} disabled={ocupado}
+                            onClick={() => hacer({ descartar: true })}>Descartar</Button>
+                        <Button variant="primary" icon={<Check size={14} />} disabled={ocupado || !texto.trim()}
+                            onClick={() => hacer({ texto: texto.trim() })}>Confirmar</Button>
+                    </div>
+                    {error && <FieldError>{error}</FieldError>}
+                </>
+            ) : (
+                <>
+                    <p className="cp-accion__texto">{accion.texto}</p>
+                    <p className="cp-accion__estado">
+                        {accion.estado === 'hecha' ? (accion.resultado || 'Hecho.') : 'Descartada.'}
+                    </p>
+                </>
+            )}
+        </div>
+    );
+}
+
+function Mensaje({ role, content, mensaje, confirmar }) {
     const [copiado, setCopiado] = useState(false);
-    const copiar = () => navigator.clipboard?.writeText(content).then(() => {
+    const copiar = () => navigator.clipboard?.writeText(content.replace(/\[\[[A-Z]\]\]/g, '').trim()).then(() => {
         setCopiado(true);
         setTimeout(() => setCopiado(false), 1500);
     });
     return (
         <li className={`cp-msg cp-msg--${role === 'user' ? 'closer' : 'copiloto'}`}>
-            {mensaje ? <div className="cp-texto">{content ? <Markdown texto={content} /> : null}</div>
-                : <p className="cp-texto">{content}</p>}
+            {mensaje ? (
+                <div className="cp-texto">
+                    <Respuesta texto={content} adjuntos={mensaje.adjuntos} />
+                    {mensaje.accion && <Accion accion={mensaje.accion} confirmar={confirmar} />}
+                </div>
+            ) : <p className="cp-texto">{content}</p>}
             {role === 'assistant' && (
                 <IconButton size="xs" icon={copiado ? <Check size={13} /> : <Copy size={13} />}
                     label={copiado ? 'Copiado' : 'Copiar respuesta'} onClick={copiar} />
@@ -68,12 +128,11 @@ function Mensaje({ role, content, mensaje }) {
 
 export default function LearnitoChat() {
     const {
-        mensajes, enviando, enviar, tocar, lleno, agotado, uso, cargarUso, modo, calificacion, calificar,
+        mensajes, enviando, enviar, tocar, confirmar, agotado, uso, calificacion, calificar,
         borrador: texto, setBorrador: setTexto,
     } = useLearnito();
-    const cerebro = modo === 'cerebro';
     const ultima = mensajes.length - 1;
-    const respondio = cerebro && mensajes.some((m) => m.role === 'assistant');
+    const respondio = mensajes.some((m) => m.role === 'assistant');
     const [error, setError] = useState(null);
     const tocarBoton = async (...args) => {
         setError(null);
@@ -83,12 +142,11 @@ export default function LearnitoChat() {
     const dictado = useDictado((frase) => setTexto((t) => juntar(t, frase)));
     const finRef = useRef(null);
 
-    useEffect(() => { cargarUso(); }, [cargarUso]);
     useEffect(() => { finRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [mensajes, enviando]);
 
     const mandar = async () => {
         const limpio = texto.trim();
-        if (!limpio || enviando || lleno || agotado) return;
+        if (!limpio || enviando || agotado) return;
         dictado.detener();
         setTexto('');
         setError(null);
@@ -114,20 +172,16 @@ export default function LearnitoChat() {
                 <EmptyState icon={<Sparkles size={28} />} title="¿En qué te ayudo?"
                     action={(
                         <div className="cp-sugerencias">
-                            {SUGERENCIAS[cerebro ? 'cerebro' : 'local'].map((s) => (
-                                <Button key={s} onClick={() => setTexto(s)}>{s}</Button>
-                            ))}
+                            {SUGERENCIAS.map((s) => <Button key={s} onClick={() => setTexto(s)}>{s}</Button>)}
                         </div>
                     )}>
-                    {cerebro
-                        ? 'Escribí o tocá el micrófono y hablá. Veo los datos de Work y de la Academia: ventas, '
-                          + 'pagos, agendas, clientes y alumnos.'
-                        : 'Escribí o tocá el micrófono y hablá. Veo tus agendas y quién te debe; el avance de los '
-                          + 'alumnos todavía no.'}
+                    Escribí o tocá el micrófono y hablá. Veo tus agendas, tus clientes y quién te debe, y los números
+                    del equipo. También puedo dejar un comentario en un cliente o avisarle algo a alguien, cuando lo
+                    confirmes.
                 </EmptyState>
             ) : (
                 <ul className="cp-lista" aria-live="polite">
-                    {mensajes.map((m, i) => <Mensaje key={i} {...m} />)}
+                    {mensajes.map((m, i) => <Mensaje key={i} {...m} confirmar={(opciones) => confirmar(i, opciones)} />)}
                     {!enviando && mensajes[ultima]?.mensaje && (
                         <li className="cp-siguientes-fila">
                             <Siguientes mensaje={mensajes[ultima].mensaje} indice={mensajes[ultima].indice} tocar={tocarBoton}
@@ -152,12 +206,11 @@ export default function LearnitoChat() {
                         disabled={!dictado.soportado || enviando}
                         onClick={dictado.escuchando ? dictado.detener : dictado.empezar} />
                     <Button variant="primary" icon={<Send size={14} />} onClick={mandar}
-                        disabled={!texto.trim() || enviando || dictado.escuchando || lleno || agotado}>
+                        disabled={!texto.trim() || enviando || dictado.escuchando || agotado}>
                         Enviar
                     </Button>
                 </div>
                 {(dictado.error || error) && <FieldError>{dictado.error || error}</FieldError>}
-                {lleno && <FieldError role="note">La conversación llegó al límite. Empezá una nueva.</FieldError>}
                 {respondio && (
                     <div className="cp-calificar" role="group" aria-label="Calificar la conversación">
                         <span>¿Cómo viene la conversación?</span>

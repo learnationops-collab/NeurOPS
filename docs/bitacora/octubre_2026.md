@@ -868,3 +868,11 @@
 - **24 de Octubre de 2026 (Plan para Santi y Kerwin: leads A/B/C/D, perfil Triage y dashboard por segmento)** *([docs/plan_segmentos_triage.md](../plan_segmentos_triage.md) [NEW])*:
   - Documento de trabajo, sin cambios de código: puntos nuevos de Thalamus y segmento A/B/C/D, reparto por segmento, el rol `triage` extendido para filtrar C y D y pasar a closing, y el dashboard de Dirección Comercial partido por segmento.
   - Sale del análisis de 3.985 agendas, 979 formularios, 696 ventas y 944 pagos; trae los ids de preguntas y opciones, los valores de referencia y dónde está cada cosa en el código.
+
+- **24 de Octubre de 2026 (Learnito · todo el equipo, con lo suyo y el ranking, acciones y gráficos)** *([app/services/tablas/alcance.py](../../app/services/tablas/alcance.py) [NEW], [app/services/learnito_conector.py](../../app/services/learnito_conector.py), [app/api/copiloto.py](../../app/api/copiloto.py), [frontend/src/pages/copiloto/Grafico.jsx](../../frontend/src/pages/copiloto/Grafico.jsx) [NEW], [frontend/src/pages/copiloto/](../../frontend/src/pages/copiloto/) [MODIFY])*:
+  - Learnito es uno solo para todo el equipo (closers, setters, triage, marketing, hiring y la dirección), con el cerebro de la Academia. Fulfillment no lo ve: sus cuentas son de la Academia.
+  - Fuera de la dirección, cada uno ve lo suyo y el ranking: sus filas, sus clientes y sus expedientes (donde figura o personas con las que tuvo una agenda) y los números de todo el equipo, salvo los que agrupan por un cliente. Los datos de la Academia, solo la dirección. Lo aplica el motor de tablas, así que vale también para las habilidades.
+  - Acciones con confirmación: un comentario en la ficha de un cliente o un aviso a alguien del equipo (notificación). La tarjeta deja editar el texto; nada se hace hasta Confirmar.
+  - Un cálculo que agrupa o mide viene con su gráfico (número, anillo, barras o columnas por período), dibujado con los colores del tema.
+  - Se borró el copiloto viejo de closers (Claude local con su tope en `ai_usage`): sus tres herramientas pasaron al conector y el gasto lo cuenta la Academia. La barra de uso queda solo con el mes.
+  - ADR-W009 y su ADR-190. Tests: los nuevos en verde; la suite, salvo tres que ya fallaban antes (objeciones de la pantalla comercial y dos del vocabulario de la ficha).

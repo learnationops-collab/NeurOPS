@@ -1,176 +1,75 @@
-"""Learnito: valida la conversación, llama a Claude por el servicio que registra el uso, ejecuta las
-herramientas que pide y corta en el tope mensual de cada persona."""
-from datetime import datetime, timedelta
-from decimal import Decimal
-from types import SimpleNamespace
-
+"""Learnito en Work: todo el equipo le pregunta al cerebro de la Academia (LearnationService.learnito), que guarda la
+conversación y el gasto. Acá: quién entra, qué viaja y cómo vuelven los errores."""
 import pytest
 
-from app.models import AiUsage
-from app.services import copiloto_herramientas
-from app.services.claude_service import ClaudeService, ClaudeServiceError
+from app.services.learnation_service import LearnationAPIError, LearnationService
 
-URL = '/api/copiloto/mensaje'
-USO = '/api/copiloto/uso'
-HOLA = {'mensajes': [{'role': 'user', 'content': 'hola'}]}
-
-
-def _usage():
-    return SimpleNamespace(input_tokens=300, output_tokens=20, cache_creation_input_tokens=0, cache_read_input_tokens=0)
-
-
-def _texto(texto='Hola, ¿en qué te ayudo?', stop_reason='end_turn'):
-    return SimpleNamespace(content=[SimpleNamespace(type='text', text=texto)], usage=_usage(),
-                           stop_reason=stop_reason, _request_id='req_1')
-
-
-def _pide(nombre, entrada, id_='tu_1'):
-    bloque = SimpleNamespace(type='tool_use', id=id_, name=nombre, input=entrada)
-    return SimpleNamespace(content=[bloque], usage=_usage(), stop_reason='tool_use', _request_id='req_t')
+URL = '/api/copiloto/learnito'
+CONFIRMAR = '/api/copiloto/learnito/confirmar'
 
 
 @pytest.fixture()
-def claude(monkeypatch):
+def cerebro(monkeypatch):
     llamadas = []
 
-    def _instalar(*respuestas):
-        cola = list(respuestas) or [_texto()]
-
-        def create(**kwargs):
-            llamadas.append({**kwargs, 'messages': list(kwargs['messages'])})
-            return cola.pop(0) if len(cola) > 1 else cola[0]
-        monkeypatch.setattr(ClaudeService, '_client', SimpleNamespace(messages=SimpleNamespace(create=create)))
+    def _instalar(respuesta=None, error=None):
+        def learnito(accion, cuerpo):
+            llamadas.append((accion, cuerpo))
+            if error:
+                raise error
+            return respuesta or {'conversacion_id': 5, 'mensaje_indice': 1, 'mensaje': {'text': 'Hola'}, 'uso': {}}
+        monkeypatch.setattr(LearnationService, 'learnito', staticmethod(learnito))
         return llamadas
     return _instalar
 
 
-def _gastar(db, user, monto, cuando=None):
-    db.session.add(AiUsage(user_id=user.id, feature='copiloto', model='claude-haiku-5-5', input_tokens=0,
-                           output_tokens=0, cache_creation_input_tokens=0, cache_read_input_tokens=0,
-                           cost_usd=Decimal(monto), status='ok', created_at=cuando or datetime.utcnow()))
-    db.session.commit()
+@pytest.mark.parametrize('rol', ['closer', 'setter', 'triage', 'admin', 'director_marketing'])
+def test_todo_el_equipo_pregunta_con_quien_es(client, auth_headers, make_user, cerebro, rol):
+    user = make_user(role=rol)
+    llamadas = cerebro()
+
+    r = client.post(URL, headers=auth_headers(user), json={'pregunta': '  mis agendas  '})
+
+    assert r.status_code == 200 and r.get_json()['mensaje'] == {'text': 'Hola'}
+    accion, cuerpo = llamadas[0]
+    assert accion == 'ask' and cuerpo['pregunta'] == 'mis agendas'
+    assert cuerpo['quien']['id'] == user.id and cuerpo['quien']['rol'] == rol
 
 
-def test_el_closer_conversa_con_herramientas_y_queda_registrado(client, auth_headers, make_user, claude):
-    closer = make_user(role='closer')
-    llamadas = claude()
-
-    r = client.post(URL, headers=auth_headers(closer), json={'mensajes': [{'role': 'user', 'content': ' hola '}]})
-
-    assert r.status_code == 200 and r.get_json()['texto'] == 'Hola, ¿en qué te ayudo?'
-    assert llamadas[0]['model'] == 'claude-haiku-5-5' and llamadas[0]['max_tokens'] == 1024
-    assert [h['name'] for h in llamadas[0]['tools']] == ['mis_agendas', 'deuda_de', 'los_que_mas_deben']
-    assert llamadas[0]['messages'] == [{'role': 'user', 'content': 'hola'}]
-    assert 'Hoy es ' in llamadas[0]['system']
-    assert r.get_json()['uso']['tope_usd'] == 8
-    fila = AiUsage.query.one()
-    assert (fila.user_id, fila.feature) == (closer.id, 'copiloto')
+def test_fulfillment_no_entra(client, auth_headers, make_user, cerebro):
+    llamadas = cerebro()
+    r = client.post(URL, headers=auth_headers(make_user(role='fulfillment')), json={'pregunta': 'x'})
+    assert r.status_code == 403 and llamadas == []
 
 
-def test_ejecuta_la_herramienta_y_le_devuelve_el_resultado(client, auth_headers, make_user, claude, monkeypatch):
-    closer = make_user(role='closer')
-    monkeypatch.setattr(copiloto_herramientas, 'mis_agendas', lambda user, fecha=None: f'2 agendas ({user.id})')
-    monkeypatch.setitem(copiloto_herramientas._EJECUTORES, 'mis_agendas', copiloto_herramientas.mis_agendas)
-    llamadas = claude(_pide('mis_agendas', {}), _texto('Tenés 2 agendas hoy.'))
-
-    r = client.post(URL, headers=auth_headers(closer), json={'mensajes': [{'role': 'user', 'content': 'mis agendas'}]})
-
-    assert r.get_json()['texto'] == 'Tenés 2 agendas hoy.'
-    assert len(llamadas) == 2
-    resultado = llamadas[1]['messages'][-1]['content'][0]
-    assert resultado == {'type': 'tool_result', 'tool_use_id': 'tu_1', 'content': f'2 agendas ({closer.id})'}
-    assert AiUsage.query.count() == 2
+def test_sin_pregunta_ni_boton(client, auth_headers, make_user, cerebro):
+    cerebro()
+    assert client.post(URL, headers=auth_headers(make_user()), json={'pregunta': '  '}).status_code == 400
 
 
-def test_una_herramienta_desconocida_vuelve_como_error(client, auth_headers, make_user, claude):
-    closer = make_user(role='closer')
-    llamadas = claude(_pide('borrar_todo', {}), _texto('No puedo.'))
-
-    client.post(URL, headers=auth_headers(closer), json=HOLA)
-
-    assert llamadas[1]['messages'][-1]['content'][0]['is_error'] is True
+def test_un_error_del_cerebro_vuelve_con_su_mensaje(client, auth_headers, make_user, cerebro):
+    cerebro(error=LearnationAPIError('tope', status_code=429,
+                                     payload={'codigo': 'tope', 'mensaje': 'Llegaste al tope.'}))
+    r = client.post(URL, headers=auth_headers(make_user()), json={'pregunta': 'x'})
+    assert r.status_code == 429 and r.get_json()['error'] == 'Llegaste al tope.'
 
 
-def test_si_no_termina_de_pedir_herramientas_corta(client, auth_headers, make_user, claude):
-    closer = make_user(role='closer')
-    llamadas = claude(_pide('borrar_todo', {}))
+def test_confirmar_pasa_el_texto_o_descarta(client, auth_headers, make_user, cerebro):
+    llamadas = cerebro(respuesta={'success': True, 'accion': {'estado': 'hecha'}})
+    h = auth_headers(make_user())
 
-    r = client.post(URL, headers=auth_headers(closer), json=HOLA)
+    assert client.post(CONFIRMAR, headers=h, json={'conversacion_id': 5}).status_code == 400
+    r = client.post(CONFIRMAR, headers=h, json={'conversacion_id': 5, 'mensaje': 1, 'texto': ' Ok '})
+    assert r.status_code == 200
+    client.post(CONFIRMAR, headers=h, json={'conversacion_id': 5, 'mensaje': 1, 'descartar': True, 'texto': 'x'})
 
-    assert r.status_code == 502 and len(llamadas) == 4
-
-
-def test_en_el_tope_mensual_no_llama(client, db, auth_headers, make_user, claude):
-    closer = make_user(role='closer')
-    _gastar(db, closer, '8')
-    llamadas = claude()
-
-    r = client.post(URL, headers=auth_headers(closer), json=HOLA)
-
-    assert r.status_code == 429 and llamadas == []
-    assert r.get_json()['uso']['porcentaje'] == 100
+    assert llamadas[0][0] == 'confirm' and llamadas[0][1]['texto'] == 'Ok'
+    assert llamadas[1][1]['descartar'] is True and 'texto' not in llamadas[1][1]
 
 
-def test_uso_del_mes(client, db, auth_headers, make_user):
-    closer = make_user(role='closer')
-    _gastar(db, closer, '2')
-    _gastar(db, closer, '5', cuando=datetime.utcnow().replace(day=1) - timedelta(days=3))
-
-    datos = client.get(USO, headers=auth_headers(closer)).get_json()
-
-    assert (datos['gastado_usd'], datos['tope_usd'], datos['porcentaje']) == (2, 8, 25)
-    assert datos['renueva'].endswith('-01')
-    # La referencia diaria: el tope del mes repartido en sus días (28 a 31), y lo de hoy contra eso.
-    assert 0.25 <= datos['tope_diario_usd'] <= 0.29
-    assert datos['hoy_usd'] == 2
-    assert datos['porcentaje_hoy'] > 100
-
-
-@pytest.mark.parametrize('mensajes', [
-    [],
-    [{'role': 'assistant', 'content': 'hola'}],
-    [{'role': 'user', 'content': 'a'}, {'role': 'assistant', 'content': 'b'}],
-    [{'role': 'user', 'content': '   '}],
-    [{'role': 'user', 'content': 'x' * 4001}],
-    [{'role': 'user', 'content': 'a'}, {'role': 'user', 'content': 'b'}],
-    [{'role': 'user' if i % 2 == 0 else 'assistant', 'content': 'a'} for i in range(11)],
-])
-def test_conversacion_invalida(client, auth_headers, make_user, claude, mensajes):
-    closer = make_user(role='closer')
-    llamadas = claude()
-
-    r = client.post(URL, headers=auth_headers(closer), json={'mensajes': mensajes})
-
-    assert r.status_code == 400 and llamadas == []
-
-
-def test_un_setter_no_entra(client, auth_headers, make_user, claude):
-    setter = make_user(role='setter')
-    claude()
-
-    assert client.post(URL, headers=auth_headers(setter), json=HOLA).status_code == 403
-    assert client.get(USO, headers=auth_headers(setter)).status_code == 403
-
-
-def test_sin_clave_devuelve_503(client, auth_headers, make_user, monkeypatch):
-    closer = make_user(role='closer')
-    monkeypatch.setattr(ClaudeService, '_client', None)
-
-    assert client.post(URL, headers=auth_headers(closer), json=HOLA).status_code == 503
-
-
-def test_un_rechazo_del_modelo_no_llega_vacio(client, auth_headers, make_user, claude):
-    closer = make_user(role='closer')
-    claude(_texto(texto='', stop_reason='refusal'))
-
-    assert client.post(URL, headers=auth_headers(closer), json=HOLA).status_code == 502
-
-
-def test_error_del_servicio_conserva_el_status(client, auth_headers, make_user, monkeypatch):
-    closer = make_user(role='closer')
-
-    def falla(*args, **kwargs):
-        raise ClaudeServiceError('No se pudo conectar con Claude.', status_code=504)
-    monkeypatch.setattr(ClaudeService, 'create_message', falla)
-
-    assert client.post(URL, headers=auth_headers(closer), json=HOLA).status_code == 504
+def test_una_accion_que_no_se_pudo_hacer_dice_por_que(client, auth_headers, make_user, cerebro):
+    cerebro(error=LearnationAPIError('x', status_code=422, payload={
+        'codigo': 'pedido_invalido', 'mensaje': 'Pedido inválido.',
+        'detalle': ['work no respondió «executeAction»: Esa acción es de otra persona.']}))
+    r = client.post(CONFIRMAR, headers=auth_headers(make_user()), json={'conversacion_id': 5, 'mensaje': 1})
+    assert r.status_code == 422 and r.get_json()['error'] == 'Esa acción es de otra persona.'
