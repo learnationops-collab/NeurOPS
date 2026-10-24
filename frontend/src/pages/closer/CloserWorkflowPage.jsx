@@ -96,9 +96,9 @@ const decisionDe = (a) => {
     const v = clave ? String(fd[clave] ?? '').trim() : '';
     if (!v) return null;
     if (/pareja|familia|padre|madre|espos|consult|acompa|otra persona|alguien|junto|no\b/i.test(v)) {
-        return { texto: 'Con acompañamiento', solo: false, title: v };
+        return { texto: 'No decisor', solo: false, title: v };
     }
-    if (/yo\b|solo|sola|m[ií] mism|por mi cuenta|s[ií]\b/i.test(v)) return { texto: 'Decide solo', solo: true, title: v };
+    if (/yo\b|solo|sola|m[ií] mism|por mi cuenta|s[ií]\b/i.test(v)) return { texto: 'Decisor', solo: true, title: v };
     return { texto: v.length > 20 ? `${v.slice(0, 19)}…` : v, solo: null, title: v };
 };
 
