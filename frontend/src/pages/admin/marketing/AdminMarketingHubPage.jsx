@@ -14,6 +14,7 @@ import ConexionMeta from './anuncios/ConexionMeta';
 import EmbudosResumen from './anuncios/EmbudosResumen';
 import RendimientoWorkshop from './anuncios/RendimientoWorkshop';
 import { CompararFuentes, TarjetasFuente } from './anuncios/FuentesResumen';
+import AvisoSinCampana from './anuncios/AvisoSinCampana';
 import { useEstadoDeMeta } from './anuncios/useEstadoDeMeta';
 import { PERIODOS, PERIODO_POR_DEFECTO, rangoDePeriodo } from './anuncios/metricas';
 import { agruparPalabraClave, archivarPalabraClave, mensajeDeError, pedirTablero } from './anuncios/marketingApi';
@@ -132,15 +133,18 @@ const AdminMarketingHubPage = () => {
     // null = el tablero todavía no llegó (esqueleto); [] = llegó sin `fuentes` (un servidor viejo): no se dibuja.
     const fuentes = datos ? datos.fuentes?.fuentes || [] : null;
     const fuenteDe = (key) => fuentes?.find((f) => f.key === key) || null;
+    // Palabras con gasto sin campaña vigente en el Inbox (24/10/2026): en General y en Setting.
+    const avisoSinCampana = <AvisoSinCampana sinCampana={datos?.fuentes?.sin_campana} moneda={datos?.moneda} />;
     const resumenEmbudos = embudo === 'todo' ? (
         <>
+            {avisoSinCampana}
             {!fuentes?.length && fuentes ? null : <CompararFuentes fuentes={fuentes} moneda={datos?.moneda} />}
             <EmbudosResumen embudos={datos ? datos.embudos || [] : null} desde={rango.desde} hasta={rango.hasta}
                 moneda={datos?.moneda} onElegir={(key) => cambiar({ embudo: key })}
                 cuentas={cuentas} irAMeta={() => cambiar({ tab: 'meta' })} />
         </>
     ) : embudo === 'setting' && !(fuentes && !fuenteDe('setting'))
-        ? <TarjetasFuente fuente={fuenteDe('setting')} moneda={datos?.moneda} /> : null;
+        ? <>{avisoSinCampana}<TarjetasFuente fuente={fuenteDe('setting')} moneda={datos?.moneda} /></> : null;
 
     if (params.get('tab') === 'trafico') return <Navigate to="/admin/workshops?tab=trafico" replace />;
 
