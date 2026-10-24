@@ -16,6 +16,7 @@ import ResumenTab from './tabs/ResumenTab';
 import HistorialTab from './tabs/HistorialTab';
 import PlanificarTab from './tabs/PlanificarTab';
 import Legado from './tabs/Legado';
+import CorrelacionesTab from './correlaciones/CorrelacionesTab';
 import { aCamposLocales, aInicioUtc, esProximo, zonaNavegador } from './agendaTaller';
 
 /**
@@ -40,6 +41,7 @@ const PESTANAS = [
     { key: 'talleres', label: 'Talleres' },
     { key: 'planificar', label: 'Planificar' },
     { key: 'trafico', label: 'Tráfico landings' },
+    { key: 'correlaciones', label: 'Correlaciones' },
 ];
 
 // Las pestañas viejas siguen abriendo lo mismo desde un link guardado.
@@ -324,7 +326,7 @@ const WorkshopDashboardPage = () => {
 
                 <div className="ws-contenido">
                         {/* Tráfico no depende de los talleres cargados: va fuera de los guards de abajo. */}
-                        {activeTab === 'trafico' ? (
+                        {activeTab === 'correlaciones' ? <CorrelacionesTab /> : activeTab === 'trafico' ? (
                             <WorkshopTraficoView />
                         ) : fallas.events && !events ? (
                             <div className="dc-shell dc-shell--embebido">
