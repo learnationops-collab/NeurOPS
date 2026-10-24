@@ -848,3 +848,7 @@
 
 - **24 de Octubre de 2026 (Setting · los cuatro gráficos del período van 2 y 2)** *([SerieDiaria.jsx](../../frontend/src/pages/admin/marketing/anuncios/SerieDiaria.jsx), [anuncios.css](../../frontend/src/pages/admin/marketing/anuncios/anuncios.css))*
   - Leads entrantes, importe gastado, agendas y costo por agenda por día salían 3 + 1 en pantallas anchas (Kerwin: no le gusta la asimetría). Ahora son dos columnas y dos filas; por debajo de 860 px, uno debajo del otro.
+
+- **24 de Octubre de 2026 (Lista estándar · el scroll horizontal ahora sí queda dentro de la tabla)** *([listas.css](../../frontend/src/components/listas/listas.css), [talleres.css](../../frontend/src/pages/admin/workshop/talleres/talleres.css))*
+  - El arreglo anterior no alcanzaba: el contenedor de la tabla (`.wt-tabla`, hijo de una grilla con `min-width: auto`) se ensanchaba hasta el ancho mínimo de las filas y la página seguía desplazándose de lado; la caja nunca desbordaba, así que tampoco aparecía la barra de arriba.
+  - `.lc-tabla` usa `contain: inline-size`: su ancho ya no cuenta para el de sus contenedores. Vale para toda lista con `ListaConfigurable`. `.wt-tabla` también con `min-width: 0`.
