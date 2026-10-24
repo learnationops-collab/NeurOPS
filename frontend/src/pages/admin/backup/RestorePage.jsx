@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Upload, AlertTriangle, CheckCircle, Database, FileText, KeyRound } from 'lucide-react';
 import { mensajeDeError, problemaDeLaClave, restaurarBackup } from './backupApi';
+import ListaTablas from './ListaTablas';
 
 // Para pedir esta palabra antes de ejecutar: una restauración BORRA todos los datos actuales.
 const PALABRA_DE_CONFIRMACION = 'RESTAURAR';
@@ -132,23 +133,8 @@ const RestorePage = ({ embebido = false }) => {
                             </div>
 
                             {previewStats.length > 0 ? (
-                                <div className="max-h-48 overflow-y-auto custom-scrollbar">
-                                    <table className="w-full text-sm text-left">
-                                        <thead className="bg-neutral-800/50 text-neutral-500 sticky top-0">
-                                            <tr>
-                                                <th className="p-2 font-medium pl-4">Tabla Detectada</th>
-                                                <th className="p-2 font-medium text-right pr-4">Reg.</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-neutral-800">
-                                            {previewStats.map((stat, i) => (
-                                                <tr key={i} className="hover:bg-neutral-800/30">
-                                                    <td className="p-2 pl-4 text-purple-300 font-mono text-xs">{stat.name}</td>
-                                                    <td className="p-2 pr-4 text-right text-white text-xs">{stat.count}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                <div className="p-3">
+                                    <ListaTablas tablas={previewStats} claveGuardado="restaurar_tablas_cols" />
                                 </div>
                             ) : (
                                 <div className="p-4 text-center text-xs text-neutral-500 italic">
