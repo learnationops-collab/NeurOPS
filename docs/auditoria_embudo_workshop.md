@@ -64,9 +64,11 @@ Retención de pitch y todo lo anterior al form son números **cargados a mano**:
 - 13% de las personas agendadas (17 de 127) no tienen formulario contado en la ventana (agendadas a mano o con el form de una ventana anterior): el numerador del agendamiento no es subconjunto del denominador.
 - La suma de la ventana atribuye a un taller formularios y agendas creados días después; es la regla de Kerwin (no se toca).
 
-## Decisiones que necesito de Kerwin
+## Decisiones de Kerwin (24/10) y qué cambió
 
-1. **Show up de citas.** Opciones: (A) como está; (B) asistieron ÷ (asistieron + no show), solo lo reportado, mostrando aparte cuántas quedaron sin reportar; (C) dividir por las citas ya vencidas incluyendo las sin reportar como falta. Recomiendo B. Requiere una columna nueva en `workshop_events` para el denominador.
-2. **Aplicaron desde Agendas 2.0.** Sumar los `SchedIntento` del funnel `workshop` que llegaron al calendario o fueron descalificados para que «Aplicaron» vuelva a incluir a quien no agendó. Recomiendo sí.
-3. **Talleres abiertos** (ventana sin cerrar): excluirlos del cálculo de tasas del Resumen, o marcarlos.
-4. «25 agendas con más del 60% y el closer 40%» del 12/10: no pude ubicarlo; ¿en qué pantalla estaba?
+1. **Show up de citas = asistieron ÷ (asistieron + no show)**, con las sin reportar aparte. Hecho: columnas `workshop_events.citas_reportadas` y `citas_sin_reportar` (migración `a3c7e1f5b9d2`), calculadas en `workshop_estados.py`. El Resumen divide por `citas_reportadas`; un taller sin esa base (null) cae a sus agendas hasta el próximo recalculo. **Hay que correr `scripts/resync_workshop_events.py --apply` en cada base tras el deploy.** Resultado con datos reales: 05/09 43%, 12/09 50%, 19/09 56%, 26/09 76%, 03/10 54%, 12/10 64%.
+2. **Aplicaron suma los `SchedIntento` del funnel `workshop`** que llegaron al calendario o fueron descalificados (`workshop_intentos.py`). 12/10: 32 → 37 aplicaciones, agendamiento 91% → 78%.
+3. Pendiente: **talleres abiertos** en los agregados del Resumen (excluir o marcar).
+4. Pendiente: dónde vio «25 agendas con más del 60% y el closer 40%».
+
+Contrato para las pantallas: cada taller trae `citas_reportadas` y `citas_sin_reportar` (pueden ser null). La tasa de show up por taller es `show_up_sales_call ÷ (citas_reportadas ?? agendas_exitosas)`.
