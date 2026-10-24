@@ -100,9 +100,9 @@ def appendix():
     lineas.append('Hay más tablas: buscar_datos las encuentra. Horas en UTC; el equipo lee el día en la zona de cada '
                   'closer (por defecto America/La_Paz).')
     lineas.append('Para agrupar o mostrar por alguien del equipo, su nombre (p.closer_id.username, '
-                  'p.setter_id.username), no su número (f.closer_id): la respuesta nombra al closer, nunca su id. El show up se mide con los '
-                  'conceptos (agenda_realizada como base, agenda_show_up), que leen s.estado_agenda, no con '
-                  'f.closer_result.')
+                  'p.setter_id.username), no su número (f.closer_id): la respuesta nombra al closer, nunca su id. '
+                  'El show up se mide con los conceptos (agenda_realizada como base, agenda_show_up), que leen '
+                  's.estado_agenda, no con f.closer_result.')
     return '\n'.join(lineas)
 
 
