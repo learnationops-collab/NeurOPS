@@ -800,3 +800,6 @@
   - «Aplicaron» suma los intentos del funnel `workshop` de Agendas 2.0 que llegaron al calendario o fueron descalificados: Agendas 2.0 guarda el formulario recién al agendar y el agendamiento daba 81–91% por construcción. 12/10: 32 → 37 aplicaciones, agendamiento 78%.
   - Los formularios del link de un setter (`setting`) ya no cuentan como del taller. En el desglose, `por_confirmar`/`confirmado`/`conversando` son Pendiente y `Cerrada`/`Follow Up`/`2TH Call` son Show Up.
   - Pendiente: talleres con ventana abierta pesan en los agregados del Resumen; Detalle del taller (`formato.js`) aún divide Asistieron por Agendas.
+- **24 de Octubre de 2026 (Workshop · «Asistieron» del taller contra las citas con resultado)** *([formato.js](../../frontend/src/pages/admin/workshop/talleres/formato.js), [FlujoEmbudo.jsx](../../frontend/src/pages/comercial/components/FlujoEmbudo.jsx))*
+  - En el embudo del taller (píldora del detalle) y en el % de la tarjeta, «Asistieron» se divide por las citas con resultado (`citas_reportadas`) y no por todas las agendas: las que nadie reportó todavía no son inasistencias. La ayuda del paso dice cuántas siguen sin reportar (`citas_sin_reportar`).
+  - Talleres sin ese dato siguen dividiendo por el paso anterior. `FlujoEmbudo` acepta `base` opcional por etapa; sin ella no cambia nada. Pedido de la auditoría del embudo.
