@@ -48,20 +48,26 @@
 @container (min-width: 600px) { .dc-shell .wr-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @container (min-width: 1180px) { .dc-shell .wr-kpis { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
 
-.dc-shell .wr-kpi { gap: var(--s3); }
+/* Compacto (24/10/2026): que el Resumen entre en una pantalla sin deslizar. */
+.dc-shell .wr-kpi { gap: 6px; padding: 12px 14px; }
 .dc-shell .wr-kpi .kpi-cab .t-eyebrow { letter-spacing: .2em; }
-.dc-shell .wr-kpi-n { font-size: clamp(26px, 2.4vw, 32px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dc-shell .wr-kpi-pie { flex-wrap: wrap; row-gap: 6px; min-width: 0; }
-.dc-shell .wr-kpi-pie .delta { flex-shrink: 0; }
+.dc-shell .wr-kpi-n { font-size: clamp(22px, 1.9vw, 26px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dc-shell .wr-kpi-pie { min-width: 0; }
+/* Si la cifra y la variación no entran juntas (cifras de seis dígitos), la variación baja entera. */
+.dc-shell .wr-kpi-fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 6px; min-width: 0; }
+.dc-shell .wr-kpi-fila .wr-kpi-n { min-width: 0; margin: 0; }
+.dc-shell .wr-kpi-fila .delta { flex-shrink: 0; height: 20px; padding: 0 6px; font-size: 10px; }
 
 /* ---- Salud del embudo + lado ----------------------------------------------- */
-.dc-shell .wr-diag { display: grid; gap: var(--s4); grid-template-columns: minmax(0, 1fr); }
+.dc-shell .wr-diag { display: grid; gap: var(--s3); grid-template-columns: minmax(0, 1fr); }
 /* Lado a lado, la columna de la derecha estira sus dos paneles al alto de la salud: sin hueco abajo. */
 @container (min-width: 1180px) { .dc-shell .wr-diag { grid-template-columns: minmax(0, 1fr) 320px; align-items: stretch; } }
 
-.dc-shell .wr-lado { display: grid; gap: var(--s4); grid-template-columns: minmax(0, 1fr); }
+.dc-shell .wr-lado { display: grid; gap: var(--s3); grid-template-columns: minmax(0, 1fr); }
 @container (min-width: 620px) and (max-width: 1179px) { .dc-shell .wr-lado { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
+.dc-shell .wr-resumen .panel { padding: var(--s4) var(--s5); }
+.dc-shell .wr-resumen .panel-cab { margin-bottom: var(--s3); }
 .dc-shell .wr-salud { container-type: inline-size; }
 .dc-shell .wr-etapas { display: grid; gap: 2px; }
 
@@ -70,7 +76,7 @@
     display: grid; align-items: center; column-gap: var(--s3);
     grid-template-columns: minmax(140px, 190px) minmax(110px, 1fr) 62px 86px 58px 52px 104px;
     grid-template-areas: "nombre pista n delta antes meta estado";
-    padding: 6px 0; border-top: 1px solid var(--border-subtle);
+    padding: 2px 0; border-top: 1px solid var(--border-subtle);
 }
 .dc-shell .wr-etapas--sin-vs .wr-etapa {
     grid-template-columns: minmax(140px, 200px) minmax(110px, 1fr) 62px 52px 104px;
@@ -78,7 +84,7 @@
 }
 .dc-shell .wr-etapas--sin-vs .wr-etapa-delta,
 .dc-shell .wr-etapas--sin-vs .wr-etapa-antes { display: none; }
-.dc-shell .wr-etapa--cab { border-top: 0; padding: 0 0 6px; }
+.dc-shell .wr-etapa--cab { border-top: 0; padding: 0 0 4px; }
 .dc-shell .wr-etapa--cab > :nth-child(2) { grid-area: pista; }
 .dc-shell .wr-etapa--cab small {
     font-size: 10px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted-40);
@@ -90,7 +96,7 @@
 .dc-shell .wr-etapa-antes { grid-area: antes; text-align: right; font-size: 12.5px; font-weight: 700; color: var(--text-muted); }
 .dc-shell .wr-etapa-meta { grid-area: meta; text-align: right; font-size: 12.5px; font-weight: 700; color: var(--text-muted); }
 .dc-shell .wr-etapa-estado { grid-area: estado; display: flex; justify-content: flex-end; }
-.dc-shell .wr-etapa-estado .chip { height: 24px; padding: 0 9px; font-size: 10px; }
+.dc-shell .wr-etapa-estado .chip { height: 20px; padding: 0 9px; font-size: 10px; }
 
 .dc-shell .wr-etapa-riel {
     position: relative; display: block; height: 10px; border-radius: var(--radius-pill); background: var(--hundido);
@@ -135,28 +141,28 @@
 /* Prioridad */
 .dc-shell .wr-prioridad .panel-cab,
 .dc-shell .wr-clarity .panel-cab { margin-bottom: var(--s3); align-items: center; }
-.dc-shell .wr-prioridad-etapa { margin-bottom: var(--s3); }
-.dc-shell .wr-prioridad-cifras { display: flex; align-items: center; gap: var(--s2); font-size: 22px; letter-spacing: -.02em; }
+.dc-shell .wr-prioridad-etapa { margin-bottom: var(--s2); }
+.dc-shell .wr-prioridad-cifras { display: flex; align-items: center; gap: var(--s2); font-size: 20px; letter-spacing: -.02em; }
 .dc-shell .wr-prioridad-cifras b { font-weight: 900; }
 .dc-shell .wr-prioridad-cifras svg { width: 16px; height: 16px; color: var(--text-muted-40); }
-.dc-shell .wr-prioridad-btn { margin-top: var(--s4); }
+.dc-shell .wr-prioridad-btn { margin-top: 10px; }
 
 /* Clarity */
 .dc-shell .wr-clarity-cuerpo { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s4); align-items: center; }
 /* El aro va en un pseudo con máscara: el fondo del panel es translúcido y un disco encima no lo tapa. */
 .dc-shell .wr-anillo {
-    position: relative; width: 84px; height: 84px; border-radius: 50%; display: grid; place-content: center; text-align: center;
+    position: relative; width: 64px; height: 64px; border-radius: 50%; display: grid; place-content: center; text-align: center;
 }
 .dc-shell .wr-anillo::before {
     content: ''; position: absolute; inset: 0; border-radius: 50%; z-index: -1;
     background: conic-gradient(var(--brand-secondary) var(--score), var(--hundido) 0);
-    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 8px));
-    mask: radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 8px));
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
 }
 .dc-shell .wr-anillo { isolation: isolate; }
-.dc-shell .wr-anillo b { font-size: 26px; font-weight: 900; line-height: 1; letter-spacing: -.03em; }
+.dc-shell .wr-anillo b { font-size: 21px; font-weight: 900; line-height: 1; letter-spacing: -.03em; }
 .dc-shell .wr-anillo small { font-size: 10px; font-weight: 700; color: var(--text-muted-40); }
-.dc-shell .wr-clarity-partes { display: grid; gap: var(--s2); min-width: 0; }
+.dc-shell .wr-clarity-partes { display: grid; gap: var(--s1); min-width: 0; }
 .dc-shell .wr-clarity-parte { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--s2); row-gap: 4px; }
 .dc-shell .wr-clarity-parte .riel { grid-column: 1 / -1; }
 

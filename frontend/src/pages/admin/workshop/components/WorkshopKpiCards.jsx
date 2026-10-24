@@ -108,10 +108,13 @@ const WorkshopKpiCards = ({ totalStats, eventsCount, cambios, anterior }) => {
                         </div>
                         {v ? (
                             <>
-                                <Cifra tag="p" className="kpi-n wr-kpi-n ui-reveal" valor={v.valor} desdeAnterior
-                                    style={{ color: `var(--${v.color || 'text-on-surface'})` }} />
-                                <div className="kpi-pie wr-kpi-pie ui-reveal">
+                                {/* La variación va junto a la cifra: en su propio renglón sumaba una fila a cada tile. */}
+                                <div className="wr-kpi-fila ui-reveal">
+                                    <Cifra tag="p" className="kpi-n wr-kpi-n" valor={v.valor} desdeAnterior
+                                        style={{ color: `var(--${v.color || 'text-on-surface'})` }} />
                                     <Cambio valor={cambios?.[k.key]} neutro={v.neutro} titulo={v.titulo} />
+                                </div>
+                                <div className="kpi-pie wr-kpi-pie ui-reveal">
                                     <span className="num trunc">{v.sub}</span>
                                 </div>
                             </>
