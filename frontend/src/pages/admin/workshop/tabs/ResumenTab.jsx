@@ -31,8 +31,12 @@ const ResumenTab = ({ realizados, goals, actions, onEditGoals, onGoToSimulador }
         setParams(siguiente, { replace: true });
     }, [params, setParams]);
 
-    // Al cambiar qué se analiza, la comparación elegida a mano se conserva.
-    const cambiarFiltro = (nuevo) => escribir({ ...paramsDeFiltro(nuevo), ...paramsDeComparacion(comparacion, nuevo) });
+    // Al cambiar qué se analiza, la comparación elegida a mano se conserva. La que sale por defecto
+    // NO se congela: «Sin comparar» de «Todos» no debe quedar pegado al pasar a «Últimos N».
+    const eligioComparacion = params.has('vs');
+    const cambiarFiltro = (nuevo) => escribir({
+        ...paramsDeFiltro(nuevo), ...paramsDeComparacion(eligioComparacion ? comparacion : null, nuevo),
+    });
     const cambiarComparacion = (nueva) => escribir(paramsDeComparacion(nueva, filtro));
 
     // `realizados` es null mientras los talleres no llegaron: cada bloque muestra su esqueleto.

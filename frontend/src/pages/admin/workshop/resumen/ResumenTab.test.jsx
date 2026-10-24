@@ -56,6 +56,25 @@ describe('Workshop › Resumen', () => {
         expect(screen.queryByRole('columnheader', { name: 'VS' })).toBeNull();
     });
 
+    it('de «Todos» a «Últimos N» la comparación pasa a los anteriores y no queda en «Sin comparar»', async () => {
+        montar('/admin/workshops');
+        await userEvent.click(screen.getByRole('button', { name: /Todos los talleres/ }));
+        await userEvent.click(screen.getByRole('menuitemradio', { name: 'Últimos 3' }));
+        const p = new URLSearchParams(ubicacion.search);
+        expect(p.get('rn')).toBe('3');
+        expect(p.has('vs')).toBe(false);
+        expect(screen.getByRole('button', { name: /Los 3 anteriores/ })).toBeInTheDocument();
+        expect(screen.getByRole('columnheader', { name: 'VS' })).toBeInTheDocument();
+    });
+
+    it('una comparación elegida a mano se conserva al cambiar qué se analiza', async () => {
+        montar('/admin/workshops?rf=ultimos&rn=2&vs=none');
+        await userEvent.click(screen.getByRole('button', { name: /Últimos 2/ }));
+        await userEvent.click(screen.getByRole('menuitemradio', { name: 'Últimos 3' }));
+        expect(new URLSearchParams(ubicacion.search).get('vs')).toBe('none');
+        expect(screen.queryByRole('columnheader', { name: 'VS' })).toBeNull();
+    });
+
     it('«Simular mejora» lleva al simulador con la etapa más lejos de su meta', async () => {
         const onGoToSimulador = vi.fn();
         montar('/admin/workshops', { onGoToSimulador });
