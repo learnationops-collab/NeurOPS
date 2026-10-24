@@ -87,7 +87,7 @@ describe('DashboardComercial · Comercial sin Finanzas ni Payroll', () => {
         montar();
         await screen.findByTestId('analizar');
 
-        expect(seccionesDelDock()).toEqual(['Analizar', 'Revisar', 'Proyectar', 'Simulador', 'Reportar']);
+        expect(seccionesDelDock()).toEqual(['Analizar', 'Revisar', 'Simulador', 'Reportar']);
     });
 
     it('un link viejo a Finanzas o Payroll en Comercial lleva a /finanzas, con el resto de la query', async () => {

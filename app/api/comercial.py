@@ -22,6 +22,7 @@ from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, RO
 from app.services import comercial_analitica as analitica
 from app.services import comercial_no_cerradas
 from app.services import comercial_reporte as reporte
+from app.services import comercial_simulador as simulador
 from app.services.booking_service import BookingService
 from app.services.comercial_service import (
     POST_CALL, POST_CALL_A_CLOSER_RESULT, PRE_CALL, PRE_CALL_A_RESULT, ROL_CLOSERS, ROL_SETTERS,
@@ -484,6 +485,15 @@ def reportes():
     except (TypeError, ValueError):
         miembro_id = None
     return jsonify(reporte.historial(miembro_id)), 200
+
+
+@bp.route('/simulador/base', methods=['GET'])
+def simulador_base():
+    """Simulador: las sumas de las ventanas con las que se arma la línea base (ver
+    `comercial_simulador`). Solo la dirección: mezcla cash, gasto en anuncios y comisiones del equipo."""
+    if not _solo_direccion():
+        return jsonify({'message': 'Forbidden'}), 403
+    return jsonify(simulador.base()), 200
 
 
 from app.api import comercial_agendas_lote  # noqa: E402,F401  (Editar en lote desde Revisar, 10/10/2026)
