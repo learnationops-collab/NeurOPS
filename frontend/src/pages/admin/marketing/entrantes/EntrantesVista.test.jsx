@@ -38,6 +38,25 @@ describe('Marketing › Entrantes', () => {
         expect(screen.getByText('mostrando 4 de 4')).toBeInTheDocument();
     });
 
+    it('muestra la tasa de respuesta: quienes contestaron o ya tienen calificación sobre el total', async () => {
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/manychat-webhook/entrantes'
+            ? { ...DATOS, filas: DATOS.filas.map((f) => ({ ...f, respondio: f.estado !== 'sin_respuesta' })) } : [] }));
+        render(<div className="dc-shell"><EntrantesVista desde="2026-10-01" hasta="2026-10-16" /></div>);
+        expect(await screen.findByText('2 de 4 respondieron')).toBeInTheDocument();
+        expect(screen.getByText('50%')).toBeInTheDocument();
+    });
+
+    it('el lead que descalificó el closer lo dice y no se corrige a calificado', async () => {
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/manychat-webhook/entrantes'
+            ? { ...DATOS, filas: [persona(1, 'Beto', 'descalificado', '4', { descalificado_por_closer: true })] } : [] }));
+        render(<div className="dc-shell"><EntrantesVista desde="2026-10-01" hasta="2026-10-16" /></div>);
+        fireEvent.click(await screen.findByText('Beto'));
+        const ficha = within(await screen.findByLabelText('Historial de Beto'));
+        expect(ficha.getByText('Lo descalificó el closer')).toBeInTheDocument();
+        fireEvent.click(ficha.getByRole('button', { name: 'Calificado' }));
+        expect(api.put).not.toHaveBeenCalled();
+    });
+
     it('desde la ficha se corrige la calificación', async () => {
         render(<div className="dc-shell"><EntrantesVista desde="2026-10-01" hasta="2026-10-16" /></div>);
         fireEvent.click(await screen.findByText('Beto'));

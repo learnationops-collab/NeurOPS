@@ -97,6 +97,7 @@ const Ficha = ({ fila, mensajes, onCerrar, onCorregir }) => {
                     <span className="t-cap mut40">{fila.ig ? `@${fila.ig} · ` : ''}{fila.clave || 'Sin palabra clave'}{fila.setter ? ` · ${fila.setter}` : ''}</span>
                 </div>
                 <Estado estado={fila.estado} />
+                {fila.descalificado_por_closer && <span className="t-cap mut40">Lo descalificó el closer</span>}
                 <button type="button" className="ibtn ibtn--sm" onClick={onCerrar} aria-label="Cerrar el historial">
                     <X aria-hidden="true" />
                 </button>
@@ -122,7 +123,7 @@ const Ficha = ({ fila, mensajes, onCerrar, onCorregir }) => {
     );
 };
 
-const KPIS = ['Entrantes', 'Calificados', 'Descalificados', 'Pendientes'];
+const KPIS = ['Entrantes', 'Tasa de respuesta', 'Calificados', 'Descalificados', 'Pendientes'];
 const LISTA = 'Leads entrantes';
 
 const EntrantesVista = ({ desde, hasta, version = 0 }) => {
@@ -137,11 +138,17 @@ const EntrantesVista = ({ desde, hasta, version = 0 }) => {
     const filas = useMemo(() => datos?.filas || [], [datos]);
     const cuenta = useMemo(() => Object.fromEntries(ORDEN_ESTADOS.map((e) => [e, filas.filter((f) => f.estado === e).length])), [filas]);
     const seguidores = filas.filter((f) => f.follower).length;
+    // Respondió = contestó algún mensaje del flujo o ya tiene calificación (`respondio` lo manda el backend).
+    const respondieron = filas.filter((f) => f.respondio ?? f.estado !== 'sin_respuesta').length;
     const abrir = useCallback((f) => setElegida((actual) => (actual?.lead_id === f.lead_id ? null : f)), []);
 
     // Corregir a mano: la fila toma el estado nuevo sin recargar la lista. «Sin dato» vuelve a en
     // conversación o sin respuesta según si contestó algún mensaje.
     const corregir = async (fila, valor) => {
+        if (fila.descalificado_por_closer && valor !== 'descalificado') {
+            toast.error('Lo descalificó el closer: la corrección no lo cambia.');
+            return;
+        }
         try {
             await api.put(`/manychat-webhook/lead/${fila.lead_id}/calificacion`, { estado: valor });
             const estado = valor !== 'sin_dato' ? valor : (fila.ultimo_respondido?.id ? 'en_conversacion' : 'sin_respuesta');
@@ -157,7 +164,7 @@ const EntrantesVista = ({ desde, hasta, version = 0 }) => {
     if (!datos) {
         return (
             <div className="en-vista">
-                <EsqueletoKpis titulos={KPIS} kpi="kpi en-kpi" className="pareja en-kpis" label="Cargando los indicadores de entrantes…" />
+                <EsqueletoKpis titulos={KPIS} kpi="kpi en-kpi" className="pareja en-kpis" min="180px" label="Cargando los indicadores de entrantes…" />
                 <section className="panel en-lista" aria-label="Entrantes">
                     <PanelCab titulo={LISTA} tip="Una fila por persona. Clic: su historial." />
                     <EsqueletoLista columnas={COLUMNAS} claveGuardado="mk_entrantes_cols" facetas={FACETAS} agrupables={AGRUPABLES}
@@ -170,14 +177,16 @@ const EntrantesVista = ({ desde, hasta, version = 0 }) => {
     const total = filas.length;
     return (
         <div className="en-vista">
-            <div className="pareja en-kpis" style={{ '--min': '220px', '--g': 'var(--s4)' }}>
+            <div className="pareja en-kpis" style={{ '--min': '180px', '--g': 'var(--s4)' }}>
                 <Kpi i={0} titulo={KPIS[0]} valor={num(total)} tip="Personas con algún webhook en el período."
                     sub={`${num(seguidores)} ya seguían la cuenta`} />
-                <Kpi i={1} titulo={KPIS[1]} valor={num(cuenta.calificado)} tip="ManyChat los marcó calificados."
+                <Kpi i={1} titulo={KPIS[1]} valor={pct(respondieron, total)} tip="Respondieron ÷ entrantes."
+                    sub={`${num(respondieron)} de ${num(total)} respondieron`} />
+                <Kpi i={2} titulo={KPIS[2]} valor={num(cuenta.calificado)} tip="Calificó y nadie lo descalificó después."
                     sub={`${pct(cuenta.calificado, total)} de los entrantes`} />
-                <Kpi i={2} titulo={KPIS[2]} valor={num(cuenta.descalificado)} tip="ManyChat los marcó no calificados."
+                <Kpi i={3} titulo={KPIS[3]} valor={num(cuenta.descalificado)} tip="No calificó o lo descalificaron después."
                     sub={`${pct(cuenta.descalificado, total)} de los entrantes`} />
-                <Kpi i={3} titulo={KPIS[3]} valor={num(cuenta.en_conversacion + cuenta.sin_respuesta)}
+                <Kpi i={4} titulo={KPIS[4]} valor={num(cuenta.en_conversacion + cuenta.sin_respuesta)}
                     tip="Todavía sin calificar."
                     sub={`${num(cuenta.en_conversacion)} en conversación · ${num(cuenta.sin_respuesta)} sin respuesta`} />
             </div>
