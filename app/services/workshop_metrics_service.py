@@ -223,17 +223,26 @@ def _estado_post_call(agenda):
     return equivalencias.get(appt.closer_result, appt.closer_result)
 
 
+# Estados normalizados: la persona se presento / la llamada aun no ocurrio ('por_confirmar',
+# 'confirmado' y 'conversando' son etapas de la confirmacion, no un resultado) / no se presento.
+_ES_SHOW_UP = {'show up', 'asistio', 'cerrada', 'cerrado', 'completada', 'terminada', 'follow up',
+               '2th call', '2da call', '2da llamada'} | set(ESTADOS_DE_VENTA)
+_ES_PENDIENTE = {'', 'pendiente', 'por confirmar', 'confirmado', 'conversando', 'contactado'}
+
+
 def _bucket_estado(estado):
-    """A cual de las 6 columnas del desglose pertenece un estado."""
-    if estado in ('Show Up', 'Show up', 'Asistió'):
+    """A cual de las 6 columnas del desglose pertenece un estado. 'Cerrada', 'Follow Up' y '2TH Call'
+    son citas a las que la persona asistio: caian en "Otros" y el close rate podia superar el show up."""
+    e = normalizar(estado)
+    if e in _ES_SHOW_UP:
         return "Show Up"
-    if estado in ('No Show', 'no show', 'Inasistencia'):
+    if e in ('no show', 'inasistencia'):
         return "No Show"
-    if estado in ('Cancelado', 'Cancelada'):
+    if e in ('cancelado', 'cancelada'):
         return "Cancelada"
-    if estado in ('Reagendado', 'Reagendada'):
+    if e in ('reagendado', 'reagendada'):
         return "Reagendada"
-    if estado == 'Pendiente':
+    if e in _ES_PENDIENTE:
         return "Pendiente"
     return "Otros"
 
