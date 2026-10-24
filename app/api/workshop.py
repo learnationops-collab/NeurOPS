@@ -3,7 +3,9 @@ from flask_login import current_user
 from app import db
 from app.models import WorkshopEvent, WorkshopGoals, WorkshopAction
 from app.decorators import workshop_required
-from app.services import workshop_agenda_service, workshop_grabaciones_service, workshop_meta_service
+from app.services import (
+    workshop_agenda_estados_service, workshop_agenda_service, workshop_grabaciones_service, workshop_meta_service,
+)
 from datetime import datetime
 import pytz
 import logging
@@ -77,6 +79,14 @@ def get_workshop_event_anuncios(event_id):
     anterior hasta el del taller): campaña › conjunto › anuncio, ver workshop_meta_service.desglose."""
     event = WorkshopEvent.query.get_or_404(event_id)
     return jsonify(workshop_meta_service.desglose(event, _tz_usuario())), 200
+
+
+@bp.route('/events/<int:event_id>/agendas-estados', methods=['GET'])
+@workshop_required
+def get_workshop_event_agendas_estados(event_id):
+    """Qué pasó con las personas que agendaron en este taller, por estado del libro de agendas."""
+    event = WorkshopEvent.query.get_or_404(event_id)
+    return jsonify(workshop_agenda_estados_service.estados_del_taller(event, _tz_usuario().zone)), 200
 
 
 def _tz_usuario():
