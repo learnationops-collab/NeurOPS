@@ -4,6 +4,8 @@ import { EsqueletoFilas, PanelCab, Segmented, Tip } from '../../../comercial/com
 import { useAnunciosTaller, useAnunciosVarios } from '../talleres/datosTaller';
 import { BASES, baseDe, tonoDe, variacion, variacionTexto } from '../talleres/comparacion';
 import { diaMes } from '../talleres/formato';
+import CajaDesplazable from '../../../../components/listas/CajaDesplazable';
+import '../../../../components/listas/listas.css';
 
 /**
  * Los anuncios de Meta que llenaron este taller: los de embudo Workshop (Marketing › Meta Ads), del
@@ -175,7 +177,7 @@ const WorkshopAnunciosView = ({ evento, formatCurrency = dineroPorDefecto, anter
                                 {todasAbiertas ? 'Cerrar todas' : 'Abrir todas'}
                             </button>
                         </PanelCab>
-                        <div className="wt-anuncios-caja">
+                        <CajaDesplazable className="wt-anuncios-caja" claseArriba="cd-arriba">
                             <table className="wt-anuncios">
                                 <thead>
                                     <tr>
@@ -228,7 +230,7 @@ const WorkshopAnunciosView = ({ evento, formatCurrency = dineroPorDefecto, anter
                                     </tr>
                                 </tfoot>
                             </table>
-                        </div>
+                        </CajaDesplazable>
                     </section>
                 </>
             )}

@@ -1,6 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, Tags } from 'lucide-react';
 import { Columnas } from './SerieDiaria';
+import CajaDeTabla from './CajaDeTabla';
 import { Kpi } from './TablaAnuncios';
 import { ErrorDeCarga, EsqueletoKpis, EsqueletoPanelTabla, HuesosSerie } from '../esqueletos';
 import EnlaceMeta from './EnlaceMeta';
@@ -152,7 +153,7 @@ const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, fuente, cuentas, v
                             : 'Todavía no hay anuncios clasificados como Workshop.'}
                     </p>
                 ) : (
-                    <div className="mk-tabla-caja">
+                    <CajaDeTabla>
                         <table className="mk-tabla mk-tabla--meta mk-tabla--ws">
                             <thead>
                                 <tr>
@@ -215,7 +216,7 @@ const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, fuente, cuentas, v
                                 </tr>
                             </tfoot>
                         </table>
-                    </div>
+                    </CajaDeTabla>
                 )}
             </section>
         </div>

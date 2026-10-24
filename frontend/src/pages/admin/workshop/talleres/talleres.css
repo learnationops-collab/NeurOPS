@@ -321,7 +321,7 @@
 .dc-shell .wt-cmp th,
 .dc-shell .wt-cmp td { padding: 10px 14px; border-bottom: 1px solid var(--border-subtle); text-align: right; }
 .dc-shell .wt-cmp th:first-child { text-align: left; width: 200px; font-weight: 700; color: var(--text-muted); }
-.dc-shell .wt-cmp thead th { vertical-align: bottom; }
+.dc-shell .wt-cmp thead th { vertical-align: bottom; position: sticky; top: 0; z-index: 2; background: var(--bg-flotante); }
 .dc-shell .wt-cmp thead small {
     display: block; font-size: 10px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted-40);
 }
