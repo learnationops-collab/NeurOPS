@@ -30,8 +30,15 @@ const SelectorHora = ({ valor, onChange, etiqueta = 'Hora', deshabilitado = fals
     const refM = useRef(null);
     const { h, m } = partes(valor);
     const hay = h !== null;
-    // Lo que se está tipeando en cada casilla, hasta que se completa o se sale de ella.
-    const [tipeo, setTipeo] = useState({ h: null, m: null });
+    // Lo que se está tipeando en cada casilla, hasta que se completa o se sale de ella. Va en un ref
+    // (al instante) y en el estado (para mostrarlo): al completar la hora se salta a los minutos en el
+    // mismo evento, y el blur de la hora tiene que ver ya vacío lo tipeado, no el «1» de antes del «19».
+    const tipeoRef = useRef({ h: null, m: null });
+    const [tipeo, setTipeoEstado] = useState({ h: null, m: null });
+    const setTipeo = (k, d) => {
+        tipeoRef.current = { ...tipeoRef.current, [k]: d };
+        setTipeoEstado(tipeoRef.current);
+    };
 
     const poner = (k, n) => {
         const nueva = k === 'h'
@@ -51,22 +58,43 @@ const SelectorHora = ({ valor, onChange, etiqueta = 'Hora', deshabilitado = fals
         poner('m', ((n % 60) + 60) % 60);
     };
 
-    const escribir = (k, e) => {
-        const d = e.target.value.replace(/\D/g, '').slice(0, 2);
+    // Cada dígito se toma de la tecla, sin depender de dónde quedó el cursor ni de la selección: al
+    // entrar a la casilla el primero reemplaza lo que había (como un reloj).
+    const completar = (k, d) => {
         const tope = k === 'h' ? 2 : 5;
         if (d.length === 2 || (d.length === 1 && Number(d) > tope)) {
-            setTipeo((t) => ({ ...t, [k]: null }));
+            setTipeo(k, null);
             poner(k, Number(d));
             if (k === 'h') refM.current?.focus();
-            else e.target.select();
+            else refM.current?.select();
         } else {
-            setTipeo((t) => ({ ...t, [k]: d }));
+            setTipeo(k, d);
         }
     };
 
+    const tecla = (k, e) => {
+        if (e.metaKey || e.ctrlKey || e.altKey) return false;
+        if (/^\d$/.test(e.key)) {
+            e.preventDefault();
+            completar(k, ((tipeoRef.current[k] ?? '') + e.key).slice(-2));
+            return true;
+        }
+        if (e.key === 'Backspace' || e.key === 'Delete') {
+            e.preventDefault();
+            const actual = tipeoRef.current[k];
+            if (k === 'm' && !actual && e.currentTarget.value === '') refH.current?.focus();
+            else setTipeo(k, actual ? actual.slice(0, -1) : '');
+            return true;
+        }
+        return false;
+    };
+
+    // Lo que entra sin tecla (pegar, dictado).
+    const escribir = (k, e) => completar(k, e.target.value.replace(/\D/g, '').slice(0, 2));
+
     const salir = (k) => {
-        const d = tipeo[k];
-        setTipeo((t) => ({ ...t, [k]: null }));
+        const d = tipeoRef.current[k];
+        setTipeo(k, null);
         if (d) poner(k, Number(d));
     };
 
@@ -84,15 +112,16 @@ const SelectorHora = ({ valor, onChange, etiqueta = 'Hora', deshabilitado = fals
                 <input ref={ref} type="text" className="fi-hr-num" inputMode="numeric" maxLength={2}
                     placeholder="--" autoComplete="off" value={texto}
                     aria-label={k === 'h' ? 'Hora, de 0 a 23' : 'Minutos, de 0 a 59'}
-                    onFocus={(e) => e.target.select()}
+                    onFocus={(e) => { setTipeo(k, null); e.target.select(); }}
+                    onMouseUp={(e) => e.preventDefault()}
                     onChange={(e) => escribir(k, e)}
                     onBlur={() => salir(k)}
                     onWheel={(e) => paso(k, e.deltaY < 0 ? grande : -grande)}
                     onKeyDown={(e) => {
+                        if (tecla(k, e)) return;
                         if (e.key === 'ArrowUp') { e.preventDefault(); paso(k, k === 'm' && e.shiftKey ? 1 : grande); }
                         if (e.key === 'ArrowDown') { e.preventDefault(); paso(k, k === 'm' && e.shiftKey ? -1 : -grande); }
                         if (e.key === 'Enter') { e.preventDefault(); salir(k); cerrar(); }
-                        if (k === 'm' && e.key === 'Backspace' && e.currentTarget.value === '') refH.current?.focus();
                     }} />
                 <button type="button" className="fi-hr-paso" tabIndex={-1} onClick={() => paso(k, -grande)}
                     aria-label={k === 'h' ? 'Una hora menos' : 'Cinco minutos menos'}>

@@ -738,3 +738,7 @@
 
 - **23 de Octubre de 2026 (Closer · decisión del lead: Decisor / No decisor)** *([frontend/src/pages/closer/CloserWorkflowPage.jsx](../../frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])*:
   - En la tarjeta de lead, «Con acompañamiento» pasa a «No decisor» y «Decide solo» a «Decisor». La respuesta completa sigue al pasar el mouse.
+
+- **23 de Octubre de 2026 (Ficha · la hora se escribe bien)** *([frontend/src/components/ficha/piezas/SelectorHora.jsx](../../frontend/src/components/ficha/piezas/SelectorHora.jsx) [MODIFY])*:
+  - Al escribir «19» en la hora quedaba «01»: al completar la hora se saltaba a los minutos y, al salir de la casilla, se volvía a guardar el «1» que había quedado de antes. Lo que se va tecleando ahora se guarda al instante y no se pisa.
+  - Cada dígito se toma de la tecla, como un reloj: el primero reemplaza lo que había, sin importar dónde quedó el cursor; Borrar quita de a uno.
