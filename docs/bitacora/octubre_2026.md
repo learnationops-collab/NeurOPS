@@ -879,3 +879,8 @@
 - **24 de Octubre de 2026 (Learnito · tope por conversación y calificar las anteriores)** *([app/api/copiloto.py](../../app/api/copiloto.py), [frontend/src/pages/copiloto/](../../frontend/src/pages/copiloto/) [MODIFY])*:
   - Cada conversación tiene un tope de 5 centavos (lo fija la Academia). Una barra arriba del uso del mes muestra cuánto va; al llenarse, el cuadro y los botones se traban.
   - Para empezar otra conversación hay que calificar las anteriores: aparecen en la ventana con sus tres botones. ADR-W010 y su ADR-191.
+- **24 de Octubre de 2026 (Admin comercial · ranking configurable, Variabilidad con capas, Simulador con proyección)** *([frontend/src/pages/comercial/](../../frontend/src/pages/comercial/), [app/services/comercial_analitica.py](../../app/services/comercial_analitica.py), [app/api/comercial.py](../../app/api/comercial.py) [MODIFY])*:
+  - Comparativas: botón «Configurar» para elegir métricas y orden, un ranking compuesto con pesos, metas con umbral y quién entra (excluidos y mínimos). Se guarda por usuario en el navegador; «Restablecer» vuelve a lo de antes.
+  - Variabilidad: barra «Capas» global a la pestaña con el período anterior superpuesto, picos y caídas (media y banda), acumulado con tendencia y el reparto por persona. El backend trae el período comparado, la semana anterior y el reparto.
+  - Proyectar y Simulador se fusionaron en «Simulador» (solo dirección): línea base por ritmo del mes o promedio de N días, palancas de setter, closer, equipo y anuncios en porcentaje o valor absoluto, horizonte elegible y escenario contra la base, sin guardarse. Endpoint `GET /comercial/simulador/base`.
+  - Verificado con la compilación de Vite y datos de prueba; falta recorrerlo con el login real.
