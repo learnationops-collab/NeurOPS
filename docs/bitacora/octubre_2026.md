@@ -817,3 +817,7 @@
   - En el dock de la dirección de marketing, «Marketing» se llama «Setting» (y el rótulo de esa pantalla). Workshop y Setting quedan separados.
   - Workshop tiene la pestaña «Rendimiento» con lo que era el embudo «Workshop» del Rendimiento de Marketing (gasto, anuncios de Meta, visitas y clics al grupo), con su selector de período. Mismo tablero y misma caché que Setting.
   - Rendimiento de Setting queda con General y Setting. La tarjeta Workshop del resumen y los links con `embudo=workshop` redirigen a Workshop › Rendimiento, conservando el período.
+
+- **24 de Octubre de 2026 (Workshop · Próximos talleres sin acciones y aviso de Correlaciones como tooltip)** *([WorkshopProximosView.jsx](../../frontend/src/pages/admin/workshop/components/WorkshopProximosView.jsx), [PlanificarTab.jsx](../../frontend/src/pages/admin/workshop/tabs/PlanificarTab.jsx), [CorrelacionesTab.jsx](../../frontend/src/pages/admin/workshop/correlaciones/CorrelacionesTab.jsx))*
+  - Próximos talleres ya no muestra «Acciones» por taller y su lista tiene alto máximo (460 px) con scroll propio, así no empuja al simulador. Las acciones que estaban en un taller se ven en el Plan de acciones, en «Por hacer» (antes «Sin un próximo taller»).
+  - Correlaciones: el panel «Leelo con cuidado» pasó a un tooltip junto al título del mapa, con los mismos avisos y la cantidad de talleres analizados.
