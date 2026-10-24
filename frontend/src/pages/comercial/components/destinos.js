@@ -295,6 +295,11 @@ export const DESTINOS_METRICA = {
             aviso: AVISO_TASA_NUMERADOR },
         close_rate: { tabla: 'agendas', filtro: { post_call: 'Venta' }, de: 'Close rate',
             aviso: AVISO_TASA_NUMERADOR },
+        close_presentacion: { tabla: 'agendas', filtro: { post_call: 'Venta' }, de: 'Close rate por presentación',
+            aviso: AVISO_TASA_NUMERADOR },
+        close_rate_real: { tabla: 'ventas', filtro: { tipo_pago: VENTAS_NUEVAS }, de: 'Close rate real',
+            aviso: 'La lista son los cobros de venta nueva del período. El origen de cada uno está en '
+                + '«Ver cobros», dentro del panel Cierre.' },
         ticket: { tabla: 'ventas', filtro: { tipo_pago: VENTAS_NUEVAS }, de: 'Ticket promedio' },
         comision: { tabla: 'ventas', filtro: {}, de: 'Comisión',
             aviso: 'La comisión es el 10% del cash neto: no es una columna de la tabla. La lista '

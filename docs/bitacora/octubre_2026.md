@@ -884,3 +884,11 @@
   - Variabilidad: barra «Capas» global a la pestaña con el período anterior superpuesto, picos y caídas (media y banda), acumulado con tendencia y el reparto por persona. El backend trae el período comparado, la semana anterior y el reparto.
   - Proyectar y Simulador se fusionaron en «Simulador» (solo dirección): línea base por ritmo del mes o promedio de N días, palancas de setter, closer, equipo y anuncios en porcentaje o valor absoluto, horizonte elegible y escenario contra la base, sin guardarse. Endpoint `GET /comercial/simulador/base`.
   - Verificado con la compilación de Vite y datos de prueba; falta recorrerlo con el login real.
+
+
+- **24 de Octubre de 2026 (Learnito · ejemplos propios de Work)** *([app/services/learnito_conector.py](../../app/services/learnito_conector.py) [MODIFY])*:
+  - El cerebro de la Academia ya no le habla a Work con ejemplos de alumnos y entregas: el conector responde `examples` con los suyos (clientes, agendas, show up, señas). ADR-W011 y su ADR-192.
+- **24 de Octubre de 2026 (Comparativas · las cuatro lecturas del close rate)** *([app/services/comercial_analitica.py](../../app/services/comercial_analitica.py), [app/services/comercial_close_real.py](../../app/services/comercial_close_real.py) [NEW], [app/api/comercial_close_real.py](../../app/api/comercial_close_real.py) [NEW], [frontend/src/pages/comercial/components/Comparativas.jsx](../../frontend/src/pages/comercial/components/Comparativas.jsx))*:
+  - El selector del ranking y el mapa del equipo ofrecen cuatro close rate de los closers: por llamada (el de siempre, misma clave `close_rate`), por presentación, con señas (señas como cierre, por llamada) y real (por cobro, el del tile de arriba).
+  - El real se pide aparte (`GET /comercial/comparativas/reales`) y solo cuando se elige o cuenta en el puntaje compuesto; mientras tanto su columna del mapa queda en «—».
+  - Cada uno trae su bajada («3 de 9 presentaciones») y el delta contra el período comparado. Verificado con la compilación de Vite; el endpoint nuevo no se probó contra datos reales.
