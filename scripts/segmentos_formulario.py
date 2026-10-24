@@ -5,14 +5,18 @@ Cambios (todos idempotentes: correrlo dos veces deja lo mismo):
   - Inversión: «Menos de $200 USD» nueva (3); «$500 a $1000» pasa a «Más de $500 USD» (8) y se quita
     «Más de $1000» (también de las reglas que la nombraban).
   - Examen: Ecuador (4), Chile (6) y Panamá (6) antes de «Otro».
-  - Decide: «¿Quién más participa de esta decisión?» Solo yo (4) · Mis padres / Mi pareja / Otra persona (0).
-  - Puntos del plan en Inversión, Etapa, Examen y Decide. Trabaja y Puntos a subir no se tocan (en observación).
+  - Decide queda como siempre (depende de mí 4 · necesito apoyo 0). Con --quien-decide pasa a «¿Quién más
+    participa de esta decisión?» Solo yo (4) · Mi pareja / Mis padres / Otra persona (0); sin el flag vuelve a
+    la de siempre.
+  - Puntos del plan en Inversión, Etapa, Examen y Decide, con MIR en 2. Trabaja y Puntos a subir no se tocan
+    (en observación).
   - Inversión y Etapa son clave (sin respuesta no hay segmento); Examen y Decide cuentan.
 Lo guarda con `guardar_doc` (normaliza, republica los eventos y sube la versión de Thalamus).
 
 Uso (en el servidor):
-  python scripts/segmentos_formulario.py           # dry-run: muestra cómo queda
-  python scripts/segmentos_formulario.py --apply   # lo guarda
+  python scripts/segmentos_formulario.py                   # dry-run: muestra cómo queda
+  python scripts/segmentos_formulario.py --apply           # lo guarda
+  python scripts/segmentos_formulario.py --apply --quien-decide   # con la pregunta nueva de Decide
 """
 import copy
 import os
@@ -34,11 +38,18 @@ SEGMENTO = {'activo': True, 'a': 75, 'b': 58, 'c': 33, 'sigma': 12, 'version': '
 PUNTOS = {
     INVERSION: {'oglxqqlugub': 0, 'og-menos-200': 3, 'oglxqq0u44o': 6, 'ogmdr0s275v': 8},
     ETAPA: {'og8xclet205': 0, 'og8xclf4go4': 6, 'og94zlvu9m2': 6, 'og9azfspw7e': 3, 'og9ed3qtpzx': 3},
-    EXAMEN: {'og77bdut6ym': 6, 'og7cr7tiwh9': 6, 'og6raas2nv9': 6, 'og-ecuador': 4, 'og-chile': 6, 'og-panama': 6,
+    # MIR baja a 2: España no es mercado prioritario (Mario, 24/10/2026).
+    EXAMEN: {'og77bdut6ym': 6, 'og7cr7tiwh9': 2, 'og6raas2nv9': 6, 'og-ecuador': 4, 'og-chile': 6, 'og-panama': 6,
              'og7imnc8sh8': 2, 'og6raaoi8vy': 2, 'og7nm9cskac': 2, 'og7p4glxgce': 0},
     DECIDE: {'ognajtws1ke': 4, 'ognajtnj7rg': 0, 'og-pareja': 0, 'og-otra-persona': 0},
 }
 ROL = {INVERSION: 'clave', ETAPA: 'clave', EXAMEN: 'cuenta', DECIDE: 'cuenta'}
+
+# Decide: la pregunta de siempre, y la nueva «¿Quién más participa?» para cuando se decida (--quien-decide).
+DECIDE_ORIGINAL = ('Necesitas apoyo (logístico, emocional o económico) de alguien, para poder tomar decisiones en tu '
+                   'aprendizaje o es algo que depende 100% de ti?',
+                   {'ognajtws1ke': 'No, depende 100% de mi', 'ognajtnj7rg': 'Si, necesito el apoyo de mis padres/pareja'})
+DECIDE_NUEVA = ('¿Quién más participa de esta decisión?', {'ognajtws1ke': 'Solo yo', 'ognajtnj7rg': 'Mis padres'})
 
 
 def _op(id_, texto):
@@ -57,7 +68,7 @@ def _insertar(opciones, nueva, antes_de=None, despues_de=None):
         opciones.append(nueva)
 
 
-def preparar(datos):
+def preparar(datos, quien_decide=False):
     preguntas = {q['id']: q for q in datos['preguntas']}
     faltan = [q for q in PUNTOS if q not in preguntas]
     if faltan:
@@ -76,12 +87,18 @@ def preparar(datos):
         _insertar(exa, _op(id_, texto), antes_de='og7nm9cskac')
 
     dec = preguntas[DECIDE]
-    dec['titulo'] = '¿Quién más participa de esta decisión?'
-    textos = {'ognajtws1ke': 'Solo yo', 'ognajtnj7rg': 'Mis padres'}
+    if quien_decide:
+        dec['titulo'] = DECIDE_NUEVA[0]
+        textos = DECIDE_NUEVA[1]
+        _insertar(dec['opciones'], _op('og-pareja', 'Mi pareja'), despues_de='ognajtws1ke')
+        _insertar(dec['opciones'], _op('og-otra-persona', 'Otra persona'))
+    else:
+        # La pregunta de siempre (y, si se había cargado la nueva, vuelve a esta).
+        dec['titulo'] = DECIDE_ORIGINAL[0]
+        textos = DECIDE_ORIGINAL[1]
+        dec['opciones'] = [o for o in dec['opciones'] if o['id'] not in ('og-pareja', 'og-otra-persona')]
     for o in dec['opciones']:
         o['texto'] = textos.get(o['id'], o['texto'])
-    _insertar(dec['opciones'], _op('og-pareja', 'Mi pareja'), despues_de='ognajtws1ke')
-    _insertar(dec['opciones'], _op('og-otra-persona', 'Otra persona'))
 
     for qid, puntos in PUNTOS.items():
         preguntas[qid]['segmento'] = ROL[qid]
@@ -107,7 +124,7 @@ def mostrar(datos):
     print('reglas:', [(r['id'], [c['ops'] for c in r['cond']]) for r in datos.get('reglas') or []])
 
 
-def main(apply=False):
+def main(apply=False, quien_decide=False):
     app = create_app()
     with app.app_context():
         from app.agendas_v2.servicio import guardar_doc
@@ -115,7 +132,7 @@ def main(apply=False):
         fila = db.session.get(SchedFormulario, FORM_ID)
         if not fila:
             raise SystemExit(f'No existe el formulario {FORM_ID}')
-        datos = preparar(copy.deepcopy(fila.datos))
+        datos = preparar(copy.deepcopy(fila.datos), quien_decide)
         mostrar(datos)
         if not apply:
             print('\nDRY-RUN: no se guardó nada. Con --apply se guarda.')
@@ -125,4 +142,4 @@ def main(apply=False):
 
 
 if __name__ == '__main__':
-    main(apply='--apply' in sys.argv)
+    main(apply='--apply' in sys.argv, quien_decide='--quien-decide' in sys.argv)
