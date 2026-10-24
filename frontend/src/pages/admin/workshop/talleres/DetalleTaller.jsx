@@ -9,6 +9,7 @@ import WorkshopFunnelView from '../components/WorkshopFunnelView';
 import WorkshopAnunciosView from '../components/WorkshopAnunciosView';
 import WorkshopReplayConfigPanel from '../components/WorkshopReplayConfigPanel';
 import AgendasDelTaller from '../agendas/AgendasDelTaller';
+import AgendasEstados from './AgendasEstados';
 import Hoja from './Hoja';
 import { VISTAS_TALLER } from './TarjetaTaller';
 import { roasRotulo, roasTono, veces } from './formato';
@@ -127,7 +128,8 @@ const DetalleTaller = ({
                 transition={quieto ? { duration: 0 } : { duration: 0.24, ease: 'easeOut' }}>
                 {vista === 'embudo' && (
                     <WorkshopFunnelView evento={evento} desglose={desglose} ventana={ventana} cargandoDesglose={cargando}
-                        onResync={resync} resyncing={resyncing} />
+                        onResync={resync} resyncing={resyncing}
+                        agendas={<AgendasEstados evento={evento} />} />
                 )}
                 {vista === 'anuncios' && <WorkshopAnunciosView key={evento.id} evento={evento} />}
                 {vista === 'grabacion' && <WorkshopReplayConfigPanel evento={evento} onSaved={() => onRefresh(true)} />}

@@ -48,6 +48,10 @@ const usePedido = (clave, url, activo) => {
 export const useAnunciosTaller = (id, activo = true) =>
     usePedido(id ? `anuncios-${id}` : null, `workshop/events/${id}/anuncios`, activo);
 
+/** Qué pasó con las personas que agendaron en el taller, por estado del libro de agendas. */
+export const useAgendasEstados = (id, activo = true) =>
+    usePedido(id ? `agendas-estados-${id}` : null, `workshop/events/${id}/agendas-estados`, activo);
+
 /**
  * El embudo de la landing de la grabación en los días que estuvo publicada la de ESTE taller
  * (del día que se publicó al día que cerró, o a hoy). Por días: la landing mide por fecha.

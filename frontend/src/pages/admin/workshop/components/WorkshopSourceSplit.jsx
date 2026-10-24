@@ -60,7 +60,7 @@ const WorkshopSourceSplit = ({ desglose, ventana, cargando }) => {
                     </span>
                 )}
             </PanelCab>
-            <div className="pareja" style={{ '--min': '240px', '--g': 'var(--s3)' }}>
+            <div className="pareja" style={{ '--min': '210px', '--g': 'var(--s3)' }}>
                 <Columna titulo="Clase en vivo" Icono={Radio} datos={desglose.vivo} color="var(--info)" />
                 <Columna titulo="Grabación (landing)" Icono={PlayCircle} datos={desglose.landing} color="var(--brand-secondary)" />
             </div>

@@ -49,7 +49,7 @@ export const Kpi = ({ titulo, valor, sub, tip, color, i = 0 }) => {
     );
 };
 
-const WorkshopFunnelView = ({ evento, desglose, ventana, cargandoDesglose, onResync, resyncing }) => {
+const WorkshopFunnelView = ({ evento, desglose, ventana, cargandoDesglose, onResync, resyncing, agendas }) => {
     const hace = useHace(evento?.synced_at);
     if (!evento) return null;
     const e = evento;
@@ -93,7 +93,11 @@ const WorkshopFunnelView = ({ evento, desglose, ventana, cargandoDesglose, onRes
                 </p>
             </section>
 
-            <WorkshopSourceSplit desglose={desglose} ventana={ventana} cargando={cargandoDesglose} />
+            {/* `agendas` (el desglose por estado) va al lado del vivo vs. grabación: dos columnas que se apilan */}
+            <div className="wt-doble">
+                {agendas}
+                <WorkshopSourceSplit desglose={desglose} ventana={ventana} cargando={cargandoDesglose} />
+            </div>
         </div>
     );
 };
