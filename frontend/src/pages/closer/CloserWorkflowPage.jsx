@@ -1338,16 +1338,8 @@ const CloserWorkflowPage = () => {
         }
 
         // Cuenta regresiva/tiempo transcurrido en vez de la fecha cruda: cuánto falta para la
-        // cita, si es ahora mismo, o hace cuánto que pasó sin resolverse. Se amortigua a color
-        // neutro en las etapas "ya resuelto" (`confirmado`, `call_done`): ahí el atraso no
-        // bloquea nada — cada una tiene su propia tarjeta ✓ para eso.
-        const DONE_PHASES = new Set(['confirmado', 'call_done']);
+        // cita, si es ahora mismo, o hace cuánto que pasó sin resolverse.
         const countdown = isPendingReferral ? null : formatCountdown(a.start_time, nowTick);
-        const whenCls = !countdown ? ''
-            : countdown.kind === 'now' ? 'now-v6'
-            : countdown.kind === 'soon' ? 'soon-v6'
-            : countdown.kind === 'past' && !DONE_PHASES.has(phase) ? 'late-v6'
-            : '';
 
         // Recordatorio pre-llamada: vencido (rojo) si ya pasó y sigue sin contactarse,
         // hoy (ámbar) si es el día calendario local actual, oculto si es un día futuro.
@@ -1357,31 +1349,52 @@ const CloserWorkflowPage = () => {
             const now = new Date();
             const { date: reminderDay, time: reminderTime } = splitLocalDateTime(a.pre_call_reminder_at);
             if (reminderDate <= now) {
-                reminderBadge = { label: `Recordatorio vencido · ${reminderTime}`, cls: 'bg-red-500/15 border-red-500/40 text-red-400' };
+                reminderBadge = { label: `Recordatorio vencido · ${reminderTime}`, tono: '#E85C4A' };
             } else if (reminderDay === todayStr) {
-                reminderBadge = { label: `Recordatorio hoy ${reminderTime}`, cls: 'bg-amber-500/15 border-amber-500/40 text-amber-400' };
+                reminderBadge = { label: `Recordatorio hoy ${reminderTime}`, tono: 'var(--cl-warning)' };
             }
         }
 
-        // Clarity: cada etapa tiñe la tarjeta con su color (`--c`) y el avatar toma el del origen.
+        // Franja viva (diseño «Tarjetas de lead · 5a»): la tarjeta abre con la hora de la llamada.
+        // Sólo la que pide acción —la cita es ahora o ya pasó sin resolverse— se tiñe de ámbar y
+        // lleva aura; las demás quedan quietas, en verde mientras falta, para que esa destaque. En
+        // las etapas "ya resuelto" el atraso no bloquea nada y va en neutro.
+        const DONE_PHASES = new Set(['confirmado', 'call_done']);
+        const pideAccion = !!countdown && (countdown.kind === 'now' || (countdown.kind === 'past' && !DONE_PHASES.has(phase)));
+        const tono = isPendingReferral ? 'var(--cl-lila)'
+            : pideAccion ? 'var(--cl-warning)'
+            : !countdown || countdown.kind === 'past' ? 'var(--cl-muted-40)'
+            : 'var(--cl-success)';
+        const rotuloFranja = isPendingReferral || !countdown || countdown.kind === 'now' ? 'Llamada'
+            : countdown.kind === 'past' ? 'Llamada hace' : 'Llamada en';
+        // Cuánto falta para la cita, como riel de 24 h que se llena a medida que se acerca.
+        const horasFaltan = a.start_time ? ((parseUtcIso(a.start_time)?.getTime() ?? Date.now()) - nowTick) / 3600000 : 0;
+        const rielCita = isPendingReferral || !countdown ? 0
+            : countdown.kind === 'future' || countdown.kind === 'soon' ? Math.round(Math.min(1, Math.max(0.04, 1 - horasFaltan / 24)) * 100)
+            : 100;
+
+        // Clarity: cada etapa tiñe la tarjeta con su color (`--c`).
         const TONO_ETAPA = { por_confirmar: 'var(--cl-warning)', conversando: 'var(--cl-info)', confirmado: 'var(--cl-success)', call: 'var(--cl-magenta)', call_done: 'var(--cl-success)' };
-        const TONOS_AVATAR = ['var(--cl-magenta)', 'var(--cl-lila)', 'var(--cl-success)', 'var(--cl-warning)', 'var(--cl-info)'];
         const origen = a.origin || 'Meta Ads';
-        const tonoAvatar = TONOS_AVATAR[[...origen].reduce((h, ch) => h + ch.charCodeAt(0), 0) % TONOS_AVATAR.length];
+        const origenEsEvento = /workshop|webinar|evento|clase|masterclass/i.test(origen);
         const iniciales = (a.lead_name || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
         const inversionTxt = inversionDe(a);
         const inversion = inversionTxt ? inversionCorta(inversionTxt) : null;
         const decision = decisionDe(a);
         const telefono = (a.phone || '').trim();
-        // Cuánto falta para la cita, como riel de 48 h que se llena a medida que se acerca.
-        const horasFaltan = a.start_time ? ((parseUtcIso(a.start_time)?.getTime() ?? Date.now()) - nowTick) / 3600000 : 0;
-        const rielCita = Math.round(Math.min(1, Math.max(0.04, 1 - horasFaltan / 48)) * 100);
+        const etiquetas = [
+            isPendingReferral && { texto: 'Contactar y acordar fecha', tono: 'var(--cl-lila)' },
+            a.examen && { texto: a.examen, tono: 'var(--cl-lila)' },
+            (phase === 'call' || phase === 'call_done') && a.closer_result && a.closer_result !== 'Pendiente'
+                && { texto: a.closer_result, tono: 'var(--cl-magenta)', title: ayudaDeResultado(a.closer_result) },
+            reminderBadge && { texto: reminderBadge.label, tono: reminderBadge.tono },
+        ].filter(Boolean);
 
         return (
             <div 
                 key={a.id} 
-                className={`kcard-v6 ${isViewed ? 'kc-visto border-pink-500/50 bg-pink-500/5 shadow-[0_0_15px_rgba(255,63,164,0.1)]' : ''}`}
-                style={{ animationDelay: `${tableroEntrando ? escalonDe(orden) : 0}ms`, '--c': TONO_ETAPA[phase] || 'var(--cl-lila)', '--av': tonoAvatar }}
+                className={`kcard-v6 kcard-franja${pideAccion ? ' kcard-vivo' : ''} ${isViewed ? 'kc-visto border-pink-500/50 bg-pink-500/5 shadow-[0_0_15px_rgba(255,63,164,0.1)]' : ''}`}
+                style={{ animationDelay: `${tableroEntrando ? escalonDe(orden) : 0}ms`, '--c': TONO_ETAPA[phase] || 'var(--cl-lila)', '--t': tono }}
                 onClick={() => handleSelectLead(a)}
                 {...(ETAPA_DE_FASE[phase] && a.id > 0 ? {
                     draggable: true,
@@ -1395,15 +1408,44 @@ const CloserWorkflowPage = () => {
                     onDragEnd: () => { setArrastrando(null); setColumnaDestino(null); },
                 } : {})}
             >
+                {/* El aura toma sus colores de los datos del lead: la urgencia, el magenta de la
+                    marca y la inversión (verde si dijo que puede invertir). */}
+                {pideAccion && (
+                    <span className="kc-aura" aria-hidden="true">
+                        <i /><i /><i style={{ '--a': inversion && !inversion.sin ? 'var(--cl-success)' : 'var(--cl-warning)' }} />
+                    </span>
+                )}
+
+                <div
+                    className="kc-banda"
+                    title={isPendingReferral ? undefined : `${formatAgendaDateTime(a.start_time)} (${viewerTimezoneLabel()}, tu zona horaria)`}
+                >
+                    <span className="kc-banda-lbl">
+                        {pideAccion
+                            ? <span className="kc-vivo" aria-hidden="true"></span>
+                            : <svg className="kc-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7.5V12l3 2" /></svg>}
+                        {rotuloFranja}
+                    </span>
+                    <span className="kc-banda-t">
+                        {isPendingReferral
+                            ? 'Por agendar'
+                            : <AgendaCountdown startTime={a.start_time} bare fallback={`${dateLabel} · ${apptTime}`} />}
+                    </span>
+                    {rielCita > 0 && (
+                        <span className="kc-banda-riel" style={{ '--w': `${rielCita}%` }} aria-hidden="true">
+                            {!pideAccion && countdown?.kind !== 'past' && <i />}
+                        </span>
+                    )}
+                </div>
+
+                <div className="kc-cuerpo">
                 <div className="kc-top">
                 <span className="kc-av" aria-hidden="true">{iniciales}</span>
                 <div className="kc-id">
-                <b className="flex items-center gap-1.5 flex-wrap">
-                    {a.lead_name || 'Sin Nombre'}
+                <b className="kc-nombre">
+                    <span className="kc-nombre-t" title={a.lead_name || 'Sin Nombre'}>{a.lead_name || 'Sin Nombre'}</span>
                     {a.unread_comment && (
-                        <span className="px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-450 border border-rose-500/20 rounded animate-pulse">
-                            Nuevo
-                        </span>
+                        <span className="kc-nuevo">Nuevo</span>
                     )}
                 </b>
                 {telefono && (
@@ -1425,60 +1467,42 @@ const CloserWorkflowPage = () => {
                     </div>
                 )}
                 </div>
-                <div
-                    className={`when-v6 ${whenCls}`}
-                    title={isPendingReferral ? undefined : `${formatAgendaDateTime(a.start_time)} (${viewerTimezoneLabel()}, tu zona horaria)`}
-                >
-                    <span className={`wd-v6 ${countdown?.kind === 'now' ? 'animate-pulse' : ''}`}></span>
-                    {isPendingReferral
-                        ? 'Por agendar'
-                        : <AgendaCountdown startTime={a.start_time} fallback={`${dateLabel} · ${apptTime}`} />}
-                </div>
                 </div>
 
-                {(inversion || decision) && (
-                    <div className="kc-datos">
-                        {inversion && (
-                            <span className={`kc-dato kc-plata${inversion.sin ? ' kc-plata--sin' : ''}`} title={`Inversión: ${inversionTxt}`}>
-                                <span className="kc-dato-ic" aria-hidden="true">$</span>
-                                <span className="kc-plata-n">{inversion.texto}</span>
-                            </span>
-                        )}
-                        {decision && (
-                            <span className={`kc-dato kc-decide${decision.solo === false ? ' kc-decide--con' : ''}`} title={`Decisión: ${decision.title}`}>
-                                <span className="kc-dato-pt" aria-hidden="true"></span>
-                                {decision.texto}
-                            </span>
-                        )}
+                {/* Cada dato con su ícono, en una línea separada por filetes: inversión, decisión
+                    y origen (un evento lleva calendario; una persona, su inicial). */}
+                <div className="kc-datos">
+                    {inversion && (
+                        <span className={`kc-dato kc-plata${inversion.sin ? ' kc-plata--sin' : ''}`} title={`Inversión: ${inversionTxt}`}>
+                            <span className="kc-dato-ic" aria-hidden="true">$</span>
+                            <span className="kc-plata-n">{inversion.texto}</span>
+                        </span>
+                    )}
+                    {decision && (
+                        <span className={`kc-dato kc-decide${decision.solo === false ? ' kc-decide--con' : decision.solo ? '' : ' kc-decide--otro'}`} title={`Decisión: ${decision.title}`}>
+                            <svg className="kc-ic" viewBox="0 0 24 24" aria-hidden="true">
+                                {decision.solo === false
+                                    ? <><circle cx="9" cy="8" r="3.2" /><path d="M3.5 19a5.5 5.5 0 0 1 11 0" /><path d="M16 5.2a3.2 3.2 0 0 1 0 5.6M17.5 14a5.5 5.5 0 0 1 3 5" /></>
+                                    : <><circle cx="12" cy="8" r="3.4" /><path d="M6 19.5a6 6 0 0 1 12 0" /></>}
+                            </svg>
+                            <span className="kc-dato-tx">{decision.texto}</span>
+                        </span>
+                    )}
+                    <span className="kc-dato kc-origen" title={`Origen: ${origen}`}>
+                        {origenEsEvento
+                            ? <svg className="kc-ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>
+                            : <span className="kc-origen-ini" aria-hidden="true">{[...origen.replace(/^Referido de\s+/i, '')][0]?.toUpperCase()}</span>}
+                        <span className="kc-dato-tx">{origen}</span>
+                    </span>
+                </div>
+
+                {etiquetas.length > 0 && (
+                    <div className="kc-etiquetas">
+                        {etiquetas.map((t) => (
+                            <span key={t.texto} className="ktag-v6" style={{ '--c': t.tono }} title={t.title}>{t.texto}</span>
+                        ))}
                     </div>
                 )}
-
-                <div className="flex gap-1.5 flex-wrap mt-2">
-                    <span className="ktag-v6 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
-                        {a.origin || 'Meta Ads'}
-                    </span>
-                    {isPendingReferral && (
-                        <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-violet-500/15 border border-violet-500/40 text-violet-300">
-                            Contactar y acordar fecha
-                        </span>
-                    )}
-                    {a.examen && (
-                        <span className="ktag-v6 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 border border-slate-850 text-slate-400">
-                            {a.examen}
-                        </span>
-                    )}
-                    {(phase === 'call' || phase === 'call_done') && a.closer_result && a.closer_result !== 'Pendiente' && (
-                        <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-violet-500/15 border border-violet-500/40 text-violet-300"
-                            title={ayudaDeResultado(a.closer_result)}>
-                            {a.closer_result}
-                        </span>
-                    )}
-                    {reminderBadge && (
-                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${reminderBadge.cls}`}>
-                            {reminderBadge.label}
-                        </span>
-                    )}
-                </div>
                 
                 {a.setter_notes && (
                     <div className="nt-v6 text-[10px] text-slate-350">
@@ -1513,22 +1537,19 @@ const CloserWorkflowPage = () => {
                         Reportar resultado
                     </button>
                 )}
+                {/* Estado resuelto: check que se dibuja y una palabra. Cuánto falta para la cita ya
+                    lo dice la franja de arriba. */}
                 {phase === 'call_done' && (
-                    <div className="flex gap-1 mt-2.5">
-                        <span className="klisto-v6 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 w-full text-center">
-                            <svg className="kc-check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M7.5 12.5l3 3 6-6.5" /></svg><span className="kc-ok-tx">Reportado</span>
-                        </span>
-                    </div>
+                    <span className="klisto-v6">
+                        <svg className="kc-check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M7.5 12.5l3 3 6-6.5" /></svg><span className="kc-ok-tx">Reportado</span>
+                    </span>
                 )}
                 {phase === 'confirmado' && (
-                    <div className="flex gap-1 mt-2.5">
-                        <span className="klisto-v6 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 w-full text-center"
-                            title="Listo · espera su fecha">
-                            <svg className="kc-check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M7.5 12.5l3 3 6-6.5" /></svg><span className="kc-ok-tx">Confirmado</span>
-                            <span className="kc-riel" aria-hidden="true"><i style={{ '--w': `${rielCita}%` }}></i></span>
-                        </span>
-                    </div>
+                    <span className="klisto-v6" title="Listo · espera su fecha">
+                        <svg className="kc-check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M7.5 12.5l3 3 6-6.5" /></svg><span className="kc-ok-tx">Confirmado</span>
+                    </span>
                 )}
+                </div>
             </div>
         );
     };

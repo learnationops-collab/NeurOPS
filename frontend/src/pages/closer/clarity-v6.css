@@ -504,3 +504,243 @@
   .clarity-v6 .kb-etapas .kcol-v6,
   .clarity-v6 .kb-etapas .kcard-v6[data-arrastrando] { transition: none; transform: none; }
 }
+
+/* ---------- Tarjeta de lead: franja viva (diseño «Tarjetas de lead · 5a») ---------- */
+/* La misma tarjeta en Confirmar y en Reportar. Abre con una franja de la hora de la llamada
+   teñida por `--t` (verde mientras falta, ámbar si es ahora o ya pasó sin resolverse, neutro si ya
+   está resuelta) con un riel de 2 px que se llena las últimas 24 h. Sólo la que pide acción lleva
+   aura y borde ámbar; las demás quedan quietas para que esa destaque. */
+.clarity-v6 .kcard-v6.kcard-franja {
+  --t: var(--cl-success);
+  padding: 0;
+  border-radius: 20px;
+  background: var(--cl-element);
+  border: 1px solid var(--cl-border-subtle);
+  display: flex;
+  flex-direction: column;
+}
+.clarity-v6 .kcard-v6.kcard-franja:hover {
+  background: var(--cl-element-hover);
+  border-color: var(--cl-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, .40);
+}
+.clarity-v6 .kcard-v6.kcard-franja::before { content: none; }
+.clarity-v6 .kcard-v6.kcard-vivo,
+.clarity-v6 .kcard-v6.kcard-vivo:hover { border-color: color-mix(in srgb, var(--cl-warning) 38%, transparent); }
+
+/* Aura: tres manchas difusas que se mueven despacio, con los colores del lead. */
+.clarity-v6 .kc-aura {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  opacity: .5;
+  pointer-events: none;
+}
+.clarity-v6 .kc-aura i {
+  position: absolute;
+  width: 46%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  filter: blur(46px);
+  mix-blend-mode: screen;
+  opacity: .5;
+}
+.clarity-v6 .kc-aura i:nth-child(1) { left: -10%; top: -30%; background: var(--cl-warning); animation: clv6-aura-1 12s ease-in-out infinite; }
+.clarity-v6 .kc-aura i:nth-child(2) { left: 30%; top: 20%; background: var(--cl-magenta); animation: clv6-aura-2 15s ease-in-out infinite; }
+.clarity-v6 .kc-aura i:nth-child(3) { left: 62%; top: -40%; background: var(--a, var(--cl-warning)); animation: clv6-aura-3 17s ease-in-out infinite; }
+
+.clarity-v6 .kc-banda,
+.clarity-v6 .kc-cuerpo { position: relative; z-index: 1; }
+.clarity-v6 .kc-banda {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 36px;
+  padding: 0 16px;
+  background: color-mix(in srgb, var(--t) 12%, transparent);
+  color: color-mix(in srgb, var(--t) 80%, #fff);
+  white-space: nowrap;
+}
+.clarity-v6 .kc-banda-lbl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+}
+.clarity-v6 .kc-banda-t {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.clarity-v6 .kc-banda-riel {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: var(--w, 0%);
+  background: var(--t);
+  overflow: hidden;
+  transition: width 1.2s cubic-bezier(.2, .7, .2, 1);
+}
+/* Mientras falta, un brillo recorre el riel. */
+.clarity-v6 .kc-banda-riel i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 30%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .7), transparent);
+  animation: clv6-brillo 2.8s ease-in-out infinite;
+}
+/* Punto que respira: la llamada ya está o ya pasó. */
+.clarity-v6 .kc-vivo {
+  position: relative;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--t);
+  flex: none;
+}
+.clarity-v6 .kc-vivo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--t);
+  animation: clv6-respira 1.8s ease-in-out infinite;
+}
+.clarity-v6 .kcard-franja .kc-ic {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.clarity-v6 .kc-cuerpo {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.clarity-v6 .kcard-franja .kc-av {
+  color: #fff;
+  font-weight: 700;
+  background: #020B5C;
+  box-shadow: inset 0 0 0 1px var(--cl-border);
+}
+.clarity-v6 .kcard-franja:hover .kc-av { transform: none; box-shadow: inset 0 0 0 1px var(--cl-border); }
+.clarity-v6 .kc-id b.kc-nombre {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+.clarity-v6 .kc-nombre-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.clarity-v6 .kc-nuevo {
+  flex: none;
+  padding: 2px 6px;
+  border-radius: 99px;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--cl-magenta) 70%, #fff);
+  background: color-mix(in srgb, var(--cl-magenta) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cl-magenta) 30%, transparent);
+  animation: clv6-respira-tx 1.8s ease-in-out infinite;
+}
+.clarity-v6 .kcard-franja .kc-tel-n { font-size: 13px; font-weight: 500; }
+.clarity-v6 .kcard-franja .kc-copiar { opacity: 1; }
+.clarity-v6 .kcard-franja .kc-copiar[data-ok] { transform: scale(1.3); }
+
+/* Datos en una línea, cada uno con su ícono y separados por un filete. El filete va a la
+   izquierda de cada dato; el que baja de renglón lo deja fuera de la caja y no se ve. */
+.clarity-v6 .kcard-franja .kc-datos {
+  margin-top: 0;
+  gap: 6px 24px;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+}
+.clarity-v6 .kcard-franja .kc-dato {
+  position: relative;
+  padding: 0;
+  gap: 6px;
+  background: none;
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  min-width: 0;
+}
+.clarity-v6 .kcard-franja .kc-dato + .kc-dato::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 2px;
+  bottom: 2px;
+  border-left: 1px solid var(--cl-border-subtle);
+}
+.clarity-v6 .kcard-franja .kc-plata { color: var(--cl-success); }
+.clarity-v6 .kcard-franja .kc-plata--sin { color: var(--cl-muted); }
+.clarity-v6 .kcard-franja .kc-dato-ic {
+  width: 16px;
+  height: 16px;
+  font-size: 9px;
+  font-weight: 700;
+  color: currentColor;
+  background: none;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+.clarity-v6 .kcard-franja .kc-decide .kc-ic { color: var(--cl-lila); }
+.clarity-v6 .kcard-franja .kc-decide--con .kc-ic { color: var(--cl-warning); }
+.clarity-v6 .kcard-franja .kc-decide--otro .kc-ic { color: var(--cl-muted-40); }
+.clarity-v6 .kcard-franja .kc-origen { color: var(--cl-muted); flex: 1 1 0; }
+.clarity-v6 .kc-dato-tx { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.clarity-v6 .kc-origen-ini {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex: none;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--cl-primary);
+}
+.clarity-v6 .kc-etiquetas { display: flex; flex-wrap: wrap; gap: 6px; }
+.clarity-v6 .kcard-franja .ktag-v6 { font-weight: 900; text-transform: uppercase; }
+.clarity-v6 .kcard-franja .nt-v6,
+.clarity-v6 .kcard-franja .kadv-v6 { margin-top: 0; align-self: stretch; }
+.clarity-v6 .kcard-franja .nt-v6 { align-self: flex-start; }
+.clarity-v6 .kcard-franja .klisto-v6 { font-weight: 900; text-transform: uppercase; }
+
+@keyframes clv6-aura-3 {
+  0%, 100% { transform: translate(0, 0) scale(.9); opacity: .4; }
+  30% { transform: translate(-44%, 32%) scale(1.22); opacity: .7; }
+  70% { transform: translate(-92%, -14%) scale(1); opacity: .45; }
+}
+@keyframes clv6-brillo { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }
+@keyframes clv6-respira { 0%, 100% { opacity: .15; transform: scale(1); } 50% { opacity: .55; transform: scale(2.4); } }
+@keyframes clv6-respira-tx { 0%, 100% { opacity: 1; } 50% { opacity: .6; } }
+@media (prefers-reduced-motion: reduce) {
+  .clarity-v6 .kc-aura i,
+  .clarity-v6 .kc-banda-riel i,
+  .clarity-v6 .kc-vivo::before,
+  .clarity-v6 .kc-nuevo { animation: none; }
+  .clarity-v6 .kc-banda-riel { transition: none; }
+}

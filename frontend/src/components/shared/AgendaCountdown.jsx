@@ -17,10 +17,13 @@ import AnimatedCounter from '../rare-ui/animated-counter';
 // dígitos que cambian cada segundo) se anima dígito por dígito en vez de texto plano. El resto
 // de formatos ("En 3 días", "Hace 2 horas y 15 minutos") mezcla texto y números de forma
 // irregular y sigue como `countdown.label` tal cual.
+//
+// `bare` deja solo el tiempo, sin el «En»/«Hace» de adelante: para cuando el que lo rodea ya lo
+// dice (la franja de la tarjeta de lead: «Llamada en» … «19:30:30»).
 const isCronometro = (countdown, withSeconds) =>
     withSeconds && !countdown.isPast && countdown.kind !== 'now' && countdown.days === 0;
 
-const AgendaCountdown = ({ startTime, withSeconds = true, fallback = null, className = '' }) => {
+const AgendaCountdown = ({ startTime, withSeconds = true, fallback = null, className = '', bare = false }) => {
     const now = useNow(withSeconds ? 1000 : 30000);
     // `formatCountdown` ya decide solo cuándo los segundos aportan: los muestra para el tiempo
     // que falta por debajo de un día, y los omite para citas lejanas o ya pasadas.
@@ -28,12 +31,12 @@ const AgendaCountdown = ({ startTime, withSeconds = true, fallback = null, class
     if (!countdown) return fallback;
 
     if (!isCronometro(countdown, withSeconds)) {
-        return <span className={className}>{countdown.label}</span>;
+        return <span className={className}>{bare ? countdown.label.replace(/^(En|Hace)\s+/, '') : countdown.label}</span>;
     }
 
     return (
         <span className={className}>
-            En{' '}
+            {!bare && <>En{' '}</>}
             <span className="inline-flex items-baseline">
                 {countdown.hours > 0 && (
                     <>
