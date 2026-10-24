@@ -137,6 +137,10 @@ def result(fuente, plan, results):
     counting = not medir or medir['metrica'] == 'count'
     rows = [{'k': None if r.k is None else str(r.k), 'n': int(r.n) if counting else _num(r.n), 'm': int(r.m)}
             for r in results[1]]
+    if pct:  # el intervalo de cada grupo, como la Academia (ic95 en %)
+        for r in rows:
+            lo, hi = wilson((r['n'] or 0) / 100, r['m'])
+            r['ic95'] = [round(lo * 100, 1), round(hi * 100, 1)]
     out = {'total': total, 'rows': rows, 'others': total - sum(r['m'] for r in rows), 'group': {'kind': 'value'},
            'warnings': warnings(rows, 'm', pct)}
     if is_date:
