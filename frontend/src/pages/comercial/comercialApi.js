@@ -31,6 +31,10 @@ export const getResumen = (filtros) =>
 export const getComparativas = (filtros) =>
     api.get('/comercial/comparativas', { params: filtrosQuery(filtros) }).then(r => r.data);
 
+/** Close rate real por closer: aparte de `getComparativas` porque pesa más (ver `useCloseReal`). */
+export const getComparativasReales = (filtros) =>
+    api.get('/comercial/comparativas/reales', { params: filtrosQuery(filtros) }).then(r => r.data);
+
 /** Series por día de Variabilidad. Endpoint aparte: se pide solo al abrir la pestaña. */
 export const getVariabilidad = (filtros) =>
     api.get('/comercial/variabilidad', { params: filtrosQuery(filtros) }).then(r => r.data);

@@ -49,9 +49,22 @@ METRICAS = {
          'desc': 'Todo lo cobrado en el período: ventas nuevas, cuotas y señas.'},
         {'key': 'show_up', 'label': 'Show up', 'formato': 'pct', 'suma': False,
          'desc': 'De las llamadas con resultado, cuántas asistieron.'},
-        {'key': 'close_rate', 'label': 'Close rate', 'formato': 'pct', 'suma': False,
+        # Las cuatro lecturas del cierre (pedido del 24/10/2026: «hay distintos close rate»). La clave
+        # `close_rate` sigue siendo la de siempre —por llamada— porque la usan las configuraciones
+        # guardadas, el puntaje y las listas de destino.
+        {'key': 'close_rate', 'label': 'Close rate · llamada', 'formato': 'pct', 'suma': False,
          'desc': 'De los que asistieron, cuántos compraron con pago completo o split pay. '
                  'Las señas no cuentan.'},
+        {'key': 'close_presentacion', 'label': 'Close rate · presentación', 'formato': 'pct', 'suma': False,
+         'desc': 'De las llamadas donde se presentó la oferta, cuántas terminaron en venta.'},
+        {'key': 'close_rate_senas', 'label': 'Close rate · con señas', 'formato': 'pct', 'suma': False,
+         'desc': 'Por llamada, pero contando también las señas como cierre.'},
+        # `diferida`: rastrea cada cobro hasta su llamada, así que no viaja con el resto. Se pide
+        # aparte cuando alguien la elige (ver `reales_por_closer`).
+        {'key': 'close_rate_real', 'label': 'Close rate · real', 'formato': 'pct', 'suma': False,
+         'diferida': True,
+         'desc': 'Cierres por cobro del período, vengan de la llamada que vengan, sobre los que '
+                 'asistieron más las llamadas de meses anteriores.'},
         {'key': 'ticket', 'label': 'Ticket promedio', 'formato': 'money', 'suma': False,
          'desc': 'Lo cobrado en las ventas nuevas (pago completo y split pay) dividido por '
                  'cuántas fueron. Las cuotas y las señas no entran.'},
@@ -762,6 +775,10 @@ def _fila_comparativa(rol, bloque):
         'cash': bloque['cash'], 'show_up': bloque['show_up'], 'close_rate': bloque['close_rate'],
         'ticket': bloque['ticket'], 'comision': bloque['comision'], 'agendas': bloque['agendas'],
         'ventas': bloque['ventas'],
+        'close_presentacion': bloque['close_presentacion'],
+        'close_rate_senas': pct(bloque['cierres']['ventas'] + bloque['cierres']['senas'], bloque['asistieron']),
+        'asistieron': bloque['asistieron'], 'presentaciones': bloque['presentaciones'],
+        'senas_cierre': bloque['cierres']['senas'], 'cierres_ventas': bloque['cierres']['ventas'],
         'senas_conversion': senas['conversion'],
         'senas_detalle': '{} de {} señas'.format(senas['completo'] + senas['parcial'], senas['total']),
         'completo_pct': pct(completo['ventas'] if completo else 0, bloque['ventas']),

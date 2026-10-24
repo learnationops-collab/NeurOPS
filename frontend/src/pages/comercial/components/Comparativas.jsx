@@ -6,6 +6,7 @@ import FlujoEmbudo from './FlujoEmbudo';
 import { COLOR_CANAL, COLOR_FUENTE, etapasParaDibujar, puntaAPunta } from './embudoSetter';
 import { BarraRanking } from './PanelRanking';
 import { armarVista, cumpleMeta, metricaActual, ordenar } from './rankingConfig';
+import { useCloseReal } from './useCloseReal';
 import { useRankingConfig } from './useRankingConfig';
 
 /**
@@ -68,6 +69,9 @@ const Ranking = ({ datos, base, metrica, filas, yo, irAPersona, destino, config,
             return fila.realizadas !== undefined ? `${fila.realizadas} con resultado` : `${fila.agendas ?? 0} agendas`;
         }
         if (metrica.key === 'close_rate' || metrica.key === 'ticket') return `${fila.ventas ?? 0} ventas`;
+        if (metrica.key === 'close_presentacion') return `${fila.cierres_ventas ?? 0} de ${fila.presentaciones ?? 0} presentaciones`;
+        if (metrica.key === 'close_rate_senas') return `${(fila.cierres_ventas ?? 0) + (fila.senas_cierre ?? 0)} de ${fila.asistieron ?? 0} que asistieron`;
+        if (metrica.key === 'close_rate_real') return fila.real_detalle ? `${fila.real_detalle} por cobro` : '';
         if (metrica.key === 'comision') return `10% de ${fmt.money(fila.cash)}`;
         if (metrica.key === 'senas_conversion') return fila.senas_detalle;
         if (['cualificacion', 'apertura', 'conversion'].includes(metrica.key)) return `${fmt.num(fila.entrantes ?? 0)} entrantes`;
@@ -351,9 +355,11 @@ const EmbudosSetters = ({ embudos, yo, rol, irAPersona }) => {
     );
 };
 
-const Comparativas = ({ datos, irAPersona, fallo = false, onReintentar = null }) => {
+const Comparativas = ({ datos: datosBase, filtros, irAPersona, fallo = false, onReintentar = null }) => {
     const [metricaKey, setMetricaKey] = useState(null);
-    const [config, cambiarConfig, restablecer] = useRankingConfig(datos?.rol);
+    const [config, cambiarConfig, restablecer] = useRankingConfig(datosBase?.rol);
+    // El close rate real se pide recién cuando se mira (ver `useCloseReal`).
+    const { datos, cargando: cargandoReal, fallo: falloReal } = useCloseReal(datosBase, filtros, metricaKey, config);
     const vista = useMemo(() => (datos ? armarVista(datos, config) : null), [datos, config]);
 
     if (!datos && fallo) return <FalloCarga texto="No se pudieron cargar las comparativas" onReintentar={onReintentar} />;
@@ -382,6 +388,11 @@ const Comparativas = ({ datos, irAPersona, fallo = false, onReintentar = null })
             <Ranking datos={conHandler} base={datos} metrica={metrica} filas={filas} yo={datos.yo}
                 irAPersona={irAPersona} destino={destino} config={config}
                 onCambiar={cambiar} onRestablecer={restablecer} />
+            {metrica.key === 'close_rate_real' && (cargandoReal || falloReal) && (
+                <p className="t-cap mut" style={{ marginBottom: 'var(--s4)' }}>
+                    {falloReal ? 'No se pudo calcular el close rate real.' : 'Calculando el close rate real…'}
+                </p>
+            )}
             {filas.length === 0 && (
                 <p className="t-cap mut" style={{ marginBottom: 'var(--s4)' }}>
                     Nadie entra con esta configuración. Probá con «Restablecer».

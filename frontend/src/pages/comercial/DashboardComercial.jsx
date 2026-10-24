@@ -794,7 +794,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     {!esperaFechas && seccion === 'analizar' && tab === 'comparativas' && contexto.puede_comparar && (
                         // Un closer ve a sus compañeros pero no puede abrir sus listas (el backend
                         // lo acota a él): sin `irAPersona` las filas no son clickeables.
-                        <Comparativas datos={comparativas} fallo={fallas.comparativas} onReintentar={cargarAnalizar}
+                        <Comparativas datos={comparativas} filtros={filtros} fallo={fallas.comparativas} onReintentar={cargarAnalizar}
                             irAPersona={contexto.puede_elegir_equipo ? irAPersona : null} />
                     )}
                     {!esperaFechas && seccion === 'analizar' && tab === 'variabilidad' && (

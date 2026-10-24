@@ -497,3 +497,4 @@ def simulador_base():
 
 
 from app.api import comercial_agendas_lote  # noqa: E402,F401  (Editar en lote desde Revisar, 10/10/2026)
+from app.api import comercial_close_real  # noqa: E402,F401  (Close rate real en Comparativas, 24/10/2026)
