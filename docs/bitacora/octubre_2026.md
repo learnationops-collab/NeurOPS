@@ -742,3 +742,13 @@
 - **23 de Octubre de 2026 (Ficha · la hora se escribe bien)** *([frontend/src/components/ficha/piezas/SelectorHora.jsx](../../frontend/src/components/ficha/piezas/SelectorHora.jsx) [MODIFY])*:
   - Al escribir «19» en la hora quedaba «01»: al completar la hora se saltaba a los minutos y, al salir de la casilla, se volvía a guardar el «1» que había quedado de antes. Lo que se va tecleando ahora se guarda al instante y no se pisa.
   - Cada dígito se toma de la tecla, como un reloj: el primero reemplaza lo que había, sin importar dónde quedó el cursor; Borrar quita de a uno.
+
+- **24 de Octubre de 2026 (Learnito · diccionario de datos de Work y su buscador)** *([app/services/tablas/diccionario.json](../../app/services/tablas/diccionario.json), [app/services/tablas/buscar.py](../../app/services/tablas/buscar.py) [NEW], [app/services/tablas/](../../app/services/tablas/) [MODIFY])*:
+  - El diccionario de datos de Work, con el mismo formato que el de la Academia: 95 tablas explicadas, 216 conceptos del equipo («no show», «venta nueva», «cuota vencida») como condiciones exactas y 71 datos calculados.
+  - Learnito de la dirección empieza por `buscar_datos`, que encuentra la fuente, los conceptos y las trampas de una pregunta. Una condición vacía ya no deja el resultado en cero.
+
+- **24 de Octubre de 2026 (Learnito · la dirección con el cerebro de la Academia)** *([app/services/learnito_conector.py](../../app/services/learnito_conector.py), [app/api/external/learnito.py](../../app/api/external/learnito.py), [frontend/src/pages/copiloto/Markdown.jsx](../../frontend/src/pages/copiloto/Markdown.jsx) [NEW], [app/api/copiloto.py](../../app/api/copiloto.py), [frontend/src/pages/copiloto/](../../frontend/src/pages/copiloto/) [MODIFY])*:
+  - Admin, operaciones y director comercial le preguntan al mismo Learnito que el equipo de la Academia: respuestas sin IA cuando alcanza, Pregunta directa, Investigación y banco de preguntas. La conversación y el gasto los lleva la Academia (tope de Work US$ 20 por mes, US$ 8 por persona).
+  - La Academia le pide los datos a Work por su conector, con los permisos de quien pregunta: el operador no ve montos.
+  - El chat dibuja las respuestas con formato (títulos, tablas, «Ojo»), los botones para seguir («Por closer», «Ver la lista») y la calificación de la conversación.
+  - Los closers siguen con su copiloto de siempre. Todavía no: acciones desde Learnito en Work ni gráficos.
