@@ -31,14 +31,54 @@ const Leyenda = ({ ex, refNombre, refRango, vista, conAtipicos, hayMarcas }) => 
                 <span><b className="ley-pico">▲</b> pico <b className="ley-caida">▼</b> caída
                     <b className="ley-cero"> ○</b> sin movimiento</span>
             )}
-            {ex.apilar && ex.apilar.map((p, k) => (
-                <span key={p.nombre}>
-                    <i className="ley-persona" style={{ background: `var(--${colorDePersona(p, k)})` }} />
-                    {p.nombre}
-                </span>
-            ))}
         </div>
     );
+};
+
+/**
+ * Las personas de la serie como botones: tildada cuenta en el gráfico y en el total, destildada
+ * queda afuera. Siempre queda al menos una (ver `alternarPersona` en `Variabilidad`).
+ */
+const Personas = ({ personas, ocultas, onPersona, esTasa, vista }) => (
+    <div className="serie-pers" role="group" aria-label="Personas del gráfico">
+        {personas.map(p => {
+            const fuera = ocultas.includes(p.nombre);
+            const ultima = !fuera && personas.filter(q => !ocultas.includes(q.nombre)).length === 1;
+            return (
+                <button key={p.nombre} type="button" className="pers-chip" aria-pressed={!fuera}
+                    disabled={ultima}
+                    title={fuera ? `Volver a sumar a ${p.nombre}` : ultima ? 'Tiene que quedar alguien'
+                        : `Quitar a ${p.nombre} del gráfico`}
+                    onClick={() => onPersona(p.nombre)}>
+                    <i className="ley-persona" style={{ background: `var(--${colorDePersona(p, p.k)})` }} />
+                    {p.nombre}
+                </button>
+            );
+        })}
+        {esTasa && vista !== 'curva' && (
+            <span className="t-cap mut40">En Curva se ve cada una por su lado.</span>
+        )}
+    </div>
+);
+
+/**
+ * La serie sin las personas quitadas. Lo que se suma, suma a quienes quedan; una tasa se promedia
+ * entre quienes quedan, pesando por las llamadas o mensajes que la sostienen cuando hay (`pesos`).
+ */
+const sinPersonas = (activa, ocultas) => {
+    const todas = activa.personas.map((p, k) => ({ ...p, k }));
+    const quedan = todas.filter(p => !ocultas.includes(p.nombre));
+    if (quedan.length === todas.length) return { ...activa, personas: todas };
+    const vals = activa.vals.map((_, i) => {
+        if (!activa.esTasa) return Math.round(quedan.reduce((a, p) => a + (p.vals[i] || 0), 0) * 100) / 100;
+        const con = quedan.filter(p => (p.pesos ? p.pesos[i] > 0 : p.vals[i] > 0));
+        if (!con.length) return 0;
+        const peso = (p) => (p.pesos ? p.pesos[i] : 1);
+        const total = con.reduce((a, p) => a + peso(p), 0);
+        return Math.round((con.reduce((a, p) => a + p.vals[i] * peso(p), 0) / total) * 10) / 10;
+    });
+    // La referencia es del equipo entero: contra un recorte no dice nada.
+    return { ...activa, vals, personas: quedan, previo: null, semana: null };
 };
 
 /**
@@ -49,7 +89,7 @@ const Leyenda = ({ ex, refNombre, refRango, vista, conAtipicos, hayMarcas }) => 
  * siendo el valor del día, y sigue abriendo la lista de ese día (salvo con Personas, donde abre el
  * reparto de ese día, que trae su propio enlace a la lista).
  */
-const PanelSerie = ({ serie, dias, hoy, vista, rol, irA, capas, refKey, refNombre, refRango }) => {
+const PanelSerie = ({ serie, dias, hoy, vista, rol, irA, capas, refKey, refNombre, refRango, ocultas, onPersona }) => {
     const montado = useMontado();
     const [iSub, setISub] = useState(0);
     // El día abierto (su índice), o null. Nunca se abre solo: seis paneles con su detalle abierto
@@ -57,16 +97,22 @@ const PanelSerie = ({ serie, dias, hoy, vista, rol, irA, capas, refKey, refNombr
     const [foco, setFoco] = useState(null);
 
     const subs = serie.series || null;
-    const activa = useMemo(() => {
-        if (subs) return { ...subs[Math.min(iSub, subs.length - 1)] };
+    const esTasa = serie.tipo === 'tasa';
+    // La serie completa y, aparte, la de las personas que quedan: quitar a alguien cambia lo que se
+    // dibuja, el total de la cabecera y los atípicos, no solo la leyenda.
+    const todas = useMemo(() => {
+        if (subs) return { ...subs[Math.min(iSub, subs.length - 1)], esTasa };
         return {
-            vals: serie.vals, tone: serie.tone, label: null,
+            vals: serie.vals, tone: serie.tone, label: null, esTasa,
             previo: serie.previo, semana: serie.semana, personas: serie.personas,
         };
-    }, [serie, subs, iSub]);
+    }, [serie, subs, iSub, esTasa]);
+    const activa = useMemo(
+        () => (capas.personas && todas.personas ? sinPersonas(todas, ocultas) : todas),
+        [capas.personas, todas, ocultas],
+    );
 
     const pasados = useMemo(() => diasPasados(dias, hoy), [dias, hoy]);
-    const esTasa = serie.tipo === 'tasa';
 
     const { max, unico, activos, cabecera } = useMemo(() => {
         const conMovimiento = activa.vals.filter(v => v > 0);
@@ -111,14 +157,17 @@ const PanelSerie = ({ serie, dias, hoy, vista, rol, irA, capas, refKey, refNombr
         : null;
     const conReparto = capas.personas && !!activa.personas;
     const apilar = conReparto && !esTasa && vista === 'barras' ? activa.personas : null;
+    // En Curva cada persona es una línea (también las tasas, que no se apilan).
+    const lineas = conReparto && vista === 'curva' ? activa.personas : null;
 
     const focoEf = foco;
     const verDetalle = focoEf !== null && focoEf < pasados && b.n > 0;
 
     const algunaCapa = capas.comparar || capas.atipicos || capas.tendencia || capas.personas;
-    const tope = Math.max(max, ...(ref || []).filter(v => v !== null), 0);
+    const tope = Math.max(max, ...(ref || []).filter(v => v !== null),
+        ...(lineas || []).flatMap(p => p.vals), 0);
     const ex = {
-        ref, banda: capas.atipicos && b.confiable ? b : null, mm, marcas, apilar,
+        ref, banda: capas.atipicos && b.confiable ? b : null, mm, marcas, apilar, lineas,
         // Sin capas la serie se ve como siempre, también los días que todavía no pasaron.
         pasados: algunaCapa ? pasados : dias.length,
         foco: verDetalle ? focoEf : null,
@@ -181,6 +230,11 @@ const PanelSerie = ({ serie, dias, hoy, vista, rol, irA, capas, refKey, refNombr
 
             <Leyenda ex={ex} refNombre={refNombre} refRango={refRango} vista={vista}
                 conAtipicos={capas.atipicos} hayMarcas={lista.length > 0} />
+
+            {conReparto && (
+                <Personas personas={todas.personas.map((p, k) => ({ ...p, k }))} ocultas={ocultas}
+                    onPersona={(n) => { onPersona(n); setFoco(null); }} esTasa={esTasa} vista={vista} />
+            )}
 
             {acum && (
                 <Acumulado serie={serie} tone={activa.tone} acum={acum} refAcum={refAcum} ritmo={rit}

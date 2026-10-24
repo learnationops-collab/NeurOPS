@@ -16,7 +16,8 @@ import { diaCorto, valorDe } from './formato';
  */
 
 const PALETA = ['cat-1', 'cat-2', 'cat-3', 'cat-4', 'cat-5', 'cat-6', 'warning', 'info'];
-export const colorDePersona = (p, i) => (p.otros ? 'idle' : PALETA[i % PALETA.length]);
+// `p.k` es su lugar en la lista completa: quitar a alguien no le cambia el color a las demás.
+export const colorDePersona = (p, i) => (p.otros ? 'idle' : PALETA[(p.k ?? i) % PALETA.length]);
 
 const GLIFO = { pico: '▲', caida: '▼', cero: '○' };
 const TEXTO = { pico: 'pico', caida: 'caída', cero: 'sin movimiento' };
@@ -155,6 +156,11 @@ const Curva = ({ serie, activa, dias, tope, max, ex }) => {
                     ))}
                     <path d={area} fill={`url(#${gradiente})`} />
                     <g className="capa-g"><Capas ex={ex} x={x} y={y} /></g>
+                    {ex.lineas && ex.lineas.map(p => (
+                        <polyline key={p.nombre} className="curva-persona"
+                            points={p.vals.map((v, i) => `${x(i).toFixed(2)},${y(v).toFixed(2)}`).join(' ')}
+                            stroke={`var(--${colorDePersona(p, 0)})`} />
+                    ))}
                     <polyline className="curva-linea" points={puntos.join(' ')}
                         stroke={`var(--${activa.tone})`} />
                 </svg>
