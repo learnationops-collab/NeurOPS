@@ -1,0 +1,86 @@
+/* ============================================================================
+   Workshop › Correlaciones. Estilo del dashboard comercial (`.dc-shell`); todo lo propio va bajo
+   `.dc-shell .wc-…`. Colores solo por token; el relleno de cada celda llega por `--wc-fondo`.
+   ============================================================================ */
+
+.dc-shell .wc-vista { gap: var(--s4); container-type: inline-size; }
+.dc-shell .wc-recargando { opacity: .6; transition: opacity .2s ease; }
+.dc-shell .wc-esqueleto { display: grid; gap: var(--s4); }
+.dc-shell .wc-filtros { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
+.dc-shell .wc-oculto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+/* --- Aviso de honestidad ------------------------------------------------------------------------ */
+.dc-shell .wc-aviso { display: grid; gap: var(--s2); padding: var(--s4) var(--s5); border-color: var(--warning-border); }
+.dc-shell .wc-aviso ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; color: var(--text-muted); }
+.dc-shell .wc-aviso-n { margin: 0; font-size: 12px; color: var(--text-muted-40); }
+.dc-shell .wc-vacio { display: grid; gap: var(--s3); justify-items: start; padding: var(--s8) var(--s6); }
+
+/* --- Distribución: mapa a la izquierda, ranking y par a la derecha ------------------------------- */
+.dc-shell .wc-cuerpo { display: grid; gap: var(--s4); grid-template-columns: minmax(0, 1fr); }
+@container (min-width: 1100px) { .dc-shell .wc-cuerpo { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; } }
+.dc-shell .wc-lado { display: grid; gap: var(--s4); min-width: 0; }
+.dc-shell .wc-panel { padding: var(--s5); min-width: 0; }
+.dc-shell .wc-panel .panel-cab { margin-bottom: var(--s3); align-items: center; }
+
+/* --- Mapa de calor ------------------------------------------------------------------------------- */
+.dc-shell .wc-mapa-scroll { overflow-x: auto; padding-bottom: var(--s2); }
+.dc-shell .wc-mapa { border-collapse: separate; border-spacing: 2px; font-size: 11px; }
+.dc-shell .wc-mapa td, .dc-shell .wc-mapa th { padding: 0; }
+.dc-shell .wc-col { height: 128px; width: 26px; vertical-align: bottom; font-weight: 700; color: var(--text-muted); }
+.dc-shell .wc-col span { display: block; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; padding-bottom: 4px; }
+.dc-shell .wc-fila {
+    position: sticky; left: 0; z-index: 1; background: var(--mat-1);
+    text-align: right; white-space: nowrap; padding-right: 8px; font-weight: 700; color: var(--text-muted);
+}
+.dc-shell .wc-diag { width: 26px; height: 26px; border-radius: 6px; background: var(--bg-element); opacity: .5; }
+.dc-shell .wc-celda {
+    position: relative; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border-radius: 6px;
+    background: var(--wc-fondo, transparent); border: 1px solid var(--border-subtle); cursor: pointer;
+    transition: transform .12s ease, border-color .12s ease;
+}
+.dc-shell .wc-celda:hover { border-color: var(--border-control); transform: scale(1.12); z-index: 2; }
+.dc-shell .wc-celda:focus-visible { box-shadow: var(--focus-ring); outline: none; }
+.dc-shell .wc-celda--vacia { background: transparent; border-style: dashed; opacity: .55; }
+.dc-shell .wc-celda--ligada { border-style: dotted; border-color: var(--text-muted-40); }
+.dc-shell .wc-celda--on { border-color: var(--text-on-surface); border-width: 2px; }
+.dc-shell .wc-firme { width: 5px; height: 5px; border-radius: 50%; background: var(--text-on-surface); display: block; }
+.dc-shell .wc-firme--ley { display: inline-block; vertical-align: middle; margin-right: 4px; }
+.dc-shell .wc-leyenda { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: var(--s3) 0 0; font-size: 11px; color: var(--text-muted-40); }
+.dc-shell .wc-leyenda i:not(.wc-firme) { width: 16px; height: 10px; border-radius: 3px; display: inline-block; }
+.dc-shell .wc-leyenda-neg { background: color-mix(in srgb, var(--error) 78%, transparent); }
+.dc-shell .wc-leyenda-cero { background: transparent; border: 1px solid var(--border-subtle); }
+.dc-shell .wc-leyenda-pos { background: color-mix(in srgb, var(--success) 78%, transparent); }
+
+/* --- Ranking ------------------------------------------------------------------------------------- */
+.dc-shell .wc-ranking-cab { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); flex-wrap: wrap; margin-bottom: var(--s3); }
+.dc-shell .wc-ranking-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; max-height: 340px; overflow-y: auto; overscroll-behavior: contain; }
+.dc-shell .wc-rk {
+    display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(60px, 1fr) 46px 40px; align-items: center; gap: var(--s2);
+    width: 100%; padding: 6px 8px; border-radius: 10px; text-align: left; font-size: 12.5px; color: var(--text-muted);
+    background: transparent; border: 1px solid transparent; cursor: pointer; transition: background-color .15s ease;
+}
+.dc-shell .wc-rk:hover { background: var(--bg-element); color: var(--text-on-surface); }
+.dc-shell .wc-rk--on { background: var(--brand-secondary-surface); border-color: var(--brand-secondary-border); color: var(--text-on-surface); }
+.dc-shell .wc-rk--ligada { opacity: .6; }
+.dc-shell .wc-rk-nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+/* La pista parte desde el centro: a la derecha suben juntas, a la izquierda una sube y la otra baja. */
+.dc-shell .wc-rk-pista { position: relative; height: 8px; border-radius: 999px; background: var(--bg-element); }
+.dc-shell .wc-rk-pista::after { content: ''; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--border-control); }
+.dc-shell .wc-rk-pista i { position: absolute; top: 0; bottom: 0; border-radius: 999px; }
+.dc-shell .wc-rk-pos { left: 50%; background: var(--success); }
+.dc-shell .wc-rk-neg { right: 50%; background: var(--error); }
+.dc-shell .wc-rk-r { text-align: right; font-weight: 800; color: var(--text-on-surface); }
+.dc-shell .wc-rk-n { font-size: 11px; color: var(--text-muted-40); text-align: right; }
+.dc-shell .wc-atajos { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s3); }
+
+/* --- Par elegido + dispersión -------------------------------------------------------------------- */
+.dc-shell .wc-n { font-size: 11px; color: var(--text-muted-40); }
+.dc-shell .wc-frase { margin: 0 0 var(--s3); }
+.dc-shell .wc-sin-puntos { padding: var(--s6) 0; }
+.dc-shell .wc-disp { width: 100%; height: auto; display: block; }
+.dc-shell .wc-disp-rej { stroke: var(--border-subtle); stroke-width: 1; }
+.dc-shell .wc-disp-eje { fill: var(--text-muted-40); font-size: 10.5px; }
+.dc-shell .wc-disp-titulo { fill: var(--text-muted); font-size: 11.5px; font-weight: 700; }
+.dc-shell .wc-disp-recta { stroke: var(--brand-secondary); stroke-width: 1.5; stroke-dasharray: 5 4; opacity: .8; }
+.dc-shell .wc-disp-punto circle { fill: var(--brand-secondary); fill-opacity: .75; stroke: var(--text-on-surface); stroke-width: 1; }
+.dc-shell .wc-disp-punto text { fill: var(--text-muted); font-size: 10px; }
