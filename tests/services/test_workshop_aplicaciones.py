@@ -111,6 +111,15 @@ def test_no_cuenta_el_formulario_de_un_setter(db):
     assert contar() == {'vivo': 0, 'landing': 0}
 
 
+def test_no_cuenta_el_formulario_del_link_de_un_setter_aunque_no_diga_cual(db):
+    # 'setting' es el link de un setter sin nombre: entraba por `es_sin_dueno` como si fuera
+    # 'No identificado' y sumaba aplicaciones sin agenda del taller (10/12: 4 de 36).
+    cliente(db, creado=DENTRO, fuente_form='setting', enviado=DENTRO)
+    cliente(db, creado=DENTRO, fuente_form='Setting', enviado=DENTRO)
+
+    assert contar() == {'vivo': 0, 'landing': 0}
+
+
 def test_separa_el_vivo_de_la_grabacion_tambien_para_quien_se_volvio_a_anotar(db):
     cliente(db, creado=ANTES, fuente_form='Workshop', enviado=DENTRO)
     cliente(db, creado=ANTES, fuente_form='workshop landing', enviado=DENTRO)

@@ -26,7 +26,8 @@ import pytz
 from sqlalchemy import and_, or_, func
 
 from app.models import Client, FinancialAgenda, FinancialSale, Appointment, WorkshopEvent
-from app.services.fuente_service import es_workshop_landing, es_workshop_vivo, es_sin_dueno
+from app.services.fuente_service import (FUENTE_SETTING, es_workshop_landing, es_workshop_vivo,
+                                         es_sin_dueno, normalizar)
 from app.services import pagos_copia
 from app.services.sales_consistency_service import filtro_de_pagos
 from app.services.ticket_service import SENA, VENTA, claves_de_venta, ticket_de
@@ -124,7 +125,10 @@ def _contar_aplicaciones(desde, hasta, tz):
         fd = form_data_de(c)
         fuente_form = fd.get('fuente_form')
         grupo = _clasificar_fuente(fuente_form, fd.get('fuente'))
-        if not grupo and fuente_form and es_sin_dueno(fuente_form):
+        # 'setting' es el link de un setter: tampoco es un formulario del workshop (la regla del
+        # 12/sep era solo para 'No identificado'); sin esta salvedad entraba por `es_sin_dueno`.
+        if (not grupo and fuente_form and es_sin_dueno(fuente_form)
+                and normalizar(fuente_form) != FUENTE_SETTING):
             grupo = 'vivo'
         if grupo:
             conteo[grupo] += 1
