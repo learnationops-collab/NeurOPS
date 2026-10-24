@@ -1,0 +1,36 @@
+/* Modal de agendas de un taller: Revisar corre adentro del cascarón compartido, con los tokens de
+   `.dc-shell` (el fondo del tablero se anula: el panel del modal ya tiene el suyo). */
+
+.dc-shell.agm {
+    min-height: 0;
+    padding-bottom: 0;
+    background: transparent;
+}
+
+.dc-shell .agm-resumen {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--s2) var(--s4);
+    margin-bottom: var(--s4);
+}
+.dc-shell .agm-resumen .chip { flex-shrink: 0; }
+
+/* El número que abre la lista: se lee como dato y se nota que se puede tocar. */
+.dc-shell .agm-num {
+    display: inline;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--text-muted, currentColor);
+}
+.dc-shell .agm-num:hover,
+.dc-shell .agm-num:focus-visible {
+    color: var(--brand-secondary);
+    text-decoration-style: solid;
+}
