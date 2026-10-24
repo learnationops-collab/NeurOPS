@@ -895,10 +895,13 @@ function Revision({
               const enLinea = pregunta && !(pregunta.campos || []).some(
                 (c) => c.tipo === 'cronograma' || c.tipo === 'estado_cliente',
               );
+              // Las fichas van de a varias por fila; un texto largo (el motivo, una nota) o la
+              // que se está editando ocupan el ancho entero.
+              const ancha = abierta || (typeof fila.valor === 'string' && fila.valor.length > 40);
               return (
                 <motion.div
                   key={unica ? paso : fila.clave}
-                  className={`fi-rev-fila${fila.vacia ? ' fi-rev-fila--vacia' : ''}${abierta ? ' fi-rev-fila--abierta' : ''}`}
+                  className={`fi-rev-fila${fila.vacia ? ' fi-rev-fila--vacia' : ''}${abierta ? ' fi-rev-fila--abierta' : ''}${ancha ? ' fi-rev-fila--ancha' : ''}`}
                   {...CASCADA.hijo(reducido)}
                 >
                   <span className="fi-rev-rotulo">{fila.label}</span>
