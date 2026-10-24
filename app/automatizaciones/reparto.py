@@ -1,6 +1,6 @@
 """A qué setter le toca cada entrada de una campaña (19/10/2026). Reemplaza al reparto de ManyChat.
 
-  · **Continuidad**: si la persona ya tuvo un setter (en cualquier campaña) y sigue siendo un setter
+  · **Continuidad**: si la persona ya tuvo un setter (en cualquier campaña o en su conversación de ManyChat) y sigue siendo un setter
     activo, se queda con ese: no se le corta la conversación que ya lleva en Kommo.
   · **Distribuido**: si no, al participante al que más le falta para su parte de las entradas de la
     campaña en las últimas 24 h (cuenta personas nuevas, no reingresos). Cada uno tiene un peso (70 y 30: 70 % y 30 %; todos en 1: parejo) y
@@ -18,8 +18,8 @@ from datetime import timedelta
 from fractions import Fraction
 
 from app import db
-from app.automatizaciones.modelos import AutEjecucion
-from app.models import User
+from app.automatizaciones.modelos import AutEjecucion, IgContacto
+from app.models import Conversation, User
 from app.models.user import ROLE_SETTER
 
 VENTANA = timedelta(hours=24)
@@ -44,13 +44,27 @@ def _participantes(campana):
     return candidatos
 
 
+def _del_historial(contacto_id):
+    """El setter que ya tenía la persona en una conversación anterior al motor (la de ManyChat), por su Instagram."""
+    contacto = db.session.get(IgContacto, contacto_id)
+    ig = (contacto.username or '').strip().lower() if contacto else ''
+    if not ig:
+        return None
+    nombre = (db.session.query(Conversation.setter)
+              .filter(db.func.lower(db.func.replace(Conversation.ig, '@', '')) == ig,
+                      Conversation.setter.isnot(None), Conversation.setter != '',
+                      ~Conversation.external_id.like('ig:%'))
+              .order_by(Conversation.updated_at.desc(), Conversation.id.desc()).limit(1).scalar())
+    return next((u for u in setters_activos() if u.username.lower() == (nombre or '').strip().lower()), None)
+
+
 def _anterior(contacto_id):
-    """El último setter que tuvo la persona, si sigue activo."""
+    """El último setter que tuvo la persona (en el motor o, si no, en ManyChat), si sigue activo."""
     setter_id = (db.session.query(AutEjecucion.setter_id)
                  .filter(AutEjecucion.contacto_id == contacto_id, AutEjecucion.setter_id.isnot(None))
                  .order_by(AutEjecucion.iniciada_en.desc(), AutEjecucion.id.desc()).limit(1).scalar())
     if setter_id is None:
-        return None
+        return _del_historial(contacto_id)
     return next((u for u in setters_activos() if u.id == setter_id), None)
 
 
