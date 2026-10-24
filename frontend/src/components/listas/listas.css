@@ -185,6 +185,31 @@
 .dc-shell .lc-caja .tabla-cab,
 .dc-shell .lc-caja .tabla-fila { min-width: var(--lc-min, 0); }
 .dc-shell .lc-caja .tabla-cab { position: sticky; top: 0; z-index: 4; background: var(--lc-fondo); box-shadow: 0 1px 0 var(--border-main); }
+/* La cabecera, la fila de grupos y la de totales se pegan juntas: el bloque entero, no cada fila. */
+.dc-shell .lc-caja .lc-cabeza { position: sticky; top: 0; z-index: 4; min-width: var(--lc-min, 0); background: var(--lc-fondo); box-shadow: 0 1px 0 var(--border-main); }
+.dc-shell .lc-cabeza .tabla-cab { position: static; box-shadow: none; }
+.dc-shell .lc-cabeza .tabla-cab[role="row"] { border-bottom: 1px solid var(--border-main); }
+.dc-shell .lc-grupos { height: 24px; border-bottom: 0; }
+.dc-shell .lc-grupos > span { color: var(--brand-secondary); font-size: 10px; }
+.dc-shell .lc-grupo-inicio { border-left: 1px solid var(--border-main); padding-left: var(--s3); }
+.dc-shell .lc-totales { background: var(--bg-element); border-bottom: 1px solid var(--border-main); min-height: 52px; }
+.dc-shell .lc-totales .lc-pegada { background: color-mix(in srgb, var(--text-on-surface) 8%, var(--bg-flotante)); }
+.dc-shell .lc-total-et { display: flex; flex-direction: column; min-width: 0; text-align: left; }
+.dc-shell .lc-total-et b { font-size: 13px; font-weight: 800; }
+.dc-shell .lc-total-v { display: flex; flex-direction: column; align-items: flex-end; }
+.dc-shell .lc-total-v b { font-size: 13px; font-weight: 800; }
+.dc-shell .lc-total-et small, .dc-shell .lc-total-v small { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+/* El asa para cambiar el ancho de una columna: una franja en el borde derecho de su encabezado. */
+.dc-shell .lc-cabeza .cab-celda:has(> .lc-asa) { position: relative; }
+.dc-shell .lc-cabeza .cab-celda.lc-pegada:has(> .lc-asa) { position: sticky; }
+.dc-shell .lc-asa { position: absolute; top: 4px; bottom: 4px; right: 0; width: 8px; cursor: col-resize;
+    border-radius: 4px; touch-action: none; z-index: 2; }
+.dc-shell .lc-asa::after { content: ""; position: absolute; top: 4px; bottom: 4px; left: 3px; width: 2px; border-radius: 1px;
+    background: var(--border-main); transition: background-color .16s ease; }
+.dc-shell .lc-asa:hover::after, .dc-shell .lc-asa:focus-visible::after, body.lc-redimensionando .lc-asa::after { background: var(--brand-secondary); }
+.dc-shell .lc-asa:focus-visible { outline: none; }
+body.lc-redimensionando { cursor: col-resize; user-select: none; }
+.dc-shell .lc-vistas { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; margin-bottom: var(--s3); }
 .dc-shell .lc-caja .lc-pegada { position: sticky; z-index: 1; background: var(--lc-fondo); }
 .dc-shell .lc-caja .tabla-fila[data-abre]:hover .lc-pegada,
 .dc-shell .lc-caja .tabla-fila[aria-current="true"] .lc-pegada { background: var(--lc-fondo-hover); }

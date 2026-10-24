@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDown, Check, ChevronDown, Columns, RotateCcw, Rows, Search, SlidersHorizontal, X } from 'lucide-react';
 import PanelConfigurar from '../../pages/comercial/components/PanelConfigurar';
+import { Segmented } from '../../pages/comercial/components/Shared';
 import Tip from '../../pages/comercial/components/Tip';
 import { useColumnasVisibles } from './useColumnasVisibles';
 import { anchoMinimo, izquierdaDePegadas } from './anchoColumnas';
@@ -8,6 +9,8 @@ import { useEnPantalla } from '../ui/useEnPantalla';
 import { usePaginaProgresiva } from './usePaginaProgresiva';
 import ListaAgrupable from './ListaAgrupable';
 import CajaDesplazable from './CajaDesplazable';
+import AsaDeAncho from './AsaDeAncho';
+import { useAnchosColumnas } from './useAnchosColumnas';
 import './listas.css';
 
 /**
@@ -25,6 +28,15 @@ import './listas.css';
  * `claveGuardado` es la clave de `localStorage` de las columnas elegidas (una por lista).
  *   agrupables: [{ key, label, de(fila) → texto o null }] — «Agrupar por», como en Revisar: grupos
  *               colapsables con su cantidad (`ListaAgrupable`).
+ *
+ * `vistas`: [{ key, label, columnas: [keys], grupos? }] — combinaciones de columnas que se eligen con un
+ * toque (Embudo, Plata…); `grupos: true` rotula arriba cada grupo (`grupo` de la primera columna de cada
+ * uno). `totales`: { etiqueta, sub(filas) } agrega la fila de totales debajo de la cabecera, con el
+ * `total(filas) → { texto, tipo, valor }` de cada columna que lo sabe calcular; `render(fila, total)`
+ * recibe el de su columna (para colorear contra el total).
+ *
+ * `redimensionable: true`: el ancho de la columna se cambia arrastrando el borde de su encabezado (se
+ * recuerda; ver `useAnchosColumnas`). Conviene en la columna principal, que es la `pegada`.
  *
  * `pegada: true` en una columna la deja fija a la izquierda al desplazar la tabla (solo las primeras, con
  * `width` en px; ver `anchoColumnas.js`).
@@ -118,11 +130,15 @@ const MenuAgrupar = ({ agrupables, filas, valor, onElegir, onCerrar }) => {
 const ListaConfigurable = ({
     columnas, facetas = [], filas, clave, onAbrirFila, buscar, buscarPlaceholder = 'Buscar…',
     claveGuardado, vacio = 'No hay filas para mostrar.', ayuda, extra, ordenInicial = null, marcada = null,
-    agrupables = [],
+    agrupables = [], vistas = [], totales = null,
 }) => {
     const [agrupacion, setAgrupacion] = useState(null);
     const dimension = agrupables.find((d) => d.key === agrupacion) || null;
-    const { visibles, alternar, restablecer } = useColumnasVisibles(claveGuardado, columnas);
+    const { visibles: visiblesCrudo, alternar, restablecer, fijarVisibles } = useColumnasVisibles(claveGuardado, columnas);
+    const { anchos, fijar: fijarAncho } = useAnchosColumnas(claveGuardado);
+    // Una columna `redimensionable` con ancho elegido usa ese (en px) en vez del de su definición.
+    const visibles = useMemo(() => visiblesCrudo.map((c) => (c.redimensionable && anchos[c.key]
+        ? { ...c, width: `${anchos[c.key]}px` } : c)), [visiblesCrudo, anchos]);
     const [query, setQuery] = useState('');
     const [elegidas, setElegidas] = useState({});
     const [modo, setModo] = useState('todas');
@@ -152,6 +168,20 @@ const ListaConfigurable = ({
 
     const { pagina, hayMas, pie } = usePaginaProgresiva(mostradas);
 
+    // La vista activa es la que deja a la vista justo sus columnas (más las fijas); si se tocó una a mano, ninguna.
+    const clavesVisibles = visibles.map((c) => c.key).sort().join('|');
+    const vistaActiva = vistas.find((v) => columnas.filter((c) => c.fija || v.columnas.includes(c.key))
+        .map((c) => c.key).sort().join('|') === clavesVisibles) || null;
+    const conGrupos = !!vistaActiva?.grupos;
+    // El total de cada columna que lo sabe calcular, sobre lo que se está viendo (ya filtrado).
+    const totalesDe = useMemo(() => (totales
+        ? Object.fromEntries(columnas.filter((c) => c.total).map((c) => [c.key, c.total(mostradas)])) : {}),
+    [totales, columnas, mostradas]);
+
+    const claseDe = (c, i, base = '') => [
+        base, c.alinear === 'der' && 'lc-der', c.pegada && 'lc-pegada', conGrupos && c.grupo && i > 0 && 'lc-grupo-inicio',
+    ].filter(Boolean).join(' ') || undefined;
+
     const dibujarFila = (fila) => (
         <div key={clave(fila)} className="tabla-fila" role="row" style={{ '--cols': plantilla }}
             {...(onAbrirFila ? {
@@ -163,11 +193,10 @@ const ListaConfigurable = ({
             } : {})}
             data-abre={onAbrirFila ? '' : undefined}
             aria-current={marcada != null && clave(fila) === marcada ? 'true' : undefined}>
-            {visibles.map((c) => (
-                <div key={c.key} data-h={c.header} role="cell"
-                    className={[c.alinear === 'der' && 'lc-der num', c.pegada && 'lc-pegada'].filter(Boolean).join(' ') || undefined}
+            {visibles.map((c, i) => (
+                <div key={c.key} data-h={c.header} role="cell" className={claseDe(c, i, c.alinear === 'der' ? 'num' : '')}
                     style={c.pegada ? { left: pegadas[c.key] } : undefined}>
-                    {c.render ? c.render(fila) : (c.valor(fila) ?? '—')}
+                    {c.render ? c.render(fila, totalesDe[c.key]) : (c.valor(fila) ?? '—')}
                 </div>
             ))}
         </div>
@@ -181,6 +210,13 @@ const ListaConfigurable = ({
 
     return (
         <div className="lista-configurable">
+            {vistas.length > 0 && (
+                <div className="lc-vistas">
+                    <span className="t-eyebrow mut">Vista de columnas</span>
+                    <Segmented opciones={vistas} valor={vistaActiva?.key ?? null} ariaLabel="Vista de columnas"
+                        onChange={(key) => fijarVisibles(vistas.find((v) => v.key === key).columnas)} />
+                </div>
+            )}
             <div className="fila barra-tabla">
                 {facetas.length > 0 && (
                     <div className="config-envoltura">
@@ -263,12 +299,22 @@ const ListaConfigurable = ({
 
             <div className="tabla lc-tabla" role="table" style={{ '--lc-min': `${ancho}px` }}>
                 <CajaDesplazable className="lc-caja" claseArriba="lc-arriba">
+                    <div className="lc-cabeza">
+                    {conGrupos && (
+                        <div className="tabla-cab lc-grupos" style={{ '--cols': plantilla }} aria-hidden="true">
+                            {visibles.map((c, i) => (
+                                <span key={c.key} className={claseDe(c, i)} style={c.pegada ? { left: pegadas[c.key] } : undefined}>
+                                    {c.grupo || ''}
+                                </span>
+                            ))}
+                        </div>
+                    )}
                     <div className="tabla-cab" style={{ '--cols': plantilla }} role="row">
-                        {visibles.map((c) => {
+                        {visibles.map((c, i) => {
                             const dir = orden?.key === c.key ? orden.dir : null;
                             const ordenable = c.ordenable !== false && !!c.valor;
                             return (
-                                <span key={c.key} className={`cab-celda${c.alinear === 'der' ? ' lc-der' : ''}${c.pegada ? ' lc-pegada' : ''}`}
+                                <span key={c.key} className={claseDe(c, i, 'cab-celda')}
                                     style={c.pegada ? { left: pegadas[c.key] } : undefined} role="columnheader">
                                     {ordenable ? (
                                         <button type="button" className={`cab-orden${dir ? ' cab-orden--on' : ''}`}
@@ -279,9 +325,34 @@ const ListaConfigurable = ({
                                         </button>
                                     ) : <span className="trunc">{c.header}</span>}
                                     {c.ayuda && <Tip texto={c.ayuda} titulo={c.header} />}
+                                    {c.redimensionable && (
+                                        <AsaDeAncho nombre={c.header} onAncho={(px) => fijarAncho(c.key, px)}
+                                            onRestablecer={() => fijarAncho(c.key, null)} />
+                                    )}
                                 </span>
                             );
                         })}
+                    </div>
+                    {totales && mostradas.length > 0 && (
+                        <div className="tabla-fila lc-totales" style={{ '--cols': plantilla }} role="row">
+                            {visibles.map((c, i) => {
+                                const t = totalesDe[c.key];
+                                return (
+                                    <div key={c.key} role="cell" className={claseDe(c, i, 'num')}
+                                        style={c.pegada ? { left: pegadas[c.key] } : undefined}>
+                                        {i === 0 ? (
+                                            <span className="lc-total-et">
+                                                <b>{totales.etiqueta}</b>
+                                                <small>{totales.sub ? totales.sub(mostradas) : ''}</small>
+                                            </span>
+                                        ) : t && (
+                                            <span className="lc-total-v"><b>{t.texto}</b><small>{t.tipo}</small></span>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                     </div>
                     {mostradas.length === 0 ? (
                         <p className="t-body mut40 lc-vacio">{vacio}</p>

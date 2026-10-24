@@ -55,7 +55,12 @@ export const useColumnasVisibles = (clave, columnas) => {
 
     const restablecer = useCallback(() => setOcultas(ocultasPorDefecto(columnas)), [columnas, setOcultas]);
 
-    return { visibles, ocultas, alternar, restablecer };
+    /** Deja a la vista justo estas columnas (más las fijas): las «vistas» de una lista, como Embudo o Plata. */
+    const fijarVisibles = useCallback((keys) => setOcultas(
+        columnas.filter((c) => !c.fija && !keys.includes(c.key)).map((c) => c.key),
+    ), [columnas, setOcultas]);
+
+    return { visibles, ocultas, alternar, restablecer, fijarVisibles };
 };
 
 export default useColumnasVisibles;
