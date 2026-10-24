@@ -246,9 +246,23 @@ def rows(user, plan, limite):
     except motor.MotorError as e:
         raise ConectorError(' '.join(e.errores)) from e
     nombres = {c['clave']: c['nombre'] for c in p.get('columnas') or []}
-    filas = [{'clave': r.get('clave'), 'fila': r.get('fila'), 'alumno_id': r.get('alumno_id'),
+    personas = _nombres_de_personas([r.get('persona') for r in p.get('filas') or [] if _sin_nombre(r.get('fila'))])
+    filas = [{'clave': r.get('clave'), 'alumno_id': r.get('alumno_id'),
+              'fila': (personas.get(r.get('persona')) if _sin_nombre(r.get('fila')) else None) or r.get('fila'),
               **{nombres.get(k, k): v for k, v in r.items() if k in nombres}} for r in p.get('filas') or []]
     return {'total': p['total'], 'filas': filas}
+
+
+def _sin_nombre(fila):
+    """Las tablas sin columna de nombre (agendas, ventas) se nombran «#id»: para una lista sirve más su persona."""
+    return fila is None or str(fila).startswith('#')
+
+
+def _nombres_de_personas(uuids):
+    uuids = [u for u in dict.fromkeys(uuids) if u]
+    if not uuids:
+        return {}
+    return dict(db.session.query(Person.uuid, Person.full_name).filter(Person.uuid.in_(uuids)).all())
 
 
 def measures(plan):
