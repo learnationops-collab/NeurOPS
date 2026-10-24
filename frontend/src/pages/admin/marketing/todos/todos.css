@@ -1,0 +1,56 @@
+/* Todos (Setting vs Workshop): tarjetas del resumen, embudo normalizado y métrica por métrica. */
+.dc-shell .td-fuerte{font-weight:700;color:var(--text-on-surface)}
+.dc-shell .td-der{text-align:right}
+
+/* Leyenda de quién es quién, bajo el título. */
+.dc-shell .td-leyenda{display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap;margin-bottom:var(--s4)}
+.dc-shell .td-leyenda span{display:inline-flex;align-items:center;gap:var(--s2);font-size:13px;font-weight:600}
+.dc-shell .td-leyenda i,.dc-shell .td-punto{display:inline-block;width:12px;height:12px;border-radius:4px;flex:none}
+.dc-shell .td-punto{width:9px;height:9px;border-radius:3px;margin-right:6px}
+
+/* Cuatro tarjetas: 2 × 2 y, si entran, las cuatro en una fila (nunca 3 + 1). */
+.dc-shell .td-tarjetas{display:grid;gap:var(--s4);grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (min-width:1000px){.dc-shell .td-tarjetas{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (max-width:520px){.dc-shell .td-tarjetas{grid-template-columns:minmax(0,1fr)}}
+.dc-shell .td-tarjeta{display:flex;flex-direction:column;gap:var(--s3);padding:var(--s5);min-width:0}
+.dc-shell .td-tarjeta-cifra{display:flex;align-items:baseline;gap:var(--s2);flex-wrap:wrap}
+.dc-shell .td-ganador{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600}
+.dc-shell .td-ganador i{width:10px;height:10px;border-radius:3px;flex:none}
+.dc-shell .td-tarjeta-pie{display:flex;justify-content:space-between;gap:var(--s2);flex-wrap:wrap}
+
+/* Embudo normalizado: por cada paso, dos barras (Setting y Workshop) del mismo largo de referencia. */
+.dc-shell .td-embudo{display:flex;flex-direction:column;gap:var(--s6);padding:var(--s5)}
+.dc-shell .td-pasos{display:flex;flex-direction:column;gap:var(--s4)}
+.dc-shell .td-paso{display:grid;grid-template-columns:minmax(110px,160px) minmax(0,1fr);gap:var(--s4);align-items:center}
+.dc-shell .td-paso-nombre{display:flex;flex-direction:column;min-width:0}
+.dc-shell .td-paso-barras{display:flex;flex-direction:column;gap:6px;min-width:0}
+.dc-shell .td-paso-fila{display:flex;align-items:center;gap:var(--s3);min-width:0}
+.dc-shell .td-paso-fila > .t-cap{white-space:nowrap}
+.dc-shell .td-barra-embudo{height:22px;min-width:4px;border-radius:6px;flex:0 1 auto;transition:width .4s cubic-bezier(.22,1,.36,1)}
+@media (max-width:640px){.dc-shell .td-paso{grid-template-columns:minmax(0,1fr)}}
+
+/* Métrica por métrica. */
+.dc-shell .td-detalle{display:flex;flex-direction:column;gap:var(--s4);padding:var(--s5)}
+.dc-shell .td-detalle .panel-cab{margin-bottom:0}
+.dc-shell .td-grupo{display:flex;flex-direction:column;gap:2px}
+.dc-shell .td-grupo-titulo{padding:0 var(--s3) var(--s2);color:var(--brand-secondary)}
+.dc-shell .td-fila{display:grid;grid-template-columns:minmax(160px,1.3fr) minmax(0,1fr) minmax(0,1fr) minmax(120px,150px);
+  gap:var(--s4);align-items:center;padding:var(--s3);border-radius:var(--radius-control)}
+.dc-shell .td-fila--tasa{background:var(--bg-element)}
+.dc-shell .td-fila--tasa:hover{background:var(--bg-element-hover)}
+.dc-shell .td-fila--cab{padding-block:0}
+.dc-shell .td-fila-nombre{display:flex;flex-direction:column;min-width:0}
+.dc-shell .td-valor{display:flex;flex-direction:column;gap:6px;min-width:0}
+.dc-shell .td-pista{height:6px;border-radius:3px;background:var(--bg-element)}
+.dc-shell .td-fila--tasa .td-pista{background:var(--hueco)}
+.dc-shell .td-pista i{display:block;height:6px;border-radius:3px;transition:width .4s cubic-bezier(.22,1,.36,1)}
+.dc-shell .td-fila-gana{display:flex;flex-direction:column;align-items:flex-end;gap:2px;text-align:right}
+@media (max-width:720px){
+    .dc-shell .td-fila,.dc-shell .td-fila--cab{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .dc-shell .td-fila--cab{display:none}
+    .dc-shell .td-fila-nombre,.dc-shell .td-fila-gana{grid-column:1 / -1}
+    .dc-shell .td-fila-gana{flex-direction:row;align-items:center;justify-content:flex-start;gap:var(--s2)}
+}
+@media (prefers-reduced-motion:reduce){
+    .dc-shell .td-barra-embudo,.dc-shell .td-pista i{transition:none}
+}

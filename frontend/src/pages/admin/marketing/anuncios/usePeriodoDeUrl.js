@@ -29,5 +29,5 @@ export const usePeriodoDeUrl = () => {
         : { periodo: key === PERIODO_POR_DEFECTO ? null : key, desde: null, hasta: null }), [cambiar, rango]);
 
     const textoPeriodo = periodo === 'personalizado' ? textoRango(rango) : PERIODOS.find((p) => p.key === periodo)?.label;
-    return { periodo, rango, cambiar, elegir, textoPeriodo };
+    return { periodo, rango, cambiar, elegir, textoPeriodo, params };
 };
