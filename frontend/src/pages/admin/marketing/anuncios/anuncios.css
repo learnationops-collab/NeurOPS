@@ -207,7 +207,6 @@
 }
 
 /* Rendimiento por embudo (15/10/2026): selector, resumen de gasto por embudo y la vista de Workshop. */
-.dc-shell .mk-embudo-selector{display:flex;justify-content:flex-start;margin-bottom:var(--s4)}
 .dc-shell .mk-embudos{padding:var(--s5);margin-bottom:var(--s5)}
 .dc-shell .mk-embudos-tarjetas{margin-top:var(--s4)}
 .dc-shell .mk-embudo{display:flex;flex-direction:column;gap:6px;text-align:left;min-width:0}

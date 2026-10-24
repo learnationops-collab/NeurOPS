@@ -11,8 +11,7 @@ import ConversacionesVista from './conversaciones/ConversacionesVista';
 import TablaAnuncios, { EsqueletoTablaAnuncios } from './anuncios/TablaAnuncios';
 import { ErrorDeCarga } from './esqueletos';
 import ConexionMeta from './anuncios/ConexionMeta';
-import EmbudosResumen from './anuncios/EmbudosResumen';
-import { CompararFuentes, TarjetasFuente } from './anuncios/FuentesResumen';
+import { TarjetasFuente } from './anuncios/FuentesResumen';
 import AvisoSinCampana from './anuncios/AvisoSinCampana';
 import { useEstadoDeMeta } from './anuncios/useEstadoDeMeta';
 import { PERIODOS, PERIODO_POR_DEFECTO, rangoDePeriodo } from './anuncios/metricas';
@@ -33,20 +32,19 @@ import './anuncios/anuncios.css';
  * 16/10/2026 (acá pedía un endpoint de admin y al director de marketing le daba error); el link viejo
  * lleva allá.
  *
- * Rendimiento separa el gasto por embudo (15/10/2026): «General» (resumen por embudo + la tabla de palabras
- * clave) y «Setting» (la tabla sola). Los anuncios de Workshop (la clase en vivo) pasaron el 24/10/2026 a
- * Workshop › Rendimiento; un link viejo con `embudo=workshop` lleva allá. El espacio se llama «Setting»
- * en el dock desde esa fecha.
+ * Rendimiento es solo Setting (24/10/2026): sus cifras y la tabla de palabras clave. La comparación Setting vs
+ * Workshop y el gasto por embudo viven en «Todos» (/admin/todos) y los anuncios de Workshop (la clase en
+ * vivo), en Workshop › Rendimiento; un link viejo con `embudo=workshop` lleva allá.
  *
  * Meta Ads (16/10/2026) desglosa campaña › conjunto › anuncio y cada fila abre el Administrador de
  * anuncios de Meta (otra pestaña: el token es de solo lectura). Lo que se cambie allá se trae solo al
  * volver (`useEstadoDeMeta`), en cualquier pestaña, y recarga lo que se esté mirando.
  *
- * Carga (17/10/2026): la cabecera, las pestañas y el selector de embudo se ven al instante; cada bloque
+ * Carga (17/10/2026): la cabecera y las pestañas se ven al instante; cada bloque
  * muestra su esqueleto hasta que llega SU dato (el tablero, o el pedido propio de Workshop, Entrantes,
  * Conversaciones y Meta Ads, que salen en paralelo). Recargar deja lo que se ve, atenuado.
  *
- * La pestaña, el embudo y el período viven en la URL (`tab`, `embudo`, `periodo`, `desde`, `hasta`), así
+ * La pestaña y el período viven en la URL (`tab`, `periodo`, `desde`, `hasta`), así
  * un link lleva a lo mismo que se estaba mirando.
  */
 
@@ -60,21 +58,12 @@ const PESTANAS = [
 // «Webhooks» pasó a ser «Entrantes» (16/10/2026): un link viejo abre la nueva.
 const PESTANA_VIEJA = { webhooks: 'entrantes' };
 const CON_PERIODO = ['anuncios', 'entrantes', 'conversaciones', 'meta'];
-// Rendimiento por fuente (15/10/2026; «Todo» se llama «General» desde el 23/10): «General» ve todo —la
-// comparación Setting vs Workshop y el gasto por embudo arriba de la tabla de palabras clave— y «Setting»
-// ve solo Setting (sus cifras y la tabla). Con ROAS New Cash y Total.
-const EMBUDOS_DE_RENDIMIENTO = [
-    { key: 'todo', label: 'General' },
-    { key: 'setting', label: 'Setting' },
-];
-
 const AdminMarketingHubPage = () => {
     const [params, setParams] = useSearchParams();
     const reducir = useReducedMotion();
     const pedida = PESTANA_VIEJA[params.get('tab')] || params.get('tab');
     const pestana = PESTANAS.some((p) => p.key === pedida) ? pedida : 'anuncios';
     const periodo = PERIODOS.some((p) => p.key === params.get('periodo')) ? params.get('periodo') : PERIODO_POR_DEFECTO;
-    const embudo = EMBUDOS_DE_RENDIMIENTO.some((e) => e.key === params.get('embudo')) ? params.get('embudo') : 'todo';
     const rango = useMemo(() => {
         if (periodo === 'personalizado' && esFecha(params.get('desde')) && esFecha(params.get('hasta'))) {
             return { desde: params.get('desde'), hasta: params.get('hasta') };
@@ -133,17 +122,9 @@ const AdminMarketingHubPage = () => {
     // null = el tablero todavía no llegó (esqueleto); [] = llegó sin `fuentes` (un servidor viejo): no se dibuja.
     const fuentes = datos ? datos.fuentes?.fuentes || [] : null;
     const fuenteDe = (key) => fuentes?.find((f) => f.key === key) || null;
-    // Palabras con gasto sin campaña vigente en el Inbox (24/10/2026): en General y en Setting.
+    // Palabras con gasto sin campaña vigente en el Inbox (24/10/2026).
     const avisoSinCampana = <AvisoSinCampana sinCampana={datos?.fuentes?.sin_campana} moneda={datos?.moneda} />;
-    const resumenEmbudos = embudo === 'todo' ? (
-        <>
-            {avisoSinCampana}
-            {!fuentes?.length && fuentes ? null : <CompararFuentes fuentes={fuentes} moneda={datos?.moneda} />}
-            <EmbudosResumen embudos={datos ? datos.embudos || [] : null} desde={rango.desde} hasta={rango.hasta}
-                moneda={datos?.moneda} onElegir={(key) => cambiar({ embudo: key })}
-                cuentas={cuentas} irAMeta={() => cambiar({ tab: 'meta' })} />
-        </>
-    ) : embudo === 'setting' && !(fuentes && !fuenteDe('setting'))
+    const resumenSetting = !(fuentes && !fuenteDe('setting'))
         ? <>{avisoSinCampana}<TarjetasFuente fuente={fuenteDe('setting')} moneda={datos?.moneda} /></> : null;
 
     if (params.get('tab') === 'trafico') return <Navigate to="/admin/workshops?tab=trafico" replace />;
@@ -199,15 +180,11 @@ const AdminMarketingHubPage = () => {
                         transition={{ duration: 0.28, ease: [0.22, 0.7, 0.2, 1] }}>
                         {pestana === 'anuncios' && (
                             <div className={cargando && datos ? 'mk-recargando' : undefined} aria-busy={cargando}>
-                                <div className="mk-embudo-selector">
-                                    <Segmented chico ariaLabel="Embudo" opciones={EMBUDOS_DE_RENDIMIENTO} valor={embudo}
-                                        onChange={(key) => cambiar({ embudo: key === 'todo' ? null : key })} />
-                                </div>
                                 {error && !datos ? (
                                     <ErrorDeCarga titulo={error} onReintentar={recargar} />
-                                ) : !datos ? <EsqueletoTablaAnuncios bajoKpis={resumenEmbudos} /> : (
+                                ) : !datos ? <EsqueletoTablaAnuncios bajoKpis={resumenSetting} /> : (
                                     <TablaAnuncios datos={datos} onArchivar={archivar} onAgrupar={agrupar} estadoMeta={estadoMeta}
-                                        irAMeta={() => cambiar({ tab: 'meta' })} bajoKpis={resumenEmbudos} />
+                                        irAMeta={() => cambiar({ tab: 'meta' })} bajoKpis={resumenSetting} />
                                 )}
                             </div>
                         )}

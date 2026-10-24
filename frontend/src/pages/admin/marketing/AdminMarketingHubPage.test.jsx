@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 vi.mock('../../../services/api', () => ({ default: { get: vi.fn(), post: vi.fn(), put: vi.fn() } }));
 vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() } }));
@@ -52,7 +52,7 @@ const TABLERO = {
     fuentes: FUENTES,
 };
 
-// La tabla de palabras clave; en General hay otra encima (Setting vs Workshop).
+// La tabla de palabras clave (la comparación Setting vs Workshop vive en Todos).
 const tablas = () => screen.queryAllByRole('table').filter((t) => !t.classList.contains('mk-cmp'));
 const filas = () => within(tablas()[0]).getAllByRole('row');
 
@@ -68,19 +68,8 @@ describe('Marketing › Anuncios', () => {
             anuncios: [], claves: ['APLICAR'], conectado: false, ultima_sincronizacion: null } }));
     });
 
-    it('General compara Setting y Workshop con el ROAS New Cash y el Total, y marca el que rinde más', async () => {
+    it('Rendimiento muestra solo Setting con los dos ROAS y sin la comparación', async () => {
         abrir();
-        await screen.findByText('Obtener Guia');
-        const tabla = screen.getByText('Setting vs Workshop').closest('section');
-        const roasNew = within(tabla).getByText('ROAS New Cash').closest('tr');
-        expect(within(roasNew).getByText('0.90x')).toBeInTheDocument();
-        expect(within(roasNew).getByText('1.10x').closest('td')).toHaveClass('mk-gana');
-        const roasTotal = within(tabla).getByText('ROAS Total').closest('tr');
-        expect(within(roasTotal).getByText('2.50x').closest('td')).toHaveClass('mk-gana');
-    });
-
-    it('Setting muestra solo su fuente con los dos ROAS y sin la comparación', async () => {
-        abrir('/admin/marketing?embudo=setting');
         await screen.findByText('Obtener Guia');
         expect(screen.getByText('ROAS New Cash')).toBeInTheDocument();
         expect(screen.getByText('ROAS Total')).toBeInTheDocument();
@@ -302,35 +291,6 @@ describe('Marketing › Anuncios', () => {
             { dias: 30, hasta: null }, { dias: 30, hasta: '2026-09-15' }, { dias: 30, hasta: '2026-08-16' }]);
     });
 
-    it('Rendimiento muestra el gasto por embudo y la tarjeta de Workshop lleva a Workshop › Rendimiento', async () => {
-        const embudos = [
-            { embudo: 'setting', gasto: 300, anuncios: 12, dias: { '2026-10-01': 300 } },
-            { embudo: 'workshop', gasto: 100, anuncios: 4, dias: { '2026-10-01': 100 } },
-            { embudo: 'contratacion', gasto: 0, anuncios: 0, dias: {} },
-            { embudo: 'otro', gasto: 0, anuncios: 0, dias: {} },
-        ];
-        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/anuncios' ? { ...TABLERO, embudos }
-            : { anuncios: [], claves: [] } }));
-        const Destino = () => {
-            const { search } = useLocation();
-            return <p>Workshop {search}</p>;
-        };
-        render(
-            <MemoryRouter initialEntries={['/admin/marketing?periodo=ultimos_30']}>
-                <Routes>
-                    <Route path="/admin/marketing" element={<AdminMarketingHubPage />} />
-                    <Route path="/admin/workshops" element={<Destino />} />
-                </Routes>
-            </MemoryRouter>,
-        );
-
-        const tarjetaWorkshop = await screen.findByRole('button', { name: 'Ver Workshop: $100' });
-        expect(screen.getByText('75% del gasto · 12 anuncios')).toBeInTheDocument();
-        await userEvent.click(tarjetaWorkshop);
-
-        expect(await screen.findByText('Workshop ?periodo=ultimos_30&tab=rendimiento')).toBeInTheDocument();
-    });
-
     it('un link viejo con embudo=workshop abre Workshop › Rendimiento', async () => {
         render(
             <MemoryRouter initialEntries={['/admin/marketing?embudo=workshop']}>
@@ -446,14 +406,12 @@ describe('Marketing › Anuncios', () => {
         expect(screen.queryByRole('button', { name: /Herramientas/ })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /Cargar calificaciones/ })).not.toBeInTheDocument();
     });
-    it('mientras llega el tablero se ven el selector de embudo, los rótulos y esqueletos, no un spinner', async () => {
+    it('mientras llega el tablero se ven los rótulos y esqueletos, no un spinner', async () => {
         let soltar;
         api.get.mockImplementation((url) => (url === '/marketing/anuncios'
             ? new Promise((r) => { soltar = () => r({ data: TABLERO }); })
             : Promise.resolve({ data: {} })));
         abrir();
-        expect(screen.getByRole('tablist', { name: 'Embudo' })).toBeInTheDocument();
-        expect(screen.getByRole('status', { name: 'Cargando el gasto por embudo…' })).toBeInTheDocument();
         expect(screen.getByRole('status', { name: 'Cargando la tabla de anuncios…' })).toBeInTheDocument();
         expect(screen.getByText('Leads entrantes')).toBeInTheDocument();
         expect(screen.getByText('Leads entrantes por día')).toBeInTheDocument();
