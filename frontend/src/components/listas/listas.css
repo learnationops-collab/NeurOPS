@@ -157,6 +157,10 @@
 .dc-shell .lc-restablecer { border-top: 1px solid var(--border-subtle); margin-top: var(--s1); }
 
 .dc-shell .lista-configurable { min-width: 0; max-width: 100%; }
+/* El ancho de la tabla (las filas tienen un mínimo, `--lc-min`) no cuenta para el de sus contenedores: si no,
+   un contenedor que es hijo de una grilla o de un flex (`min-width: auto`) se ensancha hasta el de la tabla y
+   la que se desplaza de lado es la página, no la caja. */
+.dc-shell .lc-tabla { contain: inline-size; }
 
 /* Con muchas filas o columnas la tabla se desplaza adentro de su caja (`CajaDesplazable`), no la página:
    la cabecera queda pegada arriba (como la primera fila bloqueada de una planilla), las columnas

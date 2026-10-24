@@ -5,6 +5,7 @@
    ============================================================================ */
 
 .dc-shell .wt-talleres { gap: var(--s4); }
+.dc-shell .wt-tabla { min-width: 0; }
 .dc-shell .wt-vista { gap: var(--s4); }
 .dc-shell .wt-panel { padding: var(--s5); }
 .dc-shell .wt-panel .panel-cab { margin-bottom: var(--s3); align-items: center; }
