@@ -102,6 +102,11 @@ const BarraCapas = ({ capas, alternar, poner, datos, listo }) => {
 const Variabilidad = ({ datos, rol, irA, fallo = false, onReintentar = null }) => {
     const [vista, setVista] = useState('barras');
     const { capas, alternar, poner } = useCapas();
+    // Las personas quitadas valen para todos los paneles: quien se saca de uno se saca de todos.
+    const [ocultas, setOcultas] = useState([]);
+    const alternarPersona = (nombre) => setOcultas(actual => (
+        actual.includes(nombre) ? actual.filter(n => n !== nombre) : [...actual, nombre]
+    ));
 
     // Las series de otro rol (las de closers recién cambiado a setters) no se dibujan.
     const listo = !!datos && (!datos.rol || datos.rol === rol);
@@ -141,7 +146,8 @@ const Variabilidad = ({ datos, rol, irA, fallo = false, onReintentar = null }) =
                     <PanelSerie key={serie.key} serie={serie} dias={dias} hoy={datos.hoy} vista={vista}
                         rol={rol} irA={irA} capas={capas} refKey={refKey}
                         refNombre={refKey ? nombreDe(refKey, datos) : ''}
-                        refRango={refKey ? datos.referencias[refKey] : null} />
+                        refRango={refKey ? datos.referencias[refKey] : null}
+                        ocultas={ocultas} onPersona={alternarPersona} />
                 ))}
             </div>}
         </>
