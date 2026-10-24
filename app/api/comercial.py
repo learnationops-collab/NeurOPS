@@ -175,11 +175,14 @@ def variabilidad():
 
     Endpoint aparte y no un bloque de `/resumen` porque se pide solo cuando se abre la pestaña:
     son seis series diarias y no hacen falta para ver el dashboard.
+
+    Con el período comparado del header (si hay) cada serie trae también su `previo`, alineado día
+    por día con el período; ver `comercial_variabilidad`.
     """
     rol, miembro_id, _ = _alcance()
-    start, end, _prev_start, _prev_end = _rangos()
-    datos = analitica.variabilidad(rol, start, end, miembro_id)
-    return jsonify({**datos, 'dates': _fechas(start, end, None, None)}), 200
+    start, end, prev_start, prev_end = _rangos()
+    datos = analitica.variabilidad(rol, start, end, miembro_id, prev_start, prev_end)
+    return jsonify({**datos, 'dates': _fechas(start, end, prev_start, prev_end)}), 200
 
 
 @bp.route('/cierres/no-cerradas', methods=['GET'])
