@@ -62,7 +62,7 @@ const PanelConfigurar = ({ def, filas, facetas, setFacetas, modo, setModo, tabla
             </div>
 
             <div className="fila" style={{ gap: 'var(--s3)', flexWrap: 'wrap', marginBottom: 'var(--s4)' }}>
-                {esTablaDeAgendas(tabla) && (
+                {esTablaDeAgendas(tabla) && setBasis && (
                     <>
                         <span className="t-rotulo">Fecha</span>
                         <div className="seg">

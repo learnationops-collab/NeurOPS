@@ -149,7 +149,8 @@ const TotalesTira = ({ items, alcance, filtrada }) => (
  */
 const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcance, onAbrirFila,
     filtroInicial, onOlvidarFiltro, puedeElegirEquipo = true, onSincronizarAcademia = null,
-    tablas = null, puedeExportar = false, operacion = null, onRecargar = null, fallo = false }) => {
+    tablas = null, puedeExportar = false, operacion = null, onRecargar = null, fallo = false,
+    conTodas = false }) => {
     const [query, setQuery] = useState('');
     const [facetas, setFacetas] = useState({});
     const [modo, setModo] = useState('todas');
@@ -185,7 +186,13 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     // Quien opera ve Ventas con su estado, su agenda y las no completadas (ver `defDe`). Quien mira
     // solo sus filas con rol setters (el setter mismo) ve las tablas a su medida: sin la columna de sí
     // mismo y con la palabra clave (ver `tablasSetter.js`). El resto, la tabla de siempre.
-    const def = operacion ? defDe(tabla, true) : defDeTabla(tabla, rol, !puedeElegirEquipo);
+    const defBase = operacion ? defDe(tabla, true) : defDeTabla(tabla, rol, !puedeElegirEquipo);
+    // `conTodas`: un filtro rápido «Todas» antes de «Vigentes», para quien tiene que ver a TODAS las
+    // personas de un número (el modal de agendas de un taller), también las que canceló o descartó.
+    const def = useMemo(
+        () => (conTodas ? { ...defBase, chips: [{ key: 'todas_las', label: 'Todas', filtro: () => true }, ...defBase.chips] }
+            : defBase),
+        [defBase, conTodas]);
     const deLaFila = tablas || TABLAS_POR_ROL[rol];
     const panel = useRef(null);
 
