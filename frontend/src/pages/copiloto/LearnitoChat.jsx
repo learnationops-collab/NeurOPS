@@ -34,7 +34,8 @@ const CALIFICACIONES = [
 // Los botones y las opciones que el cerebro ofrece para seguir (solo en la última respuesta).
 function Siguientes({ mensaje, indice, tocar, deshabilitado }) {
     const botones = (mensaje?.botones || []).map((b, i) => ({ ...b, tipo: 'boton', i }));
-    const opciones = (mensaje?.opciones || []).map((o, i) => ({ ...o, tipo: 'opcion', i }));
+    // Las opciones llegan como texto ("No show (Agendas)"); los botones, como {texto, icono}.
+    const opciones = (mensaje?.opciones || []).map((o, i) => ({ texto: typeof o === 'string' ? o : o?.texto, tipo: 'opcion', i }));
     const todos = [...opciones, ...botones].filter((b) => b.texto);
     if (!todos.length) return null;
     return (
