@@ -27,6 +27,17 @@ describe('FlujoEmbudo', () => {
         expect(pildoras).toEqual(['75%', '13%', '125%']);
     });
 
+    it('una etapa con `base` se mide contra esa base y no contra la etapa anterior', () => {
+        const etapas = [
+            { key: 'agendas', label: 'Agendas', n: 20 },
+            { key: 'asistieron', label: 'Asistieron', n: 6, base: { label: 'Citas con resultado', n: 12 } },
+        ];
+        const { container } = render(<FlujoEmbudo etapas={etapas} />);
+
+        expect([...container.querySelectorAll('.flj-pildora text')].map(p => p.textContent)).toEqual(['50%']);
+        expect(container.querySelector('.flj-pildora').getAttribute('aria-label')).toContain('6 de 12');
+    });
+
     it('el cruce del reporte al sistema va punteado y arriba de 100% va en ámbar', () => {
         const { container } = render(<FlujoEmbudo etapas={ETAPAS} />);
 

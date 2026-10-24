@@ -9,14 +9,15 @@ import './flujo.css';
  * Kerwin el 10/10/2026, `flujo()`/`moverFlujo()`): una barra por etapa, una banda que une cada barra
  * con la siguiente y, en el medio de la banda, una píldora con la conversión.
  *
- *   <FlujoEmbudo etapas={[{ key, label, n, partes?, color?, cruce?, ir?, ayuda? }]} max={...} />
+ *   <FlujoEmbudo etapas={[{ key, label, n, partes?, color?, cruce?, base?, ir?, ayuda? }]} max={...} />
  *
  * - `n` es el conteo de la etapa; `partes` ([{ key, n, color }]) la parte en tramos apilados del
  *   mismo alto total (las agendas por canal). Las partes tienen que sumar `n`.
  * - `max` es la escala: el valor que llena el alto entero. Por defecto, la etapa más grande. Una
  *   etapa que no está en cero mide al menos `ALTO_MIN`, para que se lea como barra. `raiz` dibuja
  *   las alturas en raíz (ver `proporcion`).
- * - La píldora de cada banda es la etapa sobre la anterior. `cruce` marca la etapa donde cambia la
+ * - La píldora de cada banda es la etapa sobre la anterior, o sobre `base` ({ label, n }) si la etapa
+ *   trae una: «Asistieron» se divide por las citas con resultado, no por todas las agendas. `cruce` marca la etapa donde cambia la
  *   fuente (del reporte al sistema): ahí la píldora no es una conversión sino cuánto registra el
  *   sistema de lo que se reportó, y se dibuja punteada. Arriba de 100% va en ámbar, como en el
  *   formulario: casi siempre es un número que no cuadra.
@@ -157,9 +158,9 @@ const Horizontal = ({ etapas, escala, raiz, ancho, rotulos, bandas, color, monta
                 );
             })}
             {bandas && etapas.slice(1).map((e, j) => {
-                const i = j + 1, v = conversion(e.n, etapas[i - 1].n);
+                const i = j + 1, ref = e.base || etapas[i - 1], v = conversion(e.n, ref.n);
                 const cx = x(i) - fg / 2;
-                const titulo = tituloPildora(e, etapas[i - 1], v);
+                const titulo = tituloPildora(e, ref, v);
                 return (
                     <g key={`p-${e.key}`} className={`${clasePildora(e, v)}${montado ? ' on' : ''}`}
                         style={{ '--c': e.color || color, transitionDelay: `${380 + i * 70}ms` }}
@@ -181,7 +182,8 @@ const Vertical = ({ etapas, escala, raiz, bandas, color, montado, de }) => {
         <div className="flj-v" role="list">
             {etapas.map((e, i) => {
                 const anterior = etapas[i - 1];
-                const v = anterior ? conversion(e.n, anterior.n) : null;
+                const ref = e.base || anterior;
+                const v = ref ? conversion(e.n, ref.n) : null;
                 const tramos = e.partes?.filter(p => p.n > 0) || [];
                 const a = anterior ? pct(anterior.n) : 0, b = pct(e.n);
                 return (
@@ -195,8 +197,8 @@ const Vertical = ({ etapas, escala, raiz, bandas, color, montado, de }) => {
                                             d={`M${50 - a / 2},0 L${50 + a / 2},0 L${50 + b / 2},10 L${50 - b / 2},10 Z`} />
                                     </svg>
                                     <span className={`${clasePildora(e, v)}${montado ? ' on' : ''}`}
-                                        style={{ '--c': e.color || color }} aria-label={tituloPildora(e, anterior, v)}
-                                        {...de(tituloPildora(e, anterior, v))}>
+                                        style={{ '--c': e.color || color }} aria-label={tituloPildora(e, ref, v)}
+                                        {...de(tituloPildora(e, ref, v))}>
                                         {textoPildora(v)}
                                     </span>
                                 </span>
