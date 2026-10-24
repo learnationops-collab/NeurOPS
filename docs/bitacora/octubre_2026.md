@@ -725,3 +725,9 @@
 - **23 de Octubre de 2026 (El humo de Learnation, guardado y aplicado)** *([docs/diseno_humo_aura.md](../diseno_humo_aura.md) [NEW], [.agents/skills/ui-builder/SKILL.md](../../.agents/skills/ui-builder/SKILL.md), [frontend/src/components/ficha/tabs/resultado.css](../../frontend/src/components/ficha/tabs/resultado.css), [frontend/src/components/ficha/tabs/TabResultado.jsx](../../frontend/src/components/ficha/tabs/TabResultado.jsx) [MODIFY])*:
   - La guía del efecto humo de Learnation (anatomía, CSS, reglas, calibración, cuándo usarlo) queda en `docs/` y la skill `ui-builder` manda a seguirla.
   - Las opciones de las preguntas (decisor, oferta…) dejan los colores por tono: quedan neutras, y el humo de marca (3 manchas, calibración de la barra de captura) asoma al pasar el mouse y queda en la elegida.
+
+- **23 de Octubre de 2026 (Closer · tarjetas de lead con franja viva, en Confirmar y Reportar)** *([frontend/src/pages/closer/CloserWorkflowPage.jsx](../../frontend/src/pages/closer/CloserWorkflowPage.jsx), [frontend/src/pages/closer/clarity-v6.css](../../frontend/src/pages/closer/clarity-v6.css), [frontend/src/components/shared/AgendaCountdown.jsx](../../frontend/src/components/shared/AgendaCountdown.jsx) [MODIFY])*:
+  - La misma tarjeta en los dos tableros, del diseño «Tarjetas de lead · 5a»: abre con una franja «Llamada en / Llamada hace» y la cuenta en vivo, con un riel de 2 px que se llena las últimas 24 h (con brillo mientras falta).
+  - Verde mientras falta; ámbar con punto que respira, borde y aura (urgencia, magenta y verde si invierte) sólo en la que pide acción (ahora o atrasada sin resolver); neutro en lo ya resuelto.
+  - Nombre y teléfono en una línea; datos con ícono en una fila (inversión, decisión, origen con calendario o inicial). Se conservan etiquetas, notas, botones, arrastre y sellos; el riel del sello «Confirmado» pasa a la franja.
+  - `AgendaCountdown` suma `bare` (sólo el tiempo, sin «En»/«Hace»).
