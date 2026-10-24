@@ -15,16 +15,18 @@ import WorkshopGoalsModal from './components/WorkshopGoalsModal';
 import ResumenTab from './tabs/ResumenTab';
 import HistorialTab from './tabs/HistorialTab';
 import PlanificarTab from './tabs/PlanificarTab';
+import RendimientoTab from './tabs/RendimientoTab';
 import Legado from './tabs/Legado';
 import CorrelacionesTab from './correlaciones/CorrelacionesTab';
 import { aCamposLocales, aInicioUtc, esProximo, zonaNavegador } from './agendaTaller';
 
 /**
- * Workshop: cuatro pestañas desde el 16/10/2026 (antes nueve sueltas).
+ * Workshop: cuatro pestañas desde el 16/10/2026 (antes nueve sueltas), más Rendimiento (24/10/2026).
  *
  *  - Resumen: KPIs y salud del embudo de los talleres elegidos.
  *  - Talleres: el historial, con el embudo, los anuncios y la grabación de cada taller.
  *  - Planificar: próximos talleres, simulador y acciones para los que vienen.
+ *  - Rendimiento: gasto y anuncios de Meta de Workshop (antes el embudo «Workshop» de Marketing).
  *  - Tráfico landings: visitas y clics de las landings (el único lugar donde está).
  *
  * La cabecera (`components/CabeceraWorkshop.jsx`) pone pestañas, filtros de la pestaña y acciones en
@@ -40,6 +42,7 @@ const PESTANAS = [
     { key: 'resumen', label: 'Resumen' },
     { key: 'talleres', label: 'Talleres' },
     { key: 'planificar', label: 'Planificar' },
+    { key: 'rendimiento', label: 'Rendimiento' },
     { key: 'trafico', label: 'Tráfico landings' },
     { key: 'correlaciones', label: 'Correlaciones' },
 ];
@@ -321,12 +324,14 @@ const WorkshopDashboardPage = () => {
                 acciones sin vaciar la pantalla (lo que se ve queda hasta que llega lo nuevo). */}
             <CabeceraWorkshop pestanas={PESTANAS} activa={activeTab} onPestana={(key) => irA(key)}
                 eventos={events} onIrAProximos={() => irA('planificar', { vista: 'proximos' })}
-                recargando={recargando} onRecargar={activeTab === 'trafico' ? null : recargar}
+                recargando={recargando} onRecargar={activeTab === 'trafico' || activeTab === 'rendimiento' ? null : recargar}
                 onRegistrar={handleOpenCreateModal}>
 
                 <div className="ws-contenido">
                         {/* Tráfico no depende de los talleres cargados: va fuera de los guards de abajo. */}
-                        {activeTab === 'correlaciones' ? <CorrelacionesTab /> : activeTab === 'trafico' ? (
+                        {activeTab === 'correlaciones' ? <CorrelacionesTab /> : activeTab === 'rendimiento' ? (
+                            <RendimientoTab />
+                        ) : activeTab === 'trafico' ? (
                             <WorkshopTraficoView />
                         ) : fallas.events && !events ? (
                             <div className="dc-shell dc-shell--embebido">

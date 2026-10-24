@@ -12,7 +12,6 @@ import TablaAnuncios, { EsqueletoTablaAnuncios } from './anuncios/TablaAnuncios'
 import { ErrorDeCarga } from './esqueletos';
 import ConexionMeta from './anuncios/ConexionMeta';
 import EmbudosResumen from './anuncios/EmbudosResumen';
-import RendimientoWorkshop from './anuncios/RendimientoWorkshop';
 import { CompararFuentes, TarjetasFuente } from './anuncios/FuentesResumen';
 import AvisoSinCampana from './anuncios/AvisoSinCampana';
 import { useEstadoDeMeta } from './anuncios/useEstadoDeMeta';
@@ -34,8 +33,10 @@ import './anuncios/anuncios.css';
  * 16/10/2026 (acá pedía un endpoint de admin y al director de marketing le daba error); el link viejo
  * lleva allá.
  *
- * Rendimiento separa el gasto por embudo (15/10/2026): «Todo» (resumen por embudo + la tabla de palabras
- * clave), «Setting» (la tabla sola) y «Workshop» (los anuncios que llevan a la clase en vivo).
+ * Rendimiento separa el gasto por embudo (15/10/2026): «General» (resumen por embudo + la tabla de palabras
+ * clave) y «Setting» (la tabla sola). Los anuncios de Workshop (la clase en vivo) pasaron el 24/10/2026 a
+ * Workshop › Rendimiento; un link viejo con `embudo=workshop` lleva allá. El espacio se llama «Setting»
+ * en el dock desde esa fecha.
  *
  * Meta Ads (16/10/2026) desglosa campaña › conjunto › anuncio y cada fila abre el Administrador de
  * anuncios de Meta (otra pestaña: el token es de solo lectura). Lo que se cambie allá se trae solo al
@@ -60,12 +61,11 @@ const PESTANAS = [
 const PESTANA_VIEJA = { webhooks: 'entrantes' };
 const CON_PERIODO = ['anuncios', 'entrantes', 'conversaciones', 'meta'];
 // Rendimiento por fuente (15/10/2026; «Todo» se llama «General» desde el 23/10): «General» ve todo —la
-// comparación Setting vs Workshop y el gasto por embudo arriba de la tabla de palabras clave—; «Setting» ve
-// solo Setting (sus cifras y la tabla) y «Workshop», sus anuncios y cifras. Todas con ROAS New Cash y Total.
+// comparación Setting vs Workshop y el gasto por embudo arriba de la tabla de palabras clave— y «Setting»
+// ve solo Setting (sus cifras y la tabla). Con ROAS New Cash y Total.
 const EMBUDOS_DE_RENDIMIENTO = [
     { key: 'todo', label: 'General' },
     { key: 'setting', label: 'Setting' },
-    { key: 'workshop', label: 'Workshop' },
 ];
 
 const AdminMarketingHubPage = () => {
@@ -147,6 +147,12 @@ const AdminMarketingHubPage = () => {
         ? <>{avisoSinCampana}<TarjetasFuente fuente={fuenteDe('setting')} moneda={datos?.moneda} /></> : null;
 
     if (params.get('tab') === 'trafico') return <Navigate to="/admin/workshops?tab=trafico" replace />;
+    if (params.get('embudo') === 'workshop') {
+        const destino = new URLSearchParams(params);
+        destino.delete('embudo');
+        destino.set('tab', 'rendimiento');
+        return <Navigate to={`/admin/workshops?${destino}`} replace />;
+    }
 
     return (
         <div className="mk-espacio">
@@ -156,7 +162,7 @@ const AdminMarketingHubPage = () => {
                         <div className="tope-id">
                             <Isotipo idGrad="lnGradMarketing" />
                             <div>
-                                <p className="t-eyebrow">Marketing</p>
+                                <p className="t-eyebrow">Setting</p>
                                 <h1 className="t-h1 mk-h1">{PESTANAS.find((p) => p.key === pestana).label}</h1>
                             </div>
                         </div>
@@ -183,7 +189,7 @@ const AdminMarketingHubPage = () => {
                     </header>
 
                     <div className="barra">
-                        <Segmented opciones={PESTANAS} valor={pestana} ariaLabel="Secciones de Marketing"
+                        <Segmented opciones={PESTANAS} valor={pestana} ariaLabel="Secciones de Setting"
                             onChange={(key) => cambiar({ tab: key === 'anuncios' ? null : key })} />
                     </div>
 
@@ -197,20 +203,11 @@ const AdminMarketingHubPage = () => {
                                     <Segmented chico ariaLabel="Embudo" opciones={EMBUDOS_DE_RENDIMIENTO} valor={embudo}
                                         onChange={(key) => cambiar({ embudo: key === 'todo' ? null : key })} />
                                 </div>
-                                {error && !datos && embudo !== 'workshop' ? (
+                                {error && !datos ? (
                                     <ErrorDeCarga titulo={error} onReintentar={recargar} />
-                                ) : (
-                                    <>
-                                        {embudo === 'workshop' ? (
-                                            <RendimientoWorkshop desde={rango.desde} hasta={rango.hasta} moneda={datos?.moneda}
-                                                embudos={datos ? datos.embudos || [] : (error ? [] : null)} fuente={fuenteDe('workshop')}
-                                                cuentas={cuentas} version={version}
-                                                irAMeta={() => cambiar({ tab: 'meta' })} />
-                                        ) : !datos ? <EsqueletoTablaAnuncios bajoKpis={resumenEmbudos} /> : (
-                                            <TablaAnuncios datos={datos} onArchivar={archivar} onAgrupar={agrupar} estadoMeta={estadoMeta}
-                                                irAMeta={() => cambiar({ tab: 'meta' })} bajoKpis={resumenEmbudos} />
-                                        )}
-                                    </>
+                                ) : !datos ? <EsqueletoTablaAnuncios bajoKpis={resumenEmbudos} /> : (
+                                    <TablaAnuncios datos={datos} onArchivar={archivar} onAgrupar={agrupar} estadoMeta={estadoMeta}
+                                        irAMeta={() => cambiar({ tab: 'meta' })} bajoKpis={resumenEmbudos} />
                                 )}
                             </div>
                         )}
