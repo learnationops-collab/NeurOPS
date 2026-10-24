@@ -156,6 +156,17 @@
 .dc-shell .lc-menu-columnas .menu-item:disabled { opacity: .55; cursor: default; }
 .dc-shell .lc-restablecer { border-top: 1px solid var(--border-subtle); margin-top: var(--s1); }
 
+.dc-shell .lista-configurable { min-width: 0; max-width: 100%; }
+
+/* Con muchas columnas la tabla se desplaza adentro de su caja, no la página: las filas tienen un ancho
+   mínimo (`--lc-min`, la suma de los mínimos de las columnas) y la caja scrollea. */
+.dc-shell .tabla.lc-tabla { overflow-x: auto; overscroll-behavior-x: contain; }
+.dc-shell .lc-tabla .tabla-cab,
+.dc-shell .lc-tabla .tabla-fila { min-width: var(--lc-min, 0); }
+/* Las columnas pegadas quedan a la izquierda; el fondo es opaco para que lo que pasa por abajo no se vea. */
+.dc-shell .lc-tabla .lc-pegada { position: sticky; z-index: 1; background: var(--bg-flotante); }
+.dc-shell .lc-tabla .tabla-fila[data-abre]:hover .lc-pegada { background: var(--bg-element); }
+
 .dc-shell .lc-tabla .tabla-fila[data-abre] { cursor: pointer; }
 .dc-shell .lc-tabla .tabla-fila[data-abre]:hover { background: var(--mat-1); }
 .dc-shell .lc-tabla .tabla-fila[data-abre]:focus-visible { outline: 2px solid var(--brand-secondary); outline-offset: -2px; }

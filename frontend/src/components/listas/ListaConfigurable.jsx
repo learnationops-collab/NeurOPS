@@ -3,6 +3,7 @@ import { ArrowDown, Check, ChevronDown, Columns, RotateCcw, Rows, Search, Slider
 import PanelConfigurar from '../../pages/comercial/components/PanelConfigurar';
 import Tip from '../../pages/comercial/components/Tip';
 import { useColumnasVisibles } from './useColumnasVisibles';
+import { anchoMinimo, izquierdaDePegadas } from './anchoColumnas';
 import { useEnPantalla } from '../ui/useEnPantalla';
 import { usePaginaProgresiva } from './usePaginaProgresiva';
 import ListaAgrupable from './ListaAgrupable';
@@ -23,6 +24,9 @@ import './listas.css';
  * `claveGuardado` es la clave de `localStorage` de las columnas elegidas (una por lista).
  *   agrupables: [{ key, label, de(fila) → texto o null }] — «Agrupar por», como en Revisar: grupos
  *               colapsables con su cantidad (`ListaAgrupable`).
+ *
+ * `pegada: true` en una columna la deja fija a la izquierda al desplazar la tabla (solo las primeras, con
+ * `width` en px; ver `anchoColumnas.js`).
  *
  * `extra` va al final de la barra (botones propios de la lista). `marcada` es la clave de la fila
  * abierta, que se resalta. Las filas se dibujan de a páginas al scrollear (`usePaginaProgresiva`),
@@ -159,7 +163,9 @@ const ListaConfigurable = ({
             data-abre={onAbrirFila ? '' : undefined}
             aria-current={marcada != null && clave(fila) === marcada ? 'true' : undefined}>
             {visibles.map((c) => (
-                <div key={c.key} data-h={c.header} role="cell" className={c.alinear === 'der' ? 'lc-der num' : undefined}>
+                <div key={c.key} data-h={c.header} role="cell"
+                    className={[c.alinear === 'der' && 'lc-der num', c.pegada && 'lc-pegada'].filter(Boolean).join(' ') || undefined}
+                    style={c.pegada ? { left: pegadas[c.key] } : undefined}>
                     {c.render ? c.render(fila) : (c.valor(fila) ?? '—')}
                 </div>
             ))}
@@ -167,6 +173,9 @@ const ListaConfigurable = ({
     );
 
     const plantilla = visibles.map((c) => c.width || 'minmax(0,1fr)').join(' ');
+    // Con muchas columnas la tabla se desplaza adentro de su caja (ver `anchoColumnas.js`).
+    const ancho = anchoMinimo(visibles);
+    const pegadas = izquierdaDePegadas(visibles);
     const quitar = (key, valor) => setElegidas((e) => ({ ...e, [key]: e[key].filter((v) => v !== valor) }));
 
     return (
@@ -251,13 +260,14 @@ const ListaConfigurable = ({
                 </div>
             )}
 
-            <div className="tabla lc-tabla" role="table">
+            <div className="tabla lc-tabla" role="table" style={{ '--lc-min': `${ancho}px` }}>
                 <div className="tabla-cab" style={{ '--cols': plantilla }} role="row">
                     {visibles.map((c) => {
                         const dir = orden?.key === c.key ? orden.dir : null;
                         const ordenable = c.ordenable !== false && !!c.valor;
                         return (
-                            <span key={c.key} className={`cab-celda${c.alinear === 'der' ? ' lc-der' : ''}`} role="columnheader">
+                            <span key={c.key} className={`cab-celda${c.alinear === 'der' ? ' lc-der' : ''}${c.pegada ? ' lc-pegada' : ''}`}
+                                style={c.pegada ? { left: pegadas[c.key] } : undefined} role="columnheader">
                                 {ordenable ? (
                                     <button type="button" className={`cab-orden${dir ? ' cab-orden--on' : ''}`}
                                         onClick={() => ordenar(c.key)} aria-label={`Ordenar por ${c.header}`}>
