@@ -2,7 +2,8 @@
 // el dock) y la página /copiloto; la conversación es la de LearnitoContext, así que es la misma en los dos.
 // Las respuestas del cerebro de la Academia vienen en markdown y pueden traer gráficos (ubicados en el texto con
 // su marcador, [[A]]), botones u opciones para seguir y una acción para confirmar. La conversación se puede
-// calificar para revisar después las que salieron mal.
+// calificar para revisar después las que salieron mal. Abajo, la barra de uso de la conversación: al llenarse no se
+// sigue escribiendo. Para abrir otra, las anteriores sin calificar se califican acá (Pendientes).
 import { useEffect, useRef, useState } from 'react';
 import { Bell, Check, Copy, Frown, Meh, MessageSquare, Mic, MicOff, Send, Smile, Sparkles, X } from 'lucide-react';
 import { Button, EmptyState, FieldError, IconButton, TextArea } from '../../components/standard';
@@ -104,6 +105,25 @@ function Accion({ accion, confirmar }) {
     );
 }
 
+// Las conversaciones anteriores sin calificar: hasta calificarlas no se puede empezar otra.
+function Pendientes({ pendientes, calificar }) {
+    return (
+        <div className="cp-pendientes" role="group" aria-label="Conversaciones sin calificar">
+            <p>Para empezar otra conversación, calificá {pendientes.length === 1 ? 'la anterior' : 'las anteriores'}:</p>
+            {pendientes.map((p) => (
+                <div key={p.id} className="cp-pendientes__fila">
+                    <span className="cp-pendientes__titulo" title={p.titulo}>{p.titulo}</span>
+                    {CALIFICACIONES.map((c) => (
+                        <Button key={c.valor} size="sm" variant="ghost" icon={c.icono} onClick={() => calificar(p.id, c.valor)}>
+                            {c.texto}
+                        </Button>
+                    ))}
+                </div>
+            ))}
+        </div>
+    );
+}
+
 function Mensaje({ role, content, mensaje, confirmar }) {
     const [copiado, setCopiado] = useState(false);
     const copiar = () => navigator.clipboard?.writeText(content.replace(/\[\[[A-Z]\]\]/g, '').trim()).then(() => {
@@ -129,8 +149,10 @@ function Mensaje({ role, content, mensaje, confirmar }) {
 export default function LearnitoChat() {
     const {
         mensajes, enviando, enviar, tocar, confirmar, agotado, uso, calificacion, calificar,
+        pendientes, cargarPendientes, calificarPendiente, trabado,
         borrador: texto, setBorrador: setTexto,
     } = useLearnito();
+    const bloqueado = agotado || trabado;
     const ultima = mensajes.length - 1;
     const respondio = mensajes.some((m) => m.role === 'assistant');
     const [error, setError] = useState(null);
@@ -143,10 +165,12 @@ export default function LearnitoChat() {
     const finRef = useRef(null);
 
     useEffect(() => { finRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [mensajes, enviando]);
+    // Al abrir sin conversación: las anteriores sin calificar, que traban la nueva.
+    useEffect(() => { if (!mensajes.length) cargarPendientes(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const mandar = async () => {
         const limpio = texto.trim();
-        if (!limpio || enviando || agotado) return;
+        if (!limpio || enviando || bloqueado) return;
         dictado.detener();
         setTexto('');
         setError(null);
@@ -185,7 +209,7 @@ export default function LearnitoChat() {
                     {!enviando && mensajes[ultima]?.mensaje && (
                         <li className="cp-siguientes-fila">
                             <Siguientes mensaje={mensajes[ultima].mensaje} indice={mensajes[ultima].indice} tocar={tocarBoton}
-                                deshabilitado={enviando} />
+                                deshabilitado={enviando || bloqueado} />
                         </li>
                     )}
                     {enviando && <li className="cp-msg cp-msg--copiloto cp-pensando">Pensando…</li>}
@@ -194,8 +218,9 @@ export default function LearnitoChat() {
             )}
 
             <div className="cp-redactor">
+                {trabado && <Pendientes pendientes={pendientes} calificar={calificarPendiente} />}
                 <TextArea value={mostrado} onChange={(e) => setTexto(e.target.value)} onKeyDown={alTeclear}
-                    readOnly={dictado.escuchando} maxLength={4000} aria-label="Mensaje para Learnito"
+                    readOnly={dictado.escuchando} disabled={bloqueado} maxLength={4000} aria-label="Mensaje para Learnito"
                     placeholder={dictado.escuchando ? 'Te escucho…' : 'Escribí o dictá tu pedido'} />
                 <div className="cp-botones">
                     <IconButton
@@ -206,7 +231,7 @@ export default function LearnitoChat() {
                         disabled={!dictado.soportado || enviando}
                         onClick={dictado.escuchando ? dictado.detener : dictado.empezar} />
                     <Button variant="primary" icon={<Send size={14} />} onClick={mandar}
-                        disabled={!texto.trim() || enviando || dictado.escuchando || agotado}>
+                        disabled={!texto.trim() || enviando || dictado.escuchando || bloqueado}>
                         Enviar
                     </Button>
                 </div>

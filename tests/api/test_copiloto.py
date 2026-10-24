@@ -67,6 +67,21 @@ def test_confirmar_pasa_el_texto_o_descarta(client, auth_headers, make_user, cer
     assert llamadas[1][1]['descartar'] is True and 'texto' not in llamadas[1][1]
 
 
+def test_para_abrir_otra_hay_que_calificar_las_anteriores(client, auth_headers, make_user, cerebro):
+    pendiente = {'id': 9, 'titulo': 'Mis agendas', 'fecha': '2026-10-24T10:00:00Z', 'porcentaje': 20}
+    cerebro(error=LearnationAPIError('x', status_code=409, payload={
+        'codigo': 'calificar_pendientes', 'mensaje': 'Para empezar otra conversación, calificá las anteriores.',
+        'pendientes': [pendiente]}))
+    r = client.post(URL, headers=auth_headers(make_user()), json={'pregunta': 'hola'})
+    assert r.status_code == 409 and r.get_json()['pendientes'] == [pendiente]
+
+
+def test_lista_las_pendientes(client, auth_headers, make_user, cerebro):
+    llamadas = cerebro(respuesta={'success': True, 'pendientes': [{'id': 9}]})
+    r = client.get('/api/copiloto/learnito/pendientes', headers=auth_headers(make_user()))
+    assert r.get_json() == {'pendientes': [{'id': 9}]} and llamadas[0][0] == 'pending'
+
+
 def test_una_accion_que_no_se_pudo_hacer_dice_por_que(client, auth_headers, make_user, cerebro):
     cerebro(error=LearnationAPIError('x', status_code=422, payload={
         'codigo': 'pedido_invalido', 'mensaje': 'Pedido inválido.',

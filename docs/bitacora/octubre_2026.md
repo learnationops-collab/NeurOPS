@@ -876,3 +876,6 @@
   - Un cálculo que agrupa o mide viene con su gráfico (número, anillo, barras o columnas por período), dibujado con los colores del tema.
   - Se borró el copiloto viejo de closers (Claude local con su tope en `ai_usage`): sus tres herramientas pasaron al conector y el gasto lo cuenta la Academia. La barra de uso queda solo con el mes.
   - ADR-W009 y su ADR-190. Tests: los nuevos en verde; la suite, salvo tres que ya fallaban antes (objeciones de la pantalla comercial y dos del vocabulario de la ficha).
+- **24 de Octubre de 2026 (Learnito · tope por conversación y calificar las anteriores)** *([app/api/copiloto.py](../../app/api/copiloto.py), [frontend/src/pages/copiloto/](../../frontend/src/pages/copiloto/) [MODIFY])*:
+  - Cada conversación tiene un tope de 5 centavos (lo fija la Academia). Una barra arriba del uso del mes muestra cuánto va; al llenarse, el cuadro y los botones se traban.
+  - Para empezar otra conversación hay que calificar las anteriores: aparecen en la ventana con sus tres botones. ADR-W010 y su ADR-191.

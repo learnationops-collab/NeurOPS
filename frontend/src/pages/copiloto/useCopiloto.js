@@ -1,6 +1,8 @@
 // La conversación con Learnito (app/api/copiloto.py). La guarda el cerebro de Learnito en la Academia: acá viaja
 // solo la pregunta (o el botón que se tocó) y el id de la conversación. Cada respuesta trae su mensaje entero (texto
-// en markdown, botones, opciones, gráficos adjuntos y la acción propuesta, si hay) y el uso del mes.
+// en markdown, botones, opciones, gráficos adjuntos y la acción propuesta, si hay) y el uso: del mes y de la
+// conversación (`uso.conversacion`: {porcentaje, agotada}). Dos reglas del cerebro (24/10): una conversación agotada
+// no acepta más preguntas, y para abrir otra hay que calificar las anteriores (`pendientes`, se califican acá).
 import { useCallback, useMemo, useState } from 'react';
 import api from '../../services/api';
 
@@ -10,6 +12,21 @@ export function useCopiloto() {
     const [uso, setUso] = useState(null);
     const [conversacion, setConversacion] = useState(null);
     const [calificacion, setCalificacion] = useState(null);
+    const [pendientes, setPendientes] = useState([]);
+
+    const cargarPendientes = useCallback(() => {
+        api.get('/copiloto/learnito/pendientes').then(({ data }) => setPendientes(data.pendientes || [])).catch(() => {});
+    }, []);
+
+    // Califica una conversación anterior sin abrirla; sale de la lista.
+    const calificarPendiente = useCallback(async (id, valor) => {
+        try {
+            await api.post('/copiloto/learnito/calificar', { conversacion_id: id, calificacion: valor });
+            setPendientes((lista) => lista.filter((p) => p.id !== id));
+        } catch {
+            // queda en la lista para volver a intentar
+        }
+    }, []);
 
     // Una pregunta o un botón. `muestra` es lo que se ve del lado de la persona. Devuelve null o el error.
     const alCerebro = useCallback(async (pedido, muestra) => {
@@ -25,7 +42,12 @@ export function useCopiloto() {
             return null;
         } catch (err) {
             setMensajes(anteriores);
-            return err.response?.data?.error || 'No se pudo hablar con Learnito.';
+            const datos = err.response?.data || {};
+            if (datos.codigo === 'calificar_pendientes') setPendientes(datos.pendientes || []);
+            if (datos.codigo === 'conversacion_agotada') {
+                setUso((u) => ({ ...u, conversacion: { ...(u?.conversacion || {}), agotada: true, porcentaje: 100 } }));
+            }
+            return datos.error || 'No se pudo hablar con Learnito.';
         } finally {
             setEnviando(false);
         }
@@ -68,10 +90,17 @@ export function useCopiloto() {
         setMensajes([]);
         setConversacion(null);
         setCalificacion(null);
-    }, []);
+        setUso((u) => (u ? { ...u, conversacion: null } : u));
+        cargarPendientes();
+    }, [cargarPendientes]);
 
+    const agotada = Boolean(conversacion && uso?.conversacion?.agotada);
     return useMemo(() => ({
         mensajes, enviando, enviar, tocar, confirmar, reiniciar, uso, calificacion, calificar,
-        agotado: (uso?.porcentaje ?? 0) >= 100,
-    }), [mensajes, enviando, enviar, tocar, confirmar, reiniciar, uso, calificacion, calificar]);
+        pendientes, cargarPendientes, calificarPendiente, agotada,
+        // Sin conversación abierta, las anteriores sin calificar traban la nueva.
+        trabado: !conversacion && pendientes.length > 0,
+        agotado: (uso?.porcentaje ?? 0) >= 100 || agotada,
+    }), [mensajes, enviando, enviar, tocar, confirmar, reiniciar, uso, calificacion, calificar,
+        pendientes, cargarPendientes, calificarPendiente, agotada, conversacion]);
 }

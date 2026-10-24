@@ -7,6 +7,10 @@ conversación, cuenta el gasto con su tope (por sistema y por persona) y le pide
 ranking (app/services/tablas/alcance.py). `/learnito/confirmar` hace (o descarta) la acción que propuso una
 respuesta, y `/learnito/calificar` califica la conversación.
 
+Dos reglas del cerebro (24/10): cada conversación tiene un tope de uso (la respuesta trae `uso.conversacion`; al
+llegar, la Academia responde `conversacion_agotada`) y para abrir otra hay que calificar las anteriores
+(`calificar_pendientes` con `pendientes`; `/learnito/pendientes` las lista).
+
 Hasta el 24/10/2026 los closers tenían un copiloto propio acá (Claude con tres herramientas); esas herramientas
 pasaron al conector (app/services/copiloto_herramientas.py).
 """
@@ -36,8 +40,12 @@ def _a_la_academia(accion, cuerpo):
         # Una acción que no se pudo hacer vuelve en `detalle` como «work no respondió «executeAction»: <motivo>».
         detalle = p.get('detalle') if isinstance(p.get('detalle'), list) else []
         motivo = str(detalle[0]).split('»: ', 1)[-1] if p.get('codigo') == 'pedido_invalido' and detalle else None
-        return ({'error': motivo or p.get('mensaje') or 'Learnito no respondió. Probá de nuevo en un rato.',
-                 'codigo': p.get('codigo')}, e.status_code or 502)
+        error = {'error': motivo or p.get('mensaje') or 'Learnito no respondió. Probá de nuevo en un rato.',
+                 'codigo': p.get('codigo')}
+        # Para abrir otra conversación hay que calificar las anteriores: la Academia manda cuáles.
+        if isinstance(p.get('pendientes'), list):
+            error['pendientes'] = p['pendientes']
+        return error, e.status_code or 502
 
 
 @bp.route('/learnito', methods=['POST'])
@@ -70,6 +78,16 @@ def learnito_confirmar():
         pedido['texto'] = cuerpo['texto'].strip()[:MAX_CARACTERES]
     data, estado = _a_la_academia('confirm', pedido)
     return jsonify(data), estado
+
+
+@bp.route('/learnito/pendientes', methods=['GET'])
+@copiloto_required
+def learnito_pendientes():
+    """Las conversaciones sin calificar de quien pregunta: {pendientes: [{id, titulo, fecha, porcentaje}]}."""
+    data, estado = _a_la_academia('pending', {})
+    if estado != 200:
+        return jsonify(data), estado
+    return jsonify({'pendientes': data.get('pendientes') or []}), 200
 
 
 @bp.route('/learnito/calificar', methods=['POST'])

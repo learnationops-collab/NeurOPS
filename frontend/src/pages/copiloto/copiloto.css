@@ -67,8 +67,20 @@
 .thalamus .learnito .cp-accion__detalle,.thalamus .learnito .cp-accion__estado{font-size:12px;color:var(--text-muted)}
 .thalamus .learnito .cp-accion__texto{white-space:pre-wrap}
 
-/* Uso: el mes contra el tope. */
-.thalamus .learnito .cp-uso{display:grid;gap:4px}
+/* Uso: la barra de esta conversación contra su tope y, abajo, el mes. */
+.thalamus .learnito .cp-uso{--c:var(--brand-secondary);display:grid;gap:4px}
+.thalamus .learnito .cp-uso--alto{--c:var(--warning)}
+.thalamus .learnito .cp-uso--agotado{--c:var(--error)}
+.thalamus .learnito .cp-uso__txt{display:flex;justify-content:space-between;gap:8px;font-size:11px;font-weight:700;color:var(--text-muted)}
+.thalamus .learnito .cp-uso--agotado .cp-uso__txt{color:var(--error)}
+.thalamus .learnito .cp-uso__barra{height:4px;border-radius:999px;background:var(--bg-element);overflow:hidden}
+.thalamus .learnito .cp-uso__barra span{display:block;height:100%;border-radius:inherit;background:var(--c);transition:width .4s ease}
+
+/* Para abrir otra conversación: las anteriores sin calificar. */
+.thalamus .learnito .cp-pendientes{display:grid;gap:8px;padding:10px 12px;border:1px solid var(--warning);border-radius:10px;background:var(--bg-surface);font-size:12px}
+.thalamus .learnito .cp-pendientes>p{margin:0;font-weight:700}
+.thalamus .learnito .cp-pendientes__fila{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.thalamus .learnito .cp-pendientes__titulo{flex:1 1 100%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted)}
 .thalamus .learnito .cp-uso__mes{margin:0;font-size:11px;font-weight:600;color:var(--text-muted)}
 .thalamus .learnito .cp-uso__mes--alto{color:var(--warning);font-weight:700}
 .thalamus .learnito .cp-uso__mes--agotado{color:var(--error);font-weight:700}

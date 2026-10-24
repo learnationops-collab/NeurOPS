@@ -10,7 +10,7 @@
 > **El resto del equipo** (closers, setters, triage, marketing, hiring) ve **lo suyo y el ranking**: sus agendas, sus clientes y quién le debe, y los números de todo el equipo (show up por closer, ventas por programa), sin nombres de clientes ajenos ni datos de la Academia.
 > Learnito no cuenta: arma un plan y el motor lo calcula. Un cálculo que agrupa o mide viene con su gráfico. Las respuestas traen a veces botones para seguir ("Por closer", "Ver la lista").
 > Learnito puede dejar un **comentario en la ficha de un cliente** o **avisarle algo a alguien del equipo**: aparece una tarjeta, se puede editar el texto y no se hace nada hasta tocar **Confirmar**.
-> La conversación se califica y dura hasta recargar la página. Cada persona tiene un tope de uso por mes; abajo se ve cuánto va, en porcentaje.
+> La conversación se califica y dura hasta recargar la página. Cada conversación tiene un tope (5 centavos): la barra de abajo muestra cuánto va y, al llenarse, no se sigue escribiendo. Para empezar otra hay que calificar las anteriores, que aparecen ahí mismo. Cada persona tiene además un tope por mes, en porcentaje.
 
 ## 1. Piezas
 
@@ -39,13 +39,15 @@
 - **Acción** (`Accion` en `LearnitoChat.jsx`): la tarjeta de la acción propuesta, con el texto editable, Confirmar y Descartar. Después queda su resultado ("Comentario guardado en la ficha de…").
 - Los botones y opciones de la última respuesta van debajo (tocarlos manda `boton` al cerebro) y, desde la primera respuesta, la calificación de la conversación (insatisfactoria, regular, satisfactoria).
 - **Dictado**: Web Speech API del navegador (Chrome y Edge; Safari a medias; Firefox no). El audio no pasa por Work. Enter envía, Shift+Enter salta de línea.
-- **Uso**: la línea del mes, en porcentaje (nunca montos). Ámbar desde 80 %, roja en el tope.
+- **Uso** (`UsoMensual`): la barra de la conversación contra su tope (`uso.conversacion`) y la línea del mes, en porcentaje (nunca montos). Ámbar desde 80 %, roja en el tope. Con la conversación agotada, el cuadro y los botones quedan trabados.
+- **Pendientes**: sin conversación abierta (al abrir o con "Nueva conversación"), `GET /api/copiloto/learnito/pendientes` trae las anteriores sin calificar; hasta calificarlas (tres botones por conversación) el cuadro queda trabado.
 - "Nueva conversación" en el encabezado del modal.
 
 ## 3. Cómo viaja una pregunta
 
 - **La pregunta** (`POST /api/copiloto/learnito`): `{pregunta | boton: {mensaje, tipo: boton | opcion, indice}, conversacion_id?}`. Work la pasa a la Academia (`POST /api/v1/learnito/ask`, con `ACADEMY_API_TOKEN`) con `sistema: work` y `quien` = `{id, nombre, email, rol, zona}` de la sesión. Devuelve `{conversacion_id, mensaje_indice, mensaje, uso}`; un error de la Academia (tope, ocupado) vuelve con su mensaje y su estado.
 - **Confirmar** (`POST /api/copiloto/learnito/confirmar`): `{conversacion_id, mensaje, texto? | descartar?}` → `POST /api/v1/learnito/confirm`. La Academia le pide a Work `executeAction`; si Work la rechaza, el motivo vuelve como `error`.
+- **Reglas de la Academia** (su ADR-191): una conversación que llegó a su tope responde `conversacion_agotada`; una pregunta sin `conversacion_id` con conversaciones sin calificar responde `calificar_pendientes` con `pendientes`. Work pasa los dos tal cual y la pantalla traba el cuadro.
 - **La conversación** la guarda la Academia (`learnito_conversations`, con `system = work` y `asker`); Work solo recuerda su id hasta recargar. Sin tope de mensajes: la Academia resume las largas.
 - **El gasto** lo lleva la Academia: un solo presupuesto, con tope de Work (US$ 20 por mes) y por persona (US$ 8). El `ai_usage` de Work no lo registra.
 
