@@ -1,0 +1,124 @@
+/* Simulador (24/10/2026). Reusa .palanca* de comercial.css; acá solo lo propio de esta sección. */
+
+.dc-shell .sim{display:grid;gap:var(--s4);min-width:0}
+
+/* Controles de arriba: línea base, horizonte, capacidad y restablecer. Cada bloque es una columna con
+   su rótulo; envuelven sin dejar uno suelto gracias a .pareja. */
+.dc-shell .sim-ctl{--min:230px;--g:var(--s4);display:grid;align-items:start}
+.dc-shell .sim-ctl-b{display:grid;gap:var(--s2);min-width:0;align-content:start}
+.dc-shell .sim-ctl-b .tabs{max-width:100%}
+.dc-shell .sim-nota{margin:0;color:var(--text-muted-40);font-size:12px;line-height:1.45}
+.dc-shell .sim-cap{display:flex;align-items:center;gap:var(--s2);min-width:0}
+.dc-shell .sim-cap input{width:76px}
+
+/* Las cuatro líneas base lado a lado: la elegida resalta. */
+.dc-shell .sim-lineas{--min:170px;--g:var(--s3)}
+.dc-shell .sim-linea{display:grid;gap:4px;text-align:left;padding:var(--s3) var(--s4);min-width:0;
+  border-radius:var(--radius-control);background:var(--hundido);border:1px solid var(--border-subtle);
+  transition:border-color .18s ease,background-color .18s ease,transform .18s var(--spring)}
+.dc-shell .sim-linea:hover{border-color:var(--border-control)}
+.dc-shell .sim-linea:active{transform:scale(.985)}
+.dc-shell .sim-linea[aria-pressed="true"]{border-color:var(--brand-secondary-border);
+  background:var(--brand-secondary-surface)}
+.dc-shell .sim-linea-n{font-size:20px;line-height:1.1;font-weight:900;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums}
+
+/* Cuerpo: resultados (sticky) y palancas. Angosto: uno debajo del otro, primero el resultado. */
+.dc-shell .sim-cuerpo{display:grid;gap:var(--s4);grid-template-columns:minmax(0,1fr);align-items:start}
+@media (min-width:1100px){
+  .dc-shell .sim-cuerpo{grid-template-columns:minmax(0,1fr) minmax(0,1.05fr)}
+  .dc-shell .sim-res{position:sticky;top:var(--s3);order:2}
+  .dc-shell .sim-pal{order:1}
+}
+.dc-shell .sim-res,.dc-shell .sim-pal{display:grid;gap:var(--s4);min-width:0}
+
+.dc-shell .sim-grupo{display:grid;gap:var(--s3);min-width:0}
+.dc-shell .sim-grupo-l{display:grid;gap:var(--s3);min-width:0}
+
+/* Una palanca: cabecera (de comercial.css), estado y controles en una línea que envuelve limpio. */
+.dc-shell .palanca[data-tocada="1"]{border-color:var(--brand-secondary-border)}
+.dc-shell .pal-estado{font-size:11px;font-weight:700;color:var(--text-muted-40);min-width:0}
+.dc-shell .pal-estado[data-tocada="1"]{color:var(--brand-secondary)}
+.dc-shell .pal-ctl{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;min-width:0}
+.dc-shell .pal-in{width:92px;height:34px;padding:0 10px;border-radius:12px;text-align:right;
+  background:var(--bg-input);border:1px solid var(--border-subtle);color:var(--text-on-surface);
+  font:inherit;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.dc-shell .pal-in:focus{outline:none;border-color:var(--border-control)}
+.dc-shell .pal-in:focus-visible{outline:2px solid var(--brand-secondary);outline-offset:2px}
+.dc-shell .pal-riel{position:relative;flex:1 1 140px;min-width:120px;height:26px;display:flex;align-items:center}
+.dc-shell .pal-riel input[type="range"]{position:relative;z-index:1;width:100%;margin:0;
+  accent-color:var(--brand-secondary);background:transparent;cursor:pointer}
+/* El punto base: una marca fija sobre el riel que no se mueve con el control. */
+.dc-shell .pal-base{position:absolute;top:3px;bottom:3px;width:2px;margin-left:-1px;border-radius:2px;
+  background:var(--text-muted);opacity:.7;pointer-events:none}
+.dc-shell .pal-base::after{content:"base";position:absolute;top:100%;left:50%;transform:translateX(-50%);
+  font-size:9px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted-40)}
+.dc-shell .pal-x{width:30px;height:30px;display:grid;place-items:center;border-radius:50%;flex-shrink:0;
+  color:var(--text-muted-40);transition:color .16s ease,background-color .16s ease,opacity .16s ease}
+.dc-shell .pal-x svg{width:14px;height:14px}
+.dc-shell .pal-x:hover:not(:disabled){color:var(--text-on-surface);background:var(--bg-element)}
+.dc-shell .pal-x:disabled{opacity:.25;cursor:default}
+.dc-shell .pal-comp{font-size:11px;color:var(--text-muted-40);margin:0}
+
+/* Resultado: tarjetas base vs escenario. */
+.dc-shell .sim-tarj{--min:200px;--g:var(--s3)}
+.dc-shell .sim-tarj .kpi{padding:var(--s4)}
+.dc-shell .sim-base{display:flex;align-items:baseline;gap:var(--s2);flex-wrap:wrap;
+  font-size:12px;color:var(--text-muted-40);font-variant-numeric:tabular-nums}
+.dc-shell .sim-base b{font-weight:700;color:var(--text-muted)}
+.dc-shell .sim-alerta{display:flex;align-items:flex-start;gap:var(--s2);padding:var(--s3) var(--s4);
+  border-radius:var(--radius-control);font-size:12.5px;line-height:1.45;
+  background:var(--warning-surface);border:1px solid var(--warning-border);color:var(--text-on-surface)}
+.dc-shell .sim-alerta svg{width:16px;height:16px;flex-shrink:0;margin-top:1px;color:var(--warning)}
+
+/* Gráfico mensual: pares de barras (base y escenario) por mes. */
+.dc-shell .sim-graf{display:grid;gap:var(--s3);min-width:0}
+.dc-shell .sim-barras{display:flex;align-items:flex-end;justify-content:space-around;gap:var(--s4);
+  height:190px;padding-top:var(--s5);min-width:0}
+.dc-shell .sim-mes{flex:1 1 0;max-width:160px;min-width:0;height:100%;display:grid;
+  grid-template-rows:minmax(0,1fr) auto;gap:var(--s2)}
+.dc-shell .sim-par{display:flex;align-items:flex-end;justify-content:center;gap:6px;min-height:0}
+.dc-shell .sim-col{flex:1 1 0;max-width:46px;min-width:0;height:100%;display:flex;flex-direction:column;
+  justify-content:flex-end;align-items:center;gap:4px}
+.dc-shell .sim-col > b{font-size:10.5px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;
+  color:var(--text-muted)}
+.dc-shell .sim-col > i{display:block;width:100%;min-height:3px;border-radius:6px 6px 3px 3px;
+  transition:height .6s var(--crecer)}
+.dc-shell .sim-col--base > i{background:transparent;border:1px dashed var(--text-muted);border-bottom:0}
+.dc-shell .sim-col--esc > i{background:linear-gradient(180deg,var(--brand-secondary),
+  color-mix(in srgb,var(--brand-secondary) 60%,transparent))}
+.dc-shell .sim-mes-n{text-align:center;font-size:11px;font-weight:800;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--text-muted);white-space:nowrap}
+.dc-shell .sim-leyenda{display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap;
+  font-size:11px;font-weight:700;color:var(--text-muted)}
+.dc-shell .sim-leyenda i{display:inline-block;width:14px;height:8px;border-radius:3px;margin-right:6px;
+  vertical-align:middle}
+.dc-shell .sim-curva{width:100%;height:190px;display:block;overflow:visible}
+.dc-shell .sim-curva .l-base{stroke:var(--text-muted);stroke-width:2;stroke-dasharray:5 5;fill:none}
+.dc-shell .sim-curva .l-esc{stroke:var(--brand-secondary);stroke-width:3;fill:none;stroke-linecap:round;
+  stroke-linejoin:round}
+.dc-shell .sim-curva .eje{stroke:var(--border-subtle);stroke-width:1}
+.dc-shell .sim-curva text{font-size:11px;font-weight:700;fill:var(--text-muted);font-variant-numeric:tabular-nums}
+
+/* Tabla de datos centrales: dato | base | escenario | cambio. */
+.dc-shell .sim-tabla{display:grid;min-width:0}
+.dc-shell .sim-f{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);
+  align-items:center;gap:var(--s3);padding:9px 0;border-bottom:1px solid var(--border-subtle);
+  font-size:13px;font-variant-numeric:tabular-nums}
+.dc-shell .sim-f:last-child{border-bottom:0}
+.dc-shell .sim-f > span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-shell .sim-f > span:not(:first-child){text-align:right}
+.dc-shell .sim-f--cab{padding-top:0;font-size:10.5px;font-weight:900;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--text-muted)}
+.dc-shell .sim-f-n{font-weight:700}
+.dc-shell .sim-f-d[data-sube="1"]{color:var(--success)}
+.dc-shell .sim-f-d[data-sube="0"]{color:var(--error)}
+.dc-shell .sim-f-d[data-sube=""]{color:var(--text-muted-40)}
+@media (max-width:560px){
+  .dc-shell .sim-f{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);row-gap:2px}
+  .dc-shell .sim-f > span:first-child{grid-column:1 / -1}
+  .dc-shell .sim-f--cab > span:first-child{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .dc-shell .sim-col > i{transition:none}
+}
