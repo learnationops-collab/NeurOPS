@@ -812,3 +812,8 @@
   - General y Setting avisan, compacto, de las palabras clave con gasto en el período que no están en una campaña vigente hoy del Inbox y que tienen anuncios activos en Meta o entrantes en el período (Kerwin, 24/10). Lista cada palabra con su gasto y el % del gasto de Setting; sin casos no se dibuja. Al crear la campaña desaparece.
   - Backend: campo nuevo `fuentes.sin_campana` (`palabras`, `gasto`, `pct_gasto`) en el tablero; ningún campo existente cambia.
   - Producción (solo lectura, 30 días): GUÍA CHILE ($33,73) y GUÍA ARGENTINA ($22,42), 1,6 % del gasto de Setting. Sin ella, al apagar ManyChat el CPL de Setting se ve más alto y el ROAS más bajo.
+
+- **24 de Octubre de 2026 (Dock y Workshop · «Setting» separado de Workshop, nueva pestaña Rendimiento)** *([useDockNavigation.js](../../frontend/src/hooks/useDockNavigation.js), [RendimientoTab.jsx](../../frontend/src/pages/admin/workshop/tabs/RendimientoTab.jsx), [AdminMarketingHubPage.jsx](../../frontend/src/pages/admin/marketing/AdminMarketingHubPage.jsx))*
+  - En el dock de la dirección de marketing, «Marketing» se llama «Setting» (y el rótulo de esa pantalla). Workshop y Setting quedan separados.
+  - Workshop tiene la pestaña «Rendimiento» con lo que era el embudo «Workshop» del Rendimiento de Marketing (gasto, anuncios de Meta, visitas y clics al grupo), con su selector de período. Mismo tablero y misma caché que Setting.
+  - Rendimiento de Setting queda con General y Setting. La tarjeta Workshop del resumen y los links con `embudo=workshop` redirigen a Workshop › Rendimiento, conservando el período.
