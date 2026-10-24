@@ -91,7 +91,9 @@ def get_entrantes():
     lead_ids = {lid for (lid,) in consulta.distinct()}
 
     clave_de_anuncio = servicio._clave_de_cada_anuncio()
-    interacciones = servicio._interacciones(lead_ids, clave_de_anuncio)
+    # Una fila por persona: sus conversaciones (la del Inbox y la de ManyChat) se juntan.
+    personas = servicio._por_persona(lead_ids, clave_de_anuncio)
+    grupo_de = {lid: clave for clave, g in personas.items() for lid in g['leads']}
     mensajes = {m.message_id: (m.title, m.category) for m in ConversationalMessage.query.all()}
     grupo_de_clave = {}
     for m in MetaAnuncio.query.filter(MetaAnuncio.clave.isnot(None)).order_by(
@@ -99,11 +101,11 @@ def get_entrantes():
         grupo_de_clave.setdefault(m.clave, (m.campana, m.conjunto))
 
     pasos = {}
-    for tanda in servicio._en_tandas(lead_ids):
+    for tanda in servicio._en_tandas(grupo_de):
         for lead_id, enviado, respondido, creada in db.session.query(
                 LeadAnswer.conversation_id, LeadAnswer.id_option_send, LeadAnswer.id_option, LeadAnswer.created_at
         ).filter(LeadAnswer.conversation_id.in_(tanda)).order_by(LeadAnswer.created_at):
-            paso = pasos.setdefault(lead_id, {'enviado': None, 'respondido': None})
+            paso = pasos.setdefault(grupo_de[lead_id], {'enviado': None, 'respondido': None})
             if (enviado or '').strip() not in ('', '0', '0.0'):
                 paso['enviado'] = enviado.strip()
             if servicio._respondio(respondido):
@@ -113,22 +115,24 @@ def get_entrantes():
         titulo, categoria = mensajes.get(mid, (None, None))
         return {'id': mid, 'titulo': titulo or (f'Mensaje {mid}' if mid else None), 'categoria': categoria}
 
-    leads = {l.id: l for tanda in servicio._en_tandas(lead_ids)
+    leads = {l.id: l for tanda in servicio._en_tandas(grupo_de)
              for l in Conversation.query.filter(Conversation.id.in_(tanda))}
     descalificados = calificacion_service.descalificados()
     filas = []
-    for lead_id in lead_ids:
-        lead, historia = leads.get(lead_id), interacciones.get(lead_id, [])
+    for clave_persona, grupo in personas.items():
+        historia = grupo['filas']
+        lead = leads.get(grupo['leads'][0])
         if not lead or not historia:
             continue
+        tope = max((descalificados[lid] for lid in grupo['leads'] if lid in descalificados), default=None)
         clave = next((h[1] for h in historia if h[1]), None)
         de_manychat = calificacion_service.ultima_de_manychat(h[2] for h in historia)
-        calificacion = calificacion_service.efectiva(de_manychat, historia[0][0], descalificados.get(lead_id))
+        calificacion = calificacion_service.efectiva(de_manychat, historia[0][0], tope)
         respondio = any(h[3] for h in historia) or calificacion is not None
         estado = ('calificado' if calificacion == 'true' else 'descalificado' if calificacion == 'false'
                   else 'en_conversacion' if respondio else 'sin_respuesta')
         campana, conjunto = grupo_de_clave.get(clave, (None, None))
-        paso = pasos.get(lead_id, {})
+        paso = pasos.get(clave_persona, {})
         filas.append({
             'lead_id': lead.id,
             'manychat_id': lead.external_id,

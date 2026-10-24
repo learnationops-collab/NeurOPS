@@ -5,7 +5,7 @@ Ver el docstring de `anuncios_service` (que re-exporta todo esto).
 from collections import defaultdict
 
 from app import db
-from app.models import Ad, LeadAnswer
+from app.models import Ad, Conversation, LeadAnswer
 from app.models.marketing import clave_de_palabra as clave_de
 
 # Lo que llega en `keyword` y no es una palabra clave: la marca de la atribución manual (la deja la
@@ -117,3 +117,29 @@ def _interacciones(lead_ids, clave_de_anuncio):
             resueltas.append((creada, actual, calificacion, respondio))
         resultado[lead_id] = resueltas
     return resultado
+
+
+def _por_persona(lead_ids, clave_de_anuncio):
+    """Las interacciones de ManyChat/Inbox juntadas por PERSONA: {grupo: {'leads', 'filas'}}.
+
+    Una persona puede tener dos conversaciones (la `ig:` del Inbox y la de ManyChat, o duplicados
+    heredados) y contaba dos veces la misma palabra clave. El grupo es su `person_uuid`; sin persona,
+    la conversación sola. Se suman también las conversaciones hermanas aunque no tengan nada en el
+    período: si ya había entrado antes por la otra, ahora no es un entrante nuevo. `leads` va de la
+    conversación con la última interacción a la más vieja (la primera es la que representa a la persona);
+    `filas` son todas sus interacciones en orden, como las de `_interacciones`."""
+    persona_de = {}
+    for tanda in _en_tandas(lead_ids):
+        persona_de.update(db.session.query(Conversation.id, Conversation.person_uuid).filter(Conversation.id.in_(tanda)))
+    for tanda in _en_tandas({p for p in persona_de.values() if p}):
+        persona_de.update(db.session.query(Conversation.id, Conversation.person_uuid).filter(
+            Conversation.person_uuid.in_(tanda)))
+    grupos = defaultdict(lambda: {'leads': [], 'filas': []})
+    for lead_id, filas in _interacciones(persona_de, clave_de_anuncio).items():
+        grupo = grupos[persona_de.get(lead_id) or f'conversacion:{lead_id}']
+        grupo['leads'].append((filas[-1][0], lead_id))
+        grupo['filas'].extend(filas)
+    for grupo in grupos.values():
+        grupo['filas'].sort(key=lambda f: f[0])
+        grupo['leads'] = [lead_id for _, lead_id in sorted(grupo['leads'], reverse=True)]
+    return dict(grupos)

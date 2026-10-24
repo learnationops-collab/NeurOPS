@@ -9,7 +9,7 @@ Marketing es una tabla al estilo del Administrador de anuncios de Meta, una fila
     una vez por palabra clave, el día de su PRIMERA interacción con ella (sus otros webhooks del
     mismo flujo no suman). Si después vuelve por otro anuncio, cuenta también en ese.
   · **Calificados / Descalificados**: el último valor de `cualificacion` que mandó ManyChat para esa
-    persona y esa palabra clave, con la descalificación posterior del closer (`calificacion_service`).
+    persona y esa palabra clave (una persona con dos conversaciones cuenta una vez), con la descalificación posterior del closer (`calificacion_service`).
     El resto está pendiente, en dos partes (Kerwin 16/10/2026: «hay leads
     que se quedan en el inicio»): **En conversación** respondió algún mensaje del flujo (`id_option`,
     el mensaje que contestó, distinto de 0) y **Sin respuesta** nunca contestó la apertura.
@@ -43,8 +43,8 @@ from app.services.cruce_conversaciones import Cruce
 from app.services.identity_service import normalize_ig
 # Partido en módulos (regla de las 500 líneas): se re-exporta todo para que `anuncios_service.X` siga igual.
 from app.services.anuncios_claves_service import (  # noqa: F401
-    CLAVES_QUE_NO_SON, LARGO_MAXIMO, TANDA, _clave_de_cada_anuncio, _en_tandas, _interacciones, _respondio,
-    _vigente, anuncio_de_clave, anuncio_de_keyword, claves_conocidas, es_keyword_valida,
+    CLAVES_QUE_NO_SON, LARGO_MAXIMO, TANDA, _clave_de_cada_anuncio, _en_tandas, _interacciones, _por_persona,
+    _respondio, _vigente, anuncio_de_clave, anuncio_de_keyword, claves_conocidas, es_keyword_valida,
 )
 from app.services.anuncios_agrupacion_service import (  # noqa: F401
     SIN_CONJUNTO, _agrupacion, _anuncios_de, _como_se_escribe, _conjuntos, _grupos_de_meta,
@@ -101,7 +101,9 @@ def _entrantes(desde_dt, hasta_dt, clave_de_anuncio):
     por_clave = defaultdict(lambda: {'entrantes': 0, 'calificados': 0, 'descalificados': 0,
                                      'en_conversacion': 0, 'dias': defaultdict(lambda: [0, 0, 0, 0])})
     descalificados = calificacion_service.descalificados()
-    for lead_id, filas in _interacciones(lead_ids, clave_de_anuncio).items():
+    for grupo in _por_persona(lead_ids, clave_de_anuncio).values():
+        filas = grupo['filas']
+        tope = max((descalificados[lid] for lid in grupo['leads'] if lid in descalificados), default=None)
         primera, calificacion, respondio = {}, {}, set()
         for creada, clave, valor, contesto in filas:
             primera.setdefault(clave, creada)
@@ -113,7 +115,7 @@ def _entrantes(desde_dt, hasta_dt, clave_de_anuncio):
             if not (desde_dt <= cuando <= hasta_dt):
                 continue
             calificacion[clave] = calificacion_service.efectiva(
-                calificacion.get(clave), cuando, descalificados.get(lead_id))
+                calificacion.get(clave), cuando, tope)
             fila = por_clave[clave]
             dia = fila['dias'][cuando.date().isoformat()]
             fila['entrantes'] += 1
