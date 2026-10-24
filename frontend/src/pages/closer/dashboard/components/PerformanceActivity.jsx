@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import Card from '../../../../components/ui/Card';
 import MetricTip from './MetricTip';
-import { tip, destinoFuente } from '../metricSources';
-import MetricaClicable from '../../../../components/dashboard/MetricaClicable';
+import { tip } from '../metricSources';
+import ListaConfigurable from '../../../../components/listas/ListaConfigurable';
+import { columnasFuente } from './columnasFuente';
+import '../../../comercial/comercial.css';
 
 const PerformanceActivity = ({ fuente, actividad, referidos, reportsProductivity, irA }) => {
+    const columnas = useMemo(() => columnasFuente(irA), [irA]);
     const fu = actividad.follow_ups;
     const rec = actividad.recoveries;
     const fuRate = fu.sent ? Math.round((fu.replied / fu.sent) * 100) : 0;
@@ -17,51 +20,10 @@ const PerformanceActivity = ({ fuente, actividad, referidos, reportsProductivity
                     <span className="w-2 h-2 rounded-full bg-primary" /> Performance por fuente
                     <MetricTip iconOnly {...tip('fuente_agendas')} />
                 </h3>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-[12.5px]">
-                        <thead>
-                            <tr className="text-[8.5px] font-black uppercase tracking-widest text-muted border-b border-base">
-                                <th className="text-left py-2">Fuente</th>
-                                <th className="text-right py-2">Agendas</th>
-                                <th className="text-right py-2">Asistencias</th>
-                                <th className="text-right py-2">Show rate</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {fuente.map(f => (
-                                <tr key={f.name} className="border-b border-base/50 last:border-0">
-                                    <td className="py-2.5"><b>{f.name}</b></td>
-                                    <td className="py-2.5 text-right">
-                                        <MetricaClicable irA={irA} destino={destinoFuente(f.name)}
-                                            vacio={!f.agendas}
-                                            detalle={`${f.agendas} agendas de ${f.name}`}>
-                                            {f.agendas}
-                                        </MetricaClicable>
-                                    </td>
-                                    <td className="py-2.5 text-right">
-                                        <MetricaClicable irA={irA}
-                                            destino={destinoFuente(f.name, 'asistencias')}
-                                            vacio={!f.asistencias}
-                                            detalle={`${f.asistencias} asistencias de ${f.name}`}>
-                                            {f.asistencias}
-                                        </MetricaClicable>
-                                    </td>
-                                    <td className="py-2.5 text-right">
-                                        <MetricaClicable irA={irA} subrayar={false}
-                                            destino={destinoFuente(f.name, 'asistencias')}
-                                            vacio={!f.asistencias}
-                                            detalle={`Show rate de ${f.name} · ${f.show_rate}%`}
-                                            className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${f.show_rate >= 55 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : f.show_rate >= 40 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'}`}>
-                                            {f.show_rate}%
-                                        </MetricaClicable>
-                                    </td>
-                                </tr>
-                            ))}
-                            {fuente.length === 0 && (
-                                <tr><td colSpan={4} className="text-center py-6 text-muted">Sin agendas en el período</td></tr>
-                            )}
-                        </tbody>
-                    </table>
+                <div className="dc-shell dc-shell--embebido">
+                    <ListaConfigurable columnas={columnas} filas={fuente} clave={(f) => f.name}
+                        buscar={(f) => f.name} buscarPlaceholder="Buscar fuente…" claveGuardado="closer_fuente_cols"
+                        ordenInicial={{ key: 'agendas', dir: 'desc' }} vacio="Sin agendas en el período" />
                 </div>
             </Card>
 

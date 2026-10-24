@@ -1,9 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import Card from '../../../../components/ui/Card';
-import MetricTip from './MetricTip';
-import { money } from '../performanceUtils';
-import { tip, DESTINOS_RANKING } from '../metricSources';
-import MetricaClicable from '../../../../components/dashboard/MetricaClicable';
+import ListaConfigurable from '../../../../components/listas/ListaConfigurable';
+import { columnasRanking } from './columnasRanking';
+import '../../../comercial/comercial.css';
 
 const ALERT_STYLES = {
     danger: 'bg-rose-500/10 border-rose-500/30',
@@ -12,78 +11,18 @@ const ALERT_STYLES = {
     success: 'bg-emerald-500/10 border-emerald-500/30'
 };
 
-/* Una celda del ranking lleva a la lista de ESA persona con ESA metrica. La persona se acota con
-   el selector de miembro del dashboard comercial (`m` en la query string, que el backend usa para
-   rearmar el alcance) y no con la faceta Closer: asi la tira de totales y los contadores de faceta
-   tambien quedan acotados, y el numero de la celda cierra con lo que se ve abajo. */
-const Celda = ({ fila, metrica, valor, irA, className, bruto }) => (
-    <td className={`py-2.5 text-right ${className || ''}`}>
-        <MetricaClicable
-            irA={irA ? (tabla, filtro) => irA(tabla, filtro, { miembroId: fila.closer_id }) : null}
-            destino={DESTINOS_RANKING[metrica]}
-            detalle={`${fila.name} · ${valor}`}>
-            {valor}
-        </MetricaClicable>
-        {bruto && <small className="block text-[10px] font-bold text-muted whitespace-nowrap">{bruto}</small>}
-    </td>
-);
-
 const PerformanceRanking = ({ ranking, selectedCloserId, alerts, irA }) => {
+    // La posición es la del ranking que manda el backend: ordenar la tabla no la cambia.
+    const filas = useMemo(() => ranking.map((r, i) => ({ ...r, pos: i + 1 })), [ranking]);
+    const columnas = useMemo(() => columnasRanking(irA, selectedCloserId), [irA, selectedCloserId]);
     return (
         <div className="space-y-4">
             <Card variant="surface" padding="p-6">
                 <h3 className="text-xs font-black uppercase tracking-widest text-base mb-5">Ranking del equipo</h3>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-[12.5px]">
-                        <thead>
-                            <tr className="text-[8.5px] font-black uppercase tracking-widest text-muted border-b border-base">
-                                <th className="text-left py-2 w-10"></th>
-                                <th className="text-left py-2">Closer</th>
-                                <th className="text-right py-2"><span className="inline-flex items-center gap-1">Cash neto <MetricTip iconOnly {...tip('cash_collected')} /></span></th>
-                                <th className="text-right py-2"><span className="inline-flex items-center gap-1">Ventas <MetricTip iconOnly {...tip('ventas')} /></span></th>
-                                <th className="text-right py-2"><span className="inline-flex items-center gap-1">Show rate <MetricTip iconOnly {...tip('q_show_rate')} /></span></th>
-                                <th className="text-right py-2"><span className="inline-flex items-center gap-1">Close s/ pres. <MetricTip iconOnly {...tip('q_close_presentacion')} /></span></th>
-                                <th className="text-right py-2"><span className="inline-flex items-center gap-1">Ticket <MetricTip iconOnly {...tip('ticket_promedio')} /></span></th>
-                                <th className="text-right py-2"><span className="inline-flex items-center gap-1">Reportes enviados <MetricTip iconOnly {...tip('rank_reportes')} /></span></th>
-                                <th className="text-right py-2">Sin enviar</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {ranking.map((r, i) => (
-                                <tr key={r.closer_id} className="border-b border-base/50 last:border-0">
-                                    <td className="py-2.5">
-                                        <div className={`w-6 h-6 rounded-md grid place-items-center text-[10px] font-black ${i === 0 ? 'bg-gradient-to-br from-primary to-secondary text-white' : 'bg-surface-hover text-muted'}`}>
-                                            {i + 1}
-                                        </div>
-                                    </td>
-                                    <td className="py-2.5">
-                                        <b>{r.name}</b>
-                                        {String(r.closer_id) === String(selectedCloserId) && <span className="text-[9px] text-muted ml-2">seleccionado</span>}
-                                    </td>
-                                    <Celda fila={r} irA={irA} metrica="cash_collected"
-                                        valor={money(r.cash_neto ?? r.cash_collected)} className="font-black"
-                                        bruto={`bruto ${money(r.cash_collected)}`} />
-                                    <Celda fila={r} irA={irA} metrica="ventas" valor={r.ventas} />
-                                    <Celda fila={r} irA={irA} metrica="show_rate" valor={`${r.show_rate}%`} />
-                                    <td className="py-2.5 text-right">
-                                        <MetricaClicable subrayar={false}
-                                            irA={irA ? (tabla, filtro) => irA(tabla, filtro, { miembroId: r.closer_id }) : null}
-                                            destino={DESTINOS_RANKING.close_rate_presentacion}
-                                            detalle={r.close_rate_presentacion > 100
-                                                ? `${r.name} · ${r.ventas} ventas sobre ${r.presentaciones} presentaciones reportadas`
-                                                : `${r.name} · ${r.ventas} ventas sobre ${r.presentaciones} presentaciones`}
-                                            className={`text-[10px] font-black px-2 py-0.5 rounded-md border ${r.close_rate_presentacion > 100 ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : r.close_rate_presentacion >= 40 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
-                                            {r.close_rate_presentacion}%{r.close_rate_presentacion > 100 ? ' ⚠️' : ''}
-                                        </MetricaClicable>
-                                    </td>
-                                    <Celda fila={r} irA={irA} metrica="ticket_promedio"
-                                        valor={money(r.ticket_promedio)} />
-                                    <td className="py-2.5 text-right">{r.reports_status}%</td>
-                                    <td className={`py-2.5 text-right font-black ${r.reportes_faltantes > 0 ? 'text-amber-400' : 'text-muted'}`}>{r.reportes_faltantes}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                <div className="dc-shell dc-shell--embebido">
+                    <ListaConfigurable columnas={columnas} filas={filas} clave={(r) => r.closer_id}
+                        buscar={(r) => r.name} buscarPlaceholder="Buscar closer…" claveGuardado="closer_ranking_cols"
+                        ordenInicial={{ key: 'pos', dir: 'asc' }} vacio="Sin closers en el período." />
                 </div>
             </Card>
 
