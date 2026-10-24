@@ -8,6 +8,7 @@ import InlineConfirm from '../../../../components/ui/InlineConfirm';
 import WorkshopFunnelView from '../components/WorkshopFunnelView';
 import WorkshopAnunciosView from '../components/WorkshopAnunciosView';
 import WorkshopReplayConfigPanel from '../components/WorkshopReplayConfigPanel';
+import AgendasDelTaller from '../agendas/AgendasDelTaller';
 import Hoja from './Hoja';
 import { VISTAS_TALLER } from './TarjetaTaller';
 import { roasRotulo, roasTono, veces } from './formato';
@@ -93,6 +94,9 @@ const DetalleTaller = ({
                 <h2 className="t-h2 wt-detalle-nom" title={evento.name}>{evento.name}</h2>
                 <span className="chip" style={{ '--c': `var(--${tono})` }}>
                     ROAS {veces(evento.roas)} · {roasRotulo(evento.roas)}
+                </span>
+                <span className="t-sm mut num">
+                    <AgendasDelTaller evento={evento} formatDate={formatDate}>{evento.agendas_exitosas ?? 0} agendas</AgendasDelTaller>
                 </span>
             </div>
             <div className="wt-detalle-barra">

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Check } from 'lucide-react';
 import ListaConfigurable from '../../../../components/listas/ListaConfigurable';
+import AgendasDelTaller from '../agendas/AgendasDelTaller';
 import {
     cac, dinero, ESTADOS_GRABACION, estadoGrabacion, ganancia, mesDe, numero, porcentaje, roasRango,
     roasRotulo, roasTono, veces,
@@ -44,7 +45,7 @@ const columnasDe = ({ formatDate, elegidos, onComparar }) => [
     { key: 'show_up', header: 'Show up', ...der, valor: (e) => e.show_up_rate,
       render: (e) => <span title={`${numero(e.show_up)} se conectaron`}>{porcentaje(e.show_up_rate)}</span> },
     { key: 'aplicaciones', header: 'Aplicaron', ...der, oculta: true, valor: (e) => e.aplicaciones_form, render: (e) => numero(e.aplicaciones_form) },
-    { key: 'agendas', header: 'Agendas', ...der, valor: (e) => e.agendas_exitosas, render: (e) => numero(e.agendas_exitosas) },
+    { key: 'agendas', header: 'Agendas', ...der, valor: (e) => e.agendas_exitosas, render: (e) => <AgendasDelTaller evento={e} formatDate={formatDate} /> },
     { key: 'costo_agenda', header: 'Costo agenda', ...der, oculta: true, valor: (e) => e.costo_por_agenda, render: (e) => dinero(e.costo_por_agenda) },
     { key: 'asistieron', header: 'Asistieron', ...der, oculta: true, valor: (e) => e.show_up_sales_call, render: (e) => numero(e.show_up_sales_call),
       ayuda: 'Personas que se presentaron a la llamada de venta.' },

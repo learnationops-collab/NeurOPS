@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, Check, Edit2 } from 'lucide-react';
 import { Segmented } from '../../../comercial/components/Shared';
 import InlineConfirm from '../../../../components/ui/InlineConfirm';
+import AgendasDelTaller from '../agendas/AgendasDelTaller';
 import { ResumenAnuncios, ResumenEmbudo, ResumenGrabacion } from './ResumenesTarjeta';
 import { cac, dinero, porcentaje, roasRotulo, roasTono, veces } from './formato';
 
@@ -65,7 +66,8 @@ const TarjetaTaller = ({
                 </div>
             </dl>
             <p className="wt-tarjeta-sub t-cap mut40 num">
-                CPL {dinero(e.cpl)} · costo por agenda {dinero(e.costo_por_agenda)} · CAC {dinero(cac(e))}
+                CPL {dinero(e.cpl)} · <AgendasDelTaller evento={e} formatDate={formatDate}>{e.agendas_exitosas ?? 0} agendas</AgendasDelTaller>
+                {' '}· costo por agenda {dinero(e.costo_por_agenda)} · CAC {dinero(cac(e))}
             </p>
 
             <Segmented chico opciones={VISTAS_TALLER} valor={vista} onChange={setVista}
