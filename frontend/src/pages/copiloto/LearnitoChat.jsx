@@ -4,13 +4,18 @@
 // su marcador, [[A]]), botones u opciones para seguir y una acción para confirmar. La conversación se puede
 // calificar para revisar después las que salieron mal. Abajo, la barra de uso de la conversación: al llenarse no se
 // sigue escribiendo. Para abrir otra, las anteriores sin calificar se califican acá (Pendientes).
+// "@" nombra a un cliente o a alguien del equipo, y un texto seleccionado (en el redactor o en una respuesta) se
+// convierte en nombre con "Nombrar"; "/" al principio abre las acciones simples, que el cerebro arma sin IA
+// (ADR-W012, menciones.js).
 import { useEffect, useRef, useState } from 'react';
-import { Bell, Check, Copy, Frown, Meh, MessageSquare, Mic, MicOff, Send, Smile, Sparkles, X } from 'lucide-react';
+import { AtSign, Bell, Check, Copy, Frown, Meh, MessageSquare, Mic, MicOff, Send, Smile, Sparkles, X } from 'lucide-react';
 import { Button, EmptyState, FieldError, IconButton, TextArea } from '../../components/standard';
+import api from '../../services/api';
 import { useLearnito } from '../../sesion/LearnitoContext';
 import { juntar } from './dictado';
 import Grafico from './Grafico';
 import Markdown from './Markdown';
+import { conMenciones, disparador, filtrarAcciones, insertar, seleccionValida } from './menciones';
 import { useDictado } from './useDictado';
 import UsoMensual from './UsoMensual';
 import './copiloto.css';
@@ -163,6 +168,86 @@ export default function LearnitoChat() {
     };
     const dictado = useDictado((frase) => setTexto((t) => juntar(t, frase)));
     const finRef = useRef(null);
+    const caja = useRef(null);
+    const listaRef = useRef(null);
+    const reloj = useRef(null);
+    const [acciones, setAcciones] = useState([]);
+    const [nombrados, setNombrados] = useState([]);
+    const [sugeridos, setSugeridos] = useState([]);
+    const [marcado, setMarcado] = useState(0);
+    const [rango, setRango] = useState(null);
+    const [nadie, setNadie] = useState(false);
+    const [seleccion, setSeleccion] = useState(null);
+
+    useEffect(() => {
+        api.get('/copiloto/learnito/acciones').then(({ data }) => setAcciones(data.acciones || [])).catch(() => {});
+    }, []);
+
+    const cerrarSugeridos = () => { setSugeridos([]); setRango(null); setNadie(false); };
+
+    const buscar = (termino, nuevoRango) => {
+        setRango(nuevoRango);
+        clearTimeout(reloj.current);
+        reloj.current = setTimeout(() => {
+            api.get('/copiloto/learnito/personas', { params: { q: termino } }).then(({ data }) => {
+                const lista = data.personas || [];
+                setSugeridos(lista);
+                setNadie(!lista.length);
+                setMarcado(0);
+            }).catch(() => cerrarSugeridos());
+        }, 200);
+    };
+
+    // Lo que se escribe antes del cursor: "/" lista las acciones; "@" con dos letras busca.
+    const revisar = (el) => {
+        const d = disparador(el.value, el.selectionStart);
+        if (d?.tipo === 'accion') {
+            setRango(d);
+            setSugeridos(filtrarAcciones(acciones, d.termino).map((a) => ({ ...a, tipo: 'accion' })));
+            setMarcado(0);
+            setNadie(false);
+        } else if (d) {
+            buscar(d.termino, d);
+        } else {
+            clearTimeout(reloj.current);
+            cerrarSugeridos();
+        }
+    };
+
+    const elegir = (item) => {
+        const { valor, cursor } = insertar(texto, rango, item);
+        setTexto(valor);
+        if (item.tipo !== 'accion') {
+            setNombrados((lista) => [...lista.filter((n) => !(n.id === item.id && n.tipo === item.tipo)), item]);
+        }
+        cerrarSugeridos();
+        requestAnimationFrame(() => { caja.current?.focus(); caja.current?.setSelectionRange(cursor, cursor); });
+    };
+
+    // Un texto seleccionado en el redactor o en una respuesta: "Nombrar" lo busca como persona.
+    useEffect(() => {
+        const alSeleccionar = () => {
+            const el = caja.current;
+            if (el && document.activeElement === el) {
+                const t = el.value.slice(el.selectionStart, el.selectionEnd).trim();
+                setSeleccion(seleccionValida(t) ? { texto: t, inicio: el.selectionStart, fin: el.selectionEnd } : null);
+                return;
+            }
+            const s = window.getSelection();
+            const t = (s?.toString() || '').trim();
+            const enRespuesta = s?.anchorNode?.parentElement?.closest('.cp-msg--copiloto');
+            setSeleccion(seleccionValida(t) && enRespuesta && listaRef.current?.contains(enRespuesta) ? { texto: t } : null);
+        };
+        document.addEventListener('selectionchange', alSeleccionar);
+        return () => document.removeEventListener('selectionchange', alSeleccionar);
+    }, []);
+
+    const nombrar = () => {
+        const fin = texto.length;
+        buscar(seleccion.texto, seleccion.inicio !== undefined ? { inicio: seleccion.inicio, fin: seleccion.fin }
+            : { inicio: fin, fin, alFinal: true });
+        setSeleccion(null);
+    };
 
     useEffect(() => { finRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [mensajes, enviando]);
     // Al abrir sin conversación: las anteriores sin calificar, que traban la nueva.
@@ -174,14 +259,34 @@ export default function LearnitoChat() {
         dictado.detener();
         setTexto('');
         setError(null);
-        const fallo = await enviar(limpio);
+        cerrarSugeridos();
+        const fallo = await enviar(conMenciones(limpio, nombrados), limpio);
         if (fallo) {
             setTexto(limpio);
             setError(fallo);
+        } else {
+            setNombrados([]);
         }
     };
 
     const alTeclear = (e) => {
+        if (e.key === 'Escape' && (sugeridos.length || nadie || seleccion)) {
+            e.preventDefault();
+            e.stopPropagation();
+            cerrarSugeridos();
+            setSeleccion(null);
+            return;
+        }
+        if (sugeridos.length && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+            e.preventDefault();
+            setMarcado((m) => (m + (e.key === 'ArrowDown' ? 1 : -1) + sugeridos.length) % sugeridos.length);
+            return;
+        }
+        if (sugeridos.length && (e.key === 'Enter' || e.key === 'Tab')) {
+            e.preventDefault();
+            elegir(sugeridos[marcado]);
+            return;
+        }
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             mandar();
@@ -200,11 +305,11 @@ export default function LearnitoChat() {
                         </div>
                     )}>
                     Escribí o tocá el micrófono y hablá. Veo tus agendas, tus clientes y quién te debe, y los números
-                    del equipo. También puedo dejar un comentario en un cliente o avisarle algo a alguien, cuando lo
-                    confirmes.
+                    del equipo. Con @ nombrás a un cliente o a alguien del equipo, y con / dejás un comentario o un
+                    aviso sin esperar a la IA: se hace cuando lo confirmes.
                 </EmptyState>
             ) : (
-                <ul className="cp-lista" aria-live="polite">
+                <ul className="cp-lista" aria-live="polite" ref={listaRef}>
                     {mensajes.map((m, i) => <Mensaje key={i} {...m} confirmar={(opciones) => confirmar(i, opciones)} />)}
                     {!enviando && mensajes[ultima]?.mensaje && (
                         <li className="cp-siguientes-fila">
@@ -219,9 +324,33 @@ export default function LearnitoChat() {
 
             <div className="cp-redactor">
                 {trabado && <Pendientes pendientes={pendientes} calificar={calificarPendiente} />}
-                <TextArea value={mostrado} onChange={(e) => setTexto(e.target.value)} onKeyDown={alTeclear}
-                    readOnly={dictado.escuchando} disabled={bloqueado} maxLength={4000} aria-label="Mensaje para Learnito"
-                    placeholder={dictado.escuchando ? 'Te escucho…' : 'Escribí o dictá tu pedido'} />
+                <div className="cp-caja">
+                    {(sugeridos.length > 0 || nadie) && (
+                        <ul className="cp-sugeridos" role="listbox" aria-label="Sugerencias">
+                            {sugeridos.map((s, i) => (
+                                <li key={`${s.tipo}${s.id ?? s.clave}`} role="option" aria-selected={i === marcado}>
+                                    <button type="button" className={i === marcado ? 'is-marcado' : ''}
+                                        onMouseDown={(e) => { e.preventDefault(); elegir(s); }} onMouseEnter={() => setMarcado(i)}>
+                                        <strong>{s.tipo === 'accion' ? `/${s.clave} · ${s.nombre}` : s.nombre}</strong>
+                                        <span>{s.detalle}</span>
+                                    </button>
+                                </li>
+                            ))}
+                            {nadie && <li className="cp-sugeridos__nadie">Nadie con ese nombre.</li>}
+                        </ul>
+                    )}
+                    {seleccion && !sugeridos.length && !nadie && (
+                        <Button className="cp-nombrar" size="sm" icon={<AtSign size={13} />}
+                            onMouseDown={(e) => { e.preventDefault(); nombrar(); }}>
+                            Nombrar «{seleccion.texto}»
+                        </Button>
+                    )}
+                    <TextArea ref={caja} value={mostrado} onChange={(e) => { setTexto(e.target.value); revisar(e.target); }}
+                        onKeyDown={alTeclear} onClick={(e) => revisar(e.target)}
+                        onBlur={() => setTimeout(cerrarSugeridos, 150)}
+                        readOnly={dictado.escuchando} disabled={bloqueado} maxLength={4000} aria-label="Mensaje para Learnito"
+                        placeholder={dictado.escuchando ? 'Te escucho…' : 'Escribí o dictá tu pedido; @ nombra a alguien y / abre las acciones'} />
+                </div>
                 <div className="cp-botones">
                     <IconButton
                         icon={dictado.escuchando ? <MicOff size={16} /> : <Mic size={16} />}

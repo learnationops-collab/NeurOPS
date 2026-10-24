@@ -195,6 +195,18 @@ CLIENTES = [
 
 ACCIONES = {'comentario': 'Comentario en el cliente', 'aviso': 'Avisarle a alguien'}
 
+# Las acciones simples, sin IA (ADR-194 de la Academia): el menú "/" del chat y las frases que las reconocen.
+# `persona` es un cliente nombrado con @[Nombre, id N]; `equipo`, alguien del equipo con @[Nombre, equipo N].
+ACCIONES_SIMPLES = [
+    {'tipo': 'comentario', 'nombre': 'Comentario', 'descripcion': 'Una nota en la ficha de un cliente',
+     'persona': 'si', 'equipo': 'no',
+     'frases': ['comentá en la ficha de', 'comentá en', 'comentale a', 'comentario en', 'comentario para',
+                'anotá en la ficha de']},
+    {'tipo': 'aviso', 'nombre': 'Aviso',
+     'descripcion': 'Una notificación para alguien del equipo (sobre un cliente, si lo nombrás)',
+     'persona': 'opcional', 'equipo': 'si', 'frases': ['avisale a', 'avisá a', 'avisarle a', 'aviso para']},
+]
+
 PROPONER = {
     'name': 'proponer_accion',
     'description': 'Deja lista una acción para que la persona la confirme: comentario (una nota en la ficha de un '
@@ -454,6 +466,33 @@ def _por_nombre(palabras):
                   for w in palabras])
 
 
+def _primero_lo_que_empieza(filas, texto):
+    """Quien empieza con lo escrito primero ("Ana" antes que "Mariana"), después quien tiene una palabra así."""
+    t = _sin_tildes(texto).strip()
+    primera = t.split(' ')[0] if t else ''
+
+    def puesto(f):
+        n = _sin_tildes(f['nombre'])
+        return 0 if n.startswith(t) else 1 if any(w.startswith(primera) for w in n.split()) else 2
+    return sorted(filas, key=puesto)
+
+
+def mentions(user, texto):
+    """Lo que encuentra el "@" del chat (ADR-194 de la Academia): sus clientes y la gente activa del equipo.
+    [{id, nombre, detalle, tipo: persona | equipo}]."""
+    texto = str(texto or '').strip()[:60]
+    if len(texto) < 2:
+        return []
+    clientes = [{'id': c['student_id'], 'nombre': c['nombre'], 'detalle': c['programa'] or c['email'] or 'Cliente',
+                 'tipo': 'persona'} for c in find_people(user, texto)]
+    q = User.query.filter(User.is_active == True)  # noqa: E712
+    for w in _sin_tildes(texto).split():
+        q = q.filter(or_(_plano(User.username).like(f'%{w}%'), _plano(User.email).like(f'%{w}%')))
+    equipo = [{'id': u.id, 'nombre': u.username or u.email, 'detalle': f'Equipo · {u.role}', 'tipo': 'equipo'}
+              for u in q.order_by(User.username).limit(4).all()]
+    return _primero_lo_que_empieza(clientes, texto)[:6] + _primero_lo_que_empieza(equipo, texto)
+
+
 def find_people(user, texto):
     texto = str(texto or '').strip()
     if len(texto) < 2:
@@ -567,13 +606,25 @@ def _destinatario(texto):
     return None, 'Hay más de una persona con ese nombre: ' + ', '.join(u.username or u.email for u in candidatos) + '.'
 
 
+def _destinatario_id(usuario_id):
+    """[usuario, error] de quien recibe un aviso, nombrado con @ (su id), entre las cuentas activas."""
+    try:
+        u = db.session.get(User, int(usuario_id))
+    except (TypeError, ValueError):
+        u = None
+    return (u, None) if u is not None and u.is_active else (None, 'Esa persona del equipo no existe o no está activa.')
+
+
 def _nombre_cliente(c):
     return (c.person and c.person.full_name) or c.full_name or f'cliente {c.id}'
 
 
 def propose_action(user, entrada):
-    """[acción, error]: la tarjeta que el cerebro muestra para confirmar. No escribe nada."""
-    e = entrada if isinstance(entrada, dict) else {}
+    """[acción, error]: la tarjeta que el cerebro muestra para confirmar. No escribe nada. Desde las acciones
+    simples (ADR-194 de la Academia) llegan también `persona_id` (el cliente) y `equipo_id` (quien recibe el aviso)."""
+    e = dict(entrada) if isinstance(entrada, dict) else {}
+    if e.get('cliente_id') in (None, '') and e.get('persona_id'):
+        e['cliente_id'] = e['persona_id']
     tipo = str(e.get('tipo') or '')
     texto = str(e.get('texto') or '').strip()[:2000]
     if getattr(user, 'id', None) is None:
@@ -594,7 +645,7 @@ def propose_action(user, entrada):
         detalle = [f'En la ficha de {_nombre_cliente(cliente)}.']
         nombre = _nombre_cliente(cliente)
     else:
-        para, error = _destinatario(e.get('para'))
+        para, error = _destinatario_id(e.get('equipo_id')) if e.get('equipo_id') else _destinatario(e.get('para'))
         if error:
             return [None, error]
         datos['para_id'] = para.id
@@ -644,6 +695,7 @@ def handle(op, args, quien=None):
     ops = {
         'guide': guide,
         'examples': lambda: EJEMPLOS,
+        'actions': lambda: ACCIONES_SIMPLES,
         'appendix': appendix,
         'askerNote': lambda: asker_note(a.get('quien') or quien),
         'tools': tools,

@@ -7,6 +7,9 @@ conversación, cuenta el gasto con su tope (por sistema y por persona) y le pide
 ranking (app/services/tablas/alcance.py). `/learnito/confirmar` hace (o descarta) la acción que propuso una
 respuesta, y `/learnito/calificar` califica la conversación.
 
+El "@" del chat y el menú "/" (ADR-194 de la Academia) los resuelve Work con lo suyo: `/learnito/personas` busca
+clientes y gente del equipo, y `/learnito/acciones` lista las acciones simples, que el cerebro arma sin IA.
+
 Dos reglas del cerebro (24/10): cada conversación tiene un tope de uso (la respuesta trae `uso.conversacion`; al
 llegar, la Academia responde `conversacion_agotada`) y para abrir otra hay que calificar las anteriores
 (`calificar_pendientes` con `pendientes`; `/learnito/pendientes` las lista).
@@ -18,6 +21,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
 from app.decorators import copiloto_required
+from app.services import learnito_conector
 from app.services.learnation_service import LearnationAPIError, LearnationService
 
 bp = Blueprint('copiloto_api', __name__)
@@ -78,6 +82,21 @@ def learnito_confirmar():
         pedido['texto'] = cuerpo['texto'].strip()[:MAX_CARACTERES]
     data, estado = _a_la_academia('confirm', pedido)
     return jsonify(data), estado
+
+
+@bp.route('/learnito/personas', methods=['GET'])
+@copiloto_required
+def learnito_personas():
+    """El "@" del chat: {personas: [{id, nombre, detalle, tipo: persona | equipo}]}, con el alcance de quien busca."""
+    return jsonify({'personas': learnito_conector.mentions(current_user, request.args.get('q') or '')}), 200
+
+
+@bp.route('/learnito/acciones', methods=['GET'])
+@copiloto_required
+def learnito_acciones():
+    """El menú "/" del chat: {acciones: [{clave, nombre, detalle}]}."""
+    return jsonify({'acciones': [{'clave': a['tipo'], 'nombre': a['nombre'], 'detalle': a['descripcion']}
+                                 for a in learnito_conector.ACCIONES_SIMPLES]}), 200
 
 
 @bp.route('/learnito/pendientes', methods=['GET'])

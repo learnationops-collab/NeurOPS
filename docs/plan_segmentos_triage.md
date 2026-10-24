@@ -244,3 +244,98 @@ Probarlo 4 semanas y mirar en el dashboard nuevo:
 2. Kerwin: dashboard por segmento (puede arrancar apenas exista el campo `segmento`).
 3. Santi: perfil Triage, panel, «Pasar a closing» y sello para el closer.
 4. Santi: reparto nuevo por segmento (último, cuando el triage ya funcione).
+
+---
+
+## 8. Anexo: auditoría y revisión estadística (Santi, 24/10/2026)
+
+Revisión del plan contra el código y la base de producción (solo lectura). El plan se mantiene; esto ajusta cómo se calcula el segmento y cómo se aplica.
+
+### 8.1 Estado actual
+
+- Las ids de preguntas y opciones del §2.1 existen todas en `dg6gukz9emx`. Ese formulario lo usan 3 eventos: Momentum Session y las dos «Sesión de Aceleración».
+- Hoy las reglas `mk-*` combinan respuestas y eligen directamente una estrategia (Grupo 1 a 5). Los puntos no deciden nada: solo dan la nota. Jean Carlo es el único miembro de los grupos 1, 2 y 3; en los grupos 4 y 5 están también Marlon y Mario. Si la estrategia elegida no tiene lugar, el lead pasa a la siguiente y, al final, a «Todos los closers».
+- **En octubre, la mitad de las agendas no entró por Thalamus.** Unas 120 llegaron por el flujo viejo (setters y workshop, Calendly + n8n → `clients.form_data`) y 87 por Thalamus. El segmento se tiene que calcular en los dos lados.
+- El formulario viejo tiene las 4 preguntas, pero a cerca del 40% de julio a septiembre le falta `apoyo`, y a casi todo junio le falta `examen`. Que falten depende de la fuente y de la versión del formulario, no del lead.
+- El rol `triage` lo tiene hoy solo Dari, que no figura como persona en Thalamus. Su pantalla actual (`TriageWorkflowPage`) trabaja sobre `FinancialAgenda` y no reporta el resultado de la llamada.
+
+### 8.2 Revisión estadística
+
+Regresión logística penalizada sobre 788 leads (12/06 al 02/10, con 77 compradores), con validación cruzada, bootstrap e intervalos del 90%:
+
+- El formulario ordena con AUC entre 0,66 y 0,69 fuera de muestra. Confirma el 0,68 del informe.
+- **Los puntos del §2.1 se confirman.** El orden de las respuestas coincide con lo que dicen los datos.
+- Sumar interacciones (combinaciones de respuestas), país, fuente, interés o «puntos a subir» no mejora la predicción. Alcanza con los puntos sumados.
+- El examen funciona sobre todo como indicador del país: ENARM es México, Colombia es Colombia.
+- **Sesgo del informe:** contar las respuestas que faltan como 0 infla D (20%, cuando con el cálculo proporcional da 11%) y empeora C. Se corrige calculando sobre lo que el lead respondió (§8.3).
+- **Jean Carlo con A:** cierra igual que el resto (48% contra 48%). Su ventaja está en la asistencia (62% contra 48%) y en el ticket ($653 contra $582). Con C y D, en cambio, sí cierra mucho más (28% contra 20%, y 40% contra 4%).
+- Con estos datos, A contra B es una diferencia probable pero no segura: el orden A > B > C > D tiene un 75% de probabilidad. El salto firme está entre B y C, donde se compra 4 veces más.
+
+### 8.3 La segmentación
+
+```
+puntaje = puntos obtenidos ÷ máximo posible de las preguntas respondidas   (0 a 1)
+
+A  puntaje >= 18/24 (75%)   ·   B  >= 14/24 (58%)   ·   C  >= 8/24 (33%)   ·   D  el resto
+```
+
+(El máximo es 24 desde que «Más de $500» junta las dos inversiones altas, ver §8.8.)
+
+- Con las 4 preguntas respondidas da lo mismo que el §2.2. Si falta una, se calcula sobre las demás, sin rellenar ni contarla como 0.
+- Sin Inversión y Etapa no hay segmento: queda «sin segmento».
+- Se guarda en la agenda y en el cliente: `segmento`, `segmento_puntos` (el puntaje), `segmento_preguntas` (cuántas de las 4 se respondieron), `segmento_confianza` y `segmento_version`.
+- La **confianza** es la probabilidad de que el lead esté de verdad en ese segmento, considerando la incertidumbre de los puntos. Un lead cerca de un corte tiene confianza baja.
+- **Los cortes y las preguntas que cuentan se configuran en el formulario**, no en el código. Cada pregunta lleva una marca «cuenta para el segmento».
+- El flujo viejo (`POST /public/financial-agendas-form`) usa los mismos puntos, con una tabla de equivalencias por texto: «$200 - $500 USD.» = 6, «Si me hace sentido…» = 6, «No estoy en una posición…» = 0, «Estoy trabajando» = 6, «Especialista» = 3.
+- Los puntos se revisan una vez por mes con los datos nuevos, partiendo de los actuales, y cada cambio sube la `segmento_version`. Las opciones con pocos datos ($500 o más, Trabaja) mantienen su valor hasta que haya datos.
+
+### 8.4 Cualificación y reparto, separados
+
+Hoy las reglas cualifican y reparten en el mismo paso. Pasan a ser dos capas:
+
+1. **Cualificación (formulario):** puntos → segmento. Las reglas quedan solo para filtros duros, como `mk-academy` (estudiante que no puede invertir → página de gracias).
+2. **Reparto (estrategias):** una tabla que asigna una estrategia a cada segmento, y cada estrategia define a cuál desborda.
+
+| Segmento | Estrategia | Si no hay lugar |
+|---|---|---|
+| A | Jean Carlo, primer horario, dentro de 24 h | Marlon / Mario (respaldo) |
+| B | Jean Carlo | Triage (si no tiene horario en 48 h) |
+| C y D | Triage | — |
+
+- El triage **no entra** en «Todos los closers».
+- Facundo sale de las estrategias. Marlon y Mario quedan solo como respaldo.
+- Objetivo: que Jean Carlo tenga las mejores llamadas posibles. A y B son unas 86 agendas por mes y, con los C que pase el triage, se llega a unas 120, cerca de su máximo (129).
+
+### 8.5 El triage
+
+- Hace el filtro de C y D como dice el §3, y lo que aprueba va a Jean Carlo, que es quien mejor cierra esos leads.
+- También confirma los A y B de Jean Carlo antes de la llamada, para que la asistencia de los A se parezca a la de hoy con él (62%).
+- Si un A o B cancela, ese turno se le ofrece a un C que el triage ya aprobó.
+
+### 8.6 Para el dashboard (Kerwin)
+
+- La asistencia se muestra de las dos formas: sobre las llamadas con reporte y sobre todas, con la cantidad sin reporte al lado.
+- Jean Carlo se mide por asistencia, cierre y ticket por separado.
+- Filtro por `segmento_preguntas` (cuántas de las 4 respondió el lead) y por `segmento_confianza`.
+
+### 8.7 Orden actualizado
+
+1. Santi: segmento calculado y guardado en los dos flujos (cualificación en el formulario, campos nuevos y backfill).
+2. Kerwin: dashboard por segmento.
+3. Santi: triage (panel, «Pasar a closing», confirmación de A/B y sello para el closer).
+4. Santi: reparto por segmento (la tabla de estrategias y su desborde).
+
+### 8.8 Decisiones sobre el formulario (Santi, 24/10/2026)
+
+Mario no podía decidir en este momento; decidió Santi. Todo es reversible y Mario puede cambiarlo.
+
+- **No se quita ninguna pregunta.** «Puntos a subir» y «Trabaja» siguen con sus puntos de hoy, quedan **en observación** y no cuentan para el segmento. Análisis anteriores mostraban que quienes trabajan rinden bien: se mide antes de decidir.
+- **Inversión:** «No puedo invertir» se parte en «No puedo invertir ahora» (0) y «Menos de $200 USD» (3, nueva). «$500 a $1000» y «Más de $1000» se juntan en «Más de $500 USD» (8): en 5 meses las eligieron 13 personas. La regla `mk-academy` sigue siendo estudiante + «No puedo invertir ahora».
+- **Examen:** se suman Ecuador (4), Chile (6) y Panamá (6), sacados del país del teléfono de quienes hoy eligen «Otro». «Otro» se queda en 2.
+- **Decide** pasa a «¿Quién más participa de esta decisión?»: Solo yo (4), Mi pareja, Mis padres u Otra persona (0).
+- **Los D van al triage**, como dice el plan. Mario puede pasarlos a «No califica» si lo prefiere: es un cambio de configuración.
+- **Sin cambios por ahora:** los textos de Interés, una oferta más barata para estudiantes, «Te llamamos nosotros» y la página de gracias según quién decide. Los dos últimos van con el triage.
+- Al juntar las inversiones altas en 8 puntos, el máximo pasa de 26 a 24. Los cortes quedan en **75 / 58 / 33%**, que son los mismos 18, 14 y 8 puntos de Mario cuando el lead respondió las 4 preguntas.
+- Los cambios del formulario y los puntos nuevos salen juntos, con `segmento_version = "2026-11"`, primero en el servidor de prueba. Scripts: `scripts/segmentos_formulario.py` y `scripts/backfill_segmentos.py`.
+
+Pendiente de Mario: confirmar que Dari hace el triage.

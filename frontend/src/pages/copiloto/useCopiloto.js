@@ -53,7 +53,8 @@ export function useCopiloto() {
         }
     }, [mensajes, conversacion]);
 
-    const enviar = useCallback((texto) => alCerebro({ pregunta: texto }, texto), [alCerebro]);
+    // `muestra` es lo que se ve: la pregunta viaja con los nombrados como "@[Nombre, id N]" (menciones.js).
+    const enviar = useCallback((texto, muestra = texto) => alCerebro({ pregunta: texto }, muestra), [alCerebro]);
 
     // Un botón (tipo "boton") o una opción (tipo "opcion") de la respuesta `indice` del cerebro.
     const tocar = useCallback((indice, tipo, i, texto) => alCerebro({ boton: { mensaje: indice, tipo, indice: i } }, texto),

@@ -66,6 +66,7 @@ __all__ = [
     'normal_pregunta',
     'normal_reglas',
     'normal_rol',
+    'normal_segmento',
     'normal_video',
     'preguntas_flujo',
     'url_ok',
@@ -135,6 +136,24 @@ def normal_pregunta(q):
         'esNombre': q.get('esNombre') is True,
         'peso': entero(q.get('peso'), 0, 5, 1 if con_opciones(t) else 0),
         'opciones': opciones,
+        # Si cuenta para el segmento A/B/C/D: '' no, 'cuenta' sí, 'clave' sí y sin respuesta no hay segmento.
+        'segmento': q.get('segmento') if q.get('segmento') in ('cuenta', 'clave') and con_opciones(t) else '',
+    }
+
+
+def normal_segmento(s):
+    """Cortes del segmento en % del puntaje (A ≥ a, B ≥ b, C ≥ c), la incertidumbre de los puntos (sigma,
+    en %) y la versión de los puntos. Inactivo, el formulario no segmenta."""
+    s = obj(s)
+    a = entero(s.get('a'), 0, 100, 69)
+    b = min(a, entero(s.get('b'), 0, 100, 54))
+    return {
+        'activo': s.get('activo') is True,
+        'a': a,
+        'b': b,
+        'c': min(b, entero(s.get('c'), 0, 100, 31)),
+        'sigma': entero(s.get('sigma'), 1, 50, 12),
+        'version': cortar(txt(s.get('version')), 20),
     }
 
 
@@ -181,6 +200,7 @@ def normal_form(id, d):
         'preguntas': ps,
         'reglas': normal_reglas(d.get('reglas')),
         'resto': txt(d.get('resto')),
+        'segmento': normal_segmento(d.get('segmento')),
         # url: la página a la que va el que no califica (la landing de descalificados); vacía, ve el título y el texto.
         'fin': {'titulo': cortar(txt(fin.get('titulo'), FIN_DEF['titulo']), 120), 'texto': cortar(texto_fin, 300),
                 'url': url_ok(fin.get('url'))},

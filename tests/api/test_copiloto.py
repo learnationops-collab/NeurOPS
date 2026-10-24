@@ -88,3 +88,15 @@ def test_una_accion_que_no_se_pudo_hacer_dice_por_que(client, auth_headers, make
         'detalle': ['work no respondió «executeAction»: Esa acción es de otra persona.']}))
     r = client.post(CONFIRMAR, headers=auth_headers(make_user()), json={'conversacion_id': 5, 'mensaje': 1})
     assert r.status_code == 422 and r.get_json()['error'] == 'Esa acción es de otra persona.'
+
+
+def test_el_arroba_y_las_acciones_los_resuelve_work(client, auth_headers, make_user, cerebro):
+    """El "@" y el menú "/" (ADR-W012) no pasan por la Academia."""
+    llamadas = cerebro()
+    user = make_user(role='closer', username='Tobias')
+    r = client.get('/api/copiloto/learnito/personas?q=tob', headers=auth_headers(user))
+    assert r.status_code == 200 and r.get_json()['personas'][0] == {
+        'id': user.id, 'nombre': 'Tobias', 'detalle': 'Equipo · closer', 'tipo': 'equipo'}
+    r = client.get('/api/copiloto/learnito/acciones', headers=auth_headers(user))
+    assert [a['clave'] for a in r.get_json()['acciones']] == ['comentario', 'aviso']
+    assert llamadas == []

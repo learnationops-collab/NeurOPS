@@ -2,8 +2,9 @@ from uuid import uuid4
 from datetime import datetime
 from app import db
 from app.models.person import ConPersona
+from app.models.segmento import ConSegmento
 
-class Client(ConPersona, db.Model):
+class Client(ConPersona, ConSegmento, db.Model):
     __tablename__ = 'clients'
     id = db.Column(db.Integer, primary_key=True)
     # Igual al uuid de su persona (`person_uuid`, ver app/models/person.py) en los clientes que ya

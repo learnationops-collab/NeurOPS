@@ -38,6 +38,16 @@
 .thalamus .learnito .cp-redactor .ui-textarea{max-height:30dvh;overflow-y:auto}
 .thalamus .learnito .cp-botones{display:flex;justify-content:flex-end;align-items:center;gap:8px}
 
+/* El "@" y el "/" del redactor (ADR-W012): la lista arriba del cuadro y "Nombrar" para un texto seleccionado. */
+.thalamus .learnito .cp-caja{position:relative}
+.thalamus .learnito .cp-sugeridos{position:absolute;left:0;bottom:calc(100% + 6px);width:min(320px, 100%);margin:0;padding:4px;list-style:none;display:grid;gap:2px;background:var(--bg-surface);border:1px solid var(--border-main);border-radius:12px;box-shadow:0 8px 24px rgb(0 0 0 / .18);z-index:20;max-height:260px;overflow-y:auto}
+.thalamus .learnito .cp-sugeridos button{width:100%;display:grid;gap:1px;text-align:left;padding:6px 10px;border:0;border-radius:8px;background:transparent;color:var(--text-main);cursor:pointer}
+.thalamus .learnito .cp-sugeridos button.is-marcado{background:var(--bg-element, var(--border-main))}
+.thalamus .learnito .cp-sugeridos strong{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thalamus .learnito .cp-sugeridos span{font-size:11px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thalamus .learnito .cp-sugeridos__nadie{padding:6px 10px;font-size:11px;color:var(--text-muted)}
+.thalamus .learnito .cp-nombrar{position:absolute;left:0;bottom:calc(100% + 6px);z-index:20;max-width:100%}
+
 /* Gráficos adjuntos (Grafico.jsx): con CSS y los tokens del tema. */
 .thalamus .learnito .cp-graf{margin:4px 0;padding:10px 12px;display:grid;gap:8px;background:var(--bg-surface);border:1px solid var(--border-main);border-radius:10px;white-space:normal}
 .thalamus .learnito .cp-graf figcaption{font-size:12px;font-weight:700}
