@@ -54,6 +54,15 @@ class ComercialAgendasMixin:
                 db.session.query(User.id).filter(User.role == 'setter')), no_es_marcador())
 
         appts = q.order_by(Appointment.start_time.desc(), Appointment.id.desc()).all()
+        return ComercialService.filas_de_citas(appts)
+
+    @staticmethod
+    def filas_de_citas(appts):
+        """Las filas de la tabla "Agendas" para una lista de citas ya elegida.
+
+        Vive aparte de `agendas` para que otras pantallas (el modal de agendas de un taller) muestren
+        la MISMA fila —mismos estados, chips y cruce con las ventas— sobre las citas que ellas elijan.
+        """
         if not appts:
             return []
 
