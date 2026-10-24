@@ -11,7 +11,38 @@
 .dc-shell .sim-cap{display:flex;align-items:center;gap:var(--s2);min-width:0}
 .dc-shell .sim-cap input{width:76px}
 
-/* Las cuatro líneas base lado a lado: la elegida resalta. */
+/* La banda de arriba de cada pestaña: en cuál de las dos estás. La Simulación lleva el color de las
+   palancas movidas (brand-secondary); la Proyección, el neutro informativo. */
+.dc-shell .sim-modo{display:flex;align-items:center;gap:var(--s3);min-width:0;flex-wrap:wrap;
+  padding:var(--s3) var(--s4);border-radius:var(--radius-control);border:1px solid var(--border-subtle);
+  border-left-width:3px;background:var(--hundido)}
+.dc-shell .sim-modo[data-modo="proyeccion"]{border-left-color:var(--info);background:var(--info-surface);
+  border-color:var(--info-border);border-left-color:var(--info)}
+.dc-shell .sim-modo[data-modo="simulacion"]{background:var(--brand-secondary-surface);
+  border-color:var(--brand-secondary-border);border-left-color:var(--brand-secondary)}
+.dc-shell .sim-modo-ic{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;flex-shrink:0;
+  background:color-mix(in srgb,currentColor 14%,transparent)}
+.dc-shell .sim-modo[data-modo="proyeccion"] .sim-modo-ic{color:var(--info)}
+.dc-shell .sim-modo[data-modo="simulacion"] .sim-modo-ic{color:var(--brand-secondary)}
+.dc-shell .sim-modo-t{flex:1 1 220px;min-width:0;display:grid;gap:2px}
+.dc-shell .sim-modo-der{margin-left:auto;display:flex;align-items:center;gap:var(--s2)}
+
+/* Simulación: de dónde parte, capacidad y cuántas palancas lleva movidas. */
+.dc-shell .sim-parte{display:flex;flex-wrap:wrap;gap:var(--s4) var(--s5);align-items:flex-start}
+.dc-shell .sim-parte-b{display:grid;gap:var(--s2);min-width:0;align-content:start}
+.dc-shell .sim-parte-n{margin:0;font-size:14px;font-weight:800;letter-spacing:-.01em}
+.dc-shell .sim-parte-n[data-tocada="1"]{color:var(--brand-secondary)}
+.dc-shell .sim-enlace{justify-self:start;font-size:12px;font-weight:700;color:var(--text-muted);
+  text-decoration:underline;text-underline-offset:3px;cursor:pointer;transition:color .16s ease}
+.dc-shell .sim-enlace:hover{color:var(--text-on-surface)}
+.dc-shell .sim-enlace:focus-visible{outline:2px solid var(--brand-secondary);outline-offset:2px;border-radius:4px}
+
+/* Proyección: el gráfico y la tabla lado a lado cuando entran. */
+.dc-shell .sim-dos{display:grid;gap:var(--s4);grid-template-columns:minmax(0,1fr);align-items:start}
+@media (min-width:1100px){.dc-shell .sim-dos{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.dc-shell .sim-lineas{margin-top:var(--s4)}
+
+/* Las líneas base lado a lado: la elegida resalta. */
 .dc-shell .sim-lineas{--min:170px;--g:var(--s3)}
 .dc-shell .sim-linea{display:grid;gap:4px;text-align:left;padding:var(--s3) var(--s4);min-width:0;
   border-radius:var(--radius-control);background:var(--hundido);border:1px solid var(--border-subtle);
@@ -114,7 +145,10 @@
 .dc-shell .sim-f-d[data-sube="1"]{color:var(--success)}
 .dc-shell .sim-f-d[data-sube="0"]{color:var(--error)}
 .dc-shell .sim-f-d[data-sube=""]{color:var(--text-muted-40)}
+.dc-shell .sim-tabla--sola .sim-f{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}
 @media (max-width:560px){
+  .dc-shell .sim-tabla--sola .sim-f{grid-template-columns:minmax(0,1fr) auto}
+  .dc-shell .sim-tabla--sola .sim-f > span:first-child{grid-column:auto}
   .dc-shell .sim-f{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);row-gap:2px}
   .dc-shell .sim-f > span:first-child{grid-column:1 / -1}
   .dc-shell .sim-f--cab > span:first-child{display:none}
