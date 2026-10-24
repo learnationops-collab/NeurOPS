@@ -731,3 +731,7 @@
   - Verde mientras falta; ámbar con punto que respira, borde y aura (urgencia, magenta y verde si invierte) sólo en la que pide acción (ahora o atrasada sin resolver); neutro en lo ya resuelto.
   - Nombre y teléfono en una línea; datos con ícono en una fila (inversión, decisión, origen con calendario o inicial). Se conservan etiquetas, notas, botones, arrastre y sellos; el riel del sello «Confirmado» pasa a la franja.
   - `AgendaCountdown` suma `bare` (sólo el tiempo, sin «En»/«Hace»).
+
+- **23 de Octubre de 2026 (Ficha · Resultado: la revisión entra sin deslizar)** *([frontend/src/components/ficha/tabs/TabResultado.jsx](../../frontend/src/components/ficha/tabs/TabResultado.jsx), [frontend/src/components/ficha/ficha.css](../../frontend/src/components/ficha/ficha.css) [MODIFY])*:
+  - «Lo que reportaste» deja la tabla de una fila por dato: cada dato es una ficha chica (rótulo y «Editar» arriba, valor abajo), varias por fila (dos en el celular).
+  - Un texto largo (el motivo) y la ficha que se está editando ocupan el ancho entero; las cortas suben a llenar el hueco.
