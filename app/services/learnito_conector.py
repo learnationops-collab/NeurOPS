@@ -98,6 +98,48 @@ def guide():
     return GUIA
 
 
+# Las frases con que el cerebro habla de Work (ADR-192 de la Academia): presentación y ejemplos del repartidor y del
+# planificador. Las reglas son del cerebro; la clave que falta va neutra (StaffAssistant::EXAMPLES).
+EJEMPLOS = {
+    'presentacion': 'Sos Learnito, el asistente del equipo de Learnation. Respondés en Work, su sistema comercial.',
+    'primera_persona': '',
+    'planificador': 'Sos el planificador de Learnito, el asistente del equipo de Learnation, en Work (su sistema '
+                    'comercial: agendas, ventas y cobranza).',
+    'p_tema': '',
+    'p_concepto': '(agenda realizada, no show, cuota vencida, seña sin convertir…)',
+    'p_glosario': '- Show up = agendas realizadas sobre las agendadas; cierre = la agenda terminó en venta. Para un '
+                  'closer o un setter, agrupá por su nombre, nunca por su número.',
+    'p_titulo': '("Show up por closer este mes")',
+    'aclarar': '("¿cuántos se cayeron?": no shows, agendas canceladas o señas que no pagaron)',
+    'r_pregunta': '("¿cuántas ventas hizo Juan este mes?", "¿quiénes de mis clientes tienen una cuota vencida?", '
+                  '"¿qué agendas tengo hoy?"). Contar algo repartido por una dimensión también es pregunta ("¿cuántas '
+                  'ventas hizo cada closer?", "¿qué fuente trae más agendas?"). También charla, dudas de cómo se hace '
+                  'algo y seguir la conversación.',
+    'r_investigacion': '("¿por qué bajó el show up este mes?", "¿los que señan rápido terminan pagando más?")',
+    'r_accion': 'dejar un comentario en la ficha de un cliente o avisarle algo a alguien del equipo',
+    'r_redactar': 'redactar = true si la respuesta es un texto largo a partir de la historia de un cliente (preparar '
+                  'una llamada, un mensaje de cobranza, por qué no cerró).',
+    'r_categoria': 'alumno (un cliente puntual), grupo (varios clientes, listas, rankings, métricas), material (Work '
+                   'no tiene: no la uses), ventas (ventas, pagos, cuotas, señas, deuda), equipo (agendas, show up, el '
+                   'trabajo de closers y setters), general (lo demás)',
+    'r_tipo': 'dato (contar, listar o repartir algo de Work: agendas, ventas, pagos, cuotas, leads, clientes), alumno '
+              '(la historia o la ficha de un cliente puntual) u otro (charla, cómo se hace algo, lo demás; Work no '
+              'tiene material)',
+    'r_intencion': '("por closer", "por mes")',
+    'r_terminos': '("no show", "señó", "no pagó", "cerró")',
+    'r_terminos_ej': '("¿qué closers tienen más no shows?": terminos de no shows, dimension closer)',
+    'r_filtros': '("cuota vencida", "de Instagram", "con seña"): "¿cuántos clientes de Instagram tienen la cuota '
+                 'vencida?" cuenta "de Instagram" con el filtro "cuota vencida".',
+    'r_filtro_o': '("no show o cancelada")',
+    'r_dato_extra': '',
+    'r_alumno': 'alumno = el nombre del cliente si nombra a uno.',
+    'r_tema': '',
+    'r_medida': '(por ejemplo avg de "monto de la venta")',
+    'r_con': 'La conversación es sobre un cliente puntual.',
+    'r_sin': 'La conversación no tiene un cliente elegido.',
+}
+
+
 def appendix():
     """Las fuentes principales de Work, para que una pregunta simple sepa dónde buscar sin salir a preguntar."""
     lineas = ['# Fuentes principales de Work (clave · qué es cada fila)']
@@ -579,6 +621,7 @@ def handle(op, args, quien=None):
     user = usuario(a.get('quien') or quien)
     ops = {
         'guide': guide,
+        'examples': lambda: EJEMPLOS,
         'appendix': appendix,
         'askerNote': lambda: asker_note(a.get('quien') or quien),
         'tools': tools,

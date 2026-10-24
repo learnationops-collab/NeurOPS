@@ -104,3 +104,11 @@ def test_el_grafico_de_un_plan_que_agrupa(equipo):
     assert g['w']['tipo'] == 'barras' and g['error'] is None
     assert sorted(f['valor'] for f in g['data']['filas']) == [1, 1]
     assert conector.card(jefa, AGENDAS) is None
+
+
+def test_los_ejemplos_son_de_work(db):
+    """El cerebro habla de Work con los ejemplos del conector (ADR-W011): frases, sin alumnos ni el Pulso."""
+    ejemplos = conector.handle('examples', {})
+    assert ejemplos and all(isinstance(v, str) for v in ejemplos.values())
+    texto = ' '.join(ejemplos.values()).lower()
+    assert 'cliente' in texto and 'entrega' not in texto and 'pulso' not in texto
