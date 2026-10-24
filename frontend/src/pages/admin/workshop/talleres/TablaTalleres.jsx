@@ -16,9 +16,9 @@ import {
 const der = { alinear: 'der', width: 'minmax(62px,0.8fr)' };
 
 const columnasDe = ({ formatDate, elegidos, onComparar }) => [
-    { key: 'fecha', header: 'Fecha', fija: true, width: '92px', valor: (e) => e.date,
+    { key: 'fecha', header: 'Fecha', fija: true, pegada: true, width: '92px', valor: (e) => e.date,
       render: (e) => <span className="celda num">{formatDate(e.date)}</span> },
-    { key: 'nombre', header: 'Taller', fija: true, width: 'minmax(130px,3fr)', valor: (e) => e.name,
+    { key: 'nombre', header: 'Taller', fija: true, pegada: true, width: 'minmax(130px,3fr)', valor: (e) => e.name,
       render: (e) => {
           const on = elegidos.includes(e.id);
           return (

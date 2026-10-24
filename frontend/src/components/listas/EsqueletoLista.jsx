@@ -1,5 +1,6 @@
 import { Skeleton, SkeletonBlock } from '../standard';
 import { useColumnasVisibles } from './useColumnasVisibles';
+import { anchoMinimo } from './anchoColumnas';
 
 /**
  * Lo que dibuja una `ListaConfigurable` mientras no llegaron sus filas: la misma barra (pastillas del
@@ -29,7 +30,7 @@ const EsqueletoLista = ({
                 {buscar && <SkeletonBlock width={190} height={38} radius={999} step={pastillas.length} />}
                 <span className="barra-cuenta"><SkeletonBlock width={120} height={10} step={pastillas.length + 1} /></span>
             </div>
-            <div className="tabla lc-tabla" aria-hidden="true">
+            <div className="tabla lc-tabla" aria-hidden="true" style={{ '--lc-min': `${anchoMinimo(visibles)}px` }}>
                 <div className="tabla-cab" style={{ '--cols': plantilla }}>
                     {visibles.map((c) => (
                         <span key={c.key} className={`cab-celda${c.alinear === 'der' ? ' lc-der' : ''}`}>
