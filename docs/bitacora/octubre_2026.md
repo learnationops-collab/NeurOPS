@@ -785,3 +785,7 @@
   - Nueva pestaña «Correlaciones»: qué métricas de los talleres se mueven parecido (show up, close rate, cash collected, gasto, CTR, costo por agenda...). Mapa de calor, ranking contra una métrica (cash collected por defecto) y dispersión con un punto por taller.
   - GET /api/workshop/correlaciones (solo lectura): Pearson y Spearman con n por par, confianza y aviso de muestra chica; con menos de 3 talleres o datos constantes no calcula. Marca las parejas que se parecen por cómo se calculan (ROAS, ventas, ticket contra cash).
   - No afirma causalidad. El show up de Setting no existe por taller: se compara con «Show up de citas» (llamada de ventas).
+
+- **24 de Octubre de 2026 (Marketing · una persona cuenta una sola vez en Entrantes)** *([app/services/anuncios_claves_service.py](../../app/services/anuncios_claves_service.py), [app/services/anuncios_service.py](../../app/services/anuncios_service.py), [app/api/manychat_monitor.py](../../app/api/manychat_monitor.py) [MODIFY])*:
+  - Una persona con dos conversaciones (la `ig:` del Inbox y la de ManyChat) contaba dos veces la misma palabra clave. Ahora la tabla de anuncios y Entrantes juntan sus conversaciones por persona (`person_uuid`; sin persona, la conversación sola).
+  - En producción desde el 19/10: 502 entrantes por conversación contra 486 por persona y palabra clave (GUIA PERU, 61 contra 46). Los campos no cambian de nombre; el histórico se arregla sin tocar datos.
