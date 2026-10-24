@@ -892,3 +892,7 @@
   - El selector del ranking y el mapa del equipo ofrecen cuatro close rate de los closers: por llamada (el de siempre, misma clave `close_rate`), por presentación, con señas (señas como cierre, por llamada) y real (por cobro, el del tile de arriba).
   - El real se pide aparte (`GET /comercial/comparativas/reales`) y solo cuando se elige o cuenta en el puntaje compuesto; mientras tanto su columna del mapa queda en «—».
   - Cada uno trae su bajada («3 de 9 presentaciones») y el delta contra el período comparado. Verificado con la compilación de Vite; el endpoint nuevo no se probó contra datos reales.
+- **24 de Octubre de 2026 (Variabilidad · quitar y poner personas)** *([frontend/src/pages/comercial/components/variabilidad/](../../frontend/src/pages/comercial/components/variabilidad/) [MODIFY])*:
+  - Con la capa «Personas», cada persona de un panel es un botón: quitarla la saca del gráfico y del total (lo que se suma, suma a quienes quedan; una tasa se promedia entre quienes quedan, pesada por sus llamadas o mensajes). Valen para todos los paneles y siempre queda al menos una.
+  - Antes la capa solo cambiaba algo en Barras y en lo que se suma; en Curva ahora hay una línea por persona (también las tasas).
+  - Sin la comparación con el período anterior mientras falte alguien, porque era del equipo entero. Verificado con la compilación de Vite; sin recorrer la pantalla.
