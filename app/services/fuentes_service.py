@@ -35,6 +35,9 @@ show up, ventas, cuotas cobradas, cash y los costos.
 monto, y el % de clientes que compran un upsell = clientes con algún upsell cobrado en el período ÷
 clientes con algún cobro en el período de esa fuente. (Definición propia, a confirmar con Kerwin.)
 
+**Sin campaña** (24/10/2026): `sin_campana` avisa de las palabras clave con gasto y anuncios activos en Meta
+que no están en una campaña vigente del Inbox; al apagar ManyChat sus leads dejan de contarse.
+
 Costos: costo por lead, por agenda y por venta = importe gastado ÷ (leads | agendas | ventas); sin
 denominador o sin gasto, None. «Ventas» cuenta pagos de venta nueva (como el close rate), no el ticket
 agrupado de `ticket_service`.
@@ -194,6 +197,31 @@ def _leads_de_workshop(desde, hasta):
     return workshop_meta_service.desglose_periodo(desde, hasta)['totales']['clics_whatsapp']
 
 
+def claves_con_campana():
+    """Las palabras clave que hoy están en alguna campaña vigente del Inbox (de cualquier embudo)."""
+    from app.automatizaciones.modelos import AutCampana, AutCampanaPalabra, ahora
+
+    momento = ahora()
+    filas = db.session.query(AutCampanaPalabra.clave).join(AutCampana, AutCampana.id == AutCampanaPalabra.campana_id) \
+        .filter(AutCampana.desde <= momento, db.or_(AutCampana.hasta.is_(None), AutCampana.hasta > momento))
+    return {clave for (clave,) in filas}
+
+
+def sin_campana(filas, gasto_setting):
+    """Palabras clave con gasto en el período y anuncios activos en Meta que NO están en una campaña vigente
+    del Inbox (Kerwin, 24/10/2026: «las campañas son las que están activas en Meta»). Cuando se apague
+    ManyChat sus leads dejan de contarse: el CPL de Setting se ve más alto y el ROAS, más bajo. Se corta
+    sola al crear la campaña. {palabras: [{clave, nombre, gasto, entrantes}], gasto, pct_gasto}, por gasto."""
+    candidatas = [f for f in filas if f['clave'] and f['gasto'] > 0 and not f['archivado']
+                  and (f.get('meta') or {}).get('activos')]
+    cubiertas = claves_con_campana() if candidatas else set()
+    palabras = sorted(({'clave': f['clave'], 'nombre': f['nombre'], 'gasto': round(f['gasto'], 2),
+                        'entrantes': f['entrantes']} for f in candidatas if f['clave'] not in cubiertas),
+                      key=lambda p: -p['gasto'])
+    gasto = round(sum(p['gasto'] for p in palabras), 2)
+    return {'palabras': palabras, 'gasto': gasto, 'pct_gasto': dividir(gasto * 100, gasto_setting, 1)}
+
+
 def resumen(desde, hasta, filas, cobros, claves, embudos):
     """Las dos fuentes con todas sus cifras, para el hub de Marketing.
 
@@ -216,4 +244,5 @@ def resumen(desde, hasta, filas, cobros, claves, embudos):
             'agendas': agendas[k]['agendas'], 'show_up': agendas[k]['show_up'],
             'agendas_dias': dict(sorted(agendas[k]['dias'].items())),
         }))
-    return {'fuentes': salida, 'otras': {'cash_total': round(otras['cash_total'], 2), 'cobros': otras['cobros']}}
+    return {'fuentes': salida, 'otras': {'cash_total': round(otras['cash_total'], 2), 'cobros': otras['cobros']},
+            'sin_campana': sin_campana(filas, (gasto_de.get('setting') or {}).get('gasto', 0.0))}
