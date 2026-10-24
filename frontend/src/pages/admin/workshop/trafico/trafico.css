@@ -92,13 +92,9 @@
 }
 
 /* El detalle trae hasta 2.000 filas y `ListaConfigurable` las dibuja todas: la tabla scrollea dentro de
-   su caja (con la cabecera fija) en vez de alargar la página varios metros. */
-.dc-shell .wf-detalle .lc-tabla { max-height: min(70vh, 680px); overflow-y: auto; overscroll-behavior: contain; }
-.dc-shell .wf-detalle .lc-tabla .tabla-cab {
-    position: sticky; top: 0; z-index: 1;
-    background: linear-gradient(var(--hundido), var(--hundido)), var(--ln-page-base, #070b2c);
-    backdrop-filter: blur(14px);
-}
+   su caja (cabecera fija y barra de desplazamiento arriba, ver `CajaDesplazable`) en vez de alargar la
+   página varios metros. */
+.dc-shell .wf-detalle .lc-caja { max-height: min(70vh, 680px); }
 /* La barra (filtro completo, columnas) por encima de la tabla: la cabecera fija con blur arma su propio
    apilamiento y tapaba los menús que se abren hacia abajo. */
 .dc-shell .wf-detalle .barra-tabla { position: relative; z-index: 3; }

@@ -7,6 +7,7 @@ import { anchoMinimo, izquierdaDePegadas } from './anchoColumnas';
 import { useEnPantalla } from '../ui/useEnPantalla';
 import { usePaginaProgresiva } from './usePaginaProgresiva';
 import ListaAgrupable from './ListaAgrupable';
+import CajaDesplazable from './CajaDesplazable';
 import './listas.css';
 
 /**
@@ -261,33 +262,35 @@ const ListaConfigurable = ({
             )}
 
             <div className="tabla lc-tabla" role="table" style={{ '--lc-min': `${ancho}px` }}>
-                <div className="tabla-cab" style={{ '--cols': plantilla }} role="row">
-                    {visibles.map((c) => {
-                        const dir = orden?.key === c.key ? orden.dir : null;
-                        const ordenable = c.ordenable !== false && !!c.valor;
-                        return (
-                            <span key={c.key} className={`cab-celda${c.alinear === 'der' ? ' lc-der' : ''}${c.pegada ? ' lc-pegada' : ''}`}
-                                style={c.pegada ? { left: pegadas[c.key] } : undefined} role="columnheader">
-                                {ordenable ? (
-                                    <button type="button" className={`cab-orden${dir ? ' cab-orden--on' : ''}`}
-                                        onClick={() => ordenar(c.key)} aria-label={`Ordenar por ${c.header}`}>
-                                        <span className="trunc">{c.header}</span>
-                                        {dir && <ArrowDown size={11} aria-hidden="true"
-                                            className={dir === 'asc' ? 'cab-flecha cab-flecha--asc' : 'cab-flecha'} />}
-                                    </button>
-                                ) : <span className="trunc">{c.header}</span>}
-                                {c.ayuda && <Tip texto={c.ayuda} titulo={c.header} />}
-                            </span>
-                        );
-                    })}
-                </div>
-                {mostradas.length === 0 ? (
-                    <p className="t-body mut40 lc-vacio">{vacio}</p>
-                ) : dimension ? (
-                    <ListaAgrupable filas={mostradas} dimension={dimension}
-                        renderFilas={(filasGrupo) => filasGrupo.map(dibujarFila)} />
-                ) : pagina.map(dibujarFila)}
-                {hayMas && <div ref={pie} className="lc-pie" aria-hidden="true" />}
+                <CajaDesplazable className="lc-caja" claseArriba="lc-arriba">
+                    <div className="tabla-cab" style={{ '--cols': plantilla }} role="row">
+                        {visibles.map((c) => {
+                            const dir = orden?.key === c.key ? orden.dir : null;
+                            const ordenable = c.ordenable !== false && !!c.valor;
+                            return (
+                                <span key={c.key} className={`cab-celda${c.alinear === 'der' ? ' lc-der' : ''}${c.pegada ? ' lc-pegada' : ''}`}
+                                    style={c.pegada ? { left: pegadas[c.key] } : undefined} role="columnheader">
+                                    {ordenable ? (
+                                        <button type="button" className={`cab-orden${dir ? ' cab-orden--on' : ''}`}
+                                            onClick={() => ordenar(c.key)} aria-label={`Ordenar por ${c.header}`}>
+                                            <span className="trunc">{c.header}</span>
+                                            {dir && <ArrowDown size={11} aria-hidden="true"
+                                                className={dir === 'asc' ? 'cab-flecha cab-flecha--asc' : 'cab-flecha'} />}
+                                        </button>
+                                    ) : <span className="trunc">{c.header}</span>}
+                                    {c.ayuda && <Tip texto={c.ayuda} titulo={c.header} />}
+                                </span>
+                            );
+                        })}
+                    </div>
+                    {mostradas.length === 0 ? (
+                        <p className="t-body mut40 lc-vacio">{vacio}</p>
+                    ) : dimension ? (
+                        <ListaAgrupable filas={mostradas} dimension={dimension}
+                            renderFilas={(filasGrupo) => filasGrupo.map(dibujarFila)} />
+                    ) : pagina.map(dibujarFila)}
+                    {hayMas && <div ref={pie} className="lc-pie" aria-hidden="true" />}
+                </CajaDesplazable>
             </div>
         </div>
     );

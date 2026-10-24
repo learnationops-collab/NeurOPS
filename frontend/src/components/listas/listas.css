@@ -158,14 +158,32 @@
 
 .dc-shell .lista-configurable { min-width: 0; max-width: 100%; }
 
-/* Con muchas columnas la tabla se desplaza adentro de su caja, no la página: las filas tienen un ancho
-   mínimo (`--lc-min`, la suma de los mínimos de las columnas) y la caja scrollea. */
-.dc-shell .tabla.lc-tabla { overflow-x: auto; overscroll-behavior-x: contain; }
-.dc-shell .lc-tabla .tabla-cab,
-.dc-shell .lc-tabla .tabla-fila { min-width: var(--lc-min, 0); }
-/* Las columnas pegadas quedan a la izquierda; el fondo es opaco para que lo que pasa por abajo no se vea. */
-.dc-shell .lc-tabla .lc-pegada { position: sticky; z-index: 1; background: var(--bg-flotante); }
-.dc-shell .lc-tabla .tabla-fila[data-abre]:hover .lc-pegada { background: var(--bg-element); }
+/* Con muchas filas o columnas la tabla se desplaza adentro de su caja (`CajaDesplazable`), no la página:
+   la cabecera queda pegada arriba (como la primera fila bloqueada de una planilla), las columnas
+   `pegada` a la izquierda y la barra de desplazamiento horizontal se repite arriba. Las filas tienen un
+   ancho mínimo (`--lc-min`, la suma de los mínimos de las columnas). Todo con fondo opaco: lo que pasa
+   por debajo de lo pegado no se tiene que ver. */
+.dc-shell .lc-caja {
+    --lc-fondo: var(--bg-flotante);
+    --lc-fondo-hover: color-mix(in srgb, var(--text-on-surface) 5%, var(--bg-flotante));
+    max-height: min(72vh, 820px); overflow: auto; overscroll-behavior: contain; isolation: isolate;
+    background: var(--lc-fondo); scrollbar-width: thin; scrollbar-color: var(--border-main) transparent;
+}
+.dc-shell .lc-arriba,
+.dc-shell .cd-arriba {
+    overflow-x: auto; overflow-y: hidden; height: 14px; border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-flotante); scrollbar-width: thin; scrollbar-color: var(--border-main) transparent;
+}
+.dc-shell .lc-arriba[hidden],
+.dc-shell .cd-arriba[hidden] { display: none; }
+.dc-shell .lc-arriba > div,
+.dc-shell .cd-arriba > div { height: 1px; }
+.dc-shell .lc-caja .tabla-cab,
+.dc-shell .lc-caja .tabla-fila { min-width: var(--lc-min, 0); }
+.dc-shell .lc-caja .tabla-cab { position: sticky; top: 0; z-index: 4; background: var(--lc-fondo); box-shadow: 0 1px 0 var(--border-main); }
+.dc-shell .lc-caja .lc-pegada { position: sticky; z-index: 1; background: var(--lc-fondo); }
+.dc-shell .lc-caja .tabla-fila[data-abre]:hover .lc-pegada,
+.dc-shell .lc-caja .tabla-fila[aria-current="true"] .lc-pegada { background: var(--lc-fondo-hover); }
 
 .dc-shell .lc-tabla .tabla-fila[data-abre] { cursor: pointer; }
 .dc-shell .lc-tabla .tabla-fila[data-abre]:hover { background: var(--mat-1); }
