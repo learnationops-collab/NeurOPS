@@ -1153,11 +1153,16 @@
    10 · TABLAS
    ============================================================ */
 .dc-shell .tabla{border-radius:var(--radius-control);background:var(--hundido);
-  border:1px solid var(--border-subtle);overflow:hidden}
+  border:1px solid var(--border-subtle);overflow:clip}
 .dc-shell .tabla-cab,
 .dc-shell .tabla-fila{display:grid;gap:var(--s3);align-items:center;
   grid-template-columns:var(--cols);padding:0 var(--s4)}
 .dc-shell .tabla-cab{height:38px;border-bottom:1px solid var(--border-subtle)}
+/* La cabecera queda pegada arriba al bajar (como la primera fila bloqueada de una planilla), así siempre
+   se ve a qué columna pertenece cada dato. `overflow:clip` en `.tabla` (y no `hidden`) para no convertirla
+   en una caja que scrollea: si lo fuera, la cabecera se pegaría a ella y no a la pantalla. Con fondo
+   opaco: las filas que pasan por debajo no se tienen que ver. */
+.dc-shell .tabla-cab{position:sticky;top:0;z-index:3;background:var(--bg-flotante)}
 .dc-shell .tabla-cab > span{font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;
   color:var(--text-muted-40);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Encabezado ordenable (ver `Encabezado` en RevisarLista.jsx): el rotulo es un boton que se lee
