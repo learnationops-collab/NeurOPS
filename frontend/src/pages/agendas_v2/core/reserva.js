@@ -3,6 +3,7 @@
 
 import { conOpciones, paisDe } from './catalogos';
 import { calificar } from './formulario';
+import { segmentar } from './segmento';
 
 export const VERSION_CONTRATO = 1;
 
@@ -68,6 +69,7 @@ export function armarReserva({ lead, evento, funnel, form, asig, slot, origen, s
         regla_idx: asig ? asig.reglaIdx : null,
         desborde: !!(asig && asig.desborde),
         nota: calificar(preguntas, resp),
+        segmento: form ? segmentar(form, resp) : null,
         descalificada,
         origen: origen || '',
         setter_id: setter || null,

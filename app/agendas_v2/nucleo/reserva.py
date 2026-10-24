@@ -6,6 +6,7 @@ import re
 
 from app.agendas_v2.nucleo.catalogos import con_opciones, pais_de
 from app.agendas_v2.nucleo.formulario import calificar
+from app.agendas_v2.nucleo.segmento import segmentar
 from app.agendas_v2.nucleo.tiempo import iso
 from app.agendas_v2.nucleo.util import js_str, js_trim, js_truthy, txt
 
@@ -101,6 +102,7 @@ def armar_reserva(*, lead, evento, funnel=None, form=None, asig=None, slot=None,
         'regla_idx': _de(asig, 'regla_idx', 'reglaIdx') if asig else None,
         'desborde': bool(asig and asig.get('desborde')),
         'nota': calificar(preguntas, resp),
+        'segmento': segmentar(form, resp) if form else None,
         # No califica por una respuesta o porque la segmentación lo manda a «No califica».
         'descalificada': any(r['descalifica'] for r in respuestas) or bool(asig and asig.get('no')),
         'origen': origen or '',

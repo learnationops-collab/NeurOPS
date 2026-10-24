@@ -1,8 +1,9 @@
 from datetime import datetime
 from app import db
 from app.models.person import ConPersona
+from app.models.segmento import ConSegmento
 
-class Appointment(ConPersona, db.Model):
+class Appointment(ConPersona, ConSegmento, db.Model):
     __tablename__ = 'appointments'
     id = db.Column(db.Integer, primary_key=True)
     closer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
