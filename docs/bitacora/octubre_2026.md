@@ -735,3 +735,6 @@
 - **23 de Octubre de 2026 (Ficha · Resultado: la revisión entra sin deslizar)** *([frontend/src/components/ficha/tabs/TabResultado.jsx](../../frontend/src/components/ficha/tabs/TabResultado.jsx), [frontend/src/components/ficha/ficha.css](../../frontend/src/components/ficha/ficha.css) [MODIFY])*:
   - «Lo que reportaste» deja la tabla de una fila por dato: cada dato es una ficha chica (rótulo y «Editar» arriba, valor abajo), varias por fila (dos en el celular).
   - Un texto largo (el motivo) y la ficha que se está editando ocupan el ancho entero; las cortas suben a llenar el hueco.
+
+- **23 de Octubre de 2026 (Closer · decisión del lead: Decisor / No decisor)** *([frontend/src/pages/closer/CloserWorkflowPage.jsx](../../frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])*:
+  - En la tarjeta de lead, «Con acompañamiento» pasa a «No decisor» y «Decide solo» a «Decisor». La respuesta completa sigue al pasar el mouse.
