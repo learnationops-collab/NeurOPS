@@ -1,9 +1,8 @@
 # Auditoría Inbox ↔ Marketing (24/10/2026)
 
 > Pedido de Kerwin (G9): comprobar que Marketing usa de verdad los datos del Inbox ahora que ManyChat se apagó.
-> **Alcance de los datos:** staging (copia de producción hasta el 21/10/2026, solo lectura). Producción no se pudo leer
-> (lectura denegada al agente y Railway CLI sin sesión), así que lo marcado «⚠ prod» hay que repetirlo allá
-> con el mismo SQL, en solo lectura (sección 4).
+> **Datos:** staging (copia de producción al 21/10) y, con el OK de Kerwin, **producción en solo lectura** (24/10, sesión
+> con `default_transaction_read_only=on`). Donde dice «prod» es producción; «staging» solo se usó para el detalle del 19–21/10.
 
 ## 1. Mapa de fuentes
 
@@ -49,40 +48,43 @@ las rutas `/api/manychat-webhook/*` que usa la pantalla, y los IDs del catálogo
 `motor._eco` cancela el recorrido cuando escribe una persona del equipo («Escribió una persona del equipo»). Lo que el lead escribe después
 no pasa por `registro.respuesta` (no hay recorrido), así que su fila queda `(send=1, option=0)` → «Sin respuesta» en la tabla y en Entrantes.
 - Ejemplo: `gallardo_villasante_z` (conversación 16886): contestó «Estudiante» y siguió 6 mensajes de conversación real con Paula; Marketing lo cuenta «Sin respuesta». En staging, 4 de 13 personas reales del Inbox quedaron con la entrada cancelada por el equipo.
+- **Prod (24/10):** 200 entradas por campaña; 41 sin ninguna respuesta registrada (20 %); en **8 de esas 41** la persona escribió después (mensajes entrantes reales) y Marketing las cuenta «Sin respuesta». 41 entradas (40 personas) fueron canceladas por «Escribió una persona del equipo».
 - Fix: `registro.respuesta_libre` — un mensaje del lead sin recorrido marca como contestado el último envío de su última entrada por campaña.
 
 ### H2 · Alta · El reparto cuenta ejecuciones, no personas (arreglado en este PR)
 `reparto.elegir` suma ejecuciones de las últimas 24 h por setter. Quien vuelve a entrar sigue con el mismo setter (continuidad) pero **cuenta de nuevo**, y empuja a los siguientes leads al otro. Con pesos 70/30 la proporción real se desvía.
 - Ejemplo (staging, campaña «Winners Reels MX + PE»): ejecuciones 11 Elias / 10 Paula (parece parejo), pero personas reales 3 Elias / 9 Paula; la cuenta de prueba `santicorof` (todas a Elias) pesó 11 ejecuciones.
 - Fix: no cuentan los reingresos con el mismo setter.
-- Pendiente (datos): los pesos 70/30 todavía no están cargados; en staging ambas campañas están 1/1 (⚠ prod).
+- **Prod:** hoy el efecto es chico porque los pesos siguen 1/1 (Elias 101 ejecuciones/89 personas, Paula 99/96), pero con 70/30 los reingresos (12 de diferencia en Elias) correrían la proporción.
+- **Pendiente (datos):** los pesos 70/30 NO están cargados en ninguna de las 3 campañas de prod (todas 1/1).
 
-### H3 · Alta · Cobertura de palabras clave (⚠ prod, no verificable acá)
-Marketing solo ve lo que entró por una campaña del Inbox. En staging al 21/10 había 2 campañas y 4 palabras (GUÍA PERÚ, GUÍA GRATIS, CURSO GRATUITO, APROBACIÓN); «OBTENER GUÍA» (59 % de los entrantes de 30 días: 1.478 de 2.521), APLICAR, guías por país, MÉTODO, etc. seguían en ManyChat y el flujo «réplica OBTENER GUÍA» es de prueba (sin `registro.mensaje_id`).
-Si ManyChat ya está apagado en prod, cada palabra sin campaña **deja de contar** en Marketing. 388 eventos de staging terminaron `sin_disparador`.
-- Comprobar en prod: palabras de `ads.clave` con entrantes en los últimos 30 días contra `aut_campana_palabras` vigentes.
+### H3 · Media · Cobertura de palabras clave (prod)
+En prod ya hay 3 campañas: «Winners Reels MX + PE» (GUÍA GRATIS, CURSO GRATUITO, APROBACIÓN, GUÍA PERÚ, QUIERO APLICAR, APLICAR) y, desde el 23/10 01:31, «LM Funnel · Obtener guía» (OBTENER GUÍA, GUÍA, MÉXICO, PANAMÁ, COLOMBIA, MIR, STEPS); la 1 es de prueba. Con eso las palabras grandes están cubiertas.
+**Quedan sin campaña** palabras con entrantes en 30 días: GUÍA CHILE (32), GUÍA ARGENTINA (24), MÉTODO (24), LECCIÓN (14), TRIADA (12), PROCRASTINACIÓN (11), MATERIAL, CONTENIDO, DOCUMENTO, SHOW ME, LO NECESITO. Mientras ManyChat sigue mandando algo (16 filas el 23/10, 3 el 24/10) entran por el webhook; el día que se corte desaparecen de Marketing.
+**«OBTENER GUÍA» bajó de ~60 personas/día a 5 (23/10):** no es pérdida de datos. Los DMs que ve el Inbox (`ig_mensajes`) también cayeron (44, 35, 12, 7, 3 por día del 19 al 23/10): es tráfico real (anuncios/difusión), no un fallo de captura.
 
 ### H4 · Media · Tres «entrantes» distintos para las mismas personas
 Misma campaña, mismas 13 personas (staging): Inbox › Campañas dice **21 entradas** (ejecuciones), Marketing **16** (persona × palabra) y hay **13** personas. `respondieron` (Inbox: cualquier mensaje en el tramo) tampoco es «En conversación» (Marketing: `id_option` registrado). Y las campañas del Inbox cuentan `califica` sin la regla de descalificación posterior del closer (G7: `calificacion_service`).
 - Propuesta: nombrar distinto («Entradas» vs «Entrantes») o que Inbox › Campañas use las funciones de Marketing. Lo decide G7/Kerwin.
 
-### H5 · Media · Doble conteo mientras convivieron los dos caminos
-La misma persona con una conversación `ig:` y otra de ManyChat se cuenta dos veces en la misma palabra clave (`_entrantes` agrupa por `conversation_id`, no por persona).
-- Ejemplo: `fabianzapatagallardo`, GUÍA PERÚ 21/10 01:44:53 → conversaciones 17007 (`ig:`) y 17008 (ManyChat) las dos como entrante.
-- Escala: 12 de 13 personas del Inbox no tuvieron conversación de ManyChat, así que es raro (1/13) pero real. Además hay 887 personas con 2+ conversaciones de ManyChat (heredado): en 30 días 2.521 entrantes por conversación vs 2.505 por persona (0,6 %).
-- Fix propuesto (G7, `_entrantes`): contar por `person_uuid` (si no tiene, por conversación).
+### H5 · Media · Doble conteo mientras convivieron los dos caminos (prod)
+`_entrantes` agrupa por `conversation_id`, no por persona. Desde el 19/10: 502 entrantes por conversación vs 486 por persona+palabra. En **GUÍA PERÚ 61 vs 46**: 15 personas entraron por el Inbox y por ManyChat en el mismo minuto (21–22/10), p. ej. `fabianzapatagallardo`, `alvaco03`, `albertazq16`, `marego.26`. Son un +33 % en esa palabra esos dos días (y sus calificados/descalificados). Con ManyChat apagándose no se repite, pero queda en el histórico.
+- Además 887 personas con 2+ conversaciones de ManyChat (heredado, staging): 0,6 % en 30 días.
+- Fix propuesto (G7, `_entrantes`): contar por `person_uuid`; arregla también el histórico sin tocar datos.
 
 ### H6 · Media · Cuentas de prueba cuentan como leads
-`santicorof` (cuenta interna) suma 4 entrantes / 11 filas calificadas en staging y carga a Elias en el reparto. Propuesta: lista de IG de prueba excluidos (Marketing y reparto).
+`santicorof` (cuenta interna) tiene 27 filas del Inbox en prod (todas a Elias), cuenta como lead real y carga a Elias en el reparto. Propuesta: lista de IG de prueba excluidos (Marketing y reparto).
 
 ### H7 · Baja · `meta_ad_id` exacto sin uso
 El Inbox guarda de qué anuncio de Meta vino cada DM (8/8 correctos) pero Marketing atribuye solo por palabra clave. Permitiría costo por lead por anuncio, no por palabra. Es mejora, no error.
 
-### H8 · A confirmar con Kerwin · Webhook de ManyChat abierto
-`POST /api/manychat-webhook` sigue montado y, con `INTEGRATIONS_AUTH_MODE=log_only`, acepta sin el header `X-ManyChat-Token`. Cualquiera puede crear anuncios en la tabla. Si ManyChat está apagado: retirarlo (o pasar a modo estricto). No se pudo leer el modo ni las variables en prod.
+### H8 · A confirmar con Kerwin · Webhook de ManyChat abierto y todavía vivo
+`POST /api/manychat-webhook` sigue montado y, con `INTEGRATIONS_AUTH_MODE=log_only`, acepta sin `X-ManyChat-Token`. Y **sigue recibiendo**: filas de ManyChat el 23/10 (16 filas, 8 conversaciones) y 24/10 (3 filas), vs 159 y 31 del Inbox. Si ManyChat se apagó, queda algún flujo/automatización mandando; hay que cortarlo y retirar el endpoint (cualquiera puede crear anuncios con él). No pude leer las variables de Railway (CLI sin sesión).
 
-### H9 · A verificar en prod · Setter de quien ya tenía conversación de ManyChat
-`reparto._anterior` mira solo `AutEjecucion`: una persona con `Conversation.setter` de ManyChat (Elias) que entra por el Inbox puede recibir a Paula, y quedan dos conversaciones con dos setters. En staging solo 2 casos y ninguno lo muestra.
+### H9 · Media · El Inbox reasignaba a otro setter a quien ya tenía uno en ManyChat (arreglado en este PR)
+`reparto._anterior` miraba solo `AutEjecucion`. Prod: de 30 personas del Inbox que ya tenían conversación de ManyChat, **5 quedaron con otro setter** (ManyChat Elias → Inbox Paula): `jhef_ze`, `eunice.paulina`, `josberthleo`, `camarenajuanaliaga`, `omar_sorianx`; el setter ve dos conversaciones con dos dueños.
+- Fix: la continuidad usa también el setter de la conversación de ManyChat (por Instagram). Probado en solo lectura contra prod: las 5 resuelven a Elias.
+- No corrige las 5 ya asignadas (dato histórico; decide Kerwin si se reasignan a mano).
 
 ## 4. Cómo repetirlo en prod (solo lectura)
 Las consultas están en el scratchpad de la sesión; resumen: (1) palabras con entrantes vs campañas vigentes; (2) ejecuciones canceladas por el equipo con mensajes posteriores y `LeadAnswer` sin `id_option`; (3) personas con 2+ conversaciones en el período; (4) pesos de `aut_campana_setters`; (5) variables `MANYCHAT_WEBHOOK_TOKEN` / `INTEGRATIONS_AUTH_MODE`.
