@@ -1,11 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { Delta, FalloCarga, fmt, Segmented, Tip, useMontado } from './Shared';
-import { Skeleton, SkeletonPanel } from '../../../components/standard';
+import { Select, Skeleton, SkeletonPanel } from '../../../components/standard';
 import { DESTINOS_METRICA, DESTINOS_SETTER } from './destinos';
 import FlujoEmbudo from './FlujoEmbudo';
 import { COLOR_CANAL, COLOR_FUENTE, etapasParaDibujar, puntaAPunta } from './embudoSetter';
 import { BarraRanking } from './PanelRanking';
-import { armarVista, cumpleMeta, metricaActual, ordenar } from './rankingConfig';
+import { armarVista, cumpleMeta, metricaActual, ordenar, unirCierre } from './rankingConfig';
 import { useCloseReal } from './useCloseReal';
 import { useRankingConfig } from './useRankingConfig';
 
@@ -60,6 +60,7 @@ const Ranking = ({ datos, base, metrica, filas, yo, irAPersona, destino, config,
         : valorEquipo;
     // Con meta, el color y la marca de la barra hablan de la meta; sin ella, del promedio de siempre.
     const meta = config.metas[metrica.key] ?? null;
+    const cierre = base.metricas.find(m => m.variantes) || null;
     const asc = config.orden === 'asc';
 
     const bajada = (fila) => {
@@ -68,10 +69,11 @@ const Ranking = ({ datos, base, metrica, filas, yo, irAPersona, destino, config,
         if (metrica.key === 'show_up') {
             return fila.realizadas !== undefined ? `${fila.realizadas} con resultado` : `${fila.agendas ?? 0} agendas`;
         }
-        if (metrica.key === 'close_rate' || metrica.key === 'ticket') return `${fila.ventas ?? 0} ventas`;
-        if (metrica.key === 'close_presentacion') return `${fila.cierres_ventas ?? 0} de ${fila.presentaciones ?? 0} presentaciones`;
-        if (metrica.key === 'close_rate_senas') return `${(fila.cierres_ventas ?? 0) + (fila.senas_cierre ?? 0)} de ${fila.asistieron ?? 0} que asistieron`;
-        if (metrica.key === 'close_rate_real') return fila.real_detalle ? `${fila.real_detalle} por cobro` : '';
+        const clave = metrica.variante || metrica.key;
+        if (clave === 'close_rate' || clave === 'ticket') return `${fila.ventas ?? 0} ventas`;
+        if (clave === 'close_presentacion') return `${fila.cierres_ventas ?? 0} de ${fila.presentaciones ?? 0} presentaciones`;
+        if (clave === 'close_rate_senas') return `${(fila.cierres_ventas ?? 0) + (fila.senas_cierre ?? 0)} de ${fila.asistieron ?? 0} que asistieron`;
+        if (clave === 'close_rate_real') return fila.real_detalle ? `${fila.real_detalle} por cobro` : '';
         if (metrica.key === 'comision') return `10% de ${fmt.money(fila.cash)}`;
         if (metrica.key === 'senas_conversion') return fila.senas_detalle;
         if (['cualificacion', 'apertura', 'conversion'].includes(metrica.key)) return `${fmt.num(fila.entrantes ?? 0)} entrantes`;
@@ -87,7 +89,7 @@ const Ranking = ({ datos, base, metrica, filas, yo, irAPersona, destino, config,
                 pedido del 10/10/2026). */}
             <div className="panel-cab">
                 <div className="fila" style={{ gap: 6, minWidth: 0 }}>
-                    <p className="t-eyebrow">Ranking · {metrica.label}</p>
+                    <p className="t-eyebrow">Ranking · {metrica.etiqueta || metrica.label}</p>
                     <Tip titulo={metrica.label} texto={metrica.desc} />
                     {meta !== null && <span className="t-cap mut40 num">meta {fmt.porFormato(meta, metrica.formato)}</span>}
                 </div>
@@ -107,9 +109,19 @@ const Ranking = ({ datos, base, metrica, filas, yo, irAPersona, destino, config,
             <div style={{ marginBottom: 'var(--s4)' }}>
                 <BarraRanking datos={base} config={config} onCambiar={onCambiar} onRestablecer={onRestablecer}
                     selector={(
-                        <Segmented ariaLabel="Métrica del ranking" valor={metrica.key}
-                            opciones={datos.metricas.map(m => ({ key: m.key, label: m.label }))}
-                            onChange={(k) => datos.onMetrica(k)} />
+                        <>
+                            <Segmented ariaLabel="Métrica del ranking" valor={metrica.key}
+                                opciones={datos.metricas.map(m => ({ key: m.key, label: m.label }))}
+                                onChange={(k) => datos.onMetrica(k)} />
+                            {cierre && (
+                                <span className="fila" style={{ gap: 6 }}>
+                                    <span className="t-cap mut40">Close rate</span>
+                                    <Select size="sm" label="Lectura del close rate" value={cierre.variante}
+                                        options={cierre.variantes.map(v => ({ value: v.key, label: v.label }))}
+                                        onChange={(v) => onCambiar({ ...config, cierre: v })} />
+                                </span>
+                            )}
+                        </>
                     )} />
             </div>
 
@@ -236,7 +248,7 @@ const MapaEquipo = ({ datos, metrica, filas, onMetrica, irAPersona, metas }) => 
                                 <button key={c.key} type="button" title={c.desc}
                                     className={c.key === metrica.key ? 'activa marcada' : undefined}
                                     onClick={() => onMetrica(c.key)}>
-                                    {c.label}
+                                    {c.etiqueta || c.label}
                                 </button>
                             ) : (
                                 <span key={c.key} title={c.desc} className="info">{c.label}</span>
@@ -267,7 +279,7 @@ const MapaEquipo = ({ datos, metrica, filas, onMetrica, irAPersona, metas }) => 
                                     if (c.key === metrica.key) clases.push('marcada');
                                     if (!c.rankeable) clases.push('info');
                                     const texto = fmt.porFormato(valor, c.formato);
-                                    const aLaLista = DESTINOS_METRICA[datos.rol]?.[c.key];
+                                    const aLaLista = DESTINOS_METRICA[datos.rol]?.[c.variante || c.key];
                                     return c.rankeable && aLaLista && irAPersona ? (
                                         <button key={c.key} type="button"
                                             title={`${c.desc} · abre la lista de ${fila.nombre}`}
@@ -359,7 +371,9 @@ const Comparativas = ({ datos: datosBase, filtros, irAPersona, fallo = false, on
     const [metricaKey, setMetricaKey] = useState(null);
     const [config, cambiarConfig, restablecer] = useRankingConfig(datosBase?.rol);
     // El close rate real se pide recién cuando se mira (ver `useCloseReal`).
-    const { datos, cargando: cargandoReal, fallo: falloReal } = useCloseReal(datosBase, filtros, metricaKey, config);
+    const { datos: conReales, cargando: cargandoReal, fallo: falloReal } = useCloseReal(datosBase, filtros, config);
+    // Las lecturas del close rate se ven como una sola métrica (ver `unirCierre`).
+    const datos = useMemo(() => (conReales ? unirCierre(conReales, config.cierre) : null), [conReales, config.cierre]);
     const vista = useMemo(() => (datos ? armarVista(datos, config) : null), [datos, config]);
 
     if (!datos && fallo) return <FalloCarga texto="No se pudieron cargar las comparativas" onReintentar={onReintentar} />;
@@ -381,14 +395,14 @@ const Comparativas = ({ datos: datosBase, filtros, irAPersona, fallo = false, on
         cambiarConfig(siguiente);
     };
     const conHandler = { ...vista, onMetrica: setMetricaKey };
-    const destino = DESTINOS_METRICA[datos.rol]?.[metrica.key];
+    const destino = DESTINOS_METRICA[datos.rol]?.[metrica.variante || metrica.key];
 
     return (
         <section className="panel">
             <Ranking datos={conHandler} base={datos} metrica={metrica} filas={filas} yo={datos.yo}
                 irAPersona={irAPersona} destino={destino} config={config}
                 onCambiar={cambiar} onRestablecer={restablecer} />
-            {metrica.key === 'close_rate_real' && (cargandoReal || falloReal) && (
+            {metrica.variante === 'close_rate_real' && (cargandoReal || falloReal) && (
                 <p className="t-cap mut" style={{ marginBottom: 'var(--s4)' }}>
                     {falloReal ? 'No se pudo calcular el close rate real.' : 'Calculando el close rate real…'}
                 </p>

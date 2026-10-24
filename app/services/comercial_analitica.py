@@ -53,16 +53,19 @@ METRICAS = {
         # `close_rate` sigue siendo la de siempre —por llamada— porque la usan las configuraciones
         # guardadas, el puntaje y las listas de destino.
         {'key': 'close_rate', 'label': 'Close rate · llamada', 'formato': 'pct', 'suma': False,
+         'grupo': 'close_rate', 'variante': 'Por llamada',
          'desc': 'De los que asistieron, cuántos compraron con pago completo o split pay. '
                  'Las señas no cuentan.'},
         {'key': 'close_presentacion', 'label': 'Close rate · presentación', 'formato': 'pct', 'suma': False,
+         'grupo': 'close_rate', 'variante': 'Por presentación',
          'desc': 'De las llamadas donde se presentó la oferta, cuántas terminaron en venta.'},
         {'key': 'close_rate_senas', 'label': 'Close rate · con señas', 'formato': 'pct', 'suma': False,
+         'grupo': 'close_rate', 'variante': 'Con señas',
          'desc': 'Por llamada, pero contando también las señas como cierre.'},
         # `diferida`: rastrea cada cobro hasta su llamada, así que no viaja con el resto. Se pide
         # aparte cuando alguien la elige (ver `reales_por_closer`).
         {'key': 'close_rate_real', 'label': 'Close rate · real', 'formato': 'pct', 'suma': False,
-         'diferida': True,
+         'grupo': 'close_rate', 'variante': 'Real (por cobro)', 'diferida': True,
          'desc': 'Cierres por cobro del período, vengan de la llamada que vengan, sobre los que '
                  'asistieron más las llamadas de meses anteriores.'},
         {'key': 'ticket', 'label': 'Ticket promedio', 'formato': 'money', 'suma': False,

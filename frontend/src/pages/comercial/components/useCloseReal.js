@@ -1,25 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getComparativasReales } from '../comercialApi';
-import { pesoDe } from './rankingConfig';
 
 const KEY_REAL = 'close_rate_real';
 
 /**
  * El close rate real de cada closer, pedido aparte (rastrea cada cobro hasta su llamada y no se
- * paga en cada carga de Comparativas). Solo se pide cuando alguien lo mira: lo eligió como
- * métrica, o cuenta en el puntaje compuesto.
+ * paga en cada carga de Comparativas). Solo se pide cuando alguien lo mira: es la lectura del
+ * close rate que eligió en el desplegable.
  *
  * Devuelve los `datos` con el valor ya pegado en cada fila y en el equipo, y si está cargando.
  * Cambiar el período (o la comparación) descarta lo cargado.
  */
-export const useCloseReal = (datos, filtros, metricaKey, config) => {
+export const useCloseReal = (datos, filtros, config) => {
     const [cargado, setCargado] = useState({ clave: null, reales: null });
     const [fallo, setFallo] = useState(false);
 
     const tiene = datos?.metricas?.some(m => m.key === KEY_REAL);
-    const elegida = metricaKey || config.inicial;
-    const activo = Boolean(tiene && (elegida === KEY_REAL
-        || (config.compuesto && pesoDe(config, datos.rol, KEY_REAL) > 0)));
+    const activo = Boolean(tiene && config.cierre === KEY_REAL);
 
     // El período del que son los datos: si cambia, lo cargado ya no sirve.
     const clave = datos?.dates ? JSON.stringify(datos.dates) : null;

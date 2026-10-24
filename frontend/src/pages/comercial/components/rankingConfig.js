@@ -22,6 +22,7 @@ export const CONFIG_BASE = {
     inicial: null,     // key de la que se abre primero; null = la primera visible
     orden: 'desc',
     compuesto: false,  // agrega «Puntaje» al selector
+    cierre: 'close_rate', // qué lectura del close rate se ve (la clave de la variante)
     pesos: {},         // key -> peso relativo; lo que falte sale de PESOS_BASE
     metas: {},         // key -> meta a alcanzar
     excluidos: [],     // ids de personas fuera del ranking
@@ -58,6 +59,7 @@ export const normalizar = (raw) => {
         inicial: typeof r.inicial === 'string' ? r.inicial : null,
         orden: r.orden === 'asc' ? 'asc' : 'desc',
         compuesto: r.compuesto === true,
+        cierre: typeof r.cierre === 'string' && r.cierre ? r.cierre : 'close_rate',
         pesos: mapaNumerico(r.pesos),
         metas: mapaNumerico(r.metas),
         excluidos: lista(r.excluidos),
@@ -72,11 +74,42 @@ export const cambiosActivos = (c) => [
     c.inicial !== null,
     c.orden !== 'desc',
     c.compuesto,
+    c.cierre !== 'close_rate',
     Object.keys(c.metas).length > 0,
     c.excluidos.length > 0,
     c.minAgendas > 0,
     c.minVentas > 0,
 ].filter(Boolean).length;
+
+/**
+ * Las lecturas del close rate (por llamada, por presentación, con señas, real) viajan como métricas
+ * separadas del backend, pero se ven como UNA: «Close rate» con un desplegable que elige la
+ * lectura. Esta función deja esa sola, con el valor de la lectura elegida en cada fila y en el
+ * equipo, así el ranking, el mapa, el puntaje y las metas la tratan como cualquier otra métrica
+ * (sigue llamándose `close_rate`, la clave de siempre de las configuraciones guardadas).
+ */
+export const unirCierre = (datos, elegida) => {
+    const grupo = datos.metricas.filter(m => m.grupo === 'close_rate');
+    if (grupo.length < 2) return datos;
+    const sel = grupo.find(m => m.key === elegida) || grupo[0];
+    const virtual = {
+        key: 'close_rate', label: 'Close rate', formato: 'pct', suma: false,
+        etiqueta: `Close rate · ${sel.variante.toLowerCase()}`,
+        desc: sel.desc, variante: sel.key,
+        variantes: grupo.map(m => ({ key: m.key, label: m.variante })),
+    };
+    const pegar = (f) => ({
+        ...f,
+        close_rate: f[sel.key],
+        deltas: f.deltas ? { ...f.deltas, close_rate: f.deltas[sel.key] } : f.deltas,
+    });
+    return {
+        ...datos,
+        metricas: datos.metricas.flatMap(m => (m.grupo !== 'close_rate' ? [m] : m.key === grupo[0].key ? [virtual] : [])),
+        filas: datos.filas.map(pegar),
+        equipo: pegar(datos.equipo),
+    };
+};
 
 /** El peso con el que cuenta una métrica en el puntaje: el elegido o el de arranque del rol. */
 export const pesoDe = (config, rol, key) => config.pesos[key] ?? PESOS_BASE[rol]?.[key] ?? 0;
