@@ -19,6 +19,7 @@ Solo registra lo que entró por una campaña: mientras conviva ManyChat, un fluj
 (las pruebas) no cuenta dos veces a la misma persona.
 """
 from app import db
+from app.automatizaciones.modelos import AutEjecucion
 from app.models import LeadAnswer, Conversation, User
 
 PREFIJO = 'ig:'
@@ -119,6 +120,18 @@ def respuesta(ejecucion, nodo, momento):
     etapa_respuesta = (nodo.get('registro') or {}).get('etapa_respuesta')
     if etapa_respuesta is not None:  # en ManyChat la etapa sube con cada respuesta
         _etapa(lead, etapa_respuesta)
+
+
+def respuesta_libre(contacto, momento):
+    """El lead escribió y ningún recorrido lo recibe (el equipo ya habló y cortó el flujo): cuenta como la
+    respuesta al último envío sin contestar de su última entrada por campaña, así no queda «sin respuesta»."""
+    ejecucion = (AutEjecucion.query.filter(AutEjecucion.contacto_id == contacto.id, AutEjecucion.campana_id.isnot(None))
+                 .order_by(AutEjecucion.iniciada_en.desc(), AutEjecucion.id.desc()).first())
+    lead = Conversation.query.filter_by(external_id=f'{PREFIJO}{contacto.igsid}').first() if ejecucion else None
+    fila = _filas(ejecucion, lead).filter(LeadAnswer.id_option_send.isnot(None)).first() if lead else None
+    if fila is None or fila.id_option_send in ('', '0', '0.0') or fila.id_option not in (None, '', '0', '0.0'):
+        return
+    fila.id_option, fila.updated_at = fila.id_option_send, momento
 
 
 def calificar(ejecucion, califica, momento):

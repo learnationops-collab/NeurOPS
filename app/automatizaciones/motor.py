@@ -88,6 +88,7 @@ class Motor:
         abierta = self._abierta(contacto)
         if abierta and abierta.estado == AutEjecucion.ESPERANDO_RESPUESTA:
             return self._respuesta(abierta, evento)
+        registro.respuesta_libre(contacto, evento.momento)
         return 'sin_disparador'
 
     def _pausado(self, contacto, evento):
@@ -101,6 +102,8 @@ class Motor:
             return self._boton(contacto, *datos, pausado=True)
         version, campana, clave = self._version_de_campana(evento.texto, evento.momento)
         if version is None:
+            if evento.tipo != ev.COMENTARIO:
+                registro.respuesta_libre(contacto, evento.momento)
             return 'bot_pausado'
         if evento.tipo == ev.COMENTARIO:
             abierta = self._abierta(contacto)
