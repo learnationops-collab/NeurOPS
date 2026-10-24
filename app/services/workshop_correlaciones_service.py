@@ -70,8 +70,27 @@ METRICAS = [
 ]
 _POR_CLAVE = {m['key']: m for m in METRICAS}
 
+# Parejas que se parecen por cómo se calculan, no porque pase algo en el negocio: una tasa contra su
+# numerador o su denominador, y el cash contra lo que lo compone. Se marcan en la vista.
+DERIVADAS = {
+    'cpm': ('inversion',), 'ctr': (), 'cpl': ('inversion', 'leads'),
+    'tx_whatsapp': ('whatsapp_leads', 'leads'), 'show_up_workshop': ('show_up', 'whatsapp_leads'),
+    'retencion_clase': ('show_up',), 'costo_agenda': ('inversion', 'agendas'),
+    'show_up_citas': ('agendas',), 'close_rate': ('ventas',),
+    'ticket': ('cash_collected',), 'roas': ('cash_collected', 'inversion'),
+}
+LIGADAS_EXTRA = (('cash_collected', 'ventas'),)
+
+
+def _ligadas():
+    pares = {frozenset((k, d)) for k, ds in DERIVADAS.items() for d in ds}
+    pares |= {frozenset(p) for p in LIGADAS_EXTRA}
+    return sorted(sorted(p) for p in pares)
+
+
 NOTAS = [
     'Una correlación no prueba que una cosa cause la otra: solo que se mueven parecido entre talleres.',
+    'Las parejas marcadas "por construcción" (por ejemplo ROAS y cash collected) se parecen por cómo se calculan.',
     'No hay un show up separado de la llamada del setter por taller: "Show up de citas" es el de la '
     'llamada de ventas (agendas que asistieron).',
 ]
@@ -231,6 +250,7 @@ def armar(desde=None, hasta=None, objetivo=OBJETIVO_DEFECTO, ultimos=None, hoy=N
         'objetivo': objetivo,
         'avisos': avisos,
         'notas': NOTAS,
+        'ligadas': _ligadas(),
         'metricas': [{k: m[k] for k in ('key', 'label', 'grupo', 'formato', 'tip')} for m in METRICAS],
         'talleres': [{'id': e.id, 'date': e.date.isoformat(), 'name': e.name,
                       'valores': {k: valores[k][i] for k in valores}} for i, e in enumerate(eventos)],

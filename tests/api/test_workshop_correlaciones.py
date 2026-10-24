@@ -141,3 +141,10 @@ def test_exige_permiso(client, db, make_user, auth_headers):
     assert client.get('/api/workshop/correlaciones').status_code in (401, 403)
     closer = auth_headers(make_user(role='closer'))
     assert client.get('/api/workshop/correlaciones', headers=closer).status_code == 403
+
+
+def test_marca_las_parejas_que_se_parecen_por_construccion(client, db, marketing):
+    ligadas = client.get('/api/workshop/correlaciones', headers=marketing).get_json()['ligadas']
+    assert ['cash_collected', 'roas'] in ligadas
+    assert ['cash_collected', 'ventas'] in ligadas
+    assert ['inversion', 'roas'] in ligadas
