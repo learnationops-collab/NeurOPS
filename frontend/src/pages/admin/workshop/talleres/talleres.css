@@ -150,6 +150,26 @@
 .dc-shell .wt-casilla:hover { border-color: var(--text-muted); }
 .dc-shell .wt-tabla .barra-tabla { flex-wrap: wrap; }
 
+/* La tabla de Talleres según el diseño de Kerwin (24/10/2026): la celda principal, las cifras contra el total y la leyenda. */
+.dc-shell .wt-taller-dos { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.dc-shell .wt-taller-fecha { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.dc-shell .wt-taller-nombre { padding-left: 16px; font-size: 11.5px; font-weight: 500; color: var(--text-muted); }
+.dc-shell .wt-punto { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+.dc-shell .wt-punto--si { background: var(--success); }
+.dc-shell .wt-punto--no { background: var(--error); }
+.dc-shell .wt-cifra { display: inline-flex; flex-direction: column; align-items: flex-end; min-width: 0; }
+.dc-shell .wt-cifra small { font-size: 11px; font-weight: 600; color: var(--text-muted-40); }
+.dc-shell .wt-tono { padding: 2px 8px; margin-right: -8px; border-radius: 8px; font-variant-numeric: tabular-nums; }
+.dc-shell .wt-tono--solo { padding: 0; margin: 0; background: none !important; }
+.dc-shell .wt-tono--success { background: var(--success-surface); color: var(--success); font-weight: 700; }
+.dc-shell .wt-tono--error { background: var(--error-surface); color: var(--error); font-weight: 700; }
+.dc-shell .wt-sin { color: var(--text-muted-40); }
+.dc-shell .wt-leyenda { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s5); margin-top: var(--s3); }
+.dc-shell .wt-leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+.dc-shell .wt-leyenda-caja { width: 12px; height: 12px; border-radius: 4px; flex: none; }
+.dc-shell .wt-leyenda-caja--si { background: var(--success-surface); border: 1px solid var(--success-border); }
+.dc-shell .wt-leyenda-caja--no { background: var(--error-surface); border: 1px solid var(--error-border); }
+
 /* --- Hoja (detalle, landing, comparar) --------------------------------------------------------- */
 .dc-shell.wt-velo { z-index: 170; }
 .dc-shell .wt-hoja {
