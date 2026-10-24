@@ -9,10 +9,7 @@
 .dc-shell .wc-filtros { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
 .dc-shell .wc-oculto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 
-/* --- Aviso de honestidad ------------------------------------------------------------------------ */
-.dc-shell .wc-aviso { display: grid; gap: var(--s2); padding: var(--s4) var(--s5); border-color: var(--warning-border); }
-.dc-shell .wc-aviso ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; color: var(--text-muted); }
-.dc-shell .wc-aviso-n { margin: 0; font-size: 12px; color: var(--text-muted-40); }
+/* --- Sin datos suficientes ------------------------------------------------------------------------ */ */
 .dc-shell .wc-vacio { display: grid; gap: var(--s3); justify-items: start; padding: var(--s8) var(--s6); }
 
 /* --- Distribución: mapa a la izquierda, ranking y par a la derecha ------------------------------- */

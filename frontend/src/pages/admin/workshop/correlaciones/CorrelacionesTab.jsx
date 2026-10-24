@@ -81,6 +81,8 @@ const CorrelacionesTab = () => {
         return <div className="dc-shell dc-shell--embebido">{filtros}<EsqueletoCorrelaciones /></div>;
     }
 
+    // Los avisos de lectura van en un tooltip del mapa (antes, un panel arriba de todo).
+    const aviso = [...datos.avisos, ...datos.notas, `${datos.n_talleres} talleres realizados en el análisis.`].join(' ');
     const celdaPar = datos.matriz[par.a]?.[par.b];
     const a = porClave[par.a];
     const b = porClave[par.b];
@@ -90,14 +92,6 @@ const CorrelacionesTab = () => {
         <div className="dc-shell dc-shell--embebido">
             {filtros}
             <div className={`vista wc-vista${recargando ? ' wc-recargando' : ''}`}>
-                <section className="panel wc-aviso" role="note">
-                    <p className="t-eyebrow">Leelo con cuidado</p>
-                    <ul>
-                        {[...datos.avisos, ...datos.notas].map((t) => <li key={t}>{t}</li>)}
-                    </ul>
-                    <p className="wc-aviso-n"><b className="num">{datos.n_talleres}</b> talleres realizados en el análisis</p>
-                </section>
-
                 {datos.n_talleres < 3 ? (
                     <section className="panel wc-vacio" role="status">
                         <p className="t-h3">Todavía no hay datos para correlacionar</p>
@@ -110,6 +104,7 @@ const CorrelacionesTab = () => {
                                 <h3 className="t-h3">Mapa de correlaciones</h3>
                                 <Tip titulo="Cómo leerlo"
                                     texto="Verde: suben juntas. Rojo: una sube y la otra baja. Clic para ver el par." />
+                                <Tip titulo="Leelo con cuidado" texto={aviso} />
                             </div>
                             <MapaCalor metricas={datos.metricas} matriz={datos.matriz} metodo={metodo} par={par}
                                 onElegir={elegir} ligadas={ligadas} />
