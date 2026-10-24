@@ -30,6 +30,19 @@ describe('Talleres › formato', () => {
         expect(tasaPaso(1, 4)).toBe(25);
     });
 
+    it('Asistieron se mide contra las citas con resultado, y sin ese dato contra el paso anterior', () => {
+        const base = { leads: 100, agendas_exitosas: 20, show_up_sales_call: 6, sales: 1 };
+        const con = pasosEmbudo({ ...base, citas_reportadas: 12, citas_sin_reportar: 8 }).find((p) => p.key === 'asistieron');
+        expect(con.base).toEqual({ label: 'Citas con resultado', n: 12 });
+        expect(tasaPaso(con.n, con.base.n)).toBe(50);
+        expect(con.ayuda).toContain('8 sin reportar');
+        // Sin citas sin reportar, la ayuda no inventa faltantes.
+        expect(pasosEmbudo({ ...base, citas_reportadas: 20, citas_sin_reportar: 0 }).find((p) => p.key === 'asistieron').ayuda)
+            .not.toContain('sin reportar.');
+        // Talleres viejos: sin el dato no hay base propia y vale el paso anterior.
+        expect(pasosEmbudo(base).find((p) => p.key === 'asistieron').base).toBeUndefined();
+    });
+
     it('el estado de la grabación: sin Loom, guardada, programada, publicada y cerrada', () => {
         const ahora = Date.now();
         expect(estadoGrabacion({}).tipo).toBe('sin_grabacion');

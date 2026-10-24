@@ -86,7 +86,7 @@ const WorkshopFunnelView = ({ evento, desglose, ventana, cargandoDesglose, onRes
                     )}
                 </PanelCab>
                 <FlujoEmbudo raiz color="var(--brand-secondary)"
-                    etapas={pasos.map((p) => ({ key: p.key, label: p.label, n: p.n, ayuda: p.ayuda }))} />
+                    etapas={pasos.map((p) => ({ key: p.key, label: p.label, n: p.n, ayuda: p.ayuda, base: p.base }))} />
                 <p className="t-cap mut num wt-pie-embudo">
                     De {pasos[0].n.toLocaleString('en-US')} leads a {ventas} {ventas === 1 ? 'venta' : 'ventas'}:{' '}
                     {porcentaje(tasaPaso(ventas, pasos[0].n))} final

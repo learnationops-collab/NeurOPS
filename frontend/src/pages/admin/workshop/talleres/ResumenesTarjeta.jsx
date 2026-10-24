@@ -44,7 +44,7 @@ export const ResumenEmbudo = ({ evento }) => {
     return (
         <Bars variant="rows" scale="sqrt" label="Embudo del taller" items={pasos.map((p, i) => ({
             key: p.key, label: p.label, value: p.n, display: numero(p.n), color: colorPaso(i, pasos.length),
-            detail: i === 0 ? '' : porcentaje(tasaPaso(p.n, pasos[i - 1].n)),
+            detail: i === 0 ? '' : porcentaje(tasaPaso(p.n, (p.base || pasos[i - 1]).n)),
         }))} />
     );
 };

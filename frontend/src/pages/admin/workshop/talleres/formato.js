@@ -36,6 +36,20 @@ export const ROAS_RANGOS = ['Menos de 1x', '1x a 1,5x', '1,5x a 3x', '3x o más'
 export const roasRango = (r) => (r >= 3 ? ROAS_RANGOS[3] : r >= 1.5 ? ROAS_RANGOS[2] : r >= 1 ? ROAS_RANGOS[1] : ROAS_RANGOS[0]);
 
 /**
+ * «Asistieron» se divide por las citas con resultado (`citas_reportadas`), no por todas las agendas: las
+ * que nadie reportó todavía no son inasistencias. Sin ese dato (talleres viejos) vuelve a dividir por
+ * el paso anterior. `citas_sin_reportar` va en la ayuda para que se vea cuántas faltan.
+ */
+const citasConResultado = (e) => {
+    if (e.citas_reportadas == null) return { ayuda: 'Se presentaron a la llamada.' };
+    const faltan = e.citas_sin_reportar > 0 ? ` ${e.citas_sin_reportar} sin reportar.` : '';
+    return {
+        base: { label: 'Citas con resultado', n: e.citas_reportadas },
+        ayuda: `Se presentaron, sobre las citas con resultado.${faltan}`,
+    };
+};
+
+/**
  * Los pasos del embudo de un taller. `corto` es el resumen de la tarjeta (sin los dos de retención
  * del pitch, que en una tarjeta son ruido). Las ayudas son las del embudo detallado de siempre.
  */
@@ -55,8 +69,7 @@ export const pasosEmbudo = (e, { corto = false } = {}) => {
           ayuda: 'Pidieron una llamada por formulario.' },
         { key: 'agendas', label: 'Agendas', n: e.agendas_exitosas || 0,
           ayuda: 'Personas con llamada agendada.' },
-        { key: 'asistieron', label: 'Asistieron', n: e.show_up_sales_call || 0,
-          ayuda: 'Se presentaron a la llamada.' },
+        { key: 'asistieron', label: 'Asistieron', n: e.show_up_sales_call || 0, ...citasConResultado(e) },
         { key: 'ventas', label: 'Ventas', n: e.sales || 0,
           ayuda: 'Pago completo o split. Las señas no cuentan.' },
     ];
