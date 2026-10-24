@@ -13,6 +13,7 @@ import { ErrorDeCarga } from './esqueletos';
 import ConexionMeta from './anuncios/ConexionMeta';
 import EmbudosResumen from './anuncios/EmbudosResumen';
 import RendimientoWorkshop from './anuncios/RendimientoWorkshop';
+import { CompararFuentes, TarjetasFuente } from './anuncios/FuentesResumen';
 import { useEstadoDeMeta } from './anuncios/useEstadoDeMeta';
 import { PERIODOS, PERIODO_POR_DEFECTO, rangoDePeriodo } from './anuncios/metricas';
 import { agruparPalabraClave, archivarPalabraClave, mensajeDeError, pedirTablero } from './anuncios/marketingApi';
@@ -57,10 +58,11 @@ const PESTANAS = [
 // «Webhooks» pasó a ser «Entrantes» (16/10/2026): un link viejo abre la nueva.
 const PESTANA_VIEJA = { webhooks: 'entrantes' };
 const CON_PERIODO = ['anuncios', 'entrantes', 'conversaciones', 'meta'];
-// Rendimiento por embudo (15/10/2026): «Todo» suma el resumen por embudo arriba de la tabla de
-// palabras clave; «Setting» es esa tabla sola y «Workshop», los anuncios que llevan a la clase.
+// Rendimiento por fuente (15/10/2026; «Todo» se llama «General» desde el 23/10): «General» ve todo —la
+// comparación Setting vs Workshop y el gasto por embudo arriba de la tabla de palabras clave—; «Setting» ve
+// solo Setting (sus cifras y la tabla) y «Workshop», sus anuncios y cifras. Todas con ROAS New Cash y Total.
 const EMBUDOS_DE_RENDIMIENTO = [
-    { key: 'todo', label: 'Todo' },
+    { key: 'todo', label: 'General' },
     { key: 'setting', label: 'Setting' },
     { key: 'workshop', label: 'Workshop' },
 ];
@@ -127,11 +129,18 @@ const AdminMarketingHubPage = () => {
         : PERIODOS.find((p) => p.key === periodo)?.label;
 
     // Va debajo de los KPIs del tablero (Kerwin, 19/10/2026: los KPIs arriba).
+    // null = el tablero todavía no llegó (esqueleto); [] = llegó sin `fuentes` (un servidor viejo): no se dibuja.
+    const fuentes = datos ? datos.fuentes?.fuentes || [] : null;
+    const fuenteDe = (key) => fuentes?.find((f) => f.key === key) || null;
     const resumenEmbudos = embudo === 'todo' ? (
-        <EmbudosResumen embudos={datos ? datos.embudos || [] : null} desde={rango.desde} hasta={rango.hasta}
-            moneda={datos?.moneda} onElegir={(key) => cambiar({ embudo: key })}
-            cuentas={cuentas} irAMeta={() => cambiar({ tab: 'meta' })} />
-    ) : null;
+        <>
+            {!fuentes?.length && fuentes ? null : <CompararFuentes fuentes={fuentes} moneda={datos?.moneda} />}
+            <EmbudosResumen embudos={datos ? datos.embudos || [] : null} desde={rango.desde} hasta={rango.hasta}
+                moneda={datos?.moneda} onElegir={(key) => cambiar({ embudo: key })}
+                cuentas={cuentas} irAMeta={() => cambiar({ tab: 'meta' })} />
+        </>
+    ) : embudo === 'setting' && !(fuentes && !fuenteDe('setting'))
+        ? <TarjetasFuente fuente={fuenteDe('setting')} moneda={datos?.moneda} /> : null;
 
     if (params.get('tab') === 'trafico') return <Navigate to="/admin/workshops?tab=trafico" replace />;
 
@@ -190,7 +199,8 @@ const AdminMarketingHubPage = () => {
                                     <>
                                         {embudo === 'workshop' ? (
                                             <RendimientoWorkshop desde={rango.desde} hasta={rango.hasta} moneda={datos?.moneda}
-                                                embudos={datos ? datos.embudos || [] : (error ? [] : null)} cuentas={cuentas} version={version}
+                                                embudos={datos ? datos.embudos || [] : (error ? [] : null)} fuente={fuenteDe('workshop')}
+                                                cuentas={cuentas} version={version}
                                                 irAMeta={() => cambiar({ tab: 'meta' })} />
                                         ) : !datos ? <EsqueletoTablaAnuncios bajoKpis={resumenEmbudos} /> : (
                                             <TablaAnuncios datos={datos} onArchivar={archivar} onAgrupar={agrupar} estadoMeta={estadoMeta}

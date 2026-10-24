@@ -26,6 +26,15 @@ const fila = (extra) => ({
     ...extra,
 });
 
+const FUENTE = {
+    anuncios: 3, leads: 1000, gasto: 1000, agendas: 50, show_up: 30, pct_show_up: 60, ventas: 3, cuotas: 4, cuotas_monto: 800,
+    new_cash: 900, cash_total: 2500, cpl: 1, costo_agenda: 20, costo_venta: 333.33, roas_new_cash: 0.9, roas_total: 2.5,
+    agendas_dias: {}, upsells: 2, upsells_monto: 350, pct_upsell: 25,
+};
+const FUENTES = { fuentes: [{ key: 'setting', label: 'Setting', ...FUENTE },
+    { key: 'workshop', label: 'Workshop', ...FUENTE, roas_new_cash: 1.1, roas_total: 1.2, costo_agenda: 35, pct_show_up: 40 }],
+otras: { cash_total: 0, cobros: 0 } };
+
 const TABLERO = {
     desde: '2026-09-15', hasta: '2026-10-14', moneda: 'USD',
     filas: [
@@ -40,7 +49,12 @@ const TABLERO = {
     sin_atribuir: { agendas: 220, ventas: 0, gasto_meta: 1572 },
     agrupaciones: [{ campana: 'DM Funnel', conjuntos: ['AD 5'] }],
     meta: { conectado: false, ultima_sincronizacion: null },
+    fuentes: FUENTES,
 };
+
+// La tabla de palabras clave; en General hay otra encima (Setting vs Workshop).
+const tablas = () => screen.queryAllByRole('table').filter((t) => !t.classList.contains('mk-cmp'));
+const filas = () => within(tablas()[0]).getAllByRole('row');
 
 const niveles = () => within(screen.getByRole('tablist', { name: 'Nivel de la tabla' }));
 
@@ -52,6 +66,25 @@ describe('Marketing › Anuncios', () => {
     beforeEach(() => {
         api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/anuncios' ? TABLERO : {
             anuncios: [], claves: ['APLICAR'], conectado: false, ultima_sincronizacion: null } }));
+    });
+
+    it('General compara Setting y Workshop con el ROAS New Cash y el Total, y marca el que rinde más', async () => {
+        abrir();
+        await screen.findByText('Obtener Guia');
+        const tabla = screen.getByText('Setting vs Workshop').closest('section');
+        const roasNew = within(tabla).getByText('ROAS New Cash').closest('tr');
+        expect(within(roasNew).getByText('0.90x')).toBeInTheDocument();
+        expect(within(roasNew).getByText('1.10x').closest('td')).toHaveClass('mk-gana');
+        const roasTotal = within(tabla).getByText('ROAS Total').closest('tr');
+        expect(within(roasTotal).getByText('2.50x').closest('td')).toHaveClass('mk-gana');
+    });
+
+    it('Setting muestra solo su fuente con los dos ROAS y sin la comparación', async () => {
+        abrir('/admin/marketing?embudo=setting');
+        await screen.findByText('Obtener Guia');
+        expect(screen.getByText('ROAS New Cash')).toBeInTheDocument();
+        expect(screen.getByText('ROAS Total')).toBeInTheDocument();
+        expect(screen.queryByText('Setting vs Workshop')).not.toBeInTheDocument();
     });
 
     it('los descalificados se ven siempre, aunque sean 0', async () => {
@@ -91,7 +124,7 @@ describe('Marketing › Anuncios', () => {
         const user = userEvent.setup();
         abrir();
         await screen.findByText('Obtener Guia');
-        const nombres = () => screen.getAllByRole('row').slice(1, 3).map((r) => within(r).getAllByRole('cell')[1].textContent);
+        const nombres = () => filas().slice(1, 3).map((r) => within(r).getAllByRole('cell')[1].textContent);
         expect(nombres()[0]).toMatch(/Obtener Guia/); // por entrantes, de mayor a menor
         await user.click(screen.getByRole('button', { name: /Costo por lead/ }));
         expect(nombres()[0]).toMatch(/APLICAR/); // el costo menor primero; el vacío al final
@@ -132,7 +165,7 @@ describe('Marketing › Anuncios', () => {
         abrir();
         await screen.findByText('Obtener Guia');
         await user.click(screen.getByRole('button', { name: 'Ver como tarjetas' }));
-        expect(screen.queryByRole('table')).not.toBeInTheDocument();
+        expect(tablas()).toHaveLength(0);
         const cabecera = screen.getByRole('button', { name: 'APLICAR: Elegir para el gráfico' });
         const tarjeta = cabecera.closest('article');
         expect(within(tarjeta).getByText('Costo por lead')).toBeInTheDocument();
@@ -200,7 +233,7 @@ describe('Marketing › Anuncios', () => {
         await screen.findByText('Obtener Guia');
 
         await user.click(niveles().getByRole('tab', { name: 'Campañas' }));
-        const nombres = () => screen.getAllByRole('row').slice(1, -1).map((r) => within(r).getAllByRole('cell')[1].textContent);
+        const nombres = () => filas().slice(1, -1).map((r) => within(r).getAllByRole('cell')[1].textContent);
         expect(nombres().join(' | ')).toMatch(/Obtener|Sin campaña/);
         expect(nombres().some((n) => n.startsWith('DM Funnel'))).toBe(true);
 

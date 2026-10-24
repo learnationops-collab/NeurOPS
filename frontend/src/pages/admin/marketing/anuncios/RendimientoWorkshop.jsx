@@ -5,7 +5,9 @@ import { Kpi } from './TablaAnuncios';
 import { ErrorDeCarga, EsqueletoKpis, EsqueletoPanelTabla, HuesosSerie } from '../esqueletos';
 import EnlaceMeta from './EnlaceMeta';
 import { enlaceAdministrador } from './enlacesMeta';
-import { dinero, formatear, serieDeEmbudos } from './metricas';
+import { dinero, formatear } from './metricas';
+import { serieDeFuente } from './fuentes';
+import { EsqueletoTarjetasFuente, TarjetasFuente } from './FuentesResumen';
 import { mensajeDeError, pedirWorkshopDelPeriodo } from './marketingApi';
 import { useDatosCacheados } from '../../../../services/cacheDeVistas';
 
@@ -37,10 +39,10 @@ const Celdas = ({ fila, moneda, landings }) => (
     </>
 );
 
-const KPIS = ['Importe gastado', 'Clics', 'Visitas a la landing', 'Clics al grupo'];
+const KPIS = ['Clics', 'Visitas a la landing', 'Clics al grupo'];
 const TITULO = 'Campañas, conjuntos y anuncios de Workshop';
 
-const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, cuentas, version = 0, irAMeta }) => {
+const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, fuente, cuentas, version = 0, irAMeta }) => {
     const [abiertasDe, setAbiertasDe] = useState({ de: null, mapa: {} });
     const [intento, setIntento] = useState(0);
 
@@ -53,22 +55,32 @@ const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, cuentas, version =
     const abiertas = abiertasDe.de === datos ? abiertasDe.mapa
         : (datos?.campanas.length ? { [datos.campanas[0].campana_id]: true } : {});
 
-    const dias = useMemo(() => (embudos ? serieDeEmbudos(embudos.filter((e) => e.embudo === 'workshop'), desde, hasta) : null),
-        [embudos, desde, hasta]);
+    // Gasto, agendas y costo por agenda por día: la serie de Workshop con lo mismo que la de Setting.
+    const dias = useMemo(() => (embudos && fuente ? serieDeFuente(embudos, fuente, desde, hasta) : null),
+        [embudos, fuente, desde, hasta]);
 
-    const serie = (
+    const grafico = (titulo, key, label, color, formato, vacio) => (
         <section className="panel mk-panel-serie">
             <div className="panel-cab">
                 <div className="mk-cab-txt">
-                    <p className="t-eyebrow">Importe gastado por día · Workshop</p>
+                    <p className="t-eyebrow">{titulo} · Workshop</p>
                 </div>
             </div>
             {!dias ? <HuesosSerie /> : (
-                <Columnas dias={dias} capas={[{ key: 'workshop', label: 'Gastado', color: 'var(--info)' }]}
-                    formato={(v) => dinero(v, moneda)} etiqueta="Gasto de Workshop por día"
-                    vacio="Los anuncios de Workshop no gastaron en estos días." />
+                <Columnas dias={dias} capas={[{ key, label, color }]} formato={formato}
+                    etiqueta={`${titulo} de Workshop`} vacio={vacio} />
             )}
         </section>
+    );
+    const serie = (
+        <div className="mk-series3">
+            {grafico('Importe gastado por día', 'gasto', 'Gastado', 'var(--info)', (v) => dinero(v, moneda),
+                'Los anuncios de Workshop no gastaron en estos días.')}
+            {grafico('Agendas por día', 'agendas', 'Agendas', 'var(--cat-2)', (v) => Number(v).toLocaleString('en-US'),
+                'No se agendó nadie de Workshop en el período.')}
+            {grafico('Costo por agenda por día', 'costo_agenda', 'Costo por agenda', 'var(--warning)', (v) => dinero(v, moneda),
+                'Sin agendas o sin gasto en estos días.')}
+        </div>
     );
 
     if (error && !datos) {
@@ -77,6 +89,7 @@ const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, cuentas, version =
     if (!datos) {
         return (
             <div className="vista mk-vista">
+                <EsqueletoTarjetasFuente />
                 <EsqueletoKpis titulos={KPIS} lineas={2} label="Cargando los anuncios de Workshop…" />
                 {serie}
                 <EsqueletoPanelTabla titulo={TITULO} sub="Los que llevan a la clase en vivo." filas={4} />
@@ -85,17 +98,15 @@ const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, cuentas, version =
     }
 
     const t = datos.totales;
+    // El gasto ya está en las tarjetas de la fuente (arriba): acá, el tráfico que trajo.
     const kpis = [
-        { titulo: KPIS[0], valor: formatear(t.gasto, 'money', moneda),
-          sub: `CPM ${formatear(t.cpm, 'money', moneda)} · ${formatear(t.impresiones, 'num')} impresiones`,
-          tip: 'Gasto de los anuncios de Workshop.' },
-        { titulo: KPIS[1], valor: formatear(t.clics, 'num'),
-          sub: `CTR ${pct(t.ctr)} · ${formatear(t.cpc, 'money', moneda)} por clic en el enlace`,
+        { titulo: KPIS[0], valor: formatear(t.clics, 'num'),
+          sub: `CTR ${pct(t.ctr)} · ${formatear(t.cpc, 'money', moneda)} por clic · CPM ${formatear(t.cpm, 'money', moneda)}`,
           tip: 'Todos los clics. El CPC es por clic en el enlace.' },
-        { titulo: KPIS[2], valor: formatear(t.visitas, 'num'),
+        { titulo: KPIS[1], valor: formatear(t.visitas, 'num'),
           sub: 'de los anuncios de Workshop (utm_campaign)',
           tip: 'Visitas a la landing desde estas campañas.' },
-        { titulo: KPIS[3], valor: formatear(t.clics_whatsapp, 'num'),
+        { titulo: KPIS[2], valor: formatear(t.clics_whatsapp, 'num'),
           sub: `${formatear(t.costo_whatsapp, 'money', moneda)} por clic al grupo`,
           tip: 'Clics al grupo de WhatsApp desde esas visitas.' },
     ];
@@ -106,6 +117,7 @@ const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, cuentas, version =
 
     return (
         <div className="vista mk-vista">
+            {embudos && !fuente ? null : <TarjetasFuente fuente={fuente} moneda={moneda} />}
             <div className="pareja mk-kpis" style={{ '--min': '220px', '--g': 'var(--s4)' }}>
                 {kpis.map((k, i) => <Kpi key={k.titulo} {...k} i={i} />)}
             </div>
