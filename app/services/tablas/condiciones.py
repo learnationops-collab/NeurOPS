@@ -2,7 +2,8 @@
 
   {"match": "all"|"any", "items": [
      {"type": "field", "field": "f.status", "op": "in", "value": ["a", "b"], "negate": false},
-     {"match": "any", "items": [...]}            # grupos anidados
+     {"match": "any", "items": [...]},           # grupos anidados
+     {"type": "concept", "concept": "no_show"}   # un concepto del diccionario: su grupo de condiciones
   ]}
 
 Operadores: eq neq contains in gt gte lt lte empty notempty within_days older_days next_days.
@@ -11,6 +12,8 @@ Un campo que no existe, o que quien mira no puede ver, no deja pasar a nadie (co
 from datetime import date, datetime, timedelta
 
 from sqlalchemy import String, and_, cast, false, not_, or_, true
+
+from app.services.tablas import diccionario
 
 OPS = {'eq', 'neq', 'contains', 'in', 'gt', 'gte', 'lt', 'lte', 'empty', 'notempty',
        'within_days', 'older_days', 'next_days'}
@@ -119,6 +122,13 @@ def compile_tree(tree, fields, depth=0):
             raise CondicionError('Cada condición tiene que ser un objeto.')
         if 'items' in it:
             part = compile_tree(it, fields, depth + 1)
+        elif it.get('type') == 'concept':
+            concepto = diccionario.concepto(it.get('concept'))
+            if concepto is None:
+                raise CondicionError(f'El concepto «{it.get("concept")}» no existe.')
+            grupo = {'match': concepto.get('match', 'all'),
+                     'items': [{'type': 'field', **c} for c in concepto.get('condicion') or []]}
+            part = compile_tree(grupo, fields, depth + 1)
         elif it.get('type') == 'field':
             op = it.get('op')
             if op not in OPS:

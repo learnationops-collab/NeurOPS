@@ -3,7 +3,8 @@ y el que viaja entre sistemas por `agent/ask`.
 
   {
     "fuente": clave de la fuente,
-    "condiciones": {"match": "all"|"any", "items": [{"field": clave, "op": ..., "value": ..., "negate": bool}]},
+    "condiciones": {"match": "all"|"any", "items": [{"field": clave, "op": ..., "value": ..., "negate": bool}
+                                                    | {"concepto": clave del diccionario, "negate": bool}]},
     "columnas": [clave, ...],
     "orden": {"dato": clave, "dir": "asc"|"desc"},
     "agrupar_por": clave,                                                    (opcional)
@@ -11,6 +12,7 @@ y el que viaja entre sistemas por `agent/ask`.
     "medir": {"metrica": count|avg|sum|min|max|pct, "dato": clave, "valor": texto}  (opcional)
   }
 """
+from app.services.tablas import diccionario
 from app.services.tablas.condiciones import OPS
 
 METRICS = ('count', 'avg', 'sum', 'min', 'max', 'pct')
@@ -22,15 +24,40 @@ DEFAULT_COLUMNS = 6
 MAX_COLUMNS = 40
 
 
-def _items(items, check, depth=0):
+def _concept(c, fuente_key, check, errors):
+    """Un concepto del diccionario como condición: {"concepto": clave} (Learnito) o
+    {"type": "concept", "concept": clave} (Tablas), como la Academia. Tiene que ser de esta fuente y sus datos
+    tienen que existir en ella."""
+    clave = str(c.get('concepto') or c.get('concept') or '')
+    concepto = diccionario.concepto(clave)
+    if concepto is None:
+        errors.append(f'El concepto «{clave}» no existe. Buscalo con buscar_datos.')
+        return None
+    if concepto['fuente'] != fuente_key:
+        errors.append(f'El concepto «{clave}» es de la fuente «{concepto["fuente"]}», no de «{fuente_key}».')
+        return None
+    for item in concepto.get('condicion') or []:
+        check(item.get('field'), f'concepto {clave}')
+    return {'type': 'concept', 'concept': clave, 'negate': bool(c.get('negate'))}
+
+
+def _items(items, check, fuente_key, errors, depth=0):
     out = []
     for c in items if isinstance(items, list) else []:
         if not isinstance(c, dict):
             continue
         if 'items' in c and depth < 5:  # grupos anidados: la Academia no los usa, pero el motor los acepta
             out.append({'match': 'any' if c.get('match') == 'any' else 'all',
-                        'items': _items(c.get('items'), check, depth + 1), 'negate': bool(c.get('negate'))})
+                        'items': _items(c.get('items'), check, fuente_key, errors, depth + 1),
+                        'negate': bool(c.get('negate'))})
             continue
+        if c.get('concepto') or c.get('type') == 'concept':
+            item = _concept(c, fuente_key, check, errors)
+            if item:
+                out.append(item)
+            continue
+        if not c.get('field'):
+            continue  # sin dato no filtra: si no, dejaba el resultado en cero (LEARNINGS #89 de la Academia)
         check(c.get('field'), 'condición')
         op = c.get('op') if c.get('op') in OPS else 'eq'
         out.append({'type': 'field', 'field': str(c.get('field') or ''), 'op': op,
@@ -48,7 +75,7 @@ def normalize(fuente, plan):
             errors.append(f'El dato «{key}» ({where}) no existe en esta fuente.')
 
     cond = plan.get('condiciones') if isinstance(plan.get('condiciones'), dict) else {}
-    items = _items(cond.get('items'), check)
+    items = _items(cond.get('items'), check, fuente.key, errors)
 
     columns = [str(k) for k in (plan.get('columnas') or []) if k] if isinstance(plan.get('columnas'), list) else []
     columns = list(dict.fromkeys(columns))

@@ -37,6 +37,7 @@ Estructura del Proyecto:
   - `package.json`: Dependencias de Node
 - `migrations/`: Archivos de control de versiones de BD (Alembic)
 - `instance/`: Base de datos local (SQLite)
+- `docs/MODELO/`: Modelo vigente por subsistema (presente); `docs/DECISIONS.md`: registro de mejoras (pasado). Ver `.agents/rules/modelo.md`.
 
 Flujo de Trabajo:
 - Backend Dev: Ejecutar con entorno virtual activo.

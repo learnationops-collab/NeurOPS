@@ -7,13 +7,17 @@ nombres. Campos de cada fila (mismas claves que la Academia):
   n.{tabla}.{fk}   cuántas filas de {tabla} apuntan a esta
   l.{tabla}.{fk}   cuándo se creó la última de ellas (si {tabla} tiene created_at)
   s.{dato}         un dato con regla de negocio (sistema.py): estado de pago, deuda, estado de la agenda…
+  d.{clave}        un dato calculado del diccionario (diccionario.py): SQL sobre la fila
+Los significados de tablas, columnas y valores salen del diccionario; sin entrada, la descripción genérica.
 """
 from dataclasses import dataclass, field
 
-from sqlalchemy import cast, func, literal, select, types
+from sqlalchemy import cast, func, literal, literal_column, select, types
 
 from app import db
-from app.services.tablas import exclusion, sistema
+from app.services.tablas import diccionario, exclusion, sistema
+
+DERIVED_KINDS = ('text', 'number', 'date', 'instant', 'bool')
 
 LABEL_COLUMNS = ('full_name', 'name', 'nombre', 'title', 'titulo', 'username', 'email', 'slug')
 
@@ -35,7 +39,7 @@ NAMED = {
     'appointments': ('Agendas', 'Cada llamada agendada con un closer'),
     'financial_agendas': ('Agendas (registro financiero)', 'Las agendas como las registra la planilla'),
     'conversations': ('Conversaciones', 'Cada conversación de un setter con un lead'),
-    'workshop_leads': ('Leads del workshop', 'Cada inscripto a un workshop'),
+    'workshop_leads': ('Leads del workshop', 'Cada lead que dejó sus datos en la landing del replay de un workshop'),
 }
 
 
@@ -145,10 +149,12 @@ def build(user, table, tables, with_fields=True):
     pk = _pk(table)
     person = pk if table.name == 'people' else table.c.get('person_uuid')
     named = NAMED.get(table.name)
+    dicc = diccionario.tabla(table.name) or {}
+    generic = named[1] if named else f'Cada fila de la tabla {table.name}'
     fuente = Fuente(key=table.name, label=named[0] if named else column_label(table.name), table=table, pk=pk,
                     label_expr=_label_expr(table), person_expr=person,
                     category='Del sistema' if named else 'Todas las tablas',
-                    description=named[1] if named else f'Cada fila de la tabla {table.name}')
+                    description=dicc.get('significado') or generic)
     if not with_fields:
         return fuente
 
@@ -156,8 +162,17 @@ def build(user, table, tables, with_fields=True):
         kind = kind_of(col)
         if _visible(user, col, kind):
             detail = ('Solo admin y director comercial. ' if exclusion.is_amount(col.name, kind) else '') + \
-                f'Columna {col.name} de {table.name}'
+                (diccionario.detalle_columna(table.name, col.name) or f'Columna {col.name} de {table.name}')
             fuente.fields[f'f.{col.name}'] = Campo(f'f.{col.name}', column_label(col.name), 'Datos', kind, col, detail)
+
+    for clave, d in diccionario.derivados(table.name).items():
+        kind = d.get('tipo') if d.get('tipo') in DERIVED_KINDS else 'text'
+        if exclusion.is_amount(clave, kind) and not exclusion.sees_amounts(user):
+            continue
+        # El SQL es del diccionario (no de quien pregunta): {t} es la tabla de la fila, sin alias en el motor.
+        expr = literal_column('(' + d['sql'].replace('{t}', table.name) + ')')
+        fuente.fields[f'd.{clave}'] = Campo(f'd.{clave}', d.get('nombre') or clave, 'Calculados', kind, expr,
+                                            d.get('significado', ''))
 
     for col in table.columns:
         parent = _parent_of(col, tables)

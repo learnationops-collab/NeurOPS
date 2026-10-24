@@ -9,7 +9,7 @@ import logging
 
 from app.services import habilidades
 from app.services.copiloto_herramientas import HerramientaError
-from app.services.tablas import motor
+from app.services.tablas import buscar, motor
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +23,12 @@ _SISTEMA = {'type': 'string', 'enum': list(SISTEMAS),
 
 PLAN = {
     'type': 'object',
-    'description': 'Plan por claves. Las claves salen de fuentes_de_datos.',
+    'description': 'Plan por claves. Las claves y los conceptos salen de buscar_datos (o de fuentes_de_datos).',
     'properties': {
         'fuente': {'type': 'string'},
         'condiciones': {'type': 'object', 'description': '{"match": "all"|"any", "items": [{"field", "op", "value", '
-                                                         '"negate"}]}. op: eq neq contains in gt gte lt lte empty '
+                                                         '"negate"} o {"concepto": clave}]}. '
+                                                         'op: eq neq contains in gt gte lt lte empty '
                                                          'notempty within_days older_days next_days.'},
         'columnas': {'type': 'array', 'items': {'type': 'string'}},
         'orden': {'type': 'object', 'description': '{"dato": clave, "dir": "asc"|"desc"}'},
@@ -52,9 +53,11 @@ HERRAMIENTAS = [
             'additionalProperties': False,
         },
     },
+    buscar.TOOL,
     {
         'name': 'fuentes_de_datos',
-        'description': 'Fuentes de un sistema o, con fuente, sus datos (claves) para armar un plan. Usá buscar.',
+        'description': 'Fuentes de un sistema o, con fuente, sus datos (claves), conceptos y trampas. Solo si '
+                       'buscar_datos no alcanzó. Usá buscar.',
         'input_schema': {
             'type': 'object',
             'properties': {'sistema': _SISTEMA, 'fuente': {'type': 'string'},
@@ -78,8 +81,11 @@ HERRAMIENTAS = [
 INSTRUCCIONES = '\n\n'.join([
     'Tenés habilidades (preguntas frecuentes ya resueltas, usar_habilidad) y operaciones (calcular_tabla con un plan '
     'por claves). Si la pregunta encaja en una habilidad, usala; si no, armá el plan. Vos nunca contás ni calculás. '
-    'Si no sabés las claves, pedilas antes con fuentes_de_datos (con buscar para no traer todo). Los datos s. son '
-    'reglas de Work: s.estado_pago, s.deuda, s.proxima_cuota, s.dias_para_vencer, s.estado_agenda.',
+    'Para armar el plan empezá por buscar_datos con la pregunta y buenas palabras clave: te da la fuente, los '
+    'conceptos del equipo (usalos como condición {"concepto": clave}: ya traen la definición exacta), los datos y las '
+    'trampas. fuentes_de_datos solo si te falta un dato. Los datos s. son reglas de Work (s.estado_pago, s.deuda, '
+    's.estado_agenda) y los d. son calculados del diccionario. En una fuente de hechos sin período en la pregunta, '
+    'acotá a los últimos 30 días por su fecha y decilo.',
     'Citá el total y los avisos del resultado (muestra chica, diferencia que puede ser azar) tal cual.',
     'Para cruzar personas entre sistemas: las filas de Work traen alumno_id, que es el alumno_id de la Academia.',
 ])
@@ -173,6 +179,19 @@ def calcular_tabla(user, sistema, plan):
     return _texto_paquete(paquete)
 
 
+def buscar_datos(user, sistema, pregunta, palabras_clave, area=None):
+    sistema = _sistema({'sistema': sistema})
+    if sistema == 'work':
+        return buscar.texto(buscar.find(user, pregunta, palabras_clave, area))
+    # La Academia tiene el mismo buscador (su DataSearch); por agentes pares todavía no lo expone.
+    try:
+        paquete = _academia(user, buscar_datos={'pregunta': pregunta, 'palabras_clave': palabras_clave, 'area': area})
+    except HerramientaError:
+        return ('La Academia todavía no responde buscar_datos por agentes pares: usá fuentes_de_datos con sistema '
+                'academia y buscar (la fuente principal es "alumno").')
+    return paquete.get('texto') or 'La Academia no devolvió coincidencias.'
+
+
 def usar_habilidad(user, nombre, parametros=None):
     try:
         return habilidades.usar(user, nombre, parametros)
@@ -180,7 +199,8 @@ def usar_habilidad(user, nombre, parametros=None):
         raise HerramientaError(str(e)) from e
 
 
-_EJECUTORES = {'fuentes_de_datos': fuentes_de_datos, 'calcular_tabla': calcular_tabla, 'usar_habilidad': usar_habilidad}
+_EJECUTORES = {'buscar_datos': buscar_datos, 'fuentes_de_datos': fuentes_de_datos, 'calcular_tabla': calcular_tabla,
+               'usar_habilidad': usar_habilidad}
 
 
 def ejecutar(nombre, entrada, user):

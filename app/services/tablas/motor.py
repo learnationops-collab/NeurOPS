@@ -21,7 +21,7 @@ from sqlalchemy import create_engine, func, literal, select, text
 from sqlalchemy.exc import OperationalError
 
 from app import db
-from app.services.tablas import catalogo, medir
+from app.services.tablas import catalogo, diccionario, medir
 from app.services.tablas.condiciones import CondicionError, compile_tree
 from app.services.tablas.plan import normalize
 
@@ -111,7 +111,18 @@ def catalog(user, fuente=True, buscar=None):
         q = _plano(str(buscar))
         datos = [d for d in datos if q in _plano(f"{d['clave']} {d['nombre']} {d['grupo']} {d['detalle']}")]
     head = {'clave': src.key, 'nombre': src.label, 'categoria': src.category, 'descripcion': src.description}
-    return {'fuente': head, 'datos': datos, 'comparaciones': COMPARACIONES}
+    dicc = diccionario.tabla(src.key) or {}
+    conceptos = [{'clave': c['clave'], 'nombre': c['nombre'], 'significado': c.get('significado', '')}
+                 for c in dicc.get('conceptos') or [] if _concepto_visible(c, src)]
+    out = {'fuente': head, 'datos': datos, 'comparaciones': COMPARACIONES,
+           'que_es': dicc.get('significado'), 'fila': dicc.get('fila'), 'fecha': dicc.get('fecha'),
+           'conceptos': conceptos, 'trampas': dicc.get('notas')}
+    return {k: v for k, v in out.items() if v not in (None, [])}
+
+
+def _concepto_visible(concepto, src):
+    """Un concepto se ofrece solo si quien mira ve todos sus datos (un monto oculto lo dejaría sin filas)."""
+    return all(c.get('field') in src.fields for c in concepto.get('condicion') or [])
 
 
 def prepare(user, raw):
