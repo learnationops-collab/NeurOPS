@@ -1,6 +1,6 @@
 """El segmento A/B/C/D en el cliente y en la agenda (docs/plan_segmentos_triage.md §8).
 
-Lo calcula Thalamus al armar la reserva (`agenda_payload.segmento`, ver nucleo/segmento.py). Este módulo lo
+Lo calcula Thalamus al armar la reserva (`agenda_payload.segmento_lead`, ver nucleo/segmento.py). Este módulo lo
 copia a las columnas en un `before_flush`, así cualquier camino que guarde un formulario o cree una agenda
 lo deja escrito sin acordarse:
   - el cliente toma el de su último formulario (`formulario_payload`);
@@ -12,6 +12,7 @@ import logging
 from sqlalchemy import event, inspect
 
 from app import db
+from app.agendas_v2.nucleo.segmento import SEGMENTOS
 from app.models.booking import Appointment
 from app.models.client import Client
 
@@ -43,9 +44,10 @@ def _cambio(fila, campo):
 
 
 def _del_payload(payload):
-    """El segmento de una reserva, o None. Un formulario que no segmenta (Consultoría, Hiring…) no
-    borra el que el lead ya tenía."""
-    return payload.get('segmento') if isinstance(payload, dict) else None
+    """El segmento de una reserva (`segmento_lead`; `segmento` es otra cosa: la regla y la estrategia del
+    reparto), o None. Un formulario que no segmenta (Consultoría, Hiring…) no borra el que el lead ya tenía."""
+    seg = payload.get('segmento_lead') if isinstance(payload, dict) else None
+    return seg if isinstance(seg, dict) and seg.get('segmento') in SEGMENTOS else None
 
 
 def mantener(session):

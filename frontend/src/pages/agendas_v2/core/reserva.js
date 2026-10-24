@@ -69,7 +69,7 @@ export function armarReserva({ lead, evento, funnel, form, asig, slot, origen, s
         regla_idx: asig ? asig.reglaIdx : null,
         desborde: !!(asig && asig.desborde),
         nota: calificar(preguntas, resp),
-        segmento: form ? segmentar(form, resp) : null,
+        segmento_lead: form ? segmentar(form, resp) : null,
         descalificada,
         origen: origen || '',
         setter_id: setter || null,
