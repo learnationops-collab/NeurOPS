@@ -193,7 +193,7 @@ const AdminMarketingHubPage = () => {
                                                 embudos={datos ? datos.embudos || [] : (error ? [] : null)} cuentas={cuentas} version={version}
                                                 irAMeta={() => cambiar({ tab: 'meta' })} />
                                         ) : !datos ? <EsqueletoTablaAnuncios bajoKpis={resumenEmbudos} /> : (
-                                            <TablaAnuncios datos={datos} onArchivar={archivar} onAgrupar={agrupar}
+                                            <TablaAnuncios datos={datos} onArchivar={archivar} onAgrupar={agrupar} estadoMeta={estadoMeta}
                                                 irAMeta={() => cambiar({ tab: 'meta' })} bajoKpis={resumenEmbudos} />
                                         )}
                                     </>
