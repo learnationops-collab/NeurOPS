@@ -38,7 +38,7 @@ from app.models import Ad, AdPeriodSpend, AdSet, Appointment, Client, FinancialS
 from app.models import MetaAnuncio, MetaGastoDiario
 from app.models.marketing import clave_de_palabra as clave_de  # noqa: F401  (lo importa meta_ads_service)
 from app.services.comercial_service import ComercialService, clientes_de_ventas, no_es_marcador, venta_completada
-from app.services import calificacion_service
+from app.services import calificacion_service, fuentes_service
 from app.services.cruce_conversaciones import Cruce
 from app.services.identity_service import normalize_ig
 # Partido en módulos (regla de las 500 líneas): se re-exporta todo para que `anuncios_service.X` siga igual.
@@ -197,9 +197,10 @@ def claves_de_cobros(cobros, clave_de_anuncio=None, cliente_de=None):
 
 
 def _ventas(desde_dt, hasta_dt, clave_de_anuncio):
-    """({clave: {'ventas', 'cobrado'}}, sin_atribuir, cobros, sin_clave): ventas nuevas (completo o
+    """({clave: {'ventas', 'cobrado'}}, sin_atribuir, cobros, sin_clave, claves): ventas nuevas (completo o
     split) y todo lo cobrado (también cuotas y señas) de las personas que llegaron por esa palabra
-    clave; además todos los cobros del período y los que no llegaron a ninguna (para `cobrado_fuera`)."""
+    clave; además todos los cobros del período, los que no llegaron a ninguna (para `cobrado_fuera`) y
+    la palabra clave de cada cobro (para `fuentes_service`)."""
     cobros = [v for v in FinancialSale.query.filter(FinancialSale.date >= desde_dt,
                                                     FinancialSale.date <= hasta_dt).all()
               if venta_completada(v)]
@@ -216,7 +217,7 @@ def _ventas(desde_dt, hasta_dt, clave_de_anuncio):
         por_clave[clave]['cobrado'] += float(cobro.monto or 0)
         if es_venta:
             por_clave[clave]['ventas'] += 1
-    return por_clave, sin_atribuir, cobros, sin_clave
+    return por_clave, sin_atribuir, cobros, sin_clave, claves
 
 
 def _cobrado_fuera(cobros, sin_clave):
@@ -334,7 +335,8 @@ def tablero(desde, hasta):
 
     entrantes = _entrantes(desde_dt, hasta_dt, clave_de_anuncio)
     agendas, agendas_sin_atribuir = _agendas(desde_dt, hasta_dt, clave_de_anuncio)
-    ventas, ventas_sin_atribuir, cobros, cobros_sin_clave = _ventas(desde_dt, hasta_dt, clave_de_anuncio)
+    ventas, ventas_sin_atribuir, cobros, cobros_sin_clave, claves_de_cobro = _ventas(
+        desde_dt, hasta_dt, clave_de_anuncio)
     gasto, gasto_sin_clave, moneda = _gasto(desde, hasta, clave_de_anuncio)
 
     anuncios_por_clave = defaultdict(list)
@@ -394,6 +396,7 @@ def tablero(desde, hasta):
     filas.sort(key=lambda f: (f['clave'] is None, -f['entrantes'], -f['gasto'], f['nombre']))
 
     totales = metricas({k: sum(f[k] for f in filas) for k in SUMABLES})
+    embudos = _meta_ads().gasto_por_embudo(desde, hasta)
     return {
         'desde': desde.isoformat(),
         'hasta': hasta.isoformat(),
@@ -411,5 +414,7 @@ def tablero(desde, hasta):
         'cobrado_fuera': _cobrado_fuera(cobros, cobros_sin_clave),
         'agrupaciones': _opciones_de_agrupacion(filas, conjuntos),
         # El gasto de Meta por embudo (setting, workshop…): el selector de Rendimiento (15/10/2026).
-        'embudos': _meta_ads().gasto_por_embudo(desde, hasta),
+        'embudos': embudos,
+        # Setting vs Workshop con ROAS New Cash y Total (23/10/2026): ver `fuentes_service`.
+        'fuentes': fuentes_service.resumen(desde, hasta, filas, cobros, claves_de_cobro, embudos),
     }

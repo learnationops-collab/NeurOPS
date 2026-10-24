@@ -130,10 +130,13 @@ def setters_conocidos():
     return conocidos
 
 
-def clasificar_pago(venta, agenda, setters):
-    """(balde, clave del detalle, rótulo del detalle) de un pago. Ver el docstring del módulo."""
+def clasificar_pago(venta, agenda, setters, por_origen=False):
+    """(balde, clave del detalle, rótulo del detalle) de un pago. Ver el docstring del módulo.
+
+    `por_origen`: ignora el tipo de pago (renovación y upsell no se van a Fulfillment) y clasifica
+    solo por la agenda que lo originó: es de dónde vino el cliente (`fuentes_service`)."""
     tipo = SheetsService.parse_tipo_pago(venta.tipo_pago)[1]
-    if tipo in TIPOS_FULFILLMENT:
+    if tipo in TIPOS_FULFILLMENT and not por_origen:
         return 'fulfillment', tipo, DETALLES[tipo]
 
     fuente = fuente_de(venta, agenda)
@@ -223,7 +226,7 @@ def agendas_para_atribuir():
     ).all()
 
 
-def procedencia_por_venta(ventas, contexto=None, agendas=None):
+def procedencia_por_venta(ventas, contexto=None, agendas=None, por_origen=False):
     """{id de cada una de `ventas` -> (balde, clave del detalle, rótulo del detalle)}: el balde de
     cada pago, uno por uno, con la atribución calculada sobre `contexto`.
 
@@ -231,14 +234,14 @@ def procedencia_por_venta(ventas, contexto=None, agendas=None):
     (`ComercialService.ventas`, la faceta «Fuente»): las dos piden a esta función, así que un cobro no
     puede caer en una fuente en la tarjeta y en otra en la lista. `contexto` y `agendas`, como en
     `procedencia_de_ventas`. Lee las agendas una vez y corre la atribución una vez, sea cual sea la
-    cantidad de pagos: nunca por fila."""
+    cantidad de pagos: nunca por fila. `por_origen`, como en `clasificar_pago`."""
     if not ventas:
         return {}
     contexto = ventas if contexto is None else contexto
     agendas = agendas_para_atribuir() if agendas is None else agendas
     atribucion = AttributionService.get_sales_attribution(sales=contexto, agendas=agendas)
     setters = setters_conocidos()
-    return {venta.id: clasificar_pago(venta, atribucion.get(venta.id), setters) for venta in ventas}
+    return {venta.id: clasificar_pago(venta, atribucion.get(venta.id), setters, por_origen) for venta in ventas}
 
 
 def procedencia_de_ventas(ventas, contexto=None, base='neto', agendas=None):
