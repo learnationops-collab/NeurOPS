@@ -15,7 +15,7 @@ import '../planificar/planificar.css';
  * hay que cumplir en un taller concreto. Antes eran tres pestañas sueltas (Próximos, Simulador,
  * Acciones); desde el 16/10/2026 es una sola vista:
  *
- *  - Próximos talleres: fecha, hora y links, y el checklist de acciones de cada uno.
+ *  - Próximos talleres: fecha, hora y links de cada uno.
  *  - Plan de acciones: los números del plan y las acciones sin un próximo taller.
  *  - Simulador: cada palanca subida se vuelve una acción («Acción»), que va al siguiente taller.
  *
@@ -97,6 +97,9 @@ const PlanificarTab = ({
         }
     };
 
+    // Próximos talleres ya no lleva acciones: las de cada taller se ven con las demás en el Plan.
+    const porHacer = useMemo(() => [...grupos.sinTaller, ...Object.values(grupos.porTaller).flat()],
+        [grupos]);
     const siguiente = siguienteTaller(events || []);
     // Sin taller elegido, va al siguiente que todavía no empezó (se cambia en el modal).
     const nueva = (extra = {}) => setBorrador({ ...extra, event_id: extra.event_id ?? siguiente?.id ?? null });
@@ -107,15 +110,12 @@ const PlanificarTab = ({
                 {events && actions ? (
                     <WorkshopProximosView
                         events={events} onEdit={onEdit} onDelete={onDelete} onProgramado={onProgramado}
-                        acciones={grupos.porTaller}
-                        onNuevaAccion={(taller) => nueva({ event_id: taller.id })}
-                        onTildar={tildar} onEditarAccion={setBorrador} onBorrarAccion={borrar}
                     />
                 ) : <EsqueletoProximos />}
                 {events && goals && actions ? (
                     <WorkshopAccionesView
                         events={realizados} goals={goals} actions={lista}
-                        sinTaller={grupos.sinTaller} pasadas={grupos.pasadas} talleres={talleres}
+                        sinTaller={porHacer} pasadas={grupos.pasadas} talleres={talleres}
                         formatCurrency={formatCurrency}
                         onNueva={() => nueva()} onTildar={tildar} onEditar={setBorrador} onBorrar={borrar} onAsignar={asignar}
                     />

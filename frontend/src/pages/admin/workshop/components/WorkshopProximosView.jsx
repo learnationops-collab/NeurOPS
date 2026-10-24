@@ -1,19 +1,18 @@
 import { useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { AlertTriangle, CalendarPlus, Check, Edit2, Loader2, MessageCircle, Plus, Radio, Trash2, Video } from 'lucide-react';
+import { AlertTriangle, CalendarPlus, Check, Edit2, Loader2, MessageCircle, Radio, Trash2, Video } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../../services/api';
 import { PanelCab } from '../../../comercial/components/Shared';
 import ModalPlan from '../planificar/ModalPlan';
-import FilaAccion from '../planificar/FilaAccion';
 import { talleresPorDelante } from '../planificar/plan';
 import {
     aInicioUtc, enLaLanding, esProximo, formatearInicio, nombreZona, sugerenciaProgramar, zonaNavegador,
 } from '../agendaTaller';
 
 /*
- * Próximos talleres: lo que antes se editaba en workshops.csv de institute-site, y desde el 16/10/2026
- * también lo que hay que cumplir en cada uno (sus acciones, que se tildan acá).
+ * Próximos talleres: lo que antes se editaba en workshops.csv de institute-site. Las acciones de cada
+ * taller se vieron acá del 16 al 24/10/2026; ahora van todas en el Plan de acciones.
  *
  * Las landings leen de /api/public/workshops/proximos la fecha, el Google Meet y el grupo de
  * WhatsApp de cada taller. Acá se ven y se cargan en la hora de quien mira el panel; el que
@@ -150,13 +149,7 @@ const Cuando = ({ taller }) => {
     return <><span className="wp-dia">{dia}</span><span className="wp-hora num">{hora}</span></>;
 };
 
-/**
- * `acciones`: las de cada taller, por id (ver `agruparAcciones`). Sin `acciones` se ve solo la
- * configuración de los talleres.
- */
-const WorkshopProximosView = ({
-    events, onEdit, onDelete, onProgramado, acciones, onNuevaAccion, onTildar, onEditarAccion, onBorrarAccion,
-}) => {
+const WorkshopProximosView = ({ events, onEdit, onDelete, onProgramado }) => {
     const [programando, setProgramando] = useState(false);
     const reducir = useReducedMotion();
     const ahora = new Date();
@@ -167,7 +160,7 @@ const WorkshopProximosView = ({
     return (
         <section className="panel wp-panel" id="wp-proximos" aria-label="Próximos talleres">
             <PanelCab titulo="Próximos talleres"
-                tip={`Horas en tu zona (${nombreZona()}). Lo que cambies se ve en las landings de institute en un minuto; quien entre desde otro país lo ve en su hora. Un taller sin link usa el del anterior. Cada taller lleva las acciones que hay que cumplir en él.`}>
+                tip={`Horas en tu zona (${nombreZona()}). Lo que cambies se ve en las landings de institute en un minuto; quien entre desde otro país lo ve en su hora. Un taller sin link usa el del anterior.`}>
                 <button type="button" className="btn btn--linea btn--sm" onClick={() => setProgramando(true)}>
                     <CalendarPlus aria-hidden="true" /> Programar semanas
                 </button>
@@ -186,11 +179,9 @@ const WorkshopProximosView = ({
                 <ol className="wp-talleres" aria-label="Talleres por delante">
                     {talleres.map((e, i) => {
                         const enLanding = Boolean(vigente && e.id === vigente.id);
-                        const suyas = acciones?.[e.id] || [];
-                        const hechas = suyas.filter((a) => a.status === 'done').length;
                         return (
                             <motion.li key={e.id} className="wp-taller" data-vigente={enLanding ? '1' : undefined}
-                                data-con-plan={acciones ? '1' : undefined} aria-label={e.name}
+                                aria-label={e.name}
                                 initial={reducir ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.22, delay: Math.min(i, 8) * 0.04 }}>
                                 <div className="wp-taller-id">
@@ -208,29 +199,6 @@ const WorkshopProximosView = ({
                                         <Enlace url={e.whatsapp_url} icon={MessageCircle} nombre="Grupo" heredado={i > 0} />
                                     </div>
                                 </div>
-
-                                {acciones && (
-                                    <div className="wp-taller-plan">
-                                        <div className="wp-plan-cab">
-                                            <span className="t-rotulo">Acciones</span>
-                                            {suyas.length > 0 && <span className="wp-cuenta num">{hechas}/{suyas.length}</span>}
-                                            <button type="button" className="wp-agregar" onClick={() => onNuevaAccion(e)}
-                                                aria-label={`Agregar acción a ${e.name}`}>
-                                                <Plus aria-hidden="true" /> Agregar
-                                            </button>
-                                        </div>
-                                        {suyas.length === 0 ? (
-                                            <p className="t-cap mut40">Sin acciones para este taller.</p>
-                                        ) : (
-                                            <ul className="wp-acciones" aria-label={`Acciones de ${e.name}`}>
-                                                {suyas.map((a) => (
-                                                    <FilaAccion key={a.id} accion={a} onTildar={onTildar}
-                                                        onEditar={onEditarAccion} onBorrar={onBorrarAccion} />
-                                                ))}
-                                            </ul>
-                                        )}
-                                    </div>
-                                )}
 
                                 <div className="wp-taller-btns">
                                     <button type="button" className="ibtn ibtn--sm" onClick={() => onEdit(e)} title="Editar taller" aria-label={`Editar ${e.name}`}>

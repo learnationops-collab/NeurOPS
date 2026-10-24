@@ -7,9 +7,9 @@ import { estimarImpacto } from '../planificar/plan';
 import { aggregateTotals, computeClarityScore, computeFuga, money, stageRates, ticketPromedio } from '../funnelMath';
 
 /**
- * El plan de acciones en números (impacto estimado, Clarity Score) y las acciones que no están en un
- * próximo taller: las que no tienen taller (todas las de antes del 16/10/2026) y las de talleres que
- * ya pasaron. Las de cada próximo taller se ven y se tildan en su fila, arriba.
+ * El plan de acciones en números (impacto estimado, Clarity Score) y todas las acciones: las de cada
+ * próximo taller (que ya no se ven en su fila, 24/10/2026), las que no tienen taller y las de talleres
+ * que ya pasaron. `sinTaller` trae las de los próximos talleres también.
  */
 const WorkshopAccionesView = ({
     events, goals, actions, sinTaller, pasadas, talleres, formatCurrency,
@@ -48,7 +48,7 @@ const WorkshopAccionesView = ({
     return (
         <section className="panel wp-panel" id="wp-acciones" aria-label="Plan de acciones">
             <PanelCab titulo="Plan de acciones"
-                tip="Pendientes sin un próximo taller: asignalas o tildalas.">
+                tip="Lo que falta hacer: tildalo o asignalo a un taller.">
                 <button type="button" className="btn btn--cta btn--sm" onClick={onNueva}>
                     <Plus aria-hidden="true" /> Nueva acción
                 </button>
@@ -65,11 +65,11 @@ const WorkshopAccionesView = ({
             </div>
 
             <div className="wp-sueltas">
-                <p className="t-rotulo">Sin un próximo taller {sueltas.length > 0 && <span className="wp-cuenta num">{sueltas.length}</span>}</p>
+                <p className="t-rotulo">Por hacer {sueltas.length > 0 && <span className="wp-cuenta num">{sueltas.length}</span>}</p>
                 {sueltas.length === 0 ? (
-                    <p className="t-cap mut40">Todas las acciones pendientes tienen un próximo taller.</p>
+                    <p className="t-cap mut40">No hay acciones por hacer.</p>
                 ) : (
-                    <ul className="wp-acciones" aria-label="Acciones sin un próximo taller">
+                    <ul className="wp-acciones" aria-label="Acciones por hacer">
                         {sueltas.map((a) => fila(a, true))}
                     </ul>
                 )}

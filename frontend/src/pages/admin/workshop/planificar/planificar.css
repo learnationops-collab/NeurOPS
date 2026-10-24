@@ -43,14 +43,15 @@
     background: transparent; color: var(--text-muted); }
 
 /* --- Próximos talleres --------------------------------------------------------------------- */
-.dc-shell .wp-talleres { display: grid; gap: var(--s2); margin: 0; padding: 0; list-style: none; }
+/* Alto fijo con scroll propio: la lista crece con los talleres programados y no empuja al simulador. */
+.dc-shell .wp-talleres { display: grid; gap: var(--s2); margin: 0; padding: 0 var(--s1) 0 0; list-style: none;
+    max-height: 460px; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
 .dc-shell .wp-taller {
     position: relative; display: grid; gap: var(--s3) var(--s4); align-items: start;
     grid-template-columns: minmax(0, 1fr) auto;
     padding: var(--s3) var(--s4); border-radius: var(--radius-control);
     background: var(--mat-0); border: 1px solid var(--border-subtle);
 }
-.dc-shell .wp-taller[data-con-plan] { grid-template-columns: minmax(240px, 290px) minmax(0, 1fr) auto; }
 .dc-shell .wp-taller[data-vigente] { border-color: var(--brand-secondary-border); background: var(--brand-secondary-surface); }
 .dc-shell .wp-taller-id { display: grid; gap: 6px; min-width: 0; }
 .dc-shell .wp-cuando { display: flex; align-items: baseline; gap: var(--s2); flex-wrap: wrap; min-width: 0; }
@@ -63,20 +64,7 @@
 .dc-shell .wp-enlaces .chip svg { width: 12px; height: 12px; }
 .dc-shell a.wp-enlace:hover { background: color-mix(in srgb, var(--c) 24%, transparent); }
 
-.dc-shell .wp-taller-plan { display: grid; gap: 6px; min-width: 0; padding-left: var(--s4);
-    border-left: 1px solid var(--border-subtle); }
-.dc-shell .wp-plan-cab { display: flex; align-items: center; gap: 6px; min-height: 28px; }
-.dc-shell .wp-plan-cab .wp-agregar { margin-left: auto; }
 .dc-shell .wp-taller-btns { display: flex; gap: 6px; }
-
-@container (max-width: 620px) {
-    .dc-shell .wp-taller[data-con-plan] { grid-template-columns: minmax(0, 1fr) auto; }
-    .dc-shell .wp-taller[data-con-plan] .wp-taller-plan {
-        grid-column: 1 / -1; grid-row: 2; padding-left: 0; padding-top: var(--s3);
-        border-left: 0; border-top: 1px solid var(--border-subtle);
-    }
-    .dc-shell .wp-taller[data-con-plan] .wp-taller-btns { grid-column: 2; grid-row: 1; }
-}
 
 /* --- Una acción ---------------------------------------------------------------------------- */
 .dc-shell .wp-acciones { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; min-width: 0; }

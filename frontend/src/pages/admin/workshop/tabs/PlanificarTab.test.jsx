@@ -66,15 +66,15 @@ describe('Workshop › Planificar', () => {
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
-    it('las acciones sin taller siguen a la vista y se asignan a un próximo', async () => {
+    it('las acciones por hacer (con o sin taller) siguen a la vista y se asignan a un próximo', async () => {
         api.put.mockResolvedValue({ data: {} });
         const vieja = { id: 7, title: 'Mejorar el botón de WhatsApp', status: 'pending', stage_key: 'whatsapp', event_id: null, score: 3 };
         const delTaller = { id: 8, title: 'Recordatorio 1 h antes', status: 'pending', stage_key: null, event_id: 2, score: 3 };
         montar({ actions: [vieja, delTaller] });
 
-        const sueltas = within(screen.getByRole('list', { name: 'Acciones sin un próximo taller' }));
+        const sueltas = within(screen.getByRole('list', { name: 'Acciones por hacer' }));
         expect(sueltas.getByText('Mejorar el botón de WhatsApp')).toBeInTheDocument();
-        expect(within(screen.getByRole('list', { name: 'Acciones de WEBINAR 19' })).getByText('Recordatorio 1 h antes')).toBeInTheDocument();
+        expect(sueltas.getByText('Recordatorio 1 h antes')).toBeInTheDocument();
 
         await userEvent.selectOptions(sueltas.getByRole('combobox', { name: 'Taller de Mejorar el botón de WhatsApp' }), '2');
         expect(api.put).toHaveBeenCalledWith('workshop/actions/7', { event_id: 2 });
