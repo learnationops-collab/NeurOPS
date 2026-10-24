@@ -20,6 +20,7 @@ export const MINIMO_DE_LEADS = 10;
 export const REFERENCIA = {
     entrantes: { mejor: 'mas', por: 'fila' },
     calificados: { mejor: 'mas', campo: 'pct_calificados', muestra: true },
+    pct_calificados: { mejor: 'mas', muestra: true },
     descalificados: { mejor: 'menos', campo: 'pct_descalificados', muestra: true },
     sin_respuesta: { mejor: 'menos', campo: 'pct_sin_respuesta', muestra: true },
     cpl: { mejor: 'menos', muestra: true },

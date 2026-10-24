@@ -1,8 +1,8 @@
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { Tip } from '../../../comercial/components/Shared';
-import { COLUMNAS, formatear } from './metricas';
+import { formatear } from './metricas';
 import { REFERENCIA, explicacion, tonoDe } from './tonos';
-import { CORTO } from './columnasTabla';
+import { COLUMNAS_TABLA, CORTO } from './columnasTabla';
 
 /**
  * Las celdas y los encabezados de la tabla de Rendimiento: una métrica sola o un grupo juntado
@@ -75,7 +75,7 @@ export const Encabezado = ({ pieza, orden, ordenarPor, ariaOrden, vista }) => {
 
 /** La referencia escrita como la métrica: un porcentaje, un monto o un número (para el `title`). */
 const textoReferencia = (moneda) => (valor, key) => {
-    const col = COLUMNAS.find((c) => c.key === key);
+    const col = COLUMNAS_TABLA.find((c) => c.key === key);
     if (REFERENCIA[key]?.campo) return formatear(Math.round(valor * 10) / 10, 'pct');
     if (col.formato === 'num') return formatear(Math.round(valor * 10) / 10, 'num');
     return formatear(valor, col.formato, moneda);
