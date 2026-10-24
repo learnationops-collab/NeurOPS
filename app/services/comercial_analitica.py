@@ -501,14 +501,21 @@ def _sub(label, tone, vals):
     return {'label': label, 'tone': tone, 'vals': vals}
 
 
-def _por_categoria(dias, filas, fecha_de, categoria_de, valor_de=None, tonos=(), maximo=4):
+def _por_categoria(dias, filas, fecha_de, categoria_de, valor_de=None, tonos=(), maximo=4, fijas=None):
     """Sub-series de una serie abierta por categoría (forma de pago, programa, fuente).
 
     Las categorías salen de los DATOS y no de una lista fija: el prototipo traía "Ads IG /
     Orgánico / Workshop / DM directo" de sus mocks, y una lista fija esconde cualquier fuente
     nueva y muestra vacías las que no existen. Se ordenan por volumen y se quedan las primeras
     `maximo`, porque una tira de quince pestañas no se lee.
+
+    `fijas` impone las categorías (y su orden): es lo que usa el desglose por persona para repartir
+    las sub-series DEL EQUIPO, aunque una persona sola tenga una categoría o ninguna.
     """
+    if fijas is not None:
+        return [_sub(cat, tonos[i % len(tonos)] if tonos else 'info',
+                     _serie(dias, filas, fecha_de, valor_de, lambda f, c=cat: categoria_de(f) == c))
+                for i, cat in enumerate(fijas)]
     totales = {}
     for f in filas:
         cat = categoria_de(f)
@@ -526,26 +533,47 @@ def _por_categoria(dias, filas, fecha_de, categoria_de, valor_de=None, tonos=(),
 CAT_TONOS = ('cat-1', 'cat-2', 'cat-3', 'cat-4')
 
 
-def variabilidad(rol, start, end, miembro_id=None):
+def variabilidad(rol, start, end, miembro_id=None, prev_start=None, prev_end=None):
     """Las series por día de la pestaña Variabilidad, para el rol pedido.
 
     Se arma sobre las MISMAS filas que el dashboard y la tabla (`ComercialService.agendas` /
     `.ventas` / `.leads`), no con otra consulta: el total de una serie tiene que dar el número que
     muestra el tile de arriba, y con dos fuentes eso no se sostiene.
+
+    `dias` y `series` son la forma de siempre. Lo que ayuda a ver los CAMBIOS (el período anterior,
+    la semana anterior y el desglose por persona) lo agrega `comercial_variabilidad.completar` como
+    claves nuevas, sin tocar las existentes.
     """
+    from app.services import comercial_variabilidad
+
     dias = _dias_del(start, end)
     nombre = ComercialService.nombre_de(miembro_id)
 
+    filas = None
     if rol == ROL_SETTERS:
         series = _series_setters(dias, start, end, miembro_id)
     else:
-        series = _series_closers(dias, start, end, miembro_id, nombre)
-    return {'dias': dias, 'series': series}
+        filas = _filas_closers(start, end, miembro_id, nombre)
+        series = _series_closers_de_filas(dias, *filas)
+    salida = {'dias': dias, 'series': series}
+    comercial_variabilidad.completar(salida, rol, start, end, miembro_id, prev_start, prev_end, filas)
+    return salida
+
+
+def _filas_closers(start, end, closer_id, closer_nombre):
+    """(agendas, ventas) del período: las filas de las que salen todas las series del closer."""
+    return (ComercialService.agendas(start, end, closer_id=closer_id),
+            ComercialService.ventas(start, end, closer_nombre=closer_nombre))
 
 
 def _series_closers(dias, start, end, closer_id, closer_nombre):
-    agendas = ComercialService.agendas(start, end, closer_id=closer_id)
-    ventas = ComercialService.ventas(start, end, closer_nombre=closer_nombre)
+    return _series_closers_de_filas(dias, *_filas_closers(start, end, closer_id, closer_nombre))
+
+
+def _series_closers_de_filas(dias, agendas, ventas, fijas=None):
+    """Las series del closer sobre filas ya leídas: así el desglose por persona reparte las mismas
+    filas sin volver a consultar. `fijas`: `{'ventas': [...], 'programas': [...]}`, las categorías del
+    equipo (ver `_por_categoria`)."""
     monto = lambda f: f['monto']  # noqa: E731
 
     es_venta = lambda f: f['es_venta']  # noqa: E731
@@ -576,7 +604,8 @@ def _series_closers(dias, start, end, closer_id, closer_nombre):
                  'promedio — que es justamente lo que esta pestaña deja ver.',
          'series': [_sub('Todas', 'success', _serie(dias, ventas, _dia_de_venta, None, es_venta))]
                    + _por_categoria(dias, [f for f in ventas if f['es_venta']], _dia_de_venta,
-                                    lambda f: f['tipo_pago']['label'], None, CAT_TONOS)},
+                                    lambda f: f['tipo_pago']['label'], None, CAT_TONOS,
+                                    fijas=(fijas or {}).get('ventas'))},
         {'key': 'showup', 'label': 'Show up', 'unidad': '%', 'tone': 'success', 'tipo': 'tasa',
          'help': 'Qué porcentaje se presentó cada día, sobre las llamadas que ya tuvieron '
                  'resultado. Los días en cero son días sin llamadas, no días con show up cero.',
@@ -589,7 +618,7 @@ def _series_closers(dias, start, end, closer_id, closer_nombre):
          'help': 'Cash cobrado por día, abierto por programa. Aislá uno para ver su ritmo propio.',
          'series': [_sub('Todos', 'brand-secondary', _serie(dias, ventas, _dia_de_venta, monto))]
                    + _por_categoria(dias, ventas, _dia_de_venta, lambda f: f['programa'],
-                                    monto, CAT_TONOS)},
+                                    monto, CAT_TONOS, fijas=(fijas or {}).get('programas'))},
     ]
 
 
