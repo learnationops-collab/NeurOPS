@@ -65,13 +65,13 @@ def get_entrantes():
     Entra quien tuvo alguna interacción en [desde, hasta] (días, ambos incluidos). De cada uno: su
     palabra clave (la de su primera interacción, resuelta como en Rendimiento), la campaña y el conjunto
     de Meta de esa palabra clave, el estado (calificado, descalificado, en conversación o sin respuesta,
-    con las mismas reglas que Rendimiento) y la etapa del flujo de ManyChat: el último mensaje que se le
+    con la regla de `calificacion_service`, la misma que Rendimiento) y la etapa del flujo de ManyChat: el último mensaje que se le
     mandó (`id_option_send`) y el último que contestó (`id_option`), con su nombre del catálogo de
     mensajes. Cada setter ve solo los suyos, como en el monitor.
     """
     from datetime import date, datetime, time, timedelta
     from app.models import ConversationalMessage, LeadAnswer, Conversation, MetaAnuncio
-    from app.services import anuncios_service as servicio
+    from app.services import anuncios_service as servicio, calificacion_service
 
     def dia(valor, defecto):
         try:
@@ -115,14 +115,16 @@ def get_entrantes():
 
     leads = {l.id: l for tanda in servicio._en_tandas(lead_ids)
              for l in Conversation.query.filter(Conversation.id.in_(tanda))}
+    descalificados = calificacion_service.por_closer()
     filas = []
     for lead_id in lead_ids:
         lead, historia = leads.get(lead_id), interacciones.get(lead_id, [])
         if not lead or not historia:
             continue
         clave = next((h[1] for h in historia if h[1]), None)
-        calificacion = next((h[2] for h in reversed(historia) if h[2] in ('true', 'false')), None)
-        respondio = any(h[3] for h in historia)
+        de_manychat = calificacion_service.ultima_de_manychat(h[2] for h in historia)
+        calificacion = calificacion_service.efectiva(de_manychat, historia[0][0], descalificados.get(lead_id))
+        respondio = any(h[3] for h in historia) or calificacion is not None
         estado = ('calificado' if calificacion == 'true' else 'descalificado' if calificacion == 'false'
                   else 'en_conversacion' if respondio else 'sin_respuesta')
         campana, conjunto = grupo_de_clave.get(clave, (None, None))
@@ -139,6 +141,9 @@ def get_entrantes():
             'campana': campana,
             'conjunto': conjunto,
             'estado': estado,
+            # Descalificado por el closer aunque ManyChat lo había calificado (calificacion_service).
+            'descalificado_por_closer': calificacion == 'false' and de_manychat != 'false',
+            'respondio': respondio,
             'ultimo_enviado': mensaje(paso.get('enviado')),
             'ultimo_respondido': mensaje(paso.get('respondido')),
             'interacciones': len(historia),

@@ -9,7 +9,8 @@ Marketing es una tabla al estilo del Administrador de anuncios de Meta, una fila
     una vez por palabra clave, el día de su PRIMERA interacción con ella (sus otros webhooks del
     mismo flujo no suman). Si después vuelve por otro anuncio, cuenta también en ese.
   · **Calificados / Descalificados**: el último valor de `cualificacion` que mandó ManyChat para esa
-    persona y esa palabra clave. El resto está pendiente, en dos partes (Kerwin 16/10/2026: «hay leads
+    persona y esa palabra clave, con la descalificación posterior del closer (`calificacion_service`).
+    El resto está pendiente, en dos partes (Kerwin 16/10/2026: «hay leads
     que se quedan en el inicio»): **En conversación** respondió algún mensaje del flujo (`id_option`,
     el mensaje que contestó, distinto de 0) y **Sin respuesta** nunca contestó la apertura.
   · **Agendas**: las agendas creadas en el período (sin el marcador «Cualificado» del setter), una por
@@ -37,6 +38,7 @@ from app.models import Ad, AdPeriodSpend, AdSet, Appointment, Client, FinancialS
 from app.models import MetaAnuncio, MetaGastoDiario
 from app.models.marketing import clave_de_palabra as clave_de  # noqa: F401  (lo importa meta_ads_service)
 from app.services.comercial_service import ComercialService, clientes_de_ventas, no_es_marcador, venta_completada
+from app.services import calificacion_service
 from app.services.cruce_conversaciones import Cruce
 from app.services.identity_service import normalize_ig
 # Partido en módulos (regla de las 500 líneas): se re-exporta todo para que `anuncios_service.X` siga igual.
@@ -98,6 +100,7 @@ def _entrantes(desde_dt, hasta_dt, clave_de_anuncio):
         LeadAnswer.created_at >= desde_dt, LeadAnswer.created_at <= hasta_dt).distinct()}
     por_clave = defaultdict(lambda: {'entrantes': 0, 'calificados': 0, 'descalificados': 0,
                                      'en_conversacion': 0, 'dias': defaultdict(lambda: [0, 0, 0, 0])})
+    descalificados = calificacion_service.por_closer()
     for lead_id, filas in _interacciones(lead_ids, clave_de_anuncio).items():
         primera, calificacion, respondio = {}, {}, set()
         for creada, clave, valor, contesto in filas:
@@ -109,6 +112,8 @@ def _entrantes(desde_dt, hasta_dt, clave_de_anuncio):
         for clave, cuando in primera.items():
             if not (desde_dt <= cuando <= hasta_dt):
                 continue
+            calificacion[clave] = calificacion_service.efectiva(
+                calificacion.get(clave), cuando, descalificados.get(lead_id))
             fila = por_clave[clave]
             dia = fila['dias'][cuando.date().isoformat()]
             fila['entrantes'] += 1
