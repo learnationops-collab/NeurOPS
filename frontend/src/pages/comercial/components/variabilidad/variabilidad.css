@@ -1,0 +1,121 @@
+/* Variabilidad: las capas que se superponen a la serie por día.
+   Los gráficos base (.serie, .curva, .mapa-dias) viven en comercial.css; acá solo lo que se suma. */
+
+.dc-shell .capas-rotulo{margin-left:var(--s3)}
+
+/* --- Encima de las barras --- */
+.dc-shell .serie-caja{position:relative}
+.dc-shell .serie-capas{position:absolute;left:0;top:0;width:100%;height:118px;pointer-events:none;
+  overflow:visible;animation:vbCapaRevela .9s var(--crecer) backwards}
+.dc-shell .capa-g{animation:vbCapaFundido .6s ease backwards}
+.dc-shell .capa-banda{fill:color-mix(in srgb,var(--text-on-surface) 8%,transparent)}
+.dc-shell .capa-media{stroke:var(--text-muted-40);stroke-width:1;stroke-dasharray:4 4;
+  vector-effect:non-scaling-stroke}
+.dc-shell .capa-ref,.dc-shell .capa-mm,.dc-shell .capa-ritmo,.dc-shell .capa-meta{fill:none;
+  stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.dc-shell .capa-ref{stroke:var(--text-on-surface);stroke-width:1.75;opacity:.7}
+.dc-shell .capa-mm{stroke:var(--brand-secondary);stroke-width:2.25}
+.dc-shell .capa-ritmo{stroke-width:1.75;stroke-dasharray:5 4}
+.dc-shell .capa-meta{stroke:var(--warning);stroke-width:1.5;stroke-dasharray:2 4}
+
+/* Un día que todavía no pasó: está en el eje pero no es un dato. */
+.dc-shell .serie-fut{opacity:.35}
+.dc-shell .serie > i{position:relative}
+.dc-shell .serie > i.serie-foco,.dc-shell .mapa-dia.serie-foco{
+  outline:2px solid var(--text-on-surface);outline-offset:1px}
+.dc-shell .serie > i.serie-pico::after,.dc-shell .serie > i.serie-caida::after,
+.dc-shell .serie > i.serie-cero::after{position:absolute;left:50%;bottom:calc(100% + 2px);
+  transform:translateX(-50%);font-size:8px;line-height:1}
+.dc-shell .serie > i.serie-pico::after{content:'▲';color:var(--success)}
+.dc-shell .serie > i.serie-caida::after{content:'▼';color:var(--error)}
+.dc-shell .serie > i.serie-cero::after{content:'○';color:var(--warning)}
+
+/* Barras apiladas por persona: cada tramo vale lo que puso esa persona. */
+.dc-shell .serie > i.serie-apilada{display:flex;flex-direction:column-reverse;overflow:visible}
+.dc-shell .serie > i.serie-apilada > b{display:block;flex-basis:0;min-height:0;
+  box-shadow:0 -1px 0 var(--bg-element)}
+.dc-shell .serie > i.serie-apilada > b:first-child{border-radius:0 0 2px 2px}
+.dc-shell .serie > i.serie-apilada > b:last-child{border-radius:4px 4px 0 0}
+
+/* --- Curva y mapa --- */
+.dc-shell .curva-marca{position:absolute;width:7px;height:7px;border-radius:50%;
+  transform:translate(-50%,-50%);box-shadow:0 0 0 2px var(--bg-element)}
+.dc-shell .curva-marca--pico{background:var(--success)}
+.dc-shell .curva-marca--caida{background:var(--error)}
+.dc-shell .curva-marca--cero{background:var(--bg-element);border:2px solid var(--warning)}
+.dc-shell .mapa-dia{position:relative}
+.dc-shell .mapa-dia small{position:absolute;top:3px;right:4px;font-size:7px;line-height:1}
+.dc-shell .mapa-dia--pico{box-shadow:inset 0 0 0 2px var(--success)}
+.dc-shell .mapa-dia--caida{box-shadow:inset 0 0 0 2px var(--error)}
+.dc-shell .mapa-dia--cero{box-shadow:inset 0 0 0 2px var(--warning)}
+
+/* --- Cabecera, leyenda y avisos --- */
+.dc-shell .serie-total{display:inline-flex;align-items:center;justify-content:flex-end;gap:var(--s2)}
+.dc-shell .serie-ley{display:flex;flex-wrap:wrap;gap:4px var(--s4);margin-top:var(--s2)}
+.dc-shell .serie-ley:empty{display:none}
+.dc-shell .serie-ley > span{display:inline-flex;align-items:center;gap:6px;min-width:0}
+.dc-shell .serie-ley i{display:inline-block;flex-shrink:0}
+.dc-shell .ley-ref{width:16px;border-top:2px solid var(--text-on-surface);opacity:.7}
+.dc-shell .ley-mm{width:16px;border-top:2.25px solid var(--brand-secondary)}
+.dc-shell .ley-banda{width:14px;height:9px;border-radius:2px;
+  background:color-mix(in srgb,var(--text-on-surface) 16%,transparent)}
+.dc-shell .ley-persona{width:9px;height:9px;border-radius:3px}
+.dc-shell .ley-pico{color:var(--success)}
+.dc-shell .ley-caida{color:var(--error)}
+.dc-shell .ley-cero{color:var(--warning)}
+
+.dc-shell .atipicos{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:var(--s3)}
+.dc-shell .atipico{--c:var(--success);display:inline-flex;align-items:center;gap:6px;height:26px;
+  padding:0 10px;border-radius:var(--radius-pill);font-size:11.5px;font-weight:700;white-space:nowrap;
+  max-width:100%;min-width:0;color:var(--text-on-surface);cursor:pointer;
+  font-variant-numeric:tabular-nums;
+  background:color-mix(in srgb,var(--c) 12%,transparent);
+  border:1px solid color-mix(in srgb,var(--c) 34%,transparent);
+  transition:background-color .16s ease,border-color .16s ease}
+.dc-shell .atipico b{color:var(--c);font-size:9px}
+.dc-shell .atipico:hover,.dc-shell .atipico[aria-pressed="true"]{
+  background:color-mix(in srgb,var(--c) 24%,transparent);
+  border-color:color-mix(in srgb,var(--c) 58%,transparent)}
+.dc-shell .atipico:focus-visible{outline:2px solid var(--brand-secondary);outline-offset:2px}
+.dc-shell .atipico--caida{--c:var(--error)}
+.dc-shell .atipico--cero{--c:var(--warning)}
+
+/* --- Acumulado --- */
+.dc-shell .acum{margin-top:var(--s3)}
+.dc-shell .acum-lienzo{position:relative;height:56px}
+.dc-shell .acum-lienzo svg{display:block;width:100%;height:100%;overflow:visible}
+.dc-shell .acum-pie{display:flex;flex-wrap:wrap;gap:2px var(--s4);margin-top:6px}
+
+/* --- Detalle de un día --- */
+.dc-shell .dia-det{margin-top:var(--s3);padding:var(--s3);border-radius:var(--radius-control);
+  background:var(--hundido);border:1px solid var(--border-subtle);
+  animation:vbDetalleEntra .3s var(--crecer) backwards}
+.dc-shell .dia-det-cab{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px var(--s3)}
+.dc-shell .dia-det-cab > b{font-size:13px;font-weight:900}
+.dc-shell .dia-det-val{font-size:15px;font-weight:900}
+.dc-shell .dia-det-der{margin-left:auto;display:inline-flex;align-items:center;gap:var(--s2)}
+.dc-shell .dia-det-lider{margin:var(--s2) 0 0}
+.dc-shell .dia-pers{list-style:none;margin:var(--s2) 0 0;padding:0;display:grid;gap:6px}
+.dc-shell .dia-pers > li{display:grid;grid-template-columns:9px minmax(64px,1.2fr) minmax(36px,1fr) auto auto;
+  gap:var(--s2);align-items:center;font-size:12px;min-width:0;transition:opacity .2s ease}
+.dc-shell .dia-pers--quieta{opacity:.5}
+.dc-shell .pers-punto{width:9px;height:9px;border-radius:3px}
+.dc-shell .pers-nom{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-shell .pers-barra{height:6px;border-radius:3px;background:var(--hueco);overflow:hidden}
+.dc-shell .pers-barra > i{display:block;height:100%;border-radius:3px;
+  transition:width .6s var(--crecer)}
+.dc-shell .pers-val{font-weight:900;text-align:right;white-space:nowrap}
+.dc-shell .pers-val small{font-size:10px;font-weight:600}
+.dc-shell .pers-dif{min-width:54px;text-align:right;font-weight:700;white-space:nowrap}
+
+@media (max-width:560px){
+  .dc-shell .dia-pers > li{grid-template-columns:9px minmax(0,1fr) auto auto}
+  .dc-shell .pers-barra{display:none}
+}
+
+@keyframes vbCapaRevela{from{clip-path:inset(-20% 100% -20% 0)}to{clip-path:inset(-20% -2% -20% 0)}}
+@keyframes vbCapaFundido{from{opacity:0}to{opacity:1}}
+@keyframes vbDetalleEntra{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  .dc-shell .serie-capas,.dc-shell .capa-g,.dc-shell .dia-det{animation:none}
+}
