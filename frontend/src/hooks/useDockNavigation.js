@@ -95,7 +95,9 @@ const useDockNavigation = () => {
         } else if (user?.role === 'director_marketing') {
             // Rol enfocado en marketing: talleres/workshops y anuncios (Instagram,
             // UTMs, tráfico de landings), sin acceso al resto del panel de admin.
+            // «Todos» compara Setting con Workshop; cada uno de los otros dos mira solo lo suyo.
             return [
+                { id: 'todos', icon: Layers, label: 'Todos', path: '/admin/todos' },
                 { id: 'workshops', icon: BarChart3, label: 'Workshops', path: '/admin/workshops' },
                 { id: 'marketing', icon: Activity, label: 'Setting', path: '/admin/marketing' }
             ];

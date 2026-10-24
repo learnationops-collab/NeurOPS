@@ -45,6 +45,7 @@ import FormsManagementPage from './pages/shared/FormsManagementPage';
 
 import AdminSalesHubPage from './pages/admin/reports/AdminSalesHubPage';
 import AdminMarketingHubPage from './pages/admin/marketing/AdminMarketingHubPage';
+import TodosPage from './pages/admin/marketing/TodosPage';
 import WorkshopDashboardPage from './pages/admin/workshop/WorkshopDashboardPage';
 import HiringDashboardPage from './pages/admin/hiring/HiringDashboardPage';
 
@@ -248,6 +249,16 @@ function App() {
             <Route
               path="/admin/payroll"
               element={<Navigate to="/finanzas?s=payroll" replace />}
+            />
+            <Route
+              path="/admin/todos"
+              element={
+                <ProtectedRoute roles={['admin', 'director_marketing']}>
+                  <MainLayout>
+                    <TodosPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
             />
             <Route
               path="/admin/marketing"
