@@ -127,3 +127,26 @@ def test_buscar_un_cliente_por_palabras_y_sin_tildes(equipo):
     for texto in ('Carla Diaz', 'carla díaz', 'Díaz'):
         assert [c['student_id'] for c in conector.find_people(ana, texto)] == [clientes[ana.id].id]
     assert conector.people_named(ana, ['diaz']) == [clientes[ana.id].id]
+
+
+def test_el_arroba_encuentra_sus_clientes_y_al_equipo(equipo, make_user):
+    """El "@" del chat (ADR-W012): sus clientes, sin tildes, y la gente activa del equipo; quien empieza así,
+    primero."""
+    ana, _, _, clientes = equipo
+    make_user(role='setter', username='Dianela')
+    r = conector.mentions(ana, 'dia')
+    assert [(x['tipo'], x['id']) for x in r if x['tipo'] == 'persona'] == [('persona', clientes[ana.id].id)]
+    assert [x['nombre'] for x in r if x['tipo'] == 'equipo'][0] == 'Dianela'
+    assert conector.mentions(ana, 'x') == []
+
+
+def test_una_accion_simple_llega_con_persona_y_equipo(equipo):
+    """Las acciones sin IA mandan persona_id y equipo_id en vez de cliente_id y para."""
+    ana, beto, _, clientes = equipo
+    entrada = {'tipo': 'aviso', 'texto': 'Llamalo', 'persona_id': clientes[ana.id].id, 'equipo_id': beto.id}
+    accion, error = conector.propose_action(ana, entrada)
+    assert error is None
+    assert accion['datos'] == {'autor_id': ana.id, 'cliente_id': clientes[ana.id].id, 'para_id': beto.id}
+    _, error = conector.propose_action(ana, {'tipo': 'comentario', 'texto': 'x', 'persona_id': clientes[beto.id].id})
+    assert error and 'no es tuyo' in error
+    assert [a['tipo'] for a in conector.handle('actions', {})] == ['comentario', 'aviso']

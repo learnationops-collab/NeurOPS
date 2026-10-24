@@ -911,3 +911,7 @@
 - **24 de Octubre de 2026 (Entrar con Google desde la app móvil)** *([app/api/auth_google_movil.py](../../app/api/auth_google_movil.py) [NEW], [app/services/login_google.py](../../app/services/login_google.py), [app/api/google_calendar.py](../../app/api/google_calendar.py))*:
   - La app móvil (`learnation-movil`) abre `GET /api/auth/google/movil/inicio?reto=` en el navegador del teléfono; Google vuelve al mismo `/google/callback` y este entrega a la app un código firmado de 2 minutos por su esquema (`learnation://auth?code=`), que la app canjea con `POST /api/auth/google/movil/canje`.
   - El código va atado a un reto (SHA-256 del verificador que solo conoce la app, estilo PKCE). El login web de Google no cambia: la rama móvil solo se activa si la sesión trae el reto. Sin verificar contra Google real; falta probarlo en el teléfono.
+
+- **24 de Octubre de 2026 (Learnito · "@", nombrar lo seleccionado y acciones con "/")** *([app/api/copiloto.py](../../app/api/copiloto.py), [app/services/learnito_conector.py](../../app/services/learnito_conector.py), [menciones.js](../../frontend/src/pages/copiloto/menciones.js) [NEW], [LearnitoChat.jsx](../../frontend/src/pages/copiloto/LearnitoChat.jsx))*:
+  - "@" en el redactor: busca los clientes de quien escribe y la gente activa del equipo, por palabras y sin tildes. Un texto seleccionado se convierte en nombre con "Nombrar".
+  - "/" lista las acciones simples (comentario, aviso). Con "/" o con una frase clara, el cerebro de la Academia arma la tarjeta sin IA y sin costo. ADR-W012 y su ADR-194.
