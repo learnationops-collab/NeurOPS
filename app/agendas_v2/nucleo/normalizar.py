@@ -125,7 +125,7 @@ def normal_pregunta(q):
                 'descalifica': o.get('descalifica') is True,
             }
         )
-    return {
+    out = {
         'id': cortar(txt(q.get('id')) or uid('q'), 40),
         'tipo': t,
         'titulo': cortar(txt(q.get('titulo')), 300),
@@ -136,19 +136,24 @@ def normal_pregunta(q):
         'esNombre': q.get('esNombre') is True,
         'peso': entero(q.get('peso'), 0, 5, 1 if con_opciones(t) else 0),
         'opciones': opciones,
-        # Si cuenta para el segmento A/B/C/D: '' no, 'cuenta' sí, 'clave' sí y sin respuesta no hay segmento.
-        'segmento': q.get('segmento') if q.get('segmento') in ('cuenta', 'clave') and con_opciones(t) else '',
     }
+    # Si cuenta para el segmento A/B/C/D: 'cuenta', o 'clave' (sin respuesta no hay segmento). Si no cuenta,
+    # la clave no se escribe: así los formularios y eventos publicados de antes quedan idénticos.
+    if q.get('segmento') in ('cuenta', 'clave') and con_opciones(t):
+        out['segmento'] = q['segmento']
+    return out
 
 
 def normal_segmento(s):
     """Cortes del segmento en % del puntaje (A ≥ a, B ≥ b, C ≥ c), la incertidumbre de los puntos (sigma,
-    en %) y la versión de los puntos. Inactivo, el formulario no segmenta."""
+    en %) y la versión de los puntos. None si no está activo: el formulario no segmenta."""
     s = obj(s)
+    if s.get('activo') is not True:
+        return None
     a = entero(s.get('a'), 0, 100, 69)
     b = min(a, entero(s.get('b'), 0, 100, 54))
     return {
-        'activo': s.get('activo') is True,
+        'activo': True,
         'a': a,
         'b': b,
         'c': min(b, entero(s.get('c'), 0, 100, 31)),
@@ -193,6 +198,7 @@ def normal_form(id, d):
         ps.append(q)
     fin = obj(d.get('fin'))
     texto_fin = FIN_DEF['texto'] if fin.get('texto') is None else js_str(fin.get('texto'))
+    seg = normal_segmento(d.get('segmento'))
     return {
         'id': id,
         'nombre': cortar(txt(d.get('nombre'), 'Sin nombre'), 80),
@@ -200,7 +206,8 @@ def normal_form(id, d):
         'preguntas': ps,
         'reglas': normal_reglas(d.get('reglas')),
         'resto': txt(d.get('resto')),
-        'segmento': normal_segmento(d.get('segmento')),
+        # Solo si segmenta: sin la clave, lo publicado antes queda idéntico.
+        **({'segmento': seg} if seg else {}),
         # url: la página a la que va el que no califica (la landing de descalificados); vacía, ve el título y el texto.
         'fin': {'titulo': cortar(txt(fin.get('titulo'), FIN_DEF['titulo']), 120), 'texto': cortar(texto_fin, 300),
                 'url': url_ok(fin.get('url'))},

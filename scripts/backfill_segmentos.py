@@ -85,7 +85,7 @@ def main(apply=False, force=False):
     with app.app_context():
         fila = db.session.get(SchedFormulario, FORM_ID)
         form = normal_form(FORM_ID, fila.datos if fila else {})
-        if not form['segmento']['activo']:
+        if not form.get('segmento'):
             raise SystemExit('El formulario no tiene la segmentación activa: correr antes scripts/segmentos_formulario.py --apply')
 
         conteo = Counter()

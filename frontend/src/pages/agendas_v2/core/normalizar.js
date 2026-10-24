@@ -57,18 +57,20 @@ export function normalPregunta(q) {
             o = typeof o === 'string' ? { texto: o } : (o || {});
             return { id: String(o.id || uid('o')).slice(0, 40), texto: String(o.texto || '').slice(0, 200), corto: String(o.corto || '').slice(0, 40), puntos: entero(o.puntos, 0, 10, null), descalifica: o.descalifica === true };
         }),
-        // Si cuenta para el segmento A/B/C/D: '' no, 'cuenta' sí, 'clave' sí y sin respuesta no hay segmento.
-        segmento: (q.segmento === 'cuenta' || q.segmento === 'clave') && conOpciones(t) ? q.segmento : '',
+        // Si cuenta para el segmento A/B/C/D: 'cuenta', o 'clave' (sin respuesta no hay segmento). Si no cuenta,
+        // la clave no se escribe: así los formularios y eventos publicados de antes quedan idénticos.
+        ...((q.segmento === 'cuenta' || q.segmento === 'clave') && conOpciones(t) ? { segmento: q.segmento } : {}),
     };
 }
 
 // Cortes del segmento en % del puntaje (A ≥ a, B ≥ b, C ≥ c), la incertidumbre de los puntos (sigma, en %)
-// y la versión de los puntos. Inactivo, el formulario no segmenta.
+// y la versión de los puntos. null si no está activo: el formulario no segmenta.
 export function normalSegmento(s) {
     s = s && typeof s === 'object' ? s : {};
+    if (s.activo !== true) return null;
     const a = entero(s.a, 0, 100, 69);
     const b = Math.min(a, entero(s.b, 0, 100, 54));
-    return { activo: s.activo === true, a, b, c: Math.min(b, entero(s.c, 0, 100, 31)), sigma: entero(s.sigma, 1, 50, 12), version: String(s.version || '').slice(0, 20) };
+    return { activo: true, a, b, c: Math.min(b, entero(s.c, 0, 100, 31)), sigma: entero(s.sigma, 1, 50, 12), version: String(s.version || '').slice(0, 20) };
 }
 
 export function normalReglas(reglas) {
@@ -98,7 +100,9 @@ export function normalForm(id, d) {
     });
     const fin = d.fin || {};
     return {
-        id, nombre: String(d.nombre || 'Sin nombre').slice(0, 80), contacto: ct, preguntas: ps, reglas: normalReglas(d.reglas), resto: String(d.resto || ''), segmento: normalSegmento(d.segmento),
+        id, nombre: String(d.nombre || 'Sin nombre').slice(0, 80), contacto: ct, preguntas: ps, reglas: normalReglas(d.reglas), resto: String(d.resto || ''),
+        // Solo si segmenta: sin la clave, lo publicado antes queda idéntico.
+        ...(normalSegmento(d.segmento) ? { segmento: normalSegmento(d.segmento) } : {}),
         // url: la página a la que va el que no califica (la landing de descalificados); vacía, ve el título y el texto.
         fin: { titulo: String(fin.titulo || FIN_DEF.titulo).slice(0, 120), texto: String(fin.texto == null ? FIN_DEF.texto : fin.texto).slice(0, 300), url: urlOk(fin.url) },
         orden: Number(d.orden) || 0,
