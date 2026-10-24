@@ -97,7 +97,7 @@ const useDockNavigation = () => {
             // UTMs, tráfico de landings), sin acceso al resto del panel de admin.
             return [
                 { id: 'workshops', icon: BarChart3, label: 'Workshops', path: '/admin/workshops' },
-                { id: 'marketing', icon: Activity, label: 'Marketing', path: '/admin/marketing' }
+                { id: 'marketing', icon: Activity, label: 'Setting', path: '/admin/marketing' }
             ];
         } else if (user?.role === 'hiring') {
             // Rol de una sola pantalla: el panel de contratación para el puesto
