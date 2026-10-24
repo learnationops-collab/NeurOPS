@@ -32,13 +32,13 @@ export const CATEGORIAS = [
 ];
 const rotuloCategoria = (c) => CATEGORIAS.find((x) => x.value === c)?.label || null;
 
-/** A qué rama del flujo pertenece (18/10/2026): recibirlo deja a la persona con esa calificación si
- * ManyChat no mandó ninguna (ver `app/services/rama_mensajes.py`). */
+/** Qué calificación deja recibir el mensaje (la «rama», 18/10/2026) si ManyChat no mandó ninguna (ver
+ * `app/services/rama_mensajes.py`). Se rotula «Marca al lead como» (Kerwin, 24/10/2026: «rama» no se entendía). */
 const SIN_RAMA = 'ninguna';
 export const RAMAS = [
     { value: SIN_RAMA, label: 'Ninguna' },
-    { value: 'calificados', label: 'Calificados' },
-    { value: 'descalificados', label: 'Descalificados' },
+    { value: 'calificados', label: 'Calificado' },
+    { value: 'descalificados', label: 'Descalificado' },
 ];
 const rotuloRama = (r) => (r ? RAMAS.find((x) => x.value === r)?.label : null);
 const num = (n) => (n ?? 0).toLocaleString('en-US');
@@ -69,7 +69,7 @@ const COLUMNAS = [
     { key: 'mensaje', header: 'Mensaje', fija: true, width: 'minmax(180px,2fr)', valor: (f) => f.title || '',
         render: (f) => (f.configurado
             ? <span className="cv-msj"><span className="celda">{f.title}</span><small className="celda mut40">
-                {[rotuloCategoria(f.category), f.rama && `rama de ${rotuloRama(f.rama).toLowerCase()}`].filter(Boolean).join(' · ')}
+                {[rotuloCategoria(f.category), f.rama && `marca ${rotuloRama(f.rama).toLowerCase()}`].filter(Boolean).join(' · ')}
             </small></span>
             : <span className="cv-msj"><span className="celda mut40">Sin configurar</span><small className="celda mut40">Llegó en el período</small></span>) },
     { key: 'enviados', header: 'Enviados', alinear: 'der', width: 'minmax(84px,.7fr)', valor: (f) => f.stats?.total_sends ?? 0,
@@ -90,8 +90,7 @@ const COLUMNAS = [
 ];
 
 const FACETAS = [
-    { key: 'categoria', label: 'Categoría', de: (f) => rotuloCategoria(f.category) || 'Sin configurar' },
-    { key: 'rama', label: 'Rama', de: (f) => rotuloRama(f.rama) || 'Ninguna' },
+    { key: 'categoria', label: 'Etapa del flujo', de: (f) => rotuloCategoria(f.category) || 'Sin configurar' },
     { key: 'estado', label: 'Estado', de: (f) => (!f.configurado ? 'Sin configurar' : f.is_active ? 'Activo' : 'Inactivo') },
 ];
 
@@ -142,16 +141,16 @@ const EditarMensaje = ({ inicial, nuevo, onCerrar, onGuardado }) => {
                         aria-label="Título" />
                 </label>
                 <div className="cv-campo cv-campo--ancho">
-                    <span className="t-rotulo">Categoría</span>
-                    <Select value={form.category} options={CATEGORIAS} onChange={cambiar('category')} label="Categoría" />
+                    <span className="t-rotulo">Etapa del flujo</span>
+                    <Select value={form.category} options={CATEGORIAS} onChange={cambiar('category')} label="Etapa del flujo" />
                 </div>
                 <div className="cv-campo cv-campo--ancho">
-                    <span className="t-rotulo">Rama</span>
-                    <Select value={form.rama} options={RAMAS} onChange={cambiar('rama')} label="Rama" />
+                    <span className="t-rotulo">Marca al lead como</span>
+                    <Select value={form.rama} options={RAMAS} onChange={cambiar('rama')} label="Marca al lead como" />
                 </div>
                 {form.rama !== SIN_RAMA && (
                     <p className="cv-campo--ancho t-cap mut40 cv-nota">
-                        Quien lo reciba queda {form.rama === 'calificados' ? 'calificado' : 'descalificado'} si ManyChat no mandó la calificación.
+                        Quien lo reciba queda {rotuloRama(form.rama).toLowerCase()} si ManyChat no mandó la calificación.
                     </p>
                 )}
                 <label className="cv-campo cv-campo--ancho">
