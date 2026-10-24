@@ -28,7 +28,7 @@ CAMPOS_EV = [
     'redir',
     'indic',
 ]
-CAMPOS_FORM = ['id', 'nombre', 'contacto', 'preguntas', 'reglas', 'resto', 'fin']
+CAMPOS_FORM = ['id', 'nombre', 'contacto', 'preguntas', 'reglas', 'resto', 'segmento', 'fin']
 
 
 def _tomar(o, ks):
