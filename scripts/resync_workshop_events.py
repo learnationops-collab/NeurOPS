@@ -34,8 +34,8 @@ from app import create_app, db
 from app.models import WorkshopEvent
 from app.services.workshop_metrics_service import calcular_prefill
 
-CAMPOS = ('aplicaciones_form', 'agendas_exitosas', 'show_up_sales_call', 'sales', 'cash_collected',
-          'cash_ventas', 'ventas_cobradas')
+CAMPOS = ('aplicaciones_form', 'agendas_exitosas', 'show_up_sales_call', 'citas_reportadas',
+          'citas_sin_reportar', 'sales', 'cash_collected', 'cash_ventas', 'ventas_cobradas')
 
 
 def main(apply=False):

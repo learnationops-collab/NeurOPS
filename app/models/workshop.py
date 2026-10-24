@@ -26,6 +26,12 @@ class WorkshopEvent(db.Model):
     sales = db.Column(db.Integer, default=0)
     cash_collected = db.Column(db.Float, default=0.0)
 
+    # Base del show up de citas (24/10/2026): las personas con resultado de llamada (asistieron + no
+    # show) y las que quedaron sin reportar. Null en los talleres anteriores a la columna hasta el
+    # proximo recalculo; mientras, el panel divide por las agendas como antes. Ver `workshop_estados`.
+    citas_reportadas = db.Column(db.Integer, nullable=True)
+    citas_sin_reportar = db.Column(db.Integer, nullable=True)
+
     # Base del ticket promedio (02/10/2026): lo cobrado en ventas NUEVAS -- pago completo y
     # split pay, lo que acepta `_es_cierre` -- y cuantas filas de venta son. `cash_collected`
     # no sirve para el ticket porque incluye las señas (y debe: el ROAS las usa), y `sales`
@@ -246,6 +252,8 @@ class WorkshopEvent(db.Model):
             "aplicaciones_form": self.aplicaciones_form,
             "agendas_exitosas": self.agendas_exitosas,
             "show_up_sales_call": self.show_up_sales_call,
+            "citas_reportadas": self.citas_reportadas,
+            "citas_sin_reportar": self.citas_sin_reportar,
             "sales": self.sales,
             "cash_collected": self.cash_collected,
             "cash_ventas": self.cash_ventas,

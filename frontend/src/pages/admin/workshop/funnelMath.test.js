@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aggregateTotals, ticketPromedio } from './funnelMath';
+import { aggregateTotals, stageRates, ticketPromedio } from './funnelMath';
 
 // Ticket del taller (02/10/2026): lo cobrado en ventas nuevas / cuántas son. Antes era
 // cash_collected / sales, con la seña adentro y dividiendo por personas.
@@ -27,5 +27,27 @@ describe('ticketPromedio', () => {
     it('sin ventas nuevas el ticket es cero', () => {
         expect(ticketPromedio(aggregateTotals([{ sales: 1, cash_collected: 100, cash_ventas: 0, ventas_cobradas: 0 }]))).toBe(0);
         expect(ticketPromedio(aggregateTotals([]))).toBe(0);
+    });
+});
+
+// Show up de citas (24/10/2026): asistieron / citas con resultado, no / todas las agendadas.
+describe('show up de citas', () => {
+    it('se divide por las citas con resultado, no por las agendas', () => {
+        const totals = aggregateTotals([
+            { agendas_exitosas: 29, citas_reportadas: 14, show_up_sales_call: 9, citas_sin_reportar: 9 },
+        ]);
+
+        expect(stageRates(totals).show_up_citas).toBeCloseTo(9 / 14);
+        expect(totals.citas_sin_reportar).toBe(9);
+    });
+
+    it('un taller sin la base calculada (null) cae a sus agendas', () => {
+        const totals = aggregateTotals([
+            { agendas_exitosas: 10, citas_reportadas: null, show_up_sales_call: 3 },
+            { agendas_exitosas: 20, citas_reportadas: 10, show_up_sales_call: 6 },
+        ]);
+
+        expect(totals.citas_reportadas).toBe(20);
+        expect(stageRates(totals).show_up_citas).toBeCloseTo(9 / 20);
     });
 });

@@ -29,18 +29,13 @@ from app.models import Client, FinancialAgenda, FinancialSale, Appointment, Work
 from app.services.fuente_service import (FUENTE_SETTING, es_workshop_landing, es_workshop_vivo,
                                          es_sin_dueno, normalizar)
 from app.services import pagos_copia
+from app.services.workshop_estados import ESTADOS_DE_VENTA, bucket_estado as _bucket_estado, desglose_de_personas
 from app.services.workshop_intentos import contar_intentos
 from app.services.sales_consistency_service import filtro_de_pagos
 from app.services.ticket_service import SENA, VENTA, claves_de_venta, ticket_de
 
 # Handles que la gente escribe cuando no tiene Instagram: no identifican a nadie
 HANDLES_INVALIDOS = {'n/a', 'na', 'no tengo', 'notengo', 'ninguno', 'none', '', 'sin instagram', 'no'}
-
-# Estados de la hoja de agendas que marcan a la persona como compradora cuando la venta todavia no
-# esta cargada. 'seña'/'sena' ya no: una seña es una reserva, no un cierre (pedido del usuario,
-# 30/09/2026: "el close rate no debe tomar señas").
-ESTADOS_DE_VENTA = ['cierre', 'completo', 'ganado', 'venta', 'vendido', 'completado']
-
 
 def _tz(timezone_str):
     try:
@@ -228,56 +223,6 @@ def _estado_post_call(agenda):
     return equivalencias.get(appt.closer_result, appt.closer_result)
 
 
-# Estados normalizados: la persona se presento / la llamada aun no ocurrio ('por_confirmar',
-# 'confirmado' y 'conversando' son etapas de la confirmacion, no un resultado) / no se presento.
-_ES_SHOW_UP = {'show up', 'asistio', 'cerrada', 'cerrado', 'completada', 'terminada', 'follow up',
-               '2th call', '2da call', '2da llamada'} | set(ESTADOS_DE_VENTA)
-_ES_PENDIENTE = {'', 'pendiente', 'por confirmar', 'confirmado', 'conversando', 'contactado'}
-
-
-def _bucket_estado(estado):
-    """A cual de las 6 columnas del desglose pertenece un estado. 'Cerrada', 'Follow Up' y '2TH Call'
-    son citas a las que la persona asistio: caian en "Otros" y el close rate podia superar el show up."""
-    e = normalizar(estado)
-    if e in _ES_SHOW_UP:
-        return "Show Up"
-    if e in ('no show', 'inasistencia'):
-        return "No Show"
-    if e in ('cancelado', 'cancelada'):
-        return "Cancelada"
-    if e in ('reagendado', 'reagendada'):
-        return "Reagendada"
-    if e in _ES_PENDIENTE:
-        return "Pendiente"
-    return "Otros"
-
-
-def _desglose_estados(personas):
-    """Cuenta PERSONAS, no filas: recibe los grupos que devuelve `_agrupar_por_persona`.
-
-    Quien reprograma queda con dos filas (el webhook solo reconoce un duplicado si la
-    reunion cae el MISMO dia, asi que un cambio de dia entra como agenda nueva) y antes
-    sumaba dos veces. Como las ventas ya se contaban por persona, el embudo se dividia
-    entre un numerador deduplicado y un denominador que no lo estaba, y el close rate y
-    el costo por agenda salian mal (26/09/2026).
-
-    A cada persona le corresponde una sola columna del desglose: la de su ultima cita,
-    salvo que haya asistido a alguna, en cuyo caso es Show Up -- lo que ya logro no lo
-    borra una reprogramacion posterior.
-    """
-    desglose = {"Show Up": 0, "No Show": 0, "Cancelada": 0, "Reagendada": 0, "Pendiente": 0, "Otros": 0}
-    show_up = 0
-    for agendas in personas:
-        buckets = [(a.date, _bucket_estado(_estado_post_call(a))) for a in agendas]
-        if any(b == "Show Up" for _, b in buckets):
-            show_up += 1
-            desglose["Show Up"] += 1
-            continue
-        _, bucket = max(buckets, key=lambda par: (par[0] is not None, par[0]))
-        desglose[bucket] += 1
-    return show_up, desglose
-
-
 def _clave_identidad(agenda):
     """Con que se reconoce a la misma persona entre dos agendas, o None si no alcanza.
 
@@ -427,7 +372,7 @@ def _resumen(personas, agendas, compradores, ventas):
     vale una venta: con la seña adentro, y dividiendo por personas (`sales`, que cuenta
     tambien a quien la hoja da por cerrado sin la venta cargada), salia inflado.
     """
-    show_up, desglose = _desglose_estados(personas)
+    estados = desglose_de_personas(personas, _estado_post_call)
     # Los pagos de la misma persona en el mismo mes son UNA venta, con su primera cuota si llega
     # antes del mes (`ticket_service`, 19/10/2026)
     cash_ventas, ventas_cobradas, _ = ticket_de(
@@ -435,12 +380,16 @@ def _resumen(personas, agendas, compradores, ventas):
     return {
         "agendas": len(personas),
         "llamadas": len(agendas),
-        "show_up": show_up,
+        "show_up": estados["show_up"],
+        # Con resultado (asistio o no) y sin reportar: ver workshop_estados. El show up de citas
+        # se divide por `citas_reportadas`, no por todas las agendadas.
+        "citas_reportadas": estados["reportadas"],
+        "citas_sin_reportar": estados["sin_reportar"],
         "sales": len(compradores),
         "cash_collected": sum(s.monto or 0.0 for s in ventas),
         "cash_ventas": cash_ventas,
         "ventas_cobradas": ventas_cobradas,
-        "breakdown": desglose,
+        "breakdown": estados["desglose"],
     }
 
 
@@ -482,6 +431,8 @@ def calcular_prefill(dia, timezone_str='America/La_Paz'):
         # alguien reprogramo o volvio a agendar: no entra al embudo, va como referencia.
         "llamadas_agendadas": resumen_vivo["llamadas"] + resumen_landing["llamadas"],
         "show_up_sales_call": resumen_vivo["show_up"] + resumen_landing["show_up"],
+        "citas_reportadas": resumen_vivo["citas_reportadas"] + resumen_landing["citas_reportadas"],
+        "citas_sin_reportar": resumen_vivo["citas_sin_reportar"] + resumen_landing["citas_sin_reportar"],
         "sales": resumen_vivo["sales"] + resumen_landing["sales"],
         "cash_collected": resumen_vivo["cash_collected"] + resumen_landing["cash_collected"],
         # Base del ticket promedio: solo ventas nuevas, sin señas ni cuotas (ver `_resumen`)

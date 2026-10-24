@@ -176,6 +176,8 @@ def create_workshop_event():
         aplicaciones_form=int(data.get('aplicaciones_form', 0)),
         agendas_exitosas=int(data.get('agendas_exitosas', 0)),
         show_up_sales_call=int(data.get('show_up_sales_call', 0)),
+        citas_reportadas=_int_o_none(data.get('citas_reportadas')),
+        citas_sin_reportar=_int_o_none(data.get('citas_sin_reportar')),
         sales=int(data.get('sales', 0)),
         cash_collected=float(data.get('cash_collected', 0.0)),
         # Sin prefill no llegan: quedan null y el listado de eventos los calcula solo.
@@ -290,6 +292,10 @@ def update_workshop_event(event_id):
         event.agendas_exitosas = int(data['agendas_exitosas'])
     if 'show_up_sales_call' in data:
         event.show_up_sales_call = int(data['show_up_sales_call'])
+    if 'citas_reportadas' in data:
+        event.citas_reportadas = _int_o_none(data['citas_reportadas'])
+    if 'citas_sin_reportar' in data:
+        event.citas_sin_reportar = _int_o_none(data['citas_sin_reportar'])
     if 'sales' in data:
         event.sales = int(data['sales'])
     if 'cash_collected' in data:

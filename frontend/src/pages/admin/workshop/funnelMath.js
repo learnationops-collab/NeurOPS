@@ -4,6 +4,8 @@
 // Las 8 etapas y su orden son las mismas que ya usa `WorkshopFunnelView.jsx` y el
 // modelo `WorkshopEvent` (backend): Leads → WhatsApp → Asistencia → Retención
 // clase → Retención pitch → Formulario → Agendamiento → Show up cita → Cierre.
+// Show up de citas (24/10/2026): se divide por las citas con resultado (asistieron + no show), no por
+// todas las agendadas. Un taller sin esa base calculada (null) cae a sus agendas, como antes.
 // Cada etapa se define por qué dos campos crudos de un evento la componen
 // (numerador / denominador de la tasa "de cada 100 que llegaron al paso
 // anterior, cuántos llegaron a este").
@@ -15,22 +17,24 @@ export const STAGE_ORDER = [
     { key: 'retencion_pitch', label: 'Retención del pitch', num: 'pitch_final_leads', den: 'pitch_leads', goalKey: 'meta_retencion_pitch' },
     { key: 'conversion_form', label: 'Conversión del form', num: 'aplicaciones_form', den: 'pitch_final_leads', goalKey: 'meta_conversion_form' },
     { key: 'agendamiento', label: 'Agendamiento', num: 'agendas_exitosas', den: 'aplicaciones_form', goalKey: 'meta_agendamiento' },
-    { key: 'show_up_citas', label: 'Show up de citas', num: 'show_up_sales_call', den: 'agendas_exitosas', goalKey: 'meta_show_up_citas' },
+    { key: 'show_up_citas', label: 'Show up de citas', num: 'show_up_sales_call', den: 'citas_reportadas', goalKey: 'meta_show_up_citas' },
     { key: 'close_rate', label: 'Close rate', num: 'sales', den: 'show_up_sales_call', goalKey: 'meta_close_rate' },
 ];
 
 const RAW_FIELDS = [
     'inversion', 'leads', 'whatsapp_leads', 'show_up', 'pitch_leads', 'pitch_final_leads',
     'aplicaciones_form', 'agendas_exitosas', 'show_up_sales_call', 'sales', 'cash_collected',
-    'cash_ventas', 'ventas_cobradas'
+    'cash_ventas', 'ventas_cobradas', 'citas_sin_reportar'
 ];
 
 // Suma los campos crudos de una lista de eventos — mismo patrón que `totalStats`
 // en WorkshopDashboardPage.jsx, extendido a los pasos intermedios del embudo.
 export function aggregateTotals(events) {
     const totals = Object.fromEntries(RAW_FIELDS.map((f) => [f, 0]));
+    totals.citas_reportadas = 0;
     (events || []).forEach((e) => {
         RAW_FIELDS.forEach((f) => { totals[f] += e[f] || 0; });
+        totals.citas_reportadas += (e.citas_reportadas ?? e.agendas_exitosas) || 0;
     });
     return totals;
 }

@@ -173,6 +173,8 @@ def register_workshop_live_sync(app):
             ev.aplicaciones_form = data['aplicaciones_form']
             ev.agendas_exitosas = data['agendas_exitosas']
             ev.show_up_sales_call = data['show_up_sales_call']
+            ev.citas_reportadas = data['citas_reportadas']
+            ev.citas_sin_reportar = data['citas_sin_reportar']
             ev.sales = data['sales']
             ev.cash_collected = data['cash_collected']
             ev.cash_ventas = data['cash_ventas']
