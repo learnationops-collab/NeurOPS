@@ -57,9 +57,9 @@ describe('metricas de la tabla de anuncios', () => {
         // Sin calificar: en conversación (respondió) o sin respuesta; una fila vieja de 4 valores sigue andando.
         const cero = { descalificados: 0, en_conversacion: 0 };
         expect(serie).toEqual([
-            { dia: '2026-10-01', entrantes: 4, calificados: 3, gasto: 14.75, agendas: 1, ...cero, en_conversacion: 1, sin_respuesta: 0 },
-            { dia: '2026-10-02', entrantes: 0, calificados: 0, gasto: 0, agendas: 0, ...cero, sin_respuesta: 0 },
-            { dia: '2026-10-03', entrantes: 1, calificados: 0, gasto: 0, agendas: 0, ...cero, sin_respuesta: 1 },
+            { dia: '2026-10-01', entrantes: 4, calificados: 3, gasto: 14.75, agendas: 1, costo_agenda: 14.75, ...cero, en_conversacion: 1, sin_respuesta: 0 },
+            { dia: '2026-10-02', entrantes: 0, calificados: 0, gasto: 0, agendas: 0, costo_agenda: 0, ...cero, sin_respuesta: 0 },
+            { dia: '2026-10-03', entrantes: 1, calificados: 0, gasto: 0, agendas: 0, costo_agenda: 0, ...cero, sin_respuesta: 1 },
         ]);
     });
 

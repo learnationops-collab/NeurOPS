@@ -165,7 +165,7 @@ export const ordenar = (filas, clave, dir) => {
  * descalificados, en conversación] }`.
  */
 /** Los días de [desde, hasta] (AAAA-MM-DD), como objetos `{ dia, ...ceros }`. */
-const diasDelRango = (desde, hasta, ceros) => {
+export const diasDelRango = (desde, hasta, ceros) => {
     if (!desde || !hasta) return [];
     const [a, m, d] = desde.split('-').map(Number);
     const [a2, m2, d2] = hasta.split('-').map(Number);
@@ -211,6 +211,8 @@ export const serieDe = (filas, desde, hasta) => {
     return dias.map((x) => ({
         ...x,
         gasto: Number(x.gasto.toFixed(2)),
+        // Los días sin agendas quedan en 0: no hay con qué dividir y la columna no se dibuja.
+        costo_agenda: x.agendas ? Number((x.gasto / x.agendas).toFixed(2)) : 0,
         sin_respuesta: x.entrantes - x.calificados - x.descalificados - x.en_conversacion,
     }));
 };

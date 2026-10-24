@@ -72,7 +72,8 @@ const ENTRANTES = [
     { key: 'sin_respuesta', label: 'Sin respuesta', color: 'var(--mk-resto)' },
 ];
 
-/** Los dos gráficos del período: leads por día (por estado) y gasto por día. Sin `serie` todavía, los
+/** Los cuatro gráficos del período: leads por día (por estado), gasto, agendas y costo por agenda (23/10/2026:
+ *  la serie arrancó alta y fue cayendo, y el costo por agenda dice si el mismo gasto sigue agendando). Sin `serie` todavía, los
  *  títulos y la leyenda ya se ven y el gráfico es un esqueleto del mismo alto. */
 const SerieDiaria = ({ serie, moneda, alcance, metaConectado }) => {
     const dias = serie;
@@ -109,6 +110,31 @@ const SerieDiaria = ({ serie, moneda, alcance, metaConectado }) => {
                         vacio={metaConectado
                             ? 'Meta no registró gasto en estos días para estas palabras clave.'
                             : 'Sin gasto: cuando Meta Ads esté conectado, el gasto de cada día llega solo.'} />
+                )}
+            </section>
+            <section className="panel mk-panel-serie">
+                <div className="panel-cab">
+                    <div className="mk-cab-txt">
+                        <p className="t-eyebrow">Agendas por día</p>
+                        <p className="t-cap mut40">{alcance}</p>
+                    </div>
+                </div>
+                {!dias ? <HuesosSerie step={3} /> : (
+                    <Columnas dias={dias} capas={[{ key: 'agendas', label: 'Agendas', color: 'var(--cat-2)' }]}
+                        formato={entero} etiqueta={`Agendas por día, ${alcance}`} vacio="No se agendó nadie en el período." />
+                )}
+            </section>
+            <section className="panel mk-panel-serie">
+                <div className="panel-cab">
+                    <div className="mk-cab-txt">
+                        <p className="t-eyebrow">Costo por agenda por día</p>
+                        <p className="t-cap mut40">{alcance}</p>
+                    </div>
+                </div>
+                {!dias ? <HuesosSerie step={4} /> : (
+                    <Columnas dias={dias} capas={[{ key: 'costo_agenda', label: 'Costo por agenda', color: 'var(--warning)' }]}
+                        formato={(v) => dinero(v, moneda)} etiqueta={`Costo por agenda por día, ${alcance}`}
+                        vacio="Sin agendas o sin gasto en estos días." />
                 )}
             </section>
         </div>
