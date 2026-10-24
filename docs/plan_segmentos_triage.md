@@ -331,8 +331,8 @@ Mario no podía decidir en este momento; decidió Santi. Todo es reversible y Ma
 
 - **No se quita ninguna pregunta.** «Puntos a subir» y «Trabaja» siguen con sus puntos de hoy, quedan **en observación** y no cuentan para el segmento. Análisis anteriores mostraban que quienes trabajan rinden bien: se mide antes de decidir.
 - **Inversión:** «No puedo invertir» se parte en «No puedo invertir ahora» (0) y «Menos de $200 USD» (3, nueva). «$500 a $1000» y «Más de $1000» se juntan en «Más de $500 USD» (8): en 5 meses las eligieron 13 personas. La regla `mk-academy` sigue siendo estudiante + «No puedo invertir ahora».
-- **Examen:** se suman Ecuador (4), Chile (6) y Panamá (6), sacados del país del teléfono de quienes hoy eligen «Otro». «Otro» se queda en 2.
-- **Decide** pasa a «¿Quién más participa de esta decisión?»: Solo yo (4), Mi pareja, Mis padres u Otra persona (0).
+- **Examen:** se suman Ecuador (4), Chile (6) y Panamá (6), sacados del país del teléfono de quienes hoy eligen «Otro». «Otro» se queda en 2. **MIR baja de 6 a 2**: Mario dijo que no se va a apuntar tanto a España. Los datos lo ponían arriba (17,5% de compra), pero es una decisión de mercado.
+- **Decide queda como está** («depende 100% de mí» 4 · «necesito apoyo» 0). La versión «¿Quién más participa de esta decisión?» (Solo yo / Mi pareja / Mis padres / Otra persona), que sirve para invitar a quien decide a la llamada, queda lista en el script (`--quien-decide`) para cuando se decida.
 - **Los D van al triage**, como dice el plan. Mario puede pasarlos a «No califica» si lo prefiere: es un cambio de configuración.
 - **Sin cambios por ahora:** los textos de Interés, una oferta más barata para estudiantes, «Te llamamos nosotros» y la página de gracias según quién decide. Los dos últimos van con el triage.
 - Al juntar las inversiones altas en 8 puntos, el máximo pasa de 26 a 24. Los cortes quedan en **75 / 58 / 33%**, que son los mismos 18, 14 y 8 puntos de Mario cuando el lead respondió las 4 preguntas.
