@@ -16,9 +16,10 @@ cálculo que agrupa o mide vuelve con su gráfico (`card`). Material: Work no ti
 """
 import json
 import logging
+import unicodedata
 from datetime import datetime, timedelta
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 
 from app import db
 from app.models import Appointment, Client, ClientComment, Notification, User
@@ -432,13 +433,34 @@ def _clientes(user, filtro):
     return out
 
 
+TILDES = list(zip('áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN'))
+
+
+def _plano(col):
+    """La columna en minúsculas y sin tildes, en SQLite y en Postgres: "Santillán" encuentra a "SANTILLAN"."""
+    for con, sin in TILDES:
+        col = func.replace(col, con, sin)
+    return func.lower(col)
+
+
+def _sin_tildes(texto):
+    return ''.join(c for c in unicodedata.normalize('NFD', str(texto).lower()) if unicodedata.category(c) != 'Mn')
+
+
+def _por_nombre(palabras):
+    """Cada palabra en el nombre, en cualquier orden y sin importar tildes: "Kevin Santillán" encuentra a "KEVIN LUIS
+    SANTILLAN SANCHEZ"."""
+    return and_(*[or_(_plano(Person.full_name).like(f'%{w}%'), _plano(Client.full_name).like(f'%{w}%'))
+                  for w in palabras])
+
+
 def find_people(user, texto):
     texto = str(texto or '').strip()
     if len(texto) < 2:
         return []
     like = f'%{texto}%'
-    return _clientes(user, or_(Person.full_name.ilike(like), Person.email.ilike(like), Person.phone.ilike(like),
-                               Client.full_name.ilike(like), Client.email.ilike(like), Client.phone.ilike(like)))
+    return _clientes(user, or_(_por_nombre(_sin_tildes(texto).split()), Person.email.ilike(like),
+                               Person.phone.ilike(like), Client.email.ilike(like), Client.phone.ilike(like)))
 
 
 def people_by_id(user, ids):
@@ -451,7 +473,7 @@ def people_named(user, palabras, maximo=4):
     if not alcance.completo(user):
         q = q.filter(_suyos(user))
     for w in palabras or []:
-        q = q.filter(nombre.ilike(f'%{w}%'))
+        q = q.filter(_plano(nombre).like(f'%{_sin_tildes(w)}%'))
     ids = [r[0] for r in q.limit(int(maximo) + 1).all()]
     return ids if ids and len(ids) <= int(maximo) else []
 

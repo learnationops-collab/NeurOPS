@@ -888,6 +888,7 @@
 
 - **24 de Octubre de 2026 (Learnito · ejemplos propios de Work)** *([app/services/learnito_conector.py](../../app/services/learnito_conector.py) [MODIFY])*:
   - El cerebro de la Academia ya no le habla a Work con ejemplos de alumnos y entregas: el conector responde `examples` con los suyos (clientes, agendas, show up, señas). ADR-W011 y su ADR-192.
+
 - **24 de Octubre de 2026 (Comparativas · las cuatro lecturas del close rate)** *([app/services/comercial_analitica.py](../../app/services/comercial_analitica.py), [app/services/comercial_close_real.py](../../app/services/comercial_close_real.py) [NEW], [app/api/comercial_close_real.py](../../app/api/comercial_close_real.py) [NEW], [frontend/src/pages/comercial/components/Comparativas.jsx](../../frontend/src/pages/comercial/components/Comparativas.jsx))*:
   - El selector del ranking y el mapa del equipo ofrecen cuatro close rate de los closers: por llamada (el de siempre, misma clave `close_rate`), por presentación, con señas (señas como cierre, por llamada) y real (por cobro, el del tile de arriba).
   - El real se pide aparte (`GET /comercial/comparativas/reales`) y solo cuando se elige o cuenta en el puntaje compuesto; mientras tanto su columna del mapa queda en «—».
@@ -896,3 +897,7 @@
   - Con la capa «Personas», cada persona de un panel es un botón: quitarla la saca del gráfico y del total (lo que se suma, suma a quienes quedan; una tasa se promedia entre quienes quedan, pesada por sus llamadas o mensajes). Valen para todos los paneles y siempre queda al menos una.
   - Antes la capa solo cambiaba algo en Barras y en lo que se suma; en Curva ahora hay una línea por persona (también las tasas).
   - Sin la comparación con el período anterior mientras falte alguien, porque era del equipo entero. Verificado con la compilación de Vite; sin recorrer la pantalla.
+
+- **24 de Octubre de 2026 (Learnito · un total cuenta solo lo suyo, y buscar clientes sin tildes)** *([app/services/tablas/alcance.py](../../app/services/tablas/alcance.py), [app/services/learnito_conector.py](../../app/services/learnito_conector.py) [MODIFY])*:
+  - Prueba con IA en producción (Jean Carlo, closer): "¿cuántas agendas tuve esta semana?" titulaba 12 (las suyas) y el número decía 17 (las del equipo). Una medición sin agrupar es un total: ahora va sobre sus filas, como la lista (`alcance.propia`). El ranking por closer sigue siendo de todo el equipo.
+  - Buscar un cliente (`buscar_cliente`, nombres de una tarea): por palabras, en cualquier orden y sin tildes. "Kevin Santillán" no encontraba a "KEVIN LUIS SANTILLAN SANCHEZ" y la acción se quedaba sin respuesta.
