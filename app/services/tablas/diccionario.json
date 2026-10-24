@@ -1042,6 +1042,22 @@
   ],
   "conceptos": [
    {
+    "clave": "venta",
+    "nombre": "Venta",
+    "fuente": "sales",
+    "match": "all",
+    "condicion": [
+     {
+      "field": "f.status",
+      "op": "eq",
+      "value": "active"
+     }
+    ],
+    "significado": "Cualquier venta que sigue en pie: nueva, renovación o upsell (sin las canceladas). Es lo que el equipo cuenta cuando dice \"ventas\" sin más. Fecha: sold_at. Para solo las inscripciones nuevas, venta_nueva.",
+    "ejemplo": "¿Cuántas ventas hubo por programa en septiembre?",
+    "palabras": "venta, ventas, vendimos, cuántas ventas, ventas del mes, ventas por programa, ventas por closer, total de ventas"
+   },
+   {
     "clave": "venta_nueva",
     "nombre": "Venta nueva",
     "fuente": "sales",
