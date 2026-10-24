@@ -8,16 +8,15 @@ import {
     CalendarDays, 
     Instagram, 
     MessageSquare, 
-    DollarSign, 
-    User, 
-    ArrowUpRight, 
-    Link, 
-    X, 
-    Info, 
-    Phone, 
+    DollarSign,
+    Link,
+    X,
     RefreshCw
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ListaConfigurable from '../../../components/listas/ListaConfigurable';
+import { columnasAgendas, columnasVentas, totalVentas } from './columnasSinAtribuir';
+import '../../comercial/comercial.css';
 
 // Componente de Badge de Atribucion
 const AttributedBadge = ({ label, type }) => (
@@ -128,6 +127,22 @@ const UnattributedLeadsPage = () => {
         setAdSearchQuery('');
     };
 
+    // handleOpenModal solo usa setters: las columnas no necesitan rearmarse.
+    const columnasDeVentas = useMemo(() => columnasVentas(handleOpenModal), []); // eslint-disable-line react-hooks/exhaustive-deps
+    const columnasDeAgendas = useMemo(() => columnasAgendas(handleOpenModal), []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const formatDate = (dateStr) => {
+        if (!dateStr) return 'N/A';
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('es-ES', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
     // Submit del modal de atribucion
     const handleAttribute = async (e) => {
         e.preventDefault();
@@ -168,17 +183,6 @@ const UnattributedLeadsPage = () => {
         }
     };
 
-    const formatDate = (dateStr) => {
-        if (!dateStr) return 'N/A';
-        const d = new Date(dateStr);
-        return d.toLocaleDateString('es-ES', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    };
 
     return (
         <div className="p-8 space-y-8 min-h-screen bg-slate-950 text-slate-100 animate-in fade-in duration-500">
@@ -365,191 +369,28 @@ const UnattributedLeadsPage = () => {
                     <>
                         {/* Tab Ventas */}
                         {activeTab === 'sales' && (leadType === 'all' || leadType === 'sales') && (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="bg-slate-950 border-b border-slate-800 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                            <th className="p-4 pl-6">Fecha</th>
-                                            <th className="p-4">Cliente</th>
-                                            <th className="p-4">Instagram</th>
-                                            <th className="p-4">Setter</th>
-                                            <th className="p-4">Closer</th>
-                                            <th className="p-4 text-right">Monto</th>
-                                            <th className="p-4 pr-6 text-center">Accion</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-850">
-                                        {data.sales.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={7} className="p-12 text-center text-xs text-slate-500 font-semibold tracking-wide">
-                                                    Perfecto. No hay ventas sin anuncio en el periodo.
-                                                </td>
-                                            </tr>
-                                                                                ) : (
-                                            <>
-                                                {data.sales.map((sale) => (
-                                                    <tr key={sale.id} className="hover:bg-slate-850/40 transition-colors group">
-                                                        <td className="p-4 pl-6 text-xs text-slate-300 font-mono">
-                                                            {formatDate(sale.date)}
-                                                        </td>
-                                                        <td className="p-4">
-                                                            <div className="font-bold text-white text-xs">{sale.cliente}</div>
-                                                        </td>
-                                                        <td className="p-4 text-xs font-mono">
-                                                            {sale.instagram && sale.instagram !== 'N/A' ? (
-                                                                <a 
-                                                                    href={`https://instagram.com/${sale.instagram.replace('@', '')}`}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="inline-flex items-center gap-1.5 text-primary hover:underline hover:text-primary-light"
-                                                                >
-                                                                    <Instagram size={12} />
-                                                                    {sale.instagram}
-                                                                    <ArrowUpRight size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                                </a>
-                                                            ) : (
-                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/25 text-[9px] font-black uppercase tracking-wider">
-                                                                    Sin IG
-                                                                </span>
-                                                            )}
-                                                        </td>
-                                                        <td className="p-4 text-xs">
-                                                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-950 rounded-md text-slate-300 font-medium">
-                                                                <User size={10} className="text-slate-500" />
-                                                                {sale.setter}
-                                                            </span>
-                                                        </td>
-                                                        <td className="p-4 text-xs">
-                                                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-950 rounded-md text-slate-300 font-medium">
-                                                                <User size={10} className="text-slate-500" />
-                                                                {sale.closer}
-                                                            </span>
-                                                        </td>
-                                                        <td className="p-4 text-xs text-right font-black text-emerald-400 font-mono">
-                                                            ${sale.monto.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                                        </td>
-                                                        <td className="p-4 pr-6 text-center">
-                                                            <button
-                                                                onClick={() => handleOpenModal(sale, 'sale')}
-                                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-white border border-emerald-500/30 hover:border-emerald-500 text-[10px] font-black uppercase tracking-wider transition-all"
-                                                            >
-                                                                <Link size={11} />
-                                                                Atribuir
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                                {/* Fila del total de ventas sin atribucion */}
-                                                <tr className="bg-slate-950/70 border-t border-slate-800 text-slate-300">
-                                                    <td colSpan={5} className="p-4 pl-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                                        Total Ventas Desatribuidas
-                                                    </td>
-                                                    <td className="p-4 text-xs text-right font-black text-emerald-400 font-mono bg-emerald-500/5">
-                                                        ${data.sales.reduce((sum, s) => sum + (Number(s.monto) || 0), 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                                    </td>
-                                                    <td className="p-4 pr-6"></td>
-                                                </tr>
-                                            </>
-                                        )}
-                                    </tbody>
-                                </table>
+                            <div className="dc-shell dc-shell--embebido p-4">
+                                <ListaConfigurable key="ventas" columnas={columnasDeVentas} filas={data.sales}
+                                    clave={(v) => v.id} buscar={(v) => `${v.cliente} ${v.instagram} ${v.setter} ${v.closer}`}
+                                    buscarPlaceholder="Filtrar ventas…" claveGuardado="sin_atribuir_ventas_cols"
+                                    ordenInicial={{ key: 'fecha', dir: 'desc' }}
+                                    extra={data.sales.length > 0 && (
+                                        <span className="chip" style={{ '--c': 'var(--success)' }}>
+                                            Total desatribuido {totalVentas(data.sales)}
+                                        </span>
+                                    )}
+                                    vacio="Perfecto. No hay ventas sin anuncio en el periodo." />
                             </div>
                         )}
 
                         {/* Tab Agendas */}
                         {activeTab === 'agendas' && (leadType === 'all' || leadType === 'agendas') && (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="bg-slate-950 border-b border-slate-800 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                            <th className="p-4 pl-6">Fecha Cita</th>
-                                            <th className="p-4">Cliente</th>
-                                            <th className="p-4">Instagram</th>
-                                            <th className="p-4">Setter (Lead)</th>
-                                            <th className="p-4">Closer</th>
-                                            <th className="p-4">Whatsapp / Meet</th>
-                                            <th className="p-4 pr-6 text-center">Accion</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-850">
-                                        {data.agendas.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={7} className="p-12 text-center text-xs text-slate-500 font-semibold tracking-wide">
-                                                    Perfecto. No hay agendas sin anuncio en el periodo.
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            data.agendas.map((agenda) => (
-                                                <tr key={agenda.id} className="hover:bg-slate-850/40 transition-colors group">
-                                                    <td className="p-4 pl-6 text-xs text-slate-300 font-mono">
-                                                        {formatDate(agenda.date)}
-                                                    </td>
-                                                    <td className="p-4">
-                                                        <div className="font-bold text-white text-xs">{agenda.cliente}</div>
-                                                    </td>
-                                                    <td className="p-4 text-xs font-mono">
-                                                        {agenda.instagram && agenda.instagram !== 'N/A' ? (
-                                                            <a 
-                                                                href={`https://instagram.com/${agenda.instagram.replace('@', '')}`}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="inline-flex items-center gap-1.5 text-primary hover:underline hover:text-primary-light"
-                                                            >
-                                                                <Instagram size={12} />
-                                                                {agenda.instagram}
-                                                                <ArrowUpRight size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                            </a>
-                                                        ) : (
-                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/25 text-[9px] font-black uppercase tracking-wider">
-                                                                Sin IG
-                                                            </span>
-                                                        )}
-                                                    </td>
-                                                    <td className="p-4 text-xs">
-                                                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-950 rounded-md text-slate-300 font-medium">
-                                                            <User size={10} className="text-slate-500" />
-                                                            {agenda.setter}
-                                                        </span>
-                                                    </td>
-                                                    <td className="p-4 text-xs">
-                                                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-950 rounded-md text-slate-300 font-medium">
-                                                            <User size={10} className="text-slate-500" />
-                                                            {agenda.closer}
-                                                        </span>
-                                                    </td>
-                                                    <td className="p-4">
-                                                        <div className="flex flex-col gap-1">
-                                                            {agenda.whatsapp && agenda.whatsapp !== 'N/A' ? (
-                                                                <a
-                                                                    href={`https://wa.me/${agenda.whatsapp.replace(/[^0-9]/g, '')}`}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="inline-flex items-center gap-1 text-[10px] text-emerald-400 hover:underline w-fit"
-                                                                >
-                                                                    <Phone size={10} />
-                                                                    {agenda.whatsapp}
-                                                                </a>
-                                                            ) : null}
-                                                            <span className="inline-flex items-center gap-1 text-[9px] text-slate-500 font-mono">
-                                                                <Info size={10} />
-                                                                {agenda.fecha_meet}
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="p-4 pr-6 text-center">
-                                                        <button
-                                                            onClick={() => handleOpenModal(agenda, 'agenda')}
-                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500 text-indigo-400 hover:text-white border border-indigo-500/30 hover:border-indigo-500 text-[10px] font-black uppercase tracking-wider transition-all"
-                                                        >
-                                                            <Link size={11} />
-                                                            Atribuir
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
+                            <div className="dc-shell dc-shell--embebido p-4">
+                                <ListaConfigurable key="agendas" columnas={columnasDeAgendas} filas={data.agendas}
+                                    clave={(a) => a.id} buscar={(a) => `${a.cliente} ${a.instagram} ${a.setter} ${a.closer}`}
+                                    buscarPlaceholder="Filtrar agendas…" claveGuardado="sin_atribuir_agendas_cols"
+                                    ordenInicial={{ key: 'fecha', dir: 'desc' }}
+                                    vacio="Perfecto. No hay agendas sin anuncio en el periodo." />
                             </div>
                         )}
                     </>

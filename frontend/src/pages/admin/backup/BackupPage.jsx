@@ -6,6 +6,7 @@ import {
     obtenerVistaPrevia,
     problemaDeLaClave,
 } from './backupApi';
+import ListaTablas from './ListaTablas';
 
 // Respaldo de la base (script SQL). Solo admin: la ruta ya lo exige y el servidor lo vuelve a comprobar.
 // La clave (BACKUP_SECRET_KEY) la escribe la persona: no está en el código ni se guarda en el navegador.
@@ -114,28 +115,13 @@ const BackupPage = ({ embebido = false }) => {
                         </div>
                     </div>
 
-                    <div className="bg-neutral-900/50 rounded-lg border border-neutral-700/50 overflow-hidden max-h-60 overflow-y-auto custom-scrollbar">
+                    <div className="bg-neutral-900/50 rounded-lg border border-neutral-700/50 overflow-hidden p-3">
                         {status === 'previewing' ? (
                             <div className="p-8 flex justify-center text-neutral-500">
                                 <RefreshCw className="w-6 h-6 animate-spin" />
                             </div>
                         ) : tablas.length > 0 ? (
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-neutral-800 text-neutral-400 sticky top-0">
-                                    <tr>
-                                        <th className="p-3 font-medium">Tabla</th>
-                                        <th className="p-3 font-medium text-right">Registros</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-neutral-800">
-                                    {tablas.map((tabla) => (
-                                        <tr key={tabla.name} className="hover:bg-neutral-800/50 transition-colors">
-                                            <td className="p-3 font-mono text-purple-300">{tabla.name}</td>
-                                            <td className="p-3 text-right text-white font-bold">{tabla.count}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                            <ListaTablas tablas={tablas} claveGuardado="respaldo_tablas_cols" />
                         ) : (
                             <div className="p-4 text-center text-neutral-500">
                                 Escribe la clave y pulsa «Ver tablas» para ver qué se va a respaldar.
