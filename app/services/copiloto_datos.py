@@ -149,6 +149,7 @@ def _texto_paquete(p):
         if 'rows' in m:
             lineas.append('Por grupo (valor; filas):')
             lineas += [f"{r.get('k') if r.get('k') is not None else '(vacío)'}: {r.get('n')}; {r.get('m')}"
+                       + (f" (IC 95 %: {r['ic95'][0]}–{r['ic95'][1]})" if r.get('ic95') else '')
                        for r in m['rows']]
             if m.get('others'):
                 lineas.append(f"Otros: {m['others']} filas fuera de los grupos mostrados.")
