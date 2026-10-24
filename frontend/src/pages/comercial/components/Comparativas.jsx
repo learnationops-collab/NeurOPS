@@ -4,6 +4,9 @@ import { Skeleton, SkeletonPanel } from '../../../components/standard';
 import { DESTINOS_METRICA, DESTINOS_SETTER } from './destinos';
 import FlujoEmbudo from './FlujoEmbudo';
 import { COLOR_CANAL, COLOR_FUENTE, etapasParaDibujar, puntaAPunta } from './embudoSetter';
+import { BarraRanking } from './PanelRanking';
+import { armarVista, cumpleMeta, metricaActual, ordenar } from './rankingConfig';
+import { useRankingConfig } from './useRankingConfig';
 
 /**
  * Analizar → Comparativas: un solo panel con el ranking arriba y el mapa del equipo abajo.
@@ -15,6 +18,10 @@ import { COLOR_CANAL, COLOR_FUENTE, etapasParaDibujar, puntaAPunta } from './emb
  * Los dos gestos vivían en el mismo clic: la celda rankeaba, igual que el encabezado, así que el
  * mapa mostraba siete métricas por persona y ninguna se podía verificar. Ahora el encabezado
  * rankea y la celda contesta "¿de qué filas está hecho este número?".
+ *
+ * La persona puede configurar el ranking (`PanelRanking`, guardado en su navegador): qué métricas
+ * ve, el orden, un puntaje compuesto, metas por métrica y quién entra. Sin configuración guardada
+ * se ve como siempre (`rankingConfig.js`).
  *
  * El marcado usa las clases de la referencia visual (`.rk-*`, `.mapa-*`, `.panel`, `.t-*`), no las
  * `.dc-*` de la primera versión: esas dejaron de existir cuando el CSS del tablero se rehízo
@@ -35,7 +42,7 @@ const Avatar = ({ nombre, rol, chico }) => (
     </span>
 );
 
-const Ranking = ({ datos, metrica, filas, yo, irAPersona, destino }) => {
+const Ranking = ({ datos, base, metrica, filas, yo, irAPersona, destino, config, onCambiar, onRestablecer }) => {
     const montado = useMontado();
     const valores = filas.map(f => f[metrica.key]).filter(v => v !== null && v !== undefined);
     const maximo = Math.max(...valores, 0);
@@ -50,6 +57,9 @@ const Ranking = ({ datos, metrica, filas, yo, irAPersona, destino }) => {
     const promedio = metrica.suma && filas.length && valorEquipo !== null && valorEquipo !== undefined
         ? valorEquipo / filas.length
         : valorEquipo;
+    // Con meta, el color y la marca de la barra hablan de la meta; sin ella, del promedio de siempre.
+    const meta = config.metas[metrica.key] ?? null;
+    const asc = config.orden === 'asc';
 
     const bajada = (fila) => {
         // El show up de un setter se mide sobre sus agendas generadas que ya tienen resultado; su
@@ -75,6 +85,7 @@ const Ranking = ({ datos, metrica, filas, yo, irAPersona, destino }) => {
                 <div className="fila" style={{ gap: 6, minWidth: 0 }}>
                     <p className="t-eyebrow">Ranking · {metrica.label}</p>
                     <Tip titulo={metrica.label} texto={metrica.desc} />
+                    {meta !== null && <span className="t-cap mut40 num">meta {fmt.porFormato(meta, metrica.formato)}</span>}
                 </div>
                 <div className="panel-cab-der" style={{ display: 'block', textAlign: 'right' }}>
                     <p className="t-rotulo">Equipo</p>
@@ -90,15 +101,21 @@ const Ranking = ({ datos, metrica, filas, yo, irAPersona, destino }) => {
             </div>
 
             <div style={{ marginBottom: 'var(--s4)' }}>
-                <Segmented ariaLabel="Métrica del ranking" valor={metrica.key}
-                    opciones={datos.metricas.map(m => ({ key: m.key, label: m.label }))}
-                    onChange={(k) => datos.onMetrica(k)} />
+                <BarraRanking datos={base} config={config} onCambiar={onCambiar} onRestablecer={onRestablecer}
+                    selector={(
+                        <Segmented ariaLabel="Métrica del ranking" valor={metrica.key}
+                            opciones={datos.metricas.map(m => ({ key: m.key, label: m.label }))}
+                            onChange={(k) => datos.onMetrica(k)} />
+                    )} />
             </div>
 
             <div className="rk">
                 {filas.map((fila, i) => {
                     const valor = fila[metrica.key];
-                    const sobrePromedio = valor !== null && promedio !== null && valor >= promedio;
+                    const cumple = cumpleMeta(valor, meta);
+                    const sobrePromedio = cumple !== null
+                        ? cumple
+                        : valor !== null && promedio !== null && valor >= promedio;
                     const largo = valor && tope ? (valor / tope) * 100 : 0;
                     // Sin `irAPersona` (un closer o un setter mirando a su equipo) la fila es solo
                     // lectura; sin `destino` también (las métricas del reporte de un setter no son filas).
@@ -129,6 +146,10 @@ const Ranking = ({ datos, metrica, filas, yo, irAPersona, destino }) => {
                                     <span className="rk-prom"
                                         style={{ left: montado ? `${Math.min(100, (promedio / tope) * 100)}%` : 0 }} />
                                 )}
+                                {meta !== null && tope > 0 && (
+                                    <span className="rk-prom rk-meta" title={`Meta ${fmt.porFormato(meta, metrica.formato)}`}
+                                        style={{ left: montado ? `${Math.min(100, (meta / tope) * 100)}%` : 0 }} />
+                                )}
                             </span>
                             <span className="rk-val">
                                 <span className="rk-cifra">{fmt.porFormato(valor, metrica.formato)}</span>
@@ -142,7 +163,7 @@ const Ranking = ({ datos, metrica, filas, yo, irAPersona, destino }) => {
             {filas.length > 1 && (
                 <div className="fila" style={{ justifyContent: 'space-between', marginTop: 'var(--s3)' }}>
                     <span className="t-cap mut">
-                        Lidera {filas[0].nombre}
+                        {asc ? 'Primero' : 'Lidera'} {filas[0].nombre}
                         {/* Puede quedar por debajo: el equipo de setters cuenta también los leads sin
                             setter asignado, así que el promedio por persona sale más alto que el de
                             todos. Antes se leía «+-16.5 sobre el promedio». */}
@@ -153,7 +174,7 @@ const Ranking = ({ datos, metrica, filas, yo, irAPersona, destino }) => {
                     </span>
                     <span className="t-cap mut40 num">
                         Brecha 1º a último: {fmt.porFormato(
-                            (filas[0][metrica.key] || 0) - (filas[filas.length - 1][metrica.key] || 0),
+                            Math.abs((filas[0][metrica.key] || 0) - (filas[filas.length - 1][metrica.key] || 0)),
                             metrica.formato)}
                     </span>
                 </div>
@@ -162,7 +183,7 @@ const Ranking = ({ datos, metrica, filas, yo, irAPersona, destino }) => {
     );
 };
 
-const MapaEquipo = ({ datos, metrica, filas, onMetrica, irAPersona }) => {
+const MapaEquipo = ({ datos, metrica, filas, onMetrica, irAPersona, metas }) => {
     const columnas = [
         ...datos.metricas.map(m => ({ ...m, rankeable: true })),
         ...datos.columnas_info.map(c => ({ ...c, rankeable: false })),
@@ -181,6 +202,7 @@ const MapaEquipo = ({ datos, metrica, filas, onMetrica, irAPersona }) => {
     }, [filas, datos.metricas, datos.columnas_info]);
 
     if (filas.length < 2) return null;
+    const hayMetas = datos.metricas.some(m => metas[m.key] !== undefined);
 
     return (
         <div className="mapa">
@@ -194,8 +216,8 @@ const MapaEquipo = ({ datos, metrica, filas, onMetrica, irAPersona }) => {
                         : 'Tocá el encabezado para rankear.'} />
                 </div>
                 <div className="panel-cab-der mapa-leyenda">
-                    <span><i style={{ background: 'var(--success)' }} />Mejor</span>
-                    <span><i style={{ background: 'var(--error)' }} />Más bajo</span>
+                    <span><i style={{ background: 'var(--success)' }} />{hayMetas ? 'Mejor o en meta' : 'Mejor'}</span>
+                    <span><i style={{ background: 'var(--error)' }} />{hayMetas ? 'Más bajo o bajo meta' : 'Más bajo'}</span>
                 </div>
             </div>
 
@@ -229,8 +251,12 @@ const MapaEquipo = ({ datos, metrica, filas, onMetrica, irAPersona }) => {
                                 {columnas.map(c => {
                                     const valor = fila[c.key];
                                     const ext = extremos[c.key];
-                                    const mejor = !esEquipo && ext && valor === ext.max && ext.max !== ext.min;
-                                    const peor = !esEquipo && ext && valor === ext.min && ext.max !== ext.min;
+                                    // Una columna con meta se pinta contra su meta; sin ella, por los extremos.
+                                    const cumple = cumpleMeta(valor, metas[c.key]);
+                                    const mejor = cumple !== null ? !esEquipo && cumple
+                                        : !esEquipo && ext && valor === ext.max && ext.max !== ext.min;
+                                    const peor = cumple !== null ? !esEquipo && !cumple && valor !== null && valor !== undefined
+                                        : !esEquipo && ext && valor === ext.min && ext.max !== ext.min;
                                     const clases = ['mapa-celda'];
                                     if (mejor) clases.push('alta');
                                     if (peor) clases.push('baja');
@@ -327,6 +353,8 @@ const EmbudosSetters = ({ embudos, yo, rol, irAPersona }) => {
 
 const Comparativas = ({ datos, irAPersona, fallo = false, onReintentar = null }) => {
     const [metricaKey, setMetricaKey] = useState(null);
+    const [config, cambiarConfig, restablecer] = useRankingConfig(datos?.rol);
+    const vista = useMemo(() => (datos ? armarVista(datos, config) : null), [datos, config]);
 
     if (!datos && fallo) return <FalloCarga texto="No se pudieron cargar las comparativas" onReintentar={onReintentar} />;
     // Ranking + mapa del equipo: unos 1070 px de alto con el equipo de hoy (medido a 1330 px).
@@ -338,23 +366,29 @@ const Comparativas = ({ datos, irAPersona, fallo = false, onReintentar = null })
         );
     }
 
-    const metrica = datos.metricas.find(m => m.key === metricaKey) || datos.metricas[0];
-    const filas = [...datos.filas].sort((a, b) => {
-        const va = a[metrica.key], vb = b[metrica.key];
-        if (va === null || va === undefined) return 1;
-        if (vb === null || vb === undefined) return -1;
-        return vb - va;
-    });
+    const metrica = metricaActual(vista.metricas, metricaKey, config);
+    const filas = ordenar(vista.filas, metrica.key, config.orden);
 
-    const conHandler = { ...datos, onMetrica: setMetricaKey };
+    // Cambiar la métrica inicial también cambia lo que se está viendo.
+    const cambiar = (siguiente) => {
+        if (siguiente.inicial !== config.inicial) setMetricaKey(null);
+        cambiarConfig(siguiente);
+    };
+    const conHandler = { ...vista, onMetrica: setMetricaKey };
     const destino = DESTINOS_METRICA[datos.rol]?.[metrica.key];
 
     return (
         <section className="panel">
-            <Ranking datos={conHandler} metrica={metrica} filas={filas} yo={datos.yo}
-                irAPersona={irAPersona} destino={destino} />
-            <MapaEquipo datos={datos} metrica={metrica} filas={filas} onMetrica={setMetricaKey}
-                irAPersona={irAPersona} />
+            <Ranking datos={conHandler} base={datos} metrica={metrica} filas={filas} yo={datos.yo}
+                irAPersona={irAPersona} destino={destino} config={config}
+                onCambiar={cambiar} onRestablecer={restablecer} />
+            {filas.length === 0 && (
+                <p className="t-cap mut" style={{ marginBottom: 'var(--s4)' }}>
+                    Nadie entra con esta configuración. Probá con «Restablecer».
+                </p>
+            )}
+            <MapaEquipo datos={vista} metrica={metrica} filas={filas} onMetrica={setMetricaKey}
+                irAPersona={irAPersona} metas={config.metas} />
             {datos.embudos && (
                 <EmbudosSetters embudos={datos.embudos} yo={datos.yo} rol={datos.rol} irAPersona={irAPersona} />
             )}
