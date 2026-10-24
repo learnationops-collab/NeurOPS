@@ -1,21 +1,53 @@
 // El chat de Learnito: la lista de mensajes y el redactor con dictado por voz. Lo usan el modal (desde
 // el dock) y la página /copiloto; la conversación es la de LearnitoContext, así que es la misma en los dos.
+// Con el cerebro de la Academia (la dirección), las respuestas vienen en markdown y pueden traer botones u
+// opciones para seguir; la conversación se puede calificar para revisar después las que salieron mal.
 import { useEffect, useRef, useState } from 'react';
-import { Check, Copy, Mic, MicOff, Send, Sparkles } from 'lucide-react';
+import { Check, Copy, Frown, Meh, Mic, MicOff, Send, Smile, Sparkles } from 'lucide-react';
 import { Button, EmptyState, FieldError, IconButton, TextArea } from '../../components/standard';
 import { useLearnito } from '../../sesion/LearnitoContext';
 import { juntar } from './dictado';
+import Markdown from './Markdown';
 import { useDictado } from './useDictado';
 import UsoMensual from './UsoMensual';
 import './copiloto.css';
 
-const SUGERENCIAS = [
-    'Decime mis agendas de hoy',
-    '¿Quién me debe más?',
-    'Redactame un seguimiento para un alumno que no responde hace una semana',
+const SUGERENCIAS = {
+    local: [
+        'Decime mis agendas de hoy',
+        '¿Quién me debe más?',
+        'Redactame un seguimiento para un alumno que no responde hace una semana',
+    ],
+    cerebro: [
+        'Ventas por mes de este año',
+        '¿Qué cuotas vencen esta semana?',
+        'Show up por closer en los últimos 30 días',
+    ],
+};
+
+const CALIFICACIONES = [
+    { valor: 'insatisfactoria', texto: 'Insatisfactoria', icono: <Frown size={13} /> },
+    { valor: 'regular', texto: 'Regular', icono: <Meh size={13} /> },
+    { valor: 'satisfactoria', texto: 'Satisfactoria', icono: <Smile size={13} /> },
 ];
 
-function Mensaje({ role, content }) {
+// Los botones y las opciones que el cerebro ofrece para seguir (solo en la última respuesta).
+function Siguientes({ mensaje, indice, tocar, deshabilitado }) {
+    const botones = (mensaje?.botones || []).map((b, i) => ({ ...b, tipo: 'boton', i }));
+    const opciones = (mensaje?.opciones || []).map((o, i) => ({ ...o, tipo: 'opcion', i }));
+    const todos = [...opciones, ...botones].filter((b) => b.texto);
+    if (!todos.length) return null;
+    return (
+        <div className="cp-siguientes">
+            {todos.map((b) => (
+                <Button key={`${b.tipo}${b.i}`} disabled={deshabilitado}
+                    onClick={() => tocar(indice, b.tipo, b.i, b.texto)}>{b.texto}</Button>
+            ))}
+        </div>
+    );
+}
+
+function Mensaje({ role, content, mensaje }) {
     const [copiado, setCopiado] = useState(false);
     const copiar = () => navigator.clipboard?.writeText(content).then(() => {
         setCopiado(true);
@@ -23,7 +55,8 @@ function Mensaje({ role, content }) {
     });
     return (
         <li className={`cp-msg cp-msg--${role === 'user' ? 'closer' : 'copiloto'}`}>
-            <p className="cp-texto">{content}</p>
+            {mensaje ? <div className="cp-texto">{content ? <Markdown texto={content} /> : null}</div>
+                : <p className="cp-texto">{content}</p>}
             {role === 'assistant' && (
                 <IconButton size="xs" icon={copiado ? <Check size={13} /> : <Copy size={13} />}
                     label={copiado ? 'Copiado' : 'Copiar respuesta'} onClick={copiar} />
@@ -34,9 +67,18 @@ function Mensaje({ role, content }) {
 
 export default function LearnitoChat() {
     const {
-        mensajes, enviando, enviar, lleno, agotado, uso, cargarUso, borrador: texto, setBorrador: setTexto,
+        mensajes, enviando, enviar, tocar, lleno, agotado, uso, cargarUso, modo, calificacion, calificar,
+        borrador: texto, setBorrador: setTexto,
     } = useLearnito();
+    const cerebro = modo === 'cerebro';
+    const ultima = mensajes.length - 1;
+    const respondio = cerebro && mensajes.some((m) => m.role === 'assistant');
     const [error, setError] = useState(null);
+    const tocarBoton = async (...args) => {
+        setError(null);
+        const fallo = await tocar(...args);
+        if (fallo) setError(fallo);
+    };
     const dictado = useDictado((frase) => setTexto((t) => juntar(t, frase)));
     const finRef = useRef(null);
 
@@ -71,15 +113,26 @@ export default function LearnitoChat() {
                 <EmptyState icon={<Sparkles size={28} />} title="¿En qué te ayudo?"
                     action={(
                         <div className="cp-sugerencias">
-                            {SUGERENCIAS.map((s) => <Button key={s} onClick={() => setTexto(s)}>{s}</Button>)}
+                            {SUGERENCIAS[cerebro ? 'cerebro' : 'local'].map((s) => (
+                                <Button key={s} onClick={() => setTexto(s)}>{s}</Button>
+                            ))}
                         </div>
                     )}>
-                    Escribí o tocá el micrófono y hablá. Veo tus agendas y quién te debe; el avance de los
-                    alumnos todavía no.
+                    {cerebro
+                        ? 'Escribí o tocá el micrófono y hablá. Veo los datos de Work y de la Academia: ventas, '
+                          + 'pagos, agendas, clientes y alumnos.'
+                        : 'Escribí o tocá el micrófono y hablá. Veo tus agendas y quién te debe; el avance de los '
+                          + 'alumnos todavía no.'}
                 </EmptyState>
             ) : (
                 <ul className="cp-lista" aria-live="polite">
                     {mensajes.map((m, i) => <Mensaje key={i} {...m} />)}
+                    {!enviando && mensajes[ultima]?.mensaje && (
+                        <li className="cp-siguientes-fila">
+                            <Siguientes mensaje={mensajes[ultima].mensaje} indice={mensajes[ultima].indice} tocar={tocarBoton}
+                                deshabilitado={enviando} />
+                        </li>
+                    )}
                     {enviando && <li className="cp-msg cp-msg--copiloto cp-pensando">Pensando…</li>}
                     <li ref={finRef} aria-hidden="true" />
                 </ul>
@@ -104,6 +157,16 @@ export default function LearnitoChat() {
                 </div>
                 {(dictado.error || error) && <FieldError>{dictado.error || error}</FieldError>}
                 {lleno && <FieldError role="note">La conversación llegó al límite. Empezá una nueva.</FieldError>}
+                {respondio && (
+                    <div className="cp-calificar" role="group" aria-label="Calificar la conversación">
+                        <span>¿Cómo viene la conversación?</span>
+                        {CALIFICACIONES.map((c) => (
+                            <Button key={c.valor} icon={c.icono} aria-pressed={calificacion === c.valor}
+                                variant={calificacion === c.valor ? 'primary' : 'ghost'}
+                                onClick={() => calificar(c.valor)}>{c.texto}</Button>
+                        ))}
+                    </div>
+                )}
                 <UsoMensual uso={uso} />
             </div>
         </div>

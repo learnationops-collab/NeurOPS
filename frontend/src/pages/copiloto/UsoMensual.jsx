@@ -17,6 +17,15 @@ export default function UsoMensual({ uso }) {
     if (!uso) return null;
     const { porcentaje, renueva, porcentaje_hoy: porcentajeHoy } = uso;
     const mes = porcentaje >= 100 ? 'agotado' : porcentaje >= 80 ? 'alto' : 'normal';
+    const lineaDelMes = (
+        <p className={`cp-uso__mes cp-uso__mes--${mes}`}>
+            {mes === 'agotado'
+                ? `Llegaste al tope del mes. Se renueva el ${diaDeRenovacion(renueva)}.`
+                : `Mes: ${pct(porcentaje)} usado${mes === 'alto' ? ` · se renueva el ${diaDeRenovacion(renueva)}` : ''}`}
+        </p>
+    );
+    // Con el cerebro de la Academia llega solo el mes (sin la referencia diaria).
+    if (porcentajeHoy == null) return <div className={`cp-uso cp-uso--${mes === 'agotado' ? 'agotado' : 'normal'}`}>{lineaDelMes}</div>;
     const dia = porcentajeHoy > 100 ? 'pasado' : 'normal';
     const ancho = Math.min(100, Math.max(porcentajeHoy, porcentajeHoy > 0 ? 2 : 0));
     return (
@@ -30,11 +39,7 @@ export default function UsoMensual({ uso }) {
                 aria-valuetext={`${pct(porcentajeHoy)} de lo diario`}>
                 <span style={{ width: `${ancho}%` }} />
             </div>
-            <p className={`cp-uso__mes cp-uso__mes--${mes}`}>
-                {mes === 'agotado'
-                    ? `Llegaste al tope del mes. Se renueva el ${diaDeRenovacion(renueva)}.`
-                    : `Mes: ${pct(porcentaje)} usado${mes === 'alto' ? ` · se renueva el ${diaDeRenovacion(renueva)}` : ''}`}
-            </p>
+            {lineaDelMes}
         </div>
     );
 }

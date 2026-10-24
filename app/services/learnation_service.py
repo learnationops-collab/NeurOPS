@@ -132,13 +132,22 @@ class LearnationService:
         return LearnationService._request('GET', '/success-cases')
 
     @staticmethod
-    def agent_ask(plan=None, pregunta=None, quien=None, pagina=1, catalogo=None, buscar=None, expediente=None):
+    def agent_ask(plan=None, pregunta=None, quien=None, pagina=1, catalogo=None, buscar=None, expediente=None,
+                  buscar_datos=None):
         """Agentes pares (API de la Academia §2.14): un plan por claves lo resuelve su motor de Tablas, sin IA;
         `catalogo` (True o una fuente) trae sus fuentes o datos; `expediente` ({alumno_id | work_uuid | email})
-        trae todo lo de un alumno, sin IA (ADR-168); una pregunta suelta la responde su Learnito con IA (con
+        trae todo lo de un alumno, sin IA (ADR-168); `buscar_datos` ({pregunta, palabras_clave, area}) su buscador del
+        diccionario (todavía no lo expone: responde 422); una pregunta suelta la responde su Learnito con IA (con
         costo). `quien` = {email, rol}, con el rol de Work tal cual. Devuelve el paquete tal cual."""
         cuerpo = {'plan': plan, 'pregunta': pregunta, 'quien': quien, 'pagina': pagina, 'catalogo': catalogo,
-                  'buscar': buscar, 'expediente': expediente}
+                  'buscar': buscar, 'expediente': expediente, 'buscar_datos': buscar_datos}
         cuerpo = {k: v for k, v in cuerpo.items() if v is not None}
         # Su Learnito puede tardar en responder una pregunta; un plan, menos.
         return LearnationService._request('POST', '/agent/ask', json=cuerpo, timeout=90 if pregunta else 40)
+
+    @staticmethod
+    def learnito(accion, cuerpo):
+        """El cerebro de Learnito, que vive en la Academia (su API.md §2.15): `ask` (una pregunta o un botón),
+        `confirm` o `rate`, con `sistema: work` y `quien`. Una Investigación puede tardar minutos."""
+        return LearnationService._request('POST', f'/learnito/{accion}', json={'sistema': 'work', **cuerpo},
+                                          timeout=240 if accion == 'ask' else 30)

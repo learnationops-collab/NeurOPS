@@ -10,6 +10,11 @@ Para gastar poco:
 - Hasta `MAX_MENSAJES` mensajes por conversación y `MAX_TOKENS` de salida por llamada.
 - Tope de `TOPE_MENSUAL_USD` por persona y por mes, sumando todo su uso de la IA (`ai_usage`). La
   pantalla muestra además una referencia diaria (el tope repartido en los días del mes).
+
+La dirección (admin, operaciones, director comercial) habla con el cerebro de Learnito, que vive en la
+Academia (su VISION/LEARNITO_COMO_SERVICIO.md, etapa 3): `/learnito` le pasa la pregunta o el botón que
+tocó y quién es; la Academia guarda la conversación, cuenta el gasto con su tope y le pide los datos a
+Work por su conector (app/services/learnito_conector.py).
 """
 from datetime import date, timedelta
 from decimal import Decimal
@@ -21,6 +26,7 @@ from app.decorators import copiloto_required
 from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, ROLE_OPERATOR
 from app.services import copiloto_datos, copiloto_herramientas
 from app.services.claude_service import ClaudeService, ClaudeServiceError, gasto_del_mes, inicio_del_mes
+from app.services.learnation_service import LearnationAPIError, LearnationService
 from app.services.user_time_service import hoy_del_usuario, limites_dia_utc
 
 bp = Blueprint('copiloto_api', __name__)
@@ -135,10 +141,65 @@ def _conversar(historial, kit):
     return None
 
 
+def _cerebro(user):
+    """Si la persona habla con el cerebro de la Academia (la dirección) en vez de con el copiloto de acá."""
+    return user.role in ROLES_DATOS
+
+
+def _quien(user):
+    datos = {'id': user.id, 'nombre': user.username or user.email, 'email': user.email, 'rol': user.role,
+             'zona': user.timezone}
+    return {k: v for k, v in datos.items() if v}
+
+
+def _a_la_academia(accion, cuerpo):
+    """(respuesta, estado) del cerebro; un error suyo vuelve con su mensaje (tope, ocupado, sin clave…)."""
+    try:
+        return LearnationService.learnito(accion, {'quien': _quien(current_user), **cuerpo}), 200
+    except LearnationAPIError as e:
+        p = e.payload if isinstance(e.payload, dict) else {}
+        return ({'error': p.get('mensaje') or 'Learnito no respondió. Probá de nuevo en un rato.',
+                 'codigo': p.get('codigo')}, e.status_code or 502)
+
+
 @bp.route('/uso', methods=['GET'])
 @copiloto_required
 def uso():
-    return jsonify(_uso(current_user)), 200
+    # Con el cerebro, el uso lo lleva la Academia y llega con cada respuesta.
+    if _cerebro(current_user):
+        return jsonify({'modo': 'cerebro'}), 200
+    return jsonify({**_uso(current_user), 'modo': 'local'}), 200
+
+
+@bp.route('/learnito', methods=['POST'])
+@copiloto_required
+def learnito():
+    """Una pregunta (o un botón de una respuesta anterior) al cerebro: {pregunta | boton, conversacion_id?}."""
+    if not _cerebro(current_user):
+        return jsonify({'error': 'Tu Learnito es el copiloto de closers.'}), 403
+    cuerpo = request.get_json(silent=True) or {}
+    pedido = {k: cuerpo[k] for k in ('pregunta', 'boton', 'conversacion_id') if cuerpo.get(k) not in (None, '')}
+    if isinstance(pedido.get('pregunta'), str):
+        pedido['pregunta'] = pedido['pregunta'].strip()[:MAX_CARACTERES]
+    if not pedido.get('pregunta') and not isinstance(pedido.get('boton'), dict):
+        return jsonify({'error': 'Escribí una pregunta.'}), 400
+    data, estado = _a_la_academia('ask', pedido)
+    if estado != 200:
+        return jsonify(data), estado
+    return jsonify({k: data.get(k) for k in ('conversacion_id', 'mensaje_indice', 'mensaje', 'uso')}), 200
+
+
+@bp.route('/learnito/calificar', methods=['POST'])
+@copiloto_required
+def learnito_calificar():
+    """{conversacion_id, calificacion: insatisfactoria | regular | satisfactoria | null, nota?}"""
+    if not _cerebro(current_user):
+        return jsonify({'error': 'Tu Learnito es el copiloto de closers.'}), 403
+    cuerpo = request.get_json(silent=True) or {}
+    data, estado = _a_la_academia('rate', {'conversacion_id': cuerpo.get('conversacion_id'),
+                                           'calificacion': cuerpo.get('calificacion') or None,
+                                           'nota': (cuerpo.get('nota') or '')[:500] or None})
+    return jsonify(data), estado
 
 
 @bp.route('/mensaje', methods=['POST'])
