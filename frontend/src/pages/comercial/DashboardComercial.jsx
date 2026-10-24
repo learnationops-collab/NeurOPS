@@ -113,7 +113,8 @@ const SECCIONES = [
     { id: 'revisar', label: 'Revisar', Icono: CheckCircle2, tabs: [] },
     // Proyectar y Simulador son uno solo desde el 24/10/2026: se parte de la proyección y se le
     // mueven palancas. Un link viejo a `?s=proyectar` abre el Simulador (ver `SECCION_ALIAS`).
-    { id: 'simulador', label: 'Simulador', Icono: Target, tabs: [], soloDireccion: true },
+    { id: 'simulador', label: 'Simulador', Icono: Target, soloDireccion: true,
+        tabs: [{ key: 'proyeccion', label: 'Proyección' }, { key: 'simulacion', label: 'Simulación' }] },
     { id: 'reportar', label: 'Reportar', Icono: Inbox, tabs: [{ key: 'reporte', label: 'Reporte del día' }, { key: 'historial', label: 'Historial' }], soloDireccion: true },
     // Las dos de plata (08/10/2026, antes /admin/finance y /admin/payroll) son de /finanzas, no del
     // dock de Comercial (ver `ESPACIOS`). `permiso` en una sección, como en una tab: solo para quien
@@ -838,7 +839,9 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                             onCerrarTasas={() => setTasasAbiertas(false)}
                             excluirAbierto={excluirAbierto} onCerrarExcluir={() => setExcluirAbierto(false)} />
                     )}
-                    {seccion === 'simulador' && <Simulador permitido={!!contexto.puede_reportar} />}
+                    {seccion === 'simulador' && (
+                        <Simulador permitido={!!contexto.puede_reportar} tab={tab} onTab={setTab} />
+                    )}
                     {seccion === 'reportar' && contexto.puede_reportar && (
                         <Reportar tab={tab} setTab={setTab} miembros={contexto.miembros}
                             onStepper={setStepper}

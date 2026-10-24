@@ -31,8 +31,8 @@ const tono = (base, esc, mejor = true) => {
     return (d > 0) === mejor ? 'success' : 'error';
 };
 
-const Tarjeta = ({ label, tip, base, esc, formato, nota, mejor = true }) => {
-    const t = base === null || esc === null ? null : tono(base, esc, mejor);
+const Tarjeta = ({ label, tip, base, esc, formato, nota, mejor = true, soloBase = false }) => {
+    const t = soloBase || base === null || esc === null ? null : tono(base, esc, mejor);
     return (
         <section className="kpi caja">
             <Humo colores={HUMO} />
@@ -42,7 +42,9 @@ const Tarjeta = ({ label, tip, base, esc, formato, nota, mejor = true }) => {
             </div>
             <div className="kpi-cifra">
                 <Cifra tag="p" className="kpi-n" valor={esc === null ? '—' : formato(esc)} desdeAnterior />
-                <p className="sim-base"><span>Base <b>{base === null ? '—' : formato(base)}</b></span></p>
+                {!soloBase && (
+                    <p className="sim-base"><span>Base <b>{base === null ? '—' : formato(base)}</b></span></p>
+                )}
                 {t && (
                     <span className="delta" style={{ '--c': `var(--${t})`, alignSelf: 'start' }}>
                         <Cambio base={base} esc={esc} formato={formato} />
@@ -79,14 +81,28 @@ const filasDe = (total, perfil) => {
     ];
 };
 
-const TablaCentrales = ({ total, perfil }) => (
-    <div className="sim-tabla" role="table" aria-label="Datos centrales, base contra escenario">
+const TablaCentrales = ({ total, perfil, soloBase = false }) => (
+    <div className={`sim-tabla${soloBase ? ' sim-tabla--sola' : ''}`} role="table"
+        aria-label={soloBase ? 'Datos centrales de la proyección' : 'Datos centrales, base contra escenario'}>
         <div className="sim-f sim-f--cab" role="row">
-            <span role="columnheader">Dato</span><span role="columnheader">Base</span>
-            <span role="columnheader">Escenario</span><span role="columnheader">Cambio</span>
+            <span role="columnheader">Dato</span>
+            {soloBase ? <span role="columnheader">Proyectado</span> : (
+                <>
+                    <span role="columnheader">Base</span>
+                    <span role="columnheader">Escenario</span><span role="columnheader">Cambio</span>
+                </>
+            )}
         </div>
         {filasDe(total, perfil).map(([rotulo, base, esc, formato, mejor = true]) => {
             const t = base === null || esc === null ? null : tono(base, esc, mejor);
+            if (soloBase) {
+                return (
+                    <div className="sim-f" role="row" key={rotulo}>
+                        <span className="sim-f-n" role="cell">{rotulo}</span>
+                        <span role="cell">{base === null ? '—' : formato(base)}</span>
+                    </div>
+                );
+            }
             return (
                 <div className="sim-f" role="row" key={rotulo}>
                     <span className="sim-f-n" role="cell">{rotulo}</span>
@@ -119,25 +135,25 @@ export const Cuellos = ({ total }) => {
 };
 
 /** Las cuatro tarjetas de arriba (y el aviso de techo del equipo, si lo hay). */
-const Resultados = ({ total, perfil }) => {
+const Resultados = ({ total, perfil, soloBase = false }) => {
     const { base, esc } = total;
     const marginal = retornoMarginal(total);
     const db = derivadas(base, perfil);
     const de = derivadas(esc, perfil);
     return (
         <>
-            <Cuellos total={total} />
+            {!soloBase && <Cuellos total={total} />}
             <div className="sim-tarj pareja">
                 <Tarjeta label="Cash proyectado" tip="Todo lo cobrado: ventas nuevas, cuotas y señas."
-                    base={base.cash} esc={esc.cash} formato={dinero} />
+                    base={base.cash} esc={esc.cash} formato={dinero} soloBase={soloBase} />
                 <Tarjeta label="Ventas" tip="Pago completo + split pay. Las señas no cuentan."
-                    base={base.ventas} esc={esc.ventas} formato={decimal}
+                    base={base.ventas} esc={esc.ventas} formato={decimal} soloBase={soloBase}
                     nota={`Close rate ${porc(de.closeRate)} · ticket ${dinero(de.ticket)}`} />
                 <Tarjeta label="Comisiones" tip="Closers 10% y setters 8% del cash neto."
-                    base={base.comCloser + base.comSetter} esc={esc.comCloser + esc.comSetter} formato={dinero}
+                    base={base.comCloser + base.comSetter} esc={esc.comCloser + esc.comSetter} formato={dinero} soloBase={soloBase}
                     nota={`Closers ${dinero(esc.comCloser)} · setters ${dinero(esc.comSetter)}`} />
                 <Tarjeta label="Retorno de anuncios" tip="Cash atribuido a anuncios ÷ inversión."
-                    base={db.roas} esc={de.roas} formato={veces}
+                    base={db.roas} esc={de.roas} formato={veces} soloBase={soloBase}
                     nota={marginal === null ? `Inversión ${dinero(esc.gasto)}`
                         : `Cada $1 extra devuelve $${marginal.toFixed(2)}`} />
             </div>
@@ -145,11 +161,12 @@ const Resultados = ({ total, perfil }) => {
     );
 };
 
-export const DatosCentrales = ({ total, perfil }) => (
+export const DatosCentrales = ({ total, perfil, soloBase = false }) => (
     <section className="panel">
         <div className="panel-cab"><h2 className="t-h3">Datos centrales</h2>
-            <Tip texto="Suma del horizonte elegido, base contra escenario." titulo="Datos centrales" /></div>
-        <TablaCentrales total={total} perfil={perfil} />
+            <Tip texto={soloBase ? 'Suma del horizonte elegido, si todo se mantiene.'
+                : 'Suma del horizonte elegido, base contra escenario.'} titulo="Datos centrales" /></div>
+        <TablaCentrales total={total} perfil={perfil} soloBase={soloBase} />
     </section>
 );
 
