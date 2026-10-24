@@ -8,6 +8,8 @@ import { pasaFacetas } from '../../../../components/listas/ListaConfigurable';
 import { useColumnasVisibles } from '../../../../components/listas/useColumnasVisibles';
 import { useEnPantalla } from '../../../../components/ui/useEnPantalla';
 import EnlaceMeta from './EnlaceMeta';
+import CajaDeTabla, { BotonPantallaCompleta } from './CajaDeTabla';
+import { usePantallaCompleta } from './usePantallaCompleta';
 import { armarDesglose, clavesAbribles, ordenarDesglose, totalDelDesglose } from './desgloseMeta';
 import { enlaceAdministrador } from './enlacesMeta';
 import { EMBUDOS, formatear } from './metricas';
@@ -134,6 +136,8 @@ const ArbolMeta = ({ anuncios, claves, leadsPorClave, cuentas, moneda, guardando
     const { visibles, alternar, restablecer } = useColumnasVisibles('mk-meta-columnas', COLUMNAS);
     const [query, setQuery] = useState('');
     const [soloActivos, setSoloActivos] = useState(false);
+    const [soloConGasto, setSoloConGasto] = useState(false);
+    const pantalla = usePantallaCompleta();
     const [elegidas, setElegidas] = useState({});
     const [modo, setModo] = useState('todas');
     const [orden, setOrden] = useState({ key: 'gasto', dir: 'desc' });
@@ -141,14 +145,14 @@ const ArbolMeta = ({ anuncios, claves, leadsPorClave, cuentas, moneda, guardando
     const [abiertas, setAbiertas] = useState(() => new Set());
 
     const activas = FACETAS.reduce((n, f) => n + (elegidas[f.key]?.length || 0), 0);
-    const filtrando = activas > 0 || soloActivos || !!query.trim();
+    const filtrando = activas > 0 || soloActivos || soloConGasto || !!query.trim();
 
     const filtrados = useMemo(() => {
         const q = normal(query.trim());
-        return (anuncios || []).filter((a) => (!soloActivos || a.estado === 'ACTIVE')
+        return (anuncios || []).filter((a) => (!soloActivos || a.estado === 'ACTIVE') && (!soloConGasto || a.gasto > 0)
             && pasaFacetas(a, FACETAS, elegidas, modo)
             && (!q || [a.nombre, a.campana, a.conjunto, a.clave, a.texto].some((x) => normal(x).includes(q))));
-    }, [anuncios, query, soloActivos, elegidas, modo]);
+    }, [anuncios, query, soloActivos, soloConGasto, elegidas, modo]);
 
     const arbol = useMemo(() => {
         const col = COLUMNAS.find((c) => c.key === orden?.key);
@@ -277,7 +281,7 @@ const ArbolMeta = ({ anuncios, claves, leadsPorClave, cuentas, moneda, guardando
     };
 
     return (
-        <div className="mk-arbol">
+        <div className={`mk-arbol${pantalla.completa ? ' mk-pantalla' : ''}`}>
             <div className="fila barra-tabla mk-arbol-barra">
                 <div className="config-envoltura">
                     <button type="button" className={`pastilla${activas ? ' pastilla--on' : ''}`}
@@ -311,6 +315,11 @@ const ArbolMeta = ({ anuncios, claves, leadsPorClave, cuentas, moneda, guardando
                     aria-pressed={soloActivos} onClick={() => setSoloActivos((v) => !v)}>
                     Solo activos
                 </button>
+                <button type="button" className={`pastilla${soloConGasto ? ' pastilla--on' : ''}`}
+                    aria-pressed={soloConGasto} onClick={() => setSoloConGasto((v) => !v)}>
+                    Solo con gasto
+                </button>
+                <BotonPantallaCompleta completa={pantalla.completa} onClick={pantalla.alternar} />
                 <button type="button" className="pastilla" disabled={filtrando || !todas.length}
                     onClick={() => setAbiertas(todoAbierto ? new Set() : new Set(todas))}>
                     {todoAbierto ? <ChevronsDownUp size={15} aria-hidden="true" /> : <ChevronsUpDown size={15} aria-hidden="true" />}
@@ -344,7 +353,7 @@ const ArbolMeta = ({ anuncios, claves, leadsPorClave, cuentas, moneda, guardando
             {!filtrados.length ? (
                 <p className="t-cap mut mk-vacio">Ningún anuncio cumple lo elegido.</p>
             ) : (
-                <div className="mk-tabla-caja">
+                <CajaDeTabla completa={pantalla.completa}>
                     <table className="mk-tabla mk-tabla--meta mk-tabla--arbol">
                         <thead>
                             <tr>
@@ -379,7 +388,7 @@ const ArbolMeta = ({ anuncios, claves, leadsPorClave, cuentas, moneda, guardando
                             </tr>
                         </tfoot>
                     </table>
-                </div>
+                </CajaDeTabla>
             )}
         </div>
     );

@@ -1,0 +1,56 @@
+/* ============================================================================
+   La tabla de anuncios usable (Kerwin, 23/10/2026): encabezado y nombre fijos, barra de
+   desplazamiento también arriba, pantalla completa, filtros y el panel de columnas.
+   Va junto a anuncios.css, que trae los tokens `--mk-fondo*` de `.mk-tabla-caja`.
+   ============================================================================ */
+
+/* --- Caja con alto acotado: el encabezado (arriba) y el pie de resultados (abajo) se quedan fijos --- */
+.dc-shell .mk-tabla-caja--alta{max-height:min(72vh,820px);overflow:auto;overscroll-behavior:contain}
+.dc-shell .mk-tabla-caja--alta .mk-tabla thead th{position:sticky;top:0;z-index:4;box-shadow:0 1px 0 var(--border-main)}
+/* Las esquinas (selector y nombre) quedan por encima de las columnas que pasan por debajo. */
+.dc-shell .mk-tabla-caja--alta .mk-tabla thead th.mk-col-sel,
+.dc-shell .mk-tabla-caja--alta .mk-tabla thead th.mk-col-nombre{z-index:6}
+.dc-shell .mk-tabla-caja--alta .mk-tabla tfoot td,
+.dc-shell .mk-tabla-caja--alta .mk-tabla tfoot th{position:sticky;bottom:0;z-index:3;box-shadow:0 -1px 0 var(--border-main)}
+.dc-shell .mk-tabla-caja--alta .mk-tabla tfoot .mk-col-sel,
+.dc-shell .mk-tabla-caja--alta .mk-tabla tfoot .mk-col-nombre{z-index:5}
+
+/* --- La segunda barra, arriba: sigue a la de abajo --- */
+.dc-shell .mk-scroll-arriba{overflow-x:auto;overflow-y:hidden;height:14px;border-top:1px solid var(--border-subtle);
+  background:var(--mk-fondo-cab, var(--bg-flotante));scrollbar-width:thin;scrollbar-color:var(--border-main) transparent}
+.dc-shell .mk-scroll-arriba[hidden]{display:none}
+.dc-shell .mk-scroll-arriba > div{height:1px}
+
+/* --- Pantalla completa: la tabla cubre la ventana, con su barra de filtros --- */
+.dc-shell .mk-panel-tabla.mk-pantalla{position:fixed;inset:0;z-index:150;display:flex;flex-direction:column;
+  margin:0;border:0;border-radius:0;padding:var(--s4) 0 0;background:var(--bg-flotante);overflow:hidden;animation:none}
+.dc-shell .mk-pantalla > *{flex:0 0 auto}
+.dc-shell .mk-pantalla .mk-tabla-caja--alta,
+.dc-shell .mk-pantalla .mk-tarjetas{flex:1 1 auto;min-height:0;max-height:none;overflow:auto}
+.dc-shell .mk-pantalla .mk-tabla-barra{padding-bottom:var(--s3)}
+.dc-shell .mk-pantalla .mk-pie{padding-bottom:var(--s2)}
+/* El desglose de Meta Ads lleva su propia barra: la capa es toda la `.mk-arbol`. */
+.dc-shell .mk-arbol.mk-pantalla{position:fixed;inset:0;z-index:150;display:flex;flex-direction:column;
+  padding:var(--s4) 0 0;background:var(--bg-flotante);overflow:hidden}
+
+/* --- Filtros y estado de Meta --- */
+.dc-shell .mk-tabla-barra .mk-filtros{flex-wrap:wrap}
+.dc-shell .mk-tabla-titulo{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s3);flex-wrap:wrap}
+.dc-shell .mk-estado-meta{display:inline-flex;align-items:center;gap:6px;max-width:100%;min-width:0}
+.dc-shell .mk-estado-meta--falla{color:var(--error)}
+
+/* --- El panel de columnas --- */
+.dc-shell .mk-herr .mk-menu-columnas{width:min(400px,calc(100vw - 32px));max-width:min(400px,calc(100vw - 32px));max-height:min(640px,80vh)}
+.dc-shell .mk-orden .menu-item{min-height:30px;padding-block:3px}
+.dc-shell .mk-orden .ibtn{flex-shrink:0}
+.dc-shell .mk-vista-fila{display:flex;align-items:center;gap:4px;padding-right:6px}
+.dc-shell .mk-vista-fila .menu-item{flex:1;min-width:0}
+.dc-shell .mk-vista-nueva{display:flex;gap:var(--s2);padding:6px 10px 2px}
+.dc-shell .mk-vista-nueva .mk-input{height:34px;flex:1;min-width:0;font-size:12.5px;padding:0 10px}
+.dc-shell .mk-orden{list-style:none;margin:0;padding:0;display:grid;gap:1px}
+.dc-shell .mk-orden-fila{display:flex;align-items:center;gap:2px;border-radius:8px;padding-right:4px}
+.dc-shell .mk-orden-fila .menu-item{flex:1;min-width:0}
+.dc-shell .mk-orden-fila.is-arrastrando{opacity:.4}
+.dc-shell .mk-orden-asa{flex-shrink:0;margin-left:6px;color:var(--text-muted-40);cursor:grab}
+.dc-shell .mk-orden-grupo{margin-left:auto;padding-left:var(--s2);font-size:10px;color:var(--text-muted-40);white-space:nowrap}
+.dc-shell .mk-menu-juntar--fila{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;font-size:12.5px}

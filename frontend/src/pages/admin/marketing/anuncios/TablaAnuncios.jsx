@@ -1,13 +1,17 @@
 import { useMemo, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Archive, ArchiveRestore, ChevronRight, Link2, Pencil, Search } from 'lucide-react';
+import { Archive, CircleDollarSign, Link2, Power, Search } from 'lucide-react';
 import Cifra from '../../../comercial/components/Cifra';
 import { Segmented, Tip } from '../../../comercial/components/Shared';
 import SerieDiaria from './SerieDiaria';
 import EditorAgrupacion from './EditorAgrupacion';
 import CobradoDelPeriodo from './CobradoDelPeriodo';
 import HerramientasTabla from './HerramientasTabla';
-import { Borde, Celda, Encabezado, Flecha } from './CeldasTabla';
+import { Borde, Encabezado, Flecha } from './CeldasTabla';
+import { FilaAnuncio, FilaGrupo, PieDeResultados } from './FilasAnuncios';
+import CajaDeTabla, { BotonPantallaCompleta } from './CajaDeTabla';
+import EstadoDeMeta from './EstadoDeMeta';
+import { usePantallaCompleta } from './usePantallaCompleta';
 import { columnasDelCsv } from './columnasTabla';
 import { useVistaDeColumnas } from './useVistaDeColumnas';
 import { referenciasDe } from './tonos';
@@ -50,18 +54,11 @@ export const Kpi = ({ titulo, valor, sub, tip, i }) => {
     );
 };
 
-const Punto = ({ meta }) => {
-    const estado = !meta?.anuncios ? 'sin' : meta.activos ? 'activo' : 'pausado';
-    const titulo = { sin: 'Sin anuncio en Meta', activo: 'Con anuncios activos en Meta', pausado: 'Sus anuncios de Meta no están activos' }[estado];
-    return <i className={`mk-punto mk-punto--${estado}`} title={titulo} aria-label={titulo} role="img" />;
-};
-
 const NOMBRE_DEL_NIVEL = { campanas: 'Campaña', conjuntos: 'Conjunto', anuncios: 'Palabra clave' };
 const UNIDAD = {
     campanas: ['campaña', 'campañas', 'elegidas'], conjuntos: ['conjunto', 'conjuntos', 'elegidos'],
     anuncios: ['palabra clave', 'palabras clave', 'elegidas'],
 };
-const ORIGEN = { meta: 'Meta', manual: 'a mano', anterior: 'carga vieja' };
 
 const vacio = () => ({ campanas: new Set(), conjuntos: new Set(), anuncios: new Set() });
 
@@ -81,9 +78,13 @@ export const EsqueletoTablaAnuncios = ({ bajoKpis = null }) => (
 );
 
 // `bajoKpis`: lo que va entre los KPIs y el resto (el gasto por embudo, en «Todo»).
-const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, bajoKpis = null }) => {
+const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = null, bajoKpis = null }) => {
     const [busqueda, setBusqueda] = useState('');
     const [verArchivados, setVerArchivados] = useState(false);
+    // Filtros de Kerwin (23/10/2026): lo que no gastó y lo que no está activo en Meta estorban al mirar costos.
+    const [soloConGasto, setSoloConGasto] = useState(false);
+    const [soloActivas, setSoloActivas] = useState(false);
+    const pantalla = usePantallaCompleta();
     const [orden, setOrden] = useState({ clave: 'entrantes', dir: 'desc' });
     const [nivel, setNivel] = useState('anuncios');
     const [elegidas, setElegidas] = useState(vacio);
@@ -110,8 +111,10 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, bajoKpis = null 
     const base = useMemo(() => {
         const texto = busqueda.trim().toLowerCase();
         return datos.filas.filter((f) => (verArchivados || !f.archivado)
+            && (!soloConGasto || f.gasto > 0)
+            && (!soloActivas || f.meta?.activos > 0)
             && (!texto || [f.nombre, f.clave, f.campana, f.conjunto].some((x) => (x || '').toLowerCase().includes(texto))));
-    }, [datos.filas, busqueda, verArchivados]);
+    }, [datos.filas, busqueda, verArchivados, soloConGasto, soloActivas]);
     // En cascada, como en Meta: las campañas elegidas acotan los conjuntos, y estos los anuncios.
     const deCampanas = useMemo(() => (elegidas.campanas.size
         ? base.filter((f) => elegidas.campanas.has(claveDeCampana(f.campana))) : base), [base, elegidas.campanas]);
@@ -246,11 +249,14 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, bajoKpis = null 
 
             <SerieDiaria serie={serie} moneda={moneda} alcance={alcance} metaConectado={datos.meta?.conectado} />
 
-            <section className="panel mk-panel-tabla" ref={panelTabla}>
+            <section className={`panel mk-panel-tabla${pantalla.completa ? ' mk-pantalla' : ''}`} ref={panelTabla}>
                 <div className="mk-tabla-barra">
-                    <div className="mk-cab-txt">
-                        <h2 className="t-h3">{TITULO}</h2>
-                        <p className="t-cap mut40">{BAJADA}</p>
+                    <div className="mk-tabla-titulo">
+                        <div className="mk-cab-txt">
+                            <h2 className="t-h3">{TITULO}</h2>
+                            <p className="t-cap mut40">{BAJADA}</p>
+                        </div>
+                        <EstadoDeMeta meta={datos.meta} estadoMeta={estadoMeta} />
                     </div>
                     {/* Todos los filtros en una sola línea (Kerwin, 17/10/2026: «se ve todo desordenado»). */}
                     <div className="mk-filtros">
@@ -269,9 +275,21 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, bajoKpis = null 
                                 {verArchivados ? 'Sin archivadas' : `Archivadas (${archivados})`}
                             </button>
                         )}
+                        <button type="button" className={`pastilla pastilla--sm${soloConGasto ? ' pastilla--on' : ''}`}
+                            aria-pressed={soloConGasto} onClick={() => setSoloConGasto((v) => !v)}
+                            title="Esconder las que no gastaron nada en el período">
+                            <CircleDollarSign aria-hidden="true" />
+                            Solo con gasto
+                        </button>
+                        <button type="button" className={`pastilla pastilla--sm${soloActivas ? ' pastilla--on' : ''}`}
+                            aria-pressed={soloActivas} onClick={() => setSoloActivas((v) => !v)}
+                            title="Solo las que tienen algún anuncio activo en Meta ahora">
+                            <Power aria-hidden="true" />
+                            Solo activas
+                        </button>
                         <span className="mk-filtros-hueco" />
                         <SelectorModo modo={modo} setModo={setModo} />
-                        <HerramientasTabla vista={vista} exportar={exportar} />
+                        <HerramientasTabla vista={vista} exportar={exportar} pantalla={pantalla} />
                     </div>
                     {refs && <LeyendaTonos />}
                 </div>
@@ -288,7 +306,7 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, bajoKpis = null 
                         <p className="t-cap mk-vacio">Nada coincide con la búsqueda o con lo elegido.</p>
                     )
                 ) : (
-                <div className="mk-tabla-caja">
+                <CajaDeTabla completa={pantalla.completa}>
                     {/* Anchos fijos (`table-layout: fixed`): los que se eligen arrastrando el borde de cada
                         encabezado, o los de siempre. */}
                     <table className="mk-tabla mk-tabla--anchos" style={{ width: anchoTotal }}>
@@ -317,78 +335,15 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, bajoKpis = null 
                             </tr>
                         </thead>
                         <tbody>
-                            {nivel !== 'anuncios' && visibles.map((g) => {
-                                const elegida = delNivel.has(g.id);
-                                const detalle = nivel === 'campanas'
-                                    ? `${g.conjuntos} ${g.conjuntos === 1 ? 'conjunto' : 'conjuntos'} · ${g.palabras} ${g.palabras === 1 ? 'palabra clave' : 'palabras clave'}`
-                                    : `${g.campana ?? SIN_CAMPANA} · ${g.palabras} ${g.palabras === 1 ? 'palabra clave' : 'palabras clave'}`;
-                                return (
-                                    <tr key={g.id} className={elegida ? 'mk-fila--elegida' : ''}>
-                                        <td className="mk-col-sel">
-                                            <input type="checkbox" checked={elegida} onChange={() => alternar(g)}
-                                                aria-label={`Elegir ${g.nombre}`} />
-                                        </td>
-                                        <td className="mk-col-nombre">
-                                            <button type="button" className="mk-nombre mk-abrir" onClick={() => abrir(g)}
-                                                title={`Ver ${nivel === 'campanas' ? 'sus conjuntos' : 'sus palabras clave'}`}>
-                                                <div className="mk-nombre-txt">
-                                                    <span className="mk-nombre-kw trunc" title={g.nombre}>{g.nombre}</span>
-                                                    <span className="mk-nombre-sub trunc">
-                                                        {detalle}{g.origenes.length === 1 && ` · ${ORIGEN[g.origenes[0]]}`}
-                                                    </span>
-                                                </div>
-                                                <ChevronRight className="mk-abrir-flecha" size={15} aria-hidden="true" />
-                                            </button>
-                                        </td>
-                                        {piezas.map((p) => <Celda key={p.key} fila={g} pieza={p} moneda={moneda} refs={refs} />)}
-                                        <td className="mk-col-acc" />
-                                    </tr>
-                                );
-                            })}
-                            {nivel === 'anuncios' && visibles.map((f) => {
-                                const elegida = delNivel.has(claveDeAnuncio(f));
-                                const meta = textoMeta(f.meta);
-                                return (
-                                    <tr key={claveDeAnuncio(f)} className={`${elegida ? 'mk-fila--elegida' : ''}${f.archivado ? ' mk-fila--archivada' : ''}`}>
-                                        <td className="mk-col-sel">
-                                            <input type="checkbox" checked={elegida} onChange={() => alternar(f)}
-                                                aria-label={`Ver ${f.nombre} en el gráfico`} />
-                                        </td>
-                                        <td className="mk-col-nombre">
-                                            <div className="mk-nombre">
-                                                <Punto meta={f.meta} />
-                                                <div className="mk-nombre-txt">
-                                                    <span className="mk-nombre-kw trunc" title={f.nombre}>{f.nombre}</span>
-                                                    {sub(f, meta) && (
-                                                        <span className="mk-nombre-sub trunc" title={(f.meta?.nombres || []).join(' · ')}>
-                                                            {sub(f, meta)}
-                                                        </span>
-                                                    )}
-                                                    {f.clave !== null && (
-                                                        <button type="button" className="mk-agrupar trunc" onClick={() => setEditando(f)}
-                                                            title={f.agrupacion ? `Campaña y conjunto (${ORIGEN[f.agrupacion]}): cambiarlos` : 'Elegir campaña y conjunto'}>
-                                                            <Pencil size={11} aria-hidden="true" />
-                                                            {f.campana ? `${f.campana} › ${f.conjunto ?? 'Sin conjunto'}` : 'Sin campaña · elegir'}
-                                                        </button>
-                                                    )}
-                                                </div>
-                                                {f.archivado && <span className="chip mk-chip" style={{ '--c': 'var(--idle)' }}>Archivada</span>}
-                                            </div>
-                                        </td>
-                                        {piezas.map((p) => <Celda key={p.key} fila={f} pieza={p} moneda={moneda} refs={refs} />)}
-                                        <td className="mk-col-acc">
-                                            {f.clave !== null && (
-                                                <button type="button" className="ibtn ibtn--sm"
-                                                    title={f.archivado ? 'Volver a mostrar' : 'Archivar: esconderla de la tabla'}
-                                                    aria-label={f.archivado ? `Volver a mostrar ${f.nombre}` : `Archivar ${f.nombre}`}
-                                                    onClick={() => onArchivar(f, !f.archivado)}>
-                                                    {f.archivado ? <ArchiveRestore aria-hidden="true" /> : <Archive aria-hidden="true" />}
-                                                </button>
-                                            )}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
+                            {nivel !== 'anuncios' && visibles.map((g) => (
+                                <FilaGrupo key={g.id} g={g} nivel={nivel} elegida={delNivel.has(g.id)} onAlternar={alternar}
+                                    onAbrir={abrir} piezas={piezas} moneda={moneda} refs={refs} />
+                            ))}
+                            {nivel === 'anuncios' && visibles.map((f) => (
+                                <FilaAnuncio key={claveDeAnuncio(f)} f={f} elegida={delNivel.has(claveDeAnuncio(f))}
+                                    onAlternar={alternar} onEditar={setEditando} onArchivar={onArchivar} subtitulo={sub}
+                                    piezas={piezas} moneda={moneda} refs={refs} />
+                            ))}
                             {!visibles.length && (
                                 <tr>
                                     <td colSpan={piezas.length + 3} className="mk-vacio">
@@ -400,19 +355,11 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, bajoKpis = null 
                             )}
                         </tbody>
                         {visibles.length > 0 && (
-                            <tfoot>
-                                <tr className="mk-total">
-                                    <td className="mk-col-sel" />
-                                    <td className="mk-col-nombre">
-                                        <span className="mk-total-rot">Resultados de {visibles.length} {visibles.length === 1 ? uno : varios}</span>
-                                    </td>
-                                    {piezas.map((p) => <Celda key={p.key} fila={totales} pieza={p} moneda={moneda} />)}
-                                    <td className="mk-col-acc" />
-                                </tr>
-                            </tfoot>
+                            <PieDeResultados cantidad={visibles.length} unidad={visibles.length === 1 ? uno : varios}
+                                totales={totales} piezas={piezas} moneda={moneda} />
                         )}
                     </table>
-                </div>
+                </CajaDeTabla>
                 )}
 
                 {(datos.sin_atribuir?.gasto_meta > 0 || datos.sin_atribuir?.agendas > 0) && (
