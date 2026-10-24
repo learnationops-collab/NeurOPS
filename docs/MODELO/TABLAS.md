@@ -19,7 +19,7 @@
 
 ## 2. Claves de dato
 
-`f.{col}` columna propia · `p.{fk}.{col}` columna del padre (un nivel, por FK declarada) · `n.{tabla}.{fk}` cuántas hijas · `l.{tabla}.{fk}` la última hija creada · `s.{dato}` regla de Work (`s.estado_pago`, `s.deuda`, `s.proxima_cuota`, `s.dias_para_vencer`, `s.cuotas_vencidas`, `s.monto_vencido`, `s.estado_agenda`) · `d.{clave}` calculado del diccionario.
+`f.{col}` columna propia · `p.{fk}.{col}` columna del padre (un nivel, por FK declarada) · `n.{tabla}.{fk}` cuántas hijas · `l.{tabla}.{fk}` la última hija creada · `s.{dato}` regla de Work (`s.estado_pago`, `s.deuda`, `s.proxima_cuota`, `s.dias_para_vencer`, `s.cuotas_vencidas`, `s.monto_vencido`, `s.estado_agenda`, `s.asistio` = si | no de las agendas realizadas, para el show up rate) · `d.{clave}` calculado del diccionario.
 
 ## 3. Diccionario de datos (ADR-W008)
 

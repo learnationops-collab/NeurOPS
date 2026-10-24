@@ -1155,7 +1155,8 @@
     ],
     "significado": "Venta activa en la que solo se pagó la seña (todavía no pagó completo, parcial ni cuota). La seña da 7 días de acceso.",
     "ejemplo": "¿Cuántas señas siguen sin completarse?",
-    "palabras": "seña, solo seña, seña pendiente, depósito, reservó, no completó"
+    "palabras": "seña, solo seña, seña pendiente, depósito, reservó, no completó",
+    "actual": true
    },
    {
     "clave": "sena_convertida",
@@ -1234,7 +1235,8 @@
     ],
     "significado": "Venta activa a la que le falta cobrar algo (total menos cobrado, sin pago completo).",
     "ejemplo": "¿Qué ventas tienen saldo pendiente?",
-    "palabras": "saldo, debe, falta cobrar, deuda, resto pendiente"
+    "palabras": "saldo, debe, falta cobrar, deuda, resto pendiente",
+    "actual": true
    },
    {
     "clave": "venta_para_revisar",
@@ -1255,7 +1257,8 @@
     ],
     "significado": "Venta activa con algún motivo de duda del agrupado (programa a definir, seña sin seguir, cuota sin venta…).",
     "ejemplo": "¿Qué ventas hay que revisar?",
-    "palabras": "para revisar, dudosa, con observación, revisar venta"
+    "palabras": "para revisar, dudosa, con observación, revisar venta",
+    "actual": true
    },
    {
     "clave": "sena_sin_seguir_30_dias",
@@ -1276,7 +1279,8 @@
     ],
     "significado": "Marcada por el sistema: solo tiene seña y pasaron más de 30 días. No se cancela sola: lo decide el equipo.",
     "ejemplo": "¿Qué señas llevan más de un mes sin pago?",
-    "palabras": "seña vieja, seña colgada, seña sin seguir, no pagó el resto"
+    "palabras": "seña vieja, seña colgada, seña sin seguir, no pagó el resto",
+    "actual": true
    }
   ]
  },

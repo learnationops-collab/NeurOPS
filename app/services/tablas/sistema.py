@@ -11,6 +11,7 @@ como un mapa {clave: valor} (un solo parámetro JSON), como hace la Academia con
     s.monto_vencido    cuánto suman
   De agendas:
     s.estado_agenda    el estado de closer_agendas_service.derivar_estado
+    s.asistio          si (show_up o segunda_llamada) o no (no_show), de ese mismo estado: el show up rate es pct = si
 """
 import json
 from datetime import date, datetime
@@ -35,7 +36,12 @@ PAGO = {
 }
 AGENDA = {'s.estado_agenda': ('Estado de la agenda', 'text', False,
                               'show_up, no_show, segunda_llamada, cancelada, reagendada, confirmada, por_confirmar, '
-                              'sin_reportar… (el mismo de Mi cartera)')}
+                              'sin_reportar… (el mismo de Mi cartera)'),
+          's.asistio': ('Asistió', 'text', False,
+                        'si (show_up o segunda_llamada) o no (no_show); vacío si la llamada no se realizó. El show up '
+                        'rate es medir pct de s.asistio con valor si, sobre las agendas realizadas')}
+# s.asistio sale de s.estado_agenda: estado -> si | no (el resto, vacío).
+ASISTIO = {'show_up': 'si', 'segunda_llamada': 'si', 'no_show': 'no'}
 _COLUMNA = {'s.estado_pago': 'estado', 's.deuda': 'deuda', 's.proxima_cuota': 'proxima', 's.dias_para_vencer': 'dias',
             's.cuotas_vencidas': 'vencidas', 's.monto_vencido': 'vencido'}
 
@@ -120,8 +126,13 @@ def _lazy_pago(columna, clave_sql, kind):
     return expr
 
 
-def _lazy_agenda(clave_sql):
-    return lambda: _desde_mapa(_memo('agendas', estados_de_agenda), clave_sql, 'text')
+def _lazy_agenda(clave_sql, key='s.estado_agenda'):
+    def expr():
+        estados = _memo('agendas', estados_de_agenda)
+        if key == 's.asistio':
+            estados = {i: ASISTIO.get(e) for i, e in estados.items()}
+        return _desde_mapa(estados, clave_sql, 'text')
+    return expr
 
 
 def _cliente_de(table):
@@ -146,5 +157,5 @@ def campos(user, table, campo_cls):
             out[key] = campo_cls(key, label, 'Pagos', kind, None, detalle, lazy=lazy)
     if table.name == 'appointments':
         for key, (label, kind, _, detalle) in AGENDA.items():
-            out[key] = campo_cls(key, label, 'Agenda', kind, None, detalle, lazy=_lazy_agenda(table.c.id))
+            out[key] = campo_cls(key, label, 'Agenda', kind, None, detalle, lazy=_lazy_agenda(table.c.id, key))
     return out
