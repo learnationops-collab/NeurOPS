@@ -60,7 +60,7 @@ La Academia le pide a Work cada dato con `POST {op, args, quien}` y el token `AC
 - **Herramientas**: las de datos (§4), las del closer (§4), `buscar_cliente`, `expediente_cliente` y `proponer_accion`.
 - **Alcance** (`tablas/alcance.py`, también en [TABLAS.md](TABLAS.md) §1b): la dirección ve todo. El resto:
   - Filas y su total: solo las suyas (donde figura como closer, setter, autor o con el email del closer, o de una persona con la que tuvo una agenda).
-  - Mediciones: de todo el equipo, salvo que agrupen por un dato personal (email, nombre, id de un cliente): esas, sobre sus filas. El paquete trae `alcance` y Learnito lo lee.
+  - Mediciones que agrupan: de todo el equipo, salvo que agrupen por un dato personal (email, nombre, id de un cliente): esas, sobre sus filas. Una medición sin agrupar es un total y va sobre sus filas ("¿cuántas agendas tuve?"). El paquete trae `alcance` y Learnito lo lee.
   - Clientes (`buscar_cliente`, `findPeople`, `person`, `peopleNamed`) y expedientes: solo los suyos (con los que tuvo una agenda).
   - Datos de la Academia (`sistema: academia`): solo la dirección.
   - Montos: como siempre, solo admin y director comercial (`exclusion.py`). Las herramientas del closer muestran la deuda de sus clientes, como su cartera.

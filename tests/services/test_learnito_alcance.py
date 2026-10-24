@@ -51,7 +51,7 @@ def test_agrupar_por_un_dato_de_cliente_solo_mide_lo_suyo(equipo):
     ana, *_ = equipo
     r = motor.run(ana, {'fuente': 'appointments', 'agrupar_por': 'f.client_id'})
     assert len(r['medicion']['rows']) == 1
-    assert r['alcance'].endswith('La medición también: agrupa por un dato personal.')
+    assert r['alcance'].endswith('La medición también (es un total o agrupa por un dato personal).')
 
 
 def test_clientes_y_expedientes_solo_los_suyos(equipo):
@@ -112,3 +112,18 @@ def test_los_ejemplos_son_de_work(db):
     assert ejemplos and all(isinstance(v, str) for v in ejemplos.values())
     texto = ' '.join(ejemplos.values()).lower()
     assert 'cliente' in texto and 'entrega' not in texto and 'pulso' not in texto
+
+
+def test_un_total_sin_agrupar_cuenta_solo_lo_suyo(equipo):
+    """"¿Cuántas agendas tuve?" no puede medir las del equipo: un total es como las filas (ADR-W011)."""
+    ana, _, jefa, _ = equipo
+    plan = {'fuente': 'appointments', 'medir': {'metrica': 'count'}}
+    assert conector.measure(ana, plan)['value'] == 1
+    assert conector.measure(jefa, plan)['value'] == 2
+
+
+def test_buscar_un_cliente_por_palabras_y_sin_tildes(equipo):
+    ana, _, _, clientes = equipo
+    for texto in ('Carla Diaz', 'carla díaz', 'Díaz'):
+        assert [c['student_id'] for c in conector.find_people(ana, texto)] == [clientes[ana.id].id]
+    assert conector.people_named(ana, ['diaz']) == [clientes[ana.id].id]

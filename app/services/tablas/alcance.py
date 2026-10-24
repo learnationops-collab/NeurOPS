@@ -3,8 +3,9 @@
 - Filas (listas y su total): solo las suyas. Una fila es suya si figura en ella (una columna que apunta a su
   usuario, como closer_id o setter_id, o el email o el nombre del closer en las tablas que lo guardan como texto)
   o si es de una persona con la que tuvo una agenda, como closer o como setter.
-- Mediciones: de todo el equipo (el show up de cada closer, las ventas por programa), salvo que agrupen por un dato
-  personal (el email o el nombre de un cliente): esas, solo sobre sus filas.
+- Mediciones que agrupan: de todo el equipo (el show up de cada closer, las ventas por programa), salvo que agrupen
+  por un dato personal (el email o el nombre de un cliente): esas, solo sobre sus filas. Una medición sin agrupar es
+  un total, como el de las filas: solo lo suyo (si no, "mis agendas" contaba las de todos).
 
 Lo usa el motor (motor.run), así que vale igual para Learnito, las habilidades y cualquier plan. Un solo lugar
 para revisarlo, como exclusion.py.
@@ -72,7 +73,12 @@ def personal(fuente, clave):
     return False
 
 
+def propia(fuente, agrupar_por):
+    """¿La medición va solo sobre sus filas? Un total (sin agrupar) o un reparto por un dato personal."""
+    return not agrupar_por or personal(fuente, agrupar_por)
+
+
 def nota(medicion_propia):
     return ('Alcance: filas y total, solo las tuyas (donde figurás o de personas con las que tuviste una agenda). '
-            + ('La medición también: agrupa por un dato personal.' if medicion_propia
+            + ('La medición también (es un total o agrupa por un dato personal).' if medicion_propia
                else 'La medición es de todo el equipo.'))

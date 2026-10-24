@@ -24,7 +24,7 @@
 
 - **La dirección** (admin, operaciones, director comercial) y los sistemas de confianza (`alcance_completo`, como la Academia por `agent/ask`) ven todas las filas.
 - **El resto**: las filas y su total son las suyas. Una fila es suya si alguna columna apunta a su usuario (closer_id, setter_id, author_id…), si `closer_email`, `setter_email` o `closer` (texto) son los suyos, o si es de una persona con la que tuvo una agenda como closer o setter.
-- **Las mediciones** (agrupar, medir) son de todo el equipo, salvo que agrupen por un dato personal (`alcance.personal`: email, nombre, teléfono, uuid o un id que no apunta a un usuario): esas, sobre sus filas.
+- **Las mediciones que agrupan** son de todo el equipo, salvo que agrupen por un dato personal (`alcance.personal`: email, nombre, teléfono, uuid o un id que no apunta a un usuario): esas, sobre sus filas. **Una medición sin agrupar** es un total y va sobre sus filas, como el total de la lista (`alcance.propia`).
 - El paquete trae `alcance` con lo que se aplicó. Quien no es de la dirección y no tiene usuario no ve filas.
 
 ## 2. Claves de dato
