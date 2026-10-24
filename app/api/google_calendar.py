@@ -142,8 +142,12 @@ def _vuelta_del_login(state, redirect_uri):
     from app.services import login_google
 
     base = os.environ.get('FRONTEND_URL', '').rstrip('/')
+    # Si el login lo arrancó la app móvil (login_google.url_de_login con reto), la vuelta es a la app.
+    reto_movil = session.pop('google_movil_reto', None)
 
     def a_login(resultado):
+        if reto_movil:
+            return _a_la_app(f'error={resultado}')
         return redirect(f'{base}/login?google={resultado}')
 
     if request.args.get('error'):
@@ -162,10 +166,26 @@ def _vuelta_del_login(state, redirect_uri):
         return a_login('sin_cuenta')
     if not usuario.is_active:
         return a_login('desactivada')
+    if reto_movil:
+        return _a_la_app(f'code={login_google.generar_codigo_movil(usuario.id, reto_movil)}')
     login_user(usuario, remember=True)
     session.pop('active_role', None)  # se entra siempre con el rol principal, como con la clave
     session['google_login'] = usuario.id
     return a_login('ok')
+
+
+def _a_la_app(query):
+    """Vuelve a la app móvil por su esquema. Una página con enlace y redirección por JS, no un 302: los
+    navegadores embebidos a veces no siguen un 302 a un esquema propio."""
+    from app.services import login_google
+
+    destino = f'{login_google.ESQUEMA_MOVIL}://auth?{query}'
+    html = ('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width">'
+            '<title>Learnation</title><body style="font-family:sans-serif;text-align:center;padding:48px">'
+            '<p>Volviendo a la app…</p>'
+            f'<p><a href="{destino}">Abrir Learnation</a></p>'
+            f'<script>location.replace({destino!r})</script></body>')
+    return html, 200, {'Content-Type': 'text/html; charset=utf-8'}
 
 
 @bp.route('/google/callback', methods=['GET'])
