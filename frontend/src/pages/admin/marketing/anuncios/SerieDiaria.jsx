@@ -79,7 +79,7 @@ const SerieDiaria = ({ serie, moneda, alcance, metaConectado }) => {
     const dias = serie;
     const entero = (v) => Number(v).toLocaleString('en-US');
     return (
-        <div className="grid-2 mk-series">
+        <div className="mk-series">
             <section className="panel mk-panel-serie">
                 <div className="panel-cab">
                     <div className="mk-cab-txt">
