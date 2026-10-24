@@ -10,9 +10,12 @@ Regla única (la usan el tablero de anuncios y Entrantes, así no se contradicen
      (`ultima_de_manychat`); sin ninguna queda sin dato (pendiente).
   2. Un lead pasa a descalificado ('false') si, después de eso, alguna de estas fuentes lo descalifica:
        · el closer lo marcó «Descalificado» o «No Lead» en su agenda (`por_closer`);
+       · el formulario de Agendas 2.0 lo cortó por una respuesta que descalifica, p. ej. «no es médico»
+         (`por_formulario`: los `SchedIntento` 'descalificada', el mismo corte que cuenta
+         `descalificados_service`);
        · el setter (o la dirección) lo corrigió a mano a «Descalificado»: eso ya se guarda como 'false'
          en el último webhook (`manychat_calificacion.calificar`), no necesita otra fuente.
-  3. La descalificación del closer vale para las palabras clave en que la persona entró hasta la fecha
+  3. La descalificación del closer o del formulario vale para las palabras clave en que la persona entró hasta la fecha
      de su llamada; una que entró después es otro recorrido y se mide aparte.
 
 La descalificación solo baja: nunca deja calificado a nadie que ManyChat no calificó.
@@ -62,11 +65,49 @@ def por_closer():
     return vale_hasta
 
 
+def por_formulario():
+    """{lead_id: instante hasta el que vale} de los leads que el formulario de agenda descalificó.
+
+    El intento trae el email y, si lo dio, el nombre y el Instagram: la conversación se busca por la
+    persona del email y, de respaldo, como el resto de Marketing (`cruce_conversaciones`). Vale hasta
+    el momento en que dejó sus datos en el formulario."""
+    # Import local: Agendas 2.0 es un módulo aparte que importa servicios de la operación.
+    from app.agendas_v2.modelos import SchedIntento
+    from app.services import person_service
+
+    filas = SchedIntento.query.filter(SchedIntento.estado == 'descalificada').all()
+    if not filas:
+        return {}
+    persona_de = {f.id: next(iter(sorted(person_service.duenos('email', (f.email or '').strip().lower()))), None)
+                  for f in filas}
+    datos = {f.id: f.resp or {} for f in filas}
+    cruce = Cruce({normalize_ig(d.get('c-instagram')) for d in datos.values()},
+                  {d.get('c-nombre') for d in datos.values()}, set(persona_de.values()))
+    vale_hasta = {}
+    for f in filas:
+        tope = f.creado_en or FUTURO
+        d = datos[f.id]
+        for lead_ids in cruce.candidatos(d.get('c-instagram'), d.get('c-nombre'), persona_de[f.id]):
+            if lead_ids:
+                for lead_id in lead_ids:
+                    vale_hasta[lead_id] = max(vale_hasta.get(lead_id, tope), tope)
+                break
+    return vale_hasta
+
+
+def descalificados():
+    """{lead_id: instante hasta el que vale} de quien descalificó el closer o el formulario."""
+    resultado = por_closer()
+    for lead_id, tope in por_formulario().items():
+        resultado[lead_id] = max(resultado.get(lead_id, tope), tope)
+    return resultado
+
+
 def efectiva(valor_manychat, entro, descalificado_hasta=None):
     """La calificación final ('true' | 'false' | None) de una persona en una palabra clave.
 
     `valor_manychat`: lo que dejó `ultima_de_manychat`. `entro`: cuándo entró por esa palabra clave.
-    `descalificado_hasta`: lo que devolvió `por_closer` para ese lead (None si nadie lo descalificó)."""
+    `descalificado_hasta`: lo que devolvió `descalificados` para ese lead (None si nadie lo descalificó)."""
     if descalificado_hasta is not None and entro is not None and entro <= descalificado_hasta:
         return 'false'
     return valor_manychat if valor_manychat in CON_DATO else None

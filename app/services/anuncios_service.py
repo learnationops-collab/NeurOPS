@@ -100,7 +100,7 @@ def _entrantes(desde_dt, hasta_dt, clave_de_anuncio):
         LeadAnswer.created_at >= desde_dt, LeadAnswer.created_at <= hasta_dt).distinct()}
     por_clave = defaultdict(lambda: {'entrantes': 0, 'calificados': 0, 'descalificados': 0,
                                      'en_conversacion': 0, 'dias': defaultdict(lambda: [0, 0, 0, 0])})
-    descalificados = calificacion_service.por_closer()
+    descalificados = calificacion_service.descalificados()
     for lead_id, filas in _interacciones(lead_ids, clave_de_anuncio).items():
         primera, calificacion, respondio = {}, {}, set()
         for creada, clave, valor, contesto in filas:

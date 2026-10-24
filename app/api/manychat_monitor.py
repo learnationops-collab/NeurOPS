@@ -115,7 +115,7 @@ def get_entrantes():
 
     leads = {l.id: l for tanda in servicio._en_tandas(lead_ids)
              for l in Conversation.query.filter(Conversation.id.in_(tanda))}
-    descalificados = calificacion_service.por_closer()
+    descalificados = calificacion_service.descalificados()
     filas = []
     for lead_id in lead_ids:
         lead, historia = leads.get(lead_id), interacciones.get(lead_id, [])
@@ -141,8 +141,8 @@ def get_entrantes():
             'campana': campana,
             'conjunto': conjunto,
             'estado': estado,
-            # Descalificado por el closer aunque ManyChat lo había calificado (calificacion_service).
-            'descalificado_por_closer': calificacion == 'false' and de_manychat != 'false',
+            # Descalificado por el closer o el formulario aunque ManyChat lo había calificado (calificacion_service).
+            'descalificado_despues': calificacion == 'false' and de_manychat != 'false',
             'respondio': respondio,
             'ultimo_enviado': mensaje(paso.get('enviado')),
             'ultimo_respondido': mensaje(paso.get('respondido')),

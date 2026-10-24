@@ -97,7 +97,7 @@ const Ficha = ({ fila, mensajes, onCerrar, onCorregir }) => {
                     <span className="t-cap mut40">{fila.ig ? `@${fila.ig} · ` : ''}{fila.clave || 'Sin palabra clave'}{fila.setter ? ` · ${fila.setter}` : ''}</span>
                 </div>
                 <Estado estado={fila.estado} />
-                {fila.descalificado_por_closer && <span className="t-cap mut40">Lo descalificó el closer</span>}
+                {fila.descalificado_despues && <span className="t-cap mut40">Descalificado después de calificar</span>}
                 <button type="button" className="ibtn ibtn--sm" onClick={onCerrar} aria-label="Cerrar el historial">
                     <X aria-hidden="true" />
                 </button>
@@ -145,8 +145,8 @@ const EntrantesVista = ({ desde, hasta, version = 0 }) => {
     // Corregir a mano: la fila toma el estado nuevo sin recargar la lista. «Sin dato» vuelve a en
     // conversación o sin respuesta según si contestó algún mensaje.
     const corregir = async (fila, valor) => {
-        if (fila.descalificado_por_closer && valor !== 'descalificado') {
-            toast.error('Lo descalificó el closer: la corrección no lo cambia.');
+        if (fila.descalificado_despues && valor !== 'descalificado') {
+            toast.error('Lo descalificaron el closer o el formulario: la corrección no lo cambia.');
             return;
         }
         try {

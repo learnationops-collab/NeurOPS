@@ -46,13 +46,13 @@ describe('Marketing › Entrantes', () => {
         expect(screen.getByText('50%')).toBeInTheDocument();
     });
 
-    it('el lead que descalificó el closer lo dice y no se corrige a calificado', async () => {
+    it('el lead descalificado después de calificar lo dice y no se corrige a calificado', async () => {
         api.get.mockImplementation((url) => Promise.resolve({ data: url === '/manychat-webhook/entrantes'
-            ? { ...DATOS, filas: [persona(1, 'Beto', 'descalificado', '4', { descalificado_por_closer: true })] } : [] }));
+            ? { ...DATOS, filas: [persona(1, 'Beto', 'descalificado', '4', { descalificado_despues: true })] } : [] }));
         render(<div className="dc-shell"><EntrantesVista desde="2026-10-01" hasta="2026-10-16" /></div>);
         fireEvent.click(await screen.findByText('Beto'));
         const ficha = within(await screen.findByLabelText('Historial de Beto'));
-        expect(ficha.getByText('Lo descalificó el closer')).toBeInTheDocument();
+        expect(ficha.getByText('Descalificado después de calificar')).toBeInTheDocument();
         fireEvent.click(ficha.getByRole('button', { name: 'Calificado' }));
         expect(api.put).not.toHaveBeenCalled();
     });

@@ -15,7 +15,8 @@ from datetime import date, datetime
 
 import pytest
 
-from app.models import Appointment, Client, Conversation, LeadAnswer
+from app.agendas_v2.modelos import SchedIntento
+from app.models import Appointment, Client, Conversation, LeadAnswer, Person
 from app.services import anuncios_service, calificacion_service
 
 _n = itertools.count(1)
@@ -48,6 +49,15 @@ def agenda(db, closer, ig, resultado, *, cuando=LLAMADA):
     db.session.add(Appointment(closer_id=closer.id, client_id=cli.id, start_time=cuando, result='Confirmado',
                                closer_result=resultado, origin='Setter', created_at=LUNES))
     db.session.commit()
+
+
+def intento(db, estado='descalificada', *, ig=None, email=None, creado=datetime(2026, 10, 8, 10, 0)):
+    n = next(_n)
+    email = email or f'form{n}@test.local'
+    db.session.add(SchedIntento(evento_id='ev1', email=email, estado=estado, creado_en=creado,
+                                resp={'c-email': email, 'c-instagram': ig or '', 'c-nombre': f'Form {n}'}))
+    db.session.commit()
+    return email
 
 
 @pytest.fixture()
@@ -153,9 +163,9 @@ def test_entrantes_y_el_tablero_dan_lo_mismo_con_los_campos_de_siempre(db, clien
     assert r.status_code == 200
     filas = {f['ig']: f for f in r.get_json()['filas']}
     assert filas['ana.medica']['estado'] == 'descalificado'
-    assert filas['ana.medica']['descalificado_por_closer'] is True
+    assert filas['ana.medica']['descalificado_despues'] is True
     assert filas['beto.med']['estado'] == 'calificado'
-    assert filas['beto.med']['descalificado_por_closer'] is False
+    assert filas['beto.med']['descalificado_despues'] is False
     tablero = fila_de_tablero()
     por_estado = {e: sum(f['estado'] == e for f in filas.values()) for e in ('calificado', 'descalificado')}
     assert (tablero['calificados'], tablero['descalificados']) == (por_estado['calificado'], por_estado['descalificado'])
@@ -171,3 +181,40 @@ def test_respondio_cuenta_a_quien_contesto_o_ya_tiene_calificacion(db, client, m
 
     respondio = {f['ig']: f['respondio'] for f in r.get_json()['filas']}
     assert respondio == {'contesto': True, 'calificado': True, 'nada': False}
+
+
+def test_el_formulario_descalifica_a_quien_ManyChat_califico_por_su_instagram(db):
+    conv = lead(db, 'hugo.estudiante')
+    intento(db, ig='@Hugo.Estudiante')
+
+    assert list(calificacion_service.por_formulario()) == [conv.id]
+    fila = fila_de_tablero()
+    assert (fila['calificados'], fila['descalificados']) == (0, 1)
+
+
+def test_el_formulario_llega_al_lead_por_el_email_de_su_persona(db):
+    conv = lead(db, 'ines.sin.ig')
+    persona = Person(uuid='p-ines', full_name='Ines', email='ines@test.local')
+    db.session.add(persona)
+    db.session.flush()
+    conv.person_uuid = persona.uuid
+    db.session.commit()
+    intento(db, email='ines@test.local')
+
+    assert list(calificacion_service.descalificados()) == [conv.id]
+
+
+def test_un_intento_incompleto_no_descalifica(db):
+    lead(db, 'julia.med')
+    intento(db, estado='incompleta', ig='julia.med')
+
+    assert calificacion_service.por_formulario() == {}
+    assert fila_de_tablero()['calificados'] == 1
+
+
+def test_closer_y_formulario_juntos_valen_la_fecha_mas_tardia(db, closer):
+    conv = lead(db, 'kari.med')
+    agenda(db, closer, 'kari.med', 'Descalificado')
+    intento(db, ig='kari.med', creado=datetime(2026, 10, 20, 9, 0))
+
+    assert calificacion_service.descalificados() == {conv.id: datetime(2026, 10, 20, 9, 0)}
