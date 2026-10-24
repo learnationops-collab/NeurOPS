@@ -123,7 +123,7 @@ const DetalleTaller = ({
 
     return (
         <Hoja titulo={`${evento.name}, ${formatDate(evento.date)}`} cabeza={cabeza} onCerrar={onCerrar}>
-            <motion.div key={`${evento.id}-${vista}`}
+            <motion.div key={`${evento.id}-${vista}`} className="wt-detalle-cuerpo"
                 initial={quieto ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                 transition={quieto ? { duration: 0 } : { duration: 0.24, ease: 'easeOut' }}>
                 {vista === 'embudo' && (

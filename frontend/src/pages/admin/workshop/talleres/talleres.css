@@ -160,7 +160,7 @@
     border-bottom: 1px solid var(--border-subtle); flex-shrink: 0;
 }
 .dc-shell .wt-hoja-cabeza-txt { flex: 1 1 auto; min-width: 0; display: grid; gap: 4px; }
-.dc-shell .wt-hoja-cuerpo { overflow: auto; overscroll-behavior: contain; padding: var(--s5) var(--s6) var(--s6); min-height: 0; }
+.dc-shell .wt-hoja-cuerpo { overflow: auto; overscroll-behavior: contain; padding: var(--s4) var(--s6) var(--s5); min-height: 0; }
 
 .dc-shell .wt-detalle-cab { display: grid; gap: var(--s3); min-width: 0; }
 .dc-shell .wt-detalle-id { display: flex; align-items: center; gap: var(--s2) var(--s3); flex-wrap: wrap; min-width: 0; }
@@ -169,6 +169,25 @@
 .dc-shell .wt-detalle-barra { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; min-width: 0; }
 .dc-shell .wt-detalle-barra > .tabs { max-width: 100%; }
 .dc-shell .wt-detalle-acciones { margin-left: auto; display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
+
+/* El cuerpo reparte el alto: la tabla de anuncios toma lo que queda (y se desliza sola), sin un segundo
+   scroll anidado. Si ni así entra, el cuerpo entero se desliza. */
+.dc-shell .wt-hoja-cuerpo { display: flex; flex-direction: column; }
+.dc-shell .wt-detalle-cuerpo { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.dc-shell .wt-detalle-cuerpo > .wt-vista--tabla { flex: 1 1 auto; min-height: 0; grid-template-rows: auto minmax(0, 1fr); }
+.dc-shell .wt-panel--tabla { display: flex; flex-direction: column; min-height: 0; }
+.dc-shell .wt-panel--tabla .wt-anuncios-caja { flex: 1 1 auto; max-height: none; min-height: 200px; }
+
+/* Detalle compacto: que el embudo, las agendas y el vivo vs. grabación entren sin deslizar en una pantalla
+   de 900 px de alto; lo que sobre, el cuerpo lo desliza. */
+.dc-shell .wt-hoja .wt-vista { gap: var(--s3); }
+.dc-shell .wt-hoja .wt-panel { padding: var(--s4); }
+.dc-shell .wt-hoja .wt-panel .panel-cab { margin-bottom: var(--s2); }
+.dc-shell .wt-hoja .wt-kpi { padding: var(--s3) var(--s4); gap: var(--s1, 4px); }
+.dc-shell .wt-hoja .wt-kpi .kpi-n { font-size: clamp(22px, 2.2vw, 26px); }
+.dc-shell .wt-hoja .wt-fuente { gap: var(--s2); }
+.dc-shell .wt-hoja .wt-fuente-datos { gap: 3px; }
+.dc-shell .wt-hoja .wt-doble { gap: var(--s3); }
 
 @media (max-width: 640px) {
     .dc-shell .wt-hoja-cabeza { padding: var(--s4); }

@@ -113,7 +113,7 @@ const WorkshopAnunciosView = ({ evento, formatCurrency = dineroPorDefecto, anter
     const gastoTotal = datos?.totales?.gasto || 0;
 
     return (
-        <div className="vista wt-vista">
+        <div className="vista wt-vista wt-vista--tabla">
             {error ? (
                 <section className="panel wt-panel"><p className="t-body mut">No se pudieron traer los anuncios de Meta.</p></section>
             ) : !datos ? (
@@ -165,7 +165,7 @@ const WorkshopAnunciosView = ({ evento, formatCurrency = dineroPorDefecto, anter
                         </div>
                     </section>
 
-                    <section className="panel wt-panel">
+                    <section className="panel wt-panel wt-panel--tabla">
                         <PanelCab titulo="Campañas, conjuntos y anuncios" tip={NOMBRE.ayuda}>
                             <span className="t-cap mut num">
                                 {datos.campanas.length} {datos.campanas.length === 1 ? 'campaña' : 'campañas'} · {cantidadAnuncios}{' '}
