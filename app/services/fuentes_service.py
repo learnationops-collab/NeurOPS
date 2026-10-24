@@ -35,8 +35,8 @@ show up, ventas, cuotas cobradas, cash y los costos.
 monto, y el % de clientes que compran un upsell = clientes con algún upsell cobrado en el período ÷
 clientes con algún cobro en el período de esa fuente. (Definición propia, a confirmar con Kerwin.)
 
-**Sin campaña** (24/10/2026): `sin_campana` avisa de las palabras clave con gasto y anuncios activos en Meta
-que no están en una campaña vigente del Inbox; al apagar ManyChat sus leads dejan de contarse.
+**Sin campaña** (24/10/2026): `sin_campana` avisa de las palabras clave con gasto, y anuncios activos en Meta
+o entrantes, que no están en una campaña vigente del Inbox; al apagar ManyChat sus leads dejan de contarse.
 
 Costos: costo por lead, por agenda y por venta = importe gastado ÷ (leads | agendas | ventas); sin
 denominador o sin gasto, None. «Ventas» cuenta pagos de venta nueva (como el close rate), no el ticket
@@ -208,12 +208,12 @@ def claves_con_campana():
 
 
 def sin_campana(filas, gasto_setting):
-    """Palabras clave con gasto en el período y anuncios activos en Meta que NO están en una campaña vigente
-    del Inbox (Kerwin, 24/10/2026: «las campañas son las que están activas en Meta»). Cuando se apague
+    """Palabras clave con gasto en el período, y anuncios activos en Meta o entrantes en el período, que NO
+    están en una campaña vigente del Inbox (Kerwin, 24/10/2026). Cuando se apague
     ManyChat sus leads dejan de contarse: el CPL de Setting se ve más alto y el ROAS, más bajo. Se corta
     sola al crear la campaña. {palabras: [{clave, nombre, gasto, entrantes}], gasto, pct_gasto}, por gasto."""
     candidatas = [f for f in filas if f['clave'] and f['gasto'] > 0 and not f['archivado']
-                  and (f.get('meta') or {}).get('activos')]
+                  and ((f.get('meta') or {}).get('activos') or f['entrantes'] > 0)]
     cubiertas = claves_con_campana() if candidatas else set()
     palabras = sorted(({'clave': f['clave'], 'nombre': f['nombre'], 'gasto': round(f['gasto'], 2),
                         'entrantes': f['entrantes']} for f in candidatas if f['clave'] not in cubiertas),
