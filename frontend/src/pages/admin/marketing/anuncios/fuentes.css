@@ -1,23 +1,8 @@
-/* Marketing por fuente: la comparación Setting vs Workshop y sus tarjetas (ver FuentesResumen.jsx). */
+/* Marketing por fuente: las tarjetas de una fuente (ver FuentesResumen.jsx); la comparación vive en todos/. */
 .dc-shell .mk-fuente-kpis{margin-bottom:var(--s5)}
 /* Ocho cifras: 4 + 4 (o 2 × 4 en pantallas angostas), nunca una fila con dos sueltas. */
 .dc-shell .pareja.mk-fuente-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media (min-width:900px){.dc-shell .pareja.mk-fuente-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
-.dc-shell .mk-comparar{padding:var(--s5);margin-bottom:var(--s5);display:flex;flex-direction:column;gap:var(--s3)}
-.dc-shell .mk-comparar-nota{display:inline-flex;align-items:center;gap:4px;color:var(--success)}
-.dc-shell .mk-cmp{width:100%;border-collapse:collapse;table-layout:fixed}
-.dc-shell .mk-cmp th,.dc-shell .mk-cmp td{padding:4px var(--s3);font-size:13px;font-weight:400;text-align:right;white-space:normal}
-.dc-shell .mk-cmp thead th{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)}
-/* La cabecera (Fuente · Setting · Workshop) queda pegada arriba al bajar por la comparación. */
-.dc-shell .mk-cmp thead th{position:sticky;top:0;z-index:2;background:color-mix(in srgb,var(--text-on-surface) 4%,var(--bg-flotante))}
-.dc-shell .mk-cmp .mk-cmp-nombre{text-align:left;width:40%;color:var(--text-muted)}
-.dc-shell .mk-cmp tbody tr:not(.mk-fuentes-grupo){border-top:1px solid color-mix(in srgb,var(--text-on-surface) 8%,transparent)}
-.dc-shell .mk-cmp .mk-fuentes-grupo th{padding-top:var(--s3);text-align:left;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)}
-.dc-shell .mk-fuentes-rotulo{display:inline-flex;align-items:center;gap:6px}
-.dc-shell .mk-cmp td.mk-gana{color:var(--success);font-weight:700}
-.dc-shell .mk-cmp-val{display:inline-flex;align-items:center;justify-content:flex-end;gap:4px}
-.dc-shell .mk-cmp-val svg{flex:none}
-
 /* Series de una fuente: tres gráficos en fila cuando entran, uno debajo del otro si no (nunca 2 + 1). */
 .dc-shell .mk-series3{display:grid;grid-template-columns:1fr;gap:var(--s4)}
 @media (min-width:980px){.dc-shell .mk-series3{grid-template-columns:repeat(3,minmax(0,1fr))}}
