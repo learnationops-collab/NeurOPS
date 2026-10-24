@@ -2,7 +2,7 @@ import React from 'react';
 import { Check, Layers } from 'lucide-react';
 import { PillMenu, fmt } from '../../../comercial/components/Shared';
 import RangoFechas, { esFecha, rangoAnterior, textoRango } from '../../../comercial/components/RangoFechas';
-import { COMPARACIONES, FILTRO_TODOS, filtrarTalleres, rangoDeSeleccion } from '../filtroTalleres';
+import { COMPARACIONES, FILTRO_TODOS, filtrarTalleres, rangoDeSeleccion, talleresComparados } from '../filtroTalleres';
 
 /**
  * Las dos pastillas del Resumen, como las de la cabecera del dashboard comercial: qué talleres se
@@ -14,6 +14,7 @@ import { COMPARACIONES, FILTRO_TODOS, filtrarTalleres, rangoDeSeleccion } from '
  */
 
 const CANTIDADES = [3, 5, 10, 20];
+const CON_CALENDARIO = ['anteriores', 'prev', 'mes', 'mismo_mes'];
 
 const talleresTexto = (n) => fmt.plural(n, 'taller', 'talleres');
 
@@ -87,9 +88,13 @@ const WorkshopFiltroResumen = ({ talleres, filtro, comparacion, comparado, onFil
     ) : null;
 
     // ---- Contra qué
+    // Una comparación sin talleres (ej. «anteriores» al analizar todos) no cambia nada: se avisa en
+    // la opción en vez de parecer rota.
+    const sinTalleres = (key) => CON_CALENDARIO.includes(key) && !talleresComparados(talleres, filtro, { modo: key });
+    const etiquetaVs = (c) => (c.key === 'anteriores' && analizados.length ? `Los ${analizados.length} anteriores` : c.label);
     const opcionesVs = COMPARACIONES.map((c) => ({
         ...c,
-        label: c.key === 'anteriores' && analizados.length ? `Los ${analizados.length} anteriores` : c.label,
+        label: sinTalleres(c.key) ? `${etiquetaVs(c)} · ninguno` : etiquetaVs(c),
         quedaAbierto: c.key === 'custom' || c.key === 'elegidos',
     }));
 
@@ -105,7 +110,7 @@ const WorkshopFiltroResumen = ({ talleres, filtro, comparacion, comparado, onFil
 
     const textoVs = comparacion.modo === 'none' ? 'Sin comparar'
         : comparacion.modo === 'custom' && comparado ? textoRango(comparado.rango)
-            : opcionesVs.find((o) => o.key === comparacion.modo)?.label;
+            : etiquetaVs(COMPARACIONES.find((c) => c.key === comparacion.modo) || {});
     const detalleVs = comparacion.modo === 'none' ? null
         : comparado ? talleresTexto(comparado.talleres.length) : 'sin talleres';
 

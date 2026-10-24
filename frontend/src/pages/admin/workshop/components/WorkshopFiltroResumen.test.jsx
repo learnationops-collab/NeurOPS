@@ -46,6 +46,15 @@ describe('Workshop › Resumen › qué talleres y contra qué', () => {
         expect(pastilla('Los 3 anteriores')).toHaveTextContent('3 talleres');
     });
 
+    it('al analizar todos, la comparación sin talleres lo dice en la opción', async () => {
+        render(<ConEstado espia={vi.fn()} />);
+        await userEvent.click(pastilla('Sin comparar'));
+        // Antes del primero no hay nada; el mes anterior al último (septiembre) sí tiene talleres.
+        expect(opcion('Los 6 anteriores · ninguno')).toBeInTheDocument();
+        expect(opcion('Período anterior · ninguno')).toBeInTheDocument();
+        expect(opcion('Mes anterior')).toBeInTheDocument();
+    });
+
     it('elegir talleres arranca con lo que se estaba mirando y se marca uno por uno', async () => {
         const espia = vi.fn();
         render(<ConEstado espia={espia} />);
