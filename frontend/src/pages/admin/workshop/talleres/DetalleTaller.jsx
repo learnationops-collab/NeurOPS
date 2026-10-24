@@ -131,7 +131,9 @@ const DetalleTaller = ({
                         onResync={resync} resyncing={resyncing}
                         agendas={<AgendasEstados evento={evento} />} />
                 )}
-                {vista === 'anuncios' && <WorkshopAnunciosView key={evento.id} evento={evento} />}
+                {vista === 'anuncios' && (
+                    <WorkshopAnunciosView key={evento.id} evento={evento} anteriores={talleres.slice(i + 1, i + 4)} />
+                )}
                 {vista === 'grabacion' && <WorkshopReplayConfigPanel evento={evento} onSaved={() => onRefresh(true)} />}
             </motion.div>
         </Hoja>

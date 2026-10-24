@@ -32,7 +32,8 @@ describe('Workshop › Talleres › Anuncios del taller', () => {
         api.get.mockResolvedValue({ data: DESGLOSE });
         armar();
 
-        expect(await screen.findByText('Ad 8 - Aprobación')).toBeInTheDocument();
+        // El primer render del archivo es el más lento (módulos y estilos en frío).
+        expect(await screen.findByText('Ad 8 - Aprobación', {}, { timeout: 5000 })).toBeInTheDocument();
         expect(api.get.mock.calls[0][0]).toBe('workshop/events/15/anuncios');
         expect(screen.getByText(/del 04\/10 al 12\/10/)).toBeInTheDocument();
         // La segunda campaña está cerrada hasta que se la abre.
@@ -81,5 +82,73 @@ describe('Workshop › Talleres › Anuncios del taller', () => {
         armar();
 
         expect(await screen.findByText(/se\s+corrigen en Marketing › Meta Ads/)).toBeInTheDocument();
+    });
+
+    describe('comparación contra los talleres anteriores', () => {
+        const previo = (totales) => ({ ...DESGLOSE, totales: { ...DESGLOSE.totales, ...totales } });
+        const ANTERIORES = [{ id: 14, date: '2026-10-03' }, { id: 13, date: '2026-09-26' }, { id: 12, date: '2026-09-19' }];
+        // El taller 14 gastó la mitad con el doble de CPM; el 13, igual que este salvo el CTR.
+        const RESPUESTAS = {
+            'workshop/events/15/anuncios': DESGLOSE,
+            'workshop/events/14/anuncios': previo({ gasto: 102.635, cpm: 45.6, ctr: 3.33 }),
+            'workshop/events/13/anuncios': previo({ ctr: 1.665 }),
+            'workshop/events/12/anuncios': { ...DESGLOSE, anuncios_workshop: 0, campanas: [] },
+        };
+        const armarConAnteriores = () => {
+            api.get.mockImplementation((url) => Promise.resolve({ data: RESPUESTAS[url] }));
+            const { container } = render(
+                <div className="dc-shell"><WorkshopAnunciosView evento={{ id: 15 }} formatCurrency={dinero} anteriores={ANTERIORES} /></div>);
+            return container;
+        };
+        const cifra = (container, titulo) => [...container.querySelectorAll('.wt-cifra')]
+            .find((c) => c.querySelector('dt').textContent.startsWith(titulo));
+
+        it('por defecto compara contra el taller anterior: gasto neutro, CPM más bajo es mejora', async () => {
+            const c = armarConAnteriores();
+
+            await screen.findByText('Ad 8 - Aprobación');
+            await within(cifra(c, 'Gasto')).findByText('+100%');
+            expect(cifra(c, 'Gasto').querySelector('.wt-var--muted')).not.toBeNull();   // el gasto no se juzga
+            expect(within(cifra(c, 'CPM')).getByText('−50,0%')).toBeInTheDocument();
+            expect(cifra(c, 'CPM').querySelector('.wt-var--success')).not.toBeNull();  // un costo que bajó
+            expect(within(cifra(c, 'CPM')).getByText('antes $45.60')).toBeInTheDocument();
+            expect(screen.getByText(/Contra el taller del 03\/10/)).toBeInTheDocument();
+        });
+
+        it('un costo que subió es para peor y lo que se queda igual no se pinta', async () => {
+            const c = armarConAnteriores();
+            await screen.findByText('Ad 8 - Aprobación');
+            await userEvent.click(screen.getByRole('tab', { name: 'Prom. 2 anteriores' }));
+
+            // CPM: promedio de 45,6 y 22,8 = 34,2 → ahora 22,8 es −33,3%; CTR: 3,33 y 1,665 → 2,4975.
+            await within(cifra(c, 'CPM')).findByText('−33,3%');
+            expect(cifra(c, 'CTR').querySelector('.wt-var--success')).not.toBeNull();
+            expect(screen.getByText(/promedio de 2 talleres/)).toBeInTheDocument();
+        });
+
+        it('el promedio ignora al taller que no tuvo anuncios con gasto', async () => {
+            armarConAnteriores();
+            await screen.findByText('Ad 8 - Aprobación');
+            await userEvent.click(screen.getByRole('tab', { name: 'Prom. 3 anteriores' }));
+
+            expect(await screen.findByText(/promedio de 2 talleres/)).toBeInTheDocument();
+        });
+
+        it('«Sin comparar» quita las flechas y no pide los talleres anteriores', async () => {
+            const c = armarConAnteriores();
+            await screen.findByText('Ad 8 - Aprobación');
+            await within(cifra(c, 'Gasto')).findByText('+100%');
+            await userEvent.click(screen.getByRole('tab', { name: 'Sin comparar' }));
+
+            expect(c.querySelector('.wt-var')).toBeNull();
+        });
+
+        it('sin talleres anteriores no hay selector de comparación', async () => {
+            api.get.mockResolvedValue({ data: DESGLOSE });
+            armar();
+
+            await screen.findByText('Ad 8 - Aprobación');
+            expect(screen.queryByRole('tab', { name: 'Taller anterior' })).not.toBeInTheDocument();
+        });
     });
 });

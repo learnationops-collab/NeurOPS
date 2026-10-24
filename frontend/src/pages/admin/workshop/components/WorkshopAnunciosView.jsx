@@ -1,7 +1,8 @@
 import { Fragment, useEffect, useState } from 'react';
-import { ChevronRight } from 'lucide-react';
-import { EsqueletoFilas, PanelCab, Tip } from '../../../comercial/components/Shared';
-import { useAnunciosTaller } from '../talleres/datosTaller';
+import { ArrowDown, ArrowUp, ChevronRight, Minus } from 'lucide-react';
+import { EsqueletoFilas, PanelCab, Segmented, Tip } from '../../../comercial/components/Shared';
+import { useAnunciosTaller, useAnunciosVarios } from '../talleres/datosTaller';
+import { BASES, baseDe, tonoDe, variacion, variacionTexto } from '../talleres/comparacion';
 import { diaMes } from '../talleres/formato';
 
 /**
@@ -10,6 +11,10 @@ import { diaMes } from '../talleres/formato';
  * conjunto › anuncio con gasto, impresiones, clics, CTR, CPC y CPM; por campaña, además, las visitas
  * a las landings y los clics al grupo de WhatsApp que trajo (el id de la campaña viaja en el
  * utm_campaign). Ver `app/services/workshop_meta_service.py`.
+ *
+ * Los números de arriba se comparan contra el taller anterior o el promedio de los 2 o 3 anteriores
+ * (`anteriores`, del más cercano al más lejano): una flecha y el % de cambio, verde si mejoró y
+ * rojo si empeoró (en un costo, bajar es mejorar; el gasto no se juzga). Ver `comparacion.js`.
  *
  * Vive en el detalle de un taller (Talleres › detalle › Anuncios). La tabla scrollea dentro de su
  * caja, con los títulos pegados arriba: un `thead` sticky funciona porque el scroll de los dos ejes
@@ -72,9 +77,27 @@ const RESUMEN = [
     ['cpm', 'visitas', 'clics_whatsapp', 'costo_whatsapp'],
 ].map((fila) => fila.map((clave) => COLUMNAS.find((col) => col.clave === clave)));
 
-const WorkshopAnunciosView = ({ evento, formatCurrency = dineroPorDefecto }) => {
+const ICONO = { 1: ArrowUp, [-1]: ArrowDown, 0: Minus };
+
+// El cambio de una cifra contra la base, con su flecha. `antes` es el valor de la base ya formateado.
+const Cambio = ({ col, cambio, antes }) => {
+    if (!cambio) return <small className="wt-var wt-var--muted">Sin dato previo</small>;
+    const Icono = ICONO[cambio.dir];
+    return (
+        <small className={`wt-var wt-var--${tonoDe(col.clave, cambio.dir)}`} title={`Antes: ${antes}`}>
+            <Icono aria-hidden="true" /> <b className="num">{variacionTexto(cambio.pct)}</b>
+            <span className="num">antes {antes}</span>
+        </small>
+    );
+};
+
+const WorkshopAnunciosView = ({ evento, formatCurrency = dineroPorDefecto, anteriores = [] }) => {
     const { datos, error } = useAnunciosTaller(evento?.id);
     const [abiertas, setAbiertas] = useState({});
+    const [baseKey, setBaseKey] = useState(anteriores.length ? 'anterior' : 'ninguna');
+    const n = BASES.find((b) => b.key === baseKey).n;
+    const { datos: previos } = useAnunciosVarios(anteriores.slice(0, n).map((e) => e.id));
+    const base = n > 0 && previos ? baseDe(previos, n) : null;
 
     // La campaña que más gastó, abierta.
     useEffect(() => {
@@ -112,7 +135,18 @@ const WorkshopAnunciosView = ({ evento, formatCurrency = dineroPorDefecto }) => 
                         <PanelCab titulo="Lo que trajeron"
                             tip="Desde el día después del taller anterior hasta este.">
                             <span className="t-cap mut num">Meta Ads · del {diaMes(datos.desde)} al {diaMes(datos.hasta)}</span>
+                            {anteriores.length > 0 && (
+                                <Segmented chico opciones={BASES.filter((b) => b.n <= anteriores.length)} valor={baseKey}
+                                    onChange={setBaseKey} ariaLabel="Comparar los anuncios contra" />
+                            )}
                         </PanelCab>
+                        {n > 0 && previos && (
+                            <p className="t-cap mut wt-base-nota">
+                                {base
+                                    ? `Contra ${n === 1 ? `el taller del ${diaMes(anteriores[0].date)}` : `el promedio de ${base.cuantos} ${base.cuantos === 1 ? 'taller' : 'talleres'}`}. Verde mejoró, rojo empeoró.`
+                                    : 'Los talleres anteriores no tienen anuncios de Workshop con gasto para comparar.'}
+                            </p>
+                        )}
                         <div className="wt-resumen-anuncios">
                             {RESUMEN.map((fila, i) => (
                                 <dl key={i} className="pareja wt-cifras" style={{ '--min': '130px', '--g': 'var(--s3)' }}>
@@ -120,6 +154,10 @@ const WorkshopAnunciosView = ({ evento, formatCurrency = dineroPorDefecto }) => 
                                         <div key={col.clave} className="tarjeta wt-cifra">
                                             <dt>{col.titulo} <Tip titulo={col.titulo} texto={col.ayuda} /></dt>
                                             <dd className="num">{valor(col, datos.totales[col.clave], formatCurrency)}</dd>
+                                            {base && (
+                                                <Cambio col={col} cambio={variacion(datos.totales[col.clave], base.totales[col.clave])}
+                                                    antes={valor(col, base.totales[col.clave], formatCurrency)} />
+                                            )}
                                         </div>
                                     ))}
                                 </dl>

@@ -21,6 +21,15 @@ const fresco = (clave) => {
 /** Para los tests (y por si algún día hace falta forzar). */
 export const olvidarDatosTaller = () => recuerdo.clear();
 
+const traer = (clave, url, signal) => {
+    const ya = fresco(clave);
+    if (ya) return Promise.resolve(ya);
+    return api.get(url, { signal }).then((r) => {
+        recuerdo.set(clave, { t: Date.now(), datos: r.data });
+        return r.data;
+    });
+};
+
 const usePedido = (clave, url, activo) => {
     const [estado, setEstado] = useState(() => ({ datos: clave ? fresco(clave) : null, error: null }));
 
@@ -47,6 +56,25 @@ const usePedido = (clave, url, activo) => {
 /** Los anuncios de Meta del taller (campaña › conjunto › anuncio), ver workshop_meta_service. */
 export const useAnunciosTaller = (id, activo = true) =>
     usePedido(id ? `anuncios-${id}` : null, `workshop/events/${id}/anuncios`, activo);
+
+/** Los anuncios de varios talleres a la vez (para compararlos), con el mismo recuerdo de cada uno. */
+export const useAnunciosVarios = (ids) => {
+    const clave = ids.join(',');
+    const [estado, setEstado] = useState({ datos: ids.length ? null : [], error: false });
+
+    useEffect(() => {
+        if (!ids.length) { setEstado({ datos: [], error: false }); return undefined; }
+        const control = new AbortController();
+        setEstado({ datos: null, error: false });
+        Promise.all(ids.map((id) => traer(`anuncios-${id}`, `workshop/events/${id}/anuncios`, control.signal)))
+            .then((datos) => setEstado({ datos, error: false }))
+            .catch((e) => { if (e?.name !== 'CanceledError') setEstado({ datos: null, error: true }); });
+        return () => control.abort();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [clave]);
+
+    return estado;
+};
 
 /** Qué pasó con las personas que agendaron en el taller, por estado del libro de agendas. */
 export const useAgendasEstados = (id, activo = true) =>
