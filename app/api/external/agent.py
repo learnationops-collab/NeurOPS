@@ -24,9 +24,11 @@ logger = logging.getLogger(__name__)
 
 
 class _SistemaExterno:
-    """Quien consulta desde otro sistema: sin rol de Work, así que sin montos ni tablas de admin."""
+    """Quien consulta desde otro sistema: sin rol de Work, así que sin montos ni tablas de admin. Con todas las filas:
+    los agentes pares de la Academia no son una persona del equipo (tablas/alcance.py)."""
     role = None
     id = None
+    alcance_completo = True
 
 
 def _items(items):

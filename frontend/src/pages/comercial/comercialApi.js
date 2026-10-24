@@ -35,6 +35,10 @@ export const getComparativas = (filtros) =>
 export const getVariabilidad = (filtros) =>
     api.get('/comercial/variabilidad', { params: filtrosQuery(filtros) }).then(r => r.data);
 
+/** Simulador: las sumas de las ventanas de la línea base (solo la dirección). Ver `comercial_simulador.py`. */
+export const getSimuladorBase = () =>
+    api.get('/comercial/simulador/base').then(r => r.data);
+
 /**
  * Las filas de una tabla de Revisar. `operar` (10/10/2026) la pide para operar los registros: en
  * Ventas, el backend suma las no completadas, el estado y la agenda de cada venta. Solo le hace caso

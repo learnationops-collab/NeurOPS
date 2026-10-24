@@ -38,13 +38,49 @@
 .thalamus .learnito .cp-redactor .ui-textarea{max-height:30dvh;overflow-y:auto}
 .thalamus .learnito .cp-botones{display:flex;justify-content:flex-end;align-items:center;gap:8px}
 
-/* Uso: la barra de hoy contra la referencia diaria y, abajo, el mes contra el tope. */
+/* Gráficos adjuntos (Grafico.jsx): con CSS y los tokens del tema. */
+.thalamus .learnito .cp-graf{margin:4px 0;padding:10px 12px;display:grid;gap:8px;background:var(--bg-surface);border:1px solid var(--border-main);border-radius:10px;white-space:normal}
+.thalamus .learnito .cp-graf figcaption{font-size:12px;font-weight:700}
+.thalamus .learnito .cp-graf__pie{margin:0;font-size:11px;color:var(--text-muted)}
+.thalamus .learnito .cp-graf__barras{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.thalamus .learnito .cp-graf__barras li{display:grid;grid-template-columns:minmax(70px,32%) 1fr auto;align-items:center;gap:8px;font-size:12px}
+.thalamus .learnito .cp-graf__rotulo{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted)}
+.thalamus .learnito .cp-graf__pista{height:8px;border-radius:999px;background:var(--bg-element);overflow:hidden}
+.thalamus .learnito .cp-graf__pista span{display:block;height:100%;border-radius:inherit;background:var(--brand-secondary)}
+.thalamus .learnito .cp-graf__valor{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.thalamus .learnito .cp-graf__valor small{font-weight:500;color:var(--text-muted)}
+.thalamus .learnito .cp-graf__columnas{display:flex;align-items:stretch;gap:6px;height:150px;overflow-x:auto}
+.thalamus .learnito .cp-graf__columna{flex:1 0 34px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10.5px}
+.thalamus .learnito .cp-graf__alto{flex:1;width:100%;display:flex;align-items:flex-end}
+.thalamus .learnito .cp-graf__alto span{display:block;width:100%;border-radius:4px 4px 0 0;background:var(--brand-secondary)}
+.thalamus .learnito .cp-graf__columna .cp-graf__rotulo{white-space:nowrap}
+.thalamus .learnito .cp-graf__numero{margin:0;font-size:28px;font-weight:800;font-variant-numeric:tabular-nums}
+.thalamus .learnito .cp-graf__anillo{--p:0%;width:96px;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--brand-secondary) var(--p), var(--bg-element) 0)}
+.thalamus .learnito .cp-graf__anillo span{width:72%;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;background:var(--bg-surface);font-weight:800;font-size:15px}
+
+/* La acción propuesta: se confirma o se descarta; después queda su resultado. */
+.thalamus .learnito .cp-accion{margin-top:8px;padding:10px 12px;display:grid;gap:6px;border:1px solid var(--brand-secondary);border-radius:10px;background:var(--bg-surface);white-space:normal}
+.thalamus .learnito .cp-accion--hecha{border-color:var(--border-main)}
+.thalamus .learnito .cp-accion--descartada{border-color:var(--border-main);opacity:.7}
+.thalamus .learnito .cp-accion p{margin:0}
+.thalamus .learnito .cp-accion__titulo{display:flex;align-items:center;gap:6px;font-weight:700;font-size:12.5px}
+.thalamus .learnito .cp-accion__detalle,.thalamus .learnito .cp-accion__estado{font-size:12px;color:var(--text-muted)}
+.thalamus .learnito .cp-accion__texto{white-space:pre-wrap}
+
+/* Uso: la barra de esta conversación contra su tope y, abajo, el mes. */
 .thalamus .learnito .cp-uso{--c:var(--brand-secondary);display:grid;gap:4px}
 .thalamus .learnito .cp-uso--alto{--c:var(--warning)}
 .thalamus .learnito .cp-uso--agotado{--c:var(--error)}
-.thalamus .learnito .cp-uso__txt{display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--text-muted)}
+.thalamus .learnito .cp-uso__txt{display:flex;justify-content:space-between;gap:8px;font-size:11px;font-weight:700;color:var(--text-muted)}
+.thalamus .learnito .cp-uso--agotado .cp-uso__txt{color:var(--error)}
 .thalamus .learnito .cp-uso__barra{height:4px;border-radius:999px;background:var(--bg-element);overflow:hidden}
 .thalamus .learnito .cp-uso__barra span{display:block;height:100%;border-radius:inherit;background:var(--c);transition:width .4s ease}
+
+/* Para abrir otra conversación: las anteriores sin calificar. */
+.thalamus .learnito .cp-pendientes{display:grid;gap:8px;padding:10px 12px;border:1px solid var(--warning);border-radius:10px;background:var(--bg-surface);font-size:12px}
+.thalamus .learnito .cp-pendientes>p{margin:0;font-weight:700}
+.thalamus .learnito .cp-pendientes__fila{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.thalamus .learnito .cp-pendientes__titulo{flex:1 1 100%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted)}
 .thalamus .learnito .cp-uso__mes{margin:0;font-size:11px;font-weight:600;color:var(--text-muted)}
 .thalamus .learnito .cp-uso__mes--alto{color:var(--warning);font-weight:700}
 .thalamus .learnito .cp-uso__mes--agotado{color:var(--error);font-weight:700}

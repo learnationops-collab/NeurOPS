@@ -10,7 +10,7 @@ const base = (user, extra = {}) => armarMenuSesion({ user, navigate: vi.fn(), lo
 
 describe('menú de sesión', () => {
     it('siempre los mismos grupos y en el mismo orden: acciones, cuenta (Configuración y Portal), salida', () => {
-        const grupos = base({ role: 'setter' }, { acciones: [{ id: 'links' }], playbook: { pendientes: 0 } });
+        const grupos = base({ role: 'fulfillment' }, { acciones: [{ id: 'links' }], playbook: { pendientes: 0 } });
         expect(ids(grupos)).toEqual([['links'], ['configuracion', 'portal'], ['salir']]);
     });
 
@@ -22,7 +22,8 @@ describe('menú de sesión', () => {
 
     it('Learnito va al final de las acciones solo para quien puede usar el copiloto', () => {
         expect(ids(base({ role: 'closer' }, { acciones: [{ id: 'agenda' }] }))[0]).toEqual(['agenda', 'learnito']);
-        expect(ids(base({ role: 'setter' }, { acciones: [{ id: 'links' }] }))[0]).toEqual(['links']);
+        expect(ids(base({ role: 'setter' }, { acciones: [{ id: 'links' }] }))[0]).toEqual(['links', 'learnito']);
+        expect(ids(base({ role: 'fulfillment' }, { acciones: [{ id: 'links' }] }))[0]).toEqual(['links']);
     });
 
     it('lo pendiente del Playbook (ahora en Cortex) se ve en «Portal»', () => {

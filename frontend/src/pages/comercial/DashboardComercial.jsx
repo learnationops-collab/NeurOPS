@@ -19,6 +19,7 @@ import MenuSesion from './components/MenuSesion';
 import Analizar from './components/Analizar';
 import Comparativas from './components/Comparativas';
 import Variabilidad from './components/Variabilidad';
+import Simulador from './components/simulador/Simulador';
 import Revisar, { TABLAS_POR_ROL, duplicadasDe } from './components/Revisar';
 import { puedeExportarRevisar } from './components/tablasDef';
 import { operacionDe } from './components/operar/operacion';
@@ -110,8 +111,9 @@ const SECCIONES = [
         { key: 'comparativas', label: 'Comparativas', permiso: 'puede_comparar' },
         { key: 'variabilidad', label: 'Variabilidad' }] },
     { id: 'revisar', label: 'Revisar', Icono: CheckCircle2, tabs: [] },
-    { id: 'proyectar', label: 'Proyectar', Icono: Calendar, tabs: [], pronto: true },
-    { id: 'simulador', label: 'Simulador', Icono: Target, tabs: [], pronto: true },
+    // Proyectar y Simulador son uno solo desde el 24/10/2026: se parte de la proyección y se le
+    // mueven palancas. Un link viejo a `?s=proyectar` abre el Simulador (ver `SECCION_ALIAS`).
+    { id: 'simulador', label: 'Simulador', Icono: Target, tabs: [], soloDireccion: true },
     { id: 'reportar', label: 'Reportar', Icono: Inbox, tabs: [{ key: 'reporte', label: 'Reporte del día' }, { key: 'historial', label: 'Historial' }], soloDireccion: true },
     // Las dos de plata (08/10/2026, antes /admin/finance y /admin/payroll) son de /finanzas, no del
     // dock de Comercial (ver `ESPACIOS`). `permiso` en una sección, como en una tab: solo para quien
@@ -121,7 +123,8 @@ const SECCIONES = [
 ];
 
 // Las secciones con su propio período: la píldora del tablero (Hoy, 7 días, Este mes…) no aplica.
-const CON_PERIODO_PROPIO = ['finanzas', 'payroll'];
+// El Simulador tiene su horizonte y su línea base.
+const CON_PERIODO_PROPIO = ['finanzas', 'payroll', 'simulador'];
 
 /**
  * Espacios: este mismo tablero con solo algunas secciones en el dock. «finanzas» (08/10/2026) es
@@ -145,20 +148,7 @@ const espacioDe = (s) => Object.keys(ESPACIOS).find(e => ESPACIOS[e].includes(s)
  */
 const BASIS_INICIAL = { generadas: 'creacion' };
 
-const PRONTO = {
-    proyectar: 'Vas a poder proyectar el cierre del mes con el ritmo actual y ajustar la meta. Estamos puliendo el cálculo.',
-    simulador: 'Vas a poder mover cada palanca del embudo y ver cuánto cambia el resultado. Estamos puliendo el modelo.',
-};
-
-const ProntoSection = ({ seccion }) => (
-    <section className="panel">
-        <div className="vacio-grande">
-            <span className="vacio-icono"><seccion.Icono size={24} /></span>
-            <h2 className="t-h2">{seccion.label} llega pronto</h2>
-            <p className="t-sm mut">{PRONTO[seccion.id]}</p>
-        </div>
-    </section>
-);
+const SECCION_ALIAS = { proyectar: 'simulador' };
 
 /** En lugar de los datos, mientras a un rango personalizado le falta una fecha: con los campos
  *  ahí mismo, para no tener que ir a buscarlos a la píldora. */
@@ -191,9 +181,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     // es de un espacio (un link viejo a Finanzas o Payroll) lleva a ese espacio (ver `ESPACIOS`).
     const delEspacio = espacio ? ESPACIOS[espacio] : null;
     const mudadaA = !embebido && !delEspacio ? espacioDe(params.get('s')) : null;
-    const seccion = seccionFija
+    const seccionPedida = seccionFija
         || (delEspacio && !delEspacio.includes(params.get('s')) ? delEspacio[0] : params.get('s'))
         || 'analizar';
+    const seccion = SECCION_ALIAS[seccionPedida] || seccionPedida;
     // Una sección con permiso que esta persona no tiene (/finanzas sin «ver finanzas») avisa en vez
     // de quedar vacía (ver `sinPermiso`).
     const permisoPedido = SECCIONES.find(s => s.id === seccion)?.permiso;
@@ -847,7 +838,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                             onCerrarTasas={() => setTasasAbiertas(false)}
                             excluirAbierto={excluirAbierto} onCerrarExcluir={() => setExcluirAbierto(false)} />
                     )}
-                    {seccionActual.pronto && <ProntoSection seccion={seccionActual} />}
+                    {seccion === 'simulador' && <Simulador permitido={!!contexto.puede_reportar} />}
                     {seccion === 'reportar' && contexto.puede_reportar && (
                         <Reportar tab={tab} setTab={setTab} miembros={contexto.miembros}
                             onStepper={setStepper}

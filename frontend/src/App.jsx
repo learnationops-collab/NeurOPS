@@ -4,6 +4,7 @@ import { AparienciaProvider } from './context/AparienciaContext';
 import { ConfiguracionProvider } from './sesion/ConfiguracionContext';
 import { PortalProvider, PortalRuta } from './sesion/PortalContext';
 import { LearnitoProvider } from './sesion/LearnitoContext';
+import { ROLES_LEARNITO } from './sesion/learnito';
 import { roleLandingPath } from './utils/roleLanding';
 import MainLayout from './components/MainLayout';
 import AdminDashboard from './pages/admin/dashboard/AdminDashboard';
@@ -154,11 +155,11 @@ function App() {
               }
             />
 
-            {/* Copiloto de closers: chat con Claude y dictado por voz (app/api/copiloto.py). */}
+            {/* Learnito: el chat de todo el equipo con el cerebro de la Academia (app/api/copiloto.py). */}
             <Route
               path="/copiloto"
               element={
-                <ProtectedRoute roles={['closer', 'admin', 'operator', 'director_comercial']}>
+                <ProtectedRoute roles={ROLES_LEARNITO}>
                   <CopilotoRoutes />
                 </ProtectedRoute>
               }

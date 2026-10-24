@@ -1,0 +1,52 @@
+/* ============================================================
+   Configurar ranking (PanelRanking.jsx, 24/10/2026).
+   Reusa `.config-panel`, `.config-op`, `.config-caja`, `.config-lista` y `.config-pie` de comercial.css;
+   acá solo lo propio: la tabla de métricas, el puntaje, los mínimos y la barra con el botón.
+   ============================================================ */
+
+/* La barra: el selector ocupa lo que sobra y el botón queda a su derecha; angosto, el botón baja. */
+.dc-shell .rkc-barra{align-items:center}
+.dc-shell .rkc-barra > .tabs{flex:1 1 280px;min-width:0}
+
+.dc-shell .rkc-seccion{margin-bottom:var(--s4)}
+.dc-shell .rkc-cab{display:flex;align-items:center;gap:6px;margin-bottom:var(--s2)}
+
+/* Una fila por métrica: mostrar | inicial | peso | meta. Los dos números miden lo mismo siempre. */
+.dc-shell .rkc-fila{display:grid;align-items:center;gap:var(--s2);
+  grid-template-columns:minmax(0,1fr) 56px 76px 76px}
+.dc-shell .rkc-fila--cab{padding:0 9px;font-size:10px;font-weight:900;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--text-muted-40)}
+.dc-shell .rkc-fila--cab > span:nth-child(n+2){text-align:center}
+.dc-shell .rkc-ini{justify-content:center;width:100%}
+.dc-shell .rkc-ini:disabled{opacity:.3;cursor:default}
+.dc-shell .rkc-fila .rkc-num.rkc-num{width:100%;min-width:0;height:34px}
+.dc-shell .rkc-fila .rkc-num:disabled{opacity:.35}
+
+/* El puntaje: interruptor, rótulo y tip en una línea; lo demás a la derecha o debajo si no entra. */
+.dc-shell .rkc-puntaje{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+.dc-shell .rkc-puntaje .rkc-ini-puntaje{width:auto;margin-left:var(--s2)}
+.dc-shell .rkc-puntaje .rkc-suma{margin-left:auto}
+
+/* Orden | Mínimos: dos de dos; angosto, uno debajo del otro. */
+.dc-shell .rkc-dos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s4) var(--s3)}
+@media (max-width:560px){.dc-shell .rkc-dos{grid-template-columns:minmax(0,1fr)}}
+.dc-shell .rkc-minimos{display:flex;gap:var(--s3);flex-wrap:wrap}
+.dc-shell .rkc-min{display:flex;align-items:center;gap:var(--s2);font-size:12.5px;font-weight:600;color:var(--text-muted)}
+.dc-shell .rkc-min .rkc-num.rkc-num{width:64px;height:34px}
+
+/* Las personas: columnas parejas (`--cols` lo calcula el panel); en un teléfono, una. */
+.dc-shell .rkc-personas{grid-template-columns:repeat(var(--cols,2),minmax(0,1fr));max-height:160px}
+
+/* En un teléfono: sin la cabecera de columnas. Cada métrica son dos líneas: el nombre entero arriba y
+   debajo «Inicial», el peso y la meta (con el rótulo escrito, porque ya no hay cabecera). */
+.dc-shell .rkc-ini-txt{display:none}
+@media (max-width:560px){
+  .dc-shell .rkc-personas{grid-template-columns:minmax(0,1fr)}
+  .dc-shell .rkc-fila--cab{display:none}
+  .dc-shell .rkc-fila{grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);margin-bottom:var(--s2)}
+  .dc-shell .rkc-fila > :first-child{grid-column:1 / -1}
+  .dc-shell .rkc-ini-txt{display:inline}
+}
+
+/* La meta en la barra del ranking: una marca en la posición de la meta, distinta de la del promedio. */
+.dc-shell .rk-prom.rk-meta{background:var(--brand-secondary);opacity:1}

@@ -16,6 +16,16 @@
 | Lo que nunca se ve, y montos | `app/services/tablas/exclusion.py` |
 | Diccionario de datos | `app/services/tablas/diccionario.json`, leído por `diccionario.py` |
 | Buscador del diccionario | `app/services/tablas/buscar.py` (`buscar_datos`) |
+| Lo suyo y el ranking (qué filas ve cada uno) | `app/services/tablas/alcance.py` |
+
+## 1b. Alcance: lo suyo y el ranking (ADR-W009)
+
+`motor.run` lo aplica a todo plan, venga de Learnito, de una habilidad o de `/api/tablas`.
+
+- **La dirección** (admin, operaciones, director comercial) y los sistemas de confianza (`alcance_completo`, como la Academia por `agent/ask`) ven todas las filas.
+- **El resto**: las filas y su total son las suyas. Una fila es suya si alguna columna apunta a su usuario (closer_id, setter_id, author_id…), si `closer_email`, `setter_email` o `closer` (texto) son los suyos, o si es de una persona con la que tuvo una agenda como closer o setter.
+- **Las mediciones** (agrupar, medir) son de todo el equipo, salvo que agrupen por un dato personal (`alcance.personal`: email, nombre, teléfono, uuid o un id que no apunta a un usuario): esas, sobre sus filas.
+- El paquete trae `alcance` con lo que se aplicó. Quien no es de la dirección y no tiene usuario no ve filas.
 
 ## 2. Claves de dato
 

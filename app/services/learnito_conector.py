@@ -5,23 +5,26 @@ operación es un método del contrato (LearnitoConnector y LearnitoData de la Ac
 argumentos que su ConnectorServer.
 
 Quien pregunta viaja en `quien` ({id, nombre, email, rol, zona}) con su id de Work: los datos se leen con sus permisos
-(montos y tablas de admin, como en Tablas). Sin quien, lo de alguien sin rol.
+(montos y tablas de admin, como en Tablas). Sin quien, lo de alguien sin rol. Desde el 24/10/2026 pregunta todo el
+equipo: la dirección ve todo y el resto, lo suyo y el ranking (tablas/alcance.py): sus filas, sus clientes y sus
+expedientes, y las mediciones de todo el equipo.
 
-Lo que Work todavía no tiene para Learnito: acciones (delegar, observaciones), material y gráficos. Esas operaciones
-responden vacío y el cerebro sigue sin ellas. Las herramientas son las de la dirección (copiloto_datos.py) más buscar
-un cliente y leer su expediente.
+Herramientas: las de datos (copiloto_datos.py), las del closer (copiloto_herramientas.py: sus agendas y quién le
+debe), buscar un cliente y leer su expediente, y proponer una acción. Acciones: un comentario en la ficha de un
+cliente o un aviso a alguien del equipo; el cerebro las muestra y se hacen recién cuando la persona confirma. Un
+cálculo que agrupa o mide vuelve con su gráfico (`card`). Material: Work no tiene.
 """
 import json
 import logging
 from datetime import datetime, timedelta
 
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, select
 
 from app import db
-from app.models import Appointment, Client, User
+from app.models import Appointment, Client, ClientComment, Notification, User
 from app.models.person import Person
-from app.services import copiloto_datos
-from app.services.tablas import buscar, catalogo, diccionario, exclusion, motor
+from app.services import copiloto_datos, copiloto_herramientas
+from app.services.tablas import alcance, buscar, catalogo, diccionario, exclusion, motor
 from app.services.tablas.plan import normalize as normalizar_plan
 
 logger = logging.getLogger(__name__)
@@ -59,13 +62,15 @@ def usuario(quien):
 
 GUIA = '\n\n'.join([
     'Respondés sobre Work, el sistema comercial de Learnation: leads y clientes, agendas (las llamadas con los '
-    'closers y su resultado), ventas, pagos, cuotas, suscripciones y la cobranza. Te escribe alguien de la '
-    'dirección (admin, operaciones o director comercial).',
+    'closers y su resultado), ventas, pagos, cuotas, suscripciones y la cobranza. Te escribe alguien del equipo: '
+    'la dirección (admin, operaciones, director comercial), closers, setters u otros roles. Lo que ve cada uno '
+    'está en la nota de quién pregunta.',
     'Te piden cosas como:\n'
     '- Números del comercial: ventas por mes o por closer, show up, no shows, señas sin convertir, cuotas vencidas.\n'
+    '- Lo propio de un closer: sus agendas de un día (mis_agendas), quién le debe (los_que_mas_deben, deuda_de).\n'
     '- Quién debe y cuánto, qué cuotas vencen, qué clientes están en riesgo de no pagar.\n'
     '- La historia de un cliente: de dónde vino, sus llamadas, qué compró, qué pagó y qué debe.\n'
-    '- Cruzar con la Academia: cómo viene en sus estudios alguien que debe una cuota.',
+    '- Cruzar con la Academia (solo la dirección): cómo viene en sus estudios alguien que debe una cuota.',
     'Datos:\n'
     '- Cuentas, listas y porcentajes: arma un plan por claves y calculalo con calcular_tabla. Empezá por '
     'buscar_datos con la pregunta y buenas palabras clave: te da la fuente, los conceptos del equipo (usalos como '
@@ -81,8 +86,11 @@ GUIA = '\n\n'.join([
     'se cruzan.\n'
     '- Si la medición trae avisos (muestra chica, diferencia que puede ser azar), decilos.\n'
     '- No inventes datos. Si algo no está, decilo.',
-    'Acciones: desde Learnito todavía no podés dejar nada hecho en Work (ni tareas ni notas). Si te piden una, '
-    'decilo en una línea y ofrecé redactar el mensaje para que la persona lo mande.',
+    'Acciones (proponer_accion), cuando te lo piden: un comentario en la ficha de un cliente (con su cliente_id de '
+    'buscar_cliente) o un aviso a alguien del equipo (por su nombre de usuario, y si es sobre un cliente, con su '
+    'cliente_id). Una por respuesta. Nada se hace hasta que la persona lo confirma en pantalla: no digas que ya '
+    'está hecho, decí en una línea qué dejaste listo. Un mensaje para un cliente (WhatsApp, mail) no es una acción: '
+    'redactalo listo para copiar.',
 ])
 
 
@@ -109,7 +117,15 @@ def appendix():
 
 def asker_note(quien):
     q = quien or {}
-    return (f"Te escribe {q.get('nombre')} ({q.get('email')}), rol {q.get('rol')} en Work. Cuando diga \"mis "
+    user = usuario(q)
+    if alcance.completo(user):
+        ve = 'Es de la dirección: ve todos los datos de Work y de la Academia.'
+    else:
+        ve = ('No es de la dirección: ve lo suyo y el ranking. Las listas, los clientes y los expedientes son solo '
+              'los suyos (donde figura o personas con las que tuvo una agenda); las mediciones (totales, '
+              'porcentajes, por closer o por programa) son de todo el equipo. Los datos de la Academia no los ve. Si '
+              'pide algo de otro, decíselo en una línea y ofrecé el número del equipo.')
+    return (f"Te escribe {q.get('nombre')} ({q.get('email')}), rol {q.get('rol')} en Work. {ve} Cuando diga \"mis "
             f"agendas\", \"mis ventas\" o \"los míos\": como closer, las filas de su closer (closer_id {q.get('id')}, "
             f"o el email {q.get('email')} en las tablas que guardan el mail del closer). Si no queda claro, decí cuál "
             f'usaste.')
@@ -134,7 +150,23 @@ CLIENTES = [
     },
 ]
 
+ACCIONES = {'comentario': 'Comentario en el cliente', 'aviso': 'Avisarle a alguien'}
+
+PROPONER = {
+    'name': 'proponer_accion',
+    'description': 'Deja lista una acción para que la persona la confirme: comentario (una nota en la ficha de un '
+                   'cliente) o aviso (una notificación en Work para alguien del equipo). Nada se hace hasta que '
+                   'confirma.',
+    'input_schema': {'type': 'object', 'properties': {
+        'tipo': {'type': 'string', 'enum': list(ACCIONES)},
+        'texto': {'type': 'string', 'description': 'El comentario, o lo que dice el aviso (corto y concreto).'},
+        'cliente_id': {'type': 'integer', 'description': 'Comentario: obligatorio. Aviso: si es sobre un cliente.'},
+        'para': {'type': 'string', 'description': 'Solo aviso: el nombre de usuario de quien lo recibe.'},
+    }, 'required': ['tipo', 'texto']},
+}
+
 DATOS = ('buscar_datos', 'fuentes_de_datos', 'calcular_tabla')
+CLOSER = {t['name'] for t in copiloto_herramientas.HERRAMIENTAS}
 
 
 def _api(t):
@@ -150,7 +182,7 @@ def _solo_work(t):
 
 
 def tools():
-    return [_api(t) for t in [*copiloto_datos.HERRAMIENTAS, *CLIENTES]]
+    return [_api(t) for t in [*copiloto_datos.HERRAMIENTAS, *copiloto_herramientas.HERRAMIENTAS, *CLIENTES, PROPONER]]
 
 
 def planner_tools():
@@ -165,10 +197,15 @@ def run_tool(nombre, entrada, user, opciones=None):
     """{texto, plan?}: el texto va al modelo; el plan, al banco de planes del cerebro."""
     entrada = dict(entrada or {})
     if nombre == 'buscar_cliente':
-        return {'texto': json.dumps(find_people(entrada.get('texto') or ''), ensure_ascii=False)}
+        return {'texto': json.dumps(find_people(user, entrada.get('texto') or ''), ensure_ascii=False)}
     if nombre == 'expediente_cliente':
         tipo = (opciones or {}).get('expediente') or 'ficha'
         return {'texto': dossier(user, entrada.get('cliente_id'), tipo)}
+    if nombre in CLOSER:
+        if getattr(user, 'id', None) is None:
+            return {'texto': 'Error: no sé quién pregunta.'}
+        texto, es_error = copiloto_herramientas.ejecutar(nombre, entrada, user)
+        return {'texto': f'Error: {texto}' if es_error else texto}
     if nombre in DATOS:
         entrada.setdefault('sistema', 'work')
     texto, es_error = copiloto_datos.ejecutar(nombre, entrada, user)
@@ -283,9 +320,64 @@ def measure(user, plan):
         raise ConectorError(' '.join(e.errores)) from e
 
 
+METRICAS = {'count': 'Cantidad', 'sum': 'Suma', 'avg': 'Promedio', 'min': 'Mínimo', 'max': 'Máximo'}
+MESES = ('ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic')
+
+
+def _periodo(k, bucket):
+    """2026-10 → oct 2026; 2026-10-19 → 19/10. Lo demás, tal cual."""
+    try:
+        if bucket == 'month':
+            return f'{MESES[int(k[5:7]) - 1]} {k[:4]}'
+        if bucket in ('day', 'week'):
+            return f'{k[8:10]}/{k[5:7]}'
+    except (TypeError, ValueError, IndexError):
+        pass
+    return k
+
+
+def card(user, plan):
+    """El gráfico de un plan que agrupa o mide, para adjuntar a la respuesta: {title, w, data, error} o None.
+    `w.tipo`: numero, anillo (un porcentaje), barras (por valor) o linea (por período). Lo dibuja la pantalla de
+    Learnito de Work (LearnitoChat, Grafico)."""
+    if not measures(plan):
+        return None
+    try:
+        fuente, p = motor.prepare(user, plan)
+        m = motor.run(user, plan, por_pagina=1).get('medicion')
+    except motor.MotorError:
+        return None
+    if not m:
+        return None
+    medir = p['medir'] or {'metrica': 'count', 'dato': None, 'valor': ''}
+    pct = medir['metrica'] == 'pct'
+    dato = fuente.fields[medir['dato']].label.lower() if medir.get('dato') in fuente.fields else ''
+    title = (f"% con {dato} = {medir['valor']}" if pct
+             else fuente.label if medir['metrica'] == 'count' else f"{METRICAS[medir['metrica']]} de {dato}")
+    if 'rows' in m:
+        bucket = (m.get('group') or {}).get('bucket')
+        title += f" por {fuente.fields[p['agrupar_por']].label.lower()}"
+        filas = [{'label': '(vacío)' if r['k'] is None else _periodo(r['k'], bucket), 'valor': r['n'], 'filas': r['m'],
+                  **({'ic95': r['ic95']} if r.get('ic95') else {})} for r in m['rows']]
+        return {'title': title, 'w': {'tipo': 'linea' if bucket else 'barras', 'pct': pct}, 'error': None,
+                'data': {'total': m['total'], 'filas': filas, 'otros': m.get('others') or 0}}
+    valor = m.get('porcentaje', 0) if pct else m.get('value')
+    return {'title': title, 'w': {'tipo': 'anillo' if pct else 'numero', 'pct': pct}, 'error': None,
+            'data': {'total': m['total'], 'valor': valor}}
+
+
 # --- Personas: los clientes -------------------------------------------------------------------------------------
 
-def _clientes(filtro):
+def _suyos(user):
+    """Los clientes de quien pregunta fuera de la dirección: con los que tuvo una agenda (tablas/alcance.py)."""
+    uid = getattr(user, 'id', None)
+    agendas = select(Appointment.client_id).where(or_(Appointment.closer_id == uid, Appointment.setter_id == uid))
+    return Client.id.in_(agendas)
+
+
+def _clientes(user, filtro):
+    if not alcance.completo(user):
+        filtro = filtro & _suyos(user)
     q = (db.session.query(Client, Person).outerjoin(Person, Person.uuid == Client.person_uuid)
          .filter(filtro).order_by(Client.created_at.desc()).limit(CLIENTES_MAX))
     from app.services.closer_followup_service import PROGRAM_CODE_NAMES, CloserFollowUpService
@@ -298,30 +390,43 @@ def _clientes(filtro):
     return out
 
 
-def find_people(texto):
+def find_people(user, texto):
     texto = str(texto or '').strip()
     if len(texto) < 2:
         return []
     like = f'%{texto}%'
-    return _clientes(or_(Person.full_name.ilike(like), Person.email.ilike(like), Person.phone.ilike(like),
-                         Client.full_name.ilike(like), Client.email.ilike(like), Client.phone.ilike(like)))
+    return _clientes(user, or_(Person.full_name.ilike(like), Person.email.ilike(like), Person.phone.ilike(like),
+                               Client.full_name.ilike(like), Client.email.ilike(like), Client.phone.ilike(like)))
 
 
-def people_by_id(ids):
-    return _clientes(Client.id.in_([int(i) for i in ids or []]))
+def people_by_id(user, ids):
+    return _clientes(user, Client.id.in_([int(i) for i in ids or []]))
 
 
-def people_named(palabras, maximo=4):
+def people_named(user, palabras, maximo=4):
     nombre = func.coalesce(Person.full_name, Client.full_name)
     q = db.session.query(Client.id).outerjoin(Person, Person.uuid == Client.person_uuid)
+    if not alcance.completo(user):
+        q = q.filter(_suyos(user))
     for w in palabras or []:
         q = q.filter(nombre.ilike(f'%{w}%'))
     ids = [r[0] for r in q.limit(int(maximo) + 1).all()]
     return ids if ids and len(ids) <= int(maximo) else []
 
 
-def person(cliente_id):
-    c = db.session.get(Client, int(cliente_id or 0))
+def _cliente(user, cliente_id):
+    """El cliente, si quien pregunta lo puede ver (la dirección, todos; el resto, los suyos)."""
+    try:
+        q = Client.query.filter(Client.id == int(cliente_id or 0))
+    except (TypeError, ValueError):
+        return None
+    if not alcance.completo(user):
+        q = q.filter(_suyos(user))
+    return q.first()
+
+
+def person(user, cliente_id):
+    c = _cliente(user, cliente_id)
     if c is None:
         return None
     p = c.person
@@ -338,9 +443,10 @@ def dossier(user, cliente_id, tipo='ficha'):
     """El expediente en texto. La ficha: lo de la ficha del lead (sin la cobranza si no ve montos). El completo suma la
     bitácora del lead, con lo de la Academia si está vinculado."""
     from app.services import bitacora_lead_service, ficha_lead_service
-    c = db.session.get(Client, int(cliente_id or 0))
+    c = _cliente(user, cliente_id)
     if c is None:
-        return 'No existe un cliente con ese id.'
+        return ('No existe un cliente con ese id.' if alcance.completo(user)
+                else 'No existe un cliente con ese id entre los tuyos (con los que tuviste una agenda).')
     nombre = (c.person and c.person.full_name) or c.full_name or f'cliente {c.id}'
     lineas = [f'# Expediente de {nombre} (cliente {c.id} en Work)',
               f"Generado el {datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC."]
@@ -380,6 +486,91 @@ def team():
             for u in User.query.filter(User.is_active == True).all()]  # noqa: E712
 
 
+# --- Acciones ---------------------------------------------------------------------------------------------------
+
+def _destinatario(texto):
+    """[usuario, error] de quien recibe un aviso: por nombre de usuario o email, entre las cuentas activas."""
+    t = str(texto or '').strip().lstrip('@')
+    if len(t) < 2:
+        return None, 'Falta a quién avisarle (su nombre de usuario).'
+    activos = User.query.filter(User.is_active == True)  # noqa: E712
+    exacto = activos.filter(or_(func.lower(User.username) == t.lower(), func.lower(User.email) == t.lower())).all()
+    candidatos = exacto or activos.filter(or_(User.username.ilike(f'%{t}%'), User.email.ilike(f'%{t}%'))).limit(6).all()
+    if len(candidatos) == 1:
+        return candidatos[0], None
+    if not candidatos:
+        return None, f'No hay nadie del equipo que se llame «{t}».'
+    return None, 'Hay más de una persona con ese nombre: ' + ', '.join(u.username or u.email for u in candidatos) + '.'
+
+
+def _nombre_cliente(c):
+    return (c.person and c.person.full_name) or c.full_name or f'cliente {c.id}'
+
+
+def propose_action(user, entrada):
+    """[acción, error]: la tarjeta que el cerebro muestra para confirmar. No escribe nada."""
+    e = entrada if isinstance(entrada, dict) else {}
+    tipo = str(e.get('tipo') or '')
+    texto = str(e.get('texto') or '').strip()[:2000]
+    if getattr(user, 'id', None) is None:
+        return [None, 'No sé quién pregunta.']
+    if tipo not in ACCIONES:
+        return [None, 'Tipo de acción desconocido: comentario o aviso.']
+    if not texto:
+        return [None, 'Falta el texto.']
+    cliente = None
+    if e.get('cliente_id') not in (None, ''):
+        cliente = _cliente(user, e.get('cliente_id'))
+        if cliente is None:
+            return [None, 'Ese cliente no existe o no es tuyo (con los que tuviste una agenda).']
+    datos = {'autor_id': user.id, 'cliente_id': cliente.id if cliente else None}
+    if tipo == 'comentario':
+        if cliente is None:
+            return [None, 'Un comentario va en la ficha de un cliente: falta su cliente_id (buscar_cliente).']
+        detalle = [f'En la ficha de {_nombre_cliente(cliente)}.']
+        nombre = _nombre_cliente(cliente)
+    else:
+        para, error = _destinatario(e.get('para'))
+        if error:
+            return [None, error]
+        datos['para_id'] = para.id
+        nombre = para.username or para.email
+        detalle = [f'Para: {nombre}', *([f'Sobre {_nombre_cliente(cliente)}.'] if cliente else []),
+                   'Le llega como notificación en Work.']
+    return [{'tipo': tipo, 'titulo': ACCIONES[tipo], 'nombre': nombre, 'texto': texto, 'estado': 'propuesta',
+             'datos': datos, 'detalle': detalle}, None]
+
+
+def execute_action(user, accion, texto):
+    """Hace la acción que la persona confirmó (`texto`, el que quedó después de editarla). Devuelve qué se hizo."""
+    a = accion if isinstance(accion, dict) else {}
+    datos = a.get('datos') or {}
+    if getattr(user, 'id', None) is None or datos.get('autor_id') != user.id:
+        raise ConectorError('Esa acción es de otra persona.')
+    texto = (str(texto or '').strip() or str(a.get('texto') or '').strip())[:2000]
+    if not texto:
+        raise ConectorError('El texto está vacío.')
+    cliente = _cliente(user, datos['cliente_id']) if datos.get('cliente_id') else None
+    if datos.get('cliente_id') and cliente is None:
+        raise ConectorError('Ese cliente ya no está entre los tuyos.')
+    autor = user.username or user.email
+    if a.get('tipo') == 'comentario':
+        db.session.add(ClientComment(client_id=cliente.id, author_id=user.id, text=texto))
+        db.session.commit()
+        return f'Comentario guardado en la ficha de {_nombre_cliente(cliente)}.'
+    if a.get('tipo') == 'aviso':
+        para = db.session.get(User, int(datos.get('para_id') or 0))
+        if para is None or not para.is_active:
+            raise ConectorError('Esa persona ya no está activa en Work.')
+        sobre = f' sobre {_nombre_cliente(cliente)}' if cliente else ''
+        db.session.add(Notification(subject=f'Aviso de {autor}{sobre}'[:100], content=texto, target_users=[para.id],
+                                    associated_id=cliente.id if cliente else None,
+                                    associated_type='lead' if cliente else None))
+        db.session.commit()
+        return f'Aviso enviado a {para.username or para.email}.'
+    raise ConectorError('Tipo de acción desconocido.')
+
+
 # --- Las operaciones --------------------------------------------------------------------------------------------
 
 def handle(op, args, quien=None):
@@ -405,23 +596,19 @@ def handle(op, args, quien=None):
         'rows': lambda: rows(user, a.get('plan'), a.get('limite')),
         'measures': lambda: measures(a.get('plan')),
         'measure': lambda: measure(user, a.get('plan')),
-        'card': lambda: None,
-        'findPeople': lambda: find_people(a.get('texto')),
-        'peopleById': lambda: people_by_id(a.get('ids')),
-        'peopleNamed': lambda: people_named(a.get('palabras'), a.get('max') or 4),
-        'person': lambda: person(a.get('id')),
+        'card': lambda: card(user, a.get('plan')),
+        'findPeople': lambda: find_people(user, a.get('texto')),
+        'peopleById': lambda: people_by_id(user, a.get('ids')),
+        'peopleNamed': lambda: people_named(user, a.get('palabras'), a.get('max') or 4),
+        'person': lambda: person(user, a.get('id')),
         'dossier': lambda: dossier(user, a.get('id'), 'completo' if a.get('tipo') == 'completo' else 'ficha'),
         'team': team,
-        'proposeAction': lambda: [None, 'Desde Learnito todavía no se pueden dejar acciones en Work.'],
-        'executeAction': _sin_acciones,
-        'actionLabel': lambda: None,
+        'proposeAction': lambda: propose_action(user, a.get('entrada')),
+        'executeAction': lambda: execute_action(user, a.get('accion'), a.get('texto')),
+        'actionLabel': lambda: ACCIONES.get(str(a.get('tipo') or '')),
         'openGoals': lambda: [],
         'findMaterial': lambda: {'results': [], 'more': []},
     }
     if op not in ops:
         raise ConectorError(f'Operación desconocida: {op}.')
     return ops[op]()
-
-
-def _sin_acciones():
-    raise ConectorError('Desde Learnito todavía no se pueden hacer acciones en Work.')

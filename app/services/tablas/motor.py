@@ -17,11 +17,11 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import create_engine, func, literal, select, text
+from sqlalchemy import and_, create_engine, func, literal, select, text
 from sqlalchemy.exc import OperationalError
 
 from app import db
-from app.services.tablas import catalogo, diccionario, medir
+from app.services.tablas import alcance, catalogo, diccionario, medir
 from app.services.tablas.condiciones import CondicionError, compile_tree
 from app.services.tablas.plan import normalize
 
@@ -172,11 +172,16 @@ def run(user, raw, pagina=1, por_pagina=PAGE, con_medicion=True):
     """El paquete completo de un plan: una página de filas, el total y, si agrupa o mide, la medición."""
     fuente, plan = prepare(user, raw)
     where = compile_tree(plan['condiciones'], fuente.fields)
+    # Fuera de la dirección, las filas son las suyas y la medición es del equipo (alcance.py).
+    suyas = alcance.filtro(user, fuente)
+    medicion_propia = suyas is not None and alcance.personal(fuente, plan['agrupar_por'])
+    filas_where = where if suyas is None else and_(where, suyas)
     pagina = max(1, int(pagina or 1))
-    rows_stmt, campos = _rows_statement(fuente, plan, where, por_pagina, (pagina - 1) * por_pagina)
-    count = select(func.count()).select_from(fuente.table).where(where)
+    rows_stmt, campos = _rows_statement(fuente, plan, filas_where, por_pagina, (pagina - 1) * por_pagina)
+    count = select(func.count()).select_from(fuente.table).where(filas_where)
     measured = con_medicion and bool(plan['agrupar_por'] or plan['medir'])
-    measure_stmts = medir.statements(fuente, where, plan, _engine().dialect.name) if measured else []
+    measure_stmts = (medir.statements(fuente, filas_where if medicion_propia else where, plan, _engine().dialect.name)
+                     if measured else [])
 
     results = _execute([count, rows_stmt, *measure_stmts])
     total = int(results[0][0][0])
@@ -193,6 +198,7 @@ def run(user, raw, pagina=1, por_pagina=PAGE, con_medicion=True):
         'medicion': medir.result(fuente, plan, results[2:]) if measured else None,
         'nota': (f'Más de {LARGE} filas: no se listan. Agrupá (agrupar_por) o filtrá con condiciones.'
                  if size == 'heavy' else None),
+        'alcance': alcance.nota(medicion_propia) if suyas is not None else None,
         'as_of': datetime.utcnow().isoformat(timespec='seconds') + 'Z',
     }
     return {k: v for k, v in out.items() if v is not None}

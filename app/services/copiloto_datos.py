@@ -1,4 +1,4 @@
-"""Las herramientas de datos de Learnito para la dirección (admin, operaciones, director comercial): el motor de
+"""Las herramientas de datos de Learnito (las usa su conector, learnito_conector.py): el motor de
 tablas de Work (app/services/tablas/) y, por agentes pares, el de la Academia (`LearnationService.agent_ask`).
 
 Claude nunca escribe SQL ni hace cuentas: arma un plan por claves y el motor del sistema dueño del dato lo calcula.
@@ -9,7 +9,7 @@ import logging
 
 from app.services import habilidades
 from app.services.copiloto_herramientas import HerramientaError
-from app.services.tablas import buscar, motor
+from app.services.tablas import alcance, buscar, motor
 
 logger = logging.getLogger(__name__)
 
@@ -78,23 +78,12 @@ HERRAMIENTAS = [
     },
 ]
 
-INSTRUCCIONES = '\n\n'.join([
-    'Tenés habilidades (preguntas frecuentes ya resueltas, usar_habilidad) y operaciones (calcular_tabla con un plan '
-    'por claves). Si la pregunta encaja en una habilidad, usala; si no, armá el plan. Vos nunca contás ni calculás. '
-    'Para armar el plan empezá por buscar_datos con la pregunta y buenas palabras clave: te da la fuente, los '
-    'conceptos del equipo (usalos como condición {"concepto": clave}: ya traen la definición exacta), los datos y las '
-    'trampas. fuentes_de_datos solo si te falta un dato. Los datos s. son reglas de Work (s.estado_pago, s.deuda, '
-    's.estado_agenda) y los d. son calculados del diccionario. En una fuente de hechos sin período en la pregunta, '
-    'acotá a los últimos 30 días por su fecha y decilo.',
-    'Citá el total y los avisos del resultado (muestra chica, diferencia que puede ser azar) tal cual.',
-    'Para cruzar personas entre sistemas: las filas de Work traen alumno_id, que es el alumno_id de la Academia.',
-])
-
-
-def _sistema(entrada):
+def _sistema(entrada, user):
     sistema = entrada.get('sistema')
     if sistema not in SISTEMAS:
         raise HerramientaError('sistema tiene que ser work o academia.')
+    if sistema == 'academia' and not alcance.completo(user):
+        raise HerramientaError('Los datos de la Academia (alumnos, actividad, sesiones) los ve la dirección.')
     return sistema
 
 
@@ -127,7 +116,7 @@ def _texto_datos(cat):
 
 
 def fuentes_de_datos(user, sistema, fuente=None, buscar=None):
-    sistema = _sistema({'sistema': sistema})
+    sistema = _sistema({'sistema': sistema}, user)
     if sistema == 'work':
         try:
             cat = motor.catalog(user, fuente or True, buscar)
@@ -165,11 +154,13 @@ def _texto_paquete(p):
             lineas.append(f"… se muestran {min(len(filas), MAX_FILAS)} de {p.get('total')}.")
     if p.get('nota'):
         lineas.append(p['nota'])
+    if p.get('alcance'):
+        lineas.append(p['alcance'])
     return '\n'.join(lineas)
 
 
 def calcular_tabla(user, sistema, plan):
-    sistema = _sistema({'sistema': sistema})
+    sistema = _sistema({'sistema': sistema}, user)
     if sistema == 'work':
         try:
             paquete = motor.run(user, plan, por_pagina=MAX_FILAS)
@@ -181,7 +172,7 @@ def calcular_tabla(user, sistema, plan):
 
 
 def buscar_datos(user, sistema, pregunta, palabras_clave, area=None):
-    sistema = _sistema({'sistema': sistema})
+    sistema = _sistema({'sistema': sistema}, user)
     if sistema == 'work':
         return buscar.texto(buscar.find(user, pregunta, palabras_clave, area))
     # La Academia tiene el mismo buscador (su DataSearch); por agentes pares todavía no lo expone.
