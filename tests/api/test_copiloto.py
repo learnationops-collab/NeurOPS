@@ -82,6 +82,25 @@ def test_lista_las_pendientes(client, auth_headers, make_user, cerebro):
     assert r.get_json() == {'pendientes': [{'id': 9}]} and llamadas[0][0] == 'pending'
 
 
+def test_lista_el_historial_y_una_conversacion(client, auth_headers, make_user, cerebro):
+    h = auth_headers(make_user())
+    llamadas = cerebro(respuesta={'success': True, 'conversaciones': [{'id': 9, 'titulo': 'Mis agendas'}]})
+    r = client.get('/api/copiloto/learnito/historial', headers=h)
+    assert r.get_json() == {'conversaciones': [{'id': 9, 'titulo': 'Mis agendas'}]} and llamadas[0][0] == 'history'
+
+    llamadas = cerebro(respuesta={'success': True, 'conversacion': {'id': 9, 'mensajes': []}})
+    r = client.get('/api/copiloto/learnito/historial/9', headers=h)
+    assert r.get_json() == {'conversacion': {'id': 9, 'mensajes': []}}
+    assert llamadas[-1][0] == 'conversation' and llamadas[-1][1]['conversacion_id'] == 9
+
+
+def test_una_conversacion_ajena_no_se_encuentra(client, auth_headers, make_user, cerebro):
+    cerebro(error=LearnationAPIError('x', status_code=404, payload={
+        'codigo': 'conversacion_no_encontrada', 'mensaje': 'No encontré esa conversación de esa persona.'}))
+    r = client.get('/api/copiloto/learnito/historial/77', headers=auth_headers(make_user()))
+    assert r.status_code == 404 and 'No encontré' in r.get_json()['error']
+
+
 def test_una_accion_que_no_se_pudo_hacer_dice_por_que(client, auth_headers, make_user, cerebro):
     cerebro(error=LearnationAPIError('x', status_code=422, payload={
         'codigo': 'pedido_invalido', 'mensaje': 'Pedido inválido.',
