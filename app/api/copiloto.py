@@ -5,7 +5,7 @@ VISION/LEARNITO_COMO_SERVICIO.md y ADR-188 y ADR-190 de allá).
 conversación, cuenta el gasto con su tope (por sistema y por persona) y le pide los datos a Work por su conector
 (app/services/learnito_conector.py), con el alcance de cada rol: la dirección ve todo y el resto, lo suyo y el
 ranking (app/services/tablas/alcance.py). `/learnito/confirmar` hace (o descarta) la acción que propuso una
-respuesta, y `/learnito/calificar` califica la conversación.
+respuesta, `/learnito/calificar` califica la conversación y `/learnito/historial` (con su detalle) devuelve las pasadas.
 
 Dos reglas del cerebro (24/10): cada conversación tiene un tope de uso (la respuesta trae `uso.conversacion`; al
 llegar, la Academia responde `conversacion_agotada`) y para abrir otra hay que calificar las anteriores
@@ -88,6 +88,26 @@ def learnito_pendientes():
     if estado != 200:
         return jsonify(data), estado
     return jsonify({'pendientes': data.get('pendientes') or []}), 200
+
+
+@bp.route('/learnito/historial', methods=['GET'])
+@copiloto_required
+def learnito_historial():
+    """Las conversaciones pasadas de quien pregunta: {conversaciones: [{id, titulo, fecha, calificacion, porcentaje}]}."""
+    data, estado = _a_la_academia('history', {})
+    if estado != 200:
+        return jsonify(data), estado
+    return jsonify({'conversaciones': data.get('conversaciones') or []}), 200
+
+
+@bp.route('/learnito/historial/<int:conversacion_id>', methods=['GET'])
+@copiloto_required
+def learnito_conversacion(conversacion_id):
+    """Una conversación pasada con todos sus mensajes, para releerla o seguirla con `/learnito`."""
+    data, estado = _a_la_academia('conversation', {'conversacion_id': conversacion_id})
+    if estado != 200:
+        return jsonify(data), estado
+    return jsonify({'conversacion': data.get('conversacion')}), 200
 
 
 @bp.route('/learnito/calificar', methods=['POST'])
