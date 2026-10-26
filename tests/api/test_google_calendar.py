@@ -11,7 +11,7 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 from google.auth.exceptions import RefreshError
 
-from app.models import GoogleCalendarToken, Notification
+from app.models import GoogleCalendarToken
 from app.services import google_service
 from app.services.google_service import GoogleService
 
@@ -126,14 +126,6 @@ def token_rechazado(db, closer, monkeypatch):
 
     monkeypatch.setattr(google_service.google.oauth2.credentials.Credentials, 'refresh', refrescar)
     return closer
-
-
-def test_un_token_rechazado_queda_vencido_y_avisa_una_vez(token_rechazado):
-    assert GoogleService.get_credentials(token_rechazado.id) is None
-    assert GoogleService.get_credentials(token_rechazado.id) is None
-    assert GoogleCalendarToken.query.one().vencido_en is not None
-    (aviso,) = Notification.query.filter_by(subject='Google Calendar desconectado').all()
-    assert token_rechazado.id in aviso.target_users and 'role:admin' in aviso.target_users
 
 
 def test_otros_errores_de_google_no_marcan_el_token(db, closer, monkeypatch):

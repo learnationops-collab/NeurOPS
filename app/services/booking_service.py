@@ -1,4 +1,4 @@
-from app.models import Availability, Appointment, User, Client, SurveyAnswer, Notification, db
+from app.models import Availability, Appointment, User, Client, SurveyAnswer, db
 from sqlalchemy import or_
 from datetime import datetime, timedelta, date, time
 import pytz
@@ -173,23 +173,14 @@ class BookingService(BookingAvisosMixin, BookingIdentidadMixin, BookingEspejoMix
         )
         db.session.add(appt)
         
-        # Notificación para Closer y Admins
-        try:
-            client_name = client.full_name or client.email or "Cliente"
-            
-            noti = Notification(
-                subject="Nueva Agenda",
-                content=f"Nueva sesión con {client_name} para el {start_time_utc.strftime('%d/%m/%Y %H:%M')} UTC.",
-                target_users=["role:admin", int(closer_id)],
-                related_users=[int(closer_id), client.id],
-                associated_id=appt.id,
-                associated_type='appointment'
-            )
-            db.session.add(noti)
-            
-            
-        except Exception as e:
-            print(f"Error creando notificación de cita: {e}")
+        db.session.flush()
+        from app.services import avisos_service
+
+        avisos_service.avisar(
+            'agenda_nueva', *avisos_service.destino(['admin'], [closer_id]), 'Nueva agenda',
+            f"Nueva sesión con {client.full_name or client.email or 'un lead'} para el "
+            f"{start_time_utc.strftime('%d/%m/%Y %H:%M')} UTC.",
+            'appointment', appt.id, person_uuid=client.person_uuid)
 
         db.session.commit()
         return appt

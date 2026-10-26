@@ -31,6 +31,7 @@ import FinancialAgendasPage from './pages/admin/reports/FinancialAgendasPage';
 import TriageWorkflowPage from './pages/triage/TriageWorkflowPage';
 import PixelTracker from './components/common/PixelTracker';
 import BugReportWidget from './components/feedback/BugReportWidget';
+import CentroDeAvisos from './components/avisos/CentroDeAvisos';
 import { PlaybookProvider } from './contexts/PlaybookContext';
 import PlaybookOverlay from './components/playbook/PlaybookOverlay';
 import PlaybookNotification from './components/playbook/PlaybookNotification';
@@ -100,6 +101,7 @@ function App() {
           <Toaster position="top-right" />
           <SoloInterno>
             <BugReportWidget />
+            <CentroDeAvisos />
             <PlaybookOverlay />
             <PlaybookNotification />
           </SoloInterno>

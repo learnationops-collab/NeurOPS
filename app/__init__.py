@@ -181,6 +181,9 @@ def create_app(config_class=Config):
     from app.api.comments import bp as comments_bp
     app.register_blueprint(comments_bp, url_prefix='/api/comments')
 
+    from app.api.avisos import bp as avisos_bp
+    app.register_blueprint(avisos_bp, url_prefix='/api/avisos')
+
     from app.api.manychat import bp as manychat_bp
     from app.api import manychat_calificacion  # noqa: F401  (rutas sobre el mismo blueprint)
     app.register_blueprint(manychat_bp, url_prefix='/api')

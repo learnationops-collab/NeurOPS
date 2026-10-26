@@ -47,27 +47,28 @@ class UserSetting(db.Model):
     __table_args__ = (db.UniqueConstraint('user_id', 'clave', name='uq_user_settings_user_clave'),)
 
 class Notification(db.Model):
+    """Un aviso al equipo (docs/plan_notas_avisos_settings.md §2.2). Lo escribe solo `avisos_service.avisar`.
+    A quién: `target_type` 'user' (id), 'rol' (nombre) o 'grupo' (lista de ids). `target_users` es de los
+    avisos viejos (sin `target_type`): la campanita no los muestra."""
     __tablename__ = 'notifications'
     id = db.Column(db.Integer, primary_key=True)
-    subject = db.Column(db.String(100), nullable=False)
-    content = db.Column(db.Text, nullable=False)
-    read_by = db.Column(db.JSON, default=[])
-    target_users = db.Column(db.JSON, default="all")
-    associated_id = db.Column(db.Integer, nullable=True)
-    associated_type = db.Column(db.String(50), nullable=True) # e.g., 'appointment'
-    related_users = db.Column(db.JSON, default=[])
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    # Avisos (docs/plan_notas_avisos_settings.md §2.2): los escribe solo `avisos_service.avisar`. A quién:
-    # `target_type` 'user' (id), 'rol' (nombre) o 'grupo' (lista de ids). `target_users` queda para los
-    # avisos viejos hasta que pasen todos por `avisar`.
     tipo = db.Column(db.String(50), nullable=True, index=True)
+    asunto = db.Column(db.String(100), nullable=False)
+    descripcion = db.Column(db.Text, nullable=False)
     target_type = db.Column(db.String(10), nullable=True)
     target = db.Column(db.JSON, nullable=True)
+    origen = db.Column(db.String(50), nullable=True)
+    origen_id = db.Column(db.Integer, nullable=True)
     person_uuid = db.Column(db.String(36), db.ForeignKey('people.uuid'), nullable=True, index=True)
     payload = db.Column(db.JSON, nullable=True)
+    leido_por = db.Column(db.JSON, default=list)
+    target_users = db.Column(db.JSON, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (db.Index('ix_notifications_origen', 'origen', 'origen_id'),)
 
     def __repr__(self):
-        return f'<Notification {self.subject}>'
+        return f'<Notification {self.asunto}>'
 
 class Comment(db.Model):
     __tablename__ = 'comments'

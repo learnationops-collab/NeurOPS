@@ -169,7 +169,22 @@ junio de 2026. Antes, cada nota existe una sola vez.
    `client_comments`, `comments` (tipos `client` y `appointment`), `closer_notes` y `setter_notes`.
 3. **Avisos:** los 14 `Notification(...)`, `CommentNotification` y los WhatsApp y Discord sueltos pasan por
    `avisar()`; se renombran las columnas de `notifications`; se borra `comment_notifications`; vuelve la
-   campanita.
+   campanita. **Hecho el 26/10/2026** (rama `feat/avisos`):
+   - Las columnas en castellano (`asunto`, `descripcion`, `origen`/`origen_id`, `leido_por`); se fue
+     `related_users`. `target_users` queda solo para los 625 avisos viejos, que la campanita no muestra.
+   - Los 10 lugares que escribían `Notification(...)` pasan por `avisar()`, con un tipo del catálogo:
+     `agenda_nueva`, `agenda_reprogramada`, `sesion_adicional`, `agenda_sin_evento`,
+     `google_desconectado` (obligatorios), `momentum_nueva`, `closer_sin_resolver` y `aviso` (de
+     Learnito). «Admins + el closer» se resuelve a un `grupo` con los ids de hoy (`destino()`).
+   - Se sacaron dos avisos «a todos» que nadie leía: cada cambio de estado de una agenda y cada cambio
+     de la calificación de un lead. Con la campanita de vuelta habrían sido ruido para todo el equipo.
+   - Ninguna pantalla lee ya `comment_notifications`. Sus 27 sin leer de los últimos 90 días pasan a
+     avisos de nota con el backfill. La tabla se borra con las demás tablas viejas.
+   - La campanita: «Avisos» en el menú de sesión de todos los docks, con la cuenta sobre el avatar
+     (`CentroDeAvisos`, montado una vez en App). Tocar un aviso lo marca leído y abre la ficha del lead.
+     `GET /api/avisos`, `/api/avisos/cuenta`, `POST /api/avisos/<id>/leido` y `/api/avisos/leidos`.
+   - Discord no entra: lo que va a Discord son avisos a un canal del equipo (agenda nueva, reporte del
+     setter), no a una persona. Siguen como están.
 4. **WhatsApp:** la plantilla genérica aprobada en Whatchimp entra como canal de `avisar()`.
 5. **Configuración:** las columnas y el `localStorage` del §2.4 a `user_settings`; la pantalla de
    preferencias de avisos en Configuración, armada desde el catálogo.

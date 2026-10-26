@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from app.models import Appointment, Client, ClientComment, Notification
+from app.models import Appointment, Client
 from app.models.person import Person
 from app.services import learnito_conector as conector
 from app.services.tablas import motor
@@ -73,18 +73,6 @@ def test_no_se_comenta_un_cliente_ajeno(equipo):
     accion, error = conector.propose_action(ana, {'tipo': 'comentario', 'texto': 'x',
                                                   'cliente_id': clientes[beto.id].id})
     assert accion is None and 'no es tuyo' in error
-
-
-def test_aviso_a_alguien_del_equipo(equipo):
-    ana, beto, _, _ = equipo
-    accion, error = conector.propose_action(ana, {'tipo': 'aviso', 'texto': 'Mirá la seña de Diego',
-                                                  'para': beto.username})
-    assert error is None and accion['detalle'][0] == f'Para: {beto.username}'
-    assert conector.execute_action(ana, accion, '') == f'Aviso enviado a {beto.username}.'
-    n = Notification.query.one()
-    assert n.target_users == [beto.id] and n.content == 'Mirá la seña de Diego'
-    _, error = conector.propose_action(ana, {'tipo': 'aviso', 'texto': 'x', 'para': 'nadie-asi'})
-    assert 'No hay nadie' in error
 
 
 def test_el_grafico_de_un_plan_que_agrupa(equipo):

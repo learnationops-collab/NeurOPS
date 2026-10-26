@@ -11,6 +11,8 @@ Decisiones (docs/auditoria_notas_junio_2026.md y plan §3, 26/10/2026):
   · `comments` tipo appointment y `client_comments`: van tal cual, como `nota`.
   · `setter_notes`: `nota_setter`, fecha de la llamada, autor el setter (o el closer).
   · Las notas que parecen pruebas se listan; solo se descartan las que se pasen con --excluir.
+  · `comment_notifications` sin leer de los últimos 90 días (etapa 3): pasan a avisos de nota para la
+    misma persona, apuntando a la entrada del log de su comentario. Se corre después de las notas.
 
 Cada entrada lleva `payload.backfill` con su origen: correrlo dos veces no duplica nada, y lo que el código
 nuevo ya escribió en el log con el mismo texto tampoco se repite.
@@ -161,6 +163,32 @@ class Backfill:
             if not self._es_prueba(clave, texto, f, autor):
                 self.agregar(clave, persona, 'nota', texto, autor, f, categoria='nota (hilo del cliente)')
 
+    def avisos_sin_leer(self):
+        """El punto de «sin leer» de los comentarios: cada aviso viejo sin leer, como aviso de nota."""
+        from app.services import avisos_service
+
+        hechos = {r[0] for r in db.session.execute(text(
+            "select payload->>'backfill' from notifications where payload->>'backfill' is not null"))}
+        logs = {r[0]: r[1] for r in db.session.execute(text(
+            "select payload->>'backfill', id from lead_event_logs where payload->>'backfill' like 'client_comments:%'"))}
+        for nid, comment_id, user_id, f, persona in db.session.execute(text(
+                "select n.id, n.comment_id, n.user_id, n.created_at, k.person_uuid from comment_notifications n "
+                "join clients k on k.id = n.client_id where n.is_read = false "
+                "and n.created_at > now() - interval '90 days'")):
+            clave = f'comment_notifications:{nid}'
+            self.cuenta['aviso de nota sin leer'][tramo(f)] += 1
+            if clave in hechos:
+                self.cuenta['aviso de nota sin leer (ya estaba)'][tramo(f)] += 1
+                continue
+            if not self.apply or not persona:
+                continue
+            log_id = logs.get(f'client_comments:{comment_id}') if comment_id else None
+            aviso = avisos_service.avisar('nota', 'user', user_id, 'Nota nueva sobre un lead', '',
+                                          'log' if log_id else None, log_id, person_uuid=persona,
+                                          payload={'backfill': clave})
+            if aviso:
+                aviso.created_at = f
+
     def _es_prueba(self, clave, texto, fecha, autor):
         if clave in self.excluir:
             self.cuenta['descartada: marcada como prueba'][tramo(fecha)] += 1
@@ -182,6 +210,9 @@ def main():
         b = Backfill(args.apply, excluir)
         b.agendas()
         b.comentarios()
+        if args.apply:
+            db.session.flush()
+        b.avisos_sin_leer()
         print('APLICADO' if args.apply else 'ENSAYO (nada escrito; --apply para escribir)')
         for categoria in sorted(b.cuenta):
             print(f'  {categoria:48} {dict(sorted(b.cuenta[categoria].items()))}')

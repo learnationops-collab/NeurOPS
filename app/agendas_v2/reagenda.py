@@ -4,7 +4,7 @@ from flask import current_app
 
 from app import db
 from app.agendas_v2 import operacion
-from app.models import Notification
+from app.services import avisos_service
 
 
 def reagendar(previa, cliente, payload, closer, setter, setter_id, inicio, ignorar_ids=()):
@@ -49,17 +49,11 @@ def reagendar(previa, cliente, payload, closer, setter, setter_id, inicio, ignor
         espejo.fecha_meet = inicio.isoformat()
         espejo.closer = closer.username
         operacion._payload_en_espejo(espejo, nueva.agenda_payload)
-    db.session.add(
-        Notification(
-            subject='Agenda reprogramada',
-            content=(
-                f'{cliente.full_name or "Un lead"} reprogramó su agenda desde el link de agendas: '
-                f'pasa al {inicio.strftime("%d/%m/%Y %H:%M")} UTC.'
-            ),
-            target_users=['role:admin', int(closer.id)],
-            associated_id=nueva.id,
-            associated_type='appointment',
-        )
+    avisos_service.avisar(
+        'agenda_reprogramada', *avisos_service.destino(['admin'], [closer.id]), 'Agenda reprogramada',
+        f'{cliente.full_name or "Un lead"} reprogramó su agenda desde el link de agendas: '
+        f'pasa al {inicio.strftime("%d/%m/%Y %H:%M")} UTC.',
+        'appointment', nueva.id, person_uuid=nueva.person_uuid,
     )
     db.session.commit()
     if not espejo:

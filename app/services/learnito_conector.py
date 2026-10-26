@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import and_, func, or_, select
 
 from app import db
-from app.models import Appointment, Client, Notification, User
+from app.models import Appointment, Client, User
 from app.models.person import Person
 from app.services import copiloto_datos, copiloto_herramientas
 from app.services.tablas import alcance, buscar, catalogo, diccionario, exclusion, motor
@@ -679,9 +679,11 @@ def execute_action(user, accion, texto):
         if para is None or not para.is_active:
             raise ConectorError('Esa persona ya no está activa en Work.')
         sobre = f' sobre {_nombre_cliente(cliente)}' if cliente else ''
-        db.session.add(Notification(subject=f'Aviso de {autor}{sobre}'[:100], content=texto, target_users=[para.id],
-                                    associated_id=cliente.id if cliente else None,
-                                    associated_type='lead' if cliente else None))
+        from app.services import avisos_service
+
+        avisos_service.avisar('aviso', 'user', para.id, f'Aviso de {autor}{sobre}', texto,
+                              'client' if cliente else None, cliente.id if cliente else None,
+                              person_uuid=cliente.person_uuid if cliente else None)
         db.session.commit()
         return f'Aviso enviado a {para.username or para.email}.'
     raise ConectorError('Tipo de acción desconocido.')

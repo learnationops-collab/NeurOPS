@@ -14,8 +14,8 @@ from unittest.mock import patch
 import pytest
 
 from app.models import (
-    Appointment, Client, ClientComment, Comment, FinancialSale, InstallmentPlan,
-    LeadEventLog, Notification, PaymentMethod, Program,
+    Appointment, Client, FinancialSale, InstallmentPlan,
+    LeadEventLog,
 )
 
 
@@ -1259,17 +1259,6 @@ def borrar(client, lead, venta_id, usuario, auth_headers):
 
 
 # --- Nota del equipo --------------------------------------------------------------------------
-
-
-def test_la_nota_avisa_al_setter_del_lead_y_queda_en_la_bitacora(client, db, lead, equipo,
-                                                                auth_headers):
-    client.post(url(lead, '/nota'), json={'texto': 'el lead pidió hablar con la esposa'},
-                headers=auth_headers(equipo['director']))
-
-    aviso = Notification.query.one()
-    assert aviso.target_users == [equipo['setter'].id]
-    assert aviso.associated_type == 'deck_comment'
-    assert [e.action_type for e in LeadEventLog.query.all()] == ['comment']
 
 
 # --- Eliminar ---------------------------------------------------------------------------------

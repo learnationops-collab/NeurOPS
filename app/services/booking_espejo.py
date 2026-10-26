@@ -1,6 +1,6 @@
 """Espejo entre la cita (`Appointment`) y la fila del Tablero de Agendas (`FinancialAgenda`).
 Mixin de `BookingService` (app/services/booking_service.py)."""
-from app.models import Appointment, User, Notification, db
+from app.models import Appointment, User, db
 from app.services import agenda_contacto_service
 from datetime import datetime, timedelta
 import pytz
@@ -45,21 +45,15 @@ class BookingEspejoMixin:
             print(f"[SYNC WARNING] Agenda {agenda.id}: closer='{agenda.closer}' no resuelve a "
                   f"ningun usuario. Fallback temporal a '{closer_user.username if closer_user else None}'.")
             if closer_user:
-                try:
-                    db.session.add(Notification(
-                        subject="Agenda con closer sin resolver",
-                        content=(
-                            f"La agenda de '{contacto['lead'] or agenda.nombre or 'Desconocido'}' tiene "
-                            f"closer='{agenda.closer}', que no coincide con ningun usuario activo "
-                            f"(¿se renombro y falta un alias con el nombre viejo?). Se asigno "
-                            f"temporalmente a {closer_user.username} - revisar y reasignar."
-                        ),
-                        target_users=["role:admin"],
-                        associated_id=agenda.id,
-                        associated_type="agenda"
-                    ))
-                except Exception:
-                    pass
+                from app.services import avisos_service
+
+                avisos_service.avisar(
+                    'closer_sin_resolver', 'rol', 'admin', 'Agenda con closer sin resolver',
+                    f"La agenda de '{contacto['lead'] or agenda.nombre or 'Desconocido'}' tiene "
+                    f"closer='{agenda.closer}', que no coincide con ningun usuario activo "
+                    f"(¿se renombro y falta un alias con el nombre viejo?). Se asigno "
+                    f"temporalmente a {closer_user.username} - revisar y reasignar.",
+                    'agenda', agenda.id)
 
         if not closer_user:
             print("[SYNC ERROR] No se encontró Closer ni Admin en la base de datos.")

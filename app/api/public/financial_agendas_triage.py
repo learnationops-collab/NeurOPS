@@ -12,11 +12,11 @@ from .financial_agendas_helpers import (
 @login_required
 def get_unread_no_agenda_triage():
     # Obtener clientes que tienen notificaciones de comentarios no leídos para este usuario de triaje
-    from app.models import CommentNotification, Client, FinancialAgenda
+    from app.models import Client, FinancialAgenda
+    from app.services.avisos_service import clientes_con_notas_sin_leer
     from sqlalchemy import func, or_
-    
-    unread_notifications = CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()
-    unread_client_ids = {n.client_id for n in unread_notifications}
+
+    unread_client_ids = clientes_con_notas_sin_leer(current_user)
     
     if not unread_client_ids:
         return jsonify([]), 200
