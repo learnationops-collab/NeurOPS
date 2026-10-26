@@ -69,7 +69,7 @@ Hecho sin commitear: campos de triage en `Appointment`, migración `c4e9a1d7f2b8
 
 ## 4. Revisar el sistema de puntos
 
-- [x] Puntos sacados de los datos (logística sobre 736 leads), escala de −3 a +2, cortes por compra contra el promedio y ruteo por segmento ([plan §8.9](plan_segmentos_triage.md)). Falta cargarlo en producción y revisarlo cada mes.
+- [x] Puntos sacados de los datos (logística sobre 736 leads), escala de −3 a +2, cortes por compra contra el promedio y ruteo por segmento ([plan §8.9](plan_segmentos_triage.md)). En producción desde el 26/10 (formulario y backfill); revisarlo cada mes con `scripts/ajuste_segmentos.py`.
 - [x] Puntos negativos: estudiante −3, residente y ENARM −2, entre otros (§8.9).
 - [ ] Mostrar el segmento y los puntos en la plataforma (ficha, agenda del closer, panel del triage). Va con la parte visual.
 
