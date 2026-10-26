@@ -127,3 +127,14 @@ setter; 934 copias y 29 sin cliente descartadas; 3.144 columnas limpiadas.
 4. Descartar las 988 copias (§2).
 5. Revisar la lista de pruebas entre las 117 notas propias (§2).
 6. Descartar las 29 sin cliente (§3).
+
+## Corrida del backfill
+
+Notas de prueba que se descartan (las 25 que listó el ensayo), igual en el servidor de prueba y en producción:
+
+```
+python scripts/backfill_notas_log.py --apply --excluir comments:11,comments:12,comments:13,comments:14,comments:18,comments:19,comments:51,comments:52,comments:127,comments:128,comments:133,comments:402,comments:403,comments:464,comments:516,comments:33,comments:34,comments:35,comments:36,comments:37,comments:38,comments:39,comments:40,comments:42,client_comments:6
+```
+
+Servidor de prueba, 26/10/2026: aplicado (notas, eventos del sistema y los 27 avisos sin leer de
+`comment_notifications`); la segunda corrida no duplica nada.
