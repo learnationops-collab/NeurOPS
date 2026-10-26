@@ -26,7 +26,7 @@ vi.mock('./settings/SeccionTecnica', () => ({
         team: 'Gestión de Equipo', closer_aliases: 'Alias de Closers', leads_audit: 'Auditoría de Leads',
         report_backlog: 'Bloqueo del Reporte', bug_reports: 'Reportes de Bugs', playbook: 'Playbook',
         bitacora: 'Bitácora de Cambios', database: 'Base de Datos', operations: 'Operaciones Críticas',
-        respaldo: 'Respaldo', restaurar: 'Restaurar',
+        respaldo: 'Respaldo',
     },
 }));
 // Registros es el Revisar de la dirección, embebido: acá solo importa que se monte así.
@@ -87,7 +87,7 @@ describe('Espacio del operador', () => {
 
         const pestanas = screen.getByRole('tablist', { name: 'Vistas de Datos' });
         expect([...pestanas.querySelectorAll('[role="tab"]')].map(t => t.textContent))
-            .toEqual(['Base de Datos', 'Operaciones Críticas', 'Respaldo', 'Restaurar']);
+            .toEqual(['Base de Datos', 'Operaciones Críticas', 'Respaldo']);
         expect(screen.getByRole('tab', { name: 'Respaldo' })).toHaveAttribute('aria-selected', 'true');
         expect(screen.getByTestId('seccion')).toHaveTextContent('respaldo');
     });

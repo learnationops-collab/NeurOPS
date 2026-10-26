@@ -45,7 +45,7 @@ const SECCIONES = [
     { id: 'soporte', label: 'Soporte', Icono: LifeBuoy,
         tabs: pestanasTecnicas(['bug_reports', 'closer_aliases', 'leads_audit', 'report_backlog', 'playbook', 'bitacora']) },
     { id: 'datos', label: 'Datos', Icono: Database,
-        tabs: pestanasTecnicas(['database', 'operations', 'ventas_revisar', 'respaldo', 'restaurar']) },
+        tabs: pestanasTecnicas(['database', 'operations', 'ventas_revisar', 'respaldo']) },
     // Las agendas, las ventas y los clientes, en el Revisar de la dirección (10/10/2026): antes eran
     // dos tablas viejas propias, «Agendas» y «Ventas». Lo que solo hacía Operaciones (edición masiva,
     // duplicados, acciones por venta) son acciones de esa vista (ver `comercial/components/operar`).
