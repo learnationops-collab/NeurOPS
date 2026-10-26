@@ -27,6 +27,7 @@ import { moneda } from '../acciones/planCuotas';
 import { Hueso } from '../../huesos/Huesos';
 import GrabacionFathom from './GrabacionFathom';
 import PasarARecuperacion from './PasarARecuperacion';
+import PasoSeguimiento from './PasoSeguimiento';
 import './resultado.css';
 import {
   estadoInicial, responder, actualizar, volverA, preguntaActual, faltantes,
@@ -418,6 +419,9 @@ function ProgresoVenta({ progreso, reducido }) {
 
 const TIPOS_DE_TEXTO = new Set(['texto', 'email', 'tel', 'monto', 'entero']);
 
+// El campo que se pinta dentro de otro (`junto`: la hora del aviso dentro de su casilla).
+const parejaDe = (pregunta, campo) => pregunta.campos.find((c) => c.junto === campo.campo) || null;
+
 function Pregunta({
   pregunta, respuestas, precarga, contexto, pendientes, puede, onElegir, onCambiar, onAnterior, irA,
   reducido, onReiniciar = null,
@@ -476,22 +480,35 @@ function Pregunta({
   }
 
   const avanzar = () => { if (puede) onElegir(pregunta.clave, {}); };
+  if (pregunta.vista === 'seguimiento') {
+    return (
+      <PasoSeguimiento respuestas={respuestas} onCambiar={onCambiar} onContinuar={avanzar} puede={puede}
+        onAnterior={onAnterior} onReiniciar={onReiniciar} reducido={reducido} />
+    );
+  }
   // Lo que ya cuenta su propio campo (el mínimo de un texto, con su barrita) no se repite abajo.
   const enElCampo = new Set(pregunta.campos.filter((c) => c.minimoTexto)
     .map((c) => faltaDelCampo(c, respuestas)).filter(Boolean));
   const primeroDeTexto = pregunta.campos.find((c) => TIPOS_DE_TEXTO.has(c.tipo || 'texto'));
+  const conPareja = pregunta.campos.some((c) => c.junto);
 
   return (
     <>
       <h3 className="ln-t-h3">{pregunta.enunciado}</h3>
       {pregunta.ayuda && <p className="ln-t-body-sm ln-muted">{pregunta.ayuda}</p>}
+      {/* Con un campo `junto` (la hora dentro de su aviso) la grilla es de a dos: lo corto lado a
+          lado y el párrafo a todo el ancho, debajo (`.fi-form-par`). */}
       <div
+        className={conPareja ? 'fi-form-par' : undefined}
         style={{
           display: 'grid', gap: 'var(--space-4)', marginTop: 'var(--space-4)',
-          gridTemplateColumns: pregunta.campos.length > 3 ? 'repeat(auto-fit, minmax(240px, 1fr))' : '1fr',
+          ...(conPareja ? {} : {
+            gridTemplateColumns: pregunta.campos.length > 3 ? 'repeat(auto-fit, minmax(240px, 1fr))' : '1fr',
+          }),
         }}
       >
         {pregunta.campos.map((campo) => {
+          if (campo.junto) return null; // lo pinta su pareja
           if (campo.tipo === 'estado_cliente') {
             return <EstadoCliente key={campo.campo} estado={contexto.estadoVenta} cargando={contexto.cargandoVenta} />;
           }
@@ -508,6 +525,7 @@ function Pregunta({
               autoFocus={campo === primeroDeTexto}
               onEnter={TIPOS_DE_TEXTO.has(campo.tipo || 'texto') ? avanzar : null}
               origen={origenDe(campo, respuestas, precarga)}
+              pareja={parejaDe(pregunta, campo)}
             />
           );
         })}
@@ -1033,7 +1051,7 @@ function EditorEnLinea({ pregunta, respuestas, contexto, precarga, reducido, onE
       ) : (
         <>
           <div className="fi-rev-campos">
-            {pregunta.campos.map((campo) => (
+            {pregunta.campos.filter((campo) => !campo.junto).map((campo) => (
               <CampoArbol
                 key={campo.campo}
                 campo={campo}
@@ -1043,6 +1061,7 @@ function EditorEnLinea({ pregunta, respuestas, contexto, precarga, reducido, onE
                 autoFocus={campo === primero}
                 onEnter={TIPOS_DE_TEXTO.has(campo.tipo || 'texto') ? guardar : null}
                 origen={origenDe(campo, vista, precarga)}
+                pareja={parejaDe(pregunta, campo)}
               />
             ))}
           </div>

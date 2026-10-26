@@ -539,15 +539,19 @@ export const PREGUNTAS = [
         falta: 'Elegí la fecha del próximo intento de cobro',
         presets: [{ label: 'Hoy', dias: 0 }, { label: 'Mañana', dias: 1 }, { label: 'En 3 días', dias: 3 }, { label: 'En 1 semana', dias: 7 }],
       },
+      // La hora va dentro de la celda del aviso (`junto`): suelta en otra columna quedaba lejos
+      // de la casilla que la prende (Mario, 26/10/2026).
       { campo: 'followup_reminder_enabled', label: 'Avisarme por WhatsApp', tipo: 'booleano' },
-      { campo: 'followup_reminder_time', label: 'Hora del aviso', tipo: 'hora' },
+      { campo: 'followup_reminder_time', label: 'Hora del aviso', tipo: 'hora', junto: 'followup_reminder_enabled' },
     ],
     cuando: (r, c) => enCobro(r, c) && ['no_resp', 'contesto'].includes(r.contacto_result),
   },
 
   // ---------- destinos comunes ----------
   { // ← follow (3015): fecha con presets + aviso de WhatsApp + ángulo del seguimiento
-    clave: 'seguimiento', hito: 'resultado', tipo: 'formulario', enunciado: '¿Cuándo lo vas a seguir?',
+    // `vista: 'seguimiento'`: se dibuja con `PasoSeguimiento` (Snap / Flow, Mario 26/10/2026). Los
+    // campos siguen acá porque la revisión y el resumen los leen.
+    clave: 'seguimiento', hito: 'resultado', tipo: 'formulario', vista: 'seguimiento', enunciado: '¿Cuándo lo vas a seguir?',
     ayuda: 'Sin fecha va al pool del equipo.',
     campos: [
       // `SelectorFecha` pide los atajos como `{label, dias}`: con los textos sueltos que había
@@ -556,9 +560,11 @@ export const PREGUNTAS = [
         campo: 'fecha_seguimiento', label: 'Fecha del próximo contacto', tipo: 'fecha',
         presets: [{ label: 'Hoy', dias: 0 }, { label: 'Mañana', dias: 1 }, { label: 'En 1 semana', dias: 7 }],
       },
+      // La hora va dentro de la celda del aviso (`junto`): suelta en otra columna quedaba lejos
+      // de la casilla que la prende (Mario, 26/10/2026).
       { campo: 'followup_reminder_enabled', label: 'Avisarme por WhatsApp', tipo: 'booleano' },
-      { campo: 'followup_reminder_time', label: 'Hora del aviso', tipo: 'hora' },
-      { campo: 'notes', label: 'Ángulo del seguimiento / Notas', tipo: 'parrafo' },
+      { campo: 'followup_reminder_time', label: 'Hora del aviso', tipo: 'hora', junto: 'followup_reminder_enabled' },
+      { campo: 'notes', label: 'Ángulo del seguimiento / Notas (opcional)', tipo: 'parrafo' },
     ],
     cuando: vaASeguimiento,
   },

@@ -60,7 +60,7 @@ const Minimo = ({ largo, minimo }) => {
 };
 
 export default function CampoArbol({
-  campo, respuestas, onCambio, cuotas = [], autoFocus = false, onEnter = null, origen = null,
+  campo, respuestas, onCambio, cuotas = [], autoFocus = false, onEnter = null, origen = null, pareja = null,
 }) {
   const valor = respuestas[campo.campo];
   const set = (v) => onCambio({ [campo.campo]: v });
@@ -109,6 +109,36 @@ export default function CampoArbol({
           {Array.from({ length: 31 }, (_, i) => i + 1).map((dia) => (
             <Pildora key={dia} activo={Number(valor) === dia} onClick={() => set(dia)}>{dia}</Pildora>
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (campo.tipo === 'booleano' && pareja) {
+    // La casilla y la hora que prende, en una sola celda: el rótulo de la hora arriba (alineado
+    // con los de al lado) y abajo la casilla y el selector. Apagada, la hora queda gris.
+    return (
+      <div className="ln-field-wrap">
+        <Rotulo id={idRotulo}>{pareja.label}</Rotulo>
+        <div className="fi-aviso">
+          <label className="ln-choice">
+            <input
+              type="checkbox"
+              className="ln-choice-input"
+              checked={valor === true}
+              onChange={(e) => set(e.target.checked)}
+            />
+            <span className="ln-choice-label">
+              <span className="ln-check" aria-hidden="true"><Check /></span>
+              <span className="ln-choice-text">{campo.label}</span>
+            </span>
+          </label>
+          <SelectorHora
+            valor={respuestas[pareja.campo] || ''}
+            onChange={(v) => onCambio({ [pareja.campo]: v })}
+            etiqueta={pareja.label}
+            deshabilitado={valor !== true}
+          />
         </div>
       </div>
     );
