@@ -13,7 +13,8 @@
   secreto.
 - El webhook de ManyChat (`GET`/`POST /api/manychat-webhook`) se retiró el 26/10/2026: ManyChat está apagado desde
   el 23/10 y el motor propio de Instagram escribe las conversaciones directo. `MANYCHAT_WEBHOOK_TOKEN` ya no se usa.
-- Backup y restauración exigen un admin **y** `BACKUP_SECRET_KEY`.
+- El backup exige un admin u operador **y** `BACKUP_SECRET_KEY` (header `X-Backup-Key`). Desde el 26/10/2026 es un
+  `pg_dump` y la restauración desde la web ya no existe (ver §5 bis).
 
 Los valores que estuvieron escritos en el código o en el frontend (clave de respaldo, token de los crons, token de
 ManyChat, contraseñas por defecto) siguen en el historial de git: **considéralos comprometidos y rota**.
@@ -26,7 +27,7 @@ más cortos se rechazan).
 | Variable | Qué protege | Quién presenta el valor y cómo |
 |---|---|---|
 | `SECRET_KEY` | firma de los JWT y las cookies (la app no arranca en Railway sin ella) | interna |
-| `BACKUP_SECRET_KEY` | `/api/backup/secret-*` | el admin, en `/admin/backup` y `/admin/restore` |
+| `BACKUP_SECRET_KEY` | `GET /api/backup/preview` y `GET /api/backup/export` | el admin u operador, en Operaciones › Datos › Respaldo (`/admin/backup` redirige ahí); viaja en el header `X-Backup-Key` |
 | `CRON_SECRET` | `GET /api/sheets/cron-sync`, `GET /api/closer/followups/cron/send-reminders`, `GET /api/academia/cron/sincronizar` y `GET /api/marketing/anuncios/cron/meta` (ver docs/marketing_anuncios.md) | el cron externo: `Authorization: Bearer <valor>` (o `?token=<valor>`) |
 | `INGEST_API_TOKEN` | rutas de ingesta y consulta de n8n y Apps Script (ver §3) | n8n / Apps Script: header `X-Api-Token: <valor>` (o `Authorization: Bearer <valor>`) |
 | `INTEGRATIONS_AUTH_MODE` | **solo para migrar**: `log_only` deja pasar y registra (ver §4) | — |
@@ -76,6 +77,29 @@ En n8n: en el nodo *HTTP Request* → *Send Headers* → nombre `X-Api-Token`, v
 
 Cambia el valor en Railway y, a la vez, en quien lo presenta (§3). Para un secreto compartido con varios sistemas
 (`INGEST_API_TOKEN`) conviene usar el modo de migración durante el cambio.
+
+## 5 bis. Respaldo y restauración de la base
+
+**Respaldo.** Operaciones › Datos › Respaldo descarga un `pg_dump -Fc` (formato custom, `.dump`) de toda la base.
+El servidor corre `pg_dump` 17 (del repositorio PGDG, ver `Dockerfile`) con la conexión en variables `PG*`: la URL
+no va en los argumentos ni en el log. Antes era un script SQL armado a mano que no escapaba las comillas dentro de
+los JSON (un «O'Brien» rompía la restauración, y un texto de un formulario público podía terminar como SQL).
+
+**Restauración (a mano, nunca desde la web).** Ejecutar un archivo subido contra producción desde un pedido web era
+demasiado peligroso: se retiró el 26/10/2026. Para restaurar:
+
+1. Saca **antes** un respaldo fresco de cómo está la base ahora (pantalla de Respaldo, o
+   `pg_dump -Fc -f antes_de_restaurar.dump "$DATABASE_URL"`), por si hay que volver atrás.
+2. Desde una máquina con `pg_restore` 17 o desde el servicio de Railway (`railway ssh --service <servicio>`, con el
+   `.dump` copiado ahí):
+
+   ```bash
+   pg_restore --clean --if-exists --no-owner -d "$DATABASE_URL" archivo.dump
+   ```
+
+   `--clean --if-exists` borra y recrea cada objeto del volcado; `--no-owner` evita depender del usuario que lo
+   generó. Para ver qué trae un archivo sin tocar nada: `pg_restore -l archivo.dump`.
+3. Reinicia el servicio y vuelve a iniciar sesión (los usuarios pueden haber cambiado).
 
 ## 6. Qué **no** cubre todavía (decisiones pendientes)
 

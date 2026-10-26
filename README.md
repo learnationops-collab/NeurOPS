@@ -70,7 +70,7 @@ repositorio se da por comprometido: se rota, no se reutiliza.
 | Variable | Qué protege | Quién presenta el valor |
 |---|---|---|
 | `SECRET_KEY` | firma de los JWT y de las cookies; sin ella la app no arranca en producción ni en Railway | (interna) |
-| `BACKUP_SECRET_KEY` | `/api/backup/secret-*` (además hay que ser `admin`) | el admin, que la escribe en las pantallas `/admin/backup` y `/admin/restore` (sin enlace en el menú; se entra por la URL); usa una hexadecimal, porque viaja como parte de la ruta |
+| `BACKUP_SECRET_KEY` | `GET /api/backup/preview` y `GET /api/backup/export` (el `pg_dump`; además hay que ser `admin` u `operator`) | el admin u operador, que la escribe en Operaciones › Datos › Respaldo; viaja en el header `X-Backup-Key`. Usa una hexadecimal. La restauración es a mano con `pg_restore` (ver `docs/seguridad_despliegue.md`) |
 | `CRON_SECRET` | `GET /api/sheets/cron-sync`, `GET /api/closer/followups/cron/send-reminders` y `GET /api/academia/cron/sincronizar` | el cron externo: `Authorization: Bearer <valor>` (o, por compatibilidad, `?token=<valor>`) |
 | `INGEST_API_TOKEN` | las rutas de ingesta y consulta de n8n y Apps Script (agendas, ventas, clientes; lista en `app/access_policy.py`) | n8n y Apps Script, en el header `X-Api-Token` (o `Authorization: Bearer`) |
 | `ACADEMY_INBOUND_API_TOKEN` | `/api/external/academy/*` | la Academia, `Authorization: Bearer <valor>` |
