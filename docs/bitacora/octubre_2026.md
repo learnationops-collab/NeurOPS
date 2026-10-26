@@ -938,5 +938,4 @@
   - La franja de cada tarjeta de Confirmar y Reportar dice «1ª llamada», «2ª llamada» o «Momentum». Debajo del porcentaje de Asistencia (Reportar) y de Confirmación (Confirmar), una línea por tipo con asistencias, reprogramaciones o confirmadas, solo los días con alguna 2ª o Momentum.
   - Aura de las tarjetas por reportar más tenue (opacidad .5 → .26, borde 38% → 24%).
   - El mazo solo aplica la carga más reciente: una carga lenta ya no borra la cita recién agendada.
-  - Tarjeta «% de presentación» en Reportar sin nada pendiente (`offer_presented` en el mazo).
   - Compilado con esbuild; sin recorrer la pantalla. Falta ver por qué dos segundas llamadas ya figuraban confirmadas (necesita leer sus datos en el servidor).
