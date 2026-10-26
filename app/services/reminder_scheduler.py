@@ -112,7 +112,7 @@ def start_scheduler(app):
                     return
                 n = sincronizar_movidas()
                 if n:
-                    logger.info(f"[ReminderScheduler] Agendas movidas en Google pasadas a su hora nueva: {n}")
+                    logger.info(f"[ReminderScheduler] Agendas movidas o canceladas en Google seguidas en Work: {n}")
             except Exception as e:
                 logger.error(f"[ReminderScheduler] Error siguiendo las agendas movidas en Google: {e}")
 

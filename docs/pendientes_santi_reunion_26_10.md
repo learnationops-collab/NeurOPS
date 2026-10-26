@@ -17,7 +17,7 @@ Junta lo que sigue abierto de la reunión del 24/10 ([pendientes_santi_reunion_2
 - [x] **Agendas futuras de Facu (6)**: las toma él (confirmado el 26/10). Después de esas no recibe nuevas ni sigue.
 - [x] 6963 (Valeria Hernández, B) y 6965 (Nicolle Pizarro, C) figuran las dos hoy a las 23:00 AR. No es un doble agendamiento: el evento de Valeria se movió en el Google Calendar de Facu al lunes 26/10 a las 13:00 AR. Lo resuelve Facu.
 - [ ] **Agenda movida en Google con la hora vieja en Work** (hecho, falta el deploy): `app/agendas_v2/movidas.py` corre cada 15 min en el scheduler. Una agenda cuyo evento se movió pasa a la hora nueva como reagenda (dos filas, el mismo evento de Google). Al desplegar mueve 5: la 6963 de Facu y 4 de Jean Carlo (6946 y 6971, que él adelantó al sábado 24/10, 6895 y 6897).
-- [ ] Ver qué hacer con las agendas cuyo evento se canceló, se borró o se marcó «Disponible» en Google: hoy siguen abiertas en Work (Jean Carlo tiene 2 «disponible»).
+- [x] Agendas cuyo evento se canceló, se borró o se marcó «Disponible» en Google: las canceladas o borradas futuras se cancelan en Work; «Disponible» es a propósito en las C/D (ver §1).
 - [ ] Cuando Facu termine (después del 27/10): bajarle el acceso de closer y sacarlo de Personas de Thalamus.
 
   | id | hora AR | segmento |
@@ -43,7 +43,7 @@ Hecho en `app/agendas_v2/desplazar.py` (rama `feat/cd-libres`, migración `d7b3e
 - [x] Los eventos C/D quedan «Disponible» en el Google del closer (pedido de Santi): las nuevas nacen así y `scripts/cd_disponibles.py` marca las que ya existen (dry-run: 3 por marcar, 4 ya lo estaban). En Work la C/D sigue ocupando su horario para todos menos un A/B.
 - [x] Arreglado de paso: Jean Carlo ya marcaba a mano sus C como «Disponible», y con eso dejaban de bloquear: un C o D podía agendar encima.
 - [ ] Deploy y `python scripts/cd_disponibles.py --apply` en producción.
-- [ ] Una C/D que el closer cancela o borra en Google sigue bloqueando en Work (antes Google mandaba). Ver si hace falta seguir eso con la trazabilidad.
+- [x] Una agenda futura cuyo evento se cancela o se borra en Google se cancela en Work (`movidas.py`, como el botón «Canceló»). Los closers casi no reportan cancelaciones: 3 de 241 en 30 días. Una que ya pasó no se toca: la reporta el closer.
 - [ ] Las C/D que el triage apruebe y pasen a Jean Carlo no deberían quedar «Disponible» ni desplazables: revisarlo al subir el triage.
 - [ ] Que el C/D desplazado se vea en el mazo del closer y del triage (con la parte visual).
 - [ ] Las migraciones del triage (`c4e9a1d7f2b8`, `f1a8d3c6b2e9`, sin subir) salen de `b8d2f4a6c1e3`, igual que `c4e8a2f6d1b7` de main: al subir el triage hay que colgarlas de la última de main (hoy `d7b3e9a1f4c2`) para no tener dos cabezas.

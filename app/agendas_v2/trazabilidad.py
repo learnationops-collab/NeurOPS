@@ -5,8 +5,8 @@ El vínculo se arma solo: para las de Agendas 2.0, el evento que creó NeurOPS; 
 calendarios de conflicto a la misma hora con el email del lead entre los invitados (o, si hay uno solo, con
 su nombre en el título). Se guarda en calendar_evento_id / calendar_id / calendar_vinculo, y no en
 google_event_id: ese es el que NeurOPS borra al cancelar o reprogramar, y un evento de Calendly no se toca.
-Google solo se lee: nunca se cambia un evento. Lo único que se sigue es un evento movido: movidas.py pasa
-la agenda a la hora nueva.
+Google solo se lee: nunca se cambia un evento. movidas.py sigue dos cosas: un evento movido (la agenda pasa
+a la hora nueva) y uno cancelado o borrado de una agenda que todavía no pasó (se cancela en Work).
 """
 
 import unicodedata
