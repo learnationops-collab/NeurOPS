@@ -39,8 +39,9 @@ SEGMENTO = {'activo': True, 'modo': 'suma', 'a': 3, 'b': 1, 'c': -1, 'sigma': 1,
 PUNTOS_SEG = {
     # $500 o más (+2; solo 10 leads, se juntaron las tres) · $200–$500 (+1) · sin inversión (-1).
     # Decisión, no dato: «No estoy dispuesto» resta más que «podría conseguir ayuda» (antes eran una sola).
-    INVERSION: {'ogmgmpvwtgt': 2, 'oa9pmy94tfg': 2, 'ogmdr0s275v': 2, 'oglxqq0u44o': 1, 'o8slpjgvje7': -1,
-                'oglxqqlugub': -2},
+    # «Menos de $200» (solo en el formulario del §8.8, hoy en el servidor de prueba) queda entre las dos: 0.
+    INVERSION: {'ogmgmpvwtgt': 2, 'oa9pmy94tfg': 2, 'ogmdr0s275v': 2, 'oglxqq0u44o': 1, 'og-menos-200': 0,
+                'o8slpjgvje7': -1, 'oglxqqlugub': -2},
     # Rural y general (+1) · especialista (-1) · residente (-2) · estudiante o interno (-3: compra 3,4%).
     ETAPA: {'og8xclet205': -3, 'og8xclf4go4': 1, 'og94zlvu9m2': 1, 'og9azfspw7e': -2, 'og9ed3qtpzx': -1},
     # Colombia y Perú (+1) · Otro y USMLE (0) · no busca examen (-1) · ENARM (-2). MIR daba +1 y queda en 0:
