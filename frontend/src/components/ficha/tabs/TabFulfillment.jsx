@@ -25,6 +25,7 @@ import { Hueso } from '../../huesos/Huesos';
 import Tip from '../../../pages/comercial/components/Tip';
 import { SeccionColapsable, diaLegible, instanteLegible, useMovimiento } from '../piezas';
 import { pestanasVisibles } from '../estadoFicha';
+import { mensajeDeError, obtenerComentariosAcademia } from '../fichaApi';
 import {
   AYUDA_ACCESO, SECCIONES, diasRestantes, estadoAcceso, nombreProducto,
 } from '../fulfillment';
@@ -231,6 +232,59 @@ function OtrosAccesos({ datos }) {
   );
 }
 
+const COMENTARIOS_A_LA_VISTA = 5;
+
+/**
+ * Lo que anotó el equipo de la Academia (Fulfillment, consultores, CES): observaciones, objetivos y acciones, lo
+ * más nuevo primero (reunión del 26/10). Pide lo suyo aparte: espera el expediente de la Academia.
+ */
+function ComentariosAcademia({ ficha }) {
+  const appointmentId = ficha?.identidad?.appointment_id ?? null;
+  const clientId = ficha?.identidad?.client_id ?? null;
+  const [datos, setDatos] = useState(null);
+  const [error, setError] = useState(null);
+  const [todos, setTodos] = useState(false);
+
+  useEffect(() => {
+    if (appointmentId == null && clientId == null) return undefined;
+    const ctrl = new AbortController();
+    obtenerComentariosAcademia({ appointmentId, clientId, signal: ctrl.signal })
+      .then(setDatos)
+      .catch((err) => { if (!ctrl.signal.aborted) setError(mensajeDeError(err)); });
+    return () => ctrl.abort();
+  }, [appointmentId, clientId]);
+
+  const lista = datos?.comentarios || [];
+  const visibles = todos ? lista : lista.slice(0, COMENTARIOS_A_LA_VISTA);
+  return (
+    <section className="ln-panel ln-panel--sm ful-seccion" aria-labelledby="ful-comentarios">
+      <small id="ful-comentarios" className="ln-t-eyebrow ln-muted">
+        {`Comentarios del equipo de la Academia${lista.length ? ` · ${lista.length}` : ''}`}
+      </small>
+      {!datos && !error && <Hueso alto={44} />}
+      {(error || datos?.aviso) && <p className="t-sm mut" style={{ margin: 0 }}>{error || datos.aviso}</p>}
+      {datos && !datos.aviso && !lista.length && (
+        <p className="t-sm mut" style={{ margin: 0 }}>Nadie del equipo de la Academia anotó nada sobre este alumno todavía.</p>
+      )}
+      {visibles.map((c) => (
+        <div key={c.id} className="ful-comentario">
+          <small className="ln-t-caption ln-muted">
+            {[instanteLegible(c.fecha), c.por, c.grupo === 'Seguimiento' ? null : c.grupo].filter(Boolean).join(' · ')}
+          </small>
+          <p className="ln-t-body-sm" style={{ margin: 0, whiteSpace: 'pre-line' }}>
+            {c.que}{c.detalle && c.grupo === 'Seguimiento' ? ` — ${c.detalle}` : ''}
+          </p>
+        </div>
+      ))}
+      {lista.length > COMENTARIOS_A_LA_VISTA && (
+        <button type="button" className="btn btn--linea btn--sm" onClick={() => setTodos(!todos)}>
+          {todos ? 'Ver menos' : `Ver los ${lista.length}`}
+        </button>
+      )}
+    </section>
+  );
+}
+
 const PanelHuesos = () => (
   <div className="ln-panel ln-panel--sm" aria-hidden="true">
     <Hueso alto={22} ancho="38%" />
@@ -327,6 +381,8 @@ export default function TabFulfillment({ ficha, onConsultar, onAccion, irA }) {
           <motion.div {...entrar()}>
             <AccesoPagado datos={datos} ficha={ficha} irA={irA} onAccion={onAccion} onHecho={pedir} />
           </motion.div>
+
+          <motion.div {...entrar()}><ComentariosAcademia ficha={ficha} /></motion.div>
 
           {desempeno ? (
             <div className="ful-secciones pareja">

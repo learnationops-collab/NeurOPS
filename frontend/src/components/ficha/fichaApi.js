@@ -32,6 +32,12 @@ export const obtenerBitacora = ({ appointmentId = null, clientId = null, signal 
     return api.get('/ficha/bitacora', { params, signal, timeout: 60000 }).then(r => r.data);
 };
 
+/** Lo que anotó el equipo de la Academia sobre el alumno (`GET /ficha/comentarios-academia`), para Fulfillment. */
+export const obtenerComentariosAcademia = ({ appointmentId = null, clientId = null, signal } = {}) => {
+    const params = appointmentId != null ? { appointment_id: appointmentId } : { client_id: clientId };
+    return api.get('/ficha/comentarios-academia', { params, signal, timeout: 60000 }).then(r => r.data);
+};
+
 /**
  * Mapa acción → petición. La clave es el nombre que usan las pestañas; el valor
  * recibe `(appt, payload)`.

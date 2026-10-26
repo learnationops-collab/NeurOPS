@@ -86,6 +86,25 @@ def bitacora():
     return jsonify(bitacora_lead_service.bitacora(client, quien=quien)), 200
 
 
+@bp.route('/comentarios-academia', methods=['GET'])
+def comentarios_academia():
+    """`GET /api/ficha/comentarios-academia?appointment_id=<id>` o `?client_id=<id>`: lo que anotó el equipo de la
+    Academia sobre el alumno (pestaña Fulfillment). Mismo permiso que la bitácora."""
+    from app import db
+    from app.models import Appointment, Client
+    from app.services import bitacora_lead_service
+
+    appointment_id, client_id = _entero('appointment_id'), _entero('client_id')
+    if not appointment_id and not client_id:
+        return jsonify({'message': 'Falta appointment_id o client_id'}), 400
+    appt = db.session.get(Appointment, appointment_id) if appointment_id else None
+    client = appt.client if appt else (db.session.get(Client, client_id) if client_id else None)
+    if not client or not puede_abrir(current_user, appointment_id=appointment_id, client_id=client_id):
+        return jsonify({'message': 'Lead no encontrado'}), 404
+    quien = {'email': current_user.email, 'rol': current_user.role}
+    return jsonify(bitacora_lead_service.comentarios(client, quien=quien)), 200
+
+
 @bp.route('/<int:appt_id>/fulfillment', methods=['GET'])
 def fulfillment(appt_id):
     """Como le va al alumno dentro de la Academia (Learnation).

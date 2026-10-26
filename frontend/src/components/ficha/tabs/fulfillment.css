@@ -72,3 +72,6 @@
 @media (max-width:640px){
   .dc-shell .ful-secciones{grid-template-columns:1fr}
 }
+
+/* Comentarios del equipo de la Academia: uno por renglón, con su fecha y autor arriba. */
+.ful-comentario { display: grid; gap: 2px; padding-top: var(--s2, 8px); border-top: 1px solid var(--border-subtle, rgba(127,127,127,.15)); }

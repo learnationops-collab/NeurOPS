@@ -91,6 +91,22 @@ def academia(client, quien=None):
     return out, None
 
 
+# Lo que escribe el equipo de la Academia (Fulfillment, consultores, CES): observaciones, objetivos y acciones.
+GRUPOS_COMENTARIO = ('Seguimiento', 'Observación', 'Victoria')
+
+
+def comentarios(client, quien=None):
+    """`{comentarios, aviso}`: lo que anotó el equipo de la Academia sobre el alumno, lo más nuevo primero.
+
+    Para la pestaña Fulfillment (reunión del 26/10): el closer ve los comentarios de Fulfillment sin abrir la
+    bitácora entera. Sale del mismo expediente que la bitácora; sin vínculo o sin respuesta, viaja el aviso.
+    """
+    entradas, aviso = academia(client, quien)
+    elegidas = [e for e in entradas if e['grupo'] in GRUPOS_COMENTARIO and e['fecha']]
+    elegidas.sort(key=lambda e: e['fecha'], reverse=True)
+    return {'comentarios': [{**e, 'fecha': e['fecha'].isoformat() + 'Z'} for e in elegidas], 'aviso': aviso}
+
+
 def bitacora(client, quien=None, ahora=None):
     """`{inicio_academia, aviso_academia, tramos: [{key, label, entradas}]}`; cada tramo en orden de fecha."""
     ahora = ahora or datetime.utcnow()
