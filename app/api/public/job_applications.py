@@ -29,6 +29,12 @@ def _texto(valor, largo=MAX_CORTO):
     return texto[:largo]
 
 
+def _url(valor):
+    """Un link http(s) o None: el panel lo pone en un href, y un `javascript:` correría en Work."""
+    texto = _texto(valor, 500)
+    return texto if texto and texto.lower().startswith(('http://', 'https://')) else None
+
+
 def _lista(valor):
     if not isinstance(valor, list):
         return None
@@ -114,8 +120,8 @@ def crear_job_application():
         _set_si_presente(app_row, 'porque', _texto(data.get('porque'), MAX_LARGO))
         _set_si_presente(app_row, 'fuente', _texto(data.get('fuente'), 60))
         _set_si_presente(app_row, 'bolsa', _texto(data.get('bolsa'), 120))
-        _set_si_presente(app_row, 'video', _texto(data.get('video'), 500))
-        _set_si_presente(app_row, 'llamada', _texto(data.get('llamada'), 500))
+        _set_si_presente(app_row, 'video', _url(data.get('video')))
+        _set_si_presente(app_row, 'llamada', _url(data.get('llamada')))
         # Solo se prende: mismo motivo que arriba, un request viejo (completo=False)
         # no debe apagar una postulación que otro más nuevo ya marcó terminada.
         app_row.completo = app_row.completo or bool(data.get('completo'))

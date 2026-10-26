@@ -41,9 +41,9 @@ def test_sin_email_ni_instagram_es_400(client):
 def test_un_cliente_conocido_se_encuentra_por_email(client, ana):
     respuesta = consultar(client, email='ana@x.com')
 
+    # A un anónimo solo el id: con un Instagram (público) se sacaba el teléfono de cualquier lead.
     assert respuesta.status_code == 200
-    assert respuesta.get_json() == {'exists': True, 'client': {
-        'id': ana.id, 'full_name': 'Ana Gomez', 'phone': '+58 412 0000000', 'instagram': 'ana.g'}}
+    assert respuesta.get_json() == {'exists': True, 'client': {'id': ana.id}}
 
 
 def test_un_desconocido_no_existe(client, ana):

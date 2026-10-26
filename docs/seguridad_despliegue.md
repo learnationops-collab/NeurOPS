@@ -81,8 +81,9 @@ Cambia el valor en Railway y, a la vez, en quien lo presenta (§3). Para un secr
 
 - `POST /api/workshop/interaction|plantilla-sent` son webhooks públicos por diseño: hoy aceptan datos de cualquiera.
   Protegerlos con un secreto exige configurarlo en quien los llama; los decoradores y el modo de migración ya existen.
-- `POST /api/public/clients/check` (pagina de reservas) devuelve nombre y teléfono de un cliente conocido a quien acierte
-  un email o un Instagram. Cerrarlo exige rehacer la experiencia de la reserva (verificar al visitante).
+- `POST /api/public/clients/check` (pagina de reservas) le dice a un anónimo si un email o un Instagram es un cliente
+  conocido, y su `id` (desde el 26/10/2026 ya no devuelve nombre, teléfono ni Instagram). Que la existencia se pueda
+  consultar exige rehacer la experiencia de la reserva (verificar al visitante).
 - Los formularios públicos (`submit-lead`, `book`, postulaciones, `workshop-lead`) no tienen límite de intentos.
 - No hay límite de intentos de login ni forma de revocar un JWT antes de que venza (24 h).
 - Las rutas protegidas siguen exentas de CSRF (el frontend usa Bearer, y las cookies son `SameSite=Lax`).

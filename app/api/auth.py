@@ -60,8 +60,9 @@ def login():
         return jsonify({"message": "Tu cuenta está desactivada. Contacta a un administrador."}), 403
 
     # 4. Login Session (Optional / Legacy support)
-    login_user(user, remember=True)
     from flask import session
+    olvidar_simulacion(session)
+    login_user(user, remember=True)
     session.pop('active_role', None)  # se entra siempre con el rol principal
 
     # Sincronizar la timezone del usuario con la detectada por su navegador en cada login,
@@ -112,6 +113,12 @@ def sesion_de_google():
         return jsonify({"message": "No hay un inicio de sesión con Google pendiente"}), 401
     return jsonify({"message": "Login successful", "token": current_user.get_auth_token(),
                     "user": _usuario_json(current_user)}), 200
+
+
+def olvidar_simulacion(session):
+    """Borra de la cookie el estado de una simulación anterior (flujo clásico), antes de cada login."""
+    for clave in ('is_impersonating', 'original_user_id', 'original_user_role'):
+        session.pop(clave, None)
 
 
 EMAIL_VALIDO = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
@@ -306,7 +313,11 @@ def resetear_contrasena(user_id):
 
 @bp.route('/auth/logout', methods=['POST'])
 def logout():
+    from flask import session
     logout_user()
+    # Sin esto quedaban en la cookie is_impersonating/original_user_id: quien entrara después en ese
+    # navegador podía llamar a /auth/revert y recibir el token del admin que había simulado.
+    session.clear()
     return jsonify({"message": "Logout successful"}), 200
 
 @bp.route('/auth/me', methods=['GET'])

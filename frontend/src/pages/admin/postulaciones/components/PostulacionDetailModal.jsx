@@ -127,7 +127,8 @@ const PostulacionDetailModal = ({ applicationId, currentUserId, ids, onClose, on
                         {data && (
                             <div className="mt-2.5 flex flex-wrap items-center gap-2">
                                 {['video', 'llamada'].map(key => (
-                                    data[key] ? (
+                                    // Solo http(s): un `javascript:` en el href correría en Work.
+                                    /^https?:\/\//i.test(data[key] || '') ? (
                                         <a
                                             key={key}
                                             href={data[key]}

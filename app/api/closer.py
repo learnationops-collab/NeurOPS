@@ -808,7 +808,9 @@ def get_slots():
 @bp.route('/appointments/<int:id>/process', methods=['POST'])
 @login_required
 def process_agenda(id):
-    if current_user.role not in ['closer', 'admin', 'setter', 'call_confirmer', 'triage', 'financial']:
+    # Reportar una agenda es del closer (la ficha tampoco deja al setter): setter y triage podían marcar
+    # «No Show» en la agenda de cualquier closer.
+    if current_user.role not in ['closer', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
     data = request.get_json() or {}
     if 'role' not in data:
@@ -2241,6 +2243,10 @@ def update_closer_sale(sale_id):
 
     from app.models import FinancialSale
     sale = FinancialSale.query.get_or_404(sale_id)
+    if current_user.role != 'admin':
+        propios = {e.strip().lower() for e in CloserService._resolve_sale_identifiers(current_user) if e}
+        if (sale.email_vendedor or '').strip().lower() not in propios:
+            return jsonify({"message": "Solo podés corregir tus propias ventas"}), 403
     data = request.get_json() or {}
 
     CAMPOS = {

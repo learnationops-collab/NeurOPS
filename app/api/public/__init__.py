@@ -119,12 +119,11 @@ def check_client_exists():
         client = Client.query.filter(or_(Client.instagram == ig_username, Client.instagram == f"@{ig_username}")).first()
     
     if client:
-        datos = {
-            "id": client.id,
-            "full_name": client.full_name,
-            "phone": client.phone,
-            "instagram": client.instagram,
-        }
+        # A un anónimo solo el id: con un Instagram (público) se sacaba el teléfono de cualquier lead. La página
+        # de reservas deja vacío lo que no viene y el lead lo completa.
+        datos = {"id": client.id}
+        if es_llamada_de_confianza():
+            datos.update(full_name=client.full_name, phone=client.phone, instagram=client.instagram)
         # Ruta publica (la pagina de reservas precarga el formulario de quien ya conocemos): a un anonimo no se
         # le devuelven las respuestas de la encuesta, que la pagina ni usa. Solo a un usuario o a un sistema
         # con el secreto de ingesta (n8n, Apps Script).
