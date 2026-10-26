@@ -36,10 +36,12 @@ FORM_ID = 'dg6gukz9emx'
 INVERSION, ETAPA, EXAMEN, DECIDE = 'qglxqqlsgya', 'qg8xclvqc4c', 'qg6raaks2pe', 'qgnajtuxkuz'
 # Opciones que se juntaron en otra (§8.8).
 ALIAS = {'ogmgmpvwtgt': 'ogmdr0s275v'}
+NO_DISPUESTO, PODRIA_AYUDA = 'oglxqqlugub', 'o8slpjgvje7'
 
 # Formulario viejo (form_data): clave → [(patrón en el texto normalizado, opción de Thalamus)], en orden.
+# «No estoy en una posición…» es la opción de hoy «podría conseguir ayuda», no «No estoy dispuesto» (§8.9).
 EQUIVALENCIAS = {
-    'inversion': (INVERSION, [(r'no estoy|no puedo|posicion', 'oglxqqlugub'), (r'200', 'oglxqq0u44o'),
+    'inversion': (INVERSION, [(r'no estoy|no puedo|posicion', PODRIA_AYUDA), (r'200', 'oglxqq0u44o'),
                               (r'500|1000', 'ogmdr0s275v'), (r'sentido', 'oglxqq0u44o')]),
     'formacion': (ETAPA, [(r'estudiante|internado', 'og8xclet205'), (r'rural|social', 'og8xclf4go4'),
                           (r'trabajando|general', 'og94zlvu9m2'), (r'residente', 'og9azfspw7e'),
@@ -60,7 +62,11 @@ def resp_de_payload(payload):
     resp = {}
     for r in (payload or {}).get('respuestas') or []:
         if r.get('opcion_id'):
-            resp[r['pregunta_id']] = ALIAS.get(r['opcion_id'], r['opcion_id'])
+            op = ALIAS.get(r['opcion_id'], r['opcion_id'])
+            # Hasta el 26/10 esa opción decía «no estoy en posición de invertir»: es la de «podría conseguir ayuda».
+            if op == NO_DISPUESTO and 'posici' in _norm(r.get('respuesta')):
+                op = PODRIA_AYUDA
+            resp[r['pregunta_id']] = op
     return resp
 
 

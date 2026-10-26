@@ -2,7 +2,14 @@
 
 import { conOpciones } from './catalogos';
 import { normalPregunta } from './normalizar';
+import { SEG_Q, preguntaSegmento, segmentar } from './segmento';
 import { clonar, mayus, uid } from './util';
+
+// Las preguntas que puede usar una regla: las del formulario y, si segmenta, «Segmento del lead».
+export function preguntasRuteo(fo) {
+    const seg = preguntaSegmento(fo);
+    return ((fo && fo.preguntas) || []).concat(seg ? [seg] : []);
+}
 
 export function resumenForm(f) {
     const ps = f.preguntas;
@@ -43,12 +50,19 @@ export const NO_CALIFICA = '__no';
 // Las reglas sin condiciones completas se saltean. Si ninguna se cumple, va a `resto`.
 // Una regla con `url` no elige prioridad: el lead no agenda y se lo manda a esa página.
 // Con destino NO_CALIFICA (no: true) el lead no califica: no agenda y ve el fin.
+// Una condición sobre SEG_Q mira el segmento A/B/C/D que le dan sus respuestas (fo trae preguntas y segmento).
 export function grupoPorReglas(fo, resp) {
     if (!fo) return { grupo: '', regla: null, url: '', no: false };
     const reglas = fo.reglas || [];
+    let seg;
+    const valor = (q) => {
+        if (q !== SEG_Q) return resp[q];
+        if (seg === undefined) seg = (segmentar(fo, resp) || {}).segmento;
+        return seg;
+    };
     for (let i = 0; i < reglas.length; i++) {
         const conds = reglas[i].cond.filter(c => c.q && c.ops.length);
-        if (conds.length && conds.every(c => c.ops.includes(resp[c.q]))) {
+        if (conds.length && conds.every(c => c.ops.includes(valor(c.q)))) {
             const url = reglas[i].url || '';
             const no = !url && reglas[i].grupo === NO_CALIFICA;
             return { grupo: url || no ? '' : reglas[i].grupo, regla: i, url, no };
@@ -69,10 +83,11 @@ export function gruposDeForm(fo) {
 // Reglas que apuntan a preguntas u opciones que ya no existen: nunca se van a cumplir.
 export function reglasRotas(fo) {
     const out = [];
+    const preguntas = preguntasRuteo(fo);
     (fo ? fo.reglas : []).forEach((r, i) => {
         const rota = r.cond.some(c => {
             if (!c.q) return false;
-            const q = fo.preguntas.find(x => x.id === c.q);
+            const q = preguntas.find(x => x.id === c.q);
             return !q || !conOpciones(q.tipo) || c.ops.some(o => !q.opciones.some(x => x.id === o));
         });
         if (rota) out.push(i);
@@ -99,8 +114,10 @@ export function revisarSegmentacion(fo, nombreGrupo = (id) => id) {
         if (!r.conds.length) avisos.push({ k: 'sin-regla', nivel: 'error', regla: r.i, t: 'La regla ' + (r.i + 1) + ' no tiene condiciones completas: nunca se cumple.' });
         else if (!r.destino) avisos.push({ k: 'sin-destino', nivel: 'error', regla: r.i, t: 'La regla ' + (r.i + 1) + ' no tiene estrategia.' });
     });
+    // El segmento se recorre como una pregunta más (A a D), sin mirar qué respuestas lo dan.
+    const preguntas = preguntasRuteo(fo);
     const usadas = [...new Set(reglas.flatMap(r => r.conds.map(c => c.q)))]
-        .map(id => fo.preguntas.find(q => q.id === id && conOpciones(q.tipo))).filter(Boolean);
+        .map(id => preguntas.find(q => q.id === id && conOpciones(q.tipo))).filter(Boolean);
     const opciones = usadas.map(q => q.opciones.filter(o => o.texto.trim() && !o.descalifica));
     const destinoResto = fo.resto ? 'van a «Todo lo demás» (' + nombreGrupo(fo.resto) + ').' : 'quedan sin estrategia: «Todo lo demás» no tiene una.';
     const total = opciones.reduce((n, os) => n * Math.max(1, os.length), 1);

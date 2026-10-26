@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { almacen } from '../../data/hooks';
 import { conOpciones } from '../../core/catalogos';
 import { buscar, nombreGrupo, ord as ordCol } from '../../core/datos';
-import { NO_CALIFICA, reglasRotas, revisarSegmentacion } from '../../core/formulario';
+import { NO_CALIFICA, preguntasRuteo, reglasRotas, revisarSegmentacion } from '../../core/formulario';
 import { urlOk } from '../../core/normalizar';
 import { uid } from '../../core/util';
 import { Humo, HUMO_MARCA, Icono, Sx } from '../../ui/base';
@@ -121,7 +121,7 @@ function Regla({ r, i, f, d, qs, msel, rota, ord, enfocar }) {
             <button type="button" className="grip" {...ord.grip(r.id, 'Mover regla ' + (i + 1))}><Icono n="grip" /></button>
             <div className="conds">
                 {r.cond.map((c, j) => {
-                    const q = f.preguntas.find(x => x.id === c.q && conOpciones(x.tipo)) || null, clave = r.id + ':' + j;
+                    const q = qs.find(x => x.id === c.q) || null, clave = r.id + ':' + j;
                     return (
                         <div className="cond" key={j} data-c={j}>
                             <span className="cond-y">{j ? 'y' : 'si'}</span>
@@ -153,7 +153,8 @@ function Regla({ r, i, f, d, qs, msel, rota, ord, enfocar }) {
 export default function Ruteo({ f, d, modo, msel }) {
     const raiz = useRef(null);
     const enfocar = useEnfocar(raiz);
-    const qs = f.preguntas.filter(q => conOpciones(q.tipo) && q.opciones.some(o => o.texto.trim()));
+    // Con la segmentación activa, «Segmento del lead» (A a D) se elige como una pregunta más.
+    const qs = preguntasRuteo(f).filter(q => conOpciones(q.tipo) && q.opciones.some(o => o.texto.trim()));
     const rotas = reglasRotas(f);
     const avisos = revisarSegmentacion(f, (id) => nombreGrupo(d, id));
     const conAviso = [...new Set(avisos.filter(a => a.regla != null && a.nivel !== 'info').map(a => a.regla))];

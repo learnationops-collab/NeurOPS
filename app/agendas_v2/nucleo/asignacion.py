@@ -109,7 +109,7 @@ def asignacion(ctx, d, opts=None):
 
 
 def _asignacion(ctx, d, opts=None):
-    """ctx: {preguntas, resp, dur, margen, evento_id, ag, reglas, resto, persona}. dur y margen son la
+    """ctx: {preguntas, resp, dur, margen, evento_id, ag, reglas, resto, segmento, persona}. dur y margen son la
     propuesta del evento; cada closer usa lo suyo si lo ajustó (sesion_de).
     opts: {ahora, ocupado(persona_id, t, dur), carga_de(persona_id) → agendas futuras, prueba}
     Devuelve {nota, grupo, grupo_regla, regla_idx, desborde, slots: [{t, p}], regla, aviso}."""
@@ -136,7 +136,8 @@ def _asignacion(ctx, d, opts=None):
 
     # Ojo: en JS `reglas: []` es verdadero, así que sin reglas igual se va a `resto`.
     if js_truthy(ctx.get('reglas')):
-        r = grupo_por_reglas({'reglas': ctx['reglas'], 'resto': ctx.get('resto')}, resp)
+        r = grupo_por_reglas({'reglas': ctx['reglas'], 'resto': ctx.get('resto'), 'preguntas': ctx.get('preguntas') or [],
+                              'segmento': ctx.get('segmento')}, resp)
     else:
         r = {'grupo': '', 'regla': None}
     if r.get('url'):

@@ -55,7 +55,9 @@ export function normalPregunta(q) {
         peso: entero(q.peso, 0, 5, conOpciones(t) ? 1 : 0),
         opciones: (Array.isArray(q.opciones) ? q.opciones : []).slice(0, 60).map(o => {
             o = typeof o === 'string' ? { texto: o } : (o || {});
-            return { id: String(o.id || uid('o')).slice(0, 40), texto: String(o.texto || '').slice(0, 200), corto: String(o.corto || '').slice(0, 40), puntos: entero(o.puntos, 0, 10, null), descalifica: o.descalifica === true };
+            // puntosSeg: puntos del segmento en modo suma (-5 a +5); sin ellos la clave no se escribe (publicados idénticos).
+            const seg = entero(o.puntosSeg, -5, 5, null);
+            return { id: String(o.id || uid('o')).slice(0, 40), texto: String(o.texto || '').slice(0, 200), corto: String(o.corto || '').slice(0, 40), puntos: entero(o.puntos, 0, 10, null), descalifica: o.descalifica === true, ...(seg != null ? { puntosSeg: seg } : {}) };
         }),
         // Si cuenta para el segmento A/B/C/D: 'cuenta', o 'clave' (sin respuesta no hay segmento). Si no cuenta,
         // la clave no se escribe: así los formularios y eventos publicados de antes quedan idénticos.
@@ -63,11 +65,16 @@ export function normalPregunta(q) {
     };
 }
 
-// Cortes del segmento en % del puntaje (A ≥ a, B ≥ b, C ≥ c), la incertidumbre de los puntos (sigma, en %)
-// y la versión de los puntos. null si no está activo: el formulario no segmenta.
+// Cortes del segmento (A ≥ a, B ≥ b, C ≥ c), la incertidumbre de los puntos (sigma) y la versión de los puntos.
+// En modo 'suma' van en puntos (sigma por pregunta); si no, en % del puntaje. null si no está activo.
 export function normalSegmento(s) {
     s = s && typeof s === 'object' ? s : {};
     if (s.activo !== true) return null;
+    if (s.modo === 'suma') {
+        const a = entero(s.a, -50, 50, 3);
+        const b = Math.min(a, entero(s.b, -50, 50, 1));
+        return { activo: true, modo: 'suma', a, b, c: Math.min(b, entero(s.c, -50, 50, -1)), sigma: entero(s.sigma, 1, 5, 1), version: String(s.version || '').slice(0, 20) };
+    }
     const a = entero(s.a, 0, 100, 69);
     const b = Math.min(a, entero(s.b, 0, 100, 54));
     return { activo: true, a, b, c: Math.min(b, entero(s.c, 0, 100, 31)), sigma: entero(s.sigma, 1, 50, 12), version: String(s.version || '').slice(0, 20) };

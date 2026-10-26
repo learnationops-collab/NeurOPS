@@ -77,7 +77,7 @@ export function asignacion(ctx, d, opts = {}) {
 }
 
 /**
- * ctx: {preguntas, resp, dur, margen, eventoId, ag, reglas, resto, persona}. dur y margen son la propuesta
+ * ctx: {preguntas, resp, dur, margen, eventoId, ag, reglas, resto, segmento, persona}. dur y margen son la propuesta
  * del evento; cada closer usa lo suyo si lo ajustó (sesionDe).
  * opts: {ahora, ocupado(personaId, t, dur), cargaDe(personaId) → agendas futuras, prueba}
  * Devuelve {nota, grupo, grupoRegla, reglaIdx, desborde, slots:[{t, p}], regla, aviso}.
@@ -103,7 +103,7 @@ function asignar(ctx, d, opts = {}) {
         return { ...base, regla: 'Persona fija', slots: pp ? slotsDe(pp).map(t => ({ t, p: pp.id })) : [] };
     }
 
-    const r = ctx.reglas ? grupoPorReglas({ reglas: ctx.reglas, resto: ctx.resto }, ctx.resp || {}) : { grupo: '', regla: null };
+    const r = ctx.reglas ? grupoPorReglas({ reglas: ctx.reglas, resto: ctx.resto, preguntas: ctx.preguntas || [], segmento: ctx.segmento }, ctx.resp || {}) : { grupo: '', regla: null };
     // La regla manda a otra página: no hay horarios que ofrecer.
     if (r.url) return { ...base, reglaIdx: r.regla, url: r.url, slots: [], regla: 'Redirige a ' + r.url };
     // La segmentación lo marca como que no califica: no agenda.

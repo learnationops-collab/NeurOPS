@@ -1,17 +1,18 @@
-"""Carga en el formulario «Sesión de Aceleración» los puntos y las opciones de los segmentos A/B/C/D
-(docs/plan_segmentos_triage.md §2.1 y §8.8) y activa la segmentación con la versión 2026-11.
+"""Carga en el formulario «Sesión de Aceleración» los puntos del segmento A/B/C/D sacados de los datos y el
+ruteo por segmento (docs/plan_segmentos_triage.md §8.9). Versión 2026-12, modo suma.
 
 Cambios (todos idempotentes: correrlo dos veces deja lo mismo):
-  - Inversión: solo puntos, sobre las opciones que dejó Mario el 26/10 (más de $2000 y $1000–$2000: 10 ·
-    $500–$1000: 8 · $200–$500: 6 · «podría conseguir ayuda» y «no estoy dispuesto»: 0).
-  - Examen: Ecuador (4), Chile (6) y Panamá (6) antes de «Otro».
-  - Decide queda como siempre (depende de mí 4 · necesito apoyo 0). Con --quien-decide pasa a «¿Quién más
-    participa de esta decisión?» Solo yo (4) · Mi pareja / Mis padres / Otra persona (0); sin el flag vuelve a
-    la de siempre.
-  - Puntos del plan en Inversión, Etapa, Examen y Decide, con MIR en 2. Trabaja y Puntos a subir no se tocan
-    (en observación).
-  - Inversión y Etapa son clave (sin respuesta no hay segmento); Examen y Decide cuentan.
-Lo guarda con `guardar_doc` (normaliza, republica los eventos y sube la versión de Thalamus).
+  - `puntosSeg` (-3 a +2) en Inversión, Etapa, Examen y Decide: 0 es el lead promedio, lo que resta compra
+    menos. Salen de una logística penalizada sobre 736 leads (jun–sep 2026, 77 compras a 60 días), pasada a
+    enteros. `puntos` (la nota de 0 a 10 del closer) no se toca.
+  - Cortes A ≥ 3 (compra unas 2 veces el promedio), B ≥ 1 (sobre el promedio), C ≥ -1, D el resto.
+  - Ruteo: las reglas con url (mk-academy) quedan primero; las mk-g* se reemplazan por una por segmento:
+    A → Grupo 5 · B → Grupo 4 · C → Grupo 2 · D → Grupo 1, con el desborde de siempre. «Todo lo demás»
+    (sin segmento: falta Inversión o Etapa) sigue en Grupo 1.
+  - Examen: Ecuador, Chile y Panamá antes de «Otro». Decide queda como siempre; con --quien-decide pasa a
+    «¿Quién más participa de esta decisión?».
+Lo guarda con `guardar_doc` (normaliza, republica los eventos y sube la versión de Thalamus). Después correr
+scripts/backfill_segmentos.py --apply --force para recalcular los segmentos guardados.
 
 Uso (en el servidor):
   python scripts/segmentos_formulario.py                   # dry-run: muestra cómo queda
@@ -28,23 +29,31 @@ os.environ['FOLLOWUP_REMINDERS_ENABLED'] = 'false'
 
 from app import create_app, db  # noqa: E402
 from app.agendas_v2.modelos import SchedFormulario  # noqa: E402
+from app.agendas_v2.nucleo.segmento import SEG_Q  # noqa: E402
 
 FORM_ID = 'dg6gukz9emx'
 INVERSION, ETAPA, EXAMEN, DECIDE = 'qglxqqlsgya', 'qg8xclvqc4c', 'qg6raaks2pe', 'qgnajtuxkuz'
-# Máximo 26 (Inversión 10 + Etapa 6 + Examen 6 + Decide 4): los cortes de Mario, 18/14/8 puntos, son 69/53/30%.
-SEGMENTO = {'activo': True, 'a': 69, 'b': 53, 'c': 30, 'sigma': 12, 'version': '2026-11'}
+SEGMENTO = {'activo': True, 'modo': 'suma', 'a': 3, 'b': 1, 'c': -1, 'sigma': 1, 'version': '2026-12'}
 
-PUNTOS = {
-    # Las opciones de Inversión son las que dejó Mario el 26/10 (10 · 10 · 8 · 6 · 0 · 0); no se tocan.
-    INVERSION: {'ogmgmpvwtgt': 10, 'oa9pmy94tfg': 10, 'ogmdr0s275v': 8, 'oglxqq0u44o': 6, 'o8slpjgvje7': 0,
-                'oglxqqlugub': 0},
-    ETAPA: {'og8xclet205': 0, 'og8xclf4go4': 6, 'og94zlvu9m2': 6, 'og9azfspw7e': 3, 'og9ed3qtpzx': 3},
-    # MIR baja a 2: España no es mercado prioritario (Mario, 24/10/2026).
-    EXAMEN: {'og77bdut6ym': 6, 'og7cr7tiwh9': 2, 'og6raas2nv9': 6, 'og-ecuador': 4, 'og-chile': 6, 'og-panama': 6,
-             'og7imnc8sh8': 2, 'og6raaoi8vy': 2, 'og7nm9cskac': 2, 'og7p4glxgce': 0},
-    DECIDE: {'ognajtws1ke': 4, 'ognajtnj7rg': 0, 'og-pareja': 0, 'og-otra-persona': 0},
+# Efecto de cada respuesta en la compra (log-odds centrado; un punto ≈ 0,23, unas 1,26 veces las chances).
+PUNTOS_SEG = {
+    # $500 o más (+2; solo 10 leads, se juntaron las tres) · $200–$500 (+1) · sin inversión (-1).
+    # Decisión, no dato: «No estoy dispuesto» resta más que «podría conseguir ayuda» (antes eran una sola).
+    INVERSION: {'ogmgmpvwtgt': 2, 'oa9pmy94tfg': 2, 'ogmdr0s275v': 2, 'oglxqq0u44o': 1, 'o8slpjgvje7': -1,
+                'oglxqqlugub': -2},
+    # Rural y general (+1) · especialista (-1) · residente (-2) · estudiante o interno (-3: compra 3,4%).
+    ETAPA: {'og8xclet205': -3, 'og8xclf4go4': 1, 'og94zlvu9m2': 1, 'og9azfspw7e': -2, 'og9ed3qtpzx': -1},
+    # Colombia y Perú (+1) · Otro y USMLE (0) · no busca examen (-1) · ENARM (-2). MIR daba +1 y queda en 0:
+    # España no es mercado prioritario (Mario, 24/10/2026). Chile, Panamá y Ecuador no tienen datos propios:
+    # siguen el orden que les dio Mario (Chile y Panamá como Colombia, Ecuador abajo).
+    EXAMEN: {'og77bdut6ym': 1, 'og6raas2nv9': 1, 'og7cr7tiwh9': 0, 'og-chile': 1, 'og-panama': 1, 'og-ecuador': 0,
+             'og7nm9cskac': 0, 'og6raaoi8vy': 0, 'og7imnc8sh8': -2, 'og7p4glxgce': -1},
+    # Decide solo (+1) · necesita apoyo (-1).
+    DECIDE: {'ognajtws1ke': 1, 'ognajtnj7rg': -1, 'og-pareja': -1, 'og-otra-persona': -1},
 }
 ROL = {INVERSION: 'clave', ETAPA: 'clave', EXAMEN: 'cuenta', DECIDE: 'cuenta'}
+POR_SEGMENTO = {'A': 'ws-g5', 'B': 'ws-g4', 'C': 'ws-g2', 'D': 'ws-g1'}
+RESTO = 'ws-g1'
 
 # Decide: la pregunta de siempre, y la nueva «¿Quién más participa?» para cuando se decida (--quien-decide).
 DECIDE_ORIGINAL = ('Necesitas apoyo (logístico, emocional o económico) de alguien, para poder tomar decisiones en tu '
@@ -69,9 +78,17 @@ def _insertar(opciones, nueva, antes_de=None, despues_de=None):
         opciones.append(nueva)
 
 
+def _reglas(reglas):
+    """Las reglas con url (mk-academy) primero y una por segmento después; las mk-g* se van."""
+    filtros = [r for r in reglas if r.get('url')]
+    por_seg = [{'id': f'seg-{s.lower()}', 'grupo': g, 'url': '', 'cond': [{'q': SEG_Q, 'ops': [s]}]}
+               for s, g in POR_SEGMENTO.items()]
+    return filtros + por_seg
+
+
 def preparar(datos, quien_decide=False):
     preguntas = {q['id']: q for q in datos['preguntas']}
-    faltan = [q for q in PUNTOS if q not in preguntas]
+    faltan = [q for q in PUNTOS_SEG if q not in preguntas]
     if faltan:
         raise SystemExit(f'Faltan preguntas en el formulario: {faltan}')
 
@@ -94,25 +111,34 @@ def preparar(datos, quien_decide=False):
     for o in dec['opciones']:
         o['texto'] = textos.get(o['id'], o['texto'])
 
-    for qid, puntos in PUNTOS.items():
+    for qid, puntos in PUNTOS_SEG.items():
         preguntas[qid]['segmento'] = ROL[qid]
         for o in preguntas[qid]['opciones']:
             if o['id'] in puntos:
-                o['puntos'] = puntos[o['id']]
+                o['puntosSeg'] = puntos[o['id']]
+        # Una opción nueva sin puntos no suma ni resta: mejor frenar que segmentar mal.
+        sin = [o['texto'] for o in preguntas[qid]['opciones'] if o.get('puntosSeg') is None]
+        if sin:
+            raise SystemExit(f'Opciones sin puntos de segmento en {qid}: {sin}')
 
     datos['segmento'] = dict(SEGMENTO)
+    datos['reglas'] = _reglas(datos.get('reglas') or [])
+    datos['resto'] = RESTO
     return datos
 
 
 def mostrar(datos):
     for q in datos['preguntas']:
-        if q['id'] not in PUNTOS:
+        if q['id'] not in PUNTOS_SEG:
             continue
         print(f"\n{q['titulo']} [{q.get('segmento')}]")
         for o in q['opciones']:
-            print(f"   {o['puntos']!s:>4}  {o['texto']}  ({o['id']})")
+            print(f"   {o.get('puntosSeg')!s:>3}  (nota {o['puntos']!s:>4})  {o['texto']}  ({o['id']})")
     print('\nsegmento:', datos['segmento'])
-    print('reglas:', [(r['id'], [c['ops'] for c in r['cond']]) for r in datos.get('reglas') or []])
+    print('reglas:')
+    for r in datos['reglas']:
+        print('  ', r['id'], [(c['q'], c['ops']) for c in r['cond']], '→', r.get('url') or r['grupo'])
+    print('   resto →', datos['resto'])
 
 
 def main(apply=False, quien_decide=False):

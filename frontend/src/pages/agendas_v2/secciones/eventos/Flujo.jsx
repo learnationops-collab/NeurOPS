@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { ESTRATEGIAS, conOpciones } from '../../core/catalogos';
 import { buscar, nombreGrupo, ord } from '../../core/datos';
 import { linkEvento, slugLibre } from '../../core/eventos';
+import { preguntasRuteo } from '../../core/formulario';
 import { almacen, useDatos } from '../../data/hooks';
 import { Icono, Sx } from '../../ui/base';
 import Lienzo from '../../ui/Lienzo';
@@ -83,7 +84,7 @@ function Inspector({ d, e, n }) {
                             <div key={r.id} style={{ display: 'grid', gap: 4 }}>
                                 <b className="t-sm">Regla {i + 1} → {nombreGrupo(d, r.grupo)}</b>
                                 {r.cond.map((c, j) => {
-                                    const q = fo.preguntas.find(x => x.id === c.q);
+                                    const q = preguntasRuteo(fo).find(x => x.id === c.q);
                                     return <span key={j} className="t-cap mut">{q ? q.titulo : '—'}: {q ? q.opciones.filter(o => c.ops.includes(o.id)).map(o => o.texto).join(' o ') : ''}</span>;
                                 })}
                             </div>

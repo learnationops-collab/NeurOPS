@@ -6,7 +6,8 @@ class ConSegmento:
     formulario; en la agenda, el del formulario con el que agendó. Lo escribe `segmento_service`."""
 
     segmento = db.Column(db.String(1), nullable=True, index=True)
-    # Puntaje de 0 a 1: puntos obtenidos sobre el máximo de las preguntas del segmento que respondió.
+    # Desde la versión 2026-12, la suma de los puntos del segmento (entero, puede ser negativo). Antes, de 0 a 1:
+    # puntos obtenidos sobre el máximo de las preguntas del segmento que respondió.
     segmento_puntos = db.Column(db.Float, nullable=True)
     segmento_preguntas = db.Column(db.Integer, nullable=True)
     # Probabilidad de que el lead esté de verdad en ese segmento (baja cerca de un corte).

@@ -339,3 +339,37 @@ Mario no podía decidir en este momento; decidió Santi. Todo es reversible y Ma
 - Los cambios del formulario y los puntos nuevos salen juntos, con `segmento_version = "2026-11"`, primero en el servidor de prueba. Scripts: `scripts/segmentos_formulario.py` y `scripts/backfill_segmentos.py`.
 
 Pendiente de Mario: confirmar que Dari hace el triage.
+
+### 8.9 Puntos sacados de los datos y ruteo por segmento (Santi, 26/10/2026, versión `2026-12`)
+
+Reemplaza los puntos del §2.1 y los cortes del §8.3. Pedido de Santi: los puntos salen de los datos, en una escala chica que también resta, y el formulario rutea por segmento para que una opción nueva no se pierda en «Todo lo demás» (pasaba con «$1000–$2000» y «podría conseguir ayuda», que no estaban en ninguna regla `mk-*`).
+
+**Método.** Logística penalizada (L2, λ por validación cruzada) sobre 736 leads del formulario viejo, del 01/06 al 26/09, con 77 compras dentro de los 60 días (ventas nuevas de `sales` y `financial_sales`). Thalamus todavía no tiene leads con 30 días para medir. Cada respuesta tiene un efecto centrado en el lead promedio (0), y se pasa a enteros con un punto ≈ 0,23 de log-odds. Las opciones con pocos datos se juntaron con la más parecida. Los puntos son estables entre λ = 2 y 8.
+
+| Pregunta | Puntos (`puntosSeg`) |
+|---|---|
+| Inversión | $500 o más **+2** · $200–$500 **+1** · podría conseguir ayuda **−1** · no estoy dispuesto **−2** |
+| Etapa | Rural **+1** · General **+1** · Especialista **−1** · Residente **−2** · Estudiante o interno **−3** |
+| Examen | Colombia, Perú, Chile y Panamá **+1** · MIR, Ecuador, Otro y USMLE **0** · no busca examen **−1** · ENARM **−2** |
+| Decide | Solo yo **+1** · necesita apoyo **−1** |
+
+Decisiones, no datos: «No estoy dispuesto» resta más que «podría conseguir ayuda» (antes eran una sola opción, −1). MIR daba +1 y queda en 0 porque España no es mercado prioritario (§8.8). Chile, Panamá y Ecuador no tienen datos propios y siguen el orden que les había dado Mario.
+
+**Segmento = suma de lo respondido.** Una pregunta sin responder suma 0 (el promedio), así no se castiga lo que falta por la versión del formulario. Sin Inversión o Etapa no hay segmento. Cortes según cuánto compra el lead contra el promedio (10,5%):
+
+| Segmento | Puntos | Leads | Compra | $ por lead | Hoy (§8.3) |
+|---|---|---|---|---|---|
+| A | ≥ 3 | 14% | 21,8% (2 veces el promedio) | $231 | 25% · 18,0% |
+| B | 1 a 2 | 31% | 13,9% (sobre el promedio) | $114 | 26% · 13,6% |
+| C | −1 a 0 | 27% | 9,1% (algo menos) | $61 | 35% · 5,9% |
+| D | ≤ −2 | 28% | 2,4% (un cuarto) | $13 | 14% · 2,9% |
+
+Ordena mejor que los puntos de hoy (AUC 0,692 contra 0,668, en la misma muestra, y con puntos ajustados en esa muestra; fuera de muestra da 0,63–0,65). A queda más chico y más puro, y D toma a los que casi no compran. A+B baja de 51% a 45% de los leads.
+
+**Confianza.** Error de 1 punto por pregunta respondida y de 2 por la que falta.
+
+**Ruteo.** Las reglas pueden pedir el segmento (pregunta «Segmento del lead» en el editor de Ruteo, `__segmento` en el formulario). `mk-academy` queda primero; las `mk-g*` se reemplazan por A → Grupo 5, B → Grupo 4, C → Grupo 2 y D → Grupo 1, con el mismo desborde (Jean Carlo primero; Marlon y Mario por los grupos 4 y 5 y «Todos los closers»). Sin segmento va a «Todo lo demás» (Grupo 1). El reparto al triage (§8.4) se cambia en esas cuatro reglas cuando esté «delegar a triage».
+
+**Revisión mensual.** Correr el ajuste con los leads nuevos (Thalamus ya va a tener datos), cargar los puntos con `scripts/segmentos_formulario.py`, subir la versión y recalcular con `scripts/backfill_segmentos.py --apply --force`. Una opción nueva sin `puntosSeg` frena el script.
+
+Pendiente de Mario: si «podría conseguir ayuda» de un estudiante también va a la página de gracias (`mk-academy`). Hoy cae en D.

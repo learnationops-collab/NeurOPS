@@ -30,7 +30,7 @@ Junta lo que sigue abierto de la reunión del 24/10 ([pendientes_santi_reunion_2
   | 6956 | mar 27/10 21:30 | C |
 
 - [ ] Commitear `scripts/segmentos_formulario.py`: quedó adaptado al formulario de hoy, pero sin commit.
-- [ ] Avisarle a Mario: las opciones nuevas de inversión ($1000–$2000 y «podría conseguir ayuda») no están en ninguna regla `mk-*`. Esos leads van a la prioridad por defecto. El segmento sí se les calcula.
+- [x] (Resuelto con el ruteo por segmento, §8.9.) Avisarle a Mario: las opciones nuevas de inversión ($1000–$2000 y «podría conseguir ayuda») no están en ninguna regla `mk-*`. Esos leads van a la prioridad por defecto. El segmento sí se les calcula.
 
 ## 1. Lógica: C y D como horarios «libres» para A y B
 
@@ -69,8 +69,8 @@ Hecho sin commitear: campos de triage en `Appointment`, migración `c4e9a1d7f2b8
 
 ## 4. Revisar el sistema de puntos
 
-- [ ] Hoy los puntos y los cortes son a mano y dan demasiada arbitrariedad a la clasificación. Definir un método: puntos sacados de los datos (la regresión del §8.2), revisión mensual y cortes por percentil o por plata por lead.
-- [ ] Revisar los puntos negativos (por ejemplo, a los estudiantes) o simplificar el sistema.
+- [x] Puntos sacados de los datos (logística sobre 736 leads), escala de −3 a +2, cortes por compra contra el promedio y ruteo por segmento ([plan §8.9](plan_segmentos_triage.md)). Falta cargarlo en producción y revisarlo cada mes.
+- [x] Puntos negativos: estudiante −3, residente y ENARM −2, entre otros (§8.9).
 - [ ] Mostrar el segmento y los puntos en la plataforma (ficha, agenda del closer, panel del triage). Va con la parte visual.
 
 ## 5. Cobros y deudores

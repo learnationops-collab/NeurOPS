@@ -4,7 +4,7 @@
 import React from 'react';
 import { CONTACTO, ESTRATEGIAS, ICO_EST } from '../../core/catalogos';
 import { buscar, ord } from '../../core/datos';
-import { NO_CALIFICA } from '../../core/formulario';
+import { NO_CALIFICA, preguntasRuteo } from '../../core/formulario';
 import { Avatar, Icono } from '../../ui/base';
 import { colorNivel } from './comun';
 
@@ -12,9 +12,10 @@ function opsTxt(q, ops) { return q ? q.opciones.filter(o => ops.includes(o.id)).
 
 export default function RuteoFlujo({ f, d, rotas = [], avisos = [] }) {
     const gs = ord(d, 'grupos');
+    const preguntas = preguntasRuteo(f);
     const filas = f.reglas.map((r, i) => {
         const cs = r.cond.filter(c => c.q && c.ops.length)
-            .map(c => { const q = f.preguntas.find(x => x.id === c.q); return q ? opsTxt(q, c.ops).join(' o ') : ''; }).filter(Boolean);
+            .map(c => { const q = preguntas.find(x => x.id === c.q); return q ? opsTxt(q, c.ops).join(' o ') : ''; }).filter(Boolean);
         return { k: r.id, t: 'Regla ' + (i + 1), d: cs.length ? cs.join(' · ') : 'Sin condiciones', g: r.grupo, url: r.url || '', rota: rotas.includes(i), aviso: avisos.includes(i) };
     }).concat([{ k: 'resto', t: 'Todo lo demás', d: 'Cualquier otra respuesta', g: f.resto, resto: true }]);
     const filtra = f.preguntas.some(q => q.opciones.some(o => o.descalifica));

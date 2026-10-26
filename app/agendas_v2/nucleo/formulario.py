@@ -6,6 +6,7 @@ import re
 
 from app.agendas_v2.nucleo.catalogos import con_opciones
 from app.agendas_v2.nucleo.normalizar import normal_pregunta
+from app.agendas_v2.nucleo.segmento import SEG_Q, pregunta_segmento, segmentar
 from app.agendas_v2.nucleo.util import WS, clonar, js_round, js_str, js_trim, js_truthy, mayus, num, txt, uid
 
 
@@ -51,17 +52,33 @@ def opcion_descalifica(q, resp):
 NO_CALIFICA = '__no'
 
 
+def preguntas_ruteo(fo):
+    """Las preguntas que puede usar una regla: las del formulario y, si segmenta, «Segmento del lead»."""
+    seg = pregunta_segmento(fo)
+    return list((fo or {}).get('preguntas') or []) + ([seg] if seg else [])
+
+
 def grupo_por_reglas(fo, resp):
     """Ruteo: las reglas se miran en orden y la primera que se cumple decide la prioridad.
     Una regla se cumple si en cada condición el lead eligió alguna de las respuestas marcadas.
-    Las reglas sin condiciones completas se saltean. Si ninguna se cumple, va a `resto`.
+    Una condición sobre SEG_Q mira el segmento A/B/C/D que le dan sus respuestas (fo trae `preguntas` y
+    `segmento`). Las reglas sin condiciones completas se saltean. Si ninguna se cumple, va a `resto`.
     Una regla con `url` no elige prioridad: el lead no agenda y se lo manda a esa página.
     Con destino NO_CALIFICA (`no`: True) el lead no califica: no agenda y ve el fin."""
     if not fo:
         return {'grupo': '', 'regla': None, 'url': '', 'no': False}
+    memo = {}
+
+    def valor(q):
+        if q != SEG_Q:
+            return resp.get(q)
+        if 'seg' not in memo:
+            memo['seg'] = (segmentar(fo, resp) or {}).get('segmento')
+        return memo['seg']
+
     for i, r in enumerate(fo.get('reglas') or []):
         conds = [c for c in r['cond'] if js_truthy(c.get('q')) and c.get('ops')]
-        if conds and all(resp.get(c['q']) in c['ops'] for c in conds):
+        if conds and all(valor(c['q']) in c['ops'] for c in conds):
             url = r.get('url') or ''
             no = not url and r['grupo'] == NO_CALIFICA
             return {'grupo': '' if url or no else r['grupo'], 'regla': i, 'url': url, 'no': no}
@@ -76,7 +93,7 @@ def texto_regla(fo, i):
     reglas = (fo or {}).get('reglas') or []
     if not 0 <= i < len(reglas):
         return ''
-    preguntas = {q['id']: q for q in fo.get('preguntas') or []}
+    preguntas = {q['id']: q for q in preguntas_ruteo(fo)}
     conds = []
     for c in reglas[i]['cond']:
         q = preguntas.get(c.get('q'))
@@ -100,10 +117,12 @@ def grupos_de_form(fo):
 def reglas_rotas(fo):
     """Reglas que apuntan a preguntas u opciones que ya no existen: nunca se van a cumplir."""
 
+    preguntas = preguntas_ruteo(fo)
+
     def rota(c):
         if not c.get('q'):
             return False
-        q = next((x for x in fo['preguntas'] if x['id'] == c['q']), None)
+        q = next((x for x in preguntas if x['id'] == c['q']), None)
         return (
             not q or not con_opciones(q['tipo']) or any(not any(x['id'] == o for x in q['opciones']) for o in c['ops'])
         )

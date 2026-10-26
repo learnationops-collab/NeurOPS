@@ -990,6 +990,7 @@ def _contexto(evento, form, resp):
         'ag': {'reservas': evento['reservas'], 'antel': evento['antel'], 'paso': evento['paso']},
         'reglas': form.get('reglas', []),
         'resto': form.get('resto', ''),
+        'segmento': form.get('segmento'),
         'persona': evento.get('persona') or None,
     }
 

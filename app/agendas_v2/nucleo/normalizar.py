@@ -115,16 +115,19 @@ def normal_pregunta(q):
     opciones = []
     for o in lista(q.get('opciones'))[:60]:
         o = {'texto': o} if isinstance(o, str) else obj(o)
-        opciones.append(
-            {
-                'id': cortar(txt(o.get('id')) or uid('o'), 40),
-                'texto': cortar(txt(o.get('texto')), 200),
-                # Versión corta para el aviso de Discord («Sí», «No»): vacía, se usa el texto.
-                'corto': cortar(txt(o.get('corto')), 40),
-                'puntos': entero(o.get('puntos'), 0, 10, None),
-                'descalifica': o.get('descalifica') is True,
-            }
-        )
+        op = {
+            'id': cortar(txt(o.get('id')) or uid('o'), 40),
+            'texto': cortar(txt(o.get('texto')), 200),
+            # Versión corta para el aviso de Discord («Sí», «No»): vacía, se usa el texto.
+            'corto': cortar(txt(o.get('corto')), 40),
+            'puntos': entero(o.get('puntos'), 0, 10, None),
+            'descalifica': o.get('descalifica') is True,
+        }
+        # Puntos del segmento en modo suma (-5 a +5). Sin ellos la clave no se escribe (publicados idénticos).
+        seg = entero(o.get('puntosSeg'), -5, 5, None)
+        if seg is not None:
+            op['puntosSeg'] = seg
+        opciones.append(op)
     out = {
         'id': cortar(txt(q.get('id')) or uid('q'), 40),
         'tipo': t,
@@ -145,11 +148,24 @@ def normal_pregunta(q):
 
 
 def normal_segmento(s):
-    """Cortes del segmento en % del puntaje (A ≥ a, B ≥ b, C ≥ c), la incertidumbre de los puntos (sigma,
-    en %) y la versión de los puntos. None si no está activo: el formulario no segmenta."""
+    """Cortes del segmento (A ≥ a, B ≥ b, C ≥ c), la incertidumbre de los puntos (sigma) y la versión de
+    los puntos. En modo 'suma' van en puntos (sigma por pregunta); si no, en % del puntaje. None si no está
+    activo: el formulario no segmenta."""
     s = obj(s)
     if s.get('activo') is not True:
         return None
+    if s.get('modo') == 'suma':
+        a = entero(s.get('a'), -50, 50, 3)
+        b = min(a, entero(s.get('b'), -50, 50, 1))
+        return {
+            'activo': True,
+            'modo': 'suma',
+            'a': a,
+            'b': b,
+            'c': min(b, entero(s.get('c'), -50, 50, -1)),
+            'sigma': entero(s.get('sigma'), 1, 5, 1),
+            'version': cortar(txt(s.get('version')), 20),
+        }
     a = entero(s.get('a'), 0, 100, 69)
     b = min(a, entero(s.get('b'), 0, 100, 54))
     return {
