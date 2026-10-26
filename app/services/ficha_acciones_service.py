@@ -16,6 +16,7 @@ diria una cosa y el mazo del closer otra sobre el mismo lead.
 `ErrorDeAccion` es un pedido mal hecho (400). Lo que revienta adentro de un servicio se propaga.
 """
 import re
+import unicodedata
 from datetime import datetime
 
 from app import db
@@ -351,6 +352,18 @@ def _mover_la_llamada(appt, inicio, usuario):
                                   f"{inicio.strftime('%d/%m/%Y %H:%M')}.")
 
 
+def _segunda_en_agenda_nueva(datos, usuario):
+    """La 2ª llamada desde la ficha va en una agenda NUEVA, como en el mazo («2da call»): la que
+    pasó queda como asistida (`segunda_llamada` cuenta como show up) y la nueva lleva la marca de
+    segunda. Antes se movía la misma agenda y la llamada a la que el lead asistió desaparecía
+    (26/10/2026). A prueba solo para Mario Bühler; el resto sigue moviendo la agenda."""
+    if (datos.get('reagenda') or {}).get('modo') != 'segunda_llamada':
+        return False
+    nombre = unicodedata.normalize('NFD', usuario.username or '')
+    nombre = ''.join(c for c in nombre if not unicodedata.combining(c)).strip().lower()
+    return nombre == 'mario buhler' or (usuario.email or '').lower() == 'mario@neurocogniciones.com'
+
+
 def _resultado_del_arbol(appt, datos, usuario):
     """Reporta la llamada (o el contacto de la cadencia) sin venta, en el orden del mazo.
 
@@ -371,10 +384,18 @@ def _resultado_del_arbol(appt, datos, usuario):
         # un descarte quedaba anotado como «Pendiente». `process_agenda` lo vuelve a poner igual.
         deck.setdefault('result', descarte['status'])
 
-    if nuevo_inicio:
+    segunda = bool(nuevo_inicio) and _segunda_en_agenda_nueva(datos, usuario)
+    if nuevo_inicio and not segunda:
         _mover_la_llamada(appt, nuevo_inicio, usuario)
     if deck:
+        if segunda:
+            # Esta llamada ya pasó y el lead asistió: no vuelve a confirmaciones, eso es la nueva.
+            deck = {k: v for k, v in deck.items() if k not in ('result', 'confirm_status')}
         aplicar_cambios(appt, deck, usuario)
+    if segunda:
+        _process_agenda(appt, usuario, {
+            'status': '2da call', 'reschedule_date': nuevo_inicio.isoformat(),
+            'note': (datos.get('respuestas') or {}).get('motivo_sin_oferta') or 'Agendada desde la ficha'})
     if descarte:
         _process_agenda(appt, usuario, descarte)
 

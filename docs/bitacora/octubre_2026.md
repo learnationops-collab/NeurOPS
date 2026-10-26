@@ -939,3 +939,8 @@
   - Aura de las tarjetas por reportar más tenue (opacidad .5 → .26, borde 38% → 24%).
   - El mazo solo aplica la carga más reciente: una carga lenta ya no borra la cita recién agendada.
   - Compilado con esbuild; sin recorrer la pantalla. Falta ver por qué dos segundas llamadas ya figuraban confirmadas (necesita leer sus datos en el servidor).
+
+- **26 de Octubre de 2026 (Mis datos · Estados por 1ª y 2ª llamada, show up por lead, y la 2ª llamada de la ficha ya no pisa la primera)** *([app/services/comercial_analitica.py](../../app/services/comercial_analitica.py), [app/services/comercial_agendas.py](../../app/services/comercial_agendas.py), [app/services/ficha_acciones_service.py](../../app/services/ficha_acciones_service.py), [frontend/src/pages/comercial/components/Analizar.jsx](../../frontend/src/pages/comercial/components/Analizar.jsx), [frontend/src/pages/comercial/components/PiezasAnalizar.jsx](../../frontend/src/pages/comercial/components/PiezasAnalizar.jsx) [MODIFY])*:
+  - Panel Estados: selector «1ª llamada / 2ª llamada / Todas» (arranca en 1ª). Cada fila de agenda trae `tipo_llamada` (`manual.tipo_de_llamada`); las Momentum van con las primeras.
+  - Tarjeta Show up: por lead, no por llamada («2 de 3 leads»): un lead que asistió a la 1ª y faltó a la 2ª se presentó. Cambia también en comparativas y deltas (mismo bloque).
+  - Ficha · «Agendar 2ª llamada»: crea una agenda nueva marcada como segunda («2da call», como el mazo) y la que pasó queda como asistida; antes se movía la misma agenda y la llamada asistida desaparecía. A prueba solo para Mario Bühler.
