@@ -21,7 +21,7 @@ def main(apply=False):
     app = create_app()
     with app.app_context():
         from app.agendas_v2 import operacion
-        from app.agendas_v2.desplazar import DESPLAZABLES
+        from app.agendas_v2.desplazar import DESPLAZABLES, desplazable
         from app.models import Appointment
         from app.services.google_service import GoogleService
 
@@ -31,6 +31,7 @@ def main(apply=False):
             Appointment.start_time >= datetime.utcnow(),
             *operacion.filtro_vigente(),
         ).order_by(Appointment.start_time).all()
+        filas = [a for a in filas if desplazable(a)]
         marcadas = errores = ya = 0
         for a in filas:
             calendario = a.calendar_id or GoogleService._calendario(a.closer_id)

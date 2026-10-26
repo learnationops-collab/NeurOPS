@@ -36,6 +36,15 @@ def desplaza(seg):
     return bool(seg) and seg.get('segmento') in QUE_DESPLAZAN
 
 
+def desplazable(appt):
+    """¿Un lead A/B puede tomar el horario de esa agenda? Una C/D de un closer, salvo la que pasó el triage
+    (ya la aprobaron) y la llamada del propio triage (sus llamadas son C/D por diseño)."""
+    from app.models.user import ROLE_TRIAGE
+
+    return (appt.segmento in DESPLAZABLES and not appt.agenda_triage_id
+            and not (appt.closer and appt.closer.role == ROLE_TRIAGE))
+
+
 def _eventos(user_id, desde, hasta):
     from app.services.google_service import GoogleService
 
@@ -85,7 +94,7 @@ def libres(elegibles, ahora):
         *operacion.filtro_vigente(),
     ).all()
     por_closer = {}
-    for a in filas:
+    for a in filter(desplazable, filas):
         inicio = _ms(a.start_time)
         por_closer.setdefault(a.closer_id, []).append((a, inicio, inicio + _bloque_min(a) * 60000))
     out = {}

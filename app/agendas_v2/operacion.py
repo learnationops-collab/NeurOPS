@@ -26,7 +26,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from app import db
 from app.models import Appointment, Client, Notification, User
 from app.models.financial import FinancialAgenda
-from app.agendas_v2.desplazar import DESPLAZABLES
+from app.agendas_v2.desplazar import desplazable
 from app.agendas_v2.nucleo.catalogos import pais_de, pais_por_telefono, zona_valida
 
 # Resultados de una Appointment que ya no ocupan el horario del closer. Incluye las dos grafias que
@@ -297,7 +297,7 @@ def crear_evento(appt, nombre_evento, evento_a_borrar=None):
         # Una C/D queda «Disponible» en Google: un lead A/B puede tomar su horario (desplazar.py).
         evento_id, meet = GoogleService.crear_evento_con_meet(
             appt.closer_id, appt.start_time, fin, titulo, _descripcion(payload), invitado_email=email,
-            disponible=appt.segmento in DESPLAZABLES,
+            disponible=desplazable(appt),
         )
     except Exception as e:  # noqa: BLE001  (Google puede fallar de mil formas; la agenda ya esta guardada)
         current_app.logger.error(f'[AGENDAS 2.0] Sin evento de Calendar para la agenda #{appt.id}: {e}')

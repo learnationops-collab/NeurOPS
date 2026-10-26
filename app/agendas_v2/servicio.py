@@ -520,7 +520,7 @@ def sigue_en_google(appt, franjas, ahora=None, leido_desde=None):
     antes de lo leído (`leido_desde`, ms), bloquean igual.
     Una C/D bloquea siempre: su evento está «Disponible» a propósito, para que solo un lead A/B pueda
     tomar su horario (desplazar.py, que la saca de lo ocupado para ese lead)."""
-    if appt.segmento in desplazar.DESPLAZABLES:
+    if desplazar.desplazable(appt):
         return True
     t = dt_a_ms(appt.start_time)
     if franjas is None or (leido_desde is not None and t < leido_desde):

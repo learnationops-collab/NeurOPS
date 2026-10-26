@@ -44,9 +44,9 @@ Hecho en `app/agendas_v2/desplazar.py` (rama `feat/cd-libres`, migración `d7b3e
 - [x] Arreglado de paso: Jean Carlo ya marcaba a mano sus C como «Disponible», y con eso dejaban de bloquear: un C o D podía agendar encima.
 - [ ] Deploy y `python scripts/cd_disponibles.py --apply` en producción.
 - [x] Una agenda futura cuyo evento se cancela o se borra en Google se cancela en Work (`movidas.py`, como el botón «Canceló»). Los closers casi no reportan cancelaciones: 3 de 241 en 30 días. Una que ya pasó no se toca: la reporta el closer.
-- [ ] Las C/D que el triage apruebe y pasen a Jean Carlo no deberían quedar «Disponible» ni desplazables: revisarlo al subir el triage.
+- [x] Las C/D que el triage aprueba y pasan a Jean Carlo (`agenda_triage_id`) y las llamadas del propio triage no quedan «Disponible» ni son desplazables (`desplazar.desplazable`).
 - [ ] Que el C/D desplazado se vea en el mazo del closer y del triage (con la parte visual).
-- [ ] Las migraciones del triage (`c4e9a1d7f2b8`, `f1a8d3c6b2e9`, sin subir) salen de `b8d2f4a6c1e3`, igual que `c4e8a2f6d1b7` de main: al subir el triage hay que colgarlas de la última de main (hoy `d7b3e9a1f4c2`) para no tener dos cabezas.
+- [x] Migraciones: `d7b3e9a1f4c2` (desplazada) cuelga de la unión `d7a3e1b9c5f2` que dejó el triage.
 - [ ] Momentum sessions por encima de C y D, o en los huecos de 15 minutos entre llamadas.
 
 ## 2. Triage
