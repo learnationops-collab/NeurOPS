@@ -14,6 +14,7 @@ from flask import request, jsonify
 from app import db
 from app.models import JobApplication
 from app.api.public import bp
+from app.services.limite_intentos import limitar
 
 MAX_CORTO = 160
 MAX_LARGO = 4000
@@ -67,6 +68,7 @@ def _set_si_presente(app_row, campo, valor):
 
 
 @bp.route('/public/job-applications', methods=['POST'])
+@limitar('job-applications', 120, 10 * 60)
 def crear_job_application():
     """Alta/actualización de una postulación.
 

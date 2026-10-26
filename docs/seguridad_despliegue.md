@@ -30,6 +30,7 @@ más cortos se rechazan).
 | `CRON_SECRET` | `GET /api/sheets/cron-sync`, `GET /api/closer/followups/cron/send-reminders`, `GET /api/academia/cron/sincronizar` y `GET /api/marketing/anuncios/cron/meta` (ver docs/marketing_anuncios.md) | el cron externo: `Authorization: Bearer <valor>` (o `?token=<valor>`) |
 | `INGEST_API_TOKEN` | rutas de ingesta y consulta de n8n y Apps Script (ver §3) | n8n / Apps Script: header `X-Api-Token: <valor>` (o `Authorization: Bearer <valor>`) |
 | `INTEGRATIONS_AUTH_MODE` | **solo para migrar**: `log_only` deja pasar y registra (ver §4) | — |
+| `RATE_LIMIT_ENABLED` | límite de intentos (§6): `0` lo apaga sin desplegar; sin definir, está prendido | — |
 
 ## 3. Qué sistema debe mandar qué
 
@@ -77,13 +78,33 @@ En n8n: en el nodo *HTTP Request* → *Send Headers* → nombre `X-Api-Token`, v
 Cambia el valor en Railway y, a la vez, en quien lo presenta (§3). Para un secreto compartido con varios sistemas
 (`INGEST_API_TOKEN`) conviene usar el modo de migración durante el cambio.
 
-## 6. Qué **no** cubre todavía (decisiones pendientes)
+## 6. Límite de intentos (desde el 26/10/2026)
+
+Vive en Postgres (tabla `intentos_limitados`, `app/services/limite_intentos.py`) porque gunicorn corre varios
+workers y un contador en memoria no se comparte. Una fila por intento; las de más de un día se borran solas. La IP
+es `request.remote_addr`, que `ProxyFix(x_for=1)` ya deja con la del visitante (el primer valor de
+`X-Forwarded-For` lo escribe él y no sirve). Al pasarlo, 429 con `{"message": "Demasiados intentos. Probá de nuevo
+en unos minutos."}`. Si la base falla, deja pasar y lo anota con `[LIMITE]` en el log.
+
+| Ruta | Límite |
+|---|---|
+| `POST /api/auth/login` | solo los **fallidos**: 20 por IP y 8 por usuario cada 15 min. Se corta antes de mirar la clave. Con un usuario que no existe se calcula igual un hash, para que la respuesta tarde lo mismo |
+| `POST /api/public/submit-lead`, `submit-survey`, `book`, `clients/check`, `workshop-lead` | 30 por IP cada 10 min |
+| `POST /api/public/job-applications`, `assistant-applications` | 120 por IP cada 10 min (postean en cada pregunta) |
+| `POST /api/public/landing-session` | 300 por IP cada 10 min (un latido cada ~15 s) |
+| `POST /api/v1/metrics/track-visit` | 120 por IP cada 10 min |
+| `/api/agendas-v2/publico/*` | los suyos, por minuto (docs/agendas_v2_api.md) |
+
+En las rutas de `/api/public` y `track-visit`, un usuario logueado o un sistema con su secreto no tiene límite.
+Muchos visitantes detrás de una misma IP (una oficina, datos móviles) comparten el contador: por eso los límites
+son holgados. `RATE_LIMIT_ENABLED=0` en Railway lo apaga.
+
+## 7. Qué **no** cubre todavía (decisiones pendientes)
 
 - `POST /api/workshop/interaction|plantilla-sent` son webhooks públicos por diseño: hoy aceptan datos de cualquiera.
   Protegerlos con un secreto exige configurarlo en quien los llama; los decoradores y el modo de migración ya existen.
 - `POST /api/public/clients/check` (pagina de reservas) le dice a un anónimo si un email o un Instagram es un cliente
   conocido, y su `id` (desde el 26/10/2026 ya no devuelve nombre, teléfono ni Instagram). Que la existencia se pueda
   consultar exige rehacer la experiencia de la reserva (verificar al visitante).
-- Los formularios públicos (`submit-lead`, `book`, postulaciones, `workshop-lead`) no tienen límite de intentos.
-- No hay límite de intentos de login ni forma de revocar un JWT antes de que venza (24 h).
+- No hay forma de revocar un JWT antes de que venza (24 h).
 - Las rutas protegidas siguen exentas de CSRF (el frontend usa Bearer, y las cookies son `SameSite=Lax`).

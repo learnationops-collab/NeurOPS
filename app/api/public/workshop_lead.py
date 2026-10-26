@@ -15,6 +15,7 @@ from flask_login import login_required
 from app import db
 from app.models import WorkshopLead, WorkshopEvent
 from app.api.public import bp
+from app.services.limite_intentos import limitar
 from app.decorators import admin_required
 
 # Largo máximo por campo de texto libre. Corta, no rechaza: preferimos guardar
@@ -35,6 +36,7 @@ def _limpiar(valor, largo=MAX_TEXTO):
 
 
 @bp.route('/public/workshop-lead', methods=['POST'])
+@limitar('workshop-lead', 30, 10 * 60)
 def crear_workshop_lead():
     """Alta de un lead desde el gate de la landing.
 

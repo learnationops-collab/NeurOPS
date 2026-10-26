@@ -95,7 +95,7 @@ En `POST /reservas` el servidor no confía en nada de lo que calculó el cliente
 
 Si el mismo lead (mismo email) manda dos veces el mismo horario, se devuelve la agenda que ya existe.
 
-**Límite por IP** (en memoria, por proceso): 30 pedidos por minuto a `/horarios` y 10 por minuto a `/reservas`. Al pasarlo responde 429.
+**Límite por IP** (en la base, compartido entre los workers; ver `app/services/limite_intentos.py`): 30 pedidos por minuto a `/horarios` y 10 por minuto a `/reservas`. Al pasarlo responde 429. La IP es `request.remote_addr` (ProxyFix), no el primer valor de `X-Forwarded-For`, que lo escribe el visitante.
 
 ## API de agenda para la Academia: `/api/external/academy/agenda`
 

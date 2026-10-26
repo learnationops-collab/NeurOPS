@@ -31,6 +31,10 @@ class Config:
         # de Instagram. 15 por worker, lejos del max_connections de 500 de producción.
         SQLALCHEMY_ENGINE_OPTIONS = {"pool_size": 5, "max_overflow": 10, "pool_pre_ping": True}
     
+    # Límite de intentos del login y los formularios públicos (app/services/limite_intentos.py).
+    # RATE_LIMIT_ENABLED=0 en Railway lo apaga sin desplegar.
+    RATE_LIMIT_ENABLED = os.environ.get('RATE_LIMIT_ENABLED', '1') != '0'
+
     # Webhooks
     VENTAS_WEBHOOK = os.environ.get('VENTAS_WEBHOOK')
 

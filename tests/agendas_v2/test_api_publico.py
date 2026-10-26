@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 import pytest
 from freezegun import freeze_time
 
-from app.agendas_v2 import operacion, api_publico, servicio
+from app.agendas_v2 import operacion, servicio
 from app.agendas_v2.nucleo.eventos import config_de
 from app.models import Appointment, Client, ClientComment, GoogleCalendarToken, Notification
 from app.models.financial import FinancialAgenda
@@ -26,10 +26,8 @@ LUNES_9 = '2026-10-05T13:00:00.000Z'  # 09:00 en La Paz
 
 @pytest.fixture(autouse=True)
 def _reloj_y_limites():
-    api_publico._pedidos.clear()
     with freeze_time('2026-10-05 12:00:00'):
         yield
-    api_publico._pedidos.clear()
 
 
 def _publicar(evento_id):
@@ -497,7 +495,8 @@ def test_si_el_cliente_ya_existe_se_reusa_y_toma_los_datos_nuevos(client, armado
     assert cliente.full_name == 'Lucía Fernández' and cliente.phone != '19567772077' and cliente.instagram == 'viejo'
 
 
-def test_limite_por_ip(client, armado):
+def test_limite_por_ip(app, client, armado, monkeypatch):
+    monkeypatch.setitem(app.config, 'RATE_LIMIT_ENABLED', True)
     for _ in range(10):
         _reservar(client, inicio=None, q1='x')
     r = _reservar(client, inicio=None, q1='x')
