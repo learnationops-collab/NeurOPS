@@ -933,3 +933,10 @@
 - **26 de Octubre de 2026 (Closer · Reportar: la primera tarjeta muestra la presentación)** *([CloserWorkflowPage.jsx](../../frontend/src/pages/closer/CloserWorkflowPage.jsx), [app/api/closer.py](../../app/api/closer.py))*:
   - En Reportar, sin nada por reportar, «Tu siguiente paso» decía «Te falta 1 por confirmar» y mandaba a Confirmar. Ahora muestra el % de presentación del día: llamadas con la oferta presentada sobre las que asistieron («Oferta presentada en 2 de 2»).
   - El mazo manda `offer_presented` de cada cita para poder contarlo.
+- **26 de Octubre de 2026 (Closer · segundas llamadas: se vuelven a confirmar y se miden aparte)** *([app/agendas_v2/manual.py](../../app/agendas_v2/manual.py), [app/services/closer_service.py](../../app/services/closer_service.py), [app/api/closer.py](../../app/api/closer.py), [CloserWorkflowPage.jsx](../../frontend/src/pages/closer/CloserWorkflowPage.jsx), [clarity-v6.css](../../frontend/src/pages/closer/clarity-v6.css))*:
+  - Agendar una 2ª llamada deja la marca `llamada: 'segunda'` en el payload de la agenda nueva; una reprogramación la conserva. `manual.tipo_de_llamada` dice 'primera', 'segunda' o 'momentum' (las segundas viejas se reconocen por `manual.via` '2da_call') y el mazo lo manda como `tipo_llamada`.
+  - La franja de cada tarjeta de Confirmar y Reportar dice «1ª llamada», «2ª llamada» o «Momentum». Debajo del porcentaje de Asistencia (Reportar) y de Confirmación (Confirmar), una línea por tipo con asistencias, reprogramaciones o confirmadas, solo los días con alguna 2ª o Momentum.
+  - Aura de las tarjetas por reportar más tenue (opacidad .5 → .26, borde 38% → 24%).
+  - El mazo solo aplica la carga más reciente: una carga lenta ya no borra la cita recién agendada.
+  - Tarjeta «% de presentación» en Reportar sin nada pendiente (`offer_presented` en el mazo).
+  - Compilado con esbuild; sin recorrer la pantalla. Falta ver por qué dos segundas llamadas ya figuraban confirmadas (necesita leer sus datos en el servidor).
