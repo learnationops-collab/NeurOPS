@@ -23,6 +23,7 @@ from app import db
 from app.models import Appointment, Client, FinancialSale
 from app.services import ficha_lead_secciones as secciones
 from app.services import ficha_vocabulario as voc
+from app.services import triage_service
 from app.services.closer_followup_service import CloserFollowUpService
 from app.services.comercial_service import ASISTIO, cerro_sin_venta, chip, post_call_de, pre_call_de
 from app.services.estado_lead import estado_de_agenda, resolver_estado
@@ -401,6 +402,8 @@ def permisos_de(usuario, appt=None):
     direccion = rol in ROLES_DIRECCION
     uid = getattr(usuario, 'id', None)
     setter_dueno = rol == 'setter' and appt is not None and appt.setter_id == uid
+    # La llamada de triage se reporta con su propio recorrido (`triage_service`): la triage, en la suya.
+    de_triage = triage_service.es_de_triage(appt)
     return {
         'confirmar': direccion or rol in ('closer', 'triage') or setter_dueno,
         'reportar': direccion or rol == 'closer',
@@ -409,6 +412,7 @@ def permisos_de(usuario, appt=None):
         'editar_datos': direccion or rol == 'closer',
         'reasignar': direccion or rol == 'closer',
         'comentar': True,
+        'triar': de_triage and (direccion or (rol == 'triage' and appt.closer_id == uid)),
     }
 
 
@@ -466,4 +470,5 @@ def ficha(appointment_id=None, client_id=None, usuario=None, ahora=None):
         'comunicacion': {'notas': secciones.notas(client, appt), 'equipo': secciones.equipo()},
         'permisos': permisos_de(usuario, appt),
         'vocabulario': voc.vocabulario(),
+        'triage': triage_service.bloque(appt),
     }

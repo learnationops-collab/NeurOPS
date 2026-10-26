@@ -232,7 +232,7 @@ class User(UserMixin, db.Model):
     client_comments = db.relationship('ClientComment', backref='author_rel', lazy='dynamic', cascade="all, delete-orphan")
     setter_daily_stats_rel = db.relationship('SetterDailyStats', backref='user_rel', lazy='dynamic', cascade="all, delete-orphan")
     closer_daily_stats_rel = db.relationship('CloserDailyStats', backref='user_rel', lazy='dynamic', cascade="all, delete-orphan")
-    view_settings = db.relationship('UserViewSetting', backref='user', lazy='dynamic', cascade="all, delete-orphan")
+    settings = db.relationship('UserSetting', backref='user', lazy='dynamic', cascade="all, delete-orphan")
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

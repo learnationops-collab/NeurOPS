@@ -118,6 +118,15 @@ class Appointment(ConPersona, ConSegmento, db.Model):
     # escribe desde la ficha; ver `ficha_grabacion_service` para lo que se acepta.
     fathom_url = db.Column(db.String(500), nullable=True)
 
+    # Llamada de triage (app/services/triage_service.py). En la agenda del triage: si el lead calificó
+    # (+500 USD, pasa al closer) o no y qué pasó con el low ticket de un descalificado (la nota para el
+    # closer va al log de la persona). En la agenda de closing que generó el pase, `agenda_triage_id`
+    # apunta a la del triage.
+    triage_calificacion = db.Column(db.String(20), nullable=True)
+    triage_low_ticket = db.Column(db.String(20), nullable=True)
+    agenda_triage_id = db.Column(db.Integer, db.ForeignKey('appointments.id', ondelete='SET NULL'),
+                                 nullable=True, index=True)
+
     # Relationships
     closer = db.relationship('User', foreign_keys=[closer_id], backref='appointments_assigned')
     setter = db.relationship('User', foreign_keys=[setter_id], backref='appointments_set')

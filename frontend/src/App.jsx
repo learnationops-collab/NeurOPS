@@ -389,8 +389,18 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            {/* El triage trabaja en la vista del closer, con sus agendas (sin MainLayout, como
+                /closer/deck). La pantalla vieja de confirmaciones queda en /triage/confirmaciones. */}
             <Route
               path="/triage/deck"
+              element={
+                <ProtectedRoute roles={['triage']}>
+                  <CloserWorkflowPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/triage/confirmaciones"
               element={
                 <ProtectedRoute roles={['triage']}>
                   <MainLayout>

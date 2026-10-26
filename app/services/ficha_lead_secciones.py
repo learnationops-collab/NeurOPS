@@ -248,6 +248,15 @@ def notas(client, appt):
                 'rol': c.author.role if c.author else 'system',
                 'fecha': _iso(c.created_at), 'texto': c.text, 'notificados': []}))
 
+    # Las notas del log de la persona (docs/plan_notas_avisos_settings.md): por ahora, la del triage.
+    from app.services import lead_log_service
+
+    for e in lead_log_service.notas_de(client.person_uuid if client else getattr(appt, 'person_uuid', None)):
+        filas.append((e.created_at, {
+            'id': f'log-{e.id}', 'autor': e.user.username if e.user else 'Sistema',
+            'rol': e.user.role if e.user else 'system',
+            'fecha': _iso(e.created_at), 'texto': e.description, 'notificados': []}))
+
     filas.sort(key=lambda f: f[0] or datetime.min)
     return [nota for _, nota in filas]
 

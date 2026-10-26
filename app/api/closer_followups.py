@@ -16,7 +16,7 @@ def _resolve_closer_id():
 @bp.route('/followups/today', methods=['GET'])
 @login_required
 def get_followups_today():
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'triage', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
     selected_date = request.args.get('selected_date') or __import__('datetime').date.today().isoformat()
     grouped = CloserFollowUpService.get_today_grouped(_resolve_closer_id(), selected_date)
@@ -29,7 +29,7 @@ def get_followups_today():
 @bp.route('/followups/pool', methods=['GET'])
 @login_required
 def get_followups_pool():
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'triage', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
     tipo = request.args.get('tipo')
     sub = request.args.get('sub') or None
@@ -63,7 +63,7 @@ def get_cartera():
 @bp.route('/followups/pool-counts', methods=['GET'])
 @login_required
 def get_followups_pool_counts():
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'triage', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
     return jsonify(CloserFollowUpService.get_pool_counts(_resolve_closer_id())), 200
 
@@ -71,7 +71,7 @@ def get_followups_pool_counts():
 @bp.route('/followups/earnings-stats', methods=['GET'])
 @login_required
 def get_followups_earnings_stats():
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'triage', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
     return jsonify(CloserFollowUpService.get_earnings_stats(_resolve_closer_id())), 200
 
@@ -79,7 +79,7 @@ def get_followups_earnings_stats():
 @bp.route('/followups/goal', methods=['GET'])
 @login_required
 def get_followups_goal():
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'triage', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
     selected_date = request.args.get('selected_date') or __import__('datetime').date.today().isoformat()
     return jsonify(CloserFollowUpService.get_daily_goal_progress(_resolve_closer_id(), selected_date)), 200
@@ -88,13 +88,13 @@ def get_followups_goal():
 @bp.route('/followups/<int:appt_id>/schedule', methods=['POST'])
 @login_required
 def schedule_followup(appt_id):
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'triage', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
 
     appt = Appointment.query.get_or_404(appt_id)
     # Cualquier closer puede programar seguimiento sobre cualquier lead (ver process_closer_card
     # para el mismo criterio). Si el dueño quedó inactivo, se reasigna al closer que lo trabaja.
-    if current_user.role == 'closer' and appt.closer_id != current_user.id:
+    if current_user.role in ('closer', 'triage') and appt.closer_id != current_user.id:
         from app.models import User
         owner = User.query.get(appt.closer_id)
         if owner and owner.is_active is False:

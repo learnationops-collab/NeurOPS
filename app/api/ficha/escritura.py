@@ -91,6 +91,14 @@ def resultado(appt_id):
     return _ejecutar(appt_id, 'reportar', acciones.resultado, momentum='resultado')
 
 
+@bp.route('/<int:appt_id>/triage', methods=['POST'])
+def triage(appt_id):
+    """El reporte de la llamada de triage: asistencia, calificación, pase al closer y low ticket."""
+    from app.services import triage_service
+
+    return _ejecutar(appt_id, 'triar', triage_service.reportar)
+
+
 @bp.route('/<int:appt_id>/fathom', methods=['PATCH'])
 def fathom(appt_id):
     """El link de Fathom (grabacion y transcripcion) de ESTA agenda; vacio lo quita.

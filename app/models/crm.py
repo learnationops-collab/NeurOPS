@@ -34,12 +34,17 @@ class PipelineStage(db.Model):
     order = db.Column(db.Integer, default=0)
     is_active = db.Column(db.Boolean, default=True)
 
-class UserViewSetting(db.Model):
-    __tablename__ = 'user_view_settings'
+class UserSetting(db.Model):
+    """La configuración de cada usuario, una fila por clave (docs/plan_notas_avisos_settings.md §2.4). Qué
+    claves existen y su valor por defecto lo dice `user_settings_service.CATALOGO`."""
+    __tablename__ = 'user_settings'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    view_name = db.Column(db.String(64), nullable=False)
-    settings = db.Column(db.JSON)
+    clave = db.Column(db.String(64), nullable=False)
+    valor = db.Column(db.JSON)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('user_id', 'clave', name='uq_user_settings_user_clave'),)
 
 class Notification(db.Model):
     __tablename__ = 'notifications'
@@ -52,6 +57,14 @@ class Notification(db.Model):
     associated_type = db.Column(db.String(50), nullable=True) # e.g., 'appointment'
     related_users = db.Column(db.JSON, default=[])
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # Avisos (docs/plan_notas_avisos_settings.md §2.2): los escribe solo `avisos_service.avisar`. A quién:
+    # `target_type` 'user' (id), 'rol' (nombre) o 'grupo' (lista de ids). `target_users` queda para los
+    # avisos viejos hasta que pasen todos por `avisar`.
+    tipo = db.Column(db.String(50), nullable=True, index=True)
+    target_type = db.Column(db.String(10), nullable=True)
+    target = db.Column(db.JSON, nullable=True)
+    person_uuid = db.Column(db.String(36), db.ForeignKey('people.uuid'), nullable=True, index=True)
+    payload = db.Column(db.JSON, nullable=True)
 
     def __repr__(self):
         return f'<Notification {self.subject}>'
@@ -88,11 +101,25 @@ class Comment(db.Model):
 class LeadEventLog(db.Model):
     __tablename__ = 'lead_event_logs'
     id = db.Column(db.Integer, primary_key=True)
-    appointment_id = db.Column(db.Integer, db.ForeignKey('appointments.id'), nullable=False, index=True)
+    # Opcional desde el 26/10/2026: el contexto pasa a `origen`/`origen_id` y se borra en la etapa 2 del plan
+    # (docs/plan_notas_avisos_settings.md §2.1). Mientras tanto se sigue llenando cuando hay agenda.
+    appointment_id = db.Column(db.Integer, db.ForeignKey('appointments.id'), nullable=True, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True) # None si es ManyChat/sistema
     action_type = db.Column(db.String(100), nullable=False) # e.g. 'comment', 'setter_notes', 'closing_notes', 'status_changed', 'incoming_lead'
     description = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # De qué persona es y con qué se conecta (`origen`: la tabla; `origen_id`: el id). Sin FK en el origen: si
+    # se borra la agenda, la entrada sigue en la persona.
+    person_uuid = db.Column(db.String(36), db.ForeignKey('people.uuid'), nullable=True)
+    origen = db.Column(db.String(30), nullable=True)
+    origen_id = db.Column(db.Integer, nullable=True)
+    payload = db.Column(db.JSON, nullable=True)
+    parent_id = db.Column(db.Integer, db.ForeignKey('lead_event_logs.id'), nullable=True)
+
+    __table_args__ = (
+        db.Index('ix_lead_event_logs_person_fecha', 'person_uuid', 'created_at'),
+        db.Index('ix_lead_event_logs_origen', 'origen', 'origen_id'),
+    )
 
     # Relationships
     user = db.relationship('User', backref=db.backref('lead_event_logs', lazy='dynamic'))

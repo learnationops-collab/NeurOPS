@@ -18,6 +18,8 @@ export function sesionDe(p, eventoId, duracion, margen) {
 }
 export function esCloser(d, p) { const r = buscar(d, 'roles', p.rol); return r ? r.atiende : p.rol === 'closer'; }
 export function closers(d) { return ord(d, 'personas').filter(p => esCloser(d, p)); }
+// Triage atiende llamadas, pero solo las que le asigna una estrategia: nunca entra a «Todos los closers».
+export function esTriage(d, p) { const r = buscar(d, 'roles', p.rol); return r ? /triage/i.test(r.nombre) : p.rol === 'triage'; }
 export function setters(d) {
     return ord(d, 'personas').filter(p => { const r = buscar(d, 'roles', p.rol); return r ? /setter/i.test(r.nombre) : p.rol === 'setter'; });
 }

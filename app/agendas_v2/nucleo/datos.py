@@ -69,6 +69,13 @@ def closers(d):
     return [p for p in ordenados(d, 'personas') if es_closer(d, p)]
 
 
+def es_triage(d, p):
+    """La persona hace triage (su rol se llama «Triage»): atiende llamadas, pero solo las que le asigna
+    una estrategia. Nunca entra al desborde «Todos los closers»."""
+    r = buscar(d, 'roles', p.get('rol'))
+    return bool(re.search('triage', js_str(r['nombre']), re.I)) if r else p.get('rol') == 'triage'
+
+
 def setters(d):
     def es(p):
         r = buscar(d, 'roles', p.get('rol'))

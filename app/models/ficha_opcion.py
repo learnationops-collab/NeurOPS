@@ -9,7 +9,7 @@ class FichaOpcion(db.Model):
     Los grupos "Otros" de «Cómo viene», «Dolores», «Motivos de descarte» y «Motivos de baja» nacen
     vacios a proposito: el vocabulario real lo va escribiendo el equipo mientras trabaja, y una
     opcion que alguien agrega tiene que aparecerle a todos en la lectura siguiente. Por eso la
-    tabla es global (no por usuario) y no hay un modelo existente que sirva: `UserViewSetting`
+    tabla es global (no por usuario) y no hay un modelo existente que sirva: `UserSetting`
     guarda preferencias de UNA persona e `Integration` es el registro de servicios externos.
 
     Minima a proposito: no hay orden, ni activo/inactivo, ni jerarquia de grupos. El grupo y el
