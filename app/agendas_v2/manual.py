@@ -30,6 +30,25 @@ DURACION_MIN = servicio.DURACION_AGENDA_OPERACION_MIN
 HEREDADOS = ('evento_nombre', 'indicaciones', 'duracion_min', 'margen_min', 'prioridad_nombre')
 # Lo que una reprogramación le actualiza al payload que ya tenía.
 ACTUALIZADOS = ('manual', 'closer_id', 'closer_user_id', 'lead')
+# Qué llamada es (24/10/2026): 'segunda' la escribe la 2da llamada en el payload de la agenda nueva y
+# una reprogramación la conserva, porque `result` ('2TH Call') se pisa apenas se confirma. Con eso
+# se mide aparte la confirmación y la asistencia de las segundas llamadas.
+ORIGEN_MOMENTUM = 'Momentum'
+
+
+def tipo_de_llamada(appt):
+    """'momentum', 'segunda' o 'primera'. Las segundas viejas, sin la marca, se reconocen por cómo
+    nacieron (`manual.via` '2da_call') o por el '2TH Call' que todavía no se pisó."""
+    if appt is None:
+        return 'primera'
+    if appt.origin == ORIGEN_MOMENTUM:
+        return 'momentum'
+    payload = appt.agenda_payload or {}
+    if payload.get('llamada') == 'segunda' or (payload.get('manual') or {}).get('via') == '2da_call':
+        return 'segunda'
+    if (appt.result or '').strip().lower() == '2th call':
+        return 'segunda'
+    return 'primera'
 
 
 class AgendaManualError(Exception):
@@ -83,6 +102,9 @@ def payload_reprogramada(appt, closer, usuario, via='reprogramar'):
     payload.setdefault('duracion_min', DURACION_MIN)
     payload.setdefault('evento_nombre', nuevo['evento_nombre'])
     payload.setdefault('origen', nuevo['origen'])
+    # Una segunda llamada reprogramada sigue siendo segunda (`manual` se reemplaza arriba).
+    if tipo_de_llamada(appt) == 'segunda':
+        payload['llamada'] = 'segunda'
     return payload
 
 

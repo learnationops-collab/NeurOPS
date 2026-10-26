@@ -1358,6 +1358,7 @@ def _format_appointment_for_deck(a, recover_form=False):
             form_data_recovered = True
     # Resolver dinámicamente el resultado real del confirmer sin depender de campos corrompidos históricos
     from app.models.financial import FinancialAgenda
+    from app.agendas_v2.manual import tipo_de_llamada
     from sqlalchemy import or_
     from datetime import timedelta
 
@@ -1426,6 +1427,8 @@ def _format_appointment_for_deck(a, recover_form=False):
         # Si se presentó la oferta: la tarjeta de Reportar saca de acá la tasa de presentación.
         "offer_presented": a.offer_presented,
         "is_rescheduled": a.is_rescheduled,
+        # 'primera', 'segunda' o 'momentum': la tarjeta lo dice y las métricas lo separan.
+        "tipo_llamada": tipo_de_llamada(a),
         "ig_chat_link": a.ig_chat_link or "",
         "keyword": a.keyword or "",
         "setter_notes": a.setter_notes or "",

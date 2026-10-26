@@ -113,6 +113,24 @@ const etapaDeConfirmacion = (a) => {
     return etapa === 'por_contactar' ? 'por_contactar' : 'contactado';
 };
 
+// Qué llamada es cada cita (`tipo_llamada` del backend, `manual.tipo_de_llamada`): la franja de la
+// tarjeta lo dice y las métricas de Confirmar y Reportar lo separan (24/10/2026).
+const TIPOS_DE_LLAMADA = [
+    { tipo: 'primera', lbl: '1ª llamada' },
+    { tipo: 'segunda', lbl: '2ª llamada' },
+    { tipo: 'momentum', lbl: 'Momentum' },
+];
+const rotuloDeLlamada = (a) => TIPOS_DE_LLAMADA.find(t => t.tipo === a.tipo_llamada)?.lbl || 'Llamada';
+// Una línea por tipo con lo que `contar` diga de sus citas; nada si todas son primeras llamadas.
+const partesPorTipo = (citas, contar) => {
+    if (!(citas || []).some(a => a.tipo_llamada && a.tipo_llamada !== 'primera')) return [];
+    return TIPOS_DE_LLAMADA.map(t => {
+        const lista = citas.filter(a => (a.tipo_llamada || 'primera') === t.tipo);
+        const texto = lista.length ? contar(lista).filter(Boolean).join(' · ') : '';
+        return texto ? { ...t, texto } : null;
+    }).filter(Boolean);
+};
+
 
 // Puntos de experiencia de un día a partir de su actividad (ver `dailyXp` en el componente).
 const xpDelDia = (actividad) => {
@@ -834,13 +852,20 @@ const CloserWorkflowPage = () => {
     // propios endpoints (/closer/followups/*), así que cualquier acción que recargue el mazo debe
     // avisarle para que un seguimiento recién resuelto desaparezca sin recargar la página. Se
     // apaga solo en la carga por cambio de pestaña/día, donde el panel ya se monta pidiendo datos.
+    // Solo la última carga escribe (24/10/2026): con dos en vuelo —la de la pestaña y la que dispara
+    // agendar una 2da llamada— la más lenta llegaba después y dejaba el tablero sin la cita nueva
+    // hasta recargar la página varias veces.
+    const pedidoMazoRef = useRef(0);
     const fetchAgendas = async ({ refreshSeguimientos = true, conservarFicha = false } = {}) => {
+        const pedido = ++pedidoMazoRef.current;
+        const vigente = () => pedido === pedidoMazoRef.current;
         const clave = `${activeStep}|${selectedDate}`;
         const conEsqueleto = mazoCargadoRef.current !== clave;
         if (conEsqueleto) setLoading(true);
         try {
             const url = `/closer/deck?step=${activeStep}&selected_date=${selectedDate}`;
             const res = await api.get(url);
+            if (!vigente()) return;
             const dataList = res.data || [];
             setAgendas(dataList);
 
@@ -850,6 +875,7 @@ const CloserWorkflowPage = () => {
             if (activeStep === 'calls') {
                 try {
                     const allDayRes = await api.get(`/closer/deck?step=agendas&selected_date=${selectedDate}`);
+                    if (!vigente()) return;
                     setReportedTodayCalls((allDayRes.data || []).filter(a => a.closer_processed));
                 } catch (err) {
                     console.error("Error al cargar llamadas reportadas del día:", err);
@@ -874,13 +900,17 @@ const CloserWorkflowPage = () => {
             // Actualizar contadores
             await fetchCounts();
         } catch (err) {
+            if (!vigente()) return;
             console.error("Error al cargar agendas:", err);
             toast.error("Error al cargar las agendas");
         } finally {
-            mazoCargadoRef.current = clave;
-            setLoading(false);
-            // En el mismo render que saca el esqueleto: las tarjetas que se montan ahí son la tanda.
-            if (conEsqueleto) abrirEntradaDelTablero();
+            // Una carga que quedó vieja no toca el mazo: la que la reemplazó cierra el esqueleto.
+            if (vigente()) {
+                mazoCargadoRef.current = clave;
+                setLoading(false);
+                // En el mismo render que saca el esqueleto: las tarjetas que se montan ahí son la tanda.
+                if (conEsqueleto) abrirEntradaDelTablero();
+            }
             // Aunque falle la carga del mazo: la acción que la disparó ya se guardó, y el panel
             // de seguimientos tiene que reflejarla igual.
             if (refreshSeguimientos) setSeguimientosRefreshKey(k => k + 1);
@@ -1365,8 +1395,10 @@ const CloserWorkflowPage = () => {
             : pideAccion ? 'var(--cl-warning)'
             : !countdown || countdown.kind === 'past' ? 'var(--cl-muted-40)'
             : 'var(--cl-success)';
-        const rotuloFranja = isPendingReferral || !countdown || countdown.kind === 'now' ? 'Llamada'
-            : countdown.kind === 'past' ? 'Llamada hace' : 'Llamada en';
+        // Primera, segunda o Momentum (24/10/2026): se lee antes que la hora.
+        const llamada = isPendingReferral ? 'Llamada' : rotuloDeLlamada(a);
+        const rotuloFranja = isPendingReferral || !countdown || countdown.kind === 'now' ? llamada
+            : countdown.kind === 'past' ? `${llamada} hace` : `${llamada} en`;
         // Cuánto falta para la cita, como riel de 24 h que se llena a medida que se acerca.
         const horasFaltan = a.start_time ? ((parseUtcIso(a.start_time)?.getTime() ?? Date.now()) - nowTick) / 3600000 : 0;
         const rielCita = isPendingReferral || !countdown ? 0
@@ -1903,6 +1935,20 @@ const CloserWorkflowPage = () => {
                         metrica = { lbl: 'Asistencia', sub: 'de asistencia', hechas: asistieron, total: concluidas.length, pie: `${asistieron} de ${concluidas.length} asistieron`, pendientes: counts.calls };
                         const presentadas = conShow.filter(r => r.offer_presented === true).length;
                         presentacion = { presentadas, asistieron, pct: asistieron ? Math.round((presentadas / asistieron) * 100) : 0 };
+                        // Asistencia de cada tipo de llamada aparte (24/10/2026): las segundas y las
+                        // Momentum, con sus reprogramaciones, que en el porcentaje no cuentan.
+                        metrica.partes = partesPorTipo(reportedTodayCalls, (lista) => {
+                            const reprog = lista.filter(r => ['reagendado', 'reagendada'].includes(res(r))).length;
+                            const fin = lista.filter(r => !['reagendado', 'reagendada'].includes(res(r)));
+                            const fueron = fin.filter(r => !['no show', 'cancelado', 'cancelada'].includes(res(r))).length;
+                            return [fin.length && `${fueron} de ${fin.length} asistieron`, reprog && `${reprog} ${reprog === 1 ? 'reprogramó' : 'reprogramaron'}`];
+                        });
+                    }
+                    if (metrica && activeStep === 'confirmations') {
+                        metrica.partes = partesPorTipo(agendas, (lista) => {
+                            const si = lista.filter(a => etapaDeConfirmacion(a) === 'confirmado').length;
+                            return [`${si} de ${lista.length} ${lista.length === 1 ? 'confirmada' : 'confirmadas'}`];
+                        });
                     }
                     const metricaPct = metrica && metrica.total ? Math.round((metrica.hechas / metrica.total) * 100) : 0;
                     // Puntos de experiencia: pondera cada acción real de hoy (no un número inventado —
@@ -2067,6 +2113,15 @@ const CloserWorkflowPage = () => {
                                     <span className="tud-foot-v6">{metrica.pie}</span>
                                     <span className="tud-foot-v6">{metrica.pendientes} {metrica.pendientes === 1 ? 'pendiente' : 'pendientes'}</span>
                                 </div>
+                                {metrica.partes?.length > 0 && (
+                                    <div className="tud-partes-v6">
+                                        {metrica.partes.map(p => (
+                                            <span key={p.tipo} className="tud-parte-v6" data-tipo={p.tipo}>
+                                                <b>{p.lbl}</b> {p.texto}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             ) : (
                             <div className="tud-v6">

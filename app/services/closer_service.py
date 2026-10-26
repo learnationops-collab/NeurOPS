@@ -1089,7 +1089,8 @@ class CloserService:
         if new_status in ('Reagendado', '2da call') and reschedule_date and appt.closer and appt.client:
             from app.agendas_v2 import manual
             if new_status == '2da call':
-                payload_nueva = manual.armar_payload(appt.client, appt.closer, user, '2da_call', anterior=appt)
+                payload_nueva = {**manual.armar_payload(appt.client, appt.closer, user, '2da_call', anterior=appt),
+                                 'llamada': 'segunda'}
             else:
                 payload_nueva = {**manual.payload_reprogramada(appt, appt.closer, user),
                                  'reprogramada_desde': appt.start_time.isoformat() + 'Z', 'reagenda_de': appt.id}
