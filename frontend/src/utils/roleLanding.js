@@ -12,7 +12,7 @@ export const ROLE_LANDING_PATHS = {
     operator: '/ops/dashboard',
     // "Mis agendas": desde el 10/10/2026 Cualificación ya no es una sección del setter.
     setter: '/setter/deck?step=agendas',
-    triage: '/triage/deck?step=confirmar',
+    triage: '/triage/deck',
     closer: '/closer/deck?step=confirmations',
     // El dashboard comercial, no el hub de Ventas: es la pantalla desde la que el director
     // trabaja el día (analizar, revisar y el reporte diario). Ventas le queda a un clic en el

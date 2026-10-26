@@ -1,10 +1,15 @@
 """La lectura de la ficha del lead."""
+import logging
+
 from flask import jsonify, request
 from flask_login import current_user
 
+from app import db
 from app.api.ficha import bp, sin_permiso
 from app.services import ficha_lead_service
 from app.services.leads_del_setter import puede_abrir
+
+logger = logging.getLogger(__name__)
 
 
 def _entero(nombre):
@@ -43,7 +48,19 @@ def lead():
         # 404 y no 403 tambien cuando el recurso existe pero queda fuera de alcance: un 403
         # confirmaria su existencia (mismo criterio que GET /api/comercial/clientes/<id>).
         return jsonify({'message': 'Lead no encontrado'}), 404
+    _marcar_notas_leidas(datos)
     return jsonify(datos), 200
+
+
+def _marcar_notas_leidas(datos):
+    """Abrir la ficha es leer sus notas: se apaga el punto de «sin leer» del mazo. Nunca frena la lectura."""
+    from app.services import avisos_service
+
+    try:
+        avisos_service.marcar_leidos(current_user, (datos.get('identidad') or {}).get('person_uuid'))
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'[avisos] no se pudieron marcar como leídas las notas: {e}')
 
 
 @bp.route('/bitacora', methods=['GET'])

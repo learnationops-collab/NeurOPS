@@ -19,7 +19,7 @@ export const AREAS = {
     cierres: { id: 'cierres', label: 'Cierres', ruta: '/closer/deck?step=confirmations', Icono: PhoneCall },
     inbox: { id: 'inbox', label: 'Inbox', ruta: '/inbox', Icono: Inbox },
     setting: { id: 'setting', label: 'Setting', ruta: '/setter/deck?step=agendas', Icono: MessageCircle },
-    triage: { id: 'triage', label: 'Triage', ruta: '/triage/deck?step=confirmar', Icono: Filter },
+    triage: { id: 'triage', label: 'Triage', ruta: '/triage/deck', Icono: Filter },
     operaciones: { id: 'operaciones', label: 'Operaciones', ruta: '/ops/dashboard', Icono: Wrench },
     marketing: { id: 'marketing', label: 'Marketing', ruta: '/admin/workshops', Icono: Megaphone },
     talent: { id: 'talent', label: 'Talent', ruta: '/admin/hiring', Icono: UserPlus },

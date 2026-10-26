@@ -99,7 +99,7 @@ def test_la_direccion_puede_todo_incluido_borrar(client, db, lead, equipo, auth_
         .get_json()['permisos']
 
     assert permisos == {'confirmar': True, 'reportar': True, 'cobrar': True, 'eliminar': True,
-                        'editar_datos': True, 'reasignar': True, 'comentar': True}
+                        'editar_datos': True, 'reasignar': True, 'comentar': True, 'triar': False}
 
 
 def test_cualquier_closer_borra_una_agenda_no_solo_el_suyo(client, db, lead, equipo, auth_headers):

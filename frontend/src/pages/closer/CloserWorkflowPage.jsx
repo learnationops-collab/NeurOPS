@@ -31,6 +31,7 @@ import '../comercial/comercial.css';
 import '../../components/dashboard/pareja.css';
 import './clarity-v6.css';
 import ComisionMesCard from './components/ComisionMesCard';
+import TriageMetricas from '../triage/components/TriageMetricas';
 import ProcrastinarModal from './components/ProcrastinarModal';
 import YaTieneAgenda from './components/YaTieneAgenda';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, localToday, localDateFromNow, formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
@@ -141,6 +142,10 @@ const CloserWorkflowPage = () => {
     const { user, logout } = useAuth();
     const { pendingCount, openPlaybook } = usePlaybook();
     const [searchParams, setSearchParams] = useSearchParams();
+    // El triage trabaja en esta misma vista con sus agendas: confirma, reporta (con su propio
+    // resultado en la ficha) y sigue. No cierra el día, no tiene cartera ni comisión: en su lugar,
+    // «Métricas» con el embudo de sus llamadas.
+    const esTriage = user?.role === 'triage';
 
     const activeStep = searchParams.get('step') || 'confirmations';
 
@@ -216,10 +221,11 @@ const CloserWorkflowPage = () => {
     // (ver LeadsAuditTogglePanel.jsx y GET /closer/leads-audit/status).
     const [auditEnabled, setAuditEnabled] = useState(false);
     useEffect(() => {
+        if (esTriage) return;
         api.get('/closer/leads-audit/status')
             .then(res => setAuditEnabled(!!res.data?.enabled))
             .catch(() => setAuditEnabled(false));
-    }, []);
+    }, [esTriage]);
     const [reportSent, setReportSent] = useState(false);
     const [sendingReport, setSendingReport] = useState(false);
     const [reportSentAt, setReportSentAt] = useState(null);
@@ -1623,6 +1629,9 @@ const CloserWorkflowPage = () => {
             marca: cuentaDelDock(llamadasHechas, llamadasHechas + counts.calls, counts.calls === 0, 'reportadas') },
         { id: 'seguimientos', label: 'Seguir', Icono: MessageCircle,
             marca: cuentaDelDock(seguimientosHechos, seguimientosHechos + counts.seguimientos, counts.seguimientos === 0, 'hechos hoy') },
+        ...(esTriage ? [{ id: 'metricas', label: 'Métricas', Icono: BarChart3 }] : []),
+    ];
+    if (!esTriage) seccionesDelDock.push(
         { id: 'report', label: 'Cerrar el día', Icono: ClipboardList, marcas: [
             estadoDeAyer?.unreported && { tipo: 'aviso', texto: '', titulo: 'ayer quedó sin reportar' },
             todayReportSent && { texto: '✓', titulo: 'reporte de hoy enviado' },
@@ -1631,7 +1640,7 @@ const CloserWorkflowPage = () => {
         { id: 'cartera', label: 'Mi cartera', Icono: Briefcase },
         // Temporal: solo mientras Operaciones la tenga activada (GET /closer/leads-audit/status).
         ...(auditEnabled ? [{ id: 'auditoria', label: 'Auditoría', Icono: FileSearch }] : []),
-    ];
+    );
     const seccionDelDock = activeView === 'inbox' ? activeStep : activeView;
 
     // Al final del dock, la sesión (ver MenuSesion): lo que antes eran botones del header. "Quiero
@@ -1648,8 +1657,10 @@ const CloserWorkflowPage = () => {
     const gruposDeSesion = armarMenuSesion({
         user, logout, navigate: (ruta) => window.location.assign(ruta),
         acciones: [
-            { id: 'agenda', label: 'Nueva agenda', Icono: CalendarPlus, onClick: () => { setYaTieneAgenda(null); setNewAgendaModalOpen(true); } },
-            { id: 'referido', label: 'Referido manual', Icono: Gift, onClick: () => setManualRefModalOpen(true) },
+            ...(esTriage ? [] : [
+                { id: 'agenda', label: 'Nueva agenda', Icono: CalendarPlus, onClick: () => { setYaTieneAgenda(null); setNewAgendaModalOpen(true); } },
+                { id: 'referido', label: 'Referido manual', Icono: Gift, onClick: () => setManualRefModalOpen(true) },
+            ]),
             ...(counts.seguimientos > 0
                 ? [{ id: 'procrastinar', label: 'Quiero procrastinar', Icono: Hourglass, onClick: () => setShowProcrastinar(true) }]
                 : []),
@@ -2068,7 +2079,7 @@ const CloserWorkflowPage = () => {
                             </div>
                             )}
 
-                            <ComisionMesCard />
+                            {!esTriage && <ComisionMesCard />}
                         </div>
                     );
                 })()}
@@ -2548,6 +2559,8 @@ const CloserWorkflowPage = () => {
                         </div>
                     )}
                 </div>
+                ) : activeView === 'metricas' ? (
+                    <TriageMetricas />
                 ) : activeView === 'auditoria' ? (
                     <CloserLeadsAudit embedded />
                 ) : activeView === 'cartera' ? (

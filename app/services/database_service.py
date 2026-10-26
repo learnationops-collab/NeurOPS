@@ -27,7 +27,7 @@ class DatabaseService:
         'closer_daily_stats': models.CloserDailyStats,
         'daily_report_answers': models.DailyReportAnswer,
         'google_calendar_tokens': models.GoogleCalendarToken,
-        'user_view_settings': models.UserViewSetting,
+        'user_settings': models.UserSetting,
         'campaigns': models.Campaign,
         'ad_sets': models.AdSet,
         'ads': models.Ad,

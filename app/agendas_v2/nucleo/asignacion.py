@@ -2,7 +2,7 @@
 Orden: respuestas → regla → prioridad → estrategia de la prioridad → closer por horario.
 """
 
-from app.agendas_v2.nucleo.datos import buscar, closers, es_closer, horas_semana, ordenados, sesion_de
+from app.agendas_v2.nucleo.datos import buscar, closers, es_closer, es_triage, horas_semana, ordenados, sesion_de
 from app.agendas_v2.nucleo.disponibilidad import GENERICA, agenda_opt, ahora_ms, slots_persona
 from app.agendas_v2.nucleo.formulario import calificar, grupo_por_reglas
 from app.agendas_v2.nucleo.util import js_truthy
@@ -167,7 +167,7 @@ def _asignacion(ctx, d, opts=None):
                     'regla': (g0['nombre'] + ' sin lugar → ' if otro else '') + x['regla'],
                 }
 
-    todos = [p for p in closers(d) if horas_semana(p) > 0]
+    todos = [p for p in closers(d) if horas_semana(p) > 0 and not es_triage(d, p)]
     if todos:
         x = _por_estrategia('repartir', todos, slots_de, ahora, carga_de)
         if x['slots']:
