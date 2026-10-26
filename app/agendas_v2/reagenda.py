@@ -15,7 +15,7 @@ def reagendar(previa, cliente, payload, closer, setter, setter_id, inicio, ignor
     El registro de agendas sigue con UNA fila (la de la vieja, que pasa a la fecha nueva): así no
     suma otra agenda en el workshop ni en Confirmación.
     Devuelve (agenda nueva, evento_a_borrar) o (None, None) si el horario ya no está libre."""
-    from app.models import ClientComment
+    from app.services import lead_log_service
     from app.services.booking_service import BookingService
 
     anterior = previa.start_time
@@ -40,17 +40,10 @@ def reagendar(previa, cliente, payload, closer, setter, setter_id, inicio, ignor
         'reprogramada_desde': anterior.isoformat() + 'Z' if anterior else None,
         'reagenda_de': previa.id,
     }
-    db.session.add(
-        ClientComment(
-            client_id=cliente.id,
-            author_id=previa.closer_id or closer.id,
-            text=(
-                f'Reagendado por el lead desde el link de agendas. '
-                f'Nueva cita el {inicio.strftime("%d/%m/%Y %H:%M")} UTC con {closer.username}.'
-            ),
-        )
-    )
     db.session.flush()
+    lead_log_service.nota(f'Reagendado por el lead desde el link de agendas. '
+                          f'Nueva cita el {inicio.strftime("%d/%m/%Y %H:%M")} UTC con {closer.username}.',
+                          previa.closer_id or closer.id, appt=nueva)
     if espejo:
         espejo.date = inicio
         espejo.fecha_meet = inicio.isoformat()

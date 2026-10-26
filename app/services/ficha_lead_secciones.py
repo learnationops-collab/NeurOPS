@@ -7,10 +7,8 @@ decision (ni del estado, ni de las pestanas, ni de los permisos). Las que si —
 confirmacion, resultado y cobro— se quedaron juntas, porque comparten la deuda, las ventas y el
 estado de la agenda que se calculan una sola vez.
 """
-from datetime import datetime
-
 from app import db
-from app.models import ClientComment, Comment, CommentNotification, LeadEventLog, SurveyAnswer, SurveyQuestion, User
+from app.models import LeadEventLog, SurveyAnswer, SurveyQuestion, User
 from app.services.estado_lead import estado_de_agenda
 from app.services.ficha_vocabulario import etiqueta_de_fuente
 
@@ -212,53 +210,15 @@ def formulario(client, appt=None):
 # --- Comunicacion -----------------------------------------------------------------------------
 
 def notas(client, appt):
-    """El hilo del equipo, juntando las tres tablas donde hoy viven las notas de un lead.
+    """El hilo del equipo: las notas del log de la persona (docs/plan_notas_avisos_settings.md), de todas sus
+    agendas y de la persona misma, con a quién se le avisó de cada una."""
+    from app.services import avisos_service, lead_log_service
 
-    `ClientComment` (hilo del cliente, con notificaciones), `Comment` type 'client' (lo que escribe
-    el mazo al guardar `closer_notes`) y `Comment` type 'appointment' (el hilo de la agenda). Estan
-    separadas por historia, no por diseno: el modal las muestra como una sola conversacion.
-    """
-    filas = []
-    if client:
-        notificados = {}
-        for n in CommentNotification.query.filter_by(client_id=client.id).all():
-            notificados.setdefault(n.comment_id, []).append(n.user.username if n.user else None)
-        comentarios = ClientComment.query.filter_by(client_id=client.id).all()
-        # `ClientComment` no tiene relacion con User: se resuelven todos los autores de una vez en
-        # vez de una consulta por comentario.
-        autores = {u.id: u for u in User.query.filter(
-            User.id.in_({c.author_id for c in comentarios})).all()} if comentarios else {}
-        for c in comentarios:
-            autor = autores.get(c.author_id)
-            filas.append((c.created_at, {
-                'id': f'cc-{c.id}', 'autor': autor.username if autor else 'Sistema',
-                'rol': autor.role if autor else 'system',
-                'fecha': _iso(c.created_at), 'texto': c.text,
-                'notificados': [u for u in notificados.get(c.id, []) if u]}))
-
-    objetivos = []
-    if client:
-        objetivos.append(('client', client.id))
-    if appt:
-        objetivos.append(('appointment', appt.id))
-    for tipo, oid in objetivos:
-        for c in Comment.query.filter_by(comment_type=tipo, associated_id=oid).all():
-            filas.append((c.created_at, {
-                'id': f'{tipo}-{c.id}', 'autor': c.author.username if c.author else 'Sistema',
-                'rol': c.author.role if c.author else 'system',
-                'fecha': _iso(c.created_at), 'texto': c.text, 'notificados': []}))
-
-    # Las notas del log de la persona (docs/plan_notas_avisos_settings.md): por ahora, la del triage.
-    from app.services import lead_log_service
-
-    for e in lead_log_service.notas_de(client.person_uuid if client else getattr(appt, 'person_uuid', None)):
-        filas.append((e.created_at, {
-            'id': f'log-{e.id}', 'autor': e.user.username if e.user else 'Sistema',
-            'rol': e.user.role if e.user else 'system',
-            'fecha': _iso(e.created_at), 'texto': e.description, 'notificados': []}))
-
-    filas.sort(key=lambda f: f[0] or datetime.min)
-    return [nota for _, nota in filas]
+    entradas = lead_log_service.notas_de(client.person_uuid if client else getattr(appt, 'person_uuid', None))
+    notificados = avisos_service.destinatarios_de_log([e.id for e in entradas])
+    return [{'id': f'log-{e.id}', 'autor': e.user.username if e.user else 'Sistema',
+             'rol': e.user.role if e.user else 'system', 'fecha': _iso(e.created_at),
+             'texto': e.description, 'notificados': notificados.get(e.id, [])} for e in entradas]
 
 
 def equipo():

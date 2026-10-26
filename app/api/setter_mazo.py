@@ -21,10 +21,10 @@ from flask import request, jsonify
 from flask_login import current_user
 
 from app import db
-from app.models import ROLE_SETTER, Client, Appointment, LeadAnswer, Ad, Comment, CommentNotification
+from app.models import ROLE_SETTER, Client, Appointment, LeadAnswer, Ad, CommentNotification
 from app.decorators import role_required
 from app.services.user_time_service import hoy_del_usuario, limites_dia_utc, limites_rango_utc
-from app.services import agenda_contacto_service
+from app.services import agenda_contacto_service, avisos_service, lead_log_service
 from app.api.setter import bp
 from app.api.setter_agendas import agendas_del_setter, clave_de_persona, _cliente_de, _cita_de
 
@@ -108,7 +108,7 @@ def get_agendas_del_mazo():
     agendas = agendas_del_setter(current_user, desde, hasta)
 
     sin_leer = {n.client_id for n in CommentNotification.query.filter_by(
-        user_id=current_user.id, is_read=False).all()}
+        user_id=current_user.id, is_read=False).all()} | avisos_service.clientes_con_notas_sin_leer(current_user)
 
     agenda_contacto_service.precargar(agendas)
     filas = []
@@ -161,9 +161,8 @@ def get_agendas_del_mazo():
             "tiene_anuncio": anuncio is not None,
             "ad_name": anuncio.name if anuncio else '',
             "client_id": client.id if client else None,
-            "comments_count": Comment.query.filter(
-                Comment.comment_type == 'client',
-                Comment.associated_id == client.id).count() if client else 0,
+            "comments_count": lead_log_service.cuantas_notas([client.person_uuid]).get(client.person_uuid, 0)
+            if client else 0,
             "unread_comment": bool(client and client.id in sin_leer),
         })
 

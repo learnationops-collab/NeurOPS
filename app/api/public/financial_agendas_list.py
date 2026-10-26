@@ -37,6 +37,8 @@ def get_financial_agendas():
     if current_user and current_user.is_authenticated:
         from app.models import CommentNotification
         unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
+        from app.services.avisos_service import clientes_con_notas_sin_leer
+        unread_client_ids |= clientes_con_notas_sin_leer(current_user)
 
     # Precalcular ventas asociadas para evitar N+1
     from app.models import FinancialSale

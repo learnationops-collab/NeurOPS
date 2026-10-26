@@ -40,7 +40,8 @@ def crear_referido(usuario, from_lead_id, nombre, contacto='', phone=None, insta
     `contacto` es el campo libre del flujo rapido; solo se mira si no llego ninguno de los tres
     explicitos (`phone`, `instagram`, `email`), que son los del modal "Referido manual".
     """
-    from app.models import Appointment, Client, Comment, User
+    from app.models import Appointment, Client, User
+    from app.services import lead_log_service
     from app.services.booking_service import BookingService
 
     nombre = (nombre or '').strip()
@@ -87,18 +88,14 @@ def crear_referido(usuario, from_lead_id, nombre, contacto='', phone=None, insta
         start_time=datetime.utcnow(),
         origin=f'Referido de {nombre_de_quien_refiere}',
         last_stage='Nueva',
-        closer_notes=(f'Referido por {nombre_de_quien_refiere}. Contacto: {contacto_visible}. '
-                      f'Notas: {notas}'),
         closer_processed=False,
     )
     db.session.add(agenda)
+    db.session.flush()
+    lead_log_service.guardar_nota_llamada(
+        agenda, f'Referido por {nombre_de_quien_refiere}. Contacto: {contacto_visible}. Notas: {notas}', usuario)
 
     if quien_refiere:
-        db.session.add(Comment(
-            text=(f"💡 Referencia otorgada: creó un nuevo referido '{nombre}' "
-                  f'({contacto_visible}). Contexto: {notas}'),
-            comment_type='client',
-            associated_id=quien_refiere.id,
-            author_id=usuario.id,
-        ))
+        lead_log_service.nota(f"💡 Referencia otorgada: creó un nuevo referido '{nombre}' "
+                              f'({contacto_visible}). Contexto: {notas}', usuario, cliente=quien_refiere)
     return agenda

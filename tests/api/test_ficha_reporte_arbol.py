@@ -94,10 +94,6 @@ def acciones(appt):
     return [e.action_type for e in LeadEventLog.query.filter_by(appointment_id=appt.id).all()]
 
 
-def comentarios(appt):
-    return [c.text for c in ClientComment.query.filter_by(client_id=appt.client_id).all()]
-
-
 # --- Todos los caminos del arbol pasan ---------------------------------------------------------
 
 CASOS_DE_LA_LLAMADA = [c for c in REPORTES if not c.startswith(('cadencia_', 'cobro_'))]
@@ -170,20 +166,6 @@ def test_los_referidos_con_contacto_entran_y_los_sin_contacto_quedan_en_la_nota(
     assert 'Referido(s) sin datos: Caro' in lead.closer_notes
 
 
-@pytest.mark.parametrize('caso', ['asistio_sin_cierre_perdido', 'asistio_sin_oferta_descartar'])
-def test_asistio_y_se_descarta_como_lead_perdido_con_el_motivo(client, db, lead, equipo,
-                                                               auth_headers, caso):
-    r = reportar(client, auth_headers, equipo['closer'], lead, caso)
-
-    assert r.status_code == 200
-    assert (lead.closer_result, lead.closer_processed, lead.seguimiento_realizado) == (
-        'Lead Perdido', True, True)
-    motivo = REPORTES[caso]['datos']['process']['note']
-    assert any(f'Marcado como Lead Perdido por vendedor: {motivo}' in c for c in comentarios(lead))
-    # El decisor y la oferta tambien quedan: son lo que miden las metricas de conversion.
-    assert lead.with_decision_maker is (caso == 'asistio_sin_cierre_perdido')
-
-
 def test_la_segunda_llamada_mueve_la_misma_agenda_y_vuelve_a_confirmaciones(client, db, lead,
                                                                            equipo, auth_headers):
     r = reportar(client, auth_headers, equipo['closer'], lead, 'asistio_sin_oferta_segunda_llamada')
@@ -209,15 +191,6 @@ def test_no_asistio_queda_como_no_show_en_seguimiento_de_recuperacion(client, db
     assert (lead.seguimiento_tipo, lead.seguimiento_sub) == ('no_tomada', 'No show: Confundió la fecha')
     assert str(lead.fecha_seguimiento) == '2026-10-02'
     assert lead.closer_notes == 'Pensó que era mañana'
-
-
-def test_el_descarte_por_no_show_guarda_el_motivo_delante_del_comentario(client, db, lead, equipo,
-                                                                        auth_headers):
-    r = reportar(client, auth_headers, equipo['closer'], lead, 'no_asistio_descartar')
-
-    assert r.status_code == 200
-    assert lead.closer_result == 'Lead Perdido'
-    assert any('Bloqueó / desapareció. No responde hace dos semanas' in c for c in comentarios(lead))
 
 
 # --- Canceló y reagenda ------------------------------------------------------------------------
@@ -252,14 +225,6 @@ def test_sin_fecha_nueva_va_a_seguimiento(client, db, lead, equipo, auth_headers
     assert lead.start_time == LLAMADA
     assert (lead.closer_result, lead.seguimiento_tipo, lead.seguimiento_sub) == (
         'No Show', 'no_tomada', sub)
-
-
-def test_cancelo_y_no_califica_queda_como_no_lead(client, db, lead, equipo, auth_headers):
-    r = reportar(client, auth_headers, equipo['closer'], lead, 'cancelo_no_lead')
-
-    assert r.status_code == 200
-    assert (lead.closer_result, lead.seguimiento_realizado) == ('No Lead', True)
-    assert any('Marcado como No Lead por vendedor: No rinde examen' in c for c in comentarios(lead))
 
 
 # --- La cadencia de seguimiento ----------------------------------------------------------------

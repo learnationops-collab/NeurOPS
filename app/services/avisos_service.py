@@ -82,3 +82,39 @@ def marcar_leidos(usuario, person_uuid, tipo='nota'):
 def personas_con_notas_sin_leer(usuario):
     """Los `person_uuid` con notas sin leer: el punto del mazo."""
     return {a.person_uuid for a in sin_leer(usuario, 'nota') if a.person_uuid}
+
+
+def clientes_con_notas_sin_leer(usuario):
+    """Los ids de cliente con notas sin leer, para las pantallas que todavía marcan por cliente."""
+    from app.models import Client
+
+    personas = personas_con_notas_sin_leer(usuario)
+    if not personas:
+        return set()
+    return {c.id for c in Client.query.filter(Client.person_uuid.in_(personas)).with_entities(Client.id)}
+
+
+def destinatarios_de_log(log_ids):
+    """{id de la entrada del log: [nombres de a quién se le avisó]}, para el «notificados» del hilo."""
+    from app.models import User
+
+    if not log_ids:
+        return {}
+    avisos = Notification.query.filter(Notification.associated_type == 'log',
+                                       Notification.associated_id.in_(log_ids)).all()
+    ids = set()
+    for a in avisos:
+        if a.target_type == 'user':
+            ids.add(int(a.target))
+        elif a.target_type == 'grupo':
+            ids |= {int(x) for x in a.target or []}
+    nombres = {u.id: u.username for u in User.query.filter(User.id.in_(ids))} if ids else {}
+    salida = {}
+    for a in avisos:
+        if a.target_type == 'rol':
+            quienes = [f'{a.target}s']
+        else:
+            quienes = [nombres[int(i)] for i in ([int(a.target)] if a.target_type == 'user' else a.target or [])
+                       if int(i) in nombres]
+        salida.setdefault(a.associated_id, []).extend(quienes)
+    return salida

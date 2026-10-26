@@ -162,11 +162,16 @@ class BookingAvisosMixin:
             suffix = f" (Acción ejecutada por {orig_name} actuando en nombre de {target_name})"
             description = f"{description}{suffix}"
             
+        appt = db.session.get(Appointment, appt_id) if appt_id else None
         log = LeadEventLog(
             appointment_id=appt_id,
             user_id=user_id,
             action_type=action_type,
-            description=description
+            description=description,
+            # La estructura del log (docs/plan_notas_avisos_settings.md): de qué persona y con qué agenda.
+            person_uuid=(appt.person_uuid or (appt.client.person_uuid if appt.client else None)) if appt else None,
+            origen='appointment' if appt_id else None,
+            origen_id=appt_id,
         )
         db.session.add(log)
         try:

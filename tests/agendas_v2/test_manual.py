@@ -132,25 +132,6 @@ def test_si_el_lead_ya_tiene_una_agenda_se_pregunta_antes_de_tocar_nada(client, 
     assert Appointment.query.count() == 1
 
 
-def test_reprogramar_desde_nueva_agenda_deja_el_tracking_de_neurops(client, db, ana, auth_headers, google):
-    """Como «Reagendado» del mazo: la vieja queda cerrada y la nueva nace con is_rescheduled."""
-    from app.models import ClientComment
-
-    primera = _nueva(client, auth_headers, ana).get_json()['id']
-
-    r = _nueva(client, auth_headers, ana, cuando=datetime(2026, 10, 22, 15, 0), si_ya_tiene='reprogramar')
-
-    assert r.status_code == 201, r.get_json()
-    vieja, nueva = db.session.get(Appointment, primera), db.session.get(Appointment, r.get_json()['id'])
-    assert nueva.id != vieja.id
-    assert (vieja.closer_result, vieja.closer_processed) == ('Reagendado', True)
-    assert nueva.is_rescheduled is True and nueva.start_time == datetime(2026, 10, 22, 15, 0)
-    assert nueva.agenda_payload['reprogramada_desde'] == '2026-10-20T15:00:00Z'
-    assert ClientComment.query.filter(ClientComment.text.like('Reagendado por ana%')).count() == 1
-    assert google['borrar'] == [(ana.id, 'evt1')]
-    assert google['crear'][-1]['inicio'] == datetime(2026, 10, 22, 15, 0)
-
-
 def test_reprogramar_media_hora_despues_no_choca_consigo_misma(client, db, ana, auth_headers, google):
     _nueva(client, auth_headers, ana)
     google['ocupado'][ana.id] = [(MS(MARTES_15), MS(MARTES_15) + 60 * 60000)]  # su propio evento

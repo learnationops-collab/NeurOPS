@@ -19,7 +19,8 @@ import re
 from datetime import datetime
 
 from app import db
-from app.models import Appointment, ClientComment, Comment, Notification, User
+from app.models import Appointment, User
+from app.services import lead_log_service
 from app.services.deck_escritura_service import aplicar_cambios
 
 # Roles a los que `CloserService.process_agenda` no reconoce (su comprobacion interna solo acepta
@@ -797,10 +798,8 @@ def reasignar(appt, datos, usuario):
 
     anterior = appt.closer.username if appt.closer else 'sin asignar'
     appt.closer_id = nuevo.id
-    if appt.client_id:
-        db.session.add(ClientComment(
-            client_id=appt.client_id, author_id=usuario.id,
-            text=f'Lead reasignado de {anterior} a {nuevo.username} (por {usuario.username}).'))
+    lead_log_service.nota(f'Lead reasignado de {anterior} a {nuevo.username} (por {usuario.username}).',
+                          usuario, appt=appt)
     db.session.commit()
     return {'id': appt.id, 'closer_id': nuevo.id, 'closer_name': nuevo.username}
 
@@ -1429,10 +1428,11 @@ def agenda_para_vender(client_id, usuario):
 
     appt = Appointment(closer_id=closer.id, client_id=cliente.id, start_time=datetime.utcnow(),
                        origin='Venta sin agenda', last_stage='Nueva', closer_result='Pendiente',
-                       closer_processed=True, seguimiento_realizado=True,
-                       closer_notes='[Sistema] Agenda creada para declarar una venta: el cliente '
-                                    'no tenía ninguna.')
+                       closer_processed=True, seguimiento_realizado=True)
     db.session.add(appt)
+    db.session.flush()
+    lead_log_service.evento(appt, 'agenda_para_venta',
+                            'Agenda creada para declarar una venta: el cliente no tenía ninguna.', usuario)
     db.session.commit()
     return appt, True
 
@@ -1641,10 +1641,7 @@ def baja(appt, datos, usuario):
         'seguimiento_realizado': not datos.get('fecha_seguimiento'),
         'fecha_seguimiento': datos.get('fecha_seguimiento'),
     }, usuario)
-    if appt.client_id:
-        db.session.add(ClientComment(
-            client_id=appt.client_id, author_id=usuario.id,
-            text=f'Cliente dado de baja por {usuario.username}. Motivo: {motivo}.'))
+    lead_log_service.nota(f'Cliente dado de baja por {usuario.username}. Motivo: {motivo}.', usuario, appt=appt)
     db.session.commit()
     return {'id': appt.id, 'motivo': motivo, 'baja': baja_service.descriptor(appt.client)}
 
@@ -1674,7 +1671,7 @@ def revertir_baja(appt, datos, usuario):
         de_cuando += f" («{anterior['motivo']}»)"
     texto = (f'{usuario.username} revirtió la baja del cliente ({de_cuando}). '
              f'Vuelve a deber ${deuda:,.2f}.')
-    db.session.add(ClientComment(client_id=cliente.id, author_id=usuario.id, text=texto))
+    lead_log_service.nota(texto, usuario, cliente=cliente)
     BookingService.log_lead_event(appt.id, usuario.id, 'baja_revertida', texto)
     db.session.commit()
     return {'id': appt.id, 'deuda': deuda, 'baja_anterior': anterior}
@@ -1689,26 +1686,27 @@ def nota(appt, datos, usuario):
     bitacora y la notificacion dirigida al setter del lead (o al rol entero si el lead es de
     ManyChat y no tiene setter concreto).
     """
-    from app.services.booking_service import BookingService
+    from app.services import avisos_service
 
     texto = _texto(datos, 'texto', obligatorio=True)
-    comentario = Comment(author_id=usuario.id, text=texto[:500], comment_type='appointment',
-                         associated_id=appt.id, parent_id=datos.get('parent_id'))
-    db.session.add(comentario)
-    BookingService.log_lead_event(appt.id, usuario.id, 'comment',
-                                  f'{usuario.username} comentó: "{texto[:60]}"')
+    entrada = lead_log_service.nota(texto, usuario, appt=appt)
+    entrada.parent_id = datos.get('parent_id')
+    db.session.flush()
 
+    # A quién se avisa: los elegidos en «Notificar a» o, si no, el setter del lead (o todos los setters si
+    # es de ManyChat y no tiene uno).
     destinatarios = datos.get('notificar')
-    if not isinstance(destinatarios, list) or not destinatarios:
-        destinatarios = [appt.setter_id] if (appt.origin != 'Instagram' and appt.setter_id) \
-            else 'role:setter'
     nombre = appt.client.full_name if appt.client else 'Sin Nombre'
-    db.session.add(Notification(subject=f'💬 Lead: {nombre}',
-                                content=f'"{texto}" - de {usuario.username}',
-                                associated_id=appt.id, associated_type='deck_comment',
-                                target_users=destinatarios))
+    if isinstance(destinatarios, list) and destinatarios:
+        destino = ('grupo', [int(x) for x in destinatarios])
+    elif appt.origin != 'Instagram' and appt.setter_id:
+        destino = ('user', appt.setter_id)
+    else:
+        destino = ('rol', 'setter')
+    avisos_service.avisar('nota', *destino, f'Nota sobre {nombre}', f'{usuario.username}: {texto}',
+                          origen='log', origen_id=entrada.id, person_uuid=entrada.person_uuid)
     db.session.commit()
-    return comentario.to_dict()
+    return lead_log_service.a_dict(entrada)
 
 
 # --- Eliminar ---------------------------------------------------------------------------------

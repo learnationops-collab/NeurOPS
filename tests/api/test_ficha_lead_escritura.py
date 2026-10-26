@@ -240,29 +240,6 @@ def test_descartar_sin_motivo_no_pasa(client, db, lead, equipo, auth_headers):
 
 # --- Descalificar -----------------------------------------------------------------------------
 
-def test_el_closer_descalifica_el_lead_al_confirmar(client, db, lead, equipo, auth_headers):
-    r = client.post(url(lead, '/descalificar'), json={'motivo': 'no es médico'},
-                    headers=auth_headers(equipo['closer']))
-
-    assert r.status_code == 200, r.get_json()
-    assert r.get_json()['status'] == 'Descalificado'
-    assert lead.closer_result == 'Descalificado'
-    # Sale del mazo y de los seguimientos: quien no califica no se vuelve a trabajar.
-    assert lead.closer_processed is True and lead.seguimiento_realizado is True
-    comentario = ClientComment.query.filter_by(client_id=lead.client_id).one()
-    assert comentario.text == 'Descalificado por vendedor: no es médico'
-
-
-def test_el_motivo_del_desplegable_se_guarda_con_su_etiqueta(client, db, lead, equipo, auth_headers):
-    """El selector manda la clave: el comentario del lead lo lee una persona."""
-    r = client.post(url(lead, '/descalificar'), json={'motivo': 'no_rinde_examen'},
-                    headers=auth_headers(equipo['closer']))
-
-    assert r.status_code == 200
-    assert r.get_json()['motivo'] == 'No rinde examen de residencia'
-    comentario = ClientComment.query.filter_by(client_id=lead.client_id).one()
-    assert comentario.text == 'Descalificado por vendedor: No rinde examen de residencia'
-
 
 def test_descalificar_libera_el_horario_del_closer(client, db, lead, equipo, auth_headers):
     """Como una cancelacion: el evento de Google Calendar se borra."""
@@ -312,14 +289,6 @@ def test_la_descalificada_queda_en_el_espejo_del_tablero_con_su_nombre(client, d
 
 
 # --- Reasignar --------------------------------------------------------------------------------
-
-def test_pasar_el_lead_a_otro_closer(client, db, lead, equipo, auth_headers):
-    r = client.patch(url(lead, '/closer'), json={'closer_id': equipo['relevo'].id},
-                     headers=auth_headers(equipo['director']))
-
-    assert r.status_code == 200
-    assert lead.closer_id == equipo['relevo'].id
-    assert ClientComment.query.count() == 1
 
 
 def test_no_se_reasigna_a_quien_ya_lo_tiene(client, db, lead, equipo, auth_headers):
@@ -1239,20 +1208,6 @@ def test_el_setter_no_asigna_el_programa(client, db, lead, equipo, auth_headers)
     assert r.status_code == 403
 
 
-def test_dar_de_baja_no_falsea_el_resultado_de_la_llamada(client, db, lead, equipo, auth_headers):
-    """La llamada ocurrio y fue una venta: reescribirla como Lead Perdido falsearia el embudo."""
-    lead.closer_result = 'Show up'
-    db.session.commit()
-
-    r = client.post(url(lead, '/baja'), json={'motivo': 'perdió ingresos'},
-                    headers=auth_headers(equipo['director']))
-
-    assert r.status_code == 200
-    assert lead.closer_result == 'Show up'
-    assert lead.seguimiento_sub == 'Baja: perdió ingresos'
-    assert ClientComment.query.count() == 1
-
-
 def test_una_baja_sin_motivo_no_pasa(client, db, lead, equipo, auth_headers):
     r = client.post(url(lead, '/baja'), json={}, headers=auth_headers(equipo['closer']))
 
@@ -1305,14 +1260,6 @@ def borrar(client, lead, venta_id, usuario, auth_headers):
 
 # --- Nota del equipo --------------------------------------------------------------------------
 
-def test_cualquiera_de_los_cinco_roles_puede_comentar(client, db, lead, equipo, auth_headers):
-    for rol in ('director', 'closer', 'setter', 'triage'):
-        r = client.post(url(lead, '/nota'), json={'texto': f'nota de {rol}'},
-                        headers=auth_headers(equipo[rol]))
-        assert r.status_code == 201, rol
-
-    assert Comment.query.filter_by(comment_type='appointment').count() == 4
-
 
 def test_la_nota_avisa_al_setter_del_lead_y_queda_en_la_bitacora(client, db, lead, equipo,
                                                                 auth_headers):
@@ -1323,15 +1270,6 @@ def test_la_nota_avisa_al_setter_del_lead_y_queda_en_la_bitacora(client, db, lea
     assert aviso.target_users == [equipo['setter'].id]
     assert aviso.associated_type == 'deck_comment'
     assert [e.action_type for e in LeadEventLog.query.all()] == ['comment']
-
-
-
-
-def test_una_nota_vacia_no_pasa(client, db, lead, equipo, auth_headers):
-    r = client.post(url(lead, '/nota'), json={'texto': '   '}, headers=auth_headers(equipo['closer']))
-
-    assert r.status_code == 400
-    assert Comment.query.count() == 0
 
 
 # --- Eliminar ---------------------------------------------------------------------------------

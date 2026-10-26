@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import and_, func, or_, select
 
 from app import db
-from app.models import Appointment, Client, ClientComment, Notification, User
+from app.models import Appointment, Client, Notification, User
 from app.models.person import Person
 from app.services import copiloto_datos, copiloto_herramientas
 from app.services.tablas import alcance, buscar, catalogo, diccionario, exclusion, motor
@@ -670,7 +670,8 @@ def execute_action(user, accion, texto):
         raise ConectorError('Ese cliente ya no está entre los tuyos.')
     autor = user.username or user.email
     if a.get('tipo') == 'comentario':
-        db.session.add(ClientComment(client_id=cliente.id, author_id=user.id, text=texto))
+        from app.services import lead_log_service
+        lead_log_service.nota(texto, user, cliente=cliente)
         db.session.commit()
         return f'Comentario guardado en la ficha de {_nombre_cliente(cliente)}.'
     if a.get('tipo') == 'aviso':

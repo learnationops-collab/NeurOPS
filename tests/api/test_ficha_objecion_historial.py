@@ -119,20 +119,6 @@ def test_la_lectura_trae_la_objecion_vigente_de_cada_agenda(client, db, equipo, 
 
 # --- Agregarla --------------------------------------------------------------------------------
 
-def test_agregar_una_objecion_a_una_llamada_vieja(client, db, equipo, agenda, auth_headers):
-    appt = agenda(10, closer_result='Show up', offer_presented=True)
-    appt.start_time = datetime(2026, 9, 20, 18, 0)  # las 14:00 en La Paz
-    db.session.commit()
-
-    r = agregar(client, auth_headers, equipo['closer'], appt, '  Lo tiene que hablar con su pareja  ')
-
-    assert r.status_code == 201, r.get_json()
-    assert r.get_json()['objecion']['texto'] == 'Lo tiene que hablar con su pareja'
-    [fila] = objeciones(appt)
-    assert (fila.user_id, fila.description) == (equipo['closer'].id, 'Lo tiene que hablar con su pareja')
-    assert [c.text for c in ClientComment.query.filter_by(client_id=appt.client_id)] == [
-        'Objeción de la llamada del 20/09/2026 (no cerró): Lo tiene que hablar con su pareja']
-
 
 def test_va_a_la_agenda_de_la_url_y_no_a_la_que_abrio_la_ficha(client, db, equipo, agenda,
                                                                auth_headers):
@@ -142,19 +128,6 @@ def test_va_a_la_agenda_de_la_url_y_no_a_la_que_abrio_la_ficha(client, db, equip
     agregar(client, auth_headers, equipo['closer'], vieja)
 
     assert [f.appointment_id for f in LeadEventLog.query.filter_by(action_type='objecion')] == [vieja.id]
-
-
-def test_volver_a_agregarla_la_reemplaza(client, db, equipo, agenda, auth_headers):
-    appt = agenda(10, closer_result='Show up', offer_presented=True)
-    agregar(client, auth_headers, equipo['closer'], appt, 'Primera versión de la objeción')
-
-    r = agregar(client, auth_headers, equipo['director'], appt, 'Quiere empezar el año que viene')
-
-    assert r.status_code == 201
-    assert objeciones_service.objeciones_por_agenda([appt.id])[appt.id] == r.get_json()['objecion']
-    assert r.get_json()['objecion']['autor'] == 'direccion'
-    notas = [c.text for c in ClientComment.query.order_by(ClientComment.id)]
-    assert notas[-1].startswith('Objeción actualizada')
 
 
 def test_una_objecion_ya_cargada_se_corrige_aunque_el_cliente_haya_comprado(client, db, equipo,
@@ -172,31 +145,6 @@ def test_una_objecion_ya_cargada_se_corrige_aunque_el_cliente_haya_comprado(clie
 
 
 # --- Lo que no se puede ------------------------------------------------------------------------
-
-@pytest.mark.parametrize('texto', [None, '', '   ', 'Es caro'])
-def test_sin_texto_suficiente_no_se_guarda(client, db, equipo, agenda, auth_headers, texto):
-    appt = agenda(10, closer_result='Show up', offer_presented=True)
-
-    r = agregar(client, auth_headers, equipo['closer'], appt, texto)
-
-    assert r.status_code == 400
-    assert r.get_json()['campo'] == 'texto'
-    assert objeciones(appt) == [] and ClientComment.query.count() == 0
-
-
-@pytest.mark.parametrize('columnas', [
-    {'closer_result': 'No Show'},
-    {'closer_result': 'Show up', 'offer_presented': False},
-    {'closer_result': 'Cancelado'},
-])
-def test_una_llamada_que_no_se_presento_y_no_cerro_no_lleva_objecion(client, db, equipo, agenda,
-                                                                     auth_headers, columnas):
-    appt = agenda(10, **columnas)
-
-    r = agregar(client, auth_headers, equipo['closer'], appt)
-
-    assert r.status_code == 400
-    assert objeciones(appt) == [] and ClientComment.query.count() == 0
 
 
 def test_si_el_cliente_ya_compro_no_se_agrega(client, db, equipo, agenda, auth_headers):

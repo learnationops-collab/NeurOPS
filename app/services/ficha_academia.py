@@ -18,7 +18,7 @@ Todo se valida antes de llamar a la Academia (otro sistema, con límite de petic
 import logging
 
 from app import db
-from app.models import ClientComment
+from app.services import lead_log_service
 from app.services.academy_access_service import AcademyAccessService
 from app.services.closer_followup_service import PROGRAM_CODE_NAMES, CloserFollowUpService
 from app.services.ficha_acciones_service import ErrorDeAccion, _texto
@@ -76,7 +76,7 @@ def _constancia(appt, usuario, texto):
     from app.services.booking_service import BookingService
 
     BookingService.log_lead_event(appt.id, usuario.id, 'academia_acceso', texto)
-    db.session.add(ClientComment(client_id=appt.client_id, author_id=usuario.id, text=texto))
+    lead_log_service.nota(texto, usuario, appt=appt)
 
 
 def quitar(appt, datos, usuario):
