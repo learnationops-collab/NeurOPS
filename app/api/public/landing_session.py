@@ -19,6 +19,7 @@ from flask import request, jsonify
 from app import db
 from app.models import LandingSession, WorkshopLead
 from app.api.public import bp
+from app.services.limite_intentos import limitar
 
 # Techo por sesion: 6 h de pagina visible. Nadie mira una clase de 1 h durante
 # mas que eso; lo que pase el techo es reloj roto o payload inventado.
@@ -43,6 +44,7 @@ def _texto(valor, largo):
 
 
 @bp.route('/public/landing-session', methods=['POST'])
+@limitar('landing-session', 300, 10 * 60)
 def registrar_landing_session():
     data = request.get_json(silent=True) or {}
 

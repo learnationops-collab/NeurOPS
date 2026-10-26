@@ -3,6 +3,7 @@ from app import db
 from app.models.marketing import LandingTracking
 from flask_login import login_required
 from app.decorators import admin_required
+from app.services.limite_intentos import limitar
 import logging
 
 bp = Blueprint('metrics', __name__)
@@ -14,6 +15,7 @@ EVENTO_CLIC_WHATSAPP = 'clic_whatsapp'
 EVENTOS_VALIDOS = {EVENTO_VISITA, EVENTO_CLIC_WHATSAPP}
 
 @bp.route('/track-visit', methods=['POST'])
+@limitar('track-visit', 120, 10 * 60)
 def track_visit():
     try:
         data = request.get_json()

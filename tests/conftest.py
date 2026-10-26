@@ -105,6 +105,8 @@ def app():
         META_PIXEL_ID = None
         SESSION_COOKIE_SECURE = False
         REMEMBER_COOKIE_SECURE = False
+        # Los tests repiten logins y formularios en bucle; el que prueba el límite lo prende a mano.
+        RATE_LIMIT_ENABLED = False
 
     flask_app = create_app(TestConfig)
     flask_app.test_client_class = ClienteDeTests

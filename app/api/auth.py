@@ -7,6 +7,8 @@ from app import db
 from app.api import bp
 from app.decorators import operator_required
 from app.models import User
+from app.services import limite_intentos
+from app.services.limite_intentos import clave_falsa, login_limitado
 from app.services.cuentas_vinculadas import (
     VinculoInvalido, cuentas_de, desvincular, listar_personas, puede_cambiar_a, vincular,
 )
@@ -42,15 +44,23 @@ def login():
     if not isinstance(username, str) or not isinstance(password, str) or not username or not password:
         return jsonify({"message": "Username and password required"}), 400
 
+    # Límite de logins fallidos por IP y por usuario, antes de mirar la clave.
+    claves_limite = login_limitado(username)
+    if claves_limite is None:
+        return limite_intentos.respuesta_429()
+
     # 1. Find User
     user = db.session.scalar(sa.select(User).where(User.username == username))
-    
+
     # 2. Try Email if username failed
     if not user:
         user = db.session.scalar(sa.select(User).where(User.email == username))
 
     # 3. Validate
+    if user is None:
+        clave_falsa(password)  # mismo tiempo que con un usuario real: no se adivina quién existe
     if user is None or not user.check_password(password):
+        limite_intentos.registrar(*claves_limite)
         return jsonify({"message": "Invalid credentials"}), 401
 
     # Cuenta desactivada: se avisa DESPUES de acertar la clave, para no revelar que un usuario existe.

@@ -7,44 +7,26 @@ tomada el lead ve el nombre de su consultor (nada de contacto).
 Contrato: docs/agendas_v2_api.md.
 """
 
-import threading
-import time
-from collections import defaultdict, deque
-
 from flask import Blueprint, Response, jsonify, request
 
 from app.agendas_v2 import servicio, videos
+from app.services import limite_intentos
 
 bp = Blueprint('agendas_v2_publico', __name__)
 
 NO_DISPONIBLE = ({'code': 'no_disponible', 'message': 'Este link no está disponible.'}, 404)
 
-# Limite por IP, en memoria y por proceso: frena a un script que martilla el endpoint, no es una
-# defensa distribuida. (pedidos, segundos)
+# Limite por IP, en la base (compartido entre los workers; ver app/services/limite_intentos.py). Cuenta
+# cada pedido, antes de cualquier otra escritura. (pedidos, segundos)
 LIMITES = {'horarios': (30, 60), 'reservas': (10, 60), 'conocido': (10, 60), 'avance': (60, 60), 'gracias': (30, 60)}
-_pedidos = defaultdict(deque)
-_candado = threading.Lock()
-
-
-def _ip():
-    # Railway pone la IP del visitante primera en X-Forwarded-For.
-    reenviada = request.headers.get('X-Forwarded-For', '')
-    return (reenviada.split(',')[0].strip() or request.remote_addr or '?')[:64]
 
 
 def _excede(tipo):
     maximo, ventana = LIMITES[tipo]
-    ahora = time.monotonic()
-    with _candado:
-        cola = _pedidos[(tipo, _ip())]
-        while cola and cola[0] <= ahora - ventana:
-            cola.popleft()
-        if len(cola) >= maximo:
-            return True
-        cola.append(ahora)
-        if len(_pedidos) > 10000:  # que la memoria no crezca sin limite
-            for clave in [k for k, v in _pedidos.items() if not v][:5000]:
-                del _pedidos[clave]
+    clave = f'agendas-{tipo}:ip:{limite_intentos.ip_cliente()}'
+    if limite_intentos.excedido(clave, maximo, ventana):
+        return True
+    limite_intentos.registrar(clave)
     return False
 
 
