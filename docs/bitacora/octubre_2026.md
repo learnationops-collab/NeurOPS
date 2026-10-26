@@ -921,3 +921,7 @@
   - Columnas `segmento*` en agendas y clientes; un `before_flush` las completa desde la reserva o, en una agenda manual, desde su cliente. La copia publicada del formulario lleva su segmentación; los formularios que no segmentan quedan idénticos a lo publicado.
   - Formulario «Sesión de Aceleración»: puntos del plan con MIR en 2, «Menos de $200» nueva, «Más de $500» junta las dos altas, Ecuador, Chile y Panamá en Examen. Decide queda como siempre (la versión «¿Quién más participa?» queda en el script). Ninguna pregunta se quita.
   - Anexo de auditoría y revisión estadística en [docs/plan_segmentos_triage.md](../plan_segmentos_triage.md) §8. Probado en el servidor de prueba: migración, formulario, backfill y una reserva real (cancelada).
+- **26 de Octubre de 2026 (Ficha · Resultado: «Reagenda sin fecha» ya no queda como No show — a prueba solo para Mario Bühler)** *([frontend/src/components/ficha/arbolResultado.payload.js](../../frontend/src/components/ficha/arbolResultado.payload.js) [MODIFY])*:
+  - «Reagenda → No dejó fecha» guardaba la llamada como «No Show» y el lead contaba como no show en la ficha y en Mis datos. Ahora se guarda «Reagendado» (Reprogramó / Reagendó).
+  - «Canceló → Seguimiento» tenía el mismo error: ahora se guarda «Cancelado».
+  - Por ahora solo cuando reporta Mario Bühler; el resto sigue como antes hasta que lo apruebe.
