@@ -42,7 +42,7 @@ Hecho en `app/agendas_v2/desplazar.py` (rama `feat/cd-libres`, migración `d7b3e
 - [x] Sin cambios en `core/asignacion.js`: la regla vive en la ocupación, que se calcula solo en el backend.
 - [x] Los eventos C/D quedan «Disponible» en el Google del closer (pedido de Santi): las nuevas nacen así y `scripts/cd_disponibles.py` marca las que ya existen (dry-run: 3 por marcar, 4 ya lo estaban). En Work la C/D sigue ocupando su horario para todos menos un A/B.
 - [x] Arreglado de paso: Jean Carlo ya marcaba a mano sus C como «Disponible», y con eso dejaban de bloquear: un C o D podía agendar encima.
-- [ ] Deploy y `python scripts/cd_disponibles.py --apply` en producción.
+- [x] Deploy (`1d12d5b8`, migración `d7b3e9a1f4c2` aplicada) y `scripts/cd_disponibles.py --apply`: las 7 C/D futuras con evento de Work quedaron «Disponible» (3 marcadas, 4 ya lo estaban).
 - [x] Una agenda futura cuyo evento se cancela o se borra en Google se cancela en Work (`movidas.py`, como el botón «Canceló»). Los closers casi no reportan cancelaciones: 3 de 241 en 30 días. Una que ya pasó no se toca: la reporta el closer.
 - [x] Las C/D que el triage aprueba y pasan a Jean Carlo (`agenda_triage_id`) y las llamadas del propio triage no quedan «Disponible» ni son desplazables (`desplazar.desplazable`).
 - [ ] Que el C/D desplazado se vea en el mazo del closer y del triage (con la parte visual).
@@ -121,6 +121,10 @@ Hecho sin commitear: campos de triage en `Appointment`, migración `c4e9a1d7f2b8
 - [ ] Rendimiento para Jean Carlo (le tarda 6 segundos, a Santi 1): modo light y optimizaciones. Va a mostrar la plataforma en llamada con su perfil de estudiante con todo habilitado.
 - [ ] **Learnito corrige entregas esta semana**: Ace hasta 5 por día, Residencia hasta 10, Specialist sin límite. Feedback obligatorio antes de mandar la siguiente: si le resultó útil y un comentario. Belu revisa ejemplos al final de la semana. Santi hace el anuncio apenas esté listo.
 - [ ] Pizarra (canvas, pomodoro, registro emocional, PDFs con resaltado al esquema): base para que entreguen desde la plataforma.
+
+## 10b. Errores vistos en los logs
+
+- [ ] `academy_payment_status._correr` (hilo `academy-payment-status`) se cae con `LearnationAPIError` sin capturar cuando la Academia responde 404 «No hay un alumno con ese cliente de Work ni con ese email» (cliente 8213, 26/10). Capturarlo y registrarlo como aviso: un cliente sin alumno no es un error.
 
 ## 11. Seguridad
 
