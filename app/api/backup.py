@@ -1,239 +1,157 @@
+"""Respaldo de la base con pg_dump (26/10/2026).
+
+Antes se armaba un script SQL a mano (sin escapar comillas dentro de los JSON) y se restauraba
+ejecutando el archivo subido entero: un «O'Brien» rompía la restauración y el texto de un formulario
+público terminaba como SQL ejecutable. Ahora el respaldo es un `pg_dump -Fc` y la restauración se hace
+a mano con `pg_restore` (ver docs/seguridad_despliegue.md), nunca desde la web.
+"""
 import datetime
-import hmac
+import logging
 import os
-import sqlite3
+import shutil
+import subprocess
+import tempfile
 
 import sqlalchemy as sa
-from flask import Blueprint, Response, current_app, jsonify
+from flask import Blueprint, Response, current_app, jsonify, request
 
 from app import db
+
 # Admin u operador (10/10/2026): el respaldo pasó del panel de «Administración», que se retiró, a
 # Operaciones › Datos. La clave de BACKUP_SECRET_KEY se sigue pidiendo igual.
-from app.decorators import operator_required
+from app.decorators import _iguales_en_tiempo_constante, operator_required
+
+logger = logging.getLogger(__name__)
 
 bp = Blueprint('backup', __name__)
 
 # Largo minimo de la clave configurada: una variable con "1234" no debe abrir la puerta.
 LARGO_MINIMO_DE_CLAVE = 20
+# La clave va en un header y no en la ruta: en la ruta quedaba en los logs de acceso.
+CABECERA_DE_CLAVE = 'X-Backup-Key'
+TAMANO_DE_BLOQUE = 64 * 1024
+# Variables de libpq que salen de los parámetros de la URL (Railway puede mandar sslmode).
+PARAMETROS_LIBPQ = {'sslmode': 'PGSSLMODE', 'sslrootcert': 'PGSSLROOTCERT', 'options': 'PGOPTIONS'}
 
 
-def _rechazar_si_la_clave_no_vale(secret_key):
+def _rechazar_si_la_clave_no_vale():
     """None si la clave es correcta; si no, la respuesta que hay que devolver.
 
     La clave sale de BACKUP_SECRET_KEY y NUNCA del codigo: estuvo escrita en el repositorio y en el
     bundle publico de la web. Sin la variable (o con una demasiado corta) la funcion queda APAGADA
-    (503), jamas abierta. Se compara en tiempo constante y sobre bytes: con str, un caracter no ASCII
-    lanzaria TypeError y produciria un 500.
+    (503), jamas abierta. Se compara en tiempo constante.
     """
     esperada = os.environ.get('BACKUP_SECRET_KEY', '')
     if len(esperada) < LARGO_MINIMO_DE_CLAVE:
         return jsonify({
             "message": f"Backup deshabilitado: falta BACKUP_SECRET_KEY (minimo {LARGO_MINIMO_DE_CLAVE} caracteres)."
         }), 503
-    if not hmac.compare_digest(secret_key.encode('utf-8'), esperada.encode('utf-8')):
+    provista = request.headers.get(CABECERA_DE_CLAVE, '')
+    if not _iguales_en_tiempo_constante(provista, esperada):
         return jsonify({"message": "Invalid secret key. Access Denied."}), 403
     return None
 
 
-def format_value(value):
-    if value is None:
-        return 'NULL'
-    if isinstance(value, (datetime.date, datetime.datetime, datetime.time)):
-        return f"'{value.isoformat()}'"
-    if isinstance(value, str):
-        # Escape single quotes for SQL
-        escaped = value.replace("'", "''")
-        return f"'{escaped}'"
-    if isinstance(value, bool):
-        # Postgres uses TRUE/FALSE, SQLite uses 1/0. 
-        # using '1'/'0' or TRUE/FALSE depends on target. 
-        # Standard SQL boolean: TRUE / FALSE often works, but let's stick to safe text or integers if possible.
-        # For Postgres compatibility:
-        return 'TRUE' if value else 'FALSE'
-    import json
-    if isinstance(value, (dict, list)):
-        return f"'{json.dumps(value)}'"
-    # Fallback to string
-    # This comment is added to force a git change.
-    return str(value)
-
-@bp.route('/secret-backup-preview/<string:secret_key>', methods=['GET'])
+@bp.route('/preview', methods=['GET'])
 @operator_required
-def preview_db(secret_key):
-    """
-    Returns statistics about the database tables.
-    """
-    rechazo = _rechazar_si_la_clave_no_vale(secret_key)
+def preview_db():
+    """Tablas de la base y su cantidad de registros."""
+    rechazo = _rechazar_si_la_clave_no_vale()
     if rechazo:
         return rechazo
 
     try:
         stats = []
-        # sort tables to match export order
         for table in db.metadata.sorted_tables:
-            stmt = sa.select(sa.func.count()).select_from(table)
-            count = db.session.execute(stmt).scalar()
-            stats.append({
-                "name": table.name,
-                "count": count
-            })
-            
+            count = db.session.execute(sa.select(sa.func.count()).select_from(table)).scalar()
+            stats.append({"name": table.name, "count": count})
         return jsonify({"tables": stats}), 200
     except Exception as e:
-        return jsonify({"message": f"Preview failed: {str(e)}"}), 500
+        logger.error(f"[BACKUP] vista previa fallida: {type(e).__name__}")
+        return jsonify({"message": "No se pudo leer la base."}), 500
 
-@bp.route('/secret-backup-export/<string:secret_key>', methods=['GET'])
+
+def _entorno_de_pg_dump():
+    """Entorno para pg_dump con la conexión en variables PG*: la URL (con la contraseña) no va en los
+    argumentos, que cualquier proceso del contenedor ve. None si la base no es PostgreSQL."""
+    url = sa.engine.make_url(current_app.config['SQLALCHEMY_DATABASE_URI'])
+    if not url.drivername.startswith('postgres'):
+        return None
+    entorno = dict(os.environ)
+    valores = {
+        'PGHOST': url.host, 'PGPORT': url.port, 'PGUSER': url.username,
+        'PGPASSWORD': url.password, 'PGDATABASE': url.database,
+    }
+    for nombre, variable in PARAMETROS_LIBPQ.items():
+        valores[variable] = url.query.get(nombre)
+    entorno.update({k: str(v) for k, v in valores.items() if v})
+    entorno.setdefault('PGCONNECT_TIMEOUT', '15')
+    return entorno
+
+
+def _error_de_pg_dump(errores):
+    """Lo que pg_dump dejó en stderr, recortado. libpq no escribe la contraseña en sus errores."""
+    errores.seek(0)
+    return errores.read().decode('utf-8', 'replace').strip()[-500:]
+
+
+def _cortar(proceso, errores):
+    if proceso.poll() is None:
+        proceso.kill()
+    proceso.wait()
+    proceso.stdout.close()
+    errores.close()
+
+
+@bp.route('/export', methods=['GET'])
 @operator_required
-def export_db(secret_key):
-    """
-    Exports the entire database as a SQL dump (INSERT statements).
-    """
-    rechazo = _rechazar_si_la_clave_no_vale(secret_key)
+def export_db():
+    """Descarga un `pg_dump -Fc` de toda la base, en streaming."""
+    rechazo = _rechazar_si_la_clave_no_vale()
     if rechazo:
         return rechazo
 
+    entorno = _entorno_de_pg_dump()
+    if entorno is None:
+        return jsonify({"message": "El respaldo con pg_dump solo funciona con PostgreSQL."}), 503
+    ejecutable = shutil.which('pg_dump')
+    if not ejecutable:
+        logger.error("[BACKUP] pg_dump no está instalado en el servidor")
+        return jsonify({"message": "pg_dump no está instalado en el servidor."}), 500
+
+    # stderr a un archivo: si se llenara un pipe sin leer, pg_dump se trabaría.
+    errores = tempfile.TemporaryFile()
     try:
-        sql_lines = []
-        sql_lines.append("-- NeurOPS Database Backup (PostgreSQL Compatible)")
-        sql_lines.append(f"-- Generated: {datetime.datetime.utcnow().isoformat()}")
-        sql_lines.append("BEGIN;") # Start transaction
-        sql_lines.append("")
-
-        # Get tables sorted by dependency
-        for table in db.metadata.sorted_tables:
-            table_name = table.name
-            
-            # Select all records
-            stmt = sa.select(table)
-            result = db.session.execute(stmt)
-            
-            rows = list(result)
-            count = len(rows)
-            sql_lines.append(f"-- Table: {table_name} ({count} records)")
-            
-            if count > 0:
-                columns = [c.name for c in table.columns]
-                col_names = ", ".join(f'"{c}"' for c in columns)
-                
-                for row in rows:
-                    row_map = row._mapping
-                    values = [format_value(row_map[c]) for c in columns]
-                    val_str = ", ".join(values)
-                    insert_stmt = f"INSERT INTO {table_name} ({col_names}) VALUES ({val_str});"
-                    sql_lines.append(insert_stmt)
-            
-            sql_lines.append("")
-
-        sql_lines.append("COMMIT;") # Commit transaction
-        sql_content = "\n".join(sql_lines)
-        
-        return Response(
-            sql_content,
-            mimetype='text/plain',
-            headers={'Content-Disposition': 'attachment;filename=neurops_backup.sql'}
-        )
-    except Exception as e:
-        current_app.logger.error(f"Backup Error: {e}")
+        proceso = subprocess.Popen([ejecutable, '--format=custom', '--no-password'], env=entorno,
+                                   stdout=subprocess.PIPE, stderr=errores)
+    except OSError as e:
+        errores.close()
+        logger.error(f"[BACKUP] no se pudo lanzar pg_dump: {e}")
         return jsonify({"message": "Backup failed"}), 500
 
-@bp.route('/secret-restore-import/<string:secret_key>', methods=['POST'])
-@operator_required
-def restore_db(secret_key):
-    """
-    Restores the database from an uploaded SQL file.
-    WARNING: THIS WILL WIPE ALL EXISTING DATA.
-    """
-    rechazo = _rechazar_si_la_clave_no_vale(secret_key)
-    if rechazo:
-        return rechazo
+    # El primer bloque se lee antes de responder: si pg_dump falla al conectar, todavía hay un 500 claro.
+    primero = proceso.stdout.read1(TAMANO_DE_BLOQUE)
+    if not primero:
+        codigo = proceso.wait()
+        logger.error(f"[BACKUP] pg_dump terminó con {codigo} sin datos: {_error_de_pg_dump(errores)}")
+        _cortar(proceso, errores)
+        return jsonify({"message": "Backup failed"}), 500
 
-    from flask import request
-    
-    if 'file' not in request.files:
-        return jsonify({"message": "No file part"}), 400
-        
-    file = request.files['file']
-    
-    if file.filename == '':
-        return jsonify({"message": "No selected file"}), 400
-        
-    if file:
+    def transmitir():
         try:
-            # Read file content (utf-8-sig: un editor de Windows puede haberle puesto una marca BOM)
-            sql_content = file.read().decode('utf-8-sig')
-            
-            # Execute logic
-            # 1. Truncate all tables first to avoid conflicts
-            #    We use CASCADE to handle foreign keys
-            
-            # Identify tables to truncate/delete
-            tables = db.metadata.sorted_tables
-            table_names = [f'"{t.name}"' for t in tables] # Quote for safety
-            
-            if not table_names:
-                 return jsonify({"message": "No tables found in metadata to restore."}), 400
+            bloque = primero
+            while bloque:
+                yield bloque
+                bloque = proceso.stdout.read1(TAMANO_DE_BLOQUE)
+            codigo = proceso.wait()
+            if codigo != 0:
+                # La descarga queda truncada; pg_restore la rechaza al leerla.
+                logger.error(f"[BACKUP] pg_dump terminó con {codigo} a mitad: {_error_de_pg_dump(errores)}")
+        finally:
+            # También si el navegador corta la descarga.
+            _cortar(proceso, errores)
 
-            # Use raw connection to avoid SQLAlchemy bind parameter parsing issues with the big SQL script
-            connection = db.engine.raw_connection()
-            try:
-                cursor = connection.cursor()
-                db_url = str(db.engine.url)
-                
-                # 1. Truncate/Wipe
-                if 'sqlite' in db_url:
-                    # SQLite: disable FK, delete all, enable FK
-                    cursor.execute("PRAGMA foreign_keys = OFF;")
-                    for table in tables:
-                        cursor.execute(f'DELETE FROM "{table.name}";')
-                    cursor.execute("PRAGMA foreign_keys = ON;")
-                else:
-                    # PostgreSQL: Truncate Cascade
-                    truncate_sql = f"TRUNCATE TABLE {', '.join(table_names)} RESTART IDENTITY CASCADE;"
-                    cursor.execute(truncate_sql)
-                
-                # 2. Execute Script
-                if 'sqlite' in db_url:
-                    # SQLite: se ejecuta sentencia por sentencia (evita las rarezas de "executescript" con
-                    # timestamps y da mejor contexto de error). Una sentencia termina donde
-                    # sqlite3.complete_statement lo indica: un ';' dentro de un texto ('hola; adios') NO la
-                    # termina y un valor con saltos de linea ocupa varias lineas. Antes se partia el script
-                    # por ';' y se descartaba todo trozo que empezara por '--': como el comentario
-                    # '-- Table: x (3 records)' va pegado al primer INSERT, la primera fila de cada tabla
-                    # no se restauraba. Los comentarios solo se ignoran ENTRE sentencias.
-                    pendiente = ''
-                    numero = 0
-                    for linea in sql_content.splitlines(keepends=True):
-                        if not pendiente.strip() and (not linea.strip() or linea.lstrip().startswith('--')):
-                            continue
-                        pendiente += linea
-                        if not sqlite3.complete_statement(pendiente):
-                            continue
-                        stmt, pendiente = pendiente.strip(), ''
-                        if stmt.upper().startswith(('BEGIN', 'COMMIT')):
-                            continue  # Skip transaction control
-                        numero += 1
-                        try:
-                            cursor.execute(stmt)
-                        except Exception as line_err:
-                            # Capture detailed context
-                            error_ctx = f"Statement #{numero} failed.\nError: {str(line_err)}\nSQL Snippet: {stmt[:150]}..."
-                            print(f"Restore Line Error: {error_ctx}")
-                            raise Exception(error_ctx)
-                    if pendiente.strip():
-                        raise Exception("El archivo termina a mitad de una sentencia (archivo truncado o incompleto).")
-                else:
-                    # PostgreSQL
-                    cursor.execute(sql_content)
-                
-                connection.commit()
-            finally:
-                cursor.close()
-                connection.close()
-            
-            return jsonify({"message": "Database restored successfully!", "tables_affected": len(table_names)}), 200
-            
-        except Exception as e:
-            db.session.rollback()
-            print(f"Restore Fatal Error: {e}")
-            # Return the specific message if passed from inner raise
-            return jsonify({"message": f"Restore failed: {str(e)}"}), 500
+    nombre = f"neurops_backup_{datetime.datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.dump"
+    return Response(transmitir(), mimetype='application/octet-stream',
+                    headers={'Content-Disposition': f'attachment; filename={nombre}',
+                             'Cache-Control': 'no-store'})

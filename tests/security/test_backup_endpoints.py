@@ -1,21 +1,25 @@
-"""/api/backup/*: exportar la base, previsualizarla y restaurarla.
+"""/api/backup/*: previsualizar la base y exportarla con pg_dump.
 
-Son las rutas mas peligrosas del sistema: exportar vuelca TODA la base (hashes de clave y datos
-personales incluidos) y restaurar la BORRA y ejecuta el SQL subido. Antes estaban protegidas solo por
-una clave escrita en el codigo (y en el bundle publico de la web) y `/api/backup/fix-auth` resetea la
-clave de un admin sin autenticacion. Ahora exigen un admin u operador logueado (el operador desde el
-10/10/2026, cuando el respaldo paso a Operaciones) Y la clave de BACKUP_SECRET_KEY, y sin esa variable
-quedan apagadas (503). Aca la clave es una de prueba: la real no se usa nunca.
+Exportar vuelca TODA la base (hashes de clave y datos personales incluidos). Antes estaba protegida
+solo por una clave escrita en el codigo (y en el bundle publico de la web) y `/api/backup/fix-auth`
+reseteaba la clave de un admin sin autenticacion. Ahora exige un admin u operador logueado (el operador
+desde el 10/10/2026, cuando el respaldo paso a Operaciones) Y la clave de BACKUP_SECRET_KEY en el header
+X-Backup-Key (desde el 26/10/2026; antes iba en la ruta y quedaba en los logs), y sin esa variable queda
+apagada (503). El 26/10/2026 la exportacion paso a pg_dump y se retiro la restauracion desde la web (el
+SQL armado a mano no escapaba comillas en los JSON y se ejecutaba entero al restaurar). Aca la clave es
+una de prueba: la real no se usa nunca.
 """
+import io
+
 import pytest
 
+from app.api import backup as modulo_backup
 from app.models import User
 
 CLAVE = 'clave-de-prueba-de-mas-de-veinte-caracteres'
 RUTAS = [
-    ('get', '/api/backup/secret-backup-preview/{}'),
-    ('get', '/api/backup/secret-backup-export/{}'),
-    ('post', '/api/backup/secret-restore-import/{}'),
+    ('get', '/api/backup/preview'),
+    ('get', '/api/backup/export'),
 ]
 
 
@@ -29,24 +33,33 @@ def admin(make_user):
     return make_user(role='admin', username='dueno')
 
 
-def pedir(client, metodo, plantilla, clave=CLAVE, cabeceras=None, **extra):
-    return getattr(client, metodo)(plantilla.format(clave), headers=cabeceras, **extra)
+@pytest.fixture()
+def sin_spa(app, tmp_path, monkeypatch):
+    """Carpeta estatica vacia: lo que no es una ruta real da 404 en vez de servir index.html."""
+    monkeypatch.setattr(app, 'static_folder', str(tmp_path))
+
+
+def pedir(client, metodo, ruta, clave=CLAVE, cabeceras=None, **extra):
+    cabeceras = dict(cabeceras or {})
+    if clave is not None:
+        cabeceras['X-Backup-Key'] = clave
+    return getattr(client, metodo)(ruta, headers=cabeceras, **extra)
 
 
 # --- Quien puede entrar -----------------------------------------------------------------------
 
-@pytest.mark.parametrize('metodo,plantilla', RUTAS)
-def test_sin_sesion_es_401_aunque_la_clave_sea_la_correcta(client, clave_configurada, metodo, plantilla):
-    assert pedir(client, metodo, plantilla).status_code == 401
+@pytest.mark.parametrize('metodo,ruta', RUTAS)
+def test_sin_sesion_es_401_aunque_la_clave_sea_la_correcta(client, clave_configurada, metodo, ruta):
+    assert pedir(client, metodo, ruta).status_code == 401
 
 
-@pytest.mark.parametrize('metodo,plantilla', RUTAS)
+@pytest.mark.parametrize('metodo,ruta', RUTAS)
 @pytest.mark.parametrize('rol', ['closer', 'setter', 'triage', 'hiring', 'director_comercial'])
 def test_solo_admin_u_operador_pueden_usarlas_aunque_tengan_la_clave(
-        client, make_user, auth_headers, clave_configurada, metodo, plantilla, rol):
+        client, make_user, auth_headers, clave_configurada, metodo, ruta, rol):
     cabeceras = auth_headers(make_user(role=rol))
 
-    assert pedir(client, metodo, plantilla, cabeceras=cabeceras).status_code == 403
+    assert pedir(client, metodo, ruta, cabeceras=cabeceras).status_code == 403
 
 
 def test_el_operador_entra_con_la_clave_porque_el_respaldo_esta_en_operaciones(
@@ -58,28 +71,29 @@ def test_el_operador_entra_con_la_clave_porque_el_respaldo_esta_en_operaciones(
 
 # --- La clave --------------------------------------------------------------------------------
 
-@pytest.mark.parametrize('metodo,plantilla', RUTAS)
-def test_sin_la_variable_de_entorno_la_funcion_queda_apagada(client, admin, auth_headers, metodo, plantilla):
-    respuesta = pedir(client, metodo, plantilla, cabeceras=auth_headers(admin))
+@pytest.mark.parametrize('metodo,ruta', RUTAS)
+def test_sin_la_variable_de_entorno_la_funcion_queda_apagada(client, admin, auth_headers, metodo, ruta):
+    respuesta = pedir(client, metodo, ruta, cabeceras=auth_headers(admin))
 
     assert respuesta.status_code == 503
     assert 'BACKUP_SECRET_KEY' in respuesta.get_json()['message']
 
 
-@pytest.mark.parametrize('metodo,plantilla', RUTAS)
-def test_una_clave_demasiado_corta_no_abre_la_puerta(client, admin, auth_headers, monkeypatch, metodo, plantilla):
+@pytest.mark.parametrize('metodo,ruta', RUTAS)
+def test_una_clave_demasiado_corta_no_abre_la_puerta(client, admin, auth_headers, monkeypatch, metodo, ruta):
     monkeypatch.setenv('BACKUP_SECRET_KEY', 'corta')
 
-    respuesta = pedir(client, metodo, plantilla, clave='corta', cabeceras=auth_headers(admin))
+    respuesta = pedir(client, metodo, ruta, clave='corta', cabeceras=auth_headers(admin))
 
     assert respuesta.status_code == 503
 
 
-@pytest.mark.parametrize('metodo,plantilla', RUTAS)
-@pytest.mark.parametrize('clave', ['x', 'clave-equivocada', 'a' * 300, CLAVE.upper(), CLAVE[:-1], CLAVE + 'x', 'clavé'])
+@pytest.mark.parametrize('metodo,ruta', RUTAS)
+@pytest.mark.parametrize('clave', [None, '', 'x', 'clave-equivocada', 'a' * 300, CLAVE.upper(), CLAVE[:-1],
+                                   CLAVE + 'x', 'clavé'])
 def test_una_clave_equivocada_es_403_y_nunca_un_500(client, admin, auth_headers, clave_configurada,
-                                                    metodo, plantilla, clave):
-    respuesta = pedir(client, metodo, plantilla, clave=clave, cabeceras=auth_headers(admin))
+                                                    metodo, ruta, clave):
+    respuesta = pedir(client, metodo, ruta, clave=clave, cabeceras=auth_headers(admin))
 
     assert respuesta.status_code == 403
     assert respuesta.get_json() == {'message': 'Invalid secret key. Access Denied.'}
@@ -102,149 +116,81 @@ def test_la_vista_previa_lista_las_tablas_con_su_conteo(client, admin, auth_head
     assert len(tablas) >= 80
 
 
-def test_exportar_devuelve_un_script_sql_descargable(client, admin, auth_headers, clave_configurada):
+def test_exportar_con_sqlite_avisa_que_solo_funciona_con_postgres(client, admin, auth_headers, clave_configurada):
     respuesta = pedir(client, 'get', RUTAS[1][1], cabeceras=auth_headers(admin))
 
-    sql = respuesta.get_data(as_text=True)
+    assert respuesta.status_code == 503
+    assert 'PostgreSQL' in respuesta.get_json()['message']
+
+
+class _PgDumpFalso:
+    """Popen de mentira: devuelve `salida` por stdout y termina con `codigo`."""
+    llamadas = []
+
+    def __init__(self, salida, codigo):
+        self.salida, self.codigo = salida, codigo
+
+    def __call__(self, args, env=None, **_):
+        _PgDumpFalso.llamadas.append((args, env))
+        self.stdout = io.BufferedReader(io.BytesIO(self.salida))
+        return self
+
+    def poll(self):
+        return self.codigo
+
+    def wait(self):
+        return self.codigo
+
+    def kill(self):
+        pass
+
+
+@pytest.fixture()
+def con_postgres(app, monkeypatch):
+    monkeypatch.setitem(app.config, 'SQLALCHEMY_DATABASE_URI', 'postgresql://usuario:clave-db@base:5432/neurops')
+    monkeypatch.setattr(modulo_backup.shutil, 'which', lambda _: '/usr/bin/pg_dump')
+    _PgDumpFalso.llamadas = []
+
+
+def test_exportar_descarga_el_pg_dump_sin_la_contrasena_en_los_argumentos(
+        client, admin, auth_headers, clave_configurada, con_postgres, monkeypatch):
+    volcado = b'PGDMP' + b'x' * 200000
+    monkeypatch.setattr(modulo_backup.subprocess, 'Popen', _PgDumpFalso(volcado, 0))
+
+    respuesta = pedir(client, 'get', RUTAS[1][1], cabeceras=auth_headers(admin))
+
+    args, env = _PgDumpFalso.llamadas[0]
     assert respuesta.status_code == 200
-    assert respuesta.mimetype == 'text/plain'
-    assert 'attachment' in respuesta.headers['Content-Disposition']
-    assert sql.startswith('-- NeurOPS Database Backup') and 'BEGIN;' in sql and sql.rstrip().endswith('COMMIT;')
-    assert 'INSERT INTO users' in sql
+    assert respuesta.mimetype == 'application/octet-stream'
+    assert respuesta.headers['Content-Disposition'].endswith('.dump')
+    assert respuesta.get_data() == volcado
+    assert '--format=custom' in args and not any('clave-db' in a for a in args)
+    assert (env['PGHOST'], env['PGUSER'], env['PGPASSWORD'], env['PGDATABASE']) == (
+        'base', 'usuario', 'clave-db', 'neurops')
 
 
-def _bytes(contenido):
-    import io
-    return io.BytesIO(contenido)
+def test_si_pg_dump_falla_antes_de_escribir_es_un_500_sin_secretos(
+        client, admin, auth_headers, clave_configurada, con_postgres, monkeypatch):
+    monkeypatch.setattr(modulo_backup.subprocess, 'Popen', _PgDumpFalso(b'', 1))
 
+    respuesta = pedir(client, 'get', RUTAS[1][1], cabeceras=auth_headers(admin))
 
-def _restaurar(client, cabeceras, sql):
-    return pedir(client, 'post', RUTAS[2][1], cabeceras=cabeceras, data={'file': (_bytes(sql), 'backup.sql')},
-                 content_type='multipart/form-data')
-
-
-# --- Exportar y restaurar (en SQLite; en Postgres se ejecuta el script entero) ----------------
-# La restauracion en SQLite partia el script por ';' y descartaba todo trozo que empezara por '--': como
-# el comentario '-- Table: x (3 records)' va pegado al primer INSERT, la PRIMERA fila de cada tabla no se
-# restauraba, y un ';' dentro de un texto rompia la sentencia. Ahora acumula lineas hasta que SQLite dice
-# que la sentencia esta completa.
-
-def test_exportar_y_restaurar_devuelve_todos_los_datos(client, db, make_user, auth_headers, clave_configurada):
-    admin = make_user(role='admin', username='dueno')
-    make_user(role='closer', username='carla')
-    make_user(role='setter', username='beto')
-    cabeceras = auth_headers(admin)
-    sql = pedir(client, 'get', RUTAS[1][1], cabeceras=cabeceras).get_data()
-    User.query.filter(User.username != 'dueno').delete()
-    db.session.commit()
-
-    respuesta = _restaurar(client, cabeceras, sql)
-
-    db.session.expire_all()
-    assert respuesta.status_code == 200
-    assert sorted(u.username for u in User.query.all()) == ['beto', 'carla', 'dueno']
-
-
-def test_restaurar_conserva_la_primera_fila_de_cada_tabla(client, db, make_user, auth_headers, clave_configurada):
-    from app.models import Client
-    cabeceras = auth_headers(make_user(role='admin', username='dueno'))
-    db.session.add_all([Client(full_name=f'Cliente {n}', email=f'c{n}@x.com') for n in (1, 2, 3)])
-    db.session.commit()
-    sql = pedir(client, 'get', RUTAS[1][1], cabeceras=cabeceras).get_data()
-
-    _restaurar(client, cabeceras, sql)
-
-    db.session.expire_all()
-    assert sorted(c.email for c in Client.query.all()) == ['c1@x.com', 'c2@x.com', 'c3@x.com']
-
-
-def test_restaurar_conserva_textos_con_punto_y_coma_comillas_y_saltos_de_linea(
-        client, db, make_user, auth_headers, clave_configurada):
-    from app.models import Client
-    cabeceras = auth_headers(make_user(role='admin', username='dueno'))
-    observacion = ("linea 1\nlinea 2; con 'comillas' y -- guiones\nuna linea que termina en punto y coma;\n"
-                   "-- Table: falsa (9 records)\nBEGIN; COMMIT;")
-    db.session.add(Client(full_name='Ana; Gomez', email='ana@x.com', observaciones=observacion))
-    db.session.commit()
-    sql = pedir(client, 'get', RUTAS[1][1], cabeceras=cabeceras).get_data()
-    Client.query.delete()
-    db.session.commit()
-
-    respuesta = _restaurar(client, cabeceras, sql)
-
-    db.session.expire_all()
-    ana = Client.query.one()
-    assert respuesta.status_code == 200
-    assert (ana.full_name, ana.email, ana.observaciones) == ('Ana; Gomez', 'ana@x.com', observacion)
-
-
-def test_restaurar_un_archivo_con_marca_bom(client, db, make_user, auth_headers, clave_configurada):
-    # Un editor de Windows puede guardar el .sql con BOM: no debe romper la primera sentencia.
-    cabeceras = auth_headers(make_user(role='admin', username='dueno'))
-    make_user(role='closer', username='carla')
-    sql = pedir(client, 'get', RUTAS[1][1], cabeceras=cabeceras).get_data()
-
-    respuesta = _restaurar(client, cabeceras, b'\xef\xbb\xbf' + sql)
-
-    db.session.expire_all()
-    assert respuesta.status_code == 200
-    assert sorted(u.username for u in User.query.all()) == ['carla', 'dueno']
-
-
-def test_restaurar_un_archivo_con_un_error_deja_la_base_como_estaba(client, db, make_user, auth_headers,
-                                                                    clave_configurada):
-    cabeceras = auth_headers(make_user(role='admin', username='dueno'))
-    make_user(role='closer', username='carla')
-    roto = b"-- backup roto\nBEGIN;\nINSERT INTO tabla_que_no_existe (a) VALUES (1);\nCOMMIT;\n"
-
-    respuesta = _restaurar(client, cabeceras, roto)
-
-    db.session.expire_all()
     assert respuesta.status_code == 500
-    assert 'Statement #1 failed' in respuesta.get_json()['message']
-    assert sorted(u.username for u in User.query.all()) == ['carla', 'dueno']  # nada se borro
+    assert respuesta.get_json() == {'message': 'Backup failed'}
 
 
-def test_restaurar_un_archivo_truncado_avisa_y_deja_la_base_como_estaba(client, db, make_user, auth_headers,
-                                                                        clave_configurada):
-    cabeceras = auth_headers(make_user(role='admin', username='dueno'))
-    make_user(role='closer', username='carla')
-    sql = pedir(client, 'get', RUTAS[1][1], cabeceras=cabeceras).get_data()
-    truncado = sql[:sql.index(b'INSERT INTO users') + 60]  # corta a mitad de una sentencia
+# --- Rutas viejas: la clave en la ruta y la restauracion desde la web ---------------------------
 
-    respuesta = _restaurar(client, cabeceras, truncado)
-
-    db.session.expire_all()
-    assert respuesta.status_code == 500
-    assert 'truncado' in respuesta.get_json()['message']
-    assert sorted(u.username for u in User.query.all()) == ['carla', 'dueno']
-
-
-def test_restaurar_pide_un_archivo(client, admin, auth_headers, clave_configurada):
-    cabeceras = auth_headers(admin)
-
-    sin_archivo = pedir(client, 'post', RUTAS[2][1], cabeceras=cabeceras)
-    sin_nombre = pedir(client, 'post', RUTAS[2][1], cabeceras=cabeceras, data={'file': (_bytes(b'x'), '')},
-                       content_type='multipart/form-data')
-
-    assert sin_archivo.status_code == sin_nombre.status_code == 400
-
-
-def test_restaurar_con_clave_equivocada_no_toca_la_base(client, admin, auth_headers, clave_configurada):
-    respuesta = pedir(client, 'post', RUTAS[2][1], clave='equivocada', cabeceras=auth_headers(admin),
-                      data={'file': (_bytes(b'-- sql'), 'backup.sql')}, content_type='multipart/form-data')
-
-    assert respuesta.status_code == 403
-    assert User.query.filter_by(username='dueno').count() == 1
+@pytest.mark.parametrize('metodo,ruta', [
+    ('get', f'/api/backup/secret-backup-preview/{CLAVE}'),
+    ('get', f'/api/backup/secret-backup-export/{CLAVE}'),
+    ('post', f'/api/backup/secret-restore-import/{CLAVE}'),
+])
+def test_las_rutas_viejas_ya_no_existen(client, admin, auth_headers, clave_configurada, sin_spa, metodo, ruta):
+    assert getattr(client, metodo)(ruta, headers=auth_headers(admin)).status_code in (404, 405)
 
 
 # --- fix-auth: la ruta ya no existe -----------------------------------------------------------
-
-@pytest.fixture()
-def sin_spa(app, tmp_path, monkeypatch):
-    """Carpeta estatica vacia: lo que no es una ruta real da 404 en vez de servir index.html."""
-    monkeypatch.setattr(app, 'static_folder', str(tmp_path))
-
 
 def test_fix_auth_ya_no_existe(client, sin_spa):
     assert client.get('/api/backup/fix-auth').status_code == 404

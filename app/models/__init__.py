@@ -37,6 +37,7 @@ from .playbook import (
 )
 from .instagram import InstagramWebhookEvento
 from .ai_usage import AiUsage
+from .intento_limitado import IntentoLimitado
 
 # Export all for easy access via from app.models import ...
 __all__ = [
@@ -64,6 +65,6 @@ __all__ = [
     'AssistantApplication', 'AssistantClarityWeight', 'HiringForm', 'HiringConfig',
     'PlaybookRoadmap', 'PlaybookModule', 'PlaybookLesson', 'PlaybookQuestion', 'PlaybookOption',
     'PlaybookLessonProgress', 'PlaybookCompletion', 'QUESTION_TYPES',
-    'InstagramWebhookEvento', 'AiUsage',
+    'InstagramWebhookEvento', 'AiUsage', 'IntentoLimitado',
 ]
 

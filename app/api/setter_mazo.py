@@ -75,7 +75,7 @@ def _normalizar_ig(valor):
     return valor.strip().lstrip('@').lower()
 
 
-def _lead_de_manychat(ig_norm, nombre_norm, person_uuid=None):
+def _conversacion_de(ig_norm, nombre_norm, person_uuid=None):
     """El Conversation de esta persona: el de su `person_uuid` (plan_personas) y, si no, el de la
     persona de ese instagram, con el respaldo por instagram o nombre de la fila (`lead_por_ig`)."""
     from app.services.conversaciones_service import de_persona as lead_de_persona
@@ -128,8 +128,8 @@ def get_agendas_del_mazo():
         if llave:
             vistas.add(llave)
 
-        lead_mc = _lead_de_manychat(ig_norm, nombre_norm, agenda.person_uuid)
-        anuncio = _anuncio_de(lead_mc)
+        conversacion = _conversacion_de(ig_norm, nombre_norm, agenda.person_uuid)
+        anuncio = _anuncio_de(conversacion)
         client = _cliente_de(agenda)
         cita = _cita_de(agenda, client)
 
@@ -139,7 +139,7 @@ def get_agendas_del_mazo():
         # conversacion, que es mejor que nada para encontrar a la persona.
         ig_mostrado = contacto['instagram'] \
             if ig_norm else (
-                (lead_contacto(lead_mc)['ig'] if lead_mc else None)
+                (lead_contacto(conversacion)['ig'] if conversacion else None)
                 or (client.instagram if client and client.instagram else None))
         if not _normalizar_ig(ig_mostrado):
             ig_mostrado = f"@{nombre_norm.replace(' ', '_')}" if nombre_norm else ''

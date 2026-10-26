@@ -7,6 +7,8 @@ from app import db
 from app.api import bp
 from app.decorators import operator_required
 from app.models import User
+from app.services import limite_intentos
+from app.services.limite_intentos import clave_falsa, login_limitado
 from app.services.cuentas_vinculadas import (
     VinculoInvalido, cuentas_de, desvincular, listar_personas, puede_cambiar_a, vincular,
 )
@@ -42,15 +44,23 @@ def login():
     if not isinstance(username, str) or not isinstance(password, str) or not username or not password:
         return jsonify({"message": "Username and password required"}), 400
 
+    # Límite de logins fallidos por IP y por usuario, antes de mirar la clave.
+    claves_limite = login_limitado(username)
+    if claves_limite is None:
+        return limite_intentos.respuesta_429()
+
     # 1. Find User
     user = db.session.scalar(sa.select(User).where(User.username == username))
-    
+
     # 2. Try Email if username failed
     if not user:
         user = db.session.scalar(sa.select(User).where(User.email == username))
 
     # 3. Validate
+    if user is None:
+        clave_falsa(password)  # mismo tiempo que con un usuario real: no se adivina quién existe
     if user is None or not user.check_password(password):
+        limite_intentos.registrar(*claves_limite)
         return jsonify({"message": "Invalid credentials"}), 401
 
     # Cuenta desactivada: se avisa DESPUES de acertar la clave, para no revelar que un usuario existe.
@@ -60,8 +70,9 @@ def login():
         return jsonify({"message": "Tu cuenta está desactivada. Contacta a un administrador."}), 403
 
     # 4. Login Session (Optional / Legacy support)
-    login_user(user, remember=True)
     from flask import session
+    olvidar_simulacion(session)
+    login_user(user, remember=True)
     session.pop('active_role', None)  # se entra siempre con el rol principal
 
     # Sincronizar la timezone del usuario con la detectada por su navegador en cada login,
@@ -112,6 +123,12 @@ def sesion_de_google():
         return jsonify({"message": "No hay un inicio de sesión con Google pendiente"}), 401
     return jsonify({"message": "Login successful", "token": current_user.get_auth_token(),
                     "user": _usuario_json(current_user)}), 200
+
+
+def olvidar_simulacion(session):
+    """Borra de la cookie el estado de una simulación anterior (flujo clásico), antes de cada login."""
+    for clave in ('is_impersonating', 'original_user_id', 'original_user_role'):
+        session.pop(clave, None)
 
 
 EMAIL_VALIDO = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
@@ -306,7 +323,11 @@ def resetear_contrasena(user_id):
 
 @bp.route('/auth/logout', methods=['POST'])
 def logout():
+    from flask import session
     logout_user()
+    # Sin esto quedaban en la cookie is_impersonating/original_user_id: quien entrara después en ese
+    # navegador podía llamar a /auth/revert y recibir el token del admin que había simulado.
+    session.clear()
     return jsonify({"message": "Logout successful"}), 200
 
 @bp.route('/auth/me', methods=['GET'])

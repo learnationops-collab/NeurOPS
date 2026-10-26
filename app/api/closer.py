@@ -805,7 +805,9 @@ def get_slots():
 @bp.route('/appointments/<int:id>/process', methods=['POST'])
 @login_required
 def process_agenda(id):
-    if current_user.role not in ['closer', 'admin', 'setter', 'call_confirmer', 'triage', 'financial']:
+    # Reportar una agenda es del closer (la ficha tampoco deja al setter): setter y triage podían marcar
+    # «No Show» en la agenda de cualquier closer.
+    if current_user.role not in ['closer', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
     data = request.get_json() or {}
     if 'role' not in data:
@@ -1303,6 +1305,7 @@ def _format_appointment_for_deck(a, recover_form=False):
             form_data_recovered = True
     # Resolver dinámicamente el resultado real del confirmer sin depender de campos corrompidos históricos
     from app.models.financial import FinancialAgenda
+    from app.agendas_v2.manual import tipo_de_llamada
     from sqlalchemy import or_
     from datetime import timedelta
 
@@ -1368,7 +1371,11 @@ def _format_appointment_for_deck(a, recover_form=False):
         "origin": a.origin,
         "result": confirmer_result,
         "closer_result": a.closer_result or "Pendiente",
+        # Si se presentó la oferta: la tarjeta de Reportar saca de acá la tasa de presentación.
+        "offer_presented": a.offer_presented,
         "is_rescheduled": a.is_rescheduled,
+        # 'primera', 'segunda' o 'momentum': la tarjeta lo dice y las métricas lo separan.
+        "tipo_llamada": tipo_de_llamada(a),
         "ig_chat_link": a.ig_chat_link or "",
         "keyword": a.keyword or "",
         "setter_notes": a.setter_notes or "",
@@ -2186,6 +2193,10 @@ def update_closer_sale(sale_id):
 
     from app.models import FinancialSale
     sale = FinancialSale.query.get_or_404(sale_id)
+    if current_user.role != 'admin':
+        propios = {e.strip().lower() for e in CloserService._resolve_sale_identifiers(current_user) if e}
+        if (sale.email_vendedor or '').strip().lower() not in propios:
+            return jsonify({"message": "Solo podés corregir tus propias ventas"}), 403
     data = request.get_json() or {}
 
     CAMPOS = {

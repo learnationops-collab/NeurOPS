@@ -72,6 +72,7 @@ class ComercialAgendasMixin:
         # un split pay. Antes cualquier fila cruzada la marcaba como venta, así que un lead que
         # solo había dejado una seña (o una cuota, o una renovación) contaba como cierre en la
         # tabla, en los totales y en el close rate.
+        from app.agendas_v2.manual import tipo_de_llamada
         from app.services.closer_service import REAL_SALE_TIPOS
         tipos_email, tipos_ig, tipos_id = CloserAgendasService._tipos_por_contacto(appts)
         tipos_persona = _tipos_por_persona({a.person_uuid for a in appts if a.person_uuid})
@@ -156,6 +157,9 @@ class ComercialAgendasMixin:
                 'con_venta': con_venta,
                 'venta_tipo': venta_tipo,
                 'con_sena': con_sena,
+                # 'primera', 'segunda' o 'momentum' (`manual.tipo_de_llamada`): el panel Estados
+                # muestra las primeras y las segundas llamadas por separado (26/10/2026).
+                'tipo_llamada': tipo_de_llamada(a),
             })
         return filas
 

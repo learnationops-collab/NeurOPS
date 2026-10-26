@@ -1,0 +1,175 @@
+/* ============================================================
+   PASO «SEGUIMIENTO» — Snap (chips + calendario + hora) y Flow (una oración con desplegables).
+   Handoff de Mario (26/10/2026). El humo va con `Aura` (estándar) y se calibra por lugar con
+   `.fi-sg-aura`: más chico, más rápido y menos difuso en un chip; más lento y difuso en la frase.
+   ============================================================ */
+
+.dc-shell .fi-sg{display:flex;flex-direction:column;gap:28px}
+.dc-shell .fi-sg-cabeza{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.dc-shell .fi-sg-cuerpo{display:flex;flex-direction:column;gap:20px;animation:fi-sg-entra .35s ease}
+
+@keyframes fi-sg-entra{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+@keyframes fi-sg-rueda{from{transform:translateY(70%);opacity:0;filter:blur(3px)}to{transform:none;opacity:1;filter:none}}
+@keyframes fi-sg-pop{0%{transform:scale(.4)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+
+/* El humo de cada pieza: el contenedor aísla y recorta, el Aura va detrás (z-index:-1). */
+.dc-shell .fi-sg .ui-aura.fi-sg-aura{opacity:.6}
+.dc-shell .fi-sg .ui-aura.fi-sg-aura i{width:58%;filter:blur(16px);mix-blend-mode:screen}
+.dc-shell .fi-sg .ui-aura.fi-sg-aura i:nth-child(1){animation-duration:9s}
+.dc-shell .fi-sg .ui-aura.fi-sg-aura i:nth-child(2){animation-duration:11s}
+.dc-shell .fi-sg .ui-aura.fi-sg-aura i:nth-child(3){animation-duration:13s}
+.dc-shell .fi-sg .ui-aura.fi-sg-aura i:nth-child(4){display:none}
+
+/* ---------- El indicador que se desliza (día, hora, modo) ---------- */
+.dc-shell .fi-sg-ind{position:absolute;top:0;left:0;z-index:0;overflow:hidden;isolation:isolate;pointer-events:none;
+  transition:transform .45s cubic-bezier(.3,1.4,.5,1),width .45s cubic-bezier(.3,1.4,.5,1),height .3s ease,opacity .2s}
+.dc-shell .fi-sg-ind--dia{border-radius:20px;background:var(--brand-secondary);box-shadow:var(--shadow-brand)}
+.dc-shell .fi-sg-ind--dia .ui-aura.fi-sg-aura{opacity:.7}
+.dc-shell .fi-sg-ind--dia .ui-aura.fi-sg-aura i{width:66%;filter:blur(18px)}
+.dc-shell .fi-sg-ind--hora{border-radius:999px;background:var(--bg-element-hover);border:1px solid var(--brand-secondary)}
+.dc-shell .fi-sg-ind--hora .ui-aura.fi-sg-aura i{filter:blur(14px)}
+.dc-shell .fi-sg-ind--modo{border-radius:999px;background:var(--bg-element-hover);
+  transition:transform .35s cubic-bezier(.3,1.3,.5,1),width .35s,opacity .2s}
+.dc-shell .fi-sg-ind--modo .ui-aura.fi-sg-aura{opacity:.55}
+
+/* ---------- Conmutador Snap / Flow ---------- */
+.dc-shell .fi-sg-modo{position:relative;display:flex;padding:4px;border-radius:999px;border:1px solid var(--border-control)}
+.dc-shell .fi-sg-modo > button{position:relative;z-index:1;width:96px;height:36px;border:0;background:transparent;
+  color:var(--text-on-surface);font:600 14px var(--font-family, inherit);cursor:pointer;border-radius:999px}
+
+/* ---------- Días ---------- */
+.dc-shell .fi-sg-dias{position:relative;display:flex;flex-wrap:wrap;gap:8px}
+.dc-shell .fi-sg-dia{position:relative;z-index:1;width:120px;height:72px;flex:none;border-radius:20px;
+  border:1px solid var(--border-main);background:transparent;color:var(--text-on-surface);cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:color .3s,border-color .3s}
+.dc-shell .fi-sg-dia b{font-weight:700;font-size:16px}
+.dc-shell .fi-sg-dia small{font-size:13px;opacity:.75}
+/* Texto sobre magenta: siempre Ink. */
+.dc-shell .fi-sg-dia[data-activo="true"]{color:var(--ink);border-color:transparent}
+.dc-shell .fi-sg-dia--cal{flex:1;min-width:72px;gap:4px}
+.dc-shell .fi-sg-dia--cal svg{width:22px;height:22px}
+.dc-shell .fi-sg-dia--cal small{font-weight:600;opacity:1}
+.dc-shell .fi-sg-dia--marcado{border-color:var(--brand-secondary)}
+
+/* ---------- Calendario ---------- */
+.dc-shell .fi-sg-plegable{max-height:0;opacity:0;overflow:hidden;transition:max-height .45s ease,opacity .3s ease}
+.dc-shell .fi-sg-plegable--abierto{max-height:420px;opacity:1}
+.dc-shell .fi-sg-mes{padding:20px;border-radius:16px;background:var(--bg-input);display:flex;flex-direction:column;gap:12px}
+.dc-shell .fi-sg-mes-cabeza{display:flex;align-items:center;justify-content:space-between}
+.dc-shell .fi-sg-mes-cabeza b{font-weight:700;font-size:16px}
+.dc-shell .fi-sg-mes-cabeza button{width:36px;height:36px;border-radius:999px;border:1px solid var(--border-control);
+  background:transparent;color:var(--text-on-surface);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.dc-shell .fi-sg-mes-cabeza button:disabled{opacity:.3;cursor:default}
+.dc-shell .fi-sg-mes-cabeza svg{width:18px;height:18px}
+.dc-shell .fi-sg-mes-grilla{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.dc-shell .fi-sg-mes-grilla small{font-size:12px;color:var(--text-muted);padding:4px 0}
+.dc-shell .fi-sg-mes-grilla button{height:36px;border-radius:999px;border:1px solid transparent;background:transparent;
+  color:var(--text-on-surface);font-weight:600;font-size:14px;cursor:pointer;transition:background .25s,color .25s}
+.dc-shell .fi-sg-mes-grilla button:hover:not(:disabled){background:var(--bg-element-hover)}
+.dc-shell .fi-sg-mes-grilla button:disabled{opacity:.3;cursor:default}
+.dc-shell .fi-sg-mes-grilla .fi-sg-mes-hoy{border-color:var(--border-control)}
+.dc-shell .fi-sg-mes-grilla .fi-sg-mes-sel,
+.dc-shell .fi-sg-mes-grilla .fi-sg-mes-sel:hover{background:var(--brand-secondary);color:var(--ink);border-color:transparent}
+
+/* ---------- Hora + WhatsApp ---------- */
+.dc-shell .fi-sg-fila-hora{display:flex;flex-wrap:wrap;align-items:center;gap:12px;max-height:200px;opacity:1;
+  transition:max-height .45s ease,opacity .3s ease}
+.dc-shell .fi-sg-fila-hora--oculta{max-height:0;opacity:0;overflow:hidden;pointer-events:none}
+.dc-shell .fi-sg-horas{position:relative;display:flex;flex-wrap:wrap;gap:8px}
+.dc-shell .fi-sg-hora{position:relative;z-index:1;width:72px;height:48px;border-radius:999px;border:1px solid var(--border-subtle);
+  background:transparent;color:var(--text-on-surface);font-weight:700;font-size:15px;cursor:pointer;box-sizing:border-box}
+.dc-shell .fi-sg-hora--sin{width:84px;font-weight:600;font-size:14px;border:1px dashed var(--border-control);white-space:nowrap}
+.dc-shell .fi-sg-hora--propia{width:124px;display:flex;align-items:center;justify-content:space-between;padding:0 4px;
+  border:1px dashed var(--border-control);cursor:default}
+.dc-shell .fi-sg-hora--propia button,
+.dc-shell .fi-sg-menu-paso button{width:32px;height:32px;border-radius:999px;border:0;background:transparent;
+  color:var(--text-on-surface);cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none}
+.dc-shell .fi-sg-hora--propia svg,
+.dc-shell .fi-sg-menu-paso svg{width:16px;height:16px}
+.dc-shell .fi-sg-hora--propia input,
+.dc-shell .fi-sg-menu-paso input{width:52px;text-align:center;border:0;border-bottom:1px solid var(--border-control);
+  background:transparent;color:var(--text-on-surface);font:700 15px var(--font-family, inherit);padding:2px 0;outline:none;
+  font-variant-numeric:tabular-nums}
+
+.dc-shell .fi-sg-wa{position:relative;overflow:hidden;isolation:isolate;margin-left:auto;flex:none;white-space:nowrap;
+  height:48px;padding:0 14px 0 6px;border-radius:999px;border:1px solid var(--border-control);background:transparent;
+  color:var(--text-on-surface);font-weight:600;font-size:15px;cursor:pointer;display:flex;align-items:center;gap:10px;
+  transition:border-color .3s,opacity .3s}
+.dc-shell .fi-sg-wa .ui-aura.fi-sg-aura{opacity:0;transition:opacity .4s}
+.dc-shell .fi-sg-wa--on{border-color:var(--brand-secondary)}
+.dc-shell .fi-sg-wa--on .ui-aura.fi-sg-aura{opacity:.55}
+.dc-shell .fi-sg-wa:disabled{opacity:.35;cursor:not-allowed}
+.dc-shell .fi-sg-wa-check{flex:none;width:32px;height:32px;border-radius:999px;background:var(--bg-element);color:var(--ink);
+  display:flex;align-items:center;justify-content:center;transition:background .3s}
+.dc-shell .fi-sg-wa--on .fi-sg-wa-check{background:var(--brand-secondary)}
+.dc-shell .fi-sg-wa-check svg{width:18px;height:18px;animation:fi-sg-pop .35s ease}
+
+/* ---------- Flow: la oración ---------- */
+.dc-shell .fi-sg-frase{position:relative;z-index:3;isolation:isolate;padding:28px 32px;border-radius:24px;
+  font-size:40px;line-height:1.4;font-weight:700;letter-spacing:-.01em;display:flex;flex-wrap:wrap;align-items:baseline;
+  column-gap:14px;row-gap:6px;min-height:176px;box-sizing:border-box;animation:fi-sg-entra .35s ease}
+.dc-shell .fi-sg-frase > .ui-aura.fi-sg-aura{opacity:.5;background:var(--bg-input)}
+.dc-shell .fi-sg-frase > .ui-aura.fi-sg-aura i{width:44%;filter:blur(70px)}
+.dc-shell .fi-sg-frase > .ui-aura.fi-sg-aura i:nth-child(1){animation-duration:19s}
+.dc-shell .fi-sg-frase > .ui-aura.fi-sg-aura i:nth-child(2){animation-duration:23s}
+.dc-shell .fi-sg-frase > .ui-aura.fi-sg-aura i:nth-child(3){animation-duration:29s}
+.dc-shell .fi-sg-frase > .ui-aura.fi-sg-aura i:nth-child(4){display:block;animation-duration:31s}
+.dc-shell .fi-sg-token{position:relative;display:inline-flex}
+.dc-shell .fi-sg-token > button{font:inherit;color:var(--brand-secondary);background:transparent;border:0;
+  border-bottom:3px solid var(--brand-secondary);padding:0 2px;cursor:pointer;line-height:1.2;display:inline-flex;
+  align-items:center;gap:6px;overflow:hidden}
+.dc-shell .fi-sg-token > button > svg{width:26px;height:26px;transition:transform .3s ease}
+.dc-shell .fi-sg-token > button > .fi-sg-giro{transform:rotate(180deg)}
+.dc-shell .fi-sg-rueda{display:inline-block;animation:fi-sg-rueda .4s cubic-bezier(.2,.9,.3,1.2)}
+
+.dc-shell .fi-sg-menu{position:absolute;top:100%;left:0;margin-top:10px;z-index:10;min-width:240px;padding:8px;
+  border-radius:16px;background:var(--ink);overflow:hidden;isolation:isolate;border:1px solid var(--border-main);
+  box-shadow:var(--shadow-main);display:flex;flex-direction:column;gap:2px;font-size:16px;letter-spacing:0;
+  line-height:1.3;animation:fi-sg-entra .2s ease}
+.dc-shell .fi-sg-menu > .ui-aura.fi-sg-aura{opacity:.4}
+.dc-shell .fi-sg-menu > .ui-aura.fi-sg-aura i{width:64%;filter:blur(30px)}
+.dc-shell .fi-sg-menu > .ui-aura.fi-sg-aura i:nth-child(1){animation-duration:21s}
+.dc-shell .fi-sg-menu > .ui-aura.fi-sg-aura i:nth-child(2){animation-duration:27s}
+.dc-shell .fi-sg-menu > .ui-aura.fi-sg-aura i:nth-child(3){animation-duration:31s}
+.dc-shell .fi-sg-menu > button{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 12px;
+  border-radius:12px;border:0;background:transparent;color:var(--text-on-surface);font-weight:600;font-size:16px;
+  text-align:left;cursor:pointer;white-space:nowrap}
+.dc-shell .fi-sg-menu > button small{color:var(--text-muted);font-weight:400;font-size:14px}
+.dc-shell .fi-sg-menu > button:hover,
+.dc-shell .fi-sg-menu .fi-sg-menu-sel{background:var(--bg-element-hover)}
+.dc-shell .fi-sg-menu-propia{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 6px 6px 12px;
+  border-radius:12px;border:1px dashed var(--border-control);margin-top:4px;font-weight:600;white-space:nowrap}
+.dc-shell .fi-sg-menu-paso{display:flex;align-items:center;gap:4px}
+.dc-shell .fi-sg-menu-paso button{border:1px solid var(--border-control)}
+
+/* ---------- Resumen ---------- */
+.dc-shell .fi-sg-resumen{position:relative;overflow:hidden;isolation:isolate;display:flex;align-items:center;min-height:56px;
+  padding:0 20px;border-radius:16px;background:var(--bg-input);
+  border:1px solid color-mix(in srgb, var(--brand-secondary) 32%, transparent)}
+.dc-shell .fi-sg-resumen > .ui-aura.fi-sg-aura{opacity:.5}
+.dc-shell .fi-sg-resumen > .ui-aura.fi-sg-aura i{width:40%;filter:blur(26px)}
+.dc-shell .fi-sg-resumen > .ui-aura.fi-sg-aura i:nth-child(1){animation-duration:11s}
+.dc-shell .fi-sg-resumen > .ui-aura.fi-sg-aura i:nth-child(2){animation-duration:15s}
+.dc-shell .fi-sg-resumen > .ui-aura.fi-sg-aura i:nth-child(3){animation-duration:19s}
+.dc-shell .fi-sg-resumen-txt{display:flex;align-items:center;gap:12px;font-size:16px;animation:fi-sg-entra .35s ease}
+.dc-shell .fi-sg-resumen-txt b{font-weight:700}
+.dc-shell .fi-sg-resumen-txt svg{width:22px;height:22px;flex:none}
+.dc-shell .fi-sg-ico-ok{color:var(--success)}
+.dc-shell .fi-sg-ico-pool{color:var(--text-muted)}
+
+/* ---------- Ángulo y pie ---------- */
+.dc-shell .fi-sg-angulo{display:flex;flex-direction:column;gap:8px;animation:fi-sg-entra .35s ease}
+.dc-shell .fi-sg-pie{gap:12px}
+.dc-shell .fi-sg-hueco{flex:1}
+
+@media (max-width:640px){
+  .dc-shell .fi-sg-dia{width:calc((100% - 16px) / 3);height:64px}
+  .dc-shell .fi-sg-dia--cal{flex:1 1 calc((100% - 16px) / 3)}
+  .dc-shell .fi-sg-wa{margin-left:0}
+  .dc-shell .fi-sg-frase{font-size:28px;padding:20px}
+  .dc-shell .fi-sg-modo > button{width:72px}
+}
+@media (prefers-reduced-motion:reduce){
+  .dc-shell .fi-sg-ind{transition:opacity .2s}
+  .dc-shell .fi-sg *{animation:none !important}
+}

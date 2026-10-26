@@ -128,6 +128,20 @@
 }
 .clarity-v6 .tud-sub-v6 { color: var(--cl-muted-40); }
 .clarity-v6 .tud-foot-v6 { color: var(--cl-muted); }
+/* La métrica por tipo de llamada (1ª, 2ª, Momentum), debajo del pie. */
+.clarity-v6 .tud-partes-v6 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--cl-border-subtle);
+  font-size: 11px;
+  color: var(--cl-muted);
+}
+.clarity-v6 .tud-parte-v6 b { font-weight: 700; color: #fff; }
+.clarity-v6 .tud-parte-v6[data-tipo="segunda"] b { color: var(--cl-info); }
+.clarity-v6 .tud-parte-v6[data-tipo="momentum"] b { color: var(--cl-lila); }
 .clarity-v6 .tud-xp-v6 {
   color: var(--cl-warning);
   background: color-mix(in srgb, var(--cl-warning) 12%, transparent);
@@ -526,16 +540,17 @@
 }
 .clarity-v6 .kcard-v6.kcard-franja::before { content: none; }
 .clarity-v6 .kcard-v6.kcard-vivo,
-.clarity-v6 .kcard-v6.kcard-vivo:hover { border-color: color-mix(in srgb, var(--cl-warning) 38%, transparent); }
+.clarity-v6 .kcard-v6.kcard-vivo:hover { border-color: color-mix(in srgb, var(--cl-warning) 24%, transparent); }
 
-/* Aura: tres manchas difusas que se mueven despacio, con los colores del lead. */
+/* Aura: tres manchas difusas que se mueven despacio, con los colores del lead. Más tenue desde el
+   24/10/2026 (pedido: «bastante fuerte, un poquito más elegante»). */
 .clarity-v6 .kc-aura {
   position: absolute;
   inset: 0;
   z-index: 0;
   border-radius: inherit;
   overflow: hidden;
-  opacity: .5;
+  opacity: .26;
   pointer-events: none;
 }
 .clarity-v6 .kc-aura i {

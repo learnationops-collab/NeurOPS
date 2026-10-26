@@ -168,6 +168,8 @@ def _vuelta_del_login(state, redirect_uri):
         return a_login('desactivada')
     if reto_movil:
         return _a_la_app(f'code={login_google.generar_codigo_movil(usuario.id, reto_movil)}')
+    from app.api.auth import olvidar_simulacion
+    olvidar_simulacion(session)
     login_user(usuario, remember=True)
     session.pop('active_role', None)  # se entra siempre con el rol principal, como con la clave
     session['google_login'] = usuario.id

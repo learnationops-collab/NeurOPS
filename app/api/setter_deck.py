@@ -84,33 +84,33 @@ def get_setter_deck():
                 if uc_ig_clean not in present_igs and uc.person_uuid not in present_persons:
                     # La conversación de su persona (plan_personas), después la de la persona de su
                     # Instagram y, de respaldo, la de la fila con ese Instagram.
-                    m_lead = conversaciones_service.de_persona(uc.person_uuid) or lead_por_ig(uc_ig_clean)
-                    if not m_lead:
+                    conversacion = conversaciones_service.de_persona(uc.person_uuid) or lead_por_ig(uc_ig_clean)
+                    if not conversacion:
                         try:
-                            m_lead = Conversation(
+                            conversacion = Conversation(
                                 external_id=f"synth_{uc.id}_{int(datetime.utcnow().timestamp())}",
                                 name=uc.full_name or "Sin Nombre",
                                 ig=uc.instagram or uc_ig_clean,
                                 created_at=datetime.utcnow()
                             )
-                            db.session.add(m_lead)
+                            db.session.add(conversacion)
                             db.session.commit()
                         except Exception as ex:
                             db.session.rollback()
                             import logging
                             logging.error(f"Error persistiendo Conversation de setter en GET: {ex}")
-                            m_lead = Conversation(
+                            conversacion = Conversation(
                                 id=-(uc.id + 2000000),
                                 name=uc.full_name or "Sin Nombre",
                                 ig=uc.instagram or uc_ig_clean,
                                 created_at=datetime.utcnow()
                             )
                             
-                    la_obj = LeadAnswer.query.filter_by(conversation_id=m_lead.id).order_by(LeadAnswer.created_at.desc()).first() if m_lead.id > 0 else None
+                    la_obj = LeadAnswer.query.filter_by(conversation_id=conversacion.id).order_by(LeadAnswer.created_at.desc()).first() if conversacion.id > 0 else None
                     if not la_obj:
                         try:
                             la_obj = LeadAnswer(
-                                conversation_id=m_lead.id,
+                                conversation_id=conversacion.id,
                                 qualification='null',
                                 keyword='Mensaje Directo',
                                 created_at=datetime.utcnow()
@@ -123,7 +123,7 @@ def get_setter_deck():
                             logging.error(f"Error persistiendo LeadAnswer de setter en GET: {ex}")
                             la_obj = LeadAnswer(
                                 id=-(uc.id + 3000000),
-                                conversation_id=m_lead.id,
+                                conversation_id=conversacion.id,
                                 qualification='null',
                                 keyword='Mensaje Directo',
                                 created_at=datetime.utcnow()
@@ -291,9 +291,9 @@ def get_setter_deck():
             client_ig = lead_contactos([lead_persona])[lead_persona.id]['ig'] or ""
         if not client_ig and a.client:
             if a.client.full_name:
-                m_lead = Conversation.query.filter(func.lower(Conversation.name) == a.client.full_name.lower().strip()).first()
-                if m_lead and m_lead.ig:
-                    client_ig = m_lead.ig
+                conversacion = Conversation.query.filter(func.lower(Conversation.name) == a.client.full_name.lower().strip()).first()
+                if conversacion and conversacion.ig:
+                    client_ig = conversacion.ig
 
         ad_obj = None
         if a.keyword:
@@ -301,24 +301,24 @@ def get_setter_deck():
 
         if not ad_obj and (lead_persona or client_ig):
             ig_clean_normal = client_ig.strip().lstrip('@').lower()
-            m_lead = lead_persona or Conversation.query.filter(
+            conversacion = lead_persona or Conversation.query.filter(
                 func.lower(func.replace(Conversation.ig, '@', '')) == ig_clean_normal
             ).first()
-            if m_lead:
+            if conversacion:
                 la = LeadAnswer.query.filter(
-                    LeadAnswer.conversation_id == m_lead.id,
+                    LeadAnswer.conversation_id == conversacion.id,
                     LeadAnswer.ad_id != None
                 ).order_by(LeadAnswer.created_at.desc()).first()
                 if la:
                     ad_obj = Ad.query.get(la.ad_id)
 
         if not ad_obj and a.client and a.client.full_name:
-            m_lead = Conversation.query.filter(
+            conversacion = Conversation.query.filter(
                 func.lower(Conversation.name) == a.client.full_name.strip().lower()
             ).first()
-            if m_lead:
+            if conversacion:
                 la = LeadAnswer.query.filter(
-                    LeadAnswer.conversation_id == m_lead.id,
+                    LeadAnswer.conversation_id == conversacion.id,
                     LeadAnswer.ad_id != None
                 ).order_by(LeadAnswer.created_at.desc()).first()
                 if la:

@@ -7,7 +7,7 @@ DENY_TABLES = {
     'ai_usage', 'conversational_messages', 'ig_mensajes', 'bug_report_messages', 'notifications',
     'comment_notifications', 'job_applications', 'job_application_votes', 'job_application_clarity_weights',
     'hiring_config', 'hiring_forms', 'assistant_applications', 'assistant_application_clarity_weights',
-    'alembic_version',
+    'alembic_version', 'intentos_limitados',
 }
 
 # `users` no es fuente (tiene staff y credenciales): solo se ven estas columnas como padre.

@@ -4,7 +4,7 @@ cómo se sirven (de a un pedazo) y los casos de éxito de la Academia en la pág
 
 import pytest
 
-from app.agendas_v2 import api_publico, servicio, videos
+from app.agendas_v2 import servicio, videos
 from app.agendas_v2.nucleo.eventos import config_de
 from app.agendas_v2.nucleo.normalizar import normal_gracias
 from app.services.learnation_service import LearnationAPIError, LearnationService
@@ -24,14 +24,12 @@ CASO = {
 
 @pytest.fixture(autouse=True)
 def _limpio(monkeypatch, tmp_path):
-    api_publico._pedidos.clear()
     servicio._casos.update({'en': 0.0, 'lista': []})
     monkeypatch.setenv('AGENDAS_VIDEOS_DIR', str(tmp_path / 'videos'))
     monkeypatch.setattr(
         LearnationService, 'get_success_cases', staticmethod(lambda: {'success': True, 'cases': [CASO]})
     )
     yield
-    api_publico._pedidos.clear()
 
 
 @pytest.fixture()

@@ -81,7 +81,7 @@ const Ficha = ({ fila, mensajes, onCerrar, onCorregir }) => {
     const [historia, setHistoria] = useState(null);
     useEffect(() => {
         const control = new AbortController();
-        api.get('/manychat-webhook/log', { params: { lead_id: fila.lead_id, limit: 200 }, signal: control.signal })
+        api.get('/marketing/entrantes/log', { params: { lead_id: fila.lead_id, limit: 200 }, signal: control.signal })
             .then((r) => setHistoria(r.data))
             .catch((e) => { if (e?.name !== 'CanceledError') setHistoria([]); });
         return () => control.abort();
@@ -131,7 +131,7 @@ const EntrantesVista = ({ desde, hasta, version = 0 }) => {
     const [intento, setIntento] = useState(0);
     // Recordado por período: volver a la pestaña no vuelve a pedirlo (cacheDeVistas).
     const { datos, error: fallo, setDatos } = useDatosCacheados(`mk:entrantes:${desde}:${hasta}`,
-        (signal) => api.get('/manychat-webhook/entrantes', { params: { desde, hasta }, signal }).then((r) => r.data),
+        (signal) => api.get('/marketing/entrantes', { params: { desde, hasta }, signal }).then((r) => r.data),
         { version: version + intento, onError: () => toast.error('No se pudieron cargar los entrantes.') });
     const error = fallo ? 'No se pudieron cargar los entrantes.' : null;
 
@@ -150,7 +150,7 @@ const EntrantesVista = ({ desde, hasta, version = 0 }) => {
             return;
         }
         try {
-            await api.put(`/manychat-webhook/lead/${fila.lead_id}/calificacion`, { estado: valor });
+            await api.put(`/marketing/entrantes/lead/${fila.lead_id}/calificacion`, { estado: valor });
             const estado = valor !== 'sin_dato' ? valor : (fila.ultimo_respondido?.id ? 'en_conversacion' : 'sin_respuesta');
             const nueva = { ...fila, estado };
             setDatos((d) => ({ ...d, filas: d.filas.map((f) => (f.lead_id === fila.lead_id ? nueva : f)) }));

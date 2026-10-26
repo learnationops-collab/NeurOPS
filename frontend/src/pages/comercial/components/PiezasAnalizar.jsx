@@ -71,7 +71,7 @@ export const Tabs = ({ valor, onChange, ops, aria }) => (
         {ops.map(([key, label, Icono]) => (
             <button key={key} type="button" className="tab tab--sm" role="tab"
                 aria-selected={valor === key} onClick={() => onChange(key)}>
-                <Icono size={13} />{label}
+                {Icono && <Icono size={13} />}{label}
             </button>
         ))}
     </div>

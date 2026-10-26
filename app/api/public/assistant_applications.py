@@ -20,6 +20,7 @@ from app import db
 from app.models import AssistantApplication, HiringConfig, HiringForm
 from app.models.assistant_application import pais_limpio
 from app.api.public import bp
+from app.services.limite_intentos import limitar
 from app.services import hiring_forms
 
 MAX_CORTO = 300
@@ -195,6 +196,7 @@ def ver_assistant_form():
 
 
 @bp.route('/public/assistant-applications', methods=['POST'])
+@limitar('assistant-applications', 120, 10 * 60)
 def crear_assistant_application():
     """Alta/actualización de una postulación a Asistente.
 

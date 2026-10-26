@@ -9,13 +9,13 @@ CORS: solo los origenes propios pueden leer respuestas de /api/* con credenciale
 """
 import pytest
 
-# Blueprints exentos de CSRF. Los publicos (public_api, manychat, webhooks, sheets, metrics,
+# Blueprints exentos de CSRF. Los publicos (public_api, webhooks, sheets, metrics,
 # backup, google_calendar_bp, agendas_v2_publico, instagram_webhook) no tienen sesion detras; los external usan token
 # Bearer propio. agendas_v2_publico es la pagina de reserva del lead: solo lee la version publicada
 # de un evento y recibe reservas, nunca actua con la sesion de quien la abre.
 EXENTOS = {
     'public_api', 'external_academy_api', 'external_dev_platform_api', 'google_calendar_bp',
-    'backup', 'manychat', 'sheets', 'metrics', 'agendas_v2_publico', 'instagram_webhook',
+    'backup', 'sheets', 'metrics', 'agendas_v2_publico', 'instagram_webhook',
 }
 ORIGENES_PERMITIDOS = [
     'http://localhost:5173', 'http://localhost:3000', 'https://work.thelearnation.com',
@@ -83,8 +83,7 @@ def test_un_bearer_tampoco_evita_el_csrf_en_rutas_no_exentas(client, make_user, 
     assert con_token.status_code == 200
 
 
-@pytest.mark.parametrize('ruta', ['/api/public/lead-roadmap/update-client',
-                                  '/api/manychat-webhook', '/api/v1/metrics/track-visit'])
+@pytest.mark.parametrize('ruta', ['/api/public/lead-roadmap/update-client', '/api/v1/metrics/track-visit'])
 def test_las_rutas_exentas_no_piden_csrf(client, csrf_enabled, ruta):
     respuesta = client.post(ruta, json={})
 

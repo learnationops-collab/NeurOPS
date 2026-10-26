@@ -8,7 +8,6 @@ import ReportBacklogTogglePanel from '../../../components/operations/ReportBackl
 import BugReportsPanel from '../../../components/operations/BugReportsPanel';
 import PlaybookAdminPanel from '../../../components/operations/PlaybookAdminPanel';
 import BackupPage from '../../admin/backup/BackupPage';
-import RestorePage from '../../admin/backup/RestorePage';
 import VentasParaRevisar from './VentasParaRevisar';
 
 /**
@@ -28,8 +27,8 @@ export const ETIQUETAS_TECNICAS = {
     operations: 'Operaciones Críticas',
     // El respaldo completo de la base (todas las tablas, con la clave de BACKUP_SECRET_KEY): era del panel
     // de «Administración» y solo se abría por URL hasta el 10/10/2026.
+    // La pestaña «Restaurar» se fue el 26/10/2026: se restaura a mano con pg_restore.
     respaldo: 'Respaldo',
-    restaurar: 'Restaurar',
     // Las ventas activas con un motivo de revisión (21/10/2026): se abren en la ficha.
     ventas_revisar: 'Ventas para revisar',
 };
@@ -49,7 +48,6 @@ const SeccionTecnica = ({ id, embebido = false }) => {
         // son de Marketing (el mismo generador está en /admin/marketing).
         case 'operations': return <OperationsPage />;
         case 'respaldo': return <BackupPage embebido />;
-        case 'restaurar': return <RestorePage embebido />;
         case 'ventas_revisar': return <VentasParaRevisar />;
         default: return null;
     }

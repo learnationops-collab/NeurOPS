@@ -28,7 +28,7 @@ dotenv.load_dotenv = lambda *args, **kwargs: False
 # no dependa del shell de quien lo corre, ni pueda hablar con un servicio real.
 VARIABLES_A_LIMPIAR = (
     'ACADEMY_API_TOKEN', 'ACADEMY_INBOUND_API_TOKEN', 'ACADEMY_SUBSCRIPTIONS_PUSH', 'DEV_PLATFORM_INBOUND_API_TOKEN',
-    'BACKUP_SECRET_KEY', 'MANYCHAT_WEBHOOK_TOKEN', 'INGEST_API_TOKEN', 'INTEGRATIONS_AUTH_MODE',
+    'BACKUP_SECRET_KEY', 'INGEST_API_TOKEN', 'INTEGRATIONS_AUTH_MODE',
     'AGENDAS_SOURCE_TZ', 'CRON_SECRET', 'CLIENT_ID', 'CLIENT_SECRET',
     'REDIRECT_URI_PROD', 'REDIRECT_URI_DEV', 'FRONTEND_URL',
     'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REDIRECT_URI',
@@ -105,6 +105,8 @@ def app():
         META_PIXEL_ID = None
         SESSION_COOKIE_SECURE = False
         REMEMBER_COOKIE_SECURE = False
+        # Los tests repiten logins y formularios en bucle; el que prueba el límite lo prende a mano.
+        RATE_LIMIT_ENABLED = False
 
     flask_app = create_app(TestConfig)
     flask_app.test_client_class = ClienteDeTests

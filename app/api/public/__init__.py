@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from app.access_policy import es_llamada_de_confianza
 from app.models import db, Event, Client, Appointment, SurveyAnswer, SurveyQuestion, User, Notification
 from app.services.booking_service import BookingService
+from app.services.limite_intentos import limitar
 from datetime import datetime, date, timedelta
 from sqlalchemy import or_
 import json
@@ -100,6 +101,7 @@ def get_funnel_by_source(utm_source):
         return jsonify({"error": "Error interno al cargar la información del evento"}), 500
 
 @bp.route('/public/clients/check', methods=['POST'])
+@limitar('clients-check', 30, 10 * 60)
 def check_client_exists():
     data = request.get_json() or {}
     email = data.get('email')
@@ -119,12 +121,11 @@ def check_client_exists():
         client = Client.query.filter(or_(Client.instagram == ig_username, Client.instagram == f"@{ig_username}")).first()
     
     if client:
-        datos = {
-            "id": client.id,
-            "full_name": client.full_name,
-            "phone": client.phone,
-            "instagram": client.instagram,
-        }
+        # A un anónimo solo el id: con un Instagram (público) se sacaba el teléfono de cualquier lead. La página
+        # de reservas deja vacío lo que no viene y el lead lo completa.
+        datos = {"id": client.id}
+        if es_llamada_de_confianza():
+            datos.update(full_name=client.full_name, phone=client.phone, instagram=client.instagram)
         # Ruta publica (la pagina de reservas precarga el formulario de quien ya conocemos): a un anonimo no se
         # le devuelven las respuestas de la encuesta, que la pagina ni usa. Solo a un usuario o a un sistema
         # con el secreto de ingesta (n8n, Apps Script).
@@ -134,6 +135,7 @@ def check_client_exists():
     return jsonify({"exists": False}), 200
 
 @bp.route('/public/submit-lead', methods=['POST'])
+@limitar('submit-lead', 30, 10 * 60)
 def submit_lead():
     data = request.get_json() or {}
     email = data.get('email')
@@ -149,6 +151,7 @@ def submit_lead():
     return jsonify({"id": client.id, "message": "Lead saved"}), 200
 
 @bp.route('/public/submit-survey', methods=['POST'])
+@limitar('submit-survey', 30, 10 * 60)
 def submit_survey():
     data = request.get_json() or {}
     client_id = data.get('client_id')
@@ -197,6 +200,7 @@ def get_public_slots():
     return jsonify(all_slots), 200
 
 @bp.route('/public/book', methods=['POST'])
+@limitar('book', 30, 10 * 60)
 def book_appointment():
     data = request.get_json() or {}
     

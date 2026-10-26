@@ -159,10 +159,18 @@ const TABS_ESTADOS = [['grafico', 'Gráfico', PieChart], ['tabla', 'Tabla', Rows
  * carguen el show up y el close rate quedan medidos de menos— vive en el tooltip y no en una nota
  * debajo: el diseño no lleva texto en el panel.
  */
+// Los estados de las primeras llamadas y los de las segundas, por separado (26/10/2026): el show up
+// de las 1ª no es el de las 2ª. «Todas» es el panel de siempre.
+const TABS_LLAMADA = [['primera', '1ª llamada'], ['segunda', '2ª llamada'], ['todas', 'Todas']];
+
 const PanelEstados = ({ bloque, irA }) => {
     const [vista, setVista] = useState('grafico');
-    const total = bloque.agendas;
-    const sinReporte = bloque.estados.find(e => e.key === 'sin_reporte');
+    const porLlamada = bloque.estados_por_llamada;
+    const [llamada, setLlamada] = useState(porLlamada ? 'primera' : 'todas');
+    const elegida = llamada !== 'todas' && porLlamada?.[llamada];
+    const total = elegida ? elegida.agendas : bloque.agendas;
+    const estados = elegida ? elegida.estados : bloque.estados;
+    const sinReporte = estados.find(e => e.key === 'sin_reporte');
     return (
         <Panel id="p-estados" cab={
             <PanelCab titulo="Estados"
@@ -171,6 +179,7 @@ const PanelEstados = ({ bloque, irA }) => {
                         + `${sinReporte.n === 1 ? 'pasó' : 'pasaron'} sin reporte: hasta que se carguen, `
                         + 'el show up y el close rate quedan medidos de menos.'
                     : ''}`}>
+                {porLlamada && <Tabs valor={llamada} onChange={setLlamada} ops={TABS_LLAMADA} aria="Tipo de llamada" />}
                 <Tabs valor={vista} onChange={setVista} ops={TABS_ESTADOS} aria="Vista de estados" />
                 <small className="est-total num">
                     <b>{fmt.num(total)}</b> {total === 1 ? 'agenda' : 'agendas'}
@@ -178,8 +187,8 @@ const PanelEstados = ({ bloque, irA }) => {
             </PanelCab>
         }>
             {total === 0
-                ? <Vacio texto="Sin agendas en el período." />
-                : <RepartoEstados estados={bloque.estados} vista={vista} irA={irA} />}
+                ? <Vacio texto={llamada === 'segunda' ? 'Sin segundas llamadas en el período.' : 'Sin agendas en el período.'} />
+                : <RepartoEstados key={llamada} estados={estados} vista={vista} irA={irA} />}
             {/* Los que el formulario corta no son agendas: pueden ser lo único del período. */}
             {(total > 0 || bloque.descalificadas?.formulario > 0)
                 && <TiraDescalificadas datos={bloque.descalificadas} irA={irA} />}
@@ -829,12 +838,14 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, fuentes, irA, cargarNoCer
     <>
         <div className="grid grid--4">
             <Tile label="Show up" valor={fmt.pct(bloque.show_up)} color={v('success')}
-                help={'De las llamadas que ya tuvieron un resultado, qué porcentaje se presentó. Mide '
-                    + 'la calidad de la agenda y de la confirmación previa, no el cierre. Las canceladas '
-                    + 'y las reagendadas no entran: esa llamada no ocurrió.'}
+                help={'De los leads cuya llamada ya tuvo un resultado, qué porcentaje se presentó al menos '
+                    + 'una vez (1ª y 2ª llamada juntas). Mide la calidad de la agenda y de la confirmación '
+                    + 'previa, no el cierre. Las canceladas y las reagendadas no entran: esa llamada no ocurrió.'}
                 delta={deltas.show_up}
                 humo={[v('success'), v('info'), v('brand-primary'), v('success')]}
-                sub={`${bloque.asistieron} de ${fmt.plural(bloque.realizadas, 'realizada', 'realizadas')}`}
+                sub={bloque.leads_realizadas !== undefined
+                    ? `${bloque.leads_asistieron} de ${fmt.plural(bloque.leads_realizadas, 'lead', 'leads')}`
+                    : `${bloque.asistieron} de ${fmt.plural(bloque.realizadas, 'realizada', 'realizadas')}`}
                 ver={abrir(irA, D.show_up)} baja="p-estados" />
             {/* Los dos tiles de tasa llevan al NUMERADOR de su tasa, que es lo que se viene a
                 buscar. La contradiccion que esto genera —arriba la tasa del tile, abajo la misma

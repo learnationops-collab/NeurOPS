@@ -2,8 +2,8 @@
 (docs/plan_segmentos_triage.md §2.1 y §8.8) y activa la segmentación con la versión 2026-11.
 
 Cambios (todos idempotentes: correrlo dos veces deja lo mismo):
-  - Inversión: «Menos de $200 USD» nueva (3); «$500 a $1000» pasa a «Más de $500 USD» (8) y se quita
-    «Más de $1000» (también de las reglas que la nombraban).
+  - Inversión: solo puntos, sobre las opciones que dejó Mario el 26/10 (más de $2000 y $1000–$2000: 10 ·
+    $500–$1000: 8 · $200–$500: 6 · «podría conseguir ayuda» y «no estoy dispuesto»: 0).
   - Examen: Ecuador (4), Chile (6) y Panamá (6) antes de «Otro».
   - Decide queda como siempre (depende de mí 4 · necesito apoyo 0). Con --quien-decide pasa a «¿Quién más
     participa de esta decisión?» Solo yo (4) · Mi pareja / Mis padres / Otra persona (0); sin el flag vuelve a
@@ -31,12 +31,13 @@ from app.agendas_v2.modelos import SchedFormulario  # noqa: E402
 
 FORM_ID = 'dg6gukz9emx'
 INVERSION, ETAPA, EXAMEN, DECIDE = 'qglxqqlsgya', 'qg8xclvqc4c', 'qg6raaks2pe', 'qgnajtuxkuz'
-MAS_DE_1000 = 'ogmgmpvwtgt'
-# Máximo 24 (Inversión 8 + Etapa 6 + Examen 6 + Decide 4): los cortes de Mario, 18/14/8 puntos, son 75/58/33%.
-SEGMENTO = {'activo': True, 'a': 75, 'b': 58, 'c': 33, 'sigma': 12, 'version': '2026-11'}
+# Máximo 26 (Inversión 10 + Etapa 6 + Examen 6 + Decide 4): los cortes de Mario, 18/14/8 puntos, son 69/53/30%.
+SEGMENTO = {'activo': True, 'a': 69, 'b': 53, 'c': 30, 'sigma': 12, 'version': '2026-11'}
 
 PUNTOS = {
-    INVERSION: {'oglxqqlugub': 0, 'og-menos-200': 3, 'oglxqq0u44o': 6, 'ogmdr0s275v': 8},
+    # Las opciones de Inversión son las que dejó Mario el 26/10 (10 · 10 · 8 · 6 · 0 · 0); no se tocan.
+    INVERSION: {'ogmgmpvwtgt': 10, 'oa9pmy94tfg': 10, 'ogmdr0s275v': 8, 'oglxqq0u44o': 6, 'o8slpjgvje7': 0,
+                'oglxqqlugub': 0},
     ETAPA: {'og8xclet205': 0, 'og8xclf4go4': 6, 'og94zlvu9m2': 6, 'og9azfspw7e': 3, 'og9ed3qtpzx': 3},
     # MIR baja a 2: España no es mercado prioritario (Mario, 24/10/2026).
     EXAMEN: {'og77bdut6ym': 6, 'og7cr7tiwh9': 2, 'og6raas2nv9': 6, 'og-ecuador': 4, 'og-chile': 6, 'og-panama': 6,
@@ -74,13 +75,6 @@ def preparar(datos, quien_decide=False):
     if faltan:
         raise SystemExit(f'Faltan preguntas en el formulario: {faltan}')
 
-    inv = preguntas[INVERSION]['opciones']
-    _insertar(inv, _op('og-menos-200', 'Menos de $200 USD.'), despues_de='oglxqqlugub')
-    for o in inv:
-        if o['id'] == 'ogmdr0s275v':
-            o['texto'] = 'Más de $500 USD.'
-    preguntas[INVERSION]['opciones'] = [o for o in inv if o['id'] != MAS_DE_1000]
-
     exa = preguntas[EXAMEN]['opciones']
     for id_, texto in (('og-ecuador', 'Examen de residencias | Ecuador'), ('og-chile', 'EUNACOM | Chile'),
                        ('og-panama', 'Examen de residencias | Panamá')):
@@ -106,9 +100,6 @@ def preparar(datos, quien_decide=False):
             if o['id'] in puntos:
                 o['puntos'] = puntos[o['id']]
 
-    for r in datos.get('reglas') or []:
-        for c in r.get('cond') or []:
-            c['ops'] = [x for x in c.get('ops') or [] if x != MAS_DE_1000]
     datos['segmento'] = dict(SEGMENTO)
     return datos
 

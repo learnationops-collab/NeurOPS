@@ -8,7 +8,8 @@ import {
 } from './backupApi';
 import ListaTablas from './ListaTablas';
 
-// Respaldo de la base (script SQL). Solo admin: la ruta ya lo exige y el servidor lo vuelve a comprobar.
+// Respaldo de la base (pg_dump, .dump). Admin u operador: la ruta ya lo exige y el servidor lo vuelve a comprobar.
+// Se restaura a mano con pg_restore (docs/seguridad_despliegue.md), no desde la web.
 // La clave (BACKUP_SECRET_KEY) la escribe la persona: no está en el código ni se guarda en el navegador.
 const BackupPage = ({ embebido = false }) => {
     const [clave, setClave] = useState('');
@@ -47,7 +48,7 @@ const BackupPage = ({ embebido = false }) => {
             const url = window.URL.createObjectURL(res.data);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `neurops_backup_${new Date().toISOString().slice(0, 10)}.sql`;
+            a.download = `neurops_backup_${new Date().toISOString().slice(0, 10)}.dump`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -69,7 +70,7 @@ const BackupPage = ({ embebido = false }) => {
                     </div>
                     <div>
                         <h1 className="text-2xl font-bold text-white mb-2">Respaldo de Base de Datos</h1>
-                        <p className="text-neutral-400">Generación de script SQL (PostgreSQL)</p>
+                        <p className="text-neutral-400">Copia completa con pg_dump (.dump). Se restaura con pg_restore.</p>
                     </div>
                 </div>
 
@@ -142,7 +143,7 @@ const BackupPage = ({ embebido = false }) => {
                     {status === 'success' && (
                         <div className="flex items-center gap-2 text-green-400 bg-green-400/10 p-3 rounded-lg w-full text-sm">
                             <CheckCircle className="w-4 h-4" />
-                            <span>¡Archivo SQL descargado correctamente!</span>
+                            <span>¡Backup descargado correctamente!</span>
                         </div>
                     )}
 
@@ -159,12 +160,12 @@ const BackupPage = ({ embebido = false }) => {
                         {status === 'downloading' ? (
                             <>
                                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                <span>Generando SQL...</span>
+                                <span>Generando backup...</span>
                             </>
                         ) : (
                             <>
                                 <Download className="w-5 h-5" />
-                                <span>Descargar Backup SQL</span>
+                                <span>Descargar Backup (.dump)</span>
                             </>
                         )}
                     </button>

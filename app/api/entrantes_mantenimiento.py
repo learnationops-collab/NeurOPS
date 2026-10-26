@@ -1,10 +1,10 @@
-"""Corrección a mano de una interacción desde el monitor de Entrantes (rutas de `manychat.bp`)."""
+"""Corrección a mano de una interacción desde el monitor de Entrantes (rutas de `entrantes.bp`)."""
 from flask import request, jsonify
 from app import db
-from app.api.manychat import bp, logger
+from app.api.entrantes import bp
 
 
-@bp.route('/manychat-webhook/answer/<int:answer_id>', methods=['PUT'])
+@bp.route('/respuesta/<int:answer_id>', methods=['PUT'])
 def update_ad_lead(answer_id):
     """Permite editar manualmente una respuesta/lead en el monitor."""
     from app.models import LeadAnswer

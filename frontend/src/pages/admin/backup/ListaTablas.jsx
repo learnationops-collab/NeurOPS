@@ -2,7 +2,7 @@ import React from 'react';
 import ListaConfigurable from '../../../components/listas/ListaConfigurable';
 import '../../comercial/comercial.css';
 
-/* Tablas de la base y su cantidad de registros: la vista previa de Respaldo y de Restaurar. */
+/* Tablas de la base y su cantidad de registros: la vista previa de Respaldo. */
 const COLUMNAS = [
     { key: 'tabla', header: 'Tabla', width: 'minmax(0,1fr)', fija: true, valor: (t) => t.name,
         render: (t) => <span className="trunc font-mono text-xs text-purple-300">{t.name}</span> },

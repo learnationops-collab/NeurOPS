@@ -359,11 +359,28 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
 
     dias, mejor_dia = _cash_por_dia(ventas, start, end)
 
+    # El show up de la tarjeta es por LEAD, no por llamada (26/10/2026): un lead que asistió a la
+    # 1ª y faltó a la 2ª se presentó. Así las segundas llamadas no inflan la base; cuántas llamadas
+    # fueron de cada tipo lo dice el panel Estados.
+    def persona(f):
+        return ('p', f['person_uuid']) if f.get('person_uuid') else ('c', f['client_id'])
+    leads_realizadas = {persona(f) for f in agendas if f['realizada']}
+    leads_asistieron = {persona(f) for f in agendas if f['asistio']}
+    segundas = [f for f in agendas if f.get('tipo_llamada') == 'segunda']
+    primeras = [f for f in agendas if f.get('tipo_llamada') != 'segunda']
+
     return {
         'agendas': tot_a['agendas'],
         'realizadas': tot_a['realizadas'],
         'asistieron': tot_a['asistieron'],
-        'show_up': tot_a['show_up'],
+        'show_up': pct(len(leads_asistieron), len(leads_realizadas)),
+        'leads_realizadas': len(leads_realizadas),
+        'leads_asistieron': len(leads_asistieron),
+        # Los estados de las primeras llamadas (y las Momentum) y los de las segundas, aparte.
+        'estados_por_llamada': {
+            'primera': {'agendas': len(primeras), 'estados': estados_de(primeras)},
+            'segunda': {'agendas': len(segundas), 'estados': estados_de(segundas)},
+        },
         # El close rate se mide sobre las AGENDAS, no sobre las filas de venta del período: la
         # pregunta es "de los que asistieron, cuántos compraron", y eso solo lo puede contestar
         # el conjunto de llamadas. Las dos cifras no son la misma — una venta del período puede

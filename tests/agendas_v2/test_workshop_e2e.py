@@ -16,7 +16,7 @@ import pytest
 import pytz
 from freezegun import freeze_time
 
-from app.agendas_v2 import api_publico, servicio
+from app.agendas_v2 import servicio
 from app.agendas_v2.modelos import SchedIntento
 from app.agendas_v2.nucleo.eventos import config_de
 from app.models import Appointment, Client, GoogleCalendarToken
@@ -48,11 +48,9 @@ SIN_PLATA = {'inv': 'nada'}                         # la respuesta descalifica: 
 
 @pytest.fixture(autouse=True)
 def _reloj():
-    api_publico._pedidos.clear()
     servicio._google_cache.clear()
     with freeze_time('2026-10-05 12:00:00'):
         yield
-    api_publico._pedidos.clear()
 
 
 @pytest.fixture(autouse=True)
@@ -164,7 +162,6 @@ class Lead:
         self.client, self.origen = client, origen
         self.contacto = {'c-nombre': f'Lead {n}', 'c-telefono': f'7100000{n}', 'c-email': f'lead{n}@correo.com',
                          'c-instagram': f'lead{n}'}
-        api_publico._pedidos.clear()  # cada lead llega desde su propia IP
 
     def abrir(self):
         r = self.client.get(LINK)

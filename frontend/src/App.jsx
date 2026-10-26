@@ -287,11 +287,10 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            {/* Respaldo y restauración de la base: desde el 10/10/2026 son pestañas de Operaciones › Datos
-                (admin u operador; el servidor lo vuelve a exigir, además de la clave BACKUP_SECRET_KEY que
-                escribe la persona en la pantalla). Antes eran páginas sueltas del admin, sin enlace. */}
+            {/* Respaldo de la base: desde el 10/10/2026 es una pestaña de Operaciones › Datos (admin u
+                operador; el servidor lo vuelve a exigir, además de la clave BACKUP_SECRET_KEY que escribe la
+                persona en la pantalla). La restauración desde la web se retiró el 26/10/2026 (pg_restore a mano). */}
             <Route path="/admin/backup" element={<Navigate to="/ops/dashboard?step=datos&tab=respaldo" replace />} />
-            <Route path="/admin/restore" element={<Navigate to="/ops/dashboard?step=datos&tab=restaurar" replace />} />
             <Route
               path="/ops/course-editor"
               element={

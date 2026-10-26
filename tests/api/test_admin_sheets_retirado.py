@@ -5,8 +5,9 @@ usaba esa pantalla.
 - GET /api/sheets/sync: la sincronización manual que esa pestaña pedía antes de cargar. Con Ventas_DB
   respondía 500 «disabled» (la sincronización destructiva está apagada), así que fallaba siempre.
 
-Se quedan los que usa otra cosa: el cron (/api/sheets/cron-sync, con CRON_SECRET), el alta de ventas
-hacia la hoja (/api/sheets/push) y la atribución manual de «Sin Anuncio» (UnattributedLeadsPage).
+Se quedan los que usa otra cosa: el cron (/api/sheets/cron-sync, con CRON_SECRET) y la atribución manual
+de «Sin Anuncio» (UnattributedLeadsPage). El alta de ventas hacia la hoja (/api/sheets/push) se retiró el
+26/10/2026: no tenía llamadores y dejaba crear ventas a cualquier rol logueado.
 """
 import pytest
 
@@ -18,6 +19,7 @@ def _reglas(app):
 @pytest.mark.parametrize('metodo,ruta', [
     ('GET', '/api/public/reports/sales-attribution'),
     ('GET', '/api/sheets/sync'),
+    ('POST', '/api/sheets/push'),
 ])
 def test_los_endpoints_de_la_pantalla_ya_no_existen(app, metodo, ruta):
     assert (metodo, ruta) not in _reglas(app)
@@ -25,7 +27,6 @@ def test_los_endpoints_de_la_pantalla_ya_no_existen(app, metodo, ruta):
 
 @pytest.mark.parametrize('metodo,ruta', [
     ('GET', '/api/sheets/cron-sync'),
-    ('POST', '/api/sheets/push'),
     ('POST', '/api/public/marketing/manual-attribution'),
     ('POST', '/api/public/marketing/manual-attribution-agenda'),
     ('GET', '/api/public/marketing/unattributed-leads'),

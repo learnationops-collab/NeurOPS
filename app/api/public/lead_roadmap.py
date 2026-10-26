@@ -26,7 +26,7 @@ def get_lead_roadmap():
         name = request.args.get('name', type=str)
 
         client = None
-        manychat_lead = None
+        conversacion = None
         financial_agendas = []
         financial_sales = []
         appointments = []
@@ -97,11 +97,11 @@ def get_lead_roadmap():
         # de la fila con ese instagram (`lead_por_ig`).
         from app.services.conversaciones_service import de_persona as lead_de_persona
         from app.services import lead_contacto_service
-        manychat_lead = lead_de_persona(puuid)
-        if not manychat_lead and resolved_ig:
-            manychat_lead = lead_contacto_service.lead_por_ig(resolved_ig)
-        if not manychat_lead and resolved_email:
-            manychat_lead = Conversation.query.filter(func.lower(Conversation.ig) == resolved_email).first() # Fallback a veces guardado como email
+        conversacion = lead_de_persona(puuid)
+        if not conversacion and resolved_ig:
+            conversacion = lead_contacto_service.lead_por_ig(resolved_ig)
+        if not conversacion and resolved_email:
+            conversacion = Conversation.query.filter(func.lower(Conversation.ig) == resolved_email).first() # Fallback a veces guardado como email
 
         # 4. Buscar FinancialAgendas
         # Las de su persona; por la copia, solo las agendas sin persona (Etapa 2b).
@@ -111,7 +111,7 @@ def get_lead_roadmap():
         if agenda_filtro is not None:
             financial_agendas = FinancialAgenda.query.filter(agenda_filtro).order_by(FinancialAgenda.date.desc()).all()
         contacto_agenda = financial_agendas[0].contacto() if financial_agendas else {}
-        contacto_lead = lead_contacto_service.contacto(manychat_lead) if manychat_lead else {}
+        contacto_lead = lead_contacto_service.contacto(conversacion) if conversacion else {}
 
         # 5. Buscar FinancialSales: los de su persona y su ficha; la copia del pago (mail, instagram)
         # cuenta solo en pagos sin persona (docs/plan_personas.md, Etapa 2b).
@@ -143,15 +143,15 @@ def get_lead_roadmap():
                 })
 
         # Si no hay absolutamente nada, retornamos un 404
-        if not client and not manychat_lead and not financial_agendas and not financial_sales:
+        if not client and not conversacion and not financial_agendas and not financial_sales:
             return jsonify({"error": "Lead no encontrado en el sistema"}), 404
 
         # Determinar la fecha de creación del lead
         created_at_val = None
         if client and client.created_at:
             created_at_val = client.created_at.isoformat()
-        elif manychat_lead and manychat_lead.created_at:
-            created_at_val = manychat_lead.created_at.isoformat()
+        elif conversacion and conversacion.created_at:
+            created_at_val = conversacion.created_at.isoformat()
         elif financial_agendas:
             # Usar el registro (creación) de la agenda más antigua (el final de la lista ordenada por date desc)
             created_at_val = financial_agendas[-1].registro or (financial_agendas[-1].date.isoformat() if financial_agendas[-1].date else None)
@@ -170,10 +170,10 @@ def get_lead_roadmap():
             # financial_agendas[0].lead: cuando el mismo telefono/mail tiene varias agendas y la
             # mas reciente es una de las historicas sin `lead` cargado (ver Bug agendas viejas),
             # ese [0] queda vacio y no debe pisar el nombre que sabiamos que era el correcto.
-            "full_name": client.full_name if client else (clean_name or (contacto_lead['nombre'] if manychat_lead else (contacto_venta['nombre_cliente'] if financial_sales else (contacto_agenda.get('lead') if financial_agendas else "Desconocido")))),
-            "email": client.email if client else (contacto_lead['ig'] if manychat_lead and '@' in (contacto_lead['ig'] or '') else (contacto_venta['mail_cliente'] if financial_sales else (contacto_agenda.get('mail') if financial_agendas else "Sin Email"))),
+            "full_name": client.full_name if client else (clean_name or (contacto_lead['nombre'] if conversacion else (contacto_venta['nombre_cliente'] if financial_sales else (contacto_agenda.get('lead') if financial_agendas else "Desconocido")))),
+            "email": client.email if client else (contacto_lead['ig'] if conversacion and '@' in (contacto_lead['ig'] or '') else (contacto_venta['mail_cliente'] if financial_sales else (contacto_agenda.get('mail') if financial_agendas else "Sin Email"))),
             "phone": client.phone if client else (contacto_venta['telefono'] if financial_sales else (contacto_agenda.get('whatsapp') if financial_agendas else "Sin Teléfono")),
-            "instagram": client.instagram if client else (contacto_lead['ig'] if manychat_lead else (contacto_venta['instagram'] if financial_sales else (contacto_agenda.get('instagram') if financial_agendas else "Sin Instagram"))),
+            "instagram": client.instagram if client else (contacto_lead['ig'] if conversacion else (contacto_venta['instagram'] if financial_sales else (contacto_agenda.get('instagram') if financial_agendas else "Sin Instagram"))),
             "status": "Entrante",
             "created_at": created_at_val,
             "objeciones": client.objeciones if client else "",
@@ -198,16 +198,16 @@ def get_lead_roadmap():
             "completed": True,
             "date": lead_profile["created_at"],
             "details": {
-                "origen": manychat_lead.external_id if manychat_lead else "Registro Web/Directo",
-                "canal": "Instagram Ads" if manychat_lead else "Orgánico / Búsqueda",
+                "origen": conversacion.external_id if conversacion else "Registro Web/Directo",
+                "canal": "Instagram Ads" if conversacion else "Orgánico / Búsqueda",
                 "campaña": "N/A",
                 "inversion": 0.0
             }
         }
         # Intentar obtener más detalles del primer contacto o ManyChat
-        if manychat_lead:
+        if conversacion:
             # Buscar la primera respuesta para ver origen
-            first_la = LeadAnswer.query.filter_by(conversation_id=manychat_lead.id).order_by(LeadAnswer.created_at.asc()).first()
+            first_la = LeadAnswer.query.filter_by(conversation_id=conversacion.id).order_by(LeadAnswer.created_at.asc()).first()
             if first_la:
                 arrived_stage["details"]["campaña"] = first_la.keyword or "Instagram Bot"
                 if first_la.opening:
@@ -219,9 +219,9 @@ def get_lead_roadmap():
         contact_date = lead_profile["created_at"]
         contact_completed = False
         contact_msg = "Mensaje del bot gatillado"
-        if manychat_lead:
+        if conversacion:
             contact_completed = True
-            first_la = LeadAnswer.query.filter_by(conversation_id=manychat_lead.id).order_by(LeadAnswer.created_at.asc()).first()
+            first_la = LeadAnswer.query.filter_by(conversation_id=conversacion.id).order_by(LeadAnswer.created_at.asc()).first()
             if first_la:
                 contact_date = first_la.created_at.isoformat()
                 contact_msg = f"Keyword: {first_la.keyword} - Opción: {first_la.id_option_send or 'N/A'}"
@@ -236,8 +236,8 @@ def get_lead_roadmap():
             "completed": contact_completed,
             "date": contact_date,
             "details": {
-                "accion": "Inició conversación" if manychat_lead else "Registro Directo",
-                "medio": "Instagram" if manychat_lead else "Web",
+                "accion": "Inició conversación" if conversacion else "Registro Directo",
+                "medio": "Instagram" if conversacion else "Web",
                 "mensaje": contact_msg
             }
         })
@@ -270,9 +270,9 @@ def get_lead_roadmap():
                         pain_date = sa.appointment.start_time.isoformat() if sa.appointment else datetime.utcnow().isoformat()
 
         # Si no se encontraron dolores en las encuestas, buscar en ManyChat
-        if not pain_completed and manychat_lead:
+        if not pain_completed and conversacion:
             # Buscar respuestas con categoría dolor en conversational_messages
-            pain_answers = LeadAnswer.query.filter_by(conversation_id=manychat_lead.id).all()
+            pain_answers = LeadAnswer.query.filter_by(conversation_id=conversacion.id).all()
             for pa in pain_answers:
                 if pa.keyword and ("dolor" in pa.keyword.lower() or "pain" in pa.keyword.lower()):
                     pain_completed = True
@@ -384,7 +384,7 @@ def get_lead_roadmap():
             }
         })
 
-        activity = build_activity(lead_profile, arrived_stage, manychat_lead, financial_agendas, appointments,
+        activity = build_activity(lead_profile, arrived_stage, conversacion, financial_agendas, appointments,
                                   financial_sales, comments, client)
 
         # Ventas resumen

@@ -1,7 +1,7 @@
 """Lo que el motor deja para los tableros de hoy: las mismas filas que el webhook de ManyChat (19/10/2026).
 
 Rendimiento, Entrantes, Conversaciones, «Mis agendas» y los números del setter leen `Conversation` y
-`LeadAnswer` (ver `app/api/manychat.py`). Para que apagar ManyChat no los deje sin datos, el motor las
+`LeadAnswer` (ver `app/api/entrantes.py`). Para que apagar ManyChat no los deje sin datos, el motor las
 escribe con el mismo significado, sin pasar por el webhook ni tocarlo:
 
   · La persona: una `Conversation` con `external_id = 'ig:<IGSID>'`, su nombre, su usuario de Instagram

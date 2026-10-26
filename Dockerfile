@@ -46,6 +46,13 @@ RUN apt-get update && apt-get install -y \
     fonts-dejavu \
     && rm -rf /var/lib/apt/lists/*
 
+# pg_dump para el respaldo (app/api/backup.py). Tiene que ser 17 como la base de Railway (un pg_dump más
+# viejo se niega a volcar un servidor más nuevo), y Debian trae otra versión: sale del repositorio PGDG.
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates postgresql-common \
+    && /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
+    && apt-get install -y --no-install-recommends postgresql-client-17 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy backend requirements
 COPY requirements.txt .
 

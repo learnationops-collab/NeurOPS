@@ -1,4 +1,6 @@
 import os
+from datetime import timedelta
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -29,6 +31,10 @@ class Config:
         # de Instagram. 15 por worker, lejos del max_connections de 500 de producción.
         SQLALCHEMY_ENGINE_OPTIONS = {"pool_size": 5, "max_overflow": 10, "pool_pre_ping": True}
     
+    # Límite de intentos del login y los formularios públicos (app/services/limite_intentos.py).
+    # RATE_LIMIT_ENABLED=0 en Railway lo apaga sin desplegar.
+    RATE_LIMIT_ENABLED = os.environ.get('RATE_LIMIT_ENABLED', '1') != '0'
+
     # Webhooks
     VENTAS_WEBHOOK = os.environ.get('VENTAS_WEBHOOK')
 
@@ -44,3 +50,7 @@ class Config:
     SESSION_COOKIE_SECURE = _is_prod
     REMEMBER_COOKIE_SECURE = _is_prod
     SESSION_COOKIE_SAMESITE = 'Lax'
+    # Flask-Login no le pone SameSite por defecto: sin esto viajaba en POST entre sitios (CSRF sobre los
+    # blueprints exentos). Y dura 30 días, no el año por defecto.
+    REMEMBER_COOKIE_SAMESITE = 'Lax'
+    REMEMBER_COOKIE_DURATION = timedelta(days=30)

@@ -155,6 +155,18 @@
 /* «Anterior» y «Empezar de nuevo», juntos a la izquierda de la botonera. */
 .dc-shell .fi-atras{display:flex;flex-wrap:wrap;gap:var(--s2);margin-right:auto}
 
+/* ---------- Formulario de a dos (fecha + aviso) ----------
+   Lo corto lado a lado y el párrafo a todo el ancho debajo; en angosto, una columna. El aviso es
+   la casilla y su hora en la misma fila, a la altura del campo de al lado. */
+.dc-shell .fi-form-par{grid-template-columns:repeat(2,minmax(0,1fr))}
+.dc-shell .fi-form-par > .ln-field-wrap:has(textarea){grid-column:1 / -1}
+@media (max-width:560px){
+  .dc-shell .fi-form-par{grid-template-columns:minmax(0,1fr)}
+}
+.dc-shell .fi-aviso{display:flex;align-items:center;gap:var(--s3)}
+.dc-shell .fi-aviso > .ln-choice{flex:none}
+.dc-shell .fi-aviso > :last-child{flex:1;min-width:0}
+
 /* ---------- Lo que falta para seguir ----------
    Una línea y no un bloque: un punto ámbar que late, «Falta» y cada faltante como chip. El
    mínimo de un texto no aparece acá: lo cuenta su barrita debajo del campo. */
