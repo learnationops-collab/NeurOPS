@@ -117,8 +117,26 @@ Hecho sin commitear: campos de triage en `Appointment`, migración `c4e9a1d7f2b8
 
 ## 11. Seguridad
 
-- [ ] Terminar la auditoría de seguridad de Work y corregir los riesgos.
-- [ ] Sacar `INTEGRATIONS_AUTH_MODE=log_only` cuando cada sistema externo mande su secreto (hoy las rutas protegidas dejan pasar llamadas sin credencial).
+Auditoría del 26/10 (autenticación, autorización, superficie externa, inyección y despliegue). Detalle de cada arreglo en la bitácora de octubre.
+
+- [x] Sacar `INTEGRATIONS_AUTH_MODE=log_only` de producción. Una semana de logs: solo pasaban sin secreto ManyChat (apagado) y el formulario viejo de agendas de n8n (en desuso). Comprobado: las rutas protegidas responden 401 sin sesión.
+- [x] Fuera el webhook de ManyChat y su exención de CSRF (`a1028bf5`).
+- [x] Ventas, agendas y simulación (`d0d6ec50`): fuera `/api/sheets/push`, un closer solo corrige sus ventas, `/process` solo closer y admin, la simulación no sobrevive al logout, cookie «remember» con SameSite y 30 días, `clients/check` da solo el id a un anónimo, links de postulaciones solo http(s).
+- [x] El setter solo abre sus leads en `/api/closer/*` por id (`ba966333`).
+- [x] Decidido: el setter puede buscar y editar cualquier lead; editar la ficha deja registro en `SystemLog` (`0660dffa`). Ojo: `GET /api/public/lead-roadmap` le muestra cualquier lead, así que la restricción por id de `ba966333` no impide que lo vea; decidir si se revierte o si se acota también el roadmap.
+- [x] Decidido: el operador es super admin a propósito (no es escalada). El director comercial puede ver sueldos (motor de tablas y Learnito). Un closer puede dar acceso a la Academia sin venta: ya queda registrado en la suscripción (`alta` con motivo y autor) y alargar exige una venta.
+- [ ] Backup con `pg_dump` y sin restauración desde la web (el export casero no escapa comillas en los JSON). En curso.
+- [ ] Límite de intentos en Postgres para el login y los formularios públicos. En curso.
+- [ ] Renombrar en el código las rutas de Entrantes (`/api/manychat-webhook/*` → `/api/marketing/entrantes/*`), sin tocar tablas. En curso.
+- [ ] Motor de tablas y Learnito: agrupar por una columna de texto devuelve valores de todo el equipo a closer, setter, triage y hiring, y los conteos sirven de oráculo (`tablas/motor.py:176`).
+- [ ] Cabeceras de seguridad: CSP, frame-ancestors, HSTS, X-Content-Type-Options (hoy ninguna).
+- [ ] Subir `react-router-dom` (≥6.30.6, open redirect en `SessionEntry` `?next=`) y `axios`.
+- [ ] Bajos: JWT en `?token=` (previews de reportes) y `/session-entry`; sin revocación de JWT ni de la cookie «remember» al cambiar la clave (`token_version`); fórmulas en 4 exportaciones CSV viejas; montos `NaN` y negativos en ventas; ~167 respuestas con `str(e)`; `/api/auth/debug` anónimo; Dockerfile como root; `PUT /auth/me/whatsapp` editable mientras se simula.
+- [ ] Confirmar que se rotaron los 5 webhooks de Discord y las contraseñas por defecto que quedaron en el historial de git.
+- [ ] Postgres de producción expuesto por el proxy TCP público de Railway: evaluar si hace falta.
+- [ ] Palabras clave sin campaña en el Inbox (GUÍA CHILE, MÉTODO y otras): ver con Marketing si siguen con anuncios activos y, si sí, crearles campaña.
+- [ ] Atribución venta → agenda → conversación (`appointments.conversation_id`): decidido dejar vacío el histórico y usar la inferencia solo al leer. Va con Agendas 2.0.
+- [ ] Reemplazar n8n: hoy solo lo justifica el mailing de ingreso por venta nueva (Work le manda la venta). El formulario viejo de agendas que llamaba a Work sin secreto ya no entra.
 
 ## 12. Fuera del código
 
