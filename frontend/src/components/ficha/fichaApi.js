@@ -51,6 +51,8 @@ const RUTAS = {
     // Resultado de la llamada y venta.
     reportar_resultado: (appt, p) => api.post(`/ficha/${appt}/resultado`, p),
     registrar_venta: (appt, p) => api.post(`/ficha/${appt}/venta`, p),
+    // La llamada de triage: asistencia, calificación, pase al closer y low ticket.
+    reportar_triage: (appt, p) => api.post(`/ficha/${appt}/triage`, p),
     // El link de Fathom (grabación y transcripción) de la agenda, aparte del reporte; vacío lo quita.
     guardar_fathom: (appt, p) => api.patch(`/ficha/${appt}/fathom`, p),
 

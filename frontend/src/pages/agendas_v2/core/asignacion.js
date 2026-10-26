@@ -1,7 +1,7 @@
 // Asignación: qué horarios ve el lead y a qué closer va cada uno.
 // Orden: respuestas → regla → prioridad → estrategia de la prioridad → closer por horario.
 
-import { buscar, closers, esCloser, horasSemana, ord, sesionDe } from './datos';
+import { buscar, closers, esCloser, esTriage, horasSemana, ord, sesionDe } from './datos';
 import { GENERICA, agendaOpt, slotsPersona } from './disponibilidad';
 import { calificar, grupoPorReglas } from './formulario';
 
@@ -123,7 +123,7 @@ function asignar(ctx, d, opts = {}) {
         }
     }
 
-    const todos = closers(d).filter(p => horasSemana(p) > 0);
+    const todos = closers(d).filter(p => horasSemana(p) > 0 && !esTriage(d, p));
     if (todos.length) {
         const x = porEstrategia('repartir', todos, slotsDe, { ahora, cargaDe });
         if (x.slots.length) return { ...res, desborde: !!g0, slots: x.slots, regla: (g0 ? g0.nombre + ' sin lugar → ' : '') + 'Todos los closers' };

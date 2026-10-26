@@ -62,49 +62,14 @@ def get_widget_data():
 @login_required
 @admin_required
 def dashboard_config():
-    """
-    Endpoint to get/set dashboard configuration for the admin.
-    Using UserViewSetting model (id: generic dashboard_layout)
-    """
-    from app.models import UserViewSetting, db
+    """El layout del dashboard del admin, guardado en su configuración (`user_settings`)."""
     from flask_login import current_user
-
-    if request.method == 'GET':
-        setting = UserViewSetting.query.filter_by(
-            user_id=current_user.id, 
-            view_name='admin_dashboard'
-        ).first()
-        
-        if not setting:
-            # Default configuration: 2 StatTiles + 1 ChartTile
-            default_config = [
-                {"id": "w1", "type": "stat", "metric": "agendas", "w": 1, "h": 2, "x": 0, "y": 0},
-                {"id": "w2", "type": "stat", "metric": "sales", "w": 1, "h": 2, "x": 1, "y": 0},
-                {"id": "w3", "type": "grafico", "metric": "cash_collect", "w": 3, "h": 2, "x": 2, "y": 0}
-            ]
-            return jsonify(default_config), 200
-        
-        return jsonify(setting.settings), 200
+    from app.services import user_settings_service
 
     if request.method == 'POST':
-        config_data = request.json
-        setting = UserViewSetting.query.filter_by(
-            user_id=current_user.id, 
-            view_name='admin_dashboard'
-        ).first()
-        
-        if not setting:
-            setting = UserViewSetting(
-                user_id=current_user.id, 
-                view_name='admin_dashboard',
-                settings=config_data
-            )
-            db.session.add(setting)
-        else:
-            setting.settings = config_data
-        
-        db.session.commit()
+        user_settings_service.guardar(current_user.id, 'admin_dashboard', request.json)
         return jsonify({"message": "Configuración guardada"}), 200
+    return jsonify(user_settings_service.leer(current_user.id, 'admin_dashboard')), 200
 
 @bp.route('/time-series', methods=['GET'])
 @login_required

@@ -1464,7 +1464,7 @@ def _format_appointment_for_deck(a, recover_form=False):
 @bp.route('/deck', methods=['GET'])
 @login_required
 def get_closer_deck():
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'triage', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
         
     date_range = request.args.get('date_range', 'all')
@@ -1584,17 +1584,22 @@ def get_closer_deck():
 
     # No local import needed as they are imported globally
     unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
-    
+    # Las notas nuevas avisan por `avisos_service` (docs/plan_notas_avisos_settings.md): mismo punto.
+    from app.services.avisos_service import personas_con_notas_sin_leer
+    unread_person_uuids = personas_con_notas_sin_leer(current_user)
+
     formatted_appointments = []
     for a in appointments:
         formatted = _format_appointment_for_deck(a)
-        formatted["unread_comment"] = a.client_id in unread_client_ids if a.client_id else False
+        formatted["unread_comment"] = (a.client_id in unread_client_ids if a.client_id else False)             or (a.person_uuid in unread_person_uuids if a.person_uuid else False)
         # Progreso del wizard de confirmación (ver Appointment.confirmation_* en
         # app/models/booking.py) — se agrega acá en vez de en _format_appointment_for_deck para
         # no tocar esa función (en revisión paralela por otro fix sin relación con esto).
         formatted["confirmation_stage"] = a.confirmation_stage
         formatted["confirmation_contact_status"] = a.confirmation_contact_status
         formatted["confirmation_pain_points"] = a.confirmation_pain_points
+        formatted["segmento"] = a.segmento
+        formatted["viene_de_triage"] = bool(a.agenda_triage_id)
         formatted_appointments.append(formatted)
         
     formatted_appointments.sort(key=lambda x: 0 if x.get('unread_comment', False) else 1)
@@ -1615,7 +1620,7 @@ def get_next_appointment():
     navegador de quien mira -- que es lo que hace que, simulando a un closer de otro pais, la
     hora siga siendo la del que simula.
     """
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'triage', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
 
     # Margen hacia atras: una llamada que empezo hace 10 minutos sigue siendo "la de ahora",
@@ -1656,7 +1661,7 @@ def get_next_appointment():
 @bp.route('/deck/counts', methods=['GET'])
 @login_required
 def get_closer_deck_counts():
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'triage', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
 
     _maybe_auto_archive_backlog()
@@ -1863,7 +1868,7 @@ def get_daily_report_status():
     """Consulta si ya existe un reporte guardado para el closer autenticado en una fecha dada
     (hoy por defecto, o ayer — ver `_dia_reportable`) y precarga lo que ya se había escrito
     (slots/reflexión). Dice además si ayer quedó sin reportar, para el aviso de "Cerrar el día"."""
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'triage', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
 
     day_local, hoy, error = _dia_reportable(current_user, request.args.get('date'))
@@ -2022,16 +2027,16 @@ def send_daily_report():
 @bp.route('/deck/<int:appt_id>', methods=['POST'])
 @login_required
 def process_closer_card(appt_id):
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'triage', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
         
     appt = Appointment.query.get_or_404(appt_id)
     # Cualquier closer puede procesar cualquier lead (decisión del usuario: bloquear por dueño
     # no aportaba nada). Si el dueño actual ya no está activo, el lead se reasigna al closer que
     # lo trabaja — para un dueño activo, se edita sin robárselo de su pipeline.
-    if current_user.role not in ('admin', 'closer'):
+    if current_user.role not in ('admin', 'closer', 'triage'):
         return jsonify({"message": "Forbidden"}), 403
-    if current_user.role == 'closer' and appt.closer_id != current_user.id:
+    if current_user.role in ('closer', 'triage') and appt.closer_id != current_user.id:
         from app.models import User
         owner = User.query.get(appt.closer_id)
         if owner and owner.is_active is False:
@@ -2082,7 +2087,7 @@ def delete_deck_appointment(appt_id):
 @bp.route('/team-members', methods=['GET'])
 @login_required
 def get_team_members():
-    if current_user.role not in ['closer', 'setter', 'admin']:
+    if current_user.role not in ['closer', 'setter', 'triage', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
 
     from app.models import User
@@ -2157,7 +2162,7 @@ def bulk_update_closer_cards():
 @bp.route('/deck/search', methods=['GET'])
 @login_required
 def search_closer_deck_leads():
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'triage', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
         
     query_str = request.args.get('q', '')
@@ -2462,7 +2467,7 @@ def grant_academy_access(client_id):
 @bp.route('/deck/card/<int:appt_id>', methods=['GET'])
 @login_required
 def get_closer_deck_card(appt_id):
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'triage', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
 
     appt = Appointment.query.get_or_404(appt_id)
@@ -2473,7 +2478,7 @@ def get_closer_deck_card(appt_id):
     # asignar, o el dueño ya no está activo) para que el lead entre al pipeline de quien lo
     # trabaja; si el dueño sigue activo, se edita sin quitárselo de su propio pipeline.
     is_owner = appt.closer_id == current_user.id
-    if current_user.role == 'closer' and not is_owner:
+    if current_user.role in ('closer', 'triage') and not is_owner:
         from app.models import User
         owner = User.query.get(appt.closer_id)
         if appt.origin == 'Instagram' or not appt.closer_id or (owner and owner.is_active is False):
@@ -2494,7 +2499,7 @@ def get_closer_deck_card(appt_id):
 @bp.route('/deck/comments/<int:appt_id>', methods=['GET'])
 @login_required
 def get_closer_deck_comments(appt_id):
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'triage', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
     from app.models import Comment
     comments = Comment.query.filter_by(associated_id=appt_id, comment_type='appointment').order_by(Comment.created_at.asc()).all()
@@ -2506,7 +2511,7 @@ def get_closer_deck_comments(appt_id):
 @bp.route('/deck/comments/<int:appt_id>', methods=['POST'])
 @login_required
 def post_closer_deck_comment(appt_id):
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'triage', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
         
     appt = Appointment.query.get_or_404(appt_id)

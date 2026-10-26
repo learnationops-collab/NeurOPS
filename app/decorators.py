@@ -82,6 +82,10 @@ copiloto_required = _requiere_roles(
 tablas_required = _requiere_roles(
     (ROLE_ADMIN, ROLE_OPERATOR, ROLE_DIRECTOR_COMERCIAL), "Tablas access required")
 
+# Métricas del triage (`/api/triage/metricas`): la triage ve lo suyo y la dirección, todas.
+triage_metricas_required = _requiere_roles(
+    (ROLE_ADMIN, ROLE_OPERATOR, ROLE_DIRECTOR_COMERCIAL, ROLE_TRIAGE), "Triage metrics access required")
+
 
 def _iguales_en_tiempo_constante(provisto, esperado):
     """Igualdad sin filtrar por tiempo cuantos caracteres coinciden. Se compara sobre bytes: con str,

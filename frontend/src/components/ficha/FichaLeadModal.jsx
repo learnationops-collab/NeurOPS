@@ -13,6 +13,7 @@ import TabHistorial from './tabs/TabHistorial';
 import TabBitacora from './tabs/TabBitacora';
 import TabFormulario from './tabs/TabFormulario';
 import TabComunicacion from './tabs/TabComunicacion';
+import ResultadoTriage from './tabs/ResultadoTriage';
 import './ficha.css';
 
 /**
@@ -56,7 +57,7 @@ const ERRORES_EN_LINEA = new Set(['editar_agenda', 'corregir_seguimiento', 'agen
     'corregir_pago', 'borrar_pago', 'agregar_pago', 'eliminar_agenda', 'borrar_seguimiento',
     'borrar_plan', 'borrar_evento', 'crear_evento', 'reportar_resultado', 'registrar_venta',
     'mail_academia', 'quitar_acceso_academia', 'prorrogar_acceso_academia', 'guardar_fathom', 'guardar_objecion',
-    'pasar_a_recuperacion']);
+    'pasar_a_recuperacion', 'reportar_triage']);
 
 /**
  * El aviso de una acción que dio de baja a un cliente (o se la revirtió), con lo que pasó en la
@@ -129,6 +130,7 @@ const MENSAJES = {
     guardar_programa: 'Programa asignado en las ventas de este cliente.',
     estado_agenda: 'Estado de la agenda corregido.',
     crear_agenda: 'Agenda creada.',
+    reportar_triage: 'Llamada de triage guardada.',
     guardar_objecion: 'Objeción guardada: quedó también en Comunicación.',
     editar_agenda: 'Agenda corregida.',
     agendar_seguimiento: 'Seguimiento agendado.',
@@ -341,7 +343,9 @@ const FichaLeadModal = ({
     const panel = () => {
         switch (pestana) {
             case 'conf': return <TabConfirmacion {...props} />;
-            case 'resultado': return TabResultado
+            // La llamada de triage tiene su propio reporte (calificación y low ticket), no el árbol del closer.
+            case 'resultado': if (ficha?.triage?.es_triage) return <ResultadoTriage {...props} />;
+                return TabResultado
                 ? <Suspense fallback={<Esqueleto />}><TabResultado {...props} arrancarEnVenta={venderAlAbrir} seguimientoPedido={seguimientoPedido} /></Suspense>
                 : <Faltante label="Resultado" />;
             case 'acciones': return TabAcciones
@@ -389,6 +393,18 @@ const FichaLeadModal = ({
                     <div style={{ display: 'grid', gap: 'var(--s3)' }}>
                         {aviso && (
                             <Aviso tono={aviso.tono} titulo={aviso.texto} onCerrar={() => setAviso(null)} />
+                        )}
+                        {/* La agenda de closing que pasó el triage: quién lo aprobó y su nota, a la
+                            vista en cualquier pestaña para que el closer llegue con contexto. */}
+                        {ficha?.triage?.viene_de_triage && (
+                            <Aviso tono="info" titulo={[
+                                `Viene de triage · aprobado por ${ficha.triage.viene_de_triage.por || 'el triage'}`,
+                                ficha.triage.viene_de_triage.segmento && `segmento ${ficha.triage.viene_de_triage.segmento}`,
+                            ].filter(Boolean).join(' · ')}>
+                                <span style={{ whiteSpace: 'pre-wrap' }}>
+                                    {ficha.triage.viene_de_triage.nota || 'Sin nota del triage.'}
+                                </span>
+                            </Aviso>
                         )}
                         {error && !ficha && (
                             <Aviso tono="error" titulo="No se pudo abrir la ficha">{error}</Aviso>

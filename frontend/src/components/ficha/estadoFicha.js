@@ -19,7 +19,8 @@
 // El orden del catálogo es el orden del tablist. No se reordena por estado.
 export const PESTANAS = [
     { id: 'conf', label: 'Confirmación', permiso: null },
-    { id: 'resultado', label: 'Resultado', permiso: 'reportar' },
+    // La triage reporta su llamada con su propio recorrido (`triar`), en la misma pestaña.
+    { id: 'resultado', label: 'Resultado', permiso: ['reportar', 'triar'] },
     { id: 'acciones', label: 'Acciones', permiso: 'cobrar' },
     // Fulfillment mira lo mismo que Acciones desde el otro lado: una cobra, la otra entrega. El
     // permiso es el de cobro porque la audiencia es la misma (dirección y closer).
@@ -41,7 +42,10 @@ const lista = (v) => (Array.isArray(v) ? v : []);
  * Solo un `false` explícito saca la pestaña. Al revés escondería media ficha cada
  * vez que el backend olvide una clave.
  */
-const vetado = (permisos, clave) => !!permisos && permisos[clave] === false;
+const vetado = (permisos, clave) => (Array.isArray(clave)
+    // Con varias claves alcanza una: se veta solo si el servidor negó todas y dio alguna.
+    ? clave.every(k => permisos?.[k] !== true) && clave.some(k => vetado(permisos, k))
+    : !!permisos && permisos[clave] === false);
 
 export const pestanasVisibles = (ficha) => {
     const estado = ficha?.estado || {};
@@ -62,7 +66,7 @@ export const pestanaPorDefecto = (ficha) => {
     return visibles.some(p => p.id === pedida) ? pedida : visibles[0].id;
 };
 
-const PERMISOS = ['confirmar', 'reportar', 'cobrar', 'reasignar', 'comentar', 'eliminar', 'editar_datos'];
+const PERMISOS = ['confirmar', 'reportar', 'cobrar', 'reasignar', 'comentar', 'eliminar', 'editar_datos', 'triar'];
 
 /** Si el rol no puede tocar nada, el panel se muestra en solo lectura. */
 export const puedeEditarFicha = (ficha) => {

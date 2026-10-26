@@ -8,7 +8,7 @@ from .marketing import Campaign, AdSet, Ad, MarketingBudget, AdPeriodSpend, Lead
 from .report import SetterDailyStats, CloserDailyStats, DailyReportQuestion, DailyReportAnswer, Expense, RecurringExpense
 from .closer_report import CloserDailyReport
 from .comercial_report import ReporteDirector, ReporteDirectorPersona
-from .crm import Pipeline, PipelineStage, UserViewSetting, Notification, Comment, LeadEventLog, FeatureToggle
+from .crm import Pipeline, PipelineStage, UserSetting, Notification, Comment, LeadEventLog, FeatureToggle
 from .integration import Integration
 from .public_registration import PublicRegistration
 from .financial import FinancialSale, FinancialAgenda, ExcludedSale, TeamMember, MonthlyPayroll, MonthlyPaymentMethodBalance, MonthlySaving
@@ -50,7 +50,7 @@ __all__ = [
     'Campaign', 'AdSet', 'Ad', 'MarketingBudget', 'AdPeriodSpend', 'LeadAnswer', 'UTMLog', 'LandingTracking', 'ConversationalMessage',
     'MetaAnuncio', 'MetaGastoDiario',
     'SetterDailyStats', 'CloserDailyStats', 'CloserDailyReport', 'ReporteDirector', 'ReporteDirectorPersona', 'DailyReportQuestion', 'DailyReportAnswer', 'Expense', 'RecurringExpense',
-    'Pipeline', 'PipelineStage', 'UserViewSetting', 'Notification', 'Comment', 'LeadEventLog', 'FeatureToggle',
+    'Pipeline', 'PipelineStage', 'UserSetting', 'Notification', 'Comment', 'LeadEventLog', 'FeatureToggle',
     'Integration', 'PublicRegistration', 'FinancialSale', 'FinancialAgenda', 'ExcludedSale', 'TriageDailyReport', 'TriageTrackerReport',
     'TeamMember', 'MonthlyPayroll', 'MonthlyPaymentMethodBalance', 'MonthlySaving',
     'ConciliacionCarga', 'ConciliacionMovimiento', 'ConciliacionRevision',
