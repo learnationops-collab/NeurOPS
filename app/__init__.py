@@ -183,8 +183,7 @@ def create_app(config_class=Config):
 
     from app.api.manychat import bp as manychat_bp
     from app.api import manychat_calificacion  # noqa: F401  (rutas sobre el mismo blueprint)
-    app.register_blueprint(manychat_bp, url_prefix='/api')
-    csrf.exempt(manychat_bp) # Exento para webhooks de ManyChat
+    app.register_blueprint(manychat_bp, url_prefix='/api')  # solo rutas con sesión: lleva CSRF
 
     from app.api.triage import bp as triage_bp
     app.register_blueprint(triage_bp, url_prefix='/api/triage')
