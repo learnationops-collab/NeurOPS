@@ -1,7 +1,7 @@
 """Corrección a mano de una interacción desde el monitor de Entrantes (rutas de `entrantes.bp`)."""
 from flask import request, jsonify
 from app import db
-from app.api.entrantes import bp, logger
+from app.api.entrantes import bp
 
 
 @bp.route('/respuesta/<int:answer_id>', methods=['PUT'])
