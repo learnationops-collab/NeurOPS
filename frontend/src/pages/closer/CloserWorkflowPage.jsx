@@ -1887,6 +1887,10 @@ const CloserWorkflowPage = () => {
                     // Reportar, el de asistencia de las llamadas reportadas del día. Asistió todo lo
                     // reportado menos No Show y Cancelada; una reagendada no cuenta para ningún lado.
                     let metrica = null;
+                    // En Reportar, sin nada por reportar, la primera tarjeta muestra la presentación
+                    // (llamadas con oferta presentada sobre las que asistieron) en vez de mandar a
+                    // Confirmar (pedido del 23/10/2026).
+                    let presentacion = null;
                     if (activeView === 'inbox' && activeStep === 'confirmations') {
                         const total = counts.confirmations || 0;
                         const hechas = counts.confirmations_done || 0;
@@ -1894,8 +1898,11 @@ const CloserWorkflowPage = () => {
                     } else if (activeView === 'inbox' && activeStep === 'calls') {
                         const res = r => (r.closer_result || r.result || '').trim().toLowerCase();
                         const concluidas = reportedTodayCalls.filter(r => !['reagendado', 'reagendada'].includes(res(r)));
-                        const asistieron = concluidas.filter(r => !['no show', 'cancelado', 'cancelada'].includes(res(r))).length;
+                        const conShow = concluidas.filter(r => !['no show', 'cancelado', 'cancelada'].includes(res(r)));
+                        const asistieron = conShow.length;
                         metrica = { lbl: 'Asistencia', sub: 'de asistencia', hechas: asistieron, total: concluidas.length, pie: `${asistieron} de ${concluidas.length} asistieron`, pendientes: counts.calls };
+                        const presentadas = conShow.filter(r => r.offer_presented === true).length;
+                        presentacion = { presentadas, asistieron, pct: asistieron ? Math.round((presentadas / asistieron) * 100) : 0 };
                     }
                     const metricaPct = metrica && metrica.total ? Math.round((metrica.hechas / metrica.total) * 100) : 0;
                     // Puntos de experiencia: pondera cada acción real de hoy (no un número inventado —
@@ -1983,6 +1990,19 @@ const CloserWorkflowPage = () => {
                                     </h3>
                                     <p className="tsp-sub-v6">
                                         {(counts.confirmations_done || 0) > 0 ? 'Listos para su llamada · nada por confirmar' : 'Nada por confirmar'}
+                                    </p>
+                                </div>
+                            ) : presentacion ? (
+                                <div className="tsp-v6 tsp-done-v6">
+                                    <div className="tsp-top-v6">
+                                        <span className="tsp-dot-v6 ok"></span>
+                                        <span className="tsp-lbl-v6">Presentación</span>
+                                    </div>
+                                    <h3 className="tsp-name-v6">{presentacion.pct}% de presentación</h3>
+                                    <p className="tsp-sub-v6">
+                                        {presentacion.asistieron
+                                            ? `Oferta presentada en ${presentacion.presentadas} de ${presentacion.asistieron} · nada por reportar`
+                                            : 'Nada por reportar'}
                                     </p>
                                 </div>
                             ) : (() => {

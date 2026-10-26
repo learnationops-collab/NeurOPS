@@ -1423,6 +1423,8 @@ def _format_appointment_for_deck(a, recover_form=False):
         "origin": a.origin,
         "result": confirmer_result,
         "closer_result": a.closer_result or "Pendiente",
+        # Si se presentó la oferta: la tarjeta de Reportar saca de acá la tasa de presentación.
+        "offer_presented": a.offer_presented,
         "is_rescheduled": a.is_rescheduled,
         "ig_chat_link": a.ig_chat_link or "",
         "keyword": a.keyword or "",
