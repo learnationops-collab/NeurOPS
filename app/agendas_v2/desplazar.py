@@ -1,10 +1,12 @@
 """Un lead A o B puede tomar el horario de una agenda C o D (docs/pendientes_santi_reunion_26_10.md §1).
 
-Para un lead A/B, la agenda C/D que empieza dentro de más de ANTELACION cuenta como libre: en la operación
-y en el Google Calendar del closer, donde se descuenta su evento solo si es lo único que ocupa ese rato
-(un evento propio del closer a esa hora la sigue bloqueando). Si el lead la toma, la C/D sigue en pie
-marcada `desplazada_por_id` y se le avisa al closer para que la reagende. Un C o D no desplaza a nadie, y
-una agenda sin segmento no se desplaza.
+El evento de una C/D se crea «Disponible» en el Google del closer (operacion.crear_evento; las viejas,
+scripts/cd_disponibles.py): el closer ve qué horarios puede soltar y Google no los cuenta como ocupados.
+En Work la C/D sigue ocupando su horario (servicio.sigue_en_google), salvo para un lead A/B: para él, la
+que empieza dentro de más de ANTELACION cuenta como libre, y si su evento no está «Disponible» (uno de
+Calendly) se descuenta solo si es lo único que ocupa ese rato (un evento propio del closer la sigue
+bloqueando). Si el lead la toma, la C/D sigue en pie marcada `desplazada_por_id` y se le avisa al closer
+para que la reagende. Un C o D no desplaza a nadie, y una agenda sin segmento no se desplaza.
 """
 
 import time

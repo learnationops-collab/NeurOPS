@@ -517,7 +517,11 @@ def sigue_en_google(appt, franjas, ahora=None, leido_desde=None):
     calendario leído (`franjas`, [(inicio, fin)] ms), solo si a esa hora hay algo ocupado; una agenda
     cuyo evento se canceló, se borró o se marcó «Disponible» ya no bloquea, aunque en NeurOPS siga
     abierta (no se la toca). franjas None: no se sabe y bloquea. Las recién creadas, y las que empiezan
-    antes de lo leído (`leido_desde`, ms), bloquean igual."""
+    antes de lo leído (`leido_desde`, ms), bloquean igual.
+    Una C/D bloquea siempre: su evento está «Disponible» a propósito, para que solo un lead A/B pueda
+    tomar su horario (desplazar.py, que la saca de lo ocupado para ese lead)."""
+    if appt.segmento in desplazar.DESPLAZABLES:
+        return True
     t = dt_a_ms(appt.start_time)
     if franjas is None or (leido_desde is not None and t < leido_desde):
         return True

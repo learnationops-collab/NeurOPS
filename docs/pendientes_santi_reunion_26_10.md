@@ -40,7 +40,11 @@ Hecho en `app/agendas_v2/desplazar.py` (rama `feat/cd-libres`, migración `d7b3e
 - [x] Su evento de Google se descuenta solo si es lo único que ocupa ese rato: un evento propio del closer a esa hora la sigue bloqueando (simulado en producción: de las 4 C de Jean Carlo se liberan 3; la 6983 choca con su «Trainning Session»).
 - [x] El C/D desplazado queda marcado (`desplazada_por_id`), con un comentario en la ficha y un aviso al closer y a los admins para reagendarlo.
 - [x] Sin cambios en `core/asignacion.js`: la regla vive en la ocupación, que se calcula solo en el backend.
-- [ ] Deploy (toca la reserva: ¿servidor de prueba primero?).
+- [x] Los eventos C/D quedan «Disponible» en el Google del closer (pedido de Santi): las nuevas nacen así y `scripts/cd_disponibles.py` marca las que ya existen (dry-run: 3 por marcar, 4 ya lo estaban). En Work la C/D sigue ocupando su horario para todos menos un A/B.
+- [x] Arreglado de paso: Jean Carlo ya marcaba a mano sus C como «Disponible», y con eso dejaban de bloquear: un C o D podía agendar encima.
+- [ ] Deploy y `python scripts/cd_disponibles.py --apply` en producción.
+- [ ] Una C/D que el closer cancela o borra en Google sigue bloqueando en Work (antes Google mandaba). Ver si hace falta seguir eso con la trazabilidad.
+- [ ] Las C/D que el triage apruebe y pasen a Jean Carlo no deberían quedar «Disponible» ni desplazables: revisarlo al subir el triage.
 - [ ] Que el C/D desplazado se vea en el mazo del closer y del triage (con la parte visual).
 - [ ] Las migraciones del triage (`c4e9a1d7f2b8`, `f1a8d3c6b2e9`, sin subir) salen de `b8d2f4a6c1e3`, igual que `c4e8a2f6d1b7` de main: al subir el triage hay que colgarlas de la última de main (hoy `d7b3e9a1f4c2`) para no tener dos cabezas.
 - [ ] Momentum sessions por encima de C y D, o en los huecos de 15 minutos entre llamadas.
