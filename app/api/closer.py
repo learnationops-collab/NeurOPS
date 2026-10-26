@@ -5,6 +5,7 @@ from flask_login import login_required, current_user
 from app.services.closer_service import CloserService
 from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, WeeklyAvailability, Event, Client, ClientComment, SurveyAnswer, SurveyQuestion, CommentNotification, FeatureToggle, Comment, Notification
 from app.decorators import role_required
+from app.services.leads_del_setter import puede_abrir
 from app.services.closer_agendas_service import contar_no_show_y_canceladas
 from datetime import date, timedelta, datetime
 from sqlalchemy import func, or_
@@ -323,6 +324,9 @@ def get_appointment_by_instagram():
     from app.services import person_service
     client = (person_service.cliente_de(person_service.buscar(instagram=instagram), crear=False)
               or Client.query.filter(db.func.lower(Client.instagram) == instagram.lower()).first())
+    if client and not puede_abrir(current_user, client_id=client.id):
+        # Un lead ajeno, igual que uno que no existe (sin buscar tampoco en las agendas de Sheets).
+        return jsonify({"error": "No se encontró ninguna agenda para este usuario de Instagram"}), 404
     
     appointment_data = None
     if client:
@@ -569,7 +573,11 @@ def get_venta(id):
     deuda y suscripción (`closer_ventas_service.detalle`)."""
     if current_user.role not in ['closer', 'admin', 'setter']:
         return jsonify({"message": "Forbidden"}), 403
+    from app.models import Sale
     from app.services import closer_ventas_service
+    venta = db.session.get(Sale, id)
+    if venta is not None and not puede_abrir(current_user, client_id=venta.client_id):
+        return jsonify({"message": "Not found"}), 404
     detalle = closer_ventas_service.detalle(id)
     if detalle is None:
         return jsonify({"message": "Venta no encontrada"}), 404
@@ -872,6 +880,8 @@ def get_availability():
 def get_lead_comments(id):
     if current_user.role not in ['closer', 'admin', 'setter', 'triage']:
         return jsonify({"message": "Forbidden"}), 403
+    if not puede_abrir(current_user, client_id=id):
+        return jsonify({"message": "Not found"}), 404
         
     from flask import current_app
     from app.models import CommentNotification, Comment, Client, ClientComment
@@ -985,6 +995,8 @@ def get_lead_comments(id):
 def add_lead_comment(id):
     if current_user.role not in ['closer', 'admin', 'setter', 'triage']:
         return jsonify({"message": "Forbidden"}), 403
+    if not puede_abrir(current_user, client_id=id):
+        return jsonify({"message": "Not found"}), 404
         
     data = request.get_json() or {}
     text = data.get('text')
@@ -1221,6 +1233,9 @@ def get_booking_links():
 def get_client_details(client_id):
     if current_user.role not in ['closer', 'admin', 'setter']:
         return jsonify({"message": "Forbidden"}), 403
+    # Un setter, solo sus leads (como la ficha): antes enumeraba ids y veía los datos de cualquiera.
+    if not puede_abrir(current_user, client_id=client_id):
+        return jsonify({"message": "Not found"}), 404
 
     client = Client.query.get_or_404(client_id)
     
@@ -2693,6 +2708,8 @@ def get_deck_stats_kpis():
 def get_deck_events(appt_id):
     if current_user.role not in ['closer', 'setter', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
+    if not puede_abrir(current_user, appointment_id=appt_id):
+        return jsonify({"message": "Not found"}), 404
         
     from app.models import LeadEventLog
     limit = request.args.get('limit', 5, type=int)

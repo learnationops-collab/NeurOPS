@@ -957,3 +957,6 @@
   - `POST /api/public/clients/check` a un anónimo devuelve solo el `id`: con un Instagram se sacaba el teléfono de cualquier lead. La página vieja de reservas deja vacío lo que no viene.
   - Postulaciones: `video` y `llamada` se guardan solo si son `http(s)`, y el panel no arma el link si no lo son (un `javascript:` corría en Work).
   - Dos tests alineados (`test_public_client_check`, `test_admin_sheets_retirado`). Sin correr tests ni build.
+- **26 de Octubre de 2026 (Seguridad · el setter solo lee sus leads también en `/api/closer/*`)** *([app/api/closer.py](../../app/api/closer.py), [app/api/setter_deck_acciones.py](../../app/api/setter_deck_acciones.py))*:
+  - La ficha y Mis datos ya limitaban al setter a sus leads (`leads_del_setter.puede_abrir`); siete rutas no, y cambiando el id se leían email, teléfono, encuesta, ventas y comentarios de cualquier cliente. Ahora, con un lead ajeno, responden 404 (como si no existiera): `GET /closer/clients/<id>`, `GET /closer/ventas/<id>`, `GET`/`POST /closer/leads/<id>/comments`, `GET /closer/appointments/by-instagram`, `GET /closer/deck/events/<id>` y `GET`/`POST /setter/deck/comments/<id>`.
+  - Closer, triage y dirección no cambian. `GET /closer/leads/search` sigue buscando en todos los leads (decisión pendiente). Sin correr tests.

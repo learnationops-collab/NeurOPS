@@ -9,6 +9,7 @@ from app.models import ROLE_SETTER, Client, Appointment
 from app.decorators import role_required
 from sqlalchemy import or_
 from app.api.setter import bp
+from app.services.leads_del_setter import puede_abrir
 
 
 @bp.route('/deck/<int:appt_id>', methods=['POST'])
@@ -158,6 +159,9 @@ def get_deck_card(appt_id):
 @role_required(ROLE_SETTER)
 def get_setter_deck_comments(appt_id):
     from app.models import Comment
+    # Solo los comentarios de sus propias agendas (antes, los de cualquiera).
+    if not puede_abrir(current_user, appointment_id=appt_id):
+        return jsonify({"message": "Not found"}), 404
     comments = Comment.query.filter_by(associated_id=appt_id, comment_type='appointment').order_by(Comment.created_at.asc()).all()
     return jsonify([c.to_dict() for c in comments]), 200
 
@@ -168,6 +172,8 @@ def post_setter_deck_comment(appt_id):
     from app.models import Comment, Appointment, Notification
     
     appt = Appointment.query.get_or_404(appt_id)
+    if not puede_abrir(current_user, appointment_id=appt_id):
+        return jsonify({"message": "Not found"}), 404
     data = request.get_json() or {}
     text = data.get('text', '').strip()
     parent_id = data.get('parent_id')
