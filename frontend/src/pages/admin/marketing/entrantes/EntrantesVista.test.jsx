@@ -26,7 +26,7 @@ const DATOS = {
 describe('Marketing › Entrantes', () => {
     beforeEach(() => {
         window.localStorage.clear();
-        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/manychat-webhook/entrantes'
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/entrantes'
             ? DATOS : [{ id: 9, created_at: '2026-10-05T12:00:00Z', id_option_send: '1', id_option: '0', qualification: 'null' }] }));
     });
 
@@ -39,7 +39,7 @@ describe('Marketing › Entrantes', () => {
     });
 
     it('muestra la tasa de respuesta: quienes contestaron o ya tienen calificación sobre el total', async () => {
-        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/manychat-webhook/entrantes'
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/entrantes'
             ? { ...DATOS, filas: DATOS.filas.map((f) => ({ ...f, respondio: f.estado !== 'sin_respuesta' })) } : [] }));
         render(<div className="dc-shell"><EntrantesVista desde="2026-10-01" hasta="2026-10-16" /></div>);
         expect(await screen.findByText('2 de 4 respondieron')).toBeInTheDocument();
@@ -47,7 +47,7 @@ describe('Marketing › Entrantes', () => {
     });
 
     it('el lead descalificado después de calificar lo dice y no se corrige a calificado', async () => {
-        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/manychat-webhook/entrantes'
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/entrantes'
             ? { ...DATOS, filas: [persona(1, 'Beto', 'descalificado', '4', { descalificado_despues: true })] } : [] }));
         render(<div className="dc-shell"><EntrantesVista desde="2026-10-01" hasta="2026-10-16" /></div>);
         fireEvent.click(await screen.findByText('Beto'));
@@ -62,7 +62,7 @@ describe('Marketing › Entrantes', () => {
         fireEvent.click(await screen.findByText('Beto'));
         const ficha = within(await screen.findByLabelText('Historial de Beto'));
         fireEvent.click(ficha.getByRole('button', { name: 'Descalificado' }));
-        await waitFor(() => expect(api.put).toHaveBeenCalledWith('/manychat-webhook/lead/1/calificacion', { estado: 'descalificado' }));
+        await waitFor(() => expect(api.put).toHaveBeenCalledWith('/marketing/entrantes/lead/1/calificacion', { estado: 'descalificado' }));
         expect(await ficha.findAllByText('Descalificado')).not.toHaveLength(0);
     });
 
@@ -71,14 +71,14 @@ describe('Marketing › Entrantes', () => {
         fireEvent.click(await screen.findByText('Caro'));
         const ficha = within(await screen.findByLabelText('Historial de Caro'));
         expect(await ficha.findByText('Opening')).toBeInTheDocument();
-        expect(api.get).toHaveBeenCalledWith('/manychat-webhook/log', expect.objectContaining({
+        expect(api.get).toHaveBeenCalledWith('/marketing/entrantes/log', expect.objectContaining({
             params: { lead_id: 2, limit: 200 } }));
     });
 
     it('el historial dice qué pasó: inicio, envío y respuesta (también la pegada al envío), sin «Webhook»', async () => {
         const fila = (id, envio, opcion, calif = 'null') => ({ id, created_at: '2026-10-05T12:00:00Z',
             id_option_send: envio, id_option: opcion, qualification: calif });
-        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/manychat-webhook/entrantes' ? DATOS : [
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/entrantes' ? DATOS : [
             fila(6, '4', '1'), fila(5, '11', '11'), fila(4, '4', '0'), fila(3, '0', '1', 'true'), fila(2, '1', '0'), fila(1, null, null),
         ] }));
         render(<div className="dc-shell"><EntrantesVista desde="2026-10-01" hasta="2026-10-16" /></div>);

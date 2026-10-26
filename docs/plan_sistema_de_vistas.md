@@ -64,7 +64,7 @@ Cada fase va en su propia sesión y su propia rama. Se integra a main y después
 | 2. Closer | Mazo: deck, conteos y no leídos en queries; las acciones invalidan en vez de recargar; vistas del dock con `<Pestanas>`; el menú navega con el router | 0 |
 | 3. Finanzas, Payroll, Setter, Operaciones | Fuera los `key` que remontan; secciones con `<Pestanas>`; menú con el router | 0 (y 1 para Revisar) |
 | 4. Hiring, Marketing, Workshop, Inbox | Pasan a `queries/` y `<Pestanas>`; fuera `datosTaller.recuerdo` y los `setInterval` | 0 |
-| 5. Servidor por lotes | `limite`/`cursor` en `/comercial/tabla`, `/assistant-applications`, `/manychat-webhook/entrantes` y `/workshop/landing/sesiones`; `<ListaPorLotes>` en esas listas | 0 |
+| 5. Servidor por lotes | `limite`/`cursor` en `/comercial/tabla`, `/assistant-applications`, `/marketing/entrantes` y `/workshop/landing/sesiones`; `<ListaPorLotes>` en esas listas | 0 |
 | 6. Pantallas viejas | Las Tailwind de `MainLayout` (triage, reportes, AdminSalesHub, stats públicas) entran a `<Vista>` cuando se rediseñen; `MainLayout` pasa a una ruta padre con `<Outlet>` para no remontarse | 0 |
 
 - Las fases 1 a 5 tocan archivos distintos y pueden ir en paralelo una vez que la 0 esté en main.

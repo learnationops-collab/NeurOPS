@@ -181,9 +181,8 @@ def create_app(config_class=Config):
     from app.api.comments import bp as comments_bp
     app.register_blueprint(comments_bp, url_prefix='/api/comments')
 
-    from app.api.manychat import bp as manychat_bp
-    from app.api import manychat_calificacion  # noqa: F401  (rutas sobre el mismo blueprint)
-    app.register_blueprint(manychat_bp, url_prefix='/api')  # solo rutas con sesión: lleva CSRF
+    from app.api.entrantes import bp as entrantes_bp
+    app.register_blueprint(entrantes_bp, url_prefix='/api/marketing/entrantes')  # solo rutas con sesión: lleva CSRF
 
     from app.api.triage import bp as triage_bp
     app.register_blueprint(triage_bp, url_prefix='/api/triage')

@@ -26,7 +26,7 @@ IMPORT_DINAMICO = re.compile(r"""import\(\s*['"]([^'"]+)['"]\s*\)""")
 LLAMADA = re.compile(r"""\b(?:api|axios)\.(get|post|put|delete|patch)\(\s*([`'"])(.*?)\2""", re.S)
 # Un literal que parece una ruta de la API (familias de la politica de acceso), sin saber con que metodo.
 LITERAL_DE_RUTA = re.compile(
-    r"""['"`](/(?:public|conversational|manychat-webhook|triage|workshop|marketing)/[^'"`\s]*)""")
+    r"""['"`](/(?:public|conversational|triage|workshop|marketing)/[^'"`\s]*)""")
 
 # Widgets globales de App.jsx (fuera de <Routes>): se cargan con cualquier usuario autenticado.
 COMPONENTES_GLOBALES = ('PixelTracker', 'BugReportWidget', 'PlaybookOverlay', 'PlaybookNotification')

@@ -398,7 +398,7 @@ describe('Marketing › Anuncios', () => {
     });
 
     it('«Webhooks» ahora es Entrantes, sin Herramientas ni Cargar calificaciones', async () => {
-        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/manychat-webhook/entrantes'
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/entrantes'
             ? { desde: '2026-10-01', hasta: '2026-10-16', mensajes: {}, filas: [] } : TABLERO }));
         abrir('/admin/marketing?tab=webhooks');
         expect(await screen.findByRole('heading', { name: 'Entrantes' })).toBeInTheDocument();

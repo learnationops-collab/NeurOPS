@@ -60,11 +60,12 @@ POLITICA = {
     ('DELETE', '/api/conversational/records/clear'): _p(COMERCIAL),
     ('GET', '/api/conversational/stats/conversational'): _p(COMERCIAL, MARKETING, SETTER),
 
-    # --- ManyChat: monitor de leads entrantes, limpieza y reasignacion (marketing) ----------------------
-    ('PUT', '/api/manychat-webhook/answer/<int:answer_id>'): _p(COMERCIAL, MARKETING, SETTER),
-    ('GET', '/api/manychat-webhook/log'): _p(COMERCIAL, MARKETING, SETTER),
-    ('GET', '/api/manychat-webhook/entrantes'): _p(COMERCIAL, MARKETING, SETTER),
-    ('PUT', '/api/manychat-webhook/lead/<int:lead_id>/calificacion'): _p(COMERCIAL, MARKETING),
+    # --- Entrantes: monitor de leads entrantes, correccion a mano y calificacion (marketing) -----------
+    # Eran /api/manychat-webhook/* hasta el 26/10/2026.
+    ('PUT', '/api/marketing/entrantes/respuesta/<int:answer_id>'): _p(COMERCIAL, MARKETING, SETTER),
+    ('GET', '/api/marketing/entrantes/log'): _p(COMERCIAL, MARKETING, SETTER),
+    ('GET', '/api/marketing/entrantes'): _p(COMERCIAL, MARKETING, SETTER),
+    ('PUT', '/api/marketing/entrantes/lead/<int:lead_id>/calificacion'): _p(COMERCIAL, MARKETING),
 
     # --- Marketing: la lista de anuncios y la atribucion manual de la bandeja «Sin anuncio» -------------
     # La configuracion vieja (alta y borrado de campanas, conjuntos y anuncios, gasto por periodo y el

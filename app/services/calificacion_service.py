@@ -7,14 +7,14 @@ corta. Medir la calificación solo con lo que dijo ManyChat inflaba los califica
 Regla única (la usan el tablero de anuncios y Entrantes, así no se contradicen):
 
   1. La calificación de base es la última 'true'/'false' que mandó ManyChat para esa persona
-     (`ultima_de_manychat`); sin ninguna queda sin dato (pendiente).
+     (`ultima_calificacion`); sin ninguna queda sin dato (pendiente).
   2. Un lead pasa a descalificado ('false') si, después de eso, alguna de estas fuentes lo descalifica:
        · el closer lo marcó «Descalificado» o «No Lead» en su agenda (`por_closer`);
        · el formulario de Agendas 2.0 lo cortó por una respuesta que descalifica, p. ej. «no es médico»
          (`por_formulario`: los `SchedIntento` 'descalificada', el mismo corte que cuenta
          `descalificados_service`);
        · el setter (o la dirección) lo corrigió a mano a «Descalificado»: eso ya se guarda como 'false'
-         en el último webhook (`manychat_calificacion.calificar`), no necesita otra fuente.
+         en el último webhook (`entrantes_calificacion.calificar`), no necesita otra fuente.
   3. La descalificación del closer o del formulario vale para las palabras clave en que la persona entró hasta la fecha
      de su llamada; una que entró después es otro recorrido y se mide aparte.
 
@@ -33,7 +33,7 @@ CON_DATO = ('true', 'false')
 FUTURO = datetime.max  # sin fecha de llamada: la descalificación vale para todo
 
 
-def ultima_de_manychat(valores):
+def ultima_calificacion(valores):
     """La última 'true'/'false' de una lista de valores en orden cronológico; None si no hay."""
     return next((v for v in reversed(list(valores)) if v in CON_DATO), None)
 
@@ -103,11 +103,11 @@ def descalificados():
     return resultado
 
 
-def efectiva(valor_manychat, entro, descalificado_hasta=None):
+def efectiva(valor, entro, descalificado_hasta=None):
     """La calificación final ('true' | 'false' | None) de una persona en una palabra clave.
 
-    `valor_manychat`: lo que dejó `ultima_de_manychat`. `entro`: cuándo entró por esa palabra clave.
+    `valor`: lo que dejó `ultima_calificacion`. `entro`: cuándo entró por esa palabra clave.
     `descalificado_hasta`: lo que devolvió `descalificados` para ese lead (None si nadie lo descalificó)."""
     if descalificado_hasta is not None and entro is not None and entro <= descalificado_hasta:
         return 'false'
-    return valor_manychat if valor_manychat in CON_DATO else None
+    return valor if valor in CON_DATO else None

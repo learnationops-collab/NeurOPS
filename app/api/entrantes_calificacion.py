@@ -1,4 +1,4 @@
-"""Corregir a mano la calificación de los leads de ManyChat (Marketing › Entrantes, 16/10/2026).
+"""Corregir a mano la calificación de un lead (Marketing › Entrantes, 16/10/2026).
 
 Del 28/07 al 16/10/2026 el webhook de la respuesta a la apertura mandaba «yes» fijo (no la variable
 «Cualificado»): casi todos quedaron calificados. Lo real está en el campo «Cualificado» de ManyChat; esto
@@ -10,7 +10,7 @@ es escribirla en su último webhook. «Sin dato» borra todas.
 from flask import jsonify, request
 
 from app import db
-from app.api.manychat import bp
+from app.api.entrantes import bp
 from app.models import LeadAnswer, Conversation
 
 ESTADOS = {'calificado': 'true', 'descalificado': 'false', 'sin_dato': 'null'}
@@ -33,7 +33,7 @@ def calificar(lead_id, valor):
 
 
 
-@bp.route('/manychat-webhook/lead/<int:lead_id>/calificacion', methods=['PUT'])
+@bp.route('/lead/<int:lead_id>/calificacion', methods=['PUT'])
 def corregir_calificacion(lead_id):
     estado = (request.get_json(silent=True) or {}).get('estado')
     if estado not in ESTADOS:

@@ -23,7 +23,7 @@ _n = itertools.count(1)
 LUNES = datetime(2026, 10, 5, 12, 0)
 LLAMADA = datetime(2026, 10, 12, 15, 0)
 DESDE, HASTA = date(2026, 10, 1), date(2026, 10, 31)
-URL = '/api/manychat-webhook/entrantes'
+URL = '/api/marketing/entrantes'
 
 
 def lead(db, ig, *, clave='GUIA PERU', calificacion='true', contesto=True, entro=LUNES, nombre=None):
@@ -73,10 +73,10 @@ def fila_de_tablero(clave='GUIA PERU'):
 
 
 def test_la_ultima_calificacion_de_manychat_es_la_que_vale():
-    assert calificacion_service.ultima_de_manychat(['null', 'true', 'null']) == 'true'
-    assert calificacion_service.ultima_de_manychat(['true', 'false']) == 'false'
-    assert calificacion_service.ultima_de_manychat(['null', None]) is None
-    assert calificacion_service.ultima_de_manychat([]) is None
+    assert calificacion_service.ultima_calificacion(['null', 'true', 'null']) == 'true'
+    assert calificacion_service.ultima_calificacion(['true', 'false']) == 'false'
+    assert calificacion_service.ultima_calificacion(['null', None]) is None
+    assert calificacion_service.ultima_calificacion([]) is None
 
 
 def test_sin_descalificacion_vale_lo_que_dijo_manychat():
@@ -143,7 +143,7 @@ def test_la_correccion_a_mano_del_setter_ya_cuenta(db, client, make_user, auth_h
     conv = lead(db, 'gabi.med')
     admin = make_user(role='admin')
 
-    r = client.put(f'/api/manychat-webhook/lead/{conv.id}/calificacion', json={'estado': 'descalificado'},
+    r = client.put(f'/api/marketing/entrantes/lead/{conv.id}/calificacion', json={'estado': 'descalificado'},
                    headers=auth_headers(admin))
 
     assert r.status_code == 200
