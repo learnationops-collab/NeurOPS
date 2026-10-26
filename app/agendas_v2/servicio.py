@@ -14,7 +14,7 @@ import time
 from datetime import datetime, timedelta, timezone
 
 from app import db
-from app.agendas_v2 import avisos_discord, operacion, trazabilidad
+from app.agendas_v2 import avisos_discord, desplazar, operacion, trazabilidad
 from app.agendas_v2.modelos import MODELOS, SchedConfig, SchedIntento, SchedPerfil
 from app.agendas_v2.nucleo.asignacion import asignacion
 from app.agendas_v2.nucleo.catalogos import (
@@ -32,6 +32,7 @@ from app.agendas_v2.nucleo.catalogos import (
 )
 from app.agendas_v2.nucleo.datos import buscar, nombre_origen, ordenados, rol_closer, sesion_de
 from app.agendas_v2.nucleo.disponibilidad import se_solapa
+from app.agendas_v2.nucleo.segmento import segmentar
 from app.agendas_v2.nucleo.eventos import con_form_al_dia, config_de, link_evento, slug_libre, version_publicada
 from app.agendas_v2.nucleo.formulario import grupo_por_reglas, limpiar_respuesta, texto_regla, validar_respuesta
 from app.agendas_v2.nucleo.normalizar import (
@@ -526,11 +527,11 @@ def sigue_en_google(appt, franjas, ahora=None, leido_desde=None):
     return any(a <= t < b for a, b in franjas)
 
 
-def _agendas_de_operacion(elegibles, desde, franjas_de=None, leido_desde=None):
+def _agendas_de_operacion(elegibles, desde, franjas_de=None, leido_desde=None, excluir=()):
     """Agendas vigentes de esos closers (Appointment), como reservas del nucleo. Las de Agendas 2.0
     duran lo que dura su evento; las que entran por n8n, 60 minutos. franjas_de: {user_id: lo leído de
     su Google, o None} desde `leido_desde` (ms); con su calendario leído, solo las que siguen ahí
-    (sigue_en_google)."""
+    (sigue_en_google). excluir: ids que no cuentan (las C/D que puede tomar un lead A/B, desplazar.py)."""
     from app.models import Appointment
 
     if not elegibles:
@@ -545,7 +546,10 @@ def _agendas_de_operacion(elegibles, desde, franjas_de=None, leido_desde=None):
         *operacion.filtro_vigente(),
     ).all()
     franjas_de = franjas_de or {}
-    filas = [a for a in filas if sigue_en_google(a, franjas_de.get(a.closer_id), leido_desde=leido_desde)]
+    filas = [
+        a for a in filas
+        if a.id not in excluir and sigue_en_google(a, franjas_de.get(a.closer_id), leido_desde=leido_desde)
+    ]
     return [
         {
             'estado': 'agendada',
@@ -590,14 +594,18 @@ def _leido_de_google(elegibles, ahora):
     return {u: _franjas_google(u, desde, hasta) if u in con else None for u in usuarios}
 
 
-def _ocupacion(ahora, elegibles=None):
+def _ocupacion(ahora, elegibles=None, libres=None):
     """Lo que tiene ocupado cada closer: sus agendas vigentes en la operacion y lo que tiene en sus
     calendarios de Google (los de conflicto), en el formato del nucleo. Lo de Google bloquea el horario
     pero no suma a su carga (no son agendas). Google manda: una agenda que ya no está en su calendario
-    (cancelada, borrada o marcada «Disponible») no bloquea (sigue_en_google)."""
-    elegibles = elegibles or {}
+    (cancelada, borrada o marcada «Disponible») no bloquea (sigue_en_google).
+    libres: {user_id: [(id, inicio, fin)]} de las agendas C/D que este lead puede tomar (desplazar.py):
+    no cuentan, ni ellas ni su evento en Google."""
+    elegibles, libres = elegibles or {}, libres or {}
     leido = _leido_de_google(elegibles, ahora)
-    agendas = _agendas_de_operacion(elegibles, ms_a_dt(ahora - DIA_MS), leido, leido_desde=ahora - 3600000)
+    leido = {u: desplazar.restar(f, libres.get(u, [])) if f else f for u, f in leido.items()}
+    excluir = {i for huecos in libres.values() for i, _, _ in huecos}
+    agendas = _agendas_de_operacion(elegibles, ms_a_dt(ahora - DIA_MS), leido, leido_desde=ahora - 3600000, excluir=excluir)
     base = opciones_de_ocupacion(agendas, ahora)
     google = {pid: [{'inicio': a, 'fin': b} for a, b in leido[u]] for pid, u in elegibles.items() if leido.get(u)}
     if not google:
@@ -619,7 +627,7 @@ def _franjas_frescas(user_id, inicio, fin):
     return GoogleService.franjas_ocupadas(user_id, ms_a_dt(inicio) - timedelta(hours=4), ms_a_dt(fin))
 
 
-def _bloquear_y_verificar(user_id, inicio, fin, franjas):
+def _bloquear_y_verificar(user_id, inicio, fin, franjas, libres_ids=()):
     """Bloquea al closer (SELECT … FOR UPDATE sobre su fila de users) y, ya bloqueado, mira en la base si
     tiene otra agenda vigente que se cruce con [inicio, fin) (ms). Dos leads que piden el mismo closer a
     la vez quedan en fila: el segundo espera a que el primero haga commit y recién ahí lee, así que ve
@@ -627,7 +635,8 @@ def _bloquear_y_verificar(user_id, inicio, fin, franjas):
     por eso Google se lee antes (_franjas_frescas). Se puede volver a llamar después de algo que haya
     hecho commit: vuelve a bloquear y a mirar.
     Devuelve (closer, choca, fuera_de_google): fuera_de_google son los ids de las agendas que se cruzan
-    pero ya no están en su calendario (sigue_en_google): esas no chocan."""
+    pero ya no están en su calendario (sigue_en_google) o que este lead puede tomar (libres_ids, las C/D
+    de desplazar.py; `franjas` ya viene sin su evento): esas no chocan."""
     from app.models import Appointment, User
 
     closer = db.session.query(User).filter_by(id=user_id).with_for_update().first()
@@ -643,7 +652,7 @@ def _bloquear_y_verificar(user_id, inicio, fin, franjas):
     ).all()
     leido_desde = inicio - 4 * 3600000
     cruzan = [a for a in filas if dt_a_ms(a.start_time) + _bloque_min(a) * 60000 > inicio]
-    siguen = [a for a in cruzan if sigue_en_google(a, franjas, leido_desde=leido_desde)]
+    siguen = [a for a in cruzan if a.id not in libres_ids and sigue_en_google(a, franjas, leido_desde=leido_desde)]
     return closer, bool(siguen), [a.id for a in cruzan if a not in siguen]
 
 
@@ -988,7 +997,8 @@ def horarios(d, evento, form, resp, ahora=None):
     if descalifica:
         return []
     d, elegibles = solo_elegibles(d)
-    asig = asignacion(_contexto(evento, form, limpias), d, {**_ocupacion(ahora, elegibles), 'prueba': False})
+    libres = desplazar.libres(elegibles, ahora) if desplazar.desplaza(segmentar(form, limpias)) else {}
+    asig = asignacion(_contexto(evento, form, limpias), d, {**_ocupacion(ahora, elegibles, libres), 'prueba': False})
     return sorted({s['t'] for s in asig['slots']})
 
 
@@ -1449,7 +1459,9 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
         raise ReservaRechazadaError('ya_tiene', {'inicio': dt_a_ms(proxima.start_time)})
 
     d, elegibles = solo_elegibles(d)
-    asig = asignacion(_contexto(evento, form, limpias), d, {**_ocupacion(ahora, elegibles), 'prueba': False})
+    # Un lead A/B puede tomar el horario de una agenda C/D (desplazar.py).
+    libres = desplazar.libres(elegibles, ahora) if desplazar.desplaza(segmentar(form, limpias)) else {}
+    asig = asignacion(_contexto(evento, form, limpias), d, {**_ocupacion(ahora, elegibles, libres), 'prueba': False})
     slot = next((s for s in asig['slots'] if s['t'] == inicio), None)
     if not slot or not slot['p'] or slot['p'] not in elegibles:
         raise ReservaRechazadaError('ocupado')
@@ -1458,10 +1470,14 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     # La sesión de ese closer en este evento (lo que ajustó o la propuesta) y su margen: los dos bloquean.
     dur, margen = sesion_de(buscar(d, 'personas', slot['p']), evento['id'], evento['duracion'], evento.get('margen'))
     fin = inicio + (dur + margen) * 60000
+    huecos = libres.get(user_id, [])
+    desplazadas = desplazar.que_pisa(huecos, inicio, fin)
     # Google primero, sin bloqueo: renovar el token hace commit y soltaría el bloqueo.
     franjas = _franjas_frescas(user_id, inicio, fin)
+    if franjas:
+        franjas = desplazar.restar(franjas, huecos)
     # Bloqueo del closer: dos leads que eligen el mismo horario a la vez no pueden quedar los dos.
-    closer, choca, fuera_de_google = _bloquear_y_verificar(user_id, inicio, fin, franjas)
+    closer, choca, fuera_de_google = _bloquear_y_verificar(user_id, inicio, fin, franjas, desplazadas)
     if choca:
         db.session.rollback()
         # El mismo lead que confirmó dos veces a la vez: el primer pedido ya le tomó la agenda.
@@ -1476,7 +1492,7 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     def asegurar():
         """Lo que llama registrar_agenda justo antes de escribir: buscar la agenda previa del lead lee su
         Google Calendar y puede haber hecho commit (soltando el bloqueo). Vuelve a bloquear y a mirar."""
-        return _bloquear_y_verificar(user_id, inicio, fin, franjas)[1:]
+        return _bloquear_y_verificar(user_id, inicio, fin, franjas, desplazadas)[1:]
 
     payload = {
         **armar_reserva(**base, asig=asig, slot={**slot, 'dur': dur, 'margen': margen}),
@@ -1493,6 +1509,8 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     )
     if not appt:
         raise ReservaRechazadaError('ocupado')
+    if desplazadas:
+        desplazar.marcar(appt, desplazadas)
     _cerrar_intento(evento, form, funnel, limpias, origen, setter, False)
     _subir_version()
     db.session.commit()

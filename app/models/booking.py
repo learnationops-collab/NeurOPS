@@ -127,6 +127,10 @@ class Appointment(ConPersona, ConSegmento, db.Model):
     agenda_triage_id = db.Column(db.Integer, db.ForeignKey('appointments.id', ondelete='SET NULL'),
                                  nullable=True, index=True)
 
+    # Un lead A o B tomó el horario de esta agenda C/D (app/agendas_v2/desplazar.py): sigue en pie, pero
+    # hay que reagendarla. Apunta a la agenda que la desplazó.
+    desplazada_por_id = db.Column(db.Integer, db.ForeignKey('appointments.id', ondelete='SET NULL'), nullable=True, index=True)
+
     # Relationships
     closer = db.relationship('User', foreign_keys=[closer_id], backref='appointments_assigned')
     setter = db.relationship('User', foreign_keys=[setter_id], backref='appointments_set')

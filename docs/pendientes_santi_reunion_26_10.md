@@ -34,12 +34,15 @@ Junta lo que sigue abierto de la reunión del 24/10 ([pendientes_santi_reunion_2
 
 ## 1. Lógica: C y D como horarios «libres» para A y B
 
-- [ ] Al agendar un A o B, los horarios de Jean Carlo ocupados por un C o D cuentan como libres. Un C no puede tomar el lugar de otro C ni de un D. Un A o B sí.
-- [ ] Ignorar el evento de Google Calendar de esa agenda C/D al calcular lo ocupado (hoy Google manda: `servicio._ocupacion`, `_bloquear_y_verificar`, `registrar_agenda`).
-- [ ] Qué pasa con el C/D desplazado: queda marcado para pasarlo al triage o reagendarlo. La reagenda la hace la chica del triage.
-- [ ] Definir hasta cuánto antes de la llamada se le puede quitar el horario a un C/D.
-- [ ] Hacer el cambio en los dos lados: `nucleo/asignacion.py` y su espejo `frontend/src/pages/agendas_v2/core/asignacion.js`.
-- [ ] Probarlo en el servidor de prueba antes de producción (toca la reserva).
+Hecho en `app/agendas_v2/desplazar.py` (rama `feat/cd-libres`, migración `d7b3e9a1f4c2`). Decidido el 26/10: el C/D desplazado queda en pie para reagendar, y se le puede quitar el horario hasta 2 horas antes.
+
+- [x] Para un lead A o B, las agendas C/D de cualquier closer que empiezan dentro de más de 2 horas cuentan como libres. Un C o D no desplaza a nadie y una agenda sin segmento no se desplaza.
+- [x] Su evento de Google se descuenta solo si es lo único que ocupa ese rato: un evento propio del closer a esa hora la sigue bloqueando (simulado en producción: de las 4 C de Jean Carlo se liberan 3; la 6983 choca con su «Trainning Session»).
+- [x] El C/D desplazado queda marcado (`desplazada_por_id`), con un comentario en la ficha y un aviso al closer y a los admins para reagendarlo.
+- [x] Sin cambios en `core/asignacion.js`: la regla vive en la ocupación, que se calcula solo en el backend.
+- [ ] Deploy (toca la reserva: ¿servidor de prueba primero?).
+- [ ] Que el C/D desplazado se vea en el mazo del closer y del triage (con la parte visual).
+- [ ] Las migraciones del triage (`c4e9a1d7f2b8`, `f1a8d3c6b2e9`, sin subir) salen de `b8d2f4a6c1e3`, igual que `c4e8a2f6d1b7` de main: al subir el triage hay que colgarlas de la última de main (hoy `d7b3e9a1f4c2`) para no tener dos cabezas.
 - [ ] Momentum sessions por encima de C y D, o en los huecos de 15 minutos entre llamadas.
 
 ## 2. Triage
