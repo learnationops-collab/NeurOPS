@@ -5,7 +5,7 @@ from flask import current_app
 
 from app import db
 from app.agendas_v2 import operacion
-from app.models import Notification
+from app.services import avisos_service
 
 
 def _mover(previa, cliente, closer, setter_id, inicio, payload, comentario, aviso, ignorar_ids=()):
@@ -50,14 +50,9 @@ def _mover(previa, cliente, closer, setter_id, inicio, payload, comentario, avis
         espejo.closer = closer.username
         if nueva.agenda_payload:
             operacion._payload_en_espejo(espejo, nueva.agenda_payload)
-    db.session.add(
-        Notification(
-            subject='Agenda reprogramada',
-            content=aviso,
-            target_users=['role:admin', int(closer.id)],
-            associated_id=nueva.id,
-            associated_type='appointment',
-        )
+    avisos_service.avisar(
+        'agenda_reprogramada', *avisos_service.destino(['admin'], [closer.id]), 'Agenda reprogramada', aviso,
+        'appointment', nueva.id, person_uuid=nueva.person_uuid,
     )
     db.session.commit()
     if not espejo:

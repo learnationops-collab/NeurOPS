@@ -5,6 +5,7 @@ import { fmt } from './Shared';
 import { DockContexto } from './dockContexto';
 import { esFijable, useFijadas } from '../../../sesion/fijadas';
 import useOpcionesDeReporte from '../../../components/feedback/useOpcionesDeReporte';
+import useOpcionesDeAvisos from '../../../components/avisos/useOpcionesDeAvisos';
 import Mascota from '../../../components/mascota/Mascota';
 import { subirACapa } from '../../../components/standard/capa';
 import { MASCOTAS, mascotaDe, nombreDeMascota } from '../../../components/mascota/mascotas';
@@ -215,14 +216,15 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
         op.onClick();
     };
 
-    // Los reportes: sus opciones van antes del último grupo (cerrar sesión) y las respuestas sin leer
-    // se suman a la cuenta del avatar.
+    // Los avisos (la campanita) y los reportes: sus opciones van antes del último grupo (cerrar sesión)
+    // y lo que tienen sin leer se suma a la cuenta del avatar.
+    const avisos = useOpcionesDeAvisos();
     const reportes = useOpcionesDeReporte();
     const conGrupos = grupos.filter(g => g.length);
-    const todosLosGrupos = [...conGrupos.slice(0, -1), reportes.opciones, ...conGrupos.slice(-1)];
-    const enCuenta = (Number(aviso?.texto) || 0) + reportes.sinLeer;
+    const todosLosGrupos = [...conGrupos.slice(0, -1), [...avisos.opciones, ...reportes.opciones], ...conGrupos.slice(-1)];
+    const enCuenta = (Number(aviso?.texto) || 0) + avisos.sinLeer + reportes.sinLeer;
     const cuenta = enCuenta > 0 ? enCuenta : aviso?.texto;
-    const titulos = [aviso?.titulo, reportes.sinLeer ? `${reportes.sinLeer} ${reportes.sinLeer === 1 ? 'respuesta sin leer' : 'respuestas sin leer'} a tus reportes` : null];
+    const titulos = [aviso?.titulo, avisos.opciones[0].titulo, reportes.sinLeer ? `${reportes.sinLeer} ${reportes.sinLeer === 1 ? 'respuesta sin leer' : 'respuestas sin leer'} a tus reportes` : null];
     const etiqueta = [`Tu sesión: ${nombre}`, ...titulos].filter(Boolean).join(', ');
 
     // Lo que se puede fijar en el dock: el dock que contiene a este menú lo recibe para dibujar las

@@ -24,7 +24,8 @@ from sqlalchemy import func, or_
 from sqlalchemy.orm.attributes import flag_modified
 
 from app import db
-from app.models import Appointment, Client, Notification, User
+from app.models import Appointment, Client, User
+from app.services import avisos_service
 from app.models.financial import FinancialAgenda
 from app.agendas_v2.nucleo.catalogos import pais_de, pais_por_telefono, zona_valida
 
@@ -243,18 +244,13 @@ def registrar_agenda(payload, closer, setter, inicio, ahora=None, decision=None,
     appt.agenda_payload = payload
     if previa:
         db.session.flush()
-        db.session.add(
-            Notification(
-                subject='Sesión adicional: revisá la agenda anterior',
-                content=(
-                    f'{cliente.full_name or "Un lead"} ya tenía una agenda el '
-                    f'{previa.start_time.strftime("%d/%m/%Y %H:%M")} UTC y pidió una sesión adicional el '
-                    f'{inicio.strftime("%d/%m/%Y %H:%M")} UTC. Decidí si cancelás la anterior.'
-                ),
-                target_users=['role:admin', *sorted({int(closer.id), int(previa.closer_id)} - {None})],
-                associated_id=appt.id,
-                associated_type='appointment',
-            )
+        avisos_service.avisar(
+            'sesion_adicional', *avisos_service.destino(['admin'], [closer.id, previa.closer_id]),
+            'Sesión adicional: revisá la agenda anterior',
+            f'{cliente.full_name or "Un lead"} ya tenía una agenda el '
+            f'{previa.start_time.strftime("%d/%m/%Y %H:%M")} UTC y pidió una sesión adicional el '
+            f'{inicio.strftime("%d/%m/%Y %H:%M")} UTC. Decidí si cancelás la anterior.',
+            'appointment', appt.id, person_uuid=appt.person_uuid,
         )
     db.session.commit()
     _payload_en_espejo(BookingService.sync_appointment_to_financial_agenda(appt, cita_nueva=True), payload)
@@ -298,19 +294,14 @@ def crear_evento(appt, nombre_evento, evento_a_borrar=None):
         )
     except Exception as e:  # noqa: BLE001  (Google puede fallar de mil formas; la agenda ya esta guardada)
         current_app.logger.error(f'[AGENDAS 2.0] Sin evento de Calendar para la agenda #{appt.id}: {e}')
-        db.session.add(
-            Notification(
-                subject='Agenda sin evento de Google Calendar',
-                content=(
-                    f'La agenda de {lead.get("nombre") or "un lead"} '
-                    f'del {appt.start_time.strftime("%d/%m/%Y %H:%M")} UTC '
-                    f'se guardó, pero no se pudo crear el evento en el Calendar del closer ({e}). '
-                    'Creálo a mano con link de Meet e invitá al lead.'
-                ),
-                target_users=['role:admin', int(appt.closer_id)],
-                associated_id=appt.id,
-                associated_type='appointment',
-            )
+        avisos_service.avisar(
+            'agenda_sin_evento', *avisos_service.destino(['admin'], [appt.closer_id]),
+            'Agenda sin evento de Google Calendar',
+            f'La agenda de {lead.get("nombre") or "un lead"} '
+            f'del {appt.start_time.strftime("%d/%m/%Y %H:%M")} UTC '
+            f'se guardó, pero no se pudo crear el evento en el Calendar del closer ({e}). '
+            'Creálo a mano con link de Meet e invitá al lead.',
+            'appointment', appt.id, person_uuid=appt.person_uuid,
         )
         db.session.commit()
         return False

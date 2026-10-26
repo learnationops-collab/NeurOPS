@@ -3,7 +3,7 @@ import json
 import pytz
 from flask_login import login_required, current_user
 from app.services.closer_service import CloserService
-from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, WeeklyAvailability, Event, Client, SurveyAnswer, SurveyQuestion, CommentNotification, FeatureToggle
+from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, WeeklyAvailability, Event, Client, SurveyAnswer, SurveyQuestion, FeatureToggle
 from app.decorators import role_required
 from app.services.closer_agendas_service import contar_no_show_y_canceladas
 from datetime import date, timedelta, datetime
@@ -871,7 +871,7 @@ def get_lead_comments(id):
         return jsonify({"message": "Forbidden"}), 403
         
     from flask import current_app
-    from app.models import CommentNotification, Client
+    from app.models import Client
     from datetime import datetime
 
     def _format_date(dt):
@@ -884,18 +884,6 @@ def get_lead_comments(id):
         return str(dt)
 
     try:
-        # Marcar notificaciones de este cliente para el usuario actual como leídas
-        try:
-            CommentNotification.query.filter_by(
-                client_id=id,
-                user_id=current_user.id,
-                is_read=False
-            ).update({"is_read": True})
-            db.session.commit()
-        except Exception as notif_err:
-            db.session.rollback()
-            current_app.logger.error(f"[NOTIF READ ERROR]: {notif_err}")
-
         from app.services import avisos_service, lead_log_service
 
         client = Client.query.get(id)
@@ -1527,8 +1515,6 @@ def get_closer_deck():
 
     appointments = query.order_by(Appointment.start_time.asc()).all()
 
-    # No local import needed as they are imported globally
-    unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
     # Las notas nuevas avisan por `avisos_service` (docs/plan_notas_avisos_settings.md): mismo punto.
     from app.services.avisos_service import personas_con_notas_sin_leer
     unread_person_uuids = personas_con_notas_sin_leer(current_user)
@@ -1536,7 +1522,7 @@ def get_closer_deck():
     formatted_appointments = []
     for a in appointments:
         formatted = _format_appointment_for_deck(a)
-        formatted["unread_comment"] = (a.client_id in unread_client_ids if a.client_id else False)             or (a.person_uuid in unread_person_uuids if a.person_uuid else False)
+        formatted["unread_comment"] = bool(a.person_uuid and a.person_uuid in unread_person_uuids)
         # Progreso del wizard de confirmación (ver Appointment.confirmation_* en
         # app/models/booking.py) — se agrega acá en vez de en _format_appointment_for_deck para
         # no tocar esa función (en revisión paralela por otro fix sin relación con esto).
@@ -2690,10 +2676,10 @@ def get_unassigned_leads_today():
 @login_required
 def get_unread_no_agenda_closer():
     # Obtener clientes que tienen notificaciones de comentarios no leídos para este closer
-    from app.models import CommentNotification, Client, Appointment
-    
-    unread_notifications = CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()
-    unread_client_ids = {n.client_id for n in unread_notifications}
+    from app.models import Client, Appointment
+    from app.services.avisos_service import clientes_con_notas_sin_leer
+
+    unread_client_ids = clientes_con_notas_sin_leer(current_user)
     
     if not unread_client_ids:
         return jsonify([]), 200

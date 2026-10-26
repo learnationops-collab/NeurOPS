@@ -16,7 +16,7 @@ from app.api.setter import bp
 @bp.route('/deck', methods=['GET'])
 @role_required(ROLE_SETTER)
 def get_setter_deck():
-    from app.models import Appointment, CommentNotification, Conversation, LeadAnswer, Ad, Event, Client
+    from app.models import Appointment, Conversation, LeadAnswer, Ad, Event, Client
     from datetime import date, timedelta, datetime
     from sqlalchemy import or_, func
     
@@ -29,8 +29,7 @@ def get_setter_deck():
 
     unread_client_ids = set()
     if current_user and current_user.is_authenticated:
-        unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
-        unread_client_ids |= avisos_service.clientes_con_notas_sin_leer(current_user)
+        unread_client_ids = avisos_service.clientes_con_notas_sin_leer(current_user)
 
     # Filtrar según el paso del flujo de trabajo
     if step == 'cualificacion':

@@ -21,7 +21,7 @@ from flask import request, jsonify
 from flask_login import current_user
 
 from app import db
-from app.models import ROLE_SETTER, Client, Appointment, LeadAnswer, Ad, CommentNotification
+from app.models import ROLE_SETTER, Client, Appointment, LeadAnswer, Ad
 from app.decorators import role_required
 from app.services.user_time_service import hoy_del_usuario, limites_dia_utc, limites_rango_utc
 from app.services import agenda_contacto_service, avisos_service, lead_log_service
@@ -107,8 +107,7 @@ def get_agendas_del_mazo():
     desde, hasta = _rango_pedido()
     agendas = agendas_del_setter(current_user, desde, hasta)
 
-    sin_leer = {n.client_id for n in CommentNotification.query.filter_by(
-        user_id=current_user.id, is_read=False).all()} | avisos_service.clientes_con_notas_sin_leer(current_user)
+    sin_leer = avisos_service.clientes_con_notas_sin_leer(current_user)
 
     agenda_contacto_service.precargar(agendas)
     filas = []
