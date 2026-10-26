@@ -10,6 +10,8 @@ Para cada tarea o requerimiento en este proyecto, el agente DEBE seguir estricta
    **Desarrollo rápido, sin tests.** El agente no escribe ni corre tests. Recién cuando no queda ningún pendiente, puede proponerlos (como propuesta, sin escribirlos); se hacen solo si el usuario dice que sí.
    **Todo se ejecuta en el servidor, nunca en la PC del usuario.** Pruebas, scripts, backfills y migraciones corren en el servidor donde está desplegado el código (`railway ssh --service <servicio> -- ...`), no en local: no se levanta la app, ni Python, ni bases SQLite en la PC del usuario. Si el cambio es crítico, se recomienda probarlo antes en el servidor de prueba (proyecto «Servidor de pruebas» (antes `successful-curiosity`), servicio "Servidor de prueba", rama `develop`), pero es una recomendación, no un paso obligatorio.
 
+   **Pendientes por escrito.** Todo pendiente que surja en la conversación (algo que se decide hacer después, un error encontrado, una pregunta abierta) se anota en el momento en el archivo de pendientes más reciente de `docs/` (`pendientes_*.md`), con lo necesario para retomarlo sin la conversación. Lo que se resuelve se marca `[x]`, y lo que se descarta se borra. No se deja ningún pendiente solo en el chat.
+
 3. **Validación con el Usuario**
    Al terminar de inyectar el código funcional, detente. Infórmale al usuario qué se modificó y pregúntale de forma clara y explícita si la solución funciona bien en sus pruebas locales.
 
