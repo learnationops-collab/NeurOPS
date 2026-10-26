@@ -170,7 +170,9 @@ def _persona_nueva(d, user, **campos):
     """Crea la persona de Team de un closer que todavía no está (así la dirección comercial lo ve)."""
     pid = uid('d')
     guardar_doc('personas', pid, {
-        'nombre': user.username, 'email': (user.email or '').lower(), 'rol': rol_closer(d),
+        # El triage queda con su rol: con el de closer entraría en «Todos los closers».
+        'nombre': user.username, 'email': (user.email or '').lower(),
+        'rol': 'triage' if user.role == 'triage' else rol_closer(d),
         'orden': max([x.get('orden') or 0 for x in ordenados(d, 'personas')] or [0]) + 1, **campos,
     }, usuario_id=user.id)
     return buscar(colecciones(), 'personas', pid)

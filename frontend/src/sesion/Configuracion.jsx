@@ -25,7 +25,7 @@ import { useTemaDeHoja } from './temaDeHoja';
 import { Icono } from '../pages/agendas_v2/ui/base';
 import '../pages/agendas_v2/thalamus.css';
 
-const RECIBEN_AGENDAS = ['closer', 'director_comercial', 'admin'];
+const RECIBEN_AGENDAS = ['closer', 'triage', 'director_comercial', 'admin'];
 const PESTANAS = [
     { id: 'datos', nombre: 'Datos', icono: 'user', para: () => true },
     { id: 'disponibilidad', nombre: 'Disponibilidad', icono: 'clock', para: (rol) => RECIBEN_AGENDAS.includes(rol) },
@@ -46,7 +46,7 @@ export default function Configuracion({ user = null, tabInicial = null, onTab = 
     const elegir = (id) => { setElegida(id); onTab(id); };
     const [raiz, dataTheme] = useTemaDeHoja();
     let cuerpo;
-    if (tab === 'disponibilidad') cuerpo = <><TarjetaDisponibilidad />{user?.role === 'closer' && <TarjetaSesiones />}</>;
+    if (tab === 'disponibilidad') cuerpo = <><TarjetaDisponibilidad />{['closer', 'triage'].includes(user?.role) && <TarjetaSesiones />}</>;
     else if (tab === 'integraciones') cuerpo = <><TarjetaCalendar /><TarjetaWhatsapp /></>;
     else if (tab === 'eventos') cuerpo = <MisEventos />;
     else if (tab === 'equipo') cuerpo = <TeamManagementPage embebido />;

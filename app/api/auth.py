@@ -230,8 +230,9 @@ def mi_disponibilidad():
     """El horario semanal del closer y su zona horaria. Es el de su persona de Team en Agendamiento:
     lo edita él acá o la dirección comercial allá. PUT {horario, tz}."""
     from app.agendas_v2 import servicio
-    if not current_user.tiene_rol('closer'):
-        return jsonify({"message": "Solo los closers tienen disponibilidad"}), 403
+    # El triage también atiende llamadas: carga su horario igual que un closer.
+    if not (current_user.tiene_rol('closer') or current_user.tiene_rol('triage')):
+        return jsonify({"message": "Solo los closers y el triage tienen disponibilidad"}), 403
     if request.method == 'PUT':
         datos = request.get_json(silent=True) or {}
         try:
@@ -248,8 +249,8 @@ def mis_sesiones():
     del director en el evento; el closer la ajusta acá y la dirección comercial la revisa en Team.
     PUT {sesiones: {evento_id: {duracion?, margen?}}} (entero: lo que no viene vuelve a la propuesta)."""
     from app.agendas_v2 import servicio
-    if not current_user.tiene_rol('closer'):
-        return jsonify({"message": "Solo los closers tienen sesiones"}), 403
+    if not (current_user.tiene_rol('closer') or current_user.tiene_rol('triage')):
+        return jsonify({"message": "Solo los closers y el triage tienen sesiones"}), 403
     if request.method == 'PUT':
         datos = request.get_json(silent=True) or {}
         return jsonify(servicio.guardar_sesiones(current_user, datos.get('sesiones'))), 200
