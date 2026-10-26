@@ -63,7 +63,7 @@ Hecho sin commitear: campos de triage en `Appointment`, migración `c4e9a1d7f2b8
 ## 3. Reparto por segmento (plan §2.3 y §8.4)
 
 - [ ] La asignación lee el segmento: A → Jean Carlo en menos de 24 h · B → Jean Carlo mientras tenga lugar; si no hay horario en 48 h, al triage · C y D → triage.
-- [ ] Mantener `mk-academy` (estudiante que no puede invertir → página de gracias). Revisar con Mario si «podría conseguir ayuda» también entra.
+- [x] Mantener `mk-academy` (estudiante que no puede invertir → página de gracias). Decidido: «podría conseguir ayuda» también entra.
 - [ ] Marlon y Mario solo como respaldo de lo que Jean Carlo no puede tomar (como hoy).
 - [ ] Capacidad de Jean Carlo configurable (llamadas por semana).
 

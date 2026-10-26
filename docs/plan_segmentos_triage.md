@@ -372,4 +372,4 @@ Ordena mejor que los puntos de hoy (AUC 0,692 contra 0,668, en la misma muestra,
 
 **Revisión mensual.** Correr el ajuste con los leads nuevos (Thalamus ya va a tener datos), cargar los puntos con `scripts/segmentos_formulario.py`, subir la versión y recalcular con `scripts/backfill_segmentos.py --apply --force`. Una opción nueva sin `puntosSeg` frena el script.
 
-Pendiente de Mario: si «podría conseguir ayuda» de un estudiante también va a la página de gracias (`mk-academy`). Hoy cae en D.
+Decidido por Mario (26/10): el estudiante que responde «podría conseguir ayuda» también va a la página de gracias (`mk-academy`).

@@ -6,7 +6,8 @@ Cambios (todos idempotentes: correrlo dos veces deja lo mismo):
     menos. Salen de una logística penalizada sobre 736 leads (jun–sep 2026, 77 compras a 60 días), pasada a
     enteros. `puntos` (la nota de 0 a 10 del closer) no se toca.
   - Cortes A ≥ 3 (compra unas 2 veces el promedio), B ≥ 1 (sobre el promedio), C ≥ -1, D el resto.
-  - Ruteo: las reglas con url (mk-academy) quedan primero; las mk-g* se reemplazan por una por segmento:
+  - Ruteo: las reglas con url (mk-academy: estudiante que no invierte, también «podría conseguir ayuda»)
+    quedan primero; las mk-g* se reemplazan por una por segmento:
     A → Grupo 5 · B → Grupo 4 · C → Grupo 2 · D → Grupo 1, con el desborde de siempre. «Todo lo demás»
     (sin segmento: falta Inversión o Etapa) sigue en Grupo 1.
   - Examen: Ecuador, Chile y Panamá antes de «Otro». Decide queda como siempre; con --quien-decide pasa a
@@ -79,9 +80,17 @@ def _insertar(opciones, nueva, antes_de=None, despues_de=None):
         opciones.append(nueva)
 
 
-def _reglas(reglas):
-    """Las reglas con url (mk-academy) primero y una por segmento después; las mk-g* se van."""
+def _reglas(reglas, inversion):
+    """Las reglas con url (mk-academy) primero y una por segmento después; las mk-g* se van.
+    mk-academy: el estudiante que no invierte, sea «no estoy dispuesto» o «podría conseguir ayuda» (Mario, 26/10)."""
     filtros = [r for r in reglas if r.get('url')]
+    existen = {o['id'] for o in inversion['opciones']}
+    for r in filtros:
+        if r.get('id') != 'mk-academy':
+            continue
+        for c in r['cond']:
+            if c['q'] == INVERSION:
+                c['ops'] = [o for o in ('oglxqqlugub', 'o8slpjgvje7') if o in existen]
     por_seg = [{'id': f'seg-{s.lower()}', 'grupo': g, 'url': '', 'cond': [{'q': SEG_Q, 'ops': [s]}]}
                for s, g in POR_SEGMENTO.items()]
     return filtros + por_seg
@@ -123,7 +132,7 @@ def preparar(datos, quien_decide=False):
             raise SystemExit(f'Opciones sin puntos de segmento en {qid}: {sin}')
 
     datos['segmento'] = dict(SEGMENTO)
-    datos['reglas'] = _reglas(datos.get('reglas') or [])
+    datos['reglas'] = _reglas(datos.get('reglas') or [], preguntas[INVERSION])
     datos['resto'] = RESTO
     return datos
 

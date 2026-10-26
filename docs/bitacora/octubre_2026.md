@@ -1029,3 +1029,6 @@
   - Los puntos del segmento salen de una logística sobre 736 leads (jun–sep, 77 compras a 60 días), en una escala de −3 a +2 que también resta (estudiante −3, residente y ENARM −2). El segmento es la suma de lo respondido; lo que falta suma 0. Cortes A ≥ 3, B ≥ 1, C ≥ −1. Detalle en [docs/plan_segmentos_triage.md](../plan_segmentos_triage.md) §8.9.
   - Las reglas del formulario pueden pedir el segmento («Segmento del lead»). En «Sesión de Aceleración», `mk-academy` primero y A → Grupo 5, B → Grupo 4, C → Grupo 2, D → Grupo 1. Las opciones nuevas de inversión ($1000–$2000, «podría conseguir ayuda») ya no caen en «Todo lo demás».
   - `puntos` (la nota del closer) no cambia: los del segmento van aparte (`puntosSeg`). `scripts/ajuste_segmentos.py` rehace el ajuste cada mes.
+- **26 de Octubre de 2026 (Segmentos · el estudiante que «podría conseguir ayuda» va a la página de gracias)** *([scripts/segmentos_formulario.py](../../scripts/segmentos_formulario.py))*:
+  - `mk-academy` toma también «No estoy en posición de invertir, pero podría conseguir ayuda» (decisión de Mario). Antes caía en D (Grupo 1).
+  - Servidor de prueba: se agregó `appointments.desplazada_por_id`, que faltaba aunque la base figuraba en la última migración.
