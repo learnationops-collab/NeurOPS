@@ -929,7 +929,7 @@
   - «¿Cuándo lo vas a seguir?» deja el formulario de rótulos y pasa al diseño de Mario: **Snap** (chips de día con indicador que se desliza, calendario, horas rápidas o tipeada, píldora de WhatsApp) y **Flow** (la oración «Seguimiento mañana a las 10:45 aviso por WhatsApp» con un desplegable por parte). Los dos modos comparten las mismas respuestas; el modo elegido se recuerda en el dispositivo.
   - Abajo, un resumen en una línea y el Ángulo opcional detrás de «+ Ángulo». Entra con mañana a las 10:45 y aviso, sin pisar una fecha que ya venía. «Sin hora» o «Sin fecha» apagan el aviso.
   - El seguimiento de cobro junta la casilla del aviso y su hora en una sola celda.
-  - Verificado con una vista previa del componente real fuera de la ficha; tres pruebas de TabResultado que escriben en las notas quedan por actualizar.
+  - Verificado con una vista previa del componente real fuera de la ficha. Las tres pruebas de TabResultado que escribían en las notas ahora tocan «+ Ángulo» antes (sin correrlas).
 - **26 de Octubre de 2026 (Closer · Reportar: la primera tarjeta muestra la presentación)** *([CloserWorkflowPage.jsx](../../frontend/src/pages/closer/CloserWorkflowPage.jsx), [app/api/closer.py](../../app/api/closer.py))*:
   - En Reportar, sin nada por reportar, «Tu siguiente paso» decía «Te falta 1 por confirmar» y mandaba a Confirmar. Ahora muestra el % de presentación del día: llamadas con la oferta presentada sobre las que asistieron («Oferta presentada en 2 de 2»).
   - El mazo manda `offer_presented` de cada cita para poder contarlo.

@@ -55,13 +55,16 @@ describe('TabResultado', () => {
     await user.click(screen.getByRole('button', { name: 'Reagenda' }));
     await user.click(screen.getByRole('button', { name: 'No dio motivo' }));
     await user.click(screen.getByRole('button', { name: /No dejó fecha/ }));
-    await user.type(screen.getByLabelText('Ángulo del seguimiento / Notas (opcional)'), 'le pido fecha nueva');
+    // El ángulo es opcional: aparece al tocar «+ Ángulo».
+    await user.click(screen.getByRole('button', { name: /Ángulo/ }));
+    await user.type(screen.getByLabelText('Ángulo'), 'le pido fecha nueva');
     await user.click(screen.getByRole('button', { name: /^Continuar$/ }));
     expect(screen.getByRole('heading', { name: /Revisá el resultado/ })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Anterior/ }));
-    expect(screen.getByRole('heading', { name: '¿Cuándo lo vas a seguir?' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Ángulo del seguimiento / Notas (opcional)')).toHaveValue('le pido fecha nueva');
+    // Volver al paso con un ángulo escrito lo muestra abierto.
+    expect(screen.getByRole('heading', { name: 'Seguimiento' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Ángulo')).toHaveValue('le pido fecha nueva');
 
     await user.click(screen.getByRole('button', { name: /Anterior/ }));
     expect(screen.getByRole('heading', { name: '¿Dejó una fecha nueva?' })).toBeInTheDocument();
@@ -180,7 +183,9 @@ describe('TabResultado', () => {
     await user.click(screen.getByRole('button', { name: 'Reagenda' }));
     await user.click(screen.getByRole('button', { name: 'No dio motivo' }));
     await user.click(screen.getByRole('button', { name: /No dejó fecha/ }));
-    await user.type(screen.getByLabelText('Ángulo del seguimiento / Notas (opcional)'), 'le pido fecha nueva');
+    // El ángulo es opcional: aparece al tocar «+ Ángulo».
+    await user.click(screen.getByRole('button', { name: /Ángulo/ }));
+    await user.type(screen.getByLabelText('Ángulo'), 'le pido fecha nueva');
     await user.click(screen.getByRole('button', { name: /^Continuar$/ }));
 
     expect(screen.getByRole('heading', { name: /Revisá el resultado/ })).toBeInTheDocument();
