@@ -5,19 +5,19 @@ from flask import current_app
 
 from app import db
 from app.agendas_v2 import operacion
-from app.models import Notification
+from app.services import avisos_service
 
 
 def _mover(previa, cliente, closer, setter_id, inicio, payload, comentario, aviso, ignorar_ids=()):
     """Igual que «Reagendado» del mazo (CloserService.process_agenda), son dos filas. La vieja queda
-    cerrada como 'Reagendado' y la nueva nace con `is_rescheduled`, con un comentario en el roadmap: de
+    cerrada como 'Reagendado' y la nueva nace con `is_rescheduled`, con una nota en el log de la persona: de
     ahí salen el embudo del closer (agendas y reagendas), la cartera y la cola «reagendar». Antes se
     movía la misma fila y para todo eso la reagenda no existía.
     El registro de agendas sigue con UNA fila (la de la vieja, que pasa a la fecha nueva): así no
     suma otra agenda en el workshop ni en Confirmación.
     payload None: la nueva queda sin agenda_payload (una de n8n sigue siendo de n8n).
     Devuelve la agenda nueva, o None si el horario ya no está libre (sin cambios)."""
-    from app.models import ClientComment
+    from app.services import lead_log_service
     from app.services.booking_service import BookingService
 
     anterior = previa.start_time
@@ -42,22 +42,17 @@ def _mover(previa, cliente, closer, setter_id, inicio, payload, comentario, avis
             'reprogramada_desde': anterior.isoformat() + 'Z' if anterior else None,
             'reagenda_de': previa.id,
         }
-    db.session.add(ClientComment(client_id=cliente.id, author_id=previa.closer_id or closer.id, text=comentario))
     db.session.flush()
+    lead_log_service.nota(comentario, previa.closer_id or closer.id, appt=nueva)
     if espejo:
         espejo.date = inicio
         espejo.fecha_meet = inicio.isoformat()
         espejo.closer = closer.username
         if nueva.agenda_payload:
             operacion._payload_en_espejo(espejo, nueva.agenda_payload)
-    db.session.add(
-        Notification(
-            subject='Agenda reprogramada',
-            content=aviso,
-            target_users=['role:admin', int(closer.id)],
-            associated_id=nueva.id,
-            associated_type='appointment',
-        )
+    avisos_service.avisar(
+        'agenda_reprogramada', *avisos_service.destino(['admin'], [closer.id]), 'Agenda reprogramada', aviso,
+        'appointment', nueva.id, person_uuid=nueva.person_uuid,
     )
     db.session.commit()
     if not espejo:

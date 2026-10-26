@@ -23,7 +23,7 @@ from app import db
 from app.models import Appointment, Client, FinancialSale
 from app.services import ficha_lead_secciones as secciones
 from app.services import ficha_vocabulario as voc
-from app.services import triage_service
+from app.services import lead_log_service, triage_service
 from app.services.closer_followup_service import CloserFollowUpService
 from app.services.comercial_service import ASISTIO, cerro_sin_venta, chip, post_call_de, pre_call_de
 from app.services.estado_lead import estado_de_agenda, resolver_estado
@@ -176,7 +176,8 @@ def _confirmacion(appt):
         'cerrada': (appt.result or '').strip().lower() == 'confirmado',
         'como_viene': {'clave': como, 'label': voc.etiqueta_de('como_viene', como)},
         'dolores': [{'clave': d, 'label': voc.etiqueta_de('dolores', d)} for d in dolores],
-        'nota': appt.closer_notes or None,
+        # La nota actual de la llamada sale del log; la columna es su copia.
+        'nota': lead_log_service.nota_llamada_de(appt) or appt.closer_notes or None,
         'recordatorio_previo': _iso(appt.pre_call_reminder_at),
     }
 

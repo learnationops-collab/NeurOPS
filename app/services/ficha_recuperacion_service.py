@@ -50,9 +50,12 @@ def pasar_a_recuperacion(appt, datos, usuario):
                                             fecha_seguimiento=fecha, intento=1, reminder_enabled=False)
     appt.closer_result = ARCHIVADA_SIN_REPORTE
     appt.closer_processed = True
-    firma = (f'[Sistema] {usuario.username} la pasó a seguimiento de recuperación: '
-             f'{motivo.lower() if motivo else "la llamada no tuvo resultado"}.')
-    appt.closer_notes = f'{appt.closer_notes}\n{firma}'.strip() if appt.closer_notes else firma
+    from app.services import lead_log_service
+
+    # Un evento en el log, no un renglón en la nota de la llamada (antes se pegaba ahí).
+    lead_log_service.evento(appt, 'pasada_a_recuperacion',
+                            f'{usuario.username} la pasó a seguimiento de recuperación: '
+                            f'{motivo.lower() if motivo else "la llamada no tuvo resultado"}.', usuario)
     db.session.commit()
 
     from app.services.booking_service import BookingService

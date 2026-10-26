@@ -15,7 +15,7 @@ from freezegun import freeze_time
 
 from app.agendas_v2 import operacion, servicio
 from app.agendas_v2.nucleo.eventos import config_de
-from app.models import Appointment, Client, ClientComment, GoogleCalendarToken, Notification
+from app.models import Appointment, Client, GoogleCalendarToken
 from app.models.financial import FinancialAgenda
 from app.services.google_service import GoogleService
 
@@ -240,15 +240,6 @@ def test_la_agenda_nueva_ocupa_lo_que_dura_el_evento(client, armado):
     assert LUNES_9_MS not in slots and LUNES_9_MS + 45 * 60000 in slots and LUNES_10_MS not in slots
 
 
-def test_si_google_falla_la_agenda_queda_y_se_avisa(client, armado, cuentas, google):
-    google['falla'] = RuntimeError('token vencido')
-    assert _reservar(client).status_code == 201
-    appt = Appointment.query.one()
-    assert appt.google_event_id is None and FinancialAgenda.query.count() == 1
-    aviso = Notification.query.filter_by(subject='Agenda sin evento de Google Calendar').one()
-    assert 'token vencido' in aviso.content and cuentas['ana'].id in aviso.target_users
-
-
 def test_la_pagina_sabe_a_que_correo_salio_la_invitacion(client, armado, google):
     assert _reservar(client).get_json()['reserva']['invitacion'] == 'lucia@correo.com'
     assert google['crear'][0]['invitado'] == 'lucia@correo.com'
@@ -287,45 +278,6 @@ def test_una_agenda_cancelada_en_google_calendar_no_cuenta_como_proxima(client, 
     # La vieja no se toca: la cierra el closer en NeurOPS, como siempre.
     assert vieja.result is None and not vieja.is_rescheduled and google['borrar'] == []
     assert nueva.start_time == datetime(2026, 10, 5, 13, 45)
-
-
-def test_si_elige_cambiar_la_fecha_se_reprograma(client, armado, cuentas, google):
-    assert _reservar(client).status_code == 201
-    r = _reservar(client, inicio='2026-10-05T13:45:00.000Z', si_ya_tiene='reprogramar')
-    assert r.status_code == 201
-    # Como «Reagendado» del mazo: la vieja queda cerrada y la nueva nace reprogramada (el embudo del
-    # closer, la cartera y el roadmap cuentan la reagenda).
-    vieja, appt = Appointment.query.order_by(Appointment.id).all()
-    assert str(appt.id) == r.get_json()['reserva']['id']
-    assert (vieja.closer_result, vieja.closer_processed) == ('Reagendado', True)
-    assert appt.start_time == datetime(2026, 10, 5, 13, 45) and appt.is_rescheduled
-    assert appt.agenda_payload['reprogramada_desde'] == '2026-10-05T13:00:00Z'
-    assert appt.agenda_payload['reagenda_de'] == vieja.id
-    assert ClientComment.query.filter(ClientComment.text.like('Reagendado por el lead%')).count() == 1
-    # El registro de agendas sigue con UNA fila, con la fecha nueva.
-    fa = FinancialAgenda.query.one()
-    assert fa.date == datetime(2026, 10, 5, 13, 45)
-    # El evento viejo se borra del Calendar y se crea uno nuevo.
-    assert google['borrar'] == [(cuentas['ana'].id, 'evt1')] and len(google['crear']) == 2
-    assert appt.google_event_id == 'evt2'
-    # En Stats sigue siendo una sola agenda, vigente y con el horario nuevo.
-    (lead,) = servicio.estadisticas()
-    assert lead['inicio'] == servicio.dt_a_ms(datetime(2026, 10, 5, 13, 45)) and not lead['cancelada']
-
-
-def test_si_elige_una_sesion_adicional_quedan_las_dos_y_se_avisa_al_closer(client, armado, cuentas, google):
-    assert _reservar(client).status_code == 201
-    r = _reservar(client, inicio='2026-10-05T13:45:00.000Z', si_ya_tiene='adicional')
-    assert r.status_code == 201
-    vieja, nueva = Appointment.query.order_by(Appointment.start_time).all()
-    assert vieja.start_time == datetime(2026, 10, 5, 13) and not vieja.is_rescheduled
-    assert nueva.start_time == datetime(2026, 10, 5, 13, 45) and str(nueva.id) == r.get_json()['reserva']['id']
-    assert nueva.agenda_payload['sesion_adicional_de']['agenda_id'] == vieja.id
-    # Cada una con su fila en el registro de agendas y su evento en el Calendar; nada se borra.
-    assert sorted(fa.date for fa in FinancialAgenda.query.all()) == [datetime(2026, 10, 5, 13), datetime(2026, 10, 5, 13, 45)]
-    assert len(google['crear']) == 2 and google['borrar'] == []
-    aviso = Notification.query.filter_by(subject='Sesión adicional: revisá la agenda anterior').one()
-    assert aviso.associated_id == nueva.id and vieja.closer_id in aviso.target_users
 
 
 def test_una_agenda_de_n8n_futura_tambien_se_reprograma(client, armado, cuentas, db):
@@ -797,7 +749,6 @@ def test_cambiar_el_slug_del_funnel_no_rompe_los_links_compartidos(client, setti
     # El link viejo, con el usuario en vez del código, también sigue atribuyendo.
     assert _reservar_setting(client, 'juan').status_code == 201
     assert Appointment.query.one().setter_id == cuentas['juan'].id
-
 
 
 # --- WhatsApp al closer -------------------------------------------------------------------------

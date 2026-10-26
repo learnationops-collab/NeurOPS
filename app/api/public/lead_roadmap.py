@@ -1,6 +1,6 @@
 from flask import request, jsonify
 from app import db
-from app.models import Client, Appointment, SurveyAnswer, SurveyQuestion, ClientComment, User
+from app.models import Client, Appointment, SurveyAnswer, SurveyQuestion, User
 from app.models.financial import FinancialSale, FinancialAgenda
 from app.models import Conversation, LeadAnswer
 from app.services.identity_service import normalize_ig
@@ -130,7 +130,10 @@ def get_lead_roadmap():
         # 6. Buscar Appointments locales y respuestas de encuestas
         if client:
             appointments = client.appointments.order_by(Appointment.start_time.desc()).all()
-            comments = ClientComment.query.filter_by(client_id=client.id).order_by(ClientComment.created_at.desc()).all()
+            from types import SimpleNamespace
+            from app.services import lead_log_service
+            comments = [SimpleNamespace(id=e.id, text=e.description, author_rel=e.user, created_at=e.created_at)
+                        for e in reversed(lead_log_service.notas_de(client.person_uuid))]
 
             answers_query = db.session.query(SurveyAnswer, SurveyQuestion).join(SurveyQuestion).filter(SurveyAnswer.client_id == client.id).all()
             for answer, question in answers_query:

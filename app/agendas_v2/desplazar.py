@@ -12,7 +12,6 @@ para que la reagende. Un C o D no desplaza a nadie, y una agenda sin segmento no
 import time
 from datetime import datetime, timedelta, timezone
 
-from app import db
 
 QUE_DESPLAZAN = ('A', 'B')
 DESPLAZABLES = ('C', 'D')
@@ -131,7 +130,8 @@ def que_pisa(huecos, inicio, fin):
 def marcar(appt, ids):
     """La agenda `appt` (del lead A/B) tomó el horario de esas agendas C/D: quedan marcadas y el closer y
     los admins reciben un aviso para reagendarlas. No hace commit."""
-    from app.models import Appointment, ClientComment, Notification
+    from app.models import Appointment
+    from app.services import avisos_service, lead_log_service
 
     for a in Appointment.query.filter(Appointment.id.in_(list(ids))).all():
         a.desplazada_por_id = appt.id
@@ -140,13 +140,9 @@ def marcar(appt, ids):
         nuevo = (appt.client.full_name if appt.client else None) or 'un lead'
         texto = (f'El horario del {cuando} UTC lo tomó {nuevo} (segmento {appt.segmento or "?"}). '
                  f'Esta agenda (segmento {a.segmento}) sigue en pie: hay que reagendarla.')
-        db.session.add(ClientComment(client_id=a.client_id, author_id=a.closer_id, text=texto))
-        db.session.add(
-            Notification(
-                subject='Agenda para reagendar',
-                content=f'La agenda de {nombre} ({a.segmento}) del {cuando} UTC quedó desplazada por {nuevo}: reagendala.',
-                target_users=['role:admin', int(a.closer_id)],
-                associated_id=a.id,
-                associated_type='appointment',
-            )
+        lead_log_service.nota(texto, a.closer_id, appt=a)
+        avisos_service.avisar(
+            'agenda_desplazada', *avisos_service.destino(['admin'], [a.closer_id]), 'Agenda para reagendar',
+            f'La agenda de {nombre} ({a.segmento}) del {cuando} UTC quedó desplazada por {nuevo}: reagendala.',
+            'appointment', a.id, person_uuid=a.person_uuid,
         )

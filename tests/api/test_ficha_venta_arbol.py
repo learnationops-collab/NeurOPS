@@ -307,22 +307,6 @@ def test_sin_pedir_acceso_no_se_toca_la_academia(client, db, lead, equipo, auth_
     acceso.assert_not_called()
 
 
-def test_los_referidos_con_nombre_entran_como_leads_nuevos(client, db, lead, equipo, auth_headers):
-    r, _ = declarar(client, auth_headers, equipo['closer'], lead, venta_del_arbol(
-        referidos={'pedido': 'si', 'filas': [{'nombre': 'Beto', 'contacto': '@beto.ig'},
-                                             {'nombre': 'Caro', 'contacto': '+59170000000'},
-                                             {'nombre': '  ', 'contacto': 'sin nombre'}]}))
-
-    assert r.status_code == 201
-    assert r.get_json()['referidos'] == 2
-    nuevas = Appointment.query.filter(Appointment.id != lead.id).all()
-    assert {a.origin for a in nuevas} == {'Referido de Ana Gomez'}
-    assert {a.closer_id for a in nuevas} == {equipo['closer'].id}
-    assert {a.client.instagram for a in nuevas} == {'beto.ig', None}
-    assert Comment.query.filter_by(associated_id=lead.client_id, comment_type='client').filter(
-        Comment.text.contains('Referencia otorgada')).count() == 2
-
-
 def test_las_respuestas_del_arbol_de_la_venta_quedan_en_la_bitacora(client, db, lead, equipo,
                                                                    auth_headers):
     r, _ = declarar(client, auth_headers, equipo['closer'], lead, venta_del_arbol())

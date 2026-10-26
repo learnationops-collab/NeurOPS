@@ -184,6 +184,9 @@ def create_app(config_class=Config):
     from app.api.entrantes import bp as entrantes_bp
     app.register_blueprint(entrantes_bp, url_prefix='/api/marketing/entrantes')  # solo rutas con sesión: lleva CSRF
 
+    from app.api.avisos import bp as avisos_bp
+    app.register_blueprint(avisos_bp, url_prefix='/api/avisos')
+
     from app.api.triage import bp as triage_bp
     app.register_blueprint(triage_bp, url_prefix='/api/triage')
 

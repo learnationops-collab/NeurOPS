@@ -160,9 +160,12 @@ class CloserFollowUpService:
             closer_processed=True,
             closer_result='Show up',
             seguimiento_realizado=True,
-            closer_notes='[Sistema] Cita creada automáticamente: este cliente tenía venta(s) registrada(s) sin ninguna agenda asociada.'
         )
         db.session.add(appt)
+        db.session.flush()
+        from app.services import lead_log_service
+        lead_log_service.evento(appt, 'cita_creada_automatica', 'Cita creada automáticamente: este cliente tenía '
+                                'venta(s) registrada(s) sin ninguna agenda asociada.')
         db.session.commit()
         return appt
 
@@ -1143,7 +1146,8 @@ class CloserFollowUpService:
         appointment.fecha_seguimiento = fecha_seguimiento or None
         appointment.seguimiento_realizado = False
         if notes:
-            appointment.closer_notes = notes
+            from app.services import lead_log_service
+            lead_log_service.guardar_nota_llamada(appointment, notes)
         CloserFollowUpService.apply_reminder_settings(appointment, reminder_enabled, reminder_time)
 
     @staticmethod

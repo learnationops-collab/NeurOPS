@@ -22,7 +22,7 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from flask import current_app, has_request_context, request
 
-from app.models import db, GoogleCalendarToken, Notification
+from app.models import db, GoogleCalendarToken
 
 SCOPES = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/calendar.events']
 
@@ -129,18 +129,15 @@ class GoogleService:
         current_app.logger.warning(f'[GOOGLE] Token del usuario #{token.user_id} rechazado: {motivo}')
         token.vencido_en = datetime.datetime.utcnow()
         nombre = token.user.username if token.user else f'#{token.user_id}'
-        db.session.add(
-            Notification(
-                subject='Google Calendar desconectado',
-                content=(
-                    f'Google dejó de aceptar la conexión con el calendario de {nombre}. Hasta que vuelva '
-                    'a conectarlo (Configuración › Google Calendar) no recibe agendas nuevas ni se '
-                    'crean sus eventos con Meet.'
-                ),
-                target_users=['role:admin', int(token.user_id)],
-                associated_id=token.user_id,
-                associated_type='user',
-            )
+        from app.services import avisos_service
+
+        avisos_service.avisar(
+            'google_desconectado', *avisos_service.destino(['admin'], [token.user_id]),
+            'Google Calendar desconectado',
+            f'Google dejó de aceptar la conexión con el calendario de {nombre}. Hasta que vuelva '
+            'a conectarlo (Configuración › Google Calendar) no recibe agendas nuevas ni se '
+            'crean sus eventos con Meet.',
+            'user', token.user_id,
         )
         db.session.commit()
 

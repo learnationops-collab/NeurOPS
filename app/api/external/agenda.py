@@ -603,7 +603,8 @@ def _reservar_momentum(u, datos, inicio, inicio_dt, dur):
     WhatsApp. No pasa por create_appointment: no es un lead nuevo y no tiene que tocar su pipeline.
     `academia` (reserva, sesión, tipo, alumno) queda en agenda_payload: con eso vuelve el resultado."""
     from app.agendas_v2.operacion import cliente_por_email
-    from app.models import Appointment, Notification
+    from app.models import Appointment
+    from app.services import avisos_service
     from app.services.booking_service import BookingService
     from app.services.google_service import GoogleService
 
@@ -637,10 +638,9 @@ def _reservar_momentum(u, datos, inicio, inicio_dt, dur):
     appt.google_event_id = event_id
     appt.agenda_payload = {**appt.agenda_payload, 'meet': meet}
     cuando = inicio_dt.strftime('%d/%m/%Y %H:%M')
-    db.session.add(Notification(
-        subject='Nueva Momentum',
-        content=f'{cliente.full_name or email} tiene su {aviso.get("sesion") or "Momentum"} el {cuando} UTC.',
-        target_users=[int(u.id)], associated_id=appt.id, associated_type='appointment'))
+    avisos_service.avisar('momentum_nueva', 'user', u.id, 'Nueva Momentum',
+                          f'{cliente.full_name or email} tiene su {aviso.get("sesion") or "Momentum"} el {cuando} UTC.',
+                          'appointment', appt.id, person_uuid=appt.person_uuid)
     db.session.commit()
     servicio._google_cache.pop(u.id, None)
     _aviso(u, inicio, servicio.zona_de_usuario(u), aviso.get('sesion'), aviso.get('alumno') or invitado.get('nombre'))

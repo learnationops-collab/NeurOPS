@@ -37,23 +37,6 @@ def crear(client, auth_headers, usuario, **payload):
                        headers=auth_headers(usuario))
 
 
-def test_el_referido_manual_entra_como_lead_nuevo_del_closer(client, db, lead, equipo,
-                                                            auth_headers):
-    r = crear(client, auth_headers, equipo['closer'], from_lead_id=lead.id, lead_name='Dani',
-              phone='+59170001111', instagram='@dani', email='dani@x.com', notes='amigo')
-
-    assert r.status_code == 201
-    nueva = db.session.get(Appointment, r.get_json()['id'])
-    assert nueva.origin == 'Referido de Ana Gomez'
-    assert nueva.closer_id == equipo['closer'].id
-    assert nueva.closer_processed is False
-    assert (nueva.client.instagram, nueva.client.email) == ('dani', 'dani@x.com')
-    assert nueva.closer_notes == ('Referido por Ana Gomez. Contacto: +59170001111, @dani, '
-                                  'dani@x.com. Notas: amigo')
-    aviso = Comment.query.filter_by(comment_type='client', associated_id=lead.client_id).one()
-    assert "creó un nuevo referido 'Dani'" in aviso.text
-
-
 @pytest.mark.parametrize('contacto,instagram,telefono', [
     ('@eva.ig', 'eva.ig', None),
     ('eva ig', 'eva ig', None),

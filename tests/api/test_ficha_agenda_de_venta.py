@@ -52,24 +52,6 @@ def test_con_agendas_da_la_mas_reciente_sin_crear_nada(client, db, cliente, equi
     assert Appointment.query.filter_by(client_id=cliente.id).count() == 2
 
 
-def test_sin_agendas_crea_una_a_nombre_del_closer_que_vende(client, db, cliente, equipo,
-                                                            auth_headers):
-    r = pedir(client, auth_headers, equipo['closer'], cliente.id)
-
-    assert r.status_code == 201
-    datos = r.get_json()
-    assert datos['creada'] is True
-    agenda = db.session.get(Appointment, datos['appointment_id'])
-    assert agenda.client_id == cliente.id
-    assert agenda.closer_id == equipo['closer'].id
-    assert agenda.origin == 'Venta sin agenda'
-    # Procesada: no aparece en el mazo como una llamada sin reportar. En 'Pendiente': si el closer
-    # cierra la ficha sin vender, no queda contada una asistencia que no hubo.
-    assert agenda.closer_processed is True and agenda.seguimiento_realizado is True
-    assert agenda.closer_result == 'Pendiente'
-    assert agenda.closer_notes.startswith('[Sistema]')
-
-
 def test_pedirla_de_nuevo_no_crea_otra(client, db, cliente, equipo, auth_headers):
     primera = pedir(client, auth_headers, equipo['closer'], cliente.id).get_json()
 

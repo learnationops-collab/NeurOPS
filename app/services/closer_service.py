@@ -1052,7 +1052,8 @@ class CloserService:
 
     @staticmethod
     def process_agenda(closer_id, appt_id, data, is_admin=False):
-        from app.models import Appointment, db, ClientComment, User
+        from app.models import Appointment, db, User
+        from app.services import lead_log_service
         from app.services.booking_service import BookingService
         
         user = User.query.get(closer_id) if closer_id else None
@@ -1148,23 +1149,20 @@ class CloserService:
                 appt.closer_processed = True
                 appt.seguimiento_realizado = True
                 if note and closer_id:
-                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Marcado como Lead Perdido por {user_display}: {note}")
-                    db.session.add(comment)
+                    lead_log_service.nota(f"Marcado como Lead Perdido por {user_display}: {note}", closer_id, appt=appt)
 
             elif new_status == 'No Lead':
                 appt.closer_result = 'No Lead'
                 appt.closer_processed = True
                 appt.seguimiento_realizado = True
                 if note and closer_id:
-                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Marcado como No Lead por {user_display}: {note}")
-                    db.session.add(comment)
+                    lead_log_service.nota(f"Marcado como No Lead por {user_display}: {note}", closer_id, appt=appt)
 
             elif new_status == 'Cancelado':
                 appt.closer_processed = True
                 if note:
                     if closer_id:
-                        comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Cancelado por {user_display}: {note}")
-                        db.session.add(comment)
+                        lead_log_service.nota(f"Cancelado por {user_display}: {note}", closer_id, appt=appt)
                 # Delete GCal
                 if appt.google_event_id:
                     try:
@@ -1182,8 +1180,7 @@ class CloserService:
                 appt.closer_processed = True
                 appt.seguimiento_realizado = True
                 if note and closer_id:
-                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Descalificado por {user_display}: {note}")
-                    db.session.add(comment)
+                    lead_log_service.nota(f"Descalificado por {user_display}: {note}", closer_id, appt=appt)
                 if appt.google_event_id:
                     try:
                         from app.services.google_service import GoogleService
@@ -1197,8 +1194,7 @@ class CloserService:
                     raise Exception("Fecha de reagenda requerida")
                 if note:
                     if closer_id:
-                        comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Reagendado por {user_display}. Razón: {note}. Nueva cita el {formatted_reschedule}")
-                        db.session.add(comment)
+                        lead_log_service.nota(f"Reagendado por {user_display}. Razón: {note}. Nueva cita el {formatted_reschedule}", closer_id, appt=appt)
                 
                 # Delete GCal
                 if appt.google_event_id:
@@ -1223,8 +1219,7 @@ class CloserService:
                 if not reschedule_date:
                     raise Exception("Fecha de segunda agenda requerida")
                 if note:
-                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"2da Call agendada por {user_display}. Razón: {note}. Programada para {formatted_reschedule}")
-                    db.session.add(comment)
+                    lead_log_service.nota(f"2da Call agendada por {user_display}. Razón: {note}. Programada para {formatted_reschedule}", closer_id, appt=appt)
 
                 # Intentar actualizar estado de FinancialAgenda actual a Follow Up
                 try:
@@ -1299,8 +1294,7 @@ class CloserService:
                     raise Exception("Fecha de reagenda requerida")
                 if note:
                     if closer_id:
-                        comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Reagendado por {user_display}. Razón: {note}. Nueva cita el {formatted_reschedule}")
-                        db.session.add(comment)
+                        lead_log_service.nota(f"Reagendado por {user_display}. Razón: {note}. Nueva cita el {formatted_reschedule}", closer_id, appt=appt)
 
                 # Delete GCal
                 if appt.google_event_id:
@@ -1323,8 +1317,7 @@ class CloserService:
             elif new_status == 'Cancelado':
                 if note:
                     if closer_id:
-                        comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Cancelado por {user_display}: {note}")
-                        db.session.add(comment)
+                        lead_log_service.nota(f"Cancelado por {user_display}: {note}", closer_id, appt=appt)
                 # Delete GCal
                 if appt.google_event_id:
                     try:
@@ -2470,14 +2463,16 @@ class CloserService:
         if dry_run:
             return {"count": len(archived_ids), "ids": archived_ids[:50], "dry_run": True}
 
-        from app.services.closer_agendas_service import ARCHIVADA_SIN_REPORTE, NOTA_ARCHIVADA
+        from app.services import lead_log_service
+        from app.services.closer_agendas_service import ARCHIVADA_SIN_REPORTE
 
-        note = f"{NOTA_ARCHIVADA}: sin confirmar ni procesar tras {days}+ días desde su fecha."
+        # Un evento del sistema en el log, no un renglón en la nota de la llamada (antes se pegaba ahí).
+        note = f"Archivado automáticamente: sin confirmar ni procesar tras {days}+ días desde su fecha."
         for appt in appointments:
             appt.closer_result = ARCHIVADA_SIN_REPORTE
             appt.closer_processed = True
             appt.seguimiento_realizado = True
-            appt.closer_notes = f"{appt.closer_notes}\n{note}".strip() if appt.closer_notes else note
+            lead_log_service.evento(appt, 'archivada_automatica', note)
 
         db.session.commit()
         return {"count": len(archived_ids), "ids": archived_ids[:50], "dry_run": False}

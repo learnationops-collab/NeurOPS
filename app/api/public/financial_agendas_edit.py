@@ -101,16 +101,6 @@ def update_financial_agenda(agenda_id):
                     zona_origen()).replace(tzinfo=None).isoformat()
             
         if status_changed:
-            from app.models import Notification
-            contacto = agenda.contacto()
-            notif = Notification(
-                subject=f"Estado de Agenda Actualizado: {contacto['lead'] or agenda.nombre or 'Desconocido'}",
-                content=f"La agenda con @{contacto['instagram'] or 'sin_ig'} ha cambiado de estado a '{agenda.estado}'.",
-                target_users=["all"],
-                associated_id=agenda.id,
-                associated_type="agenda"
-            )
-            db.session.add(notif)
             
             # Sincronización in-line de razones para Setter (Confirmer)
             if agenda.estado in ('Cancelada', 'Reagendada'):

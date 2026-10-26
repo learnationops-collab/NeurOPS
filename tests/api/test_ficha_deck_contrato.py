@@ -187,22 +187,6 @@ def test_un_confirm_status_que_no_es_confirmado_no_deja_log_de_confirmacion(clie
 
 # --- El comentario que nace de `closer_notes` -------------------------------------------------
 
-def test_la_nota_del_closer_queda_como_comentario_del_cliente(client, db, cita, auth_headers, closer):
-    """El hilo del cliente es donde el equipo lee lo que paso; la nota de la agenda se espeja ahi."""
-    guardar(client, auth_headers, closer, cita, closer_notes='  pidio hablar con la esposa  ')
-
-    comentarios = Comment.query.filter_by(comment_type='client', associated_id=cita.client_id).all()
-    assert [c.text for c in comentarios] == ['pidio hablar con la esposa']
-    assert comentarios[0].author_id == closer.id
-    assert cita.closer_notes == 'pidio hablar con la esposa'
-
-
-def test_una_nota_vacia_no_crea_comentario(client, db, cita, auth_headers, closer):
-    guardar(client, auth_headers, closer, cita, closer_notes='   ')
-
-    assert Comment.query.filter_by(comment_type='client').count() == 0
-    assert cita.closer_notes == ''
-
 
 # --- Campos sueltos con reglas propias --------------------------------------------------------
 

@@ -16,8 +16,6 @@ ficha encadenan varios pasos en un mismo guardado.
 """
 from datetime import datetime
 
-from app import db
-
 # Claves del autoguardado del wizard de confirmacion. Si un guardado trae `confirm_status` y NADA
 # fuera de este conjunto, el lead sigue vivo dentro del pipeline de confirmaciones y la cita no se
 # marca como procesada: tocar una etapa mientras el lead sigue "conversando" la sacaria del mazo
@@ -57,14 +55,10 @@ def _aplicar_campos(appt, data, usuario):
     if 'linked_call' in data:
         appt.linked_call = data['linked_call']
     if 'closer_notes' in data:
-        notes_str = data['closer_notes'].strip()
-        appt.closer_notes = notes_str
-        # La nota de la agenda se espeja en el hilo del cliente: es donde el equipo lee el
-        # historial del lead, que no vive por agenda sino por persona.
-        if notes_str and appt.client_id:
-            from app.models import Comment
-            db.session.add(Comment(text=notes_str, comment_type='client',
-                                   associated_id=appt.client_id, author_id=usuario.id))
+        # La nota de la llamada va al log de la persona (lead_log_service), que es de donde la lee el
+        # hilo del equipo; ya no se copia como comentario del cliente.
+        from app.services import lead_log_service
+        lead_log_service.guardar_nota_llamada(appt, data['closer_notes'], usuario)
 
     if 'result' in data:
         res_val = data['result']
@@ -128,9 +122,8 @@ def _aplicar_campos(appt, data, usuario):
 def _registrar_eventos(appt, data, usuario, anterior):
     from app.services.booking_service import BookingService
 
+    # La nota ya quedó como `nota_llamada` en el log: el evento dice solo el estado.
     description = f"Closer {usuario.username} completó seguimiento. Estado: {data.get('result', 'Pendiente')}."
-    if data.get('closer_notes'):
-        description += f" Notas: \"{data['closer_notes']}\""
     BookingService.log_lead_event(appt.id, usuario.id, 'closer_notes', description)
 
     # Eventos especificos, ADEMAS del genérico de arriba. Bug real (08/sep/2026, Nerina):
@@ -167,8 +160,7 @@ def _baja_si_no_va_a_pagar(appt, usuario, contacto_anterior):
     después de revertir la baja, no la tiene que volver a dar. Y un cliente que ya estaba de baja
     conserva el motivo con el que se lo dio.
     """
-    from app.models import ClientComment
-    from app.services import baja_service
+    from app.services import baja_service, lead_log_service
 
     if appt.last_contact_outcome != NO_VA_A_PAGAR or contacto_anterior == NO_VA_A_PAGAR:
         return
@@ -177,8 +169,8 @@ def _baja_si_no_va_a_pagar(appt, usuario, contacto_anterior):
         return
     baja_service.dar_de_baja(cliente, 'No va a pagar', usuario)
     # El mismo texto que deja la baja a mano: el hilo del cliente es donde el equipo la lee.
-    db.session.add(ClientComment(client_id=cliente.id, author_id=usuario.id,
-                                 text=f'Cliente dado de baja por {usuario.username}. Motivo: No va a pagar.'))
+    lead_log_service.nota(f'Cliente dado de baja por {usuario.username}. Motivo: No va a pagar.', usuario,
+                          cliente=cliente)
 
 
 def aplicar_cambios(appt, data, usuario):

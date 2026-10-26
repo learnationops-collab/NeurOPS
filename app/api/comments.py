@@ -1,7 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
-from app.models import db, Comment, User
-from datetime import datetime
+from app.models import db, User
 
 bp = Blueprint('comments', __name__)
 
@@ -14,12 +13,13 @@ def get_comments():
     if not comment_type or not associated_id:
         return jsonify({"error": "Missing type or associated_id"}), 400
 
-    comments = Comment.query.filter_by(
-        comment_type=comment_type,
-        associated_id=int(associated_id)
-    ).order_by(Comment.created_at.desc()).all()
-
-    return jsonify([c.to_dict() for c in comments]), 200
+    # Las notas viven en el log de la persona (docs/plan_notas_avisos_settings.md). El único tipo que se
+    # pide es 'appointment' (el hilo de una agenda).
+    if comment_type != 'appointment':
+        return jsonify({"error": "Tipo no soportado"}), 400
+    from app.services import lead_log_service
+    notas = lead_log_service.notas_de_agenda(int(associated_id))
+    return jsonify([lead_log_service.a_dict(e) for e in reversed(notas)]), 200
 
 @bp.route('', methods=['POST'], strict_slashes=False)
 @login_required
@@ -32,17 +32,18 @@ def add_comment():
     if not text or not comment_type or not associated_id:
         return jsonify({"error": "Missing required fields"}), 400
 
-    comment = Comment(
-        text=text,
-        comment_type=comment_type,
-        associated_id=int(associated_id),
-        author_id=current_user.id
-    )
+    if comment_type != 'appointment':
+        return jsonify({"error": "Tipo no soportado"}), 400
+    from app.models import Appointment
+    from app.services import lead_log_service
 
+    appt = db.session.get(Appointment, int(associated_id))
+    if not appt:
+        return jsonify({"error": "Agenda no encontrada"}), 404
     try:
-        db.session.add(comment)
+        entrada = lead_log_service.nota(text, current_user, appt=appt)
         db.session.commit()
-        return jsonify(comment.to_dict()), 201
+        return jsonify(lead_log_service.a_dict(entrada)), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
