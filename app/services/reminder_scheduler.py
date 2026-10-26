@@ -104,8 +104,24 @@ def start_scheduler(app):
             except Exception as e:
                 logger.error(f"[ReminderScheduler] Error marcando señas sin seguir: {e}")
 
+    def _movidas():
+        with app.app_context():
+            from app.agendas_v2.movidas import sincronizar_movidas
+            try:
+                if not soy_lider(CLAVE_DEL_SCHEDULER):
+                    return
+                n = sincronizar_movidas()
+                if n:
+                    logger.info(f"[ReminderScheduler] Agendas movidas en Google pasadas a su hora nueva: {n}")
+            except Exception as e:
+                logger.error(f"[ReminderScheduler] Error siguiendo las agendas movidas en Google: {e}")
+
     from datetime import datetime, timedelta
+
+    from app.agendas_v2.movidas import MINUTOS as MOVIDAS_MINUTOS
     _scheduler = BackgroundScheduler(daemon=True)
+    _scheduler.add_job(_movidas, 'interval', minutes=MOVIDAS_MINUTOS,
+                       id='agendas_movidas_en_google', next_run_time=datetime.now() + timedelta(minutes=4))
     _scheduler.add_job(_senas, 'interval', minutes=AVANCE_INTERVAL_MINUTES,
                        id='senas_sin_seguir', next_run_time=datetime.now() + timedelta(minutes=3))
     if con_avisos:
