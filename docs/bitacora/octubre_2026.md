@@ -968,3 +968,5 @@
   - El formulario «Sesión de Aceleración» no tenía la segmentación activa en producción y ningún lead tenía segmento. Se activó con la inversión que dejó Mario el 26/10 (más de $2000 y $1000–$2000: 10 · $500–$1000: 8 · $200–$500: 6 · «podría conseguir ayuda» y «no estoy dispuesto»: 0), sin borrar ni renombrar opciones. Cortes 69/53/30%: los 18/14/8 puntos sobre 26.
   - Backfill aplicado: unos 240 A, 243 B, 370 C y 128 D entre clientes viejos y de Thalamus.
 - **26 de Octubre de 2026 (Agendas · Facu sin agendas nuevas)**: horario vaciado en Thalamus; atiende las que ya tenía y no sigue.
+- **26 de Octubre de 2026 (Seguridad · editar la ficha de un cliente deja registro)** *([app/api/public/lead_roadmap_edit.py](../../app/api/public/lead_roadmap_edit.py))*:
+  - Decisión: el setter puede buscar y editar cualquier lead, pero los cambios quedan en la bitácora del sistema (`SystemLog`). `POST /api/public/lead-roadmap/update-client` registra, al editar un cliente que ya existía, quién lo hizo y cada campo con su valor anterior y el nuevo (nombre, email, teléfono, Instagram, objeciones, observaciones, dolores). Si no cambió nada, no registra. Sin correr tests.

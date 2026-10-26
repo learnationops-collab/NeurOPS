@@ -1,5 +1,6 @@
 """Edicion desde el roadmap del lead: guardar la ficha del cliente y relacionar una venta o agenda a un instagram."""
 from flask import request, jsonify
+from flask_login import current_user
 from app import db
 from app.models import Client
 from app.models.financial import FinancialSale, FinancialAgenda
@@ -8,6 +9,23 @@ from . import bp
 from sqlalchemy import func
 
 from .lead_roadmap_helpers import is_generic_val
+
+# Lo que queda en la bitácora del sistema cuando alguien edita la ficha de un cliente que ya existía. El
+# setter puede buscar y editar cualquier lead (decisión del 26/10/2026): el registro dice quién cambió qué.
+CAMPOS_REGISTRADOS = ('full_name', 'email', 'phone', 'instagram', 'objeciones', 'observaciones', 'dolores')
+
+
+def _registrar_cambios(client, antes):
+    from app.services import system_log_service
+    cambios = [f'{campo}: {antes[campo] or "—"} → {getattr(client, campo) or "—"}'
+               for campo in CAMPOS_REGISTRADOS if (antes[campo] or None) != (getattr(client, campo) or None)]
+    if not cambios:
+        return
+    usuario = current_user if current_user.is_authenticated else None
+    quien = f'{usuario.username} ({usuario.role})' if usuario else 'un sistema con el secreto de ingesta'
+    system_log_service.registrar(f'Ficha del cliente editada por {quien}', '\n'.join(cambios), usuario=usuario,
+                                 entity_type='client', entity_id=client.id)
+
 
 @bp.route('/public/lead-roadmap/update-client', methods=['POST'])
 def update_client_roadmap():
@@ -65,6 +83,7 @@ def update_client_roadmap():
         db.session.add(client)
         db.session.flush()
     else:
+        antes = {campo: getattr(client, campo) for campo in CAMPOS_REGISTRADOS}
         # Actualizar campos existentes
         if full_name:
             client.full_name = full_name
@@ -80,6 +99,7 @@ def update_client_roadmap():
             client.observaciones = observaciones
         if dolores is not None:
             client.dolores = dolores
+        _registrar_cambios(client, antes)
 
     if objeciones is not None or observaciones is not None or dolores is not None:
         from app.models import Notification
