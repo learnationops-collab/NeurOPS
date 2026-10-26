@@ -18,7 +18,7 @@ from flask_login import current_user, login_required
 from app import db
 from app.models import Appointment
 from app.api.public.finance import puede_ver_finanzas
-from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, ROLE_OPERATOR, ROLE_SETTER
+from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, ROLE_OPERATOR, ROLE_SETTER, ROLE_TRIAGE
 from app.services import comercial_analitica as analitica
 from app.services import comercial_no_cerradas
 from app.services import comercial_reporte as reporte
@@ -38,8 +38,11 @@ ROLES_DIRECCION = (ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL)
 # ventas (10/10/2026, cuando las tablas viejas de Operaciones pasaron a Revisar). Ve el equipo completo
 # como la dirección, pero no reporta ni compara: el operador solo entra a Revisar.
 ROLES_QUE_OPERAN = (ROLE_ADMIN, ROLE_OPERATOR)
+# El triage atiende llamadas como un closer (sus agendas tienen `closer_id` = su cuenta): ve lo suyo
+# con el mismo alcance (26/10/2026, «Mis datos» y «Mi cartera» de su espacio).
+ROLES_COMO_CLOSER = (ROLE_CLOSER, ROLE_TRIAGE)
 # Quién entra al tablero, de una forma u otra.
-ROLES_CON_ACCESO = ROLES_DIRECCION + (ROLE_OPERATOR, ROLE_CLOSER, ROLE_SETTER)
+ROLES_CON_ACCESO = ROLES_DIRECCION + (ROLE_OPERATOR, ROLE_SETTER) + ROLES_COMO_CLOSER
 
 PERIODOS = [
     {'key': 'hoy', 'label': 'Hoy'}, {'key': 'ayer', 'label': 'Ayer'},
@@ -64,7 +67,7 @@ def alcance_de(usuario, rol_pedido, miembro_pedido):
     Para un closer o un setter el alcance es él mismo y el rol es el suyo, pida lo que pida: es
     el único punto donde se decide, así que ninguna vista de abajo puede olvidarse de filtrar.
     """
-    if usuario.role == ROLE_CLOSER:
+    if usuario.role in ROLES_COMO_CLOSER:
         return ROL_CLOSERS, usuario.id, False
     if usuario.role == ROLE_SETTER:
         return ROL_SETTERS, usuario.id, False
@@ -349,7 +352,7 @@ def _puede_corregir(appt):
     el setter que la generó. Nadie toca las filas de otro."""
     if current_user.role in ROLES_DIRECCION:
         return True
-    if current_user.role == ROLE_CLOSER:
+    if current_user.role in ROLES_COMO_CLOSER:
         return appt.closer_id == current_user.id
     if current_user.role == ROLE_SETTER:
         return appt.setter_id == current_user.id

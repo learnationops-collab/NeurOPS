@@ -661,7 +661,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const puedeCorregirFila = (fila) => {
         if (!fila || fila.tipo !== 'agenda') return false;
         if (contexto.puede_reportar) return true;
-        if (contexto.yo.rol === 'closer') return fila.closer_id === contexto.yo.id;
+        // El triage atiende sus llamadas como un closer: corrige las suyas.
+        if (contexto.yo.rol === 'closer' || contexto.yo.rol === 'triage') return fila.closer_id === contexto.yo.id;
         if (contexto.yo.rol === 'setter') return fila.setter_id === contexto.yo.id;
         return false;
     };

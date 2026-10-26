@@ -1032,3 +1032,6 @@
 - **26 de Octubre de 2026 (Segmentos · el estudiante que «podría conseguir ayuda» va a la página de gracias)** *([scripts/segmentos_formulario.py](../../scripts/segmentos_formulario.py))*:
   - `mk-academy` toma también «No estoy en posición de invertir, pero podría conseguir ayuda» (decisión de Mario). Antes caía en D (Grupo 1).
   - Servidor de prueba: se agregó `appointments.desplazada_por_id`, que faltaba aunque la base figuraba en la última migración.
+- **26 de Octubre de 2026 (Triage · «Mis datos» y «Mi cartera» en su espacio, y alta de Juliana)** *([app/api/comercial.py](../../app/api/comercial.py), [CloserWorkflowPage.jsx](../../frontend/src/pages/closer/CloserWorkflowPage.jsx), [DashboardComercial.jsx](../../frontend/src/pages/comercial/DashboardComercial.jsx))*:
+  - El dock del triage suma «Mis datos» y «Mi cartera», como el closer: el dashboard comercial acotado a sus agendas (`ROLES_COMO_CLOSER` en `alcance_de`). Corrige solo sus filas. El encabezado dice «Triage Workspace».
+  - Producción: Juliana Avila (`hola.julianaavilac@gmail.com`, usuario 1145) con rol `triage` y su persona en Team de Agendas 2.0 con rol `triage`.

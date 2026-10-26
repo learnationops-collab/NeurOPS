@@ -9,7 +9,7 @@ import {
     Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, Pencil,
     DollarSign, UserPlus,
     CalendarCheck, PhoneCall, MessageCircle, ClipboardList, BarChart3, Briefcase, FileSearch,
-    CalendarPlus, Gift, Hourglass, Ghost
+    CalendarPlus, Gift, Hourglass, Ghost, Filter
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -1661,7 +1661,13 @@ const CloserWorkflowPage = () => {
             marca: cuentaDelDock(llamadasHechas, llamadasHechas + counts.calls, counts.calls === 0, 'reportadas') },
         { id: 'seguimientos', label: 'Seguir', Icono: MessageCircle,
             marca: cuentaDelDock(seguimientosHechos, seguimientosHechos + counts.seguimientos, counts.seguimientos === 0, 'hechos hoy') },
-        ...(esTriage ? [{ id: 'metricas', label: 'Métricas', Icono: BarChart3 }] : []),
+        // El triage tiene sus métricas (el embudo de la llamada de filtro) y, como el closer, sus datos y
+        // su cartera: el dashboard comercial acotado a sus agendas (`alcance_de`, app/api/comercial.py).
+        ...(esTriage ? [
+            { id: 'metricas', label: 'Métricas', Icono: Filter },
+            { id: 'dashboard', label: 'Mis datos', Icono: BarChart3 },
+            { id: 'cartera', label: 'Mi cartera', Icono: Briefcase },
+        ] : []),
     ];
     if (!esTriage) seccionesDelDock.push(
         { id: 'report', label: 'Cerrar el día', Icono: ClipboardList, marcas: [
@@ -1726,7 +1732,7 @@ const CloserWorkflowPage = () => {
                     <div className="brand-v6">
                         <div className="logo-v6">L</div>
                         <div>
-                            <h1>Closer Workspace</h1>
+                            <h1>{esTriage ? 'Triage Workspace' : 'Closer Workspace'}</h1>
                             <small>Learnation</small>
                         </div>
                     </div>
