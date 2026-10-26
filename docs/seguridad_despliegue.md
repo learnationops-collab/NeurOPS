@@ -102,7 +102,6 @@ demasiado peligroso: se retiró el 26/10/2026. Para restaurar:
    generó. Para ver qué trae un archivo sin tocar nada: `pg_restore -l archivo.dump`.
 3. Reinicia el servicio y vuelve a iniciar sesión (los usuarios pueden haber cambiado).
 
-## 6. Qué **no** cubre todavía (decisiones pendientes)
 ## 6. Límite de intentos (desde el 26/10/2026)
 
 Vive en Postgres (tabla `intentos_limitados`, `app/services/limite_intentos.py`) porque gunicorn corre varios

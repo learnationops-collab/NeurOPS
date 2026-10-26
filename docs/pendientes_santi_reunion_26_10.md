@@ -125,9 +125,10 @@ Auditoría del 26/10 (autenticación, autorización, superficie externa, inyecci
 - [x] El setter solo abre sus leads en `/api/closer/*` por id (`ba966333`).
 - [x] Decidido: el setter puede buscar y editar cualquier lead; editar la ficha deja registro en `SystemLog` (`0660dffa`). Ojo: `GET /api/public/lead-roadmap` le muestra cualquier lead, así que la restricción por id de `ba966333` no impide que lo vea; decidir si se revierte o si se acota también el roadmap.
 - [x] Decidido: el operador es super admin a propósito (no es escalada). El director comercial puede ver sueldos (motor de tablas y Learnito). Un closer puede dar acceso a la Academia sin venta: ya queda registrado en la suscripción (`alta` con motivo y autor) y alargar exige una venta.
-- [ ] Backup con `pg_dump` y sin restauración desde la web (el export casero no escapa comillas en los JSON). En curso.
-- [ ] Límite de intentos en Postgres para el login y los formularios públicos. En curso.
-- [ ] Renombrar en el código las rutas de Entrantes (`/api/manychat-webhook/*` → `/api/marketing/entrantes/*`), sin tocar tablas. En curso.
+- [x] Backup con `pg_dump` y sin restauración desde la web (`39c066ee`). Verificar tras el deploy: que el build instale `postgresql-client-17` (PGDG) y `pg_dump --version` por `railway ssh`, y bajar un respaldo desde Operaciones › Datos › Respaldo.
+- [x] Límite de intentos en Postgres para el login y los formularios públicos (`05700e0b`, tabla `intentos_limitados`). `RATE_LIMIT_ENABLED=0` en Railway lo apaga sin desplegar.
+- [ ] **Antes de subir el trabajo de triage:** la migración local `c4e9a1d7f2b8_resultado_del_triage` y la de `intentos_limitados` (`c4e8a2f6d1b7`) salen las dos de `b8d2f4a6c1e3`. Al commitear el triage, sumar una migración de merge (`flask db merge heads`, en el servidor) o pasarle a la del triage `down_revision = 'c4e8a2f6d1b7'` si todavía no corrió en ningún servidor. Si no, `flask db upgrade` del pre-deploy falla por dos heads.
+- [x] Renombrar en el código las rutas de Entrantes (`/api/manychat-webhook/*` → `/api/marketing/entrantes/*`), sin tocar tablas (`7323c92a`).
 - [ ] Motor de tablas y Learnito: agrupar por una columna de texto devuelve valores de todo el equipo a closer, setter, triage y hiring, y los conteos sirven de oráculo (`tablas/motor.py:176`).
 - [ ] Cabeceras de seguridad: CSP, frame-ancestors, HSTS, X-Content-Type-Options (hoy ninguna).
 - [ ] Subir `react-router-dom` (≥6.30.6, open redirect en `SessionEntry` `?next=`) y `axios`.
