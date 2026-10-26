@@ -114,7 +114,7 @@ const IncomingLeadsTab = () => {
         if (!isSilent) setLoading(true);
         else setRefreshing(true);
         try {
-            const res = await api.get('/manychat-webhook/log', { params: { limit } });
+            const res = await api.get('/marketing/entrantes/log', { params: { limit } });
             setLogs(res.data || []);
         } catch (err) {
             console.error('Error fetching webhook logs:', err);
@@ -155,7 +155,7 @@ const IncomingLeadsTab = () => {
                 ad_id: currentLog.ad_id,
                 keyword: editKeyword
             };
-            await api.put(`/manychat-webhook/answer/${id}`, payload);
+            await api.put(`/marketing/entrantes/respuesta/${id}`, payload);
             setEditingId(null);
             fetchLogs(true);
         } catch (err) {

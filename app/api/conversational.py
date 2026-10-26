@@ -284,10 +284,10 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
     agendas_per_msg = {}
     ventas_per_msg = {}
 
-    def get_lead_msg_key(manychat_lead_id):
+    def get_lead_msg_key(conversation_id):
         """Devuelve el último id_option_send del lead en el período."""
         ans = LeadAnswer.query.filter(
-            LeadAnswer.conversation_id == manychat_lead_id,
+            LeadAnswer.conversation_id == conversation_id,
             LeadAnswer.id_option_send != None,
             LeadAnswer.created_at >= start_dt,
             LeadAnswer.created_at <= end_dt

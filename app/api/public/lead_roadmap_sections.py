@@ -7,7 +7,7 @@ from app.models.marketing import LeadAnswer
 from .lead_roadmap_helpers import format_date_es
 
 
-def build_activity(lead_profile, arrived_stage, manychat_lead, financial_agendas, appointments,
+def build_activity(lead_profile, arrived_stage, conversacion, financial_agendas, appointments,
                    financial_sales, comments, client):
     # Construir Historial de Actividad Cronológica
     activity = []
@@ -17,12 +17,12 @@ def build_activity(lead_profile, arrived_stage, manychat_lead, financial_agendas
         "date": lead_profile["created_at"],
         "event": "Llegó al embudo",
         "detail": f"Prospecto ingresó al sistema. Origen resuelto: {arrived_stage['details']['origen']}",
-        "origin": "Instagram" if manychat_lead else "Sistema"
+        "origin": "Instagram" if conversacion else "Sistema"
     })
 
     # 2. Respuestas de bot
-    if manychat_lead:
-        answers = LeadAnswer.query.filter_by(conversation_id=manychat_lead.id).all()
+    if conversacion:
+        answers = LeadAnswer.query.filter_by(conversation_id=conversacion.id).all()
         for la in answers:
             activity.append({
                 "date": la.created_at.isoformat() if la.created_at else lead_profile["created_at"],

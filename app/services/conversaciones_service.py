@@ -26,7 +26,7 @@ PREFIJO_INSTAGRAM = 'ig:'  # el motor propio de Instagram (`automatizaciones/reg
 _estado = {'registrado': False}
 
 
-def manychat_id_real(external_id):
+def external_id_real(external_id):
     """El id de suscriptor de ManyChat si es uno de verdad (solo dígitos); el resto lleva prefijo."""
     eid = str(external_id or '').strip()
     return eid if eid.isdigit() else None
@@ -57,7 +57,7 @@ def sincronizar(conv):
     """La persona de la conversación."""
     if not conv.external_id:
         return None
-    real = manychat_id_real(conv.external_id)
+    real = external_id_real(conv.external_id)
     del_motor = conv.external_id.startswith(PREFIJO_INSTAGRAM)
     person = persona_de(conv.name, crear=bool(real) or del_motor, actual_uuid=conv.person_uuid,
                         instagram=conv.ig, manychat_id=real)

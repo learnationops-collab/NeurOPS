@@ -1,12 +1,12 @@
-"""El monitor de ManyChat: el historial de webhooks y los entrantes del período (rutas de `manychat.bp`)."""
+"""El monitor de Entrantes: el historial de interacciones y los entrantes del período (rutas de `entrantes.bp`)."""
 from flask import request, jsonify
 from flask_login import current_user
 from app import db
-from app.api.manychat import bp
+from app.api.entrantes import bp
 from app.services.setter_assignment_service import condicion_leads_visibles
 
 
-@bp.route('/manychat-webhook/log', methods=['GET'])
+@bp.route('/log', methods=['GET'])
 def get_webhook_log():
     """Retorna las últimas N interacciones recibidas."""
     from app.models import LeadAnswer, Conversation, Ad
@@ -58,7 +58,7 @@ def get_webhook_log():
     } for ans in answers]), 200
 
 
-@bp.route('/manychat-webhook/entrantes', methods=['GET'])
+@bp.route('', methods=['GET'])
 def get_entrantes():
     """Los leads entrantes del período, UNA fila por persona (Marketing › Entrantes, 16/10/2026).
 
@@ -126,8 +126,8 @@ def get_entrantes():
             continue
         tope = max((descalificados[lid] for lid in grupo['leads'] if lid in descalificados), default=None)
         clave = next((h[1] for h in historia if h[1]), None)
-        de_manychat = calificacion_service.ultima_de_manychat(h[2] for h in historia)
-        calificacion = calificacion_service.efectiva(de_manychat, historia[0][0], tope)
+        ultima = calificacion_service.ultima_calificacion(h[2] for h in historia)
+        calificacion = calificacion_service.efectiva(ultima, historia[0][0], tope)
         respondio = any(h[3] for h in historia) or calificacion is not None
         estado = ('calificado' if calificacion == 'true' else 'descalificado' if calificacion == 'false'
                   else 'en_conversacion' if respondio else 'sin_respuesta')
@@ -146,7 +146,7 @@ def get_entrantes():
             'conjunto': conjunto,
             'estado': estado,
             # Descalificado por el closer o el formulario aunque ManyChat lo había calificado (calificacion_service).
-            'descalificado_despues': calificacion == 'false' and de_manychat != 'false',
+            'descalificado_despues': calificacion == 'false' and ultima != 'false',
             'respondio': respondio,
             'ultimo_enviado': mensaje(paso.get('enviado')),
             'ultimo_respondido': mensaje(paso.get('respondido')),
