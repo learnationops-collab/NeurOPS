@@ -925,3 +925,8 @@
   - «Reagenda → No dejó fecha» guardaba la llamada como «No Show» y el lead contaba como no show en la ficha y en Mis datos. Ahora se guarda «Reagendado» (Reprogramó / Reagendó).
   - «Canceló → Seguimiento» tenía el mismo error: ahora se guarda «Cancelado».
   - Por ahora solo cuando reporta Mario Bühler; el resto sigue como antes hasta que lo apruebe.
+- **26 de Octubre de 2026 (Ficha · Resultado: paso «Seguimiento» nuevo, Snap y Flow)** *([PasoSeguimiento.jsx](../../frontend/src/components/ficha/tabs/PasoSeguimiento.jsx) [NEW], [paso-seguimiento.css](../../frontend/src/components/ficha/tabs/paso-seguimiento.css) [NEW], [TabResultado.jsx](../../frontend/src/components/ficha/tabs/TabResultado.jsx), [arbolResultado.preguntas.js](../../frontend/src/components/ficha/arbolResultado.preguntas.js), [CampoArbol.jsx](../../frontend/src/components/ficha/acciones/CampoArbol.jsx))*:
+  - «¿Cuándo lo vas a seguir?» deja el formulario de rótulos y pasa al diseño de Mario: **Snap** (chips de día con indicador que se desliza, calendario, horas rápidas o tipeada, píldora de WhatsApp) y **Flow** (la oración «Seguimiento mañana a las 10:45 aviso por WhatsApp» con un desplegable por parte). Los dos modos comparten las mismas respuestas; el modo elegido se recuerda en el dispositivo.
+  - Abajo, un resumen en una línea y el Ángulo opcional detrás de «+ Ángulo». Entra con mañana a las 10:45 y aviso, sin pisar una fecha que ya venía. «Sin hora» o «Sin fecha» apagan el aviso.
+  - El seguimiento de cobro junta la casilla del aviso y su hora en una sola celda.
+  - Verificado con una vista previa del componente real fuera de la ficha; tres pruebas de TabResultado que escriben en las notas quedan por actualizar.
