@@ -157,58 +157,34 @@ def get_deck_card(appt_id):
 @bp.route('/deck/comments/<int:appt_id>', methods=['GET'])
 @role_required(ROLE_SETTER)
 def get_setter_deck_comments(appt_id):
-    from app.models import Comment
-    comments = Comment.query.filter_by(associated_id=appt_id, comment_type='appointment').order_by(Comment.created_at.asc()).all()
-    return jsonify([c.to_dict() for c in comments]), 200
+    from app.services import lead_log_service
+    return jsonify([lead_log_service.a_dict(e) for e in lead_log_service.notas_de_agenda(appt_id)]), 200
 
 
 @bp.route('/deck/comments/<int:appt_id>', methods=['POST'])
 @role_required(ROLE_SETTER)
 def post_setter_deck_comment(appt_id):
-    from app.models import Comment, Appointment, Notification
-    
+    """La nota del setter sobre esta agenda, al log de la persona, con aviso al closer del lead (o a todos
+    los closers si es de ManyChat y no tiene uno)."""
+    from app.models import Appointment
+    from app.services import avisos_service, lead_log_service
+
     appt = Appointment.query.get_or_404(appt_id)
     data = request.get_json() or {}
     text = data.get('text', '').strip()
-    parent_id = data.get('parent_id')
-    
     if not text:
         return jsonify({"message": "El texto del comentario es requerido"}), 400
-        
-    comment = Comment(
-        author_id=current_user.id,
-        text=text,
-        comment_type='appointment',
-        associated_id=appt_id,
-        parent_id=parent_id
-    )
-    db.session.add(comment)
-    
-    from app.services.booking_service import BookingService
-    description = f"Setter {current_user.username} comentó: \"{text[:60]}...\""
-    BookingService.log_lead_event(appt.id, current_user.id, 'comment', description)
-    
-    # Notificación cruzada al Closer (dirigida al rol si es Manychat)
-    lead_name = appt.client.full_name if appt.client else "Sin Nombre"
-    subject = f"💬 Lead: {lead_name}"
-    content = f"\"{text}\" - de Setter {current_user.username}"
-    
-    target_users = "role:closer"
-    if appt.origin != 'Instagram' and appt.closer_id:
-        target_users = [appt.closer_id]
-        
-    notif = Notification(
-        subject=subject,
-        content=content,
-        associated_id=appt_id,
-        associated_type='deck_comment',
-        target_users=target_users
-    )
-    db.session.add(notif)
-        
+
     try:
+        entrada = lead_log_service.nota(text, current_user, appt=appt)
+        entrada.parent_id = data.get('parent_id')
+        db.session.flush()
+        destino = ('user', appt.closer_id) if appt.origin != 'Instagram' and appt.closer_id else ('rol', 'closer')
+        avisos_service.avisar('nota', *destino, f"Nota sobre {appt.client.full_name if appt.client else 'un lead'}",
+                              f'{current_user.username}: {text}', origen='log', origen_id=entrada.id,
+                              person_uuid=entrada.person_uuid)
         db.session.commit()
-        return jsonify(comment.to_dict()), 201
+        return jsonify(lead_log_service.a_dict(entrada)), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": f"Error al guardar comentario: {str(e)}"}), 500

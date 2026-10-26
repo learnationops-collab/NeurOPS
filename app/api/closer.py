@@ -3,7 +3,7 @@ import json
 import pytz
 from flask_login import login_required, current_user
 from app.services.closer_service import CloserService
-from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, WeeklyAvailability, Event, Client, ClientComment, SurveyAnswer, SurveyQuestion, CommentNotification, FeatureToggle, Comment, Notification
+from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, WeeklyAvailability, Event, Client, SurveyAnswer, SurveyQuestion, CommentNotification, FeatureToggle
 from app.decorators import role_required
 from app.services.closer_agendas_service import contar_no_show_y_canceladas
 from datetime import date, timedelta, datetime
@@ -694,12 +694,9 @@ def reassign_appointment(id):
     old_closer_name = appt.closer.username if appt.closer else 'sin asignar'
     appt.closer_id = new_closer.id
 
-    if appt.client_id:
-        db.session.add(ClientComment(
-            client_id=appt.client_id,
-            author_id=current_user.id,
-            text=f"Lead reasignado de {old_closer_name} a {new_closer.username} (por {current_user.username})."
-        ))
+    from app.services import lead_log_service
+    lead_log_service.nota(f"Lead reasignado de {old_closer_name} a {new_closer.username} (por {current_user.username}).",
+                          current_user, appt=appt)
 
     db.session.commit()
     return jsonify({
@@ -872,7 +869,7 @@ def get_lead_comments(id):
         return jsonify({"message": "Forbidden"}), 403
         
     from flask import current_app
-    from app.models import CommentNotification, Comment, Client, ClientComment
+    from app.models import CommentNotification, Client
     from datetime import datetime
 
     def _format_date(dt):
@@ -897,9 +894,10 @@ def get_lead_comments(id):
             db.session.rollback()
             current_app.logger.error(f"[NOTIF READ ERROR]: {notif_err}")
 
-        comments = ClientComment.query.filter_by(client_id=id).all()
-        old_comments = Comment.query.filter_by(comment_type='client', associated_id=id).all()
+        from app.services import avisos_service, lead_log_service
+
         client = Client.query.get(id)
+        avisos_service.marcar_leidos(current_user, client.person_uuid if client else None)
         
         combined = []
         seen_texts = set()
@@ -941,31 +939,16 @@ def get_lead_comments(id):
                     })
                     seen_texts.add(txt.lower())
 
-        # 2. Comentarios de la tabla genérica Comment
-        for c in old_comments:
-            c_text = getattr(c, 'text', None) or getattr(c, 'content', None) or ""
-            if c_text and c_text.strip().lower() not in seen_texts:
-                author_name = "Call Confirmer"
-                if hasattr(c, 'user') and c.user:
-                    author_name = c.user.username
+        # 2. Las notas del log de la persona (docs/plan_notas_avisos_settings.md)
+        for e in lead_log_service.notas_de(client.person_uuid if client else None):
+            if e.description.strip().lower() not in seen_texts:
                 combined.append({
-                    "id": f"old_{c.id}",
-                    "text": c_text.strip(),
-                    "author": author_name,
-                    "created_at": _format_date(c.created_at)
+                    "id": f"log_{e.id}",
+                    "text": e.description.strip(),
+                    "author": e.user.username if e.user else "Sistema",
+                    "created_at": _format_date(e.created_at)
                 })
-                seen_texts.add(c_text.strip().lower())
-
-        # 3. Comentarios de ClientComment
-        for c in comments:
-            if c.text and c.text.strip().lower() not in seen_texts:
-                combined.append({
-                    "id": c.id,
-                    "text": c.text.strip(),
-                    "author": c.author_rel.username if c.author_rel else "Call Confirmer",
-                    "created_at": _format_date(c.created_at)
-                })
-                seen_texts.add(c.text.strip().lower())
+                seen_texts.add(e.description.strip().lower())
 
         # Ordenar cronológicamente descendente
         combined.sort(key=lambda x: str(x["created_at"]), reverse=True)
@@ -988,82 +971,44 @@ def add_lead_comment(id):
     text = data.get('text')
     if not text: return jsonify({"error": "Texto requerido"}), 400
     
-    comment = ClientComment(client_id=id, author_id=current_user.id, text=text)
-    db.session.add(comment)
-    db.session.flush()
-    
-    # Procesar destinatarios
-    target_user_ids = data.get('target_user_ids', [])
-    
-    from app.models import Notification, Client, CommentNotification
-    client = Client.query.get(id)
-    if client:
-        # 1. Notificaciones dirigidas/personalizadas
-        if target_user_ids:
-            for uid in target_user_ids:
-                notif = CommentNotification(
-                    client_id=client.id,
-                    user_id=int(uid),
-                    comment_id=comment.id,
-                    sender_id=current_user.id,
-                    is_read=False
-                )
-                db.session.add(notif)
-        else:
-            # 2. Notificación automática al responder
-            # Buscar última notificación recibida por el usuario actual sobre este lead
-            last_notif = CommentNotification.query.filter_by(
-                client_id=client.id,
-                user_id=current_user.id
-            ).order_by(CommentNotification.created_at.desc()).first()
-            
-            if last_notif and last_notif.sender_id != current_user.id:
-                notif = CommentNotification(
-                    client_id=client.id,
-                    user_id=last_notif.sender_id,
-                    comment_id=comment.id,
-                    sender_id=current_user.id,
-                    is_read=False
-                )
-                db.session.add(notif)
-            else:
-                # Si no hay notificación directa pero hay comentarios previos, podemos notificar al autor del último comentario
-                # que sea distinto al usuario actual
-                last_comment = ClientComment.query.filter(
-                    ClientComment.client_id == client.id,
-                    ClientComment.author_id != current_user.id
-                ).order_by(ClientComment.created_at.desc()).first()
-                if last_comment:
-                    notif = CommentNotification(
-                        client_id=client.id,
-                        user_id=last_comment.author_id,
-                        comment_id=comment.id,
-                        sender_id=current_user.id,
-                        is_read=False
-                    )
-                    db.session.add(notif)
+    from app.models import Client
+    from app.models.crm import LeadEventLog
+    from app.services import avisos_service, lead_log_service
 
-        # 3. Mantener notificación general por compatibilidad
-        notif_global = Notification(
-            subject=f"Nueva nota interna en el lead: {client.full_name or client.instagram or 'Desconocido'}",
-            content=f"{current_user.username} agregó una nota:\n\n{text}",
-            target_users=["all"],
-            associated_id=client.id,
-            associated_type="lead"
-        )
-        db.session.add(notif_global)
-        
+    client = Client.query.get(id)
+    if not client:
+        return jsonify({"error": "Cliente no encontrado"}), 404
+    entrada = lead_log_service.nota(text, current_user, cliente=client)
+    db.session.flush()
+
+    # A quién se avisa (avisos_service): los elegidos o, si no, quien escribió la última nota de este lead
+    # que no sea uno mismo (responderle).
+    destinatarios = [int(u) for u in (data.get('target_user_ids') or [])]
+    if not destinatarios:
+        ultima = (LeadEventLog.query.filter(LeadEventLog.person_uuid == client.person_uuid,
+                                            LeadEventLog.action_type.in_(lead_log_service.TIPOS_NOTA),
+                                            LeadEventLog.user_id.isnot(None),
+                                            LeadEventLog.user_id != current_user.id,
+                                            LeadEventLog.id != entrada.id)
+                  .order_by(LeadEventLog.created_at.desc()).first()) if client.person_uuid else None
+        destinatarios = [ultima.user_id] if ultima else []
+    if destinatarios:
+        avisos_service.avisar('nota', 'grupo', destinatarios,
+                              f"Nota sobre {client.full_name or client.instagram or 'un lead'}",
+                              f'{current_user.username}: {text}', origen='log', origen_id=entrada.id,
+                              person_uuid=client.person_uuid)
+
     try:
         db.session.commit()
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
-    
+
     return jsonify({"message": "Comentario agregado", "comment": {
-        "id": comment.id,
-        "text": comment.text,
+        "id": entrada.id,
+        "text": entrada.description,
         "author": current_user.username,
-        "created_at": comment.created_at.isoformat()
+        "created_at": entrada.created_at.isoformat()
     }}), 201
 
 # Los pagos del sistema viejo de inscripciones (Enrollment/Payment) ya no se cargan ni se corrigen desde
@@ -2490,11 +2435,11 @@ def get_closer_deck_card(appt_id):
 def get_closer_deck_comments(appt_id):
     if current_user.role not in ['closer', 'triage', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
-    from app.models import Comment
-    comments = Comment.query.filter_by(associated_id=appt_id, comment_type='appointment').order_by(Comment.created_at.asc()).all()
+    from app.services import lead_log_service
     appt = db.session.get(Appointment, appt_id)
     puuid = appt.client.person_uuid if appt and appt.client else None
-    return jsonify([{**c.to_dict(), 'person_uuid': puuid} for c in comments]), 200
+    return jsonify([{**lead_log_service.a_dict(e), 'person_uuid': puuid}
+                    for e in lead_log_service.notas_de_agenda(appt_id)]), 200
 
 
 @bp.route('/deck/comments/<int:appt_id>', methods=['POST'])
@@ -2511,40 +2456,11 @@ def post_closer_deck_comment(appt_id):
     if not text:
         return jsonify({"message": "El texto del comentario es requerido"}), 400
         
-    comment = Comment(
-        author_id=current_user.id,
-        text=text,
-        comment_type='appointment',
-        associated_id=appt_id,
-        parent_id=parent_id
-    )
-    db.session.add(comment)
-    
-    from app.services.booking_service import BookingService
-    description = f"Closer {current_user.username} comentó: \"{text[:60]}...\""
-    BookingService.log_lead_event(appt.id, current_user.id, 'comment', description)
-    
-    # Notificación cruzada al Setter (dirigida al rol si es Manychat)
-    lead_name = appt.client.full_name if appt.client else "Sin Nombre"
-    subject = f"💬 Lead: {lead_name}"
-    content = f"\"{text}\" - de Closer {current_user.username}"
-    
-    target_users = "role:setter"
-    if appt.origin != 'Instagram' and appt.setter_id:
-        target_users = [appt.setter_id]
-        
-    notif = Notification(
-        subject=subject,
-        content=content,
-        associated_id=appt_id,
-        associated_type='deck_comment',
-        target_users=target_users
-    )
-    db.session.add(notif)
-        
+    # La misma acción que «Nota» de la ficha: la nota al log y el aviso al setter del lead.
+    from app.services import ficha_acciones_service
     try:
-        db.session.commit()
-        return jsonify({**comment.to_dict(), 'person_uuid': appt.client.person_uuid if appt.client else None}), 201
+        nota = ficha_acciones_service.nota(appt, {'texto': text, 'parent_id': parent_id}, current_user)
+        return jsonify({**nota, 'person_uuid': appt.client.person_uuid if appt.client else None}), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": f"Error al guardar comentario: {str(e)}"}), 500

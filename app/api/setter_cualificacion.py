@@ -155,14 +155,8 @@ def update_qualified_lead(answer_id):
     # 2. Guardar observación del setter y publicarla como nota visible
     setter_note = data.get('setter_note', '').strip()
     if setter_note:
-        from app.models import Comment
-        comment = Comment(
-            text=setter_note,
-            comment_type='client',
-            associated_id=client.id,
-            author_id=current_user.id
-        )
-        db.session.add(comment)
+        from app.services import lead_log_service
+        lead_log_service.nota(setter_note, current_user, cliente=client)
         
     # 3. Guardar anuncio de origen en LeadAnswer
     if 'keyword' in data:

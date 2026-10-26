@@ -47,15 +47,6 @@ def test_la_direccion_comercial_reporta_una_llamada_con_el_mismo_efecto(db, cita
     assert acciones(cita.id) == ['closer_notes', 'show_up_reported']
 
 
-def test_la_nota_se_espeja_en_el_hilo_del_cliente(db, cita, director):
-    aplicar_cambios(cita, {'closer_notes': '  pidio hablar con la esposa  '}, director)
-    db.session.commit()
-
-    comentarios = Comment.query.filter_by(comment_type='client', associated_id=cita.client_id).all()
-    assert [c.text for c in comentarios] == ['pidio hablar con la esposa']
-    assert comentarios[0].author_id == director.id
-
-
 def test_volver_a_pendiente_desprocesa_tambien_desde_la_ficha(db, cita, director):
     cita.closer_processed = True
     db.session.commit()

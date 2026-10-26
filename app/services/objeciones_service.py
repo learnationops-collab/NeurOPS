@@ -19,12 +19,11 @@ reportaron antes de ahora». Desde ese día la objeción es obligatoria al repor
 Además queda una nota del equipo en Comunicación (el hilo del cliente), que es donde el equipo la
 lee. No avisa a nadie: es un registro, no un pedido.
 """
-from datetime import datetime
-
 import pytz
 
 from app import db
-from app.models import ClientComment, Comment, LeadEventLog
+from app.models import LeadEventLog
+from app.services import lead_log_service
 
 ACCION = 'objecion'
 # Lo mismo que se le pide a «Qué le dijiste y qué respondió» en la cadencia de seguimiento: una
@@ -114,20 +113,13 @@ def registrar_objecion(appt, usuario, texto):
     habia = (db.session.query(LeadEventLog.id)
              .filter_by(appointment_id=appt.id, action_type=ACCION).first() is not None)
 
-    fila = LeadEventLog(appointment_id=appt.id, user_id=usuario.id, action_type=ACCION,
-                        description=texto, created_at=datetime.utcnow())
-    db.session.add(fila)
+    fila = lead_log_service.evento(appt, ACCION, texto, usuario)
 
+    # La nota que la deja a la vista en Comunicación, que muestra todas las notas de la persona (también
+    # la objeción de una llamada vieja).
     dia = _dia_de_la_llamada(appt, usuario)
-    nota = (f"{'Objeción actualizada' if habia else 'Objeción'}"
-            f"{f' de la llamada del {dia}' if dia else ''} (no cerró): {texto}")
-    if appt.client_id:
-        # El hilo del CLIENTE y no el de la agenda: Comunicación muestra el de la agenda con la que
-        # se abrió la ficha, y la objeción de una llamada vieja tiene que verse igual.
-        db.session.add(ClientComment(client_id=appt.client_id, author_id=usuario.id, text=nota))
-    else:
-        db.session.add(Comment(author_id=usuario.id, text=nota[:500], comment_type='appointment',
-                               associated_id=appt.id))
+    lead_log_service.nota(f"{'Objeción actualizada' if habia else 'Objeción'}"
+                          f"{f' de la llamada del {dia}' if dia else ''} (no cerró): {texto}", usuario, appt=appt)
     db.session.flush()
     return fila
 

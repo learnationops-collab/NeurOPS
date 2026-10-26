@@ -7,7 +7,7 @@ from flask_login import current_user
 from app import db
 from app.models import ROLE_SETTER
 from app.decorators import role_required
-from app.services import conversaciones_service, person_service
+from app.services import avisos_service, conversaciones_service, lead_log_service, person_service
 from app.services.lead_contacto_service import contactos as lead_contactos, lead_por_ig
 from app.services.setter_assignment_service import condicion_leads_visibles
 from app.api.setter import bp
@@ -16,7 +16,7 @@ from app.api.setter import bp
 @bp.route('/deck', methods=['GET'])
 @role_required(ROLE_SETTER)
 def get_setter_deck():
-    from app.models import Appointment, CommentNotification, Comment, Conversation, LeadAnswer, Ad, Event, Client
+    from app.models import Appointment, CommentNotification, Conversation, LeadAnswer, Ad, Event, Client
     from datetime import date, timedelta, datetime
     from sqlalchemy import or_, func
     
@@ -30,6 +30,7 @@ def get_setter_deck():
     unread_client_ids = set()
     if current_user and current_user.is_authenticated:
         unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
+        unread_client_ids |= avisos_service.clientes_con_notas_sin_leer(current_user)
 
     # Filtrar según el paso del flujo de trabajo
     if step == 'cualificacion':
@@ -225,7 +226,7 @@ def get_setter_deck():
                 "observaciones": client.observaciones if client else "",
                 "client_id": client.id if client else None,
                 "person_uuid": lead.person_uuid or (client.person_uuid if client else None),
-                "comments_count": db.session.query(Comment).filter(Comment.comment_type == 'client', Comment.associated_id == client.id).count() if client else 0,
+                "comments_count": lead_log_service.cuantas_notas([client.person_uuid]).get(client.person_uuid, 0) if client else 0,
                 "unread_comment": client.id in unread_client_ids if client else False
             })
             
@@ -342,7 +343,7 @@ def get_setter_deck():
             # Con que agenda se corresponde esta cita: es lo que le permite al
             # mazo abrir el detalle del lead, que se pide por agenda y no por cita.
             "agenda_id": agenda_de_cita.get(a.id),
-            "comments_count": Comment.query.filter(Comment.comment_type == 'client', Comment.associated_id == a.client_id).count() if a.client_id else 0,
+            "comments_count": lead_log_service.cuantas_notas([a.person_uuid]).get(a.person_uuid, 0) if a.person_uuid else 0,
             "unread_comment": a.client_id in unread_client_ids if (a.client_id and unread_client_ids) else False
         })
 

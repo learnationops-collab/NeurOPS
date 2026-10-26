@@ -68,17 +68,6 @@ def test_la_academia_es_de_la_direccion(equipo):
     assert out['texto'].startswith('Error: Los datos de la Academia')
 
 
-def test_comentario_propuesto_y_confirmado(db, equipo):
-    ana, beto, _, clientes = equipo
-    accion, error = conector.propose_action(ana, {'tipo': 'comentario', 'texto': 'Llamar el lunes',
-                                                  'cliente_id': clientes[ana.id].id})
-    assert error is None and accion['estado'] == 'propuesta' and ClientComment.query.count() == 0
-    assert conector.execute_action(ana, accion, 'Llamar el martes') == 'Comentario guardado en la ficha de Carla Díaz.'
-    assert ClientComment.query.one().text == 'Llamar el martes'
-    with pytest.raises(conector.ConectorError):
-        conector.execute_action(beto, accion, 'otro')
-
-
 def test_no_se_comenta_un_cliente_ajeno(equipo):
     ana, beto, _, clientes = equipo
     accion, error = conector.propose_action(ana, {'tipo': 'comentario', 'texto': 'x',

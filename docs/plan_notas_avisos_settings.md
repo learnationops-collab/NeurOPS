@@ -141,6 +141,15 @@ Regla de Santiago (26/10/2026) para los backfills de este plan:
 
 Las 29 notas que apuntan a clientes inexistentes siguen la misma regla según su fecha.
 
+**Informe del 26/10/2026** (producción, solo lectura): la triple copia de la nota de la llamada empieza en
+junio de 2026. Antes, cada nota existe una sola vez.
+
+- **Antes de 2026:** 2.155 notas de la llamada, solo en la columna. Pasan tal cual como `nota_llamada`.
+- **Enero a mayo de 2026:** 174 notas de la llamada, 2 comentarios de agenda y la única `setter_notes`.
+  Sin duplicados. Decidido con Santiago: fecha de la entrada = fecha de la llamada (`start_time`); autor =
+  el closer de la agenda. Vale también para las notas de antes de 2026.
+- **Desde junio de 2026:** auditoría en `docs/auditoria_notas_junio_2026.md`.
+
 ---
 
 ## 4. Orden
@@ -151,7 +160,11 @@ Las 29 notas que apuntan a clientes inexistentes siguen la misma regla según su
    para el closer se escribe en el log y le avisa al closer: le aparece el punto de «sin leer» en el mazo y
    la nota en Comunicación.
 2. **Notas:** backfill de las cinco formas al log (con la regla del §3); la ficha, el mazo y las tablas leen
-   del log; se renombran `action_type` → `tipo` y `description` → `texto`; se saca el borrado en cascada
+   del log. **Hecho el 26/10/2026** (rama `feat/notas-log`): todo lo que escribía `client_comments` o
+   `comments` escribe en el log (`lead_log_service`); la ficha, los hilos del mazo, el roadmap y los
+   contadores leen de ahí; los avisos de esas notas van por `avisar()`. `closer_notes` **se queda** como
+   copia de la nota actual de la llamada (la mantiene `guardar_nota_llamada`), para que las listas no hagan
+   una consulta por fila; el backfill le saca el texto del sistema. Falta: se renombran `action_type` → `tipo` y `description` → `texto`; se saca el borrado en cascada
    de la bitácora al borrar una agenda (hoy `event_logs` es `delete-orphan`); se borran `appointment_id`,
    `client_comments`, `comments` (tipos `client` y `appointment`), `closer_notes` y `setter_notes`.
 3. **Avisos:** los 14 `Notification(...)`, `CommentNotification` y los WhatsApp y Discord sueltos pasan por

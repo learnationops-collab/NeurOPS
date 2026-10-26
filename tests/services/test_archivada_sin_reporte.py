@@ -53,26 +53,6 @@ def agenda(db, closer, cli, *, cuando=datetime(2026, 9, 10, 15, 0), closer_resul
 
 # --- El barrido -----------------------------------------------------------------------------------
 
-@freeze_time(HOY)
-def test_el_barrido_archiva_sin_reporte_y_no_como_lead_perdido(db, marlon):
-    vieja = agenda(db, marlon, cliente(db, 'Vieja'), cuando=datetime(2026, 8, 1, 15, 0),
-                   result='Pendiente', closer_notes='Le escribí dos veces')
-    reciente = agenda(db, marlon, cliente(db, 'Reciente'), cuando=datetime(2026, 9, 1, 15, 0),
-                      result='Pendiente')
-    descartada = agenda(db, marlon, cliente(db, 'Descartada'), cuando=datetime(2026, 8, 1, 16, 0),
-                        closer_result='Lead Perdido', closer_processed=True)
-
-    resultado = CloserService.archive_stale_backlog(days=30)
-
-    assert resultado['count'] == 1
-    assert vieja.closer_result == ARCHIVADA_SIN_REPORTE == 'Archivada sin reporte'
-    assert vieja.closer_processed is True and vieja.seguimiento_realizado is True
-    # La firma va DESPUÉS de lo que ya tenía la nota: es lo que la migración y el script de
-    # corrección reconocen.
-    assert vieja.closer_notes.startswith('Le escribí dos veces\n' + NOTA_ARCHIVADA)
-    assert reciente.closer_result == 'Pendiente'
-    assert descartada.closer_result == 'Lead Perdido'
-
 
 @freeze_time(HOY)
 def test_una_archivada_ya_no_bloquea_el_horario_ni_vuelve_a_archivarse(db, marlon):

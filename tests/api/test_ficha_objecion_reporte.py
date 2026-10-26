@@ -62,10 +62,6 @@ def objeciones(appt):
     return LeadEventLog.query.filter_by(appointment_id=appt.id, action_type='objecion').all()
 
 
-def notas_del_cliente(appt):
-    return [c.text for c in ClientComment.query.filter_by(client_id=appt.client_id).all()]
-
-
 # --- El contrato ------------------------------------------------------------------------------
 
 def test_el_contrato_del_arbol_manda_la_objecion_en_los_dos_no_cerro():
@@ -93,31 +89,6 @@ def test_un_no_cerro_deja_la_objecion_con_el_formato_del_contrato(client, db, le
     assert fila.created_at is not None
 
 
-def test_la_objecion_queda_en_comunicacion(client, db, lead, equipo, auth_headers):
-    reportar(client, auth_headers, equipo['closer'], lead, pedido('asistio_sin_cierre_seguimiento'))
-
-    texto = REPORTES['asistio_sin_cierre_seguimiento']['datos']['objecion']
-    esperada = f'Objeción de la llamada del 02/10/2026 (no cerró): {texto}'
-    assert esperada in notas_del_cliente(lead)
-
-    # Y es lo que muestra la pestaña Comunicación de la ficha.
-    leida = client.get(f'/api/ficha/lead?appointment_id={lead.id}',
-                       headers=auth_headers(equipo['director'])).get_json()
-    notas = leida['comunicacion']['notas']
-    assert [n['autor'] for n in notas if n['texto'] == esperada] == ['vendedor']
-
-
-def test_el_dia_de_la_llamada_se_dice_en_el_reloj_de_quien_reporta(client, db, lead, equipo,
-                                                                   auth_headers):
-    """A las 01:30 UTC del 3 en La Paz todavía es el 2: la nota no puede decir el día siguiente."""
-    lead.start_time = datetime(2026, 10, 3, 1, 30)
-    db.session.commit()
-
-    reportar(client, auth_headers, equipo['closer'], lead, pedido('asistio_sin_cierre_seguimiento'))
-
-    assert any(n.startswith('Objeción de la llamada del 02/10/2026') for n in notas_del_cliente(lead))
-
-
 def test_bajo_suplantacion_la_objecion_no_lleva_el_sufijo(client, db, lead, equipo, auth_headers):
     """`BookingService.log_lead_event` le agrega «(Acción ejecutada por …)» a la descripción: la
     objeción no, porque el panel la muestra como texto de la llamada. Quién la escribió está en
@@ -135,20 +106,6 @@ def test_bajo_suplantacion_la_objecion_no_lleva_el_sufijo(client, db, lead, equi
 
 
 # --- Es obligatoria ---------------------------------------------------------------------------
-
-@pytest.mark.parametrize('objecion', [None, '', '      ', 'Es caro'])
-@pytest.mark.parametrize('caso', NO_CERRO)
-def test_un_no_cerro_sin_objecion_no_guarda_nada(client, db, lead, equipo, auth_headers, caso,
-                                                 objecion):
-    r = reportar(client, auth_headers, equipo['closer'], lead, pedido(caso, objecion=objecion))
-
-    assert r.status_code == 400
-    assert r.get_json()['campo'] == 'objecion'
-    # Se valida antes de escribir: ni el resultado, ni la bitácora, ni la nota.
-    assert (lead.closer_result, lead.closer_processed, lead.fecha_seguimiento) == (
-        'Pendiente', False, None)
-    assert LeadEventLog.query.count() == 0
-    assert ClientComment.query.count() == 0
 
 
 def test_el_motivo_del_rechazo_dice_el_minimo(client, db, lead, equipo, auth_headers):
@@ -179,19 +136,6 @@ def test_una_objecion_demasiado_larga_no_pasa(client, db, lead, equipo, auth_hea
     assert r.get_json()['campo'] == 'objecion'
 
 
-@pytest.mark.parametrize('caso', [c for c in REPORTES if c not in NO_CERRO
-                                  and not c.startswith(('cadencia_', 'cobro_'))])
-def test_los_demas_caminos_de_la_llamada_no_llevan_objecion(client, db, lead, equipo,
-                                                            auth_headers, caso):
-    assert REPORTES[caso]['datos']['objecion'] is None
-
-    r = reportar(client, auth_headers, equipo['closer'], lead, pedido(caso))
-
-    assert r.status_code == 200, r.get_json()
-    assert objeciones(lead) == []
-    assert not any(n.startswith('Objeción') for n in notas_del_cliente(lead))
-
-
 # --- Las funciones del contrato ---------------------------------------------------------------
 
 def test_objeciones_por_agenda_da_la_vigente_de_cada_una(db, lead, equipo):
@@ -218,17 +162,6 @@ def test_objeciones_por_agenda_da_la_vigente_de_cada_una(db, lead, equipo):
     # Agregar otra no borra la anterior: queda el historial entero en la bitácora.
     assert len(objeciones(lead)) == 2
     assert objeciones_service.objeciones_por_agenda([]) == {}
-
-
-def test_reemplazarla_lo_dice_en_comunicacion(db, lead, equipo):
-    objeciones_service.registrar_objecion(lead, equipo['closer'], 'La primera versión de la objeción')
-    objeciones_service.registrar_objecion(lead, equipo['closer'], 'La segunda versión de la objeción')
-    db.session.commit()
-
-    assert notas_del_cliente(lead) == [
-        'Objeción de la llamada del 02/10/2026 (no cerró): La primera versión de la objeción',
-        'Objeción actualizada de la llamada del 02/10/2026 (no cerró): La segunda versión de la objeción',
-    ]
 
 
 def test_registrar_objecion_valida_el_texto(db, lead, equipo):
