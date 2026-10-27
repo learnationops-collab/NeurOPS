@@ -28,6 +28,7 @@ import { Hueso } from '../../huesos/Huesos';
 import GrabacionFathom from './GrabacionFathom';
 import PasarARecuperacion from './PasarARecuperacion';
 import PasoSeguimiento from './PasoSeguimiento';
+import { useChequeoVenta } from './useChequeoVenta';
 import './resultado.css';
 import {
   estadoInicial, responder, actualizar, volverA, preguntaActual, faltantes,
@@ -856,9 +857,16 @@ function Revision({
   // La fila que se está editando acá mismo, sin salir de la revisión. Solo una a la vez.
   const [editando, setEditando] = useState(null);
   const rev = revisionVenta(respuestas, contexto, resumen(respuestas, contexto));
+  // El correo o el Instagram de otra ficha (formulario anterior reusado): lo dice el servidor.
+  const deOtraFicha = useChequeoVenta(venta, {
+    clientId: contexto.clientId, nombre: respuestas.nombre_cliente, email: respuestas.mail_cliente, instagram: respuestas.instagram,
+  });
+  const todos = [...rev.avisos, ...deOtraFicha];
   const saldo = rev.numeros.saldo;
-  const errores = rev.avisos.filter((a) => a.nivel === 'error');
-  const avisos = rev.avisos.filter((a) => a.nivel !== 'error');
+  const errores = todos.filter((a) => a.nivel === 'error');
+  const avisos = todos.filter((a) => a.nivel !== 'error');
+  // Datos del cliente que son de otro (o de relleno): la venta no se registra hasta corregirlos.
+  const frena = venta && errores.some((a) => a.frena);
   // La llamada sin venta no tiene secciones que armar: es una sola lista de lo contestado.
   const secciones = venta ? rev.secciones : [{
     id: 'resumen', titulo: 'Lo que reportaste', filas: rev.secciones.flatMap((s) => s.filas),
@@ -1002,12 +1010,13 @@ function Revision({
         <motion.button
           type="button"
           className="btn btn--cta"
-          disabled={guardando}
-          whileTap={reducido || guardando ? undefined : { scale: 0.97 }}
+          disabled={guardando || frena}
+          whileTap={reducido || guardando || frena ? undefined : { scale: 0.97 }}
           onClick={onGuardar}
         >
           {guardando ? <span className="ln-spinner" /> : <CheckCircle2 />}
-          {venta ? (rev.avisos.length ? 'Registrar la venta de todos modos' : 'Registrar la venta') : 'Guardar el resultado'}
+          {frena ? 'Corregí los datos del cliente'
+            : venta ? (todos.length ? 'Registrar la venta de todos modos' : 'Registrar la venta') : 'Guardar el resultado'}
         </motion.button>
       </div>
     </div>

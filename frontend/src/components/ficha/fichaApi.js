@@ -203,3 +203,10 @@ export default {
     obtenerFicha, obtenerBitacora, ejecutarAccion, ejecutarConsulta, agendaParaVender, clienteNuevoParaVender,
     ACCIONES, mensajeDeError,
 };
+
+/**
+ * Antes de registrar una venta: si el correo o el Instagram ya son de otra ficha con otro nombre
+ * (`GET /ficha/venta/chequeo`). Devuelve `{conflictos: [{campo, valor, nombre, client_id, reciente}]}`.
+ */
+export const chequearDatosVenta = ({ clientId, nombre, email, instagram, signal }) => api
+    .get('/ficha/venta/chequeo', { params: { client_id: clientId, nombre, email, instagram }, signal }).then(r => r.data);

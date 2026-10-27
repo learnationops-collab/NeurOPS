@@ -62,6 +62,27 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const pasoDeLaFila = (fila) => fila.paso || fila.clave;
 
+// Lo que el closer escribe en Instagram cuando no lo tiene: no es un usuario (pendientes del 27/10).
+const IG_DE_RELLENO = /^(no|no tengo|no tiene|no usa|no uso|ninguno|ninguna|sin instagram|na|n\/a|x|-+|\.+)$/i;
+const soloLetras = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+
+/** El Instagram de la venta no es de relleno ni el nombre (o el correo) de un closer. */
+function avisoInstagram(r, c) {
+  const ig = String(r.instagram || '').trim().replace(/^@+/, '');
+  if (!ig) return null;
+  if (IG_DE_RELLENO.test(ig) || /\s/.test(ig)) {
+    return 'El Instagram no parece un usuario: si no tiene, dejalo vacío.';
+  }
+  const plano = soloLetras(ig);
+  const closers = [...(c.closers || []), c.closerAgenda].filter(Boolean)
+    .map((x) => (typeof x === 'string' ? x : x.nombre || x.username || ''));
+  const delVendedor = String(r.email_vendedor || '').split('@')[0];
+  if ([...closers, delVendedor].some((n) => soloLetras(n) && soloLetras(n) === plano)) {
+    return 'El Instagram es el nombre de un closer: va el del cliente.';
+  }
+  return null;
+}
+
 /** Los avisos de datos faltantes o inconsistentes de la venta. `nivel`: error | aviso. */
 export function avisosVenta(r = {}, c = {}, hoy = new Date()) {
   const avisos = [];
@@ -71,6 +92,9 @@ export function avisosVenta(r = {}, c = {}, hoy = new Date()) {
   if (!vacio(r.mail_cliente) && !EMAIL.test(String(r.mail_cliente).trim())) {
     agregar('email', 'error', 'El email no parece válido: ahí le llega el acceso al programa.', 'venta_email');
   }
+  const ig = avisoInstagram(r, c);
+  // Frena: con un Instagram que no es del cliente la venta no se registra (pendientes del 27/10).
+  if (ig) avisos.push({ id: 'instagram', nivel: 'error', texto: ig, paso: 'venta_instagram', frena: true });
   if (hayPaso(r, 'venta_telefono') && vacio(r.telefono)) {
     agregar('telefono', 'aviso', 'Sin teléfono: no se le podrá escribir por WhatsApp.', 'venta_telefono');
   }
