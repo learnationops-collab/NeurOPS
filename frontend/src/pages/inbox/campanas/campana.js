@@ -62,6 +62,20 @@ export function formulario(c) {
     };
 }
 
+// Partida para clonar: todo igual salvo el nombre y las fechas (arranca hoy y sin fin). No hereda las
+// campañas de Meta (su gasto se contaría dos veces) y sus palabras solo si el original ya terminó: si
+// siguen vigentes el servidor rechaza repetirlas.
+export function copiaDe(c, ahora = new Date()) {
+    return {
+        ...formulario(c),
+        nombre: `${c.nombre} (copia)`.slice(0, 150),
+        desde: dia(ahora),
+        hasta: '',
+        palabras: estadoDe(c, ahora) === 'terminada' ? [...c.palabras] : [],
+        campanas_meta: [],
+    };
+}
+
 export const PESO_MAX = 100;
 const pesoValido = (p) => Number.isInteger(Number(p)) && Number(p) >= 1 && Number(p) <= PESO_MAX && String(p).trim() !== '';
 

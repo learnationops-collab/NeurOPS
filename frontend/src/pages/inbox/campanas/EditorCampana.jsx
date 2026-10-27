@@ -19,8 +19,9 @@ function Quitable({ children, label, onQuitar, lectura }) {
     );
 }
 
-export default function EditorCampana({ campana, flujos, campanasMeta, setters = [], lectura, onGuardada, onBorrada, onCerrar }) {
-    const [f, setF] = useState(() => formulario(campana));
+// `plantilla`: el formulario ya armado de una campaña clonada (campana es null: se crea una nueva).
+export default function EditorCampana({ campana, plantilla = null, flujos, campanasMeta, setters = [], lectura, onGuardada, onBorrada, onCerrar }) {
+    const [f, setF] = useState(() => plantilla || formulario(campana));
     const [palabra, setPalabra] = useState('');
     const [error, setError] = useState(null);
     const [ocupado, setOcupado] = useState(false);
@@ -58,6 +59,11 @@ export default function EditorCampana({ campana, flujos, campanasMeta, setters =
         }
     };
 
+    let subtitulo = 'Sus palabras clave llevan al flujo mientras esté vigente.';
+    if (plantilla) {
+        subtitulo = plantilla.palabras.length ? 'Parte de la original: cambiá lo que haga falta.'
+            : 'Las palabras de la original siguen vigentes: elegí otras para la copia.';
+    }
     const parte = porcentajes(f.setters, f.pesos);
     const nombreMeta = (id) => campanasMeta.find((m) => m.id === id)?.nombre || id;
     const metaLibres = campanasMeta.filter((m) => !f.campanas_meta.includes(m.id))
@@ -68,8 +74,8 @@ export default function EditorCampana({ campana, flujos, campanasMeta, setters =
     return (
         <Modal onClose={onCerrar} className="cp-editor" labelledBy="cp-editor-t">
             <ModalHeader titleId="cp-editor-t" icon={<Megaphone />} onClose={onCerrar}
-                title={campana ? campana.nombre : 'Nueva campaña'}
-                subtitle="Sus palabras clave llevan al flujo mientras esté vigente." />
+                title={campana ? campana.nombre : plantilla ? 'Clonar campaña' : 'Nueva campaña'}
+                subtitle={subtitulo} />
             <form className="cp-form" noValidate onSubmit={guardar}>
                 <Campo label="Nombre">
                     <Input value={f.nombre} maxLength={150} autoFocus={!campana} disabled={lectura} autoComplete="off"

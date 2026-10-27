@@ -6,7 +6,7 @@ import { Megaphone, Plus } from 'lucide-react';
 import { BRAND_AURA, Button, EmptyState, Grid, HeaderActions, Segmented, toast } from '../../components/standard';
 import EditorCampana from './campanas/EditorCampana';
 import TarjetaCampana from './campanas/TarjetaCampana';
-import { ESTADOS, estadoDe } from './campanas/campana';
+import { ESTADOS, copiaDe, estadoDe } from './campanas/campana';
 import { inboxApi } from './api';
 
 const FILTROS = [['todas', 'Todas'], ['vigente', 'Vigentes'], ['proxima', 'Próximas'], ['terminada', 'Terminadas']];
@@ -26,6 +26,7 @@ export default function Campanas({ puedeEditar }) {
     const [filtro, setFiltro] = useState('todas');
     const [dias, setDias] = useState(30);
     const [editando, setEditando] = useState(null); // null cerrado · 'nueva' · la campaña
+    const [plantilla, setPlantilla] = useState(null); // formulario de una campaña clonada (con editando = 'nueva')
     const [flujos, setFlujos] = useState([]);
     const [campanasMeta, setCampanasMeta] = useState([]);
     const [setters, setSetters] = useState([]);
@@ -40,7 +41,9 @@ export default function Campanas({ puedeEditar }) {
         inboxApi.setters().then(setSetters).catch(() => setSetters([]));
     }, []);
 
-    const cerrarCon = (mensaje) => { setEditando(null); toast(mensaje); cargar(); };
+    const cerrar = () => { setEditando(null); setPlantilla(null); };
+    const clonar = (c) => { setPlantilla(copiaDe(c)); setEditando('nueva'); };
+    const cerrarCon = (mensaje) => { cerrar(); toast(mensaje); cargar(); };
     const cuenta = (id) => (campanas || []).filter((c) => id === 'todas' || estadoDe(c) === id).length;
     const visibles = (campanas || []).filter((c) => filtro === 'todas' || estadoDe(c) === filtro);
 
@@ -60,7 +63,8 @@ export default function Campanas({ puedeEditar }) {
     } else {
         cuerpo = (
             <Grid variant="cards">
-                {visibles.map((c) => <TarjetaCampana key={c.id} c={c} setters={setters} puedeEditar={puedeEditar} onAbrir={setEditando} />)}
+                {visibles.map((c) => <TarjetaCampana key={c.id} c={c} setters={setters} puedeEditar={puedeEditar}
+                    onAbrir={setEditando} onClonar={clonar} />)}
             </Grid>
         );
     }
@@ -88,8 +92,8 @@ export default function Campanas({ puedeEditar }) {
             </HeaderActions>
             {cuerpo}
             {editando && (
-                <EditorCampana campana={editando === 'nueva' ? null : editando} flujos={flujos} campanasMeta={campanasMeta} setters={setters}
-                    lectura={!puedeEditar} onCerrar={() => setEditando(null)}
+                <EditorCampana campana={editando === 'nueva' ? null : editando} plantilla={plantilla} flujos={flujos}
+                    campanasMeta={campanasMeta} setters={setters} lectura={!puedeEditar} onCerrar={cerrar}
                     onGuardada={(c) => cerrarCon(`${c.nombre} guardada`)} onBorrada={(c) => cerrarCon(`${c.nombre} eliminada`)} />
             )}
         </>
