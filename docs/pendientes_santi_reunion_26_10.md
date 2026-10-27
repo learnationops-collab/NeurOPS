@@ -156,6 +156,43 @@ Hecho sin commitear: campos de triage en `Appointment`, migración `c4e9a1d7f2b8
     - **No cortar**: Santiago Herrera tiene un acuerdo de pago de $700 el 15/11 (onboarding del 14/09).
   - [x] Suscripciones creadas con las fechas de los pagos (26/10, sin empujar a la Academia porque ya estaban vencidas): Paola Figueroa, Evelyn Morán, Andrea Martínez y Rodrigo Vergara (seña de 7 días); Emily (RR mensual, del 07/01 al 06/08).
   - [ ] **Joel Almengor sin suscripción.** Paga $150 cada 15 días por Stripe (suscripción automática). Si cada pago es un mes, le corresponde acceso hasta ~30/11. Si es medio mes, hasta ~agosto. La Academia tiene su RR «expired» (asignado el 09/09 hasta el 07/01/27) y Learnation Course activo. Lleva 223 horas de estudio. Definir cuánto cubre cada pago.
+  - [x] Estrategia de cobranza (26/10, ya empujada a la Academia):
+    - Seña sin completar con actividad: acceso hasta el lunes 02/11 (Lysander, Valentina, Leslie y Cynthia). Santiago Herrera, hasta su pago acordado del 15/11.
+    - Seña sin completar y sin actividad: se les quitó el acceso completo (Katherine, Joselyne, Adrian Luna, Jorge Raúl, Emilia, David Barahona y Tamara).
+    - Vencidas entre el 12/10 y el 25/10: prórroga de una semana, hasta el 03/11 (8 personas).
+  - [x] Resuelto el 26/10:
+    - Las 12 de la capacitación, canceladas.
+    - Miguel: una sola ficha, con la seña en la cuenta 701 (la que usa); la 700, cortada.
+    - Karina, unificada en «Andrea Hernandez»: la cuenta 18, con el RR hasta el 21/01/27 atado a su venta de $1.200.
+    - Laura Hernández, atada a su upsell SI.
+    - María Alejandra Rodríguez Verano: su pago de $1.500 del 27/05 recibió su venta.
+  - [x] **Suscripciones de Work × cuentas activas de la Academia (26/10, 230 cuentas)**:
+    - Joel: un mes por pago, RR hasta el 19/01/27.
+    - Rossana: venta desde su cobro de enero, y el acceso de agosto como prórroga de Jean Carlo.
+    - Felipe, pasado a RR.
+    - Amsy, igualada a la Academia (04/02/27) con una prórroga.
+    - Camila Palacios, dada de baja (la Academia la depuró el 13/10).
+    - Laura Hernández (RR → SI) y Laura Toloza (AL → RR): se dio de baja la suscripción vieja.
+    - Cuentas vinculadas: Rossana 94, Jhoselyn 472, Monica 523, Laura Hernández 625 y Camila Palacios 378.
+    - Quedan iguales salvo las cuentas de prueba (12 Gabriela Zapata, 712 Jean Carlo Second Brain) y Anita/Camila Palomino (ver abajo).
+  - [x] **Problemas de la sincronización con la Academia, vistos el 26/10** (arreglados el 26/10, Work y Academia ADR-196):
+    1. El aviso salía en un hilo daemon que moría con el script. Ahora el hilo espera, y cada suscripción guarda hasta cuándo la Academia la tiene al día (`academy_synced_at`). El cron de cada hora reenvía las que cambiaron después, también las cambiadas sin `otorgar`.
+    2. La Academia busca primero por `learnation_user_id` y después por la ficha (Monica 522/523, Miguel 700/701).
+    3. Una baja de un producto que ya no está activo no lo reasigna, y no le corta el producto vigente (Laura Toloza).
+    4. Dos filas activas del mismo producto quedan en la más nueva, con la fecha de Work (Anita 432 y Camila Palomino 662: se reenvían tras el deploy).
+  - [ ] **Coherencia ventas × suscripciones (26/10)**: de 118 ventas con pago desde el 26/06, todas tienen suscripción salvo la de Joel. Quedan pendientes:
+    - **Joel**: sin suscripción hasta definir cuánto cubre cada pago de $150.
+    - **Rossana Vargas**: su RR (13/08–11/12, dado por Jean Carlo) no tiene venta. Su único pago es de $800 por Stripe, del 19/01/26, y nunca se cargó.
+    - **Felipe Sanhueza**: pagó un RR completo (Hotmart, 16/08) y la Academia le dio AL hasta el 29/01/27. La recarga de onboardings del 26/09 lo reenvió como Ace Learner.
+    - **Ventas atadas a otro producto (8)**: upsells y renovaciones etiquetadas AL sobre un RR (Fredy, Joseph, Jonathan, Anita, Andres Simon, Fiorella, Emily). Vale el producto que dio la Academia.
+  - [ ] ~~Suscripciones activas sin venta (16)~~ (resuelto arriba): Rossana Vargas, Karina Morales, María Alejandra Rodríguez Verano (tiene un pago sin venta), Miguel Ángel Contreras (seña dada por Santiago el 22/10), y 12 de AL dadas por Jean Carlo en tandas el 05/06 y el 17/07 (Miguel Barros, Wilmer Correa, Adriana Salina, Andrea Medina, Emmanuel Mogollón, Yorza Hernández, Emily Vanderven, Ian Diaz, Marianny Bolívar, Ashly Madriz, Romer García y Amelie Hernández). Regla: ninguna suscripción sin venta. Decidir si se carga la venta o se corta. Leslie, Juan Camilo Sánchez y Antonio Castro ya quedaron atadas a su venta.
+  - [ ] **Lógica de vencimiento por plan de cuotas** (Santiago, 26/10):
+    - Seña: 7 días, extensible con prórroga.
+    - El tiempo corre desde el pago que completa la seña.
+    - En cuotas, cada pago lleva el vencimiento hasta la próxima cuota del plan, más una semana de gracia.
+    - Completo: 120 días.
+    - Renovación: mensual o cuatrimestral, atada a un pago nuevo.
+    - Hoy el código da 120 días a cualquier parcial: falta implementarlo.
   - [x] 120 días desde el pago que completó la seña (26/10): Miguel Alva → 12/11, Greysi → 02/12, Yancarlos → 26/10, Sergio Carrillo → 05/02/27. Y `subscription_service`: la duración por defecto pasa a 120 días (`DURACION_DIAS`), no 4 meses de calendario.
   - **Producto distinto (12)**: la venta dice un programa y la suscripción es de otro (por ejemplo, venta RR con acceso AL). La carga respetó el producto que dio la Academia. Revisar caso por caso.
   - **Hasta +47 días sobre lo pagado (≈20)**: el acceso arrancó con el onboarding o con días bonificados por el closer (Daniel Aldana: 20 días). Aceptable.

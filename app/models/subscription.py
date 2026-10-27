@@ -29,6 +29,9 @@ class Subscription(ConPersona, db.Model):
     is_deposit = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # Hasta cuándo la Academia tiene esta suscripción tal como está: si `updated_at` es posterior, falta
+    # avisarle y el cron la reenvía (`subscription_sync.reenviar_pendientes`).
+    academy_synced_at = db.Column(db.DateTime, nullable=True)
 
     client = db.relationship('Client', backref=db.backref('subscriptions', lazy='dynamic', passive_deletes=True))
     sale = db.relationship('Sale', foreign_keys=[sale_id])

@@ -25,11 +25,14 @@ def cron_sincronizar():
 
     Antes del lote, el avance de TODOS en un masivo (`sincronizar_avance`, una o dos peticiones):
     con el cron cada hora, la cartera del closer sabe cómo avanza cada alumno.
+
+    También reenvía las suscripciones que la Academia todavía no tiene al día (`subscription_sync`).
     """
-    from app.services import academy_payment_status, academy_snapshot_service
+    from app.services import academy_payment_status, academy_snapshot_service, subscription_sync
 
     avance = academy_snapshot_service.sincronizar_avance()
     # Una vez por día: el estado de pago de quienes tienen una cuota que entra en "por vencer" o "vencida".
     academy_payment_status.avisar_cambios_por_fecha()
+    suscripciones = subscription_sync.reenviar_pendientes()
     resultado = academy_snapshot_service.sincronizar_lote(presupuesto=request.args.get('presupuesto'))
-    return jsonify({'status': 'success', 'avance': avance, **resultado}), 200
+    return jsonify({'status': 'success', 'avance': avance, 'suscripciones': suscripciones, **resultado}), 200

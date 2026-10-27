@@ -3,8 +3,12 @@
 Work es la fuente de verdad (`subscription_service`): la Academia refleja lo que diga acá, también
 cuando acorta (una corrección o un acceso quitado). Cada `otorgar` anota la suscripción tocada en
 `session.info`; en `before_commit` se arma el aviso (todavía se puede leer la base) y en
-`after_commit` sale en un hilo, como `academy_payment_sync`: lo guardado no espera a la Academia, y
-si falla queda en el log.
+`after_commit` sale en un hilo, como `academy_payment_sync`: lo guardado no espera a la Academia.
+
+Lo que no llega no se pierde: cada suscripción anota hasta cuándo la Academia la tiene al día
+(`academy_synced_at`), y el cron de la Academia reenvía las que cambiaron después
+(`reenviar_pendientes`), también las que se cambiaron sin `otorgar`. El hilo no es daemon: un
+script o un worker que termina espera a que salga el aviso en vez de cortarlo.
 
 Apagado salvo `ACADEMY_SUBSCRIPTIONS_PUSH=true`: se enciende cuando la Academia tenga su
 `POST /api/v1/subscriptions` en producción.
@@ -12,9 +16,10 @@ Apagado salvo `ACADEMY_SUBSCRIPTIONS_PUSH=true`: se enciende cuando la Academia 
 import logging
 import os
 import threading
+from datetime import datetime
 
 from flask import current_app
-from sqlalchemy import event
+from sqlalchemy import event, or_, update
 
 from app import db
 
@@ -52,17 +57,55 @@ def aviso(sub):
     }
 
 
-def _enviar(avisos, app):
+def _avisar(sub_id, payload, armado):
+    """Manda un aviso y, si la Academia respondió algo definitivo, marca la suscripción como avisada
+    hasta `armado`. Un 404 (sin alumno) o un 422 también cuentan: reenviarlo no lo cambia. Una
+    caída, un 429 o un 5xx no: lo reintenta el cron."""
+    from app.models import Subscription
     from app.services.learnation_service import LearnationAPIError, LearnationService
 
+    try:
+        LearnationService.report_subscription(payload)
+    except LearnationAPIError as e:
+        logger.warning(f"[ACADEMY SUBS] Cliente {payload['work_client_id']}: {e} ({e.status_code})")
+        if e.status_code is None or e.status_code == 429 or e.status_code >= 500:
+            return False
+    except Exception as e:
+        logger.error(f"[ACADEMY SUBS] Cliente {payload['work_client_id']}: {e}")
+        return False
+    db.session.execute(update(Subscription).where(Subscription.id == sub_id)
+                       .values(academy_synced_at=armado, updated_at=Subscription.updated_at))
+    db.session.commit()
+    return True
+
+
+def _enviar(avisos, armado, app):
     with app.app_context():
-        for payload in avisos:
-            try:
-                LearnationService.report_subscription(payload)
-            except LearnationAPIError as e:
-                app.logger.warning(f"[ACADEMY SUBS] Cliente {payload['work_client_id']}: {e} ({e.status_code})")
-            except Exception as e:
-                app.logger.error(f"[ACADEMY SUBS] Cliente {payload['work_client_id']}: {e}")
+        for sub_id, payload in avisos:
+            _avisar(sub_id, payload, armado)
+
+
+def reenviar_pendientes(limite=20):
+    """Las suscripciones que cambiaron después del último aviso que la Academia confirmó, de la más
+    vieja a la más nueva, hasta `limite` (el tope de 60 peticiones por minuto es compartido). La
+    llama el cron de la Academia; sincrónica."""
+    from app.models import Subscription
+
+    if not activo():
+        return {'pendientes': 0, 'enviadas': 0}
+    pendientes = (Subscription.query
+                  .filter(or_(Subscription.academy_synced_at.is_(None),
+                              Subscription.academy_synced_at < Subscription.updated_at))
+                  .order_by(Subscription.updated_at).limit(limite).all())
+    enviadas = 0
+    for sub in pendientes:
+        try:
+            armado = datetime.utcnow()
+            enviadas += _avisar(sub.id, aviso(sub), armado)
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f'[ACADEMY SUBS] Reenvío de la suscripción {sub.id}: {e}')
+    return {'pendientes': len(pendientes), 'enviadas': enviadas}
 
 
 def register_subscription_sync(app):
@@ -74,16 +117,16 @@ def register_subscription_sync(app):
         try:
             session.flush()
             unicas = {id(s): s for s in tocadas if s.id is not None}.values()
-            session.info[KEY_AVISOS] = [aviso(s) for s in unicas]
+            session.info[KEY_AVISOS] = (datetime.utcnow(), [(s.id, aviso(s)) for s in unicas])
         except Exception as e:
             logger.error(f'[ACADEMY SUBS] No se pudo armar el aviso: {e}')
 
     @event.listens_for(db.session, 'after_commit')
     def _mandar(session):
-        avisos = session.info.pop(KEY_AVISOS, [])
+        armado, avisos = session.info.pop(KEY_AVISOS, (None, []))
         if avisos:
-            threading.Thread(target=_enviar, args=(avisos, current_app._get_current_object()),
-                             daemon=True, name='academy-subs').start()
+            threading.Thread(target=_enviar, args=(avisos, armado, current_app._get_current_object()),
+                             daemon=False, name='academy-subs').start()
 
     @event.listens_for(db.session, 'after_rollback')
     def _olvidar(session):
