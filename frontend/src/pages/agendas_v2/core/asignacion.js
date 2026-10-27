@@ -11,7 +11,8 @@ const DIA = 86400000;
 export const VENTANA_LLENAR_DIAS = 7;
 
 export function miembrosValidos(d, g) {
-    return g ? g.miembros.map(id => buscar(d, 'personas', id)).filter(p => p && esCloser(d, p) && horasSemana(p) > 0) : [];
+    // El triage atiende las llamadas del grupo donde lo ponen (esTriage), aunque su rol no sea de closer.
+    return g ? g.miembros.map(id => buscar(d, 'personas', id)).filter(p => p && (esCloser(d, p) || esTriage(d, p)) && horasSemana(p) > 0) : [];
 }
 
 // El porcentaje de un closer en una estrategia Distribuida; sin cargar, parte pareja.

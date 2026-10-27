@@ -20,7 +20,8 @@ def miembros_validos(d, g):
     if not g:
         return []
     ps = [buscar(d, 'personas', i) for i in g['miembros']]
-    return [p for p in ps if p and es_closer(d, p) and horas_semana(p) > 0]
+    # El triage atiende las llamadas del grupo donde lo ponen (es_triage), aunque su rol no sea de closer.
+    return [p for p in ps if p and (es_closer(d, p) or es_triage(d, p)) and horas_semana(p) > 0]
 
 
 def _o(*xs):
