@@ -18,7 +18,7 @@ from datetime import datetime
 from sqlalchemy import or_
 
 from app.services.comision_tasas_service import FUENTES, TASAS_DE_FABRICA
-from app.services.commission_service import cash_neto_de
+from app.services.commission_service import cash_neto
 
 DESDE = '2026-09'
 
@@ -118,7 +118,7 @@ def recaudado_por_programa(sales):
     (ya filtradas por mes y por estado completado)."""
     recaudado = {}
     for s, programa, fuente in ingresos_de_fulfillment(sales):
-        recaudado[(programa, fuente)] = recaudado.get((programa, fuente), 0.0) + cash_neto_de(s.monto, s.metodo_pago)
+        recaudado[(programa, fuente)] = recaudado.get((programa, fuente), 0.0) + cash_neto(s)
     return recaudado
 
 
@@ -165,7 +165,7 @@ def nomina_por_persona(ventas, tasas_de_mes=None):
             if not tasa:
                 continue
             datos = datos_de[id(venta)]
-            monto_neto = cash_neto_de(venta.monto, venta.metodo_pago)
+            monto_neto = cash_neto(venta)
             fila = {**datos, 'programa': programa, 'fuente': fuente, 'porcentaje': tasa,
                     'comision': round(monto_neto * tasa / 100, 2)}
             filas.append(fila)

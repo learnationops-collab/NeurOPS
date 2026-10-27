@@ -2,7 +2,7 @@ from flask import request, jsonify, current_app
 from flask_login import login_required
 from app.models import db, FinancialSale, ExcludedSale, FinancialAgenda
 from app.decorators import admin_required
-from app.services.commission_service import cash_neto_de
+from app.services.commission_service import cash_neto
 from datetime import datetime
 from . import bp
 from .finance import finance_admin_required
@@ -328,7 +328,7 @@ def update_financial_sale(sale_id):
         monto_original = float(sale.monto or 0.0)
         s_dict["monto_bruto"] = round(monto_original, 2)
         # El neto, sin la comisión estimada de la pasarela (`COMISION_PASARELA`).
-        s_dict["monto"] = round(cash_neto_de(monto_original, sale.metodo_pago), 2)
+        s_dict["monto"] = round(cash_neto(sale), 2)
             
         s_dict["closer_name"] = resolve_closer_name(sale.email_vendedor)
         
@@ -589,7 +589,7 @@ def get_financial_sales():
 
         # El neto, sin la comisión estimada de la pasarela (`COMISION_PASARELA`).
         monto_original = float(s.monto or 0.0)
-        monto_ajustado = cash_neto_de(monto_original, s.metodo_pago)
+        monto_ajustado = cash_neto(s)
 
         if has_agenda_match or resolved_setter:
             if sale_is_completed:

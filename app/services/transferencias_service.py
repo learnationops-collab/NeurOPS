@@ -95,9 +95,9 @@ def _transferencias_del_rango(desde, hasta):
 
 def _monto(venta):
     # La misma cuenta que el ingreso (una transferencia no paga fee de pasarela: es el monto).
-    from app.services.commission_service import cash_neto_de
+    from app.services.commission_service import cash_neto
 
-    return round(cash_neto_de(venta.monto, venta.metodo_pago), 2)
+    return round(cash_neto(venta), 2)
 
 
 def recibidas_por_persona(desde=None, hasta=None):

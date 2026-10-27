@@ -4,7 +4,7 @@ y sus totales. `ComercialService` hereda de acá; ver `comercial_service.py`.
 
 from app.models import FinancialSale
 from app.services.closer_name_service import resolver_nombre_closer
-from app.services.commission_service import cash_neto_de
+from app.services.commission_service import cash_neto
 from app.services.setter_assignment_service import normalizar_nombre
 from app.services.ticket_service import pago_de_fila, ticket_de
 from app.services.comercial_cruces import clientes_de_ventas
@@ -115,7 +115,7 @@ class ComercialVentasMixin:
             'tipo_pago_raw': (v.tipo_pago or '').strip() or 'Sin tipo',
             'es_venta': es_venta,
             'monto': round(monto, 2),
-            'monto_neto': round(cash_neto_de(monto, v.metodo_pago), 2),
+            'monto_neto': round(cash_neto(v), 2),
             'metodo': v.metodo_pago or 'Sin método',
             'closer': nombre,
             'setter': v.setter or '',

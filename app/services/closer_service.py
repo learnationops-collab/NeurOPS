@@ -267,11 +267,11 @@ class CloserService:
         kpi_query = apply_lead_filters(kpi_query)
         total_clients = kpi_query.count()
 
-        # El cash neto de sus pagos (`FinancialSale` completados que vendió, menos la fee de la pasarela,
-        # `commission_service.cash_neto_de`), de los clientes que pasan los filtros; la comisión, con su
+        # El cash neto de sus pagos (`FinancialSale` completados que vendió: el real si está verificado,
+        # `commission_service.cash_neto`), de los clientes que pasan los filtros; la comisión, con su
         # tasa de la nómina (`_tasa_de_comision`), como `commission_service.get_closer_commission`.
         from app.models import FinancialSale
-        from app.services.commission_service import cash_neto_de
+        from app.services.commission_service import cash_neto
         from app.services.comercial_vocabulario import venta_completada
         identificadores = {e.lower() for e in CloserService._resolve_sale_identifiers(User.query.get(closer_id)) if e} or {''}
         pagos = FinancialSale.query.filter(func.lower(func.trim(FinancialSale.email_vendedor)).in_(identificadores))
@@ -280,7 +280,7 @@ class CloserService:
             ids = {cid for cid, _ in filtrados}
             personas = {pu for _, pu in filtrados if pu}
             pagos = pagos.filter(or_(FinancialSale.client_id.in_(ids or {0}), FinancialSale.person_uuid.in_(personas or {''})))
-        cash_collect_net = sum(cash_neto_de(p.monto, p.metodo_pago) for p in pagos.all() if venta_completada(p))
+        cash_collect_net = sum(cash_neto(p) for p in pagos.all() if venta_completada(p))
         tasa = _tasa_de_comision(closer_id, datetime.utcnow().strftime('%Y-%m'))
 
         # La deuda de sus clientes, por venta (`deuda_service`); sin los dados de baja: su saldo ya no es
@@ -341,11 +341,11 @@ class CloserService:
         def calculate_commission(s_dt, e_dt):
             """El cash neto de sus pagos completados del rango por su tasa de la nómina (`CLOSER_RATE` si
             no tiene), como `commission_service.get_closer_commission`."""
-            from app.services.commission_service import cash_neto_de
+            from app.services.commission_service import cash_neto
             pagos = FinancialSale.query.filter(func.lower(func.trim(FinancialSale.email_vendedor)).in_(identificadores),
                                                FinancialSale.date >= s_dt, FinancialSale.date <= e_dt).all()
-            cash_neto = sum(cash_neto_de(p.monto, p.metodo_pago) for p in pagos if venta_completada(p))
-            return cash_neto * _tasa_de_comision(closer_id, today_local.strftime('%Y-%m'))
+            neto = sum(cash_neto(p) for p in pagos if venta_completada(p))
+            return neto * _tasa_de_comision(closer_id, today_local.strftime('%Y-%m'))
 
         upcoming = Appointment.query.filter(
             Appointment.closer_id == closer_id,

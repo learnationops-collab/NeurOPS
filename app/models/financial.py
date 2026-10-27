@@ -38,6 +38,8 @@ class FinancialSale(ConPersona, db.Model):
     transaction_date = db.Column(db.DateTime, nullable=True)
     transaction_id = db.Column(db.String(120), nullable=True, index=True)
     transaction_source = db.Column(db.String(60), nullable=True)
+    # Neto: lo que llegó a la cuenta, ya sin la fee de la pasarela (26/10/2026). Verificado, es el cash
+    # collect real y manda para comisiones e ingresos (`commission_service.cash_neto`).
     transaction_amount = db.Column(db.Float, nullable=True)
     # Rutas en el volumen (extracto de un período, comprobante individual...); un archivo puede respaldar varios pagos.
     transaction_evidence = db.Column(db.JSON, nullable=True)

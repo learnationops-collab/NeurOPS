@@ -5,7 +5,7 @@ from app.models import db
 from flask_login import current_user
 from app.services import agenda_contacto_service
 from app.services import conversaciones_service
-from app.services.commission_service import cash_neto_de
+from app.services.commission_service import cash_neto
 from app.services.identity_service import normalize_ig
 from . import bp
 
@@ -180,7 +180,7 @@ def get_unattributed_leads():
 
             # El neto, sin la comisión estimada de la pasarela (`COMISION_PASARELA`).
             monto_original = float(sale.monto or 0.0)
-            monto_ajustado = cash_neto_de(monto_original, sale.metodo_pago)
+            monto_ajustado = cash_neto(sale)
 
             lead_key = None
             if sale.person_uuid:

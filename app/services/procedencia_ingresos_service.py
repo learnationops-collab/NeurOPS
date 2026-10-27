@@ -40,7 +40,7 @@ Los baldes:
 
 Monto y ventas: los del ingreso del Resumen (`get_finance_summary`): ventas con fecha en el período
 y estado vacío, «Completada» o «Confirmada», en cash NETO de la fee de Stripe/Hotmart
-(`cash_neto_de`). La suma de los baldes es ese ingreso, al centavo (lo afirma un test).
+(`cash_neto`: el real si está verificado). La suma de los baldes es ese ingreso, al centavo (lo afirma un test).
 
 Desde el 09/10/2026 el reparto también lo usa el dashboard comercial (Analizar › «Ingresos por
 fuente», `comercial_analitica.fuentes_de`), con dos ajustes que se piden acá y no se copian allá:
@@ -53,7 +53,7 @@ from datetime import datetime, time
 from app import db
 from app.models import FinancialAgenda, FinancialSale, User
 from app.services.attribution_service import AttributionService
-from app.services.commission_service import cash_neto_de
+from app.services.commission_service import cash_neto
 from app.services.fuente_service import (
     FUENTE_SETTING, SETTERS, es_vsl, es_workshop_landing, es_workshop_vivo, normalizar,
 )
@@ -205,7 +205,7 @@ def ventas_que_suman(desde, hasta):
 # su «Cash collected» (`ComercialService.ventas` redondea cada fila al centavo y suma eso). Cada uno
 # cierra con la cifra que tiene al lado.
 BASES = {
-    'neto': lambda venta: cash_neto_de(venta.monto, venta.metodo_pago),
+    'neto': lambda venta: cash_neto(venta),
     'bruto': lambda venta: round(float(venta.monto or 0.0), 2),
 }
 

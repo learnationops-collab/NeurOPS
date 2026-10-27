@@ -59,6 +59,15 @@ def cash_neto_de(monto, metodo_pago):
     factor = FEES_POR_METODO.get((metodo_pago or '').strip().lower(), 1.0)
     return float(monto or 0.0) * factor
 
+
+def cash_neto(venta):
+    """El cash collect real de un pago: lo que entró según el extracto (`transaction_amount`, neto de la
+    pasarela) si está verificado; si no, el estimado (`cash_neto_de`). Es lo que cuenta para comisiones
+    (Santiago, 26/10/2026)."""
+    if venta.transaction_status == 'verified' and venta.transaction_amount is not None:
+        return float(venta.transaction_amount)
+    return cash_neto_de(venta.monto, venta.metodo_pago)
+
 # Mismos valores que el resto del sistema considera "sin resultado todavía" para una agenda
 # como fuente de un lead — ver `get_commissions_calculated` en app/api/public/finance.py.
 _FUENTE_INVALIDA = {'s/f', 'n/a', ''}
@@ -121,7 +130,7 @@ class CommissionService:
         sales = FinancialSale.query.filter(
             FinancialSale.date >= start_dt, FinancialSale.date < end_dt
         ).all()
-        cash_neto = 0.0
+        neto_total = 0.0
         if sales:
             all_agendas = FinancialAgenda.query.all()
             attribution_map = AttributionService.get_sales_attribution(sales=sales, agendas=all_agendas)
@@ -149,7 +158,7 @@ class CommissionService:
                 if resolved != username:
                     continue
 
-                cash_neto += cash_neto_de(s.monto, s.metodo_pago)
+                neto_total += cash_neto(s)
 
         tasa = _tasa_propia('setters', SETTERS_CON_COMISION.get((user.username or '').strip().lower()),
                             mes, SETTER_RATE)
@@ -157,8 +166,8 @@ class CommissionService:
             'role': 'setter',
             'month': mes,
             'rate': tasa,
-            'cash_neto': round(cash_neto, 2),
-            'commission': round(cash_neto * tasa, 2),
+            'cash_neto': round(neto_total, 2),
+            'commission': round(neto_total * tasa, 2),
         }
 
     @staticmethod

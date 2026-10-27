@@ -3,7 +3,7 @@ docs/plan_personas.md): antes salían de `Enrollment`/`Payment`, el espejo que s
 
 Mismos criterios que Comercial, para que admin no dé distinto:
   · cash = cobros (`FinancialSale`) completados (`comercial_vocabulario.venta_completada`), por su fecha;
-  · fee de la pasarela = bruto menos `commission_service.cash_neto_de`;
+  · fee de la pasarela = bruto menos `commission_service.cash_neto` (la real si el pago está verificado);
   · venta = cobro completo o parcial (`ComercialService.clasificar_venta`), las señas y cuotas no;
   · closer de un cobro = `resolver_nombre_closer(email_vendedor)`; programa = el del `tipo_pago`;
   · deuda = la de cada venta (`deuda_service.saldo`: acordado menos cobrado).
@@ -111,13 +111,13 @@ def cobros(desde, hasta, closer_ids=None, program_ids=None):
 
 
 def fee(v):
-    from app.services.commission_service import cash_neto_de
-    return float(v.monto or 0) - cash_neto_de(v.monto, v.metodo_pago)
+    from app.services.commission_service import cash_neto
+    return float(v.monto or 0) - cash_neto(v)
 
 
 def neto(v):
-    from app.services.commission_service import cash_neto_de
-    return cash_neto_de(v.monto, v.metodo_pago)
+    from app.services.commission_service import cash_neto
+    return cash_neto(v)
 
 
 def comision_estimada_closers(lista):

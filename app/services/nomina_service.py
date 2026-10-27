@@ -18,7 +18,7 @@ import calendar
 from datetime import datetime, time, timedelta
 
 from app.services.commission_service import (
-    CLOSERS_CON_COMISION, DIRECTOR_DE_VENTAS, SETTERS_CON_COMISION, cash_neto_de, clave_de_closer)
+    CLOSERS_CON_COMISION, DIRECTOR_DE_VENTAS, SETTERS_CON_COMISION, cash_neto, clave_de_closer)
 
 # Lo que el resto del sistema considera «sin resultado todavía» como fuente de un lead.
 _FUENTE_INVALIDA = ('s/f', 'n/a', '')
@@ -127,7 +127,7 @@ def comisiones_del_rango(desde=None, hasta=None):
         final_setter = setter_de_la_venta(s, attribution_map.get(s.id))
         final_closer = resolver_nombre_closer(s.email_vendedor)
         monto_original = float(s.monto or 0.0)
-        monto_ajustado = cash_neto_de(s.monto, s.metodo_pago)
+        monto_ajustado = cash_neto(s)
 
         sale_data = {
             "id": s.id,
