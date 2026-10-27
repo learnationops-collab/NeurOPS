@@ -7,6 +7,7 @@ import { Avatar, EmptyState, IconButton, Panel } from '../../../components/stand
 import { rotuloPaso } from '../estadoFlujo';
 import { inboxApi } from '../api';
 import AccionesFlujo, { EJECUCION } from './AccionesFlujo';
+import Etiquetas from './Etiquetas';
 import { Asignado } from './Fila';
 import { REFRESCO, examenDe, quien } from './colas';
 
@@ -52,7 +53,7 @@ function Burbuja({ m }) {
     );
 }
 
-function Chat({ contacto, asignado, ejecucion, mensajes, yo, onCambio }) {
+function Chat({ contacto, asignado, etiquetas, ejecucion, mensajes, yo, onCambio }) {
     const lista = useRef(null);
     const cantidad = mensajes.length;
     // Abre en el último mensaje, como cualquier chat, y baja cuando llega uno nuevo.
@@ -71,6 +72,7 @@ function Chat({ contacto, asignado, ejecucion, mensajes, yo, onCambio }) {
                 <div className="cv-chat-quien">
                     <h3 className="t-h3">{quien(contacto)}</h3>
                     {linea && <span className="t-cap mut">{linea}</span>}
+                    <Etiquetas contactoId={contacto.id} etiquetas={etiquetas} onCambio={onCambio} />
                 </div>
                 <div className="cv-chat-asignado">
                     <Asignado asignado={asignado} yo={yo} />
@@ -149,7 +151,7 @@ export default function Detalle({ id, yo }) {
     if (!datos) return <Panel size="sm" className="cv-detalle"><EmptyState>Cargando…</EmptyState></Panel>;
     return (
         <>
-            <Chat contacto={datos.contacto} asignado={datos.asignado} ejecucion={datos.ejecucion} mensajes={datos.mensajes} yo={yo} onCambio={pedir} />
+            <Chat contacto={datos.contacto} asignado={datos.asignado} etiquetas={datos.etiquetas || []} ejecucion={datos.ejecucion} mensajes={datos.mensajes} yo={yo} onCambio={pedir} />
             <Ficha contacto={datos.contacto} recorrido={datos.recorrido || []} />
         </>
     );

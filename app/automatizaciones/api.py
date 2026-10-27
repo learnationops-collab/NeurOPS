@@ -13,14 +13,18 @@ from app.automatizaciones import bandeja, metricas, servicio
 from app.automatizaciones.modelos import AutEjecucion, AutFlujo, IgContacto, IgMensaje
 from app.automatizaciones.nucleo import grafo as g
 from app.models.instagram import InstagramWebhookEvento
+from app.models.tag import TARGET_IG_CONTACT
+from app.services import tags_service
 from app.models.user import ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL, ROLE_SETTER
 
 bp = Blueprint('inbox', __name__)
 
 ROLES_CON_ACCESO = (ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL)
 ROLES_DE_LECTURA = (ROLE_SETTER,)
-# Lo único que el setter puede cambiar: el recorrido y el bot de una conversación (`api_acciones.py`).
-ACCIONES_DEL_SETTER = {'inbox.mover_en_flujo', 'inbox.bot_de_conversacion'}
+# Lo único que el setter puede cambiar: el recorrido y el bot de una conversación (`api_acciones.py`)
+# y sus etiquetas, incluido crear un grupo (`api_etiquetas.py`).
+ACCIONES_DEL_SETTER = {'inbox.mover_en_flujo', 'inbox.bot_de_conversacion', 'inbox.crear_grupo_etiquetas',
+                       'inbox.poner_etiqueta', 'inbox.sacar_etiqueta'}
 MAX_BYTES_GRAFO = 300_000
 MAX_NODOS = 300
 MENSAJES_POR_CONVERSACION = 300
@@ -226,6 +230,7 @@ def listar_conversaciones():
     ahora = servicio.ahora()
     ejecuciones = bandeja.ultimas_ejecuciones([c.id for c, _, _ in filas])
     asignados = bandeja.asignaciones([c.id for c, _, _ in filas])
+    etiquetas = tags_service.de(TARGET_IG_CONTACT, [c.id for c, _, _ in filas])
     salida = []
     for contacto, momento, cantidad in filas:
         variables = contacto.variables or {}
@@ -250,6 +255,7 @@ def listar_conversaciones():
             # El último recorrido, abierto o no: la bandeja marca los cortados (error, ventana vencida).
             'ejecucion': bandeja.resumen_ejecucion(ejecucion),
             'asignado': asignados.get(contacto.id),
+            'etiquetas': etiquetas.get(str(contacto.id), []),
         })
     return jsonify({'conversaciones': salida, 'mediana_respuesta': bandeja.mediana_respuesta(ahora),
                     'medianas_setters': bandeja.medianas_por_setter(ahora)})
@@ -272,6 +278,7 @@ def ver_conversacion(contacto_id):
             'bot_pausado_hasta': _iso(contacto.bot_pausado_hasta),
         },
         'asignado': bandeja.asignaciones([contacto.id]).get(contacto.id),
+        'etiquetas': tags_service.de(TARGET_IG_CONTACT, [contacto.id]).get(str(contacto.id), []),
         'ejecucion': recorrido[0] if recorrido else None,
         'recorrido': recorrido,
         'mensajes': [{

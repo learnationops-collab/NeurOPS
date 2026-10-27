@@ -66,20 +66,33 @@ export function asignados(lista) {
     return [...cuenta.values()].sort((a, b) => b.n - a.n);
 }
 
+export const claveEtiqueta = (e) => `${e.group_id || ''}:${e.name}`;
+
+// Las etiquetas puestas en la lista, con cuántas conversaciones tiene cada una.
+export function etiquetasDe(lista) {
+    const cuenta = new Map();
+    lista.forEach((c) => (c.etiquetas || []).forEach((e) => {
+        const k = claveEtiqueta(e);
+        cuenta.set(k, { ...e, n: (cuenta.get(k)?.n || 0) + 1 });
+    }));
+    return [...cuenta.values()].sort((a, b) => b.n - a.n);
+}
+
 const mismoDia = (iso, ahora) => Boolean(iso) && new Date(iso).toDateString() === ahora.toDateString();
 
 // `asignado`: null (todos) · 'ninguno' · el id de un setter. `hoy`: el último mensaje es de hoy.
-export function cumpleFiltro(c, { examen, asignado, hoy }, ahora) {
+export function cumpleFiltro(c, { examen, asignado, etiqueta, hoy }, ahora) {
     if (examen && examenDe(c) !== examen) return false;
+    if (etiqueta && !(c.etiquetas || []).some((e) => claveEtiqueta(e) === etiqueta)) return false;
     if (asignado === 'ninguno' && c.asignado) return false;
     if (asignado != null && asignado !== 'ninguno' && c.asignado?.id !== asignado) return false;
     return !hoy || mismoDia(c.ultimo_en, ahora);
 }
 
 // Las colas de espera van de la que más espera a la que menos; las demás, por el último mensaje.
-export function filtrar(lista, { cola, examen, asignado = null, hoy = false, ahora }) {
+export function filtrar(lista, { cola, examen, asignado = null, etiqueta = null, hoy = false, ahora }) {
     const def = COLAS.find((x) => x.value === cola) || COLAS[0];
-    const salida = lista.filter((c) => def.cumple(c, ahora) && cumpleFiltro(c, { examen, asignado, hoy }, ahora));
+    const salida = lista.filter((c) => def.cumple(c, ahora) && cumpleFiltro(c, { examen, asignado, etiqueta, hoy }, ahora));
     if (def.porEspera) salida.sort((a, b) => esperaMin(b, ahora) - esperaMin(a, ahora));
     return salida;
 }

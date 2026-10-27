@@ -20,6 +20,11 @@ export const inboxApi = {
     pasos: (id) => api.get(`/inbox/conversaciones/${id}/pasos`).then(datos),
     moverEnFlujo: (id, cuerpo) => api.post(`/inbox/conversaciones/${id}/flujo`, cuerpo).then(datos),
     bot: (id, pausado) => api.post(`/inbox/conversaciones/${id}/bot`, { pausado }).then(datos),
+    // Etiquetas (app/automatizaciones/api_etiquetas.py): { grupos: [{ id, name, color, exclusive, tags }], sueltas }
+    etiquetas: () => api.get('/inbox/etiquetas').then(datos),
+    crearGrupoEtiquetas: (grupo) => api.post('/inbox/etiquetas/grupos', grupo).then(datos),
+    ponerEtiqueta: (id, etiqueta) => api.post(`/inbox/conversaciones/${id}/etiquetas`, etiqueta).then((r) => r.data.etiquetas),
+    sacarEtiqueta: (id, tagId) => api.delete(`/inbox/conversaciones/${id}/etiquetas/${tagId}`).then((r) => r.data.etiquetas),
     // { desde, hasta, campanas: [{ ..., metricas }] } (app/automatizaciones/api_campanas.py)
     campanas: (desde, hasta) => api.get('/inbox/campanas', { params: { desde, hasta } }).then(datos),
     crearCampana: (campana) => api.post('/inbox/campanas', campana).then(datos),

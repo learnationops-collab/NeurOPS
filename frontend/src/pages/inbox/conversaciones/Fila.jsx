@@ -4,6 +4,7 @@ import { AlertTriangle, Bot, Clock, PauseCircle, User } from 'lucide-react';
 import { Avatar, Chip } from '../../../components/standard';
 import { rotuloPaso } from '../estadoFlujo';
 import { colorEspera, esperaMin, examenDe, flujoCortado, quien, textoEspera } from './colas';
+import { Etiqueta } from './Etiquetas';
 
 export function hora(iso) {
     if (!iso) return '';
@@ -55,7 +56,10 @@ export default function Fila({ c, elegida, ahora, yo, onElegir }) {
                         {c.califica === true && <Chip subtle color="var(--success)">Califica</Chip>}
                         {c.califica === false && <Chip subtle color="var(--idle)">No califica</Chip>}
                     </span>
-                    <span className="cv-item-pie"><Asignado asignado={c.asignado} yo={yo} /></span>
+                    <span className="cv-item-pie">
+                        <Asignado asignado={c.asignado} yo={yo} />
+                        {(c.etiquetas || []).map((e) => <Etiqueta key={e.id} e={e} />)}
+                    </span>
                 </span>
             </button>
         </li>
