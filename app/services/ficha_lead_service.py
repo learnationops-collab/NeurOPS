@@ -139,6 +139,9 @@ def _identidad(appt, client, programa_nombre, ingreso, baja=None):
         'ingreso': ingreso,
         'llamada': _momento(appt.start_time if appt else None),
         'fuente': (appt.origin or None) if appt else None,
+        # El segmento de la agenda (nucleo/segmento.py) y sus puntos: con qué prioridad llega el lead.
+        'segmento': (appt.segmento or None) if appt else None,
+        'segmento_puntos': appt.segmento_puntos if appt else None,
         # Como se lee la fuente en la cabecera: la misma etiqueta que el desplegable del historial,
         # para que 'workshop_landing' no aparezca escrito como un nombre de variable.
         'fuente_label': voc.etiqueta_de_fuente(appt.origin) if appt else None,

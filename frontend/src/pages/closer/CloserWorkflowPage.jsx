@@ -103,6 +103,9 @@ const decisionDe = (a) => {
     return { texto: v.length > 20 ? `${v.slice(0, 19)}…` : v, solo: null, title: v };
 };
 
+// Color del segmento en la tarjeta: A y B son los que más importan, C y D los que se pueden desplazar.
+const TONO_SEGMENTO = { A: 'var(--cl-success)', B: 'var(--cl-info)', C: 'var(--cl-warning)', D: 'var(--cl-magenta)' };
+const fmtPuntos = (n) => (Number(n) > 0 ? '+' : '') + Number(n).toLocaleString('es-AR', { maximumFractionDigits: 1 });
 const ETAPA_DE_FASE = Object.fromEntries(ETAPAS_DEL_TABLERO.map(e => [e.fase, e.clave]));
 
 // En qué etapa está una cita, con la misma regla que la pestaña Confirmación de la ficha
@@ -1421,10 +1424,14 @@ const CloserWorkflowPage = () => {
         const decision = decisionDe(a);
         const telefono = (a.phone || '').trim();
         const etiquetas = [
+            a.desplazada && { texto: 'Reagendar: horario tomado', tono: 'var(--cl-warning)', title: 'Un lead A/B o una Momentum tomó este horario. La agenda sigue en pie: acordá otro con el lead.' },
             isPendingReferral && { texto: 'Contactar y acordar fecha', tono: 'var(--cl-lila)' },
             // El triage confirma los A y B de los closers (plan_segmentos_triage.md §8.5).
             esTriage && a.closer_id && a.closer_id !== user?.id
                 && { texto: `${a.segmento || ''} de ${a.closer_name}`.trim(), tono: 'var(--cl-info)', title: 'Confirmala antes de su llamada con el closer' },
+            // El segmento y sus puntos (la del triage ya lo dice en «A de <closer>»).
+            a.segmento && !(esTriage && a.closer_id && a.closer_id !== user?.id)
+                && { texto: a.segmento_puntos != null ? `${a.segmento} · ${fmtPuntos(a.segmento_puntos)} pts` : a.segmento, tono: TONO_SEGMENTO[a.segmento] || 'var(--cl-info)', title: 'Segmento del lead según su formulario' },
             a.examen && { texto: a.examen, tono: 'var(--cl-lila)' },
             (phase === 'call' || phase === 'call_done') && a.closer_result && a.closer_result !== 'Pendiente'
                 && { texto: a.closer_result, tono: 'var(--cl-magenta)', title: ayudaDeResultado(a.closer_result) },

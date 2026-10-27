@@ -328,6 +328,20 @@ export default function TabFulfillment({ ficha, onConsultar, onAccion, irA }) {
   // Las piezas entran de a una, en el orden en que se leen.
   let orden = 0;
   const entrar = () => mov.campo(orden++);
+  // Lo que registra Work (suscripción y ventas): se ve aunque la Academia no conteste o todavía no sea alumno.
+  // Las ventas piden lo suyo aparte.
+  const deWork = () => (
+    <>
+      {datos?.suscripciones?.length > 0 && (
+        <motion.div {...entrar()}>
+          <SuscripcionWork suscripciones={datos.suscripciones} programas={ficha?.vocabulario?.programas || []} />
+        </motion.div>
+      )}
+      <motion.div {...entrar()}>
+        <VentasWork onConsultar={onConsultar} onAccion={onAccion} programas={ficha?.vocabulario?.programas || []} />
+      </motion.div>
+    </>
+  );
 
   return (
     <div className="ful">
@@ -382,7 +396,8 @@ export default function TabFulfillment({ ficha, onConsultar, onAccion, irA }) {
             <AccesoPagado datos={datos} ficha={ficha} irA={irA} onAccion={onAccion} onHecho={pedir} />
           </motion.div>
 
-          <motion.div {...entrar()}><ComentariosAcademia ficha={ficha} /></motion.div>
+          {/* Para el closer, después de lo que pagó: hasta cuándo tiene acceso y qué debe (27/10/2026). */}
+          {deWork()}
 
           {desempeno ? (
             <div className="ful-secciones pareja">
@@ -400,21 +415,14 @@ export default function TabFulfillment({ ficha, onConsultar, onAccion, irA }) {
             <p className="t-sm mut">La Academia no mandó métricas de desempeño para este alumno.</p>
           )}
 
+          <motion.div {...entrar()}><ComentariosAcademia ficha={ficha} /></motion.div>
+
           <motion.div {...entrar()}><Cuenta datos={datos} ficha={ficha} /></motion.div>
           <motion.div {...entrar()}><OtrosAccesos datos={datos} /></motion.div>
         </>
       )}
 
-      {/* Lo que registra Work: se ve aunque la Academia no conteste o todavía no sea alumno. */}
-      {datos?.suscripciones?.length > 0 && (
-        <motion.div {...entrar()}>
-          <SuscripcionWork suscripciones={datos.suscripciones} programas={ficha?.vocabulario?.programas || []} />
-        </motion.div>
-      )}
-      {/* Las ventas de la persona, al lado de la suscripción que abren: piden lo suyo aparte. */}
-      <motion.div {...entrar()}>
-        <VentasWork onConsultar={onConsultar} onAccion={onAccion} programas={ficha?.vocabulario?.programas || []} />
-      </motion.div>
+      {!(datos?.vinculado && alumno) && deWork()}
     </div>
   );
 }

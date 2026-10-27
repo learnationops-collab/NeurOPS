@@ -1536,6 +1536,9 @@ def get_closer_deck():
         formatted["confirmation_contact_status"] = a.confirmation_contact_status
         formatted["confirmation_pain_points"] = a.confirmation_pain_points
         formatted["segmento"] = a.segmento
+        formatted["segmento_puntos"] = a.segmento_puntos
+        # Un lead A/B o una Momentum tomó su horario (desplazar.py): sigue en pie, hay que reagendarla.
+        formatted["desplazada"] = bool(a.desplazada_por_id)
         formatted["viene_de_triage"] = bool(a.agenda_triage_id)
         formatted_appointments.append(formatted)
         

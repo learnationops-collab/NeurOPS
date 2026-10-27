@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { CalendarClock, Check, ChevronDown, ChevronRight, ClipboardCopy, Contact, Copy, GraduationCap, Megaphone, Pencil, Phone, User, Video, X } from 'lucide-react';
+import { CalendarClock, Check, ChevronDown, ChevronRight, ClipboardCopy, Contact, Copy, Gauge, GraduationCap, Megaphone, Pencil, Phone, User, Video, X } from 'lucide-react';
 import { IconButton } from '../standard';
 import IdentidadesPersona from './piezas/IdentidadesPersona';
 import useMovimiento from './piezas/useMovimiento';
@@ -525,6 +525,12 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
                     </Dato>
 
                     <Dato rotulo="Fuente" icono={Megaphone} valor={fuente} orden={4} />
+                    {id.segmento && (
+                        <Dato rotulo="Segmento" icono={Gauge} orden={5}
+                            valor={id.segmento_puntos != null
+                                ? `${id.segmento} · ${Number(id.segmento_puntos) > 0 ? '+' : ''}${Number(id.segmento_puntos).toLocaleString('es-AR', { maximumFractionDigits: 1 })} pts`
+                                : id.segmento} />
+                    )}
                 </div>
             )}
 
