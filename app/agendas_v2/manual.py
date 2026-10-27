@@ -160,10 +160,12 @@ def verificar_horario(closer_id, inicio, payload, propia=None):
     return [i for i in fuera_de_google if propia is None or i != propia.id]
 
 
-def agendar(cliente, closer, inicio, usuario, via, fuente=None, decision=None, anterior=None, ahora=None):
+def agendar(cliente, closer, inicio, usuario, via, fuente=None, decision=None, anterior=None, ahora=None,
+            sesion=None):
     """Crea la agenda de `cliente` con `closer` a las `inicio` (UTC sin zona), y después crea el evento
     con Meet y avisa. Con `decision == 'reprogramar'` reagenda la que ya tenía, con su closer (ver
-    _reprogramar_en_neurops). Hace commit.
+    _reprogramar_en_neurops). Hace commit. `sesion`: {'duracion_min', 'margen_min'} en lugar de los
+    heredados de `anterior` (la de closing que sale de una llamada de triage, más corta).
     Devuelve (appointment, con_evento). Lanza AgendaManualError."""
     ahora = ahora or datetime.utcnow()
     previa = operacion.proxima_de(cliente.id, ahora)
@@ -180,7 +182,7 @@ def agendar(cliente, closer, inicio, usuario, via, fuente=None, decision=None, a
     if decision == 'reprogramar':
         return _reprogramar_en_neurops(previa, inicio, usuario)
 
-    payload = armar_payload(cliente, closer, usuario, via, anterior=anterior, fuente=fuente)
+    payload = {**armar_payload(cliente, closer, usuario, via, anterior=anterior, fuente=fuente), **(sesion or {})}
     if usuario is not None and usuario.role == 'setter':
         payload['setter_user_id'] = usuario.id
 

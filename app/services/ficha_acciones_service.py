@@ -1418,7 +1418,7 @@ def crear_agenda(appt, datos, usuario):
     try:
         nueva, con_evento = manual.agendar(
             appt.client, closer, inicio, usuario, via='ficha', fuente=(datos.get('fuente') or appt.origin or 'ficha'),
-            decision='adicional', anterior=appt)
+            decision='adicional', anterior=appt, sesion=datos.get('sesion'))
     except manual.AgendaManualError as e:
         raise ErrorDeAccion(e.mensaje) from None
     return {'id': nueva.id, 'fecha': _iso_dt(nueva.start_time), 'con_evento': con_evento}

@@ -82,9 +82,13 @@ def _validar(appt, datos):
 
 def _pasar_al_closer(appt, datos, usuario):
     """La agenda de closing, por el mismo camino que «Agendar otra llamada» de la ficha."""
+    from app.agendas_v2 import a_triage
     from app.services import ficha_acciones_service as acciones
 
-    nueva = acciones.crear_agenda(appt, {'fecha': datos['fecha'], 'closer_id': datos['closer_id']}, usuario)
+    closer = db.session.get(User, int(datos['closer_id']))
+    sesion = a_triage.sesion_closing_de(closer) if closer else None
+    nueva = acciones.crear_agenda(appt, {'fecha': datos['fecha'], 'closer_id': datos['closer_id'], 'sesion': sesion},
+                                  usuario)
     closing = db.session.get(Appointment, nueva['id'])
     closing.agenda_triage_id = appt.id
     for campo in _SEGMENTO:  # mantiene el segmento original para medir después

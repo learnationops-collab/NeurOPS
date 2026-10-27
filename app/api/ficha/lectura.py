@@ -135,6 +135,19 @@ def fulfillment(appt_id):
     return jsonify(datos), 200
 
 
+@bp.route('/<int:appt_id>/triage/horarios', methods=['GET'])
+def horarios_para_closing(appt_id):
+    """Los horarios libres del closer (`?closer_id=`) para la llamada de closing que agenda el triage."""
+    from app.agendas_v2 import a_triage
+
+    appt, _ = ficha_lead_service.resolver_lead(appointment_id=appt_id)
+    if not appt:
+        return jsonify({'message': 'Lead no encontrado'}), 404
+    if not ficha_lead_service.permisos_de(current_user, appt)['triar']:
+        return sin_permiso('triar')
+    return jsonify({'horarios': a_triage.horarios_closer(request.args.get('closer_id', type=int))}), 200
+
+
 @bp.route('/<int:appt_id>/estado-venta', methods=['GET'])
 def estado_venta(appt_id):
     """Como viene pagando este cliente el programa que se le esta vendiendo (`?programa=RR`).

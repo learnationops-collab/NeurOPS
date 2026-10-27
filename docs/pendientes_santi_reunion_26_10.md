@@ -54,17 +54,25 @@ Hecho en `app/agendas_v2/desplazar.py` (rama `feat/cd-libres`, migración `d7b3e
 Hecho sin commitear: campos de triage en `Appointment`, migración `c4e9a1d7f2b8`, `triage_service.py`, `triage_metricas.py`, `ResultadoTriage.jsx`, `TriageMetricas.jsx`. El triage queda fuera del reparto general.
 
 - [x] Dashboard de triage (Marlon lo pidió hoy): «Mis datos» y «Mi cartera» en el dock del triage, el dashboard comercial acotado a sus agendas (`2d48ad80`, en `main` el 26/10).
-- [x] «Pasar a closing» crea la agenda del closer (`agenda_triage_id`) y le deja la nota (`triage_service._pasar_al_closer`). Falta lo de confirmar A/B (§8.5).
+- [x] «Pasar a closing» crea la agenda del closer (`agenda_triage_id`) y le deja la nota (`triage_service._pasar_al_closer`). Falta lo de confirmar A/B (§8.5). Desde el 27/10, al marcar «Califica» la triage ve los horarios libres del closer de la semana (`GET /api/ficha/<id>/triage/horarios`) y la agenda de closing dura una Sesión de Aceleración del closer (60 + 15 de Jean Carlo), no lo de la llamada de triage.
 - [x] Botón «pasar a triage» (`23c19b38`, en producción el 26/10): ficha › Closer › «Pasar el lead a» › Triage (`app/agendas_v2/a_triage.py`, `POST /api/ficha/<id>/triage`). Va a la del triage libre a esa hora (horario de Team, agendas y Google). Si las dos lo están, a la de menos agendas por delante. Si ninguna, igual a la de menos carga, con nota y aviso de que hay que reagendar. El evento de Google se borra del calendario del closer sin avisarle al lead y se crea en el de la triage con un Meet nuevo (le llega la invitación).
-- [ ] Desde el 27/10 Jean Carlo delega al triage sus C y D (los B se quedan con él; Mario, 26/10). Hoy tiene 7 futuras: 6975, 6977, 6986 (D) y 6976, 6978, 6983, 6927 (C).
+- [ ] Desde el 27/10 Jean Carlo delega al triage sus C y D (los B se quedan con él; Mario, 26/10). El 27/10 ya descalificó 6975, 6977, 6986 y 6978; le quedan por pasar 6976, 6983 y 6927 (C).
 - [x] Ruteo C y D → grupo «Triage» (`ws-triage`, Juliana y Dari, máxima disponibilidad, último en el orden), aplicado en producción el 26/10 con `scripts/segmentos_formulario.py`. Si el triage está lleno, desborda a «Todos los closers».
-- [ ] **Juliana y Dari tienen el horario vacío** (Calendar y WhatsApp ya están): sin horario, el grupo Triage no ofrece nada (C y D siguen yendo a Jean Carlo por el desborde) y el botón no encuentra a nadie libre.
+- [x] Juliana y Dari cargaron su horario (verificado en producción el 27/10). Dari (Caracas): lun–vie 9–12 y 14–20, sáb 9–12. Juliana (Bogotá): mar–vie 11–14, sáb y dom 15–18.
+- [ ] Preguntas abiertas para Marlon (salieron del onboarding del 26/10):
+  - [ ] Duración de la sesión de triage y nombre del evento (¿«sesión de diagnóstico»?). Con eso armo su evento propio.
+  - [ ] Al calificar: ¿agendan ellas en un horario de Jean Carlo o le pasan el link al lead?
+  - [ ] Reporte diario y «cerrar el día» del triage: qué datos cargan y qué preguntas responden.
+  - [ ] Cobertura: Juliana puede 3 h por día y buscaban 6. ¿Alcanza con las dos? ¿Hay hora límite para las llamadas? Dari toma sesiones fuera de su horario (22 h) cuando ve potencial: ¿se permite?
+  - [ ] Low ticket de 100: ¿lo ofrecen ellas en la sesión? ¿El seguimiento por mensaje lo hacen ellas?
+  - [ ] Seguimientos viejos de Jean Carlo que les aparecen en el panel: ¿se los quedan, se reasignan o se cierran?
+  - [ ] Antelación mínima de 2 h para que una agenda mejor calificada desplace a otra: ¿le parece bien?
 - [ ] Cuentas y alta en Thalamus de Dari y de la otra chica (onboarding hoy a las 18).
   - [x] Juliana Avila (`hola.julianaavilac@gmail.com`): usuario 1145 con rol `triage` (entra con Google) y persona `dqxljuz3bnw` en Team de Agendas 2.0 con rol `triage` (no entra en «Todos los closers»). Producción, 26/10.
-  - [ ] Juliana: cargar su horario (Google Calendar ya conectado, zona America/La_Paz).
+  - [x] Juliana: cargar su horario (Google Calendar ya conectado).
   - [x] El triage no podía cargar su disponibilidad: Configuración › Disponibilidad e Integraciones ahora le aparecen (`6745cb3f`, en `main` el 26/10).
   - [x] Dari entra con Google: la 1143 (`asistentevirtualdariangonzalez@gmail.com`) pasa a rol principal `triage` con `fulfillment` adicional (la Academia la sigue viendo), persona `drpq0ivx0gk` en Team con rol `triage`. La 1123 (`dari@gmail.com`, sin agendas) quedó desactivada. Producción, 26/10.
-  - [ ] Dari: cargar su horario (Google Calendar ya conectado, zona America/La_Paz).
+  - [x] Dari: cargar su horario (Google Calendar ya conectado).
   - [ ] Borrar las agendas ficticias de la explicación: 6984 (Juliana) y 6985 (Dari), del 26/10 a las 19:30 y 19:45 AR (si alguna probó «calificado», borrar también la agenda de closing que creó), con sus clientes [SIM] 10088 y 10089 (y sus personas `55358282-…` y `bae37449-…`).
 - [x] Probar en el servidor de prueba, commit y deploy (en producción desde `a615b72c`, ver §11).
 

@@ -6,6 +6,9 @@ a la de menos carga: la que la recibe la reagenda (decidido el 26/10).
 
 El evento de Google se mueve: se borra del calendario del closer sin avisarle al lead y se crea en el de la
 triage con un Meet nuevo, que le llega al lead como invitación.
+
+La vuelta (triage → closer, «Califica» en triage_service) usa `horarios_closer` para mostrarle a la triage
+los huecos del closer, y `sesion_closing_de` para que esa agenda dure una Sesión de Aceleración.
 """
 
 from datetime import datetime
@@ -17,8 +20,12 @@ from app.models.user import ROLE_TRIAGE
 from app.services import avisos_service, lead_log_service
 from app.agendas_v2 import operacion, servicio
 from app.agendas_v2.nucleo.catalogos import TZ_DEF, a_min
-from app.agendas_v2.nucleo.datos import es_triage
+from app.agendas_v2.nucleo.datos import buscar, es_triage, sesion_de
+from app.agendas_v2.nucleo.disponibilidad import agenda_opt, slots_persona
 from app.agendas_v2.nucleo.normalizar import franjas
+
+# El evento de la llamada de closing: la Sesión de Aceleración.
+EVENTO_CLOSING = 'sesion-de-aceleracion'
 
 
 def _en_horario(p, t, dur):
@@ -48,6 +55,41 @@ def candidatas(appt, ahora=None):
     ocupado = servicio._ocupacion(servicio.dt_a_ms(ahora), {pid: usuarios[pid] for pid in personas})['ocupado']
     filas = [(users[usuarios[pid]], _en_horario(p, t, dur) and not ocupado(pid, t, dur)) for pid, p in personas.items()]
     return sorted(filas, key=lambda f: (not f[1], _carga(f[0].id, ahora), f[0].username))
+
+
+def sesion_closing(d, p):
+    """(duración, margen) de la llamada de closing con ese closer: su Sesión de Aceleración (la del evento,
+    o la que él ajustó), no la de la llamada de triage, que suele ser más corta."""
+    e = buscar(d, 'eventos', EVENTO_CLOSING) or {}
+    return sesion_de(p, EVENTO_CLOSING, e.get('duracion') or servicio.DURACION_AGENDA_OPERACION_MIN, e.get('margen') or 0)
+
+
+def sesion_closing_de(user):
+    """{'duracion_min', 'margen_min'} para el payload de la agenda de closing, o None si no está en Team."""
+    d = servicio.colecciones()
+    p = servicio.persona_de_usuario(d, user)
+    if not p:
+        return None
+    dur, margen = sesion_closing(d, p)
+    return {'duracion_min': int(dur), 'margen_min': int(margen or 0)}
+
+
+def horarios_closer(closer_id, dias=7, ahora=None):
+    """Inicios libres (ISO UTC) del closer en los próximos `dias` para la llamada de closing que le agenda
+    el triage: su horario de Team, sus agendas y su Google, como la página pública. [] si no está en Team."""
+    ahora = ahora or datetime.utcnow()
+    user = db.session.get(User, int(closer_id)) if closer_id else None
+    d = servicio.colecciones()
+    p = servicio.persona_de_usuario(d, user) if user else None
+    if not p:
+        return []
+    dur, margen = sesion_closing(d, p)
+    o = agenda_opt({'reservas': {'modo': 'dias', 'n': dias, 'tipo': 'corridos', 'desde': '', 'hasta': ''},
+                    'antel': {'n': 1, 'u': 'h'}, 'paso': {'n': 15, 'u': 'min'}}, dur)
+    ahora_ms = servicio.dt_a_ms(ahora)
+    ocupado = servicio._ocupacion(ahora_ms, {p['id']: user.id})['ocupado']
+    slots = slots_persona(p, dur, o, ahora=ahora_ms, ocupado=ocupado, margen=margen)
+    return [servicio.ms_a_dt(t).isoformat() + 'Z' for t in slots]
 
 
 def _validar(appt, ahora):

@@ -4,11 +4,12 @@
 // el closer ve en su ficha. Descalificado → el low ticket de 100 USD: si se pitcheó y cómo quedó.
 // Todo va por `onAccion('reportar_triage')` (app/services/triage_service.py).
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button, Chip, FieldError, Input, Segmented, Select, TextArea } from '../../standard';
 import { instanteLegible } from '../piezas/fecha';
 import { mensajeDeError } from '../fichaApi';
-import { datetimeLocalToUtcIso } from '../../../utils/datetime';
+import api from '../../../services/api';
+import { datetimeLocalToUtcIso, toDatetimeLocalValue } from '../../../utils/datetime';
 
 const ASISTENCIA = [
   { value: 'asistio', label: 'Se presentó' },
@@ -40,6 +41,49 @@ const Campo = ({ etiqueta, htmlFor, children }) => (
     {children}
   </div>
 );
+
+const diaLegible = (iso) => new Date(iso).toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'numeric' });
+const horaLegible = (iso) => new Date(iso).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+
+/** Los horarios libres del closer en la semana (app/agendas_v2/a_triage.py), por día. Tocar uno lo elige. */
+const HorariosCloser = ({ apptId, closerId, cuando, onElegir }) => {
+  const [horarios, setHorarios] = useState(null);
+  useEffect(() => {
+    if (!apptId || !closerId) return undefined;
+    let vivo = true;
+    setHorarios(null);
+    api.get(`/ficha/${apptId}/triage/horarios`, { params: { closer_id: closerId } })
+      .then((r) => vivo && setHorarios(r.data?.horarios || []))
+      .catch(() => vivo && setHorarios([]));
+    return () => { vivo = false; };
+  }, [apptId, closerId]);
+
+  if (horarios === null) return <small className="t-cap mut">Buscando sus horarios libres…</small>;
+  if (!horarios.length) return <small className="t-cap mut">No tiene horarios libres en la semana: escribí el día y la hora.</small>;
+  const dias = horarios.reduce((acc, iso) => {
+    const d = diaLegible(iso);
+    (acc[d] = acc[d] || []).push(iso);
+    return acc;
+  }, {});
+  return (
+    <div style={{ display: 'grid', gap: 'var(--s2)' }}>
+      {Object.entries(dias).map(([dia, lista]) => (
+        <div key={dia} style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+          <small className="t-rotulo" style={{ minWidth: 72 }}>{dia}</small>
+          {lista.map((iso) => {
+            const valor = toDatetimeLocalValue(iso);
+            return (
+              <Chip key={iso} as="button" type="button" aria-pressed={cuando === valor} subtle={cuando !== valor}
+                onClick={() => onElegir(valor)}>
+                {horaLegible(iso)}
+              </Chip>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+};
 
 /** El estado del low ticket y, si queda en seguimiento, cuándo. Se usa al reportar y después. */
 const LowTicket = ({ valor, fecha, onValor, onFecha }) => (
@@ -171,6 +215,9 @@ export default function ResultadoTriage({ ficha, onAccion, puedeEditar = true })
           <Campo etiqueta="Pasar a">
             <Select value={closerId} onChange={setCloserId} label="Closer"
               options={closers.map((c) => ({ value: String(c.id), label: `${c.nombre} · ${c.pista}` }))} />
+          </Campo>
+          <Campo etiqueta="Horarios libres del closer">
+            <HorariosCloser apptId={ficha?.identidad?.appointment_id} closerId={closerId} cuando={cuando} onElegir={setCuando} />
           </Campo>
           <Campo etiqueta="Día y hora de la llamada con el closer" htmlFor="triage-cuando">
             <Input id="triage-cuando" type="datetime-local" value={cuando} onChange={(e) => setCuando(e.target.value)} />
