@@ -7,7 +7,7 @@ Archivo único de pendientes. Junta lo abierto de las reuniones del 24/10 y del 
 ## 1. Hoy y esta semana
 
 - [ ] **Facu**: cuando termine sus agendas (la última es la 6956, mar 27/10 21:30 AR), bajarle el acceso de closer y sacarlo de Personas de Thalamus.
-- [ ] **Borrar las agendas ficticias del onboarding del triage**: 6984 (Juliana) y 6985 (Dari), del 26/10 a las 19:30 y 19:45 AR, con sus clientes [SIM] 10088 y 10089 y sus personas (`55358282-…` y `bae37449-…`). Si alguna probó «calificado», borrar también la agenda de closing que creó.
+- [x] Agendas ficticias del onboarding del triage borradas (27/10): 6984 y 6985, clientes [SIM] 10088 y 10089, sus personas, 13 eventos del lead y la fila «Prueba triage» de `financial_agendas`. No habían creado agenda de closing.
 - [ ] **QUIERO APLICAR del 27/10 sin respuesta**: pasárselos a los setters (`ig_contactos` 1241, 1242, 1250, 1256; revisar 1263 `rosmeryatao`).
 
 ## 2. Triage
