@@ -1,9 +1,9 @@
-// La barra del flujo en el chat: en qué estado está la persona y qué puede hacer el setter. Continuar
-// se destaca cuando el recorrido se cortó; cambiar de flujo es raro y va como ícono.
-import { useState } from 'react';
+// Las acciones del bot, desplegables desde la etapa automática (arriba del chat): continuar desde un
+// paso, reiniciar, cambiar de flujo (raro) y pausar o reanudar. Sin recorrido, iniciar un flujo.
+import { useEffect, useRef, useState } from 'react';
 import { ArrowLeftRight, Pause, Play, RotateCcw } from 'lucide-react';
-import { Button, IconButton, toast } from '../../../components/standard';
-import { rotuloPaso } from '../estadoFlujo';
+import useEnPantalla from '../../../components/ui/useEnPantalla';
+import { toast } from '../../../components/standard';
 import { inboxApi } from '../api';
 import ModalFlujo from './ModalFlujo';
 
@@ -13,20 +13,32 @@ export const EJECUCION = {
     esperando_tiempo: { texto: 'Esperando', color: 'var(--info)' },
     pendiente: { texto: 'Pendiente: arranca cuando el lead escriba', color: 'var(--warning)' },
     terminada: { texto: 'Terminó', color: 'var(--success)' },
-    cancelada: { texto: 'Cancelado', color: 'var(--idle)' },
+    cancelada: { texto: 'Pausado', color: 'var(--warning)' },
     ventana_vencida: { texto: 'Venció la ventana de 24 h', color: 'var(--warning)' },
     error: { texto: 'Error', color: 'var(--error)' },
 };
-const RETOMABLE = ['error', 'ventana_vencida', 'cancelada'];
 
-export default function AccionesFlujo({ contacto, ejecucion, onCambio }) {
+export default function MenuBot({ contacto, ejecucion, onCambio, children, className, style }) {
+    const [abierto, setAbierto] = useState(false);
     const [accion, setAccion] = useState(null);
     const [pausando, setPausando] = useState(false);
+    const caja = useRef(null);
+    const pop = useEnPantalla();
     const pausado = contacto.bot_pausado_hasta && new Date(contacto.bot_pausado_hasta) > new Date();
-    const est = ejecucion && (EJECUCION[ejecucion.estado] || { texto: ejecucion.estado, color: 'var(--idle)' });
     const cortada = ejecucion && ['error', 'ventana_vencida'].includes(ejecucion.estado);
 
+    useEffect(() => {
+        if (!abierto) return undefined;
+        const fuera = (e) => { if (caja.current && !caja.current.contains(e.target)) setAbierto(false); };
+        const tecla = (e) => { if (e.key === 'Escape') setAbierto(false); };
+        document.addEventListener('mousedown', fuera);
+        document.addEventListener('keydown', tecla);
+        return () => { document.removeEventListener('mousedown', fuera); document.removeEventListener('keydown', tecla); };
+    }, [abierto]);
+
+    const elegir = (a) => { setAbierto(false); setAccion(a); };
     const cambiarBot = async () => {
+        setAbierto(false);
         setPausando(true);
         try {
             await inboxApi.bot(contacto.id, !pausado);
@@ -39,23 +51,26 @@ export default function AccionesFlujo({ contacto, ejecucion, onCambio }) {
         }
     };
 
+    const opciones = ejecucion ? [
+        ['continuar', 'Continuar desde…', Play],
+        ['reiniciar', 'Reiniciar el flujo', RotateCcw],
+        ['cambiar', 'Cambiar de flujo', ArrowLeftRight],
+    ] : [['iniciar', 'Iniciar un flujo', Play]];
+
     return (
-        <div className="cv-acciones">
-            <span className="cv-acciones-estado">
-                <i className="fl-punto" style={{ '--c': est?.color || 'var(--warning)' }} />
-                <span>{ejecucion
-                    ? <><b>{ejecucion.flujo}</b> · {est.texto}{ejecucion.paso ? ` · ${rotuloPaso(ejecucion.paso)}` : ''}</>
-                    : 'Ningún flujo arrancó'}</span>
-            </span>
-            {ejecucion ? (
-                <>
-                    <Button variant={RETOMABLE.includes(ejecucion.estado) ? 'primary' : 'secondary'} icon={<Play />} onClick={() => setAccion('continuar')}>Continuar desde…</Button>
-                    <Button icon={<RotateCcw />} onClick={() => setAccion('reiniciar')}>Reiniciar</Button>
-                    <IconButton size="sm" label="Cambiar de flujo" data-tip="Cambiar de flujo" icon={<ArrowLeftRight size={14} />} onClick={() => setAccion('cambiar')} />
-                </>
-            ) : <Button variant="primary" icon={<Play />} onClick={() => setAccion('iniciar')}>Iniciar flujo</Button>}
-            <span className="cv-acciones-sep" />
-            <Button icon={pausado ? <Play /> : <Pause />} disabled={pausando} onClick={cambiarBot}>{pausado ? 'Reanudar bot' : 'Pausar bot'}</Button>
+        <div className="cv-menu-bot" ref={caja}>
+            <button type="button" className={className} style={style} aria-haspopup="menu" aria-expanded={abierto}
+                data-tip="Acciones del bot" onClick={() => setAbierto((a) => !a)}>{children}</button>
+            {abierto && (
+                <div className="cv-menu-pop" ref={pop} role="menu">
+                    {opciones.map(([a, label, Icono]) => (
+                        <button key={a} type="button" role="menuitem" onClick={() => elegir(a)}><Icono size={14} />{label}</button>
+                    ))}
+                    <button type="button" role="menuitem" disabled={pausando} onClick={cambiarBot}>
+                        {pausado ? <Play size={14} /> : <Pause size={14} />}{pausado ? 'Reanudar el bot' : 'Pausar el bot'}
+                    </button>
+                </div>
+            )}
             {accion && (
                 <ModalFlujo accion={accion} contacto={contacto} ejecucion={ejecucion} cortada={cortada}
                     onCerrar={() => setAccion(null)} onHecho={() => { setAccion(null); onCambio(); }} />

@@ -43,7 +43,7 @@ function Pasos({ datos, elegido, onElegir, cortada }) {
     );
 }
 
-export default function ModalFlujo({ accion, contacto, ejecucion, cortada, onCerrar, onHecho }) {
+export default function ModalFlujo({ accion, contacto, ejecucion, cortada, nodoInicial = null, onCerrar, onHecho }) {
     const [titulo, ok] = TITULOS[accion];
     const [pasos, setPasos] = useState(null);
     const [elegido, setElegido] = useState(null);
@@ -56,14 +56,15 @@ export default function ModalFlujo({ accion, contacto, ejecucion, cortada, onCer
         if (accion === 'continuar') {
             inboxApi.pasos(contacto.id).then((d) => {
                 setPasos(d);
-                if (d.estado !== 'terminada') setElegido(d.actual);
+                if (nodoInicial) setElegido(nodoInicial);
+                else if (d.estado !== 'terminada') setElegido(d.actual);
             }).catch(() => setPasos({ pasos: [] }));
         }
         if (accion === 'cambiar' || accion === 'iniciar') {
             inboxApi.flujos().then((l) => setFlujos(l.filter((f) => f.estado === 'activo' && f.version && f.nombre !== ejecucion?.flujo)))
                 .catch(() => setFlujos([]));
         }
-    }, [accion, contacto.id, ejecucion?.flujo]);
+    }, [accion, contacto.id, ejecucion?.flujo, nodoInicial]);
 
     const minutos = contacto.ultimo_entrante_en ? Math.floor((abiertoEn - new Date(contacto.ultimo_entrante_en)) / 60000) : null;
     const abierta = minutos != null && minutos < VENTANA_MIN;

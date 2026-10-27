@@ -20,7 +20,6 @@ describe('Bandeja › colas', () => {
     it('las colas de espera ordenan por la que más espera', () => {
         expect(filtrar(LISTA, { cola: 'esperan', ahora: AHORA }).map((c) => c.id)).toEqual([2, 1]);
         expect(filtrar(LISTA, { cola: 'esperan_hora', ahora: AHORA }).map((c) => c.id)).toEqual([2]);
-        expect(filtrar(LISTA, { cola: 'no_califican', ahora: AHORA }).map((c) => c.id)).toEqual([3]);
         expect(filtrar(LISTA, { cola: 'todas', examen: 'ENARM', ahora: AHORA }).map((c) => c.id)).toEqual([1, 3]);
     });
 

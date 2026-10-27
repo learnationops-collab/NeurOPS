@@ -5,7 +5,7 @@ from datetime import timedelta
 from statistics import median
 
 from app import db
-from app.automatizaciones.modelos import AutCampana, AutEjecucion, AutFlujoVersion, IgMensaje
+from app.automatizaciones.modelos import AutCampana, AutEjecucion, AutFlujoVersion, IgContacto, IgMensaje
 from app.automatizaciones.nucleo import grafo as g
 from app.automatizaciones.nucleo import mensajes as nucleo_mensajes
 from app.automatizaciones.nucleo import pasos
@@ -49,11 +49,21 @@ def asignaciones(contacto_ids):
     ultima = (db.session.query(db.func.max(AutEjecucion.id))
               .filter(AutEjecucion.contacto_id.in_(contacto_ids), AutEjecucion.setter_id.isnot(None))
               .group_by(AutEjecucion.contacto_id))
-    filas = (db.session.query(AutEjecucion.contacto_id, User.id, User.username, AutCampana.nombre)
+    filas = (db.session.query(AutEjecucion.contacto_id, User.id, User.username, AutCampana.nombre, AutEjecucion.iniciada_en)
              .join(User, User.id == AutEjecucion.setter_id)
              .outerjoin(AutCampana, AutCampana.id == AutEjecucion.campana_id)
              .filter(AutEjecucion.id.in_(ultima)).all())
-    return {cid: {'id': uid, 'username': nombre, 'campana': campana} for cid, uid, nombre, campana in filas}
+    salida = {cid: {'id': uid, 'username': nombre, 'campana': campana, '_en': en} for cid, uid, nombre, campana, en in filas}
+    # Asignada a mano: manda, salvo que después haya entrado por una campaña que la repartió de nuevo.
+    manuales = (db.session.query(IgContacto.id, User.id, User.username, IgContacto.asignado_en)
+                .join(User, User.id == IgContacto.setter_id).filter(IgContacto.id.in_(contacto_ids)).all())
+    for cid, uid, nombre, en in manuales:
+        previa = salida.get(cid)
+        if previa is None or not previa['_en'] or (en and en >= previa['_en']):
+            salida[cid] = {'id': uid, 'username': nombre, 'campana': (previa or {}).get('campana'), '_en': en, 'a_mano': True}
+    for a in salida.values():
+        a.pop('_en', None)
+    return salida
 
 
 def elegidos(mensajes):

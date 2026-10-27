@@ -59,10 +59,14 @@ def _del_historial(contacto_id):
 
 
 def _anterior(contacto_id):
-    """El último setter que tuvo la persona (en el motor o, si no, en ManyChat), si sigue activo."""
-    setter_id = (db.session.query(AutEjecucion.setter_id)
-                 .filter(AutEjecucion.contacto_id == contacto_id, AutEjecucion.setter_id.isnot(None))
-                 .order_by(AutEjecucion.iniciada_en.desc(), AutEjecucion.id.desc()).limit(1).scalar())
+    """El último setter que tuvo la persona (asignado a mano, en el motor o, si no, en ManyChat), si sigue activo."""
+    fila = (db.session.query(AutEjecucion.setter_id, AutEjecucion.iniciada_en)
+            .filter(AutEjecucion.contacto_id == contacto_id, AutEjecucion.setter_id.isnot(None))
+            .order_by(AutEjecucion.iniciada_en.desc(), AutEjecucion.id.desc()).first())
+    setter_id, desde = fila or (None, None)
+    contacto = db.session.get(IgContacto, contacto_id)
+    if contacto and contacto.setter_id and (desde is None or (contacto.asignado_en and contacto.asignado_en >= desde)):
+        setter_id = contacto.setter_id
     if setter_id is None:
         return _del_historial(contacto_id)
     return next((u for u in setters_activos() if u.id == setter_id), None)

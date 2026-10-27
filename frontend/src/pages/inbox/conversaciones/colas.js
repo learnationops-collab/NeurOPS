@@ -30,15 +30,40 @@ export function colorEspera(min) {
 // Sin ningún recorrido: escribió pero ninguna palabra clave arrancó un flujo.
 export const flujoCortado = (c) => !c.ejecucion || CORTADOS.includes(c.ejecucion.estado);
 
+const vencida = (t, ahora) => Boolean(t?.vence) && new Date(t.vence) < ahora;
+
 export const COLAS = [
     { value: 'esperan', label: 'Esperan respuesta', cumple: (c, ahora) => esperaMin(c, ahora) != null, porEspera: true },
     { value: 'esperan_hora', label: 'Esperan más de 1 h', cumple: (c, ahora) => esperaMin(c, ahora) >= HORA, porEspera: true },
+    { value: 'sin_leer', label: 'Sin leer', cumple: (c) => c.sin_leer > 0 },
     { value: 'cortadas', label: 'Flujo cortado', cumple: flujoCortado, alerta: true },
-    { value: 'bot_pausado', label: 'Bot pausado', cumple: (c) => c.bot_pausado },
-    { value: 'califican', label: 'Califican', cumple: (c) => c.califica === true },
-    { value: 'no_califican', label: 'No califican', cumple: (c) => c.califica === false },
+    { value: 'bot_pausado', label: 'Bot pausado', cumple: (c) => c.etapas?.auto === 'pausada' },
+    { value: 'tarea_vencida', label: 'Con tarea vencida', cumple: (c, ahora) => vencida(c.tarea, ahora), alerta: true },
     { value: 'todas', label: 'Todas', cumple: () => true },
 ];
+
+export const ETAPAS = [
+    { value: 'con_bot', label: 'Con el bot', tramo: 'auto', color: 'var(--info)' },
+    { value: 'conversando', label: 'En conversación', tramo: 'manual', color: '#7D63E6' },
+    { value: 'link', label: 'Link enviado', tramo: 'agenda', color: 'var(--warning)' },
+    { value: 'agendo', label: 'Agendó', tramo: 'agenda', color: 'var(--success)' },
+];
+
+const DIA = 86400000;
+const cero = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
+
+// hoy · ayer · rango (desde y hasta, días enteros en la hora de quien mira).
+export function enRango(iso, rango, desde, hasta, ahora) {
+    if (!rango) return true;
+    if (!iso) return false;
+    const t = new Date(iso).getTime();
+    const hoy = cero(ahora);
+    if (rango === 'hoy') return t >= hoy;
+    if (rango === 'ayer') return t >= hoy - DIA && t < hoy;
+    const d = desde ? new Date(`${desde}T00:00`).getTime() : -Infinity;
+    const h = hasta ? new Date(`${hasta}T00:00`).getTime() + DIA : Infinity;
+    return t >= d && t < h;
+}
 
 // «ENARM 2027», «enarm» y «Enarm.» son el mismo examen para filtrar.
 export function examenDe(c) {
@@ -78,21 +103,26 @@ export function etiquetasDe(lista) {
     return [...cuenta.values()].sort((a, b) => b.n - a.n);
 }
 
-const mismoDia = (iso, ahora) => Boolean(iso) && new Date(iso).toDateString() === ahora.toDateString();
+// El último mensaje enviado: 'bot' o el setter asignado (Meta no dice quién del equipo lo mandó).
+const enviadoPor = (c) => (c.ultimo_envio?.de === 'bot' ? 'bot' : c.ultimo_envio ? c.asignado?.id ?? null : null);
 
-// `asignado`: null (todos) · 'ninguno' · el id de un setter. `hoy`: el último mensaje es de hoy.
-export function cumpleFiltro(c, { examen, asignado, etiqueta, hoy }, ahora) {
-    if (examen && examenDe(c) !== examen) return false;
-    if (etiqueta && !(c.etiquetas || []).some((e) => claveEtiqueta(e) === etiqueta)) return false;
-    if (asignado === 'ninguno' && c.asignado) return false;
-    if (asignado != null && asignado !== 'ninguno' && c.asignado?.id !== asignado) return false;
-    return !hoy || mismoDia(c.ultimo_en, ahora);
+// `asignado`: null (todos) · 'ninguno' · el id de un setter. `califica`: 'si' · 'no'.
+export function cumpleFiltro(c, f, ahora) {
+    if (f.examen && examenDe(c) !== f.examen) return false;
+    if (f.etiqueta && !(c.etiquetas || []).some((e) => claveEtiqueta(e) === f.etiqueta)) return false;
+    if (f.asignado === 'ninguno' && c.asignado) return false;
+    if (f.asignado != null && f.asignado !== 'ninguno' && c.asignado?.id !== f.asignado) return false;
+    if (f.etapa && c.etapa !== f.etapa) return false;
+    if (f.califica && c.califica !== (f.califica === 'si')) return false;
+    if (!enRango(c.inicio, f.inicio, f.inicioDesde, f.inicioHasta, ahora)) return false;
+    if (f.envioPor != null && enviadoPor(c) !== f.envioPor) return false;
+    return enRango(c.ultimo_envio?.en, f.envio, f.envioDesde, f.envioHasta, ahora);
 }
 
 // Las colas de espera van de la que más espera a la que menos; las demás, por el último mensaje.
-export function filtrar(lista, { cola, examen, asignado = null, etiqueta = null, hoy = false, ahora }) {
-    const def = COLAS.find((x) => x.value === cola) || COLAS[0];
-    const salida = lista.filter((c) => def.cumple(c, ahora) && cumpleFiltro(c, { examen, asignado, etiqueta, hoy }, ahora));
+export function filtrar(lista, { ahora, ...f }) {
+    const def = COLAS.find((x) => x.value === f.cola) || COLAS[0];
+    const salida = lista.filter((c) => def.cumple(c, ahora) && cumpleFiltro(c, f, ahora));
     if (def.porEspera) salida.sort((a, b) => esperaMin(b, ahora) - esperaMin(a, ahora));
     return salida;
 }

@@ -67,6 +67,11 @@ class IgContacto(db.Model):
     bot_pausado_hasta = db.Column(db.DateTime, nullable=True)
     variables = db.Column(db.JSON, nullable=False, default=dict)
     creado_en = db.Column(db.DateTime, nullable=False, default=ahora)
+    # Sub-etapa del embudo que puso el equipo a mano (`progreso.py`); sin poner, sale de lo que pasó.
+    etapa = db.Column(db.String(20), nullable=True)
+    # Setter asignado a mano. Manda sobre el reparto mientras no entre por otra campaña (`bandeja.asignaciones`).
+    setter_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    asignado_en = db.Column(db.DateTime, nullable=True)
 
 
 class AutEjecucion(db.Model):

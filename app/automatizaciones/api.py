@@ -9,7 +9,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 
 from app import db
-from app.automatizaciones import bandeja, campanas, metricas, servicio
+from app.automatizaciones import bandeja, campanas, metricas, progreso, servicio
 from app.automatizaciones.modelos import AutEjecucion, AutFlujo, IgContacto, IgMensaje
 from app.automatizaciones.nucleo import grafo as g
 from app.models.instagram import InstagramWebhookEvento
@@ -22,9 +22,13 @@ bp = Blueprint('inbox', __name__)
 ROLES_CON_ACCESO = (ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL)
 ROLES_DE_LECTURA = (ROLE_SETTER,)
 # Lo único que el setter puede cambiar: el recorrido y el bot de una conversación (`api_acciones.py`)
-# sus etiquetas, incluido crear un grupo (`api_etiquetas.py`), y los textos de los flujos (`api_mensajes.py`).
+# sus etiquetas, incluido crear un grupo (`api_etiquetas.py`), los textos de los flujos (`api_mensajes.py`),
+# lo que trabaja sobre la conversación (`api_trabajo.py`) y la biblioteca del equipo (`api_biblioteca.py`).
 ACCIONES_DEL_SETTER = {'inbox.mover_en_flujo', 'inbox.bot_de_conversacion', 'inbox.crear_grupo_etiquetas',
-                       'inbox.poner_etiqueta', 'inbox.sacar_etiqueta', 'inbox.guardar_mensajes'}
+                       'inbox.poner_etiqueta', 'inbox.sacar_etiqueta', 'inbox.guardar_mensajes',
+                       'inbox.marcar_leido', 'inbox.asignar_conversacion', 'inbox.mover_etapa', 'inbox.corregir_variable',
+                       'inbox.crear_nota', 'inbox.crear_tarea', 'inbox.cambiar_tarea',
+                       'inbox.crear_rapida', 'inbox.borrar_rapida', 'inbox.subir_audio', 'inbox.borrar_audio'}
 MAX_BYTES_GRAFO = 300_000
 MAX_NODOS = 300
 MENSAJES_POR_CONVERSACION = 300
@@ -222,9 +226,10 @@ def listar_conversaciones():
     buscar = (request.args.get('buscar') or '').strip().lower()
     limite = min(max(request.args.get('limite', 100, type=int) or 100, 1), 300)
     ultimo = (db.session.query(IgMensaje.contacto_id, db.func.max(IgMensaje.enviado_en).label('ultimo'),
+                               db.func.min(IgMensaje.enviado_en).label('primero'),
                                db.func.count(IgMensaje.id).label('cantidad'))
               .group_by(IgMensaje.contacto_id).subquery())
-    consulta = (db.session.query(IgContacto, ultimo.c.ultimo, ultimo.c.cantidad)
+    consulta = (db.session.query(IgContacto, ultimo.c.ultimo, ultimo.c.cantidad, ultimo.c.primero)
                 .join(ultimo, ultimo.c.contacto_id == IgContacto.id))
     if buscar:
         patron = f'%{buscar}%'
@@ -233,11 +238,14 @@ def listar_conversaciones():
                                           IgContacto.igsid.like(patron)))
     filas = consulta.order_by(ultimo.c.ultimo.desc()).limit(limite).all()
     ahora = servicio.ahora()
-    ejecuciones = bandeja.ultimas_ejecuciones([c.id for c, _, _ in filas])
-    asignados = bandeja.asignaciones([c.id for c, _, _ in filas])
-    etiquetas = tags_service.de(TARGET_IG_CONTACT, [c.id for c, _, _ in filas])
+    ids = [c.id for c, _, _, _ in filas]
+    ejecuciones = bandeja.ultimas_ejecuciones(ids)
+    asignados = bandeja.asignaciones(ids)
+    etiquetas = tags_service.de(TARGET_IG_CONTACT, ids)
+    avance = progreso.de_contactos([c for c, _, _, _ in filas], ejecuciones, ahora, current_user.id,
+                                   {c.id: primero for c, _, _, primero in filas})
     salida = []
-    for contacto, momento, cantidad in filas:
+    for contacto, momento, cantidad, _ in filas:
         variables = contacto.variables or {}
         ejecucion = ejecuciones.get(contacto.id)
         abierta = ejecucion if ejecucion and ejecucion.estado in AutEjecucion.ABIERTOS else None
@@ -261,6 +269,7 @@ def listar_conversaciones():
             'ejecucion': bandeja.resumen_ejecucion(ejecucion),
             'asignado': asignados.get(contacto.id),
             'etiquetas': etiquetas.get(str(contacto.id), []),
+            **avance.get(contacto.id, {}),
         })
     return jsonify({'conversaciones': salida, 'mediana_respuesta': bandeja.mediana_respuesta(ahora),
                     'medianas_setters': bandeja.medianas_por_setter(ahora)})
@@ -276,7 +285,12 @@ def ver_conversacion(contacto_id):
     mensajes = list(reversed(mensajes))
     recorrido = bandeja.recorrido(contacto.id)
     elegidos = bandeja.elegidos(mensajes)
+    from app.automatizaciones import api_trabajo  # cuelga de `bp`: importarlo arriba sería circular
+    notas, tareas = api_trabajo.historial(contacto.id)
     return jsonify({
+        'avance': progreso.uno(contacto, servicio.ahora(), current_user.id),
+        'notas': notas,
+        'tareas': tareas,
         'contacto': {
             'id': contacto.id, 'igsid': contacto.igsid, 'username': contacto.username, 'nombre': contacto.nombre,
             'variables': contacto.variables or {}, 'ultimo_entrante_en': _iso(contacto.ultimo_entrante_en),

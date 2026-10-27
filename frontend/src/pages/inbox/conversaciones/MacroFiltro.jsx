@@ -1,21 +1,40 @@
 // El filtro de la bandeja, comprimido en un botón de ícono: abre un panel con la cola, a quién está
-// asignada, el examen y si el último mensaje es de hoy. El número sobre el ícono es cuántos hay puestos.
+// asignada, la sub-etapa, si califica, la etiqueta, el examen, cuándo empezó la última conversación y
+// quién mandó el último mensaje (y cuándo). El número sobre el ícono es cuántos hay puestos.
 import { useEffect, useRef, useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import useEnPantalla from '../../../components/ui/useEnPantalla';
-import { Button, Chip, IconButton, Segmented } from '../../../components/standard';
-import { COLAS, asignados, claveEtiqueta, cumpleFiltro, etiquetasDe, examenes, filtrar } from './colas';
+import { Button, Chip, IconButton, Input, Segmented } from '../../../components/standard';
+import { COLAS, ETAPAS, asignados, claveEtiqueta, cumpleFiltro, etiquetasDe, examenes, filtrar } from './colas';
 import { VACIO, activos } from './filtros';
+
+const RANGOS = [['hoy', 'Hoy'], ['ayer', 'Ayer'], ['rango', 'Personalizado']];
 
 function Opciones({ valor, opciones, onElegir }) {
     return (
         <div className="cv-macro-chips">
             {opciones.map(([v, label, n, color]) => (
-                <Chip key={String(v)} as="button" type="button" color={color} aria-pressed={valor === v} onClick={() => onElegir(v)}>
+                <Chip key={String(v)} as="button" type="button" color={color} aria-pressed={valor === v} onClick={() => onElegir(valor === v ? null : v)}>
                     {label}{n != null && <span className="cv-cuenta">{n}</span>}
                 </Chip>
             ))}
         </div>
+    );
+}
+
+// Hoy · Ayer · Personalizado; con Personalizado, desde y hasta.
+function Rango({ clave, filtro, cambiar }) {
+    return (
+        <>
+            <Opciones valor={filtro[clave]} opciones={RANGOS} onElegir={(v) => cambiar({ [clave]: v })} />
+            {filtro[clave] === 'rango' && (
+                <div className="cv-macro-fechas">
+                    <Input variant="date" type="date" aria-label="Desde" value={filtro[`${clave}Desde`]} onChange={(e) => cambiar({ [`${clave}Desde`]: e.target.value })} />
+                    <span className="t-cap mut">a</span>
+                    <Input variant="date" type="date" aria-label="Hasta" value={filtro[`${clave}Hasta`]} onChange={(e) => cambiar({ [`${clave}Hasta`]: e.target.value })} />
+                </div>
+            )}
+        </>
     );
 }
 
@@ -34,10 +53,11 @@ export default function MacroFiltro({ lista, filtro, onCambiar, ahora, yo }) {
     }, [abierto]);
 
     const cambiar = (parte) => onCambiar({ ...filtro, ...parte });
-    // Las cuentas de cada opción respetan los otros filtros puestos, no el propio.
+    // Las cuentas de cada cola respetan los otros filtros puestos, no el propio.
     const sinCola = lista.filter((c) => cumpleFiltro(c, filtro, ahora));
     const setters = asignados(lista);
     const etiquetas = etiquetasDe(lista);
+    const nombre = (s) => (s.id === yo ? 'Vos' : s.username);
     const n = activos(filtro);
 
     return (
@@ -55,22 +75,31 @@ export default function MacroFiltro({ lista, filtro, onCambiar, ahora, yo }) {
                     <div className="cv-macro-col">
                         <span className="t-rotulo">Asignado a</span>
                         <Opciones valor={filtro.asignado} onElegir={(asignado) => cambiar({ asignado })} opciones={[
-                            [null, 'Todos'],
-                            ...setters.map((s) => [s.id, s.id === yo ? 'Vos' : s.username, s.n]),
+                            ...setters.map((s) => [s.id, nombre(s), s.n]),
                             ['ninguno', 'Sin asignar', lista.filter((c) => !c.asignado).length, 'var(--warning)'],
                         ]} />
+                        <span className="t-rotulo">Sub-etapa</span>
+                        <Opciones valor={filtro.etapa} onElegir={(etapa) => cambiar({ etapa })}
+                            opciones={ETAPAS.map((e) => [e.value, e.label, lista.filter((c) => c.etapa === e.value).length, e.color])} />
+                        <span className="t-rotulo">Calificación</span>
+                        <Opciones valor={filtro.califica} onElegir={(califica) => cambiar({ califica })}
+                            opciones={[['si', 'Califica', null, 'var(--success)'], ['no', 'No califica', null, 'var(--error)']]} />
                         {etiquetas.length > 0 && (
                             <>
                                 <span className="t-rotulo">Etiqueta</span>
                                 <Opciones valor={filtro.etiqueta} onElegir={(etiqueta) => cambiar({ etiqueta })}
-                                    opciones={[[null, 'Todas'], ...etiquetas.map((e) => [claveEtiqueta(e), e.group ? `${e.group}: ${e.name}` : e.name, e.n, e.color])]} />
+                                    opciones={etiquetas.map((e) => [claveEtiqueta(e), e.group ? `${e.group}: ${e.name}` : e.name, e.n, e.color])} />
                             </>
                         )}
                         <span className="t-rotulo">Examen</span>
-                        <Opciones valor={filtro.examen} onElegir={(examen) => cambiar({ examen })}
-                            opciones={[[null, 'Todos'], ...examenes(lista).map(([e, c]) => [e, e, c])]} />
-                        <span className="t-rotulo">Último mensaje</span>
-                        <Opciones valor={filtro.hoy} onElegir={(hoy) => cambiar({ hoy })} opciones={[[false, 'Cuando sea'], [true, 'Hoy']]} />
+                        <Opciones valor={filtro.examen} onElegir={(examen) => cambiar({ examen })} opciones={examenes(lista).map(([e, c]) => [e, e, c])} />
+                        <span className="t-rotulo">Inicio de la última conversación</span>
+                        <Rango clave="inicio" filtro={filtro} cambiar={cambiar} />
+                        <span className="t-rotulo">Último mensaje enviado por</span>
+                        <Opciones valor={filtro.envioPor} onElegir={(envioPor) => cambiar({ envioPor })}
+                            opciones={[...setters.map((s) => [s.id, nombre(s)]), ['bot', 'El bot']]} />
+                        <span className="t-cap mut">en</span>
+                        <Rango clave="envio" filtro={filtro} cambiar={cambiar} />
                     </div>
                     <div className="cv-macro-pie">
                         <Button variant="ghost" disabled={!n} onClick={() => onCambiar({ ...VACIO })}>Limpiar</Button>

@@ -28,6 +28,23 @@ export const inboxApi = {
     crearGrupoEtiquetas: (grupo) => api.post('/inbox/etiquetas/grupos', grupo).then(datos),
     ponerEtiqueta: (id, etiqueta) => api.post(`/inbox/conversaciones/${id}/etiquetas`, etiqueta).then((r) => r.data.etiquetas),
     sacarEtiqueta: (id, tagId) => api.delete(`/inbox/conversaciones/${id}/etiquetas/${tagId}`).then((r) => r.data.etiquetas),
+    // Lo que el setter trabaja sobre la conversación (app/automatizaciones/api_trabajo.py)
+    leido: (id) => api.post(`/inbox/conversaciones/${id}/leido`),
+    asignar: (id, setterId) => api.post(`/inbox/conversaciones/${id}/asignar`, { setter_id: setterId }).then(datos),
+    moverEtapa: (id, etapa) => api.put(`/inbox/conversaciones/${id}/etapa`, { etapa }).then(datos),
+    corregirVariable: (id, campo, valor) => api.put(`/inbox/conversaciones/${id}/variables`, { campo, valor }).then(datos),
+    crearNota: (id, texto) => api.post(`/inbox/conversaciones/${id}/notas`, { texto }).then(datos),
+    crearTarea: (id, tarea) => api.post(`/inbox/conversaciones/${id}/tareas`, tarea).then(datos),
+    cambiarTarea: (tareaId, hecha) => api.put(`/inbox/tareas/${tareaId}`, { hecha }).then(datos),
+    misTareas: () => api.get('/inbox/tareas').then((r) => r.data.tareas),
+    // Biblioteca del equipo (app/automatizaciones/api_biblioteca.py)
+    rapidas: () => api.get('/inbox/respuestas-rapidas').then((r) => r.data.respuestas),
+    crearRapida: (r) => api.post('/inbox/respuestas-rapidas', r).then(datos),
+    borrarRapida: (rid) => api.delete(`/inbox/respuestas-rapidas/${rid}`),
+    audios: () => api.get('/inbox/audios').then((r) => r.data.audios),
+    subirAudio: (form) => api.post('/inbox/audios', form).then(datos),
+    archivoAudio: (aid) => api.get(`/inbox/audios/${aid}/archivo`, { responseType: 'blob' }).then(datos),
+    borrarAudio: (aid) => api.delete(`/inbox/audios/${aid}`),
     // { desde, hasta, campanas: [{ ..., metricas }] } (app/automatizaciones/api_campanas.py)
     campanas: (desde, hasta) => api.get('/inbox/campanas', { params: { desde, hasta } }).then(datos),
     crearCampana: (campana) => api.post('/inbox/campanas', campana).then(datos),

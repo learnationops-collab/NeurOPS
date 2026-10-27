@@ -39,6 +39,7 @@ from .instagram import InstagramWebhookEvento
 from .ai_usage import AiUsage
 from .intento_limitado import IntentoLimitado
 from .tag import Tag, TagGroup, TARGET_IG_CONTACT
+from .inbox_work import Note, Task, QuickReply, AudioClip, InboxRead
 
 # Export all for easy access via from app.models import ...
 __all__ = [
