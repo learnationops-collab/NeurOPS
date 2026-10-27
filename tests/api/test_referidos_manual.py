@@ -8,7 +8,7 @@ from datetime import datetime
 
 import pytest
 
-from app.models import Appointment, Client, Comment
+from app.models import Appointment, Client
 
 
 @pytest.fixture()

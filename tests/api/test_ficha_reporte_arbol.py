@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from app.models import Appointment, Client, ClientComment, LeadEventLog
+from app.models import Appointment, Client, LeadEventLog
 
 CONTRATO = (Path(__file__).resolve().parents[2] / 'frontend' / 'src' / 'components' / 'ficha'
             / '__fixtures__' / 'reportes.json')

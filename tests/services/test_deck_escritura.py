@@ -9,7 +9,7 @@ from datetime import datetime
 
 import pytest
 
-from app.models import Appointment, Client, Comment, LeadEventLog
+from app.models import Appointment, Client, LeadEventLog
 from app.services.deck_escritura_service import CLAVES_SOLO_CONFIRMACION, aplicar_cambios
 
 

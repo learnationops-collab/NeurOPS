@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from app.models import Appointment, Client, ClientComment, FinancialSale, LeadEventLog
+from app.models import Appointment, Client, FinancialSale, LeadEventLog
 from app.services import objeciones_service
 
 AHORA = datetime.utcnow().replace(microsecond=0)

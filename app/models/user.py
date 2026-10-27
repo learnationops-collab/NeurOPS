@@ -251,8 +251,6 @@ class User(UserMixin, db.Model):
     weekly_availability = db.relationship('WeeklyAvailability', backref='closer', lazy='dynamic', cascade="all, delete-orphan")
     
     # Adding missing cascades for other related models
-    comments_authored = db.relationship('Comment', backref='author_rel', lazy='dynamic', cascade="all, delete-orphan")
-    client_comments = db.relationship('ClientComment', backref='author_rel', lazy='dynamic', cascade="all, delete-orphan")
     setter_daily_stats_rel = db.relationship('SetterDailyStats', backref='user_rel', lazy='dynamic', cascade="all, delete-orphan")
     closer_daily_stats_rel = db.relationship('CloserDailyStats', backref='user_rel', lazy='dynamic', cascade="all, delete-orphan")
     settings = db.relationship('UserSetting', backref='user', lazy='dynamic', cascade="all, delete-orphan")

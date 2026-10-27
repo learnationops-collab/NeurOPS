@@ -166,7 +166,9 @@ junio de 2026. Antes, cada nota existe una sola vez.
    copia de la nota actual de la llamada (la mantiene `guardar_nota_llamada`), para que las listas no hagan
    una consulta por fila; el backfill le saca el texto del sistema. Falta: se renombran `action_type` → `tipo` y `description` → `texto`; se saca el borrado en cascada
    de la bitácora al borrar una agenda (hoy `event_logs` es `delete-orphan`); se borran `appointment_id`,
-   `client_comments`, `comments` (tipos `client` y `appointment`), `closer_notes` y `setter_notes`.
+   `closer_notes` y `setter_notes` (el mazo del setter todavía escribe `setter_notes`). **El 27/10/2026** se
+   corrió el backfill en producción (5.100 entradas; 24 notas de prueba excluidas) y se borraron
+   `client_comments`, `comments` y `comment_notifications` (migración `a3c5e7f9b1d2`).
 3. **Avisos:** los 14 `Notification(...)`, `CommentNotification` y los WhatsApp y Discord sueltos pasan por
    `avisar()`; se renombran las columnas de `notifications`; se borra `comment_notifications`; vuelve la
    campanita. **Hecho el 26/10/2026** (rama `feat/avisos`):

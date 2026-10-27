@@ -7,7 +7,7 @@ from datetime import date, datetime
 import pytest
 
 from app.models import (
-    Appointment, Client, ClientComment, ClientMergeLog, CommentNotification, FinancialSale,
+    Appointment, Client, ClientMergeLog, FinancialSale,
     InstallmentPlan, Program, SurveyAnswer, SurveyQuestion,
 )
 from app.services.client_dedup_service import ClientDedupService

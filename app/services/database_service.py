@@ -31,8 +31,7 @@ class DatabaseService:
         'campaigns': models.Campaign,
         'ad_sets': models.AdSet,
         'ads': models.Ad,
-        'marketing_budgets': models.MarketingBudget,
-        'client_comments': models.ClientComment
+        'marketing_budgets': models.MarketingBudget
     }
 
     @staticmethod

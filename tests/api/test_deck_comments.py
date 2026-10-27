@@ -11,7 +11,7 @@ from datetime import datetime
 
 import pytest
 
-from app.models import Appointment, Client, Comment, LeadEventLog, Notification
+from app.models import Appointment, Client, LeadEventLog, Notification
 
 
 @pytest.fixture()

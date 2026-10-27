@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 import pytest
 
-from app.models import Appointment, Client, Comment, InstallmentPlan, LeadEventLog
+from app.models import Appointment, Client, InstallmentPlan, LeadEventLog
 
 SHEETS = 'app.services.sheets_service.SheetsService.post_to_sheets'
 ACADEMIA = 'app.services.academy_access_service.AcademyAccessService.grant_access'

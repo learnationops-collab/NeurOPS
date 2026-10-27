@@ -5,7 +5,7 @@ from app.models.user import ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL
 DENY_TABLES = {
     'google_calendar_tokens', 'integrations', 'feature_toggles', 'user_settings', 'instagram_webhook_eventos',
     'ai_usage', 'conversational_messages', 'ig_mensajes', 'bug_report_messages', 'notifications',
-    'comment_notifications', 'job_applications', 'job_application_votes', 'job_application_clarity_weights',
+    'job_applications', 'job_application_votes', 'job_application_clarity_weights',
     'hiring_config', 'hiring_forms', 'assistant_applications', 'assistant_application_clarity_weights',
     'alembic_version', 'intentos_limitados',
 }

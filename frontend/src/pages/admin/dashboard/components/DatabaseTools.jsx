@@ -20,8 +20,7 @@ const DatabaseTools = () => {
         { key: 'clients', name: 'Clientes' },
         { key: 'expenses', name: 'Gastos' },
         { key: 'recurring_expenses', name: 'Gastos Recurrentes' },
-        { key: 'availability', name: 'Disponibilidad' },
-        { key: 'client_comments', name: 'Comentarios de Clientes' }
+        { key: 'availability', name: 'Disponibilidad' }
     ];
 
     const handleClearTable = async () => {

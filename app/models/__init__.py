@@ -1,6 +1,6 @@
 from app import db, login
 from .user import User, GoogleCalendarToken, CloserAlias, ROLE_ADMIN, ROLE_CLOSER, ROLE_SETTER, ROLE_OPERATOR, get_impersonation_state
-from .client import Client, ClientComment, CommentNotification
+from .client import Client
 from .funnel import Event, EventGroup, Program, event_closers
 from .booking import Appointment, Availability, WeeklyAvailability, SurveyQuestion, SurveyAnswer
 from .payment import PaymentMethod
@@ -8,7 +8,7 @@ from .marketing import Campaign, AdSet, Ad, MarketingBudget, AdPeriodSpend, Lead
 from .report import SetterDailyStats, CloserDailyStats, DailyReportQuestion, DailyReportAnswer, Expense, RecurringExpense
 from .closer_report import CloserDailyReport
 from .comercial_report import ReporteDirector, ReporteDirectorPersona
-from .crm import Pipeline, PipelineStage, UserSetting, Notification, Comment, LeadEventLog, FeatureToggle
+from .crm import Pipeline, PipelineStage, UserSetting, Notification, LeadEventLog, FeatureToggle
 from .integration import Integration
 from .public_registration import PublicRegistration
 from .financial import FinancialSale, FinancialAgenda, ExcludedSale, TeamMember, MonthlyPayroll, MonthlyPaymentMethodBalance, MonthlySaving
@@ -46,14 +46,14 @@ from .conflicto import Conflicto, CONFLICTO_TIPOS, CONFLICTO_ESTADOS
 __all__ = [
     'User', 'GoogleCalendarToken', 'CloserAlias', 'ROLE_ADMIN', 'ROLE_CLOSER', 'ROLE_SETTER', 'ROLE_OPERATOR', 'ROLE_TRIAGE',
     'get_impersonation_state',
-    'Client', 'ClientComment', 'CommentNotification',
+    'Client',
     'Event', 'EventGroup', 'Program', 'event_closers',
     'Appointment', 'Availability', 'WeeklyAvailability', 'SurveyQuestion', 'SurveyAnswer',
     'PaymentMethod',
     'Campaign', 'AdSet', 'Ad', 'MarketingBudget', 'AdPeriodSpend', 'LeadAnswer', 'UTMLog', 'LandingTracking', 'ConversationalMessage',
     'MetaAnuncio', 'MetaGastoDiario',
     'SetterDailyStats', 'CloserDailyStats', 'CloserDailyReport', 'ReporteDirector', 'ReporteDirectorPersona', 'DailyReportQuestion', 'DailyReportAnswer', 'Expense', 'RecurringExpense',
-    'Pipeline', 'PipelineStage', 'UserSetting', 'Notification', 'Comment', 'LeadEventLog', 'FeatureToggle',
+    'Pipeline', 'PipelineStage', 'UserSetting', 'Notification', 'LeadEventLog', 'FeatureToggle',
     'Integration', 'PublicRegistration', 'FinancialSale', 'FinancialAgenda', 'ExcludedSale', 'TriageDailyReport', 'TriageTrackerReport',
     'TeamMember', 'MonthlyPayroll', 'MonthlyPaymentMethodBalance', 'MonthlySaving',
     'ConciliacionCarga', 'ConciliacionMovimiento', 'ConciliacionRevision',

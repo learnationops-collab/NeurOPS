@@ -14,7 +14,7 @@ from datetime import date, datetime, timedelta
 import pytest
 
 from app.models import (
-    Appointment, Client, ClientComment, FinancialSale, InstallmentPlan, Program,
+    Appointment, Client, FinancialSale, InstallmentPlan, Program,
 )
 
 URL = '/api/ficha/lead'
@@ -206,19 +206,6 @@ def test_un_campo_nuevo_del_formulario_no_se_pierde(client, db, lead, equipo, au
 
     assert {'clave': 'pregunta_nueva', 'pregunta': 'pregunta_nueva',
             'respuesta': 'una respuesta'} in respuestas
-
-
-def test_el_hilo_de_notas_junta_las_tres_tablas_donde_viven(client, db, lead, equipo, auth_headers):
-    db.session.add(ClientComment(client_id=lead.client_id, author_id=equipo['closer'].id,
-                                 text='hablé con la esposa'))
-    db.session.commit()
-
-    comunicacion = abrir(client, auth_headers, equipo['director'], appointment_id=lead.id) \
-        .get_json()['comunicacion']
-
-    assert [n['texto'] for n in comunicacion['notas']] == ['hablé con la esposa']
-    assert comunicacion['notas'][0]['rol'] == 'closer'
-    assert {m['nombre'] for m in comunicacion['equipo']} >= {'vendedor', 'captador', 'triaje'}
 
 
 def test_el_vocabulario_viaja_con_la_ficha(client, db, lead, equipo, auth_headers):
