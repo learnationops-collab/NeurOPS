@@ -174,7 +174,7 @@ def run(user, raw, pagina=1, por_pagina=PAGE, con_medicion=True):
     where = compile_tree(plan['condiciones'], fuente.fields)
     # Fuera de la dirección, las filas son las suyas y la medición que agrupa es del equipo (alcance.py).
     suyas = alcance.filtro(user, fuente)
-    medicion_propia = suyas is not None and alcance.propia(fuente, plan['agrupar_por'])
+    medicion_propia = suyas is not None and alcance.propia(fuente, plan)
     filas_where = where if suyas is None else and_(where, suyas)
     pagina = max(1, int(pagina or 1))
     rows_stmt, campos = _rows_statement(fuente, plan, filas_where, por_pagina, (pagina - 1) * por_pagina)

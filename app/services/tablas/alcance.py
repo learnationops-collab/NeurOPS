@@ -3,9 +3,10 @@
 - Filas (listas y su total): solo las suyas. Una fila es suya si figura en ella (una columna que apunta a su
   usuario, como closer_id o setter_id, o el email o el nombre del closer en las tablas que lo guardan como texto)
   o si es de una persona con la que tuvo una agenda, como closer o como setter.
-- Mediciones que agrupan: de todo el equipo (el show up de cada closer, las ventas por programa), salvo que agrupen
-  por un dato personal (el email o el nombre de un cliente): esas, solo sobre sus filas. Una medición sin agrupar es
-  un total, como el de las filas: solo lo suyo (si no, "mis agendas" contaba las de todos).
+- Mediciones que agrupan por una categoría cerrada (el closer, la fecha, el programa, el estado) y filtran solo por
+  categorías así: de todo el equipo (el show up de cada closer, las ventas por programa). Si agrupan o filtran por
+  otra cosa (un dato personal, un texto libre), solo sobre sus filas. Una medición sin agrupar es un total, como el
+  de las filas: solo lo suyo (si no, "mis agendas" contaba las de todos).
 
 Lo usa el motor (motor.run), así que vale igual para Learnito, las habilidades y cualquier plan. Un solo lugar
 para revisarlo, como exclusion.py.
@@ -23,6 +24,11 @@ CLOSER_TEXTO = {'closer_email': 'email', 'setter_email': 'email', 'closer': 'use
 # Un dato es personal si su nombre tiene una de estas palabras (o es un id que no apunta a un usuario).
 PERSONALES = ('email', 'phone', 'telefono', 'full_name', 'first_name', 'last_name', 'nombre', 'name', 'instagram',
               'whatsapp', 'dni', 'documento', 'uuid', 'direccion', 'address')
+
+# Textos que son una categoría cerrada (una palabra del nombre de la columna): se pueden medir en todo el equipo.
+CATEGORIAS = ('program', 'programa', 'estado', 'status', 'result', 'resultado', 'kind', 'tipo', 'etapa',
+              'stage', 'segmento', 'grupo', 'origen', 'source', 'metodo', 'method', 'canal', 'pais', 'country',
+              'role', 'rol', 'moneda', 'currency', 'outcome')
 
 
 def completo(user):
@@ -73,9 +79,38 @@ def personal(fuente, clave):
     return False
 
 
-def propia(fuente, agrupar_por):
-    """¿La medición va solo sobre sus filas? Un total (sin agrupar) o un reparto por un dato personal."""
-    return not agrupar_por or personal(fuente, agrupar_por)
+def _segura(fuente, clave):
+    """¿Este dato puede repartir o filtrar una medición de todo el equipo? Solo categorías cerradas: un usuario
+    del equipo, una fecha, un sí/no o un texto de la lista. Un texto libre (notas, objeciones, examen) devolvía
+    los valores de todo el equipo (auditoría de seguridad, 27/10/2026)."""
+    campo = fuente.fields.get(clave)
+    if campo is None or personal(fuente, clave):
+        return False
+    if campo.kind in ('date', 'instant', 'bool'):
+        return True
+    partes = clave.split('.')
+    col = fuente.table.c.get(partes[1]) if partes[0] in ('f', 'p') and len(partes) > 1 else None
+    if col is not None and _a_usuarios(col):
+        return True
+    nombre = partes[-1].lower()
+    return nombre in CLOSER_TEXTO or (campo.kind == 'text' and any(p in nombre.split('_') for p in CATEGORIAS))
+
+
+def _campos(arbol):
+    for it in (arbol or {}).get('items') or []:
+        if 'items' in it:
+            yield from _campos(it)
+        elif it.get('type') == 'field':
+            yield it.get('field')
+
+
+def propia(fuente, plan):
+    """¿La medición va solo sobre sus filas? Un total (sin agrupar), un reparto por un dato que no es una categoría
+    cerrada, o con una condición sobre uno: filtrar por el email de alguien y contar en todo el equipo era un oráculo."""
+    agrupar_por = plan['agrupar_por']
+    if not agrupar_por or not _segura(fuente, agrupar_por):
+        return True
+    return not all(_segura(fuente, c) for c in _campos(plan['condiciones']))
 
 
 def nota(medicion_propia):
