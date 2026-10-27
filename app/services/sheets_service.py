@@ -114,6 +114,11 @@ class SheetsService:
                                                                 payload.get('metodo_pago'))
         except ValueError:
             transferido_a = None
+        # Cuántos meses da una renovación (1 o 4): lo usa la suscripción, no viaja.
+        try:
+            meses_renovacion = int(payload.pop('meses_renovacion', None) or 0) or None
+        except (TypeError, ValueError):
+            meses_renovacion = None
         # Quién compra y quién pagó (docs/plan_personas.md): también de NeurOPS, no viajan.
         comprador_uuid = payload.pop('person_uuid', None)
         pagador = payload.pop('pagador', None)
@@ -223,6 +228,7 @@ class SheetsService:
                     sold_in_call=payload.get('sold_in_call') == True or payload.get('sold_in_call') in ('true', 'True', '1', 1),
                     date=sale_date
                 )
+                sale.meses_renovacion = meses_renovacion  # no es columna: lo lee `subscription_service.al_ubicar_pago`
                 db.session.add(sale)
                 db.session.commit()
                 logger.info("[SHEETS POST] Venta registrada exitosamente en base de datos local.")

@@ -36,7 +36,7 @@ Que el closer cobre las cuotas y que los datos de venta lleguen limpios.
 ## Vencimientos y suscripciones
 El acceso del alumno, su renovación y sus pagos.
 
-- [ ] Renovación de 1 o 4 meses a elección del closer en el formulario de venta (campo en `Sale`).
+- [x] Renovación de 1 o 4 meses a elección del closer en el formulario de venta (campo en `Sale`).
 - [ ] Recordatorios de pago para el alumno: tarjeta en su perfil con cuotas y fecha límite, y avisos antes del vencimiento y en la semana de gracia.
 - [ ] Si no agendan la renovación, Dari los contacta (primero los activos) para una «entrevista final».
 - [ ] Señas sin completar: decidir qué pasa después del 02/11 con Lysander, Valentina, Leslie y Cynthia. Santiago Herrera tiene hasta el 15/11.

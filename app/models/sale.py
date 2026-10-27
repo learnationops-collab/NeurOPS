@@ -27,6 +27,8 @@ class Sale(ConPersona, db.Model):
     appointment_id = db.Column(db.Integer, db.ForeignKey('appointments.id', ondelete='SET NULL'),
                                nullable=True, index=True)
     agreed_total = db.Column(db.Float, nullable=True)
+    # Cuántos meses da una renovación: 1 o 4, lo elige el closer (Santiago, 26/10/2026). Vacío: 1.
+    renewal_months = db.Column(db.Integer, nullable=True)
     # La suscripción que esta venta activó o extendió (`subscription_service.otorgar`).
     subscription_id = db.Column(db.Integer, db.ForeignKey('subscriptions.id', ondelete='SET NULL', use_alter=True,
                                                           name='fk_sales_subscription_id'),
@@ -53,6 +55,7 @@ class Sale(ConPersona, db.Model):
             'setter': self.setter,
             'appointment_id': self.appointment_id,
             'agreed_total': self.agreed_total,
+            'renewal_months': self.renewal_months,
             'subscription_id': self.subscription_id,
             'source': self.source,
             'review_note': self.review_note,

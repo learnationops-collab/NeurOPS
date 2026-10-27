@@ -562,7 +562,7 @@ CAMPOS_DE_VENTA = (
     'email_vendedor', 'nombre_cliente', 'telefono', 'mail_cliente', 'instagram',
     'documento_identidad', 'setter', 'tipo_pago', 'monto', 'precio_total', 'segundo_pago',
     'metodo_pago', 'transferido_a', 'examen', 'estado', 'marca_temporal', 'enviar_webhook',
-    'enviar_mensaje', 'sold_in_call',
+    'enviar_mensaje', 'sold_in_call', 'meses_renovacion',
 )
 CAMPOS_DEL_COMPRADOR = ('email_vendedor', 'nombre_cliente', 'telefono', 'mail_cliente',
                         'instagram', 'documento_identidad', 'setter')

@@ -3,8 +3,8 @@
 Reglas (Santiago, 20/10):
   · la abre la venta: una seña da 7 días; un completo, un parcial o un upsell, la duración por
     defecto (120 días, no 4 meses de calendario; Santiago, 26/10/2026) desde el pago;
-  · una renovación es mes a mes: la extiende 1 mes desde donde vencía (o desde el pago, si ya había
-    vencido; Santiago, 22/10/2026);
+  · una renovación la extiende 1 o 4 meses (lo elige el closer, `Sale.renewal_months`) desde donde
+    vencía (o desde el pago, si ya había vencido; Santiago, 22/10 y 26/10/2026);
   · el pago que completa una seña (completo, parcial o la cuota) la pasa a acceso completo;
   · en cuotas, cada cambio del plan la lleva hasta la próxima cuota más una semana de gracia, y el
     plan pagado, a 120 días desde el pago que la completó (`ajustar_por_plan`, Santiago, 26/10/2026);
@@ -28,7 +28,8 @@ from app.services import subscription_sync
 
 DURACION_DIAS = 120
 DIAS_SENA = 7
-MESES_RENOVACION = 1  # las renovaciones se pagan mes a mes
+MESES_RENOVACION = 1  # por defecto; el closer puede elegir 4 (`Sale.renewal_months`)
+MESES_DE_RENOVACION = (1, 4)
 # Lo que, sumado a una venta que era solo seña, la pasa a acceso completo.
 COMPLETAN_SENA = ('completo', 'parcial', 'cuota')
 # Prórroga sin pago, siempre con motivo: las duraciones recomendadas (la de seña, solo para un acceso de
@@ -129,10 +130,14 @@ def al_ubicar_pago(session, sale, fila, pago, abre, abierta):
     dia = _dia(fila.date)
     comun = {'programa': pago.programa, 'desde': dia, 'sale': sale, 'payment': fila}
     if abre and sale.kind == 'renewal':
+        # Lo que eligió el closer viaja en el pago (`SheetsService.post_to_sheets`).
+        elegidos = getattr(fila, 'meses_renovacion', None)
+        meses = elegidos if elegidos in MESES_DE_RENOVACION else (sale.renewal_months or MESES_RENOVACION)
+        sale.renewal_months = meses
         actual = _de(session, fila.client_id, slug)
         base = max(dia, actual.expires_at) if actual else dia
-        return otorgar(session, fila.client_id, slug, _add_months(base, MESES_RENOVACION), 'renovacion',
-                       is_deposit=False, reason='Renovación', **comun)
+        return otorgar(session, fila.client_id, slug, _add_months(base, meses), 'renovacion',
+                       is_deposit=False, reason=f'Renovación de {meses} {"mes" if meses == 1 else "meses"}', **comun)
     if abre and pago.tipo == 'seña':
         return otorgar(session, fila.client_id, slug, dia + timedelta(days=DIAS_SENA), 'alta',
                        is_deposit=True, reason='Seña: 7 días', **comun)

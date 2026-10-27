@@ -293,6 +293,15 @@ export const PREGUNTAS = [
     cuando: (r, c) => esVenta(r) && esRenovacionOUpsell(r)
       && !!c.estadoVenta?.can_settle_balance_with_installment && saldoPrevio(c) > 0.009,
   },
+  { // Cuánto dura la renovación: la elige el closer (Santiago, 26/10/2026). Va a la suscripción.
+    clave: 'renovacion_meses', hito: 'deuda', campo: 'meses_renovacion', tipo: 'opciones',
+    enunciado: '¿Por cuánto renueva?',
+    opciones: [
+      { valor: 1, label: '1 mes', sub: 'Renovación mensual', tono: 'info' },
+      { valor: 4, label: '4 meses', sub: 'Renovación cuatrimestral', tono: 'info' },
+    ],
+    cuando: (r) => esVenta(r) && r.tipo_pago_simple === 'Renovacion',
+  },
   { // ← wizard `amounts` (precio total + cobrado hoy) y, en un pago completo, el monto del paso
     // `method`. El comentario del cobro viaja a Sheets como `segundo_pago`.
     clave: 'venta_montos', hito: 'deuda', tipo: 'formulario',

@@ -522,6 +522,7 @@ describe('venta directa: la que no sale de reportar esta llamada', () => {
     ...COMPRADOR,
     programa: { programa: 'RR' },
     tipo_pago: { tipo_pago_simple: 'Renovacion' },
+    renovacion_meses: { meses_renovacion: 4 },
     venta_montos: { precio_total: '1500', monto: '1500' },
     medio_pago: { metodo_pago: 'Stripe' },
     ...DATOS_DE_LA_VENTA,
@@ -561,7 +562,7 @@ describe('venta directa: la que no sale de reportar esta llamada', () => {
     }
     const { accion, datos } = construirPayload(r, { appointmentId: 88 });
     expect(accion).toBe('registrar_venta');
-    expect(datos.venta).toMatchObject({ tipo_pago: 'RR - Renovacion', monto: 1500, sold_in_call: false });
+    expect(datos.venta).toMatchObject({ tipo_pago: 'RR - Renovacion', monto: 1500, sold_in_call: false, meses_renovacion: 4 });
     // `null` es «no se preguntó»: el backend no pisa lo que la agenda ya tenía.
     expect(datos.agenda).toEqual({ with_decision_maker: null, offer_presented: null });
     expect(datos.deck).toBeNull();

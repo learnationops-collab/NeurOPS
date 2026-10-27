@@ -272,6 +272,8 @@ function bloqueVenta(r, contexto) {
     enviar_webhook: r.enviar_webhook !== false,
     enviar_mensaje: r.enviar_webhook !== false,
     sold_in_call: r.sold_in_call !== false,
+    ...(r.tipo_pago_simple === 'Renovacion' && [1, 4].includes(r.meses_renovacion)
+      ? { meses_renovacion: r.meses_renovacion } : {}),
   };
 }
 

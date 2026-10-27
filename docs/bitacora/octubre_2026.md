@@ -1120,3 +1120,6 @@
 - **27 de Octubre de 2026 (Seguridad: CSP y frame-ancestors)** *([app/api/__init__.py](../../app/api/__init__.py))*:
   - Nadie de afuera puede mostrar Work en un iframe (clickjacking), salvo la reserva pública (`/book/...`), que puede embeberse desde `*.thelearnation.com`. No se pudo revisar el WordPress de las landings (bloquea consultas automáticas), por eso la reserva queda permitida; la Academia y Leadership no embeben Work.
   - CSP con `object-src 'none'` y `base-uri 'self'`. Los scripts no se restringen: un CSP de scripts mal medido rompe pantallas sin aviso.
+- **27 de Octubre de 2026 (La renovación dura 1 o 4 meses, lo elige el closer)** *([sale.py](../../app/models/sale.py), [subscription_service.py](../../app/services/subscription_service.py), [sheets_service.py](../../app/services/sheets_service.py), [arbolResultado.preguntas.js](../../frontend/src/components/ficha/arbolResultado.preguntas.js))*:
+  - En una renovación, el formulario de venta pregunta «¿Por cuánto renueva?»: 1 mes o 4 meses. Queda en la venta (`sales.renewal_months`, migración `e6a1c3d5f7b9`) y la suscripción se extiende esos meses desde donde vencía. Sin respuesta (otros caminos de carga), 1 mes como antes.
+  - El dato viaja en el pago hasta la suscripción y no se manda a Sheets ni a n8n.
