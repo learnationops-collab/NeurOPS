@@ -63,8 +63,8 @@ Que cada palabra clave lleve a un flujo que funcione.
 La plataforma del alumno.
 
 - [x] Al simular un rol, que el avatar sea un perfil de prueba con todos los accesos (pedido de Mario) y que no aparezca bloqueado.
-- [ ] Learnito corrige entregas: Ace hasta 5 por día, Residencia 10, Specialist sin límite; feedback obligatorio antes de la siguiente; Belu revisa ejemplos al final de la semana; Santi hace el anuncio.
-- [ ] Entregar desde la pizarra.
+- [x] Learnito corrige entregas: Ace hasta 5 por día, Residencia 10, Specialist sin límite; feedback obligatorio antes de la siguiente; Belu revisa ejemplos al final de la semana; Santi hace el anuncio.
+- [x] Entregar desde la pizarra.
 
 ## Fulfillment y accesos
 Las fichas y los permisos del equipo.
