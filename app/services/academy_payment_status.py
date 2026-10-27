@@ -196,7 +196,7 @@ def _estados(client_ids):
 
 
 def avisar(client_ids):
-    """Le manda a la Academia el estado de estos clientes, en un hilo: lo que lo cambió ya está
+    """Le manda a la Academia el estado de estos clientes, en un hilo (no daemon: un script espera a que salga): lo que lo cambió ya está
     guardado y la Academia puede tardar. Nunca levanta. El estado se arma ACÁ (lee la base); el hilo
     solo hace el HTTP."""
     ids = [i for i in dict.fromkeys(client_ids or []) if i]
@@ -216,7 +216,7 @@ def avisar(client_ids):
             for payload in payloads:
                 guardar_alumno(payload, _enviar(payload, app.logger))
 
-    threading.Thread(target=_correr, daemon=True, name='academy-payment-status').start()
+    threading.Thread(target=_correr, daemon=False, name='academy-payment-status').start()
 
 
 def guardar_alumno(payload, respuesta):
