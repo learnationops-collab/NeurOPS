@@ -55,7 +55,7 @@ Hecho sin commitear: campos de triage en `Appointment`, migración `c4e9a1d7f2b8
 
 - [x] Dashboard de triage (Marlon lo pidió hoy): «Mis datos» y «Mi cartera» en el dock del triage, el dashboard comercial acotado a sus agendas (`2d48ad80`, en `main` el 26/10).
 - [x] «Pasar a closing» crea la agenda del closer (`agenda_triage_id`) y le deja la nota (`triage_service._pasar_al_closer`). Falta lo de confirmar A/B (§8.5). Desde el 27/10, al marcar «Califica» la triage ve los horarios libres del closer de la semana (`GET /api/ficha/<id>/triage/horarios`) y la agenda de closing dura una Sesión de Aceleración del closer (60 + 15 de Jean Carlo), no lo de la llamada de triage.
-- [x] Botón «pasar a triage» (`23c19b38`, en producción el 26/10): ficha › Closer › «Pasar el lead a» › Triage (`app/agendas_v2/a_triage.py`, `POST /api/ficha/<id>/triage`). Va a la del triage libre a esa hora (horario de Team, agendas y Google). Si las dos lo están, a la de menos agendas por delante. Si ninguna, igual a la de menos carga, con nota y aviso de que hay que reagendar. El evento de Google se borra del calendario del closer sin avisarle al lead y se crea en el de la triage con un Meet nuevo (le llega la invitación).
+- [x] Botón «pasar a triage» (`23c19b38`, en producción el 26/10): ficha › Closer › «Pasar el lead a» › Triage (`app/agendas_v2/a_triage.py`, `POST /api/ficha/<id>/pasar-a-triage`). Va a la del triage libre a esa hora (horario de Team, agendas y Google). Si las dos lo están, a la de menos agendas por delante. Si ninguna, igual a la de menos carga, con nota y aviso de que hay que reagendar. El evento de Google se borra del calendario del closer sin avisarle al lead y se crea en el de la triage con un Meet nuevo (le llega la invitación).
 - [ ] Desde el 27/10 Jean Carlo delega al triage sus C y D (los B se quedan con él; Mario, 26/10). El 27/10 ya descalificó 6975, 6977, 6986 y 6978; le quedan por pasar 6976, 6983 y 6927 (C).
 - [x] Ruteo C y D → grupo «Triage» (`ws-triage`, Juliana y Dari, máxima disponibilidad, último en el orden), aplicado en producción el 26/10 con `scripts/segmentos_formulario.py`. Si el triage está lleno, desborda a «Todos los closers».
 - [x] Juliana y Dari cargaron su horario (verificado en producción el 27/10). Dari (Caracas): lun–vie 9–12 y 14–20, sáb 9–12. Juliana (Bogotá): mar–vie 11–14, sáb y dom 15–18.
@@ -188,6 +188,11 @@ Hecho sin commitear: campos de triage en `Appointment`, migración `c4e9a1d7f2b8
     2. La Academia busca primero por `learnation_user_id` y después por la ficha (Monica 522/523, Miguel 700/701).
     3. Una baja de un producto que ya no está activo no lo reasigna, y no le corta el producto vigente (Laura Toloza).
     4. Dos filas activas del mismo producto quedan en la más nueva, con la fecha de Work (Anita 432 y Camila Palomino 662: se reenvían tras el deploy).
+  - [ ] **Deuda de las suscripciones vigentes: datos que la inflan (auditoría del 27/10)**. De $37.3k que figuran vencidos, ~$8k no son deuda:
+    - Cuotas pendientes ya pagadas: Maricielo (cuota $100, pagó el 26/10), Fernanda Vargas (cuota $220 repetida, pagó $750 de $750) y Rodrigo Miranda (cuota de $1.425 sobre un completo de $1.000 por Hotmart). Marcarlas pagadas o borrarlas.
+    - Dos ventas «new» que son una sola compra (la seña quedó en otro programa, o el upsell no cerró la venta anterior): Ruby Castillo (RR seña $75 + AL $675 = AL $750), Jocelyn Hernández (RR $50 + AL $700), Geraldine Pachas (AL $287 + RR $1.213 = RR $1.500), Anita Sanhueza (AL seña $50 + RR $1.450), Beatriz Olivera (AL seña $75 y después RR completo $2.000), Briana Chalco (AL seña $75 + upsell RR $1.425), Laura Toloza (AL en cuotas y después RR completo $1.700, ¿se le perdonan las cuotas de AL?), Javier Duarte (dos ventas RR: debe $1.000, no $2.500).
+    - Dudosas: Yrein (en observación, pidió reembolso), María Alejandra Rodríguez Verano (su pago de $1.500 está «Cancelada»: tiene RR sin ningún cobro), Saúl (su pago de $250 no aparece en la pasarela).
+    - El Pulso de 17 deudores marca 22 días por la sesión grupal de onboarding del 05/10 (52 asistencias cargadas juntas); sin ella, su última actividad es de junio a septiembre.
   - [ ] **Coherencia ventas × suscripciones (26/10)**: de 118 ventas con pago desde el 26/06, todas tienen suscripción salvo la de Joel. Quedan pendientes:
     - **Joel**: sin suscripción hasta definir cuánto cubre cada pago de $150.
     - **Rossana Vargas**: su RR (13/08–11/12, dado por Jean Carlo) no tiene venta. Su único pago es de $800 por Stripe, del 19/01/26, y nunca se cargó.
@@ -259,6 +264,20 @@ Auditoría del 26/10 (autenticación, autorización, superficie externa, inyecci
 - [ ] Palabras clave sin campaña en el Inbox (GUÍA CHILE, MÉTODO y otras): ver con Marketing si siguen con anuncios activos y, si sí, crearles campaña.
 - [ ] Atribución venta → agenda → conversación (`appointments.conversation_id`): decidido dejar vacío el histórico y usar la inferencia solo al leer. Va con Agendas 2.0.
 - [ ] Reemplazar n8n: hoy solo lo justifica el mailing de ingreso por venta nueva (Work le manda la venta). El formulario viejo de agendas que llamaba a Work sin secreto ya no entra.
+
+## 11b. Inbox para setters (paso previo a conversar desde Work)
+
+Mockup en revisión con Santi (27/10): Conversaciones con asignación y reactivar, y Flujos con «Editar mensajes». Por ahora solo frontend; lo de abajo es lo que falta del lado del servidor para que funcione.
+
+- [ ] Asignación por conversación: a qué setter le tocó y por qué campaña (hoy el reparto vive en la campaña, la conversación no lo expone). Filtro «Asignado a» y «Sin asignar».
+- [ ] Filtros guardados por setter («Míos de hoy», «Míos esperando»…): guardarlos en el servidor por usuario, no en el navegador. El setter no ve Campañas.
+- [ ] Mover a una persona dentro de su flujo: continuar desde cualquier paso (por defecto el que se cortó), reiniciar desde el paso 1 o, rara vez, mandarla a otro flujo. Casos: error, ventana de 24 h vencida, cancelada, o ningún flujo arrancó. Fuera de la ventana de 24 h no se puede escribir: queda lista y arranca cuando el lead escribe. Reactivar saca al bot de la pausa.
+- [ ] Permiso de setter para editar solo el texto de los mensajes de un flujo publicado (no botones, condiciones ni esperas) y publicar como versión nueva. Hoy el servidor lo deja en solo lectura (`app/automatizaciones/api.py`).
+- [ ] Etiquetas del equipo en las conversaciones: las crea cualquier setter (nombre y color), se ponen y sacan desde el chat, se ven en la lista y entran en el macrofiltro y en los filtros guardados. Tabla nueva (etiqueta + relación con la conversación).
+- [ ] Botón para abrir el perfil de Instagram de la persona desde el chat (`instagram.com/<usuario>`), y en los mensajes del bot un ícono de «Automático».
+- [ ] Etapas en los flujos (cambio de datos): agrupar los pasos en etapas (p. ej. Bienvenida, Calificación, Agenda). Se usan al elegir desde qué paso continuar y en el editor de mensajes.
+- [ ] Conversaciones que llegan por palabras clave que figuran apagadas y siguen entrando: averiguar por qué (¿anuncios viejos todavía activos, coincidencia parcial, otra campaña que la reusa?) y resolverlo. Va después de aplicar el Inbox de setters.
+- [ ] La bandeja no se actualiza sola: la lista se pide solo al buscar y el chat una vez al abrirlo (`Conversaciones.jsx`). Pedir de nuevo cada 20–30 s.
 
 ## 12. Fuera del código
 
