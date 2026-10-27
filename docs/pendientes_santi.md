@@ -30,7 +30,7 @@ Que el closer cobre las cuotas y que los datos de venta lleguen limpios.
 - [ ] Revisar con Jean Carlo los errores de lógica que encuentre y corregirlos de raíz.
 - [ ] Desactivar los flows automáticos que se pisan con el contacto manual.
 - [x] Formulario de venta: que no se reusen los datos del anterior ni se acepte su nombre o «no tengo» como Instagram; avisar si el correo o el Instagram son de otra ficha.
-- [ ] Vista Conflictos ([mockup](mockups/conflictos.html)) con los casos de Jean Carlo: Andres Simon (AL 697, posible upsell sobre RR, cuota de $500), Yrein (reembolso, v57525), Saúl Logreira ($250 que no aparece en la pasarela), María Alejandra Villa y Natalia Salazar (v57629 sin cobro), Sureiny Marrero (suscripción de $150 falló el 20/08), Nadia Rodríguez ($2.000 el 08/08 y $500 el 13/08 sin venta).
+- [x] Vista Conflictos ([mockup](mockups/conflictos.html)) con los casos de Jean Carlo: Andres Simon (AL 697, posible upsell sobre RR, cuota de $500), Yrein (reembolso, v57525), Saúl Logreira ($250 que no aparece en la pasarela), María Alejandra Villa y Natalia Salazar (v57629 sin cobro), Sureiny Marrero (suscripción de $150 falló el 20/08), Nadia Rodríguez ($2.000 el 08/08 y $500 el 13/08 sin venta).
 
 ## Vencimientos y suscripciones
 El acceso del alumno, su renovación y sus pagos.
@@ -69,7 +69,7 @@ La plataforma del alumno.
 ## Fulfillment y accesos
 Las fichas y los permisos del equipo.
 
-- [ ] Unificar las tablas de comentarios (closers, setters, Dari).
+- [x] Unificar las tablas de comentarios (closers, setters, Dari).
 - [ ] Que todos puedan crear sesiones desde Leadership.
 
 ## Seguridad

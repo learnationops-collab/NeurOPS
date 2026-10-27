@@ -1142,3 +1142,6 @@
   - Tabla `conflictos` y página `/conflictos`: los casos de datos que no cierran, con tipo, persona, de dónde vienen (fecha y venta o pago), qué no cierra, monto y responsable. La dirección y Operaciones ven todos; cada closer, los suyos. «Conflictos» aparece en el menú de sesión solo si hay casos abiertos.
   - Al elegir un caso, «Qué pasó»: sus ventas, pagos y agendas en orden, con lo que se cargó ese día (programa, tipo de pago, monto, método, correo, Instagram, closer). «Ver ficha y Fulfillment» abre la ficha del lead en la pestaña Fulfillment.
   - Se cierra como resuelto o descartado con una nota obligatoria, que queda en la bitácora de la ficha. Se puede reabrir.
+  - Cargados en producción los 7 casos de Jean Carlo (Andres Simon, Yrein Cordova, Saul Logreira, María Alejandra Villa, Natalia Salazar, Sureiny Marrero y Nadia Rodríguez): $3.675 en juego.
+- **27 de Octubre de 2026 (Ficha: un solo hilo de comentarios)** *([TabComunicacion.jsx](../../frontend/src/components/ficha/tabs/TabComunicacion.jsx), [useComentariosAcademia.js](../../frontend/src/components/ficha/useComentariosAcademia.js))*:
+  - Comunicación muestra, junto a las notas de closers, setters y triage, lo que anotó el equipo de la Academia (Dari, consultores), por fecha y con el rol «Academia». Fulfillment sigue con su bloque; los dos leen del mismo pedido.

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Send } from 'lucide-react';
 import { instanteLegible } from '../piezas/fecha';
+import useComentariosAcademia, { comoNota } from '../useComentariosAcademia';
 
 // El color del avatar dice el rol sin leer nada: el hilo se escanea por bloques.
-const TONO_ROL = { Triage: 'info', Setter: 'success', Closer: 'brand-secondary', Dirección: 'warning' };
+const TONO_ROL = { Triage: 'info', Setter: 'success', Closer: 'brand-secondary', Dirección: 'warning', Academia: 'brand-primary' };
 const tonoDe = (rol) => TONO_ROL[rol] || 'idle';
 
 /**
@@ -16,7 +17,11 @@ const tonoDe = (rol) => TONO_ROL[rol] || 'idle';
  */
 const TabComunicacion = ({ ficha, onAccion, puedeEditar = true }) => {
     const com = ficha?.comunicacion || {};
-    const notas = com.notas || [];
+    // Un solo hilo: las notas de Work (closers, setters, triage) y lo que anotó el equipo de la Academia
+    // (Dari, consultores), por fecha. Lo de la Academia se lee acá y se escribe allá.
+    const { datos: academia } = useComentariosAcademia(ficha);
+    const notas = [...(com.notas || []), ...(academia?.comentarios || []).map(comoNota)]
+        .sort((a, b) => String(a.fecha || '').localeCompare(String(b.fecha || '')));
     const equipo = com.equipo || [];
     const [texto, setTexto] = useState('');
     const [notificar, setNotificar] = useState([]);

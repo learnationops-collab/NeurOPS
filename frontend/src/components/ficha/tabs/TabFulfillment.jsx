@@ -25,7 +25,7 @@ import { Hueso } from '../../huesos/Huesos';
 import Tip from '../../../pages/comercial/components/Tip';
 import { SeccionColapsable, diaLegible, instanteLegible, useMovimiento } from '../piezas';
 import { pestanasVisibles } from '../estadoFicha';
-import { mensajeDeError, obtenerComentariosAcademia } from '../fichaApi';
+import useComentariosAcademia from '../useComentariosAcademia';
 import {
   AYUDA_ACCESO, SECCIONES, diasRestantes, estadoAcceso, nombreProducto,
 } from '../fulfillment';
@@ -239,20 +239,8 @@ const COMENTARIOS_A_LA_VISTA = 5;
  * más nuevo primero (reunión del 26/10). Pide lo suyo aparte: espera el expediente de la Academia.
  */
 function ComentariosAcademia({ ficha }) {
-  const appointmentId = ficha?.identidad?.appointment_id ?? null;
-  const clientId = ficha?.identidad?.client_id ?? null;
-  const [datos, setDatos] = useState(null);
-  const [error, setError] = useState(null);
+  const { datos, error } = useComentariosAcademia(ficha);
   const [todos, setTodos] = useState(false);
-
-  useEffect(() => {
-    if (appointmentId == null && clientId == null) return undefined;
-    const ctrl = new AbortController();
-    obtenerComentariosAcademia({ appointmentId, clientId, signal: ctrl.signal })
-      .then(setDatos)
-      .catch((err) => { if (!ctrl.signal.aborted) setError(mensajeDeError(err)); });
-    return () => ctrl.abort();
-  }, [appointmentId, clientId]);
 
   const lista = datos?.comentarios || [];
   const visibles = todos ? lista : lista.slice(0, COMENTARIOS_A_LA_VISTA);
