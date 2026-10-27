@@ -2,6 +2,10 @@
 // escribió el lead: la espera corre desde ese mensaje.
 
 const HORA = 60;
+// Cada cuánto se vuelven a pedir la lista y el chat abierto (ms).
+export const REFRESCO = 20000;
+// Un recorrido que se cortó sin terminar: el setter lo puede retomar.
+const CORTADOS = ['error', 'ventana_vencida'];
 
 export function esperaMin(c, ahora) {
     if (c.ultimo_de !== 'lead' || !c.ultimo_en) return null;
@@ -23,9 +27,13 @@ export function colorEspera(min) {
     return 'var(--text-muted)';
 }
 
+// Sin ningún recorrido: escribió pero ninguna palabra clave arrancó un flujo.
+export const flujoCortado = (c) => !c.ejecucion || CORTADOS.includes(c.ejecucion.estado);
+
 export const COLAS = [
     { value: 'esperan', label: 'Esperan respuesta', cumple: (c, ahora) => esperaMin(c, ahora) != null, porEspera: true },
     { value: 'esperan_hora', label: 'Esperan más de 1 h', cumple: (c, ahora) => esperaMin(c, ahora) >= HORA, porEspera: true },
+    { value: 'cortadas', label: 'Flujo cortado', cumple: flujoCortado, alerta: true },
     { value: 'bot_pausado', label: 'Bot pausado', cumple: (c) => c.bot_pausado },
     { value: 'califican', label: 'Califican', cumple: (c) => c.califica === true },
     { value: 'no_califican', label: 'No califican', cumple: (c) => c.califica === false },
@@ -47,10 +55,31 @@ export function examenes(lista) {
     return [...cuenta].sort((a, b) => b[1] - a[1]);
 }
 
+// Los setters a los que están asignadas las conversaciones de la lista, con cuántas tiene cada uno.
+export function asignados(lista) {
+    const cuenta = new Map();
+    lista.forEach((c) => {
+        if (!c.asignado) return;
+        const previo = cuenta.get(c.asignado.id) || { ...c.asignado, n: 0 };
+        cuenta.set(c.asignado.id, { ...previo, n: previo.n + 1 });
+    });
+    return [...cuenta.values()].sort((a, b) => b.n - a.n);
+}
+
+const mismoDia = (iso, ahora) => Boolean(iso) && new Date(iso).toDateString() === ahora.toDateString();
+
+// `asignado`: null (todos) · 'ninguno' · el id de un setter. `hoy`: el último mensaje es de hoy.
+export function cumpleFiltro(c, { examen, asignado, hoy }, ahora) {
+    if (examen && examenDe(c) !== examen) return false;
+    if (asignado === 'ninguno' && c.asignado) return false;
+    if (asignado != null && asignado !== 'ninguno' && c.asignado?.id !== asignado) return false;
+    return !hoy || mismoDia(c.ultimo_en, ahora);
+}
+
 // Las colas de espera van de la que más espera a la que menos; las demás, por el último mensaje.
-export function filtrar(lista, { cola, examen, ahora }) {
+export function filtrar(lista, { cola, examen, asignado = null, hoy = false, ahora }) {
     const def = COLAS.find((x) => x.value === cola) || COLAS[0];
-    const salida = lista.filter((c) => def.cumple(c, ahora) && (!examen || examenDe(c) === examen));
+    const salida = lista.filter((c) => def.cumple(c, ahora) && cumpleFiltro(c, { examen, asignado, hoy }, ahora));
     if (def.porEspera) salida.sort((a, b) => esperaMin(b, ahora) - esperaMin(a, ahora));
     return salida;
 }

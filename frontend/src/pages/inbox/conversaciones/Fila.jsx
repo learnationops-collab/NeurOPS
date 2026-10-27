@@ -1,9 +1,9 @@
-// Una fila de la bandeja: quién es, para qué examen, en qué paso del flujo quedó y cuánto hace que
-// espera. Se decide a quién atender sin abrir el chat.
-import { Bot, Clock, PauseCircle, User } from 'lucide-react';
+// Una fila de la bandeja: quién es, para qué examen, en qué paso del flujo quedó, cuánto hace que
+// espera y a quién está asignada. Se decide a quién atender sin abrir el chat.
+import { AlertTriangle, Bot, Clock, PauseCircle, User } from 'lucide-react';
 import { Avatar, Chip } from '../../../components/standard';
 import { rotuloPaso } from '../estadoFlujo';
-import { colorEspera, esperaMin, examenDe, quien, textoEspera } from './colas';
+import { colorEspera, esperaMin, examenDe, flujoCortado, quien, textoEspera } from './colas';
 
 export function hora(iso) {
     if (!iso) return '';
@@ -12,9 +12,22 @@ export function hora(iso) {
     return d.toLocaleString('es', hoy ? { hour: '2-digit', minute: '2-digit' } : { day: 'numeric', month: 'short' });
 }
 
-export default function Fila({ c, elegida, ahora, onElegir }) {
+const CORTE = { error: 'Error', ventana_vencida: 'Venció la ventana de 24 h' };
+
+export function Asignado({ asignado, yo }) {
+    if (!asignado) return <span className="cv-asignado cv-asignado--sin"><User size={12} aria-hidden="true" />Sin asignar</span>;
+    const mio = asignado.id === yo;
+    return (
+        <span className={`cv-asignado${mio ? ' cv-asignado--mio' : ''}`}>
+            <Avatar name={asignado.username} size="xs" />{mio ? 'Vos' : asignado.username}
+        </span>
+    );
+}
+
+export default function Fila({ c, elegida, ahora, yo, onElegir }) {
     const espera = esperaMin(c, ahora);
     const examen = examenDe(c);
+    const corte = flujoCortado(c) ? (c.ejecucion ? CORTE[c.ejecucion.estado] : 'Ningún flujo arrancó') : null;
     return (
         <li>
             <button type="button" className={`cv-item${c.califica === false ? ' cv-item--apagada' : ''}`} aria-pressed={elegida} onClick={() => onElegir(c.id)}>
@@ -30,7 +43,8 @@ export default function Fila({ c, elegida, ahora, onElegir }) {
                         <span>{c.ultimo_texto || '…'}</span>
                     </span>
                     <span className="cv-item-chips">
-                        {c.paso && <Chip subtle color="var(--brand-secondary)">{rotuloPaso(c.paso)}</Chip>}
+                        {corte && <Chip subtle color={c.ejecucion?.estado === 'error' ? 'var(--error)' : 'var(--warning)'} icon={<AlertTriangle />}>{corte}</Chip>}
+                        {c.paso && <Chip subtle color="var(--info)">{rotuloPaso(c.paso)}</Chip>}
                         {espera != null && (
                             <Chip subtle color={colorEspera(espera)} icon={<Clock />} data-tip={`Espera respuesta|Desde ${hora(c.ultimo_en)}`}>
                                 espera {textoEspera(espera)}
@@ -40,6 +54,7 @@ export default function Fila({ c, elegida, ahora, onElegir }) {
                         {c.califica === true && <Chip subtle color="var(--success)">Califica</Chip>}
                         {c.califica === false && <Chip subtle color="var(--idle)">No califica</Chip>}
                     </span>
+                    <span className="cv-item-pie"><Asignado asignado={c.asignado} yo={yo} /></span>
                 </span>
             </button>
         </li>

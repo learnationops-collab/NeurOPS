@@ -71,9 +71,11 @@ export default function InboxApp() {
     };
 
     const grupos = armarMenuSesion({ user, logout, configuracion: { onClick: () => abrirConfiguracion() } });
-    const actual = SECCIONES.find((s) => s.id === seccion) || SECCIONES[0];
     const lectura = estado ? !estado.puede_editar : false;
-    const modo = estado?.modo && (MODO[estado.modo] || { label: estado.modo });
+    // El setter no ve Campañas ni el estado del motor (Santi, 27/10/2026).
+    const secciones = lectura ? SECCIONES.filter((s) => s.id !== 'campanas') : SECCIONES;
+    const actual = secciones.find((s) => s.id === seccion) || secciones[0];
+    const modo = !lectura && estado?.modo && (MODO[estado.modo] || { label: estado.modo });
 
     return (
         <>
@@ -92,16 +94,16 @@ export default function InboxApp() {
                         )} />
                     <main className="vista">
                         {!estado && <EmptyState>Cargando…</EmptyState>}
-                        {estado && seccion === 'flujos' && <Flujos puedeEditar={!lectura} />}
-                        {estado && seccion === 'campanas' && <Campanas puedeEditar={!lectura} />}
-                        {estado && seccion === 'conversaciones' && <Conversaciones />}
+                        {estado && actual.id === 'flujos' && <Flujos puedeEditar={!lectura} />}
+                        {estado && actual.id === 'campanas' && <Campanas puedeEditar={!lectura} />}
+                        {estado && actual.id === 'conversaciones' && <Conversaciones />}
                     </main>
                 </div>
                 <Toaster />
                 <Tooltip />
             </div>
             <div className="dc-shell dc-shell--embebido">
-                <DockSecciones secciones={SECCIONES} activa={seccion} onElegir={elegir} ariaLabel="Secciones del Inbox"
+                <DockSecciones secciones={secciones} activa={actual.id} onElegir={elegir} ariaLabel="Secciones del Inbox"
                     despues={<MenuSesion nombre={user?.username || ''} rol={rotuloDeSesion(user, `${rotuloDeRol(user?.role)} · Inbox`)} grupos={grupos} />} />
             </div>
         </>

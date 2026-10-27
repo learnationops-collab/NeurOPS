@@ -16,7 +16,7 @@ Reglas que garantiza:
 from datetime import timedelta
 
 from app import db
-from app.automatizaciones import campanas, registro, reparto
+from app.automatizaciones import campanas, efectos, registro, reparto
 from app.automatizaciones.modelos import AutEjecucion, AutFlujo, AutFlujoVersion, IgContacto, IgMensaje
 from app.automatizaciones.nucleo import eventos as ev
 from app.automatizaciones.nucleo import grafo as g
@@ -40,10 +40,12 @@ class Motor:
         self.transporte = transporte
         self.ahora = ahora
         self.pausar_ante_ecos = pausar_ante_ecos
+        self._entrante = None  # el mensaje del lead que se está procesando, para anotarle su efecto
 
     # --- Entrada ------------------------------------------------------------------------------
 
     def procesar(self, evento):
+        self._entrante = None
         contacto = self._contacto(evento)
         if evento.tipo == ev.ECO:
             return self._eco(contacto, evento)
@@ -153,8 +155,9 @@ class Motor:
             contenido = {**(contenido or {}), 'anuncio_id': evento.anuncio_id}
         if evento.tipo == ev.COMENTARIO:
             contenido = {'comentario_id': evento.comentario_id, 'publicacion_id': evento.publicacion_id}
-        db.session.add(IgMensaje(contacto_id=contacto.id, mid=mid, direccion=IgMensaje.ENTRANTE, origen=IgMensaje.LEAD,
-                                 texto=evento.texto, contenido=contenido, enviado_en=evento.momento))
+        self._entrante = IgMensaje(contacto_id=contacto.id, mid=mid, direccion=IgMensaje.ENTRANTE, origen=IgMensaje.LEAD,
+                                   texto=evento.texto, contenido=contenido, enviado_en=evento.momento)
+        db.session.add(self._entrante)
         # Un comentario no abre la ventana de mensajes; un DM o un botón sí.
         if evento.tipo != ev.COMENTARIO and (not contacto.ultimo_entrante_en or evento.momento > contacto.ultimo_entrante_en):
             contacto.ultimo_entrante_en = evento.momento
@@ -235,6 +238,7 @@ class Motor:
             self._guardar(contacto, {SETTER: setter.username if setter else ''})
         registro.entrada(ejecucion, self.ahora)
         self._correr(ejecucion)
+        efectos.anotar(self._entrante, ejecucion, tipo='inicio', clave=clave)
         return ejecucion
 
     def _completar_perfil(self, contacto):
@@ -262,15 +266,21 @@ class Motor:
         if pausado and cortada is None:
             return 'bot_pausado'
         self._guardar(contacto, {'ultimo_boton': boton.get('titulo')})
+
+        def anotar(ejecucion):
+            efectos.anotar(self._entrante, ejecucion, tipo='boton', boton=boton.get('titulo'), nodo=nodo_id)
+
         if abierta and abierta.version_id == version_id and abierta.nodo_actual == nodo_id \
                 and abierta.estado == AutEjecucion.ESPERANDO_RESPUESTA:
             self._avanzar(abierta, boton_id)
+            anotar(abierta)
             return 'boton'
         if cortada:
             # Sigue el mismo recorrido: conserva campaña, setter y registro para los tableros.
             contacto.bot_pausado_hasta = None
             cortada.detalle = None
             self._avanzar(cortada, boton_id)
+            anotar(cortada)
             return 'boton_retoma'
         if self._ya_respondido(contacto, version, nodo_id):
             return 'boton_usado'
@@ -278,7 +288,7 @@ class Motor:
         hacia = g.destino(version.grafo, nodo_id, boton_id)
         if hacia is None:
             return 'boton_sin_destino'
-        self._iniciar(contacto, version, nodo=hacia)
+        anotar(self._iniciar(contacto, version, nodo=hacia))
         return 'boton_reanuda'
 
     def _cortada_por_el_equipo(self, contacto, version, nodo_id):
@@ -311,10 +321,13 @@ class Motor:
                 return 'ignorado'
             self._guardar(ejecucion.contacto, {'ultimo_boton': boton.get('titulo')})
             self._avanzar(ejecucion, boton['id'])
+            efectos.anotar(self._entrante, ejecucion, tipo='boton', boton=boton.get('titulo'), nodo=nodo.get('id'))
             return 'boton_por_texto'
         if nodo.get('espera') and evento.texto:
-            self._guardar(ejecucion.contacto, {nodo['espera']['guardar_en']: evento.texto})
+            campo = nodo['espera']['guardar_en']
+            self._guardar(ejecucion.contacto, {campo: evento.texto})
             self._avanzar(ejecucion, 'respuesta')
+            efectos.anotar(self._entrante, ejecucion, tipo='respuesta', guardo={campo: evento.texto[:200]})
             return 'respuesta'
         return 'ignorado'
 

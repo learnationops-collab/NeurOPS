@@ -223,6 +223,7 @@ def listar_conversaciones():
     filas = consulta.order_by(ultimo.c.ultimo.desc()).limit(limite).all()
     ahora = servicio.ahora()
     ejecuciones = bandeja.ultimas_ejecuciones([c.id for c, _, _ in filas])
+    asignados = bandeja.asignaciones([c.id for c, _, _ in filas])
     salida = []
     for contacto, momento, cantidad in filas:
         variables = contacto.variables or {}
@@ -244,8 +245,12 @@ def listar_conversaciones():
             'califica': variables.get('_califica'),
             'flujo': ejecucion.version.flujo.nombre if ejecucion else None,
             'paso': bandeja.paso(abierta),
+            # El último recorrido, abierto o no: la bandeja marca los cortados (error, ventana vencida).
+            'ejecucion': bandeja.resumen_ejecucion(ejecucion),
+            'asignado': asignados.get(contacto.id),
         })
-    return jsonify({'conversaciones': salida, 'mediana_respuesta': bandeja.mediana_respuesta(ahora)})
+    return jsonify({'conversaciones': salida, 'mediana_respuesta': bandeja.mediana_respuesta(ahora),
+                    'medianas_setters': bandeja.medianas_por_setter(ahora)})
 
 
 @bp.route('/conversaciones/<int:contacto_id>', methods=['GET'])
@@ -255,21 +260,27 @@ def ver_conversacion(contacto_id):
         return jsonify({'message': 'Not found'}), 404
     mensajes = (IgMensaje.query.filter_by(contacto_id=contacto.id)
                 .order_by(IgMensaje.enviado_en.desc(), IgMensaje.id.desc()).limit(MENSAJES_POR_CONVERSACION).all())
+    mensajes = list(reversed(mensajes))
     recorrido = bandeja.recorrido(contacto.id)
+    elegidos = bandeja.elegidos(mensajes)
     return jsonify({
         'contacto': {
             'id': contacto.id, 'igsid': contacto.igsid, 'username': contacto.username, 'nombre': contacto.nombre,
             'variables': contacto.variables or {}, 'ultimo_entrante_en': _iso(contacto.ultimo_entrante_en),
             'bot_pausado_hasta': _iso(contacto.bot_pausado_hasta),
         },
+        'asignado': bandeja.asignaciones([contacto.id]).get(contacto.id),
         'ejecucion': recorrido[0] if recorrido else None,
         'recorrido': recorrido,
         'mensajes': [{
             'id': m.id, 'direccion': m.direccion, 'origen': m.origen, 'texto': m.texto,
             'adjuntos': [a.get('type') for a in (m.contenido or {}).get('adjuntos') or []]
             if isinstance(m.contenido, dict) else [],
-            'botones': _botones(m.contenido), 'en': _iso(m.enviado_en),
-        } for m in reversed(mensajes)],
+            'botones': _botones(m.contenido), 'en': _iso(m.enviado_en), 'nodo_id': m.nodo_id,
+            # Del bot: el botón que tocó el lead. Del lead: qué activó en el flujo (`efectos.py`).
+            'elegido': elegidos.get(m.id),
+            'efecto': (m.contenido or {}).get('efecto') if isinstance(m.contenido, dict) else None,
+        } for m in mensajes],
     })
 
 

@@ -13,8 +13,8 @@ export const inboxApi = {
     pausarFlujo: (id) => api.post(`/inbox/flujos/${id}/pausar`).then(datos),
     activarFlujo: (id) => api.post(`/inbox/flujos/${id}/activar`).then(datos),
     borrarFlujo: (id) => api.delete(`/inbox/flujos/${id}`),
-    // { conversaciones, mediana_respuesta }
-    conversaciones: (buscar) => api.get('/inbox/conversaciones', { params: buscar ? { buscar } : {} }).then(datos),
+    // { conversaciones, mediana_respuesta, medianas_setters }
+    conversaciones: (buscar, limite) => api.get('/inbox/conversaciones', { params: { ...(buscar ? { buscar } : {}), ...(limite ? { limite } : {}) } }).then(datos),
     conversacion: (id) => api.get(`/inbox/conversaciones/${id}`).then(datos),
     // { desde, hasta, campanas: [{ ..., metricas }] } (app/automatizaciones/api_campanas.py)
     campanas: (desde, hasta) => api.get('/inbox/campanas', { params: { desde, hasta } }).then(datos),

@@ -158,18 +158,36 @@
   .thalamus.inbox .pf{border-left:0;border-top:1px solid var(--border-subtle);overflow:visible}
 }
 
-/* --- Conversaciones: colas · lista · chat · ficha --- */
-.thalamus.inbox .cv-buscar.ui-entry{flex:0 1 300px;height:36px}
-.thalamus.inbox .cv{display:grid;grid-template-columns:210px 340px minmax(0,1fr) 280px;gap:var(--s3);height:var(--inbox-alto);min-height:520px}
+/* --- Conversaciones: lista · chat · ficha. En la cabecera: filtros guardados, buscador, filtro y Stats --- */
+.thalamus.inbox .cv-barra.barra{justify-content:flex-start;flex-wrap:nowrap}
+.thalamus.inbox .cv-barra .barra-der{flex-wrap:nowrap}
+.thalamus.inbox .cv-guardados.ui-select{min-width:190px;max-width:260px}
+.thalamus.inbox .cv-buscar.ui-entry{flex:0 1 260px;height:36px}
+.thalamus.inbox .cv{display:grid;grid-template-columns:360px minmax(0,1fr) 290px;gap:var(--s3);height:var(--inbox-alto);min-height:520px}
 .thalamus.inbox .cv > *{min-height:0}
 .thalamus.inbox .cv-detalle--vacio{grid-column:span 2}
-.thalamus.inbox .cv-colas{display:flex;flex-direction:column;gap:var(--s3);overflow:auto;padding:var(--s3)}
-.thalamus.inbox .cv-examenes{display:flex;flex-wrap:wrap;gap:6px}
-.thalamus.inbox .cv-examenes .ui-chip.ui-chip{height:24px;padding:0 9px;font-size:10.5px}
-.thalamus.inbox .cv-cuenta{opacity:.6;font-variant-numeric:tabular-nums}
-.thalamus.inbox .cv-mediana{margin-top:auto;display:grid;gap:2px;padding-top:var(--s3);border-top:1px solid var(--border-subtle);cursor:default}
-.thalamus.inbox .cv-mediana b{font-size:20px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--success)}
-.thalamus.inbox .cv-mediana b.mut40{font-size:13px;color:var(--text-muted-40)}
+.thalamus.inbox .cv-cuenta{opacity:.6;font-variant-numeric:tabular-nums;margin-left:4px}
+
+/* El filtro: botón de ícono con el número de filtros puestos y su panel */
+.thalamus.inbox .cv-macro{position:relative}
+.thalamus.inbox .cv-macro .cv-macro-btn--activo.ui-ibtn{color:var(--brand-secondary);border-color:var(--brand-secondary-border);background:var(--brand-secondary-surface)}
+.thalamus.inbox .cv-macro-btn{position:relative}
+.thalamus.inbox .cv-macro-n{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;display:grid;place-items:center;
+  background:var(--brand-secondary);color:var(--on-brand);font-size:10px;font-weight:900}
+.thalamus.inbox .cv-macro-pop{position:absolute;top:calc(100% + 8px);right:0;z-index:30;width:min(560px,calc(100vw - 32px));display:grid;
+  grid-template-columns:210px minmax(0,1fr);gap:var(--s4);padding:var(--s4);border-radius:20px;background:var(--bg-flotante);
+  border:1px solid var(--border-main);box-shadow:var(--shadow-main)}
+.thalamus.inbox .cv-macro-col{display:grid;gap:8px;align-content:start;min-width:0}
+.thalamus.inbox .cv-macro-chips{display:flex;flex-wrap:wrap;gap:6px}
+.thalamus.inbox .cv-macro-chips .ui-chip.ui-chip{height:26px;padding:0 10px;font-size:11px;cursor:pointer}
+.thalamus.inbox .cv-macro-pie{grid-column:1 / -1;display:flex;align-items:center;justify-content:space-between;gap:var(--s2);padding-top:var(--s3);border-top:1px solid var(--border-subtle)}
+@media (max-width:620px){.thalamus.inbox .cv-macro-pop{grid-template-columns:1fr}}
+
+/* Stats y «Guardar filtro» */
+.thalamus.inbox .cv-stats{width:min(620px,100%);display:grid;gap:var(--s4)}
+.thalamus.inbox .cv-stats-kpis.ui-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.thalamus.inbox .cv-guardar{width:min(420px,100%)}
+.thalamus.inbox .cv-guardar-form{display:grid;gap:var(--s3)}
 .thalamus.inbox .cv-lista{display:flex;flex-direction:column;overflow:hidden;padding:var(--s2)}
 .thalamus.inbox .cv-lista-cab{margin:0;padding:4px 8px 8px;font-size:11px}
 .thalamus.inbox .cv-lista ul{list-style:none;margin:0;padding:0;overflow:auto;display:grid;gap:4px;align-content:start}
@@ -190,9 +208,16 @@
 .thalamus.inbox .cv-item-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
 .thalamus.inbox .cv-item-chips .ui-chip.ui-chip{height:20px;padding:0 7px;font-size:10.5px;gap:4px}
 .thalamus.inbox .cv-item-chips .ui-chip.ui-chip svg{width:11px;height:11px}
+.thalamus.inbox .cv-item-pie{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:2px}
+.thalamus.inbox .cv-asignado{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--text-muted);white-space:nowrap}
+.thalamus.inbox .cv-asignado--mio{color:var(--brand-secondary)}
+.thalamus.inbox .cv-asignado--sin{color:var(--warning)}
+.thalamus.inbox .cv-asignado .ui-avatar.ui-avatar{width:18px;height:18px;font-size:8.5px}
 .thalamus.inbox .cv-detalle{overflow:hidden;display:flex;flex-direction:column;gap:var(--s3)}
 .thalamus.inbox .cv-chat-cab{display:flex;align-items:center;gap:var(--s3);padding-bottom:var(--s3);border-bottom:1px solid var(--border-subtle)}
 .thalamus.inbox .cv-chat-quien{display:grid;gap:2px;min-width:0}
+.thalamus.inbox .cv-chat-asignado{margin-left:auto;display:grid;justify-items:end;gap:1px;text-align:right;min-width:0}
+.thalamus.inbox .cv-chat-asignado .cv-asignado{font-size:12.5px}
 .thalamus.inbox .cv-mensajes{flex:1;min-height:0;list-style:none;margin:0;padding:0 4px 0 0;overflow:auto;display:flex;flex-direction:column;gap:8px}
 .thalamus.inbox .cv-burbuja{max-width:min(520px,80%);padding:9px 13px;border-radius:16px;font-size:13px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
 .thalamus.inbox .cv-burbuja p{margin:0}
@@ -201,7 +226,14 @@
 .thalamus.inbox .cv-burbuja--otro{background:var(--info-surface);color:var(--text-on-surface);border:1px solid var(--info-border)}
 .thalamus.inbox .cv-botones{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .thalamus.inbox .cv-botones span{padding:4px 10px;border-radius:999px;border:1px solid currentColor;font-size:12px;font-weight:700}
-.thalamus.inbox .cv-meta{display:block;margin-top:4px;font-size:10.5px;opacity:.7}
+.thalamus.inbox .cv-meta{display:flex;align-items:center;gap:4px;margin-top:4px;font-size:10.5px;opacity:.75}
+/* El botón que eligió el lead, relleno; los demás, apagados. Debajo de su respuesta, qué activó. */
+.thalamus.inbox .cv-botones--respondido span{opacity:.45}
+.thalamus.inbox .cv-botones--respondido .cv-elegido{opacity:1;display:inline-flex;align-items:center;gap:4px;background:var(--on-brand);color:var(--brand-secondary);border-color:var(--on-brand)}
+.thalamus.inbox .cv-efecto{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;max-width:min(520px,90%);margin-top:-4px;padding:3px 10px;border-radius:999px;
+  font-size:11px;font-weight:700;color:var(--success);background:var(--success-surface);border:1px solid var(--success-border)}
+.thalamus.inbox .cv-efecto svg{flex-shrink:0}
+.thalamus.inbox .cv-efecto b{color:var(--text-on-surface);font-weight:800}
 .thalamus.inbox .cv-pie{margin:0;padding-top:var(--s2);border-top:1px solid var(--border-subtle);text-align:center;font-size:11.5px}
 .thalamus.inbox .cv-ficha{display:flex;flex-direction:column;gap:var(--s3);overflow:auto}
 .thalamus.inbox .cv-datos{margin:0;display:grid;gap:6px}
@@ -214,25 +246,19 @@
 .thalamus.inbox .cv-recorrido li::before{content:'';position:absolute;left:0;top:5px;width:8px;height:8px;border-radius:50%;background:var(--c, var(--text-muted))}
 .thalamus.inbox .cv-recorrido strong{font-size:12.5px}
 
-/* Sin lugar para cuatro columnas: la ficha va debajo del chat. */
-@media (max-width: 1500px){
-  .thalamus.inbox .cv{grid-template-columns:200px 320px minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto}
-  .thalamus.inbox .cv :is(.cv-colas,.cv-lista){grid-row:span 2}
-  .thalamus.inbox .cv-detalle--vacio{grid-column:auto;grid-row:span 2}
-  .thalamus.inbox .cv-ficha{max-height:200px}
-}
-/* Las colas pasan arriba, en una fila. */
-@media (max-width: 1100px){
-  .thalamus.inbox .cv{grid-template-columns:300px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto}
-  .thalamus.inbox .cv .cv-colas{grid-column:1 / -1;grid-row:auto;flex-direction:row;flex-wrap:wrap;align-items:center;overflow:visible}
-  .thalamus.inbox .cv-colas > .t-rotulo,.thalamus.inbox .cv-mediana{display:none}
-  .thalamus.inbox .cv-colas .ui-seg--vertical.ui-seg{flex-direction:row;overflow-x:auto;max-width:100%}
+/* Sin lugar para la ficha al costado: va debajo del chat. */
+@media (max-width: 1300px){
+  .thalamus.inbox .cv{grid-template-columns:320px minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto}
   .thalamus.inbox .cv .cv-lista{grid-row:span 2}
+  .thalamus.inbox .cv-detalle--vacio{grid-column:auto;grid-row:span 2}
+  .thalamus.inbox .cv-ficha{max-height:220px}
 }
 @media (max-width: 760px){
   .thalamus.inbox .cv{grid-template-columns:minmax(0,1fr);grid-template-rows:none;height:auto}
   .thalamus.inbox .cv .cv-lista{grid-row:auto;max-height:45dvh}
   .thalamus.inbox .cv-detalle{min-height:60dvh}
   .thalamus.inbox .cv-ficha{max-height:none}
+  .thalamus.inbox .cv-barra.barra,.thalamus.inbox .cv-barra .barra-der{flex-wrap:wrap}
   .thalamus.inbox .cv-buscar.ui-entry{flex:1 1 100%}
+  .thalamus.inbox .cv-chat-asignado .t-cap{display:none}
 }
