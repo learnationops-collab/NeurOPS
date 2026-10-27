@@ -1092,3 +1092,7 @@
   - Un solo archivo de pendientes (reemplaza los de las reuniones del 24/10 y 26/10), revisado contra el código.
   - Mockup de la vista Conflictos: origen con fecha, la historia con lo que se cargó ese día y la ficha con Fulfillment. Se sube con solo los casos de Jean Carlo.
   - Datos en prod: Antonio Castro unificado en una ficha (la venta 993 queda con su agenda 6213 y sus cuotas); correo de Milagros Gamonal completado; la cuenta 504 de la Academia (Fabian La Rotta) reatada al cliente 5992; Instagram «.» borrado de dos fichas.
+- **27 de Octubre de 2026 (Seña sin acceso en la Academia: la suscripción se reenvía al vincular la cuenta)** *([subscription_sync.py](../../app/services/subscription_sync.py))*:
+  - Natalia Melgarejo pagó la seña de AL y no tenía acceso: al cargarla, su cliente tenía el mail de la agenda y no estaba vinculado a su cuenta de la Academia (creada minutos antes con otro mail). El aviso dio 404, se dio por hecho, y vincularla después no lo reenviaba.
+  - Ahora, cuando a un cliente se le cambia el alumno vinculado o el correo, sus suscripciones vuelven a quedar pendientes y el cron de la Academia las reenvía.
+  - Datos en prod: a Natalia se le reenvió su suscripción (AL de seña hasta el 03/11, venta 1002). Cruce de las 125 suscripciones vigentes contra la Academia: ningún otro caso igual (Gaby Mérida, con dos cuentas, queda en pendientes).

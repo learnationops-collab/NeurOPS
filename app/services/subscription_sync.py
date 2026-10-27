@@ -7,7 +7,8 @@ cuando acorta (una corrección o un acceso quitado). Cada `otorgar` anota la sus
 
 Lo que no llega no se pierde: cada suscripción anota hasta cuándo la Academia la tiene al día
 (`academy_synced_at`), y el cron de la Academia reenvía las que cambiaron después
-(`reenviar_pendientes`), también las que se cambiaron sin `otorgar`. El hilo no es daemon: un
+(`reenviar_pendientes`), también las que se cambiaron sin `otorgar` y las de un cliente al que se le
+vincula la cuenta de la Academia después (`_al_vincular`). El hilo no es daemon: un
 script o un worker que termina espera a que salga el aviso en vez de cortarlo.
 
 Apagado salvo `ACADEMY_SUBSCRIPTIONS_PUSH=true`: se enciende cuando la Academia tenga su
@@ -19,7 +20,7 @@ import threading
 from datetime import datetime
 
 from flask import current_app
-from sqlalchemy import event, or_, update
+from sqlalchemy import event, inspect, or_, update
 
 from app import db
 
@@ -108,7 +109,31 @@ def reenviar_pendientes(limite=20):
     return {'pendientes': len(pendientes), 'enviadas': enviadas}
 
 
+def _al_vincular(session):
+    """Un cliente al que se le vincula el alumno de la Academia o se le cambia el correo: sus
+    suscripciones vuelven a quedar pendientes. El aviso que salió antes del vínculo dio 404 y se dio
+    por hecho, y nada lo reenviaba (Natalia Melgarejo, 27/10/2026: seña sin acceso)."""
+    from app.models import Client, Subscription
+
+    clientes = [c for c in session.dirty if isinstance(c, Client) and c.id is not None
+                and (inspect(c).attrs.learnation_user_id.history.has_changes()
+                     or inspect(c).attrs.email.history.has_changes())]
+    for c in clientes:
+        filtro = Subscription.client_id == c.id
+        if c.person_uuid:
+            filtro = or_(filtro, Subscription.person_uuid == c.person_uuid)
+        with session.no_autoflush:
+            subs = session.query(Subscription).filter(filtro, Subscription.academy_synced_at.isnot(None)).all()
+        for sub in subs:
+            sub.academy_synced_at = None
+
+
 def register_subscription_sync(app):
+    @event.listens_for(db.session, 'before_flush')
+    def _vincular(session, _contexto, _instancias):
+        if activo():
+            _al_vincular(session)
+
     @event.listens_for(db.session, 'before_commit')
     def _armar(session):
         tocadas = session.info.pop(KEY_TOCADAS, [])
