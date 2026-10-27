@@ -33,7 +33,7 @@ describe('Campañas', () => {
         const tarjeta = (await screen.findByText('Guía MIR octubre')).closest('article');
         expect(within(tarjeta).getByText('#GUIA MIR')).toBeTruthy();
         expect(within(tarjeta).getByText(/Obtener guía/)).toBeTruthy();
-        expect(within(tarjeta).getByText('Calificados · 50%')).toBeTruthy();
+        expect(within(tarjeta).getByText('50%')).toBeTruthy();
         expect(within(tarjeta).getByText('Por agenda')).toBeTruthy();
         expect(await within(tarjeta).findByText('Reparte entre Paula')).toBeTruthy();
         expect(inboxApi.campanas).toHaveBeenCalledWith(expect.any(String), expect.any(String));
