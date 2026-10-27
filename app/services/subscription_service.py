@@ -2,7 +2,7 @@
 
 Reglas (Santiago, 20/10):
   · la abre la venta: una seña da 7 días; un completo, un parcial o un upsell, la duración por
-    defecto (4 meses) desde el pago;
+    defecto (120 días, no 4 meses de calendario; Santiago, 26/10/2026) desde el pago;
   · una renovación es mes a mes: la extiende 1 mes desde donde vencía (o desde el pago, si ya había
     vencido; Santiago, 22/10/2026);
   · el pago que completa una seña (completo, parcial o la cuota) la pasa a acceso completo;
@@ -24,7 +24,7 @@ from app.models import Client, Sale, Subscription, SubscriptionEvent
 from app.services.academy_access_service import AcademyAccessService, _add_months
 from app.services import subscription_sync
 
-DURACION_MESES = 4
+DURACION_DIAS = 120
 DIAS_SENA = 7
 MESES_RENOVACION = 1  # las renovaciones se pagan mes a mes
 # Lo que, sumado a una venta que era solo seña, la pasa a acceso completo.
@@ -128,10 +128,10 @@ def al_ubicar_pago(session, sale, fila, pago, abre, abierta):
         return otorgar(session, fila.client_id, slug, dia + timedelta(days=DIAS_SENA), 'alta',
                        is_deposit=True, reason='Seña: 7 días', **comun)
     if abre and pago.tipo in ('completo', 'parcial', 'upsell'):
-        return otorgar(session, fila.client_id, slug, _add_months(dia, DURACION_MESES), 'alta',
+        return otorgar(session, fila.client_id, slug, dia + timedelta(days=DURACION_DIAS), 'alta',
                        is_deposit=False, reason='Venta', **comun)
     if not abre and abierta is not None and abierta.solo_sena and pago.tipo in COMPLETAN_SENA:
-        return otorgar(session, fila.client_id, slug, _add_months(dia, DURACION_MESES), 'conversion',
+        return otorgar(session, fila.client_id, slug, dia + timedelta(days=DURACION_DIAS), 'conversion',
                        is_deposit=False, reason='La seña pasó a acceso completo', **comun)
     return None
 
@@ -153,7 +153,7 @@ def venta_que_extiende(client, slug, hasta):
         return venta
     reciente = actual is not None and not actual.is_deposit and actual.sale is not None \
         and (hoy - actual.sale.sold_at.date()).days <= DEMORA_DIAS
-    if reciente and hasta <= _add_months(hoy, DURACION_MESES):
+    if reciente and hasta <= hoy + timedelta(days=DURACION_DIAS):
         return None
     raise ValueError('Sin una venta nueva no se alarga el acceso. Para darle días sin pago, usá una '
                      'prórroga (seña o cortesía, con motivo).')

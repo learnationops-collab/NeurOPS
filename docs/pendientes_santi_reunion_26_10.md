@@ -146,6 +146,20 @@ Hecho sin commitear: campos de triage en `Appointment`, migración `c4e9a1d7f2b8
 - [ ] Indicador visual del tiempo que le queda a cada estudiante.
 - [ ] Recordatorios de pago en el perfil (tarjeta con cuotas pendientes y fecha límite) y avisos antes y después del vencimiento.
 - [ ] Caso perdido: Andrea Pérez (residencia, con grupo personal), se venció el domingo sin respuesta.
+- [ ] **Fase 2: ventas × suscripciones (chequeo del 26/10, últimos 4 meses).** Se revisaron 130 suscripciones de 124 personas. Script: `scratchpad/ventas_x_suscripciones.py` (solo lee).
+  - **Coinciden 64**: 57 justas y 7 contando prórrogas.
+  - **Acceso completo con solo la seña pagada (13)**: Katherine Sandoval, Valentina Donado, Emilia Collantes, Leslie Aguilar, David Barahona, Cynthia Vidal, Joselyne Galdamez, Lysander, Santiago Herrera, Tamara Staufert, Adrian Luna, Jorge Raúl Castillo y Alvaro Sarmiento (cancelada). Tienen unos 4 meses de acceso y un solo pago. Decidir: ¿se cobra el resto (deuda) o se corta a la semana de seña?
+  - Actividad de las 13 en la Academia (26/10): 12 tienen el objetivo «Perdido: que retome». Riesgo real de malestar si se les quita el acceso:
+    - **Medio**: Lysander (245 vistas, 12/12 lecciones, 7 sesiones, objetivo «Rescate»), Valentina Donado (12/12, 7 sesiones) y Leslie Aguilar (80 vistas, 11/12).
+    - **Bajo**: Cynthia Vidal (67 vistas, 5/12).
+    - **Ninguno**: Katherine (se dio de baja), Joselyne (quiere devolución), Adrian Luna (nunca respondió), Jorge Raúl (0 vistas), Emilia, David Barahona, Tamara y Alvaro (cancelada, ya en Learnation Course).
+    - **No cortar**: Santiago Herrera tiene un acuerdo de pago de $700 el 15/11 (onboarding del 14/09).
+  - [x] Suscripciones creadas con las fechas de los pagos (26/10, sin empujar a la Academia porque ya estaban vencidas): Paola Figueroa, Evelyn Morán, Andrea Martínez y Rodrigo Vergara (seña de 7 días); Emily (RR mensual, del 07/01 al 06/08).
+  - [ ] **Joel Almengor sin suscripción.** Paga $150 cada 15 días por Stripe (suscripción automática). Si cada pago es un mes, le corresponde acceso hasta ~30/11. Si es medio mes, hasta ~agosto. La Academia tiene su RR «expired» (asignado el 09/09 hasta el 07/01/27) y Learnation Course activo. Lleva 223 horas de estudio. Definir cuánto cubre cada pago.
+  - [x] 120 días desde el pago que completó la seña (26/10): Miguel Alva → 12/11, Greysi → 02/12, Yancarlos → 26/10, Sergio Carrillo → 05/02/27. Y `subscription_service`: la duración por defecto pasa a 120 días (`DURACION_DIAS`), no 4 meses de calendario.
+  - **Producto distinto (12)**: la venta dice un programa y la suscripción es de otro (por ejemplo, venta RR con acceso AL). La carga respetó el producto que dio la Academia. Revisar caso por caso.
+  - **Hasta +47 días sobre lo pagado (≈20)**: el acceso arrancó con el onboarding o con días bonificados por el closer (Daniel Aldana: 20 días). Aceptable.
+  - **Menos acceso que lo pagado (5)**: Miguel Alva −6, Greysi −15, Yancarlos −4, Sergio Carrillo −26 (los 4 meses se contaron desde la seña y no desde el pago que la completó) y Jennifer Guzmán (cancelada, −77).
 
 ## 7. Scale
 
