@@ -7,9 +7,14 @@ flujo ir. La vigencia es de la campaña entera, [desde, hasta).
 
 Vive en paralelo a Marketing: no crea `Ad` ni toca el mapeo de Meta ni el webhook de ManyChat. Usa la
 misma normalización que Marketing (`clave_de_palabra`) para poder cruzarse con ella el día del cambio.
+
+Una palabra vigente siempre tiene un flujo que corre (27/10/2026): la campaña vigente o futura con
+palabras no se guarda apuntando a un flujo en borrador, pausado o a ninguno, y un flujo no se pausa
+mientras lo use una (`que_lo_usan`). El 27/10 QUIERO APLICAR quedó sin flujo una noche y 14 leads no
+recibieron nada.
 """
 from app import db
-from app.automatizaciones.modelos import AutCampana, AutCampanaMeta, AutCampanaPalabra, AutCampanaSetter, AutFlujo
+from app.automatizaciones.modelos import AutCampana, AutCampanaMeta, AutCampanaPalabra, AutCampanaSetter, AutFlujo, ahora
 from app.automatizaciones.reparto import setters_activos
 from app.models.marketing import clave_de_palabra
 
@@ -23,6 +28,35 @@ class ErrorDeCampana(ValueError):
 
 def vigente(campana, momento):
     return campana.desde <= momento and (campana.hasta is None or momento < campana.hasta)
+
+
+def corre(flujo):
+    """¿El flujo atiende mensajes? Activo y con una versión publicada (lo mismo que pide el motor)."""
+    return flujo is not None and flujo.estado == AutFlujo.ACTIVO and flujo.version_publicada_id is not None
+
+
+def _sin_terminar(hasta, momento):
+    return hasta is None or hasta > momento
+
+
+def que_lo_usan(flujo, momento=None):
+    """Las campañas vigentes o futuras con palabras que llevan a ese flujo."""
+    momento = momento or ahora()
+    return [c for c in AutCampana.query.filter(AutCampana.flujo_id == flujo.id).order_by(AutCampana.id).all()
+            if c.palabras and _sin_terminar(c.hasta, momento)]
+
+
+def _exigir_flujo_que_corre(flujo_id, palabras, hasta):
+    if not palabras or not _sin_terminar(hasta, ahora()):
+        return
+    flujo = db.session.get(AutFlujo, flujo_id) if flujo_id is not None else None
+    if flujo is None:
+        raise ErrorDeCampana('Una campaña vigente con palabras clave necesita un flujo: si no, quien escriba '
+                             'la palabra no recibe nada')
+    if not corre(flujo):
+        estado = 'en borrador' if flujo.version_publicada_id is None else flujo.estado
+        raise ErrorDeCampana(f'El flujo «{flujo.nombre}» no está corriendo ({estado}): publicalo y activalo '
+                             'antes de mandarle palabras clave')
 
 
 def _se_pisan(a_desde, a_hasta, b_desde, b_hasta):
@@ -102,6 +136,7 @@ def guardar(campana, datos):
     if choques:
         detalle = ', '.join(sorted(f'{clave} ({otra.nombre})' for clave, otra in choques))
         raise ErrorDeCampana(f'Estas palabras ya están en otra campaña vigente en esas fechas: {detalle}')
+    _exigir_flujo_que_corre(flujo_id, palabras, hasta)
 
     meta = datos.get('campanas_meta')
     if meta is not None and (not isinstance(meta, list) or not all(isinstance(m, str) and m.strip() for m in meta)):

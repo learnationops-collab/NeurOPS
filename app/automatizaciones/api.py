@@ -9,7 +9,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 
 from app import db
-from app.automatizaciones import bandeja, metricas, servicio
+from app.automatizaciones import bandeja, campanas, metricas, servicio
 from app.automatizaciones.modelos import AutEjecucion, AutFlujo, IgContacto, IgMensaje
 from app.automatizaciones.nucleo import grafo as g
 from app.models.instagram import InstagramWebhookEvento
@@ -180,6 +180,11 @@ def pausar_flujo(flujo_id):
     flujo, error = _flujo_o_404(flujo_id)
     if error:
         return error
+    usan = campanas.que_lo_usan(flujo)
+    if usan and flujo.estado == AutFlujo.ACTIVO:
+        nombres = ', '.join(f'«{c.nombre}»' for c in usan)
+        return jsonify({'message': f'Lo usan campañas vigentes ({nombres}): pasá sus palabras a otro flujo '
+                                   'o terminá la campaña antes de pausarlo'}), 409
     if flujo.version_publicada_id:
         flujo.estado = AutFlujo.PAUSADO
         db.session.commit()
