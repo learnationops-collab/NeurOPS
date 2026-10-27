@@ -226,6 +226,9 @@ def create_app(config_class=Config):
     from app.api.playbook import bp as playbook_bp
     app.register_blueprint(playbook_bp, url_prefix='/api')
 
+    from app.api.conflictos import bp as conflictos_bp
+    app.register_blueprint(conflictos_bp, url_prefix='/api')
+
     # Politica de acceso de la herramienta interna: quien puede llamar a las rutas que antes respondian a
     # cualquiera en internet (ver app/access_policy.py). Una sola guarda; lo que no esta en su tabla no se toca.
     from app.access_policy import guardia

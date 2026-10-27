@@ -24,6 +24,7 @@ import SetterEspacioPage from './pages/setter/SetterEspacioPage';
 import CloserWorkflowPage from './pages/closer/CloserWorkflowPage';
 import OperationsPage from './pages/admin/database/OperationsPage';
 import OpsRuta from './pages/operations/OpsRuta';
+import ConflictosPage from './pages/conflictos/ConflictosPage';
 import BookingPage from './pages/public/BookingPage';
 import PublicCloserReportPage from './pages/public/PublicCloserReportPage';
 import PublicTriageReportPage from './pages/public/PublicTriageReportPage';
@@ -222,6 +223,17 @@ function App() {
               }
             />
             <Route path="/setter/mis-datos" element={<Navigate replace to="/setter/deck?step=datos" />} />
+            {/* Conflictos: casos de datos que no cierran. La dirección y Operaciones ven todos; el closer, los suyos. */}
+            <Route
+              path="/conflictos"
+              element={
+                <ProtectedRoute roles={['admin', 'operator', 'director_comercial', 'closer']}>
+                  <MainLayout>
+                    <ConflictosPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/admin/ventas"
               element={

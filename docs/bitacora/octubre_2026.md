@@ -1138,3 +1138,7 @@
   - Mazo del closer y del triage: una C/D desplazada lleva la etiqueta «Reagendar: horario tomado» (antes solo llegaba el aviso), y cada tarjeta muestra su segmento y puntos («A · +4 pts», con color por segmento).
   - Ficha: el segmento y sus puntos en la cabecera, después de Fuente.
   - Pestaña Fulfillment, en el orden en que la usa el closer: lo que pagó, suscripción y ventas de Work (vencimiento y deuda), desempeño, comentarios de la Academia, cuenta y otros accesos. Antes la suscripción y las ventas estaban al fondo.
+- **27 de Octubre de 2026 (Vista Conflictos)** *([conflictos_service.py](../../app/services/conflictos_service.py), [conflictos.py](../../app/api/conflictos.py), [ConflictosPage.jsx](../../frontend/src/pages/conflictos/ConflictosPage.jsx), migración `f7b2d4e6a8c1`)*:
+  - Tabla `conflictos` y página `/conflictos`: los casos de datos que no cierran, con tipo, persona, de dónde vienen (fecha y venta o pago), qué no cierra, monto y responsable. La dirección y Operaciones ven todos; cada closer, los suyos. «Conflictos» aparece en el menú de sesión solo si hay casos abiertos.
+  - Al elegir un caso, «Qué pasó»: sus ventas, pagos y agendas en orden, con lo que se cargó ese día (programa, tipo de pago, monto, método, correo, Instagram, closer). «Ver ficha y Fulfillment» abre la ficha del lead en la pestaña Fulfillment.
+  - Se cierra como resuelto o descartado con una nota obligatoria, que queda en la bitácora de la ficha. Se puede reabrir.
