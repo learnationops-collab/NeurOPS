@@ -1512,7 +1512,12 @@ def get_closer_deck():
             query = query.filter(Appointment.start_time >= start_date)
 
     if current_user.role != 'admin':
-        query = query.filter_by(closer_id=current_user.id)
+        if step == 'confirmations':
+            # El triage también confirma los A y B de los closers (plan_segmentos_triage.md §8.5).
+            from app.services.triage_service import filtro_confirmaciones
+            query = query.filter(filtro_confirmaciones(current_user))
+        else:
+            query = query.filter_by(closer_id=current_user.id)
 
     appointments = query.order_by(Appointment.start_time.asc()).all()
 
@@ -1633,7 +1638,8 @@ def get_closer_deck_counts():
     )
     
     if current_user.role != 'admin':
-        query_confirmations = query_confirmations.filter_by(closer_id=current_user.id)
+        from app.services.triage_service import filtro_confirmaciones
+        query_confirmations = query_confirmations.filter(filtro_confirmaciones(current_user))
         query_calls = query_calls.filter_by(closer_id=current_user.id)
 
     # "Confirmadas" dentro del propio pool de confirmaciones: una cita puede tener

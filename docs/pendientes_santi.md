@@ -12,7 +12,7 @@ Lo que tiene fecha o gente esperando.
 ## Triage
 Pasar al lead del triage al closing.
 
-- [ ] Confirmar A/B al pasar a closing (plan §8.5, [plan_segmentos_triage.md](plan_segmentos_triage.md)).
+- [x] Confirmar A/B al pasar a closing (plan §8.5, [plan_segmentos_triage.md](plan_segmentos_triage.md)).
 
 ## Agendas y reparto
 Cómo se reparten las agendas entre closers.

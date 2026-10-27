@@ -286,3 +286,17 @@ def _leads(agendas):
         'fecha_seguimiento': a.fecha_seguimiento,
         'nota': notas.get((a.id, 'nota_llamada')), 'nota_para_closer': notas.get((a.id, 'nota_para_closer')),
     } for a in sorted(agendas, key=lambda a: a.start_time)]
+
+
+# --- Confirmar los A y B de closing (plan_segmentos_triage.md §8.5) -------------------------------
+
+def filtro_confirmaciones(usuario):
+    """Qué agendas confirma esta cuenta en su mazo: las suyas y, si es del triage, también las A y B de
+    los closers, para que la asistencia de los A se parezca a la de hoy con Jean Carlo."""
+    from sqlalchemy import and_, or_
+
+    propias = Appointment.closer_id == usuario.id
+    if not usuario.tiene_rol('triage'):
+        return propias
+    closers = db.session.query(User.id).filter(User.role == 'closer')
+    return or_(propias, and_(Appointment.segmento.in_(('A', 'B')), Appointment.closer_id.in_(closers)))

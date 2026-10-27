@@ -1422,6 +1422,9 @@ const CloserWorkflowPage = () => {
         const telefono = (a.phone || '').trim();
         const etiquetas = [
             isPendingReferral && { texto: 'Contactar y acordar fecha', tono: 'var(--cl-lila)' },
+            // El triage confirma los A y B de los closers (plan_segmentos_triage.md §8.5).
+            esTriage && a.closer_id && a.closer_id !== user?.id
+                && { texto: `${a.segmento || ''} de ${a.closer_name}`.trim(), tono: 'var(--cl-info)', title: 'Confirmala antes de su llamada con el closer' },
             a.examen && { texto: a.examen, tono: 'var(--cl-lila)' },
             (phase === 'call' || phase === 'call_done') && a.closer_result && a.closer_result !== 'Pendiente'
                 && { texto: a.closer_result, tono: 'var(--cl-magenta)', title: ayudaDeResultado(a.closer_result) },
