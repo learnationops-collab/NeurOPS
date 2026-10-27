@@ -1072,3 +1072,6 @@
   - Migración `c4e8a2f6b1d9`: `tag_groups` (grupo, p. ej. «Temperatura»; `exclusive` = una sola por conversación) y `tags` genérica (`target_type` + `target_id`, hoy `ig_contact`). Se ponen y sacan desde el chat y entran en los filtros.
   - Etapas en el grafo del flujo (campo «Etapa» en el inspector): agrupan pasos y al entrar graban su número como la acción «Etapa».
   - El setter edita solo los textos de un flujo publicado y publica una versión nueva desde la publicada; los textos se copian al borrador.
+- **27 de Octubre de 2026 (Inbox · una palabra clave vigente siempre lleva a un flujo que corre)** *([campanas.py](../../app/automatizaciones/campanas.py), [api.py](../../app/automatizaciones/api.py))*:
+  - La campaña vigente o futura con palabras clave no se guarda apuntando a un flujo en borrador, pausado o a ninguno, y no se puede pausar un flujo que use una de ellas (409 con las campañas). La madrugada del 27/10 QUIERO APLICAR y APLICAR quedaron fuera de toda campaña (cambio directo a la base, sin pasar por la app) y 14 mensajes no recibieron flujo; se restauraron en «Winners Reels MX + PE».
+  - Datos en prod: GUÍA COLOMBIA y GUÍA MIR pasaron de «LM Funnel · Obtener guía» a «Winners Reels MX + PE», la campaña dueña de sus ad sets en Meta.
