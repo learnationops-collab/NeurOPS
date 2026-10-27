@@ -25,13 +25,12 @@ Cómo se reparten las agendas entre closers.
 ## Cobros y deudores
 Que el closer cobre las cuotas y que los datos de venta lleguen limpios.
 
-- [ ] Cobros del closer en Work: deudores del mes y vencidos, primero los atrasados, filtro opcional por monto. Ver antes si Deudores de la Academia ya alcanza.
+- [x] Cobros del closer en Work: deudores del mes y vencidos, primero los atrasados, filtro opcional por monto. Ver antes si Deudores de la Academia ya alcanza.
 - [ ] Las cuotas de Nerina, Seba y otros closers que ya no están pasan a Jean Carlo (las de Marlon se quedan con él).
 - [ ] Revisar con Jean Carlo los errores de lógica que encuentre y corregirlos de raíz.
 - [ ] Desactivar los flows automáticos que se pisan con el contacto manual.
 - [x] Formulario de venta: que no se reusen los datos del anterior ni se acepte su nombre o «no tengo» como Instagram; avisar si el correo o el Instagram son de otra ficha.
 - [ ] Vista Conflictos ([mockup](mockups/conflictos.html)) con los casos de Jean Carlo: Andres Simon (AL 697, posible upsell sobre RR, cuota de $500), Yrein (reembolso, v57525), Saúl Logreira ($250 que no aparece en la pasarela), María Alejandra Villa y Natalia Salazar (v57629 sin cobro), Sureiny Marrero (suscripción de $150 falló el 20/08), Nadia Rodríguez ($2.000 el 08/08 y $500 el 13/08 sin venta).
-- [ ] Parser de Hotmart en la pestaña Diferencias (`conciliacion_csv`): el alias de bruto toma «Precio Total».
 
 ## Vencimientos y suscripciones
 El acceso del alumno, su renovación y sus pagos.

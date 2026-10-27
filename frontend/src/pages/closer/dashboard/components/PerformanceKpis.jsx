@@ -6,7 +6,10 @@ import { money } from '../performanceUtils';
 import { tip, destino } from '../metricSources';
 import MetricaClicable from '../../../../components/dashboard/MetricaClicable';
 
-const KpiCard = ({ label, value, hero, sm, current, previous, invert, note, warning, metric, irA, bruto }) => (
+// A quién cobrar: Deudores de la Academia (el closer ve los suyos, primero los atrasados).
+const DEUDORES_URL = 'https://academy.thelearnation.com/staff/deudores';
+
+const KpiCard = ({ label, value, hero, sm, current, previous, invert, note, warning, metric, irA, bruto, enlace }) => (
     <Card
         variant="surface"
         padding={sm ? 'p-5' : 'p-6'}
@@ -27,6 +30,8 @@ const KpiCard = ({ label, value, hero, sm, current, previous, invert, note, warn
             {/* Solo texto corto y accionable queda siempre visible (p. ej. "$X vencidos") — el resto
                 de la explicación (qué cuenta, por qué es histórico, etc.) ya vive en el tooltip. */}
             {note && <span className="text-[10px] font-bold text-amber-400">{note}</span>}
+            {enlace && <a href={enlace.href} target="_blank" rel="noopener noreferrer"
+                className="text-[10px] font-bold text-primary hover:underline">{enlace.texto}</a>}
         </div>
     </Card>
 );
@@ -50,7 +55,8 @@ const PerformanceKpis = ({ current, previous, deuda, irA }) => {
             <KpiCard metric="ticket_promedio" label="Ticket promedio" value={money(k.ticket_promedio)} current={k.ticket_promedio} previous={pk?.ticket_promedio} irA={irA} />
             <KpiCard metric="deuda_total_pendiente" label="Deuda total pendiente" value={money(k.deuda_total_pendiente ?? deuda)}
                 note={k.deuda_vencida > 0 ? `${money(k.deuda_vencida)} vencidos` : null}
-                warning={k.deuda_vencida > 0} irA={irA} />
+                warning={k.deuda_vencida > 0} irA={irA}
+                enlace={{ href: DEUDORES_URL, texto: 'Ver a quién cobrar →' }} />
         </div>
     );
 };
