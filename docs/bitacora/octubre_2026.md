@@ -1117,3 +1117,6 @@
   - El JWT de la sesión ya no viaja en la URL: la vista previa de reportes usa un token de dos minutos que solo sirve para eso (`/auth/preview-token`), la API ya no acepta `?token=` y la pestaña de «Simular» lo pasa en el fragmento (`#`), que no llega al servidor ni al Referer.
   - Las respuestas 500 ya no devuelven el texto de la excepción (66, una con el traceback entero): se registra y llega un mensaje genérico (`error_interno`). Los mensajes de validación (400, 409, 422) siguen igual.
   - La imagen corre con un usuario sin privilegios (`app`), no como root.
+- **27 de Octubre de 2026 (Seguridad: CSP y frame-ancestors)** *([app/api/__init__.py](../../app/api/__init__.py))*:
+  - Nadie de afuera puede mostrar Work en un iframe (clickjacking), salvo la reserva pública (`/book/...`), que puede embeberse desde `*.thelearnation.com`. No se pudo revisar el WordPress de las landings (bloquea consultas automáticas), por eso la reserva queda permitida; la Academia y Leadership no embeben Work.
+  - CSP con `object-src 'none'` y `base-uri 'self'`. Los scripts no se restringen: un CSP de scripts mal medido rompe pantallas sin aviso.

@@ -18,9 +18,19 @@ def add_header(response):
     return response
 
 
+# Quién puede mostrar Work dentro de un iframe: nadie de afuera (clickjacking), salvo la reserva pública, que
+# una landing de Learnation puede embeber. Sin restringir scripts: la SPA y lo que carga de afuera seguirían
+# andando igual, y un CSP de scripts mal medido rompe pantallas sin aviso.
+EMBEBIBLES = ('/book/',)
+ANCESTROS_DE_LANDING = "'self' https://*.thelearnation.com https://thelearnation.com"
+
+
 @bp.after_app_request
 def cabeceras_de_seguridad(response):
-    # frame-ancestors y CSP todavía no: la reserva puede estar embebida en alguna landing.
+    from flask import request
+    ancestros = ANCESTROS_DE_LANDING if request.path.startswith(EMBEBIBLES) else "'self'"
+    response.headers.setdefault('Content-Security-Policy',
+                                f"frame-ancestors {ancestros}; object-src 'none'; base-uri 'self'")
     response.headers.setdefault('X-Content-Type-Options', 'nosniff')
     response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
     response.headers.setdefault('Strict-Transport-Security', 'max-age=31536000')
