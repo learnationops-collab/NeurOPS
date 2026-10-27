@@ -1096,3 +1096,7 @@
   - Natalia Melgarejo pagó la seña de AL y no tenía acceso: al cargarla, su cliente tenía el mail de la agenda y no estaba vinculado a su cuenta de la Academia (creada minutos antes con otro mail). El aviso dio 404, se dio por hecho, y vincularla después no lo reenviaba.
   - Ahora, cuando a un cliente se le cambia el alumno vinculado o el correo, sus suscripciones vuelven a quedar pendientes y el cron de la Academia las reenvía.
   - Datos en prod: a Natalia se le reenvió su suscripción (AL de seña hasta el 03/11, venta 1002). Cruce de las 125 suscripciones vigentes contra la Academia: ningún otro caso igual (Gaby Mérida, con dos cuentas, queda en pendientes).
+- **27 de Octubre de 2026 (Triage · el reporte diario que pidió Marlon)** *([triage_service.py](../../app/services/triage_service.py), [TriageMetricas.jsx](../../frontend/src/pages/triage/components/TriageMetricas.jsx), [ResultadoTriage.jsx](../../frontend/src/components/ficha/tabs/ResultadoTriage.jsx))*:
+  - Métricas con los nombres de Marlon: presentaciones, cierres, no cierres, seguimiento y perdido del low ticket. Debajo, el reporte lead por lead del período (con «Hoy», el del día): asistencia, si califica, cómo quedó el low ticket y las notas (para el closer y por qué no califica).
+  - Un lead que no califica exige la nota de por qué.
+  - Datos en prod: la Sesión de Aceleración dura 30 min para Juliana y Dari (`sesiones` de su persona en Team).

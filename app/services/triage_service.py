@@ -23,7 +23,7 @@ ASISTENCIAS = ('asistio', 'no_show', 'cancelo')
 _SEGMENTO = ('segmento', 'segmento_puntos', 'segmento_preguntas', 'segmento_confianza', 'segmento_version')
 _LOW_TICKET_TEXTO = {'no_pitch': 'no se le pitcheó el low ticket', 'cerrado': 'cerró el low ticket',
                      'no_cerrado': 'no cerró el low ticket', 'seguimiento': 'low ticket en seguimiento',
-                     'descartado': 'lead descartado'}
+                     'descartado': 'lead perdido'}
 
 
 def es_de_triage(appt):
@@ -76,8 +76,11 @@ def _validar(appt, datos):
             raise _error('Dejale una nota al closer.', 'nota_para_closer')
         if not datos.get('closer_id') or not datos.get('fecha'):
             raise _error('Elegí el closer y el horario de la llamada.', 'fecha')
-    elif datos.get('low_ticket') not in LOW_TICKET:
-        raise _error('Elegí qué pasó con el low ticket.', 'low_ticket')
+    else:
+        if not (datos.get('nota') or '').strip():
+            raise _error('Dejá una nota de por qué no califica.', 'nota')
+        if datos.get('low_ticket') not in LOW_TICKET:
+            raise _error('Elegí qué pasó con el low ticket.', 'low_ticket')
 
 
 def _pasar_al_closer(appt, datos, usuario):
@@ -261,4 +264,25 @@ def metricas(desde, hasta, solo=None):
     return {
         'desde': desde.isoformat(), 'hasta': hasta.isoformat(), 'total': total,
         'por_persona': [{'id': p.id, 'nombre': p.username, **por_id[p.id]} for p in personas],
+        'leads': _leads(agendas),
     }
+
+
+def _leads(agendas):
+    """El reporte del período, lead por lead: cómo quedó y sus dos notas (la de la llamada y la del closer).
+    Las notas salen del log en una sola consulta."""
+    from app.models import LeadEventLog
+
+    notas = {}
+    for e in (LeadEventLog.query.filter(LeadEventLog.origen == 'appointment',
+                                        LeadEventLog.origen_id.in_([a.id for a in agendas] or [0]),
+                                        LeadEventLog.action_type.in_(('nota_llamada', 'nota_para_closer')))
+              .order_by(LeadEventLog.created_at, LeadEventLog.id)):
+        notas[(e.origen_id, e.action_type)] = e.description
+    return [{
+        'id': a.id, 'cliente': a.client.full_name if a.client else None, 'client_id': a.client_id,
+        'hora': _iso(a.start_time), 'triage': a.closer.username if a.closer else None,
+        'asistencia': a.closer_result, 'calificacion': a.triage_calificacion, 'low_ticket': a.triage_low_ticket,
+        'fecha_seguimiento': a.fecha_seguimiento,
+        'nota': notas.get((a.id, 'nota_llamada')), 'nota_para_closer': notas.get((a.id, 'nota_para_closer')),
+    } for a in sorted(agendas, key=lambda a: a.start_time)]

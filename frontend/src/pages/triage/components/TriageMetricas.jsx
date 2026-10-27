@@ -1,11 +1,12 @@
 // «Métricas» del espacio del triage: el embudo de sus llamadas, calculado de lo que marca en cada
 // lead (GET /api/triage/metricas). Agendas → confirmadas → asistencias → calificados / descalificados
-// → pitch del low ticket → cómo quedó.
+// → presentaciones del low ticket → cómo quedó. Abajo, el reporte lead por lead con sus notas: es el
+// reporte diario que pidió Marlon (27/10), con «Hoy».
 
 import { useEffect, useState } from 'react';
 import api from '../../../services/api';
-import { Bars, EmptyState, FieldError, Grid, Kpi, Panel, Segmented, SkeletonKpi, SkeletonPanel, Skeleton } from '../../../components/standard';
-import { localDateFromNow, localToday } from '../../../utils/datetime';
+import { Bars, Chip, EmptyState, FieldError, Grid, Kpi, Panel, Segmented, SkeletonKpi, SkeletonPanel, Skeleton } from '../../../components/standard';
+import { formatAgendaDateTime, localDateFromNow, localToday } from '../../../utils/datetime';
 
 const PERIODOS = [
     { value: '0', label: 'Hoy' },
@@ -24,12 +25,56 @@ const embudo = (m) => [
 ];
 
 const lowTicket = (m) => [
-    { key: 'pitch', label: 'Pitch del low ticket', value: m.pitch_low_ticket, detail: pct(m.pitch_low_ticket, m.descalificados) },
-    { key: 'cerrado', label: 'Cerró', value: m.cerrado, detail: pct(m.cerrado, m.pitch_low_ticket), color: 'var(--success)' },
-    { key: 'no_cerrado', label: 'No cerró', value: m.no_cerrado, detail: pct(m.no_cerrado, m.pitch_low_ticket), color: 'var(--error)' },
+    { key: 'pitch', label: 'Presentaciones', value: m.pitch_low_ticket, detail: pct(m.pitch_low_ticket, m.descalificados) },
+    { key: 'cerrado', label: 'Cierres', value: m.cerrado, detail: pct(m.cerrado, m.pitch_low_ticket), color: 'var(--success)' },
+    { key: 'no_cerrado', label: 'No cierres', value: m.no_cerrado, detail: pct(m.no_cerrado, m.pitch_low_ticket), color: 'var(--error)' },
     { key: 'seguimiento', label: 'Seguimiento', value: m.seguimiento, detail: pct(m.seguimiento, m.pitch_low_ticket), color: 'var(--info)' },
-    { key: 'descartado', label: 'Descartado', value: m.descartado, detail: pct(m.descartado, m.pitch_low_ticket), color: 'var(--idle)' },
+    { key: 'descartado', label: 'Perdido', value: m.descartado, detail: pct(m.descartado, m.pitch_low_ticket), color: 'var(--idle)' },
 ];
+
+const RESULTADO = {
+    calificado: ['Califica', 'var(--success)'],
+    descalificado: ['No califica', 'var(--warning)'],
+};
+const LOW_TICKET = {
+    no_pitch: 'Sin presentación', cerrado: 'Cerró el low ticket', no_cerrado: 'No cerró',
+    seguimiento: 'Seguimiento', descartado: 'Perdido',
+};
+
+const asistenciaDe = (l) => {
+    const r = (l.asistencia || '').toLowerCase();
+    if (r === 'show up') return null;
+    if (r === 'no show') return ['No se presentó', 'var(--error)'];
+    if (r.startsWith('cancel')) return ['Canceló', 'var(--idle)'];
+    return ['Sin reportar', 'var(--idle)'];
+};
+
+/** El reporte lead por lead: cómo quedó cada llamada y las notas (para el closer o por qué no califica). */
+const Reporte = ({ leads }) => (
+    <Panel>
+        <h3 className="t-sm">{`Reporte · ${leads.length} ${leads.length === 1 ? 'llamada' : 'llamadas'}`}</h3>
+        <div style={{ display: 'grid' }}>
+            {leads.map((l) => {
+                const asis = asistenciaDe(l);
+                const res = RESULTADO[l.calificacion];
+                return (
+                    <div key={l.id} style={{ display: 'grid', gap: 'var(--s1)', padding: 'var(--s3) 0', borderTop: '1px solid var(--border-subtle)' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s2)', alignItems: 'center' }}>
+                            <span className="t-sm" style={{ fontWeight: 700 }}>{l.cliente || `Agenda ${l.id}`}</span>
+                            <span className="t-cap mut">{formatAgendaDateTime(l.hora)}{l.triage ? ` · ${l.triage}` : ''}</span>
+                            {asis && <Chip color={asis[1]} subtle>{asis[0]}</Chip>}
+                            {res && <Chip color={res[1]} subtle>{res[0]}</Chip>}
+                            {l.calificacion === 'calificado' && <Chip subtle>Pasado al closer</Chip>}
+                            {l.low_ticket && <Chip subtle>{LOW_TICKET[l.low_ticket]}{l.low_ticket === 'seguimiento' && l.fecha_seguimiento ? ` · ${l.fecha_seguimiento}` : ''}</Chip>}
+                        </div>
+                        {l.nota_para_closer && <small className="t-cap" style={{ whiteSpace: 'pre-wrap' }}>{`Para el closer: ${l.nota_para_closer}`}</small>}
+                        {l.nota && <small className="t-cap mut" style={{ whiteSpace: 'pre-wrap' }}>{l.nota}</small>}
+                    </div>
+                );
+            })}
+        </div>
+    </Panel>
+);
 
 const Cargando = () => (
     <Skeleton label="Cargando las métricas del triage">
@@ -73,8 +118,8 @@ export default function TriageMetricas() {
                             <Kpi label="Calificados" value={pct(m.calificados, m.asistencias)}>
                                 <small>{`${m.calificados} pasados al closer · ${m.pasadas_asistieron} ya asistieron con él`}</small>
                             </Kpi>
-                            <Kpi label="Low ticket cerrado" value={pct(m.cerrado, m.pitch_low_ticket)}>
-                                <small>{`${m.cerrado} de ${m.pitch_low_ticket} pitcheados`}</small>
+                            <Kpi label="Cierres del low ticket" value={pct(m.cerrado, m.pitch_low_ticket)}>
+                                <small>{`${m.cerrado} de ${m.pitch_low_ticket} presentaciones`}</small>
                             </Kpi>
                         </Grid>
                         <Panel>
@@ -85,6 +130,7 @@ export default function TriageMetricas() {
                             <h3 className="t-sm">Descalificados: low ticket de 100 USD</h3>
                             <Bars variant="rows" items={lowTicket(m)} label="Low ticket" />
                         </Panel>
+                        {datos.leads?.length > 0 && <Reporte leads={datos.leads} />}
                     </>
                 )}
             </div>

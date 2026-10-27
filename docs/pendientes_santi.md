@@ -9,17 +9,15 @@ Archivo único de pendientes. Junta lo abierto de las reuniones del 24/10 y del 
 - [ ] **Facu**: cuando termine sus agendas (la última es la 6956, mar 27/10 21:30 AR), bajarle el acceso de closer y sacarlo de Personas de Thalamus.
 - [ ] **Borrar las agendas ficticias del onboarding del triage**: 6984 (Juliana) y 6985 (Dari), del 26/10 a las 19:30 y 19:45 AR, con sus clientes [SIM] 10088 y 10089 y sus personas (`55358282-…` y `bae37449-…`). Si alguna probó «calificado», borrar también la agenda de closing que creó.
 - [ ] **QUIERO APLICAR del 27/10 sin respuesta**: pasárselos a los setters (`ig_contactos` 1241, 1242, 1250, 1256; revisar 1263 `rosmeryatao`).
-- [ ] **Inbox de setters, probar y subir**: las partes 1 y 2 están en `main`; las partes 3 (etiquetas, migración `c4e8a2f6b1d9`) y 4 (etapas y editor de mensajes) están solo en `develop`. Probarlas en el servidor de prueba y pasarlas a `main`. Ver [plan_inbox_setters.md](plan_inbox_setters.md).
 
 ## 2. Triage
 
 - [ ] Confirmar A/B al pasar a closing (plan §8.5). Lo demás de «Pasar a closing» ya está: crea la agenda, deja la nota y muestra los horarios libres del closer.
-- [ ] Preguntas abiertas para Marlon (del onboarding del 26/10):
-  - Duración y nombre de la sesión de triage (¿«sesión de diagnóstico»?). Con eso se arma su evento propio.
-  - Al calificar: ¿agendan ellas en un horario de Jean Carlo o le pasan el link al lead?
-  - Reporte diario y «cerrar el día»: qué datos cargan y qué preguntas responden.
-  - Cobertura: Juliana puede 3 h por día y buscaban 6. ¿Alcanza? ¿Hay hora límite? Dari toma sesiones fuera de horario (22 h) cuando ve potencial: ¿se permite?
-  - Low ticket de 100: ¿lo ofrecen ellas? ¿El seguimiento por mensaje es de ellas?
+- [ ] Dari: dejar su horario en 4 h por día (Marlon, 27/10). Hoy tiene 5 de lunes a viernes (11–12 y 15–19, Caracas) y 3 el sábado. Lo ajusta ella desde Configuración › Disponibilidad. Juliana ya tiene 3 h.
+- [ ] Preguntas que Marlon no respondió el 27/10 (respondió: tracker, agendan ellas en el calendario de Jean Carlo, 30 min, Juliana 3 h y Dari 4 h):
+  - Nombre del evento de la sesión de triage (¿«sesión de diagnóstico»?). Hoy usa el de la Sesión de Aceleración, con 30 min para ellas.
+  - Dari toma sesiones fuera de horario (22 h) cuando ve potencial: ¿se permite?
+  - El seguimiento del low ticket por mensaje, ¿es de ellas?
   - Seguimientos viejos de Jean Carlo que les aparecen en el panel: ¿se quedan, se reasignan o se cierran?
   - Antelación mínima de 2 h para que un A/B desplace a un C/D: ¿le parece bien?
 
@@ -58,6 +56,8 @@ El alumno ya ve cuándo vence o venció su acceso y agenda la renovación con Je
 - [ ] Si no agendan la renovación, Dari los contacta (primero los activos), con el motivo «entrevista final para contar su experiencia».
 - [ ] Seña sin completar con actividad: acceso hasta el lunes 02/11 (Lysander, Valentina, Leslie y Cynthia). Decidir qué pasa después. Santiago Herrera, hasta su pago acordado del 15/11.
 - [ ] Caso perdido: Andrea Pérez (residencia, con grupo personal), se venció sin respuesta.
+- [x] **Aviso de suscripción marcado como enviado sin aplicarse** (27/10). Natalia Melgarejo: la seña se cargó cuando su cliente tenía el mail de la agenda y no estaba vinculado a su cuenta de la Academia (713, creada 6 min antes con otro mail); el aviso dio 404, se dio por hecho y vincularla después no lo reenviaba. Arreglado: al cambiar `learnation_user_id` o el mail de un cliente, sus suscripciones vuelven a pendientes (`subscription_sync._al_vincular`). Cruce de las 125 vigentes contra la Academia: no hay otro caso igual.
+- [ ] **Gaby Mérida Ramírez (cliente 8464) tiene dos cuentas en la Academia**: 594 (yonofuisoytete@gmail.com, con su seña y la prórroga de Darian hasta el 03/11) y 614 (dragabrielameridar@gmail.com, solo el curso gratuito). Work la tiene vinculada a la 614 desde el 27/10 ~19:19, justo después de la prórroga. Su acceso está en la 594. Con el arreglo de arriba, el próximo cambio de vínculo le reenvía la suscripción a la cuenta vinculada. Decidir cuál es la buena y unificar.
 
 ## 6. Scale
 
@@ -78,10 +78,8 @@ El alumno ya ve cuándo vence o venció su acceso y agenda la renovación con Je
 - [ ] Acomodo automático de palabras por ad set de Meta: contar la entrada por el `anuncio_id` del DM y mover la palabra a la campaña dueña de su campaña de Meta cuando el otro lado ya no tiene anuncios activos (solo entre campañas con el mismo flujo). La sincronización hoy solo trae anuncios que ya gastaron.
 - [ ] Palabras huérfanas reales (HOJAS, LECCIÓN, TRÍADA, GUÍA CHILE, MÉTODO y otras): ver con Marketing si siguen con anuncios activos y, si sí, crearles campaña.
 - [x] **Bandeja estilo Kommo** (27/10, `7c2ae66e`, en main): tres etapas por conversación, sin leer, filtros nuevos, Embudo, notas, tareas, reasignar, variables editables, respuestas rápidas, pasos del flujo desde el rayito y biblioteca de audios (en la base).
-- [ ] Probar en el servidor de pruebas la bandeja estilo Kommo como setter y como admin (etapas, filtros, notas, tareas, Embudo, audios).
 - [ ] **EN ESPERA (proyecto futuro, hasta que se decida activar el corte de Kommo) · Corte de Kommo: escribir desde Work.** No se arranca antes de esa decisión. Falta: enviar texto con `HUMAN_AGENT` fuera de las 24 h (el check «Pausar el bot al enviar» ya está en la caja), mandar audios de la biblioteca (necesita una URL pública para Meta: hoy se sirven solo con sesión) y que la app de Work sea la predeterminada en Mensajería avanzada. Después, pasar a los 2 setters con una semana en paralelo.
-- [ ] Bandeja: el tramo «agendamiento» se completa cruzando el Instagram del cliente de la agenda con el usuario de la conversación; revisar con datos reales si alcanza o hace falta un vínculo más firme (persona).
-- [ ] **EN ESPERA (mismo proyecto futuro: depende de escribir desde Work) · Tracking directo del link de agenda** (idea de Santi, 27/10): cuando se escriba desde Work, el link de agenda que sale de una conversación lleva su id (p. ej. `?c=<ig_contactos.id>`). Con eso: «Link enviado» se marca solo al mandarlo, se ve si lo abrió, y la agenda queda atada a la conversación sin cruzar por usuario de Instagram (reemplaza el cruce de arriba y alimenta la atribución venta → agenda → conversación). Va después del corte de Kommo.
+- [ ] **EN ESPERA (mismo proyecto futuro: depende de escribir desde Work) · Tracking directo del link de agenda** (idea de Santi, 27/10): cuando se escriba desde Work, el link de agenda que sale de una conversación lleva su id (p. ej. `?c=<ig_contactos.id>`). Con eso: «Link enviado» se marca solo al mandarlo, se ve si lo abrió, y la agenda queda atada a la conversación sin cruzar por usuario de Instagram (hoy el tramo «agendamiento» cruza por ese usuario; alimenta la atribución venta → agenda → conversación). Va después del corte de Kommo.
 
 ## 8. Academia
 
@@ -94,7 +92,6 @@ El alumno ya ve cuándo vence o venció su acceso y agenda la renovación con Je
 
 - [ ] Unificar las tablas de comentarios (closers, setters, Dari, etc.). Los comentarios de la Academia ya se ven en la pestaña Fulfillment de la ficha (`d65f0ef6`).
 - [ ] Dejar `mario@neurocogniciones.com` como único correo de Mario y sacar el viejo, que sigue apareciendo, por ejemplo en «Responsable» (está en los datos, no en el código).
-- [ ] Revisar que no se haya roto nada en Personas con los cambios de Mario (pasó lo anterior a «heredado»).
 - [ ] Que todos puedan crear sesiones desde Leadership.
 
 ## 10. Seguridad y errores

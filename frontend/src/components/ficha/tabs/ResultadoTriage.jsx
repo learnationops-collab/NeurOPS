@@ -25,7 +25,7 @@ const LOW_TICKET = [
   { value: 'cerrado', label: 'Cerró' },
   { value: 'no_cerrado', label: 'No cerró' },
   { value: 'seguimiento', label: 'Seguimiento' },
-  { value: 'descartado', label: 'Descartado' },
+  { value: 'descartado', label: 'Perdido' },
 ];
 const ETIQUETA = Object.fromEntries([...ASISTENCIA, ...CALIFICACION, ...LOW_TICKET].map((o) => [o.value, o.label]));
 
@@ -176,7 +176,7 @@ export default function ResultadoTriage({ ficha, onAccion, puedeEditar = true })
   const descalifica = asistencia === 'asistio' && calificacion === 'descalificado';
   const listo = asistencia && (asistencia !== 'asistio' || (califica
     ? closerId && cuando && notaCloser.trim()
-    : descalifica && lowTicket && (lowTicket !== 'seguimiento' || fechaSeg)));
+    : descalifica && nota.trim() && lowTicket && (lowTicket !== 'seguimiento' || fechaSeg)));
 
   const guardar = async (e) => {
     e.preventDefault();
@@ -234,8 +234,9 @@ export default function ResultadoTriage({ ficha, onAccion, puedeEditar = true })
       )}
 
       {asistencia && (
-        <Campo etiqueta="Nota (opcional)" htmlFor="triage-nota">
-          <TextArea id="triage-nota" value={nota} onChange={(e) => setNota(e.target.value)} />
+        <Campo etiqueta={descalifica ? 'Por qué no califica' : 'Nota (opcional)'} htmlFor="triage-nota">
+          <TextArea id="triage-nota" value={nota} onChange={(e) => setNota(e.target.value)}
+            placeholder={descalifica ? 'Qué dijo del dinero, qué le ofreciste y cómo quedó' : undefined} />
         </Campo>
       )}
 
