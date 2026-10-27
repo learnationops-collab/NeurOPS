@@ -12,6 +12,7 @@ from flask import request, jsonify
 from flask_login import login_required
 from sqlalchemy import or_, func
 
+from app.api.errores import error_interno
 from app.models import db, FinancialAgenda, User, Client, Appointment
 from app.decorators import admin_required
 from app.services.fuente_service import FUENTES_CANONICAS
@@ -163,7 +164,7 @@ def bulk_update_financial_agendas():
     except Exception as e:
         db.session.rollback()
         logger.error(f"[BULK AGENDAS] Error aplicando la edición masiva: {e}")
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 
     return jsonify({
         "message": f"{actualizadas} agenda(s) actualizada(s)",

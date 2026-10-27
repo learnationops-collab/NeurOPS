@@ -4,6 +4,7 @@ Se cuelga del blueprint de `setter.py` (se importa al final de ese archivo).
 """
 from flask import request, jsonify
 from flask_login import current_user
+from app.api.errores import error_interno
 from app import db
 from app.models import DailyReportAnswer, SetterDailyStats, ROLE_SETTER
 from app.decorators import role_required
@@ -185,4 +186,4 @@ def delete_daily_report(report_id):
         return jsonify({"message": "Reporte eliminado"}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"message": f"Error al eliminar: {str(e)}"}), 500
+        return error_interno(e, 'Error al eliminar', clave='message')

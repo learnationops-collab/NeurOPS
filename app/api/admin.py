@@ -1,5 +1,6 @@
 from flask import request, jsonify
 from flask_login import login_required, current_user
+from app.api.errores import error_interno
 from app.api import bp
 from app.services.user_service import UserService
 from app.services.financial_service import FinancialService
@@ -494,7 +495,7 @@ def bulk_delete_legacy_users():
         }), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "message": f"Error al eliminar usuarios: {str(e)}"}), 500
+        return error_interno(e, 'Error al eliminar usuarios', clave='message')
 
 @bp.route('/admin/leads/search', methods=['GET'])
 @login_required
@@ -1001,7 +1002,7 @@ def test_2chat_integration():
         response = TwoChatService.send_message(to_number, message, from_number=from_number)
         return jsonify({"message": "Message sent successfully", "response": response}), 200
     except Exception as e:
-        return jsonify({"message": f"Failed to send message: {str(e)}"}), 500
+        return error_interno(e, 'Failed to send message', clave='message')
 
 # --- Academia (Learnation) ---
 # Ver docs/integracion_learnation_api.md — vinculación de productos NeurOPS (AL/RR/SI) con
@@ -1392,7 +1393,7 @@ def manage_closer_aliases():
             return jsonify({"message": "Alias creado con éxito", "alias": alias.to_dict()}), 201
         except Exception as e:
             db.session.rollback()
-            return jsonify({"error": str(e)}), 500
+            return error_interno(e)
             
     # GET
     aliases = CloserAlias.query.all()
@@ -1410,7 +1411,7 @@ def delete_closer_alias(id):
         return jsonify({"message": "Alias eliminado con éxito"}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 
 @bp.route('/admin/bitacora', methods=['GET'])
 @login_required
@@ -1429,7 +1430,7 @@ def get_bitacora():
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
     except Exception as e:
-        return jsonify({"error": f"Error al leer la bitácora: {str(e)}"}), 500
+        return error_interno(e, 'Error al leer la bitácora')
         
     pattern = r"(^-\s*\*\*(?P<dia>\d+)\s+de\s+(?P<mes>[a-zA-Z]+)\s+de\s+(?P<anio>\d{4})\*\*:\s*)"
     matches = list(re.finditer(pattern, content, re.MULTILINE))

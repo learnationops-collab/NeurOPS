@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from app.api.errores import error_interno
 from app import db
 from datetime import datetime
 from sqlalchemy import func
@@ -199,7 +200,7 @@ def submit_triage_tracker():
         return jsonify({"message": f"Reporte Tracker de {triage_name} guardado exitosamente"}), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 
 
 @bp.route('/tracker', methods=['GET'])
@@ -510,7 +511,7 @@ def merge_clients():
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error al fusionar clientes: {e}")
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 
 
 @bp.route('/qualified-forms/<int:client_id>', methods=['PUT'])

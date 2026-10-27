@@ -1,7 +1,7 @@
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import CloserReportsTable from './CloserReportsTable';
 import SetterReportsTable from './SetterReportsTable';
 
@@ -58,22 +58,6 @@ describe('Reportes de closers', () => {
         expect(screen.queryByText('Total pendiente (a hoy)')).toBeNull();
         expect(vistaPrevia()).toBeNull();
         expect(reenviar()).toBeTruthy();
-    });
-
-    describe('vista previa', () => {
-        const abrir = vi.fn();
-        beforeEach(() => { vi.stubGlobal('open', abrir); });
-        afterEach(() => { vi.unstubAllGlobals(); abrir.mockReset(); });
-
-        it('la dirección la abre en otra pestaña con su token', async () => {
-            sesion.role = 'director_comercial';
-            window.localStorage.setItem('auth_token', 'tk-direccion');
-            await montar(CloserReportsTable, { closers: [] });
-
-            fireEvent.click(vistaPrevia());
-
-            expect(abrir).toHaveBeenCalledWith('/api/public/closer-reports/31/preview?token=tk-direccion', '_blank');
-        });
     });
 });
 

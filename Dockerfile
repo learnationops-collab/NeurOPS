@@ -69,6 +69,12 @@ RUN rm -rf frontend
 # Flask expects them in ../frontend/dist (relative to app/) -> /app/frontend/dist
 COPY --from=frontend_builder /app_build/dist /app/frontend/dist
 
+# Sin root (auditoría de seguridad, 27/10/2026): si alguien explota la app, no es dueño del contenedor.
+# Chromium escribe en /tmp y en su HOME. Si se le monta un volumen de Railway (entra como root), hace falta
+# RAILWAY_RUN_UID=0 o darle permisos a la carpeta.
+RUN useradd --create-home --uid 1000 app && chown -R app:app /app
+USER app
+
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8080

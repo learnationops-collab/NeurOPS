@@ -202,7 +202,7 @@ const TeamManagementPage = ({ embebido = false }) => {
             const res = await api.post('/auth/impersonate', { user_id: targetUser.id, isolated: true, ...(rol ? { role: rol } : {}) });
             const { user: impersonatedUser, token } = res.data;
             const params = new URLSearchParams({ token, u: JSON.stringify(impersonatedUser), next: destino || roleLandingPath(impersonatedUser.role) });
-            if (newTab) newTab.location.href = `/session-entry?${params.toString()}`;
+            if (newTab) newTab.location.href = `/session-entry#${params.toString()}`;
             else alert('El navegador bloqueó la pestaña nueva. Habilita las ventanas emergentes para este sitio e intenta de nuevo.');
         } catch (err) {
             if (newTab) newTab.close();

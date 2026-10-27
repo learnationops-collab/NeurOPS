@@ -1,4 +1,5 @@
 from flask import request, jsonify
+from app.api.errores import error_interno
 from app.models import db, User
 from datetime import datetime, date, timedelta
 from . import bp
@@ -19,7 +20,7 @@ def get_active_triage():
             for t in triages
         ]), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 
 @bp.route('/public/triage-report/prefill', methods=['GET'])
 def prefill_triage_report():
@@ -169,7 +170,7 @@ def submit_public_triage_report():
         return jsonify({"message": f"Reporte de {triage_name} guardado exitosamente"}), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 
 
 def _trigger_triage_report_webhook(report):

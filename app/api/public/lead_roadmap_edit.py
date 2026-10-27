@@ -1,6 +1,7 @@
 """Edicion desde el roadmap del lead: guardar la ficha del cliente y relacionar una venta o agenda a un instagram."""
 from flask import request, jsonify
 from flask_login import current_user
+from app.api.errores import error_interno
 from app import db
 from app.models import Client
 from app.models.financial import FinancialSale, FinancialAgenda
@@ -122,7 +123,7 @@ def update_client_roadmap():
         db.session.rollback()
         import logging
         logging.getLogger(__name__).error(f"Error al guardar calificación del lead: {e}")
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 
 @bp.route('/public/lead-roadmap/relate-event', methods=['POST'])
 def relate_event_roadmap():
@@ -194,4 +195,4 @@ def relate_event_roadmap():
         return jsonify({"message": f"Evento {event_type} relacionado con éxito a @{ig_norm}"}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)

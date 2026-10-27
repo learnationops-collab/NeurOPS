@@ -1,6 +1,7 @@
 from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
+from app.api.errores import error_interno
 from app import db
 from app.models import BugReport, BugReportMessage, STATUS_VALUES, REPORT_TYPES
 import logging
@@ -71,7 +72,7 @@ def create_bug_report():
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error al crear reporte de bug: {str(e)}")
-        return jsonify({"message": f"Error al crear el reporte: {str(e)}"}), 500
+        return error_interno(e, 'Error al crear el reporte', clave='message')
 
 
 @bp.route('/bug-reports/mine', methods=['GET'])
@@ -140,7 +141,7 @@ def update_bug_report_status(report_id):
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error al actualizar estado del reporte {report_id}: {str(e)}")
-        return jsonify({"message": f"Error al actualizar: {str(e)}"}), 500
+        return error_interno(e, 'Error al actualizar', clave='message')
 
 
 @bp.route('/bug-reports/<int:report_id>/reopen', methods=['POST'])
@@ -175,7 +176,7 @@ def reopen_bug_report(report_id):
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error al reabrir el reporte {report_id}: {str(e)}")
-        return jsonify({"message": f"Error al reabrir: {str(e)}"}), 500
+        return error_interno(e, 'Error al reabrir', clave='message')
 
 
 @bp.route('/bug-reports/<int:report_id>/messages', methods=['GET'])
@@ -237,4 +238,4 @@ def create_bug_report_message(report_id):
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error al agregar mensaje al reporte {report_id}: {str(e)}")
-        return jsonify({"message": f"Error al enviar el mensaje: {str(e)}"}), 500
+        return error_interno(e, 'Error al enviar el mensaje', clave='message')

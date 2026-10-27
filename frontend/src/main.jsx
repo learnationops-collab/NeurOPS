@@ -13,8 +13,9 @@ console.log('Frontend Version: 2024-02-04 JWT Patch v2');
 // comparte entre TODAS las pestañas) antes de montar React, para que AuthContext los
 // encuentre ahí desde su primerísimo render sin parpadeos ni carreras de useEffect. El
 // token se saca de la URL de inmediato para no dejarlo visible en el historial del navegador.
+// El token y el usuario viajan en el fragmento (#), que no llega al servidor ni sale en el Referer.
 if (window.location.pathname === '/session-entry') {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(window.location.hash.slice(1) || window.location.search);
     const token = params.get('token');
     const userRaw = params.get('u');
     if (token && userRaw) {

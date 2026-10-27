@@ -1,4 +1,5 @@
 from flask import request, jsonify, render_template
+from app.api.errores import error_interno
 from app.models import db, User
 from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL
 from flask_login import current_user
@@ -23,7 +24,7 @@ def get_active_closers():
             for c in closers
         ]), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 
 
 @bp.route('/public/closer-report', methods=['POST'])
@@ -125,7 +126,7 @@ def submit_public_closer_report():
         db.session.rollback()
         import traceback
         traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 
     # Discord separado para no comprometer el guardado si falla
     try:
@@ -679,26 +680,8 @@ def preview_closer_report_discord(report_id):
     if current_user.is_authenticated:
         user = current_user
     else:
-        token = request.args.get('token')
-        if token:
-            user_id = User.verify_auth_token(token)
-            if user_id:
-                user = User.query.get(user_id)
-                # Un token valido con current_user anonimo es, casi siempre, el de una cuenta DESACTIVADA (el
-                # request_loader ya lee `?token=` y la rechaza por eso). Aca tampoco entra.
-                if user is not None and not user.is_active:
-                    user = None
-
-            # Soporte de compatibilidad en desarrollo local (DEBUG) si el ID de admin no existe en SQLite
-            if not user and (current_app.config.get('DEBUG') or current_app.debug):
-                try:
-                    import jwt
-                    # Decodificar para asegurar que sea un token firmado con la misma SECRET_KEY
-                    jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
-                    # En local asignamos el primer administrador disponible de forma transparente
-                    user = User.query.filter_by(role='admin').first()
-                except Exception as e:
-                    print(f"DEBUG PREVIEW BYPASS ERROR: {e}")
+        # Un token de vista previa de dos minutos (`/auth/preview-token`), no el de la sesión.
+        user = User.de_vista_previa(request.args.get('token'))
 
     # Solo la direccion: `role` es el rol ACTIVO (el loader lo fija con el claim `active_role` del token).
     if not user or user.role not in ROLES_DIRECCION:
@@ -737,7 +720,7 @@ def resend_closer_report_discord(report_id):
         _trigger_closer_report_discord(report)
         return jsonify({"message": "Reporte reenviado a Discord exitosamente"}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 
 
 # Resultados con los que el prefill del reporte diario da una llamada por atendida. 'archivada sin

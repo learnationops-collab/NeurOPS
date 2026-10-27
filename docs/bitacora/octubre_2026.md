@@ -1112,3 +1112,8 @@
 - **27 de Octubre de 2026 (Seguridad: el motor de tablas ya no filtra datos del equipo)** *([alcance.py](../../app/services/tablas/alcance.py), [motor.py](../../app/services/tablas/motor.py))*:
   - Fuera de la dirección, una medición agrupada era de todo el equipo salvo que agrupara por un dato con nombre de personal: agrupar por un texto libre (notas, objeciones, examen) devolvía los valores de todos, y filtrar por el email de alguien y contar en el equipo servía de oráculo.
   - Ahora es de todo el equipo solo si agrupa y filtra por categorías cerradas (un usuario, una fecha, un sí/no, programa, estado, tipo, etapa, segmento...). Si no, se mide sobre sus filas. Vale para Learnito, las habilidades y Tablas.
+- **27 de Octubre de 2026 (Seguridad: los menores de la auditoría)** *([user.py](../../app/models/user.py), [auth.py](../../app/api/auth.py), [errores.py](../../app/api/errores.py) [NEW], [vistaPrevia.js](../../frontend/src/utils/vistaPrevia.js) [NEW], [Dockerfile](../../Dockerfile))*:
+  - Cambiar la clave revoca todo: los JWT y la sesión (también la cookie «remember») llevan una huella de la clave. Las sesiones abiertas antes de esto piden iniciar sesión una vez.
+  - El JWT de la sesión ya no viaja en la URL: la vista previa de reportes usa un token de dos minutos que solo sirve para eso (`/auth/preview-token`), la API ya no acepta `?token=` y la pestaña de «Simular» lo pasa en el fragmento (`#`), que no llega al servidor ni al Referer.
+  - Las respuestas 500 ya no devuelven el texto de la excepción (66, una con el traceback entero): se registra y llega un mensaje genérico (`error_interno`). Los mensajes de validación (400, 409, 422) siguen igual.
+  - La imagen corre con un usuario sin privilegios (`app`), no como root.

@@ -1,4 +1,5 @@
 from flask import request, jsonify
+from app.api.errores import error_interno
 from app import db
 from app.models import FinancialSale, Client
 from app.api.public import bp
@@ -364,4 +365,4 @@ def update_client_follow_up():
             }), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"Error al actualizar base de datos: {str(e)}"}), 500
+        return error_interno(e, 'Error al actualizar base de datos')

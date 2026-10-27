@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_login import current_user
+from app.api.errores import error_interno
 from app import db
 from app.models import DailyReportQuestion, SetterDailyStats, ROLE_SETTER
 from app.decorators import role_required
@@ -14,9 +15,7 @@ def get_setter_questions():
         questions = DailyReportQuestion.query.filter_by(role='setter', is_active=True).order_by(DailyReportQuestion.order).all()
         return jsonify([{"id": q.id, "text": q.text, "type": q.question_type} for q in questions]), 200
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"message": str(e), "trace": traceback.format_exc()}), 500
+        return error_interno(e, clave='message')
 
 def _get_setter_stages_ordered():
     from app.models import Pipeline, PipelineStage
@@ -349,7 +348,7 @@ def submit_daily_report():
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        return jsonify({"message": f"Error al guardar el reporte: {str(e)}"}), 500
+        return error_interno(e, 'Error al guardar el reporte', clave='message')
 
     # Discord separado para no comprometer el guardado si falla
     try:

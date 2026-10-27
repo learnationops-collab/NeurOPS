@@ -1,6 +1,6 @@
 """Vista previa y reenvio a Discord de los reportes diarios de closers y setters.
 
-La tabla de reportes abre la vista previa en una pestaña nueva con el JWT en `?token=` (sin cabecera) y
+La tabla de reportes abre la vista previa en una pestaña nueva con un token de vista previa en `?token=` (sin cabecera) y
 reenvia con un POST normal. Los dos endpoints validan el rol en la propia vista: no estan en
 app/access_policy.py.
 
@@ -57,8 +57,9 @@ def discord(monkeypatch):
 
 
 def vista_previa(client, tipo, reporte, user, **claims):
-    """La pide como la abre la tabla: pestaña nueva, el JWT en `?token=` y ninguna cabecera."""
-    return client.get(f'/api/public/{tipo}-reports/{reporte.id}/preview?token={user.get_auth_token(**claims)}')
+    """La pide como la abre la tabla: pestaña nueva, el token de vista previa en `?token=` y ninguna cabecera."""
+    token = user.get_auth_token(expires_in=120, purpose='preview', **claims)
+    return client.get(f'/api/public/{tipo}-reports/{reporte.id}/preview?token={token}')
 
 
 def reenviar(client, tipo, reporte, headers=None):

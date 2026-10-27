@@ -1,4 +1,5 @@
 from datetime import datetime
+import hashlib
 import secrets
 import time
 import jwt
@@ -43,8 +44,11 @@ def _esta_desactivado(user):
 
 @login.user_loader
 def load_user(id):
-    user = User.query.get(int(id))
-    if _esta_desactivado(user):
+    # La sesión guarda «id:huella» (`User.get_id`): una sesión o cookie «remember» de antes de cambiar la clave
+    # ya no entra. Una sin huella (anterior al 27/10/2026) tampoco: vuelve a iniciar sesión una vez.
+    uid, _, huella = str(id).partition(':')
+    user = User.query.get(int(uid)) if uid.isdigit() else None
+    if _esta_desactivado(user) or user is None or not secrets.compare_digest(huella, user.huella()):
         return None
     if user is not None:
         # Flujo de cookie: el rol activo vive en la sesión (el de un token manda en el otro loader).
@@ -58,15 +62,14 @@ def load_user_from_request(request):
     token = None
     if auth_header:
         token = auth_header.replace('Bearer ', '', 1)
-    else:
-        token = request.args.get('token')
 
     if token:
         try:
             payload = User.decode_auth_token(token)
-            if payload:
+            # Un token de un solo uso (la vista previa de un reporte) no es una sesión.
+            if payload and not payload.get('purpose'):
                 user = User.query.get(payload.get('id'))
-                if _esta_desactivado(user):
+                if _esta_desactivado(user) or (user and not secrets.compare_digest(str(payload.get('pw') or ''), user.huella())):
                     return None
                 if user:
                     user.activar_rol(payload.get('active_role'))
@@ -198,8 +201,15 @@ class User(UserMixin, db.Model):
         principal): el token puede traer cualquier cosa, así que SIEMPRE se valida acá."""
         self._rol_activo = rol if rol and rol != self._role and rol in self.roles else None
 
+    def huella(self):
+        """Cambia cuando cambia la clave: los tokens y las sesiones la llevan, así que cambiarla los revoca."""
+        return hashlib.sha256(f"{self.password_hash or ''}|{current_app.config['SECRET_KEY']}".encode()).hexdigest()[:16]
+
+    def get_id(self):
+        return f'{self.id}:{self.huella()}'
+
     def get_auth_token(self, expires_in=86400, **extra_claims):
-        payload = {'id': self.id, 'exp': time.time() + expires_in}
+        payload = {'id': self.id, 'exp': time.time() + expires_in, 'pw': self.huella()}
         payload.update(extra_claims)
         return jwt.encode(
             payload,
@@ -222,6 +232,19 @@ class User(UserMixin, db.Model):
     def verify_auth_token(token):
         payload = User.decode_auth_token(token)
         return payload.get('id') if payload else None
+
+    @staticmethod
+    def de_vista_previa(token):
+        """El usuario de un token de vista previa (`/auth/preview-token`, dos minutos), con su rol activo; o None.
+        Así el JWT de la sesión no viaja en la URL."""
+        payload = User.decode_auth_token(token) if token else None
+        if not payload or payload.get('purpose') != 'preview':
+            return None
+        user = User.query.get(payload.get('id'))
+        if _esta_desactivado(user) or user is None or not secrets.compare_digest(str(payload.get('pw') or ''), user.huella()):
+            return None
+        user.activar_rol(payload.get('active_role'))
+        return user
 
     # Relationships are now defined in Appointment model for better singular access
     availability = db.relationship('Availability', backref='closer', lazy='dynamic', cascade="all, delete-orphan")

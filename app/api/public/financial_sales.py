@@ -1,5 +1,6 @@
 from flask import request, jsonify, current_app
 from flask_login import login_required
+from app.api.errores import error_interno
 from app.models import db, FinancialSale, ExcludedSale, FinancialAgenda
 from app.decorators import admin_required
 from app.services.commission_service import cash_neto
@@ -206,7 +207,7 @@ def receive_financial_sales():
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"[FINANCIAL] Database commit error: {e}")
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 
 # POST /public/financial-sales/new (el alta manual de una venta desde el Registro de Ventas) se
 # retiró el 10/10/2026: su modal no lo abría nada desde que el botón pasó a navegar a otra ruta, y
@@ -362,7 +363,7 @@ def update_financial_sale(sale_id):
         return jsonify({"message": "Venta actualizada correctamente", "sale": s_dict}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 
 @bp.route('/public/financial-sales/<int:sale_id>', methods=['DELETE'])
 def delete_financial_sale(sale_id):
@@ -383,7 +384,7 @@ def delete_financial_sale(sale_id):
         return jsonify({"message": "Venta excluida correctamente de la base de datos local"}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 
 @bp.route('/public/financial-sales', methods=['GET'])
 def get_financial_sales():
@@ -786,7 +787,7 @@ def resend_financial_sale_webhook(sale_id):
         return jsonify({"message": "Webhook reenviado a n8n con exito", "status": "success"}), 200
     except Exception as e:
         current_app.logger.error(f"[N8N WEBHOOK RESEND] Error al reenviar: {e}")
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 
 # Tope de filas que se empujan a Google Sheets por lote. La propagacion corre en
 # segundo plano (ver `_propagar_lote_a_sheets`), asi que no bloquea la respuesta,
@@ -950,7 +951,7 @@ def bulk_update_financial_sales():
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 
 
 @bp.route('/public/financial-sales/<int:sale_id>/toggle-payroll-exclusion', methods=['POST'])

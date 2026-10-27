@@ -1,4 +1,5 @@
 from flask import request, jsonify, render_template_string
+from app.api.errores import error_interno
 from app.models import db, User
 from app.models.user import ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL, ROLE_SETTER
 from datetime import datetime, date, timedelta
@@ -20,7 +21,7 @@ def get_active_setters():
             for s in setters
         ]), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 
 @bp.route('/public/setter-questions', methods=['GET'])
 def get_public_setter_questions():
@@ -30,7 +31,7 @@ def get_public_setter_questions():
         questions = DailyReportQuestion.query.filter_by(role='setter', is_active=True).order_by(DailyReportQuestion.order).all()
         return jsonify([{"id": q.id, "text": q.text, "type": q.question_type} for q in questions]), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 
 def _setter_del_pedido(valor):
     """El setter de un pedido sobre reportes, y el error si no corresponde: `(id, None)` o `(None, respuesta)`.
@@ -308,7 +309,7 @@ def submit_public_setter_report():
         db.session.rollback()
         import traceback
         traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 
 @bp.route('/public/setter-report/prefill', methods=['GET'])
 def prefill_public_setter_report():
@@ -1491,23 +1492,8 @@ def preview_setter_report_discord(report_id):
     if current_user.is_authenticated:
         user = current_user
     else:
-        token = request.args.get('token')
-        if token:
-            user_id = User.verify_auth_token(token)
-            if user_id:
-                user = User.query.get(user_id)
-                # Un token valido con current_user anonimo es, casi siempre, el de una cuenta DESACTIVADA (el
-                # request_loader ya lee `?token=` y la rechaza por eso). Aca tampoco entra.
-                if user is not None and not user.is_active:
-                    user = None
-
-            if not user and (current_app.config.get('DEBUG') or current_app.debug):
-                try:
-                    import jwt
-                    jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
-                    user = User.query.filter_by(role='admin').first()
-                except Exception as e:
-                    print(f"DEBUG PREVIEW BYPASS ERROR: {e}")
+        # Un token de vista previa de dos minutos (`/auth/preview-token`), no el de la sesión.
+        user = User.de_vista_previa(request.args.get('token'))
 
     # Solo la direccion: `role` es el rol ACTIVO (el loader lo fija con el claim `active_role` del token).
     if not user or user.role not in ROLES_DIRECCION:
@@ -1553,7 +1539,7 @@ def resend_setter_report_discord(report_id):
         _trigger_setter_report_webhook(stat)
         return jsonify({"message": "Reporte reenviado a Discord exitosamente"}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 
 
 # ============================================================

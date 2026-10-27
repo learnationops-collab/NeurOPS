@@ -41,7 +41,7 @@ export const simularEnPestanaNueva = async (userId, destino = null, rol = null) 
         const { user, token } = res.data;
         if (!pestana) throw new Error('El navegador bloqueó la pestaña nueva. Habilitá las ventanas emergentes para este sitio.');
         const params = new URLSearchParams({ token, u: JSON.stringify(user), next: destino || roleLandingPath(user.role) });
-        pestana.location.href = `/session-entry?${params.toString()}`;
+        pestana.location.href = `/session-entry#${params.toString()}`;
     } catch (err) {
         pestana?.close();
         throw err;

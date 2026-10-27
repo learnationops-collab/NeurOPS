@@ -1,6 +1,7 @@
 """Atribucion manual de ventas y agendas sin anuncio (UnattributedLeadsPage). Las rutas viven sobre `bp`."""
 # pyrefly: ignore [missing-import]
 from flask import request, jsonify
+from app.api.errores import error_interno
 from app.models import db
 from flask_login import current_user
 from app.services import agenda_contacto_service
@@ -129,7 +130,7 @@ def force_manual_attribution():
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error de base de datos en atribucion manual: {str(e)}")
-        return jsonify({"error": f"Error interno al guardar: {str(e)}"}), 500
+        return error_interno(e, 'Error interno al guardar')
 
 
 @bp.route('/public/marketing/unattributed-leads', methods=['GET'])
@@ -469,5 +470,5 @@ def force_manual_attribution_agenda():
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error de base de datos en atribucion de agenda: {str(e)}")
-        return jsonify({"error": f"Error interno al guardar: {str(e)}"}), 500
+        return error_interno(e, 'Error interno al guardar')
 

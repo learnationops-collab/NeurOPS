@@ -1,6 +1,7 @@
 from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
+from app.api.errores import error_interno
 from app import db
 from app.models import (
     User, PlaybookRoadmap, PlaybookModule, PlaybookLesson, PlaybookQuestion, PlaybookOption,
@@ -208,7 +209,7 @@ def create_lesson():
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error al crear lección: {str(e)}")
-        return jsonify({"message": f"Error al crear la lección: {str(e)}"}), 500
+        return error_interno(e, 'Error al crear la lección', clave='message')
 
 
 @bp.route('/playbook/lessons/<int:lesson_id>/admin', methods=['GET'])
@@ -259,7 +260,7 @@ def update_lesson(lesson_id):
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error al actualizar lección {lesson_id}: {str(e)}")
-        return jsonify({"message": f"Error al actualizar: {str(e)}"}), 500
+        return error_interno(e, 'Error al actualizar', clave='message')
 
 
 @bp.route('/playbook/lessons/<int:lesson_id>', methods=['DELETE'])
@@ -405,7 +406,7 @@ def create_quick_lesson():
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error al crear lección rápida: {str(e)}")
-        return jsonify({"message": f"Error al guardar la lección: {str(e)}"}), 500
+        return error_interno(e, 'Error al guardar la lección', clave='message')
 
 
 @bp.route('/playbook/admin/overview', methods=['GET'])

@@ -1,4 +1,5 @@
 from flask import request, jsonify
+from app.api.errores import error_interno
 from app import db
 from app.models import Client, Appointment, SurveyAnswer, SurveyQuestion, User
 from app.models.financial import FinancialSale, FinancialAgenda
@@ -454,4 +455,4 @@ def get_lead_roadmap():
     except Exception as e:
         import logging
         logging.error(f"Error en get_lead_roadmap: {e}", exc_info=True)
-        return jsonify({"error": f"Error al procesar los datos del lead: {str(e)}"}), 500
+        return error_interno(e, 'Error al procesar los datos del lead')

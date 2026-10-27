@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
+from app.api.errores import error_interno
 from app.models import db, User
 
 bp = Blueprint('comments', __name__)
@@ -46,7 +47,7 @@ def add_comment():
         return jsonify(lead_log_service.a_dict(entrada)), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 
 @bp.route('/users', methods=['GET'])
 @login_required

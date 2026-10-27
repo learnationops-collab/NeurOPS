@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
+import { abrirVistaPrevia } from '../../utils/vistaPrevia';
 import { useAuth } from '../../contexts/AuthContext';
 import {
     Search, Trash2, Edit3, Loader2, Calendar,
@@ -341,10 +342,7 @@ const SetterReportsTable = ({ setters }) => {
                                                 <>
                                                     {esDireccion && (
                                                         <button 
-                                                            onClick={() => {
-                                                                const token = localStorage.getItem('auth_token');
-                                                                window.open(`/api/public/setter-reports/${r.id}/preview?token=${token}`, '_blank');
-                                                            }} 
+                                                            onClick={() => abrirVistaPrevia(`/api/public/setter-reports/${r.id}/preview`).catch(() => alert('No se pudo abrir la vista previa.'))} 
                                                             className="p-2 bg-violet-600/20 text-violet-400 border border-violet-600/30 rounded-lg hover:bg-violet-600 hover:text-white transition-colors cursor-pointer" 
                                                             title="Vista Previa de Discord"
                                                         >

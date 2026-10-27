@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 import json
 import pytz
 from flask_login import login_required, current_user
+from app.api.errores import error_interno
 from app.services.closer_service import CloserService
 from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, WeeklyAvailability, Event, Client, SurveyAnswer, SurveyQuestion, FeatureToggle
 from app.decorators import role_required
@@ -626,7 +627,7 @@ def register_sale():
         return jsonify({"message": "Venta registrada con éxito"}), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 @bp.route('/appointments/<int:id>', methods=['PATCH'])
 @login_required
 def update_appointment(id):
@@ -992,7 +993,7 @@ def add_lead_comment(id):
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 
     return jsonify({"message": "Comentario agregado", "comment": {
         "id": entrada.id,
@@ -1887,7 +1888,7 @@ def send_daily_report():
         try:
             pending = CloserService.get_previous_days_pending(current_user.id, day_local)
         except Exception as e:
-            return jsonify({"error": f"Error al validar pendientes de días anteriores: {str(e)}"}), 500
+            return error_interno(e, 'Error al validar pendientes de días anteriores')
         if pending['total'] > 0:
             return jsonify({
                 "error": "Tenés tareas pendientes de días anteriores — resolvelas antes de enviar el reporte.",
@@ -1897,7 +1898,7 @@ def send_daily_report():
     try:
         computed = CloserService.compute_daily_report_fields(current_user.id, day_local)
     except Exception as e:
-        return jsonify({"error": f"Error al calcular el reporte: {str(e)}"}), 500
+        return error_interno(e, 'Error al calcular el reporte')
 
     # "Pedidos" no tiene ninguna señal automática confiable en el sistema (a diferencia de
     # "Concretados": un referido real, con datos, que efectivamente entró como agenda) — se
@@ -1939,7 +1940,7 @@ def send_daily_report():
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"Error al guardar el reporte: {str(e)}"}), 500
+        return error_interno(e, 'Error al guardar el reporte')
 
     try:
         from app.api.public.closer import _trigger_closer_report_discord
@@ -1985,7 +1986,7 @@ def process_closer_card(appt_id):
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        return jsonify({"message": f"Error al guardar: {str(e)}"}), 500
+        return error_interno(e, 'Error al guardar', clave='message')
     # «No va a pagar» da de baja, y la baja se le avisa a la Academia (cierra el proceso, no corta
     # el acceso): después del commit, igual que en la ficha (`_con_accesos_de_bajas`).
     from app.services import academy_payment_status, momentum_academia
@@ -2086,7 +2087,7 @@ def bulk_update_closer_cards():
         return jsonify({"message": f"Se actualizaron {len(appointments)} citas con éxito"}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"message": f"Error al actualizar en masa: {str(e)}"}), 500
+        return error_interno(e, 'Error al actualizar en masa', clave='message')
 
 
 
@@ -2240,7 +2241,7 @@ def update_closer_sale(sale_id):
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"Error al guardar la venta: {str(e)}"}), 500
+        return error_interno(e, 'Error al guardar la venta')
 
     # Traza en el historial del lead: quién tocó qué, para que una corrección no sea un cambio
     # silencioso sobre un registro financiero.
@@ -2309,7 +2310,7 @@ def update_client_total_amount(client_id):
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"Error al guardar el total del programa: {str(e)}"}), 500
+        return error_interno(e, 'Error al guardar el total del programa')
 
     try:
         from app.models import Appointment
@@ -2458,7 +2459,7 @@ def post_closer_deck_comment(appt_id):
         return jsonify({**nota, 'person_uuid': appt.client.person_uuid if appt.client else None}), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"message": f"Error al guardar comentario: {str(e)}"}), 500
+        return error_interno(e, 'Error al guardar comentario', clave='message')
 
 
 @bp.route('/deck/stats/kpis', methods=['GET'])

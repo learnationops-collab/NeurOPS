@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from app.api.errores import error_interno
 from app import db
 from app.models import ConversationalMessage, LeadAnswer, Conversation, Ad, FinancialAgenda, FinancialSale
 from app.services import rama_mensajes
@@ -64,7 +65,7 @@ def create_message():
     except Exception as e:
         db.session.rollback()
         logger.error(f"[conversational.create_message] {e}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        return error_interno(e, clave='message')
 
 
 @bp.route('/messages/<int:msg_id>', methods=['PUT'])
@@ -108,7 +109,7 @@ def update_message(msg_id):
     except Exception as e:
         db.session.rollback()
         logger.error(f"[conversational.update_message] {e}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        return error_interno(e, clave='message')
 
 
 @bp.route('/messages/<int:msg_id>', methods=['DELETE'])
@@ -165,7 +166,7 @@ def clear_records():
     except Exception as e:
         db.session.rollback()
         logger.error(f"[conversational.clear_records] {e}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        return error_interno(e, clave='message')
 
 
 # ──────────────────────────────────────────────

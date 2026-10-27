@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_login import current_user
+from app.api.errores import error_interno
 from app import db
 from app.models import WorkshopEvent, WorkshopGoals, WorkshopAction
 from app.decorators import workshop_required
@@ -203,7 +204,7 @@ def create_workshop_event():
         return jsonify(_con_replay_local(event.to_dict(), event)), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"Error al guardar en base de datos: {str(e)}"}), 500
+        return error_interno(e, 'Error al guardar en base de datos')
 
 @bp.route('/events/programar', methods=['POST'])
 @workshop_required
@@ -334,7 +335,7 @@ def update_workshop_event(event_id):
         return jsonify(_con_replay_local(event.to_dict(), event)), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"Error al actualizar la base de datos: {str(e)}"}), 500
+        return error_interno(e, 'Error al actualizar la base de datos')
 
 @bp.route('/events/<int:event_id>', methods=['DELETE'])
 @workshop_required
@@ -350,7 +351,7 @@ def delete_workshop_event(event_id):
         return jsonify({"message": "Evento eliminado con éxito"}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"Error al eliminar de la base de datos: {str(e)}"}), 500
+        return error_interno(e, 'Error al eliminar de la base de datos')
 
 @bp.route('/prefill', methods=['GET'])
 @workshop_required
@@ -419,7 +420,7 @@ def update_workshop_goals():
         return jsonify(goals.to_dict()), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"Error al guardar las metas: {str(e)}"}), 500
+        return error_interno(e, 'Error al guardar las metas')
 
 
 # ==========================================================================
@@ -487,7 +488,7 @@ def create_workshop_action():
         return jsonify(action.to_dict()), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"Error al guardar la acción: {str(e)}"}), 500
+        return error_interno(e, 'Error al guardar la acción')
 
 
 @bp.route('/actions/<int:action_id>', methods=['PUT'])
@@ -526,7 +527,7 @@ def update_workshop_action(action_id):
         return jsonify(action.to_dict()), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"Error al actualizar la acción: {str(e)}"}), 500
+        return error_interno(e, 'Error al actualizar la acción')
 
 
 @bp.route('/actions/<int:action_id>', methods=['DELETE'])
@@ -539,5 +540,5 @@ def delete_workshop_action(action_id):
         return jsonify({"message": "Acción eliminada con éxito"}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"Error al eliminar la acción: {str(e)}"}), 500
+        return error_interno(e, 'Error al eliminar la acción')
 

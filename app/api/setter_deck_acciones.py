@@ -4,6 +4,7 @@ Se cuelga del blueprint de `setter.py` (se importa al final de ese archivo).
 """
 from flask import request, jsonify
 from flask_login import current_user
+from app.api.errores import error_interno
 from app import db
 from app.models import ROLE_SETTER, Client, Appointment
 from app.decorators import role_required
@@ -52,7 +53,7 @@ def process_setter_card(appt_id):
         return jsonify({"message": "Carta procesada con éxito", "id": appt.id}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"message": f"Error al guardar: {str(e)}"}), 500
+        return error_interno(e, 'Error al guardar', clave='message')
 
 
 @bp.route('/deck/bulk-update', methods=['POST'])
@@ -94,7 +95,7 @@ def bulk_update_setter_cards():
         return jsonify({"message": f"Se actualizaron {len(appointments)} citas con éxito"}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"message": f"Error al actualizar en masa: {str(e)}"}), 500
+        return error_interno(e, 'Error al actualizar en masa', clave='message')
 
 
 @bp.route('/deck/search', methods=['GET'])
@@ -187,4 +188,4 @@ def post_setter_deck_comment(appt_id):
         return jsonify(lead_log_service.a_dict(entrada)), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"message": f"Error al guardar comentario: {str(e)}"}), 500
+        return error_interno(e, 'Error al guardar comentario', clave='message')

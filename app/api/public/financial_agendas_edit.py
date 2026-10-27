@@ -1,6 +1,7 @@
 """Edicion, borrado y reparaciones de agendas financieras."""
 from flask import request, jsonify, current_app
 from flask_login import current_user
+from app.api.errores import error_interno
 from app.models import db, FinancialAgenda, Client
 from datetime import datetime
 from sqlalchemy import or_, func
@@ -223,7 +224,7 @@ def update_financial_agenda(agenda_id):
         return jsonify({"error": str(e)}), 409 if isinstance(e, DatoDeOtraPersona) else 422
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 
 @bp.route('/public/financial-agendas/<int:agenda_id>', methods=['DELETE'])
 def delete_financial_agenda(agenda_id):
@@ -265,7 +266,7 @@ def delete_financial_agenda(agenda_id):
         return jsonify({"message": "Agenda eliminada correctamente"}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)
 
 @bp.route('/public/financial-agendas/sync-appointments', methods=['POST'])
 def sync_all_financial_agendas():
@@ -300,4 +301,4 @@ def sync_all_financial_agendas():
             "filtered_by_days": None if sync_all else days
         }), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return error_interno(e)

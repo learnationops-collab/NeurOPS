@@ -334,6 +334,17 @@ def logout():
     session.clear()
     return jsonify({"message": "Logout successful"}), 200
 
+@bp.route('/auth/preview-token', methods=['POST'])
+@login_required
+def preview_token():
+    """Un token de dos minutos que solo sirve para abrir una vista previa en una pestaña nueva: el de la sesión
+    no viaja en la URL (queda en historial, logs y Referer)."""
+    claims = {'purpose': 'preview'}
+    if current_user.role != current_user._role:
+        claims['active_role'] = current_user.role
+    return jsonify({'token': current_user.get_auth_token(expires_in=120, **claims)}), 200
+
+
 @bp.route('/auth/me', methods=['GET'])
 def get_me():
     if not current_user.is_authenticated:

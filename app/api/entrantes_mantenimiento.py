@@ -1,5 +1,6 @@
 """Corrección a mano de una interacción desde el monitor de Entrantes (rutas de `entrantes.bp`)."""
 from flask import request, jsonify
+from app.api.errores import error_interno
 from app import db
 from app.api.entrantes import bp
 
@@ -47,4 +48,4 @@ def update_ad_lead(answer_id):
         return jsonify({"status": "success", "message": "Lead actualizado"}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return error_interno(e, clave='message')
