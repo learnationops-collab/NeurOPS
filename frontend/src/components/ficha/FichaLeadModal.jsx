@@ -117,6 +117,9 @@ const MENSAJES = {
     borrar_plan: 'Plan de cuotas eliminado.',
     crear_evento: 'Evento agregado.',
     reasignar_closer: 'Lead pasado al closer elegido.',
+    pasar_a_triage: (r) => (r?.libre === false
+        ? { tono: 'warning', texto: `Pasada a ${r.closer_name}, que no tenía ese horario libre: la va a reagendar.` }
+        : `Pasada al triage: la toma ${r?.closer_name}.`),
     // El backend devuelve `cambios` vacío cuando lo escrito, ya normalizado, es lo que había
     // (un 'no tengo' sobre un instagram vacío, un 'n/a' sobre un correo vacío): no se guardó nada.
     // `agregados`: un dato más que también es válido (no corrige el principal).

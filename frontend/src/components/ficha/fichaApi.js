@@ -76,6 +76,8 @@ const RUTAS = {
     // la ficha sigue abierta en la agenda que le quede al cliente (ver FichaLeadModal).
     eliminar_agenda: (appt) => api.delete(`/ficha/${appt}`),
     reasignar_closer: (appt, p) => api.patch(`/ficha/${appt}/closer`, p),
+    // A la del triage libre a esa hora; el evento de Google pasa a su calendario.
+    pasar_a_triage: (appt) => api.post(`/ficha/${appt}/triage`),
     // Los datos del cliente (nombre, teléfono, correo, instagram) y el examen de la agenda,
     // corregidos en el lugar desde la cabecera. Viaja solo lo que cambió.
     editar_datos: (appt, p) => api.patch(`/ficha/${appt}/datos`, p),

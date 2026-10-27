@@ -414,6 +414,10 @@ def permisos_de(usuario, appt=None):
         'reasignar': direccion or rol == 'closer',
         'comentar': True,
         'triar': de_triage and (direccion or (rol == 'triage' and appt.closer_id == uid)),
+        # Una agenda del closer que todavía no empezó (app/agendas_v2/a_triage.py).
+        'pasar_triage': (direccion or rol == 'closer') and appt is not None and not de_triage
+                        and not appt.closer_processed and bool(appt.start_time)
+                        and appt.start_time > datetime.utcnow(),
     }
 
 

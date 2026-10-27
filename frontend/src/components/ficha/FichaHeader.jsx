@@ -146,6 +146,7 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
     const closerActual = id.closer?.nombre || null;
     const closers = opciones(ficha, 'closers');
     const puedeReasignar = ficha?.permisos?.reasignar !== false && puedeEditar && closers.length > 0;
+    const puedeTriage = ficha?.permisos?.pasar_triage === true && puedeEditar;
     // Mismo criterio que el resto de los permisos de la ficha: solo un `false` explícito
     // esconde. El backend lo manda siempre, y la ruta lo vuelve a comprobar. Pero sin ficha no
     // hay permisos ni datos: la que no se pudo abrir no tiene nada que corregir, y el editor
@@ -322,6 +323,11 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
         onAccion?.('reasignar_closer', { closer_id: closer.id, closer: closer.nombre })?.catch?.(() => {});
     };
 
+    const pasarATriage = () => {
+        cerrar();
+        onAccion?.('pasar_a_triage')?.catch?.(() => {});
+    };
+
     return (
         <div className="fi-cab" onKeyDown={teclas}>
             <div className={`fi-cab-titulo${editando ? ' fi-cab-titulo--editando' : ''}`}>
@@ -463,6 +469,13 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
                                         <small className="t-rotulo" style={{ padding: 'var(--s2) var(--s3)' }}>
                                             Pasar el lead a
                                         </small>
+                                        {puedeTriage && (
+                                            <button type="button" className="fi-opcion" role="option"
+                                                aria-selected={false} onClick={pasarATriage}>
+                                                <span>Triage</span>
+                                                <span className="t-cap mut">La que esté libre</span>
+                                            </button>
+                                        )}
                                         {closers.map(c => {
                                             const on = c.nombre === closerActual;
                                             return (

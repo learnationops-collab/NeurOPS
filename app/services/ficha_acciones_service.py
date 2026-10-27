@@ -825,6 +825,15 @@ def reasignar(appt, datos, usuario):
     return {'id': appt.id, 'closer_id': nuevo.id, 'closer_name': nuevo.username}
 
 
+def pasar_a_triage(appt, datos, usuario):
+    from app.agendas_v2 import a_triage
+
+    try:
+        return a_triage.pasar(appt, usuario)
+    except ValueError as e:
+        raise ErrorDeAccion(str(e)) from e
+
+
 # --- Seguimiento ------------------------------------------------------------------------------
 
 def seguimiento(appt, datos, usuario):

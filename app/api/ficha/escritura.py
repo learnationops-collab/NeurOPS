@@ -180,6 +180,12 @@ def reasignar(appt_id):
     return _ejecutar(appt_id, 'reasignar', acciones.reasignar)
 
 
+@bp.route('/<int:appt_id>/triage', methods=['POST'])
+def pasar_a_triage(appt_id):
+    """«Pasar a triage»: la agenda va a la del triage libre a esa hora, con su evento de Google."""
+    return _ejecutar(appt_id, 'pasar_triage', acciones.pasar_a_triage)
+
+
 @bp.route('/<int:appt_id>/seguimiento', methods=['POST'])
 def seguimiento(appt_id):
     return _ejecutar(appt_id, 'cobrar', acciones.seguimiento)

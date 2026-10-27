@@ -8,7 +8,7 @@ Cambios (todos idempotentes: correrlo dos veces deja lo mismo):
   - Cortes A ≥ 3 (compra unas 2 veces el promedio), B ≥ 1 (sobre el promedio), C ≥ -1, D el resto.
   - Ruteo: las reglas con url (mk-academy: estudiante que no invierte, también «podría conseguir ayuda»)
     quedan primero; las mk-g* se reemplazan por una por segmento:
-    A → Grupo 5 · B → Grupo 4 · C → Grupo 2 · D → Grupo 1, con el desborde de siempre. «Todo lo demás»
+    A → Grupo 5 · B → Grupo 4 · C y D → Triage (lo crea), con el desborde de siempre. «Todo lo demás»
     (sin segmento: falta Inversión o Etapa) sigue en Grupo 1.
   - Examen: Ecuador, Chile y Panamá antes de «Otro». Decide queda como siempre; con --quien-decide pasa a
     «¿Quién más participa de esta decisión?».
@@ -54,7 +54,10 @@ PUNTOS_SEG = {
     DECIDE: {'ognajtws1ke': 1, 'ognajtnj7rg': -1, 'og-pareja': -1, 'og-otra-persona': -1},
 }
 ROL = {INVERSION: 'clave', ETAPA: 'clave', EXAMEN: 'cuenta', DECIDE: 'cuenta'}
-POR_SEGMENTO = {'A': 'ws-g5', 'B': 'ws-g4', 'C': 'ws-g2', 'D': 'ws-g1'}
+# C y D van solo al triage (Mario, 26/10): el grupo «Triage», último en el orden, con las personas del triage.
+# Máxima disponibilidad: el lead ve los horarios de las dos. Si están llenas desborda a «Todos los closers».
+TRIAGE = 'ws-triage'
+POR_SEGMENTO = {'A': 'ws-g5', 'B': 'ws-g4', 'C': TRIAGE, 'D': TRIAGE}
 RESTO = 'ws-g1'
 
 # Decide: la pregunta de siempre, y la nueva «¿Quién más participa?» para cuando se decida (--quien-decide).
@@ -151,10 +154,26 @@ def mostrar(datos):
     print('   resto →', datos['resto'])
 
 
+def grupo_triage():
+    """El grupo «Triage» con las personas del triage, después de todos los demás."""
+    from app.agendas_v2.nucleo.datos import es_triage, ordenados
+    from app.agendas_v2.servicio import colecciones
+
+    d = colecciones()
+    miembros = [p['id'] for p in ordenados(d, 'personas') if es_triage(d, p)]
+    if not miembros:
+        raise SystemExit('No hay personas con rol triage en Team.')
+    orden = max([g.get('orden') or 0 for g in d['grupos'] if g['id'] != TRIAGE] or [0]) + 1
+    return {'nombre': 'Triage', 'estrategia': 'horario', 'miembros': miembros, 'orden': orden}
+
+
 def main(apply=False, quien_decide=False):
     app = create_app()
     with app.app_context():
         from app.agendas_v2.servicio import guardar_doc
+
+        grupo = grupo_triage()
+        print('grupo', TRIAGE, grupo)
 
         fila = db.session.get(SchedFormulario, FORM_ID)
         if not fila:
@@ -164,6 +183,7 @@ def main(apply=False, quien_decide=False):
         if not apply:
             print('\nDRY-RUN: no se guardó nada. Con --apply se guarda.')
             return
+        guardar_doc('grupos', TRIAGE, grupo)
         doc = guardar_doc('formularios', FORM_ID, datos)
         print('\nGuardado. Segmentación:', doc['segmento'])
 
