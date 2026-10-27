@@ -35,6 +35,8 @@ from app.agendas_v2.nucleo.catalogos import pais_de, pais_por_telefono, zona_val
 RESULTADOS_NO_VIGENTES = ('Cancelada', 'Cancelado', 'Reprogramada', 'Reagendada', 'Reagendado')
 # Una agenda que empezo hace menos de esto todavia cuenta como "futura abierta" para reprogramar.
 MARGEN_REPROGRAMAR = timedelta(hours=2)
+# El nombre del evento de Google cuando la agenda es de una triage (Marlon, 27/10/2026).
+SESION_TRIAGE = 'Sesión diagnóstica'
 
 
 def filtro_vigente():
@@ -286,6 +288,8 @@ def crear_evento(appt, nombre_evento, evento_a_borrar=None):
     payload = dict(appt.agenda_payload or {})
     lead = payload.get('lead') or {}
     closer = db.session.get(User, appt.closer_id)
+    if closer and closer.tiene_rol('triage'):
+        nombre_evento = SESION_TRIAGE
     fin = appt.start_time + timedelta(minutes=int(payload.get('duracion_min') or 60))
     titulo = f'{nombre_evento}: {lead.get("nombre") or "Lead"} y {closer.username if closer else "Learnation"}'
     email = _o_none(lead.get('email'))

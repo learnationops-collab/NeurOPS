@@ -13,14 +13,6 @@ Archivo único de pendientes. Junta lo abierto de las reuniones del 24/10 y del 
 ## 2. Triage
 
 - [ ] Confirmar A/B al pasar a closing (plan §8.5). Lo demás de «Pasar a closing» ya está: crea la agenda, deja la nota y muestra los horarios libres del closer.
-- [ ] Dari: dejar su horario en 4 h por día (Marlon, 27/10). Hoy tiene 5 de lunes a viernes (11–12 y 15–19, Caracas) y 3 el sábado. Lo ajusta ella desde Configuración › Disponibilidad. Juliana ya tiene 3 h.
-- [ ] Preguntas que Marlon no respondió el 27/10 (respondió: tracker, agendan ellas en el calendario de Jean Carlo, 30 min, Juliana 3 h y Dari 4 h):
-  - Nombre del evento de la sesión de triage (¿«sesión de diagnóstico»?). Hoy usa el de la Sesión de Aceleración, con 30 min para ellas.
-  - Dari toma sesiones fuera de horario (22 h) cuando ve potencial: ¿se permite?
-  - El seguimiento del low ticket por mensaje, ¿es de ellas?
-  - Seguimientos viejos de Jean Carlo que les aparecen en el panel: ¿se quedan, se reasignan o se cierran?
-  - Antelación mínima de 2 h para que un A/B desplace a un C/D: ¿le parece bien?
-
 ## 3. Agendas y reparto
 
 - [ ] Capacidad de Jean Carlo configurable (llamadas por semana). No existe en el código.
@@ -57,7 +49,7 @@ El alumno ya ve cuándo vence o venció su acceso y agenda la renovación con Je
 - [ ] Seña sin completar con actividad: acceso hasta el lunes 02/11 (Lysander, Valentina, Leslie y Cynthia). Decidir qué pasa después. Santiago Herrera, hasta su pago acordado del 15/11.
 - [ ] Caso perdido: Andrea Pérez (residencia, con grupo personal), se venció sin respuesta.
 - [x] **Aviso de suscripción marcado como enviado sin aplicarse** (27/10). Natalia Melgarejo: la seña se cargó cuando su cliente tenía el mail de la agenda y no estaba vinculado a su cuenta de la Academia (713, creada 6 min antes con otro mail); el aviso dio 404, se dio por hecho y vincularla después no lo reenviaba. Arreglado: al cambiar `learnation_user_id` o el mail de un cliente, sus suscripciones vuelven a pendientes (`subscription_sync._al_vincular`). Cruce de las 125 vigentes contra la Academia: no hay otro caso igual.
-- [ ] **Gaby Mérida Ramírez (cliente 8464) tiene dos cuentas en la Academia**: 594 (yonofuisoytete@gmail.com, con su seña y la prórroga de Darian hasta el 03/11) y 614 (dragabrielameridar@gmail.com, solo el curso gratuito). Work la tiene vinculada a la 614 desde el 27/10 ~19:19, justo después de la prórroga. Su acceso está en la 594. Con el arreglo de arriba, el próximo cambio de vínculo le reenvía la suscripción a la cuenta vinculada. Decidir cuál es la buena y unificar.
+- [x] Gaby Mérida Ramírez: la prórroga cayó en su cuenta vieja (594) un minuto antes de que Dari eligiera la 614. AL hasta el 03/11 pasado a la 614; la 594 quedó sin acceso.
 
 ## 6. Scale
 

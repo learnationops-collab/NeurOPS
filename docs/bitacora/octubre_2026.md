@@ -1100,3 +1100,5 @@
   - Métricas con los nombres de Marlon: presentaciones, cierres, no cierres, seguimiento y perdido del low ticket. Debajo, el reporte lead por lead del período (con «Hoy», el del día): asistencia, si califica, cómo quedó el low ticket y las notas (para el closer y por qué no califica).
   - Un lead que no califica exige la nota de por qué.
   - Datos en prod: la Sesión de Aceleración dura 30 min para Juliana y Dari (`sesiones` de su persona en Team).
+- **27 de Octubre de 2026 (Triage · «Sesión diagnóstica» en Google)** *([operacion.py](../../app/agendas_v2/operacion.py))*:
+  - El evento de Google de una agenda de triage se llama «Sesión diagnóstica» (Marlon, 27/10), venga del formulario, de «pasar a triage» o de una agenda manual.
