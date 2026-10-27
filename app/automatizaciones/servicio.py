@@ -202,18 +202,22 @@ def _bucle(app):
 
 # --- Flujos -------------------------------------------------------------------------------------
 
-def publicar(flujo, momento=None):
-    """Congela el borrador como una versión nueva y la deja activa. Devuelve los errores si no se puede."""
-    errores = g.validar(flujo.grafo)
+def publicar(flujo, momento=None, grafo=None, activar=True):
+    """Congela el borrador como una versión nueva y la deja activa. Devuelve los errores si no se puede.
+    `grafo`: publicar ese en lugar del borrador (el setter que cambia textos parte de lo publicado, no del
+    borrador a medio hacer). `activar=False`: no toca el estado (un flujo pausado sigue pausado)."""
+    grafo = flujo.grafo if grafo is None else grafo
+    errores = g.validar(grafo)
     if errores:
         return errores
     momento = momento or ahora()
     ultimo = (db.session.query(db.func.max(AutFlujoVersion.numero)).filter_by(flujo_id=flujo.id).scalar() or 0)
-    version = AutFlujoVersion(flujo_id=flujo.id, numero=ultimo + 1, grafo=copy.deepcopy(flujo.grafo), publicada_en=momento)
+    version = AutFlujoVersion(flujo_id=flujo.id, numero=ultimo + 1, grafo=copy.deepcopy(grafo), publicada_en=momento)
     db.session.add(version)
     db.session.flush()
     flujo.version_publicada_id = version.id
-    _activar(flujo, momento)
+    if activar:
+        _activar(flujo, momento)
     db.session.commit()
     return []
 

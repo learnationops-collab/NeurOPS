@@ -117,6 +117,11 @@ function Lienzo({ flujoInicial, nodoInicial, lectura, onVolver, onCambio }) {
         setNodos((ns) => ns.map((n) => (n.id === INICIO ? { ...n, data: { ...n.data, disparadores } } : n)));
         marcar();
     };
+    const etapas = nodos.find((n) => n.id === INICIO)?.data.etapas || [];
+    const cambiarEtapas = (lista) => {
+        setNodos((ns) => ns.map((n) => (n.id === INICIO ? { ...n, data: { ...n.data, etapas: lista } } : n)));
+        marcar();
+    };
     const borrarSeleccion = () => {
         if (!seleccion || seleccion.id === INICIO) return;
         setNodos((ns) => ns.filter((n) => n.id !== seleccion.id));
@@ -244,6 +249,7 @@ function Lienzo({ flujoInicial, nodoInicial, lectura, onVolver, onCambio }) {
                 <Panel seleccion={seleccion} lectura={lectura} flujo={{ ...flujo, nombre }} metricas={metricas} avisos={avisos}
                     numeros={numeros} nombres={nombres} destinos={destinos} variables={variablesDe(nodos)}
                     onCambiarNodo={cambiarNodo} onCambiarDisparadores={cambiarDisparadores} onBorrar={borrarSeleccion} onElegir={elegir}
+                    etapas={etapas} onCambiarEtapas={cambiarEtapas}
                     esInicioDelFlujo={seleccion?.id === deInicio} onHacerInicio={hacerInicio} />
             </div>
             {salir && (

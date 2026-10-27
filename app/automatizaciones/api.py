@@ -22,9 +22,9 @@ bp = Blueprint('inbox', __name__)
 ROLES_CON_ACCESO = (ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL)
 ROLES_DE_LECTURA = (ROLE_SETTER,)
 # Lo único que el setter puede cambiar: el recorrido y el bot de una conversación (`api_acciones.py`)
-# y sus etiquetas, incluido crear un grupo (`api_etiquetas.py`).
+# sus etiquetas, incluido crear un grupo (`api_etiquetas.py`), y los textos de los flujos (`api_mensajes.py`).
 ACCIONES_DEL_SETTER = {'inbox.mover_en_flujo', 'inbox.bot_de_conversacion', 'inbox.crear_grupo_etiquetas',
-                       'inbox.poner_etiqueta', 'inbox.sacar_etiqueta'}
+                       'inbox.poner_etiqueta', 'inbox.sacar_etiqueta', 'inbox.guardar_mensajes'}
 MAX_BYTES_GRAFO = 300_000
 MAX_NODOS = 300
 MENSAJES_POR_CONVERSACION = 300

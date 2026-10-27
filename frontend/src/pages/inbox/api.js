@@ -13,6 +13,9 @@ export const inboxApi = {
     pausarFlujo: (id) => api.post(`/inbox/flujos/${id}/pausar`).then(datos),
     activarFlujo: (id) => api.post(`/inbox/flujos/${id}/activar`).then(datos),
     borrarFlujo: (id) => api.delete(`/inbox/flujos/${id}`),
+    // Solo los textos de la versión publicada (app/automatizaciones/api_mensajes.py)
+    mensajesFlujo: (id) => api.get(`/inbox/flujos/${id}/mensajes`).then(datos),
+    guardarMensajes: (id, cambios) => api.put(`/inbox/flujos/${id}/mensajes`, { cambios }).then(datos),
     // { conversaciones, mediana_respuesta, medianas_setters }
     conversaciones: (buscar, limite) => api.get('/inbox/conversaciones', { params: { ...(buscar ? { buscar } : {}), ...(limite ? { limite } : {}) } }).then(datos),
     conversacion: (id) => api.get(`/inbox/conversaciones/${id}`).then(datos),

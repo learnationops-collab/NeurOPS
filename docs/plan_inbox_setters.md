@@ -87,6 +87,15 @@ El setter hoy solo puede hacer GET (`_guardia` en `api.py`). Se le abren:
 
 Lo demás de flujos y campañas sigue siendo de admin y de la dirección comercial.
 
+## Estado (27/10/2026)
+
+Las cuatro partes están escritas y en `develop` (rama `feat/inbox-setters`), sin probar todavía en el servidor de pruebas:
+
+1. `246ab1d8`: lectura, filtros, Stats y bandeja que se actualiza sola.
+2. `871658a7`: acciones sobre el flujo y pausa del bot (`acciones.py`, `api_acciones.py`).
+3. `0d266782`: etiquetas (`app/models/tag.py`, migración `c4e8a2f6b1d9`, `tags_service.py`, `api_etiquetas.py`).
+4. Etapas (`etapas.py`, campo «Etapa» en el inspector del lienzo) y el editor de mensajes del setter (`nucleo/textos.py`, `api_mensajes.py`, `flujos/EditorMensajes.jsx`).
+
 ## Orden
 
 1. Lectura (asignación, botón elegido, efecto) y que la bandeja se actualice sola.

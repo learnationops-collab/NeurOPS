@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Plus, Search, Workflow } from 'lucide-react';
 import { BRAND_AURA, Button, EmptyState, Grid, HeaderActions, InputGroup, Segmented, toast } from '../../components/standard';
 import EditorFlujo from './editor/EditorFlujo';
+import EditorMensajes from './flujos/EditorMensajes';
 import { ESTADOS } from './estadoFlujo';
 import NuevoFlujo from './flujos/NuevoFlujo';
 import Plantillas from './flujos/Plantillas';
@@ -26,6 +27,7 @@ export default function Flujos({ puedeEditar }) {
     const [buscar, setBuscar] = useState('');
     const [borrando, setBorrando] = useState(null);
     const [creando, setCreando] = useState(null);
+    const [textos, setTextos] = useState(null); // id del flujo cuyos mensajes se editan
     const [clonando, setClonando] = useState(false);
 
     const cargar = useCallback(() => {
@@ -75,6 +77,7 @@ export default function Flujos({ puedeEditar }) {
         }
     };
 
+    if (textos) return <EditorMensajes id={textos} onVolver={() => { setTextos(null); cargar(); }} />;
     if (abierto) {
         return (
             <EditorFlujo flujoInicial={abierto.flujo} nodoInicial={abierto.nodo} lectura={!puedeEditar}
@@ -103,7 +106,7 @@ export default function Flujos({ puedeEditar }) {
             <Grid variant="cards" className="fl-grilla">
                 {visibles.map((f) => (
                     <Tarjeta key={f.id} f={f} puedeEditar={puedeEditar} borrando={borrando === f.id}
-                        onBorrando={setBorrando} onAbrir={abrir} onBorrar={borrar} onPausar={pausar} onClonar={clonar} clonando={clonando} />
+                        onBorrando={setBorrando} onAbrir={abrir} onBorrar={borrar} onPausar={pausar} onClonar={clonar} clonando={clonando} onEditarMensajes={setTextos} />
                 ))}
                 {plantillas}
             </Grid>

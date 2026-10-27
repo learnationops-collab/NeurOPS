@@ -55,7 +55,7 @@ export function aLienzo(grafo) {
     const nodos = g.nodos || [];
     const rfNodos = [
         { id: INICIO, type: 'inicio', position: g.posicion_inicio || { x: -320, y: 0 }, deletable: false,
-          data: { disparadores: g.disparadores || [] } },
+          data: { disparadores: g.disparadores || [], etapas: g.etapas || [] } },
         ...nodos.map((n, i) => ({
             id: n.id, type: n.tipo, position: n.posicion || { x: i * 320, y: 0 }, data: { nodo: n },
         })),
@@ -82,6 +82,8 @@ export function aGrafo(rfNodos, aristas) {
         .map((a) => ({ id: a.id, desde: a.source, salida: a.sourceHandle, hacia: a.target }));
     return {
         disparadores: inicio?.data.disparadores || [],
+        // Las etapas agrupan pasos (`nodo.etapa`); se guardan con el flujo, como los disparadores.
+        etapas: inicio?.data.etapas || [],
         inicio: deInicio?.target || null,
         posicion_inicio: inicio ? { x: Math.round(inicio.position.x), y: Math.round(inicio.position.y) } : undefined,
         nodos,

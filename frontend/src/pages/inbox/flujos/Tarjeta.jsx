@@ -1,6 +1,6 @@
 // Tarjeta de un flujo: resultado de los últimos días (entradas, completan, en curso), su embudo por
 // paso y una alerta cuando un paso pierde gente. Tocar una barra abre el lienzo en ese paso.
-import { AlertTriangle, Copy, Eye, Pause, Pencil, Play, Trash2, Workflow } from 'lucide-react';
+import { AlertTriangle, Copy, Eye, Pause, Pencil, Play, Trash2, Type, Workflow } from 'lucide-react';
 import { Bars, Button, Card, ConfirmDelete, IconButton, Status } from '../../../components/standard';
 import { estadoDe, porciento, rotuloPaso } from '../estadoFlujo';
 
@@ -25,7 +25,7 @@ function Alerta({ f, m }) {
     );
 }
 
-export default function Tarjeta({ f, puedeEditar, borrando, clonando = false, onBorrando, onAbrir, onBorrar, onPausar, onClonar }) {
+export default function Tarjeta({ f, puedeEditar, borrando, clonando = false, onBorrando, onAbrir, onBorrar, onPausar, onClonar, onEditarMensajes }) {
     const est = estadoDe(f);
     const m = f.metricas;
     const palabras = f.palabras_clave.filter(Boolean);
@@ -76,6 +76,8 @@ export default function Tarjeta({ f, puedeEditar, borrando, clonando = false, on
                                 disabled={clonando} onClick={() => onClonar(f)} />
                         )}
                         <Button icon={puedeEditar ? <Pencil /> : <Eye />} onClick={() => onAbrir(f.id)}>{puedeEditar ? 'Editar' : 'Ver'}</Button>
+                        {/* Solo los textos de lo publicado: lo que puede tocar el setter. */}
+                        {f.version && !puedeEditar && <Button icon={<Type />} onClick={() => onEditarMensajes(f.id)}>Editar mensajes</Button>}
                     </div>
                 </div>
             )}

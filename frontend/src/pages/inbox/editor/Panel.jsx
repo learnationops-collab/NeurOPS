@@ -1,8 +1,9 @@
 // El inspector, fijo a la derecha del lienzo: edita el paso elegido (o los disparadores si es el inicio)
 // con sus avisos al lado. Sin nada elegido, resume el flujo: cómo le va y qué falta para publicar.
+import { useState } from 'react';
 import { AlertTriangle, CheckCircle2, Trash2 } from 'lucide-react';
-import { Button, Input } from '../../../components/standard';
-import { INICIO, TIPOS } from './grafoFlujo';
+import { Button, Input, Select } from '../../../components/standard';
+import { INICIO, TIPOS, nuevoId } from './grafoFlujo';
 import { Campo, PanelAccion, PanelCondicion, PanelInicio, PanelMensaje } from './paneles';
 import RegistroMensaje from './RegistroMensaje';
 import { porciento, rotuloPaso } from '../estadoFlujo';
@@ -63,9 +64,39 @@ function Resumen({ flujo, metricas, avisos, numeros, nombres, onElegir }) {
     );
 }
 
+// La etapa del paso: agrupa pasos distintos (p. ej. Bienvenida, Calificación, Agenda). Al entrar a una
+// etapa nueva el motor graba su número (app/automatizaciones/etapas.py). Se crea una nueva desde acá.
+function CampoEtapa({ nodo, etapas, lectura, onCambiarNodo, onCambiarEtapas }) {
+    const [nueva, setNueva] = useState(null);
+    const crear = () => {
+        const nombre = (nueva || '').trim().slice(0, 40);
+        if (!nombre) return;
+        const etapa = { id: nuevoId('e'), nombre };
+        onCambiarEtapas([...etapas, etapa]);
+        onCambiarNodo({ ...nodo, etapa: etapa.id });
+        setNueva(null);
+    };
+    return (
+        <Campo label="Etapa" ayuda="Agrupa pasos. Al entrar a una etapa nueva se graba su número (los tableros lo usan).">
+            {nueva === null ? (
+                <Select label="Etapa" value={nodo.etapa || ''} disabled={lectura}
+                    options={[{ value: '', label: 'Sin etapa' }, ...etapas.map((e, i) => ({ value: e.id, label: `${i + 1} · ${e.nombre}` })), ...(lectura ? [] : [{ value: '__nueva', label: '+ Etapa nueva…' }])]}
+                    onChange={(v) => (v === '__nueva' ? setNueva('') : onCambiarNodo({ ...nodo, etapa: v || undefined }))} />
+            ) : (
+                <div className="pf-fila">
+                    <Input value={nueva} autoFocus maxLength={40} placeholder="Ej. Calificación" aria-label="Nombre de la etapa"
+                        onChange={(e) => setNueva(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') crear(); if (e.key === 'Escape') setNueva(null); }} />
+                    <Button variant="primary" disabled={!nueva.trim()} onClick={crear}>Crear</Button>
+                </div>
+            )}
+        </Campo>
+    );
+}
+
 export default function Panel({
     seleccion, lectura, flujo, metricas, avisos, numeros, nombres, destinos, variables,
     onCambiarNodo, onCambiarDisparadores, onBorrar, onElegir, esInicioDelFlujo, onHacerInicio,
+    etapas = [], onCambiarEtapas,
 }) {
     if (!seleccion) {
         return (
@@ -106,6 +137,9 @@ export default function Panel({
                     <Input value={nodo.nombre || ''} maxLength={60} disabled={lectura} aria-label="Nombre del paso" placeholder="Ej. Cualificación · examen"
                         onChange={(e) => onCambiarNodo({ ...nodo, nombre: e.target.value || undefined })} />
                 </Campo>
+            )}
+            {nodo.tipo !== 'fin' && (
+                <CampoEtapa key={nodo.id} nodo={nodo} etapas={etapas} lectura={lectura} onCambiarNodo={onCambiarNodo} onCambiarEtapas={onCambiarEtapas} />
             )}
             <Avisos lista={avisos.porNodo[nodo.id]} />
             {nodo.tipo === 'mensaje' && <PanelMensaje nodo={nodo} cambiar={cambiar} lectura={lectura} variables={variables} destinos={destinos} metrica={metrica} />}

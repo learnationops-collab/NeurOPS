@@ -230,6 +230,14 @@ def validar(grafo):
     for nodo in nodos:
         errores += _errores_nodo(nodo, ids)
 
+    # Las etapas agrupan pasos (`nodo.etapa`): cada paso apunta a una que exista.
+    etapas = [e.get('id') for e in grafo.get('etapas') or [] if isinstance(e, dict)]
+    if len(set(etapas)) != len(etapas) or not all(etapas):
+        errores.append('Cada etapa necesita un id único')
+    for nodo in nodos:
+        if nodo.get('etapa') and nodo['etapa'] not in etapas:
+            errores.append(f'Nodo {nodo.get("id")}: la etapa «{nodo["etapa"]}» no existe')
+
     vistas = set()
     for c in grafo.get('conexiones') or []:
         origen, hacia = por_id.get(c.get('desde')), c.get('hacia')

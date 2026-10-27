@@ -16,7 +16,7 @@ Reglas que garantiza:
 from datetime import timedelta
 
 from app import db
-from app.automatizaciones import acciones, campanas, efectos, registro, reparto
+from app.automatizaciones import acciones, campanas, efectos, etapas, registro, reparto
 from app.automatizaciones.modelos import AutEjecucion, AutFlujo, AutFlujoVersion, IgContacto, IgMensaje
 from app.automatizaciones.nucleo import eventos as ev
 from app.automatizaciones.nucleo import grafo as g
@@ -381,6 +381,7 @@ class Motor:
             if nodo is None:
                 return self._cerrar(ejecucion, AutEjecucion.ERROR, f'El nodo {ejecucion.nodo_actual} no existe')
             tipo = nodo['tipo']
+            etapas.al_entrar(self, ejecucion, nodo)
             if tipo == 'fin':
                 return self._cerrar(ejecucion, AutEjecucion.TERMINADA)
             if tipo == 'mensaje':
