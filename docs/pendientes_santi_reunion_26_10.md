@@ -16,7 +16,7 @@ Junta lo que sigue abierto de la reunión del 24/10 ([pendientes_santi_reunion_2
 
 - [x] **Agendas futuras de Facu (6)**: las toma él (confirmado el 26/10). Después de esas no recibe nuevas ni sigue.
 - [x] 6963 (Valeria Hernández, B) y 6965 (Nicolle Pizarro, C) figuran las dos hoy a las 23:00 AR. No es un doble agendamiento: el evento de Valeria se movió en el Google Calendar de Facu al lunes 26/10 a las 13:00 AR. Lo resuelve Facu.
-- [ ] **Agenda movida en Google con la hora vieja en Work** (hecho, falta el deploy): `app/agendas_v2/movidas.py` corre cada 15 min en el scheduler. Una agenda cuyo evento se movió pasa a la hora nueva como reagenda (dos filas, el mismo evento de Google). Al desplegar mueve 5: la 6963 de Facu y 4 de Jean Carlo (6946 y 6971, que él adelantó al sábado 24/10, 6895 y 6897).
+- [x] **Agenda movida en Google con la hora vieja en Work** (`d74f75ad`, en `main`): `app/agendas_v2/movidas.py` corre cada 15 min en el scheduler. Una agenda cuyo evento se movió pasa a la hora nueva como reagenda (dos filas, el mismo evento de Google). Al desplegar mueve 5: la 6963 de Facu y 4 de Jean Carlo (6946 y 6971, que él adelantó al sábado 24/10, 6895 y 6897).
 - [x] Agendas cuyo evento se canceló, se borró o se marcó «Disponible» en Google: las canceladas o borradas futuras se cancelan en Work; «Disponible» es a propósito en las C/D (ver §1).
 - [ ] Cuando Facu termine (después del 27/10): bajarle el acceso de closer y sacarlo de Personas de Thalamus.
 
@@ -29,7 +29,7 @@ Junta lo que sigue abierto de la reunión del 24/10 ([pendientes_santi_reunion_2
   | 6965 | lun 26/10 23:00 | C |
   | 6956 | mar 27/10 21:30 | C |
 
-- [ ] Commitear `scripts/segmentos_formulario.py`: quedó adaptado al formulario de hoy, pero sin commit.
+- [x] Commitear `scripts/segmentos_formulario.py` (`81836865` y después la versión 2026-12).
 - [x] (Resuelto con el ruteo por segmento, §8.9.) Avisarle a Mario: las opciones nuevas de inversión ($1000–$2000 y «podría conseguir ayuda») no están en ninguna regla `mk-*`. Esos leads van a la prioridad por defecto. El segmento sí se les calcula.
 
 ## 1. Lógica: C y D como horarios «libres» para A y B
@@ -53,16 +53,24 @@ Hecho en `app/agendas_v2/desplazar.py` (rama `feat/cd-libres`, migración `d7b3e
 
 Hecho sin commitear: campos de triage en `Appointment`, migración `c4e9a1d7f2b8`, `triage_service.py`, `triage_metricas.py`, `ResultadoTriage.jsx`, `TriageMetricas.jsx`. El triage queda fuera del reparto general.
 
-- [ ] Dashboard de triage (Marlon lo pidió hoy): reciclado del de closer.
-- [ ] «Pasar a closing» crea la agenda del closer, se confirma A/B y el closer ve la nota (§8.7 paso 3).
-- [ ] Botón «pasar a triage»: busca cuál de las dos chicas está libre en el horario del lead y se lo manda. Si las dos lo están, a cualquiera. La chica que lo recibe lo reagenda si hace falta.
-- [ ] Desde mañana (27/10), los B, C y D que tenga Jean Carlo van a las chicas del triage. Él se los delega.
+- [x] Dashboard de triage (Marlon lo pidió hoy): «Mis datos» y «Mi cartera» en el dock del triage, el dashboard comercial acotado a sus agendas (`2d48ad80`, en `main` el 26/10).
+- [x] «Pasar a closing» crea la agenda del closer (`agenda_triage_id`) y le deja la nota (`triage_service._pasar_al_closer`). Falta lo de confirmar A/B (§8.5).
+- [x] Botón «pasar a triage» (`23c19b38`, en producción el 26/10): ficha › Closer › «Pasar el lead a» › Triage (`app/agendas_v2/a_triage.py`, `POST /api/ficha/<id>/triage`). Va a la del triage libre a esa hora (horario de Team, agendas y Google). Si las dos lo están, a la de menos agendas por delante. Si ninguna, igual a la de menos carga, con nota y aviso de que hay que reagendar. El evento de Google se borra del calendario del closer sin avisarle al lead y se crea en el de la triage con un Meet nuevo (le llega la invitación).
+- [ ] Desde el 27/10 Jean Carlo delega al triage sus C y D (los B se quedan con él; Mario, 26/10). Hoy tiene 7 futuras: 6975, 6977, 6986 (D) y 6976, 6978, 6983, 6927 (C).
+- [x] Ruteo C y D → grupo «Triage» (`ws-triage`, Juliana y Dari, máxima disponibilidad, último en el orden), aplicado en producción el 26/10 con `scripts/segmentos_formulario.py`. Si el triage está lleno, desborda a «Todos los closers».
+- [ ] **Juliana y Dari tienen el horario vacío** (Calendar y WhatsApp ya están): sin horario, el grupo Triage no ofrece nada (C y D siguen yendo a Jean Carlo por el desborde) y el botón no encuentra a nadie libre.
 - [ ] Cuentas y alta en Thalamus de Dari y de la otra chica (onboarding hoy a las 18).
-- [ ] Probar en el servidor de prueba, commit y deploy.
+  - [x] Juliana Avila (`hola.julianaavilac@gmail.com`): usuario 1145 con rol `triage` (entra con Google) y persona `dqxljuz3bnw` en Team de Agendas 2.0 con rol `triage` (no entra en «Todos los closers»). Producción, 26/10.
+  - [ ] Juliana: cargar su horario (Google Calendar ya conectado, zona America/La_Paz).
+  - [x] El triage no podía cargar su disponibilidad: Configuración › Disponibilidad e Integraciones ahora le aparecen (`6745cb3f`, en `main` el 26/10).
+  - [x] Dari entra con Google: la 1143 (`asistentevirtualdariangonzalez@gmail.com`) pasa a rol principal `triage` con `fulfillment` adicional (la Academia la sigue viendo), persona `drpq0ivx0gk` en Team con rol `triage`. La 1123 (`dari@gmail.com`, sin agendas) quedó desactivada. Producción, 26/10.
+  - [ ] Dari: cargar su horario (Google Calendar ya conectado, zona America/La_Paz).
+  - [ ] Borrar las agendas ficticias de la explicación: 6984 (Juliana) y 6985 (Dari), del 26/10 a las 19:30 y 19:45 AR (si alguna probó «calificado», borrar también la agenda de closing que creó), con sus clientes [SIM] 10088 y 10089 (y sus personas `55358282-…` y `bae37449-…`).
+- [x] Probar en el servidor de prueba, commit y deploy (en producción desde `a615b72c`, ver §11).
 
 ## 3. Reparto por segmento (plan §2.3 y §8.4)
 
-- [ ] La asignación lee el segmento: A → Jean Carlo en menos de 24 h · B → Jean Carlo mientras tenga lugar; si no hay horario en 48 h, al triage · C y D → triage.
+- [ ] La asignación lee el segmento: A → Jean Carlo en menos de 24 h · B → Jean Carlo (decidido el 26/10: los B no van al triage) · C y D → solo triage (ver §2, ruteo a `ws-triage`).
 - [x] Mantener `mk-academy` (estudiante que no puede invertir → página de gracias). Decidido: «podría conseguir ayuda» también entra.
 - [ ] Marlon y Mario solo como respaldo de lo que Jean Carlo no puede tomar (como hoy).
 - [ ] Capacidad de Jean Carlo configurable (llamadas por semana).
@@ -85,6 +93,50 @@ Hecho sin commitear: campos de triage en `Appointment`, migración `c4e9a1d7f2b8
   - Ace Learners → Dari y después Jean Carlo (sin scale).
 - [ ] Usar el sistema de contacto manual, no el automático, para deudores y vencidos.
 - [ ] Revisar si hay que desactivar los flows automáticos que se pisan con esto.
+- [x] **Cruce de pagos Stripe/Hotmart (26/10):** ventas verificadas, correos y ventas cruzadas corregidos según la Academia (detalle en `raw_data['verificacion']` y `raw_data['correo_de_pago']` de cada venta, y en la bitácora del sistema).
+- [ ] Cruce de pagos, casos raros sin resolver:
+  - [x] Ficha «Paula Carrasco F.»: v57477 era una cuota de Joel (pasó a su venta 977, verificada); la venta activa de RR de Paula se borró sola y se le quitó el Instagram «joel». Su cuenta 704 de la Academia no tiene productos ni actividad.
+- [x] Limpieza de los últimos 4 meses (26/10): correos e Instagram de las ventas corregidos, datos ajenos e Instagram de relleno («jean carlo», «no tengo», «scale sprint», «joel», «emily») retirados, 8 duplicadas de ManyChat fusionadas, Jimena Blázquez separada de «Karen Téllez», Rodrigo Vergara con su Instagram y teléfono. Lo anterior de cada venta quedó en `raw_data['correccion_datos']`.
+- [ ] **Formulario de venta**: frenar que el closer reuse los datos del formulario anterior (correo/Instagram de otro cliente cargado el mismo día) y que escriba su nombre o «no tengo» como Instagram. Avisar al cargar si el correo o el Instagram ya son de otra ficha con otro nombre.
+- [x] **Migración de personas del 22/10, últimos 4 meses** (123 fichas con ventas desde el 26/06): no hay otro intercambio aparte de Joel ↔ Oliver Tapia. Se devolvieron las agendas 171447 (Andrés Simón, estaba en «Candy Lopez») y 171381 (Jennifer Guzmán, estaba en «Areli Valcarcel»), lysanderod@ pasó de Cynthia Quinto a Lysander y 12 fichas sumaron el correo de su cuenta de la Academia. Lo anterior a 26/06 no se revisa: costo asumible (alumnos que ya pasaron).
+- [x] **Mónica Contreras tenía dos cuentas en la Academia**: estudia en la 523 (monikontreras@). La 522 (saravaleria1622@) quedó sin acceso el 26/10 y se retiró de su ficha.
+- [x] **Pagos vs ventas desde junio, emparejado a mano (26/10)**: 15 ventas verificadas con su cobro (Kiandra en dos cobros; Emilia con emy_fer2000@, confianza media), 5 transferencias aceptadas, 7 marcadas `unverified` (Yrein v57525, María Alejandra v57605, Saúl v57608, Greysi v57617, Natalia Salazar v57629, y duplicadas Felipe v57676 y Gaby v57675). Fusionadas las fichas repetidas de Yrein, Raúl Arévalo y Nadia Rodríguez. Maricielo v57731 (26/10) queda pendiente: es posterior a los reportes.
+- [x] **Aplicado el 26/10**:
+  - Borradas v57617 (Greysi), v57676 (Felipe) y v57675 (Gaby). La fila completa de cada una quedó en `system_log`.
+  - Emilia v57674 pasó al 31/08, con confianza alta.
+  - Ventas creadas desde el cobro:
+    - Joel v57732 (30/03) y v57733 (29/07), sin closer y excluidas de comisión.
+    - Sureiny v57734 (22/06), sin closer y excluida de comisión.
+    - Karla v57735 (18/08), con Jean Carlo.
+    - Leslie v57736 (01/08), seña con Marlon.
+- [x] **Comisiones e ingresos sobre el cash collect real (26/10)**: nuevo `commission_service.cash_neto(venta)`. Si la venta está verificada usa `transaction_amount`; si no, la estimación. Reemplaza a `cash_neto_de` en comisiones, nómina, finanzas, dashboards y procedencia. Se cargó el neto real en las 312 ventas verificadas: en Stripe, el monto menos la Fee; en Hotmart, el valor recibido. Lo anterior quedó en `raw_data.verificacion.monto_antes`. Falta desplegar el código.
+- [ ] ~~La comisión no usa el cash collect real.~~ Lo que motivó el cambio: `commission_service.cash_neto_de` calcula sobre el monto cargado menos una fee fija por medio de pago, y no lee `transaction_amount`, que es lo que trae la pasarela. Ejemplos de Hotmart: Felipe Sanhueza y Oscar Bracho se cargaron con $1.000 y la comisión se calcula sobre $915, pero el comprador pagó unos $878 y entraron $770. Además, `transaction_amount` guarda el bruto en Stripe (antes de la fee) y el neto en Hotmart (precio de la oferta). Decidir si la comisión pasa al real cuando la venta está verificada, y unificar bruto/neto.
+- [ ] **En observación** (Santiago, 26/10):
+  - Nadia Rodríguez: $2.000 el 08/08 y $500 el 13/08, sin venta porque no se sabe el closer. Está en los wins del 08/08 al 10/08, que no se pegaron.
+  - Saúl Logreira, María Alejandra Villa y Natalia Salazar: tuvieron onboarding sin pago registrado.
+- [ ] ~~Cobros sin venta ($3.075)~~ (resuelto arriba, salvo Nadia), buscados en todas las ventas sin límite de fecha (nombre, correo, teléfono): Joel Almengor 30/03 $150 (ch_3TGnra…) y 29/07 $100 (ch_3TydMz…); Sureiny 22/06 $150 (ch_3TkRNw…, cobro automático de su suscripción mensual); Karla 18/08 $100 (ch_3U5nAJ…); Nadia Rodríguez 08/08 $2.000 (py_3U292a…) y 13/08 $500 (py_3U47an…, alta de suscripción; en la Academia es la renovación: Specialist Iniciative desde el 10/09); Leslie Aguilar 31/07 $75 (ch_3TzR5Y…, nikyaguilar3214@ = alumna 556, Ace Learners; cliente 7702 creado el 31/07 sin venta; ya tiene su correo real). Decidir si se crean las ventas y con qué closer.
+- [x] Datos que se habían perdido, recuperados de la Academia (26/10): correo real de Leslie Aguilar (tenía uno de relleno) y el alumno 70, que es Emily Chipana y estaba en la ficha de Humberto García Lizaso.
+- [ ] **Sureiny Marrero**: su suscripción de $150 falló el 20/08 y no volvió a pagar. Ver si sigue en la Academia.
+- [ ] Cruce con #wins y #onboardings (pegados por Santiago, 26/10). Resultados:
+  - **Leslie Aguilar**: la cerró Marlon García. Su agenda era del 31/07 a las 19:30, se reprogramó a las 20:00 y quedó «No Show», pero pagó $75 una hora después.
+  - **Emilia Collantes**: la seña fue el 31/08 (aviso de Jean Carlo con su teléfono), no el 12/08. Hay que corregir la fecha de la v57674.
+  - **Duplicadas**: v57675 (Gaby) y v57676 (Felipe) salen de la recarga de onboardings del 26/09, entre las 3:24 y las 3:53. Greysi v57617: Jean Carlo pidió borrarla el 15/08 porque se envió por error.
+  - **Entraron sin pago registrado**:
+    - Saúl Logreira: onboarding el 08/08. Su intento de $250 del 07/08 con la tarjeta de jhoturner80@ falló.
+    - María Alejandra Villa: onboarding el 07/08. Su intento de $50 falló.
+    - Natalia Salazar: onboarding el 24/08 con Marlon. No tiene ningún cobro.
+    - Revisar si los tres tienen acceso a la Academia y si pagaron por otro medio.
+  - **Susett Cochachín**: el primer onboarding salió con el closer de prueba `closer1@prueba.com`. Revisar el closer de su venta.
+- [ ] **Duplicadas v57676 (Felipe) y v57675 (Gaby)**: quedaron `unverified` con la nota; decidir si se borran.
+- [ ] Agendas importadas el 03/06/26 (registros de 2024–2025): el `mail` del formulario no coincide con el nombre en muchas (Blank Aguilar → cicarrillom@, Prince Aguilar → alanvilla45@…). Pre-2026: baja prioridad.
+- [ ] Avisarle a Dari que cierre «Perdido: que retome la preparación» de la cuenta 522 de Mónica: es una falsa alarma, estudia en la 523.
+- [ ] `heidgarcia@uan.edu.co`: lo usa Joel (agenda 01/2025 y sus cuotas) y Nataly García (v57239, 26/01/2025); quedó como secundario de Joel. La cuenta 704 de la Academia («Paula Carrasco F.», vacía) se creó el 22/10 con ese correo: decidir si se borra o se le cambia el correo.
+- [ ] Limpieza de datos compartidos (resto, 26/10): 287 de 22.533 fichas comparten correo, teléfono o Instagram con alguien de otro nombre (39 con ventas). Sobre todo fichas con nombre de producto («Sesión de Claridad», «Plan de Aceleración», «Sesión de Aceleración») e Instagram de relleno («no tengo» ×8, nombres con espacios, «karla»). Mostrar qué se tocaría antes de aplicar.
+  - v57525 Yrein (pago de Sureiny Marrero), v57674 Emilia Collantes (pago de Kiandra Vega), v57629 Natalia Salazar (sin cobro; el de `nikyaguilar@` es de Leslie Aguilar, alumna 556): quedan sin cobro.
+  - v56755 Miguel Olivera: el cobro de $1500 del 09/01 es de Sebastián Piraban (`sebastianpl27@`, alumno 377); no quedó verificado.
+  - v57338 Natalia Rivera (11/02, pagó `cesar_anthony_2397@`) y v56759 Ireri González (31/12/25, pagó `cucumberwithchili01@`; ficha «Salma kaori» con `ireri_94@`): sin nada que una correo y venta.
+  - Cobros sin venta: 20 (~$9.5k) antes de junio, casi todos de enero; 5 después.
+  - Parser de Hotmart crudo en la pestaña Diferencias (`conciliacion_csv`): el alias de bruto toma «Precio Total».
 
 ## 6. Vencimientos y renovaciones
 
