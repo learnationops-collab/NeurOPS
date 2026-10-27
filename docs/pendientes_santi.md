@@ -81,7 +81,7 @@ El alumno ya ve cuándo vence o venció su acceso y agenda la renovación con Je
 ## 9. Fulfillment, personas y accesos
 
 - [ ] Unificar las tablas de comentarios (closers, setters, Dari, etc.). Los comentarios de la Academia ya se ven en la pestaña Fulfillment de la ficha (`d65f0ef6`).
-- [ ] Dejar `mario@neurocogniciones.com` como único correo de Mario y sacar el viejo, que sigue apareciendo, por ejemplo en «Responsable» (está en los datos, no en el código).
+- [ ] Correo viejo de Mario: sus dos cuentas se quedan (la 3, operador con calendario de ventas y `mario@thelearnation.com`; la 1144, `mario@neurocogniciones.com`, la que la Academia usa para sus sesiones con el calendario Teaching). Unificarlas mezcla los calendarios. Falta saber en qué pantalla ve el correo viejo para sacarlo de ahí.
 - [ ] Que todos puedan crear sesiones desde Leadership.
 
 ## 10. Seguridad y errores
