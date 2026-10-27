@@ -1102,3 +1102,6 @@
   - Datos en prod: la Sesión de Aceleración dura 30 min para Juliana y Dari (`sesiones` de su persona en Team).
 - **27 de Octubre de 2026 (Triage · «Sesión diagnóstica» en Google)** *([operacion.py](../../app/agendas_v2/operacion.py))*:
   - El evento de Google de una agenda de triage se llama «Sesión diagnóstica» (Marlon, 27/10), venga del formulario, de «pasar a triage» o de una agenda manual.
+- **27 de Octubre de 2026 (El vencimiento sigue al plan de cuotas)** *([subscription_service.py](../../app/services/subscription_service.py), [installment_service.py](../../app/services/installment_service.py))*:
+  - Regla de Santiago (26/10): en cuotas, el acceso va hasta la próxima cuota más una semana de gracia; con el plan pagado, 120 días desde el pago que completó la venta. Se recalcula cada vez que cambia el plan (crearlo, editarlo, marcar, agregar o borrar una cuota).
+  - Solo toca suscripciones que ya existen y nunca pisa lo que decidió una persona (prórroga, corrección o acceso dado a mano). Acorta solo en ventas desde el 28/10: medido en producción, en las viejas le cortaba hoy el acceso a 10 alumnos con cuotas cobradas sin marcar; ahí solo extiende.

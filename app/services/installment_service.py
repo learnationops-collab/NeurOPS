@@ -1,6 +1,9 @@
+import logging
 from datetime import date, datetime, timedelta
 from app import db
 from app.models import InstallmentPlan
+
+logger = logging.getLogger(__name__)
 
 
 def _venta_de(client_id, programa_code, existentes=()):
@@ -27,10 +30,17 @@ def _add_months(d, months):
     return date(year, month, day)
 
 
-def _avisar_a_la_academia(client_id):
-    """El plan cambió: la Academia muestra el estado de pago del alumno (ver
-    `academy_payment_status`). En un hilo y sin levantar: el plan ya está guardado."""
-    from app.services import academy_payment_status
+def _avisar_a_la_academia(client_id, programa_code=None):
+    """El plan cambió: el vencimiento sigue al plan (`subscription_service.ajustar_por_plan`) y la
+    Academia muestra el estado de pago del alumno (`academy_payment_status`). Sin levantar: el plan
+    ya está guardado."""
+    from app.services import academy_payment_status, subscription_service
+    try:
+        if subscription_service.ajustar_por_plan(client_id, programa_code):
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'[PLAN] Vencimiento por plan del cliente {client_id}: {e}')
     academy_payment_status.avisar([client_id])
 
 
@@ -74,7 +84,7 @@ class InstallmentService:
 
         if rest <= 0 or n <= 0:
             db.session.commit()
-            _avisar_a_la_academia(client_id)
+            _avisar_a_la_academia(client_id, programa_code)
             return []
 
         each = round(rest / n, 2)
@@ -119,7 +129,7 @@ class InstallmentService:
             plans.append(plan)
 
         db.session.commit()
-        _avisar_a_la_academia(client_id)
+        _avisar_a_la_academia(client_id, programa_code)
         return plans
 
     @staticmethod
@@ -181,7 +191,7 @@ class InstallmentService:
             cuota.numero_cuota = i
 
         db.session.commit()
-        _avisar_a_la_academia(client_id)
+        _avisar_a_la_academia(client_id, programa_code)
         return resultado
 
     @staticmethod
@@ -257,7 +267,7 @@ class InstallmentService:
             cuota.estado = estado
             cuota.fecha_pago = datetime.utcnow() if estado == 'pagado' else None
         db.session.commit()
-        _avisar_a_la_academia(cuota.client_id)
+        _avisar_a_la_academia(cuota.client_id, cuota.programa_code)
         return cuota, ajustada
 
     @staticmethod
@@ -282,12 +292,12 @@ class InstallmentService:
         )
         db.session.add(plan)
         db.session.commit()
-        _avisar_a_la_academia(client_id)
+        _avisar_a_la_academia(client_id, programa_code)
         return plan
 
     @staticmethod
     def delete_cuota(cuota):
-        client_id = cuota.client_id
+        client_id, programa_code = cuota.client_id, cuota.programa_code
         db.session.delete(cuota)
         db.session.commit()
-        _avisar_a_la_academia(client_id)
+        _avisar_a_la_academia(client_id, programa_code)

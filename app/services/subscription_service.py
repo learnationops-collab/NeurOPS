@@ -6,12 +6,14 @@ Reglas (Santiago, 20/10):
   · una renovación es mes a mes: la extiende 1 mes desde donde vencía (o desde el pago, si ya había
     vencido; Santiago, 22/10/2026);
   · el pago que completa una seña (completo, parcial o la cuota) la pasa a acceso completo;
+  · en cuotas, cada cambio del plan la lleva hasta la próxima cuota más una semana de gracia, y el
+    plan pagado, a 120 días desde el pago que la completó (`ajustar_por_plan`, Santiago, 26/10/2026);
   · el closer la puede acortar a voluntad (Fulfillment, `cambiar`), pero alargarla pide una venta
     nueva sin suscripción (`venta_que_extiende`, 22/10/2026);
   · sin pago se extiende con una prórroga con motivo, de la cantidad de días que se quiera (`dias`) o
     de una de las recomendadas (`PRORROGAS`; Santiago, 23/10/2026), desde Work o pedida por la Academia;
   · nada se pisa en silencio: cada cambio queda en `SubscriptionEvent`.
-Estar al día con las cuotas no mueve esta fecha: eso lo dice la venta.
+El estado de las cuotas (al día, vencida) lo dice la venta; la fecha solo sigue al plan.
 
 Lo automático corre dentro del `before_flush` de `sale_service`, sobre el pago recién ubicado.
 Cada cambio se le empuja a la Academia al guardar (`subscription_sync`, fase 4), y el aviso de cada
@@ -39,6 +41,13 @@ PRORROGAS = {
     'dos_meses': {'label': 'Prórroga', 'meses': 2},
 }
 PRORROGA_MAX_DIAS = 365
+# En cuotas, el acceso llega hasta la próxima cuota más esta gracia (`ajustar_por_plan`).
+GRACIA_DIAS = 7
+# Lo que puso el sistema solo y el plan puede acortar; lo demás lo decidió una persona.
+AJUSTABLES = ('alta', 'conversion', 'extension', 'correccion')
+# Las ventas anteriores tienen planes con cuotas cobradas sin marcar: el plan solo les extiende
+# (acortar le cortaba hoy el acceso a 10 alumnos, 27/10/2026).
+DESDE_REGLA_CUOTAS = date(2026, 10, 28)
 # Un acceso dado con demora puede contar sus meses desde que se da, si la venta es de hace poco.
 DEMORA_DIAS = 30
 
@@ -237,6 +246,52 @@ def prorrogar(client, tipo, motivo, *, dias=None, slug=None, usuario=None, actor
     return otorgar(db.session, client.id, sub.product_slug, hasta, 'prorroga',
                    reason=f"{etiqueta_de_prorroga(tipo, dias)}: {motivo}", actor_id=getattr(usuario, 'id', None),
                    actor_email=actor_email, source=source)
+
+
+def _desde_el_pago(sub):
+    """Desde cuándo corren los 120 días de un plan ya pagado: el primer pago de su venta que no es
+    seña (el que la completó), o el inicio de la suscripción."""
+    from app.models import FinancialSale
+    from app.services.sales_grouping import pago_de_fila
+
+    if sub.sale_id:
+        filas = FinancialSale.query.filter(FinancialSale.sale_id == sub.sale_id).order_by(FinancialSale.date).all()
+        dia = next((_dia(f.date) for f in filas if pago_de_fila(f).tipo != 'seña'), None)
+        if dia:
+            return dia
+    return sub.starts_at
+
+
+def ajustar_por_plan(client_id, programa):
+    """El plan de cuotas cambió (Santiago, 26/10/2026): con cuotas pendientes, el acceso va hasta la
+    próxima más una semana de gracia; con todo pagado, 120 días desde el pago que la completó. Solo
+    toca una suscripción que ya existe (ninguna sin venta). Puede acortar lo que puso el sistema solo
+    en una venta desde `DESDE_REGLA_CUOTAS`, nunca lo que decidió una persona (prórroga, corrección,
+    acceso dado a mano)."""
+    from app.models import InstallmentPlan
+
+    slug = slug_de(programa)
+    sub = _de(db.session, client_id, slug) if slug and client_id else None
+    if sub is None or sub.is_deposit:
+        return None
+    cuotas = InstallmentPlan.query.filter_by(client_id=client_id, programa_code=programa).all()
+    if not cuotas:
+        return None
+    pendientes = sorted(c.fecha_vencimiento for c in cuotas if c.estado != 'pagado' and c.fecha_vencimiento)
+    if pendientes:
+        hasta = pendientes[0] + timedelta(days=GRACIA_DIAS)
+        reason = f'Plan de cuotas: próxima cuota el {pendientes[0].strftime("%d/%m")} + {GRACIA_DIAS} días de gracia'
+    else:
+        hasta = _desde_el_pago(sub) + timedelta(days=DURACION_DIAS)
+        reason = f'Plan de cuotas pagado: {DURACION_DIAS} días'
+    ultimo = sub.events.order_by(SubscriptionEvent.id.desc()).first()
+    automatico = (sub.sale is not None and _dia(sub.sale.sold_at) >= DESDE_REGLA_CUOTAS
+                  and (ultimo is None or (ultimo.kind in AJUSTABLES and not ultimo.actor_id and not ultimo.actor_email)))
+    if hasta < sub.expires_at and not automatico:
+        return None
+    kind = 'extension' if hasta > sub.expires_at else 'correccion'
+    return otorgar(db.session, client_id, slug, hasta, kind, programa=programa, reason=reason,
+                   puede_acortar=automatico)
 
 
 def del_cliente(client_id):

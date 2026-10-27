@@ -40,10 +40,8 @@ La herramienta Deudores de la Academia ya trae los deudores del mes con activo/i
 
 El alumno ya ve cuándo vence o venció su acceso y agenda la renovación con Jean Carlo (`academy` `514ec41c`). La prórroga de una semana a los vencidos se aplicó el 26/10 (hasta el 03/11).
 
-- [ ] **Lógica de vencimiento por plan de cuotas** (Santiago, 26/10). Hoy el código da 120 días a cualquier parcial y estar al día con las cuotas no mueve la fecha (`subscription_service.py`):
-  - Seña: 7 días, extensible con prórroga. El tiempo corre desde el pago que la completa.
-  - En cuotas: cada pago lleva el vencimiento hasta la próxima cuota del plan, más una semana de gracia.
-  - Completo: 120 días. Renovación: mensual o cuatrimestral, atada a un pago nuevo.
+- [x] **Lógica de vencimiento por plan de cuotas** (27/10): cada cambio del plan lleva el acceso a la próxima cuota + 7 días; plan pagado, 120 días (`subscription_service.ajustar_por_plan`). Acorta solo en ventas desde el 28/10: en las viejas solo extiende (acortar le cortaba el acceso hoy a 10 alumnos con cuotas cobradas sin marcar).
+- [ ] Renovación cuatrimestral: hoy toda renovación es mensual. Falta que el closer elija 1 o 4 meses en el formulario de venta (campo en `Sale` + formulario).
 - [ ] **Recordatorios de pago para el alumno**: tarjeta en su perfil con las cuotas pendientes y la fecha límite (visible y constante), y avisos automáticos antes del vencimiento y durante la semana de gracia. Hoy las señales de pago solo las ve el equipo.
 - [ ] Si no agendan la renovación, Dari los contacta (primero los activos), con el motivo «entrevista final para contar su experiencia».
 - [ ] Seña sin completar con actividad: acceso hasta el lunes 02/11 (Lysander, Valentina, Leslie y Cynthia). Decidir qué pasa después. Santiago Herrera, hasta su pago acordado del 15/11.
