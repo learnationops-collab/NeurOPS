@@ -25,7 +25,7 @@ from itsdangerous import BadSignature, URLSafeTimedSerializer
 from sqlalchemy import func
 
 from app import db
-from app.agendas_v2 import servicio
+from app.agendas_v2 import desplazar, servicio
 from app.agendas_v2.modelos import SchedPerfil
 from app.agendas_v2.nucleo.disponibilidad import agenda_opt, ahora_ms, se_solapa, slots_persona
 from app.api.external import bp
@@ -532,11 +532,15 @@ def agenda_horarios():
         franjas = GoogleService.franjas_ocupadas(u.id, servicio.ms_a_dt(desde), servicio.ms_a_dt(hasta))
     else:
         franjas = servicio._franjas_google(u.id, desde, hasta)
+    if ventas and franjas:
+        # Una Momentum va por encima de las C/D: su horario cuenta como libre (desplazar.py).
+        franjas = desplazar.restar(franjas, desplazar.libres({u.id: u.id}, ahora).get(u.id, []))
     ocupado = _franjas_ocupadas(datos.get('ocupado')) + [{'inicio': a, 'fin': b} for a, b in franjas or []]
     o = agenda_opt({
         'reservas': {'modo': 'dias', 'n': dias, 'tipo': 'corridos', 'desde': '', 'hasta': ''},
         'antel': {'n': antel, 'u': 'min'},
-        'paso': {'n': 30, 'u': 'min'},
+        # Las Momentum, de a 15 minutos: entran en los huecos cortos entre llamadas.
+        'paso': {'n': 15 if ventas else 30, 'u': 'min'},
     }, dur)
     slots = slots_persona({'id': f'f-{u.id}', 'tz': tz, 'horario': horario}, dur, o, ahora,
                           lambda pid, t, d: se_solapa(ocupado, t, d), margen)
@@ -621,6 +625,8 @@ def _reservar_momentum(u, datos, inicio, inicio_dt, dur):
     if choca:
         return _error('ocupado', 409)
     titulo = str(datos.get('titulo') or 'Momentum')[:200]
+    # Las C/D que pisa: la Momentum va por encima y al closer se le avisa para reagendarlas (desplazar.py).
+    desplazadas = desplazar.que_pisa(desplazar.libres({u.id: u.id}, ahora_ms()).get(u.id, []), inicio, inicio + dur * 60000)
     appt = Appointment(closer_id=u.id, client_id=cliente.id, start_time=inicio_dt, origin=ORIGEN_MOMENTUM,
                        last_stage='Nueva', closer_result='Pendiente',
                        agenda_payload={'academia': dict(datos.get('academia') or {}), 'duracion_min': dur,
@@ -637,6 +643,8 @@ def _reservar_momentum(u, datos, inicio, inicio_dt, dur):
         return _error('google', 502)
     appt.google_event_id = event_id
     appt.agenda_payload = {**appt.agenda_payload, 'meet': meet}
+    if desplazadas:
+        desplazar.marcar(appt, desplazadas)
     cuando = inicio_dt.strftime('%d/%m/%Y %H:%M')
     avisos_service.avisar('momentum_nueva', 'user', u.id, 'Nueva Momentum',
                           f'{cliente.full_name or email} tiene su {aviso.get("sesion") or "Momentum"} el {cuando} UTC.',

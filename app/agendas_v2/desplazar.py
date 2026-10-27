@@ -5,7 +5,7 @@ scripts/cd_disponibles.py): el closer ve qué horarios puede soltar y Google no 
 En Work la C/D sigue ocupando su horario (servicio.sigue_en_google), salvo para un lead A/B: para él, la
 que empieza dentro de más de ANTELACION cuenta como libre, y si su evento no está «Disponible» (uno de
 Calendly) se descuenta solo si es lo único que ocupa ese rato (un evento propio del closer la sigue
-bloqueando). Si el lead la toma, la C/D sigue en pie marcada `desplazada_por_id` y se le avisa al closer
+bloqueando). Una Momentum de la Academia también va por encima de las C/D (api/external/agenda.py). Si el lead la toma, la C/D sigue en pie marcada `desplazada_por_id` y se le avisa al closer
 para que la reagende. Un C o D no desplaza a nadie, y una agenda sin segmento no se desplaza.
 """
 
@@ -128,8 +128,8 @@ def que_pisa(huecos, inicio, fin):
 
 
 def marcar(appt, ids):
-    """La agenda `appt` (del lead A/B) tomó el horario de esas agendas C/D: quedan marcadas y el closer y
-    los admins reciben un aviso para reagendarlas. No hace commit."""
+    """La agenda `appt` (de un lead A/B o una Momentum) tomó el horario de esas agendas C/D: quedan marcadas y
+    el closer y los admins reciben un aviso para reagendarlas. No hace commit."""
     from app.models import Appointment
     from app.services import avisos_service, lead_log_service
 
@@ -138,7 +138,8 @@ def marcar(appt, ids):
         cuando = a.start_time.strftime('%d/%m/%Y %H:%M')
         nombre = (a.client.full_name if a.client else None) or 'un lead'
         nuevo = (appt.client.full_name if appt.client else None) or 'un lead'
-        texto = (f'El horario del {cuando} UTC lo tomó {nuevo} (segmento {appt.segmento or "?"}). '
+        que = 'su Momentum' if appt.origin == 'Momentum' else f'segmento {appt.segmento or "?"}'
+        texto = (f'El horario del {cuando} UTC lo tomó {nuevo} ({que}). '
                  f'Esta agenda (segmento {a.segmento}) sigue en pie: hay que reagendarla.')
         lead_log_service.nota(texto, a.closer_id, appt=a)
         avisos_service.avisar(

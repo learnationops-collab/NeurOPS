@@ -18,7 +18,7 @@ Pasar al lead del triage al closing.
 Cómo se reparten las agendas entre closers.
 
 - [x] Capacidad de Jean Carlo configurable (llamadas por semana).
-- [ ] Momentum sessions por encima de C y D, o en los huecos de 15 minutos entre llamadas.
+- [x] Momentum sessions por encima de C y D, o en los huecos de 15 minutos entre llamadas.
 - [ ] Parte visual: el C/D desplazado en el mazo del closer y del triage; segmento y puntos en la ficha, la agenda del closer y el panel del triage; vista de Fulfillment reorganizada para el closer.
 - [ ] Revisar los puntos del segmento cada mes con `scripts/ajuste_segmentos.py`.
 
