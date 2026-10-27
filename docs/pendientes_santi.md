@@ -26,7 +26,7 @@ Cómo se reparten las agendas entre closers.
 Que el closer cobre las cuotas y que los datos de venta lleguen limpios.
 
 - [x] Cobros del closer en Work: deudores del mes y vencidos, primero los atrasados, filtro opcional por monto. Ver antes si Deudores de la Academia ya alcanza.
-- [ ] Las cuotas de Nerina, Seba y otros closers que ya no están pasan a Jean Carlo (las de Marlon se quedan con él).
+- [x] Toda la deuda la cobra Jean Carlo por ahora, también la de Marlon (`app/services/cobrador.py`).
 - [ ] Revisar con Jean Carlo los errores de lógica que encuentre y corregirlos de raíz.
 - [ ] Desactivar los flows automáticos que se pisan con el contacto manual.
 - [x] Formulario de venta: que no se reusen los datos del anterior ni se acepte su nombre o «no tengo» como Instagram; avisar si el correo o el Instagram son de otra ficha.

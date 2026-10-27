@@ -134,6 +134,7 @@ class CloserDashboardService:
         from app.services import deuda_service
         from app.services.baja_service import ids_de_baja
         from app.services.closer_followup_service import PROGRAM_CODE_NAMES
+        from app.services.cobrador import cobrador
 
         hoy = date.today()
         empty = {'total': 0.0, 'vencido': 0.0, 'por_vencer': 0.0, 'sin_plan': 0.0,
@@ -185,8 +186,11 @@ class CloserDashboardService:
         clientes = {c.id: c for c in Client.query.filter(Client.id.in_(deuda_por_cliente.keys())).all()}
 
         rows, totals = [], dict(empty)
+        # Con cobrador (`cobrador.py`), toda la deuda es suya y de nadie más.
+        quien_cobra = cobrador()
         for client_id, deuda in deuda_por_cliente.items():
-            if closer_id and dueño.get(client_id) != closer_id:
+            dueño_de_la_deuda = quien_cobra.id if quien_cobra else dueño.get(client_id)
+            if closer_id and dueño_de_la_deuda != closer_id:
                 continue
 
             cuotas = cuotas_por_cliente.get(client_id, [])

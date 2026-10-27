@@ -5,6 +5,7 @@ from app import db
 from app.models import Appointment, FinancialSale, User
 from app.services import baja_service, deuda_service
 from app.services.lead_cobro_service import resolver_etapa
+from app.services.cobrador import cobrador
 from sqlalchemy import or_, and_, func
 
 logger = logging.getLogger(__name__)
@@ -267,7 +268,13 @@ class CloserFollowUpService:
             # reales en producción) apareciera repartido en el "no tomadas"/"tomadas" de CUALQUIER
             # closer activo — reportado por Jean Carlo como "veo seguimientos de leads que le
             # pertenecen a otros closers".
-            q = q.filter(Appointment.closer_id == closer_id)
+            propias = Appointment.closer_id == closer_id
+            # Los cobros (`cerrada`) los hace el cobrador (`cobrador.py`): los de todos, y nadie más.
+            quien_cobra = cobrador()
+            if quien_cobra:
+                es_cobro = func.coalesce(Appointment.seguimiento_tipo, '') == 'cerrada'
+                propias = or_(propias, es_cobro) if quien_cobra.id == closer_id else and_(propias, ~es_cobro)
+            q = q.filter(propias)
         return q
 
     @staticmethod
@@ -752,6 +759,10 @@ class CloserFollowUpService:
 
         if not closer_id:
             return []
+        # Con cobrador (`cobrador.py`), toda la cola es suya.
+        quien_cobra = cobrador()
+        if quien_cobra and quien_cobra.id != closer_id:
+            return []
 
         sales_by_client = CloserFollowUpService._resolve_sales_and_clients()
 
@@ -772,7 +783,7 @@ class CloserFollowUpService:
             appt = lote.ultima_cita.get(cid)
             if not appt:
                 continue
-            if appt.closer_id != closer_id and appt.closer_id not in inactive_closer_ids:
+            if not quien_cobra and appt.closer_id != closer_id and appt.closer_id not in inactive_closer_ids:
                 continue
             items.append(CloserFollowUpService._build_cartera_item(cid, client, appt, sales_by_client, lote=lote))
 

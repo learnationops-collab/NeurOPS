@@ -116,6 +116,7 @@ def estado(client, hoy=None):
     from app.services import baja_service
     from app.services.academy_access_service import AcademyAccessService
     from app.services.closer_followup_service import CloserFollowUpService
+    from app.services.cobrador import cobrador
     from app.services.sheets_service import SheetsService
 
     hoy = hoy or date.today()
@@ -148,7 +149,9 @@ def estado(client, hoy=None):
         'tipo': tipo,
         'estado': regla_estado(baja, len(vencidas), proxima.fecha_vencimiento if proxima else None, tipo, hoy,
                                saldo),
-        'closer_email': AcademyAccessService.closer_de(client),
+        # A quién le toca cobrar: el cobrador (`cobrador.py`) o, sin él, el closer del que depende.
+        'closer_email': (quien_cobra.email.strip().lower() if (quien_cobra := cobrador()) and quien_cobra.email
+                         else AcademyAccessService.closer_de(client)),
         'cuotas': {
             'total': len(cuotas),
             'pagadas': len(cuotas) - len(pendientes),
