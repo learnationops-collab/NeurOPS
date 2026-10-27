@@ -997,6 +997,22 @@ def _contexto(evento, form, resp):
     }
 
 
+def sesion_del_lead(d, evento, form, resp):
+    """El evento de la sesión que toma el lead: el que elige la regla del formulario que lo rutea (C/D →
+    «Sesión diagnóstica» con el triage, Mario 27/10) o, si la regla no elige, el del formulario. De ese
+    evento salen el nombre, la duración, el margen y las indicaciones; la ventana de reservas y lo demás
+    siguen siendo del evento del formulario, que es el que el lead abrió."""
+    if evento.get('persona') or not form:
+        return evento
+    i = grupo_por_reglas(form, resp).get('regla')
+    reglas = form.get('reglas') or []
+    otro = buscar(d, 'eventos', reglas[i].get('evento')) if i is not None and 0 <= i < len(reglas) else None
+    if not otro or otro['id'] == evento['id']:
+        return evento
+    return {**evento, 'id': otro['id'], 'nombre': otro['nombre'], 'duracion': otro['duracion'],
+            'margen': otro.get('margen') or 0, 'indic': otro.get('indic') or ''}
+
+
 def horarios(d, evento, form, resp, ahora=None):
     """Inicios libres (ms) para esas respuestas, sin decir de que closer es cada uno."""
     ahora = ahora or ahora_ms()
@@ -1005,7 +1021,8 @@ def horarios(d, evento, form, resp, ahora=None):
         return []
     d, elegibles = solo_elegibles(d)
     libres = desplazar.libres(elegibles, ahora) if desplazar.desplaza(segmentar(form, limpias)) else {}
-    asig = asignacion(_contexto(evento, form, limpias), d, {**_ocupacion(ahora, elegibles, libres), 'prueba': False})
+    sesion = sesion_del_lead(d, evento, form, limpias)
+    asig = asignacion(_contexto(sesion, form, limpias), d, {**_ocupacion(ahora, elegibles, libres), 'prueba': False})
     return sorted({s['t'] for s in asig['slots']})
 
 
@@ -1468,14 +1485,15 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     d, elegibles = solo_elegibles(d)
     # Un lead A/B puede tomar el horario de una agenda C/D (desplazar.py).
     libres = desplazar.libres(elegibles, ahora) if desplazar.desplaza(segmentar(form, limpias)) else {}
-    asig = asignacion(_contexto(evento, form, limpias), d, {**_ocupacion(ahora, elegibles, libres), 'prueba': False})
+    sesion = sesion_del_lead(d, evento, form, limpias)
+    asig = asignacion(_contexto(sesion, form, limpias), d, {**_ocupacion(ahora, elegibles, libres), 'prueba': False})
     slot = next((s for s in asig['slots'] if s['t'] == inicio), None)
     if not slot or not slot['p'] or slot['p'] not in elegibles:
         raise ReservaRechazadaError('ocupado')
 
     user_id = elegibles[slot['p']]
     # La sesión de ese closer en este evento (lo que ajustó o la propuesta) y su margen: los dos bloquean.
-    dur, margen = sesion_de(buscar(d, 'personas', slot['p']), evento['id'], evento['duracion'], evento.get('margen'))
+    dur, margen = sesion_de(buscar(d, 'personas', slot['p']), sesion['id'], sesion['duracion'], sesion.get('margen'))
     fin = inicio + (dur + margen) * 60000
     huecos = libres.get(user_id, [])
     desplazadas = desplazar.que_pisa(huecos, inicio, fin)
@@ -1503,8 +1521,8 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
 
     payload = {
         **armar_reserva(**base, asig=asig, slot={**slot, 'dur': dur, 'margen': margen}),
-        'evento_nombre': evento['nombre'],
-        'indicaciones': evento.get('indic') or '',
+        'evento_nombre': sesion['nombre'],
+        'indicaciones': sesion.get('indic') or '',
         'prioridad_nombre': asig['grupo']['nombre'] if asig.get('grupo') else None,
         'segmento': _segmento(d, form, asig),
         'closer_user_id': closer.id,
@@ -1522,7 +1540,7 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     _subir_version()
     db.session.commit()
     # Con correo, el evento de Calendar le manda la invitación al lead: la página se lo dice solo si salió.
-    con_evento = operacion.crear_evento(appt, evento['nombre'], evento_a_borrar=evento_viejo)
+    con_evento = operacion.crear_evento(appt, sesion['nombre'], evento_a_borrar=evento_viejo)
     avisos_discord.avisar_agenda(appt)
     operacion.avisar_whatsapp(appt)
     invitacion = limpias.get('c-email') if con_evento else None

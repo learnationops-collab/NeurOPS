@@ -58,6 +58,10 @@ ROL = {INVERSION: 'clave', ETAPA: 'clave', EXAMEN: 'cuenta', DECIDE: 'cuenta'}
 # Máxima disponibilidad: el lead ve los horarios de las dos. Si están llenas desborda a «Todos los closers».
 TRIAGE = 'ws-triage'
 POR_SEGMENTO = {'A': 'ws-g5', 'B': 'ws-g4', 'C': TRIAGE, 'D': TRIAGE}
+# La sesión de cada segmento (Mario, 27/10): A y B, la Sesión de Aceleración del formulario; C y D, la
+# Sesión diagnóstica de 30 min con el triage.
+SESION_TRIAGE = 'sesion-diagnostica'
+SESION_POR_SEGMENTO = {'C': SESION_TRIAGE, 'D': SESION_TRIAGE}
 RESTO = 'ws-g1'
 
 # Decide: la pregunta de siempre, y la nueva «¿Quién más participa?» para cuando se decida (--quien-decide).
@@ -94,7 +98,8 @@ def _reglas(reglas, inversion):
         for c in r['cond']:
             if c['q'] == INVERSION:
                 c['ops'] = [o for o in ('oglxqqlugub', 'o8slpjgvje7') if o in existen]
-    por_seg = [{'id': f'seg-{s.lower()}', 'grupo': g, 'url': '', 'cond': [{'q': SEG_Q, 'ops': [s]}]}
+    por_seg = [{'id': f'seg-{s.lower()}', 'grupo': g, 'url': '', 'cond': [{'q': SEG_Q, 'ops': [s]}],
+                **({'evento': SESION_POR_SEGMENTO[s]} if s in SESION_POR_SEGMENTO else {})}
                for s, g in POR_SEGMENTO.items()]
     return filtros + por_seg
 

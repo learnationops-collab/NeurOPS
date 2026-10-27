@@ -88,6 +88,8 @@ export function normalReglas(reglas) {
         return {
             id: String(r.id || uid('r')).slice(0, 40), grupo: url ? '' : String(r.grupo || ''), url,
             cond: (Array.isArray(r.cond) ? r.cond : []).slice(0, 8).map(c => { c = c || {}; return { q: String(c.q || ''), ops: (Array.isArray(c.ops) ? c.ops : []).map(String).slice(0, 60) }; }),
+            // evento: la sesión que toma el lead de esta regla; sin la clave, la del evento del formulario.
+            ...(!url && r.evento ? { evento: String(r.evento).slice(0, 40) } : {}),
         };
     });
 }

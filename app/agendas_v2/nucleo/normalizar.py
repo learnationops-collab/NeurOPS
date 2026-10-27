@@ -188,8 +188,13 @@ def normal_reglas(reglas):
             cond.append({'q': txt(c.get('q')), 'ops': [js_str(x) for x in lista(c.get('ops'))][:60]})
         # url: la regla no manda a una estrategia sino a otra página (el lead no agenda).
         url = url_ok(r.get('url'))
-        out.append({'id': cortar(txt(r.get('id')) or uid('r'), 40), 'grupo': '' if url else txt(r.get('grupo')),
-                    'url': url, 'cond': cond})
+        regla = {'id': cortar(txt(r.get('id')) or uid('r'), 40), 'grupo': '' if url else txt(r.get('grupo')),
+                 'url': url, 'cond': cond}
+        # evento: la sesión que toma el lead que entra por esta regla (C/D → Sesión diagnóstica). Sin la
+        # clave, la del evento del formulario; así lo publicado antes queda idéntico.
+        if not url and txt(r.get('evento')):
+            regla['evento'] = cortar(txt(r.get('evento')), 40)
+        out.append(regla)
     return out
 
 

@@ -47,6 +47,11 @@ function Destino({ d, valor, onChange, label, extra = [] }) {
     );
 }
 
+// La sesión que toma el lead de la regla: la del evento del formulario o otro evento del equipo
+// (C/D → «Sesión diagnóstica» de 30 min con el triage). Los eventos propios de un closer no van.
+const opcionesSesion = (d) => [{ v: '', n: 'La del formulario' },
+    ...ordCol(d, 'eventos').filter(e => !e.persona).map(e => ({ v: e.id, n: e.nombre }))];
+
 // Destino de una regla: una estrategia o una página (el lead no agenda y va a esa URL).
 // Lo que se escribe queda en borrador hasta que es una URL https válida: así no se borra mientras se tipea.
 const A_URL = '__url';
@@ -143,7 +148,13 @@ function Regla({ r, i, f, d, qs, msel, rota, ord, enfocar }) {
                     </FieldError>
                 )}
             </div>
-            <DestinoRegla d={d} r={r} onGrupo={v => cambiar(x => { x.grupo = v; x.url = ''; })} onUrl={u => cambiar(x => { x.url = u; if (u) x.grupo = ''; })} />
+            <div style={{ display: 'grid', gap: 'var(--s2)', alignContent: 'start' }}>
+                <DestinoRegla d={d} r={r} onGrupo={v => cambiar(x => { x.grupo = v; x.url = ''; })} onUrl={u => cambiar(x => { x.url = u; if (u) { x.grupo = ''; delete x.evento; } })} />
+                {!r.url && r.grupo !== NO_CALIFICA && (
+                    <Sx sm label="Sesión" valor={r.evento || ''} opciones={opcionesSesion(d)}
+                        onChange={v => cambiar(x => { if (v) x.evento = v; else delete x.evento; })} />
+                )}
+            </div>
             <IconButton label={'Eliminar regla ' + (i + 1)} icon={<Icono n="basura" />} size="xs" danger className="regla-x"
                 onClick={() => { mutarForm(f.id, 'reglas', rs => rs.filter(y => y.id !== r.id)); enfocar('[data-regla-add]'); }} />
         </div>
