@@ -214,7 +214,11 @@ def avisar(client_ids):
     def _correr():
         with app.app_context():
             for payload in payloads:
-                guardar_alumno(payload, _enviar(payload, app.logger))
+                try:
+                    guardar_alumno(payload, _enviar(payload, app.logger))
+                except Exception:
+                    # _enviar ya lo registró (un 404, cliente sin alumno, como aviso); sigue con los demás.
+                    continue
 
     threading.Thread(target=_correr, daemon=False, name='academy-payment-status').start()
 

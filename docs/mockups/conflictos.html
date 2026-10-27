@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conflictos · mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Tokens del tema Modern oscuro de Work (frontend/src/temas/temas.css) */
+:root{
+  --bg:#020617; --page:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%);
+  --ct2:rgba(255,255,255,.04); --ct3:rgba(255,255,255,.08); --ct3h:rgba(255,255,255,.12); --inset:rgba(0,0,0,.34);
+  --text:#fff; --muted:rgba(255,255,255,.62); --faint:rgba(255,255,255,.42);
+  --b1:rgba(255,255,255,.07); --b2:rgba(255,255,255,.15); --b3:rgba(255,255,255,.34);
+  --brand:#FF3FA4; --brand-soft:rgba(255,63,164,.10); --brand-sb:rgba(255,63,164,.35);
+  --ok-bg:#071A24; --ok-b:#10413D; --ok-t:#7DEAC0;
+  --warn-bg:#1A171C; --warn-b:#473924; --warn-t:#F3D08A;
+  --bad:#E85C4A; --bad-bg:#1B0F1D; --bad-b:#4C2227; --bad-t:#F5A99C;
+  --info-bg:#0A152C; --info-b:#1A3155; --info-t:#93C5FD;
+  --idle-bg:#0E1326; --idle-b:#252C42;
+  --focus:0 0 0 3px rgba(91,124,255,.55); --pop:#0B1030; --win:rgba(2,6,23,.96); --scrim:rgba(2,6,23,.72);
+  --r:28px; --rc:16px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);background-image:var(--page);background-attachment:fixed;color:var(--text);
+  font-family:'Montserrat','Helvetica Neue',Arial,sans-serif;font-size:14px;min-height:100vh}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:none;box-shadow:var(--focus)}
+.wrap{max-width:1440px;margin:0 auto;padding:20px 24px 120px}
+.ph{color:var(--faint);font-style:italic;border-bottom:1px dashed var(--b3)}
+.mut{color:var(--muted)} .faint{color:var(--faint)}
+
+.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+.iso{width:36px;height:36px;border-radius:12px;background:var(--brand);display:grid;place-items:center;font-weight:800;color:#020617}
+.top h1{margin:0;font-size:26px;font-weight:800;letter-spacing:-.02em}
+.top .sub{color:var(--muted);font-size:13px}
+.spacer{flex:1}
+
+.seg{display:inline-flex;gap:4px;padding:4px;border-radius:999px;background:var(--inset);border:1px solid var(--b1);flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:8px 14px;border-radius:999px;font-weight:600;font-size:13px;color:var(--muted);display:inline-flex;gap:8px;align-items:center}
+.seg button:hover{color:var(--text)}
+.seg button[aria-pressed="true"]{background:var(--ct3h);color:var(--text)}
+.seg .n{font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--ct3);color:var(--muted)}
+.seg button[aria-pressed="true"] .n{background:var(--brand);color:#020617}
+
+.btn{border:1px solid var(--b2);background:transparent;border-radius:999px;padding:7px 14px;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{background:var(--ct3)}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:#020617}
+.btn.ghost{border-color:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--text)}
+.btn.danger{border-color:var(--bad-b);color:var(--bad-t)}
+.link{border:0;background:none;padding:0;color:inherit;font-weight:700;text-align:left;text-decoration:underline;text-decoration-color:var(--b3);text-underline-offset:3px}
+.link:hover{text-decoration-color:var(--brand)}
+
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:700;border:1px solid;white-space:nowrap}
+.c-cobranza{background:var(--warn-bg);border-color:var(--warn-b);color:var(--warn-t)}
+.c-cobro{background:var(--info-bg);border-color:var(--info-b);color:var(--info-t)}
+.c-datos{background:var(--idle-bg);border-color:var(--idle-b);color:#C5CEDB}
+.c-fichas{background:var(--brand-soft);border-color:var(--brand-sb);color:#FFB3DE}
+.c-producto{background:var(--ok-bg);border-color:var(--ok-b);color:var(--ok-t)}
+.chip.f{cursor:pointer;background:transparent;border-color:var(--b2);color:var(--muted)}
+.chip.f[aria-pressed="true"]{background:var(--ct3h);border-color:var(--b3);color:var(--text)}
+.src{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:6px;background:var(--ct3);color:var(--muted)}
+.src.Pasarela{color:var(--info-t);background:var(--info-bg)}
+.src.Academia{color:var(--ok-t);background:var(--ok-bg)}
+.src.Agendas{color:var(--warn-t);background:var(--warn-bg)}
+
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.kpi{background:var(--ct2);border:1px solid var(--b1);border-radius:22px;padding:16px 18px}
+.kpi .l{font-size:12px;color:var(--muted);font-weight:600}
+.kpi .v{font-size:28px;font-weight:800;letter-spacing:-.02em;margin-top:4px}
+.kpi small{color:var(--faint);font-size:12px}
+
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.search{display:flex;align-items:center;gap:8px;background:var(--inset);border:1px solid var(--b1);border-radius:999px;padding:0 14px;flex:1 1 240px;max-width:360px}
+.search input{border:0;background:transparent;outline:none;padding:9px 0;width:100%}
+.search svg{flex:none;color:var(--faint)}
+.tipos{display:flex;gap:6px;flex-wrap:wrap}
+
+.cols{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+.list{flex:999 1 560px;min-width:0;background:var(--ct2);border:1px solid var(--b1);border-radius:var(--r);overflow:hidden}
+.det{flex:1 1 440px;min-width:0;background:var(--ct2);border:1px solid var(--b2);border-radius:var(--r);padding:22px;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto}
+.thead,.row{display:grid;grid-template-columns:140px minmax(0,1.1fr) minmax(0,1.6fr) minmax(0,1.3fr) 80px 110px;gap:12px;align-items:center;padding:0 18px}
+.thead{height:40px;color:var(--faint);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--b1)}
+.row{width:100%;text-align:left;border:0;background:transparent;min-height:62px;border-bottom:1px solid var(--b1);color:var(--text);padding-top:8px;padding-bottom:8px}
+.row:hover{background:var(--ct3)}
+.row[aria-current="true"]{background:var(--ct3h);box-shadow:inset 3px 0 0 var(--brand)}
+.row .who{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .que{color:var(--muted);font-size:13px;line-height:1.35}
+.row .ori{font-size:12.5px;line-height:1.35}
+.row .ori b{display:block;font-weight:700}
+.row .ori span{color:var(--faint)}
+.row .monto{font-weight:700;text-align:right}
+.resp{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
+.av{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:800;color:#020617;flex:none}
+.row.done .who,.row.done .que{opacity:.55}
+.vacio{padding:56px 24px;text-align:center;color:var(--muted)}
+.vacio b{display:block;color:var(--text);font-size:16px;margin-bottom:6px}
+
+.det h2{margin:6px 0 2px;font-size:22px;font-weight:800;letter-spacing:-.01em}
+.det .q{margin:12px 0 4px;line-height:1.5;padding:12px 14px;border-radius:var(--rc);background:var(--bad-bg);border:1px solid var(--bad-b);color:var(--bad-t);font-weight:600}
+h3.sec{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin:22px 0 10px;font-weight:700}
+
+/* Línea de tiempo: qué pasó, en orden */
+.tl{list-style:none;margin:0;padding:0 0 0 18px;position:relative}
+.tl:before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:2px;background:var(--b1)}
+.ev{position:relative;padding:0 0 14px}
+.ev:before{content:"";position:absolute;left:-18px;top:5px;width:12px;height:12px;border-radius:50%;background:var(--bg);border:2px solid var(--b3)}
+.ev.mal:before{border-color:var(--bad);background:var(--bad-bg)}
+.ev .h{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ev .fe{font-weight:800;font-size:13px;min-width:62px}
+.ev .ti{font-size:13px}
+.ev.mal .ti{color:var(--bad-t);font-weight:600}
+.ev .nota{color:var(--muted);font-size:12.5px;margin-top:4px;line-height:1.45}
+details.form{margin-top:8px;border:1px solid var(--b1);border-radius:12px;background:var(--inset)}
+details.form summary{cursor:pointer;padding:8px 12px;font-size:12.5px;font-weight:600;color:var(--muted);list-style:none}
+details.form summary::-webkit-details-marker{display:none}
+details.form summary:before{content:"▸ ";color:var(--faint)}
+details.form[open] summary:before{content:"▾ "}
+.campos{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;padding:4px 12px 12px;font-size:12.5px}
+.campos dt{color:var(--faint)}
+.campos dd{margin:0}
+.campos dd.mal{color:var(--bad-t);font-weight:700}
+
+.acciones{display:flex;flex-direction:column;gap:8px}
+.accion{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 14px;border:1px solid var(--b1);border-radius:var(--rc);background:var(--ct2)}
+.accion .d{font-size:13px}
+.accion .d small{display:block;color:var(--faint);font-size:12px;margin-top:2px}
+textarea{width:100%;min-height:64px;resize:vertical;background:var(--inset);border:1px solid var(--b1);border-radius:var(--rc);padding:10px 12px;outline:none}
+.pie{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:14px;flex-wrap:wrap}
+.resuelto{background:var(--ok-bg);border:1px solid var(--ok-b);color:var(--ok-t);border-radius:var(--rc);padding:12px 14px;font-weight:600}
+
+/* Modal: la ficha del lead */
+dialog{border:1px solid var(--b2);border-radius:var(--r);background:var(--win);color:var(--text);padding:0;width:min(920px,calc(100vw - 32px));max-height:calc(100vh - 48px)}
+dialog::backdrop{background:var(--scrim)}
+.mh{display:flex;gap:14px;align-items:center;padding:20px 24px 14px;border-bottom:1px solid var(--b1);flex-wrap:wrap}
+.mh .avg{width:48px;height:48px;border-radius:50%;background:#FF6AD5;color:#020617;display:grid;place-items:center;font-weight:800}
+.mh h2{margin:0;font-size:20px;font-weight:800}
+.mh .meta{color:var(--muted);font-size:12.5px;margin-top:2px}
+.mt{padding:12px 24px 0}
+.mb{padding:18px 24px 24px;overflow:auto;max-height:calc(100vh - 230px)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.card{background:var(--ct2);border:1px solid var(--b1);border-radius:20px;padding:14px 16px}
+.card .l{font-size:11.5px;color:var(--faint);font-weight:700;margin-bottom:4px}
+.card .v{font-size:15px;font-weight:700}
+.tabla{width:100%;border-collapse:collapse;font-size:13px}
+.tabla th{text-align:left;color:var(--faint);font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;padding:8px 10px;border-bottom:1px solid var(--b1)}
+.tabla td{padding:10px;border-bottom:1px solid var(--b1);vertical-align:top}
+.tabla tr.mal td{color:var(--bad-t)}
+.coment{border-left:0;padding:12px 14px;background:var(--ct2);border:1px solid var(--b1);border-radius:14px;margin-bottom:8px;font-size:13px;line-height:1.45}
+.coment .a{font-size:12px;color:var(--faint);margin-bottom:4px}
+.barra{height:8px;border-radius:999px;background:var(--ct3);overflow:hidden;margin-top:8px}
+.barra i{display:block;height:100%;background:var(--brand)}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--pop);border:1px solid var(--b2);padding:12px 18px;border-radius:999px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:10}
+.toast.on{opacity:1}
+.aviso{margin-bottom:16px;font-size:12.5px;color:var(--muted)}
+
+@media (max-width:900px){
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .thead{display:none}
+  .row{grid-template-columns:1fr auto;grid-template-areas:"who monto" "ori ori" "que que" "tipo resp";padding:12px 16px;gap:6px}
+  .row .tipo{grid-area:tipo}.row .who{grid-area:who}.row .que{grid-area:que}.row .ori{grid-area:ori}.row .monto{grid-area:monto}.row .resp{grid-area:resp;justify-self:end}
+  .det{position:static;max-height:none}
+  .grid2{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="iso" aria-hidden="true">L</div>
+    <div><div class="sub">Operaciones</div><h1>Conflictos</h1></div>
+    <div class="spacer"></div>
+    <nav class="seg" aria-label="Secciones de Operaciones">
+      <button>Equipo</button><button>Soporte</button><button>Datos</button><button>Registros</button>
+      <button aria-pressed="true">Conflictos <span class="n" id="nTab">0</span></button>
+      <button>Formularios</button><button>Curso</button>
+    </nav>
+  </header>
+
+  <p class="aviso">Mockup con los casos reales de los pendientes. Lo que va <span class="ph">entre corchetes</span> es un dato que todavía no tengo: se llena solo cuando se conecte con la base.</p>
+
+  <section class="kpis" aria-label="Resumen">
+    <div class="kpi"><div class="l">Abiertos</div><div class="v" id="kAb">0</div><small>casos que no cierran</small></div>
+    <div class="kpi"><div class="l">En juego</div><div class="v" id="kMonto">$0</div><small>deuda y cobros sin venta</small></div>
+    <div class="kpi"><div class="l">Para Jean Carlo</div><div class="v" id="kJc">0</div><small>cobranza: hablar con el alumno</small></div>
+    <div class="kpi"><div class="l">Resueltos</div><div class="v" id="kRes">0</div><small>esta semana</small></div>
+  </section>
+
+  <div class="bar">
+    <label class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Buscar persona, correo o fecha" aria-label="Buscar"></label>
+    <div class="seg" id="colas" role="group" aria-label="Cola"></div>
+    <div class="tipos" id="tipos" role="group" aria-label="Tipo"></div>
+  </div>
+
+  <div class="cols">
+    <section class="list" aria-label="Casos">
+      <div class="thead"><span>Tipo</span><span>Persona</span><span>De dónde viene</span><span>Qué no cierra</span><span style="text-align:right">Monto</span><span>Responsable</span></div>
+      <div id="filas"></div>
+    </section>
+    <aside class="det" id="det" aria-live="polite"></aside>
+  </div>
+</div>
+
+<dialog id="ficha" aria-labelledby="fichaTit"></dialog>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const TIPOS = {cobranza:'Cobranza', cobro:'Cobro sin venta', datos:'Datos', fichas:'Fichas compartidas', producto:'Producto distinto'};
+const RESP = {
+  jc: {nombre:'Jean Carlo', ini:'JC', color:'#FF6AD5'},
+  ops: {nombre:'Operaciones', ini:'OP', color:'#93C5FD'},
+};
+const ACCIONES = {
+  cobranza: [['Crear la cuota','Con la fecha que acuerde con el alumno','pri'],['Marcar pagado','Pagó por otro medio: adjuntar el comprobante',''],['Cortar el acceso','No paga: se avisa a la Academia','danger']],
+  cobro: [['Cargar la venta','Desde el cobro, eligiendo el closer','pri'],['Atar a una venta existente','El cobro es de otra venta de la persona','']],
+  datos: [['Corregir','Se edita el dato en la ficha o la venta','pri'],['Unir fichas','Son la misma persona','']],
+  fichas: [['Revisar el lote','Ver qué se tocaría antes de aplicar','pri'],['Separar','Son personas distintas: cada dato a su ficha','']],
+  producto: [['Dejar el de la Academia','La venta se corrige al producto con acceso','pri'],['Cambiar el acceso','Vale lo vendido','']],
+};
+
+// ev: [fecha, fuente, título, mal?, nota, campos del formulario tal como se cargaron]
+const F = (programa, tipo, monto, metodo, correo, ig, extra = []) =>
+  [['Programa', programa], ['Tipo de pago', tipo], ['Monto', monto], ['Método', metodo], ['Correo', correo], ['Instagram', ig], ...extra];
+
+const CASOS = [
+  {id:1, tipo:'cobranza', quien:'Antonio Castro', correo:'[correo]', ig:'[instagram]', monto:920, resp:'jc',
+   origen:['[fecha de la venta]','Venta RR cargada por [closer]'], que:'Debe $920 y no tiene ninguna cita: no se le puede colgar la cuota',
+   ev:[
+     ['[fecha]','Work','Venta RR cargada por [closer]',0,'Quedó con saldo: el total acordado es mayor que lo cobrado.',
+       F('RR','[parcial / seña]','[monto]','[método]','[correo]','[instagram]',[['Precio total','[precio total]'],['Fecha de la llamada','[sin agenda en Work]']])],
+     ['27/10','Work','No se pudo crear la cuota del saldo',1,'La corrección de deuda crea la cuota sobre la cita de la venta, y esta venta no tiene ninguna.'],
+   ],
+   ful:{programa:'RR',acceso:'[hasta]',pago:'Debe $920',actividad:'[último acceso]',avance:null,objetivo:'[objetivo]',coment:[]}},
+
+  {id:2, tipo:'cobranza', quien:'Andres Simon', correo:'[correo]', ig:'[instagram]', monto:500, resp:'jc',
+   origen:['[fecha]','Venta AL cargada sobre un RR'], que:'Su venta AL puede ser un upsell sobre RR mal etiquetado',
+   ev:[
+     ['[fecha]','Work','Venta RR',0,'',F('RR','[tipo]','[monto]','[método]','[correo]','[instagram]')],
+     ['[fecha]','Work','Venta AL cargada como venta nueva',1,'Si era un upsell sobre el RR, el precio y la deuda cambian.',F('AL','[tipo]','[monto]','[método]','[correo]','[instagram]')],
+     ['26/10','Agendas','Su agenda volvió a su ficha',0,'Estaba en la ficha de «Candy Lopez» por la migración de personas del 22/10.'],
+     ['27/10','Work','Cuota de $500 al 30/10',1,'Sale del precio de lista de AL, no de lo que se le vendió.'],
+   ],
+   ful:{programa:'[programa con acceso]',acceso:'[hasta]',pago:'Cuota de $500 al 30/10',actividad:'[último acceso]',avance:null,objetivo:'[objetivo]',coment:[]}},
+
+  {id:3, tipo:'cobranza', quien:'Yrein', correo:'[correo]', ig:'[instagram]', monto:null, resp:'jc',
+   origen:['[fecha]','Venta cargada por [closer]'], que:'Pidió reembolso y su venta quedó sin cobro',
+   ev:[
+     ['[fecha]','Work','Venta cargada por [closer]',0,'',F('[programa]','[tipo]','[monto]','[método]','[correo]','[instagram]')],
+     ['26/10','Pasarela','El cobro que tenía atado era de Sureiny Marrero',1,'Se desató: la venta queda sin ningún cobro.'],
+     ['26/10','Work','Sus fichas repetidas se unieron en una',0,''],
+     ['[fecha]','Academia','Pidió reembolso',1,'En observación.'],
+   ],
+   ful:{programa:'[programa]',acceso:'[hasta]',pago:'Sin cobro',actividad:'[último acceso]',avance:null,objetivo:'[objetivo]',coment:[['[fecha]','[equipo]','Pidió el reembolso. [detalle]']]}},
+
+  {id:4, tipo:'cobranza', quien:'Saúl Logreira', correo:'[correo]', ig:'[instagram]', monto:250, resp:'jc',
+   origen:['07/08','Intento de pago con otra tarjeta'], que:'Entró al onboarding, pero su pago de $250 falló',
+   ev:[
+     ['07/08','Pasarela','Intento de $250 con la tarjeta de jhoturner80@: falló',1,'La tarjeta no es suya.'],
+     ['08/08','Agendas','Onboarding',0,'Entró sin que el pago estuviera confirmado.'],
+     ['[fecha]','Work','Venta cargada por [closer]',0,'',F('[programa]','[tipo]','$250','[método]','[correo]','[instagram]')],
+     ['26/10','Work','La venta queda sin verificar',1,'Ningún cobro de Stripe ni Hotmart la respalda.'],
+   ],
+   ful:{programa:'[programa]',acceso:'[hasta]',pago:'Sin cobro',actividad:'[último acceso]',avance:null,objetivo:'[objetivo]',coment:[]}},
+
+  {id:5, tipo:'cobranza', quien:'María Alejandra Villa', correo:'[correo]', ig:'[instagram]', monto:null, resp:'jc',
+   origen:['07/08','Onboarding sin pago'], que:'Entró al onboarding y su pago de $50 falló',
+   ev:[
+     ['07/08','Pasarela','Intento de $50: falló',1,''],
+     ['07/08','Agendas','Onboarding',0,''],
+     ['[fecha]','Work','Venta cargada por [closer]',0,'',F('[programa]','[tipo]','[monto]','[método]','[correo]','[instagram]')],
+     ['26/10','Work','La venta queda sin verificar',1,''],
+   ],
+   ful:{programa:'[programa]',acceso:'[hasta]',pago:'Sin cobro',actividad:'[último acceso]',avance:null,objetivo:'[objetivo]',coment:[]}},
+
+  {id:6, tipo:'cobranza', quien:'Natalia Salazar', correo:'[correo]', ig:'[instagram]', monto:null, resp:'jc',
+   origen:['24/08','Onboarding con Marlon'], que:'Tuvo onboarding con Marlon y no tiene ningún cobro',
+   ev:[
+     ['24/08','Agendas','Onboarding con Marlon',0,''],
+     ['[fecha]','Work','Venta cargada por Marlon',0,'',F('[programa]','[tipo]','[monto]','[método]','[correo]','[instagram]')],
+     ['26/10','Pasarela','El cobro de nikyaguilar@ no era suyo',1,'Es de Leslie Aguilar (alumna 556). La venta queda sin cobro.'],
+   ],
+   ful:{programa:'[programa]',acceso:'[hasta]',pago:'Sin cobro',actividad:'[último acceso]',avance:null,objetivo:'[objetivo]',coment:[]}},
+
+  {id:7, tipo:'cobranza', quien:'Sureiny Marrero', correo:'[correo]', ig:'[instagram]', monto:150, resp:'jc',
+   origen:['20/08','Falló la suscripción mensual'], que:'Su suscripción de $150 falló el 20/08 y no volvió a pagar',
+   ev:[
+     ['22/06','Pasarela','Cobro automático de $150 de su suscripción mensual',0,'La venta se creó el 26/10 desde este cobro, sin closer.'],
+     ['20/08','Pasarela','Falló el cobro de $150',1,'No hubo ningún pago después.'],
+     ['27/10','Work','Una venta suya superada por un upsell quedó cancelada',0,''],
+   ],
+   ful:{programa:'[programa]',acceso:'[hasta]',pago:'Vencida desde el 20/08',actividad:'[último acceso]',avance:null,objetivo:'[objetivo]',coment:[]}},
+
+  {id:8, tipo:'cobro', quien:'Nadia Rodríguez', correo:'[correo]', ig:'[instagram]', monto:2500, resp:'jc',
+   origen:['08/08','Pagó $2.000 y no hay venta'], que:'Cobró $2.500 sin venta: no se sabe quién la cerró',
+   ev:[
+     ['08/08','Pasarela','Stripe: $2.000',1,'Sin venta en Work. Los avisos de #wins del 08/08 al 10/08 no se pegaron.'],
+     ['13/08','Pasarela','Stripe: $500, alta de suscripción',1,''],
+     ['10/09','Academia','Renovación: Specialist Iniciative',0,''],
+     ['26/10','Work','Sus fichas repetidas se unieron en una',0,''],
+   ],
+   ful:{programa:'Specialist Iniciative',acceso:'[hasta]',pago:'Pagó, sin venta',actividad:'[último acceso]',avance:null,objetivo:'[objetivo]',coment:[]}},
+
+  {id:9, tipo:'datos', quien:'Susett Cochachín', correo:'[correo]', ig:'[instagram]', monto:null, resp:'ops',
+   origen:['[fecha]','Onboarding con el closer de prueba'], que:'Su venta figura con el closer de prueba',
+   ev:[
+     ['[fecha]','Work','Venta cargada',1,'',F('[programa]','[tipo]','[monto]','[método]','[correo]','[instagram]',[['Closer','closer1@prueba.com']])],
+     ['[fecha]','Agendas','Primer aviso de onboarding con closer1@prueba.com',1,''],
+   ],
+   ful:{programa:'[programa]',acceso:'[hasta]',pago:'[estado]',actividad:'[último acceso]',avance:null,objetivo:'[objetivo]',coment:[]}},
+
+  {id:10, tipo:'datos', quien:'Emilia Collantes', correo:'emy_fer2000@', ig:'[instagram]', monto:null, resp:'ops',
+   origen:['31/08','Seña avisada por Jean Carlo'], que:'Su venta quedó sin cobro: el pago que tenía era de otra alumna',
+   ev:[
+     ['31/08','Work','Seña cargada por Jean Carlo',0,'La venta decía 12/08; se corrigió al 31/08 con el aviso de Jean Carlo.',F('[programa]','Seña','[monto]','[método]','emy_fer2000@','[instagram]')],
+     ['26/10','Pasarela','El cobro que tenía era de Kiandra Vega',1,'Queda sin cobro.'],
+     ['26/10','Academia','Se le quitó el acceso completo',0,'Seña sin completar y sin actividad.'],
+   ],
+   ful:{programa:'[programa]',acceso:'Sin acceso completo desde el 26/10',pago:'Seña sin completar',actividad:'Sin actividad',avance:null,objetivo:'Perdido: que retome',coment:[]}},
+
+  {id:11, tipo:'datos', quien:'heidgarcia@uan.edu.co', correo:'heidgarcia@uan.edu.co', ig:'—', monto:null, resp:'ops', agregado:true,
+   origen:['22/10','Cuenta de la Academia creada vacía'], que:'Un correo en dos personas y una cuenta vacía en la Academia',
+   ev:[
+     ['01/2025','Agendas','Agenda de Joel con este correo',0,'Sus cuotas también lo usan.'],
+     ['26/01/2025','Work','Venta de Nataly García con este correo',1,''],
+     ['22/10','Academia','Se creó la cuenta 704 «Paula Carrasco F.», vacía',1,'Sin productos ni actividad.'],
+   ]},
+
+  {id:12, tipo:'datos', quien:'17 deudores', monto:null, resp:'ops', agregado:true,
+   origen:['05/10','Sesión grupal de onboarding'], que:'El Pulso los marca activos (22 días) por la sesión grupal',
+   ev:[['05/10','Academia','52 asistencias cargadas juntas',1,'Sin esa sesión, su última actividad es de junio a septiembre.']]},
+
+  {id:13, tipo:'datos', quien:'5 fichas', monto:null, resp:'ops', agregado:true,
+   origen:['27/10','Aviso de estado de pago'], que:'El estado de pago no llegó a la Academia',
+   ev:[['27/10','Work','El aviso no encontró alumno',1,'Duplicados vinculados a otro cliente, un correo inválido y una venta sin cliente.']]},
+
+  {id:14, tipo:'fichas', quien:'39 fichas con ventas', monto:null, resp:'ops', agregado:true,
+   origen:['26/10','Limpieza de datos compartidos'], que:'Comparten correo, teléfono o Instagram con alguien de otro nombre',
+   ev:[['26/10','Work','287 fichas compartidas; 39 tienen ventas',1,'Sobre todo nombres de producto e Instagram de relleno («no tengo»).']]},
+
+  {id:15, tipo:'producto', quien:'12 ventas', monto:null, resp:'ops', agregado:true,
+   origen:['26/10','Cruce ventas × suscripciones'], que:'La venta dice un programa y el acceso es de otro',
+   ev:[['26/10','Academia','La carga respetó el producto que dio la Academia',1,'Ejemplo: venta RR con acceso AL.']]},
+];
+
+const COLAS = [
+  {k:'abiertos', label:'Abiertos', f:c => !c.res},
+  {k:'jc', label:'Jean Carlo', f:c => !c.res && c.resp === 'jc'},
+  {k:'ops', label:'Operaciones', f:c => !c.res && c.resp === 'ops'},
+  {k:'res', label:'Resueltos', f:c => !!c.res},
+];
+
+const st = {cola:'abiertos', tipo:null, q:'', sel:1, tab:'resumen'};
+const $ = id => document.getElementById(id);
+const money = n => '$' + n.toLocaleString('es-AR');
+const esc = s => String(s ?? '').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+// Lo que todavía no sé va entre corchetes y se ve como hueco.
+const t = s => esc(s).replace(/\[([^\]]+)\]/g, '<span class="ph">$1</span>');
+
+function visibles(){
+  const cola = COLAS.find(c => c.k === st.cola);
+  const q = st.q.trim().toLowerCase();
+  return CASOS.filter(c => cola.f(c) && (!st.tipo || c.tipo === st.tipo)
+    && (!q || [c.quien, c.que, c.correo, ...c.origen, ...c.ev.map(e => e[0] + ' ' + e[2])].join(' ').toLowerCase().includes(q)));
+}
+
+function render(){
+  const ab = CASOS.filter(c => !c.res);
+  $('nTab').textContent = ab.length;
+  $('kAb').textContent = ab.length;
+  $('kMonto').textContent = money(ab.reduce((s, c) => s + (c.monto || 0), 0));
+  $('kJc').textContent = ab.filter(c => c.resp === 'jc').length;
+  $('kRes').textContent = CASOS.length - ab.length;
+
+  $('colas').innerHTML = COLAS.map(c => `<button aria-pressed="${st.cola === c.k}" data-cola="${c.k}">${c.label} <span class="n">${CASOS.filter(c.f).length}</span></button>`).join('');
+  const base = CASOS.filter(COLAS.find(c => c.k === st.cola).f);
+  $('tipos').innerHTML = Object.entries(TIPOS).map(([k, l]) =>
+    `<button class="chip f" aria-pressed="${st.tipo === k}" data-tipo="${k}">${l} · ${base.filter(c => c.tipo === k).length}</button>`).join('');
+
+  const filas = visibles();
+  if (!filas.some(c => c.id === st.sel)) st.sel = filas[0]?.id ?? null;
+  $('filas').innerHTML = filas.length ? filas.map(c => {
+    const r = RESP[c.resp];
+    return `<button class="row${c.res ? ' done' : ''}" aria-current="${c.id === st.sel}" data-id="${c.id}">
+      <span class="tipo"><span class="chip c-${c.tipo}">${TIPOS[c.tipo]}</span></span>
+      <span class="who">${esc(c.quien)}</span>
+      <span class="ori"><b>${t(c.origen[0])}</b><span>${t(c.origen[1])}</span></span>
+      <span class="que">${c.res ? '✓ ' + esc(c.res) : esc(c.que)}</span>
+      <span class="monto">${c.monto ? money(c.monto) : '—'}</span>
+      <span class="resp"><span class="av" style="background:${r.color}">${r.ini}</span>${r.nombre}</span></button>`;
+  }).join('') : `<div class="vacio"><b>Nada por acá</b>${st.cola === 'res' ? 'Todavía no se resolvió ningún caso.' : 'No hay casos con estos filtros.'}</div>`;
+
+  renderDetalle(CASOS.find(c => c.id === st.sel));
+}
+
+function evento([fe, fuente, titulo, mal, nota, campos]){
+  const form = campos ? `<details class="form"><summary>Lo que se cargó ese día</summary><dl class="campos">${
+    campos.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${t(v)}</dd>`).join('')}</dl></details>` : '';
+  return `<li class="ev${mal ? ' mal' : ''}"><div class="h"><span class="fe">${t(fe)}</span><span class="src ${fuente}">${fuente}</span><span class="ti">${t(titulo)}</span></div>
+    ${nota ? `<div class="nota">${t(nota)}</div>` : ''}${form}</li>`;
+}
+
+function renderDetalle(c){
+  const d = $('det');
+  if (!c) { d.innerHTML = '<div class="vacio"><b>Elegí un caso</b>El detalle aparece acá.</div>'; return; }
+  const r = RESP[c.resp];
+  const acciones = c.res ? `<div class="resuelto">Resuelto: ${esc(c.res)}</div>`
+    : `<div class="acciones">${ACCIONES[c.tipo].map(([a, sub, v], i) =>
+        `<div class="accion"><div class="d">${a}<small>${sub}</small></div><button class="btn ${v}" data-acc="${i}">${a}</button></div>`).join('')}</div>`;
+  d.innerHTML = `
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span class="chip c-${c.tipo}">${TIPOS[c.tipo]}</span>
+      <span class="resp"><span class="av" style="background:${r.color}">${r.ini}</span>${r.nombre}</span>
+      <span style="flex:1"></span>
+      ${c.agregado ? '' : '<button class="btn" data-ficha>Ver ficha</button>'}
+    </div>
+    <h2>${c.agregado ? esc(c.quien) : `<button class="link" data-ficha style="font-size:inherit">${esc(c.quien)}</button>`}</h2>
+    <div class="faint" style="font-size:12.5px">Desde el ${t(c.origen[0])} · ${t(c.origen[1])}${c.monto ? ' · ' + money(c.monto) : ''}</div>
+    <div class="q">${esc(c.que)}</div>
+    <h3 class="sec">Qué pasó</h3>
+    <ol class="tl">${c.ev.map(evento).join('')}</ol>
+    <h3 class="sec">Cómo se resuelve</h3>
+    ${acciones}
+    <h3 class="sec">Nota</h3>
+    <textarea placeholder="Qué se habló, qué se decidió…" aria-label="Nota"></textarea>
+    <div class="pie">
+      <button class="btn">Pasar a ${c.resp === 'jc' ? 'Operaciones' : 'Jean Carlo'}</button>
+      ${c.res ? '<button class="btn" data-reabrir>Reabrir</button>' : '<button class="btn ghost" data-descartar>Descartar con motivo</button>'}
+    </div>`;
+}
+
+// La ficha del lead, como en Work: datos, ventas y pagos, agendas y Fulfillment (lo de la Academia).
+const TABS = [['resumen','Resumen'],['ventas','Ventas y pagos'],['agendas','Agendas'],['ful','Fulfillment']];
+function renderFicha(){
+  const c = CASOS.find(x => x.id === st.sel); if (!c) return;
+  const ini = c.quien.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
+  const ventas = c.ev.filter(e => e[1] === 'Work' || e[1] === 'Pasarela');
+  const agendas = c.ev.filter(e => e[1] === 'Agendas');
+  const f = c.ful;
+  let cuerpo = '';
+  if (st.tab === 'resumen') {
+    cuerpo = `<div class="grid2">
+      <div class="card"><div class="l">Correo</div><div class="v">${t(c.correo)}</div></div>
+      <div class="card"><div class="l">Instagram</div><div class="v">${t(c.ig)}</div></div>
+      <div class="card"><div class="l">Programa en la Academia</div><div class="v">${t(f.programa)}</div></div>
+      <div class="card"><div class="l">Estado de pago</div><div class="v">${t(f.pago)}</div></div>
+    </div>
+    <h3 class="sec">Conflicto abierto</h3><div class="coment"><div class="a">Desde el ${t(c.origen[0])} · ${RESP[c.resp].nombre}</div>${esc(c.que)}</div>`;
+  } else if (st.tab === 'ventas') {
+    cuerpo = ventas.length ? `<table class="tabla"><thead><tr><th>Fecha</th><th>Origen</th><th>Qué</th><th>Detalle</th></tr></thead><tbody>${
+      ventas.map(e => `<tr class="${e[3] ? 'mal' : ''}"><td>${t(e[0])}</td><td><span class="src ${e[1]}">${e[1]}</span></td><td>${t(e[2])}</td><td>${
+        e[5] ? e[5].map(([k, v]) => `<div><span class="faint">${esc(k)}:</span> ${t(v)}</div>`).join('') : t(e[4] || '—')}</td></tr>`).join('')}</tbody></table>`
+      : '<div class="vacio">Sin ventas ni cobros.</div>';
+  } else if (st.tab === 'agendas') {
+    cuerpo = agendas.length ? `<table class="tabla"><thead><tr><th>Fecha</th><th>Qué</th><th>Nota</th></tr></thead><tbody>${
+      agendas.map(e => `<tr class="${e[3] ? 'mal' : ''}"><td>${t(e[0])}</td><td>${t(e[2])}</td><td>${t(e[4] || '—')}</td></tr>`).join('')}</tbody></table>`
+      : '<div class="vacio">Sin agendas en Work.</div>';
+  } else {
+    cuerpo = `<div class="grid2">
+      <div class="card"><div class="l">Programa</div><div class="v">${t(f.programa)}</div></div>
+      <div class="card"><div class="l">Acceso</div><div class="v">${t(f.acceso)}</div></div>
+      <div class="card"><div class="l">Última actividad (Pulso)</div><div class="v">${t(f.actividad)}</div></div>
+      <div class="card"><div class="l">Objetivo de Fulfillment</div><div class="v">${t(f.objetivo)}</div></div>
+      <div class="card"><div class="l">Avance de lecciones</div><div class="v"><span class="ph">lecciones vistas / total</span></div><div class="barra"><i style="width:0%"></i></div></div>
+      <div class="card"><div class="l">Sesiones</div><div class="v"><span class="ph">asistidas</span></div></div>
+    </div>
+    <h3 class="sec">Comentarios del equipo de la Academia</h3>
+    ${f.coment.length ? f.coment.map(([fe, a, x]) => `<div class="coment"><div class="a">${t(fe)} · ${t(a)}</div>${t(x)}</div>`).join('')
+      : '<div class="coment"><div class="a"><span class="ph">fecha · autor</span></div><span class="ph">comentarios de Dari y del equipo</span></div>'}
+    <p class="faint" style="font-size:12px;margin-top:12px">Se lee de la Academia al abrir, igual que la pestaña Fulfillment de la ficha.</p>`;
+  }
+  $('ficha').innerHTML = `
+    <div class="mh"><div class="avg" aria-hidden="true">${esc(ini)}</div>
+      <div style="flex:1;min-width:200px"><h2 id="fichaTit">${esc(c.quien)}</h2><div class="meta">${t(c.correo)} · ${t(c.ig)}</div></div>
+      <button class="btn">Abrir en Work ↗</button><button class="btn ghost" data-cerrar aria-label="Cerrar">✕</button></div>
+    <div class="mt"><div class="seg" role="tablist">${TABS.map(([k, l]) => `<button role="tab" aria-pressed="${st.tab === k}" data-tab="${k}">${l}</button>`).join('')}</div></div>
+    <div class="mb">${cuerpo}</div>`;
+}
+
+function aviso(x){ const el = $('toast'); el.textContent = x; el.classList.add('on'); clearTimeout(aviso.t); aviso.t = setTimeout(() => el.classList.remove('on'), 1800); }
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) { if (e.target === $('ficha')) $('ficha').close(); return; }
+  if (b.dataset.cola) { st.cola = b.dataset.cola; st.tipo = null; render(); return; }
+  if (b.dataset.tipo) { st.tipo = st.tipo === b.dataset.tipo ? null : b.dataset.tipo; render(); return; }
+  if (b.dataset.id) { st.sel = +b.dataset.id; render(); return; }
+  if ('ficha' in b.dataset) { st.tab = 'resumen'; renderFicha(); $('ficha').showModal(); return; }
+  if (b.dataset.tab) { st.tab = b.dataset.tab; renderFicha(); return; }
+  if ('cerrar' in b.dataset) { $('ficha').close(); return; }
+  const c = CASOS.find(x => x.id === st.sel); if (!c) return;
+  if (b.dataset.acc !== undefined) { c.res = ACCIONES[c.tipo][+b.dataset.acc][0]; aviso('Resuelto: ' + c.quien); render(); return; }
+  if ('descartar' in b.dataset) { c.res = 'Descartado'; aviso('Descartado: ' + c.quien); render(); return; }
+  if ('reabrir' in b.dataset) { delete c.res; aviso('Reabierto'); render(); }
+});
+$('q').addEventListener('input', e => { st.q = e.target.value; render(); });
+render();
+</script>
+</body>
+</html>

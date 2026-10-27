@@ -1,4 +1,4 @@
-"""/api/auth/*: login, logout, me, csrf-token y debug.
+"""/api/auth/*: login, logout, me y csrf-token.
 
 Login devuelve un JWT (metodo principal de la SPA) y ademas abre una sesion de cookie. Un error de
 credenciales debe ser IDENTICO para un usuario inexistente y para una clave incorrecta, para no
@@ -282,22 +282,10 @@ def test_logout_sin_sesion_no_falla(client):
     assert client.post('/api/auth/logout').status_code == 200
 
 
-# --- csrf-token y debug -----------------------------------------------------------------------
+# --- csrf-token -----------------------------------------------------------------------------
 
 def test_csrf_token_entrega_un_token(client):
     respuesta = client.get('/api/auth/csrf-token')
 
     assert respuesta.status_code == 200
     assert len(respuesta.get_json()['csrf_token']) > 20
-
-
-def test_debug_no_devuelve_las_cabeceras_ni_cookies_sensibles(client):
-    client.set_cookie('otra', 'VALOR-SECRETO-DE-COOKIE')
-
-    respuesta = client.get('/api/auth/debug', headers={'Authorization': 'Bearer VALOR-SECRETO-DEL-TOKEN'})
-
-    cuerpo = respuesta.get_data(as_text=True)
-    assert respuesta.status_code == 200
-    assert 'VALOR-SECRETO-DEL-TOKEN' not in cuerpo
-    assert 'VALOR-SECRETO-DE-COOKIE' not in cuerpo
-    assert 'otra' in respuesta.get_json()['cookies_received']  # solo el NOMBRE de la cookie

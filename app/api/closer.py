@@ -2293,12 +2293,10 @@ def update_client_total_amount(client_id):
 
     if 'total_amount' not in data:
         return jsonify({"error": "Falta 'total_amount'"}), 400
-    try:
-        nuevo_total = float(data['total_amount'])
-    except (TypeError, ValueError):
-        return jsonify({"error": "'total_amount' tiene que ser un número"}), 400
-    if nuevo_total < 0:
-        return jsonify({"error": "'total_amount' no puede ser negativo"}), 400
+    from app.services.montos import monto_valido
+    nuevo_total = monto_valido(data['total_amount'])
+    if nuevo_total is None:
+        return jsonify({"error": "'total_amount' tiene que ser un número no negativo"}), 400
 
     # El total vive en la venta 'new' vigente de su persona (`Sale.agreed_total`).
     from app.services.deuda_service import total_acordado

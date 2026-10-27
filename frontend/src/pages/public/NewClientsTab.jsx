@@ -9,6 +9,7 @@ import {
 import usePersistentFilters from '../../hooks/usePersistentFilters';
 import Card from '../../components/ui/Card';
 
+import { campoCsv } from '../../utils/csv';
 const getFirstDayOfCurrentMonth = () => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
@@ -185,15 +186,6 @@ const NewClientsTab = () => {
             'Upsells', 'Total Pagado', 'Total a Pagar', 'Deuda', 'Estado Seguimiento'
         ];
 
-        const escapeCSVValue = (val) => {
-            if (val === null || val === undefined) return '';
-            let valStr = String(val).replace(/"/g, '""');
-            if (valStr.includes(',') || valStr.includes('\n') || valStr.includes('\r') || valStr.includes('"')) {
-                return `"${valStr}"`;
-            }
-            return valStr;
-        };
-
         const rows = clients.map(c => [
             c.fecha,
             c.nombre,
@@ -213,8 +205,8 @@ const NewClientsTab = () => {
         ]);
 
         const csvContent = [
-            headers.map(escapeCSVValue).join(','),
-            ...rows.map(row => row.map(escapeCSVValue).join(','))
+            headers.map(campoCsv).join(','),
+            ...rows.map(row => row.map(campoCsv).join(','))
         ].join('\n');
 
         const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });

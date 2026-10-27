@@ -11,6 +11,7 @@ import LeadRoadmapModal from '../../components/modals/LeadRoadmapModal';
 import { PREGUNTA_TRANSFERENCIA, esTransferencia, leyendaTransferencia } from '../../components/ficha/transferencia';
 
 
+import { campoCsv } from '../../utils/csv';
 const getFirstDayOfCurrentMonth = () => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
@@ -589,14 +590,6 @@ const PublicFinancialSalesPage = () => {
                 ]);
             });
 
-            const escapeCSVValue = (val) => {
-                if (val === null || val === undefined) return '';
-                let valStr = String(val).replace(/"/g, '""');
-                if (valStr.includes(',') || valStr.includes('\n') || valStr.includes('\r') || valStr.includes('"')) {
-                    return `"${valStr}"`;
-                }
-                return valStr;
-            };
 
             const headers = [
                 'Fecha', 'Nombre', 'Seña', 'Completo', 'Parcial', 'Cuota', 
@@ -605,8 +598,8 @@ const PublicFinancialSalesPage = () => {
             ];
 
             const csvContent = [
-                headers.map(escapeCSVValue).join(','),
-                ...clientsRows.map(row => row.map(escapeCSVValue).join(','))
+                headers.map(campoCsv).join(','),
+                ...clientsRows.map(row => row.map(campoCsv).join(','))
             ].join('\n');
 
             const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -691,14 +684,6 @@ const PublicFinancialSalesPage = () => {
                 }
             }
 
-            const escapeCSVValue = (val) => {
-                if (val === null || val === undefined) return '';
-                let valStr = String(val).replace(/"/g, '""');
-                if (valStr.includes(',') || valStr.includes('\n') || valStr.includes('\r') || valStr.includes('"')) {
-                    return `"${valStr}"`;
-                }
-                return valStr;
-            };
 
             let rows = [];
             let headers = [];
@@ -738,8 +723,8 @@ const PublicFinancialSalesPage = () => {
             }
 
             const csvContent = [
-                headers.map(escapeCSVValue).join(','),
-                ...rows.map(row => row.map(escapeCSVValue).join(','))
+                headers.map(campoCsv).join(','),
+                ...rows.map(row => row.map(campoCsv).join(','))
             ].join('\n');
 
             const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -929,14 +914,6 @@ const PublicFinancialSalesPage = () => {
                 return;
             }
 
-            const escapeCSVValue = (val) => {
-                if (val === null || val === undefined) return '';
-                let valStr = String(val).replace(/"/g, '""');
-                if (valStr.includes(',') || valStr.includes('\n') || valStr.includes('\r') || valStr.includes('"')) {
-                    return `"${valStr}"`;
-                }
-                return valStr;
-            };
 
             const headers = [
                 'Fecha', 'Nombre', 'Seña', 'Completo', 'Parcial', 'Cuota', 
@@ -945,8 +922,8 @@ const PublicFinancialSalesPage = () => {
             ];
 
             const csvContent = [
-                headers.map(escapeCSVValue).join(','),
-                ...newClientsRows.map(row => row.map(escapeCSVValue).join(','))
+                headers.map(campoCsv).join(','),
+                ...newClientsRows.map(row => row.map(campoCsv).join(','))
             ].join('\n');
 
             const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });

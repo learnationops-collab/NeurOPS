@@ -16,3 +16,12 @@ def add_header(response):
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     return response
+
+
+@bp.after_app_request
+def cabeceras_de_seguridad(response):
+    # frame-ancestors y CSP todavía no: la reserva puede estar embebida en alguna landing.
+    response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+    response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+    response.headers.setdefault('Strict-Transport-Security', 'max-age=31536000')
+    return response

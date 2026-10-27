@@ -34,6 +34,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { ayudaDeResultado } from '../../../utils/estadosAgenda';
 
 
+import { campoCsv } from '../../../utils/csv';
 // Columnas disponibles al exportar clientes potenciales (el orden define el del CSV)
 const POTENTIAL_EXPORT_COLUMNS = [
     { id: 'date', label: 'Fecha Meet', getValue: (l) => (l.date ? String(l.date).split('T')[0] : '') },
@@ -82,20 +83,10 @@ const DEFAULT_AGENDA_REVIEW_COLUMNS = [
     'has_sale', 'es_correcto', 'show_up_real', 'comentario'
 ];
 
-// Compartida entre las dos exportaciones (potenciales y revisión de agendas).
-const escapeCSVValue = (val) => {
-    if (val === null || val === undefined) return '';
-    let valStr = String(val).replace(/"/g, '""');
-    if (valStr.includes(',') || valStr.includes('\n') || valStr.includes('\r') || valStr.includes('"')) {
-        return `"${valStr}"`;
-    }
-    return valStr;
-};
-
 const downloadCSV = (headers, rows, filename) => {
     const csvContent = [
-        headers.map(escapeCSVValue).join(','),
-        ...rows.map(row => row.map(escapeCSVValue).join(','))
+        headers.map(campoCsv).join(','),
+        ...rows.map(row => row.map(campoCsv).join(','))
     ].join('\n');
     const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);

@@ -10,7 +10,6 @@ conciencia; proteger una existente obliga a quitarla de aca.
 # publicas, telemetria de la landing y callbacks de terceros.
 PUBLICAS_POR_DISENO = frozenset({
     ('GET', '/api/auth/csrf-token'),
-    ('GET', '/api/auth/debug'),
     ('POST', '/api/auth/login'),
     # Entrar con Google: solo devuelve la URL de Google; quién entra lo decide el callback.
     ('GET', '/api/auth/google'),

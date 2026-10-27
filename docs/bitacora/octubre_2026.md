@@ -1081,3 +1081,14 @@
   - Vista Embudo (Con el bot · En conversación · Link enviado · Agendó): arrastrar mueve la sub-etapa. Ficha: sub-etapa, responsable (reasignar a mano, manda sobre el reparto hasta una entrada nueva), tareas y variables editables con su origen (bot o setter).
   - Chat con notas internas, tareas y eventos intercalados; caja con Chat, Nota interna y Tarea. El rayito (o «/») trae variables, respuestas rápidas y pasos del flujo (los manda el bot). Biblioteca de audios (en la base, hasta 8 MB). Enviar texto o audio al lead queda apagado hasta el corte de Kommo; mientras, «Copiar».
   - Migración `d5f7a9c1e3b6`: `notes`, `tasks`, `quick_replies`, `audio_clips`, `inbox_reads` y en `ig_contactos` `etapa`, `setter_id`, `asignado_en`.
+- **27 de Octubre de 2026 (Seguridad y validaciones: arreglos chicos de la auditoría)** *([app/api/__init__.py](../../app/api/__init__.py), [auth.py](../../app/api/auth.py), [montos.py](../../app/services/montos.py) [NEW], [academy_payment_status.py](../../app/services/academy_payment_status.py), [utils/csv.js](../../frontend/src/utils/csv.js) [NEW])*:
+  - Fuera `/api/auth/debug` (anónimo y sin uso). Cambiar el WhatsApp mientras se simula da 403.
+  - Cabeceras en toda respuesta: `X-Content-Type-Options`, `Referrer-Policy` y HSTS. CSP y frame-ancestors quedan pendientes (la reserva podría estar embebida en una landing).
+  - `react-router-dom` 6.30.6 (open redirect de `?next=`) y `axios` 1.21.0.
+  - Montos: editar una venta, el total de una cita o una cuota rechaza NaN, infinito y negativos (`monto_valido`); el formulario de venta ya no guarda `inf`/`nan`.
+  - Las 4 exportaciones CSV viejas (postulaciones, agendas financieras, clientes nuevos, ventas públicas) escapan las fórmulas con un apóstrofo (`campoCsv`).
+  - El aviso de estado de pago a la Academia sigue con los demás clientes si uno da error (un 404, cliente sin alumno, cortaba la tanda).
+- **27 de Octubre de 2026 (Pendientes unificados y conflictos de Operaciones)** *([pendientes_santi.md](../pendientes_santi.md) [NEW], [mockups/conflictos.html](../mockups/conflictos.html) [NEW])*:
+  - Un solo archivo de pendientes (reemplaza los de las reuniones del 24/10 y 26/10), revisado contra el código.
+  - Mockup de la vista Conflictos: origen con fecha, la historia con lo que se cargó ese día y la ficha con Fulfillment. Se sube con solo los casos de Jean Carlo.
+  - Datos en prod: Antonio Castro unificado en una ficha (la venta 993 queda con su agenda 6213 y sus cuotas); correo de Milagros Gamonal completado; la cuenta 504 de la Academia (Fabian La Rotta) reatada al cliente 5992; Instagram «.» borrado de dos fichas.

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Download } from 'lucide-react';
 import api from '../../../../services/api';
 
+import { campoCsv } from '../../../../utils/csv';
 const SEGMENTOS = [
     { id: 'todos', label: 'Completaron', conteo: 'todas' },
     { id: 'preseleccionados', label: 'Seleccionados', conteo: 'preseleccionadas' },
@@ -282,10 +283,6 @@ const EmbudoFila = ({ etapa, cantidad, deltaPct, max }) => (
     </div>
 );
 
-const csvCell = (valor) => {
-    const texto = valor === null || valor === undefined ? '' : String(valor);
-    return /[",\n]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto;
-};
 
 const PostulacionesStatsTab = () => {
     const [segmento, setSegmento] = useState('todos');
@@ -315,7 +312,7 @@ const PostulacionesStatsTab = () => {
             const res = await api.get(`/job-applications?filtro=${filtro}`);
             const columnas = ['nombre', 'email', 'veredicto', 'score', 'conocimiento', 'ingles', 'cierre', 'respondidas', 'total_preguntas', 'created_at'];
             const filas = [columnas.join(',')].concat(
-                res.data.postulaciones.map(p => columnas.map(c => csvCell(p[c])).join(','))
+                res.data.postulaciones.map(p => columnas.map(c => campoCsv(p[c])).join(','))
             );
             const blob = new Blob([filas.join('\n')], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);

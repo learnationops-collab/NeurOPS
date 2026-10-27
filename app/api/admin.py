@@ -693,7 +693,12 @@ def manage_db_sales():
     if request.method == 'POST':
         data = request.get_json() or {}
         p = FinancialSale.query.get_or_404(data.get('id'))
-        if 'amount' in data: p.monto = float(data['amount'])
+        if 'amount' in data:
+            from app.services.montos import monto_valido
+            monto = monto_valido(data['amount'])
+            if monto is None:
+                return jsonify({"message": "El monto tiene que ser un número no negativo"}), 400
+            p.monto = monto
         if 'date' in data: p.date = datetime.fromisoformat(data['date'].replace('Z', ''))
         db.session.commit()
         return jsonify({"message": "Registro de venta actualizado"}), 200

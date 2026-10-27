@@ -264,7 +264,11 @@ def update_financial_sale(sale_id):
             if agenda:
                 agenda.nombre = new_setter
         if 'amount' in data:
-            sale.monto = float(data['amount'])
+            from app.services.montos import monto_valido
+            monto = monto_valido(data['amount'])
+            if monto is None:
+                return jsonify({"message": "El monto tiene que ser un número no negativo"}), 400
+            sale.monto = monto
         if 'instagram' in data:
             sale.instagram = data['instagram']
         if 'nombre_cliente' in data:

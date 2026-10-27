@@ -1,6 +1,6 @@
 # Plan: Inbox para setters
 
-El paso previo a que los setters conversen desde Work. Mockup acordado con Santi el 27/10/2026. Pendientes en [pendientes_santi_reunion_26_10.md](pendientes_santi_reunion_26_10.md) §11b.
+El paso previo a que los setters conversen desde Work. Mockup acordado con Santi el 27/10/2026. Pendientes en [pendientes_santi.md](pendientes_santi.md) §1 y §7.
 
 ## Qué ve el setter
 

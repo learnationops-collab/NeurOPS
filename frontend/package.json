@@ -16,7 +16,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@xyflow/react": "12.3.6",
-    "axios": "^1.6.0",
+    "axios": "^1.21.0",
     "chart.js": "^4.5.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.29.2",
@@ -28,7 +28,7 @@
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.6.0",
-    "react-router-dom": "^6.18.0",
+    "react-router-dom": "^6.30.6",
     "recharts": "^3.7.0",
     "tailwind-merge": "^3.7.0"
   },

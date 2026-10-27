@@ -1,3 +1,4 @@
+import math
 import requests
 from datetime import datetime
 from dateutil import parser
@@ -575,7 +576,8 @@ class SheetsService:
                     # En contexto de ventas, 1.200 es más probable que 1.2
                     s_val = s_val.replace('.', '')
 
-            return float(s_val)
+            valor = float(s_val)
+            return valor if math.isfinite(valor) else 0.0
         except (ValueError, TypeError):
             return 0.0
 

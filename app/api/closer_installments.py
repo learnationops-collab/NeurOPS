@@ -112,9 +112,9 @@ def create_single_installment():
     if not appt.client_id:
         return jsonify({"error": "Esta cita no tiene un cliente asociado"}), 400
 
-    try:
-        monto = float(data.get('monto') or 0)
-    except (TypeError, ValueError):
+    from app.services.montos import monto_valido
+    monto = monto_valido(data.get('monto') or 0)
+    if monto is None:
         return jsonify({"error": "Monto inválido"}), 400
     fecha_vencimiento = data.get('fecha_vencimiento')
     if monto <= 0 or not fecha_vencimiento:
