@@ -45,11 +45,11 @@ El acceso del alumno, su renovación y sus pagos.
 ## Scale
 Reparto de agendas en los scale.
 
-- [ ] Sumar a Belu.
-- [ ] «Máxima disponibilidad» en lugar de «llenar en orden»; si coinciden los horarios, va Andy primero.
-- [ ] Mario solo recibe cuando todos los demás están llenos.
-- [ ] Ventana de 3 días.
-- [ ] Reporte después de cada scale para Mario (puede que ya esté).
+- [x] Sumar a Belu.
+- [x] «Máxima disponibilidad» en lugar de «llenar en orden»; si coinciden los horarios, va Andy primero.
+- [x] Mario solo recibe cuando todos los demás están llenos.
+- [x] Ventana de 3 días.
+- [x] Reporte después de cada scale para Mario (puede que ya esté).
 
 ## Inbox y palabras clave
 Que cada palabra clave lleve a un flujo que funcione.
