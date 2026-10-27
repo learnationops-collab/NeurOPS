@@ -25,6 +25,10 @@ export function gmtTxt(tz, ahora = Date.now()) {
     return 'GMT' + s + Math.floor(o / 60) + (o % 60 ? ':' + pad(o % 60) : '');
 }
 function utcDeClave(k) { const a = k.split('-').map(Number); return Date.UTC(a[0], a[1] - 1, a[2], 12); }
+// El lunes (AAAA-MM-DD) de la semana de `ts` en la zona `tz`.
+export function semanaDe(ts, tz) {
+    return new Date(utcDeClave(claveDia(ts, tz)) - ((diaSemana(ts, tz) + 6) % 7) * 86400000).toISOString().slice(0, 10);
+}
 export function fechaCorta(k) { return dtf('UTC', { day: 'numeric', month: 'short' }, 'es').format(utcDeClave(k)); }
 export function fechaClave(k) { return mayus(dtf('UTC', { weekday: 'long', day: 'numeric', month: 'long' }, 'es').format(utcDeClave(k))); }
 export function fechaTs(ts, tz) { return mayus(dtf(tz, { weekday: 'long', day: 'numeric', month: 'long' }, 'es').format(ts)); }

@@ -22,6 +22,8 @@ import { Button, IconButton, ModalHeader } from '../../../../components/standard
 const OPS_DESDE = HORAS.slice(0, -1).map(h => ({ v: h, n: h }));
 const OPS_HASTA = HORAS.slice(1).map(h => ({ v: h, n: h }));
 const OPS_ZONA = ZONAS.map(z => ({ v: z.tz, n: z.n + ' · ' + gmtTxt(z.tz) }));
+// Tope de agendas por semana (lunes a domingo): con la semana llena no se le ofrecen horarios.
+const OPS_TOPE = [{ v: '0', n: 'Sin tope por semana' }, ...[5, 10, 15, 20, 25, 30, 35, 40, 50].map(n => ({ v: String(n), n: `Hasta ${n} por semana` }))];
 
 // Popover "Copiar horas a…": cierra con Escape o con un clic afuera.
 function CopiarA({ desde, onAplicar, onCerrar }) {
@@ -91,6 +93,8 @@ export function HorarioEditor({ p, bloqueado = false, onGuardar = null }) {
         <div className="horario" ref={raiz}>
             <div className="horario-barra">
                 <Sx sm label="Zona horaria" valor={p.tz} opciones={OPS_ZONA} disabled={dis} onChange={v => editarPersona({ tz: v })} />
+                <Sx sm label="Llamadas por semana" valor={String(p.llamadas_semana || 0)} opciones={OPS_TOPE} disabled={dis}
+                    onChange={v => editarPersona({ llamadas_semana: Number(v) })} />
                 <div className="barra-der">
                     <button type="button" className="sug" disabled={dis} onClick={() => guardar(horarioLaV())}><Icono n="rayo" />L a V 9–18</button>
                     {otros.length > 0 && (

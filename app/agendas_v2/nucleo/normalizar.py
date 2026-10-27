@@ -317,6 +317,8 @@ def normal_persona(id, d):
         'horario': normal_horario(d.get('horario')),
         'sesiones': normal_sesiones(d.get('sesiones')),
         'orden': _orden(d.get('orden')),
+        # Tope de llamadas por semana (lunes a domingo, en su zona); 0 = sin tope.
+        'llamadas_semana': entero(d.get('llamadas_semana'), 0, 200, 0),
     }
 
 

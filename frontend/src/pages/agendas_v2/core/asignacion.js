@@ -1,6 +1,7 @@
 // Asignación: qué horarios ve el lead y a qué closer va cada uno.
 // Orden: respuestas → regla → prioridad → estrategia de la prioridad → closer por horario.
 
+import { TZ_DEF } from './catalogos';
 import { buscar, closers, esCloser, esTriage, horasSemana, ord, sesionDe } from './datos';
 import { GENERICA, agendaOpt, slotsPersona } from './disponibilidad';
 import { calificar, grupoPorReglas } from './formulario';
@@ -80,20 +81,25 @@ export function asignacion(ctx, d, opts = {}) {
 /**
  * ctx: {preguntas, resp, dur, margen, eventoId, ag, reglas, resto, segmento, persona}. dur y margen son la propuesta
  * del evento; cada closer usa lo suyo si lo ajustó (sesionDe).
- * opts: {ahora, ocupado(personaId, t, dur), cargaDe(personaId) → agendas futuras, prueba}
+ * opts: {ahora, ocupado(personaId, t, dur), cargaDe(personaId) → agendas futuras,
+ *        enSemana(personaId, t, tz) → agendas en la semana de t, prueba}
  * Devuelve {nota, grupo, grupoRegla, reglaIdx, desborde, slots:[{t, p}], regla, aviso}.
  */
 function asignar(ctx, d, opts = {}) {
     const ahora = opts.ahora ?? Date.now();
     const ocupado = opts.ocupado || (() => false);
     const cargaDe = opts.cargaDe || (() => 0);
+    const enSemana = opts.enSemana || (() => 0);
     const nota = calificar(ctx.preguntas || [], ctx.resp || {});
     const o = agendaOpt(ctx.ag, ctx.dur);
     const memo = new Map();
     const slotsDe = (p) => {
         if (!memo.has(p.id)) {
             const [dur, margen] = sesionDe(p, ctx.eventoId, ctx.dur, ctx.margen);
-            memo.set(p.id, slotsPersona(p, dur, o, { ahora, ocupado, margen }));
+            const slots = slotsPersona(p, dur, o, { ahora, ocupado, margen });
+            // Con tope de llamadas por semana, una semana llena no ofrece horarios (Jean Carlo, 27/10/2026).
+            const tope = p.llamadas_semana || 0, tz = p.tz || TZ_DEF;
+            memo.set(p.id, tope ? slots.filter(t => enSemana(p.id, t, tz) < tope) : slots);
         }
         return memo.get(p.id);
     };

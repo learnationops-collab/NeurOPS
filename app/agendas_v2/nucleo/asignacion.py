@@ -3,6 +3,7 @@ Orden: respuestas → regla → prioridad → estrategia de la prioridad → clo
 """
 
 from app.agendas_v2.nucleo.datos import buscar, closers, es_closer, es_triage, horas_semana, ordenados, sesion_de
+from app.agendas_v2.nucleo.catalogos import TZ_DEF
 from app.agendas_v2.nucleo.disponibilidad import GENERICA, agenda_opt, ahora_ms, slots_persona
 from app.agendas_v2.nucleo.formulario import calificar, grupo_por_reglas
 from app.agendas_v2.nucleo.util import js_truthy
@@ -112,12 +113,14 @@ def asignacion(ctx, d, opts=None):
 def _asignacion(ctx, d, opts=None):
     """ctx: {preguntas, resp, dur, margen, evento_id, ag, reglas, resto, segmento, persona}. dur y margen son la
     propuesta del evento; cada closer usa lo suyo si lo ajustó (sesion_de).
-    opts: {ahora, ocupado(persona_id, t, dur), carga_de(persona_id) → agendas futuras, prueba}
+    opts: {ahora, ocupado(persona_id, t, dur), carga_de(persona_id) → agendas futuras,
+           en_semana(persona_id, t, tz) → agendas en la semana de t, prueba}
     Devuelve {nota, grupo, grupo_regla, regla_idx, desborde, slots: [{t, p}], regla, aviso}."""
     opts = opts or {}
     ahora = ahora_ms() if opts.get('ahora') is None else opts['ahora']
     ocupado = opts.get('ocupado') or (lambda pid, t, dur: False)
     carga_de = opts.get('carga_de') or (lambda pid: 0)
+    en_semana = opts.get('en_semana') or (lambda pid, t, tz: 0)
     resp = ctx.get('resp') or {}
     nota = calificar(ctx.get('preguntas') or [], resp)
     o = agenda_opt(ctx.get('ag'), ctx['dur'])
@@ -126,7 +129,13 @@ def _asignacion(ctx, d, opts=None):
     def slots_de(p):
         if p['id'] not in memo:
             dur, margen = sesion_de(p, ctx.get('evento_id'), ctx['dur'], ctx.get('margen'))
-            memo[p['id']] = slots_persona(p, dur, o, ahora=ahora, ocupado=ocupado, margen=margen)
+            slots = slots_persona(p, dur, o, ahora=ahora, ocupado=ocupado, margen=margen)
+            # Con tope de llamadas por semana, una semana llena no ofrece horarios (Jean Carlo, 27/10/2026).
+            tope = p.get('llamadas_semana') or 0
+            if tope:
+                tz = p.get('tz') or TZ_DEF
+                slots = [t for t in slots if en_semana(p['id'], t, tz) < tope]
+            memo[p['id']] = slots
         return memo[p['id']]
 
     base = {'nota': nota, 'grupo': None, 'grupo_regla': '', 'regla_idx': None, 'desborde': False, 'aviso': ''}

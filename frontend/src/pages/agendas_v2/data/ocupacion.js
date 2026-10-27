@@ -2,6 +2,7 @@
 // del lead la use sin arrastrar el almacén (ni la API de gestión) a la página pública.
 
 import { seSolapa } from '../core/disponibilidad';
+import { semanaDe } from '../core/tiempo';
 
 // Reservas vigentes (agendadas, con closer y horario) de una persona.
 export function reservasDe(reservas, personaId) {
@@ -20,5 +21,7 @@ export function opcionesDeOcupacion(reservas, ahora = Date.now()) {
         ahora,
         ocupado: (pid, t, dur) => seSolapa(por[pid] || [], t, dur),
         cargaDe: (pid) => (por[pid] || []).filter(x => x.inicio >= ahora).length,
+        // Cuántas agendas tiene en la semana de `t` (para el tope de llamadas por semana).
+        enSemana: (pid, t, tz) => (por[pid] || []).filter(x => semanaDe(x.inicio, tz) === semanaDe(t, tz)).length,
     };
 }

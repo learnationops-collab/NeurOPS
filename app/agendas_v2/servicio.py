@@ -611,7 +611,8 @@ def _ocupacion(ahora, elegibles=None, libres=None):
     leido = _leido_de_google(elegibles, ahora)
     leido = {u: desplazar.restar(f, libres.get(u, [])) if f else f for u, f in leido.items()}
     excluir = {i for huecos in libres.values() for i, _, _ in huecos}
-    agendas = _agendas_de_operacion(elegibles, ms_a_dt(ahora - DIA_MS), leido, leido_desde=ahora - 3600000, excluir=excluir)
+    # Desde 7 días antes: el tope de llamadas por semana cuenta también las de los días que ya pasaron.
+    agendas = _agendas_de_operacion(elegibles, ms_a_dt(ahora - 7 * DIA_MS), leido, leido_desde=ahora - 3600000, excluir=excluir)
     base = opciones_de_ocupacion(agendas, ahora)
     google = {pid: [{'inicio': a, 'fin': b} for a, b in leido[u]] for pid, u in elegibles.items() if leido.get(u)}
     if not google:

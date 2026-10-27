@@ -165,6 +165,8 @@ export function normalPersona(id, d) {
         id, nombre: String(d.nombre || 'Sin nombre').slice(0, 60), email: emailOk(d.email), rol: String(d.rol || 'closer').slice(0, 40), foto: fotoOk(d.foto),
         nivel: entero(d.nivel, 1, 3, 1), color: COLORES.includes(d.color) ? d.color : 'azul', tz: zonaValida(d.tz) ? d.tz : TZ_DEF,
         horario: normalHorario(d.horario), sesiones: normalSesiones(d.sesiones), orden: Number(d.orden) || 0,
+        // Tope de llamadas por semana (lunes a domingo, en su zona); 0 = sin tope.
+        llamadas_semana: entero(d.llamadas_semana, 0, 200, 0),
     };
 }
 

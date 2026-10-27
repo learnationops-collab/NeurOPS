@@ -3,7 +3,16 @@
 `margen_min` (lo que el closer se reservó después; también bloquea).
 """
 
+from datetime import date, timedelta
+
 from app.agendas_v2.nucleo.disponibilidad import ahora_ms, se_solapa
+from app.agendas_v2.nucleo.tiempo import clave_dia, dia_semana
+
+
+def semana_de(ts, tz):
+    """El lunes (AAAA-MM-DD) de la semana de `ts` en la zona `tz`."""
+    lunes = date.fromisoformat(clave_dia(ts, tz)) - timedelta(days=(dia_semana(ts, tz) + 6) % 7)
+    return lunes.isoformat()
 
 
 def reservas_de(reservas, persona_id):
@@ -31,4 +40,6 @@ def opciones_de_ocupacion(reservas, ahora=None):
         'ahora': ahora,
         'ocupado': lambda pid, t, dur: se_solapa(por.get(pid, []), t, dur),
         'carga_de': lambda pid: len([x for x in por.get(pid, []) if x['inicio'] >= ahora]),
+        # Cuántas agendas tiene en la semana de `t` (para el tope de llamadas por semana).
+        'en_semana': lambda pid, t, tz: sum(1 for x in por.get(pid, []) if semana_de(x['inicio'], tz) == semana_de(t, tz)),
     }
