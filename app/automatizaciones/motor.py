@@ -16,7 +16,7 @@ Reglas que garantiza:
 from datetime import timedelta
 
 from app import db
-from app.automatizaciones import campanas, efectos, registro, reparto
+from app.automatizaciones import acciones, campanas, efectos, registro, reparto
 from app.automatizaciones.modelos import AutEjecucion, AutFlujo, AutFlujoVersion, IgContacto, IgMensaje
 from app.automatizaciones.nucleo import eventos as ev
 from app.automatizaciones.nucleo import grafo as g
@@ -60,6 +60,8 @@ class Motor:
                 return self._boton(contacto, *datos)
 
         canal = 'comentario' if evento.tipo == ev.COMENTARIO else 'dm'
+        if canal == 'dm' and acciones.retomar_pendiente(self, contacto, evento):
+            return 'pendiente_arranca'
         if canal == 'dm':
             version, campana, clave = self._version_de_campana(evento.texto, evento.momento)
             if version:
@@ -172,12 +174,19 @@ class Motor:
                                  contenido={'adjuntos': evento.adjuntos} if evento.adjuntos else None,
                                  enviado_en=evento.momento))
         if self.pausar_ante_ecos:
-            contacto.bot_pausado_hasta = self.ahora + timedelta(hours=HORAS_DE_PAUSA)
-            abierta = self._abierta(contacto)
-            if abierta:
-                self._cerrar(abierta, AutEjecucion.CANCELADA, CORTADA_POR_ECO)
+            self.pausar(contacto, CORTADA_POR_ECO)
         db.session.flush()
         return 'eco_ajeno'
+
+    def pausar(self, contacto, detalle=CORTADA_POR_PAUSA):
+        """El bot no le habla por HORAS_DE_PAUSA y se corta lo abierto (un botón de ese mensaje lo retoma)."""
+        contacto.bot_pausado_hasta = self.ahora + timedelta(hours=HORAS_DE_PAUSA)
+        abierta = self._abierta(contacto)
+        if abierta:
+            self._cerrar(abierta, AutEjecucion.CANCELADA, detalle)
+
+    def en_ventana(self, contacto):
+        return bool(contacto.ultimo_entrante_en and self.ahora - contacto.ultimo_entrante_en < VENTANA)
 
     # --- Ejecuciones --------------------------------------------------------------------------
 
@@ -224,6 +233,7 @@ class Motor:
         abierta = self._abierta(contacto)
         if abierta:
             self._cerrar(abierta, AutEjecucion.CANCELADA, 'Entró a otro flujo', liberar=False)
+        acciones.descartar_pendientes(contacto, 'Entró a otro flujo')
         ejecucion = AutEjecucion(contacto=contacto, version=version, estado=AutEjecucion.EN_CURSO,
                                  nodo_actual=nodo or version.grafo.get('inicio'), comentario_id=comentario_id,
                                  iniciada_en=self.ahora, campana_id=campana.id if campana else None, clave=clave,
@@ -404,8 +414,7 @@ class Motor:
     def _enviar(self, ejecucion, nodo):
         """Manda el mensaje del nodo. False si no se pudo (y deja la ejecución cerrada)."""
         contacto = ejecucion.contacto
-        dentro_de_ventana = contacto.ultimo_entrante_en and self.ahora - contacto.ultimo_entrante_en < VENTANA
-        if not dentro_de_ventana and not ejecucion.comentario_id:
+        if not self.en_ventana(contacto) and not ejecucion.comentario_id:
             self._cerrar(ejecucion, AutEjecucion.VENTANA_VENCIDA, 'Pasaron más de 24 h desde el último mensaje del contacto')
             return False
         variables = {**(contacto.variables or {}), 'nombre': contacto.nombre or '', 'usuario': contacto.username or ''}

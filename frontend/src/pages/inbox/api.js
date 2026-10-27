@@ -16,6 +16,10 @@ export const inboxApi = {
     // { conversaciones, mediana_respuesta, medianas_setters }
     conversaciones: (buscar, limite) => api.get('/inbox/conversaciones', { params: { ...(buscar ? { buscar } : {}), ...(limite ? { limite } : {}) } }).then(datos),
     conversacion: (id) => api.get(`/inbox/conversaciones/${id}`).then(datos),
+    // Acciones del setter (app/automatizaciones/api_acciones.py)
+    pasos: (id) => api.get(`/inbox/conversaciones/${id}/pasos`).then(datos),
+    moverEnFlujo: (id, cuerpo) => api.post(`/inbox/conversaciones/${id}/flujo`, cuerpo).then(datos),
+    bot: (id, pausado) => api.post(`/inbox/conversaciones/${id}/bot`, { pausado }).then(datos),
     // { desde, hasta, campanas: [{ ..., metricas }] } (app/automatizaciones/api_campanas.py)
     campanas: (desde, hasta) => api.get('/inbox/campanas', { params: { desde, hasta } }).then(datos),
     crearCampana: (campana) => api.post('/inbox/campanas', campana).then(datos),

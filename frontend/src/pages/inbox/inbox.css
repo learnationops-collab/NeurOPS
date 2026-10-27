@@ -183,6 +183,31 @@
 .thalamus.inbox .cv-macro-pie{grid-column:1 / -1;display:flex;align-items:center;justify-content:space-between;gap:var(--s2);padding-top:var(--s3);border-top:1px solid var(--border-subtle)}
 @media (max-width:620px){.thalamus.inbox .cv-macro-pop{grid-template-columns:1fr}}
 
+/* La barra del flujo en el chat y el modal para mover a la persona */
+.thalamus.inbox .cv-acciones{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;min-width:0}
+.thalamus.inbox .cv-acciones > :not(.cv-acciones-estado){flex-shrink:0}
+.thalamus.inbox .cv-acciones-estado{flex:1;min-width:0;display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--text-muted)}
+.thalamus.inbox .cv-acciones-estado > span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thalamus.inbox .cv-acciones-estado b{color:var(--text-on-surface)}
+.thalamus.inbox .cv-acciones-sep{width:1px;height:20px;background:var(--border-subtle);margin:0 2px}
+.thalamus.inbox .cv-modal-flujo{width:min(540px,100%)}
+.thalamus.inbox .cv-modal-cuerpo{display:grid;gap:var(--s3);max-height:calc(100dvh - 240px);overflow:auto}
+.thalamus.inbox .cv-modal-pie{display:flex;justify-content:flex-end;gap:var(--s2);margin-top:var(--s3)}
+.thalamus.inbox .cv-pasos{display:grid;gap:6px}
+.thalamus.inbox .cv-etapa{margin:6px 0 2px;font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted-40)}
+.thalamus.inbox .cv-paso{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:14px;border:1px solid var(--border-subtle);background:var(--hundido);cursor:pointer;font-size:13px}
+.thalamus.inbox .cv-paso:has(input:checked){border-color:var(--brand-secondary-border);background:var(--brand-secondary-surface)}
+.thalamus.inbox .cv-paso input{accent-color:var(--brand-secondary);margin-top:3px}
+.thalamus.inbox .cv-paso--pasado{opacity:.75}
+.thalamus.inbox .cv-paso-txt{flex:1;min-width:0;display:grid;gap:1px}
+.thalamus.inbox .cv-paso-txt small{font-size:11.5px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thalamus.inbox .cv-paso .ui-chip.ui-chip{height:20px;font-size:10px;align-self:center}
+.thalamus.inbox .cv-ventana{display:flex;gap:8px;align-items:flex-start;margin:0;padding:10px 12px;border-radius:14px;font-size:12.5px;font-weight:600}
+.thalamus.inbox .cv-ventana svg{flex-shrink:0;margin-top:2px}
+.thalamus.inbox .cv-ventana--abierta{color:var(--success);background:var(--success-surface);border:1px solid var(--success-border)}
+.thalamus.inbox .cv-ventana--cerrada{color:var(--warning);background:var(--warning-surface);border:1px solid var(--warning-border)}
+@media (max-width:760px){.thalamus.inbox .cv-acciones{flex-wrap:wrap}.thalamus.inbox .cv-acciones-estado{flex-basis:100%}}
+
 /* Stats y «Guardar filtro» */
 .thalamus.inbox .cv-stats{width:min(620px,100%);display:grid;gap:var(--s4)}
 .thalamus.inbox .cv-stats-kpis.ui-grid{grid-template-columns:repeat(2,minmax(0,1fr))}

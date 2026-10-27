@@ -19,6 +19,8 @@ bp = Blueprint('inbox', __name__)
 
 ROLES_CON_ACCESO = (ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL)
 ROLES_DE_LECTURA = (ROLE_SETTER,)
+# Lo único que el setter puede cambiar: el recorrido y el bot de una conversación (`api_acciones.py`).
+ACCIONES_DEL_SETTER = {'inbox.mover_en_flujo', 'inbox.bot_de_conversacion'}
 MAX_BYTES_GRAFO = 300_000
 MAX_NODOS = 300
 MENSAJES_POR_CONVERSACION = 300
@@ -37,7 +39,7 @@ GRAFO_NUEVO = {
 def _guardia():
     if current_user.role in ROLES_CON_ACCESO:
         return None
-    if current_user.role in ROLES_DE_LECTURA and request.method == 'GET':
+    if current_user.role in ROLES_DE_LECTURA and (request.method == 'GET' or request.endpoint in ACCIONES_DEL_SETTER):
         return None
     return jsonify({'message': 'Forbidden'}), 403
 

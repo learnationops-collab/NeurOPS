@@ -1,23 +1,15 @@
 // La conversación abierta: el chat al centro y, a la derecha, la ficha del lead y su recorrido por
 // los flujos. En el chat se ve qué botón eligió el lead y qué activó cada respuesta suya en el flujo.
 // Por ahora solo se mira: contestar desde acá llega cuando el Inbox reemplace a Kommo.
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Bot, Check, Instagram, MessageSquare, Zap } from 'lucide-react';
 import { Avatar, EmptyState, IconButton, Panel } from '../../../components/standard';
 import { rotuloPaso } from '../estadoFlujo';
 import { inboxApi } from '../api';
+import AccionesFlujo, { EJECUCION } from './AccionesFlujo';
 import { Asignado } from './Fila';
 import { REFRESCO, examenDe, quien } from './colas';
 
-const EJECUCION = {
-    en_curso: { texto: 'En curso', color: 'var(--info)' },
-    esperando_respuesta: { texto: 'Esperando respuesta', color: 'var(--info)' },
-    esperando_tiempo: { texto: 'Esperando', color: 'var(--info)' },
-    terminada: { texto: 'Terminó', color: 'var(--success)' },
-    cancelada: { texto: 'Cancelado', color: 'var(--idle)' },
-    ventana_vencida: { texto: 'Venció la ventana de 24 h', color: 'var(--warning)' },
-    error: { texto: 'Error', color: 'var(--error)' },
-};
 const ABIERTA = ['en_curso', 'esperando_respuesta', 'esperando_tiempo'];
 
 function momento(iso) {
@@ -35,6 +27,7 @@ function textoEfecto(e) {
         return <>Guardó <b>{campo} = {valor}</b>{hacia}</>;
     }
     if (e.tipo === 'boton') return <>Eligió <b>{e.boton}</b>{hacia}</>;
+    if (e.tipo === 'pendiente') return <>Arrancó <b>{e.flujo}</b>, que había dejado listo el equipo{hacia}</>;
     return null;
 }
 
@@ -59,7 +52,7 @@ function Burbuja({ m }) {
     );
 }
 
-function Chat({ contacto, asignado, ejecucion, mensajes, yo }) {
+function Chat({ contacto, asignado, ejecucion, mensajes, yo, onCambio }) {
     const lista = useRef(null);
     const cantidad = mensajes.length;
     // Abre en el último mensaje, como cualquier chat, y baja cuando llega uno nuevo.
@@ -88,6 +81,7 @@ function Chat({ contacto, asignado, ejecucion, mensajes, yo }) {
                         onClick={() => window.open(`https://www.instagram.com/${encodeURIComponent(contacto.username)}/`, '_blank', 'noopener')} />
                 )}
             </div>
+            <AccionesFlujo contacto={contacto} ejecucion={ejecucion} onCambio={onCambio} />
             <ol className="cv-mensajes" ref={lista}>
                 {mensajes.map((m) => {
                     const efecto = m.efecto && textoEfecto(m.efecto);
@@ -142,21 +136,20 @@ export default function Detalle({ id, yo }) {
     const [datos, setDatos] = useState(null);
     const [error, setError] = useState(null);
     // Cada conversación monta un Detalle nuevo (key={id}): arranca vacío. Se vuelve a pedir cada
-    // REFRESCO sin vaciar lo que se ve.
+    // REFRESCO, y después de cada acción del setter, sin vaciar lo que se ve.
+    const pedir = useCallback(() => inboxApi.conversacion(id)
+        .then((d) => { setDatos(d); setError(null); })
+        .catch(() => setError('No se pudo cargar la conversación')), [id]);
     useEffect(() => {
-        let vivo = true;
-        const pedir = () => inboxApi.conversacion(id)
-            .then((d) => { if (vivo) { setDatos(d); setError(null); } })
-            .catch(() => { if (vivo) setError('No se pudo cargar la conversación'); });
         pedir();
         const cada = setInterval(pedir, REFRESCO);
-        return () => { vivo = false; clearInterval(cada); };
-    }, [id]);
+        return () => clearInterval(cada);
+    }, [pedir]);
     if (error && !datos) return <Panel size="sm" className="cv-detalle"><EmptyState icon={<MessageSquare size={22} />}>{error}</EmptyState></Panel>;
     if (!datos) return <Panel size="sm" className="cv-detalle"><EmptyState>Cargando…</EmptyState></Panel>;
     return (
         <>
-            <Chat contacto={datos.contacto} asignado={datos.asignado} ejecucion={datos.ejecucion} mensajes={datos.mensajes} yo={yo} />
+            <Chat contacto={datos.contacto} asignado={datos.asignado} ejecucion={datos.ejecucion} mensajes={datos.mensajes} yo={yo} onCambio={pedir} />
             <Ficha contacto={datos.contacto} recorrido={datos.recorrido || []} />
         </>
     );

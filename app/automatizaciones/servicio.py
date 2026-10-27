@@ -15,6 +15,7 @@ import copy
 import logging
 import os
 import threading
+import time
 from contextlib import contextmanager
 from datetime import timedelta
 
@@ -130,6 +131,35 @@ def candado():
             if tengo:
                 conexion.execute(text('SELECT pg_advisory_unlock(:k)'), {'k': CLAVE_DEL_CANDADO})
                 conexion.commit()
+
+
+class MotorOcupado(Exception):
+    """El reloj tiene el candado y no lo soltó a tiempo: la acción se puede volver a intentar."""
+
+
+class MotorApagado(Exception):
+    """Con el motor apagado no se mueve a nadie: el recorrido no avanzaría."""
+
+
+@contextmanager
+def con_motor(momento=None, intentos=6, espera=0.5):
+    """El motor para una acción de la bandeja (`acciones.py`), con el candado tomado para no pisarse
+    con el reloj. Guarda al salir; si algo falla, no guarda nada."""
+    if modo() == APAGADO:
+        raise MotorApagado()
+    for _ in range(intentos):
+        with candado() as tengo:
+            if not tengo:
+                time.sleep(espera)
+                continue
+            try:
+                yield _motor(None, momento or ahora())
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                raise
+            return
+    raise MotorOcupado()
 
 
 def correr_una_vuelta():

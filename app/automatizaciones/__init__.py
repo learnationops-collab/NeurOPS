@@ -15,5 +15,6 @@ def registrar(app):
     from app.automatizaciones import modelos  # noqa: F401  (que alembic y create_all vean las tablas)
     from app.automatizaciones.api import bp
     from app.automatizaciones import api_campanas  # noqa: F401  (sus rutas se cuelgan de `bp`)
+    from app.automatizaciones import api_acciones  # noqa: F401
 
     app.register_blueprint(bp, url_prefix='/api/inbox')

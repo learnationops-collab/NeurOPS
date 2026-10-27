@@ -79,6 +79,8 @@ class AutEjecucion(db.Model):
     CANCELADA = 'cancelada'
     VENTANA_VENCIDA = 'ventana_vencida'
     ERROR = 'error'
+    # Un setter la movió fuera de la ventana de 24 h: arranca cuando el lead vuelva a escribir (`acciones.py`).
+    PENDIENTE = 'pendiente'
     ABIERTOS = (EN_CURSO, ESPERANDO_RESPUESTA, ESPERANDO_TIEMPO)
 
     id = db.Column(db.Integer, primary_key=True)

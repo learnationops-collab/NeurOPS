@@ -44,6 +44,7 @@ export default function Fila({ c, elegida, ahora, yo, onElegir }) {
                     </span>
                     <span className="cv-item-chips">
                         {corte && <Chip subtle color={c.ejecucion?.estado === 'error' ? 'var(--error)' : 'var(--warning)'} icon={<AlertTriangle />}>{corte}</Chip>}
+                        {c.ejecucion?.estado === 'pendiente' && <Chip subtle color="var(--warning)" icon={<Clock />} data-tip="Pendiente|Arranca cuando el lead vuelva a escribir">Pendiente</Chip>}
                         {c.paso && <Chip subtle color="var(--info)">{rotuloPaso(c.paso)}</Chip>}
                         {espera != null && (
                             <Chip subtle color={colorEspera(espera)} icon={<Clock />} data-tip={`Espera respuesta|Desde ${hora(c.ultimo_en)}`}>
