@@ -1,6 +1,6 @@
 // Tarjeta de un flujo: resultado de los últimos días (entradas, completan, en curso), su embudo por
 // paso y una alerta cuando un paso pierde gente. Tocar una barra abre el lienzo en ese paso.
-import { AlertTriangle, Eye, Pause, Pencil, Play, Trash2, Workflow } from 'lucide-react';
+import { AlertTriangle, Copy, Eye, Pause, Pencil, Play, Trash2, Workflow } from 'lucide-react';
 import { Bars, Button, Card, ConfirmDelete, IconButton, Status } from '../../../components/standard';
 import { estadoDe, porciento, rotuloPaso } from '../estadoFlujo';
 
@@ -25,7 +25,7 @@ function Alerta({ f, m }) {
     );
 }
 
-export default function Tarjeta({ f, puedeEditar, borrando, onBorrando, onAbrir, onBorrar, onPausar }) {
+export default function Tarjeta({ f, puedeEditar, borrando, clonando = false, onBorrando, onAbrir, onBorrar, onPausar, onClonar }) {
     const est = estadoDe(f);
     const m = f.metricas;
     const palabras = f.palabras_clave.filter(Boolean);
@@ -71,6 +71,10 @@ export default function Tarjeta({ f, puedeEditar, borrando, onBorrando, onAbrir,
                         <Button icon={pausado ? <Play /> : <Pause />} onClick={() => onPausar(f)}>{pausado ? 'Reanudar' : 'Pausar'}</Button>
                     )}
                     <div className="der">
+                        {puedeEditar && (
+                            <IconButton label={`Clonar ${f.nombre}`} icon={<Copy />} size="sm" data-tip="Clonar|Una copia como borrador"
+                                disabled={clonando} onClick={() => onClonar(f)} />
+                        )}
                         <Button icon={puedeEditar ? <Pencil /> : <Eye />} onClick={() => onAbrir(f.id)}>{puedeEditar ? 'Editar' : 'Ver'}</Button>
                     </div>
                 </div>

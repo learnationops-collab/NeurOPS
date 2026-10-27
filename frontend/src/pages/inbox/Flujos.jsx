@@ -26,6 +26,7 @@ export default function Flujos({ puedeEditar }) {
     const [buscar, setBuscar] = useState('');
     const [borrando, setBorrando] = useState(null);
     const [creando, setCreando] = useState(null);
+    const [clonando, setClonando] = useState(false);
 
     const cargar = useCallback(() => {
         inboxApi.flujos().then(setFlujos).catch(() => setError('No se pudieron cargar los flujos'));
@@ -47,6 +48,21 @@ export default function Flujos({ puedeEditar }) {
             cargar();
         } catch (e) {
             toast(e.response?.data?.message || 'No se pudo eliminar', 'error');
+        }
+    };
+    // La copia es un borrador nuevo con el mismo grafo: no corre hasta que se publique.
+    const clonar = async (flujo) => {
+        if (clonando) return;
+        setClonando(true);
+        try {
+            const { grafo } = await inboxApi.flujo(flujo.id);
+            const copia = await inboxApi.crearFlujo(`${flujo.nombre} (copia)`.slice(0, 150), structuredClone(grafo));
+            toast(`${flujo.nombre} clonado: es un borrador`);
+            setAbierto({ flujo: copia, nodo: null });
+        } catch (e) {
+            toast(e.response?.data?.message || 'No se pudo clonar', 'error');
+        } finally {
+            setClonando(false);
         }
     };
     const pausar = async (flujo) => {
@@ -87,7 +103,7 @@ export default function Flujos({ puedeEditar }) {
             <Grid variant="cards" className="fl-grilla">
                 {visibles.map((f) => (
                     <Tarjeta key={f.id} f={f} puedeEditar={puedeEditar} borrando={borrando === f.id}
-                        onBorrando={setBorrando} onAbrir={abrir} onBorrar={borrar} onPausar={pausar} />
+                        onBorrando={setBorrando} onAbrir={abrir} onBorrar={borrar} onPausar={pausar} onClonar={clonar} clonando={clonando} />
                 ))}
                 {plantillas}
             </Grid>
