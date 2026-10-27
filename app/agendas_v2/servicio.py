@@ -1000,7 +1000,8 @@ def _contexto(evento, form, resp):
 def sesion_del_lead(d, evento, form, resp):
     """El evento de la sesión que toma el lead: el que elige la regla del formulario que lo rutea (C/D →
     «Sesión diagnóstica» con el triage, Mario 27/10) o, si la regla no elige, el del formulario. De ese
-    evento salen el nombre, la duración, el margen y las indicaciones; la ventana de reservas y lo demás
+    evento salen el nombre, la duración, el margen, cada cuánto se ofrecen horarios y las indicaciones; la
+    ventana de reservas y lo demás
     siguen siendo del evento del formulario, que es el que el lead abrió."""
     if evento.get('persona') or not form:
         return evento
@@ -1010,7 +1011,7 @@ def sesion_del_lead(d, evento, form, resp):
     if not otro or otro['id'] == evento['id']:
         return evento
     return {**evento, 'id': otro['id'], 'nombre': otro['nombre'], 'duracion': otro['duracion'],
-            'margen': otro.get('margen') or 0, 'indic': otro.get('indic') or ''}
+            'margen': otro.get('margen') or 0, 'paso': otro['paso'], 'indic': otro.get('indic') or ''}
 
 
 def horarios(d, evento, form, resp, ahora=None):
