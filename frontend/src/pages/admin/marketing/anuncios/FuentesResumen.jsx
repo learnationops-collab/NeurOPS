@@ -20,7 +20,7 @@ const TITULOS = ['Leads entrantes', 'Importe gastado', 'Agendas', 'Ventas', 'New
 const SIN_REPETIDOS = ['Show up', ...TITULOS.slice(4)];
 
 export const EsqueletoTarjetasFuente = ({ sinRepetidos = false }) => (
-    <Skeleton label="Cargando la fuente…" className="pareja mk-fuente-kpis" style={{ '--min': '170px', '--g': 'var(--s4)' }}>
+    <Skeleton label="Cargando la fuente…" className={`pareja mk-fuente-kpis${sinRepetidos ? ' mk-fuente-kpis--cinco' : ''}`} style={{ '--min': '170px', '--g': 'var(--s4)' }}>
         {(sinRepetidos ? SIN_REPETIDOS : TITULOS).map((t, i) => (
             <div key={t} className="kpi mk-kpi" aria-hidden="true">
                 <p className="t-eyebrow">{t}</p>
@@ -60,7 +60,7 @@ export const TarjetasFuente = ({ fuente, moneda, sinRepetidos = false }) => {
         tip: 'Asistieron ÷ citas con resultado (asistieron + no show).' };
     const mostradas = sinRepetidos ? [showUp, ...kpis.slice(4)] : kpis;
     return (
-        <div className="pareja mk-fuente-kpis" style={{ '--min': '170px', '--g': 'var(--s4)' }}>
+        <div className={`pareja mk-fuente-kpis${sinRepetidos ? ' mk-fuente-kpis--cinco' : ''}`} style={{ '--min': '170px', '--g': 'var(--s4)' }}>
             {mostradas.map((k, i) => <Kpi key={k.titulo} {...k} i={i} />)}
         </div>
     );
