@@ -14,6 +14,7 @@ import RevisarLista, { EsqueletoRevisar, claveDe } from './RevisarLista';
 import { columnasOrdenables, ordenarFilas, siguienteOrden } from './ordenFilas';
 import MenuOrdenar from './MenuOrdenar';
 import AcademiaBarra, { SelectorColumnas } from './AcademiaBarra';
+import ConciliacionAgendas from './ConciliacionAgendas';
 import { itemTotalAcademia } from './academia';
 import { useModoVista } from '../../../components/listas/useModoVista';
 import { useGruposElegidos } from '../../../components/listas/useGruposElegidos';
@@ -189,10 +190,14 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     const defBase = operacion ? defDe(tabla, true) : defDeTabla(tabla, rol, !puedeElegirEquipo);
     // `conTodas`: un filtro rápido «Todas» antes de «Vigentes», para quien tiene que ver a TODAS las
     // personas de un número (el modal de agendas de un taller), también las que canceló o descartó.
-    const def = useMemo(
-        () => (conTodas ? { ...defBase, chips: [{ key: 'todas_las', label: 'Todas', filtro: () => true }, ...defBase.chips] }
-            : defBase),
-        [defBase, conTodas]);
+    // En Agendas, «Todas» va siempre, segunda: «Vigentes» (150) sigue siendo la de por defecto y la diferencia
+    // con las que cuenta el embudo (223) se ve y se abre (ver `ConciliacionAgendas`).
+    const def = useMemo(() => {
+        if (!conTodas && tabla !== 'agendas') return defBase;
+        const todas = { key: 'todas_las', label: 'Todas', filtro: () => true };
+        const [primero, ...resto] = defBase.chips;
+        return { ...defBase, chips: conTodas ? [todas, primero, ...resto] : [primero, todas, ...resto] };
+    }, [defBase, conTodas, tabla]);
     const deLaFila = tablas || TABLAS_POR_ROL[rol];
     const panel = useRef(null);
 
@@ -241,7 +246,8 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
             const de = Object.keys(nuevas).length ? filtroInicial.__de || null : null;
             setOrigen({ tabla, token, de, soltado: false });
             setFacetas(nuevas);
-            setChip(null);
+            // Un número del embudo puede pedir otro filtro rápido que el de por defecto (`__chip`).
+            setChip(token !== null && token !== origen.token ? filtroInicial.__chip || null : null);
             setQuery('');
             setMenu(null);
             // La agrupación también se reinicia: las dimensiones son por tabla y la de Ventas no
@@ -742,6 +748,11 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                     <Tip titulo="Qué estás mirando" texto={def.ayuda} />
                 </span>
             </div>
+
+            {tabla === 'agendas' && chips.some(c => c.key === 'descartadas') && chips.some(c => c.key === 'todas') && (
+                <ConciliacionAgendas total={filas.length} descartadas={filas.filter(f => f.descartada).length}
+                    chipActivo={chipActivo} elegir={setChip} />
+            )}
 
             {/* Las etiquetas del filtro: el único lugar que las muestra, cada una con su X, más el
                 "+" que abre el panel Filtro completo para sumar otra. Hubo arriba un aviso grande
