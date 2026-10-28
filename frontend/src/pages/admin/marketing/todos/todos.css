@@ -19,9 +19,9 @@
 .dc-shell .td-tarjeta-pie{display:flex;justify-content:space-between;gap:var(--s2);flex-wrap:wrap}
 .dc-shell .td-tasas{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:15px;font-weight:800;color:var(--text-on-surface)}
 .dc-shell .td-tasa2{font-size:12.5px;font-weight:600;color:var(--text-muted)}
-.dc-shell .td-tasa2 .td-cc{font-size:15px;font-weight:800;color:var(--text-on-surface)}
+.dc-shell .td-tasa2 .ui-cifra{font-size:15px;font-weight:800;color:var(--text-on-surface)}
 .dc-shell .td-tarjeta-pie > span{font-size:13px}
-.dc-shell .td-tarjeta-pie .td-cc{font-size:15px;font-weight:800;color:var(--text-on-surface)}
+.dc-shell .td-tarjeta-pie .ui-cifra{font-size:15px;font-weight:800;color:var(--text-on-surface)}
 /* La cifra del embudo: una tasa por 1.000 leads, con su unidad dicha debajo. */
 .dc-shell .td-cifra{display:flex;flex-direction:column;flex:none;min-width:5.2em;line-height:1.1}
 .dc-shell .td-cifra b{font-size:18px;font-weight:800;color:var(--text-on-surface)}
@@ -72,3 +72,5 @@
 @media (prefers-reduced-motion:reduce){
     .dc-shell .td-barra-embudo,.dc-shell .td-pista i{transition:none}
 }
+
+.dc-shell .td-tarjetas > :nth-last-child(-n+2) .ui-cifra__cuenta{left:auto;right:0}

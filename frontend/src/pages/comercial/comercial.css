@@ -837,6 +837,9 @@
 .dc-shell .kpi{position:relative;isolation:isolate;display:flex;flex-direction:column;gap:10px;
   background:var(--bg-element);border:1px solid var(--border-subtle);
   border-radius:var(--radius-main);padding:var(--s4);min-width:0;overflow:hidden}
+/* Con una cifra con cuenta (`CifraConCuenta`) la tarjeta deja asomar su tooltip y pasa por encima de las vecinas. */
+.dc-shell .kpi:has(.ui-cifra){overflow:visible}
+.dc-shell .kpi:has(.ui-cifra):hover,.dc-shell .kpi:has(.ui-cifra):focus-within{z-index:20}
 .dc-shell .kpi-cab{display:flex;align-items:center;gap:var(--s2);min-width:0}
 .dc-shell .kpi-cifra{display:grid;gap:6px;align-content:start;min-width:0}
 .dc-shell .kpi-n{font-size:clamp(28px,3vw,36px);line-height:1;font-weight:900;letter-spacing:-.025em;

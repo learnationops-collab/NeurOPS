@@ -17,7 +17,7 @@
    ============================================================================ */
 
 :where(.ui-btn,.ui-ibtn,.ui-link,.ui-chip,.ui-status,.ui-card,.ui-aura,.ui-empty,.ui-confirm,.ui-header,
-  .ui-seg,.ui-select,.ui-select__pop,.ui-switch,.ui-stepper,.ui-scrim,.ui-modal,.ui-avatar,.ui-input,.ui-entry,.ui-field-error,.ui-panel,.ui-kpi,.ui-grid,.ui-cal,.ui-cal-event,.ui-toast,.ui-tip,.ui-textarea,.ui-modal-head,.ui-bars,.ui-skel-bone,.ui-reg){
+  .ui-seg,.ui-select,.ui-select__pop,.ui-switch,.ui-stepper,.ui-scrim,.ui-modal,.ui-avatar,.ui-input,.ui-entry,.ui-field-error,.ui-panel,.ui-kpi,.ui-grid,.ui-cal,.ui-cal-event,.ui-toast,.ui-tip,.ui-textarea,.ui-modal-head,.ui-bars,.ui-skel-bone,.ui-reg,.ui-cifra){
   --ui-brand:var(--ln-brand, var(--brand-secondary, #FF3FA4));
   --ui-brand-accent:var(--ln-brand-accent, var(--brand-secondary-light, #FF6AD5));
   --ui-brand-2:var(--ln-brand-2, var(--brand-primary, #1323C6));
@@ -315,6 +315,21 @@
 @keyframes ui-reg-in{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
 @media (max-width:640px){.ui-reg.ui-reg--lateral{border-radius:0}.ui-reg__cuerpo{padding:var(--ui-s3) var(--ui-s4) var(--ui-s4)}}
 @media (prefers-reduced-motion:reduce){.ui-reg.ui-reg--lateral{animation:none}}
+
+/* --- CifraConCuenta: la cifra sola; su cuenta («163 de 2.448 leads») aparece al pasar el mouse o enfocarla --- */
+.ui-cifra.ui-cifra{position:relative;display:inline-flex;align-items:baseline}
+.ui-cifra__valor.ui-cifra__valor{background:none;border:0;padding:0;color:inherit;font:inherit;letter-spacing:inherit;cursor:pointer;
+  border-bottom:1px dotted var(--ui-muted)}
+.ui-cifra__valor.ui-cifra__valor:hover,.ui-cifra__valor.ui-cifra__valor:focus-visible{color:var(--ui-brand);border-bottom-color:var(--ui-brand);outline:none}
+.ui-cifra__cuenta{position:absolute;left:0;bottom:calc(100% + 8px);z-index:30;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px;
+  min-width:max-content;max-width:min(320px,80vw);padding:var(--ui-s2) var(--ui-s3);border-radius:var(--ui-radius-control);background:var(--ui-popover-bg);
+  border:1px solid var(--ui-border-main);box-shadow:var(--ui-shadow);font-size:13px;font-weight:600;color:var(--ui-text);letter-spacing:0;text-transform:none;
+  opacity:0;visibility:hidden;transform:translateY(4px);transition:opacity .14s,transform .14s,visibility 0s .14s}
+.ui-cifra--der .ui-cifra__cuenta{left:auto;right:0}
+.ui-cifra:hover .ui-cifra__cuenta,.ui-cifra:focus-within .ui-cifra__cuenta{opacity:1;visibility:visible;transform:none;transition-delay:0s}
+.ui-cifra__cuenta button{background:none;border:0;padding:0;font:inherit;font-weight:800;color:var(--ui-brand);cursor:pointer;text-decoration:underline}
+.ui-cifra__cuenta small{flex-basis:100%;font-size:11px;font-weight:600;color:var(--ui-muted)}
+.ui-cifra--quieta{cursor:default}
 
 /* --- Calendar ---------------------------------------------------------------------------------- */
 .ui-cal.ui-cal{overflow-x:auto}
