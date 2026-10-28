@@ -8,7 +8,7 @@ import pytz
 
 # Nombre visible de cada programa a partir del código corto que trae `FinancialSale.tipo_pago`
 # ("RR - Parcial", "AL - Completo", ...), tal como lo separa SheetsService.parse_tipo_pago.
-PROGRAM_LABELS = {'RR': 'Residency Roadmap', 'AL': 'Ace Learners', 'SI': 'Specialist Initiative'}
+PROGRAM_LABELS = {'RR': 'Residency Roadmap', 'AL': 'Ace Learners', 'SI': 'Specialist Initiative', 'LT': 'Low Ticket'}
 
 # Qué cuenta como qué a partir del tipo canónico de SheetsService.parse_tipo_pago. Solo 'completo'
 # (PIF: paga todo el programa de una) y 'parcial' (Split Pay: primer pago que abre un plan de
@@ -483,6 +483,8 @@ class CloserService:
                     program_code = "SI"
                 elif "roadmap" in name_lower or "residency" in name_lower:
                     program_code = "RR"
+                elif "low ticket" in name_lower:
+                    program_code = "LT"
                     
             payment_type_friendly = "completo"
             pay_type = data.get('payment_type', 'full')

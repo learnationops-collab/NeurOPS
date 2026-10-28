@@ -16,7 +16,7 @@ from app.models import Appointment, Client, FinancialSale, Person, Sale
 from app.services import deuda_service
 from app.services.comercial_vocabulario import venta_completada
 
-NOMBRES = {'AL': 'Ace Learners', 'RR': 'Residency Roadmap', 'SI': 'Specialist Initiative'}
+NOMBRES = {'AL': 'Ace Learners', 'RR': 'Residency Roadmap', 'SI': 'Specialist Initiative', 'LT': 'Low Ticket'}
 CODIGOS = {v.lower(): k for k, v in NOMBRES.items()}
 
 

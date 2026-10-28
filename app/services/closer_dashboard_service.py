@@ -5,7 +5,7 @@ from app.models import User, Appointment, InstallmentPlan, Client, CloserDailyRe
 from app.services.closer_service import CloserService
 from app.services.closer_pending_service import CloserPendingService
 
-PROGRAM_NAMES = {'AL': 'Ace Learner', 'RR': 'Residency Roadmap', 'SI': 'Specialist Initiative'}
+PROGRAM_NAMES = {'AL': 'Ace Learner', 'RR': 'Residency Roadmap', 'SI': 'Specialist Initiative', 'LT': 'Low Ticket'}
 
 
 class CloserDashboardService:

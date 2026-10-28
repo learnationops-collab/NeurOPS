@@ -6,7 +6,8 @@ import Button from '../ui/Button';
 const PROGRAM_CODES = [
     { v: 'AL', label: 'Ace Learner' },
     { v: 'RR', label: 'Residency Roadmap' },
-    { v: 'SI', label: 'Specialist Initiative' }
+    { v: 'SI', label: 'Specialist Initiative' },
+    { v: 'LT', label: 'Low Ticket' }
 ];
 
 // Vincula los 3 programas internos (AL/RR/SI) con el slug de producto real de la Academia

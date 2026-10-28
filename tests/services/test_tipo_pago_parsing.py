@@ -82,4 +82,4 @@ def test_parse_tipo_pago(crudo, esperado):
 
 
 def test_solo_hay_tres_programas_conocidos():
-    assert set(SheetsService.PROGRAM_KEYWORDS) == {'RR', 'AL', 'SI'}
+    assert set(SheetsService.PROGRAM_KEYWORDS) == {'RR', 'AL', 'SI', 'LT'}

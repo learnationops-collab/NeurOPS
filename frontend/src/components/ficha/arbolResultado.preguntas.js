@@ -60,6 +60,7 @@ export const PROGRAMAS = [
   { valor: 'RR', label: 'Residency Roadmap', sub: 'RR' },
   { valor: 'AL', label: 'Ace Learner', sub: 'AL' },
   { valor: 'SI', label: 'Specialist Initiative', sub: 'SI' },
+  { valor: 'LT', label: 'Low Ticket', sub: 'LT · 100 USD por mes' },
 ];
 export const MEDIOS_PAGO = ['Stripe', 'PayPal', 'Transferencia Bancaria', 'Binance / USDT', 'Hotmart', 'Otro'];
 // `clave` es como los nombra `allowed_types` del backend (todo en minúscula); `valor` es la grafía

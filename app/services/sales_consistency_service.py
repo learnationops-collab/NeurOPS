@@ -64,7 +64,7 @@ class SalesConsistencyService:
 
     # Total por defecto de cada programa, para quien todavía no tiene una venta con su total
     # (`Sale.agreed_total`). Cuando el closer declara un "Precio Total", ése queda en la venta.
-    PROGRAM_DEFAULT_TOTALS = {'AL': 1000.0, 'RR': 1500.0, 'SI': 2000.0}
+    PROGRAM_DEFAULT_TOTALS = {'AL': 1000.0, 'RR': 1500.0, 'SI': 2000.0, 'LT': 100.0}
 
     @staticmethod
     def _normalize_tipo(tipo_pago_simple):

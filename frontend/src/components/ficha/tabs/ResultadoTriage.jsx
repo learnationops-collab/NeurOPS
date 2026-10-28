@@ -2,7 +2,8 @@
 //
 // Calificado (+500 USD) → se le agenda la llamada al closer (Jean Carlo por defecto) con una nota que
 // el closer ve en su ficha. Descalificado → el low ticket de 100 USD: si se pitcheó y cómo quedó.
-// Todo va por `onAccion('reportar_triage')` (app/services/triage_service.py).
+// «Cerró» pide la venta (monto y medio de pago): se registra como `LT - completo` y se le da el acceso
+// en la Academia. Todo va por `onAccion('reportar_triage')` (app/services/triage_service.py).
 
 import { useEffect, useState } from 'react';
 import { Button, Chip, FieldError, Input, Segmented, Select, TextArea } from '../../standard';
@@ -100,6 +101,40 @@ const LowTicket = ({ valor, fecha, onValor, onFecha }) => (
   </>
 );
 
+const PRECIO_LOW_TICKET = '100';
+const esTransferencia = (medio) => /transferencia/i.test(medio || '');
+
+/** La venta del low ticket que se registra al marcar «Cerró». */
+const VentaLowTicket = ({ venta, onVenta, vocabulario }) => {
+  const medios = vocabulario?.medios_pago_venta || [];
+  const personas = vocabulario?.transferido_a || [];
+  const poner = (campo) => (valor) => onVenta({ ...venta, [campo]: valor });
+  return (
+    <>
+      <Campo etiqueta="Cuánto pagó (USD)" htmlFor="triage-monto">
+        <Input id="triage-monto" type="number" min="1" step="any" value={venta.monto}
+          onChange={(e) => poner('monto')(e.target.value)} />
+      </Campo>
+      <Campo etiqueta="Medio de pago">
+        <Select value={venta.metodo_pago} onChange={poner('metodo_pago')} label="Medio de pago"
+          options={[{ value: '', label: 'Elegí el medio' }, ...medios.map((m) => ({ value: m.clave, label: m.label }))]} />
+      </Campo>
+      {esTransferencia(venta.metodo_pago) && (
+        <Campo etiqueta="A quién del equipo se le transfirió">
+          <Select value={venta.transferido_a} onChange={poner('transferido_a')} label="Transferido a"
+            options={[{ value: '', label: 'Elegí a quién' }, ...personas.map((t) => ({ value: t.clave, label: t.label }))]} />
+        </Campo>
+      )}
+      <small className="t-cap mut">Al guardar se registra la venta del mes y se le da el acceso a la Academia.</small>
+    </>
+  );
+};
+
+const ventaVacia = () => ({ monto: PRECIO_LOW_TICKET, metodo_pago: '', transferido_a: '' });
+const ventaLista = (v) => Number(v.monto) > 0 && v.metodo_pago && (!esTransferencia(v.metodo_pago) || v.transferido_a);
+const ventaParaEnviar = (v) => ({ monto: Number(v.monto), metodo_pago: v.metodo_pago,
+  ...(esTransferencia(v.metodo_pago) ? { transferido_a: v.transferido_a } : {}) });
+
 const Guardar = ({ guardando, disabled, error, texto }) => (
   <>
     <div><Button variant="primary" type="submit" disabled={guardando || disabled}>{texto}</Button></div>
@@ -108,8 +143,10 @@ const Guardar = ({ guardando, disabled, error, texto }) => (
 );
 
 /** Ya reportada: el resumen y, en un descalificado, cambiar cómo quedó el low ticket. */
-const Reportada = ({ triage, onAccion }) => {
+const Reportada = ({ triage, onAccion, vocabulario }) => {
   const [valor, setValor] = useState(triage.low_ticket || 'no_pitch');
+  const [venta, setVenta] = useState(ventaVacia);
+  const vende = valor === 'cerrado' && triage.low_ticket !== 'cerrado';
   const [fecha, setFecha] = useState((triage.fecha_seguimiento || '').slice(0, 10) || manana());
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
@@ -119,7 +156,8 @@ const Reportada = ({ triage, onAccion }) => {
     setGuardando(true);
     setError(null);
     try {
-      await onAccion('reportar_triage', { low_ticket: valor, fecha_seguimiento: fecha });
+      await onAccion('reportar_triage', { low_ticket: valor, fecha_seguimiento: fecha,
+        ...(vende ? { venta: ventaParaEnviar(venta) } : {}) });
     } catch (err) {
       setError(mensajeDeError(err));
     } finally {
@@ -146,8 +184,9 @@ const Reportada = ({ triage, onAccion }) => {
       {triage.calificacion === 'descalificado' && (
         <>
           <LowTicket valor={valor} fecha={fecha} onValor={setValor} onFecha={setFecha} />
-          <Guardar guardando={guardando} error={error} texto="Actualizar low ticket"
-            disabled={valor === triage.low_ticket && valor !== 'seguimiento'} />
+          {vende && <VentaLowTicket venta={venta} onVenta={setVenta} vocabulario={vocabulario} />}
+          <Guardar guardando={guardando} error={error} texto={vende ? 'Registrar la venta' : 'Actualizar low ticket'}
+            disabled={(valor === triage.low_ticket && valor !== 'seguimiento') || (vende && !ventaLista(venta))} />
         </>
       )}
     </form>
@@ -166,17 +205,19 @@ export default function ResultadoTriage({ ficha, onAccion, puedeEditar = true })
   const [notaCloser, setNotaCloser] = useState('');
   const [lowTicket, setLowTicket] = useState(null);
   const [fechaSeg, setFechaSeg] = useState(manana());
+  const [venta, setVenta] = useState(ventaVacia);
   const [nota, setNota] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
 
-  if (triage.reportada) return <Reportada triage={triage} onAccion={onAccion} />;
+  if (triage.reportada) return <Reportada triage={triage} onAccion={onAccion} vocabulario={ficha?.vocabulario} />;
 
   const califica = asistencia === 'asistio' && calificacion === 'calificado';
   const descalifica = asistencia === 'asistio' && calificacion === 'descalificado';
   const listo = asistencia && (asistencia !== 'asistio' || (califica
     ? closerId && cuando && notaCloser.trim()
-    : descalifica && nota.trim() && lowTicket && (lowTicket !== 'seguimiento' || fechaSeg)));
+    : descalifica && nota.trim() && lowTicket && (lowTicket !== 'seguimiento' || fechaSeg)
+      && (lowTicket !== 'cerrado' || ventaLista(venta))));
 
   const guardar = async (e) => {
     e.preventDefault();
@@ -189,6 +230,7 @@ export default function ResultadoTriage({ ficha, onAccion, puedeEditar = true })
         ...(asistencia === 'asistio' ? { calificacion } : {}),
         ...(califica ? { closer_id: Number(closerId), fecha: datetimeLocalToUtcIso(cuando), nota_para_closer: notaCloser.trim() } : {}),
         ...(descalifica ? { low_ticket: lowTicket, fecha_seguimiento: fechaSeg } : {}),
+        ...(descalifica && lowTicket === 'cerrado' ? { venta: ventaParaEnviar(venta) } : {}),
       });
     } catch (err) {
       setError(mensajeDeError(err));
@@ -232,6 +274,9 @@ export default function ResultadoTriage({ ficha, onAccion, puedeEditar = true })
       {descalifica && (
         <LowTicket valor={lowTicket} fecha={fechaSeg} onValor={setLowTicket} onFecha={setFechaSeg} />
       )}
+      {descalifica && lowTicket === 'cerrado' && (
+        <VentaLowTicket venta={venta} onVenta={setVenta} vocabulario={ficha?.vocabulario} />
+      )}
 
       {asistencia && (
         <Campo etiqueta={descalifica ? 'Por qué no califica' : 'Nota (opcional)'} htmlFor="triage-nota">
@@ -241,7 +286,7 @@ export default function ResultadoTriage({ ficha, onAccion, puedeEditar = true })
       )}
 
       <Guardar guardando={guardando} error={error} disabled={!puedeEditar || !listo}
-        texto={califica ? 'Guardar y agendar con el closer' : 'Guardar'} />
+        texto={califica ? 'Guardar y agendar con el closer' : descalifica && lowTicket === 'cerrado' ? 'Guardar y registrar la venta' : 'Guardar'} />
     </form>
   );
 }

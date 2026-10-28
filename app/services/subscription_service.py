@@ -27,6 +27,8 @@ from app.services.academy_access_service import AcademyAccessService, _add_month
 from app.services import subscription_sync
 
 DURACION_DIAS = 120
+# Programas por mes: la venta da un mes y cada mes se renueva (LT, el low ticket; academy ADR-199).
+MESES_DE_ALTA = {'LT': 1}
 DIAS_SENA = 7
 MESES_RENOVACION = 1  # por defecto; el closer puede elegir 4 (`Sale.renewal_months`)
 MESES_DE_RENOVACION = (1, 4)
@@ -142,8 +144,10 @@ def al_ubicar_pago(session, sale, fila, pago, abre, abierta):
         return otorgar(session, fila.client_id, slug, dia + timedelta(days=DIAS_SENA), 'alta',
                        is_deposit=True, reason='Seña: 7 días', **comun)
     if abre and pago.tipo in ('completo', 'parcial', 'upsell'):
-        return otorgar(session, fila.client_id, slug, dia + timedelta(days=DURACION_DIAS), 'alta',
-                       is_deposit=False, reason='Venta', **comun)
+        meses = MESES_DE_ALTA.get(pago.programa)
+        hasta = _add_months(dia, meses) if meses else dia + timedelta(days=DURACION_DIAS)
+        return otorgar(session, fila.client_id, slug, hasta, 'alta', is_deposit=False,
+                       reason=f'Venta: {meses} mes' if meses == 1 else 'Venta', **comun)
     if not abre and abierta is not None and abierta.solo_sena and pago.tipo in COMPLETAN_SENA:
         return otorgar(session, fila.client_id, slug, dia + timedelta(days=DURACION_DIAS), 'conversion',
                        is_deposit=False, reason='La seña pasó a acceso completo', **comun)

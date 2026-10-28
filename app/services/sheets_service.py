@@ -324,7 +324,8 @@ class SheetsService:
             logger.error(f"[SHEETS POST] Excepción during POST ({tabla}): {str(e)}")
             return {"status": "success", "message": "Venta registrada localmente. Google Sheets inaccesible.", "warning": inconsistency_warning, "client_id": result_client_id}
 
-    PROGRAM_KEYWORDS = {'RR': 'roadmap', 'AL': 'learner', 'SI': 'iniciative'}
+    # LT: el low ticket de 100 USD por mes, solo contenido (academy ADR-199).
+    PROGRAM_KEYWORDS = {'RR': 'roadmap', 'AL': 'learner', 'SI': 'iniciative', 'LT': 'low ticket'}
 
     # Tipo de pago canonico de la venta (`parse_tipo_pago`) -> `Payment.payment_type` del sistema
     # viejo de inscripciones. Ya no se escribe (Etapa 2c): queda para leer los `Payment` históricos.

@@ -20,7 +20,7 @@ TIPOS_SEGUIMIENTO = {
     'cerrada': {'label': 'Llamadas cerradas', 'desc': 'Clientes: cobranza, renovación y upsell', 'icon': '💰'},
 }
 
-PROGRAM_CODE_NAMES = {'AL': 'Ace Learners', 'RR': 'Residency Roadmap', 'SI': 'Specialist Initiative'}
+PROGRAM_CODE_NAMES = {'AL': 'Ace Learners', 'RR': 'Residency Roadmap', 'SI': 'Specialist Initiative', 'LT': 'Low Ticket'}
 
 # closer_result que implican "no_tomada" aunque el closer nunca haya programado explícitamente
 # un seguimiento (ej. reportó la llamada como No Show pero cerró el modal sin asignar fecha).

@@ -7,7 +7,8 @@ propio es cómo se reporta la llamada, y por eso vive acá y no en el árbol del
   · si asistió, calificación económica: **calificado** (puede invertir más de 500 USD) pasa al closer
     con una agenda nueva y una nota; **descalificado** cierra con el low ticket de 100 USD;
   · del low ticket se registra si se pitcheó y cómo quedó: cerró, no cerró, seguimiento o descartado.
-    Por ahora es solo estado: la venta se carga cuando exista el producto.
+    «Cerró» trae la venta (monto y medio de pago): se registra como `LT - completo` a nombre del triage
+    y se le da el acceso en la Academia (`_vender_low_ticket`, academy ADR-199).
 
 Una agenda es de triage cuando su `closer_id` es una cuenta con el rol `triage`.
 """
@@ -17,6 +18,7 @@ from app import db
 from app.models import Appointment, User
 
 CALIFICACIONES = ('calificado', 'descalificado')
+PROGRAMA_LOW_TICKET = 'LT'
 LOW_TICKET = ('no_pitch', 'cerrado', 'no_cerrado', 'seguimiento', 'descartado')
 PITCHEADO = ('cerrado', 'no_cerrado', 'seguimiento', 'descartado')
 ASISTENCIAS = ('asistio', 'no_show', 'cancelo')
@@ -60,6 +62,33 @@ def _aplicar_low_ticket(appt, estado, datos):
         appt.seguimiento_realizado = False
     elif appt.fecha_seguimiento:
         appt.seguimiento_realizado = True
+
+
+def _venta_low_ticket(datos):
+    """El monto y el medio de la venta del low ticket, validados antes de reportar nada."""
+    venta = datos.get('venta') if isinstance(datos.get('venta'), dict) else {}
+    try:
+        monto = float(venta.get('monto') or 0)
+    except (TypeError, ValueError):
+        monto = 0
+    if monto <= 0:
+        raise _error('Escribí cuánto pagó.', 'monto')
+    if not venta.get('metodo_pago'):
+        raise _error('Elegí el medio de pago.', 'metodo_pago')
+    return {'monto': monto, 'metodo_pago': venta['metodo_pago'], 'transferido_a': venta.get('transferido_a')}
+
+
+def _vender_low_ticket(appt, venta, usuario):
+    """Registra la venta del low ticket por el camino de toda venta (`ficha_acciones_service._declarar`:
+    FinancialSale, suscripción de un mes y aviso a n8n) y le da el acceso en la Academia. Si el acceso
+    falla, la venta queda y vuelve el aviso: declararla de nuevo la duplicaría."""
+    from app.services import ficha_acciones_service as acciones
+
+    resultado = acciones._declarar(appt, {'tipo_pago': f'{PROGRAMA_LOW_TICKET} - completo', **venta}, usuario)
+    avisos = [resultado['warning']] if resultado.get('warning') else []
+    acciones._despues_de_la_venta(avisos, 'Acceso a la Academia', lambda: acciones._dar_acceso_a_la_academia(
+        appt.client_id, {'programa_code': PROGRAMA_LOW_TICKET, 'tipo_venta': 'completo'}, usuario))
+    return avisos
 
 
 def _validar(appt, datos):
@@ -110,17 +139,27 @@ def reportar(appt, datos, usuario):
     if 'asistencia' not in datos:
         if appt.triage_calificacion != 'descalificado':
             raise _error('El low ticket solo se registra en un lead descalificado.')
+        vende = datos.get('low_ticket') == 'cerrado' and appt.triage_low_ticket != 'cerrado'
+        if datos.get('low_ticket') not in LOW_TICKET:
+            raise _error('Elegí qué pasó con el low ticket.', 'low_ticket')
+        # La venta primero: si no se puede registrar, el low ticket no queda cerrado sin venta.
+        avisos = _vender_low_ticket(appt, _venta_low_ticket(datos), usuario) if vende else []
         _aplicar_low_ticket(appt, datos.get('low_ticket'), datos)
         db.session.commit()
         _log(appt, usuario, f'{usuario.username} actualizó el triage: {_LOW_TICKET_TEXTO[appt.triage_low_ticket]}.')
-        return bloque(appt)
+        return {**bloque(appt), 'avisos': avisos, 'vendio': vende}
 
     _validar(appt, datos)
+    vende = (datos['asistencia'] == 'asistio' and datos.get('calificacion') == 'descalificado'
+             and datos.get('low_ticket') == 'cerrado')
+    venta = _venta_low_ticket(datos) if vende else None
     nota = (datos.get('nota') or '').strip() or None
     calificacion = datos.get('calificacion') if datos['asistencia'] == 'asistio' else None
 
     # El pase primero: si el horario del closer está ocupado, no queda nada reportado a medias.
     closing = _pasar_al_closer(appt, datos, usuario) if calificacion == 'calificado' else None
+    # Lo mismo con la venta del low ticket: si no se registra, no queda reportada como cerrada.
+    avisos = _vender_low_ticket(appt, venta, usuario) if vende else []
 
     acciones.resultado(appt, {'resultado': datos['asistencia'], 'nota': nota}, usuario)
     appt.triage_calificacion = calificacion
@@ -137,7 +176,7 @@ def reportar(appt, datos, usuario):
     elif calificacion == 'descalificado':
         _log(appt, usuario, f'{usuario.username} lo descalificó económicamente: '
                             f'{_LOW_TICKET_TEXTO[appt.triage_low_ticket]}.')
-    return bloque(appt)
+    return {**bloque(appt), 'avisos': avisos, 'vendio': vende}
 
 
 def _nota_para_closer(appt, closing, texto, usuario):

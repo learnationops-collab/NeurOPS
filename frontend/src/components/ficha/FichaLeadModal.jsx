@@ -133,7 +133,11 @@ const MENSAJES = {
     guardar_programa: 'Programa asignado en las ventas de este cliente.',
     estado_agenda: 'Estado de la agenda corregido.',
     crear_agenda: 'Agenda creada.',
-    reportar_triage: 'Llamada de triage guardada.',
+    // Con «Cerró» se registra la venta del low ticket (app/services/triage_service.py); si el acceso a
+    // la Academia falla, la venta quedó igual y se avisa.
+    reportar_triage: (r) => (r?.avisos?.length
+        ? { tono: 'warning', texto: `${r.vendio ? 'Venta del low ticket registrada, pero ' : ''}${r.avisos.join(' · ')}` }
+        : r?.vendio ? 'Venta del low ticket registrada y acceso a la Academia dado.' : 'Llamada de triage guardada.'),
     guardar_objecion: 'Objeción guardada: quedó también en Comunicación.',
     editar_agenda: 'Agenda corregida.',
     agendar_seguimiento: 'Seguimiento agendado.',
