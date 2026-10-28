@@ -1215,3 +1215,5 @@
   - En Setting había tres ROAS a la vez (2,89x en la tarjeta Ventas, 2,38x New Cash y 3,12x Total). La tarjeta Ventas ya no trae ROAS (dice el costo por venta y lo cobrado); quedan los dos de las tarjetas de la fuente.
   - La columna ROAS de la tabla de palabras clave pasa a llamarse «ROAS Total» (todo lo cobrado ÷ importe gastado, con cuotas y señas).
   - En Workshop, el «ROAS» de las tarjetas, de cada taller y del detalle era cobrado ÷ inversión, es decir el Total: ahora lo dice («ROAS Total», «ROAS total»). El ROAS New Cash por taller no existe todavía.
+- **28 de Octubre de 2026 (Setting: las cinco tarjetas de abajo, en una sola fila)** *([fuentes.css](../../frontend/src/pages/admin/marketing/anuncios/fuentes.css), [FuentesResumen.jsx](../../frontend/src/pages/admin/marketing/anuncios/FuentesResumen.jsx))*:
+  - Al quitar los KPIs repetidos quedaron cinco tarjetas (Show up, New Cash, Cash total y los dos ROAS) y la grilla de cuatro las partía en 4 + 1. Ahora van las cinco en una fila; en pantallas angostas, Show up a todo el ancho y las otras cuatro de dos en dos.
