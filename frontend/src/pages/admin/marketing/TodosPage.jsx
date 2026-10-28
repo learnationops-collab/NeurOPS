@@ -83,10 +83,10 @@ const TodosPage = () => {
         }
         return (
             <div className="vista mk-vista">
-                {aviso}
                 {vista === 'detalle'
                     ? <MetricaPorMetrica grupos={grupos} moneda={datos.moneda} />
                     : <ResumenTodos grupos={grupos} setting={setting} workshop={workshop} moneda={datos.moneda} />}
+                {aviso}
             </div>
         );
     };

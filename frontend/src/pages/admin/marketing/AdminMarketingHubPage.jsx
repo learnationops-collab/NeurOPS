@@ -125,7 +125,7 @@ const AdminMarketingHubPage = () => {
     // Palabras con gasto sin campaña vigente en el Inbox (24/10/2026).
     const avisoSinCampana = <AvisoSinCampana sinCampana={datos?.fuentes?.sin_campana} moneda={datos?.moneda} />;
     const resumenSetting = !(fuentes && !fuenteDe('setting'))
-        ? <>{avisoSinCampana}<TarjetasFuente fuente={fuenteDe('setting')} moneda={datos?.moneda} sinRepetidos /></> : null;
+        ? <TarjetasFuente fuente={fuenteDe('setting')} moneda={datos?.moneda} sinRepetidos /> : null;
 
     if (params.get('tab') === 'trafico') return <Navigate to="/admin/workshops?tab=trafico" replace />;
     if (params.get('embudo') === 'workshop') {
@@ -183,8 +183,11 @@ const AdminMarketingHubPage = () => {
                                 {error && !datos ? (
                                     <ErrorDeCarga titulo={error} onReintentar={recargar} />
                                 ) : !datos ? <EsqueletoTablaAnuncios bajoKpis={resumenSetting} /> : (
-                                    <TablaAnuncios datos={datos} onArchivar={archivar} onAgrupar={agrupar} estadoMeta={estadoMeta}
-                                        irAMeta={() => cambiar({ tab: 'meta' })} bajoKpis={resumenSetting} />
+                                    <>
+                                        <TablaAnuncios datos={datos} onArchivar={archivar} onAgrupar={agrupar} estadoMeta={estadoMeta}
+                                            irAMeta={() => cambiar({ tab: 'meta' })} bajoKpis={resumenSetting} />
+                                        {avisoSinCampana}
+                                    </>
                                 )}
                             </div>
                         )}

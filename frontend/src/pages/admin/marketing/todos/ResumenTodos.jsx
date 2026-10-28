@@ -23,7 +23,7 @@ const ResumenTodos = ({ grupos, setting, workshop, moneda }) => {
     const pasos = embudoNormalizado(setting, workshop);
     return (
         <div className="vista mk-vista">
-            <section className="td-tarjetas" aria-label="Lo que más separa a Setting de Workshop">
+            <section className="td-tarjetas td-tarjetas--cinco" aria-label="Lo que más separa a Setting de Workshop">
                 {tarjetas.map((k) => (
                     <div key={k.id} className="panel td-tarjeta">
                         <p className="t-eyebrow mut">{k.label}</p>
@@ -55,12 +55,12 @@ const ResumenTodos = ({ grupos, setting, workshop, moneda }) => {
                             <div className="td-paso-barras">
                                 <div className="td-paso-fila">
                                     <Barra color={SETTING.color} ancho={p.sw} />
-                                    <span className="t-sm td-fuerte num" title={p.st}>{p.s}</span>
+                                    <span className="td-cifra num" title={p.st}><b>{p.s}</b><small>por 1.000 leads</small></span>
                                     <span className="td-det td-det--fila t-cap mut">{p.sr}{p.sr2 && <small>{p.sr2}</small>}</span>
                                 </div>
                                 <div className="td-paso-fila">
                                     <Barra color={WORKSHOP.color} ancho={p.ww} />
-                                    <span className="t-sm td-fuerte num" title={p.wt}>{p.w}</span>
+                                    <span className="td-cifra num" title={p.wt}><b>{p.w}</b><small>por 1.000 leads</small></span>
                                     <span className="td-det td-det--fila t-cap mut">{p.wr}{p.wr2 && <small>{p.wr2}</small>}</span>
                                 </div>
                             </div>

@@ -103,7 +103,7 @@ export const anchosDe = (fila) => {
 };
 
 /** Las cuatro tarjetas del resumen: la cifra que más separa a las dos fuentes y quién gana. */
-const TARJETAS = ['lead_agenda', 'roas_total', 'costo_venta', 'show_venta'];
+const TARJETAS = ['lead_agenda', 'roas_new_cash', 'roas_total', 'costo_venta', 'show_venta'];
 const EN_PUNTOS = new Set(['show_venta']);
 
 export const tarjetasDe = (grupos, moneda) => {
@@ -143,8 +143,8 @@ const PASOS = [
 export const embudoNormalizado = (s, w) => {
     const por = (fuente, k) => (fuente.leads ? (fuente[k] / fuente.leads) * 1000 : 0);
     const mayor = Math.max(por(s, 'agendas'), por(w, 'agendas')) || 1;
-    // Enteros: «5,3 ventas» no existe (Kerwin, 28/10/2026). El decimal exacto va en el título del número.
-    const texto = (v) => String(Math.round(v));
+    // Con decimal, pero dicho: «5,3 por 1.000 leads» es una tasa, no 5,3 ventas (Kerwin, 28/10/2026).
+    const texto = (v) => v.toFixed(v < 10 ? 1 : 0);
     const exacto = (v) => `${v.toFixed(1)} de cada 1.000 leads`;
     const pct = (a, b) => (b ? `${((a / b) * 100).toFixed(1)}%` : '—');
     const delPaso = (f, p) => (f[p.previo]
