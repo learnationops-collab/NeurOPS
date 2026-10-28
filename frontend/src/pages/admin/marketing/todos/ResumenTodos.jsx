@@ -32,7 +32,8 @@ const ResumenTodos = ({ grupos, setting, workshop, moneda }) => {
                             <span className="td-ganador"><i style={{ background: k.color }} aria-hidden="true" />{k.winner}</span>
                         </div>
                         <div className="td-tarjeta-pie t-cap mut">
-                            <span>Setting {k.s}</span><span>Workshop {k.w}</span>
+                            <span>Setting {k.s}{k.sd && <small className="td-det">{k.sd}</small>}</span>
+                            <span>Workshop {k.w}{k.wd && <small className="td-det">{k.wd}</small>}</span>
                         </div>
                     </div>
                 ))}
@@ -42,6 +43,7 @@ const ResumenTodos = ({ grupos, setting, workshop, moneda }) => {
                 <div className="mk-cab-txt">
                     <p className="t-eyebrow mut">Embudo normalizado</p>
                     <h2 className="t-h3" id="td-embudo-titulo">De cada 1.000 leads, cuántos llegan a cada paso</h2>
+                    <p className="t-cap mut">La barra es la cifra llevada a 1.000 leads; a la derecha, la cuenta real y contra qué se divide.</p>
                 </div>
                 <div className="td-pasos">
                     {pasos.map((p) => (
@@ -54,12 +56,12 @@ const ResumenTodos = ({ grupos, setting, workshop, moneda }) => {
                                 <div className="td-paso-fila">
                                     <Barra color={SETTING.color} ancho={p.sw} />
                                     <span className="t-sm td-fuerte num">{p.s}</span>
-                                    <span className="t-cap mut">{p.sr}</span>
+                                    <span className="td-det td-det--fila t-cap mut">{p.sr}{p.sr2 && <small>{p.sr2}</small>}</span>
                                 </div>
                                 <div className="td-paso-fila">
                                     <Barra color={WORKSHOP.color} ancho={p.ww} />
                                     <span className="t-sm td-fuerte num">{p.w}</span>
-                                    <span className="t-cap mut">{p.wr}</span>
+                                    <span className="td-det td-det--fila t-cap mut">{p.wr}{p.wr2 && <small>{p.wr2}</small>}</span>
                                 </div>
                             </div>
                         </div>

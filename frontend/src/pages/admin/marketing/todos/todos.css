@@ -17,6 +17,11 @@
 .dc-shell .td-ganador{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600}
 .dc-shell .td-ganador i{width:10px;height:10px;border-radius:3px;flex:none}
 .dc-shell .td-tarjeta-pie{display:flex;justify-content:space-between;gap:var(--s2);flex-wrap:wrap}
+.dc-shell .td-tarjeta-pie > span{display:flex;flex-direction:column;gap:2px;min-width:0}
+/* La cuenta real detrás de un porcentaje, costo o ROAS: «163 de 2.448 leads». */
+.dc-shell .td-det{display:block;font-size:11px;font-weight:600;line-height:1.35;color:var(--text-muted)}
+.dc-shell .td-det--fila{display:flex;flex-direction:column;min-width:0;white-space:normal}
+.dc-shell .td-det--fila small{font-size:11px;color:var(--text-muted)}
 
 /* Embudo normalizado: por cada paso, dos barras (Setting y Workshop) del mismo largo de referencia. */
 .dc-shell .td-embudo{display:flex;flex-direction:column;gap:var(--s6);padding:var(--s5)}
@@ -25,7 +30,9 @@
 .dc-shell .td-paso-nombre{display:flex;flex-direction:column;min-width:0}
 .dc-shell .td-paso-barras{display:flex;flex-direction:column;gap:6px;min-width:0}
 .dc-shell .td-paso-fila{display:flex;align-items:center;gap:var(--s3);min-width:0}
-.dc-shell .td-paso-fila > .t-cap{white-space:nowrap}
+.dc-shell .td-paso-fila{align-items:flex-start}
+.dc-shell .td-paso-fila > .num{flex:none;min-width:2.2em;padding-top:2px}
+.dc-shell .td-barra-embudo{margin-top:1px}
 .dc-shell .td-barra-embudo{height:22px;min-width:4px;border-radius:6px;flex:0 1 auto;transition:width .4s cubic-bezier(.22,1,.36,1)}
 @media (max-width:640px){.dc-shell .td-paso{grid-template-columns:minmax(0,1fr)}}
 

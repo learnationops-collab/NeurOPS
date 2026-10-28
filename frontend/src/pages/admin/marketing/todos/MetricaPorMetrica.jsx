@@ -14,9 +14,10 @@ const FILTROS = [
     { key: 'costos', label: 'Costos' },
 ];
 
-const Valor = ({ texto, ancho, color, gana }) => (
+const Valor = ({ texto, detalle, ancho, color, gana }) => (
     <div className="td-valor">
         <span className={`t-body num${gana ? ' td-fuerte' : ''}`}>{texto}</span>
+        {detalle && <span className="td-det">{detalle}</span>}
         <div className="td-pista"><i style={{ width: ancho, background: color }} /></div>
     </div>
 );
@@ -32,8 +33,8 @@ const Fila = ({ fila, f }) => {
                 <span className="t-body td-fuerte">{fila.label}</span>
                 {fila.hint && <span className="t-cap mut">{fila.hint}</span>}
             </div>
-            <Valor texto={f[fila.fmt](fila.s)} ancho={s} color={SETTING.color} gana={gana === SETTING.key} />
-            <Valor texto={f[fila.fmt](fila.w)} ancho={w} color={WORKSHOP.color} gana={gana === WORKSHOP.key} />
+            <Valor texto={f[fila.fmt](fila.s)} detalle={fila.ds} ancho={s} color={SETTING.color} gana={gana === SETTING.key} />
+            <Valor texto={f[fila.fmt](fila.w)} detalle={fila.dw} ancho={w} color={WORKSHOP.color} gana={gana === WORKSHOP.key} />
             <div className="td-fila-gana">
                 {gana ? (
                     <>

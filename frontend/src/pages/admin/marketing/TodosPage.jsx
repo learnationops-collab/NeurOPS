@@ -52,7 +52,7 @@ const TodosPage = () => {
 
     const setting = datos?.fuentes?.fuentes?.find((f) => f.key === SETTING.key);
     const workshop = datos?.fuentes?.fuentes?.find((f) => f.key === WORKSHOP.key);
-    const grupos = useMemo(() => (setting && workshop ? gruposDe(setting, workshop) : null), [setting, workshop]);
+    const grupos = useMemo(() => (setting && workshop ? gruposDe(setting, workshop, datos?.moneda) : null), [setting, workshop, datos?.moneda]);
     const sinFuentes = datos && !grupos;
 
     const elegirVista = (key) => cambiar({ vista: key === 'resumen' ? null : key });
