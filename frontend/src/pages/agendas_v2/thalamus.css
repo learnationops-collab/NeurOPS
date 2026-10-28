@@ -615,6 +615,12 @@
 .thalamus .ev-o > svg:last-child{color:var(--text-muted-40)}
 .thalamus .ev-o:hover{border-color:var(--brand-secondary-border)}
 .thalamus .ev-o:hover > svg:last-child{color:var(--brand-secondary)}
+.hl-nota{margin:0 0 14px}
+.hl-dias{display:flex;flex-direction:column;gap:16px;max-height:min(60vh,520px);overflow:auto;padding-right:4px}
+.hl-dia-tit{display:flex;align-items:baseline;gap:8px;margin:0 0 8px;font-size:12px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--text-on-surface)}
+.hl-horas{display:flex;flex-wrap:wrap;gap:6px}
+.hl-hora{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:999px;background:var(--hundido);border:1px solid var(--border-subtle);font-size:13px;color:var(--text-on-surface)}
+.hl-ps{display:inline-flex;align-items:center;gap:2px;font-size:11px}
 .thalamus .ffila--top > span{padding-top:12px}
 .thalamus .combo{display:inline-flex;align-items:center;gap:8px;flex-wrap:nowrap;flex-shrink:0}
 .thalamus .combo-t{font-size:13px;font-weight:600;color:var(--text-muted)}

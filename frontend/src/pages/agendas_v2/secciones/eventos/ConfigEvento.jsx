@@ -17,6 +17,7 @@ import { ModalNoCalifica } from '../forms/Modales';
 import { CampoMinutos, SesionesDelEvento } from '../team/Sesiones';
 import TablaTurnos from '../team/Turnos.jsx';
 import { abrirGracias } from '../forms/ListaGracias';
+import HorariosLibres from './HorariosLibres';
 import { InputVivo, LinksSetters, slugOrigen, urlPublica, useBorrador } from './comun';
 import { Button, ConfirmDelete, Input, InputGroup, LinkButton, Panel } from '../../../../components/standard';
 
@@ -128,8 +129,9 @@ function General({ d, e, f, cm }) {
     );
 }
 
-function Disponibilidad({ e }) {
+function Disponibilidad({ e, personas }) {
     const r = e.reservas;
+    const [ver, setVer] = useState(false);
     const rangoMal = !!(r.desde && r.hasta && r.hasta < r.desde);
     const modo = (v) => {
         const rr = { ...clonar(r), modo: v };
@@ -168,7 +170,9 @@ function Disponibilidad({ e }) {
             </Fila>
             <Fila l="Horarios">
                 <span className="t-sm mut">Uno tras otro, con la sesión y el margen de cada closer: así le entran la mayor cantidad de agendas.</span>
+                <Button icon={<Icono n="calendar" />} data-nav="" onClick={() => setVer(true)}>Ver horarios libres</Button>
             </Fila>
+            {ver && <HorariosLibres e={e} personas={personas} onCerrar={() => setVer(false)} />}
         </>
     );
 }
@@ -257,7 +261,7 @@ export default function ConfigEvento({ e }) {
                     )}
                 </div>
                 <div className="ev-col">
-                    <Bloque tit="Disponibilidad" icono="calendar" i={1}><Disponibilidad e={e} /></Bloque>
+                    <Bloque tit="Disponibilidad" icono="calendar" i={1}><Disponibilidad e={e} personas={personas} /></Bloque>
                     {!e.persona && !cm && (
                         <Bloque tit="Sesiones de cada closer" icono="clock" i={0}>
                             <p className="t-sm mut">Lo que cada uno ajustó sobre la propuesta. Lo podés personalizar acá.</p>
