@@ -86,8 +86,8 @@ export const EsqueletoTablaAnuncios = ({ bajoKpis = null }) => (
     <div className="vista mk-vista">
         <EsqueletoKpis titulos={KPIS} lineas={2} label="Cargando los indicadores de los anuncios…" />
         {bajoKpis}
-        <SerieDiaria serie={null} alcance={ALCANCE_INICIAL} />
         <EsqueletoPanelTabla titulo={TITULO} sub={BAJADA} label="Cargando la tabla de anuncios…" />
+        <SerieDiaria serie={null} alcance={ALCANCE_INICIAL} />
     </div>
 );
 
@@ -264,11 +264,7 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = nul
 
             {bajoKpis}
 
-            <CobradoDelPeriodo enTabla={datos.totales?.cobrado || 0} total={datos.cobrado_periodo}
-                fuera={datos.cobrado_fuera || []} moneda={moneda} irAVentas={irAVentas} irATabla={irATabla} />
-
-            <SerieDiaria serie={serie} moneda={moneda} alcance={alcance} metaConectado={datos.meta?.conectado} />
-
+            {/* Lo accionable primero (28/10/2026): KPIs, la tabla y, después, lo cobrado y los gráficos. */}
             <section className={`panel mk-panel-tabla${pantalla.completa ? ' mk-pantalla' : ''}`} ref={panelTabla}>
                 <div className="mk-tabla-barra">
                     <div className="mk-tabla-titulo">
@@ -393,6 +389,11 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = nul
                     </p>
                 )}
             </section>
+
+            <CobradoDelPeriodo enTabla={datos.totales?.cobrado || 0} total={datos.cobrado_periodo}
+                fuera={datos.cobrado_fuera || []} moneda={moneda} irAVentas={irAVentas} irATabla={irATabla} />
+
+            <SerieDiaria serie={serie} moneda={moneda} alcance={alcance} metaConectado={datos.meta?.conectado} />
 
             {editando && (
                 <EditorAgrupacion fila={editando} opciones={datos.agrupaciones || []} guardando={guardando}
