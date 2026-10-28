@@ -8,7 +8,7 @@ import { sesionDe } from '../../core/datos';
 import { agendaOpt, seSolapa, slotsPersona } from '../../core/disponibilidad';
 import { claveDia, fechaClave, gmtTxt, horaTxt, semanaDe } from '../../core/tiempo';
 import { useDatos } from '../../data/hooks';
-import { Avatar, Icono } from '../../ui/base';
+import { Avatar, HUMO_MARCA, Humo, Icono } from '../../ui/base';
 import { agendasDeVista, googleDeOcupacion, useAhora, useOcupacionGoogle, useZonaVista } from '../team/semana';
 import { Modal, ModalHeader } from '../../../../components/standard';
 
@@ -58,8 +58,10 @@ export default function HorariosLibres({ e, personas, onCerrar }) {
     }), [e, personas, ahora, reservas, google, tz]);
     const hoy = claveDia(ahora, tz), manana = claveDia(ahora + DIA, tz);
     const total = r.dias.reduce((n, d) => n + d.slots.length, 0);
+    const primero = total ? r.dias[0].slots[0].t : null;
     return (
-        <Modal onClose={onCerrar} style={{ width: 'min(640px,100%)' }} labelledBy="hl-tit">
+        <Modal onClose={onCerrar} className="modal--hl" labelledBy="hl-tit">
+            <Humo clase="humo--tarjeta humo--suave" cols={HUMO_MARCA} />
             <ModalHeader icon={<span className="icono-m"><Icono n="calendar" s={18} /></span>} title="Horarios libres ahora" titleId="hl-tit"
                 subtitle={'Con esta configuración, aunque no esté publicada · tu hora (' + gmtTxt(tz) + ')'}
                 onClose={onCerrar} closeProps={{ 'data-nav': '' }} />
@@ -75,12 +77,14 @@ export default function HorariosLibres({ e, personas, onCerrar }) {
                         {r.dias.map(d => (
                             <section key={d.clave} className="hl-dia">
                                 <h3 className="hl-dia-tit">
+                                    {d === r.dias[0] && <span className="hl-punto" aria-hidden="true" />}
                                     {d.clave === hoy ? 'Hoy' : d.clave === manana ? 'Mañana' : fechaClave(d.clave)}
                                     <span className="mut">{d.slots.length}</span>
                                 </h3>
                                 <div className="hl-horas">
                                     {d.slots.map(s => (
-                                        <span key={s.t} className="hl-hora" title={s.ps.map(p => p.nombre).join(', ')}>
+                                        <span key={s.t} className={'hl-hora' + (s.t === primero ? ' hl-hora--prox' : '')} title={s.ps.map(p => p.nombre).join(', ')}>
+                                            {s.t === primero && <Humo clase="humo--suave" cols={HUMO_MARCA} />}
                                             <b className="num">{horaTxt(s.t, tz)}</b>
                                             {r.nPersonas > 1 && (
                                                 <span className="hl-ps">

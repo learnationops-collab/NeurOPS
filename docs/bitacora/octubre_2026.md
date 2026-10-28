@@ -1225,3 +1225,4 @@
 - **28 de Octubre de 2026 (Agendas · ver los horarios libres de un evento con su configuración)** *([HorariosLibres.jsx](../../frontend/src/pages/agendas_v2/secciones/eventos/HorariosLibres.jsx), [ConfigEvento.jsx](../../frontend/src/pages/agendas_v2/secciones/eventos/ConfigEvento.jsx))*:
   - Disponibilidad → Horarios suma «Ver horarios libres»: una ventana con los inicios libres desde ahora (hasta 7 días con lugar, dentro de 10), por día y en la hora de quien mira, con quién está libre en cada uno.
   - Usa la configuración que se está editando, aunque no esté publicada, y descuenta agendas, Google Calendar y el tope de llamadas por semana de cada closer. Muestra todos los closers del evento (o la persona fija): la segmentación se prueba con «Probar segmento».
+  - Corrección: la ventana se abre fuera del bloque (el panel con aura la encerraba y «Página de reserva» la tapaba), con fondo sólido, aura suave y el próximo horario libre resaltado con aura.

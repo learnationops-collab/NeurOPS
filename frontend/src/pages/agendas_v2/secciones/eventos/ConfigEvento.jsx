@@ -129,9 +129,8 @@ function General({ d, e, f, cm }) {
     );
 }
 
-function Disponibilidad({ e, personas }) {
+function Disponibilidad({ e, onVer }) {
     const r = e.reservas;
-    const [ver, setVer] = useState(false);
     const rangoMal = !!(r.desde && r.hasta && r.hasta < r.desde);
     const modo = (v) => {
         const rr = { ...clonar(r), modo: v };
@@ -170,9 +169,8 @@ function Disponibilidad({ e, personas }) {
             </Fila>
             <Fila l="Horarios">
                 <span className="t-sm mut">Uno tras otro, con la sesión y el margen de cada closer: así le entran la mayor cantidad de agendas.</span>
-                <Button icon={<Icono n="calendar" />} data-nav="" onClick={() => setVer(true)}>Ver horarios libres</Button>
+                <Button icon={<Icono n="calendar" />} data-nav="" onClick={onVer}>Ver horarios libres</Button>
             </Fila>
-            {ver && <HorariosLibres e={e} personas={personas} onCerrar={() => setVer(false)} />}
         </>
     );
 }
@@ -233,6 +231,7 @@ export default function ConfigEvento({ e }) {
     const { d } = useDatos();
     const { modoCloser: cm } = usePermisos();
     const [borrar, setBorrar] = useState(false);
+    const [libres, setLibres] = useState(false);
     const f = buscar(d, 'funnels', e.funnel);
     // Si es el único agendamiento del funnel, el funnel quedaría sin generar agendas: se ofrece borrarlo
     // también (el closer no maneja funnels).
@@ -261,7 +260,7 @@ export default function ConfigEvento({ e }) {
                     )}
                 </div>
                 <div className="ev-col">
-                    <Bloque tit="Disponibilidad" icono="calendar" i={1}><Disponibilidad e={e} personas={personas} /></Bloque>
+                    <Bloque tit="Disponibilidad" icono="calendar" i={1}><Disponibilidad e={e} onVer={() => setLibres(true)} /></Bloque>
                     {!e.persona && !cm && (
                         <Bloque tit="Sesiones de cada closer" icono="clock" i={0}>
                             <p className="t-sm mut">Lo que cada uno ajustó sobre la propuesta. Lo podés personalizar acá.</p>
@@ -283,6 +282,8 @@ export default function ConfigEvento({ e }) {
             <Bloque tit="Turnos de la semana" icono="users" i={1}>
                 <TablaTurnos evento={e} personas={personas} />
             </Bloque>
+            {/* Fuera de los bloques: un Panel con aura aísla lo de adentro y el bloque de abajo lo tapaba. */}
+            {libres && <HorariosLibres e={e} personas={personas} onCerrar={() => setLibres(false)} />}
         </div>
     );
 }
