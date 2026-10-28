@@ -36,7 +36,7 @@ export const EsqueletoPrioridad = () => (
 );
 
 export const EsqueletoClarity = () => (
-    <Skeleton label="Cargando el Clarity score…" className="wr-clarity-cuerpo">
+    <Skeleton label="Cargando el plan de mejora…" className="wr-clarity-cuerpo">
         <SkeletonCircle size={84} />
         <div className="wr-clarity-partes" aria-hidden="true">
             {[0, 1, 2].map((i) => (

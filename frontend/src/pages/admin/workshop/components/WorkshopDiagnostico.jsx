@@ -144,9 +144,9 @@ const WorkshopDiagnostico = ({ events, comparados, goals, actions, onEditGoals, 
 
                 <motion.section className="panel wr-clarity" {...entrada(2)}>
                     <div className="panel-cab">
-                        <p className="t-eyebrow">Clarity score</p>
-                        <Tip titulo="Clarity score"
-                            texto="Promedio de metas cargadas, plan y acciones hechas." />
+                        <p className="t-eyebrow">Plan de mejora</p>
+                        <Tip titulo="Plan de mejora"
+                            texto="Bajo: cargá las metas y una acción por cada etapa bajo meta." />
                     </div>
                     {clarity ? <Clarity clarity={clarity} /> : <EsqueletoClarity />}
                 </motion.section>
@@ -174,7 +174,7 @@ const Clarity = ({ clarity }) => {
         <div className="wr-clarity-cuerpo ui-reveal">
             <Anillo score={clarity.score} />
             <div className="wr-clarity-partes">
-                {[['Diagnóstico', clarity.diagnostico], ['Plan', clarity.plan], ['Ejecución', clarity.ejecucion]].map(([rotulo, v], i) => (
+                {[['Metas cargadas', clarity.diagnostico], ['Etapas con acción', clarity.plan], ['Acciones hechas', clarity.ejecucion]].map(([rotulo, v], i) => (
                     <div key={rotulo} className="wr-clarity-parte">
                         <span className="t-cap mut">{rotulo}</span>
                         <span className="t-cap num">{v}%</span>
