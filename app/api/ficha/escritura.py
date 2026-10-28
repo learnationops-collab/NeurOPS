@@ -17,12 +17,15 @@ from app.services.ficha_lead_service import permisos_de
 
 
 def _agenda_y_permiso(appt_id, permiso):
-    """(appt, respuesta_de_error). Exactamente una de las dos es None."""
+    """(appt, respuesta_de_error). Exactamente una de las dos es None. `permiso` puede ser una
+    tupla: alcanza con uno de ellos."""
     appt = acciones.buscar_agenda(appt_id)
     if not appt:
         return None, (jsonify({'message': 'Lead no encontrado'}), 404)
-    if not permisos_de(current_user, appt)[permiso]:
-        return None, sin_permiso(permiso)
+    claves = permiso if isinstance(permiso, tuple) else (permiso,)
+    permisos = permisos_de(current_user, appt)
+    if not any(permisos[k] for k in claves):
+        return None, sin_permiso(claves[0])
     return appt, None
 
 
@@ -210,10 +213,10 @@ def agendar_seguimiento(appt_id):
 @bp.route('/<int:appt_id>/recuperacion', methods=['POST'])
 def pasar_a_recuperacion(appt_id):
     """La llamada sin resultado que el closer no tomó, a seguimiento de recuperación (ver
-    `ficha_recuperacion_service`). Mismo permiso que reportarla."""
+    `ficha_recuperacion_service`). Mismo permiso que reportarla: el closer, o el triage en la suya."""
     from app.services.ficha_recuperacion_service import pasar_a_recuperacion as pasar
 
-    return _ejecutar(appt_id, 'reportar', pasar)
+    return _ejecutar(appt_id, ('reportar', 'triar'), pasar)
 
 
 @bp.route('/<int:appt_id>/seguimiento', methods=['PATCH'])

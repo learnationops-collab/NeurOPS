@@ -137,15 +137,24 @@ def fulfillment(appt_id):
 
 @bp.route('/<int:appt_id>/triage/horarios', methods=['GET'])
 def horarios_para_closing(appt_id):
-    """Los horarios libres del closer (`?closer_id=`) para la llamada de closing que agenda el triage."""
+    """Los horarios libres del closer (`?closer_id=`) para la llamada de closing que agenda el triage,
+    con la zona del lead (la del aviso al closer) para mostrárselos en su hora, y las zonas a elegir."""
     from app.agendas_v2 import a_triage
+    from app.agendas_v2.nucleo.catalogos import ZONAS
+    from app.agendas_v2.operacion import zona_del_lead
 
     appt, _ = ficha_lead_service.resolver_lead(appointment_id=appt_id)
     if not appt:
         return jsonify({'message': 'Lead no encontrado'}), 404
     if not ficha_lead_service.permisos_de(current_user, appt)['triar']:
         return sin_permiso('triar')
-    return jsonify({'horarios': a_triage.horarios_closer(request.args.get('closer_id', type=int))}), 200
+    lead = (appt.agenda_payload or {}).get('lead') or {'telefono': appt.client.phone if appt.client else None}
+    zona, pais = zona_del_lead(lead)
+    return jsonify({
+        'horarios': a_triage.horarios_closer(request.args.get('closer_id', type=int)),
+        'zona_lead': {'tz': zona.key, 'pais': pais['n']},
+        'zonas': [{'tz': z['tz'], 'nombre': z['n']} for z in ZONAS],
+    }), 200
 
 
 @bp.route('/<int:appt_id>/estado-venta', methods=['GET'])

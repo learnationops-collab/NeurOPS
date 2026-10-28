@@ -1165,3 +1165,8 @@
   - La pestaña Formulario de la ficha muestra los puntos de cada respuesta que cuenta y la suma con los cortes.
 - **28 de Octubre de 2026 (Cerrar el día: sin las tres tarjetas de arriba)** *([CloserWorkflowPage.jsx](../../frontend/src/pages/closer/CloserWorkflowPage.jsx))*:
   - En «Cerrar el día» ya no aparecen «Tu siguiente paso», «Tu día» ni «Comisión de este mes». Siguen en Confirmar, Reportar, Seguir, Ver mis datos y Mi cartera.
+- **28 de Octubre de 2026 (Triage: el reporte de la llamada, como el del closer)** *([ResultadoTriage.jsx](../../frontend/src/components/ficha/tabs/ResultadoTriage.jsx), [recorrido.js](../../frontend/src/components/ficha/triage/recorrido.js), [PantallasTriage.jsx](../../frontend/src/components/ficha/triage/PantallasTriage.jsx), [triage_service.py](../../app/services/triage_service.py))*:
+  - La pestaña Resultado del triage toma la forma del reporte del closer: el progreso a la izquierda, las cuatro tarjetas (Asistió, No asistió, Canceló, Reagenda), una pregunta por pantalla con «Falta» y el mínimo de la nota, y la revisión con «Editar» antes de guardar.
+  - Califica → closer → horario → nota para el closer. No califica → low ticket → (si cerró) monto, medio y a quién se transfirió → (si queda en seguimiento) fecha → por qué no califica.
+  - Los horarios del closer se muestran en la hora del lead (la zona de su WhatsApp, como el aviso al closer), con un selector para cambiarla.
+  - Nuevo: Reagenda (la misma agenda a la fecha nueva, de vuelta a Confirmar), «Registrar el low ticket» sin reporte previo (no si ya pasó al closer) y «Pasar a seguimiento» para el triage en sus agendas.

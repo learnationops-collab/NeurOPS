@@ -4,6 +4,7 @@ El triage trabaja con la misma vista del closer (mazo, ficha, confirmación, seg
 propio es cómo se reporta la llamada, y por eso vive acá y no en el árbol del closer:
 
   · asistió, no se presentó o canceló: lo mismo que reporta el closer (`ficha_acciones_service.resultado`);
+  · reagenda: la misma agenda pasa a la hora nueva y vuelve a confirmarse, como la reagenda del closer;
   · si asistió, calificación económica: **calificado** (puede invertir más de 500 USD) pasa al closer
     con una agenda nueva y una nota; **descalificado** cierra con el low ticket de 100 USD;
   · del low ticket se registra si se pitcheó y cómo quedó: cerró, no cerró, seguimiento o descartado.
@@ -12,7 +13,7 @@ propio es cómo se reporta la llamada, y por eso vive acá y no en el árbol del
 
 Una agenda es de triage cuando su `closer_id` es una cuenta con el rol `triage`.
 """
-from datetime import date
+from datetime import date, datetime
 
 from app import db
 from app.models import Appointment, User
@@ -93,7 +94,7 @@ def _vender_low_ticket(appt, venta, usuario):
 
 def _validar(appt, datos):
     asistencia = datos.get('asistencia')
-    if asistencia not in ASISTENCIAS:
+    if asistencia not in ASISTENCIAS + ('reagenda',):
         raise _error('Elegí si el lead se presentó.', 'asistencia')
     if asistencia != 'asistio':
         return
@@ -137,8 +138,11 @@ def reportar(appt, datos, usuario):
         raise _error('Esta agenda no es de triage.')
 
     if 'asistencia' not in datos:
-        if appt.triage_calificacion != 'descalificado':
-            raise _error('El low ticket solo se registra en un lead descalificado.')
+        # «Registrar el low ticket» de la ficha llega acá sin reporte previo: solo la venta.
+        if appt.triage_calificacion == 'calificado':
+            raise _error('Este lead ya pasó al closer: la venta es suya.')
+        if appt.triage_calificacion != 'descalificado' and datos.get('low_ticket') != 'cerrado':
+            raise _error('Reportá primero la llamada.')
         vende = datos.get('low_ticket') == 'cerrado' and appt.triage_low_ticket != 'cerrado'
         if datos.get('low_ticket') not in LOW_TICKET:
             raise _error('Elegí qué pasó con el low ticket.', 'low_ticket')
@@ -150,6 +154,8 @@ def reportar(appt, datos, usuario):
         return {**bloque(appt), 'avisos': avisos, 'vendio': vende}
 
     _validar(appt, datos)
+    if datos['asistencia'] == 'reagenda':
+        return _reagendar(appt, datos, usuario)
     vende = (datos['asistencia'] == 'asistio' and datos.get('calificacion') == 'descalificado'
              and datos.get('low_ticket') == 'cerrado')
     venta = _venta_low_ticket(datos) if vende else None
@@ -177,6 +183,23 @@ def reportar(appt, datos, usuario):
         _log(appt, usuario, f'{usuario.username} lo descalificó económicamente: '
                             f'{_LOW_TICKET_TEXTO[appt.triage_low_ticket]}.')
     return {**bloque(appt), 'avisos': avisos, 'vendio': vende}
+
+
+def _reagendar(appt, datos, usuario):
+    """La misma agenda a la hora nueva, de vuelta a confirmar (la reagenda del árbol del closer)."""
+    from app.services import ficha_acciones_service as acciones
+    from app.services.deck_escritura_service import aplicar_cambios
+    from app.services.ficha_agendas_service import _instante_utc
+
+    inicio = _instante_utc(datos.get('fecha'))
+    if inicio <= datetime.utcnow():
+        raise _error('La fecha nueva tiene que ser futura.', 'fecha')
+    acciones._mover_la_llamada(appt, inicio, usuario)
+    aplicar_cambios(appt, {'confirm_status': 'por_confirmar', 'result': 'Pendiente'}, usuario)
+    db.session.commit()
+    nota = (datos.get('nota') or '').strip()
+    _log(appt, usuario, f'{usuario.username} reagendó la sesión diagnóstica' + (f': «{nota}».' if nota else '.'))
+    return {**bloque(appt), 'avisos': [], 'vendio': False}
 
 
 def _nota_para_closer(appt, closing, texto, usuario):
