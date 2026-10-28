@@ -1215,3 +1215,7 @@
   - Seguimiento del equipo en lugar de comentarios: objetivos abiertos con su próximo paso (pendiente, vencido o en observación) y protocolo, y las últimas acciones con si el alumno respondió, observaciones y victorias.
   - Uso: la franja del Pulso, días activos en 14 y en 30, horas, entregas, la tira de 14 días y la bitácora con filtros.
   - Avance, seguimiento y uso salen del expediente de la Academia, que los suma desde su ADR-202 (`GET /ficha/seguimiento-academia`).
+- **28 de Octubre de 2026 (Hiring · WhatsApp con código de país y todas las respuestas en la postulación)** *([app/models/assistant_application.py](../../app/models/assistant_application.py), [app/api/assistant_applications.py](../../app/api/assistant_applications.py), [HiringCandidateModal.jsx](../../frontend/src/pages/admin/hiring/components/HiringCandidateModal.jsx))*:
+  - El formulario muestra el código del país fijo y guarda solo el resto del número: `whatsapp_completo()` se lo suma al leerlo (el de la opción de país en Forms, si tiene `prefijo`, o +54/+55/+58). Lo que ya trae «+» o el código escrito queda igual. Se copia y abre WhatsApp con el número entero.
+  - `bloques_respuestas()`: las preguntas del formulario con que contestó (con las preguntas nuevas de Forms en su lugar) y, al final, «Formulario anterior» con las columnas que ese formulario no tiene, incluidas las de la versión vieja, que antes no salían.
+  - «Abrir todas las respuestas» muestra también las resumidas en los rieles, con la respuesta entera.

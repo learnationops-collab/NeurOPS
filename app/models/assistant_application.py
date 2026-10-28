@@ -97,6 +97,12 @@ VERIFICADO_OK = 'Sí, lo verifiqué'
 # editable con otro id se guarda en `respuestas_extra`.
 COLUMNAS_DE_RESPUESTA = frozenset(CAMPOS_FORMULARIO + CAMPOS_LEGACY)
 
+# Código de WhatsApp de cada país del formulario (el mismo PREFIJOS de
+# institute-site). El formulario lo muestra fijo al lado del campo y guarda
+# solo el resto del número; un país agregado en Forms puede traer el suyo en
+# la opción (`prefijo`).
+PREFIJOS = {'Argentina': '+54', 'Brasil': '+55', 'Venezuela': '+58'}
+
 
 class AssistantApplication(db.Model):
     """Una fila por candidato. Se actualiza (no se duplica) por `dedupe_key`:
@@ -389,7 +395,7 @@ class AssistantApplication(db.Model):
             "dedupe_key": self.dedupe_key,
             "nombre": self.nombre,
             "email": self.email,
-            "whatsapp": self.whatsapp,
+            "whatsapp": self.whatsapp_completo(),
             "pais": pais_limpio(self.pais),
             "provincia": self.provincia,
             "modalidad": self.modalidad(),
@@ -436,6 +442,66 @@ class AssistantApplication(db.Model):
                 data.setdefault(campo, getattr(self, campo))
             data["respuestas_extra"] = dict(self.respuestas_extra or {})
         return data
+
+    def prefijo_whatsapp(self):
+        """El código de país del WhatsApp: el de la opción de país que eligió
+        (si el formulario le puso uno) o el del país conocido. '' si no se sabe."""
+        pais = pais_limpio(self.pais)
+        if not pais:
+            return ''
+        form = self.formulario()
+        pregunta = form.pregunta('pais') if form is not None else None
+        for opcion in (pregunta or {}).get('o') or []:
+            if isinstance(opcion, dict) and opcion.get('prefijo') and pais_limpio(opcion.get('t')) == pais:
+                return str(opcion['prefijo'])
+        return PREFIJOS.get(pais, '')
+
+    def whatsapp_completo(self):
+        """El WhatsApp con su código de país (+58 414…), listo para copiar. Lo
+        que ya viene con «+» (país sin prefijo, o escrito a mano) queda igual;
+        si ya trae el código sin «+», no se le suma otra vez."""
+        crudo = (self.whatsapp or '').strip()
+        if not crudo or crudo.startswith('+'):
+            return crudo or None
+        prefijo = self.prefijo_whatsapp()
+        codigo = ''.join(c for c in prefijo if c.isdigit())
+        if not codigo:
+            return crudo
+        digitos = ''.join(c for c in crudo if c.isdigit())
+        if crudo.startswith('00') and digitos[2:].startswith(codigo):
+            return f"+{digitos[2:]}"
+        # Los números locales de estos países tienen 10 u 11 dígitos: si con el
+        # código adelante quedan al menos 10 más, el código ya estaba escrito.
+        if digitos.startswith(codigo) and len(digitos) - len(codigo) >= 10:
+            return f"+{digitos}"
+        return f"{prefijo} {crudo.lstrip('0')}"
+
+    def bloques_respuestas(self):
+        """Las preguntas de ESTA postulación en el orden en que las contestó:
+        [{titulo, campos}]. Con formulario editable, las de su formulario
+        (prendidas o no: si la contestó, se ve), con `ciudad` como `provincia`;
+        sin él, los bloques del formulario base. Al final, las del formulario
+        anterior (las postulaciones viejas las tienen respondidas)."""
+        form = self.formulario()
+        bloques = []
+        if form is not None and form.preguntas:
+            for p in form.preguntas:
+                if not isinstance(p, dict) or not p.get('id') or p.get('tipo') == 'intro':
+                    continue
+                campo = COLUMNA_DE_PREGUNTA.get(p['id'], p['id'])
+                titulo = p.get('bloque') or 'Otras'
+                if not bloques or bloques[-1]['titulo'] != titulo:
+                    bloques.append({"titulo": titulo, "campos": []})
+                bloques[-1]['campos'].append(campo)
+        else:
+            bloques = [{"titulo": titulo, "campos": list(campos)} for titulo, campos in BLOQUES]
+        vistos = {campo for b in bloques for campo in b['campos']}
+        # Una columna que su formulario no tiene (apagada y quitada, o de otra versión)
+        # pero que igual quedó respondida.
+        sueltas = [c for c in CAMPOS_FORMULARIO + CAMPOS_LEGACY if c not in vistos]
+        if sueltas:
+            bloques.append({"titulo": "Formulario anterior", "campos": sueltas})
+        return bloques
 
     def preguntas_extra(self):
         """Cómo rotular cada respuesta de `respuestas_extra`: [{id, t, bloque}],

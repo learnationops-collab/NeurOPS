@@ -139,10 +139,10 @@ def ver_assistant_application(app_id):
     app_row = AssistantApplication.query.get_or_404(app_id)
     weights = _weights_map()
     data = app_row.to_dict(include_respuestas=True, criterios=weights)
-    # Los 9 bloques en orden, para que el panel muestre las 41 respuestas
-    # agrupadas igual que las contestó el candidato, sin hardcodear el orden
-    # en el frontend.
-    data["bloques"] = [{"titulo": titulo, "campos": campos} for titulo, campos in BLOQUES]
+    # Las preguntas de su formulario en orden (más las del formulario anterior),
+    # para que el panel muestre todas sus respuestas agrupadas igual que las
+    # contestó, sin hardcodear el orden en el frontend.
+    data["bloques"] = app_row.bloques_respuestas()
     data["criterios"] = assistant_clarity.compute_criteria_values(app_row)
     # Rótulos de las respuestas a preguntas agregadas desde el editor (no
     # tienen columna ni lugar en `bloques`).
