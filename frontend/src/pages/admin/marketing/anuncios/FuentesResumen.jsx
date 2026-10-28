@@ -15,10 +15,13 @@ import './fuentes.css';
  * trajo la fuente (cuotas, upsells, ventas de meses anteriores) ÷ gastado.
  */
 const TITULOS = ['Leads entrantes', 'Importe gastado', 'Agendas', 'Ventas', 'New Cash', 'Cash total', 'ROAS New Cash', 'ROAS Total'];
+// `sinRepetidos` (la vista Setting, que ya tiene los KPIs de su tabla arriba): solo lo que la tabla no dice, la
+// asistencia y la plata. Un rótulo sale una sola vez en la pantalla (Kerwin, 28/10/2026).
+const SIN_REPETIDOS = ['Show up', ...TITULOS.slice(4)];
 
-export const EsqueletoTarjetasFuente = () => (
+export const EsqueletoTarjetasFuente = ({ sinRepetidos = false }) => (
     <Skeleton label="Cargando la fuente…" className="pareja mk-fuente-kpis" style={{ '--min': '170px', '--g': 'var(--s4)' }}>
-        {TITULOS.map((t, i) => (
+        {(sinRepetidos ? SIN_REPETIDOS : TITULOS).map((t, i) => (
             <div key={t} className="kpi mk-kpi" aria-hidden="true">
                 <p className="t-eyebrow">{t}</p>
                 <SkeletonText width={90} height={18} lineHeight={26} step={i} />
@@ -28,8 +31,8 @@ export const EsqueletoTarjetasFuente = () => (
     </Skeleton>
 );
 
-export const TarjetasFuente = ({ fuente, moneda }) => {
-    if (!fuente) return <EsqueletoTarjetasFuente />;
+export const TarjetasFuente = ({ fuente, moneda, sinRepetidos = false }) => {
+    if (!fuente) return <EsqueletoTarjetasFuente sinRepetidos={sinRepetidos} />;
     const dinero = (v) => formatear(v, 'money', moneda);
     const veces = (v) => formatear(v, 'veces');
     const kpis = [
@@ -52,9 +55,13 @@ export const TarjetasFuente = ({ fuente, moneda }) => {
         { titulo: TITULOS[7], valor: veces(fuente.roas_total), sub: 'Cash total / gastado',
           tip: 'Todo lo cobrado de los clientes de la fuente, sobre lo gastado.' },
     ];
+    const showUp = { titulo: 'Show up', valor: fuente.pct_show_up === null ? '—' : `${fuente.pct_show_up}%`,
+        sub: `${formatear(fuente.show_up, 'num')} de ${formatear(fuente.reportadas, 'num')} citas con resultado`,
+        tip: 'Asistieron ÷ citas con resultado (asistieron + no show).' };
+    const mostradas = sinRepetidos ? [showUp, ...kpis.slice(4)] : kpis;
     return (
         <div className="pareja mk-fuente-kpis" style={{ '--min': '170px', '--g': 'var(--s4)' }}>
-            {kpis.map((k, i) => <Kpi key={k.titulo} {...k} i={i} />)}
+            {mostradas.map((k, i) => <Kpi key={k.titulo} {...k} i={i} />)}
         </div>
     );
 };
