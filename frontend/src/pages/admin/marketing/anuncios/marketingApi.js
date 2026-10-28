@@ -6,8 +6,9 @@ const cambia = (r) => { olvidarCache('mk:'); return r.data; };
 
 /** La API de la tabla de anuncios (ver `app/api/marketing_anuncios.py`). */
 
-export const pedirTablero = (desde, hasta, config = {}) =>
-    api.get('/marketing/anuncios', { params: { desde, hasta }, ...config }).then((r) => r.data);
+/** `config.base`: por qué fecha se cuentan las agendas (`alta` | `reunion`, ver `baseDeConteo`). */
+export const pedirTablero = (desde, hasta, { base, ...config } = {}) =>
+    api.get('/marketing/anuncios', { params: { desde, hasta, ...(base ? { base } : {}) }, ...config }).then((r) => r.data);
 
 export const pedirAnunciosDeMeta = (desde, hasta, config = {}) =>
     api.get('/marketing/anuncios/meta', { params: { desde, hasta }, ...config }).then((r) => r.data);
@@ -47,6 +48,8 @@ export const archivarPalabraClave = (clave, archivado) =>
 export const mensajeDeError = (error, porDefecto) =>
     error?.response?.data?.error || error?.response?.data?.message || porDefecto;
 
-/** La lista que suma una cifra de una fuente (`fuente`: setting | workshop; `metrica`: ver fuentes_registros_service). */
-export const pedirRegistros = (fuente, metrica, desde, hasta, config = {}) =>
-    api.get('/marketing/anuncios/registros', { params: { fuente, metrica, desde, hasta }, ...config }).then((r) => r.data);
+/** La lista que suma una cifra de una fuente (`fuente`: setting | workshop | otras; `metrica`: ver
+ *  fuentes_registros_service; `config.base`: la fecha por la que se cuentan las agendas). */
+export const pedirRegistros = (fuente, metrica, desde, hasta, { base, ...config } = {}) =>
+    api.get('/marketing/anuncios/registros', { params: { fuente, metrica, desde, hasta, ...(base ? { base } : {}) }, ...config })
+        .then((r) => r.data);

@@ -7,6 +7,7 @@ import RangoFechas, { esFecha, textoRango } from '../../../comercial/components/
 import RendimientoWorkshop from '../../marketing/anuncios/RendimientoWorkshop';
 import { PERIODOS, PERIODO_POR_DEFECTO, rangoDePeriodo } from '../../marketing/anuncios/metricas';
 import { mensajeDeError, pedirTablero } from '../../marketing/anuncios/marketingApi';
+import { SelectorBase, useBaseDeConteo } from '../../marketing/anuncios/baseDeConteo';
 import { useDatosCacheados } from '../../../../services/cacheDeVistas';
 import { EnCabecera } from '../components/CabeceraWorkshop';
 import '../../../../components/dashboard/pareja.css';
@@ -30,6 +31,7 @@ const RendimientoTab = () => {
     }, [periodo, pDesde, pHasta]);
 
     const [version, setVersion] = useState(0);
+    const { base, elegirBase } = useBaseDeConteo();
     const recargar = useCallback(() => setVersion((v) => v + 1), []);
     const cambiar = useCallback((cambios) => {
         const siguiente = new URLSearchParams(params);
@@ -38,8 +40,8 @@ const RendimientoTab = () => {
     }, [params, setParams]);
 
     // Mismo tablero que Setting: de acá salen el gasto por día y las cuentas de Meta.
-    const { datos, error: fallo, cargando } = useDatosCacheados(`mk:tablero:${rango.desde}:${rango.hasta}`,
-        (signal) => pedirTablero(rango.desde, rango.hasta, { signal }),
+    const { datos, error: fallo, cargando } = useDatosCacheados(`mk:tablero:${base}:${rango.desde}:${rango.hasta}`,
+        (signal) => pedirTablero(rango.desde, rango.hasta, { signal, base }),
         { version, onError: (e) => toast.error(mensajeDeError(e, 'No se pudo cargar el rendimiento.')) });
 
     const fuente = datos?.fuentes?.fuentes?.find((f) => f.key === 'workshop') || null;
@@ -61,6 +63,7 @@ const RendimientoTab = () => {
                                     if (esFecha(desde) && esFecha(hasta)) cambiar({ periodo: 'personalizado', desde, hasta });
                                 }} />
                         )} />
+                    <SelectorBase base={base} onChange={elegirBase} />
                     <button type="button" className="ibtn" onClick={recargar} disabled={cargando}
                         title="Volver a cargar" aria-label="Volver a cargar">
                         <RefreshCw className={cargando ? 'mk-gira' : ''} aria-hidden="true" />
@@ -70,7 +73,7 @@ const RendimientoTab = () => {
             <div className={cargando && datos ? 'mk-recargando' : undefined} aria-busy={cargando}>
                 <RendimientoWorkshop desde={rango.desde} hasta={rango.hasta} moneda={datos?.moneda}
                     embudos={datos ? datos.embudos || [] : (fallo ? [] : null)} fuente={fuente}
-                    cuentas={datos?.meta?.cuentas || []} version={version}
+                    cuentas={datos?.meta?.cuentas || []} version={version} base={base}
                     irAMeta={() => navigate('/admin/marketing?tab=meta')} />
             </div>
         </div>

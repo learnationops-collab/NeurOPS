@@ -13,6 +13,7 @@ import { ErrorDeCarga } from './esqueletos';
 import ConexionMeta from './anuncios/ConexionMeta';
 import { TarjetasFuente } from './anuncios/FuentesResumen';
 import { useRegistrosMarketing } from './anuncios/useRegistrosMarketing';
+import { SelectorBase, useBaseDeConteo } from './anuncios/baseDeConteo';
 import AvisoSinCampana from './anuncios/AvisoSinCampana';
 import { useEstadoDeMeta } from './anuncios/useEstadoDeMeta';
 import { PERIODOS, PERIODO_POR_DEFECTO, rangoDePeriodo } from './anuncios/metricas';
@@ -73,6 +74,7 @@ const AdminMarketingHubPage = () => {
     }, [periodo, params]);
 
     const [version, setVersion] = useState(0);
+    const { base, elegirBase } = useBaseDeConteo();
 
     const cambiar = useCallback((cambios) => {
         const siguiente = new URLSearchParams(params);
@@ -81,8 +83,8 @@ const AdminMarketingHubPage = () => {
     }, [params, setParams]);
 
     // El tablero queda recordado por período: ir y volver entre pestañas o vistas no lo vuelve a pedir.
-    const { datos, error: fallo, cargando, setDatos } = useDatosCacheados(`mk:tablero:${rango.desde}:${rango.hasta}`,
-        (signal) => pedirTablero(rango.desde, rango.hasta, { signal }),
+    const { datos, error: fallo, cargando, setDatos } = useDatosCacheados(`mk:tablero:${base}:${rango.desde}:${rango.hasta}`,
+        (signal) => pedirTablero(rango.desde, rango.hasta, { signal, base }),
         { version, onError: (e) => toast.error(mensajeDeError(e, 'No se pudo cargar la tabla de anuncios.')) });
     const error = fallo ? mensajeDeError(fallo, 'No se pudo cargar la tabla de anuncios.') : null;
 
@@ -125,7 +127,7 @@ const AdminMarketingHubPage = () => {
     const fuenteDe = (key) => fuentes?.find((f) => f.key === key) || null;
     // Palabras con gasto sin campaña vigente en el Inbox (24/10/2026).
     const avisoSinCampana = <AvisoSinCampana sinCampana={datos?.fuentes?.sin_campana} moneda={datos?.moneda} />;
-    const registros = useRegistrosMarketing(rango.desde, rango.hasta, datos?.moneda);
+    const registros = useRegistrosMarketing(rango.desde, rango.hasta, datos?.moneda, base);
     const resumenSetting = !(fuentes && !fuenteDe('setting'))
         ? <TarjetasFuente fuente={fuenteDe('setting')} moneda={datos?.moneda} sinRepetidos
             onVer={(metrica, titulo) => registros.abrir('setting', metrica, titulo)} /> : null;
@@ -164,6 +166,7 @@ const AdminMarketingHubPage = () => {
                                                 if (esFecha(desde) && esFecha(hasta)) cambiar({ periodo: 'personalizado', desde, hasta });
                                             }} />
                                     )} />
+                                {pestana === 'anuncios' && <SelectorBase base={base} onChange={elegirBase} />}
                                 <button type="button" className="ibtn" onClick={recargar} disabled={cargando}
                                     title="Volver a cargar" aria-label="Volver a cargar">
                                     <RefreshCw className={cargando ? 'mk-gira' : ''} aria-hidden="true" />
@@ -188,7 +191,9 @@ const AdminMarketingHubPage = () => {
                                 ) : !datos ? <EsqueletoTablaAnuncios bajoKpis={resumenSetting} /> : (
                                     <>
                                         <TablaAnuncios datos={datos} onArchivar={archivar} onAgrupar={agrupar} estadoMeta={estadoMeta}
-                                            irAMeta={() => cambiar({ tab: 'meta' })} bajoKpis={resumenSetting} />
+                                            irAMeta={() => cambiar({ tab: 'meta' })} bajoKpis={resumenSetting}
+                                            agendasDeFuente={base === 'reunion' ? fuenteDe('setting') : null}
+                                            onVerAgendas={(metrica, titulo) => registros.abrir('setting', metrica, titulo)} />
                                         {avisoSinCampana}
                                         {registros.panel}
                                     </>

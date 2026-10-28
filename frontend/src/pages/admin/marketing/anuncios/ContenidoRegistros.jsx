@@ -29,15 +29,15 @@ const columnaDe = (c, moneda) => ({
     },
 });
 
-const ContenidoRegistros = ({ fuente, metrica, desde, hasta, moneda }) => {
+const ContenidoRegistros = ({ fuente, metrica, desde, hasta, moneda, base }) => {
     const [estado, setEstado] = useState({ datos: null, error: null });
     useEffect(() => {
         const control = new AbortController();
-        pedirRegistros(fuente, metrica, desde, hasta, { signal: control.signal })
+        pedirRegistros(fuente, metrica, desde, hasta, { signal: control.signal, base })
             .then((datos) => setEstado({ datos, error: null }))
             .catch((e) => { if (!control.signal.aborted) setEstado({ datos: null, error: mensajeDeError(e, 'No se pudo traer la lista.') }); });
         return () => control.abort();
-    }, [fuente, metrica, desde, hasta]);
+    }, [fuente, metrica, desde, hasta, base]);
 
     const { datos, error } = estado;
     const columnas = useMemo(() => (datos ? datos.columnas.map((c) => columnaDe(c, moneda)) : []), [datos, moneda]);
@@ -54,7 +54,7 @@ const ContenidoRegistros = ({ fuente, metrica, desde, hasta, moneda }) => {
         <>
             <p className="t-body td-fuerte" style={{ margin: '0 0 var(--s3)' }}>{datos.resumen}</p>
             <ListaConfigurable columnas={columnas} filas={datos.filas} clave={(f) => f.id}
-                claveGuardado={`mk_registros_${fuente}_${metrica}`}
+                claveGuardado={`mk_registros_${fuente}_${metrica}${base === 'reunion' ? '_reunion' : ''}`}
                 buscar={(f) => Object.values(f).join(' ')} buscarPlaceholder="Buscar en la lista"
                 vacio="Ninguna fila suma a esta cifra en el período." />
         </>
