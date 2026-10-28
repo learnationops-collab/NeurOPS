@@ -1185,3 +1185,8 @@
   - Pago de algo que ya compró en 3 pantallas: qué registra, qué cuota (o un pago suelto) y cuánto y por dónde. «Registrar pago» de Acciones abre este camino.
   - El low ticket del triage se carga en una pantalla: cuánto, por dónde y a quién si fue transferencia.
   - Se borran el formulario de pago de Acciones, los modales viejos de venta (sin uso) y `POST /closer/sales`.
+- **28 de Octubre de 2026 (Componente estándar «Ver registros»: cada cifra se abre en su lista)** *([VerRegistros.jsx](../../frontend/src/components/standard/VerRegistros.jsx), [Layout.jsx](../../frontend/src/components/standard/Layout.jsx), [registrosDeKpi.jsx](../../frontend/src/pages/admin/marketing/anuncios/registrosDeKpi.jsx), [TablaAnuncios.jsx](../../frontend/src/pages/admin/marketing/anuncios/TablaAnuncios.jsx), [ADR-W015](../DECISIONS.md))*:
+  - Nuevo `VerRegistros` + `useVerRegistros()`: la lista que compone una cifra se abre en un panel lateral o en una ventana central. La persona alterna entre las dos y se recuerda. El `Kpi` estándar suma `onSelect`.
+  - En Marketing, el ojo de cada KPI de la tabla de anuncios (Leads entrantes, Importe gastado, Agendas, Ventas) abre las filas que lo suman, con su aporte y los costos; son las mismas filas que ve la tabla, con los mismos filtros.
+  - Todavía no abre las personas de cada agenda o venta, ni está en las otras pantallas: sigue en las tareas de Leadership.
+  - En el catálogo `/ui` y en la skill ui-builder.
