@@ -1209,3 +1209,5 @@
   - En Revisar › Agendas, bajo la barra, una línea con las tres cifras como botones: «223 agendas = 150 vigentes + 73 descartadas». «Todas» pasa a ser también un filtro rápido (segundo, «Vigentes» sigue por defecto).
   - El backend suma `vigentes` y `descartadas` al paso Agendas del embudo; `__chip` en el drill-down elige el filtro rápido con el que abre la lista.
   - Marketing sigue por su lado (agendas por fecha de alta, no de reunión): lo resuelven las tareas «Contar por» y «Otras».
+- **28 de Octubre de 2026 (Todos: el embudo normalizado en números enteros)** *([comparacion.js](../../frontend/src/pages/admin/marketing/todos/comparacion.js), [ResumenTodos.jsx](../../frontend/src/pages/admin/marketing/todos/ResumenTodos.jsx))*:
+  - El embudo decía «5.3» ventas por cada 1.000 leads: una venta no se parte. Ahora los números de las barras son enteros («5») y el decimal exacto queda en el título del número («5,3 de cada 1.000 leads»); la cuenta real sigue al lado («13 de 52 que asistieron»).
