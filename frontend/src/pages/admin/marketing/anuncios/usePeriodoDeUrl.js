@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useParamsGuardados } from '../../../../hooks/useParamsGuardados';
 import { esFecha, textoRango } from '../../../comercial/components/RangoFechas';
 import { PERIODOS, PERIODO_POR_DEFECTO, rangoDePeriodo } from './metricas';
 
@@ -8,8 +8,9 @@ import { PERIODOS, PERIODO_POR_DEFECTO, rangoDePeriodo } from './metricas';
  * (`periodo`, `desde`, `hasta`), así un link lleva a lo mismo que se estaba mirando.
  * `elegir(key)` cambia de período; `cambiar(cambios)` toca cualquier otro parámetro de la URL.
  */
-export const usePeriodoDeUrl = () => {
-    const [params, setParams] = useSearchParams();
+export const usePeriodoDeUrl = (clave = 'mk_periodo_url', extras = []) => {
+    // `clave`: dónde se recuerda lo último elegido (por usuario); sin parámetros en el link se restaura.
+    const [params, setParams] = useParamsGuardados(clave, ['periodo', 'desde', 'hasta', ...extras]);
     const periodo = PERIODOS.some((p) => p.key === params.get('periodo')) ? params.get('periodo') : PERIODO_POR_DEFECTO;
     const pDesde = params.get('desde');
     const pHasta = params.get('hasta');

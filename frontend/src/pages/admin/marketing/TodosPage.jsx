@@ -41,7 +41,7 @@ const VISTAS = [
 const TodosPage = () => {
     const navigate = useNavigate();
     const reducir = useReducedMotion();
-    const { periodo, rango, cambiar, elegir, textoPeriodo, params } = usePeriodoDeUrl();
+    const { periodo, rango, cambiar, elegir, textoPeriodo, params } = usePeriodoDeUrl('mk_todos_url', ['vista']);
     const vista = VISTAS.some((v) => v.key === params.get('vista')) ? params.get('vista') : 'resumen';
     const [version, setVersion] = useState(0);
     const recargar = useCallback(() => setVersion((v) => v + 1), []);

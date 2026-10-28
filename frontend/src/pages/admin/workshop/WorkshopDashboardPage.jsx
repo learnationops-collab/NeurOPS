@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useParamsGuardados } from '../../../hooks/useParamsGuardados';
 import { Plus } from 'lucide-react';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
@@ -47,6 +47,9 @@ const PESTANAS = [
     { key: 'correlaciones', label: 'Correlaciones' },
 ];
 
+// Todo lo que las pestañas guardan en la URL: pestaña, filtro y comparación del Resumen, y período.
+const CLAVES_DE_LA_URL = ['tab', 'rf', 'rn', 'rd', 'rh', 'ri', 'vs', 'vd', 'vh', 'vi', 'periodo', 'desde', 'hasta'];
+
 // Las pestañas viejas siguen abriendo lo mismo desde un link guardado.
 const PESTANA_VIEJA = { list: 'talleres', funnel: 'talleres', anuncios: 'talleres', landing: 'talleres',
     proximos: 'planificar', simulador: 'planificar', acciones: 'planificar' };
@@ -83,7 +86,8 @@ const initialFormData = {
 };
 
 const WorkshopDashboardPage = () => {
-    const [params, setParams] = useSearchParams();
+    // La pestaña, el filtro del Resumen (rf…vi) y el período se recuerdan por usuario (`useParamsGuardados`).
+    const [params, setParams, restaurando] = useParamsGuardados('ws_url', CLAVES_DE_LA_URL);
     const pedida = PESTANA_VIEJA[params.get('tab')] || params.get('tab');
     const activeTab = PESTANAS.some((p) => p.key === pedida) ? pedida : 'resumen';
     // Lo que una pestaña le pide a Planificar al mandar ahí (ver PlanificarTab). Un link viejo a
@@ -317,6 +321,9 @@ const WorkshopDashboardPage = () => {
             return dateStr;
         }
     };
+
+    // Los hijos leen la URL por su cuenta: no se pintan hasta que la URL tenga lo de la última vez.
+    if (restaurando) return null;
 
     return (
         <div className="ws-espacio">

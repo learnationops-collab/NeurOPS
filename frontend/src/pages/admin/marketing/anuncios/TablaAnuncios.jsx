@@ -15,6 +15,7 @@ import EstadoDeMeta from './EstadoDeMeta';
 import { usePantallaCompleta } from './usePantallaCompleta';
 import { columnasDelCsv } from './columnasTabla';
 import { useVistaDeColumnas } from './useVistaDeColumnas';
+import { useFiltrosTabla } from './useFiltrosTabla';
 import { referenciasDe } from './tonos';
 import LeyendaTonos from './LeyendaTonos';
 import TarjetasAnuncios, { SelectorModo } from './TarjetasAnuncios';
@@ -91,15 +92,13 @@ export const EsqueletoTablaAnuncios = ({ bajoKpis = null }) => (
 
 // `bajoKpis`: lo que va entre los KPIs y el resto (el gasto por embudo, en «Todo»).
 const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = null, bajoKpis = null }) => {
-    const [busqueda, setBusqueda] = useState('');
-    const [verArchivados, setVerArchivados] = useState(false);
-    // Filtros de Kerwin (23/10/2026): lo que no gastó y lo que no está activo en Meta estorban al mirar costos.
-    const [soloConGasto, setSoloConGasto] = useState(false);
-    const [soloActivas, setSoloActivas] = useState(false);
+    // Los filtros se recuerdan por usuario (`useFiltrosTabla`, norma del 28/10/2026). «Solo con gasto» y «solo
+    // activas» (Kerwin, 23/10/2026): lo que no gastó y lo que no está activo en Meta estorban al mirar costos.
+    const {
+        busqueda, setBusqueda, verArchivados, setVerArchivados, soloConGasto, setSoloConGasto, soloActivas, setSoloActivas,
+        orden, setOrden, nivel, setNivel, elegidas, setElegidas,
+    } = useFiltrosTabla(datos.filas);
     const pantalla = usePantallaCompleta();
-    const [orden, setOrden] = useState({ clave: 'entrantes', dir: 'desc' });
-    const [nivel, setNivel] = useState('anuncios');
-    const [elegidas, setElegidas] = useState(vacio);
     const [editando, setEditando] = useState(null);
     const [guardando, setGuardando] = useState(false);
     const moneda = datos.moneda;
