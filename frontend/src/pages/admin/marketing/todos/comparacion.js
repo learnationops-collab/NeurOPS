@@ -143,7 +143,9 @@ const PASOS = [
 export const embudoNormalizado = (s, w) => {
     const por = (fuente, k) => (fuente.leads ? (fuente[k] / fuente.leads) * 1000 : 0);
     const mayor = Math.max(por(s, 'agendas'), por(w, 'agendas')) || 1;
-    const texto = (v) => v.toFixed(v < 10 ? 1 : 0);
+    // Enteros: «5,3 ventas» no existe (Kerwin, 28/10/2026). El decimal exacto va en el título del número.
+    const texto = (v) => String(Math.round(v));
+    const exacto = (v) => `${v.toFixed(1)} de cada 1.000 leads`;
     const pct = (a, b) => (b ? `${((a / b) * 100).toFixed(1)}%` : '—');
     const delPaso = (f, p) => (f[p.previo]
         ? `${pct(f[p.k], f[p.previo])} · ${nDeM(num(f[p.k]), num(f[p.previo]), p.unidad)}` : 'sin paso anterior');
@@ -154,7 +156,7 @@ export const embudoNormalizado = (s, w) => {
     };
     return PASOS.map((p) => ({
         label: p.label, paso: p.paso,
-        s: texto(por(s, p.k)), w: texto(por(w, p.k)),
+        s: texto(por(s, p.k)), w: texto(por(w, p.k)), st: exacto(por(s, p.k)), wt: exacto(por(w, p.k)),
         sw: `${(por(s, p.k) / mayor) * 100}%`, ww: `${(por(w, p.k) / mayor) * 100}%`,
         sr: delPaso(s, p), wr: delPaso(w, p),
         sr2: conResultado(s, p), wr2: conResultado(w, p),

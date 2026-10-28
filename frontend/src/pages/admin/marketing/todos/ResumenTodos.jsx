@@ -55,12 +55,12 @@ const ResumenTodos = ({ grupos, setting, workshop, moneda }) => {
                             <div className="td-paso-barras">
                                 <div className="td-paso-fila">
                                     <Barra color={SETTING.color} ancho={p.sw} />
-                                    <span className="t-sm td-fuerte num">{p.s}</span>
+                                    <span className="t-sm td-fuerte num" title={p.st}>{p.s}</span>
                                     <span className="td-det td-det--fila t-cap mut">{p.sr}{p.sr2 && <small>{p.sr2}</small>}</span>
                                 </div>
                                 <div className="td-paso-fila">
                                     <Barra color={WORKSHOP.color} ancho={p.ww} />
-                                    <span className="t-sm td-fuerte num">{p.w}</span>
+                                    <span className="t-sm td-fuerte num" title={p.wt}>{p.w}</span>
                                     <span className="td-det td-det--fila t-cap mut">{p.wr}{p.wr2 && <small>{p.wr2}</small>}</span>
                                 </div>
                             </div>
