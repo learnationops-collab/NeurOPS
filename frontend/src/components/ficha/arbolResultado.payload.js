@@ -13,7 +13,7 @@
 // `respuestas` va crudo al final: si mañana aparece un campo nuevo, el backend lo tiene igual.
 
 import {
-  esVenta, esCompleto, esCuota, esRenovacionOUpsell, pagadoAntes, saldoPrevio, quedaSaldo, armaPlan,
+  esVenta, esNueva, esCompleto, esCuota, esRenovacionOUpsell, pagadoAntes, saldoPrevio, quedaSaldo, armaPlan,
   cobraCuotaExistente, cantidadCuotas, fechasCuotas, montosCuotas,
 } from './arbolResultado.venta';
 import { esTransferencia } from './transferencia';
@@ -305,7 +305,8 @@ function payloadVenta(r, contexto) {
     liquidar_saldo: esRenovacionOUpsell(r) && r.settleBalanceWithSale === true && saldo > 0
       ? { monto: saldo, tipo_pago: `${r.programa} - Cuota`, comentario: 'Liquidación de saldo previo a Renovación/Upsell' }
       : null,
-    acceso_academia: r.dar_acceso_academia === true
+    // El acceso sale de una venta nueva; un pago no lo crea ni lo renueva.
+    acceso_academia: esNueva(r) && r.dar_acceso_academia === true
       ? {
         programa_code: r.programa, tipo_venta: (r.tipo_pago_simple || '').toLowerCase(), email: r.mail_cliente,
         ...(r.acceso_hasta ? { expires_at: r.acceso_hasta } : {}),

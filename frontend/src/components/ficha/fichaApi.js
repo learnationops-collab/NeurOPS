@@ -105,14 +105,12 @@ const RUTAS = {
     editar_evento: (appt, p) => api.patch(`/ficha/${appt}/evento/${p.evento_id}`, { detalle: p.detalle }),
     borrar_evento: (appt, p) => api.delete(`/ficha/${appt}/evento/${p.evento_id}`),
 
-    // Post-venta / cobro. Un pago es una escritura de venta: el único camino real
-    // de una venta y de una cuota cobrada es el mismo (`SheetsService.post_to_sheets`).
+    // Post-venta / cobro. Un pago se registra con `registrar_venta` desde Resultado (ADR-W013).
     guardar_plan: (appt, p) => api.put(`/ficha/${appt}/plan-cuotas`, p),
     guardar_total: (appt, p) => api.patch(`/ficha/${appt}/total`, p),
     guardar_programa: (appt, p) => api.patch(`/ficha/${appt}/programa`, p),
-    registrar_pago: (appt, p) => api.post(`/ficha/${appt}/venta`, p),
-    // La corrección a mano de un pago desde el historial: NO es `registrar_pago`, que declara una
-    // venta y dispara todo lo que una venta implica. Estas corrigen el registro y nada más. El id
+    // La corrección a mano de un pago desde el historial: NO es `registrar_venta`, que declara una
+    // venta (o un pago) y dispara todo lo que eso implica. Estas corrigen el registro y nada más. El id
     // del pago va en la URL y no viaja en el cuerpo.
     agregar_pago: (appt, p) => api.post(`/ficha/${appt}/pago`, p),
     corregir_pago: (appt, { pago_id: pagoId, ...cambios }) => api.patch(`/ficha/${appt}/pago/${pagoId}`, cambios),

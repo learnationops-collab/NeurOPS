@@ -20,7 +20,7 @@ import {
   secuencia, textoGuardar, vende,
 } from '../triage/recorrido';
 import {
-  Fecha, Horario, Monto, Nota, Opciones, Revision, Titulo, medioIcono,
+  Fecha, Horario, Nota, Opciones, Revision, Titulo, Venta,
 } from '../triage/PantallasTriage';
 import './resultado.css';
 
@@ -129,13 +129,8 @@ export default function ResultadoTriage({ ficha, onAccion, puedeEditar = true })
         placeholder="Cuánto puede invertir, quién decide, qué busca…" />;
       case 'lt': return <Opciones texto="¿Cómo quedó el low ticket?" ayuda="El programa LT: 100 USD, un mes de acceso a la Academia."
         opciones={LOW_TICKET} elegida={r.lt} onElegir={(v) => elegir('lt', { lt: v })} nav={nav} />;
-      case 'monto': return <Monto r={r} onCambiar={cambiar} nav={navCampos} />;
-      case 'medio': return <Opciones texto="¿Cómo pagó?" elegida={r.medio} nav={nav}
-        opciones={contexto.medios.map((m) => ({ valor: m.clave, label: m.label, Icono: medioIcono(m.clave) }))}
-        onElegir={(v) => elegir('medio', { medio: v })} />;
-      case 'transferido': return <Opciones texto="¿A quién se lo transfirió?" elegida={r.transferidoA} nav={nav}
-        opciones={contexto.personas.map((p) => ({ valor: p.clave, label: p.label }))}
-        onElegir={(v) => elegir('transferido', { transferidoA: v })} />;
+      case 'venta': return <Venta r={r} medios={contexto.medios} personas={contexto.personas}
+        onCambiar={cambiar} nav={navCampos} />;
       case 'fecha_seg': return <Fecha paso={paso} r={r} campo="fechaSeg" onCambiar={cambiar} nav={navCampos}
         texto="¿Cuándo lo volvés a hablar?" ayuda="Te aparece en «Seguir» ese día."
         atajos={ATAJOS_SEGUIMIENTO.map((a) => ({ valor: localDateFromNow(a.dias), label: a.label }))} />;

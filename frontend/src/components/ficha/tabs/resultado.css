@@ -192,3 +192,11 @@
 @media (prefers-reduced-motion:reduce){
   .dc-shell .fi-faltan > i,.dc-shell .fi-minimo--listo small{animation:none}
 }
+
+/* El correo del acceso (ADR-W013): con él se crea la suscripción, así que se ve distinto al resto. */
+.dc-shell .fi-acceso{grid-column:1 / -1;display:grid;gap:var(--s2);padding:var(--s4);border-radius:16px;
+  border:1px solid color-mix(in srgb,var(--brand-secondary) 45%,transparent);
+  background:color-mix(in srgb,var(--brand-secondary) 8%,transparent)}
+.dc-shell .fi-acceso input{font-size:1.15rem;font-weight:700}
+.dc-shell .fi-acceso > small{color:var(--text-muted)}
+.dc-shell .fi-rev-acceso{color:var(--brand-secondary)}

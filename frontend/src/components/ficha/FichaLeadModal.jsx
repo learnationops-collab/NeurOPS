@@ -144,7 +144,6 @@ const MENSAJES = {
     corregir_seguimiento: 'Seguimiento corregido.',
     editar_evento: 'Evento reescrito.',
     borrar_evento: 'Evento borrado del registro.',
-    registrar_pago: 'Pago registrado.',
     // La deuda sale de las ventas: un pago cargado, corregido o borrado la mueve siempre.
     agregar_pago: 'Pago agregado: la deuda ya lo cuenta.',
     // Marcar a quién se le hizo una transferencia no toca la plata: la deuda no se movió.
@@ -342,7 +341,11 @@ const FichaLeadModal = ({
         return ejecutarConsulta(nombre, appt, config);
     }, [ficha, appointmentId]);
 
-    const irA = useCallback((id) => setPestana(id), []);
+    // `vender` abre Resultado ya en la venta: `true` (elige qué registra) o 'pago' (el camino del pago).
+    const irA = useCallback((id, { vender } = {}) => {
+        if (vender) setVenderAlAbrir(vender);
+        setPestana(id);
+    }, []);
     const onRecargar = useCallback(() => cargar(), [cargar]);
 
     const props = { ficha, onAccion, onConsultar, onRecargar, irA, puedeEditar: estado.puedeEditar };

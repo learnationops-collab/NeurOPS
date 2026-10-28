@@ -13,34 +13,26 @@
 import { moneda, round2 } from './acciones/planCuotas';
 import { PREGUNTAS, PROGRAMAS, TIPOS_PAGO } from './arbolResultado.preguntas';
 import {
-  esVenta, esCompleto, armaPlan, saldoVenta, pagadoAntes, montosCuotas, fechasCuotas,
+  esVenta, esPago, esCompleto, armaPlan, saldoVenta, saldoPrevio, pagadoAntes, montosCuotas, fechasCuotas,
   cantidadCuotas,
 } from './arbolResultado.venta';
 
 // Qué sección ocupa cada pregunta. Lo que no figura cae en «Otros datos».
 const SECCION_DE = {
   res: 'llamada', contacto_result: 'llamada', contacto_detalle: 'llamada', decisor: 'llamada',
-  oferta: 'llamada', cierre: 'llamada',
-  venta_nombre: 'cliente', venta_instagram: 'cliente', venta_email: 'cliente',
-  venta_telefono: 'cliente', venta_documento: 'cliente', venta_closer: 'cliente',
-  venta_examen: 'cliente',
-  programa: 'programa', venta_estado_cliente: 'programa',
-  tipo_pago: 'pago', liquidar: 'pago', venta_montos: 'pago', medio_pago: 'pago',
-  // A quién del equipo se le hizo la transferencia (09/10/2026): va con el medio de pago.
-  transferido_a: 'pago',
-  venta_cuota: 'pago', venta_num_cuotas: 'pago', venta_modo_cuotas: 'pago',
-  venta_dia_pago: 'pago', venta_fechas_cuotas: 'pago',
-  venta_fecha: 'fechas', venta_estado: 'fechas',
-  venta_notas: 'notas',
-  refs_ask: 'despues', refs_filas: 'despues', venta_academia: 'despues',
+  oferta: 'llamada', cierre: 'llamada', que_registra: 'llamada',
+  venta_datos: 'cliente',
+  programa: 'programa',
+  tipo_pago: 'pago', liquidar: 'pago', venta_montos: 'pago', venta_plan: 'pago', pago_que: 'pago', pago_monto: 'pago',
+  venta_detalles: 'detalles',
+  refs_ask: 'despues', refs_filas: 'despues',
 };
 
 export const SECCIONES_VENTA = [
   { id: 'cliente', titulo: 'Cliente' },
   { id: 'programa', titulo: 'Programa' },
-  { id: 'pago', titulo: 'Forma de pago' },
-  { id: 'fechas', titulo: 'Fechas y estado' },
-  { id: 'notas', titulo: 'Notas' },
+  { id: 'pago', titulo: 'La plata' },
+  { id: 'detalles', titulo: 'Detalles' },
   { id: 'despues', titulo: 'Después de la venta' },
   { id: 'llamada', titulo: 'La llamada' },
   { id: 'otros', titulo: 'Otros datos' },
@@ -49,10 +41,9 @@ export const SECCIONES_VENTA = [
 // Datos opcionales que, si quedaron vacíos, se muestran igual como «Sin cargar» con su botón
 // para completarlos: que falten es una decisión del closer, no un olvido del resumen.
 const OPCIONALES = [
-  { paso: 'venta_telefono', campo: 'telefono', label: 'Teléfono' },
-  { paso: 'venta_documento', campo: 'documento_identidad', label: 'Documento de identidad' },
-  { paso: 'venta_examen', campo: 'examen_lead', label: 'Examen' },
-  { paso: 'venta_notas', campo: 'notas', label: 'Notas' },
+  { paso: 'venta_datos', campo: 'telefono', label: 'Teléfono (WhatsApp)' },
+  { paso: 'venta_datos', campo: 'instagram', label: 'Instagram' },
+  { paso: 'venta_detalles', campo: 'notas', label: 'Notas' },
 ];
 
 const vacio = (v) => v === undefined || v === null || String(v).trim() === '';
@@ -89,20 +80,31 @@ export function avisosVenta(r = {}, c = {}, hoy = new Date()) {
   const agregar = (id, nivel, texto, paso) => avisos.push({ id, nivel, texto, paso });
   const hoyIso = iso(hoy);
 
+  if (r.date) {
+    if (r.date > hoyIso) {
+      agregar('fecha-futura', 'error', 'La fecha es futura: cambiala en «Detalles».', 'venta_detalles');
+    } else {
+      const dias = Math.round((new Date(`${hoyIso}T00:00:00`) - new Date(`${r.date}T00:00:00`)) / 86400000);
+      if (dias > 7) agregar('fecha-vieja', 'aviso', `Está fechada hace ${dias} días. ¿Es correcto?`, 'venta_detalles');
+    }
+  }
+  // Un pago no pide los datos del cliente ni arma un plan: solo puede pasarse de lo que debía.
+  if (esPago(r)) {
+    const cobradoPago = parseFloat(r.monto) || 0;
+    if (saldoPrevio(c) > 0.009 && cobradoPago > saldoPrevio(c) + 0.009) {
+      agregar('pago-mayor', 'aviso', `Paga ${moneda(cobradoPago)} y debía ${moneda(saldoPrevio(c))}.`, 'pago_monto');
+    }
+    return avisos;
+  }
+
   if (!vacio(r.mail_cliente) && !EMAIL.test(String(r.mail_cliente).trim())) {
-    agregar('email', 'error', 'El email no parece válido: ahí le llega el acceso al programa.', 'venta_email');
+    agregar('email', 'error', 'El correo no parece válido: con él se crea su acceso a la Academia.', 'venta_datos');
   }
   const ig = avisoInstagram(r, c);
   // Frena: con un Instagram que no es del cliente la venta no se registra (pendientes del 27/10).
-  if (ig) avisos.push({ id: 'instagram', nivel: 'error', texto: ig, paso: 'venta_instagram', frena: true });
-  if (hayPaso(r, 'venta_telefono') && vacio(r.telefono)) {
-    agregar('telefono', 'aviso', 'Sin teléfono: no se le podrá escribir por WhatsApp.', 'venta_telefono');
-  }
-  if (hayPaso(r, 'venta_documento') && vacio(r.documento_identidad)) {
-    agregar('documento', 'aviso', 'Sin documento de identidad.', 'venta_documento');
-  }
-  if (hayPaso(r, 'venta_examen') && vacio(r.examen_lead)) {
-    agregar('examen', 'aviso', 'Sin examen: define el grupo y el contenido que recibe.', 'venta_examen');
+  if (ig) avisos.push({ id: 'instagram', nivel: 'error', texto: ig, paso: 'venta_datos', frena: true });
+  if (hayPaso(r, 'venta_datos') && vacio(r.telefono)) {
+    agregar('telefono', 'aviso', 'Sin teléfono: no se le podrá escribir por WhatsApp.', 'venta_datos');
   }
 
   const total = parseFloat(r.precio_total) || 0;
@@ -116,19 +118,10 @@ export function avisosVenta(r = {}, c = {}, hoy = new Date()) {
       `Con lo que ya pagó antes (${moneda(pagadoAntes(c))}) se supera el precio total.`, 'venta_montos');
   }
 
-  if (r.date) {
-    if (r.date > hoyIso) {
-      agregar('fecha-futura', 'error', 'La fecha de la venta es futura.', 'venta_fecha');
-    } else {
-      const dias = Math.round((new Date(`${hoyIso}T00:00:00`) - new Date(`${r.date}T00:00:00`)) / 86400000);
-      if (dias > 7) agregar('fecha-vieja', 'aviso', `La venta está fechada hace ${dias} días. ¿Es correcto?`, 'venta_fecha');
-    }
-  }
-
   if (armaPlan(r, c)) {
     const saldo = saldoVenta(r, c);
     const montos = montosCuotas(r, c);
-    const pasoPlan = r.installmentMode === 'custom' ? 'venta_fechas_cuotas' : 'venta_dia_pago';
+    const pasoPlan = 'venta_plan';
     const mala = montos.findIndex((m) => !(m > 0));
     if (mala >= 0) {
       agregar('cuota-cero', 'error', `La cuota ${mala + 1} quedó sin monto: los montos cargados pasan el saldo.`, pasoPlan);
@@ -176,21 +169,25 @@ export function revisionVenta(respuestas = {}, contexto = {}, filasResumen = [],
     .map((s) => ({ ...s, filas: porSeccion[s.id] || [] }))
     .filter((s) => s.filas.length > 0);
 
-  const completo = esCompleto(r);
+  const pago = esPago(r);
   const cobrado = parseFloat(r.monto) || 0;
-  const total = completo ? cobrado : (parseFloat(r.precio_total) || 0);
-  const tipo = TIPOS_PAGO.find((t) => t.valor === r.tipo_pago_simple);
+  const total = esCompleto(r) || pago ? cobrado : (parseFloat(r.precio_total) || 0);
+  const cuota = pago ? (contexto.cuotas || []).find((q) => q.id === r.selectedCuotaId) : null;
+  const tipo = pago
+    ? { label: cuota ? `Cuota ${cuota.numero_cuota}` : 'Pago del saldo' }
+    : TIPOS_PAGO.find((t) => t.valor === r.tipo_pago_simple);
   const programa = PROGRAMAS.find((p) => p.valor === r.programa);
   const saldo = venta ? saldoVenta(r, contexto) : 0;
   return {
     venta,
+    pago,
     secciones,
     avisos: venta ? avisosVenta(r, contexto, hoy) : [],
     numeros: {
       total,
       cobrado,
       saldo,
-      antes: pagadoAntes(contexto),
+      antes: pago ? 0 : pagadoAntes(contexto),
       programa: programa ? programa.label : (r.programa || ''),
       tipoPago: tipo ? tipo.label : (r.tipo_pago_simple || ''),
       cuotas: armaPlan(r, contexto) ? cantidadCuotas(r) : 0,

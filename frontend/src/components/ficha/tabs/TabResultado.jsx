@@ -6,9 +6,9 @@
 // La escritura va SIEMPRE por `onAccion` y la lectura por `onConsultar`: esta pestaña nunca llama
 // fetch/axios.
 //
-// La venta es el wizard «Declarar venta» del mazo, dentro de la ficha y no en un modal encima:
-// se confirma cada dato del comprador, qué compró, cómo paga, el cronograma, los referidos y el
-// acceso a la Academia, y se registra todo en un solo guardado.
+// La venta va dentro de la ficha y no en un modal encima, en dos caminos (ADR-W013): la venta
+// nueva (sus datos con el correo del acceso, qué compró, cómo paga, la plata, el plan y los
+// referidos) y el pago de algo que ya compró (qué paga y cuánto). Todo se registra en un solo guardado.
 //
 // Los botones son los de la ficha (`.btn`) y no los `.ln-btn` del design system: dentro de
 // `.dc-shell` una clase sola del DS pierde contra `.dc-shell button{background:none;border:0;
@@ -24,7 +24,6 @@ import { StepperFicha, TarjetaAccion } from '../acciones/piezas';
 import CampoArbol from '../acciones/CampoArbol';
 import CronogramaCuotas from '../acciones/CronogramaCuotas';
 import { moneda } from '../acciones/planCuotas';
-import { Hueso } from '../../huesos/Huesos';
 import GrabacionFathom from './GrabacionFathom';
 import PasarARecuperacion from './PasarARecuperacion';
 import PasoSeguimiento from './PasoSeguimiento';
@@ -89,15 +88,19 @@ function precargar(ficha) {
     instagram: (id.instagram || '').replace(/@/g, ''),
     mail_cliente: esCorreoInventado(id.email) ? '' : (id.email || ''),
     telefono: id.telefono || '',
-    documento_identidad: '',
     // El respaldo cuando no hay lista de closers para elegir: la venta va al closer de la agenda.
     email_vendedor: id.closer?.email || '',
     setter: id.setter?.nombre || '',
     examen_lead: id.examen || '',
+    // Lo que casi siempre es igual viene puesto y se cambia en «Detalles» de la revisión.
     sold_in_call: true,
+    estado: 'Completada',
     enviar_webhook: true,
     date: hoyIso(),
+    dar_acceso_academia: true,
+    ...(id.closer?.id ? { vendedor_id: id.closer.id } : {}),
     num_cuotas: 1,
+    installmentMode: 'monthly',
     dia_de_pago: 10,
     modalidad: [],
     refs_rows: [],
@@ -150,8 +153,17 @@ export default function TabResultado({
   const reducido = useReducedMotion();
   const precarga = useMemo(() => precargar(ficha), []); // eslint-disable-line react-hooks/exhaustive-deps
   // «Declarar venta» del dock abre la ficha para vender: se entra derecho a la venta directa, sin
-  // pasar por las cuatro tarjetas de la llamada («Anterior» vuelve a ellas).
-  const [respuestas, setRespuestas] = useState(() => (arrancarEnVenta ? ventaDirecta(precarga) : precarga));
+  // pasar por las cuatro tarjetas de la llamada («Anterior» vuelve a ellas). «Registrar pago» de
+  // Acciones (`'pago'`) entra ya en el camino del pago.
+  const [respuestas, setRespuestas] = useState(() => {
+    if (arrancarEnVenta === 'pago') {
+      return responder(ventaDirecta(precarga), 'que_registra', {
+        registro: 'pago', sold_in_call: false, tipo_pago_simple: 'Cuota',
+        ...(ficha?.cobro?.programa_code ? { programa: ficha.cobro.programa_code } : {}),
+      });
+    }
+    return arrancarEnVenta ? ventaDirecta(precarga) : precarga;
+  });
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
   // Lo que quedó guardado. Mientras existe, la pestaña muestra la confirmación y no la revisión:
@@ -182,6 +194,8 @@ export default function TabResultado({
       transferidoA: ficha?.vocabulario?.transferido_a || [],
       closerAgenda: ficha?.identidad?.closer || null,
       cuotas: ficha?.cobro?.cuotas || [],
+      // El programa que ya compró: es el que paga quien registra un pago.
+      programaCliente: ficha?.cobro?.programa_code || null,
     };
   }, [ficha, venta.estado, venta.cargando, seguimientoPedido]);
 
@@ -328,7 +342,7 @@ export default function TabResultado({
                 <motion.button
                   type="button"
                   className="fi-otra"
-                  data-tip="Registrar una venta|Renovación, upsell, la cuota de su plan o una venta cerrada por fuera"
+                  data-tip="Registrar una venta|Una venta nueva (renovación, upsell, cerrada por fuera) o el pago de algo que ya compró"
                   whileTap={reducido ? undefined : { scale: 0.97 }}
                   onClick={() => { setError(null); setRespuestas((prev) => ventaDirecta(prev)); }}
                 >
@@ -510,13 +524,10 @@ function Pregunta({
       >
         {pregunta.campos.map((campo) => {
           if (campo.junto) return null; // lo pinta su pareja
-          if (campo.tipo === 'estado_cliente') {
-            return <EstadoCliente key={campo.campo} estado={contexto.estadoVenta} cargando={contexto.cargandoVenta} />;
-          }
           if (campo.tipo === 'cronograma') {
             return <CronogramaVenta key={campo.campo} respuestas={respuestas} contexto={contexto} onCambiar={onCambiar} />;
           }
-          return (
+          const pieza = (
             <CampoArbol
               key={campo.campo}
               campo={campo}
@@ -529,6 +540,13 @@ function Pregunta({
               pareja={parejaDe(pregunta, campo)}
             />
           );
+          // El correo del acceso: con él se crea la suscripción, así que se ve distinto al resto.
+          return campo.destacado ? (
+            <div key={campo.campo} className="fi-acceso">
+              {pieza}
+              <small className="ln-t-body-sm">{campo.destacado}</small>
+            </div>
+          ) : pieza;
         })}
       </div>
 
@@ -620,8 +638,25 @@ function valoresDeOpcion(pregunta, opcion, contexto, respuestas) {
     if (respuestas.followup_reminder_enabled === undefined) base.followup_reminder_enabled = true;
     if (!respuestas.followup_reminder_time) base.followup_reminder_time = '09:00';
   }
-  // Lo que se cobra en un seguimiento no se cerró en la llamada (el mazo abría la venta así).
-  if (pregunta.clave === 'contacto_result' && opcion.valor === 'pago') base.sold_in_call = false;
+  // Un pago (el «Pagó» del cobro o el de la venta directa) es del programa que ya compró, de tipo
+  // Cuota, y no se cerró en la llamada.
+  if ((pregunta.clave === 'contacto_result' && opcion.valor === 'pago')
+    || (pregunta.clave === 'que_registra' && opcion.valor === 'pago')) {
+    base.sold_in_call = false;
+    base.tipo_pago_simple = 'Cuota';
+    if (contexto.programaCliente) base.programa = contexto.programaCliente;
+  }
+  if (pregunta.clave === 'que_registra' && opcion.valor === 'venta') base.sold_in_call = true;
+  // La cuota elegida trae su monto; el pago suelto del saldo se escribe.
+  if (pregunta.clave === 'pago_que') {
+    base.selectedCuotaId = opcion.cuota ? opcion.cuota.id : null;
+    base.monto = opcion.cuota ? String(opcion.cuota.monto ?? '') : '';
+  }
+  // Un pago completo arranca con el precio del programa como monto cobrado.
+  if (pregunta.clave === 'tipo_pago' && opcion.valor === 'completo' && !respuestas.monto
+    && contexto.estadoVenta?.program_price) {
+    base.monto = String(contexto.estadoVenta.program_price);
+  }
   if (pregunta.clave === 'refs_ask' && opcion.valor === 'si' && !(respuestas.refs_rows || []).length) {
     base.refs_rows = [{ nombre: '', contacto: '' }];
   }
@@ -678,6 +713,7 @@ function pagoDeCuota(cuota, ficha) {
     sold_in_call: false,
     programa: cuota.programa_code || ficha?.cobro?.programa_code || undefined,
     tipo_pago_simple: 'Cuota',
+    pago_de: cuota.id,
     selectedCuotaId: cuota.id,
     monto: String(cuota.monto ?? ''),
   };
@@ -764,35 +800,6 @@ function cierreDelSeguimiento(r, contexto) {
 
 // --- piezas de la venta ---------------------------------------------------------------------
 
-// «Así viene este cliente»: lo que ya pagó del programa, lo que le falta y cuántas ventas tiene.
-// Mientras carga se dibuja su forma, no un spinner.
-function EstadoCliente({ estado, cargando }) {
-  if (cargando || !estado) {
-    return (
-      <div className="ln-panel ln-panel--sm" aria-busy="true" style={{ display: 'grid', gap: 'var(--space-3)' }}>
-        <Hueso alto={18} ancho="60%" />
-        <Hueso alto={18} ancho="45%" paso={1} />
-        <Hueso alto={18} ancho="35%" paso={2} />
-      </div>
-    );
-  }
-  const filas = [
-    ['Pagó', `${moneda(estado.total_paid)} de ${moneda(estado.program_price)}`, 'var(--text-on-surface)'],
-    ['Le falta', moneda(estado.balance_remaining), estado.balance_remaining > 0.009 ? 'var(--warning)' : 'var(--success)'],
-    ['Ventas registradas', String(estado.sales_count ?? 0), 'var(--text-on-surface)'],
-  ];
-  return (
-    <div className="ln-panel ln-panel--sm" style={{ display: 'grid', gap: 'var(--space-2)' }}>
-      {filas.map(([rotulo, valor, color]) => (
-        <div key={rotulo} style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--space-4)' }}>
-          <small className="ln-t-caption ln-muted">{rotulo}</small>
-          <b className="ln-t-body ln-mono" style={{ color }}>{valor}</b>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // El saldo se recalcula mientras el closer tipea el precio y lo cobrado, como en el wizard.
 function SaldoEnVivo({ saldo, reducido }) {
   return (
@@ -874,13 +881,16 @@ function Revision({
   return (
     <div className="fi-rev">
       <header className="fi-rev-cab">
-        <h3 className="ln-t-h3">{venta ? 'Revisá la venta antes de registrarla' : 'Revisá el resultado antes de guardarlo'}</h3>
+        <h3 className="ln-t-h3">
+          {rev.pago ? 'Revisá el pago antes de registrarlo'
+            : venta ? 'Revisá la venta antes de registrarla' : 'Revisá el resultado antes de guardarlo'}
+        </h3>
         <p className="ln-t-body-sm ln-muted">
           Tocá «Editar» en cualquier dato para corregirlo ahí mismo.
         </p>
       </header>
 
-      {venta && <CifrasVenta numeros={rev.numeros} respuestas={respuestas} reducido={reducido} />}
+      {venta && <CifrasVenta numeros={rev.numeros} respuestas={respuestas} pago={rev.pago} reducido={reducido} />}
 
       {errores.length > 0 && (
         <AvisosRevision
@@ -918,9 +928,7 @@ function Revision({
               const pregunta = preg ? normalizar(preg, respuestas, contexto) : null;
               // Los pasos con cronograma o el estado del cliente no caben en una fila: esos
               // siguen llevando a su pantalla.
-              const enLinea = pregunta && !(pregunta.campos || []).some(
-                (c) => c.tipo === 'cronograma' || c.tipo === 'estado_cliente',
-              );
+              const enLinea = pregunta && !(pregunta.campos || []).some((c) => c.tipo === 'cronograma');
               // Las fichas van de a varias por fila; un texto largo (el motivo, una nota) o la
               // que se está editando ocupan el ancho entero.
               const ancha = abierta || (typeof fila.valor === 'string' && fila.valor.length > 40);
@@ -1016,7 +1024,7 @@ function Revision({
         >
           {guardando ? <span className="ln-spinner" /> : <CheckCircle2 />}
           {frena ? 'Corregí los datos del cliente'
-            : venta ? (todos.length ? 'Registrar la venta de todos modos' : 'Registrar la venta') : 'Guardar el resultado'}
+            : venta ? `Registrar ${rev.pago ? 'el pago' : 'la venta'}${todos.length ? ' de todos modos' : ''}` : 'Guardar el resultado'}
         </motion.button>
       </div>
     </div>
@@ -1092,7 +1100,7 @@ function EditorEnLinea({ pregunta, respuestas, contexto, precarga, reducido, onE
 
 // Lo primero que se lee: cuánto se vendió, cuánto entró hoy y cuánto queda. Tres cifras en una
 // sola fila (en celular, una debajo de otra): nunca dos arriba y una suelta abajo.
-function CifrasVenta({ numeros, respuestas, reducido }) {
+function CifrasVenta({ numeros, respuestas, pago, reducido }) {
   const { total, cobrado, saldo, antes, programa, tipoPago } = numeros;
   const debe = saldo > 0.009;
   return (
@@ -1104,20 +1112,27 @@ function CifrasVenta({ numeros, respuestas, reducido }) {
       transition={{ duration: 0.2, ease: 'easeOut' }}
     >
       <div className="fi-rev-total">
-        <small className="fi-rev-sec-tit">Total de la venta</small>
+        <small className="fi-rev-sec-tit">{pago ? 'Pago' : 'Total de la venta'}</small>
         <b className="fi-rev-monto ln-mono">{moneda(total)}</b>
         <small className="ln-t-body-sm ln-muted">
           {[programa, tipoPago].filter(Boolean).join(' · ') || 'Programa sin elegir'}
           {antes > 0.009 ? ` · ya había pagado ${moneda(antes)}` : ''}
         </small>
+        {/* Con qué correo se le da el acceso: es lo que crea la suscripción (ADR-W013). */}
+        {!pago && respuestas.dar_acceso_academia === true && (
+          <small className="ln-t-body-sm fi-rev-acceso">
+            {`Acceso a la Academia con ${respuestas.mail_cliente || '(sin correo)'}`}
+            {respuestas.acceso_hasta ? ` hasta el ${fechaCorta(respuestas.acceso_hasta)}` : ''}
+          </small>
+        )}
       </div>
       <div className="fi-rev-cifras">
         <div className="fi-rev-cifra">
-          <small className="fi-rev-sec-tit">Cobrado hoy</small>
+          <small className="fi-rev-sec-tit">{pago ? 'Pagó' : 'Cobrado hoy'}</small>
           <b className="ln-t-h3 ln-mono">{moneda(cobrado)}</b>
         </div>
         <div className="fi-rev-cifra">
-          <small className="fi-rev-sec-tit">Saldo</small>
+          <small className="fi-rev-sec-tit">{pago ? 'Le queda debiendo' : 'Saldo'}</small>
           <b className="ln-t-h3 ln-mono" style={{ color: debe ? 'var(--warning)' : 'var(--success)' }}>
             {debe ? moneda(saldo) : 'Sin saldo'}
           </b>

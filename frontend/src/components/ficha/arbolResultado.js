@@ -7,7 +7,7 @@
 // El inventario de preguntas y de dónde salió cada rama está en `arbolResultado.preguntas.js`.
 
 import { PREGUNTAS } from './arbolResultado.preguntas';
-import { esVenta, esCompleto, quedaSaldo, fechaCorta } from './arbolResultado.venta';
+import { esVenta, esPago, esCompleto, quedaSaldo, fechaCorta } from './arbolResultado.venta';
 
 export * from './arbolResultado.preguntas';
 export * from './arbolResultado.venta';
@@ -21,7 +21,8 @@ const PASOS = '_pasos';
 // elegir lo mismo, el resto del camino sigue valiendo y no hay que contestarlo de nuevo.
 const ANTES = '_antes';
 
-export const estadoInicial = () => ({ [PASOS]: [] });
+// Las preguntas fijas (`fija: true`) arrancan contestadas: no son pantalla, se corrigen en la revisión.
+export const estadoInicial = () => ({ [PASOS]: PREGUNTAS.filter((q) => q.fija).map((q) => q.clave) });
 export const reiniciar = () => estadoInicial();
 
 const indiceDe = (clave) => PREGUNTAS.findIndex((q) => q.clave === clave);
@@ -192,7 +193,7 @@ export function preguntaAnterior(respuestas = {}, contexto = {}) {
   const actual = preguntaActual(respuestas, contexto);
   const hasta = actual ? camino.findIndex((q) => q.clave === actual.clave) : camino.length;
   for (let i = hasta - 1; i >= 0; i -= 1) {
-    if (contestada(camino[i], respuestas)) return normalizar(camino[i], respuestas, contexto);
+    if (!camino[i].fija && contestada(camino[i], respuestas)) return normalizar(camino[i], respuestas, contexto);
   }
   return null;
 }
@@ -272,7 +273,8 @@ export function hitos(respuestas = {}, contexto = {}) {
   // su propio hito) y de los montos. Se sabe si queda deuda cuando es un pago completo o cuando
   // ya se cargaron el precio y lo cobrado.
   const tipo = esVenta(r) ? r.tipo_pago_simple : undefined;
-  const deudaSabida = !!tipo && (esCompleto(r) || (r[PASOS] || []).includes('venta_montos'));
+  const deudaSabida = !!tipo && (esCompleto(r)
+    || ['venta_montos', 'pago_monto'].some((k) => (r[PASOS] || []).includes(k)));
   const deuda = deudaSabida ? quedaSaldo(r, contexto) : null;
   const up = !tipo ? null : ({ Renovacion: 'Renovación', Upsell: 'Upsell' }[tipo] || 'none');
 
@@ -288,7 +290,8 @@ export function hitos(respuestas = {}, contexto = {}) {
   };
   const subCierre = () => {
     if (cerro === null) return r.offer_presented === false ? 'Sin oferta' : 'Pendiente';
-    return cerro ? 'Venta cerrada' : 'No cerró';
+    if (!cerro) return 'No cerró';
+    return esPago(r) ? 'Pago' : 'Venta cerrada';
   };
   const subUpsell = () => {
     if (up === null) return 'Renovación o upsell';
@@ -376,8 +379,9 @@ function formatoValor(valor) {
 export const quedaDeuda = (respuestas = {}, contexto = {}) => esVenta(respuestas)
   && !esCompleto(respuestas) && quedaSaldo(respuestas, contexto);
 
-// Desde dónde cuenta el progreso de la venta: la primera pregunta de su rama.
-const PRIMERA_DE_LA_VENTA = 'venta_nombre';
+// Desde dónde cuenta el progreso de la venta: la primera pregunta de su rama (la venta directa
+// arranca eligiendo qué registra; el pago del seguimiento de cobro, eligiendo qué paga).
+const PRIMERAS_DE_LA_VENTA = ['que_registra', 'venta_datos', 'pago_que'];
 
 /**
  * «Paso 3 de 17» de la venta, como el contador del wizard. El total cambia mientras se contesta
@@ -386,7 +390,7 @@ const PRIMERA_DE_LA_VENTA = 'venta_nombre';
 export function progresoVenta(respuestas = {}, contexto = {}) {
   if (!esVenta(respuestas)) return null;
   const camino = caminoActivo(respuestas, contexto);
-  const desde = camino.findIndex((q) => q.clave === PRIMERA_DE_LA_VENTA);
+  const desde = camino.findIndex((q) => PRIMERAS_DE_LA_VENTA.includes(q.clave));
   if (desde < 0) return null;
   const tramo = camino.slice(desde);
   const actual = preguntaActual(respuestas, contexto);

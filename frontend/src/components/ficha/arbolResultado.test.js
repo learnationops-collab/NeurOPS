@@ -369,13 +369,6 @@ describe('cadencia de seguimiento (modo seguimiento)', () => {
     expect(datos.deck).toMatchObject({ confirm_status: 'por_confirmar', seguimiento_realizado: true, fecha_seguimiento: null });
   });
 
-  it('«cerró la venta» entra a la rama de venta (el recorrido entero está en su propio archivo)', () => {
-    let r = responder(estadoInicial(), 'contacto_result', { contacto_result: 'cerro' });
-    r = responder(r, 'contacto_detalle', { modalidad: ['Llamada'], notes: 'me pasó el comprobante del pago' });
-    expect(preguntaActual(r, ctx).clave).toBe('venta_nombre');
-    expect(esVenta(r)).toBe(true);
-  });
-
   it('el paso «¿y ahora qué hacemos?» no aparece si agendó o cerró', () => {
     let r = responder(estadoInicial(), 'contacto_result', { contacto_result: 'cerro' });
     r = responder(r, 'contacto_detalle', { modalidad: ['Llamada'], notes: 'pagó por transferencia hoy' });
@@ -440,17 +433,6 @@ describe('seguimiento de cobro (modo cobro)', () => {
       contact_result: 'no_paga', seguimiento_realizado: true, fecha_seguimiento: null,
       closer_notes: 'no sigue y no paga el resto | Motivo de cierre: No va a pagar',
     });
-  });
-
-  it('«Pagó» sigue a la venta y el guardado cierra el seguimiento', () => {
-    let r = responder(estadoInicial(), 'contacto_result', { contacto_result: 'pago' });
-    r = responder(r, 'contacto_detalle', { notes: 'me mandó el comprobante de la cuota' });
-    expect(esVenta(r)).toBe(true);
-    expect(preguntaActual(r, ctx).clave).toBe('venta_nombre');
-    expect(hitos(r, ctx)[2].sub).toBe('Venta cerrada');
-    const { accion, datos } = construirPayload(r, ctx);
-    expect(accion).toBe('registrar_venta');
-    expect(datos.deck).toMatchObject({ contact_result: 'pago', seguimiento_realizado: true, fecha_seguimiento: null });
   });
 
   it('la cadencia de un lead que no compró no se entera del cobro', () => {

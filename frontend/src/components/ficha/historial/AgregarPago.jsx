@@ -96,7 +96,8 @@ const AgregarPago = ({
     if (!abierto) {
         return (
             <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 'var(--s3)' }}>
-                <button type="button" ref={boton} className="btn btn--linea btn--sm" onClick={abrir}>
+                <button type="button" ref={boton} className="btn btn--linea btn--sm" onClick={abrir}
+                    title="Carga un pago que falta, sin avisos. Para cobrar: «Registrar pago» en Acciones">
                     Agregar pago
                 </button>
             </div>
@@ -129,8 +130,8 @@ const AgregarPago = ({
 
             <small className="t-cap mut">
                 Carga un pago que quedó sin registrar, y la deuda lo cuenta. No le avisa al cliente, no
-                escribe en Google Sheets ni marca cuotas del plan: para cobrar una cuota, «Registrar
-                pago» en Acciones.
+                escribe en Google Sheets ni marca cuotas del plan: para cobrar, «Registrar pago» en
+                Acciones (o «Registrar una venta» en Resultado).
             </small>
 
             <MotivoDelFallo motivo={error} />

@@ -12,7 +12,7 @@ import { CampoPrograma, CampoTotal } from '../acciones/CamposCobro';
 import { soloDia } from '../piezas/fecha';
 import SubVistaPlanCuotas from '../acciones/SubVistaPlanCuotas';
 import {
-  SubVistaPago, SubVistaSeguimiento, SubVistaBaja, SubVistaRevertirBaja,
+  SubVistaSeguimiento, SubVistaBaja, SubVistaRevertirBaja,
 } from '../acciones/SubVistasCobro';
 import { moneda } from '../acciones/planCuotas';
 
@@ -23,7 +23,8 @@ import { moneda } from '../acciones/planCuotas';
 // dejaba DOS avisos idénticos apilados.
 const ACCIONES = [
   { modo: 'plan', label: 'Armar plan de cuotas', tono: 'info', icono: CalendarDays, accion: 'guardar_plan' },
-  { modo: 'pago', label: 'Registrar pago', tono: 'success', icono: CheckCircle2, accion: 'registrar_pago' },
+  // El pago se registra en Resultado, con el mismo formulario que cualquier venta (ADR-W013).
+  { modo: 'pago', label: 'Registrar pago', tono: 'success', icono: CheckCircle2, enResultado: true },
   { modo: 'seg', label: 'Registrar seguimiento', tono: 'warning', icono: Clock, accion: 'registrar_seguimiento' },
   { modo: 'baja', label: 'Dar de baja', tono: 'error', icono: XCircle, accion: 'dar_de_baja' },
 ];
@@ -36,7 +37,7 @@ const detalleDeBaja = (baja) => {
   return `${cuando ? `${cuando}. ` : ''}Ya no se le cobra; lo que pagó queda.`;
 };
 
-export default function TabAcciones({ ficha, onAccion, puedeEditar = true }) {
+export default function TabAcciones({ ficha, onAccion, irA = null, puedeEditar = true }) {
   const reducido = useReducedMotion();
   const [modo, setModo] = useState('menu');
   const [guardando, setGuardando] = useState(false);
@@ -91,7 +92,8 @@ export default function TabAcciones({ ficha, onAccion, puedeEditar = true }) {
                   tono={a.tono}
                   icono={a.icono}
                   label={a.label}
-                  onClick={puedeCobrar ? () => setModo(a.modo) : undefined}
+                  onClick={!puedeCobrar ? undefined
+                    : a.enResultado ? () => irA?.('resultado', { vender: 'pago' }) : () => setModo(a.modo)}
                 />
               ))}
             </div>
@@ -104,7 +106,6 @@ export default function TabAcciones({ ficha, onAccion, puedeEditar = true }) {
         ) : (
           <motion.div key={modo} {...animar}>
             {modo === 'plan' && <SubVistaPlanCuotas {...comunes} />}
-            {modo === 'pago' && <SubVistaPago {...comunes} />}
             {modo === 'seg' && <SubVistaSeguimiento {...comunes} />}
             {modo === 'baja' && <SubVistaBaja {...comunes} />}
             {modo === 'revertir' && <SubVistaRevertirBaja {...comunes} />}

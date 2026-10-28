@@ -40,7 +40,8 @@ export const califica = (r) => r.res === 'asistio' && r.cal === 'calificado';
 export const descalifica = (r) => r.res === 'asistio' && r.cal === 'descalificado';
 export const vende = (r) => r.modo === 'venta' || ((descalifica(r) || r.modo === 'actualizar') && r.lt === 'cerrado');
 
-const pasosDeVenta = (r) => ['monto', 'medio', ...(esTransferencia(r.medio) ? ['transferido'] : [])];
+// La venta en una pantalla: cuánto, por dónde y a quién si fue transferencia (ADR-W013, como el pago del closer).
+const pasosDeVenta = () => ['venta'];
 const pasosDelLowTicket = (r) => [
   'lt',
   ...(r.lt === 'cerrado' ? pasosDeVenta(r) : []),
@@ -78,7 +79,9 @@ export function faltan(paso, r) {
   const f = [];
   if (paso === 'horario' && !r.cuando) f.push('Día y hora');
   if (paso === 'nota_closer' && !largo(r.notaCloser)) f.push('Nota para el closer');
-  if (paso === 'monto' && !(Number(r.monto) > 0)) f.push('Monto');
+  if (paso === 'venta' && !(Number(r.monto) > 0)) f.push('Monto');
+  if (paso === 'venta' && !r.medio) f.push('Medio de pago');
+  if (paso === 'venta' && esTransferencia(r.medio) && !r.transferidoA) f.push('A quién se lo transfirió');
   if (paso === 'fecha_seg' && !r.fechaSeg) f.push('Fecha');
   if (paso === 'reagenda' && !r.nueva) f.push('Fecha nueva');
   if (paso === 'por_que' && !largo(r.nota)) f.push('Por qué no califica');
@@ -90,10 +93,10 @@ export function hitos(r, hechos, guardado) {
   const dado = (p) => guardado || hechos.includes(p);
   const est = (alcanzado, malo = false) => (alcanzado ? (malo ? 'alerta' : 'hecho') : 'pendiente');
   const lt = [{ key: 'lt', label: 'Low ticket', estado: est(!!r.lt && dado('lt'), r.lt !== 'cerrado') }];
-  if (r.lt === 'cerrado') lt.push({ key: 'venta', label: 'Venta', estado: est(dado('medio')) });
+  if (r.lt === 'cerrado') lt.push({ key: 'venta', label: 'Venta', estado: est(dado('venta')) });
   let lista;
   if (r.modo === 'venta') {
-    lista = [{ key: 'monto', label: 'Monto', estado: est(dado('monto')) }, { key: 'pago', label: 'Pago', estado: est(dado('medio')) }];
+    lista = [{ key: 'venta', label: 'Pago', estado: est(dado('venta')) }];
   } else if (r.modo === 'actualizar') {
     lista = lt;
   } else {
@@ -135,9 +138,9 @@ export function filas(r, { closers = [], medios = [], personas = [], legible = (
   }
   if (descalifica(r) || r.modo === 'actualizar') fila('Low ticket', etiqueta(LOW_TICKET, r.lt), 'lt');
   if (vende(r)) {
-    fila('Monto', `${r.monto} USD`, 'monto');
-    fila('Medio de pago', medios.find((m) => m.clave === r.medio)?.label || r.medio, 'medio');
-    if (esTransferencia(r.medio)) fila('Transferido a', personas.find((p) => p.clave === r.transferidoA)?.label, 'transferido');
+    fila('Monto', `${r.monto} USD`, 'venta');
+    fila('Medio de pago', medios.find((m) => m.clave === r.medio)?.label || r.medio, 'venta');
+    if (esTransferencia(r.medio)) fila('Transferido a', personas.find((p) => p.clave === r.transferidoA)?.label, 'venta');
   }
   if (r.lt === 'seguimiento' && r.modo !== 'venta') fila('Seguimiento', r.fechaSeg, 'fecha_seg');
   if (descalifica(r)) fila('Por qué no califica', r.nota, 'por_que');

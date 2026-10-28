@@ -17,6 +17,12 @@ import { moneda, repartirCuotas, round2, sumarMeses } from './acciones/planCuota
 export const esVenta = (r = {}) => r.cierre === true || ['cerro', 'pago'].includes(r.contacto_result)
   || r.venta_directa === true;
 
+// Dos caminos (ADR-W013): el pago de algo que ya compró (una cuota o parte del saldo) y la venta
+// nueva. El pago es el «Pagó» del seguimiento de cobro o la venta directa que lo elige.
+export const esPago = (r = {}) => r.contacto_result === 'pago' || (r.venta_directa === true && r.registro === 'pago');
+export const esNueva = (r = {}) => r.cierre === true || r.contacto_result === 'cerro'
+  || (r.venta_directa === true && r.registro === 'venta');
+
 export const esCompleto = (r = {}) => r.tipo_pago_simple === 'completo';
 export const esCuota = (r = {}) => (r.tipo_pago_simple || '').toLowerCase() === 'cuota';
 export const esRenovacionOUpsell = (r = {}) => ['Renovacion', 'Upsell'].includes(r.tipo_pago_simple);
@@ -32,6 +38,7 @@ export const saldoPrevio = (c = {}) => Number(c.estadoVenta?.balance_remaining) 
  * que paga hoy. «Cobrado hoy» solo no alcanza: una Seña previa se volvería a cobrar en las cuotas.
  */
 export function saldoVenta(r = {}, c = {}) {
+  if (esPago(r)) return Math.max(0, round2(saldoPrevio(c) - (parseFloat(r.monto) || 0)));
   if (esCompleto(r)) return 0;
   const total = parseFloat(r.precio_total) || 0;
   return Math.max(0, round2(total - pagadoAntes(c) - (parseFloat(r.monto) || 0)));
@@ -47,8 +54,7 @@ export const cuotasPendientes = (r = {}, c = {}) => (c.cuotas || []).filter((q) 
 export const cobraCuotaExistente = (r = {}, c = {}) => esCuota(r) && cuotasPendientes(r, c).length > 0;
 
 /** Si al registrar la venta se crea un plan de cuotas nuevo (y por eso se pregunta cómo). */
-export const armaPlan = (r = {}, c = {}) => esVenta(r) && !esCompleto(r) && quedaSaldo(r, c)
-  && !cobraCuotaExistente(r, c);
+export const armaPlan = (r = {}, c = {}) => esNueva(r) && !esCompleto(r) && quedaSaldo(r, c);
 
 export const MAXIMO_CUOTAS = 12;
 export const cantidadCuotas = (r = {}) => Math.max(1, Math.min(MAXIMO_CUOTAS, Math.trunc(Number(r.num_cuotas) || 1)));

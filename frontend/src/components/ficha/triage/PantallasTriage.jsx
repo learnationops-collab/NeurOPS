@@ -4,14 +4,14 @@
 
 import { useEffect, useState } from 'react';
 import {
-  ArrowLeft, ArrowRight, CheckCircle2, Clock, CreditCard, DollarSign, EyeOff, Landmark, Pencil,
+  ArrowLeft, ArrowRight, CheckCircle2, Clock, DollarSign, EyeOff, Pencil,
   RotateCcw, ThumbsDown, ThumbsUp, Trash2,
 } from 'lucide-react';
 import { Button, Chip, Input, Select, TextArea } from '../../standard';
 import api from '../../../services/api';
 import { browserTimezone } from '../../../utils/datetime';
 import { zonedToUtc } from '../../../pages/agendas_v2/core/tiempo';
-import { MINIMO_NOTA, faltan as faltanDe } from './recorrido';
+import { MINIMO_NOTA, esTransferencia, faltan as faltanDe } from './recorrido';
 
 const ICONOS = {
   calificado: ThumbsUp, descalificado: ThumbsDown,
@@ -121,14 +121,35 @@ export const Fecha = ({ paso, r, campo, texto, ayuda, conHora = false, atajos = 
   </Campos>
 );
 
-export const Monto = ({ r, onCambiar, nav }) => (
-  <Campos paso="monto" r={r} texto="¿Cuánto pagó?" ayuda="En dólares. El low ticket es de 100 USD." nav={nav}>
-    <Input autoFocus variant="number" type="number" min="1" step="any" value={r.monto}
-      style={{ maxWidth: 200 }} onChange={(e) => onCambiar({ monto: e.target.value })} />
-  </Campos>
+/** Una fila de chips para elegir uno: el medio de pago o a quién se transfirió. */
+const Chips = ({ label, opciones, elegida, onElegir }) => (
+  <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
+    <small className="ln-field-label">{label}</small>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+      {opciones.map((o) => (
+        <Chip key={o.valor} as="button" type="button" aria-pressed={elegida === o.valor}
+          subtle={elegida !== o.valor} onClick={() => onElegir(o.valor)}>{o.label}</Chip>
+      ))}
+    </div>
+  </div>
 );
 
-export const medioIcono = (clave) => (/transferencia/i.test(clave) ? Landmark : CreditCard);
+/** La venta del low ticket en una pantalla, como el pago del closer (ADR-W013): cuánto, por dónde
+ *  y, si fue transferencia, a la cuenta de quién. */
+export const Venta = ({ r, medios, personas, onCambiar, nav }) => (
+  <Campos paso="venta" r={r} texto="¿Cuánto pagó y por dónde?" ayuda="En dólares. El low ticket es de 100 USD." nav={nav}>
+    <Input autoFocus variant="number" type="number" min="1" step="any" value={r.monto}
+      style={{ maxWidth: 200 }} onChange={(e) => onCambiar({ monto: e.target.value })} />
+    <Chips label="Por dónde entró la plata" elegida={r.medio}
+      opciones={medios.map((m) => ({ valor: m.clave, label: m.label }))}
+      onElegir={(v) => onCambiar({ medio: v, ...(esTransferencia(v) ? {} : { transferidoA: null }) })} />
+    {esTransferencia(r.medio) && (
+      <Chips label="¿A quién se lo transfirió?" elegida={r.transferidoA}
+        opciones={personas.map((p) => ({ valor: p.clave, label: p.label }))}
+        onElegir={(v) => onCambiar({ transferidoA: v })} />
+    )}
+  </Campos>
+);
 
 const enZona = (iso, tz, o) => new Date(iso).toLocaleString('es', { timeZone: tz, ...o });
 const DIA = { weekday: 'short', day: 'numeric', month: 'numeric' };
