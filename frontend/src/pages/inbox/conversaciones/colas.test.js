@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { colorEspera, esperaMin, examenDe, examenes, filtrar, quien, textoEspera } from './colas';
+import { colorEspera, esperaMin, examenDe, filtrar, quien, textoEspera } from './colas';
 
 const AHORA = new Date('2026-10-17T15:00:00Z');
 const hace = (min) => new Date(AHORA - min * 60000).toISOString();
@@ -20,12 +20,10 @@ describe('Bandeja › colas', () => {
     it('las colas de espera ordenan por la que más espera', () => {
         expect(filtrar(LISTA, { cola: 'esperan', ahora: AHORA }).map((c) => c.id)).toEqual([2, 1]);
         expect(filtrar(LISTA, { cola: 'esperan_hora', ahora: AHORA }).map((c) => c.id)).toEqual([2]);
-        expect(filtrar(LISTA, { cola: 'todas', examen: 'ENARM', ahora: AHORA }).map((c) => c.id)).toEqual([1, 3]);
     });
 
     it('agrupa los exámenes por la primera palabra', () => {
         expect(examenDe({ examen: ' enarm 2027' })).toBe('ENARM');
-        expect(examenes(LISTA)).toEqual([['ENARM', 2], ['MIR', 1]]);
     });
 
     it('identidad antes que ID', () => {

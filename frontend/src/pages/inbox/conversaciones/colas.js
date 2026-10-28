@@ -65,19 +65,10 @@ export function enRango(iso, rango, desde, hasta, ahora) {
     return t >= d && t < h;
 }
 
-// «ENARM 2027», «enarm» y «Enarm.» son el mismo examen para filtrar.
+// «ENARM 2027», «enarm» y «Enarm.» son el mismo examen.
 export function examenDe(c) {
     const primera = String(c.examen || '').trim().split(/[\s.,;]+/)[0];
     return primera ? primera.toUpperCase().slice(0, 12) : null;
-}
-
-export function examenes(lista) {
-    const cuenta = new Map();
-    lista.forEach((c) => {
-        const e = examenDe(c);
-        if (e) cuenta.set(e, (cuenta.get(e) || 0) + 1);
-    });
-    return [...cuenta].sort((a, b) => b[1] - a[1]);
 }
 
 // Los setters a los que están asignadas las conversaciones de la lista, con cuántas tiene cada uno.
@@ -108,7 +99,6 @@ const enviadoPor = (c) => (c.ultimo_envio?.de === 'bot' ? 'bot' : c.ultimo_envio
 
 // `asignado`: null (todos) · 'ninguno' · el id de un setter. `califica`: 'si' · 'no'.
 export function cumpleFiltro(c, f, ahora) {
-    if (f.examen && examenDe(c) !== f.examen) return false;
     if (f.etiqueta && !(c.etiquetas || []).some((e) => claveEtiqueta(e) === f.etiqueta)) return false;
     if (f.asignado === 'ninguno' && c.asignado) return false;
     if (f.asignado != null && f.asignado !== 'ninguno' && c.asignado?.id !== f.asignado) return false;

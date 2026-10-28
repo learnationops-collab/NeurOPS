@@ -1,11 +1,12 @@
 // El filtro de la bandeja, comprimido en un botón de ícono: abre un panel con la cola, a quién está
-// asignada, la sub-etapa, si califica, la etiqueta, el examen, cuándo empezó la última conversación y
+// asignada, la sub-etapa, si califica, la etiqueta, cuándo empezó la última conversación y
 // quién mandó el último mensaje (y cuándo). El número sobre el ícono es cuántos hay puestos.
 import { useEffect, useRef, useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import useEnPantalla from '../../../components/ui/useEnPantalla';
 import { Button, Chip, IconButton, Input, Segmented } from '../../../components/standard';
-import { COLAS, ETAPAS, asignados, claveEtiqueta, cumpleFiltro, etiquetasDe, examenes, filtrar } from './colas';
+import { COLAS, ETAPAS, asignados, claveEtiqueta, cumpleFiltro, etiquetasDe, filtrar } from './colas';
+import Resumen from './Resumen';
 import { VACIO, activos } from './filtros';
 
 const RANGOS = [['hoy', 'Hoy'], ['ayer', 'Ayer'], ['rango', 'Personalizado']];
@@ -67,6 +68,7 @@ export default function MacroFiltro({ lista, filtro, onCambiar, ahora, yo }) {
                 icon={<><SlidersHorizontal size={16} />{n > 0 && <span className="cv-macro-n">{n}</span>}</>} />
             {abierto && (
                 <div className="cv-macro-pop" ref={pop} role="dialog" aria-label="Filtros">
+                    <Resumen lista={lista} filtro={filtro} onCambiar={onCambiar} yo={yo} />
                     <div className="cv-macro-col">
                         <span className="t-rotulo">Cola</span>
                         <Segmented orientation="vertical" label="Cola" value={filtro.cola} onChange={(cola) => cambiar({ cola })}
@@ -91,8 +93,6 @@ export default function MacroFiltro({ lista, filtro, onCambiar, ahora, yo }) {
                                     opciones={etiquetas.map((e) => [claveEtiqueta(e), e.group ? `${e.group}: ${e.name}` : e.name, e.n, e.color])} />
                             </>
                         )}
-                        <span className="t-rotulo">Examen</span>
-                        <Opciones valor={filtro.examen} onElegir={(examen) => cambiar({ examen })} opciones={examenes(lista).map(([e, c]) => [e, e, c])} />
                         <span className="t-rotulo">Inicio de la última conversación</span>
                         <Rango clave="inicio" filtro={filtro} cambiar={cambiar} />
                         <span className="t-rotulo">Último mensaje enviado por</span>

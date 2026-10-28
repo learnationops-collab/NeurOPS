@@ -1152,3 +1152,7 @@
 - **27 de Octubre de 2026 (Se borran las tablas viejas de comentarios)** *(migración `a3c5e7f9b1d2`, [backfill_notas_log.py](../../scripts/backfill_notas_log.py))*:
   - El backfill de notas al log nunca se había corrido: desde el 26/10 la ficha y el mazo no mostraban las notas viejas. Corrido en producción: 685 del hilo del cliente, 107 comentarios, 1.181 notas de la llamada, 3.124 eventos del sistema y 27 avisos sin leer. Quedaron afuera las 979 copias de la nota de la llamada, 31 de clientes que ya no existen y 24 pruebas («sdfsdf», «Probando función»).
   - Se borran `client_comments`, `comments` y `comment_notifications` con sus modelos. `closer_notes` y `setter_notes` siguen: las listas y el mazo del setter las usan.
+- **27 de Octubre de 2026 (Bandeja: el filtro dice qué está puesto)** *([MacroFiltro.jsx](../../frontend/src/pages/inbox/conversaciones/MacroFiltro.jsx), [Resumen.jsx](../../frontend/src/pages/inbox/conversaciones/Resumen.jsx), [filtros.js](../../frontend/src/pages/inbox/conversaciones/filtros.js))*:
+  - Sale el filtro por examen (no se había pedido). El chip del examen en cada fila sigue.
+  - La opción elegida se llena de su color y las otras del grupo se apagan.
+  - Arriba de la lista y del panel, los filtros puestos en palabras («Esperan respuesta · Asignadas a Elias · En etapa Agendó · Califican»), cada uno con su × para sacarlo.

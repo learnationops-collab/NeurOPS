@@ -180,6 +180,16 @@
 .thalamus.inbox .cv-macro-col{display:grid;gap:8px;align-content:start;min-width:0}
 .thalamus.inbox .cv-macro-chips{display:flex;flex-wrap:wrap;gap:6px}
 .thalamus.inbox .cv-macro-chips .ui-chip.ui-chip{height:26px;padding:0 10px;font-size:11px;cursor:pointer}
+/* El elegido se llena de su color; los demás de ese grupo se apagan */
+.thalamus.inbox .cv-macro-chips:has([aria-pressed="true"]) .ui-chip.ui-chip:not([aria-pressed="true"]){opacity:.45}
+.thalamus.inbox .cv-macro-chips .ui-chip.ui-chip[aria-pressed="true"]{background:var(--c);border-color:var(--c);
+  color:var(--on-brand);box-shadow:0 0 0 2px color-mix(in srgb,var(--c) 30%,transparent)}
+.thalamus.inbox .cv-macro-chips .ui-chip.ui-chip[aria-pressed="true"] .cv-cuenta{opacity:.85}
+/* Los filtros puestos, en palabras */
+.thalamus.inbox .cv-resumen{display:flex;flex-wrap:wrap;gap:6px;padding:4px 8px 8px}
+.thalamus.inbox .cv-macro-pop .cv-resumen{grid-column:1 / -1;padding:0 0 var(--s3);border-bottom:1px solid var(--border-subtle)}
+.thalamus.inbox .cv-resumen .ui-chip.ui-chip{height:24px;font-size:11px}
+.thalamus.inbox .cv-resumen .ui-chip.ui-chip svg{opacity:.7}
 .thalamus.inbox .cv-macro-pie{grid-column:1 / -1;display:flex;align-items:center;justify-content:space-between;gap:var(--s2);padding-top:var(--s3);border-top:1px solid var(--border-subtle)}
 @media (max-width:620px){.thalamus.inbox .cv-macro-pop{grid-template-columns:1fr}}
 

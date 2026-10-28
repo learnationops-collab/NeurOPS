@@ -14,6 +14,7 @@ import Fila from './conversaciones/Fila';
 import FiltrosGuardados from './conversaciones/FiltrosGuardados';
 import MacroFiltro from './conversaciones/MacroFiltro';
 import MisTareas from './conversaciones/MisTareas';
+import Resumen from './conversaciones/Resumen';
 import Stats from './conversaciones/Stats';
 import { VACIO } from './conversaciones/filtros';
 import './conversaciones/trabajo.css';
@@ -119,7 +120,10 @@ export default function Conversaciones() {
             </HeaderActions>
             {vista === 'embudo' ? <Embudo lista={visibles} ahora={ahora} onAbrir={abrir} onMovida={recargar} /> : (
                 <div className={`cv${elegida ? ' cv--abierta' : ''}`}>
-                    <Panel as="section" size="sm" className="cv-lista" aria-label="Conversaciones">{listado}</Panel>
+                    <Panel as="section" size="sm" className="cv-lista" aria-label="Conversaciones">
+                        {datos && <Resumen lista={lista} filtro={filtro} onCambiar={setFiltro} yo={yo} />}
+                        {listado}
+                    </Panel>
                     {elegida
                         ? <Detalle key={elegida} id={elegida} yo={yo} onLeido={marcarLeida} />
                         : <Panel size="sm" className="cv-detalle cv-detalle--vacio"><EmptyState icon={<MessageSquare size={22} />}>Elegí una conversación.</EmptyState></Panel>}
