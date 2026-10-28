@@ -16,6 +16,7 @@ import { usePantallaCompleta } from './usePantallaCompleta';
 import { columnasDelCsv } from './columnasTabla';
 import { useVistaDeColumnas } from './useVistaDeColumnas';
 import { useFiltrosTabla } from './useFiltrosTabla';
+import { clavesUnicas } from './clavesUnicas';
 import { referenciasDe } from './tonos';
 import LeyendaTonos from './LeyendaTonos';
 import TarjetasAnuncios, { SelectorModo } from './TarjetasAnuncios';
@@ -145,6 +146,8 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = nul
         return ordenar(filas, orden.clave, orden.dir);
     }, [nivel, base, deCampanas, deConjuntos, elegidas.campanas, orden]);
 
+    // Dos filas con la misma clave no se repiten en pantalla (`clavesUnicas`).
+    const clavesDeFilas = useMemo(() => clavesUnicas(visibles, idDe), [visibles, nivel]); // eslint-disable-line react-hooks/exhaustive-deps
     const delNivel = elegidas[nivel];
     const elegidasVisibles = visibles.filter((f) => delNivel.has(idDe(f)));
     const totales = useMemo(() => totalesDe(visibles), [visibles]);
@@ -356,8 +359,8 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = nul
                                 <FilaGrupo key={g.id} g={g} nivel={nivel} elegida={delNivel.has(g.id)} onAlternar={alternar}
                                     onAbrir={abrir} piezas={piezas} moneda={moneda} refs={refs} />
                             ))}
-                            {nivel === 'anuncios' && visibles.map((f) => (
-                                <FilaAnuncio key={claveDeAnuncio(f)} f={f} elegida={delNivel.has(claveDeAnuncio(f))}
+                            {nivel === 'anuncios' && visibles.map((f, i) => (
+                                <FilaAnuncio key={clavesDeFilas[i]} f={f} elegida={delNivel.has(claveDeAnuncio(f))}
                                     onAlternar={alternar} onEditar={setEditando} onArchivar={onArchivar} subtitulo={sub}
                                     piezas={piezas} moneda={moneda} refs={refs} />
                             ))}

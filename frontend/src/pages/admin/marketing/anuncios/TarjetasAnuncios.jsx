@@ -1,5 +1,7 @@
+import { useMemo } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { List, LayoutGrid } from 'lucide-react';
+import { clavesUnicas } from './clavesUnicas';
 import { Chip } from '../../../../components/standard';
 import { formatear } from './metricas';
 import { tonoDeValor, valorDe } from './CeldasTabla';
@@ -63,13 +65,14 @@ const Embudo = ({ fila, totales, colores }) => {
 
 const TarjetasAnuncios = ({ filas, piezas, moneda, idDe, elegidas, onTocar, subtitulo, refs, totales, nivel }) => {
     const cols = piezas.flatMap((p) => (p.tipo === 'col' ? [p.col] : p.cols)).filter((c) => !EN_EL_EMBUDO.has(c.key));
-    const accion = nivel === 'anuncios' ? 'Elegir para el gráfico' : nivel === 'campanas' ? 'Ver sus conjuntos' : 'Ver sus palabras clave';
+    const claves = useMemo(() => clavesUnicas(filas, idDe), [filas, idDe]);
+    const accion = nivel === 'anuncios' ?'Elegir para el gráfico' : nivel === 'campanas' ? 'Ver sus conjuntos' : 'Ver sus palabras clave';
     return (
         <div className="tarjetas mk-tarjetas">
-            {filas.map((f) => {
+            {filas.map((f, i) => {
                 const elegida = elegidas.has(idDe(f));
                 return (
-                    <article key={idDe(f)} className={`mk-tarjeta${elegida ? ' is-on' : ''}${f.archivado ? ' is-archivada' : ''}`}>
+                    <article key={claves[i]}className={`mk-tarjeta${elegida ? ' is-on' : ''}${f.archivado ? ' is-archivada' : ''}`}>
                         <button type="button" className="mk-tarjeta-cab" onClick={() => onTocar(f)}
                             aria-pressed={nivel === 'anuncios' ? elegida : undefined}
                             aria-label={`${f.nombre}: ${accion}`} title={accion}>
