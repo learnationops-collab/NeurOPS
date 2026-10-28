@@ -119,8 +119,8 @@ export const COLUMNAS = [
         ayuda: 'Importe gastado ÷ ventas.' },
     { key: 'cobrado', label: 'Cobrado', formato: 'money',
         ayuda: 'Todo lo cobrado: ventas, cuotas y señas.' },
-    { key: 'roas', label: 'ROAS', formato: 'veces',
-        ayuda: 'Cobrado ÷ importe gastado.' },
+    { key: 'roas', label: 'ROAS Total', formato: 'veces',
+        ayuda: 'Todo lo cobrado (ventas, cuotas y señas) ÷ importe gastado.' },
 ];
 
 const ENTERO = new Intl.NumberFormat('en-US');

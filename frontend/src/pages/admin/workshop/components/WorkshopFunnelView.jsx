@@ -64,7 +64,7 @@ const WorkshopFunnelView = ({ evento, desglose, ventana, cargandoDesglose, onRes
                     sub={e.inversion_de_meta ? 'De Meta Ads' : 'Cargada a mano'}
                     tip="Gasto en anuncios de este taller (de Meta si hay)." />
                 <Kpi i={1} titulo="Cash cobrado" valor={dinero(e.cash_collected)}
-                    sub={`ROAS ${Number(e.roas || 0).toFixed(2)}x`}
+                    sub={`ROAS total ${Number(e.roas || 0).toFixed(2)}x`}
                     tip="Todo lo cobrado a las personas del taller, señas incluidas." />
                 <Kpi i={2} titulo="Ganancia" valor={dinero(g)} color={g < 0 ? 'var(--error)' : undefined}
                     sub="Cash menos inversión" />

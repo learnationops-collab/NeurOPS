@@ -57,7 +57,7 @@ const TarjetaTaller = ({
                 <div><dt>Inversión</dt><dd className="num">{dinero(e.inversion)}</dd></div>
                 <div><dt>Cash</dt><dd className="num">{dinero(e.cash_collected)}</dd></div>
                 <div>
-                    <dt>ROAS</dt>
+                    <dt>ROAS total</dt>
                     <dd className="num" style={{ color: `var(--${tono})` }} title={roasRotulo(e.roas)}>{veces(e.roas)}</dd>
                 </div>
                 <div>

@@ -32,7 +32,7 @@ const COLUMNAS = (moneda) => ({
     ventas: columnaNumero('ventas', 'Ventas', 'num'),
     cobrado: columnaNumero('cobrado', 'Cobrado', 'money', moneda),
     costo_venta: columnaNumero('costo_venta', 'Costo por venta', 'money', moneda),
-    roas: columnaNumero('roas', 'ROAS', 'veces'),
+    roas: columnaNumero('roas', 'ROAS Total', 'veces'),
 });
 
 /** `kpi`: entrantes · gasto · agendas · ventas. `nivel`: el rótulo de la primera columna. */

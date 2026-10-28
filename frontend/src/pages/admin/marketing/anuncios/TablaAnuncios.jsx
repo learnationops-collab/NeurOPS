@@ -233,8 +233,8 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = nul
           sub: conGasto ? `${formatear(totales.costo_agenda, 'money', moneda)} por agenda` : 'Costo por agenda: —',
           tip: 'Con palabra clave de ManyChat; la tarjeta de Setting cuenta por setter.' },
         { titulo: KPIS[3], valor: formatear(totales.ventas, 'num'), onVer: ver('ventas', KPIS[3], formatear(totales.ventas, 'num')),
-          sub: conGasto ? `${formatear(totales.costo_venta, 'money', moneda)} por venta · ROAS ${formatear(totales.roas, 'veces')}` : `${formatear(totales.cobrado, 'money', moneda)} cobrado`,
-          tip: 'Pago completo o split. ROAS = cobrado ÷ gastado.' },
+          sub: conGasto ? `${formatear(totales.costo_venta, 'money', moneda)} por venta · ${formatear(totales.cobrado, 'money', moneda)} cobrado` : `${formatear(totales.cobrado, 'money', moneda)} cobrado`,
+          tip: 'Pago completo o split. El ROAS está en las tarjetas de abajo.' },
     ];
 
     return (

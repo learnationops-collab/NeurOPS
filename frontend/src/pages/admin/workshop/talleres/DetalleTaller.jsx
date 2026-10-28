@@ -94,7 +94,7 @@ const DetalleTaller = ({
                 <p className="t-eyebrow num">{formatDate(evento.date)}</p>
                 <h2 className="t-h2 wt-detalle-nom" title={evento.name}>{evento.name}</h2>
                 <span className="chip" style={{ '--c': `var(--${tono})` }}>
-                    ROAS {veces(evento.roas)} · {roasRotulo(evento.roas)}
+                    ROAS total {veces(evento.roas)} · {roasRotulo(evento.roas)}
                 </span>
                 <span className="t-sm mut num">
                     <AgendasDelTaller evento={evento} formatDate={formatDate}>{evento.agendas_exitosas ?? 0} agendas</AgendasDelTaller>

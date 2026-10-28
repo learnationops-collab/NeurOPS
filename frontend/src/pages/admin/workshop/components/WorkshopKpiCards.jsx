@@ -51,7 +51,7 @@ const HUMOS = {
 const ROTULOS = [
     { key: 'inversion', label: 'Inversión', ayuda: 'Lo que se gastó en publicidad para estos talleres.' },
     { key: 'cash', label: 'Cash collected', ayuda: 'Lo cobrado. Neto = cobrado − inversión.' },
-    { key: 'roas', label: 'ROAS', ayuda: 'Cobrado ÷ inversión. Desde 1,5x es sano.' },
+    { key: 'roas', label: 'ROAS Total', ayuda: 'Todo lo cobrado (con cuotas y señas) ÷ inversión. Desde 1,5x es sano.' },
     { key: 'leads', label: 'Leads', ayuda: 'Personas que se registraron. CPL = inversión ÷ leads.' },
     { key: 'agendas', label: 'Agendas', ayuda: 'Llamadas agendadas. CPA = inversión ÷ agendas.' },
     { key: 'sales', label: 'Ventas', ayuda: 'Compradores distintos. CAC = inversión ÷ ventas.' },

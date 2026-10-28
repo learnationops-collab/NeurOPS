@@ -34,7 +34,7 @@ export const CORTO = {
     entrantes: 'Entrantes', calificados: 'Calificados', descalificados: 'Descalif.', en_conversacion: 'En conv.',
     sin_respuesta: 'Sin resp.', gasto: 'Gastado', cpl: 'Por lead', cpl_calificado: 'Por calif.',
     costo_agenda: 'Por agenda', costo_venta: 'Por venta', agendas: 'Agendas', ventas: 'Ventas',
-    cobrado: 'Cobrado', roas: 'ROAS', pct_calificados: '% calif.',
+    cobrado: 'Cobrado', roas: 'ROAS Total', pct_calificados: '% calif.',
 };
 
 const grupoDe = Object.fromEntries(GRUPOS.flatMap((g) => g.cols.map((k) => [k, g])));

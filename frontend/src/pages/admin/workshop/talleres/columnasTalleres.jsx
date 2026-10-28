@@ -97,7 +97,7 @@ export const columnasDe = ({ formatDate, elegidos, onComparar, comparar }) => {
             oculta: true, ayuda: 'Ventas nuevas ÷ cantidad. Sin cuotas ni señas.',
         }),
         cifra('cac', 'CAC', cac, dinero, { oculta: true, ayuda: 'Lo que costó cada venta: la inversión dividida las ventas.' }),
-        cifra('roas', 'ROAS', (e) => e.roas, veces, { ayuda: 'Cobrado ÷ inversión. Desde 1x el taller se pagó.' }),
+        cifra('roas', 'ROAS Total', (e) => e.roas, veces, { ayuda: 'Todo lo cobrado (con cuotas y señas) ÷ inversión. Desde 1x el taller se pagó.' }),
         {
             key: 'grabacion', header: 'Grabación', width: 'minmax(96px,1fr)', oculta: true,
             valor: (e) => ESTADOS_GRABACION[estadoGrabacion(e).tipo].texto,
