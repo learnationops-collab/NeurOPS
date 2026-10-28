@@ -40,7 +40,8 @@ const Celdas = ({ fila, moneda, landings }) => (
     </>
 );
 
-const KPIS = ['Clics', 'Visitas a la landing', 'Clics al grupo'];
+// Los clics al grupo de WhatsApp son los Leads de la tarjeta de la fuente (arriba): no se repiten acá.
+const KPIS = ['Clics', 'Visitas a la landing'];
 const TITULO = 'Campañas, conjuntos y anuncios de Workshop';
 
 const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, fuente, cuentas, version = 0, irAMeta }) => {
@@ -107,9 +108,6 @@ const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, fuente, cuentas, v
         { titulo: KPIS[1], valor: formatear(t.visitas, 'num'),
           sub: 'de los anuncios de Workshop (utm_campaign)',
           tip: 'Visitas a la landing desde estas campañas.' },
-        { titulo: KPIS[2], valor: formatear(t.clics_whatsapp, 'num'),
-          sub: `${formatear(t.costo_whatsapp, 'money', moneda)} por clic al grupo`,
-          tip: 'Clics al grupo de WhatsApp desde esas visitas.' },
     ];
     const alternar = (id) => setAbiertasDe({ de: datos, mapa: { ...abiertas, [id]: !abiertas[id] } });
     const cuenta = cuentas?.[0];
