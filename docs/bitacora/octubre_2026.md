@@ -1190,3 +1190,6 @@
   - En Marketing, el ojo de cada KPI de la tabla de anuncios (Leads entrantes, Importe gastado, Agendas, Ventas) abre las filas que lo suman, con su aporte y los costos; son las mismas filas que ve la tabla, con los mismos filtros.
   - Todavía no abre las personas de cada agenda o venta, ni está en las otras pantallas: sigue en las tareas de Leadership.
   - En el catálogo `/ui` y en la skill ui-builder.
+- **28 de Octubre de 2026 (Ficha del lead: mockups de hoy y de la ficha por persona)** *([ficha_hoy.html](../mockups/ficha_hoy.html), [ficha_propuesta.html](../mockups/ficha_propuesta.html))*:
+  - Mockup de la ficha como es hoy: cabecera, las 8 pestañas y la agenda «ancla», con la marca de qué dato sale de la agenda y cuál de la persona.
+  - Propuesta de ficha por persona (person_uuid): quién es, qué toca ahora y su historia en una línea de tiempo, con paneles de Plata, Academia y Perfil. Queda para trabajarla con el equipo; no se implementa por ahora.
