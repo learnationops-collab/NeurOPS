@@ -1170,3 +1170,6 @@
   - Califica → closer → horario → nota para el closer. No califica → low ticket → (si cerró) monto, medio y a quién se transfirió → (si queda en seguimiento) fecha → por qué no califica.
   - Los horarios del closer se muestran en la hora del lead (la zona de su WhatsApp, como el aviso al closer), con un selector para cambiarla.
   - Nuevo: Reagenda (la misma agenda a la fecha nueva, de vuelta a Confirmar), «Registrar el low ticket» sin reporte previo (no si ya pasó al closer) y «Pasar a seguimiento» para el triage en sus agendas.
+- **28 de Octubre de 2026 (Reportar una venta: propuesta en mockup y ADR-W013)** *([reportar_venta.html](../mockups/reportar_venta.html), [reportar_venta_hoy.html](../mockups/reportar_venta_hoy.html), [DECISIONS.md](../DECISIONS.md), [modelo.md](../../.agents/rules/modelo.md))*:
+  - Mockup del flujo de hoy (20 pantallas para un alumno nuevo con cuotas) y de la propuesta: venta nueva y pago separados, 6 pantallas para la venta nueva (5 si paga todo) y 3 para un pago, datos confirmados en una pantalla con el correo del acceso destacado, sin documento ni examen. Todavía no se implementó en la app.
+  - Regla: todo subsistema, tenga modelo o no, suma su ADR en `docs/DECISIONS.md`. Una decisión sobre un mockup entra como «propuesta».

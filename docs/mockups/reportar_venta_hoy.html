@@ -1,0 +1,1043 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reportar venta hoy · mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* Mockup de la pestaña «Resultado» de la ficha cuando el closer reporta una venta.
+   Recrea el árbol de frontend/src/components/ficha/arbolResultado*.js (mismas preguntas, mismo
+   orden, mismas ramas) para poder rediseñar el frontend sin tocar la app.
+   Tokens: tema Modern oscuro (learnation-ds.css). */
+:root{
+  --bg:#020617; --page:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%);
+  --el:rgba(255,255,255,.08); --el-h:rgba(255,255,255,.12); --el-2:rgba(255,255,255,.04); --inset:rgba(0,0,0,.34);
+  --text:#fff; --muted:rgba(255,255,255,.62); --faint:rgba(255,255,255,.42);
+  --b1:rgba(255,255,255,.07); --b2:rgba(255,255,255,.15); --b3:rgba(255,255,255,.34);
+  --brand:#FF3FA4; --blue:#1323C6; --focus-blue:#5B7CFF;
+  --ok:#2FBF8F; --warn:#D9A441; --bad:#E85C4A; --info:#4E8BD8;
+  --ok-bg:#071A24; --ok-b:#10413D; --warn-bg:#1A171C; --warn-b:#473924; --bad-bg:#1B0F1D; --bad-b:#4C2227;
+  --aqua:#2EE6C8; --magenta:#FF3FA4; --amber:#FFB547; --lilac:#7D8BFF;
+  --rc:16px; --pill:999px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);background-image:var(--page);background-attachment:fixed;color:var(--text);
+  font-family:'Montserrat','Helvetica Neue',Arial,sans-serif;font-size:14px;min-height:100vh}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(91,124,255,.55)}
+svg{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.mono{font-variant-numeric:tabular-nums}
+.mut{color:var(--muted)} .faint{color:var(--faint)}
+h3{margin:0;font-size:20px;font-weight:800;letter-spacing:-.01em}
+p{margin:0}
+
+/* ---------- barra del mockup (no es parte de la app) ---------- */
+.mk{position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;
+  padding:12px 24px;background:rgba(2,6,23,.86);backdrop-filter:blur(10px);border-bottom:1px dashed var(--b2)}
+.mk b{font-size:13px;letter-spacing:.04em}
+.mk .tag{font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#020617;background:var(--amber);
+  padding:3px 8px;border-radius:6px}
+.mk .sp{flex:1}
+.seg{display:inline-flex;gap:4px;padding:4px;border-radius:var(--pill);background:var(--inset);border:1px solid var(--b1);flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:7px 12px;border-radius:var(--pill);font-weight:600;font-size:12.5px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--el-h);color:var(--text)}
+.mk-cont{display:flex;gap:14px;font-size:12px;color:var(--muted)}
+.mk-cont b{color:var(--text);font-size:15px;margin-right:4px}
+.mk-btn{border:1px solid var(--b2);background:var(--el-2);border-radius:var(--pill);padding:7px 14px;font-weight:600;font-size:12.5px;
+  display:inline-flex;align-items:center;gap:6px}
+.mk-btn[aria-pressed="true"]{border-color:var(--brand);color:var(--brand)}
+
+/* ---------- ventana de la ficha ---------- */
+.lay{display:flex;gap:20px;align-items:flex-start;justify-content:center;padding:28px 24px 120px}
+.win{width:min(1120px,100%);border-radius:28px;background:rgba(2,6,23,.96);border:1px solid var(--b1);
+  box-shadow:0 30px 80px -30px rgba(19,35,198,.55)}
+.win-cab{padding:20px 20px 0}
+.cab{display:grid;gap:16px;padding:22px 28px 24px;border-radius:20px;border:1px solid rgba(255,255,255,.1);
+  background:linear-gradient(180deg,rgba(255,255,255,.03),transparent 70%)}
+.cab-tit{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.cab-tit h2{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}
+.cab-x{width:36px;height:36px;border-radius:12px;border:1px solid var(--b1);background:var(--el-2);display:grid;place-items:center}
+.cab-datos{display:grid;grid-template-columns:repeat(5,minmax(0,auto));justify-content:start;gap:16px clamp(28px,4vw,56px)}
+.dato{display:grid;gap:10px;white-space:nowrap}
+.rot{display:inline-flex;align-items:center;gap:6px;letter-spacing:.16em;font-size:10px;font-weight:700;text-transform:uppercase;opacity:.75}
+.rot svg{width:12px;height:12px}
+.val{font-size:15px;font-weight:600;line-height:28px;display:inline-flex;align-items:center;gap:8px}
+.avatar{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;font-size:9px;font-weight:800;
+  background:linear-gradient(135deg,#1d4ed8,#3b82f6)}
+.punto{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px rgba(47,191,143,.18)}
+@media (max-width:860px){.cab-datos{grid-template-columns:repeat(2,minmax(0,1fr))}.dato{white-space:normal}}
+
+.tabs{display:flex;gap:20px;padding:0 20px;margin-top:16px;border-bottom:1px solid var(--b1);overflow-x:auto;scrollbar-width:none}
+.tab{position:relative;display:inline-flex;align-items:center;gap:7px;padding:12px 0;border:0;background:none;
+  color:var(--muted);font-size:13px;font-weight:500;white-space:nowrap}
+.tab svg{width:14px;height:14px;opacity:.75}
+.tab[aria-selected="true"]{color:var(--brand);font-weight:700}
+.tab[aria-selected="true"]::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--brand);border-radius:2px}
+.panel{padding:20px}
+
+/* ---------- pestaña Resultado ---------- */
+.res{display:grid;grid-template-columns:124px minmax(0,1fr);gap:24px;align-items:stretch}
+.res-main{display:flex;flex-direction:column;gap:24px;min-width:0}
+.hitos{display:flex;flex-direction:column;gap:12px;min-height:300px;padding:4px 16px 8px 0;border-right:1px solid var(--b1);opacity:.75}
+.hitos:hover{opacity:1}
+.hitos-tit{font-size:9px;font-weight:900;letter-spacing:.22em;text-transform:uppercase;color:var(--faint)}
+.stp{flex:1;display:flex;flex-direction:column}
+.paso{position:relative;flex:1 1 0;min-height:44px;display:grid;grid-template-columns:14px 1fr;column-gap:8px;align-content:start;
+  font-size:11.5px;line-height:14px;color:var(--muted)}
+.paso:last-child{flex:0 0 auto;min-height:0}
+.paso:not(:last-child)::after{content:'';position:absolute;left:6px;top:17px;bottom:3px;width:2px;border-radius:2px;background:var(--b1)}
+.paso.fill:not(:last-child)::after{background:linear-gradient(180deg,var(--aqua),var(--lilac),var(--magenta))}
+.paso i{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--b3);background:var(--bg);display:grid;place-items:center}
+.paso[data-e="hecho"] i{background:var(--aqua);border-color:var(--aqua);animation:pop .45s cubic-bezier(.34,1.56,.64,1)}
+.paso[data-e="alerta"] i{background:var(--amber);border-color:var(--amber);animation:pop .45s cubic-bezier(.34,1.56,.64,1)}
+.paso.sig i{border-color:var(--brand);animation:late 2s ease-in-out infinite}
+.paso.sig{color:var(--text)}
+.paso small{grid-column:2;font-size:10px;color:var(--faint);margin-top:3px;white-space:normal}
+@keyframes pop{0%{transform:scale(.4)}100%{transform:scale(1)}}
+@keyframes late{0%,100%{box-shadow:0 0 0 0 rgba(255,63,164,.55)}50%{box-shadow:0 0 0 4px rgba(255,63,164,.12),0 0 10px 2px rgba(125,139,255,.45)}}
+@media (max-width:760px){
+  .res{grid-template-columns:1fr;gap:16px}
+  .hitos{min-height:0;padding:0 0 12px;border-right:0;border-bottom:1px solid var(--b1)}
+  .stp{flex-direction:row;flex-wrap:wrap;gap:8px 16px}
+  .paso,.paso:last-child{flex:0 0 auto;min-height:0}.paso::after{display:none}
+}
+
+.prog{display:grid;gap:8px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.prog-riel{height:3px;border-radius:3px;background:var(--b1);overflow:hidden}
+.prog-riel i{display:block;height:100%;background:var(--brand);transition:width .25s ease-out}
+
+.entra{animation:entra .18s ease-out}
+@keyframes entra{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+
+.raices{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-top:16px}
+.raiz{--c:#fff;min-height:112px;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:12px;
+  padding:18px;border-radius:20px;text-align:left;border:1px solid color-mix(in srgb,var(--c) 30%,transparent);
+  background:radial-gradient(120% 140% at 0% 0%,color-mix(in srgb,var(--c) 22%,transparent),transparent 60%),
+    radial-gradient(90% 120% at 100% 100%,rgba(19,35,198,.22),transparent 65%),rgba(255,255,255,.05);
+  font-weight:700;font-size:15px;transition:transform .2s,box-shadow .25s,border-color .2s}
+.raiz:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--c) 60%,transparent);box-shadow:0 10px 28px -14px var(--c)}
+.raiz svg{width:24px;height:24px;color:var(--c);filter:drop-shadow(0 0 8px color-mix(in srgb,var(--c) 60%,transparent))}
+.otras{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px}
+.otra{height:56px;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--rc);
+  border:1px solid var(--b2);background:var(--el-2);font-weight:600;font-size:14.5px}
+.otra:hover{border-color:var(--b3)}
+@media (max-width:640px){.raices{grid-template-columns:repeat(2,minmax(0,1fr))}.otras{grid-template-columns:1fr}}
+
+.ayuda{font-size:13px;color:var(--muted);margin-top:6px}
+.ops{display:grid;gap:12px;margin-top:16px}
+.op{position:relative;overflow:hidden;isolation:isolate;display:grid;grid-template-columns:auto 1fr;column-gap:12px;row-gap:2px;align-items:center;
+  min-height:64px;padding:16px 20px;border-radius:var(--rc);text-align:left;border:1px solid var(--b3);
+  background:rgba(255,255,255,.056);transition:border-color .25s,transform .15s}
+.entra .op,.entra .ficha{animation:cae .16s ease-out both}
+.op:hover{transform:translateY(-2px);border-color:rgba(255,63,164,.35)}
+.op[aria-pressed="true"]{border-color:rgba(255,63,164,.6);background:linear-gradient(120deg,rgba(255,63,164,.16),rgba(78,139,216,.12),rgba(91,124,255,.1))}
+.op > :not(.op-ico){grid-column:2}
+.op.sin-ico > *{grid-column:1 / -1}
+.op-ico{grid-row:span 3;width:34px;height:34px;border-radius:11px;display:grid;place-items:center;color:var(--muted);background:rgba(255,255,255,.06)}
+.op b{font-size:14.5px;font-weight:700}
+.op small{font-size:12px;color:var(--muted)}
+.op .aviso{color:var(--warn);display:flex;gap:4px}
+.op[data-aviso]{border-color:rgba(217,164,65,.45)}
+@keyframes cae{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ---------- campos ---------- */
+.form{display:grid;gap:16px;margin-top:16px}
+.form.par{grid-template-columns:repeat(2,minmax(0,1fr))}
+.form.par > .fw-ancho{grid-column:1 / -1}
+@media (max-width:560px){.form.par{grid-template-columns:1fr}}
+.fw{display:grid;gap:6px;min-width:0}
+.fw-lbl{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;font-weight:600;color:var(--muted)}
+.origen{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:var(--pill)}
+.origen.agenda{color:#7DEAC0;background:var(--ok-bg);border:1px solid var(--ok-b)}
+.origen.corregido{color:#F3D08A;background:var(--warn-bg);border:1px solid var(--warn-b)}
+.origen.vos{color:#93C5FD;background:#0A152C;border:1px solid #1A3155}
+.field{display:flex;align-items:center;gap:8px;min-height:48px;padding:0 14px;border-radius:var(--rc);border:1px solid var(--b3);background:rgba(255,255,255,.04)}
+.field:focus-within{border-color:rgba(255,63,164,.55);box-shadow:0 0 0 3px rgba(255,63,164,.14)}
+.field input,.field textarea{flex:1;min-width:0;border:0;background:transparent;outline:none;box-shadow:none;font-size:15px;padding:12px 0}
+.field textarea{min-height:96px;resize:vertical;line-height:1.5}
+.field .pre{color:var(--faint);font-weight:600}
+.field input[type=date],.field input[type=time]{color-scheme:dark}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--b2);background:var(--el-2);border-radius:var(--pill);padding:5px 12px;font-size:12px;font-weight:600}
+.chip[aria-pressed="true"]{border-color:var(--brand);color:var(--brand)}
+.minimo{display:flex;align-items:center;gap:8px}
+.minimo-riel{flex:1;max-width:160px;height:3px;border-radius:3px;background:var(--b1);overflow:hidden}
+.minimo-riel i{display:block;height:100%;background:linear-gradient(90deg,var(--magenta),var(--lilac));transition:width .3s}
+.minimo small{font-size:11px;font-weight:700;color:var(--faint)}
+.minimo.listo .minimo-riel i{background:var(--aqua)} .minimo.listo small{color:var(--aqua)}
+.toggle2{display:inline-flex;gap:4px;padding:4px;border-radius:var(--rc);background:var(--inset);border:1px solid var(--b1)}
+.toggle2 button{border:0;background:transparent;padding:9px 14px;border-radius:12px;font-weight:600;font-size:13px;color:var(--muted)}
+.toggle2 button[aria-pressed="true"]{background:var(--el-h);color:var(--text)}
+.contador{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.contador .n{width:64px;text-align:center;font-size:24px;font-weight:800}
+.redondo{width:40px;height:40px;border-radius:12px;border:1px solid var(--b2);background:var(--el-2);font-size:18px;font-weight:700}
+.check{display:flex;align-items:center;gap:10px;min-height:48px;padding:0 14px;border-radius:var(--rc);border:1px solid var(--b2);background:var(--el-2)}
+.check input{width:18px;height:18px;accent-color:var(--brand)}
+.check .field{min-height:36px;margin-left:auto}
+
+.cuotas{display:grid;gap:8px}
+.cuota{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px 16px;border-radius:var(--rc);
+  border:1px solid var(--b2);background:var(--el-2);text-align:left}
+.cuota[aria-pressed="true"]{border-color:var(--brand);background:rgba(255,63,164,.08)}
+.cuota .radio{width:16px;height:16px;border-radius:50%;border:2px solid var(--b3)}
+.cuota[aria-pressed="true"] .radio{border-color:var(--brand);background:radial-gradient(circle,var(--brand) 45%,transparent 50%)}
+
+.crono{display:grid;gap:6px}
+.crono-fila{display:grid;grid-template-columns:70px minmax(0,1fr) minmax(0,140px);gap:10px;align-items:center}
+.crono-fila .field{min-height:40px}
+.crono-fila .field input{padding:8px 0;font-size:14px}
+.crono-pie{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-top:4px}
+.linkbtn{border:0;background:none;color:var(--info);font-weight:600;font-size:12px;padding:4px;display:inline-flex;gap:4px;align-items:center}
+.linkbtn:hover{text-decoration:underline}
+
+.filas{display:grid;gap:8px}
+.filas-row{display:grid;grid-template-columns:1fr 1fr 36px;gap:8px}
+.filas-row .field{min-height:42px}
+.quitar{border:1px solid var(--b1);background:none;border-radius:10px;color:var(--muted)}
+
+.cajita{padding:16px;border-radius:var(--rc);border:1px solid var(--b1);background:var(--el-2);display:grid;gap:8px}
+.cajita-fila{display:flex;justify-content:space-between;gap:16px;font-size:13px}
+.cajita-fila b{font-size:15px}
+.hueso{height:18px;border-radius:6px;background:linear-gradient(90deg,var(--el) 0%,var(--el-h) 50%,var(--el) 100%);background-size:200% 100%;animation:hueso 1.2s linear infinite}
+@keyframes hueso{to{background-position:-200% 0}}
+.saldo{display:flex;justify-content:space-between;align-items:baseline;margin-top:16px}
+.saldo b{font-size:22px;font-weight:800}
+
+.faltan{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-top:16px;font-size:12px;color:var(--muted)}
+.faltan > i{width:7px;height:7px;border-radius:50%;background:var(--amber);animation:flat 1.8s ease-out infinite}
+.faltan > span{font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:10px}
+.faltan > b{padding:3px 10px;border-radius:var(--pill);font-weight:600;color:var(--text);border:1px solid rgba(255,181,71,.3);background:rgba(255,181,71,.1)}
+@keyframes flat{0%{box-shadow:0 0 0 0 rgba(255,181,71,.6)}100%{box-shadow:0 0 0 7px transparent}}
+
+.botonera{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end;margin-top:24px}
+.atras{display:flex;gap:8px;margin-right:auto;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border-radius:var(--pill);font-weight:700;font-size:14px;border:1px solid transparent}
+.btn-linea{border-color:var(--b2);background:transparent;color:var(--text)}
+.btn-linea:hover{border-color:var(--b3)}
+.btn-cta{background:var(--brand);color:#fff;box-shadow:0 8px 24px -10px rgba(255,63,164,.8)}
+.btn-cta:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
+.btn-sm{min-height:34px;padding:0 12px;font-size:12.5px}
+
+.alert{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:var(--rc);border:1px solid}
+.alert.warn{background:var(--warn-bg);border-color:var(--warn-b)} .alert.warn > svg{color:var(--warn)}
+.alert.err{background:var(--bad-bg);border-color:var(--bad-b)} .alert.err > svg{color:var(--bad)}
+.alert.ok{background:var(--ok-bg);border-color:var(--ok-b)} .alert.ok > svg{color:var(--ok)}
+.alert-body{display:grid;gap:4px;flex:1}
+.alert-body b{font-size:14px} .alert-body span{font-size:13px;color:var(--muted)}
+.alert ul{margin:6px 0 0;padding:0;list-style:none;display:grid;gap:4px}
+.alert li{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:4px 12px;font-size:13px}
+
+/* ---------- revisión ---------- */
+.rev{display:grid;gap:20px}
+.hero{display:grid;gap:16px;padding:20px;border:1px solid var(--b2);border-radius:var(--rc);background:var(--el)}
+.hero-monto{font-size:34px;font-weight:800;line-height:1.1}
+.cifras{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding-top:16px;border-top:1px solid var(--b1)}
+.cifras > div{display:grid;gap:4px}
+.cifras b{font-size:20px;font-weight:800}
+.sec{display:grid;gap:8px}
+.sec-tit{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.fichas{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));grid-auto-flow:row dense;gap:8px}
+.ficha{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"r e" "v v";align-items:center;column-gap:8px;row-gap:2px;
+  padding:8px 8px 8px 12px;border:1px solid var(--b1);border-radius:var(--rc);background:var(--el)}
+.ficha.ancha{grid-column:1 / -1}
+.ficha .r{grid-area:r;font-size:12px;color:var(--muted)}
+.ficha .v{grid-area:v;font-size:14px;font-weight:600;overflow-wrap:anywhere}
+.ficha.vacia .v{font-weight:400;font-style:italic;color:var(--warn)}
+.ficha .linkbtn{grid-area:e}
+.webhook{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:var(--rc);border:1px solid var(--b1);background:var(--el-2)}
+.webhook input{width:18px;height:18px;margin-top:2px;accent-color:var(--brand)}
+.webhook small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+@media (max-width:640px){.cifras{grid-template-columns:1fr}.fichas{grid-template-columns:1fr 1fr}}
+
+/* ---------- recorrido (panel del mockup) ---------- */
+.reco{position:sticky;top:76px;width:300px;flex:none;max-height:calc(100vh - 100px);overflow:auto;padding:16px;border-radius:20px;
+  border:1px dashed var(--b2);background:rgba(2,6,23,.8)}
+.reco h4{margin:0 0 4px;font-size:13px}
+.reco p{font-size:12px;color:var(--muted);margin-bottom:12px}
+.reco-g{font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:12px 0 6px}
+.reco-i{display:flex;gap:8px;align-items:flex-start;width:100%;text-align:left;border:0;background:none;padding:5px 6px;border-radius:8px;font-size:12.5px;color:var(--muted)}
+.reco-i:hover{background:var(--el-2)}
+.reco-i .n{width:20px;flex:none;text-align:right;color:var(--faint);font-variant-numeric:tabular-nums}
+.reco-i.hecho{color:var(--text)} .reco-i.hecho .n{color:var(--aqua)}
+.reco-i.actual{color:var(--brand);font-weight:700;background:rgba(255,63,164,.08)}
+.reco-i em{font-style:normal;font-size:10px;color:var(--faint);margin-left:auto;white-space:nowrap}
+@media (max-width:1300px){.reco{display:none}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ======================================================================================
+// Datos de ejemplo. Los precios y las cuotas son inventados: en la app vienen de
+// GET /ficha/<id>/estado-venta?programa=XX y de ficha.cobro.cuotas.
+// ======================================================================================
+const PRECIOS = { RR: 3000, AL: 2000, SI: 4500, LT: 100 };
+const FICHA = {
+  nombre: 'Lucía Fernández', instagram: 'lu.fernandez.md', email: 'lucia.fernandez@gmail.com',
+  telefono: '+54 9 11 5555-0192', examen: 'ENARM 2027', closer: { id: 1, nombre: 'Kerwin Rojas' },
+  setter: 'Agustina', llamada: 'Hoy · 16:30', fuente: 'Instagram · palabra «RESIDENCIA»',
+};
+const enDias = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return iso(d); };
+const ESCENARIOS = {
+  nuevo: { label: 'Cliente nuevo', estado: () => null, cuotas: [] },
+  sena: {
+    label: 'Ya dejó una seña (AL)',
+    estado: (p) => (p === 'AL' ? {
+      total_paid: 300, balance_remaining: 1700, sales_count: 1,
+      allowed_types: { completo: { ok: false, reason: 'Ya tiene una seña: lo que sigue es parcial o cuota' }, seña: { ok: false, reason: 'Ya tiene una seña registrada' } },
+    } : null),
+    cuotas: [],
+  },
+  plan: {
+    label: 'Plan de cuotas en curso (RR)',
+    estado: (p) => (p === 'RR' ? {
+      total_paid: 1500, balance_remaining: 1500, sales_count: 2, can_settle_balance_with_installment: true,
+      allowed_types: { completo: { ok: false, reason: 'Ya tiene un plan: va Cuota, Renovación o Upsell' }, seña: { ok: false, reason: 'Ya tiene un plan en curso' }, parcial: { ok: false, reason: 'Ya tiene un plan en curso' } },
+    } : null),
+    cuotas: [
+      { id: 11, numero_cuota: 2, fecha_vencimiento: enDias(-6), monto: 750, estado: 'vencido', programa_code: 'RR' },
+      { id: 12, numero_cuota: 3, fecha_vencimiento: enDias(24), monto: 750, estado: 'pendiente', programa_code: 'RR' },
+    ],
+  },
+};
+const CLOSERS = [{ id: 1, nombre: 'Kerwin Rojas' }, { id: 2, nombre: 'Valentina Paz', pista: 'Hizo la primera llamada' }];
+const TRANSFERIDO_A = [
+  { clave: 'pedro', label: 'Pedro', descuenta: true }, { clave: 'jean_carlo', label: 'Jean Carlo', descuenta: true },
+  { clave: 'otro', label: 'Otro', descuenta: false },
+];
+
+// ======================================================================================
+// Aritmética (arbolResultado.venta.js + acciones/planCuotas.js)
+// ======================================================================================
+function iso(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+const hoyIso = () => enDias(0);
+const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+const moneda = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+function sumarMeses(s, meses) {
+  const [y, m, d] = String(s).split('-').map(Number);
+  const base = new Date(y, m - 1 + meses, 1);
+  const ultimo = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+  return iso(new Date(base.getFullYear(), base.getMonth(), Math.min(d, ultimo)));
+}
+function repartirCuotas(n, total, fijados = {}) {
+  const out = []; let resto = round2(total);
+  const libres = Array.from({ length: n - 1 }, (_, i) => i + 1).filter((i) => fijados[i] === undefined || fijados[i] === '').length;
+  const fijo = Object.entries(fijados).filter(([k, v]) => Number(k) < n && v !== '').reduce((a, [, v]) => a + (parseFloat(v) || 0), 0);
+  const parejo = libres ? Math.floor(((total - fijo) / (libres + 1)) * 100) / 100 : 0;
+  for (let i = 1; i < n; i += 1) {
+    const v = fijados[i] !== undefined && fijados[i] !== '' ? round2(parseFloat(fijados[i]) || 0) : parejo;
+    out.push(v); resto = round2(resto - v);
+  }
+  out.push(resto);
+  return out;
+}
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const fechaCorta = (v) => { const [, m, d] = String(v || '').split('-').map(Number); return m && d ? `${d} ${MESES[m - 1]}` : String(v || ''); };
+
+const esVenta = (r = {}) => r.cierre === true || r.venta_directa === true;
+const esCompleto = (r) => r.tipo_pago_simple === 'completo';
+const esCuota = (r) => (r.tipo_pago_simple || '').toLowerCase() === 'cuota';
+const esRenovacionOUpsell = (r) => ['Renovacion', 'Upsell'].includes(r.tipo_pago_simple);
+const pagadoAntes = (c) => Number(c.estadoVenta?.total_paid) || 0;
+const saldoPrevio = (c) => Number(c.estadoVenta?.balance_remaining) || 0;
+function saldoVenta(r, c) {
+  if (esCompleto(r)) return 0;
+  return Math.max(0, round2((parseFloat(r.precio_total) || 0) - pagadoAntes(c) - (parseFloat(r.monto) || 0)));
+}
+const quedaSaldo = (r, c) => saldoVenta(r, c) > 0.009;
+const cuotasPendientes = (r, c) => (c.cuotas || []).filter((q) => q.estado !== 'pagado' && (!r.programa || q.programa_code === r.programa));
+const cobraCuotaExistente = (r, c) => esCuota(r) && cuotasPendientes(r, c).length > 0;
+const armaPlan = (r, c) => esVenta(r) && !esCompleto(r) && quedaSaldo(r, c) && !cobraCuotaExistente(r, c);
+const MAXIMO_CUOTAS = 12;
+const cantidadCuotas = (r) => Math.max(1, Math.min(MAXIMO_CUOTAS, Math.trunc(Number(r.num_cuotas) || 1)));
+function fechasCuotas(r) {
+  const n = cantidadCuotas(r);
+  if (r.installmentMode === 'custom') return Array.from({ length: n }, (_, i) => r.cuotaFechas?.[i + 1] || sumarMeses(hoyIso(), i + 1));
+  const dia = Math.max(1, Math.min(31, Math.trunc(Number(r.dia_de_pago) || 10)));
+  const base = `${hoyIso().slice(0, 8)}${String(dia).padStart(2, '0')}`;
+  return Array.from({ length: n }, (_, i) => sumarMeses(base, i + 1));
+}
+const montosCuotas = (r, c) => repartirCuotas(cantidadCuotas(r), saldoVenta(r, c), r.cuotaMontos || {});
+const cronogramaEnTexto = (r, c) => { const m = montosCuotas(r, c); return fechasCuotas(r).map((f, i) => `${fechaCorta(f)} ${moneda(m[i])}`).join(' · '); };
+
+// ======================================================================================
+// Catálogo de preguntas (arbolResultado.preguntas.js, modo «llamada» + venta directa)
+// ======================================================================================
+const RAICES = [
+  { valor: 'asistio', label: 'Asistió', color: '#2EE6C8', ico: 'checkc' },
+  { valor: 'no_asistio', label: 'No asistió', color: '#FF3FA4', ico: 'xc' },
+  { valor: 'cancelo', label: 'Canceló', color: '#FFB547', ico: 'calx' },
+  { valor: 'reagenda', label: 'Reagenda', color: '#7D8BFF', ico: 'calc' },
+];
+const PROGRAMAS = [
+  { valor: 'RR', label: 'Residency Roadmap', sub: 'RR' }, { valor: 'AL', label: 'Ace Learner', sub: 'AL' },
+  { valor: 'SI', label: 'Specialist Initiative', sub: 'SI' }, { valor: 'LT', label: 'Low Ticket', sub: 'LT · 100 USD por mes' },
+];
+const MEDIOS_PAGO = ['Stripe', 'PayPal', 'Transferencia Bancaria', 'Binance / USDT', 'Hotmart', 'Otro'];
+const TIPOS_PAGO = [
+  { valor: 'completo', clave: 'completo', label: 'Completo (PIF)', sub: 'Paga todo hoy' },
+  { valor: 'parcial', clave: 'parcial', label: 'Parcial (primer pago)', sub: 'Arranca un plan de cuotas' },
+  { valor: 'Seña', clave: 'seña', label: 'Seña', sub: 'Promesa de pago, sin cronograma todavía' },
+  { valor: 'Cuota', clave: 'cuota', label: 'Cuota', sub: 'Cobra una cuota del plan ya armado' },
+  { valor: 'Renovacion', clave: 'renovacion', label: 'Renovación', sub: 'Ya fue alumno, compra de nuevo' },
+  { valor: 'Upsell', clave: 'upsell', label: 'Upsell', sub: 'Suma otro programa o una mejora' },
+];
+const ESTADOS_VENTA = [
+  { valor: 'Completada', label: 'Completada', sub: 'todo en orden' }, { valor: 'Pendiente', label: 'Pendiente', sub: 'falta algo para cerrarla' },
+  { valor: 'Cancelada', label: 'Cancelada', sub: 'no va a concretarse' },
+];
+const opts = (l) => l.map((x) => ({ valor: x, label: x }));
+const si = { valor: true, label: 'Sí' }; const no = { valor: false, label: 'No' };
+const texto = (campo, label, extra = {}) => ({ campo, label, tipo: 'texto', ...extra });
+const enLlamada = (r) => r.venta_directa !== true;
+const vaASeguimiento = (r) => [r.nocierre_next, r.nopres_next, r.noshow_next, r.cancel_next].includes('seguimiento') || r.reag_dejo_fecha === false;
+const vaADescartar = (r) => ['perdido', 'descartar', 'no_lead'].some((v) => [r.nocierre_next, r.nopres_next, r.noshow_next, r.cancel_next].includes(v));
+const huboContacto = (r) => r.res === 'asistio' || r.venta_directa === true;
+function closersDeLaVenta() {
+  return CLOSERS.map((x) => ({ valor: x.id, label: x.nombre, sub: x.id === FICHA.closer.id ? 'Closer de esta agenda' : x.pista }))
+    .sort((a, b) => (b.sub === 'Closer de esta agenda') - (a.sub === 'Closer de esta agenda'));
+}
+const muestraEstadoCliente = (r, c) => esVenta(r) && !!r.programa && (!!c.cargandoVenta || (Number(c.estadoVenta?.sales_count) || 0) > 0);
+const enPlata = (v) => (v === '' || v == null ? null : moneda(v));
+
+const PREGUNTAS = [
+  { clave: 'res', hito: 'resultado', campo: 'res', tipo: 'opciones', enunciado: '¿Qué pasó con esta llamada?', opciones: RAICES, cuando: enLlamada },
+  { clave: 'decisor', campo: 'with_decision_maker', tipo: 'opciones', enunciado: '¿Estuvo el decisor?',
+    opciones: [{ ...si, label: 'Sí, con decisor', ico: 'userok' }, { ...no, label: 'No, sin decisor', ico: 'userx' }], cuando: (r) => enLlamada(r) && r.res === 'asistio' },
+  { clave: 'oferta', campo: 'offer_presented', tipo: 'opciones', enunciado: '¿Se presentó la oferta?',
+    opciones: [{ ...si, label: 'Sí, se presentó', ico: 'eye' }, { ...no, label: 'No se presentó', ico: 'eyeoff' }], cuando: (r) => enLlamada(r) && r.res === 'asistio' },
+  { clave: 'cierre', campo: 'cierre', tipo: 'opciones', enunciado: '¿Se cerró la venta?',
+    opciones: [{ ...si, label: 'Sí, cerró', sub: 'Registrar el pago', ico: 'up' }, { ...no, label: 'No cerró', ico: 'down' }], cuando: (r) => r.offer_presented === true },
+  { clave: 'objecion', tipo: 'formulario', enunciado: '¿Por qué no cerró? ¿Cuál es la objeción?',
+    ayuda: 'Lo que dijo, con sus palabras si podés. Queda en Comunicación y en la base de no cerradas.',
+    campos: [{ campo: 'objecion', label: 'Objeción', tipo: 'parrafo', requerido: true, minimoTexto: 10 }], cuando: (r) => r.cierre === false },
+  { clave: 'motivo_sin_oferta', tipo: 'formulario', enunciado: '¿Por qué no se cerró?',
+    ayuda: 'Contá por qué no se presentó la oferta, por qué no hubo ni una seña, o qué faltó para que terminara mejor.',
+    campos: [{ campo: 'motivo_sin_oferta', label: 'Motivo', tipo: 'parrafo', requerido: true, minimoTexto: 10 }], cuando: (r) => r.offer_presented === false },
+
+  // ---------- venta ----------
+  { clave: 'venta_nombre', tipo: 'formulario', enunciado: '¿Quién compró?', ayuda: 'Vino de la agenda. Confirmá que esté bien escrito.',
+    campos: [texto('nombre_cliente', 'Nombre y apellido', { requerido: true, precargado: true })], cuando: esVenta },
+  { clave: 'venta_instagram', tipo: 'formulario', enunciado: '¿Su Instagram?', ayuda: 'Sin arroba. Se usa para el seguimiento por DM.',
+    campos: [texto('instagram', 'Instagram', { requerido: true, prefijo: '@', precargado: true })], cuando: esVenta },
+  { clave: 'venta_email', tipo: 'formulario', enunciado: '¿Su email?', ayuda: 'Acá le llega el acceso al programa.',
+    campos: [texto('mail_cliente', 'Email', { requerido: true, tipo: 'email', precargado: true })], cuando: esVenta },
+  { clave: 'venta_telefono', tipo: 'formulario', enunciado: '¿Su teléfono?', ayuda: 'Con código de país, para WhatsApp.',
+    campos: [texto('telefono', 'Teléfono', { tipo: 'tel', precargado: true })], cuando: esVenta },
+  { clave: 'venta_documento', tipo: 'formulario', enunciado: '¿Su documento de identidad?', ayuda: 'DNI, NIE o pasaporte. Es el único dato que no trae la agenda.',
+    campos: [texto('documento_identidad', 'Documento de identidad', { precargado: true })], cuando: esVenta },
+  { clave: 'venta_closer', campo: 'vendedor_id', tipo: 'opciones', enunciado: '¿A quién se le atribuye la venta?', ayuda: 'La comisión va a este closer.',
+    opciones: () => closersDeLaVenta(), cuando: (r) => esVenta(r) && closersDeLaVenta().length > 1 },
+  { clave: 'programa', campo: 'programa', tipo: 'opciones', enunciado: '¿Qué programa compró?', opciones: PROGRAMAS, cuando: esVenta },
+  { clave: 'venta_estado_cliente', tipo: 'formulario', enunciado: 'Así viene este cliente',
+    ayuda: 'Ya tiene pagos registrados en este programa: el resto de la venta se ajusta solo.',
+    campos: [{ campo: 'estado_cliente', label: 'Estado de pagos', tipo: 'estado_cliente', enResumen: false }],
+    validar: (r, c) => (c.cargandoVenta ? ['Esperá a que cargue cómo viene pagando'] : []), cuando: muestraEstadoCliente },
+  { clave: 'tipo_pago', campo: 'tipo_pago_simple', tipo: 'opciones', enunciado: '¿Cómo paga?',
+    opciones: (r, c) => TIPOS_PAGO.map((t) => { const g = c.estadoVenta?.allowed_types?.[t.clave]; return { ...t, aviso: g && g.ok === false ? g.reason : null }; }),
+    cuando: esVenta },
+  { clave: 'liquidar', campo: 'settleBalanceWithSale', tipo: 'opciones',
+    enunciado: (r, c) => `Todavía debe ${moneda(saldoPrevio(c))} del programa. ¿Lo liquidás junto con esta venta?`,
+    ayuda: 'Se registra primero una Cuota por ese saldo y, si sale bien, la venta nueva.',
+    opciones: [{ valor: true, label: 'Sí, liquidarlo', sub: 'Cuota por el saldo + la venta nueva' }, { valor: false, label: 'No, solo la venta nueva', sub: 'El saldo sigue pendiente' }],
+    cuando: (r, c) => esVenta(r) && esRenovacionOUpsell(r) && !!c.estadoVenta?.can_settle_balance_with_installment && saldoPrevio(c) > 0.009 },
+  { clave: 'renovacion_meses', campo: 'meses_renovacion', tipo: 'opciones', enunciado: '¿Por cuánto renueva?',
+    opciones: [{ valor: 1, label: '1 mes', sub: 'Renovación mensual' }, { valor: 4, label: '4 meses', sub: 'Renovación cuatrimestral' }],
+    cuando: (r) => esVenta(r) && r.tipo_pago_simple === 'Renovacion' },
+  { clave: 'venta_montos', tipo: 'formulario',
+    enunciado: (r) => (esCompleto(r) ? '¿Cuánto cobraste?' : 'Precio total y cuánto cobrás hoy'),
+    ayuda: (r) => (esCompleto(r) ? null : 'El saldo se calcula solo.'),
+    campos: (r) => [
+      ...(esCompleto(r) ? [] : [{ campo: 'precio_total', label: 'Precio total', tipo: 'monto', requerido: true, minimo: 0.01, resumir: enPlata }]),
+      { campo: 'monto', label: esCompleto(r) ? 'Monto cobrado' : 'Cobrado hoy', tipo: 'monto', requerido: true, minimo: 0.01, resumir: enPlata },
+      texto('segundo_pago', 'Comentario del cobro (opcional)'),
+    ], cuando: esVenta },
+  { clave: 'medio_pago', campo: 'metodo_pago', tipo: 'opciones', enunciado: '¿Por dónde entró la plata?', opciones: opts(MEDIOS_PAGO), cuando: esVenta },
+  { clave: 'transferido_a', campo: 'transferido_a', tipo: 'opciones', enunciado: '¿A quién se le hizo la transferencia?',
+    ayuda: 'La plata quedó en la cuenta de esa persona: Finanzas lo muestra aparte.',
+    opciones: TRANSFERIDO_A.map((o) => ({ valor: o.clave, label: o.label, sub: o.descuenta ? 'Se le descuenta en Payroll' : 'No se descuenta' })),
+    cuando: (r) => esVenta(r) && r.metodo_pago === 'Transferencia Bancaria' },
+  { clave: 'venta_cuota', tipo: 'formulario', enunciado: '¿Cuál cuota se está pagando?', ayuda: 'Elegí cualquier pendiente: podés adelantar una futura o pagar una vencida.',
+    campos: [{ campo: 'selectedCuotaId', label: 'Cuota que se paga', tipo: 'cuota', requerido: true, falta: 'Elegí la cuota que se paga',
+      resumir: (v, r, c) => { const q = (c.cuotas || []).find((x) => x.id === v); return q ? `Cuota ${q.numero_cuota} · vence ${fechaCorta(q.fecha_vencimiento)} · ${moneda(q.monto)}` : null; } }],
+    cuando: (r, c) => esVenta(r) && cobraCuotaExistente(r, c) },
+  { clave: 'venta_num_cuotas', tipo: 'formulario', enunciado: (r, c) => `Te deben ${moneda(saldoVenta(r, c))}. ¿En cuántas cuotas?`, ayuda: 'Después definís cuándo se cobran.',
+    campos: [{ campo: 'num_cuotas', label: 'Cantidad de cuotas', tipo: 'contador', requerido: true, atajos: [2, 3, 4, 6],
+      resumir: (v, r) => `${cantidadCuotas(r)} ${cantidadCuotas(r) === 1 ? 'cuota' : 'cuotas'}` }], cuando: armaPlan },
+  { clave: 'venta_modo_cuotas', campo: 'installmentMode', tipo: 'opciones', enunciado: '¿El pago es mensual?', ayuda: 'Si es mensual solo elegís el día y el resto se calcula solo.',
+    opciones: [{ valor: 'monthly', label: 'Sí, todos los meses el mismo día', sub: 'Elegís un día y listo' }, { valor: 'custom', label: 'No, fechas distintas', sub: 'Cargás cada fecha a mano' }],
+    cuando: armaPlan },
+  { clave: 'venta_dia_pago', tipo: 'formulario', enunciado: '¿Qué día de cada mes paga?',
+    ayuda: 'Si el mes no tiene ese día, se cobra el último. Podés ajustar el monto de cada cuota abajo.',
+    campos: [{ campo: 'dia_de_pago', label: 'Día de pago', tipo: 'dia_mes', requerido: true, resumir: (v) => `El ${v} de cada mes` },
+      { campo: 'cuotaMontos', label: 'Cronograma', tipo: 'cronograma', resumir: (v, r, c) => cronogramaEnTexto(r, c) }],
+    cuando: (r, c) => armaPlan(r, c) && r.installmentMode === 'monthly' },
+  { clave: 'venta_fechas_cuotas', tipo: 'formulario', enunciado: '¿Cuándo cobrás cada cuota?',
+    ayuda: 'Estas fechas son las que te van a aparecer en seguimientos. La última cuota se ajusta sola para que la suma cierre.',
+    campos: [{ campo: 'cuotaFechas', label: 'Cronograma', tipo: 'cronograma', resumir: (v, r, c) => cronogramaEnTexto(r, c) }],
+    cuando: (r, c) => armaPlan(r, c) && r.installmentMode === 'custom' },
+  { clave: 'venta_examen', tipo: 'formulario', enunciado: '¿Qué examen rinde?', ayuda: 'Define el grupo y el contenido que recibe.',
+    campos: [texto('examen_lead', 'Examen', { precargado: true })], cuando: esVenta },
+  { clave: 'venta_fecha', tipo: 'formulario', enunciado: '¿Cuándo se cerró?', ayuda: 'Y si la firma fue dentro de la llamada.',
+    campos: [{ campo: 'date', label: 'Fecha de la venta', tipo: 'fecha', requerido: true, presets: [{ label: 'Hoy', dias: 0 }, { label: 'Ayer', dias: -1 }] },
+      { campo: 'sold_in_call', label: '¿Cerró en la llamada?', tipo: 'opcion', opciones: [true, false], etiquetas: { true: 'Sí, en el Meet', false: 'No, fuera de la llamada' } }],
+    cuando: esVenta },
+  { clave: 'venta_estado', campo: 'estado', tipo: 'opciones', enunciado: '¿Estado de la venta?', opciones: ESTADOS_VENTA, cuando: esVenta },
+  { clave: 'venta_notas', tipo: 'formulario', enunciado: 'Notas u observaciones', ayuda: 'Opcional: objeciones, detalles del cierre, lo que sirva después.',
+    campos: (r, c) => [{ campo: 'notas', label: 'Notas', tipo: 'parrafo' },
+      ...(quedaSaldo(r, c) ? [{ campo: 'fecha_cobro', label: 'Próximo seguimiento de cobro (opcional)', tipo: 'fecha', presets: [{ label: 'En 1 semana', dias: 7 }, { label: 'En 1 mes', dias: 30 }] }] : [])],
+    cuando: esVenta },
+
+  // ---------- sin venta ----------
+  { clave: 'nocierre_next', campo: 'nocierre_next', tipo: 'opciones', enunciado: 'Se presentó la oferta pero no se cerró. ¿Siguiente acción?',
+    opciones: [{ valor: 'seguimiento', label: 'Programar seguimiento' }, { valor: 'perdido', label: 'Lead perdido / descartado', sub: 'Descartar prospecto' }], cuando: (r) => r.cierre === false },
+  { clave: 'nopres_next', campo: 'nopres_next', tipo: 'opciones', enunciado: 'No se le presentó la oferta. ¿Siguiente paso?',
+    opciones: [{ valor: 'segunda', label: 'Agendar 2ª llamada', sub: 'Enviar a confirmación' }, { valor: 'seguimiento', label: 'Seguimiento', sub: 'Agendar más tarde' }, { valor: 'descartar', label: 'Descartar lead', sub: 'No califica' }],
+    cuando: (r) => r.offer_presented === false },
+  { clave: 'segunda_llamada', tipo: 'formulario', enunciado: 'Agendar la 2ª llamada',
+    campos: [{ campo: 'nueva_fecha_agenda', label: 'Nueva fecha', tipo: 'fecha', requerido: true }, { campo: 'nueva_hora_agenda', label: 'Nueva hora', tipo: 'hora' },
+      { campo: 'notes', label: 'Qué falta cubrir / Notas (opcional)', tipo: 'parrafo' }], cuando: (r) => r.nopres_next === 'segunda' },
+  { clave: 'noshow_motivo', campo: 'noshow_motivo', tipo: 'opciones', enunciado: '¿Por qué no se presentó?',
+    opciones: opts(['No contestó el mensaje', 'Bloqueó / desapareció', 'Se arrepintió', 'Problema técnico / horario', 'Confundió la fecha', 'Otro motivo']), cuando: (r) => r.res === 'no_asistio' },
+  { clave: 'noshow_detalle', tipo: 'formulario', enunciado: '¿Qué pasó exactamente?', campos: [{ campo: 'notes', label: 'Qué pasó exactamente', tipo: 'parrafo' }], cuando: (r) => r.res === 'no_asistio' },
+  { clave: 'noshow_next', campo: 'noshow_next', tipo: 'opciones', enunciado: '¿Siguiente paso operativo?',
+    opciones: [{ valor: 'seguimiento', label: 'Programar seguimiento', sub: 'Continuar contacto' }, { valor: 'descartar', label: 'Descartar lead', sub: 'Dar por perdido' }], cuando: (r) => r.res === 'no_asistio' },
+  { clave: 'cancel_motivo', campo: 'cancel_motivo', tipo: 'opciones', enunciado: '¿Cuál fue el motivo de la cancelación?',
+    opciones: opts(['Sin tiempo / imprevisto', 'Ya no le interesa', 'Problema económico', 'No dio motivo']), cuando: (r) => r.res === 'cancelo' },
+  { clave: 'cancel_detalle', tipo: 'formulario', enunciado: 'Comentario del closer', campos: [{ campo: 'notes', label: 'Detalle de lo que dijo', tipo: 'parrafo' }], cuando: (r) => r.res === 'cancelo' },
+  { clave: 'cancel_next', campo: 'cancel_next', tipo: 'opciones', enunciado: '¿Siguiente paso operativo?',
+    opciones: [{ valor: 'reagendar', label: 'Reagendar ahora', sub: 'Cambiar la cita' }, { valor: 'seguimiento', label: 'Seguimiento', sub: 'Programar contacto' }, { valor: 'no_lead', label: 'Marcar No Lead', sub: 'No califica' }],
+    cuando: (r) => r.res === 'cancelo' },
+  { clave: 'reag_motivo', campo: 'reag_motivo', tipo: 'opciones', enunciado: '¿Por qué se reagenda?',
+    opciones: opts(['Imprevisto del lead', 'Sin tiempo suficiente', 'Pidió otro horario', 'No dio motivo']), cuando: (r) => r.res === 'reagenda' || r.cancel_next === 'reagendar' },
+  { clave: 'reag_dejo_fecha', campo: 'reag_dejo_fecha', tipo: 'opciones', enunciado: '¿Dejó una fecha nueva?', ayuda: 'Si no dio fecha no es reagenda: se programa un seguimiento.',
+    opciones: [{ ...si, label: 'Sí, dejó fecha', sub: 'Vuelve a confirmaciones' }, { ...no, label: 'No dejó fecha', sub: 'Mandar a seguimiento' }],
+    cuando: (r) => r.res === 'reagenda' || r.cancel_next === 'reagendar' },
+  { clave: 'reag_fecha', tipo: 'formulario', enunciado: '¿Para cuándo queda?',
+    campos: [{ campo: 'nueva_fecha_agenda', label: 'Nueva fecha', tipo: 'fecha', requerido: true }, { campo: 'nueva_hora_agenda', label: 'Nueva hora', tipo: 'hora', requerido: true }],
+    cuando: (r) => r.reag_dejo_fecha === true },
+  { clave: 'seguimiento', tipo: 'formulario', enunciado: '¿Cuándo lo vas a seguir?', ayuda: 'Sin fecha va al pool del equipo.',
+    campos: [{ campo: 'fecha_seguimiento', label: 'Fecha del próximo contacto', tipo: 'fecha', presets: [{ label: 'Hoy', dias: 0 }, { label: 'Mañana', dias: 1 }, { label: 'En 1 semana', dias: 7 }] },
+      { campo: 'followup_reminder_enabled', label: 'Avisarme por WhatsApp', tipo: 'booleano' },
+      { campo: 'followup_reminder_time', label: 'Hora del aviso', tipo: 'hora', junto: 'followup_reminder_enabled' },
+      { campo: 'notes', label: 'Ángulo del seguimiento / Notas (opcional)', tipo: 'parrafo' }],
+    cuando: vaASeguimiento },
+  { clave: 'descarte', tipo: 'formulario', enunciado: '¿Por qué se descarta?', ayuda: 'El motivo queda en la bitácora del lead.',
+    campos: [{ campo: 'motivo_descarte', label: 'Motivo', tipo: 'parrafo', requerido: true, minimoTexto: 3 }], cuando: vaADescartar },
+
+  // ---------- después de la venta ----------
+  { clave: 'refs_ask', campo: 'refs_ask', tipo: 'opciones', enunciado: '¿Le pediste un referido?',
+    ayuda: (r) => (esVenta(r) ? 'El mejor momento para pedirlo ya pasó. Contá qué salió.' : null),
+    opciones: [{ valor: 'si', label: 'Sí le pedí y me dio', sub: 'Cargamos los contactos' }, { valor: 'no', label: 'Sí le pedí, no me dio', sub: 'Queda registrado igual' }, { valor: 'no_pedido', label: 'No le pedí', sub: 'La próxima' }],
+    cuando: huboContacto },
+  { clave: 'refs_filas', tipo: 'formulario', enunciado: 'Nombre y contacto de cada referido', ayuda: 'Con nombre y contacto entran directo a Confirmaciones como una llamada nueva.',
+    campos: [{ campo: 'refs_rows', label: 'Referidos', tipo: 'filas' }],
+    validar: (r) => (!(r.refs_rows || []).some((f) => (f.nombre || '').trim()) ? ['Cargá al menos un referido con nombre'] : []),
+    cuando: (r) => huboContacto(r) && r.refs_ask === 'si' },
+  { clave: 'venta_academia', campo: 'dar_acceso_academia', tipo: 'opciones', enunciado: '¿Le das acceso a la Academia?',
+    ayuda: (r) => `Con el email ${r.mail_cliente || '(sin email)'}. Sí, si esta venta arranca o renueva su acceso real al programa; no hace falta en una venta de prueba o en la Cuota de alguien que ya entra.`,
+    opciones: (r) => [{ valor: true, label: 'Sí, darle acceso', sub: `Crea o renueva su usuario con ${r.mail_cliente || 'su email'}` }, { valor: false, label: 'No por ahora', sub: 'Se le puede dar después' }],
+    cuando: esVenta },
+  { clave: 'venta_acceso_hasta', tipo: 'formulario', enunciado: '¿Hasta cuándo tiene acceso?', ayuda: 'Opcional. Vacío: 7 días si es una seña, 4 meses si no (o lo que ya tenga, si es más).',
+    campos: [{ campo: 'acceso_hasta', label: 'Acceso hasta (opcional)', tipo: 'fecha', presets: [{ label: '4 meses', meses: 4 }, { label: '6 meses', meses: 6 }, { label: '1 año', meses: 12 }] }],
+    cuando: (r) => esVenta(r) && r.dar_acceso_academia === true },
+];
+const ETAPA = (q) => (['res', 'decisor', 'oferta', 'cierre', 'objecion', 'motivo_sin_oferta', 'nocierre_next', 'nopres_next', 'segunda_llamada', 'noshow_motivo', 'noshow_detalle', 'noshow_next', 'cancel_motivo', 'cancel_detalle', 'cancel_next', 'reag_motivo', 'reag_dejo_fecha', 'reag_fecha', 'seguimiento', 'descarte'].includes(q.clave) ? 'La llamada'
+  : ['venta_nombre', 'venta_instagram', 'venta_email', 'venta_telefono', 'venta_documento', 'venta_closer'].includes(q.clave) ? 'Datos del comprador'
+    : ['programa', 'venta_estado_cliente'].includes(q.clave) ? 'Qué compró'
+      : ['venta_examen', 'venta_fecha', 'venta_estado', 'venta_notas'].includes(q.clave) ? 'Datos de la venta'
+        : ['refs_ask', 'refs_filas', 'venta_academia', 'venta_acceso_hasta'].includes(q.clave) ? 'Después de la venta' : 'Cómo paga');
+
+// ======================================================================================
+// Recorrido (arbolResultado.js)
+// ======================================================================================
+const PASOS = '_pasos'; const ANTES = '_antes';
+const indiceDe = (k) => PREGUNTAS.findIndex((q) => q.clave === k);
+const resolver = (v, r, c) => (typeof v === 'function' ? v(r, c) : v);
+const normalizar = (q, r, c) => (q ? { ...q, opciones: resolver(q.opciones, r, c) || [], campos: resolver(q.campos, r, c) || [], enunciado: resolver(q.enunciado, r, c), ayuda: resolver(q.ayuda, r, c) || null } : null);
+const contestada = (q, r) => (q.tipo === 'formulario' ? (r[PASOS] || []).includes(q.clave) : r[q.campo] !== undefined && r[q.campo] !== null);
+const caminoActivo = (r, c) => PREGUNTAS.filter((q) => (q.cuando ? !!q.cuando(r, c) : true));
+const preguntaActual = (r, c) => normalizar(caminoActivo(r, c).find((q) => !contestada(q, r)), r, c);
+const arrancado = (r) => r.res !== undefined || r.venta_directa === true;
+const completo = (r, c) => arrancado(r) && preguntaActual(r, c) === null;
+const vacio = (v) => v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0);
+function faltaDelCampo(campo, r) {
+  const v = r[campo.campo];
+  if (campo.minimoTexto) { const l = String(v || '').trim().length; return l < campo.minimoTexto ? `${campo.label} (mínimo ${campo.minimoTexto} caracteres, llevás ${l})` : null; }
+  if (campo.tipo === 'monto') { const n = parseFloat(v); return Number.isNaN(n) || n < (campo.minimo ?? 0) ? (campo.falta || `Cargá ${campo.label}`) : null; }
+  return vacio(v) ? (campo.falta || `Completá ${campo.label}`) : null;
+}
+function faltantesDe(q, r, c) {
+  if (!q) return [];
+  if (q.tipo !== 'formulario') return ['Elegí una de las opciones'];
+  return [...q.campos.filter((x) => x.requerido).map((x) => faltaDelCampo(x, r)).filter(Boolean), ...(q.validar ? q.validar(r, c) || [] : [])];
+}
+function responder(r, clave, valores = {}) {
+  const idx = indiceDe(clave); const q = PREGUNTAS[idx];
+  const { [ANTES]: antes = {}, ...limpio } = r;
+  const previo = q.tipo === 'formulario' ? undefined : (Object.prototype.hasOwnProperty.call(antes, q.campo) ? antes[q.campo] : r[q.campo]);
+  const cambia = q.tipo !== 'formulario' && previo !== undefined && previo !== null && previo !== valores[q.campo];
+  let pasos = r[PASOS] || [];
+  if (cambia) {
+    pasos = pasos.filter((p) => { const i = indiceDe(p); return i >= 0 && i <= idx; });
+    PREGUNTAS.slice(idx + 1).forEach((s) => { if (s.tipo !== 'formulario') delete limpio[s.campo]; });
+  }
+  const restantes = Object.fromEntries(Object.entries(antes).filter(([k]) => k !== q.campo));
+  return { ...limpio, ...valores, ...(Object.keys(restantes).length && !cambia ? { [ANTES]: restantes } : {}), [PASOS]: [...new Set([...pasos, clave])] };
+}
+function volverA(r, clave) {
+  const q = PREGUNTAS[indiceDe(clave)];
+  const out = { ...r, [PASOS]: (r[PASOS] || []).filter((p) => p !== clave) };
+  if (q.tipo !== 'formulario') { if (r[q.campo] !== undefined) out[ANTES] = { ...(r[ANTES] || {}), [q.campo]: r[q.campo] }; delete out[q.campo]; }
+  return out;
+}
+function anterior(r, c) {
+  const camino = caminoActivo(r, c); const actual = preguntaActual(r, c);
+  const hasta = actual ? camino.findIndex((q) => q.clave === actual.clave) : camino.length;
+  for (let i = hasta - 1; i >= 0; i -= 1) if (contestada(camino[i], r)) return volverA(r, camino[i].clave);
+  if (r.venta_directa === true) { const { venta_directa: _, ...resto } = r; return resto; }
+  return null;
+}
+const elegida = (r, campo) => (r[campo] !== undefined ? r[campo] : r[ANTES]?.[campo]);
+function progresoVenta(r, c) {
+  if (!esVenta(r)) return null;
+  const camino = caminoActivo(r, c); const desde = camino.findIndex((q) => q.clave === 'venta_nombre');
+  if (desde < 0) return null;
+  const tramo = camino.slice(desde); const actual = preguntaActual(r, c);
+  if (!actual) return { paso: tramo.length, total: tramo.length, listo: true };
+  const p = tramo.findIndex((q) => q.clave === actual.clave);
+  return p < 0 ? null : { paso: p + 1, total: tramo.length, listo: false };
+}
+function hitos(r, c) {
+  const SIN = ['no_asistio', 'cancelo', 'reagenda'];
+  const sinVenta = SIN.includes(r.res) || r.offer_presented === false || r.cierre === false;
+  const cerro = r.cierre ?? (r.venta_directa ? true : null);
+  const tipo = esVenta(r) ? r.tipo_pago_simple : undefined;
+  const deuda = tipo && (esCompleto(r) || (r[PASOS] || []).includes('venta_montos')) ? quedaSaldo(r, c) : null;
+  const up = !tipo ? null : ({ Renovacion: 'Renovación', Upsell: 'Upsell' }[tipo] || 'none');
+  const lbl = { asistio: 'Asistió', no_asistio: 'No asistió', cancelo: 'Canceló', reagenda: 'Reagenda' };
+  const dec = r.with_decision_maker == null ? '' : (r.with_decision_maker ? ' · con decisor' : ' · sin decisor');
+  const h = [
+    { label: 'Confirmado', sub: 'Agenda confirmada', a: true, m: false },
+    { label: 'Resultado', sub: r.venta_directa ? 'Venta directa' : (r.res ? lbl[r.res] + dec : 'Sin reportar'), a: arrancado(r), m: !!r.res && r.res !== 'asistio' },
+  ];
+  if (!SIN.includes(r.res)) h.push({ label: 'Cierre', sub: cerro === null ? (r.offer_presented === false ? 'Sin oferta' : 'Pendiente') : (cerro ? 'Venta cerrada' : 'No cerró'), a: cerro !== null || r.offer_presented === false, m: cerro === false || r.offer_presented === false });
+  if (sinVenta) {
+    const el = r.nocierre_next || r.nopres_next || r.noshow_next || r.cancel_next;
+    const sub = r.nopres_next === 'segunda' ? '2ª llamada' : r.reag_dejo_fecha === true ? 'Nueva llamada' : (r.reag_dejo_fecha === false || el === 'seguimiento') ? 'Seguimiento' : el === 'no_lead' ? 'No Lead' : el ? 'Lead descartado' : null;
+    h.push({ label: 'Siguiente paso', sub: sub || 'Por elegir', a: !!sub, m: ['No Lead', 'Lead descartado'].includes(sub) });
+  } else {
+    h.push({ label: 'Deuda', sub: deuda === null ? 'Pendiente' : (deuda ? 'Con deuda' : 'Sin deuda'), a: deuda !== null, m: deuda === true });
+    h.push({ label: 'Upsell', sub: up === null ? 'Renovación o upsell' : (up === 'none' ? 'Ninguno' : up), a: !!up && up !== 'none', m: false });
+  }
+  return h.map((x) => ({ ...x, estado: x.a ? (x.m ? 'alerta' : 'hecho') : 'pendiente' }));
+}
+
+// ---- revisión (arbolResultado.revision.js) ----
+const SECCION_DE = {
+  res: 'llamada', decisor: 'llamada', oferta: 'llamada', cierre: 'llamada',
+  venta_nombre: 'cliente', venta_instagram: 'cliente', venta_email: 'cliente', venta_telefono: 'cliente', venta_documento: 'cliente', venta_closer: 'cliente', venta_examen: 'cliente',
+  programa: 'programa', venta_estado_cliente: 'programa',
+  tipo_pago: 'pago', liquidar: 'pago', renovacion_meses: 'pago', venta_montos: 'pago', medio_pago: 'pago', transferido_a: 'pago', venta_cuota: 'pago', venta_num_cuotas: 'pago', venta_modo_cuotas: 'pago', venta_dia_pago: 'pago', venta_fechas_cuotas: 'pago',
+  venta_fecha: 'fechas', venta_estado: 'fechas', venta_notas: 'notas',
+  refs_ask: 'despues', refs_filas: 'despues', venta_academia: 'despues', venta_acceso_hasta: 'despues',
+};
+const SECCIONES_VENTA = [['cliente', 'Cliente'], ['programa', 'Programa'], ['pago', 'Forma de pago'], ['fechas', 'Fechas y estado'], ['notas', 'Notas'], ['despues', 'Después de la venta'], ['llamada', 'La llamada'], ['otros', 'Otros datos']];
+const OPCIONALES = [['venta_telefono', 'telefono', 'Teléfono'], ['venta_documento', 'documento_identidad', 'Documento de identidad'], ['venta_examen', 'examen_lead', 'Examen'], ['venta_notas', 'notas', 'Notas']];
+function formatoValor(v) {
+  if (typeof v === 'boolean') return v ? 'Sí' : 'No';
+  if (Array.isArray(v)) return v.map((x) => (typeof x === 'object' && x ? Object.values(x).filter(Boolean).join(' · ') : String(x))).filter(Boolean).join(', ');
+  return String(v);
+}
+function resumen(r, c) {
+  const filas = [];
+  caminoActivo(r, c).forEach((cr) => {
+    if (!contestada(cr, r)) return;
+    const q = normalizar(cr, r, c);
+    if (q.tipo !== 'formulario') { const o = q.opciones.find((x) => x.valor === r[q.campo]); filas.push({ clave: q.clave, paso: q.clave, label: q.enunciado, valor: o ? o.label : String(r[q.campo]) }); return; }
+    q.campos.forEach((f) => {
+      const crudo = r[f.campo];
+      if (f.enResumen === false || (vacio(crudo) && !f.resumir)) return;
+      const v = f.resumir ? f.resumir(crudo, r, c) : (f.etiquetas && f.etiquetas[String(crudo)]) || formatoValor(crudo);
+      if (v == null || v === '') return;
+      filas.push({ clave: `${q.clave}.${f.campo}`, paso: q.clave, label: f.label, valor: v });
+    });
+  });
+  return filas;
+}
+function avisosVenta(r, c) {
+  const a = []; const add = (id, nivel, texto, paso, frena) => a.push({ id, nivel, texto, paso, frena });
+  if (r.mail_cliente && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.mail_cliente.trim())) add('email', 'error', 'El email no parece válido: ahí le llega el acceso al programa.', 'venta_email');
+  const ig = String(r.instagram || '').trim().replace(/^@+/, '');
+  if (ig && (/^(no|no tengo|no tiene|ninguno|na|n\/a|x|-+|\.+)$/i.test(ig) || /\s/.test(ig))) add('ig', 'error', 'El Instagram no parece un usuario: si no tiene, dejalo vacío.', 'venta_instagram', true);
+  const has = (k) => (r[PASOS] || []).includes(k);
+  if (has('venta_telefono') && vacio(r.telefono)) add('tel', 'aviso', 'Sin teléfono: no se le podrá escribir por WhatsApp.', 'venta_telefono');
+  if (has('venta_documento') && vacio(r.documento_identidad)) add('doc', 'aviso', 'Sin documento de identidad.', 'venta_documento');
+  if (has('venta_examen') && vacio(r.examen_lead)) add('ex', 'aviso', 'Sin examen: define el grupo y el contenido que recibe.', 'venta_examen');
+  const total = parseFloat(r.precio_total) || 0; const cob = parseFloat(r.monto) || 0;
+  if (!esCompleto(r) && total > 0 && cob > total + 0.009) add('cob', 'error', `Cobrado hoy (${moneda(cob)}) es mayor que el precio total (${moneda(total)}).`, 'venta_montos');
+  else if (!esCompleto(r) && total > 0 && pagadoAntes(c) + cob > total + 0.009) add('pag', 'aviso', `Con lo que ya pagó antes (${moneda(pagadoAntes(c))}) se supera el precio total.`, 'venta_montos');
+  if (r.date > hoyIso()) add('fut', 'error', 'La fecha de la venta es futura.', 'venta_fecha');
+  if (armaPlan(r, c)) {
+    const m = montosCuotas(r, c); const paso = r.installmentMode === 'custom' ? 'venta_fechas_cuotas' : 'venta_dia_pago';
+    const mala = m.findIndex((x) => !(x > 0));
+    if (mala >= 0) add('cero', 'error', `La cuota ${mala + 1} quedó sin monto: los montos cargados pasan el saldo.`, paso);
+  }
+  return a;
+}
+function revisionVenta(r, c) {
+  const por = {}; const meter = (f) => { const id = SECCION_DE[f.paso] || 'otros'; (por[id] = por[id] || []).push(f); };
+  resumen(r, c).forEach(meter);
+  OPCIONALES.forEach(([paso, campo, label]) => {
+    if (!(r[PASOS] || []).includes(paso) || !vacio(r[campo])) return;
+    if (!(por[SECCION_DE[paso]] || []).some((f) => f.paso === paso)) meter({ clave: `${paso}.${campo}`, paso, label, valor: 'Sin cargar', vacia: true });
+  });
+  const tipo = TIPOS_PAGO.find((t) => t.valor === r.tipo_pago_simple); const prog = PROGRAMAS.find((p) => p.valor === r.programa);
+  const cobrado = parseFloat(r.monto) || 0;
+  return {
+    secciones: SECCIONES_VENTA.map(([id, titulo]) => ({ id, titulo, filas: por[id] || [] })).filter((s) => s.filas.length),
+    avisos: esVenta(r) ? avisosVenta(r, c) : [],
+    numeros: { total: esCompleto(r) ? cobrado : (parseFloat(r.precio_total) || 0), cobrado, saldo: esVenta(r) ? saldoVenta(r, c) : 0, antes: pagadoAntes(c), programa: prog?.label || '', tipoPago: tipo?.label || '' },
+  };
+}
+
+// ======================================================================================
+// Estado de la pantalla
+// ======================================================================================
+const precargar = () => ({
+  [PASOS]: [], nombre_cliente: FICHA.nombre, instagram: FICHA.instagram, mail_cliente: FICHA.email, telefono: FICHA.telefono,
+  documento_identidad: '', examen_lead: FICHA.examen, sold_in_call: true, enviar_webhook: true, date: hoyIso(), num_cuotas: 1, dia_de_pago: 10, refs_rows: [],
+});
+const S = { escenario: 'nuevo', R: precargar(), hecho: null, recorrido: true, clics: 0, cargando: false, leido: null, sugerido: '' };
+S.precarga = precargar();
+function contexto() {
+  const esc = ESCENARIOS[S.escenario]; const p = esVenta(S.R) ? S.R.programa : null;
+  const base = p && S.leido === p ? esc.estado(p) : null;
+  const estado = base ? { ...base, program_price: PRECIOS[p] } : (p && S.leido === p ? { program_price: PRECIOS[p], total_paid: 0, balance_remaining: 0, sales_count: 0 } : null);
+  return { estadoVenta: estado, cargandoVenta: !!p && S.leido !== p, cuotas: esc.cuotas };
+}
+// Simula `useEstadoVenta`: al elegir programa se consulta y tarda un poco.
+let consultando = null;
+function vigilarPrograma() {
+  const p = esVenta(S.R) ? S.R.programa : null;
+  if (!p || S.leido === p || consultando === p) return;
+  consultando = p;
+  setTimeout(() => {
+    if (consultando !== p) return;
+    consultando = null; S.leido = p;
+    const e = contexto().estadoVenta;
+    const precio = e.program_price ? String(e.program_price) : '';
+    if (precio && (!S.R.precio_total || S.R.precio_total === S.sugerido)) S.R.precio_total = precio;
+    S.sugerido = precio;
+    if (e.total_paid > 0 && e.balance_remaining > 0 && !S.R.monto) S.R.monto = String(e.balance_remaining);
+    render();
+  }, 650);
+}
+
+// ======================================================================================
+// Íconos (lucide)
+// ======================================================================================
+const P = {
+  checkc: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>', xc: '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/>',
+  calx: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M14 14l-4 4M10 14l4 4"/>',
+  calc: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M12 14v3l2 1"/>',
+  left: '<path d="m12 19-7-7 7-7M19 12H5"/>', right: '<path d="M5 12h14M12 5l7 7-7 7"/>', rot: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+  dollar: '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>', pen: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
+  alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4M12 17h.01"/>',
+  userok: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m16 11 2 2 4-4"/>',
+  userx: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m17 8 5 5M22 8l-5 5"/>',
+  eye: '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
+  eyeoff: '<path d="M9.88 9.88a3 3 0 1 0 4.24 4.24M10.73 5.08A10.4 10.4 0 0 1 12 5c7 0 10 7 10 7a13.2 13.2 0 0 1-1.67 2.68M6.61 6.61A13.5 13.5 0 0 0 2 12s3 7 10 7a9.7 9.7 0 0 0 5.39-1.61M2 2l20 20"/>',
+  up: '<path d="M7 10v12M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>',
+  down: '<path d="M17 14V2M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>',
+  hist: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5M12 7v5l4 2"/>', phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/>',
+  wallet: '<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>',
+  clip: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M9 14l2 2 4-4"/>',
+  book: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+  file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M16 13H8M16 17H8"/>',
+  msg: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>', x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>', clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  map: '<path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/>', check: '<path d="M20 6 9 17l-5-5"/>', send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+};
+const ic = (n, s) => `<svg viewBox="0 0 24 24"${s ? ` style="width:${s}px;height:${s}px"` : ''}>${P[n] || ''}</svg>`;
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+
+// ======================================================================================
+// Pintado
+// ======================================================================================
+function render() {
+  const foco = document.activeElement; const fk = foco?.dataset?.k; let sel = null;
+  try { sel = foco?.selectionStart; } catch (e) { sel = null; }
+  vigilarPrograma();
+  const c = contexto();
+  document.getElementById('app').innerHTML = `${barraMockup(c)}<div class="lay"><div class="win">${cabecera()}${pestanas()}<div class="panel">${resultado(c)}</div></div>${S.recorrido ? recorrido(c) : ''}</div>`;
+  if (fk) {
+    const el = document.querySelector(`[data-k="${fk}"]`);
+    if (el) { el.focus(); try { if (sel != null) el.setSelectionRange(sel, sel); } catch (e) { /* date/number */ } }
+  } else {
+    const auto = document.querySelector('[data-auto]'); if (auto && S.autofoco) { auto.focus(); S.autofoco = false; }
+  }
+}
+
+function barraMockup(c) {
+  const camino = arrancado(S.R) ? caminoActivo(S.R, c) : [];
+  const hechas = camino.filter((q) => contestada(q, S.R)).length;
+  return `<div class="mk"><span class="tag">Mockup</span><b>Reportar una venta · pestaña Resultado</b>
+    <div class="seg" role="group" aria-label="Escenario">${Object.entries(ESCENARIOS).map(([k, e]) => `<button data-act="escenario" data-v="${k}" aria-pressed="${S.escenario === k}">${e.label}</button>`).join('')}</div>
+    <span class="sp"></span>
+    <span class="mk-cont"><span><b>${hechas}</b>/ ${camino.length || '–'} pantallas</span><span><b>${S.clics}</b>clics</span></span>
+    <button class="mk-btn" data-act="recorrido" aria-pressed="${S.recorrido}">${ic('map', 14)} Recorrido</button>
+    <button class="mk-btn" data-act="atajo">${ic('dollar', 14)} Saltar a la venta</button></div>`;
+}
+
+function cabecera() {
+  const d = (ico, rot, val) => `<div class="dato"><span class="rot">${ic(ico)} ${rot}</span><span class="val">${val}</span></div>`;
+  return `<div class="win-cab"><div class="cab"><div class="cab-tit"><h2>${esc(FICHA.nombre)}</h2><button class="cab-x" aria-label="Cerrar">${ic('x')}</button></div>
+    <div class="cab-datos">${d('user', 'Closer', `<span class="avatar">KR</span>${FICHA.closer.nombre}`)}${d('phone', 'Teléfono', `<span class="punto"></span>${FICHA.telefono}`)}
+    ${d('clock', 'Llamada', FICHA.llamada)}${d('send', 'Fuente', FICHA.fuente)}${d('user', 'Setter', FICHA.setter)}</div></div></div>`;
+}
+function pestanas() {
+  const t = [['clip', 'Confirmación'], ['phone', 'Resultado'], ['wallet', 'Acciones'], ['hist', 'Historial'], ['book', 'Bitácora'], ['file', 'Formulario'], ['msg', 'Comunicación']];
+  return `<div class="tabs" role="tablist">${t.map(([i, l]) => `<button class="tab" role="tab" aria-selected="${l === 'Resultado'}">${ic(i)} ${l}</button>`).join('')}</div>`;
+}
+
+function resultado(c) {
+  const hs = hitos(S.R, c);
+  const stp = hs.map((h, i) => {
+    const sig = h.estado === 'pendiente' && i > 0 && hs[i - 1].estado !== 'pendiente';
+    const fill = h.estado !== 'pendiente' && hs[i + 1] && hs[i + 1].estado !== 'pendiente';
+    return `<div class="paso${sig ? ' sig' : ''}${fill ? ' fill' : ''}" data-e="${h.estado}" title="${esc(h.sub)}"><i></i><span>${h.label}</span><small>${esc(h.sub)}</small></div>`;
+  }).join('');
+  let main; let clave;
+  if (S.hecho) { main = hecho(); clave = 'hecho'; }
+  else if (!arrancado(S.R)) { main = raices(); clave = 'raices'; }
+  else if (completo(S.R, c)) { main = revision(c); clave = 'revision'; }
+  else { const q = preguntaActual(S.R, c); main = pregunta(q, c); clave = q.clave; }
+  // Solo se anima la entrada a una pantalla nueva, no cada tecla que re-pinta la misma.
+  const animar = clave !== S.ultima; S.ultima = clave;
+  const pr = progresoVenta(S.R, c);
+  const barra = pr && !S.hecho ? `<div class="prog"><span class="eyebrow">${pr.listo ? 'Venta · revisión' : `Venta · paso ${pr.paso} de ${pr.total}`}</span>
+    <div class="prog-riel"><i style="width:${Math.round((pr.listo ? 1 : (pr.paso - 1) / pr.total) * 100)}%"></i></div></div>` : '';
+  return `<div class="res"><aside class="hitos"><span class="hitos-tit">Progreso</span><div class="stp">${stp}</div></aside>
+    <div class="res-main">${barra}<section${animar ? ' class="entra"' : ''}>${main}</section></div></div>`;
+}
+
+function raices() {
+  return `<h3>¿Qué pasó con esta llamada?</h3><div class="raices">${RAICES.map((o) => `<button class="raiz" style="--c:${o.color}" data-act="raiz" data-v="${o.valor}">${ic(o.ico)}${o.label}</button>`).join('')}</div>
+    <div class="otras"><button class="otra" data-act="directa">${ic('dollar', 18)} Registrar una venta</button><button class="otra">${ic('rot', 18)} Pasar a seguimiento</button></div>`;
+}
+
+function botonesAtras(disabled) {
+  return `<span class="atras"><button class="btn btn-linea" data-act="anterior"${disabled ? ' disabled' : ''}>${ic('left')} Anterior</button>
+    <button class="btn btn-linea" data-act="reiniciar"${disabled ? ' disabled' : ''}>${ic('rot')} Empezar de nuevo</button></span>`;
+}
+
+function pregunta(q, c) {
+  const R = S.R;
+  const cab = `<h3>${esc(q.enunciado)}</h3>${q.ayuda ? `<p class="ayuda">${esc(q.ayuda)}</p>` : ''}`;
+  if (q.tipo !== 'formulario') {
+    const min = q.opciones.length > 2 ? 180 : 220;
+    const ops = q.opciones.map((o, i) => {
+      const ico = o.ico || (o.valor === true ? 'up' : o.valor === false ? 'down' : null);
+      return `<button class="op${ico ? '' : ' sin-ico'}" style="animation-delay:${i * 30}ms" data-act="op" data-i="${i}" aria-pressed="${elegida(R, q.campo) === o.valor}"${o.aviso ? ' data-aviso' : ''}>
+        ${ico ? `<span class="op-ico">${ic(ico, 18)}</span>` : ''}<b>${esc(o.label)}</b>${o.sub ? `<small>${esc(o.sub)}</small>` : ''}${o.aviso ? `<small class="aviso">${ic('alert', 12)}${esc(o.aviso)}</small>` : ''}</button>`;
+    }).join('');
+    const aviso = q.opciones.some((o) => o.aviso) ? `<div class="alert warn" style="margin-top:16px">${ic('alert')}<span class="alert-body"><b>Algunos tipos no siguen el historial de pagos de este cliente</b><span>Podés declararlo igual. Si es un dato viejo mal cargado, corregilo en el historial.</span></span><button class="btn btn-linea btn-sm">${ic('hist', 14)} Ver historial</button></div>` : '';
+    return `${cab}<div class="ops" style="grid-template-columns:repeat(auto-fit,minmax(${min}px,1fr))">${ops}</div>${aviso}<div class="botonera" style="justify-content:flex-start">${botonesAtras()}</div>`;
+  }
+  const falta = faltantesDe(q, R, c);
+  const enCampo = new Set(q.campos.filter((f) => f.minimoTexto).map((f) => faltaDelCampo(f, R)).filter(Boolean));
+  const par = q.campos.some((f) => f.junto);
+  const primero = q.campos.find((f) => ['texto', 'monto', undefined].includes(f.tipo) || f.tipo === 'parrafo');
+  const campos = q.campos.filter((f) => !f.junto).map((f) => campo(f, q, c, f === primero)).join('');
+  const saldo = q.clave === 'venta_montos' && !esCompleto(R) ? `<div class="cajita saldo"><span class="eyebrow">Saldo a financiar</span><b class="mono" style="color:${quedaSaldo(R, c) ? 'var(--warn)' : 'var(--ok)'}">${quedaSaldo(R, c) ? moneda(saldoVenta(R, c)) : 'Sin saldo'}</b></div>` : '';
+  const chips = falta.filter((f) => !enCampo.has(f));
+  const pend = chips.length ? `<div class="faltan" role="status"><i></i><span>Falta</span>${chips.map((f) => `<b>${esc(f.replace(/^(Completá|Elegí|Cargá)\s+/i, ''))}</b>`).join('')}</div>` : '';
+  return `${cab}<div class="form${par ? ' par' : ''}">${campos}</div>${saldo}${pend}
+    <div class="botonera">${botonesAtras()}<button class="btn btn-cta" data-act="continuar"${falta.length ? ' disabled' : ''}>Continuar ${ic('right')}</button></div>`;
+}
+
+function origen(f) {
+  if (!f.precargado) return '';
+  const antes = String(S.precarga[f.campo] ?? '').trim(); const ahora = String(S.R[f.campo] ?? '').trim();
+  const o = !antes ? 'vos' : antes === ahora ? 'agenda' : 'corregido';
+  return `<span class="origen ${o}">${{ agenda: 'De la agenda', corregido: 'Corregido', vos: 'Cargado por vos' }[o]}</span>`;
+}
+
+function campo(f, q, c, auto) {
+  const R = S.R; const v = R[f.campo];
+  const lbl = (extra = '') => `<span class="fw-lbl"><span>${esc(f.label)}${f.requerido ? '' : ' <span class="faint">(opcional)</span>'}</span>${extra}</span>`;
+  const a = auto ? ' data-auto' : '';
+  switch (f.tipo) {
+    case 'parrafo': {
+      const largo = String(v || '').trim().length;
+      const min = f.minimoTexto ? `<div class="minimo${largo >= f.minimoTexto ? ' listo' : ''}"><span class="minimo-riel"><i style="width:${Math.min(100, (largo / f.minimoTexto) * 100)}%"></i></span><small>${largo >= f.minimoTexto ? '✓ Listo' : `${largo}/${f.minimoTexto}`}</small></div>` : '';
+      return `<label class="fw fw-ancho">${lbl()}<span class="field"><textarea data-k="${f.campo}"${a}>${esc(v)}</textarea></span>${min}</label>`;
+    }
+    case 'monto':
+      return `<label class="fw">${lbl()}<span class="field"><span class="pre">$</span><input inputmode="decimal" data-k="${f.campo}" value="${esc(v)}"${a}></span></label>`;
+    case 'fecha': {
+      const presets = (f.presets || []).map((p) => { const val = p.meses ? sumarMeses(hoyIso(), p.meses) : enDias(p.dias); return `<button class="chip" data-act="preset" data-f="${f.campo}" data-v="${val}" aria-pressed="${v === val}">${p.label}</button>`; }).join('');
+      return `<div class="fw">${lbl()}<span class="field"><input type="date" data-k="${f.campo}" value="${esc(v)}"></span>${presets ? `<div class="presets">${presets}</div>` : ''}</div>`;
+    }
+    case 'hora':
+      return `<label class="fw">${lbl()}<span class="field"><input type="time" data-k="${f.campo}" value="${esc(v)}"></span></label>`;
+    case 'opcion':
+      return `<div class="fw">${lbl()}<div class="toggle2">${f.opciones.map((o) => `<button data-act="opcion" data-f="${f.campo}" data-v="${o}" aria-pressed="${v === o}">${f.etiquetas[String(o)]}</button>`).join('')}</div></div>`;
+    case 'contador': {
+      const n = cantidadCuotas(R);
+      return `<div class="fw">${lbl()}<div class="contador"><button class="redondo" data-act="cont" data-d="-1">−</button><span class="n mono">${n}</span><button class="redondo" data-act="cont" data-d="1">+</button>
+        <span class="presets">${f.atajos.map((x) => `<button class="chip" data-act="cont-set" data-v="${x}" aria-pressed="${n === x}">${x} cuotas</button>`).join('')}</span></div>
+        <small class="mut">${n} × ${moneda(saldoVenta(R, c) / n)} aprox.</small></div>`;
+    }
+    case 'dia_mes':
+      return `<div class="fw">${lbl()}<div class="presets">${[1, 5, 10, 15, 20, 25, 28, 30].map((d) => `<button class="chip" data-act="dia" data-v="${d}" aria-pressed="${Number(v) === d}">${d}</button>`).join('')}
+        <span class="field" style="min-height:32px;width:90px"><input type="number" min="1" max="31" data-k="dia_de_pago" value="${esc(v)}" style="padding:4px 0"></span></div></div>`;
+    case 'cronograma': return `<div class="fw fw-ancho">${cronograma(c, false)}</div>`;
+    case 'cuota': {
+      const ps = cuotasPendientes(R, c);
+      return `<div class="fw fw-ancho">${lbl()}<div class="cuotas">${ps.map((x) => `<button class="cuota" data-act="cuota" data-v="${x.id}" aria-pressed="${v === x.id}"><span class="radio"></span>
+        <span><b>Cuota ${x.numero_cuota}</b> <small class="mut">· vence ${fechaCorta(x.fecha_vencimiento)} · <span style="color:${x.estado === 'vencido' ? 'var(--bad)' : 'var(--warn)'}">${x.estado === 'vencido' ? 'Vencida' : 'Pendiente'}</span></small></span><b class="mono">${moneda(x.monto)}</b></button>`).join('')}</div></div>`;
+    }
+    case 'estado_cliente': {
+      const e = c.estadoVenta;
+      if (c.cargandoVenta || !e) return `<div class="cajita fw-ancho"><div class="hueso" style="width:60%"></div><div class="hueso" style="width:45%"></div><div class="hueso" style="width:35%"></div></div>`;
+      return `<div class="cajita fw-ancho"><div class="cajita-fila"><span class="mut">Pagó</span><b class="mono">${moneda(e.total_paid)} de ${moneda(e.program_price)}</b></div>
+        <div class="cajita-fila"><span class="mut">Le falta</span><b class="mono" style="color:${e.balance_remaining > 0 ? 'var(--warn)' : 'var(--ok)'}">${moneda(e.balance_remaining)}</b></div>
+        <div class="cajita-fila"><span class="mut">Ventas registradas</span><b>${e.sales_count}</b></div></div>`;
+    }
+    case 'filas': {
+      const rows = R.refs_rows || [];
+      return `<div class="fw fw-ancho">${lbl()}<div class="filas">${rows.map((row, i) => `<div class="filas-row"><span class="field"><input placeholder="Nombre" data-k="ref-${i}-nombre" value="${esc(row.nombre)}"></span>
+        <span class="field"><input placeholder="@instagram o teléfono" data-k="ref-${i}-contacto" value="${esc(row.contacto)}"></span><button class="quitar" data-act="ref-del" data-i="${i}" aria-label="Quitar">${ic('x', 14)}</button></div>`).join('')}
+        <button class="linkbtn" data-act="ref-add">+ Agregar otro referido</button></div></div>`;
+    }
+    case 'booleano': {
+      const p = q.campos.find((x) => x.junto === f.campo);
+      return `<div class="fw"><span class="fw-lbl">&nbsp;</span><label class="check"><input type="checkbox" data-k="${f.campo}" data-bool${v ? ' checked' : ''}> ${esc(f.label)}
+        ${p && v ? `<span class="field"><input type="time" data-k="${p.campo}" value="${esc(R[p.campo])}"></span>` : ''}</label></div>`;
+    }
+    default:
+      return `<label class="fw">${lbl(origen(f))}<span class="field">${f.prefijo ? `<span class="pre">${f.prefijo}</span>` : ''}<input type="${f.tipo === 'email' ? 'email' : 'text'}" data-k="${f.campo}" value="${esc(v)}"${a}></span></label>`;
+  }
+}
+
+function cronograma(c, soloLectura) {
+  const R = S.R; const saldo = saldoVenta(R, c); const m = montosCuotas(R, c); const fs = fechasCuotas(R); const mensual = R.installmentMode !== 'custom';
+  const filas = fs.map((f, i) => {
+    const ultima = i === fs.length - 1;
+    const fecha = soloLectura || mensual ? `<span>${fechaCorta(f)}</span>` : `<span class="field"><input type="date" data-k="cf-${i + 1}" value="${f}"></span>`;
+    const monto = soloLectura || ultima ? `<b class="mono" style="text-align:right">${moneda(m[i])}</b>` : `<span class="field"><span class="pre">$</span><input inputmode="decimal" data-k="cm-${i + 1}" value="${R.cuotaMontos?.[i + 1] ?? m[i]}"></span>`;
+    return `<div class="crono-fila"><span class="mut">Cuota ${i + 1}</span>${fecha}${monto}</div>`;
+  }).join('');
+  return `<span class="eyebrow">Saldo a financiar · ${moneda(saldo)}</span><div class="crono">${filas}</div>
+    ${soloLectura ? '' : `<div class="crono-pie"><span>La última cuota se ajusta sola.</span><button class="linkbtn" data-act="repartir">Repartir parejo</button></div>`}`;
+}
+
+function revision(c) {
+  const R = S.R; const venta = esVenta(R); const rev = revisionVenta(R, c);
+  const errores = rev.avisos.filter((a) => a.nivel === 'error'); const avisos = rev.avisos.filter((a) => a.nivel !== 'error');
+  const frena = venta && errores.some((a) => a.frena);
+  const n = rev.numeros;
+  const hero = venta ? `<section class="hero"><div><span class="sec-tit">Total de la venta</span><div class="hero-monto mono">${moneda(n.total)}</div>
+    <small class="mut">${[n.programa, n.tipoPago].filter(Boolean).join(' · ')}${n.antes > 0 ? ` · ya había pagado ${moneda(n.antes)}` : ''}</small></div>
+    <div class="cifras"><div><span class="sec-tit">Cobrado hoy</span><b class="mono">${moneda(n.cobrado)}</b></div>
+    <div><span class="sec-tit">Saldo</span><b class="mono" style="color:${n.saldo > 0.009 ? 'var(--warn)' : 'var(--ok)'}">${n.saldo > 0.009 ? moneda(n.saldo) : 'Sin saldo'}</b></div>
+    <div><span class="sec-tit">Medio de pago</span><b style="font-size:15px">${esc(R.metodo_pago || 'Sin elegir')}</b></div></div></section>` : '';
+  const caja = (lista, tipo, titulo) => (lista.length ? `<div class="alert ${tipo}">${ic('alert')}<span class="alert-body"><b>${titulo}</b><ul>${lista.map((a) => `<li><span>${esc(a.texto)}</span><button class="linkbtn" data-act="editar" data-paso="${a.paso}">${ic('pen', 12)} Corregir</button></li>`).join('')}</ul></span></div>` : '');
+  const secciones = venta ? rev.secciones : [{ id: 'r', titulo: 'Lo que reportaste', filas: rev.secciones.flatMap((s) => s.filas) }];
+  const secs = secciones.map((s) => `<section class="sec"><span class="sec-tit">${s.titulo}</span><div class="fichas">${s.filas.map((f, i) => `<div class="ficha${f.vacia ? ' vacia' : ''}${String(f.valor).length > 40 ? ' ancha' : ''}" style="animation-delay:${i * 30}ms">
+    <span class="r">${esc(f.label)}</span><button class="linkbtn" data-act="editar" data-paso="${f.paso}">${ic('pen', 12)} ${f.vacia ? 'Completar' : 'Editar'}</button><span class="v">${esc(f.valor)}</span></div>`).join('')}</div></section>`).join('');
+  const plan = venta && armaPlan(R, c) ? `<section class="sec"><span class="sec-tit">Cronograma de cuotas</span><div class="cajita">${cronograma(c, true)}</div></section>` : '';
+  const saldo = venta && n.saldo > 0.009 ? `<div class="alert warn">${ic('alert')}<span class="alert-body"><b>Queda saldo por cobrar: ${moneda(n.saldo)}</b><span>Al guardar se abre la pestaña «Acciones» para seguir el cobro.</span></span></div>` : '';
+  const hook = venta ? `<label class="webhook"><input type="checkbox" data-k="enviar_webhook" data-bool${R.enviar_webhook !== false ? ' checked' : ''}><span><b>Avisar por la automatización (n8n)</b><small>Dispara los mensajes automáticos al cliente y las notificaciones del equipo. Apagalo solo si ya avisaste vos o si es una venta de prueba.</small></span></label>` : '';
+  const txt = frena ? 'Corregí los datos del cliente' : venta ? (rev.avisos.length ? 'Registrar la venta de todos modos' : 'Registrar la venta') : 'Guardar el resultado';
+  return `<div class="rev"><header><h3>${venta ? 'Revisá la venta antes de registrarla' : 'Revisá el resultado antes de guardarlo'}</h3><p class="ayuda">Tocá «Editar» en cualquier dato para corregirlo.</p></header>
+    ${hero}${caja(errores, 'err', errores.length === 1 ? 'Hay un dato que parece incorrecto' : `Hay ${errores.length} datos que parecen incorrectos`)}
+    ${caja(avisos, 'warn', avisos.length === 1 ? 'Un dato para mirar' : `${avisos.length} datos para mirar`)}${secs}${plan}${saldo}${hook}
+    <div class="botonera">${botonesAtras()}<button class="btn btn-cta" data-act="guardar"${frena ? ' disabled' : ''}>${ic('checkc')} ${txt}</button></div></div>`;
+}
+
+function hecho() {
+  const h = S.hecho;
+  let linea = 'Resultado guardado'; let det = 'Ya podés cerrar la ficha.';
+  if (h.venta && h.saldo > 0.009) { linea = `Queda un saldo de ${moneda(h.saldo)}`; det = 'El cobro sigue en «Acciones»: el plan, los pagos y los seguimientos.'; }
+  else if (h.venta) { linea = 'Pagó todo: no queda saldo por cobrar'; det = 'Ya podés cerrar la ficha, o revisar el historial del cliente.'; }
+  return `<div style="display:grid;gap:16px"><div class="alert ok">${ic('checkc', 20)}<span class="alert-body"><b>${linea}</b><span>${det}</span></span></div>
+    <div class="botonera"><button class="btn btn-linea" data-act="reiniciar">${ic('rot')} Reportar otra (mockup)</button><button class="btn btn-linea">${ic('hist')} Ver historial</button>${h.venta ? `<button class="btn btn-cta">Ir a Acciones ${ic('right')}</button>` : ''}</div></div>`;
+}
+
+function recorrido(c) {
+  if (!arrancado(S.R)) return `<aside class="reco"><h4>Recorrido</h4><p>Elegí qué pasó con la llamada (o «Registrar una venta») para ver todas las pantallas que tiene el camino.</p></aside>`;
+  const camino = caminoActivo(S.R, c); const actual = preguntaActual(S.R, c);
+  let grupo = ''; let html = '';
+  camino.forEach((q, i) => {
+    const g = ETAPA(q); if (g !== grupo) { grupo = g; html += `<div class="reco-g">${g}</div>`; }
+    const est = contestada(q, S.R) ? 'hecho' : actual?.clave === q.clave ? 'actual' : '';
+    const enun = resolver(q.enunciado, S.R, c);
+    html += `<button class="reco-i ${est}" ${est === 'hecho' ? `data-act="editar" data-paso="${q.clave}"` : ''}><span class="n">${est === 'hecho' ? '✓' : i + 1}</span><span>${esc(enun)}</span><em>${q.tipo === 'formulario' ? 'form' : 'opciones'}</em></button>`;
+  });
+  const venta = camino.filter((q) => ETAPA(q) !== 'La llamada').length;
+  return `<aside class="reco"><h4>Recorrido · ${camino.length} pantallas</h4><p>${esVenta(S.R) ? `${venta} son de la venta. ` : ''}El total cambia con lo que se responde (saldo → cronograma, transferencia → a quién). Tocá una hecha para volver a ella.</p>${html}</aside>`;
+}
+
+// ======================================================================================
+// Eventos
+// ======================================================================================
+function elegir(clave, valores) { S.R = responder(S.R, clave, valores); S.autofoco = true; }
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-act]'); if (!t || t.disabled) return;
+  const act = t.dataset.act; const c = contexto(); const v = t.dataset.v;
+  if (!['escenario', 'recorrido'].includes(act)) S.clics += 1;
+  switch (act) {
+    case 'escenario': S.escenario = v; S.R = precargar(); S.hecho = null; S.leido = null; S.sugerido = ''; consultando = null; S.clics = 0; break;
+    case 'recorrido': S.recorrido = !S.recorrido; break;
+    case 'atajo': S.R = responder(responder(responder(responder(precargar(), 'res', { res: 'asistio' }), 'decisor', { with_decision_maker: true }), 'oferta', { offer_presented: true }), 'cierre', { cierre: true }); S.hecho = null; S.clics = 0; break;
+    case 'raiz': elegir('res', { res: v }); break;
+    case 'directa': S.R = { ...S.R, venta_directa: true }; break;
+    case 'op': {
+      const q = preguntaActual(S.R, c); const o = q.opciones[Number(t.dataset.i)];
+      const val = { [q.campo]: o.valor };
+      if (q.clave === 'refs_ask' && o.valor === 'si' && !(S.R.refs_rows || []).length) val.refs_rows = [{ nombre: '', contacto: '' }];
+      elegir(q.clave, val); break;
+    }
+    case 'continuar': { const q = preguntaActual(S.R, c); if (!faltantesDe(q, S.R, c).length) elegir(q.clave, {}); break; }
+    case 'anterior': { const a = anterior(S.R, c); if (a) S.R = a; break; }
+    case 'reiniciar': S.R = precargar(); S.hecho = null; S.leido = null; S.sugerido = ''; consultando = null; break;
+    case 'preset': S.R[t.dataset.f] = v; break;
+    case 'opcion': S.R[t.dataset.f] = v === 'true'; break;
+    case 'cont': S.R.num_cuotas = Math.max(1, Math.min(MAXIMO_CUOTAS, cantidadCuotas(S.R) + Number(t.dataset.d))); S.R.cuotaMontos = {}; break;
+    case 'cont-set': S.R.num_cuotas = Number(v); S.R.cuotaMontos = {}; break;
+    case 'dia': S.R.dia_de_pago = Number(v); break;
+    case 'cuota': S.R.selectedCuotaId = Number(v); break;
+    case 'repartir': S.R.cuotaMontos = {}; break;
+    case 'ref-add': S.R.refs_rows = [...(S.R.refs_rows || []), { nombre: '', contacto: '' }]; break;
+    case 'ref-del': S.R.refs_rows = S.R.refs_rows.filter((_, i) => i !== Number(t.dataset.i)); break;
+    case 'editar': S.R = volverA(S.R, t.dataset.paso); S.autofoco = true; break;
+    case 'guardar': S.hecho = { venta: esVenta(S.R), saldo: saldoVenta(S.R, c) }; break;
+    default: return;
+  }
+  render();
+});
+document.addEventListener('input', (e) => {
+  const k = e.target.dataset?.k; if (!k) return;
+  let m;
+  if (e.target.dataset.bool !== undefined) S.R[k] = e.target.checked;
+  else if ((m = k.match(/^ref-(\d+)-(\w+)$/))) S.R.refs_rows[Number(m[1])][m[2]] = e.target.value;
+  else if ((m = k.match(/^cm-(\d+)$/))) S.R.cuotaMontos = { ...(S.R.cuotaMontos || {}), [m[1]]: e.target.value };
+  else if ((m = k.match(/^cf-(\d+)$/))) S.R.cuotaFechas = { ...(S.R.cuotaFechas || {}), [m[1]]: e.target.value };
+  else S.R[k] = e.target.value;
+  if (k === 'followup_reminder_enabled' && S.R[k] && !S.R.followup_reminder_time) S.R.followup_reminder_time = '09:00';
+  render();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
+  const b = document.querySelector('[data-act="continuar"]'); if (b && !b.disabled) b.click();
+});
+render();
+</script>
+</body>
+</html>
