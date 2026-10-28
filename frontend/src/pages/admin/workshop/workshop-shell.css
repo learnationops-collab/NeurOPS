@@ -46,6 +46,8 @@
 .dc-shell .ws-cab-tabs { grid-area: tabs; min-width: 0; display: flex; }
 .dc-shell .ws-cab-filtros { grid-area: filtros; min-width: 0; }
 .dc-shell .ws-cab-filtros:empty { display: none; }
+.dc-shell .ws-cab-alcance { margin: var(--s2) 0 0; color: var(--text-muted); }
+.dc-shell .ws-cab-alcance b { color: var(--text-on-surface); }
 .dc-shell .ws-cab-filtros .wf-barra { justify-content: flex-start; }
 .dc-shell .ws-cab-acc { grid-area: acc; display: flex; align-items: center; gap: var(--s2); justify-self: end; }
 

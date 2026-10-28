@@ -19,6 +19,7 @@ import RendimientoTab from './tabs/RendimientoTab';
 import Legado from './tabs/Legado';
 import CorrelacionesTab from './correlaciones/CorrelacionesTab';
 import { aCamposLocales, aInicioUtc, esProximo, zonaNavegador } from './agendaTaller';
+import { alcanceDeWorkshop } from './alcanceWorkshop';
 
 /**
  * Workshop: cuatro pestañas desde el 16/10/2026 (antes nueve sueltas), más Rendimiento (24/10/2026).
@@ -332,7 +333,7 @@ const WorkshopDashboardPage = () => {
             <CabeceraWorkshop pestanas={PESTANAS} activa={activeTab} onPestana={(key) => irA(key)}
                 eventos={events} onIrAProximos={() => irA('planificar', { vista: 'proximos' })}
                 recargando={recargando} onRecargar={activeTab === 'trafico' || activeTab === 'rendimiento' ? null : recargar}
-                onRegistrar={handleOpenCreateModal}>
+                onRegistrar={handleOpenCreateModal} alcance={alcanceDeWorkshop(activeTab, realizados, params)}>
 
                 <div className="ws-contenido">
                         {/* Tráfico no depende de los talleres cargados: va fuera de los guards de abajo. */}
