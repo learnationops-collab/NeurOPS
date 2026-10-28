@@ -1177,3 +1177,6 @@
   - Las tarjetas de fuente dividían los que asistieron entre todas las agendas, y Workshop entre las citas con resultado. Ahora las dos usan asistieron ÷ (asistieron + no show).
   - Asistió cuenta lo mismo que en Workshop (`bucket_estado`): también Cerrada, Follow Up y 2TH Call. Antes solo «Show Up» y «Asistió».
   - «Agenda → show» de Todos usa el mismo denominador (`reportadas`); los textos de ayuda lo dicen.
+- **28 de Octubre de 2026 (Marketing: las dos cuentas de agendas dicen en qué se basan)** *([TablaAnuncios.jsx](../../frontend/src/pages/admin/marketing/anuncios/TablaAnuncios.jsx), [fuentes.js](../../frontend/src/pages/admin/marketing/anuncios/fuentes.js))*:
+  - La tabla cuenta las citas por palabra clave de ManyChat y las tarjetas de fuente cuentan el libro de agendas por setter o taller. Medido en producción del 28/09 al 28/10: 177 con palabra clave + 71 sin ella en la tabla contra 171 de Setting y 61 de Workshop en las tarjetas.
+  - De las 267 citas del período, 246 tienen su agenda vigente en el libro; 7 la tienen creada fuera del período y 14 no tienen (ninguna descartada ni duplicada). No se unificó el origen: la diferencia es chica y viene de la base de cada cuenta, así que cada ayuda dice cuál usa.
