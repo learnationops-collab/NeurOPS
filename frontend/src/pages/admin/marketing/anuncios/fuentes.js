@@ -16,7 +16,7 @@ export const GRUPOS_COMPARACION = [
             ayuda: 'Setting: personas que escribieron una palabra clave. Workshop: clics al grupo de WhatsApp.' },
         { key: 'agendas', label: 'Agendas', formato: 'num', ayuda: 'Personas con agenda creada en el período, por fuente.' },
         { key: 'show_up', label: 'Show up', formato: 'num', pct: 'pct_show_up', mejor: 'mas', porPct: true,
-            ayuda: 'Agendados que asistieron a la llamada. Se corona por el % sobre las agendas.' },
+            ayuda: 'Asistieron ÷ citas con resultado (asistieron + no show). Se corona por ese %.' },
         { key: 'ventas', label: 'Ventas', formato: 'num', ayuda: 'Pagos de venta nueva (completo o split) del período.' },
         { key: 'cuotas', label: 'Cuotas cobradas', formato: 'num', monto: 'cuotas_monto',
             ayuda: 'Cuotas del período de clientes que trajo la fuente, aunque la venta sea de antes.' },

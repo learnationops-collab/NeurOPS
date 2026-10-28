@@ -14,7 +14,8 @@ show up, ventas, cuotas cobradas, cash y los costos.
     sin procedencia) no es de ninguna de las dos y queda en `otras`.
   · **Base**: cash BRUTO, como el «Cash collected» del dashboard comercial y la tabla de Marketing.
   · **Agendas y show up**: las `FinancialAgenda` (el libro de agendas) creadas en el período, una por
-    persona, con la fuente que dice su `nombre`. Show up: la persona asistió a alguna de sus agendas.
+    persona, con la fuente que dice su `nombre`. Show up: la persona asistió a alguna de sus agendas;
+    su % es asistieron ÷ citas con resultado (asistieron + no show), igual que Workshop.
   · **Leads entrantes**: Setting, las personas que escribieron una palabra clave (la tabla de abajo);
     Workshop, los clics al grupo de WhatsApp desde las landings de sus anuncios.
   · **Importe gastado**: el gasto de Meta de los anuncios del embudo (`meta_ads_service.gasto_por_embudo`).
@@ -48,6 +49,7 @@ from datetime import datetime, time
 from app import db
 from app.models import FinancialAgenda
 from app.services.fuente_service import FUENTE_SETTING, es_workshop_landing, es_workshop_vivo, normalizar
+from app.services.workshop_estados import bucket_estado
 from app.services.procedencia_ingresos_service import (
     agendas_para_atribuir,
     procedencia_por_venta,
@@ -62,7 +64,6 @@ FUENTES = (
 # Lo que hay en `FinancialAgenda.nombre` y no es una fuente de lead (mismas exclusiones que `fuente_de`).
 _NO_ES_FUENTE = ('s/f', 'n/a', '')
 _NO_ES_FUENTE_SI_CONTIENE = ('entrevista', 'diagnostica', 'diagnóstica')
-_ASISTIO = ('show up', 'asistio')
 
 
 def dividir(numerador, denominador, decimales=2):
@@ -81,7 +82,8 @@ def metricas_de_fuente(base):
         'gasto': gasto,
         'new_cash': new_cash,
         'cash_total': cash_total,
-        'pct_show_up': dividir(base.get('show_up', 0) * 100, base.get('agendas', 0), 1),
+        # Igual que Workshop: asistieron ÷ citas con resultado (asistieron + no show), no ÷ todas las agendas.
+        'pct_show_up': dividir(base.get('show_up', 0) * 100, base.get('reportadas', base.get('agendas', 0)), 1),
         'pct_upsell': dividir(base.get('clientes_upsell', 0) * 100, base.get('clientes', 0), 1),
         'cpl': dividir(gasto, base.get('leads', 0)) if con_gasto else None,
         'costo_agenda': dividir(gasto, base.get('agendas', 0)) if con_gasto else None,
@@ -163,8 +165,10 @@ def fuente_de_agenda(nombre, setters):
 
 
 def agendas_por_fuente(desde, hasta):
-    """{fuente: {agendas, show_up, dias: {fecha: agendas}}}: las agendas creadas en el período, una por
-    persona (las repetidas de una reprogramación no suman) y show up si asistió a alguna."""
+    """{fuente: {agendas, show_up, reportadas, dias: {fecha: agendas}}}: las agendas creadas en el período,
+    una por persona (las repetidas de una reprogramación no suman) y show up si asistió a alguna.
+    `reportadas` = con resultado (show up o, si no asistió, no show en su última cita); mismo criterio
+    que `workshop_estados.desglose_de_personas` (`bucket_estado`)."""
     inicio, fin = datetime.combine(desde, time.min), datetime.combine(hasta, time.max)
     setters = setters_conocidos()
     filas = db.session.query(
@@ -180,13 +184,16 @@ def agendas_por_fuente(desde, hasta):
         if not fuente:
             continue
         persona = por_persona.setdefault((fuente, f.person_uuid or f'agenda-{f.id}'),
-                                         {'dia': f.created_at.date().isoformat(), 'asistio': False})
-        persona['asistio'] = persona['asistio'] or normalizar(f.estado) in _ASISTIO
+                                         {'dia': f.created_at.date().isoformat(), 'asistio': False, 'ultima': None})
+        bucket = bucket_estado(f.estado)
+        persona['asistio'] = persona['asistio'] or bucket == 'Show Up'
+        persona['ultima'] = bucket
 
-    salida = {f['key']: {'agendas': 0, 'show_up': 0, 'dias': Counter()} for f in FUENTES}
+    salida = {f['key']: {'agendas': 0, 'show_up': 0, 'reportadas': 0, 'dias': Counter()} for f in FUENTES}
     for (fuente, _), p in por_persona.items():
         salida[fuente]['agendas'] += 1
         salida[fuente]['show_up'] += 1 if p['asistio'] else 0
+        salida[fuente]['reportadas'] += 1 if p['asistio'] or p['ultima'] == 'No Show' else 0
         salida[fuente]['dias'][p['dia']] += 1
     return salida
 
@@ -242,6 +249,7 @@ def resumen(desde, hasta, filas, cobros, claves, embudos):
             **f, **cobros_fuente[k],
             'leads': leads[k], 'gasto': meta['gasto'], 'anuncios': meta['anuncios'],
             'agendas': agendas[k]['agendas'], 'show_up': agendas[k]['show_up'],
+            'reportadas': agendas[k]['reportadas'],
             'agendas_dias': dict(sorted(agendas[k]['dias'].items())),
         }))
     return {'fuentes': salida, 'otras': {'cash_total': round(otras['cash_total'], 2), 'cobros': otras['cobros']},

@@ -39,7 +39,7 @@ export const TarjetasFuente = ({ fuente, moneda }) => {
           tip: 'Gasto de Meta de los anuncios del embudo.' },
         { titulo: TITULOS[2], valor: formatear(fuente.agendas, 'num'),
           sub: `${dinero(fuente.costo_agenda)} por agenda · show up ${fuente.pct_show_up === null ? '—' : `${fuente.pct_show_up}%`}`,
-          tip: 'Personas con agenda creada en el período. El show up es el % que asistió.' },
+          tip: 'Personas con agenda creada en el período. Show up: asistieron ÷ citas con resultado.' },
         { titulo: TITULOS[3], valor: formatear(fuente.ventas, 'num'), sub: `${dinero(fuente.costo_venta)} por venta`,
           tip: 'Pagos de venta nueva (completo o split) del período.' },
         { titulo: TITULOS[4], valor: dinero(fuente.new_cash), sub: 'venta nueva del período',
