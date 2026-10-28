@@ -60,6 +60,9 @@
 .dc-shell .mk-kpi-ver{margin-left:auto;flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;cursor:pointer;
   color:var(--text-muted);background:transparent;border:1px solid var(--border-subtle);transition:color .16s,border-color .16s,background-color .16s}
 .dc-shell .mk-kpi-ver:hover,.dc-shell .mk-kpi-ver:focus-visible{color:var(--text-on-surface);border-color:var(--brand-secondary);outline:none}
+/* Su tooltip va debajo y pegado a la derecha: arriba lo cortaba la tarjeta (overflow:hidden) y centrado se salía por el borde. */
+.dc-shell .mk-kpi-ver[data-tip]:hover::after,.dc-shell .mk-kpi-ver[data-tip]:focus-visible::after{bottom:auto;top:calc(100% + 8px);left:auto;right:0;transform:none}
+.dc-shell .kpi:has(.mk-kpi-ver:hover),.dc-shell .kpi:has(.mk-kpi-ver:focus-visible){overflow:visible;z-index:20}
 
 /* --- Gráficos por día --- */
 .dc-shell .mk-shell, .dc-shell.mk-shell{--mk-resto:color-mix(in srgb,var(--text-on-surface) 24%,transparent)}

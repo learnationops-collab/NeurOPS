@@ -53,7 +53,7 @@ export const Kpi = ({ titulo, valor, sub, tip, i, onVer, cuenta = null, onCuenta
                 <Tip texto={tip} titulo={titulo} />
                 {onVer && (
                     <button type="button" className="mk-kpi-ver" onClick={onVer} aria-label={`Ver los registros de ${titulo}`}
-                        data-tip="Ver registros|Las filas que suman esta cifra">
+                        data-tip="Ver las filas que suman esta cifra">
                         <Eye size={15} aria-hidden="true" />
                     </button>
                 )}
