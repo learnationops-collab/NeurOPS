@@ -47,6 +47,7 @@ export const archivarPalabraClave = (clave, archivado) =>
 export const mensajeDeError = (error, porDefecto) =>
     error?.response?.data?.error || error?.response?.data?.message || porDefecto;
 
-/** La lista que suma una cifra de una fuente (`fuente`: setting | workshop; `metrica`: ver fuentes_registros_service). */
-export const pedirRegistros = (fuente, metrica, desde, hasta, config = {}) =>
-    api.get('/marketing/anuncios/registros', { params: { fuente, metrica, desde, hasta }, ...config }).then((r) => r.data);
+/** La lista que suma una cifra de una fuente (`fuente`: setting | workshop; `metrica`: ver fuentes_registros_service). Con `segmento`
+ *  (A, B, C, D, sin; '' = todos) la lista trae la columna de segmento y solo ese grupo. */
+export const pedirRegistros = (fuente, metrica, desde, hasta, config = {}, segmento = undefined) =>
+    api.get('/marketing/anuncios/registros', { params: { fuente, metrica, desde, hasta, segmento }, ...config }).then((r) => r.data);

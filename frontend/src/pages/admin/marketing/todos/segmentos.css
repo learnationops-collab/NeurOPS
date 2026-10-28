@@ -1,0 +1,22 @@
+/* Todos › Segmentos: la matriz A/B/C/D por fuente. */
+.dc-shell .sg-filtro{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap}
+.dc-shell .sg-chip{display:inline-flex;align-items:center;gap:6px;cursor:pointer;opacity:.62;transition:opacity .15s}
+.dc-shell .sg-chip[aria-pressed="true"],.dc-shell .sg-chip:hover{opacity:1}
+.dc-shell .sg-chip[aria-pressed="true"]{box-shadow:inset 0 0 0 1px var(--c)}
+.dc-shell .sg-chip small{font-weight:600;color:var(--text-muted)}
+.dc-shell .sg-punto{display:inline-block;width:9px;height:9px;border-radius:3px;flex:none}
+.dc-shell .sg-panel{display:flex;flex-direction:column;gap:var(--s4);padding:var(--s5)}
+.dc-shell .sg-panel .panel-cab{margin-bottom:0}
+.dc-shell .sg-tabla{display:flex;flex-direction:column;gap:2px;overflow-x:auto}
+.dc-shell .sg-fila{display:grid;grid-template-columns:minmax(130px,1.1fr) repeat(6,minmax(96px,1fr)) minmax(80px,.8fr);
+  gap:var(--s3);align-items:center;padding:var(--s3);border-radius:var(--radius-control);min-width:820px}
+.dc-shell .sg-fila:not(.sg-fila--cab):not(.sg-fila--total){background:var(--bg-element)}
+.dc-shell .sg-fila:not(.sg-fila--cab):not(.sg-fila--total):hover{background:var(--bg-element-hover)}
+.dc-shell .sg-fila--cab{padding-block:0}
+.dc-shell .sg-fila--total{border-top:1px solid var(--border-subtle);border-radius:0;margin-top:var(--s2)}
+.dc-shell .sg-nombre{display:flex;align-items:center;gap:var(--s2);min-width:0}
+.dc-shell .sg-celda{display:flex;flex-direction:column;gap:2px;min-width:0}
+.dc-shell .sg-pct{color:var(--text-muted)}
+.dc-shell .sg-pct .td-cc{color:inherit;font-weight:700}
+.dc-shell .sg-pct--bien .td-cc{color:var(--success)}
+.dc-shell .sg-pct--mal .td-cc{color:var(--error)}
