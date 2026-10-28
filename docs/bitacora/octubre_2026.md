@@ -1173,3 +1173,7 @@
 - **28 de Octubre de 2026 (Reportar una venta: propuesta en mockup y ADR-W013)** *([reportar_venta.html](../mockups/reportar_venta.html), [reportar_venta_hoy.html](../mockups/reportar_venta_hoy.html), [DECISIONS.md](../DECISIONS.md), [modelo.md](../../.agents/rules/modelo.md))*:
   - Mockup del flujo de hoy (20 pantallas para un alumno nuevo con cuotas) y de la propuesta: venta nueva y pago separados, 6 pantallas para la venta nueva (5 si paga todo) y 3 para un pago, datos confirmados en una pantalla con el correo del acceso destacado, sin documento ni examen. Todavía no se implementó en la app.
   - Regla: todo subsistema, tenga modelo o no, suma su ADR en `docs/DECISIONS.md`. Una decisión sobre un mockup entra como «propuesta».
+- **28 de Octubre de 2026 (Marketing: un solo show up en Setting y Workshop)** *([fuentes_service.py](../../app/services/fuentes_service.py), [comparacion.js](../../frontend/src/pages/admin/marketing/todos/comparacion.js), [fuentes.js](../../frontend/src/pages/admin/marketing/anuncios/fuentes.js), [FuentesResumen.jsx](../../frontend/src/pages/admin/marketing/anuncios/FuentesResumen.jsx))*:
+  - Las tarjetas de fuente dividían los que asistieron entre todas las agendas, y Workshop entre las citas con resultado. Ahora las dos usan asistieron ÷ (asistieron + no show).
+  - Asistió cuenta lo mismo que en Workshop (`bucket_estado`): también Cerrada, Follow Up y 2TH Call. Antes solo «Show Up» y «Asistió».
+  - «Agenda → show» de Todos usa el mismo denominador (`reportadas`); los textos de ayuda lo dicen.
