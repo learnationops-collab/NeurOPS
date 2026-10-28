@@ -17,7 +17,7 @@ const porCien = (v) => (v === null || v === undefined ? null : v / 100);
 const num = (v) => formatear(v, 'num');
 /** El título de cada lista que se puede abrir (`fuentes_registros_service.METRICAS`). */
 export const TITULO_DE = {
-    agendas: 'Agendas', reportadas: 'Citas con resultado', show_up: 'Show up', ventas: 'Ventas', new_cash: 'New Cash',
+    agendas: 'Agendas', agendas_alta: 'Agendas por fecha de alta', reportadas: 'Citas con resultado', show_up: 'Show up', ventas: 'Ventas', new_cash: 'New Cash',
     cash_total: 'Cash total', leads: 'Leads entrantes', gasto: 'Importe gastado',
 };
 
@@ -37,7 +37,9 @@ export const cuentaDe = (id, f, d) => {
         case 'roas_total': return { a: parte(d(f.cash_total), 'cash_total'), b: parte(d(f.gasto), 'gasto', 'gastados') };
         case 'costo_venta': return { a: parte(d(f.gasto), 'gasto', 'gastados'), b: parte(num(f.ventas), 'ventas', 'ventas') };
         case 'cpl': return { a: parte(d(f.gasto), 'gasto', 'gastados'), b: parte(num(f.leads), 'leads', 'leads') };
-        case 'costo_agenda': return { a: parte(d(f.gasto), 'gasto', 'gastados'), b: parte(num(f.agendas), 'agendas', 'agendas') };
+        // Siempre las agendas por fecha de alta, aunque se cuente por reunión: lo que Meta gastó genera agendas al
+        // darse de alta (28/10/2026). El backend manda esas en `agendas_alta`.
+        case 'costo_agenda': return { a: parte(d(f.gasto), 'gasto', 'gastados'), b: parte(num(f.agendas_alta ?? f.agendas), 'agendas_alta', 'agendas por fecha de alta') };
         case 'costo_show': return { a: parte(d(f.gasto), 'gasto', 'gastados'), b: parte(num(f.show_up), 'show_up', 'que asistieron') };
         default: return null;
     }
@@ -56,7 +58,7 @@ const METRICA_DE = {
     lead_agenda: 'agendas', agendas: 'agendas', agenda_show: 'reportadas', show_up: 'show_up', ventas: 'ventas',
     show_venta: 'ventas', cuotas: 'cash_total', upsells: 'cash_total', new_cash: 'new_cash', cash_total: 'cash_total',
     ticket: 'ventas', roas_new_cash: 'new_cash', roas_total: 'cash_total', costo_show: 'show_up', costo_venta: 'ventas',
-    leads: 'leads', gasto: 'gasto', cpl: 'leads', costo_agenda: 'agendas',
+    leads: 'leads', gasto: 'gasto', cpl: 'leads', costo_agenda: 'agendas_alta',
 };
 
 export const gruposDe = (s, w, moneda = 'USD') => {
@@ -93,7 +95,7 @@ export const gruposDe = (s, w, moneda = 'USD') => {
     ] },
     { id: 'costos', titulo: 'Costos', filas: [
         { id: 'cpl', label: 'Costo por lead', tipo: 'down', fmt: 'd', s: s.cpl, w: w.cpl },
-        { id: 'costo_agenda', label: 'Costo por agenda', tipo: 'down', fmt: 'd', s: s.costo_agenda, w: w.costo_agenda },
+        { id: 'costo_agenda', label: 'Costo por agenda', hint: 'gastado ÷ agendas por fecha de alta', tipo: 'down', fmt: 'd', s: s.costo_agenda, w: w.costo_agenda },
         { id: 'costo_show', label: 'Costo por show', tipo: 'down', fmt: 'd',
             s: razon(s.gasto, s.show_up), w: razon(w.gasto, w.show_up) },
         { id: 'costo_venta', label: 'Costo por venta', hint: 'CAC', tipo: 'down', fmt: 'd', s: s.costo_venta, w: w.costo_venta },
