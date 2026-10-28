@@ -92,3 +92,9 @@ Gestiones y decisiones.
 - [ ] Cancelar las suscripciones de lo que ya se reemplazó; n8n solo queda por el mailing de ingreso de venta nueva.
 - [ ] Documentos del papá de Mario el viernes 30/10.
 - [ ] Atribución venta → agenda → conversación (`appointments.conversation_id`), con Agendas 2.0.
+
+## Marketing: una sola definición de lead y de gasto (tarea 868 de Leadership)
+Falta la fórmula de backend; la presentación ya tiene su rótulo.
+
+- [ ] Definir cuál es «lead» (hoy: 2.448 en Palabras clave = persona × palabra clave, 2.397 en Entrantes = personas, 2.647 en Conversaciones = mensajes de apertura enviados) y cuál es «gasto» ($3.366 en la tabla, $3.342 en la tarjeta de Setting, $4.279 en Meta Ads, $4.270 en Todos › Gasto en Meta). Cada pestaña tiene que mostrar ese número o decir, con su lista, cuánto aporta cada parte. El cálculo vive en `anuncios_service.py` / `fuentes_service.py` y no se tocó.
+- [ ] Mientras tanto, quien abre cada vista ve de qué habla: «Habla de:» bajo la cabecera de Workshop y en Todos (28/10/2026).

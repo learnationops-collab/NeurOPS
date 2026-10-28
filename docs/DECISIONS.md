@@ -133,3 +133,13 @@
 - **Decisión:** componente estándar `VerRegistros` + hook `useVerRegistros()` (`components/standard/VerRegistros.jsx`). La pantalla llama `abrir({ titulo, subtitulo, contenido })` y pone `panel` una vez; el contenido es una `ListaConfigurable`. Se abre como panel lateral o ventana central, la persona alterna y se recuerda (`localStorage` `ui_registros_modo`). `Kpi` suma `onSelect` (la tarjeta pasa a ser botón); las tarjetas de Marketing, que tienen su propio `Kpi`, ponen el ojo de Closing (`onVer`). Se monta dentro del `.dc-shell` para que la lista conserve sus clases.
 - **Alcance de esta entrega:** el marco y los 4 KPIs de la tabla de anuncios, que abren las filas que los suman. Los registros a nivel persona (agendas, ventas) y el resto de las pantallas siguen en las tareas de Leadership «Vistas estándar y datos trazables».
 - **Qué se pierde (nombrado):** la lista de un KPI de la tabla de anuncios muestra palabras clave (con su aporte), no todavía las personas.
+
+## ADR-W016: Cada vista recuerda lo último que usó la persona (`useEstadoGuardado`, `useParamsGuardados`)
+- **Fecha:** 2026-10-28 · **Subsistema:** Marketing y Workshop (norma para todas las pantallas) · **Estado:** implementado en Marketing y Workshop
+- **Contexto:** en Marketing los filtros vivían en `useState` y se perdían al recargar o cambiar de pestaña; cada hook de preferencias (`useModoVista`, `useColumnasVisibles`, `useVistaDeColumnas`) guardaba a su manera y por navegador, y uno escribía en `localStorage` dentro de un updater de `setState`. Pedido de Kerwin y de Gabriela del 28/10.
+- **Decisión:**
+  1. `useEstadoGuardado(clave, inicial, { normalizar, heredar })`: estado objeto, por usuario (la clave lleva el id de la sesión), escrito en un efecto. Lo leído se mezcla sobre `inicial` y `normalizar` limpia lo de otra versión.
+  2. `useParamsGuardados(clave, claves)`: lo que ya vive en la URL (pestaña, período, vista) se restaura solo si se entra sin ninguno de esos parámetros; la URL manda. Una pantalla usa un solo hook con todas las claves de su URL.
+  3. Las pantallas nuevas lo usan en vez de `useState` para filtros y vistas.
+- **Qué se pierde (nombrado):** lo que ya estaba guardado por navegador (`mk_rendimiento_columnas`) se hereda una sola vez; `useModoVista` y `useColumnasVisibles` siguen por navegador hasta migrarlos. Un link sin parámetros ya no abre «lo de siempre», sino lo último que esa persona usó.
+- **Consecuencias:** quedan por migrar las demás pantallas (una tarea por pantalla, tarea 845 de Leadership). En simulación cada identidad simulada tiene sus propias preferencias.
