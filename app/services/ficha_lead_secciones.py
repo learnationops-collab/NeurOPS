@@ -176,7 +176,8 @@ def formulario(client, appt=None):
     """Las respuestas del formulario: las de esa agenda si es de Agendas 2.0, si no las del viejo
     `form_data` (ver app/services/formulario_lead.py)."""
     from app.api.closer import _form_data_has_useful_answers, _recover_form_data_by_contact
-    from app.services.formulario_lead import form_data_de
+    from app.services.formulario_lead import form_data_de, payload_de
+    from app.services.segmento_service import puntos_por_pregunta
 
     form_data = form_data_de(client, appt)
     if client and not _form_data_has_useful_answers(form_data):
@@ -186,6 +187,7 @@ def formulario(client, appt=None):
 
     respuestas = []
     vistas = set()
+    puntos = puntos_por_pregunta(payload_de(client, appt))
     for clave, pregunta in ETIQUETAS_FORMULARIO.items():
         if form_data.get(clave) not in (None, '', 'n/a'):
             respuestas.append({'clave': clave, 'pregunta': pregunta, 'respuesta': form_data[clave]})
@@ -195,7 +197,8 @@ def formulario(client, appt=None):
     for clave, valor in (form_data or {}).items():
         if clave in vistas or clave in FORMULARIO_OCULTO or valor in (None, '', 'n/a'):
             continue
-        respuestas.append({'clave': clave, 'pregunta': clave, 'respuesta': valor})
+        respuestas.append({'clave': clave, 'pregunta': clave, 'respuesta': valor,
+                           **({'puntos': puntos[clave]} if clave in puntos else {})})
 
     encuesta = []
     if client:

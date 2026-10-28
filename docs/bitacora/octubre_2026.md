@@ -1158,3 +1158,8 @@
   - Arriba de la lista y del panel, los filtros puestos en palabras («Esperan respuesta · Asignadas a Elias · En etapa Agendó · Califican»), cada uno con su × para sacarlo.
 - **27 de Octubre de 2026 (Confirmación: cada uno confirma sus agendas)** *([closer.py](../../app/api/closer.py), [triage_service.py](../../app/services/triage_service.py))*:
   - El triage ya no ve en Confirmación las agendas A y B de los closers (le salían las de Jean Carlo). Closing confirma sus propias agendas y el triage, las suyas. Se borra `filtro_confirmaciones`.
+- **27 de Octubre de 2026 (Segmentos: quien no invierte no entra a A ni B; puntos a la vista en la ficha)** *([segmentos_formulario.py](../../scripts/segmentos_formulario.py), [segmento_service.py](../../app/services/segmento_service.py), [TabFormulario.jsx](../../frontend/src/components/ficha/tabs/TabFormulario.jsx), [plan §8.10](../plan_segmentos_triage.md))*:
+  - Caso: Brenda (médica general, Perú, decide sola, «podría conseguir ayuda») sumaba +2 y entraba como B (Grupo 4); con las reglas viejas era Grupo 1. 94 de los 285 B desde junio no invertían.
+  - La inversión pesa el doble: $500 o más +4 · $200–$500 +2 · podría conseguir ayuda −3 · no estoy dispuesto −4. A desde +4 (los mismos A que antes), B de +1 a +3. Quien no invierte queda como mucho en C (triage); el script frena si una opción nueva lo rompe. Versión `2026-12.1`.
+  - Aplicado en producción y recalculados los segmentos guardados: 0 leads que no invierten en A o B; Brenda pasó a C (su agenda ya tomada no se reasigna).
+  - La pestaña Formulario de la ficha muestra los puntos de cada respuesta que cuenta y la suma con los cortes.

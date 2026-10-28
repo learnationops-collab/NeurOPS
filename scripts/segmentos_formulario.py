@@ -5,7 +5,8 @@ Cambios (todos idempotentes: correrlo dos veces deja lo mismo):
   - `puntosSeg` (-3 a +2) en Inversión, Etapa, Examen y Decide: 0 es el lead promedio, lo que resta compra
     menos. Salen de una logística penalizada sobre 736 leads (jun–sep 2026, 77 compras a 60 días), pasada a
     enteros. `puntos` (la nota de 0 a 10 del closer) no se toca.
-  - Cortes A ≥ 3 (compra unas 2 veces el promedio), B ≥ 1 (sobre el promedio), C ≥ -1, D el resto.
+  - Cortes A ≥ 4 (con la inversión al doble, los mismos A de antes), B ≥ 1, C ≥ -1, D el resto. Quien no
+    invierte no llega a B (corte duro: el script frena si una opción lo rompe).
   - Ruteo: las reglas con url (mk-academy: estudiante que no invierte, también «podría conseguir ayuda»)
     quedan primero; las mk-g* se reemplazan por una por segmento:
     A → Grupo 5 · B → Grupo 4 · C y D → Triage (lo crea), con el desborde de siempre. «Todo lo demás»
@@ -34,15 +35,15 @@ from app.agendas_v2.nucleo.segmento import SEG_Q  # noqa: E402
 
 FORM_ID = 'dg6gukz9emx'
 INVERSION, ETAPA, EXAMEN, DECIDE = 'qglxqqlsgya', 'qg8xclvqc4c', 'qg6raaks2pe', 'qgnajtuxkuz'
-SEGMENTO = {'activo': True, 'modo': 'suma', 'a': 3, 'b': 1, 'c': -1, 'sigma': 1, 'version': '2026-12'}
+SEGMENTO = {'activo': True, 'modo': 'suma', 'a': 4, 'b': 1, 'c': -1, 'sigma': 1, 'version': '2026-12.1'}
 
 # Efecto de cada respuesta en la compra (log-odds centrado; un punto ≈ 0,23, unas 1,26 veces las chances).
 PUNTOS_SEG = {
-    # $500 o más (+2; solo 10 leads, se juntaron las tres) · $200–$500 (+1) · sin inversión (-1).
-    # Decisión, no dato: «No estoy dispuesto» resta más que «podría conseguir ayuda» (antes eran una sola).
-    # «Menos de $200» (solo en el formulario del §8.8, hoy en el servidor de prueba) queda entre las dos: 0.
-    INVERSION: {'ogmgmpvwtgt': 2, 'oa9pmy94tfg': 2, 'ogmdr0s275v': 2, 'oglxqq0u44o': 1, 'og-menos-200': 0,
-                'o8slpjgvje7': -1, 'oglxqqlugub': -2},
+    # La inversión pesa el doble que el resto (pedido del equipo, 27/10): $500 o más +4 · $200–$500 +2.
+    # Quien no invierte no puede llegar a A ni a B (corte duro, ver _chequear_corte): «podría conseguir ayuda» -3,
+    # «no estoy dispuesto» -4. «Menos de $200» (solo en el servidor de prueba) -2: como mucho B.
+    INVERSION: {'ogmgmpvwtgt': 4, 'oa9pmy94tfg': 4, 'ogmdr0s275v': 4, 'oglxqq0u44o': 2, 'og-menos-200': -2,
+                'o8slpjgvje7': -3, 'oglxqqlugub': -4},
     # Rural y general (+1) · especialista (-1) · residente (-2) · estudiante o interno (-3: compra 3,4%).
     ETAPA: {'og8xclet205': -3, 'og8xclf4go4': 1, 'og94zlvu9m2': 1, 'og9azfspw7e': -2, 'og9ed3qtpzx': -1},
     # Colombia y Perú (+1) · Otro y USMLE (0) · no busca examen (-1) · ENARM (-2). MIR daba +1 y queda en 0:
@@ -53,6 +54,7 @@ PUNTOS_SEG = {
     # Decide solo (+1) · necesita apoyo (-1).
     DECIDE: {'ognajtws1ke': 1, 'ognajtnj7rg': -1, 'og-pareja': -1, 'og-otra-persona': -1},
 }
+NO_INVIERTE = ('o8slpjgvje7', 'oglxqqlugub')
 ROL = {INVERSION: 'clave', ETAPA: 'clave', EXAMEN: 'cuenta', DECIDE: 'cuenta'}
 # C y D van solo al triage (Mario, 26/10): el grupo «Triage», último en el orden, con las personas del triage.
 # Máxima disponibilidad: el lead ve los horarios de las dos. Si están llenas desborda a «Todos los closers».
@@ -139,10 +141,19 @@ def preparar(datos, quien_decide=False):
         if sin:
             raise SystemExit(f'Opciones sin puntos de segmento en {qid}: {sin}')
 
+    _chequear_corte(preguntas)
     datos['segmento'] = dict(SEGMENTO)
     datos['reglas'] = _reglas(datos.get('reglas') or [], preguntas[INVERSION])
     datos['resto'] = RESTO
     return datos
+
+
+def _chequear_corte(preguntas):
+    """Corte duro: quien no invierte, con lo mejor en todo lo demás, no llega a B. Frena si una opción nueva lo rompe."""
+    resto = sum(max(o['puntosSeg'] for o in preguntas[q]['opciones']) for q in PUNTOS_SEG if q != INVERSION)
+    for o in preguntas[INVERSION]['opciones']:
+        if o['id'] in NO_INVIERTE and o['puntosSeg'] + resto >= SEGMENTO['b']:
+            raise SystemExit(f"«{o['texto']}» puede llegar a B ({o['puntosSeg']} + {resto}): bajale los puntos.")
 
 
 def mostrar(datos):

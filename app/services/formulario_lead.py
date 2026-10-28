@@ -42,6 +42,15 @@ def desde_payload(payload, enviado=None):
     return fd
 
 
+def payload_de(client, appt=None):
+    """El payload de Agendas 2.0 que se muestra (el de la agenda o el último del cliente), o None."""
+    if appt is not None and es_payload(appt.agenda_payload):
+        return appt.agenda_payload
+    if client is not None and es_payload(getattr(client, 'formulario_payload', None)):
+        return client.formulario_payload
+    return None
+
+
 def form_data_de(client, appt=None):
     """El formulario a mostrar: el de esa agenda si es de Agendas 2.0; si no, el último de Agendas
     2.0 del cliente; si no, el viejo `form_data`."""

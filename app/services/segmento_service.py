@@ -50,6 +50,37 @@ def _del_payload(payload):
     return seg if isinstance(seg, dict) and seg.get('segmento') in SEGMENTOS else None
 
 
+# Las mismas equivalencias que scripts/backfill_segmentos.py: opciones juntadas (§8.8) y renombradas (§8.9).
+ALIAS = {'ogmgmpvwtgt': 'ogmdr0s275v'}
+NO_DISPUESTO, PODRIA_AYUDA = 'oglxqqlugub', 'o8slpjgvje7'
+
+
+def puntos_por_pregunta(payload):
+    """{texto de la pregunta: puntos de segmento de la opción elegida} de una reserva de Thalamus, con los
+    puntos de hoy del formulario (los mismos con los que se recalcula el segmento). Para que el closer vea de
+    dónde sale la suma. Vacío si no es de Thalamus o el formulario no segmenta."""
+    from app.agendas_v2.modelos import SchedFormulario
+
+    if not isinstance(payload, dict) or not payload.get('formulario_id'):
+        return {}
+    fila = db.session.get(SchedFormulario, payload['formulario_id'])
+    form = fila.datos if fila else None
+    if not ((form or {}).get('segmento') or {}).get('activo'):
+        return {}
+    preguntas = {q['id']: q for q in form.get('preguntas') or [] if q.get('segmento')}
+    puntos = {}
+    for r in payload.get('respuestas') or []:
+        q = preguntas.get(r.get('pregunta_id'))
+        op = ALIAS.get(r.get('opcion_id'), r.get('opcion_id'))
+        # Hasta el 26/10 esa opción decía «no estoy en posición de invertir»: es la de «podría conseguir ayuda».
+        if op == NO_DISPUESTO and 'posici' in str(r.get('respuesta') or '').lower():
+            op = PODRIA_AYUDA
+        o = next((x for x in (q or {}).get('opciones') or [] if x.get('id') == op), None)
+        if o is not None and o.get('puntosSeg') is not None:
+            puntos[r.get('pregunta')] = o['puntosSeg']
+    return puntos
+
+
 def mantener(session):
     with session.no_autoflush:
         filas = list(session.new) + list(session.dirty)

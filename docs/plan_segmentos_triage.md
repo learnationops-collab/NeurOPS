@@ -373,3 +373,12 @@ Ordena mejor que los puntos de hoy (AUC 0,692 contra 0,668, en la misma muestra,
 **Revisión mensual.** Correr el ajuste con los leads nuevos (Thalamus ya va a tener datos), cargar los puntos con `scripts/segmentos_formulario.py`, subir la versión y recalcular con `scripts/backfill_segmentos.py --apply --force`. Una opción nueva sin `puntosSeg` frena el script.
 
 Decidido por Mario (26/10): el estudiante que responde «podría conseguir ayuda» también va a la página de gracias (`mk-academy`).
+
+### 8.10 La inversión pesa el doble y quien no invierte no llega a B (pedido del equipo, 27/10/2026, versión `2026-12.1`)
+
+Caso que lo disparó: una lead médica general de Perú que decide sola, pero que «podría conseguir ayuda» para invertir, sumaba +2 y entraba como B (Grupo 4). Con las reglas `mk-g*` anteriores era Grupo 1. Desde junio, 94 de los 285 B no invertían.
+
+- **Inversión:** $500 o más **+4** · $200–$500 **+2** · menos de $200 **−2** · podría conseguir ayuda **−3** · no estoy dispuesto **−4**. El resto de las preguntas no cambia.
+- **Cortes:** A ≥ 4 · B ≥ 1 · C ≥ −1 · D el resto. Con A ≥ 4, los A son exactamente los mismos que antes (127 desde junio); con A ≥ 3 se duplicaban.
+- **Corte duro:** quien no invierte, aunque tenga lo mejor en todo lo demás (+3), queda en C como máximo. `scripts/segmentos_formulario.py` frena si una opción nueva lo rompe.
+- Efecto desde junio: 94 B pasan a C (no invierten), 52 C pasan a B (invierten y tenían el resto flojo); C y D van igual al triage.

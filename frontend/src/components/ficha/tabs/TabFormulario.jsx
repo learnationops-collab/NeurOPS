@@ -1,11 +1,21 @@
 import React from 'react';
 import { Inbox } from 'lucide-react';
+import { Chip } from '../../standard';
 
-const Fila = ({ pregunta, respuesta }) => (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.4fr)',
+const conSigno = (n) => (n > 0 ? '+' : '') + n;
+const tonoPuntos = (n) => (n > 0 ? 'var(--success)' : n < 0 ? 'var(--danger)' : 'var(--idle)');
+
+// `puntos`: lo que esa respuesta suma o resta al segmento A/B/C/D (solo las preguntas que cuentan).
+const Fila = ({ pregunta, respuesta, puntos }) => (
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.4fr) auto',
         gap: 'var(--s4)', padding: 'var(--s3) 0', borderTop: '1px solid var(--border-subtle)' }}>
         <span className="t-sm mut">{pregunta}</span>
         <span className="t-sm" style={{ fontWeight: 600 }}>{respuesta || '—'}</span>
+        <span>{puntos != null && (
+            <Chip subtle color={tonoPuntos(puntos)} title="Puntos de esta respuesta para el segmento">
+                {conSigno(puntos)} pts
+            </Chip>
+        )}</span>
     </div>
 );
 
@@ -20,6 +30,8 @@ const TabFormulario = ({ ficha }) => {
     const form = ficha?.formulario || {};
     const respuestas = form.respuestas || [];
     const encuesta = form.encuesta || [];
+    const conPuntos = respuestas.filter(r => r.puntos != null);
+    const total = conPuntos.reduce((s, r) => s + r.puntos, 0);
 
     if (!respuestas.length && !encuesta.length) {
         return (
@@ -43,8 +55,12 @@ const TabFormulario = ({ ficha }) => {
                     </div>
                 )}
                 {respuestas.map((r, i) => (
-                    <Fila key={r.clave ?? i} pregunta={r.pregunta} respuesta={r.respuesta} />
+                    <Fila key={r.clave ?? i} pregunta={r.pregunta} respuesta={r.respuesta} puntos={r.puntos} />
                 ))}
+                {conPuntos.length > 0 && (
+                    <Fila pregunta="Segmento" puntos={total}
+                        respuesta={`Suma de ${conPuntos.length} respuestas. A desde +4 · B +1 a +3 · C −1 a 0 · D −2 o menos`} />
+                )}
             </div>
 
             {encuesta.length > 0 && (
