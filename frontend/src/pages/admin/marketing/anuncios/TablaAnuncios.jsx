@@ -216,7 +216,7 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = nul
           tip: 'Gasto en Meta de estas palabras clave.' },
         { titulo: KPIS[2], valor: formatear(totales.agendas, 'num'),
           sub: conGasto ? `${formatear(totales.costo_agenda, 'money', moneda)} por agenda` : 'Costo por agenda: —',
-          tip: 'Agendas de estas personas en el período.' },
+          tip: 'Con palabra clave de ManyChat; la tarjeta de Setting cuenta por setter.' },
         { titulo: KPIS[3], valor: formatear(totales.ventas, 'num'),
           sub: conGasto ? `${formatear(totales.costo_venta, 'money', moneda)} por venta · ROAS ${formatear(totales.roas, 'veces')}` : `${formatear(totales.cobrado, 'money', moneda)} cobrado`,
           tip: 'Pago completo o split. ROAS = cobrado ÷ gastado.' },

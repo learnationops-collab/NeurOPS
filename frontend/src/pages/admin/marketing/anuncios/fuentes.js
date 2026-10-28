@@ -14,7 +14,7 @@ export const GRUPOS_COMPARACION = [
     { titulo: 'Embudo', filas: [
         { key: 'leads', label: 'Leads entrantes', formato: 'num',
             ayuda: 'Setting: personas que escribieron una palabra clave. Workshop: clics al grupo de WhatsApp.' },
-        { key: 'agendas', label: 'Agendas', formato: 'num', ayuda: 'Personas con agenda creada en el período, por fuente.' },
+        { key: 'agendas', label: 'Agendas', formato: 'num', ayuda: 'Libro de agendas, por setter o taller (la tabla cuenta por palabra clave).' },
         { key: 'show_up', label: 'Show up', formato: 'num', pct: 'pct_show_up', mejor: 'mas', porPct: true,
             ayuda: 'Asistieron ÷ citas con resultado (asistieron + no show). Se corona por ese %.' },
         { key: 'ventas', label: 'Ventas', formato: 'num', ayuda: 'Pagos de venta nueva (completo o split) del período.' },
