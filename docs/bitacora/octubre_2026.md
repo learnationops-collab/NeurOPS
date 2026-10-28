@@ -1156,3 +1156,5 @@
   - Sale el filtro por examen (no se había pedido). El chip del examen en cada fila sigue.
   - La opción elegida se llena de su color y las otras del grupo se apagan.
   - Arriba de la lista y del panel, los filtros puestos en palabras («Esperan respuesta · Asignadas a Elias · En etapa Agendó · Califican»), cada uno con su × para sacarlo.
+- **27 de Octubre de 2026 (Confirmación: cada uno confirma sus agendas)** *([closer.py](../../app/api/closer.py), [triage_service.py](../../app/services/triage_service.py))*:
+  - El triage ya no ve en Confirmación las agendas A y B de los closers (le salían las de Jean Carlo). Closing confirma sus propias agendas y el triage, las suyas. Se borra `filtro_confirmaciones`.

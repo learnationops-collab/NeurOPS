@@ -309,7 +309,7 @@ Hoy las reglas cualifican y reparten en el mismo paso. Pasan a ser dos capas:
 ### 8.5 El triage
 
 - Hace el filtro de C y D como dice el §3, y lo que aprueba va a Jean Carlo, que es quien mejor cierra esos leads.
-- También confirma los A y B de Jean Carlo antes de la llamada, para que la asistencia de los A se parezca a la de hoy con él (62%).
+- ~~También confirma los A y B de Jean Carlo antes de la llamada.~~ Se retiró el 27/10/2026: closing confirma sus propias agendas y el triage solo las suyas.
 - Si un A o B cancela, ese turno se le ofrece a un C que el triage ya aprobó.
 
 ### 8.6 Para el dashboard (Kerwin)
