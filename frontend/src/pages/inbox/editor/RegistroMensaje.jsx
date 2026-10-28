@@ -36,7 +36,7 @@ export default function RegistroMensaje({ nodo, cambiar, lectura }) {
 
     return (
         <div className="pf-bloque">
-            <Campo label="Para Marketing" ayuda="El mensaje del catálogo de Conversaciones. Cuenta en Rendimiento y Entrantes cuando la persona entra por una campaña.">
+            <Campo label="Para Marketing" ayuda="El mensaje del catálogo de Conversaciones. Cuenta en Palabras clave y Entrantes cuando la persona entra por una campaña.">
                 <Select label="Mensaje del catálogo" value={registro?.mensaje_id || ''} options={opciones} disabled={lectura}
                     onChange={(v) => poner({ mensaje_id: v || undefined })} />
             </Campo>

@@ -42,7 +42,7 @@ const PESTANAS = [
     { key: 'resumen', label: 'Resumen' },
     { key: 'talleres', label: 'Talleres' },
     { key: 'planificar', label: 'Planificar' },
-    { key: 'rendimiento', label: 'Rendimiento' },
+    { key: 'rendimiento', label: 'Anuncios de Meta' },
     { key: 'trafico', label: 'Tráfico landings' },
     { key: 'correlaciones', label: 'Correlaciones' },
 ];

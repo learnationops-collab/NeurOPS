@@ -51,7 +51,8 @@ import './anuncios/anuncios.css';
  */
 
 const PESTANAS = [
-    { key: 'anuncios', label: 'Rendimiento' },
+    // «Rendimiento» también era una pestaña de Workshop (28/10/2026): cada nombre dice qué mide.
+    { key: 'anuncios', label: 'Palabras clave' },
     { key: 'entrantes', label: 'Entrantes' },
     { key: 'conversaciones', label: 'Conversaciones' },
     { key: 'meta', label: 'Meta Ads' },
