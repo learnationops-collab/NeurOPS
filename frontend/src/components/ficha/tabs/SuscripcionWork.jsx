@@ -54,7 +54,7 @@ export default function SuscripcionWork({ suscripciones = [], programas = [] }) 
   const principal = suscripciones[0];
   const cambios = suscripciones.reduce((n, s) => n + (s.events?.length || 0), 0);
   return (
-    <SeccionColapsable titulo="Suscripción en Work"
+    <SeccionColapsable titulo="Historial de la suscripción"
       resumen={`${principal.vigente ? 'Vence' : 'Venció'} el ${diaLegible(principal.expires_at)} · `
         + `${cambios} ${cambios === 1 ? 'cambio' : 'cambios'}`}>
       <p className="t-sm mut" style={{ margin: '0 0 var(--s3)' }}>

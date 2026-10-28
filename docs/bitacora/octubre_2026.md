@@ -1209,3 +1209,9 @@
   - En Revisar › Agendas, bajo la barra, una línea con las tres cifras como botones: «223 agendas = 150 vigentes + 73 descartadas». «Todas» pasa a ser también un filtro rápido (segundo, «Vigentes» sigue por defecto).
   - El backend suma `vigentes` y `descartadas` al paso Agendas del embudo; `__chip` en el drill-down elige el filtro rápido con el que abre la lista.
   - Marketing sigue por su lado (agendas por fecha de alta, no de reunión): lo resuelven las tareas «Contar por» y «Otras».
+- **28 de Octubre de 2026 (Fulfillment en cuatro bloques: suscripción, avance, seguimiento del equipo y uso, ADR-W016)** *([TabFulfillment.jsx](../../frontend/src/components/ficha/tabs/TabFulfillment.jsx), [tabs/fulfillment/](../../frontend/src/components/ficha/tabs/fulfillment/), [ficha_seguimiento_service.py](../../app/services/ficha_seguimiento_service.py), [ficha_academia.py](../../app/services/ficha_academia.py))*:
+  - La suscripción de Work es lo primero: hasta cuándo, qué venta la abrió o la extendió, si la Academia la tiene igual y sus acciones (Prórroga, Corregir mail, Quitar). Si la Academia no la tiene igual, «Reenviar a la Academia» le asigna el producto con la fecha de Work. El historial va dentro, cerrado.
+  - Avance: el recorrido de sesiones contra los 30 días, con la próxima, su estado y la Momentum que da el closer.
+  - Seguimiento del equipo en lugar de comentarios: objetivos abiertos con su próximo paso (pendiente, vencido o en observación) y protocolo, y las últimas acciones con si el alumno respondió, observaciones y victorias.
+  - Uso: la franja del Pulso, días activos en 14 y en 30, horas, entregas, la tira de 14 días y la bitácora con filtros.
+  - Avance, seguimiento y uso salen del expediente de la Academia, que los suma desde su ADR-202 (`GET /ficha/seguimiento-academia`).

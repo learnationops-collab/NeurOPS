@@ -51,6 +51,7 @@ class Subscription(ConPersona, db.Model):
             'expires_at': self.expires_at.isoformat() if self.expires_at else None,
             'status': self.status,
             'is_deposit': bool(self.is_deposit),
+            'academy_synced_at': self.academy_synced_at.isoformat() if self.academy_synced_at else None,
             # Vencida o no se lee de la fecha: no hace falta un cron que la marque.
             'vigente': bool(self.expires_at and self.expires_at >= date.today() and self.status == 'active'),
         }

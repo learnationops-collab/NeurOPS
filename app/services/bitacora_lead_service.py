@@ -62,20 +62,27 @@ def _clave_academia(client):
     return {'work_uuid': client.person_uuid} if client.person_uuid else None
 
 
-def academia(client, quien=None):
-    """(entradas, aviso) del expediente de la Academia. `aviso` dice por qué falta, si falta."""
+def expediente(client, quien=None):
+    """(expediente, aviso) de la Academia. `aviso` dice por qué falta, si falta."""
     from app.services.learnation_service import LearnationAPIError, LearnationService
 
     clave = _clave_academia(client)
     if not clave:
-        return [], 'No está vinculado a la Academia.'
+        return None, 'No está vinculado a la Academia.'
     try:
-        exp = LearnationService.agent_ask(expediente=clave, quien=quien)
+        return LearnationService.agent_ask(expediente=clave, quien=quien), None
     except LearnationAPIError as e:
         if getattr(e, 'status_code', None) == 404:
-            return [], 'No tiene cuenta en la Academia.'
+            return None, 'No tiene cuenta en la Academia.'
         logger.error(f'[bitacora] expediente de la Academia ({clave}): {e}')
-        return [], 'La Academia no respondió: se muestra solo lo de Work.'
+        return None, 'La Academia no respondió: se muestra solo lo de Work.'
+
+
+def academia(client, quien=None):
+    """(entradas, aviso) del expediente de la Academia. `aviso` dice por qué falta, si falta."""
+    exp, aviso = expediente(client, quien)
+    if exp is None:
+        return [], aviso
 
     out = []
     for i, b in enumerate(exp.get('bitacora') or []):
