@@ -127,10 +127,15 @@ const MenuAgrupar = ({ agrupables, filas, valor, onElegir, onCerrar }) => {
     );
 };
 
+// Defaults estables: un `[]` nuevo por render cambiaba la identidad de `filtradas` y el reset de la página no convergía.
+const SIN_FACETAS = [];
+const SIN_AGRUPABLES = [];
+const SIN_VISTAS = [];
+
 const ListaConfigurable = ({
-    columnas, facetas = [], filas, clave, onAbrirFila, buscar, buscarPlaceholder = 'Buscar…',
+    columnas, facetas = SIN_FACETAS, filas, clave, onAbrirFila, buscar, buscarPlaceholder = 'Buscar…',
     claveGuardado, vacio = 'No hay filas para mostrar.', ayuda, extra, ordenInicial = null, marcada = null,
-    agrupables = [], vistas = [], totales = null,
+    agrupables = SIN_AGRUPABLES, vistas = SIN_VISTAS, totales = null,
 }) => {
     const [agrupacion, setAgrupacion] = useState(null);
     const dimension = agrupables.find((d) => d.key === agrupacion) || null;
