@@ -10,7 +10,7 @@ import '../comercial/comercial.css';
 import './catalogo.css';
 import {
     Avatar, Bars, BRAND_AURA, Button, Calendar, CalendarEvent, calendarY, Card, Chip, Status, ModalHeader, TextArea, toast, Toaster, Tooltip, ConfirmDelete, EmptyState, FieldError, Grid, IconButton, Input, InputGroup, Kpi, LinkButton, Modal, PageHeader, Panel, Segmented, Select,
-    Stepper, Switch, Reveal, Skeleton, SkeletonBlock, SkeletonChart, SkeletonCircle, SkeletonKpi, SkeletonPanel, SkeletonRow, SkeletonText,
+    useVerRegistros, Stepper, Switch, Reveal, Skeleton, SkeletonBlock, SkeletonChart, SkeletonCircle, SkeletonKpi, SkeletonPanel, SkeletonRow, SkeletonText,
 } from '../../components/standard';
 
 const TEMAS = [
@@ -146,6 +146,25 @@ function Demo({ titulo, children }) {
     );
 }
 
+// Un KPI que abre sus registros: la pantalla arma el contenido, el componente pone el marco.
+const DemoRegistros = () => {
+    const registros = useVerRegistros();
+    const abrir = () => registros.abrir({
+        titulo: 'Agendas', subtitulo: '128 en el período · una fila por persona',
+        contenido: (
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 8 }}>
+                {['Lucía Pérez', 'Mateo Ruiz', 'Ana Gómez', 'Pablo Díaz'].map((n) => <li key={n}>{n}</li>)}
+            </ul>
+        ),
+    });
+    return (
+        <>
+            <Kpi label="Agendas" value="128" onSelect={abrir}><small>tocá para ver las que la suman</small></Kpi>
+            {registros.panel}
+        </>
+    );
+};
+
 const SECCIONES = [
     {
         nombre: 'Button',
@@ -268,8 +287,14 @@ const SECCIONES = [
     {
         nombre: 'Kpi',
         para: 'Número grande con su rótulo y un detalle debajo. Los de arriba están en un Grid kpis.',
-        props: 'label · value · aura — children: el detalle (con <small> para lo secundario)',
+        props: 'label · value · aura · onSelect (la tarjeta abre sus registros) · selectLabel — children: el detalle (con <small> para lo secundario)',
         demo: () => <Kpi label="Leads" value="1.240" aura={BRAND_AURA}><small>últimos 30 días</small></Kpi>,
+    },
+    {
+        nombre: 'VerRegistros',
+        para: 'La lista que compone una cifra, en un panel lateral o en una ventana central (la persona alterna y se recuerda). Un Kpi con onSelect lo abre; la pantalla pasa el contenido.',
+        props: 'useVerRegistros() → { abrir({ titulo, subtitulo, contenido, acciones }), panel, cerrar } — VerRegistros: titulo · subtitulo · modo: lateral · central · onModo · onClose',
+        demo: () => <DemoRegistros />,
     },
     {
         nombre: 'Bars',

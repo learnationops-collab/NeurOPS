@@ -17,7 +17,7 @@
    ============================================================================ */
 
 :where(.ui-btn,.ui-ibtn,.ui-link,.ui-chip,.ui-status,.ui-card,.ui-aura,.ui-empty,.ui-confirm,.ui-header,
-  .ui-seg,.ui-select,.ui-select__pop,.ui-switch,.ui-stepper,.ui-scrim,.ui-modal,.ui-avatar,.ui-input,.ui-entry,.ui-field-error,.ui-panel,.ui-kpi,.ui-grid,.ui-cal,.ui-cal-event,.ui-toast,.ui-tip,.ui-textarea,.ui-modal-head,.ui-bars,.ui-skel-bone){
+  .ui-seg,.ui-select,.ui-select__pop,.ui-switch,.ui-stepper,.ui-scrim,.ui-modal,.ui-avatar,.ui-input,.ui-entry,.ui-field-error,.ui-panel,.ui-kpi,.ui-grid,.ui-cal,.ui-cal-event,.ui-toast,.ui-tip,.ui-textarea,.ui-modal-head,.ui-bars,.ui-skel-bone,.ui-reg){
   --ui-brand:var(--ln-brand, var(--brand-secondary, #FF3FA4));
   --ui-brand-accent:var(--ln-brand-accent, var(--brand-secondary-light, #FF6AD5));
   --ui-brand-2:var(--ln-brand-2, var(--brand-primary, #1323C6));
@@ -296,6 +296,25 @@
 .ui-kpi__label{font-size:11px;font-weight:900;letter-spacing:.28em;text-transform:uppercase;color:var(--ui-muted)}
 .ui-kpi__value{font-size:clamp(28px,3vw,38px);line-height:1;font-weight:900;letter-spacing:-.025em;font-variant-numeric:tabular-nums}
 .ui-kpi.ui-kpi small{font-size:11px;font-weight:600;color:var(--ui-faint)}
+/* Con `onSelect` la tarjeta es un botón: el borde se enciende y «Ver registros ›» aparece abajo. */
+.ui-kpi.ui-kpi--select{cursor:pointer;transition:border-color .16s,background-color .16s}
+.ui-kpi.ui-kpi--select:hover,.ui-kpi.ui-kpi--select:focus-visible{border-color:var(--ui-brand-soft-border);background:var(--ui-strong-bg);outline:none}
+.ui-kpi.ui-kpi--select:focus-visible{box-shadow:0 0 0 3px rgba(91,124,255,.28)}
+.ui-kpi__ver{justify-self:end;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--ui-brand-accent);opacity:.72;transition:opacity .16s}
+.ui-kpi--select:hover .ui-kpi__ver,.ui-kpi--select:focus-visible .ui-kpi__ver{opacity:1}
+
+/* --- VerRegistros: la lista detrás de una cifra, en panel lateral o ventana central ------------ */
+/* El panel lateral no lleva fondo oscuro: la pantalla sigue a la vista. La entrada va con `backwards`
+   (no `both`) por lo mismo que el Modal. */
+.ui-reg.ui-reg{display:flex;flex-direction:column;overflow:hidden;padding:0;color:var(--ui-text);background:var(--ui-popover-bg);
+  border:1px solid var(--ui-border-main);box-shadow:var(--ui-shadow)}
+.ui-reg.ui-reg--lateral{position:fixed;top:0;right:0;bottom:0;z-index:95;width:min(680px,100vw);border-radius:var(--ui-radius-panel) 0 0 var(--ui-radius-panel);
+  border-right:0;animation:ui-reg-in .28s var(--ui-spring) backwards}
+.ui-reg.ui-reg--central{width:min(1120px,100%);height:min(86vh,860px);max-height:none}
+.ui-reg__cuerpo{flex:1;min-height:0;overflow:auto;padding:var(--ui-s4) var(--ui-s6) var(--ui-s6)}
+@keyframes ui-reg-in{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
+@media (max-width:640px){.ui-reg.ui-reg--lateral{border-radius:0}.ui-reg__cuerpo{padding:var(--ui-s3) var(--ui-s4) var(--ui-s4)}}
+@media (prefers-reduced-motion:reduce){.ui-reg.ui-reg--lateral{animation:none}}
 
 /* --- Calendar ---------------------------------------------------------------------------------- */
 .ui-cal.ui-cal{overflow-x:auto}

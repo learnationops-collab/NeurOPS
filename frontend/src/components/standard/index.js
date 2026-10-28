@@ -7,6 +7,7 @@ export { Segmented, Select, Switch, Stepper, Modal, ModalHeader, Avatar, initial
 export { Input, InputGroup, FieldError, TextArea } from './Fields';
 export { Panel, Grid, Kpi } from './Layout';
 export { Bars } from './Charts';
+export { VerRegistros, useVerRegistros, useModoRegistros, MODOS_REGISTROS } from './VerRegistros';
 export { Calendar, CalendarEvent, calendarY } from './Calendar';
 export { toast, closeToast, Toaster, Tooltip } from './Notify';
 export { subirACapa } from './capa';

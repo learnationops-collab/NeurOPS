@@ -23,13 +23,19 @@ export const Grid = forwardRef(function Grid({ as: Tag = 'div', variant = 'list'
 });
 
 // Número grande con su rótulo arriba y el detalle abajo (comparación, aclaración en <small>).
-export function Kpi({ label, value, aura, className, children }) {
+// `onSelect` lo vuelve un botón que abre los registros que lo componen (`useVerRegistros`).
+export function Kpi({ label, value, aura, className, onSelect, selectLabel = 'Ver registros', children }) {
+    const botonera = onSelect ? {
+        role: 'button', tabIndex: 0, onClick: onSelect, 'aria-label': `${label}: ${value}. ${selectLabel}`,
+        onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(); } },
+    } : null;
     return (
-        <div className={clsx('ui-kpi', className)}>
+        <div className={clsx('ui-kpi', onSelect && 'ui-kpi--select', className)} {...botonera}>
             {aura && <Aura colors={aura} />}
             <span className="ui-kpi__label">{label}</span>
             <span className="ui-kpi__value">{value}</span>
             {children != null && <div className="ui-kpi__detail">{children}</div>}
+            {onSelect && <span className="ui-kpi__ver" aria-hidden="true">{selectLabel} ›</span>}
         </div>
     );
 }
