@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { CalendarDays, RefreshCw } from 'lucide-react';
@@ -38,7 +38,7 @@ const OtrasPage = () => {
     const otras = datos?.fuentes?.otras;
     const fuentes = datos?.fuentes?.fuentes || [];
     const porBase = BASES.find((b) => b.key === base)?.label.toLowerCase();
-    const kpis = useMemo(() => {
+    const kpis = (() => {
         if (!otras) return [];
         const dinero = (v) => formatear(v, 'money', datos.moneda);
         return [
@@ -54,7 +54,7 @@ const OtrasPage = () => {
             { titulo: 'Cash total', valor: dinero(otras.cash_total), sub: `${otras.cobros} ${otras.cobros === 1 ? 'cobro' : 'cobros'}`, metrica: 'cash_total',
               tip: 'Todo lo cobrado del período de estos clientes (ventas, cuotas, señas, upsells).' },
         ];
-    }, [otras, datos?.moneda, porBase]);
+    })();
 
     const suma = fuentes.map((f) => f.agendas).concat(otras ? [otras.agendas] : []);
 
