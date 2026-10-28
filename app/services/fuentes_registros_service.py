@@ -9,11 +9,18 @@ no de una consulta parecida: la suma de la lista es la cifra.
   · show_up   las que asistieron.
   · ventas / new_cash   los pagos de venta nueva del período (su suma es el New Cash).
   · cash_total   todos los cobros de la fuente, y de cuáles son de una venta anterior.
+  · leads   Setting: las personas que entraron por una palabra clave (con su calificación); Workshop: los clics al
+    grupo de WhatsApp, por campaña.
+  · gasto   el gasto de Meta de los anuncios del embudo de la fuente, anuncio por anuncio.
 """
-from app.services import anuncios_service, fuentes_service
+from collections import defaultdict
+
+from app import db
+from app.models import Ad, Conversation, MetaAnuncio, MetaGastoDiario
+from app.services import anuncios_service, fuentes_service, workshop_meta_service
 from app.services.comercial_service import ComercialService
 
-METRICAS = ('agendas', 'reportadas', 'show_up', 'ventas', 'new_cash', 'cash_total')
+METRICAS = ('agendas', 'reportadas', 'show_up', 'ventas', 'new_cash', 'cash_total', 'leads', 'gasto')
 
 TIPOS = {'cuota': 'Cuota', 'sena': 'Seña', 'seña': 'Seña', 'renovacion': 'Renovación', 'upsell': 'Upsell'}
 
@@ -37,6 +44,35 @@ _COLUMNAS_COBROS = [
     {'key': 'medio', 'header': 'Medio', 'tipo': 'texto', 'ancho': 'minmax(110px,1fr)', 'oculta': True},
     {'key': 'clave', 'header': 'Palabra clave', 'tipo': 'texto', 'ancho': 'minmax(120px,1fr)'},
 ]
+
+
+_COLUMNAS_LEADS_SETTING = [
+    {'key': 'persona', 'header': 'Persona', 'tipo': 'texto', 'ancho': 'minmax(160px,1.5fr)'},
+    {'key': 'instagram', 'header': 'Instagram', 'tipo': 'texto', 'ancho': 'minmax(130px,1fr)', 'oculta': True},
+    {'key': 'clave', 'header': 'Palabra clave', 'tipo': 'texto', 'ancho': 'minmax(130px,1fr)'},
+    {'key': 'fecha', 'header': 'Entró', 'tipo': 'fecha', 'ancho': '150px'},
+    {'key': 'estado', 'header': 'Estado', 'tipo': 'texto', 'ancho': 'minmax(120px,1fr)'},
+    {'key': 'setter', 'header': 'Setter', 'tipo': 'texto', 'ancho': 'minmax(100px,1fr)', 'oculta': True},
+]
+
+_COLUMNAS_LEADS_WORKSHOP = [
+    {'key': 'campana', 'header': 'Campaña', 'tipo': 'texto', 'ancho': 'minmax(220px,2fr)'},
+    {'key': 'visitas', 'header': 'Visitas a la landing', 'tipo': 'numero', 'ancho': '150px'},
+    {'key': 'clics', 'header': 'Clics al grupo', 'tipo': 'numero', 'ancho': '130px'},
+    {'key': 'gasto', 'header': 'Gastado', 'tipo': 'dinero', 'ancho': '110px'},
+    {'key': 'por_clic', 'header': 'Por clic al grupo', 'tipo': 'dinero', 'ancho': '140px'},
+]
+
+_COLUMNAS_GASTO = [
+    {'key': 'anuncio', 'header': 'Anuncio', 'tipo': 'texto', 'ancho': 'minmax(200px,2fr)'},
+    {'key': 'campana', 'header': 'Campaña', 'tipo': 'texto', 'ancho': 'minmax(160px,1.4fr)'},
+    {'key': 'clave', 'header': 'Palabra clave', 'tipo': 'texto', 'ancho': 'minmax(120px,1fr)'},
+    {'key': 'gasto', 'header': 'Gastado', 'tipo': 'dinero', 'ancho': '110px'},
+    {'key': 'dias', 'header': 'Días con gasto', 'tipo': 'numero', 'ancho': '130px'},
+    {'key': 'estado', 'header': 'Estado en Meta', 'tipo': 'texto', 'ancho': '130px', 'oculta': True},
+]
+
+ESTADO_ENTRANTE = {'true': 'Calificado', 'false': 'Descalificado'}
 
 
 def _si_no(valor):
@@ -99,12 +135,67 @@ def _cobros(fuente, metrica, desde, hasta):
     return _COLUMNAS_COBROS, filas, resumen
 
 
+def _claves_archivadas():
+    """Las palabras clave cuyos anuncios están todos archivados: la tabla de Marketing no las suma."""
+    estados = defaultdict(list)
+    for clave, estado in db.session.query(Ad.clave, Ad.status).filter(Ad.clave.isnot(None)):
+        estados[clave].append((estado or '').lower() == 'archived')
+    return {clave for clave, archivados in estados.items() if all(archivados)}
+
+
+def _leads(fuente, metrica, desde, hasta):
+    if fuente == 'workshop':
+        campanas = workshop_meta_service.desglose_periodo(desde, hasta)['campanas']
+        filas = [{'id': str(c['campana_id']), 'campana': c['nombre'] or 'Sin nombre', 'visitas': c['visitas'],
+                  'clics': c['clics_whatsapp'], 'gasto': round(c['gasto'], 2), 'por_clic': c['costo_whatsapp'] or 0}
+                 for c in campanas if c['clics_whatsapp'] or c['visitas']]
+        total = sum(f['clics'] for f in filas)
+        return _COLUMNAS_LEADS_WORKSHOP, filas, f"{total} clics al grupo de WhatsApp en {len(filas)} campañas"
+    desde_dt, hasta_dt = anuncios_service._limites(desde, hasta)
+    archivadas = _claves_archivadas()
+    entradas = [e for e in anuncios_service.entradas_del_periodo(desde_dt, hasta_dt, anuncios_service._clave_de_cada_anuncio())
+                if e['clave'] not in archivadas]
+    conversaciones = {c.id: c for c in Conversation.query.filter(Conversation.id.in_({e['lead_id'] for e in entradas}))} \
+        if entradas else {}
+    filas = []
+    for e in entradas:
+        c = conversaciones.get(e['lead_id'])
+        estado = ESTADO_ENTRANTE.get(e['calificacion']) or ('En conversación' if e['respondio'] else 'Sin respuesta')
+        filas.append({
+            'id': f"{e['lead_id']}-{e['clave'] or 'sin'}", 'persona': (c.name if c and c.name else None) or (f'@{c.ig}' if c and c.ig else 'Sin nombre'),
+            'instagram': (c.ig if c else '') or '—', 'clave': e['clave'] or 'Sin palabra clave',
+            'fecha': e['cuando'].isoformat(), 'estado': estado, 'setter': (c.setter if c else '') or '—',
+        })
+    filas.sort(key=lambda f: f['fecha'], reverse=True)
+    cuenta = defaultdict(int)
+    for f in filas:
+        cuenta[f['estado']] += 1
+    detalle = ' · '.join(f'{n:,} {k.lower()}' for k, n in sorted(cuenta.items(), key=lambda kv: -kv[1]))
+    return _COLUMNAS_LEADS_SETTING, filas, f"{len(filas):,} entradas por palabra clave · {detalle}"
+
+
+def _gasto(fuente, metrica, desde, hasta):
+    filas_db = db.session.query(
+        MetaAnuncio.meta_ad_id, MetaAnuncio.nombre, MetaAnuncio.campana, MetaAnuncio.clave, MetaAnuncio.estado,
+        db.func.sum(MetaGastoDiario.gasto), db.func.count(MetaGastoDiario.fecha),
+    ).join(MetaGastoDiario, MetaGastoDiario.meta_ad_id == MetaAnuncio.meta_ad_id) \
+        .filter(MetaAnuncio.embudo == fuente, MetaGastoDiario.fecha >= desde, MetaGastoDiario.fecha <= hasta,
+                MetaGastoDiario.gasto > 0) \
+        .group_by(MetaAnuncio.meta_ad_id, MetaAnuncio.nombre, MetaAnuncio.campana, MetaAnuncio.clave, MetaAnuncio.estado).all()
+    filas = [{'id': str(ad_id), 'anuncio': nombre or 'Sin nombre', 'campana': campana or '—', 'clave': clave or '—',
+              'gasto': round(float(gasto or 0), 2), 'dias': dias, 'estado': estado or '—'}
+             for ad_id, nombre, campana, clave, estado, gasto, dias in filas_db]
+    filas.sort(key=lambda f: -f['gasto'])
+    return _COLUMNAS_GASTO, filas, f"{len(filas)} anuncios · ${sum(f['gasto'] for f in filas):,.2f} de Meta"
+
+
 def registros(fuente, metrica, desde, hasta):
     """{columnas, filas, resumen} de lo que suma `metrica` en `fuente` ('setting' o 'workshop')."""
     if fuente not in {f['key'] for f in fuentes_service.FUENTES}:
         raise ValueError('Fuente desconocida.')
     if metrica not in METRICAS:
         raise ValueError('Esa cifra todavía no tiene lista.')
-    columnas, filas, resumen = (_agendas if metrica in ('agendas', 'reportadas', 'show_up') else _cobros)(
-        fuente, metrica, desde, hasta)
+    hacer = _agendas if metrica in ('agendas', 'reportadas', 'show_up') else _leads if metrica == 'leads' \
+        else _gasto if metrica == 'gasto' else _cobros
+    columnas, filas, resumen = hacer(fuente, metrica, desde, hasta)
     return {'fuente': fuente, 'metrica': metrica, 'columnas': columnas, 'filas': filas, 'resumen': resumen}

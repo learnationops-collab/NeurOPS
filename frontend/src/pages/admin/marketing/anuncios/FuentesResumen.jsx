@@ -31,8 +31,8 @@ export const EsqueletoTarjetasFuente = ({ sinRepetidos = false }) => (
     </Skeleton>
 );
 
-// Qué lista abre cada tarjeta de una fuente (`fuentes_registros_service.METRICAS`); Leads e Importe no la tienen todavía.
-const LISTA_DE = { 'Agendas': 'agendas', 'Ventas': 'ventas', 'New Cash': 'new_cash', 'Cash total': 'cash_total',
+// Qué lista abre cada tarjeta de una fuente (`fuentes_registros_service.METRICAS`).
+const LISTA_DE = { 'Leads entrantes': 'leads', 'Importe gastado': 'gasto', 'Agendas': 'agendas', 'Ventas': 'ventas', 'New Cash': 'new_cash', 'Cash total': 'cash_total',
     'ROAS New Cash': 'new_cash', 'ROAS Total': 'cash_total', 'Show up': 'reportadas' };
 
 export const TarjetasFuente = ({ fuente, moneda, sinRepetidos = false, onVer = null }) => {

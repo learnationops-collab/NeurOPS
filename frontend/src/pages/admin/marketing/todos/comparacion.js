@@ -31,6 +31,7 @@ const METRICA_DE = {
     lead_agenda: 'agendas', agendas: 'agendas', agenda_show: 'reportadas', show_up: 'show_up', ventas: 'ventas',
     show_venta: 'ventas', cuotas: 'cash_total', upsells: 'cash_total', new_cash: 'new_cash', cash_total: 'cash_total',
     ticket: 'ventas', roas_new_cash: 'new_cash', roas_total: 'cash_total', costo_show: 'show_up', costo_venta: 'ventas',
+    leads: 'leads', gasto: 'gasto', cpl: 'leads', costo_agenda: 'agendas',
 };
 
 export const gruposDe = (s, w, moneda = 'USD') => {

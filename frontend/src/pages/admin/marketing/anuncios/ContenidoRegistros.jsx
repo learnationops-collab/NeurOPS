@@ -17,12 +17,13 @@ const fecha = (v) => {
 };
 
 const columnaDe = (c, moneda) => ({
-    key: c.key, header: c.header, width: c.ancho, valor: (f) => f[c.key], alinear: c.tipo === 'dinero' ? 'der' : undefined,
+    key: c.key, header: c.header, width: c.ancho, valor: (f) => f[c.key], alinear: ['dinero', 'numero'].includes(c.tipo) ? 'der' : undefined,
     oculta: !!c.oculta,
     render: (f) => {
         const v = f[c.key];
         if (c.tipo === 'fecha') return <span style={{ whiteSpace: 'nowrap' }}>{fecha(v)}</span>;
         if (c.tipo === 'dinero') return formatear(v, 'money', moneda);
+        if (c.tipo === 'numero') return formatear(v, 'num');
         if (c.tipo === 'si_no') return <b style={{ color: v === 'Sí' ? 'var(--success)' : 'var(--text-muted)' }}>{v}</b>;
         return <span title={v} style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v}</span>;
     },

@@ -92,14 +92,14 @@ class _Atribuidor:
 
 # --- El tablero --------------------------------------------------------------------------------
 
-def _entrantes(desde_dt, hasta_dt, clave_de_anuncio):
-    """{clave: {'entrantes', 'calificados', 'descalificados', 'en_conversacion',
-    'dias': {fecha: [entrantes, calificados, descalificados, en conversación]}}}
-    y la cantidad de personas cuya conversación no tiene ninguna palabra clave (clave None)."""
+def entradas_del_periodo(desde_dt, hasta_dt, clave_de_anuncio):
+    """Cada persona que entró por una palabra clave en el período, una vez por palabra clave:
+    `{'lead_id', 'clave', 'cuando', 'calificacion' ('true' | 'false' | None), 'respondio'}`.
+
+    Es lo que cuenta `_entrantes` y lo que lista «Leads» al abrir la cifra (`fuentes_registros_service`):
+    las dos salen de acá, así que la lista suma la cifra."""
     lead_ids = {lid for (lid,) in db.session.query(LeadAnswer.conversation_id).filter(
         LeadAnswer.created_at >= desde_dt, LeadAnswer.created_at <= hasta_dt).distinct()}
-    por_clave = defaultdict(lambda: {'entrantes': 0, 'calificados': 0, 'descalificados': 0,
-                                     'en_conversacion': 0, 'dias': defaultdict(lambda: [0, 0, 0, 0])})
     descalificados = calificacion_service.descalificados()
     for grupo in _por_persona(lead_ids, clave_de_anuncio).values():
         filas = grupo['filas']
@@ -114,21 +114,30 @@ def _entrantes(desde_dt, hasta_dt, clave_de_anuncio):
         for clave, cuando in primera.items():
             if not (desde_dt <= cuando <= hasta_dt):
                 continue
-            calificacion[clave] = calificacion_service.efectiva(
-                calificacion.get(clave), cuando, tope)
-            fila = por_clave[clave]
-            dia = fila['dias'][cuando.date().isoformat()]
-            fila['entrantes'] += 1
-            dia[0] += 1
-            if calificacion.get(clave) == 'true':
-                fila['calificados'] += 1
-                dia[1] += 1
-            elif calificacion.get(clave) == 'false':
-                fila['descalificados'] += 1
-                dia[2] += 1
-            elif clave in respondio:
-                fila['en_conversacion'] += 1
-                dia[3] += 1
+            yield {'lead_id': grupo['leads'][0], 'clave': clave, 'cuando': cuando, 'respondio': clave in respondio,
+                   'calificacion': calificacion_service.efectiva(calificacion.get(clave), cuando, tope)}
+
+
+def _entrantes(desde_dt, hasta_dt, clave_de_anuncio):
+    """{clave: {'entrantes', 'calificados', 'descalificados', 'en_conversacion',
+    'dias': {fecha: [entrantes, calificados, descalificados, en conversación]}}}
+    y la cantidad de personas cuya conversación no tiene ninguna palabra clave (clave None)."""
+    por_clave = defaultdict(lambda: {'entrantes': 0, 'calificados': 0, 'descalificados': 0,
+                                     'en_conversacion': 0, 'dias': defaultdict(lambda: [0, 0, 0, 0])})
+    for e in entradas_del_periodo(desde_dt, hasta_dt, clave_de_anuncio):
+        fila = por_clave[e['clave']]
+        dia = fila['dias'][e['cuando'].date().isoformat()]
+        fila['entrantes'] += 1
+        dia[0] += 1
+        if e['calificacion'] == 'true':
+            fila['calificados'] += 1
+            dia[1] += 1
+        elif e['calificacion'] == 'false':
+            fila['descalificados'] += 1
+            dia[2] += 1
+        elif e['respondio']:
+            fila['en_conversacion'] += 1
+            dia[3] += 1
     return por_clave
 
 
