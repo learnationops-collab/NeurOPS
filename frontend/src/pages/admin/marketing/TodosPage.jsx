@@ -14,6 +14,7 @@ import { usePeriodoDeUrl } from './anuncios/usePeriodoDeUrl';
 import ResumenTodos, { EsqueletoResumen } from './todos/ResumenTodos';
 import MetricaPorMetrica from './todos/MetricaPorMetrica';
 import { SETTING, WORKSHOP, gruposDe } from './todos/comparacion';
+import { useRegistrosMarketing } from './anuncios/useRegistrosMarketing';
 import { useDatosCacheados } from '../../../services/cacheDeVistas';
 import '../../comercial/comercial.css';
 import '../../../components/dashboard/pareja.css';
@@ -52,6 +53,7 @@ const TodosPage = () => {
 
     const setting = datos?.fuentes?.fuentes?.find((f) => f.key === SETTING.key);
     const workshop = datos?.fuentes?.fuentes?.find((f) => f.key === WORKSHOP.key);
+    const registros = useRegistrosMarketing(rango.desde, rango.hasta, datos?.moneda);
     const grupos = useMemo(() => (setting && workshop ? gruposDe(setting, workshop, datos?.moneda) : null), [setting, workshop, datos?.moneda]);
     const sinFuentes = datos && !grupos;
 
@@ -84,9 +86,10 @@ const TodosPage = () => {
         return (
             <div className="vista mk-vista">
                 {vista === 'detalle'
-                    ? <MetricaPorMetrica grupos={grupos} moneda={datos.moneda} />
-                    : <ResumenTodos grupos={grupos} setting={setting} workshop={workshop} moneda={datos.moneda} />}
+                    ? <MetricaPorMetrica grupos={grupos} moneda={datos.moneda} onVer={registros.abrir} />
+                    : <ResumenTodos grupos={grupos} setting={setting} workshop={workshop} moneda={datos.moneda} onVer={registros.abrir} />}
                 {aviso}
+                {registros.panel}
             </div>
         );
     };

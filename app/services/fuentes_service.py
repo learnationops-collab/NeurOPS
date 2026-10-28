@@ -46,6 +46,8 @@ agrupado de `ticket_service`.
 from collections import Counter
 from datetime import datetime, time
 
+from sqlalchemy.orm import joinedload
+
 from app import db
 from app.models import FinancialAgenda
 from app.services.fuente_service import FUENTE_SETTING, es_workshop_landing, es_workshop_vivo, normalizar
@@ -164,18 +166,16 @@ def fuente_de_agenda(nombre, setters):
     return 'setting' if normal in setters or normal == FUENTE_SETTING else None
 
 
-def agendas_por_fuente(desde, hasta):
-    """{fuente: {agendas, show_up, reportadas, dias: {fecha: agendas}}}: las agendas creadas en el período,
-    una por persona (las repetidas de una reprogramación no suman) y show up si asistió a alguna.
-    `reportadas` = con resultado (show up o, si no asistió, no show en su última cita); mismo criterio
-    que `workshop_estados.desglose_de_personas` (`bucket_estado`)."""
+def personas_por_fuente(desde, hasta):
+    """Una fila por persona con agenda creada en el período y fuente conocida: de acá salen las cuentas de
+    `agendas_por_fuente` y la lista que se abre al tocar la cifra (`fuentes_registros_service`), así que
+    no pueden diferir. Las repetidas de una reprogramación no suman. `asistio` si fue a alguna; `ultima` es
+    el `bucket_estado` de su última cita (criterio de `workshop_estados.desglose_de_personas`)."""
     inicio, fin = datetime.combine(desde, time.min), datetime.combine(hasta, time.max)
     setters = setters_conocidos()
-    filas = db.session.query(
-        FinancialAgenda.id, FinancialAgenda.nombre, FinancialAgenda.estado, FinancialAgenda.created_at,
-        FinancialAgenda.person_uuid,
-    ).filter(FinancialAgenda.created_at >= inicio, FinancialAgenda.created_at <= fin,
-             FinancialAgenda.duplicada_de_id.is_(None), FinancialAgenda.descartada_at.is_(None)) \
+    filas = FinancialAgenda.query.options(joinedload(FinancialAgenda.person)).filter(
+        FinancialAgenda.created_at >= inicio, FinancialAgenda.created_at <= fin,
+        FinancialAgenda.duplicada_de_id.is_(None), FinancialAgenda.descartada_at.is_(None)) \
         .order_by(FinancialAgenda.created_at, FinancialAgenda.id).all()
 
     por_persona = {}
@@ -183,18 +183,35 @@ def agendas_por_fuente(desde, hasta):
         fuente = fuente_de_agenda(f.nombre, setters)
         if not fuente:
             continue
-        persona = por_persona.setdefault((fuente, f.person_uuid or f'agenda-{f.id}'),
-                                         {'dia': f.created_at.date().isoformat(), 'asistio': False, 'ultima': None})
+        persona = por_persona.setdefault((fuente, f.person_uuid or f'agenda-{f.id}'), {
+            'fuente': fuente, 'dia': f.created_at.date().isoformat(), 'asistio': False, 'ultima': None,
+            'persona': f.nombre_persona, 'origen': f.nombre, 'closer': f.closer, 'cita': f.date, 'estado': f.estado,
+            'agenda_id': f.id})
         bucket = bucket_estado(f.estado)
+        if bucket == 'Show Up' or not persona['asistio']:
+            persona['estado'] = f.estado
         persona['asistio'] = persona['asistio'] or bucket == 'Show Up'
         persona['ultima'] = bucket
+        persona['closer'] = f.closer or persona['closer']
+        persona['cita'] = f.date or persona['cita']
+    return list(por_persona.values())
 
+
+def con_resultado(p):
+    """¿La cita de esta persona tiene resultado? Asistió o, si no, su última cita fue un no show."""
+    return bool(p['asistio'] or p['ultima'] == 'No Show')
+
+
+def agendas_por_fuente(desde, hasta):
+    """{fuente: {agendas, show_up, reportadas, dias: {fecha: agendas}}}: las agendas creadas en el período,
+    una por persona y show up si asistió a alguna. `reportadas` = con resultado (`con_resultado`)."""
     salida = {f['key']: {'agendas': 0, 'show_up': 0, 'reportadas': 0, 'dias': Counter()} for f in FUENTES}
-    for (fuente, _), p in por_persona.items():
-        salida[fuente]['agendas'] += 1
-        salida[fuente]['show_up'] += 1 if p['asistio'] else 0
-        salida[fuente]['reportadas'] += 1 if p['asistio'] or p['ultima'] == 'No Show' else 0
-        salida[fuente]['dias'][p['dia']] += 1
+    for p in personas_por_fuente(desde, hasta):
+        fila = salida[p['fuente']]
+        fila['agendas'] += 1
+        fila['show_up'] += 1 if p['asistio'] else 0
+        fila['reportadas'] += 1 if con_resultado(p) else 0
+        fila['dias'][p['dia']] += 1
     return salida
 
 

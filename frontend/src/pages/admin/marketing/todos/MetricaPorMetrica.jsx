@@ -14,15 +14,24 @@ const FILTROS = [
     { key: 'costos', label: 'Costos' },
 ];
 
-const Valor = ({ texto, detalle, ancho, color, gana }) => (
+const Valor = ({ texto, detalle, ancho, color, gana, onVer }) => (
     <div className="td-valor">
-        <span className={`t-body num${gana ? ' td-fuerte' : ''}`}>{texto}</span>
-        {detalle && <span className="td-det">{detalle}</span>}
+        {onVer ? (
+            <button type="button" className="td-lado td-lado--valor" onClick={onVer} title="Ver la lista de lo que suma">
+                <span className={`t-body num${gana ? ' td-fuerte' : ''}`}>{texto}</span>
+                {detalle && <span className="td-det">{detalle}</span>}
+            </button>
+        ) : (
+            <>
+                <span className={`t-body num${gana ? ' td-fuerte' : ''}`}>{texto}</span>
+                {detalle && <span className="td-det">{detalle}</span>}
+            </>
+        )}
         <div className="td-pista"><i style={{ width: ancho, background: color }} /></div>
     </div>
 );
 
-const Fila = ({ fila, f }) => {
+const Fila = ({ fila, f, onVer }) => {
     const gana = ganadorDe(fila);
     const { s, w } = anchosDe(fila);
     const nombre = gana === SETTING.key ? SETTING.label : WORKSHOP.label;
@@ -33,8 +42,10 @@ const Fila = ({ fila, f }) => {
                 <span className="t-body td-fuerte">{fila.label}</span>
                 {fila.hint && <span className="t-cap mut">{fila.hint}</span>}
             </div>
-            <Valor texto={f[fila.fmt](fila.s)} detalle={fila.ds} ancho={s} color={SETTING.color} gana={gana === SETTING.key} />
-            <Valor texto={f[fila.fmt](fila.w)} detalle={fila.dw} ancho={w} color={WORKSHOP.color} gana={gana === WORKSHOP.key} />
+            <Valor texto={f[fila.fmt](fila.s)} detalle={fila.ds} ancho={s} color={SETTING.color} gana={gana === SETTING.key}
+                onVer={fila.metrica && onVer ? () => onVer('setting', fila.metrica, fila.label) : null} />
+            <Valor texto={f[fila.fmt](fila.w)} detalle={fila.dw} ancho={w} color={WORKSHOP.color} gana={gana === WORKSHOP.key}
+                onVer={fila.metrica && onVer ? () => onVer('workshop', fila.metrica, fila.label) : null} />
             <div className="td-fila-gana">
                 {gana ? (
                     <>
@@ -49,7 +60,7 @@ const Fila = ({ fila, f }) => {
     );
 };
 
-const MetricaPorMetrica = ({ grupos, moneda }) => {
+const MetricaPorMetrica = ({ grupos, moneda, onVer }) => {
     const [filtro, setFiltro] = useState('todo');
     const f = formatos(moneda);
     const vistos = grupos.filter((g) => filtro === 'todo' || g.id === filtro);
@@ -71,7 +82,7 @@ const MetricaPorMetrica = ({ grupos, moneda }) => {
             {vistos.map((g) => (
                 <div key={g.id} className="td-grupo" role="group" aria-label={g.titulo}>
                     <p className="t-eyebrow td-grupo-titulo">{g.titulo}</p>
-                    {g.filas.map((fila) => <Fila key={fila.id} fila={fila} f={f} />)}
+                    {g.filas.map((fila) => <Fila key={fila.id} fila={fila} f={f} onVer={onVer} />)}
                 </div>
             ))}
             <p className="t-cap mut">

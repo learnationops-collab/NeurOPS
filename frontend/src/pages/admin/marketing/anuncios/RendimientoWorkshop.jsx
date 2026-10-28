@@ -9,6 +9,7 @@ import { enlaceAdministrador } from './enlacesMeta';
 import { dinero, formatear } from './metricas';
 import { serieDeFuente } from './fuentes';
 import { EsqueletoTarjetasFuente, TarjetasFuente } from './FuentesResumen';
+import { useRegistrosMarketing } from './useRegistrosMarketing';
 import { mensajeDeError, pedirWorkshopDelPeriodo } from './marketingApi';
 import { useDatosCacheados } from '../../../../services/cacheDeVistas';
 
@@ -45,6 +46,7 @@ const KPIS = ['Clics', 'Visitas a la landing'];
 const TITULO = 'Campañas, conjuntos y anuncios de Workshop';
 
 const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, fuente, cuentas, version = 0, irAMeta }) => {
+    const registros = useRegistrosMarketing(desde, hasta, moneda);
     const [abiertasDe, setAbiertasDe] = useState({ de: null, mapa: {} });
     const [intento, setIntento] = useState(0);
 
@@ -116,7 +118,10 @@ const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, fuente, cuentas, v
 
     return (
         <div className="vista mk-vista">
-            {embudos && !fuente ? null : <TarjetasFuente fuente={fuente} moneda={moneda} />}
+            {embudos && !fuente ? null : (
+                <TarjetasFuente fuente={fuente} moneda={moneda} onVer={(metrica, titulo) => registros.abrir('workshop', metrica, titulo)} />
+            )}
+            {registros.panel}
             <div className="pareja mk-kpis" style={{ '--min': '220px', '--g': 'var(--s4)' }}>
                 {kpis.map((k, i) => <Kpi key={k.titulo} {...k} i={i} />)}
             </div>

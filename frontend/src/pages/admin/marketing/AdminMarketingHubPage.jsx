@@ -12,6 +12,7 @@ import TablaAnuncios, { EsqueletoTablaAnuncios } from './anuncios/TablaAnuncios'
 import { ErrorDeCarga } from './esqueletos';
 import ConexionMeta from './anuncios/ConexionMeta';
 import { TarjetasFuente } from './anuncios/FuentesResumen';
+import { useRegistrosMarketing } from './anuncios/useRegistrosMarketing';
 import AvisoSinCampana from './anuncios/AvisoSinCampana';
 import { useEstadoDeMeta } from './anuncios/useEstadoDeMeta';
 import { PERIODOS, PERIODO_POR_DEFECTO, rangoDePeriodo } from './anuncios/metricas';
@@ -124,8 +125,10 @@ const AdminMarketingHubPage = () => {
     const fuenteDe = (key) => fuentes?.find((f) => f.key === key) || null;
     // Palabras con gasto sin campaña vigente en el Inbox (24/10/2026).
     const avisoSinCampana = <AvisoSinCampana sinCampana={datos?.fuentes?.sin_campana} moneda={datos?.moneda} />;
+    const registros = useRegistrosMarketing(rango.desde, rango.hasta, datos?.moneda);
     const resumenSetting = !(fuentes && !fuenteDe('setting'))
-        ? <TarjetasFuente fuente={fuenteDe('setting')} moneda={datos?.moneda} sinRepetidos /> : null;
+        ? <TarjetasFuente fuente={fuenteDe('setting')} moneda={datos?.moneda} sinRepetidos
+            onVer={(metrica, titulo) => registros.abrir('setting', metrica, titulo)} /> : null;
 
     if (params.get('tab') === 'trafico') return <Navigate to="/admin/workshops?tab=trafico" replace />;
     if (params.get('embudo') === 'workshop') {
@@ -187,6 +190,7 @@ const AdminMarketingHubPage = () => {
                                         <TablaAnuncios datos={datos} onArchivar={archivar} onAgrupar={agrupar} estadoMeta={estadoMeta}
                                             irAMeta={() => cambiar({ tab: 'meta' })} bajoKpis={resumenSetting} />
                                         {avisoSinCampana}
+                                        {registros.panel}
                                     </>
                                 )}
                             </div>

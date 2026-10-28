@@ -46,3 +46,7 @@ export const archivarPalabraClave = (clave, archivado) =>
 /** El mensaje de un error de la API, para un toast. */
 export const mensajeDeError = (error, porDefecto) =>
     error?.response?.data?.error || error?.response?.data?.message || porDefecto;
+
+/** La lista que suma una cifra de una fuente (`fuente`: setting | workshop; `metrica`: ver fuentes_registros_service). */
+export const pedirRegistros = (fuente, metrica, desde, hasta, config = {}) =>
+    api.get('/marketing/anuncios/registros', { params: { fuente, metrica, desde, hasta }, ...config }).then((r) => r.data);

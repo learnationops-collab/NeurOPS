@@ -18,7 +18,15 @@ const Barra = ({ color, ancho }) => (
     <div className="td-barra-embudo" style={{ width: ancho, background: color }} />
 );
 
-const ResumenTodos = ({ grupos, setting, workshop, moneda }) => {
+// El texto de un lado (Setting o Workshop) como botón que abre su lista, si esa cifra la tiene.
+const Lado = ({ onVer, fuente, metrica, titulo, children }) => (metrica && onVer ? (
+    <button type="button" className="td-lado" onClick={() => onVer(fuente, metrica, titulo)}
+        aria-label={`Ver la lista de ${titulo} de ${fuente === 'setting' ? 'Setting' : 'Workshop'}`}>
+        {children}
+    </button>
+) : <span className="td-lado td-lado--quieto">{children}</span>);
+
+const ResumenTodos = ({ grupos, setting, workshop, moneda, onVer }) => {
     const tarjetas = tarjetasDe(grupos, moneda);
     const pasos = embudoNormalizado(setting, workshop);
     return (
@@ -32,8 +40,12 @@ const ResumenTodos = ({ grupos, setting, workshop, moneda }) => {
                             <span className="td-ganador"><i style={{ background: k.color }} aria-hidden="true" />{k.winner}</span>
                         </div>
                         <div className="td-tarjeta-pie t-cap mut">
-                            <span>Setting {k.s}{k.sd && <small className="td-det">{k.sd}</small>}</span>
-                            <span>Workshop {k.w}{k.wd && <small className="td-det">{k.wd}</small>}</span>
+                            <Lado onVer={onVer} fuente="setting" metrica={k.metrica} titulo={k.label}>
+                                Setting {k.s}{k.sd && <small className="td-det">{k.sd}</small>}
+                            </Lado>
+                            <Lado onVer={onVer} fuente="workshop" metrica={k.metrica} titulo={k.label}>
+                                Workshop {k.w}{k.wd && <small className="td-det">{k.wd}</small>}
+                            </Lado>
                         </div>
                     </div>
                 ))}
@@ -56,12 +68,16 @@ const ResumenTodos = ({ grupos, setting, workshop, moneda }) => {
                                 <div className="td-paso-fila">
                                     <Barra color={SETTING.color} ancho={p.sw} />
                                     <span className="td-cifra num" title={p.st}><b>{p.s}</b><small>por 1.000 leads</small></span>
-                                    <span className="td-det td-det--fila t-cap mut">{p.sr}{p.sr2 && <small>{p.sr2}</small>}</span>
+                                    <Lado onVer={onVer} fuente="setting" metrica={p.metrica} titulo={p.label}>
+                                        <span className="td-det td-det--fila t-cap mut">{p.sr}{p.sr2 && <small>{p.sr2}</small>}</span>
+                                    </Lado>
                                 </div>
                                 <div className="td-paso-fila">
                                     <Barra color={WORKSHOP.color} ancho={p.ww} />
                                     <span className="td-cifra num" title={p.wt}><b>{p.w}</b><small>por 1.000 leads</small></span>
-                                    <span className="td-det td-det--fila t-cap mut">{p.wr}{p.wr2 && <small>{p.wr2}</small>}</span>
+                                    <Lado onVer={onVer} fuente="workshop" metrica={p.metrica} titulo={p.label}>
+                                        <span className="td-det td-det--fila t-cap mut">{p.wr}{p.wr2 && <small>{p.wr2}</small>}</span>
+                                    </Lado>
                                 </div>
                             </div>
                         </div>

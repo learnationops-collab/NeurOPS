@@ -12,7 +12,7 @@ from flask_login import current_user
 
 from app.decorators import _acceso_denegado, require_cron_secret
 from app.models.user import ROLE_ADMIN, ROLE_DIRECTOR_MARKETING
-from app.services import anuncios_service, meta_ads_service, workshop_meta_service
+from app.services import anuncios_service, fuentes_registros_service, meta_ads_service, workshop_meta_service
 
 bp = Blueprint('marketing_anuncios', __name__)
 
@@ -60,6 +60,19 @@ def tablero():
     except ValueError as error:
         return jsonify({'error': str(error)}), 400
     return jsonify({**anuncios_service.tablero(desde, hasta), 'meta': _estado_de_meta()}), 200
+
+
+@bp.route('/registros', methods=['GET'])
+def registros():
+    """La lista que suma una cifra de una fuente: `?fuente=setting|workshop&metrica=agendas|reportadas|show_up|
+    ventas|new_cash|cash_total` (ver `fuentes_registros_service`)."""
+    try:
+        desde, hasta = _periodo()
+        datos = fuentes_registros_service.registros(request.args.get('fuente', ''), request.args.get('metrica', ''),
+                                                    desde, hasta)
+    except ValueError as error:
+        return jsonify({'error': str(error)}), 400
+    return jsonify(datos), 200
 
 
 @bp.route('/archivar', methods=['POST'])

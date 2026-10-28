@@ -26,10 +26,17 @@ export const formatos = (moneda) => ({
 });
 
 /** Los grupos de «Métrica por métrica»; `s` y `w` son las fuentes tal cual llegan del tablero. */
+/** Qué lista abre cada fila (`fuentes_registros_service.METRICAS`); las que no están no tienen lista todavía. */
+const METRICA_DE = {
+    lead_agenda: 'agendas', agendas: 'agendas', agenda_show: 'reportadas', show_up: 'show_up', ventas: 'ventas',
+    show_venta: 'ventas', cuotas: 'cash_total', upsells: 'cash_total', new_cash: 'new_cash', cash_total: 'cash_total',
+    ticket: 'ventas', roas_new_cash: 'new_cash', roas_total: 'cash_total', costo_show: 'show_up', costo_venta: 'ventas',
+};
+
 export const gruposDe = (s, w, moneda = 'USD') => {
     const d = (v) => formatear(v, 'money', moneda);
     const reportadas = (f) => f.reportadas ?? f.agendas;
-    return [
+    const grupos = [
     { id: 'embudo', titulo: 'Embudo', filas: [
         { id: 'leads', label: 'Leads entrantes', tipo: 'vol', fmt: 'n', s: s.leads, w: w.leads,
             hint: 'Setting: palabras clave · Workshop: clics al grupo' },
@@ -73,6 +80,7 @@ export const gruposDe = (s, w, moneda = 'USD') => {
             ds: nDeM(d(s.gasto), num(s.ventas), 'ventas'), dw: nDeM(d(w.gasto), num(w.ventas), 'ventas') },
     ] },
     ];
+    return grupos.map((g) => ({ ...g, filas: g.filas.map((f) => ({ ...f, metrica: METRICA_DE[f.id] })) }));
 };
 
 /** Un costo en 0 es «sin dato» (no hubo ventas, agendas… con qué dividir): no puede ganar. */
@@ -121,7 +129,7 @@ export const tarjetasDe = (grupos, moneda) => {
         else if (gana && EN_PUNTOS.has(id)) big = diferenciaDe(fila);
         else if (gana && bajo) big = `×${(alto / bajo).toFixed(1)}`;
         return {
-            id, label: fila.label, big, winner: gana === SETTING.key ? SETTING.label : gana ? WORKSHOP.label : 'Sin ganador',
+            id, label: fila.label, big, metrica: fila.metrica, winner: gana === SETTING.key ? SETTING.label : gana ? WORKSHOP.label : 'Sin ganador',
             color: gana === SETTING.key ? SETTING.color : gana ? WORKSHOP.color : 'var(--text-muted)',
             s: f[fila.fmt](fila.s), w: f[fila.fmt](fila.w), sd: fila.ds || '', wd: fila.dw || '',
         };
@@ -135,9 +143,9 @@ export const tarjetasDe = (grupos, moneda) => {
  * que es la misma base que en «Métrica por métrica».
  */
 const PASOS = [
-    { label: 'Agendas', paso: 'agendas ÷ leads', k: 'agendas', previo: 'leads', unidad: 'leads' },
-    { label: 'Show up', paso: 'asistieron ÷ agendas', k: 'show_up', previo: 'agendas', unidad: 'agendas', conResultado: true },
-    { label: 'Ventas', paso: 'ventas ÷ asistieron', k: 'ventas', previo: 'show_up', unidad: 'que asistieron' },
+    { label: 'Agendas', paso: 'agendas ÷ leads', k: 'agendas', previo: 'leads', unidad: 'leads', metrica: 'agendas' },
+    { label: 'Show up', paso: 'asistieron ÷ agendas', k: 'show_up', previo: 'agendas', unidad: 'agendas', conResultado: true, metrica: 'reportadas' },
+    { label: 'Ventas', paso: 'ventas ÷ asistieron', k: 'ventas', previo: 'show_up', unidad: 'que asistieron', metrica: 'ventas' },
 ];
 
 export const embudoNormalizado = (s, w) => {
@@ -155,7 +163,7 @@ export const embudoNormalizado = (s, w) => {
         return `${pct(f[p.k], base)} de las citas con resultado · ${nDeM(num(f[p.k]), num(base))}`;
     };
     return PASOS.map((p) => ({
-        label: p.label, paso: p.paso,
+        label: p.label, paso: p.paso, metrica: p.metrica,
         s: texto(por(s, p.k)), w: texto(por(w, p.k)), st: exacto(por(s, p.k)), wt: exacto(por(w, p.k)),
         sw: `${(por(s, p.k) / mayor) * 100}%`, ww: `${(por(w, p.k) / mayor) * 100}%`,
         sr: delPaso(s, p), wr: delPaso(w, p),

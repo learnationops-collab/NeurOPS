@@ -17,7 +17,13 @@
 .dc-shell .td-ganador{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600}
 .dc-shell .td-ganador i{width:10px;height:10px;border-radius:3px;flex:none}
 .dc-shell .td-tarjeta-pie{display:flex;justify-content:space-between;gap:var(--s2);flex-wrap:wrap}
-.dc-shell .td-tarjeta-pie > span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.dc-shell .td-tarjeta-pie > .td-lado{display:flex;flex-direction:column;gap:2px;min-width:0}
+/* Un lado (Setting o Workshop) que abre la lista de lo que suma su cifra. */
+.dc-shell .td-lado{background:none;border:1px solid transparent;border-radius:var(--radius-control);padding:4px 6px;margin:-4px -6px;
+  color:inherit;font:inherit;text-align:left;cursor:pointer;transition:border-color .16s,background-color .16s}
+.dc-shell button.td-lado:hover,.dc-shell button.td-lado:focus-visible{border-color:var(--brand-secondary);background:var(--bg-element-hover);outline:none}
+.dc-shell .td-lado--quieto{cursor:default}
+.dc-shell .td-lado--valor{display:flex;flex-direction:column;gap:2px;width:100%}
 /* La cuenta real detrás de un porcentaje, costo o ROAS: «163 de 2.448 leads». */
 .dc-shell .td-det{display:block;font-size:12.5px;font-weight:600;line-height:1.35;color:var(--text-muted)}
 .dc-shell .td-det--fila{display:flex;flex-direction:column;min-width:0;white-space:normal;font-size:13px;color:var(--text-on-surface)}

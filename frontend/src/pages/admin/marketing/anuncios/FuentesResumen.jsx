@@ -31,7 +31,11 @@ export const EsqueletoTarjetasFuente = ({ sinRepetidos = false }) => (
     </Skeleton>
 );
 
-export const TarjetasFuente = ({ fuente, moneda, sinRepetidos = false }) => {
+// Qué lista abre cada tarjeta de una fuente (`fuentes_registros_service.METRICAS`); Leads e Importe no la tienen todavía.
+const LISTA_DE = { 'Agendas': 'agendas', 'Ventas': 'ventas', 'New Cash': 'new_cash', 'Cash total': 'cash_total',
+    'ROAS New Cash': 'new_cash', 'ROAS Total': 'cash_total', 'Show up': 'reportadas' };
+
+export const TarjetasFuente = ({ fuente, moneda, sinRepetidos = false, onVer = null }) => {
     if (!fuente) return <EsqueletoTarjetasFuente sinRepetidos={sinRepetidos} />;
     const dinero = (v) => formatear(v, 'money', moneda);
     const veces = (v) => formatear(v, 'veces');
@@ -61,7 +65,10 @@ export const TarjetasFuente = ({ fuente, moneda, sinRepetidos = false }) => {
     const mostradas = sinRepetidos ? [showUp, ...kpis.slice(4)] : kpis;
     return (
         <div className={`pareja mk-fuente-kpis${sinRepetidos ? ' mk-fuente-kpis--cinco' : ''}`} style={{ '--min': '170px', '--g': 'var(--s4)' }}>
-            {mostradas.map((k, i) => <Kpi key={k.titulo} {...k} i={i} />)}
+            {mostradas.map((k, i) => (
+                <Kpi key={k.titulo} {...k} i={i}
+                    onVer={onVer && LISTA_DE[k.titulo] ? () => onVer(LISTA_DE[k.titulo], k.titulo) : undefined} />
+            ))}
         </div>
     );
 };
