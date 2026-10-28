@@ -334,12 +334,15 @@ def metricas(base):
 SUMABLES = ('entrantes', 'calificados', 'descalificados', 'en_conversacion', 'agendas', 'ventas', 'gasto', 'cobrado')
 
 
-def tablero(desde, hasta):
+def tablero(desde, hasta, base=None):
     """La tabla de Marketing para el período [desde, hasta] (fechas, ambos incluidos).
 
     Devuelve una fila por palabra clave con movimiento en el período (entrantes, agendas, ventas o
     gasto), los totales, la serie por día de cada fila (para el gráfico de las filas elegidas) y lo
     que no se pudo atribuir. Los totales los recalcula también la pantalla sobre las filas visibles.
+
+    `base` (`conteo_agendas_service`): por qué fecha cuentan las agendas de las tarjetas de fuente (Setting,
+    Workshop y Otras). La tabla de palabras clave cuenta siempre por fecha de alta: es la de los costos.
     """
     desde_dt, hasta_dt = _limites(desde, hasta)
     clave_de_anuncio = _clave_de_cada_anuncio()
@@ -427,5 +430,5 @@ def tablero(desde, hasta):
         # El gasto de Meta por embudo (setting, workshop…): el selector de Rendimiento (15/10/2026).
         'embudos': embudos,
         # Setting vs Workshop con ROAS New Cash y Total (23/10/2026): ver `fuentes_service`.
-        'fuentes': fuentes_service.resumen(desde, hasta, filas, cobros, claves_de_cobro, embudos),
+        'fuentes': fuentes_service.resumen(desde, hasta, filas, cobros, claves_de_cobro, embudos, base),
     }

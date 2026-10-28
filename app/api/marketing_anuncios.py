@@ -59,17 +59,17 @@ def tablero():
         desde, hasta = _periodo()
     except ValueError as error:
         return jsonify({'error': str(error)}), 400
-    return jsonify({**anuncios_service.tablero(desde, hasta), 'meta': _estado_de_meta()}), 200
+    return jsonify({**anuncios_service.tablero(desde, hasta, request.args.get('base')), 'meta': _estado_de_meta()}), 200
 
 
 @bp.route('/registros', methods=['GET'])
 def registros():
-    """La lista que suma una cifra de una fuente: `?fuente=setting|workshop&metrica=agendas|reportadas|show_up|
-    ventas|new_cash|cash_total` (ver `fuentes_registros_service`)."""
+    """La lista que suma una cifra de una fuente: `?fuente=setting|workshop|otras&metrica=agendas|reportadas|
+    show_up|ventas|new_cash|cash_total&base=alta|reunion` (ver `fuentes_registros_service`)."""
     try:
         desde, hasta = _periodo()
         datos = fuentes_registros_service.registros(request.args.get('fuente', ''), request.args.get('metrica', ''),
-                                                    desde, hasta)
+                                                    desde, hasta, request.args.get('base'))
     except ValueError as error:
         return jsonify({'error': str(error)}), 400
     return jsonify(datos), 200

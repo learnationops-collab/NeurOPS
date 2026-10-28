@@ -1,10 +1,12 @@
 """Los registros detrás de cada cifra de una fuente (Setting o Workshop) en Marketing.
 
 Pedido de Kerwin (28/10/2026): cualquier cifra se abre en la lista de lo que la suma, para poder verificarla.
-Cada lista sale del MISMO código que la cifra (`fuentes_service.personas_por_fuente` y `_cobros_para_sumar`),
-no de una consulta parecida: la suma de la lista es la cifra.
+Cada lista sale del MISMO código que la cifra (`conteo_agendas_service.personas` y `_cobros_para_sumar`),
+no de una consulta parecida: la suma de la lista es la cifra. Las agendas se cuentan por fecha de alta o de
+reunión (`base`); Otras es lo que no es de Setting ni de Workshop (solo agendas y cobros: no tiene leads ni gasto).
 
-  · agendas   las personas con agenda creada en el período (con «Asistió» y «Con resultado»).
+  · agendas   las agendas del período en la base elegida (con «Asistió» y «Con resultado»).
+  · agendas_alta   las mismas por fecha de alta, siempre: el denominador de los costos y del ROAS.
   · reportadas las que tienen resultado: la base del % de show up.
   · show_up   las que asistieron.
   · ventas / new_cash   los pagos de venta nueva del período (su suma es el New Cash).
@@ -17,10 +19,10 @@ from collections import defaultdict
 
 from app import db
 from app.models import Ad, Conversation, MetaAnuncio, MetaGastoDiario
-from app.services import anuncios_service, fuentes_service, workshop_meta_service
+from app.services import anuncios_service, conteo_agendas_service, fuentes_service, workshop_meta_service
 from app.services.comercial_service import ComercialService
 
-METRICAS = ('agendas', 'reportadas', 'show_up', 'ventas', 'new_cash', 'cash_total', 'leads', 'gasto')
+METRICAS = ('agendas', 'agendas_alta', 'reportadas', 'show_up', 'ventas', 'new_cash', 'cash_total', 'leads', 'gasto')
 
 TIPOS = {'cuota': 'Cuota', 'sena': 'Seña', 'seña': 'Seña', 'renovacion': 'Renovación', 'upsell': 'Upsell'}
 
@@ -79,22 +81,34 @@ def _si_no(valor):
     return 'Sí' if valor else 'No'
 
 
-def _agendas(fuente, metrica, desde, hasta):
-    personas = [p for p in fuentes_service.personas_por_fuente(desde, hasta) if p['fuente'] == fuente]
+def _agendas(fuente, metrica, desde, hasta, base):
+    base = 'alta' if metrica == 'agendas_alta' else conteo_agendas_service.base_de(base)
+    todas = conteo_agendas_service.personas(desde, hasta, base)
+    # En reunión el show up cuenta leads, una fila por lead y en una sola fuente (`por_lead`).
+    personas = [p for p in (conteo_agendas_service.por_lead(todas) if base == 'reunion' and metrica in ('show_up', 'reportadas')
+                            else todas) if p['fuente'] == fuente]
     if metrica == 'show_up':
         personas = [p for p in personas if p['asistio']]
     elif metrica == 'reportadas':
-        personas = [p for p in personas if fuentes_service.con_resultado(p)]
+        personas = [p for p in personas if p['con_resultado']]
     filas = [{
-        'id': f"{p['agenda_id']}", 'persona': p['persona'] or 'Sin nombre', 'alta': p['dia'],
-        'cita': p['cita'].isoformat() if p['cita'] else '', 'origen': p['origen'] or '—', 'closer': p['closer'] or '—',
-        'estado': p['estado'] or '—', 'asistio': _si_no(p['asistio']), 'con_resultado': _si_no(fuentes_service.con_resultado(p)),
+        'id': f"{p['agenda_id']}", 'persona': p['persona'] or 'Sin nombre', 'alta': p['alta'],
+        'cita': p['cita'], 'origen': p['origen'] or '—', 'closer': p['closer'] or '—',
+        'estado': p['estado'] or '—', 'asistio': _si_no(p['asistio']), 'con_resultado': _si_no(p['con_resultado']),
+        '_dia': p['dia'],
     } for p in personas]
-    filas.sort(key=lambda f: f['alta'], reverse=True)
+    filas.sort(key=lambda f: f['_dia'], reverse=True)
+    for f in filas:
+        del f['_dia']
     asistieron = sum(1 for f in filas if f['asistio'] == 'Sí')
-    resumen = f"{len(filas)} personas · {asistieron} asistieron" if metrica != 'agendas' else f"{len(filas)} agendas"
-    if metrica == 'reportadas':
-        resumen = f"{len(filas)} con resultado · {asistieron} asistieron"
+    unidad = 'leads' if base == 'reunion' and metrica in ('show_up', 'reportadas') else 'personas'
+    por = conteo_agendas_service.ETIQUETA_BASE[base]
+    if metrica in ('agendas', 'agendas_alta'):
+        resumen = f"{len(filas)} agendas por {por}"
+    elif metrica == 'reportadas':
+        resumen = f"{len(filas)} {unidad} con resultado · {asistieron} asistieron"
+    else:
+        resumen = f"{len(filas)} {unidad} asistieron"
     return _COLUMNAS_AGENDAS, filas, resumen
 
 
@@ -103,8 +117,9 @@ def _cobros(fuente, metrica, desde, hasta):
     _por_clave, _sin, cobros, _sin_clave, claves = anuncios_service._ventas(
         desde_dt, hasta_dt, anuncios_service._clave_de_cada_anuncio())
     de_cobro = fuentes_service._cobros_para_sumar(cobros, claves)
+    destino = None if fuente == 'otras' else fuente  # Otras: los cobros que no son de Setting ni de Workshop
     pares = [(c, f) for c, f in zip(cobros, de_cobro)
-             if fuentes_service.fuente_de_cobro(f['por_clave'], f['balde']) == fuente]
+             if fuentes_service.fuente_de_cobro(f['por_clave'], f['balde']) == destino]
     # Clientes que compraron algo nuevo en el período: sus cuotas y upsells son «de esta venta». Las otras
     # son cobros de ventas de antes (lo que separa el ROAS Total del ROAS New Cash).
     nuevos = {f['cliente'] for _, f in pares if f['es_venta']}
@@ -189,13 +204,17 @@ def _gasto(fuente, metrica, desde, hasta):
     return _COLUMNAS_GASTO, filas, f"{len(filas)} anuncios · ${sum(f['gasto'] for f in filas):,.2f} de Meta"
 
 
-def registros(fuente, metrica, desde, hasta):
-    """{columnas, filas, resumen} de lo que suma `metrica` en `fuente` ('setting' o 'workshop')."""
-    if fuente not in {f['key'] for f in fuentes_service.FUENTES}:
+def registros(fuente, metrica, desde, hasta, base=None):
+    """{columnas, filas, resumen} de lo que suma `metrica` en `fuente` ('setting', 'workshop' u 'otras')."""
+    if fuente not in conteo_agendas_service.FUENTES:
         raise ValueError('Fuente desconocida.')
     if metrica not in METRICAS:
         raise ValueError('Esa cifra todavía no tiene lista.')
-    hacer = _agendas if metrica in ('agendas', 'reportadas', 'show_up') else _leads if metrica == 'leads' \
-        else _gasto if metrica == 'gasto' else _cobros
-    columnas, filas, resumen = hacer(fuente, metrica, desde, hasta)
+    if fuente == 'otras' and metrica in ('leads', 'gasto'):
+        raise ValueError('Otras no tiene leads ni gasto: no viene de anuncios.')
+    if metrica in ('agendas', 'agendas_alta', 'reportadas', 'show_up'):
+        columnas, filas, resumen = _agendas(fuente, metrica, desde, hasta, base)
+    else:
+        hacer = _leads if metrica == 'leads' else _gasto if metrica == 'gasto' else _cobros
+        columnas, filas, resumen = hacer(fuente, metrica, desde, hasta)
     return {'fuente': fuente, 'metrica': metrica, 'columnas': columnas, 'filas': filas, 'resumen': resumen}
