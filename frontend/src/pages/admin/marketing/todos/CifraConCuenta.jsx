@@ -1,4 +1,5 @@
 import { TITULO_DE } from './comparacion';
+import './cifra.css';
 
 /**
  * Una cifra (el %, el ROAS, el costo) que muestra SOLA, con su cuenta en un tooltip (Kerwin, 28/10/2026):
@@ -14,7 +15,7 @@ const CifraConCuenta = ({ children, cuenta = null, metrica = null, onVer = null,
     return (
         <span className={`td-cc ${className}`}>
             <button type="button" className="td-cc-cifra" onClick={() => abrir(lista)}
-                aria-label={`${children}: ver la lista de ${(TITULO_DE[lista] || lista).toLowerCase()}`}>
+                aria-label={`${typeof children === 'string' ? `${children}: ` : ''}ver la lista de ${(TITULO_DE[lista] || lista).toLowerCase()}`}>
                 {children}
             </button>
             {cuenta && (

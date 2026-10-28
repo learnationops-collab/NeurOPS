@@ -2,6 +2,8 @@ import { Skeleton, SkeletonText } from '../../../../components/standard';
 import { Kpi } from './TablaAnuncios';
 import { GRUPOS_COMPARACION } from './fuentes';
 import { formatear } from './metricas';
+import { cuentaDe } from '../todos/comparacion';
+import CifraConCuenta from '../todos/CifraConCuenta';
 import './fuentes.css';
 
 /**
@@ -45,7 +47,14 @@ export const TarjetasFuente = ({ fuente, moneda, sinRepetidos = false, onVer = n
         { titulo: TITULOS[1], valor: dinero(fuente.gasto), sub: `${fuente.anuncios} ${fuente.anuncios === 1 ? 'anuncio' : 'anuncios'} en Meta`,
           tip: 'Gasto de Meta de los anuncios del embudo.' },
         { titulo: TITULOS[2], valor: formatear(fuente.agendas, 'num'),
-          sub: `${dinero(fuente.costo_agenda)} por agenda · show up ${fuente.pct_show_up === null ? '—' : `${fuente.pct_show_up}%`}`,
+          sub: (
+              <>
+                  {dinero(fuente.costo_agenda)} por agenda · show up{' '}
+                  <CifraConCuenta cuenta={cuentaDe('agenda_show', fuente, dinero)} onVer={onVer}>
+                      {fuente.pct_show_up === null ? '—' : `${fuente.pct_show_up}%`}
+                  </CifraConCuenta>
+              </>
+          ),
           tip: 'Personas con agenda creada en el período. Show up: asistieron ÷ citas con resultado.' },
         { titulo: TITULOS[3], valor: formatear(fuente.ventas, 'num'), sub: `${dinero(fuente.costo_venta)} por venta`,
           tip: 'Pagos de venta nueva (completo o split) del período.' },
@@ -54,20 +63,21 @@ export const TarjetasFuente = ({ fuente, moneda, sinRepetidos = false, onVer = n
         { titulo: TITULOS[5], valor: dinero(fuente.cash_total),
           sub: `con ${fuente.cuotas} ${fuente.cuotas === 1 ? 'cuota' : 'cuotas'} y upsells`,
           tip: 'Todo lo cobrado del período de los clientes que trajo la fuente, aunque la venta sea de antes.' },
-        { titulo: TITULOS[6], valor: veces(fuente.roas_new_cash), sub: 'New Cash / gastado',
+        { titulo: TITULOS[6], valor: veces(fuente.roas_new_cash), cuenta: cuentaDe('roas_new_cash', fuente, dinero),
           tip: 'Solo la venta nueva del período, sobre lo gastado. Sin gasto no hay ROAS.' },
-        { titulo: TITULOS[7], valor: veces(fuente.roas_total), sub: 'Cash total / gastado',
+        { titulo: TITULOS[7], valor: veces(fuente.roas_total), cuenta: cuentaDe('roas_total', fuente, dinero),
           tip: 'Todo lo cobrado de los clientes de la fuente, sobre lo gastado.' },
     ];
     const showUp = { titulo: 'Show up', valor: fuente.pct_show_up === null ? '—' : `${fuente.pct_show_up}%`,
-        sub: `${formatear(fuente.show_up, 'num')} de ${formatear(fuente.reportadas, 'num')} citas con resultado`,
+        cuenta: cuentaDe('agenda_show', fuente, dinero),
         tip: 'Asistieron ÷ citas con resultado (asistieron + no show).' };
     const mostradas = sinRepetidos ? [showUp, ...kpis.slice(4)] : kpis;
     return (
         <div className={`pareja mk-fuente-kpis${sinRepetidos ? ' mk-fuente-kpis--cinco' : ''}`} style={{ '--min': '170px', '--g': 'var(--s4)' }}>
             {mostradas.map((k, i) => (
                 <Kpi key={k.titulo} {...k} i={i}
-                    onVer={onVer && LISTA_DE[k.titulo] ? () => onVer(LISTA_DE[k.titulo], k.titulo) : undefined} />
+                    onVer={onVer && LISTA_DE[k.titulo] ? () => onVer(LISTA_DE[k.titulo], k.titulo) : undefined}
+                    onCuenta={onVer} />
             ))}
         </div>
     );

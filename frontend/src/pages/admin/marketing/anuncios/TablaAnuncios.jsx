@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Archive, CircleDollarSign, Eye, Link2, Power, Search } from 'lucide-react';
 import Cifra from '../../../comercial/components/Cifra';
+import CifraConCuenta from '../todos/CifraConCuenta';
 import { Segmented, Tip } from '../../../comercial/components/Shared';
 import SerieDiaria from './SerieDiaria';
 import EditorAgrupacion from './EditorAgrupacion';
@@ -39,8 +40,10 @@ import {
  */
 
 // `onVer`: el ojo de la tarjeta abre las filas que suman su cifra (`useVerRegistros`), como en Closing.
-export const Kpi = ({ titulo, valor, sub, tip, i, onVer }) => {
+// `cuenta` ({ a, b } de `cuentaDe`): la cifra va sola y su «N de M» en un tooltip con cada parte clicable (`onCuenta`).
+export const Kpi = ({ titulo, valor, sub, tip, i, onVer, cuenta = null, onCuenta = null }) => {
     const reducir = useReducedMotion();
+    const cifra = <Cifra valor={valor} className="kpi-n" desdeAnterior />;
     return (
         <motion.section className="kpi mk-kpi"
             initial={reducir ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -56,8 +59,8 @@ export const Kpi = ({ titulo, valor, sub, tip, i, onVer }) => {
                 )}
             </div>
             <div className="kpi-cifra">
-                <Cifra valor={valor} className="kpi-n" desdeAnterior />
-                <p className="kpi-sub">{sub}</p>
+                {cuenta ? <CifraConCuenta cuenta={cuenta} onVer={onCuenta}>{cifra}</CifraConCuenta> : cifra}
+                {sub && <p className="kpi-sub">{sub}</p>}
             </div>
         </motion.section>
     );
