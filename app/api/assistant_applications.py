@@ -21,6 +21,7 @@ from app.models.assistant_application import (
     BLOQUES, CAMPOS_FORMULARIO, ESTADOS, ETIQUETAS_PREGUNTA, OPCIONALES, VERIFICADO_OK, pais_limpio,
 )
 from app.services import assistant_clarity
+from app.services.hiring_forms import form_activo
 from app.services.assistant_clarity import CLARITY_CRITERIA
 from flask_login import current_user
 
@@ -80,6 +81,24 @@ def _conteos(filas):
     return conteos
 
 
+def _preguntas_filtro():
+    """Las preguntas de opción (una o varias) del formulario activo, para filtrar
+    la tabla por sus respuestas: [{id, t, bloque, tipo, o: [texto]}]. El país va
+    aparte (tiene su propio filtro) y las de texto no se filtran."""
+    form = form_activo()
+    salida = []
+    for p in (form.preguntas if form else None) or []:
+        if not isinstance(p, dict) or p.get('on') is False or p.get('id') == 'pais':
+            continue
+        if p.get('tipo') not in ('radio', 'check'):
+            continue
+        opciones = [o.get('t') for o in p.get('o') or [] if isinstance(o, dict) and o.get('t')]
+        if opciones:
+            salida.append({"id": p['id'], "t": p.get('t') or p['id'], "bloque": p.get('bloque'),
+                           "tipo": p['tipo'], "o": opciones})
+    return salida
+
+
 @bp.route('/assistant-applications', methods=['GET'])
 @login_required
 @hiring_required
@@ -117,10 +136,18 @@ def listar_assistant_applications():
     conteos = _conteos(base)
     conteos.update(conteos_modalidad)
 
+    preguntas_filtro = _preguntas_filtro()
+    ids_filtro = [p['id'] for p in preguntas_filtro]
+
+    def fila(a):
+        data = a.to_dict(include_respuestas=False, criterios=weights)
+        # Solo las respuestas de opción, para los filtros de la vista.
+        data["resp"] = {pid: v for pid in ids_filtro if (v := a.respuesta(pid))}
+        return data
+
     return jsonify({
-        "postulaciones": [
-            a.to_dict(include_respuestas=False, criterios=weights) for a in filtradas
-        ],
+        "postulaciones": [fila(a) for a in filtradas],
+        "preguntas_filtro": preguntas_filtro,
         "conteos": conteos,
         "conteos_globales": _conteos(todas),
         # KPI «Postulaciones»: solo las que terminaron el formulario (las

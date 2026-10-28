@@ -79,6 +79,7 @@ const HiringDashboardPage = () => {
     const [statsSeg, setStatsSeg] = useState('gen');
     const [query, setQuery] = useState('');
     const [todas, setTodas] = useState([]);
+    const [preguntasFiltro, setPreguntasFiltro] = useState([]);
     const [cargando, setCargando] = useState(true);
     const [errorCarga, setErrorCarga] = useState('');
     const [errorBorrado, setErrorBorrado] = useState('');
@@ -103,6 +104,7 @@ const HiringDashboardPage = () => {
             if (mio !== pedido.current) return;
             const filas = (res.data.postulaciones || []).map(normalizar);
             setTodas(filas);
+            setPreguntasFiltro(res.data.preguntas_filtro || []);
             setErrorCarga('');
             // La primera vez, el Inbox abre en la tanda que tiene algo (híbridos primero).
             if (!yaCargo.current) {
@@ -481,6 +483,7 @@ const HiringDashboardPage = () => {
                 <MenuVista
                     ancla={botonVista}
                     cfg={cfg}
+                    preguntas={preguntasFiltro}
                     onCambiar={cambiarVista}
                     onCerrar={() => setMenuAbierto(false)}
                     onCriterios={() => { setMenuAbierto(false); setConfig('clarity'); }}
