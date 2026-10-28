@@ -15,7 +15,9 @@ leads de Setting `anuncios_service.entradas_del_periodo`. Cada uno se reparte en
 """
 from app.services import anuncios_service, fuentes_registros_service, fuentes_service
 from app.services.fuentes_service import FUENTES, dividir
-from app.services.segmentos_lectura import ETIQUETAS, ORDEN, SIN, de_agendas_del_libro, de_cobros, de_conversaciones, lista
+from app.services.segmentos_lectura import (
+    ETIQUETAS, ORDEN, SIN, de_agendas_del_libro, de_cobros, de_conversaciones, lista, parsear,
+)
 
 CAMPOS = ('leads', 'agendas', 'reportadas', 'show_up', 'ventas', 'new_cash', 'cash_total')
 # Lo que NO se puede partir por segmento (gasto de Meta: no conoce al lead).
@@ -122,9 +124,10 @@ def _grupos_de(fuente, metrica, filas):
 
 def registros(fuente, metrica, segmento, desde, hasta):
     """La lista de una celda de la matriz: lo que suma `metrica` en `fuente` para el grupo `segmento` ('A'…'D',
-    'sin'), o el de todos si va vacío. Es la lista de `fuentes_registros_service` con una columna de segmento y
-    solo las filas del grupo: su suma es la celda."""
-    if segmento and segmento not in ORDEN:
+    'sin'; varios separados por coma; vacío = todos). Es la lista de `fuentes_registros_service` con una columna
+    de segmento y solo las filas del grupo: su suma es la celda."""
+    elegidos = parsear(segmento)
+    if segmento and elegidos is None and not set(str(segmento).replace(' ', '').split(',')) <= set(ORDEN):
         raise ValueError('Segmento desconocido.')
     if metrica in SIN_SEGMENTO_POSIBLE:
         raise ValueError('El gasto de Meta no se parte por segmento: Meta no conoce al lead.')
@@ -135,11 +138,11 @@ def registros(fuente, metrica, segmento, desde, hasta):
     filas = []
     for f in base['filas']:
         g = grupo_de.get(str(f['id']), SIN)
-        if not segmento or g == segmento:
+        if elegidos is None or g in elegidos:
             filas.append({**f, 'segmento': ETIQUETAS[g]})
-    nombre = ETIQUETAS[segmento] if segmento else 'todos los segmentos'
+    nombre = ' + '.join(ETIQUETAS[s] for s in ORDEN if s in elegidos) if elegidos else 'todos los segmentos'
     resumen = f"{len(filas):,} {_UNIDAD.get(metrica, 'filas')} · {nombre}"
     if metrica in ('ventas', 'new_cash', 'cash_total'):
         resumen += f" · ${sum(f['monto'] for f in filas):,.2f}"
-    return {'fuente': fuente, 'metrica': metrica, 'segmento': segmento or None, 'resumen': resumen, 'filas': filas,
-            'columnas': [base['columnas'][0], _COLUMNA_SEGMENTO, *base['columnas'][1:]]}
+    return {'fuente': fuente, 'metrica': metrica, 'segmento': ','.join(s for s in ORDEN if s in elegidos) if elegidos else None,
+            'resumen': resumen, 'filas': filas, 'columnas': [base['columnas'][0], _COLUMNA_SEGMENTO, *base['columnas'][1:]]}
