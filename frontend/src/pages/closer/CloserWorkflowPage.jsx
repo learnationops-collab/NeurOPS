@@ -1924,8 +1924,9 @@ const CloserWorkflowPage = () => {
                     30/09/2026). Antes eran dos arriba y la comisión en otra fila entera: entre las dos
                     filas y las pestañas, lo que había que mirar —el tablero, los datos— empezaba a
                     media pantalla. En `.pareja` para que, si no entran las tres, se apilen las tres
-                    y nunca quede una sola abajo. */}
-                {(() => {
+                    y nunca quede una sola abajo. En «Cerrar el día» no van (pedido del 28/10/2026):
+                    esa vista ya trae su propio resumen del día. */}
+                {activeView !== 'report' && (() => {
                     // "Tu día" tiene que reflejar el trabajo real de HOY en las 3 pestañas, no solo lo
                     // que trajo la pestaña activa (`agendas` es la lista de una sola pestaña, y para
                     // "Confirmar"/"Reportar" solo incluye lo PENDIENTE por diseño del backend — nunca

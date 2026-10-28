@@ -1163,3 +1163,5 @@
   - La inversión pesa el doble: $500 o más +4 · $200–$500 +2 · podría conseguir ayuda −3 · no estoy dispuesto −4. A desde +4 (los mismos A que antes), B de +1 a +3. Quien no invierte queda como mucho en C (triage); el script frena si una opción nueva lo rompe. Versión `2026-12.1`.
   - Aplicado en producción y recalculados los segmentos guardados: 0 leads que no invierten en A o B; Brenda pasó a C (su agenda ya tomada no se reasigna).
   - La pestaña Formulario de la ficha muestra los puntos de cada respuesta que cuenta y la suma con los cortes.
+- **28 de Octubre de 2026 (Cerrar el día: sin las tres tarjetas de arriba)** *([CloserWorkflowPage.jsx](../../frontend/src/pages/closer/CloserWorkflowPage.jsx))*:
+  - En «Cerrar el día» ya no aparecen «Tu siguiente paso», «Tu día» ni «Comisión de este mes». Siguen en Confirmar, Reportar, Seguir, Ver mis datos y Mi cartera.
