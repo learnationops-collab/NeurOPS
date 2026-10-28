@@ -196,7 +196,9 @@ export const DESTINOS_SETTER = {
 export const PASOS_CLOSER = {
     Agendas: {
         ayuda: 'Llamadas agendadas en el período, sin importar la fuente.',
-        destino: { tabla: 'agendas', filtro: {}, de: 'Embudo · Agendas' },
+        // «Todas»: el embudo cuenta también las descartadas, y la lista por defecto («Vigentes») las deja afuera.
+        destino: { tabla: 'agendas', filtro: {}, chip: 'todas_las', de: 'Embudo · Agendas' },
+        destinoDescartadas: { tabla: 'agendas', filtro: {}, chip: 'descartadas', de: 'Embudo · Agendas descartadas' },
     },
     // Sin «Confirmadas»: el usuario la sacó del embudo (09/10/2026). La confirmación se sigue
     // viendo en el pre call de cada agenda y se filtra con la faceta «Confirmada» de Revisar.

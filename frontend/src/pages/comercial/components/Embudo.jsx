@@ -12,6 +12,8 @@ import { CardHead, Tip, useMontado } from './Shared';
  *
  * - `paso` es el nombre y `n` el conteo; el array va en orden, de arriba hacia abajo.
  * - `ayuda` es el texto del tooltip de esa fila. Opcional: sin él la fila no muestra el ícono.
+ * - `sub` es una línea bajo la banda con la cuenta que la compone («150 vigentes + 73 descartadas»);
+ *   con `irSub` es un botón. Opcional.
  * - `ir` es el drill-down de esa fila. Opcional: sin él el nombre no es clicable. Es por fila y no
  *   un callback genérico porque cada paso lleva a un filtro distinto de Revisar, y quién decide
  *   ese destino es la vista que arma los pasos, no el embudo.
@@ -99,6 +101,20 @@ const Embudo = ({ pasos, sinCuello = false, sinFinal = false }) => {
                                 {pct === null ? '' : `${pct}%`}
                             </span>
                         </div>
+                        {p.sub && (
+                            <div className="dc-funnel-row">
+                                <span />
+                                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                    {p.irSub ? (
+                                        <button type="button" className="t-cap mut num" onClick={p.irSub}
+                                            style={{ background: 'none', border: 0, cursor: 'pointer', textDecoration: 'underline dotted' }}>
+                                            {p.sub}
+                                        </button>
+                                    ) : <span className="t-cap mut num">{p.sub}</span>}
+                                </div>
+                                <span />
+                            </div>
+                        )}
                         {anchoSig !== null && (
                             <div className="dc-funnel-row">
                                 <span />

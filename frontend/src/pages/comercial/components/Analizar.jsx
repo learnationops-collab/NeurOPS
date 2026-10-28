@@ -823,6 +823,9 @@ const pasosDe = (funnel, vocabulario, irA) => funnel.map(p => {
         n: p.n,
         ayuda: def.ayuda,
         ir: abrir(irA, def.destino),
+        // Agendas: cuántas son vigentes y cuántas descartadas; la segunda cifra abre las descartadas.
+        sub: p.descartadas != null ? `${p.vigentes} vigentes + ${p.descartadas} descartadas` : undefined,
+        irSub: p.descartadas ? abrir(irA, def.destinoDescartadas) : undefined,
     };
 });
 

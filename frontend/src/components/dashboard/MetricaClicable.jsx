@@ -38,7 +38,7 @@ import './drill.css';
  * decir de dónde vino el filtro. Las claves `__` no son facetas, Revisar las separa al absorberlas.
  */
 export const cargaDe = (destino) => ({
-    ...destino.filtro, __de: destino.de, __aviso: destino.aviso || null,
+    ...destino.filtro, __de: destino.de, __aviso: destino.aviso || null, __chip: destino.chip || null,
 });
 
 /**

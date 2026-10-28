@@ -336,6 +336,7 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
     # presentación aunque nadie haya tildado el campo — sin eso el embudo mostraría más ventas
     # que presentaciones, que es imposible.
     presentaciones = sum(1 for f in agendas if f['asistio'] and f['presento'])
+    descartadas = sum(1 for f in agendas if f['descartada'])
 
     por_tipo, programas = {}, {}
     for f in ventas:
@@ -458,7 +459,10 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
         # Revisar; lo que se fue es el escalón, y con él la tasa de asistencia pasa a medirse
         # contra las agendas.
         'funnel': [
-            {'paso': 'Agendas', 'n': tot_a['agendas']},
+            # Las descartadas (canceló, lead perdido, descalificada, archivada sin reporte) salen de la
+            # lista «Vigentes» de Revisar: el embudo cuenta todas y dice cuántas de cada una (28/10/2026).
+            {'paso': 'Agendas', 'n': tot_a['agendas'], 'vigentes': tot_a['agendas'] - descartadas,
+             'descartadas': descartadas},
             {'paso': 'Asistieron', 'n': tot_a['asistieron']},
             {'paso': 'Presentaciones', 'n': presentaciones},
             {'paso': 'Ventas', 'n': tot_a['ventas']},
