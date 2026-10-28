@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Archive, CircleDollarSign, Link2, Power, Search } from 'lucide-react';
+import { Archive, CircleDollarSign, Eye, Link2, Power, Search } from 'lucide-react';
 import Cifra from '../../../comercial/components/Cifra';
 import { Segmented, Tip } from '../../../comercial/components/Shared';
 import SerieDiaria from './SerieDiaria';
@@ -18,6 +18,8 @@ import { referenciasDe } from './tonos';
 import LeyendaTonos from './LeyendaTonos';
 import TarjetasAnuncios, { SelectorModo } from './TarjetasAnuncios';
 import { useModoVista } from '../../../../components/listas/useModoVista';
+import { useVerRegistros } from '../../../../components/standard';
+import { contenidoDeKpi } from './registrosDeKpi';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { hayListaComercial, useDrillDown } from '../../../closer/dashboard/useDrillDown';
 import { EsqueletoKpis, EsqueletoPanelTabla } from '../esqueletos';
@@ -36,7 +38,8 @@ import {
  * conjunto; acá se filtran, se agrupan (`agruparFilas`), se ordenan y se suman.
  */
 
-export const Kpi = ({ titulo, valor, sub, tip, i }) => {
+// `onVer`: el ojo de la tarjeta abre las filas que suman su cifra (`useVerRegistros`), como en Closing.
+export const Kpi = ({ titulo, valor, sub, tip, i, onVer }) => {
     const reducir = useReducedMotion();
     return (
         <motion.section className="kpi mk-kpi"
@@ -45,6 +48,12 @@ export const Kpi = ({ titulo, valor, sub, tip, i }) => {
             <div className="kpi-cab">
                 <p className="t-eyebrow">{titulo}</p>
                 <Tip texto={tip} titulo={titulo} />
+                {onVer && (
+                    <button type="button" className="mk-kpi-ver" onClick={onVer} aria-label={`Ver los registros de ${titulo}`}
+                        data-tip="Ver registros|Las filas que suman esta cifra">
+                        <Eye size={15} aria-hidden="true" />
+                    </button>
+                )}
             </div>
             <div className="kpi-cifra">
                 <Cifra valor={valor} className="kpi-n" desdeAnterior />
@@ -93,6 +102,7 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = nul
     const moneda = datos.moneda;
     const vista = useVistaDeColumnas();
     const { modo, setModo } = useModoVista('mk_rendimiento_modo');
+    const registros = useVerRegistros();
     // De «De dónde vino lo cobrado» a la lista de esas ventas: Revisar › Ventas con las fechas de acá,
     // solo para quien puede abrir el dashboard comercial (admin o dirección comercial).
     const { user } = useAuth();
@@ -207,17 +217,22 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = nul
     };
 
     const conGasto = totales.gasto > 0;
+    // El ojo de cada KPI abre las filas que lo suman: las mismas que ve la tabla, con su aporte.
+    const ver = (kpi, titulo, valor) => () => registros.abrir({
+        titulo, subtitulo: `${valor} en el período · una fila por ${NOMBRE_DEL_NIVEL[nivel].toLowerCase()}`,
+        contenido: contenidoDeKpi({ kpi, filas: visibles, idDe, nivel: NOMBRE_DEL_NIVEL[nivel], moneda }),
+    });
     const kpis = [
-        { titulo: KPIS[0], valor: formatear(totales.entrantes, 'num'),
+        { titulo: KPIS[0], valor: formatear(totales.entrantes, 'num'), onVer: ver('entrantes', KPIS[0], formatear(totales.entrantes, 'num')),
           sub: `${formatear(totales.pct_calificados, 'pct')} calificados · ${formatear(totales.pct_descalificados, 'pct')} descalificados · ${formatear(totales.pct_pendientes, 'pct')} pendientes`,
           tip: 'Personas que entraron, por estado en ManyChat.' },
-        { titulo: KPIS[1], valor: formatear(totales.gasto, 'money', moneda),
+        { titulo: KPIS[1], valor: formatear(totales.gasto, 'money', moneda), onVer: ver('gasto', KPIS[1], formatear(totales.gasto, 'money', moneda)),
           sub: conGasto ? `${formatear(totales.cpl, 'money', moneda)} por lead · ${formatear(totales.cpl_calificado, 'money', moneda)} por calificado` : 'Sin gasto cargado en el período',
           tip: 'Gasto en Meta de estas palabras clave.' },
-        { titulo: KPIS[2], valor: formatear(totales.agendas, 'num'),
+        { titulo: KPIS[2], valor: formatear(totales.agendas, 'num'), onVer: ver('agendas', KPIS[2], formatear(totales.agendas, 'num')),
           sub: conGasto ? `${formatear(totales.costo_agenda, 'money', moneda)} por agenda` : 'Costo por agenda: —',
           tip: 'Con palabra clave de ManyChat; la tarjeta de Setting cuenta por setter.' },
-        { titulo: KPIS[3], valor: formatear(totales.ventas, 'num'),
+        { titulo: KPIS[3], valor: formatear(totales.ventas, 'num'), onVer: ver('ventas', KPIS[3], formatear(totales.ventas, 'num')),
           sub: conGasto ? `${formatear(totales.costo_venta, 'money', moneda)} por venta · ROAS ${formatear(totales.roas, 'veces')}` : `${formatear(totales.cobrado, 'money', moneda)} cobrado`,
           tip: 'Pago completo o split. ROAS = cobrado ÷ gastado.' },
     ];
@@ -379,6 +394,7 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = nul
                     onGuardar={guardarAgrupacion} onAutomatica={() => guardarAgrupacion(null, null)}
                     onCerrar={() => setEditando(null)} />
             )}
+            {registros.panel}
         </div>
     );
 };

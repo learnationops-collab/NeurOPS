@@ -56,6 +56,10 @@
 /* --- KPIs --- */
 .dc-shell .mk-kpi{gap:var(--s3);padding:var(--s5)}
 .dc-shell .mk-kpi .kpi-sub{font-size:12px;line-height:1.4}
+/* El ojo que abre los registros de la cifra (como en Closing), al final de la cabecera. */
+.dc-shell .mk-kpi-ver{margin-left:auto;flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;cursor:pointer;
+  color:var(--text-muted);background:transparent;border:1px solid var(--border-subtle);transition:color .16s,border-color .16s,background-color .16s}
+.dc-shell .mk-kpi-ver:hover,.dc-shell .mk-kpi-ver:focus-visible{color:var(--text-on-surface);border-color:var(--brand-secondary);outline:none}
 
 /* --- Gráficos por día --- */
 .dc-shell .mk-shell, .dc-shell.mk-shell{--mk-resto:color-mix(in srgb,var(--text-on-surface) 24%,transparent)}
