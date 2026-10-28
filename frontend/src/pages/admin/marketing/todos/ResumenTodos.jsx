@@ -1,5 +1,6 @@
 import { Skeleton, SkeletonBlock } from '../../../../components/standard';
 import { SETTING, WORKSHOP, embudoNormalizado, tarjetasDe } from './comparacion';
+import CifraConCuenta from './CifraConCuenta';
 
 /**
  * «Resumen» de Todos: las cuatro cifras que más separan a Setting de Workshop (quién gana y por cuánto)
@@ -18,17 +19,26 @@ const Barra = ({ color, ancho }) => (
     <div className="td-barra-embudo" style={{ width: ancho, background: color }} />
 );
 
-// El texto de un lado (Setting o Workshop) como botón que abre su lista, si esa cifra la tiene.
-const Lado = ({ onVer, fuente, metrica, titulo, children }) => (metrica && onVer ? (
-    <button type="button" className="td-lado" onClick={() => onVer(fuente, metrica, titulo)}
-        aria-label={`Ver la lista de ${titulo} de ${fuente === 'setting' ? 'Setting' : 'Workshop'}`}>
-        {children}
-    </button>
-) : <span className="td-lado td-lado--quieto">{children}</span>);
+// Las tasas de un paso del embudo, cada una con su cuenta en el tooltip: «6,6%» y, en el show up, también «61,9% con resultado».
+const Tasas = ({ paso, lado, onVer }) => {
+    const principal = paso[`${lado}r`];
+    const segunda = paso[`${lado}r2`];
+    return (
+        <span className="td-tasas">
+            <CifraConCuenta cuenta={principal.cuenta} metrica={paso.metrica} onVer={onVer}>{principal.pct}</CifraConCuenta>
+            {segunda && (
+                <span className="td-tasa2">
+                    <CifraConCuenta cuenta={segunda.cuenta} onVer={onVer}>{segunda.pct}</CifraConCuenta> {segunda.rotulo}
+                </span>
+            )}
+        </span>
+    );
+};
 
 const ResumenTodos = ({ grupos, setting, workshop, moneda, onVer }) => {
     const tarjetas = tarjetasDe(grupos, moneda);
     const pasos = embudoNormalizado(setting, workshop);
+    const ver = (fuente) => (onVer ? (metrica, titulo) => onVer(fuente, metrica, titulo) : null);
     return (
         <div className="vista mk-vista">
             <section className="td-tarjetas td-tarjetas--cinco" aria-label="Lo que más separa a Setting de Workshop">
@@ -40,12 +50,8 @@ const ResumenTodos = ({ grupos, setting, workshop, moneda, onVer }) => {
                             <span className="td-ganador"><i style={{ background: k.color }} aria-hidden="true" />{k.winner}</span>
                         </div>
                         <div className="td-tarjeta-pie t-cap mut">
-                            <Lado onVer={onVer} fuente="setting" metrica={k.metrica} titulo={k.label}>
-                                Setting {k.s}{k.sd && <small className="td-det">{k.sd}</small>}
-                            </Lado>
-                            <Lado onVer={onVer} fuente="workshop" metrica={k.metrica} titulo={k.label}>
-                                Workshop {k.w}{k.wd && <small className="td-det">{k.wd}</small>}
-                            </Lado>
+                            <span>Setting <CifraConCuenta cuenta={k.sd} metrica={k.metrica} onVer={ver('setting')}>{k.s}</CifraConCuenta></span>
+                            <span>Workshop <CifraConCuenta cuenta={k.wd} metrica={k.metrica} onVer={ver('workshop')}>{k.w}</CifraConCuenta></span>
                         </div>
                     </div>
                 ))}
@@ -68,16 +74,12 @@ const ResumenTodos = ({ grupos, setting, workshop, moneda, onVer }) => {
                                 <div className="td-paso-fila">
                                     <Barra color={SETTING.color} ancho={p.sw} />
                                     <span className="td-cifra num" title={p.st}><b>{p.s}</b><small>por 1.000 leads</small></span>
-                                    <Lado onVer={onVer} fuente="setting" metrica={p.metrica} titulo={p.label}>
-                                        <span className="td-det td-det--fila t-cap mut">{p.sr}{p.sr2 && <small>{p.sr2}</small>}</span>
-                                    </Lado>
+                                    <Tasas paso={p} lado="s" onVer={ver('setting')} />
                                 </div>
                                 <div className="td-paso-fila">
                                     <Barra color={WORKSHOP.color} ancho={p.ww} />
                                     <span className="td-cifra num" title={p.wt}><b>{p.w}</b><small>por 1.000 leads</small></span>
-                                    <Lado onVer={onVer} fuente="workshop" metrica={p.metrica} titulo={p.label}>
-                                        <span className="td-det td-det--fila t-cap mut">{p.wr}{p.wr2 && <small>{p.wr2}</small>}</span>
-                                    </Lado>
+                                    <Tasas paso={p} lado="w" onVer={ver('workshop')} />
                                 </div>
                             </div>
                         </div>

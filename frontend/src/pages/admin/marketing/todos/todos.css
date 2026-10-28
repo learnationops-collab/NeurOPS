@@ -17,17 +17,25 @@
 .dc-shell .td-ganador{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600}
 .dc-shell .td-ganador i{width:10px;height:10px;border-radius:3px;flex:none}
 .dc-shell .td-tarjeta-pie{display:flex;justify-content:space-between;gap:var(--s2);flex-wrap:wrap}
-.dc-shell .td-tarjeta-pie > .td-lado{display:flex;flex-direction:column;gap:2px;min-width:0}
-/* Un lado (Setting o Workshop) que abre la lista de lo que suma su cifra. */
-.dc-shell .td-lado{background:none;border:1px solid transparent;border-radius:var(--radius-control);padding:4px 6px;margin:-4px -6px;
-  color:inherit;font:inherit;text-align:left;cursor:pointer;transition:border-color .16s,background-color .16s}
-.dc-shell button.td-lado:hover,.dc-shell button.td-lado:focus-visible{border-color:var(--brand-secondary);background:var(--bg-element-hover);outline:none}
-.dc-shell .td-lado--quieto{cursor:default}
-.dc-shell .td-lado--valor{display:flex;flex-direction:column;gap:2px;width:100%}
-/* La cuenta real detrás de un porcentaje, costo o ROAS: «163 de 2.448 leads». */
-.dc-shell .td-det{display:block;font-size:12.5px;font-weight:600;line-height:1.35;color:var(--text-muted)}
-.dc-shell .td-det--fila{display:flex;flex-direction:column;min-width:0;white-space:normal;font-size:13px;color:var(--text-on-surface)}
-.dc-shell .td-det--fila small{font-size:12.5px;color:var(--text-muted)}
+/* La cifra sola; su cuenta («163 de 2.448 leads») aparece al pasar el mouse o enfocarla, con cada parte clicable. */
+.dc-shell .td-cc{position:relative;display:inline-flex;align-items:baseline}
+.dc-shell .td-cc-cifra{background:none;border:0;padding:0;color:inherit;font:inherit;letter-spacing:inherit;cursor:pointer;
+  border-bottom:1px dotted var(--text-muted)}
+.dc-shell .td-cc-cifra:hover,.dc-shell .td-cc-cifra:focus-visible{color:var(--brand-secondary);border-bottom-color:var(--brand-secondary);outline:none}
+.dc-shell .td-tip{position:absolute;left:0;bottom:calc(100% + 8px);z-index:30;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px;
+  min-width:max-content;max-width:min(320px,80vw);padding:var(--s2) var(--s3);border-radius:var(--radius-control);background:var(--bg-flotante);
+  border:1px solid var(--border-main);box-shadow:var(--shadow-main);font-size:13px;font-weight:600;color:var(--text-on-surface);
+  opacity:0;visibility:hidden;transform:translateY(4px);transition:opacity .14s,transform .14s,visibility 0s .14s}
+.dc-shell .td-cc:hover .td-tip,.dc-shell .td-cc:focus-within .td-tip{opacity:1;visibility:visible;transform:none;transition-delay:0s}
+.dc-shell .td-tip button{background:none;border:0;padding:0;font:inherit;font-weight:800;color:var(--brand-secondary);cursor:pointer;text-decoration:underline}
+.dc-shell .td-tip small{flex-basis:100%;font-size:11px;font-weight:600;color:var(--text-muted)}
+.dc-shell .td-tarjetas > :nth-last-child(-n+2) .td-tip{left:auto;right:0}
+.dc-shell .td-cc--quieta{cursor:default}
+.dc-shell .td-tasas{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:15px;font-weight:800;color:var(--text-on-surface)}
+.dc-shell .td-tasa2{font-size:12.5px;font-weight:600;color:var(--text-muted)}
+.dc-shell .td-tasa2 .td-cc{font-size:15px;font-weight:800;color:var(--text-on-surface)}
+.dc-shell .td-tarjeta-pie > span{font-size:13px}
+.dc-shell .td-tarjeta-pie .td-cc{font-size:15px;font-weight:800;color:var(--text-on-surface)}
 /* La cifra del embudo: una tasa por 1.000 leads, con su unidad dicha debajo. */
 .dc-shell .td-cifra{display:flex;flex-direction:column;flex:none;min-width:5.2em;line-height:1.1}
 .dc-shell .td-cifra b{font-size:18px;font-weight:800;color:var(--text-on-surface)}

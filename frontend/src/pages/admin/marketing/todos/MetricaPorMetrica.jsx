@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Segmented, Tip } from '../../../comercial/components/Shared';
 import { SETTING, WORKSHOP, anchosDe, diferenciaDe, formatos, ganadorDe } from './comparacion';
+import CifraConCuenta from './CifraConCuenta';
 
 /**
  * «Métrica por métrica» de Todos: cada cifra con la de Setting y la de Workshop lado a lado (con su barra,
@@ -14,19 +15,11 @@ const FILTROS = [
     { key: 'costos', label: 'Costos' },
 ];
 
-const Valor = ({ texto, detalle, ancho, color, gana, onVer }) => (
+const Valor = ({ texto, cuenta, metrica, onVer, ancho, color, gana }) => (
     <div className="td-valor">
-        {onVer ? (
-            <button type="button" className="td-lado td-lado--valor" onClick={onVer} title="Ver la lista de lo que suma">
-                <span className={`t-body num${gana ? ' td-fuerte' : ''}`}>{texto}</span>
-                {detalle && <span className="td-det">{detalle}</span>}
-            </button>
-        ) : (
-            <>
-                <span className={`t-body num${gana ? ' td-fuerte' : ''}`}>{texto}</span>
-                {detalle && <span className="td-det">{detalle}</span>}
-            </>
-        )}
+        <CifraConCuenta cuenta={cuenta} metrica={metrica} onVer={onVer} className={`t-body num${gana ? ' td-fuerte' : ''}`}>
+            {texto}
+        </CifraConCuenta>
         <div className="td-pista"><i style={{ width: ancho, background: color }} /></div>
     </div>
 );
@@ -42,10 +35,10 @@ const Fila = ({ fila, f, onVer }) => {
                 <span className="t-body td-fuerte">{fila.label}</span>
                 {fila.hint && <span className="t-cap mut">{fila.hint}</span>}
             </div>
-            <Valor texto={f[fila.fmt](fila.s)} detalle={fila.ds} ancho={s} color={SETTING.color} gana={gana === SETTING.key}
-                onVer={fila.metrica && onVer ? () => onVer('setting', fila.metrica, fila.label) : null} />
-            <Valor texto={f[fila.fmt](fila.w)} detalle={fila.dw} ancho={w} color={WORKSHOP.color} gana={gana === WORKSHOP.key}
-                onVer={fila.metrica && onVer ? () => onVer('workshop', fila.metrica, fila.label) : null} />
+            <Valor texto={f[fila.fmt](fila.s)} cuenta={fila.ds} metrica={fila.metrica} ancho={s} color={SETTING.color} gana={gana === SETTING.key}
+                onVer={onVer ? (m, t) => onVer('setting', m, t) : null} />
+            <Valor texto={f[fila.fmt](fila.w)} cuenta={fila.dw} metrica={fila.metrica} ancho={w} color={WORKSHOP.color} gana={gana === WORKSHOP.key}
+                onVer={onVer ? (m, t) => onVer('workshop', m, t) : null} />
             <div className="td-fila-gana">
                 {gana ? (
                     <>

@@ -15,8 +15,33 @@ export const WORKSHOP = { key: 'workshop', label: 'Workshop', color: 'var(--info
 const razon = (a, b) => (b ? a / b : null);
 const porCien = (v) => (v === null || v === undefined ? null : v / 100);
 const num = (v) => formatear(v, 'num');
-/** «163 de 2.448 leads»: la cuenta real detrás de un porcentaje o un costo (Kerwin, 28/10/2026). */
-const nDeM = (a, b, unidad) => `${a} de ${b}${unidad ? ` ${unidad}` : ''}`;
+/** El título de cada lista que se puede abrir (`fuentes_registros_service.METRICAS`). */
+export const TITULO_DE = {
+    agendas: 'Agendas', reportadas: 'Citas con resultado', show_up: 'Show up', ventas: 'Ventas', new_cash: 'New Cash',
+    cash_total: 'Cash total', leads: 'Leads entrantes', gasto: 'Importe gastado',
+};
+
+/**
+ * La cuenta detrás de un porcentaje, un costo o un ROAS (Kerwin, 28/10/2026): `{ a, b }` con el numerador y el
+ * denominador, cada uno `{ t: texto, m: lista que lo suma }`. Se muestra en un tooltip y cada parte abre su lista.
+ */
+const parte = (t, m, unidad) => ({ t: unidad ? `${t} ${unidad}` : String(t), m });
+export const cuentaDe = (id, f, d) => {
+    const reportadas = f.reportadas ?? f.agendas;
+    switch (id) {
+        case 'lead_agenda': return { a: parte(num(f.agendas), 'agendas'), b: parte(num(f.leads), 'leads', 'leads') };
+        case 'agenda_show': return { a: parte(num(f.show_up), 'show_up'), b: parte(num(reportadas), 'reportadas', 'con resultado') };
+        case 'show_venta': return { a: parte(num(f.ventas), 'ventas'), b: parte(num(f.show_up), 'show_up', 'que asistieron') };
+        case 'ticket': return { a: parte(d(f.new_cash), 'new_cash'), b: parte(num(f.ventas), 'ventas', 'ventas') };
+        case 'roas_new_cash': return { a: parte(d(f.new_cash), 'new_cash'), b: parte(d(f.gasto), 'gasto', 'gastados') };
+        case 'roas_total': return { a: parte(d(f.cash_total), 'cash_total'), b: parte(d(f.gasto), 'gasto', 'gastados') };
+        case 'costo_venta': return { a: parte(d(f.gasto), 'gasto', 'gastados'), b: parte(num(f.ventas), 'ventas', 'ventas') };
+        case 'cpl': return { a: parte(d(f.gasto), 'gasto', 'gastados'), b: parte(num(f.leads), 'leads', 'leads') };
+        case 'costo_agenda': return { a: parte(d(f.gasto), 'gasto', 'gastados'), b: parte(num(f.agendas), 'agendas', 'agendas') };
+        case 'costo_show': return { a: parte(d(f.gasto), 'gasto', 'gastados'), b: parte(num(f.show_up), 'show_up', 'que asistieron') };
+        default: return null;
+    }
+};
 
 export const formatos = (moneda) => ({
     n: (v) => formatear(v, 'num'),
@@ -43,16 +68,13 @@ export const gruposDe = (s, w, moneda = 'USD') => {
             hint: 'Setting: palabras clave · Workshop: clics al grupo' },
         { id: 'agendas', label: 'Agendas', tipo: 'vol', fmt: 'n', s: s.agendas, w: w.agendas },
         { id: 'lead_agenda', label: 'Lead → agenda', hint: 'agendas ÷ leads', tipo: 'up', fmt: 'p', pp: true,
-            s: razon(s.agendas, s.leads), w: razon(w.agendas, w.leads),
-            ds: nDeM(num(s.agendas), num(s.leads), 'leads'), dw: nDeM(num(w.agendas), num(w.leads), 'leads') },
+            s: razon(s.agendas, s.leads), w: razon(w.agendas, w.leads) },
         { id: 'show_up', label: 'Show up', tipo: 'vol', fmt: 'n', s: s.show_up, w: w.show_up },
         { id: 'agenda_show', label: 'Agenda → show', hint: 'asistieron ÷ citas con resultado', tipo: 'up', fmt: 'p', pp: true,
-            s: razon(s.show_up, reportadas(s)), w: razon(w.show_up, reportadas(w)),
-            ds: nDeM(num(s.show_up), num(reportadas(s)), 'con resultado'), dw: nDeM(num(w.show_up), num(reportadas(w)), 'con resultado') },
+            s: razon(s.show_up, reportadas(s)), w: razon(w.show_up, reportadas(w)) },
         { id: 'ventas', label: 'Ventas', tipo: 'vol', fmt: 'n', s: s.ventas, w: w.ventas },
         { id: 'show_venta', label: 'Show → venta', hint: 'ventas ÷ asistieron', tipo: 'up', fmt: 'p', pp: true,
-            s: razon(s.ventas, s.show_up), w: razon(w.ventas, w.show_up),
-            ds: nDeM(num(s.ventas), num(s.show_up), 'que asistieron'), dw: nDeM(num(w.ventas), num(w.show_up), 'que asistieron') },
+            s: razon(s.ventas, s.show_up), w: razon(w.ventas, w.show_up) },
         { id: 'cuotas', label: 'Cuotas cobradas', hint: `${s.cuotas} · ${w.cuotas} cuotas`, tipo: 'vol', fmt: 'd',
             s: s.cuotas_monto, w: w.cuotas_monto },
         { id: 'upsells', label: 'Upsells', hint: `${s.upsells} · ${w.upsells} upsells`, tipo: 'vol', fmt: 'd',
@@ -65,23 +87,21 @@ export const gruposDe = (s, w, moneda = 'USD') => {
         { id: 'new_cash', label: 'New Cash', tipo: 'vol', fmt: 'd', s: s.new_cash, w: w.new_cash },
         { id: 'cash_total', label: 'Cash total', tipo: 'vol', fmt: 'd', s: s.cash_total, w: w.cash_total },
         { id: 'ticket', label: 'Ticket por venta', hint: 'New Cash ÷ ventas', tipo: 'up', fmt: 'd',
-            s: razon(s.new_cash, s.ventas), w: razon(w.new_cash, w.ventas),
-            ds: nDeM(d(s.new_cash), num(s.ventas), 'ventas'), dw: nDeM(d(w.new_cash), num(w.ventas), 'ventas') },
-        { id: 'roas_new_cash', label: 'ROAS New Cash', hint: 'New Cash ÷ gastado', tipo: 'up', fmt: 'x', s: s.roas_new_cash, w: w.roas_new_cash,
-            ds: nDeM(d(s.new_cash), d(s.gasto)), dw: nDeM(d(w.new_cash), d(w.gasto)) },
-        { id: 'roas_total', label: 'ROAS Total', hint: 'Cash total ÷ gastado', tipo: 'up', fmt: 'x', s: s.roas_total, w: w.roas_total,
-            ds: nDeM(d(s.cash_total), d(s.gasto)), dw: nDeM(d(w.cash_total), d(w.gasto)) },
+            s: razon(s.new_cash, s.ventas), w: razon(w.new_cash, w.ventas) },
+        { id: 'roas_new_cash', label: 'ROAS New Cash', hint: 'New Cash ÷ gastado', tipo: 'up', fmt: 'x', s: s.roas_new_cash, w: w.roas_new_cash },
+        { id: 'roas_total', label: 'ROAS Total', hint: 'Cash total ÷ gastado', tipo: 'up', fmt: 'x', s: s.roas_total, w: w.roas_total },
     ] },
     { id: 'costos', titulo: 'Costos', filas: [
         { id: 'cpl', label: 'Costo por lead', tipo: 'down', fmt: 'd', s: s.cpl, w: w.cpl },
         { id: 'costo_agenda', label: 'Costo por agenda', tipo: 'down', fmt: 'd', s: s.costo_agenda, w: w.costo_agenda },
         { id: 'costo_show', label: 'Costo por show', tipo: 'down', fmt: 'd',
             s: razon(s.gasto, s.show_up), w: razon(w.gasto, w.show_up) },
-        { id: 'costo_venta', label: 'Costo por venta', hint: 'CAC', tipo: 'down', fmt: 'd', s: s.costo_venta, w: w.costo_venta,
-            ds: nDeM(d(s.gasto), num(s.ventas), 'ventas'), dw: nDeM(d(w.gasto), num(w.ventas), 'ventas') },
+        { id: 'costo_venta', label: 'Costo por venta', hint: 'CAC', tipo: 'down', fmt: 'd', s: s.costo_venta, w: w.costo_venta },
     ] },
     ];
-    return grupos.map((g) => ({ ...g, filas: g.filas.map((f) => ({ ...f, metrica: METRICA_DE[f.id] })) }));
+    return grupos.map((g) => ({
+        ...g, filas: g.filas.map((f) => ({ ...f, metrica: METRICA_DE[f.id], ds: cuentaDe(f.id, s, d), dw: cuentaDe(f.id, w, d) })),
+    }));
 };
 
 /** Un costo en 0 es «sin dato» (no hubo ventas, agendas… con qué dividir): no puede ganar. */
@@ -132,7 +152,7 @@ export const tarjetasDe = (grupos, moneda) => {
         return {
             id, label: fila.label, big, metrica: fila.metrica, winner: gana === SETTING.key ? SETTING.label : gana ? WORKSHOP.label : 'Sin ganador',
             color: gana === SETTING.key ? SETTING.color : gana ? WORKSHOP.color : 'var(--text-muted)',
-            s: f[fila.fmt](fila.s), w: f[fila.fmt](fila.w), sd: fila.ds || '', wd: fila.dw || '',
+            s: f[fila.fmt](fila.s), w: f[fila.fmt](fila.w), sd: fila.ds, wd: fila.dw,
         };
     });
 };
@@ -144,9 +164,12 @@ export const tarjetasDe = (grupos, moneda) => {
  * que es la misma base que en «Métrica por métrica».
  */
 const PASOS = [
-    { label: 'Agendas', paso: 'agendas ÷ leads', k: 'agendas', previo: 'leads', unidad: 'leads', metrica: 'agendas' },
-    { label: 'Show up', paso: 'asistieron ÷ agendas', k: 'show_up', previo: 'agendas', unidad: 'agendas', conResultado: true, metrica: 'reportadas' },
-    { label: 'Ventas', paso: 'ventas ÷ asistieron', k: 'ventas', previo: 'show_up', unidad: 'que asistieron', metrica: 'ventas' },
+    { label: 'Agendas', paso: 'agendas ÷ leads', k: 'agendas', previo: 'leads', unidad: 'leads', metrica: 'agendas',
+        metricaK: 'agendas', metricaPrevio: 'leads' },
+    { label: 'Show up', paso: 'asistieron ÷ agendas', k: 'show_up', previo: 'agendas', unidad: 'agendas', conResultado: true,
+        metrica: 'show_up', metricaK: 'show_up', metricaPrevio: 'agendas' },
+    { label: 'Ventas', paso: 'ventas ÷ asistieron', k: 'ventas', previo: 'show_up', unidad: 'que asistieron', metrica: 'ventas',
+        metricaK: 'ventas', metricaPrevio: 'show_up' },
 ];
 
 export const embudoNormalizado = (s, w) => {
@@ -157,11 +180,13 @@ export const embudoNormalizado = (s, w) => {
     const exacto = (v) => `${v.toFixed(1)} de cada 1.000 leads`;
     const pct = (a, b) => (b ? `${((a / b) * 100).toFixed(1)}%` : '—');
     const delPaso = (f, p) => (f[p.previo]
-        ? `${pct(f[p.k], f[p.previo])} · ${nDeM(num(f[p.k]), num(f[p.previo]), p.unidad)}` : 'sin paso anterior');
+        ? { pct: pct(f[p.k], f[p.previo]), cuenta: { a: parte(num(f[p.k]), p.metricaK), b: parte(num(f[p.previo]), p.metricaPrevio, p.unidad) } }
+        : { pct: '—', cuenta: null });
     const conResultado = (f, p) => {
-        if (!p.conResultado) return '';
+        if (!p.conResultado) return null;
         const base = f.reportadas ?? f.agendas;
-        return `${pct(f[p.k], base)} de las citas con resultado · ${nDeM(num(f[p.k]), num(base))}`;
+        return { pct: pct(f[p.k], base), rotulo: 'con resultado',
+            cuenta: { a: parte(num(f[p.k]), 'show_up'), b: parte(num(base), 'reportadas', 'con resultado') } };
     };
     return PASOS.map((p) => ({
         label: p.label, paso: p.paso, metrica: p.metrica,
