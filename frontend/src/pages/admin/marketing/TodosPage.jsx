@@ -88,7 +88,6 @@ const TodosPage = () => {
                 {vista === 'detalle'
                     ? <MetricaPorMetrica grupos={grupos} moneda={datos.moneda} onVer={registros.abrir} />
                     : <ResumenTodos grupos={grupos} setting={setting} workshop={workshop} moneda={datos.moneda} onVer={registros.abrir} />}
-                {aviso}
                 {registros.panel}
             </div>
         );
@@ -107,6 +106,7 @@ const TodosPage = () => {
                             </div>
                         </div>
                         <div className="tope-meta mk-tope-meta">
+                            {aviso}
                             <PillMenu icono={<CalendarDays />} texto={textoPeriodo} rotulo="Período"
                                 detalle={periodo === 'personalizado' ? null : textoRango(rango)}
                                 opciones={PERIODOS} valor={periodo} ancho={230} onChange={elegir}

@@ -43,14 +43,8 @@
 .dc-shell .mk-aviso > svg{color:var(--warning)}
 .dc-shell .mk-aviso p{flex:1 1 320px;min-width:0}
 .dc-shell .mk-aviso b{color:var(--text-on-surface)}
-/* Aviso de palabras sin campaña en el Inbox: texto arriba, palabras abajo, sin solapes. */
-.dc-shell .mk-aviso--palabras{align-items:flex-start;flex-wrap:nowrap}
-.dc-shell .mk-aviso--palabras > svg{flex:none;margin-top:2px}
-.dc-shell .mk-aviso-cuerpo{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:var(--s2)}
-.dc-shell .mk-aviso-cuerpo p{flex:none}
-.dc-shell .mk-aviso-palabras{display:flex;flex-wrap:wrap;gap:var(--s2);margin:0;padding:0;list-style:none}
-.dc-shell .mk-aviso-palabras li{min-width:0;max-width:100%}
-.dc-shell .mk-aviso-palabras .ui-chip{max-width:100%;white-space:nowrap}
+/* Pastilla de palabras sin campaña en el Inbox (va en la cabecera, junto al período). */
+.dc-shell .mk-aviso-chip{max-width:100%;white-space:nowrap;cursor:help}
 .dc-shell .mk-aviso-nombre{display:inline-block;max-width:22ch;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
 
 /* --- KPIs --- */

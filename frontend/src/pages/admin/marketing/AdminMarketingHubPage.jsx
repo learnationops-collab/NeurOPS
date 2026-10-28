@@ -154,6 +154,7 @@ const AdminMarketingHubPage = () => {
                         </div>
                         {CON_PERIODO.includes(pestana) && (
                             <div className="tope-meta mk-tope-meta">
+                                {pestana === 'anuncios' && avisoSinCampana}
                                 <PillMenu icono={<CalendarDays />} texto={textoPeriodo} rotulo="Período"
                                     detalle={periodo === 'personalizado' ? null : textoRango(rango)}
                                     opciones={opcionesPeriodo} valor={periodo} ancho={230}
@@ -191,7 +192,6 @@ const AdminMarketingHubPage = () => {
                                     <>
                                         <TablaAnuncios datos={datos} onArchivar={archivar} onAgrupar={agrupar} estadoMeta={estadoMeta}
                                             irAMeta={() => cambiar({ tab: 'meta' })} bajoKpis={resumenSetting} />
-                                        {avisoSinCampana}
                                         {registros.panel}
                                     </>
                                 )}
