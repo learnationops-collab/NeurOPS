@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Archive, CircleDollarSign, Eye, Link2, Power, Search } from 'lucide-react';
 import Cifra from '../../../comercial/components/Cifra';
-import CifraConCuenta from '../todos/CifraConCuenta';
+import { CifraConCuenta } from '../../../../components/standard';
 import { Segmented, Tip } from '../../../comercial/components/Shared';
 import SerieDiaria from './SerieDiaria';
 import EditorAgrupacion from './EditorAgrupacion';

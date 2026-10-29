@@ -7,7 +7,6 @@ import { getSegmentos, getSegmentosRegistros } from '../comercialApi';
 import { Panel, PanelCab, Vacio } from './PiezasAnalizar';
 import { fmt } from './Shared';
 import '../../admin/marketing/todos/todos.css';
-import '../../admin/marketing/todos/cifra.css';
 import '../../admin/marketing/todos/segmentos.css';
 
 /**

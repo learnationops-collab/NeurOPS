@@ -113,7 +113,7 @@ Gestiones y decisiones.
 ## Cifras con N de M y listas (28/10, rama mk-tooltips)
 - [ ] Decidir si las cuotas suman al cash de un taller: hoy New Cash (con primera cuota) puede superar a Cash total (ADR-W017).
 - [ ] Analizar: destinos de Revisar para el denominador de cada tasa (con resultado, entrantes, aperturas) para que ambas partes abran lista.
-- [ ] `TablaAnuncios.jsx`: importar `CifraConCuenta` de `components/standard` y borrar el re-export `marketing/todos/CifraConCuenta.jsx`.
+- [x] `TablaAnuncios.jsx`: importar `CifraConCuenta` de `components/standard` y borrar el re-export `marketing/todos/CifraConCuenta.jsx`.
 - [ ] Tests de vitest que leen el texto «N de M» de los tiles de Analizar y las 6 tarjetas de `WorkshopKpiCards` quedaron sin actualizar (no se corrieron).
 
 ## Marketing: una sola definición de lead y de gasto (tarea 868 de Leadership)
@@ -121,3 +121,9 @@ Falta la fórmula de backend; la presentación ya tiene su rótulo.
 
 - [ ] Definir cuál es «lead» (hoy: 2.448 en Palabras clave = persona × palabra clave, 2.397 en Entrantes = personas, 2.647 en Conversaciones = mensajes de apertura enviados) y cuál es «gasto» ($3.366 en la tabla, $3.342 en la tarjeta de Setting, $4.279 en Meta Ads, $4.270 en Todos › Gasto en Meta). Cada pestaña tiene que mostrar ese número o decir, con su lista, cuánto aporta cada parte. El cálculo vive en `anuncios_service.py` / `fuentes_service.py` y no se tocó.
 - [ ] Mientras tanto, quien abre cada vista ve de qué habla: «Habla de:» bajo la cabecera de Workshop y en Todos (28/10/2026).
+
+
+## Integración de las ramas de Marketing (28/10, avance-local)
+- [ ] La matriz de segmentos (Todos › Segmentos) cuenta siempre por fecha de alta; con «Contar por: fecha de reunión» sus totales no cambian y no suman las 223 de Closing. Decidir si se parte también por reunión (y sumar «Otras»).
+- [ ] Analizar › Segmentos da show up 64,2% (79 de las llamadas) y la tarjeta de arriba 63,9% (78 de 122 leads): cuenta llamadas contra leads. Unificar el denominador (tarea 853).
+- [ ] `tests/services/test_fuentes_service.py` usa `fuentes_service.agendas_por_fuente` y `personas_por_fuente`, que ahora viven en `conteo_agendas_service`: los tests quedaron rotos (no se corrieron).

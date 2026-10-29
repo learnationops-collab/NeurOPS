@@ -2,7 +2,7 @@
 
 Cada fuente trae, por segmento, las cifras que dice su propio resumen (`fuentes_service`): leads, agendas, show
 up, ventas y cash. **Salen del mismo código que las cifras de la fuente**, no de una consulta parecida:
-las personas con agenda son `fuentes_service.personas_por_fuente`, los cobros `_cobros_para_sumar` y los
+las personas con agenda son `conteo_agendas_service.personas` (base alta), los cobros `_cobros_para_sumar` y los
 leads de Setting `anuncios_service.entradas_del_periodo`. Cada uno se reparte en su grupo con
 `segmentos_lectura` (el segmento de la persona), así los cinco grupos suman exactamente la cifra de la fuente.
 
@@ -13,7 +13,7 @@ leads de Setting `anuncios_service.entradas_del_periodo`. Cada uno se reparte en
     prorratea el gasto por la mezcla de segmentos, o se divide el gasto de la fuente por los leads del
     segmento. No se calcula hasta que se decida; ver `docs/pendientes_santi.md`.
 """
-from app.services import anuncios_service, fuentes_registros_service, fuentes_service
+from app.services import anuncios_service, conteo_agendas_service, fuentes_registros_service, fuentes_service
 from app.services.fuentes_service import FUENTES, dividir
 from app.services.segmentos_lectura import (
     ETIQUETAS, ORDEN, SIN, de_agendas_del_libro, de_cobros, de_conversaciones, lista, parsear,
@@ -60,13 +60,15 @@ def por_segmento(desde, hasta, cobros, claves, fuentes):
     de donde sale el total de leads de Workshop (clics)."""
     acumulado = {f['key']: {s: _vacia() for s in ORDEN} for f in FUENTES}
 
-    personas = fuentes_service.personas_por_fuente(desde, hasta)
+    # La matriz cuenta siempre por fecha de alta (las agendas del libro: son las que tienen formulario y segmento);
+    # «Otras» no entra: no tiene leads ni gasto que partir.
+    personas = [p for p in conteo_agendas_service.personas(desde, hasta, 'alta') if p['fuente'] in acumulado]
     grupo_de_agenda = de_agendas_del_libro(p['agenda_id'] for p in personas)
     for p in personas:
         fila = acumulado[p['fuente']][grupo_de_agenda[p['agenda_id']]]
         fila['agendas'] += 1
         fila['show_up'] += 1 if p['asistio'] else 0
-        fila['reportadas'] += 1 if fuentes_service.con_resultado(p) else 0
+        fila['reportadas'] += 1 if p['con_resultado'] else 0
 
     de_cobro = fuentes_service._cobros_para_sumar(cobros, claves)
     grupo_de_cobro = de_cobros(cobros)

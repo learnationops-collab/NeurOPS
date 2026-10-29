@@ -1,5 +1,6 @@
 import { Tip } from '../../../comercial/components/Shared';
-import CifraConCuenta from './CifraConCuenta';
+import { CifraConCuenta } from '../../../../components/standard';
+import { TITULO_DE } from './comparacion';
 import { COLOR_SEGMENTO, COLUMNAS_SEGMENTO, pctDe, tonoDeTasa, valorDe } from './segmentos';
 
 /**
@@ -14,17 +15,18 @@ const Celda = ({ columna, fila, referencia, moneda, abrir }) => {
     const tono = tonoDeTasa(columna, fila, referencia);
     const sinDato = fila[columna.key] === null || fila[columna.key] === undefined;
     const cuenta = columna.base && !sinDato ? {
-        a: { t: valorDe(columna, fila, moneda), m: columna.lista },
-        b: { t: `${fila[columna.base]} ${columna.baseTexto}`, m: columna.baseLista },
+        a: { t: valorDe(columna, fila, moneda), m: columna.lista, titulo: TITULO_DE[columna.lista] },
+        b: { t: `${fila[columna.base]} ${columna.baseTexto}`, m: columna.baseLista, titulo: TITULO_DE[columna.baseLista] },
     } : null;
     return (
         <div className="sg-celda">
-            <CifraConCuenta metrica={sinDato ? null : columna.lista} onVer={sinDato ? null : abrir} className="t-body num td-fuerte">
+            <CifraConCuenta metrica={sinDato ? null : columna.lista} titulo={TITULO_DE[columna.lista]}
+                onVer={sinDato ? null : abrir} className="t-body num td-fuerte">
                 {valorDe(columna, fila, moneda)}
             </CifraConCuenta>
             {pct && (
                 <span className={`sg-pct t-cap${tono ? ` sg-pct--${tono}` : ''}`}>
-                    <CifraConCuenta cuenta={cuenta} metrica={columna.lista} onVer={abrir}>{pct}</CifraConCuenta>
+                    <CifraConCuenta cuenta={cuenta} metrica={columna.lista} titulo={TITULO_DE[columna.lista]} onVer={abrir}>{pct}</CifraConCuenta>
                     {columna.pctRotulo ? ` ${columna.pctRotulo}` : ''}
                 </span>
             )}

@@ -9,7 +9,7 @@ Cada fuente (Setting, Workshop) trae las mismas cifras para poder compararlas (`
 | Cifra | Setting | Workshop |
 |---|---|---|
 | Leads | personas que escribieron una palabra clave de ManyChat (`anuncios_service.entradas_del_periodo`, sin las palabras archivadas) | clics al grupo de WhatsApp desde las landings de sus anuncios |
-| Agendas | personas con `FinancialAgenda` creada en el período, una por persona (`personas_por_fuente`) | igual |
+| Agendas | personas con `FinancialAgenda` creada en el período, una por persona (`conteo_agendas_service.personas`, base alta) | igual |
 | Show up | asistió a alguna de sus agendas; % = asistieron ÷ citas con resultado | igual |
 | Ventas / New Cash | pagos de venta nueva (completo o split) del período | igual |
 | Cash total | todo lo cobrado del período de los clientes de la fuente (cuotas, upsells, renovaciones) | igual |
