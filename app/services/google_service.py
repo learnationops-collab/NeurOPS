@@ -33,7 +33,7 @@ ERRORES_DE_TOKEN = ('invalid_grant', 'unauthorized_client')
 
 # Las capacitaciones internas («Training Session», «Trainning», «Capacitación») no bloquean horarios
 # de agenda (Santi, 29/10/2026).
-_CAPACITACION = re.compile(r'trai+n+i+n+g|capacitaci[oó]n', re.I)
+_CAPACITACION = re.compile(r'\btrai+n+i+n+g|capacitaci[oó]n', re.I)
 
 
 def es_capacitacion(titulo):
