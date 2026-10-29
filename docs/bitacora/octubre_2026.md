@@ -1340,3 +1340,7 @@
   - La ocupación de Google de cada closer se lee evento por evento (antes con freebusy, sin títulos) y saltea las capacitaciones internas («Training Session», «Trainning», «Capacitación»). Un calendario que solo deja ver libre/ocupado se sigue leyendo con freebusy.
   - Caso: a Jean Carlo una «Trainning Session» del viernes 30 (18 a 19) le tapaba horarios para los leads del workshop.
   - Configuración en producción: el margen de Jean Carlo en las Sesiones de Aceleración (workshop y setting) pasa de 15 a 0 minutos, para que entren sesiones en los huecos de una hora.
+- **29 de Octubre de 2026 (Workshop: ruteo solo por dinero y agenda de 3 días)** *(configuración de Tálamus en producción, sin código)*:
+  - El formulario `dg6gukz9emx` (Workshop, Setting) rutea solo por la inversión: $200 o más → «Segmentos A y B» (closers); «podría conseguir ayuda» o «no estoy dispuesto» → Triage con la Sesión diagnóstica. `mk-academy` sigue primera. Reemplaza las reglas `seg-a`…`seg-d`.
+  - «Segmentos A y B» (antes Grupo 5): Jean Carlo y Marlon, máxima disponibilidad (Jean Carlo desempata). Mario sale de A/B. El Grupo 4 queda sin uso.
+  - La Sesión de Aceleración del Workshop ofrece hoy, mañana y pasado (2 días corridos después de hoy, antes 3). Con eso, a un lead con dinero se le ofrecen 11 horarios del 29 al 31/10 y al triage 21.
