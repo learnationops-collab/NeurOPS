@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Edit2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -10,6 +10,7 @@ import WorkshopAnunciosView from '../components/WorkshopAnunciosView';
 import WorkshopReplayConfigPanel from '../components/WorkshopReplayConfigPanel';
 import AgendasDelTaller from '../agendas/AgendasDelTaller';
 import AgendasEstados from './AgendasEstados';
+import useRegistrosWorkshop from '../registros/useRegistrosWorkshop';
 import Hoja from './Hoja';
 import { VISTAS_TALLER } from './TarjetaTaller';
 import { roasRotulo, roasTono, veces } from './formato';
@@ -56,6 +57,8 @@ const DetalleTaller = ({
     const quieto = useReducedMotion();
     const [{ desglose, ventana, cargando }, setDesglose] = useDesglose(evento, vista === 'embudo');
     const [resyncing, setResyncing] = useState(false);
+    // Cada cifra y cada barra del embudo abre la lista de ESTE taller (ADR-W015).
+    const registros = useRegistrosWorkshop(useMemo(() => [evento], [evento]), formatDate);
 
     const i = talleres.findIndex((t) => t.id === evento.id);
     const anterior = i > 0 ? talleres[i - 1] : null;   // más nuevo (la lista va de nuevo a viejo)
@@ -128,7 +131,7 @@ const DetalleTaller = ({
                 transition={quieto ? { duration: 0 } : { duration: 0.24, ease: 'easeOut' }}>
                 {vista === 'embudo' && (
                     <WorkshopFunnelView evento={evento} desglose={desglose} ventana={ventana} cargandoDesglose={cargando}
-                        onResync={resync} resyncing={resyncing}
+                        onResync={resync} resyncing={resyncing} onVer={registros.abrir}
                         agendas={<AgendasEstados evento={evento} />} />
                 )}
                 {vista === 'anuncios' && (
@@ -136,6 +139,7 @@ const DetalleTaller = ({
                 )}
                 {vista === 'grabacion' && <WorkshopReplayConfigPanel evento={evento} onSaved={() => onRefresh(true)} />}
             </motion.div>
+            {registros.panel}
         </Hoja>
     );
 };

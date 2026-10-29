@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { Eye, RefreshCw } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import Cifra from '../../../comercial/components/Cifra';
 import FlujoEmbudo from '../../../comercial/components/FlujoEmbudo';
 import { PanelCab, Tip } from '../../../comercial/components/Shared';
 import WorkshopSourceSplit from './WorkshopSourceSplit';
-import { cac, dinero, ganancia, pasosEmbudo, porcentaje, tasaPaso } from '../talleres/formato';
+import { CifraConCuenta } from '../../../../components/standard';
+import { LISTA_DE_PASO, cuentaDeTaller } from '../registros/cuentaDeTaller';
+import { TITULOS } from '../registros/cuentas';
+import { cac, dinero, ganancia, origenDePaso, pasosEmbudo, porcentaje, tasaPaso } from '../talleres/formato';
 
 /**
  * El embudo completo de un taller (Talleres › detalle › Embudo): la plata arriba, los nueve pasos
@@ -31,8 +34,10 @@ function useHace(iso) {
     return `hace ${Math.round(h / 24)} d`;
 }
 
-export const Kpi = ({ titulo, valor, sub, tip, color, i = 0 }) => {
+// `lista`: el ojo abre las filas que suman la cifra; `cuenta`: la cifra es una razón y dice su «N de M» (ADR-W015, W017).
+export const Kpi = ({ titulo, valor, sub, tip, color, i = 0, lista = null, cuenta = null, onVer = null }) => {
     const quieto = useReducedMotion();
+    const cifra = <Cifra valor={valor} className="kpi-n" style={color ? { color } : undefined} desdeAnterior />;
     return (
         <motion.section className="kpi wt-kpi"
             initial={quieto ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -40,16 +45,23 @@ export const Kpi = ({ titulo, valor, sub, tip, color, i = 0 }) => {
             <div className="kpi-cab">
                 <p className="t-eyebrow">{titulo}</p>
                 {tip && <Tip texto={tip} titulo={titulo} />}
+                {onVer && lista && (
+                    <button type="button" className="mk-kpi-ver" onClick={() => onVer(lista, TITULOS[lista] || titulo)}
+                        aria-label={`Ver los registros de ${titulo}`} data-tip="Ver las filas que suman esta cifra">
+                        <Eye size={15} aria-hidden="true" />
+                    </button>
+                )}
             </div>
             <div className="kpi-cifra">
-                <Cifra valor={valor} className="kpi-n" style={color ? { color } : undefined} desdeAnterior />
+                {cuenta && onVer ? <CifraConCuenta cuenta={cuenta} onVer={onVer}>{cifra}</CifraConCuenta> : cifra}
                 {sub && <p className="kpi-sub">{sub}</p>}
             </div>
         </motion.section>
     );
 };
 
-const WorkshopFunnelView = ({ evento, desglose, ventana, cargandoDesglose, onResync, resyncing, agendas }) => {
+// `onVer(lista, titulo)`: abre la lista de ESTE taller que suma cada cifra y cada barra (`useRegistrosWorkshop`).
+const WorkshopFunnelView = ({ evento, desglose, ventana, cargandoDesglose, onResync, resyncing, agendas, onVer = null }) => {
     const hace = useHace(evento?.synced_at);
     if (!evento) return null;
     const e = evento;
@@ -60,15 +72,15 @@ const WorkshopFunnelView = ({ evento, desglose, ventana, cargandoDesglose, onRes
     return (
         <div className="vista wt-vista">
             <div className="pareja" style={{ '--min': '190px', '--g': 'var(--s3)' }}>
-                <Kpi i={0} titulo="Inversión" valor={dinero(e.inversion)}
+                <Kpi i={0} titulo="Inversión" valor={dinero(e.inversion)} lista="t_inversion" onVer={onVer}
                     sub={e.inversion_de_meta ? 'De Meta Ads' : 'Cargada a mano'}
                     tip="Gasto en anuncios de este taller (de Meta si hay)." />
-                <Kpi i={1} titulo="Cash cobrado" valor={dinero(e.cash_collected)}
+                <Kpi i={1} titulo="Cash cobrado" valor={dinero(e.cash_collected)} lista="cash_total" onVer={onVer}
                     sub={`ROAS total ${Number(e.roas || 0).toFixed(2)}x`}
                     tip="Todo lo cobrado a las personas del taller, señas incluidas." />
                 <Kpi i={2} titulo="Ganancia" valor={dinero(g)} color={g < 0 ? 'var(--error)' : undefined}
                     sub="Cash menos inversión" />
-                <Kpi i={3} titulo="CAC" valor={dinero(cac(e))}
+                <Kpi i={3} titulo="CAC" valor={dinero(cac(e))} onVer={onVer} cuenta={cuentaDeTaller('cac', e)?.cuenta}
                     sub={`${ventas} ${ventas === 1 ? 'venta' : 'ventas'}`}
                     tip="Lo que costó cada venta: la inversión dividida las ventas." />
             </div>
@@ -86,7 +98,10 @@ const WorkshopFunnelView = ({ evento, desglose, ventana, cargandoDesglose, onRes
                     )}
                 </PanelCab>
                 <FlujoEmbudo raiz color="var(--brand-secondary)"
-                    etapas={pasos.map((p) => ({ key: p.key, label: p.label, n: p.n, ayuda: p.ayuda, base: p.base }))} />
+                    etapas={pasos.map((p) => ({
+                        key: p.key, label: p.label, n: p.n, ayuda: p.ayuda, base: p.base, color: origenDePaso(p.key).color,
+                        ir: onVer && LISTA_DE_PASO[p.key] ? () => onVer(LISTA_DE_PASO[p.key], TITULOS[LISTA_DE_PASO[p.key]] || p.label) : undefined,
+                    }))} />
                 <p className="t-cap mut num wt-pie-embudo">
                     De {pasos[0].n.toLocaleString('en-US')} leads a {ventas} {ventas === 1 ? 'venta' : 'ventas'}:{' '}
                     {porcentaje(tasaPaso(ventas, pasos[0].n))} final
