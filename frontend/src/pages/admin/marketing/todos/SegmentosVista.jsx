@@ -60,10 +60,12 @@ const SegmentosVista = ({ rango, version, params, cambiar, abrirRegistros }) => 
     };
     return (
         <div className={`vista mk-vista${cargando ? ' mk-recargando' : ''}`}>
-            <Segmented opciones={PESTANAS} valor={pestana} ariaLabel="Fuente de los segmentos"
-                onChange={(key) => poner({ fuente: key })} />
-            <FiltroSegmentos segmentos={matriz.segmentos} elegidos={elegidos} cuentas={cuentas}
-                onCambiar={(lista) => cambiar({ segmento: lista.join(',') || null })} />
+            <div className="sg-barra">
+                <Segmented opciones={PESTANAS} valor={pestana} ariaLabel="Fuente de los segmentos"
+                    onChange={(key) => poner({ fuente: key })} />
+                <FiltroSegmentos segmentos={matriz.segmentos} elegidos={elegidos} cuentas={cuentas}
+                    onCambiar={(lista) => cambiar({ segmento: lista.join(',') || null })} />
+            </div>
             {matriz.fuentes.filter((f) => pestana === 'todos' || f.key === pestana).map((fuente) => {
                 const filas = visibles(fuente.filas, elegidos);
                 return (

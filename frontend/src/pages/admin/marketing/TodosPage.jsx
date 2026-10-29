@@ -137,12 +137,14 @@ const TodosPage = () => {
                         </div>
                     </header>
 
-                    <div className="td-leyenda" aria-label="Quién es quién">
-                        <span><i style={{ background: SETTING.color }} />{SETTING.label}</span>
-                        <span><i style={{ background: WORKSHOP.color }} />{WORKSHOP.label}</span>
+                    <div className="td-contexto">
+                        <div className="td-leyenda" aria-label="Quién es quién">
+                            <span><i style={{ background: SETTING.color }} />{SETTING.label}</span>
+                            <span><i style={{ background: WORKSHOP.color }} />{WORKSHOP.label}</span>
+                        </div>
+                        <p className="t-cap mut40"><b>Habla de:</b> los anuncios de Meta de Setting y de Workshop, {textoPeriodo?.toLowerCase()}
+                            {periodo === 'personalizado' ? '' : ` (${textoRango(rango)})`}. No es por taller.</p>
                     </div>
-                    <p className="t-cap mut40"><b>Habla de:</b> los anuncios de Meta de Setting y de Workshop, {textoPeriodo?.toLowerCase()}
-                        {periodo === 'personalizado' ? '' : ` (${textoRango(rango)})`}. No es por taller.</p>
                     <div className="barra">
                         <Segmented opciones={VISTAS} valor={vista} ariaLabel="Vistas de Todos" onChange={elegirVista} />
                     </div>

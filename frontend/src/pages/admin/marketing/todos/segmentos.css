@@ -24,3 +24,6 @@
 /* El panel del dashboard comercial (SegmentosPanel): cuatro cifras en vez de ocho. */
 .dc-shell .sp-fila{grid-template-columns:minmax(130px,1.2fr) repeat(4,minmax(96px,1fr));min-width:560px}
 .dc-shell .sg-filtro{margin-bottom:var(--s3)}
+/* La fuente y el filtro de segmento en UNA fila (compacto; en angosto el filtro baja). */
+.dc-shell .sg-barra{display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap}
+.dc-shell .sg-barra > *{flex:none;width:auto;max-width:100%;margin:0}

@@ -7,6 +7,9 @@
 .dc-shell .td-leyenda span{display:inline-flex;align-items:center;gap:var(--s2);font-size:13px;font-weight:600}
 .dc-shell .td-leyenda i,.dc-shell .td-punto{display:inline-block;width:12px;height:12px;border-radius:4px;flex:none}
 .dc-shell .td-punto{width:9px;height:9px;border-radius:3px;margin-right:6px}
+/* Quién es quién y de qué habla, en una sola línea (compacto). */
+.dc-shell .td-contexto{display:flex;align-items:center;gap:var(--s2) var(--s5);flex-wrap:wrap;margin-bottom:var(--s3)}
+.dc-shell .td-contexto .td-leyenda,.dc-shell .td-contexto p{margin:0}
 
 /* Cuatro tarjetas: 2 × 2 y, si entran, las cuatro en una fila (nunca 3 + 1). */
 .dc-shell .td-tarjetas{display:grid;gap:var(--s4);grid-template-columns:repeat(2,minmax(0,1fr))}
