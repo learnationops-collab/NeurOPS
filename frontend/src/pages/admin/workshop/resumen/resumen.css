@@ -40,13 +40,12 @@
 .dc-shell .wr-lista-dia { font-weight: 700; }
 .dc-shell .wr-lista-roas { font-size: 11px; color: var(--text-muted-40); }
 
-/* ---- KPIs: 6 en fila, 3 × 2, 2 × 3 o apilados (nunca uno suelto) ---------- */
+/* ---- KPIs: 8 en 4 × 2, 2 × 4 o apilados (nunca uno suelto) ---------- */
 /* Se mide el ancho del Resumen (no el de la ventana): es lo que importa para cuántas entran. */
 .dc-shell .wr-resumen { container-type: inline-size; }
 .dc-shell .wr-kpis { display: grid; gap: var(--s3); grid-template-columns: minmax(0, 1fr); }
 @container (min-width: 420px) { .dc-shell .wr-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@container (min-width: 600px) { .dc-shell .wr-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@container (min-width: 1180px) { .dc-shell .wr-kpis { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+@container (min-width: 600px) { .dc-shell .wr-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
 /* Compacto (24/10/2026): que el Resumen entre en una pantalla sin deslizar. */
 .dc-shell .wr-kpi { gap: 6px; padding: 12px 14px; }

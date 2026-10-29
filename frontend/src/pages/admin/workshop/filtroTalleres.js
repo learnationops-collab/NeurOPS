@@ -177,7 +177,11 @@ export function totalesResumen(talleres) {
         t.cash_ventas += e.cash_ventas || 0;
         t.ventas_cobradas += e.ventas_cobradas || 0;
     });
-    return { ...t, roas: t.inversion > 0 ? t.cash / t.inversion : 0 };
+    return {
+        ...t, roas: t.inversion > 0 ? t.cash / t.inversion : 0,
+        // New Cash = la base del ticket (`cash_ventas`): ventas nuevas y su primera cuota.
+        roas_nc: t.inversion > 0 ? t.cash_ventas / t.inversion : 0,
+    };
 }
 
 // Variación (en %) de la selección contra los anteriores. Las sumas se comparan POR TALLER (un período
@@ -190,6 +194,8 @@ export function variaciones(actual, cantidadActual, anterior, cantidadAnterior) 
         inversion: porTaller('inversion'),
         cash: porTaller('cash'),
         roas: cambio(actual.roas, anterior.roas),
+        roas_nc: cambio(actual.roas_nc, anterior.roas_nc),
+        new_cash: porTaller('cash_ventas'),
         leads: porTaller('leads'),
         agendas: porTaller('agendas'),
         sales: porTaller('sales'),

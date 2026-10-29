@@ -4,6 +4,8 @@ import { ArrowRight, Settings2 } from 'lucide-react';
 import { Delta, Humo, PanelCab, Tip, useMontado } from '../../../comercial/components/Shared';
 import Cifra from '../../../comercial/components/Cifra';
 import { EsqueletoClarity, EsqueletoEtapas, EsqueletoPrioridad } from '../resumen/EsqueletosResumen';
+import { CifraConCuenta } from '../../../../components/standard';
+import { cuentaDeEtapa } from '../registros/cuentas';
 import { STAGE_ORDER, aggregateTotals, computeClarityScore, computeFuga, stageRates } from '../funnelMath';
 
 /**
@@ -25,7 +27,7 @@ const pct = (v) => `${Number(v).toFixed(1)}%`;
 
 // Cada fila mide su propio montaje: si llega después que el panel (las metas tardaron), su barra
 // igual crece desde cero.
-const Fila = ({ f, antes, i }) => {
+const Fila = ({ f, antes, i, cuenta, onVer }) => {
     const montado = useMontado();
     const color = `var(--${TONO[f.estado]})`;
     const demora = `${120 + i * 70}ms`;
@@ -44,7 +46,9 @@ const Fila = ({ f, antes, i }) => {
                     </span>
                 )}
             </span>
-            <span className="wr-etapa-n num" role="cell" style={{ color }}>{pct(f.real)}</span>
+            <span className="wr-etapa-n num" role="cell" style={{ color }}>
+                <CifraConCuenta cuenta={cuenta} onVer={onVer} lado="der">{pct(f.real)}</CifraConCuenta>
+            </span>
             <span className="wr-etapa-delta" role="cell">
                 {cambio != null && <Delta delta={{ valor: cambio, modo: 'pts' }} />}
             </span>
@@ -69,7 +73,7 @@ const Anillo = ({ score }) => (
  * la salud y la prioridad, los talleres y las metas; el Clarity score, además, el plan de acciones.
  * Mientras tanto, huesos del tamaño real (resumen/EsqueletosResumen.jsx).
  */
-const WorkshopDiagnostico = ({ events, comparados, goals, actions, onEditGoals, onGoToSimulador }) => {
+const WorkshopDiagnostico = ({ events, comparados, goals, actions, onEditGoals, onGoToSimulador, onVer = null }) => {
     const reducir = useReducedMotion();
 
     const conMetas = Boolean(events && goals);
@@ -110,7 +114,7 @@ const WorkshopDiagnostico = ({ events, comparados, goals, actions, onEditGoals, 
                 {conMetas ? (
                     <div className={`wr-etapas ui-reveal${ratesAntes ? '' : ' wr-etapas--sin-vs'}`} role="table" aria-label="Salud del embudo">
                         <CabEtapas conVs={Boolean(ratesAntes)} />
-                        {filas.map((f, i) => <Fila key={f.key} f={f} antes={antesDe(f.key)} i={i} />)}
+                        {filas.map((f, i) => <Fila key={f.key} f={f} antes={antesDe(f.key)} i={i} cuenta={cuentaDeEtapa(f.key, totals)} onVer={onVer} />)}
                     </div>
                 ) : <EsqueletoEtapas cabecera={<CabEtapas conVs={false} />} />}
             </motion.section>

@@ -7,6 +7,7 @@ import {
     comparacionDeParams, filtrarTalleres, filtroDeParams, paramsDeComparacion, paramsDeFiltro,
     talleresComparados, totalesResumen, variaciones,
 } from '../filtroTalleres';
+import useRegistrosWorkshop from '../registros/useRegistrosWorkshop';
 import { EsqueletoFiltros } from '../resumen/EsqueletosResumen';
 import { EnCabecera } from '../components/CabeceraWorkshop';
 import '../resumen/resumen.css';
@@ -57,6 +58,8 @@ const ResumenTab = ({ realizados, goals, actions, onEditGoals, onGoToSimulador }
         [totales, analizados.length, anterior]
     );
 
+    const registros = useRegistrosWorkshop(analizados);
+
     return (
         <div className="dc-shell dc-shell--embebido">
             <div className="vista wr-resumen">
@@ -81,7 +84,7 @@ const ResumenTab = ({ realizados, goals, actions, onEditGoals, onGoToSimulador }
                 ) : (
                     <>
                         <WorkshopKpiCards totalStats={cargando ? null : totales} eventsCount={analizados.length}
-                            cambios={cambios} anterior={anterior} />
+                            cambios={cambios} anterior={anterior} onVer={registros.abrir} />
                         <WorkshopDiagnostico
                             events={cargando ? null : analizados}
                             comparados={comparado?.talleres || null}
@@ -89,9 +92,11 @@ const ResumenTab = ({ realizados, goals, actions, onEditGoals, onGoToSimulador }
                             actions={actions}
                             onEditGoals={onEditGoals}
                             onGoToSimulador={onGoToSimulador}
+                            onVer={registros.abrir}
                         />
                     </>
                 )}
+                {registros.panel}
             </div>
         </div>
     );
