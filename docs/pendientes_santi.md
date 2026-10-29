@@ -128,3 +128,10 @@ Falta la fórmula de backend; la presentación ya tiene su rótulo.
 - [ ] La matriz de segmentos (Todos › Segmentos) cuenta siempre por fecha de alta; con «Contar por: fecha de reunión» sus totales no cambian y no suman las 223 de Closing. Decidir si se parte también por reunión (y sumar «Otras»).
 - [ ] Analizar › Segmentos da show up 64,2% (79 de las llamadas) y la tarjeta de arriba 63,9% (78 de 122 leads): cuenta llamadas contra leads. Unificar el denominador (tarea 853).
 - [ ] `tests/services/test_fuentes_service.py` usa `fuentes_service.agendas_por_fuente` y `personas_por_fuente`, que ahora viven en `conteo_agendas_service`: los tests quedaron rotos (no se corrieron).- [ ] Otras: hay agendas con origen «Setter» (genérico, sin nombre de setter) que caen en Otras y no en Setting. Confirmar si son de Setting y cómo identificarlas (se ven en Otras › De dónde viene cada agenda).
+
+
+## Workshop: rediseño gráfico (tarea 851, 29/10/2026)
+- [ ] Las agendas partidas del Resumen (No asistieron, Sin reporte, Otras) abren una lista más ancha que su número: sumar a `GET /workshop/registros` una métrica por estado (`no_show`, `sin_reporte`) para que cada tramo abra exactamente lo que suma.
+- [ ] Los grupos de agendas del detalle de un taller (`AgendasEstados`) siguen sin abrir su lista.
+- [ ] New Cash ($12.650) es mayor que Cash total ($12.258) en el Resumen: dos definiciones distintas (ADR-W017). La barra «Invertido y cobrado» lo deja a la vista; decidir si las cuotas suman al cash del taller (grupo B, backend).
+- [ ] `ResumenTab.test.jsx`, `TalleresVista.test.jsx` y los de `WorkshopKpiCards` no se corrieron tras el cambio (regla: sin tests); el Resumen ahora monta `FlujoEmbudo` y `Bars`.
