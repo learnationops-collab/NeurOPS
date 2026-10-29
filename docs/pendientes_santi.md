@@ -130,5 +130,5 @@ Falta la fórmula de backend; la presentación ya tiene su rótulo.
 - [ ] `tests/services/test_fuentes_service.py` usa `fuentes_service.agendas_por_fuente` y `personas_por_fuente`, que ahora viven en `conteo_agendas_service`: los tests quedaron rotos (no se corrieron).- [ ] Otras: hay agendas con origen «Setter» (genérico, sin nombre de setter) que caen en Otras y no en Setting. Confirmar si son de Setting y cómo identificarlas (se ven en Otras › De dónde viene cada agenda).
 
 ## ROAS de Workshop (Leadership 850, 29/10/2026)
-- [ ] **Decisión de Kerwin:** qué ROAS manda. Recomendación: titular = ROAS New Cash (lo que ese gasto trajo en ventas del período) y ROAS Total como lectura del negocio, ya con su parte de ventas anteriores a la vista; el Total sube o baja con el período aunque el gasto no cambie.
+- [x] Qué ROAS manda (Kerwin, 29/10): «deja los 2». Se quedan ROAS New Cash y ROAS Total con el mismo peso, sin titular; el Total ya muestra su parte de ventas anteriores.
 - [ ] **Decisión de Kerwin:** Workshop › Resumen y Marketing muestran «ROAS Total» y «Cash total» con cuentas distintas (cohorte del taller sin cuotas contra período de cobro con cuotas): octubre da 0,9x en el Resumen y 6,05x en Marketing. Opciones: renombrar los del Resumen («ROAS del taller») o llevarlos a la definición de Marketing. Es del rediseño de Workshop (otra sesión).
