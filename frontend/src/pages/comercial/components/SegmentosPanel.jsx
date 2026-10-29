@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import useEstadoGuardado from '../../../hooks/useEstadoGuardado';
 import { useVerRegistros } from '../../../components/standard';
 import ContenidoRegistros from '../../admin/marketing/anuncios/ContenidoRegistros';
-import { AgruparPor, Columnas, VerComo, disposicionDe } from '../../admin/marketing/todos/ControlesSegmentos';
+import {
+    AgruparPor, Columnas, Grupos, VerComo, conQuitados, disposicionDe, gruposVisibles, normalizarQuitados, quitadosDe,
+} from '../../admin/marketing/todos/ControlesSegmentos';
 import CruceSegmentos from '../../admin/marketing/todos/CruceSegmentos';
 import FiltroSegmentos from '../../admin/marketing/todos/FiltroSegmentos';
 import { getSegmentos, getSegmentosRegistros } from '../comercialApi';
@@ -32,8 +34,8 @@ const POR_ROL = {
             + '«Sin segmento» son las agendas de antes del triage y quienes no llenaron el formulario.' },
 };
 const CORTES = ['ninguno', 'closer', 'setter', 'fuente', 'origen'];
-const INICIAL = { corte: 'ninguno', disposicion: '', campo: 'agendas', ocultas: [], orden: { col: 'total', dir: 'desc' } };
-const normalizar = (m) => ({ ...m, corte: CORTES.includes(m.corte) ? m.corte : INICIAL.corte,
+const INICIAL = { corte: 'ninguno', disposicion: '', campo: 'agendas', ocultas: [], quitados: {}, orden: { col: 'total', dir: 'desc' } };
+const normalizar = (m) => ({ ...m, quitados: normalizarQuitados(m.quitados), corte: CORTES.includes(m.corte) ? m.corte : INICIAL.corte,
     ocultas: Array.isArray(m.ocultas) ? m.ocultas : [], orden: m.orden?.col ? m.orden : INICIAL.orden });
 
 const SegmentosPanel = ({ filtros, rol, elegidos, onElegir, version = 0 }) => {
@@ -77,8 +79,12 @@ const SegmentosPanel = ({ filtros, rol, elegidos, onElegir, version = 0 }) => {
 
     const columnasTodas = COLUMNAS_PANEL(texto);
     const columnas = columnasTodas.filter((c) => !ocultas.includes(c.key));
-    const grupos = datos ? datos.grupos : [];
-    const disposicion = datos ? disposicionDe(guardado.disposicion, corte, grupos.length) : 'tablas';
+    // Los grupos que se sacaron del análisis no se dibujan; se recuerdan por usuario y por corte.
+    const todosLosGrupos = datos ? datos.grupos : [];
+    const quitados = quitadosDe(guardado, corte);
+    const grupos = gruposVisibles(todosLosGrupos, quitados);
+    const cambiarQuitados = (lista) => poner(conQuitados(guardado, corte, lista));
+    const disposicion = datos ? disposicionDe(guardado.disposicion, corte, todosLosGrupos.length) : 'tablas';
     const campo = columnasTodas.find((c) => c.key === campoKey) || columnasTodas[0];
     const ordenar = (col) => poner({ orden: { col, dir: orden.col === col && orden.dir === 'desc' ? 'asc' : 'desc' } });
 
@@ -95,12 +101,15 @@ const SegmentosPanel = ({ filtros, rol, elegidos, onElegir, version = 0 }) => {
                         <FiltroSegmentos segmentos={datos.segmentos} elegidos={elegidos} cuentas={datos.cuentas} onCambiar={onElegir} />
                         {disposicion === 'tablas' && <Columnas columnas={columnasTodas} ocultas={ocultas} onChange={(lista) => poner({ ocultas: lista })} />}
                     </div>
+                    <div className="sg-barra">
+                        <Grupos grupos={todosLosGrupos} quitados={quitados} onChange={cambiarQuitados} />
+                    </div>
                 </>
             )}
             {!datos ? <Vacio texto="Cargando los segmentos…" /> : disposicion === 'cruce' ? (
                 <CruceSegmentos plano grupos={grupos} campo={campo} campos={columnasTodas} onCampo={(key) => poner({ campo: key })}
                     onVer={({ grupo, campo: c, segmento, nombre, previo }) => verDe(grupo)(c.lista, c.label, segmento, nombre, previo)}
-                    orden={orden} onOrden={ordenar} />
+                    orden={orden} onOrden={ordenar} onQuitar={(key) => cambiarQuitados([...quitados, key])} />
             ) : grupos.map((g) => (
                 <SegmentosGrupo key={g.key} grupo={g} columnas={columnas} titulo={corte === 'ninguno' ? null : g.label} onVer={verDe(g)} />
             ))}

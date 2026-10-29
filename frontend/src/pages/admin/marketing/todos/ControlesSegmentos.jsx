@@ -29,6 +29,36 @@ export const VerComo = ({ valor, onChange }) => (
     </div>
 );
 
+/**
+ * Los grupos (closers, fuentes, orígenes, setters) que se analizan: se pueden quitar los que no interesan y lo quitado se
+ * recuerda por usuario y por corte (los grupos de un corte no son los de otro). Se guarda como `quitados: { [corte]: [clave] }`.
+ */
+export const quitadosDe = (guardado, corte) => (Array.isArray(guardado.quitados?.[corte]) ? guardado.quitados[corte] : []);
+export const conQuitados = (guardado, corte, lista) => ({ quitados: { ...(guardado.quitados || {}), [corte]: lista } });
+export const gruposVisibles = (grupos, quitados) => grupos.filter((g) => !quitados.includes(g.key));
+export const normalizarQuitados = (valor) => Object.fromEntries(Object.entries(valor && typeof valor === 'object' && !Array.isArray(valor) ? valor : {})
+    .filter(([, lista]) => Array.isArray(lista)));
+
+/** Un botón por grupo: apagado = fuera del análisis. Al menos uno queda a la vista. */
+export const Grupos = ({ grupos, quitados, onChange }) => {
+    if (grupos.length < 2) return null;
+    const alternar = (key) => {
+        const fuera = quitados.includes(key);
+        if (!fuera && grupos.length - quitados.length <= 1) return;
+        onChange(fuera ? quitados.filter((k) => k !== key) : [...quitados, key]);
+    };
+    return (
+        <div className="sg-filtro" role="group" aria-label="Grupos a analizar">
+            <span className="t-eyebrow mut">Grupos</span>
+            {grupos.map((g) => (
+                <button key={g.key} type="button" className="chip sg-chip" aria-pressed={!quitados.includes(g.key)}
+                    style={{ '--c': 'var(--brand-secondary)' }} onClick={() => alternar(g.key)}>{g.label}</button>
+            ))}
+            {quitados.length > 0 && <button type="button" className="link-btn" onClick={() => onChange([])}>Ver todos</button>}
+        </div>
+    );
+};
+
 /** Las columnas de las tablas: una cada una, al menos una a la vista. `ocultas` son las claves que se escondieron. */
 export const Columnas = ({ columnas, ocultas, onChange }) => {
     const alternar = (key) => {

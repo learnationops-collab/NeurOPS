@@ -36,7 +36,7 @@ const Celda = ({ fila, campo, grupo, moneda, onVer, segmento }) => {
     );
 };
 
-const CruceSegmentos = ({ grupos, campo, campos, onCampo, moneda, color, onVer, orden, onOrden, plano = false }) => {
+const CruceSegmentos = ({ grupos, campo, campos, onCampo, moneda, color, onVer, orden, onOrden, onQuitar = null, plano = false }) => {
     if (!grupos.length) return null;
     const segmentos = grupos[0].filas.map((f) => ({ key: f.segmento, label: f.label }));
     const valorDe = (g, col) => (col === 'nombre' ? g.label.toLowerCase()
@@ -82,7 +82,13 @@ const CruceSegmentos = ({ grupos, campo, campos, onCampo, moneda, color, onVer, 
                 </div>
                 {filas.map((g) => (
                     <div key={g.key} className="sg-fila" style={plantilla} role="row">
-                        <div className="sg-nombre" role="rowheader"><span className="t-body td-fuerte">{g.label}</span></div>
+                        <div className="sg-nombre" role="rowheader">
+                            <span className="t-body td-fuerte">{g.label}</span>
+                            {onQuitar && grupos.length > 1 && (
+                                <button type="button" className="sg-quitar" onClick={() => onQuitar(g.key)}
+                                    aria-label={`Quitar ${g.label} del análisis`} title="Quitar del análisis">×</button>
+                            )}
+                        </div>
                         {g.filas.map((f) => (
                             <Celda key={f.segmento} fila={f} campo={campo} grupo={g} moneda={moneda} onVer={onVer} segmento={f.segmento} />
                         ))}

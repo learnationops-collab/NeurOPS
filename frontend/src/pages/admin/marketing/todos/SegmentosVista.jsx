@@ -9,7 +9,9 @@ import { pedirRegistrosSegmentos, pedirSegmentos } from '../anuncios/segmentosAp
 import ContenidoRegistros from '../anuncios/ContenidoRegistros';
 import { useDatosCacheados } from '../../../../services/cacheDeVistas';
 import ComparaCon, { comparacionDeUrl } from './ComparaCon';
-import { AgruparPor, Columnas, VerComo, disposicionDe } from './ControlesSegmentos';
+import {
+    AgruparPor, Columnas, Grupos, VerComo, conQuitados, disposicionDe, gruposVisibles, normalizarQuitados, quitadosDe,
+} from './ControlesSegmentos';
 import CruceSegmentos from './CruceSegmentos';
 import FiltroSegmentos from './FiltroSegmentos';
 import TablaSegmentos from './TablaSegmentos';
@@ -44,9 +46,10 @@ const PESTANAS = [
 ];
 const CORTES_VALIDOS = ['fuente', 'origen', 'closer', 'ninguno'];
 const COLUMNAS_CRUCE = COLUMNAS_SEGMENTO.filter((c) => c.key !== 'ticket');
-const INICIAL = { fuente: 'todos', corte: 'fuente', disposicion: '', campo: 'agendas', ocultas: [], orden: { col: 'total', dir: 'desc' } };
+const INICIAL = { fuente: 'todos', corte: 'fuente', disposicion: '', campo: 'agendas', ocultas: [], quitados: {}, orden: { col: 'total', dir: 'desc' } };
 const normalizar = (m) => ({
     ...m,
+    quitados: normalizarQuitados(m.quitados),
     fuente: PESTANAS.some((p) => p.key === m.fuente) ? m.fuente : INICIAL.fuente,
     corte: CORTES_VALIDOS.includes(m.corte) ? m.corte : INICIAL.corte,
     campo: COLUMNAS_CRUCE.some((c) => c.key === m.campo) ? m.campo : INICIAL.campo,
@@ -102,6 +105,10 @@ const SegmentosVista = ({ rango, version, params, cambiar }) => {
     };
 
     const columnas = COLUMNAS_SEGMENTO.filter((c) => !ocultas.includes(c.key));
+    // Los grupos que Kerwin sacó del análisis (28/10/2026) no se dibujan; se recuerdan por corte.
+    const quitados = quitadosDe(guardado, corte);
+    const grupos = gruposVisibles(datos.grupos, quitados);
+    const cambiarQuitados = (lista) => poner(conQuitados(guardado, corte, lista));
     const disposicion = disposicionDe(guardado.disposicion, corte, datos.grupos.length);
     const campo = COLUMNAS_CRUCE.find((c) => c.key === campoKey) || COLUMNAS_CRUCE[1];
     const color = (g) => COLOR[g.key] || 'var(--brand-secondary)';
@@ -120,13 +127,17 @@ const SegmentosVista = ({ rango, version, params, cambiar }) => {
                     onCambiar={(lista) => cambiar({ segmento: lista.join(',') || null })} />
                 {disposicion === 'tablas' && <Columnas columnas={COLUMNAS_SEGMENTO} ocultas={ocultas} onChange={(lista) => poner({ ocultas: lista })} />}
             </div>
+            <div className="sg-barra">
+                <Grupos grupos={datos.grupos} quitados={quitados} onChange={cambiarQuitados} />
+            </div>
             {comparacion.vs === 'custom' && !comparacion.rango && <p className="t-cap mut">Elegí las dos fechas del período comparado.</p>}
             {disposicion === 'cruce'
                 ? (
-                    <CruceSegmentos grupos={datos.grupos} campo={campo} campos={COLUMNAS_CRUCE} onCampo={(key) => poner({ campo: key })}
-                        moneda={datos.moneda} color="var(--brand-secondary)" onVer={verDeCruce} orden={orden} onOrden={ordenar} />
+                    <CruceSegmentos grupos={grupos} campo={campo} campos={COLUMNAS_CRUCE} onCampo={(key) => poner({ campo: key })}
+                        moneda={datos.moneda} color="var(--brand-secondary)" onVer={verDeCruce} orden={orden} onOrden={ordenar}
+                        onQuitar={(key) => cambiarQuitados([...quitados, key])} />
                 )
-                : datos.grupos.map((g) => (
+                : grupos.map((g) => (
                     <TablaSegmentos key={g.key} grupo={g} color={color(g)} columnas={columnas} moneda={datos.moneda} onVer={verDeTabla(g)}
                         nota={corte === 'fuente' && g.key === 'workshop'
                             ? 'Los leads de Workshop son clics al grupo de WhatsApp: no traen formulario, así que no se parten por segmento.' : null} />

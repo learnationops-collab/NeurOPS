@@ -1324,3 +1324,6 @@
 
 - **28 de Octubre de 2026 (Workshop › Talleres: la tabla ocupa todo el ancho)** *([workshop-shell.css](../../frontend/src/pages/admin/workshop/workshop-shell.css), [WorkshopDashboardPage.jsx](../../frontend/src/pages/admin/workshop/WorkshopDashboardPage.jsx))*
   - En la pestaña Talleres, la cabecera y el contenido dejan de tener el tope de 1440 px (`.ws-espacio--ancho`): la tabla usa todo el ancho de la pantalla para analizar más columnas a la vez. Las demás pestañas de Workshop conservan su ancho.
+- **28 de Octubre de 2026 (Segmentos: quitar grupos del análisis, recordados por usuario)** *([ControlesSegmentos.jsx](../../frontend/src/pages/admin/marketing/todos/ControlesSegmentos.jsx), [CruceSegmentos.jsx](../../frontend/src/pages/admin/marketing/todos/CruceSegmentos.jsx))*
+  - En Segmentos de Marketing y de Analizar hay un control «Grupos» con un botón por closer, fuente, origen o setter: apagar uno lo saca de las tablas y del cruce (en el cruce también con la × de cada fila). «Ver todos» los devuelve. Siempre queda al menos uno.
+  - Lo quitado se guarda por usuario y por corte (`quitados: { closer: [...] }`), así que al volver, o al cambiar de corte y regresar, siguen fuera los grupos que no se quieren analizar. Verificado en local: dos closers quitados siguieron fuera tras recargar.
