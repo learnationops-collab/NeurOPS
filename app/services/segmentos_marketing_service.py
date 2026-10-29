@@ -19,6 +19,8 @@ listas que se abren al tocarlas— son cuentas sobre esos hechos con `PERTENECE`
     prorratea el gasto por la mezcla de segmentos, o se divide el gasto de la fuente por los leads del
     segmento. No se calcula hasta que se decida; ver `docs/pendientes_santi.md`.
 """
+import time
+
 from app import db
 from app.models import Conversation
 from app.services import anuncios_service, conteo_agendas_service, fuentes_registros_service, fuentes_service
@@ -93,9 +95,26 @@ def _leads_de_setting(desde, hasta):
              'seg': segmento.get(e['lead_id'], SIN)} for e in entradas]
 
 
+_MEMORIA = {}   # {(desde, hasta): (cuándo, resultado)}: cambiar de corte o de filtro no rehace la cuenta de 3 s
+_VIGENCIA = 45  # segundos
+
+
 def hechos(desde, hasta):
     """([hechos], clics de WhatsApp de Workshop) del período: las agendas por fecha de alta, los cobros y los leads de Setting,
-    cada uno con su segmento. Es todo lo que cuenta esta vista."""
+    cada uno con su segmento. Es todo lo que cuenta esta vista. Se recuerda 45 s: la vista pide el mismo período varias
+    veces (otro corte, otro filtro, la lista de una celda) y nadie modifica lo devuelto."""
+    ahora = time.monotonic()
+    guardado = _MEMORIA.get((desde, hasta))
+    if guardado and ahora - guardado[0] < _VIGENCIA:
+        return guardado[1]
+    resultado = _hechos(desde, hasta)
+    for k in [k for k, (t, _) in _MEMORIA.items() if ahora - t >= _VIGENCIA]:
+        del _MEMORIA[k]
+    _MEMORIA[(desde, hasta)] = (ahora, resultado)
+    return resultado
+
+
+def _hechos(desde, hasta):
     desde_dt, hasta_dt = anuncios_service._limites(desde, hasta)
     _por_clave, _sin, cobros, _sin_clave, claves = anuncios_service._ventas(
         desde_dt, hasta_dt, anuncios_service._clave_de_cada_anuncio())

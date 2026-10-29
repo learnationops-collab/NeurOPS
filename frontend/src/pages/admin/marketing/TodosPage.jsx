@@ -45,7 +45,7 @@ const VISTAS = [
 const TodosPage = () => {
     const navigate = useNavigate();
     const reducir = useReducedMotion();
-    const { periodo, rango, cambiar, elegir, textoPeriodo, params } = usePeriodoDeUrl('mk_todos_url', ['vista']);
+    const { periodo, rango, cambiar, elegir, textoPeriodo, params } = usePeriodoDeUrl('mk_todos_url', ['vista', 'segmento', 'vs', 'vd', 'vh']);
     const vista = VISTAS.some((v) => v.key === params.get('vista')) ? params.get('vista') : 'resumen';
     const [version, setVersion] = useState(0);
     const { base, elegirBase } = useBaseDeConteo();
@@ -80,12 +80,7 @@ const TodosPage = () => {
             );
         }
         if (vista === 'segmentos') {
-            return (
-                <>
-                    <SegmentosVista rango={rango} version={version} params={params} cambiar={cambiar} abrirRegistros={registros.abrir} />
-                    {registros.panel}
-                </>
-            );
+            return <SegmentosVista rango={rango} version={version} params={params} cambiar={cambiar} />;
         }
         if (!datos) return <EsqueletoResumen />;
         if (sinFuentes) {
