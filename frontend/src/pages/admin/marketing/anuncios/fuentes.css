@@ -13,4 +13,3 @@
 .dc-shell .mk-series3{display:grid;grid-template-columns:1fr;gap:var(--s4)}
 @media (min-width:980px){.dc-shell .mk-series3{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
-.dc-shell .mk-fuente-kpis > :nth-last-child(-n+2) .ui-cifra__cuenta{left:auto;right:0}
