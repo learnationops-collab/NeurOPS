@@ -9,14 +9,14 @@ import { formatear } from './metricas';
  * la suma, que arma el backend con el mismo código que la cifra (`fuentes_registros_service.py`). Arriba,
  * su cuenta en una línea: la suma de la lista es la cifra que se tocó.
  */
-const fecha = (v) => {
+export const fecha = (v) => {
     if (!v) return '—';
     const [d, h] = String(v).split('T');
     const [a, m, dia] = d.split('-');
     return `${dia}/${m}/${a}${h && h !== '00:00:00' ? ` ${h.slice(0, 5)}` : ''}`;
 };
 
-const columnaDe = (c, moneda) => ({
+export const columnaDe = (c, moneda) => ({
     key: c.key, header: c.header, width: c.ancho, valor: (f) => f[c.key], alinear: ['dinero', 'numero'].includes(c.tipo) ? 'der' : undefined,
     oculta: !!c.oculta,
     render: (f) => {
