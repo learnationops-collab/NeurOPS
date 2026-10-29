@@ -28,7 +28,7 @@ export const EnCabecera = ({ children }) => {
 };
 
 const CabeceraWorkshop = ({
-    pestanas, activa, onPestana, eventos, onIrAProximos, recargando, onRecargar, onRegistrar, children,
+    pestanas, activa, onPestana, eventos, onIrAProximos, recargando, onRecargar, onRegistrar, alcance = null, children,
 }) => {
     const [destino, setDestino] = useState(null);
     return (
@@ -58,6 +58,8 @@ const CabeceraWorkshop = ({
                         </button>
                     </div>
                 </header>
+                {/* De qué talleres o de qué período habla la pestaña (`alcanceWorkshop.js`). */}
+                {alcance && <p className="t-cap ws-cab-alcance" role="note"><b>Habla de:</b> {alcance}</p>}
             </div>
             {children}
         </Slot.Provider>

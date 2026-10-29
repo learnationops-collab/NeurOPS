@@ -15,6 +15,8 @@ import EstadoDeMeta from './EstadoDeMeta';
 import { usePantallaCompleta } from './usePantallaCompleta';
 import { columnasDelCsv } from './columnasTabla';
 import { useVistaDeColumnas } from './useVistaDeColumnas';
+import { useFiltrosTabla } from './useFiltrosTabla';
+import { clavesUnicas } from './clavesUnicas';
 import { referenciasDe } from './tonos';
 import LeyendaTonos from './LeyendaTonos';
 import TarjetasAnuncios, { SelectorModo } from './TarjetasAnuncios';
@@ -84,22 +86,20 @@ export const EsqueletoTablaAnuncios = ({ bajoKpis = null }) => (
     <div className="vista mk-vista">
         <EsqueletoKpis titulos={KPIS} lineas={2} label="Cargando los indicadores de los anuncios…" />
         {bajoKpis}
-        <SerieDiaria serie={null} alcance={ALCANCE_INICIAL} />
         <EsqueletoPanelTabla titulo={TITULO} sub={BAJADA} label="Cargando la tabla de anuncios…" />
+        <SerieDiaria serie={null} alcance={ALCANCE_INICIAL} />
     </div>
 );
 
 // `bajoKpis`: lo que va entre los KPIs y el resto (el gasto por embudo, en «Todo»).
 const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = null, bajoKpis = null }) => {
-    const [busqueda, setBusqueda] = useState('');
-    const [verArchivados, setVerArchivados] = useState(false);
-    // Filtros de Kerwin (23/10/2026): lo que no gastó y lo que no está activo en Meta estorban al mirar costos.
-    const [soloConGasto, setSoloConGasto] = useState(false);
-    const [soloActivas, setSoloActivas] = useState(false);
+    // Los filtros se recuerdan por usuario (`useFiltrosTabla`, norma del 28/10/2026). «Solo con gasto» y «solo
+    // activas» (Kerwin, 23/10/2026): lo que no gastó y lo que no está activo en Meta estorban al mirar costos.
+    const {
+        busqueda, setBusqueda, verArchivados, setVerArchivados, soloConGasto, setSoloConGasto, soloActivas, setSoloActivas,
+        orden, setOrden, nivel, setNivel, elegidas, setElegidas,
+    } = useFiltrosTabla(datos.filas);
     const pantalla = usePantallaCompleta();
-    const [orden, setOrden] = useState({ clave: 'entrantes', dir: 'desc' });
-    const [nivel, setNivel] = useState('anuncios');
-    const [elegidas, setElegidas] = useState(vacio);
     const [editando, setEditando] = useState(null);
     const [guardando, setGuardando] = useState(false);
     const moneda = datos.moneda;
@@ -146,6 +146,8 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = nul
         return ordenar(filas, orden.clave, orden.dir);
     }, [nivel, base, deCampanas, deConjuntos, elegidas.campanas, orden]);
 
+    // Dos filas con la misma clave no se repiten en pantalla (`clavesUnicas`).
+    const clavesDeFilas = useMemo(() => clavesUnicas(visibles, idDe), [visibles, nivel]); // eslint-disable-line react-hooks/exhaustive-deps
     const delNivel = elegidas[nivel];
     const elegidasVisibles = visibles.filter((f) => delNivel.has(idDe(f)));
     const totales = useMemo(() => totalesDe(visibles), [visibles]);
@@ -262,11 +264,7 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = nul
 
             {bajoKpis}
 
-            <CobradoDelPeriodo enTabla={datos.totales?.cobrado || 0} total={datos.cobrado_periodo}
-                fuera={datos.cobrado_fuera || []} moneda={moneda} irAVentas={irAVentas} irATabla={irATabla} />
-
-            <SerieDiaria serie={serie} moneda={moneda} alcance={alcance} metaConectado={datos.meta?.conectado} />
-
+            {/* Lo accionable primero (28/10/2026): KPIs, la tabla y, después, lo cobrado y los gráficos. */}
             <section className={`panel mk-panel-tabla${pantalla.completa ? ' mk-pantalla' : ''}`} ref={panelTabla}>
                 <div className="mk-tabla-barra">
                     <div className="mk-tabla-titulo">
@@ -357,8 +355,8 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = nul
                                 <FilaGrupo key={g.id} g={g} nivel={nivel} elegida={delNivel.has(g.id)} onAlternar={alternar}
                                     onAbrir={abrir} piezas={piezas} moneda={moneda} refs={refs} />
                             ))}
-                            {nivel === 'anuncios' && visibles.map((f) => (
-                                <FilaAnuncio key={claveDeAnuncio(f)} f={f} elegida={delNivel.has(claveDeAnuncio(f))}
+                            {nivel === 'anuncios' && visibles.map((f, i) => (
+                                <FilaAnuncio key={clavesDeFilas[i]} f={f} elegida={delNivel.has(claveDeAnuncio(f))}
                                     onAlternar={alternar} onEditar={setEditando} onArchivar={onArchivar} subtitulo={sub}
                                     piezas={piezas} moneda={moneda} refs={refs} />
                             ))}
@@ -391,6 +389,11 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = nul
                     </p>
                 )}
             </section>
+
+            <CobradoDelPeriodo enTabla={datos.totales?.cobrado || 0} total={datos.cobrado_periodo}
+                fuera={datos.cobrado_fuera || []} moneda={moneda} irAVentas={irAVentas} irATabla={irATabla} />
+
+            <SerieDiaria serie={serie} moneda={moneda} alcance={alcance} metaConectado={datos.meta?.conectado} />
 
             {editando && (
                 <EditorAgrupacion fila={editando} opciones={datos.agrupaciones || []} guardando={guardando}

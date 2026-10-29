@@ -101,11 +101,13 @@ const CorrelacionesTab = () => {
                     <div className="wc-cuerpo">
                         <section className="panel wc-panel wc-panel--mapa">
                             <div className="panel-cab">
-                                <h3 className="t-h3">Mapa de correlaciones</h3>
+                                <h3 className="t-h3">Qué cifras se mueven juntas</h3>
                                 <Tip titulo="Cómo leerlo"
                                     texto="Verde: suben juntas. Rojo: una sube y la otra baja. Clic para ver el par." />
                                 <Tip titulo="Leelo con cuidado" texto={aviso} />
                             </div>
+                            {/* Para qué sirve, en lenguaje de decisión (28/10/2026). */}
+                            <p className="t-cap mut40">Para elegir qué mover primero: lo que sube con el cash es donde conviene apuntar. No prueba que una cause la otra.</p>
                             <MapaCalor metricas={datos.metricas} matriz={datos.matriz} metodo={metodo} par={par}
                                 onElegir={elegir} ligadas={ligadas} />
                             <p className="wc-leyenda">

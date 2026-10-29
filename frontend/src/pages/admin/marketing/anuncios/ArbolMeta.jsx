@@ -6,6 +6,7 @@ import PanelConfigurar from '../../../comercial/components/PanelConfigurar';
 import { Tip } from '../../../comercial/components/Shared';
 import { pasaFacetas } from '../../../../components/listas/ListaConfigurable';
 import { useColumnasVisibles } from '../../../../components/listas/useColumnasVisibles';
+import { useEstadoGuardado } from '../../../../hooks/useEstadoGuardado';
 import { useEnPantalla } from '../../../../components/ui/useEnPantalla';
 import EnlaceMeta from './EnlaceMeta';
 import CajaDeTabla, { BotonPantallaCompleta } from './CajaDeTabla';
@@ -25,6 +26,10 @@ import '../../../../components/listas/listas.css';
  * `ListaConfigurable` es plana (no anida filas): de ella se usan `useColumnasVisibles` y `pasaFacetas`, y
  * el menú de columnas es una copia local del suyo, que no se exporta.
  */
+
+const FILTROS_INICIALES = {
+    query: '', soloActivos: false, soloConGasto: false, elegidas: {}, modo: 'todas', orden: { key: 'gasto', dir: 'desc' },
+};
 
 export const AUTO = '__auto';
 export const NINGUNA = '__ninguna';
@@ -134,13 +139,17 @@ const MenuColumnas = ({ columnas, visibles, alternar, restablecer, onCerrar }) =
 const ArbolMeta = ({ anuncios, claves, leadsPorClave, cuentas, moneda, guardando, onElegirClave, onElegirEmbudo }) => {
     const quieto = useReducedMotion();
     const { visibles, alternar, restablecer } = useColumnasVisibles('mk-meta-columnas', COLUMNAS);
-    const [query, setQuery] = useState('');
-    const [soloActivos, setSoloActivos] = useState(false);
-    const [soloConGasto, setSoloConGasto] = useState(false);
+    // Los filtros se recuerdan por usuario (norma del 28/10/2026, `useEstadoGuardado`).
+    const [filtros, poner] = useEstadoGuardado('mk_meta_filtros', FILTROS_INICIALES);
+    const { query, soloActivos, soloConGasto, elegidas, modo, orden } = filtros;
+    const campo = (k) => (v) => poner((p) => ({ [k]: typeof v === 'function' ? v(p[k]) : v }));
+    const setQuery = campo('query');
+    const setSoloActivos = campo('soloActivos');
+    const setSoloConGasto = campo('soloConGasto');
+    const setElegidas = campo('elegidas');
+    const setModo = campo('modo');
+    const setOrden = campo('orden');
     const pantalla = usePantallaCompleta();
-    const [elegidas, setElegidas] = useState({});
-    const [modo, setModo] = useState('todas');
-    const [orden, setOrden] = useState({ key: 'gasto', dir: 'desc' });
     const [menu, setMenu] = useState(null);
     const [abiertas, setAbiertas] = useState(() => new Set());
 

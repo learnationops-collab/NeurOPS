@@ -41,7 +41,7 @@ const VISTAS = [
 const TodosPage = () => {
     const navigate = useNavigate();
     const reducir = useReducedMotion();
-    const { periodo, rango, cambiar, elegir, textoPeriodo, params } = usePeriodoDeUrl();
+    const { periodo, rango, cambiar, elegir, textoPeriodo, params } = usePeriodoDeUrl('mk_todos_url', ['vista']);
     const vista = VISTAS.some((v) => v.key === params.get('vista')) ? params.get('vista') : 'resumen';
     const [version, setVersion] = useState(0);
     const recargar = useCallback(() => setVersion((v) => v + 1), []);
@@ -88,7 +88,6 @@ const TodosPage = () => {
                 {vista === 'detalle'
                     ? <MetricaPorMetrica grupos={grupos} moneda={datos.moneda} onVer={registros.abrir} />
                     : <ResumenTodos grupos={grupos} setting={setting} workshop={workshop} moneda={datos.moneda} onVer={registros.abrir} />}
-                {aviso}
                 {registros.panel}
             </div>
         );
@@ -107,6 +106,7 @@ const TodosPage = () => {
                             </div>
                         </div>
                         <div className="tope-meta mk-tope-meta">
+                            {aviso}
                             <PillMenu icono={<CalendarDays />} texto={textoPeriodo} rotulo="Período"
                                 detalle={periodo === 'personalizado' ? null : textoRango(rango)}
                                 opciones={PERIODOS} valor={periodo} ancho={230} onChange={elegir}
@@ -127,6 +127,8 @@ const TodosPage = () => {
                         <span><i style={{ background: SETTING.color }} />{SETTING.label}</span>
                         <span><i style={{ background: WORKSHOP.color }} />{WORKSHOP.label}</span>
                     </div>
+                    <p className="t-cap mut40"><b>Habla de:</b> los anuncios de Meta de Setting y de Workshop, {textoPeriodo?.toLowerCase()}
+                        {periodo === 'personalizado' ? '' : ` (${textoRango(rango)})`}. No es por taller.</p>
                     <div className="barra">
                         <Segmented opciones={VISTAS} valor={vista} ariaLabel="Vistas de Todos" onChange={elegirVista} />
                     </div>

@@ -40,8 +40,8 @@ const WorkshopAccionesView = ({
         { key: 'pend', label: 'Pendientes', valor: String(pendientes.length), sub: actions.length - pendientes.length === 1 ? '1 hecha' : `${actions.length - pendientes.length} hechas` },
         { key: 'ventas', label: 'Si se cumplen', valor: `+${impacto.ventas.toFixed(1)}`, sub: `+${fmt(impacto.cash)} cash`,
           tip: 'Ventas que sumarían las pendientes. Estimación para priorizar.' },
-        { key: 'clarity', label: 'Clarity Score', valor: String(clarity.score), sub: `Diagnóstico ${clarity.diagnostico}% · plan ${clarity.plan}%`,
-          tip: 'Promedio de metas, plan y acciones hechas.' },
+        { key: 'clarity', label: 'Plan de mejora', valor: String(clarity.score), sub: `Metas ${clarity.diagnostico}% · etapas con acción ${clarity.plan}%`,
+          tip: 'Bajo: cargá las metas y una acción por cada etapa bajo meta.' },
         { key: 'ejec', label: 'Ejecución', valor: `${clarity.ejecucion}%`, sub: 'de las acciones, hechas' },
     ];
 

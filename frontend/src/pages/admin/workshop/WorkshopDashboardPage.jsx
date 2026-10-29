@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useParamsGuardados } from '../../../hooks/useParamsGuardados';
 import { Plus } from 'lucide-react';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
@@ -19,6 +19,7 @@ import RendimientoTab from './tabs/RendimientoTab';
 import Legado from './tabs/Legado';
 import CorrelacionesTab from './correlaciones/CorrelacionesTab';
 import { aCamposLocales, aInicioUtc, esProximo, zonaNavegador } from './agendaTaller';
+import { alcanceDeWorkshop } from './alcanceWorkshop';
 
 /**
  * Workshop: cuatro pestañas desde el 16/10/2026 (antes nueve sueltas), más Rendimiento (24/10/2026).
@@ -42,10 +43,13 @@ const PESTANAS = [
     { key: 'resumen', label: 'Resumen' },
     { key: 'talleres', label: 'Talleres' },
     { key: 'planificar', label: 'Planificar' },
-    { key: 'rendimiento', label: 'Rendimiento' },
+    { key: 'rendimiento', label: 'Anuncios de Meta' },
     { key: 'trafico', label: 'Tráfico landings' },
     { key: 'correlaciones', label: 'Correlaciones' },
 ];
+
+// Todo lo que las pestañas guardan en la URL: pestaña, filtro y comparación del Resumen, y período.
+const CLAVES_DE_LA_URL = ['tab', 'rf', 'rn', 'rd', 'rh', 'ri', 'vs', 'vd', 'vh', 'vi', 'periodo', 'desde', 'hasta'];
 
 // Las pestañas viejas siguen abriendo lo mismo desde un link guardado.
 const PESTANA_VIEJA = { list: 'talleres', funnel: 'talleres', anuncios: 'talleres', landing: 'talleres',
@@ -83,7 +87,8 @@ const initialFormData = {
 };
 
 const WorkshopDashboardPage = () => {
-    const [params, setParams] = useSearchParams();
+    // La pestaña, el filtro del Resumen (rf…vi) y el período se recuerdan por usuario (`useParamsGuardados`).
+    const [params, setParams, restaurando] = useParamsGuardados('ws_url', CLAVES_DE_LA_URL);
     const pedida = PESTANA_VIEJA[params.get('tab')] || params.get('tab');
     const activeTab = PESTANAS.some((p) => p.key === pedida) ? pedida : 'resumen';
     // Lo que una pestaña le pide a Planificar al mandar ahí (ver PlanificarTab). Un link viejo a
@@ -318,6 +323,9 @@ const WorkshopDashboardPage = () => {
         }
     };
 
+    // Los hijos leen la URL por su cuenta: no se pintan hasta que la URL tenga lo de la última vez.
+    if (restaurando) return null;
+
     return (
         <div className="ws-espacio">
             {/* Tráfico tiene su propio recargar junto al período: el de acá recarga talleres, metas y
@@ -325,7 +333,7 @@ const WorkshopDashboardPage = () => {
             <CabeceraWorkshop pestanas={PESTANAS} activa={activeTab} onPestana={(key) => irA(key)}
                 eventos={events} onIrAProximos={() => irA('planificar', { vista: 'proximos' })}
                 recargando={recargando} onRecargar={activeTab === 'trafico' || activeTab === 'rendimiento' ? null : recargar}
-                onRegistrar={handleOpenCreateModal}>
+                onRegistrar={handleOpenCreateModal} alcance={alcanceDeWorkshop(activeTab, realizados, params)}>
 
                 <div className="ws-contenido">
                         {/* Tráfico no depende de los talleres cargados: va fuera de los guards de abajo. */}

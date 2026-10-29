@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Navigate, useSearchParams } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
+import { useParamsGuardados } from '../../../hooks/useParamsGuardados';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { CalendarDays, RefreshCw } from 'lucide-react';
@@ -50,7 +51,8 @@ import './anuncios/anuncios.css';
  */
 
 const PESTANAS = [
-    { key: 'anuncios', label: 'Rendimiento' },
+    // «Rendimiento» también era una pestaña de Workshop (28/10/2026): cada nombre dice qué mide.
+    { key: 'anuncios', label: 'Palabras clave' },
     { key: 'entrantes', label: 'Entrantes' },
     { key: 'conversaciones', label: 'Conversaciones' },
     { key: 'meta', label: 'Meta Ads' },
@@ -60,7 +62,8 @@ const PESTANAS = [
 const PESTANA_VIEJA = { webhooks: 'entrantes' };
 const CON_PERIODO = ['anuncios', 'entrantes', 'conversaciones', 'meta'];
 const AdminMarketingHubPage = () => {
-    const [params, setParams] = useSearchParams();
+    // La pestaña y el período se recuerdan por usuario: sin parámetros en el link, se abre donde se dejó.
+    const [params, setParams] = useParamsGuardados('mk_setting_url', ['tab', 'periodo', 'desde', 'hasta']);
     const reducir = useReducedMotion();
     const pedida = PESTANA_VIEJA[params.get('tab')] || params.get('tab');
     const pestana = PESTANAS.some((p) => p.key === pedida) ? pedida : 'anuncios';
@@ -152,6 +155,7 @@ const AdminMarketingHubPage = () => {
                         </div>
                         {CON_PERIODO.includes(pestana) && (
                             <div className="tope-meta mk-tope-meta">
+                                {pestana === 'anuncios' && avisoSinCampana}
                                 <PillMenu icono={<CalendarDays />} texto={textoPeriodo} rotulo="Período"
                                     detalle={periodo === 'personalizado' ? null : textoRango(rango)}
                                     opciones={opcionesPeriodo} valor={periodo} ancho={230}
@@ -189,7 +193,6 @@ const AdminMarketingHubPage = () => {
                                     <>
                                         <TablaAnuncios datos={datos} onArchivar={archivar} onAgrupar={agrupar} estadoMeta={estadoMeta}
                                             irAMeta={() => cambiar({ tab: 'meta' })} bajoKpis={resumenSetting} />
-                                        {avisoSinCampana}
                                         {registros.panel}
                                     </>
                                 )}

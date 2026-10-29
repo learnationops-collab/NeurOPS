@@ -1,27 +1,19 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
+import { useEstadoGuardado } from '../../../../hooks/useEstadoGuardado';
 import {
     COLUMNAS_TABLA, GRUPOS, OCULTAS_INICIALES, PRESETS, acotar, anchoDe, columnasEnOrden, mismaVista, moverColumna,
     piezasDeLaTabla, soltarColumna,
 } from './columnasTabla';
 
 /**
- * La vista de columnas de Rendimiento, recordada en este navegador: cuáles se ocultan, en qué orden van,
- * qué grupos van juntos en una sola columna, el ancho de cada una (ver `columnasTabla.js`) y las vistas
- * que se guardaron con nombre. Como `useColumnasVisibles`, se guardan las OCULTAS: una columna nueva
- * aparece sola.
+ * La vista de columnas de Rendimiento, recordada POR USUARIO (`useEstadoGuardado`; antes era por navegador):
+ * cuáles se ocultan, en qué orden van, qué grupos van juntos en una sola columna, el ancho de cada una
+ * (ver `columnasTabla.js`) y las vistas que se guardaron con nombre. Como `useColumnasVisibles`, se guardan
+ * las OCULTAS: una columna nueva aparece sola.
  */
 const CLAVE = 'mk_rendimiento_columnas';
 const MAXIMO_DE_VISTAS = 8;
 const VERSION = 2;
-
-const leer = () => {
-    try {
-        const v = JSON.parse(window.localStorage.getItem(CLAVE) || 'null');
-        return v && typeof v === 'object' ? v : {};
-    } catch {
-        return {};
-    }
-};
 
 const lista = (v) => (Array.isArray(v) ? v.filter((k) => typeof k === 'string') : []);
 
@@ -29,28 +21,26 @@ const vistaGuardada = (p) => (p && typeof p === 'object' && typeof p.nombre === 
     ? [{ id: String(p.id || p.nombre), nombre: p.nombre.trim().slice(0, 30), ocultas: lista(p.ocultas),
         juntados: lista(p.juntados), orden: lista(p.orden) }] : []);
 
-const inicial = () => {
-    const g = leer();
-    const anchos = g.anchos && typeof g.anchos === 'object' ? g.anchos : {};
+const INICIAL = {
+    v: VERSION, ocultas: OCULTAS_INICIALES, juntados: [], orden: [], anchos: {}, colores: true, vistas: [],
+};
+
+// Lo guardado puede venir de otra versión (o de la clave vieja por navegador): se limpia campo a campo.
+const normalizar = (m, inicial, g) => {
     // Antes de la v2 no existía el «% de calificación»: queda oculto salvo que se lo pida.
     const ocultas = g.v === VERSION ? lista(g.ocultas) : [...new Set([...lista(g.ocultas), ...OCULTAS_INICIALES])];
     return {
-        v: VERSION, ocultas, juntados: lista(g.juntados), orden: lista(g.orden), anchos, colores: g.colores !== false,
+        v: VERSION, ocultas, juntados: lista(g.juntados), orden: lista(g.orden),
+        anchos: g.anchos && typeof g.anchos === 'object' && !Array.isArray(g.anchos) ? g.anchos : inicial.anchos,
+        colores: g.colores !== false,
         vistas: (Array.isArray(g.vistas) ? g.vistas : []).flatMap(vistaGuardada).slice(0, MAXIMO_DE_VISTAS),
     };
 };
+const OPCIONES = { normalizar, heredar: CLAVE };
 
 export const useVistaDeColumnas = () => {
-    const [estado, setEstado] = useState(inicial);
-    const guardar = useCallback((cambio) => setEstado((prev) => {
-        const nuevo = { ...prev, ...cambio(prev) };
-        try {
-            window.localStorage.setItem(CLAVE, JSON.stringify(nuevo));
-        } catch {
-            // Sin almacenamiento la vista no se recuerda; la tabla sigue andando.
-        }
-        return nuevo;
-    }), []);
+    // El guardado lo hace `useEstadoGuardado` en un efecto, no dentro del updater (que React puede repetir).
+    const [estado, guardar] = useEstadoGuardado(CLAVE, INICIAL, OPCIONES);
 
     const piezas = useMemo(() => piezasDeLaTabla(estado.ocultas, estado.juntados, estado.orden),
         [estado.ocultas, estado.juntados, estado.orden]);
