@@ -1321,3 +1321,6 @@
   - En «Confirmá sus datos» de una venta nueva, el closer elige **Inicia el** (vacío: el día de la venta). La suscripción de Work arranca ese día y el vencimiento se cuenta desde ahí (seña 7 días, venta 120 días o los meses del programa). Se ve en la revisión y en Fulfillment («Desde el …»).
   - Solo hacia adelante: un inicio anterior a la venta no le quita días. La Academia le da el acceso igual al registrar la venta; un inicio posterior solo le suma días.
   - `inicio_acceso` viaja como `meses_renovacion`: no es columna de la venta, lo lee `al_ubicar_pago`.
+
+- **28 de Octubre de 2026 (Workshop › Talleres: la tabla ocupa todo el ancho)** *([workshop-shell.css](../../frontend/src/pages/admin/workshop/workshop-shell.css), [WorkshopDashboardPage.jsx](../../frontend/src/pages/admin/workshop/WorkshopDashboardPage.jsx))*
+  - En la pestaña Talleres, la cabecera y el contenido dejan de tener el tope de 1440 px (`.ws-espacio--ancho`): la tabla usa todo el ancho de la pantalla para analizar más columnas a la vez. Las demás pestañas de Workshop conservan su ancho.

@@ -90,6 +90,10 @@
     min-height: 0;
 }
 
+/* Talleres: la tabla ocupa todo el ancho de la pantalla (cabecera y contenido sin tope de 1440 px). */
+.ws-espacio--ancho > .ws-cabeza,
+.ws-espacio--ancho .ws-contenido > .dc-shell { max-width: none; }
+
 @keyframes ws-gira { to { transform: rotate(360deg); } }
 .dc-shell .ws-gira { animation: ws-gira 1s linear infinite; }
 @media (prefers-reduced-motion: reduce) { .dc-shell .ws-gira { animation: none; } }
