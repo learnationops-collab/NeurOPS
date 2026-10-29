@@ -1350,3 +1350,6 @@
   - A los 5 minutos de que un lead deje sus datos en un link y no siga, llega a Discord «⏳ No terminó de agendar», etiquetando a su setter, con sus respuestas y hasta dónde llegó (ADR-W026). Un aviso por lead y evento.
   - Migración `b4d6f8a0c2e3`: `sched_intentos.pais` y `sched_intentos.avisado_en`.
 - **29 de Octubre de 2026 (margen de Jean Carlo de vuelta)** *(configuración de Tálamus en producción)*: terminada la agendada del workshop, el margen de Jean Carlo en las Sesiones de Aceleración (workshop y setting) vuelve de 0 a 15 minutos.
+- **29 de Octubre de 2026 (la ventana de días cuenta solo días con lugar)** *([asignacion.py](../../app/agendas_v2/nucleo/asignacion.py), [asignacion.js](../../frontend/src/pages/agendas_v2/core/asignacion.js))*:
+  - Un evento de «N días» ahora ofrece N días con al menos 3 horarios del grupo del lead: los días llenos o con 1 o 2 lugares no cuentan, y se abren días hasta completar N (tope 14). Los de 1 o 2 lugares se siguen mostrando.
+  - Antes de pasar a otro grupo (por ejemplo, de «Segmentos A y B» al Grupo 4 con Mario), primero se abren días con el propio grupo (ADR-W027).
