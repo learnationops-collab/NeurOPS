@@ -27,6 +27,7 @@ import LeadModal from './components/LeadModal';
 import FichaLeadModal from '../../components/ficha/FichaLeadModal';
 import Reportar from './components/Reportar';
 import RangoFechas, { mesEnCurso, rangoAnterior, rangoDe, textoRango } from './components/RangoFechas';
+import SegmentosPanel from './components/SegmentosPanel';
 import { corregirAgenda, eliminarAgenda as eliminarAgendaApi, getComparativas, getContexto, getResumen, getTabla, getVariabilidad, marcarAgendaDuplicada } from './comercialApi';
 import { getNoCerradas, sincronizarAcademia as sincronizarAcademiaApi } from './comercialApi';
 import Finanzas, { TABS_FINANZAS } from './components/finanzas/Finanzas';
@@ -209,6 +210,11 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     // La pestaña General · Anuncios · Inbound del tablero de setters (10/10/2026). Solo elige qué
     // vista del resumen se dibuja —el backend manda las tres juntas—, así que no dispara pedidos.
     const canal = ['anuncios', 'inbound'].includes(params.get('canal')) ? params.get('canal') : null;
+    // El filtro de segmento A/B/C/D (`seg=A,B`, 28/10/2026): acota los KPIs del closer, las listas de Revisar y el
+    // panel Segmentos. El panel pide todos los grupos y lo aplica él (ver `SegmentosPanel`).
+    const segmentoUrl = params.get('seg') || '';
+    const elegidosSeg = useMemo(() => segmentoUrl.split(',').filter(s => ['A', 'B', 'C', 'D', 'sin'].includes(s)), [segmentoUrl]);
+    const segmento = elegidosSeg.join(',');
 
     const [tab, setTab] = useState('dashboard');
     // Finanzas se mira por mes o por un rango personalizado (queda el último elegido; las vistas
@@ -317,8 +323,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
 
     const filtros = useMemo(
         () => ({ period, compare, rol, miembroId, desde: rango?.desde, hasta: rango?.hasta,
-            vsDesde: rangoVs?.desde, vsHasta: rangoVs?.hasta }),
-        [period, compare, rol, miembroId, rango?.desde, rango?.hasta, rangoVs?.desde, rangoVs?.hasta]);
+            vsDesde: rangoVs?.desde, vsHasta: rangoVs?.hasta, segmento }),
+        [period, compare, rol, miembroId, rango?.desde, rango?.hasta, rangoVs?.desde, rangoVs?.hasta, segmento]);
 
     const seccionActual = SECCIONES.find(s => s.id === seccion) || SECCIONES[0];
 
@@ -792,6 +798,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                             fallo={fallas.resumen} onReintentar={cargarAnalizar}
                             cargarNoCerradas={cargarNoCerradas} onAbrirFila={abrirFila}
                             canal={canal} onCanal={(c) => set({ canal: c })} />
+                    )}
+                    {!esperaFechas && seccion === 'analizar' && tab === 'dashboard' && ['closers', 'setters'].includes(rol) && (
+                        <SegmentosPanel filtros={filtros} rol={rol} elegidos={elegidosSeg}
+                            onElegir={(lista) => set({ seg: lista.join(',') })} />
                     )}
                     {!esperaFechas && seccion === 'analizar' && tab === 'comparativas' && contexto.puede_comparar && (
                         // Un closer ve a sus compañeros pero no puede abrir sus listas (el backend

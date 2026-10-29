@@ -7,7 +7,8 @@ import { formatear } from './metricas';
 /**
  * Lo que se abre al tocar una cifra de Setting o de Workshop (`useRegistrosMarketing`): la lista de lo que
  * la suma, que arma el backend con el mismo código que la cifra (`fuentes_registros_service.py`). Arriba,
- * su cuenta en una línea: la suma de la lista es la cifra que se tocó.
+ * su cuenta en una línea: la suma de la lista es la cifra que se tocó. `cargar({ signal })` reemplaza el pedido de
+ * Marketing por otro que devuelva la misma forma `{ columnas, filas, resumen }` (el dashboard comercial por segmento).
  */
 const fecha = (v) => {
     if (!v) return '—';
@@ -29,15 +30,15 @@ const columnaDe = (c, moneda) => ({
     },
 });
 
-const ContenidoRegistros = ({ fuente, metrica, desde, hasta, moneda, segmento = undefined }) => {
+const ContenidoRegistros = ({ fuente, metrica, desde, hasta, moneda, segmento = undefined, cargar = null }) => {
     const [estado, setEstado] = useState({ datos: null, error: null });
     useEffect(() => {
         const control = new AbortController();
-        pedirRegistros(fuente, metrica, desde, hasta, { signal: control.signal }, segmento)
+        (cargar ? cargar({ signal: control.signal }) : pedirRegistros(fuente, metrica, desde, hasta, { signal: control.signal }, segmento))
             .then((datos) => setEstado({ datos, error: null }))
             .catch((e) => { if (!control.signal.aborted) setEstado({ datos: null, error: mensajeDeError(e, 'No se pudo traer la lista.') }); });
         return () => control.abort();
-    }, [fuente, metrica, desde, hasta, segmento]);
+    }, [fuente, metrica, desde, hasta, segmento, cargar]);
 
     const { datos, error } = estado;
     const columnas = useMemo(() => (datos ? datos.columnas.map((c) => columnaDe(c, moneda)) : []), [datos, moneda]);
