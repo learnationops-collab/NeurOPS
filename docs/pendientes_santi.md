@@ -84,6 +84,15 @@ Lo que quedó de la auditoría.
 - [ ] Confirmar que se rotaron los 5 webhooks de Discord y las contraseñas por defecto que quedaron en git.
 - [ ] Ver si hace falta el proxy TCP público de Railway hacia el Postgres de producción.
 
+## Rituales del workshop en Leadership
+Ver ADR-W016. Hecho y probado en local; para que funcione en producción falta:
+
+- [ ] Cargar en Railway (producción) `LEADERSHIP_URL=https://leadership.thelearnation.com`, `LEADERSHIP_TOKEN` (el token personal de Kerwin, Setting › Conexiones) y `LEADERSHIP_SYNC=1`; opcional `LEADERSHIP_TZ` (por defecto America/Caracas). Sin esas tres variables no se hace nada.
+- [ ] Programar el cron diario `GET /api/workshop/cron/leadership` con `CRON_SECRET` (como el de Meta): cada día entra un taller más al horizonte de 10 días.
+- [ ] En la PC de Kerwin: tras integrar, volver a correr `scriptsvisos_leadership.ps1 -Instalar` desde el checkout principal (hoy la tarea apunta al worktree `avance-local`) y confirmar que ve el aviso de Windows de las 10:30 del 29/10 (30 min antes del recordatorio de las 11:00).
+- [ ] Decidir con Kerwin si se quitan los pasos fijos «Enviar mensajes a los grupos» y «Preparar lista y flujo para broadcast» del ritual «Preparar workshop» (jue/vie/sáb 16:00): ahora se duplican con las tareas que genera Work.
+- [ ] Las tareas de un taller que ya empezó (más de 1 día) no se tocan; si se quieren cerrar solas al cargar los datos del taller, falta la llamada inversa Work → Leadership.
+
 ## Fuera del código
 Gestiones y decisiones.
 
