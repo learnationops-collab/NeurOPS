@@ -1349,3 +1349,4 @@
 - **29 de Octubre de 2026 (aviso del lead que no terminó de agendar)** *([abandonos.py](../../app/agendas_v2/abandonos.py), [avisos_discord.py](../../app/agendas_v2/avisos_discord.py), [reminder_scheduler.py](../../app/services/reminder_scheduler.py))*:
   - A los 5 minutos de que un lead deje sus datos en un link y no siga, llega a Discord «⏳ No terminó de agendar», etiquetando a su setter, con sus respuestas y hasta dónde llegó (ADR-W026). Un aviso por lead y evento.
   - Migración `b4d6f8a0c2e3`: `sched_intentos.pais` y `sched_intentos.avisado_en`.
+- **29 de Octubre de 2026 (margen de Jean Carlo de vuelta)** *(configuración de Tálamus en producción)*: terminada la agendada del workshop, el margen de Jean Carlo en las Sesiones de Aceleración (workshop y setting) vuelve de 0 a 15 minutos.
