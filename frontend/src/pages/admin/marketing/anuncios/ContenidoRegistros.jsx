@@ -30,15 +30,16 @@ export const columnaDe = (c, moneda) => ({
     },
 });
 
-const ContenidoRegistros = ({ fuente, metrica, desde, hasta, moneda, base, segmento = undefined, cargar = null }) => {
+const ContenidoRegistros = ({ fuente, metrica, desde, hasta, moneda, base, segmento = undefined, origen = undefined, cargar = null }) => {
     const [estado, setEstado] = useState({ datos: null, error: null });
     useEffect(() => {
         const control = new AbortController();
-        (cargar ? cargar({ signal: control.signal }) : pedirRegistros(fuente, metrica, desde, hasta, { signal: control.signal, base }, segmento))
+        (cargar ? cargar({ signal: control.signal })
+            : pedirRegistros(fuente, metrica, desde, hasta, { signal: control.signal, base, origen }, segmento))
             .then((datos) => setEstado({ datos, error: null }))
             .catch((e) => { if (!control.signal.aborted) setEstado({ datos: null, error: mensajeDeError(e, 'No se pudo traer la lista.') }); });
         return () => control.abort();
-    }, [fuente, metrica, desde, hasta, base, segmento, cargar]);
+    }, [fuente, metrica, desde, hasta, base, segmento, origen, cargar]);
 
     const { datos, error } = estado;
     const columnas = useMemo(() => (datos ? datos.columnas.map((c) => columnaDe(c, moneda)) : []), [datos, moneda]);

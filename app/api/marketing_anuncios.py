@@ -78,7 +78,7 @@ def registros():
                                                           request.args.get('segmento', ''), desde, hasta)
         else:
             datos = fuentes_registros_service.registros(request.args.get('fuente', ''), request.args.get('metrica', ''),
-                                                        desde, hasta, request.args.get('base'))
+                                                        desde, hasta, request.args.get('base'), request.args.get('origen'))
     except ValueError as error:
         return jsonify({'error': str(error)}), 400
     return jsonify(datos), 200

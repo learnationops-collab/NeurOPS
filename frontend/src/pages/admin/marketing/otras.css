@@ -1,0 +1,10 @@
+/* Otras: de dónde viene cada agenda. */
+.dc-shell .ot-panel{display:flex;flex-direction:column;gap:var(--s4);padding:var(--s5)}
+.dc-shell .ot-panel .panel-cab{margin-bottom:0}
+.dc-shell .ot-tabla{display:flex;flex-direction:column;gap:2px;overflow-x:auto}
+.dc-shell .ot-fila{display:grid;grid-template-columns:minmax(160px,2fr) repeat(4,minmax(90px,1fr));gap:var(--s3);align-items:center;
+  padding:var(--s3);border-radius:var(--radius-control);min-width:520px}
+.dc-shell .ot-fila:not(.ot-fila--cab):not(.ot-fila--total){background:var(--bg-element)}
+.dc-shell .ot-fila:not(.ot-fila--cab):not(.ot-fila--total):hover{background:var(--bg-element-hover)}
+.dc-shell .ot-fila--cab{padding-block:0}
+.dc-shell .ot-fila--total{border-top:1px solid var(--border-subtle);border-radius:0;margin-top:var(--s2)}

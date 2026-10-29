@@ -5,6 +5,7 @@ import { CalendarDays, RefreshCw } from 'lucide-react';
 import { Isotipo, PillMenu } from '../../comercial/components/Shared';
 import RangoFechas, { esFecha, textoRango } from '../../comercial/components/RangoFechas';
 import { ErrorDeCarga } from './esqueletos';
+import OrigenDeOtras from './OrigenDeOtras';
 import { Kpi } from './anuncios/TablaAnuncios';
 import { PERIODOS, formatear } from './anuncios/metricas';
 import { mensajeDeError, pedirTablero } from './anuncios/marketingApi';
@@ -115,6 +116,8 @@ const OtrasPage = () => {
                                             : 'Por fecha de alta: personas con agenda creada en el período, sin las repetidas de una reprogramación.'}
                                     </p>
                                 </section>
+                                <OrigenDeOtras otras={otras} desde={rango.desde} hasta={rango.hasta} moneda={datos.moneda} base={base}
+                                    abrir={(metrica, titulo, origen) => registros.abrir('otras', metrica, titulo, undefined, '', origen)} />
                                 {registros.panel}
                             </div>
                         )}

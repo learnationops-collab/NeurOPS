@@ -81,12 +81,14 @@ def _si_no(valor):
     return 'Sí' if valor else 'No'
 
 
-def _agendas(fuente, metrica, desde, hasta, base):
+def _agendas(fuente, metrica, desde, hasta, base, origen=None):
     base = 'alta' if metrica == 'agendas_alta' else conteo_agendas_service.base_de(base)
     todas = conteo_agendas_service.personas(desde, hasta, base)
     # En reunión el show up cuenta leads, una fila por lead y en una sola fuente (`por_lead`).
     personas = [p for p in (conteo_agendas_service.por_lead(todas) if base == 'reunion' and metrica in ('show_up', 'reportadas')
                             else todas) if p['fuente'] == fuente]
+    if origen:  # solo las de un grupo de origen (`conteo_agendas_service.categoria_de_origen`)
+        personas = [p for p in personas if conteo_agendas_service.categoria_de_origen(p['origen']) == origen]
     if metrica == 'show_up':
         personas = [p for p in personas if p['asistio']]
     elif metrica == 'reportadas':
@@ -109,7 +111,12 @@ def _agendas(fuente, metrica, desde, hasta, base):
         resumen = f"{len(filas)} {unidad} con resultado · {asistieron} asistieron"
     else:
         resumen = f"{len(filas)} {unidad} asistieron"
-    return _COLUMNAS_AGENDAS, filas, resumen
+    if origen:
+        resumen += f" · {origen}"
+    # En Otras el origen es lo que se quiere ver: la columna va a la vista (en Setting y Workshop es siempre la misma).
+    columnas = [{**c, 'header': 'Origen', 'oculta': False} if c['key'] == 'origen' else c for c in _COLUMNAS_AGENDAS] \
+        if fuente == 'otras' else _COLUMNAS_AGENDAS
+    return columnas, filas, resumen
 
 
 def _cobros(fuente, metrica, desde, hasta):
@@ -204,8 +211,9 @@ def _gasto(fuente, metrica, desde, hasta):
     return _COLUMNAS_GASTO, filas, f"{len(filas)} anuncios · ${sum(f['gasto'] for f in filas):,.2f} de Meta"
 
 
-def registros(fuente, metrica, desde, hasta, base=None):
-    """{columnas, filas, resumen} de lo que suma `metrica` en `fuente` ('setting', 'workshop' u 'otras')."""
+def registros(fuente, metrica, desde, hasta, base=None, origen=None):
+    """{columnas, filas, resumen} de lo que suma `metrica` en `fuente` ('setting', 'workshop' u 'otras').
+    `origen`: solo las agendas de ese grupo de origen (para Otras: VSL, Momentum, Referido…)."""
     if fuente not in conteo_agendas_service.FUENTES:
         raise ValueError('Fuente desconocida.')
     if metrica not in METRICAS:
@@ -213,7 +221,7 @@ def registros(fuente, metrica, desde, hasta, base=None):
     if fuente == 'otras' and metrica in ('leads', 'gasto'):
         raise ValueError('Otras no tiene leads ni gasto: no viene de anuncios.')
     if metrica in ('agendas', 'agendas_alta', 'reportadas', 'show_up'):
-        columnas, filas, resumen = _agendas(fuente, metrica, desde, hasta, base)
+        columnas, filas, resumen = _agendas(fuente, metrica, desde, hasta, base, origen)
     else:
         hacer = _leads if metrica == 'leads' else _gasto if metrica == 'gasto' else _cobros
         columnas, filas, resumen = hacer(fuente, metrica, desde, hasta)

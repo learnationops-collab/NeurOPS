@@ -108,21 +108,41 @@ def por_lead(filas):
     return list(mejor.values())
 
 
+def categoria_de_origen(origen):
+    """El grupo de una agenda por cómo llegó (su `origen`, el nombre libre de la fuente): los «Referido de X» son
+    un solo grupo y lo vacío es «Sin fuente». Es lo que ordena «Otras» (Kerwin, 28/10/2026)."""
+    texto = (origen or '').strip()
+    if not texto or texto == '—':
+        return 'Sin fuente'
+    if texto.lower().startswith('referid'):
+        return 'Referido'
+    return 'VSL' if texto.lower() == 'vsl' else texto
+
+
 def por_fuente(desde, hasta, base=BASE_POR_DEFECTO):
-    """{fuente: {agendas, show_up, reportadas, dias: {fecha: agendas}}} para setting, workshop y otras.
+    """{fuente: {agendas, show_up, reportadas, dias: {fecha: agendas}, origenes}} para setting, workshop y otras.
 
     `show_up`: asistieron; `reportadas`: con resultado (asistieron + no show), la base del % de show up. En
-    reunión esas dos cuentan leads (`por_lead`): una persona que fue a la 1ª y faltó a la 2ª se presentó."""
+    reunión esas dos cuentan leads (`por_lead`): una persona que fue a la 1ª y faltó a la 2ª se presentó.
+    `origenes`: lo mismo partido por `categoria_de_origen` (la suma de los grupos es la cifra de la fuente)."""
     base = base_de(base)
     filas = personas(desde, hasta, base)
-    salida = {k: {'agendas': 0, 'show_up': 0, 'reportadas': 0, 'dias': {}} for k in FUENTES}
+    salida = {k: {'agendas': 0, 'show_up': 0, 'reportadas': 0, 'dias': {}, 'origenes': {}} for k in FUENTES}
+
+    def del_origen(p):
+        return salida[p['fuente']]['origenes'].setdefault(
+            categoria_de_origen(p['origen']), {'agendas': 0, 'show_up': 0, 'reportadas': 0})
+
     for p in filas:
         fila = salida[p['fuente']]
         fila['agendas'] += 1
+        del_origen(p)['agendas'] += 1
         fila['dias'][p['dia']] = fila['dias'].get(p['dia'], 0) + 1
     for p in (por_lead(filas) if base == 'reunion' else filas):
         salida[p['fuente']]['show_up'] += 1 if p['asistio'] else 0
         salida[p['fuente']]['reportadas'] += 1 if p['con_resultado'] else 0
+        del_origen(p)['show_up'] += 1 if p['asistio'] else 0
+        del_origen(p)['reportadas'] += 1 if p['con_resultado'] else 0
     for fila in salida.values():
         fila['dias'] = dict(sorted(fila['dias'].items()))
     return salida

@@ -227,6 +227,10 @@ def resumen(desde, hasta, filas, cobros, claves, embudos, base=conteo_agendas_se
                       'reportadas': otras_agendas['reportadas'], 'agendas_dias': otras_agendas['dias'],
                       'agendas_alta': agendas_alta['otras']['agendas'],
                       'pct_show_up': dividir(otras_agendas['show_up'] * 100, otras_agendas['reportadas'], 1),
+                      # De dónde viene cada agenda de Otras (VSL, Momentum, Referido, Setter genérico…); cada grupo abre su lista.
+                      'origenes': [{'origen': o, **v, 'pct_show_up': dividir(v['show_up'] * 100, v['reportadas'], 1),
+                                    'pct_agendas': dividir(v['agendas'] * 100, otras_agendas['agendas'], 1)}
+                                   for o, v in sorted(otras_agendas['origenes'].items(), key=lambda x: (-x[1]['agendas'], x[0]))],
                       'cash_total': round(otras['cash_total'], 2), 'new_cash': round(otras['new_cash'], 2),
                       'ventas': otras['ventas'], 'cobros': otras['cobros']},
             # Lo que suman las tres, en la base elegida: es el total de Closing, Analizar y Revisar en reunión.
