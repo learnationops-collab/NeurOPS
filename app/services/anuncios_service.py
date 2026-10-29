@@ -334,7 +334,7 @@ def metricas(base):
 SUMABLES = ('entrantes', 'calificados', 'descalificados', 'en_conversacion', 'agendas', 'ventas', 'gasto', 'cobrado')
 
 
-def tablero(desde, hasta, base=None):
+def tablero(desde, hasta, base=None, segmento=None):
     """La tabla de Marketing para el período [desde, hasta] (fechas, ambos incluidos).
 
     Devuelve una fila por palabra clave con movimiento en el período (entrantes, agendas, ventas o
@@ -343,6 +343,8 @@ def tablero(desde, hasta, base=None):
 
     `base` (`conteo_agendas_service`): por qué fecha cuentan las agendas de las tarjetas de fuente (Setting,
     Workshop y Otras). La tabla de palabras clave cuenta siempre por fecha de alta: es la de los costos.
+    `segmento` (A, B, C, D, sin; coma): las cifras de las fuentes (no la tabla de palabras clave ni el gasto) acotadas a esos
+    segmentos, por fecha de alta (`segmentos_marketing_service.acotar_fuentes`).
     """
     desde_dt, hasta_dt = _limites(desde, hasta)
     clave_de_anuncio = _clave_de_cada_anuncio()
@@ -412,6 +414,9 @@ def tablero(desde, hasta, base=None):
     totales = metricas({k: sum(f[k] for f in filas) for k in SUMABLES})
     embudos = _meta_ads().gasto_por_embudo(desde, hasta)
     fuentes = fuentes_service.resumen(desde, hasta, filas, cobros, claves_de_cobro, embudos, base)
+    if segmento:
+        from app.services import segmentos_marketing_service
+        fuentes = segmentos_marketing_service.acotar_fuentes(fuentes, desde, hasta, segmento)
     return {
         'desde': desde.isoformat(),
         'hasta': hasta.isoformat(),

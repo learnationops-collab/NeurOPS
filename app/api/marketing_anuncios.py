@@ -62,7 +62,7 @@ def tablero():
         desde, hasta = _periodo()
     except ValueError as error:
         return jsonify({'error': str(error)}), 400
-    return jsonify({**anuncios_service.tablero(desde, hasta, request.args.get('base')),
+    return jsonify({**anuncios_service.tablero(desde, hasta, request.args.get('base'), request.args.get('segmento')),
                     'meta': _estado_de_meta()}), 200
 
 
@@ -108,9 +108,11 @@ def registros():
             # `corte` + `grupo` (un closer, un origen…) y `fuentes` son los de la vista; sin corte, `fuente` es el grupo.
             corte = request.args.get('corte') or 'fuente'
             grupo = request.args.get('grupo') if 'grupo' in request.args else (request.args.get('fuente') or None)
+            fuentes = request.args.get('fuentes')
+            if request.args.get('origen'):  # las agendas de un origen de una fuente (Otras: VSL, Momentum…)
+                corte, grupo, fuentes = 'origen', request.args['origen'], fuentes or request.args.get('fuente')
             datos = segmentos_marketing_service.registros(desde, hasta, request.args.get('metrica', ''),
-                                                          request.args.get('segmento', ''), request.args.get('fuentes'),
-                                                          corte, grupo)
+                                                          request.args.get('segmento', ''), fuentes, corte, grupo)
         else:
             datos = fuentes_registros_service.registros(request.args.get('fuente', ''), request.args.get('metrica', ''),
                                                         desde, hasta, request.args.get('base'), request.args.get('origen'))

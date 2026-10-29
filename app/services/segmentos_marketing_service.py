@@ -233,6 +233,46 @@ def vista(desde, hasta, corte='fuente', fuentes=None, segmentos=None, comparar=N
             'comparacion': {'desde': comparar[0].isoformat(), 'hasta': comparar[1].isoformat()} if comparar else None}
 
 
+# --- Las otras vistas de Marketing con un segmento elegido ---------------------------------------------
+
+# Lo que se pisa de una fuente cuando se mira un solo segmento: lo que sale de los hechos. El resto (gasto de Meta, costos, ROAS,
+# upsells, la serie por día) no se parte por segmento: queda en None o vacío, y la pantalla lo dice.
+_PISADAS = ('leads', 'agendas', 'reportadas', 'show_up', 'ventas', 'new_cash', 'cash_total')
+
+
+def acotar_fuentes(resumen, desde, hasta, segmento):
+    """`fuentes_service.resumen` con las cifras de Setting, Workshop y Otras acotadas a los segmentos `segmento` (A…D, sin; coma).
+    Sale de la misma matriz de Segmentos (`vista`), así que cada cifra es la de su celda; cuenta siempre por fecha de alta. El
+    gasto de Meta no conoce al lead: sin gasto, los costos y el ROAS quedan en None. Los leads de Workshop (clics) tampoco."""
+    elegidos = parsear(segmento)
+    if not elegidos:
+        return resumen
+    por_fuente = {g['key']: g['total'] for g in vista(desde, hasta, 'fuente', None, segmento)['grupos']}
+    fuentes = []
+    for f in resumen['fuentes']:
+        t = por_fuente[f['key']]
+        base = {k: v for k, v in f.items() if k not in _PISADAS}
+        fuentes.append({**fuentes_service.metricas_de_fuente({
+            **base, **{k: t[k] for k in _PISADAS}, 'gasto': 0.0, 'agendas_alta': t['agendas'], 'agendas_dias': {},
+            'clientes': 0, 'clientes_upsell': 0, 'cuotas': 0, 'cuotas_monto': 0.0, 'upsells': 0, 'upsells_monto': 0.0}),
+            'gasto': None})
+    otras = por_fuente['otras']
+    hs, _clics = hechos(desde, hasta)
+    cobros_de_otras = sum(1 for h in hs if h['fuente'] == 'otras' and PERTENECE['cash_total'](h) and h['seg'] in elegidos)
+    por_origen = vista(desde, hasta, 'origen', 'otras', segmento)['grupos']
+    return {**resumen, 'fuentes': fuentes, 'otras': {
+        **{k: v for k, v in resumen['otras'].items() if k not in _PISADAS + ('origenes', 'cobros')},
+        'agendas': otras['agendas'], 'show_up': otras['show_up'], 'reportadas': otras['reportadas'], 'agendas_alta': otras['agendas'],
+        'agendas_dias': {}, 'pct_show_up': otras['pct_show_up'], 'cash_total': otras['cash_total'], 'new_cash': otras['new_cash'],
+        'ventas': otras['ventas'], 'cobros': cobros_de_otras,
+        'origenes': [{'origen': g['label'], 'agendas': g['total']['agendas'], 'show_up': g['total']['show_up'],
+                      'reportadas': g['total']['reportadas'], 'pct_show_up': g['total']['pct_show_up'],
+                      'pct_agendas': dividir(g['total']['agendas'] * 100, otras['agendas'], 1)}
+                     for g in por_origen if g['total']['agendas']]},
+        'agendas_total': sum(t['agendas'] for t in por_fuente.values()), 'base': 'alta',
+        'segmento': {'elegidos': [s for s in ORDEN if s in elegidos]}}
+
+
 # --- Las listas detrás de cada celda -----------------------------------------------------------------
 
 _COLUMNA_SEGMENTO = {'key': 'segmento', 'header': 'Segmento', 'tipo': 'texto', 'ancho': '110px'}
