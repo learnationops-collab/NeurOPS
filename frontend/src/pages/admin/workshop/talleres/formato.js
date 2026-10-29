@@ -153,3 +153,21 @@ export const duracion = (segundos) => {
     if (m < 60) return `${m}m ${String(r).padStart(2, '0')}s`;
     return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`;
 };
+
+// --- De dónde sale cada paso ---------------------------------------------------------------------
+
+/**
+ * El color dice el origen del número (Kerwin, 29/10/2026): los leads son de Meta, lo del taller (WhatsApp, clase,
+ * pitch, formulario) lo carga o sincroniza el taller, y desde las agendas son personas del libro de los closers.
+ * Lo usan el Resumen, las tarjetas y el detalle de un taller.
+ */
+export const ORIGEN = {
+    meta: { label: 'Meta', color: 'var(--info)' },
+    taller: { label: 'Taller', color: 'var(--brand-secondary)' },
+    personas: { label: 'Personas', color: 'var(--success)' },
+};
+const ORIGEN_DE_PASO = {
+    leads: 'meta', whatsapp: 'taller', show_up: 'taller', pitch: 'taller', pitch_final: 'taller', aplicaciones: 'taller',
+    agendas: 'personas', asistieron: 'personas', ventas: 'personas',
+};
+export const origenDePaso = (key) => ORIGEN[ORIGEN_DE_PASO[key]] || ORIGEN.taller;

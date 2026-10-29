@@ -42,8 +42,12 @@ const Centro = () => (
     </svg>
 );
 
-// Dentro de un `.dc-shell` (Revisar, Marketing) la lista usa sus clases: el marco se monta ahí.
-const destino = () => document.querySelector('.dc-shell') || document.body;
+// Dentro de un `.dc-shell` (Revisar, Marketing) la lista usa sus clases: el marco se monta ahí. Si hay una hoja o
+// un modal abierto (su velo es un `.dc-shell.scrim`, z-index 170), se monta en el último velo: así no queda debajo.
+const destino = () => {
+    const velos = document.querySelectorAll('.dc-shell.scrim');
+    return velos[velos.length - 1] || document.querySelector('.dc-shell') || document.body;
+};
 
 /**
  * `titulo` y `subtitulo` dicen qué cifra se abrió y cuánto suma («Agendas · 158 en el período»).

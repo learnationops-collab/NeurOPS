@@ -145,3 +145,9 @@ Falta la fórmula de backend; la presentación ya tiene su rótulo.
 ## Marketing: «CLASE 26» no es una palabra clave de DM (tarea 852 de Leadership)
 - [x] Causa: el anuncio «TC5 | Clase 26» (campaña Meta «WORKSHOP FUNNEL | Testing Creativos | PE + CO», lleva a /clase-hero/) tomó la clave CLASE 26 del nombre de su conjunto y cayó en Setting porque `/clase-hero/` no estaba entre los destinos de clase. Nunca hubo un DM con esa palabra (0 ejecuciones del Inbox). `meta_ads_service._DESTINO_CLASE` ahora reconoce `/clase*`.
 - [ ] Tras el deploy, la próxima sincronización de Meta lo pasa solo a Workshop y quita la clave (mapeo auto): el aviso «sin campaña» y los ~$20 de Setting desaparecen. Si no se mueve, Sincronizar a mano en Marketing › Anuncios.
+
+## Workshop: rediseño gráfico (tarea 851, 29/10/2026)
+- [ ] Las agendas partidas del Resumen (No asistieron, Sin reporte, Otras) abren una lista más ancha que su número: sumar a `GET /workshop/registros` una métrica por estado (`no_show`, `sin_reporte`) para que cada tramo abra exactamente lo que suma.
+- [ ] Los grupos de agendas del detalle de un taller (`AgendasEstados`) siguen sin abrir su lista.
+- [ ] New Cash ($12.650) es mayor que Cash total ($12.258) en el Resumen: dos definiciones distintas (ADR-W017). La barra «Invertido y cobrado» lo deja a la vista; decidir si las cuotas suman al cash del taller (grupo B, backend).
+- [ ] `ResumenTab.test.jsx`, `TalleresVista.test.jsx` y los de `WorkshopKpiCards` no se corrieron tras el cambio (regla: sin tests); el Resumen ahora monta `FlujoEmbudo` y `Bars`.
