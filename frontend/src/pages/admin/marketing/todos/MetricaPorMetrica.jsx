@@ -15,12 +15,13 @@ const FILTROS = [
     { key: 'costos', label: 'Costos' },
 ];
 
-const Valor = ({ texto, cuenta, metrica, onVer, ancho, color, gana }) => (
+const Valor = ({ texto, cuenta, metrica, onVer, ancho, fuente, gana }) => (
     <div className="td-valor">
-        <CifraConCuenta cuenta={cuenta} metrica={metrica} titulo={TITULO_DE[metrica]} onVer={onVer} className={`t-body num${gana ? ' td-fuerte' : ''}`}>
+        <CifraConCuenta color={fuente.color} rotulo={fuente.label} cuenta={cuenta} metrica={metrica} titulo={TITULO_DE[metrica]} onVer={onVer}
+            className={`t-body num${gana ? ' td-fuerte' : ''}`}>
             {texto}
         </CifraConCuenta>
-        <div className="td-pista"><i style={{ width: ancho, background: color }} /></div>
+        <div className="td-pista"><i style={{ width: ancho, background: fuente.color }} /></div>
     </div>
 );
 
@@ -35,18 +36,15 @@ const Fila = ({ fila, f, onVer }) => {
                 <span className="t-body td-fuerte">{fila.label}</span>
                 {fila.hint && <span className="t-cap mut">{fila.hint}</span>}
             </div>
-            <Valor texto={f[fila.fmt](fila.s)} cuenta={fila.ds} metrica={fila.metrica} ancho={s} color={SETTING.color} gana={gana === SETTING.key}
+            <Valor texto={f[fila.fmt](fila.s)} cuenta={fila.ds} metrica={fila.metrica} ancho={s} fuente={SETTING} gana={gana === SETTING.key}
                 onVer={onVer ? (m, t) => onVer('setting', m, t) : null} />
-            <Valor texto={f[fila.fmt](fila.w)} cuenta={fila.dw} metrica={fila.metrica} ancho={w} color={WORKSHOP.color} gana={gana === WORKSHOP.key}
+            <Valor texto={f[fila.fmt](fila.w)} cuenta={fila.dw} metrica={fila.metrica} ancho={w} fuente={WORKSHOP} gana={gana === WORKSHOP.key}
                 onVer={onVer ? (m, t) => onVer('workshop', m, t) : null} />
             <div className="td-fila-gana">
                 {gana ? (
-                    <>
-                        <span className="chip" style={{ '--c': 'var(--success)' }} title={`Gana ${nombre}`}>
-                            <i className="td-punto" style={{ background: color }} aria-hidden="true" />{nombre}
-                        </span>
-                        <span className="t-cap mut">{diferenciaDe(fila)}</span>
-                    </>
+                    <span className="td-gana num" style={{ color }} data-tip={`Gana ${nombre}`} tabIndex={0} aria-label={`Gana ${nombre}: ${diferenciaDe(fila)}`}>
+                        {diferenciaDe(fila)}
+                    </span>
                 ) : <span className="t-cap mut40">{fila.tipo === 'vol' ? 'Volumen' : 'Sin dato'}</span>}
             </div>
         </div>
@@ -70,7 +68,10 @@ const MetricaPorMetrica = ({ grupos, moneda, onVer }) => {
             </div>
 
             <div className="td-fila td-fila--cab t-eyebrow mut" aria-hidden="true">
-                <span>Métrica</span><span>Setting</span><span>Workshop</span><span className="td-der">Gana</span>
+                <span>Métrica</span>
+                <span className="td-fuente" style={{ '--c': SETTING.color }} data-tip={SETTING.label} aria-label={SETTING.label}><i /></span>
+                <span className="td-fuente" style={{ '--c': WORKSHOP.color }} data-tip={WORKSHOP.label} aria-label={WORKSHOP.label}><i /></span>
+                <span className="td-der">Gana</span>
             </div>
             {vistos.map((g) => (
                 <div key={g.id} className="td-grupo" role="group" aria-label={g.titulo}>

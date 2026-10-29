@@ -77,7 +77,7 @@ describe('Todos › Setting vs Workshop', () => {
         const roas = (await screen.findByText('ROAS Total')).closest('.td-fila');
         expect(within(roas).getByText('2.50x')).toBeInTheDocument();
         expect(within(roas).getByText('1.20x')).toBeInTheDocument();
-        expect(within(roas).getByTitle('Gana Setting')).toBeInTheDocument();
+        expect(within(roas).getByLabelText(/^Gana Setting/)).toBeInTheDocument();
         const leads = screen.getByText('Leads entrantes').closest('.td-fila');
         expect(within(leads).getByText('Volumen')).toBeInTheDocument();
         // Un filtro deja solo un grupo.

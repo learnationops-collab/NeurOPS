@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { CalendarDays, RefreshCw } from 'lucide-react';
-import { Isotipo, PillMenu, Segmented } from '../../comercial/components/Shared';
+import { Isotipo, PillMenu, Segmented, Tip } from '../../comercial/components/Shared';
 import RangoFechas, { esFecha, textoRango } from '../../comercial/components/RangoFechas';
 import { ErrorDeCarga } from './esqueletos';
 import EmbudosResumen from './anuncios/EmbudosResumen';
@@ -140,8 +140,7 @@ const TodosPage = () => {
                             <span><i style={{ background: SETTING.color }} />{SETTING.label}</span>
                             <span><i style={{ background: WORKSHOP.color }} />{WORKSHOP.label}</span>
                         </div>
-                        <p className="t-cap mut40"><b>Habla de:</b> los anuncios de Meta de Setting y de Workshop, {textoPeriodo?.toLowerCase()}
-                            {periodo === 'personalizado' ? '' : ` (${textoRango(rango)})`}. No es por taller.</p>
+                        <Tip titulo="De qué habla" texto="Anuncios de Meta de Setting y Workshop. No es por taller." />
                     </div>
                     <div className="barra">
                         <Segmented opciones={VISTAS} valor={vista} ariaLabel="Vistas de Todos" onChange={elegirVista} />

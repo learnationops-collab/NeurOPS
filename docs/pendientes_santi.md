@@ -128,3 +128,9 @@ Falta la fórmula de backend; la presentación ya tiene su rótulo.
 - [ ] La matriz de segmentos (Todos › Segmentos) cuenta siempre por fecha de alta; con «Contar por: fecha de reunión» sus totales no cambian y no suman las 223 de Closing. Decidir si se parte también por reunión (y sumar «Otras»).
 - [ ] Analizar › Segmentos da show up 64,2% (79 de las llamadas) y la tarjeta de arriba 63,9% (78 de 122 leads): cuenta llamadas contra leads. Unificar el denominador (tarea 853).
 - [ ] `tests/services/test_fuentes_service.py` usa `fuentes_service.agendas_por_fuente` y `personas_por_fuente`, que ahora viven en `conteo_agendas_service`: los tests quedaron rotos (no se corrieron).- [ ] Otras: hay agendas con origen «Setter» (genérico, sin nombre de setter) que caen en Otras y no en Setting. Confirmar si son de Setting y cómo identificarlas (se ven en Otras › De dónde viene cada agenda).
+
+## Revisión visual de Marketing (29/10, grupo-a-visual)
+- [ ] Confirmar con Kerwin que Entrantes, Conversaciones y Meta Ads no llevan el selector «Contar por» (en el código solo lo tienen Setting › Palabras clave, Todos y Otras).
+- [ ] Revisar (dashboard comercial) y Setters usan la misma `.sg-barra` que ya se midió en Analizar, pero no se miraron a ojo.
+- [ ] En 390 px las tarjetas KPI de Otras parten el rótulo («SHOW / UP», «NEW / CASH»): caben dos íconos y el rótulo con tracking en media tarjeta. Cosmético, no se tocó.
+- [ ] `TodosPage.test.jsx` (ajustado a mano: «Gana Setting» ahora es `aria-label`) y los tests de Todos que busquen «Setting»/«Workshop» junto a las cifras no se corrieron.
