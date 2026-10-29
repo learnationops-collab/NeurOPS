@@ -1,11 +1,12 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_login import current_user
 from app.api.errores import error_interno
 from app import db
 from app.models import WorkshopEvent, WorkshopGoals, WorkshopAction
 from app.decorators import workshop_required
 from app.services import (
-    workshop_agenda_estados_service, workshop_agenda_service, workshop_grabaciones_service, workshop_meta_service,
+    leadership_rituales_service, workshop_agenda_estados_service, workshop_agenda_service,
+    workshop_grabaciones_service, workshop_meta_service,
 )
 from datetime import datetime
 import pytz
@@ -13,6 +14,11 @@ import logging
 import time
 
 logger = logging.getLogger(__name__)
+
+
+def _sincronizar_leadership(ids=None, borrados=()):
+    """Las tareas del taller en Leadership siguen su fecha y hora (en segundo plano, sin romper el guardado)."""
+    leadership_rituales_service.sincronizar_en_segundo_plano(current_app._get_current_object(), ids, borrados)
 
 bp = Blueprint('workshop', __name__)
 
@@ -201,6 +207,7 @@ def create_workshop_event():
         # Su inversión de Meta, y la del taller siguiente, cuya ventana ahora empieza en este.
         workshop_meta_service.recalcular()
         db.session.commit()
+        _sincronizar_leadership([event.id])
         return jsonify(_con_replay_local(event.to_dict(), event)), 201
     except Exception as e:
         db.session.rollback()
@@ -228,6 +235,8 @@ def programar_workshop_events():
             # Como al registrar uno: su inversión de Meta y la del anterior, cuya ventana se acorta.
             workshop_meta_service.recalcular()
         db.session.commit()
+        if creados:
+            _sincronizar_leadership([e.id for e in creados])
     except workshop_agenda_service.DatoInvalido as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
@@ -246,7 +255,8 @@ def programar_workshop_events():
 def update_workshop_event(event_id):
     event = WorkshopEvent.query.get_or_404(event_id)
     data = request.get_json() or {}
-    
+    antes = (event.date, event.inicio_at, event.meet_url, event.whatsapp_url)
+
     if 'name' in data:
         event.name = data['name']
     movido = False
@@ -332,6 +342,8 @@ def update_workshop_event(event_id):
             # Cambió de qué días es la inversión de Meta de este taller y la de sus vecinos.
             workshop_meta_service.recalcular()
         db.session.commit()
+        if antes != (event.date, event.inicio_at, event.meet_url, event.whatsapp_url):
+            _sincronizar_leadership([event.id])
         return jsonify(_con_replay_local(event.to_dict(), event)), 200
     except Exception as e:
         db.session.rollback()
@@ -348,6 +360,7 @@ def delete_workshop_event(event_id):
         db.session.flush()
         workshop_meta_service.recalcular()  # el taller siguiente recupera sus días
         db.session.commit()
+        _sincronizar_leadership([], [event_id])
         return jsonify({"message": "Evento eliminado con éxito"}), 200
     except Exception as e:
         db.session.rollback()
