@@ -15,6 +15,7 @@ from app.models.user import ROLE_ADMIN, ROLE_DIRECTOR_MARKETING
 from app.services import (
     anuncios_service, fuentes_registros_service, meta_ads_service, segmentos_marketing_service, workshop_meta_service,
 )
+from app.services.comercial_service import ComercialService
 
 bp = Blueprint('marketing_anuncios', __name__)
 
@@ -61,9 +62,39 @@ def tablero():
         desde, hasta = _periodo()
     except ValueError as error:
         return jsonify({'error': str(error)}), 400
-    con_segmentos = request.args.get('segmentos') in ('1', 'true')
-    return jsonify({**anuncios_service.tablero(desde, hasta, request.args.get('base'), con_segmentos=con_segmentos),
+    return jsonify({**anuncios_service.tablero(desde, hasta, request.args.get('base')),
                     'meta': _estado_de_meta()}), 200
+
+
+def _comparado(desde, hasta):
+    """(desde, hasta) del período contra el que se compara, de `?comparar=prev|month|year|custom&comparar_desde=&comparar_hasta=`
+    (los mismos del VS de Analizar, `ComercialService.rango_comparado`); None si no se pidió ninguno."""
+    modo = request.args.get('comparar') or 'none'
+    if modo not in ('prev', 'month', 'year', 'custom'):
+        return None
+    try:
+        rango = ComercialService.rango_comparado(desde, hasta, modo, request.args.get('comparar_desde'),
+                                                 request.args.get('comparar_hasta'))
+    except ValueError:
+        raise ValueError('Las fechas van como AAAA-MM-DD.') from None
+    if rango[0] is None:
+        return None
+    if (rango[1] - rango[0]).days > PERIODO_MAXIMO:
+        raise ValueError(f'El período no puede pasar de {PERIODO_MAXIMO} días.')
+    return rango
+
+
+@bp.route('/segmentos', methods=['GET'])
+def segmentos():
+    """Marketing › Todos › Segmentos: la matriz A/B/C/D cortada por `corte` (fuente|origen|closer|ninguno), con las `fuentes`
+    (coma) y los `segmento` (coma) que se quieran y, con `comparar`, contra otro período (ver `segmentos_marketing_service`)."""
+    try:
+        desde, hasta = _periodo()
+        datos = segmentos_marketing_service.vista(desde, hasta, request.args.get('corte', 'fuente'), request.args.get('fuentes'),
+                                                  request.args.get('segmento'), _comparado(desde, hasta))
+    except ValueError as error:
+        return jsonify({'error': str(error)}), 400
+    return jsonify({**datos, 'desde': desde.isoformat(), 'hasta': hasta.isoformat()}), 200
 
 
 @bp.route('/registros', methods=['GET'])
@@ -74,8 +105,12 @@ def registros():
         desde, hasta = _periodo()
         if 'segmento' in request.args:
             # Con `segmento` (A, B, C, D, sin; vacío = todos) la lista trae la columna de segmento y solo ese grupo.
-            datos = segmentos_marketing_service.registros(request.args.get('fuente', ''), request.args.get('metrica', ''),
-                                                          request.args.get('segmento', ''), desde, hasta)
+            # `corte` + `grupo` (un closer, un origen…) y `fuentes` son los de la vista; sin corte, `fuente` es el grupo.
+            corte = request.args.get('corte') or 'fuente'
+            grupo = request.args.get('grupo') if 'grupo' in request.args else (request.args.get('fuente') or None)
+            datos = segmentos_marketing_service.registros(desde, hasta, request.args.get('metrica', ''),
+                                                          request.args.get('segmento', ''), request.args.get('fuentes'),
+                                                          corte, grupo)
         else:
             datos = fuentes_registros_service.registros(request.args.get('fuente', ''), request.args.get('metrica', ''),
                                                         desde, hasta, request.args.get('base'), request.args.get('origen'))

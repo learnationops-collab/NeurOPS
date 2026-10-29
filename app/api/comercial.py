@@ -155,19 +155,28 @@ def segmentos():
     y cierre; el setter, las agendas que generó. Mismo alcance que el resumen (`alcance_de`); `?segmento=A,B`
     deja solo esos grupos. Las listas detrás de cada cifra: `/segmentos/registros`."""
     rol, miembro_id, _ = _alcance()
-    start, end, _prev_start, _prev_end = _rangos()
-    datos = segmentos_comercial.panel(rol, start, end, miembro_id, segmentos_lectura.parsear(request.args.get('segmento')))
-    return jsonify({**datos, 'dates': _fechas(start, end, None, None)}), 200
+    start, end, prev_start, prev_end = _rangos()
+    # `corte` (closer|setter|fuente|origen) parte cada segmento por eso; el VS del header (`compare`) trae el período comparado.
+    previo = (prev_start, prev_end) if prev_start else None
+    datos = segmentos_comercial.panel(rol, start, end, miembro_id, segmentos_lectura.parsear(request.args.get('segmento')),
+                                      request.args.get('corte', 'ninguno'), previo)
+    return jsonify({**datos, 'dates': _fechas(start, end, prev_start, prev_end)}), 200
 
 
 @bp.route('/segmentos/registros', methods=['GET'])
 def segmentos_registros():
-    """La lista de una cifra de `/segmentos`: `?metrica=agendas|realizadas|asistieron|ventas|sin_reporte&segmento=A`."""
+    """La lista de una cifra de `/segmentos`: `?metrica=agendas|realizadas|asistieron|ventas|sin_reporte&segmento=A`, del
+    grupo `grupo` del `corte`; con `previo=1`, la del período comparado."""
     rol, miembro_id, _ = _alcance()
-    start, end, _prev_start, _prev_end = _rangos()
+    start, end, prev_start, prev_end = _rangos()
+    if request.args.get('previo') in ('1', 'true'):
+        if not prev_start:
+            return jsonify({'error': 'No hay un período de comparación elegido.'}), 400
+        start, end = prev_start, prev_end
     try:
         datos = segmentos_comercial.registros(rol, start, end, miembro_id, request.args.get('metrica', ''),
-                                              request.args.get('segmento', ''))
+                                              request.args.get('segmento', ''), request.args.get('corte', 'ninguno'),
+                                              request.args.get('grupo') if 'grupo' in request.args else None)
     except ValueError as error:
         return jsonify({'error': str(error)}), 400
     return jsonify(datos), 200
@@ -533,5 +542,7 @@ def simulador_base():
     return jsonify(simulador.base()), 200
 
 
-from app.api import comercial_agendas_lote  # noqa: E402,F401  (Editar en lote desde Revisar, 10/10/2026)
-from app.api import comercial_close_real  # noqa: E402,F401  (Close rate real en Comparativas, 24/10/2026)
+from app.api import (
+    comercial_agendas_lote,  # noqa: E402,F401  (Editar en lote desde Revisar, 10/10/2026)
+    comercial_close_real,  # noqa: E402,F401  (Close rate real en Comparativas, 24/10/2026)
+)

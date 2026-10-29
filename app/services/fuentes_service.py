@@ -149,7 +149,9 @@ def _cobros_para_sumar(cobros, claves):
         _programa, tipo, es_venta = ComercialService.clasificar_venta(cobro)
         filas.append({'monto': round(float(cobro.monto or 0), 2), 'es_venta': es_venta, 'es_cuota': tipo == 'cuota',
                       'es_upsell': tipo == 'upsell', 'cliente': cliente_de.get(cobro.id) or f'cobro-{cobro.id}',
-                      'por_clave': bool(claves.get(cobro.id)), 'balde': baldes[cobro.id][0]})
+                      'por_clave': bool(claves.get(cobro.id)), 'balde': baldes[cobro.id][0],
+                      # El rótulo del detalle de su procedencia (el setter, En vivo, Grabación…): el «origen» de Segmentos.
+                      'detalle': baldes[cobro.id][2]})
     return filas
 
 
