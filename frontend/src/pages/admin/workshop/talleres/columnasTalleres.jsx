@@ -1,5 +1,8 @@
 import { Check } from 'lucide-react';
 import AgendasDelTaller from '../agendas/AgendasDelTaller';
+import { CifraConCuenta } from '../../../../components/standard';
+import { cuentaDeTaller } from '../registros/cuentaDeTaller';
+import { TITULOS } from '../registros/cuentas';
 import {
     cac, dinero, ESTADOS_GRABACION, estadoGrabacion, ganancia, mesDe, numero, porcentaje, roasRango, veces,
 } from './formato';
@@ -24,7 +27,21 @@ const FALTA = <span className="wt-sin">—</span>;
 const der = { alinear: 'der', width: 'minmax(96px,1fr)' };
 
 /** Todas las cifras comparan contra `total` solo si `comparar` está prendido. */
-export const columnasDe = ({ formatDate, elegidos, onComparar, comparar }) => {
+/** El texto de una cifra de UN taller; con `onVer`, abre su lista o dice su «N de M». Dentro de la fila: no la abre. */
+const conCuenta = (clave, e, texto, onVer) => {
+    const c = onVer ? cuentaDeTaller(clave, e) : null;
+    if (!c) return texto;
+    const parar = (ev) => ev.stopPropagation();
+    return (
+        <span onClick={parar} onKeyDown={parar}>
+            <CifraConCuenta cuenta={c.cuenta} metrica={c.metrica} titulo={TITULOS[c.metrica]} onVer={(m, t) => onVer(m, t, [e])}>
+                {texto}
+            </CifraConCuenta>
+        </span>
+    );
+};
+
+export const columnasDe = ({ formatDate, elegidos, onComparar, comparar, onVer = null }) => {
     const cifra = (key, header, valor, formato, extra = {}) => ({
         key, header, ...der, valor, ...extra,
         total: (filas) => calcularTotales(filas)[key],
@@ -32,7 +49,7 @@ export const columnasDe = ({ formatDate, elegidos, onComparar, comparar }) => {
             const v = valor(e);
             if (v == null) return FALTA;
             const tono = comparar ? tonoDe(key, v, total?.valor, e) : null;
-            return <Cifra texto={formato(v, e)} tono={tono} solo={key === 'ganancia' || key === 'roas'}
+            return <Cifra texto={conCuenta(key, e, formato(v, e), onVer)} tono={tono} solo={key === 'ganancia' || key === 'roas'}
                 nota={extra.nota ? extra.nota(e) : null} />;
         },
     });

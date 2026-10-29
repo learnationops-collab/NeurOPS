@@ -27,11 +27,11 @@ const Leyenda = () => (
     </div>
 );
 
-const TablaTalleres = ({ talleres, formatDate, elegidos, onComparar, onAbrir, extra }) => {
+const TablaTalleres = ({ talleres, formatDate, elegidos, onComparar, onAbrir, extra, onVer = null }) => {
     const [comparar, setComparar] = useState(true);
     const columnas = useMemo(
-        () => columnasDe({ formatDate, elegidos, onComparar, comparar }),
-        [formatDate, elegidos, onComparar, comparar],
+        () => columnasDe({ formatDate, elegidos, onComparar, comparar, onVer }),
+        [formatDate, elegidos, onComparar, comparar, onVer],
     );
     const botones = (
         <>

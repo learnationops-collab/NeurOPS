@@ -5,6 +5,8 @@ import { Bars } from '../../../../components/standard';
 import { EsqueletoFilas, Tip } from '../../../comercial/components/Shared';
 import { urlLoom } from '../../../../utils/loom';
 import Interruptor from './Interruptor';
+import { LISTA_DE_PASO } from '../registros/cuentaDeTaller';
+import { TITULOS } from '../registros/cuentas';
 import { useAnunciosTaller, useLandingTaller, usePublicacion, ventanaGrabacion } from './datosTaller';
 import {
     dinero, diaMes, ESTADOS_GRABACION, estadoGrabacion, estaPublicada, numero, pasosEmbudo, porcentaje,
@@ -38,13 +40,14 @@ const colorPaso = (i, total) => {
 
 // --- Embudo -------------------------------------------------------------------------------------
 
-export const ResumenEmbudo = ({ evento }) => {
+export const ResumenEmbudo = ({ evento, onVer = null }) => {
     const pasos = pasosEmbudo(evento, { corto: true });
     // La barra en raíz: de 600 leads a 3 ventas, las últimas serían una raya.
     return (
-        <Bars variant="rows" scale="sqrt" label="Embudo del taller" items={pasos.map((p, i) => ({
+        <Bars variant="rows" scale="sqrt" label="Embudo del taller" onSelect={onVer ? (key) => onVer(LISTA_DE_PASO[key], TITULOS[LISTA_DE_PASO[key]] || key) : undefined} items={pasos.map((p, i) => ({
             key: p.key, label: p.label, value: p.n, display: numero(p.n), color: colorPaso(i, pasos.length),
             detail: i === 0 ? '' : porcentaje(tasaPaso(p.n, (p.base || pasos[i - 1]).n)),
+            tip: i === 0 ? undefined : `${numero(p.n)} de ${numero((p.base || pasos[i - 1]).n)} ${(p.base || pasos[i - 1]).label.toLowerCase()}`,
         }))} />
     );
 };

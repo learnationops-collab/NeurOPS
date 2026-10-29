@@ -10,7 +10,8 @@ import { POR_TALLER, TITULOS } from './cuentas';
  * «Ver registros» de las cifras de Workshop (ADR-W015): `abrir(lista, titulo)` abre el panel (lateral o central) con
  * la lista que suma esa cifra para `talleres`, y `panel` va una vez en el JSX de la pestaña. Las listas se arman
  * según la clave (ver `cuentas.js`): agendas con la tabla de Revisar, personas y cobros desde el backend, y lo que
- * se carga por taller (inversión, leads, pasos del embudo) taller por taller.
+ * se carga por taller (inversión, leads, pasos del embudo) taller por taller. `abrir(lista, titulo, [taller])` abre la lista
+ * de un solo taller (la fila o la tarjeta que se tocó).
  */
 
 // Lo que guardan los talleres de cada lista del backend: si la lista de hoy da otra cuenta, se avisa.
@@ -31,8 +32,8 @@ export const useRegistrosWorkshop = (talleres, formatDate = null) => {
     const ultimos = useRef(talleres);
     ultimos.current = talleres;
 
-    const abrir = useCallback((lista, titulo) => {
-        const lote = ultimos.current || [];
+    const abrir = useCallback((lista, titulo, de = null) => {
+        const lote = de || ultimos.current || [];
         if (!lote.length) return;
         const ids = lote.map((t) => t.id);
         const nombre = titulo || TITULOS[lista] || lista;
