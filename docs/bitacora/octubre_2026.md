@@ -1281,3 +1281,5 @@
 - **28 de Octubre de 2026 (Marketing: se quita la pestaña «Conversaciones»)** *([AdminMarketingHubPage.jsx](../../frontend/src/pages/admin/marketing/AdminMarketingHubPage.jsx))*
   - Los mensajes del flujo se manejan ahora directo desde el Inbox, así que Setting queda con Palabras clave, Entrantes, Meta Ads y Generador UTM. Se borraron `ConversacionesVista`, su CSS y su test; un link viejo (`?tab=conversaciones`, o la pestaña recordada) abre Palabras clave.
   - Los endpoints `/conversational/messages` y `stats/conversational` quedan en el backend: los siguen usando el dashboard del setter y las estadísticas conversacionales.
+- **28 de Octubre de 2026 (Todos › Segmentos: pestañas Todos, Setting y Workshop)** *([SegmentosVista.jsx](../../frontend/src/pages/admin/marketing/todos/SegmentosVista.jsx))*
+  - Un selector de tres pestañas sobre los segmentos: «Todos» deja las dos tablas una sobre otra para compararlas; «Setting» y «Workshop» analizan una sola. El filtro A/B/C/D vale para las tres, y la pestaña elegida se recuerda por usuario (`mk_segmentos_fuente`).

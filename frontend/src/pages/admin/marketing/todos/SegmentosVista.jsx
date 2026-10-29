@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 import toast from 'react-hot-toast';
+import useEstadoGuardado from '../../../../hooks/useEstadoGuardado';
+import { Segmented } from '../../../comercial/components/Shared';
 import { ErrorDeCarga } from '../esqueletos';
 import { Skeleton, SkeletonBlock } from '../../../../components/standard';
 import { mensajeDeError } from '../anuncios/marketingApi';
@@ -28,8 +30,17 @@ export const EsqueletoSegmentos = () => (
 );
 
 const COLOR = { setting: SETTING.color, workshop: WORKSHOP.color };
+// «Todos» pone las dos fuentes una sobre otra para compararlas; las otras dos analizan una sola (Kerwin, 28/10/2026).
+const PESTANAS = [
+    { key: 'todos', label: 'Todos' },
+    { key: 'setting', label: 'Setting' },
+    { key: 'workshop', label: 'Workshop' },
+];
+const INICIAL = { fuente: 'todos' };
+const normalizar = (mezclado) => (PESTANAS.some((p) => p.key === mezclado.fuente) ? mezclado : INICIAL);
 
 const SegmentosVista = ({ rango, version, params, cambiar, abrirRegistros }) => {
+    const [{ fuente: pestana }, poner] = useEstadoGuardado('mk_segmentos_fuente', INICIAL, { normalizar });
     const { datos, error: fallo, cargando } = useDatosCacheados(`mk:segmentos:${rango.desde}:${rango.hasta}`,
         (signal) => pedirSegmentos(rango.desde, rango.hasta, { signal }),
         { version, onError: (e) => toast.error(mensajeDeError(e, 'No se pudieron cargar los segmentos.')) });
@@ -49,9 +60,11 @@ const SegmentosVista = ({ rango, version, params, cambiar, abrirRegistros }) => 
     };
     return (
         <div className={`vista mk-vista${cargando ? ' mk-recargando' : ''}`}>
+            <Segmented opciones={PESTANAS} valor={pestana} ariaLabel="Fuente de los segmentos"
+                onChange={(key) => poner({ fuente: key })} />
             <FiltroSegmentos segmentos={matriz.segmentos} elegidos={elegidos} cuentas={cuentas}
                 onCambiar={(lista) => cambiar({ segmento: lista.join(',') || null })} />
-            {matriz.fuentes.map((fuente) => {
+            {matriz.fuentes.filter((f) => pestana === 'todos' || f.key === pestana).map((fuente) => {
                 const filas = visibles(fuente.filas, elegidos);
                 return (
                     <TablaSegmentos key={fuente.key} fuente={fuente} color={COLOR[fuente.key]} filas={filas}
