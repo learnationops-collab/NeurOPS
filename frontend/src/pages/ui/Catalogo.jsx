@@ -299,10 +299,14 @@ const SECCIONES = [
     {
         nombre: 'CifraConCuenta',
         para: 'Un porcentaje, un ROAS o un costo que se ve SOLO; al pasar el mouse dice su cuenta («163 de 2.448 leads») y cada parte abre la lista que la suma.',
-        props: 'cuenta { a, b } con { t, m, titulo } · metrica · titulo · onVer(metrica, titulo) · lado: izq · der — children: la cifra',
+        props: 'cuenta { a, b } con { t, m, titulo } · metrica · titulo · onVer(metrica, titulo) · lado: izq · der · color + rotulo (la cifra en el color de su fuente y el nombre solo en el tooltip) — children: la cifra',
         demo: () => (
             <p style={{ fontSize: 28, fontWeight: 900 }}>
                 <CifraConCuenta onVer={nada} cuenta={{ a: { t: '163', m: 'agendas', titulo: 'Agendas' }, b: { t: '2.448 leads', m: 'leads', titulo: 'Leads' } }}>6,7%</CifraConCuenta>
+                {' '}
+                <CifraConCuenta onVer={nada} color="var(--ln-brand, #FF3FA4)" rotulo="Setting" cuenta={{ a: { t: '151', m: 'agendas', titulo: 'Agendas' }, b: { t: '2.352 leads', m: 'leads', titulo: 'Leads' } }}>6,4%</CifraConCuenta>
+                {' '}
+                <CifraConCuenta onVer={nada} color="var(--ln-info, #4E8BD8)" rotulo="Workshop" cuenta={{ a: { t: '61', m: 'agendas', titulo: 'Agendas' }, b: { t: '325 leads', m: 'leads', titulo: 'Leads' } }}>18,8%</CifraConCuenta>
             </p>
         ),
     },

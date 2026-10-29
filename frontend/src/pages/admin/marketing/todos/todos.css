@@ -17,14 +17,13 @@
 @media (max-width:520px){.dc-shell .td-tarjetas{grid-template-columns:minmax(0,1fr)}}
 .dc-shell .td-tarjeta{display:flex;flex-direction:column;gap:var(--s3);padding:var(--s5);min-width:0}
 .dc-shell .td-tarjeta-cifra{display:flex;align-items:baseline;gap:var(--s2);flex-wrap:wrap}
-.dc-shell .td-ganador{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600}
-.dc-shell .td-ganador i{width:10px;height:10px;border-radius:3px;flex:none}
+/* Sin las palabras Setting/Workshop (Kerwin, 29/10/2026): la cifra va en el color de su fuente y el nombre sale en el tooltip. */
+.dc-shell .td-tarjeta-cifra .t-h2{cursor:help;outline:none}
 .dc-shell .td-tarjeta-pie{display:flex;justify-content:space-between;gap:var(--s2);flex-wrap:wrap}
 .dc-shell .td-tasas{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:15px;font-weight:800;color:var(--text-on-surface)}
 .dc-shell .td-tasa2{font-size:12.5px;font-weight:600;color:var(--text-muted)}
 .dc-shell .td-tasa2 .ui-cifra{font-size:15px;font-weight:800;color:var(--text-on-surface)}
-.dc-shell .td-tarjeta-pie > span{font-size:13px}
-.dc-shell .td-tarjeta-pie .ui-cifra{font-size:15px;font-weight:800;color:var(--text-on-surface)}
+.dc-shell .td-tarjeta-pie .ui-cifra{font-size:18px;font-weight:800}
 /* La cifra del embudo: una tasa por 1.000 leads, con su unidad dicha debajo. */
 .dc-shell .td-cifra{display:flex;flex-direction:column;flex:none;min-width:5.2em;line-height:1.1}
 .dc-shell .td-cifra b{font-size:18px;font-weight:800;color:var(--text-on-surface)}
@@ -60,6 +59,9 @@
 .dc-shell .td-fila--tasa{background:var(--bg-element)}
 .dc-shell .td-fila--tasa:hover{background:var(--bg-element-hover)}
 .dc-shell .td-fila--cab{padding-block:0}
+.dc-shell .td-fuente{display:inline-flex;align-items:center;cursor:help}
+.dc-shell .td-fuente i{width:12px;height:12px;border-radius:4px;background:var(--c)}
+.dc-shell .td-gana{font-size:15px;font-weight:800;cursor:help;outline:none}
 .dc-shell .td-fila-nombre{display:flex;flex-direction:column;min-width:0}
 .dc-shell .td-valor{display:flex;flex-direction:column;gap:6px;min-width:0}
 .dc-shell .td-pista{height:6px;border-radius:3px;background:var(--bg-element)}

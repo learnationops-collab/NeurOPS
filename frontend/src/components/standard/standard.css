@@ -318,9 +318,12 @@
 
 /* --- CifraConCuenta: la cifra sola; su cuenta («163 de 2.448 leads») aparece al pasar el mouse o enfocarla --- */
 .ui-cifra.ui-cifra{position:relative;display:inline-flex;align-items:baseline}
-.ui-cifra__valor.ui-cifra__valor{background:none;border:0;padding:0;color:inherit;font:inherit;letter-spacing:inherit;cursor:pointer;
+.ui-cifra__valor.ui-cifra__valor{background:none;border:0;padding:0;color:var(--ui-cifra-c,inherit);font:inherit;letter-spacing:inherit;cursor:pointer;
   border-bottom:1px dotted var(--ui-muted)}
 .ui-cifra__valor.ui-cifra__valor:hover,.ui-cifra__valor.ui-cifra__valor:focus-visible{color:var(--ui-brand);border-bottom-color:var(--ui-brand);outline:none}
+/* Con `color` (una fuente con color propio) el hover no cambia el matiz: subraya y listo. */
+.ui-cifra--color .ui-cifra__valor.ui-cifra__valor:hover,.ui-cifra--color .ui-cifra__valor.ui-cifra__valor:focus-visible{color:var(--ui-cifra-c);border-bottom-color:var(--ui-cifra-c)}
+.ui-cifra--color .ui-cifra__valor.ui-cifra__valor{border-bottom-color:var(--ui-cifra-c)}
 .ui-cifra__cuenta{position:fixed;z-index:200;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px;
   width:max-content;max-width:min(320px,80vw);padding:var(--ui-s2) var(--ui-s3);border-radius:var(--ui-radius-control);background:var(--ui-popover-bg);
   border:1px solid var(--ui-border-main);box-shadow:var(--ui-shadow);font-size:13px;font-weight:600;line-height:1.35;color:var(--ui-text);letter-spacing:0;text-transform:none;
@@ -332,6 +335,8 @@
 .ui-cifra--quieta{cursor:default}
 .ui-cifra__valor--quieta.ui-cifra__valor--quieta{cursor:help;outline:none}
 .ui-cifra__cuenta b{font-weight:800}
+.ui-cifra__rotulo{flex-basis:100%;display:flex;align-items:center;gap:6px;font-style:normal;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ui-muted)}
+.ui-cifra__rotulo[style]::before{content:"";width:9px;height:9px;border-radius:3px;background:var(--ui-cifra-c);flex:none}
 
 /* --- Calendar ---------------------------------------------------------------------------------- */
 .ui-cal.ui-cal{overflow-x:auto}

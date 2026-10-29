@@ -11,6 +11,8 @@ import { createPortal } from 'react-dom';
  * `onVer(metrica, titulo)`: la pantalla abre esa lista (`useVerRegistros`); sin ella la cifra queda quieta.
  * `metrica` / `titulo`: la lista de una cifra sin cuenta. `lado="der"`: el tooltip se alinea al borde derecho de la
  * cifra (también lo hace solo si no entra a la derecha).
+ * `color` + `rotulo` (Kerwin, 29/10/2026): una cifra de una fuente con color propio (Setting rosa, Workshop azul) va en ese
+ * color y NO escribe el nombre al lado; el nombre (`rotulo`) aparece solo como título del tooltip.
  *
  * El tooltip se dibuja fuera de su lugar (en el `.dc-shell`, o en `body`) y `fixed`: una tabla que scrollea, una
  * tarjeta con `overflow:hidden` o con vidrio no lo recortan ni lo corren.
@@ -21,7 +23,7 @@ const DEMORA_CIERRE = 140;
 
 const destino = () => document.querySelector('.dc-shell') || document.body;
 
-const CifraConCuenta = ({ children, cuenta = null, metrica = null, titulo = null, onVer = null, lado = 'izq', className = '' }) => {
+const CifraConCuenta = ({ children, cuenta = null, metrica = null, titulo = null, onVer = null, lado = 'izq', className = '', color = null, rotulo = null }) => {
     const id = useId();
     const raiz = useRef(null);
     const cierre = useRef(null);
@@ -55,31 +57,33 @@ const CifraConCuenta = ({ children, cuenta = null, metrica = null, titulo = null
 
     const tituloDe = (m, t) => t || (m === metrica && titulo) || m;
     const abrir = (m, t) => { setPos(null); if (onVer && m) onVer(m, tituloDe(m, t)); };
-    if (!lista && !cuenta) return <span className={`ui-cifra ui-cifra--quieta ${className}`}>{children}</span>;
+    const hayTip = Boolean(cuenta || rotulo);
+    const estilo = color ? { '--ui-cifra-c': color } : undefined;
+    const clase = `ui-cifra${color ? ' ui-cifra--color' : ''} ${className}`;
+    if (!lista && !hayTip) return <span className={`${clase} ui-cifra--quieta`} style={estilo}>{children}</span>;
 
     const parte = (p) => (onVer && p.m
         ? <button type="button" onClick={() => abrir(p.m, p.titulo)}>{p.t}</button>
         : <b>{p.t}</b>);
-    const eventos = cuenta ? {
+    const eventos = hayTip ? {
         onMouseEnter: abrirTip, onMouseLeave: cerrarTip, onFocus: abrirTip,
         onBlur: (ev) => { if (!ev.currentTarget.contains(ev.relatedTarget)) cerrarTip(); },
     } : {};
     return (
-        <span ref={raiz} className={`ui-cifra ${className}`} {...eventos}>
+        <span ref={raiz} className={clase} style={estilo} {...eventos}>
             {lista ? (
                 <button type="button" className="ui-cifra__valor" onClick={() => abrir(lista, cuenta?.a?.titulo)}
-                    aria-describedby={cuenta && pos ? id : undefined}
-                    aria-label={`${typeof children === 'string' ? `${children}: ` : ''}ver la lista de ${String(tituloDe(lista, cuenta?.a?.titulo)).toLowerCase()}`}>
+                    aria-describedby={hayTip && pos ? id : undefined}
+                    aria-label={`${rotulo ? `${rotulo} ` : ''}${typeof children === 'string' ? `${children}: ` : ''}ver la lista de ${String(tituloDe(lista, cuenta?.a?.titulo)).toLowerCase()}`}>
                     {children}
                 </button>
-            ) : <span className="ui-cifra__valor ui-cifra__valor--quieta" tabIndex={0} aria-describedby={cuenta && pos ? id : undefined}>{children}</span>}
-            {cuenta && pos && createPortal(
+            ) : <span className="ui-cifra__valor ui-cifra__valor--quieta" tabIndex={0} aria-describedby={hayTip && pos ? id : undefined}>{children}</span>}
+            {hayTip && pos && createPortal(
                 <span id={id} className="ui-cifra__cuenta" role="tooltip" style={pos}
                     onMouseEnter={() => clearTimeout(cierre.current)} onMouseLeave={cerrarTip}>
-                    {parte(cuenta.a)}
-                    <span> de </span>
-                    {parte(cuenta.b)}
-                    {lista && <small>Tocá una cifra para ver su lista</small>}
+                    {rotulo && <em className="ui-cifra__rotulo" style={color ? { '--ui-cifra-c': color } : undefined}>{rotulo}</em>}
+                    {cuenta && <>{parte(cuenta.a)}<span> de </span>{parte(cuenta.b)}</>}
+                    {lista && cuenta && <small>Tocá una cifra para ver su lista</small>}
                 </span>,
                 destino(),
             )}
