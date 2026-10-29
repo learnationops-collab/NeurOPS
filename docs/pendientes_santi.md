@@ -130,7 +130,7 @@ Falta la fórmula de backend; la presentación ya tiene su rótulo.
 - [ ] `tests/services/test_fuentes_service.py` usa `fuentes_service.agendas_por_fuente` y `personas_por_fuente`, que ahora viven en `conteo_agendas_service`: los tests quedaron rotos (no se corrieron).- [ ] Otras: hay agendas con origen «Setter» (genérico, sin nombre de setter) que caen en Otras y no en Setting. Confirmar si son de Setting y cómo identificarlas (se ven en Otras › De dónde viene cada agenda).
 ## Segmentos: backfill de las agendas del flujo viejo (tarea 840 de Leadership)
 - [x] Backfill probado en staging (dry-run y `--apply`, 29/10/2026): no escribe nada nuevo (931 clientes y 844 agendas ya tenían segmento; 6 clientes con formulario viejo incompleto). Ahora informa al final las agendas sin segmento por motivo y mes (`--desde=AAAA-MM-DD`, `--ids`).
-- [ ] Correr en prod (lo aprueba Kerwin): `railway ssh --service "learnation work" -- python scripts/backfill_segmentos.py --ids` (ensayo) y, si coincide, `--apply`. El script ya fija `DISABLE_REMINDER_SCHEDULER`. Nunca se leyó prod en esta tarea: el número de prod falta.
+- [x] Corrido en prod (29/10/2026, aprobado por Kerwin): ensayo y `--apply` escribieron 1 agenda (copia del segmento D de su cliente); 961 agendas y 1.021 clientes ya tenían; 36 de 285 agendas desde el 01/10 siguen sin segmento (32 clientes sin formulario, 4 formularios que no segmentan).
 - [ ] Las ~31 agendas de octubre del flujo viejo (17 son del 01/10) sin segmento tienen un cliente sin ningún formulario: no se pueden segmentar. Decidir si quedan sin segmento en los cortes o van a una fila «Sin dato».
 
 ## Marketing: «CLASE 26» no es una palabra clave de DM (tarea 852 de Leadership)
